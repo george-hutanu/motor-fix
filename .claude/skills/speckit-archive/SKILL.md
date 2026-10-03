@@ -120,6 +120,9 @@ A retired requirement now prints `⊘ retired` instead of `✗ UNTESTED`.
 2. Run `/speckit-retro` if it has not run — the acceptance verdict belongs with
    the feature, and archiving without one loses the reason it was accepted.
 3. Commit: `chore: archive <feature> into the <capability> capability`.
+4. Invoke `speckit-notion-sync finish`: the story goes to Done, its timeline row
+   to Merged, and the epic to Done once every story in it is Done. Skip this if
+   the merge to `main` already ran it.
 
 ## What this never does
 

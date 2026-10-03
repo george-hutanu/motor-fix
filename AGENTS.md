@@ -20,6 +20,30 @@ that way for `~/code`.
 - Never `gh auth switch` to george-hutanu, and never edit `~/.gitconfig` for
   this repo — both would change every QLOG repo under `~/code` too.
 
+## Notion is the tracker, and design comes first
+
+These hold for every piece of work in this repo: a story, a task, a bug, an
+epic or a plan, whether run through spec-kit or by hand.
+
+- **Check the design before starting.** Before any code, read the story's
+  boards in the clickable mock (the `Design` and `Design boards` properties
+  in Notion) and the Build brief's Screens section, and write
+  `specs/<feature>/design.md`. Skill: `speckit-design-check`.
+- **Keep Notion in step.** When work starts, the story goes to In progress;
+  when review starts, In review; when it merges to `main`, Done. The same goes
+  for its row in the epic's build timeline under Delivery › Plans, and for the
+  epic itself (In progress at its first story, Done at its last). Skill:
+  `speckit-notion-sync start | review | finish`. These writes are standing
+  instructions; do not ask before them.
+- **Plans live under Delivery › Plans in Notion:** one execution-plan page and
+  one build-timeline database per epic (`speckit-notion-sync plan`).
+- **The spec-kit hooks do this automatically** (`.specify/extensions.yml`:
+  `after_specify`, `before_plan`, `before_implement`), and so do
+  `/speckit-review` and `/speckit-archive`. Outside spec-kit, run the skills
+  yourself. After every merge to `main`, run `speckit-notion-sync finish`.
+- A Notion or mock failure never blocks the build. It is logged in
+  `specs/<feature>/notion-sync.md` or `design.md` and retried on the next run.
+
 ## Product and stack
 
 MotorFix: drivers in Romania find a garage or mechanic for their car. The
