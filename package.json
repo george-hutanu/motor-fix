@@ -1,0 +1,20 @@
+{
+  "name": "motor-fix",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "node -e \"console.log('typecheck: no product code yet — replace with the real check when the stack lands')\"",
+    "lint": "find .claude/hooks .claude/scripts .claude/skills -type f \\( -name '*.js' -o -name '*.mjs' \\) -print0 | xargs -0 -n1 node --check",
+    "test": "npm run test:harness",
+    "test:harness": "vitest run --config .claude/vitest.config.ts",
+    "prepare": "husky && sh .husky/identity.sh apply"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "vitest": "^4.1.11"
+  }
+}

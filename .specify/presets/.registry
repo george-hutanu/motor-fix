@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "presets": {
+    "constitution-sync": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:f1aaf71bec530e4103147820777009c17a7b67c531769e5338e783947c5cbb13",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "claude": [
+          "speckit.constitution"
+        ]
+      },
+      "registered_skills": {
+        "claude": [
+          "speckit-constitution"
+        ]
+      },
+      "installed_at": "2026-07-31T19:55:17.668585+00:00"
+    }
+  }
+}

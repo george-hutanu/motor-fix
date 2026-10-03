@@ -1,0 +1,5 @@
+{
+  "_comment": "Features exempted from a gate they predate. `grandfathered` is read by scripts/trace-matrix.mjs --check: a feature listed there is skipped even when implemented with untested FRs. `artifact_legacy` is read by scripts/artifact-lint.mjs: those features' FR/task gaps report as warnings instead of errors. Do not add an entry to buy time — that is what the gate is for. Remove an entry once the feature genuinely passes.",
+  "grandfathered": [],
+  "artifact_legacy": []
+}

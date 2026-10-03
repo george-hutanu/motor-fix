@@ -1,0 +1,92 @@
+[
+  {
+    "id": "red-first-leaves-main-alone",
+    "hook": "pre:edit:red-first",
+    "why": "maintenance on a non-feature branch must not need a spec edit, or every fix becomes a spec exercise",
+    "payload": {
+      "tool_input": {
+        "file_path": "apps/server/src/app.service.ts"
+      }
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "red-first-ignores-test-edits",
+    "hook": "pre:edit:red-first",
+    "why": "the gate demands tests, so it can never be the thing that blocks writing them",
+    "payload": {
+      "tool_input": {
+        "file_path": "apps/scanner/src/plugins/regexp/rules.spec.ts"
+      }
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "verdict-gate-rejects-a-review-with-no-verdict",
+    "hook": "subagent:verdict",
+    "why": "a review with no verdict line reads as approval to whoever skims it",
+    "transcript": [
+      "## Code Review\n\nThe diff looks broadly fine and I have some thoughts about naming."
+    ],
+    "payload": {},
+    "expect": {
+      "exit": 2,
+      "stderr": "VERDICT"
+    }
+  },
+  {
+    "id": "verdict-gate-accepts-a-well-formed-review",
+    "hook": "subagent:verdict",
+    "why": "the gate has to let the correct shape through, or reviewers learn to route around it",
+    "transcript": [
+      "## Code Review\n\nVERDICT: APPROVE\n\n| severity | finding |\n|---|---|\n| LOW | naming |"
+    ],
+    "payload": {},
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "verdict-gate-rejects-a-transcript-length-report",
+    "hook": "subagent:verdict",
+    "why": "the caller relays a reviewer's report into a running session; a transcript-sized one costs the caller its context",
+    "transcript": [
+      "## Code Review\n\nVERDICT: APPROVE\n\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE\nLINE"
+    ],
+    "payload": {},
+    "expect": {
+      "exit": 2,
+      "stderr": "lines"
+    }
+  },
+  {
+    "id": "verdict-gate-ignores-ordinary-subagent-work",
+    "hook": "subagent:verdict",
+    "why": "only reviewers owe a verdict; a search agent that had to emit one would be lying",
+    "transcript": [
+      "Found the rule table in apps/scanner/src/plugins/regexp/rules.ts:42 and read its callers."
+    ],
+    "payload": {},
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "unknown-hook-id-never-breaks-a-session",
+    "hook": "made:up:id",
+    "why": "a typo in settings.json must not stop the harness — it must say so and let the call through",
+    "payload": {
+      "tool_input": {
+        "command": "ls"
+      }
+    },
+    "expect": {
+      "exit": 0,
+      "stderr": "no registry entry"
+    }
+  }
+]

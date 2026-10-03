@@ -1,0 +1,92 @@
+schema_version: "1.0"
+workflow:
+  id: "speckit"
+  name: "Full SDD Cycle"
+  version: "1.1.0"
+  author: "GitHub"
+  description: "Runs specify → plan → tasks → implement with review gates"
+
+requires:
+  # 0.15.1 is the first release where gate steps accept ``verdict_input``
+  # (engine-side binding of a gate verdict to a declared workflow input).
+  # Older engines reject the field, so the pin must cover it. This also
+  # comfortably exceeds the previous floor of 0.8.5 needed for engine-side
+  # resolution of the ``integration: "auto"`` default.
+  speckit_version: ">=0.15.1"
+  integrations:
+    # The four commands below (specify, plan, tasks, implement) are core
+    # spec-kit commands provided by every integration. The list here is an
+    # advisory, non-exhaustive compatibility hint following the documented
+    # ``any: [...]`` schema -- it is NOT a closed set. The workflow runs
+    # against any integration the project was initialized with, including
+    # ones not listed below, as long as that integration provides the four
+    # core commands referenced in ``steps``.
+    any:
+      - "claude"
+      - "copilot"
+      - "gemini"
+      - "opencode"
+
+inputs:
+  spec:
+    type: string
+    required: true
+    prompt: "Describe what you want to build"
+  integration:
+    type: string
+    default: "auto"
+    prompt: "Integration to use (e.g. claude, copilot, gemini; 'auto' uses the project's initialized integration)"
+  scope:
+    type: string
+    default: "full"
+    enum: ["full", "backend-only", "frontend-only"]
+  # Gate verdict bindings (0.15.1 ``verdict_input``). Empty by default so the
+  # gates still prompt interactively; supply a verdict to pre-approve a gate
+  # (e.g. in CI) or when resuming a paused run:
+  #   specify workflow run speckit --input spec_verdict=approve
+  #   specify workflow resume <run_id> --input plan_verdict=approve
+  spec_verdict:
+    type: string
+    default: ""
+  plan_verdict:
+    type: string
+    default: ""
+
+steps:
+  - id: specify
+    command: speckit.specify
+    integration: "{{ inputs.integration }}"
+    input:
+      args: "{{ inputs.spec }}"
+
+  - id: review-spec
+    type: gate
+    message: "Review the generated spec before planning."
+    options: [approve, reject]
+    on_reject: abort
+    verdict_input: spec_verdict
+
+  - id: plan
+    command: speckit.plan
+    integration: "{{ inputs.integration }}"
+    input:
+      args: "{{ inputs.spec }}"
+
+  - id: review-plan
+    type: gate
+    message: "Review the plan before generating tasks."
+    options: [approve, reject]
+    on_reject: abort
+    verdict_input: plan_verdict
+
+  - id: tasks
+    command: speckit.tasks
+    integration: "{{ inputs.integration }}"
+    input:
+      args: "{{ inputs.spec }}"
+
+  - id: implement
+    command: speckit.implement
+    integration: "{{ inputs.integration }}"
+    input:
+      args: "{{ inputs.spec }}"

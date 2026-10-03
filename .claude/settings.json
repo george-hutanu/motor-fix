@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs session:start:context"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs session:start:github-identity"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs pre:bash:guard"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs pre:bash:commit-gate"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs pre:edit:config-protection"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs pre:edit:red-first"
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs pre:tool:agent-model"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs post:edit:affected-tests"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs stop:test-gate"
+          },
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs stop:telemetry"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs pre:compact:flush"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs subagent:verdict"
+          }
+        ]
+      }
+    ]
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm run typecheck)",
+      "Bash(npm run lint)",
+      "Bash(npm run test)",
+      "Bash(npx vitest run)",
+      "Bash(npx biome check)",
+      "Bash(npx biome check .)",
+      "Bash(node .claude/scripts/trace-matrix.mjs)",
+      "Bash(node .claude/scripts/artifact-lint.mjs)",
+      "Bash(node .claude/scripts/artifact-lint.mjs --check)",
+      "Bash(node .claude/scripts/diff-audit.mjs)",
+      "Bash(node .claude/scripts/diff-audit.mjs --check)",
+      "Bash(node .claude/scripts/artifact-lint.mjs --no-jev)",
+      "Bash(node .claude/scripts/diff-audit.mjs --no-jev)",
+      "Bash(node .claude/scripts/context-audit.mjs --jev)",
+      "Bash(node .claude/scripts/gc-scan.mjs --jev)",
+      "Bash(node .claude/scripts/jev.mjs check)",
+      "Bash(node .claude/scripts/retro-evidence.mjs --since:*)",
+      "Bash(node .claude/scripts/instincts.mjs triggered --since:*)",
+      "Bash(node .claude/scripts/spec-drift.mjs --status)",
+      "Bash(node .claude/scripts/lib/feature.mjs)",
+      "Bash(python3 .specify/scripts/python/check_prerequisites.py --json --paths-only)",
+      "Bash(python3 .specify/scripts/python/check_prerequisites.py --json --require-tasks --include-tasks)",
+      "Bash(python3 .specify/scripts/python/check_prerequisites.py --json --require-spec --require-tasks --include-tasks)",
+      "mcp__webstorm__get_file_problems",
+      "mcp__webstorm__analyze_calls",
+      "mcp__webstorm__search_symbol",
+      "mcp__webstorm__analyzeMermaidDiagram",
+      "mcp__webstorm__introspect_schema",
+      "Bash(node .claude/scripts/doctor.mjs)",
+      "Bash(node .claude/scripts/doctor.mjs --check)",
+      "Bash(node .claude/scripts/doctor.mjs --json)",
+      "Bash(node .claude/scripts/telemetry.mjs)",
+      "Bash(node .claude/scripts/telemetry.mjs --json)",
+      "Bash(node .claude/scripts/telemetry.mjs --unused)",
+      "Bash(node .claude/scripts/instincts.mjs list)",
+      "Bash(node .claude/scripts/instincts.mjs list --all)",
+      "Bash(node .claude/scripts/instincts.mjs inject)",
+      "Bash(node .claude/scripts/instincts.mjs decay)",
+      "Bash(node .claude/scripts/config-scan.mjs)",
+      "Bash(node .claude/scripts/config-scan.mjs --check)",
+      "Bash(node .claude/scripts/config-scan.mjs --json)",
+      "Bash(node .claude/scripts/gc-scan.mjs)",
+      "Bash(node .claude/scripts/gc-scan.mjs --json)",
+      "Bash(node .claude/scripts/harness-eval.mjs)",
+      "Bash(node .claude/scripts/harness-eval.mjs --check)",
+      "Bash(node .claude/skills/design-audit/scripts/scan.mjs)",
+      "Bash(node .claude/skills/design-audit/scripts/contrast.mjs)"
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash $CLAUDE_PROJECT_DIR/.claude/scripts/statusline.sh"
+  }
+}

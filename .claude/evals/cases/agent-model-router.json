@@ -1,0 +1,102 @@
+[
+  {
+    "id": "routes-a-large-review-to-fable",
+    "hook": "pre:tool:agent-model",
+    "why": "a 10-file, 1157-line diff is the review where a defect spans files, and the band above the ceiling is mechanical so it costs no round trip",
+    "payload": {
+      "tool_name": "Agent",
+      "tool_input": {
+        "subagent_type": "spec-reviewer",
+        "prompt": "Review the feature against f66d2c6~1..f66d2c6"
+      }
+    },
+    "expect": {
+      "exit": 0,
+      "stdout": "\"model\":\"fable\""
+    }
+  },
+  {
+    "id": "routes-a-tiny-review-to-sonnet",
+    "hook": "pre:tool:agent-model",
+    "why": "seven deleted lines do not need the expensive model, and this is the only case in the set that actually saves anything",
+    "payload": {
+      "tool_name": "Agent",
+      "tool_input": {
+        "subagent_type": "code-reviewer",
+        "prompt": "Review 9e88d85~1..9e88d85"
+      }
+    },
+    "expect": {
+      "exit": 0,
+      "stdout": "\"model\":\"sonnet\""
+    }
+  },
+  {
+    "id": "leaves-the-model-the-caller-named",
+    "hook": "pre:tool:agent-model",
+    "why": "a caller naming a model made a decision; a default that overrides a decision is not a default",
+    "payload": {
+      "tool_name": "Agent",
+      "tool_input": {
+        "subagent_type": "code-reviewer",
+        "model": "opus",
+        "prompt": "Review f66d2c6~1..f66d2c6"
+      }
+    },
+    "expect": {
+      "exit": 0,
+      "stdout": "^(?![\\s\\S]*model router)[\\s\\S]*$"
+    }
+  },
+  {
+    "id": "leaves-the-agents-frontmatter-already-answers",
+    "hook": "pre:tool:agent-model",
+    "why": "mutation-runner is pinned to haiku in its own file; only the two reviewers have a size that varies per call",
+    "payload": {
+      "tool_name": "Agent",
+      "tool_input": {
+        "subagent_type": "mutation-runner",
+        "prompt": "Run mutation for apps/server over f66d2c6~1..f66d2c6"
+      }
+    },
+    "expect": {
+      "exit": 0,
+      "stdout": "^(?![\\s\\S]*model router)[\\s\\S]*$"
+    }
+  },
+  {
+    "id": "never-refuses-a-call",
+    "hook": "pre:tool:agent-model",
+    "why": "this is a routing default, not a gate: an unreadable payload must leave the subagent running exactly as the caller made it",
+    "payload": {
+      "tool_name": "Agent",
+      "tool_input": {
+        "subagent_type": "code-reviewer",
+        "prompt": "Review the working tree, no range named"
+      }
+    },
+    "expect": {
+      "exit": 0,
+      "stdout": "^(?![\\s\\S]*model router)[\\s\\S]*$"
+    }
+  },
+  {
+    "id": "the-off-switch-works",
+    "hook": "pre:tool:agent-model",
+    "why": "leaving the frontmatter pins in place while the routing stops is the cheap way to tell whether the router caused a bad review",
+    "payload": {
+      "tool_name": "Agent",
+      "tool_input": {
+        "subagent_type": "spec-reviewer",
+        "prompt": "Review the feature against f66d2c6~1..f66d2c6"
+      }
+    },
+    "env": {
+      "SPECKIT_MODEL_ROUTER": "0"
+    },
+    "expect": {
+      "exit": 0,
+      "stdout": "^(?![\\s\\S]*model router)[\\s\\S]*$"
+    }
+  }
+]

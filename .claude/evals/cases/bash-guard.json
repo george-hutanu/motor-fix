@@ -1,0 +1,143 @@
+[
+  {
+    "id": "blocks-force-push",
+    "hook": "pre:bash:guard",
+    "why": "a force-push can erase a colleague's commits, and nothing in this repo's workflow needs one",
+    "payload": {
+      "tool_input": {
+        "command": "git push --force origin BKP-1304"
+      }
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "force-push"
+    }
+  },
+  {
+    "id": "allows-force-with-lease",
+    "hook": "pre:bash:guard",
+    "why": "--force-with-lease refuses when the remote moved, which is the safe form the block points at",
+    "payload": {
+      "tool_input": {
+        "command": "git push --force-with-lease origin BKP-1304"
+      }
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "blocks-hard-reset",
+    "hook": "pre:bash:guard",
+    "why": "a hard reset throws away uncommitted work with no copy anywhere",
+    "payload": {
+      "tool_input": {
+        "command": "git reset --hard origin/main"
+      }
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "destroys uncommitted work"
+    }
+  },
+  {
+    "id": "blocks-clean-force",
+    "hook": "pre:bash:guard",
+    "why": "specs/, .specify/ and .claude/ are all untracked here, so a forced clean deletes the whole harness",
+    "payload": {
+      "tool_input": {
+        "command": "git clean -fd"
+      }
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "untracked files"
+    }
+  },
+  {
+    "id": "blocks-deleting-the-work-directory",
+    "hook": "pre:bash:guard",
+    "why": ".work/ holds cloned repos and scan outputs that cost minutes to hours to reproduce",
+    "payload": {
+      "tool_input": {
+        "command": "rm -rf .work/scan"
+      }
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "expensive state"
+    }
+  },
+  {
+    "id": "allows-a-runtime-dependency-install",
+    "hook": "pre:bash:guard",
+    "why": "this is the rule speckit-demo has and this repo deliberately dropped — every workspace here ships runtime dependencies, and blocking that would fight normal work",
+    "payload": {
+      "tool_input": {
+        "command": "npm install fastify -w apps/server"
+      }
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "allows-a-plain-push",
+    "hook": "pre:bash:guard",
+    "why": "\"never push until asked\" is a rule about acting unasked; a hard block would also break the case where the user does ask, so it stays prose",
+    "payload": {
+      "tool_input": {
+        "command": "git push origin BKP-1304"
+      }
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "allows-ordinary-commands",
+    "hook": "pre:bash:guard",
+    "why": "a guard that costs a round trip on every `npm test` would be turned off within a day",
+    "payload": {
+      "tool_input": {
+        "command": "npm test"
+      }
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "profile-off-disarms-the-gate",
+    "hook": "pre:bash:guard",
+    "why": "the escape hatch has to work, or debugging a gate means editing it",
+    "payload": {
+      "tool_input": {
+        "command": "git reset --hard origin/main"
+      }
+    },
+    "env": {
+      "SPECKIT_HOOK_PROFILE": "off"
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "dry-run-reports-instead-of-blocking",
+    "hook": "pre:bash:guard",
+    "why": "watching a gate without being stopped by it is how you tell a false positive from a real one",
+    "payload": {
+      "tool_input": {
+        "command": "git reset --hard origin/main"
+      }
+    },
+    "env": {
+      "SPECKIT_HOOKS_DRY_RUN": "1"
+    },
+    "expect": {
+      "exit": 0,
+      "stderr": "DRY RUN"
+    }
+  }
+]

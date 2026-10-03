@@ -1,0 +1,20 @@
+[
+  {
+    "id": "an-edit-gate-refuses-a-payload-it-cannot-read",
+    "hook": "pre:edit:red-first",
+    "why": "a Write payload carries the whole file, so it is the one most likely to arrive truncated — and red-first reading that as consent is exactly how implementation lands before its test",
+    "payload": {
+      "tool_input": { "file_path": "apps/scanner/src/plugins/regexp/index.ts", "content": "export const x = 1;" }
+    },
+    "env": { "SPECKIT_HOOK_INPUT_MAX_BYTES": "16" },
+    "expect": { "exit": 2, "stderr": "has not approved it" }
+  },
+  {
+    "id": "an-advisory-hook-is-handed-an-oversized-payload-unchanged",
+    "hook": "stop:telemetry",
+    "why": "the other half of the contract: only gates marked fail_closed refuse. Ending a session over a long telemetry payload would make the ledger cost more than it records",
+    "payload": { "session_id": "eval-oversized-payload" },
+    "env": { "SPECKIT_HOOK_INPUT_MAX_BYTES": "8" },
+    "expect": { "exit": 0 }
+  }
+]

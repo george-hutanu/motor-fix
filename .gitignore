@@ -1,0 +1,15 @@
+node_modules/
+.DS_Store
+*.log
+.idea/
+.worktrees/
+
+# Claude Code: personal settings stay local
+.claude/settings.local.json
+
+# spec-kit machine-local state (catalog caches, per-run bookkeeping, telemetry)
+.specify/**/.cache/
+.specify/run-state.json
+.specify/telemetry/*.json
+.stryker-tmp/
+reports/

@@ -1,0 +1,65 @@
+[
+  {
+    "id": "ignores-a-command-that-is-not-a-commit",
+    "hook": "pre:bash:commit-gate",
+    "why": "the gate runs on every Bash call; if it did real work on `npm test` it would be turned off within a day",
+    "payload": { "tool_input": { "command": "npm test" } },
+    "expect": { "exit": 0 }
+  },
+  {
+    "id": "allows-a-one-line-conventional-commit",
+    "hook": "pre:bash:commit-gate",
+    "why": "the shape the working agreement asks for has to pass, or the gate teaches people to bypass it",
+    "payload": {
+      "tool_input": { "command": "git commit -m \"feat(scanner): bound the baseline read\"" }
+    },
+    "expect": { "exit": 0 }
+  },
+  {
+    "id": "blocks-a-message-with-a-body",
+    "hook": "pre:bash:commit-gate",
+    "why": "commit style here is one line with a scope and no body; a second -m is the usual way that slips",
+    "payload": {
+      "tool_input": { "command": "git commit -m \"feat(x): thing\" -m \"body paragraph\"" }
+    },
+    "expect": { "exit": 2, "stderr": "single -m only" }
+  },
+  {
+    "id": "blocks-a-metadata-trailer",
+    "hook": "pre:bash:commit-gate",
+    "why": "trailers are asked for by the session harness and forbidden by this repo — the gate is the only thing that settles it",
+    "payload": {
+      "tool_input": {
+        "command": "git commit -m \"feat(x): thing\n\nCo-Authored-By: Someone <a@b.c>\""
+      }
+    },
+    "expect": { "exit": 2, "stderr": "no metadata trailers" }
+  },
+  {
+    "id": "blocks-a-tool-mention",
+    "hook": "pre:bash:commit-gate",
+    "why": "no tool mentions in history; this is the rule a generated message breaks first",
+    "payload": {
+      "tool_input": { "command": "git commit -m \"feat(x): generated with Claude\"" }
+    },
+    "expect": { "exit": 2, "stderr": "tool mentions" }
+  },
+  {
+    "id": "refuses-a-commit-it-cannot-read",
+    "hook": "pre:bash:commit-gate",
+    "why": "before run-hook capped stdin, a payload too large to arrive intact failed JSON.parse and every gate read that as consent — a commit could pass all of them in silence",
+    "payload": {
+      "tool_input": { "command": "git commit -m \"feat(x): thing\"" }
+    },
+    "env": { "SPECKIT_HOOK_INPUT_MAX_BYTES": "16" },
+    "expect": { "exit": 2, "stderr": "has not approved it" }
+  },
+  {
+    "id": "profile-off-disarms-the-commit-gate",
+    "hook": "pre:bash:commit-gate",
+    "why": "the escape hatch has to work for this gate too, or debugging it means editing it",
+    "payload": { "tool_input": { "command": "git commit -m \"nope\" -m \"also nope\"" } },
+    "env": { "SPECKIT_HOOK_PROFILE": "off" },
+    "expect": { "exit": 0 }
+  }
+]

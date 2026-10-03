@@ -1,0 +1,24 @@
+[
+  {
+    "id": "never-blocks-twice-in-a-row",
+    "hook": "stop:test-gate",
+    "why": "stop_hook_active means the gate already blocked this turn; blocking again is an infinite loop, and Claude Code's own contract forbids it",
+    "payload": { "stop_hook_active": true },
+    "expect": { "exit": 0 }
+  },
+  {
+    "id": "allows-a-stop-with-no-changed-typescript",
+    "hook": "stop:test-gate",
+    "why": "the gate is scoped to uncommitted TS under apps/, libs/ and e2e/ — with nothing changed there is nothing to run, and a clean tree must not cost a vitest boot",
+    "payload": { "stop_hook_active": false },
+    "expect": { "exit": 0 }
+  },
+  {
+    "id": "refuses-a-stop-it-cannot-read",
+    "hook": "stop:test-gate",
+    "why": "the loop-protection branch keys off stop_hook_active in the payload; a truncated payload used to miss it and exit 0, which is the same answer the gate gives when everything is green",
+    "payload": { "stop_hook_active": false },
+    "env": { "SPECKIT_HOOK_INPUT_MAX_BYTES": "8" },
+    "expect": { "exit": 2, "stderr": "has not approved it" }
+  }
+]

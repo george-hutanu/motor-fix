@@ -1,0 +1,5 @@
+{
+  "_comment": "The harness eval floor, a ratchet like the thresholds.break in each workspace's stryker.config.json. `node .claude/scripts/harness-eval.mjs --check` fails below this rate. Raise it when a run comes back higher; never lower it to make a run pass \u2014 a case that no longer holds is either a gate that broke or a specification that changed, and both are worth stopping for.",
+  "pass_rate": 1,
+  "recorded": "2026-09-13"
+}

@@ -1,0 +1,126 @@
+[
+  {
+    "id": "blocks-lowering-the-mutation-floor",
+    "hook": "pre:edit:config-protection",
+    "why": "the cheapest way out of a red mutation run is editing the threshold; that must cost more than killing the mutant",
+    "payload": {
+      "tool_input": {
+        "file_path": "apps/server/stryker.config.json",
+        "content": "{\n  \"testRunner\": \"vitest\",\n  \"thresholds\": { \"break\": 10, \"high\": 95, \"low\": 90 }\n}\n"
+      }
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "ratchet"
+    }
+  },
+  {
+    "id": "blocks-lowering-a-second-workspace-floor",
+    "hook": "pre:edit:config-protection",
+    "why": "mutation is per workspace here — a rule that only knew one path would leave apps/scanner unguarded",
+    "payload": {
+      "tool_input": {
+        "file_path": "apps/scanner/stryker.config.json",
+        "content": "{\n  \"testRunner\": \"vitest\",\n  \"thresholds\": { \"break\": 0, \"high\": 95, \"low\": 90 }\n}\n"
+      }
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "ratchet"
+    }
+  },
+  {
+    "id": "allows-raising-the-mutation-floor",
+    "hook": "pre:edit:config-protection",
+    "why": "the ratchet only turns one way; raising it after a harden pass is the intended move",
+    "payload": {
+      "tool_input": {
+        "file_path": "apps/server/stryker.config.json",
+        "content": "{\n  \"testRunner\": \"vitest\",\n  \"thresholds\": { \"break\": 95, \"high\": 95, \"low\": 90 }\n}\n"
+      }
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "blocks-growing-the-traceability-baseline",
+    "hook": "pre:edit:config-protection",
+    "why": "an exemption added to make a gate pass is the gate defeating itself",
+    "payload": {
+      "tool_input": {
+        "file_path": ".specify/trace-baseline.json",
+        "content": "{\n  \"grandfathered\": [\n    \"001-regexp-scanner-plugin\",\n    \"002-rust-regex-engine\",\n    \"003-regexp-dag-plugin\",\n    \"004-port-generic-regex-rules\",\n    \"005-plugin-report-logger\",\n    \"011-scan-control-api\"\n  ]\n}\n"
+      }
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "grandfathering entry"
+    }
+  },
+  {
+    "id": "blocks-deleting-a-requirement-token",
+    "hook": "pre:edit:config-protection",
+    "why": "removing a @traces NNN-FR- token silences the traceability gate for that requirement",
+    "payload": {
+      "tool_input": {
+        "file_path": "apps/scanner/src/plugins/regexp/rules.spec.ts",
+        "content": "import { describe, it } from \"vitest\";\n\ndescribe(\"rules\", () => {\n  it(\"still runs\", () => {});\n});\n"
+      }
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "traceability gate"
+    }
+  },
+  {
+    "id": "allows-an-ordinary-edit",
+    "hook": "pre:edit:config-protection",
+    "why": "the gate must be invisible on the edits that make up most of a session",
+    "payload": {
+      "tool_input": {
+        "file_path": "apps/server/src/app.service.ts",
+        "content": "export class AppService {}\n"
+      }
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "strict-profile-freezes-the-harness",
+    "hook": "pre:edit:config-protection",
+    "why": "under strict, weakening a gate should never be something that happens in passing",
+    "payload": {
+      "tool_input": {
+        "file_path": ".claude/hooks/bash-guard.mjs",
+        "content": "process.exit(0);\n"
+      }
+    },
+    "env": {
+      "SPECKIT_HOOK_PROFILE": "strict"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "freezes the harness"
+    }
+  },
+  {
+    "id": "strict-freeze-takes-an-explicit-override",
+    "hook": "pre:edit:config-protection",
+    "why": "the freeze is a speed bump, not a wall — it asks for the change to be deliberate",
+    "payload": {
+      "tool_input": {
+        "file_path": ".claude/hooks/bash-guard.mjs",
+        "content": "process.exit(0);\n"
+      }
+    },
+    "env": {
+      "SPECKIT_HOOK_PROFILE": "strict",
+      "SPECKIT_ALLOW_HOOK_EDIT": "1"
+    },
+    "expect": {
+      "exit": 0
+    }
+  }
+]

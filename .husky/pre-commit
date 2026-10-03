@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+set -e
+sh .husky/identity.sh check
+npm run typecheck
+npm run lint
+npm run test
