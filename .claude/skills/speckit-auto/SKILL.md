@@ -184,12 +184,10 @@ continue. Note it in the run log as a material autonomous action.
 ### 2. Specify
 
 Invoke `speckit-specify` with the description. Its `before_specify` hook runs
-`speckit.git.feature`, which creates the branch — let it, and respect this
-repo's rule that a ticketed feature's branch is the ticket code verbatim
-(`.claude/skills/speckit-git-feature/SKILL.md`). If the description names a
-Jira key, pass it so the branch is the key; the specs directory still gets its
-own `NNN-slug` name, and `.specify/feature.json` is what ties the two together
-for the gates.
+`speckit.git.feature`, which creates the branch — let it, and branches here use
+the generated `NNN-slug` form, and `.specify/feature.json` ties the branch to
+the feature for the gates. If the description names a Notion story, feature or
+epic, put its URL in the spec so phase 3 can anchor on it.
 
 Gate override: the skill's clarification-question table is its interactive
 gate. Answer every question yourself from the description, the constitution,
@@ -197,32 +195,33 @@ and the repo. Each answer becomes a line under the spec's **Assumptions**
 marked `(autonomous default)`. A number in Success Criteria that no source
 supports is an assumption, not a metric — write it as one.
 
-### 3. Org context
+### 3. Notion context
 
-Invoke `speckit-context`. It anchors on the Jira key (the branch name, after
-phase 2) and gathers what the organisation already decided from Jira,
-Confluence, Slack, email, and this repository's open, closed and merged pull
-requests into `specs/<feature>/context.md`, bounded to the last 30 days. The
-four search lanes run inside its `org-researcher` subagent, so the noise never
-enters this run's context and the agent structurally cannot write outward; the
-PR lane is read by the caller, because `gh` needs a shell and a shell would
-undo that guarantee.
+Invoke `speckit-context`. It anchors on the Notion story, feature or epic the
+spec links (or on terms from the spec) and gathers what the owner's Notion
+space already says — the story and its comments, the feature page, the epic and
+its sibling stories, the architecture pages, the open decisions — into
+`specs/<feature>/context.md`. Notion is its only source, there is no recency
+window, and when sources disagree the latest one wins. The reading runs inside
+its `org-researcher` subagent, so the pages never enter this run's context and
+the agent structurally cannot write to Notion.
 
 Gate overrides:
 
 - The overwrite prompt is answered **overwrite**: phase 2 just created this
   feature directory, so any `context.md` there is from this run.
-- A lane whose MCP server is not connected or errors twice is logged
-  `[UNAVAILABLE: …]` and the run continues. A dead connector is a gap in the
-  report, never a Hard Stop, and never evidence that nothing exists.
-- If the feature has no Jira key and no usable search terms, the skill stops.
+- A Notion connector that is not connected or errors twice is logged
+  `[UNAVAILABLE: notion — …]` and the run continues without a digest. A dead
+  connector is a gap in the report, never a Hard Stop, and never evidence that
+  nothing exists.
+- If the feature has no Notion anchor and no usable search terms, the skill stops.
   In this command that is a complete phase with an empty digest, not a Hard
   Stop — log it and continue to phase 4.
 
 The output is an input, not a decision: carry its **Contradictions** and
 **Proposed Clarifications** into phase 4 as clarification material, and its
-**Constraints** into phase 5's Technical Context. The ticket remains the only
-source of scope — a Slack or email finding never becomes a requirement here,
+**Constraints** into phase 5's Technical Context. The story remains the only
+source of scope — any other Notion finding never becomes a requirement here,
 and this phase never edits `spec.md`.
 
 ### 4. Clarify

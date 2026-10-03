@@ -25,9 +25,9 @@ Commit per implementation slice, never pushes, stops only on the Hard Stops in
 `.claude/skills/speckit-auto/SKILL.md`, and logs its decisions to
 `specs/<feature>/auto-run.md`.
 
-`/speckit-context` searches Jira, Confluence, Slack and email through the
-`claude_ai_*` connectors. On this machine those are the QLOG workspace, so its
-org lanes do not apply here; its PR lane reads `george-hutanu/motor-fix`.
+`/speckit-context` reads only the Notion space "MotorFix — Product
+documentation" (story, feature page, epic, architecture, open decisions) — no
+recency window, and when sources disagree the latest one wins.
 
 Other entry points: `/speckit-assess-*` for raw ideas that aren't ready for a
 spec, `/speckit-bug-{assess,fix,test}` for bug reports, `/speckit-converge` to

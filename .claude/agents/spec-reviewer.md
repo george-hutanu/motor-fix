@@ -1,7 +1,7 @@
 ---
 name: spec-reviewer
 description: Reviews an implementation diff against the feature's spec.md, plan.md, tasks.md, and the motor-fix constitution. Reports findings by severity; CRITICAL/HIGH findings block completion. Invoke after /speckit-implement finishes a feature (or a phase), passing the feature directory and the diff range to review. Read-only — it never edits code.
-tools: Read, Grep, Glob, Bash, mcp__claude_ai_Atlassian__getJiraIssue
+tools: Read, Grep, Glob, Bash, ToolSearch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-get-comments, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-search, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-fetch, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-get-comments
 model: fable
 ---
 
@@ -19,12 +19,12 @@ range (or "working tree"). Gather your own evidence:
   only — never modify anything)
 - `specs/NNN-slug/spec.md` — requirements (FR-###), acceptance scenarios, edge cases
 - `specs/NNN-slug/plan.md` + `tasks.md` — the promised design and task list
-- `specs/NNN-slug/context.md` when present — the organisation's own record from
-  Jira, Confluence, Slack, email and the repository's pull requests. Its
+- `specs/NNN-slug/context.md` when present — the owner's Notion space as
+  `/speckit-context` read it, the latest source winning. Its
   Constraints bind the diff as tightly
   as the spec does
 - the feature's story or feature page in the Notion space "MotorFix — Product
-  documentation", **comments included**, when the spec links one. The local
+  documentation", **comments included**, when the spec links one (Notion read tools only — never a write). The local
   artifacts are as current as the day they were written; the story is current
   now. A comment that narrowed the ask after the spec was frozen is the finding
   the implementing agent structurally cannot see

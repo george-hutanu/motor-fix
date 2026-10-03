@@ -72,16 +72,16 @@ Execution steps:
 
 2. **IF EXISTS**: Load `.specify/memory/constitution.md` for project principles and governance constraints.
 
-2a. **IF EXISTS**: Load `FEATURE_DIR/context.md`, the organisational evidence
+2a. **IF EXISTS**: Load `FEATURE_DIR/context.md`, the Notion evidence
    gathered by `/speckit-context`, and mine it before generating a single
    question of your own:
    - Its **Proposed Clarifications** are questions already researched against
-     Jira, Confluence, Slack, email and the repository's pull requests. Promote
+     the owner's Notion space. Promote
      them ahead of anything you
      derive from the spec alone — they carry a cited answer, so asking them is
      cheap and answering them is sound.
    - Its **Contradictions with spec.md** are the highest-value questions
-     available: the spec and the organisation disagree, and only the user can
+     available: the spec and Notion disagree, and only the user can
      say which wins.
    - Its **Decisions** and **Constraints** ANSWER questions rather than raise
      them. A question the digest already settles must not be asked — record the

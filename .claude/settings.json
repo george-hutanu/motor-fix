@@ -150,7 +150,17 @@
       "Bash(node .claude/scripts/harness-eval.mjs)",
       "Bash(node .claude/scripts/harness-eval.mjs --check)",
       "Bash(node .claude/skills/design-audit/scripts/scan.mjs)",
-      "Bash(node .claude/skills/design-audit/scripts/contrast.mjs)"
+      "Bash(node .claude/skills/design-audit/scripts/contrast.mjs)",
+      "mcp__claude_ai_Notion__notion-search",
+      "mcp__claude_ai_Notion__notion-fetch",
+      "mcp__claude_ai_Notion__notion-get-comments",
+      "mcp__claude_ai_Notion__notion-query-data-sources",
+      "mcp__claude_ai_Notion__notion-get-tool-access",
+      "mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-search",
+      "mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-fetch",
+      "mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-get-comments",
+      "mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-query-data-sources",
+      "mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-get-tool-access"
     ]
   },
   "statusLine": {
