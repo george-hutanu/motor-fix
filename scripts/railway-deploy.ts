@@ -42,7 +42,9 @@ async function graphql<T>(
       'content-type': 'application/json',
     },
     method: 'POST',
+    signal: AbortSignal.timeout(30_000),
   });
+  if (!res.ok) throw new Error(`Railway API answered HTTP ${res.status}`);
   const body = (await res.json()) as {
     data?: T;
     errors?: { message: string }[];
@@ -81,7 +83,7 @@ async function waitFor(
   return 'TIMED_OUT';
 }
 
-async function deployOne(options: Options, service: Service) {
+const previousImage = async (options: Options, service: Service) => {
   const { serviceInstance } = await graphql<{
     serviceInstance: { source: { image: string | null } | null };
   }>(
@@ -89,8 +91,17 @@ async function deployOne(options: Options, service: Service) {
     'query ($serviceId: String, $environmentId: String) { serviceInstance(serviceId: $serviceId, environmentId: $environmentId) { source { image } } }',
     { environmentId: options.environmentId, serviceId: service.id },
   );
-  const previous = serviceInstance.source?.image;
+  return serviceInstance.source?.image ?? undefined;
+};
 
+const redeploy = (options: Options, service: Service) =>
+  graphql<{ serviceInstanceDeployV2: string }>(
+    options,
+    'mutation ($serviceId: String!, $environmentId: String!) { serviceInstanceDeployV2(serviceId: $serviceId, environmentId: $environmentId) }',
+    { environmentId: options.environmentId, serviceId: service.id },
+  );
+
+async function deployOne(options: Options, service: Service) {
   await update(options, service.id, {
     healthcheckPath: '/health/ready',
     healthcheckTimeout: HEALTH_TIMEOUT_S,
@@ -99,18 +110,12 @@ async function deployOne(options: Options, service: Service) {
     region: REGION,
     source: { image: service.image },
   });
-  const { serviceInstanceDeployV2: deploymentId } = await graphql<{
-    serviceInstanceDeployV2: string;
-  }>(
+  const { serviceInstanceDeployV2: deploymentId } = await redeploy(
     options,
-    'mutation ($serviceId: String!, $environmentId: String!) { serviceInstanceDeployV2(serviceId: $serviceId, environmentId: $environmentId) }',
-    { environmentId: options.environmentId, serviceId: service.id },
+    service,
   );
-
   const status = await waitFor(options, deploymentId);
   if (status === DONE) return;
-  if (previous)
-    await update(options, service.id, { source: { image: previous } });
   throw new Error(
     status === 'TIMED_OUT'
       ? `${service.name}: not healthy within ${options.limitMs / 1000} s`
@@ -118,9 +123,40 @@ async function deployOne(options: Options, service: Service) {
   );
 }
 
+// Puts every service this run touched back on the image it ran before. The
+// ones that already went live on the new image are redeployed; the one that
+// failed is still serving its previous deployment.
+async function restore(
+  options: Options,
+  touched: { service: Service; previous?: string; live: boolean }[],
+) {
+  for (const { service, previous, live } of touched) {
+    if (!previous) continue;
+    await update(options, service.id, { source: { image: previous } });
+    if (live) await redeploy(options, service);
+  }
+}
+
 // The api goes first: its pre-deploy step migrates the database the others use.
 export async function deploy(options: Options) {
-  for (const service of options.services) await deployOne(options, service);
+  const touched: { service: Service; previous?: string; live: boolean }[] = [];
+  try {
+    for (const service of options.services) {
+      const entry = {
+        live: false,
+        previous: await previousImage(options, service),
+        service,
+      };
+      touched.push(entry);
+      await deployOne(options, service);
+      entry.live = true;
+    }
+  } catch (error) {
+    await restore(options, touched).catch((restoreError: Error) =>
+      console.error(`restore failed: ${restoreError.message}`),
+    );
+    throw error;
+  }
 }
 
 const REPLICAS: Record<string, Record<string, number>> = {
@@ -141,7 +177,9 @@ async function main() {
   return deploy({
     endpoint: 'https://backboard.railway.com/graphql/v2',
     environmentId: required('RAILWAY_ENVIRONMENT_ID'),
-    limitMs: HEALTH_TIMEOUT_S * 1000,
+    // Railway's own health check (HEALTH_TIMEOUT_S, counted from container
+    // start) decides; this limit only stops a run whose deployment never ends.
+    limitMs: 20 * 60_000,
     pollMs: 5_000,
     services: ['api', 'worker', 'web'].map((name) => ({
       id: required(`RAILWAY_SERVICE_${name.toUpperCase()}`),

@@ -15,6 +15,24 @@ const CODE_BY_STATUS: Record<number, string> = {
   503: 'service_unavailable',
 };
 
+export function sendProblem(
+  res: Response,
+  status: number,
+  code: string,
+  detail?: string,
+) {
+  res
+    .status(status)
+    .type('application/problem+json')
+    .json({
+      code,
+      ...(detail && { detail }),
+      status,
+      title: STATUS_CODES[status],
+      type: 'about:blank',
+    });
+}
+
 // Every error leaves the API as RFC 9457 problem details with a stable `code`
 // the front end translates. Unknown errors keep their cause in the log only.
 @Catch()
@@ -26,17 +44,12 @@ export class ProblemFilter implements ExceptionFilter {
     const known = exception instanceof HttpException;
     const status = known ? exception.getStatus() : 500;
     if (!known) this.logger.error(exception);
-    const detail = known ? this.detail(exception) : undefined;
-    res
-      .status(status)
-      .type('application/problem+json')
-      .json({
-        code: known ? (CODE_BY_STATUS[status] ?? 'error') : 'internal_error',
-        ...(detail && { detail }),
-        status,
-        title: STATUS_CODES[status],
-        type: 'about:blank',
-      });
+    sendProblem(
+      res,
+      status,
+      known ? (CODE_BY_STATUS[status] ?? 'error') : 'internal_error',
+      known ? this.detail(exception) : undefined,
+    );
   }
 
   private detail(exception: HttpException): string | undefined {

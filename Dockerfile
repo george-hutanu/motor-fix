@@ -1,7 +1,7 @@
 # One image per app:
 #   docker build --build-arg APP=web --target web .
 #   docker build --build-arg APP=<api|worker|mcp> --target node-app .
-# Node's major version is the one in .nvmrc.
+# Keep in step with .nvmrc.
 ARG NODE_VERSION=24
 
 FROM node:${NODE_VERSION}-slim AS build
@@ -9,7 +9,10 @@ WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY libs/domain/prisma.config.ts libs/domain/prisma.config.ts
 COPY libs/domain/prisma libs/domain/prisma
-RUN npm ci
+# The repo's own install hooks set up git and need .husky; the build needs
+# only the Prisma client.
+RUN npm ci --ignore-scripts \
+ && npx prisma generate --config libs/domain/prisma.config.ts
 COPY . .
 ARG APP
 RUN npx nx run ${APP}:build --configuration=production

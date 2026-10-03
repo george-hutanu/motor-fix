@@ -63,16 +63,6 @@
       "defaultConfiguration": "development",
       "executor": "@angular/build:dev-server"
     },
-    "serve-static": {
-      "continuous": true,
-      "executor": "@nx/web:file-server",
-      "options": {
-        "buildTarget": "web:build",
-        "port": 4200,
-        "spa": true,
-        "staticFilePath": "dist/apps/web/browser"
-      }
-    },
     "test": {
       "executor": "@nx/jest:jest",
       "options": {

@@ -2,7 +2,7 @@ import type { Env } from '@motor-fix/contracts';
 import { HealthModule } from '@motor-fix/domain';
 import { DynamicModule, Module } from '@nestjs/common';
 
-export type ApiEnv = Env<'DATABASE_URL' | 'REDIS_URL'>;
+type ApiEnv = Env<'DATABASE_URL' | 'REDIS_URL'>;
 
 @Module({})
 export class AppModule {

@@ -148,3 +148,26 @@ describe('railway deploy', () => {
     });
   });
 });
+
+describe('railway deploy when the Railway API itself fails', () => {
+  it('names the HTTP status instead of failing to parse an error page', async () => {
+    const down = createServer((_req, res) =>
+      res.writeHead(502, { 'content-type': 'text/html' }).end('<html>'),
+    );
+    await new Promise<void>((resolve) => down.listen(0, resolve));
+    const endpoint = `http://localhost:${(down.address() as AddressInfo).port}`;
+
+    await expect(
+      deploy({
+        endpoint,
+        environmentId: 'env-1',
+        limitMs: 200,
+        pollMs: 5,
+        services,
+        token: 't',
+      }),
+    ).rejects.toThrow('Railway API answered HTTP 502');
+
+    await new Promise((resolve) => down.close(resolve));
+  });
+});

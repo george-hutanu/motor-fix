@@ -27,17 +27,17 @@ Paths are `(new)` unless they exist today: `package.json`, `biome.json`, `.gitig
 **Independent test**: both checks with services up, then with each pointed at a dead port.
 
 - [X] T012 [P] [US3] Test: `libs/domain/src/health/health.controller.spec.ts` against real PostgreSQL and Redis — live 200 with no dependency reachable; ready 200 with checks and version; 503 naming `redis` when Redis is unreachable and `postgres` when PostgreSQL is; answers within 2 s of a hanging dependency (FR-012, FR-013, SC-002)
-- [X] T013 [US3] `libs/domain/src/health/{health.service,health.controller,health.module}.ts` (research R4) (FR-012, FR-013)
-- [X] T014 [P] [US3] Test: `apps/mcp/src/main.spec.ts` — `/health/live` 200 `{"status":"ok"}` (FR-012)
-- [X] T015 [P] [US3] `apps/mcp/src/main.ts` — `node:http` server, `readEnv(['APP_ENV'])` (FR-012, FR-021)
-- [X] T016 [US3] `apps/worker/src/main.ts`, `apps/worker/src/worker.module.ts` — Nest app importing `HealthModule`, env check (FR-012, FR-013, FR-021)
+- [X] T013 [US3] `libs/domain/src/health/health.service.ts`, `libs/domain/src/health/health.controller.ts`, `libs/domain/src/health/health.module.ts` (research R4) (FR-012, FR-013)
+- [X] T014 [P] [US3] Test: `apps/mcp/src/server.spec.ts` — `/health/live` 200 `{"status":"ok"}` (FR-012)
+- [X] T015 [P] [US3] `apps/mcp/src/server.ts` and `apps/mcp/src/main.ts` — `node:http` server, `readEnv(['APP_ENV'])` (FR-012, FR-021)
+- [X] T016 [US3] `apps/worker/src/main.ts` — Nest app on `HealthModule`, env check (FR-012, FR-013, FR-021)
 
 ## Phase 4: US6 + API conventions (P1/P2)
 
 - [X] T017 [US6] Test: `apps/api/src/bootstrap.spec.ts` against real services — health outside `/api/v1`; unknown route → 404 problem+json `not_found`; unknown body field → 400 `validation_failed`; thrown error → 500 `internal_error` with no stack; `X-Request-Id` echoed and created; log lines are JSON with `requestId`; `/api/docs` 404 when `APP_ENV=production` and 200 otherwise (FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-018)
 - [X] T018 [US6] `apps/api/src/bootstrap.ts` — `configureApp` (research R3); `apps/api/src/app.module.ts`; `apps/api/src/main.ts` with `readEnv` (FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-018, FR-021)
-- [X] T019 [P] [US6] Test: `libs/domain/prisma/seed.spec.ts` — refuses `APP_ENV=production` with a non-zero exit; two runs succeed and leave the database unchanged (FR-025)
-- [X] T020 [US6] `libs/domain/prisma/seed.ts`; seed command in `prisma.config.ts`; `api:seed` target (FR-025)
+- [X] T019 [P] [US6] Test: `libs/domain/src/seed.spec.ts` — refuses `APP_ENV=production` with a non-zero exit; two runs succeed and leave the database unchanged (FR-025)
+- [X] T020 [US6] `libs/domain/src/seed.ts`; seed command in `prisma.config.ts`; `api:seed` target (FR-025)
 
 ## Phase 5: US4 Contract (P1)
 
@@ -48,7 +48,7 @@ Paths are `(new)` unless they exist today: `package.json`, `biome.json`, `.gitig
 ## Phase 6: US2 Walking skeleton (P1)
 
 - [X] T024 [P] [US2] Test: `apps/web/src/app/app.spec.ts` — renders "MotorFix", the version, and "PostgreSQL: ok · Redis: ok" / "Redis: error" from a `HealthReadyDto` held in `TransferState` (FR-019)
-- [X] T025 [P] [US2] Test: `apps/web/src/server.spec.ts` — `/health/live` and `/health/ready` 200 from web itself; `/api/v1/x` forwarded to a stub upstream with path, method, body and streaming preserved; `/health/ready` not forwarded (FR-014, FR-020)
+- [X] T025 [P] [US2] Test: `apps/web/src/server/edge.spec.ts` — `/health/live` and `/health/ready` 200 from web itself; `/api/v1/x` forwarded to a stub upstream with path, method, body and streaming preserved; `/health/ready` not forwarded (FR-014, FR-020)
 - [X] T026 [US2] `apps/web/src/app/app.ts` (+ template), `app.config.server.ts` (rootUrl from `API_INTERNAL_URL`) (FR-019)
 - [X] T027 [US2] `apps/web/src/server.ts` — health routes, `/api/` forward with `node:http`, env check (FR-014, FR-020, FR-021)
 - [X] T028 [US2] Test: `apps/web-e2e/src/skeleton.spec.ts` — open `/`, see "MotorFix", the version from `RELEASE_SHA`, and "PostgreSQL: ok · Redis: ok"; `BASE_URL` selects local or staging (US2-1, US5-4)
@@ -80,13 +80,13 @@ Paths are `(new)` unless they exist today: `package.json`, `biome.json`, `.gitig
 | FR-005 | `npm run lint` (Biome `noRestrictedImports`), checked once with a deliberate bad import |
 | FR-006–FR-010, FR-018 | `apps/api/src/bootstrap.spec.ts` |
 | FR-011 | `apps/api/src/bootstrap.spec.ts` (process TZ) |
-| FR-012, FR-013 | `libs/domain/src/health/health.controller.spec.ts`, `apps/mcp/src/main.spec.ts` |
-| FR-014, FR-020 | `apps/web/src/server.spec.ts` |
+| FR-012, FR-013 | `libs/domain/src/health/health.controller.spec.ts`, `apps/mcp/src/server.spec.ts` |
+| FR-014, FR-020 | `apps/web/src/server/edge.spec.ts` |
 | FR-015–FR-017 | CI contract check (T023, run in T029) |
 | FR-019 | `apps/web/src/app/app.spec.ts`, `apps/web-e2e/src/skeleton.spec.ts` |
 | FR-021, FR-023 | `libs/contracts/src/env.spec.ts` |
 | FR-022, FR-024, FR-026, FR-032, FR-033, FR-034 | inspection (files exist, no values) |
-| FR-025 | `libs/domain/prisma/seed.spec.ts` |
+| FR-025 | `libs/domain/src/seed.spec.ts` |
 | FR-027–FR-031 | `scripts/railway-deploy.spec.ts`; workflows by hand on first merge (FR-034) |
 
 ## Dependencies

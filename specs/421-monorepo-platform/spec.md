@@ -119,6 +119,8 @@ Railway and the later monitoring story need two checks per process: one that ans
 - The end-to-end run fails on staging: nothing is promoted; staging keeps that build until the next merge.
 - GitHub Actions or Railway is down: nothing is deployed and the running system is unaffected. The build lead can deploy an image that already passed on staging with the Railway command-line tool, staging first.
 - An unknown error in the API: it answers problem details with code `internal_error` and no stack trace.
+- A path outside `/api/` and `/health/` on the API: 404 problem details with code `not_found`.
+- A deploy fails after some services already went live on the new images: every service this run touched is put back on its previous image.
 - A request body with an unknown field: refused.
 
 ## Requirements *(mandatory)*
@@ -138,7 +140,7 @@ Railway and the later monitoring story need two checks per process: one that ans
 - **FR-006**: The API MUST serve its routes under `/api/v1`, and the health checks outside it at `/health/live` and `/health/ready`.
 - **FR-007**: The API MUST validate every request body against its DTO from `contracts`, refuse unknown fields, and transform input to the DTO types.
 - **FR-008**: Errors MUST be returned (Notion A28, proposed; confirmed in the plan) as RFC 9457 problem details (`application/problem+json`) with a stable `code`; an unknown error MUST answer 500 with code `internal_error` and no stack trace.
-- **FR-009**: Every response MUST carry an `X-Request-Id`, taken from the request or created when missing, and every log line MUST carry it.
+- **FR-009**: Every response MUST carry an `X-Request-Id`, taken from the request when it is 1–128 letters, digits, `_`, `.` or `-`, and created otherwise; every log line written during a request MUST carry it.
 - **FR-010**: Logs MUST be JSON lines on standard output with no e-mail address, phone number, number plate or message text.
 - **FR-011**: Every process MUST run with `TZ=UTC`.
 
@@ -158,7 +160,7 @@ Railway and the later monitoring story need two checks per process: one that ans
 **Skeleton page**
 
 - **FR-019**: The web app's root page MUST show "MotorFix", the deployed version (`dev` locally, the commit SHA when deployed), and "PostgreSQL: ok · Redis: ok" (or the failing part; "unknown" for both, and "version unknown", when the API does not answer). The page is server-rendered: during server rendering it calls the API's `/health/ready` through the generated client at `API_INTERNAL_URL`, and the browser reuses that result without a second call.
-- **FR-020**: The `web` server MUST forward `/api/` requests to the `api` service without buffering the response. It answers its own `/health/*` and forwards none of it.
+- **FR-020**: The `web` server MUST forward `/api/` requests to the `api` service without buffering the response, close the upstream request when the browser goes away, and close the browser's response when the API breaks off. It answers its own `/health/*` and forwards none of it.
 
 **Configuration and secrets**
 

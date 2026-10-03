@@ -5,15 +5,6 @@
   "sourceRoot": "apps/api/src",
   "tags": [],
   "targets": {
-    "copy-workspace-modules": {
-      "cache": true,
-      "dependsOn": ["build"],
-      "executor": "@nx/js:copy-workspace-modules",
-      "options": {
-        "buildTarget": "build"
-      },
-      "outputs": ["{workspaceRoot}/dist/apps/api/workspace_modules"]
-    },
     "openapi": {
       "command": "node dist/apps/api/main.js openapi apps/api/openapi.json",
       "dependsOn": ["build"],
@@ -24,22 +15,6 @@
           "REDIS_URL": "redis://localhost/unused"
         }
       }
-    },
-    "prune": {
-      "dependsOn": ["prune-lockfile", "copy-workspace-modules"],
-      "executor": "nx:noop"
-    },
-    "prune-lockfile": {
-      "cache": true,
-      "dependsOn": ["build"],
-      "executor": "@nx/js:prune-lockfile",
-      "options": {
-        "buildTarget": "build"
-      },
-      "outputs": [
-        "{workspaceRoot}/dist/apps/api/package.json",
-        "{workspaceRoot}/dist/apps/api/package-lock.json"
-      ]
     },
     "serve": {
       "configurations": {
@@ -61,9 +36,6 @@
     },
     "test": {
       "options": {
-        "env": {
-          "NODE_OPTIONS": "--experimental-vm-modules --no-warnings=ExperimentalWarning"
-        },
         "passWithNoTests": true
       }
     },

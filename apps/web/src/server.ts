@@ -21,7 +21,7 @@ const browserDistFolder = resolve(
 const app = express();
 const publicUrl = process.env['PUBLIC_WEB_URL'];
 const angularApp = new AngularNodeAppEngine({
-  allowedHosts: publicUrl ? [new URL(publicUrl).hostname] : [],
+  allowedHosts: publicUrl ? [new URL(publicUrl).hostname] : undefined,
 });
 
 mountEdge(app, apiInternalUrl());

@@ -12,13 +12,6 @@
         "cwd": "libs/domain"
       }
     },
-    "test": {
-      "options": {
-        "env": {
-          "NODE_OPTIONS": "--experimental-vm-modules --no-warnings=ExperimentalWarning"
-        }
-      }
-    },
     "typecheck": {
       "cache": true,
       "command": "tsc --noEmit -p libs/domain/tsconfig.lib.json && tsc --noEmit -p libs/domain/tsconfig.spec.json"
