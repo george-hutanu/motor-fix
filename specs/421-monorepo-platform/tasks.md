@@ -55,7 +55,7 @@ Paths are `(new)` unless they exist today: `package.json`, `biome.json`, `.gitig
 
 ## Phase 7: US1 Fresh clone (P1)
 
-- [ ] T029 [US1] Run the five root commands on a clean install; fix until green (SC-001, US1-1)
+- [X] T029 [US1] Run the five root commands on a clean install; fix until green (SC-001, US1-1)
 
 ## Phase 8: US5 + US7 Pipeline and environments (P2/P3)
 

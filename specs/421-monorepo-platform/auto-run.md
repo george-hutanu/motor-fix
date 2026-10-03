@@ -53,3 +53,14 @@
 - Homebrew postgresql@17 and redis installed and started (research R9).
 - Red: `npx jest libs/contracts libs/domain apps/api apps/mcp apps/web/src` → Test Suites: 7 failed, 7 total (missing modules; seed: 2 tests failed).
 - Seams chosen for testability: readEnv(required, env); HealthModule.register({databaseUrl, redisUrl, version}); configureApp(app, env) + AppModule.register(env); mcp createServer(); web mountEdge(app, apiUrl); page reads TransferState key HEALTH. Added state "unknown" when the API did not answer (FR-019 updated).
+
+## 10. Implement
+- All 38 tasks done. Commits: feat(api) workspace + health + conventions; feat(web) page + client + edge server; ci(release) images, deploy script, workflows (also carries the ExpressAdapter fix found while reproducing the image steps).
+- Findings during implementation, each fixed and verified:
+  - Jest needs `--experimental-vm-modules` to load ESM-only Nest 12; set per Nest project (it breaks jest-preset-angular, so not globally).
+  - Nx's generated package.json missed `@prisma/client`, `tslib`, `prisma` (runtimeDependencies) and `@nestjs/platform-express` (dynamic import; fixed by using `new ExpressAdapter()` explicitly).
+  - Angular 22 SSR rejects unknown hosts → `allowedHosts` from PUBLIC_WEB_URL.
+  - `node .` makes Angular's isMainModule false → the web image has its own final stage starting `server/server.mjs`.
+  - TS7 rejected by Angular peers; `moduleResolution: node10` deprecated in TS 6 → `bundler` in web spec tsconfig.
+- Verified: smoke tests of every built app from an `npm ci --omit=dev` copy of its dist (image steps without Docker); the page renders ok / Redis error / unknown; `prisma migrate deploy` from the api image layout; Playwright e2e 1 passed locally; fresh clone: typecheck, lint, test, build, test:harness all ok.
+- Not verifiable here: `docker build` (no Docker), the GitHub workflows and Railway (owner setup) → quickstart.md by-hand table.
