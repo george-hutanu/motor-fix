@@ -100,3 +100,7 @@ Phase 1 → Phase 2 → (Phase 3 ∥ Phase 4) → Phase 5 (needs `configureApp`)
 3. `feat(web): …` — Phases 5–6
 4. `ci(release): …` — Phase 8
 5. `docs: …` — Phase 9 and the spec artifacts
+
+## Phase 10: Convergence
+
+- [X] T039 Remove the `push: main` trigger from `.github/workflows/ci.yml`: `release.yml` already runs it through `workflow_call` on every merge, so each merge runs the checks twice per FR-027, FR-028 (unrequested)

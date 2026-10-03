@@ -1,9 +1,8 @@
 name: CI
 
+# Merges into main run this through release.yml.
 on:
   pull_request:
-  push:
-    branches: [main]
   workflow_call:
 
 permissions:

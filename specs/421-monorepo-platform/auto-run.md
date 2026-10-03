@@ -64,3 +64,8 @@
   - TS7 rejected by Angular peers; `moduleResolution: node10` deprecated in TS 6 → `bundler` in web spec tsconfig.
 - Verified: smoke tests of every built app from an `npm ci --omit=dev` copy of its dist (image steps without Docker); the page renders ok / Redis error / unknown; `prisma migrate deploy` from the api image layout; Playwright e2e 1 passed locally; fresh clone: typecheck, lint, test, build, test:harness all ok.
 - Not verifiable here: `docker build` (no Docker), the GitHub workflows and Railway (owner setup) → quickstart.md by-hand table.
+
+## 11. Converge
+- Cycle 1: 34 FRs, 5 SCs (buildable: SC-001–SC-003, SC-005), plan decisions R1–R10 and Principles I–VI checked against the code. 1 finding: F1 unrequested/LOW — ci.yml ran on push to main and again via release.yml's workflow_call → T039 appended and done.
+- Not appended (outside the spec): the server-rendered page waits as long as the API does if the API hangs (no client-side timeout) → Follow-ups. plan.md still lists `@nx/nest` (removed during implement) → recorded here; converge does not edit plan.md.
+- Cycle 2: no further findings.
