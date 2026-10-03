@@ -18,7 +18,7 @@
         "strict"
       ],
       "description": "Re-anchor a new session: branch and feature state, the mode context for where the feature stands, earned instincts, and the check commands — inside a character budget",
-      "fingerprint": "a21682e6f62e"
+      "fingerprint": "2945fc12f49b"
     },
     {
       "id": "session:start:github-identity",
@@ -106,7 +106,7 @@
         "strict"
       ],
       "description": "Syntax-check the edited file and run the tests affected by it",
-      "fingerprint": "a7dfcbb15e7d"
+      "fingerprint": "d18883208ed5"
     },
     {
       "id": "stop:test-gate",
@@ -119,7 +119,7 @@
       ],
       "description": "Refuse to end a session whose uncommitted code changes leave npm test + lint red",
       "fail_closed": true,
-      "fingerprint": "a9e5a2e56fa9"
+      "fingerprint": "cec14128380c"
     },
     {
       "id": "stop:telemetry",

@@ -15,7 +15,7 @@
 <!--
   ACTION REQUIRED: Replace the content in this section with the technical details
   for the project. Source every value from repo files (package.json, lockfile,
-  tsconfig*.json, turbo.json, vitest.config.ts, the touched app's config) and cite
+  tsconfig*.json, nx.json, jest.config.ts, the touched app's config) and cite
   the file — never from memory. The structure here is presented in advisory
   capacity to guide the iteration process.
 -->
@@ -42,15 +42,28 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-Gates from the motor-fix Constitution (v1.0.0) — evaluate in order:
+Gates from the motor-fix Constitution (v1.1.0) — evaluate in order:
 
 - [ ] **I. No Bloat (NON-NEGOTIABLE)**: plan is the smallest design that fully
   solves the feature — no speculative abstractions, no single-implementation
   layers, no new dependency where an existing one or local code suffices.
   Anything that looks like bloat goes to Complexity Tracking or gets cut.
-- [ ] **II. Test Discipline**: failing tests come first (`/speckit-tests`);
-  unit tests colocated with their source; tests cover real behavior, sized
-  like their neighbors.
+- [ ] **II. Test Discipline**: failing tests first (`/speckit-tests`); Jest
+  specs colocated with their source; API tests against real PostgreSQL and
+  Redis; Playwright for end-to-end flows.
+- [ ] **III. The Given Stack**: Angular + PrimeNG (Cockpit theme), NestJS,
+  PostgreSQL, Redis — no substitute and no second framework for the same job.
+- [ ] **IV. One Repository, One Toolchain**: fits the Nx apps `web`, `api`,
+  `worker`, `mcp` and shared libs; no microservice, GraphQL, global store,
+  search engine or broker; no eslint, prettier or per-project Biome config.
+- [ ] **V. Rules Live in One Place**: API shapes in the OpenAPI document with a
+  generated client; DTOs validated at the edge; one use case shared by
+  screen, worker and MCP server; trust checked on the server.
+- [ ] **VI. PostgreSQL Is the Truth**: nothing only in Redis; every state
+  change saved with its outbox event in the same transaction.
+- [ ] **Notion choices**: each Proposed choice this plan relies on cites its
+  Notion Architecture page; each To-decide item (T1–T10) it touches is marked
+  `[NEEDS CLARIFICATION]`, not assumed.
 
 ## Project Structure
 

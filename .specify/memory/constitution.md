@@ -1,16 +1,38 @@
 <!--
-Sync Impact Report (v1.0.0)
-- Version change: none → 1.0.0 (initial ratification)
-- Derived from the speckit-demo harness constitution (v1.2.1). Kept the
-  stack-agnostic parts: No Bloated Code, Test Discipline, Enforcement, Agent
-  Execution Rules, Governance. Dropped the stack-specific principles
-  (contract-first client/server, production-parity libraries, single root
-  toolchain): motor-fix has no stack yet.
-- Templates: ✅ .specify/templates/plan-template.md Constitution Check now
-  lists I and II only
-- Follow-up TODOs: once the stack is chosen, run /speckit-constitution to add
-  its principles (MINOR bump) and re-point the edit-time gates if the code
-  does not live under apps/* and libs/*
+Sync Impact Report (v1.1.0)
+- Version change: 1.0.0 → 1.1.0 (MINOR: four principles added, II and the
+  Enforcement section materially expanded; nothing removed or redefined)
+- Source: the owner's Notion space "MotorFix — Product documentation",
+  Architecture > Technology stack
+  (https://app.notion.com/p/3ee607bff0d2819ab8e3ee6926a249f2) and
+  Architecture decisions
+  (https://app.notion.com/p/3ee607bff0d28111907edddc4bdd066a), read 2026-10-03.
+  Lint is Biome (owner's choice, overriding nothing in Notion, which leaves
+  lint unspecified); tests are Jest + Playwright as Notion proposes.
+- Modified principles: II. Test Discipline — names Jest for unit and API
+  tests, Playwright for end-to-end
+- Added principles: III. The Given Stack; IV. One Repository, One Toolchain;
+  V. Rules Live in One Place; VI. PostgreSQL Is the Truth
+- Added sections: none (Additional Constraints expanded: worker for slow work,
+  by-hand route per integration, EU data residency, Notion as the source for
+  Proposed and To-decide choices)
+- Removed sections: none
+- Gates changed: post-edit-check.sh and stop-test-gate.sh run Biome + Jest
+  (were Biome + vitest) and skip each tool until it is installed
+- Templates:
+  - ✅ .specify/templates/plan-template.md — Constitution Check lists I–VI;
+    Technical Context cites nx.json / jest.config.ts
+  - ✅ .specify/templates/spec-template.md — no change needed
+  - ✅ .specify/templates/tasks-template.md — no change needed
+  - ✅ .specify/contexts/implement.md — one-toolchain rule names biome.json
+  - ✅ .claude/agents/{spec-reviewer,code-reviewer,test-adversary}.md — principle
+    list II–VI, Jest commands
+  - ✅ .claude/skills/speckit-{tests,plan,auto,harden,bug-fix}/SKILL.md — Jest,
+    Nx, biome.json (project-local edits; re-apply after `specify integration
+    upgrade`)
+  - ✅ CLAUDE.local.md, AGENTS.md — stack and gate tables
+- Follow-up TODOs: none in this file. Notion's To-decide items T1–T10 stay open
+  by design (Additional Constraints).
 -->
 
 # motor-fix Constitution
@@ -31,7 +53,8 @@ habit, template output, and generated boilerplate.
   re-export barrels that exist only for organization.
 - Wrappers, interfaces, and indirection MUST be justified by at least two real
   call sites or a concrete, current requirement — not symmetry or aesthetics.
-- Generated scaffolding MUST be stripped to what the project actually uses.
+- Generated scaffolding (Nx, Angular and Nest generators) MUST be stripped to
+  what the project actually uses.
 
 Rationale: bloat is the dominant long-term cost — every unused layer is read,
 built, and maintained forever. Reviewers reject bloated diffs outright; "it
@@ -41,8 +64,11 @@ might be useful later" is not a defense.
 
 - Failing tests come before implementation: `/speckit-tests` turns a feature's
   requirements into red tests, then `/speckit-implement` makes them green.
-- Unit tests MUST be colocated with the source they cover
-  (`foo.ts` / `foo.spec.ts`).
+- Unit and API tests run on Jest from the root config, colocated with the
+  source they cover (`foo.ts` / `foo.spec.ts`). API tests run against real
+  PostgreSQL and Redis in containers, never mocks of either.
+- End-to-end flows run on Playwright in the app's `*-e2e` project; the three
+  core flows are covered end to end before every release.
 - Tests follow Principle I: cover real behavior and contracts, no padding
   suites for coverage numbers.
 - Source carries no internal identifiers — no FR id, feature number, task id,
@@ -50,10 +76,86 @@ might be useful later" is not a defense.
   in `tasks.md` and each command's completion report.
 
 Rationale: concrete failing tests cut agent regressions where advisory TDD
-prose does not; colocation keeps tests discoverable and honest.
+prose does not; tests against the real database catch what mocks agree to.
+
+### III. The Given Stack
+
+The owner's stack is decided, not proposed:
+
+- Front end: Angular (standalone components, signals) with PrimeNG, styled by
+  the Cockpit theme — design tokens on top of PrimeNG plus the few custom
+  components it needs (dial, lamp, rolling digits).
+- Back end: NestJS on Node.js, PostgreSQL, Redis.
+- TypeScript everywhere; types are shared between browser, API, worker and
+  MCP server.
+- Each at its current long-term-support release when the build starts; no
+  version is pinned by this document.
+- A substitute for any of these, or a second framework doing the same job,
+  MUST NOT land without an amendment.
+
+Rationale: the stack is the owner's, and every design page in Notion assumes
+it; a quiet substitute invalidates the documentation the build follows.
+
+### IV. One Repository, One Toolchain
+
+- One Nx monorepo: apps `web`, `api`, `worker`, `mcp`, and shared libraries.
+  A new app MUST NOT be added without an amendment.
+- One API and one worker — no microservices. Modules follow the product areas
+  and stay separable; nothing is split early.
+- No GraphQL, no global front-end store library, no separate search engine,
+  no message broker besides Redis.
+- Biome is the only linter and formatter, from the root `biome.json`. No
+  eslint, no prettier, no per-project Biome config; a genuinely
+  project-specific need is a scoped `overrides` entry in the root file.
+- Jest runs from the root config across every project.
+
+Rationale: one of each, until it hurts — a small team ships faster with one
+deployable and one toolchain, and duplicate configs drift silently
+(Principle I applied to tooling).
+
+### V. Rules Live in One Place
+
+- The API is REST with JSON, described by an OpenAPI document. The Angular
+  client is generated from it; request and response types MUST NOT be written
+  by hand on the client.
+- Every request is validated at the API edge by DTOs whose types live in a
+  shared contracts library and feed the OpenAPI document.
+- The screen, the background job and the MCP server reach a rule through the
+  same use case. A rule is written once.
+- Trust is enforced on the server: unverified garages are never returned,
+  ownership is checked on every call, and an AI assistant gets no more than
+  its user's role.
+
+Rationale: a rule copied into two places is two rules the day one of them
+changes; a check made only in the browser is not a check.
+
+### VI. PostgreSQL Is the Truth
+
+- PostgreSQL is the single source of truth. Redis only caches, queues, fans
+  out and counts; nothing in Redis is the only copy of anything, and emptying
+  it loses nothing.
+- Every state change is saved with the event that announces it, in the same
+  transaction (transactional outbox). An event is never published outside the
+  transaction that saved its change.
+
+Rationale: no change without its event is what keeps trackers, inboxes and
+notifications in step, even when Redis is down.
 
 ## Additional Constraints
 
+- Slow work — e-mail, register look-ups, clip processing, PDFs — runs in the
+  worker, never in a request. Files go straight from the browser to object
+  storage.
+- Every outside integration (ANAF, ONRC, RAR registers, WhatsApp, PDF) has a
+  by-hand route, so no outside party can block a launch.
+- Personal data stays in an EU region.
+- The Notion Architecture section is the source of truth for the choices it
+  marks Proposed (Prisma, BullMQ, server-sent events, PostGIS, signed uploads,
+  and the rest); each is confirmed or replaced per feature in `/speckit-plan`,
+  citing the Notion page. Its To-decide items (T1–T10: hosting, maps, e-mail,
+  PWA or store apps, register automation, live video, scheduling component,
+  OAuth for assistants, analytics, retention) are open: a plan that depends on
+  one records it as `[NEEDS CLARIFICATION]` instead of assuming an answer.
 - Code style matches the surrounding file: same comment density, naming, and
   idiom. Comments state constraints the code cannot show — never narration.
 - Every commit and push is authored as `george-hutanu <hutanugeorge40@gmail.com>`
@@ -65,7 +167,9 @@ prose does not; colocation keeps tests discoverable and honest.
 
 - Every plan produced by `/speckit-plan` MUST pass the Constitution Check
   gates, with Principle I (No Bloat) evaluated first.
-- Every PR review MUST verify: no bloat (I), tests placed and written per (II).
+- Every PR review MUST verify: no bloat (I), tests placed and written per (II),
+  the given stack (III), one repository and toolchain (IV), rules in one place
+  (V), PostgreSQL as the truth (VI).
 - Any complexity that appears to violate Principle I MUST be justified in the
   plan's Complexity Tracking table before implementation starts; unjustified
   complexity is rejected, not negotiated during review.
@@ -78,19 +182,17 @@ the hooks live in `.claude/hooks/`, the checks in `.claude/scripts/`.
 | Principle / rule | Gate | Fires |
 | --- | --- | --- |
 | II red-first tests | `red-first-gate.mjs` (PreToolUse) | blocks `apps/*/src` and `libs/*/src` edits while the active feature has FRs and open tasks but the branch adds or modifies no `*.spec.*` / `*.test.*` file |
+| II, IV broken-edit feedback | `post-edit-check.sh` (PostToolUse) | `biome check` on the edited file, then its colocated `*.spec.ts` through the root Jest config |
+| II, IV done means green | `stop-test-gate.sh` (Stop hook) | the agent may not finish with `biome check` red on changed TypeScript or `jest --onlyChanged` red |
 | Spec-drift rule | `.claude/scripts/spec-drift.mjs --staged` | pre-commit, keyed on the conventional-commit type |
 | Commit hygiene | `commit-msg-policy.js` | one-line Conventional Commit, no metadata trailers or tool mentions |
 | Identity | `.husky/pre-commit` → `.husky/identity.sh check`; `github-identity.sh` (SessionStart) | refuses a commit not authored by `george-hutanu <hutanugeorge40@gmail.com>`; pins `gh` to the `george-hutanu` account for agent sessions |
-| Broken-edit feedback | `post-edit-check.sh` (PostToolUse) | `biome check` + the affected `*.spec.ts` after every edit |
-| Done means green | `stop-test-gate.sh` (Stop hook) | the agent may not finish with `vitest run --changed` or biome red |
 | Destructive commands | `bash-guard.mjs` (PreToolUse) | force-push, `reset --hard`, `clean -f`, deleting `.work/` |
-| Full verification | `.husky/pre-commit` | `npm run typecheck && npm run lint && npm run test` on every real commit |
+| Full verification | `.husky/pre-commit` | identity, then `npm run typecheck && npm run lint && npm run test` on every real commit |
 
-The edit-time gates (`red-first`, `post-edit-check`, `stop-test-gate`) are tuned
-for a TypeScript layout under `apps/*`, `libs/*` and `e2e/` with Biome and
-vitest, and pass silently on anything else. Until the stack is chosen they are
-armed but inert; if the code lands elsewhere, re-point them and bless the
-fingerprints (`node .claude/scripts/doctor.mjs --bless-hooks`).
+The edit-time gates watch `apps/*`, `libs/*` and `e2e/`, and skip Biome or Jest
+while that tool is not installed yet (before the Nx scaffold lands) rather than
+failing every edit.
 
 Spec-drift is hash-based: the gate records the active feature's `spec.md` +
 `tasks.md` content hash per gated commit (`.claude/.spec-drift-state.json`)
@@ -98,8 +200,9 @@ and blocks a `feat`/`fix`/`perf` commit that stages implementation code while
 that hash is unchanged. Traceability is reported by
 `.claude/scripts/trace-matrix.mjs`, not gated.
 
-Principle I is a judgment call with no mechanical gate; the `code-reviewer` and
-`spec-reviewer` subagents check it during review, and deviations surface there.
+Principles I and III–VI are judgment calls with no mechanical gate beyond
+Biome's; the `code-reviewer` and `spec-reviewer` subagents check them during
+review, and deviations surface there.
 
 ## Agent Execution Rules
 
@@ -157,4 +260,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-03
+**Version**: 1.1.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-03

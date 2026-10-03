@@ -33,10 +33,11 @@ produces artifacts, not intentions.
 - **Real assertions, no placeholders.** Every test asserts the concrete expected
   behavior from the spec (return shapes, thrown errors, counters, ordering). No
   `it.todo`, no empty bodies, no assertions on placeholder values.
-- **House test conventions** (constitution V): vitest, colocated `foo.spec.ts`
+- **House test conventions** (constitution II): Jest, colocated `foo.spec.ts`
   next to the source it covers; app-level integration tests in the app's `test/`;
   cross-app in `e2e/`. Temp dirs via `mkdtemp`, cleaned in `afterEach`. Suite
-  stays fast and deterministic. No parameter-property DI in `apps/server`.
+  stays fast and deterministic. End-to-end flows are Playwright, in the app's
+  `*-e2e` project.
 - **Plain test titles** (project rule): describe the behavior, nothing else — no
   FR tokens, ticket codes, or other prefixes in titles.
 - **No internal identifiers anywhere in the source** (project rule): not in test

@@ -1,8 +1,8 @@
 {
   "file": "CLAUDE.local.md",
   "_comment": "High-water mark for the agent context file, in non-empty lines. A ratchet: the context file may shrink freely and may not grow without a recorded reason. Read by scripts/context-audit.mjs and by the pre:edit:config-protection hook.",
-  "lines": 140,
-  "chars": 10113,
+  "lines": 135,
+  "chars": 9791,
   "managed_lines": 1,
   "recorded": "2026-10-03"
 }

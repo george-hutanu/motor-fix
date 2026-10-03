@@ -143,7 +143,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
   const tail = [
     "Gates: node .claude/hooks/run-hook.mjs <id> runs each one; `node .claude/scripts/doctor.mjs` lists them and checks they still fire.",
-    "Checks: npm test | npm run lint | npm run typecheck | node .claude/scripts/doctor.mjs | node .claude/scripts/trace-matrix.mjs | node .claude/scripts/artifact-lint.mjs | node .claude/scripts/diff-audit.mjs | npm run test:mutation -w apps/server",
+    "Checks: npm test | npm run lint | npm run typecheck | node .claude/scripts/doctor.mjs | node .claude/scripts/trace-matrix.mjs | node .claude/scripts/artifact-lint.mjs | node .claude/scripts/diff-audit.mjs",
     "Constitution: .specify/memory/constitution.md | Full autonomous cycle: /speckit-auto",
   ].join("\n");
 

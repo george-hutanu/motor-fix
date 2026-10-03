@@ -46,8 +46,8 @@ This is the whole point of the command — read it before phase 1.
    `**Recommended:** Option X` or `**Suggested:** <answer>`, that is the
    answer. Where it computes none, pick the option that best fits the
    constitution (`.specify/memory/constitution.md`, Principle I first) and
-   this repo's real code — `package.json`, `turbo.json`, `biome.jsonc`,
-   `vitest.config.ts`, the touched workspace — and say which evidence decided
+   this repo's real code — `package.json`, `nx.json`, `biome.json`,
+   `jest.config.ts`, the touched workspace — and say which evidence decided
    it.
 3. **Assumptions are written down, not held in memory.** Every autonomous
    answer lands in the artifact the phase owns (spec Clarifications /
@@ -84,7 +84,7 @@ Run these before phase 1, in one batch:
   starting branch and commit.
 - Read `.specify/memory/constitution.md` (v1.2.1 — its Enforcement section
   lists the gates that will fire at you).
-- `npm run typecheck && npm run lint && npx vitest run` — the repo MUST start
+- `npm run typecheck && npm run lint && npx jest` — the repo MUST start
   green. A red start is a hard stop; the run has no way to tell a pre-existing
   failure from one it caused. This is the one time the full suite runs; after
   this, verification is scoped to what changed.
@@ -174,7 +174,7 @@ Do **not** invoke `/speckit-constitution`: it rewrites the constitution and
 propagates into templates and installed skill files, which is not a decision
 an autonomous run gets to make. Instead read
 `.specify/memory/constitution.md`, confirm it has a version and no unfilled
-`[PLACEHOLDER]` tokens, and carry its five principles — Principle I (No
+`[PLACEHOLDER]` tokens, and carry its principles — Principle I (No
 Bloated Code) first — into every later phase.
 
 Only if the file is missing or still a bare template: invoke
@@ -241,7 +241,7 @@ complete phase, not a failure.
 ### 5. Plan
 
 Invoke `speckit-plan`. Technical Context values come from `package.json`, the
-lockfile, `tsconfig*.json`, `turbo.json`, `vitest.config.ts`, and the touched
+lockfile, `tsconfig*.json`, `nx.json`, `jest.config.ts`, and the touched
 workspace's own config — read them and cite them; never a version from memory.
 Parse the setup script's JSON for `FEATURE_SPEC`, `IMPL_PLAN`, `FEATURE_DIR`,
 `BRANCH` (spec-kit ≥1.0.5 renamed `SPECS_DIR` to `FEATURE_DIR`).
@@ -277,15 +277,15 @@ findings survive both, that is a Hard Stop.
 ### 9. Tests (red-first gate)
 
 Invoke `speckit-tests`. Every spec FR must get at least one test in a
-colocated `*.spec.ts` next to the code it covers (`apps/server` module tests in
-`apps/server/test/*.e2e.spec.ts`, cross-app in `e2e/` — constitution V),
+colocated `*.spec.ts` next to the code it covers (API tests against real PostgreSQL and
+Redis, end-to-end flows in the app's `*-e2e` Playwright project — constitution II),
 No internal identifier goes into the source — not in a title, not in a comment:
 no FR id, feature number, task id or Jira key (project rule,
 `.claude/skills/speckit-tests/SKILL.md`). The FR → test mapping belongs to the
 completion report and `tasks.md`, where those ids resolve. Comments are held to
 the same bar as code: one only where it says something the code cannot. Then
 prove red: run the new spec files with
-`npx vitest run <files>` and quote the failing count in the run log. Tests that
+`npx jest <files>` and quote the failing count in the run log. Tests that
 pass before any implementation exist are not red-first — fix the test, do not
 proceed.
 

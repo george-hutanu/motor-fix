@@ -54,14 +54,14 @@ For each public entry point:
   surface under attack (`foo.ts` → `foo.spec.ts`), or in the app's `test/`
   directory for HTTP. You never touch `src/` bodies; the red-first gate blocks
   you if you try, and it is right to.
-- **House conventions**: vitest; plain titles describing the behavior; no FR
+- **House conventions**: Jest; plain titles describing the behavior; no FR
   ids, ticket keys, task ids or other internal identifiers anywhere in the
   file; no comment that restates its own test; temp dirs via `mkdtemp`, cleaned
-  in `afterEach`; no parameter-property DI in `apps/server`.
+  in `afterEach`.
 - **Real assertions.** Every test asserts a concrete expected outcome from the
   spec or contract — a thrown error, a status code, an exact shape. Never
   `toBeTruthy()`, never "does not throw" alone.
-- **Run what you wrote**: `npx vitest run <your files>`. A failing test is not
+- **Run what you wrote**: `npx jest <your files>`. A failing test is not
   a mistake — it is your deliverable. Do not fix the implementation and do not
   delete the test.
 

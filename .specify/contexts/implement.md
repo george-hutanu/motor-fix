@@ -6,5 +6,5 @@ Mode: implement — traced failing tests exist and tasks are open.
   in the same commit; pure code motion is `refactor`/`chore`.
 - `/speckit-converge` diffs the code against spec/plan/tasks and appends what is
   still unbuilt — use it instead of hand-auditing.
-- One root toolchain (constitution IV): no per-app Biome or vitest config beyond
-  what the root `biome.jsonc` and `vitest.config.ts` already govern.
+- One root toolchain (constitution IV): no per-project eslint, prettier or second
+  Biome config; the root `biome.json` governs, with scoped `overrides` only.

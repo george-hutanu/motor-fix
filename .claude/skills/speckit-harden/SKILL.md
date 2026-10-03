@@ -158,7 +158,7 @@ The rubric it applies, so you can judge its findings:
 Apply the fixes in one pass, then:
 
 ```bash
-npx vitest run --changed && npm run lint && npm run typecheck
+npx jest --onlyChanged && npm run lint && npm run typecheck
 ```
 
 Re-run the audits from step 1. Loop at most twice; a third round means the
@@ -186,7 +186,7 @@ Needs you: <finding this command must not decide>
 - [ ] `diff-audit.mjs` and `artifact-lint.mjs` report zero ERRORs, or each survivor is explained in the report
 - [ ] Mutation score at or above the configured floor for every touched package, with no disable added to get there (or the step explicitly waived by the user)
 - [ ] Durability read done, with each of its five questions answered for the diff
-- [ ] `vitest run --changed`, `lint` and `typecheck` green after the last edit
+- [ ] `jest --onlyChanged`, `lint` and `typecheck` green after the last edit
 - [ ] Every fix is a refactor, deletion, or added test — no behavior changed, no test weakened
 - [ ] Report delivered with before/after numbers, not adjectives
 

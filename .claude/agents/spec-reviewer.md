@@ -15,7 +15,7 @@ The invoking prompt names a feature directory (`specs/NNN-slug/`) and a diff
 range (or "working tree"). Gather your own evidence:
 
 - `git diff <range>` / `git status` for what actually changed (Bash is for
-  read-only git, `npx vitest run`, `npm run typecheck` and `npm run lint`
+  read-only git, `npx jest`, `npm run typecheck` and `npm run lint`
   only — never modify anything)
 - `specs/NNN-slug/spec.md` — requirements (FR-###), acceptance scenarios, edge cases
 - `specs/NNN-slug/plan.md` + `tasks.md` — the promised design and task list
@@ -23,13 +23,12 @@ range (or "working tree"). Gather your own evidence:
   Jira, Confluence, Slack, email and the repository's pull requests. Its
   Constraints bind the diff as tightly
   as the spec does
-- the feature's Jira ticket, **comments included**
-  (`mcp__claude_ai_Atlassian__getJiraIssue`, cloudId
-  `f6dd7c49-a92f-4551-b898-7b3e9b6d2602`, `comment` in `fields`). The local
-  artifacts are as current as the day they were written; the ticket is current
+- the feature's story or feature page in the Notion space "MotorFix — Product
+  documentation", **comments included**, when the spec links one. The local
+  artifacts are as current as the day they were written; the story is current
   now. A comment that narrowed the ask after the spec was frozen is the finding
   the implementing agent structurally cannot see
-- `.specify/memory/constitution.md` — the five non-negotiable principles
+- `.specify/memory/constitution.md` — the non-negotiable principles
 - `AGENTS.md` — the operational conventions the constitution defers to
 - the real code and tests the diff touches
 
@@ -40,17 +39,20 @@ range (or "working tree"). Gather your own evidence:
      single-implementation interface layer, a new dependency where existing
      code sufficed, padding tests for coverage. This is the first thing to
      look for, not the last.
-   - **II. Contract-First**: a client/server shape that is not a Zod schema in
-     `libs/contracts`, validated inbound *and* outbound on the server and
-     parsed on the client.
-   - **III. Production-Parity Libraries**: a `libs/*` change that works only
-     because the consumer transpiles TS on the fly (`apps/server` and
-     `apps/scanner` run compiled output under plain node).
-   - **IV. Single Root Toolchain**: a stray per-app biome/eslint/prettier
-     config, or a duplicate vitest config, instead of a scoped override.
-   - **V. Test Discipline**: tests not colocated as `foo.spec.ts`; an
-     `apps/server` injectable using parameter-property shorthand (breaks DI
-     under vitest's swc transform while passing `nest build`).
+   - **II. Test Discipline**: tests not colocated as `foo.spec.ts`; no failing
+     test written before the implementation it covers.
+   - **III. The Given Stack**: a substitute for Angular, PrimeNG, NestJS,
+     PostgreSQL or Redis, or a second framework doing the same job.
+   - **IV. One Repository, One Toolchain**: a new app beyond web, api, worker
+     and mcp without an amendment; a stray per-project lint, format or test
+     config (eslint, prettier, a second biome.json) instead of a root override.
+   - **V. Rules Live in One Place**: a request or response type written by hand
+     on the client instead of generated from the API's OpenAPI document; a rule
+     the screen, the worker and the MCP server do not all reach through the
+     same use case; a trust check made only in the browser.
+   - **VI. PostgreSQL Is the Truth**: anything whose only copy is in Redis; a
+     state change saved without its outbox event, or published outside the
+     transaction that saved it.
 2. **Spec conformance** — for each FR the diff claims to implement: does the
    code do what the FR says, including error paths, JSON report shape, and
    ordering rules? Quote the FR and the code that satisfies or misses it.
@@ -73,7 +75,7 @@ range (or "working tree"). Gather your own evidence:
 7. **Unrequested work** — code in the diff no artifact asked for. Principle I
    makes this a finding here, not a nicety.
 
-Run the tests yourself (`npx vitest run --changed`, or the affected
+Run the tests yourself (`npx jest --onlyChanged`, or the affected
 `*.spec.ts` files); never trust a reported green.
 
 ## Triage — every finding takes one of three routes
@@ -119,8 +121,8 @@ VERDICT: APPROVE | BLOCK
 | # | Severity | Route | Where | Finding | Evidence |
 |---|----------|-------|-------|---------|----------|
 
-Checked: <n> FRs, <n> tasks, constitution I–V, tests (<pass>/<total>),
-ticket <KEY> re-read <date> (or "not fetched: <reason>").
+Checked: <n> FRs, <n> tasks, constitution I–VI, tests (<pass>/<total>),
+story <Notion page> re-read <date> (or "not fetched: <reason>").
 ```
 
 - Severity: CRITICAL (constitution MUST / broken behavior / weakened test),

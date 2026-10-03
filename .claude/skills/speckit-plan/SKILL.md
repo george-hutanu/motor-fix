@@ -192,7 +192,7 @@ Full text: `.specify/memory/constitution.md`.
 The constitution's Agent Execution Rules apply in full. Specific to this command:
 
 - Technical Context values come from `package.json`, the lockfile,
-  `tsconfig*.json`, `turbo.json`, `vitest.config.ts`, and the touched
+  `tsconfig*.json`, `nx.json`, `jest.config.ts`, and the touched
   app's config — read them, cite them; never fill a version from memory.
 - Project Structure lists real paths confirmed by a directory listing,
   plus paths marked `(new)`.

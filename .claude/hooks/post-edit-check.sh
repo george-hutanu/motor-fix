@@ -4,17 +4,20 @@
 # after every edit, so concrete failures land in the agent's context now
 # instead of at commit time.
 #
-# Ported from speckit-demo, where the checks were `node --check` (syntax) plus
-# `node --test tests/<name>.test.js`. This repo is TypeScript with colocated
+# Ported from speckit-demo. motor-fix is a TypeScript Nx monorepo with colocated
 # tests, so:
 #   1. `biome check` on the edited file — the same linter `npm run lint` runs,
-#      scoped to one file (fast, and honours biome.jsonc's per-path overrides)
+#      scoped to one file (fast, and honours biome.json's per-path overrides)
 #   2. the AFFECTED colocated test, not the suite:
 #        foo.spec.ts  -> itself
 #        foo.ts       -> foo.spec.ts when it exists, else nothing
+#      run through the root jest config, which spans every Nx project
 #
-# Typecheck is deliberately NOT here: `turbo run typecheck` is a whole-repo
-# task and too slow to run per edit. .husky/pre-commit still runs it (with
+# A tool that is not installed yet (before the Nx scaffold lands) is skipped,
+# not failed: the gate exists to catch broken edits, not a missing toolchain.
+#
+# Typecheck is deliberately NOT here: a whole-workspace typecheck is too slow
+# to run per edit. .husky/pre-commit still runs it (with
 # lint and the full suite) on every real commit, and the Stop hook re-checks
 # what changed before the agent may finish.
 #
@@ -44,7 +47,7 @@ esac
 
 cd "$repo" || exit 0
 
-if ! npx --no-install biome check "$rel" >&2 2>&1; then
+if [ -x node_modules/.bin/biome ] && ! npx --no-install biome check "$rel" >&2 2>&1; then
   echo "❌ biome check failed for $rel — fix before continuing (npx biome check --write '$rel' fixes the safe ones)." >&2
   exit 2
 fi
@@ -58,8 +61,9 @@ case "$rel" in
     ;;
 esac
 [ -n "$test_file" ] || exit 0
+[ -x node_modules/.bin/jest ] || exit 0
 
-if ! npx --no-install vitest run "$test_file" --reporter=dot >&2 2>&1; then
+if ! npx --no-install jest "$test_file" >&2 2>&1; then
   echo "❌ Affected tests failed: $test_file (after editing $rel). Fix now — the Stop gate and .husky/pre-commit will block until green." >&2
   exit 2
 fi

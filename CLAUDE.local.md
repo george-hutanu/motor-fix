@@ -39,15 +39,15 @@ feature through `.specify/feature.json` (`.claude/scripts/lib/feature.mjs`).
 
 ## Gates
 
-Constitution v1.0.0 (`.specify/memory/constitution.md`) maps each rule to its
+Constitution v1.1.0 (`.specify/memory/constitution.md`) maps each rule to its
 check; its Enforcement section is the authority. In short:
 
 | Gate | When | What it does |
 | --- | --- | --- |
 | `github-identity.sh` | at session start | exports `GH_TOKEN` for george-hutanu so `gh` never acts as the QLOG account; reports git identity drift or a missing gh login |
 | `red-first-gate.mjs` | before an Edit/Write | blocks `apps/*/src`, `libs/*/src` edits while the active feature has FRs + open tasks but the branch touches no `*.spec.*`/`*.test.*` file — run `/speckit-tests` first |
-| `post-edit-check.sh` | after an Edit/Write | `biome check` on the file + its colocated `*.spec.ts` |
-| `stop-test-gate.sh` | before the agent finishes | `biome check` + `vitest run --changed` must be green |
+| `post-edit-check.sh` | after an Edit/Write | `biome check` on the file, then its colocated `*.spec.ts` through Jest |
+| `stop-test-gate.sh` | before the agent finishes | `biome check` + `jest --onlyChanged` must be green |
 | `pre-commit-check.sh` | before `git commit` | commit-message policy, `spec-drift --staged` |
 | `bash-guard.mjs` | before any Bash call | blocks force-push, `reset --hard`, `clean -f`, deleting `.work/` |
 | `config-protection.mjs` | before an Edit/Write | the ratchets: a `thresholds.break` only rises, `.specify/trace-baseline.json` only shrinks, this file never grows past its baseline |
@@ -56,9 +56,8 @@ check; its Enforcement section is the authority. In short:
 | `session-telemetry.mjs` | before the agent finishes | counts-only ledger per session in `.specify/telemetry/` |
 | `.husky/pre-commit` | every real commit | identity check, then `typecheck` + `lint` + `test` |
 
-The edit-time gates (`red-first`, `post-edit-check`, `stop-test-gate`) assume
-a TypeScript layout under `apps/*`, `libs/*`, `e2e/` with Biome and vitest, and
-pass silently on anything else. Re-point them if the stack lands elsewhere.
+The edit-time gates watch `apps/*`, `libs/*`, `e2e/` and skip Biome or Jest
+until that tool is installed. The harness's own specs run on vitest, apart.
 
 Every gate is registered in `.claude/hooks/registry.json` with an id and the
 fingerprint of the script as reviewed; `.claude/settings.json` only calls
@@ -69,11 +68,6 @@ fingerprint of the script as reviewed; `.claude/settings.json` only calls
 `node .claude/scripts/doctor.mjs` until you run `--bless-hooks`**. Read the
 diff before blessing. `strict` also freezes `.claude/` against edits unless
 `SPECKIT_ALLOW_HOOK_EDIT=1`.
-
-Spec-drift is hash-based: `spec-drift.mjs` records the active feature's
-`spec.md` + `tasks.md` hash per gated commit (`.claude/.spec-drift-state.json`)
-and blocks a `feat`/`fix`/`perf` commit that stages implementation code while
-that hash is unchanged.
 
 ## Commands
 
