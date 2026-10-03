@@ -53,9 +53,20 @@ decisions are the source for anything the constitution does not fix.
 
 - Given: Angular (standalone, signals) + PrimeNG with the Cockpit theme;
   NestJS, PostgreSQL, Redis; TypeScript everywhere.
-- Repo: one Nx monorepo — apps `web`, `api`, `worker`, `mcp`, shared libs.
-  Not scaffolded yet.
+- Repo: one Nx monorepo — apps `web` (Angular SSR), `api`, `worker` (NestJS),
+  `mcp`, `web-e2e` (Playwright); libs `contracts` (DTOs, env), `domain`
+  (NestJS modules, Prisma schema per module), `data-access` (Angular client
+  generated from `apps/api/openapi.json`: `npx nx run data-access:generate`,
+  never edited by hand). A lib is created by the story that first needs it.
 - Lint and format: Biome only, root `biome.json` (no eslint, no prettier).
-  Tests: Jest from the root config, Playwright for end-to-end.
-- When the scaffold lands, replace the placeholder `typecheck` script and point
-  `test` at the product suite; the harness specs keep `npm run test:harness`.
+  Tests: Jest from the root config, Playwright for end-to-end. NestJS 12 is
+  ESM-only, so the Nest projects' `test` targets run Jest with
+  `--experimental-vm-modules`.
+- Root scripts: `typecheck`, `lint`, `test`, `build`, `e2e` run across every
+  project; the harness specs keep `npm run test:harness`. API tests need
+  PostgreSQL and Redis: `docker compose up -d` (or local servers), with
+  `DATABASE_URL` and `REDIS_URL` from `.env.example`.
+- Release: `.github/workflows/release.yml` builds one image per app (root
+  `Dockerfile`), deploys staging through `scripts/railway-deploy.ts`, runs the
+  end-to-end suite there, and promotes the same digests to production after
+  approval.

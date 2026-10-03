@@ -43,6 +43,27 @@ APP_ENV=production DATABASE_URL= npx nx serve api   # exits, logs "DATABASE_URL"
 npx nx run api:openapi && npx nx run data-access:generate && git diff --exit-code apps/api/openapi.json libs/data-access
 ```
 
+## Seed
+
+```bash
+npx nx run domain:seed                 # idempotent; refuses APP_ENV=production
+```
+
 ## Pipeline (scenarios 8–10, 13, 14)
 
-Verified on the first real merge once the owner's Railway project and the GitHub settings exist (spec Assumptions). Steps and the by-hand checks are in research.md R6–R8.
+Verified on the first real merge, once the owner has set up:
+
+- Railway (Pro plan, EU region): services `web`, `api`, `worker` in the environments `staging` and `production`; `postgres` (PostGIS template) and `redis` from Railway's templates; each app service's variables (`APP_ENV`, `DATABASE_URL` and `REDIS_URL` as references, `API_INTERNAL_URL`, `PUBLIC_WEB_URL`); ghcr registry credentials (classic personal access token) on each service.
+- GitHub: branch protection on `main` (pull requests only, CI green); environments `staging` and `production` (required reviewer: the build lead), each with the secret `RAILWAY_API_TOKEN` (a workspace token), the variables `RAILWAY_ENVIRONMENT_ID`, `RAILWAY_SERVICE_WEB`, `RAILWAY_SERVICE_API`, `RAILWAY_SERVICE_WORKER`, `PUBLIC_WEB_URL`, and, on `staging` only, the secret `DATABASE_URL` for the reset workflow.
+
+### Checked by hand (record each)
+
+| Check | How | Date | Result |
+|---|---|---|---|
+| A lint error cannot merge | open a pull request with a Biome error | | |
+| A stale client fails the contract check | change `HealthReadyDto` without `nx run data-access:generate` | | |
+| A broken migration stops the run before staging | merge a migration with a SQL error | | |
+| Production does not deploy without approval | merge, watch the `production` job wait | | |
+| A failing production health check restores the previous images | deploy an image whose `/health/ready` answers 503 | | |
+| Railway accepts an image by digest and runs the pre-deploy command on an image service | first staging deploy (research.md R7, unconfirmed in Railway's docs) | | |
+| Every service runs in `europe-west4-drams3a` | Railway dashboard after the first deploy | | |

@@ -1,0 +1,126 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  images:
+    needs: checks
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.web.outputs.digest }}
+      api: ${{ steps.api.outputs.digest }}
+      worker: ${{ steps.worker.outputs.digest }}
+      mcp: ${{ steps.mcp.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: web
+        uses: docker/build-push-action@v6
+        with:
+          build-args: |
+            APP=web
+            RELEASE_SHA=${{ github.sha }}
+          target: web
+          push: true
+          tags: ghcr.io/${{ github.repository }}-web:${{ github.sha }}
+      - id: api
+        uses: docker/build-push-action@v6
+        with:
+          build-args: |
+            APP=api
+            RELEASE_SHA=${{ github.sha }}
+          target: node-app
+          push: true
+          tags: ghcr.io/${{ github.repository }}-api:${{ github.sha }}
+      - id: worker
+        uses: docker/build-push-action@v6
+        with:
+          build-args: |
+            APP=worker
+            RELEASE_SHA=${{ github.sha }}
+          target: node-app
+          push: true
+          tags: ghcr.io/${{ github.repository }}-worker:${{ github.sha }}
+      - id: mcp
+        uses: docker/build-push-action@v6
+        with:
+          build-args: |
+            APP=mcp
+            RELEASE_SHA=${{ github.sha }}
+          target: node-app
+          push: true
+          tags: ghcr.io/${{ github.repository }}-mcp:${{ github.sha }}
+
+  staging:
+    needs: images
+    runs-on: ubuntu-latest
+    environment: staging
+    # Staging releases run one at a time, in commit order.
+    concurrency:
+      group: release-staging
+      cancel-in-progress: false
+    env:
+      IMAGE_WEB: ghcr.io/${{ github.repository }}-web@${{ needs.images.outputs.web }}
+      IMAGE_API: ghcr.io/${{ github.repository }}-api@${{ needs.images.outputs.api }}
+      IMAGE_WORKER: ghcr.io/${{ github.repository }}-worker@${{ needs.images.outputs.worker }}
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      RAILWAY_ENVIRONMENT_ID: ${{ vars.RAILWAY_ENVIRONMENT_ID }}
+      RAILWAY_SERVICE_WEB: ${{ vars.RAILWAY_SERVICE_WEB }}
+      RAILWAY_SERVICE_API: ${{ vars.RAILWAY_SERVICE_API }}
+      RAILWAY_SERVICE_WORKER: ${{ vars.RAILWAY_SERVICE_WORKER }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Deploy and wait for /health/ready
+        run: node scripts/railway-deploy.ts staging
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: End to end on staging
+        run: npx nx run web-e2e:e2e --skip-nx-cache
+        env:
+          BASE_URL: ${{ vars.PUBLIC_WEB_URL }}
+          RELEASE_SHA: ${{ github.sha }}
+
+  production:
+    needs: [images, staging]
+    runs-on: ubuntu-latest
+    # Required reviewers on this environment approve each release. A newer
+    # commit that passes staging cancels the approval still waiting here, so
+    # only the latest proven commit can reach production.
+    environment: production
+    concurrency:
+      group: release-production
+      cancel-in-progress: true
+    env:
+      IMAGE_WEB: ghcr.io/${{ github.repository }}-web@${{ needs.images.outputs.web }}
+      IMAGE_API: ghcr.io/${{ github.repository }}-api@${{ needs.images.outputs.api }}
+      IMAGE_WORKER: ghcr.io/${{ github.repository }}-worker@${{ needs.images.outputs.worker }}
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      RAILWAY_ENVIRONMENT_ID: ${{ vars.RAILWAY_ENVIRONMENT_ID }}
+      RAILWAY_SERVICE_WEB: ${{ vars.RAILWAY_SERVICE_WEB }}
+      RAILWAY_SERVICE_API: ${{ vars.RAILWAY_SERVICE_API }}
+      RAILWAY_SERVICE_WORKER: ${{ vars.RAILWAY_SERVICE_WORKER }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+      - name: Deploy the staging-proven digests and wait for /health/ready
+        run: node scripts/railway-deploy.ts production

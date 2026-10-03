@@ -6,6 +6,12 @@
   "sourceRoot": "libs/domain/src",
   "tags": [],
   "targets": {
+    "seed": {
+      "command": "prisma db seed",
+      "options": {
+        "cwd": "libs/domain"
+      }
+    },
     "test": {
       "options": {
         "env": {

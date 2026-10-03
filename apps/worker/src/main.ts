@@ -1,6 +1,7 @@
 import { readEnv } from '@motor-fix/contracts';
 import { HealthModule, JsonLogger } from '@motor-fix/domain';
 import { NestFactory } from '@nestjs/core';
+import { ExpressAdapter } from '@nestjs/platform-express';
 
 // The worker serves no routes of its own: its HTTP listener exists so that
 // Railway can health-check it.
@@ -12,6 +13,7 @@ async function bootstrap() {
       redisUrl: env.REDIS_URL,
       version: env.RELEASE_SHA,
     }),
+    new ExpressAdapter(),
     { logger: new JsonLogger() },
   );
   app.enableShutdownHooks();

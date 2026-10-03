@@ -59,18 +59,18 @@ Paths are `(new)` unless they exist today: `package.json`, `biome.json`, `.gitig
 
 ## Phase 8: US5 + US7 Pipeline and environments (P2/P3)
 
-- [ ] T030 [P] [US5] `Dockerfile` (multi-stage, `ARG APP`, Node 24 from `.nvmrc`, `TZ=UTC`, non-root) and `.dockerignore`; the api image carries the Prisma CLI and schema for the pre-deploy command (FR-032, FR-011)
-- [ ] T031 [P] [US5] Test: `scripts/railway-deploy.spec.mjs` — against a stub GraphQL server: sets image digest, region `europe-west4-drams3a`, replicas, health path and timeout, api pre-deploy; deploys; SUCCESS exits 0; FAILED or 5-minute timeout restores the previous image and exits 1 (FR-028, FR-029, US5-5)
-- [ ] T032 [US5] `scripts/railway-deploy.mjs` (research R7) (FR-028, FR-029)
-- [ ] T033 [P] [US4] `.github/workflows/ci.yml` — pull request and push checks with PostgreSQL/Redis service containers, contract check, `npm audit --audit-level=high` (FR-027)
-- [ ] T034 [US5] `.github/workflows/release.yml` — images to ghcr by SHA, staging deploy (concurrency `release-staging`), e2e on staging, production job in environment `production` (concurrency `release-production`, cancel-in-progress) with the same digests (FR-028, FR-029, FR-030)
-- [ ] T035 [P] [US7] `.github/workflows/reset-staging.yml` — `workflow_dispatch`, environment `staging` only (FR-031)
-- [ ] T036 [P] [US5] `.github/dependabot.yml` — npm and github-actions, weekly (FR-033)
-- [ ] T037 [US5] `quickstart.md` by-hand checks table with date/result columns (FR-034)
+- [X] T030 [P] [US5] `Dockerfile` (multi-stage, `ARG APP`, Node 24 from `.nvmrc`, `TZ=UTC`, non-root) and `.dockerignore`; the api image carries the Prisma CLI and schema for the pre-deploy command (FR-032, FR-011)
+- [X] T031 [P] [US5] Test: `scripts/railway-deploy.spec.ts` — against a stub GraphQL server: sets image digest, region `europe-west4-drams3a`, replicas, health path and timeout, api pre-deploy; deploys; SUCCESS exits 0; FAILED or 5-minute timeout restores the previous image and exits 1 (FR-028, FR-029, US5-5)
+- [X] T032 [US5] `scripts/railway-deploy.ts` (research R7) (FR-028, FR-029)
+- [X] T033 [P] [US4] `.github/workflows/ci.yml` — pull request and push checks with PostgreSQL/Redis service containers, contract check, `npm audit --audit-level=high` (FR-027)
+- [X] T034 [US5] `.github/workflows/release.yml` — images to ghcr by SHA, staging deploy (concurrency `release-staging`), e2e on staging, production job in environment `production` (concurrency `release-production`, cancel-in-progress) with the same digests (FR-028, FR-029, FR-030)
+- [X] T035 [P] [US7] `.github/workflows/reset-staging.yml` — `workflow_dispatch`, environment `staging` only (FR-031)
+- [X] T036 [P] [US5] `.github/dependabot.yml` — npm and github-actions, weekly (FR-033)
+- [X] T037 [US5] `quickstart.md` by-hand checks table with date/result columns (FR-034)
 
 ## Phase 9: Polish
 
-- [ ] T038 `AGENTS.md` — replace "Not scaffolded yet" and the placeholder-script note with the real commands (AGENTS.md asks for it)
+- [X] T038 `AGENTS.md` — replace "Not scaffolded yet" and the placeholder-script note with the real commands (AGENTS.md asks for it)
 
 ## FR → test
 
@@ -87,7 +87,7 @@ Paths are `(new)` unless they exist today: `package.json`, `biome.json`, `.gitig
 | FR-021, FR-023 | `libs/contracts/src/env.spec.ts` |
 | FR-022, FR-024, FR-026, FR-032, FR-033, FR-034 | inspection (files exist, no values) |
 | FR-025 | `libs/domain/prisma/seed.spec.ts` |
-| FR-027–FR-031 | `scripts/railway-deploy.spec.mjs`; workflows by hand on first merge (FR-034) |
+| FR-027–FR-031 | `scripts/railway-deploy.spec.ts`; workflows by hand on first merge (FR-034) |
 
 ## Dependencies
 

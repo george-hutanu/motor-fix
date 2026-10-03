@@ -16,6 +16,7 @@ module.exports = {
       main: './src/main.ts',
       optimization: false,
       outputHashing: 'none',
+      runtimeDependencies: ['@prisma/client', 'prisma', 'tslib'],
       sourceMap: true,
       target: 'node',
       tsConfig: './tsconfig.app.json',
