@@ -20,7 +20,7 @@ Paths are `(new)` unless they exist today: `package.json`, `biome.json`, `.gitig
 - [X] T008 [P] Test: `libs/contracts/src/env.spec.ts` — `readEnv` returns values and defaults (`RELEASE_SHA`=`dev`), exits with the missing variable's name only, rejects an `APP_ENV` outside the four values (FR-021, FR-023)
 - [X] T009 [P] `libs/contracts/src/env.ts` — `APP_ENVS`, `readEnv(required)` per data-model.md (FR-021, FR-023)
 - [X] T010 [P] `libs/contracts/src/health.dto.ts` — `HealthReadyDto`, `HealthLiveDto` with Swagger decorators (contracts/health.md)
-- [X] T011 Prisma in `libs/domain`: `prisma.config.ts`, `prisma/schema/schema.prisma` (generator `prisma-client`, output `src/generated/prisma`, datasource postgresql), empty `auth.prisma`, `notifications.prisma`, `audit.prisma`, `events.prisma`; `src/prisma.service.ts` with `@prisma/adapter-pg`; `postinstall` runs `prisma generate` (FR-024)
+- [X] T011 Prisma in `libs/domain`: `prisma.config.ts`, `prisma/schema/schema.prisma` (generator `prisma-client`, output `src/generated/prisma`, datasource postgresql), empty `auth.prisma`, `notifications.prisma`, `audit.prisma`, `events.prisma`; the Prisma client built with `@prisma/adapter-pg` where it is used (`libs/domain/src/health/health.service.ts`); `postinstall` runs `prisma generate` (FR-024)
 
 ## Phase 3: US3 Health checks (P1)
 
@@ -37,7 +37,7 @@ Paths are `(new)` unless they exist today: `package.json`, `biome.json`, `.gitig
 - [X] T017 [US6] Test: `apps/api/src/bootstrap.spec.ts` against real services — health outside `/api/v1`; unknown route → 404 problem+json `not_found`; unknown body field → 400 `validation_failed`; thrown error → 500 `internal_error` with no stack; `X-Request-Id` echoed and created; log lines are JSON with `requestId`; `/api/docs` 404 when `APP_ENV=production` and 200 otherwise (FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-018)
 - [X] T018 [US6] `apps/api/src/bootstrap.ts` — `configureApp` (research R3); `apps/api/src/app.module.ts`; `apps/api/src/main.ts` with `readEnv` (FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-018, FR-021)
 - [X] T019 [P] [US6] Test: `libs/domain/src/seed.spec.ts` — refuses `APP_ENV=production` with a non-zero exit; two runs succeed and leave the database unchanged (FR-025)
-- [X] T020 [US6] `libs/domain/src/seed.ts`; seed command in `prisma.config.ts`; `api:seed` target (FR-025)
+- [X] T020 [US6] `libs/domain/src/seed.ts`; seed command in `prisma.config.ts`; `domain:seed` target (the seed lives with the schema in `libs/domain`) (FR-025)
 
 ## Phase 5: US4 Contract (P1)
 
@@ -79,7 +79,7 @@ Paths are `(new)` unless they exist today: `package.json`, `biome.json`, `.gitig
 | FR-001, FR-002, FR-003, FR-004 | T029 (root commands on a clean install) |
 | FR-005 | `npm run lint` (Biome `noRestrictedImports`), checked once with a deliberate bad import |
 | FR-006–FR-010, FR-018 | `apps/api/src/bootstrap.spec.ts` |
-| FR-011 | `apps/api/src/bootstrap.spec.ts` (process TZ) |
+| FR-011 | inspection: `ENV TZ=UTC` in the Dockerfile's runtime stage and `TZ=UTC` in the root `test` script; local `nx serve` runs in the developer's zone |
 | FR-012, FR-013 | `libs/domain/src/health/health.controller.spec.ts`, `apps/mcp/src/server.spec.ts` |
 | FR-014, FR-020 | `apps/web/src/server/edge.spec.ts` |
 | FR-015–FR-017 | CI contract check (T023, run in T029) |

@@ -78,3 +78,14 @@
 - Front end architecture — https://app.notion.com/p/3ee607bff0d2811688cde6508dfcd09a
 - Backend architecture (excerpt only) — https://app.notion.com/p/3ee607bff0d281dfa162cd4b9983dd2e
 - Decisions and ideas — https://app.notion.com/p/3ee607bff0d281df9485ce97dfa3332d
+
+## Refresh 2026-10-04
+
+Baseline: 2026-10-03T19:30Z (the Gathered date, 2026-10-04, and the digest's own page edit times). Re-read the story with its comments (all blocks, resolved included), EP-1, and Architecture decisions, and checked the last-edited times of the pages the digest cites through search.
+
+No changes since 2026-10-04.
+
+- **Story changes**: none. ST-421 is still In progress, priority Highest, 8 points, page last edited 2026-10-03T19:24:37Z. It still has no comments.
+- **Last-edited times seen**: story 19:24, EP-1 19:24, EP-1 execution plan 19:11, Architecture decisions 19:08, Security 19:08, Architecture 19:08, Technology stack 19:05, System overview 19:00. All are before the baseline.
+- **Limit**: search here has no edited-after filter (Business plan only), so pages outside the digest's Sources were checked only by the times in search results (ST-422 18:55, monitoring story 18:52, health-checks story 18:53, ST-430 19:12). None is later than the baseline.
+- The FR-020 contradiction and its Proposed Clarification above still stand.

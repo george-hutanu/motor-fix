@@ -25,7 +25,9 @@ export function mountEdge(app: Express, apiUrl: string) {
       },
       (answer) => {
         res.writeHead(answer.statusCode ?? 502, answer.headers);
-        answer.on('aborted', () => res.destroy());
+        answer.on('close', () => {
+          if (!answer.complete) res.destroy();
+        });
         answer.pipe(res);
       },
     );

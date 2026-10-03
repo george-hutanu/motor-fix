@@ -67,3 +67,6 @@ Verified on the first real merge, once the owner has set up:
 | A failing production health check restores the previous images | deploy an image whose `/health/ready` answers 503 | | |
 | Railway accepts an image by digest and runs the pre-deploy command on an image service | first staging deploy (research.md R7, unconfirmed in Railway's docs) | | |
 | Every service runs in `europe-west4-drams3a` | Railway dashboard after the first deploy | | |
+| A newer commit that passes staging cancels an older production approval still waiting | merge twice without approving; the first `production` job shows as cancelled | | |
+| `docker build` succeeds for each app and target | the first `release.yml` run (no Docker on the machine that built this) | | |
+| Reset staging empties, migrates and seeds staging only | run the workflow once by hand | | |

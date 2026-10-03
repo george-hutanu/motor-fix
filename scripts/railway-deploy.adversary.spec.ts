@@ -143,6 +143,17 @@ describe('railway deploy under failure', () => {
       .map((u) => u.id)
       .sort();
     expect(restored).toEqual(['svc-api', 'svc-web', 'svc-worker']);
+    const deploys = (id: string) =>
+      calls.filter(
+        (c) =>
+          c.query.includes('serviceInstanceDeployV2') &&
+          c.variables['serviceId'] === id,
+      ).length;
+    expect([
+      deploys('svc-api'),
+      deploys('svc-worker'),
+      deploys('svc-web'),
+    ]).toEqual([2, 2, 1]);
   });
 
   it('does not write an empty image when the service had no previous image', async () => {

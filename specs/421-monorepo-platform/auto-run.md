@@ -77,3 +77,13 @@
 - test-adversary: 134 tests in 6 files; 9 failing → 7 defects fixed (readEnv read Object.prototype names; mcp health with a query string; edge left upstream open when the browser left and hung when the API broke off; deploy restored only the failing service and nothing on a polling error), 1 test-fixture fix (nested DTO needed @IsObject), 1 spec gap closed (request id bounded to 128 safe chars; API 404s outside the prefix as problem details).
 - code-reviewer BLOCK: 12 findings. Fixed: Dockerfile `npm ci` ran `prepare` before .husky existed (exit 127 — no image could build) → `--ignore-scripts` + `prisma generate`, replayed on a git-less copy: 4/4 builds; deploy script's own 5-min clock raced Railway's health check → Railway's 300 s check decides, script keeps a 20-min safety limit; Railway calls get a 30 s timeout and an HTTP status check (new test); a failed restore no longer hides the original error; unused generator targets (prune*, copy-workspace-modules, serve-static) and packages (@nx/web, @angular/cli, @angular/language-service) removed; allowedHosts falls back to NG_ALLOWED_HOSTS; hydration event replay and global error listeners removed. Not taken: TODO on CODE_BY_STATUS (codes are added with the first endpoint that needs them; a TODO adds nothing).
 - Repair laps: 2.
+- The first `git commit` of the harden pass failed in the pre-commit hook; an immediate re-run of the hook and three full `nx run-many -t test --skip-nx-cache` runs were all green, and the retried commit passed. The failing step was not captured (output truncated) → recorded as an unexplained intermittent failure.
+
+## 13. Ticket refresh
+- org-researcher refresh: no changes since the digest; story has 0 comments; status In progress at the time. The FR-020 contradiction it re-lists was resolved in phase 4 (spec now forwards /api/ only, as Notion says).
+
+## 14. Review
+- notion-sync review: ST-421 → In review. design.md present.
+- code-reviewer re-review: all 10 earlier fixes verified; 4 new → fixed 3 (mcp crashed on a request line `new URL` rejects → split on `?`, raw-socket test added; rollback redeploy was untested → assertion added and proven to fail with the line removed; deprecated `aborted` event → `close` + `complete`); declined 1 (env-var knob for the 20-min safety limit: nothing sets it, Principle I).
+- spec-reviewer: APPROVE. LOWs fixed: FR-011 row now "inspection"; T011/T020 wording matched to delivery; unused `@nx/node` removed; 3 by-hand rows added (production approval cancellation, docker build, reset staging); page title `MotorFix`. MEDIUM left to the owner: whether the `*.adversary.spec.ts` suites stay as a standing layer or get folded into the primary specs.
+- Repair laps: 3 of 5.
