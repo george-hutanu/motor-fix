@@ -1,0 +1,21 @@
+{
+  "// targets": "to see all targets run: nx show project domain --web",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "domain",
+  "projectType": "library",
+  "sourceRoot": "libs/domain/src",
+  "tags": [],
+  "targets": {
+    "test": {
+      "options": {
+        "env": {
+          "NODE_OPTIONS": "--experimental-vm-modules --no-warnings=ExperimentalWarning"
+        }
+      }
+    },
+    "typecheck": {
+      "cache": true,
+      "command": "tsc --noEmit -p libs/domain/tsconfig.lib.json && tsc --noEmit -p libs/domain/tsconfig.spec.json"
+    }
+  }
+}

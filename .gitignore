@@ -13,3 +13,13 @@ node_modules/
 .specify/telemetry/*.json
 .stryker-tmp/
 reports/
+
+.angular
+
+# workspace
+dist/
+.nx/
+.env
+libs/domain/src/generated/
+apps/web-e2e/test-output/
+coverage/

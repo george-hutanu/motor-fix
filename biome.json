@@ -25,15 +25,18 @@
     "includes": [
       "apps/**",
       "libs/**",
-      "test/**",
-      "src/**",
+      "scripts/**",
       "*.ts",
       "*.js",
       "*.json",
       "!**/node_modules",
       "!**/dist",
       "!**/coverage",
-      "!**/*.log"
+      "!**/*.log",
+      "!apps/api/openapi.json",
+      "!libs/data-access/src/lib",
+      "!libs/domain/src/generated",
+      "!apps/web-e2e/test-output"
     ]
   },
   "formatter": {
@@ -98,6 +101,23 @@
         "rules": {
           "suspicious": {
             "noExplicitAny": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/**", "libs/data-access/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@motor-fix/domain": "The web app never imports the server domain; use the generated client in @motor-fix/data-access."
+                }
+              }
+            }
           }
         }
       }

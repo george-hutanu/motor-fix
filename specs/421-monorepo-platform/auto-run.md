@@ -46,3 +46,10 @@
 ## 8. Analyze
 - artifact-lint round 1: 3 ERROR (FR-007/008/009 untasked — ranges "FR-006–FR-010" not parsed), 1 WARN (no Spec Delta). Fixed: FRs listed explicitly in T017/T018; Spec Delta added (capability `platform`, Adds FR-001…FR-034); `.specify/capabilities/platform.md` created from the template (empty requirements; archive fills them).
 - Round 2: 0 errors, 0 warnings. Manual passes: 0 CRITICAL, 0 HIGH; 100% FR coverage; context contradiction resolved by Q1.
+
+## 9. Tests (red-first)
+- Phase 1 scaffold done first so tests have projects to live in: Nx 23.2.1 generators (`--linter none`), generator samples deleted; webpack configs renamed `.cjs` (root package is `"type": "module"`).
+- Dependency decisions: generators pinned Angular ~22.1 / Nest 11 / Express 4 → reset to plan versions. `@nx/nest@23.2.1` peers Nest `<12` → removed `@nx/nest` and `@nestjs/schematics` (generators only; builds use @nx/webpack), Nest 12 kept. `npm audit --omit=dev` found 4 high in Prisma CLI transitive deps (mysql2, deepmerge-ts) → npm `overrides` mysql2 3.24.5, deepmerge-ts 8.0.2 → 0 vulnerabilities. Dev-tool highs (Nx, webpack-dev-server) remain; the CI audit is scoped to production dependencies (FR-027 wording updated).
+- Homebrew postgresql@17 and redis installed and started (research R9).
+- Red: `npx jest libs/contracts libs/domain apps/api apps/mcp apps/web/src` → Test Suites: 7 failed, 7 total (missing modules; seed: 2 tests failed).
+- Seams chosen for testability: readEnv(required, env); HealthModule.register({databaseUrl, redisUrl, version}); configureApp(app, env) + AppModule.register(env); mcp createServer(); web mountEdge(app, apiUrl); page reads TransferState key HEALTH. Added state "unknown" when the API did not answer (FR-019 updated).

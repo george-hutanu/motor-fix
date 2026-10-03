@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "module": "commonjs",
+    "moduleResolution": "bundler",
+    "outDir": "../../dist/out-tsc",
+    "target": "es2021",
+    "types": ["node"]
+  },
+  "exclude": [
+    "jest.config.ts",
+    "jest.config.cts",
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts"
+  ],
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*.ts"]
+}

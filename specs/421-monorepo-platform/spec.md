@@ -157,7 +157,7 @@ Railway and the later monitoring story need two checks per process: one that ans
 
 **Skeleton page**
 
-- **FR-019**: The web app's root page MUST show "MotorFix", the deployed version (`dev` locally, the commit SHA when deployed), and "PostgreSQL: ok · Redis: ok" (or the failing part). The page is server-rendered: during server rendering it calls the API's `/health/ready` through the generated client at `API_INTERNAL_URL`, and the browser reuses that result without a second call.
+- **FR-019**: The web app's root page MUST show "MotorFix", the deployed version (`dev` locally, the commit SHA when deployed), and "PostgreSQL: ok · Redis: ok" (or the failing part; "unknown" for both, and "version unknown", when the API does not answer). The page is server-rendered: during server rendering it calls the API's `/health/ready` through the generated client at `API_INTERNAL_URL`, and the browser reuses that result without a second call.
 - **FR-020**: The `web` server MUST forward `/api/` requests to the `api` service without buffering the response. It answers its own `/health/*` and forwards none of it.
 
 **Configuration and secrets**
@@ -174,7 +174,7 @@ Railway and the later monitoring story need two checks per process: one that ans
 
 **Pipeline and environments**
 
-- **FR-027**: On every pull request CI MUST run install, typecheck, lint, unit and API tests against real PostgreSQL and Redis, the contract check, the build of the affected projects, and a dependency audit that fails on high and critical findings.
+- **FR-027**: On every pull request CI MUST run install, typecheck, lint, unit and API tests against real PostgreSQL and Redis, the contract check, the build of the affected projects, and a dependency audit of the production dependencies that fails on high and critical findings (the build tooling is kept current by the dependency-update pull requests instead).
 - **FR-028**: On every merge into `main` the pipeline MUST run every check on every project, build one image per app tagged with the commit SHA, push it to GitHub's container registry, migrate and deploy staging, wait for `/health/ready`, run the end-to-end suite against staging, and stop for approval of the `production` environment. The staging wait for `/health/ready` is limited to 5 minutes; on expiry the run fails and nothing is promoted. Migrations run as `prisma migrate deploy` in the `api` pre-deploy command and MUST be backwards compatible, because the previous images may be restored.
 - **FR-029**: After approval the pipeline MUST deploy the same image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes.
 - **FR-030**: Staging deploys MUST run one at a time, in commit order. When a newer commit passes staging, the production approval waiting for an older commit MUST be cancelled, so only the latest proven commit can be approved. There MUST be no path that deploys a branch or an unproven commit to production.

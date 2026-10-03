@@ -1,0 +1,64 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "worker",
+  "projectType": "application",
+  "sourceRoot": "apps/worker/src",
+  "tags": [],
+  "targets": {
+    "copy-workspace-modules": {
+      "cache": true,
+      "dependsOn": ["build"],
+      "executor": "@nx/js:copy-workspace-modules",
+      "options": {
+        "buildTarget": "build"
+      },
+      "outputs": ["{workspaceRoot}/dist/apps/worker/workspace_modules"]
+    },
+    "prune": {
+      "dependsOn": ["prune-lockfile", "copy-workspace-modules"],
+      "executor": "nx:noop"
+    },
+    "prune-lockfile": {
+      "cache": true,
+      "dependsOn": ["build"],
+      "executor": "@nx/js:prune-lockfile",
+      "options": {
+        "buildTarget": "build"
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/apps/worker/package.json",
+        "{workspaceRoot}/dist/apps/worker/package-lock.json"
+      ]
+    },
+    "serve": {
+      "configurations": {
+        "development": {
+          "buildTarget": "worker:build:development"
+        },
+        "production": {
+          "buildTarget": "worker:build:production"
+        }
+      },
+      "continuous": true,
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
+      "executor": "@nx/js:node",
+      "options": {
+        "buildTarget": "worker:build",
+        "runBuildTargetDependencies": false
+      }
+    },
+    "test": {
+      "options": {
+        "env": {
+          "NODE_OPTIONS": "--experimental-vm-modules --no-warnings=ExperimentalWarning"
+        },
+        "passWithNoTests": true
+      }
+    },
+    "typecheck": {
+      "cache": true,
+      "command": "tsc --noEmit -p apps/worker/tsconfig.app.json && tsc --noEmit -p apps/worker/tsconfig.spec.json"
+    }
+  }
+}
