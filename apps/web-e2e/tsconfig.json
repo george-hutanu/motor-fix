@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "outDir": "../../dist/out-tsc",
+    "sourceMap": false,
+    "strict": true,
+    "types": ["node"]
+  },
+  "extends": "../../tsconfig.base.json",
+  "include": ["playwright.config.mts", "src/**/*.ts"]
+}
