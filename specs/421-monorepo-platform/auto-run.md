@@ -87,3 +87,13 @@
 - code-reviewer re-review: all 10 earlier fixes verified; 4 new → fixed 3 (mcp crashed on a request line `new URL` rejects → split on `?`, raw-socket test added; rollback redeploy was untested → assertion added and proven to fail with the line removed; deprecated `aborted` event → `close` + `complete`); declined 1 (env-var knob for the 20-min safety limit: nothing sets it, Principle I).
 - spec-reviewer: APPROVE. LOWs fixed: FR-011 row now "inspection"; T011/T020 wording matched to delivery; unused `@nx/node` removed; 3 by-hand rows added (production approval cancellation, docker build, reset staging); page title `MotorFix`. MEDIUM left to the owner: whether the `*.adversary.spec.ts` suites stay as a standing layer or get folded into the primary specs.
 - Repair laps: 3 of 5.
+
+## 15. Agent context
+- CLAUDE.local.md managed block now names the plan in one line; context-audit: held its size (135 lines). Committed (the file is tracked in this repo).
+
+## 16. Retrospective evidence (unjudged)
+- retro-evidence --since 69b1c22 --jev: 39 tasks done, 34 FRs, 9 commits, Spec Delta platform +34, 0 deferred; Jev lane unavailable → no suggested verdict. instincts triggered: none.
+
+## 17. Archive
+- validate --check: 0 errors. merge --apply: platform +34. Capability FR-001 text edited to state current truth (adds the `scripts` project). Spec status → Archived (2026-10-04).
+- Not run here: /speckit-retro (the verdict is the owner's; this run made every decision) and notion-sync finish (runs on the merge to main).

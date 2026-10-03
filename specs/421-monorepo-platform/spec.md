@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-03
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-421 — The Nx monorepo, staging and production on Railway, and the release pipeline (EP-1 Foundations, slice 1, first story). Notion story: https://app.notion.com/p/3ee607bff0d2815a8fede068cbfbad58."
 
