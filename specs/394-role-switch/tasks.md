@@ -30,7 +30,7 @@ Independent test: through HTTP against PostgreSQL and Redis, a two-role account 
 ## Phase 5: Review fixes
 
 - [X] T011 `apps/web/src/app/dashboard/session.ts`: a renewal sent before a role switch that answers after it leaves the switch's token in place (FR-006, FR-008; code-reviewer HIGH)
-- [X] T012 `libs/contracts/src/auth.dto.ts` reuses the role list of `me.dto.ts`; no task key in `audit-coverage.spec.ts`; `refresh()` takes its role without a default; the 400 test title says what it asserts (code-reviewer MEDIUM ×2, LOW; spec-reviewer MEDIUM, LOW)
+- [X] T012 `libs/contracts/src/auth.dto.ts` reuses the role list of `me.dto.ts`; no task key in `audit-coverage.spec.ts`; `refresh()` takes its role without a default; the 400 test title says what it asserts (code-reviewer MEDIUM ×2, LOW; spec-reviewer MEDIUM, LOW); a renewal that fails after a switch keeps the tab signed in, now tested (code-reviewer re-review HIGH)
 
 ## Dependencies
 

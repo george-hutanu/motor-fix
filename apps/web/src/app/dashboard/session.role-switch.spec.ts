@@ -145,6 +145,26 @@ describe('Session, renewing the token', () => {
     expect(session.current()?.role).toBe('driver');
   });
 
+  it('stays signed in when a renewal sent before the switch fails after it', async () => {
+    const { auth, session } = setup(async () => ({ accessToken: 'as-driver' }));
+    await session.load();
+    let fail: (error: Error) => void = () => undefined;
+    auth.authControllerRefresh.mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          fail = reject;
+        }),
+    );
+    const renewing = session.renew();
+
+    await session.switchRole('driver');
+    fail(new Error('offline'));
+    await renewing;
+
+    expect(session.token()).toBe('as-driver');
+    expect(session.current()?.role).toBe('driver');
+  });
+
   it('asks for no role before an account is on screen', async () => {
     const { auth, session } = setup(async () => ({ accessToken: 'x' }));
 
