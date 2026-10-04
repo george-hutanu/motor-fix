@@ -31,7 +31,7 @@ const porcelain = [
   '',
   'worktree /repo/.claude/worktrees/agent-a1',
   'HEAD 2222222222222222222222222222222222222222',
-  'branch refs/heads/021-language-urls',
+  'branch refs/heads/901-fixture-urls',
   'locked claude agent agent-a1 (pid 2214 start Sun Oct  4 08:07:18 2026)',
   '',
   'worktree /tmp/x/mf-prtest-12-e57edba-73771',
@@ -51,7 +51,7 @@ const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review
 
 const pr = (over = {}) => ({
   number: 21,
-  headRefName: '021-language-urls',
+  headRefName: '901-fixture-urls',
   state: 'OPEN',
   isDraft: false,
   headRefOid: 'abc',
@@ -77,7 +77,7 @@ describe('worktree records', () => {
     assert.equal(first.branch, 'main');
     assert.equal(second.main, false);
     assert.equal(second.path, '/repo/.claude/worktrees/agent-a1');
-    assert.equal(second.branch, '021-language-urls');
+    assert.equal(second.branch, '901-fixture-urls');
     assert.match(second.lock, /pid 2214/);
   });
 
@@ -330,7 +330,7 @@ describe('collect', () => {
   it('lists every worktree with its fields and counts a live PR-tester run instead of listing it', () => {
     const f = fixture();
     try {
-      const a = f.add('agent-a', '021-language-urls');
+      const a = f.add('agent-a', '901-fixture-urls');
       quietCommit(a, 120);
       const scratch = join(f.root, 'mf-prtest-12-abcdef1-4242');
       git(f.repo, 'worktree', 'add', '-q', '--detach', scratch);
@@ -341,7 +341,7 @@ describe('collect', () => {
       }));
       assert.equal(report.rows.length, 2);
       const r = report.rows.find((x) => x.path === a);
-      assert.equal(r.branch, '021-language-urls');
+      assert.equal(r.branch, '901-fixture-urls');
       assert.equal(r.holder, 'none');
       assert.equal(r.pr.number, 21);
       assert.equal(r.pr.state, 'draft');
@@ -356,7 +356,7 @@ describe('collect', () => {
   it('takes the newest of commit, changed file and run-state as the last activity', () => {
     const f = fixture();
     try {
-      const a = f.add('agent-a', '050-x');
+      const a = f.add('agent-a', '905-x');
       quietCommit(a, 300);
       writeFileSync(join(a, 'wip.txt'), 'x\n');
       const t = (NOW - 100 * MIN) / 1000;
@@ -379,11 +379,11 @@ describe('collect', () => {
     const f = fixture();
     try {
       const a = f.add('agent-a', 'chore-x');
-      mkdirSync(join(a, 'specs', '464-agent-watch'), { recursive: true });
-      writeFileSync(join(a, '.specify', 'feature.json'), JSON.stringify({ feature_directory: 'specs/464-agent-watch' }));
-      writeFileSync(join(a, 'specs', '464-agent-watch', 'spec.md'), '# s\n');
+      mkdirSync(join(a, 'specs', '900-fixture'), { recursive: true });
+      writeFileSync(join(a, '.specify', 'feature.json'), JSON.stringify({ feature_directory: 'specs/900-fixture' }));
+      writeFileSync(join(a, 'specs', '900-fixture', 'spec.md'), '# s\n');
       const r = collect(f.repo, env()).rows.find((x) => x.path === a);
-      assert.equal(r.feature, 'specs/464-agent-watch');
+      assert.equal(r.feature, 'specs/900-fixture');
       assert.equal(r.phase, 'planning');
     } finally {
       rmSync(f.root, { recursive: true, force: true });
@@ -393,7 +393,7 @@ describe('collect', () => {
   it('still lists every row when gh fails, with the PR state unknown', () => {
     const f = fixture();
     try {
-      const a = f.add('agent-a', '021-language-urls');
+      const a = f.add('agent-a', '901-fixture-urls');
       quietCommit(a, 120);
       const report = collect(f.repo, env({ gh: () => { throw new Error('gh: not logged in'); } }));
       const r = report.rows.find((x) => x.path === a);
@@ -411,19 +411,19 @@ describe('--fix and claim', () => {
   it('unlocks a dead lock, removes a merged clean worktree, prunes a deleted one, and leaves the rest alone', () => {
     const f = fixture();
     try {
-      const dead = f.add('agent-dead', '021-a');
+      const dead = f.add('agent-dead', '901-a');
       quietCommit(dead, 120);
       git(f.repo, 'worktree', 'lock', '--reason', 'claude agent agent-dead (pid 999999 start Sun Oct  4 08:07:18 2026)', dead);
-      const merged = f.add('agent-merged', '022-b');
-      const dirty = f.add('agent-dirty', '023-c');
+      const merged = f.add('agent-merged', '902-b');
+      const dirty = f.add('agent-dirty', '903-c');
       writeFileSync(join(dirty, 'wip.txt'), 'x\n');
-      const gone = f.add('agent-gone', '024-d');
+      const gone = f.add('agent-gone', '904-d');
       rmSync(gone, { recursive: true, force: true });
-      const heads = { '022-b': git(merged, 'rev-parse', 'HEAD'), '023-c': git(dirty, 'rev-parse', 'HEAD') };
+      const heads = { '902-b': git(merged, 'rev-parse', 'HEAD'), '903-c': git(dirty, 'rev-parse', 'HEAD') };
       const report = collect(f.repo, env({
         gh: () => [
-          pr({ number: 22, headRefName: '022-b', state: 'MERGED', headRefOid: heads['022-b'] }),
-          pr({ number: 23, headRefName: '023-c', state: 'MERGED', headRefOid: heads['023-c'] }),
+          pr({ number: 22, headRefName: '902-b', state: 'MERGED', headRefOid: heads['902-b'] }),
+          pr({ number: 23, headRefName: '903-c', state: 'MERGED', headRefOid: heads['903-c'] }),
         ],
       }));
       const actions = applyFixes(f.repo, report);
@@ -435,7 +435,25 @@ describe('--fix and claim', () => {
       assert.ok(existsSync(join(dirty, 'wip.txt')), 'the dirty worktree is kept');
       assert.ok(existsSync(join(f.repo, 'README.md')), 'the main worktree is kept');
       const branches = git(f.repo, 'branch', '--format=%(refname:short)').split('\n');
-      for (const b of ['021-a', '022-b', '023-c', '024-d']) assert.ok(branches.includes(b), `branch ${b} kept`);
+      for (const b of ['901-a', '902-b', '903-c', '904-d']) assert.ok(branches.includes(b), `branch ${b} kept`);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('never unlocks a lock whose agent is alive, or a lock set by hand', () => {
+    const f = fixture();
+    try {
+      const held = f.add('agent-held', '905-held');
+      const byHand = f.add('agent-by-hand', '906-by-hand');
+      quietCommit(held, 120);
+      quietCommit(byHand, 120);
+      git(f.repo, 'worktree', 'lock', '--reason', 'claude agent agent-held (pid 4242 start Sun Oct  4 08:07:18 2026)', held);
+      git(f.repo, 'worktree', 'lock', '--reason', 'kept while I look at it', byHand);
+      const report = collect(f.repo, env({ alive: (pid) => pid === 4242 }));
+      assert.deepEqual(applyFixes(f.repo, report), []);
+      const locked = git(f.repo, 'worktree', 'list', '--porcelain').split('\n').filter((l) => l.startsWith('locked'));
+      assert.equal(locked.length, 2);
     } finally {
       rmSync(f.root, { recursive: true, force: true });
     }
@@ -444,7 +462,7 @@ describe('--fix and claim', () => {
   it('does nothing and writes nothing on a pass with nothing to fix', () => {
     const f = fixture();
     try {
-      const a = f.add('agent-a', '021-a');
+      const a = f.add('agent-a', '901-a');
       const before = statSync(join(f.repo, '.git')).mtimeMs;
       const actions = applyFixes(f.repo, collect(f.repo, env()));
       assert.deepEqual(actions, []);
@@ -458,7 +476,7 @@ describe('--fix and claim', () => {
   it('writes a claim git ignores, which makes the holder live until it ages out', () => {
     const f = fixture();
     try {
-      const a = f.add('agent-a', '021-a');
+      const a = f.add('agent-a', '901-a');
       quietCommit(a, 120);
       writeClaim(a, 'resume', NOW - 5 * MIN);
       const claim = JSON.parse(readFileSync(join(a, '.specify', '.cache', 'watch-claim.json'), 'utf8'));
@@ -490,7 +508,7 @@ describe('the command', () => {
   it('prints rows, QA runs and the dispatch plan as JSON', () => {
     const f = fixture();
     try {
-      const a = f.add('agent-a', '021-a');
+      const a = f.add('agent-a', '901-a');
       quietCommit(a, 120);
       const { status, out } = capture(() => main(['--json'], { cwd: f.repo, ...env() }));
       assert.equal(status, 0);
@@ -507,11 +525,12 @@ describe('the command', () => {
   it('prints a board line per worktree, and refuses an unknown flag', () => {
     const f = fixture();
     try {
-      f.add('agent-a', '021-a');
+      f.add('agent-a', '901-a');
       const { status, out } = capture(() => main([], { cwd: f.repo, ...env() }));
       assert.equal(status, 0);
-      assert.match(out, /agent-a/);
-      assert.match(out, /021-a/);
+      assert.match(out, /901-a/);
+      assert.ok(out.includes(join(f.root, 'agent-a')), 'the full path');
+      assert.match(out, /\d+m commit/);
       assert.equal(capture(() => main(['--frobnicate'], { cwd: f.repo, ...env() })).status, 1);
     } finally {
       rmSync(f.root, { recursive: true, force: true });

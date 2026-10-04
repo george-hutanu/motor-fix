@@ -19,3 +19,21 @@
 
 ## 2. Specify
 - spec.md written; 5 clarifications self-answered (liveness from worktree lock pid + `claude` comm; QA runs from `mf-prtest-*` scratch worktrees; PR state outranks run-state; heavy.sh slots 3 → 4 so 4 QA runs can run; claims stop double dispatch).
+
+## 3. Org context
+- The org-researcher subagent got no Notion tools (its allowlist names other connector ids than this session's `828510aa…`), so it wrote `[UNAVAILABLE: notion]`. The run's own session had already read ST-464, ST-434 and EP-1, and context.md was written from those. No contradiction; the owner's "4 QA at once" is newer than the 3-slot limit.
+
+## 4. Clarify
+- spec-challenger raised 8 points; 5 answered as clarifications (an open ready PR outranks run-state done; agent-review is not a check, and its failure means resume; a live PR-tester run holds its row; claim at `.specify/.cache/watch-claim.json`, already ignored; no dispatch with the PR state unknown). The other 3 were applied as remediation: `block` dropped (run-state.mjs repair already blocks), phase → stage table written out, a lock with no pid counts as live, the cap of 2 counts only the watcher's claims.
+
+## 5–8. Plan, checklist, tasks, analyze
+- plan.md: one script, one skill, docs; no new dependency; no Complexity Tracking. Checklist: 16/16. tasks.md: 9 tasks. `artifact-lint.mjs`: 0 errors, 0 warnings (Jev lane unavailable: no key).
+- Draft PR #29 opened at the first commit (792c786).
+
+## 9. Tests (red)
+- `watch.spec.mjs` (40 tests) fails to load: `watch.mjs` does not exist. `heavy.spec.mjs` "has four slots by default…": 1 failed (default 3). Red: 41.
+
+## 10–11. Implement, converge
+- `watch.mjs`, `speckit-watch` skill, `heavy.sh` 4 slots, AGENTS.md, CLAUDE.local.md (+1 line, recorded with `context-audit --bless --allow-growth`), speckit-auto run-state note. 52/52 green.
+- Real pass on this machine: 30 worktrees in 7.1 s, 0 stale, 14 merged clean worktrees with `remove-worktree`, 7 merged worktrees left alone (uncommitted changes or a live holder). No `--fix` run against the real worktrees in this run.
+- Commits e18eddf (watcher), db46152 (slots and docs). Converge: every FR implemented; nothing appended.

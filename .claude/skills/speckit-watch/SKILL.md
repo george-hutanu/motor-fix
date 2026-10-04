@@ -1,7 +1,7 @@
 ---
 name: "speckit-watch"
 description: "Watch every worktree on this machine and get stale work moving again: one board of what each agent is doing (feature, phase, holder, last activity, PR), the safe fixes applied (dead locks released, merged clean worktrees removed), and one background agent dispatched per stale item to resume it, re-run QA, fix red CI or merge — at most 4 QA runs and 2 other agents at once. Repeat it with /loop 15m /speckit-watch."
-argument-hint: "[--stale <phase>=<minutes>,…] [--dry-run]"
+argument-hint: "[--stale <phase>=<minutes>,…]"
 compatibility: "Requires git, gh (george-hutanu via GH_TOKEN), Node 24"
 metadata:
   author: "george-hutanu"
@@ -32,8 +32,7 @@ or overrides them.
    node .claude/scripts/watch.mjs --fix --json [--stale <phase>=<minutes>,…]
    ```
 
-   Pass on any `--stale` from the arguments. With `--dry-run`, drop `--fix`
-   and stop after step 3: nothing is changed and nothing is dispatched.
+   Pass on any `--stale` from the arguments.
 
 2. `actions` lists what `--fix` did: dead locks released, merged clean
    worktrees removed, deleted worktrees pruned. A failed action is reported,
@@ -86,14 +85,13 @@ moved by then, it is stale again and gets a new agent.
 ```
 
 repeats the pass every 15 minutes in this session. A pass with nothing to do
-writes nothing and dispatches nothing, so the loop costs one `git` and one
-`gh` call per worktree set.
+writes nothing and dispatches nothing; it costs one `gh` call and a few
+read-only `git` calls per worktree.
 
 ## Limits
 
-- At most 4 PR-tester (QA) runs at once on this machine, counting the ones
-  already running; at most 2 other dispatched agents at once. `heavy.sh` has 4
-  slots, so each QA run holds one.
+- The caps on QA runs and other dispatched agents are applied by
+  `watch.mjs` (AGENTS.md states them); this skill dispatches exactly the plan.
 - The main worktree is the owner's; it is shown, never fixed.
 - `--fix` never forces, never deletes a branch, and never touches a tree with
   uncommitted changes.

@@ -14,7 +14,7 @@
 - [X] T005 `.claude/scripts/watch.mjs`: `--fix` and `claim` (`.specify/.cache/watch-claim.json`, already ignored) (FR-007, FR-009)
 - [X] T006 `scripts/heavy.sh`: 4 slots by default (FR-012)
 - [X] T007 `.claude/skills/speckit-watch/SKILL.md`: run, claim, dispatch one subagent per planned item with the fix's instructions, report, repeat with `/loop` (FR-011)
-- [X] T008 Docs: AGENTS.md (4 slots, 4 QA runs at once, the watcher and `/loop`), CLAUDE.local.md (command and skill, within the context baseline), `/speckit-auto` Run state paragraph (FR-011, FR-012)
+- [X] T008 Docs: AGENTS.md (4 slots, 4 QA runs at once, the watcher and `/loop`), CLAUDE.local.md (command and skill; one line of growth recorded with `context-audit.mjs --bless --allow-growth`), `/speckit-auto` Run state paragraph (FR-011, FR-012)
 
 ## Phase 3: Proof
 

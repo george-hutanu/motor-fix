@@ -8,20 +8,21 @@
 // Everything is derived on each pass from what is already on disk and on
 // GitHub: `git worktree list`, each worktree's `.specify/run-state.json` and
 // feature artifacts, its lock, one `gh pr list`. The only thing written by the
-// watcher itself is a claim, so a second pass does not dispatch onto work the
-// first one already handed out.
+// watcher itself is a claim, so a later pass does not dispatch onto work an
+// earlier one already handed out. Two passes running at the same moment are not
+// guarded against: run one /loop per machine.
 //
 // Usage:
 //   node .claude/scripts/watch.mjs [--json] [--fix] [--stale qa=10,planning=20]
 //   node .claude/scripts/watch.mjs claim <worktree> <fix>
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { readState } from "./run-state.mjs";
 
 export const DEFAULT_THRESHOLDS = { planning: 30, tests: 45, development: 45, review: 30, qa: 30, merging: 30 };
-export const QA_CAP = 4;
-export const AGENT_CAP = 2;
+const QA_CAP = 4;
+const AGENT_CAP = 2;
 const MIN = 60_000;
 const FIXES = ["merge", "fix-ci", "rerun-qa", "resume"];
 const claimPath = (path) => join(path, ".specify", ".cache", "watch-claim.json");
@@ -55,21 +56,29 @@ export function parseWorktrees(porcelain) {
   });
 }
 
-/** A PR tester's scratch worktree (`mf-prtest-<pr>-<sha7>-<pid>`, pr-test/worktree.mjs). */
+/**
+ * A PR tester's scratch worktree (`mf-prtest-<pr>-<sha7>-<pid>`, pr-test/worktree.mjs).
+ * Only live ones are counted. One left behind by a crashed tester is not shown:
+ * removing it takes the tester's forced cleanup, which the watcher never does.
+ */
 export function scratchRun(path) {
-  const m = basename(path).match(/^mf-prtest-(\d+)-[0-9a-f]+-(\d+)$/);
+  const m = basename(path).match(/^mf-prtest-(\d+)-[0-9a-f]+-([1-9]\d*)$/);
   return m ? { pr: Number(m[1]), pid: Number(m[2]) } : null;
 }
 
 export function lockPid(lock) {
-  const m = lock?.match(/\(pid (\d+)\b/);
+  const m = lock?.match(/\(pid ([1-9]\d*)\b/);
   return m ? Number(m[1]) : null;
 }
 
-/** A running process whose command is Claude Code. Lock start times are in another time zone than ps, so they are not compared. */
+/**
+ * A running process whose command line names Claude Code: the native `claude`
+ * binary, or `node …/claude-code/cli.js` for an npm install. Lock start times
+ * are in another time zone than ps, so they are not compared.
+ */
 function claudeAlive(pid) {
   try {
-    return execFileSync("ps", ["-p", String(pid), "-o", "comm="], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).includes("claude");
+    return execFileSync("ps", ["-p", String(pid), "-o", "command="], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).includes("claude");
   } catch {
     return false;
   }
@@ -87,8 +96,8 @@ const processAlive = (pid) => {
 export function summarizePr(pr) {
   let checks = "none";
   let agentReview = null;
-  for (const c of pr.statusCheckRollup ?? []) {
-    if (c.context === "agent-review") {
+  for (const c of (pr.statusCheckRollup ?? []).filter(Boolean)) {
+    if ((c.context ?? c.name) === "agent-review") {
       agentReview = String(c.state).toLowerCase() === "error" ? "failure" : String(c.state).toLowerCase();
       continue;
     }
@@ -123,11 +132,11 @@ export function phaseOf({ pr, runState, artifacts, qaLive }) {
   return "development";
 }
 
-const claimLive = (claim, threshold, now) => Boolean(claim) && now - Date.parse(claim.at) < threshold * MIN;
+const claimLive = (claim, threshold, now) => typeof claim?.at === "string" && now - Date.parse(claim.at) <= threshold * MIN;
 
-export function holderOf({ main, lock, alive, qaLive, claim, threshold, now }) {
+export function holderOf({ main, self = false, lock, alive, qaLive, claim, threshold, now }) {
   if (main) return "owner";
-  if (qaLive || claimLive(claim, threshold, now)) return "live";
+  if (self || qaLive || claimLive(claim, threshold, now)) return "live";
   if (lock === null) return "none";
   const pid = lockPid(lock);
   return pid === null || alive(pid) ? "live" : "dead";
@@ -140,7 +149,7 @@ export function fixOf(row, { now, thresholds }) {
     if (!pr || pr.state !== "merged") return { verdict: "done", fix: null, reason: pr ? `PR ${pr.state}` : "run done" };
     if (row.main || row.holder === "live") return { verdict: "done", fix: null, reason: "merged, still held" };
     if (!row.clean) return { verdict: "done", fix: null, reason: "merged, but has uncommitted changes" };
-    if (row.head !== pr.head) return { verdict: "done", fix: null, reason: "merged, but has commits after the merged head" };
+    if (!row.head || row.head !== pr.head) return { verdict: "done", fix: null, reason: "merged, but has commits after the merged head" };
     return { verdict: "done", fix: "remove-worktree", reason: "merged and clean" };
   }
   if (row.holder === "live" || row.holder === "owner") return { verdict: "ok", fix: null, reason: `held (${row.holder})` };
@@ -151,7 +160,7 @@ export function fixOf(row, { now, thresholds }) {
   const open = pr && (pr.state === "ready" || pr.state === "draft");
   if (pr?.state === "ready" && pr.checks === "pass" && pr.agentReview === "success") return { verdict: "stale", fix: "merge", reason };
   if (open && pr.checks === "fail") return { verdict: "stale", fix: "fix-ci", reason };
-  if (pr?.state === "ready" && pr.checks === "pass" && (!pr.agentReview || pr.agentReview === "pending")) return { verdict: "stale", fix: "rerun-qa", reason };
+  if (pr?.state === "ready" && pr.checks === "pass" && !pr.agentReview) return { verdict: "stale", fix: "rerun-qa", reason };
   return { verdict: "stale", fix: "resume", reason };
 }
 
@@ -174,18 +183,19 @@ export function dispatchPlan(rows, { qaLive, prsKnown = true }) {
 export function parseStale(args, defaults) {
   const thresholds = { ...defaults };
   for (const pair of args.flatMap((a) => a.split(","))) {
-    const [phase, minutes] = pair.split("=");
-    if (!(phase in thresholds) || !/^\d+$/.test(minutes ?? "")) throw new Error(`--stale expects <phase>=<minutes>, phases: ${Object.keys(defaults).join(", ")}`);
+    const [phase, minutes, extra] = pair.split("=");
+    if (!Object.hasOwn(defaults, phase) || !/^\d+$/.test(minutes ?? "") || extra !== undefined) throw new Error(`--stale expects <phase>=<minutes>, phases: ${Object.keys(defaults).join(", ")}`);
     thresholds[phase] = Number(minutes);
   }
   return thresholds;
 }
 
+/** null when git fails, so a failed `status` is never read as a clean tree. */
 const git = (cwd, args) => {
   try {
-    return execFileSync("git", ["--no-optional-locks", ...args], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    return execFileSync("git", ["--no-optional-locks", ...args], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 64 * 1024 * 1024 });
   } catch {
-    return "";
+    return null;
   }
 };
 
@@ -199,7 +209,7 @@ const readJson = (file) => {
 
 const mtime = (file) => {
   try {
-    return statSync(file).mtimeMs;
+    return lstatSync(file).mtimeMs;
   } catch {
     return 0;
   }
@@ -207,7 +217,7 @@ const mtime = (file) => {
 
 function featureOf(w) {
   const dir = readJson(join(w.path, ".specify", "feature.json"))?.feature_directory;
-  if (dir) return dir;
+  if (typeof dir === "string" && dir) return dir;
   return w.branch && existsSync(join(w.path, "specs", w.branch)) ? `specs/${w.branch}` : null;
 }
 
@@ -225,9 +235,9 @@ function artifactsOf(path, feature) {
 }
 
 function activityOf(path, runState) {
-  const candidates = [{ at: Date.parse(git(path, ["log", "-1", "--format=%cI"]).trim()) || 0, source: "commit" }];
-  const status = git(path, ["status", "--porcelain", "-z"]);
-  for (const entry of status.split("\0").filter(Boolean)) {
+  const candidates = [{ at: Date.parse((git(path, ["log", "-1", "--format=%cI"]) ?? "").trim()) || 0, source: "commit" }];
+  const status = git(path, ["status", "--porcelain", "-z", "--untracked-files=all"]);
+  for (const entry of (status ?? "").split("\0").filter(Boolean)) {
     if (!/^[ MADRCU?!]{2} /.test(entry)) continue;
     candidates.push({ at: mtime(join(path, entry.slice(3))), source: "file" });
   }
@@ -237,15 +247,18 @@ function activityOf(path, runState) {
 
 function fetchPrs(gh) {
   try {
-    return gh();
+    const prs = gh();
+    return Array.isArray(prs) ? prs.filter((p) => p && typeof p === "object" && typeof p.headRefName === "string") : null;
   } catch {
     return null;
   }
 }
 
+// 1000 covers this repository many times over; past it the oldest merged PRs
+// drop out, and their worktrees read as having no PR (shown, never removed).
 const defaultGh = () =>
   JSON.parse(
-    execFileSync("gh", ["pr", "list", "--state", "all", "--limit", "200", "--json", "number,headRefName,state,isDraft,headRefOid,statusCheckRollup"], {
+    execFileSync("gh", ["pr", "list", "--state", "all", "--limit", "1000", "--json", "number,headRefName,state,isDraft,headRefOid,statusCheckRollup"], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
       timeout: 30_000,
@@ -258,12 +271,20 @@ function prFor(prs, branch) {
 }
 
 export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claudeAlive, pidAlive = processAlive, thresholds = DEFAULT_THRESHOLDS } = {}) {
-  const worktrees = parseWorktrees(git(repo, ["worktree", "list", "--porcelain"]));
+  const worktrees = parseWorktrees(git(repo, ["worktree", "list", "--porcelain"]) ?? "");
+  const real = (p) => {
+    try {
+      return realpathSync(p);
+    } catch {
+      return p;
+    }
+  };
+  const here = real((git(repo, ["rev-parse", "--show-toplevel"]) ?? "").trim());
   const qaRuns = worktrees.map((w) => scratchRun(w.path)).filter((r) => r && pidAlive(r.pid));
   const prs = fetchPrs(gh);
   const rows = [];
   for (const w of worktrees) {
-    if (w.prunable || scratchRun(w.path)) continue;
+    if (w.prunable || scratchRun(w.path) || !existsSync(w.path)) continue;
     const runState = readState(w.path);
     const feature = featureOf(w);
     const raw = prs && w.branch ? prFor(prs, w.branch) : null;
@@ -272,8 +293,7 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
     const phase = phaseOf({ pr, runState, artifacts: artifactsOf(w.path, feature), qaLive });
     const threshold = thresholds[phase] ?? 0;
     const claim = readJson(claimPath(w.path));
-    const holder = holderOf({ main: w.main, lock: w.lock, alive, qaLive, claim, threshold, now });
-    const pid = lockPid(w.lock);
+    const holder = holderOf({ main: w.main, self: real(w.path) === here, lock: w.lock, alive, qaLive, claim, threshold, now });
     const { activity, clean } = activityOf(w.path, runState);
     const row = {
       path: w.path,
@@ -281,7 +301,6 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
       feature,
       phase,
       holder,
-      deadLock: !w.main && pid !== null && !alive(pid),
       activity,
       pr,
       clean,
@@ -310,7 +329,7 @@ export function applyFixes(repo, report) {
       actions.push({ what, ok: false, error: String(e.stderr ?? e.message).trim() });
     }
   };
-  for (const r of report.rows.filter((x) => x.deadLock)) run(`unlock ${r.path}`, ["worktree", "unlock", r.path]);
+  for (const r of report.rows.filter((x) => x.holder === "dead")) run(`unlock ${r.path}`, ["worktree", "unlock", r.path]);
   for (const r of report.rows.filter((x) => x.fix === "remove-worktree" && !x.main && x.clean))
     run(`remove ${r.path}`, ["worktree", "remove", r.path]);
   if (report.prunable.length > 0) run(`prune ${report.prunable.join(", ")}`, ["worktree", "prune"]);
@@ -336,14 +355,16 @@ function render(report, now) {
   const cols = report.rows.map((r) => [
     r.phase,
     r.holder,
-    ago(now, r.activity.at),
+    `${ago(now, r.activity.at)} ${r.activity.source}`,
     prText(r.pr),
     r.verdict,
     r.fix ?? "-",
-    `${basename(r.path)} (${r.branch ?? "detached"})`,
+    r.branch ?? "detached",
+    r.feature ?? "-",
+    r.path,
     r.verdict === "ok" ? "" : r.reason,
   ]);
-  const head = ["PHASE", "HOLDER", "QUIET", "PR", "VERDICT", "FIX", "WORKTREE", "WHY"];
+  const head = ["PHASE", "HOLDER", "LAST MOVED", "PR", "VERDICT", "FIX", "BRANCH", "FEATURE", "PATH", "WHY"];
   const widths = head.map((h, i) => Math.max(h.length, ...cols.map((c) => c[i].length)));
   for (const c of [head, ...cols]) lines.push(c.map((v, i) => v.padEnd(widths[i])).join("  ").trimEnd());
   lines.push(report.plan.length ? `dispatch: ${report.plan.map((p) => `${p.fix} ${basename(p.path)}`).join(", ")}` : "dispatch: nothing");
@@ -353,7 +374,7 @@ function render(report, now) {
 export function main(argv, { cwd = process.cwd(), now = Date.now(), ...deps } = {}) {
   if (argv[0] === "claim") {
     const [, path, fix] = argv;
-    if (!path || !FIXES.includes(fix)) {
+    if (!path || !FIXES.includes(fix) || !existsSync(join(path, ".git"))) {
       console.error(`usage: watch.mjs claim <worktree> <${FIXES.join("|")}>`);
       return 1;
     }
@@ -380,6 +401,10 @@ export function main(argv, { cwd = process.cwd(), now = Date.now(), ...deps } = 
     return 1;
   }
   const report = collect(cwd, { now, thresholds, ...deps });
+  if (report.rows.length === 0) {
+    console.error("watch.mjs: not inside a git repository");
+    return 1;
+  }
   const actions = fix ? applyFixes(cwd, report) : [];
   if (json) console.log(JSON.stringify({ ...report, actions }, null, 2));
   else {
