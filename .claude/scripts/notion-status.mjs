@@ -44,9 +44,9 @@ export function decide({ event, current, prior = null }) {
 }
 
 export function main(argv, repo) {
-  const event = argv.find((a) => !a.startsWith("--"));
   const i = argv.indexOf("--current");
   const current = i === -1 ? undefined : argv[i + 1];
+  const event = argv.find((a, j) => !a.startsWith("--") && (i === -1 || j !== i + 1));
   if (!event || !current) {
     console.error('usage: notion-status.mjs <start|review|qa|finish|blocked|unblock> --current "<story Status>"');
     return 1;

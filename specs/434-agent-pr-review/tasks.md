@@ -17,9 +17,9 @@ description: "Tasks: agent QA review of every ready PR"
 
 ## Phase 2: User Story 5 — heavy commands share one lock (P2, foundational: everything heavy below runs through it)
 
-- [X] T003 [US5] Red tests in `.claude/scripts/heavy.spec.mjs`: runs the command and returns its code; re-entrant under `MOTOR_FIX_HEAVY_HELD`; a held lock with `MOTOR_FIX_HEAVY_WAIT=1` exits 75 without running; an unmet memory floor with a bounded wait exits 75; exports `JEST_MAX_WORKERS=2`
+- [X] T003 [US5] Red tests in `.claude/scripts/heavy.spec.mjs`: exit codes pass through (75 included); slots exclude each other and a third job waits when two are taken; re-entrant under `HEAVY_HELD`; `HEAVY_WAIT=1` with every slot or the memory floor unmet exits 124 without running; TERM stops the command, frees the slot and ends a waiter; exports; the pre-commit hook wraps its checks and turns the Nx daemon off
 - [X] T004 [US5] Implement `scripts/heavy.sh` (lockf on macOS, flock on Linux, bounded wait, re-entrant)
-- [X] T005 [US5] `.husky/pre-commit` under the lock with `--parallel=1`; `jest.preset.cjs` reads `JEST_MAX_WORKERS`; `stop-test-gate.sh` and `post-edit-check.sh` run Jest through the lock with a bounded wait and `--maxWorkers=2`, reporting a skip
+- [X] T005 [US5] `.husky/pre-commit` runs its checks in one slot with `NX_DAEMON=false`; `jest.preset.cjs` reads `JEST_MAX_WORKERS`; `stop-test-gate.sh` (300 s) and `post-edit-check.sh` (60 s) run Jest in a slot with `--maxWorkers=2`, reporting a skip
 
 ## Phase 3: User Story 2 — the verdict decides the merge (P1)
 

@@ -9,9 +9,16 @@ const pr = (rollup) => ({ number: 21, state: 'OPEN', headRefOid: 'abc1234def5678
 describe('merge gate — which commands are merges', () => {
   it('finds gh pr merge with a number, a branch, a URL or nothing', () => {
     assert.deepEqual(mergeTarget('gh pr merge 21 --merge'), { pr: '21' });
-    assert.deepEqual(mergeTarget('GH_TOKEN=$(gh auth token -u george-hutanu) gh pr merge 434-agent-pr-review --merge'), { pr: '434-agent-pr-review' });
+    assert.deepEqual(mergeTarget('GH_TOKEN=$(gh auth token -u george-hutanu) gh pr merge feature-branch --merge'), { pr: 'feature-branch' });
     assert.deepEqual(mergeTarget('gh pr merge https://github.com/george-hutanu/motor-fix/pull/21 --squash'), { pr: 'https://github.com/george-hutanu/motor-fix/pull/21' });
     assert.deepEqual(mergeTarget('git push && gh pr merge --merge'), { pr: null });
+  });
+
+  it('finds a merge with the repository flag anywhere, or gh called by its path', () => {
+    assert.deepEqual(mergeTarget('gh -R george-hutanu/motor-fix pr merge 21 --merge'), { pr: '21' });
+    assert.deepEqual(mergeTarget('gh pr merge --repo george-hutanu/motor-fix 21 --merge'), { pr: '21' });
+    assert.deepEqual(mergeTarget('gh pr merge -R george-hutanu/motor-fix --squash 21'), { pr: '21' });
+    assert.deepEqual(mergeTarget('/opt/homebrew/bin/gh pr merge 21'), { pr: '21' });
   });
 
   it('finds the REST merge call', () => {

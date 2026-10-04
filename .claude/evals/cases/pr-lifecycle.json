@@ -27,7 +27,7 @@
     "why": "a session that ends on a green ready PR with no agent review skips the QA step; the gate sends it to the tester instead of to the merge",
     "payload": {},
     "env": {
-      "SPECKIT_PR_STATE": "{\"branch\": \"434-agent-pr-review\", \"ahead\": 3, \"unpushed\": 0, \"blocked\": false, \"pr\": {\"number\": 21, \"state\": \"OPEN\", \"isDraft\": false, \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"checks\", \"conclusion\": \"SUCCESS\"}]}}"
+      "SPECKIT_PR_STATE": "{\"branch\": \"feature-branch\", \"ahead\": 3, \"unpushed\": 0, \"blocked\": false, \"pr\": {\"number\": 21, \"state\": \"OPEN\", \"isDraft\": false, \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"checks\", \"conclusion\": \"SUCCESS\"}]}}"
     },
     "expect": {
       "exit": 2,
@@ -40,7 +40,7 @@
     "why": "with agent-review success on the head the PR is mergeable, and leaving it unmerged is the unfinished task Constitution VII refuses",
     "payload": {},
     "env": {
-      "SPECKIT_PR_STATE": "{\"branch\": \"434-agent-pr-review\", \"ahead\": 3, \"unpushed\": 0, \"blocked\": false, \"pr\": {\"number\": 21, \"state\": \"OPEN\", \"isDraft\": false, \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"checks\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"StatusContext\", \"context\": \"agent-review\", \"state\": \"SUCCESS\"}]}}"
+      "SPECKIT_PR_STATE": "{\"branch\": \"feature-branch\", \"ahead\": 3, \"unpushed\": 0, \"blocked\": false, \"pr\": {\"number\": 21, \"state\": \"OPEN\", \"isDraft\": false, \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"checks\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"StatusContext\", \"context\": \"agent-review\", \"state\": \"SUCCESS\"}]}}"
     },
     "expect": {
       "exit": 2,
@@ -53,7 +53,7 @@
     "why": "an agent-review failure is in the implementer's fix loop (or blocked at its cap); trapping the session would force a merge or a dodge",
     "payload": {},
     "env": {
-      "SPECKIT_PR_STATE": "{\"branch\": \"434-agent-pr-review\", \"ahead\": 3, \"unpushed\": 0, \"blocked\": false, \"pr\": {\"number\": 21, \"state\": \"OPEN\", \"isDraft\": false, \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"checks\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"StatusContext\", \"context\": \"agent-review\", \"state\": \"FAILURE\"}]}}"
+      "SPECKIT_PR_STATE": "{\"branch\": \"feature-branch\", \"ahead\": 3, \"unpushed\": 0, \"blocked\": false, \"pr\": {\"number\": 21, \"state\": \"OPEN\", \"isDraft\": false, \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"checks\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"StatusContext\", \"context\": \"agent-review\", \"state\": \"FAILURE\"}]}}"
     },
     "expect": {
       "exit": 0

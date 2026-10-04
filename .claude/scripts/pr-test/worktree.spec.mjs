@@ -64,6 +64,14 @@ describe('the tester worktree', () => {
     assert.doesNotMatch(git(caller, 'worktree', 'list'), new RegExp(wt.dir));
   });
 
+  it('leaves no ref behind in the caller\'s repository', () => {
+    const { caller, root } = repos();
+    const before = git(caller, 'for-each-ref', '--format=%(refname)');
+    const wt = createWorktree({ repo: caller, pr: 21, root: join(root, 'runs') });
+    removeWorktree({ repo: caller, dir: wt.dir });
+    assert.equal(git(caller, 'for-each-ref', '--format=%(refname)'), before);
+  });
+
   it('is safe to remove twice', () => {
     const { caller, root } = repos();
     const wt = createWorktree({ repo: caller, pr: 21, root: join(root, 'runs') });

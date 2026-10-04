@@ -51,6 +51,23 @@
     }
   },
   {
+    "id": "merge-gate-refuses-a-merge-with-the-repo-flag",
+    "hook": "pre:bash:merge-gate",
+    "why": "gh -R owner/repo is the spelling AGENTS.md teaches; a gate that only reads gh pr merge first fails open on it",
+    "payload": {
+      "tool_input": {
+        "command": "gh -R george-hutanu/motor-fix pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\": 21, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"checks\", \"conclusion\": \"SUCCESS\"}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "speckit-pr-test 21"
+    }
+  },
+  {
     "id": "merge-gate-passes-with-agent-review-success",
     "hook": "pre:bash:merge-gate",
     "why": "with the tester's success on the head commit the merge is the next lifecycle step, and the gate must not stand in its way",

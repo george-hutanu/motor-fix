@@ -15,16 +15,22 @@ import { fileURLToPath } from "node:url";
 import { hasAgentReview } from "./pr-lifecycle-gate.mjs";
 
 /** The PR a command merges ({ pr: null } for the current branch), or null for any other command. */
+// Flags of `gh` and `gh pr merge` that take a value, so the value is not read as the PR.
+const VALUED = new Set(["-R", "--repo", "-t", "--subject", "-b", "--body", "-F", "--body-file", "--match-head-commit", "-A", "--author-email"]);
+
 export function mergeTarget(command) {
   for (const part of command.split(/&&|\|\||;|\n/)) {
     const words = part.trim().split(/\s+/);
-    const gh = words.indexOf("gh");
+    const gh = words.findIndex((w) => w === "gh" || w.endsWith("/gh"));
     if (gh === -1) continue;
-    const [sub, verb] = words.slice(gh + 1);
-    if (sub === "pr" && verb === "merge") {
-      const arg = words.slice(gh + 3).find((w) => !w.startsWith("-"));
-      return { pr: arg ?? null };
+    const positional = [];
+    const rest = words.slice(gh + 1);
+    for (let i = 0; i < rest.length; i++) {
+      if (VALUED.has(rest[i])) i++;
+      else if (!rest[i].startsWith("-")) positional.push(rest[i]);
     }
+    const [sub, verb, arg] = positional;
+    if (sub === "pr" && verb === "merge") return { pr: arg ?? null };
     if (sub === "api") {
       const m = part.match(/repos\/[^/\s]+\/[^/\s]+\/pulls\/(\d+)\/merge\b/);
       if (m) return { pr: m[1] };

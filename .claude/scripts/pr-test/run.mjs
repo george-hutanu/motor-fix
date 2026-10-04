@@ -3,7 +3,14 @@
 // slot: a worktree at the PR head, private services and apps on free ports,
 // health, the API calls, the viewport sweep, the agent's flows, the affected
 // tests and the end-to-end suite, a report — and teardown of everything it
-// started, on success, failure, or SIGINT/SIGTERM.
+// started, on success, on failure, and on SIGINT, SIGTERM or SIGHUP to this
+// process (passed through heavy.sh to the inner run). SIGKILL cannot be
+// caught: after one, `git worktree prune` and the run directory under the
+// temp dir are what is left to clean.
+//
+// --allow-closed sweeps a merged or closed PR (dry runs looking back);
+// --langs and --schemes narrow the matrix for a quick lap; --no-tests skips
+// the test runs. The pr-tester agent uses none of them on a real review.
 //
 //   node .claude/scripts/pr-test/run.mjs <pr> [--routes /,/cockpit] [--flows <file.mjs>]
 //        [--out <dir>] [--lap <n>] [--langs ro,en] [--schemes light,dark] [--no-tests] [--allow-closed]
@@ -52,9 +59,12 @@ async function main(argv) {
     return 64;
   }
   // The whole boot-test-teardown sequence holds one heavy-command slot.
+  // A signal to this outer process is passed on: heavy.sh stops the inner run,
+  // whose own handlers tear everything down before it exits.
   if (process.env.HEAVY_HELD !== "1") {
-    const r = spawnSync("sh", [join(repoRoot, "scripts", "heavy.sh"), process.execPath, self, ...argv], { stdio: "inherit" });
-    return r.status ?? 1;
+    const child = spawn("sh", [join(repoRoot, "scripts", "heavy.sh"), process.execPath, self, ...argv], { stdio: "inherit" });
+    for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) process.on(signal, () => child.kill(signal));
+    return new Promise((done) => child.on("exit", (code, signal) => done(code ?? (signal ? 143 : 1))));
   }
 
   const info = JSON.parse(sh("gh", ["pr", "view", opt.pr, "--json", "number,state,headRefOid,baseRefName,headRefName,url,mergeCommit"], { cwd: repoRoot }));
@@ -263,7 +273,7 @@ async function main(argv) {
     const v = verdict(findings);
     const blocking = findings.filter((f) => f.severity === "blocker" || f.severity === "high").length;
     const summary = `${v === "failure" ? `${blocking} blocking finding(s)` : "No blocking findings"}; ${findings.length} in all. Booted ${booted.join(", ") || "nothing"}.`;
-    const report = { pr: Number(opt.pr), repo: info.repo, sha, base: info.base, lap: opt.lap, verdict: v, summary, findings, booted, notes, screenshots, out };
+    const report = { pr: Number(opt.pr), repo: info.repo, sha, base: info.base, lap: opt.lap, verdict: v, summary, findings, booted, notes, screenshots: screenshots.map((s) => relative(out, s)) };
     report.markdown = reportMarkdown({ pr: opt.pr, sha, verdict: v, findings, booted, screenshots, lap: opt.lap, notes });
     writeFileSync(join(out, "report.json"), JSON.stringify(report, null, 2));
     writeFileSync(join(out, "report.md"), report.markdown);

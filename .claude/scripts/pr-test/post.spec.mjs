@@ -111,10 +111,10 @@ describe('adding the agent\'s own findings', () => {
   it('recomputes the verdict, the summary and the report', async () => {
     const { addFindings } = await import('./post.mjs');
     const report = { pr: 21, sha: 'abc1234', lap: 1, verdict: 'success', summary: '', findings: [{ severity: 'low', kind: 'axe', title: 'x', steps: ['a'] }], booted: ['api', 'web'], notes: [], screenshots: [] };
-    const next = addFindings(report, [{ severity: 'high', kind: 'review', title: 'FR-003 not implemented', steps: ['Read spec.md FR-003'] }]);
+    const next = addFindings(report, [{ severity: 'high', kind: 'review', title: 'A required behaviour is not implemented', steps: ['Read spec.md'] }]);
     assert.equal(next.verdict, 'failure');
     assert.match(next.summary, /1 blocking/);
-    assert.match(next.markdown, /FR-003 not implemented/);
+    assert.match(next.markdown, /A required behaviour is not implemented/);
     assert.equal(next.findings.length, 2);
   });
 });

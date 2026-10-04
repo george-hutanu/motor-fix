@@ -17,6 +17,8 @@ export const VIEWPORTS = {
   mobile: { width: 390, height: 844, isMobile: true, hasTouch: true, deviceScaleFactor: 3 },
 };
 const LOCALES = { ro: "ro-RO", en: "en-GB" };
+// Where the language switch keeps the chosen language (libs/i18n/src/switch.ts).
+const LANG_KEY = "mf.lang";
 
 const slug = (route) => route.replace(/^\/+|\/+$/g, "").replace(/[^a-z0-9]+/gi, "-") || "home";
 
@@ -53,7 +55,7 @@ export function toFindings(observations, { web, origins }) {
 }
 
 /** Drive the running web app through the matrix; returns observations and screenshot paths. */
-export async function runSweep({ baseURL, routes, outDir, schemes, langs, langKey = "mf.lang", repoRoot }) {
+export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRoot }) {
   const require = createRequire(join(repoRoot, "package.json"));
   const { chromium } = require("@playwright/test");
   const axeSource = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
@@ -77,7 +79,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, langKe
             localStorage.setItem(key, value);
           } catch {}
         },
-        [langKey, run.lang],
+        [LANG_KEY, run.lang],
       );
       const page = await context.newPage();
       const screenshot = join(outDir, run.shot);

@@ -13,8 +13,8 @@ const git = (cwd, ...args) =>
  * commit, and that commit is the one its status lands on.
  */
 export function createWorktree({ repo, pr, sha, root }) {
-  git(repo, "fetch", "--quiet", "origin", `+refs/pull/${pr}/head:refs/pr-test/${pr}`);
-  const head = git(repo, "rev-parse", `refs/pr-test/${pr}`);
+  git(repo, "fetch", "--quiet", "origin", `refs/pull/${pr}/head`);
+  const head = git(repo, "rev-parse", "FETCH_HEAD");
   if (sha && !head.startsWith(sha)) throw new Error(`PR #${pr} head is ${head}, not ${sha}; it moved since the tester was asked to run`);
   mkdirSync(root, { recursive: true });
   const dir = join(root, `mf-prtest-${pr}-${head.slice(0, 7)}-${process.pid}`);

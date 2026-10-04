@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 set -e
+# No Nx daemon from a commit, slot or not: it outlives the hook in every worktree.
+export NX_DAEMON=false
 sh .husky/identity.sh check
 # Typecheck, lint and test share the machine with other sessions: they take a
 # heavy-command slot and run with heavy.sh's modest parallelism (NX_PARALLEL,

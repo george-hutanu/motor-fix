@@ -40,7 +40,12 @@ export async function waitForHttp(url, { timeoutMs = 120000, intervalMs = 1000 }
   return { ok: false, error: `${url} did not answer 2xx within ${timeoutMs} ms (last: ${last})` };
 }
 
-/** `docker` arguments for the compose services on the run's own ports and project. */
+/**
+ * `docker` arguments for the compose services on the run's own ports and project.
+ * TODO: not yet run end to end — the machine this was built on has no Docker.
+ * Verify `up --wait` with the one-shot minio-setup and `down -v` on the first
+ * Docker host that runs the tester (specs/434-agent-pr-review/deferred.md).
+ */
 export function composePlan({ project, file, ports }) {
   const base = ["compose", "-p", project, "-f", file];
   return {

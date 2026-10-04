@@ -86,4 +86,13 @@ describe('the command line keeps the prior status in run-state', () => {
     assert.equal(JSON.parse(out.at(-1)).story, 'QA');
     assert.equal(readState(repo).notion_prior_status, null);
   });
+
+  it('reads the event whichever side of --current it is on', () => {
+    const repo = mkdtempSync(join(tmpdir(), 'notion-status-'));
+    dirs.push(repo);
+    const out = [];
+    vi.spyOn(console, 'log').mockImplementation((line) => out.push(line));
+    assert.equal(main(['--current', 'In review', 'qa'], repo), 0);
+    assert.equal(JSON.parse(out.at(-1)).story, 'QA');
+  });
 });

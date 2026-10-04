@@ -15,7 +15,12 @@
 #   HEAVY_MIN_FREE  free-memory floor in percent (default 20)
 #   HEAVY_WAIT      give up after this many seconds, exit 124, command not run
 #                   (default: wait for as long as it takes)
-#   HEAVY_POLL      seconds between slot checks while all are busy (default 5)
+#   HEAVY_POLL      seconds between slot checks while all are busy (default 5),
+#                   and between memory checks once a slot is had (default 20)
+#
+# INT, TERM and HUP stop the command and free its slot, exiting 130, 143, 129.
+# Dev servers (nx serve) must not run under heavy.sh: a slot held for as long
+# as a server lives starves every other session.
 #
 # A command already holding a slot (HEAVY_HELD=1) runs a nested call at once
 # rather than taking a second slot. Free memory is read with macOS
@@ -32,7 +37,23 @@ deadline=""
 [ -n "${HEAVY_WAIT:-}" ] && deadline=$(( $(date +%s) + HEAVY_WAIT ))
 got=$(mktemp "${TMPDIR:-/tmp}/heavy-got.XXXXXX")
 rm -f "$got"
-trap 'rm -f "$got"' EXIT INT TERM
+
+# A signal stops whatever this script started — the slot holder and the
+# command under it — then exits; it never falls back into the slot loop.
+child=""
+killtree() {
+  for c in $(pgrep -P "$1" 2>/dev/null); do killtree "$c"; done
+  kill -TERM "$1" 2>/dev/null
+}
+stop() {
+  [ -n "$child" ] && { killtree "$child"; wait "$child" 2>/dev/null; }
+  rm -f "$got"
+  exit "$1"
+}
+trap 'rm -f "$got"' EXIT
+trap 'stop 130' INT
+trap 'stop 143' TERM
+trap 'stop 129' HUP
 export HEAVY_GOT="$got" HEAVY_MIN_FREE="${HEAVY_MIN_FREE:-20}" HEAVY_DEADLINE="$deadline" HEAVY_HELD=1
 
 # Runs inside a slot: the marker says the slot was had, then the memory wait.
@@ -45,11 +66,11 @@ run='
       echo "heavy.sh: gave up, only ${free}% memory free (floor ${HEAVY_MIN_FREE}%); not running: $*" >&2
       exit 124
     fi
-    echo "heavy.sh: only ${free}% memory free, waiting 20s" >&2
+    echo "heavy.sh: only ${free}% memory free, waiting ${HEAVY_POLL:-20}s" >&2
     sleep "${HEAVY_POLL:-20}"
   done
   echo "heavy.sh: running: $*" >&2
-  "$@"'
+  exec "$@"'
 
 slot() {
   l=$1
@@ -59,8 +80,20 @@ slot() {
   elif command -v flock >/dev/null 2>&1; then
     flock -n -E 75 "$l" /bin/sh -c "$run" heavy "$@"
   else
+    echo "heavy.sh: neither lockf nor flock here; running without a slot" >&2
     /bin/sh -c "$run" heavy "$@"
   fi
+}
+
+# In the background and waited for, so a signal is handled at once rather than
+# after the command ends.
+background() {
+  "$@" &
+  child=$!
+  wait "$child"
+  rc=$?
+  child=""
+  return "$rc"
 }
 
 waited=0
@@ -69,7 +102,7 @@ while :; do
   while [ "$i" -le "$SLOTS" ]; do
     lock="$LOCK"
     [ "$i" -gt 1 ] && lock="${LOCK%.lock}.$i.lock"
-    slot "$lock" "$@"
+    background slot "$lock" "$@"
     rc=$?
     # A busy slot also exits 75; the marker tells it apart from the command's own 75.
     [ -e "$got" ] && exit "$rc"
@@ -81,5 +114,5 @@ while :; do
   fi
   [ "$waited" -eq 0 ] && echo "heavy.sh: all $SLOTS slots busy, waiting" >&2
   waited=1
-  sleep "${HEAVY_POLL:-5}"
+  background sleep "${HEAVY_POLL:-5}"
 done

@@ -10,10 +10,10 @@ A `pr-tester` subagent, started by `/speckit-pr-test <PR>`, drives deterministic
 
 **Language/Version**: Node 24 (`.nvmrc`), plain ESM `.mjs` for the harness (`.claude/hooks`, `.claude/scripts`), POSIX `sh` for `scripts/heavy.sh`.
 **Primary Dependencies**: `@playwright/test` 1.63.0 (package.json), new devDependency `axe-core` 4.13.0 (MPL-2.0; no existing package injects axe), `gh` CLI, `docker compose` when installed, else Homebrew `initdb`/`pg_ctl` 17 and `redis-server`.
-**Storage**: none of its own; the report is files under `.work/pr-test/`, run-state carries the Notion prior status.
+**Storage**: none of its own; the report is files under `--out` (default `<tmp>/mf-prtest/<pr>-<sha7>`), run-state carries the Notion prior status.
 **Testing**: harness vitest (`npm run test:harness`, `.claude/vitest.config.ts`), harness evals (`node .claude/scripts/harness-eval.mjs --check`).
 **Target Platform**: macOS 16 GB laptop shared by several sessions (lockf), Linux in CI (flock).
-**Constraints**: one heavy command at a time (shared lock, 30 % free memory); never mutation tests locally; one Playwright browser; teardown on every exit path.
+**Constraints**: at most 3 heavy commands machine-wide (`scripts/heavy.sh` slots, 20 % free memory, owner relaxation mid-run); never mutation tests locally; one Playwright browser; teardown on every exit path.
 
 ## Constitution Check
 
@@ -37,7 +37,7 @@ A `pr-tester` subagent, started by `/speckit-pr-test <PR>`, drives deterministic
 - **Findings and verdict**: `findings.mjs` holds the severity table, the web-touching rule, the verdict, the changed GET endpoints from two OpenAPI documents, and the Markdown report.
 - **Posting**: `post.mjs` with an injected `gh` runner; review event first, COMMENT fallback on HTTP 422 ("own pull request"), status, then the description section (`## Agent review` up to the next `## `) or a comment.
 - **Gates**: `merge-gate.mjs` (PreToolUse Bash) parses `gh pr merge [<n|branch|url>]` and `gh api … pulls/<n>/merge`; `pr-lifecycle-gate.mjs` checks the rollup for `agent-review`. Both read `SPECKIT_PR_STATE` (JSON) instead of `gh` when set, so eval cases need no network; hook processes take the environment of Claude Code, not of a Bash call, so an agent cannot set it for a real gate run.
-- **Lock**: `scripts/heavy.sh` uses `lockf -t` on macOS, `flock -w` on Linux; exports `MOTOR_FIX_HEAVY_HELD=1`, `NX_PARALLEL=1`, `NX_DAEMON=false`, `JEST_MAX_WORKERS=2`; `jest.preset.cjs` reads `JEST_MAX_WORKERS`; the hooks pass `--maxWorkers=2`.
+- **Lock**: `scripts/heavy.sh` tries 3 slot lock files with `lockf -k -t 0` (macOS) or `flock -n` (Linux), polling every 5 s; a marker separates a busy slot (75) from the command's own exit code; `HEAVY_WAIT` gives up with 124; INT/TERM/HUP stop the command and exit 130/143/129; exports `HEAVY_HELD=1`, `NX_PARALLEL=2`, `NX_DAEMON=false`, `JEST_MAX_WORKERS=2` and the shared wrapper's Node heap cap; `jest.preset.cjs` reads `JEST_MAX_WORKERS`; the hooks pass `--maxWorkers=2` because the root multi-project Jest config ignores a per-project value.
 - **Notion**: `notion-status.mjs <event> --current <Status>` prints the target story and timeline statuses and whether to write; `blocked` records the prior status in run-state (`notion_prior_status`), `unblock` returns to it.
 
 ## Project Structure

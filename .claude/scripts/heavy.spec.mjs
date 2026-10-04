@@ -14,8 +14,17 @@ const scratch = () => {
   dirs.push(dir);
   return dir;
 };
-afterEach(() => {
-  for (const h of holders.splice(0)) h.kill();
+/** Stop a heavy.sh child and wait for it; SIGKILL if TERM did not end it, so no test leaves a waiter behind. */
+async function stop(child) {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  const gone = new Promise((resolve) => child.once('exit', resolve));
+  child.kill('SIGTERM');
+  const timer = setTimeout(() => child.kill('SIGKILL'), 8000);
+  await gone;
+  clearTimeout(timer);
+}
+afterEach(async () => {
+  await Promise.all(holders.splice(0).map(stop));
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
@@ -82,6 +91,39 @@ describe('heavy.sh', () => {
     assert.equal(out.status, 0);
   }, 20000);
 
+  it('on SIGTERM stops its command, frees the slot and exits, without running the command again', async () => {
+    const dir = scratch();
+    const log = join(dir, 'log');
+    const started = join(dir, 'one');
+    const child = spawn('sh', [heavy, 'sh', '-c', `touch ${started}; echo start >> ${log}; sleep 3; echo done >> ${log}`], {
+      env: env(dir, { HEAVY_SLOTS: '1' }),
+      stdio: 'ignore',
+    });
+    holders.push(child);
+    for (let i = 0; i < 100 && !existsSync(started); i++) await new Promise((r) => setTimeout(r, 50));
+    const exited = new Promise((resolve) => child.on('exit', (code) => resolve(code)));
+    child.kill('SIGTERM');
+    assert.equal(await exited, 143);
+    await new Promise((r) => setTimeout(r, 3500));
+    assert.equal(readFileSync(log, 'utf8'), 'start\n');
+    assert.equal(run(dir, ['true'], { HEAVY_SLOTS: '1', HEAVY_WAIT: '1' }).status, 0);
+  }, 20000);
+
+  it('on SIGTERM ends a heavy.sh that is still waiting for a slot', async () => {
+    const dir = scratch();
+    await hold(dir, 'one', { HEAVY_SLOTS: '1' });
+    const ran = join(dir, 'ran');
+    const waiter = spawn('sh', [heavy, 'sh', '-c', `touch ${ran}`], { env: env(dir, { HEAVY_SLOTS: '1', HEAVY_POLL: '5' }), stdio: 'ignore' });
+    holders.push(waiter);
+    await new Promise((r) => setTimeout(r, 500));
+    const exited = new Promise((resolve) => waiter.on('exit', (code) => resolve(code)));
+    const sent = Date.now();
+    waiter.kill('SIGTERM');
+    assert.equal(await exited, 143);
+    assert.ok(Date.now() - sent < 2000, 'the waiter finished its sleep before handling TERM');
+    assert.equal(existsSync(ran), false);
+  }, 20000);
+
   it('gives up with 124 when free memory stays under the floor past the wait', () => {
     const dir = scratch();
     const ran = join(dir, 'ran');
@@ -100,5 +142,13 @@ describe('the pre-commit hook', () => {
     const line = hook.split('\n').find((l) => l.includes('scripts/heavy.sh'));
     assert.ok(line, 'pre-commit does not call scripts/heavy.sh');
     for (const check of ['typecheck', 'lint', 'test']) assert.match(line, new RegExp(`npm run ${check}\\b`));
+  });
+
+  it('turns the Nx daemon off before anything runs, slot or not', () => {
+    const hook = readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8');
+    const lines = hook.split('\n');
+    const off = lines.findIndex((l) => /^export NX_DAEMON=false\b/.test(l));
+    assert.ok(off !== -1, 'pre-commit does not export NX_DAEMON=false');
+    assert.ok(off < lines.findIndex((l) => l.includes('scripts/heavy.sh')));
   });
 });

@@ -99,9 +99,11 @@ decisions are the source for anything the constitution does not fix.
   (NestJS modules, Prisma schema per module), `data-access` (Angular client
   generated from `apps/api/openapi.json`: `npx nx run data-access:generate`,
   never edited by hand). A lib is created by the story that first needs it.
-- Heavy commands (npm ci/install, nx build/serve/test/typecheck/e2e, Jest over
-  more than a few files, docker compose, Playwright, booting the apps) go
-  through `scripts/heavy.sh`; mutation tests never run locally, only in CI.
+- Heavy commands (npm ci/install, nx build/test/typecheck/e2e, Jest over more
+  than a few files, docker compose, Playwright, a boot-test-teardown run) go
+  through `scripts/heavy.sh` (3 slots machine-wide); a dev server
+  (`nx serve`) never holds a slot for as long as it lives, and mutation tests
+  never run locally, only in CI.
 - Lint and format: Biome only, root `biome.json` (no eslint, no prettier).
   Tests: Jest from the root config, Playwright for end-to-end. NestJS 12 is
   ESM-only, so the Nest projects' `test` targets run Jest with
