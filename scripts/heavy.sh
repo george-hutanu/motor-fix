@@ -11,7 +11,8 @@
 #
 #   HEAVY_LOCK      slot 1's lock file (default /tmp/motor-fix-heavy.lock);
 #                   slot n is the same path with .n before .lock
-#   HEAVY_SLOTS     how many heavy commands at once (default 3)
+#   HEAVY_SLOTS     how many heavy commands at once (default 4, so 4 PR-tester
+#                   runs can each hold one)
 #   HEAVY_MIN_FREE  free-memory floor in percent (default 20)
 #   HEAVY_WAIT      give up after this many seconds, exit 124, command not run
 #                   (default: wait for as long as it takes)
@@ -26,7 +27,7 @@
 # rather than taking a second slot. Free memory is read with macOS
 # `memory_pressure`; where it does not exist (Linux CI) the floor is not checked.
 LOCK="${HEAVY_LOCK:-/tmp/motor-fix-heavy.lock}"
-SLOTS="${HEAVY_SLOTS:-3}"
+SLOTS="${HEAVY_SLOTS:-4}"
 export NX_DAEMON=false NX_PARALLEL="${NX_PARALLEL:-2}" JEST_MAX_WORKERS="${JEST_MAX_WORKERS:-2}"
 export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=3072}"
 

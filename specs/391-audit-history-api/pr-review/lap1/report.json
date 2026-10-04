@@ -1,0 +1,139 @@
+{
+  "pr": 32,
+  "repo": "george-hutanu/motor-fix",
+  "sha": "ede041fb8a0e957afe2b95dfd331497aa38f3871",
+  "base": "e9124ae5e9b1c199a109f13dbcec4a587329e255",
+  "lap": 1,
+  "verdict": "success",
+  "summary": "No blocking findings; 4 in all. Booted postgres, redis, api, web, worker.",
+  "findings": [
+    {
+      "severity": "medium",
+      "kind": "step",
+      "title": "api readiness: storage down",
+      "steps": [
+        "No object store on this machine (no Docker); every other check is ok. Environment limit, not the change."
+      ]
+    },
+    {
+      "severity": "medium",
+      "kind": "step",
+      "title": "worker readiness: storage down",
+      "steps": [
+        "No object store on this machine (no Docker); every other check is ok. Environment limit, not the change."
+      ]
+    },
+    {
+      "severity": "medium",
+      "kind": "axe",
+      "title": "Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element)",
+      "route": "/",
+      "viewport": "desktop",
+      "scheme": "light",
+      "lang": "ro",
+      "steps": [
+        "Open / at the desktop viewport (1440×900), light colour scheme, language ro.",
+        "Run axe-core on the page: rule landmark-one-main on html.",
+        "Observe: Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element)."
+      ],
+      "evidence": "shots/home-desktop-light-ro.png",
+      "seenIn": [
+        "desktop light ro",
+        "desktop light en",
+        "desktop dark ro",
+        "desktop dark en",
+        "tablet light ro",
+        "tablet light en",
+        "tablet dark ro",
+        "tablet dark en",
+        "mobile light ro",
+        "mobile light en",
+        "mobile dark ro",
+        "mobile dark en",
+        "small-phone light ro",
+        "small-phone light en",
+        "small-phone dark ro",
+        "small-phone dark en"
+      ]
+    },
+    {
+      "severity": "medium",
+      "kind": "axe",
+      "title": "Accessibility (moderate): region — All page content should be contained by landmarks (2 elements)",
+      "route": "/",
+      "viewport": "desktop",
+      "scheme": "light",
+      "lang": "ro",
+      "steps": [
+        "Open / at the desktop viewport (1440×900), light colour scheme, language ro.",
+        "Run axe-core on the page: rule region on p:nth-child(2).",
+        "Observe: Accessibility (moderate): region — All page content should be contained by landmarks (2 elements)."
+      ],
+      "evidence": "shots/home-desktop-light-ro.png",
+      "seenIn": [
+        "desktop light ro",
+        "desktop light en",
+        "desktop dark ro",
+        "desktop dark en",
+        "tablet light ro",
+        "tablet light en",
+        "tablet dark ro",
+        "tablet dark en",
+        "mobile light ro",
+        "mobile light en",
+        "mobile dark ro",
+        "mobile dark en",
+        "small-phone light ro",
+        "small-phone light en",
+        "small-phone dark ro",
+        "small-phone dark en"
+      ]
+    }
+  ],
+  "booted": [
+    "postgres",
+    "redis",
+    "api",
+    "web",
+    "worker"
+  ],
+  "notes": [
+    "No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.",
+    "Called changed endpoints: /api/v1/audit-history."
+  ],
+  "screenshots": [
+    "shots/home-desktop-light-ro.png",
+    "shots/home-desktop-light-en.png",
+    "shots/home-desktop-dark-ro.png",
+    "shots/home-desktop-dark-en.png",
+    "shots/home-tablet-light-ro.png",
+    "shots/home-tablet-light-en.png",
+    "shots/home-tablet-dark-ro.png",
+    "shots/home-tablet-dark-en.png",
+    "shots/home-mobile-light-ro.png",
+    "shots/home-mobile-light-en.png",
+    "shots/home-mobile-dark-ro.png",
+    "shots/home-mobile-dark-en.png",
+    "shots/home-small-phone-light-ro.png",
+    "shots/home-small-phone-light-en.png",
+    "shots/home-small-phone-dark-ro.png",
+    "shots/home-small-phone-dark-en.png",
+    "shots/cockpit-desktop-light-ro.png",
+    "shots/cockpit-desktop-light-en.png",
+    "shots/cockpit-desktop-dark-ro.png",
+    "shots/cockpit-desktop-dark-en.png",
+    "shots/cockpit-tablet-light-ro.png",
+    "shots/cockpit-tablet-light-en.png",
+    "shots/cockpit-tablet-dark-ro.png",
+    "shots/cockpit-tablet-dark-en.png",
+    "shots/cockpit-mobile-light-ro.png",
+    "shots/cockpit-mobile-light-en.png",
+    "shots/cockpit-mobile-dark-ro.png",
+    "shots/cockpit-mobile-dark-en.png",
+    "shots/cockpit-small-phone-light-ro.png",
+    "shots/cockpit-small-phone-light-en.png",
+    "shots/cockpit-small-phone-dark-ro.png",
+    "shots/cockpit-small-phone-dark-en.png"
+  ],
+  "markdown": "**Agent review: success** — PR #32 at `ede041f`, lap 1\n\nBlocking: 0 (blocker 0, high 0) · medium 4 · low 0. Booted: postgres, redis, api, web, worker.\n- No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.\n- Called changed endpoints: /api/v1/audit-history.\n\n| # | Severity | Finding | Where | Evidence |\n| --- | --- | --- | --- | --- |\n| 1 | medium | api readiness: storage down |  |  |\n| 2 | medium | worker readiness: storage down |  |  |\n| 3 | medium | Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element) | / · desktop · light · ro (+15 more) | shots/home-desktop-light-ro.png |\n| 4 | medium | Accessibility (moderate): region — All page content should be contained by landmarks (2 elements) | / · desktop · light · ro (+15 more) | shots/home-desktop-light-ro.png |\n\n### Reproduction\n1. No object store on this machine (no Docker); every other check is ok. Environment limit, not the change.\n2. No object store on this machine (no Docker); every other check is ok. Environment limit, not the change.\n3. Open / at the desktop viewport (1440×900), light colour scheme, language ro. → Run axe-core on the page: rule landmark-one-main on html. → Observe: Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element).\n4. Open / at the desktop viewport (1440×900), light colour scheme, language ro. → Run axe-core on the page: rule region on p:nth-child(2). → Observe: Accessibility (moderate): region — All page content should be contained by landmarks (2 elements).\n\nScreenshots: 32, one per route × viewport × scheme × language.\n"
+}

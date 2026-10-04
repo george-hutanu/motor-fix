@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-53 — See screens build up with motion, or still with reduced motion: the shared motion for the Cockpit UI kit in libs/ui-cockpit, with prefers-reduced-motion giving a still version. Animate ST-51's gauges through the hooks it left (the lamp's `pulse` marker, `--mf-dial-fill`, the large dial's static needle, and odometer digit cells carrying `--mf-digit`), and add the dialog pop animation that ST-157 will use. Notion story: https://app.notion.com/p/3ee607bff0d281e6a52dd360e3cf1cda. Spec folder and branch: 053-motion."
 
