@@ -53,3 +53,11 @@
 ## 16. Retrospective evidence
 
 - Gathered for the final report, unjudged.
+
+## Hand-off
+
+- PR body filled and checked (`pr-body-check.ts`: follows the template); PR #42 ready; Notion In review; label `in review`.
+- Merged origin/main (16 commits, clean); typecheck, lint, tests and notion-ready specs green; pushed.
+- CI: Harness failed on `watch.adversary.spec.mjs` › "writes the claim through the command and then holds the worktree". The cause was a time bomb, not flakiness: the claim is written at a fixed `NOW` (2026-10-04T12:00Z) and was read back with `Date.now()`, so it stopped counting as live once real time passed noon plus the threshold, on main too. Fixed in one line by reading with the same clock (b806e99); repair lap 1. CI all green.
+- QA: Notion QA, label `QA`, pr-tester lap 2 started.
+- QA lap 2 (b806e99): failure. One real bug: the CLI entry check compared `import.meta.url` with the un-resolved `argv[1]`, so through a symlinked path (macOS temp dirs) the script did nothing and exited 0 — the archive check would pass anything. 13 of the 15 highs were that bug's symptoms in the tester's temp worktree; one was the known ST-437 timeout under load. Fixed with real-path comparison (as `watch.mjs`), plus `process.exitCode` so >64 KB output is not cut; both tested first (2 red → green, 80 notion-ready tests). PR body corrected on the watch fix. The same entry check in 21 other scripts is deferred to ST-443 (commented there). Repair lap 2.

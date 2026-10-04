@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -350,5 +350,29 @@ describe('the command line', () => {
   it('exits non-zero with no command', () => {
     const r = cli([]);
     assert.notEqual(r.status, 0);
+  });
+});
+
+describe('the command line from wherever it is called', () => {
+  it('still runs, and still fails a log with no ready line, through a symlinked path', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'notion-ready-link-'));
+    try {
+      const link = join(dir, 'notion-ready.mjs');
+      symlinkSync(SCRIPT, link);
+      const log = join(dir, 'notion-sync.md');
+      writeFileSync(log, '- 2026-10-04 · finish · ST-1 story · QA → Done\n');
+      const r = spawnSync('node', [link, 'check', log], { encoding: 'utf8' });
+      assert.equal(r.status, 1);
+      assert.match(r.stderr, /notion-ready/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('prints a decision larger than a pipe buffer in full', () => {
+    const items = Array.from({ length: 5000 }, (_, i) => item(`ST-${i + 1}`, { priority: 'Low' }));
+    const r = cli(['decide'], JSON.stringify(items));
+    assert.equal(r.status, 0);
+    assert.equal(JSON.parse(r.stdout).ready.length, 5000);
   });
 });

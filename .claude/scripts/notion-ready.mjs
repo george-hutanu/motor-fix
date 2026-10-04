@@ -13,8 +13,8 @@
 //     prints { tick, untick, ready: [{ id, priority }], held: [{ id, reason }] }
 //   node .claude/scripts/notion-ready.mjs check specs/<feature>/notion-sync.md
 //     exits 0 when a ready line follows the last finish line, else 1 with why
-import { readFileSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
+import { readFileSync, realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const FINISHED = new Set(['Done', 'Merged']);
 const RANK = ['Highest', 'High', 'Medium', 'Low'];
@@ -92,4 +92,15 @@ function run(argv) {
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) process.exit(run(process.argv.slice(2)));
+// Real paths on both sides: a symlinked path (macOS temp dirs are one) must
+// still run the CLI, or the archive check would pass by doing nothing.
+const invoked = (() => {
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+})();
+
+// exitCode, not exit(): exit() would cut stdout at the pipe buffer.
+if (invoked) process.exitCode = run(process.argv.slice(2));
