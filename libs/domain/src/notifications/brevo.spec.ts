@@ -1,9 +1,11 @@
+// @traces 195-FR-005
 import { Brevo, BrevoError } from './brevo';
 import { BrevoMock } from './brevo-mock.testing';
 
 const mock = new BrevoMock();
 const mail = {
   from: { email: 'noreply@example.test', name: 'MotorFix' },
+  html: '<p>Un mesaj</p>',
   subject: 'Salut',
   text: 'Un mesaj',
   to: { email: 'ana@example.test', name: 'Ana' },
@@ -25,6 +27,7 @@ describe('the Brevo e-mail adapter', () => {
     expect(call.method).toBe('POST');
     expect(call.headers['api-key']).toBe('test-key');
     expect(call.body).toEqual({
+      htmlContent: '<p>Un mesaj</p>',
       sender: { email: 'noreply@example.test', name: 'MotorFix' },
       subject: 'Salut',
       textContent: 'Un mesaj',

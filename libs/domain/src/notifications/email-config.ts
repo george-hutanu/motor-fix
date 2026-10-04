@@ -9,6 +9,8 @@ export interface EmailConfig {
   apiKey?: string;
   apiUrl: string;
   webhookSecret?: string;
+  // The web app, which every e-mail's button opens.
+  webUrl?: string;
 }
 
 type BlockedReason = 'sending_off' | 'not_allowed';
@@ -24,6 +26,13 @@ function sender(value = '', sending = false): EmailConfig['from'] {
     throw new Error('EMAIL_FROM must be an address or Name <address>');
   }
   return from;
+}
+
+// A value that is not a URL would put a broken link in every e-mail;
+// without one, the messages that need it fail instead.
+function webUrl(value = ''): string | undefined {
+  if (!URL.canParse(value)) return undefined;
+  return value.replace(/\/+$/, '');
 }
 
 export function emailConfig(
@@ -46,6 +55,7 @@ export function emailConfig(
     production: appEnv === 'production',
     sending: switchValue === 'on',
     webhookSecret: source['BREVO_WEBHOOK_SECRET'] || undefined,
+    webUrl: webUrl(source['PUBLIC_WEB_URL']),
   };
 }
 

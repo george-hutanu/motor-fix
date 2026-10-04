@@ -8,6 +8,7 @@ interface OutgoingEmail {
   to: Mailbox;
   subject: string;
   text: string;
+  html: string;
 }
 
 export class BrevoError extends Error {
@@ -34,6 +35,7 @@ export class Brevo {
   async send(mail: OutgoingEmail): Promise<string> {
     const res = await this.call('/smtp/email', {
       body: JSON.stringify({
+        htmlContent: mail.html,
         sender: mail.from,
         subject: mail.subject,
         textContent: mail.text,

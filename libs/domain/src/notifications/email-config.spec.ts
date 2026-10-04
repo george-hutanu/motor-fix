@@ -32,6 +32,17 @@ describe('e-mail configuration', () => {
     });
   });
 
+  it('reads the web app address the e-mail buttons open, without a trailing slash', () => {
+    expect(
+      emailConfig('staging', { PUBLIC_WEB_URL: 'https://motorfix.test/' })
+        .webUrl,
+    ).toBe('https://motorfix.test');
+    expect(emailConfig('staging', {}).webUrl).toBeUndefined();
+    expect(
+      emailConfig('staging', { PUBLIC_WEB_URL: 'motorfix.test' }).webUrl,
+    ).toBeUndefined();
+  });
+
   it('talks to Brevo by default', () => {
     expect(emailConfig('production', {}).apiUrl).toBe(
       'https://api.brevo.com/v3',
