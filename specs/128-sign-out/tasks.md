@@ -37,6 +37,7 @@ Independent test: through HTTP against PostgreSQL and Redis, two sessions of one
 
 - [X] T013 `apps/web/src/app/dashboard/session.ts`: a sign-out retry still on its way when a sign-in starts a new session (the `online` retry) leaves the pending flag alone, so it never reaches the new cookie (FR-010; code-reviewer re-review MEDIUM)
 - [X] T014 `libs/domain/src/auth/sign-in.service.ts`: record `account.signed_out_everywhere` through `EVENT_PORT` inside the sign-out transaction, a failing record ending nothing (500); `plan.md` structure corrected (FR-001, Constitution VI; pr-tester lap 1 medium #3, low #7)
+- [X] T015 `apps/api/src/public-routes.integration.spec.ts` (from main, ST-130): `POST /api/v1/auth/sign-out-everywhere` joins the public list, like sign-out it reads the refresh cookie; `plan.md` structure and VI line corrected (pr-tester lap 2 high #1, low #4)
 
 ## Dependencies
 

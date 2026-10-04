@@ -19,17 +19,17 @@ One new API call, `POST /api/v1/auth/sign-out-everywhere`, read off the refresh 
 
 - I No bloated code: one service method, one controller route, one small confirm task, a few lines in `Session` and `Frame`; no new module, no port for a single publisher (the auth Redis publishes in the live fan-out's own shape through one exported helper).
 - II Tests first: API integration + unit + web unit + e2e written before the code.
-- VI Redis holds nothing that is the only copy: the live message is a hint; the revocation is in PostgreSQL.
+- VI Redis holds nothing that is the only copy: the live message is a hint; the revocation is in PostgreSQL. The change records `account.signed_out_everywhere` through `EVENT_PORT` in its own transaction.
 - VII Lifecycle: draft PR #66 open, Notion Planning.
 
 ## Project Structure
 
 ```
-libs/domain/src/auth/sign-in.service.ts        signOutEverywhere(token); audit-coverage.spec already scans it
+libs/domain/src/auth/sign-in.service.ts        signOutEverywhere(token), its event through EVENT_PORT; audit-coverage.spec already scans it
 libs/domain/src/auth/auth.controller.ts        POST auth/sign-out-everywhere
 libs/domain/src/auth/auth.module.ts            pass the auth Redis to SignInService's publisher
 libs/domain/src/events/live.hub.ts             export publishLive(redis, event, audience) (LiveHub.publish uses it)
-libs/domain/src/events/event.port.ts           account.signed_out_everywhere recorded in the change's transaction (Constitution VI)
+apps/api/src/public-routes.integration.spec.ts  the new route joins the public list (it reads the refresh cookie)
 apps/api/openapi.json, libs/data-access        regenerated
 apps/web/src/app/dashboard/session.ts          signOutEverywhere(), cross-tab channel, pending retry, ended$
 apps/web/src/app/dashboard/sign-out-everywhere.ts  the confirm task (new)
