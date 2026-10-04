@@ -43,6 +43,21 @@ export class Session {
     return this.load();
   }
 
+  // A new driver account, signed in as a sign-in would be.
+  async signUp(
+    name: string,
+    email: string,
+    password: string,
+    language: 'ro' | 'en',
+  ) {
+    const { accessToken } = await this.auth.authControllerSignUp({
+      body: { email, language, name, password },
+    });
+    this.accessToken = accessToken;
+    this.current.set(null);
+    return this.load();
+  }
+
   // One renewal at a time, whoever asks.
   renew(): Promise<boolean> {
     if (this.renewing) return this.renewing;

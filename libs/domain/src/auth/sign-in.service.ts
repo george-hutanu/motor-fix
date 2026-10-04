@@ -98,10 +98,18 @@ export class SignInService {
       );
     }
     await this.attempts.clear(email);
-    const remember = input.remember ?? true;
+    return this.openSession(account.id, role, input.remember ?? true);
+  }
+
+  // A new session: its access token, and the refresh token of a new family.
+  async openSession(
+    accountId: string,
+    role: Role,
+    remember: boolean,
+  ): Promise<Issued> {
     return {
-      accessToken: this.accessToken(account.id, role),
-      refreshToken: await this.openFamily(account.id, remember),
+      accessToken: this.accessToken(accountId, role),
+      refreshToken: await this.openFamily(accountId, remember),
       remember,
     };
   }

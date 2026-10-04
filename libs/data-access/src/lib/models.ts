@@ -11,4 +11,5 @@ export type { LiveTestDto } from './models/live-test-dto';
 export type { MeDto } from './models/me-dto';
 export type { SessionDto } from './models/session-dto';
 export type { SignInDto } from './models/sign-in-dto';
+export type { SignUpDto } from './models/sign-up-dto';
 export type { UpdateMeDto } from './models/update-me-dto';
