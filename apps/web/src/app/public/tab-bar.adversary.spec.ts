@@ -14,7 +14,12 @@ import { Session } from '../dashboard/session';
 // a loaded CI runner.
 jest.mock('@motor-fix/ui-cockpit/sample', () => {
   const { Component } = jest.requireActual('@angular/core');
-  return { CockpitSamplePage: Component({ selector: 'mf-cockpit-sample', template: '' })(class {}) };
+  return {
+    CockpitSamplePage: Component({
+      selector: 'mf-cockpit-sample',
+      template: '',
+    })(class {}),
+  };
 });
 
 const ORIGIN = 'https://motorfix.ro';
