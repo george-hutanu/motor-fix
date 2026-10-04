@@ -16,3 +16,9 @@
 - 2026-10-04 · labels · PR #45 · QA
 - 2026-10-04 · debt · 2 deferred bullets filed as To do tasks 3ef607bff0d281f2ac88f8453c97d361 (proxy trust on staging), 3ef607bff0d28174b5dced301e1b45b8 (one offline sentence)
 - 2026-10-04 · debt · 2 PR-tester findings filed as To do tasks 3ef607bff0d281c497dadbe0862dbc54 (offline behind the service worker), 3ef607bff0d2818aac43e06a8f6e1341 (signed-out renewal console error)
+- 2026-10-04 · finish · ST-82 story Status · QA → Done (PR #45, 047ab21)
+- 2026-10-04 · finish · Foundations timeline row ST-82 · QA → Merged
+- 2026-10-04 · finish · EP-1 Foundations Status · unchanged (In progress: other stories open)
+- 2026-10-04 · labels · PR #45 · none
+- 2026-10-04 · ready · Foundations · +ST-80 +ST-253 +ST-288 +ST-394 −none
+- 2026-10-04 · comment · ST-82 · posted (17 items)
