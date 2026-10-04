@@ -17,17 +17,17 @@ Paths are `(new)` unless they exist today: `libs/i18n/src/check.ts`, `libs/i18n/
 
 **Independent test**: render the display in English with a text that equals a translation key; it shows the literal text, carries `translate="no"`, has no button, and does not change on a language switch.
 
-- [ ] T004 [US2] Test: `libs/i18n/src/as-written.spec.ts` — shows the text exactly (including one equal to a key and one in Romanian under English), `translate="no"` on the host, no button or link, unchanged after `I18n.use('en')`, nothing for an empty text (FR-003)
-- [ ] T005 [US2] `libs/i18n/src/as-written.ts` — `AsWritten` component; export from `libs/i18n/src/index.ts` (FR-003)
-- [ ] T006 [US2] Test: `apps/web/src/app/dashboard/frame.spec.ts` — the signed-in name shows through the display (`translate="no"`), as stored, in both languages (FR-004)
-- [ ] T007 [US2] `apps/web/src/app/dashboard/frame.ts` — the name through `mf-as-written` (FR-004)
+- [X] T004 [US2] Test: `libs/i18n/src/as-written.spec.ts` — shows the text exactly (including one equal to a key and one in Romanian under English), `translate="no"` on the host, no button or link, unchanged after `I18n.use('en')`, nothing for an empty text (FR-003)
+- [X] T005 [US2] `libs/i18n/src/as-written.ts` — `AsWritten` component; export from `libs/i18n/src/index.ts` (FR-003)
+- [X] T006 [US2] Test: `apps/web/src/app/dashboard/frame.spec.ts` — the signed-in name shows through the display (`translate="no"`), as stored, in both languages (FR-004)
+- [X] T007 [US2] `apps/web/src/app/dashboard/frame.ts` — the name through `mf-as-written` (FR-004)
 
 ## Phase 3: US1 One language per screen (P1)
 
 **Independent test**: the catalogue pipe follows the language; every route in English shows no Romanian-only interface text, and the reverse.
 
-- [ ] T008 [US1] Test: `libs/i18n/src/catalogue-name.pipe.spec.ts` — Romanian name under Romanian, English under English, follows a switch without re-creating the view, Romanian when the English name is missing or blank (FR-005)
-- [ ] T009 [US1] `libs/i18n/src/catalogue-name.pipe.ts` — `CatalogueNamePipe`; export from `index.ts` (FR-005)
+- [X] T008 [US1] Test: `libs/i18n/src/catalogue-name.pipe.spec.ts` — Romanian name under Romanian, English under English, follows a switch without re-creating the view, Romanian when the English name is missing or blank (FR-005)
+- [X] T009 [US1] `libs/i18n/src/catalogue-name.pipe.ts` — `CatalogueNamePipe`; export from `index.ts` (FR-005)
 - [ ] T010 [US1] Test: `apps/web-e2e/src/one-language.spec.ts` — on `/ro`, `/en`, `/cockpit` and the three dashboards, in each language, no visible text or accessible label equals a text only the other language's files have; the dashboard name is shown with `translate="no"` in English (FR-004, FR-006, SC-002)
 
 ## Phase 4: US3 Long text at 320 px in both languages (P2)

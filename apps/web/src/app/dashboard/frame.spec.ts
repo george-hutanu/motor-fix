@@ -128,6 +128,16 @@ describe('Frame', () => {
     );
   });
 
+  it('shows the signed-in name as written, marked not to be translated, in both languages', async () => {
+    const { element, fixture } = render('driver', '/app/driver', []);
+    const name = () => element.querySelector('.account [translate="no"]');
+
+    expect(name()?.textContent?.trim()).toBe('Ioana Pop');
+    await TestBed.inject(I18n).use('en');
+    await fixture.whenStable();
+    expect(name()?.textContent?.trim()).toBe('Ioana Pop');
+  });
+
   it('shows the chosen entry as the title over a plain empty state', () => {
     const { element, fixture } = render('driver', '/app/driver', [
       'driver.cars',
