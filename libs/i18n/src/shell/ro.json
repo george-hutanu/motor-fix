@@ -72,6 +72,15 @@
         "team": "Mecanici"
       }
     },
+    "roles": {
+      "admin": "Admin",
+      "driver": "Șofer",
+      "failed": "Nu am putut schimba rolul. Încearcă din nou.",
+      "garage": "Service",
+      "label": "Rolul tău",
+      "mechanic": "Mecanic",
+      "receptionist": "Recepție"
+    },
     "signOut": "Ieși din cont",
     "tab": {
       "brands": "Mărci",

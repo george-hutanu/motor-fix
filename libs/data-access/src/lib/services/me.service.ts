@@ -11,9 +11,12 @@ import { StrictHttpResponse } from '../strict-http-response';
 
 import { meControllerMe } from '../fn/me/me-controller-me';
 import { MeControllerMe$Params } from '../fn/me/me-controller-me';
+import { meControllerSwitchRole } from '../fn/me/me-controller-switch-role';
+import { MeControllerSwitchRole$Params } from '../fn/me/me-controller-switch-role';
 import { meControllerUpdate } from '../fn/me/me-controller-update';
 import { MeControllerUpdate$Params } from '../fn/me/me-controller-update';
 import { MeDto } from '../models/me-dto';
+import { SessionDto } from '../models/session-dto';
 
 @Injectable({ providedIn: 'root' })
 export class MeService extends BaseService {
@@ -69,6 +72,31 @@ export class MeService extends BaseService {
   meControllerUpdate(params: MeControllerUpdate$Params, context?: HttpContext): Promise<MeDto> {
     const resp = this.meControllerUpdate$Response(params, context);
     return resp.then((r: StrictHttpResponse<MeDto>): MeDto => r.body);
+  }
+
+  /** Path part for operation `meControllerSwitchRole()` */
+  static readonly MeControllerSwitchRolePath = '/api/v1/me/roles/switch';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `meControllerSwitchRole()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  meControllerSwitchRole$Response(params: MeControllerSwitchRole$Params, context?: HttpContext): Promise<StrictHttpResponse<SessionDto>> {
+    const obs = meControllerSwitchRole(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `meControllerSwitchRole$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  meControllerSwitchRole(params: MeControllerSwitchRole$Params, context?: HttpContext): Promise<SessionDto> {
+    const resp = this.meControllerSwitchRole$Response(params, context);
+    return resp.then((r: StrictHttpResponse<SessionDto>): SessionDto => r.body);
   }
 
 }

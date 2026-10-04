@@ -119,6 +119,16 @@
       "post": {
         "operationId": "AuthController_refresh",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -198,6 +208,45 @@
                 }
               }
             }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/roles/switch": {
+      "post": {
+        "operationId": "MeController_switchRole",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwitchRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The account does not hold that role"
           }
         },
         "security": [
@@ -560,6 +609,22 @@
           "language"
         ]
       },
+      "RefreshDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "The role the tab is showing; used when the account still holds it",
+            "enum": [
+              "driver",
+              "garage",
+              "receptionist",
+              "mechanic",
+              "admin"
+            ]
+          }
+        }
+      },
       "MeDto": {
         "type": "object",
         "properties": {
@@ -651,6 +716,25 @@
         },
         "required": [
           "language"
+        ]
+      },
+      "SwitchRoleDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "One of the roles the account holds",
+            "enum": [
+              "driver",
+              "garage",
+              "receptionist",
+              "mechanic",
+              "admin"
+            ]
+          }
+        },
+        "required": [
+          "role"
         ]
       },
       "AuditActorDto": {

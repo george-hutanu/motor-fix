@@ -1,12 +1,32 @@
-import { MeDto, UpdateMeDto } from '@motor-fix/contracts';
-import { Body, Controller, Get, Inject, Patch } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+  MeDto,
+  SessionDto,
+  SwitchRoleDto,
+  UpdateMeDto,
+} from '@motor-fix/contracts';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Patch,
+  Post,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 
 import { AccountsService } from './accounts.service';
 import { CurrentActor } from './actor.guard';
 import { capabilitiesOf } from './capabilities';
 import { type Actor, landingFor } from './policy';
 import { PRISMA } from './prisma';
+import { SignInService } from './sign-in.service';
 import type { PrismaClient } from '../generated/prisma/client';
 
 @ApiTags('me')
@@ -16,6 +36,7 @@ export class MeController {
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     private readonly accounts: AccountsService,
+    private readonly signIns: SignInService,
   ) {}
 
   @Get()
@@ -44,5 +65,16 @@ export class MeController {
   ): Promise<MeDto> {
     await this.accounts.setLanguage(actor, body.language);
     return this.me(actor);
+  }
+
+  @Post('roles/switch')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: SessionDto })
+  @ApiNotFoundResponse({ description: 'The account does not hold that role' })
+  async switchRole(
+    @CurrentActor() actor: Actor,
+    @Body() body: SwitchRoleDto,
+  ): Promise<SessionDto> {
+    return { accessToken: await this.signIns.switchRole(actor, body.role) };
   }
 }

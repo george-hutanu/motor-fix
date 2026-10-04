@@ -6,6 +6,7 @@ import {
   Inject,
   Injectable,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 
 import { signAccessToken } from './access-token';
@@ -14,7 +15,7 @@ import { Attempts } from './attempts';
 import type { Role } from './capabilities';
 import { MAINTENANCE, type Maintenance } from './maintenance';
 import { DECOY_HASH, verifyPassword } from './password';
-import { roleInUse } from './policy';
+import { type Actor, roleInUse } from './policy';
 import { PRISMA } from './prisma';
 import type { PrismaClient } from '../generated/prisma/client';
 
@@ -114,7 +115,22 @@ export class SignInService {
     };
   }
 
-  async refresh(token: string | undefined): Promise<Issued> {
+  // A view preference, not a change of rights: no audit entry. A role the
+  // account does not hold does not exist for it.
+  async switchRole(actor: Actor, role: Role): Promise<string> {
+    if (!actor.roles.includes(role)) throw new NotFoundException();
+    await this.prisma.account.update({
+      data: { lastRole: role },
+      where: { id: actor.accountId },
+    });
+    return this.accessToken(actor.accountId, role);
+  }
+
+  // `wanted`: the role the renewing tab shows, kept while the account holds it.
+  async refresh(
+    token: string | undefined,
+    wanted: Role | null = null,
+  ): Promise<Issued> {
     const row = await this.presented(token);
     const now = Date.now();
     if (!row || row.expiresAt.getTime() <= now) throw signInRequired();
@@ -126,7 +142,7 @@ export class SignInService {
     const { account } = row;
     const accessToken = this.accessToken(
       account.id,
-      await this.stillAllowed(row),
+      await this.stillAllowed(row, wanted),
     );
     const next = inGrace ? null : await this.rotate(row, now);
     // In the grace, or another tab rotated it between the read and the write.
@@ -194,13 +210,16 @@ export class SignInService {
 
   // The role in use of an account that may still be signed in; otherwise the
   // family is closed.
-  private async stillAllowed(row: {
-    familyId: string;
-    account: { lastRole: Role; status: string; roles: { role: Role }[] };
-  }): Promise<Role> {
+  private async stillAllowed(
+    row: {
+      familyId: string;
+      account: { lastRole: Role; status: string; roles: { role: Role }[] };
+    },
+    wanted: Role | null,
+  ): Promise<Role> {
     const { account } = row;
     const role = roleInUse(
-      null,
+      wanted,
       account.lastRole,
       account.roles.map((r) => r.role),
     );

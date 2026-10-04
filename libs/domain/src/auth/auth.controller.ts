@@ -1,4 +1,9 @@
-import { SessionDto, SignInDto, SignUpDto } from '@motor-fix/contracts';
+import {
+  RefreshDto,
+  SessionDto,
+  SignInDto,
+  SignUpDto,
+} from '@motor-fix/contracts';
 import {
   Body,
   type CanActivate,
@@ -123,11 +128,15 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: SessionDto })
   async refresh(
+    @Body() body: RefreshDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<SessionDto> {
     try {
-      const issued = await this.signIns.refresh(presented(req));
+      const issued = await this.signIns.refresh(
+        presented(req),
+        body.role ?? null,
+      );
       keep(res, issued);
       return { accessToken: issued.accessToken };
     } catch (error) {

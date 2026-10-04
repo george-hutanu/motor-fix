@@ -35,6 +35,7 @@ interface Person {
 const GARAGES = [
   { name: 'Atelier Test', slug: 'atelier-test' },
   { name: 'Service Dobre', slug: 'service-dobre' },
+  { name: 'Atelier Dinamo', slug: 'atelier-dinamo' },
 ];
 
 const PEOPLE: Person[] = [
@@ -76,6 +77,15 @@ const PEOPLE: Person[] = [
     email: 'doua-roluri@example.test',
     lastRole: 'garage',
     name: 'Elena Dobre',
+    roles: ['driver', 'garage'],
+  },
+  // Switches roles in the end-to-end tests; nothing else may rely on its
+  // role used last.
+  {
+    at: { as: 'owner', garage: 'atelier-dinamo' },
+    email: 'comutare@example.test',
+    lastRole: 'garage',
+    name: 'Mihai Ionescu',
     roles: ['driver', 'garage'],
   },
   {

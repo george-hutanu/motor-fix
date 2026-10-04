@@ -62,8 +62,10 @@ export class Session {
   renew(): Promise<boolean> {
     if (this.renewing) return this.renewing;
     const generation = this.generation;
+    // The role this tab shows, so a switch in another tab leaves it alone.
+    const role = this.current()?.role;
     const renewing: Promise<boolean> = this.auth
-      .authControllerRefresh()
+      .authControllerRefresh({ body: role ? { role } : {} })
       .then(
         (answer) => {
           if (generation !== this.generation) return false;
@@ -102,6 +104,31 @@ export class Session {
     });
     this.loading = loading;
     return loading;
+  }
+
+  // The tab's session in another of the account's roles. A failure leaves the
+  // token and the account as they were, and rejects.
+  async switchRole(role: MeDto['role']): Promise<MeDto | null> {
+    const generation = this.generation;
+    const { accessToken } = await this.me.meControllerSwitchRole({
+      body: { role },
+    });
+    if (generation !== this.generation) return null;
+    if (typeof accessToken !== 'string' || !accessToken) {
+      throw new Error('no access token in the answer');
+    }
+    const before = this.accessToken;
+    this.accessToken = accessToken;
+    try {
+      const answer = await this.me.meControllerMe();
+      if (generation !== this.generation) return null;
+      this.current.set(answer);
+      return answer;
+    } catch (error) {
+      // The old token still holds the old role for its last minutes.
+      if (generation === this.generation) this.accessToken = before;
+      throw error;
+    }
   }
 
   async signOut(): Promise<void> {

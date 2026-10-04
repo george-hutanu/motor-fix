@@ -77,3 +77,25 @@ export class SessionDto {
   })
   accessToken!: string;
 }
+
+const ROLE = ['driver', 'garage', 'receptionist', 'mechanic', 'admin'] as const;
+
+export class SwitchRoleDto {
+  @ApiProperty({
+    description: 'One of the roles the account holds',
+    enum: ROLE,
+  })
+  @IsIn(ROLE)
+  role!: (typeof ROLE)[number];
+}
+
+export class RefreshDto {
+  @ApiPropertyOptional({
+    description:
+      'The role the tab is showing; used when the account still holds it',
+    enum: ROLE,
+  })
+  @IsOptional()
+  @IsIn(ROLE)
+  role?: (typeof ROLE)[number];
+}
