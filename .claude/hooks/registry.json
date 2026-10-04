@@ -21,6 +21,18 @@
       "fingerprint": "2945fc12f49b"
     },
     {
+      "id": "session:start:watch-reminder",
+      "event": "SessionStart",
+      "matcher": "",
+      "script": "session-watch-reminder.mjs",
+      "profiles": [
+        "standard",
+        "strict"
+      ],
+      "description": "On the main checkout, when two or more worktrees hold live or in-flight work (watch.mjs --json, read-only, under a timeout), print one line telling the session to check CronList and schedule /speckit-watch; silent otherwise, and always exits 0",
+      "fingerprint": "f25922e55e5a"
+    },
+    {
       "id": "session:start:github-identity",
       "event": "SessionStart",
       "matcher": "",
