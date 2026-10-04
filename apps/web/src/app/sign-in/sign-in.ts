@@ -40,9 +40,9 @@ export interface AuthSwitch {
 export type AuthData = { email?: string } | undefined;
 
 // The sign-in task shown in the shared dialog. It closes with "signed-in", or
-// with a switch to sign-up; whoever opened it decides where to go next. Saving, field errors and the
-// answer's message are the shared task behaviour; the codes only sign-in has
-// are under public.signIn.problem.
+// with a switch to sign-up; whoever opened it decides where to go next.
+// Saving, field errors and the answer's message are the shared task
+// behaviour; the codes only sign-in has are under public.signIn.problem.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -109,7 +109,7 @@ export type AuthData = { email?: string } | undefined;
       </button>
       <p class="switch">
         <span>{{ 'public.signIn.newHere' | t }}</span>
-        <button type="button" (click)="switchToSignUp()">
+        <button type="button" [disabled]="save.state() === 'sending'" (click)="switchToSignUp()">
           {{ 'public.signIn.createAccount' | t }}
         </button>
       </p>

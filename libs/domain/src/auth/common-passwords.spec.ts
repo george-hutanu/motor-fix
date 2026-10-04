@@ -1,4 +1,4 @@
-import { isCommonPassword } from './common-passwords';
+import { COMMON_PASSWORDS, isCommonPassword } from './common-passwords';
 
 describe('the list of common passwords', () => {
   it.each([
@@ -26,9 +26,7 @@ describe('the list of common passwords', () => {
     expect(isCommonPassword(password)).toBe(false);
   });
 
-  it('holds only passwords that pass the length rule, so the list is the only reason for a refusal', async () => {
-    const { COMMON_PASSWORDS } = await import('./common-passwords');
-
+  it('holds only passwords that pass the length rule, so the list is the only reason for a refusal', () => {
     for (const password of COMMON_PASSWORDS) {
       expect([...password].length).toBeGreaterThanOrEqual(8);
       expect(password).toBe(password.toLowerCase());

@@ -26,6 +26,7 @@ export class SignInDialog {
       return;
     }
     let result = await this.signIn();
+    // Each lap waits on a dialog; it ends when one closes signed in or cancelled.
     while (isSwitch(result)) {
       const data = { email: result.email };
       result =

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { isIPv6 } from 'node:net';
 
 import { Logger } from '@nestjs/common';
 import type { Redis } from 'ioredis';
@@ -10,17 +11,43 @@ const SIGN_UP_LIMIT = 10;
 
 type Kind = keyof typeof LIMIT;
 
+// One client however its address is written: an IPv4 address also in its
+// IPv6-mapped form, and an IPv6 address by its /64, which one subscriber
+// usually holds whole.
+export function clientOf(address: string): string {
+  if (!isIPv6(address)) return address;
+  const groups = expand(new URL(`http://[${address}]`).hostname.slice(1, -1));
+  const [, , , , , mark, high = 0, low = 0] = groups;
+  if (groups.slice(0, 5).every((x) => x === 0) && mark === 0xffff) {
+    return [high >> 8, high & 255, low >> 8, low & 255].join('.');
+  }
+  return `${groups
+    .slice(0, 4)
+    .map((x) => x.toString(16))
+    .join(':')}::/64`;
+}
+
+// The eight groups of a canonical IPv6 address (no embedded IPv4).
+function expand(canonical: string): number[] {
+  const [head = '', tail] = canonical.split('::');
+  const part = (s: string) =>
+    s ? s.split(':').map((x) => parseInt(x, 16)) : [];
+  const left = part(head);
+  const right = tail === undefined ? [] : part(tail);
+  return [...left, ...Array(8 - left.length - right.length).fill(0), ...right];
+}
+
 // The keys never hold the e-mail or the address itself.
 const digest = (value: string) =>
   createHash('sha256').update(value).digest('hex');
 const keyOf = (kind: Kind, value: string) =>
-  `auth:fail:${kind}:${digest(value)}`;
+  `auth:fail:${kind}:${digest(kind === 'address' ? clientOf(value) : value)}`;
 
 // Failed sign-ins per e-mail and per address, and sign-ups per address. Redis
 // only counts: when it is unreachable the limits are skipped rather than
 // sign-in or sign-up being refused.
 export class Attempts {
-  private readonly logger = new Logger('SignIn');
+  private readonly logger = new Logger('Auth');
 
   constructor(private readonly redis: Redis) {}
 
@@ -64,17 +91,16 @@ export class Attempts {
   // Counts one sign-up from the address; false once it has had its 10 in the
   // hour that began with its first.
   async admitSignUp(address: string): Promise<boolean> {
-    const key = `auth:signup:address:${digest(address)}`;
+    const key = `auth:signup:address:${digest(clientOf(address))}`;
     try {
-      const [counted] =
-        (await this.redis
-          .multi()
-          .incr(key)
-          .expire(key, SIGN_UP_WINDOW_SECONDS, 'NX')
-          .exec()) ?? [];
-      const [error, count] = counted ?? [new Error('no answer')];
-      if (error) throw error;
-      return Number(count) <= SIGN_UP_LIMIT;
+      const replies = await this.redis
+        .multi()
+        .incr(key)
+        .expire(key, SIGN_UP_WINDOW_SECONDS, 'NX')
+        .exec();
+      // A refused EXPIRE would leave the key counting for ever.
+      for (const [error] of replies ?? []) if (error) throw error;
+      return Number(replies?.[0]?.[1]) <= SIGN_UP_LIMIT;
     } catch {
       this.unavailable('sign-up');
       return true;

@@ -23,3 +23,33 @@
 
 ## 5. Plan
 - plan.md: no migration; reuse `createAccount`, `hashPassword`, `openSession`, `keep()`; new `SignUpService`, `admitSignUp`, `common-passwords.ts`; web: sign-up task + switch loop.
+
+## 6. Checklist
+- checklists/requirements.md: all items pass, none struck.
+
+## 7–8. Tasks, analyze
+- tasks.md: 13 tasks, FR → test table. `artifact-lint.mjs` → 0 errors, 0 warnings (Jev lane unavailable: no key). No CRITICAL findings; nothing to remediate.
+
+## 9. Tests (red first)
+- Red before code: `sign-up.api.integration.spec.ts` 49 of 49 failing (no route); `common-passwords.spec.ts` unresolved module; web `sign-up.spec.ts` unresolved module, `sign-in.spec.ts`, `sign-in-dialog.spec.ts`, `session.signup.spec.ts` — 10 failing, 52 passing.
+
+## 10. Implement
+- Notion implement: ST-80 Planning → Implementing; timeline row → Implementing; label in development.
+- Commits: 89fb27d feat(auth) API; 0ff0e58 feat(web) dialog; cb6c54e test(web-e2e).
+- One deviation found by the tests: a text/plain body is never parsed, so it is a 400, not a 415 — as sign-in already answers; FR-005 reworded to say so.
+- ST-79's "no route writes anything but a session" guard now lists `auth/sign-up` (a write that cannot choose a role).
+- Verification: `npx jest libs/domain/src/auth` → 487 passed; web sign-in + session → 121 passed; typecheck 6 projects OK; biome clean (3 pre-existing warnings); e2e on local servers (api :3080, web :4280, seeded motorfix_st080): sign-up.spec 25 passed; sign-in, tab-bar, overlays, task-form, dashboards, phone → 111 passed.
+
+## 11. Converge
+- Every task [X]; every FR has a test in the FR → test table; no unbuilt work appended.
+
+## 12. Harden
+- diff-audit (local `main` is stale, 18c9e3d): no finding on a hand-written file of this branch; generated `libs/data-access` and the pre-existing `libs/contracts/src/index.ts` import rule only. Mutation: not run locally (owner rule: no local mutation tests).
+
+## 14. Review (lap 1)
+- spec-reviewer: APPROVE — 1 MEDIUM (deviation "on the story" had no story comment → comment posted), 4 LOW (logger context, comment wrap, static import, Status Draft) → all patched.
+- code-reviewer: BLOCK — HIGH: session failure after commit untested → test added (500, no cookie, account kept, 409 next, sign-in works). MEDIUM: EXPIRE NX reply error ignored → every reply checked. MEDIUM defer: proxy trust on staging (already ST-82's task). LOW: SignUp interface → SignUpDto; loop exit comment; static import; decision: keep limit constants (owner confirmed 10/hour); defer: HMAC keys.
+- Security verdicts (code-reviewer): enumeration PASS (email_taken allowed by brief, identical bodies, counted before any check); password rules PASS; rate limits PASS with the two fixes; logs PASS; CSRF PASS.
+- test-adversary: 2 files, 142 tests, 11 failing → fixed: IPv4-mapped and IPv6 spellings share one key (/64 for IPv6); JSON-only guard before validation (form posts 415 whatever they hold; prototype keys 400); client lengths in code points; switch disabled while sending. Sign-in's text-body tests moved from 400 to 415.
+- Owner decision relayed by the coordinator: 10 attempts an hour per address, recorded in spec Clarifications, notion-sync.md and the brief (proposed → Decided 2026-10-04).
+- Verification: `npx jest libs/domain/src/auth apps/web/src/app/sign-in` → 716 passed; `npx jest apps/api` → 59 passed.

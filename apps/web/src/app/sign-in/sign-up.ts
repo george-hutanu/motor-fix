@@ -25,17 +25,21 @@ import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 import { ADDRESS, type AuthData, type AuthSwitch } from './sign-in';
 import { Session } from '../dashboard/session';
 
-// The name as it will be stored: trimmed, 2 to 80 characters. The messages
-// are the shared ones for these validators.
-function nameLength(control: AbstractControl): ValidationErrors | null {
-  const length = String(control.value ?? '').trim().length;
-  if (length === 0) return { required: true };
-  if (length < 2)
-    return { minlength: { actualLength: length, requiredLength: 2 } };
-  if (length > 80)
-    return { maxlength: { actualLength: length, requiredLength: 80 } };
-  return null;
-}
+// Between min and max characters, counted in code points as the server counts
+// them, so an emoji is one; `trim` checks the value as it will be stored. The
+// messages are the shared ones for these validators.
+const characters =
+  (min: number, max: number, trim = false) =>
+  (control: AbstractControl): ValidationErrors | null => {
+    const value = String(control.value ?? '');
+    const length = [...(trim ? value.trim() : value)].length;
+    if (length === 0) return { required: true };
+    if (length < min)
+      return { minlength: { actualLength: length, requiredLength: min } };
+    if (length > max)
+      return { maxlength: { actualLength: length, requiredLength: max } };
+    return null;
+  };
 
 // The sign-up task shown in the shared dialog: a driver account, signed in at
 // once. It closes with "signed-in", or with a switch back to sign-in. The
@@ -138,7 +142,7 @@ function nameLength(control: AbstractControl): ValidationErrors | null {
       </button>
       <p class="switch">
         <span>{{ 'public.signUp.haveAccount' | t }}</span>
-        <button type="button" (click)="switchToSignIn()">
+        <button type="button" [disabled]="save.state() === 'sending'" (click)="switchToSignIn()">
           {{ 'public.signUp.signIn' | t }}
         </button>
       </p>
@@ -162,15 +166,11 @@ export class SignUp {
     }),
     name: new FormControl('', {
       nonNullable: true,
-      validators: [nameLength],
+      validators: [characters(2, 80, true)],
     }),
     password: new FormControl('', {
       nonNullable: true,
-      validators: [
-        Validators.required,
-        Validators.minLength(8),
-        Validators.maxLength(128),
-      ],
+      validators: [characters(8, 128)],
     }),
   });
 

@@ -1,3 +1,4 @@
+import type { SignUpDto } from '@motor-fix/contracts';
 import {
   HttpException,
   HttpStatus,
@@ -16,13 +17,6 @@ import { Prisma } from '../generated/prisma/client';
 
 const MIN_PASSWORD = 8;
 const MAX_PASSWORD = 128;
-
-export interface SignUp {
-  name: string;
-  email: string;
-  password: string;
-  language: 'ro' | 'en';
-}
 
 const refusal = (
   status: HttpStatus,
@@ -55,7 +49,7 @@ export class SignUpService {
     @Inject(MAINTENANCE) private readonly maintenance: Maintenance,
   ) {}
 
-  async signUp(input: SignUp, address: string): Promise<Issued> {
+  async signUp(input: SignUpDto, address: string): Promise<Issued> {
     if (!(await this.attempts.admitSignUp(address))) {
       throw this.refused(
         refusal(

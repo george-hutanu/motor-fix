@@ -591,8 +591,7 @@ describe('the sign-in request', () => {
       );
 
     expect(res.status).toBe(415);
-    // A text body is never parsed, so it fails validation first.
-    expect(plain.status).toBe(400);
+    expect(plain.status).toBe(415);
     for (const answer of [res, plain]) {
       expect(setCookie(answer)).toBeUndefined();
     }

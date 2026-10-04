@@ -11,6 +11,7 @@ import { MAINTENANCE } from './maintenance';
 import { verifyPassword } from './password';
 import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';
+import { SignInService } from './sign-in.service';
 import { AuditService } from '../audit/audit.service';
 import { EVENT_PORT, type EventPort, noEvents } from '../events/event.port';
 
@@ -196,6 +197,25 @@ describe('creating a driver account', () => {
     expect(setCookie(failed)).toBeUndefined();
   });
 
+  it('keeps the account when the session cannot be opened: 500, no cookie, and the password signs in later', async () => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    jest
+      .spyOn(SignInService.prototype, 'openSession')
+      .mockRejectedValueOnce(new Error('database went away'));
+
+    const failed = await signUp();
+
+    expect(failed.status).toBe(500);
+    expect(setCookie(failed)).toBeUndefined();
+    expect(await accountCount()).toBe(1);
+    expect((await signUp()).status).toBe(409);
+    const later = await request(app.getHttpServer())
+      .post('/auth/sign-in')
+      .set('X-Forwarded-For', address())
+      .send({ email: 'andrei@example.test', password: PASSWORD });
+    expect(later.status).toBe(200);
+  });
+
   it('stores the e-mail trimmed and in lower case', async () => {
     await signUp(body({ email: '  Andrei@Example.TEST ' }));
 
@@ -377,7 +397,7 @@ describe('a body that is not a sign-up', () => {
     expect(await accountCount()).toBe(0);
   });
 
-  it('refuses a form post with 415, and a text body, never parsed, with 400; no cookie either way', async () => {
+  it('refuses a form post and a text body with 415, before the body is checked, with no cookie', async () => {
     const fields =
       'name=Andrei+Marin&email=andrei%40example.test&password=o-parola-lunga&language=ro';
     const form = await request(app.getHttpServer())
@@ -390,7 +410,7 @@ describe('a body that is not a sign-up', () => {
       .send(JSON.stringify(body()));
 
     expect(form.status).toBe(415);
-    expect(text.status).toBe(400);
+    expect(text.status).toBe(415);
     for (const answer of [form, text]) {
       expect(setCookie(answer)).toBeUndefined();
     }
