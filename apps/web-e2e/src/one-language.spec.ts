@@ -65,11 +65,14 @@ async function open(
   await page.goto(path);
   await page.waitForLoadState('networkidle');
   // A dashboard opens in the account's language; English is chosen on it.
-  if (role && language === 'en')
+  if (role && language === 'en') {
     await page
       .getByRole('group', { name: 'Limba' })
       .getByRole('button', { name: 'EN' })
       .click();
+    // <html lang> changes before the view renders the new texts.
+    await expect(page.getByRole('group', { name: 'Language' })).toBeVisible();
+  }
   await expect(page.locator('html')).toHaveAttribute('lang', language);
 }
 
