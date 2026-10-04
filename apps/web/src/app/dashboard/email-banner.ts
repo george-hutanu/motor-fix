@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -11,9 +10,7 @@ import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton, toast } from '@motor-fix/ui-cockpit';
 
 import { Session } from './session';
-
-const status = (error: unknown) =>
-  error instanceof HttpErrorResponse ? error.status : 0;
+import { httpStatus } from '../http-status';
 
 // Shown on every dashboard while the account's e-mail is not confirmed.
 @Component({
@@ -54,7 +51,7 @@ export class EmailBanner {
       await this.me.meEmailConfirmationControllerAskAgain();
       toast(this.i18n.t('shell.emailBanner.sent'));
     } catch (error) {
-      const code = status(error);
+      const code = httpStatus(error);
       // Confirmed meanwhile, in another tab or on another device.
       if (code === 409) await this.session.reload();
       else if (code === 429) toast(this.i18n.t('shell.emailBanner.tooMany'));

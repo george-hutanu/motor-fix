@@ -1,5 +1,4 @@
 import { isPlatformBrowser } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -14,12 +13,10 @@ import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { Session } from '../dashboard/session';
+import { httpStatus } from '../http-status';
 
 type State = 'confirming' | 'confirmed' | 'expired' | 'error';
 type Asked = 'sending' | 'sent' | 'tooMany' | 'failed' | 'refused';
-
-const status = (error: unknown) =>
-  error instanceof HttpErrorResponse ? error.status : 0;
 
 // Opened from the confirmation e-mail; no sign-in needed. On the server it
 // only renders the busy state: the link is spent in the browser.
@@ -90,7 +87,7 @@ export class ConfirmEmail implements OnInit {
       });
       this.confirmed();
     } catch (error) {
-      const code = status(error);
+      const code = httpStatus(error);
       // 400: a link cut short or mistyped is as spent as an expired one.
       this.state.set(code === 410 || code === 400 ? 'expired' : 'error');
     }
@@ -105,7 +102,7 @@ export class ConfirmEmail implements OnInit {
       });
       this.asked.set('sent');
     } catch (error) {
-      const code = status(error);
+      const code = httpStatus(error);
       if (code === 409) this.confirmed();
       else if (code === 429) this.asked.set('tooMany');
       else if (code === 410 || code === 400) this.asked.set('refused');
