@@ -91,3 +91,9 @@
 ## Phases 16–17
 - Retro evidence and archive left to the owner: archive belongs after the merge; retro is not self-graded.
 - Merged origin/main (b422966) into the branch before ready.
+
+## Resume (orchestrator, after a session break)
+- Heavy-command lock: the worktree guard refuses `heavy.sh git commit`, so typecheck, lint and test run through `heavy.sh` right before a plain `git commit` (the hook then hits the Nx cache).
+- c5e366b docs commit; merged origin/main c03d769 (ST-50, ST-19, ST-17, harness: PR-lifecycle gate, mutation testing) → ea2a0f7, CLAUDE.local.md conflict resolved to this feature's plan line. `npm install` for main's new dev dependencies. Under the lock: typecheck 12/12, lint 232 files clean, test 10/10 projects.
+- Re-review (code-reviewer, once) of 831912f: APPROVE; fix correct (canonical JSON at every depth, arrays order-kept, Object.hasOwn, no prototype pollution). MEDIUM: 7 adversary tests duplicated audit.service.spec cases → removed (adversary 76 → 62 tests, all pass).
+- Full run: adversary 'orders entries … with distinct times' failed once: it asserted distinct JS milliseconds, but Date drops the microseconds PostgreSQL stores, so fast inserts can share a millisecond. The spec promises order only → that assertion removed; the order assertion stays.
