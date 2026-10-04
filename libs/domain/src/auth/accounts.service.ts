@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import type { Role } from './capabilities';
+import type { Actor } from './policy';
 import { PRISMA } from './prisma';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { EVENT_PORT, type EventPort } from '../events/event.port';
@@ -66,6 +67,35 @@ export class AccountsService {
         subjectId: id,
       });
       return { id };
+    });
+  }
+
+  async setLanguage(actor: Actor, language: 'ro' | 'en'): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const where = { id: actor.accountId };
+      const before = await tx.account.findUniqueOrThrow({
+        select: { language: true },
+        where,
+      });
+      if (before.language === language) return;
+      // Only the change that still finds the old value writes, so two at once
+      // leave one audit entry.
+      const { count } = await tx.account.updateMany({
+        data: { language },
+        where: { ...where, language: before.language },
+      });
+      if (count === 0) return;
+      await this.audit.recordChanges(
+        tx,
+        {
+          actorId: actor.accountId,
+          actorRole: actor.role,
+          subjectId: actor.accountId,
+          subjectType: 'account',
+        },
+        before,
+        { language },
+      );
     });
   }
 

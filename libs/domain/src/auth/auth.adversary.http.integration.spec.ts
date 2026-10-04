@@ -365,7 +365,6 @@ describe('who am I over HTTP and account writes under attack', () => {
     it.each([
       'post',
       'put',
-      'patch',
       'delete',
     ] as const)('does not serve %s on the me route', async (method) => {
       const accountId = await make('andrei', ['driver']);
@@ -376,6 +375,18 @@ describe('who am I over HTTP and account writes under attack', () => {
         .send({ roles: ['admin'] });
 
       expect(res.status).toBe(404);
+      const row = await prisma.accountRole.findMany({ where: { accountId } });
+      expect(row.map((r) => r.role)).toEqual(['driver']);
+    });
+    it('grants no role through the language change', async () => {
+      const accountId = await make('andrei', ['driver']);
+
+      const res = await request(app.getHttpServer())
+        .patch('/me')
+        .set('Authorization', bearer(accountId, 'driver'))
+        .send({ language: 'en', roles: ['admin'] });
+
+      expect(res.body.roles).toEqual(['driver']);
       const row = await prisma.accountRole.findMany({ where: { accountId } });
       expect(row.map((r) => r.role)).toEqual(['driver']);
     });

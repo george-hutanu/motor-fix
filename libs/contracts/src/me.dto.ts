@@ -1,7 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsIn } from 'class-validator';
 
 const ROLE = ['driver', 'garage', 'receptionist', 'mechanic', 'admin'] as const;
 type Role = (typeof ROLE)[number];
+
+const LANGUAGE = ['ro', 'en'] as const;
+
+export class UpdateMeDto {
+  @ApiProperty({ enum: LANGUAGE })
+  @IsIn(LANGUAGE)
+  language!: (typeof LANGUAGE)[number];
+}
 
 export class MeDto {
   @ApiProperty({ format: 'uuid' })
@@ -13,8 +22,8 @@ export class MeDto {
   @ApiProperty({ nullable: true, type: String })
   email!: string | null;
 
-  @ApiProperty({ enum: ['ro', 'en'] })
-  language!: 'ro' | 'en';
+  @ApiProperty({ enum: LANGUAGE })
+  language!: (typeof LANGUAGE)[number];
 
   @ApiProperty({ enum: ROLE, isArray: true })
   roles!: Role[];

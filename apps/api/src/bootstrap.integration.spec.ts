@@ -114,6 +114,40 @@ describe('api conventions', () => {
     expect(res.body).toMatchObject({ code: 'sign_in_required', status: 401 });
   });
 
+  it('asks for sign-in before changing the language', async () => {
+    app = await start();
+
+    const res = await request(app.getHttpServer())
+      .patch('/api/v1/me')
+      .send({ language: 'en' });
+
+    expect(res.status).toBe(401);
+    expect(res.headers['content-type']).toContain('application/problem+json');
+    expect(res.body).toMatchObject({ code: 'sign_in_required', status: 401 });
+  });
+
+  it('describes the language change in the OpenAPI document', async () => {
+    app = await start();
+
+    const document = openApiDocument(app);
+    const operation = document.paths['/api/v1/me']?.patch;
+    const body = operation?.requestBody;
+    const ref =
+      body && 'content' in body
+        ? body.content['application/json']?.schema
+        : undefined;
+    const name = ref && '$ref' in ref ? ref.$ref.split('/').pop() : undefined;
+    const schema = name ? document.components?.schemas?.[name] : undefined;
+
+    expect(operation?.responses['200']).toBeDefined();
+    expect(schema && 'properties' in schema && schema.properties).toEqual({
+      language: expect.objectContaining({ enum: ['ro', 'en'] }),
+    });
+    expect(schema && 'required' in schema && schema.required).toEqual([
+      'language',
+    ]);
+  });
+
   it('serves the audit history under the prefix, behind sign-in', async () => {
     app = await start();
 

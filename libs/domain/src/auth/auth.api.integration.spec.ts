@@ -376,7 +376,7 @@ describe('the account module', () => {
         );
     });
 
-  it('exposes no route that writes anything but a session', () => {
+  it('exposes no route that writes anything but a session or my language', () => {
     const controllers =
       AuthModule.register({ databaseUrl, redisUrl, tokenSecret }).controllers ??
       [];
@@ -387,6 +387,7 @@ describe('the account module', () => {
       'auth/refresh',
       'auth/sign-in',
       'auth/sign-out',
+      'me//',
     ]);
   });
 });
