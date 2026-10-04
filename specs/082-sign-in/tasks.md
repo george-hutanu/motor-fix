@@ -43,6 +43,11 @@ Independent test: sign in per role through HTTP against PostgreSQL and Redis; wr
 - [X] T019 `libs/domain/src/seed.ts`: the seven accounts, the garage, memberships and mechanic link with `pg` and `argon2Sync`, insert-if-missing; staging needs `SEED_PASSWORD`; `pg` as a dev dependency in `package.json` (FR-023)
 - [X] T020 `apps/web-e2e/src/accounts.ts` (new) seeded e-mails and `E2E_PASSWORD`; `apps/web-e2e/src/sign-in.ts` also stubs `/api/v1/auth/refresh`; `.github/workflows/ci.yml` e2e job seeds; `release.yml` and `reset-staging.yml` pass `secrets.SEED_PASSWORD` (FR-023)
 
+## Phase 6b: After ST-159 merged
+
+- [X] T022 `libs/ui-cockpit/src/lib/helm/input.ts`: pass `aria-describedby` through to the brain's describedby directive, which otherwise drops a field's own error id (FR-014); test in `libs/ui-cockpit/src/lib/helm/helm.spec.ts`
+- [ ] T023 `apps/web/src/app/sign-in/sign-in.ts` on `taskSave` and the shared field and task errors from `libs/overlays`; own codes under `public.signIn.problem`, the e-mail format under `public.signIn.field.pattern`; `Session` drops in-flight answers at sign-out (FR-014, FR-015, FR-016, FR-020)
+
 ## Phase 7: Polish
 
 - [ ] T021 Mark tasks, update `auto-run.md`; `npm run typecheck`, `npm run lint`, the touched Jest projects, the e2e
