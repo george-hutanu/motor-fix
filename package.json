@@ -88,6 +88,8 @@
     "prepare": "husky && sh .husky/identity.sh apply",
     "test": "TZ=UTC nx run-many -t test",
     "test:harness": "vitest run --config .claude/vitest.config.ts",
+    "test:integration": "JEST_SUITE=integration TZ=UTC nx run-many -t test --passWithNoTests",
+    "test:unit": "JEST_SUITE=unit TZ=UTC nx run-many -t test",
     "typecheck": "nx run-many -t typecheck"
   },
   "type": "module",
