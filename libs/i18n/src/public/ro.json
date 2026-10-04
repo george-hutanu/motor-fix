@@ -21,6 +21,7 @@
       "invalid_credentials": "E‑mailul sau parola nu sunt corecte.",
       "too_many_attempts": "Prea multe încercări. Încearcă din nou în 15 minute."
     },
+    "reason": "Intră în cont ca să continui.",
     "remember": "Ține‑mă autentificat",
     "submit": "Intră în cont",
     "title": "Autentificare"

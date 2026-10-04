@@ -2,17 +2,16 @@ import {
   AuditHistoryPageDto,
   AuditHistoryQueryDto,
 } from '@motor-fix/contracts';
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 
 import { AuditHistoryService } from './audit-history.service';
-import { ActorGuard, CurrentActor } from '../auth/actor.guard';
+import { CurrentActor } from '../auth/actor.guard';
 import type { Actor } from '../auth/policy';
 
 @ApiTags('audit-history')
 @ApiBearerAuth()
 @Controller('audit-history')
-@UseGuards(ActorGuard)
 export class AuditHistoryController {
   constructor(private readonly history: AuditHistoryService) {}
 

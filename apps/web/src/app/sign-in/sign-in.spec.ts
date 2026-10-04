@@ -387,3 +387,30 @@ describe('answers that refuse', () => {
     expect(alertText()).toBe('');
   });
 });
+
+describe('the reason line', () => {
+  async function openWith(data: { reason?: boolean } | undefined) {
+    TestBed.configureTestingModule({
+      providers: [{ provide: Session, useValue: { signIn: jest.fn() } }],
+    });
+    const host = TestBed.createComponent(Host);
+    host.componentInstance.overlays.open(SignIn, {
+      data,
+      shape: 'dialog',
+      title: 'public.signIn.title',
+    });
+    await settle();
+  }
+
+  it('says why sign-in is asked when an action opened the dialog', async () => {
+    await openWith({ reason: true });
+
+    expect(panel().textContent).toContain('Intră în cont ca să continui.');
+  });
+
+  it('is not shown when the person opened the dialog themselves', async () => {
+    await openWith(undefined);
+
+    expect(panel().textContent).not.toContain('ca să continui');
+  });
+});

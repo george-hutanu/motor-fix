@@ -17,12 +17,15 @@ import {
   NOTIFICATIONS_CONFIG,
   NotificationsService,
 } from './notifications.service';
+import { Public } from '../auth/actor.guard';
 
 const digest = (value: string) => createHash('sha256').update(value).digest();
 
-// Brevo's transactional webhook; Brevo sends the configured bearer token.
+// Brevo's transactional webhook; Brevo sends the configured bearer token, not
+// a session, so the app-wide actor check stays out of its way.
 @ApiExcludeController()
 @Controller('webhooks/brevo')
+@Public()
 export class BrevoWebhookController {
   constructor(
     private readonly notifications: NotificationsService,
