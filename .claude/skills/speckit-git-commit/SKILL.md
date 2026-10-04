@@ -79,14 +79,30 @@ auto_commit:
   one line, e.g. `feat(scanner): add regexp pattern engine`.
 - NO metadata of any kind: no `Co-Authored-By` trailers, no
   "Generated with" lines, no Claude/AI mentions.
-- Push after every commit, to the feature's own branch only (`git push`; the
-  upstream was set when the branch and its draft PR were created). NEVER
-  `--force`, NEVER push `main`, NEVER mark the PR ready or merge it: those
-  are the user's call.
+- Push after every commit, to the feature's own branch only. NEVER `--force`,
+  NEVER push `main`, NEVER merge: merging is the user's.
+- **The first commit on a branch with no PR yet** opens it, in this order (the
+  task lifecycle in AGENTS.md):
+  1. `speckit-notion-sync start`, so the story is In progress before the PR
+     exists (idempotent; a no-op when it already is).
+  2. Push with the upstream set, then open the PR as a **draft**:
+
+     ```bash
+     git push -u origin <branch>
+     GH_TOKEN=$(gh auth token -u george-hutanu) gh pr create --draft --base main \
+       --head <branch> --title "<type>(<scope>): ST-<n> <story title>" \
+       --body "Notion story: <story URL>"
+     ```
+
+     The title is a Conventional Commit carrying the story's ST number.
+- Every later commit: `git push`. Marking the PR ready is not this skill's
+  job; it is the last step of the work (`speckit-auto` hand-off, or
+  `speckit-review` when it finds nothing blocking).
 
 ## Done When
 
 - [ ] Message is a one-line Conventional Commit with a scope, no body, no trailers
 - [ ] Only the intended files staged — no `git add -A` sweeping unrelated work
-- [ ] Pushed to the feature's own branch, not forced, not `main`; the PR untouched
+- [ ] Pushed to the feature's own branch, not forced, not `main`
+- [ ] On the branch's first commit: story In progress in Notion first, then a draft PR linking it
 

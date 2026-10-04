@@ -29,11 +29,18 @@ epic or a plan, whether run through spec-kit or by hand.
   boards in the clickable mock (the `Design` and `Design boards` properties
   in Notion) and the Build brief's Screens section, and write
   `specs/<feature>/design.md`. Skill: `speckit-design-check`.
-- **Keep Notion in step.** When work starts, the story goes to In progress;
-  when its PR is marked ready for review, In review; when it merges to `main`, Done. The same goes
-  for its row in the epic's build timeline under Delivery › Plans, and for the
-  epic itself (In progress at its first story, Done at its last). Skill:
-  `speckit-notion-sync start | review | finish`. These writes are standing
+- **Every task follows the same lifecycle, in this order:**
+  1. Take the task and set it to In progress in Notion (`speckit-notion-sync start`).
+  2. Open a draft PR for its branch (`speckit-git-commit`, at the first commit).
+  3. Do the work, pushing every commit to that branch: never forced, never `main`.
+  4. When it is done (tests, typecheck and lint green, review with no
+     CRITICAL/HIGH left), mark the PR ready for review (`gh pr ready`) and set
+     the task to In review in Notion (`speckit-notion-sync review`).
+  5. When the PR is merged, set the task to Done (`speckit-notion-sync finish`).
+
+  Merging is always the user's. The Notion writes cover the story, its row in
+  the epic's build timeline under Delivery › Plans, and the epic itself (In
+  progress at its first story, Done at its last). They are standing
   instructions; do not ask before them.
 - **Plans live under Delivery › Plans in Notion:** one execution-plan page and
   one build-timeline database per epic (`speckit-notion-sync plan`).

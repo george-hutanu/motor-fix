@@ -97,25 +97,13 @@ The script outputs JSON with:
 - When the feature comes from a ticket (Jira key like `BKP-1270`), the branch
   name IS the ticket code, verbatim — pass `GIT_BRANCH_NAME=<ticket-code>` to
   the script. The generated `{number}-{slug}` form is only for ticketless work.
-- Right after creating the branch, push it and open a **draft** PR so the
-  work is visible from the start:
-
-  ```bash
-  git push -u origin <BRANCH_NAME>
-  GH_TOKEN=$(gh auth token -u george-hutanu) gh pr create --draft --base main \
-    --head <BRANCH_NAME> --title "<type>(<scope>): ST-<n> <story title>" \
-    --body "Notion story: <story URL>"
-  ```
-
-  A branch with no commits yet cannot open a PR: push and open it after the
-  first commit instead. The title is a Conventional Commit with the story's ST
-  number. Never `--force`, never push `main`, never mark the PR ready or
-  merge it: those are the user's call.
+- This skill only creates the branch. A branch with no commits cannot open a
+  PR, so `speckit-git-commit` sets the story In progress and opens the draft PR
+  at the first commit (the task lifecycle in AGENTS.md).
 
 ## Done When
 
 - [ ] Ticketed work is on a branch named for the Jira key verbatim; ticketless work on `NNN-slug`
 - [ ] `.specify/feature.json` names the specs directory, since the branch name may not
-- [ ] The branch is pushed with its upstream set, and a draft PR links the Notion story
 - [ ] The previous branch's state was clean before switching
 
