@@ -29,6 +29,11 @@ Independent test: sign up through HTTP against PostgreSQL and Redis; taken e-mai
 - [X] T011 [US1] `apps/web/src/app/sign-in/sign-in-dialog.ts`: the switch loop carrying the e-mail; the landing on "signed-in" (FR-009, FR-013)
 - [X] T012 [P] [US1] Texts `public.signIn.newHere`, `public.signIn.createAccount`, `public.signUp.*` in `libs/i18n/src/public/ro.json` and `en.json`, U+2011 inside Romanian words (FR-014)
 
+## Phase 4b: Review fixes
+
+- [X] T014 [US2] `auth.controller.ts`: `JsonOnly` guard before validation for sign-in and sign-up, prototype-chain keys 400 (FR-015)
+- [X] T015 [US2] `attempts.ts`: `clientOf()` keys every address by client — IPv4-mapped, IPv6 spellings, zone id, /64 (FR-016)
+
 ## Phase 5: End to end
 
 - [X] T013 [US1] `apps/web-e2e/src/sign-up.spec.ts` (new): sign up and land signed in; the taken e-mail with the name kept (ST-494); empty, invalid and short fields send nothing; switching both ways; English; sizes × themes × languages with axe; keyboard (FR-003, FR-009, FR-010, FR-012, FR-013, FR-014)
@@ -55,3 +60,5 @@ T001 → T005 → T006 → T007 → T008 → T009–T011; T002, T003, T004 befor
 | FR-012 | `sign-up.spec.ts` (web); `sign-up.spec.ts` (e2e) |
 | FR-013 | `sign-in-dialog.spec.ts`; `sign-up.spec.ts` (e2e) |
 | FR-014 | `sign-up.spec.ts` (web); `sign-up.spec.ts` (e2e) |
+| FR-015 | `sign-up.api.integration.spec.ts`; `sign-in.api.integration.spec.ts`; `sign-up.adversary.integration.spec.ts` |
+| FR-016 | `libs/domain/src/auth/attempts.spec.ts`; `sign-up.adversary.integration.spec.ts` |

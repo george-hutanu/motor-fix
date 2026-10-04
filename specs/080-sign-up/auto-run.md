@@ -54,3 +54,12 @@
 - Owner decision relayed by the coordinator: 10 attempts an hour per address, recorded in spec Clarifications, notion-sync.md and the brief (proposed → Decided 2026-10-04).
 - Verification: `npx jest libs/domain/src/auth apps/web/src/app/sign-in` → 716 passed; `npx jest apps/api` → 59 passed.
 - code-reviewer re-review (f40315e): APPROVE, HIGH closed; new MEDIUM: a zone-id address made `clientOf` throw outside the try → zone stripped, key built inside the try, `attempts.spec.ts` (8) red then green. Merge of origin/main (ST-20 #51) as 26af690: auth route guard lists both writes; data-access regenerated.
+
+## 13. Ticket refresh
+- Story re-read by spec-reviewer 2026-10-04T16:08Z: no comments, no scope change. Since then only this run's writes (the Decided limit line and the scenario-3 comment).
+
+## 15. Agent context
+- No tracked file changed: AGENTS.md has no SPECKIT block, and CLAUDE.local.md's active-plan line is left to the owner's checkout.
+
+## 17. Archive
+- Delta fixed before the merge: FR-005/006/009 were in both Adds and Modifies, and replacing 082-FR-011 / 082-FR-005 would have dropped sign-in's rules. The cross-cutting rules became FR-015 (JSON before validation) and FR-016 (one key per client), both Adds; only 082-FR-013 → FR-009 is a Modifies. `capabilities.mjs merge --apply` → accounts +15 ~1 -0.

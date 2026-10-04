@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Agreed (2026-10-04)
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-80 Create an account with e-mail and password (Notion story https://app.notion.com/p/3ee607bff0d2813a9bd4d4acd406ca56, epic EP-1 Foundations). Reuse ST-82's argon2id hashing, refresh cookie, Redis attempt limits, JSON-only auth and the sign-in dialog on libs/overlays and taskSave; signing up ends signed in like sign-in. Wire the sign-in dialog's hidden create-account path. Include ST-494's sign-up 'e-mail taken' end-to-end flow."
 
@@ -68,8 +68,8 @@ A visitor opens "Autentificare", taps "Creează un cont" next to "Ești nou pe M
 - **FR-002**: A successful sign-up MUST answer 201 with an access token for the role `driver` in the body and set the refresh-token cookie of a new remembered session family, exactly as a remembered sign-in does, and set the account's last active time.
 - **FR-003**: The e-mail MUST be trimmed and stored lower-case; an e-mail that already belongs to any account, compared without regard to case and whatever that account's state, MUST answer 409 `email_taken` with the same body every time, and create nothing — also when two sign-ups for one e-mail race.
 - **FR-004**: The password MUST be 8 to 128 characters (code points) and not on the list of common passwords (compared without regard to case); otherwise the answer MUST be 400 `weak_password` with a field error on `password`, and nothing is created.
-- **FR-005**: A body without a name, an e-mail or a password, with values that are not text, with a name that is not 2 to 80 characters once trimmed, an e-mail longer than 254 characters or without text, "@" and a domain with a dot, control characters in the name or the e-mail, a language other than `ro` or `en`, or any other field, MUST answer 400; a sign-up or a sign-in not sent as JSON (a form post, a text body) MUST be refused with 415 before its body is checked, and no key naming the prototype chain (`__proto__`, `constructor`, `prototype`) is accepted (400); neither sets a cookie.
-- **FR-006**: Sign-up attempts with a valid body MUST be counted per network address in Redis; once an address has 10 within its hour, every further attempt from it MUST be refused with 429 `too_many_attempts` before anything is checked, until the hour that began with its first counted attempt ends. An address MUST count as one client however it is written — an IPv4 address also in its IPv4-mapped IPv6 form, an IPv6 address in any spelling and without its zone id, grouped by its /64 — for this limit and for sign-in's per-address count alike. When Redis cannot be reached or does not answer within 2 seconds, sign-up MUST proceed without the limit and log the failure.
+- **FR-005**: A body without a name, an e-mail or a password, with values that are not text, with a name that is not 2 to 80 characters once trimmed, an e-mail longer than 254 characters or without text, "@" and a domain with a dot, control characters in the name or the e-mail, a language other than `ro` or `en`, or any other field, MUST answer 400; a sign-up not sent as JSON MUST be refused as FR-015 says.
+- **FR-006**: Sign-up attempts with a valid body MUST be counted per network address in Redis; once an address has 10 within its hour, every further attempt from it MUST be refused with 429 `too_many_attempts` before anything is checked, until the hour that began with its first counted attempt ends. The address is keyed as FR-016 says. When Redis cannot be reached or does not answer within 2 seconds, sign-up MUST proceed without the limit and log the failure.
 - **FR-007**: While maintenance mode reads as on, sign-up MUST answer 503 `maintenance` and create nothing.
 - **FR-008**: The password MUST never be logged; a refused sign-up MUST be logged with its code and no name, e-mail, password or address, and a created account with no personal data.
 - **FR-009**: The sign-in dialog MUST show "Ești nou pe MotorFix?" and the button "Creează un cont" under its main button; it MUST open the sign-up dialog — the shared `dialog` shape titled "Cont nou", "MotorFix" and the driver blurb under the title, "Nume", "E‑mail", "Parolă" with a show/hide control, the main button "Creează contul", and "Ai deja cont?" with "Intră în cont", which opens the sign-in dialog again. Each switch MUST carry the typed e-mail and MUST NOT ask before discarding.
@@ -78,6 +78,8 @@ A visitor opens "Autentificare", taps "Creează un cont" next to "Ești nou pe M
 - **FR-012**: The dialog MUST show the message for the answer's code in the person's language — `email_taken` and `too_many_attempts` (its own texts), `weak_password` under the password field, and the shared texts for `maintenance`, offline, a failed call and any other code — in a region screen readers announce; the typed name, e-mail and password MUST stay.
 - **FR-013**: After a successful sign-up the dialog MUST close and the driver landing `/app/driver` MUST open, in the interface language; the dialog MUST resolve with "signed in" like the sign-in dialog, so whoever opened it can go back to the action that asked for an account.
 - **FR-014**: Every new text MUST exist in Romanian and English, Romanian words joined by a hyphen MUST use U+2011, and text the person typed MUST never be shown back as markup.
+- **FR-015**: A sign-up or a sign-in not sent as JSON (a form post, a text body) MUST be refused with 415 before its body is checked, and a body with a key naming the prototype chain (`__proto__`, `constructor`, `prototype`) MUST answer 400; neither sets a cookie.
+- **FR-016**: A network address MUST count as one client however it is written — an IPv4 address also in its IPv4-mapped IPv6 form, an IPv6 address in any spelling and without its zone id, grouped by its /64 — for the sign-up limit and for sign-in's per-address count alike; an address that cannot be read leaves the limit skipped, as an unreachable Redis does.
 
 ### Key Entities
 
@@ -88,8 +90,8 @@ A visitor opens "Autentificare", taps "Creează un cont" next to "Ești nou pe M
 
 ### Capability: `accounts`
 
-- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-012, FR-013, FR-014
-- **Modifies**: 082-FR-013 → FR-009; 082-FR-011 → FR-005 (any non-JSON body is a 415, before validation); 082-FR-005 → FR-006 (one key per client address)
+- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-010, FR-011, FR-012, FR-013, FR-014, FR-015, FR-016
+- **Modifies**: 082-FR-013 → FR-009
 - **Removes**: none
 
 ## Success Criteria *(mandatory)*
@@ -106,8 +108,8 @@ A visitor opens "Autentificare", taps "Creează un cont" next to "Ești nou pe M
 ### Session 2026-10-04
 
 - Q: Is the sign-up limit 10 attempts an hour per network address (the Build brief's *proposed* value)? → A: Yes, unchanged. (owner's decision, 2026-10-04)
-- Q: How is "one network address" keyed, when the same client can arrive as `198.51.100.7`, `::ffff:198.51.100.7` or an IPv6 address spelled several ways? → A: One key per client: IPv4-mapped forms fold to IPv4, IPv6 is canonicalised and grouped by its /64 (one subscriber's usual allocation), for sign-up and sign-in alike; otherwise the 10 could be doubled, or multiplied by 2^64 on IPv6 (FR-006). (autonomous, from test-adversary's findings)
-- Q: Does a form post with unrelated fields get 415 or 400? → A: 415: the JSON check is a guard that answers before the body is validated, for sign-in too, so every non-JSON body is refused the same way; prototype-chain keys are refused with 400 (FR-005). (autonomous, from test-adversary's findings)
+- Q: How is "one network address" keyed, when the same client can arrive as `198.51.100.7`, `::ffff:198.51.100.7` or an IPv6 address spelled several ways? → A: One key per client: IPv4-mapped forms fold to IPv4, IPv6 is canonicalised and grouped by its /64 (one subscriber's usual allocation), for sign-up and sign-in alike; otherwise the 10 could be doubled, or multiplied by 2^64 on IPv6 (FR-016). (autonomous, from test-adversary's findings)
+- Q: Does a form post with unrelated fields get 415 or 400? → A: 415: the JSON check is a guard that answers before the body is validated, for sign-in too, so every non-JSON body is refused the same way; prototype-chain keys are refused with 400 (FR-015). (autonomous, from test-adversary's findings)
 - Q: When the visitor switches sign-in → sign-up and then creates an account, what does the opener's promise resolve with? → A: One entry (`SignInDialog.start`) owns the loop: a task that closes with a switch makes it open the other task, carrying the e-mail; the opener's promise resolves "signed in" or "cancelled" only from the last task (FR-009, FR-013). (autonomous, recommended by spec-challenger)
 - Q: In what order are a sign-up's checks made, and which count toward the limit? → A: 415 → 400 (body) → count and 429 → 503 → `weak_password` → `email_taken` → create; every request that passes the body check is counted, whatever its answer (FR-006). (autonomous, recommended)
 - Q: A taken e-mail and a weak password together? → A: `weak_password` first: it needs no database read and is fixed in place; `email_taken` only for an otherwise acceptable body (FR-003, FR-004). (autonomous, recommended)
