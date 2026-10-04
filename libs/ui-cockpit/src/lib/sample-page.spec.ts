@@ -78,4 +78,53 @@ describe('CockpitSamplePage', () => {
       expect(buttonNamed(page, name)).toBeDefined();
     }
   });
+
+  const settle = async () => {
+    for (let i = 0; i < 3; i++) {
+      TestBed.tick();
+      await new Promise((resolve) => setTimeout(resolve));
+    }
+  };
+  const openTask = () =>
+    document.querySelector<HTMLElement>('.cdk-overlay-pane [role="dialog"]');
+
+  afterEach(() => {
+    document.querySelector('.cdk-overlay-container')?.remove();
+  });
+
+  it.each([
+    ['overlay.openDialog', 'mf-overlay-dialog'],
+    ['overlay.openDrawer', 'mf-overlay-drawer'],
+    ['overlay.openWide', 'mf-overlay-drawer-wide'],
+  ])('opens the sample task from %s in its shape', async (key, shape) => {
+    const page = await render();
+
+    buttonNamed(page, text(key))?.click();
+    await settle();
+
+    const task = openTask();
+    expect(task?.querySelector('mf-overlay-panel')?.classList).toContain(shape);
+    const input = task?.querySelector<HTMLInputElement>('input');
+    expect(task?.querySelector(`label[for="${input?.id}"]`)?.textContent).toBe(
+      text('overlay.field'),
+    );
+    expect(
+      buttonNamed(task as HTMLElement, text('overlay.again')),
+    ).toBeDefined();
+  });
+
+  it('shows the result the sample task closes with', async () => {
+    const page = await render();
+    buttonNamed(page, text('overlay.openDialog'))?.click();
+    await settle();
+
+    buttonNamed(openTask() as HTMLElement, text('overlay.done'))?.click();
+    await settle();
+    TestBed.tick();
+
+    expect(openTask()).toBeNull();
+    expect(page.querySelector('.mf-overlay-result')?.textContent).toContain(
+      text('overlay.results.saved'),
+    );
+  });
 });

@@ -1,6 +1,7 @@
 import { Component, inject, PendingTasks, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
+import { type OverlayShape, Overlays } from '@motor-fix/overlays';
 
 import { CockpitChartsSample } from './charts-sample';
 import { CockpitGaugesSample } from './gauges-sample';
@@ -15,6 +16,7 @@ import { HlmTableImports } from './helm/table';
 import { HlmTabsImports } from './helm/tabs';
 import { HlmToaster, toast } from './helm/toaster';
 import { Panel } from './panel';
+import { CockpitSampleTask } from './sample-task';
 import { SAMPLE_GARAGES } from './sample-text';
 
 @Component({
@@ -157,6 +159,24 @@ import { SAMPLE_GARAGES } from './sample-text';
         </hlm-popover>
       </div>
 
+      <div class="row">
+        <button hlmBtn variant="secondary" (click)="openTask('dialog')">
+          {{ 'cockpit.overlay.openDialog' | t }}
+        </button>
+        <button hlmBtn variant="secondary" (click)="openTask('drawer')">
+          {{ 'cockpit.overlay.openDrawer' | t }}
+        </button>
+        <button hlmBtn variant="secondary" (click)="openTask('drawer-wide')">
+          {{ 'cockpit.overlay.openWide' | t }}
+        </button>
+      </div>
+      <p class="mf-overlay-result" aria-live="polite">
+        {{
+          'cockpit.overlay.result'
+            | t: { result: (results[lastResult()] | t) }
+        }}
+      </p>
+
       <mf-cockpit-charts-sample />
 
       <hlm-toaster />
@@ -165,6 +185,13 @@ import { SAMPLE_GARAGES } from './sample-text';
 })
 export class CockpitSamplePage {
   private readonly i18n = inject(I18n);
+  private readonly overlays = inject(Overlays);
+  protected readonly results = {
+    cancelled: 'cockpit.overlay.results.cancelled',
+    none: 'cockpit.overlay.results.none',
+    saved: 'cockpit.overlay.results.saved',
+  } as const;
+  protected readonly lastResult = signal<keyof typeof this.results>('none');
   protected readonly garages = SAMPLE_GARAGES;
   protected readonly brand = signal('');
   protected readonly openNow = signal(true);
@@ -173,6 +200,15 @@ export class CockpitSamplePage {
     toast(this.i18n.t('cockpit.toastSummary'), {
       description: this.i18n.t('cockpit.toastDetail'),
     });
+  }
+
+  protected async openTask(shape: OverlayShape) {
+    this.lastResult.set(
+      await this.overlays.open<'saved'>(CockpitSampleTask, {
+        shape,
+        title: 'cockpit.overlay.title',
+      }),
+    );
   }
 
   constructor() {
