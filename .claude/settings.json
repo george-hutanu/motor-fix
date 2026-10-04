@@ -168,7 +168,12 @@
       "mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-fetch",
       "mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-get-comments",
       "mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-query-data-sources",
-      "mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-get-tool-access"
+      "mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-get-tool-access",
+      "mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-search",
+      "mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-fetch",
+      "mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-get-comments",
+      "mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-query-data-sources",
+      "mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-get-tool-access"
     ]
   },
   "statusLine": {

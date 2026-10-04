@@ -1,0 +1,36 @@
+{
+  "$schema": "../../node_modules/@angular/service-worker/config/schema.json",
+  "assetGroups": [
+    {
+      "installMode": "prefetch",
+      "name": "app",
+      "resources": {
+        "files": [
+          "/favicon.ico",
+          "/index.csr.html",
+          "/manifest.webmanifest",
+          "/*.css",
+          "/*.js"
+        ]
+      }
+    },
+    {
+      "installMode": "lazy",
+      "name": "assets",
+      "resources": {
+        "files": ["/icons/**", "/media/**"]
+      },
+      "updateMode": "prefetch"
+    }
+  ],
+  "index": "/index.csr.html",
+  "navigationRequestStrategy": "freshness",
+  "navigationUrls": [
+    "/**",
+    "!/**/*.*",
+    "!/**/*__*",
+    "!/**/*__*/**",
+    "!/api/**",
+    "!/health/**"
+  ]
+}

@@ -37,6 +37,10 @@
     },
     "signOut": "Ieși din cont"
   },
+  "gauge": {
+    "none": "Nicio recenzie încă",
+    "rating": "Rating {value} din 5"
+  },
   "health": {
     "status": "PostgreSQL: {postgres} · Redis: {redis}",
     "unknown": "necunoscut"
