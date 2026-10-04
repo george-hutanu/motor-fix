@@ -52,6 +52,10 @@ description: "Tasks: agent QA review of every ready PR"
 - [X] T023 [US3] Wire the tester, the QA status, the fix-and-retest loop and the Blocked event into `.claude/skills/speckit-auto/SKILL.md`, `.claude/skills/speckit-review/SKILL.md`, `.claude/skills/speckit-archive/SKILL.md`
 - [X] T024 [US3] Constitution VII and Enforcement (v1.5.0), AGENTS.md lifecycle and the heavy-lock line, CLAUDE.local.md gate table without growing past its baseline
 
+## Phase 6b: Deferred debt as Notion tasks (owner addition)
+
+- [X] T028 Red tests in `.claude/scripts/debt-tasks.spec.mjs`, then `.claude/scripts/debt-tasks.mjs` (plan/mark); `speckit-notion-sync debt`; wiring in speckit-auto, speckit-review, speckit-pr-test, AGENTS.md; backfill ST-433, ST-435, ST-434
+
 ## Phase 7: Proof
 
 - [X] T025 Run the tester on this feature's PR; act on its findings; copy the evidence to `specs/434-agent-pr-review/pr-review/`
@@ -79,3 +83,4 @@ description: "Tasks: agent QA review of every ready PR"
 | FR-015 | `heavy.spec.mjs` (bounded wait, exit 75); hooks exercised by the session |
 | FR-016 | `notion-status.spec.mjs` |
 | FR-017 | spec-reviewer (prose) |
+| FR-018 | `debt-tasks.spec.mjs` |

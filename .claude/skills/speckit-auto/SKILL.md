@@ -376,7 +376,9 @@ feature directory and the diff range `<start-commit>..HEAD`. They answer
 different questions — conformance to the spec, and durability of the code —
 and run in parallel. Merge both tables. Fix every CRITICAL and HIGH finding,
 then re-run whichever reviewer raised them, once. CRITICAL/HIGH findings that survive the re-review block completion —
-report them as a Hard Stop. MEDIUM/LOW findings go in the report unfixed.
+report them as a Hard Stop. MEDIUM/LOW findings go in the report unfixed; the
+ones routed to defer go to `specs/<feature>/deferred.md` and are filed as Notion
+tasks (`speckit-notion-sync debt`).
 
 ### 15. Agent context
 
@@ -530,7 +532,9 @@ When phases 14–16 are done, the review left no CRITICAL/HIGH and the last
    exits 1 the run is blocked (`repair-loop-exceeded`): `speckit-notion-sync
    blocked` with the open findings, the same as a PR comment, and stop — the PR
    is never merged at the cap.
-6. On `agent-review` success with every other check green: merge `origin/main`
+6. Before the merge, `speckit-notion-sync debt` files every deferred bullet
+   not yet filed (reviewers' and the tester's) as a To do task in Notion.
+7. On `agent-review` success with every other check green: merge `origin/main`
    in again if it moved (a new head needs a new tester run), then
    `gh pr merge <branch> --merge` — the `pre:bash:merge-gate` hook refuses it
    without `agent-review` success on the head — and `speckit-notion-sync

@@ -55,7 +55,9 @@ without a status, so the test runs again.
    ```
 
    Then go back to step 3 on the new head. Medium and low findings go to
-   `specs/<feature>/deferred.md` unless they are one-line fixes.
+   `specs/<feature>/deferred.md` unless they are one-line fixes, and every
+   deferred bullet is filed as a Notion task (`speckit-notion-sync debt`).
+   On success, file the lap's deferred findings the same way before merging.
 6. **Cap reached** (`repair` exits 1): the run is blocked with
    `repair-loop-exceeded`. Run `speckit-notion-sync blocked` with the reason
    (open findings, laps used), comment the same on the PR

@@ -129,12 +129,13 @@ An agent finishes a task, marks its PR ready and moves the story to In review. B
 - **FR-015**: `.husky/pre-commit` MUST run its typecheck, lint and test inside one slot with heavy.sh's parallelism; the post-edit gate (60 s) and the Stop gate (300 s) MUST run Jest in a slot with that bounded wait and two workers, and skip with a report when no slot is had.
 - **FR-016**: The Notion status decision MUST be scripted: events `start`, `review`, `qa`, `finish`, `blocked`, `unblock` map to story and timeline statuses on the order To do < In progress < In review < QA < Done, with Blocked outside it; no event moves a story backwards; `blocked` records the status it left (a second `blocked` keeps the first record); only `unblock` leaves Blocked, returning to the recorded status; nothing moves a Done story.
 - **FR-017**: `/speckit-auto`, `/speckit-review`, AGENTS.md and Constitution VII MUST put the tester between "ready" and "merge", with the fix-and-retest loop counted by `run-state.mjs repair` and the story in QA during it.
+- **FR-018**: Every finding a reviewer routes to defer (`specs/<feature>/deferred.md`) MUST be filed as a To do Task in MotorFix stories carrying its severity, place, reviewer, PR, story and Epic (Feature when known), with the task's URL written back onto the bullet so no later run files it twice; a Notion failure is logged and retried, never blocking.
 
 ## Spec Delta
 
 ### Capability: `harness`
 
-- **Adds**: FR-001–FR-017
+- **Adds**: FR-001–FR-018
 
 ### Key Entities
 

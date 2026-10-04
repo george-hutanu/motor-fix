@@ -1,7 +1,7 @@
 ---
 name: "speckit-notion-sync"
 description: "Keep the MotorFix Notion tracker in step with the build: when a story or task starts, goes to review, goes to QA (the PR tester), is blocked or unblocked, or is finished, set its Status in MotorFix stories, its row in the epic's build timeline under Plans, and its epic's Status. Also files a new epic execution plan under Plans. Runs from the spec-kit hooks (after_specify, before_implement), from /speckit-review, /speckit-archive and /speckit-auto, and after a merge to main."
-argument-hint: "start | review | qa | blocked <reason> | unblock | finish | plan — optionally followed by a Notion story URL or ST-<n>"
+argument-hint: "start | review | qa | blocked <reason> | unblock | finish | debt | plan — optionally followed by a Notion story URL or ST-<n>"
 compatibility: "Requires the Notion connector and the spec-kit project structure"
 metadata:
   author: "george-hutanu"
@@ -17,7 +17,7 @@ $ARGUMENTS
 ```
 
 The first word is the **event**: `start`, `review`, `qa`, `blocked`, `unblock`,
-`finish` or `plan`. `blocked` is followed by the reason. When the
+`finish`, `debt` or `plan`. `blocked` is followed by the reason. When the
 skill runs as a spec-kit hook there is no argument; take the event from the
 hook's description (`after_specify` and `before_implement` are `start`).
 
@@ -102,6 +102,32 @@ Rules:
   stories, Wave, Lane, Points, Start, End, Blocked by ↔ Blocking, Build status,
   Outside / open, and a timeline view). Follow the Foundations plan already
   there as the pattern.
+
+## 2b. `debt`: file deferred technical debt as tasks
+
+Every bullet in `specs/<feature>/deferred.md` — a finding spec-reviewer,
+code-reviewer or the PR tester routed to defer — becomes one task. The space
+has no separate tasks database, so it is a row in MotorFix stories with Issue
+type Task, Role System, Status To do, the story's Epic (and Feature when known),
+filed the way ST-431–ST-434 are.
+
+```bash
+node .claude/scripts/debt-tasks.mjs plan specs/<feature>/deferred.md \
+  --story <story URL> --epic <epic URL> --pr <PR URL> --id ST-<n> [--feature <URL>]
+# [{ "line": 6, "properties": { … }, "content": "…" }, …] — pending bullets only
+```
+
+For each entry: `notion-create-pages` in the stories data source with its
+`properties` and `content`, then write the new page's URL back onto the bullet:
+
+```bash
+node .claude/scripts/debt-tasks.mjs mark specs/<feature>/deferred.md --line <line> --url <task URL>
+```
+
+A bullet carrying `— Notion: <url>` is never filed again, so a retest lap or a
+second run is a no-op. A create that fails (a usage limit included) is logged
+`[NOTION-SYNC PENDING: debt <feature> line <n> — <error>]` and retried on the
+next run; it never blocks the build.
 
 ## 3. Record it
 

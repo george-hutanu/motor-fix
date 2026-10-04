@@ -63,3 +63,8 @@
 - The `pr-tester` agent type was not loadable: this session read its agent list before the file existed. The tester ran as a general-purpose subagent told to read and follow `.claude/agents/pr-tester.md` (new sessions get the real type).
 - Lap 1 on 12d0bb5: verdict success, 0 blocking, 5 medium (storage readiness env limit; 2 pre-existing axe moderate on /; a flow false positive; post.mjs --add rewrites the report), 4 low. Posted a COMMENT review (own-PR fallback), filled the Agent review section, `agent-review` = success on 12d0bb5. Teardown complete. Evidence: pr-review/pr-21-lap1/. Non-blocking findings deferred (deferred.md) per the owner's "defer, don't expand scope".
 - Copying the evidence is a new commit, so the head moves and the tester runs again (lap 2) before the merge — the gate working as designed.
+
+## Owner addition: deferred debt becomes Notion tasks (inside #21)
+- No separate tasks database in the MotorFix space (notion-search); tasks are MotorFix stories rows, Issue type Task, Role System, Status To do, Epic EP-1, priority from severity.
+- `.claude/scripts/debt-tasks.mjs` (plan/mark) with `debt-tasks.spec.mjs` written first (red: module missing; then 8 passed). The Notion writes stay in the skill (`speckit-notion-sync debt`), which the script feeds; wired into speckit-auto (phase 14 and hand-off step 6), speckit-review, speckit-pr-test and AGENTS.md.
+- Backfill: 13 tasks (ST-433 1, ST-435 4, ST-434 8); URLs on every bullet; re-plan returns [].

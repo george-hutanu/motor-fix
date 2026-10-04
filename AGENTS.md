@@ -58,6 +58,10 @@ epic or a plan, whether run through spec-kit or by hand.
      (`gh pr merge <n> --merge`); a PR with a failing, pending or missing check
      is never merged. Then set the task to Done (`speckit-notion-sync finish`).
 
+  Technical debt a review defers (`specs/<feature>/deferred.md`) is filed as
+  a To do task in Notion (`speckit-notion-sync debt`) before the merge; each
+  bullet carries its task's URL so it is never filed twice.
+
   Whenever the work cannot go on without something outside it (a Hard Stop,
   red CI the agent cannot fix, the repair cap, an unresolved Blocked by), set
   the task to Blocked with the reason as a Notion comment and a PR comment

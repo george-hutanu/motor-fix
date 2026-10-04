@@ -177,7 +177,8 @@ and mark the PR ready exactly as `/speckit-auto`'s hand-off step 1 does
 `speckit-notion-sync review`, then run the QA step and merge exactly as
 `/speckit-auto`'s hand-off steps 3–6 do: green CI, `/speckit-pr-test <n>`
 (story → QA) until `agent-review` is success on the head commit, then merge.
-With a blocker left, do none of this.
+Findings routed to defer go to `specs/<feature>/deferred.md` and are filed as
+Notion tasks (`speckit-notion-sync debt`). With a blocker left, do none of this.
 
 ## Done When
 
