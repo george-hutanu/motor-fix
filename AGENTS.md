@@ -188,5 +188,6 @@ decisions are the source for anything the constitution does not fix.
   `workflow_dispatch`.
 - Release: `.github/workflows/release.yml` builds one image per app (root
   `Dockerfile`), deploys staging through `scripts/railway-deploy.ts`, runs the
-  end-to-end suite there, and promotes the same digests to production after
-  approval.
+  end-to-end suite there, and promotes the same digests to production with
+  no manual approval: a merge reaches production only when CI and staging
+  both passed.

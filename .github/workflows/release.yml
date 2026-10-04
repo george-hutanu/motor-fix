@@ -101,9 +101,9 @@ jobs:
   production:
     needs: [images, staging]
     runs-on: ubuntu-latest
-    # Required reviewers on this environment approve each release. A newer
-    # commit that passes staging cancels the approval still waiting here, so
-    # only the latest proven commit can reach production.
+    # No approval: production follows a green staging run. A newer commit
+    # that passes staging cancels a production run still in progress, so
+    # only the latest proven commit reaches production.
     environment: production
     concurrency:
       group: release-production
