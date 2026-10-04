@@ -47,7 +47,6 @@ is not.
 ### Capability: `platform`
 
 - **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006
-- **Modifies**: 435-FR-003 → FR-005 (`CI OK` also needs the detector)
 
 ## Success Criteria *(mandatory)*
 

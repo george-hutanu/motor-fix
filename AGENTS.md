@@ -103,8 +103,8 @@ decisions are the source for anything the constitution does not fix.
   Dependency audit, Docker build (`web`, `node-app`), then `CI OK`, which
   fails when any of them did. A PR that changes documentation only
   (`scripts/docs-only.ts`: Markdown outside `.claude/`, `.specify/` and
-  `.github/`, or `docs/`) runs only the title check and `CI OK`; the other
-  jobs are skipped. PRs run `nx affected`; `release.yml` calls the
+  `.github/`, or `docs/`) runs only the PR title, Changes and `CI OK` jobs;
+  the others are skipped. PRs run `nx affected`; `release.yml` calls the
   same workflow, which then runs every project. Mutation testing never runs
   in PR CI: `.github/workflows/mutation.yml` runs it nightly on `main` and on
   `workflow_dispatch`.

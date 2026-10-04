@@ -1,9 +1,9 @@
 name: CI
 
-# Pull requests run the affected projects, and a documentation-only PR skips
-# every job but the title check; merges into main run every project through
-# release.yml. Mutation testing has its own workflow (mutation.yml)
-# and never runs here.
+# Pull requests run the affected projects, and a documentation-only PR runs
+# only the title check, the change detector and CI OK; merges into main run
+# every project through release.yml. Mutation testing has its own workflow
+# (mutation.yml) and never runs here.
 on:
   pull_request:
   workflow_call:

@@ -32,7 +32,14 @@ function main() {
   if (!base) throw new Error('Usage: node scripts/docs-only.ts <base-ref>');
   const changed = execFileSync(
     'git',
-    ['diff', '--name-only', '--no-renames', `${base}...HEAD`],
+    [
+      '-c',
+      'core.quotePath=off',
+      'diff',
+      '--name-only',
+      '--no-renames',
+      `${base}...HEAD`,
+    ],
     { encoding: 'utf8' },
   ).split('\n');
   const docsOnly = isDocsOnly(changed);

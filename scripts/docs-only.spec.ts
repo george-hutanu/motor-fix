@@ -93,7 +93,7 @@ describe('the CLI', () => {
 
   beforeEach(() => {
     repo = mkdtempSync(join(tmpdir(), 'docs-only-'));
-    output = join(repo, '..', `${repo.split('/').pop()}.out`);
+    output = join(repo, 'github-output');
     git('init', '-q', '-b', 'main');
     writeFileSync(join(repo, 'README.md'), 'readme\n');
     writeFileSync(join(repo, 'main.ts'), 'export const a = 1;\n');
@@ -103,7 +103,6 @@ describe('the CLI', () => {
 
   afterEach(() => {
     rmSync(repo, { force: true, recursive: true });
-    rmSync(output, { force: true });
   });
 
   it('writes docs-only=true when only documentation changed', () => {
@@ -114,6 +113,13 @@ describe('the CLI', () => {
 
     expect(result.output).toBe('docs-only=true\n');
     expect(result.stdout).toContain('README.md');
+  });
+
+  it('reads a Markdown path with non-ASCII characters as documentation', () => {
+    writeFileSync(join(repo, 'ghid-întreținere.md'), 'ghid\n');
+    commitAll('romanian docs');
+
+    expect(run().output).toBe('docs-only=true\n');
   });
 
   it('writes docs-only=false when code changed', () => {
