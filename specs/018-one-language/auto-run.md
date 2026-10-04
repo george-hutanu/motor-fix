@@ -17,3 +17,17 @@
 
 ## 7. Tasks
 - tasks.md written directly from the spec (level 1, no plan.md): 12 tasks.
+- Draft PR #36 opened at the first commit (dbe7f30), body from the template via --body-file; story `PR` property set to it.
+- Coordinator: GitHub Actions is off (billing); CI moves to `scripts/local-ci.ts` with PR #30. Until then verification is local under heavy.sh and only the merge waits.
+
+## 9. Tests (red first)
+- Red before implementation: `npx jest libs/i18n/src/check.spec.ts libs/i18n/src/as-written.spec.ts libs/i18n/src/catalogue-name.pipe.spec.ts apps/web/src/app/dashboard/frame.spec.ts` → "Test Suites: 4 failed, 4 total · Tests: 4 failed, 30 passed", two suites unloadable ("Cannot find module './as-written'", "'./catalogue-name.pipe'").
+- The first commit attempt's pre-commit (red tests in the tree) showed typecheck and lint green at the start, and failed only on them ("Tests: 3 failed, 158 passed" in web, and i18n).
+- e2e `one-language.spec.ts`: the mixed-language check was proven on planted text with a throwaway probe ("Ieși din cont" under English and "Sign out" under Romanian were caught; a `translate="no"` "Panou" was not). The 320 px and mixed-language checks pass on today's screens: regression guards. The `translate="no"` name check was written with the implementation.
+
+## 10. Implement
+- 8ebf820 feat(i18n): keep Romanian hyphenated words whole on one line (rule + 9 texts in shell/cockpit ro.json; frame.spec expectations).
+- faa13be feat(i18n): show user text and names as written, catalogue names in the interface language.
+- Autonomous: the e2e switches dashboards to English with the RO/EN switch (the stubbed account says `ro`, which wins over a remembered `mf.lang`).
+- `npx jest libs/i18n apps/web/src/app/dashboard` → "Test Suites: 16 passed · Tests: 473 passed".
+- Production build `scripts/heavy.sh npx nx run web:build` OK; served on :4218 (APP_ENV=test, no API); `BASE_URL=http://localhost:4218 scripts/heavy.sh npx playwright test --workers=2` → 89 passed, 1 failed (`skeleton.spec` needs the API with PostgreSQL/Redis: environment, as in ST-21/ST-286). one-language.spec 21/21.

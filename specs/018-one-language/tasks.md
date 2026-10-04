@@ -28,15 +28,15 @@ Paths are `(new)` unless they exist today: `libs/i18n/src/check.ts`, `libs/i18n/
 
 - [X] T008 [US1] Test: `libs/i18n/src/catalogue-name.pipe.spec.ts` — Romanian name under Romanian, English under English, follows a switch without re-creating the view, Romanian when the English name is missing or blank (FR-005)
 - [X] T009 [US1] `libs/i18n/src/catalogue-name.pipe.ts` — `CatalogueNamePipe`; export from `index.ts` (FR-005)
-- [ ] T010 [US1] Test: `apps/web-e2e/src/one-language.spec.ts` — on `/ro`, `/en`, `/cockpit` and the three dashboards, in each language, no visible text or accessible label equals a text only the other language's files have; the dashboard name is shown with `translate="no"` in English (FR-004, FR-006, SC-002)
+- [X] T010 [US1] Test: `apps/web-e2e/src/one-language.spec.ts` — on `/ro`, `/en`, `/cockpit` and the three dashboards, in each language, no visible text or accessible label equals a text only the other language's files have; the dashboard name is shown with `translate="no"` in English (FR-004, FR-006, SC-002)
 
 ## Phase 4: US3 Long text at 320 px in both languages (P2)
 
-- [ ] T011 [US3] Test: `apps/web-e2e/src/one-language.spec.ts` — at 320 px, on every route in each language: no sideways scroll, no text cut off by its own box, no text under 12 px (FR-007, SC-003)
+- [X] T011 [US3] Test: `apps/web-e2e/src/one-language.spec.ts` — at 320 px, on every route in each language: no sideways scroll, no text cut off by its own box, no text under 12 px (FR-007, SC-003)
 
 ## Phase 5: Polish
 
-- [ ] T012 Run `npm run typecheck`, `npm run lint`, `npm run test` and the e2e suite under `scripts/heavy.sh`; record results in auto-run.md
+- [X] T012 Run `npm run typecheck`, `npm run lint`, `npm run test` and the e2e suite under `scripts/heavy.sh`; record results in auto-run.md
 
 ## FR → test
 
