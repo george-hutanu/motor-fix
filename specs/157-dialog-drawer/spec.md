@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-157 Build the shared dialog and right-hand drawer (Notion https://app.notion.com/p/3ee607bff0d2811db730c1017d198dd2). One overlay service that opens any task component as a centred dialog or a drawer on the right, with dimmed backdrop, scroll lock, focus trap, close by X/Escape/backdrop, a typed result, no URL change. Build on libs/ui-cockpit Spartan helm dialog and sheet; ST-53 motion already in place."
 
