@@ -46,12 +46,14 @@ model Account {
   status          AccountStatus     @default(active)
   lastRole        Role              @map("last_role")
   lastActiveAt    DateTime?         @map("last_active_at") @db.Timestamptz(3)
+  emailBouncedAt  DateTime?         @map("email_bounced_at") @db.Timestamptz(3)
   createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
   roles           AccountRole[]
   identities      AccountIdentity[]
   refreshTokens   RefreshToken[]
   memberships     GarageMember[]
   mechanic        Mechanic?
+  notifications   Notification[]
 
   @@map("account")
 }

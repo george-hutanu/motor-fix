@@ -317,6 +317,42 @@
         ]
       }
     },
+    "/api/v1/admin/notifications/test": {
+      "post": {
+        "operationId": "NotificationsController_test",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestMessageQueuedDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/api/v1/live": {
       "get": {
         "operationId": "LiveController_live",
@@ -800,6 +836,36 @@
           "items",
           "nextCursor",
           "total"
+        ]
+      },
+      "TestMessageDto": {
+        "type": "object",
+        "properties": {
+          "accountIds": {
+            "description": "The accounts that get the test e-mail",
+            "maxItems": 20,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "accountIds"
+        ]
+      },
+      "TestMessageQueuedDto": {
+        "type": "object",
+        "properties": {
+          "queued": {
+            "type": "number",
+            "description": "How many test e-mails were queued"
+          }
+        },
+        "required": [
+          "queued"
         ]
       },
       "LiveTestDto": {
