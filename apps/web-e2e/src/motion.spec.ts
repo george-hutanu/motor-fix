@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 
 import { expect, type Page, test } from '@playwright/test';
 
@@ -12,6 +13,10 @@ const COCKPIT = JSON.parse(
   ),
 );
 const GAUGES = COCKPIT.gauges as Record<string, string>;
+const AXE = readFileSync(
+  createRequire(import.meta.url).resolve('axe-core/axe.min.js'),
+  'utf8',
+);
 
 type Running = {
   delay: number;
@@ -149,7 +154,8 @@ test.describe('with full motion', () => {
           Number(s.getAnimations()[0]?.effect?.getTiming().delay),
         ),
       );
-    expect(gauges - table).toBe(60);
+    // Only panels count: the first starts at once, the next 60 ms later.
+    expect([table, gauges]).toEqual([0, 60]);
   });
 
   test('a control works while the screen builds up, and a change does not replay it', async ({
@@ -269,4 +275,31 @@ test.describe('with full motion', () => {
       GAUGES['motionReduced'],
     );
   });
+});
+
+test('the live label keeps its contrast through the whole blink', async ({
+  page,
+}) => {
+  await openCockpit(page);
+  // A panel still fading in would lower every contrast inside it.
+  await expect
+    .poll(async () => named(await running(page), 'mf-rise').length)
+    .toBe(0);
+  await page.evaluate(AXE);
+  const violations: string[] = [];
+  // Five looks across one blink period catch both halves of it.
+  for (let look = 0; look < 5; look++) {
+    const found = await page.evaluate(async () => {
+      const axe = (globalThis as unknown as { axe: { run: Function } }).axe;
+      const result = await axe.run(
+        { include: [['.mf-live']] },
+        { runOnly: ['color-contrast'] },
+      );
+      return result.violations.map((v: { id: string }) => v.id);
+    });
+    violations.push(...found);
+    await page.waitForTimeout(220);
+  }
+
+  expect(violations).toEqual([]);
 });

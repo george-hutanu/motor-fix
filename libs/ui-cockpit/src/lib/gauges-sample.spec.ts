@@ -89,9 +89,14 @@ describe('CockpitGaugesSample', () => {
     expect(odometers(page)[1]).toBe('1.250–1.600 lei');
   });
 
-  it('shows a blinking live label in both languages', async () => {
+  it('shows a live label whose dot blinks, the text staying still, in both languages', async () => {
     const { fixture, page } = await render();
-    const blink = () => page.querySelector('.mf-blink')?.textContent?.trim();
+    const blink = () => page.querySelector('.mf-live')?.textContent?.trim();
+    const dot = page.querySelector('.mf-live .mf-blink');
+
+    expect(dot?.getAttribute('aria-hidden')).toBe('true');
+    expect(dot?.textContent).toBe('');
+    expect(page.querySelectorAll('.mf-blink')).toHaveLength(1);
 
     expect(blink()).toBe(text('live'));
     await TestBed.inject(I18n).use('en');

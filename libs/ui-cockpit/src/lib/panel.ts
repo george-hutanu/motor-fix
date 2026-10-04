@@ -11,37 +11,37 @@ import { Component, inject, input } from '@angular/core';
       padding: var(--mf-space-5);
       animation: mf-rise var(--mf-motion-rise) var(--mf-motion-ease) calc(var(--mf-panel-step, 0) * var(--mf-motion-stagger)) backwards;
     }
-    :host(:nth-child(2)) {
+    :host(:nth-child(2 of mf-panel)) {
       --mf-panel-step: 1;
     }
-    :host(:nth-child(3)) {
+    :host(:nth-child(3 of mf-panel)) {
       --mf-panel-step: 2;
     }
-    :host(:nth-child(4)) {
+    :host(:nth-child(4 of mf-panel)) {
       --mf-panel-step: 3;
     }
-    :host(:nth-child(5)) {
+    :host(:nth-child(5 of mf-panel)) {
       --mf-panel-step: 4;
     }
-    :host(:nth-child(6)) {
+    :host(:nth-child(6 of mf-panel)) {
       --mf-panel-step: 5;
     }
-    :host(:nth-child(7)) {
+    :host(:nth-child(7 of mf-panel)) {
       --mf-panel-step: 6;
     }
-    :host(:nth-child(8)) {
+    :host(:nth-child(8 of mf-panel)) {
       --mf-panel-step: 7;
     }
-    :host(:nth-child(9)) {
+    :host(:nth-child(9 of mf-panel)) {
       --mf-panel-step: 8;
     }
-    :host(:nth-child(10)) {
+    :host(:nth-child(10 of mf-panel)) {
       --mf-panel-step: 9;
     }
-    :host(:nth-child(11)) {
+    :host(:nth-child(11 of mf-panel)) {
       --mf-panel-step: 10;
     }
-    :host(:nth-child(n + 12)) {
+    :host(:nth-child(n + 12 of mf-panel)) {
       --mf-panel-step: 11;
     }
     h2 {

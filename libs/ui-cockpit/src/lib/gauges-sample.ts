@@ -32,6 +32,17 @@ const RATINGS = [4.8, 4.2] as const;
       grid-template-columns: minmax(0, 1fr);
       gap: var(--mf-space-5);
     }
+    .mf-live {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--mf-space-2);
+    }
+    .mf-live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--mf-red);
+    }
     .dial {
       flex: 1 1 200px;
       max-width: 240px;
@@ -44,7 +55,10 @@ const RATINGS = [4.8, 4.2] as const;
         <mf-lamp state="red" [label]="'cockpit.gauges.lampRed' | t" />
         <mf-lamp state="amber" pulse [label]="'cockpit.gauges.lampAmber' | t" />
         <mf-lamp state="grey" [label]="'cockpit.gauges.lampGrey' | t" />
-        <span class="mf-label mf-blink">{{ 'cockpit.gauges.live' | t }}</span>
+        <span class="mf-label mf-live">
+          <span class="mf-live-dot mf-blink" aria-hidden="true"></span>
+          {{ 'cockpit.gauges.live' | t }}
+        </span>
       </div>
       <div class="row">
         <div class="dial"><mf-rating-dial [value]="rating()" /></div>

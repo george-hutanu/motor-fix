@@ -61,3 +61,11 @@ Start: branch `053-motion` from origin/main 0dfde6c (contains ST-51, #20), 2026-
   - Decision A (orchestrator): the gauges panel now sits in `<main>` beside the table panel (heading moved to sample-page, the sample renders its body); e2e checks the real 60 ms stagger; ST-51's 320 px test locator updated to `section.mf-panel:has(mf-cockpit-gauges-sample)`.
   - Deferred: charts read reduced motion once (chart.ts:93, from #23) → deferred.md + Notion task.
 - Merged origin/main (#23 ST-52) into the branch, no conflicts. ui-cockpit 371, i18n 428 passed; e2e motion, gauges, cockpit, phone, charts, dashboards ×2 → 120 passed.
+
+## QA lap 1 (pr-tester on ade9319): failure — repair 1 of 5
+- report.md / report.json kept in pr-review/lap1 (no images). All motion, reduced-motion and 320/390 flows passed.
+- BLOCKER charts.spec "grows the bars in" flaky: the panel's rise made the element screenshot wait → that test removes the panels' animation; 10/10 ×2.
+- HIGH axe colour contrast on blinking text → the dot blinks, the text stays; axe colour-contrast on `.mf-live` over one blink period (after the build-up) in motion.spec.
+- MEDIUM the stagger counted every sibling (first panel hidden 480 ms) → `:nth-child(n of mf-panel)`; e2e asserts 0 and 60 ms.
+- Ignored on the orchestrator's word: the 401 on /me at /app/driver during the sweep (harness limit).
+- Verified: ui-cockpit 371 passed; motion + charts ×3 → 51 passed. One earlier full run lost the dev server mid-run (connection refused on 4 chart tests); not reproduced.

@@ -125,13 +125,15 @@ describe('Cockpit motion', () => {
     ]);
     const steps = [
       ...panel.matchAll(
-        /:host\(:nth-child\((\d+)\)\)\s*\{\s*--mf-panel-step:\s*(\d+);/g,
+        /:host\(:nth-child\((\d+) of mf-panel\)\)\s*\{\s*--mf-panel-step:\s*(\d+);/g,
       ),
     ].map(([, child, step]) => [Number(child), Number(step)]);
     expect(steps).toEqual(Array.from({ length: 10 }, (_, i) => [i + 2, i + 1]));
-    // The twelfth and every later panel share the last step, never step 0.
+    // Only panels count, so the first panel starts at once; the twelfth and
+    // every later one share the last step, never step 0.
+    expect(panel).not.toMatch(/:nth-child\((?![^)]*of mf-panel)/);
     expect(panel).toMatch(
-      /:host\(:nth-child\(n \+ 12\)\)\s*\{\s*--mf-panel-step:\s*11;\s*\}/,
+      /:host\(:nth-child\(n \+ 12 of mf-panel\)\)\s*\{\s*--mf-panel-step:\s*11;\s*\}/,
     );
   });
 });

@@ -40,6 +40,10 @@ Paths are `(new)` unless they exist today: `libs/ui-cockpit/src/styles/cockpit.c
 - [X] T013 [US1] code review: the twelfth and later panels share the last step (`:nth-child(n + 12)`), not step 0; `styles/motion.spec.ts` and the adversary assert it (FR-002)
 - [X] T014 [US1] `/cockpit`: the table panel and the gauges panel are siblings in `<main>`, so the catalogue shows the 60 ms stagger; the e2e checks the real page (FR-002, FR-011)
 
+- [X] T015 [US1] QA lap 1: only panels count in the stagger (`:nth-child(n of mf-panel)`), so the first panel starts at 0 ms; unit tests and the e2e assert 0 and 60 ms on `/cockpit` (FR-002)
+- [X] T016 [US2] QA lap 1: the live label's dot blinks, its text stays at full opacity; axe colour contrast on `.mf-live` across one blink period in `motion.spec.ts` (FR-005, FR-011)
+- [X] T017 QA lap 1: `charts.spec.ts` "grows the bars in" no longer depends on the panel's rise (the panels' animation is removed in that test) (FR-002)
+
 ## Dependencies
 
 T001, T002, T005, T007, T008, T011 before T003, T004, T006, T009, T010. Phase 1 before the rest (tokens and keyframes).

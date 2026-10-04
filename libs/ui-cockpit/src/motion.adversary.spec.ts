@@ -287,7 +287,7 @@ describe('panel build-up', () => {
     render();
     const steps = [
       ...sheetText().matchAll(
-        /:nth-child\((\d+)\)[^{]*{[^}]*--mf-panel-step:\s*(\d+)/g,
+        /:nth-child\((\d+) of mf-panel\)[^{]*{[^}]*--mf-panel-step:\s*(\d+)/g,
       ),
     ];
 
@@ -295,7 +295,7 @@ describe('panel build-up', () => {
       Array.from({ length: 10 }, (_, i) => [i + 2, i + 1]),
     );
     expect(sheetText()).toMatch(
-      /:nth-child\(n \+ 12\)\)[^{]*{[^}]*--mf-panel-step:\s*11;/,
+      /:nth-child\(n \+ 12 of mf-panel\)\)[^{]*{[^}]*--mf-panel-step:\s*11;/,
     );
   });
 
