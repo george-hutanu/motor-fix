@@ -56,7 +56,7 @@ _From 051-cockpit-gauges._
 
 _From 051-cockpit-gauges._
 
-### 053-FR-012 — The lamp, the rating dial and the odometer MUST move only as FR-003, FR-004 and FR-006 describe, through the hooks ST-51 left (the pulse marker, the dial's fill and needle, the per-digit cells); they are still with reduced motion. This replaces ST-51's rule that the three parts do not animate.
+### 053-FR-012 — The lamp, the rating dial and the odometer MUST move only as 053-FR-003, 053-FR-004 and 053-FR-006 (cockpit-motion) describe, through the hooks ST-51 left (the pulse marker, the dial's fill and needle, the per-digit cells); they are still with reduced motion. This replaces ST-51's rule that the three parts do not animate.
 
 _From 053-motion._
 
