@@ -62,6 +62,9 @@ describe('Cockpit motion', () => {
     );
     expect(keyframes('mf-pulse')).toMatch(/50% \{ opacity: 0\.45; \}/);
     expect(keyframes('mf-blink')).toMatch(/50% \{ opacity: 0\.35; \}/);
+    expect(
+      declarations(blockAfter(css, /\.mf-blink\s*\{/), 'animation'),
+    ).toEqual(['mf-blink var(--mf-motion-blink) steps(1, end) infinite']);
   });
 
   it('pops dialogs and sheets in when they open', () => {
@@ -83,21 +86,6 @@ describe('Cockpit motion', () => {
       expect(declarations(sheet, 'transform-origin')).toEqual([
         `${side} center`,
       ]);
-    }
-  });
-
-  it('blinks the live badge once a second, never faster', () => {
-    expect(
-      declarations(blockAfter(css, /\.mf-blink\s*\{/), 'animation'),
-    ).toEqual(['mf-blink var(--mf-motion-blink) steps(1, end) infinite']);
-    for (const token of ['--mf-motion-blink', '--mf-motion-pulse']) {
-      expect([
-        token,
-        Number.parseFloat(motionTokens.get(token) ?? '0'),
-      ]).toEqual([token, expect.any(Number)]);
-      expect(
-        Number.parseFloat(motionTokens.get(token) ?? '0'),
-      ).toBeGreaterThanOrEqual(1);
     }
   });
 
@@ -140,6 +128,10 @@ describe('Cockpit motion', () => {
         /:host\(:nth-child\((\d+)\)\)\s*\{\s*--mf-panel-step:\s*(\d+);/g,
       ),
     ].map(([, child, step]) => [Number(child), Number(step)]);
-    expect(steps).toEqual(Array.from({ length: 11 }, (_, i) => [i + 2, i + 1]));
+    expect(steps).toEqual(Array.from({ length: 10 }, (_, i) => [i + 2, i + 1]));
+    // The twelfth and every later panel share the last step, never step 0.
+    expect(panel).toMatch(
+      /:host\(:nth-child\(n \+ 12\)\)\s*\{\s*--mf-panel-step:\s*11;\s*\}/,
+    );
   });
 });

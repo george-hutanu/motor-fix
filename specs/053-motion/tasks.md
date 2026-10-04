@@ -10,7 +10,7 @@ Paths are `(new)` unless they exist today: `libs/ui-cockpit/src/styles/cockpit.c
 **Independent test**: the reduced-motion rule removes every animation and transition from every element and pseudo-element; the tokens hold the Build brief's numbers; every animation and transition in the kit uses them; the signal follows the device live.
 
 - [X] T001 [US4] Test: `libs/ui-cockpit/src/styles/motion.spec.ts` (new) — reads `cockpit.css` and the part sources: the `--mf-motion-*` tokens equal 700ms, 60ms, 1100ms, 420ms, 900ms, 1.6s, 1s and `cubic-bezier(0.32, 0.72, 0, 1)`; keyframes `mf-rise` (opacity 0, translateY(14px)), `mf-pop` (opacity 0, scale(0.94)), `mf-pulse` (0.45), `mf-blink` (0.35) exist; dialog and sheet content pop, sheets from their anchored edge; one `prefers-reduced-motion: reduce` block sets `animation: none !important` and `transition: none !important` on `*, *::before, *::after`; every `animation`/`transition` declaration in `cockpit.css` and in `panel.ts`, `lamp.ts`, `rating-dial.ts`, `odometer.ts` takes its duration from a `--mf-motion-*` token and none has a period under 1 s for an infinite animation (FR-001, FR-005, FR-008, SC-003, SC-004)
-- [X] T002 [US4] Test: `libs/ui-cockpit/src/lib/reduced-motion.spec.ts` (new) — `injectReducedMotion()` is true when the device query matches and false when not, follows a `change` event live, is one shared instance per injector, stops listening when the root injector is destroyed, and is false with no window (FR-009, FR-013)
+- [X] T002 [US4] Test: `libs/ui-cockpit/src/lib/reduced-motion.spec.ts` (new) — `inject(REDUCED_MOTION)` is true when the device query matches and false when not, follows a `change` event live, is one shared instance per injector, stops listening when the root injector is destroyed, and is false with no window (FR-009, FR-013)
 - [X] T003 [US4] `libs/ui-cockpit/src/styles/cockpit.css` — appended motion block: tokens, keyframes, `.mf-blink`, dialog and sheet pop, the reduced-motion rule (FR-001, FR-005, FR-007, FR-008)
 - [X] T004 [US4] `libs/ui-cockpit/src/lib/reduced-motion.ts` (new) + export in `libs/ui-cockpit/src/index.ts` (FR-009, FR-013)
 
@@ -36,7 +36,9 @@ Paths are `(new)` unless they exist today: `libs/ui-cockpit/src/styles/cockpit.c
 
 ## Phase 5: Hardening
 
-- [X] T012 [US4] `libs/ui-cockpit/src/motion.adversary.spec.ts` (test-adversary) + `lib/reduced-motion.ts` — a device whose media query has only `addListener`/`removeListener` still gets the signal, followed live and released on destroy (FR-009)
+- [X] T012 [US4] `libs/ui-cockpit/src/motion.adversary.spec.ts` (test-adversary): the signal, tokens, keyframes, reduced-motion rule and parts from the outside (FR-001–FR-010)
+- [X] T013 [US1] code review: the twelfth and later panels share the last step (`:nth-child(n + 12)`), not step 0; `styles/motion.spec.ts` and the adversary assert it (FR-002)
+- [X] T014 [US1] `/cockpit`: the table panel and the gauges panel are siblings in `<main>`, so the catalogue shows the 60 ms stagger; the e2e checks the real page (FR-002, FR-011)
 
 ## Dependencies
 

@@ -51,3 +51,13 @@ Start: branch `053-motion` from origin/main 0dfde6c (contains ST-51, #20), 2026-
 
 ## 13 Ticket refresh
 - Story re-read: no comments, Build brief unchanged. No new evidence.
+
+## 14 Review
+- test-adversary: motion.adversary.spec.ts, 38 tests, 1 real defect (legacy-only media listeners) → fixed a5182ca; then reverted on code-reviewer's MEDIUM (Angular 22 browserslist has no such Safari; Principle I).
+- spec-reviewer: APPROVE (LOW: vacuous blink-period test; MEDIUM: local sign-in stub). code-reviewer: BLOCK — 2 HIGH, all fixed (relayed by the orchestrator):
+  - HIGH panel 13th+ at step 0 → `:host(:nth-child(n + 12))` step 11, asserted in motion.spec and the adversary.
+  - HIGH vacuous "never faster" test → deleted (exact token values cover it); `.mf-blink` declaration kept in the keyframes test.
+  - MEDIUM legacy listener fallback removed; MEDIUM e2e uses `sign-in.ts`; MEDIUM `injectReducedMotion` wrapper removed, `REDUCED_MOTION` exported; LOW odometer spec's dial/lamp half removed.
+  - Decision A (orchestrator): the gauges panel now sits in `<main>` beside the table panel (heading moved to sample-page, the sample renders its body); e2e checks the real 60 ms stagger; ST-51's 320 px test locator updated to `section.mf-panel:has(mf-cockpit-gauges-sample)`.
+  - Deferred: charts read reduced motion once (chart.ts:93, from #23) → deferred.md + Notion task.
+- Merged origin/main (#23 ST-52) into the branch, no conflicts. ui-cockpit 371, i18n 428 passed; e2e motion, gauges, cockpit, phone, charts, dashboards ×2 → 120 passed.

@@ -80,7 +80,6 @@ A person whose device asks for reduced motion gets exactly the same screens with
 - A dial or odometer created with a value does not animate into it; only a change of value moves.
 - More panels than the stagger can carry within 1.5 s: the delay stops growing after the twelfth panel.
 - Forced-colours mode: the odometer shows its plain digits instead of the rolling column.
-- An older browser whose media query has only `addListener` / `removeListener` (Safari before 14) still gets the shared signal, live.
 - A dialog closed while its pop is still running closes at once (the pop is an opening animation only).
 
 ## Clarifications
@@ -109,7 +108,7 @@ A person whose device asks for reduced motion gets exactly the same screens with
 - **FR-010**: Motion MUST NOT block input: no animation hides a control from pointer or keyboard, or delays its response.
 - **FR-011**: The component catalogue (`/cockpit`) MUST show the motion: a button that changes the dial ratings (4.8 ↔ 4.2) and the odometer range together, the pulsing lamp, a blinking sample label, and a line saying whether motion is full or reduced, read from the shared signal, with its texts through i18n keys in Romanian and English.
 - **FR-012**: The lamp, the rating dial and the odometer MUST move only as FR-003, FR-004 and FR-006 describe, through the hooks ST-51 left (the pulse marker, the dial's fill and needle, the per-digit cells); they are still with reduced motion. This replaces ST-51's rule that the three parts do not animate.
-- **FR-013**: The shared reduced-motion signal MUST be exported from `@motor-fix/ui-cockpit` for later screens.
+- **FR-013**: The shared reduced-motion signal MUST be exported from `@motor-fix/ui-cockpit` (the `REDUCED_MOTION` injection token) for later screens.
 
 ### Key Entities
 

@@ -47,8 +47,8 @@ CSS motion for the Cockpit kit: tokens and keyframes in `cockpit.css`, one reduc
 - **Dial** (`rating-dial.ts`): `.mf-dial-arc { transition: stroke-dasharray var(--mf-motion-dial) var(--mf-motion-ease); }`, `.mf-dial-needle { transition: transform … }` — Chromium transitions the presentation attributes ST-51 sets, and the needle turns about its pivot (probe: pivot stays at 34,34 mid-transition).
 - **Lamp** (`lamp.ts`): `:host([data-pulse]) .mf-lamp-dot { animation: mf-pulse var(--mf-motion-pulse) ease-in-out infinite; }`.
 - **Odometer** (`odometer.ts`): the cell becomes `position: relative; overflow: hidden; color: transparent`; `::before` holds `"0\A 1\A … 9"` with `white-space: pre`, `line-height: 1.4em`, `color: var(--mf-text)`, `translate: 0 calc(var(--mf-digit) * -1.4em)` and `transition: translate var(--mf-motion-roll) var(--mf-motion-ease)`. A changed `--mf-digit` changes the pseudo-element's computed `translate`, which transitions; no `@property` needed. Forced colours: `::before { content: none }` and the cell's text colour back to inherit.
-- **Signal** (`lib/reduced-motion.ts`): `injectReducedMotion(): Signal<boolean>` backed by a root `InjectionToken` factory: `DOCUMENT.defaultView?.matchMedia('(prefers-reduced-motion: reduce)')`, a `signal(matches)`, a `change` listener removed on the root `DestroyRef`; false without a window.
-- **Catalogue** (`gauges-sample.ts`): `RATINGS = [4.8, 4.2]` swapped with the estimate by the existing button; first large and first small dial bound to it; a `<span class="mf-label mf-blink">` sample label (`cockpit.gauges.live`); a line "motion: full / reduced" from `injectReducedMotion()` (`cockpit.gauges.motionFull`, `motionReduced`).
+- **Signal** (`lib/reduced-motion.ts`): `inject(REDUCED_MOTION): Signal<boolean>` backed by a root `InjectionToken` factory: `DOCUMENT.defaultView?.matchMedia('(prefers-reduced-motion: reduce)')`, a `signal(matches)`, a `change` listener removed on the root `DestroyRef`; false without a window.
+- **Catalogue** (`gauges-sample.ts`): `RATINGS = [4.8, 4.2]` swapped with the estimate by the existing button; first large and first small dial bound to it; a `<span class="mf-label mf-blink">` sample label (`cockpit.gauges.live`); a line "motion: full / reduced" from `inject(REDUCED_MOTION)` (`cockpit.gauges.motionFull`, `motionReduced`).
 - **Sheet origin**: `.spartan-sheet-content[data-side="right"|"left"] { transform-origin: right|left center }`, so the pop grows from the anchored edge; the dialog keeps the centre.
 
 ## Project Structure
@@ -72,7 +72,7 @@ libs/ui-cockpit/src/
 ├── lib/panel.ts · lamp.ts · rating-dial.ts · odometer.ts   # motion styles
 ├── lib/odometer.spec.ts          # the no-motion test replaced
 ├── lib/gauges-sample.ts · gauges-sample.spec.ts
-└── index.ts                      # export injectReducedMotion
+└── index.ts                      # export REDUCED_MOTION
 libs/i18n/src/cockpit/{ro,en}.json  # gauges.swap reworded, gauges.live added
 apps/web-e2e/src/motion.spec.ts     # (new)
 ```

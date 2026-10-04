@@ -2,10 +2,10 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { DOCUMENT } from '@angular/common';
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
-import { injectReducedMotion, Lamp, Odometer, Panel } from './index';
+import { Lamp, Odometer, Panel, REDUCED_MOTION } from './index';
 
 const QUERY = '(prefers-reduced-motion: reduce)';
 const css = readFileSync(join(__dirname, 'styles', 'cockpit.css'), 'utf8');
@@ -53,7 +53,8 @@ afterEach(() => {
 });
 
 describe('the shared reduced-motion signal from the outside', () => {
-  const read = () => TestBed.runInInjectionContext(injectReducedMotion);
+  const read = () =>
+    TestBed.runInInjectionContext(() => inject(REDUCED_MOTION));
 
   it('is false when the document has no window', () => {
     TestBed.configureTestingModule({
@@ -79,16 +80,6 @@ describe('the shared reduced-motion signal from the outside', () => {
     } as unknown as MediaQueryList);
 
     expect(read()()).toBe(false);
-  });
-
-  it('still answers from the device on a browser whose query only has the legacy listener API', () => {
-    jest.spyOn(window, 'matchMedia').mockReturnValue({
-      addListener() {},
-      matches: true,
-      removeListener() {},
-    } as unknown as MediaQueryList);
-
-    expect(read()()).toBe(true);
   });
 
   it('cannot be written to by a consumer', () => {
@@ -292,7 +283,7 @@ const sheetText = () =>
     .join('\n');
 
 describe('panel build-up', () => {
-  it('declares stagger steps for children 2 to 12 only, 11 steps at most', () => {
+  it('declares stagger steps for children 2 to 11, and the last step for the twelfth on, 11 steps at most', () => {
     render();
     const steps = [
       ...sheetText().matchAll(
@@ -301,7 +292,10 @@ describe('panel build-up', () => {
     ];
 
     expect(steps.map(([, nth, step]) => [Number(nth), Number(step)])).toEqual(
-      Array.from({ length: 11 }, (_, i) => [i + 2, i + 1]),
+      Array.from({ length: 10 }, (_, i) => [i + 2, i + 1]),
+    );
+    expect(sheetText()).toMatch(
+      /:nth-child\(n \+ 12\)\)[^{]*{[^}]*--mf-panel-step:\s*11;/,
     );
   });
 

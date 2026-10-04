@@ -41,7 +41,7 @@ import { Component, inject, input } from '@angular/core';
     :host(:nth-child(11)) {
       --mf-panel-step: 10;
     }
-    :host(:nth-child(12)) {
+    :host(:nth-child(n + 12)) {
       --mf-panel-step: 11;
     }
     h2 {

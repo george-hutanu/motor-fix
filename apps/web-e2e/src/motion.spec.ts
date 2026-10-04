@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 
 import { expect, type Page, test } from '@playwright/test';
 
+import { signInAs } from './sign-in.js';
+
 // The page opens in Romanian, the default language.
 const COCKPIT = JSON.parse(
   readFileSync(
@@ -45,24 +47,6 @@ const running = (page: Page) =>
 const named = (all: Running[], name: string) =>
   all.filter((a) => a.name === name);
 
-async function signInAsDriver(page: Page) {
-  await page.route('**/api/v1/me', (route) =>
-    route.fulfill({
-      json: {
-        capabilities: [],
-        email: 'driver@example.ro',
-        garageId: null,
-        id: 'driver-1',
-        landing: '/app/driver',
-        language: 'ro',
-        name: 'Test driver',
-        role: 'driver',
-        roles: ['driver'],
-      },
-    }),
-  );
-}
-
 async function openCockpit(page: Page) {
   await page.goto('/cockpit');
   await expect(
@@ -100,7 +84,7 @@ test.describe('with reduced motion', () => {
     await expect(page.locator('mf-home h1')).toBeVisible();
     expect(await running(page)).toEqual([]);
 
-    await signInAsDriver(page);
+    await signInAs(page, 'driver', '/app/driver');
     await page.goto('/app/driver');
     await expect(page.getByRole('navigation', { name: 'Meniu' })).toBeVisible();
     expect(await running(page)).toEqual([]);
@@ -150,22 +134,22 @@ test.describe('with full motion', () => {
     await expect(page.locator('[data-motion]')).toHaveText(
       GAUGES['motionFull'],
     );
-    // Two copies beside the gauges panel make it the first of three siblings.
-    await page.evaluate(() => {
-      const host = document.querySelector('mf-cockpit-gauges-sample mf-panel');
-      host?.after(host.cloneNode(true), host.cloneNode(true));
-    });
-
     const rises = named(await running(page), 'mf-rise');
-    expect(rises.length).toBeGreaterThanOrEqual(3);
+    expect(rises.length).toBeGreaterThanOrEqual(2);
     for (const rise of rises) {
       expect(rise.target).toBe('section.mf-panel');
       expect(rise.duration).toBe(700);
       expect(rise.delay + rise.duration).toBeLessThanOrEqual(1500);
     }
-    expect(rises.map((r) => r.delay)).toEqual(
-      expect.arrayContaining([60, 120]),
-    );
+    // The table panel and the gauges panel sit side by side in the page.
+    const [table, gauges] = await page
+      .locator('main > mf-panel > section.mf-panel')
+      .evaluateAll((sections) =>
+        sections.map((s) =>
+          Number(s.getAnimations()[0]?.effect?.getTiming().delay),
+        ),
+      );
+    expect(gauges - table).toBe(60);
   });
 
   test('a control works while the screen builds up, and a change does not replay it', async ({

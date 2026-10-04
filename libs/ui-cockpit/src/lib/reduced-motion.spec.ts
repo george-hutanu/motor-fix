@@ -1,7 +1,8 @@
 import { DOCUMENT } from '@angular/common';
+import { inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
-import { injectReducedMotion } from './reduced-motion';
+import { REDUCED_MOTION } from './reduced-motion';
 
 const QUERY = '(prefers-reduced-motion: reduce)';
 
@@ -31,11 +32,11 @@ function fakeDevice(matches: boolean) {
   };
 }
 
-const read = () => TestBed.runInInjectionContext(injectReducedMotion);
+const read = () => TestBed.runInInjectionContext(() => inject(REDUCED_MOTION));
 
 afterEach(() => jest.restoreAllMocks());
 
-describe('injectReducedMotion', () => {
+describe('REDUCED_MOTION', () => {
   it.each([
     true,
     false,

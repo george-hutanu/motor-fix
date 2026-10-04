@@ -16,4 +16,4 @@ export { Odometer } from './lib/odometer';
 export { Panel } from './lib/panel';
 export { provideCockpitTheme } from './lib/provide-cockpit-theme';
 export { RatingDial } from './lib/rating-dial';
-export { injectReducedMotion } from './lib/reduced-motion';
+export { REDUCED_MOTION } from './lib/reduced-motion';
