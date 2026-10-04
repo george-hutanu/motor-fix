@@ -17,6 +17,7 @@ import {
   ApiNoContentResponse,
   ApiOkResponse,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { CookieOptions, Request, Response } from 'express';
 
@@ -51,6 +52,10 @@ function keep(res: Response, issued: Issued) {
 }
 
 const forget = (res: Response) => res.clearCookie(COOKIE, FLAGS);
+
+const refused = (error: unknown) =>
+  error instanceof HttpException &&
+  [HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN].includes(error.getStatus());
 
 const PROTOTYPE_KEYS = ['__proto__', 'constructor', 'prototype'];
 
@@ -132,16 +137,27 @@ export class AuthController {
       return { accessToken: issued.accessToken };
     } catch (error) {
       // Only a refused token ends the session; an outage keeps the cookie.
-      if (
-        error instanceof HttpException &&
-        [HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN].includes(
-          error.getStatus(),
-        )
-      ) {
-        forget(res);
-      }
+      if (refused(error)) forget(res);
       throw error;
     }
+  }
+
+  @Post('sign-out-everywhere')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse()
+  @ApiUnauthorizedResponse()
+  async signOutEverywhere(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    try {
+      await this.signIns.signOutEverywhere(presented(req));
+    } catch (error) {
+      // An outage keeps the cookie, so the browser can ask again.
+      if (refused(error)) forget(res);
+      throw error;
+    }
+    forget(res);
   }
 
   @Post('sign-out')

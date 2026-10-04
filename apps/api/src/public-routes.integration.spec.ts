@@ -23,6 +23,7 @@ const PUBLIC = [
   'POST /api/v1/auth/refresh',
   'POST /api/v1/auth/sign-in',
   'POST /api/v1/auth/sign-out',
+  'POST /api/v1/auth/sign-out-everywhere',
   'POST /api/v1/auth/sign-up',
 ];
 

@@ -385,6 +385,7 @@ describe('the account module', () => {
       'auth/refresh',
       'auth/sign-in',
       'auth/sign-out',
+      'auth/sign-out-everywhere',
       'auth/sign-up',
       'me//',
     ]);
