@@ -128,6 +128,7 @@ describe('CockpitSamplePage', () => {
     );
   });
 
+  // The whole kit renders on this page, which is slow in jsdom under load.
   it('opens a sample form task whose server answer and ending can be chosen', async () => {
     const page = await render();
     buttonNamed(page, text('form.open'))?.click();
