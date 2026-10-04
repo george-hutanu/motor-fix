@@ -3,7 +3,6 @@ import { createHash } from 'node:crypto';
 import {
   confirmLink,
   hashToken,
-  isTokenShape,
   LINK_TTL_MS,
   newToken,
   overLimit,
@@ -30,15 +29,6 @@ describe('confirmation tokens', () => {
 
   it('expire 72 hours after they are made', () => {
     expect(LINK_TTL_MS).toBe(72 * 60 * 60 * 1000);
-  });
-
-  it('accept only the shape a link carries', () => {
-    expect(isTokenShape(newToken().token)).toBe(true);
-    expect(isTokenShape('')).toBe(false);
-    expect(isTokenShape('a'.repeat(42))).toBe(false);
-    expect(isTokenShape('a'.repeat(44))).toBe(false);
-    expect(isTokenShape(`${'a'.repeat(42)}=`)).toBe(false);
-    expect(isTokenShape(`${'a'.repeat(42)}/`)).toBe(false);
   });
 });
 

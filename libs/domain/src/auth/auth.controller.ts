@@ -58,7 +58,7 @@ const PROTOTYPE_KEYS = ['__proto__', 'constructor', 'prototype'];
 // site cannot sign this browser into an account it chose. A guard, so it
 // answers before the body is validated, whatever the body holds; and a key
 // that names the prototype chain is no field of any body.
-class JsonOnly implements CanActivate {
+export class JsonOnly implements CanActivate {
   canActivate(context: ExecutionContext) {
     const req = context.switchToHttp().getRequest<Request>();
     if (!req.is('application/json')) {

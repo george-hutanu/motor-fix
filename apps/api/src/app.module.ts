@@ -37,7 +37,7 @@ export class AppModule {
         auth,
         notifications,
         EmailConfirmationModule.register(
-          { redisUrl: env.REDIS_URL, webUrl: email.webUrl },
+          { webUrl: email.webUrl },
           notifications,
         ),
         EventsModule.register({ redisUrl: env.REDIS_URL }),

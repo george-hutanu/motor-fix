@@ -4,6 +4,9 @@ import { isIP } from 'node:net';
 import { Logger } from '@nestjs/common';
 import type { Redis } from 'ioredis';
 
+// The Redis of the attempt limits, which the e-mail confirmation's limit shares.
+export const AUTH_REDIS = Symbol('AUTH_REDIS');
+
 const WINDOW_SECONDS = 15 * 60;
 const LIMIT = { address: 20, email: 5 } as const;
 const SIGN_UP_WINDOW_SECONDS = 60 * 60;

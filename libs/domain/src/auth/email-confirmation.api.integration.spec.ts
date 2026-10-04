@@ -5,6 +5,7 @@ import { Redis } from 'ioredis';
 import request from 'supertest';
 
 import { signAccessToken } from './access-token';
+import { AUTH_REDIS } from './attempts';
 import { AuthModule } from './auth.module';
 import { hashToken, newToken } from './email-confirmation';
 import { EmailConfirmationModule } from './email-confirmation.module';
@@ -43,7 +44,7 @@ beforeAll(async () => {
     imports: [
       auth,
       notifications,
-      EmailConfirmationModule.register({ redisUrl, webUrl }, notifications),
+      EmailConfirmationModule.register({ webUrl }, notifications),
     ],
   }).compile();
   app = moduleRef.createNestApplication<NestExpressApplication>();
@@ -320,12 +321,21 @@ describe('asking for a new link from an expired one', () => {
     const old = tokenOf(await lastLink(id));
     later(73 * 60 * 60 * 1000);
     await resendByToken(old).expect(202);
-    confirmations.now = () => new Date();
     const fresh = tokenOf(await lastLink(id));
     expect(fresh).not.toBe(old);
     expect(await confirmationEmails(id)).toHaveLength(2);
     await confirm(old).expect(410);
     await confirm(fresh).expect(200);
+  });
+
+  it('sends a new link from a link a newer one voided', async () => {
+    const { id } = await signUp();
+    const old = tokenOf(await lastLink(id));
+    await resendFor(id).expect(202);
+    await confirm(old).expect(410);
+    await redis.del(`auth:confirm:minute:${id}`);
+    await resendByToken(old).expect(202);
+    expect(await confirmationEmails(id)).toHaveLength(3);
   });
 
   it('refuses when the address is already confirmed', async () => {
@@ -441,5 +451,43 @@ describe('the signed-in account', () => {
       .set('Authorization', bearer(id))
       .expect(200);
     expect(res.body).toMatchObject({ email: null, emailConfirmed: false });
+  });
+});
+
+describe('with Redis down', () => {
+  const down = () => {
+    const client = app.get<Redis>(AUTH_REDIS);
+    jest.spyOn(client, 'multi').mockImplementation(() => {
+      const chain = {
+        decr: () => chain,
+        exec: () => Promise.reject(new Error('Connection is closed.')),
+        expire: () => chain,
+        incr: () => chain,
+      };
+      return chain as unknown as ReturnType<Redis['multi']>;
+    });
+    jest
+      .spyOn(client, 'publish')
+      .mockRejectedValue(new Error('Connection is closed.'));
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  };
+
+  it('still sends a new link, without the limit', async () => {
+    const id = await unconfirmed();
+    down();
+    await resendFor(id).expect(202);
+    await resendFor(id).expect(202);
+    expect(await confirmationEmails(id)).toHaveLength(2);
+  });
+
+  it('still confirms, without the live announcement', async () => {
+    const { id } = await signUp();
+    down();
+    await confirm(tokenOf(await lastLink(id))).expect(200);
+    expect(await verifiedAt(id)).not.toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(
+      published.filter((m) => m.includes('account.email_confirmed')),
+    ).toEqual([]);
   });
 });

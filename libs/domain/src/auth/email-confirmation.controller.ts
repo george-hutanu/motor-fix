@@ -1,5 +1,12 @@
 import { ConfirmEmailAnswerDto, ConfirmEmailDto } from '@motor-fix/contracts';
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiAcceptedResponse,
   ApiBearerAuth,
@@ -8,6 +15,7 @@ import {
 } from '@nestjs/swagger';
 
 import { CurrentActor, Public } from './actor.guard';
+import { JsonOnly } from './auth.controller';
 import { EmailConfirmationService } from './email-confirmation.service';
 import type { Actor } from './policy';
 
@@ -17,6 +25,7 @@ export class EmailConfirmationController {
   constructor(private readonly confirmations: EmailConfirmationService) {}
 
   @Public()
+  @UseGuards(JsonOnly)
   @Post()
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: ConfirmEmailAnswerDto })
@@ -26,6 +35,7 @@ export class EmailConfirmationController {
   }
 
   @Public()
+  @UseGuards(JsonOnly)
   @Post('resend')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiAcceptedResponse({ description: 'A new link was sent' })

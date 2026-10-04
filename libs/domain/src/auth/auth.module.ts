@@ -9,7 +9,7 @@ import { Redis } from 'ioredis';
 
 import { AccountsService } from './accounts.service';
 import { ActorGuard, AUTH_OPTIONS, type AuthOptions } from './actor.guard';
-import { Attempts } from './attempts';
+import { Attempts, AUTH_REDIS } from './attempts';
 import { AuthController } from './auth.controller';
 import { MAINTENANCE, maintenanceOff } from './maintenance';
 import { MeController } from './me.controller';
@@ -22,8 +22,6 @@ import { AuditHistoryController } from '../audit/audit-history.controller';
 import { AuditHistoryService } from '../audit/audit-history.service';
 import { EVENT_PORT, noEvents } from '../events/event.port';
 import type { PrismaClient } from '../generated/prisma/client';
-
-const REDIS = Symbol('AUTH_REDIS');
 
 function connect(url: string) {
   // A Redis that does not answer within 2 s counts as down (the sign-in rule).
@@ -42,13 +40,13 @@ function connect(url: string) {
 export class AuthModule implements OnApplicationShutdown {
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
-    @Inject(REDIS) private readonly redis: Redis,
+    @Inject(AUTH_REDIS) private readonly redis: Redis,
   ) {}
 
   static register(options: AuthOptions): DynamicModule {
     return {
       controllers: [AuthController, MeController, AuditHistoryController],
-      exports: [AccountsService, AUTH_OPTIONS, PRISMA],
+      exports: [AccountsService, AUTH_OPTIONS, AUTH_REDIS, PRISMA],
       // One actor check for every route of the app, and one client.
       global: true,
       module: AuthModule,
@@ -64,9 +62,9 @@ export class AuthModule implements OnApplicationShutdown {
           provide: PRISMA,
           useFactory: () => createPrisma(options.databaseUrl),
         },
-        { provide: REDIS, useFactory: () => connect(options.redisUrl) },
+        { provide: AUTH_REDIS, useFactory: () => connect(options.redisUrl) },
         {
-          inject: [REDIS],
+          inject: [AUTH_REDIS],
           provide: Attempts,
           useFactory: (redis: Redis) => new Attempts(redis),
         },

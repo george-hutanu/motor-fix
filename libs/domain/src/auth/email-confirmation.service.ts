@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import type { Redis } from 'ioredis';
 
+import { AUTH_REDIS } from './attempts';
 import {
   ASK_WINDOW_SECONDS,
   confirmLink,
@@ -22,7 +23,6 @@ import type { PrismaClient } from '../generated/prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 
 export const CONFIRMATION_OPTIONS = Symbol('EMAIL_CONFIRMATION_OPTIONS');
-export const CONFIRMATION_REDIS = Symbol('EMAIL_CONFIRMATION_REDIS');
 
 export interface ConfirmationOptions {
   // The web app the link opens; without it no link can be written.
@@ -48,6 +48,8 @@ const alreadyConfirmed = () =>
     'This e-mail address is already confirmed',
   );
 
+const WINDOWS = ['minute', 'hour'] as const;
+
 const askKey = (window: keyof typeof ASK_WINDOW_SECONDS, accountId: string) =>
   `auth:confirm:${window}:${accountId}`;
 
@@ -62,16 +64,17 @@ export class EmailConfirmationService {
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     private readonly notifications: NotificationsService,
     @Inject(CONFIRMATION_OPTIONS) private readonly options: ConfirmationOptions,
-    @Inject(CONFIRMATION_REDIS) private readonly redis: Redis,
+    @Inject(AUTH_REDIS) private readonly redis: Redis,
   ) {}
 
   // A new link to the account's address, in its language; older unused
-  // links stop working.
+  // links expire now, and still lead their reader to ask for a new one.
   async issue(accountId: string): Promise<void> {
     const { webUrl } = this.options;
     if (!webUrl) throw new Error('PUBLIC_WEB_URL is not set');
     const { hash, token } = newToken();
-    const expiresAt = new Date(this.now().getTime() + LINK_TTL_MS);
+    const at = this.now();
+    const expiresAt = new Date(at.getTime() + LINK_TTL_MS);
     const { language } = await this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${PURPOSE}:${accountId}`}))`;
       const account = await tx.account.findUniqueOrThrow({
@@ -79,8 +82,14 @@ export class EmailConfirmationService {
         where: { id: accountId },
       });
       if (!account.email) throw new Error('the account has no e-mail');
-      await tx.accountToken.deleteMany({
-        where: { accountId, purpose: PURPOSE, usedAt: null },
+      await tx.accountToken.updateMany({
+        data: { expiresAt: at },
+        where: {
+          accountId,
+          expiresAt: { gt: at },
+          purpose: PURPOSE,
+          usedAt: null,
+        },
       });
       await tx.accountToken.create({
         data: {
@@ -182,42 +191,61 @@ export class EmailConfirmationService {
     return row;
   }
 
-  // Only a link actually sent counts against the limit.
+  // Only a link actually sent counts against the limit. The ask is counted
+  // first, so two at once cannot both pass, and taken back when refused or
+  // not sent.
   private async askAgain(accountId: string) {
-    if (overLimit(await this.asked(accountId))) {
+    if (!(await this.reserve(accountId))) {
       throw refusal(
         HttpStatus.TOO_MANY_REQUESTS,
         'too_many_attempts',
         'A link was asked for too often; try again later',
       );
     }
-    await this.issue(accountId);
-    await this.count(accountId);
-  }
-
-  private async asked(accountId: string) {
     try {
-      const [minute, hour] = await this.redis.mget(
-        askKey('minute', accountId),
-        askKey('hour', accountId),
-      );
-      return { hour: Number(hour), minute: Number(minute) };
-    } catch {
-      this.logger.warn('confirmation link limit skipped: Redis unavailable');
-      return { hour: 0, minute: 0 };
+      await this.issue(accountId);
+    } catch (error) {
+      await this.release(accountId);
+      throw error;
     }
   }
 
-  private async count(accountId: string) {
+  private async reserve(accountId: string): Promise<boolean> {
     const counts = this.redis.multi();
-    for (const window of ['minute', 'hour'] as const) {
+    for (const window of WINDOWS) {
       const key = askKey(window, accountId);
       counts.incr(key).expire(key, ASK_WINDOW_SECONDS[window], 'NX');
+    }
+    let asked: { hour: number; minute: number };
+    try {
+      const replies = await counts.exec();
+      // A refused EXPIRE would leave the key counting for ever.
+      for (const [error] of replies ?? []) if (error) throw error;
+      asked = {
+        hour: Number(replies?.[2]?.[1]),
+        minute: Number(replies?.[0]?.[1]),
+      };
+    } catch {
+      this.logger.warn('confirmation link limit skipped: Redis unavailable');
+      return true;
+    }
+    // The counts include this ask; the limit is on the ones before it.
+    const before = { hour: asked.hour - 1, minute: asked.minute - 1 };
+    if (!overLimit(before)) return true;
+    await this.release(accountId);
+    return false;
+  }
+
+  private async release(accountId: string) {
+    const counts = this.redis.multi();
+    for (const window of WINDOWS) {
+      const key = askKey(window, accountId);
+      counts.decr(key).expire(key, ASK_WINDOW_SECONDS[window], 'NX');
     }
     try {
       await counts.exec();
     } catch {
-      this.logger.warn('confirmation link not counted: Redis unavailable');
+      this.logger.warn('confirmation link not uncounted: Redis unavailable');
     }
   }
 
