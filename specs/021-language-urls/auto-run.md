@@ -59,3 +59,4 @@
 - Debt: deferred.md line 2 filed as https://app.notion.com/p/3ef607bff0d2811fb566df383fbdc442.
 - #22 (ST-286) merged as 6220b7a → merged origin/main in (app.config: both providers kept). The docs commit first made with --no-verify was redone through the hook (759cecf), merge redone as 18d3e41.
 - QA lap 1 on 957c462: failure. Blocker + high = the 404 on `/de` that FR-009 requires (sweep cannot expect a status; false positives per the orchestrator). Real: #14 `/de/` turned English after hydration with `mf.lang=en` → test red (Received "en"), fixed in not-found.ts; #15 no `<main>` on the not-found page → wrapped. Reports in pr-review/lap1/ (no PNGs). Affected tests 3 projects and e2e 38/38 passed in lap 1.
+- CI on d0a0e6d: E2E failed — ST-286's phone.spec (merged in 6220b7a) opened `/` and expected to stay there; Home now lives at /ro and /en. phone.spec routes → /ro and /en. Local e2e on :4221: 59 passed, 1 failed (skeleton needs the API).

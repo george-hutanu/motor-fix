@@ -3,7 +3,9 @@ import { expect, type Page, test } from '@playwright/test';
 import { signInAs } from './sign-in.js';
 
 const routes = [
-  { path: '/' },
+  // Home lives at its language addresses; `/` moves to one of them.
+  { path: '/ro' },
+  { path: '/en' },
   { path: '/cockpit' },
   { path: '/app/driver', role: 'driver' },
   { path: '/app/garage', role: 'garage' },
