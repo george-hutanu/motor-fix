@@ -1,0 +1,136 @@
+{
+  "pr": 22,
+  "repo": "george-hutanu/motor-fix",
+  "sha": "810921874a65691c1dc91e98db2d95ada3403994",
+  "base": "060b9accf9f06480ea23d12a1d2bb59c68aa6664",
+  "lap": 1,
+  "verdict": "success",
+  "summary": "No blocking findings; 5 in all. Booted postgres, redis, api, web.",
+  "findings": [
+    {
+      "severity": "medium",
+      "kind": "step",
+      "title": "api readiness: storage down",
+      "steps": [
+        "No object store on this machine (no Docker); every other check is ok. Environment limit, not the change."
+      ]
+    },
+    {
+      "severity": "medium",
+      "kind": "axe",
+      "title": "Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element)",
+      "route": "/",
+      "viewport": "desktop",
+      "scheme": "light",
+      "lang": "ro",
+      "steps": [
+        "Open / at the desktop viewport (1440×900), light colour scheme, language ro.",
+        "Run axe-core on the page: rule landmark-one-main on html.",
+        "Observe: Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element)."
+      ],
+      "evidence": "shots/home-desktop-light-ro.png",
+      "seenIn": [
+        "desktop light ro",
+        "desktop light en",
+        "desktop dark ro",
+        "desktop dark en",
+        "tablet light ro",
+        "tablet light en",
+        "tablet dark ro",
+        "tablet dark en",
+        "mobile light ro",
+        "mobile light en",
+        "mobile dark ro",
+        "mobile dark en"
+      ]
+    },
+    {
+      "severity": "medium",
+      "kind": "axe",
+      "title": "Accessibility (moderate): region — All page content should be contained by landmarks (2 elements)",
+      "route": "/",
+      "viewport": "desktop",
+      "scheme": "light",
+      "lang": "ro",
+      "steps": [
+        "Open / at the desktop viewport (1440×900), light colour scheme, language ro.",
+        "Run axe-core on the page: rule region on p:nth-child(2).",
+        "Observe: Accessibility (moderate): region — All page content should be contained by landmarks (2 elements)."
+      ],
+      "evidence": "shots/home-desktop-light-ro.png",
+      "seenIn": [
+        "desktop light ro",
+        "desktop light en",
+        "desktop dark ro",
+        "desktop dark en",
+        "tablet light ro",
+        "tablet light en",
+        "tablet dark ro",
+        "tablet dark en",
+        "mobile light ro",
+        "mobile light en",
+        "mobile dark ro",
+        "mobile dark en"
+      ]
+    },
+    {
+      "severity": "medium",
+      "kind": "review",
+      "title": "Phone list rows drop the column names for screen readers: the header row is display:none and the table/tr are re-displayed as block/flex",
+      "route": "/cockpit",
+      "viewport": "mobile",
+      "steps": [
+        "libs/ui-cockpit/src/styles/cockpit.css phone query: `.spartan-table:has([data-column=\"main\"]) .spartan-table-header { display: none; }`, the table and body set to `display: block`, rows to `display: flex`",
+        "Open /cockpit at 375 px with VoiceOver (iOS Safari): the key value is read as a bare \"4,9\" with no \"Rating\" header, and WebKit drops table semantics for a table re-displayed as block",
+        "Suggested: hide the header row visually (clip / sr-only pattern) instead of display:none, or keep role=table/row/cell explicitly on the helm directives"
+      ],
+      "evidence": "shots/cockpit-mobile-dark-en.png"
+    },
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "Layout is exported from @motor-fix/ui-cockpit with no consumer yet",
+      "steps": [
+        "libs/ui-cockpit/src/index.ts: `export { Layout, type LayoutName } from './lib/layout';` and nothing in apps/ or libs/ injects it",
+        "FR-008 requires the signal now, so it is in scope; Principle I wants its first reader (bottom sheet / tab bar story) soon"
+      ]
+    }
+  ],
+  "booted": [
+    "postgres",
+    "redis",
+    "api",
+    "web"
+  ],
+  "notes": [
+    "No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.",
+    "No changed GET endpoint without path parameters."
+  ],
+  "screenshots": [
+    "shots/home-desktop-light-ro.png",
+    "shots/home-desktop-light-en.png",
+    "shots/home-desktop-dark-ro.png",
+    "shots/home-desktop-dark-en.png",
+    "shots/home-tablet-light-ro.png",
+    "shots/home-tablet-light-en.png",
+    "shots/home-tablet-dark-ro.png",
+    "shots/home-tablet-dark-en.png",
+    "shots/home-mobile-light-ro.png",
+    "shots/home-mobile-light-en.png",
+    "shots/home-mobile-dark-ro.png",
+    "shots/home-mobile-dark-en.png",
+    "shots/cockpit-desktop-light-ro.png",
+    "shots/cockpit-desktop-light-en.png",
+    "shots/cockpit-desktop-dark-ro.png",
+    "shots/cockpit-desktop-dark-en.png",
+    "shots/cockpit-tablet-light-ro.png",
+    "shots/cockpit-tablet-light-en.png",
+    "shots/cockpit-tablet-dark-ro.png",
+    "shots/cockpit-tablet-dark-en.png",
+    "shots/cockpit-mobile-light-ro.png",
+    "shots/cockpit-mobile-light-en.png",
+    "shots/cockpit-mobile-dark-ro.png",
+    "shots/cockpit-mobile-dark-en.png"
+  ],
+  "markdown": "**Agent review: success** — PR #22 at `8109218`, lap 1\n\nBlocking: 0 (blocker 0, high 0) · medium 4 · low 1. Booted: postgres, redis, api, web.\n- No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.\n- No changed GET endpoint without path parameters.\n\n| # | Severity | Finding | Where | Evidence |\n| --- | --- | --- | --- | --- |\n| 1 | medium | api readiness: storage down |  |  |\n| 2 | medium | Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element) | / · desktop · light · ro (+11 more) | shots/home-desktop-light-ro.png |\n| 3 | medium | Accessibility (moderate): region — All page content should be contained by landmarks (2 elements) | / · desktop · light · ro (+11 more) | shots/home-desktop-light-ro.png |\n| 4 | medium | Phone list rows drop the column names for screen readers: the header row is display:none and the table/tr are re-displayed as block/flex | /cockpit · mobile | shots/cockpit-mobile-dark-en.png |\n| 5 | low | Layout is exported from @motor-fix/ui-cockpit with no consumer yet |  |  |\n\n### Reproduction\n1. No object store on this machine (no Docker); every other check is ok. Environment limit, not the change.\n2. Open / at the desktop viewport (1440×900), light colour scheme, language ro. → Run axe-core on the page: rule landmark-one-main on html. → Observe: Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element).\n3. Open / at the desktop viewport (1440×900), light colour scheme, language ro. → Run axe-core on the page: rule region on p:nth-child(2). → Observe: Accessibility (moderate): region — All page content should be contained by landmarks (2 elements).\n4. libs/ui-cockpit/src/styles/cockpit.css phone query: `.spartan-table:has([data-column=\"main\"]) .spartan-table-header { display: none; }`, the table and body set to `display: block`, rows to `display: flex` → Open /cockpit at 375 px with VoiceOver (iOS Safari): the key value is read as a bare \"4,9\" with no \"Rating\" header, and WebKit drops table semantics for a table re-displayed as block → Suggested: hide the header row visually (clip / sr-only pattern) instead of display:none, or keep role=table/row/cell explicitly on the helm directives\n5. libs/ui-cockpit/src/index.ts: `export { Layout, type LayoutName } from './lib/layout';` and nothing in apps/ or libs/ injects it → FR-008 requires the signal now, so it is in scope; Principle I wants its first reader (bottom sheet / tab bar story) soon\n\nScreenshots: 24, one per route × viewport × scheme × language.\n"
+}

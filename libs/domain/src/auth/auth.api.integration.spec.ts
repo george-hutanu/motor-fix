@@ -18,14 +18,14 @@ import type { Role } from './capabilities';
 import { type Actor, assertOwner } from './policy';
 import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';
-import { noAudit } from '../audit/audit.port';
+import { AuditService } from '../audit/audit.service';
 import { noEvents } from '../events/event.port';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
 const tokenSecret = 'test-secret';
 const prisma = createPrisma(databaseUrl);
-const accounts = new AccountsService(prisma, noAudit, noEvents);
+const accounts = new AccountsService(prisma, new AuditService(), noEvents);
 serialDatabase(databaseUrl);
 
 @Controller('probe')
