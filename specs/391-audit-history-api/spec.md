@@ -85,6 +85,7 @@ Anyone without the right gets 404, never 403 and never an empty list; someone no
 - `from` after `to`, an unknown area, an unknown parameter, a malformed id or date answers 400 `validation_failed`.
 - An entry whose old or new value is an object holding a `phone` or `plate` key is masked inside the object for garage staff.
 - An entry whose actor account was deleted still shows with the name it was written with.
+- An id written in capitals is the same id: a staff member naming their own garage in capitals reads it, another garage's id in capitals still answers 404.
 - An account holding both driver and garage roles reads as the role in use: as driver it gets 404.
 - Reading the history writes no audit entry.
 

@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsISO8601, IsOptional, IsUUID, Matches } from 'class-validator';
 
-export const AUDIT_AREAS = [
+const AUDIT_AREAS = [
   'requests',
   'quotes',
   'bookings',

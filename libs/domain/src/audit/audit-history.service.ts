@@ -81,7 +81,12 @@ export class AuditHistoryService {
       actor,
       admin ? 'admin.audit_history' : 'garage.audit_history',
     );
-    if (!admin && query.garageId && query.garageId !== actor.garageId) {
+    // A UUID may arrive in capitals; PostgreSQL compares them without case.
+    if (
+      !admin &&
+      query.garageId &&
+      query.garageId.toLowerCase() !== actor.garageId?.toLowerCase()
+    ) {
       throw new NotFoundException();
     }
     const scope: Prisma.ActivityLogWhereInput = admin
