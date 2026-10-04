@@ -68,8 +68,11 @@ without a status, so the test runs again.
 
 ## Evidence
 
-Copy `report.md`, `report.json` and one screenshot per viewport from the
-tester's `--out` directory into `specs/<feature>/pr-review/lap<n>/`.
+Copy `report.md` and `report.json` from the tester's `--out` directory into
+`specs/<feature>/pr-review/lap<n>/`. Never commit the screenshots: they stay in
+`--out`, outside the repo, and the report names them. A lap's images would
+otherwise add hundreds of kilobytes to every clone for good, since a merge
+keeps them in history; `.gitignore` refuses them under `pr-review/`.
 
 ## Never
 
