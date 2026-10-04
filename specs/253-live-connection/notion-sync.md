@@ -9,3 +9,6 @@
 - 2026-10-04 · implement · ST-253 story Status · Planning → Implementing
 - 2026-10-04 · implement · Foundations timeline row ST-253 · Planning → Implementing
 - 2026-10-04 · labels · PR #57 · in development
+- 2026-10-04 · review · ST-253 story Status · Implementing → In review (PR #57 marked ready)
+- 2026-10-04 · review · Foundations timeline row ST-253 · Implementing → In review
+- 2026-10-04 · labels · PR #57 · in review
