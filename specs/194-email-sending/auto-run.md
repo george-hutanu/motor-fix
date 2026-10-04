@@ -39,3 +39,17 @@ Start commit: f052989fa51c58f1605f3d434292327b62535c30 (origin/main) · branch 1
 
 ## 7 Tasks / 8 Analyze
 - 17 tasks. artifact-lint: 1 ERROR (delta-unknown-capability) → created .specify/capabilities/notifications.md stub (as fab4e39 did for storage); re-run 0/0. Analyze: 1 MEDIUM (grouped rows held vs queued) → data-model aligned to `held`. No CRITICAL/HIGH.
+
+## Phase 10 — implement (done)
+- 17/17 tasks [X]. Typecheck (6 projects), Biome, unit suite (11 projects) and integration suite green; notifications + audit Jest: 21 suites, 574 tests passed.
+- The audit-coverage gate flagged the service's writes: delivery records (build, emailRow, dispatch, release, fail) are exempted as outbox bookkeeping (FR-019); the bounce's change to `account.email_bounced_at` is audited as `system`.
+- Commits: 3d03f46 docs, 432f948 feat (foundations), 4a86a90 feat (sending); pushed.
+
+## Phase 11 — converge (converged)
+- FR-001..FR-020 and SC-001..SC-007 checked against libs/domain/src/notifications; no gaps; tasks.md unchanged. Jira lane n/a (Notion is the tracker; re-read in phase 13).
+
+## Phase 12 — harden
+- artifact-lint: 0 errors. diff-audit: 11 dead type exports in notifications fixed (export dropped); kept: import-extension (repo-wide bundler resolution, extensionless like the rest of libs/domain), data-access eslint-disable/dead export (generated, never hand-edited), overlays (not this branch), bullmq (plan R1).
+- test-adversary ran in phase 9. Mutation: not run locally (CI only, nightly).
+- code-reviewer: 3 HIGH. Fixed: the worker re-checks the switch and allow-list before sending (rows queued before sending was switched off now fail `sending_off`); a bounce reported twice records once and fails every row of a grouped e-mail. Fixed MEDIUM: one Prisma pool in the API (AuthModule's); EMAIL_FROM without an address refused at boot. LOW: unused worker export and BREVO_API_URL line dropped. HIGH #3 (unreachable Brevo at start-up) is an owner decision → deferred.md; MEDIUM #4/#5/#8 → deferred.md. Kept: `sendsEmail(type, muted)` parameter (FR-004).
+- Tests: notifications + audit 574 → 579, green. Repair lap 1/5.

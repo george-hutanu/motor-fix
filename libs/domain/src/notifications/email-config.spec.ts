@@ -44,6 +44,12 @@ describe('e-mail configuration', () => {
     );
   });
 
+  it('refuses a sender that is not an address when sending is on', () => {
+    expect(() =>
+      emailConfig('test', { EMAIL_FROM: 'MotorFix', EMAIL_SENDING: 'on' }),
+    ).toThrow(/EMAIL_FROM/);
+  });
+
   it('outside production sends only to listed addresses and domains', () => {
     const config = emailConfig('staging', {
       EMAIL_ALLOWLIST: 'Ana@Example.test, @motorfix.test',

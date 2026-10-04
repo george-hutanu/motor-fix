@@ -7,7 +7,7 @@ import {
 } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
-export interface RecordedCall {
+interface RecordedCall {
   method: string;
   path: string;
   headers: IncomingHttpHeaders;

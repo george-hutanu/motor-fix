@@ -47,15 +47,15 @@ const JOB: JobsOptions = {
 // Called when an e-mail fails for good; the push channel takes over here.
 export type EmailFallback = (row: Notification) => Promise<void>;
 
-export interface Jobs {
+interface Jobs {
   add(name: string, data: unknown, options: JobsOptions): Promise<unknown>;
 }
 
-export interface Publisher {
+interface Publisher {
   publish(channel: string, message: string): Promise<unknown>;
 }
 
-export interface NotifyInput {
+interface NotifyInput {
   kind: string;
   recipients: readonly string[];
   eventId: string;
@@ -177,10 +177,17 @@ export class NotificationsService {
     }
   }
 
+  // Brevo may report a bounce twice; a grouped e-mail carries one message id
+  // on every row it sent.
   async recordBounce(messageId: string): Promise<void> {
-    const row = await this.prisma.notification.findFirst({
-      where: { channel: 'email', providerMessageId: messageId },
+    const rows = await this.prisma.notification.findMany({
+      where: {
+        channel: 'email',
+        providerMessageId: messageId,
+        status: { not: 'failed' },
+      },
     });
+    const [row] = rows;
     if (!row) return;
     const at = this.now();
     await this.prisma.$transaction(async (tx) => {
@@ -204,7 +211,7 @@ export class NotificationsService {
         { emailBouncedAt: at },
       );
     });
-    await this.fail([row], 'bounced', true);
+    await this.fail(rows, 'bounced', true);
   }
 
   // The bell row and the e-mail row of one recipient; null when nothing is

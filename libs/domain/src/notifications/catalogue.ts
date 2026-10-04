@@ -1,5 +1,5 @@
-export type OutsideChannel = 'email' | 'push' | 'sms' | 'whatsapp';
-export type DriverGroup =
+type OutsideChannel = 'email' | 'push' | 'sms' | 'whatsapp';
+type DriverGroup =
   | 'offers'
   | 'bookings'
   | 'due_dates'

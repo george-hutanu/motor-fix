@@ -11,15 +11,19 @@ export interface EmailConfig {
   webhookSecret?: string;
 }
 
-export type BlockedReason = 'sending_off' | 'not_allowed';
+type BlockedReason = 'sending_off' | 'not_allowed';
 
 const FROM = /^\s*(.*?)\s*<([^<>\s]+)>\s*$/;
 
-function sender(value = ''): EmailConfig['from'] {
+function sender(value = '', sending = false): EmailConfig['from'] {
   const named = FROM.exec(value);
-  return named
+  const from = named
     ? { email: named[2], name: named[1] || 'MotorFix' }
     : { email: value.trim(), name: 'MotorFix' };
+  if (sending && from.email && !from.email.includes('@')) {
+    throw new Error('EMAIL_FROM must be an address or Name <address>');
+  }
+  return from;
 }
 
 export function emailConfig(
@@ -37,7 +41,7 @@ export function emailConfig(
       .filter(Boolean),
     apiKey: source['BREVO_API_KEY'] || undefined,
     apiUrl: source['BREVO_API_URL'] || 'https://api.brevo.com/v3',
-    from: sender(source['EMAIL_FROM']),
+    from: sender(source['EMAIL_FROM'], switchValue === 'on'),
     production: appEnv === 'production',
     sending: switchValue === 'on',
     webhookSecret: source['BREVO_WEBHOOK_SECRET'] || undefined,

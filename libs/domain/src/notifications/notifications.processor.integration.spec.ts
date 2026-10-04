@@ -155,6 +155,33 @@ describe('sending one e-mail', () => {
   });
 });
 
+describe('switching sending off after a message was queued', () => {
+  it('fails the queued row without calling Brevo', async () => {
+    const andrei = await account('andrei');
+    const row = await quote(andrei, 'evt-1');
+    build({ EMAIL_SENDING: 'off' });
+    await sendJob(row.id);
+    expect(mock.emails()).toEqual([]);
+    expect((await emailRows(andrei))[0]).toMatchObject({
+      failure: 'sending_off',
+      status: 'failed',
+    });
+    expect(fallback).not.toHaveBeenCalled();
+  });
+
+  it('fails a queued row whose address left the allow-list', async () => {
+    const andrei = await account('andrei');
+    const row = await quote(andrei, 'evt-1');
+    build({ EMAIL_ALLOWLIST: 'someone@else.test' });
+    await sendJob(row.id);
+    expect(mock.emails()).toEqual([]);
+    expect((await emailRows(andrei))[0]).toMatchObject({
+      failure: 'not_allowed',
+      status: 'failed',
+    });
+  });
+});
+
 describe('when Brevo fails', () => {
   it('retries after 1, 5, 15, 60 and 240 minutes', () => {
     expect([0, 1, 2, 3, 4].map(retryDelay)).toEqual(

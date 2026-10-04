@@ -17,7 +17,7 @@
 | sent_at | timestamptz, null | |
 | read_at | timestamptz, null | set by the bell (ST-199) |
 | fallback_of | uuid → notification.id, null | set by a fallback channel (ST-196) |
-| failure | text, null | `bounced`, `not_allowed`, `sending_off`, `account_deleted`, `provider_<status>`, `provider_unreachable` |
+| failure | text, null | `bounced`, `not_allowed`, `sending_off`, `no_address`, `account_deleted`, `provider_<status>`, `provider_unreachable` |
 | provider_message_id | text, null, indexed | Brevo's `messageId`, read by the bounce webhook |
 | created_at | timestamptz default now() | |
 

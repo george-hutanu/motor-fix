@@ -26,10 +26,10 @@ import {
 } from './notifications.service';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
-import { createPrisma } from '../auth/prisma';
+import { createPrisma, PRISMA } from '../auth/prisma';
 import type { PrismaClient } from '../generated/prisma/client';
 
-export interface NotificationsOptions {
+interface NotificationsOptions {
   databaseUrl: string;
   redisUrl: string;
   email: EmailConfig;
@@ -40,14 +40,11 @@ const WORKER = Symbol('NOTIFICATIONS_WORKER');
 // No channel takes over from a failed e-mail yet.
 const noFallback: EmailFallback = async () => undefined;
 
-function shared(options: NotificationsOptions): Provider[] {
+function shared(options: NotificationsOptions, prisma: Provider): Provider[] {
   return [
     NotificationsService,
+    prisma,
     { provide: NOTIFICATIONS_CONFIG, useValue: options.email },
-    {
-      provide: NOTIFICATIONS_PRISMA,
-      useFactory: () => createPrisma(options.databaseUrl),
-    },
     {
       provide: NOTIFICATIONS_JOBS,
       useFactory: () =>
@@ -81,17 +78,23 @@ export class NotificationsModule implements OnApplicationShutdown {
       exports: [NotificationsService],
       imports: [auth],
       module: NotificationsModule,
-      providers: shared(options),
+      // One PostgreSQL pool per API process: the one AuthModule opened.
+      providers: shared(options, {
+        provide: NOTIFICATIONS_PRISMA,
+        useExisting: PRISMA,
+      }),
     };
   }
 
   // The worker: the same entry point plus the queue's consumer.
   static registerWorker(options: NotificationsOptions): DynamicModule {
     return {
-      exports: [NotificationsService],
       module: NotificationsModule,
       providers: [
-        ...shared(options),
+        ...shared(options, {
+          provide: NOTIFICATIONS_PRISMA,
+          useFactory: () => createPrisma(options.databaseUrl),
+        }),
         NotificationsProcessor,
         {
           provide: Brevo,

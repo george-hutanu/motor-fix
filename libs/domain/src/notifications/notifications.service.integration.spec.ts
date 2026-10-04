@@ -244,6 +244,39 @@ describe('a hard bounce', () => {
       expect.objectContaining({ id: email?.id }),
     );
   });
+
+  it('records a bounce Brevo reports twice only once', async () => {
+    const andrei = await account('andrei');
+    await quote(andrei, 'evt-b');
+    const email = (await rows(andrei)).find((r) => r.channel === 'email');
+    await prisma.notification.update({
+      data: { providerMessageId: '<b@relay>', status: 'sent' },
+      where: { id: email?.id },
+    });
+    await service.recordBounce('<b@relay>');
+    await service.recordBounce('<b@relay>');
+    expect(
+      await prisma.activityLog.count({
+        where: { field: 'emailBouncedAt', subjectId: andrei },
+      }),
+    ).toBe(1);
+    expect(fallback).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails every row of a grouped e-mail that bounced', async () => {
+    const andrei = await account('andrei');
+    await quote(andrei, 'evt-1');
+    await quote(andrei, 'evt-2');
+    await prisma.notification.updateMany({
+      data: { providerMessageId: '<g@relay>', status: 'sent' },
+      where: { accountId: andrei, channel: 'email' },
+    });
+    await service.recordBounce('<g@relay>');
+    const emails = (await rows(andrei)).filter((r) => r.channel === 'email');
+    expect(emails).toHaveLength(2);
+    expect(emails.every((r) => r.status === 'failed')).toBe(true);
+    expect(fallback).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('guarding who gets e-mail', () => {

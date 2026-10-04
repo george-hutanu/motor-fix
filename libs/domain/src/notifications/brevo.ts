@@ -1,9 +1,9 @@
-export interface Mailbox {
+interface Mailbox {
   email: string;
   name: string;
 }
 
-export interface OutgoingEmail {
+interface OutgoingEmail {
   from: Mailbox;
   to: Mailbox;
   subject: string;
