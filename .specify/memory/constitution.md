@@ -1,5 +1,26 @@
 <!--
-Sync Impact Report (v1.6.1)
+Sync Impact Report (v1.6.2)
+- Version change: 1.6.1 → 1.6.2 (PATCH: VII step 5 clarified — the PR tester
+  boots the change on a GitHub Actions runner (the PR QA workflow,
+  `.github/workflows/pr-qa.yml`) instead of in a worktree on the owner's
+  laptop, and posts its verdict from the run's report; `--local` keeps the
+  laptop run, behind the heavy lock, for when Actions is unavailable. No step,
+  gate or check removed: the QA step, the agent-review merge gate and the
+  repair cap are unchanged)
+- Source: owner decision 2026-10-04: the repo is public, so Actions is free;
+  move the PR tester's heavy part off the 16 GB laptop.
+- Templates:
+  - ✅ AGENTS.md — lifecycle step 6, "Reviewing a change that has screens"
+    (the sweep runs in CI, the artifact's screenshots are the evidence, the
+    built-in browser walk is optional, no laptop limit on QA), heavy commands
+    and the watcher
+  - ✅ .claude/agents/pr-tester.md, speckit-pr-test (`--local`), speckit-auto
+    (hand-off step 5), speckit-watch, .claude/scripts/watch.mjs (QA cap is
+    Actions' 20 concurrent jobs), scripts/heavy.sh (comment)
+  - ⚠ CLAUDE.local.md still names v1.6.0: untracked and under a growth
+    ratchet, left for the owner
+
+Previous report (v1.6.1)
 - Version change: 1.6.0 → 1.6.1 (PATCH: VII clarified — the In review stage
   is folded into QA. Marking a PR ready sets the task QA and its one stage
   label `QA` at once; the PR tester's run keeps QA. Notion Status is Planning
@@ -252,8 +273,9 @@ waits for the owner:
    failing check is fixed on the branch and waited for again.
 5. With the task and the PR's label still QA, run
    the PR tester (`/speckit-pr-test`) on the head
-   commit: it boots the change in its own worktree, tests it in a browser and
-   against the API, runs the tests, reviews the diff against the spec and this
+   commit: it boots the change on a GitHub Actions runner (the PR QA workflow;
+   `--local` on the laptop when Actions is unavailable), tests it in a browser
+   and against the API, runs the tests, reviews the diff against the spec and this
    constitution, and sets the `agent-review` commit status. Blocking findings
    are fixed (tests first) and the tester runs again on the new head, at most
    `SPECKIT_MAX_REPAIR_ITERATIONS` times; at the cap the task is Blocked.
@@ -395,4 +417,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.6.1 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-04
+**Version**: 1.6.2 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-04

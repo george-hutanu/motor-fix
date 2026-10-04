@@ -22,7 +22,10 @@ import { fileURLToPath } from "node:url";
 import { readState } from "./run-state.mjs";
 
 export const DEFAULT_THRESHOLDS = { planning: 30, tests: 45, development: 45, review: 30, qa: 30, merging: 30 };
-const QA_CAP = 4;
+// QA runs on GitHub Actions (.github/workflows/pr-qa.yml), not on the laptop:
+// the cap is Actions' 20 concurrent jobs on a free plan. A `--local` run waits
+// for a scripts/heavy.sh slot like any other heavy command.
+export const QA_CAP = 20;
 const AGENT_CAP = 2;
 const MIN = 60_000;
 const FIXES = ["merge", "fix-ci", "rerun-qa", "resume"];

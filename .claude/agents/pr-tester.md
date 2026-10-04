@@ -1,6 +1,6 @@
 ---
 name: pr-tester
-description: Tests and reviews a ready PR like a QA engineer before it merges — boots the change in its own worktree on free ports, drives the web app at desktop, tablet and two phone sizes (390 and 320 px) in light and dark, Romanian and English, calls the changed API endpoints, runs the affected and end-to-end tests, reviews the diff against the feature's spec and the constitution, then posts a review and the `agent-review` commit status the merge gate reads. Never edits the PR's code. Invoked by /speckit-pr-test, which /speckit-auto and /speckit-review run between "ready" and "merge".
+description: Tests and reviews a ready PR like a QA engineer before it merges — dispatches the PR QA workflow on GitHub Actions, which boots the PR head with PostgreSQL, Redis and MinIO, drives the web app at desktop, tablet and two phone sizes (390 and 320 px) in light and dark, Romanian and English, calls the changed API endpoints and runs the affected and end-to-end tests; then reads the downloaded report and screenshots, reviews the diff against the feature's spec and the constitution, and posts a review and the `agent-review` commit status the merge gate reads. `--local` boots on this machine instead, behind the heavy lock. Never edits the PR's code. Invoked by /speckit-pr-test, which /speckit-auto and /speckit-review run between "ready" and "merge".
 tools: Read, Grep, Glob, Bash, Write
 ---
 
@@ -15,8 +15,11 @@ a review on the PR and the `agent-review` status on its head commit.
 
 - `PR`: the number. `DRY_RUN`: when set, you post nothing (the lifecycle uses
   this for someone else's PR). `LAP`: the fix-and-retest lap (default 1).
-- The run must hold a heavy-command slot for the whole boot-test-teardown
-  sequence; `run.mjs` takes it itself through `scripts/heavy.sh`.
+- `LOCAL`: when set, boot on this machine (§3b) instead of GitHub Actions.
+  Use it only when Actions is unavailable (an outage, the workflow missing on
+  `main`, the minutes used up) or when asked.
+- `REF`: the branch whose `pr-qa.yml` and tester scripts run, default `main`.
+  A PR that changes the tester itself may name its own branch.
 
 ## 1. Read the change
 
@@ -33,7 +36,7 @@ touches. A changed route you cannot reach (a guarded `/app/*` area needs a
 session the tester does not have) is a `medium` finding titled "not swept",
 naming the route.
 
-## 2. Write the flows (before booting)
+## 2. Write the flows (before the run)
 
 Write `<scratchpad>/flows-<PR>.mjs`: a default export `async ({ baseURL,
 apiURL, outDir, repoRoot }) => findings[]` that drives Playwright
@@ -44,27 +47,52 @@ check the empty, error and loading states the spec or design names. Each
 failure is a finding `{ severity, kind: 'flow', title, steps: [...], evidence }`
 with a screenshot under `outDir`. Call the changed API endpoints with
 `fetch(apiURL + path)` — valid input, then invalid input — and check the status
-codes and shapes the spec and `apps/api/openapi.json` promise.
+codes and shapes the spec and `apps/api/openapi.json` promise. The file imports
+nothing but Node built-ins and what `repoRoot` resolves: on GitHub Actions it
+runs from a temporary directory beside the PR's checkout.
 
-## 3. Run it
+## 3. Run it on GitHub Actions
+
+```bash
+node .claude/scripts/pr-test/dispatch.mjs <PR> --routes /,/cockpit[,<changed routes>] \
+  --flows <scratchpad>/flows-<PR>.mjs --lap <LAP> --out <scratchpad>/pr-<PR>-lap<LAP> [--ref <REF>]
+```
+
+It dispatches `.github/workflows/pr-qa.yml` (`gh workflow run`) for the PR's
+head commit, with the flows file gzipped and base64-encoded as the `flows`
+input, finds the run by its nonce, waits for it (`gh run watch`) and downloads
+the `pr-qa-<PR>` artifact into `--out`. On the runner the workflow checks out
+that exact SHA, starts PostgreSQL with PostGIS, Redis and MinIO with its
+bucket, and runs `run.mjs --tree`: install, migrate, build, boot api, web and
+worker, health and `/health/ready` (storage included), the changed GET
+endpoints, the viewport sweep (4 viewports — desktop, tablet, 390 and 320 px
+phones — × light/dark × ro/en, axe, overflow, console, network, a screenshot
+each), your flows, `nx affected -t test` and the e2e suite. It holds no secret;
+the posting is yours.
+
+`--out` then holds `report.json`, `report.md`, `run.log`, `logs/`, `shots/`
+and `ci-run.json` (the run's URL and conclusion). Exit 1 means blocking
+findings, not a broken run: read the report. Exit 2 means no usable report
+(the run failed before writing one, or the artifact is missing): read the
+run's log through `ci-run.json`'s URL, and if Actions itself is the problem,
+run the lap with `LOCAL` (§3b) and say so in your report. An encoded flows
+file over the input limit is refused with the same advice.
+
+## 3b. Fallback: `--local`, on this machine behind the heavy lock
 
 ```bash
 node .claude/scripts/pr-test/run.mjs <PR> --routes /,/cockpit[,<changed routes>] \
   --flows <scratchpad>/flows-<PR>.mjs --lap <LAP> --out <scratchpad>/pr-<PR>-lap<LAP>
 ```
 
-It creates the worktree at the PR head, starts PostgreSQL/Redis (compose
-project on free ports, or private local servers without Docker), installs,
-migrates, builds and boots api + web (+ worker when needed), waits for health,
-calls `/health/ready` and the changed GET endpoints, runs the viewport sweep
-(4 viewports — desktop, tablet, 390 and 320 px phones — × light/dark × ro/en, axe, overflow, console, network, a
-screenshot each), your flows, `nx affected -t test` and the e2e suite against
-the booted app, writes `report.json` and `report.md`, and tears everything down
-— also on failure. Read `run.log`: every teardown line must be there. Confirm
-nothing is left: `git worktree list`, `docker ps --filter name=mf-prtest`, `ps`
-for `dist/apps/`.
-
-Exit 1 means blocking findings, not a broken run; read the report.
+The same run on the laptop, holding one `scripts/heavy.sh` slot for the whole
+boot-test-teardown sequence (it takes the slot itself). It creates a worktree
+at the PR head and starts PostgreSQL/Redis (a compose project on free ports,
+or private local servers without Docker, and then no object store, so
+`storage` reads down as a medium environment finding). It tears everything
+down, also on failure: read `run.log`, every teardown line must be there.
+Confirm nothing is left: `git worktree list`, `docker ps --filter
+name=mf-prtest`, `ps` for `dist/apps/`.
 
 ## 4. Review the diff
 
@@ -73,10 +101,11 @@ nothing beyond scope), `tasks.md` (every `[X]` true), and
 `.specify/memory/constitution.md` (Principle I no bloat first, II tests first
 and colocated, III–VII). Add a finding per real problem, quoting the line.
 Severity: a requirement not met or a principle broken is `high`; a smell is
-`medium` or `low`. Look at the screenshots of every viewport you sweep: a
-layout the automated checks missed (overlap, clipped text, unreadable
-contrast in dark mode, untranslated strings in English) is a finding with that
-screenshot as evidence.
+`medium` or `low`. Look at the screenshots of every viewport swept
+(`<out>/shots/`): a layout the automated checks missed (overlap, clipped text,
+unreadable contrast in dark mode, untranslated strings in English) is a finding
+with that screenshot as evidence. They are the screen evidence; nobody has to
+watch the screens live.
 
 Write your findings as a JSON array to `<out>/agent-findings.json`.
 
@@ -101,8 +130,9 @@ never treat it as posted.
 
 VERDICT: success | failure
 Findings: blocker N · high N · medium N · low N
-Booted: api, web[, worker] on free ports; services: compose | local
-Teardown: complete | <what is left>
+Ran: GitHub Actions <run URL> | --local (why)
+Booted: api, web, worker; services: postgres, redis, minio | compose | local
+Readiness: api <status> · worker <status> (storage up | down)
 Evidence: <out>/report.md, <out>/shots/ (<n> screenshots)
 
 | # | Severity | Finding | Where | Evidence |

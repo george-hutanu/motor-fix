@@ -1,0 +1,178 @@
+name: PR QA
+
+# The PR tester's mechanical half on a GitHub runner instead of the owner's
+# 16 GB laptop: boot the PR head with PostgreSQL+PostGIS, Redis and MinIO,
+# check /health/ready, call the changed endpoints, run the viewport sweep
+# (desktop, tablet, 390 and 320 px phones x light/dark x ro/en), the agent's
+# flows, the affected tests and e2e, and upload the report and the screenshots.
+# It is .claude/scripts/pr-test/run.mjs in --tree mode, not a copy of it.
+#
+# Dispatched by .claude/scripts/pr-test/dispatch.mjs (the pr-tester agent),
+# which waits for the run and downloads the artifact. The review, the
+# agent-review status and the PR description's Agent review section are posted
+# by that agent from the report: this workflow holds no secret and writes
+# nothing to the repository or the PR.
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: PR number
+        required: true
+        type: string
+      sha:
+        description: The PR head commit to test, 40 hex characters; the run refuses any other
+        required: true
+        type: string
+      lap:
+        description: Fix-and-retest lap
+        required: false
+        default: '1'
+        type: string
+      routes:
+        description: Comma-separated routes for the viewport sweep
+        required: false
+        default: /,/cockpit
+        type: string
+      flows:
+        description: The tester agent's flows file, gzipped then base64 (dispatch.mjs), or empty
+        required: false
+        default: ''
+        type: string
+      nonce:
+        description: Lets the dispatcher find this run by its name
+        required: false
+        default: ''
+        type: string
+
+run-name: PR QA #${{ inputs.pr }} at ${{ inputs.sha }} lap ${{ inputs.lap }} ${{ inputs.nonce }}
+
+permissions:
+  contents: read
+
+# A new lap on the same PR replaces the older run.
+concurrency:
+  group: pr-qa-${{ inputs.pr }}
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    name: PR QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: motorfix
+          POSTGRES_PASSWORD: motorfix
+          POSTGRES_DB: motorfix
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U motorfix" --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PR: ${{ inputs.pr }}
+      SHA: ${{ inputs.sha }}
+      LAP: ${{ inputs.lap }}
+      ROUTES: ${{ inputs.routes }}
+      FLOWS: ${{ inputs.flows }}
+      # The runner is the slot: run.mjs does not queue on scripts/heavy.sh here.
+      HEAVY_HELD: '1'
+      TZ: UTC
+    steps:
+      - name: The inputs are a PR number, a full commit SHA, a lap and plain routes
+        run: |
+          [[ "$PR" =~ ^[1-9][0-9]*$ ]] || { echo "::error::pr must be a PR number"; exit 1; }
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::sha must be the full 40-character head commit"; exit 1; }
+          [[ "$LAP" =~ ^[1-9][0-9]*$ ]] || { echo "::error::lap must be a positive number"; exit 1; }
+          [[ "$ROUTES" =~ ^/[A-Za-z0-9/_.,-]*$ ]] || { echo "::error::routes must be comma-separated paths"; exit 1; }
+
+      # The tester comes from the ref this run was dispatched on (main), so a
+      # PR branched before a tester change is tested by today's tester.
+      - uses: actions/checkout@v5
+        with:
+          path: tester
+          sparse-checkout: .claude/scripts
+          persist-credentials: false
+
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.sha }}
+          path: pr
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: The checkout is the commit asked for
+        run: test "$(git -C pr rev-parse HEAD)" = "$SHA"
+
+      # A service container cannot be given a command, and MinIO needs
+      # `server /data`, so it runs as a plain container beside the services.
+      # Credentials and bucket are the ones run.mjs gives the apps (services.mjs).
+      - name: Start MinIO and create the bucket
+        run: |
+          docker run -d --name minio -p 9000:9000 -e MINIO_ROOT_USER=motorfix -e MINIO_ROOT_PASSWORD=motorfix-secret minio/minio server /data
+          for _ in $(seq 1 60); do curl -fsS http://127.0.0.1:9000/minio/health/live && break; sleep 1; done
+          docker exec minio mc alias set local http://127.0.0.1:9000 motorfix motorfix-secret
+          docker exec minio mc mb --ignore-existing local/motorfix
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: pr/.nvmrc
+          cache: npm
+          cache-dependency-path: pr/package-lock.json
+
+      - name: Install
+        working-directory: pr
+        run: npm ci
+
+      - id: playwright
+        working-directory: pr
+        run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - id: browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - if: steps.browsers.outputs.cache-hit != 'true'
+        working-directory: pr
+        run: npx playwright install --with-deps chromium
+      - if: steps.browsers.outputs.cache-hit == 'true'
+        working-directory: pr
+        run: npx playwright install-deps chromium
+
+      - name: Decode the flows
+        if: inputs.flows != ''
+        run: printf '%s' "$FLOWS" | base64 -d | gunzip > "$RUNNER_TEMP/flows.mjs"
+
+      - name: Boot, readiness, API, sweep, flows, affected tests, e2e
+        id: run
+        run: |
+          args=()
+          [ -n "$FLOWS" ] && args+=(--flows "$RUNNER_TEMP/flows.mjs")
+          set +e
+          node tester/.claude/scripts/pr-test/run.mjs "$PR" --tree pr --sha "$SHA" --base origin/main \
+            --routes "$ROUTES" --lap "$LAP" --out "$RUNNER_TEMP/pr-qa" "${args[@]}"
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Readiness of the api and the worker
+        if: always()
+        run: grep -h 'ready ' "$RUNNER_TEMP/pr-qa/run.log" || echo "no readiness line in run.log"
+
+      # Screenshots stay here, never in git: the agent copies only report.md
+      # and report.json into specs/<feature>/pr-review/.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr-qa-${{ inputs.pr }}
+          path: ${{ runner.temp }}/pr-qa
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: The verdict (1 means blocking findings; the report says which)
+        env:
+          CODE: ${{ steps.run.outputs.code }}
+        run: exit "${CODE:-1}"

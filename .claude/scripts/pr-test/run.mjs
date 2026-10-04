@@ -12,8 +12,16 @@
 // --langs and --schemes narrow the matrix for a quick lap; --no-tests skips
 // the test runs. The pr-tester agent uses none of them on a real review.
 //
+// --tree <dir> --sha <sha> is how the PR QA workflow (.github/workflows/pr-qa.yml)
+// runs it on a GitHub runner: the PR is already checked out at <dir>, pinned
+// to <sha>, with its dependencies installed; PostgreSQL, Redis and MinIO are
+// the workflow's containers on the standard ports; the worker always boots.
+// No gh, no worktree, nothing to tear down but the apps. --base (default
+// origin/main) is what the change is measured against.
+//
 //   node .claude/scripts/pr-test/run.mjs <pr> [--routes /,/cockpit] [--flows <file.mjs>]
 //        [--out <dir>] [--lap <n>] [--langs ro,en] [--schemes light,dark] [--no-tests] [--allow-closed]
+//        [--tree <dir> --sha <sha> [--base <ref>]]
 //
 // It posts nothing: the pr-tester agent adds its own findings and posts with
 // post.mjs. The report lands in --out (default <tmp>/mf-prtest/<pr>-<sha7>).
@@ -24,14 +32,14 @@ import { join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { appsFor, changedGetEndpoints, endpointFinding, reportMarkdown, stepFinding, testFinding, touchesWeb, verdict } from "./findings.mjs";
-import { appEnv, composePlan, freePorts, localPlan, waitForHttp } from "./services.mjs";
+import { EXTERNAL_PORTS, appEnv, composePlan, externalPlan, freePorts, localPlan, waitForHttp } from "./services.mjs";
 import { VIEWPORTS, runSweep, toFindings } from "./sweep.mjs";
 import { createWorktree, depsToClone, removeWorktree } from "./worktree.mjs";
 
 const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const self = fileURLToPath(import.meta.url);
 
-function args(argv) {
+export function parseArgs(argv) {
   const flag = (n, d) => {
     const i = argv.indexOf(`--${n}`);
     return i === -1 ? d : argv[i + 1];
@@ -46,6 +54,9 @@ function args(argv) {
     schemes: flag("schemes", "light,dark").split(","),
     tests: !argv.includes("--no-tests"),
     allowClosed: argv.includes("--allow-closed"),
+    tree: flag("tree"),
+    sha: flag("sha"),
+    base: flag("base", "origin/main"),
   };
 }
 
@@ -53,9 +64,9 @@ const sh = (cmd, list, opts = {}) => execFileSync(cmd, list, { encoding: "utf8",
 const has = (cmd, list) => spawnSync(cmd, list, { stdio: "ignore" }).status === 0;
 
 async function main(argv) {
-  const opt = args(argv);
-  if (!opt.pr) {
-    console.error("usage: run.mjs <pr> [--routes …] [--flows file.mjs] [--out dir] [--lap n] [--no-tests]");
+  const opt = parseArgs(argv);
+  if (!opt.pr || (opt.tree && !/^[0-9a-f]{40}$/.test(opt.sha ?? ""))) {
+    console.error("usage: run.mjs <pr> [--routes …] [--flows file.mjs] [--out dir] [--lap n] [--no-tests] [--tree dir --sha <40-hex sha> [--base ref]]");
     return 64;
   }
   // The whole boot-test-teardown sequence holds one heavy-command slot.
@@ -67,12 +78,19 @@ async function main(argv) {
     return new Promise((done) => child.on("exit", (code, signal) => done(code ?? (signal ? 143 : 1))));
   }
 
-  const info = JSON.parse(sh("gh", ["pr", "view", opt.pr, "--json", "number,state,headRefOid,baseRefName,headRefName,url,mergeCommit"], { cwd: repoRoot }));
-  if (info.state !== "OPEN" && !opt.allowClosed) {
-    console.error(`run: PR #${opt.pr} is ${info.state}; nothing to test (--allow-closed to sweep it anyway)`);
-    return 3;
+  // Git questions go to the tree under test: the PR QA workflow's checkout, or this repository.
+  const root = opt.tree ? resolve(opt.tree) : repoRoot;
+  let info;
+  if (opt.tree) {
+    info = { number: Number(opt.pr), state: "OPEN", headRefOid: opt.sha, baseRefName: opt.base.replace(/^origin\//, ""), repo: process.env.GITHUB_REPOSITORY ?? "" };
+  } else {
+    info = JSON.parse(sh("gh", ["pr", "view", opt.pr, "--json", "number,state,headRefOid,baseRefName,headRefName,url,mergeCommit"], { cwd: repoRoot }));
+    if (info.state !== "OPEN" && !opt.allowClosed) {
+      console.error(`run: PR #${opt.pr} is ${info.state}; nothing to test (--allow-closed to sweep it anyway)`);
+      return 3;
+    }
+    info.repo = sh("gh", ["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"], { cwd: repoRoot });
   }
-  info.repo = sh("gh", ["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"], { cwd: repoRoot });
   const sha = info.headRefOid;
   const out = resolve(opt.out ?? join(tmpdir(), "mf-prtest", `${opt.pr}-${sha.slice(0, 7)}`));
   const shots = join(out, "shots");
@@ -127,26 +145,40 @@ async function main(argv) {
 
   try {
     teardown.push({ name: `remove ${runDir}`, run: () => rmSync(runDir, { recursive: true, force: true }) });
-    const wt = createWorktree({ repo: repoRoot, pr: opt.pr, sha, root: runDir });
-    teardown.push({ name: `remove worktree ${wt.dir}`, run: () => removeWorktree({ repo: repoRoot, dir: wt.dir }) });
-    log(`worktree ${wt.dir} at ${sha}`);
-
-    sh("git", ["fetch", "--quiet", "origin", info.baseRefName], { cwd: repoRoot });
-    // A merged PR (a dry run looking back) is measured against main as it was before the merge.
-    const against = info.mergeCommit?.oid ? `${info.mergeCommit.oid}^1` : `origin/${info.baseRefName}`;
-    const base = sh("git", ["merge-base", against, sha], { cwd: repoRoot });
+    let wt;
+    let against;
+    if (opt.tree) {
+      const head = sh("git", ["rev-parse", "HEAD"], { cwd: root });
+      if (head !== sha) throw new Error(`the tree at ${root} is at ${head}, not ${sha}`);
+      wt = { dir: root, sha };
+      against = opt.base;
+      log(`tree ${root} at ${sha}`);
+    } else {
+      wt = createWorktree({ repo: repoRoot, pr: opt.pr, sha, root: runDir });
+      teardown.push({ name: `remove worktree ${wt.dir}`, run: () => removeWorktree({ repo: repoRoot, dir: wt.dir }) });
+      log(`worktree ${wt.dir} at ${sha}`);
+      sh("git", ["fetch", "--quiet", "origin", info.baseRefName], { cwd: repoRoot });
+      // A merged PR (a dry run looking back) is measured against main as it was before the merge.
+      against = info.mergeCommit?.oid ? `${info.mergeCommit.oid}^1` : `origin/${info.baseRefName}`;
+    }
+    const base = sh("git", ["merge-base", against, sha], { cwd: root });
     info.base = base;
-    const files = sh("git", ["diff", "--name-only", `${base}...${sha}`], { cwd: repoRoot }).split("\n").filter(Boolean);
+    const files = sh("git", ["diff", "--name-only", `${base}...${sha}`], { cwd: root }).split("\n").filter(Boolean);
     const web = touchesWeb(files);
-    const apps = appsFor(files);
+    // On a runner the worker costs nothing extra, so it always boots there.
+    const apps = { ...appsFor(files), ...(opt.tree ? { worker: true } : {}) };
     log(`${files.length} changed files; web code ${web ? "touched" : "untouched"}; worker ${apps.worker ? "booted" : "not needed"}`);
 
     const [pgPort, redisPort, minioPort, apiPort, webPort, workerPort] = await freePorts(6);
-    const ports = { postgres: pgPort, redis: redisPort, minio: minioPort };
+    const ports = opt.tree ? EXTERNAL_PORTS : { postgres: pgPort, redis: redisPort, minio: minioPort };
     const env = { ...process.env, ...appEnv({ ports }), NX_DAEMON: "false" };
     const project = `mf-prtest-${opt.pr}-${process.pid}`;
     let plan;
-    if (has("docker", ["info"])) {
+    if (opt.tree) {
+      plan = externalPlan();
+      const { GITHUB_SERVER_URL: server, GITHUB_REPOSITORY: repo, GITHUB_RUN_ID: id } = process.env;
+      notes.push(`Ran on GitHub Actions${server && repo && id ? ` (${server}/${repo}/actions/runs/${id})` : ""}: PostgreSQL with PostGIS, Redis and MinIO in the PR QA workflow's containers.`);
+    } else if (has("docker", ["info"])) {
       plan = composePlan({ project, file: join(repoRoot, "docker-compose.yml"), ports });
       teardown.push({ name: `docker compose -p ${project} down -v`, run: () => sh("docker", plan.down, { env: { ...process.env, ...plan.env } }) });
       if (!mustPass("services", step("services", "docker", plan.up, { env: { ...process.env, ...plan.env } }))) return finish();
@@ -161,8 +193,9 @@ async function main(argv) {
     }
     booted.push("postgres", "redis", ...(plan.storage ? ["minio"] : []));
 
-    const deps = depsToClone({ repoRoot, lock: readFileSync(join(wt.dir, "package-lock.json"), "utf8") });
+    const deps = opt.tree ? null : depsToClone({ repoRoot, lock: readFileSync(join(wt.dir, "package-lock.json"), "utf8") });
     let install = { code: 1 };
+    if (opt.tree && existsSync(join(wt.dir, "node_modules"))) install = { code: 0 };
     if (deps && process.platform === "darwin") install = step("install-clone", "cp", ["-cR", deps, join(wt.dir, "node_modules")]);
     if (install.code !== 0) install = step("install", "npm", ["ci", "--no-audit", "--no-fund"], { cwd: wt.dir, env });
     if (!mustPass("install", install)) return finish();
@@ -219,7 +252,7 @@ async function main(argv) {
 
     let baseDoc = null;
     try {
-      baseDoc = JSON.parse(sh("git", ["show", `${base}:apps/api/openapi.json`], { cwd: repoRoot }));
+      baseDoc = JSON.parse(sh("git", ["show", `${base}:apps/api/openapi.json`], { cwd: root }));
     } catch {}
     const headFile = join(wt.dir, "apps/api/openapi.json");
     const endpoints = existsSync(headFile) ? changedGetEndpoints(baseDoc, JSON.parse(readFileSync(headFile, "utf8"))) : [];
@@ -232,7 +265,7 @@ async function main(argv) {
     notes.push(endpoints.length ? `Called changed endpoints: ${endpoints.join(", ")}.` : "No changed GET endpoint without path parameters.");
 
     log(`sweep: ${opt.routes.join(", ")} × ${Object.keys(VIEWPORTS).length} viewports × ${opt.schemes.join("/")} × ${opt.langs.join("/")}`);
-    const sweep = await runSweep({ baseURL: webURL, routes: opt.routes, outDir: shots, schemes: opt.schemes, langs: opt.langs, repoRoot });
+    const sweep = await runSweep({ baseURL: webURL, routes: opt.routes, outDir: shots, schemes: opt.schemes, langs: opt.langs, repoRoot: root });
     // Evidence relative to the report: shots/ stays in --out, beside it; only the report is copied into specs/.
     for (const f of toFindings(sweep.observations, { web, origins: [webURL, apiURL] }))
       findings.push(f.evidence ? { ...f, evidence: relative(out, f.evidence) } : f);
@@ -242,7 +275,7 @@ async function main(argv) {
     if (opt.flows) {
       const flow = await import(pathToFileURL(resolve(opt.flows)).href);
       try {
-        const extra = (await flow.default({ baseURL: webURL, apiURL, outDir: shots, repoRoot, worktree: wt.dir })) ?? [];
+        const extra = (await flow.default({ baseURL: webURL, apiURL, outDir: shots, repoRoot: root, worktree: wt.dir })) ?? [];
         findings.push(...extra);
         log(`flows: ${extra.length} finding(s)`);
       } catch (error) {

@@ -540,8 +540,9 @@ When phases 14–16 are done, the review left no CRITICAL/HIGH and the last
 5. **QA — the PR tester** (`/speckit-pr-test <n>`, Constitution VII): the
    story, its timeline row and the PR's one stage label stay QA
    (`speckit-notion-sync qa` again is a no-op); the `pr-tester`
-   subagent boots the head commit in its own worktree, sweeps the UI, calls the
-   API, runs the tests, reviews the diff, posts its review, replaces the
+   subagent dispatches the PR QA workflow, where a GitHub runner boots the head
+   commit, sweeps the UI, calls the API and runs the tests; it then reads the
+   artifact, reviews the diff, posts its review, replaces the
    body's Agent review `Pending.` line (`gh pr edit --body-file`) and sets
    `agent-review` on the head commit. On failure: fix every blocking finding,
    tests first, commit, push, `node .claude/scripts/run-state.mjs repair`, and

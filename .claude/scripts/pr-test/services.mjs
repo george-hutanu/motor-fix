@@ -81,6 +81,18 @@ export function localPlan({ dir, ports }) {
   };
 }
 
+/** Where the PR QA workflow's containers listen (.github/workflows/pr-qa.yml). */
+export const EXTERNAL_PORTS = { postgres: 5432, redis: 6379, minio: 9000 };
+
+/**
+ * Services something else already runs, on EXTERNAL_PORTS: on a GitHub runner
+ * the workflow starts PostgreSQL, Redis and MinIO (with its bucket) and stops
+ * them with the job, so there is nothing to start or tear down here.
+ */
+export function externalPlan() {
+  return { kind: "external", storage: true };
+}
+
 /** What every app gets: the run's services, never the shared defaults. */
 export function appEnv({ ports }) {
   return {
