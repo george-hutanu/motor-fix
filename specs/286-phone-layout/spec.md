@@ -236,6 +236,14 @@ its icons and the service worker registers.
   app's part is a valid manifest and a service worker with a fetch handler
   (autonomous default).
 
+- The manifest also carries `lang: "ro"` (the default language, ST-16) and
+  `scope: "/"` (the whole app), standard members the brief does not list;
+  `/media/**` in the service worker's lazy group is where the build emits the
+  self-hosted fonts (autonomous default).
+- The service worker e2e test runs only against the production build
+  (`BASE_URL`, as the release pipeline does); the local dev server has no
+  worker (autonomous default).
+
 ## Spec Delta
 
 ### Capability: `phone-layout`

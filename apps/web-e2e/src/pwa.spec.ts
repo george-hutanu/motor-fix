@@ -2,6 +2,10 @@ import { expect, test } from '@playwright/test';
 
 // Every other spec blocks service workers so their API stubs reach the page.
 test.use({ serviceWorkers: 'allow' });
+test.skip(
+  !process.env['BASE_URL'],
+  'only the production build, run with BASE_URL, has a service worker',
+);
 
 test('serves the manifest and its icons, and registers the service worker', async ({
   page,

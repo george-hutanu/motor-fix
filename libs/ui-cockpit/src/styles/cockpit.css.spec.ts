@@ -236,11 +236,12 @@ describe('cockpit.css typefaces', () => {
 
 const escapeRegExp = (text: string) =>
   text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const rule = (selector: string) =>
+const ruleIn = (source: string, selector: string) =>
   blockAfter(
-    css,
-    new RegExp(`(^|[},]\\s*)${escapeRegExp(selector)}\\s*\\{`, 'm'),
+    source,
+    new RegExp(`(^|[{},])\\s*${escapeRegExp(selector)}\\s*\\{`, 'm'),
   );
+const rule = (selector: string) => ruleIn(css, selector);
 
 const componentRules = [
   ...topLevel.matchAll(/(?<=^|\})\s*([^{}@]*\.spartan-[^{}]*)\{([^{}]*)\}/g),
@@ -397,16 +398,11 @@ describe('cockpit.css phone rules', () => {
       .replace(/\s+/g, ' ')
       .replace(/\(\s+/g, '(')
       .replace(/\s+\)/g, ')');
-  const ruleIn = (source: string, selector: string) =>
-    blockAfter(
-      source,
-      new RegExp(`(^|[{},])\\s*${escapeRegExp(selector)}\\s*\\{`),
-    );
   const flat = flatten(css);
   const phone = blockAfter(
     flat,
     new RegExp(
-      `@media\\s*\\(max-width:\\s*${escapeRegExp(String(BREAKPOINTS.tablet - 0.02))}px\\)\\s*`,
+      `@media not all and \\(min-width:\\s*${BREAKPOINTS.tablet}px\\)\\s*`,
     ),
   );
   const phoneRule = (selector: string) => ruleIn(phone, selector);
@@ -419,7 +415,7 @@ describe('cockpit.css phone rules', () => {
         ':where(button, select, textarea, summary, [role="button"], [role="tab"], [role="switch"], input:not([type="checkbox"], [type="radio"], [type="hidden"], [type="range"]))',
       ),
     ).toMatch(/min-height:\s*var\(--mf-tap\)/);
-    const link = rule(':where(a):not(:where(p, li) a)');
+    const link = rule(':where(a:not(:where(p, li) a))');
     expect(link).toMatch(/min-height:\s*var\(--mf-tap\)/);
     expect(link).toMatch(/display:\s*inline-flex/);
   });
@@ -462,7 +458,7 @@ describe('cockpit.css phone rules', () => {
     );
     expect(
       phoneRule(
-        `${collapsing} .spartan-table-cell:not([data-column="main"], [data-column="key"])`,
+        `${collapsing} .spartan-table-cell:not([data-column="main"], [data-column="key"]), ${collapsing} .spartan-table-head:not([data-column="main"], [data-column="key"])`,
       ),
     ).toMatch(/display:\s*none/);
     const row = phoneRule(`${collapsing} .spartan-table-row`);

@@ -23,7 +23,7 @@ Paths are `(new)` unless they exist today: `libs/ui-cockpit/src/index.ts`, `libs
 **Independent test**: a table naming main and key columns shows only those, side by side, below 768 px.
 
 - [X] T006 [US2] Test: `libs/ui-cockpit/src/lib/helm/table.spec.ts` — `hlmTh` / `hlmTd` with `column="main"` or `"key"` carry `data-column`; without it they carry none (FR-007)
-- [X] T007 [US2] Test: `libs/ui-cockpit/src/styles/cockpit.css.spec.ts` — the phone query (`max-width: 767.98px`, tied to `BREAKPOINTS.tablet`) hides the header and every cell not main or key in a table that has a main column, and lays the row out as main at the start, key at the end (FR-007)
+- [X] T007 [US2] Test: `libs/ui-cockpit/src/styles/cockpit.css.spec.ts` — the phone query (`not all and (min-width: 768px)`, tied to `BREAKPOINTS.tablet`) hides the header and every cell or row header not main or key in a table that has a main column, and lays the row out as main at the start, key at the end (FR-007)
 - [X] T008 [US2] `libs/ui-cockpit/src/lib/helm/table.ts` — optional `column` input; `cockpit.css` list-row rules; `sample-page.ts` names Service (main) and Rating (key) (FR-007)
 - [X] T009 [US2] Test: `apps/web-e2e/src/phone.spec.ts` — `/cockpit` at 375 px: header row and area column hidden, name and rating visible on one line; at 1024 px every column and the header show (FR-007)
 

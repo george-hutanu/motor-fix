@@ -54,3 +54,19 @@ Start: `origin/main` at c03d7691461e9a621824af549485dbd8507aba60 (fast-forward f
 - E2E against the production server (`APP_ENV=test PORT=4286 node dist/apps/web/server/server.mjs`, `BASE_URL=http://localhost:4286`, `--workers=2`): 42 passed, 1 failed — `skeleton.spec` "shows the release and both checks" needs the API with PostgreSQL/Redis, not running locally (unrelated; it runs on staging). All 19 phone.spec tests, the pwa test and the existing specs passed with service workers blocked.
 - `npm run typecheck` (12 projects), `npm run lint`, `npm run test` (10 projects): green.
 - Commits: ui-cockpit slice, then web slice.
+
+## Draft PR
+- Pushed, draft PR #22. The PR-template check failed on the first body (template from #17 on main); body rewritten to the template, title `feat(web): ST-286 …`; checks green on the draft.
+
+## Phase 11 — Converge
+- Every FR has code and a test; nothing unbuilt.
+
+## Phase 12 — Harden
+- diff-audit (stale local `main` base): `import-extension` ERRORs are the lib's `bundler` resolution (same as ST-50, kept); `new-dependency` `@angular/service-worker` justified in Complexity Tracking; `BREAKPOINTS` test-only export kept (ties the CSS query to the signal).
+- test-adversary: `libs/ui-cockpit/src/phone.adversary.spec.ts` (22) and `apps/web/src/pwa.adversary.spec.ts` (25). Two real defects: (a) the CSS phone query `max-width: 767.98px` and the signal's `min-width: 768px` disagreed between 767.98 and 768 px → CSS now `@media not all and (min-width: 768px)`; (b) a row header (`th` in a body) with no role stayed visible → hidden with the cells.
+- Mutation: not run locally (owner's rule: never on this laptop); the nightly mutation workflow covers it.
+
+## Phase 14 — Review
+- spec-reviewer BLOCK: HIGH fractional-width disagreement (fixed above); LOW `/media/**` glob (kept: the build emits the self-hosted fonts there — recorded in Assumptions), plan line about `BREAKPOINTS` export (plan corrected), manifest `lang`/`scope` (recorded in Assumptions).
+- code-reviewer APPROVE: MEDIUM pwa e2e cannot pass on the dev server (now runs only with `BASE_URL`, as the release pipeline does); MEDIUM duplicated sign-in stub (shared `apps/web-e2e/src/sign-in.ts`); LOW default `registrationStrategy` (dropped); LOW link rule specificity (`:where(a:not(:where(p, li) a))`); LOW duplicate regex helper (one `ruleIn`).
+- Re-verified: production build; e2e 42 passed / 1 unrelated (`skeleton.spec`, needs the API); `npm run typecheck`, `npm run lint`, `npm run test` green; 20 suites / 231 tests in apps/web + ui-cockpit.

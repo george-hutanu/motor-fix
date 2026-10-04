@@ -108,7 +108,7 @@ body {
   min-height: var(--mf-tap);
 }
 
-:where(a):not(:where(p, li) a) {
+:where(a:not(:where(p, li) a)) {
   display: inline-flex;
   align-items: center;
   min-height: var(--mf-tap);
@@ -439,8 +439,8 @@ button.spartan-switch[data-disabled="true"] {
   outline-offset: var(--mf-focus-offset);
 }
 
-/* Phone: below the tablet breakpoint of layout.ts. */
-@media (max-width: 767.98px) {
+/* Phone: the exact complement of the tablet query in layout.ts. */
+@media not all and (min-width: 768px) {
   .spartan-button {
     white-space: normal;
     text-align: center;
@@ -464,7 +464,9 @@ button.spartan-switch[data-disabled="true"] {
   }
 
   .spartan-table:has([data-column="main"])
-    .spartan-table-cell:not([data-column="main"], [data-column="key"]) {
+    .spartan-table-cell:not([data-column="main"], [data-column="key"]),
+  .spartan-table:has([data-column="main"])
+    .spartan-table-head:not([data-column="main"], [data-column="key"]) {
     display: none;
   }
 

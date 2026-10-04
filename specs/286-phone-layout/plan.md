@@ -49,20 +49,20 @@ Angular service worker registered in production builds.
 
 ## Design decisions
 
-1. **Collapse in CSS, signal in code.** The list-row collapse is a `@media (max-width: 767.98px)` rule keyed on `data-column`, scoped with `:has([data-column="main"])` to tables that name a main column. The `Layout` signal reads the same breakpoints (`BREAKPOINTS` exported, and a test ties the CSS value to it). Rejected: hiding cells from the signal — the server has no width, so the first paint would be wrong on one of phone or desktop.
+1. **Collapse in CSS, signal in code.** The list-row collapse is a `@media not all and (min-width: 768px)` rule (the exact complement of the signal's tablet query, so fractional widths agree) keyed on `data-column`, scoped with `:has([data-column="main"])` to tables that name a main column. The `Layout` signal reads the same breakpoints (`BREAKPOINTS` exported, and a test ties the CSS value to it). Rejected: hiding cells from the signal — the server has no width, so the first paint would be wrong on one of phone or desktop.
 2. **Targets.** A base rule gives `button`, `select`, `textarea`, `summary`, `[role=button|tab|switch]`, text-like `input` and standalone `a` a 44 px minimum height (`--mf-tap`); links inside `p` and `li` stay inline (WCAG 2.5.8 inline exception).
 3. **Text.** `input, select, textarea` take `--mf-size-field` (16 px). Every type token is ≥ 12 px already; `body` gets `overflow-wrap: break-word`; on a phone `.spartan-button` wraps (`white-space: normal`).
 4. **Safe areas.** Tokens `--mf-safe-top/right/bottom/left: env(safe-area-inset-*, 0px)`; `body` pads left and right; `.spartan-sheet-content` adds top and bottom; a `.mf-bar-top` / `.mf-bar-bottom` pair is not added (no fixed bar exists yet; the tab bar stories add theirs on the tokens).
 5. **Theme colour.** `provideCockpitTheme()` adds `<meta name="theme-color" media="(prefers-color-scheme: dark|light)">` through Angular's `Meta` (rendered on the server; `addTag` reuses an identical tag on the browser). The two values are constants beside `cockpit.css` and tested equal to `--mf-bg` in each set.
 6. **Manifest.** `apps/web/public/manifest.webmanifest`, icons in `apps/web/public/icons/` (192, 512, maskable 512; PNGs drawn from the tokens), linked from `index.html` with an `apple-touch-icon`.
-7. **Service worker.** `provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode(), registrationStrategy: 'registerWhenStable:30000' })` in `app.config.ts`; `apps/web/ngsw-config.json` with the app shell (`/index.csr.html`) prefetched, assets lazy, no `dataGroups` (no API answer is cached), `navigationRequestStrategy: 'freshness'`, and `/api/**`, `/health/**` excluded from navigation. `serviceWorker` is set on the production configuration only.
+7. **Service worker.** `provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode() })` (default registration: when stable or after 30 s) in `app.config.ts`; `apps/web/ngsw-config.json` with the app shell (`/index.csr.html`) prefetched, assets lazy, no `dataGroups` (no API answer is cached), `navigationRequestStrategy: 'freshness'`, and `/api/**`, `/health/**` excluded from navigation. `serviceWorker` is set on the production configuration only.
 8. **E2E.** `playwright.config.mts` blocks service workers (so `page.route` stubs keep working); the PWA spec allows them for itself. New spec `apps/web-e2e/src/phone.spec.ts`.
 
 ## Project Structure
 
 ```text
 libs/ui-cockpit/src/
-├── index.ts                         # + Layout, BREAKPOINTS
+├── index.ts                         # + Layout (BREAKPOINTS stays in layout.ts)
 ├── lib/layout.ts / layout.spec.ts   # new
 ├── lib/helm/table.ts                # + optional column input on th/td
 ├── lib/helm/table.spec.ts           # new

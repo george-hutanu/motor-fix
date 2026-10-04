@@ -17,9 +17,6 @@ export const appConfig: ApplicationConfig = {
     provideCockpitTheme(),
     provideRememberedLanguage(),
     // Only the production build emits ngsw-worker.js.
-    provideServiceWorker('ngsw-worker.js', {
-      enabled: !isDevMode(),
-      registrationStrategy: 'registerWhenStable:30000',
-    }),
+    provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode() }),
   ],
 };

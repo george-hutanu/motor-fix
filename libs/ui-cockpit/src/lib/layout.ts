@@ -5,7 +5,8 @@ import { map } from 'rxjs';
 
 export type LayoutName = 'phone' | 'tablet' | 'desktop';
 
-// cockpit.css's phone query (max-width: tablet - 0.02px) mirrors these.
+// cockpit.css's phone query is `not all and (min-width: tablet)`, so the two
+// never disagree, even on fractional widths.
 export const BREAKPOINTS = { desktop: 1024, tablet: 768 } as const;
 
 const TABLET = `(min-width: ${BREAKPOINTS.tablet}px)`;
