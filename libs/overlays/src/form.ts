@@ -27,7 +27,8 @@ export type TaskSaveState = 'idle' | 'invalid' | 'sending' | 'done' | 'failed';
 export interface TaskSaveOptions<F extends AbstractControl, R> {
   form: F;
   // Saves the value. Put the key in an `Idempotency-Key` header: it stays the
-  // same while the person retries the same values.
+  // same while the person retries the same values. No endpoint reads it yet;
+  // each saving endpoint does once it exists.
   send: (
     value: F['value'],
     idempotencyKey: string,
@@ -145,7 +146,7 @@ export function taskSave<F extends AbstractControl, R>(
     problem.set(failure);
     phase.set('failed');
     const fields = (failure.errors ?? []).flatMap(({ code, field }) => {
-      const control = form.get(field);
+      const control = editable(form.get(field));
       if (!control) return [];
       control.setErrors({ ...control.errors, server: code });
       return [control];
@@ -159,7 +160,7 @@ export function taskSave<F extends AbstractControl, R>(
       const failure = problem();
       if (!failure) return [];
       const unknownFields = (failure.errors ?? []).filter(
-        ({ field }: FieldProblem) => !form.get(field),
+        ({ field }: FieldProblem) => !editable(form.get(field)),
       );
       return [
         text([
@@ -198,6 +199,7 @@ export function taskSave<F extends AbstractControl, R>(
       const value = form.value;
       const serialised = JSON.stringify(value);
       if (key === null || serialised !== keyFor) {
+        // randomUUID needs a secure context: HTTPS, or localhost in development.
         key = crypto.randomUUID();
         keyFor = serialised;
       }
@@ -217,9 +219,14 @@ export function toProblem(error: unknown): Problem {
       code: globalThis.navigator?.onLine === false ? 'offline' : 'network',
       status,
     };
-  const body: Record<string, unknown> =
-    typeof error.error === 'object' && error.error !== null ? error.error : {};
-  if (typeof body['code'] !== 'string')
+  return fromBody(error.error, status);
+}
+
+function fromBody(answer: unknown, status: number): Problem {
+  const body = (
+    typeof answer === 'object' && answer !== null ? answer : {}
+  ) as Record<string, unknown>;
+  if (typeof body['code'] !== 'string' || body['code'] === '')
     return { code: codeForStatus(status), status };
   const errors = fieldProblems(body['errors']);
   const detail = typeof body['detail'] === 'string' ? body['detail'] : null;
@@ -239,6 +246,11 @@ function sending<R>(start: () => Promise<R> | Observable<R>): Promise<R> {
   } catch (error) {
     return Promise.reject(error);
   }
+}
+
+// A control the person can still fix; a disabled one shows no message.
+function editable(control: AbstractControl | null): AbstractControl | null {
+  return control?.enabled ? control : null;
 }
 
 function leaves(control: AbstractControl): AbstractControl[] {

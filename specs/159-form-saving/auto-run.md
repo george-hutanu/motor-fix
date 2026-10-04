@@ -28,3 +28,9 @@
 - contracts problem.ts (shape, field-error guard, status table); ProblemFilter passes `errors`, reads the shared table, no "[object Object]" detail; overlays form.ts + form-parts.ts; shell/cockpit texts; catalogue sample form task.
 - Decisions: `messages` option (i18n prefix) so features own their codes' texts (ST-82); `@motor-fix/contracts/problem` path alias so the Angular lib does not pull env.ts (node types); `--mf-red-ink` token (light #b3261e) because `--mf-red` on the raised light panel is 3.85:1 (axe).
 - Unit: contracts 62, overlays 84, ui-cockpit 377, api 47 passed. E2E task-form + overlays: 32 passed.
+
+## Harden / Review
+- diff-audit: import-extension errors are false positives (every tsconfig uses `moduleResolution: bundler`, no nodenext); TaskSave/TaskSaveOptions dead-export rows are the public API for ST-82.
+- test-adversary: 71 tests, 3 failed → fixed: disabled control's server error shows next to the button; empty `code` reads as none; `codeForStatus` reads own keys only.
+- spec-reviewer: APPROVE; MEDIUM aria-invalid wording → usage note + FR-002 wording; LOWs: FR-009 sentence for server-error blocking, design.md token line, deferred.md, filter detail test.
+- code-reviewer: BLOCK on HIGH (untested Observable/throwing send) → covered by form.adversary.spec.ts. MEDIUMs: `maintenance` key kept (Build brief scenario 8 asks for it; the maintenance switch emits it); `toProblem` export kept (ST-130 reads failures through it); one-second catalogue unit test removed (e2e covers it). LOWs: idempotency and secure-context comments added.

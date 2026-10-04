@@ -157,24 +157,5 @@ describe('CockpitSamplePage', () => {
       text('form.endings.confirm'),
     ]);
     expect(buttonNamed(task, text('form.save'))?.type).toBe('submit');
-  });
-
-  it('shows the saved number on the page once the form closes', async () => {
-    const page = await render();
-    buttonNamed(page, text('form.open'))?.click();
-    await settle();
-    const plate = openTask()?.querySelector<HTMLInputElement>(
-      '[formcontrolname="plate"]',
-    ) as HTMLInputElement;
-    plate.value = 'B 123 ABC';
-    plate.dispatchEvent(new Event('input', { bubbles: true }));
-    buttonNamed(openTask() as HTMLElement, text('form.save'))?.click();
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    await settle();
-
-    expect(openTask()).toBeNull();
-    expect(page.querySelector('.mf-form-result')?.textContent).toContain(
-      'B 123 ABC',
-    );
-  });
+  }, 20_000);
 });

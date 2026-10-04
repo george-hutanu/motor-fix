@@ -42,8 +42,6 @@ const CODE_BY_STATUS: Record<number, string> = {
 
 // The code of an error that carries none of its own.
 export function codeForStatus(status: number): string {
-  return (
-    CODE_BY_STATUS[status] ??
-    (status >= 500 && status < 600 ? 'internal_error' : 'error')
-  );
+  if (Object.hasOwn(CODE_BY_STATUS, status)) return CODE_BY_STATUS[status];
+  return status >= 500 && status < 600 ? 'internal_error' : 'error';
 }

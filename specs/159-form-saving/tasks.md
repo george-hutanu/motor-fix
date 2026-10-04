@@ -35,11 +35,16 @@ Paths are `(new)` unless they exist today: `libs/contracts/src/index.ts`, `apps/
 ## Phase 5: The catalogue (FR-013)
 
 - [X] T010 Test: `libs/ui-cockpit/src/lib/sample-page.spec.ts` — a button opens the sample form task as a dialog; the task has a required registration field, a server-answer choice (success, field error, conflict, server error, network) and an ending choice (close, confirm); a successful close shows the saved value in the page's line (FR-013)
-- [X] T011 `libs/ui-cockpit/src/lib/sample-form-task.ts` (new), `sample-page.ts`, `libs/i18n/src/cockpit/{ro,en}.json` `form.*` (FR-013)
+- [X] T011 `libs/ui-cockpit/src/lib/sample-form-task.ts` (new), `sample-page.ts`, `libs/i18n/src/cockpit/ro.json`, `libs/i18n/src/cockpit/en.json` `form.*` (FR-013)
 
 ## Phase 6: End to end
 
 - [X] T012 Test: `apps/web-e2e/src/task-form.spec.ts` (new) — on `/cockpit`: empty press shows the message under the field with the focus in it and no request; a valid press with a slow answer: the button is busy and ten more presses change nothing; success closes and the page line already shows the value; the confirmation ending shows Close; each failing answer (field error, 409, 500, network) shows its message next to or under the field with the text kept; retry with success saves; RO and EN; 320 and 390 px without sideways scroll; axe clean in the invalid and failed states, light and dark; reduced motion: the spinner does not move (FR-002, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-012, FR-013, SC-001, SC-002, SC-003, SC-004)
+
+## Phase 7: Hardening
+
+- [X] T013 Test: `libs/overlays/src/form.adversary.spec.ts`, `libs/contracts/src/problem.adversary.spec.ts`, `apps/api/src/problem.filter.adversary.spec.ts` (new, test-adversary) — Observable and throwing sends, nested and disabled controls, empty codes, inherited keys as statuses; `form.ts`: a server error for a disabled field shows next to the button, an empty code reads as none; `problem.ts`: own keys only (FR-004, FR-007, FR-008, FR-011)
+- [X] T014 review fixes: a filter case for an object body without a message; the usage note names `hlmInput` for `aria-invalid`; design.md records `--mf-red-ink`; the catalogue's one-second unit wait removed (the e2e covers the saved line) (FR-002, FR-011, FR-013)
 
 ## Dependencies
 

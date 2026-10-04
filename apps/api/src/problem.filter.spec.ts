@@ -65,6 +65,12 @@ describe('ProblemFilter', () => {
     expect(res.body).toMatchObject({ code: 'validation_failed', errors });
   });
 
+  it('sends no detail for an object body without a message', () => {
+    expect(
+      send(new HttpException({ code: 'validation_failed' }, 400)).body,
+    ).not.toHaveProperty('detail');
+  });
+
   it.each([
     ['no list', { code: 'validation_failed' }],
     ['a malformed list', { code: 'validation_failed', errors: [{ x: 1 }] }],

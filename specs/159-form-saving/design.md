@@ -9,7 +9,7 @@ The story's Design boards roll up from EP-1 (Sign in · dialog, Home, Mobile · 
 - Reduced motion: the mock stops every animation and transition.
 
 ## What to build to match it
-- Field message: under the field, 13 px, `--mf-red`, with the field's border in `--mf-red` (the kit's `data-matches-spartan-invalid` look).
+- Field message: under the field, 13 px, `--mf-red-ink` (new token: `--mf-red` on the raised light panel is 3.85:1; light `#b3261e`), with the field's border in `--mf-red` (the kit's `data-matches-spartan-invalid` look).
 - Error next to the main button: the same red text in a line just above the button row, inside a live region (`role="alert"`).
 - Busy main button: the label stays, a small spinner appears before it; `aria-busy`, `aria-disabled`, dimmed like a disabled button; under reduced motion the spinner does not turn (ST-53's global rule removes the animation).
 - Confirmation in place: the mock's done column — check circle in `--mf-green`, an 18 px bold sentence (`role="status"`), a full-width secondary "Închide" / "Close" button.

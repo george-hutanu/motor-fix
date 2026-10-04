@@ -14,12 +14,14 @@
 //   });
 //
 //   <form [formGroup]="form" (ngSubmit)="save.submit()">
-//     <input formControlName="email" aria-describedby="email-error" />
+//     <input hlmInput formControlName="email" aria-describedby="email-error" />
 //     <mf-field-error id="email-error" [save]="save" [control]="form.controls.email" />
 //     <mf-task-error [save]="save" />
 //     <button type="submit" [mfTaskSubmit]="save">…</button>
 //   </form>
 //
+// Fields use the kit's `hlmInput`, which marks an invalid field `aria-invalid`
+// and paints its border once the press has touched it.
 // Nothing is sent before the press. An invalid press shows each field's
 // message and focuses the first. A failure keeps the text, shows the code's
 // message next to the button and server field errors under their fields;
