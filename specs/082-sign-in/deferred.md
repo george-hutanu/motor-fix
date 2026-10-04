@@ -1,0 +1,8 @@
+# Deferred — 082-sign-in
+
+Findings that are real but not this change. Each becomes a Notion To-do task (`speckit-notion-sync debt`).
+
+- [ ] `apps/api/src/bootstrap.ts` — **medium** — Verify on staging that the API's `req.ip` is the visitor's address behind Railway's proxy and the web edge (the per-address sign-in limit depends on it); if Railway's hop is not private or does not append the client, switch `trust proxy` to a hop count. Raised by code-reviewer and spec-reviewer (MEDIUM, decision), `apps/api/src/bootstrap.ts`, `apps/web/src/server/edge.ts`. — Notion: https://app.notion.com/p/3ef607bff0d281f2ac88f8453c97d361
+- [ ] `libs/i18n/src/public/ro.json` — **low** — Pick one offline sentence for every form: ST-82's Build brief proposes "Nu ești conectat la internet.", ST-159 "Nu ești conectat. Încearcă din nou când revine conexiunea."; the dialog now shows ST-159's shared sentence. Raised by spec-reviewer (LOW, decision), `libs/i18n/src/public/ro.json`. — Notion: https://app.notion.com/p/3ef607bff0d28174b5dced301e1b45b8
+- [ ] `libs/overlays/src/form.ts` — **medium** — In the production build the service worker answers a failed fetch with 504, and `toProblem()` maps only status 0 to offline, so a form sent offline says "Ceva nu a mers la noi" instead of the offline message; the typed text is kept. Raised by pr-tester (lap 2). — Notion: https://app.notion.com/p/3ef607bff0d281c497dadbe0862dbc54
+- [ ] `apps/web/src/app/public/account.guard.ts` — **low** — A signed-out visit to `/ro/account` renews (401) and the browser logs a console error each time; a readable session hint or a 204 without a cookie would avoid it. Raised by pr-tester (lap 2). — Notion: https://app.notion.com/p/3ef607bff0d2818aac43e06a8f6e1341

@@ -113,8 +113,8 @@ export class Frame {
   });
   protected readonly view = signal('shell.frame.nav.dashboard');
 
-  protected signOut() {
-    this.session.current.set(null);
-    void this.router.navigateByUrl('/');
+  protected async signOut() {
+    await this.session.signOut();
+    await this.router.navigateByUrl('/');
   }
 }
