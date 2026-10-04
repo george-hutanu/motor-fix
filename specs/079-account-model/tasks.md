@@ -11,7 +11,7 @@
 
 - [X] T002 Prisma models in `libs/domain/prisma/schema/auth.prisma`: `Account` (`email` unique nullable, `phone` unique nullable, `language` enum `ro|en` default `ro`, `status` enum `active|suspended|deleted` default `active`, `lastRole` Role, `lastActiveAt?`, `emailVerifiedAt?`, `phoneVerifiedAt?`, `city?`, `createdAt`), `AccountRole` (PK account+role, enum `driver|garage|receptionist|mechanic|admin`), `AccountIdentity` (method enum `password|google|apple|whatsapp_phone`, `subject`, `passwordHash?`, unique (method, subject)), `RefreshToken` (`tokenHash` unique, `familyId` indexed, `expiresAt`, `usedAt?`); uuid ids, snake_case `@@map` (FR-001, FR-002, FR-003, FR-004)
 - [X] T003 [P] Prisma models in `libs/domain/prisma/schema/garages.prisma` (new): `Garage` (`slug` unique, `status` default `draft`), `GarageMember` (PK garage+account, role enum `owner|receptionist`, unique (account, role), `joinedAt`), `Mechanic` (`accountId` unique, three permissions default false) (FR-005)
-- [X] T004 Generate the migration `libs/domain/prisma/migrations/<ts>_accounts/migration.sql` (new) with `prisma migrate dev --create-only`, apply it to `motorfix_st079`, regenerate the client (FR-001, FR-002, FR-003, FR-004, FR-005)
+- [X] T004 Generate the migration `libs/domain/prisma/migrations/20261004053640_accounts/migration.sql` (new) with `prisma migrate dev --create-only`, apply it to `motorfix_st079`, regenerate the client (FR-001, FR-002, FR-003, FR-004, FR-005)
 - [X] T005 [P] `apps/api/src/problem.filter.ts`: an HttpException body with a string `code` keeps it (FR-011)
 
 ## Phase 3: User Story 1 — one account, several roles (P1)

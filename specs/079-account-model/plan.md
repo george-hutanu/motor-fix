@@ -57,7 +57,7 @@ specs/079-account-model/
 ```text
 libs/domain/prisma/schema/auth.prisma                 # Account, AccountRole, AccountIdentity, RefreshToken
 libs/domain/prisma/schema/garages.prisma              # (new) Garage, GarageMember, Mechanic — minimal
-libs/domain/prisma/migrations/<ts>_accounts/          # (new) migration.sql + migration_lock.toml
+libs/domain/prisma/migrations/20261004053640_accounts/          # (new) migration.sql + migration_lock.toml
 libs/domain/src/audit/audit.port.ts                   # (new) AuditPort, AUDIT_PORT, no-op
 libs/domain/src/events/event.port.ts                  # (new) EventPort, EVENT_PORT, no-op
 libs/domain/src/auth/capabilities.ts (+ .spec.ts)     # (new) roles, capabilities table, allows()

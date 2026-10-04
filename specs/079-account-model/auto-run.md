@@ -33,7 +33,7 @@
 - Q3 garage membership unique per (account, role); none → garage empty → 404.
 - Q4 only endpoint is "who am I"; FR-009 tested at use cases + route list.
 - Q5 customer view takes ownJob input.
-- (see below)
+- Also resolved from context.md without a question: token carries role (ST-394); FR-015 staff conditions deferred to quote/job epics; table in domain lib; A34 403 intra-garage is for later endpoints; port payloads follow ST-390/ST-257 names; UUID/UTC types; assistant context deferred to EP-16.
 
 ## Phase 5 — Plan
 - plan.md, research.md, data-model.md, contracts/me.md, quickstart.md. Constitution Check PASS; Complexity Tracking: two no-op ports, signAccessToken used by tests until ST-82.
@@ -49,5 +49,28 @@
 - artifact-lint: 2 fr-untasked (ranges not parsed → listed explicitly) + delta-unknown-capability (capability file created) → 0 errors on re-run. Jev lane unavailable (no key).
 - Analysis: 0 CRITICAL, 0 HIGH; MEDIUM: FR-003 lacked argon2id (context.md) → applied. Coverage 18/18 FRs.
 
-## Phase 4 (cont.)
-- Resolved from context without questions: token carries role (ST-394); FR-015 staff conditions deferred to quote/job epics; table in domain lib; A34 403 intra-garage is for later endpoints; port payloads follow ST-390/ST-257 names; UUID/UTC types; assistant context deferred to EP-16.
+## Phase 9 — Tests (red first)
+- Wrote capabilities, access-token, policy, accounts.service (DB), auth.api (HTTP, DB), problem.filter, area.guard, frame specs and the dashboards e2e.
+- RED: `npx jest libs/domain/src/auth apps/api/src/problem.filter.spec.ts apps/web/src/app/dashboard` → "Test Suites: 8 failed, 8 total" (7 cannot resolve the modules under test, problem.filter 1 failed / 1 passed: the pre-existing status→code mapping is a regression guard).
+- test-adversary added auth.adversary.spec.ts (58 cases) and auth.adversary.http.spec.ts (~75): 9 pure failures → fixed as defects (empty sub, null payload, padded signature, non-string token, null permissions); HTTP: tab/double-space bearer accepted → strict `^Bearer (\S+)$`; duplicate roles → de-duplicated; problem+json check moved to apps/api bootstrap.spec (the filter is wired by configureApp, not by AuthModule).
+
+## Phase 10 — Implement
+- Checklist gate: requirements.md 16/16, security.md 17/17 → PASS.
+- DB tests ran in parallel Jest workers on one database and truncated each other's rows → serialDatabase() advisory lock helper (libs/domain/src/auth/serial-db.testing.ts, *.testing.ts excluded from the lib build).
+- openapi needed `.addBearerAuth()` (apps/api/src/bootstrap.ts) for the generator to resolve the bearer scheme.
+- Commits: c89f3f5 feat(auth) store accounts…, 06e9531 feat(auth) run every call as an actor…, aee19c4 feat(web) land each role…
+- Verification: `npx jest libs/domain apps/api apps/web libs/contracts` → "Tests: 393 passed, 393 total"; `npm run typecheck` → "Successfully ran target typecheck for 9 projects"; `npm run lint` → "Checked 121 files … No fixes applied"; `nx run web-e2e:e2e` → "8 passed".
+
+## Phase 11 — Converge
+- Converged: 18/18 FRs met in code; no tasks appended. No Jira (Notion is the tracker); refresh in phase 13.
+
+## Phase 12 — Harden
+- artifact-lint: 1 error (T004 phantom `<ts>` path) → fixed → 0.
+- No stryker.config.json in any touched package → mutation step not applicable.
+- security-review: no HIGH/MEDIUM findings ≥ 8 confidence.
+
+- diff-audit (--no-jev): 0 errors. WARN untested-new-file only: most are ST-421's files, because the audit compares against the worktree's stale local `main`. Mine (audit.port, event.port, actor.guard, prisma, serial-db.testing) are covered through the auth specs → kept.
+- Full suite: `npm run test` → "Successfully ran target test for 7 projects". `npm run test:harness`: 2 failed / 348 passed. Both failures are in artifact-lint.spec.mjs "diff-audit — the same default" and are timeouts (26 s, 53 s): diff-audit takes minutes in this worktree against the stale local main. They are environmental, not caused by this change, and left unchanged.
+
+## Phase 13 — Ticket refresh
+- ST-79 unchanged since 05:24Z (our own status write); no comments. Query Data Source hit its usage limit → sibling stories not re-queried ([UNAVAILABLE] logged in context.md).
