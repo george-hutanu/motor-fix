@@ -16,6 +16,8 @@ import { MAINTENANCE, type Maintenance } from './maintenance';
 import { DECOY_HASH, verifyPassword } from './password';
 import { roleInUse } from './policy';
 import { PRISMA } from './prisma';
+import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
+import { publishLive } from '../events/live.hub';
 import type { PrismaClient } from '../generated/prisma/client';
 
 const DAY_MS = 86_400_000;
@@ -25,6 +27,13 @@ const BROWSER_SESSION_MS = 12 * 3_600_000;
 const GRACE_MS = 20_000;
 const ACTIVE_EVERY_MS = 3_600_000;
 const TOKEN = /^[A-Za-z0-9_-]{43}$/;
+
+// Where the open dashboards hear that their session ended: the live fan-out.
+export const SESSION_EVENTS = Symbol('SESSION_EVENTS');
+
+interface Publisher {
+  publish(channel: string, message: string): Promise<unknown>;
+}
 
 export interface Issued {
   accessToken: string;
@@ -66,6 +75,8 @@ export class SignInService {
     @Inject(AUTH_OPTIONS) private readonly options: AuthOptions,
     @Inject(MAINTENANCE) private readonly maintenance: Maintenance,
     private readonly attempts: Attempts,
+    @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Inject(SESSION_EVENTS) private readonly sessionEvents: Publisher,
   ) {}
 
   async signIn(
@@ -115,14 +126,8 @@ export class SignInService {
   }
 
   async refresh(token: string | undefined): Promise<Issued> {
-    const row = await this.presented(token);
     const now = Date.now();
-    if (!row || row.expiresAt.getTime() <= now) throw signInRequired();
-    const inGrace = row.usedAt && now - row.usedAt.getTime() < GRACE_MS;
-    if (row.usedAt && !inGrace) {
-      await this.revoke(row.familyId);
-      throw signInRequired();
-    }
+    const { inGrace, row } = await this.renewable(token, now);
     const { account } = row;
     const accessToken = this.accessToken(
       account.id,
@@ -143,6 +148,48 @@ export class SignInService {
       where: { tokenHash: hashOf(token) },
     });
     if (row) await this.revoke(row.familyId);
+  }
+
+  // Every session of the account the token belongs to, when it would renew.
+  async signOutEverywhere(token: string | undefined): Promise<void> {
+    const now = Date.now();
+    const { account } = (await this.renewable(token, now)).row;
+    await this.prisma.$transaction(async (tx) => {
+      await tx.refreshToken.deleteMany({ where: { accountId: account.id } });
+      await this.audit.record(tx, {
+        action: 'delete',
+        actorId: account.id,
+        actorRole: account.lastRole,
+        kind: 'signed_out_everywhere',
+        subjectId: account.id,
+        subjectType: 'account',
+      });
+    });
+    // Not awaited: a tab that misses it is signed out at its next renewal.
+    publishLive(
+      this.sessionEvents,
+      {
+        at: new Date(now).toISOString(),
+        id: randomUUID(),
+        kind: 'session.revoked',
+      },
+      [`account:${account.id}`],
+    ).catch((error: Error) =>
+      this.logger.warn(`session.revoked not sent: ${error.message}`),
+    );
+  }
+
+  // The presented token's row, when it may renew. A token used again after
+  // the grace was taken from its holder: its family is closed.
+  private async renewable(token: string | undefined, now: number) {
+    const row = await this.presented(token);
+    if (!row || row.expiresAt.getTime() <= now) throw signInRequired();
+    const inGrace = !!row.usedAt && now - row.usedAt.getTime() < GRACE_MS;
+    if (row.usedAt && !inGrace) {
+      await this.revoke(row.familyId);
+      throw signInRequired();
+    }
+    return { inGrace, row };
   }
 
   private revoke(familyId: string) {

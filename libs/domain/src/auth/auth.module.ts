@@ -13,7 +13,7 @@ import { AuthController } from './auth.controller';
 import { MAINTENANCE, maintenanceOff } from './maintenance';
 import { MeController } from './me.controller';
 import { createPrisma, PRISMA } from './prisma';
-import { SignInService } from './sign-in.service';
+import { SESSION_EVENTS, SignInService } from './sign-in.service';
 import { SignUpService } from './sign-up.service';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
@@ -63,6 +63,7 @@ export class AuthModule implements OnApplicationShutdown {
           useFactory: () => createPrisma(options.databaseUrl),
         },
         { provide: REDIS, useFactory: () => connect(options.redisUrl) },
+        { provide: SESSION_EVENTS, useExisting: REDIS },
         {
           inject: [REDIS],
           provide: Attempts,

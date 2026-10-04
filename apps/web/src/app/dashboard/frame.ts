@@ -21,17 +21,19 @@ import {
   LanguageSwitch,
   TranslatePipe,
 } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { HlmToaster, toast } from '@motor-fix/ui-cockpit';
 import { filter, map } from 'rxjs';
 
 import { Live } from './live';
 import { Session } from './session';
+import { SignOutEverywhere } from './sign-out-everywhere';
 import { DashboardTabBar } from './tab-bar';
 import { type Area, allowedViews, DASHBOARDS } from './views';
 import { segmentsOf } from '../addresses';
 
 // Below 768 px the bar replaces the menu; the rest of the aside (logo, area,
-// name, sign out) stays on top as the account band.
+// name, the two sign-outs) stays on top as the account band.
 @Component({
   imports: [
     AsWritten,
@@ -74,6 +76,7 @@ import { segmentsOf } from '../addresses';
       <div class="account">
         <mf-as-written [text]="session.current()?.name ?? ''" />
         <button type="button" (click)="signOut()">{{ 'shell.frame.signOut' | t }}</button>
+        <button type="button" (click)="signOutEverywhere()">{{ 'shell.frame.signOutEverywhere' | t }}</button>
       </div>
     </aside>
     <div class="view">
@@ -88,6 +91,7 @@ export class Frame implements OnInit {
   protected readonly session = inject(Session);
   private readonly router = inject(Router);
   private readonly live = inject(Live);
+  private readonly overlays = inject(Overlays);
   private readonly i18n = inject(I18n);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly base = computed(
@@ -142,6 +146,15 @@ export class Frame implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((message) => {
         if (message.kind === 'live.test') toast(this.i18n.t('shell.live.test'));
+        // Signed out on all devices, from this one or another.
+        if (message.kind === 'session.revoked') void this.signOut();
+      });
+    // Signed out in another tab of this browser.
+    this.session.ended
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.live.close();
+        void this.router.navigateByUrl('/');
       });
     this.live.open();
     this.destroyRef.onDestroy(() => this.live.close());
@@ -150,6 +163,17 @@ export class Frame implements OnInit {
   protected async signOut() {
     this.live.close();
     await this.session.signOut();
+    await this.router.navigateByUrl('/');
+  }
+
+  protected async signOutEverywhere() {
+    const answer = await this.overlays.open<boolean>(SignOutEverywhere, {
+      shape: 'dialog',
+      title: 'shell.signOutEverywhere.title',
+    });
+    if (answer !== true) return;
+    this.live.close();
+    await this.session.signOutEverywhere();
     await this.router.navigateByUrl('/');
   }
 }

@@ -4,6 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { MeDto } from '@motor-fix/data-access';
 import { LanguageChoice } from '@motor-fix/i18n';
+import { Subject } from 'rxjs';
 
 import { provideLanguageAddresses, SITE_ORIGIN } from '../addresses';
 import { routes } from '../app.routes';
@@ -54,7 +55,10 @@ function setUp(...replies: Array<MeDto | null>) {
       provideRouter(routes),
       provideLanguageAddresses(),
       { provide: SITE_ORIGIN, useValue: ORIGIN },
-      { provide: Session, useValue: { current, load } },
+      {
+        provide: Session,
+        useValue: { current, ended: new Subject<void>(), load },
+      },
     ],
   });
 }

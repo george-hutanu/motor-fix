@@ -46,6 +46,14 @@ const isEvent = (value: unknown): value is LiveMessage => {
   );
 };
 
+// What every API copy's subscriber reads off the one channel. Anything that
+// can publish to Redis may send it; the hub needs no part in that.
+export const publishLive = (
+  redis: { publish(channel: string, message: string): Promise<unknown> },
+  event: LiveMessage,
+  audience: string[],
+) => redis.publish(LIVE_CHANNEL, JSON.stringify({ audience, event }));
+
 const frame = (message: LiveMessage) =>
   `event: ${message.kind}\ndata: ${JSON.stringify(message)}\n\n`;
 
@@ -108,7 +116,7 @@ export class LiveHub {
   }
 
   async publish(event: LiveMessage, audience: string[]) {
-    await this.redis.publish(LIVE_CHANNEL, JSON.stringify({ audience, event }));
+    await publishLive(this.redis, event, audience);
   }
 
   shutdown() {
