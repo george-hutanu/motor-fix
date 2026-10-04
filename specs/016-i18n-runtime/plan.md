@@ -43,8 +43,11 @@ The skeleton page moves its texts onto `shell.*` keys and `index.html` declares
 
 - [x] **I. No Bloat (NON-NEGOTIABLE)**: one service, one pipe, one constants
   file, one check module. No dependency: Transloco (Notion *Proposed*) is
-  replaced — see research R1. No provider function (the service is
-  `providedIn: 'root'`), no route helper (areas are entered with one call from
+  replaced — see research R1. One provider function, `provideI18n()`, as its
+  own line in `app.config.ts` (agreed with the orchestrator so ST-50's
+  `provideCockpitTheme()` merges beside it): it starts the runtime with the app
+  and sets `<html lang>` from it; the service itself stays `providedIn: 'root'`.
+  No route helper (areas are entered with one call from
   a route resolver once routes exist). Empty file pairs for the five areas
   without screens are required by the brief and by lane ownership (Complexity
   Tracking).

@@ -1,5 +1,12 @@
 import { DOCUMENT } from '@angular/common';
-import { Injectable, inject, signal } from '@angular/core';
+import {
+  type EnvironmentProviders,
+  Injectable,
+  inject,
+  makeEnvironmentProviders,
+  provideEnvironmentInitializer,
+  signal,
+} from '@angular/core';
 
 import { FILES, flatten, SHELL_RO } from './files';
 import { type Area, isLanguage, type Language } from './languages';
@@ -66,6 +73,17 @@ export class I18n {
     this.loading.set(id, pending);
     return pending;
   }
+}
+
+// The app's one i18n line in app.config: it starts the runtime with the app,
+// so <html lang> comes from the current language on every render, server too.
+export function provideI18n(): EnvironmentProviders {
+  return makeEnvironmentProviders([
+    provideEnvironmentInitializer(() => {
+      const i18n = inject(I18n);
+      inject(DOCUMENT).documentElement.lang = i18n.language();
+    }),
+  ]);
 }
 
 function find(

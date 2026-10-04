@@ -2,7 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
 
 import { FILES } from './files';
-import { I18n } from './i18n';
+import { I18n, provideI18n } from './i18n';
 import { AREAS, LANGUAGES } from './languages';
 
 const shellEn = {
@@ -197,5 +197,16 @@ describe('I18n', () => {
       expect(i18n.t('public.results.count', { count: 1 })).toBe('1 garage');
       expect(i18n.t('public.results.count', { count: 3 })).toBe('3 garages');
     });
+  });
+});
+
+describe('provideI18n', () => {
+  it('declares the current language on the page when the app starts', () => {
+    globalThis.document.documentElement.lang = 'xx';
+    TestBed.configureTestingModule({ providers: [provideI18n()] });
+
+    const page = TestBed.inject(DOCUMENT).documentElement;
+
+    expect(page.lang).toBe('ro');
   });
 });

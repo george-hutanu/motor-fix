@@ -49,6 +49,9 @@ Paths are `(new)` unless they exist today: `tsconfig.base.json`, `apps/web/src/i
 
 - [X] T018 Run `npx nx build web` and confirm each area file is its own chunk and shell Romanian is in main (FR-009, quickstart)
 
+- [X] T019 `provideI18n()` exported from `@motor-fix/i18n` and added as its own line in `apps/web/src/app/app.config.ts`; test in `libs/i18n/src/i18n.spec.ts` (starts the runtime, sets `<html lang>`)
+- [X] T020 Check in `libs/i18n/src/check.spec.ts`: every folder of translation files is a registered area; "Adding an area" documented in `contracts/i18n-api.md` (FR-003)
+
 ## Dependencies
 
 T001 → everything. T002, T003 parallel after T001. US1 (T004–T007) needs T003 and T012 for the app (T007 uses the pipe), so in practice: tests T004, T006, T008, T009, T015–T017 first (red), then T005, T010–T012, T007, T013. T014 and T018 last.

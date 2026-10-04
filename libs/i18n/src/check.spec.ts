@@ -124,6 +124,14 @@ describe('unknownKeys', () => {
 });
 
 describe('the workspace', () => {
+  it('registers every folder of translation files as an area', () => {
+    const folders = readdirSync(__dirname, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name);
+
+    expect(folders.sort()).toEqual([...AREAS].sort());
+  });
+
   it.each(AREAS)('keeps the %s files in step', (area) => {
     expect(
       fileProblems(area, areaFile(area, 'ro'), areaFile(area, 'en')),
