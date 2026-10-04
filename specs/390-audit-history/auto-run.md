@@ -76,3 +76,18 @@
 - Mutation: no stryker config in the repo → not measured.
 - test-adversary: `audit.adversary.spec.ts`, 76 tests, 2 failed (report relayed by the orchestrator), both defects against FR-003: (1) key order made equal objects "changed" → compare canonical JSON with sorted object keys; (2) `after` keys like `constructor`/`__proto__` read Object.prototype from `before` and crashed `json()` → `Object.hasOwn`. Spec edge case updated. `npx jest src/audit` → "Tests: 110 passed, 110 total".
 - spec-reviewer: APPROVE; LOW: T009/T010 unchecked → checked.
+- Biome `--write` (useSortedKeys) auto-sorted the adversary's key-order literal and made the test vacuous; the unordered object is now built with `JSON.parse`. Proven: with the old comparison the test fails ("1 failed"), with the fix "Tests: 110 passed, 110 total". One pre-commit run failed before that (the flaky 56 s health spec or the unsorted literal); the retry passed: 831912f.
+- code-reviewer: APPROVE. MEDIUM #1 key-order compare → fixed in 831912f. LOW #2 test rows accumulate, LOW #3 diff-audit regex → deferred.md.
+
+## Phase 13 — Ticket refresh
+- ST-390 page: last edit 2026-10-04T07:07Z (this run's status write); no discussions. No new evidence.
+
+## Phase 14 — Review
+- spec-reviewer APPROVE (1 LOW fixed), code-reviewer APPROVE (1 MEDIUM fixed, 2 LOW deferred). No CRITICAL/HIGH; no re-review needed.
+
+## Phase 15 — Agent context
+- CLAUDE.local.md "Active plan" line pointed at specs/390-audit-history/plan.md (one line, same size).
+
+## Phases 16–17
+- Retro evidence and archive left to the owner: archive belongs after the merge; retro is not self-graded.
+- Merged origin/main (b422966) into the branch before ready.
