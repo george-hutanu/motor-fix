@@ -9,3 +9,4 @@
 - 2026-10-04 · implement · ST-470 story Status · Planning → Implementing
 - 2026-10-04 · implement · Foundations build timeline · no row
 - 2026-10-04 · labels · PR #50 · in development
+- 2026-10-04 · debt · 1 deferred bullet filed as To do task 3ef607bff0d2817aa0dec871ab9e2964 (e2e mid-growth timing)

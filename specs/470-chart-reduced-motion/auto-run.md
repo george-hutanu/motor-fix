@@ -29,3 +29,10 @@
 ## 10. Implement
 
 - `chart.ts`: the effect reads `REDUCED_MOTION` and calls `chart.stop()` before `update('none')` when it is on. Unit: `Test Suites: 6 passed`, `Tests: 115 passed` (chart*, charts-sample, reduced-motion and motion specs). e2e: charts + motion `18 passed`; the new test with `--repeat-each=8`: `8 passed`.
+
+## 12/14. Harden and review
+
+- diff-audit --no-jev: local `main` is stale (18c9e3d), so it diffs other merged work too; for this change only `import-extension` on `./reduced-motion` — known false positive (moduleResolution bundler; 016/017/019 runs). artifact-lint: 0 errors; Jev lane unavailable (no key).
+- No test-adversary (one-file change, level 1) and no local mutation run (owner rule: no local mutation tests).
+- spec-reviewer: APPROVE, 1 LOW (tick the closed 053 deferred line) → patched.
+- code-reviewer: APPROVE, 2 LOW: comment on why stop() precedes update('none') → patched; e2e mid-growth timing → accepted (coordinator option a), deferred and filed as Notion task.

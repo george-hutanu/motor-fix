@@ -99,7 +99,8 @@ abstract class CockpitChart {
         this.chart = new Chart(canvas, config);
         return;
       }
-      // Chart.js animates in script, out of reach of the stylesheet's rule.
+      // A running animation would keep overwriting the final values
+      // update('none') writes.
       if (reduced) this.chart.stop();
       this.chart.data = config.data;
       this.chart.options = config.options ?? {};
