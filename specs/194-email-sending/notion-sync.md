@@ -9,3 +9,7 @@
 - 2026-10-04 · implement · ST-194 · Planning → Implementing
 - 2026-10-04 · implement · Foundations timeline ST-194 · Planning → Implementing
 - 2026-10-04 · labels · PR #59 · in development
+- 2026-10-04 · review · ST-194 · Implementing → QA (In review folded into QA on main)
+- 2026-10-04 · review · Foundations timeline ST-194 · Implementing → QA
+- 2026-10-04 · labels · PR #59 · QA
+- 2026-10-04 · debt · ST-194 · 8 tasks filed (To do)

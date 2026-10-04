@@ -139,7 +139,7 @@ export class NotificationsProcessor {
       if (!(error instanceof BrevoError)) throw error;
       if (error.retryable && attemptsMade < RETRY_MINUTES.length) {
         this.logger.warn(
-          `notification ${rows[0].id} will be retried: ${error.reason}`,
+          `notification ${rows[0].id} ${rows[0].kind} ${rows[0].channel} will be retried: ${error.reason}`,
         );
         throw error;
       }

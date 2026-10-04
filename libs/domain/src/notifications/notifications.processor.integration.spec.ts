@@ -249,6 +249,19 @@ describe('when Brevo fails', () => {
     expect(fallback).toHaveBeenCalledTimes(1);
   });
 
+  it('names the type and channel when it logs a retry', async () => {
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const andrei = await account('andrei');
+    const row = await quote(andrei, 'evt-1');
+    mock.answer({ status: 503 });
+    await expect(sendJob(row.id)).rejects.toThrow();
+    const logged = JSON.stringify(warn.mock.calls);
+    expect(logged).toContain(`${row.id} QUOTE_RECEIVED email`);
+    warn.mockRestore();
+  });
+
   it('logs the failure without the address or the message', async () => {
     const warn = jest
       .spyOn(Logger.prototype, 'warn')

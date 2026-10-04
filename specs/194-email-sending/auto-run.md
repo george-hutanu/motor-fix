@@ -62,3 +62,9 @@ Start commit: f052989fa51c58f1605f3d434292327b62535c30 (origin/main) · branch 1
 - Repair lap 2/5.
 ## Phase 15 — agent context: CLAUDE.local.md pointer → specs/194-email-sending/plan.md; size held.
 ## Phase 16 — retro evidence gathered (jev lane unavailable); no verdict written.
+
+## Hand-off
+- PR #59 body filled (pr-body-check passes), marked ready. origin/main merged (266a4e7: In review folded into QA) — typecheck 13 projects, lint, test 11 projects green; CI all green.
+- Notion: story and timeline Implementing → QA; PR label QA.
+- QA lap 3 (pr-tester): success, 0 blocker/high; 92 API/worker flows passed, e2e 193/193, notifications+audit 575. Medium ×2 = no object store on this machine (environment). Low: retry log lacked type/channel → fixed (test first); 2xx without message id → deferred.
+- Debt: 8 deferred bullets filed as To do tasks in Notion.
