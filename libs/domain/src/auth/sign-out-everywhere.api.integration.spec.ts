@@ -160,12 +160,14 @@ describe('signing out on all devices', () => {
 
   it('writes one "signed out on all devices" entry to the audit history', async () => {
     const id = await person('andrei@example.test');
-    const before = (await entries(id)).length;
+    const before = await entries(id);
     const phone = await session('andrei@example.test');
 
     await everywhere(phone);
 
-    const added = (await entries(id)).slice(before);
+    // findMany has no order: tell the new entry by its id, not its place.
+    const seen = new Set(before.map((entry) => entry.id));
+    const added = (await entries(id)).filter((entry) => !seen.has(entry.id));
     expect(added).toHaveLength(1);
     expect(added[0]).toMatchObject({
       action: 'delete',
