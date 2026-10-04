@@ -40,7 +40,9 @@ function answer(call: Call, status: () => string = () => 'DEPLOYING') {
 // Resolves once the fake API has received a call matching the predicate, so a
 // test cancels at a known point rather than after a guessed delay.
 async function seenIn(calls: () => Call[], match: (call: Call) => boolean) {
+  const until = Date.now() + 2_000;
   while (!calls().some(match)) {
+    if (Date.now() > until) throw new Error('the expected call never came');
     await new Promise((resolve) => setTimeout(resolve, 2));
   }
 }
