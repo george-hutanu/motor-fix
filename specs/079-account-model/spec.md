@@ -71,6 +71,7 @@ A signed-in person opens the frame of their dashboard: header, menu and "Ieși d
 ### Edge Cases
 
 - An account holding no role at all cannot exist: creating one without a role is refused.
+- An account whose role rows were all removed later is treated as signed out: every protected call answers 401 `sign_in_required` (fail closed; it never keeps the rights of its last role).
 - `last_role` names a role the account no longer holds: the role in use falls back to the first held role in the order admin, garage, receptionist, mechanic, driver.
 - A token signed with another key, malformed, or expired: 401 `sign_in_required`, the same as no token.
 - A token for an account that was deleted (status `deleted`) or no longer exists: 401 `sign_in_required`.

@@ -163,6 +163,17 @@ describe('signing in is required', () => {
     ).toBe(401);
   });
 
+  it('answers 401 for an account whose roles were all removed', async () => {
+    const id = await account('mihai', ['garage']);
+    await prisma.accountRole.deleteMany({ where: { accountId: id } });
+
+    for (const path of ['/me', '/probe/team']) {
+      const res = await get(path, bearer(id, 'garage'));
+      expect(res.status).toBe(401);
+      expect(res.body.code).toBe('sign_in_required');
+    }
+  });
+
   it('answers 403 account_suspended before any right is checked', async () => {
     const id = await account('mihai', ['garage']);
     await prisma.account.update({

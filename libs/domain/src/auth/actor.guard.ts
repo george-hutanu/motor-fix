@@ -68,19 +68,10 @@ export class ActorGuard implements CanActivate {
       ? verifyAccessToken(token, this.options.tokenSecret)
       : null;
     if (!claims) throw signInRequired();
-    const account = await this.prisma.account.findUnique({
-      include: { mechanic: true, memberships: true, roles: true },
-      where: { id: claims.accountId },
-    });
-    if (!account || account.status === 'deleted') throw signInRequired();
-    if (account.status === 'suspended') {
-      throw new HttpException(
-        { code: 'account_suspended', message: 'This account is suspended' },
-        HttpStatus.FORBIDDEN,
-      );
-    }
+    const account = await this.activeAccount(claims.accountId);
     const roles = account.roles.map((r) => r.role);
     const role = roleInUse(claims.role, account.lastRole, roles);
+    if (!role) throw signInRequired();
     const membership = account.memberships.find(
       (m) =>
         (role === 'garage' && m.role === 'owner') ||
@@ -98,5 +89,20 @@ export class ActorGuard implements CanActivate {
       role,
       roles,
     };
+  }
+
+  private async activeAccount(id: string) {
+    const account = await this.prisma.account.findUnique({
+      include: { mechanic: true, memberships: true, roles: true },
+      where: { id },
+    });
+    if (!account || account.status === 'deleted') throw signInRequired();
+    if (account.status === 'suspended') {
+      throw new HttpException(
+        { code: 'account_suspended', message: 'This account is suspended' },
+        HttpStatus.FORBIDDEN,
+      );
+    }
+    return account;
   }
 }

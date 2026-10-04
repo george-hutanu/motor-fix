@@ -74,3 +74,16 @@
 
 ## Phase 13 — Ticket refresh
 - ST-79 unchanged since 05:24Z (our own status write); no comments. Query Data Source hit its usage limit → sibling stories not re-queried ([UNAVAILABLE] logged in context.md).
+
+## Resume (2026-10-04, after interruption)
+- Log fix: the trailing "## Phase 4 (cont.)" was the clarify phase's no-question answers, appended at the end and then pushed below later phases; folded into Phase 4.
+- Re-verified before resuming: `npx jest libs/domain apps/api apps/web libs/contracts` → "Tests: 393 passed, 393 total"; typecheck exit 0; lint exit 0.
+- Committed the 5 dirty spec files (836c6b1), pushed `079-account-model`, opened draft PR https://github.com/george-hutanu/motor-fix/pull/3 (owner's new working rule).
+- Notion: a previous run had set ST-79 story and its Foundations timeline row to In review. New rule: In review only when the owner marks the PR ready → both reverted to In progress (notion-sync.md). Query Data Source still at its usage limit; timeline row found through search.
+
+## Phase 14 — Review
+- Ran directly as spec-reviewer + code-reviewer subagents in parallel (Agent tool), range 3f717c6..HEAD; no Workflow tool, so not the verified `speckit-review` path.
+- spec-reviewer: APPROVE. MEDIUM: T001 incomplete, `AUTH_TOKEN_SECRET` missing from the ci.yml job env → fixed (`ci-test-secret`). Cross-story contracts all hold.
+- code-reviewer: BLOCK on 1 HIGH: `roleInUse` fell back to `lastRole` when an account had no role rows, so a fully revoked account kept its last role's rights → now returns null and ActorGuard answers 401 `sign_in_required`; spec edge case added; red first (2 failed), then green. Account loading extracted to `activeAccount()` to stay under Biome's complexity limit.
+- Unfixed MEDIUM/LOW (reported): secret length not enforced; web Session treats a /me 5xx or network error as signed out; signAccessToken/AccountsService/assertOwner/assertGarage have no production caller yet (kept: ST-82 and later stories use them, agreed contract); token lifetime a default parameter; AuthModule owns its own PrismaClient; redundant `?.` in capabilitiesOf.
+- After fixes: `npx jest libs/domain apps/api apps/web libs/contracts` → "Tests: 395 passed, 395 total"; typecheck exit 0; lint "Checked 121 files … No fixes applied".

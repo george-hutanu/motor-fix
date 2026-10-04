@@ -27,6 +27,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
       REDIS_URL: redis://localhost:6379
+      AUTH_TOKEN_SECRET: ci-test-secret
       TZ: UTC
     steps:
       - uses: actions/checkout@v5

@@ -48,6 +48,10 @@ describe('role in use', () => {
     expect(roleInUse(null, 'driver', ['receptionist', 'admin'])).toBe('admin');
     expect(roleInUse(null, 'mechanic', ['driver', 'garage'])).toBe('garage');
   });
+
+  it('gives no role to an account that holds none', () => {
+    expect(roleInUse('garage', 'garage', [])).toBeNull();
+  });
 });
 
 describe('landing', () => {

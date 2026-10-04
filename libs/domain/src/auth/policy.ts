@@ -27,10 +27,10 @@ export function roleInUse(
   tokenRole: Role | null,
   lastRole: Role,
   roles: Role[],
-): Role {
+): Role | null {
   if (tokenRole && roles.includes(tokenRole)) return tokenRole;
   if (roles.includes(lastRole)) return lastRole;
-  return FALLBACK.find((r) => roles.includes(r)) ?? lastRole;
+  return FALLBACK.find((r) => roles.includes(r)) ?? null;
 }
 
 export function landingFor(role: Role) {
