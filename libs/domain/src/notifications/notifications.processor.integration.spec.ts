@@ -112,10 +112,61 @@ describe('sending one e-mail', () => {
       recipients: [en, ro],
     });
     for (const id of [en, ro]) await sendJob((await emailRows(id))[0].id);
-    const [toEn, toRo] = mock
-      .emails()
-      .map((c) => c.body as { subject: string });
-    expect(toEn.subject).not.toBe(toRo.subject);
+    const [toEn, toRo] = mock.emails().map(
+      (c) =>
+        c.body as {
+          subject: string;
+          textContent: string;
+          htmlContent: string;
+        },
+    );
+    expect(toEn.subject).toBe('MotorFix test message');
+    expect(toEn.textContent).toContain('This is a test message from MotorFix.');
+    expect(toEn.htmlContent).toContain('This is a test message from MotorFix.');
+    expect(toEn.htmlContent).toContain('href="https://motorfix.test"');
+    expect(toRo.subject).toBe('Mesaj de test MotorFix');
+    expect(toRo.textContent).toContain('Primești');
+    expect(toRo.htmlContent).toContain('Primești');
+  });
+
+  it('fails the row and calls nobody when its template cannot render', async () => {
+    const error = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    const ana = await account('ana');
+    await service.notify({
+      eventId: 'no-link',
+      kind: 'ACCOUNT_EMAIL',
+      params: { purpose: 'email_check' },
+      recipients: [ana],
+    });
+    await sendJob((await emailRows(ana))[0].id);
+    expect(mock.emails()).toHaveLength(0);
+    expect(fallback).not.toHaveBeenCalled();
+    const [row] = await emailRows(ana);
+    expect([row.status, row.failure]).toEqual(['failed', 'template_failed']);
+    expect(error).toHaveBeenCalledWith(
+      expect.stringMatching(/ACCOUNT_EMAIL.*email.*missing value link/),
+    );
+    error.mockRestore();
+  });
+
+  it('fails the test message when the web app address is not configured', async () => {
+    const error = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    build({ PUBLIC_WEB_URL: '' });
+    const ana = await account('ana');
+    await service.notify({
+      eventId: 't',
+      kind: 'TEST_MESSAGE',
+      recipients: [ana],
+    });
+    await sendJob((await emailRows(ana))[0].id);
+    expect(mock.emails()).toHaveLength(0);
+    const [row] = await emailRows(ana);
+    expect(row.failure).toBe('template_failed');
+    error.mockRestore();
   });
 
   it('puts the account e-mail link into the e-mail', async () => {
@@ -301,8 +352,8 @@ describe('a grouping window', () => {
       name: 'flush',
     });
     expect(mock.emails()).toHaveLength(2);
-    expect((mock.emails()[1].body as { subject: string }).subject).toContain(
-      '2',
+    expect((mock.emails()[1].body as { subject: string }).subject).toBe(
+      '2 oferte noi',
     );
     const rows = await emailRows(andrei);
     expect(rows.map((r) => r.status)).toEqual(['sent', 'sent', 'sent']);

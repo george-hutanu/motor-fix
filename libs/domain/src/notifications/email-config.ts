@@ -9,6 +9,8 @@ export interface EmailConfig {
   apiKey?: string;
   apiUrl: string;
   webhookSecret?: string;
+  // The web app, which every e-mail's button opens.
+  webUrl?: string;
 }
 
 type BlockedReason = 'sending_off' | 'not_allowed';
@@ -46,6 +48,7 @@ export function emailConfig(
     production: appEnv === 'production',
     sending: switchValue === 'on',
     webhookSecret: source['BREVO_WEBHOOK_SECRET'] || undefined,
+    webUrl: source['PUBLIC_WEB_URL']?.replace(/\/+$/, '') || undefined,
   };
 }
 

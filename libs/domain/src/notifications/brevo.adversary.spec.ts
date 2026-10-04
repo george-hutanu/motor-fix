@@ -4,6 +4,7 @@ import { BrevoMock } from './brevo-mock.testing';
 const mock = new BrevoMock();
 const mail = {
   from: { email: 'noreply@example.test', name: 'MotorFix' },
+  html: '<p>Un mesaj</p>',
   subject: 'Salut',
   text: 'Un mesaj',
   to: { email: 'ana@example.test', name: 'Ana' },

@@ -2,13 +2,13 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { Brevo, BrevoError } from './brevo';
 import { blockedReason, type EmailConfig } from './email-config';
-import { groupedMessage, message } from './messages';
 import {
   NOTIFICATIONS_CONFIG,
   NOTIFICATIONS_PRISMA,
   NotificationsService,
   RETRY_MINUTES,
 } from './notifications.service';
+import { render, TemplateError, templateName } from './templates';
 import type {
   Account,
   Notification,
@@ -79,10 +79,12 @@ export class NotificationsProcessor {
     }
     const to = await this.allowed([row], row.account);
     if (!to) return;
-    await this.deliver(
+    const values = params(row);
+    await this.write(
       [row],
       to,
-      message(row.kind, row.account.language, params(row)),
+      templateName(row.kind, values),
+      values,
       attemptsMade,
     );
   }
@@ -101,11 +103,48 @@ export class NotificationsProcessor {
     }
     const to = await this.allowed(rows, first.account);
     if (!to) return;
-    const { language } = first.account;
-    const mail =
-      rows.length === 1
-        ? message(first.kind, language, params(first))
-        : groupedMessage(first.kind, rows.length, language);
+    if (rows.length === 1) {
+      const values = params(first);
+      await this.write(
+        rows,
+        to,
+        templateName(first.kind, values),
+        values,
+        attemptsMade,
+      );
+      return;
+    }
+    await this.write(
+      rows,
+      to,
+      `${first.kind}.grouped`,
+      { count: rows.length },
+      attemptsMade,
+    );
+  }
+
+  // A message that cannot be written in full is not sent at all.
+  private async write(
+    rows: (Notification & { account: Account })[],
+    to: { email: string; name: string },
+    name: string,
+    values: Record<string, unknown>,
+    attemptsMade: number,
+  ) {
+    let mail: { subject: string; text: string; html: string };
+    try {
+      mail = render(name, 'email', rows[0].account.language, {
+        app: this.config.webUrl,
+        ...values,
+      });
+    } catch (error) {
+      if (!(error instanceof TemplateError)) throw error;
+      this.logger.error(
+        `notification ${rows[0].id} ${rows[0].kind} email not written: ${error.message}`,
+      );
+      await this.service.fail(rows, 'template_failed', false);
+      return;
+    }
     await this.deliver(rows, to, mail, attemptsMade);
   }
 
@@ -124,13 +163,14 @@ export class NotificationsProcessor {
   private async deliver(
     rows: Notification[],
     to: { email: string; name: string },
-    mail: { subject: string; text: string },
+    mail: { subject: string; text: string; html: string },
     attemptsMade: number,
   ) {
     let messageId: string;
     try {
       messageId = await this.brevo.send({
         from: this.config.from,
+        html: mail.html,
         subject: mail.subject,
         text: mail.text,
         to,

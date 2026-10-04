@@ -24,6 +24,7 @@ export const testConfig = (
     EMAIL_ALLOWLIST: '@example.test',
     EMAIL_FROM: 'MotorFix <noreply@example.test>',
     EMAIL_SENDING: 'on',
+    PUBLIC_WEB_URL: 'https://motorfix.test',
     ...overrides,
   });
 
