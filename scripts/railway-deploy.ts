@@ -1,7 +1,8 @@
 // Points each Railway service of one environment at an image digest built by
 // the release workflow, deploys it, and waits until Railway's health check
 // passes. On failure the service is pointed back at its previous image; Railway
-// itself keeps traffic on the previous deployment.
+// itself keeps traffic on the previous deployment. SIGINT or SIGTERM (a
+// cancelled workflow run) stops the wait and restores the same way.
 //
 //   node scripts/railway-deploy.ts <staging|production>
 //
@@ -23,6 +24,9 @@ interface Options {
   services: Service[];
   limitMs: number;
   pollMs: number;
+  // Aborted when the run is cancelled: waiting and in-flight calls stop, and
+  // the restore runs without it.
+  signal?: AbortSignal;
 }
 
 const REGION = 'europe-west4-drams3a';
@@ -42,7 +46,9 @@ async function graphql<T>(
       'content-type': 'application/json',
     },
     method: 'POST',
-    signal: AbortSignal.timeout(30_000),
+    signal: options.signal
+      ? AbortSignal.any([options.signal, AbortSignal.timeout(30_000)])
+      : AbortSignal.timeout(30_000),
   });
   if (!res.ok) throw new Error(`Railway API answered HTTP ${res.status}`);
   const body = (await res.json()) as {
@@ -57,6 +63,23 @@ async function graphql<T>(
   return body.data;
 }
 
+const CANCELLED = 'deploy cancelled';
+
+function stopIfCancelled(options: Options) {
+  if (options.signal?.aborted) throw new Error(CANCELLED);
+}
+
+const pause = (options: Options) =>
+  new Promise<void>((resolve) => {
+    const done = () => {
+      clearTimeout(timer);
+      options.signal?.removeEventListener('abort', done);
+      resolve();
+    };
+    const timer = setTimeout(done, options.pollMs);
+    options.signal?.addEventListener('abort', done);
+  });
+
 const update = (options: Options, serviceId: string, input: object) =>
   graphql(
     options,
@@ -70,6 +93,7 @@ async function waitFor(
 ): Promise<string> {
   const until = Date.now() + options.limitMs;
   while (Date.now() < until) {
+    stopIfCancelled(options);
     const { deployment } = await graphql<{ deployment: { status: string } }>(
       options,
       'query ($id: String!) { deployment(id: $id) { status } }',
@@ -78,8 +102,9 @@ async function waitFor(
     if (deployment.status === DONE || FAILED.includes(deployment.status)) {
       return deployment.status;
     }
-    await new Promise((resolve) => setTimeout(resolve, options.pollMs));
+    await pause(options);
   }
+  stopIfCancelled(options);
   return 'TIMED_OUT';
 }
 
@@ -101,7 +126,17 @@ const redeploy = (options: Options, service: Service) =>
     { environmentId: options.environmentId, serviceId: service.id },
   );
 
-async function deployOne(options: Options, service: Service) {
+// One service this run touched: the image it ran before, whether a
+// deployment of the new image was requested, and whether it went live.
+interface Touched {
+  service: Service;
+  previous?: string;
+  started: boolean;
+  live: boolean;
+}
+
+async function deployOne(options: Options, entry: Touched) {
+  const { service } = entry;
   await update(options, service.id, {
     healthcheckPath: '/health/ready',
     healthcheckTimeout: HEALTH_TIMEOUT_S,
@@ -110,6 +145,9 @@ async function deployOne(options: Options, service: Service) {
     region: REGION,
     source: { image: service.image },
   });
+  // Set before the request: once sent, Railway may have accepted it even if
+  // the answer never arrives.
+  entry.started = true;
   const { serviceInstanceDeployV2: deploymentId } = await redeploy(
     options,
     service,
@@ -125,37 +163,50 @@ async function deployOne(options: Options, service: Service) {
 
 // Puts every service this run touched back on the image it ran before. The
 // ones that already went live on the new image are redeployed; the one that
-// failed is still serving its previous deployment.
-async function restore(
-  options: Options,
-  touched: { service: Service; previous?: string; live: boolean }[],
-) {
-  for (const { service, previous, live } of touched) {
-    if (!previous) continue;
-    await update(options, service.id, { source: { image: previous } });
-    if (live) await redeploy(options, service);
+// failed is still serving its previous deployment. On a cancel, the one whose
+// deployment was still in progress is redeployed too, because that deployment
+// may yet go live on the new image. Services are restored side by side, so
+// one slow or failing answer neither delays nor stops the others.
+async function restore(options: Options, touched: Touched[]) {
+  const results = await Promise.allSettled(
+    touched.map(async ({ service, previous, live }) => {
+      if (!previous) return;
+      await update(options, service.id, { source: { image: previous } });
+      if (live) await redeploy(options, service);
+    }),
+  );
+  for (const [i, result] of results.entries()) {
+    if (result.status === 'rejected') {
+      console.error(
+        `restore of ${touched[i]?.service.name} failed: ${(result.reason as Error).message}`,
+      );
+    }
   }
 }
 
 // The api goes first: its pre-deploy step migrates the database the others use.
 export async function deploy(options: Options) {
-  const touched: { service: Service; previous?: string; live: boolean }[] = [];
+  const touched: Touched[] = [];
   try {
     for (const service of options.services) {
-      const entry = {
+      stopIfCancelled(options);
+      const entry: Touched = {
         live: false,
         previous: await previousImage(options, service),
         service,
+        started: false,
       };
       touched.push(entry);
-      await deployOne(options, service);
+      await deployOne(options, entry);
       entry.live = true;
     }
   } catch (error) {
-    await restore(options, touched).catch((restoreError: Error) =>
-      console.error(`restore failed: ${restoreError.message}`),
-    );
-    throw error;
+    const cancelled = options.signal?.aborted ?? false;
+    if (cancelled) {
+      for (const entry of touched) entry.live ||= entry.started;
+    }
+    await restore({ ...options, signal: undefined }, touched);
+    throw cancelled ? new Error(CANCELLED) : error;
   }
 }
 
@@ -174,6 +225,16 @@ async function main() {
   const replicas = REPLICAS[process.argv[2] ?? ''];
   if (!replicas)
     throw new Error('usage: railway-deploy.ts <staging|production>');
+  // A cancelled run gets SIGINT, then SIGTERM a few seconds later. Both stay
+  // handled for the whole run, so the second does not kill the restore.
+  const cancel = new AbortController();
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    process.on(signal, () => {
+      if (cancel.signal.aborted) return;
+      console.error(`${signal}: cancelling, restoring the previous images`);
+      cancel.abort();
+    });
+  }
   return deploy({
     endpoint: 'https://backboard.railway.com/graphql/v2',
     environmentId: required('RAILWAY_ENVIRONMENT_ID'),
@@ -188,6 +249,7 @@ async function main() {
       replicas: replicas[name] ?? 1,
       ...(name === 'api' && { preDeploy: ['npx prisma migrate deploy'] }),
     })),
+    signal: cancel.signal,
     token: required('RAILWAY_API_TOKEN'),
   });
 }
