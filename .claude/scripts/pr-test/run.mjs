@@ -13,7 +13,7 @@
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { appsFor, changedGetEndpoints, endpointFinding, reportMarkdown, stepFinding, testFinding, touchesWeb, verdict } from "./findings.mjs";
@@ -57,7 +57,7 @@ async function main(argv) {
     return r.status ?? 1;
   }
 
-  const info = JSON.parse(sh("gh", ["pr", "view", opt.pr, "--json", "number,state,headRefOid,baseRefName,headRefName,url"], { cwd: repoRoot }));
+  const info = JSON.parse(sh("gh", ["pr", "view", opt.pr, "--json", "number,state,headRefOid,baseRefName,headRefName,url,mergeCommit"], { cwd: repoRoot }));
   if (info.state !== "OPEN" && !opt.allowClosed) {
     console.error(`run: PR #${opt.pr} is ${info.state}; nothing to test (--allow-closed to sweep it anyway)`);
     return 3;
@@ -122,7 +122,9 @@ async function main(argv) {
     log(`worktree ${wt.dir} at ${sha}`);
 
     sh("git", ["fetch", "--quiet", "origin", info.baseRefName], { cwd: repoRoot });
-    const base = sh("git", ["merge-base", `origin/${info.baseRefName}`, sha], { cwd: repoRoot });
+    // A merged PR (a dry run looking back) is measured against main as it was before the merge.
+    const against = info.mergeCommit?.oid ? `${info.mergeCommit.oid}^1` : `origin/${info.baseRefName}`;
+    const base = sh("git", ["merge-base", against, sha], { cwd: repoRoot });
     info.base = base;
     const files = sh("git", ["diff", "--name-only", `${base}...${sha}`], { cwd: repoRoot }).split("\n").filter(Boolean);
     const web = touchesWeb(files);
@@ -141,9 +143,11 @@ async function main(argv) {
     } else {
       plan = localPlan({ dir: runDir, ports });
       notes.push("No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.");
-      teardown.push({ name: "stop private PostgreSQL and Redis", run: () => plan.stop.forEach(([c, ...l]) => spawnSync(c, l, { stdio: "ignore" })) });
+      // PostgreSQL refuses to start under a locale the C library cannot load.
+      const cEnv = { ...process.env, LC_ALL: "C", LANG: "C" };
+      teardown.push({ name: "stop private PostgreSQL and Redis", run: () => plan.stop.forEach(([c, ...l]) => spawnSync(c, l, { stdio: "ignore", env: cEnv })) });
       for (const [i, [cmd, ...list]] of plan.start.entries())
-        if (!mustPass(`services-${i + 1}`, step(`services-${i + 1}`, cmd, list))) return finish();
+        if (!mustPass(`services-${i + 1}`, step(`services-${i + 1}`, cmd, list, { env: cEnv }))) return finish();
     }
     booted.push("postgres", "redis", ...(plan.storage ? ["minio"] : []));
 
@@ -219,7 +223,9 @@ async function main(argv) {
 
     log(`sweep: ${opt.routes.join(", ")} × 3 viewports × ${opt.schemes.join("/")} × ${opt.langs.join("/")}`);
     const sweep = await runSweep({ baseURL: webURL, routes: opt.routes, outDir: shots, schemes: opt.schemes, langs: opt.langs, repoRoot });
-    findings.push(...toFindings(sweep.observations, { web, origins: [webURL, apiURL] }));
+    // Evidence relative to the report, so the report reads the same once copied into specs/.
+    for (const f of toFindings(sweep.observations, { web, origins: [webURL, apiURL] }))
+      findings.push(f.evidence ? { ...f, evidence: relative(out, f.evidence) } : f);
     writeFileSync(join(out, "observations.json"), JSON.stringify(sweep.observations, null, 2));
     const screenshots = sweep.screenshots;
 

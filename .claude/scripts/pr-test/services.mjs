@@ -63,7 +63,7 @@ export function localPlan({ dir, ports }) {
   return {
     kind: "local",
     start: [
-      ["initdb", "-D", pg, "-U", "motorfix", "--auth=trust", "--no-sync", "-E", "UTF8"],
+      ["initdb", "-D", pg, "-U", "motorfix", "--auth=trust", "--no-sync", "-E", "UTF8", "--no-locale"],
       ["pg_ctl", "-D", pg, "-l", join(dir, "pg.log"), "-o", `-p ${ports.postgres} -k ${dir} -c listen_addresses=127.0.0.1`, "-w", "start"],
       ["createdb", "-h", "127.0.0.1", "-p", String(ports.postgres), "-U", "motorfix", "motorfix"],
       ["redis-server", "--port", String(ports.redis), "--bind", "127.0.0.1", "--save", "", "--appendonly", "no", "--daemonize", "yes", "--pidfile", join(dir, "redis.pid"), "--dir", dir],
