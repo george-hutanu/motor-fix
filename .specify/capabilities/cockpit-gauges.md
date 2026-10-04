@@ -3,6 +3,7 @@ capability: cockpit-gauges
 updated: 2026-10-04
 features:
   - 051-cockpit-gauges
+  - 053-motion
 ---
 
 # Capability: cockpit-gauges
@@ -55,9 +56,9 @@ _From 051-cockpit-gauges._
 
 _From 051-cockpit-gauges._
 
-### 051-FR-012 — The three parts MUST NOT animate in this story, and MUST leave the hooks the motion story needs: the lamp takes an optional pulse marker that only marks the host; the dial exposes its fill (0–1) as a custom property on the host; the odometer renders each digit as its own element carrying its digit as a custom property.
+### 053-FR-012 — The lamp, the rating dial and the odometer MUST move only as FR-003, FR-004 and FR-006 describe, through the hooks ST-51 left (the pulse marker, the dial's fill and needle, the per-digit cells); they are still with reduced motion. This replaces ST-51's rule that the three parts do not animate.
 
-_From 051-cockpit-gauges._
+_From 053-motion._
 
 ### 051-FR-013 — The three parts MUST take every colour, font, radius and spacing from the Cockpit `--mf-*` tokens, in dark and light (part-specific geometry — stroke widths, the dot size, the odometer digit cell's 8 px radius and 2 px gap from the mock, and the large dial's 40 px display numeral, none of which a token matches — stays in the part's own styles), and MUST fit a 320 px wide screen. In forced-colours mode the lamp dot keeps a visible outline.
 
@@ -72,3 +73,5 @@ _From 051-cockpit-gauges._
 _From 051-cockpit-gauges._
 
 ## Retired
+
+- `051-FR-012` — superseded by `053-FR-012` (2026-10-04)
