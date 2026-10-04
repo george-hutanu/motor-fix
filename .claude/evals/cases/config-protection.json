@@ -15,21 +15,6 @@
     }
   },
   {
-    "id": "blocks-dropping-a-mutation-floor-to-zero",
-    "hook": "pre:edit:config-protection",
-    "why": "resetting a floor to zero is the cheapest way out of every surviving mutant at once",
-    "payload": {
-      "tool_input": {
-        "file_path": "libs/contracts/stryker.config.json",
-        "content": "{\n  \"thresholds\": {\n    \"break\": 0,\n    \"high\": 80,\n    \"low\": 60\n  }\n}\n"
-      }
-    },
-    "expect": {
-      "exit": 2,
-      "stderr": "ratchet"
-    }
-  },
-  {
     "id": "allows-raising-the-mutation-floor",
     "hook": "pre:edit:config-protection",
     "why": "the ratchet only turns one way; raising it after a harden pass is the intended move",

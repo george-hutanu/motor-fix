@@ -257,7 +257,7 @@ export function checkCommands(repo) {
       ? "no stryker config in this repo — nothing owns a mutation run"
       : noMutation.length
         ? `no test:mutation script or target in: ${noMutation.join(", ")}`
-        : `${mutationOwners.length} workspace(s) carry their own mutation run`,
+        : `${mutationOwners.length} project(s) carry their own mutation run`,
   });
 
   const settings = readJson(join(repo, ".claude", "settings.json")) ?? {};
