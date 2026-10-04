@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-431 Set up mutation testing across every app and lib in the monorepo (Notion story: https://app.notion.com/p/3ef607bff0d28172bf64e2e2cdb952f4). So that a green test suite means the code is actually checked, not just run: Stryker on every Jest project, a thresholds.break floor per project that only rises, an Nx test:mutation target per project, one root command for all and one for affected, CI running it on changed projects for a PR with per-project score in the job summary."
 
