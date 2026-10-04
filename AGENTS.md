@@ -36,12 +36,17 @@ epic or a plan, whether run through spec-kit or by hand.
   4. When it is done (tests, typecheck and lint green, review with no
      CRITICAL/HIGH left), mark the PR ready for review (`gh pr ready`) and set
      the task to In review in Notion (`speckit-notion-sync review`).
-  5. When the PR is merged, set the task to Done (`speckit-notion-sync finish`).
+  5. Merge it on green CI: merge `origin/main` into the branch if it is behind
+     and push, wait for the checks (`gh pr checks <n> --watch`), and when every
+     check passes, `gh pr merge <n> --merge`. A failing check is fixed on the
+     branch and waited for again; a PR with a failing, pending or missing check
+     is never merged. Then set the task to Done (`speckit-notion-sync finish`).
 
-  Merging is always the user's. The Notion writes cover the story, its row in
-  the epic's build timeline under Delivery › Plans, and the epic itself (In
-  progress at its first story, Done at its last). They are standing
-  instructions; do not ask before them.
+  No step waits for the user: opening the draft, pushing, marking it ready,
+  merging on green CI and the Notion writes are all standing instructions. The
+  Notion writes cover the story, its row in the epic's build timeline under
+  Delivery › Plans, and the epic itself (In progress at its first story, Done
+  at its last).
 - **Plans live under Delivery › Plans in Notion:** one execution-plan page and
   one build-timeline database per epic (`speckit-notion-sync plan`).
 - **The spec-kit hooks do this automatically** (`.specify/extensions.yml`:
