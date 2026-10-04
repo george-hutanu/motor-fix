@@ -62,6 +62,6 @@ describe('AGENTS.md', () => {
   it('states the readiness rule and the finish comment rule', () => {
     assert.match(agents, /Ready to work/);
     assert.match(agents, /notion-ready/);
-    assert.match(agents, /comment/i);
+    assert.match(agents, /comments on the task when there is something to record/);
   });
 });

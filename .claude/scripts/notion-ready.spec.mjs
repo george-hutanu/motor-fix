@@ -82,6 +82,11 @@ describe('the archive check', () => {
     assert.equal(result.ok, true);
   });
 
+  it('passes when the PENDING refresh is written as a bullet, like every other line', () => {
+    const result = readyLogged(log('- 2026-10-04 · finish · ST-490 story · QA → Done', '- [NOTION-SYNC PENDING: ready Foundations — usage limit]'));
+    assert.equal(result.ok, true);
+  });
+
   it('fails with no ready line after the finish, and names what to run', () => {
     const result = readyLogged(log('- 2026-10-04 · finish · ST-490 story · QA → Done', '- 2026-10-04 · finish · Foundations timeline row · QA → Merged'));
     assert.equal(result.ok, false);

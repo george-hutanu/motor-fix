@@ -44,13 +44,21 @@ For each story build one item:
 - `blockers`: on the timeline, every `Blocked by` row as `{ id, status }` with its
   `Build status`. Off the timeline (tech debt, harness tasks, late additions),
   each story the page names as a prerequisite, with its story Status.
-- `hold`: the one judgement left to you. Read the page body and the timeline
-  note: when it waits on the owner, the lawyer or another outside party, says
-  "do it when" later work exists, or says another item covers it, `hold` is a
-  short phrase naming that (`the lawyer`, `owner decision`). An open question
-  marked not blocking, or a production-only switch, is no hold. Unsure is a hold.
+- `hold`: `null` on the first pass (§2).
 
-## 2. Decide
+## 2. Decide, in two passes
+
+A hold can only stop an item that is otherwise ready, so page bodies are read
+only for those, not for every To do item of the epic:
+
+1. Run `decide` with every `hold` null.
+2. For each item in its `ready` list, read the page body and the timeline
+   note. When it waits on the owner, the lawyer or another outside party, says
+   "do it when" later work exists, or says another item covers it, set `hold`
+   to a short phrase naming that (`the lawyer`, `owner decision`). An open
+   question marked not blocking, or a production-only switch, is no hold.
+   Unsure is a hold.
+3. Run `decide` again with those holds; its answer is the one you write.
 
 ```bash
 node .claude/scripts/notion-ready.mjs decide < items.json

@@ -126,9 +126,9 @@ A retired requirement now prints `⊘ retired` instead of `✗ UNTESTED`.
    the merge to `main` already ran it.
 5. `node .claude/scripts/notion-ready.mjs check specs/<feature>/notion-sync.md`
    must exit 0: Ready to work was refreshed (or logged PENDING) after the last
-   `finish`. When it exits 1, run `notion-ready <epic>`, log the line
-   (`speckit-notion-sync`, §2d), and check again. The feature is not archived
-   until it passes.
+   `finish`. When it exits 1, do what its reason says — usually run
+   `notion-ready <epic>` and log the line (`speckit-notion-sync`, §2d) — and
+   check again. The feature is not archived until it passes.
 
 ## What this never does
 

@@ -28,11 +28,16 @@ function holdOf(item) {
 }
 
 export function decideReady(items) {
+  if (!Array.isArray(items)) throw new TypeError('items must be an array');
   const ready = [];
   const held = [];
   const tick = [];
   const untick = [];
+  const seen = new Set();
   for (const item of items) {
+    // One page, one checkbox: a repeated ID is the same item gathered twice.
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
     const reason = item.status === 'To do' ? holdOf(item) : null;
     const isReady = item.status === 'To do' && !reason;
     if (isReady) ready.push({ id: item.id, priority: item.priority ?? null });
@@ -40,19 +45,21 @@ export function decideReady(items) {
     if (isReady && !item.ticked) tick.push(item.id);
     if (!isReady && item.ticked) untick.push(item.id);
   }
-  ready.sort((a, b) => rank(a.priority) - rank(b.priority) || number(a.id) - number(b.id));
+  ready.sort((a, b) => rank(a.priority) - rank(b.priority) || number(a.id) - number(b.id) || String(a.id).localeCompare(String(b.id)));
   return { tick, untick, ready, held };
 }
 
 // Log lines are `- <date> · <event> · …`, some written without the ` · ` after
-// the date. A failed refresh is logged `[NOTION-SYNC PENDING: ready …]`.
+// the date. A failed refresh is logged `[NOTION-SYNC PENDING: ready …]`, as a
+// bullet like every other line or bare.
 const EVENT = /^- \d{4}-\d{2}-\d{2}(?: ·)? (\w+)\b/;
+const PENDING_READY = /^(?:- )?\[NOTION-SYNC PENDING: ready\b/;
 
 export function readyLogged(text) {
   let finish = -1;
   let ready = -1;
   text.split('\n').forEach((line, index) => {
-    const event = line.match(EVENT)?.[1] ?? (line.startsWith('[NOTION-SYNC PENDING: ready') ? 'ready' : null);
+    const event = line.match(EVENT)?.[1] ?? (PENDING_READY.test(line) ? 'ready' : null);
     if (event === 'finish') finish = index;
     if (event === 'ready') ready = index;
   });
@@ -75,4 +82,13 @@ function main([command, file]) {
   return 2;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) process.exit(main(process.argv.slice(2)));
+function run(argv) {
+  try {
+    return main(argv);
+  } catch (error) {
+    console.error(`notion-ready: ${error.message}`);
+    return 2;
+  }
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) process.exit(run(process.argv.slice(2)));
