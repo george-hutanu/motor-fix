@@ -21,6 +21,7 @@ The users of this story are the build team and the harness's own commands (`/spe
 - Q: Does a pull request's run mutate the dependants of a changed project, or only the projects whose own files changed? → A: Dependants too (Nx affected, as the existing test step does), because a change in a lib can leave a dependant's tests checking nothing; incremental mode keeps it affordable.
 - Q: On a time-out, what must the output contain, and is the limit per project or per step? → A: One time limit on the CI step; projects run one at a time and each run starts by naming its project, so the last named project is the one cut off. The number is set in plan.md from the measured run times.
 - Owner, 2026-10-04 (during the run): mutation runs are too expensive for the development laptop. Do not run them locally now; measuring the projects and fixing their surviving mutants is a separate follow-up task; open the pull request as a draft. → Floors start at 0 except where a score was already measured (`libs/contracts`: 100% in the planning spike); the first measured scores come from CI on the draft pull request.
+- Owner, 2026-10-04 (relayed by the owner's setup session, matching the owner's own laptop concern in this run): "do not add mutation tests to PR CI, add mutation tests as a standalone git action workflow"; "avoid running mutation test locally will max out my computer". → Mutation leaves `ci.yml` for `.github/workflows/mutation.yml` (nightly on `main`, manual start with optional projects, incremental cache, reports uploaded). Supersedes the pull-request answer above.
 - Q: Who asked for "find any project's floor and score with one command" (SC-004), when no score is stored in the repository? → A: Nobody; dropped. The floor is in each `stryker.config.json`; the score is the output of the project's run and the pull request's job summary.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -57,19 +58,19 @@ From the repository root, one command runs every project's mutation target, and 
 
 ---
 
-### User Story 3 - A pull request shows each changed project's mutation score (Priority: P2)
+### User Story 3 - The team sees each project's mutation score without running it locally (Priority: P2)
 
-On a pull request, CI runs the mutation targets of the affected projects and writes each project's score into the job summary. A score below a floor fails the job, which names the project.
+A standalone workflow runs every project's mutation target nightly on `main`, and on demand for chosen projects, writes each project's score into the job summary and uploads the reports. A score below a floor fails the run, which names the project. Pull-request CI does not run mutation.
 
-**Why this priority**: the floor protects nothing if nobody runs it before merge.
+**Why this priority**: a full run is too heavy for both a pull request and the development laptop; a nightly run still catches a falling score.
 
-**Independent Test**: open a pull request touching one project; the CI job runs that project's mutation target and the job summary lists its score.
+**Independent Test**: start the mutation workflow by hand for one project; the run's summary lists its score and the reports are attached.
 
 **Acceptance Scenarios**:
 
-1. **Given** a pull request, **When** CI runs, **Then** the affected projects' mutation targets run against the same PostgreSQL and Redis service containers the test step uses, and the job summary shows one score line per project that ran.
-2. **Given** a project below its floor, **When** the CI job finishes, **Then** the job fails and its output names the project.
-3. **Given** a mutation step in CI that exceeds its time limit, **When** it is cut off, **Then** the job fails, and the last project named in the step's output is the one that was running.
+1. **Given** the nightly schedule or a manual start, **When** the mutation workflow runs, **Then** the projects' mutation targets run against PostgreSQL and Redis service containers, and the job summary shows one score line per project that ran.
+2. **Given** a project below its floor, **When** the run finishes, **Then** the run fails and its output names the project.
+3. **Given** a run that exceeds the job's time limit, **When** it is cut off, **Then** the run fails, the last project named in its output is the one that was running, and the incremental results gathered so far are still saved.
 
 ---
 
@@ -107,8 +108,8 @@ Each project's `break` floor is a ratchet: an edit that lowers it is refused; a 
 - **FR-004**: A mutation run for a project with no spec files MUST report that and exit zero without starting Stryker; such a project's floor is 0.
 - **FR-005**: Projects whose tests need PostgreSQL and Redis MUST reach them through the same `DATABASE_URL` / `REDIS_URL` as `npm test`.
 - **FR-006**: The root MUST provide `npm run test:mutation` (every project) and `npm run test:mutation:affected` (only projects affected relative to `main`), both through Nx.
-- **FR-007**: CI MUST run the affected projects' mutation targets (changed projects and their dependants, as Nx computes them) on every pull request, one project at a time, in incremental mode, against the same service containers as the test step, and MUST write one score line per project into the job summary.
-- **FR-008**: The CI mutation step MUST fail when any project is below its floor or the step exceeds its time limit; each project's run MUST start by printing the project's name, so the failing or cut-off project is named in the output.
+- **FR-007**: A standalone CI workflow, not the pull-request workflow, MUST run every project's mutation target (or the projects named when it is started by hand) nightly on `main` and on demand, one project at a time, in incremental mode with the incremental files cached between runs, against PostgreSQL and Redis service containers like the test step's; it MUST write one score line per project into the job summary and upload the reports as an artifact.
+- **FR-008**: The mutation workflow MUST fail when any project is below its floor or the job exceeds its time limit; each project's run MUST start by printing the project's name, so the failing or cut-off project is named in the output.
 - **FR-009**: A project's `thresholds.break` MUST start at 5 points below a measured score, rounded down, where one exists, and at 0 otherwise (no spec files, or not yet measured); `low` and `high` MUST be 60 and 80. Raising the unmeasured floors from real scores is the follow-up task's work.
 - **FR-010**: Every project's `stryker.config.json` MUST be within what `config-protection.mjs` guards, and a harness eval case MUST show that lowering a `thresholds.break` is refused.
 - **FR-011**: The `mutation-runner` subagent and `/speckit-harden` MUST invoke the Nx targets and name this repository's projects, not the `npm -w apps/server` / `apps/scanner` form.
@@ -124,15 +125,15 @@ Each project's `break` floor is a ratchet: an edit that lowers it is refused; a 
 
 ### Measurable Outcomes
 
-- **SC-001**: All 8 Jest projects have a mutation target; the draft pull request's CI runs the affected ones at their committed floors and its job summary shows a score per project (`worker` reporting no tests).
-- **SC-002**: A pull request that touches one project runs mutation for that project and its dependants only, and its job summary shows their scores.
+- **SC-001**: All 10 Jest projects have a mutation target; the first run of the mutation workflow on GitHub runs them at their committed floors and its job summary shows a score per project (`worker` reporting no tests).
+- **SC-002**: A started or nightly mutation run shows a score for each project it ran in its job summary, and its HTML reports are downloadable from the run.
 - **SC-003**: A floor-lowering edit is refused in 100% of harness eval runs.
 
 ## Assumptions
 
 - `libs/media` and `scripts` are in scope although the story's list of six predates them: the Build brief's rule is "every project that has a `jest.config.cts`", and its note that later libs "add their own config when they first get tests" covers `media` (autonomous default).
 - "The same runtime options as its `test` target" (FR-002) follows the Nx-inferred `test` targets as they are in `nx show project`, which run `jest` with `TS_NODE_COMPILER_OPTIONS` forcing CommonJS and do not pass `--experimental-vm-modules`; the story's scenario 3 and AGENTS.md describe that flag, but the targets it says to copy do not use it today (clarified 2026-10-04: follow the targets).
-- Incremental mode is used in CI for pull requests, with the incremental file per project git-ignored and cached between CI runs, as the Build brief proposes (autonomous default).
+- Incremental mode is used in the mutation workflow, with the incremental file per project git-ignored and cached between runs, as the Build brief proposes (autonomous default).
 - Whether a full non-incremental run happens nightly or only before release is the owner's open question in the story; this story ships no scheduled full run (autonomous default; out of scope until the owner decides).
 - Mutants that only run while a module loads (static mutants) are not tested and do not count toward the score; on `libs/domain` they are 14% of mutants and about two thirds of the run time (spike, 2026-10-04). A later story may turn them back on per project (autonomous default).
 - "A few points below" the measured score (story, Rules and validation) is fixed at 5 points (autonomous default).

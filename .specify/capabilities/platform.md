@@ -173,11 +173,11 @@ _From 431-mutation-testing._
 
 _From 431-mutation-testing._
 
-### 431-FR-007 — CI MUST run the affected projects' mutation targets (changed projects and their dependants, as Nx computes them) on every pull request, one project at a time, in incremental mode, against the same service containers as the test step, and MUST write one score line per project into the job summary.
+### 431-FR-007 — A standalone CI workflow, not the pull-request workflow, MUST run every project's mutation target (or the projects named when it is started by hand) nightly on `main` and on demand, one project at a time, in incremental mode with the incremental files cached between runs, against PostgreSQL and Redis service containers like the test step's; it MUST write one score line per project into the job summary and upload the reports as an artifact.
 
 _From 431-mutation-testing._
 
-### 431-FR-008 — The CI mutation step MUST fail when any project is below its floor or the step exceeds its time limit; each project's run MUST start by printing the project's name, so the failing or cut-off project is named in the output.
+### 431-FR-008 — The mutation workflow MUST fail when any project is below its floor or the job exceeds its time limit; each project's run MUST start by printing the project's name, so the failing or cut-off project is named in the output.
 
 _From 431-mutation-testing._
 

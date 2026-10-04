@@ -29,11 +29,11 @@ Paths exist today unless marked `(new)`.
 
 - [X] T008 [US2] `package.json` scripts: `"test:mutation": "nx run-many -t test:mutation --parallel=1"`, `"test:mutation:affected": "nx affected -t test:mutation --parallel=1"` (FR-006)
 
-## Phase 5: US3 — pull request scores (P2)
+## Phase 5: US3 — scores from a standalone workflow (P2)
 
-**Independent test**: the CI job on this branch's pull request runs the step and its summary lists each affected project.
+**Independent test**: a manual run of the mutation workflow (`gh workflow run mutation.yml`) lists each project's score in its summary.
 
-- [X] T009 [US3] `.github/workflows/ci.yml`: after the pull-request test step, an `actions/cache` step for `reports/mutation` (key per head branch, fallback to any earlier key) and a step `npx nx affected -t test:mutation --base=origin/${{ github.base_ref }} --parallel=1 -- --incremental`, pull requests only, with `timeout-minutes: 60` — no full duration was measured; the follow-up task revises it from the first CI run (FR-005, FR-007, FR-008; research R8)
+- [X] T009 [US3] `.github/workflows/mutation.yml` (new, replacing the pull-request steps first put in `ci.yml`): nightly on `main` and `workflow_dispatch` with an optional project list; PostgreSQL/Redis services and migration like `ci.yml`; `actions/cache/restore` + `actions/cache/save` (`if: always()`) for `reports/mutation`; `npx nx run-many -t test:mutation --parallel=1 -- --incremental`; reports uploaded as an artifact; job `timeout-minutes: 180` until measured. Verified with `gh workflow run`, never locally (FR-005, FR-007, FR-008; research R8)
 
 ## Phase 6: US4 — the floors only rise (P3)
 
@@ -52,7 +52,7 @@ Paths exist today unless marked `(new)`.
 
 ## Follow-up (separate task, not this branch)
 
-- Measure each project's score from the draft pull request's CI (or a machine that can afford it), raise every unmeasured `thresholds.break` to 5 below its score, kill the surviving mutants, decide `concurrency` for `api`/`domain` (research R9), and set the CI `timeout-minutes` from real durations. Filed in Notion (see auto-run.md).
+- Measure each project's score from the mutation workflow's runs (never the development laptop), raise every unmeasured `thresholds.break` to 5 below its score, kill the surviving mutants, decide `concurrency` for `api`/`domain` (research R9), and set the CI `timeout-minutes` from real durations. Filed in Notion (see auto-run.md).
 
 ## Dependencies
 
