@@ -1,4 +1,5 @@
 import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
+import { Public } from '@motor-fix/domain';
 import { S3TestStore } from '@motor-fix/domain/testing';
 import {
   Body,
@@ -23,6 +24,7 @@ class EchoDto {
 }
 
 @Controller('probe')
+@Public()
 class ProbeController {
   private readonly logger = new Logger('Probe');
 

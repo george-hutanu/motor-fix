@@ -4,6 +4,7 @@ import {
   Module,
   type OnApplicationShutdown,
 } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { Redis } from 'ioredis';
 
 import { AccountsService } from './accounts.service';
@@ -47,13 +48,14 @@ export class AuthModule implements OnApplicationShutdown {
   static register(options: AuthOptions): DynamicModule {
     return {
       controllers: [AuthController, MeController, AuditHistoryController],
-      exports: [AccountsService, ActorGuard, AUTH_OPTIONS, PRISMA],
-      // Every module that checks the actor uses this one guard and client.
+      exports: [AccountsService, AUTH_OPTIONS, PRISMA],
+      // One actor check for every route of the app, and one client.
       global: true,
       module: AuthModule,
       providers: [
         AccountsService,
         ActorGuard,
+        { provide: APP_GUARD, useExisting: ActorGuard },
         AuditHistoryService,
         SignInService,
         SignUpService,
