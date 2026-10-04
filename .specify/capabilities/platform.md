@@ -7,6 +7,7 @@ features:
   - 431-mutation-testing
   - 464-agent-watch
   - 159-form-saving
+  - 491-production-release-queue
 ---
 
 # Capability: Platform
@@ -123,17 +124,17 @@ _From 421-monorepo-platform._
 
 _From 421-monorepo-platform._
 
-### 421-FR-028 — On every merge into `main` the pipeline MUST run every check on every project, build one image per app tagged with the commit SHA, push it to GitHub's container registry, migrate and deploy staging, wait for `/health/ready`, run the end-to-end suite against staging, and stop for approval of the `production` environment. The staging wait for `/health/ready` is limited to 5 minutes; on expiry the run fails and nothing is promoted. Migrations run as `prisma migrate deploy` in the `api` pre-deploy command and MUST be backwards compatible, because the previous images may be restored.
+### 491-FR-001 — On every merge into `main` the pipeline MUST run every check on every project, build one image per app tagged with the commit SHA, push it to GitHub's container registry, migrate and deploy staging, wait for `/health/ready`, run the end-to-end suite against staging, and then promote to production with no manual approval. The staging wait for `/health/ready` is limited to 5 minutes; on expiry the run fails and nothing is promoted. Migrations run as `prisma migrate deploy` in the `api` pre-deploy command and MUST be backwards compatible, because the previous images may be restored.
 
-_From 421-monorepo-platform._
+_From 491-production-release-queue._
 
-### 421-FR-029 — After approval the pipeline MUST deploy the same image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes.
+### 491-FR-002 — Once staging and its end-to-end suite pass, the pipeline MUST deploy the same image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes.
 
-_From 421-monorepo-platform._
+_From 491-production-release-queue._
 
-### 421-FR-030 — Staging deploys MUST run one at a time, in commit order. When a newer commit passes staging, the production approval waiting for an older commit MUST be cancelled, so only the latest proven commit can be approved. There MUST be no path that deploys a branch or an unproven commit to production.
+### 491-FR-003 — Staging deploys and production deploys MUST each run one at a time, in commit order, and a deploy already running MUST NOT be cancelled by a newer commit: the newer one waits, and of several waiting only the latest proven commit runs next. There MUST be no path that deploys a branch or an unproven commit to production.
 
-_From 421-monorepo-platform._
+_From 491-production-release-queue._
 
 ### 421-FR-031 — A "Reset staging" workflow, started by hand, MUST empty, migrate and seed the staging database and MUST have no production target.
 
@@ -147,9 +148,9 @@ _From 421-monorepo-platform._
 
 _From 421-monorepo-platform._
 
-### 421-FR-034 — The by-hand checks of the pipeline (a lint error blocks a merge; a stale client fails the contract check; a broken migration stops the run before staging; production does not deploy without approval; a failing production health check restores the previous images) MUST be listed in `quickstart.md`, with a place to record the date and result of each.
+### 491-FR-004 — The by-hand checks of the pipeline (a lint error blocks a merge; a stale client fails the contract check; a broken migration stops the run before staging; production deploys only after staging and its end-to-end suite pass; a production deploy is not cancelled by a newer merge; a failing production health check restores the previous images) MUST be listed in `specs/421-monorepo-platform/quickstart.md`, with a place to record the date and result of each.
 
-_From 421-monorepo-platform._
+_From 491-production-release-queue._
 
 ### 431-FR-001 — Every project with a Jest configuration (`apps/api`, `apps/worker`, `apps/web`, `apps/mcp`, `libs/contracts`, `libs/domain`, `libs/media`, `scripts`) MUST have its own `stryker.config.json` with a `thresholds.break` floor and an Nx `test:mutation` target.
 
@@ -251,7 +252,15 @@ _From 464-agent-watch._
 
 _From 159-form-saving._
 
+### 491-FR-005 — When the deploy script receives SIGINT or SIGTERM it MUST stop waiting, restore every service the run touched to its previous image (redeploying the ones already live on the new one), and exit non-zero.
+
+_From 491-production-release-queue._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
 - `421-FR-021` — superseded by `422-FR-010` (2026-10-04)
+- `421-FR-028` — superseded by `491-FR-001` (2026-10-04)
+- `421-FR-029` — superseded by `491-FR-002` (2026-10-04)
+- `421-FR-030` — superseded by `491-FR-003` (2026-10-04)
+- `421-FR-034` — superseded by `491-FR-004` (2026-10-04)
