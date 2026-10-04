@@ -9,6 +9,11 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { notificationPreferencesControllerRead } from '../fn/notifications/notification-preferences-controller-read';
+import { NotificationPreferencesControllerRead$Params } from '../fn/notifications/notification-preferences-controller-read';
+import { notificationPreferencesControllerSave } from '../fn/notifications/notification-preferences-controller-save';
+import { NotificationPreferencesControllerSave$Params } from '../fn/notifications/notification-preferences-controller-save';
+import { NotificationPreferencesDto } from '../models/notification-preferences-dto';
 import { notificationsControllerTest } from '../fn/notifications/notifications-controller-test';
 import { NotificationsControllerTest$Params } from '../fn/notifications/notifications-controller-test';
 import { TestMessageQueuedDto } from '../models/test-message-queued-dto';
@@ -42,6 +47,56 @@ export class NotificationsService extends BaseService {
   notificationsControllerTest(params: NotificationsControllerTest$Params, context?: HttpContext): Promise<TestMessageQueuedDto> {
     const resp = this.notificationsControllerTest$Response(params, context);
     return resp.then((r: StrictHttpResponse<TestMessageQueuedDto>): TestMessageQueuedDto => r.body);
+  }
+
+  /** Path part for operation `notificationPreferencesControllerRead()` */
+  static readonly NotificationPreferencesControllerReadPath = '/api/v1/notification-preferences';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `notificationPreferencesControllerRead()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  notificationPreferencesControllerRead$Response(params?: NotificationPreferencesControllerRead$Params, context?: HttpContext): Promise<StrictHttpResponse<NotificationPreferencesDto>> {
+    const obs = notificationPreferencesControllerRead(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `notificationPreferencesControllerRead$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  notificationPreferencesControllerRead(params?: NotificationPreferencesControllerRead$Params, context?: HttpContext): Promise<NotificationPreferencesDto> {
+    const resp = this.notificationPreferencesControllerRead$Response(params, context);
+    return resp.then((r: StrictHttpResponse<NotificationPreferencesDto>): NotificationPreferencesDto => r.body);
+  }
+
+  /** Path part for operation `notificationPreferencesControllerSave()` */
+  static readonly NotificationPreferencesControllerSavePath = '/api/v1/notification-preferences';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `notificationPreferencesControllerSave()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  notificationPreferencesControllerSave$Response(params: NotificationPreferencesControllerSave$Params, context?: HttpContext): Promise<StrictHttpResponse<NotificationPreferencesDto>> {
+    const obs = notificationPreferencesControllerSave(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `notificationPreferencesControllerSave$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  notificationPreferencesControllerSave(params: NotificationPreferencesControllerSave$Params, context?: HttpContext): Promise<NotificationPreferencesDto> {
+    const resp = this.notificationPreferencesControllerSave$Response(params, context);
+    return resp.then((r: StrictHttpResponse<NotificationPreferencesDto>): NotificationPreferencesDto => r.body);
   }
 
 }

@@ -51,3 +51,23 @@ model Notification {
   @@index([fallbackOf])
   @@map("notification")
 }
+
+// A person's choice for one type: a driver type has one row (its chosen
+// channel), any other type one row per channel, with the garage for staff.
+// Uniqueness is kept by the save's per-account lock: PostgreSQL treats empty
+// garages as distinct in a unique index.
+model NotificationPreference {
+  id        String              @id @default(uuid()) @db.Uuid
+  accountId String              @map("account_id") @db.Uuid
+  garageId  String?             @map("garage_id") @db.Uuid
+  type      String
+  channel   NotificationChannel
+  enabled   Boolean
+  updatedAt DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  account   Account             @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  garage    Garage?             @relation(fields: [garageId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, type])
+  @@index([garageId])
+  @@map("notification_preference")
+}
