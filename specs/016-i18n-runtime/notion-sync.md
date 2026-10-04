@@ -9,3 +9,6 @@
 - 2026-10-04 correction · Foundations timeline row ST-16 Build status: In review → In progress
 - 2026-10-04 · review · ST-16 story Status: In progress → In review (PR #4 marked ready)
 - 2026-10-04 · review · ST-16 Foundations timeline Build status: In progress → In review
+- 2026-10-04 · finish · ST-16 story Status: In review → Done (PR #4, 202c88e)
+- 2026-10-04 · finish · ST-16 Foundations timeline Build status: In review → Merged
+- 2026-10-04 · finish · EP-1 Status: In progress (unchanged: other stories open)

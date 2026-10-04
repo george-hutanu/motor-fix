@@ -80,7 +80,8 @@ auto_commit:
 - NO metadata of any kind: no `Co-Authored-By` trailers, no
   "Generated with" lines, no Claude/AI mentions.
 - Push after every commit, to the feature's own branch only. NEVER `--force`,
-  NEVER push `main`, NEVER merge: merging is the user's.
+  NEVER push `main`. The merge happens once, at the task's hand-off, on green
+  CI (AGENTS.md lifecycle step 5) — never mid-task.
 - **The first commit on a branch with no PR yet** opens it, in this order (the
   task lifecycle in AGENTS.md):
   1. `speckit-notion-sync start`, so the story is In progress before the PR
