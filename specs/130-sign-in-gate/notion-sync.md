@@ -9,3 +9,6 @@
 - 2026-10-04 · implement · Foundations timeline ST-130 · Planning → Implementing
 - 2026-10-04 · labels · PR #64 · in development
 - 2026-10-04 · ready · EP-1 · +ST-128 −ST-130 (ST-130 ticked then unticked at start; ST-394 already ticked; ST-132 held: the lawyer)
+- 2026-10-04 · review · ST-130 · Implementing → QA
+- 2026-10-04 · review · Foundations timeline ST-130 · Implementing → QA
+- 2026-10-04 · labels · PR #64 · QA
