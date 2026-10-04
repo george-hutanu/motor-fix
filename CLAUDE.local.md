@@ -38,7 +38,7 @@ feature through `.specify/feature.json` (`.claude/scripts/lib/feature.mjs`).
 
 ## Gates
 
-Constitution v1.3.0 (`.specify/memory/constitution.md`) maps each rule to its
+Constitution v1.4.0 (`.specify/memory/constitution.md`) maps each rule to its
 check; its Enforcement section is the authority. In short:
 
 | Gate | When | What it does |
@@ -47,6 +47,7 @@ check; its Enforcement section is the authority. In short:
 | `red-first-gate.mjs` | before an Edit/Write | blocks `apps/*/src`, `libs/*/src` edits while the active feature has FRs + open tasks but the branch touches no `*.spec.*`/`*.test.*` file — run `/speckit-tests` first |
 | `post-edit-check.sh` | after an Edit/Write | `biome check` on the file, then its colocated `*.spec.ts` through Jest |
 | `stop-test-gate.sh` | before the agent finishes | `biome check` + `jest --onlyChanged` must be green |
+| `pr-lifecycle-gate.mjs` | before the agent finishes | Constitution VII: no unpushed commits, no task branch without a PR, no green ready PR left unmerged |
 | `pre-commit-check.sh` | before `git commit` | commit-message policy, `spec-drift --staged` |
 | `bash-guard.mjs` | before any Bash call | blocks force-push, pushes to `main`, `reset --hard`, `clean -f`, deleting `.work/` |
 | `config-protection.mjs` | before an Edit/Write | the ratchets: a `thresholds.break` only rises, `.specify/trace-baseline.json` only shrinks, this file never grows past its baseline |
@@ -148,9 +149,8 @@ touching a gate, and before `--bless-hooks`. `.claude/vitest.config.ts` pins
 
 Commit style: one-line Conventional Commit with a scope (`feat(api): …`), no
 body, no trailers, no tool mentions — enforced by
-`.claude/hooks/commit-msg-policy.js`. Every task runs the lifecycle in AGENTS.md:
-In progress, draft PR, a push per commit (never forced, never `main`), PR ready
-plus In review when done, merge on green CI, then Done. Nothing waits for the user.
+`.claude/hooks/commit-msg-policy.js`. Every task runs Constitution VII on its own:
+draft PR, a push per commit, ready when done, merged on green CI, then Done.
 
 ## Design work
 

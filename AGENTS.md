@@ -29,7 +29,8 @@ epic or a plan, whether run through spec-kit or by hand.
   boards in the clickable mock (the `Design` and `Design boards` properties
   in Notion) and the Build brief's Screens section, and write
   `specs/<feature>/design.md`. Skill: `speckit-design-check`.
-- **Every task follows the same lifecycle, in this order:**
+- **Every task follows the same lifecycle, in this order.** This is a hard
+  rule, Constitution VII, enforced by the `stop:pr-lifecycle` gate:
   1. Take the task and set it to In progress in Notion (`speckit-notion-sync start`).
   2. Open a draft PR for its branch (`speckit-git-commit`, at the first commit).
   3. Do the work, pushing every commit to that branch: never forced, never `main`.
