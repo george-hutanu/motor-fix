@@ -53,6 +53,8 @@ and message.
 - A PR with no Notion story (`chore-*`): the same decision is asked with the status its work is at; only the Notion writes are skipped.
 - Removing a label the PR does not carry is harmless, so the instruction names every other stage label without reading the PR first.
 - The gate sees GitHub only: when a PR carries two fitting stage labels it keeps the furthest along the ladder, because stage labels only move forward.
+- A PR state with no `labels` field (a declared state, or a `gh` answer without them) is one the gate cannot see: it skips the label checks, as it fails open wherever it cannot see.
+- An event name that is not one of the seven, including an inherited property name such as `toString`, is refused as unknown.
 
 ## Requirements *(mandatory)*
 

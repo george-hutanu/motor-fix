@@ -45,7 +45,7 @@ const LEGACY = (status) => (status === "In progress" ? "Implementing" : status);
 export function decide({ event, current: raw, prior: rawPrior = null }) {
   const current = LEGACY(raw);
   const prior = rawPrior && LEGACY(rawPrior);
-  if (!(event in TARGET) && event !== "blocked" && event !== "unblock") throw new Error(`unknown event "${event}"`);
+  if (!Object.hasOwn(TARGET, event) && event !== "blocked" && event !== "unblock") throw new Error(`unknown event "${event}"`);
   if (current === "Done") return result(false, current, prior, "Done never moves");
 
   if (event === "blocked") {

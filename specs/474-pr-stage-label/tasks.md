@@ -12,7 +12,7 @@
 
 - [X] T004 [US1] `.claude/scripts/notion-status.mjs`: the stage label of each status and the `gh pr edit` label arguments, added to every decision (FR-001, FR-002, FR-003, FR-004)
 - [X] T005 [US2] `.claude/hooks/pr-lifecycle-gate.mjs`: one stage-label check — more than one, or one that does not fit the draft state — naming the `gh pr edit` that leaves one fitting label (FR-006, FR-007)
-- [X] T006 [US1] `.claude/skills/speckit-notion-sync/SKILL.md`: state the one-stage-label rule and apply the decision's `labels` on every event in place of the per-event table; `speckit-auto` hand-off, `speckit-pr-test` step 1 and AGENTS.md lifecycle step 4 point at it instead of quoting a move (FR-005)
+- [X] T006 [US1] `.claude/skills/speckit-notion-sync/SKILL.md`: state the one-stage-label rule and apply the decision's `labels` on every event in place of the per-event table; `speckit-auto` hand-off, `speckit-pr-test` step 1 and AGENTS.md lifecycle steps 4 and 6 point at it instead of quoting a move (FR-005)
 
 ## Phase 3: Proof
 

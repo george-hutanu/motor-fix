@@ -31,7 +31,7 @@ const IN_DEVELOPMENT = "in development";
 const DRAFT_LABELS = new Set(["planning", IN_DEVELOPMENT]);
 const IN_REVIEW = "in review";
 const READY_LABELS = new Set([IN_REVIEW, "QA"]);
-const STAGES = ["planning", IN_DEVELOPMENT, IN_REVIEW, "QA"];
+const STAGES = [...DRAFT_LABELS, ...READY_LABELS];
 const GREEN = new Set(["SUCCESS", "NEUTRAL", "SKIPPED"]);
 
 /** The `gh pr edit` that leaves an open PR one stage label fitting its draft state, or null when it has that. */

@@ -41,3 +41,19 @@
 - Eval `stderr` is a regex: the `)` in the PR #33 case needed escaping (the red run never reached it: exit 0 failed first).
 - Proof: `npm run test:harness` 500/500 (after `doctor.mjs --bless-hooks` for `stop:pr-lifecycle`, diff read first: cac729172242 → 37b4f41d5903); `doctor.mjs` 16 ok; `harness-eval.mjs --check` 63/63; artifact-lint 0/0; diff-audit 0/0.
 - Environment note: `red-first-leaves-main-alone` failed (62/63) while tasks were open after `git fetch origin main:main`: it runs the gate against the real checkout, which here has an active feature with open tasks and no `*.spec.ts` (harness specs are `.mjs`). Before the fetch, the stale local `main` made the merge-base pull in hundreds of `*.spec.ts`. With every task checked it passes; on CI no `feature.json` exists.
+
+## 12. Harden
+
+- Level 1 path (no `apps`/`libs`/`e2e` lines): audits, test-adversary, then the durability read in phase 14 in place of a separate `/simplify` (the code diff is ~60 lines). No mutation run: no Nx project touched, and never local (owner's RAM rule). `npm run lint` clean, `npm run typecheck` 12/12. WebStorm inspections: IDE not running.
+- test-adversary wrote 39 tests, 36 green. Failing: (1) `toString`/`constructor`/`__proto__` accepted as events — `event in TARGET` matched inherited names, a pre-existing defect in the file this change owns → fixed with `Object.hasOwn`; (2, 3) a PR state with `labels` missing or null passes the label checks — the gate's deliberate fail-open (`gh` always returns `labels`; 4 existing eval cases declare PRs without them and expect other refusals) → a spec gap, closed by an Edge Case line, and the two tests now assert the fail-open.
+- Pruned to what the author specs do not prove (Principle I): kept the exhaustive single-event property (every status × event × prior × 32 label sets), the four-event sequence walk, "names no other label", "never adds and removes one label", legacy In progress equivalence, inherited names; at the gate every stage-label subset (draft and ready, the named fix applied and a second pass clean), lookalike labels, fail-open, refusal order. 39 → 14 tests, 363 → 179 lines. Repair lap 1 of 5.
+
+## 14. Review
+
+- spec-reviewer APPROVE: MEDIUM patch — AGENTS.md step 6 still quoted the QA move (fixed; T006 named only step 4); LOW defer — Constitution VII steps 3 and 5 word the label as a swap, an amendment rather than this diff → `deferred.md`.
+- code-reviewer APPROVE: MEDIUM decision — `stage` has no reader → kept (the approved fix asked for it) and given one: §2b logs `labels · PR #<n> · <stage>`; LOW patch — `STAGES` restated the two label sets → derived from them (gate re-blessed 37b4f41d5903 → 1a4d7ef2119d); LOW patch — the skill showed `labels` only JSON-escaped → the decoded command shown once. Repair lap 2 of 5.
+- After the fixes: `npm run test:harness` 513/513; `harness-eval.mjs --check` 63/63; `doctor.mjs` 16 ok; artifact-lint 0/0; diff-audit 0/0.
+
+## 15. Agent context
+
+- AGENTS.md lifecycle steps 4 and 6 changed as part of the requirement (they quoted label moves); no managed-block change.

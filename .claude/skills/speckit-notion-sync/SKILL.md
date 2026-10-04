@@ -157,8 +157,12 @@ stage label and removes every other one, so a repeated, late or catch-up event
 leaves one stage label instead of stacking a second:
 
 ```bash
-gh pr edit <n> <labels>
+gh pr edit <n> <labels>   # decoded from the JSON, e.g.
+gh pr edit 33 --add-label "QA" --remove-label "planning" --remove-label "in development" --remove-label "in review" --remove-label "blocked"
 ```
+
+Log it as `- <date> · labels · PR #<n> · <stage>` (`stage` from the decision;
+`none` when it is null).
 
 At `start`, a branch with no PR opens its draft labelled `planning`
 (`speckit-git-commit`: first commit, push, `gh pr create --draft --label
