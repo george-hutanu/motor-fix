@@ -1,5 +1,13 @@
 {
   "brand": "MotorFix",
+  "chart": {
+    "empty": "Încă nu sunt date",
+    "label": "Perioadă",
+    "retry": "Reîncearcă",
+    "summary": "{title}, {period}. Cea mai mare valoare: {high}, {highLabel}. Cea mai mică: {low}, {lowLabel}.",
+    "table": "Vezi ca tabel",
+    "value": "Valoare"
+  },
   "frame": {
     "area": {
       "admin": "Admin",

@@ -2,6 +2,7 @@ import { Component, inject, PendingTasks, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 
+import { CockpitChartsSample } from './charts-sample';
 import { CockpitGaugesSample } from './gauges-sample';
 import { HlmButton } from './helm/button';
 import { HlmDialogImports } from './helm/dialog';
@@ -32,6 +33,7 @@ import { SAMPLE_GARAGES } from './sample-text';
     HlmToaster,
     Panel,
     TranslatePipe,
+    CockpitChartsSample,
   ],
   selector: 'mf-cockpit-sample-page',
   styles: `
@@ -151,6 +153,8 @@ import { SAMPLE_GARAGES } from './sample-text';
           </hlm-popover-content>
         </hlm-popover>
       </div>
+
+      <mf-cockpit-charts-sample />
 
       <hlm-toaster />
     </main>
