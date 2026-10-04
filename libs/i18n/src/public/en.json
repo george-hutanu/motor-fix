@@ -21,6 +21,7 @@
       "invalid_credentials": "The e-mail or password is not correct.",
       "too_many_attempts": "Too many attempts. Try again in 15 minutes."
     },
+    "reason": "Sign in to continue.",
     "remember": "Keep me signed in",
     "submit": "Sign in",
     "title": "Sign in"

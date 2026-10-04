@@ -27,7 +27,7 @@
       "not_found": "What you were saving is no longer there. Reload the page.",
       "offline": "You are offline. Try again when you are back online.",
       "service_unavailable": "MotorFix is not answering right now. Try again in a few minutes.",
-      "sign_in_required": "Your session has expired. Sign in again to continue.",
+      "sign_in_required": "Sign in to continue.",
       "validation_failed": "Check the marked fields."
     },
     "sending": "Sending…"

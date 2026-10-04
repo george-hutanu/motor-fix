@@ -153,4 +153,94 @@ describe('SignInDialog', () => {
       'SignIn',
     );
   });
+
+  describe('as the gate of an account action', () => {
+    const reason = {
+      data: { reason: true },
+      shape: 'dialog',
+      title: 'public.signIn.title',
+    };
+
+    it('opens the sign-in dialog with the reason and stays on the screen after sign-in', async () => {
+      const { dialog, navigate, open } = setup(null, 'signed-in');
+
+      await expect(dialog.gate()).resolves.toBe(true);
+
+      expect(open).toHaveBeenCalledWith(expect.any(Function), reason);
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('resolves signed in after an account is created in the sign-up dialog', async () => {
+      const { dialog, navigate } = setup(
+        null,
+        { email: 'andrei@example.ro', switchTo: 'sign-up' },
+        'signed-in',
+      );
+
+      await expect(dialog.gate()).resolves.toBe(true);
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('keeps the reason when the person switches to sign-up and back', async () => {
+      const { dialog, open } = setup(
+        null,
+        { email: 'andrei@example.ro', switchTo: 'sign-up' },
+        { email: 'andrei@example.ro', switchTo: 'sign-in' },
+        'cancelled',
+      );
+
+      await dialog.gate();
+
+      expect(open.mock.calls[2]?.[1]).toEqual({
+        data: { email: 'andrei@example.ro', reason: true },
+        shape: 'dialog',
+        title: 'public.signIn.title',
+      });
+    });
+
+    it('resolves not signed in when the dialog is closed', async () => {
+      const { dialog } = setup(null, 'cancelled');
+
+      await expect(dialog.gate()).resolves.toBe(false);
+    });
+
+    it('opens one dialog for calls that ask at the same time', async () => {
+      const { dialog, open } = setup(null, 'signed-in');
+
+      const answers = await Promise.all([dialog.gate(), dialog.gate()]);
+
+      expect(answers).toEqual([true, true]);
+      expect(open).toHaveBeenCalledTimes(1);
+    });
+
+    it('waits on a sign-in dialog already open from "Autentificare", which still opens the dashboard', async () => {
+      const { dialog, navigate, open, session } = setup(null);
+      let answer: (value: Answer) => void = () => undefined;
+      open.mockImplementationOnce(
+        () =>
+          new Promise<Answer>((resolve) => {
+            answer = resolve;
+          }),
+      );
+
+      const started = dialog.start();
+      await new Promise((resolve) => setTimeout(resolve));
+      const gated = dialog.gate();
+      session.current.set(GARAGE);
+      answer('signed-in');
+      await started;
+
+      await expect(gated).resolves.toBe(true);
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledWith('/app/garage');
+    });
+
+    it('opens a new dialog once the previous one has closed', async () => {
+      const { dialog, open } = setup(null, 'cancelled', 'signed-in');
+
+      await expect(dialog.gate()).resolves.toBe(false);
+      await expect(dialog.gate()).resolves.toBe(true);
+      expect(open).toHaveBeenCalledTimes(2);
+    });
+  });
 });

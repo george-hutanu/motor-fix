@@ -27,7 +27,7 @@
       "not_found": "Nu mai găsim ce voiai să salvezi. Reîncarcă pagina.",
       "offline": "Nu ești conectat. Încearcă din nou când revine conexiunea.",
       "service_unavailable": "MotorFix nu răspunde acum. Încearcă din nou în câteva minute.",
-      "sign_in_required": "Sesiunea a expirat. Autentifică‑te din nou ca să continui.",
+      "sign_in_required": "Intră în cont ca să continui.",
       "validation_failed": "Verifică câmpurile marcate."
     },
     "sending": "Se trimite…"
