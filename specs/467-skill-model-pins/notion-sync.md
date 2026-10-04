@@ -9,3 +9,4 @@
 - 2026-10-04 · blocked · ST-467 story · QA → Blocked (CI jobs not started: GitHub billing / spending limit; waiting on PR #30)
 - 2026-10-04 · unblock · ST-467 story · Blocked → QA (PR #30 merged, repo public, CI runs again)
 - 2026-10-04 · labels · PR #33 · tooling, scope: harness, EP-1, QA
+- 2026-10-04 · pr · ST-467 · PR #33 https://github.com/george-hutanu/motor-fix/pull/33 (story PR property already set when the draft opened: unchanged)
