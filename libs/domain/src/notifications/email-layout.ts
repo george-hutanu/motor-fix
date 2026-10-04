@@ -1,17 +1,9 @@
+import { EMAIL_PALETTE as PALETTE } from '@motor-fix/ui-cockpit/email';
+
 // The HTML part every e-mail shares: the light Cockpit palette
 // (libs/ui-cockpit/src/styles/cockpit.css), the wordmark, one amber button
 // and the footer that says why the person gets it. Inline styles only:
 // mail clients drop <style> blocks and CSS variables.
-const PALETTE = {
-  amber: '#ffb000',
-  bg: '#f4f4f1',
-  line: '#d3d5d8',
-  onAmber: '#15171a',
-  panel: '#ffffff',
-  text: '#15171a',
-  textSecondary: '#50545b',
-};
-
 const FONT = 'font-family:Helvetica,Arial,sans-serif';
 
 const escapeHtml = (value: string) =>

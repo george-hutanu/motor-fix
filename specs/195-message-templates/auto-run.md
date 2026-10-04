@@ -74,3 +74,7 @@
 ## 13. Refresh: story, feature and epic unchanged since 2026-10-03; 0 comments (re-read by spec-reviewer 2026-10-05).
 ## 15. Agent context: AGENTS.md unchanged (no new command, lib or rule); CLAUDE.local.md is the owner's local file, not in this worktree.
 ## 16. Retro evidence gathered (`retro-evidence.mjs --since 66606f1`, Jev off): 3 commits, 0 deferred; no verdict written. Trace tags added: 11/11 FRs covered; the matrix also lists `FR-018`, which it reads from the Spec Delta's `194-FR-018` and is not an FR of this feature.
+
+## Hand-off
+- PR #67 body filled (pr-body-check passes), ready; Notion story + timeline Implementing → QA, label QA.
+- CI lap 1: Unit tests red — `ui-cockpit/colour-literals.spec.ts` refuses hex colours outside the theme library, and `email-layout.ts` held the palette. Fix: `EMAIL_PALETTE` moved to `libs/ui-cockpit/src/email.ts` (path `@motor-fix/ui-cockpit/email`, no Angular), `email.spec.ts` keeps it equal to the light theme in cockpit.css. Worker bundle: no Angular.
