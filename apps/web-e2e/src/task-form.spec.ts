@@ -47,7 +47,8 @@ async function openForm(page: Page, language: Language = 'ro') {
   await expect(opener).toBeVisible();
   await page.waitForLoadState('networkidle');
   await opener.click();
-  await expect(task(page, language)).toBeVisible();
+  // The panel: on a phone the dialog container around the sheet has no box.
+  await expect(task(page, language).locator('mf-overlay-panel')).toBeVisible();
 }
 
 const task = (page: Page, language: Language = 'ro') =>

@@ -213,40 +213,6 @@ test.describe('the drawer', () => {
   }
 });
 
-test.describe('on a phone', () => {
-  for (const width of [320, 390]) {
-    test(`at ${width} px the dialog keeps a 16 px gutter, drawers fill the width, nothing scrolls sideways`, async ({
-      page,
-    }) => {
-      await page.setViewportSize({ height: 700, width });
-      await openCockpit(page);
-
-      for (const [key, expected] of [
-        ['cockpit.overlay.openDialog', width - 32],
-        ['cockpit.overlay.openDrawer', width],
-        ['cockpit.overlay.openWide', width],
-      ] as const) {
-        await opener(page, key).scrollIntoViewIfNeeded();
-        await open(page, key);
-        const box = await task(page).locator('mf-overlay-panel').boundingBox();
-        expect(Math.round(box?.width ?? 0)).toBe(expected);
-        expect(
-          await page.evaluate(
-            () => document.documentElement.scrollWidth <= window.innerWidth,
-          ),
-        ).toBe(true);
-        const close = await task(page)
-          .getByRole('button', { exact: true, name: 'Închide' })
-          .boundingBox();
-        expect(close?.width).toBeGreaterThanOrEqual(44);
-        expect(close?.height).toBeGreaterThanOrEqual(44);
-        await page.keyboard.press('Escape');
-        await expect(task(page)).toHaveCount(0);
-      }
-    });
-  }
-});
-
 test.describe('changed fields', () => {
   test('ask before closing; keep editing keeps the text, discard closes', async ({
     page,

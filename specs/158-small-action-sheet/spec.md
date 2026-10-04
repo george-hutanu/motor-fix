@@ -92,7 +92,13 @@ Everything a task does in a dialog it does in a sheet: focus stays inside and re
 
 ### Session 2026-10-04
 
-- (filled by clarify)
+- Q: Does an open task change shape when the width crosses 768 px (ST-286 scenario 7 switches page layouts live)? → A: No. The shape is chosen when the task opens and kept until it closes; turning a phone sideways (390 × 844 → 844 × 390 crosses 768) keeps the sheet, as the Build brief's States ask. ST-286's live switch is about page layouts; it is deliberately not applied to an open overlay. (Build brief, spec-challenger 1)
+- Q: Where does the 768 px decision come from? → A: The same `(min-width: 768px)` media query as the kit's phone rules and `Layout`, matched in `Overlays.open()`. `libs/overlays` cannot import `Layout` from `libs/ui-cockpit` (the architecture is `ui-cockpit → overlays`, and the catalogue imports overlays), so the panel's existing `COMPUTER` query and the new phone query share one constant in overlays; the e2e pins 767 px (sheet) and 768 px (dialog), so a drift from the kit fails. (autonomous default; specs/157-dialog-drawer/plan.md:62, spec-challenger 3)
+- Q: How does the sheet stay above the keyboard, and how is it tested? → A: The panel listens to `window.visualViewport` `resize` and `scroll` while it is a sheet, sets its bottom offset to the hidden part below the visual viewport and its height cap to 92 % of the visual viewport's height, and scrolls the focused element into view (`block: 'nearest'`) after each change. Tested in Jest with a faked `visualViewport` and in Playwright by replacing `visualViewport` in the page; a real keyboard is checked by the epic's real-phones story (EP-1 Slice 9, https://app.notion.com/p/3ee607bff0d281788c6fdb6d60963d80). (spec-challenger 2)
+- Q: Which height is the drag threshold measured against, and where is the sheet when a long drag asks the discard question? → A: The sheet's height when the drag starts; on a long release the sheet returns to rest first and then closes as X does, so a changed task shows its question at rest. Distance only, no flick velocity. (spec-challenger 4)
+- Q: Does the sheet reach the screen's bottom, or stop above the home bar? → A: It reaches the bottom edge; its body's bottom padding is at least the bottom safe area, so the main button, last in the body, ends above the home bar once the body is scrolled to its end; the 92 % cap is of the whole visible height. (design.md, spec-challenger 5)
+- Q: Under reduced motion, does the sheet still follow the finger? → A: Yes. Following the pointer is direct manipulation; only the pop, the spring back and transitions go. The spring uses ST-53's tokens (`--mf-motion-ease`, `--mf-motion-pop`), no new values. (spec-challenger 6, 7)
+- Q: Stacked sheets? → A: ST-157's behaviour unchanged: one backdrop per task, only the top one closes; no sheet-specific stacking code. (spec-challenger 8)
 
 ## Requirements *(mandatory)*
 
@@ -101,12 +107,14 @@ Everything a task does in a dialog it does in a sheet: focus stays inside and re
 - **FR-001**: When the window is narrower than 768 px as a task opens, the overlay service MUST show it as a bottom sheet whatever its shape (`dialog`, `drawer`, `drawer-wide`); at 768 px and wider it MUST show the asked-for shape. The callers' options do not change; the shape is chosen when the task opens and kept until it closes.
 - **FR-002**: The sheet MUST be anchored to the bottom edge, the full width of the window, on the kit's sheet surface with its bottom edge (`data-side="bottom"`: top border, `--mf-radius-panel` on the top corners), at most 92 % of the visible height, with the header (title, X) fixed and the body scrolling inside.
 - **FR-003**: The sheet MUST have a grip at its top: a 36 × 4 px bar in the strong line colour, centred in a row at least 44 px tall that is the drag handle; the grip is hidden from assistive technology (X is the named way to close).
-- **FR-004**: Dragging the grip down MUST move the sheet with the pointer (never above its resting place); on release past one third of the sheet's height it MUST close as X does (the discard question first when a field changed, else `cancelled`); on release at one third or less, or when the pointer is cancelled, it MUST return to rest.
-- **FR-005**: While the on-screen keyboard (or anything that shrinks the visual viewport) hides the bottom of the window, the sheet's bottom MUST sit at the bottom of the visible area and its height cap MUST be 92 % of the visible height; the focused field inside the sheet MUST be scrolled into view; when the visible area grows back the sheet returns to the bottom edge.
+- **FR-004**: Dragging the grip down MUST move the sheet with the pointer (never above its resting place); on release past one third of the sheet's height at the drag's start it MUST return to rest and close as X does (the discard question first when a field changed, else `cancelled`); on release at one third or less, or when the pointer is cancelled, it MUST return to rest.
+- **FR-005**: While the on-screen keyboard (or anything that shrinks the visual viewport) hides the bottom of the window, the sheet's bottom MUST sit at the bottom of the visible area (`visualViewport`) and its height cap MUST be 92 % of the visible height; the focused field inside the sheet MUST be scrolled into view after each change; when the visible area grows back the sheet returns to the bottom edge.
 - **FR-006**: The sheet's body MUST keep its last content above the bottom safe area, its header and body inside the side safe areas, and MUST NOT add the top safe area to its header.
 - **FR-007**: The sheet MUST keep ST-157's and ST-159's behaviour: the mask and the scroll lock, closing by X, Escape and outside with `cancelled` and the scroll position kept, the focus on the sheet itself when it opens (no field focused, so no keyboard), the focus kept inside and returned to the opener, the discard question, stacking, the loader skeleton, and `taskSave`'s messages, busy button and confirmation.
-- **FR-008**: The sheet MUST open with ST-53's `mf-pop` from its bottom edge and return from a short drag with a short spring; under reduced motion nothing moves (no pop, no spring, no transition).
+- **FR-008**: The sheet MUST open with ST-53's `mf-pop` from its bottom edge and return from a short drag with a spring on ST-53's tokens; under reduced motion there is no animation (no pop, no spring, no transition), while a drag still follows the pointer.
 - **FR-009**: The sheet MUST fit 320 px without sideways scroll, keep the 44 × 44 px close button and 12 px minimum text, and pass axe in light and dark, Romanian and English. It adds no text of its own.
+- **FR-010**: On a window at least 768 px wide when the task opens, the `dialog` shape MUST be centred, `min(480px, 100% − 32px)` wide and at most `100% − 48px` tall, on the kit's dialog surface; its body MUST scroll inside the panel when the content is taller. Below 768 px it is the sheet of FR-001. (Replaces 157-FR-002, which applied at every width.)
+- **FR-011**: On a window at least 768 px wide when the task opens, the `drawer` and `drawer-wide` shapes MUST be anchored to the right edge at full height, `min(480px, 100%)` and `min(720px, 100%)` wide, on the kit's right-hand sheet surface; the header stays while the body scrolls. Below 768 px they are the sheet of FR-001. (Replaces 157-FR-003.)
 
 ### Key Entities
 
@@ -119,7 +127,7 @@ Everything a task does in a dialog it does in a sheet: focus stays inside and re
 ### Capability: `overlays`
 
 - **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009
-- **Modifies**: 157-FR-002 and 157-FR-003 — the dialog and drawer shapes apply on a window at least 768 px wide; below it every shape is the bottom sheet of 158-FR-001. (157's phone e2e "the dialog keeps a 16 px gutter, drawers fill the width" is replaced by the sheet's.)
+- **Modifies**: `157-FR-002` → `FR-010`, `157-FR-003` → `FR-011`
 - **Removes**: none
 
 ### Capability: `cockpit-theme`
@@ -139,4 +147,9 @@ Everything a task does in a dialog it does in a sheet: focus stays inside and re
 
 ## Assumptions
 
-- (filled by clarify)
+- The sign-in dialog (ST-82, PR #45, open) opens through `Overlays`, so it becomes a sheet on a phone with no change of its own; this story shows the sheet with the catalogue's sample tasks. (Build brief, PR #45 file list)
+- The Build brief's "PrimeNG Drawer in the bottom position" is superseded by Architecture decisions A1 (2026-10-04): the kit's Spartan sheet surface on the Angular CDK. (context.md, constitution III)
+- Grip 36 × 4 px in `--mf-line-strong` (the mock's `#4A4E55`) in a 44 px row; radius `--mf-radius-panel` on the top corners (mock 24 px). (design.md, autonomous default)
+- The grip is not keyboard-operable and is hidden from assistive technology; X, Escape and outside are the accessible ways to close. (autonomous default; ST-157 FR-009)
+- Back closing a task is not in this story (ST-157 left it not designed). (design.md)
+- A real on-screen keyboard is verified on real iOS and Android phones by the epic's last story (EP-1 Slice 9); here it is simulated through `visualViewport`. (autonomous default, epic Slice 9)

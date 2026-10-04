@@ -244,6 +244,23 @@ describe('motion declarations across the kit', () => {
     expect(css).toMatch(
       /data-side="left"\]\s*{\s*transform-origin:\s*left center/,
     );
+    expect(css).toMatch(
+      /data-side="bottom"\]\s*{\s*transform-origin:\s*center bottom/,
+    );
+  });
+
+  it('lays a bottom sheet on the bottom edge, full width, rounded and bordered on top only', () => {
+    const at = css.indexOf('.spartan-sheet-content[data-side="bottom"] {');
+    const bottom = css.slice(at, css.indexOf('}', at));
+
+    expect(at).toBeGreaterThan(-1);
+    expect(bottom).toMatch(/inset-block:\s*auto 0;/);
+    expect(bottom).toMatch(/inset-inline:\s*0;/);
+    expect(bottom).toMatch(/width:\s*auto;/);
+    expect(bottom).toMatch(/border-width:\s*1px 0 0;/);
+    expect(bottom).toMatch(
+      /border-radius:\s*var\(--mf-radius-panel\) var\(--mf-radius-panel\) 0 0;/,
+    );
   });
 });
 
