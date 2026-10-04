@@ -247,8 +247,12 @@ async function openAt(page: Page, width: number, language: 'ro' | 'en') {
   } else {
     await openFromHeader(page, TITLE[language]);
   }
-  await expect(dialog(page, TITLE[language])).toBeVisible();
+  await expect(panel(page, language)).toBeVisible();
 }
+
+// The panel: on a phone the dialog container around the sheet has no box.
+const panel = (page: Page, language: 'ro' | 'en') =>
+  dialog(page, TITLE[language]).locator('mf-overlay-panel');
 
 async function axeViolations(page: Page) {
   await page.evaluate(AXE);
@@ -278,15 +282,32 @@ test.describe('the dialog on every screen size', () => {
 
       await openAt(page, width, language);
 
-      const box = await dialog(page, TITLE[language]).boundingBox();
+      const box = await panel(page, language).boundingBox();
       expect(box?.x).toBeGreaterThanOrEqual(0);
       expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width);
+      if (width < 768) {
+        // A phone: the sheet rises from the bottom, no taller than 92 %.
+        await expect(panel(page, language)).toHaveAttribute(
+          'data-side',
+          'bottom',
+        );
+        expect(box?.height ?? 0).toBeLessThanOrEqual(height * 0.92 + 0.5);
+      }
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
       expect(await axeViolations(page)).toEqual([]);
+      if (width < 768) {
+        // A tap above the sheet closes it; the page stays where it was.
+        const address = page.url();
+        const before = await page.evaluate(() => window.scrollY);
+        await page.mouse.click(width / 2, 10);
+        await expect(dialog(page, TITLE[language])).toHaveCount(0);
+        expect(page.url()).toBe(address);
+        expect(await page.evaluate(() => window.scrollY)).toBe(before);
+      }
     });
   }
 

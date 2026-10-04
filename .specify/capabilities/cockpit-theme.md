@@ -3,6 +3,7 @@ capability: cockpit-theme
 updated: 2026-10-04
 features:
   - 050-cockpit-theme
+  - 158-small-action-sheet
 ---
 
 # Capability: Cockpit theme

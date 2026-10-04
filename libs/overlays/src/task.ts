@@ -27,6 +27,8 @@ export interface OverlayTask<D = undefined, R = never> {
 export interface PanelContext extends OverlayOptions<unknown> {
   source: OverlaySource;
   titleId: string;
+  // A phone: whatever its shape, the task is a bottom sheet until it closes.
+  sheet: boolean;
 }
 
 export const OVERLAY_TASK = new InjectionToken<OverlayTask<unknown, unknown>>(
