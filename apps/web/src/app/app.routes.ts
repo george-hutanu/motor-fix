@@ -4,9 +4,9 @@ import { languageAddress, languageRoot, toLanguageAddress } from './addresses';
 import { areaGuard } from './dashboard/area.guard';
 import { Home } from './home/home';
 import { NotFound } from './not-found/not-found';
+import { signedInToDashboard } from './public/account.guard';
 import { PublicFrame } from './public/frame';
 import { Placeholder } from './public/placeholder';
-import { toAccount } from './public/tab-bar';
 
 const frame = () => import('./dashboard/frame').then((m) => m.Frame);
 
@@ -42,7 +42,7 @@ export const routes: Routes = [
       placeholder('mechanics/:mechanic', 'public.placeholder.mechanics'),
       {
         ...placeholder('account', 'public.placeholder.account'),
-        canActivate: [toAccount],
+        canActivate: [signedInToDashboard],
       },
     ],
     component: PublicFrame,

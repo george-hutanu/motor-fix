@@ -62,14 +62,15 @@ apps/web/src/app/
 ├── addresses.ts             # languageAddress also enters the `public` text area
 └── public/
     ├── frame.ts             # PublicFrame: router outlet + tab bar, full-height column
-    ├── tab-bar.ts           # mf-public-tab-bar (inline styles, as the dashboard frame), the active-tab rule, LastBrand, toAccount
+    ├── tab-bar.ts           # mf-public-tab-bar (inline styles, as the dashboard frame), the active-tab rule, LastBrand
     ├── tab-bar.spec.ts
+    ├── account.guard.ts     # signedInToDashboard: a signed-in person goes to their dashboard (browser only)
     └── placeholder.ts       # one heading and one line per section, from route data
 libs/i18n/src/public/{ro,en}.json   # tabs.* and placeholder.*
 apps/web-e2e/src/tab-bar.spec.ts
 ```
 
-**Structure Decision**: a `public/` folder beside `dashboard/`, mirroring how the dashboards keep their frame. The guard for the account placeholder lives with the bar (`tab-bar.ts`) because the account tab is its only reason to exist; it moves with the screen ST-82 builds.
+**Structure Decision**: a `public/` folder beside `dashboard/`, mirroring how the dashboards keep their frame. The account guard sits beside the placeholder it guards (`public/account.guard.ts`) and is skipped on the server, which has no session.
 
 ## Design notes
 
@@ -79,7 +80,7 @@ apps/web-e2e/src/tab-bar.spec.ts
 - Service-uri: `/<lang>/garages?brand=<b>` when `LastBrand` holds a brand (set
   on `NavigationEnd` of a `garages` results URL with a non-empty `brand`),
   else `/<lang>/garages`.
-- Cont: `/<lang>/account`; its `canActivate` guard awaits `Session.load()` and
+- Cont: `/<lang>/account`; its `signedInToDashboard` guard (browser only) awaits `Session.load()` and
   redirects to `me.landing` when signed in.
 - Typing: the bar listens to `focusin`/`focusout` on the document and hides
   itself (host class) while the focused element takes text.

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { signal } from '@angular/core';
+import { PLATFORM_ID, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -29,7 +29,7 @@ const DRIVER = {
 
 let signedIn: MeDto | null;
 
-function setUp() {
+function setUp(platform = 'browser') {
   signedIn = null;
   const current = signal<MeDto | null>(null);
   const load = jest.fn(async () => {
@@ -42,18 +42,19 @@ function setUp() {
       provideLanguageAddresses(),
       { provide: SITE_ORIGIN, useValue: 'https://motorfix.ro' },
       { provide: Session, useValue: { current, load } },
+      { provide: PLATFORM_ID, useValue: platform },
     ],
   });
   return load;
 }
 
-let harness: RouterTestingHarness;
+let harness: RouterTestingHarness | undefined;
 
 async function settle() {
   for (let i = 0; i < 4; i++) {
     TestBed.tick();
     await new Promise((resolve) => setTimeout(resolve));
-    await harness.fixture.whenStable();
+    await harness?.fixture.whenStable();
   }
 }
 
@@ -64,7 +65,7 @@ async function open(url: string) {
 }
 
 const url = () => TestBed.inject(Router).url;
-const page = () => harness.fixture.nativeElement as HTMLElement;
+const page = () => harness?.fixture.nativeElement as HTMLElement;
 const bar = () => page().querySelector<HTMLElement>('mf-public-tab-bar');
 const nav = () => bar()?.querySelector('nav');
 const tabs = () => [...(bar()?.querySelectorAll('a') ?? [])];
@@ -91,11 +92,24 @@ const styles = () =>
 
 beforeEach(() => {
   localStorage.clear();
-  harness = undefined as unknown as RouterTestingHarness;
+  harness = undefined;
+});
+
+describe('the account screen on the server', () => {
+  it('renders the placeholder without asking for a session it cannot have', async () => {
+    const load = setUp('server');
+    signedIn = DRIVER;
+
+    await open('/ro/account');
+
+    expect(load).not.toHaveBeenCalled();
+    expect(url()).toBe('/ro/account');
+    expect(page().querySelector('h1')?.textContent?.trim()).toBe('Cont');
+  });
 });
 
 describe('the public tab bar', () => {
-  beforeEach(setUp);
+  beforeEach(() => setUp());
 
   it('shows Caută, Service-uri and Cont on Home, Caută the current page', async () => {
     await open('/ro');
@@ -160,7 +174,7 @@ describe('the public tab bar', () => {
     expect(href(GARAGES)).toBe('/ro/garages');
 
     await open('/ro/garages?brand=bmw');
-    await open('/ro/garages/atelier-dinamo?brand=bmw');
+    await open('/ro/garages/atelier-dinamo?brand=audi');
     await open('/ro/garages');
     await open('/ro/garages?brand=');
     await open('/ro');

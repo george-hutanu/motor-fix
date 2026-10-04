@@ -13,7 +13,7 @@ Paths are `(new)` unless they exist today: `apps/web/src/app/app.routes.ts`, `ap
 - [X] T002 [US1] Test: same file — `/ro/garages`, `/ro/garages/atelier-dinamo` and `/ro/mechanics/ion-popescu` make "Service-uri" the active tab, `/ro/account` makes "Cont"; each placeholder shows its heading and the "comes later" line; `/ro/no-such-page` and `/app/driver` (signed in) have no public bar (FR-003, FR-011)
 - [X] T003 [US1] Test: same file — "Caută" leads to `/ro`; "Service-uri" leads to `/ro/garages` until `/ro/garages?brand=bmw` was opened, then to `/ro/garages?brand=bmw` from any public screen, also after leaving the public screens and coming back; a later `/ro/garages` with no or an empty `brand` keeps `bmw` (FR-004, FR-005)
 - [X] T004 [US1] Test: same file — "Cont" leads to `/ro/account`; opening it signed out shows the account placeholder; signed in (session answers an account with landing `/app/driver`) it ends on `/app/driver` (FR-006)
-- [X] T005 [US1] `apps/web/src/app/public/tab-bar.ts`, `frame.ts`, `placeholder.ts`; `app.routes.ts` — the `:lang` route gets `PublicFrame` and the `garages`, `garages/:garage`, `mechanics/:mechanic`, `account` children; `addresses.ts` — `languageAddress` enters the `public` text area; `libs/i18n/src/public/{ro,en}.json` — `tabs.*`, `placeholder.*` (FR-001..FR-006, FR-011, FR-012)
+- [X] T005 [US1] `apps/web/src/app/public/tab-bar.ts`, `frame.ts`, `placeholder.ts`; `app.routes.ts` — the `:lang` route gets `PublicFrame` and the `garages`, `garages/:garage`, `mechanics/:mechanic`, `account` children; `addresses.ts` — `languageAddress` enters the `public` text area; `libs/i18n/src/public/ro.json` and `libs/i18n/src/public/en.json` — `tabs.*`, `placeholder.*` (FR-001..FR-006, FR-011, FR-012)
 
 ## Phase 2: US2 The bar fits every phone and every person (P1)
 
@@ -31,7 +31,12 @@ Paths are `(new)` unless they exist today: `apps/web/src/app/app.routes.ts`, `ap
 - [X] T010 [US3] Test: `apps/web-e2e/src/tab-bar.spec.ts` — at 375 px tapping each tab from `/ro` lands on its address; at 768 px and 1024 px the bar is not visible on `/ro` and `/ro/garages`; `/en` shows the English labels (FR-004..FR-006, FR-008, FR-012, SC-001, SC-003)
 - [X] T011 [US3] Language and typing handling in `tab-bar.ts` (FR-008, FR-009, FR-012)
 
-## Phase 4: Polish
+## Phase 4: Review follow-up
+
+- [X] T013 Test: `tab-bar.spec.ts` — on the server platform `/ro/account` renders the placeholder and never asks the session; the brand test opens a garage address with a different brand; `public/account.guard.ts` `signedInToDashboard` skips the server; the bar parses the address once per navigation and binds a computed query (FR-005, FR-006)
+- [X] T014 Test: `apps/web-e2e/src/tab-bar.spec.ts` — an editable element hides the bar on a phone; the server render of `/` carries no bar (FR-009)
+
+## Phase 5: Polish
 
 - [X] T012 Run `npm run typecheck`, `npm run lint`, `npm run test` and the web-e2e suite; record the results in auto-run.md (SC-004 through the i18n check)
 
@@ -43,11 +48,11 @@ Paths are `(new)` unless they exist today: `apps/web/src/app/app.routes.ts`, `ap
 | FR-002 | T001, T007 |
 | FR-003 | T001, T002, T007 |
 | FR-004 | T003, T010 |
-| FR-005 | T003 |
-| FR-006 | T004, T010 |
+| FR-005 | T003, T013 |
+| FR-006 | T004, T010, T013 |
 | FR-007 | T006, T007 |
 | FR-008 | T009, T010 |
-| FR-009 | T009 |
+| FR-009 | T009, T014 |
 | FR-010 | T006, T007 |
 | FR-011 | T002 |
 | FR-012 | T009, T010 |

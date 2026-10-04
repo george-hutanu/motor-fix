@@ -1,16 +1,14 @@
 import { Component, computed, Injectable, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
-  type CanActivateFn,
   NavigationEnd,
   PRIMARY_OUTLET,
   Router,
   RouterLink,
+  type UrlTree,
 } from '@angular/router';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { filter } from 'rxjs';
-
-import { Session } from '../dashboard/session';
 
 type Tab = 'search' | 'garages' | 'account';
 
@@ -47,11 +45,8 @@ class LastBrand {
   readonly value = signal<string | null>(null);
 }
 
-export const toAccount: CanActivateFn = async () => {
-  const router = inject(Router);
-  const me = await inject(Session).load();
-  return me ? router.parseUrl(me.landing) : true;
-};
+const segmentsOf = (tree: UrlTree) =>
+  tree.root.children[PRIMARY_OUTLET]?.segments.map((s) => s.path) ?? [];
 
 @Component({
   host: {
@@ -104,7 +99,7 @@ export const toAccount: CanActivateFn = async () => {
         <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4.5 4.5" /></svg>
         <span>{{ 'public.tabs.search' | t }}</span>
       </a>
-      <a [routerLink]="['/', language(), 'garages']" [queryParams]="brand() ? { brand: brand() } : {}" [attr.aria-current]="active() === 'garages' ? 'page' : null">
+      <a [routerLink]="['/', language(), 'garages']" [queryParams]="brandQuery()" [attr.aria-current]="active() === 'garages' ? 'page' : null">
         <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s6.5-6.1 6.5-11A6.5 6.5 0 0 0 5.5 10c0 4.9 6.5 11 6.5 11z" /><circle cx="12" cy="10" r="2.3" /></svg>
         <span>{{ 'public.tabs.garages' | t }}</span>
       </a>
@@ -117,16 +112,18 @@ export const toAccount: CanActivateFn = async () => {
 })
 export class PublicTabBar {
   private readonly router = inject(Router);
-  private readonly url = signal(this.router.url);
+  private readonly segments = signal(
+    segmentsOf(this.router.parseUrl(this.router.url)),
+  );
   protected readonly language = inject(I18n).language;
   protected readonly brand = inject(LastBrand).value;
+  protected readonly brandQuery = computed(() => {
+    const brand = this.brand();
+    return brand ? { brand } : {};
+  });
   protected readonly typing = signal(false);
   protected readonly takesText = takesText;
-  protected readonly active = computed(() => {
-    const tree = this.router.parseUrl(this.url());
-    const segments = tree.root.children[PRIMARY_OUTLET]?.segments ?? [];
-    return TAB_OF[segments[1]?.path ?? ''];
-  });
+  protected readonly active = computed(() => TAB_OF[this.segments()[1] ?? '']);
 
   constructor() {
     this.router.events
@@ -135,11 +132,11 @@ export class PublicTabBar {
         takeUntilDestroyed(),
       )
       .subscribe(({ urlAfterRedirects }) => {
-        this.url.set(urlAfterRedirects);
         const tree = this.router.parseUrl(urlAfterRedirects);
-        const segments = tree.root.children[PRIMARY_OUTLET]?.segments ?? [];
+        const segments = segmentsOf(tree);
+        this.segments.set(segments);
         const brand = tree.queryParams['brand'];
-        if (segments.length === 2 && segments[1].path === 'garages' && brand)
+        if (segments.length === 2 && segments[1] === 'garages' && brand)
           this.brand.set(String(brand));
       });
   }

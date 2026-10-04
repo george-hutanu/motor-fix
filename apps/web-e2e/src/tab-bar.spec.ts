@@ -107,6 +107,29 @@ test.describe('the public tab bar on a 375 px phone', () => {
     await page.locator('#field').blur();
     await expect(bar(page)).toBeVisible();
   });
+
+  test('hides while an editable element has focus', async ({ page }) => {
+    await open(page, '/ro');
+    await page.evaluate(() => {
+      const editor = document.createElement('div');
+      editor.id = 'editor';
+      editor.contentEditable = 'true';
+      editor.textContent = 'notă';
+      document.querySelector('mf-home')?.append(editor);
+    });
+
+    await page.locator('#editor').focus();
+    await expect(bar(page)).toBeHidden();
+    await page.locator('#editor').blur();
+    await expect(bar(page)).toBeVisible();
+  });
+});
+
+test('the server render of / carries no tab bar', async ({ request }) => {
+  const html = await (await request.get('/')).text();
+
+  expect(html).toContain('<mf-home');
+  expect(html).not.toContain('mf-public-tab-bar');
 });
 
 test.describe('the public tab bar at 320 px', () => {

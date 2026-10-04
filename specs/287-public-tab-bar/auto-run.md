@@ -45,4 +45,19 @@
 - Notion implement event: story and timeline row → Implementing; PR #37 label planning → in development.
 - `public/{tab-bar,frame,placeholder}.ts`, the `:lang` route's frame and four placeholder children, `languageAddress` enters `public`, `public/{ro,en}.json`.
 - jest-preset-angular drops component styles, so the style test reads them from `tab-bar.ts`, as `cockpit.css.spec.ts` reads `cockpit.css`.
-- Green: jest public + addresses → "Tests: 60 passed"; Playwright against the production build on :4287 (`tab-bar`, `phone`, `addresses`, `language`) → "45 passed".
+- Green: jest `public/tab-bar.spec.ts` + `addresses.spec.ts` → "Tests: 35 passed" (an earlier "60" counted the adversary address specs too); Playwright against the production build on :4287 (`tab-bar`, `phone`, `addresses`, `language`) → "45 passed".
+- 2026-10-04: merged origin/main 8e4773d (ST-18 #36, ST-53 #31) through the hook as 5d5e9da; Romanian "Service-uri" now uses U+2011 (ST-18's hyphen check).
+
+## 11. Converge
+- Every FR has code and a test; nothing appended.
+
+## 12. Harden
+- artifact-lint: 0 errors after spelling out the T005 paths. diff-audit: the feature's own files have only the two `untested-new-file` warnings (`frame.ts`, `placeholder.ts`, both exercised through the routes in `tab-bar.spec.ts`); its errors are all in ST-18's merged `libs/i18n` files (import-extension), not this change.
+- test-adversary: `tab-bar.adversary.spec.ts`, 89 tests, 1 failure (contenteditable under jsdom). Production stays on `isContentEditable`; the jsdom test defines the property, and a Playwright test covers the real browser.
+- Mutation tests: not run locally (AGENTS.md: nightly CI only).
+
+## 14. Review
+- spec-reviewer: APPROVE; 3 LOW, all fixed (one URL parse, artifact edits committed, logged Jest count corrected to 35).
+- code-reviewer: 1 HIGH (the account guard called `/me` during SSR), 1 MEDIUM (the brand test could not fail), 3 LOW (double parse, literal queryParams, guard name/place, double cast). All fixed, tests first: the server test went red ("1 failed, 108 passed"), then green ("188 passed" across apps/web).
+- E2E on the rebuilt production build: tab-bar "16 passed" (contenteditable and server `/` checks added).
+- CI on 5d5e9da: every check passed.
