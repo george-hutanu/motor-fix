@@ -1,0 +1,14 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "ui-cockpit",
+  "prefix": "mf",
+  "projectType": "library",
+  "sourceRoot": "libs/ui-cockpit/src",
+  "tags": [],
+  "targets": {
+    "typecheck": {
+      "cache": true,
+      "command": "ngc --noEmit -p libs/ui-cockpit/tsconfig.lib.json && tsc --noEmit -p libs/ui-cockpit/tsconfig.spec.json"
+    }
+  }
+}

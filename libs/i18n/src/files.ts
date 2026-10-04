@@ -18,6 +18,10 @@ export const FILES: Record<Area, Loaders> = {
     en: () => import('./admin/en.json').then((m) => m.default),
     ro: () => import('./admin/ro.json').then((m) => m.default),
   },
+  cockpit: {
+    en: () => import('./cockpit/en.json').then((m) => m.default),
+    ro: () => import('./cockpit/ro.json').then((m) => m.default),
+  },
   driver: {
     en: () => import('./driver/en.json').then((m) => m.default),
     ro: () => import('./driver/ro.json').then((m) => m.default),

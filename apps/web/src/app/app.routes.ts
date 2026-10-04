@@ -11,5 +11,10 @@ export const routes: Routes = [
   { canMatch: [areaGuard('driver')], loadComponent: frame, path: 'app/driver' },
   { canMatch: [areaGuard('garage')], loadComponent: frame, path: 'app/garage' },
   { canMatch: [areaGuard('admin')], loadComponent: frame, path: 'app/admin' },
+  {
+    loadComponent: () =>
+      import('@motor-fix/ui-cockpit/sample').then((m) => m.CockpitSamplePage),
+    path: 'cockpit',
+  },
   { path: '**', redirectTo: '' },
 ];
