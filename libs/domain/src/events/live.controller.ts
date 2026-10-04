@@ -13,7 +13,6 @@ import {
   Post,
   Req,
   Res,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiAcceptedResponse,
@@ -27,7 +26,6 @@ import type { Request, Response } from 'express';
 import { LiveHub } from './live.hub';
 import { verifyAccessToken } from '../auth/access-token';
 import {
-  ActorGuard,
   AUTH_OPTIONS,
   type AuthOptions,
   CurrentActor,
@@ -40,7 +38,6 @@ import type { PrismaClient } from '../generated/prisma/client';
 @ApiTags('live')
 @ApiBearerAuth()
 @Controller()
-@UseGuards(ActorGuard)
 export class LiveController {
   constructor(
     private readonly hub: LiveHub,

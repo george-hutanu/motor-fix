@@ -1,0 +1,16 @@
+import { EMAIL_CHECK, PASSWORD_RESET } from './account-email';
+import { GENERIC, GENERIC_GROUPED } from './generic';
+import { QUOTE_RECEIVED_GROUPED } from './quote-received';
+import { TEST_MESSAGE } from './test-message';
+import type { Registry } from '../templates';
+
+// Keyed by notification type, or `<type>.<variant>`; GENERIC fills in for a
+// type with no e-mail or bell text.
+export const TEMPLATES: Registry = {
+  'ACCOUNT_EMAIL.email_check': EMAIL_CHECK,
+  'ACCOUNT_EMAIL.password_reset': PASSWORD_RESET,
+  GENERIC,
+  'GENERIC.grouped': GENERIC_GROUPED,
+  'QUOTE_RECEIVED.grouped': QUOTE_RECEIVED_GROUPED,
+  TEST_MESSAGE,
+};

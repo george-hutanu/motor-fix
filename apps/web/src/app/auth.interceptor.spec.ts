@@ -7,15 +7,21 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
+import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 
 import { authInterceptor } from './auth.interceptor';
 import { Session } from './dashboard/session';
+import { SignInDialog } from './sign-in/sign-in-dialog';
 
 let controller: HttpTestingController | undefined;
 
-function setup(token: string | null, renewsTo: string | null = 'fresh') {
+function setup(
+  token: string | null,
+  renewsTo: string | null = 'fresh',
+  { signsIn = true, platform = 'browser' } = {},
+) {
   let current = token;
   const session = {
     renew: jest.fn(async () => {
@@ -24,16 +30,40 @@ function setup(token: string | null, renewsTo: string | null = 'fresh') {
     }),
     token: () => current,
   };
+  let settle: (signedIn: boolean) => void = () => undefined;
+  const outcome = new Promise<boolean>((resolve) => {
+    settle = (signedIn) => {
+      if (signedIn) current = 'signed-in';
+      resolve(signedIn);
+    };
+  });
+  const gate = jest.fn(() => outcome);
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([authInterceptor])),
       provideHttpClientTesting(),
       { provide: Session, useValue: session },
+      { provide: SignInDialog, useValue: { gate } },
+      { provide: PLATFORM_ID, useValue: platform },
     ],
   });
   controller = TestBed.inject(HttpTestingController);
-  return { http: TestBed.inject(HttpClient), server: controller, session };
+  return {
+    close: () => settle(false),
+    gate,
+    http: TestBed.inject(HttpClient),
+    server: controller,
+    session,
+    signIn: () => settle(signsIn),
+  };
 }
+
+const tick = () => new Promise((resolve) => setTimeout(resolve));
+
+const signInRequired = {
+  body: { code: 'sign_in_required', status: 401 },
+  options: { status: 401, statusText: 'Unauthorized' },
+};
 
 const unauthorized = { status: 401, statusText: 'Unauthorized' };
 
@@ -133,5 +163,147 @@ describe('authInterceptor', () => {
 
     await expect(answer).rejects.toMatchObject({ status: 403 });
     expect(session.renew).not.toHaveBeenCalled();
+  });
+
+  describe('when an account call is refused for want of a session', () => {
+    it('renews from the cookie first, even when the call carried no token', async () => {
+      const { gate, http, server, session } = setup(null);
+
+      const answer = firstValueFrom(http.patch('/api/v1/me', {}));
+      server
+        .expectOne('/api/v1/me')
+        .flush(signInRequired.body, signInRequired.options);
+      await tick();
+      const retry = server.expectOne('/api/v1/me');
+      retry.flush({ saved: true });
+
+      expect(session.renew).toHaveBeenCalledTimes(1);
+      expect(retry.request.headers.get('Authorization')).toBe('Bearer fresh');
+      expect(await answer).toEqual({ saved: true });
+      expect(gate).not.toHaveBeenCalled();
+    });
+
+    it('asks to sign in when the renewal fails, then sends the call again with the new token', async () => {
+      const { gate, http, server, signIn } = setup('expired', null);
+
+      const answer = firstValueFrom(http.patch('/api/v1/me', {}));
+      server
+        .expectOne('/api/v1/me')
+        .flush(signInRequired.body, signInRequired.options);
+      await tick();
+      expect(gate).toHaveBeenCalledTimes(1);
+      server.expectNone('/api/v1/me');
+
+      signIn();
+      await tick();
+      const retry = server.expectOne('/api/v1/me');
+      retry.flush({ saved: true });
+
+      expect(retry.request.headers.get('Authorization')).toBe(
+        'Bearer signed-in',
+      );
+      expect(await answer).toEqual({ saved: true });
+    });
+
+    it('passes the refusal on when the dialog is closed without signing in', async () => {
+      const { close, http, server } = setup(null, null);
+
+      const answer = firstValueFrom(http.patch('/api/v1/me', {}));
+      server
+        .expectOne('/api/v1/me')
+        .flush(signInRequired.body, signInRequired.options);
+      await tick();
+      close();
+
+      await expect(answer).rejects.toMatchObject({
+        error: { code: 'sign_in_required' },
+        status: 401,
+      });
+    });
+
+    it('sends the call again only once: a second refusal reaches the caller', async () => {
+      const { gate, http, server, signIn } = setup(null, null);
+
+      const answer = firstValueFrom(http.patch('/api/v1/me', {}));
+      server
+        .expectOne('/api/v1/me')
+        .flush(signInRequired.body, signInRequired.options);
+      await tick();
+      signIn();
+      await tick();
+      server
+        .expectOne('/api/v1/me')
+        .flush(signInRequired.body, signInRequired.options);
+
+      await expect(answer).rejects.toMatchObject({ status: 401 });
+      expect(gate).toHaveBeenCalledTimes(1);
+    });
+
+    it('lets calls refused together wait on the same sign-in and both go on', async () => {
+      const { http, server, signIn } = setup(null, null);
+
+      const first = firstValueFrom(http.patch('/api/v1/me', { a: 1 }));
+      const second = firstValueFrom(http.get('/api/v1/audit-history'));
+      server
+        .expectOne('/api/v1/me')
+        .flush(signInRequired.body, signInRequired.options);
+      server
+        .expectOne('/api/v1/audit-history')
+        .flush(signInRequired.body, signInRequired.options);
+      await tick();
+      signIn();
+      await tick();
+      server.expectOne('/api/v1/me').flush({ one: true });
+      server.expectOne('/api/v1/audit-history').flush({ two: true });
+
+      expect(await first).toEqual({ one: true });
+      expect(await second).toEqual({ two: true });
+    });
+
+    it.each([
+      ['POST', '/api/v1/auth/sign-in'],
+      ['POST', '/api/v1/auth/sign-up'],
+      ['POST', '/api/v1/auth/refresh'],
+      ['GET', '/api/v1/me'],
+    ])('never asks to sign in for %s %s', async (method, url) => {
+      const { gate, http, server } = setup(null, null);
+
+      const answer = firstValueFrom(http.request(method, url, { body: {} }));
+      server.expectOne(url).flush(signInRequired.body, signInRequired.options);
+
+      await expect(answer).rejects.toMatchObject({ status: 401 });
+      expect(gate).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [403, 'account_suspended'],
+      [404, 'not_found'],
+      [429, 'too_many_attempts'],
+      [503, 'maintenance'],
+      [401, 'invalid_credentials'],
+    ])('never asks to sign in for a %i %s', async (status, code) => {
+      const { gate, http, server, session } = setup(null, null);
+
+      const answer = firstValueFrom(http.patch('/api/v1/me', {}));
+      server
+        .expectOne('/api/v1/me')
+        .flush({ code, status }, { status, statusText: code });
+
+      await expect(answer).rejects.toMatchObject({ status });
+      expect(gate).not.toHaveBeenCalled();
+      expect(session.renew).not.toHaveBeenCalled();
+    });
+
+    it('never asks to sign in while the page is rendered on the server', async () => {
+      const { gate, http, server } = setup(null, null, { platform: 'server' });
+
+      const answer = firstValueFrom(http.patch('/api/v1/me', {}));
+      server
+        .expectOne('/api/v1/me')
+        .flush(signInRequired.body, signInRequired.options);
+
+      await expect(answer).rejects.toMatchObject({ status: 401 });
+      expect(gate).not.toHaveBeenCalled();
+    });
   });
 });

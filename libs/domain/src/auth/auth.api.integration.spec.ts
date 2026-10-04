@@ -5,7 +5,6 @@ import {
   INestApplication,
   Param,
   RequestMethod,
-  UseGuards,
 } from '@nestjs/common';
 import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { Test } from '@nestjs/testing';
@@ -13,7 +12,7 @@ import request from 'supertest';
 
 import { signAccessToken } from './access-token';
 import { AccountsService } from './accounts.service';
-import { ActorGuard, CurrentActor, Requires } from './actor.guard';
+import { CurrentActor, Requires } from './actor.guard';
 import { AuthModule } from './auth.module';
 import type { Role } from './capabilities';
 import { type Actor, assertOwner } from './policy';
@@ -31,7 +30,6 @@ const accounts = new AccountsService(prisma, new AuditService(), noEvents);
 serialDatabase(databaseUrl);
 
 @Controller('probe')
-@UseGuards(ActorGuard)
 class ProbeController {
   @Get('team')
   @Requires('garage.team')

@@ -1,4 +1,5 @@
 import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
+import { Public } from '@motor-fix/domain';
 import {
   Body,
   Controller,
@@ -37,6 +38,7 @@ class ThingDto {
 }
 
 @Controller('thing')
+@Public()
 class ThingController {
   private readonly logger = new Logger('Thing');
 

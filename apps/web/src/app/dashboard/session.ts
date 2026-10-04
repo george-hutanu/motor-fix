@@ -217,7 +217,7 @@ export class Session {
   }
 
   // Signed out, a tap stays on the device. A failed save is sent again at the
-  // next tap; an answer for an account no longer held is dropped.
+  // next tap; an answer for an account no longer signed in is dropped.
   private async save() {
     let me = this.current();
     // Ends on the language last sent, whatever the answer says.
@@ -230,7 +230,10 @@ export class Session {
       } catch {
         return;
       }
-      if (this.current() !== me) return;
+      const now = this.current();
+      if (now?.id !== saved.id) return;
+      // Signed in again meanwhile, the reload brought the old language back.
+      if (now !== me) void this.language.choose(saved.language);
       this.current.set(saved);
       me = saved;
     }

@@ -36,8 +36,9 @@ export interface AuthSwitch {
   email: string;
 }
 
-// The e-mail typed in the other task, if any.
-export type AuthData = { email?: string } | undefined;
+// The e-mail typed in the other task, if any, and whether an action that
+// needs an account opened the dialog.
+export type AuthData = { email?: string; reason?: boolean } | undefined;
 
 // The sign-in task shown in the shared dialog. It closes with "signed-in", or
 // with a switch to sign-up; whoever opened it decides where to go next.
@@ -70,6 +71,9 @@ export type AuthData = { email?: string } | undefined;
   template: `
     <form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
       <p class="brand">{{ 'public.signIn.brand' | t }}</p>
+      @if (reason) {
+        <p class="brand">{{ 'public.signIn.reason' | t }}</p>
+      }
       <div class="field">
         <label for="mf-sign-in-email">{{ 'public.signIn.email' | t }}</label>
         <input
@@ -124,6 +128,8 @@ export class SignIn {
   >();
   private readonly passwordInput =
     viewChild.required<ElementRef<HTMLInputElement>>('passwordInput');
+
+  protected readonly reason = this.task.data?.reason === true;
 
   protected readonly form = new FormGroup({
     email: new FormControl(this.task.data?.email ?? '', {

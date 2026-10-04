@@ -8,9 +8,11 @@ import {
 import type { Response } from 'express';
 
 import { HealthService } from './health.service';
+import { Public } from '../auth/actor.guard';
 
 @ApiTags('health')
 @Controller('health')
+@Public()
 export class HealthController {
   constructor(private readonly health: HealthService) {}
 

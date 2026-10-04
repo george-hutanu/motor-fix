@@ -21,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 import type { CookieOptions, Request, Response } from 'express';
 
+import { Public } from './actor.guard';
 import { type Issued, REMEMBERED_MS, SignInService } from './sign-in.service';
 import { SignUpService } from './sign-up.service';
 
@@ -88,6 +89,7 @@ class JsonOnly implements CanActivate {
 
 @ApiTags('auth')
 @Controller('auth')
+@Public()
 export class AuthController {
   constructor(
     private readonly signIns: SignInService,
