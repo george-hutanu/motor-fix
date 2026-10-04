@@ -1,4 +1,4 @@
-import { readEnv } from '@motor-fix/contracts';
+import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
 import {
   Body,
   Controller,
@@ -79,10 +79,15 @@ const env = {
     process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres',
   REDIS_URL: process.env['REDIS_URL'] ?? 'redis://localhost:6379',
   RELEASE_SHA: 'abc123',
+  STORAGE_ACCESS_KEY_ID: 'test-key',
+  STORAGE_BUCKET: 'motorfix',
+  STORAGE_ENDPOINT: 'http://127.0.0.1:1',
+  STORAGE_REGION: 'eu-central-1',
+  STORAGE_SECRET_ACCESS_KEY: 'test-secret',
 };
 
 async function start(appEnv = 'test') {
-  const config = readEnv(['DATABASE_URL', 'REDIS_URL'], {
+  const config = readEnv(['DATABASE_URL', 'REDIS_URL', ...STORAGE_ENV], {
     ...env,
     APP_ENV: appEnv,
   });

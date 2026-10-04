@@ -94,11 +94,19 @@
               "ok",
               "error"
             ]
+          },
+          "storage": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "error"
+            ]
           }
         },
         "required": [
           "postgres",
-          "redis"
+          "redis",
+          "storage"
         ]
       },
       "HealthReadyDto": {

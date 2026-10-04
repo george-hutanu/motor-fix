@@ -4,6 +4,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { Redis } from 'ioredis';
 
 import { PrismaClient } from '../generated/prisma/client';
+import { StorageService } from '../storage/storage.service';
 
 export const HEALTH_OPTIONS = Symbol('HEALTH_OPTIONS');
 
@@ -31,7 +32,10 @@ export class HealthService implements OnApplicationShutdown {
   private readonly prisma: PrismaClient;
   private readonly redis: Redis;
 
-  constructor(@Inject(HEALTH_OPTIONS) private readonly options: HealthOptions) {
+  constructor(
+    @Inject(HEALTH_OPTIONS) private readonly options: HealthOptions,
+    private readonly storage: StorageService,
+  ) {
     this.prisma = new PrismaClient({
       adapter: new PrismaPg({
         connectionString: options.databaseUrl,
@@ -49,12 +53,17 @@ export class HealthService implements OnApplicationShutdown {
   }
 
   async ready(): Promise<HealthReadyDto> {
-    const [postgres, redis] = await Promise.allSettled([
+    const [postgres, redis, storage] = await Promise.allSettled([
       within(this.prisma.$queryRaw`SELECT 1`),
       within(this.redis.ping()),
+      within(this.storage.ready()),
     ]);
-    const checks = { postgres: outcome(postgres), redis: outcome(redis) };
-    const ok = checks.postgres === 'ok' && checks.redis === 'ok';
+    const checks = {
+      postgres: outcome(postgres),
+      redis: outcome(redis),
+      storage: outcome(storage),
+    };
+    const ok = Object.values(checks).every((check) => check === 'ok');
     return {
       checks,
       status: ok ? 'ok' : 'error',

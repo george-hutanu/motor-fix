@@ -1,4 +1,4 @@
-import { readEnv } from './env';
+import { readEnv, STORAGE_ENV } from './env';
 
 describe('readEnv', () => {
   it('returns the required variables and defaults the release to dev', () => {
@@ -36,6 +36,45 @@ describe('readEnv', () => {
     expect(() =>
       readEnv(['REDIS_URL'], { APP_ENV: 'test', REDIS_URL: '' }),
     ).toThrow('REDIS_URL');
+  });
+
+  it('reads the five storage variables', () => {
+    const values = {
+      STORAGE_ACCESS_KEY_ID: 'key',
+      STORAGE_BUCKET: 'motorfix',
+      STORAGE_ENDPOINT: 'https://store.example',
+      STORAGE_REGION: 'eu-central-1',
+      STORAGE_SECRET_ACCESS_KEY: 'secret',
+    };
+
+    expect(readEnv(STORAGE_ENV, { APP_ENV: 'test', ...values })).toEqual({
+      APP_ENV: 'test',
+      RELEASE_SHA: 'dev',
+      ...values,
+    });
+  });
+
+  it.each([
+    'STORAGE_ENDPOINT',
+    'STORAGE_REGION',
+    'STORAGE_BUCKET',
+    'STORAGE_ACCESS_KEY_ID',
+    'STORAGE_SECRET_ACCESS_KEY',
+  ])('refuses to start without %s and prints no value', (missing) => {
+    const source: Record<string, string> = {
+      APP_ENV: 'test',
+      STORAGE_ACCESS_KEY_ID: 'key-value',
+      STORAGE_BUCKET: 'bucket-value',
+      STORAGE_ENDPOINT: 'endpoint-value',
+      STORAGE_REGION: 'region-value',
+      STORAGE_SECRET_ACCESS_KEY: 'secret-value',
+    };
+    delete source[missing];
+
+    const run = () => readEnv(STORAGE_ENV, source);
+
+    expect(run).toThrow(`missing environment variable ${missing}`);
+    expect(run).not.toThrow(/-value/);
   });
 
   it('requires APP_ENV to be one of the four environments', () => {

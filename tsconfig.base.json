@@ -15,7 +15,11 @@
       "@motor-fix/contracts": ["./libs/contracts/src/index.ts"],
       "@motor-fix/contracts/env": ["./libs/contracts/src/env.ts"],
       "@motor-fix/data-access": ["./libs/data-access/src/index.ts"],
-      "@motor-fix/domain": ["./libs/domain/src/index.ts"]
+      "@motor-fix/domain": ["./libs/domain/src/index.ts"],
+      "@motor-fix/domain/testing": [
+        "./libs/domain/src/storage/s3-test-store.ts"
+      ],
+      "@motor-fix/media": ["./libs/media/src/index.ts"]
     },
     "rootDir": ".",
     "skipLibCheck": true,
