@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   DEFAULT_THRESHOLDS,
+  QA_CAP,
   applyFixes,
   collect,
   dispatchPlan,
@@ -297,15 +298,17 @@ describe('stale and the fix', () => {
 describe('dispatch plan', () => {
   const stale = (path, fix, minutesQuiet) => ({ path, verdict: 'stale', fix, activity: { at: NOW - minutesQuiet * MIN }, claim: null });
 
-  it('dispatches no QA run while 4 are live', () => {
-    const plan = dispatchPlan([stale('a', 'rerun-qa', 50), stale('b', 'rerun-qa', 60)], { qaLive: 4, now: NOW });
-    assert.deepEqual(plan, []);
+  it('no longer holds QA to the 4 laptop runs: QA runs on GitHub Actions', () => {
+    assert.equal(QA_CAP, 20);
+    const rows = [stale('a', 'rerun-qa', 50), stale('b', 'rerun-qa', 90), stale('c', 'rerun-qa', 70)];
+    const plan = dispatchPlan(rows, { qaLive: 4, now: NOW });
+    assert.deepEqual(plan.map((p) => p.path), ['b', 'c', 'a']);
   });
 
-  it('fills the free QA places, oldest first', () => {
+  it('stops at the Actions cap of concurrent QA runs, oldest first', () => {
     const rows = [stale('a', 'rerun-qa', 50), stale('b', 'rerun-qa', 90), stale('c', 'rerun-qa', 70)];
-    const plan = dispatchPlan(rows, { qaLive: 2, now: NOW });
-    assert.deepEqual(plan.map((p) => p.path), ['b', 'c']);
+    assert.deepEqual(dispatchPlan(rows, { qaLive: QA_CAP - 2, now: NOW }).map((p) => p.path), ['b', 'c']);
+    assert.deepEqual(dispatchPlan(rows, { qaLive: QA_CAP, now: NOW }), []);
   });
 
   it('runs at most 2 other agent fixes at once, counting live claims', () => {
@@ -315,10 +318,9 @@ describe('dispatch plan', () => {
     assert.equal(dispatchPlan([...rows, claimed], { qaLive: 0, now: NOW }).length, 1);
   });
 
-  it('counts a QA claim once when the QA run it started is already live', () => {
-    const claimed = (path, qaLive) => ({ path, verdict: 'ok', fix: null, qaLive, claim: { fix: 'rerun-qa', at: new Date(NOW - MIN).toISOString(), live: true } });
-    const rows = [claimed('x', true), claimed('y', true), stale('a', 'rerun-qa', 90), stale('b', 'rerun-qa', 80)];
-    assert.equal(dispatchPlan(rows, { qaLive: 2, now: NOW }).length, 2);
+  it('does not count QA re-runs against the 2 other agent fixes', () => {
+    const rows = [stale('a', 'rerun-qa', 90), stale('b', 'resume', 80), stale('c', 'fix-ci', 70), stale('d', 'merge', 60)];
+    assert.deepEqual(dispatchPlan(rows, { qaLive: 0, now: NOW }).map((p) => p.path), ['a', 'b', 'c']);
   });
 
   it('dispatches nothing when the PR state is unknown', () => {
