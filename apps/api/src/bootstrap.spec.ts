@@ -1,4 +1,5 @@
-import { readEnv } from '@motor-fix/contracts';
+import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
+import { S3TestStore } from '@motor-fix/domain/testing';
 import {
   Body,
   Controller,
@@ -48,12 +49,17 @@ const env = {
   REDIS_URL: process.env['REDIS_URL'] ?? 'redis://localhost:6379',
   RELEASE_SHA: 'abc123',
 } as const;
+const store = new S3TestStore();
 
 async function start(appEnv: string = env.APP_ENV) {
-  const config = readEnv(['DATABASE_URL', 'REDIS_URL', 'AUTH_TOKEN_SECRET'], {
-    ...env,
-    APP_ENV: appEnv,
-  });
+  const config = readEnv(
+    ['DATABASE_URL', 'REDIS_URL', 'AUTH_TOKEN_SECRET', ...STORAGE_ENV],
+    {
+      ...env,
+      ...store.env(),
+      APP_ENV: appEnv,
+    },
+  );
   const moduleRef = await Test.createTestingModule({
     controllers: [ProbeController],
     imports: [AppModule.register(config)],
@@ -67,6 +73,8 @@ async function start(appEnv: string = env.APP_ENV) {
 describe('api conventions', () => {
   let app: INestApplication;
 
+  beforeAll(() => store.start());
+  afterAll(() => store.stop());
   afterEach(() => app.close());
 
   it('serves health outside the /api/v1 prefix and routes under it', async () => {

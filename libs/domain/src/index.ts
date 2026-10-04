@@ -5,3 +5,5 @@ export { AuthModule } from './auth/auth.module';
 export { type Actor, assertGarage, assertOwner } from './auth/policy';
 export * from './health/health.module';
 export * from './logging';
+export * from './storage/storage.module';
+export { type SignedUpload, StorageService } from './storage/storage.service';

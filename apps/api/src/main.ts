@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 
-import { readEnv } from '@motor-fix/contracts';
+import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 
@@ -8,7 +8,12 @@ import { AppModule } from './app.module';
 import { configureApp, openApiDocument } from './bootstrap';
 
 async function bootstrap() {
-  const env = readEnv(['DATABASE_URL', 'REDIS_URL', 'AUTH_TOKEN_SECRET']);
+  const env = readEnv([
+    'DATABASE_URL',
+    'REDIS_URL',
+    'AUTH_TOKEN_SECRET',
+    ...STORAGE_ENV,
+  ]);
   const app = await NestFactory.create(
     AppModule.register(env),
     new ExpressAdapter(),

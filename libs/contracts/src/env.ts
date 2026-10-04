@@ -28,3 +28,13 @@ export function readEnv<K extends string>(
   }
   return env as Env<K>;
 }
+
+export const STORAGE_ENV = [
+  'STORAGE_ENDPOINT',
+  'STORAGE_REGION',
+  'STORAGE_BUCKET',
+  'STORAGE_ACCESS_KEY_ID',
+  'STORAGE_SECRET_ACCESS_KEY',
+] as const;
+
+export type StorageEnv = Record<(typeof STORAGE_ENV)[number], string>;
