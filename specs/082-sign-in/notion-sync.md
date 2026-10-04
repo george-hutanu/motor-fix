@@ -11,3 +11,6 @@
 - 2026-10-04 · review · ST-82 story Status · Implementing → In review (PR #45 marked ready)
 - 2026-10-04 · review · Foundations timeline row ST-82 · Implementing → In review
 - 2026-10-04 · labels · PR #45 · in review
+- 2026-10-04 · qa · ST-82 story Status · In review → QA
+- 2026-10-04 · qa · Foundations timeline row ST-82 · In review → QA
+- 2026-10-04 · labels · PR #45 · QA
