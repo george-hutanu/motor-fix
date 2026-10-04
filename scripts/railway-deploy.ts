@@ -126,11 +126,17 @@ const redeploy = (options: Options, service: Service) =>
     { environmentId: options.environmentId, serviceId: service.id },
   );
 
-async function deployOne(
-  options: Options,
-  service: Service,
-  started: () => void,
-) {
+// One service this run touched: the image it ran before, whether a
+// deployment of the new image was requested, and whether it went live.
+interface Touched {
+  service: Service;
+  previous?: string;
+  started: boolean;
+  live: boolean;
+}
+
+async function deployOne(options: Options, entry: Touched) {
+  const { service } = entry;
   await update(options, service.id, {
     healthcheckPath: '/health/ready',
     healthcheckTimeout: HEALTH_TIMEOUT_S,
@@ -139,11 +145,13 @@ async function deployOne(
     region: REGION,
     source: { image: service.image },
   });
+  // Set before the request: once sent, Railway may have accepted it even if
+  // the answer never arrives.
+  entry.started = true;
   const { serviceInstanceDeployV2: deploymentId } = await redeploy(
     options,
     service,
   );
-  started();
   const status = await waitFor(options, deploymentId);
   if (status === DONE) return;
   throw new Error(
@@ -157,39 +165,39 @@ async function deployOne(
 // ones that already went live on the new image are redeployed; the one that
 // failed is still serving its previous deployment. On a cancel, the one whose
 // deployment was still in progress is redeployed too, because that deployment
-// may yet go live on the new image.
-async function restore(
-  options: Options,
-  touched: { service: Service; previous?: string; live: boolean }[],
-) {
-  for (const { service, previous, live } of touched) {
-    if (!previous) continue;
-    await update(options, service.id, { source: { image: previous } });
-    if (live) await redeploy(options, service);
+// may yet go live on the new image. Services are restored side by side, so
+// one slow or failing answer neither delays nor stops the others.
+async function restore(options: Options, touched: Touched[]) {
+  const results = await Promise.allSettled(
+    touched.map(async ({ service, previous, live }) => {
+      if (!previous) return;
+      await update(options, service.id, { source: { image: previous } });
+      if (live) await redeploy(options, service);
+    }),
+  );
+  for (const [i, result] of results.entries()) {
+    if (result.status === 'rejected') {
+      console.error(
+        `restore of ${touched[i]?.service.name} failed: ${(result.reason as Error).message}`,
+      );
+    }
   }
 }
 
 // The api goes first: its pre-deploy step migrates the database the others use.
 export async function deploy(options: Options) {
-  const touched: {
-    service: Service;
-    previous?: string;
-    live: boolean;
-    started: boolean;
-  }[] = [];
+  const touched: Touched[] = [];
   try {
     for (const service of options.services) {
       stopIfCancelled(options);
-      const entry = {
+      const entry: Touched = {
         live: false,
         previous: await previousImage(options, service),
         service,
         started: false,
       };
       touched.push(entry);
-      await deployOne(options, service, () => {
-        entry.started = true;
-      });
+      await deployOne(options, entry);
       entry.live = true;
     }
   } catch (error) {
@@ -197,10 +205,7 @@ export async function deploy(options: Options) {
     if (cancelled) {
       for (const entry of touched) entry.live ||= entry.started;
     }
-    await restore({ ...options, signal: undefined }, touched).catch(
-      (restoreError: Error) =>
-        console.error(`restore failed: ${restoreError.message}`),
-    );
+    await restore({ ...options, signal: undefined }, touched);
     throw cancelled ? new Error(CANCELLED) : error;
   }
 }

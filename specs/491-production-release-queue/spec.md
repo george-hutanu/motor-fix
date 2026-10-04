@@ -44,6 +44,9 @@ a deployment is still in progress, and check the previous image is restored.
 
 - A cancel that arrives before any service was touched: nothing to restore; the run fails with "cancelled".
 - A Railway call already in flight when the cancel arrives is aborted, so the restore starts at once; the restore's own calls are not tied to the cancel.
+- A cancel while the request that starts a deployment is in flight: Railway may have accepted it, so that service is redeployed on its previous image too.
+- The services are restored side by side, so one slow or failing restore call neither delays nor stops the others.
+- The deploy step runs the script with `exec`, so the runner's signals reach node rather than a shell waiting on it.
 - A runner that kills the process before the restore finishes (SIGKILL) cannot be handled; the next release, or a manual redeploy, puts the services right.
 
 ## Requirements *(mandatory)*

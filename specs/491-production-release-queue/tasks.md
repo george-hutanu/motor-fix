@@ -15,12 +15,12 @@
 
 ## Phase 3: Proof
 
-- [ ] T006 `npx jest -c scripts/jest.config.cts` green; `node .claude/scripts/capabilities.mjs validate specs/491-production-release-queue --check` green; archive the delta into `platform` (SC-001, SC-002)
+- [X] T006 `npx jest -c scripts/jest.config.cts` green; `node .claude/scripts/capabilities.mjs validate specs/491-production-release-queue --check` green; archive the delta into `platform` (SC-001, SC-002)
 
 ## FR → test
 
 | FR | Proof |
 |---|---|
-| FR-001, FR-002, FR-003 | `scripts/release-workflow.spec.ts` |
+| FR-001, FR-002, FR-003 | `scripts/release-workflow.spec.ts` (job order and concurrency). The "no manual approval" part of FR-001 and FR-002 lives in the GitHub `production` environment's settings (no required reviewers), outside the repository; it is proved by the by-hand check in `specs/421-monorepo-platform/quickstart.md`, not by this spec |
 | FR-004 | review of the quickstart diff (prose) |
-| FR-005 | `scripts/railway-deploy.spec.ts` |
+| FR-005 | `scripts/railway-deploy.spec.ts` (cancel while waiting, while the deploy request is in flight, before start; one failing restore does not stop the others); `scripts/release-workflow.spec.ts` (`exec`, so the signal reaches node); the quickstart's by-hand cancel check |

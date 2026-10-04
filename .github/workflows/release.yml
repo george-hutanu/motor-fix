@@ -89,7 +89,8 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - name: Deploy and wait for /health/ready
-        run: node scripts/railway-deploy.ts staging
+        # exec: the runner's cancel signals reach node, not a waiting shell.
+        run: exec node scripts/railway-deploy.ts staging
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: End to end on staging
@@ -124,4 +125,5 @@ jobs:
         with:
           node-version-file: .nvmrc
       - name: Deploy the staging-proven digests and wait for /health/ready
-        run: node scripts/railway-deploy.ts production
+        # exec: the runner's cancel signals reach node, not a waiting shell.
+        run: exec node scripts/railway-deploy.ts production

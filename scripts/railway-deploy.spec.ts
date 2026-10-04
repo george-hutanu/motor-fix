@@ -139,7 +139,6 @@ describe('railway deploy', () => {
     );
   });
 
-  // @traces 491-FR-005
   it('puts the previous image back when the run is cancelled mid-deploy', async () => {
     statuses = [];
     const cancel = new AbortController();
@@ -161,12 +160,15 @@ describe('railway deploy', () => {
       input: { source: { image: 'svc-api@sha256:old' } },
       serviceId: 'svc-api',
     });
+    const redeploys = calls
+      .filter((c) => c.query.includes('serviceInstanceDeployV2'))
+      .map((c) => c.variables['serviceId']);
+    expect(redeploys).toEqual(['svc-api', 'svc-api']);
     expect(calls.some((c) => c.variables['serviceId'] === 'svc-web')).toBe(
       false,
     );
   });
 
-  // @traces 491-FR-005
   it('redeploys the services already live when the run is cancelled', async () => {
     statuses = ['SUCCESS'];
     const cancel = new AbortController();
@@ -186,6 +188,9 @@ describe('railway deploy', () => {
     const restores = updates().filter(
       (u) => !('healthcheckPath' in (u['input'] as object)),
     );
+    restores.sort((x, y) =>
+      String(x['serviceId']).localeCompare(String(y['serviceId'])),
+    );
     expect(restores).toEqual([
       {
         environmentId: 'env-1',
@@ -201,10 +206,95 @@ describe('railway deploy', () => {
     const redeploys = calls
       .filter((c) => c.query.includes('serviceInstanceDeployV2'))
       .map((c) => c.variables['serviceId']);
-    expect(redeploys).toEqual(['svc-api', 'svc-web', 'svc-api', 'svc-web']);
+    expect(redeploys.slice(0, 2)).toEqual(['svc-api', 'svc-web']);
+    expect(redeploys.slice(2).sort()).toEqual(['svc-api', 'svc-web']);
   });
 
-  // @traces 491-FR-005
+  it('redeploys the previous image when cancelled while the deploy request is in flight', async () => {
+    statuses = [];
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const cancel = new AbortController();
+    const slow = createServer((req, res) => {
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk;
+      });
+      req.on('end', async () => {
+        const call = JSON.parse(body) as Call;
+        calls.push(call);
+        if (
+          call.query.includes('serviceInstanceDeployV2') &&
+          !cancel.signal.aborted
+        ) {
+          await held;
+        }
+        res.end(JSON.stringify({ data: answer(call) }));
+      });
+    });
+    await new Promise<void>((resolve) => slow.listen(0, resolve));
+    const started = deploy({
+      endpoint: `http://localhost:${(slow.address() as AddressInfo).port}`,
+      environmentId: 'env-1',
+      limitMs: 10_000,
+      pollMs: 5,
+      services,
+      signal: cancel.signal,
+      token: 't',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    cancel.abort();
+
+    await expect(started).rejects.toThrow('cancelled');
+    release();
+    await new Promise((resolve) => slow.close(resolve));
+    expect(updates().at(-1)).toEqual({
+      environmentId: 'env-1',
+      input: { source: { image: 'svc-api@sha256:old' } },
+      serviceId: 'svc-api',
+    });
+    const redeploys = calls
+      .filter((c) => c.query.includes('serviceInstanceDeployV2'))
+      .map((c) => c.variables['serviceId']);
+    expect(redeploys).toEqual(['svc-api', 'svc-api']);
+  });
+
+  it('still restores the other services when one restore fails', async () => {
+    statuses = ['SUCCESS', 'FAILED'];
+    server.removeAllListeners('request');
+    server.on('request', (req, res) => {
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk;
+      });
+      req.on('end', () => {
+        const call = JSON.parse(body) as Call;
+        calls.push(call);
+        const input = call.variables['input'] as
+          | { source?: { image?: string } }
+          | undefined;
+        if (input?.source?.image === 'svc-api@sha256:old') {
+          res.end(JSON.stringify({ errors: [{ message: 'busy' }] }));
+          return;
+        }
+        res.end(
+          JSON.stringify({
+            data: answer(call, () => statuses.shift() ?? 'DEPLOYING'),
+          }),
+        );
+      });
+    });
+
+    await expect(run()).rejects.toThrow('web: deployment FAILED');
+    expect(updates().at(-1)).toEqual({
+      environmentId: 'env-1',
+      input: { source: { image: 'svc-web@sha256:old' } },
+      serviceId: 'svc-web',
+    });
+  });
+
   it('fails as cancelled without touching anything when cancelled before it starts', async () => {
     const cancel = new AbortController();
     cancel.abort();

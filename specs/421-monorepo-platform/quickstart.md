@@ -65,6 +65,7 @@ Verified on the first real merge, once the owner has set up:
 | A broken migration stops the run before staging | merge a migration with a SQL error | | |
 | Production deploys only after staging and its end-to-end suite pass | merge, watch `production` start only once `staging` is green | | |
 | A failing production health check restores the previous images | deploy an image whose `/health/ready` answers 503 | | |
+| A cancelled deploy restores the previous images | cancel a staging run while it deploys; the log shows `SIGINT: cancelling` and each service is back on its previous image | | |
 | Railway accepts an image by digest and runs the pre-deploy command on an image service | first staging deploy (research.md R7, unconfirmed in Railway's docs) | | |
 | Every service runs in `europe-west4-drams3a` | Railway dashboard after the first deploy | | |
 | A production deploy in progress is not cancelled by a newer merge | merge twice in quick succession; the second `production` job waits for the first, which completes | | |
