@@ -9,3 +9,7 @@
 - 2026-10-04 · implement · ST-128 story Status · Planning → Implementing
 - 2026-10-04 · implement · Foundations timeline row ST-128 · Planning → Implementing
 - 2026-10-04 · labels · PR #66 · in development
+- 2026-10-05 · qa · ST-128 story Status · Implementing → QA
+- 2026-10-05 · qa · Foundations timeline row ST-128 · Implementing → QA
+- 2026-10-05 · labels · PR #66 · QA
+- 2026-10-05 · debt · ST-128 · 1 task filed https://app.notion.com/p/3ef607bff0d2818bafeec79d6a8b83cb
