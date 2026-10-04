@@ -6,6 +6,7 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { provideI18n, provideRememberedLanguage } from '@motor-fix/i18n';
 import { provideCockpitTheme } from '@motor-fix/ui-cockpit';
 
+import { provideLanguageAddresses } from './addresses';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -16,6 +17,7 @@ export const appConfig: ApplicationConfig = {
     provideI18n(),
     provideCockpitTheme(),
     provideRememberedLanguage(),
+    provideLanguageAddresses(),
     // Only the production build emits ngsw-worker.js.
     provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode() }),
   ],

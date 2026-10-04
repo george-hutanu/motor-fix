@@ -43,5 +43,5 @@ test('a signed-out visitor typing a dashboard address ends on Home', async ({
 
   await page.goto('/app/garage');
 
-  await expect(page).toHaveURL('/');
+  await expect(page).toHaveURL(/\/ro\/?$/);
 });

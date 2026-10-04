@@ -1,0 +1,41 @@
+import {
+  afterNextRender,
+  Component,
+  inject,
+  RESPONSE_INIT,
+} from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import {
+  I18n,
+  isLanguage,
+  LanguageSwitch,
+  TranslatePipe,
+} from '@motor-fix/i18n';
+
+@Component({
+  imports: [LanguageSwitch, RouterLink, TranslatePipe],
+  selector: 'mf-not-found',
+  template: `
+    <header><mf-language-switch /></header>
+    <main>
+      <h1>{{ 'shell.notFound.title' | t }}</h1>
+      <p>{{ 'shell.notFound.text' | t }}</p>
+      <a routerLink="/">{{ 'shell.notFound.home' | t }}</a>
+    </main>
+  `,
+})
+export class NotFound {
+  constructor() {
+    // Only the server render provides it; in the browser there is no status to set.
+    const response = inject(RESPONSE_INIT, { optional: true });
+    if (response) response.status = 404;
+
+    // An address with no known language prefix is Romanian, as the server sent
+    // it: undo the remembered language, which is applied after the first render
+    // (registered earlier, so it runs first).
+    const [first] = inject(ActivatedRoute).snapshot.url;
+    if (first && isLanguage(first.path)) return;
+    const i18n = inject(I18n);
+    afterNextRender(() => void i18n.use('ro'));
+  }
+}

@@ -82,7 +82,8 @@ test('with storage blocked the app works in Romanian and still switches', async 
     .click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 
-  await page.reload();
+  // The address now says English; nothing remembered means `/` is Romanian.
+  await page.goto('/');
   await expect(languageSwitch(page, 'Limba')).toBeVisible();
   await page.waitForLoadState('networkidle');
   await expect(page.locator('html')).toHaveAttribute('lang', 'ro');

@@ -166,3 +166,27 @@ describe('provideRememberedLanguage', () => {
     expect(localStorage.getItem('mf.lang')).toBe('en');
   });
 });
+
+describe('LanguageChoice.saved', () => {
+  const saved = () => TestBed.inject(LanguageChoice).saved();
+
+  it('returns the remembered language', () => {
+    localStorage.setItem('mf.lang', 'en');
+
+    expect(saved()).toBe('en');
+  });
+
+  it('returns null when nothing, or no language, is remembered', () => {
+    expect(saved()).toBeNull();
+
+    localStorage.setItem('mf.lang', 'xx');
+
+    expect(saved()).toBeNull();
+  });
+
+  it('returns null, without an error, when storage is blocked', () => {
+    blockStorage();
+
+    expect(saved()).toBeNull();
+  });
+});

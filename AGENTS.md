@@ -87,6 +87,30 @@ epic or a plan, whether run through spec-kit or by hand.
 - A Notion or mock failure never blocks the build. It is logged in
   `specs/<feature>/notion-sync.md` or `design.md` and retried on the next run.
 
+## Reviewing a change that has screens
+
+- **Phones first.** Every review of a screen covers a 320 px phone, a 390 px
+  phone, a tablet and a desktop, in light and dark, Romanian and English. The
+  PR tester's sweep (`.claude/scripts/pr-test/sweep.mjs`) runs all four; a
+  reviewer or agent checking by hand does the same, and a screen that scrolls
+  sideways at 320 px is a finding.
+- **In the built-in browser, where the session has one.** The session that
+  runs the lifecycle walks every changed screen of a ready PR in its built-in
+  browser pane (the `mcp__Claude_Browser__*` tools), so the owner can watch:
+  serve the PR head under `scripts/heavy.sh`, open each screen at the sizes
+  above, use the flows, then stop the server. The headless PR tester still
+  runs; this pass is the one a person can see.
+- **At most four PRs in QA at once.** Each run boots the whole stack on a
+  16 GB laptop, and the heavy lock still runs only three at a time, so a
+  fourth waits for a slot. After a merge, a PR waiting in QA merges
+  `origin/main` and is tested again only if it now conflicts with `main` or
+  shares changed files with what merged (never a rebase, which would need a
+  forced push); its CI already runs on the merge result.
+- **No images in the repo.** Screenshots are evidence for a chat, a review
+  or a PR comment, never a commit: QA copies only `report.md` and
+  `report.json` into `pr-review/`, and `.gitignore` refuses images there. Real
+  app assets, such as the web app's icons, are the only images git holds.
+
 ## Product and stack
 
 MotorFix: drivers in Romania find a garage or mechanic for their car. The

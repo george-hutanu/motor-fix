@@ -1,4 +1,4 @@
-// The viewport sweep: every route at desktop, tablet and phone sizes, light
+// The viewport sweep: every route at desktop, tablet and two phone sizes, light
 // and dark, Romanian and English, with one browser and one page at a time.
 // Records console errors, uncaught errors, failed requests and error
 // responses, axe violations and horizontal overflow, and a screenshot of each
@@ -15,6 +15,8 @@ export const VIEWPORTS = {
   desktop: { width: 1440, height: 900, isMobile: false, hasTouch: false, deviceScaleFactor: 1 },
   tablet: { width: 834, height: 1194, isMobile: false, hasTouch: true, deviceScaleFactor: 2 },
   mobile: { width: 390, height: 844, isMobile: true, hasTouch: true, deviceScaleFactor: 3 },
+  // The narrowest phone the specs promise no horizontal scrolling at.
+  "small-phone": { width: 320, height: 568, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
 };
 const LOCALES = { ro: "ro-RO", en: "en-GB" };
 // Where the language switch keeps the chosen language (libs/i18n/src/switch.ts).
