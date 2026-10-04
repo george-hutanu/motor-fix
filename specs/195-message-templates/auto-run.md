@@ -67,3 +67,7 @@
 - test-adversary: 237 tests; 5 failed → fixed (inherited properties read as values; bellText threw on hostile kind/params).
 - code-reviewer: APPROVE; #2 (empty link reason), #4 (wordmark assertion), #5 (validate PUBLIC_WEB_URL) patched; #1 MEDIUM decision: keep per-row `template_failed` when the worker has no PUBLIC_WEB_URL rather than refusing to boot (autonomous default: a boot refusal would also stop ACCOUNT_EMAIL, which does not need it) — owner must set PUBLIC_WEB_URL on the worker; #3 keep bellText (plan Complexity Tracking).
 - Mutation: not run locally (AGENTS.md: mutation runs only in CI, nightly on main).
+
+## 14. Review
+- spec-reviewer: APPROVE, 11/11 FRs met, 12 tasks truthful. #1 LOW patched: a row's own `app` value can no longer replace the configured web address (processor and check spread `app` last; integration spec added). #2 LOW decision: zero count keeps the bare numeral ("0 oferte noi"); spec wording amended to "a non-zero count", unit case added.
+- code-reviewer (phase 12): APPROVE; findings handled there.

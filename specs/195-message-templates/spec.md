@@ -89,7 +89,7 @@ When a template cannot render (for example a value it needs is missing), the mes
 - A value that contains `<`, `>`, `&` or quotes is escaped in the HTML part and left as is in the plain-text part.
 - A notification type with no template for a channel falls back to the generic text for the bell and the e-mail (the 194 behaviour), so types whose owning stories have not yet written their texts keep working; the check does not require a template for every catalogue type.
 - A params value that is `null` counts as absent (JSON carries no `undefined`).
-- Grouped e-mails ("3 new quotes") are templates too, in both languages; in Romanian a count whose last two digits are 00 or 20–99 takes "de" ("20 de oferte noi").
+- Grouped e-mails ("3 new quotes") are templates too, in both languages; in Romanian a non-zero count whose last two digits are 00 or 20–99 takes "de" ("20 de oferte noi").
 
 ## Requirements *(mandatory)*
 
@@ -119,7 +119,7 @@ When a template cannot render (for example a value it needs is missing), the mes
 - Q: Is a type with no template for a channel a render failure, and must the check demand a template for every catalogue type × channel? → A: No. The check covers only the templates that exist; a type with no template for the e-mail or the bell renders the generic text, as 194 does. (Deviation: Notion states only the failed-render case.)
 - Q: Should the phone rule follow the plate shape (the recipient's own number allowed) or bar every phone value? → A: Bar every `phone` value in every template for this story; no template written here or by the SMS-eligible types needs one. A deliberate tightening of "another person's phone number", recorded for the owner.
 - Q: Is the e-mail footer's reason one fixed sentence or a per-template text? → A: A per-template text in Romanian and English, printed by the shared layout, so the two-language check covers it.
-- Q: Which grouped e-mails does this story carry, and does the Romanian count handle the "de" form? → A: The generic grouped e-mail and the existing QUOTE_RECEIVED grouped e-mail; Romanian counts take "de" when the count's last two digits are 00 or 20–99 ("20 de oferte noi", "101 oferte noi").
+- Q: Which grouped e-mails does this story carry, and does the Romanian count handle the "de" form? → A: The generic grouped e-mail and the existing QUOTE_RECEIVED grouped e-mail; Romanian counts take "de" when a non-zero count's last two digits are 00 or 20–99 ("20 de oferte noi", "101 oferte noi").
 - Q: Does the renderer read the account's language itself or take the language from its caller? → A: From its caller: the worker passes the account's language, the bell screen (ST-199) will pass the viewer's; anything other than `ro` or `en` renders Romanian.
 
 ## Spec Delta

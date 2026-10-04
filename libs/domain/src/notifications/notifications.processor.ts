@@ -134,8 +134,8 @@ export class NotificationsProcessor {
     let mail: { subject: string; text: string; html: string };
     try {
       mail = render(name, 'email', rows[0].account.language, {
-        app: this.config.webUrl,
         ...values,
+        app: this.config.webUrl,
       });
     } catch (error) {
       if (!(error instanceof TemplateError)) throw error;

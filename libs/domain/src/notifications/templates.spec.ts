@@ -131,6 +131,7 @@ describe('grouped e-mails', () => {
   });
 
   it.each([
+    [0, '0 oferte noi'],
     [2, '2 oferte noi'],
     [19, '19 oferte noi'],
     [20, '20 de oferte noi'],

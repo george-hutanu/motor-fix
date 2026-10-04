@@ -169,6 +169,20 @@ describe('sending one e-mail', () => {
     error.mockRestore();
   });
 
+  it('keeps the configured web address when a row carries its own app value', async () => {
+    const ana = await account('ana', ['admin'], { language: 'en' });
+    await service.notify({
+      eventId: 't-app',
+      kind: 'TEST_MESSAGE',
+      params: { app: 'https://elsewhere.example' },
+      recipients: [ana],
+    });
+    await sendJob((await emailRows(ana))[0].id);
+    const html = (mock.emails()[0].body as { htmlContent: string }).htmlContent;
+    expect(html).toContain('href="https://motorfix.test"');
+    expect(html).not.toContain('elsewhere.example');
+  });
+
   it('puts the account e-mail link into the e-mail', async () => {
     const ana = await account('ana');
     await service.sendAccountEmail({

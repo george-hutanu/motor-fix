@@ -51,7 +51,7 @@ function rendering(
       name,
       channel,
       language,
-      { app: EXAMPLE_APP, ...template.example },
+      { ...template.example, app: EXAMPLE_APP },
       { [name]: template },
     );
     return null;
