@@ -4,7 +4,8 @@ export type LampState = 'green' | 'red' | 'amber' | 'grey';
 
 const STATES: readonly unknown[] = ['green', 'red', 'amber', 'grey'];
 
-// Typed for templates, but data can still bring any string at run time.
+// Templates must name one of the four states; data bound through `$any` or an
+// untyped value can still bring any string at run time.
 function toState(value: unknown): LampState {
   if (STATES.includes(value)) return value as LampState;
   if (isDevMode())
@@ -16,7 +17,6 @@ function toState(value: unknown): LampState {
   host: {
     '[attr.data-pulse]': 'pulse() ? "" : null',
     '[attr.data-state]': 'state()',
-    class: 'mf-lamp',
   },
   selector: 'mf-lamp',
   styles: `
@@ -58,7 +58,9 @@ function toState(value: unknown): LampState {
   template: `<span class="mf-lamp-dot" aria-hidden="true"></span>{{ label() }}`,
 })
 export class Lamp {
-  readonly state = input<LampState, unknown>('grey', { transform: toState });
+  readonly state = input<LampState, LampState>('grey', {
+    transform: toState,
+  });
   readonly label = input.required<string>();
   readonly pulse = input(false, { transform: booleanAttribute });
 }

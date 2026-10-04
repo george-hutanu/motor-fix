@@ -13,15 +13,21 @@ const read = (path: string) =>
 const COCKPIT = read('cockpit/ro.json').gauges as Record<string, string>;
 const SHELL = read('shell/ro.json').gauge as Record<string, string>;
 
-const tokens = {
-  dark: { amber: '#FFB000', green: '#32D74B', grey: '#B5B8BE', red: '#FF5A4F' },
-  light: {
-    amber: '#8A5E00',
-    green: '#1E8E34',
-    grey: '#50545B',
-    red: '#D93A30',
-  },
+// Each state's colour is read from the page's own tokens, so a token change
+// in the theme cannot break this suite.
+const STATE_TOKEN = {
+  amber: '--mf-amber-ink',
+  green: '--mf-green',
+  grey: '--mf-text-secondary',
+  red: '--mf-red',
 } as const;
+
+const token = (page: Page, name: string) =>
+  page.evaluate(
+    (n) =>
+      getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
+    name,
+  );
 
 const rgb = (hex: string) => {
   const [r, g, b] = [1, 3, 5].map((i) =>
@@ -57,7 +63,7 @@ for (const scheme of ['dark', 'light'] as const) {
         await expect(lamp).toHaveText(label);
         await expect(lamp.locator('.mf-lamp-dot')).toHaveCSS(
           'background-color',
-          rgb(tokens[scheme][state]),
+          rgb(await token(page, STATE_TOKEN[state])),
         );
       }
 
@@ -109,7 +115,7 @@ test('updates the estimate and tells screen readers the new value once', async (
   await expect(live).toHaveText('1.400–1.800 lei');
 });
 
-// The rest of the sample page is ST-50's; this checks the gauges' own panel.
+// The rest of the sample page belongs to the theme; this checks the gauges' own panel.
 test('fits a 320 px wide screen inside its panel', async ({ page }) => {
   await open(page, 'dark', 320);
 

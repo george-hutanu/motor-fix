@@ -2,14 +2,13 @@ import { Component, computed, inject, input } from '@angular/core';
 import { formatLei, formatLeiRange, I18n } from '@motor-fix/i18n';
 
 // The odometer shows whole lei: each amount is rounded before formatting, so
-// the ST-19 formats never add decimals.
+// the shared price formats never add decimals.
 const toWholeLei = (bani: unknown) =>
   typeof bani === 'number' && Number.isFinite(bani)
     ? Math.round(bani / 100) * 100
     : bani;
 
 @Component({
-  host: { class: 'mf-odometer' },
   selector: 'mf-odometer',
   styles: `
     :host {
@@ -63,7 +62,9 @@ export class Odometer {
   private readonly i18n = inject(I18n);
 
   readonly from = input<unknown>();
-  // Left out for a single price; given (even empty) for a range.
+  // Left unbound (undefined) for a single price. Bound for a range, where a
+  // missing end (null, NaN) shows the dash: never bind an optional end here
+  // expecting a single price.
   readonly to = input<unknown>();
 
   protected readonly text = computed(() => {

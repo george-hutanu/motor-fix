@@ -8,7 +8,7 @@ import { Lamp } from './lamp';
 
 @Component({
   imports: [Lamp],
-  template: `<mf-lamp [state]="state()" label="Lucrează pe Dacia" [pulse]="pulse()" />`,
+  template: `<mf-lamp [state]="$any(state())" label="Lucrează pe Dacia" [pulse]="pulse()" />`,
 })
 class Host {
   readonly state = signal<string>('green');

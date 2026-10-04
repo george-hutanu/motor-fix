@@ -72,6 +72,11 @@ describe('Odometer', () => {
     expect(spoken()).toBe('1.400–1.800 lei');
   });
 
+  it('is a single price when the end is left out, and a dash when the end is missing', () => {
+    expect(render(125000, undefined).shown()).toBe('1.250 lei');
+    expect(render(125000, null).shown()).toBe('—');
+  });
+
   it('rounds a single price to whole lei', () => {
     expect(render(140050).shown()).toBe('1.401 lei');
     expect(render(140049).shown()).toBe('1.400 lei');
