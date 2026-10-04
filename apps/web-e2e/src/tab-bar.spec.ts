@@ -42,8 +42,11 @@ test.describe('the public tab bar on a 375 px phone', () => {
 
     await bar(page).getByRole('link', { name: 'Cont' }).click();
 
+    // On a phone the sign-in opens as a sheet; the dialog container has no box.
     await expect(
-      page.getByRole('dialog', { name: 'Autentificare' }),
+      page
+        .getByRole('dialog', { name: 'Autentificare' })
+        .locator('mf-overlay-panel'),
     ).toBeVisible();
     await expect(page).toHaveURL('/ro/garages');
   });
@@ -104,8 +107,11 @@ test.describe('the public tab bar on a 375 px phone', () => {
     await page.keyboard.press('Tab');
     await expect(links.nth(2)).toBeFocused();
     await page.keyboard.press('Enter');
+    // On a phone the sign-in opens as a sheet; the dialog container has no box.
     await expect(
-      page.getByRole('dialog', { name: 'Autentificare' }),
+      page
+        .getByRole('dialog', { name: 'Autentificare' })
+        .locator('mf-overlay-panel'),
     ).toBeVisible();
   });
 

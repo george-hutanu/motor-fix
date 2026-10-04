@@ -30,12 +30,14 @@ Paths are `(new)` unless they exist today: `libs/overlays/src/{overlays,task,pan
 
 - [X] T015 [US1][US3] PR tester lap 2: tests then code — the sheet fits an already-shrunk visible area when it opens; the sheet's own rule outranks the kit's bottom edge whatever the load order; the specs colocate as `panel.spec.ts` / `panel.adversary.spec.ts`; the close tests let a wheel scroll end before closing (the desktop dialog's intermittent scroll miss) (FR-005, FR-007) — `libs/overlays/src/panel.ts`, `apps/web-e2e/src/{overlays,sheet}.spec.ts`
 
+- [X] T016 [US1] After ST-82 merged: the sign-in dialog is a sheet on a phone — `apps/web-e2e/src/sign-in.spec.ts` asserts it at 320 and 390 px; `accounts.ts`, `sign-in.spec.ts` and `tab-bar.spec.ts` wait for the panel, since the dialog container has no box around a fixed sheet (FR-001, FR-002)
+
 ## FR → test
 
 | FR | Tests |
 | --- | --- |
-| FR-001 | T001, T006 |
-| FR-002 | T001, T005, T006 |
+| FR-001 | T001, T006, T016 |
+| FR-002 | T001, T005, T006, T016 |
 | FR-003 | T001, T006 |
 | FR-004 | T002, T006, T014 |
 | FR-005 | T003, T006, T014 |
