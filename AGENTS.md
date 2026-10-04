@@ -100,8 +100,9 @@ epic or a plan, whether run through spec-kit or by hand.
   serve the PR head under `scripts/heavy.sh`, open each screen at the sizes
   above, use the flows, then stop the server. The headless PR tester still
   runs; this pass is the one a person can see.
-- **At most three PRs in QA at once.** Each run boots the whole stack on a
-  16 GB laptop. After a merge, a PR waiting in QA rebases and is tested again
+- **At most four PRs in QA at once.** Each run boots the whole stack on a
+  16 GB laptop, and the heavy lock still runs only three at a time, so a
+  fourth waits for a slot. After a merge, a PR waiting in QA rebases and is tested again
   only if it now conflicts with `main` or shares changed files with what
   merged; its CI already runs on the merge result.
 - **No images in the repo.** Screenshots are evidence for a chat, a review
