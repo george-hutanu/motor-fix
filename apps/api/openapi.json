@@ -78,6 +78,113 @@
           "me"
         ]
       }
+    },
+    "/api/v1/audit-history": {
+      "get": {
+        "operationId": "AuditHistoryController_list",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": false,
+            "in": "query",
+            "description": "Staff: their own garage only; admin: any garage",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "actorId",
+            "required": false,
+            "in": "query",
+            "description": "Who made the change",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "jobId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "area",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "requests",
+                "quotes",
+                "bookings",
+                "jobs",
+                "prices",
+                "repair_history",
+                "photos",
+                "garage_profile",
+                "team",
+                "settings",
+                "admin_actions"
+              ]
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive; 7 days before now when absent",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "The nextCursor of the previous page",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditHistoryPageDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "audit-history"
+        ]
+      }
     }
   },
   "info": {
@@ -242,6 +349,191 @@
           "garageId",
           "capabilities",
           "landing"
+        ]
+      },
+      "AuditActorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "First name, or \"MotorFix\" for the system"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "driver",
+              "owner",
+              "receptionist",
+              "mechanic",
+              "admin",
+              "system"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "role"
+        ]
+      },
+      "AuditEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "create",
+              "update",
+              "delete",
+              "open"
+            ]
+          },
+          "subjectType": {
+            "type": "string",
+            "description": "The table the entry is about, e.g. quote"
+          },
+          "subjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "field": {
+            "type": "string",
+            "nullable": true
+          },
+          "oldValue": {
+            "description": "The value as stored (money in bani, times in UTC)",
+            "nullable": true,
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              }
+            ]
+          },
+          "newValue": {
+            "description": "The value as stored (money in bani, times in UTC)",
+            "nullable": true,
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              }
+            ]
+          },
+          "actor": {
+            "$ref": "#/components/schemas/AuditActorDto"
+          },
+          "viaAssistant": {
+            "type": "boolean"
+          },
+          "garageId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "carId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "jobId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "internal": {
+            "type": "boolean",
+            "description": "Never shown to the driver"
+          },
+          "kind": {
+            "type": "string",
+            "nullable": true
+          },
+          "text": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "action",
+          "subjectType",
+          "subjectId",
+          "field",
+          "oldValue",
+          "newValue",
+          "actor",
+          "viaAssistant",
+          "garageId",
+          "carId",
+          "jobId",
+          "internal",
+          "kind",
+          "text"
+        ]
+      },
+      "AuditHistoryPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Newest first, 20 at most",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEntryDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "total": {
+            "type": "number",
+            "description": "Entries matching the filters"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "total"
         ]
       }
     }

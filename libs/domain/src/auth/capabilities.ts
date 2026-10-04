@@ -22,11 +22,13 @@ export const CAPABILITIES = [
   'garage.prices',
   'garage.profile',
   'garage.feature_switches',
+  'garage.audit_history',
   'admin.garages',
   'admin.users',
   'admin.reviews',
   'admin.catalogue',
   'admin.settings',
+  'admin.audit_history',
 ] as const;
 export type Capability = (typeof CAPABILITIES)[number];
 
@@ -45,6 +47,7 @@ const TABLE: Record<Role, readonly Capability[]> = {
     'admin.reviews',
     'admin.catalogue',
     'admin.settings',
+    'admin.audit_history',
   ],
   driver: [
     'driver.requests',
@@ -63,13 +66,15 @@ const TABLE: Record<Role, readonly Capability[]> = {
     'garage.prices',
     'garage.profile',
     'garage.feature_switches',
+    'garage.audit_history',
   ],
-  mechanic: ['garage.own_jobs'],
+  mechanic: ['garage.own_jobs', 'garage.audit_history'],
   receptionist: [
     'garage.requests',
     'garage.schedule',
     'garage.final_price',
     'garage.own_jobs',
+    'garage.audit_history',
   ],
 };
 

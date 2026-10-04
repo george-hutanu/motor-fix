@@ -299,6 +299,7 @@ describe('capability table boundaries', () => {
       expect(held).not.toContain(c);
     }
     expect([...held].sort()).toEqual([
+      'garage.audit_history',
       'garage.final_price',
       'garage.own_jobs',
       'garage.requests',
@@ -309,23 +310,29 @@ describe('capability table boundaries', () => {
   it('opens each mechanic capability only through its own permission', () => {
     expect(
       [...capabilitiesOf('mechanic', { ...off, canMoveBookings: true })].sort(),
-    ).toEqual(['garage.own_jobs', 'garage.schedule']);
+    ).toEqual(['garage.audit_history', 'garage.own_jobs', 'garage.schedule']);
     expect(
       [...capabilitiesOf('mechanic', { ...off, canAnswerQuotes: true })].sort(),
-    ).toEqual(['garage.own_jobs', 'garage.requests']);
+    ).toEqual(['garage.audit_history', 'garage.own_jobs', 'garage.requests']);
     expect(
       [
         ...capabilitiesOf('mechanic', { ...off, canRecordFinalPrice: true }),
       ].sort(),
-    ).toEqual(['garage.final_price', 'garage.own_jobs']);
+    ).toEqual([
+      'garage.audit_history',
+      'garage.final_price',
+      'garage.own_jobs',
+    ]);
   });
 
-  it('gives a mechanic only own jobs when the permissions are missing or not true booleans', () => {
+  it('gives a mechanic only the base capabilities when the permissions are missing or not true booleans', () => {
     expect(capabilitiesOf('mechanic', {} as never)).toEqual([
       'garage.own_jobs',
+      'garage.audit_history',
     ]);
     expect(capabilitiesOf('mechanic', null as never)).toEqual([
       'garage.own_jobs',
+      'garage.audit_history',
     ]);
     expect(
       capabilitiesOf('mechanic', {
@@ -333,7 +340,7 @@ describe('capability table boundaries', () => {
         canMoveBookings: 1,
         canRecordFinalPrice: {},
       } as never),
-    ).toEqual(['garage.own_jobs']);
+    ).toEqual(['garage.own_jobs', 'garage.audit_history']);
   });
 
   it('ignores mechanic permissions for the other roles', () => {

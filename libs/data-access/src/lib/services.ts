@@ -3,3 +3,4 @@
 
 export { HealthService } from './services/health.service';
 export { MeService } from './services/me.service';
+export { AuditHistoryService } from './services/audit-history.service';

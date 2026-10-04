@@ -13,7 +13,7 @@ import { IsString } from 'class-validator';
 import request from 'supertest';
 
 import { AppModule } from './app.module';
-import { configureApp } from './bootstrap';
+import { configureApp, openApiDocument } from './bootstrap';
 
 class EchoDto {
   @IsString()
@@ -105,6 +105,27 @@ describe('api conventions', () => {
     expect(res.status).toBe(401);
     expect(res.headers['content-type']).toContain('application/problem+json');
     expect(res.body).toMatchObject({ code: 'sign_in_required', status: 401 });
+  });
+
+  it('serves the audit history under the prefix, behind sign-in', async () => {
+    app = await start();
+
+    const res = await request(app.getHttpServer()).get('/api/v1/audit-history');
+
+    expect(res.status).toBe(401);
+    expect(res.body).toMatchObject({ code: 'sign_in_required', status: 401 });
+  });
+
+  it('describes the audit history in the OpenAPI document', async () => {
+    app = await start();
+
+    const document = openApiDocument(app);
+    const operation = document.paths['/api/v1/audit-history']?.get;
+
+    expect(
+      operation?.parameters?.map((p) => 'name' in p && p.name).sort(),
+    ).toEqual(['actorId', 'area', 'cursor', 'from', 'garageId', 'jobId', 'to']);
+    expect(operation?.responses['200']).toBeDefined();
   });
 
   it('refuses a body with an unknown field', async () => {
