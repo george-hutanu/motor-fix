@@ -55,3 +55,4 @@
 - QA lap 1 on 02dcc71: success, 0 blocking; medium #3 (no domain event in the transaction, Constitution VI) fixed test-first (1 red) with `EVENT_PORT` in the transaction; low #7 plan.md fixed; lows #4–#6 deferred; mediums #1–#2 environment (no object store locally).
 - QA lap 2 on 5b36be6: failure on one CI check — main's new public-route list (ST-130) lacked the new route → merged origin/main, route added; low #4 plan.md fixed.
 - CI on 5acc665: Integration tests red on the audit-entry test — it sliced an unordered `findMany`; now it picks the new entry by id.
+- QA lap 3 on 28210de: success, 0 blocking; main moved (#68 ST-197 shares the generated client), so origin/main merged again, contract check clean, retest.
