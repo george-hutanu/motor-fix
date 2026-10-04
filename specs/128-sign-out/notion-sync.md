@@ -1,0 +1,16 @@
+# Notion sync — 128-sign-out
+
+- 2026-10-04 · start · ST-128 story Status · To do → Planning
+- 2026-10-04 · start · Foundations timeline row ST-128 · Not started → Planning
+- 2026-10-04 · start · EP-1 Foundations Status · unchanged (In progress)
+- 2026-10-04 · pr · ST-128 · PR #66 https://github.com/george-hutanu/motor-fix/pull/66
+- 2026-10-04 · labels · PR #66 · planning
+- 2026-10-04 · ready · Foundations · −ST-128 (started; a start changes no other item's blockers)
+- 2026-10-04 · implement · ST-128 story Status · Planning → Implementing
+- 2026-10-04 · implement · Foundations timeline row ST-128 · Planning → Implementing
+- 2026-10-04 · labels · PR #66 · in development
+- 2026-10-05 · qa · ST-128 story Status · Implementing → QA
+- 2026-10-05 · qa · Foundations timeline row ST-128 · Implementing → QA
+- 2026-10-05 · labels · PR #66 · QA
+- 2026-10-05 · debt · ST-128 · 1 task filed https://app.notion.com/p/3ef607bff0d2818bafeec79d6a8b83cb
+- 2026-10-05 · debt · ST-128 · 3 tasks filed (pr-tester lap 1) https://app.notion.com/p/3ef607bff0d2816aadf4d566701b18c2 https://app.notion.com/p/3ef607bff0d281e6ac3acc89b13e7991 https://app.notion.com/p/3ef607bff0d281fa892cfb5e17f6aca8

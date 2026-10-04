@@ -55,6 +55,7 @@ async function render(
   };
   const session = {
     current,
+    ended: new Subject<void>(),
     signOut: jest.fn(async () => current.set(null)),
     switchRole: jest.fn(async (to: Role) => {
       await switchRole(to);

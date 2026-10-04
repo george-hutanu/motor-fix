@@ -39,7 +39,10 @@ async function open(capabilities: string[] | null, area: Area, url: string) {
           path: `app/${a}`,
         })),
       ),
-      { provide: Session, useValue: { current, signOut: jest.fn() } },
+      {
+        provide: Session,
+        useValue: { current, ended: new Subject<void>(), signOut: jest.fn() },
+      },
       {
         provide: Live,
         useValue: {

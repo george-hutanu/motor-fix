@@ -82,6 +82,7 @@
       "receptionist": "Front desk"
     },
     "signOut": "Sign out",
+    "signOutEverywhere": "Sign out on all devices",
     "tab": {
       "brands": "Brands",
       "cars": "Cars",
@@ -127,6 +128,12 @@
       "keep": "Keep editing",
       "question": "Discard your changes?"
     }
+  },
+  "signOutEverywhere": {
+    "cancel": "Cancel",
+    "confirm": "Sign out",
+    "text": "You will need to sign in again everywhere.",
+    "title": "Sign out on all devices?"
   },
   "version": {
     "unknown": "version unknown"

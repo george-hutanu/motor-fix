@@ -146,6 +146,23 @@
         ]
       }
     },
+    "/api/v1/auth/sign-out-everywhere": {
+      "post": {
+        "operationId": "AuthController_signOutEverywhere",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/sign-out": {
       "post": {
         "operationId": "AuthController_signOut",

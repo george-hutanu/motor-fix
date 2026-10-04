@@ -47,6 +47,8 @@ export type { AuthControllerSignUp$Params as AuthControllerSignUp$Params } from 
 export { authControllerSignUp as authControllerSignUp } from './fn/auth/auth-controller-sign-up';
 export type { AuthControllerRefresh$Params as AuthControllerRefresh$Params } from './fn/auth/auth-controller-refresh';
 export { authControllerRefresh as authControllerRefresh } from './fn/auth/auth-controller-refresh';
+export type { AuthControllerSignOutEverywhere$Params as AuthControllerSignOutEverywhere$Params } from './fn/auth/auth-controller-sign-out-everywhere';
+export { authControllerSignOutEverywhere as authControllerSignOutEverywhere } from './fn/auth/auth-controller-sign-out-everywhere';
 export type { AuthControllerSignOut$Params as AuthControllerSignOut$Params } from './fn/auth/auth-controller-sign-out';
 export { authControllerSignOut as authControllerSignOut } from './fn/auth/auth-controller-sign-out';
 export type { MeControllerMe$Params as MeControllerMe$Params } from './fn/me/me-controller-me';
