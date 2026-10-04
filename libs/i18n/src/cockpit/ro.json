@@ -11,6 +11,14 @@
   "dialogTitle": "Programare confirmată",
   "drawerBody": "Sertarul folosește aceleași suprafețe și margini.",
   "drawerTitle": "Detalii service",
+  "gauges": {
+    "lampAmber": "Necesită atenție",
+    "lampGreen": "Lucrează pe Dacia",
+    "lampGrey": "Închis acum",
+    "lampRed": "Nu ia Dacia",
+    "swap": "Schimbă estimarea",
+    "title": "Lămpi, cadrane și prețuri"
+  },
   "heading": "Tema Cockpit",
   "inputLabel": "Marca mașinii",
   "intro": "Pagina de probă pentru aprobarea temei: comută aspectul dispozitivului între întunecat și luminos.",

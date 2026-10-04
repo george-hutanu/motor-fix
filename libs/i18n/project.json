@@ -13,6 +13,9 @@
         "{projectRoot}/src/test-setup.ts",
         "{workspaceRoot}/apps/web/src/**/*",
         {
+          "env": "JEST_SUITE"
+        },
+        {
           "externalDependencies": [
             "jest",
             "@nx/jest",

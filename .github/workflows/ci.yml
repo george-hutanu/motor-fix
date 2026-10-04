@@ -1,6 +1,9 @@
 name: CI
 
-# Merges into main run this through release.yml.
+# Pull requests run the affected projects, and a documentation-only PR runs
+# only the title check, the change detector and CI OK; merges into main run
+# every project through release.yml. Mutation testing has its own workflow
+# (mutation.yml) and never runs here.
 on:
   pull_request:
   workflow_call:
@@ -8,10 +11,99 @@ on:
 permissions:
   contents: read
 
+# A new push to a PR cancels its older run; runs on main never cancel each other.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NX_SCOPE: ${{ github.event_name == 'pull_request' && format('affected --base=origin/{0}', github.base_ref) || 'run-many' }}
+  TZ: UTC
+
 jobs:
-  checks:
+  pr-title:
+    name: PR title
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    services:
+    timeout-minutes: 2
+    steps:
+      - name: The title is a Conventional Commit
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([a-z0-9._/-]+\))?!?: [^ ]'
+          if [[ ! "$TITLE" =~ $pattern ]]; then
+            echo "::error::PR title is not a Conventional Commit: \"$TITLE\". Expected type(scope): subject, e.g. feat(api): add the health check. After fixing the title, push again to re-run the check."
+            exit 1
+          fi
+
+  # Decides whether the PR changes documentation only (scripts/docs-only.ts).
+  # Off a PR the step does not run, the output is empty and every job runs.
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      docs-only: ${{ steps.classify.outputs.docs-only }}
+    steps:
+      - uses: actions/checkout@v5
+        if: github.event_name == 'pull_request'
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        if: github.event_name == 'pull_request'
+        with:
+          node-version-file: .nvmrc
+      - id: classify
+        if: github.event_name == 'pull_request'
+        run: node scripts/docs-only.ts origin/${{ github.base_ref }}
+
+  biome:
+    name: Biome
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: biomejs/setup-biome@v2
+      - run: biome ci
+
+  typecheck:
+    name: Typecheck
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - run: npx nx $NX_SCOPE -t typecheck
+
+  unit:
+    name: Unit tests
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      JEST_SUITE: unit
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - run: npx nx $NX_SCOPE -t test --passWithNoTests
+
+  integration:
+    name: Integration tests
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services: &services
       postgres:
         image: postgis/postgis:17-3.5
         env:
@@ -25,30 +117,156 @@ jobs:
         options: >-
           --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
+      JEST_SUITE: integration
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
       REDIS_URL: redis://localhost:6379
       AUTH_TOKEN_SECRET: ci-only-test-secret-not-used-in-any-deploy
-      TZ: UTC
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - name: Migrate the test database
+        run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
+      - run: npx nx $NX_SCOPE -t test --passWithNoTests
+
+  e2e:
+    name: E2E tests
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services: *services
+    env:
+      APP_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      REDIS_URL: redis://localhost:6379
+      AUTH_TOKEN_SECRET: ci-only-test-secret-not-used-in-any-deploy
+      # The e2e suite does not upload files; the api only needs the settings.
+      STORAGE_ENDPOINT: http://localhost:9000
+      STORAGE_REGION: eu-central-1
+      STORAGE_BUCKET: motorfix
+      STORAGE_ACCESS_KEY_ID: ci-only
+      STORAGE_SECRET_ACCESS_KEY: ci-only
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - name: Migrate the test database
+        run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
+      - id: playwright
+        run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - id: browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - if: steps.browsers.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.browsers.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      # Playwright starts the api and web dev servers itself (playwright.config.mts).
+      - run: npx nx $NX_SCOPE -t e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            dist/.playwright
+            apps/web-e2e/test-output
+          if-no-files-found: ignore
+
+  build:
+    name: Build
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - run: npx nx $NX_SCOPE -t build
+
+  harness:
+    name: Harness
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: npm run lint:harness
+      - run: npm run test:harness
+
+  contract:
+    name: Contract check
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: sh scripts/contract-check.sh
+
+  audit:
+    name: Dependency audit
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      - name: Migrate the test database
-        run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
-      - name: Typecheck, test and build the affected projects
-        if: github.event_name == 'pull_request'
-        run: npx nx affected -t typecheck test build --base=origin/${{ github.base_ref }}
-      - name: Typecheck, test and build every project
-        if: github.event_name != 'pull_request'
-        run: npx nx run-many -t typecheck test build
-      - run: npx biome ci
-      - run: npm run lint:harness && npm run test:harness
-      - name: Contract check
-        run: sh scripts/contract-check.sh
-      - name: Dependency audit
-        run: npm audit --omit=dev --audit-level=high
+      - run: npm audit --omit=dev --audit-level=high
+
+  # On main, release.yml's images job is the real build.
+  docker:
+    name: Docker build (${{ matrix.app }})
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.docs-only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: web
+            target: web
+          # worker and mcp build the same node-app stage with another APP.
+          - app: api
+            target: node-app
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          build-args: APP=${{ matrix.app }}
+          target: ${{ matrix.target }}
+          push: false
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs:
+      [pr-title, changes, biome, typecheck, unit, integration, e2e, build, harness, contract, audit, docker]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Every job passed or did not apply
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Results: $RESULTS"
+          for result in $RESULTS; do
+            case "$result" in success|skipped) ;; *) exit 1 ;; esac
+          done

@@ -55,6 +55,7 @@
     "@types/jest": "30.0.0",
     "@types/node": "24.19.1",
     "@types/supertest": "7.2.1",
+    "axe-core": "4.13.0",
     "esbuild": "^0.27.0",
     "husky": "^9.1.7",
     "jest": "30.5.2",
@@ -92,8 +93,10 @@
     "prepare": "husky && sh .husky/identity.sh apply",
     "test": "TZ=UTC nx run-many -t test",
     "test:harness": "vitest run --config .claude/vitest.config.ts",
+    "test:integration": "JEST_SUITE=integration TZ=UTC nx run-many -t test --passWithNoTests",
     "test:mutation": "nx run-many -t test:mutation --parallel=1",
     "test:mutation:affected": "nx affected -t test:mutation --parallel=1",
+    "test:unit": "JEST_SUITE=unit TZ=UTC nx run-many -t test --passWithNoTests",
     "typecheck": "nx run-many -t typecheck"
   },
   "type": "module",

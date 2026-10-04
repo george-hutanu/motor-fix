@@ -1,1 +1,52 @@
 // audit module models
+
+enum AuditAction {
+  create
+  update
+  delete
+  open
+
+  @@map("audit_action")
+}
+
+enum AuditActorRole {
+  driver
+  owner
+  receptionist
+  mechanic
+  admin
+  system
+
+  @@map("audit_actor_role")
+}
+
+// Append-only: the migration adds triggers that refuse UPDATE, DELETE and
+// TRUNCATE. No foreign keys, so an entry outlives what it names.
+model ActivityLog {
+  id               String         @id @default(uuid()) @db.Uuid
+  at               DateTime       @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  action           AuditAction
+  subjectType      String         @map("subject_type")
+  subjectId        String         @map("subject_id") @db.Uuid
+  field            String?
+  oldValue         Json?          @map("old_value")
+  newValue         Json?          @map("new_value")
+  actorId          String?        @map("actor_id") @db.Uuid
+  actorRole        AuditActorRole @map("actor_role")
+  actorName        String         @map("actor_name")
+  viaAssistant     Boolean        @default(false) @map("via_assistant")
+  assistantGrantId String?        @map("assistant_grant_id") @db.Uuid
+  garageId         String?        @map("garage_id") @db.Uuid
+  carId            String?        @map("car_id") @db.Uuid
+  jobId            String?        @map("job_id") @db.Uuid
+  isKeyChange      Boolean        @default(false) @map("is_key_change")
+  internal         Boolean        @default(false)
+  kind             String?
+  text             String?
+
+  @@index([garageId, at])
+  @@index([carId, at])
+  @@index([jobId, at])
+  @@index([actorId, at])
+  @@map("activity_log")
+}

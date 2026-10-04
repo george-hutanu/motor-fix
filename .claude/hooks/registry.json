@@ -59,6 +59,19 @@
       "fingerprint": "a7d87a437bc9"
     },
     {
+      "id": "pre:bash:merge-gate",
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "script": "merge-gate.mjs",
+      "profiles": [
+        "standard",
+        "strict"
+      ],
+      "description": "Constitution VII: refuse `gh pr merge` (and the REST merge call) while the PR's head commit has no `agent-review` success from the PR tester",
+      "fail_closed": true,
+      "fingerprint": "7beeed050b97"
+    },
+    {
       "id": "pre:tool:agent-model",
       "event": "PreToolUse",
       "matcher": "Agent",
@@ -106,7 +119,7 @@
         "strict"
       ],
       "description": "Syntax-check the edited file and run the tests affected by it",
-      "fingerprint": "d18883208ed5"
+      "fingerprint": "cd75783b87f1"
     },
     {
       "id": "stop:test-gate",
@@ -119,7 +132,7 @@
       ],
       "description": "Refuse to end a session whose uncommitted code changes leave npm test + lint red",
       "fail_closed": true,
-      "fingerprint": "cec14128380c"
+      "fingerprint": "dbddc15a3c5c"
     },
     {
       "id": "stop:pr-lifecycle",
@@ -130,8 +143,8 @@
         "standard",
         "strict"
       ],
-      "description": "Constitution VII: refuse to end a session on a task branch with unpushed commits, with no PR, or with a ready PR whose checks all passed but that is not merged",
-      "fingerprint": "b1f1c68f26a6"
+      "description": "Constitution VII: refuse to end a session on a task branch with unpushed commits, with no PR, with a green ready PR the PR tester has not passed (no `agent-review` on its head), or with a ready PR whose checks and agent review passed but that is not merged",
+      "fingerprint": "b43340fadb8a"
     },
     {
       "id": "stop:telemetry",

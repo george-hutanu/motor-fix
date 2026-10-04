@@ -11,6 +11,14 @@
   "dialogTitle": "Appointment confirmed",
   "drawerBody": "The drawer uses the same surfaces and borders.",
   "drawerTitle": "Service details",
+  "gauges": {
+    "lampAmber": "Needs attention",
+    "lampGreen": "Works on Dacia",
+    "lampGrey": "Closed now",
+    "lampRed": "Does not take Dacia",
+    "swap": "Change the estimate",
+    "title": "Lamps, dials and prices"
+  },
   "heading": "Cockpit theme",
   "inputLabel": "Car make",
   "intro": "Sample page for approving the theme: switch the device appearance between dark and light.",

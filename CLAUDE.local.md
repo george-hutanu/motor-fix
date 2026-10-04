@@ -47,14 +47,14 @@ check; its Enforcement section is the authority. In short:
 | `red-first-gate.mjs` | before an Edit/Write | blocks `apps/*/src`, `libs/*/src` edits while the active feature has FRs + open tasks but the branch touches no `*.spec.*`/`*.test.*` file — run `/speckit-tests` first |
 | `post-edit-check.sh` | after an Edit/Write | `biome check` on the file, then its colocated `*.spec.ts` through Jest |
 | `stop-test-gate.sh` | before the agent finishes | `biome check` + `jest --onlyChanged` must be green |
-| `pr-lifecycle-gate.mjs` | before the agent finishes | Constitution VII: no unpushed commits, no task branch without a PR, no green ready PR left unmerged |
+| `pr-lifecycle-gate.mjs`, `merge-gate.mjs` | before finishing; before `gh pr merge` | Constitution VII: no unpushed commits, no branch without a PR, no green ready PR untested by `/speckit-pr-test` or left unmerged; no merge without `agent-review` success on the head |
 | `pre-commit-check.sh` | before `git commit` | commit-message policy, `spec-drift --staged` |
 | `bash-guard.mjs` | before any Bash call | blocks force-push, pushes to `main`, `reset --hard`, `clean -f`, deleting `.work/` |
 | `config-protection.mjs` | before an Edit/Write | the ratchets: a `thresholds.break` only rises, `.specify/trace-baseline.json` only shrinks, this file never grows past its baseline |
 | `agent-model-router.mjs` | before an Agent call | routes `code-reviewer`/`spec-reviewer` to sonnet or fable by diff size; rewrites `model` or does nothing, never refuses (`SPECKIT_MODEL_ROUTER=0` to stop it) |
 | `session-context.mjs` | at session start | injects `.specify/contexts/<mode>.md` for the phase the feature is in, plus instincts above the confidence threshold |
 | `session-telemetry.mjs` | before the agent finishes | counts-only ledger per session in `.specify/telemetry/` |
-| `.husky/pre-commit` | every real commit | identity check, then `typecheck` + `lint` + `test` |
+| `.husky/pre-commit` | every real commit | identity check, then `typecheck` + `lint` + `test` in a `scripts/heavy.sh` slot |
 
 The edit-time gates watch `apps/*`, `libs/*`, `e2e/` and skip Biome or Jest
 until that tool is installed. The harness's own specs run on vitest, apart.
@@ -159,5 +159,5 @@ ranked, read-only UI audit with `scan.mjs` and `contrast.mjs` helpers; fixes
 only the findings you name).
 
 <!-- SPECKIT START -->
-Active plan (stack, structure, commands): specs/431-mutation-testing/plan.md
+Active plan (stack, structure, commands): specs/390-audit-history/plan.md
 <!-- SPECKIT END -->

@@ -1,0 +1,53 @@
+[
+  {
+    "severity": "medium",
+    "kind": "review",
+    "title": "post.mjs --add is not idempotent: a re-run duplicates the agent's findings",
+    "steps": [
+      ".claude/scripts/pr-test/post.mjs:125 `writeFileSync(file, JSON.stringify(report, null, 2));` writes the merged findings back into report.json",
+      "A failed status call exits 1 (FR-010), so the caller retries the same `post.mjs --report <out>/report.json --add <out>/agent-findings.json`",
+      "The retry folds agent-findings.json in a second time: every agent finding appears twice in the review, the summary count and the PR description"
+    ],
+    "evidence": ".claude/scripts/pr-test/post.mjs:125"
+  },
+  {
+    "severity": "low",
+    "kind": "review",
+    "title": "Any HTTP 422 on the review call is treated as the own-PR refusal",
+    "steps": [
+      ".claude/scripts/pr-test/post.mjs:49 `const ownPrRefusal = (stderr) => /own pull request|HTTP 422/i.test(stderr);`",
+      "A 422 for another reason (for example a commit_id no longer on the PR after a push) silently falls back to a COMMENT review instead of surfacing the error"
+    ],
+    "evidence": ".claude/scripts/pr-test/post.mjs:49"
+  },
+  {
+    "severity": "low",
+    "kind": "review",
+    "title": "Merge gate does not see the GraphQL merge mutation",
+    "steps": [
+      ".claude/hooks/merge-gate.mjs:34 only matches `gh pr merge` and REST `repos/<o>/<r>/pulls/<n>/merge`",
+      "`gh api graphql` with a mergePullRequest mutation merges without an agent-review success; FR-011 names only the gh and REST paths, so this is hardening, not a requirement miss"
+    ],
+    "evidence": ".claude/hooks/merge-gate.mjs:34"
+  },
+  {
+    "severity": "low",
+    "kind": "review",
+    "title": "tasks.md T026 unchecked although its evidence is committed",
+    "steps": [
+      "specs/434-agent-pr-review/tasks.md:58 `- [ ] T026 Dry-run the tester on PR #14 ...`",
+      "specs/434-agent-pr-review/pr-review/pr-14-dry-run/ (report.json, report.md, 4 screenshots) is in this diff; T025 and T027 are also open. Tick them as the proof lands"
+    ],
+    "evidence": "specs/434-agent-pr-review/tasks.md:58"
+  },
+  {
+    "severity": "low",
+    "kind": "review",
+    "title": "Teardown removes the run directory twice",
+    "steps": [
+      "run.log ends with `teardown: remove .../mf-prtest-21-ZFV3BT` twice; .claude/scripts/pr-test/run.mjs:129 registers the removal and another path registers the same one",
+      "Harmless (force: true) but the teardown log no longer maps one line to one resource"
+    ],
+    "evidence": "run.log"
+  }
+]

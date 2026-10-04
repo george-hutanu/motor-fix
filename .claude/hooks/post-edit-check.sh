@@ -63,7 +63,17 @@ esac
 [ -n "$test_file" ] || exit 0
 [ -x node_modules/.bin/jest ] || exit 0
 
-if ! npx --no-install jest "$test_file" >&2 2>&1; then
+# In a heavy-command slot with two workers, waiting at most 60 s for one; no
+# slot in time skips the run and says so rather than stalling every edit.
+heavy=""
+[ -f scripts/heavy.sh ] && heavy="sh scripts/heavy.sh"
+HEAVY_WAIT="${HEAVY_WAIT:-60}" $heavy npx --no-install jest "$test_file" --maxWorkers=2 >&2 2>&1
+code=$?
+if [ "$code" -eq 124 ] && [ -n "$heavy" ]; then
+  echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"Affected tests for $rel were not run: every shared heavy-command slot stayed busy for 60 s. Run $test_file before relying on it.\"}}"
+  exit 0
+fi
+if [ "$code" -ne 0 ]; then
   echo "❌ Affected tests failed: $test_file (after editing $rel). Fix now — the Stop gate and .husky/pre-commit will block until green." >&2
   exit 2
 fi

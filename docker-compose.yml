@@ -6,11 +6,11 @@ services:
       POSTGRES_PASSWORD: motorfix
       POSTGRES_DB: motorfix
     ports:
-      - '5432:5432'
+      - '${POSTGRES_PORT:-5432}:5432'
   redis:
     image: redis:7
     ports:
-      - '6379:6379'
+      - '${REDIS_PORT:-6379}:6379'
   minio:
     image: minio/minio
     command: server /data
@@ -18,7 +18,7 @@ services:
       MINIO_ROOT_USER: motorfix
       MINIO_ROOT_PASSWORD: motorfix-secret
     ports:
-      - '9000:9000'
+      - '${MINIO_PORT:-9000}:9000'
   minio-setup:
     image: minio/mc
     depends_on:

@@ -173,9 +173,12 @@ Run standalone (not from `/speckit-auto`, which hands off after its own phase
 16): when no confirmed CRITICAL/HIGH is left and `typecheck`, `lint` and the
 tests are green, fill in the PR body from `.github/pull_request_template.md`
 and mark the PR ready exactly as `/speckit-auto`'s hand-off step 1 does
-(`pr-body-check.ts`, `gh pr edit --body-file`, `gh pr ready`), invoke `speckit-notion-sync review`, then merge on green
-CI exactly as `/speckit-auto`'s hand-off steps 3–4 do. With a blocker left, do
-none of this.
+(`pr-body-check.ts`, `gh pr edit --body-file`, `gh pr ready`), invoke
+`speckit-notion-sync review`, then run the QA step and merge exactly as
+`/speckit-auto`'s hand-off steps 3–7 do: green CI, `/speckit-pr-test <n>`
+(story → QA) until `agent-review` is success on the head commit, then merge.
+Findings routed to defer go to `specs/<feature>/deferred.md` and are filed as
+Notion tasks (`speckit-notion-sync debt`). With a blocker left, do none of this.
 
 ## Done When
 
@@ -183,7 +186,7 @@ none of this.
 - [ ] Every finding went to the configured number of refuters; none reached the report unverified
 - [ ] Confirmed and refuted findings both listed, with the refuters' reasons available
 - [ ] Confirmed CRITICAL/HIGH fixed and re-reviewed once, or reported as a Hard Stop
-- [ ] Standalone and clean: PR marked ready and the story In review; nothing merged
+- [ ] Standalone and clean: PR ready, story In review → QA, merged only on `agent-review` success
 
 ## Agent Execution Rules: review deltas
 

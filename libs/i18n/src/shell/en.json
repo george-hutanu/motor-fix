@@ -45,6 +45,10 @@
     },
     "signOut": "Sign out"
   },
+  "gauge": {
+    "none": "No reviews yet",
+    "rating": "Rating {value} out of 5"
+  },
   "health": {
     "status": "PostgreSQL: {postgres} · Redis: {redis}",
     "unknown": "unknown"

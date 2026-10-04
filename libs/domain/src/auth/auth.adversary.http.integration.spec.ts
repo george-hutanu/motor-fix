@@ -10,7 +10,7 @@ import { AuthModule } from './auth.module';
 import type { Role } from './capabilities';
 import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';
-import { noAudit } from '../audit/audit.port';
+import { AuditService } from '../audit/audit.service';
 import { noEvents } from '../events/event.port';
 
 const b64 = (value: unknown) =>
@@ -35,7 +35,7 @@ describe('who am I over HTTP and account writes under attack', () => {
     process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
   const tokenSecret = 'test-secret';
   const prisma = createPrisma(databaseUrl);
-  const accounts = new AccountsService(prisma, noAudit, noEvents);
+  const accounts = new AccountsService(prisma, new AuditService(), noEvents);
   let app: INestApplication;
 
   beforeAll(async () => {

@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 
 import { CockpitChartsSample } from './charts-sample';
+import { CockpitGaugesSample } from './gauges-sample';
 import { HlmButton } from './helm/button';
 import { HlmDialogImports } from './helm/dialog';
 import { HlmInput } from './helm/input';
@@ -18,6 +19,7 @@ import { SAMPLE_GARAGES } from './sample-text';
 
 @Component({
   imports: [
+    CockpitGaugesSample,
     FormsModule,
     HlmButton,
     HlmDialogImports,
@@ -37,6 +39,7 @@ import { SAMPLE_GARAGES } from './sample-text';
   styles: `
     main {
       display: grid;
+      grid-template-columns: minmax(0, 1fr);
       gap: var(--mf-space-6);
       max-width: 960px;
       margin: 0 auto;
@@ -109,6 +112,8 @@ import { SAMPLE_GARAGES } from './sample-text';
           </table>
         </div>
       </mf-panel>
+
+      <mf-cockpit-gauges-sample />
 
       <div class="row">
         <hlm-dialog>
