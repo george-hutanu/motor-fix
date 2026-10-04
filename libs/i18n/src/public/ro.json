@@ -1,1 +1,14 @@
-{}
+{
+  "placeholder": {
+    "account": "Cont",
+    "garages": "Service-uri",
+    "later": "Pagina vine în curând.",
+    "mechanics": "Mecanic"
+  },
+  "tabs": {
+    "account": "Cont",
+    "garages": "Service-uri",
+    "label": "Navigare principală",
+    "search": "Caută"
+  }
+}

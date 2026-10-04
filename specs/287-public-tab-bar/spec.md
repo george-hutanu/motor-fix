@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "ST-287 \"Move between public screens with a bottom tab bar on a phone\" — Notion story https://app.notion.com/p/3ee607bff0d281e1bf91cd25024ee64e (EP-1 Foundations, Phone experience feature; timeline row https://app.notion.com/p/3ee607bff0d281c2b8aac5ff4a90f456, Lane B · i18n & shell, wave W3, 3 points). A bottom tab bar on the public screens on a phone (below 768 px) with three tabs Caută / Service-uri / Cont (EN: Search / Garages / Account), safe-area aware, 44 px tabs, 12 px labels, active tab amber with aria-current, nav landmark \"Navigare principală\". The public screens it links to arrive in EP-4, so build it against placeholder routes. Blocked by ST-286 and ST-17, both merged."
 
@@ -28,9 +28,10 @@ the bar, its active tab, and where each tab leads.
 1. **Given** a visitor on Home on a phone 375 px wide, **when** the page
    renders, **then** a bottom bar shows "Caută", "Service-uri" and "Cont",
    and "Caută" is active and amber.
-2. **Given** the visitor opened the results for a brand earlier in this tab,
-   **when** they tap "Service-uri", **then** the results for that brand open;
-   **given** they did not, **then** Home opens.
+2. **Given** the visitor opened the results for a brand earlier in this
+   visit, **when** they tap "Service-uri", **then** the results for that brand
+   open; **given** they did not, **then** the results screen opens without a
+   brand.
 3. **Given** a visitor who is not signed in, **when** they tap "Cont",
    **then** the account screen opens (a placeholder until the sign-in sheet of
    ST-82 replaces it).
@@ -103,10 +104,14 @@ screen at 768 px and 1024 px; focus a text field at 375 px.
 - An unknown address under a language prefix answers the not-found page, which
   is not a public section screen and has no bar.
 - The dashboards (`/app/*`) and the Cockpit sample (`/cockpit`) are not public
-  screens and have no public bar (the dashboards get their own bar in a separate story).
-- A `brand` on a results address that is empty is not remembered.
-- A signed-in person's session that has expired: "Cont" asks the server once
-  and, without an answer, behaves as signed out.
+  screens and have no public bar (the dashboards get their own bar in ST-288).
+- A results address with no `brand`, or an empty one, keeps the brand already
+  remembered.
+- A signed-in person's session that has expired: opening the account screen
+  asks the server once per visit to that screen and, without an answer,
+  behaves as signed out; a failed answer is not remembered.
+- A short page (Home today is three lines): the bar still sits at the bottom
+  of the screen, not under the last line.
 
 ## Requirements *(mandatory)*
 
@@ -123,25 +128,29 @@ screen at 768 px and 1024 px; focus a text field at 375 px.
 - **FR-003**: Exactly one tab MUST be active, chosen by the current screen:
   Home → "Caută"; results, garage and mechanic screens → "Service-uri"; the
   account screen → "Cont". The active tab MUST carry `aria-current="page"` and
-  the theme's amber; the other two MUST carry neither.
+  the theme's amber ink (`--mf-amber-ink`); the other two MUST carry neither
+  and use the secondary text colour.
 - **FR-004**: "Caută" MUST lead to Home in the current language.
-- **FR-005**: "Service-uri" MUST lead to the results for the brand of the last
-  results address opened in this browser tab (its `brand` query parameter),
-  and to Home when no results address with a brand was opened; the brand is
-  held in memory only.
-- **FR-006**: "Cont" MUST lead to the account screen. Opening the account
-  screen MUST show the signed-in person's dashboard (the landing of the role
-  they used last, from the session) when someone is signed in, and the
-  account placeholder otherwise.
+- **FR-005**: "Service-uri" MUST lead to the results screen with the brand of
+  the last results address opened in this visit (its non-empty `brand` query
+  parameter), and to the results screen without a brand when none was; the
+  brand is held in memory until the page reloads.
+- **FR-006**: "Cont" MUST lead to the account screen (the same address
+  whether signed in or not). Opening the account screen MUST ask the session
+  once and show the signed-in person's dashboard (the landing of the role they
+  used last) when someone is signed in, and the account placeholder otherwise.
 - **FR-007**: The bar's bottom padding MUST be at least the device's bottom
   safe-area inset; each tab MUST be at least 44 px tall; each label at least
   12 px; and no public screen may scroll sideways at 320 px with the bar shown.
 - **FR-008**: From 768 px wide the bar MUST be hidden.
-- **FR-009**: While a text field (an input that takes text, a textarea, or an
-  editable element) on the page has focus, the bar MUST be hidden; it MUST
-  show again when that focus leaves.
-- **FR-010**: The bar MUST NOT cover the end of a page: the last content of a
-  public screen stays visible above the bar when scrolled to the bottom.
+- **FR-009**: While a text field has focus — a textarea, an editable element,
+  or an input of any type but button, checkbox, color, file, image, radio,
+  range, reset and submit — the bar MUST be hidden (not shown, not announced,
+  not focusable); it MUST show again when that focus leaves.
+- **FR-010**: The bar MUST sit at the bottom of the screen on a page shorter
+  than the screen, and MUST NOT cover the end of a longer page: the last
+  content of a public screen stays visible above the bar when scrolled to the
+  bottom.
 - **FR-011**: Until EP-4 and ST-82 build them, the results (`garages`),
   garage (`garages/<garage>`), mechanic (`mechanics/<mechanic>`) and account
   (`account`) screens MUST exist under each language prefix as placeholders:
@@ -155,8 +164,8 @@ screen at 768 px and 1024 px; focus a text field at 375 px.
 
 - **Tab**: one of `search`, `garages`, `account`; a label, an icon and a
   destination address.
-- **Last brand**: the `brand` of the last results address opened in this
-  browser tab; in memory, lost on reload.
+- **Last brand**: the non-empty `brand` of the last results address opened in
+  this visit; in memory, lost on reload.
 
 ## Success Criteria *(mandatory)*
 
@@ -166,7 +175,8 @@ screen at 768 px and 1024 px; focus a text field at 375 px.
   in one tap (the end-to-end test taps each tab from Home and checks the
   address).
 - **SC-002**: At 320 px, every public screen with the bar has
-  `scrollWidth` ≤ 320 and every tab is at least 44 px tall.
+  `document.documentElement.scrollWidth` ≤ 320 and every tab is at least
+  44 px tall.
 - **SC-003**: At 768 px and 1024 px the bar is not visible on any public
   screen.
 - **SC-004**: The en and ro text files of the bar have identical key sets
@@ -182,6 +192,25 @@ screen at 768 px and 1024 px; focus a text field at 375 px.
   `GET /api/v1/garages/:slug`, ST-307): `garages`, `garages/<garage>`,
   `mechanics/<mechanic>`, and `account` for Cont (autonomous default; the
   timeline row says "build the bar against placeholder routes").
+- Q: With no remembered brand, does "Service-uri" open Home or the results
+  screen? → A: The results screen without a brand: the mock links the tab to
+  Results, and from Home a tab that reopens Home would look dead and leave
+  "Caută" active (spec-challenger, recommended).
+- Q: Is the signed-in redirect decided by the tab's address or by the account
+  screen? → A: By the account screen's guard, as the dashboards' area guard
+  does: one stable address for the tab, and no session call on every public
+  page load (recommended).
+- Q: Where does the bar live, and how does it stay at the bottom of a short
+  page? → A: One public frame under the language prefix (Home and the
+  placeholders), a full-height column with the bar last and sticky; the
+  not-found page stays outside it (recommended).
+- Q: Memory or session storage for the last brand, and does a results address
+  without a brand clear it? → A: Memory, lost on reload; a missing or empty
+  `brand` keeps the previous one; only the results address records it
+  (recommended).
+- Q: Which fields hide the bar, and how hidden? → A: Not displayed at all
+  (out of the accessibility tree and the tab order); every input type that
+  takes typed text, textareas and editable elements (recommended).
 
 ## Assumptions
 
@@ -190,9 +219,13 @@ screen at 768 px and 1024 px; focus a text field at 375 px.
   current screen (autonomous default; Build brief scenario 3 is *proposed* and
   names the sheet as out of scope).
 - "Searched for a brand before in this session" (scenario 2) is read as "opened
-  a results address with a `brand` in this browser tab", in memory, since no
-  search exists yet; Home stands in for "Home at the brand picker" until EP-4
-  adds the picker (autonomous default).
+  a results address with a `brand` in this visit", in memory, since no search
+  exists yet; without one the tab opens the results placeholder, not "Home at
+  the brand picker" (*proposed* in the Build brief), which EP-4 can revisit
+  once the picker exists (autonomous default, see Clarifications).
+- The placeholders accept any garage or mechanic slug, and get the canonical
+  and hreflang tags every address under a language prefix gets; they are only
+  left out of the sitemap, since EP-4 replaces them (autonomous default).
 - The server's render of `/` has no bar: `/` exists for search engines and the
   browser moves on to the language address at once (ST-21) (autonomous
   default).

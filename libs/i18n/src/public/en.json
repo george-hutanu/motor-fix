@@ -1,1 +1,14 @@
-{}
+{
+  "placeholder": {
+    "account": "Account",
+    "garages": "Garages",
+    "later": "This page is coming soon.",
+    "mechanics": "Mechanic"
+  },
+  "tabs": {
+    "account": "Account",
+    "garages": "Garages",
+    "label": "Main navigation",
+    "search": "Search"
+  }
+}
