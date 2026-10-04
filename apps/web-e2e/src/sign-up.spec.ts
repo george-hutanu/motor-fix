@@ -25,6 +25,9 @@ const TITLE = {
 } as const;
 
 const dialog = (page: Page, name: string) => page.getByRole('dialog', { name });
+// On a phone the dialog element is a 0x0 pane; the panel inside is what shows.
+const surface = (page: Page, name: string) =>
+  dialog(page, name).locator('mf-overlay-panel');
 
 const fresh = () =>
   `nou-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
@@ -225,7 +228,7 @@ test.describe('the sign-up form', () => {
       .getByRole('button', { name: 'Creează un cont' })
       .click();
 
-    await expect(dialog(page, 'Cont nou')).toBeVisible();
+    await expect(surface(page, 'Cont nou')).toBeVisible();
     await expect(page).toHaveURL('/ro/garages');
   });
 
@@ -288,7 +291,7 @@ async function openAt(page: Page, width: number, language: 'ro' | 'en') {
       name: language === 'ro' ? 'Creează un cont' : 'Create an account',
     })
     .click();
-  await expect(dialog(page, titles.signUp)).toBeVisible();
+  await expect(surface(page, titles.signUp)).toBeVisible();
 }
 
 async function axeViolations(page: Page) {
@@ -319,7 +322,7 @@ test.describe('the sign-up dialog on every screen size', () => {
 
       await openAt(page, width, language);
 
-      const box = await dialog(page, TITLE[language].signUp).boundingBox();
+      const box = await surface(page, TITLE[language].signUp).boundingBox();
       expect(box?.x).toBeGreaterThanOrEqual(0);
       expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width);
       expect(
