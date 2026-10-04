@@ -97,5 +97,18 @@
       "exit": 2,
       "stderr": "--add-label \"in development\""
     }
+  },
+  {
+    "id": "pr-lifecycle-refuses-a-pr-without-its-type-label",
+    "hook": "stop:pr-lifecycle",
+    "why": "the owner filters PRs by type on GitHub; a fix(\u2026) PR must say bug",
+    "payload": {},
+    "env": {
+      "SPECKIT_PR_STATE": "{\"branch\": \"chore-x\", \"ahead\": 1, \"unpushed\": 0, \"blocked\": false, \"pr\": {\"number\": 40, \"title\": \"fix(web): ST-9 x\", \"state\": \"OPEN\", \"isDraft\": true, \"labels\": [{\"name\": \"in development\"}], \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": []}}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "--add-label \"bug\""
+    }
   }
 ]

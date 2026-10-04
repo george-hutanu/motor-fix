@@ -7,7 +7,9 @@
 // `speckit-notion-sync pr` records in specs/<branch>/notion-sync.md. A PR
 // carries its stage as a label: `planning` until /speckit-implement, then
 // `in development` while a draft, `in review` once ready, `QA` while the PR
-// tester runs.
+// tester runs. It also carries its type, read off the Conventional Commit
+// title: `feature`, `bug`, `tech debt`, `performance`, `documentation`,
+// `tests` or `tooling`, and `breaking` when the title carries a `!`.
 //
 // What it does NOT block: main or a detached HEAD, a branch with nothing ahead
 // of origin/main, a draft PR (the work is not done yet), a PR whose checks are
@@ -43,6 +45,24 @@ const isAgentReview = (c) => (c.context ?? c.name) === "agent-review";
 export const hasAgentReview = (checks) =>
   checks.some((c) => isAgentReview(c) && (c.state ?? c.conclusion) === "SUCCESS");
 
+const TYPE_LABELS = {
+  feat: "feature",
+  fix: "bug",
+  refactor: "tech debt",
+  perf: "performance",
+  docs: "documentation",
+  test: "tests",
+  ci: "tooling",
+  build: "tooling",
+  chore: "tooling",
+};
+
+/** The type label a Conventional Commit title asks for, or null. */
+export function typeLabel(title = "") {
+  const type = /^(\w+)(\([^)]*\))?!?:/.exec(title)?.[1];
+  return TYPE_LABELS[type] ?? null;
+}
+
 /** The refusal for this state, or null when the session may end. */
 export function decide({ branch, ahead, unpushed, pr, prLinked = true, blocked = false }) {
   if (!branch || branch === "HEAD" || branch === "main" || ahead === 0)
@@ -59,6 +79,11 @@ export function decide({ branch, ahead, unpushed, pr, prLinked = true, blocked =
       return `PR #${pr.number} is a draft without its stage label. Add "planning" before /speckit-implement or "${IN_DEVELOPMENT}" from it (gh pr edit ${pr.number} --add-label "${IN_DEVELOPMENT}"); every open PR shows its stage on GitHub.`;
     if (!pr.isDraft && ![...READY_LABELS].some(has))
       return `PR #${pr.number} is ready but has no "${IN_REVIEW}" or "QA" label. Swap it in (gh pr edit ${pr.number} --remove-label "${IN_DEVELOPMENT}" --add-label "${IN_REVIEW}"); every open PR shows its stage on GitHub.`;
+    const type = typeLabel(pr.title);
+    if (type && !has(type))
+      return `PR #${pr.number} has no "${type}" label for its title's type. Add it (gh pr edit ${pr.number} --add-label "${type}"); every open PR shows its type on GitHub.`;
+    if (/^\w+(\([^)]*\))?!:/.test(pr.title ?? "") && !has("breaking"))
+      return `PR #${pr.number} is a breaking change (! in its title) without the "breaking" label. Add it (gh pr edit ${pr.number} --add-label "breaking").`;
   }
   if (pr.state !== "OPEN" || pr.isDraft || pr.mergeable !== "MERGEABLE") return null;
   const checks = pr.statusCheckRollup ?? [];
@@ -115,7 +140,7 @@ function readState(cwd) {
   try {
     const out = execFileSync(
       "gh",
-      ["pr", "view", branch, "--json", "number,state,isDraft,labels,mergeable,statusCheckRollup"],
+      ["pr", "view", branch, "--json", "number,state,isDraft,labels,mergeable,statusCheckRollup,title"],
       { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 15000 },
     );
     pr = JSON.parse(out);

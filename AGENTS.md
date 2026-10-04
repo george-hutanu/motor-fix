@@ -32,7 +32,9 @@ epic or a plan, whether run through spec-kit or by hand.
 - **Every task follows the same lifecycle, in this order.** This is a hard
   rule, Constitution VII, enforced by the `stop:pr-lifecycle` and
   `pre:bash:merge-gate` gates:
-  1. Take the task and set it to In progress in Notion (`speckit-notion-sync start`).
+  1. Take the task and set it to Planning in Notion (`speckit-notion-sync start`);
+     it moves to Implementing when `/speckit-implement` begins
+     (`speckit-notion-sync implement`, the `before_implement` hook).
   2. Open a draft PR for its branch at the start (`speckit-git-commit`; before
      planning has a commit, an empty `chore(<scope>): ST-<n> start …` one),
      its body made from `.github/pull_request_template.md`:
@@ -75,8 +77,10 @@ epic or a plan, whether run through spec-kit or by hand.
   returns it to where it was. Each step also moves the PR's label —
   `planning` until `/speckit-implement`, then `in development`, `in review`,
   `QA`, plus `blocked` — so GitHub shows the
-  same stage as Notion (table in `speckit-notion-sync`, §2b); the merge
-  removes them all.
+  same stage as Notion. Next to its one stage label a PR carries its type
+  (`feature`, `bug`, `tech debt`, …, from the title), `breaking`, its scope,
+  its epic, `ui` and `dependencies` where they apply (table in
+  `speckit-notion-sync`, §2b); the merge removes the stage labels.
 
   No step waits for the user: opening the draft, pushing, marking it ready,
   merging on green CI and the Notion writes are all standing instructions. The

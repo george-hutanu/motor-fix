@@ -9,7 +9,9 @@ Sync Impact Report (v1.6.0)
   link … make it a hard rule" and "when a PR is in review, add a label", "and QA label as well", "in development as well", "and other
   labels that you think are useful" (→ `blocked`), "once merged, remove
   labels", "planning label … for the beginning of the task until
-  speckit-implement";
+  speckit-implement", "in notion keep 2 columns instead of in progress:
+  planning and implementing" (story Status and timeline Build status), "use more labels like: bug,
+  feature, tech debt" (type, breaking, scope, epic, ui, dependencies);
   MotorFix stories gains a `PR` URL property, every existing story PR was
   backfilled, and the open ready PRs were labelled.
 - Templates:
@@ -211,7 +213,8 @@ notifications in step, even when Redis is down.
 Every task, current or future, runs this lifecycle on its own, and no step
 waits for the owner:
 
-1. Set the task In progress in Notion, then open a draft PR for its branch,
+1. Set the task Planning in Notion (Implementing once `/speckit-implement`
+   starts), then open a draft PR for its branch,
    labelled `planning` until `/speckit-implement` starts and `in development`
    from then on,
    and write that PR's link onto the task's own `PR` property in Notion. Every
@@ -238,8 +241,10 @@ waits for the owner:
 A task that cannot go on without something outside it is set Blocked, with the
 reason on the story and the PR and the PR's `blocked` label, and returns to
 its previous status when it resumes. An open PR always carries exactly one
-stage label (`planning`, `in development`, `in review`, `QA`); the merge removes them all,
-`blocked` included.
+stage label (`planning`, `in development`, `in review`, `QA`), which the merge
+removes with `blocked`, and its type label from the title (`feature`, `bug`,
+`tech debt`, `performance`, `documentation`, `tests`, `tooling`), plus
+`breaking` for a `!` title.
 
 Rationale: the owner should not have to say when to open a PR or when to
 merge one, and green unit tests are not proof the change works when used. A
