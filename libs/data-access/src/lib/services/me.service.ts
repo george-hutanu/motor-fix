@@ -11,6 +11,8 @@ import { StrictHttpResponse } from '../strict-http-response';
 
 import { meControllerMe } from '../fn/me/me-controller-me';
 import { MeControllerMe$Params } from '../fn/me/me-controller-me';
+import { meControllerUpdate } from '../fn/me/me-controller-update';
+import { MeControllerUpdate$Params } from '../fn/me/me-controller-update';
 import { MeDto } from '../models/me-dto';
 
 @Injectable({ providedIn: 'root' })
@@ -41,6 +43,31 @@ export class MeService extends BaseService {
    */
   meControllerMe(params?: MeControllerMe$Params, context?: HttpContext): Promise<MeDto> {
     const resp = this.meControllerMe$Response(params, context);
+    return resp.then((r: StrictHttpResponse<MeDto>): MeDto => r.body);
+  }
+
+  /** Path part for operation `meControllerUpdate()` */
+  static readonly MeControllerUpdatePath = '/api/v1/me';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `meControllerUpdate()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  meControllerUpdate$Response(params: MeControllerUpdate$Params, context?: HttpContext): Promise<StrictHttpResponse<MeDto>> {
+    const obs = meControllerUpdate(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `meControllerUpdate$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  meControllerUpdate(params: MeControllerUpdate$Params, context?: HttpContext): Promise<MeDto> {
+    const resp = this.meControllerUpdate$Response(params, context);
     return resp.then((r: StrictHttpResponse<MeDto>): MeDto => r.body);
   }
 

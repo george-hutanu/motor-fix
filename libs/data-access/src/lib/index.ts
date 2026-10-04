@@ -14,6 +14,7 @@ export type { HealthChecksDto } from './models/health-checks-dto';
 export type { HealthLiveDto } from './models/health-live-dto';
 export type { HealthReadyDto } from './models/health-ready-dto';
 export type { MeDto } from './models/me-dto';
+export type { UpdateMeDto } from './models/update-me-dto';
 export { BaseService } from './base-service';
 export { HealthService } from './services/health.service';
 export { MeService } from './services/me.service';
@@ -25,5 +26,7 @@ export type { HealthControllerReady$Params as HealthControllerReady$Params } fro
 export { healthControllerReady as healthControllerReady } from './fn/health/health-controller-ready';
 export type { MeControllerMe$Params as MeControllerMe$Params } from './fn/me/me-controller-me';
 export { meControllerMe as meControllerMe } from './fn/me/me-controller-me';
+export type { MeControllerUpdate$Params as MeControllerUpdate$Params } from './fn/me/me-controller-update';
+export { meControllerUpdate as meControllerUpdate } from './fn/me/me-controller-update';
 export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Params } from './fn/audit-history/audit-history-controller-list';
 export { auditHistoryControllerList as auditHistoryControllerList } from './fn/audit-history/audit-history-controller-list';

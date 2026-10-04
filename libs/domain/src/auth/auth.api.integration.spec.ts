@@ -354,20 +354,20 @@ describe('rights answer 404, never 403', () => {
 });
 
 describe('the account module', () => {
-  it('exposes no route that writes', () => {
+  it('exposes no route that writes but the change of my language', () => {
     const controllers =
       AuthModule.register({ databaseUrl, tokenSecret }).controllers ?? [];
+    const writes = controllers.flatMap((controller) => {
+      const proto = controller.prototype as Record<string, object>;
+      return Object.getOwnPropertyNames(proto)
+        .filter((name) => {
+          const method = Reflect.getMetadata(METHOD_METADATA, proto[name]);
+          return method !== undefined && method !== RequestMethod.GET;
+        })
+        .map((name) => `${controller.name}.${name}`);
+    });
 
     expect(controllers.length).toBeGreaterThan(0);
-    for (const controller of controllers) {
-      const proto = controller.prototype as Record<string, unknown>;
-      for (const name of Object.getOwnPropertyNames(proto)) {
-        const method = Reflect.getMetadata(
-          METHOD_METADATA,
-          proto[name] as object,
-        );
-        if (method !== undefined) expect(method).toBe(RequestMethod.GET);
-      }
-    }
+    expect(writes).toEqual(['MeController.update']);
   });
 });
