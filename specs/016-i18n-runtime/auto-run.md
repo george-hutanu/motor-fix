@@ -73,3 +73,17 @@
 
 ## 14 Review
 - Notion review sync: ST-16 In review; timeline row In review.
+- Resumed run: specs/016-i18n-runtime and .specify/capabilities/i18n.md had never been committed → committed (07ecd47); branch pushed, draft PR https://github.com/george-hutanu/motor-fix/pull/4.
+- Note: the earlier run had already set ST-16 and its timeline row to In review before this resume; the orchestrator asked for no In review write. Left as is, flagged in the report.
+- Agreed decision applied before review: provideI18n() (environment initializer: starts the runtime, sets <html lang>) as its own line in app.config.ts — plan.md's "no provider function" revised; contract documents provideI18n and "Adding an area" for ST-50. Added a check that every folder of translation files is a registered area (c98c163).
+- spec-reviewer: APPROVE — MEDIUM enter/use race; LOW template scan missed '…'/"…" templates and any *index.html; LOW adversary specs duplicate cases (kept).
+- code-reviewer: BLOCK → HIGH enter/use race (area entered mid-switch never got its English file); MEDIUM failed English load still switches (withdrawn on re-review: FR-008 requires it); LOW `const reader = this` in check.ts (Biome passes; kept); LOW use/enter have no UI caller yet (ST-17 owns the switcher).
+- Fixed (f276e9d): I18n keeps the switch's target language and enter() loads it; overlap test added. Template scan reads every quote style and skips only apps/web/src/index.html.
+- Re-review (code-reviewer): finding resolved, APPROVE. No CRITICAL/HIGH left.
+
+## 15 Agent context
+- CLAUDE.local.md managed block points at specs/016-i18n-runtime/plan.md (one line; the script's three-line form trimmed so the ratchet holds at 135 lines). 588475c.
+
+## 16 Retrospective evidence
+- retro-evidence --since 3f717c6: 22/22 tasks, 12 FRs, Spec Delta i18n +12, 0 deferred. No verdict recorded (user's call).
+- Final verify: typecheck 10/10, lint clean (122 files), test 8 projects green; SSR smoke (built server, no API): <html lang="ro">, Romanian shell texts. Full Playwright e2e not re-run in the resume.
