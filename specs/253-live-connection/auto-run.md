@@ -26,3 +26,37 @@
   - Q4 mechanic dashboard → mechanics land on /app/garage (policy.ts landingFor); FR-015 names all four roles.
   - Q5 Redis down → streams open with heartbeats; subscriber resubscribes; only the test POST answers 503.
 - Minor applied: the test address answers 401 without a token, 404 to signed-in non-admins.
+
+## 5–8 Plan, checklist, tasks, analyze
+- plan.md + research, data-model, contracts/live.md, quickstart; Complexity Tracking: the web reader is a file in apps/web (not a new Nx lib, one consumer); AuthModule global (one guard and Prisma for the events module).
+- checklists/live.md: 13 items, all judged satisfied with a reason each.
+- tasks.md: 11 tasks. Analyze: artifact-lint 0/0 after the Spec Delta named a new capability `live-updates` (stub file under .specify/capabilities); one plan/tasks mismatch fixed (EventsModule options).
+
+## 9 Tests (red)
+- New suites: live.hub.spec, live.api.integration.spec, live.spec (web), frame.spec additions, access-token expiry; e2e live.spec. Red: 5/5 suites failing (modules absent).
+- test-adversary: 3 files, ~116 tests. Four corrected to the house rules after implementation: two-garage fixture (schema forbids two owner rows → owner + receptionist), forged role (roleInUse falls back to the held role, policy.ts), reconnect "delay" (reconnect is immediate), one-byte-at-a-time flush.
+
+## 10 Implement
+- Local DB motorfix_st253, Redis db 13, API :3253, web :4253 (.env git-ignored).
+- Full Jest: 120 suites, 2918 tests passed. typecheck 0, biome 0.
+- e2e (BASE_URL :4253): 189 passed; 3 failed unrelated — pwa.spec needs the production build; overlays.spec scroll check on /cockpit flakes by a few px on the dev server (a different case each run).
+- Commits: 8830658 feat, a197646 refactor (dead exports).
+
+## 12 Harden
+- diff-audit: dead exports removed (LIVE_BYE_REASONS → type, interfaces private). `import-extension` ERRORs: known false positive (bundler resolution, every lib file extensionless). `suppression` / `untested-new-file` on libs/data-access: generated code. `unbounded-loop` WARN on the reader: exits on stream end or abort.
+- Mutation: not run locally (AGENTS.md: CI nightly only).
+
+## Browser walk (built-in pane)
+- Driver dashboard, admin test update: toast at 320 px dark RO, 390 px light EN, tablet dark EN, desktop light EN; no sideways scroll; Cockpit toast colours in both themes.
+
+## 14 Review
+- spec-reviewer APPROVE (3 LOW: re-verify comment → fixed; `Connection` header → removed; open handle in worker mode → deferred.md).
+- code-reviewer APPROVE (MEDIUM #1 client gone during the channel lookup kept a slot → fixed in the hub, test first; LOW #2 log the failed subscribe → done; MEDIUM #3 decision two Redis helpers → kept B, a dedicated fail-fast publisher so the test address answers 503 at once rather than after the 2 s command timeout; LOW #4 AccessClaims export → removed; LOW #5 loop exit comment → added).
+- No CRITICAL/HIGH; no re-review needed.
+
+## 15 Agent context
+- CLAUDE.local.md is tracked here; its "Active plan" pointer left as is, to avoid a conflict with the other open PRs.
+
+## 16 Retro evidence (unjudged)
+- retro-evidence --since e58ed38 --jev: 11/11 tasks, 15 FRs, Spec Delta live-updates +15, 0 deferred at the time; 5 carryover items from earlier features; jev lane unavailable (no key), so no suggested verdict.
+- instincts triggered: none (jev lane unavailable).

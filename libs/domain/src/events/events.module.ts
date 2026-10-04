@@ -49,6 +49,8 @@ function connect(url: string, role: 'publisher' | 'subscriber') {
 export class EventsModule
   implements OnModuleInit, BeforeApplicationShutdown, OnApplicationShutdown
 {
+  private readonly logger = new Logger('Live');
+
   constructor(
     private readonly hub: LiveHub,
     @Inject(PUBLISHER) private readonly publisher: Redis,
@@ -83,7 +85,13 @@ export class EventsModule
       this.hub.deliver(message),
     );
     // Not awaited: the API starts, and streams open, whether Redis answers or not.
-    this.subscriber.subscribe(LIVE_CHANNEL).catch(() => undefined);
+    this.subscriber
+      .subscribe(LIVE_CHANNEL)
+      .catch((error: Error) =>
+        this.logger.error(
+          `live updates are off on this copy: ${error.message}`,
+        ),
+      );
     this.publisher.connect().catch(() => undefined);
   }
 

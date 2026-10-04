@@ -84,7 +84,8 @@ export class Live {
   }
 
   // Server-sent events arrive in blocks that end with a blank line; a chunk
-  // may end in the middle of one.
+  // may end in the middle of one. The loop ends when the server closes the
+  // stream or close() cancels the reader.
   private async consume(
     reader: ReadableStreamDefaultReader<Uint8Array>,
     signal: AbortSignal,

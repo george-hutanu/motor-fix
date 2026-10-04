@@ -223,6 +223,23 @@ describe('LiveHub', () => {
     expect(sink.pings()).toBe(0);
   });
 
+  it('keeps no stream whose client left before it opened', () => {
+    const gone = Object.assign(new Sink(), { destroyed: true });
+
+    hub.open(gone, {
+      accountId: 'a1',
+      channels: ['account:a1'],
+      expiresAt: NOW + 15 * MINUTE,
+    });
+    const streams = Array.from({ length: 10 }, () =>
+      open('a1', ['account:a1']),
+    );
+    jest.advanceTimersByTime(25_000);
+
+    expect(gone.chunks).toEqual([]);
+    for (const { sink } of streams) expect(sink.ended).toBe(false);
+  });
+
   it('frees the slot of a stream that went away', () => {
     const first = open('a1', ['account:a1']);
     first.sink.emit('close');

@@ -10,6 +10,7 @@ const STREAMS_PER_ACCOUNT = 10;
 
 // An Express response, as far as the hub needs one.
 interface LiveSink {
+  readonly destroyed?: boolean;
   write(chunk: string): unknown;
   end(): unknown;
   on(event: 'close', listener: () => void): unknown;
@@ -60,7 +61,9 @@ export class LiveHub {
     },
   ) {}
 
-  open(sink: LiveSink, target: LiveTarget): string {
+  open(sink: LiveSink, target: LiveTarget): string | null {
+    // A client that left before the stream opened has already emitted close.
+    if (sink.destroyed) return null;
     const connection: Connection = {
       accountId: target.accountId,
       channels: new Set(target.channels),

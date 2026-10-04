@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 
 import { ROLES, type Role } from './capabilities';
 
-export interface AccessClaims {
+interface AccessClaims {
   accountId: string;
   role: Role;
 }

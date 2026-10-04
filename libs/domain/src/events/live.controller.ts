@@ -56,13 +56,12 @@ export class LiveController {
     @Res() res: Response,
   ) {
     const token = req.header('authorization')?.slice('Bearer '.length) ?? '';
-    // The guard has just accepted this token, so it verifies again here.
+    // The guard accepted this token; reading it again gives its expiry.
     const expiresAt =
       verifyAccessToken(token, this.auth.tokenSecret)?.expiresAt ?? Date.now();
     const channels = await this.channels(actor);
     res.writeHead(200, {
       'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
       'Content-Type': 'text/event-stream; charset=utf-8',
       'X-Accel-Buffering': 'no',
     });

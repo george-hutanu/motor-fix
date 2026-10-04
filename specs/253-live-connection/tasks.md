@@ -36,6 +36,11 @@ Independent test: two Nest apps on one Redis; an admin's test reaches each strea
 
 - [X] T011 `apps/web-e2e/src/live.spec.ts` (new): driver and garage dashboards in two contexts, the admin's test to each, both toasts within 2 s, no reload (SC-001, FR-015)
 
+## Phase 7: Review fixes
+
+- [X] T012 `libs/domain/src/events/live.hub.ts`: a sink already destroyed when `open` runs (client gone during the channel lookup) is not kept, so it never holds a slot of the 10 (FR-009, FR-010; code-reviewer #1)
+- [X] T013 `libs/domain/src/events/events.module.ts`: log a failed first subscribe; `live.controller.ts`: drop `Connection: keep-alive` (FR-001 names three headers) and fix the expiry comment; `access-token.ts`: `AccessClaims` private (code-reviewer #2, #4, #5; spec-reviewer #1, #2)
+
 ## Dependencies
 
 T001, T002 → T003 → T004, T005 → T006 → T007; T001 → T008 → T009 → T010; T006 + T009 → T011.
