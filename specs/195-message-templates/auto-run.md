@@ -78,3 +78,4 @@
 ## Hand-off
 - PR #67 body filled (pr-body-check passes), ready; Notion story + timeline Implementing → QA, label QA.
 - CI lap 1: Unit tests red — `ui-cockpit/colour-literals.spec.ts` refuses hex colours outside the theme library, and `email-layout.ts` held the palette. Fix: `EMAIL_PALETTE` moved to `libs/ui-cockpit/src/email.ts` (path `@motor-fix/ui-cockpit/email`, no Angular), `email.spec.ts` keeps it equal to the light theme in cockpit.css. Worker bundle: no Angular.
+- QA lap 1 (pr-tester, d77d8ee): success, 0 blocker/high. Medium x2 = no object store on this machine (environment); medium PUBLIC_WEB_URL and low href scheme → deferred.md, filed in Notion. Evidence: pr-review/lap1/.

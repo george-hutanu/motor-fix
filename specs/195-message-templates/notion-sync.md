@@ -12,3 +12,4 @@
 - 2026-10-05 · qa · ST-195 · Implementing → QA
 - 2026-10-05 · qa · Foundations timeline ST-195 · Implementing → QA
 - 2026-10-05 · labels · PR #67 · QA
+- 2026-10-05 · debt · ST-195 · 2 tasks filed (deferred.md lines 2–3)
