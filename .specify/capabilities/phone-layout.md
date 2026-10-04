@@ -3,6 +3,7 @@ capability: phone-layout
 updated: 2026-10-04
 features:
   - 286-phone-layout
+  - 287-public-tab-bar
 ---
 
 # Capability: Phone layout and installable web app
@@ -54,5 +55,53 @@ _From 286-phone-layout._
 ### 286-FR-011 — The production build MUST register the Angular service worker, which caches the app shell and static assets, never caches API answers, and sends navigations to the server first; development builds and browsers without service workers run without it.
 
 _From 286-phone-layout._
+
+### 287-FR-001 — Below 768 px, every public screen — Home and the results, garage, mechanic and account screens under a language prefix — MUST show a bar at the bottom of the screen with three tabs, in this order: "Caută", "Service-uri", "Cont" (English "Search", "Garages", "Account"), each an icon with its label, never an icon alone.
+
+_From 287-public-tab-bar._
+
+### 287-FR-002 — The bar MUST be a navigation landmark named "Navigare principală" (English "Main navigation"); the icons MUST be hidden from assistive technology.
+
+_From 287-public-tab-bar._
+
+### 287-FR-003 — Exactly one tab MUST be active, chosen by the current screen: Home → "Caută"; results, garage and mechanic screens → "Service-uri"; the account screen → "Cont". The active tab MUST carry `aria-current="page"` and the theme's amber ink (`--mf-amber-ink`); the other two MUST carry neither and use the secondary text colour.
+
+_From 287-public-tab-bar._
+
+### 287-FR-004 — "Caută" MUST lead to Home in the current language.
+
+_From 287-public-tab-bar._
+
+### 287-FR-005 — "Service-uri" MUST lead to the results screen with the brand of the last results address opened in this visit (its non-empty `brand` query parameter), and to the results screen without a brand when none was; the brand is held in memory until the page reloads.
+
+_From 287-public-tab-bar._
+
+### 287-FR-006 — "Cont" MUST lead to the account screen (the same address whether signed in or not). Opening the account screen MUST ask the session once and show the signed-in person's dashboard (the landing of the role they used last) when someone is signed in, and the account placeholder otherwise.
+
+_From 287-public-tab-bar._
+
+### 287-FR-007 — The bar's bottom padding MUST be at least the device's bottom safe-area inset; each tab MUST be at least 44 px tall; each label at least 12 px; and no public screen may scroll sideways at 320 px with the bar shown.
+
+_From 287-public-tab-bar._
+
+### 287-FR-008 — From 768 px wide the bar MUST be hidden.
+
+_From 287-public-tab-bar._
+
+### 287-FR-009 — While a text field has focus — a textarea, an editable element, or an input of any type but button, checkbox, color, file, image, radio, range, reset and submit — the bar MUST be hidden (not shown, not announced, not focusable); it MUST show again when that focus leaves.
+
+_From 287-public-tab-bar._
+
+### 287-FR-010 — The bar MUST sit at the bottom of the screen on a page shorter than the screen, and MUST NOT cover the end of a longer page: the last content of a public screen stays visible above the bar when scrolled to the bottom.
+
+_From 287-public-tab-bar._
+
+### 287-FR-011 — Until EP-4 and ST-82 build them, the results (`garages`), garage (`garages/<garage>`), mechanic (`mechanics/<mechanic>`) and account (`account`) screens MUST exist under each language prefix as placeholders: a heading naming the section and one line saying the screen comes later, in both languages; they are not added to the sitemap.
+
+_From 287-public-tab-bar._
+
+### 287-FR-012 — The bar's texts MUST exist in Romanian and English with the same keys; switching the language MUST change the labels and the landmark name in place, and the tabs MUST lead to the addresses of the new language.
+
+_From 287-public-tab-bar._
 
 ## Retired
