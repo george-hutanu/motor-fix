@@ -39,13 +39,9 @@
 - Decisions: global StorageModule beside HealthModule; no SignedUploadDto yet (no endpoint uses it, Principle I); biome noRestrictedImports override extended to libs/media; bucket settings listed under "Outside the code".
 - Complexity Tracking: in-process S3 test store; libs/media lib.
 
-## 9 Tests
-- Red specs: libs/contracts files.spec.ts (7), env.spec.ts (+6); libs/domain storage.service.spec.ts (~38, with the in-process S3 test store s3-test-store.ts), health.controller.spec.ts (7) and health.adversary.spec.ts (storage added, +3); libs/media file-uploader.spec.ts (7); apps/api bootstrap specs boot with storage env.
-- RED: `npx jest <those files>` → "Test Suites: 8 failed, 8 total" — every suite fails to compile on the missing ./files, ./storage.module, ./storage.service, ./file-uploader and STORAGE_ENV (the behaviour does not exist yet).
-- test-adversary launched in background (new files storage.adversary.spec.ts, file-uploader.adversary.spec.ts).
-- Also: SDK installed (T001, 0 prod vulnerabilities); libs/media scaffold (T002); tsconfig paths @motor-fix/domain/testing and @motor-fix/media.
-
 ## 6 Checklist
+- checklists/security.md: 19 items; 4 failed first reading and were fixed in spec.md (owner id quantified, 400 for malformed input, store-down for confirm/delete/write, check-then-move race → move only the checked object). 0 unchecked. requirements.md 16/16.
+
 ## 7 Tasks
 - tasks.md: 21 tasks (setup 3, foundational 3, US1 4, US2 2, US3 2, US5 4, US4 2, polish 1), FR → test map.
 
@@ -53,4 +49,23 @@
 - artifact-lint: WARN delta-missing → added Spec Delta (storage Adds FR-001–008, 011, 012; platform Modifies 421-FR-013 → FR-009, 421-FR-021 → FR-010; FR-009/FR-010 restated in full); then ERROR delta-unknown-capability → created .specify/capabilities/storage.md (empty, archive fills it). Re-run: 0/0; capabilities validate: merges cleanly.
 - Own pass: HIGH — FR-010 test was hollow (generic readEnv). Remediated: STORAGE_ENV in contracts env.ts used by both mains and StorageModule.register (T006, T017, T018, plan Config). Re-run lint: clean. No CRITICAL. Coverage 12/12 FRs.
 
-- checklists/security.md: 19 items; 4 failed first reading and were fixed in spec.md (owner id quantified, 400 for malformed input, store-down for confirm/delete/write, check-then-move race → move only the checked object). 0 unchecked. requirements.md 16/16.
+## 9 Tests
+- Red specs: libs/contracts files.spec.ts (7), env.spec.ts (+6); libs/domain storage.service.spec.ts (~38, with the in-process S3 test store s3-test-store.ts), health.controller.spec.ts (7) and health.adversary.spec.ts (storage added, +3); libs/media file-uploader.spec.ts (7); apps/api bootstrap specs boot with storage env.
+- RED: `npx jest <those files>` → "Test Suites: 8 failed, 8 total" — every suite fails to compile on the missing ./files, ./storage.module, ./storage.service, ./file-uploader and STORAGE_ENV (the behaviour does not exist yet).
+- test-adversary launched in background (new files storage.adversary.spec.ts, file-uploader.adversary.spec.ts).
+- Also: SDK installed (T001, 0 prod vulnerabilities); libs/media scaffold (T002); tsconfig paths @motor-fix/domain/testing and @motor-fix/media.
+
+## 10 Implement
+- Gate: checklists 16/16 + 19/19 → proceed. before_implement hooks: design.md current; Notion story already In progress.
+- test-adversary found 5 real defects, all fixed (spec updated first): replayed form after confirm could replace a confirmed file (FR-005: final key exists → file_missing); download lifetime 0/-5/NaN signed (FR-006: refused); ready() had no limit of its own (FR-009: 2 s abort); uploader re-subscription reused the old address (defer); progress could be NaN or >100 (clamped).
+- Biome complexity on the test store fixed by splitting functions (no suppression).
+- Commits: fab4e39 feat(storage) — rules, storage module, health storage check, api/worker wiring, openapi + client, compose, .env.example, specs; 823e904 feat(media) — upload helper lib. Both through husky (identity, typecheck, lint, test).
+- Verification: `npx jest libs/domain libs/contracts libs/media apps/api` → "Tests: 310 passed, 310 total"; `npm run typecheck` → "Successfully ran target typecheck for 10 projects"; `sh scripts/contract-check.sh` → clean; `nx run-many -t build -p api worker` → success.
+- Note: specs/ and .specify/capabilities/ ARE tracked in this repo (421 committed them), unlike the speckit-auto skill text; committed with the slice, following the 421 precedent.
+
+## 11 Converge
+- Converged: 12 FRs, 5 stories, plan decisions, constitution I–VI checked; 0 findings; tasks.md unchanged. Notion story re-read: no comments.
+
+## Resume
+- Run resumed after an interruption at 2 commits ahead of main; log sections reordered into phase order (11 had been written before 6/7/8). tasks.md: 21/21 done (T021 ticked). Remaining: 12 harden, 13 ticket refresh, 14 review, 15 agent context.
+- Owner-authorised for this run: push the branch and open a draft PR after the first commit; push after each later commit; never mark ready, never merge, Notion stays In progress (no `review` sync).

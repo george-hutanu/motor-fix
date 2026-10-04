@@ -57,7 +57,7 @@ description: "Tasks: private file storage with signed uploads and downloads"
 
 ## Phase 8: Polish
 
-- [ ] T021 Run quickstart.md validation: `npm run typecheck`, `npm run lint`, `npm test`, `sh scripts/contract-check.sh`
+- [X] T021 Run quickstart.md validation: `npm run typecheck`, `npm run lint`, `npm test`, `sh scripts/contract-check.sh`
 
 ## Dependencies
 
