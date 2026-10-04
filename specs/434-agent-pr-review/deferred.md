@@ -7,3 +7,7 @@ Verified findings that are real but not this change.
 - [ ] `.claude/scripts/pr-test/sweep.mjs`, `post.mjs`, `notion-status.mjs` and 17 other harness scripts — **low** — pre-existing convention: the CLI entry check compares `import.meta.url` with a `file://` template, which breaks on a path with spaces; `pathToFileURL(process.argv[1]).href` everywhere (code-reviewer, 2026-10-04).
 - [ ] `.claude/agents/org-researcher.md` — **medium** — its tool list names Notion servers (`mcp__claude_ai_Notion__*`, `mcp__f3041bc4-…`) that are not connected in this session, so `/speckit-context` returned UNAVAILABLE; add the connected server's tool names (run log, phase 3).
 - [ ] GitHub branch protection — **decision for the owner** — `agent-review` is enforced by the harness gates, not by GitHub; making it a required status check is a repository setting.
+- [ ] `.claude/scripts/pr-test/post.mjs:125` — **medium** — `--add` writes the merged findings back into report.json, so a retry after a failed status call adds the agent's findings twice (pr-tester lap 1 on PR #21, 2026-10-04).
+- [ ] `.claude/scripts/pr-test/post.mjs:49` — **low** — any HTTP 422 from the review call is read as "own pull request"; match GitHub's message only (pr-tester lap 1).
+- [ ] `.claude/hooks/merge-gate.mjs` — **low** — a merge through `gh api graphql` (`mergePullRequest`) is not gated (pr-tester lap 1).
+- [ ] `.claude/scripts/pr-test/run.mjs:129` — **low** — the run directory's teardown step runs twice, one duplicate log line (pr-tester lap 1).

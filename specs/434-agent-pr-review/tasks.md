@@ -54,9 +54,9 @@ description: "Tasks: agent QA review of every ready PR"
 
 ## Phase 7: Proof
 
-- [ ] T025 Run the tester on this feature's PR; act on its findings; copy the evidence to `specs/434-agent-pr-review/pr-review/`
-- [ ] T026 Dry-run the tester on PR #14 without posting; evidence in `specs/434-agent-pr-review/pr-review/pr-14-dry-run/`
-- [ ] T027 `npm run test:harness`, `node .claude/scripts/harness-eval.mjs --check`, `node .claude/scripts/doctor.mjs`, `npm run lint`
+- [X] T025 Run the tester on this feature's PR; act on its findings; copy the evidence to `specs/434-agent-pr-review/pr-review/`
+- [X] T026 Dry-run the tester on PR #14 without posting; evidence in `specs/434-agent-pr-review/pr-review/pr-14-dry-run/`
+- [X] T027 `npm run test:harness`, `node .claude/scripts/harness-eval.mjs --check`, `node .claude/scripts/doctor.mjs`, `npm run lint` (CI Harness job green; locally 2 pre-existing diff-audit timeouts, see deferred.md)
 
 ## FR → test
 
