@@ -50,7 +50,7 @@ Independent test: sign in per role through HTTP against PostgreSQL and Redis; wr
 
 ## Phase 7: Polish
 
-- [ ] T021 Mark tasks, update `auto-run.md`; `npm run typecheck`, `npm run lint`, the touched Jest projects, the e2e
+- [X] T021 Mark tasks, update `auto-run.md`; `npm run typecheck`, `npm run lint`, the touched Jest projects, the e2e
 
 ## Tests (written first by `/speckit-tests`; FR → test)
 

@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-82 Sign in with e-mail and password (Notion story https://app.notion.com/p/3ee607bff0d2810e8ab4ed9099e3e908, epic EP-1 Foundations)."
 

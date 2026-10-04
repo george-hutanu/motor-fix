@@ -67,3 +67,23 @@
 ## 12. Harden
 - artifact-lint 0 errors. diff-audit (against the stale local main): mine — `.skip(` in the e2e helper → moved to a `grepInvert` on `@seeded` in playwright.config.mts; `eslint-disable` in generated `libs/data-access` files (generator output, never hand-edited); `pg` dev dependency justified in plan.md; others are other stories' files.
 - Mutation run: not run locally (user rule: no mutation tests on this laptop).
+
+## 14. Review
+- spec-reviewer: APPROVE (MEDIUM decision: proxy trust → deferred; LOW: offline text → deferred; LOW: lifetime twice, run log → fixed).
+- code-reviewer (with security): BLOCK on HIGH #1 (refresh cleared the cookie on any error); MEDIUM login CSRF, Redis command timeout, seed deny-list, proxy trust (deferred); LOW TODO, duplicate constant. Security verdicts: argon2id/decoy PASS, timing-safe PASS, limits PASS, no secrets logged PASS, cookie flags PASS, rotation/reuse PASS, access token in memory PASS.
+- test-adversary: 135 tests in 5 files; 4 defects (NUL e-mail → 500; renewal without a token accepted; two late answers restoring the session after sign-out).
+- Fixes, tests first: fec614f. Re-review: code-reviewer APPROVE (new MEDIUM stale in-flight promise after sign-out → sign-in, fixed with a test in a0aa4a5; LOW .env.example, deferred.md format → fixed). `run-state repair` lap 1 of 5.
+- Coordinator: ST-159 merged (5b99c7d) → merged main (4923504), dialog moved onto `taskSave` and the shared parts; `--mf-red-ink` comes with the shared error parts; found and fixed the kit input dropping a field's `aria-describedby` (0c06e2c, test in helm.spec.ts).
+- Second re-review (both): APPROVE; LOWs fixed in the session fix commit (failed renewal and slow sign-out forget only their own session; stale spec texts).
+
+## 13. Ticket refresh
+- Story re-read after implementation: no comments, Build brief unchanged. No new evidence.
+
+## 15. Agent context
+- Skipped: the only managed pointer is the tracked `CLAUDE.local.md` "Active plan" line, which every story would rewrite on main; left unchanged.
+
+## 16. Retrospective evidence
+- `retro-evidence.mjs --since a27b286 --jev` and `instincts.mjs triggered --since a27b286` gathered for the report; Jev lane unavailable (no key); no verdict written.
+
+## 17. Archive
+- Spec Delta merged: accounts +21 ~1 (079-FR-017 → 082-FR-021), phone-layout ~1 (287-FR-006 → 082-FR-012).
