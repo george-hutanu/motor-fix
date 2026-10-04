@@ -1,0 +1,410 @@
+@import "@angular/cdk/overlay-prebuilt.css";
+@import "@fontsource/michroma/index.css";
+@import "@fontsource-variable/hanken-grotesk/index.css";
+
+:root {
+  color-scheme: dark;
+
+  --mf-bg: #0b0c0e;
+  --mf-panel: #101215;
+  --mf-panel-raised: #15171a;
+  --mf-line: #2a2d31;
+  --mf-line-strong: #4a4e55;
+  --mf-text: #f2f2f0;
+  --mf-text-secondary: #b5b8be;
+  --mf-amber: #ffb000;
+  --mf-amber-hover: #ffc94d;
+  --mf-on-amber: #0b0c0e;
+  --mf-amber-ink: #ffb000;
+  --mf-amber-tint: rgba(255, 176, 0, 0.1);
+  --mf-green: #32d74b;
+  --mf-red: #ff5a4f;
+  --mf-focus: #ffb000;
+  --mf-mask: rgba(0, 0, 0, 0.6);
+
+  --mf-font-label: "Michroma", "Hanken Grotesk Variable", system-ui, sans-serif;
+  --mf-font-body: "Hanken Grotesk Variable", system-ui, sans-serif;
+  --mf-size-label: 12px;
+  --mf-size-small: 13px;
+  --mf-size-body: 15px;
+  --mf-size-field: 16px;
+  --mf-label-tracking: 0.14em;
+
+  --mf-space-1: 4px;
+  --mf-space-2: 8px;
+  --mf-space-3: 12px;
+  --mf-space-4: 16px;
+  --mf-space-5: 20px;
+  --mf-space-6: 24px;
+  --mf-space-8: 32px;
+
+  --mf-radius-panel: 20px;
+  --mf-radius-control: 12px;
+  --mf-radius-chip: 10px;
+
+  --mf-focus-width: 3px;
+  --mf-focus-offset: 3px;
+  --mf-tap: 44px;
+}
+
+/* TODO: the owner approves the light set, derived from the dark one, on /cockpit. */
+@media (prefers-color-scheme: light), print {
+  :root {
+    color-scheme: light;
+
+    --mf-bg: #f4f4f1;
+    --mf-panel: #ffffff;
+    --mf-panel-raised: #ecece8;
+    --mf-line: #d3d5d8;
+    --mf-line-strong: #9a9ea5;
+    --mf-text: #15171a;
+    --mf-text-secondary: #50545b;
+    --mf-amber: #ffb000;
+    --mf-amber-hover: #ffc94d;
+    --mf-on-amber: #15171a;
+    --mf-amber-ink: #8a5e00;
+    --mf-amber-tint: rgba(138, 94, 0, 0.1);
+    --mf-green: #1e8e34;
+    --mf-red: #d93a30;
+    --mf-focus: #8a5e00;
+    --mf-mask: rgba(0, 0, 0, 0.4);
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--mf-bg);
+  color: var(--mf-text);
+  font-family: var(--mf-font-body);
+  font-size: var(--mf-size-body);
+  line-height: 1.45;
+}
+
+.mf-label {
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  font-weight: 400;
+  letter-spacing: var(--mf-label-tracking);
+  text-transform: uppercase;
+}
+
+:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
+
+/* Spartan helm components: each carries a spartan-* class painted here. */
+
+.spartan-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mf-space-2);
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-5);
+  border: 1px solid transparent;
+  border-radius: var(--mf-radius-control);
+  font-family: var(--mf-font-body);
+  font-size: var(--mf-size-body);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.spartan-button[data-disabled] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.spartan-button-variant-default {
+  background: var(--mf-amber);
+  color: var(--mf-on-amber);
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-small);
+  font-weight: 400;
+  letter-spacing: var(--mf-label-tracking);
+  text-transform: uppercase;
+}
+
+.spartan-button-variant-default:hover {
+  background: var(--mf-amber-hover);
+}
+
+.spartan-button-variant-secondary {
+  background: transparent;
+  border-color: var(--mf-line-strong);
+  color: var(--mf-text);
+}
+
+.spartan-button-variant-secondary:hover,
+.spartan-button-variant-ghost:hover {
+  background: var(--mf-panel-raised);
+  border-color: var(--mf-text-secondary);
+}
+
+.spartan-button-variant-ghost {
+  background: transparent;
+  color: var(--mf-text);
+}
+
+.spartan-label {
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+}
+
+.spartan-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-3);
+  background: var(--mf-bg);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+  color: var(--mf-text);
+  font-family: var(--mf-font-body);
+  font-size: var(--mf-size-field);
+}
+
+.spartan-input:hover {
+  border-color: var(--mf-text-secondary);
+}
+
+.spartan-input:focus-visible {
+  border-color: var(--mf-amber-ink);
+}
+
+.spartan-input::placeholder {
+  color: var(--mf-text-secondary);
+}
+
+.spartan-input[data-matches-spartan-invalid="true"] {
+  border-color: var(--mf-red);
+}
+
+/* brn-switch passes the class on to its inner button, which is the 44 px
+   target; the track is drawn inside it. */
+button.spartan-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 48px;
+  min-height: var(--mf-tap);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--mf-radius-chip);
+  cursor: pointer;
+}
+
+button.spartan-switch::before {
+  content: "";
+  position: absolute;
+  inset: 10px 0;
+  background: var(--mf-line-strong);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: 12px;
+}
+
+button.spartan-switch[data-state="checked"]::before {
+  background: var(--mf-amber);
+  border-color: var(--mf-amber);
+}
+
+.spartan-switch-thumb {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  margin-inline-start: 4px;
+  background: var(--mf-text);
+  border-radius: 50%;
+  pointer-events: none;
+  transition: transform 0.15s ease-out;
+}
+
+.spartan-switch-thumb[data-state="checked"] {
+  background: var(--mf-on-amber);
+  transform: translateX(22px);
+}
+
+button.spartan-switch[data-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.spartan-tabs {
+  display: grid;
+  gap: var(--mf-space-3);
+}
+
+.spartan-tabs-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+
+.spartan-tabs-trigger {
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-4);
+  background: transparent;
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-chip);
+  color: var(--mf-text-secondary);
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  letter-spacing: var(--mf-label-tracking);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.spartan-tabs-trigger:hover {
+  color: var(--mf-text);
+}
+
+.spartan-tabs-trigger[data-state="active"] {
+  background: var(--mf-amber-tint);
+  border-color: var(--mf-amber-ink);
+  color: var(--mf-amber-ink);
+}
+
+.spartan-tabs-content {
+  margin: 0;
+}
+
+.spartan-table-container {
+  overflow-x: auto;
+}
+
+.spartan-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--mf-size-body);
+}
+
+.spartan-table-row {
+  border-bottom: 1px solid var(--mf-line);
+}
+
+.spartan-table-body .spartan-table-row:last-child {
+  border-bottom: 0;
+}
+
+.spartan-table-row[data-state="selected"] {
+  background: var(--mf-amber-tint);
+  color: var(--mf-amber-ink);
+}
+
+.spartan-table-head {
+  padding: var(--mf-space-3) var(--mf-space-2);
+  color: var(--mf-text-secondary);
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  font-weight: 400;
+  letter-spacing: var(--mf-label-tracking);
+  text-align: start;
+  text-transform: uppercase;
+}
+
+.spartan-table-cell {
+  padding: var(--mf-space-3) var(--mf-space-2);
+}
+
+.spartan-dialog-overlay,
+.spartan-sheet-overlay {
+  background: var(--mf-mask);
+}
+
+.spartan-dialog-content,
+.spartan-sheet-content,
+.spartan-popover-content {
+  display: grid;
+  gap: var(--mf-space-3);
+  box-sizing: border-box;
+  background: var(--mf-panel-raised);
+  border: 1px solid var(--mf-line);
+  color: var(--mf-text);
+}
+
+.spartan-dialog-content {
+  position: relative;
+  width: min(480px, calc(100vw - 2 * var(--mf-space-4)));
+  padding: var(--mf-space-6);
+  border-radius: var(--mf-radius-panel);
+}
+
+.spartan-sheet-content {
+  position: fixed;
+  inset-block: 0;
+  align-content: start;
+  width: min(400px, 85vw);
+  padding: var(--mf-space-6);
+}
+
+.spartan-sheet-content[data-side="right"] {
+  inset-inline-end: 0;
+  border-width: 0 0 0 1px;
+}
+
+.spartan-sheet-content[data-side="left"] {
+  inset-inline-start: 0;
+  border-width: 0 1px 0 0;
+}
+
+.spartan-popover-content {
+  width: 288px;
+  padding: var(--mf-space-4);
+  border-radius: var(--mf-radius-control);
+}
+
+.spartan-dialog-close,
+.spartan-sheet-close {
+  position: absolute;
+  inset-block-start: var(--mf-space-2);
+  inset-inline-end: var(--mf-space-2);
+  min-width: var(--mf-tap);
+  padding: 0;
+}
+
+.spartan-dialog-header,
+.spartan-sheet-header {
+  display: grid;
+  gap: var(--mf-space-2);
+  padding-inline-end: var(--mf-tap);
+}
+
+.spartan-dialog-title,
+.spartan-sheet-title {
+  margin: 0;
+}
+
+/* Beats the toaster's own [data-sonner-toast][data-styled] rule. */
+[data-sonner-toaster] [data-sonner-toast].spartan-toast {
+  background: var(--mf-panel-raised);
+  border-color: var(--mf-line);
+  border-radius: var(--mf-radius-control);
+  box-shadow: none;
+  color: var(--mf-text);
+  font-family: var(--mf-font-body);
+  font-size: var(--mf-size-small);
+}
+
+[data-sonner-toaster] .spartan-toast [data-description] {
+  color: var(--mf-text-secondary);
+}
+
+.spartan-toast:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
+
+@media (forced-colors: active) {
+  button.spartan-switch::before,
+  .spartan-tabs-trigger[data-state="active"] {
+    border-color: CanvasText;
+  }
+
+  button.spartan-switch[data-state="checked"]::before {
+    background: Highlight;
+  }
+}
