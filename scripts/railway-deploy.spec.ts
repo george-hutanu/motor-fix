@@ -359,4 +359,159 @@ describe('railway deploy when the Railway API itself fails', () => {
 
     await new Promise((resolve) => down.close(resolve));
   });
+
+  it("names Railway's GraphQL errors from a 400 body", async () => {
+    const invalid = createServer((_req, res) =>
+      res.writeHead(400, { 'content-type': 'application/json' }).end(
+        JSON.stringify({
+          errors: [
+            { message: 'Variable "$serviceId" of type "String" is wrong.' },
+            { message: 'Variable "$environmentId" is wrong.' },
+          ],
+        }),
+      ),
+    );
+    await new Promise<void>((resolve) => invalid.listen(0, resolve));
+    const endpoint = `http://localhost:${(invalid.address() as AddressInfo).port}`;
+
+    await expect(
+      deploy({
+        endpoint,
+        environmentId: 'env-1',
+        limitMs: 200,
+        pollMs: 5,
+        services,
+        token: 't',
+      }),
+    )
+      .rejects.toThrow(
+        'Railway API answered HTTP 400: Variable "$serviceId" of type "String" is wrong.; Variable "$environmentId" is wrong.',
+      )
+      .finally(() => new Promise((resolve) => invalid.close(resolve)));
+  });
+});
+
+// Railway's public schema (backboard.railway.com/graphql/v2): every argument
+// below is String!, except serviceInstanceUpdate's environmentId (String).
+// A nullable variable in a String! position fails validation with HTTP 400.
+describe('railway deploy query variables', () => {
+  const NON_NULL: Record<string, string[]> = {
+    deployment: ['id'],
+    serviceInstance: ['serviceId', 'environmentId'],
+    serviceInstanceDeployV2: ['serviceId', 'environmentId'],
+    serviceInstanceUpdate: ['serviceId'],
+  };
+
+  it('declares String! for every argument Railway requires', async () => {
+    const queries: string[] = [];
+    const fake = createServer((req, res) => {
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk;
+      });
+      req.on('end', () => {
+        const call = JSON.parse(body) as Call;
+        queries.push(call.query);
+        res.end(JSON.stringify({ data: answer(call, () => 'SUCCESS') }));
+      });
+    });
+    await new Promise<void>((resolve) => fake.listen(0, resolve));
+    const endpoint = `http://localhost:${(fake.address() as AddressInfo).port}`;
+
+    try {
+      await deploy({
+        endpoint,
+        environmentId: 'env-1',
+        limitMs: 200,
+        pollMs: 5,
+        services,
+        token: 't',
+      });
+    } finally {
+      await new Promise((resolve) => fake.close(resolve));
+    }
+
+    for (const [field, args] of Object.entries(NON_NULL)) {
+      const query = queries.find((q) => q.includes(` ${field}(`));
+      expect(query).toBeDefined();
+      for (const arg of args) expect(query).toContain(`$${arg}: String!`);
+    }
+  });
+});
+
+describe('railway deploy with a project token', () => {
+  let server: Server;
+  let endpoint: string;
+  let seen: { authorization?: string; project?: string }[];
+  // Answers "Not Authorized" (HTTP 200, as Railway does) to a bearer token.
+  let bearerRefused: boolean;
+
+  beforeEach(async () => {
+    seen = [];
+    bearerRefused = false;
+    server = createServer((req, res) => {
+      const headers = {
+        authorization: req.headers.authorization,
+        project: req.headers['project-access-token'] as string | undefined,
+      };
+      seen.push(headers);
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk;
+      });
+      req.on('end', () => {
+        if (bearerRefused && headers.authorization) {
+          res.end(
+            JSON.stringify({
+              data: null,
+              errors: [{ message: 'Not Authorized' }],
+            }),
+          );
+          return;
+        }
+        const call = JSON.parse(body) as Call;
+        res.end(JSON.stringify({ data: answer(call, () => 'SUCCESS') }));
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    endpoint = `http://localhost:${(server.address() as AddressInfo).port}`;
+  });
+
+  afterEach(() => new Promise((resolve) => server.close(resolve)));
+
+  const run = (tokenKind?: 'bearer' | 'project') =>
+    deploy({
+      endpoint,
+      environmentId: 'env-1',
+      limitMs: 200,
+      pollMs: 5,
+      services,
+      token: 't',
+      ...(tokenKind && { tokenKind }),
+    });
+
+  it('sends a project token as Project-Access-Token, never as a bearer', async () => {
+    await run('project');
+
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((h) => h.project === 't' && !h.authorization)).toBe(true);
+  });
+
+  it('retries as a project token when Railway refuses the bearer, then keeps it', async () => {
+    bearerRefused = true;
+
+    await run();
+
+    expect(seen[0]).toEqual({ authorization: 'Bearer t', project: undefined });
+    expect(
+      seen.slice(1).every((h) => h.project === 't' && !h.authorization),
+    ).toBe(true);
+  });
+
+  it('does not retry an explicit bearer token, and says Railway refused it', async () => {
+    bearerRefused = true;
+
+    await expect(run('bearer')).rejects.toThrow('Not Authorized');
+    expect(seen.every((h) => !h.project)).toBe(true);
+  });
 });
