@@ -52,3 +52,4 @@
 - spec-reviewer (report via orchestrator): APPROVE, 2 LOW patched — padding test on PUBLIC_PATHS deleted; tasks.md T006/T009 now cite the `/cockpit` tests in addresses.adversary.spec.ts.
 - code-reviewer (report via orchestrator, on 13ff490): BLOCK. (1) HIGH: a language change landing mid-navigation was dropped → `align(url)` called from the effect and from NavigationEnd; new spec "moves the address … while a page is still opening" red first (Received "/ro/slow"), then green. (2) MEDIUM: trailing-slash fix to be committed. (3) LOW: padding test deleted. (4) LOW: server.ts parses PUBLIC_WEB_URL once, mountSearch takes the origin. (5) LOW deferred → deferred.md.
 - Single-file jest after fixes: addresses.spec 15/15, addresses.adversary 25/25, search.spec 5/5, search.adversary 17/17. Full checks and commit wait for "#21 QA done".
+- Code re-review on b74f95e: APPROVE; one LOW patch (deferred.md checkbox form) applied.
