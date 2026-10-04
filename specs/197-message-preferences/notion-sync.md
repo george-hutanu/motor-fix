@@ -1,0 +1,21 @@
+# Notion sync — 197-message-preferences
+
+- 2026-10-05 · start · ST-197 · To do → Planning
+- 2026-10-05 · start · Foundations timeline ST-197 · Not started → Planning
+- 2026-10-05 · start · EP-1 Foundations · In progress (unchanged)
+- 2026-10-05 · pr · ST-197 · PR #68 https://github.com/george-hutanu/motor-fix/pull/68
+- 2026-10-05 · labels · PR #68 · planning
+- 2026-10-05 · ready · Foundations · −ST-197 (start changes only the started story's readiness)
+- 2026-10-05 · implement · ST-197 · Planning → Implementing
+- 2026-10-05 · implement · Foundations timeline ST-197 · Planning → Implementing
+- 2026-10-05 · labels · PR #68 · in development
+- 2026-10-05 · qa · ST-197 · Implementing → QA
+- 2026-10-05 · qa · Foundations timeline ST-197 · Implementing → QA
+- 2026-10-05 · labels · PR #68 · QA
+- 2026-10-05 · debt · ST-197 · 3 tasks filed (To do)
+- 2026-10-05 · qa-lap · PR #68 lap 1 · agent-review success (0 blocking; report in pr-review/lap1)
+- 2026-10-05 · finish · ST-197 · QA → Done
+- 2026-10-05 · finish · Foundations timeline ST-197 · QA → Merged
+- 2026-10-05 · finish · EP-1 Foundations · In progress (unchanged; stories still open)
+- 2026-10-05 · comment · ST-197 · posted (12 items)
+- 2026-10-05 · ready · Foundations · +ST-392 +ST-200 +ST-201 (ST-198 still waits on ST-392, ST-196; stories SQL quota hit, pages read by fetch)

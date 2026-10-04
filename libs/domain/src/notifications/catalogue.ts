@@ -1,10 +1,7 @@
-type OutsideChannel = 'email' | 'push' | 'sms' | 'whatsapp';
-type DriverGroup =
-  | 'offers'
-  | 'bookings'
-  | 'due_dates'
-  | 'news'
-  | 'reviews_history';
+import type {
+  NotificationGroupKey as DriverGroup,
+  OutsideChannel,
+} from '@motor-fix/contracts';
 
 export interface NotificationType {
   trigger: 'event' | 'timer' | 'direct';
@@ -149,7 +146,8 @@ export function notificationType(name: string): NotificationType {
   return NOTIFICATION_TYPES[name];
 }
 
-// Preferences arrive with their own story; until then nothing is muted.
+// `muted` is what the person switched off (preferences.ts); an always-sent or
+// transactional type still goes by e-mail.
 export function sendsEmail(
   type: NotificationType,
   muted: ReadonlySet<OutsideChannel> = new Set(),
