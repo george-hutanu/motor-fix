@@ -9,3 +9,6 @@
 - 2026-10-04 · implement · ST-195 · Planning → Implementing
 - 2026-10-04 · implement · Foundations timeline ST-195 · Planning → Implementing
 - 2026-10-04 · labels · PR #67 · in development
+- 2026-10-05 · qa · ST-195 · Implementing → QA
+- 2026-10-05 · qa · Foundations timeline ST-195 · Implementing → QA
+- 2026-10-05 · labels · PR #67 · QA
