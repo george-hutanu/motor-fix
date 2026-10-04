@@ -64,7 +64,7 @@ question, not a divergence: FR-016 as written is met.
 
 None of the five carried items is in this feature's scope: the 050 theme
 approval, the two 157 drawer items, and the two 159 items. The 159 item
-"sign-up with a taken e-mail" e2e has since shipped in ST-494, so it closes
+"sign-up with a taken e-mail" e2e (debt task ST-494) has since shipped in ST-80, so it closes
 in its own feature's records.
 
 ## Action items
