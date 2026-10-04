@@ -3,6 +3,7 @@ capability: cockpit-charts
 updated: 2026-10-04
 features:
   - 052-chart-style
+  - 470-chart-reduced-motion
 ---
 
 # Capability: Cockpit charts
@@ -86,5 +87,21 @@ _From 052-chart-style._
 ### 052-FR-019 — The Cockpit sample page MUST show a bar chart and a line chart of 12 monthly values, so the style can be approved in both themes and on phone and desktop widths.
 
 _From 052-chart-style._
+
+### 470-FR-001 — The bar and line charts MUST take reduced motion from the shared `REDUCED_MOTION` signal of `libs/ui-cockpit`, and MUST NOT query `prefers-reduced-motion` themselves.
+
+_From 470-chart-reduced-motion._
+
+### 470-FR-002 — When the signal turns on while a chart exists, the chart MUST stop any running animation, show its final drawing, and carry no animation in its options, so later updates do not animate.
+
+_From 470-chart-reduced-motion._
+
+### 470-FR-003 — When the signal turns off while a chart exists, the chart MUST carry its animation options again, and a chart drawn after that MUST animate.
+
+_From 470-chart-reduced-motion._
+
+### 470-FR-004 — The chart unit and end-to-end tests that predate 470 MUST stay green, and the "grows the bars in" end-to-end test MUST NOT gain an injected style beyond the one it carried before 470.
+
+_From 470-chart-reduced-motion._
 
 ## Retired
