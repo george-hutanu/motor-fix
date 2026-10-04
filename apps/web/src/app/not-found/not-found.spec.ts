@@ -24,6 +24,13 @@ describe('NotFound', () => {
     expect(element.querySelector('a')?.getAttribute('href')).toBe('/');
   });
 
+  it('puts its content in the main landmark', () => {
+    const main = render().querySelector('main');
+
+    expect(main?.querySelector('h1')).not.toBeNull();
+    expect(main?.querySelector('a')).not.toBeNull();
+  });
+
   it('answers 404 when rendered on the server', () => {
     const init: ResponseInit = {};
     TestBed.configureTestingModule({

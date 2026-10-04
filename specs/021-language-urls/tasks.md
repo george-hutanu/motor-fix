@@ -41,6 +41,7 @@ Paths are `(new)` unless they exist today: `libs/i18n/src/switch.ts`, `libs/i18n
 
 - [X] T013 [US5] Test: `apps/web/src/app/not-found/not-found.spec.ts` and `addresses.spec.ts` — `/de` renders the not-found page in Romanian, `/en/no-such-page` in English, both with `noindex`; on the server the response status is 404; the page links to Home (FR-009)
 - [X] T014 [US5] `apps/web/src/app/not-found/not-found.ts`; `app.routes.ts` `'**'` → `NotFound` (FR-009)
+- [X] T018 [US5] QA lap 1: test in `addresses.spec.ts` — with `mf.lang` = `en`, `/de` stays Romanian after the first render; `not-found.spec.ts` — content inside `<main>`; `not-found.ts` resets an unknown prefix to Romanian after the remembered language is applied, and wraps its content in `<main>` (FR-009)
 
 ## Phase 6: End to end and polish
 
@@ -60,4 +61,4 @@ Paths are `(new)` unless they exist today: `libs/i18n/src/switch.ts`, `libs/i18n
 | FR-006 | T011, T015 |
 | FR-007 | T011, T015 |
 | FR-008 | T009, T011, T015, addresses.adversary.spec.ts, search.adversary.spec.ts |
-| FR-009 | T013, T015 |
+| FR-009 | T013, T015, T018 |

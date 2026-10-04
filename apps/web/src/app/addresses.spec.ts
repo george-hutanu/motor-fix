@@ -9,7 +9,7 @@ import {
 } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { HealthService } from '@motor-fix/data-access';
-import { I18n } from '@motor-fix/i18n';
+import { I18n, provideRememberedLanguage } from '@motor-fix/i18n';
 
 import {
   alternates,
@@ -199,6 +199,18 @@ describe('language addresses', () => {
   });
 
   it('shows the not-found page in Romanian for an unknown language prefix', async () => {
+    const harness = await open('/de');
+
+    expect(lang()).toBe('ro');
+    expect(text(harness)).toContain('Pagina nu există');
+  });
+
+  it('keeps the not-found page of an unknown prefix Romanian when English is remembered', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideRememberedLanguage()],
+    });
+    localStorage.setItem('mf.lang', 'en');
+
     const harness = await open('/de');
 
     expect(lang()).toBe('ro');
