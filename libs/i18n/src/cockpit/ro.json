@@ -34,8 +34,8 @@
     "field": "Numărul de înmatriculare",
     "intro": "Scrie ceva, apoi închide: vei fi întrebat dacă renunți la modificări.",
     "openDialog": "Deschide sarcina ca dialog",
-    "openDrawer": "Deschide sarcina ca panou lateral",
-    "openWide": "Deschide panoul lat",
+    "openDrawer": "Deschide sarcina ca sertar",
+    "openWide": "Deschide sertarul lat",
     "result": "Ultimul rezultat: {result}",
     "results": {
       "cancelled": "anulat",

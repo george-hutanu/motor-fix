@@ -16,7 +16,7 @@
 ## 2. Specify
 - Spec written from the story, its Build brief, feature MF-5 and the epic. Autonomous answers (also in spec Clarifications):
   - PrimeNG in the brief → Spartan + CDK (Constitution III, AGENTS.md).
-  - `libs/overlays` in the brief → inside `libs/ui-cockpit` (dependency cycle with the catalogue; Principle I).
+  - `libs/overlays` as the brief and the Front end architecture say (first drafted inside `libs/ui-cockpit`; reversed after reading the architecture page's `ui-cockpit → overlays`).
   - Drawer widths 480/720 px (brief over mock 520/660).
   - "A computer" = ≥ 768 px wide with a fine pointer.
   - Changed field = any `input` event in the task body.

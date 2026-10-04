@@ -119,8 +119,7 @@ test.describe('a task over the page', () => {
       await button.click();
       await shown(page);
       await page.mouse.wheel(0, 600);
-      await page.waitForTimeout(100);
-      expect(await lockedAt(page)).toBe(before);
+      await expect.poll(() => lockedAt(page)).toBe(before);
       expect(page.url()).toBe(address);
 
       await close(page);

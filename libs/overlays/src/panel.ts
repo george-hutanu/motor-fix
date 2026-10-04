@@ -4,6 +4,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   Injector,
   inject,
@@ -242,8 +243,11 @@ export class OverlayPanel {
     if (reflectComponentType(source as Type<unknown>)) {
       this.task.set(source as Type<unknown>);
     } else {
+      const destroyed = inject(DestroyRef);
       (source as () => Promise<Type<unknown>>)().then(
         (component) => {
+          // Closed while it was loading: nothing left to show it in.
+          if (destroyed.destroyed) return;
           this.task.set(component);
           this.afterRender(() => this.focusStart());
         },

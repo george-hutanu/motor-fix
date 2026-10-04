@@ -8,7 +8,7 @@ Paths are `(new)` unless they exist today: `tsconfig.base.json`, `libs/i18n/src/
 ## Phase 1: Setup
 
 - [X] T001 `libs/overlays/` (new) Nx library: `project.json`, `jest.config.cts`, `tsconfig{,.lib,.spec}.json`, `stryker.config.json`, `src/test-setup.ts`, `src/index.ts`; path `@motor-fix/overlays` in `tsconfig.base.json`
-- [X] T002 [P] `libs/i18n/src/shell/{ro,en}.json` — `overlay.close`, `overlay.discard.{question,discard,keep}` (FR-009, FR-010, FR-014)
+- [X] T002 [P] `libs/i18n/src/shell/ro.json`, `libs/i18n/src/shell/en.json` — `overlay.close`, `overlay.discard.{question,discard,keep}` (FR-009, FR-010, FR-014)
 
 ## Phase 2: US1 + US2 — open, close, focus, shapes (P1)
 
@@ -34,7 +34,7 @@ Paths are `(new)` unless they exist today: `tsconfig.base.json`, `libs/i18n/src/
 ## Phase 5: The catalogue (FR-015)
 
 - [X] T013 Test: `libs/ui-cockpit/src/lib/sample-page.spec.ts` — three buttons open the sample task as a dialog, a drawer and a wide drawer; the sample task has a labelled field, a done button that closes with a result shown in the last-result line, and a button that opens a second task (FR-015)
-- [X] T014 `libs/ui-cockpit/src/lib/sample-task.ts` (new), `sample-page.ts`, `libs/i18n/src/cockpit/{ro,en}.json` `overlay.*` (FR-015)
+- [X] T014 `libs/ui-cockpit/src/lib/sample-task.ts` (new), `sample-page.ts`, `libs/i18n/src/cockpit/ro.json`, `libs/i18n/src/cockpit/en.json` `overlay.*` (FR-015)
 
 ## Phase 6: End to end
 
@@ -43,3 +43,9 @@ Paths are `(new)` unless they exist today: `tsconfig.base.json`, `libs/i18n/src/
 ## Dependencies
 
 T001 first. T003, T004, T008, T010, T011, T013 before T005–T007, T009, T012, T014. T015 after T014.
+
+## Phase 7: Hardening
+
+- [X] T016 [US5] Test: `libs/overlays/src/overlays.adversary.spec.ts` (new, test-adversary) — double closes, stacked discard, the same task twice, a rejected loader still closes with `cancelled`, a loader that resolves after its panel closed is dropped, unique title ids, no history entry (FR-005, FR-006, FR-010, FR-011, FR-012)
+- [X] T017 [US5] `libs/overlays/src/panel.ts`: a task that arrives after its panel closed is dropped (code-review and spec-review HIGH) (FR-012)
+- [X] T018 review LOWs: the address test asserts a task opened; the e2e polls the scroll lock instead of sleeping; the catalogue says "sertar" like the kit's sample (FR-001, FR-004, FR-015)

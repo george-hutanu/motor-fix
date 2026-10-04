@@ -193,6 +193,7 @@ describe('Overlays: open and close', () => {
     const href = location.href;
     const length = history.length;
     await openTask();
+    expect(dialogs()).toHaveLength(1);
     pressEscape();
     await settle();
 
