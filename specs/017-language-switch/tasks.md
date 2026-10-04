@@ -33,8 +33,8 @@ Paths are `(new)` unless they exist today: `libs/i18n/src/index.ts`, `libs/i18n/
 
 **Independent test**: a session whose account says `en` switches the interface and stores `en`; a second load does not re-apply.
 
-- [ ] T012 [US4] Test: `apps/web/src/app/dashboard/session.spec.ts` — loading a session for an `en` account on a device that remembers `ro` switches to English and stores `en`; once loaded, a tap on RO is not undone by the next `load()`; no account → nothing changes (FR-008)
-- [ ] T013 [US4] `apps/web/src/app/dashboard/session.ts` — on the first successful load, `LanguageChoice.choose(me.language)` (FR-008)
+- [X] T012 [US4] Test: `apps/web/src/app/dashboard/session.spec.ts` — loading a session for an `en` account on a device that remembers `ro` switches to English and stores `en`; once loaded, a tap on RO is not undone by the next `load()`; no account → nothing changes (FR-008)
+- [X] T013 [US4] `apps/web/src/app/dashboard/session.ts` — on the first successful load, `LanguageChoice.choose(me.language)` (FR-008)
 
 ## Phase 5: Polish
 
