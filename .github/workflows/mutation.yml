@@ -59,7 +59,7 @@ jobs:
         id: mutation
         env:
           PROJECTS: ${{ inputs.projects }}
-        run: npx nx run-many -t test:mutation --parallel=1 ${PROJECTS:+--projects=$PROJECTS} -- --incremental
+        run: npx nx run-many -t test:mutation --parallel=1 --output-style=static ${PROJECTS:+--projects=$PROJECTS} -- --incremental
       # Saved even when the step fails, so the next run resumes instead of starting over.
       - name: Save the mutation results
         if: always() && steps.mutation.outcome != 'skipped'

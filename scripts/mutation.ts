@@ -73,6 +73,24 @@ export function strykerOptions(
   };
 }
 
+// Nx forwards `--incremental` as `--incremental=true` and `--mutate x` as
+// `--mutate=x`; a person typing the command uses the spaced forms.
+export function flags(args: string[]): {
+  incremental: boolean;
+  only: string | undefined;
+} {
+  const value = (name: string) => {
+    const at = args.indexOf(name);
+    if (at !== -1) return args[at + 1] ?? '';
+    return args.find((a) => a.startsWith(`${name}=`))?.slice(name.length + 1);
+  };
+  const incremental = value('--incremental');
+  return {
+    incremental: incremental !== undefined && incremental !== 'false',
+    only: value('--mutate'),
+  };
+}
+
 export function hasSpecs(dir: string): boolean {
   return readdirSync(dir, { withFileTypes: true }).some((entry) =>
     entry.isDirectory()
@@ -109,13 +127,8 @@ async function main() {
     console.log(`${project}: no tests yet, mutation run skipped`);
     return;
   }
-  const at = process.argv.indexOf('--mutate');
-  const options = strykerOptions(
-    project,
-    root,
-    process.argv.includes('--incremental'),
-    at === -1 ? undefined : process.argv[at + 1],
-  );
+  const { incremental, only } = flags(process.argv.slice(4));
+  const options = strykerOptions(project, root, incremental, only);
   // A specifier the compiler cannot follow: the spec build resolves with node10,
   // which cannot see this ESM-only package.
   const { Stryker }: StrykerCore = await import(STRYKER);
