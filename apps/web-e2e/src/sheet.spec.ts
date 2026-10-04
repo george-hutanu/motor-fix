@@ -162,6 +162,7 @@ test.describe('on a phone, every task is a bottom sheet', () => {
     await open(page, SHAPES[0]);
     await expect(sheet(page)).toHaveAttribute('data-side', 'bottom');
     await page.keyboard.press('Escape');
+    await expect(task(page)).toHaveCount(0);
 
     for (const width of [768, 1024, 1280]) {
       await page.setViewportSize({ height: 900, width });
@@ -169,6 +170,7 @@ test.describe('on a phone, every task is a bottom sheet', () => {
       await expect(sheet(page)).toHaveClass(/mf-overlay-dialog/);
       await expect(sheet(page).locator('.mf-overlay-grip')).toHaveCount(0);
       await page.keyboard.press('Escape');
+      await expect(task(page)).toHaveCount(0);
       await open(page, SHAPES[1]);
       await expect(sheet(page)).toHaveAttribute('data-side', 'right');
       await page.keyboard.press('Escape');

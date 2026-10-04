@@ -113,3 +113,7 @@
 - Foundations (EP-1) build timeline row — https://app.notion.com/p/3ee607bff0d281da81fed1425fb27a29
 - Front end architecture — https://app.notion.com/p/3ee607bff0d2811688cde6508dfcd09a
 - Architecture decisions — https://app.notion.com/p/3ee607bff0d28111907edddc4bdd066a
+
+## Refresh
+
+- 2026-10-04: story re-read after implementation; no comments, no discussion; Build brief unchanged since the first read (the page's last edit is this run's own Status/PR writes). No new evidence.

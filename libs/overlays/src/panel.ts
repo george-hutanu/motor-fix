@@ -179,7 +179,8 @@ let questions = 0;
         (pointerdown)="grab($event)"
         (pointermove)="pull($event)"
         (pointerup)="release($event)"
-        (pointercancel)="letGo()"
+        (pointercancel)="letGo($event)"
+        (lostpointercapture)="letGo($event)"
       ></div>
     }
     <header class="mf-overlay-header">
@@ -272,7 +273,8 @@ export class OverlayPanel {
   private focusedBeforeAsking: HTMLElement | null = null;
   // How far the grip is pulled down, and where the pull started.
   protected readonly drag = signal<string | null>(null);
-  private pullFrom: { height: number; y: number } | null = null;
+  private pullFrom: { height: number; pointer: number; y: number } | null =
+    null;
   // The part of the window an on-screen keyboard hides, and what is left.
   protected readonly keyboard = signal<string | null>(null);
   protected readonly visibleHeight = signal<string | null>(null);
@@ -325,29 +327,35 @@ export class OverlayPanel {
     if (this.context.sheet) this.followVisibleArea();
   }
 
+  // One pointer drags at a time; a second finger is ignored.
   protected grab(event: PointerEvent) {
-    if (event.button !== 0) return;
+    if (event.button !== 0 || this.pullFrom) return;
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
     this.pullFrom = {
       height: this.host.nativeElement.offsetHeight,
+      pointer: event.pointerId,
       y: event.clientY,
     };
   }
 
   protected pull(event: PointerEvent) {
-    if (!this.pullFrom) return;
+    if (event.pointerId !== this.pullFrom?.pointer) return;
     this.drag.set(`${Math.max(0, event.clientY - this.pullFrom.y)}px`);
   }
 
   // Past a third of its height the sheet closes as the X does; otherwise,
-  // and when the system takes the pointer, it springs back.
+  // and when the system takes the pointer, it springs back. While the discard
+  // question shows, a drag only springs back, as Escape and outside only keep.
   protected release(event: PointerEvent) {
     const from = this.pullFrom;
-    this.letGo();
-    if (from && event.clientY - from.y > from.height / 3) this.dismiss();
+    if (event.pointerId !== from?.pointer) return;
+    this.letGo(event);
+    if (!this.asking() && event.clientY - from.y > from.height / 3)
+      this.dismiss();
   }
 
-  protected letGo() {
+  protected letGo(event: PointerEvent) {
+    if (event.pointerId !== this.pullFrom?.pointer) return;
     this.pullFrom = null;
     this.drag.set(null);
   }
@@ -362,6 +370,11 @@ export class OverlayPanel {
       const hidden = window.innerHeight - visible.offsetTop - visible.height;
       this.keyboard.set(`${Math.max(0, Math.round(hidden))}px`);
       this.visibleHeight.set(`${visible.height}px`);
+    };
+    // A resize is the keyboard opening or closing: bring the field into
+    // view then, not on every pan of the visible area.
+    const resize = () => {
+      follow();
       this.afterRender(() => {
         const focused = window.document.activeElement;
         if (
@@ -371,10 +384,10 @@ export class OverlayPanel {
           focused.scrollIntoView({ block: 'nearest' });
       });
     };
-    visible.addEventListener('resize', follow);
+    visible.addEventListener('resize', resize);
     visible.addEventListener('scroll', follow);
     inject(DestroyRef).onDestroy(() => {
-      visible.removeEventListener('resize', follow);
+      visible.removeEventListener('resize', resize);
       visible.removeEventListener('scroll', follow);
     });
   }

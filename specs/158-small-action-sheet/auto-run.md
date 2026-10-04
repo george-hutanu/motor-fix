@@ -34,3 +34,13 @@
 - e2e fix: `still()` waits two frames and then the overlay's own animations (it ran before the pop or spring had started).
 - Unit: overlays 142 passed; ui-cockpit, web green; typecheck green. E2E (own dev server on :4358): sheet, overlays, task-form, motion, phone, cockpit 90 passed.
 - Visual: 320 dark RO, 390 light RO (form), 390 dark EN, 820 dark (dialog), 1280 light EN (drawer) — match the board (screenshots in the scratchpad only).
+
+## Converge
+- All tasks T001–T013 [X]; nothing unbuilt found against spec/plan/tasks.
+
+## Harden / Review
+- diff-audit: import-extension errors are false positives (bundler resolution, as 159 recorded) and cover files this range does not touch; untested-new-file rows predate the branch. Mutation run skipped locally (owner's rule: no local mutation tests).
+- test-adversary: 31 tests, 3 failed → second pointerdown mid-drag and a second pointer id drove the sheet (fixed: one pointer per drag, `lostpointercapture`); the lower stacked grip test removed (unreachable: the top task's backdrop covers it; the reachable case "a drag closes only the top" is in sheet.spec.ts); one adversary expectation contradicted FR-004 (130 px of 300 closes) and was corrected to the spec.
+- spec-reviewer: APPROVE. MEDIUM sign-in e2e → deferred (ST-82); LOW asking guard → patched with a red-first test; LOW stale plan `focusin` line → plan updated; LOW 768 px in three places → deferred.
+- code-reviewer: BLOCK on HIGH (drag release ignored the discard question) → patched (same fix as above). MEDIUM pointer ids → patched. MEDIUM stacked sheets untested → test added. LOW scrollIntoView on every pan → only on resize, red-first test. LOW e2e waits after Escape → added. LOW dead TaskSave exports (pre-existing) → deferred.
+- Pre-existing flake in overlays.spec close/scroll test (1/16 local) → deferred.

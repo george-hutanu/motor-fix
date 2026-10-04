@@ -16,10 +16,16 @@ import {
     <label for="plate">Număr</label>
     <input id="plate" />
     <button id="done" type="button" (click)="task.close('saved')">Gata</button>
+    <button id="again" type="button" (click)="openAgain()">Încă una</button>
   `,
 })
 class FieldTask {
   readonly task = injectOverlayTask<undefined, 'saved'>();
+  private readonly overlays = inject(Overlays);
+
+  openAgain() {
+    this.overlays.open(FieldTask, { shape: 'drawer', title: 'shell.brand' });
+  }
 }
 
 @Component({
@@ -102,7 +108,8 @@ const panel = () =>
   document.querySelector<HTMLElement>(
     '.cdk-overlay-pane mf-overlay-panel',
   ) as HTMLElement;
-const grip = () => panel()?.querySelector<HTMLElement>('.mf-overlay-grip');
+const grip = (from: HTMLElement = panel()) =>
+  from?.querySelector<HTMLElement>('.mf-overlay-grip');
 const open = () => document.querySelectorAll('mf-overlay-panel').length;
 const dragOffset = () => panel().style.getPropertyValue('--mf-drag');
 
@@ -116,6 +123,12 @@ function pointerEvent(type: string, clientY: number, button = 0) {
 
 function pointer(type: string, clientY: number, target = grip()) {
   target?.dispatchEvent(pointerEvent(type, clientY));
+}
+
+function pressEscape() {
+  (document.activeElement ?? document.body).dispatchEvent(
+    new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }),
+  );
 }
 
 async function drag(by: number, end = 'pointerup') {
@@ -228,6 +241,43 @@ describe('dragging the grip', () => {
     expect(dragOffset()).toBe('');
   });
 
+  it('only springs back while the discard question shows, and keeping returns to the field', async () => {
+    await openTask();
+    const field = panel().querySelector<HTMLInputElement>('#plate');
+    if (!field) throw new Error('no field');
+    field.focus();
+    field.value = 'B 123 ABC';
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    pressEscape();
+    await settle();
+
+    await drag(250);
+    panel()
+      .querySelector<HTMLButtonElement>('[role="alertdialog"] button')
+      ?.click();
+    await settle();
+
+    expect(open()).toBe(1);
+    expect(document.activeElement).toBe(field);
+  });
+
+  it('closes only the top one of two stacked sheets', async () => {
+    await openTask();
+    panel().querySelector<HTMLButtonElement>('#again')?.click();
+    await settle();
+    const [lower, upper] =
+      document.querySelectorAll<HTMLElement>('mf-overlay-panel');
+    expect(upper.getAttribute('data-side')).toBe('bottom');
+
+    pointer('pointerdown', 100, grip(upper));
+    pointer('pointermove', 250, grip(upper));
+    pointer('pointerup', 250, grip(upper));
+    await settle();
+
+    expect(open()).toBe(1);
+    expect(document.querySelector('mf-overlay-panel')).toBe(lower);
+  });
+
   it('ignores a press that is not the primary button', async () => {
     await openTask();
     expect(grip()).not.toBeNull();
@@ -241,6 +291,23 @@ describe('dragging the grip', () => {
 });
 
 describe('the on-screen keyboard', () => {
+  it('brings the focused field into view when the keyboard opens, not on every pan', async () => {
+    const viewport = fakeViewport(844);
+    await openTask();
+    const field = panel().querySelector<HTMLInputElement>('#plate');
+    field?.focus();
+
+    viewport.offsetTop = 40;
+    viewport.dispatchEvent(new Event('scroll'));
+    await settle();
+    expect(field?.scrollIntoView).not.toHaveBeenCalled();
+
+    viewport.height = 500;
+    viewport.dispatchEvent(new Event('resize'));
+    await settle();
+    expect(field?.scrollIntoView).toHaveBeenCalledTimes(1);
+  });
+
   it('lifts the sheet to the top of the keyboard and caps it to what is visible', async () => {
     const viewport = fakeViewport(844);
     await openTask();

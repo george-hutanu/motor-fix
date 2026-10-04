@@ -24,6 +24,10 @@ Paths are `(new)` unless they exist today: `libs/overlays/src/{overlays,task,pan
 - [X] T012 [US3] `libs/overlays/src/panel.ts`: `visualViewport` follow and focused field into view (FR-005)
 - [X] T013 [US4] `libs/overlays/src/index.ts`: the usage note says a phone gets the sheet (FR-007)
 
+## Phase 3: Review fixes
+
+- [X] T014 [US2] Tests then code: a drag follows one pointer (a second `pointerdown` or another pointer id is ignored, `lostpointercapture` ends it); a long drag while the discard question shows only springs back, so Keep returns to the field; two stacked sheets — a drag closes only the top; the focused field is scrolled into view on a viewport resize, not on every pan (FR-004, FR-005, FR-007) — `libs/overlays/src/sheet.spec.ts`, `libs/overlays/src/sheet.adversary.spec.ts` (new), `libs/overlays/src/panel.ts`
+
 ## FR → test
 
 | FR | Tests |
@@ -31,10 +35,10 @@ Paths are `(new)` unless they exist today: `libs/overlays/src/{overlays,task,pan
 | FR-001 | T001, T006 |
 | FR-002 | T001, T005, T006 |
 | FR-003 | T001, T006 |
-| FR-004 | T002, T006 |
-| FR-005 | T003, T006 |
+| FR-004 | T002, T006, T014 |
+| FR-005 | T003, T006, T014 |
 | FR-006 | T004, T006 |
-| FR-007 | T004, T006 |
+| FR-007 | T004, T006, T014 |
 | FR-008 | T005, T006 |
 | FR-009 | T006 |
 | FR-010 | T001, T007 (overlays.spec.ts dialog tests at 1280 px) |
