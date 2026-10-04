@@ -64,3 +64,21 @@
 
 ## Phase 12 — Harden
 - Mutation step waived by the owner. diff-audit: 0 errors, 3 warnings (the three Stryker dev deps — named by the story, justified in plan). artifact-lint: clean. test-adversary not run (tooling script with a full unit spec; owner asked to keep the machine light) — noted in report.
+
+## Phase 13 — Ticket refresh
+- No new evidence: no comments; only this run's own writes. Appended `## Refresh 2026-10-04` to context.md.
+
+## Phase 14 — Review
+- spec-reviewer: APPROVE — 2 MEDIUM (runner env decided, see deferred.md; pre-existing eval failures deferred), 3 LOW (patched).
+- code-reviewer: BLOCK — HIGH cache not saved on failure (fixed: cache/restore + cache/save `if: always()`), HIGH shared DB under parallel runners (fixed: `concurrency: 1` for api, domain); MEDIUM floor validation, default knobs, ignorePatterns (fixed); LOW TODO, wording, duplicate eval (fixed). Re-review: APPROVE, both HIGH resolved; 2 new MEDIUM (`.claude/worktrees`, unparsable config) fixed with a test.
+- The commit gate once hit a `domain` health-check timing flake under the full parallel run (516/516 alone; Nx already flagged `domain:test` flaky at preflight) — follow-up.
+- PR left as draft (owner's instruction), so no `notion-sync review`: the story stays In progress until the PR is marked ready.
+
+## Phase 15 — Agent context
+- CLAUDE.local.md active-plan pointer → 431 (size held, context-audit clean); AGENTS.md root-scripts line names `test:mutation` / `test:mutation:affected`.
+
+## Phase 16 — Retrospective evidence
+- Gathered with `--since b53f57a`; jev lane unavailable (no suggested verdict). No verdict written, no instinct reinforced.
+
+## Phase 17 — Archive
+- Not run: the PR is a draft and the floors await the follow-up; archive merges the Spec Delta when the PR is made ready or merged.
