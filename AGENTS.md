@@ -63,8 +63,10 @@ product, architecture and backlog live in the Notion space **MotorFix —
 Product documentation** — Architecture > Technology stack and Architecture
 decisions are the source for anything the constitution does not fix.
 
-- Given: Angular (standalone, signals) + PrimeNG with the Cockpit theme;
-  NestJS, PostgreSQL, Redis; TypeScript everywhere.
+- Given: Angular (standalone, signals) + Spartan UI (brain primitives, helm
+  components copied into `libs/ui-cockpit`, Angular CDK) with the Cockpit
+  theme; NestJS, PostgreSQL, Redis; TypeScript everywhere. Front-end
+  dependencies stay free and open source: no PrimeNG (licence key since v22).
 - Repo: one Nx monorepo — apps `web` (Angular SSR), `api`, `worker` (NestJS),
   `mcp`, `web-e2e` (Playwright); libs `contracts` (DTOs, env), `domain`
   (NestJS modules, Prisma schema per module), `data-access` (Angular client

@@ -38,7 +38,7 @@ feature through `.specify/feature.json` (`.claude/scripts/lib/feature.mjs`).
 
 ## Gates
 
-Constitution v1.1.0 (`.specify/memory/constitution.md`) maps each rule to its
+Constitution v1.3.0 (`.specify/memory/constitution.md`) maps each rule to its
 check; its Enforcement section is the authority. In short:
 
 | Gate | When | What it does |
