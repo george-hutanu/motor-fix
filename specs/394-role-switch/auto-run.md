@@ -27,3 +27,8 @@ Start commit: 255ce1f (branch from origin/main 04dc982) · Run in an isolated wo
 - artifact-lint clean; diff-audit ERRORs only in generated libs/data-access and pre-existing notifications files (base b581136 is the main checkout's, 154 files).
 ## review
 - spec-reviewer APPROVE (MEDIUM task key in a comment, LOW test title, LOW decision → deferred.md, LOW unstaged artifacts). code-reviewer BLOCK: HIGH renew answering after a switch overwrote the new token → fixed test-first (T011); MEDIUM duplicate role list, MEDIUM task key, LOW default param → fixed (T012).
+## hand-off
+- PR #70 body filled (pr-body-check passes), marked ready, story → QA, label QA.
+- Merged origin/main (bc4a940, ST-197) into the branch: generated client conflicts resolved by regenerating; 36c9e90. CI green on 36c9e90.
+## pr-test
+- Lap 2 on 36c9e90: success, 0 blocker/high, 2 medium (environment: no object store), 6 low. Fixed: #3 renewal during a switch's reload (T013), #4 optional refresh body (T014). Deferred: #5, #6, #8 (deferred.md). Not this PR: #1, #2 (no object store, filed before as ST-459), #7 (tester could not force a renewal in the browser; covered by unit and API tests).
