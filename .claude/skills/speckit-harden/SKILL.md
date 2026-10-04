@@ -105,7 +105,7 @@ user; relay the failing rows.
 
 **2b. Mutation score.** Collect the `mutation-runner` results launched in
 step 1 (one per touched Nx project with a `stryker.config.json` — `api`, `mcp`,
-`web`, `worker`, `contracts`, `domain`, `media`, `scripts`; `npx nx show projects
+`web`, `worker`, `contracts`, `domain`, `i18n`, `media`, `ui-cockpit`, `scripts`; `npx nx show projects
 --affected --with-target test:mutation` lists the touched ones). Each is a survivor table of at most
 twenty-five lines; the multi-minute run and its output stayed in the agent.
 Relay the score line per project. If the user waived mutation, you launched

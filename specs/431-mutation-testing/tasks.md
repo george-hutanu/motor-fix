@@ -48,6 +48,8 @@ Paths exist today unless marked `(new)`.
 - [X] T013 [P] `.claude/agents/mutation-runner.md`: inputs are this repo's 8 Nx projects; run `npx nx run <project>:test:mutation 2>&1 | tail -200`; scoping via `-- --mutate "<glob>"` (FR-011)
 - [X] T014 [P] `.claude/skills/speckit-harden/SKILL.md` step 2b and `.specify/contexts/harden.md`: the projects with a `stryker.config.json` and the Nx target, not `-w apps/server` / `apps/scanner` (FR-011)
 
+- [X] T015 [US1] After merging `main`: `libs/i18n` and `libs/ui-cockpit` (new Jest projects) get `stryker.config.json` (floor 0, unmeasured) and `"test:mutation": {}` in their `project.json` (FR-001, FR-009)
+
 ## Follow-up (separate task, not this branch)
 
 - Measure each project's score from the draft pull request's CI (or a machine that can afford it), raise every unmeasured `thresholds.break` to 5 below its score, kill the surviving mutants, decide `concurrency` for `api`/`domain` (research R9), and set the CI `timeout-minutes` from real durations. Filed in Notion (see auto-run.md).

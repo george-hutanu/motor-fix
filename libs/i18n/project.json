@@ -1,0 +1,31 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "i18n",
+  "projectType": "library",
+  "sourceRoot": "libs/i18n/src",
+  "tags": [],
+  "targets": {
+    "test": {
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/jest.preset.cjs",
+        "{projectRoot}/src/test-setup.ts",
+        "{workspaceRoot}/apps/web/src/**/*",
+        {
+          "externalDependencies": [
+            "jest",
+            "@nx/jest",
+            "ts-jest",
+            "jest-preset-angular"
+          ]
+        }
+      ]
+    },
+    "test:mutation": {},
+    "typecheck": {
+      "cache": true,
+      "command": "ngc --noEmit -p libs/i18n/tsconfig.lib.json && tsc --noEmit -p libs/i18n/tsconfig.spec.json"
+    }
+  }
+}

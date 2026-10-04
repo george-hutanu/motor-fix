@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-422 Private file storage with signed uploads and downloads (Notion story ST-422 https://app.notion.com/p/3ee607bff0d2815393e8ffeeca814408, epic Foundations EP-1 https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707). Build what the story's Build brief says; the EP-2 listing form photos and documents will use it."
 

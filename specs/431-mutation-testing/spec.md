@@ -101,7 +101,7 @@ Each project's `break` floor is a ratchet: an edit that lowers it is refused; a 
 
 ### Functional Requirements
 
-- **FR-001**: Every project with a Jest configuration (`apps/api`, `apps/worker`, `apps/web`, `apps/mcp`, `libs/contracts`, `libs/domain`, `libs/media`, `scripts`) MUST have its own `stryker.config.json` with a `thresholds.break` floor and an Nx `test:mutation` target.
+- **FR-001**: Every project with a Jest configuration (`apps/api`, `apps/worker`, `apps/web`, `apps/mcp`, `libs/contracts`, `libs/domain`, `libs/i18n`, `libs/media`, `libs/ui-cockpit`, `scripts`) MUST have its own `stryker.config.json` with a `thresholds.break` floor and an Nx `test:mutation` target.
 - **FR-002**: A project's mutation run MUST mutate only that project's non-test, non-generated TypeScript source and MUST run that project's own Jest configuration, with the same runtime options as its `test` target.
 - **FR-003**: A mutation run MUST report a mutation score and MUST exit non-zero when the score is below the project's `thresholds.break`.
 - **FR-004**: A mutation run for a project with no spec files MUST report that and exit zero without starting Stryker; such a project's floor is 0.

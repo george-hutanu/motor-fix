@@ -11,7 +11,7 @@ anything beyond a first-guess classification, or paste raw output back.
 ## Inputs
 
 The invoking prompt names an Nx project with a `test:mutation` target: `api`,
-`mcp`, `web`, `worker`, `contracts`, `domain`, `media` or `scripts` (its
+`mcp`, `web`, `worker`, `contracts`, `domain`, `i18n`, `media`, `ui-cockpit` or `scripts` (its
 directory holds the `stryker.config.json`). Optionally a list of files to
 restrict the run to.
 

@@ -150,7 +150,7 @@ Commit style: one-line Conventional Commit with a scope (`feat(api): …`), no
 body, no trailers, no tool mentions — enforced by
 `.claude/hooks/commit-msg-policy.js`. Every task runs the lifecycle in AGENTS.md:
 In progress, draft PR, a push per commit (never forced, never `main`), PR ready
-plus In review when done, then merge on green CI and Done — without asking.
+plus In review when done, merge on green CI, then Done. Nothing waits for the user.
 
 ## Design work
 

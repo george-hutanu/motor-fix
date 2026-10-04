@@ -360,7 +360,7 @@ Gate overrides:
 
 Do not invoke `speckit-notion-sync review` here: In review follows the PR
 being marked ready, which is the run's hand-off (below), after phase 16.
-`finish` runs when the user merges the PR to `main`.
+`finish` runs after the hand-off merges the PR to `main`.
 Before phase 14, `specs/<feature>/design.md` must exist. The `after_specify` and
 `before_implement` hooks write it, and a run without one is a Hard Stop.
 
@@ -426,7 +426,7 @@ One Conventional Commit per implementation slice, single line, no body, no
 trailers (`.claude/hooks/commit-msg-policy.js` enforces it). Push after every
 commit, to the feature's own branch only (`git push`, upstream set when the
 branch was created, so the draft PR follows the work). Never `--force`, never
-`main`. Merge only at the Hand-off, on green CI (AGENTS.md lifecycle).
+`main`. Never merge mid-run: the hand-off merges, on green CI only.
 
 The artifact phases produce **no commits**, and this is not an oversight:
 `specs/`, `.specify/` and `.claude/` are all listed in `.git/info/exclude`, so
@@ -506,13 +506,17 @@ When phases 14–16 are done, the review left no CRITICAL/HIGH and the last
 
 1. `GH_TOKEN=$(gh auth token -u george-hutanu) gh pr ready <branch>`
 2. `speckit-notion-sync review`: the story, its timeline row → In review.
-3. Wait for the PR's CI. Every check green: `gh pr merge <n> --merge
-   --delete-branch`, then `speckit-notion-sync finish`. A red check: fix it on
-   the branch, push, wait again; after three attempts on the same check, stop
-   and report it with the PR left open.
+3. If the branch is behind `origin/main`, `git merge --no-edit origin/main`,
+   re-run `typecheck`, `lint` and the tests, and push.
+4. `gh pr checks <branch> --watch`. When every check passes,
+   `gh pr merge <branch> --merge`, then `speckit-notion-sync finish` (story →
+   Done, timeline row → Merged). A failing check is a repair: fix it on the
+   branch, push, wait again; it counts toward `SPECKIT_MAX_REPAIR_ITERATIONS`.
+   A PR with no checks, or one still failing at the limit, is a Hard Stop: it
+   stays ready and unmerged, and the report says which check and why.
 
-A run that ends on a Hard Stop does none of this: the PR stays a draft and the
-story In progress. None of these steps waits for the user's confirmation.
+None of these steps asks the user. A run that ends on a Hard Stop before the
+hand-off does none of them: the PR stays a draft and the story In progress.
 
 ## Final Report
 

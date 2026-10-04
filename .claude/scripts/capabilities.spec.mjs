@@ -158,7 +158,28 @@ describe('reading a feature delta', () => {
   it('reads declared requirements the way the rest of the harness does', () => {
     const declared = declaredRequirements('- **FR-001**: bolded\n- FR-002: plain\n  mentions FR-003 in prose\n');
     assert.deepEqual([...declared.keys()], ['FR-001', 'FR-002']);
-    assert.equal(declared.get('FR-002'), 'plain');
+    assert.equal(declared.get('FR-001'), 'bolded');
+  });
+
+  it('reads a requirement wrapped over indented lines as one text', () => {
+    const declared = declaredRequirements(
+      [
+        '- **FR-001**: The list of languages MUST be defined once, as Romanian',
+        '  (`ro`) and English (`en`); Romanian is the',
+        '  default.',
+        '- **FR-002**: one line',
+        '  - a nested bullet is not part of it',
+        '- **FR-003**: ends at a blank line',
+        '',
+        '  indented prose after the blank is not part of it',
+        '- **FR-004**: ends at an unindented line',
+        'Prose.',
+      ].join('\n'),
+    );
+    assert.equal(declared.get('FR-001'), 'The list of languages MUST be defined once, as Romanian (`ro`) and English (`en`); Romanian is the default.');
+    assert.equal(declared.get('FR-002'), 'one line');
+    assert.equal(declared.get('FR-003'), 'ends at a blank line');
+    assert.equal(declared.get('FR-004'), 'ends at an unindented line');
   });
 });
 
@@ -325,6 +346,44 @@ describe('merging a delta into the living capability', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it('merges a requirement wrapped over several lines with its whole text', () => {
+    const dir = fixture({
+      '.specify/capabilities/i18n.md': capability('i18n'),
+      'specs/002-fixture/spec.md': spec(
+        [['FR-001', 'Each area MUST\n  have its own Romanian file\n  and its own English file.']],
+        '### Capability: `i18n`\n\n- **Adds**: FR-001',
+      ),
+    });
+    try {
+      const [plan] = planMerge(dir, feature(dir));
+      assert.equal(
+        parseCapability(plan.text).requirements.get(T('002', '001')),
+        'Each area MUST have its own Romanian file and its own English file.',
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  for (const [label, line] of [
+    ['an empty inline list', 'features: []'],
+    ['a bare key, as the template writes it', 'features:'],
+  ]) {
+    it(`records the feature in a capability whose features are ${label}`, () => {
+      const dir = fixture({
+        '.specify/capabilities/i18n.md': capability('i18n').replace('features:\n', `${line}\n`),
+        'specs/002-fixture/spec.md': spec([['FR-001', 'switches language']], '### Capability: `i18n`\n\n- **Adds**: FR-001'),
+      });
+      try {
+        const [plan] = planMerge(dir, feature(dir));
+        assert.deepEqual(parseCapability(plan.text).features, ['002-fixture']);
+        assert.match(plan.text, /^features:\n {2}- 002-fixture\n---$/m);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
 
   it('keeps a superseded requirement in its original position', () => {
     // Reading order is the order the behaviour was built in. A replacement

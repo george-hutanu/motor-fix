@@ -19,8 +19,12 @@
       "@motor-fix/domain/testing": [
         "./libs/domain/src/storage/s3-test-store.ts"
       ],
-      "@motor-fix/media": ["./libs/media/src/index.ts"]
+      "@motor-fix/i18n": ["./libs/i18n/src/index.ts"],
+      "@motor-fix/media": ["./libs/media/src/index.ts"],
+      "@motor-fix/ui-cockpit": ["./libs/ui-cockpit/src/index.ts"],
+      "@motor-fix/ui-cockpit/sample": ["./libs/ui-cockpit/src/sample.ts"]
     },
+    "resolveJsonModule": true,
     "rootDir": ".",
     "skipLibCheck": true,
     "sourceMap": true,

@@ -1,0 +1,17 @@
+{
+  "brand": "MotorFix",
+  "frame": {
+    "empty": "Nothing here yet.",
+    "home": "MotorFix, home page",
+    "logo": "MOTORFIX",
+    "menu": "Menu",
+    "signOut": "Sign out"
+  },
+  "health": {
+    "status": "PostgreSQL: {postgres} · Redis: {redis}",
+    "unknown": "unknown"
+  },
+  "version": {
+    "unknown": "version unknown"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "brand": "MotorFix",
+  "frame": {
+    "empty": "Nimic aici încă.",
+    "home": "MotorFix, pagina principală",
+    "logo": "MOTORFIX",
+    "menu": "Meniu",
+    "signOut": "Ieși din cont"
+  },
+  "health": {
+    "status": "PostgreSQL: {postgres} · Redis: {redis}",
+    "unknown": "necunoscut"
+  },
+  "version": {
+    "unknown": "versiune necunoscută"
+  }
+}

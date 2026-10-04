@@ -172,9 +172,9 @@ findings are not fixed.
 Run standalone (not from `/speckit-auto`, which hands off after its own phase
 16): when no confirmed CRITICAL/HIGH is left and `typecheck`, `lint` and the
 tests are green, mark the PR ready (`GH_TOKEN=$(gh auth token -u george-hutanu)
-gh pr ready <branch>`) and invoke `speckit-notion-sync review`, then merge on
-green CI and invoke `speckit-notion-sync finish` (AGENTS.md lifecycle, step 5).
-With a blocker left, do none of it.
+gh pr ready <branch>`), invoke `speckit-notion-sync review`, then merge on green
+CI exactly as `/speckit-auto`'s hand-off steps 3–4 do. With a blocker left, do
+none of this.
 
 ## Done When
 

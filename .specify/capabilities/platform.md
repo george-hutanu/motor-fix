@@ -3,6 +3,7 @@ capability: platform
 updated: 2026-10-04
 features:
   - 421-monorepo-platform
+  - 422-private-file-storage
   - 431-mutation-testing
 ---
 
@@ -60,9 +61,9 @@ _From 421-monorepo-platform._
 
 _From 421-monorepo-platform._
 
-### 421-FR-013 — `api` and `worker` MUST answer `GET /health/ready` as in US3 scenarios 2 and 3, with a 2-second limit per check and the deployed commit SHA as `version`.
+### 422-FR-009 — `api` and `worker` MUST answer `GET /health/ready` with `checks` for `postgres`, `redis` and `storage` (the bucket answers; the storage check gives up after 2 seconds on its own too), each limited to 2 seconds and run in parallel, the deployed commit SHA as `version`, 200 when all are `ok` and 503 naming each failed check otherwise.
 
-_From 421-monorepo-platform._
+_From 422-private-file-storage._
 
 ### 421-FR-014 — The `web` server MUST answer `GET /health/ready` with 200 `{"status":"ok"}` from the process that renders; answering is the check.
 
@@ -92,9 +93,9 @@ _From 421-monorepo-platform._
 
 _From 421-monorepo-platform._
 
-### 421-FR-021 — One configuration module MUST read and check the environment at start; a missing required variable MUST stop the process and log the variable's name only. Required: `api` and `worker` — `APP_ENV`, `DATABASE_URL`, `REDIS_URL`; `web` — `APP_ENV`, `API_INTERNAL_URL`, `PUBLIC_WEB_URL`; `mcp` — `APP_ENV`. With defaults: `PORT` (set by Railway; a fixed port per app locally) and `RELEASE_SHA` (`dev`).
+### 422-FR-010 — One configuration module MUST read and check the environment at start; a missing required variable MUST stop the process and log the variable's name only, never a value. Required: `api` and `worker` — `APP_ENV`, `DATABASE_URL`, `REDIS_URL`, `STORAGE_ENDPOINT`, `STORAGE_REGION`, `STORAGE_BUCKET`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`; `web` — `APP_ENV`, `API_INTERNAL_URL`, `PUBLIC_WEB_URL`; `mcp` — `APP_ENV`. With defaults: `PORT` (set by Railway; a fixed port per app locally) and `RELEASE_SHA` (`dev`). The storage keys MUST NOT be sent to the browser.
 
-_From 421-monorepo-platform._
+_From 422-private-file-storage._
 
 ### 421-FR-022 — The repository MUST hold no secret value: `.env.example` lists every variable name with no value, and `.env` is ignored by git.
 
@@ -197,3 +198,6 @@ _From 431-mutation-testing._
 _From 431-mutation-testing._
 
 ## Retired
+
+- `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
+- `421-FR-021` — superseded by `422-FR-010` (2026-10-04)
