@@ -42,3 +42,12 @@ Start: branch `053-motion` from origin/main 0dfde6c (contains ST-51, #20), 2026-
 ## 10 Implement
 - Slice 1 (tokens, keyframes, reduced-motion rule, panel, dial, lamp, pop, blink, signal, catalogue): ui-cockpit 228 passed, i18n 428 passed, typecheck green, motion + gauges + cockpit e2e 25 passed on :4253. The odometer part held back on the orchestrator's word until ST-286 (#22) merged.
 - Rebased onto origin/main 6220b7a (#22): clean. Odometer roll on top of ST-286's wrap (`max-width: 100%`, `flex-wrap: wrap` kept). ui-cockpit 267 passed; motion + gauges + cockpit + phone e2e 88 passed (repeat-each 2), motion alone 35 passed (repeat-each 5). One earlier run right after `npm install` had 4 failures that did not reproduce (likely the dev server re-optimising dependencies on its first start); `swap` in the e2e now waits for the range to change, so a click replayed after hydration is waited for.
+
+## Draft PR
+- Pushed 053-motion; draft PR #31 with the template body; CI all green on 6a3b422.
+
+## Built-in browser walk (PR #28 rule)
+- /cockpit served on :4253: 320 px light — no sideways scroll (scrollWidth 320), live label blinking, change button swung the dial to 4,2 and rolled the range digits to 1.400–1.800; dark desktop pane — the dialog popped in and closed at once. Server stopped.
+
+## 13 Ticket refresh
+- Story re-read: no comments, Build brief unchanged. No new evidence.

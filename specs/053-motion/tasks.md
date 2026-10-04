@@ -34,6 +34,10 @@ Paths are `(new)` unless they exist today: `libs/ui-cockpit/src/styles/cockpit.c
 
 - [X] T011 Test: `apps/web-e2e/src/motion.spec.ts` (new) — with `reducedMotion: 'reduce'`: `/`, `/cockpit` and the driver dashboard have no running animation or transition (`document.getAnimations()` empty) on load, after the change button and with the dialog open, and the dialog and dial show their end state; with full motion on `/cockpit`: each panel runs `mf-rise`, all have finished within 1.5 s, the later panel starts 60 ms after the earlier; a button is pressable during the build-up; the change button starts a 1100 ms transition on the large dial's arc and needle and a roll on the odometer digits, and does not replay the build-up; the pulsing lamp's dot runs `mf-pulse` infinitely; the dialog content runs `mf-pop` 420 ms; switching to reduced motion while panels build cancels every animation at once (FR-002–FR-008, FR-010, SC-001, SC-002)
 
+## Phase 5: Hardening
+
+- [X] T012 [US4] `libs/ui-cockpit/src/motion.adversary.spec.ts` (test-adversary) + `lib/reduced-motion.ts` — a device whose media query has only `addListener`/`removeListener` still gets the signal, followed live and released on destroy (FR-009)
+
 ## Dependencies
 
 T001, T002, T005, T007, T008, T011 before T003, T004, T006, T009, T010. Phase 1 before the rest (tokens and keyframes).

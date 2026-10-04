@@ -31,3 +31,6 @@ Gathered: 2026-10-04 · Source: Notion "MotorFix — Product documentation" only
 ## Proposed clarifications
 - Roll duration for the odometer (not in the brief; mock 900 ms).
 - Whether the "shared signal" or the CSS media query is the switch for CSS motion.
+
+## Refresh
+2026-10-04: story re-read after implementation; no comments, no discussions; Build brief unchanged (as of 2026-10-03). No new evidence.

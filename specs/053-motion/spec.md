@@ -80,6 +80,7 @@ A person whose device asks for reduced motion gets exactly the same screens with
 - A dial or odometer created with a value does not animate into it; only a change of value moves.
 - More panels than the stagger can carry within 1.5 s: the delay stops growing after the twelfth panel.
 - Forced-colours mode: the odometer shows its plain digits instead of the rolling column.
+- An older browser whose media query has only `addListener` / `removeListener` (Safari before 14) still gets the shared signal, live.
 - A dialog closed while its pop is still running closes at once (the pop is an opening animation only).
 
 ## Clarifications

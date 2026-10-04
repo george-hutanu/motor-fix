@@ -17,10 +17,16 @@ const REDUCED_MOTION = new InjectionToken<Signal<boolean>>('REDUCED_MOTION', {
     const reduced = signal(query?.matches ?? false);
     if (query) {
       const follow = (event: MediaQueryListEvent) => reduced.set(event.matches);
-      query.addEventListener('change', follow);
-      inject(DestroyRef).onDestroy(() =>
-        query.removeEventListener('change', follow),
-      );
+      // Safari before 14 has only the older listener methods.
+      if (query.addEventListener) {
+        query.addEventListener('change', follow);
+        inject(DestroyRef).onDestroy(() =>
+          query.removeEventListener('change', follow),
+        );
+      } else {
+        query.addListener(follow);
+        inject(DestroyRef).onDestroy(() => query.removeListener(follow));
+      }
     }
     return reduced.asReadonly();
   },
