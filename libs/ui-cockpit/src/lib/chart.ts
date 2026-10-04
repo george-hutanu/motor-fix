@@ -108,6 +108,7 @@ abstract class CockpitChart {
       const redraw = () => this.scheme.update((n) => n + 1);
       const tapOutside = (event: Event) => {
         if (!this.chart || event.target === this.chart.canvas) return;
+        if (!this.chart.tooltip?.getActiveElements().length) return;
         this.chart.setActiveElements([]);
         this.chart.tooltip?.setActiveElements([], { x: 0, y: 0 });
         this.chart.update('none');

@@ -14,6 +14,9 @@ async function open(
   await page.goto('/cockpit');
   await expect(page.locator(bar).first()).toBeVisible();
   await expect(page.locator(line).first()).toBeVisible();
+  // The server sends the canvas undrawn; Chart.js sets its size on the first draw.
+  for (const canvas of [bar, line])
+    await expect(page.locator(canvas).first()).toHaveAttribute('width', /\d/);
 }
 
 const shot = (page: Page) => page.locator(bar).first().screenshot();

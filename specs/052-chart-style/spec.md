@@ -20,7 +20,7 @@ Every dashboard chart in MotorFix (a driver's spend over 12 months, a garage's r
 - Q: What do values look like per unit? → A: Only the shared formatters write them: lei → `formatLei` ("1.250 lei" / "1,250 lei"), km → `formatKm` ("1.250 km"), count → `formatNum` ("1.250" / "1,250").
 - Q: Which labels survive at 320 px? → A: The axis skips labels that would overlap, never rotates them, and keeps them at 12 px or more; no fixed label count is promised.
 - Q: How do colours "come from the tokens" on a canvas? → A: The chart reads the `--mf-*` custom properties from the page when it draws and again when the device switches theme; no colour is written in the component's code.
-- Q: Exact entry animation? → A: 1000 ms with a quartic ease-out; none with reduced motion. Also settled from the same review: state precedence is loading, then error, then empty, then the chart; the chart is one image (`role="img"`) whose accessible name is the summary, rendered on the server too; a point reacts to a hover or tap within 22 px of it.
+- Q: Exact entry animation? → A: 1000 ms with a quartic ease-out; none with reduced motion. Also settled from the same review: state precedence is loading, then error, then empty, then the chart; the chart is one image (`role="img"`) whose accessible name is the summary, rendered on the server too; a hover or tap anywhere over a column picks its bar or point (corrected after review: column picking, rather than a 22 px radius, is what makes 8 px bars and line points tappable on a phone).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -143,7 +143,7 @@ On a 320 px wide phone, a 12-month chart fits without sideways scroll; axis labe
 ### Functional Requirements
 
 - **FR-001**: The bar chart MUST draw its values as amber bars 8 px thick with rounded tops and square bottoms, in the theme's amber for lines and text.
-- **FR-002**: The line chart MUST draw its values as one amber line 2 px wide with a fill under it that fades from 25% amber at the top of the chart to 0% at the bottom, and no point markers until a point is hovered or tapped; a hover or tap within 22 px of a point picks it.
+- **FR-002**: The line chart MUST draw its values as one amber line 2 px wide with a fill under it that fades from 25% amber at the top of the chart to 0% at the bottom, and no point markers until a point is hovered or tapped; a hover or tap anywhere over a point’s column picks it.
 - **FR-003**: Both charts MUST show one value axis only, with hairline grid lines in the theme's hairline colour, no category grid lines, no axis border lines and no legend; the panel title says what is shown.
 - **FR-004**: Both charts MUST take their values as numbers with one unit — lei (given in bani), km, or a count — and MUST format value-axis labels, tooltip values, the summary and the table through the shared locale formatters for the current language (in Romanian: lei "1.250 lei", km "1.250 km", count "1.250"), re-formatting when the language changes.
 - **FR-005**: Hovering a bar or point on a pointer device MUST show a tooltip of one line, "label · value"; tapping a bar or point on a touch device MUST show the same tooltip, and tapping anywhere else MUST hide it.

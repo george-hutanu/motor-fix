@@ -22,3 +22,32 @@ Start commit: 9a2753c (origin/main after rebase, coordinator resume 2026-10-04).
 
 ## 4 Clarify (5 autonomous answers, spec-challenger input)
 - One label per point (Principle I) · per-unit formatters formatLei/formatKm/formatNum · autoSkip, no rotation, ≥12 px · tokens read from computed style at draw and on scheme change · 1000 ms easeOutQuart; precedence loading>error>empty>chart; role=img summary on server too; 22 px hit radius.
+
+## 5–8 Plan, checklist, tasks, analyze
+- New dependency chart.js 4.5.1 (MIT), `--save-exact`, justified in plan Complexity Tracking (stack page names it).
+- Two components on one abstract base (brief names both); config builder internal, not exported.
+- E2E screenshot comparison done in-run (theme round trip), because Playwright baselines are per platform and e2e runs on Linux in CI/release.
+- Checklist charts.md: 15/15. artifact-lint: 1 error (unknown capability `cockpit-charts`) → added `.specify/capabilities/cockpit-charts.md`; re-run clean; capabilities validate clean.
+
+## 9 Tests (red first)
+- `npx jest chart-config.spec.ts chart.spec.ts charts-sample.spec.ts` → 3 suites failed (modules missing), 0 passing.
+- SSR check moved from the unit spec to e2e (afterRender hooks are not platform-gated in TestBed).
+
+## 10 Implement
+- jsdom: added a no-op 2D context (gradient tagged CanvasGradient, else Chart.js wraps it as options) and ResizeObserver stub to the lib test setup.
+- ui-cockpit 11 suites / 127 tests green; e2e charts.spec.ts 9/9 + cockpit.spec.ts green on port 4252.
+- Found: /cockpit sample table panel makes the page ~21 px wider than 320 px (pre-existing); e2e measures the charts with the rest hidden; follow-up chip filed.
+- Commits: 2a7a07a feat(ui-cockpit): add the shared bar and line chart style · 21d835c feat(ui-cockpit): show the bar and line charts on the cockpit sample page. Draft PR #23.
+
+## 11 Converge
+- All T001–T009 built; nothing appended.
+
+## 12 Harden
+- diff-audit (local main stale → old base; filtered to this diff): import-extension findings are a stale rule (no lib uses .js extensions); chart.js new-dependency justified; ChartTheme test-only export → made private.
+- Mutation: not run locally (coordinator: never run mutation tests locally; CI mutation workflow).
+- test-adversary: chart.adversary.spec.ts, 48 tests, no real defects (5 own mistakes corrected).
+
+## 14 Review (lap 1)
+- spec-reviewer BLOCK: HIGH adversary spec fails tsc (index-signature access) → fixed with bracket access. MEDIUM 22 px hit radius never applies under column picking → decision: keep column picking (taps on 8 px bars), amend FR-002 and the clarification, drop `pointHitRadius`. MEDIUM SC-003 page overflow → deferred.md. LOW default `events` → removed. LOW T008 wording → fixed.
+- code-reviewer BLOCK: HIGH canvas-leaves-DOM release path untested → covered by the adversary spec (empty→data→empty destroys the chart). MEDIUM hand-parsed hex → Chart.js `color` helper, and no fill when the token is not a colour (new unit test). MEDIUM defaults `events`/`responsive`/`tension` → removed. MEDIUM outside tap redraws every chart → returns early without an active tooltip. MEDIUM e2e pre-draw race → wait for the canvas `width` attribute. LOW `formatValue` unknown → comment.
+- Coordinator: heavy commands paused for PR #21; the fix commit is staged and queued.

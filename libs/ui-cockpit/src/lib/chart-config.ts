@@ -15,6 +15,7 @@ import {
   Tooltip,
   type TooltipItem,
 } from 'chart.js';
+import { color } from 'chart.js/helpers';
 
 Chart.register(
   BarController,
@@ -34,7 +35,7 @@ export interface ChartPoint {
   readonly label: string;
   readonly value: number;
 }
-export interface ChartTheme {
+interface ChartTheme {
   amber: string;
   bg: string;
   font: string;
@@ -45,6 +46,8 @@ export interface ChartTheme {
 
 const FORMATS = { count: formatNum, km: formatKm, lei: formatLei } as const;
 
+// Untyped on purpose: a tooltip's raw value and a missing extreme come in too,
+// and the shared formats write the dash for anything that is not a number.
 export const formatValue = (
   unit: ChartUnit,
   value: unknown,
@@ -65,13 +68,6 @@ export function readTheme(el: Element): ChartTheme {
   };
 }
 
-function withAlpha(hex: string, alpha: number): string {
-  const [r, g, b] = [1, 3, 5].map((i) =>
-    Number.parseInt(hex.slice(i, i + 2), 16),
-  );
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
 function dataset(
   type: ChartType,
   values: number[],
@@ -89,10 +85,11 @@ function dataset(
   return {
     backgroundColor: ({ chart }: ScriptableContext<'line'>) => {
       const area = chart.chartArea;
-      if (!area) return undefined;
+      const amber = color(theme.amber);
+      if (!area || !amber.valid) return undefined;
       const fade = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
-      fade.addColorStop(0, withAlpha(theme.amber, 0.25));
-      fade.addColorStop(1, withAlpha(theme.amber, 0));
+      fade.addColorStop(0, amber.alpha(0.25).rgbString());
+      fade.addColorStop(1, amber.alpha(0).rgbString());
       return fade;
     },
     borderCapStyle: 'round',
@@ -102,10 +99,8 @@ function dataset(
     data: values,
     fill: 'origin',
     pointBackgroundColor: theme.amber,
-    pointHitRadius: 22,
     pointHoverRadius: 4,
     pointRadius: 0,
-    tension: 0,
   };
 }
 
@@ -137,7 +132,6 @@ export function chartConfig(
       animation: reducedMotion
         ? false
         : { duration: 1000, easing: 'easeOutQuart' },
-      events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
       interaction: { axis: 'x', intersect: false, mode: 'nearest' },
       maintainAspectRatio: false,
       plugins: {
@@ -156,7 +150,6 @@ export function chartConfig(
           padding: { x: 8, y: 5 },
         },
       },
-      responsive: true,
       scales: {
         x: {
           border: { display: false },

@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { type ChartTheme, chartConfig, readTheme } from './chart-config';
+import { chartConfig, readTheme } from './chart-config';
+
+type ChartTheme = ReturnType<typeof readTheme>;
 
 const css = readFileSync(join(__dirname, '../styles/cockpit.css'), 'utf8');
 
@@ -106,9 +108,7 @@ describe('chartConfig', () => {
       borderJoinStyle: 'round',
       borderWidth: 2,
       fill: 'origin',
-      pointHitRadius: 22,
       pointRadius: 0,
-      tension: 0,
     });
 
     const { args, fill, gradient, stops } = gradientStops(dataset);
@@ -130,6 +130,12 @@ describe('chartConfig', () => {
     const [dataset] = line().data.datasets;
 
     expect(dataset.backgroundColor({ chart: {} })).toBeUndefined();
+  });
+
+  it('leaves the line unfilled rather than failing when the amber token is missing', () => {
+    const [dataset] = line({ ...dark, amber: '' }).data.datasets;
+
+    expect(gradientStops(dataset).fill).toBeUndefined();
   });
 
   it('shows one value axis with hairline grid lines and no legend', () => {
@@ -187,7 +193,7 @@ describe('chartConfig', () => {
     });
   });
 
-  it('answers a hover or a tap over a column, on pointer and touch events', () => {
+  it('answers a hover or a tap anywhere over a column', () => {
     const { options } = bar();
 
     expect(options.interaction).toMatchObject({
@@ -195,9 +201,6 @@ describe('chartConfig', () => {
       intersect: false,
       mode: 'nearest',
     });
-    expect(options.events).toEqual(
-      expect.arrayContaining(['mousemove', 'mouseout', 'click', 'touchstart']),
-    );
     expect(options.maintainAspectRatio).toBe(false);
   });
 
