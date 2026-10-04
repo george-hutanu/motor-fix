@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { BREAKPOINTS } from '../lib/layout';
+
 const css = readFileSync(join(__dirname, 'cockpit.css'), 'utf8');
 
 function blockAfter(source: string, opener: RegExp): string {
@@ -384,5 +386,97 @@ describe('cockpit.css rules', () => {
     expect(rule).toMatch(/font-size:\s*var\(--mf-size-label\)/);
     expect(rule).toMatch(/letter-spacing:\s*var\(--mf-label-tracking\)/);
     expect(rule).toMatch(/text-transform:\s*uppercase/);
+  });
+});
+
+describe('cockpit.css phone rules', () => {
+  // The formatter breaks long selectors over lines; compare them flat.
+  const flatten = (text: string) =>
+    text
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ')
+      .replace(/\(\s+/g, '(')
+      .replace(/\s+\)/g, ')');
+  const ruleIn = (source: string, selector: string) =>
+    blockAfter(
+      source,
+      new RegExp(`(^|[{},])\\s*${escapeRegExp(selector)}\\s*\\{`),
+    );
+  const flat = flatten(css);
+  const phone = blockAfter(
+    flat,
+    new RegExp(
+      `@media\\s*\\(max-width:\\s*${escapeRegExp(String(BREAKPOINTS.tablet - 0.02))}px\\)\\s*`,
+    ),
+  );
+  const phoneRule = (selector: string) => ruleIn(phone, selector);
+  const flatRule = (selector: string) => ruleIn(flat, selector);
+  const collapsing = '.spartan-table:has([data-column="main"])';
+
+  it('gives every button, field, tab, switch and standalone link the 44 px minimum', () => {
+    expect(
+      flatRule(
+        ':where(button, select, textarea, summary, [role="button"], [role="tab"], [role="switch"], input:not([type="checkbox"], [type="radio"], [type="hidden"], [type="range"]))',
+      ),
+    ).toMatch(/min-height:\s*var\(--mf-tap\)/);
+    const link = rule(':where(a):not(:where(p, li) a)');
+    expect(link).toMatch(/min-height:\s*var\(--mf-tap\)/);
+    expect(link).toMatch(/display:\s*inline-flex/);
+  });
+
+  it('sets every field at 16 px so a phone does not zoom on tap', () => {
+    expect(rule(':where(input, select, textarea)')).toMatch(
+      /font-size:\s*var\(--mf-size-field\)/,
+    );
+  });
+
+  it('wraps long words and keeps the page clear of the side insets', () => {
+    const body = rule('body');
+    expect(body).toMatch(/overflow-wrap:\s*break-word/);
+    expect(body).toMatch(
+      /padding-inline:\s*var\(--mf-safe-left\) var\(--mf-safe-right\)/,
+    );
+  });
+
+  it('offers the four safe-area insets as tokens', () => {
+    for (const edge of ['top', 'right', 'bottom', 'left']) {
+      expect(dark.get(`--mf-safe-${edge}`)).toBe(
+        `env(safe-area-inset-${edge}, 0px)`,
+      );
+    }
+  });
+
+  it('keeps the sheet clear of the notch and the home indicator', () => {
+    expect(rule('.spartan-sheet-content')).toMatch(
+      /padding-block:\s*calc\(var\(--mf-space-6\) \+ var\(--mf-safe-top\)\)\s+calc\(var\(--mf-space-6\) \+ var\(--mf-safe-bottom\)\)/,
+    );
+  });
+
+  it('wraps button labels on a phone', () => {
+    expect(phoneRule('.spartan-button')).toMatch(/white-space:\s*normal/);
+  });
+
+  it('turns a table that names a main column into list rows on a phone', () => {
+    expect(phoneRule(`${collapsing} .spartan-table-header`)).toMatch(
+      /display:\s*none/,
+    );
+    expect(
+      phoneRule(
+        `${collapsing} .spartan-table-cell:not([data-column="main"], [data-column="key"])`,
+      ),
+    ).toMatch(/display:\s*none/);
+    const row = phoneRule(`${collapsing} .spartan-table-row`);
+    expect(row).toMatch(/display:\s*flex/);
+    expect(row).toMatch(/justify-content:\s*space-between/);
+    expect(phoneRule(`${collapsing} [data-column="main"]`)).toMatch(
+      /order:\s*0/,
+    );
+    expect(phoneRule(`${collapsing} [data-column="key"]`)).toMatch(
+      /order:\s*1/,
+    );
+  });
+
+  it('collapses only below the tablet breakpoint', () => {
+    expect(topLevel).not.toContain('data-column');
   });
 });
