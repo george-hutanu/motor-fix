@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import type { MeDto } from '@motor-fix/data-access';
+import { TranslatePipe } from '@motor-fix/i18n';
 
 import { Session } from './session';
 
@@ -48,7 +49,7 @@ const MENUS: Record<MeDto['landing'], { tag: string; entries: Entry[] }> = {
 };
 
 @Component({
-  imports: [RouterLink],
+  imports: [RouterLink, TranslatePipe],
   selector: 'mf-frame',
   styles: `
     :host { display: grid; grid-template-columns: minmax(0, 16rem) minmax(0, 1fr); min-height: 100vh; }
@@ -59,9 +60,9 @@ const MENUS: Record<MeDto['landing'], { tag: string; entries: Entry[] }> = {
   `,
   template: `
     <aside>
-      <a routerLink="/" aria-label="MotorFix, pagina principală">MOTORFIX</a>
+      <a routerLink="/" [attr.aria-label]="'shell.frame.home' | t">{{ 'shell.frame.logo' | t }}</a>
       <span>{{ menu().tag }}</span>
-      <nav aria-label="Meniu">
+      <nav [attr.aria-label]="'shell.frame.menu' | t">
         @for (entry of entries(); track entry.label) {
           <button type="button" [attr.aria-pressed]="entry.label === view()" (click)="view.set(entry.label)">
             {{ entry.label }}
@@ -70,12 +71,12 @@ const MENUS: Record<MeDto['landing'], { tag: string; entries: Entry[] }> = {
       </nav>
       <div class="account">
         <span>{{ session.current()?.name }}</span>
-        <button type="button" (click)="signOut()">Ieși din cont</button>
+        <button type="button" (click)="signOut()">{{ 'shell.frame.signOut' | t }}</button>
       </div>
     </aside>
     <div>
       <header><h1>{{ view() }}</h1></header>
-      <main><p>Nimic aici încă.</p></main>
+      <main><p>{{ 'shell.frame.empty' | t }}</p></main>
     </div>
   `,
 })
