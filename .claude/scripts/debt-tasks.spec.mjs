@@ -89,6 +89,12 @@ describe('writing the task back', () => {
     assert.equal(next.split('\n').length, DEFERRED.split('\n').length);
     assert.equal(markFiled(next, entries[0].line, 'https://app.notion.com/p/other'), next);
   });
+
+  it('refuses a line that is not a bullet', () => {
+    assert.throws(() => markFiled(DEFERRED, 0, 'https://app.notion.com/p/x'), /not a bullet/);
+    assert.throws(() => markFiled(DEFERRED, 99, 'https://app.notion.com/p/x'), /not a bullet/);
+    assert.throws(() => markFiled(DEFERRED, Number('x'), 'https://app.notion.com/p/x'), /not a bullet/);
+  });
 });
 
 describe('the command line', () => {

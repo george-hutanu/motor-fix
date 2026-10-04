@@ -175,7 +175,7 @@ tests are green, fill in the PR body from `.github/pull_request_template.md`
 and mark the PR ready exactly as `/speckit-auto`'s hand-off step 1 does
 (`pr-body-check.ts`, `gh pr edit --body-file`, `gh pr ready`), invoke
 `speckit-notion-sync review`, then run the QA step and merge exactly as
-`/speckit-auto`'s hand-off steps 3–6 do: green CI, `/speckit-pr-test <n>`
+`/speckit-auto`'s hand-off steps 3–7 do: green CI, `/speckit-pr-test <n>`
 (story → QA) until `agent-review` is success on the head commit, then merge.
 Findings routed to defer go to `specs/<feature>/deferred.md` and are filed as
 Notion tasks (`speckit-notion-sync debt`). With a blocker left, do none of this.

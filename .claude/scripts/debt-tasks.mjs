@@ -74,6 +74,7 @@ export function taskFor(entry, { story, epic, feature, pr, storyId }) {
 
 export function markFiled(markdown, line, url) {
   const lines = markdown.split("\n");
+  if (!/^- /.test(lines[line] ?? "")) throw new Error(`line ${line} is not a bullet of deferred.md`);
   if (NOTION.test(lines[line])) return markdown;
   lines[line] = `${lines[line]} — Notion: ${url}`;
   return lines.join("\n");

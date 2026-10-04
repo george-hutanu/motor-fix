@@ -532,8 +532,13 @@ When phases 14–16 are done, the review left no CRITICAL/HIGH and the last
    exits 1 the run is blocked (`repair-loop-exceeded`): `speckit-notion-sync
    blocked` with the open findings, the same as a PR comment, and stop — the PR
    is never merged at the cap.
-6. Before the merge, `speckit-notion-sync debt` files every deferred bullet
-   not yet filed (reviewers' and the tester's) as a To do task in Notion.
+6. After a passing lap, `speckit-notion-sync debt` files every deferred bullet
+   not yet filed (reviewers' and the tester's) as a To do task in Notion. Its
+   URLs change `deferred.md`, so commit and push that, and the tester runs once
+   more on the new head (it re-raises nothing already deferred). Non-blocking
+   findings new in that last lap are filed in Notion directly and named in the
+   PR's Agent review section; their bullets, with the task URLs, join
+   `deferred.md` in the feature's next commit (the archive), so the loop ends.
 7. On `agent-review` success with every other check green: merge `origin/main`
    in again if it moved (a new head needs a new tester run), then
    `gh pr merge <branch> --merge` — the `pre:bash:merge-gate` hook refuses it
