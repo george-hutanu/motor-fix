@@ -8,6 +8,7 @@ metadata:
   source: extension:assess
 user-invocable: true
 disable-model-invocation: false
+model: sonnet
 ---
 
 # Assess Research Skill

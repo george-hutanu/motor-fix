@@ -8,6 +8,7 @@ metadata:
   source: "project-local — quality gate"
 user-invocable: true
 disable-model-invocation: false
+model: opus
 ---
 
 

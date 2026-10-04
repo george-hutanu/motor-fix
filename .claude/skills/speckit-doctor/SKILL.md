@@ -8,6 +8,7 @@ metadata:
   source: "adapted from ECC's doctor/repair pair and hooks.metadata.json fingerprints (github.com/affaan-m/ECC)"
 user-invocable: true
 disable-model-invocation: false
+model: sonnet
 ---
 
 ## User Input

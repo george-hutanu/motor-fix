@@ -8,6 +8,7 @@ metadata:
   source: extension:bug
 user-invocable: true
 disable-model-invocation: false
+model: sonnet
 ---
 
 # Bug Test Skill

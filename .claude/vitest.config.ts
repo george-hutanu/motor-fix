@@ -20,8 +20,7 @@ export default defineConfig({
   test: {
     name: "harness",
     include: ["**/*.spec.mjs"],
-    // design-audit ships two scripts of its own and their spec; the rest of
-    // skills/ is prose, and apple-design-skill is a vendored reference tree.
+    // apple-design-skill is a vendored reference tree.
     exclude: ["**/node_modules/**", "skills/apple-design-skill/**"],
     environment: "node",
   },

@@ -8,6 +8,7 @@ metadata:
   source: "ported from speckit-demo, adapted to blastradius conventions"
 user-invocable: true
 disable-model-invocation: false
+model: opus
 ---
 
 

@@ -8,6 +8,7 @@ metadata:
   source: "adapted from BMAD's bmad-party-mode / multi-agent discussions"
 user-invocable: true
 disable-model-invocation: false
+model: opus
 ---
 
 ## User Input
