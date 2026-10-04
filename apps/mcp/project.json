@@ -60,6 +60,7 @@
         "passWithNoTests": true
       }
     },
+    "test:mutation": {},
     "typecheck": {
       "cache": true,
       "command": "tsc --noEmit -p apps/mcp/tsconfig.app.json && tsc --noEmit -p apps/mcp/tsconfig.spec.json"

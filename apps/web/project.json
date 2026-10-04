@@ -71,6 +71,7 @@
       },
       "outputs": ["{workspaceRoot}/coverage/{projectRoot}"]
     },
+    "test:mutation": {},
     "typecheck": {
       "cache": true,
       "command": "ngc --noEmit -p apps/web/tsconfig.app.json && tsc --noEmit -p apps/web/tsconfig.spec.json"

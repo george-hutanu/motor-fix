@@ -70,6 +70,15 @@
           "json": "{workspaceRoot}/tsconfig.json"
         }
       ]
+    },
+    "test:mutation": {
+      "cache": false,
+      "command": "node scripts/mutation.ts {projectName} {projectRoot}",
+      "options": {
+        "env": {
+          "TZ": "UTC"
+        }
+      }
     }
   }
 }
