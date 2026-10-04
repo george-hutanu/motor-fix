@@ -8,6 +8,7 @@ metadata:
   source: "adapted from ECC's continuous-learning-v2 (github.com/affaan-m/ECC)"
 user-invocable: true
 disable-model-invocation: false
+model: sonnet
 ---
 
 ## User Input

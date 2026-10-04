@@ -8,6 +8,7 @@ metadata:
   source: "project-local — Notion evidence gathering for motor-fix"
 user-invocable: true
 disable-model-invocation: false
+model: sonnet
 ---
 
 

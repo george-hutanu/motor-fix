@@ -8,6 +8,7 @@ metadata:
   source: "templates/commands/checklist.md"
 user-invocable: true
 disable-model-invocation: false
+model: sonnet
 ---
 
 

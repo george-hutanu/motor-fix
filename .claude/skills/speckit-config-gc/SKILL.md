@@ -8,6 +8,7 @@ metadata:
   source: "adapted from ECC's config-gc skill (github.com/affaan-m/ECC)"
 user-invocable: true
 disable-model-invocation: false
+model: sonnet
 ---
 
 ## User Input

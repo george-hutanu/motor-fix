@@ -8,6 +8,7 @@ metadata:
   source: "adapted from BMAD's scale-adaptive routing (docs.bmad-method.org/plan/choose-a-planning-path)"
 user-invocable: true
 disable-model-invocation: false
+model: sonnet
 ---
 
 ## User Input

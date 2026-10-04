@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-52 — Build the shared chart style in libs/ui-cockpit, on the merged Cockpit theme (ST-50, --mf-* tokens, dark and light) with axis and value labels through the ST-19 locale formats in libs/i18n. The charts that use it come in later epics (Driver insights, Garage workspace). Notion story: https://app.notion.com/p/3ee607bff0d28176aa7efb7b909ee35b. Spec folder and branch: 052-chart-style."
 
