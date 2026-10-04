@@ -38,3 +38,17 @@
 - Domain: `actor.guard.integration.spec.ts` → suite fails to compile (`Public` not exported) — red.
 - API: `public-routes.integration.spec.ts` → 6 passed (regression guard: every existing route is already guarded per controller; the red for "gated without a mark" is the domain spec). Refresh's own 401 told apart by its Set-Cookie.
 - test-adversary: 27 tests in 3 files; web interceptor 3 red / 6 green (never-gate cases), dialog 4 red, guard adversary suite red (compile).
+
+## 10 Implement
+- 15/15 tasks. Web jest 186/186; domain auth/audit/events/health 1102/1102; API 67/67. E2E `sign-in-gate` + `account-language` 9/9 (phones assert the sheet's `mf-overlay-panel`, as `tab-bar.spec.ts` does). Typecheck 13/13, Biome clean (3 warnings from before this branch).
+- Commits 35e039b (auth), ca3eeb8 (web), pushed.
+
+## 11 Converge / 12 Harden
+- artifact-lint 0/0; diff-audit: `import-extension` noise on extensionless imports (repo convention; deferred). Mutation not run locally (CI nightly).
+
+## 14 Review
+- spec-reviewer APPROVE (1 MEDIUM decision: auto-repeat vs one-more-tap, left to the owner; 2 LOW). code-reviewer APPROVE (3 MEDIUM, 4 LOW). Patched: refusal read through `toProblem`, deterministic lower-case-scheme test, duplicate integration tests removed, impossible `renew().catch` and its test removed, comment wording. Declined: renaming `reason` (it names the reason line it shows). Deferred: 3 items in deferred.md. Commit 7b86810; touched suites 207/207.
+
+## 15 Agent context / 16 Retro evidence
+- AGENTS.md: one bullet on the closed-by-default API and `@Public()`.
+- retro-evidence --since 9be21d3: 40 files, +1703 −50; Spec Delta accounts +8 ~2; 3 deferred.
