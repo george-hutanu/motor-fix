@@ -51,3 +51,7 @@ Start commit: 9a2753c (origin/main after rebase, coordinator resume 2026-10-04).
 - spec-reviewer BLOCK: HIGH adversary spec fails tsc (index-signature access) → fixed with bracket access. MEDIUM 22 px hit radius never applies under column picking → decision: keep column picking (taps on 8 px bars), amend FR-002 and the clarification, drop `pointHitRadius`. MEDIUM SC-003 page overflow → deferred.md. LOW default `events` → removed. LOW T008 wording → fixed.
 - code-reviewer BLOCK: HIGH canvas-leaves-DOM release path untested → covered by the adversary spec (empty→data→empty destroys the chart). MEDIUM hand-parsed hex → Chart.js `color` helper, and no fill when the token is not a colour (new unit test). MEDIUM defaults `events`/`responsive`/`tension` → removed. MEDIUM outside tap redraws every chart → returns early without an active tooltip. MEDIUM e2e pre-draw race → wait for the canvas `width` attribute. LOW `formatValue` unknown → comment.
 - Coordinator: heavy commands paused for PR #21; the fix commit is staged and queued.
+
+## 15 QA
+- Lap 2 at 6a93f5a: agent-review success (0 blocker, 0 high; 4 medium, 1 low: storage down without Docker, two axe landmark findings on `/` (not touched here), one flow false positive retracted). e2e 40/40. 320 px overflow no longer reproduces. Report: pr-review/lap2/.
+- #22 (ST-286) merged first and shares sample-page.ts, index.ts and the lockfile: merged origin/main (6220b7a), npm install (chart.js + @angular/service-worker), typecheck and test green; lap 3 on the new head.
