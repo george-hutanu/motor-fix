@@ -12,6 +12,9 @@ import { provideLanguageAddresses, SITE_ORIGIN } from '../addresses';
 import { routes } from '../app.routes';
 import { Session } from '../dashboard/session';
 
+// Romanian keeps the word whole with a non-breaking hyphen.
+const GARAGES = 'Service\u2011uri';
+
 const DRIVER = {
   capabilities: [],
   email: null,
@@ -98,7 +101,7 @@ describe('the public tab bar', () => {
     await open('/ro');
 
     expect(nav()?.getAttribute('aria-label')).toBe('Navigare principală');
-    expect(labels()).toEqual(['Caută', 'Service-uri', 'Cont']);
+    expect(labels()).toEqual(['Caută', GARAGES, 'Cont']);
     expect(current()).toEqual(['Caută']);
     for (const tab of tabs()) {
       const icon = tab.querySelector('svg');
@@ -107,10 +110,10 @@ describe('the public tab bar', () => {
   });
 
   it.each([
-    ['/ro/garages', 'Service-uri'],
-    ['/ro/garages?brand=bmw', 'Service-uri'],
-    ['/ro/garages/atelier-dinamo', 'Service-uri'],
-    ['/ro/mechanics/ion-popescu', 'Service-uri'],
+    ['/ro/garages', GARAGES],
+    ['/ro/garages?brand=bmw', GARAGES],
+    ['/ro/garages/atelier-dinamo', GARAGES],
+    ['/ro/mechanics/ion-popescu', GARAGES],
     ['/ro/account', 'Cont'],
   ])('makes %s the screen of %s', async (address, tab) => {
     await open(address);
@@ -120,8 +123,8 @@ describe('the public tab bar', () => {
   });
 
   it.each([
-    ['/ro/garages', 'Service-uri'],
-    ['/ro/garages/atelier-dinamo', 'Service-uri'],
+    ['/ro/garages', GARAGES],
+    ['/ro/garages/atelier-dinamo', GARAGES],
     ['/ro/mechanics/ion-popescu', 'Mecanic'],
     ['/ro/account', 'Cont'],
   ])('shows a placeholder at %s', async (address, heading) => {
@@ -154,7 +157,7 @@ describe('the public tab bar', () => {
 
   it('leads Service-uri to the results, then to the last brand opened', async () => {
     await open('/ro');
-    expect(href('Service-uri')).toBe('/ro/garages');
+    expect(href(GARAGES)).toBe('/ro/garages');
 
     await open('/ro/garages?brand=bmw');
     await open('/ro/garages/atelier-dinamo?brand=bmw');
@@ -162,14 +165,14 @@ describe('the public tab bar', () => {
     await open('/ro/garages?brand=');
     await open('/ro');
 
-    expect(href('Service-uri')).toBe('/ro/garages?brand=bmw');
+    expect(href(GARAGES)).toBe('/ro/garages?brand=bmw');
 
     signedIn = DRIVER;
     await open('/app/driver');
     await open('/ro');
-    expect(href('Service-uri')).toBe('/ro/garages?brand=bmw');
+    expect(href(GARAGES)).toBe('/ro/garages?brand=bmw');
 
-    await tap('Service-uri');
+    await tap(GARAGES);
     expect(url()).toBe('/ro/garages?brand=bmw');
   });
 

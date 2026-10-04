@@ -51,7 +51,7 @@ describe('Frame', () => {
       'Mecanici',
       'Prețuri',
       'Recenzii',
-      'Profilul service-ului',
+      'Profilul service\u2011ului',
     ]);
   });
 
@@ -88,7 +88,7 @@ describe('Frame', () => {
       'Cererile mele',
       'Mașinile mele',
       'Recenziile mele',
-      'Service-uri salvate',
+      'Service\u2011uri salvate',
       'Setări',
     ]);
     TestBed.resetTestingModule();
@@ -104,7 +104,7 @@ describe('Frame', () => {
       ),
     ).toEqual([
       'Panou',
-      'Service-uri',
+      'Service\u2011uri',
       'Utilizatori',
       'Recenzii raportate',
       'Mărci și lucrări',
@@ -126,6 +126,16 @@ describe('Frame', () => {
     expect(nav?.compareDocumentPosition(signOut as Node)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
+  });
+
+  it('shows the signed-in name as written, marked not to be translated, in both languages', async () => {
+    const { element, fixture } = render('driver', '/app/driver', []);
+    const name = () => element.querySelector('.account [translate="no"]');
+
+    expect(name()?.textContent?.trim()).toBe('Ioana Pop');
+    await TestBed.inject(I18n).use('en');
+    await fixture.whenStable();
+    expect(name()?.textContent?.trim()).toBe('Ioana Pop');
   });
 
   it('shows the chosen entry as the title over a plain empty state', () => {

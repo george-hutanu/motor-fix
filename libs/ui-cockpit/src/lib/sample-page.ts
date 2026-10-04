@@ -113,7 +113,10 @@ import { SAMPLE_GARAGES } from './sample-text';
         </div>
       </mf-panel>
 
-      <mf-cockpit-gauges-sample />
+      <!-- Beside the table panel, so the catalogue shows the build-up stagger. -->
+      <mf-panel [heading]="'cockpit.gauges.title' | t">
+        <mf-cockpit-gauges-sample />
+      </mf-panel>
 
       <div class="row">
         <hlm-dialog>

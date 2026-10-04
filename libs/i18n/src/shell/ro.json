@@ -21,7 +21,7 @@
     "nav": {
       "admin": {
         "catalogue": "Mărci și lucrări",
-        "garages": "Service-uri",
+        "garages": "Service‑uri",
         "reviews": "Recenzii raportate",
         "settings": "Setări",
         "users": "Utilizatori"
@@ -31,12 +31,12 @@
         "cars": "Mașinile mele",
         "requests": "Cererile mele",
         "reviews": "Recenziile mele",
-        "savedGarages": "Service-uri salvate",
+        "savedGarages": "Service‑uri salvate",
         "settings": "Setări"
       },
       "garage": {
         "prices": "Prețuri",
-        "profile": "Profilul service-ului",
+        "profile": "Profilul service‑ului",
         "requests": "Cereri de ofertă",
         "reviews": "Recenzii",
         "schedule": "Programări",

@@ -118,13 +118,21 @@ describe('Odometer', () => {
     ).toEqual(['1', '2', '5', '0', '1', '6', '0', '0']);
   });
 
-  it('changes its digits at once: none of the three parts animates', () => {
-    for (const file of ['odometer.ts', 'rating-dial.ts', 'lamp.ts']) {
-      const source = readFileSync(join(__dirname, file), 'utf8');
-      expect([file, /transition|animation|@keyframes/.test(source)]).toEqual([
-        file,
-        false,
-      ]);
-    }
+  it('rolls each digit cell to its digit, and shows the plain digit in forced colours', () => {
+    const odometer = readFileSync(
+      join(__dirname, 'odometer.ts'),
+      'utf8',
+    ).replace(/\s+/g, ' ');
+    // The source escapes the CSS line break once more for the template string.
+    const column = [...'0123456789'].join(String.raw`\\A `);
+
+    expect(odometer).toContain(`content: "${column}";`);
+    expect(odometer).toContain(
+      'translate: 0 calc(var(--mf-digit) * -1.4em); transition: translate var(--mf-motion-roll) var(--mf-motion-ease);',
+    );
+    expect(odometer).toMatch(
+      /@media \(forced-colors: active\) \{ \.mf-odometer-digit \{ color: inherit; \} \.mf-odometer-digit::before \{ content: none; \} \}/,
+    );
+    expect(odometer.match(/animation|transition/g)).toHaveLength(1);
   });
 });

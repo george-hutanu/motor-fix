@@ -2,6 +2,9 @@ import { expect, type Page, test } from '@playwright/test';
 
 import { signInAs } from './sign-in.js';
 
+// Romanian keeps the word whole with a non-breaking hyphen.
+const GARAGES = 'Service\u2011uri';
+
 const bar = (page: Page) =>
   page.getByRole('navigation', { name: 'Navigare principală' });
 
@@ -19,7 +22,7 @@ test.describe('the public tab bar on a 375 px phone', () => {
     page,
   }) => {
     for (const [tab, address] of [
-      ['Service-uri', '/ro/garages'],
+      [GARAGES, '/ro/garages'],
       ['Cont', '/ro/account'],
       ['Caută', '/ro'],
     ]) {
@@ -68,7 +71,7 @@ test.describe('the public tab bar on a 375 px phone', () => {
     await open(page, '/ro');
     const links = bar(page).getByRole('link');
 
-    await expect(links).toHaveText(['Caută', 'Service-uri', 'Cont']);
+    await expect(links).toHaveText(['Caută', GARAGES, 'Cont']);
     await expect(links.first()).toHaveAttribute('aria-current', 'page');
     await expect(links.nth(1)).not.toHaveAttribute('aria-current');
 
