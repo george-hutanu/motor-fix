@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-194 Set up e-mail sending (Notion story https://app.notion.com/p/3ee607bff0d281df9c01d35400d5195f, epic EP-1 Foundations https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707). Core of the notifications platform module with e-mail as its first channel: NOTIFICATION table, NOTIFICATION_TYPES catalogue in code, worker notifications queue, Brevo transactional e-mail adapter, always-sent flag, grouping, retries and fallback hook, quiet hours 22:00–08:00 Europe/Bucharest for non-urgent types [X25], admin-only test message endpoint, signed Brevo bounce webhook, and direct ACCOUNT_EMAIL sends for e-mail check and password reset. Cycle cut (build timeline): the outbox relay wiring into this queue belongs to ST-257; this story builds the queue entry point the relay will call. Production sending stays off until the sending domain (S10) is chosen; non-production sends only to allow-listed addresses."
 
