@@ -100,7 +100,8 @@ instance showing the English formats.
 
 - A missing value (`null`, `undefined`, a non-number, a non-finite number, or
   a date input that gives an invalid date) shows "—"; a numeric string is
-  not a number.
+  not a number, and a date string that is not ISO-8601 (a date, or a date
+  and time with its offset) is not a date.
 - An inverted range (from above to) is shown as given.
 - A range with one end missing shows "—"; a range whose ends are equal shows a
   single amount ("800 lei").

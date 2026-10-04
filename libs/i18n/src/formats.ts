@@ -58,6 +58,8 @@ function digits(
   return format.format(value || 0);
 }
 
+// Templates may pass anything: whatever is not a finite number (or, for
+// dates, a valid instant) shows the missing-value dash.
 const isNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
 
@@ -112,11 +114,16 @@ const clock = new Intl.DateTimeFormat('en-GB', {
   timeZone: ZONE,
 });
 
+// A date, or a date and time with its offset: other strings are parsed by
+// each engine its own way, and a time without an offset in the device zone.
+const ISO =
+  /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2}))?$/;
+
 function instant(value: unknown): Date | undefined {
   const date =
     value instanceof Date
       ? value
-      : typeof value === 'string' || isNumber(value)
+      : (typeof value === 'string' && ISO.test(value)) || isNumber(value)
         ? new Date(value)
         : undefined;
   return date && !Number.isNaN(date.getTime()) ? date : undefined;
@@ -137,16 +144,8 @@ export function formatClock(value: unknown): string {
   return date ? clock.format(date) : MISSING;
 }
 
-export interface CalendarNames {
-  firstDay: 1;
-  months: string[];
-  monthsShort: string[];
-  days: string[];
-  daysShort: string[];
-}
-
 // For date pickers and other standard controls: days run from Monday.
-export function calendarNames(language: Language): CalendarNames {
+export function calendarNames(language: Language) {
   const names = (options: Intl.DateTimeFormatOptions, dates: Date[]) => {
     const format = new Intl.DateTimeFormat(LOCALES[language], {
       ...options,
@@ -164,7 +163,7 @@ export function calendarNames(language: Language): CalendarNames {
   return {
     days: names({ weekday: 'long' }, week),
     daysShort: names({ weekday: 'short' }, week),
-    firstDay: 1,
+    firstDay: 1 as const,
     months: names({ month: 'long' }, months),
     monthsShort: [...MONTHS_SHORT[language]],
   };

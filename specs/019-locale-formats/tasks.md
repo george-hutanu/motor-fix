@@ -37,6 +37,9 @@ Paths are `(new)` unless they exist today: `libs/i18n/src/index.ts`.
 
 - [X] T009 `npx nx run i18n:typecheck`, `npx biome check libs/i18n`, `npx jest -c libs/i18n/jest.config.cts` green (quickstart)
 
+- [X] T010 Review fix: a date string that is not ISO-8601 (a date, or a date and time with its offset) shows "—" instead of being parsed by the engine; `{{ from | lei: to }}` with a missing `to` shows "—"; named exports in `index.ts`; tests in `formats.spec.ts` and `format.pipes.spec.ts` (FR-008)
+- [X] T011 Harden: `libs/i18n/src/formats.adversary.spec.ts` (235 outside-in tests) (FR-001–FR-009)
+
 ## Dependencies
 
 Tests T001, T003, T005, T007 first (red), then T002, T004, T006, T008, then T009. T002/T004/T006 all edit `formats.ts` (sequential).

@@ -89,15 +89,21 @@ describe('format pipes', () => {
   it('show a dash for a missing value', async () => {
     @Component({
       imports: [LeiPipe, DayPipe],
-      template: `<p id="price">{{ none | lei }}</p><p id="day">{{ none | day }}</p>`,
+      template: `<p id="price">{{ none | lei }}</p><p id="range">{{ from | lei: to }}</p><p id="day">{{ none | day }}</p>`,
     })
     class Empty {
       readonly none = null;
+      readonly from = 80000;
+      readonly to = undefined;
     }
 
     const fixture = TestBed.createComponent(Empty);
     await fixture.whenStable();
 
-    expect(read(fixture.nativeElement)).toEqual({ day: '—', price: '—' });
+    expect(read(fixture.nativeElement)).toEqual({
+      day: '—',
+      price: '—',
+      range: '—',
+    });
   });
 });

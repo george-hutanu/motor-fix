@@ -18,11 +18,12 @@ import { I18n } from './i18n';
 export class LeiPipe implements PipeTransform {
   private readonly i18n = inject(I18n);
 
-  transform(bani: unknown, to?: unknown): string {
+  // `{{ from | lei: to }}` is a range even when `to` is missing.
+  transform(bani: unknown, ...to: unknown[]): string {
     const language = this.i18n.language();
-    return to === undefined
+    return to.length === 0
       ? formatLei(bani, language)
-      : formatLeiRange(bani, to, language);
+      : formatLeiRange(bani, to[0], language);
   }
 }
 

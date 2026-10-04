@@ -154,7 +154,8 @@ const SHORT_EN = [
 
 describe('dates and times', () => {
   // Jest cannot change the zone of its own process, so a child Node process
-  // on another device zone runs the formats.
+  // on another device zone runs the formats. Plain Node loads formats.ts only
+  // while it keeps erasable TypeScript and `import type` relative imports.
   it.each([
     ['America/New_York'],
     ['Pacific/Kiritimati'],
@@ -206,6 +207,7 @@ describe('dates and times', () => {
     expect(formatDay('2026-03-09', 'ro')).toBe('9 mart. 2026');
     expect(formatDay('2026-03-09T10:00:00Z', 'en')).toBe('9 Mar 2026');
     expect(formatDay(Date.UTC(2026, 2, 9, 10), 'en')).toBe('9 Mar 2026');
+    expect(formatClock('2026-03-09T14:30:00+02:00')).toBe('14:30');
   });
 
   it.each([
@@ -219,6 +221,9 @@ describe('dates and times', () => {
 
   it.each([
     'not a date',
+    '9 March 2026',
+    '92',
+    '2026-03-09T14:30',
     new Date(Number.NaN),
     null,
     undefined,
