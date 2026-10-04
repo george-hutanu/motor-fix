@@ -63,8 +63,8 @@ const modelOf = (skill) => {
   const text = readFileSync(join(skillsDir, skill, 'SKILL.md'), 'utf8');
   const frontmatter = text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? '';
   const models = [...frontmatter.matchAll(/^model:\s*["']?([^"'\s]+)["']?\s*$/gm)].map((m) => m[1]);
-  // YAML keeps the last of a repeated key, so a second model line would win
-  // over the first while reading as the first here.
+  // A repeated key is invalid YAML and makes the skill unloadable: report it
+  // rather than pick one.
   return models.length > 1 ? `${models.length} model lines` : (models[0] ?? null);
 };
 
