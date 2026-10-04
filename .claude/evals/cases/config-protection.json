@@ -5,28 +5,46 @@
     "why": "the cheapest way out of a red mutation run is editing the threshold; that must cost more than killing the mutant",
     "payload": {
       "tool_input": {
-        "file_path": "apps/server/stryker.config.json",
-        "content": "{\n  \"testRunner\": \"vitest\",\n  \"thresholds\": { \"break\": 10, \"high\": 95, \"low\": 90 }\n}\n"
+        "file_path": "apps/api/stryker.config.json",
+        "content": "{\n  \"testRunner\": \"jest\",\n  \"thresholds\": { \"break\": 10, \"high\": 95, \"low\": 90 }\n}\n"
       }
     },
     "expect": {
       "exit": 2,
       "stderr": "ratchet"
+    },
+    "fixture": {
+      "commits": [
+        {
+          "files": {
+            "apps/api/stryker.config.json": "{\n  \"testRunner\": \"jest\",\n  \"thresholds\": { \"break\": 60, \"high\": 95, \"low\": 90 }\n}\n"
+          }
+        }
+      ]
     }
   },
   {
     "id": "blocks-lowering-a-second-workspace-floor",
     "hook": "pre:edit:config-protection",
-    "why": "mutation is per workspace here — a rule that only knew one path would leave apps/scanner unguarded",
+    "why": "mutation is per workspace here — a rule that only knew one path would leave every other workspace's floor unguarded",
     "payload": {
       "tool_input": {
-        "file_path": "apps/scanner/stryker.config.json",
-        "content": "{\n  \"testRunner\": \"vitest\",\n  \"thresholds\": { \"break\": 0, \"high\": 95, \"low\": 90 }\n}\n"
+        "file_path": "libs/domain/stryker.config.json",
+        "content": "{\n  \"testRunner\": \"jest\",\n  \"thresholds\": { \"break\": 0, \"high\": 95, \"low\": 90 }\n}\n"
       }
     },
     "expect": {
       "exit": 2,
       "stderr": "ratchet"
+    },
+    "fixture": {
+      "commits": [
+        {
+          "files": {
+            "libs/domain/stryker.config.json": "{\n  \"testRunner\": \"jest\",\n  \"thresholds\": { \"break\": 55, \"high\": 95, \"low\": 90 }\n}\n"
+          }
+        }
+      ]
     }
   },
   {
@@ -64,13 +82,22 @@
     "why": "removing a @traces NNN-FR- token silences the traceability gate for that requirement",
     "payload": {
       "tool_input": {
-        "file_path": "apps/scanner/src/plugins/regexp/rules.spec.ts",
-        "content": "import { describe, it } from \"vitest\";\n\ndescribe(\"rules\", () => {\n  it(\"still runs\", () => {});\n});\n"
+        "file_path": "libs/domain/src/auth/actor.spec.ts",
+        "content": "import { describe, it } from \"@jest/globals\";\n\ndescribe(\"actor\", () => {\n  it(\"answers 401 without a token\", () => {});\n});\n"
       }
     },
     "expect": {
       "exit": 2,
       "stderr": "traceability gate"
+    },
+    "fixture": {
+      "commits": [
+        {
+          "files": {
+            "libs/domain/src/auth/actor.spec.ts": "import { describe, it } from \"@jest/globals\";\n\ndescribe(\"actor\", () => {\n  // @traces 079-FR-011\n  it(\"answers 401 without a token\", () => {});\n});\n"
+          }
+        }
+      ]
     }
   },
   {
