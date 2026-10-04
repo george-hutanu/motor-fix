@@ -65,7 +65,9 @@ for (const [width, height] of [
       .getByRole('button', { name: 'EN' })
       .click();
 
-    await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+    await expect(
+      page.getByRole('button', { exact: true, name: 'Sign out' }),
+    ).toBeVisible();
     await expect.poll(() => saved).toEqual([{ language: 'en' }]);
     await fits(page, 'Language', width);
     const english = languageSwitch(page, 'Language');
@@ -88,7 +90,9 @@ test('the account language opens the dashboard, and nothing is saved for it', as
 
   await page.goto('/app/driver');
 
-  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
+  await expect(
+    page.getByRole('button', { exact: true, name: 'Sign out' }),
+  ).toBeVisible();
   await page.waitForLoadState('networkidle');
   expect(saved).toEqual([]);
 });

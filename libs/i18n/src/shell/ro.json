@@ -80,6 +80,7 @@
       }
     },
     "signOut": "Ieși din cont",
+    "signOutEverywhere": "Ieși de pe toate dispozitivele",
     "tab": {
       "brands": "Mărci",
       "cars": "Mașini",
@@ -125,6 +126,12 @@
       "keep": "Continuă editarea",
       "question": "Renunți la modificări?"
     }
+  },
+  "signOutEverywhere": {
+    "cancel": "Renunță",
+    "confirm": "Ieși",
+    "text": "Va trebui să te autentifici din nou peste tot.",
+    "title": "Ieși de pe toate dispozitivele?"
   },
   "version": {
     "unknown": "versiune necunoscută"

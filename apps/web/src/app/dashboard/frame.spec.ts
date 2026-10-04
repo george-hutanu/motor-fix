@@ -55,7 +55,10 @@ async function render(
           path: `app/${area}`,
         })),
       ),
-      { provide: Session, useValue: { current, reload, signOut } },
+      {
+        provide: Session,
+        useValue: { current, ended: new Subject<void>(), reload, signOut },
+      },
       { provide: Live, useValue: live },
       { provide: MeService, useValue: {} },
     ],

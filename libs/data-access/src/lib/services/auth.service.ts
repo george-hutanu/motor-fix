@@ -15,6 +15,8 @@ import { authControllerSignIn } from '../fn/auth/auth-controller-sign-in';
 import { AuthControllerSignIn$Params } from '../fn/auth/auth-controller-sign-in';
 import { authControllerSignOut } from '../fn/auth/auth-controller-sign-out';
 import { AuthControllerSignOut$Params } from '../fn/auth/auth-controller-sign-out';
+import { authControllerSignOutEverywhere } from '../fn/auth/auth-controller-sign-out-everywhere';
+import { AuthControllerSignOutEverywhere$Params } from '../fn/auth/auth-controller-sign-out-everywhere';
 import { authControllerSignUp } from '../fn/auth/auth-controller-sign-up';
 import { AuthControllerSignUp$Params } from '../fn/auth/auth-controller-sign-up';
 import { ConfirmEmailAnswerDto } from '../models/confirm-email-answer-dto';
@@ -103,6 +105,31 @@ export class AuthService extends BaseService {
   authControllerRefresh(params?: AuthControllerRefresh$Params, context?: HttpContext): Promise<SessionDto> {
     const resp = this.authControllerRefresh$Response(params, context);
     return resp.then((r: StrictHttpResponse<SessionDto>): SessionDto => r.body);
+  }
+
+  /** Path part for operation `authControllerSignOutEverywhere()` */
+  static readonly AuthControllerSignOutEverywherePath = '/api/v1/auth/sign-out-everywhere';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `authControllerSignOutEverywhere()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  authControllerSignOutEverywhere$Response(params?: AuthControllerSignOutEverywhere$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = authControllerSignOutEverywhere(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `authControllerSignOutEverywhere$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  authControllerSignOutEverywhere(params?: AuthControllerSignOutEverywhere$Params, context?: HttpContext): Promise<void> {
+    const resp = this.authControllerSignOutEverywhere$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
   /** Path part for operation `authControllerSignOut()` */

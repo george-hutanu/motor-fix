@@ -30,3 +30,21 @@
 
 ## 10. Implement
 - Notion implement: ST-81 Planning → Implementing; timeline → Implementing; label in development.
+- T001–T013 done in 012bdd4, 09a4b31, 51ca195 (CI e2e gets PUBLIC_WEB_URL).
+
+## 11. Harden
+- test-adversary: `email-confirmation.adversary.integration.spec.ts` (48 tests); 7 failed first: concurrent resends could both send, `__proto__` keys rode through, a voided link refused a resend. Mutation not run locally (CI nightly).
+
+## 12. Review
+- spec-reviewer: HIGH voided link must still ask again → older links now expire instead of being deleted; MEDIUM no AppModule proof of the sign-up e-mail → `apps/api/src/sign-up-confirmation.integration.spec.ts`; MEDIUM outbox and LOW boot check → deferred.md.
+- code-reviewer: APPROVE; EXPIRE replies checked, one Redis client (AUTH_REDIS), atomic reserve/release, Redis-down tests, shared `httpStatus`.
+- Fixes in 3221683, 1792f41, 2afe9c3 (repair lap 1 of 5). spec-reviewer re-run: APPROVE, no new CRITICAL/HIGH.
+
+## 13. Ticket refresh
+- No new comments on ST-81 since the context was written.
+
+## 15. Agent context
+- AGENTS.md unchanged: no new command, project or rule.
+
+## 16. Retro evidence
+- `retro-evidence.mjs --since 4995168`: 2 deferred (low), 1 carry-over from 050; no instincts triggered. Jev lane unavailable (no key).

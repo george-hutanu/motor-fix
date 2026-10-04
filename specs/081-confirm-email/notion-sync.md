@@ -9,3 +9,6 @@
 - 2026-10-05 · implement · ST-81 story Status · Planning → Implementing
 - 2026-10-05 · implement · Foundations timeline row ST-81 · Planning → Implementing
 - 2026-10-05 · labels · PR #71 · in development
+- 2026-10-05 · qa · ST-81 story Status · Implementing → QA
+- 2026-10-05 · qa · Foundations timeline row ST-81 · Implementing → QA
+- 2026-10-05 · labels · PR #71 · QA
