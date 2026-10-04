@@ -9,3 +9,6 @@
 - 2026-10-04 revert ST-79 Foundations timeline Build status: In review → In progress (same rule)
 - 2026-10-04 · review · ST-79 story Status: In progress → In review (PR #3 marked ready)
 - 2026-10-04 · review · ST-79 Foundations timeline Build status: In progress → In review
+- 2026-10-04 · finish · ST-79 story Status: In review → Done (PR #3, 1203b1c)
+- 2026-10-04 · finish · ST-79 Foundations timeline Build status: In review → Merged
+- 2026-10-04 · finish · EP-1 Status: In progress (unchanged: other stories open)

@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-79 Set up the account model, the four roles and their rights (Notion story ST-79, epic Foundations EP-1). Build what the story's Build brief says, per the epic's Build plan: one account with several roles (decision ST-78: driver + garage on one account, role used last opens), roles driver, garage owner, mechanic, optional receptionist per garage, admin. Call an AuditPort interface (no-op for now) that ST-390 will implement."
 
