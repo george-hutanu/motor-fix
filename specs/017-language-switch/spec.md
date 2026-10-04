@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-17 — Switch the interface between Romanian and English: the RO / EN switch in the header, changing the language with no reload, built on the ST-16 i18n runtime in libs/i18n. Notion story: https://app.notion.com/p/3ee607bff0d28131b3c1e5856c0e50bf. Spec folder and branch: 017-language-switch."
 

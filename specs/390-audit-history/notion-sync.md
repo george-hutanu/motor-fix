@@ -10,3 +10,5 @@
 - 2026-10-04 review · story ST-390 · In progress → In review (#12 ready after the rebase onto 060b9ac)
 - 2026-10-04 qa · story ST-390 · In review → QA; Foundations timeline row · In review → QA
 - 2026-10-04 debt · 5 tasks filed in MotorFix stories from deferred.md (URLs on each bullet)
+- 2026-10-04 debt · lap-2 finding filed directly: https://app.notion.com/p/3ef607bff0d2815c8378ca4d8a65c2e1
+- 2026-10-04 finish · story ST-390 · QA → Done; Foundations timeline row · QA → Merged; epic EP-1 unchanged (In progress, other stories open)
