@@ -2,7 +2,7 @@
 
 Real findings that are not this change.
 
-- harness-eval below its floor (42/45 after this branch, 41/46 on `main`): `blocks-deleting-a-requirement-token` still targets `apps/scanner`, and the two `agent-model-router` cases fail — `.claude/evals/cases/config-protection.json`, `.claude/evals/cases/agent-model-router.json`. Pre-existing; none of their gates is touched here. (spec-reviewer #4)
+- Resolved by `main` (b965391, eval fixture repos; 48/48 after merging it): harness-eval below its floor (42/45 after this branch, 41/46 on `main`): `blocks-deleting-a-requirement-token` still targets `apps/scanner`, and the two `agent-model-router` cases fail — `.claude/evals/cases/config-protection.json`, `.claude/evals/cases/agent-model-router.json`. Pre-existing; none of their gates is touched here. (spec-reviewer #4)
 - Stale harness references to the old `apps/server` / `apps/scanner` layout outside the mutation path: `.claude/scripts/diff-audit.mjs:163-173`, `.claude/agents/code-reviewer.md:77`, `.claude/skills/speckit-auto/SKILL.md:248`, `.claude/skills/speckit-implement/SKILL.md:296`, `.claude/skills/speckit-tests/SKILL.md:83` (`npm run test -w …`).
 - `org-researcher` subagent cannot reach Notion in this session: its tool list names other connector ids than the session's (`mcp__828510aa-…`).
 

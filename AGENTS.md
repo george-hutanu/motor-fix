@@ -29,7 +29,8 @@ epic or a plan, whether run through spec-kit or by hand.
   boards in the clickable mock (the `Design` and `Design boards` properties
   in Notion) and the Build brief's Screens section, and write
   `specs/<feature>/design.md`. Skill: `speckit-design-check`.
-- **Every task follows the same lifecycle, in this order:**
+- **Every task follows the same lifecycle, in this order.** This is a hard
+  rule, Constitution VII, enforced by the `stop:pr-lifecycle` gate:
   1. Take the task and set it to In progress in Notion (`speckit-notion-sync start`).
   2. Open a draft PR for its branch (`speckit-git-commit`, at the first commit).
   3. Do the work, pushing every commit to that branch: never forced, never `main`.
@@ -63,8 +64,10 @@ product, architecture and backlog live in the Notion space **MotorFix —
 Product documentation** — Architecture > Technology stack and Architecture
 decisions are the source for anything the constitution does not fix.
 
-- Given: Angular (standalone, signals) + PrimeNG with the Cockpit theme;
-  NestJS, PostgreSQL, Redis; TypeScript everywhere.
+- Given: Angular (standalone, signals) + Spartan UI (brain primitives, helm
+  components copied into `libs/ui-cockpit`, Angular CDK) with the Cockpit
+  theme; NestJS, PostgreSQL, Redis; TypeScript everywhere. Front-end
+  dependencies stay free and open source: no PrimeNG (licence key since v22).
 - Repo: one Nx monorepo — apps `web` (Angular SSR), `api`, `worker` (NestJS),
   `mcp`, `web-e2e` (Playwright); libs `contracts` (DTOs, env), `domain`
   (NestJS modules, Prisma schema per module), `data-access` (Angular client

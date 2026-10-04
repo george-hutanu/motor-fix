@@ -58,7 +58,7 @@ full.
    - <Canvas page> › <Board>: what it shows, in 1–3 lines.
 
    ## What to build to match it
-   - Layout, components (Cockpit / PrimeNG), texts, phone behaviour.
+   - Layout, components (Cockpit / Spartan UI), texts, phone behaviour.
 
    ## States
    - Shown in the mock: …

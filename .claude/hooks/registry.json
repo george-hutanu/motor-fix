@@ -122,6 +122,18 @@
       "fingerprint": "cec14128380c"
     },
     {
+      "id": "stop:pr-lifecycle",
+      "event": "Stop",
+      "matcher": "",
+      "script": "pr-lifecycle-gate.mjs",
+      "profiles": [
+        "standard",
+        "strict"
+      ],
+      "description": "Constitution VII: refuse to end a session on a task branch with unpushed commits, with no PR, or with a ready PR whose checks all passed but that is not merged",
+      "fingerprint": "44884d03b4d1"
+    },
+    {
       "id": "stop:telemetry",
       "event": "Stop",
       "matcher": "",
