@@ -97,7 +97,7 @@
   {
     "id": "blocks-a-push-to-main",
     "hook": "pre:bash:guard",
-    "why": "main changes only through a PR the user merges; a direct push skips the review and the user's call",
+    "why": "main changes only through a PR merged on green CI; a direct push skips the review and the checks",
     "payload": {
       "tool_input": {
         "command": "git push origin main"
