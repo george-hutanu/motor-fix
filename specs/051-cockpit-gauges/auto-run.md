@@ -55,3 +55,15 @@ Start: branch `051-cockpit-gauges` from origin/main 8cb1882 (worktree agent-a68e
 - spec-reviewer: BLOCK — HIGH: story keys in two comments (odometer.ts, gauges.spec.ts) → reworded. MEDIUM: T009 text over-claimed the 320 px check → reworded. MEDIUM decision: literal 8 px cell radius / 2 px gap vs FR-013 → Option B, FR-013 lists them as part geometry (the mock's cell has no token; design fidelity); the dial's 13 px → `--mf-size-small`. LOW: e2e hex copies → read from the page's computed tokens; deferred.md for the sample page's 5 px overflow; capability stub committed.
 - code-reviewer: APPROVE. MEDIUM decision: `to` doubles as the single/range switch → kept (option a): the 80 adversary tests and FR-010 use from/to, and a single `amount` union adds a type guard per caller; the undefined/null difference is now in the input's comment and a spec row. MEDIUM patches: `state` typed `input<LampState, LampState>` (literal typos fail to compile; tests bind runtime strings through `$any`); dead host classes removed. LOW: duplicated hex helper → deferred.md.
 - Re-review: spec-reviewer APPROVE (115/115 gauge tests; one MEDIUM: deferred.md format → rewritten to the template). No CRITICAL/HIGH left.
+
+## Phase 13 — Ticket refresh
+- ST-51 re-read 2026-10-04: no comments or discussions; no new evidence. context.md `## Refresh 2026-10-04`: No changes since 2026-10-04.
+
+## Phase 15 — Agent context
+- Skipped on purpose: the managed block lives in the tracked CLAUDE.local.md, which several parallel branches rewrite (it names specs/431's plan today); changing it here would only create merge conflicts. No tracked file changed.
+
+## Phase 16 — Retrospective evidence (unjudged)
+- `retro-evidence.mjs --since ec4fa07~1`: 10/10 tasks, 15 FRs, 5 commits, 27 files +2035, 3 deferred open; Jev lane unavailable, so no suggested verdict. `instincts.mjs triggered`: no output beyond the Jev line.
+
+## Lifecycle
+- Merge freeze (owner, via orchestrator) until #21 (ST-434) merges: PR #20 stays draft; then rebase onto origin/main, force-with-lease, `gh pr ready`, `speckit-pr-test`, checks, merge, notion finish, archive.

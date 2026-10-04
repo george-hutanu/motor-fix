@@ -63,3 +63,7 @@ Note: the `org-researcher` subagent reported `[UNAVAILABLE: notion]` (its tool l
 - MF-3 Cockpit design system and motion — https://app.notion.com/p/3ee607bff0d2817aa8bdc2f304d558b2
 - EP-1 Foundations — https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707
 - ST-53 See screens build up with motion — https://app.notion.com/p/3ee607bff0d281e6a52dd360e3cf1cda
+
+## Refresh 2026-10-04
+
+No changes since 2026-10-04.
