@@ -50,6 +50,11 @@
     "label": "Limba",
     "ro": "RO"
   },
+  "notFound": {
+    "home": "Înapoi la pagina principală",
+    "text": "Adresa nu duce la nicio pagină MotorFix.",
+    "title": "Pagina nu există"
+  },
   "version": {
     "unknown": "versiune necunoscută"
   }

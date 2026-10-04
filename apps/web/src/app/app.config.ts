@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { provideI18n, provideRememberedLanguage } from '@motor-fix/i18n';
 import { provideCockpitTheme } from '@motor-fix/ui-cockpit';
 
+import { provideLanguageAddresses } from './addresses';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -15,5 +16,6 @@ export const appConfig: ApplicationConfig = {
     provideI18n(),
     provideCockpitTheme(),
     provideRememberedLanguage(),
+    provideLanguageAddresses(),
   ],
 };

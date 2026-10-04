@@ -12,6 +12,7 @@ import express from 'express';
 
 import { apiInternalUrl } from './api-url';
 import { mountEdge } from './server/edge';
+import { mountSearch } from './server/search';
 
 const browserDistFolder = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -25,6 +26,7 @@ const angularApp = new AngularNodeAppEngine({
 });
 
 mountEdge(app, apiInternalUrl());
+mountSearch(app, publicUrl);
 
 app.use(
   express.static(browserDistFolder, {

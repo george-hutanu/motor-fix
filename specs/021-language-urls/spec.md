@@ -31,6 +31,8 @@ engine can only ever see one language.
 2. **Given** the device remembers Romanian, **when** `/en/` is opened in the
    browser, **then** the page stays English and the device now remembers English.
 3. **Given** `/ro/`, **then** the page is Romanian, declaring `lang="ro"`.
+4. **Given** a second tab open on `/ro/`, **when** `/en/` is opened in a new tab,
+   **then** the second tab follows to English at `/en`, as after a tap.
 
 ---
 
@@ -48,8 +50,8 @@ not reload, and the history length did not grow.
 
 **Acceptance Scenarios**:
 
-1. **Given** `/ro/`, **when** EN is tapped, **then** the address is `/en/`, the
-   page was not reloaded and Back does not lead to `/ro/`.
+1. **Given** `/ro/`, **when** EN is tapped, **then** the address is `/en` (or
+   `/en/`), the page was not reloaded and Back does not lead to `/ro/`.
 2. **Given** two tabs on `/ro/`, **when** EN is tapped in one, **then** the other
    shows English at `/en/` with no reload.
 
@@ -152,8 +154,9 @@ robots rule.
   query string and replacing the history entry.
 - **FR-004**: When the language changes on a page with a language address — a tap
   on the switch, or a change from another tab — the address MUST change to the
-  same page under the new prefix through the router, with no reload and no new
-  history entry.
+  same page under the new prefix — query string and fragment kept, a not-found
+  address under a known prefix included — through the router, with no reload and
+  no new history entry.
 - **FR-005**: A public page rendered on the server MUST carry a canonical link to
   its own language address and `hreflang` alternate links for `ro`, `en` and
   `x-default` (the Romanian address), all absolute on the public origin
@@ -167,9 +170,11 @@ robots rule.
   them: every `/app/…` answer carries `X-Robots-Tag: noindex`; every other page
   that is not public (the cockpit sample, the not-found page) carries `<meta
   name="robots" content="noindex">` and no canonical or `hreflang` link.
-- **FR-009**: An address the app does not know MUST answer 404 with a not-found
-  page carrying `noindex` — in Romanian for an unknown language prefix, in the
-  prefix's language under a known one — with a link to Home.
+- **FR-009**: An address the app does not know MUST show a not-found page
+  carrying `noindex`, with a link to Home — in Romanian for an unknown language
+  prefix, in the prefix's language under a known one — and, when rendered on the
+  server (every address outside `/app/`), answer with status 404. Under `/app/`
+  the page renders in the browser with the `/app/` answer's status.
 
 ### Key Entities
 
@@ -196,7 +201,27 @@ robots rule.
 
 ### Session 2026-10-04
 
-(filled by the clarify phase)
+- Q: `/` — a 302 to `/ro/`, or a 200 Romanian Home with canonical `/ro/`? → A:
+  200 + canonical `/ro/`, then the browser moves to the language address; the only
+  reading that keeps FR-002 and ST-17's reopened-English together without a
+  cookie (spec-challenger #1; Assumptions).
+- Q: After a switch, `/en` or `/en/` in the address bar? → A: either; the
+  trailing slash is a property of canonical, `hreflang` and sitemap entries.
+  Tests accept `^/en/?$`; the server serves both, no redirect between them
+  (challenger #2).
+- Q: Does opening `/en/` directly act like a tap, moving other tabs? → A: yes,
+  one write path; tested as US1 scenario 4. ST-17's "remembered language
+  applied after the first render" now changes nothing on a prefixed page, since
+  the address has already become the remembered language (challenger #3).
+- Q: Does FR-009's 404 apply under `/app/`? → A: no — `/app/**` is rendered in
+  the browser; the not-found page shows there with the shell's status, and
+  `X-Robots-Tag: noindex` keeps crawlers out (challenger #4).
+- Q: `PUBLIC_WEB_URL` and the fallback origin? → A: `server.ts` already requires
+  `PUBLIC_WEB_URL` when it runs as the deployed server (`readEnv`); the request's
+  origin is the fallback for the dev server only; the origin is taken with
+  `new URL(...).origin`, so a trailing slash or path is dropped (challenger #5).
+- Q: Query, fragment and a not-found page on a switch? → A: kept; a not-found
+  address under a known prefix switches in place (challenger #6; FR-004).
 
 ## Assumptions
 

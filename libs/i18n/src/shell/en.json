@@ -50,6 +50,11 @@
     "label": "Language",
     "ro": "RO"
   },
+  "notFound": {
+    "home": "Back to the home page",
+    "text": "This address does not lead to a MotorFix page.",
+    "title": "Page not found"
+  },
   "version": {
     "unknown": "version unknown"
   }
