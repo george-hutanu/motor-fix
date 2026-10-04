@@ -47,7 +47,7 @@ Paths are `(new)` unless they exist today: `libs/ui-cockpit/src/index.ts`, `libs
 
 ## Phase 6: Polish
 
-- [ ] T018 Run `npm run typecheck`, `npm run lint`, `npm run test`, and the e2e suite against the production build on port 4286; record results in auto-run.md
+- [X] T018 Run `npm run typecheck`, `npm run lint`, `npm run test`, and the e2e suite against the production build on port 4286; record results in auto-run.md
 
 ## FR → test
 

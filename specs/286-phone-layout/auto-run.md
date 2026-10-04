@@ -42,3 +42,15 @@ Start: `origin/main` at c03d7691461e9a621824af549485dbd8507aba60 (fast-forward f
 
 ## Phase 8 — Analyze
 - artifact-lint: 0 errors, 0 warnings (Jev lane unavailable: no key). `capabilities validate`: merges cleanly into the new `phone-layout` capability.
+
+## Phase 9 — Tests (red)
+- New/extended suites: cockpit.css.spec (phone rules), helm/table.spec, layout.spec, provide-cockpit-theme.spec, apps/web pwa.spec; e2e phone.spec, pwa.spec.
+- Red: `npx jest --maxWorkers=2 <the 5 files>` → Test Suites: 5 failed, 5 total; Tests: 3 failed, 1 passed (3 suites failed to load: no layout.ts, no manifest/ngsw config).
+
+## Phase 10 — Implement
+- Biome breaks long selectors over lines → the CSS spec compares selectors flattened.
+- `npx jest --maxWorkers=2 apps/web libs/ui-cockpit` → 18 suites, 186 tests passed.
+- Production build OK; `ngsw.json` index is `/index.csr.html`; SSR head carries both `theme-color` tags. Warning: initial bundle 578.98 kB > 500 kB warning budget (error at 1 MB); it was already over (546 kB at ST-50).
+- E2E against the production server (`APP_ENV=test PORT=4286 node dist/apps/web/server/server.mjs`, `BASE_URL=http://localhost:4286`, `--workers=2`): 42 passed, 1 failed — `skeleton.spec` "shows the release and both checks" needs the API with PostgreSQL/Redis, not running locally (unrelated; it runs on staging). All 19 phone.spec tests, the pwa test and the existing specs passed with service workers blocked.
+- `npm run typecheck` (12 projects), `npm run lint`, `npm run test` (10 projects): green.
+- Commits: ui-cockpit slice, then web slice.
