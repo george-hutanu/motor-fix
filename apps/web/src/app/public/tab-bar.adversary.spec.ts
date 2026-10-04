@@ -9,6 +9,14 @@ import { provideLanguageAddresses, SITE_ORIGIN } from '../addresses';
 import { routes } from '../app.routes';
 import { Session } from '../dashboard/session';
 
+// The bar only cares that /cockpit is outside the public frame. The real
+// sample page renders the whole kit, which takes longer than a test's 5 s on
+// a loaded CI runner.
+jest.mock('@motor-fix/ui-cockpit/sample', () => {
+  const { Component } = jest.requireActual('@angular/core');
+  return { CockpitSamplePage: Component({ selector: 'mf-cockpit-sample', template: '' })(class {}) };
+});
+
 const ORIGIN = 'https://motorfix.ro';
 const GARAGES = 'Service‑uri';
 
