@@ -62,7 +62,10 @@ const skillsDir = import.meta.dirname;
 const modelOf = (skill) => {
   const text = readFileSync(join(skillsDir, skill, 'SKILL.md'), 'utf8');
   const frontmatter = text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? '';
-  return frontmatter.match(/^model:\s*["']?([^"'\s]+)["']?\s*$/m)?.[1] ?? null;
+  const models = [...frontmatter.matchAll(/^model:\s*["']?([^"'\s]+)["']?\s*$/gm)].map((m) => m[1]);
+  // YAML keeps the last of a repeated key, so a second model line would win
+  // over the first while reading as the first here.
+  return models.length > 1 ? `${models.length} model lines` : (models[0] ?? null);
 };
 
 describe('the model each spec-kit phase runs on', () => {
