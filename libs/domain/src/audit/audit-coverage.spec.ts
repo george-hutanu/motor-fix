@@ -93,6 +93,12 @@ const NOT_CHANGES = new Set([
   'SignInService.revoke',
   'SignInService.rotate',
   'SignInService.touch',
+  // A notification's delivery records, not a change to anyone's data.
+  'NotificationsService.build',
+  'NotificationsService.dispatch',
+  'NotificationsService.emailRow',
+  'NotificationsService.fail',
+  'NotificationsService.release',
 ]);
 
 const uncovered = (source: string) =>

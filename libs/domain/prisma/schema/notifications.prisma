@@ -1,1 +1,53 @@
 // notifications module models
+
+enum NotificationChannel {
+  in_app
+  email
+  push
+  sms
+  whatsapp
+
+  @@map("notification_channel")
+}
+
+enum NotificationStatus {
+  queued
+  held
+  sent
+  failed
+
+  @@map("notification_status")
+}
+
+model Notification {
+  id                String              @id @default(uuid()) @db.Uuid
+  accountId         String              @map("account_id") @db.Uuid
+  // A catalogue type; the catalogue lives in code, so this is not an enum.
+  kind              String
+  subjectId         String?             @map("subject_id") @db.Uuid
+  channel           NotificationChannel
+  status            NotificationStatus
+  eventId           String              @map("event_id")
+  params            Json                @default("{}")
+  sendAfter         DateTime?           @map("send_after") @db.Timestamptz(3)
+  groupLeaderId     String?             @map("group_leader_id") @db.Uuid
+  sentAt            DateTime?           @map("sent_at") @db.Timestamptz(3)
+  readAt            DateTime?           @map("read_at") @db.Timestamptz(3)
+  fallbackOf        String?             @map("fallback_of") @db.Uuid
+  failure           String?
+  providerMessageId String?             @map("provider_message_id")
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  account           Account             @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  groupLeader       Notification?       @relation("NotificationGroup", fields: [groupLeaderId], references: [id], onDelete: SetNull)
+  grouped           Notification[]      @relation("NotificationGroup")
+  fallbackFrom      Notification?       @relation("NotificationFallback", fields: [fallbackOf], references: [id], onDelete: SetNull)
+  fallbacks         Notification[]      @relation("NotificationFallback")
+
+  @@unique([kind, accountId, channel, eventId])
+  @@index([accountId, createdAt])
+  @@index([kind, accountId, channel, createdAt])
+  @@index([providerMessageId])
+  @@index([groupLeaderId])
+  @@index([fallbackOf])
+  @@map("notification")
+}

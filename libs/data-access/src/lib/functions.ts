@@ -19,6 +19,8 @@ export type { MeControllerUpdate$Params as MeControllerUpdate$Params } from './f
 export { meControllerUpdate as meControllerUpdate } from './fn/me/me-controller-update';
 export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Params } from './fn/audit-history/audit-history-controller-list';
 export { auditHistoryControllerList as auditHistoryControllerList } from './fn/audit-history/audit-history-controller-list';
+export type { NotificationsControllerTest$Params as NotificationsControllerTest$Params } from './fn/notifications/notifications-controller-test';
+export { notificationsControllerTest as notificationsControllerTest } from './fn/notifications/notifications-controller-test';
 export type { LiveControllerLive$Params as LiveControllerLive$Params } from './fn/live/live-controller-live';
 export { liveControllerLive as liveControllerLive } from './fn/live/live-controller-live';
 export type { LiveControllerTest$Params as LiveControllerTest$Params } from './fn/live/live-controller-test';
