@@ -8,6 +8,7 @@ metadata:
   source: "adapted from OpenSpec's propose → apply → archive cycle (openspec.dev)"
 user-invocable: true
 disable-model-invocation: false
+model: sonnet
 ---
 
 ## User Input

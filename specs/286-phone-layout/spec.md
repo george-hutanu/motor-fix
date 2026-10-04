@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-286 — Set up the shared phone layout rules: the shared phone layout rules every screen uses, plus the installable web app's manifest and service worker (ST-196 Web Push extends that service worker later), built on the merged Cockpit theme in libs/ui-cockpit. Notion story: https://app.notion.com/p/3ee607bff0d281df9a9ef85c0725362c. Spec folder and branch: 286-phone-layout."
 

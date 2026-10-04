@@ -7,3 +7,6 @@
 - 2026-10-04 · review · Foundations timeline row "Build the shared chart style" · In progress → In review
 - 2026-10-04 · qa · story ST-52 · In review → QA
 - 2026-10-04 · qa · Foundations timeline row "Build the shared chart style" · In review → QA
+- 2026-10-04 · finish · story ST-52 · QA → Done (PR #23 merged as 1d23288)
+- 2026-10-04 · finish · Foundations timeline row "Build the shared chart style" · QA → Merged
+- 2026-10-04 · finish · epic EP-1 Foundations · In progress (unchanged, stories still open)

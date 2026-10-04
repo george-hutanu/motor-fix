@@ -7,6 +7,7 @@ metadata:
   source: extension:agent-context
 user-invocable: true
 disable-model-invocation: false
+model: sonnet
 ---
 
 # Agent Context Update Skill

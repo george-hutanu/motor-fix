@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-21 — Give each language its own web address for search engines: the /ro/ and /en/ prefixes, server rendering per language, hreflang alternates and the sitemap plumbing. Built on ST-16's i18n runtime and ST-17's RO/EN switch (switching language moves between /ro/ and /en/; opening an /en/ address directly renders English). The public pages it lists arrive in EP-4, so build the mechanism against the existing pages and placeholder routes. Notion story: https://app.notion.com/p/3ee607bff0d281bbaa1de24ea602b2a2. Spec folder and branch: 021-language-urls."
 
@@ -258,5 +258,5 @@ robots rule.
 
 ### Capability: `i18n`
 
-- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009
+- **Adds**: FR-001, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009
 - **Modifies**: `016-FR-011` → `FR-002`

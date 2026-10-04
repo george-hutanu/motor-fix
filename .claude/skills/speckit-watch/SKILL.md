@@ -8,6 +8,7 @@ metadata:
   source: "project-local — watcher for parallel agent work"
 user-invocable: true
 disable-model-invocation: false
+model: sonnet
 ---
 
 ## User Input

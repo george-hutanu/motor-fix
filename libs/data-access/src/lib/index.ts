@@ -7,6 +7,9 @@ export { RequestBuilder } from './request-builder';
 export type { StrictHttpResponse } from './strict-http-response';
 export { Api } from './api';
 
+export type { AuditActorDto } from './models/audit-actor-dto';
+export type { AuditEntryDto } from './models/audit-entry-dto';
+export type { AuditHistoryPageDto } from './models/audit-history-page-dto';
 export type { HealthChecksDto } from './models/health-checks-dto';
 export type { HealthLiveDto } from './models/health-live-dto';
 export type { HealthReadyDto } from './models/health-ready-dto';
@@ -14,6 +17,7 @@ export type { MeDto } from './models/me-dto';
 export { BaseService } from './base-service';
 export { HealthService } from './services/health.service';
 export { MeService } from './services/me.service';
+export { AuditHistoryService } from './services/audit-history.service';
 
 export type { HealthControllerLive$Params as HealthControllerLive$Params } from './fn/health/health-controller-live';
 export { healthControllerLive as healthControllerLive } from './fn/health/health-controller-live';
@@ -21,3 +25,5 @@ export type { HealthControllerReady$Params as HealthControllerReady$Params } fro
 export { healthControllerReady as healthControllerReady } from './fn/health/health-controller-ready';
 export type { MeControllerMe$Params as MeControllerMe$Params } from './fn/me/me-controller-me';
 export { meControllerMe as meControllerMe } from './fn/me/me-controller-me';
+export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Params } from './fn/audit-history/audit-history-controller-list';
+export { auditHistoryControllerList as auditHistoryControllerList } from './fn/audit-history/audit-history-controller-list';
