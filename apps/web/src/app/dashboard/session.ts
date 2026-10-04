@@ -86,6 +86,8 @@ export class Session {
       body: { email, password, remember },
     });
     this.accessToken = accessToken;
+    // The cookie now holds the new session: an old sign-out must never reach it.
+    keepPending(null);
     this.current.set(null);
     return this.load();
   }
@@ -102,6 +104,8 @@ export class Session {
       body: { email, language, name, password },
     });
     this.accessToken = accessToken;
+    // The cookie now holds the new session: an old sign-out must never reach it.
+    keepPending(null);
     this.current.set(null);
     return this.load();
   }

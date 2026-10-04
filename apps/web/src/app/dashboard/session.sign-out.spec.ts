@@ -283,4 +283,26 @@ describe('a sign-out that gets no answer', () => {
     expect(order).toEqual(['sign-out-everywhere', 'start']);
     expect(localStorage.getItem(PENDING)).toBeNull();
   });
+
+  it.each([
+    ['sign-in', (s: Session) => s.signIn('andrei@example.ro', 'parola', true)],
+    [
+      'sign-up',
+      (s: Session) =>
+        s.signUp('Andrei', 'andrei@example.ro', 'parola-lunga', 'ro'),
+    ],
+  ])('is dropped once a %s succeeds, even when its retry got no answer, so it never ends the new session', async (_, start) => {
+    localStorage.setItem(PENDING, 'everywhere');
+    const { api, session } = setup();
+    api.authControllerSignOutEverywhere.mockImplementationOnce(() =>
+      answered(503),
+    );
+
+    await start(session);
+    await session.load();
+
+    expect(api.authControllerSignOutEverywhere).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem(PENDING)).toBeNull();
+    expect(session.token()).not.toBeNull();
+  });
 });

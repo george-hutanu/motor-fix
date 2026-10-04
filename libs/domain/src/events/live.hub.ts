@@ -48,8 +48,12 @@ const isEvent = (value: unknown): value is LiveMessage => {
 
 // What every API copy's subscriber reads off the one channel. Anything that
 // can publish to Redis may send it; the hub needs no part in that.
+export interface LivePublisher {
+  publish(channel: string, message: string): Promise<unknown>;
+}
+
 export const publishLive = (
-  redis: { publish(channel: string, message: string): Promise<unknown> },
+  redis: LivePublisher,
   event: LiveMessage,
   audience: string[],
 ) => redis.publish(LIVE_CHANNEL, JSON.stringify({ audience, event }));
@@ -63,11 +67,7 @@ export class LiveHub {
   private readonly logger = new Logger('Live');
   private readonly connections = new Map<string, Connection>();
 
-  constructor(
-    private readonly redis: {
-      publish(channel: string, message: string): Promise<unknown>;
-    },
-  ) {}
+  constructor(private readonly redis: LivePublisher) {}
 
   open(sink: LiveSink, target: LiveTarget): string | null {
     // A client that left before the stream opened has already emitted close.

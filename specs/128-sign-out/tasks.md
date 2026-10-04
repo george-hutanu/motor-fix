@@ -30,6 +30,11 @@ Independent test: through HTTP against PostgreSQL and Redis, two sessions of one
 
 - [X] T010 `apps/web-e2e/src/sign-out.spec.ts` (new): two contexts signed in to one account of its own, created through sign-up (signing out everywhere would end a shared seeded account's sessions in other specs); "all devices" in one; the other on Home signed out; Back shows no dashboard; two tabs of one context, "Ieși din cont" in one, the other on Home (SC-001, SC-002, FR-005, FR-009)
 
+## Phase 6: Review fixes
+
+- [X] T011 `apps/web/src/app/dashboard/session.ts`: a pending sign-out is dropped once sign-in or sign-up returns a token, so a retry that got a 5xx before it can never reach the new session's cookie (FR-010; code-reviewer HIGH)
+- [X] T012 `libs/domain/src/events/live.hub.ts`: one exported `LivePublisher` type, used by `sign-in.service.ts`; the Redis-down API test waits for the unsent publish before closing; the e2e's `@seeded` tag explained (spec-reviewer LOW #1, code-reviewer MEDIUM, LOW)
+
 ## Dependencies
 
 T001 → T002 → T003 → T004 → T005 → T006, T007, T008 → T009 → T010.

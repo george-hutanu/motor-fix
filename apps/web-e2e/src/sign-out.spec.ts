@@ -41,6 +41,8 @@ const signedOut = async (page: Page) => {
   await expect(page).toHaveURL(home);
 };
 
+// @seeded: needs the real API and its database, not stubs; a deployed address
+// runs it only when given E2E_PASSWORD, like the other real-API flows.
 test.describe('signing out @seeded', () => {
   test('"Ieși de pe toate dispozitivele" signs the other device out within seconds', async ({
     browser,

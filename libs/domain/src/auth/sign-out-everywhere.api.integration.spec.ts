@@ -1,4 +1,4 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
@@ -274,9 +274,18 @@ describe('signing out on all devices', () => {
     expect(setCookie(again)).toMatch(CLEARED);
   });
 
-  it('still ends every session when Redis does not answer', async () => {
+  it('still ends every session when Redis does not answer, and logs the unsent message', async () => {
     const id = await person('andrei@example.test');
     const down = await start('redis://127.0.0.1:1');
+    let logged: () => void = () => undefined;
+    const unsent = new Promise<void>((resolve) => {
+      logged = resolve;
+    });
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation((message: unknown) => {
+        if (String(message).startsWith('session.revoked not sent')) logged();
+      });
     try {
       const phone = await session('andrei@example.test', down);
       const laptop = await session('andrei@example.test', down);
@@ -287,7 +296,10 @@ describe('signing out on all devices', () => {
         await prisma.refreshToken.count({ where: { accountId: id } }),
       ).toBe(0);
       expect((await refresh(laptop)).status).toBe(401);
+      // The publish is not awaited by the call: wait for it before closing.
+      await unsent;
     } finally {
+      warn.mockRestore();
       await down.close();
     }
   }, 30_000);

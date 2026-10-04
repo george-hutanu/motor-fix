@@ -17,7 +17,7 @@ import { DECOY_HASH, verifyPassword } from './password';
 import { roleInUse } from './policy';
 import { PRISMA } from './prisma';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
-import { publishLive } from '../events/live.hub';
+import { type LivePublisher, publishLive } from '../events/live.hub';
 import type { PrismaClient } from '../generated/prisma/client';
 
 const DAY_MS = 86_400_000;
@@ -30,10 +30,6 @@ const TOKEN = /^[A-Za-z0-9_-]{43}$/;
 
 // Where the open dashboards hear that their session ended: the live fan-out.
 export const SESSION_EVENTS = Symbol('SESSION_EVENTS');
-
-interface Publisher {
-  publish(channel: string, message: string): Promise<unknown>;
-}
 
 export interface Issued {
   accessToken: string;
@@ -76,7 +72,7 @@ export class SignInService {
     @Inject(MAINTENANCE) private readonly maintenance: Maintenance,
     private readonly attempts: Attempts,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
-    @Inject(SESSION_EVENTS) private readonly sessionEvents: Publisher,
+    @Inject(SESSION_EVENTS) private readonly sessionEvents: LivePublisher,
   ) {}
 
   async signIn(
