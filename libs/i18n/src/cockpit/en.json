@@ -28,6 +28,22 @@
   "openDialog": "Open the dialog",
   "openDrawer": "Open the drawer",
   "openPopover": "Open the popover",
+  "overlay": {
+    "again": "Open another",
+    "done": "Done",
+    "field": "Registration number",
+    "intro": "Type something, then close: you will be asked whether to discard your changes.",
+    "openDialog": "Open the task as a dialog",
+    "openDrawer": "Open the task as a drawer",
+    "openWide": "Open the wide drawer",
+    "result": "Last result: {result}",
+    "results": {
+      "cancelled": "cancelled",
+      "none": "none",
+      "saved": "saved"
+    },
+    "title": "Sample task"
+  },
   "panelTitle": "Nearby garages",
   "popoverBody": "Small windows use the raised surface.",
   "primary": "Find garages",

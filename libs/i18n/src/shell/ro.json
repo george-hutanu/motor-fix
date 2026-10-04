@@ -63,6 +63,14 @@
     "text": "Adresa nu duce la nicio pagină MotorFix.",
     "title": "Pagina nu există"
   },
+  "overlay": {
+    "close": "Închide",
+    "discard": {
+      "discard": "Renunță",
+      "keep": "Continuă editarea",
+      "question": "Renunți la modificări?"
+    }
+  },
   "version": {
     "unknown": "versiune necunoscută"
   }
