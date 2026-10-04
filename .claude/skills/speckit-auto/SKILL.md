@@ -504,7 +504,15 @@ When phases 14–16 are done, the review left no CRITICAL/HIGH and the last
 `typecheck`, `lint` and test runs are green, finish the task lifecycle
 (AGENTS.md) before the report:
 
-1. `GH_TOKEN=$(gh auth token -u george-hutanu) gh pr ready <branch>`
+1. Fill in every section of the PR body made from
+   `.github/pull_request_template.md` (the draft was opened from it with
+   `--body-file`): what changed, the exact test commands and results, UI
+   evidence or `N/A` and the reason, risk and rollback, every checklist box
+   ticked; leave Agent review at `Pending.`. Check it, then publish it and
+   mark the PR ready:
+   `node scripts/pr-body-check.ts --body-file <body> --title "<PR title>"`,
+   `GH_TOKEN=$(gh auth token -u george-hutanu) gh pr edit <branch> --body-file <body>`,
+   `GH_TOKEN=$(gh auth token -u george-hutanu) gh pr ready <branch>`
 2. `speckit-notion-sync review`: the story, its timeline row → In review.
 3. If the branch is behind `origin/main`, `git merge --no-edit origin/main`,
    re-run `typecheck`, `lint` and the tests, and push.
