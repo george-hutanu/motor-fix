@@ -66,8 +66,8 @@ export class AuditService implements AuditPort {
     after: Record<string, unknown>,
   ) {
     for (const [field, newValue] of Object.entries(after)) {
-      const oldValue = Object.hasOwn(before, field) ? before[field] : undefined;
-      if (canonical(oldValue) === canonical(newValue)) continue;
+      const oldValue = Object.hasOwn(before, field) ? before[field] : null;
+      if (canonical(oldValue) === canonical(newValue ?? null)) continue;
       await this.record(tx, {
         ...change,
         action: 'update',

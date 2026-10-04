@@ -15,6 +15,9 @@ const MODEL_WRITES = new Set([
   'upsert',
 ]);
 const RAW_WRITES = new Set(['$executeRaw', '$executeRawUnsafe']);
+// A raw query writes when it runs INSERT, UPDATE or DELETE (... RETURNING).
+const RAW_QUERIES = new Set(['$queryRaw', '$queryRawUnsafe']);
+const WRITE_SQL = /^\s*(insert|update|delete)\b/i;
 
 const isThisAudit = (node: ts.Expression) =>
   ts.isPropertyAccessExpression(node) &&
@@ -27,8 +30,18 @@ function callee(node: ts.Node) {
   return null;
 }
 
-const isWrite = (target: ts.PropertyAccessExpression) =>
+const sqlOf = (node: ts.Node) => {
+  const text = ts.isTaggedTemplateExpression(node)
+    ? node.template
+    : ts.isCallExpression(node)
+      ? node.arguments[0]
+      : undefined;
+  return text ? text.getText().replace(/^[`'"]/, '') : '';
+};
+
+const isWrite = (node: ts.Node, target: ts.PropertyAccessExpression) =>
   RAW_WRITES.has(target.name.text) ||
+  (RAW_QUERIES.has(target.name.text) && WRITE_SQL.test(sqlOf(node))) ||
   (MODEL_WRITES.has(target.name.text) &&
     ts.isPropertyAccessExpression(target.expression));
 
@@ -39,7 +52,7 @@ function facts(body: ts.Node) {
   const walk = (node: ts.Node) => {
     const target = callee(node);
     if (target && ts.isPropertyAccessExpression(target)) {
-      found.writes ||= isWrite(target);
+      found.writes ||= isWrite(node, target);
       found.audits ||= isThisAudit(target.expression);
     }
     ts.forEachChild(node, walk);
@@ -140,6 +153,28 @@ describe('the check itself', () => {
           }
         }`),
     ).toEqual(['JobsService.close']);
+  });
+
+  it('names a method that writes through a raw query without an entry', () => {
+    expect(
+      uncovered(`
+        class JobsService {
+          async close(tx) {
+            return tx.$queryRaw\`UPDATE job SET status = 'done' RETURNING id\`;
+          }
+        }`),
+    ).toEqual(['JobsService.close']);
+  });
+
+  it('ignores a raw read', () => {
+    expect(
+      uncovered(`
+        class HealthService {
+          ping() {
+            return this.prisma.$queryRaw\`SELECT 1\`;
+          }
+        }`),
+    ).toEqual([]);
   });
 
   it('accepts a method that writes and records the change', () => {

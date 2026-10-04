@@ -421,6 +421,21 @@ describe('recordChanges', () => {
     expect(await entriesOf(subjectId)).toEqual([]);
   });
 
+  it('writes nothing when a field goes from absent to null', async () => {
+    const subjectId = randomUUID();
+
+    await prisma.$transaction((tx) =>
+      audit.recordChanges(
+        tx,
+        { ...ion, subjectId, subjectType: 'garage' },
+        {},
+        { note: null },
+      ),
+    );
+
+    expect(await entriesOf(subjectId)).toEqual([]);
+  });
+
   it('records a corrected final price as a key change on the job', async () => {
     const jobId = randomUUID();
 

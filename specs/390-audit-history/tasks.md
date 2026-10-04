@@ -18,7 +18,7 @@ Independent test: change + entry in one transaction; a throw after the entry lea
 
 - [X] T003 [US1] `libs/domain/src/audit/audit.port.ts`: `AuditEntry` gains `action` `'open'`, `actorName?`, `assistantGrantId?`, `garageId?`, `carId?`, `jobId?`, `internal?`, `kind?`, `text?`; `AuditPort.recordChanges(tx, entry, before, after)`; remove `noAudit` (FR-001, FR-002, FR-003)
 - [X] T004 [US1] `libs/domain/src/audit/audit.service.ts` (new): `@Injectable() AuditService implements AuditPort`; `record` inserts through `tx.activityLog.create` with values as JSON (null/undefined → SQL NULL, dates → ISO strings); `recordChanges` writes one `update` entry per key of `after` whose `JSON.stringify` differs from `before`, nothing when none differ (FR-001, FR-002, FR-003, FR-004)
-- [X] T005 [US1] `libs/domain/src/auth/auth.module.ts`: bind `AUDIT_PORT` with `useClass: AuditService`; `libs/domain/src/auth/auth.api.spec.ts` and `libs/domain/src/auth/auth.adversary.http.spec.ts`: `noAudit` → `new AuditService()` (FR-013)
+- [X] T005 [US1] `libs/domain/src/auth/auth.module.ts`: bind `AUDIT_PORT` with `useClass: AuditService`; `libs/domain/src/auth/auth.api.integration.spec.ts` and `libs/domain/src/auth/auth.adversary.http.integration.spec.ts`: `noAudit` → `new AuditService()` (FR-013)
 
 ## Phase 4: User Story 2 — actor, scope and flags on every entry (P1)
 
@@ -31,7 +31,7 @@ Independent test: write entries for each actor kind and flag and read the column
 
 Independent test: UPDATE/DELETE/TRUNCATE refused; the coverage check fails on a fixture service that writes without auditing.
 
-- [X] T008 [US3] Triggers verified by `libs/domain/src/audit/audit.service.spec.ts` (delivered by T002) (FR-011)
+- [X] T008 [US3] Triggers verified by `libs/domain/src/audit/audit.service.integration.spec.ts` (delivered by T002) (FR-011)
 - [X] T009 [US3] `libs/domain/src/audit/audit-coverage.spec.ts` (new): the check over `libs/domain/src/**/*.service.ts` and over a fixture source (FR-014, SC-004)
 
 ## Phase 6: Polish
@@ -42,21 +42,21 @@ Independent test: UPDATE/DELETE/TRUNCATE refused; the coverage check fails on a 
 
 | FR | Test |
 | --- | --- |
-| FR-001 | audit.service.spec.ts — "writes the entry in the change's transaction", "leaves no entry when the transaction rolls back", "fails the change when the entry cannot be written" |
-| FR-002 | audit.service.spec.ts — "stores who, what, when, old and new" |
-| FR-003 | audit.service.spec.ts — "writes one entry per changed field", "writes nothing when no field changed", "compares values by content" |
-| FR-004 | audit.service.spec.ts — "keeps a deleted repair as its old value" |
-| FR-005 | audit.service.spec.ts — "records the garage role as owner" |
-| FR-006 | audit.service.spec.ts — "names a person by first name", "looks the name up", "names the system MotorFix" |
-| FR-007 | audit.service.spec.ts — "marks an assistant change" |
-| FR-008 | audit.service.spec.ts — "carries the job, car and garage ids" |
-| FR-009 | audit.service.spec.ts — "marks each key change" (one case per row), "price list rows are not key changes" |
-| FR-010 | audit.service.spec.ts — "stores kind and text" |
-| FR-011 | audit.service.spec.ts — "refuses update", "refuses delete", "refuses truncate" |
-| FR-012 | audit.service.spec.ts — "stores who, what, when, old and new" (the writer has one table, activity_log) |
-| FR-013 | accounts.service.spec.ts — "stores the account entries in the audit history" |
+| FR-001 | audit.service.integration.spec.ts — "writes the entry in the change's transaction", "leaves no entry when the transaction rolls back", "fails the change when the entry cannot be written" |
+| FR-002 | audit.service.integration.spec.ts — "stores who, what, when, old and new" |
+| FR-003 | audit.service.integration.spec.ts — "writes one entry per changed field", "writes nothing when no field changed", "compares values by content" |
+| FR-004 | audit.service.integration.spec.ts — "keeps a deleted repair as its old value" |
+| FR-005 | audit.service.integration.spec.ts — "records the garage role as owner" |
+| FR-006 | audit.service.integration.spec.ts — "names a person by first name", "looks the name up", "names the system MotorFix" |
+| FR-007 | audit.service.integration.spec.ts — "marks an assistant change" |
+| FR-008 | audit.service.integration.spec.ts — "carries the job, car and garage ids" |
+| FR-009 | audit.service.integration.spec.ts — "marks each key change" (one case per row), "price list rows are not key changes" |
+| FR-010 | audit.service.integration.spec.ts — "stores kind and text" |
+| FR-011 | audit.service.integration.spec.ts — "refuses update", "refuses delete", "refuses truncate" |
+| FR-012 | audit.service.integration.spec.ts — "stores who, what, when, old and new" (the writer has one table, activity_log) |
+| FR-013 | accounts.service.integration.spec.ts — "stores the account entries in the audit history" |
 | FR-014 | audit-coverage.spec.ts |
-| FR-015 | audit.service.spec.ts — "keeps the write order within one transaction" |
+| FR-015 | audit.service.integration.spec.ts — "keeps the write order within one transaction" |
 
 ## Dependencies
 

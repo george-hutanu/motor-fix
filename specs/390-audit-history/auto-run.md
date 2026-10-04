@@ -99,3 +99,11 @@
 - Full run: adversary 'orders entries … with distinct times' failed once: it asserted distinct JS milliseconds, but Date drops the microseconds PostgreSQL stores, so fast inserts can share a millisecond. The spec promises order only → that assertion removed; the order assertion stays.
 - Merged origin/main 9a2753c (PR template #17) → b366b64. PR #12 marked ready; title and body set to the new template. Notion review: story and timeline → In review.
 - HOLD from the owner (via orchestrator): no ready/merge until ST-434 (#21) merges. #12 had already been marked ready (CI: checks pass, body pass on 48b565d) → converted back to draft; Notion story and timeline back to In progress. Next, on the go-ahead: rebase onto origin/main, typecheck and test under heavy.sh, push --force-with-lease, then gh pr ready, speckit-pr-test, CI, merge --match-head-commit, notion finish.
+
+## Hand-off after ST-434 (GO from the orchestrator)
+- Rebased onto origin/main 060b9ac (merge-of-main commits dropped; one CLAUDE.local.md conflict → this feature's plan line). Under scripts/heavy.sh: npm install, typecheck 12/12, test 10/10. `git push --force-with-lease` → 20986d5; `gh pr ready 12`.
+- `speckit-pr-test` and the `pr-tester` agent type are not registered in this session (they arrived with the rebase), so the skill's procedure ran by hand: notion-status review → qa; the pr-tester manual run by a general-purpose agent.
+- Lap 1 on 20986d5: agent-review **success** (0 blocker, 0 high, 4 medium, 4 low); booted api/web/worker on local services, `prisma migrate deploy` clean on a fresh cluster (no P1010 there), e2e 24/24, psql flows confirmed triggers, indexes, rollback, ordering. Reports in pr-review/lap1 (no PNGs).
+- One-line fixes, red first (2 failed → green): absent → null in `recordChanges` writes nothing; the coverage check counts `$queryRaw`/`$queryRawUnsafe` running INSERT/UPDATE/DELETE (a `SELECT` stays a read, so HealthService is not flagged). tasks.md file names corrected.
+- Main's new rule (jest.preset.cjs:3): database specs are `*.integration.spec.ts` → renamed audit.service and audit.adversary specs.
+- Deferred: 3 more lap-1 findings (axe on `/` pre-existing; tester has no object store without Docker; tester's affected tests hit the Nx cache). All 5 deferred bullets filed as Notion tasks (debt-tasks.mjs plan/mark).

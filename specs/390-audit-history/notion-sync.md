@@ -7,3 +7,6 @@
 - 2026-10-04 review · Foundations timeline row ST-390 · Build status In progress → In review
 - 2026-10-04 hold · story ST-390 · Status In review → In progress (owner's hold: #12 back to draft until ST-434 merges)
 - 2026-10-04 hold · Foundations timeline row ST-390 · Build status In review → In progress
+- 2026-10-04 review · story ST-390 · In progress → In review (#12 ready after the rebase onto 060b9ac)
+- 2026-10-04 qa · story ST-390 · In review → QA; Foundations timeline row · In review → QA
+- 2026-10-04 debt · 5 tasks filed in MotorFix stories from deferred.md (URLs on each bullet)
