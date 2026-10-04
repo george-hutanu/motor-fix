@@ -202,8 +202,7 @@ test.describe('signing in with something wrong @seeded', () => {
     const form = dialog(page);
 
     await form.getByRole('button', { name: 'Intră în cont' }).click();
-    await expect(form.getByText('Scrie adresa de e‑mail.')).toBeVisible();
-    await expect(form.getByText('Scrie parola.')).toBeVisible();
+    await expect(form.getByText('Câmpul este obligatoriu.')).toHaveCount(2);
     await expect(form.getByLabel('E‑mail')).toBeFocused();
 
     await form.getByLabel('E‑mail').fill('andrei@example');

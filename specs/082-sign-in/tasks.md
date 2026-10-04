@@ -46,7 +46,7 @@ Independent test: sign in per role through HTTP against PostgreSQL and Redis; wr
 ## Phase 6b: After ST-159 merged
 
 - [X] T022 `libs/ui-cockpit/src/lib/helm/input.ts`: pass `aria-describedby` through to the brain's describedby directive, which otherwise drops a field's own error id (FR-014); test in `libs/ui-cockpit/src/lib/helm/helm.spec.ts`
-- [ ] T023 `apps/web/src/app/sign-in/sign-in.ts` on `taskSave` and the shared field and task errors from `libs/overlays`; own codes under `public.signIn.problem`, the e-mail format under `public.signIn.field.pattern`; `Session` drops in-flight answers at sign-out (FR-014, FR-015, FR-016, FR-020)
+- [X] T023 `apps/web/src/app/sign-in/sign-in.ts` on `taskSave` and the shared field and task errors from `libs/overlays`; own codes under `public.signIn.problem`, the e-mail format under `public.signIn.field.pattern`; `Session` drops in-flight answers at sign-out (FR-014, FR-015, FR-016, FR-020)
 
 ## Phase 7: Polish
 

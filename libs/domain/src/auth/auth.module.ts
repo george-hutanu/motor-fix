@@ -24,6 +24,7 @@ import type { PrismaClient } from '../generated/prisma/client';
 const REDIS = Symbol('AUTH_REDIS');
 
 function connect(url: string) {
+  // A Redis that does not answer within 2 s counts as down (the sign-in rule).
   const redis = new Redis(url, {
     commandTimeout: 2000,
     connectTimeout: 2000,

@@ -73,7 +73,8 @@ const alertText = () =>
 const describedBy = (input: HTMLInputElement) =>
   (input.getAttribute('aria-describedby') ?? '')
     .split(' ')
-    .map((id) => document.getElementById(id)?.textContent?.trim())
+    .filter(Boolean)
+    .map((id) => input.form?.querySelector(`#${id}`)?.textContent?.trim())
     .filter(Boolean)
     .join(' ');
 
@@ -155,8 +156,8 @@ describe('checking the form before sending', () => {
     const password = field('Parolă');
     expect(email.getAttribute('aria-invalid')).toBe('true');
     expect(password.getAttribute('aria-invalid')).toBe('true');
-    expect(describedBy(email)).toContain('Scrie adresa de e‑mail.');
-    expect(describedBy(password)).toContain('Scrie parola.');
+    expect(describedBy(email)).toContain('Câmpul este obligatoriu.');
+    expect(describedBy(password)).toContain('Câmpul este obligatoriu.');
     expect(document.activeElement).toBe(email);
   });
 
@@ -230,14 +231,14 @@ describe('sending', () => {
         }),
     );
 
-    await submit('andrei@example.ro', 'parola');
     const main = button('Intră în cont');
+    await submit('andrei@example.ro', 'parola');
     main.click();
     panel().querySelector('form')?.dispatchEvent(new Event('submit'));
     await settle();
 
     expect(signIn).toHaveBeenCalledTimes(1);
-    expect(main.disabled).toBe(true);
+    expect(main.getAttribute('aria-disabled')).toBe('true');
     expect(main.getAttribute('aria-busy')).toBe('true');
     finish();
     await settle();
@@ -256,7 +257,7 @@ describe('answers that refuse', () => {
     [
       503,
       'maintenance',
-      'MotorFix este în mentenanță. Încearcă din nou puțin mai târziu.',
+      'MotorFix este în mentenanță. Încearcă din nou în câteva minute.',
     ],
   ])('shows the message for %s %s and keeps the e-mail', async (status, code, message) => {
     await open();
@@ -293,17 +294,33 @@ describe('answers that refuse', () => {
   });
 
   it.each([
-    ['a failed call while online', problem(0)],
-    ['a server error', problem(500, 'internal_error')],
-    ['an unknown code', problem(400, 'validation_failed')],
-    ['an error that is not an answer', new Error('boom')],
-  ])('shows one generic message for %s', async (_, error) => {
+    [
+      'a failed call while online',
+      problem(0),
+      'Nu am putut ajunge la MotorFix. Verifică conexiunea și încearcă din nou.',
+    ],
+    [
+      'a server error',
+      problem(500, 'internal_error'),
+      'Ceva nu a mers la noi. Încearcă din nou.',
+    ],
+    [
+      'an unknown code',
+      problem(418, 'teapot'),
+      'Ceva nu a mers. Încearcă din nou.',
+    ],
+    [
+      'an error that is not an answer',
+      new Error('boom'),
+      'Ceva nu a mers. Încearcă din nou.',
+    ],
+  ])('shows the shared message for %s', async (_, error, message) => {
     await open();
     signIn.mockRejectedValueOnce(error);
 
     await submit('andrei@example.ro', 'parola');
 
-    expect(alertText()).toBe('Ceva nu a mers. Încearcă din nou.');
+    expect(alertText()).toBe(message);
   });
 
   it('shows the refusal in English', async () => {

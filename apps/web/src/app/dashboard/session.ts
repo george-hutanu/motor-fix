@@ -31,8 +31,9 @@ export class Session {
 
   // One renewal at a time, whoever asks.
   renew(): Promise<boolean> {
+    if (this.renewing) return this.renewing;
     const generation = this.generation;
-    this.renewing ??= this.auth
+    const renewing: Promise<boolean> = this.auth
       .authControllerRefresh()
       .then(
         (answer) => {
@@ -50,28 +51,34 @@ export class Session {
         },
       )
       .finally(() => {
-        this.renewing = null;
+        if (this.renewing === renewing) this.renewing = null;
       });
-    return this.renewing;
+    this.renewing = renewing;
+    return renewing;
   }
 
   async load(): Promise<MeDto | null> {
     const known = this.current();
     if (known) return known;
+    if (this.loading) return this.loading;
     const generation = this.generation;
-    this.loading ??= this.ask().then((answer) => {
-      this.loading = null;
-      const me = generation === this.generation ? answer : null;
+    const loading: Promise<MeDto | null> = this.ask().then((answer) => {
+      if (this.loading === loading) this.loading = null;
+      // An answer that arrives after a sign-out restores nothing.
+      if (generation !== this.generation) return null;
       // At sign-in the account's language wins over the device's.
-      if (me) void this.language.choose(me.language);
-      this.current.set(me);
-      return me;
+      if (answer) void this.language.choose(answer.language);
+      this.current.set(answer);
+      return answer;
     });
-    return this.loading;
+    this.loading = loading;
+    return loading;
   }
 
   async signOut(): Promise<void> {
     this.generation++;
+    this.loading = null;
+    this.renewing = null;
     this.forget();
     try {
       await this.auth.authControllerSignOut();

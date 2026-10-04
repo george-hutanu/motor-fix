@@ -171,6 +171,28 @@ describe('Session tokens', () => {
     expect(session.current()).toBeNull();
   });
 
+  it('signs in again cleanly after a sign-out made while a load was on its way', async () => {
+    const { meControllerMe, session } = setup();
+    let answerLate: (me: MeDto) => void = () => undefined;
+    meControllerMe.mockImplementationOnce(
+      () =>
+        new Promise<MeDto>((resolve) => {
+          answerLate = resolve;
+        }),
+    );
+    const stale = session.load();
+    await flush();
+
+    await session.signOut();
+    const me = await session.signIn('andrei@example.ro', 'parola', true);
+    answerLate(account('ro'));
+
+    expect(await stale).toBeNull();
+    expect(me?.id).toBe('account-1');
+    expect(session.current()?.id).toBe('account-1');
+    expect(session.token()).toBe('signed-in');
+  });
+
   it('forgets the session even when the sign-out call fails', async () => {
     const { api, session } = setup();
     await session.load();
