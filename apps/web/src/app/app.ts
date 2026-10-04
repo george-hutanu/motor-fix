@@ -11,6 +11,7 @@ import {
   TransferState,
 } from '@angular/core';
 import { HealthReadyDto, HealthService } from '@motor-fix/data-access';
+import { I18n, TranslatePipe } from '@motor-fix/i18n';
 
 export const HEALTH = makeStateKey<HealthReadyDto | null>('health');
 
@@ -22,19 +23,25 @@ const report = (error: unknown) =>
     : null;
 
 @Component({
+  imports: [TranslatePipe],
   selector: 'mf-root',
   template: `
-    <h1>MotorFix</h1>
-    <p>{{ health()?.version ?? 'version unknown' }}</p>
-    <p>{{ status() }}</p>
+    <h1>{{ 'shell.brand' | t }}</h1>
+    <p>{{ health()?.version ?? ('shell.version.unknown' | t) }}</p>
+    <p>{{ 'shell.health.status' | t: checks() }}</p>
   `,
 })
 export class App {
   private readonly state = inject(TransferState);
   protected readonly health = signal(this.state.get(HEALTH, null));
-  protected readonly status = computed(() => {
+  private readonly i18n = inject(I18n);
+  protected readonly checks = computed(() => {
     const checks = this.health()?.checks;
-    return `PostgreSQL: ${checks?.postgres ?? 'unknown'} · Redis: ${checks?.redis ?? 'unknown'}`;
+    const unknown = this.i18n.t('shell.health.unknown');
+    return {
+      postgres: checks?.postgres ?? unknown,
+      redis: checks?.redis ?? unknown,
+    };
   });
 
   constructor() {

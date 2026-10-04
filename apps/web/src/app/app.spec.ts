@@ -1,5 +1,6 @@
 import { TransferState } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { I18n } from '@motor-fix/i18n';
 
 import { App, HEALTH } from './app';
 
@@ -30,11 +31,23 @@ describe('App', () => {
   });
 
   it('says the status is unknown when the API did not answer', () => {
-    const text = TestBed.createComponent(App);
-    text.detectChanges();
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent;
 
-    expect((text.nativeElement as HTMLElement).textContent).toContain(
-      'PostgreSQL: unknown · Redis: unknown',
-    );
+    expect(text).toContain('versiune necunoscută');
+    expect(text).toContain('PostgreSQL: necunoscut · Redis: necunoscut');
+  });
+
+  it('switches the page to English in place', async () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    await TestBed.inject(I18n).use('en');
+    await fixture.whenStable();
+    const text = (fixture.nativeElement as HTMLElement).textContent;
+
+    expect(text).toContain('version unknown');
+    expect(text).toContain('PostgreSQL: unknown · Redis: unknown');
   });
 });
