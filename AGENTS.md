@@ -32,11 +32,16 @@ epic or a plan, whether run through spec-kit or by hand.
 - **Every task follows the same lifecycle, in this order.** This is a hard
   rule, Constitution VII, enforced by the `stop:pr-lifecycle` gate:
   1. Take the task and set it to In progress in Notion (`speckit-notion-sync start`).
-  2. Open a draft PR for its branch (`speckit-git-commit`, at the first commit).
+  2. Open a draft PR for its branch (`speckit-git-commit`, at the first commit),
+     its body made from `.github/pull_request_template.md`:
+     `gh pr create --draft --body-file <body>`, never `--body` or `--fill`.
   3. Do the work, pushing every commit to that branch: never forced, never `main`.
   4. When it is done (tests, typecheck and lint green, review with no
-     CRITICAL/HIGH left), mark the PR ready for review (`gh pr ready`) and set
-     the task to In review in Notion (`speckit-notion-sync review`).
+     CRITICAL/HIGH left), fill in every section of the template
+     (`node scripts/pr-body-check.ts --body-file <body> --title "<title>"`
+     passes, then `gh pr edit <n> --body-file <body>`), mark the PR ready for
+     review (`gh pr ready`) and set the task to In review in Notion
+     (`speckit-notion-sync review`).
   5. Merge it on green CI: merge `origin/main` into the branch if it is behind
      and push, wait for the checks (`gh pr checks <n> --watch`), and when every
      check passes, `gh pr merge <n> --merge`. A failing check is fixed on the
@@ -54,6 +59,11 @@ epic or a plan, whether run through spec-kit or by hand.
   `after_specify`, `before_plan`, `before_implement`), and so do
   `/speckit-review` and `/speckit-archive`. Outside spec-kit, run the skills
   yourself. After every merge to `main`, run `speckit-notion-sync finish`.
+- **Every PR uses the template**, `.github/pull_request_template.md`, whoever
+  opens it. The `PR template` workflow (`scripts/pr-body-check.ts`, whose
+  header lists the rules) checks a draft's headings and a ready PR's every
+  section, and names what is missing. Write `N/A` and the reason where a
+  section does not apply. Agent review is filled in by the automated reviewer.
 - A Notion or mock failure never blocks the build. It is logged in
   `specs/<feature>/notion-sync.md` or `design.md` and retried on the next run.
 

@@ -30,7 +30,7 @@ export function decide({ branch, ahead, unpushed, pr }) {
   if (unpushed > 0)
     return `${unpushed} commit(s) on ${branch} are not pushed. Push them (git push -u origin ${branch}); work on a task is pushed as it goes.`;
   if (pr === null)
-    return `${branch} has no PR. Open it as a draft (gh pr create --draft --base main --head ${branch}); a task's PR opens at its start.`;
+    return `${branch} has no PR. Open it as a draft (gh pr create --draft --base main --head ${branch} --body-file <body made from .github/pull_request_template.md>); a task's PR opens at its start.`;
   if (pr.state !== "OPEN" || pr.isDraft) return null;
   if (pr.mergeable === "MERGEABLE" && allGreen(pr.statusCheckRollup ?? []))
     return `PR #${pr.number} is ready and every check passed. Merge it (gh pr merge ${pr.number} --merge), then run speckit-notion-sync finish; merging on green CI does not wait for the user.`;
