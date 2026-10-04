@@ -1,0 +1,81 @@
+import { DOCUMENT } from '@angular/common';
+import {
+  afterNextRender,
+  Component,
+  DestroyRef,
+  type EnvironmentProviders,
+  Injectable,
+  inject,
+  makeEnvironmentProviders,
+  provideEnvironmentInitializer,
+} from '@angular/core';
+
+import { I18n } from './i18n';
+import type { Language } from './languages';
+import { TranslatePipe } from './translate.pipe';
+
+const KEY = 'mf.lang';
+
+// Every storage access is guarded: with storage blocked the browser throws on
+// reading `localStorage` itself, and the app must still work in Romanian.
+@Injectable({ providedIn: 'root' })
+export class LanguageChoice {
+  private readonly i18n = inject(I18n);
+  private readonly window = inject(DOCUMENT).defaultView;
+
+  choose(language: Language): Promise<void> {
+    try {
+      this.window?.localStorage.setItem(KEY, language);
+    } catch {}
+    return this.i18n.use(language);
+  }
+
+  restore(): () => void {
+    let saved: string | null = null;
+    try {
+      saved = this.window?.localStorage.getItem(KEY) ?? null;
+    } catch {}
+    if (saved) void this.i18n.use(saved);
+    // Another tab's choice; the tab that wrote the value gets no event.
+    const follow = ({ key, newValue }: StorageEvent) => {
+      if (key === KEY && newValue) void this.i18n.use(newValue);
+    };
+    this.window?.addEventListener('storage', follow);
+    return () => this.window?.removeEventListener('storage', follow);
+  }
+}
+
+// After the first render, so the server's Romanian page hydrates unchanged.
+export function provideRememberedLanguage(): EnvironmentProviders {
+  return makeEnvironmentProviders([
+    provideEnvironmentInitializer(() => {
+      const choice = inject(LanguageChoice);
+      const destroy = inject(DestroyRef);
+      afterNextRender(() => destroy.onDestroy(choice.restore()));
+    }),
+  ]);
+}
+
+@Component({
+  imports: [TranslatePipe],
+  selector: 'mf-language-switch',
+  styles: `
+    :host { display: inline-flex; }
+    button { min-width: 44px; min-height: 44px; }
+    button[aria-pressed='true'] { font-weight: 700; text-decoration: underline; }
+  `,
+  template: `
+    <div role="group" [attr.aria-label]="'shell.language.label' | t">
+      <button type="button" [attr.aria-pressed]="i18n.language() === 'ro'" (click)="choice.choose('ro')">
+        {{ 'shell.language.ro' | t }}
+      </button>
+      <button type="button" [attr.aria-pressed]="i18n.language() === 'en'" (click)="choice.choose('en')">
+        {{ 'shell.language.en' | t }}
+      </button>
+    </div>
+  `,
+})
+export class LanguageSwitch {
+  protected readonly i18n = inject(I18n);
+  protected readonly choice = inject(LanguageChoice);
+}

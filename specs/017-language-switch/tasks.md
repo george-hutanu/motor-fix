@@ -7,16 +7,16 @@ Paths are `(new)` unless they exist today: `libs/i18n/src/index.ts`, `libs/i18n/
 
 ## Phase 1: Setup
 
-- [ ] T001 Shell keys in `libs/i18n/src/shell/ro.json` and `en.json`: `language.label` ("Limba" / "Language"), `language.ro` ("RO"), `language.en` ("EN"); `frame.area.{admin,driver,garage}` and `frame.nav.*` for every menu entry, Romanian as in today's `MENUS`, English per plan (FR-001, FR-009)
+- [X] T001 Shell keys in `libs/i18n/src/shell/ro.json` and `en.json`: `language.label` ("Limba" / "Language"), `language.ro` ("RO"), `language.en` ("EN"); `frame.area.{admin,driver,garage}` and `frame.nav.*` for every menu entry, Romanian as in today's `MENUS`, English per plan (FR-001, FR-009)
 
 ## Phase 2: US1 Switch the language from the header (P1)
 
 **Independent test**: render the switch, tap EN, the texts and the pressed state change in the same instance.
 
-- [ ] T002 [US1] Test: `libs/i18n/src/switch.spec.ts` — the switch is a group named "Limba" with buttons "RO" (pressed) and "EN" (not pressed); tapping EN switches the language, swaps the pressed state and renames the group "Language"; tapping RO switches back; tapping the current language changes nothing (FR-001, FR-003, FR-004)
-- [ ] T003 [US1] `libs/i18n/src/switch.ts` — `LanguageSwitch` component (`mf-language-switch`, buttons at least 44 px tall) and `LanguageChoice.choose()`; export both from `libs/i18n/src/index.ts` (FR-001, FR-002, FR-003)
-- [ ] T004 [US1] Test: `apps/web/src/app/home/home.spec.ts` — Home's header holds the switch; tapping EN turns the page English in place (FR-001, FR-003)
-- [ ] T005 [US1] `apps/web/src/app/home/home.ts` — `<header>` with the brand and `<mf-language-switch />` (FR-001)
+- [X] T002 [US1] Test: `libs/i18n/src/switch.spec.ts` — the switch is a group named "Limba" with buttons "RO" (pressed) and "EN" (not pressed); tapping EN switches the language, swaps the pressed state and renames the group "Language"; tapping RO switches back; tapping the current language changes nothing (FR-001, FR-003, FR-004)
+- [X] T003 [US1] `libs/i18n/src/switch.ts` — `LanguageSwitch` component (`mf-language-switch`, buttons at least 44 px tall) and `LanguageChoice.choose()`; export both from `libs/i18n/src/index.ts` (FR-001, FR-002, FR-003)
+- [X] T004 [US1] Test: `apps/web/src/app/home/home.spec.ts` — Home's header holds the switch; tapping EN turns the page English in place (FR-001, FR-003)
+- [X] T005 [US1] `apps/web/src/app/home/home.ts` — `<header>` with the brand and `<mf-language-switch />` (FR-001)
 - [ ] T006 [US1] Test: `apps/web/src/app/dashboard/frame.spec.ts` — the frame's header holds the switch; after a switch to EN the area tag, the menu entries and the title are English and the chosen entry stays pressed; the Romanian menus stay as today (FR-001, FR-003, FR-009)
 - [ ] T007 [US1] `apps/web/src/app/dashboard/frame.ts` — `MENUS` carry keys (`shell.frame.area.*`, `shell.frame.nav.*`); `view` holds the chosen entry's key; the switch in the `<header>` (FR-001, FR-003, FR-009)
 
@@ -24,10 +24,10 @@ Paths are `(new)` unless they exist today: `libs/i18n/src/index.ts`, `libs/i18n/
 
 **Independent test**: with `mf.lang` = `en` stored, the app opens in English after the first render; a storage event from another tab switches this one; blocked storage throws nowhere.
 
-- [ ] T008 [US2] Test: `libs/i18n/src/switch.spec.ts` — `choose()` stores `mf.lang`; `provideRememberedLanguage()` applies a stored `en` after the first render, ignores `xx` and an empty store (Romanian), and with `localStorage` throwing on read and on write the app renders Romanian, the switch still switches, and nothing throws (FR-004, FR-005, FR-006)
-- [ ] T009 [US3] Test: `libs/i18n/src/switch.spec.ts` — a `storage` event for `mf.lang` = `en` switches to English; an event for another key, or with no new value, changes nothing (FR-007)
-- [ ] T010 [US2] `libs/i18n/src/switch.ts` — `LanguageChoice.restore()` and `provideRememberedLanguage()` (`afterNextRender`, storage listener); export the provider; `apps/web/src/app/app.config.ts` gains `provideRememberedLanguage()` (FR-005, FR-006, FR-007)
-- [ ] T011 [US2] Test: `apps/web-e2e/src/language.spec.ts` — Home: RO pressed by default; each button ≥ 44 px tall; tap EN → English without a reload; a second tab already open turns English; a new page in the same browser opens in English; with storage blocked by an init script the app is Romanian, EN still switches, and a fresh page is Romanian again (FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, SC-001..SC-004)
+- [X] T008 [US2] Test: `libs/i18n/src/switch.spec.ts` — `choose()` stores `mf.lang`; `provideRememberedLanguage()` applies a stored `en` after the first render, ignores `xx` and an empty store (Romanian), and with `localStorage` throwing on read and on write the app renders Romanian, the switch still switches, and nothing throws (FR-004, FR-005, FR-006)
+- [X] T009 [US3] Test: `libs/i18n/src/switch.spec.ts` — a `storage` event for `mf.lang` = `en` switches to English; an event for another key, or with no new value, changes nothing (FR-007)
+- [X] T010 [US2] `libs/i18n/src/switch.ts` — `LanguageChoice.restore()` and `provideRememberedLanguage()` (`afterNextRender`, storage listener); export the provider; `apps/web/src/app/app.config.ts` gains `provideRememberedLanguage()` (FR-005, FR-006, FR-007)
+- [X] T011 [US2] Test: `apps/web-e2e/src/language.spec.ts` — Home: RO pressed by default; each button ≥ 44 px tall; tap EN → English without a reload; a second tab already open turns English; a new page in the same browser opens in English; with storage blocked by an init script the app is Romanian, EN still switches, and a fresh page is Romanian again (FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, SC-001..SC-004)
 
 ## Phase 4: US4 The account's language wins at sign-in (P3)
 

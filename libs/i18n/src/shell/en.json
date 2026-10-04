@@ -1,15 +1,50 @@
 {
   "brand": "MotorFix",
   "frame": {
+    "area": {
+      "admin": "Admin",
+      "driver": "Driver",
+      "garage": "Garage"
+    },
     "empty": "Nothing here yet.",
     "home": "MotorFix, home page",
     "logo": "MOTORFIX",
     "menu": "Menu",
+    "nav": {
+      "admin": {
+        "catalogue": "Brands and jobs",
+        "garages": "Garages",
+        "reviews": "Reported reviews",
+        "settings": "Settings",
+        "users": "Users"
+      },
+      "dashboard": "Dashboard",
+      "driver": {
+        "cars": "My cars",
+        "requests": "My requests",
+        "reviews": "My reviews",
+        "savedGarages": "Saved garages",
+        "settings": "Settings"
+      },
+      "garage": {
+        "prices": "Prices",
+        "profile": "Garage profile",
+        "requests": "Quote requests",
+        "reviews": "Reviews",
+        "schedule": "Bookings",
+        "team": "Mechanics"
+      }
+    },
     "signOut": "Sign out"
   },
   "health": {
     "status": "PostgreSQL: {postgres} · Redis: {redis}",
     "unknown": "unknown"
+  },
+  "language": {
+    "en": "EN",
+    "label": "Language",
+    "ro": "RO"
   },
   "version": {
     "unknown": "version unknown"
