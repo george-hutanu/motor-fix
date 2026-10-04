@@ -4,7 +4,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { activeCount, readWatch, reminder, runReminder } from './session-watch-reminder.mjs';
+import { DEFAULT_TIMEOUT_MS, activeCount, readWatch, reminder, runReminder } from './session-watch-reminder.mjs';
 
 // A resumed or compacted session has lost its CronCreate schedule, and a hook
 // cannot see or create one. So the session-start reminder only says, once, that
@@ -116,6 +116,10 @@ describe('watch reminder — the watcher call', () => {
     const resolved = readWatch(repo, 5000, { GH_TOKEN: '' }).token;
     assert.equal(typeof resolved, 'string');
     assert.notEqual(resolved, '');
+  });
+
+  it('waits by default well past a busy board (8-9 s measured with four worktrees)', () => {
+    assert.ok(DEFAULT_TIMEOUT_MS >= 20_000);
   });
 
   it('gives up at the timeout', () => {

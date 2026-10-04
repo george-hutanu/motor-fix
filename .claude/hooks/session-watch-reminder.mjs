@@ -13,10 +13,12 @@
 //   - fewer than three worktrees (the main checkout plus two) cannot be
 //     parallel work, so the watcher is not run;
 //   - the watcher runs read-only (`--json`, never `--fix`) under a timeout,
-//     SPECKIT_WATCH_REMINDER_TIMEOUT_MS (default 10000); a timeout, a failure
+//     SPECKIT_WATCH_REMINDER_TIMEOUT_MS (default 20000, past the 8-9 s a busy board takes); a timeout, a failure
 //     or unreadable output prints nothing, and the hook always exits 0.
 import { execFileSync, spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
+
+export const DEFAULT_TIMEOUT_MS = 20_000;
 
 const git = (cwd, args) => {
   try {
@@ -85,7 +87,7 @@ export function runReminder({ repo, watch }) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   try {
     const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
-    const timeout = Number(process.env.SPECKIT_WATCH_REMINDER_TIMEOUT_MS) || 10_000;
+    const timeout = Number(process.env.SPECKIT_WATCH_REMINDER_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;
     const line = runReminder({ repo, watch: () => readWatch(repo, timeout) });
     if (line) console.log(line);
   } catch {
