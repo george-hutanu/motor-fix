@@ -169,6 +169,21 @@ describe('switching sending off after a message was queued', () => {
     expect(fallback).not.toHaveBeenCalled();
   });
 
+  it('fails a queued row whose account no longer has an address', async () => {
+    const andrei = await account('andrei');
+    const row = await quote(andrei, 'evt-1');
+    await prisma.account.update({
+      data: { email: null },
+      where: { id: andrei },
+    });
+    await sendJob(row.id);
+    expect(mock.emails()).toEqual([]);
+    expect((await emailRows(andrei))[0]).toMatchObject({
+      failure: 'no_address',
+      status: 'failed',
+    });
+  });
+
   it('fails a queued row whose address left the allow-list', async () => {
     const andrei = await account('andrei');
     const row = await quote(andrei, 'evt-1');
@@ -179,6 +194,14 @@ describe('switching sending off after a message was queued', () => {
       failure: 'not_allowed',
       status: 'failed',
     });
+  });
+});
+
+describe('a job the worker does not know', () => {
+  it('is refused', () => {
+    expect(() =>
+      processor.handle({ attemptsMade: 0, data: {}, name: 'other' }),
+    ).toThrow(/unknown notifications job/);
   });
 });
 
@@ -271,6 +294,27 @@ describe('a grouping window', () => {
     const rows = await emailRows(andrei);
     expect(rows.map((r) => r.status)).toEqual(['sent', 'sent', 'sent']);
     expect(rows[1].providerMessageId).toBe(rows[2].providerMessageId);
+  });
+
+  it('fails every held row without calling Brevo when sending was switched off', async () => {
+    const andrei = await account('andrei');
+    const leader = await quote(andrei, 'evt-a');
+    service.now = at('2026-10-05T11:01:00Z');
+    await quote(andrei, 'evt-b');
+    await quote(andrei, 'evt-c');
+    await sendJob(leader.id);
+    build({ EMAIL_SENDING: 'off' });
+    await processor.handle({
+      attemptsMade: 0,
+      data: { leaderId: leader.id },
+      name: 'flush',
+    });
+    expect(mock.emails()).toHaveLength(1);
+    const [, ...held] = await emailRows(andrei);
+    expect(held.map((r) => [r.status, r.failure])).toEqual([
+      ['failed', 'sending_off'],
+      ['failed', 'sending_off'],
+    ]);
   });
 
   it('sends a single held row as an ordinary e-mail', async () => {

@@ -93,7 +93,7 @@ const NOT_CHANGES = new Set([
   'SignInService.revoke',
   'SignInService.rotate',
   'SignInService.touch',
-  // Delivery records of a notification: the outbox, not anyone's data.
+  // A notification's delivery records, not a change to anyone's data.
   'NotificationsService.build',
   'NotificationsService.dispatch',
   'NotificationsService.emailRow',

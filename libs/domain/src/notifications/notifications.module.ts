@@ -134,6 +134,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.worker?.close();
     await this.jobs.close();
     this.publisher.disconnect();
-    await this.prisma.$disconnect();
+    // In the API the client is AuthModule's, which closes it.
+    if (this.worker !== undefined) await this.prisma.$disconnect();
   }
 }

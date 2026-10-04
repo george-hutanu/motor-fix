@@ -75,3 +75,7 @@
 - System overview (excerpt) — https://app.notion.com/p/3ee607bff0d28161a43cc77282ccc8c1
 - Open decisions (excerpt) — https://app.notion.com/p/3ee607bff0d2817d95ebd3b142c1de11
 - Design mock (recorded, not opened) — https://claude.ai/artifact/EoPWH9MHmuY5Jfw7vTWTHr
+
+## Refresh 2026-10-04
+
+No changes since 2026-10-04. Re-read the story (body and comments, all blocks, resolved included), the feature page's comments and a workspace search over the notification pages. The story's body matches what is recorded above. Its Status is now Implementing, which is the move this run's own lifecycle made, so it is not reported as a change. Priority is still Highest. The story and its timeline row show an edit at 18:00Z, which is that status write. No comment exists on the story or the feature page. The feature page (last edited 2026-10-03T18:53Z), the epic (2026-10-03T19:24Z), ST-279 (2026-10-03T18:52Z) and the sibling notification stories were last edited on or before 2026-10-03, so no page changed after the digest was gathered.

@@ -81,4 +81,5 @@ apps/api/openapi.json, libs/data-access (generated)      # the two new routes
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
 | E-mail fallback seam with a no-op default (`EMAIL_FALLBACK` provider) | Build brief scenario 6: "the fallback hook runs; ST-196 plugs push into it"; feature rule 13 | Leaving it out makes scenario 6 untestable and moves a change into this module's retry path in ST-196; one provider and one call site is the smallest form |
+| Brevo webhook body read as plain JSON, outside the OpenAPI document (`@ApiExcludeController`) | Brevo, not our clients, owns the shape; only `event` and `message-id` are read, and the bearer secret is checked before the body | A contracts DTO under the global `forbidNonWhitelisted` pipe would refuse Brevo's other fields, and would publish an outside party's payload as our API |
 | New dependency `bullmq` | delayed jobs, attempts with custom backoff, concurrency (FR-008/009/010/017) | hand-written Redis queue is far beyond 20 lines; A9 names BullMQ |

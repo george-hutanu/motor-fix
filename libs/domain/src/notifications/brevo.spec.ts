@@ -62,10 +62,6 @@ describe('the Brevo e-mail adapter', () => {
     });
   });
 
-  it('waits ten seconds by default', () => {
-    expect(brevo().timeoutMs).toBe(10_000);
-  });
-
   it('treats an unreachable provider as worth retrying', async () => {
     const down = new Brevo({ apiKey: 'k', apiUrl: 'http://127.0.0.1:9/v3' });
     await expect(down.send(mail)).rejects.toMatchObject({

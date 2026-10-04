@@ -34,4 +34,4 @@ State: `queued` → `sent` | `failed`; `held` → `queued` at send_after (releas
 ## Not tables
 
 - `NOTIFICATION_TYPES` (code): see FR-001.
-- BullMQ `notifications` queue in Redis: jobs `build`, `send`, `flush`. Everything a job decided is in a NOTIFICATION row; a lost job loses only work not yet built.
+- BullMQ `notifications` queue in Redis: jobs `send` and `flush` (a quiet-hours release reuses `send`). The rows are written before the job, so a lost job leaves a `queued` or `held` row behind.

@@ -47,5 +47,7 @@ model Notification {
   @@index([accountId, createdAt])
   @@index([kind, accountId, channel, createdAt])
   @@index([providerMessageId])
+  @@index([groupLeaderId])
+  @@index([fallbackOf])
   @@map("notification")
 }

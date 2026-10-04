@@ -77,10 +77,11 @@ export class NotificationsProcessor {
       if (row.groupLeaderId) return;
       if (!(await this.service.release(row))) return;
     }
-    if (await this.blocked([row], row.account)) return;
+    const to = await this.allowed([row], row.account);
+    if (!to) return;
     await this.deliver(
       [row],
-      row.account,
+      to,
       message(row.kind, row.account.language, params(row)),
       attemptsMade,
     );
@@ -98,28 +99,31 @@ export class NotificationsProcessor {
       await this.service.fail(rows, 'account_deleted', false);
       return;
     }
-    if (await this.blocked(rows, first.account)) return;
+    const to = await this.allowed(rows, first.account);
+    if (!to) return;
     const { language } = first.account;
     const mail =
       rows.length === 1
         ? message(first.kind, language, params(first))
         : groupedMessage(first.kind, rows.length, language);
-    await this.deliver(rows, first.account, mail, attemptsMade);
+    await this.deliver(rows, to, mail, attemptsMade);
   }
 
   // Sending may have been switched off, or the address changed, since the
-  // row was built.
-  private async blocked(rows: Notification[], account: Account) {
-    const reason = account.email
-      ? blockedReason(this.config, account.email)
-      : 'no_address';
-    if (reason) await this.service.fail(rows, reason, false);
-    return reason !== null;
+  // row was built. Answers the recipient, or null when the rows failed.
+  private async allowed(rows: Notification[], account: Account) {
+    const { email, name } = account;
+    const reason = email ? blockedReason(this.config, email) : 'no_address';
+    if (!email || reason) {
+      await this.service.fail(rows, reason ?? 'no_address', false);
+      return null;
+    }
+    return { email, name };
   }
 
   private async deliver(
     rows: Notification[],
-    account: Account,
+    to: { email: string; name: string },
     mail: { subject: string; text: string },
     attemptsMade: number,
   ) {
@@ -129,7 +133,7 @@ export class NotificationsProcessor {
         from: this.config.from,
         subject: mail.subject,
         text: mail.text,
-        to: { email: account.email as string, name: account.name },
+        to,
       });
     } catch (error) {
       if (!(error instanceof BrevoError)) throw error;

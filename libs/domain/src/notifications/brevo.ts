@@ -21,7 +21,7 @@ export class BrevoError extends Error {
 
 // Brevo's transactional e-mail API: two calls, so no SDK.
 export class Brevo {
-  readonly timeoutMs: number;
+  private readonly timeoutMs: number;
   private readonly apiKey: string;
   private readonly apiUrl: string;
 

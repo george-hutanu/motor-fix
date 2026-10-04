@@ -39,6 +39,12 @@ CREATE INDEX "notification_kind_account_id_channel_created_at_idx" ON "notificat
 CREATE INDEX "notification_provider_message_id_idx" ON "notification"("provider_message_id");
 
 -- CreateIndex
+CREATE INDEX "notification_group_leader_id_idx" ON "notification"("group_leader_id");
+
+-- CreateIndex
+CREATE INDEX "notification_fallback_of_idx" ON "notification"("fallback_of");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "notification_kind_account_id_channel_event_id_key" ON "notification"("kind", "account_id", "channel", "event_id");
 
 -- AddForeignKey

@@ -53,3 +53,12 @@ Start commit: f052989fa51c58f1605f3d434292327b62535c30 (origin/main) · branch 1
 - test-adversary ran in phase 9. Mutation: not run locally (CI only, nightly).
 - code-reviewer: 3 HIGH. Fixed: the worker re-checks the switch and allow-list before sending (rows queued before sending was switched off now fail `sending_off`); a bounce reported twice records once and fails every row of a grouped e-mail. Fixed MEDIUM: one Prisma pool in the API (AuthModule's); EMAIL_FROM without an address refused at boot. LOW: unused worker export and BREVO_API_URL line dropped. HIGH #3 (unreachable Brevo at start-up) is an owner decision → deferred.md; MEDIUM #4/#5/#8 → deferred.md. Kept: `sendsEmail(type, muted)` parameter (FR-004).
 - Tests: notifications + audit 574 → 579, green. Repair lap 1/5.
+
+## Phase 13 — refresh: no changes since 2026-10-04 (story, feature, epic unchanged; 0 comments).
+
+## Phase 14 — review
+- spec-reviewer: APPROVE, 0 CRITICAL/HIGH. Fixed LOW: contract/data-model wording (no `build` job; the bounced row's own account), audit-coverage comment, padding retry spec removed. MEDIUM decision (webhook body outside contracts/OpenAPI) → recorded in plan Complexity Tracking; MEDIUM (bounce records no domain event) → deferred.
+- code-reviewer: 1 HIGH (the new pre-send check untested on flush and no address) → tests added (regression guards, already green). Fixed MEDIUM: indexes on `group_leader_id` and `fallback_of`; the test message now answers the number of e-mails actually queued. Fixed LOW: the API no longer disconnects AuthModule's client; the check returns the recipient (no cast); BREVO_API_URL documented where read; Brevo timeout private, constant test dropped; unknown job tested. LOW concurrency → deferred.
+- Repair lap 2/5.
+## Phase 15 — agent context: CLAUDE.local.md pointer → specs/194-email-sending/plan.md; size held.
+## Phase 16 — retro evidence gathered (jev lane unavailable); no verdict written.

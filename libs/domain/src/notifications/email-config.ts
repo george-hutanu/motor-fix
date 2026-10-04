@@ -40,6 +40,7 @@ export function emailConfig(
       .map((entry) => entry.trim().toLowerCase())
       .filter(Boolean),
     apiKey: source['BREVO_API_KEY'] || undefined,
+    // Only tests set it, to point at the recorded mock.
     apiUrl: source['BREVO_API_URL'] || 'https://api.brevo.com/v3',
     from: sender(source['EMAIL_FROM'], switchValue === 'on'),
     production: appEnv === 'production',

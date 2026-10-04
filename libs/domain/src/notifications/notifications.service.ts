@@ -91,8 +91,10 @@ export class NotificationsService {
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
-  async notify(input: NotifyInput): Promise<void> {
+  // Answers how many e-mails it queued.
+  async notify(input: NotifyInput): Promise<number> {
     const type = notificationType(input.kind);
+    let queued = 0;
     for (const accountId of new Set(input.recipients)) {
       const at = this.now();
       const written = await this.prisma.$transaction((tx) =>
@@ -100,16 +102,19 @@ export class NotificationsService {
       );
       if (!written) continue;
       await this.announce(written.bell);
-      if (written.next) await this.queue(written.next);
+      if (!written.next) continue;
+      await this.queue(written.next);
+      queued++;
     }
+    return queued;
   }
 
-  sendAccountEmail(input: {
+  async sendAccountEmail(input: {
     accountId: string;
     purpose: 'email_check' | 'password_reset';
     link: string;
   }): Promise<void> {
-    return this.notify({
+    await this.notify({
       eventId: randomUUID(),
       kind: 'ACCOUNT_EMAIL',
       params: { link: input.link, purpose: input.purpose },
@@ -132,15 +137,16 @@ export class NotificationsService {
       );
     }
     const eventId = randomUUID();
+    let queued = 0;
     for (const accountId of accountIds) {
-      await this.notify({
+      queued += await this.notify({
         eventId,
         kind: 'TEST_MESSAGE',
         recipients: [accountId],
         subjectId: accountId,
       });
     }
-    return accountIds.length;
+    return queued;
   }
 
   // A held row reaching its 08:00: it goes through the grouping rule as if

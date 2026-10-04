@@ -318,6 +318,16 @@ describe('guarding who gets e-mail', () => {
   });
 });
 
+describe('the admin test message', () => {
+  it('counts only the e-mails it queued', async () => {
+    const allowed = await account('allowed');
+    const outside = await account('outside', ['driver'], {
+      email: 'someone@gmail.com',
+    });
+    expect(await service.sendTestMessage([allowed, outside])).toBe(1);
+  });
+});
+
 describe('grouping', () => {
   it('sends the first at once and holds the next ones of the window for one e-mail', async () => {
     const andrei = await account('andrei');
