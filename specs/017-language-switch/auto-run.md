@@ -65,3 +65,24 @@
 
 ## 13 Ticket refresh
 - No new evidence: story unchanged apart from this run's status write; no comments.
+
+## 12 Harden
+- diff-audit --no-jev: 6 `import-extension` ERRORs on libs/i18n relative imports: false positive (tsconfig.base `moduleResolution: bundler`; every existing libs/i18n file is extensionless; code-reviewer concurred). 1 WARN `test-only-export` on Home's `HEALTH` (pre-existing).
+- test-adversary (report relayed by the orchestrator): switch.adversary.spec.ts 28 tests, session.adversary.spec.ts 8. Real defect: `choose()` stored unsupported values (`fr`), fixed in 995b020 (`isLanguage` guard first). Spec-gap test "does not write when the current language is chosen again" deleted: the write must stay, because the session's `choose(account language)` may run while a remembered language's `use()` is pending, and skipping the write would leave the device on the old value; writing the same value fires no event in other tabs, so nothing visible changes (spec Q6).
+- Mutation: no stryker config for web/i18n packages (as in 016), not run.
+
+## 14 Review
+- spec-reviewer: APPROVE; LOW stray `spec.md.tmp` deleted.
+- code-reviewer (relayed by the orchestrator): BLOCK, HIGH = the same `choose()` validation defect, fixed in 995b020; re-review: APPROVE, no findings.
+
+## 15 Agent context
+- CLAUDE.local.md is tracked and its "Active plan" line is also the target of parallel lanes (ST-19); left at 016 to avoid a merge conflict. Flagged.
+
+## 16 Retrospective evidence
+- retro-evidence --since 202c88e: 14 tasks, 9 FRs, Spec Delta i18n +9, 0 deferred; Jev lane unavailable, so no suggested verdict. No verdict written.
+
+## Final verify
+- `npm run typecheck` 11/11; `npm run lint` 176 files clean; `npx jest` 41 suites / 858 tests passed.
+
+## Hand-off (orchestrator's standing rule, mid-run)
+- Original instruction was no push / no PR; the orchestrator later relayed a user standing rule: push, open a draft PR, then ready, CI, merge, finish sync. Followed from here.

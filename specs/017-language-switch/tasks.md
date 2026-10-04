@@ -38,7 +38,7 @@ Paths are `(new)` unless they exist today: `libs/i18n/src/index.ts`, `libs/i18n/
 
 ## Phase 5: Polish
 
-- [ ] T014 Run `npm run typecheck`, `npm run lint`, `npx jest`, and the e2e suite on port 4217; record results in auto-run.md
+- [X] T014 Run `npm run typecheck`, `npm run lint`, `npx jest`, and the e2e suite on port 4217; record results in auto-run.md
 
 ## FR → test
 
