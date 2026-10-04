@@ -146,3 +146,4 @@ The orchestrating session (or the owner) runs one command and sees every worktre
 - At most 2 non-QA agent fixes at once follows the owner's limit of 2 build agents on a 16 GB laptop (owner, 2026-10-04). It counts only what the watcher itself dispatched: the owner decides how many sessions to open, and `heavy.sh`'s free-memory floor is what protects the machine. (autonomous default)
 - The Notion criterion "block at the repair cap" is already met by `run-state.mjs repair`, which blocks the run in the same write that passes the cap; the watcher then sees `blocked` and leaves it alone.
 - Sessions on other machines or in the cloud are out of scope (Notion Build brief, Out of scope).
+- Agents are dispatched from a session opened on the main checkout. A session isolated in a worktree passes that isolation to the agents it starts, and they cannot run commands in another worktree (first real pass, 2026-10-04), so there the skill reports the plan without dispatching.

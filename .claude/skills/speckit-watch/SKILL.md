@@ -43,6 +43,13 @@ or overrides them.
    of 4), then one line per row whose verdict is not `ok` — worktree, branch,
    phase, PR, fix, `reason`. Rows that are `ok` are summed, not listed.
 
+   Dispatch only from a session that is not itself isolated in a worktree
+   (one opened on the main checkout). An agent started from a worktree
+   session inherits that isolation and cannot run a command in another
+   worktree (seen 2026-10-04: `EnterWorktree` succeeded, every Bash call was
+   refused). In a worktree session, stop after step 3, list the plan, and do
+   not claim.
+
 4. For each entry of `plan` (the watcher already applied the caps and the
    oldest-first order), claim it, then dispatch it:
 

@@ -54,3 +54,7 @@
 
 ## 16. Retrospective evidence
 - `retro-evidence.mjs --since 0dfde6c --jev`: 9/9 tasks, 12 requirements, 4 commits, 18 files +2981 −8, Spec Delta platform +12, 0 deferred. Jev lane unavailable (no key), so no suggested verdict. `instincts.mjs triggered`: none.
+
+## First real pass (owner asked, 2026-10-04)
+- `watch.mjs --fix`: removed 4 merged clean worktrees (docs-ep1-wave2, draft-pr-workflow, fix-shell-frame-keys, spartan-ui-stack); kept 8 done ones (live holder, uncommitted changes, no PR); 2 live QA runs (#29, #31).
+- Dispatched `resume` for archive-050. The agent's `EnterWorktree` succeeded, but every Bash call there was refused, because this session is worktree-isolated and the agent inherited it. Nothing changed. The skill now dispatches only from a session on the main checkout and otherwise reports the plan. The archive-050 claim expires 30 min after it was written.
