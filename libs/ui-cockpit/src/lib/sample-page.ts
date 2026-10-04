@@ -95,17 +95,17 @@ import { SAMPLE_GARAGES } from './sample-text';
           <table hlmTable>
             <thead hlmTHead>
               <tr hlmTr>
-                <th hlmTh>{{ 'cockpit.tableGarage' | t }}</th>
+                <th hlmTh column="main">{{ 'cockpit.tableGarage' | t }}</th>
                 <th hlmTh>{{ 'cockpit.tableArea' | t }}</th>
-                <th hlmTh>{{ 'cockpit.tableRating' | t }}</th>
+                <th hlmTh column="key">{{ 'cockpit.tableRating' | t }}</th>
               </tr>
             </thead>
             <tbody hlmTBody>
               @for (garage of garages; track garage.name) {
                 <tr hlmTr>
-                  <td hlmTd>{{ garage.name }}</td>
+                  <td hlmTd column="main">{{ garage.name }}</td>
                   <td hlmTd>{{ garage.area }}</td>
-                  <td hlmTd>{{ garage.rating }}</td>
+                  <td hlmTd column="key">{{ garage.rating }}</td>
                 </tr>
               }
             </tbody>
