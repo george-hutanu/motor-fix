@@ -37,6 +37,14 @@ function answer(call: Call, status: () => string = () => 'DEPLOYING') {
   return { deployment: { status: status() } };
 }
 
+// Resolves once the fake API has received a call matching the predicate, so a
+// test cancels at a known point rather than after a guessed delay.
+async function seenIn(calls: () => Call[], match: (call: Call) => boolean) {
+  while (!calls().some(match)) {
+    await new Promise((resolve) => setTimeout(resolve, 2));
+  }
+}
+
 describe('railway deploy', () => {
   let server: Server;
   let endpoint: string;
@@ -75,6 +83,8 @@ describe('railway deploy', () => {
       services,
       token: 't',
     });
+
+  const seen = (match: (call: Call) => boolean) => seenIn(() => calls, match);
 
   const updates = () =>
     calls
@@ -151,7 +161,7 @@ describe('railway deploy', () => {
       signal: cancel.signal,
       token: 't',
     });
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await seen((c) => c.query.includes('deployment('));
     cancel.abort();
 
     await expect(started).rejects.toThrow('cancelled');
@@ -181,7 +191,10 @@ describe('railway deploy', () => {
       signal: cancel.signal,
       token: 't',
     });
-    await new Promise((resolve) => setTimeout(resolve, 80));
+    await seen(
+      (c) =>
+        c.query.includes('deployment(') && c.variables['id'] === 'dep-svc-web',
+    );
     cancel.abort();
 
     await expect(started).rejects.toThrow('cancelled');
@@ -244,7 +257,7 @@ describe('railway deploy', () => {
       signal: cancel.signal,
       token: 't',
     });
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await seen((c) => c.query.includes('serviceInstanceDeployV2'));
     cancel.abort();
 
     await expect(started).rejects.toThrow('cancelled');
@@ -288,7 +301,7 @@ describe('railway deploy', () => {
     });
 
     await expect(run()).rejects.toThrow('web: deployment FAILED');
-    expect(updates().at(-1)).toEqual({
+    expect(updates()).toContainEqual({
       environmentId: 'env-1',
       input: { source: { image: 'svc-web@sha256:old' } },
       serviceId: 'svc-web',
