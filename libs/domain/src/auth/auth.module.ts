@@ -9,7 +9,8 @@ import { AccountsService } from './accounts.service';
 import { ActorGuard, AUTH_OPTIONS, type AuthOptions } from './actor.guard';
 import { MeController } from './me.controller';
 import { createPrisma, PRISMA } from './prisma';
-import { AUDIT_PORT, noAudit } from '../audit/audit.port';
+import { AUDIT_PORT } from '../audit/audit.port';
+import { AuditService } from '../audit/audit.service';
 import { EVENT_PORT, noEvents } from '../events/event.port';
 import type { PrismaClient } from '../generated/prisma/client';
 
@@ -30,7 +31,7 @@ export class AuthModule implements OnApplicationShutdown {
           provide: PRISMA,
           useFactory: () => createPrisma(options.databaseUrl),
         },
-        { provide: AUDIT_PORT, useValue: noAudit },
+        { provide: AUDIT_PORT, useClass: AuditService },
         { provide: EVENT_PORT, useValue: noEvents },
       ],
     };

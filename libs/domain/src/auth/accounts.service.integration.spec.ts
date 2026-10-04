@@ -2,6 +2,7 @@ import { AccountsService } from './accounts.service';
 import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';
 import type { AuditPort } from '../audit/audit.port';
+import { AuditService } from '../audit/audit.service';
 import type { EventPort } from '../events/event.port';
 
 const databaseUrl =
@@ -14,6 +15,10 @@ function ports() {
     record: jest.fn<
       ReturnType<AuditPort['record']>,
       Parameters<AuditPort['record']>
+    >(async () => undefined),
+    recordChanges: jest.fn<
+      ReturnType<AuditPort['recordChanges']>,
+      Parameters<AuditPort['recordChanges']>
     >(async () => undefined),
   };
   const events = {
@@ -196,6 +201,41 @@ describe('grantRole', () => {
       1,
     );
     expect(audit.record).not.toHaveBeenCalled();
+  });
+});
+
+describe('with the audit history writer', () => {
+  it('stores the account entries in the audit history', async () => {
+    const service = new AccountsService(prisma, new AuditService(), {
+      record: async () => undefined,
+    });
+    const { id } = await service.createAccount(andrei);
+    await prisma.$transaction((tx) =>
+      service.grantRole(tx, { id, role: 'driver' }, id, 'garage'),
+    );
+
+    const entries = await prisma.activityLog.findMany({
+      orderBy: { at: 'asc' },
+      where: { subjectId: id },
+    });
+    expect(entries).toEqual([
+      expect.objectContaining({
+        action: 'create',
+        actorId: id,
+        actorName: 'Andrei',
+        actorRole: 'driver',
+        field: 'role',
+        newValue: 'driver',
+        subjectType: 'account',
+      }),
+      expect.objectContaining({
+        action: 'update',
+        actorName: 'Andrei',
+        field: 'role',
+        newValue: 'garage',
+        oldValue: null,
+      }),
+    ]);
   });
 });
 
