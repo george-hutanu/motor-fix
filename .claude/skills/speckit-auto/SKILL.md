@@ -358,6 +358,11 @@ Gate overrides:
 
 ### 14. Review
 
+First invoke `speckit-notion-sync review`. The run never merges, so In review is
+where it leaves the story; `finish` runs when the branch merges to `main`.
+Before phase 14, `specs/<feature>/design.md` must exist. The `after_specify` and
+`before_implement` hooks write it, and a run without one is a Hard Stop.
+
 If the user's invocation said `verified` or `use a workflow`, invoke
 `speckit-review` instead of the two agents directly: every finding is
 adversarially checked by independent refuters before you act on it. It drives

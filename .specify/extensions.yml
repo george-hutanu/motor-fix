@@ -34,6 +34,14 @@ hooks:
     description: Auto-commit before spec clarification
     condition: null
   before_plan:
+  - extension: motorfix
+    command: speckit.design.check
+    enabled: true
+    optional: false
+    priority: 5
+    prompt: Confirm design.md is current before planning?
+    description: Design check (skips when specs/<feature>/design.md is current)
+    condition: null
   - extension: git
     command: speckit.git.commit
     enabled: true
@@ -52,6 +60,22 @@ hooks:
     description: Auto-commit before task generation
     condition: null
   before_implement:
+  - extension: motorfix
+    command: speckit.design.check
+    enabled: true
+    optional: false
+    priority: 5
+    prompt: Confirm design.md is current before implementing?
+    description: Design check (skips when specs/<feature>/design.md is current)
+    condition: null
+  - extension: motorfix
+    command: speckit.notion.sync
+    enabled: true
+    optional: false
+    priority: 5
+    prompt: Make sure the story is In progress in Notion?
+    description: 'Notion sync, event start (no-op when already In progress)'
+    condition: null
   - extension: git
     command: speckit.git.commit
     enabled: true
@@ -97,6 +121,22 @@ hooks:
     description: Auto-commit after constitution update
     condition: null
   after_specify:
+  - extension: motorfix
+    command: speckit.notion.sync
+    enabled: true
+    optional: false
+    priority: 5
+    prompt: Mark the story In progress in Notion?
+    description: 'Notion sync, event start: story, build-timeline row and epic to In progress'
+    condition: null
+  - extension: motorfix
+    command: speckit.design.check
+    enabled: true
+    optional: false
+    priority: 5
+    prompt: Check the story's design boards before planning?
+    description: Read the story's boards in the mock and write specs/<feature>/design.md
+    condition: null
   - extension: git
     command: speckit.git.commit
     enabled: true

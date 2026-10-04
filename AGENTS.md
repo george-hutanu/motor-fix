@@ -20,6 +20,30 @@ that way for `~/code`.
 - Never `gh auth switch` to george-hutanu, and never edit `~/.gitconfig` for
   this repo — both would change every QLOG repo under `~/code` too.
 
+## Notion is the tracker, and design comes first
+
+These hold for every piece of work in this repo: a story, a task, a bug, an
+epic or a plan, whether run through spec-kit or by hand.
+
+- **Check the design before starting.** Before any code, read the story's
+  boards in the clickable mock (the `Design` and `Design boards` properties
+  in Notion) and the Build brief's Screens section, and write
+  `specs/<feature>/design.md`. Skill: `speckit-design-check`.
+- **Keep Notion in step.** When work starts, the story goes to In progress;
+  when review starts, In review; when it merges to `main`, Done. The same goes
+  for its row in the epic's build timeline under Delivery › Plans, and for the
+  epic itself (In progress at its first story, Done at its last). Skill:
+  `speckit-notion-sync start | review | finish`. These writes are standing
+  instructions; do not ask before them.
+- **Plans live under Delivery › Plans in Notion:** one execution-plan page and
+  one build-timeline database per epic (`speckit-notion-sync plan`).
+- **The spec-kit hooks do this automatically** (`.specify/extensions.yml`:
+  `after_specify`, `before_plan`, `before_implement`), and so do
+  `/speckit-review` and `/speckit-archive`. Outside spec-kit, run the skills
+  yourself. After every merge to `main`, run `speckit-notion-sync finish`.
+- A Notion or mock failure never blocks the build. It is logged in
+  `specs/<feature>/notion-sync.md` or `design.md` and retried on the next run.
+
 ## Product and stack
 
 MotorFix: drivers in Romania find a garage or mechanic for their car. The
@@ -29,9 +53,20 @@ decisions are the source for anything the constitution does not fix.
 
 - Given: Angular (standalone, signals) + PrimeNG with the Cockpit theme;
   NestJS, PostgreSQL, Redis; TypeScript everywhere.
-- Repo: one Nx monorepo — apps `web`, `api`, `worker`, `mcp`, shared libs.
-  Not scaffolded yet.
+- Repo: one Nx monorepo — apps `web` (Angular SSR), `api`, `worker` (NestJS),
+  `mcp`, `web-e2e` (Playwright); libs `contracts` (DTOs, env), `domain`
+  (NestJS modules, Prisma schema per module), `data-access` (Angular client
+  generated from `apps/api/openapi.json`: `npx nx run data-access:generate`,
+  never edited by hand). A lib is created by the story that first needs it.
 - Lint and format: Biome only, root `biome.json` (no eslint, no prettier).
-  Tests: Jest from the root config, Playwright for end-to-end.
-- When the scaffold lands, replace the placeholder `typecheck` script and point
-  `test` at the product suite; the harness specs keep `npm run test:harness`.
+  Tests: Jest from the root config, Playwright for end-to-end. NestJS 12 is
+  ESM-only, so the Nest projects' `test` targets run Jest with
+  `--experimental-vm-modules`.
+- Root scripts: `typecheck`, `lint`, `test`, `build`, `e2e` run across every
+  project; the harness specs keep `npm run test:harness`. API tests need
+  PostgreSQL and Redis: `docker compose up -d` (or local servers), with
+  `DATABASE_URL` and `REDIS_URL` from `.env.example`.
+- Release: `.github/workflows/release.yml` builds one image per app (root
+  `Dockerfile`), deploys staging through `scripts/railway-deploy.ts`, runs the
+  end-to-end suite there, and promotes the same digests to production after
+  approval.

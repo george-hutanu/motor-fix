@@ -59,7 +59,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 1. **Setup**: Run `python3 .specify/scripts/python/setup_plan.py --json` from repo root and parse JSON for FEATURE_SPEC, IMPL_PLAN, FEATURE_DIR, BRANCH. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
-2. **Load context**: Read FEATURE_SPEC and `.specify/memory/constitution.md`. Also read `FEATURE_DIR/context.md` when it exists — the owner's Notion space (story, feature page, epic, architecture, open decisions), where the latest source wins. Its **Constraints** section feeds Technical Context directly (a storage decision already made, a deadline, a platform limit), and a plan that contradicts it is wrong even when it satisfies the spec. Load IMPL_PLAN template (already copied).
+2. **Load context**: Read FEATURE_SPEC and `.specify/memory/constitution.md`. Also read `FEATURE_DIR/context.md` when it exists — the owner's Notion space (story, feature page, epic, architecture, open decisions), where the latest source wins. Its **Constraints** section feeds Technical Context directly (a storage decision already made, a deadline, a platform limit), and a plan that contradicts it is wrong even when it satisfies the spec. Read `FEATURE_DIR/design.md` too (written by `speckit-design-check`): the boards in the mock fix the screens' layout, states and texts, and a plan that contradicts a board is wrong unless the Build brief says otherwise. Load IMPL_PLAN template (already copied).
 
 3. **Execute plan workflow**: Follow the structure in IMPL_PLAN template to:
    - Fill Technical Context (mark unknowns as "NEEDS CLARIFICATION")

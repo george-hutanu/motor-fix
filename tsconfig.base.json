@@ -1,0 +1,27 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "declaration": false,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "lib": ["es2024", "dom"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "paths": {
+      "@motor-fix/contracts": ["./libs/contracts/src/index.ts"],
+      "@motor-fix/contracts/env": ["./libs/contracts/src/env.ts"],
+      "@motor-fix/data-access": ["./libs/data-access/src/index.ts"],
+      "@motor-fix/domain": ["./libs/domain/src/index.ts"]
+    },
+    "rootDir": ".",
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "target": "es2023"
+  },
+  "exclude": ["node_modules", "tmp", ".claude", ".specify", ".worktrees"]
+}

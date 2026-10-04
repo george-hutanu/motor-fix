@@ -1,0 +1,51 @@
+name: CI
+
+# Merges into main run this through release.yml.
+on:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      REDIS_URL: redis://localhost:6379
+      TZ: UTC
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Typecheck, test and build the affected projects
+        if: github.event_name == 'pull_request'
+        run: npx nx affected -t typecheck test build --base=origin/${{ github.base_ref }}
+      - name: Typecheck, test and build every project
+        if: github.event_name != 'pull_request'
+        run: npx nx run-many -t typecheck test build
+      - run: npx biome ci
+      - run: npm run lint:harness && npm run test:harness
+      - name: Contract check
+        run: sh scripts/contract-check.sh
+      - name: Dependency audit
+        run: npm audit --omit=dev --audit-level=high

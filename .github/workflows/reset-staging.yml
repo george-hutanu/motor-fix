@@ -1,0 +1,27 @@
+name: Reset staging
+
+# Started by hand. The environment is fixed to staging: there is no input that
+# could point it at production.
+on: workflow_dispatch
+
+permissions:
+  contents: read
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      APP_ENV: staging
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Empty and migrate the staging database
+        working-directory: libs/domain
+        run: npx prisma migrate reset --force
+      - run: npx nx run domain:seed

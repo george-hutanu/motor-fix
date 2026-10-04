@@ -1,0 +1,47 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "api",
+  "projectType": "application",
+  "sourceRoot": "apps/api/src",
+  "tags": [],
+  "targets": {
+    "openapi": {
+      "command": "node dist/apps/api/main.js openapi apps/api/openapi.json",
+      "dependsOn": ["build"],
+      "options": {
+        "env": {
+          "APP_ENV": "development",
+          "DATABASE_URL": "postgresql://localhost/unused",
+          "REDIS_URL": "redis://localhost/unused"
+        }
+      }
+    },
+    "serve": {
+      "configurations": {
+        "development": {
+          "buildTarget": "api:build:development"
+        },
+        "production": {
+          "buildTarget": "api:build:production"
+        }
+      },
+      "continuous": true,
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
+      "executor": "@nx/js:node",
+      "options": {
+        "buildTarget": "api:build",
+        "runBuildTargetDependencies": false
+      }
+    },
+    "test": {
+      "options": {
+        "passWithNoTests": true
+      }
+    },
+    "typecheck": {
+      "cache": true,
+      "command": "tsc --noEmit -p apps/api/tsconfig.app.json && tsc --noEmit -p apps/api/tsconfig.spec.json"
+    }
+  }
+}

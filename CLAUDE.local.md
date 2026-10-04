@@ -159,5 +159,5 @@ ranked, read-only UI audit with `scan.mjs` and `contrast.mjs` helpers; fixes
 only the findings you name).
 
 <!-- SPECKIT START -->
-No feature plan yet — `/speckit-plan` points this block at the active plan.
+Active plan (stack, structure, commands): specs/421-monorepo-platform/plan.md
 <!-- SPECKIT END -->
