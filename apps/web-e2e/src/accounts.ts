@@ -26,7 +26,8 @@ export async function signIn(
   { password = PASSWORD, remember = true } = {},
 ) {
   const dialog = page.getByRole('dialog', { name: 'Autentificare' });
-  await expect(dialog).toBeVisible();
+  // The panel: on a phone the dialog container around the sheet has no box.
+  await expect(dialog.locator('mf-overlay-panel')).toBeVisible();
   await dialog.getByLabel('E‑mail').fill(email);
   await dialog.getByLabel('Parolă').fill(password);
   if (!remember) await dialog.getByLabel('Ține‑mă autentificat').uncheck();

@@ -1,0 +1,20 @@
+**Agent review: failure** — PR #48 at `ea32a10`, lap 3
+
+Blocking: 1 (blocker 0, high 1) · medium 2 · low 1. Booted: postgres, redis, api, web.
+- No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.
+- No changed GET endpoint without path parameters.
+
+| # | Severity | Finding | Where | Evidence |
+| --- | --- | --- | --- | --- |
+| 1 | high | regression from 3f1c87a: while dragging, the sheet trails the finger by a 0.42 s transition, because the raised sheet rule now outranks .mf-overlay-dragging { transition: none } |  | Compiled rules in the page: `.mf-overlay-sheet[data-side][_nghost-ng-c2998214333] { transition: transform … }` (0,3,0) and `.mf-overlay-dragging[_nghost-ng-c2998214333] { transition: none }` (0,2,0). During the drag the host carries `mf-overlay-sheet spartan-sheet-content mf-overlay-dragging`, yet its computed transition is `transform 0.42s`. --mf-drag is 84px, but the panel has moved only 29–56 px right after the move and 47–79 px two frames later (8 of 8 runs, pr-48-lap3-probe/probe-lap3.json). The lap-3 flow "the sheet does not follow the pointer while dragging" flagged the same (rest y 507.7, during drag y 536.7, transform translateY 29 px; it passed in lap 2, before the specificity change). FR-004 says dragging "MUST move the sheet with the pointer", and FR-008 keeps the spring for the release only. Under reduced motion the global rule strips transitions, which hides the problem there. The colocated test `springs back on the motion tokens and follows the finger with no transition` (panel.spec.ts) matches each rule's text with a regex, not the cascade, so it stays green. Fix: give the dragging rule the same weight, e.g. `:host.mf-overlay-sheet.mf-overlay-dragging[data-side] { transition: none; }`, and add an e2e check in sheet.spec.ts that reads `getComputedStyle(panel).transitionDuration === '0s'` (or the panel's y equal to rest + the pull) mid-drag. Screenshot: pr-48-lap3-probe/drag-mid.png, pr-48-lap3/shots/flow-28-the-sheet-does-not-follow-the-pointer-while-draggi.png |
+| 2 | medium | api readiness: storage down |  |  |
+| 3 | medium | the sheet does not follow the pointer while dragging |  | rest y=507.65625, during drag y=536.6771850585938, transform matrix(1, 0, 0, 1, 0, 29.0209); screenshot <scratchpad>/pr-48-lap3/shots/flow-28-the-sheet-does-not-follow-the-pointer-while-draggi.png |
+| 4 | low | the deferred sign-in item is ticked as resolved, but sign-in.spec.ts adds only the bottom edge and the 92 % cap, not the 'tap outside, page not moved' it asked for |  | The behaviour itself works. The lap-3 flows opened the sign-in from the Cont/Account tab at 390×844 and 320×640, light and dark, RO and EN, mouse and touch. Each time it was a full-width sheet on the bottom edge, 509.25 px tall (≤ 92 %), with the grip, no axe violations; a tap outside closed it, the address stayed /…/garages and the focus went back to the tab (pr-48-lap3/shots/signin-observations.json). Opened over a page scrolled to 300 px, it pinned at 300 and came back to 300 after the tap outside (pr-48-lap3-probe/probe-lap3b.json). Either add the tap-outside and scroll assertion to sign-in.spec.ts or reword the resolution, so the ticked item says what is tested. |
+
+### Reproduction
+1. open /cockpit at 390×844 (no reduced motion) → click "Deschide sarcina ca dialog" → press the grip and move the pointer down 84 px (25 % of the sheet), then read the panel's position and getComputedStyle(panel).transitionDuration
+2. No object store on this machine (no Docker); every other check is ok. Environment limit, not the change.
+3. open /cockpit at 390×844 → click "Deschide sarcina ca dialog" → press the grip and move down by 25 %
+4. read deferred.md line 3: "add a 390 × 844 and 320 × 640 sign-in sheet check (height cap, tap outside, page not moved)", now `[x]` → read the sign-in.spec.ts change: `toHaveAttribute('data-side', 'bottom')` and `box.height <= height * 0.92 + 0.5`; nothing taps outside or reads the scroll
+
+Screenshots: 48, one per route × viewport × scheme × language.

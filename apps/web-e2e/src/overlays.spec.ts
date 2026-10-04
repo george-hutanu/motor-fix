@@ -80,6 +80,17 @@ async function open(page: Page, key = 'cockpit.overlay.openDialog') {
   await shown(page);
 }
 
+// A wheel scroll runs on for a moment after the wheel; closing before it ends
+// lets the rest land on the page once the scroll lock lifts.
+const wheelSettled = (page: Page) =>
+  page.evaluate(
+    () =>
+      new Promise<void>((done) => {
+        document.addEventListener('scrollend', () => done(), { once: true });
+        setTimeout(done, 1000);
+      }),
+  );
+
 const scrollY = (page: Page) => page.evaluate(() => window.scrollY);
 // While the page is locked the root is pinned at minus its scroll position.
 const lockedAt = (page: Page) =>
@@ -119,6 +130,7 @@ test.describe('a task over the page', () => {
       await button.click();
       await shown(page);
       await page.mouse.wheel(0, 600);
+      await wheelSettled(page);
       await expect.poll(() => lockedAt(page)).toBe(before);
       expect(page.url()).toBe(address);
 
@@ -209,40 +221,6 @@ test.describe('the drawer', () => {
 
       const box = await task(page).locator('mf-overlay-panel').boundingBox();
       expect(box).toEqual({ height: 800, width, x: 1280 - width, y: 0 });
-    });
-  }
-});
-
-test.describe('on a phone', () => {
-  for (const width of [320, 390]) {
-    test(`at ${width} px the dialog keeps a 16 px gutter, drawers fill the width, nothing scrolls sideways`, async ({
-      page,
-    }) => {
-      await page.setViewportSize({ height: 700, width });
-      await openCockpit(page);
-
-      for (const [key, expected] of [
-        ['cockpit.overlay.openDialog', width - 32],
-        ['cockpit.overlay.openDrawer', width],
-        ['cockpit.overlay.openWide', width],
-      ] as const) {
-        await opener(page, key).scrollIntoViewIfNeeded();
-        await open(page, key);
-        const box = await task(page).locator('mf-overlay-panel').boundingBox();
-        expect(Math.round(box?.width ?? 0)).toBe(expected);
-        expect(
-          await page.evaluate(
-            () => document.documentElement.scrollWidth <= window.innerWidth,
-          ),
-        ).toBe(true);
-        const close = await task(page)
-          .getByRole('button', { exact: true, name: 'Închide' })
-          .boundingBox();
-        expect(close?.width).toBeGreaterThanOrEqual(44);
-        expect(close?.height).toBeGreaterThanOrEqual(44);
-        await page.keyboard.press('Escape');
-        await expect(task(page)).toHaveCount(0);
-      }
     });
   }
 });

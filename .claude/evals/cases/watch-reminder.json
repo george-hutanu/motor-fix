@@ -1,0 +1,19 @@
+[
+  {
+    "id": "watch-reminder-is-silent-without-parallel-work",
+    "hook": "session:start:watch-reminder",
+    "why": "every session start pays for this hook; a repository with no other worktrees cannot be running parallel work, so the reminder must print nothing and never run the watcher",
+    "fixture": { "commits": [{ "message": "init" }] },
+    "payload": { "hook_event_name": "SessionStart", "source": "startup" },
+    "expect": { "exit": 0, "stdout": "^$" }
+  },
+  {
+    "id": "watch-reminder-is-advisory-on-a-truncated-payload",
+    "hook": "session:start:watch-reminder",
+    "why": "the reminder is not a gate: a payload cut short must not turn a session start into a refusal, the way it does for the fail-closed gates",
+    "fixture": { "commits": [{ "message": "init" }] },
+    "payload": { "hook_event_name": "SessionStart", "source": "resume" },
+    "env": { "SPECKIT_HOOK_INPUT_MAX_BYTES": "8" },
+    "expect": { "exit": 0, "stdout": "^$" }
+  }
+]
