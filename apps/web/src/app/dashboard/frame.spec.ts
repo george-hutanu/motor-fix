@@ -7,7 +7,10 @@ import { I18n } from '@motor-fix/i18n';
 import { Frame } from './frame';
 import { Session } from './session';
 
+let signOut: jest.Mock;
+
 function render(role: string, landing: string, capabilities: string[]) {
+  signOut = jest.fn(async () => current.set(null));
   const current = signal<MeDto | null>({
     capabilities,
     email: null,
@@ -20,7 +23,10 @@ function render(role: string, landing: string, capabilities: string[]) {
     roles: [role],
   } as unknown as MeDto);
   TestBed.configureTestingModule({
-    providers: [provideRouter([]), { provide: Session, useValue: { current } }],
+    providers: [
+      provideRouter([]),
+      { provide: Session, useValue: { current, signOut } },
+    ],
   });
   const fixture = TestBed.createComponent(Frame);
   fixture.detectChanges();
@@ -154,7 +160,7 @@ describe('Frame', () => {
     );
   });
 
-  it('signs out to Home and forgets the account', async () => {
+  it('signs out on the server, then opens Home', async () => {
     const { current, element } = render('driver', '/app/driver', []);
     const navigate = jest
       .spyOn(TestBed.inject(Router), 'navigateByUrl')
@@ -163,9 +169,14 @@ describe('Frame', () => {
     [...element.querySelectorAll('button')]
       .find((b) => b.textContent?.trim() === 'Ieși din cont')
       ?.click();
+    await new Promise((resolve) => setTimeout(resolve));
 
+    expect(signOut).toHaveBeenCalledTimes(1);
     expect(current()).toBeNull();
     expect(navigate).toHaveBeenCalledWith('/');
+    expect(signOut.mock.invocationCallOrder[0]).toBeLessThan(
+      navigate.mock.invocationCallOrder[0] ?? 0,
+    );
   });
 
   it('has the language switch in its header', () => {

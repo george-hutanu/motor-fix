@@ -5,6 +5,30 @@
     "later": "Pagina vine în curând.",
     "mechanics": "Mecanic"
   },
+  "signIn": {
+    "brand": "MotorFix",
+    "email": "E‑mail",
+    "emailPlaceholder": "tu@exemplu.ro",
+    "error": {
+      "account_suspended": "Contul tău este suspendat.",
+      "invalid_credentials": "E‑mailul sau parola nu sunt corecte.",
+      "maintenance": "MotorFix este în mentenanță. Încearcă din nou puțin mai târziu.",
+      "offline": "Nu ești conectat. Încearcă din nou când revine conexiunea.",
+      "other": "Ceva nu a mers. Încearcă din nou.",
+      "too_many_attempts": "Prea multe încercări. Încearcă din nou în 15 minute."
+    },
+    "invalid": {
+      "emailFormat": "Adresa de e‑mail nu pare corectă.",
+      "emailMissing": "Scrie adresa de e‑mail.",
+      "passwordMissing": "Scrie parola."
+    },
+    "password": "Parolă",
+    "passwordPlaceholder": "Parola ta",
+    "remember": "Ține‑mă autentificat",
+    "submit": "Intră în cont",
+    "title": "Autentificare"
+  },
+  "signInButton": "Autentificare",
   "tabs": {
     "account": "Cont",
     "garages": "Service‑uri",

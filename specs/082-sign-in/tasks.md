@@ -26,22 +26,22 @@ Independent test: sign in per role through HTTP against PostgreSQL and Redis; wr
 ## Phase 4: User Story 3 + 4 — renewal and sign-out (P1/P2)
 
 - [X] T010 [US3] `SignInService.refresh` and `signOut`: rotation, 20 s grace without a cookie, reuse revokes the family, status and role checks revoke, last active at most hourly, sign-out revokes the family (FR-008, FR-009, FR-010)
-- [ ] T011 [US3] `apps/web/src/app/dashboard/session.ts`: token in memory, `signIn`, shared `renew`, `load` renews first, `signOut` forgets even on failure (FR-018, FR-019, FR-020)
-- [ ] T012 [US3] `apps/web/src/app/auth.interceptor.ts` (new) + `withInterceptors` in `apps/web/src/app/app.config.ts`: bearer on `/api/` outside `/api/v1/auth/`, one shared renewal on a 401 to a call that carried the token, repeat (FR-018)
-- [ ] T013 [US4] `apps/web/src/app/dashboard/frame.ts`: "Ieși din cont" awaits `session.signOut()` then Home (FR-020)
+- [X] T011 [US3] `apps/web/src/app/dashboard/session.ts`: token in memory, `signIn`, shared `renew`, `load` renews first, `signOut` forgets even on failure (FR-018, FR-019, FR-020)
+- [X] T012 [US3] `apps/web/src/app/auth.interceptor.ts` (new) + `withInterceptors` in `apps/web/src/app/app.config.ts`: bearer on `/api/` outside `/api/v1/auth/`, one shared renewal on a 401 to a call that carried the token, repeat (FR-018)
+- [X] T013 [US4] `apps/web/src/app/dashboard/frame.ts`: "Ieși din cont" awaits `session.signOut()` then Home (FR-020)
 
 ## Phase 5: User Story 1 (web) — the dialog and its entries (P1)
 
-- [ ] T014 [US1] `apps/web/src/app/sign-in/sign-in.ts` (new): the task — "MotorFix", e-mail, password, "Ține‑mă autentificat" ticked, "Intră în cont"; local validation, focus on the first wrong field, busy state, coded messages, password cleared after `invalid_credentials`, closes with "signed-in" (FR-013, FR-014, FR-015, FR-016, FR-022)
-- [ ] T015 [US1] `apps/web/src/app/sign-in/sign-in-dialog.ts` (new): `SignInDialog.start()` (signed in → landing; else open the dialog, then the landing on "signed-in") (FR-012, FR-017)
-- [ ] T016 [US1] `apps/web/src/app/public/tab-bar.ts`: "Cont" while signed out opens the dialog without navigating; `apps/web/src/app/public/frame.ts`: ≥ 768 px top bar with "Autentificare", and the dialog on a navigation with `state.signIn` (FR-012, FR-021)
-- [ ] T017 [US1] `apps/web/src/app/dashboard/area.guard.ts`: signed out → `RedirectCommand` to `/<language>` with `state.signIn` (FR-021)
-- [ ] T018 [P] [US1] Texts `public.signIn.*` and `public.signInButton` in `libs/i18n/src/public/ro.json` and `en.json`, U+2011 inside Romanian words (FR-022)
+- [X] T014 [US1] `apps/web/src/app/sign-in/sign-in.ts` (new): the task — "MotorFix", e-mail, password, "Ține‑mă autentificat" ticked, "Intră în cont"; local validation, focus on the first wrong field, busy state, coded messages, password cleared after `invalid_credentials`, closes with "signed-in" (FR-013, FR-014, FR-015, FR-016, FR-022)
+- [X] T015 [US1] `apps/web/src/app/sign-in/sign-in-dialog.ts` (new): `SignInDialog.start()` (signed in → landing; else open the dialog, then the landing on "signed-in") (FR-012, FR-017)
+- [X] T016 [US1] `apps/web/src/app/public/tab-bar.ts`: "Cont" while signed out opens the dialog without navigating; `apps/web/src/app/public/frame.ts`: ≥ 768 px top bar with "Autentificare", and the dialog on a navigation with `state.signIn` (FR-012, FR-021)
+- [X] T017 [US1] `apps/web/src/app/dashboard/area.guard.ts`: signed out → `RedirectCommand` to `/<language>` with `state.signIn` (FR-021)
+- [X] T018 [P] [US1] Texts `public.signIn.*` and `public.signInButton` in `libs/i18n/src/public/ro.json` and `en.json`, U+2011 inside Romanian words (FR-022)
 
 ## Phase 6: Seed, end to end, CI
 
 - [X] T019 `libs/domain/src/seed.ts`: the seven accounts, the garage, memberships and mechanic link with `pg` and `argon2Sync`, insert-if-missing; staging needs `SEED_PASSWORD`; `pg` as a dev dependency in `package.json` (FR-023)
-- [ ] T020 `apps/web-e2e/src/accounts.ts` (new) seeded e-mails and `E2E_PASSWORD`; `apps/web-e2e/src/sign-in.ts` also stubs `/api/v1/auth/refresh`; `.github/workflows/ci.yml` e2e job seeds; `release.yml` and `reset-staging.yml` pass `secrets.SEED_PASSWORD` (FR-023)
+- [X] T020 `apps/web-e2e/src/accounts.ts` (new) seeded e-mails and `E2E_PASSWORD`; `apps/web-e2e/src/sign-in.ts` also stubs `/api/v1/auth/refresh`; `.github/workflows/ci.yml` e2e job seeds; `release.yml` and `reset-staging.yml` pass `secrets.SEED_PASSWORD` (FR-023)
 
 ## Phase 7: Polish
 

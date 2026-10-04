@@ -1,29 +1,82 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { type MeDto, MeService } from '@motor-fix/data-access';
+import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
 import { LanguageChoice } from '@motor-fix/i18n';
 
-// The signed-in account, held in memory only. Without an access token the
-// answer is 401 and nobody is signed in; setting `current` to null signs out.
+// The signed-in account. The access token lives in this object's memory only;
+// the refresh token is a cookie the page cannot read, used to renew it.
 @Injectable({ providedIn: 'root' })
 export class Session {
-  private readonly api = inject(MeService);
+  private readonly me = inject(MeService);
+  private readonly auth = inject(AuthService);
   private readonly language = inject(LanguageChoice);
   readonly current = signal<MeDto | null>(null);
+  private accessToken: string | null = null;
   private loading: Promise<MeDto | null> | null = null;
+  private renewing: Promise<boolean> | null = null;
+
+  token(): string | null {
+    return this.accessToken;
+  }
+
+  async signIn(email: string, password: string, remember: boolean) {
+    const { accessToken } = await this.auth.authControllerSignIn({
+      body: { email, password, remember },
+    });
+    this.accessToken = accessToken;
+    this.current.set(null);
+    return this.load();
+  }
+
+  // One renewal at a time, whoever asks.
+  renew(): Promise<boolean> {
+    this.renewing ??= this.auth
+      .authControllerRefresh()
+      .then(
+        ({ accessToken }) => {
+          this.accessToken = accessToken;
+          return true;
+        },
+        () => {
+          this.forget();
+          return false;
+        },
+      )
+      .finally(() => {
+        this.renewing = null;
+      });
+    return this.renewing;
+  }
 
   async load(): Promise<MeDto | null> {
     const known = this.current();
     if (known) return known;
-    this.loading ??= this.api
-      .meControllerMe()
-      .catch(() => null)
-      .then((me) => {
-        // At sign-in the account's language wins over the device's.
-        if (me) void this.language.choose(me.language);
-        this.current.set(me);
-        this.loading = null;
-        return me;
-      });
+    this.loading ??= this.ask().then((me) => {
+      // At sign-in the account's language wins over the device's.
+      if (me) void this.language.choose(me.language);
+      this.current.set(me);
+      this.loading = null;
+      return me;
+    });
     return this.loading;
+  }
+
+  async signOut(): Promise<void> {
+    try {
+      await this.auth.authControllerSignOut();
+    } catch {
+      // Signed out here anyway; the server's copy expires on its own.
+    } finally {
+      this.forget();
+    }
+  }
+
+  private async ask(): Promise<MeDto | null> {
+    if (!this.accessToken && !(await this.renew())) return null;
+    return this.me.meControllerMe().catch(() => null);
+  }
+
+  private forget() {
+    this.accessToken = null;
+    this.current.set(null);
   }
 }

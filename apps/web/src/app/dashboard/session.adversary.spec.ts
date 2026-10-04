@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { type MeDto, MeService } from '@motor-fix/data-access';
+import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
 import { I18n, LanguageChoice } from '@motor-fix/i18n';
 
 import { Session } from './session';
@@ -23,7 +23,16 @@ const settle = () => new Promise((resolve) => setTimeout(resolve));
 function setup(answer: () => Promise<MeDto>) {
   const meControllerMe = jest.fn(answer);
   TestBed.configureTestingModule({
-    providers: [{ provide: MeService, useValue: { meControllerMe } }],
+    providers: [
+      { provide: MeService, useValue: { meControllerMe } },
+      {
+        provide: AuthService,
+        useValue: {
+          authControllerRefresh: async () => ({ accessToken: 'renewed' }),
+          authControllerSignOut: async () => undefined,
+        },
+      },
+    ],
   });
   return {
     i18n: TestBed.inject(I18n),

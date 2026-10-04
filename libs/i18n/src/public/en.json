@@ -5,6 +5,30 @@
     "later": "This page is coming soon.",
     "mechanics": "Mechanic"
   },
+  "signIn": {
+    "brand": "MotorFix",
+    "email": "E-mail",
+    "emailPlaceholder": "you@example.com",
+    "error": {
+      "account_suspended": "Your account is suspended.",
+      "invalid_credentials": "The e-mail or password is not correct.",
+      "maintenance": "MotorFix is down for maintenance. Try again a little later.",
+      "offline": "You are offline. Try again when the connection is back.",
+      "other": "Something went wrong. Try again.",
+      "too_many_attempts": "Too many attempts. Try again in 15 minutes."
+    },
+    "invalid": {
+      "emailFormat": "That e-mail address does not look right.",
+      "emailMissing": "Enter your e-mail address.",
+      "passwordMissing": "Enter your password."
+    },
+    "password": "Password",
+    "passwordPlaceholder": "Your password",
+    "remember": "Keep me signed in",
+    "submit": "Sign in",
+    "title": "Sign in"
+  },
+  "signInButton": "Sign in",
   "tabs": {
     "account": "Account",
     "garages": "Garages",

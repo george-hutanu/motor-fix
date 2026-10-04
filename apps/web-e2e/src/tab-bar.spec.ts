@@ -23,7 +23,6 @@ test.describe('the public tab bar on a 375 px phone', () => {
   }) => {
     for (const [tab, address] of [
       [GARAGES, '/ro/garages'],
-      ['Cont', '/ro/account'],
       ['Caută', '/ro'],
     ]) {
       await open(page, '/ro');
@@ -34,6 +33,30 @@ test.describe('the public tab bar on a 375 px phone', () => {
         'page',
       );
     }
+  });
+
+  test('opens the sign-in dialog over the current screen from Cont for a visitor', async ({
+    page,
+  }) => {
+    await open(page, '/ro/garages');
+
+    await bar(page).getByRole('link', { name: 'Cont' }).click();
+
+    await expect(
+      page.getByRole('dialog', { name: 'Autentificare' }),
+    ).toBeVisible();
+    await expect(page).toHaveURL('/ro/garages');
+  });
+
+  test('shows Cont as the current tab on the account screen', async ({
+    page,
+  }) => {
+    await open(page, '/ro/account');
+
+    await expect(bar(page).getByRole('link', { name: 'Cont' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
   });
 
   test('opens the dashboard of a signed-in person from Cont', async ({
@@ -81,7 +104,9 @@ test.describe('the public tab bar on a 375 px phone', () => {
     await page.keyboard.press('Tab');
     await expect(links.nth(2)).toBeFocused();
     await page.keyboard.press('Enter');
-    await expect(page).toHaveURL('/ro/account');
+    await expect(
+      page.getByRole('dialog', { name: 'Autentificare' }),
+    ).toBeVisible();
   });
 
   test('reads English at /en', async ({ page }) => {
