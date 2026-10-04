@@ -233,7 +233,7 @@ async function main(argv) {
 
     log(`sweep: ${opt.routes.join(", ")} × ${Object.keys(VIEWPORTS).length} viewports × ${opt.schemes.join("/")} × ${opt.langs.join("/")}`);
     const sweep = await runSweep({ baseURL: webURL, routes: opt.routes, outDir: shots, schemes: opt.schemes, langs: opt.langs, repoRoot });
-    // Evidence relative to the report, so the report reads the same once copied into specs/.
+    // Evidence relative to the report: shots/ stays in --out, beside it; only the report is copied into specs/.
     for (const f of toFindings(sweep.observations, { web, origins: [webURL, apiURL] }))
       findings.push(f.evidence ? { ...f, evidence: relative(out, f.evidence) } : f);
     writeFileSync(join(out, "observations.json"), JSON.stringify(sweep.observations, null, 2));

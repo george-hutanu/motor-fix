@@ -38,3 +38,14 @@ describe('QA evidence keeps screenshots out of the repo', () => {
     assert.match(evidence, /never commit/i);
   });
 });
+
+describe('the screen-review rules in AGENTS.md', () => {
+  const section = () => readFileSync(join(root, 'AGENTS.md'), 'utf8').split('## Reviewing a change that has screens')[1].split('\n## ')[0];
+
+  // A pushed branch can only be rebased by a forced push, which Constitution
+  // VII and bash-guard forbid; lifecycle step 5 merges origin/main instead.
+  it('brings a waiting PR up to date by merging main, never by a rebase', () => {
+    assert.doesNotMatch(section(), /\brebases\b/i);
+    assert.match(section(), /merges\s+`origin\/main`/);
+  });
+});
