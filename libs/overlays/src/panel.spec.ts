@@ -411,6 +411,9 @@ describe('the sheet styles', () => {
     expect(rule(':host.mf-overlay-sheet[data-side]')).toMatch(
       /transition:\s*transform var\(--mf-motion-pop\) var\(--mf-motion-ease\)/,
     );
-    expect(rule(':host.mf-overlay-dragging')).toMatch(/transition:\s*none/);
+    // As specific as the sheet's own rule, so the drag wins over the spring.
+    expect(
+      rule(':host.mf-overlay-sheet.mf-overlay-dragging[data-side]'),
+    ).toMatch(/transition:\s*none/);
   });
 });

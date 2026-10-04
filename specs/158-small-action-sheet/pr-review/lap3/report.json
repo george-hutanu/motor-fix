@@ -1,0 +1,114 @@
+{
+  "pr": 48,
+  "repo": "george-hutanu/motor-fix",
+  "sha": "ea32a107786ad159186b52ef02cd7e376dd4aa90",
+  "base": "4586f6eafdf61588b1279144788be7059ecabbbc",
+  "lap": 3,
+  "verdict": "failure",
+  "summary": "1 blocking finding(s); 4 in all. Booted postgres, redis, api, web.",
+  "findings": [
+    {
+      "severity": "medium",
+      "kind": "step",
+      "title": "api readiness: storage down",
+      "steps": [
+        "No object store on this machine (no Docker); every other check is ok. Environment limit, not the change."
+      ]
+    },
+    {
+      "severity": "medium",
+      "kind": "flow",
+      "title": "the sheet does not follow the pointer while dragging",
+      "steps": [
+        "open /cockpit at 390×844",
+        "click \"Deschide sarcina ca dialog\"",
+        "press the grip and move down by 25 %"
+      ],
+      "evidence": "rest y=507.65625, during drag y=536.6771850585938, transform matrix(1, 0, 0, 1, 0, 29.0209); screenshot <scratchpad>/pr-48-lap3/shots/flow-28-the-sheet-does-not-follow-the-pointer-while-draggi.png"
+    },
+    {
+      "severity": "high",
+      "kind": "review",
+      "title": "regression from 3f1c87a: while dragging, the sheet trails the finger by a 0.42 s transition, because the raised sheet rule now outranks .mf-overlay-dragging { transition: none }",
+      "where": "libs/overlays/src/panel.ts styles: `:host.mf-overlay-sheet[data-side] { … transition: transform var(--mf-motion-pop) var(--mf-motion-ease); }` vs `:host.mf-overlay-dragging { transition: none; }`",
+      "steps": [
+        "open /cockpit at 390×844 (no reduced motion)",
+        "click \"Deschide sarcina ca dialog\"",
+        "press the grip and move the pointer down 84 px (25 % of the sheet), then read the panel's position and getComputedStyle(panel).transitionDuration"
+      ],
+      "evidence": "Compiled rules in the page: `.mf-overlay-sheet[data-side][_nghost-ng-c2998214333] { transition: transform … }` (0,3,0) and `.mf-overlay-dragging[_nghost-ng-c2998214333] { transition: none }` (0,2,0). During the drag the host carries `mf-overlay-sheet spartan-sheet-content mf-overlay-dragging`, yet its computed transition is `transform 0.42s`. --mf-drag is 84px, but the panel has moved only 29–56 px right after the move and 47–79 px two frames later (8 of 8 runs, pr-48-lap3-probe/probe-lap3.json). The lap-3 flow \"the sheet does not follow the pointer while dragging\" flagged the same (rest y 507.7, during drag y 536.7, transform translateY 29 px; it passed in lap 2, before the specificity change). FR-004 says dragging \"MUST move the sheet with the pointer\", and FR-008 keeps the spring for the release only. Under reduced motion the global rule strips transitions, which hides the problem there. The colocated test `springs back on the motion tokens and follows the finger with no transition` (panel.spec.ts) matches each rule's text with a regex, not the cascade, so it stays green. Fix: give the dragging rule the same weight, e.g. `:host.mf-overlay-sheet.mf-overlay-dragging[data-side] { transition: none; }`, and add an e2e check in sheet.spec.ts that reads `getComputedStyle(panel).transitionDuration === '0s'` (or the panel's y equal to rest + the pull) mid-drag. Screenshot: pr-48-lap3-probe/drag-mid.png, pr-48-lap3/shots/flow-28-the-sheet-does-not-follow-the-pointer-while-draggi.png"
+    },
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "the deferred sign-in item is ticked as resolved, but sign-in.spec.ts adds only the bottom edge and the 92 % cap, not the 'tap outside, page not moved' it asked for",
+      "where": "specs/158-small-action-sheet/deferred.md:3; apps/web-e2e/src/sign-in.spec.ts 'the dialog on every screen size'",
+      "steps": [
+        "read deferred.md line 3: \"add a 390 × 844 and 320 × 640 sign-in sheet check (height cap, tap outside, page not moved)\", now `[x]`",
+        "read the sign-in.spec.ts change: `toHaveAttribute('data-side', 'bottom')` and `box.height <= height * 0.92 + 0.5`; nothing taps outside or reads the scroll"
+      ],
+      "evidence": "The behaviour itself works. The lap-3 flows opened the sign-in from the Cont/Account tab at 390×844 and 320×640, light and dark, RO and EN, mouse and touch. Each time it was a full-width sheet on the bottom edge, 509.25 px tall (≤ 92 %), with the grip, no axe violations; a tap outside closed it, the address stayed /…/garages and the focus went back to the tab (pr-48-lap3/shots/signin-observations.json). Opened over a page scrolled to 300 px, it pinned at 300 and came back to 300 after the tap outside (pr-48-lap3-probe/probe-lap3b.json). Either add the tap-outside and scroll assertion to sign-in.spec.ts or reword the resolution, so the ticked item says what is tested."
+    }
+  ],
+  "booted": [
+    "postgres",
+    "redis",
+    "api",
+    "web"
+  ],
+  "notes": [
+    "No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.",
+    "No changed GET endpoint without path parameters."
+  ],
+  "screenshots": [
+    "shots/home-desktop-light-ro.png",
+    "shots/home-desktop-light-en.png",
+    "shots/home-desktop-dark-ro.png",
+    "shots/home-desktop-dark-en.png",
+    "shots/home-tablet-light-ro.png",
+    "shots/home-tablet-light-en.png",
+    "shots/home-tablet-dark-ro.png",
+    "shots/home-tablet-dark-en.png",
+    "shots/home-mobile-light-ro.png",
+    "shots/home-mobile-light-en.png",
+    "shots/home-mobile-dark-ro.png",
+    "shots/home-mobile-dark-en.png",
+    "shots/home-small-phone-light-ro.png",
+    "shots/home-small-phone-light-en.png",
+    "shots/home-small-phone-dark-ro.png",
+    "shots/home-small-phone-dark-en.png",
+    "shots/cockpit-desktop-light-ro.png",
+    "shots/cockpit-desktop-light-en.png",
+    "shots/cockpit-desktop-dark-ro.png",
+    "shots/cockpit-desktop-dark-en.png",
+    "shots/cockpit-tablet-light-ro.png",
+    "shots/cockpit-tablet-light-en.png",
+    "shots/cockpit-tablet-dark-ro.png",
+    "shots/cockpit-tablet-dark-en.png",
+    "shots/cockpit-mobile-light-ro.png",
+    "shots/cockpit-mobile-light-en.png",
+    "shots/cockpit-mobile-dark-ro.png",
+    "shots/cockpit-mobile-dark-en.png",
+    "shots/cockpit-small-phone-light-ro.png",
+    "shots/cockpit-small-phone-light-en.png",
+    "shots/cockpit-small-phone-dark-ro.png",
+    "shots/cockpit-small-phone-dark-en.png",
+    "shots/ro-garages-desktop-light-ro.png",
+    "shots/ro-garages-desktop-light-en.png",
+    "shots/ro-garages-desktop-dark-ro.png",
+    "shots/ro-garages-desktop-dark-en.png",
+    "shots/ro-garages-tablet-light-ro.png",
+    "shots/ro-garages-tablet-light-en.png",
+    "shots/ro-garages-tablet-dark-ro.png",
+    "shots/ro-garages-tablet-dark-en.png",
+    "shots/ro-garages-mobile-light-ro.png",
+    "shots/ro-garages-mobile-light-en.png",
+    "shots/ro-garages-mobile-dark-ro.png",
+    "shots/ro-garages-mobile-dark-en.png",
+    "shots/ro-garages-small-phone-light-ro.png",
+    "shots/ro-garages-small-phone-light-en.png",
+    "shots/ro-garages-small-phone-dark-ro.png",
+    "shots/ro-garages-small-phone-dark-en.png"
+  ],
+  "markdown": "**Agent review: failure** — PR #48 at `ea32a10`, lap 3\n\nBlocking: 1 (blocker 0, high 1) · medium 2 · low 1. Booted: postgres, redis, api, web.\n- No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.\n- No changed GET endpoint without path parameters.\n\n| # | Severity | Finding | Where | Evidence |\n| --- | --- | --- | --- | --- |\n| 1 | high | regression from 3f1c87a: while dragging, the sheet trails the finger by a 0.42 s transition, because the raised sheet rule now outranks .mf-overlay-dragging { transition: none } |  | Compiled rules in the page: `.mf-overlay-sheet[data-side][_nghost-ng-c2998214333] { transition: transform … }` (0,3,0) and `.mf-overlay-dragging[_nghost-ng-c2998214333] { transition: none }` (0,2,0). During the drag the host carries `mf-overlay-sheet spartan-sheet-content mf-overlay-dragging`, yet its computed transition is `transform 0.42s`. --mf-drag is 84px, but the panel has moved only 29–56 px right after the move and 47–79 px two frames later (8 of 8 runs, pr-48-lap3-probe/probe-lap3.json). The lap-3 flow \"the sheet does not follow the pointer while dragging\" flagged the same (rest y 507.7, during drag y 536.7, transform translateY 29 px; it passed in lap 2, before the specificity change). FR-004 says dragging \"MUST move the sheet with the pointer\", and FR-008 keeps the spring for the release only. Under reduced motion the global rule strips transitions, which hides the problem there. The colocated test `springs back on the motion tokens and follows the finger with no transition` (panel.spec.ts) matches each rule's text with a regex, not the cascade, so it stays green. Fix: give the dragging rule the same weight, e.g. `:host.mf-overlay-sheet.mf-overlay-dragging[data-side] { transition: none; }`, and add an e2e check in sheet.spec.ts that reads `getComputedStyle(panel).transitionDuration === '0s'` (or the panel's y equal to rest + the pull) mid-drag. Screenshot: pr-48-lap3-probe/drag-mid.png, pr-48-lap3/shots/flow-28-the-sheet-does-not-follow-the-pointer-while-draggi.png |\n| 2 | medium | api readiness: storage down |  |  |\n| 3 | medium | the sheet does not follow the pointer while dragging |  | rest y=507.65625, during drag y=536.6771850585938, transform matrix(1, 0, 0, 1, 0, 29.0209); screenshot <scratchpad>/pr-48-lap3/shots/flow-28-the-sheet-does-not-follow-the-pointer-while-draggi.png |\n| 4 | low | the deferred sign-in item is ticked as resolved, but sign-in.spec.ts adds only the bottom edge and the 92 % cap, not the 'tap outside, page not moved' it asked for |  | The behaviour itself works. The lap-3 flows opened the sign-in from the Cont/Account tab at 390×844 and 320×640, light and dark, RO and EN, mouse and touch. Each time it was a full-width sheet on the bottom edge, 509.25 px tall (≤ 92 %), with the grip, no axe violations; a tap outside closed it, the address stayed /…/garages and the focus went back to the tab (pr-48-lap3/shots/signin-observations.json). Opened over a page scrolled to 300 px, it pinned at 300 and came back to 300 after the tap outside (pr-48-lap3-probe/probe-lap3b.json). Either add the tap-outside and scroll assertion to sign-in.spec.ts or reword the resolution, so the ticked item says what is tested. |\n\n### Reproduction\n1. open /cockpit at 390×844 (no reduced motion) → click \"Deschide sarcina ca dialog\" → press the grip and move the pointer down 84 px (25 % of the sheet), then read the panel's position and getComputedStyle(panel).transitionDuration\n2. No object store on this machine (no Docker); every other check is ok. Environment limit, not the change.\n3. open /cockpit at 390×844 → click \"Deschide sarcina ca dialog\" → press the grip and move down by 25 %\n4. read deferred.md line 3: \"add a 390 × 844 and 320 × 640 sign-in sheet check (height cap, tap outside, page not moved)\", now `[x]` → read the sign-in.spec.ts change: `toHaveAttribute('data-side', 'bottom')` and `box.height <= height * 0.92 + 0.5`; nothing taps outside or reads the scroll\n\nScreenshots: 48, one per route × viewport × scheme × language.\n"
+}

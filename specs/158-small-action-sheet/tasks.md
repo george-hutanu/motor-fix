@@ -32,6 +32,8 @@ Paths are `(new)` unless they exist today: `libs/overlays/src/{overlays,task,pan
 
 - [X] T016 [US1] After ST-82 merged: the sign-in dialog is a sheet on a phone — `apps/web-e2e/src/sign-in.spec.ts` asserts it at 320 and 390 px; `accounts.ts`, `sign-in.spec.ts` and `tab-bar.spec.ts` wait for the panel, since the dialog container has no box around a fixed sheet (FR-001, FR-002)
 
+- [X] T017 [US2] PR tester lap 3: the sheet's `[data-side]` rule had outranked the dragging rule, so a dragged sheet trailed the finger by the spring; a mid-drag e2e (no transition, the sheet at rest + pull) and the rule check came first, then the dragging rule matched the sheet rule's weight; the sign-in sheet check also taps outside and finds the page where it was (FR-004, FR-001)
+
 ## FR → test
 
 | FR | Tests |

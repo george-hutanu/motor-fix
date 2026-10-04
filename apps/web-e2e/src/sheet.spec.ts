@@ -245,6 +245,25 @@ test.describe('closing a sheet', () => {
     });
   }
 
+  test('while dragged, the sheet stays under the finger with no transition', async ({
+    page,
+  }) => {
+    await openCockpit(page, 390, 844);
+    await open(page, SHAPES[0]);
+    const rest = await box(page);
+    const grip = await sheet(page).locator('.mf-overlay-grip').boundingBox();
+    if (!grip) throw new Error('no grip');
+    const x = grip.x + grip.width / 2;
+    const y = grip.y + grip.height / 2;
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y + 84, { steps: 4 });
+    await expect(sheet(page)).toHaveCSS('transition-duration', '0s');
+    expect(Math.round((await box(page)).y)).toBe(Math.round(rest.y + 84));
+    await page.mouse.up();
+  });
+
   test('a drag of a quarter springs back; past a third it closes', async ({
     page,
   }) => {

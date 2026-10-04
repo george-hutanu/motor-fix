@@ -78,7 +78,7 @@ let questions = 0;
       transform: translateY(var(--mf-drag, 0px));
       transition: transform var(--mf-motion-pop) var(--mf-motion-ease);
     }
-    :host.mf-overlay-dragging {
+    :host.mf-overlay-sheet.mf-overlay-dragging[data-side] {
       transition: none;
     }
     .mf-overlay-grip {

@@ -299,6 +299,15 @@ test.describe('the dialog on every screen size', () => {
         ),
       ).toBe(true);
       expect(await axeViolations(page)).toEqual([]);
+      if (width < 768) {
+        // A tap above the sheet closes it; the page stays where it was.
+        const address = page.url();
+        const before = await page.evaluate(() => window.scrollY);
+        await page.mouse.click(width / 2, 10);
+        await expect(dialog(page, TITLE[language])).toHaveCount(0);
+        expect(page.url()).toBe(address);
+        expect(await page.evaluate(() => window.scrollY)).toBe(before);
+      }
     });
   }
 
