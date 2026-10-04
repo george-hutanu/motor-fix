@@ -73,16 +73,16 @@
     }
   },
   {
-    "id": "pr-lifecycle-refuses-a-ready-pr-without-the-in-review-label",
+    "id": "pr-lifecycle-refuses-a-ready-pr-without-the-qa-label",
     "hook": "stop:pr-lifecycle",
-    "why": "the owner watches GitHub for PRs in review; a ready PR without the `in review` label is invisible there",
+    "why": "the owner watches GitHub for PRs in QA; a ready PR is in QA from the moment it is marked ready, and one without the `QA` label is invisible there",
     "payload": {},
     "env": {
       "SPECKIT_PR_STATE": "{\"branch\": \"chore-notion-tool-names\", \"ahead\": 2, \"unpushed\": 0, \"blocked\": false, \"pr\": {\"number\": 27, \"state\": \"OPEN\", \"isDraft\": false, \"labels\": [], \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": []}}"
     },
     "expect": {
       "exit": 2,
-      "stderr": "--add-label \"in review\""
+      "stderr": "--add-label \"QA\""
     }
   },
   {
@@ -114,20 +114,20 @@
   {
     "id": "pr-lifecycle-refuses-a-ready-pr-with-two-stage-labels",
     "hook": "stop:pr-lifecycle",
-    "why": "an open PR carries exactly one stage label; PR #33 caught up by adding QA and kept in review, so GitHub showed two stages",
+    "why": "an open PR carries exactly one stage label; PR #33 caught up by adding QA and kept its old stage, so GitHub showed two stages",
     "payload": {},
     "env": {
-      "SPECKIT_PR_STATE": "{\"branch\": \"467-skill-model-pins\", \"ahead\": 3, \"unpushed\": 0, \"blocked\": false, \"pr\": {\"number\": 33, \"title\": \"chore(harness): ST-467 pin a model to each spec-kit phase\", \"state\": \"OPEN\", \"isDraft\": false, \"labels\": [{\"name\": \"in review\"}, {\"name\": \"QA\"}, {\"name\": \"tooling\"}], \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": []}}"
+      "SPECKIT_PR_STATE": "{\"branch\": \"467-skill-model-pins\", \"ahead\": 3, \"unpushed\": 0, \"blocked\": false, \"pr\": {\"number\": 33, \"title\": \"chore(harness): ST-467 pin a model to each spec-kit phase\", \"state\": \"OPEN\", \"isDraft\": false, \"labels\": [{\"name\": \"in development\"}, {\"name\": \"QA\"}, {\"name\": \"tooling\"}], \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": []}}"
     },
     "expect": {
       "exit": 2,
-      "stderr": "gh pr edit 33 --remove-label \"in review\"\\)"
+      "stderr": "gh pr edit 33 --remove-label \"in development\"\\)"
     }
   },
   {
     "id": "pr-lifecycle-refuses-a-draft-labelled-in-review",
     "hook": "stop:pr-lifecycle",
-    "why": "a draft is planning or in development; in review on a draft shows a stage the PR has left or not reached",
+    "why": "in review is retired (folded into QA, 2026-10-04); a draft carrying it is swapped to in development",
     "payload": {},
     "env": {
       "SPECKIT_PR_STATE": "{\"branch\": \"chore-x\", \"ahead\": 1, \"unpushed\": 0, \"blocked\": false, \"pr\": {\"number\": 41, \"title\": \"feat(web): ST-9 x\", \"state\": \"OPEN\", \"isDraft\": true, \"labels\": [{\"name\": \"in review\"}, {\"name\": \"feature\"}], \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": []}}"
@@ -135,6 +135,19 @@
     "expect": {
       "exit": 2,
       "stderr": "--remove-label \"in review\" --add-label \"in development\""
+    }
+  },
+  {
+    "id": "pr-lifecycle-refuses-a-ready-pr-labelled-in-review",
+    "hook": "stop:pr-lifecycle",
+    "why": "in review is retired (folded into QA, 2026-10-04); a ready PR is QA, so a leftover in review label is swapped for QA",
+    "payload": {},
+    "env": {
+      "SPECKIT_PR_STATE": "{\"branch\": \"chore-x\", \"ahead\": 1, \"unpushed\": 0, \"blocked\": false, \"pr\": {\"number\": 42, \"title\": \"feat(web): ST-9 x\", \"state\": \"OPEN\", \"isDraft\": false, \"labels\": [{\"name\": \"in review\"}, {\"name\": \"feature\"}], \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": []}}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "gh pr edit 42 --remove-label \"in review\" --add-label \"QA\"\\)"
     }
   }
 ]

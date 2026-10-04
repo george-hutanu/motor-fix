@@ -30,8 +30,10 @@ without a status, so the test runs again.
 ## Procedure
 
 1. **Notion → QA** (skip on `--dry-run`): `speckit-notion-sync qa`, which also
-   sets the PR's one stage label to `QA`. The story
-   and its timeline row stay QA for the whole loop.
+   sets the PR's one stage label to `QA`. Marking the PR ready already moved
+   both to QA (there is no In review stage), so this normally reports
+   `unchanged` and only catches a PR that skipped that step. The story and its
+   timeline row stay QA for the whole loop.
 2. **Lap**: `node .claude/scripts/run-state.mjs show --json` — the lap is
    `repair_iterations + 1`.
 3. **Test**: invoke the `pr-tester` subagent (Agent tool,

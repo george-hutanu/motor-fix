@@ -156,7 +156,7 @@
         "strict"
       ],
       "description": "Constitution VII: refuse to end a session on a task branch with unpushed commits, with no PR, with a green ready PR the PR tester has not passed (no `agent-review` on its head), or with a ready PR whose checks and agent review passed but that is not merged",
-      "fingerprint": "1a4d7ef2119d"
+      "fingerprint": "49bbd9348afb"
     },
     {
       "id": "stop:telemetry",

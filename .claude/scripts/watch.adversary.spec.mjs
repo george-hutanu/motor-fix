@@ -377,7 +377,7 @@ describe('stale and the fix, edges', () => {
   });
 
   it('resumes a ready PR whose checks are still pending, never merging or rerunning QA on it', () => {
-    assert.equal(fixOf(row({ ...quiet, phase: 'review', pr: ready([check(null, 'IN_PROGRESS')]) }), opts).fix, 'resume');
+    assert.equal(fixOf(row({ ...quiet, phase: 'qa', pr: ready([check(null, 'IN_PROGRESS')]) }), opts).fix, 'resume');
   });
 
   it('resumes, not reruns QA, for an agent-review failure on a ready PR with passed checks', () => {
