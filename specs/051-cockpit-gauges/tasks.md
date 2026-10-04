@@ -32,11 +32,11 @@ Paths are `(new)` unless they exist today: `libs/ui-cockpit/src/index.ts`, `libs
 
 - [X] T007 [US4] Test: `libs/ui-cockpit/src/lib/gauges-sample.spec.ts` — the section shows four lamps (labels from `cockpit.gauges.*`), two large and two small dials (4.8 and none), three odometers (single, range, none), and the swap button changes the range text from "1.250–1.600 lei" to "1.400–1.800 lei"; `libs/ui-cockpit/src/index.ts` exports `Lamp`, `RatingDial`, `Odometer`; the sample page holds the section (FR-014, FR-015)
 - [X] T008 [US4] `libs/ui-cockpit/src/lib/gauges-sample.ts`, one element in `sample-page.ts`, `cockpit.gauges.*` in `libs/i18n/src/cockpit/{ro,en}.json`, exports in `index.ts` (FR-014, FR-015)
-- [ ] T009 [US4] Test: `apps/web-e2e/src/gauges.spec.ts` — `/cockpit` in dark and light at 375 and 1280 px: lamp dots painted by the state token, the dial's accessible name, the odometer swap updates its live text once, the small dial ≥ 44 px with a ≥ 12 px number, and at 320 px no part is wider than its container and the page has no horizontal scroll (FR-005, FR-008, FR-011, FR-013, FR-014, SC-003)
+- [X] T009 [US4] Test: `apps/web-e2e/src/gauges.spec.ts` — `/cockpit` in dark and light at 375 and 1280 px: lamp dots painted by the state token, the dial's accessible name, the odometer swap updates its live text once, the small dial ≥ 44 px with a ≥ 12 px number, and at 320 px no part is wider than its container and the page has no horizontal scroll (FR-005, FR-008, FR-011, FR-013, FR-014, SC-003)
 
 ## Phase 5: Polish
 
-- [ ] T010 `npx nx run ui-cockpit:typecheck`, `npx nx run i18n:typecheck`, `npx biome check libs/ui-cockpit libs/i18n apps/web-e2e`, `npx jest -c libs/ui-cockpit/jest.config.cts --maxWorkers=2` green; e2e on port 4251
+- [X] T010 `npx nx run ui-cockpit:typecheck`, `npx nx run i18n:typecheck`, `npx biome check libs/ui-cockpit libs/i18n apps/web-e2e`, `npx jest -c libs/ui-cockpit/jest.config.cts --maxWorkers=2` green; e2e on port 4251
 
 ## FR → test
 
