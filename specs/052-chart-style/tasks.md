@@ -27,9 +27,9 @@ Paths are `(new)` unless they exist today: `libs/ui-cockpit/src/index.ts`, `libs
 
 **Independent test**: the `/cockpit` page shows the bar and line charts and the three states in both languages; at 320 px nothing scrolls sideways and no chart text is under 12 px; tapping a bar on a phone shows the tooltip.
 
-- [ ] T006 [US7] Test: `libs/ui-cockpit/src/lib/charts-sample.spec.ts` — the section renders a lei bar chart and a count line chart with 12 points labelled "Ianuarie 2027"… in Romanian and "January 2027"… in English, an empty chart, a loading chart, and an error chart whose retry shows its data (FR-019, FR-017)
-- [ ] T007 [US7] `libs/ui-cockpit/src/lib/charts-sample.ts` + `libs/i18n/src/cockpit/{ro,en}.json` `charts.*` + one element in `libs/ui-cockpit/src/lib/sample-page.ts` (FR-019)
-- [ ] T008 [US7] E2E: `apps/web-e2e/src/charts.spec.ts` — in dark and light at 320 px and 1280 px: both charts visible, no horizontal scroll, every chart text and canvas tick font ≥ 12 px; the dark chart's screenshot after light and back equals the first and the light one differs; at 375 px with touch, tapping a bar shows the tooltip and tapping the page heading hides it; with reduced motion the chart is drawn complete at once and without it the bars grow; the server-rendered HTML holds the chart element and the named canvas (FR-005, FR-006, FR-008, FR-015, FR-018, FR-019, SC-003)
+- [X] T006 [US7] Test: `libs/ui-cockpit/src/lib/charts-sample.spec.ts` — the section renders a lei bar chart and a count line chart with 12 points labelled "Ianuarie 2027"… in Romanian and "January 2027"… in English, an empty chart, a loading chart, and an error chart whose retry shows its data (FR-019, FR-017)
+- [X] T007 [US7] `libs/ui-cockpit/src/lib/charts-sample.ts` + `libs/i18n/src/cockpit/{ro,en}.json` `charts.*` + one element in `libs/ui-cockpit/src/lib/sample-page.ts` (FR-019)
+- [X] T008 [US7] E2E: `apps/web-e2e/src/charts.spec.ts` — in dark and light at 320 px and 1280 px: both charts visible, no horizontal scroll, every chart text and canvas tick font ≥ 12 px; the dark chart's screenshot after light and back equals the first and the light one differs; at 375 px with touch, tapping a bar shows the tooltip and tapping the page heading hides it; with reduced motion the chart is drawn complete at once and without it the bars grow; the server-rendered HTML holds the chart element and the named canvas (FR-005, FR-006, FR-008, FR-015, FR-018, FR-019, SC-003)
 
 ## Phase 5: Polish
 

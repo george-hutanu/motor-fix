@@ -1,4 +1,11 @@
 {
+  "charts": {
+    "error": "Nu s-a putut încărca",
+    "garages": "Garaje noi pe 12 luni",
+    "loading": "Se încarcă",
+    "none": "Fără istoric",
+    "spend": "Cheltuieli pe 12 luni"
+  },
   "close": "Închide",
   "dialogBody": "Dialogurile folosesc suprafața ridicată și raza de panou.",
   "dialogTitle": "Programare confirmată",

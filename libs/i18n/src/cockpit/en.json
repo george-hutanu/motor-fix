@@ -1,4 +1,11 @@
 {
+  "charts": {
+    "error": "Could not load",
+    "garages": "New garages over 12 months",
+    "loading": "Loading",
+    "none": "No history",
+    "spend": "Spend over 12 months"
+  },
   "close": "Close",
   "dialogBody": "Dialogs use the raised surface and the panel radius.",
   "dialogTitle": "Appointment confirmed",
