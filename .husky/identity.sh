@@ -1,9 +1,9 @@
 #!/usr/bin/env sh
 # motor-fix is a personal repo: every commit and push is george-hutanu
-# <hutanugeorge40@gmail.com> on GitHub account george-hutanu — never the QLOG
+# <hutanugeorge40@gmail.com> on GitHub account george-hutanu — never the work
 # identity that ~/.gitconfig and gh's active account default to on this machine.
 # Everything here is repo-local; ~/.gitconfig and gh's active account stay as
-# they are, so ~/code keeps the QLOG setup.
+# they are, so ~/code keeps the work setup.
 #
 #   sh .husky/identity.sh apply   write the repo-local git config (npm prepare runs this)
 #   sh .husky/identity.sh check   exit 1 naming what drifted (.husky/pre-commit runs this)
@@ -20,7 +20,7 @@ case "${1:-}" in
     git config user.name "$name"
     git config user.email "$email"
     # The empty helper drops the global gh helper, which hands out the active
-    # (QLOG) account's token. This one asks gh for george-hutanu's token by
+    # (work) account's token. This one asks gh for george-hutanu's token by
     # name and gives git nothing when that account is not logged in.
     git config --unset-all "$key" 2>/dev/null || true
     git config --add "$key" ""
@@ -45,7 +45,7 @@ case "${1:-}" in
     case "$(git config --get-all "$key" 2>/dev/null)" in
       *"--user $account"*) ;;
       *) problems="$problems
-  - GitHub credentials are not pinned to $account (pushes would use gh's active, QLOG, account)" ;;
+  - GitHub credentials are not pinned to $account (pushes would use gh's active, work, account)" ;;
     esac
     if [ -n "$problems" ]; then
       echo "motor-fix identity check failed:$problems" >&2

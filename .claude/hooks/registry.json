@@ -30,7 +30,7 @@
         "strict"
       ],
       "description": "Pin gh to the george-hutanu account for the session (GH_TOKEN via CLAUDE_ENV_FILE, resolved per command, never written out) and report when git author, committer or credential pinning has drifted from george-hutanu <hutanugeorge40@gmail.com>",
-      "fingerprint": "fca454341dba"
+      "fingerprint": "3af31e3c29ed"
     },
     {
       "id": "pre:bash:guard",

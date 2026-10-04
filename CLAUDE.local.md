@@ -43,7 +43,7 @@ check; its Enforcement section is the authority. In short:
 
 | Gate | When | What it does |
 | --- | --- | --- |
-| `github-identity.sh` | at session start | exports `GH_TOKEN` for george-hutanu so `gh` never acts as the QLOG account; reports git identity drift or a missing gh login |
+| `github-identity.sh` | at session start | exports `GH_TOKEN` for george-hutanu so `gh` never acts as the work account; reports git identity drift or a missing gh login |
 | `red-first-gate.mjs` | before an Edit/Write | blocks `apps/*/src`, `libs/*/src` edits while the active feature has FRs + open tasks but the branch touches no `*.spec.*`/`*.test.*` file — run `/speckit-tests` first |
 | `post-edit-check.sh` | after an Edit/Write | `biome check` on the file, then its colocated `*.spec.ts` through Jest |
 | `stop-test-gate.sh` | before the agent finishes | `biome check` + `jest --onlyChanged` must be green |

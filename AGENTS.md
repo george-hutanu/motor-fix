@@ -3,22 +3,22 @@
 Guidance for AI agents (and humans) working in motor-fix. The spec-kit
 workflow and its gates are in [CLAUDE.local.md](./CLAUDE.local.md).
 
-## Identity — personal repo, not QLOG
+## Identity — personal repo, not work
 
 Every commit and push here is **george-hutanu <hutanugeorge40@gmail.com>** on
-GitHub account **george-hutanu**. Never the QLOG identity (`georgeh@qlog.co`,
-`george-hutanu-qlog`), which is this machine's global default and must stay
+GitHub account **george-hutanu**. Never the work identity (the work e-mail and
+work GitHub account), which is this machine's global default and must stay
 that way for `~/code`.
 
 - `sh .husky/identity.sh apply` writes the repo-local git config: author, and
   credentials pinned to george-hutanu's gh token. `npm install` runs it via
   `prepare`, so a fresh clone is covered.
 - `.husky/pre-commit` refuses any commit not authored as george-hutanu.
-- `gh` follows gh's active account, which stays QLOG. Agent sessions get
+- `gh` follows gh's active account, which stays the work one. Agent sessions get
   `GH_TOKEN` for george-hutanu from the SessionStart hook; in your own
   terminal, prefix: `GH_TOKEN=$(gh auth token -u george-hutanu) gh …`.
 - Never `gh auth switch` to george-hutanu, and never edit `~/.gitconfig` for
-  this repo — both would change every QLOG repo under `~/code` too.
+  this repo — both would change every work repo under `~/code` too.
 
 ## Notion is the tracker, and design comes first
 

@@ -269,7 +269,7 @@ tester, or with a passed PR left unmerged is not finished.
 - Code style matches the surrounding file: same comment density, naming, and
   idiom. Comments state constraints the code cannot show — never narration.
 - Every commit and push is authored as `george-hutanu <hutanugeorge40@gmail.com>`
-  on GitHub account `george-hutanu`, never the QLOG work identity.
+  on GitHub account `george-hutanu`, never the work identity.
 - AGENTS.md remains the runtime guidance file; this constitution governs, it
   does not duplicate AGENTS.md operational detail.
 
