@@ -100,6 +100,10 @@ epic or a plan, whether run through spec-kit or by hand.
   serve the PR head under `scripts/heavy.sh`, open each screen at the sizes
   above, use the flows, then stop the server. The headless PR tester still
   runs; this pass is the one a person can see.
+- **At most three PRs in QA at once.** Each run boots the whole stack on a
+  16 GB laptop. After a merge, a PR waiting in QA rebases and is tested again
+  only if it now conflicts with `main` or shares changed files with what
+  merged; its CI already runs on the merge result.
 - **No images in the repo.** Screenshots are evidence for a chat, a review
   or a PR comment, never a commit: QA copies only `report.md` and
   `report.json` into `pr-review/`, and `.gitignore` refuses images there. Real
