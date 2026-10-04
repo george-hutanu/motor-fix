@@ -17,6 +17,8 @@ import type { Language } from './languages';
 
 const LETTER = /\p{L}/u;
 const CEDILLA = /[şţŞŢ]/;
+// "service-ul", "s-a": a plain hyphen lets the line break inside the word.
+const BREAKING_HYPHEN = /\p{L}-\p{L}/u;
 const PERSON_FACING = new Set([
   'alt',
   'aria-label',
@@ -64,6 +66,9 @@ function valueProblems(area: string, texts: Texts, language: Language) {
     ...(text.trim() ? [] : [`${key}: empty in ${language}`]),
     ...(language === 'ro' && CEDILLA.test(text)
       ? [`${key}: ş or ţ with a cedilla; use ș or ț`]
+      : []),
+    ...(language === 'ro' && BREAKING_HYPHEN.test(text)
+      ? [`${key}: a hyphen between letters breaks the line; use U+2011`]
       : []),
   ]);
 }
