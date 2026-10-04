@@ -75,3 +75,4 @@ Start: branch `051-cockpit-gauges` from origin/main 8cb1882 (worktree agent-a68e
 - Own check of the lap-1 phone screenshot: the odometer's space before "lei" collapsed in its flex row ("1.401lei"). Test first (e2e: no zero-width separator → red on " "), then `white-space: pre` on the digit row → gauges + cockpit e2e 19 passed.
 - pr-tester lap 2 on a383c4b: success (0 blocking; 3 medium, environment or pre-existing). Owner rule (no PNGs in the repo): branch rewritten with `reset --soft` to 7276b4c and the fix recommitted without lap 1's screenshots; only report.md and report.json are kept per lap. The new head needs one more tester lap.
 - debt: the 4 deferred bullets filed as Notion To do tasks; URLs written onto the bullets.
+- Rebased onto origin/main 060b9ac (CI/docs only). Orchestrator visual pass: no overflow; LOW design note (no-rating needle rests at 0) — not designed in the mock → deferred as a decision and filed in Notion.
