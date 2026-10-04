@@ -18,6 +18,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBody,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiOkResponse,
@@ -126,6 +127,7 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @ApiBody({ required: false, type: RefreshDto })
   @ApiOkResponse({ type: SessionDto })
   async refresh(
     @Body() body: RefreshDto,

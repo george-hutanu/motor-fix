@@ -15,6 +15,8 @@ export class Session {
   private renewing: Promise<boolean> | null = null;
   // Bumped at sign-out, so an answer that arrives later restores nothing.
   private generation = 0;
+  // The role whose token is held while its account is still loading.
+  private switchingTo: MeDto['role'] | null = null;
 
   // The language last tapped, and the save sending it, one at a time.
   private wanted: Language | null = null;
@@ -63,7 +65,7 @@ export class Session {
     if (this.renewing) return this.renewing;
     const generation = this.generation;
     // The role this tab shows, so a switch in another tab leaves it alone.
-    const role = this.current()?.role;
+    const role = this.switchingTo ?? this.current()?.role;
     // A role switch that answers first wins: this answer is for the old role.
     const sent = this.accessToken;
     const replaced = () => this.accessToken !== sent;
@@ -125,6 +127,7 @@ export class Session {
     }
     const before = this.accessToken;
     this.accessToken = accessToken;
+    this.switchingTo = role;
     try {
       const answer = await this.me.meControllerMe();
       if (generation !== this.generation) return null;
@@ -134,6 +137,8 @@ export class Session {
       // The old token still holds the old role for its last minutes.
       if (generation === this.generation) this.accessToken = before;
       throw error;
+    } finally {
+      this.switchingTo = null;
     }
   }
 

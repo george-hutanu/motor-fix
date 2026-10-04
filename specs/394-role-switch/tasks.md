@@ -32,6 +32,11 @@ Independent test: through HTTP against PostgreSQL and Redis, a two-role account 
 - [X] T011 `apps/web/src/app/dashboard/session.ts`: a renewal sent before a role switch that answers after it leaves the switch's token in place (FR-006, FR-008; code-reviewer HIGH)
 - [X] T012 `libs/contracts/src/auth.dto.ts` reuses the role list of `me.dto.ts`; no task key in `audit-coverage.spec.ts`; `refresh()` takes its role without a default; the 400 test title says what it asserts (code-reviewer MEDIUM ×2, LOW; spec-reviewer MEDIUM, LOW); a renewal that fails after a switch keeps the tab signed in, now tested (code-reviewer re-review HIGH)
 
+## Phase 6: QA fixes (pr-tester lap 2)
+
+- [X] T013 `apps/web/src/app/dashboard/session.ts`: a renewal that starts while the switched account is still loading asks for the new role (FR-008; pr-tester low #3)
+- [X] T014 `libs/domain/src/auth/auth.controller.ts`: the refresh body is optional in the OpenAPI document; `apps/api/openapi.json` and `libs/data-access` regenerated (FR-004; pr-tester low #4)
+
 ## Dependencies
 
 T001 → T002 → T003 → T004 → T005 → T006, T007 → T008 → T009 → T010.

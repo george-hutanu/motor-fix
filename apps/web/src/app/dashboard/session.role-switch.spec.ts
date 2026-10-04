@@ -165,6 +165,31 @@ describe('Session, renewing the token', () => {
     expect(session.current()?.role).toBe('driver');
   });
 
+  it('asks for the new role when a renewal starts while the switched account loads', async () => {
+    const { auth, me, session } = setup(async () => ({
+      accessToken: 'as-driver',
+    }));
+    await session.load();
+    let loaded: (value: MeDto) => void = () => undefined;
+    me.meControllerMe.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          loaded = resolve;
+        }),
+    );
+    const switching = session.switchRole('driver');
+    await new Promise((resolve) => setTimeout(resolve));
+
+    await session.renew();
+    loaded(account('driver'));
+    await switching;
+
+    expect(auth.authControllerRefresh).toHaveBeenLastCalledWith({
+      body: { role: 'driver' },
+    });
+    expect(session.current()?.role).toBe('driver');
+  });
+
   it('asks for no role before an account is on screen', async () => {
     const { auth, session } = setup(async () => ({ accessToken: 'x' }));
 

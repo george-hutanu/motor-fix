@@ -84,7 +84,7 @@ export class AuthService extends BaseService {
    *
    * This method sends `application/json` and handles request body of type `application/json`.
    */
-  authControllerRefresh$Response(params: AuthControllerRefresh$Params, context?: HttpContext): Promise<StrictHttpResponse<SessionDto>> {
+  authControllerRefresh$Response(params?: AuthControllerRefresh$Params, context?: HttpContext): Promise<StrictHttpResponse<SessionDto>> {
     const obs = authControllerRefresh(this.http, this.rootUrl, params, context);
     return firstValueFrom(obs);
   }
@@ -95,7 +95,7 @@ export class AuthService extends BaseService {
    *
    * This method sends `application/json` and handles request body of type `application/json`.
    */
-  authControllerRefresh(params: AuthControllerRefresh$Params, context?: HttpContext): Promise<SessionDto> {
+  authControllerRefresh(params?: AuthControllerRefresh$Params, context?: HttpContext): Promise<SessionDto> {
     const resp = this.authControllerRefresh$Response(params, context);
     return resp.then((r: StrictHttpResponse<SessionDto>): SessionDto => r.body);
   }
