@@ -413,6 +413,80 @@
         ]
       }
     },
+    "/api/v1/auth/confirm-email": {
+      "post": {
+        "operationId": "EmailConfirmationController_confirm",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmEmailAnswerDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/confirm-email/resend": {
+      "post": {
+        "operationId": "EmailConfirmationController_resend",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "A new link was sent"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/me/email-confirmation": {
+      "post": {
+        "operationId": "MeEmailConfirmationController_askAgain",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": "A new link was sent"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      }
+    },
     "/api/v1/live": {
       "get": {
         "operationId": "LiveController_live",
@@ -634,6 +708,10 @@
             "type": "string",
             "nullable": true
           },
+          "emailConfirmed": {
+            "type": "boolean",
+            "description": "Whether the e-mail is confirmed; false when there is none"
+          },
           "language": {
             "type": "string",
             "enum": [
@@ -690,6 +768,7 @@
           "id",
           "name",
           "email",
+          "emailConfirmed",
           "language",
           "roles",
           "role",
@@ -1090,6 +1169,33 @@
             }
           }
         }
+      },
+      "ConfirmEmailDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The token of a confirmation link: 43 base64url characters",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "ConfirmEmailAnswerDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "confirmed"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
       },
       "LiveTestDto": {
         "type": "object",

@@ -144,6 +144,16 @@ describe('seed', () => {
     }
   });
 
+  it('gives every account a confirmed e-mail address', async () => {
+    seed('test');
+
+    const accounts = await seeded();
+    expect(accounts.length).toBeGreaterThan(0);
+    for (const account of accounts) {
+      expect(account.emailVerifiedAt).toBeInstanceOf(Date);
+    }
+  });
+
   it('uses SEED_PASSWORD when it is given', async () => {
     expect(
       seed('staging', { SEED_PASSWORD: 'o-parola-din-secrete' }).status,

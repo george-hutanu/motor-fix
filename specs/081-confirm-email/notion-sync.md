@@ -4,3 +4,8 @@
 - 2026-10-05 · start · Foundations timeline row ST-81 · Not started → Planning
 - 2026-10-05 · start · EP-1 Foundations Status · unchanged (In progress)
 - 2026-10-05 · ready · Foundations · −ST-81
+- 2026-10-05 · pr · ST-81 · PR #71 https://github.com/george-hutanu/motor-fix/pull/71
+- 2026-10-05 · labels · PR #71 · planning
+- 2026-10-05 · implement · ST-81 story Status · Planning → Implementing
+- 2026-10-05 · implement · Foundations timeline row ST-81 · Planning → Implementing
+- 2026-10-05 · labels · PR #71 · in development
