@@ -84,5 +84,18 @@
       "exit": 2,
       "stderr": "--add-label \"in review\""
     }
+  },
+  {
+    "id": "pr-lifecycle-refuses-a-draft-without-the-in-development-label",
+    "hook": "stop:pr-lifecycle",
+    "why": "every open PR shows its stage on GitHub; a draft is `in development`",
+    "payload": {},
+    "env": {
+      "SPECKIT_PR_STATE": "{\"branch\": \"chore-x\", \"ahead\": 1, \"unpushed\": 0, \"blocked\": false, \"pr\": {\"number\": 28, \"state\": \"OPEN\", \"isDraft\": true, \"labels\": [], \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": []}}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "--add-label \"in development\""
+    }
   }
 ]

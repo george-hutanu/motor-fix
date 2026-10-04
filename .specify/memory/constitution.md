@@ -2,11 +2,12 @@
 Sync Impact Report (v1.6.0)
 - Version change: 1.5.0 → 1.6.0 (MINOR: VII steps 1 and 3 expanded — every
   task carries the link to its own PR in Notion from the moment the draft
-  opens, and a ready PR carries the GitHub label `in review`, then `QA` while
-  the PR tester runs (step 5); the stop:pr-lifecycle gate refuses an unlinked
-  story PR and an unlabelled ready PR; nothing removed)
+  opens, and every open PR carries its stage as a GitHub label —
+  `in development`, `in review`, `QA`, plus `blocked`; the stop:pr-lifecycle gate refuses an unlinked
+  story PR and an open PR without its stage label; nothing removed)
 - Source: owner decision 2026-10-04: "update each notion ticket with its own PR
-  link … make it a hard rule" and "when a PR is in review, add a label", "and QA label as well";
+  link … make it a hard rule" and "when a PR is in review, add a label", "and QA label as well", "in development as well", "and other
+  labels that you think are useful" (→ `blocked`);
   MotorFix stories gains a `PR` URL property, every existing story PR was
   backfilled, and the open ready PRs were labelled.
 - Templates:
@@ -208,15 +209,16 @@ notifications in step, even when Redis is down.
 Every task, current or future, runs this lifecycle on its own, and no step
 waits for the owner:
 
-1. Set the task In progress in Notion, then open a draft PR for its branch
+1. Set the task In progress in Notion, then open a draft PR for its branch,
+   labelled `in development`,
    and write that PR's link onto the task's own `PR` property in Notion. Every
    story and task links its own PR; one opened later for the same task is
    added as a comment, never in place of the first.
 2. Push every commit to that branch as the work goes: never forced, never to
    `main`.
 3. When the work is done (tests, typecheck and lint green, review with no
-   CRITICAL/HIGH left), mark the PR ready, label it `in review`, and set the
-   task In review.
+   CRITICAL/HIGH left), mark the PR ready, swap its label to `in review`,
+   and set the task In review.
 4. Merge `origin/main` into the branch if it is behind and wait for CI. A
    failing check is fixed on the branch and waited for again.
 5. Set the task to QA, swap the PR's `in review` label for `QA`, and run
@@ -231,8 +233,9 @@ waits for the owner:
    Then set the task Done.
 
 A task that cannot go on without something outside it is set Blocked, with the
-reason on the story and the PR, and returns to its previous status when it
-resumes.
+reason on the story and the PR and the PR's `blocked` label, and returns to
+its previous status when it resumes. An open PR always carries exactly one
+stage label (`in development`, `in review`, `QA`), and a merged one none.
 
 Rationale: the owner should not have to say when to open a PR or when to
 merge one, and green unit tests are not proof the change works when used. A

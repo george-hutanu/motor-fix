@@ -95,6 +95,7 @@ auto_commit:
      # fill in what is known now: Why, Notion story, Spec folder; keep every heading
      GH_TOKEN=$(gh auth token -u george-hutanu) gh pr create --draft --base main \
        --head <branch> --title "<type>(<scope>): ST-<n> <story title>" \
+       --label "in development" \
        --body-file "${TMPDIR:-/tmp}/<branch>-pr-body.md"
      ```
 

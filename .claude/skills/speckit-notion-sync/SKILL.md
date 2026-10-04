@@ -77,8 +77,8 @@ it back, so run both from the feature's checkout.
 | Event | Story `Status` | Timeline `Build status` | Epic `Status` |
 | --- | --- | --- | --- |
 | `start`: the task is taken, before its draft PR opens | → In progress | → In progress | To do → In progress |
-| `review`: the work is done and its PR is marked ready for review (not when the draft opens); spec and code review. Also label the PR `in review` on GitHub (`gh pr edit <n> --add-label "in review"`) | → In review | → In review | unchanged |
-| `qa`: the PR tester (`/speckit-pr-test`) starts on the ready PR; stays through every fix-and-retest lap. Swap the PR's label: `gh pr edit <n> --remove-label "in review" --add-label QA` | → QA | → QA | unchanged |
+| `review`: the work is done and its PR is marked ready for review (not when the draft opens); spec and code review | → In review | → In review | unchanged |
+| `qa`: the PR tester (`/speckit-pr-test`) starts on the ready PR; stays through every fix-and-retest lap | → QA | → QA | unchanged |
 | `blocked <reason>`: the run cannot go on without something outside it — a Hard Stop, a run-state `blocking_condition`, the repair cap in the QA loop, red CI the agent cannot fix, an unresolved Blocked by | → Blocked | → Blocked | unchanged |
 | `unblock`: the run resumes | → the status before Blocked | → the same | unchanged |
 | `finish`: the PR is merged to `main` | → Done | → Merged | → Done when every story of the epic is Done |
@@ -125,7 +125,25 @@ Log it in `specs/<feature>/notion-sync.md` as
 `- <date> · pr · ST-<n> · PR #<n> <url>` — the gate reads that line. A branch
 with no Notion story (`chore-*`) has nothing to link.
 
-## 2b. `debt`: file deferred technical debt as tasks
+## 2b. PR labels: the stage on GitHub too
+
+Every event that moves the story also moves its PR's label, so the PR list on
+GitHub shows the same stage as the board. Exactly one stage label at a time;
+`stop:pr-lifecycle` refuses an open PR without its stage label.
+
+| Event | Label change (`gh pr edit <n> …`) |
+| --- | --- |
+| `pr` (the draft opens) | `--add-label "in development"` (or `gh pr create --label`) |
+| `review` (marked ready) | `--remove-label "in development" --add-label "in review"` |
+| `qa` (PR tester starts) | `--remove-label "in review" --add-label QA` |
+| `blocked <reason>` | `--add-label blocked` (the stage label stays) |
+| `unblock` | `--remove-label blocked` |
+| `finish` (merged) | `--remove-label QA --remove-label blocked` — a merged PR carries no stage |
+
+A PR with no story (`chore-*`) gets the same labels; only the Notion writes
+are skipped. Removing a label the PR does not have is harmless.
+
+## 2c. `debt`: file deferred technical debt as tasks
 
 Every bullet in `specs/<feature>/deferred.md` — a finding spec-reviewer,
 code-reviewer or the PR tester routed to defer — becomes one task. The space

@@ -24,7 +24,7 @@ describe('PR lifecycle gate — what it leaves alone', () => {
   });
 
   it('lets a draft end: the work is not done yet', () => {
-    assert.equal(decide(task({ pr: ready({ isDraft: true }) })), null);
+    assert.equal(decide(task({ pr: ready({ isDraft: true, labels: [{ name: 'in development' }] }) })), null);
   });
 
   it('lets a ready PR end while its checks are pending, failing or missing', () => {
@@ -86,7 +86,7 @@ describe('PR lifecycle gate — the PR link on the story', () => {
   });
 
   it('leaves a branch with no story alone, and a merged or closed PR', () => {
-    assert.equal(decide(task({ branch: 'chore-harness-evals', pr: ready({ isDraft: true }), prLinked: false })), null);
+    assert.equal(decide(task({ branch: 'chore-harness-evals', pr: ready({ isDraft: true, labels: [{ name: 'in development' }] }), prLinked: false })), null);
     assert.equal(decide(task({ pr: ready({ state: 'MERGED' }), prLinked: false })), null);
     assert.equal(decide(task({ pr: ready({ state: 'CLOSED' }), prLinked: false })), null);
   });
@@ -96,7 +96,7 @@ describe('PR lifecycle gate — the in review label', () => {
   it('refuses a ready PR without the in review label, before anything about merging', () => {
     const why = decide(task({ pr: ready({ labels: [] }) }));
     assert.match(why, /PR #6/);
-    assert.match(why, /gh pr edit 6 --add-label "in review"/);
+    assert.match(why, /gh pr edit 6 --remove-label "in development" --add-label "in review"/);
   });
 
   it('asks the same of a ready PR with no story and of one whose checks are still running', () => {
@@ -108,8 +108,17 @@ describe('PR lifecycle gate — the in review label', () => {
     assert.doesNotMatch(decide(task({ pr: ready({ labels: [{ name: 'QA' }] }) })), /add-label/);
   });
 
-  it('leaves a draft, a merged and a closed PR without the label alone', () => {
-    assert.equal(decide(task({ pr: ready({ isDraft: true, labels: [] }) })), null);
+  it('refuses a draft without the in development label', () => {
+    const why = decide(task({ branch: 'chore-x', pr: ready({ isDraft: true, labels: [] }) }));
+    assert.match(why, /gh pr edit 6 --add-label "in development"/);
+    assert.equal(decide(task({ branch: 'chore-x', pr: ready({ isDraft: true, labels: [{ name: 'in development' }] }) })), null);
+  });
+
+  it('does not take in development for a ready PR', () => {
+    assert.match(decide(task({ pr: ready({ labels: [{ name: 'in development' }] }) })), /add-label "in review"/);
+  });
+
+  it('leaves a merged and a closed PR without the label alone', () => {
     assert.equal(decide(task({ pr: ready({ labels: [], state: 'MERGED' }) })), null);
     assert.equal(decide(task({ pr: ready({ labels: [], state: 'CLOSED' }) })), null);
   });
