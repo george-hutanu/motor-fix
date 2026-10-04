@@ -70,6 +70,11 @@ const switchTo = (body: unknown, cookie?: string) => {
   return cookie ? call.set('Cookie', `mf_refresh=${cookie}`) : call;
 };
 
+// The cookie the answer clears.
+const CLEARED = /^mf_refresh=;.*Expires=Thu, 01 Jan 1970/;
+const cleared = (res: { headers: Record<string, unknown> }) =>
+  String(res.headers['set-cookie'] ?? '');
+
 const rotated = (res: { headers: Record<string, unknown> }) =>
   String(res.headers['set-cookie'] ?? '').match(/mf_refresh=([^;]+)/)?.[1];
 
@@ -180,6 +185,7 @@ describe('switching my role', () => {
     const res = await switchTo({ role: 'driver' }, cookie);
 
     expect(res.status).toBe(401);
+    expect(cleared(res)).toMatch(CLEARED);
     expect(res.body.accessToken).toBeUndefined();
     expect(await lastRole(id)).toBe('garage');
   });
@@ -195,6 +201,7 @@ describe('switching my role', () => {
     const res = await switchTo({ role: 'driver' }, here);
 
     expect(res.status).toBe(401);
+    expect(cleared(res)).toMatch(CLEARED);
     expect(await lastRole(id)).toBe('garage');
   });
 
@@ -221,7 +228,37 @@ describe('switching my role', () => {
     const res = await switchTo({ role: 'driver' }, await session(id, 'garage'));
 
     expect(res.status).toBe(403);
+    expect(cleared(res)).toMatch(CLEARED);
     expect(await lastRole(id)).toBe('garage');
+  });
+
+  it('switches with a cookie another tab renewed a moment ago, keeping the session', async () => {
+    const id = await account('mihai', ['garage', 'driver']);
+    const cookie = await session(id);
+    const renewal = await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .set('Cookie', `mf_refresh=${cookie}`);
+    const next = rotated(renewal);
+
+    const res = await switchTo({ role: 'driver' }, cookie);
+
+    expect(res.status).toBe(200);
+    expect(roleOf(res.body.accessToken)).toBe('driver');
+    expect(rotated(res)).toBeUndefined();
+    expect(await lastRole(id)).toBe('driver');
+    const later = await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .set('Cookie', `mf_refresh=${next}`);
+    expect(later.status).toBe(200);
+  });
+
+  it('keeps the cookie when the role is not held', async () => {
+    const id = await account('andrei', ['driver']);
+
+    const res = await switchTo({ role: 'garage' }, await session(id, 'driver'));
+
+    expect(res.status).toBe(404);
+    expect(cleared(res)).not.toMatch(CLEARED);
   });
 
   it('writes no audit entry', async () => {

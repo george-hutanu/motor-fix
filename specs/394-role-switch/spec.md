@@ -60,7 +60,7 @@ After switching to the driver role, Mihai signs out and signs in again, on this 
 
 - A tap on a chip while a switch is on its way: ignored until the answer arrives.
 - The account lost the role it switched to between the menu and the tap: the API answers 404; the tab shows the failure toast and keeps its role.
-- A suspended or deleted account: the actor guard refuses the switch as it refuses every call.
+- A suspended or deleted account: the switch refuses it as a refresh does (403 suspended, 401 deleted) and clears the cookie. A role the account does not hold answers 404 first, whatever the account's status.
 - The tab renews with a role the account no longer holds: the token is for `last_role` (or the fallback order), as without a role.
 - Switching to the role already in use: the API answers with a token for it and changes nothing else; the web app never calls it (the pressed chip does nothing).
 - The garage chip of a receptionist or mechanic opens `/app/garage`; the live connection is reopened so it joins the new role's channels.
@@ -105,6 +105,6 @@ After switching to the driver role, Mihai signs out and signs in again, on this 
 - (autonomous default) The chips sit in the frame's account block on every dashboard and on the phone's account band (Clarifications Q3); the mock's chips are demo-only and the phone placement is *(proposed)* in the Build brief.
 - (autonomous default) The English chip labels are "Driver", "Garage", "Front desk", "Mechanic", "Admin"; the Build brief gives the Romanian only, "Recepție" is *(proposed)*.
 - (autonomous default) The failure toast's texts (FR-007); the Build brief says only "an error toast" *(proposed)*.
-- (autonomous default) A switch answers 200 with the same `SessionDto` shape sign-in uses; the refresh cookie is untouched.
+- (autonomous default) A switch answers 200 with the same `SessionDto` shape sign-in uses, and rotates the refresh cookie as a refresh does.
 - (autonomous default) The e2e test uses a new seeded two-role account (`comutare@example.test`, owner of a new seeded garage "Atelier Dinamo") so switching never changes the `last_role` that the sign-in test of `doua-roluri@example.test` relies on.
 - Out of scope, per the Build brief or a later story: "Adaugă o mașină" and adding `driver` with a first car (the add-car story, EP-3; `AccountsService.grantRole` already exists); getting `garage` at the end of the listing form (EP-2); the assistant's per-role tools (AI assistant epic).
