@@ -6,6 +6,7 @@ features:
   - 422-private-file-storage
   - 431-mutation-testing
   - 464-agent-watch
+  - 159-form-saving
 ---
 
 # Capability: Platform
@@ -245,6 +246,10 @@ _From 464-agent-watch._
 ### 464-FR-012 — `scripts/heavy.sh` MUST default to 4 slots, and AGENTS.md MUST state that up to 4 PR-tester (QA) runs may run at the same time and name the watcher and how to repeat it.
 
 _From 464-agent-watch._
+
+### 159-FR-011 — The API's problem filter MUST keep an exception's `errors` list of `{ field, code }` (both strings) on the problem it sends, and send none when the exception carries no valid list (one malformed entry drops the list); the problem-details shape MUST be one type in the contracts library.
+
+_From 159-form-saving._
 
 ## Retired
 

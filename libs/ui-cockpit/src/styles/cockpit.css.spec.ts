@@ -54,6 +54,7 @@ const colourNames = [
   '--mf-amber-tint',
   '--mf-green',
   '--mf-red',
+  '--mf-red-ink',
   '--mf-focus',
   '--mf-mask',
 ];
@@ -87,6 +88,7 @@ describe('cockpit.css tokens', () => {
       '--mf-panel': '#101215',
       '--mf-panel-raised': '#15171a',
       '--mf-red': '#ff5a4f',
+      '--mf-red-ink': '#ff5a4f',
       '--mf-text': '#f2f2f0',
       '--mf-text-secondary': '#b5b8be',
     });
@@ -103,6 +105,7 @@ describe('cockpit.css tokens', () => {
       '--mf-panel': '#ffffff',
       '--mf-panel-raised': '#ecece8',
       '--mf-red': '#d93a30',
+      '--mf-red-ink': '#b3261e',
       '--mf-text': '#15171a',
       '--mf-text-secondary': '#50545b',
     });
@@ -167,6 +170,7 @@ describe('cockpit.css contrast', () => {
         '--mf-text',
         '--mf-text-secondary',
         '--mf-amber-ink',
+        '--mf-red-ink',
       ]) {
         for (const surface of surfaces) {
           expect(
