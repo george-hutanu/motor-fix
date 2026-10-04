@@ -2,18 +2,18 @@
 Sync Impact Report (v1.6.0)
 - Version change: 1.5.0 → 1.6.0 (MINOR: VII steps 1 and 3 expanded — every
   task carries the link to its own PR in Notion from the moment the draft
-  opens, and a ready PR carries the GitHub label `in review`; the
-  stop:pr-lifecycle gate refuses an unlinked story PR and an unlabelled ready
-  PR; nothing removed)
+  opens, and a ready PR carries the GitHub label `in review`, then `QA` while
+  the PR tester runs (step 5); the stop:pr-lifecycle gate refuses an unlinked
+  story PR and an unlabelled ready PR; nothing removed)
 - Source: owner decision 2026-10-04: "update each notion ticket with its own PR
-  link … make it a hard rule" and "when a PR is in review, add a label";
+  link … make it a hard rule" and "when a PR is in review, add a label", "and QA label as well";
   MotorFix stories gains a `PR` URL property, every existing story PR was
   backfilled, and the open ready PRs were labelled.
 - Templates:
-  - ✅ AGENTS.md — lifecycle steps 2 and 4
+  - ✅ AGENTS.md — lifecycle steps 2, 4 and 6
   - ✅ .claude/hooks/pr-lifecycle-gate.mjs, evals/cases/pr-lifecycle.json
   - ✅ speckit-notion-sync (`pr` event, label on `review`), speckit-git-commit,
-    speckit-auto (hand-off step 1)
+    speckit-auto (hand-off steps 1 and 5), speckit-pr-test
 
 Previous report (v1.5.0)
 - Version change: 1.4.0 → 1.5.0 (MINOR: VII materially expanded — a QA step
@@ -219,7 +219,8 @@ waits for the owner:
    task In review.
 4. Merge `origin/main` into the branch if it is behind and wait for CI. A
    failing check is fixed on the branch and waited for again.
-5. Set the task to QA and run the PR tester (`/speckit-pr-test`) on the head
+5. Set the task to QA, swap the PR's `in review` label for `QA`, and run
+   the PR tester (`/speckit-pr-test`) on the head
    commit: it boots the change in its own worktree, tests it in a browser and
    against the API, runs the tests, reviews the diff against the spec and this
    constitution, and sets the `agent-review` commit status. Blocking findings

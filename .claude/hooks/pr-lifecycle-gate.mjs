@@ -5,7 +5,8 @@
 // its head commit), and then merged, not left for the user. On a story branch
 // (`NNN-slug`) the open PR must also be linked from its Notion story, which
 // `speckit-notion-sync pr` records in specs/<branch>/notion-sync.md. A PR
-// marked ready carries the `in review` label until it merges.
+// marked ready carries the `in review` label, swapped for `QA` while the PR
+// tester runs, until it merges.
 //
 // What it does NOT block: main or a detached HEAD, a branch with nothing ahead
 // of origin/main, a draft PR (the work is not done yet), a PR whose checks are
@@ -22,6 +23,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const IN_REVIEW = "in review";
+const STAGE_LABELS = new Set([IN_REVIEW, "QA"]);
 const GREEN = new Set(["SUCCESS", "NEUTRAL", "SKIPPED"]);
 
 /** Every check concluded green; an empty rollup is not green. */
@@ -48,8 +50,8 @@ export function decide({ branch, ahead, unpushed, pr, prLinked = true, blocked =
     return `${branch} has no PR. Open it as a draft (gh pr create --draft --base main --head ${branch} --body-file <body made from .github/pull_request_template.md>); a task's PR opens at its start.`;
   if (pr.state === "OPEN" && !prLinked && /^\d+-/.test(branch))
     return `PR #${pr.number} is not linked from its Notion story. Write it to the story's PR property (speckit-notion-sync pr ${pr.number}); every story carries its own PR link from the moment the PR opens.`;
-  if (pr.state === "OPEN" && !pr.isDraft && pr.labels && !pr.labels.some((l) => l.name === IN_REVIEW))
-    return `PR #${pr.number} is ready but has no "${IN_REVIEW}" label. Add it (gh pr edit ${pr.number} --add-label "${IN_REVIEW}"); a ready PR shows it is in review on GitHub too.`;
+  if (pr.state === "OPEN" && !pr.isDraft && pr.labels && !pr.labels.some((l) => STAGE_LABELS.has(l.name)))
+    return `PR #${pr.number} is ready but has no "${IN_REVIEW}" or "QA" label. Add it (gh pr edit ${pr.number} --add-label "${IN_REVIEW}"); a ready PR shows it is in review on GitHub too.`;
   if (pr.state !== "OPEN" || pr.isDraft || pr.mergeable !== "MERGEABLE") return null;
   const checks = pr.statusCheckRollup ?? [];
   if (!allGreen(checks.filter((c) => !isAgentReview(c)))) return null;

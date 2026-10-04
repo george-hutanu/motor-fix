@@ -50,7 +50,8 @@ epic or a plan, whether run through spec-kit or by hand.
      push, wait for the checks (`gh pr checks <n> --watch`); a failing check is
      fixed on the branch and waited for again.
   6. QA: run the PR tester (`/speckit-pr-test <n>`, the `pr-tester` subagent)
-     and set the task to QA (`speckit-notion-sync qa`). It boots the PR head in
+     and set the task to QA (`speckit-notion-sync qa`; the PR's `in review`
+     label becomes `QA`). It boots the PR head in
      its own worktree, tests it in a browser and against the API, reviews the
      diff, posts a review, fills the template's "Agent review" section and sets
      the `agent-review` status on the head commit. Fix every blocking finding

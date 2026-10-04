@@ -78,7 +78,7 @@ it back, so run both from the feature's checkout.
 | --- | --- | --- | --- |
 | `start`: the task is taken, before its draft PR opens | → In progress | → In progress | To do → In progress |
 | `review`: the work is done and its PR is marked ready for review (not when the draft opens); spec and code review. Also label the PR `in review` on GitHub (`gh pr edit <n> --add-label "in review"`) | → In review | → In review | unchanged |
-| `qa`: the PR tester (`/speckit-pr-test`) starts on the ready PR; stays through every fix-and-retest lap | → QA | → QA | unchanged |
+| `qa`: the PR tester (`/speckit-pr-test`) starts on the ready PR; stays through every fix-and-retest lap. Swap the PR's label: `gh pr edit <n> --remove-label "in review" --add-label QA` | → QA | → QA | unchanged |
 | `blocked <reason>`: the run cannot go on without something outside it — a Hard Stop, a run-state `blocking_condition`, the repair cap in the QA loop, red CI the agent cannot fix, an unresolved Blocked by | → Blocked | → Blocked | unchanged |
 | `unblock`: the run resumes | → the status before Blocked | → the same | unchanged |
 | `finish`: the PR is merged to `main` | → Done | → Merged | → Done when every story of the epic is Done |

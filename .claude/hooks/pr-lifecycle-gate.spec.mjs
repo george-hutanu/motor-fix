@@ -104,6 +104,10 @@ describe('PR lifecycle gate — the in review label', () => {
     assert.match(decide(task({ pr: ready({ labels: [], statusCheckRollup: [{ state: 'PENDING' }] }) })), /in review/);
   });
 
+  it('accepts the QA label in its place: the PR tester swaps one for the other', () => {
+    assert.doesNotMatch(decide(task({ pr: ready({ labels: [{ name: 'QA' }] }) })), /add-label/);
+  });
+
   it('leaves a draft, a merged and a closed PR without the label alone', () => {
     assert.equal(decide(task({ pr: ready({ isDraft: true, labels: [] }) })), null);
     assert.equal(decide(task({ pr: ready({ labels: [], state: 'MERGED' }) })), null);
