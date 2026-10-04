@@ -68,3 +68,8 @@
   - HIGH console 401 from `/api/v1/me` on `/ro/account`: the web app holds no access token until sign-in exists, so `/me` always answers 401 (session.ts: "Without an access token the answer is 401 and nobody is signed in"); the same finding on `/app/driver` in ST-53's lap 1. Not a defect of the change: lap 2 leaves `/ro/account` out of the sweep and records it as "not swept", the case pr-tester.md names for a route needing a session the tester lacks; the flows cover it signed in and signed out.
   - MEDIUM axe landmark-one-main / region on every public page: fixed, tests first (red "1 failed, 20 passed"), `main` in the public frame.
   - MEDIUM storage down: no object store without Docker, an environment limit.
+- Merged origin/main e08eff3 (PRs #38, #29, #39) as 1f75879 through the hook; CI 15/15 green.
+- QA lap 2 on 1f75879 (repair 1 of 5): success, 0 blocking; medium: storage down (environment), "not swept: /ro/account" (agent finding). Flows: 0 findings. `agent-review` success.
+- Built-in browser walk on 1f75879: /ro and /ro/garages at 390 dark, /en/account at 390, /ro/mechanics at 320 light (scrollWidth 320, tabs 52 px, labels 12 px), hidden at 768 and 1440.
+- Merged with `gh pr merge 37 --merge --match-head-commit 1f75879…` → 74f397f. Notion finish: Done / Merged; labels removed.
+- Not pushed after agent-review (owner's rule): this log's last lines, the finish lines in notion-sync.md, pr-review/lap2/.

@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Implemented
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-287 \"Move between public screens with a bottom tab bar on a phone\" — Notion story https://app.notion.com/p/3ee607bff0d281e1bf91cd25024ee64e (EP-1 Foundations, Phone experience feature; timeline row https://app.notion.com/p/3ee607bff0d281c2b8aac5ff4a90f456, Lane B · i18n & shell, wave W3, 3 points). A bottom tab bar on the public screens on a phone (below 768 px) with three tabs Caută / Service-uri / Cont (EN: Search / Garages / Account), safe-area aware, 44 px tabs, 12 px labels, active tab amber with aria-current, nav landmark \"Navigare principală\". The public screens it links to arrive in EP-4, so build it against placeholder routes. Blocked by ST-286 and ST-17, both merged."
 

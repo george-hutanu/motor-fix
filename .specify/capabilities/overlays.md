@@ -2,6 +2,7 @@
 capability: overlays
 updated: 2026-10-04
 features:
+  - 157-dialog-drawer
   - 159-form-saving
 ---
 
@@ -10,6 +11,70 @@ features:
 The shared way a short task opens on top of the current screen, in `libs/overlays`: a centred dialog or a drawer on the right, the dimmed and still page behind, the three ways to close, the focus kept inside and given back, the discard question, stacking, and the result handed to the opener.
 
 ## Requirements
+
+### 157-FR-001 — The front end MUST offer one overlay service that opens any task component on top of the current screen in one of three shapes, `dialog`, `drawer` or `drawer-wide`, with a title (an i18n key), without changing the page address or adding a history entry.
+
+_From 157-dialog-drawer._
+
+### 157-FR-002 — The `dialog` shape MUST be centred, `min(480px, 100% − 32px)` wide and at most `100% − 48px` tall, on the kit's dialog surface; its body MUST scroll inside the panel when the content is taller.
+
+_From 157-dialog-drawer._
+
+### 157-FR-003 — The `drawer` and `drawer-wide` shapes MUST be anchored to the right edge at full height, `min(480px, 100%)` and `min(720px, 100%)` wide, on the kit's right-hand sheet surface; the header stays while the body scrolls.
+
+_From 157-dialog-drawer._
+
+### 157-FR-004 — While any task is open, the page behind MUST be covered by the theme's mask and MUST NOT scroll; after the last task closes, the scroll position MUST be the one before opening.
+
+_From 157-dialog-drawer._
+
+### 157-FR-005 — A task MUST close with its X button, with Escape, and with a click or tap outside it; each such close MUST hand the opener `cancelled`.
+
+_From 157-dialog-drawer._
+
+### 157-FR-006 — A task MUST be able to close itself with a typed result, which the opener receives; the opener's result is `cancelled` or one of the task's own result values.
+
+_From 157-dialog-drawer._
+
+### 157-FR-007 — On a computer (a window at least 768 px wide with a fine pointer) the task's first field (the first `input`, `select`, `textarea` or editable element in its body) MUST get the focus when it opens; elsewhere, or in a task with no field, the panel gets the focus.
+
+_From 157-dialog-drawer._
+
+### 157-FR-008 — Keyboard focus MUST stay inside the top task while it is open (Tab and Shift+Tab wrap), and MUST return to the element that opened it when it closes.
+
+_From 157-dialog-drawer._
+
+### 157-FR-009 — A task MUST be exposed as a modal dialog (`role="dialog"`, `aria-modal="true"`) named by its title; its close button MUST be named "Închide" / "Close".
+
+_From 157-dialog-drawer._
+
+### 157-FR-010 — When a field inside a task has changed, closing it by X, Escape or outside MUST first ask "Renunți la modificări?" / "Discard your changes?" with "Renunță" / "Discard" and "Continuă editarea" / "Keep editing" *(proposed)*; the question replaces the task's body inside the same panel; keeping (or Escape) returns to the task with its text, discarding closes it with `cancelled`; a click outside while it asks does nothing; a task that closes itself with a result, was not changed, was marked unchanged again by the task, or was opened with the question switched off MUST NOT ask.
+
+_From 157-dialog-drawer._
+
+### 157-FR-011 — A task opened from an open task MUST stack on top; Escape and a click outside MUST close only the top one *(proposed)*.
+
+_From 157-dialog-drawer._
+
+### 157-FR-012 — A task given as a loader MUST show its panel, title and X at once with a skeleton in a body marked busy (`aria-busy="true"`), replaced by the task when it arrives *(proposed)*.
+
+_From 157-dialog-drawer._
+
+### 157-FR-013 — The dialog and drawer MUST keep ST-53's motion and reduced-motion behaviour unchanged (pop on open, instant close, nothing moves with reduced motion); this story adds no motion of its own.
+
+_From 157-dialog-drawer._
+
+### 157-FR-014 — Every text of the overlay MUST come through i18n keys in Romanian and English; the close and discard buttons MUST be at least 44 × 44 px; no text smaller than 12 px.
+
+_From 157-dialog-drawer._
+
+### 157-FR-015 — The catalogue (`/cockpit`) MUST show the service: buttons that open a sample task as a dialog, a drawer and a wide drawer, with one field, a button that closes it with a result and a button that opens a second task on top, and a line saying the last result; its texts in Romanian and English.
+
+_From 157-dialog-drawer._
+
+### 157-FR-016 — The service and the task-side helper MUST be exported from `@motor-fix/overlays` for sign-in and the later tasks.
+
+_From 157-dialog-drawer._
 
 ### 159-FR-001 — The overlays library MUST offer one shared form-saving helper for a task's reactive form that sends nothing until the main button (or the form's submit) is pressed.
 

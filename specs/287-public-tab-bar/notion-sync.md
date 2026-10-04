@@ -13,3 +13,7 @@
 - 2026-10-04 · qa · ST-287 · In review → QA
 - 2026-10-04 · qa · Foundations timeline ST-287 · In review → QA
 - 2026-10-04 · qa · PR #37 label · in review → QA
+- 2026-10-04 · finish · ST-287 · QA → Done
+- 2026-10-04 · finish · Foundations timeline ST-287 · QA → Merged
+- 2026-10-04 · finish · EP-1 · In progress (unchanged; other stories open)
+- 2026-10-04 · finish · PR #37 merged as 74f397f; stage labels removed
