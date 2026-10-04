@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import type { MeDto } from '@motor-fix/data-access';
+import { I18n } from '@motor-fix/i18n';
 
 import { Frame } from './frame';
 import { Session } from './session';
@@ -155,5 +156,83 @@ describe('Frame', () => {
 
     expect(current()).toBeNull();
     expect(navigate).toHaveBeenCalledWith('/');
+  });
+
+  it('has the language switch in its header', () => {
+    const { element } = render('driver', '/app/driver', []);
+
+    const group = element.querySelector('header [role="group"]');
+    expect(group?.getAttribute('aria-label')).toBe('Limba');
+  });
+
+  it('turns the tag, the menu and the title English, keeping the chosen entry', async () => {
+    const { element, fixture } = render('driver', '/app/driver', [
+      'driver.requests',
+      'driver.cars',
+    ]);
+    (element.querySelectorAll('nav button')[2] as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    await TestBed.inject(I18n).use('en');
+    await fixture.whenStable();
+
+    expect(element.querySelector('aside span')?.textContent?.trim()).toBe(
+      'Driver',
+    );
+    expect(menu(element)).toEqual(['Dashboard', 'My requests', 'My cars']);
+    expect(element.querySelector('h1')?.textContent?.trim()).toBe('My cars');
+    const pressed = [...element.querySelectorAll('nav button')].filter(
+      (b) => b.getAttribute('aria-pressed') === 'true',
+    );
+    expect(pressed.map((b) => b.textContent?.trim())).toEqual(['My cars']);
+  });
+
+  it('names the garage and admin areas and menus in English', async () => {
+    const garage = render('garage', '/app/garage', [
+      'garage.requests',
+      'garage.schedule',
+      'garage.team',
+      'garage.prices',
+      'garage.reviews',
+      'garage.profile',
+    ]);
+    await TestBed.inject(I18n).use('en');
+    await garage.fixture.whenStable();
+
+    expect(
+      garage.element.querySelector('aside span')?.textContent?.trim(),
+    ).toBe('Garage');
+    expect(menu(garage.element)).toEqual([
+      'Dashboard',
+      'Quote requests',
+      'Bookings',
+      'Mechanics',
+      'Prices',
+      'Reviews',
+      'Garage profile',
+    ]);
+
+    TestBed.resetTestingModule();
+    const admin = render('admin', '/app/admin', [
+      'admin.garages',
+      'admin.users',
+      'admin.reviews',
+      'admin.catalogue',
+      'admin.settings',
+    ]);
+    await TestBed.inject(I18n).use('en');
+    await admin.fixture.whenStable();
+
+    expect(admin.element.querySelector('aside span')?.textContent?.trim()).toBe(
+      'Admin',
+    );
+    expect(menu(admin.element)).toEqual([
+      'Dashboard',
+      'Garages',
+      'Users',
+      'Reported reviews',
+      'Brands and jobs',
+      'Settings',
+    ]);
   });
 });

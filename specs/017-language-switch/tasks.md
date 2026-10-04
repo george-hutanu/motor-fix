@@ -17,8 +17,8 @@ Paths are `(new)` unless they exist today: `libs/i18n/src/index.ts`, `libs/i18n/
 - [X] T003 [US1] `libs/i18n/src/switch.ts` — `LanguageSwitch` component (`mf-language-switch`, buttons at least 44 px tall) and `LanguageChoice.choose()`; export both from `libs/i18n/src/index.ts` (FR-001, FR-002, FR-003)
 - [X] T004 [US1] Test: `apps/web/src/app/home/home.spec.ts` — Home's header holds the switch; tapping EN turns the page English in place (FR-001, FR-003)
 - [X] T005 [US1] `apps/web/src/app/home/home.ts` — `<header>` with the brand and `<mf-language-switch />` (FR-001)
-- [ ] T006 [US1] Test: `apps/web/src/app/dashboard/frame.spec.ts` — the frame's header holds the switch; after a switch to EN the area tag, the menu entries and the title are English and the chosen entry stays pressed; the Romanian menus stay as today (FR-001, FR-003, FR-009)
-- [ ] T007 [US1] `apps/web/src/app/dashboard/frame.ts` — `MENUS` carry keys (`shell.frame.area.*`, `shell.frame.nav.*`); `view` holds the chosen entry's key; the switch in the `<header>` (FR-001, FR-003, FR-009)
+- [X] T006 [US1] Test: `apps/web/src/app/dashboard/frame.spec.ts` — the frame's header holds the switch; after a switch to EN the area tag, the menu entries and the title are English and the chosen entry stays pressed; the Romanian menus stay as today (FR-001, FR-003, FR-009)
+- [X] T007 [US1] `apps/web/src/app/dashboard/frame.ts` — `MENUS` carry keys (`shell.frame.area.*`, `shell.frame.nav.*`); `view` holds the chosen entry's key; the switch in the `<header>` (FR-001, FR-003, FR-009)
 
 ## Phase 3: US2 Remembered on the device (P1) and US3 Open tabs move together (P2)
 
