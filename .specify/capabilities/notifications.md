@@ -1,8 +1,9 @@
 ---
 capability: notifications
-updated: 2026-10-04
+updated: 2026-10-05
 features:
   - 194-email-sending
+  - 195-message-templates
 ---
 
 # Capability: Notifications
@@ -35,9 +36,9 @@ _From 194-email-sending._
 
 _From 194-email-sending._
 
-### 194-FR-007 — The e-mail MUST go through Brevo's transactional e-mail API, with a 10-second timeout, from the configured sender, to the account's address, in the account's language (`ro` when not set); a 2xx answer MUST set the row `sent` with its sent time and Brevo's message id.
+### 195-FR-005 — The e-mail MUST go through Brevo's transactional e-mail API, with a 10-second timeout, from the configured sender, to the account's address, carrying the rendered subject, HTML part and plain-text part in the account's language (`ro` when not set); a 2xx answer MUST set the row `sent` with its sent time and Brevo's message id.
 
-_From 194-email-sending._
+_From 195-message-templates._
 
 ### 194-FR-008 — A Brevo 5xx, a 429, a timeout or a network error MUST be retried after 1, 5, 15, 60 and 240 minutes; any other 4xx, or the failure of the last retry, MUST set the row `failed` with the reason and call the e-mail fallback with the failed row. The fallback does nothing in this story; ST-196 makes it send push.
 
@@ -79,9 +80,9 @@ _From 194-email-sending._
 
 _From 194-email-sending._
 
-### 194-FR-018 — TEST_MESSAGE and ACCOUNT_EMAIL MUST have a Romanian and an English subject and body; the ACCOUNT_EMAIL body MUST carry the link. The grouped e-mail MUST name the count in the recipient's language.
+### 195-FR-010 — The system MUST carry the Romanian and English texts of TEST_MESSAGE and ACCOUNT_EMAIL (e-mail check and password reset, whose e-mail carries the link), for the e-mail and the bell, and of the generic and QUOTE_RECEIVED grouped e-mails, with the Romanian "de" plural.
 
-_From 194-email-sending._
+_From 195-message-templates._
 
 ### 194-FR-019 — Sending a notification MUST NOT write to the audit history.
 
@@ -90,3 +91,44 @@ _From 194-email-sending._
 ### 194-FR-020 — Logs about a notification MUST carry its id, type, channel and outcome only, never the address, the link, the message text or the Brevo key.
 
 _From 194-email-sending._
+
+### 195-FR-001 — The system MUST keep one template per notification type and channel (e-mail, push, SMS, WhatsApp, bell), each with a Romanian and an English text, in the repository.
+
+_From 195-message-templates._
+
+### 195-FR-002 — The system MUST render a message in the language its caller passes (the worker passes the recipient account's language), and in Romanian when that language is not `ro` or `en`.
+
+_From 195-message-templates._
+
+### 195-FR-003 — The system MUST render price, number, date and time values in the format of the message's language, with dates and times in Europe/Bucharest local time, reusing the app's shared formatters.
+
+_From 195-message-templates._
+
+### 195-FR-004 — An e-mail template MUST render a subject, an HTML part and a plain-text part with the MotorFix wordmark, one amber button that links to the screen in question, and a footer that says why the person gets it (a per-template text in both languages); only NEWS may carry an unsubscribe link.
+
+_From 195-message-templates._
+
+### 195-FR-006 — A push template MUST render a title of at most 50 characters, a body of at most 120 and a link to the screen in question.
+
+_From 195-message-templates._
+
+### 195-FR-007 — An SMS template MUST render to at most 70 characters, link included.
+
+_From 195-message-templates._
+
+### 195-FR-008 — A WhatsApp template MUST render to the name of its approved WhatsApp template and its ordered parameter values.
+
+_From 195-message-templates._
+
+### 195-FR-009 — A check that runs in CI MUST fail the build when a template lacks a language, uses an undeclared value, belongs to an unknown type, uses a `plate` or `phone` value against the privacy rule, writes ş or ţ with a cedilla, breaks a push, SMS or WhatsApp limit with its example values, or does not render with its example values.
+
+_From 195-message-templates._
+
+### 195-FR-011 — When a template cannot render, the system MUST NOT send the message; it MUST set the row `failed` with the reason `template_failed`, log the type, channel and missing value, and answer a generic bell text in the person's language.
+
+_From 195-message-templates._
+
+## Retired
+
+- `194-FR-007` — superseded by `195-FR-005` (2026-10-04)
+- `194-FR-018` — superseded by `195-FR-010` (2026-10-04)
