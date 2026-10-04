@@ -14,3 +14,5 @@
 - 2026-10-04 · qa · ST-82 story Status · In review → QA
 - 2026-10-04 · qa · Foundations timeline row ST-82 · In review → QA
 - 2026-10-04 · labels · PR #45 · QA
+- 2026-10-04 · debt · 2 deferred bullets filed as To do tasks 3ef607bff0d281f2ac88f8453c97d361 (proxy trust on staging), 3ef607bff0d28174b5dced301e1b45b8 (one offline sentence)
+- 2026-10-04 · debt · 2 PR-tester findings filed as To do tasks 3ef607bff0d281c497dadbe0862dbc54 (offline behind the service worker), 3ef607bff0d2818aac43e06a8f6e1341 (signed-out renewal console error)
