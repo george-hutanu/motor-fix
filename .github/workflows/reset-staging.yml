@@ -16,9 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     timeout-minutes: 20
-    # Never during a staging release, which redeploys the api this runs in.
+    # Its own group: sharing release-staging would let a waiting reset cancel
+    # a waiting release, since a group keeps only one pending run.
     concurrency:
-      group: release-staging
+      group: reset-staging
       cancel-in-progress: false
     env:
       RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}

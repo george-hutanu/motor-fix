@@ -32,8 +32,8 @@ describe('reset-staging workflow', () => {
     expect(workflow).not.toMatch(/inputs:/);
   });
 
-  it('waits for a staging release instead of racing its api deploy', () => {
-    expect(setting('group')).toBe('release-staging');
+  it('runs one at a time, without ever displacing a waiting staging release', () => {
+    expect(setting('group')).toBe('reset-staging');
     expect(setting('cancel-in-progress')).toBe('false');
   });
 
