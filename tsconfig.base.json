@@ -21,6 +21,7 @@
       ],
       "@motor-fix/i18n": ["./libs/i18n/src/index.ts"],
       "@motor-fix/media": ["./libs/media/src/index.ts"],
+      "@motor-fix/overlays": ["./libs/overlays/src/index.ts"],
       "@motor-fix/ui-cockpit": ["./libs/ui-cockpit/src/index.ts"],
       "@motor-fix/ui-cockpit/sample": ["./libs/ui-cockpit/src/sample.ts"]
     },

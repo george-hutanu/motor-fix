@@ -28,6 +28,22 @@
   "openDialog": "Deschide dialogul",
   "openDrawer": "Deschide sertarul",
   "openPopover": "Deschide fereastra",
+  "overlay": {
+    "again": "Deschide încă una",
+    "done": "Gata",
+    "field": "Numărul de înmatriculare",
+    "intro": "Scrie ceva, apoi închide: vei fi întrebat dacă renunți la modificări.",
+    "openDialog": "Deschide sarcina ca dialog",
+    "openDrawer": "Deschide sarcina ca sertar",
+    "openWide": "Deschide sertarul lat",
+    "result": "Ultimul rezultat: {result}",
+    "results": {
+      "cancelled": "anulat",
+      "none": "niciunul",
+      "saved": "salvat"
+    },
+    "title": "Sarcină de probă"
+  },
   "panelTitle": "Service‑uri apropiate",
   "popoverBody": "Ferestrele mici folosesc suprafața ridicată.",
   "primary": "Caută service‑uri",

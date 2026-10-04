@@ -38,9 +38,12 @@ export function alternates(origin: string, path: string) {
 
 // The language comes from the address, before the page renders, so the server
 // and the browser render the same language; it also becomes the remembered one.
+// The public screens' texts load first for the same reason.
 export const languageAddress: CanMatchFn = async (_route, [first]) => {
   if (!first || !isLanguage(first.path)) return false;
+  const texts = inject(I18n).enter('public');
   await inject(LanguageChoice).choose(first.path);
+  await texts;
   return true;
 };
 

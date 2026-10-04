@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-464 https://app.notion.com/p/3ef607bff0d281c89794da24167062c8 — Watch every running agent and get stale work moving again", epic [Foundations (EP-1)](https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707). The owner works on several tasks at once, each an agent in its own worktree with its own PR, and some sit stale in planning, development, review or QA. Owner addition during the run: up to 4 QA runs may run at the same time, and the docs must say so.
 
