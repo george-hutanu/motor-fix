@@ -3,3 +3,5 @@
 - 2026-10-04 start · story ST-390 (3ee607bff0d28146adece5076470024d) · Status To do → In progress
 - 2026-10-04 start · Foundations timeline row ST-390 (3ee607bff0d28147b58bf7a022cf9658) · Build status Not started → In progress
 - 2026-10-04 start · epic EP-1 Foundations · Status In progress (unchanged)
+- 2026-10-04 review · story ST-390 · Status In progress → In review
+- 2026-10-04 review · Foundations timeline row ST-390 · Build status In progress → In review
