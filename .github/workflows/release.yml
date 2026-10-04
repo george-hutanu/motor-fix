@@ -101,13 +101,14 @@ jobs:
   production:
     needs: [images, staging]
     runs-on: ubuntu-latest
-    # No approval: production follows a green staging run. A newer commit
-    # that passes staging cancels a production run still in progress, so
-    # only the latest proven commit reaches production.
+    # No approval: production follows a green staging run. Production
+    # releases run one at a time, in commit order, and a deploy already
+    # running is never cancelled: a newer commit that passes staging waits
+    # for it, and of several waiting only the latest runs next.
     environment: production
     concurrency:
       group: release-production
-      cancel-in-progress: true
+      cancel-in-progress: false
     env:
       IMAGE_WEB: ghcr.io/${{ github.repository }}-web@${{ needs.images.outputs.web }}
       IMAGE_API: ghcr.io/${{ github.repository }}-api@${{ needs.images.outputs.api }}

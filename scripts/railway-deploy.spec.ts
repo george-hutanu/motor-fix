@@ -139,6 +139,90 @@ describe('railway deploy', () => {
     );
   });
 
+  // @traces 491-FR-005
+  it('puts the previous image back when the run is cancelled mid-deploy', async () => {
+    statuses = [];
+    const cancel = new AbortController();
+    const started = deploy({
+      endpoint,
+      environmentId: 'env-1',
+      limitMs: 10_000,
+      pollMs: 5,
+      services,
+      signal: cancel.signal,
+      token: 't',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    cancel.abort();
+
+    await expect(started).rejects.toThrow('cancelled');
+    expect(updates().at(-1)).toEqual({
+      environmentId: 'env-1',
+      input: { source: { image: 'svc-api@sha256:old' } },
+      serviceId: 'svc-api',
+    });
+    expect(calls.some((c) => c.variables['serviceId'] === 'svc-web')).toBe(
+      false,
+    );
+  });
+
+  // @traces 491-FR-005
+  it('redeploys the services already live when the run is cancelled', async () => {
+    statuses = ['SUCCESS'];
+    const cancel = new AbortController();
+    const started = deploy({
+      endpoint,
+      environmentId: 'env-1',
+      limitMs: 10_000,
+      pollMs: 5,
+      services,
+      signal: cancel.signal,
+      token: 't',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    cancel.abort();
+
+    await expect(started).rejects.toThrow('cancelled');
+    const restores = updates().filter(
+      (u) => !('healthcheckPath' in (u['input'] as object)),
+    );
+    expect(restores).toEqual([
+      {
+        environmentId: 'env-1',
+        input: { source: { image: 'svc-api@sha256:old' } },
+        serviceId: 'svc-api',
+      },
+      {
+        environmentId: 'env-1',
+        input: { source: { image: 'svc-web@sha256:old' } },
+        serviceId: 'svc-web',
+      },
+    ]);
+    const redeploys = calls
+      .filter((c) => c.query.includes('serviceInstanceDeployV2'))
+      .map((c) => c.variables['serviceId']);
+    expect(redeploys).toEqual(['svc-api', 'svc-web', 'svc-api', 'svc-web']);
+  });
+
+  // @traces 491-FR-005
+  it('fails as cancelled without touching anything when cancelled before it starts', async () => {
+    const cancel = new AbortController();
+    cancel.abort();
+
+    await expect(
+      deploy({
+        endpoint,
+        environmentId: 'env-1',
+        limitMs: 200,
+        pollMs: 5,
+        services,
+        signal: cancel.signal,
+        token: 't',
+      }),
+    ).rejects.toThrow('cancelled');
+    expect(updates()).toEqual([]);
+  });
+
   it('puts the previous image back when the health check never passes in time', async () => {
     statuses = [];
 

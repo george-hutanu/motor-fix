@@ -54,7 +54,7 @@ npx nx run domain:seed                 # idempotent; refuses APP_ENV=production
 Verified on the first real merge, once the owner has set up:
 
 - Railway (Pro plan, EU region): services `web`, `api`, `worker` in the environments `staging` and `production`; `postgres` (PostGIS template) and `redis` from Railway's templates; each app service's variables (`APP_ENV`, `DATABASE_URL` and `REDIS_URL` as references, `API_INTERNAL_URL`, `PUBLIC_WEB_URL`); ghcr registry credentials (classic personal access token) on each service.
-- GitHub: branch protection on `main` (pull requests only, CI green); environments `staging` and `production` (required reviewer: the build lead), each with the secret `RAILWAY_API_TOKEN` (a workspace token), the variables `RAILWAY_ENVIRONMENT_ID`, `RAILWAY_SERVICE_WEB`, `RAILWAY_SERVICE_API`, `RAILWAY_SERVICE_WORKER`, `PUBLIC_WEB_URL`, and, on `staging` only, the secret `DATABASE_URL` for the reset workflow.
+- GitHub: branch protection on `main` (pull requests only, CI green); environments `staging` and `production` (no required reviewers: production follows a green staging run), each with the secret `RAILWAY_API_TOKEN` (a workspace token), the variables `RAILWAY_ENVIRONMENT_ID`, `RAILWAY_SERVICE_WEB`, `RAILWAY_SERVICE_API`, `RAILWAY_SERVICE_WORKER`, `PUBLIC_WEB_URL`, and, on `staging` only, the secret `DATABASE_URL` for the reset workflow.
 
 ### Checked by hand (record each)
 
@@ -63,10 +63,10 @@ Verified on the first real merge, once the owner has set up:
 | A lint error cannot merge | open a pull request with a Biome error | | |
 | A stale client fails the contract check | change `HealthReadyDto` without `nx run data-access:generate` | | |
 | A broken migration stops the run before staging | merge a migration with a SQL error | | |
-| Production does not deploy without approval | merge, watch the `production` job wait | | |
+| Production deploys only after staging and its end-to-end suite pass | merge, watch `production` start only once `staging` is green | | |
 | A failing production health check restores the previous images | deploy an image whose `/health/ready` answers 503 | | |
 | Railway accepts an image by digest and runs the pre-deploy command on an image service | first staging deploy (research.md R7, unconfirmed in Railway's docs) | | |
 | Every service runs in `europe-west4-drams3a` | Railway dashboard after the first deploy | | |
-| A newer commit that passes staging cancels an older production approval still waiting | merge twice without approving; the first `production` job shows as cancelled | | |
+| A production deploy in progress is not cancelled by a newer merge | merge twice in quick succession; the second `production` job waits for the first, which completes | | |
 | `docker build` succeeds for each app and target | the first `release.yml` run (no Docker on the machine that built this) | | |
 | Reset staging empties, migrates and seeds staging only | run the workflow once by hand | | |
