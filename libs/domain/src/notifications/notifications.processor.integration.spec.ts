@@ -1,3 +1,4 @@
+// @traces 195-FR-002 195-FR-005 195-FR-010 195-FR-011
 import { Logger } from '@nestjs/common';
 import { Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';

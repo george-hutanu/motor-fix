@@ -71,3 +71,6 @@
 ## 14. Review
 - spec-reviewer: APPROVE, 11/11 FRs met, 12 tasks truthful. #1 LOW patched: a row's own `app` value can no longer replace the configured web address (processor and check spread `app` last; integration spec added). #2 LOW decision: zero count keeps the bare numeral ("0 oferte noi"); spec wording amended to "a non-zero count", unit case added.
 - code-reviewer (phase 12): APPROVE; findings handled there.
+## 13. Refresh: story, feature and epic unchanged since 2026-10-03; 0 comments (re-read by spec-reviewer 2026-10-05).
+## 15. Agent context: AGENTS.md unchanged (no new command, lib or rule); CLAUDE.local.md is the owner's local file, not in this worktree.
+## 16. Retro evidence gathered (`retro-evidence.mjs --since 66606f1`, Jev off): 3 commits, 0 deferred; no verdict written. Trace tags added: 11/11 FRs covered; the matrix also lists `FR-018`, which it reads from the Spec Delta's `194-FR-018` and is not an FR of this feature.

@@ -1,3 +1,4 @@
+// @traces 195-FR-009
 import { checkTemplates } from './template-check';
 import type { Template } from './templates';
 import { TEMPLATES } from './templates/registry';
