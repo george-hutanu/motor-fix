@@ -89,20 +89,25 @@ export class AuditHistoryService {
     ) {
       throw new NotFoundException();
     }
-    const scope: Prisma.ActivityLogWhereInput = admin
-      ? {}
-      : { garageId: actor.garageId };
-    const where = { ...scope, ...this.filters(query) };
-    if (query.garageId) where.garageId = query.garageId;
+    const where: Prisma.ActivityLogWhereInput = {
+      ...this.filters(query),
+      garageId: admin ? query.garageId : actor.garageId,
+    };
 
+    // Prisma pages from the cursor row's own (at, id) in the database, so the
+    // times keep their microseconds; the row must match the filters, or the
+    // skip would drop a real entry instead of it.
     if (
       query.cursor &&
       !(await this.prisma.activityLog.findFirst({
         select: { id: true },
-        where: { ...scope, id: query.cursor },
+        where: { ...where, id: query.cursor },
       }))
     ) {
-      throw invalid('invalid_cursor', 'cursor is not an entry of this history');
+      throw invalid(
+        'invalid_cursor',
+        'cursor is not an entry of this history with these filters',
+      );
     }
 
     const [rows, total] = await Promise.all([

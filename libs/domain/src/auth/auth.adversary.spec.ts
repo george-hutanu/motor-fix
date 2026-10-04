@@ -325,7 +325,7 @@ describe('capability table boundaries', () => {
     ]);
   });
 
-  it('gives a mechanic only own jobs when the permissions are missing or not true booleans', () => {
+  it('gives a mechanic only the base capabilities when the permissions are missing or not true booleans', () => {
     expect(capabilitiesOf('mechanic', {} as never)).toEqual([
       'garage.own_jobs',
       'garage.audit_history',

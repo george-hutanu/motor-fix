@@ -50,3 +50,7 @@
 - Set up the account model, the roles and their rights (ST-79) — https://app.notion.com/p/3ee607bff0d281778692cbdd267fb72f
 - Data model — https://app.notion.com/p/3ee607bff0d281a386aeea19ef79cf34
 - Foundations build timeline — collection://2437de64-5c28-4136-b8b6-2d60693d45d7
+
+## Refresh
+
+- 2026-10-04 (after implementation): story re-read with comments. No discussions; content unchanged since 2026-10-03T17:42Z. Properties changed by someone else: Status "Implementing" (a value newer than this skill's list) and PR = https://github.com/george-hutanu/motor-fix/pull/32. No new evidence on scope.

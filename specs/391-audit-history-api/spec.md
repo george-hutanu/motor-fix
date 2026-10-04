@@ -19,7 +19,7 @@
 - Q: Does the API format money, times and state labels? → A: No. It returns stored values (money in bani, times as UTC ISO strings); the view formats them in the reader's language with the locale formats library. Formatting is part of the late view work.
 - Q: How are phone and plate values masked while the acceptance and job rules cannot be checked yet (no quotes or jobs exist)? → A: Conservatively: for the owner, the receptionist and the mechanic, a value under a field or key named `phone` or `plate` is replaced by a mask; the admin sees them. The relaxation (owner and receptionist after acceptance, mechanic on own jobs) is recorded as a late item for the quotes and jobs stories.
 - Q: What does "admin actions" mean as a filter area, given every other area is a group of subjects? → A: Entries whose actor role is `admin`.
-- Q: (spec-challenger) When is a cursor valid, and with which code is a bad one refused? → A: When it is an existing entry inside the caller's scope (own garage for staff, any entry for the admin), whatever the other filters; otherwise 400 `invalid_cursor`. Paging continues from that entry's time and id.
+- Q: (spec-challenger) When is a cursor valid, and with which code is a bad one refused? → A: When it is an existing entry inside the caller's scope (own garage for staff, any entry for the admin) that also matches the current filters; otherwise 400 `invalid_cursor`. Paging continues from that entry's time and id. (Revised in review: a cursor outside the filters cannot mark a position in the filtered list, and the database paging would drop an entry; the view starts again from the first page when the filters change.)
 - Q: (spec-challenger) Exact key or substring for the mask, and is `text` masked? → A: Exact key `phone` or `plate`, case-insensitive, through objects and arrays of the old and new values; `text` is not masked.
 - Q: (spec-challenger) Does the start-after-end check apply to the default start? → A: No, only to a `from` and a `to` both given; a default start after `to` gives an empty page.
 - Q: (spec-challenger) Are date-only values accepted? → A: No: `from` and `to` are full date-times with a zone (`Z` or an offset); a date alone answers 400. The view turns local days into instants.
@@ -81,7 +81,7 @@ Anyone without the right gets 404, never 403 and never an empty list; someone no
 ### Edge Cases
 
 - Several entries with the same time keep a stable order by entry id, and paging with a fixed `from` neither skips nor repeats one of them (the default start moves with the clock, so a view pins `from` while it pages).
-- A cursor that is not an entry inside the caller's scope answers 400 `invalid_cursor`, the same for an id of another garage and an id that does not exist.
+- A cursor that is not an entry inside the caller's scope and the current filters answers 400 `invalid_cursor`, the same for an id of another garage, an id that does not exist, and an entry the new filters leave out.
 - `from` after `to`, an unknown area, an unknown parameter, a malformed id or date answers 400 `validation_failed`.
 - An entry whose old or new value is an object holding a `phone` or `plate` key is masked inside the object for garage staff.
 - An entry whose actor account was deleted still shows with the name it was written with.
@@ -102,7 +102,7 @@ Anyone without the right gets 404, never 403 and never an empty list; someone no
 - **FR-007**: When `from` is absent, the system MUST use 7 days before the time of the call; `to` has no default.
 - **FR-008**: The `area` filter MUST be one of `requests`, `quotes`, `bookings`, `jobs`, `prices`, `repair_history`, `photos`, `garage_profile`, `team`, `settings`, `admin_actions`, each matching a fixed set of subject types (Data model table names), and `admin_actions` matching entries made by an admin.
 - **FR-009**: The system MUST order entries newest first, equal times by entry id (descending), and return 20 per page with `nextCursor` (null on the last page) and `total`, the number of entries matching the filters.
-- **FR-010**: A `cursor` MUST be the id of the last entry of the previous page; one that is not an existing entry inside the caller's scope MUST answer 400 `invalid_cursor`.
+- **FR-010**: A `cursor` MUST be the id of the last entry of the previous page; one that is not an existing entry inside the caller's scope and matching the current filters MUST answer 400 `invalid_cursor`.
 - **FR-011**: Each entry MUST carry id, time (UTC), action, subject type and id, field, old and new value as stored, the actor (id, first name, stored role), `viaAssistant`, garage, car and job ids, `internal`, kind and text; absent values are null.
 - **FR-012**: Internal entries MUST be returned to garage staff and the admin.
 - **FR-013**: For the owner, the receptionist and the mechanic, a non-null value of a field named `phone` or `plate`, and the value of any `phone` or `plate` key inside an object or array value (names compared without case), MUST be returned masked; `text` is not masked; the admin gets them as stored.

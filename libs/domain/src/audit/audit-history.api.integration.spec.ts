@@ -210,6 +210,7 @@ describe('GET /audit-history', () => {
     ['a malformed person id', { actorId: '1' }],
     ['a malformed job id', { jobId: '1' }],
     ['a malformed cursor', { cursor: 'abc' }],
+    ['an impossible date', { from: '2026-02-30T10:00:00Z' }],
     ['a date without a time', { from: '2026-10-01' }],
     ['a time without a zone', { to: '2026-10-01T10:00:00' }],
     ['not a date', { from: 'yesterday' }],

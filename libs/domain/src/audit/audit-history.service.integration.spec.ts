@@ -661,7 +661,7 @@ describe('paging', () => {
     );
   });
 
-  it('lets the admin continue from any entry, whatever the filters', async () => {
+  it('lets the admin continue from an entry of any garage', async () => {
     const g = await twoGarages();
 
     const page = await history.list(actor('admin', null), {
@@ -672,15 +672,44 @@ describe('paging', () => {
     expect(ids(page)).toEqual([g.inNord.id]);
   });
 
-  it('continues a staff page after the filters change', async () => {
+  it('refuses a cursor that no longer matches the filters', async () => {
     const g = await twoGarages();
+    const shift = (seconds: number) => new Date(+g.inNord2.at + seconds * 1000);
+    await entry({
+      at: shift(-30),
+      garageId: g.nord,
+      subjectType: 'staff_invite',
+    });
+
+    await rejects400(
+      history.list(actor('garage', g.nord), {
+        area: 'team',
+        cursor: g.inNord2.id,
+      }),
+      'invalid_cursor',
+    );
+  });
+
+  it('continues from a cursor that matches the filters', async () => {
+    const g = await twoGarages();
+    const shift = (seconds: number) => new Date(+g.inNord2.at + seconds * 1000);
+    const newer = await entry({
+      at: shift(30),
+      garageId: g.nord,
+      subjectType: 'staff_invite',
+    });
+    const older = await entry({
+      at: shift(-30),
+      garageId: g.nord,
+      subjectType: 'staff_invite',
+    });
 
     const page = await history.list(actor('garage', g.nord), {
       area: 'team',
-      cursor: g.inNord2.id,
+      cursor: newer.id,
     });
 
-    expect(page.items).toEqual([]);
+    expect(ids(page)).toEqual([older.id]);
   });
 });
 

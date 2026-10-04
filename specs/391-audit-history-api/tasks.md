@@ -50,7 +50,7 @@ Independent test: driver, garage role without a garage, no token, suspended acco
 | FR-007 | audit-history.service.integration.spec.ts — "reads the last 7 days when no start is given" |
 | FR-008 | audit-history.service.integration.spec.ts — "filters by area", "admin actions are the admin's entries" |
 | FR-009 | audit-history.service.integration.spec.ts — "pages newest first, 20 at a time, with the total", "keeps equal times in id order across pages" |
-| FR-010 | audit-history.service.integration.spec.ts — "refuses a cursor outside the caller's scope" |
+| FR-010 | audit-history.service.integration.spec.ts — "refuses a cursor outside the caller’s scope", "refuses a cursor that no longer matches the filters", "continues from a cursor that matches the filters"; audit-history.adversary.integration.spec.ts cursor cases |
 | FR-011 | audit-history.service.integration.spec.ts — "describes who changed what, when, from what to what"; audit-history.api.integration.spec.ts — "answers the page shape" |
 | FR-012 | audit-history.service.integration.spec.ts — "shows internal entries to staff" |
 | FR-013 | audit-history.service.integration.spec.ts — "masks phone and plate values for garage staff", "shows them to the admin" |
