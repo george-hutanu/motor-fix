@@ -46,7 +46,7 @@ export class Session {
           return true;
         },
         () => {
-          this.forget();
+          if (generation === this.generation) this.forget();
           return false;
         },
       )
@@ -84,8 +84,6 @@ export class Session {
       await this.auth.authControllerSignOut();
     } catch {
       // Signed out here anyway; the server's copy expires on its own.
-    } finally {
-      this.forget();
     }
   }
 

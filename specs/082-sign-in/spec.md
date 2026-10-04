@@ -96,7 +96,7 @@ While maintenance mode is on, only an account holding `admin` signs in; everyone
 
 **Acceptance Scenarios**:
 
-1. **Given** maintenance mode is on, **When** a driver, a garage owner, a receptionist or a mechanic signs in with the right password, **Then** it is refused with "MotorFix este în mentenanță. Încearcă din nou puțin mai târziu." ("MotorFix is down for maintenance. Try again a little later.").
+1. **Given** maintenance mode is on, **When** a driver, a garage owner, a receptionist or a mechanic signs in with the right password, **Then** it is refused with the shared maintenance message, "MotorFix este în mentenanță. Încearcă din nou în câteva minute." ("MotorFix is down for maintenance. Try again in a few minutes.").
 2. **Given** maintenance mode is on, **When** an admin signs in, **Then** it works.
 
 ---
@@ -153,7 +153,7 @@ While maintenance mode is on, only an account holding `admin` signs in; everyone
 
 ### Capability: `accounts`
 
-- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-012, FR-013, FR-014, FR-015, FR-016, FR-017, FR-018, FR-019, FR-020, FR-021, FR-022, FR-023
+- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-013, FR-014, FR-015, FR-016, FR-017, FR-018, FR-019, FR-020, FR-022, FR-023
 - **Modifies**: 079-FR-017 → FR-021
 - **Removes**: none
 
@@ -201,5 +201,5 @@ While maintenance mode is on, only an account holding `admin` signs in; everyone
 - argon2id parameters: 19 MiB memory, 2 passes, 1 lane, 16-byte salt, 32-byte tag (OWASP's minimum), with Node's built-in `crypto.argon2` (Node 24, `.nvmrc`), so no new dependency. (autonomous default)
 - The network address is the client's, read through the web app's edge proxy, which appends the address it saw to `X-Forwarded-For`; the API trusts only private and loopback hops. (autonomous default)
 - Failed attempts are logged as structured log lines (`JsonLogger`); the SYSTEM_LOG_ENTRY table does not exist yet. (autonomous default)
-- The generic failure text is "Ceva nu a mers. Încearcă din nou." ("Something went wrong. Try again."); like the e-mail validation messages it is minimal, and will move to ST-159's shared validation when it lands. (autonomous default)
+- The field, maintenance, offline, network and generic messages are ST-159's shared texts (`shell.form`); only the codes sign-in alone has are the dialog's own (`public.signIn.problem`), and the e-mail format message (`public.signIn.field.pattern`). (autonomous default, after ST-159 merged)
 - The seed's fake default password lives in `libs/domain/src/seed.ts` and the end-to-end fixture only; staging's comes from a secret, and the end-to-end flows that sign in for real need `E2E_PASSWORD` when they run against a deployed address. (autonomous default)
