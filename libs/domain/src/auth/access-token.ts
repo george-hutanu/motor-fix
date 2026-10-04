@@ -7,7 +7,7 @@ export interface AccessClaims {
   role: Role;
 }
 
-export interface VerifiedClaims extends AccessClaims {
+interface VerifiedClaims extends AccessClaims {
   // Epoch milliseconds.
   expiresAt: number;
 }

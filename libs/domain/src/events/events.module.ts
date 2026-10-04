@@ -15,7 +15,7 @@ import { LIVE_CHANNEL, LiveHub } from './live.hub';
 const PUBLISHER = Symbol('LIVE_PUBLISHER');
 const SUBSCRIBER = Symbol('LIVE_SUBSCRIBER');
 
-export interface EventsOptions {
+interface EventsOptions {
   redisUrl: string;
 }
 

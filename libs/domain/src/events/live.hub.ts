@@ -9,13 +9,13 @@ const HEARTBEAT_MS = 25_000;
 const STREAMS_PER_ACCOUNT = 10;
 
 // An Express response, as far as the hub needs one.
-export interface LiveSink {
+interface LiveSink {
   write(chunk: string): unknown;
   end(): unknown;
   on(event: 'close', listener: () => void): unknown;
 }
 
-export interface LiveTarget {
+interface LiveTarget {
   accountId: string;
   channels: string[];
   expiresAt: number;

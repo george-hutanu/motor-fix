@@ -5,7 +5,7 @@
 
 ## Phase 1: Setup
 
-- [X] T001 [P] `libs/contracts/src/live.dto.ts` (new): `LiveTestDto` (`accountId` uuid), the wire type `LiveMessage` (`kind`, `id`, `at`, optional `reason`), `LIVE_BYE_REASONS` = `expired` | `evicted` | `shutdown`; export from `libs/contracts/src/index.ts` (FR-005, FR-008, FR-012)
+- [X] T001 [P] `libs/contracts/src/live.dto.ts` (new): `LiveTestDto` (`accountId` uuid), the wire type `LiveMessage` (`kind`, `id`, `at`, optional `reason`), the `LiveByeReason` type = `expired` | `evicted` | `shutdown`; export from `libs/contracts/src/index.ts` (FR-005, FR-008, FR-012)
 - [X] T002 [P] `libs/domain/src/auth/access-token.ts`: `verifyAccessToken` also returns `expiresAt` (ms from `exp`) (FR-008)
 
 ## Phase 2: Foundational
@@ -34,7 +34,7 @@ Independent test: two Nest apps on one Redis; an admin's test reaches each strea
 
 ## Phase 6: Polish
 
-- [ ] T011 `apps/web-e2e/src/live.spec.ts` (new): driver and garage dashboards in two contexts, the admin's test to each, both toasts within 2 s, no reload (SC-001, FR-015)
+- [X] T011 `apps/web-e2e/src/live.spec.ts` (new): driver and garage dashboards in two contexts, the admin's test to each, both toasts within 2 s, no reload (SC-001, FR-015)
 
 ## Dependencies
 

@@ -7,8 +7,7 @@ export class LiveTestDto {
   accountId!: string;
 }
 
-export const LIVE_BYE_REASONS = ['expired', 'evicted', 'shutdown'] as const;
-export type LiveByeReason = (typeof LIVE_BYE_REASONS)[number];
+export type LiveByeReason = 'expired' | 'evicted' | 'shutdown';
 
 // One message on the live stream. It names what changed, never the change:
 // the screen reads the object from the API. No personal data travels here.
