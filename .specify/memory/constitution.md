@@ -1,5 +1,21 @@
 <!--
-Sync Impact Report (v1.5.0)
+Sync Impact Report (v1.6.0)
+- Version change: 1.5.0 → 1.6.0 (MINOR: VII steps 1 and 3 expanded — every
+  task carries the link to its own PR in Notion from the moment the draft
+  opens, and a ready PR carries the GitHub label `in review`; the
+  stop:pr-lifecycle gate refuses an unlinked story PR and an unlabelled ready
+  PR; nothing removed)
+- Source: owner decision 2026-10-04: "update each notion ticket with its own PR
+  link … make it a hard rule" and "when a PR is in review, add a label";
+  MotorFix stories gains a `PR` URL property, every existing story PR was
+  backfilled, and the open ready PRs were labelled.
+- Templates:
+  - ✅ AGENTS.md — lifecycle steps 2 and 4
+  - ✅ .claude/hooks/pr-lifecycle-gate.mjs, evals/cases/pr-lifecycle.json
+  - ✅ speckit-notion-sync (`pr` event, label on `review`), speckit-git-commit,
+    speckit-auto (hand-off step 1)
+
+Previous report (v1.5.0)
 - Version change: 1.4.0 → 1.5.0 (MINOR: VII materially expanded — a QA step
   by the PR tester between ready and merge, the Notion QA and Blocked states;
   Enforcement gains pre:bash:merge-gate; nothing removed)
@@ -192,11 +208,15 @@ notifications in step, even when Redis is down.
 Every task, current or future, runs this lifecycle on its own, and no step
 waits for the owner:
 
-1. Set the task In progress in Notion, then open a draft PR for its branch.
+1. Set the task In progress in Notion, then open a draft PR for its branch
+   and write that PR's link onto the task's own `PR` property in Notion. Every
+   story and task links its own PR; one opened later for the same task is
+   added as a comment, never in place of the first.
 2. Push every commit to that branch as the work goes: never forced, never to
    `main`.
 3. When the work is done (tests, typecheck and lint green, review with no
-   CRITICAL/HIGH left), mark the PR ready and set the task In review.
+   CRITICAL/HIGH left), mark the PR ready, label it `in review`, and set the
+   task In review.
 4. Merge `origin/main` into the branch if it is behind and wait for CI. A
    failing check is fixed on the branch and waited for again.
 5. Set the task to QA and run the PR tester (`/speckit-pr-test`) on the head
@@ -339,4 +359,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.5.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-04
+**Version**: 1.6.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-04

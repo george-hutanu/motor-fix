@@ -102,6 +102,8 @@ auto_commit:
      `--body` or `--fill`: the `PR template` check fails a PR whose body drops
      a section. A draft only needs the headings; the rest is filled in before
      it is marked ready.
+  3. `speckit-notion-sync pr <n>`: the PR's link goes onto the story's `PR`
+     property. Every story links its own PR (Constitution VII).
 - Every later commit: `git push`. Marking the PR ready is not this skill's
   job; it is the last step of the work (`speckit-auto` hand-off, or
   `speckit-review` when it finds nothing blocking).
@@ -111,5 +113,5 @@ auto_commit:
 - [ ] Message is a one-line Conventional Commit with a scope, no body, no trailers
 - [ ] Only the intended files staged — no `git add -A` sweeping unrelated work
 - [ ] Pushed to the feature's own branch, not forced, not `main`
-- [ ] On the branch's first commit: story In progress in Notion first, then a draft PR from the template (`--body-file`) linking it
+- [ ] On the branch's first commit: story In progress in Notion first, then a draft PR from the template (`--body-file`) linking it, and that PR's link on the story in Notion
 

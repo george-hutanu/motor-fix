@@ -36,12 +36,15 @@ epic or a plan, whether run through spec-kit or by hand.
   2. Open a draft PR for its branch (`speckit-git-commit`, at the first commit),
      its body made from `.github/pull_request_template.md`:
      `gh pr create --draft --body-file <body>`, never `--body` or `--fill`.
+     Then write the PR's link onto the task's `PR` property in Notion
+     (`speckit-notion-sync pr <n>`): every task links its own PR.
   3. Do the work, pushing every commit to that branch: never forced, never `main`.
   4. When it is done (tests, typecheck and lint green, review with no
      CRITICAL/HIGH left), fill in every section of the template
      (`node scripts/pr-body-check.ts --body-file <body> --title "<title>"`
      passes, then `gh pr edit <n> --body-file <body>`), mark the PR ready for
-     review (`gh pr ready`) and set the task to In review in Notion
+     review (`gh pr ready`), label it `in review`
+     (`gh pr edit <n> --add-label "in review"`) and set the task to In review in Notion
      (`speckit-notion-sync review`).
   5. Get CI green: merge `origin/main` into the branch if it is behind and
      push, wait for the checks (`gh pr checks <n> --watch`); a failing check is

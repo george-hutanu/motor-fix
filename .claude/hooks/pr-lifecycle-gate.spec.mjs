@@ -8,12 +8,13 @@ const green = [{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }, review('SUC
 const ready = (over = {}) => ({
   isDraft: false,
   mergeable: 'MERGEABLE',
+  labels: [{ name: 'in review' }],
   number: 6,
   state: 'OPEN',
   statusCheckRollup: green,
   ...over,
 });
-const task = (over = {}) => ({ ahead: 3, branch: '050-cockpit-theme', pr: ready(), unpushed: 0, ...over });
+const task = (over = {}) => ({ ahead: 3, branch: '050-cockpit-theme', pr: ready(), prLinked: true, unpushed: 0, ...over });
 
 describe('PR lifecycle gate — what it leaves alone', () => {
   it('lets a session on main, a detached HEAD or a branch with nothing ahead end', () => {
@@ -68,6 +69,45 @@ describe('PR lifecycle gate — what it refuses', () => {
   it('lets a session end while the agent review says failure: the fix loop owns that PR', () => {
     const rollup = [{ conclusion: 'SUCCESS' }, review('FAILURE')];
     assert.equal(decide(task({ pr: ready({ statusCheckRollup: rollup }) })), null);
+  });
+});
+
+describe('PR lifecycle gate — the PR link on the story', () => {
+  it('refuses a story branch whose open PR is not recorded on its Notion story, draft or ready', () => {
+    for (const pr of [ready({ isDraft: true }), ready()]) {
+      const why = decide(task({ pr, prLinked: false }));
+      assert.match(why, /PR #6/);
+      assert.match(why, /speckit-notion-sync pr/);
+    }
+  });
+
+  it('asks for the link before the merge', () => {
+    assert.doesNotMatch(decide(task({ prLinked: false })), /gh pr merge/);
+  });
+
+  it('leaves a branch with no story alone, and a merged or closed PR', () => {
+    assert.equal(decide(task({ branch: 'chore-harness-evals', pr: ready({ isDraft: true }), prLinked: false })), null);
+    assert.equal(decide(task({ pr: ready({ state: 'MERGED' }), prLinked: false })), null);
+    assert.equal(decide(task({ pr: ready({ state: 'CLOSED' }), prLinked: false })), null);
+  });
+});
+
+describe('PR lifecycle gate — the in review label', () => {
+  it('refuses a ready PR without the in review label, before anything about merging', () => {
+    const why = decide(task({ pr: ready({ labels: [] }) }));
+    assert.match(why, /PR #6/);
+    assert.match(why, /gh pr edit 6 --add-label "in review"/);
+  });
+
+  it('asks the same of a ready PR with no story and of one whose checks are still running', () => {
+    assert.match(decide(task({ branch: 'chore-x', pr: ready({ labels: [] }) })), /in review/);
+    assert.match(decide(task({ pr: ready({ labels: [], statusCheckRollup: [{ state: 'PENDING' }] }) })), /in review/);
+  });
+
+  it('leaves a draft, a merged and a closed PR without the label alone', () => {
+    assert.equal(decide(task({ pr: ready({ isDraft: true, labels: [] }) })), null);
+    assert.equal(decide(task({ pr: ready({ labels: [], state: 'MERGED' }) })), null);
+    assert.equal(decide(task({ pr: ready({ labels: [], state: 'CLOSED' }) })), null);
   });
 });
 

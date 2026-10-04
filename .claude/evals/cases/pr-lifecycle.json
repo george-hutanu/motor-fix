@@ -58,5 +58,31 @@
     "expect": {
       "exit": 0
     }
+  },
+  {
+    "id": "pr-lifecycle-refuses-a-story-pr-not-linked-from-notion",
+    "hook": "stop:pr-lifecycle",
+    "why": "every story carries its own PR link from the moment the PR opens; a draft on a story branch with no recorded link sends the session to speckit-notion-sync pr",
+    "payload": {},
+    "env": {
+      "SPECKIT_PR_STATE": "{\"branch\": \"390-audit-history\", \"ahead\": 2, \"unpushed\": 0, \"blocked\": false, \"prLinked\": false, \"pr\": {\"number\": 12, \"state\": \"OPEN\", \"isDraft\": true, \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": []}}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "speckit-notion-sync pr 12"
+    }
+  },
+  {
+    "id": "pr-lifecycle-refuses-a-ready-pr-without-the-in-review-label",
+    "hook": "stop:pr-lifecycle",
+    "why": "the owner watches GitHub for PRs in review; a ready PR without the `in review` label is invisible there",
+    "payload": {},
+    "env": {
+      "SPECKIT_PR_STATE": "{\"branch\": \"chore-notion-tool-names\", \"ahead\": 2, \"unpushed\": 0, \"blocked\": false, \"pr\": {\"number\": 27, \"state\": \"OPEN\", \"isDraft\": false, \"labels\": [], \"mergeable\": \"MERGEABLE\", \"statusCheckRollup\": []}}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "--add-label \"in review\""
+    }
   }
 ]

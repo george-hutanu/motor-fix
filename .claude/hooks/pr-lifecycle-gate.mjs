@@ -2,7 +2,10 @@
 // lifecycle. Before a session ends on a task branch with work ahead of main,
 // the work must be pushed, the branch must have a PR, a ready PR whose checks
 // passed must have been tested by the PR tester (an `agent-review` success on
-// its head commit), and then merged, not left for the user.
+// its head commit), and then merged, not left for the user. On a story branch
+// (`NNN-slug`) the open PR must also be linked from its Notion story, which
+// `speckit-notion-sync pr` records in specs/<branch>/notion-sync.md. A PR
+// marked ready carries the `in review` label until it merges.
 //
 // What it does NOT block: main or a detached HEAD, a branch with nothing ahead
 // of origin/main, a draft PR (the work is not done yet), a PR whose checks are
@@ -18,6 +21,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+const IN_REVIEW = "in review";
 const GREEN = new Set(["SUCCESS", "NEUTRAL", "SKIPPED"]);
 
 /** Every check concluded green; an empty rollup is not green. */
@@ -35,13 +39,17 @@ export const hasAgentReview = (checks) =>
   checks.some((c) => isAgentReview(c) && (c.state ?? c.conclusion) === "SUCCESS");
 
 /** The refusal for this state, or null when the session may end. */
-export function decide({ branch, ahead, unpushed, pr, blocked = false }) {
+export function decide({ branch, ahead, unpushed, pr, prLinked = true, blocked = false }) {
   if (!branch || branch === "HEAD" || branch === "main" || ahead === 0)
     return null;
   if (unpushed > 0)
     return `${unpushed} commit(s) on ${branch} are not pushed. Push them (git push -u origin ${branch}); work on a task is pushed as it goes.`;
   if (pr === null)
     return `${branch} has no PR. Open it as a draft (gh pr create --draft --base main --head ${branch} --body-file <body made from .github/pull_request_template.md>); a task's PR opens at its start.`;
+  if (pr.state === "OPEN" && !prLinked && /^\d+-/.test(branch))
+    return `PR #${pr.number} is not linked from its Notion story. Write it to the story's PR property (speckit-notion-sync pr ${pr.number}); every story carries its own PR link from the moment the PR opens.`;
+  if (pr.state === "OPEN" && !pr.isDraft && pr.labels && !pr.labels.some((l) => l.name === IN_REVIEW))
+    return `PR #${pr.number} is ready but has no "${IN_REVIEW}" label. Add it (gh pr edit ${pr.number} --add-label "${IN_REVIEW}"); a ready PR shows it is in review on GitHub too.`;
   if (pr.state !== "OPEN" || pr.isDraft || pr.mergeable !== "MERGEABLE") return null;
   const checks = pr.statusCheckRollup ?? [];
   if (!allGreen(checks.filter((c) => !isAgentReview(c)))) return null;
@@ -61,6 +69,16 @@ function runBlocked(cwd) {
   const file = join(cwd, ".specify", "run-state.json");
   try {
     return existsSync(file) && JSON.parse(readFileSync(file, "utf8")).status === "blocked";
+  } catch {
+    return false;
+  }
+}
+
+/** `speckit-notion-sync pr` logged this PR for the branch's story. */
+function prLinked(cwd, branch, number) {
+  try {
+    const log = readFileSync(join(cwd, "specs", branch, "notion-sync.md"), "utf8");
+    return new RegExp(`· pr · .*#${number}\\b`).test(log);
   } catch {
     return false;
   }
@@ -87,7 +105,7 @@ function readState(cwd) {
   try {
     const out = execFileSync(
       "gh",
-      ["pr", "view", branch, "--json", "number,state,isDraft,mergeable,statusCheckRollup"],
+      ["pr", "view", branch, "--json", "number,state,isDraft,labels,mergeable,statusCheckRollup"],
       { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 15000 },
     );
     pr = JSON.parse(out);
@@ -95,7 +113,8 @@ function readState(cwd) {
     const said = `${error.stderr ?? ""}`;
     if (!/no pull requests found/i.test(said)) return null;
   }
-  return { ahead, blocked: runBlocked(cwd), branch, pr, unpushed };
+  const linked = pr === null || prLinked(cwd, branch, pr.number);
+  return { ahead, blocked: runBlocked(cwd), branch, pr, prLinked: linked, unpushed };
 }
 
 /**
