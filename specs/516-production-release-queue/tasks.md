@@ -1,6 +1,6 @@
 # Tasks: Production deploys queue instead of cancelling, with no approval
 
-**Input**: `specs/491-production-release-queue/spec.md` (level 1: no plan.md)
+**Input**: `specs/516-production-release-queue/spec.md` (level 1: no plan.md)
 
 ## Phase 1: Tests first
 
@@ -15,7 +15,7 @@
 
 ## Phase 3: Proof
 
-- [X] T006 `npx jest -c scripts/jest.config.cts` green; `node .claude/scripts/capabilities.mjs validate specs/491-production-release-queue --check` green; archive the delta into `platform` (SC-001, SC-002)
+- [X] T006 `npx jest -c scripts/jest.config.cts` green; `node .claude/scripts/capabilities.mjs validate specs/516-production-release-queue --check` green; archive the delta into `platform` (SC-001, SC-002)
 
 ## FR → test
 

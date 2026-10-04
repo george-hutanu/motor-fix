@@ -190,3 +190,55 @@ describe('LanguageChoice.saved', () => {
     expect(saved()).toBeNull();
   });
 });
+
+describe('LanguageChoice.taps', () => {
+  function listen() {
+    const taps: string[] = [];
+    TestBed.inject(LanguageChoice).taps.subscribe((l) => taps.push(l));
+    return taps;
+  }
+
+  it('reports each tap on the switch, the current language included', async () => {
+    const { button, fixture } = render();
+    const taps = listen();
+
+    await tap(fixture, button('EN'));
+    await tap(fixture, button('EN'));
+    await tap(fixture, button('RO'));
+
+    expect(taps).toEqual(['en', 'en', 'ro']);
+  });
+
+  it('reports nothing for a language chosen without the switch', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideRememberedLanguage()],
+    });
+    const { fixture } = render();
+    const taps = listen();
+
+    await TestBed.inject(LanguageChoice).choose('en');
+    window.dispatchEvent(
+      new StorageEvent('storage', { key: 'mf.lang', newValue: 'ro' }),
+    );
+    await new Promise((resolve) => setTimeout(resolve));
+    await fixture.whenStable();
+
+    expect(taps).toEqual([]);
+  });
+
+  it('reports nothing for a value that is not a language', async () => {
+    const taps = listen();
+
+    await TestBed.inject(LanguageChoice).pick('fr');
+
+    expect(taps).toEqual([]);
+    expect(TestBed.inject(I18n).language()).toBe('ro');
+  });
+
+  it('switches and remembers a picked language like a chosen one', async () => {
+    await TestBed.inject(LanguageChoice).pick('en');
+
+    expect(TestBed.inject(I18n).language()).toBe('en');
+    expect(localStorage.getItem('mf.lang')).toBe('en');
+  });
+});

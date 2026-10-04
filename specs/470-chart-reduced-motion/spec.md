@@ -2,7 +2,7 @@
 
 **Feature Branch**: `470-chart-reduced-motion`
 **Created**: 2026-10-04
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 **Level**: 1 (one-session)
 **Notion story**: ST-470 — https://app.notion.com/p/3ef607bff0d281beb7fef25a5d0d7cb7
 **Epic**: EP-1 Foundations — https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707

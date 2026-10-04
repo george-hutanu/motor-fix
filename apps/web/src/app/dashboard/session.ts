@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
-import { LanguageChoice } from '@motor-fix/i18n';
+import { type Language, LanguageChoice } from '@motor-fix/i18n';
 
 // The signed-in account. The access token lives in this object's memory only;
 // the refresh token is a cookie the page cannot read, used to renew it.
@@ -15,6 +15,20 @@ export class Session {
   private renewing: Promise<boolean> | null = null;
   // Bumped at sign-out, so an answer that arrives later restores nothing.
   private generation = 0;
+
+  // The language last tapped, and the save sending it, one at a time.
+  private wanted: Language | null = null;
+  private saving: Promise<void> | null = null;
+
+  constructor() {
+    this.language.taps.subscribe((language) => {
+      this.wanted = language;
+      if (this.saving) return;
+      this.saving = this.save().finally(() => {
+        this.saving = null;
+      });
+    });
+  }
 
   token(): string | null {
     return this.accessToken;
@@ -95,5 +109,25 @@ export class Session {
   private forget() {
     this.accessToken = null;
     this.current.set(null);
+  }
+
+  // Signed out, a tap stays on the device. A failed save is sent again at the
+  // next tap; an answer for an account no longer held is dropped.
+  private async save() {
+    let me = this.current();
+    // Ends on the language last sent, whatever the answer says.
+    let sent = me?.language;
+    while (me && this.wanted && this.wanted !== sent) {
+      sent = this.wanted;
+      let saved: MeDto;
+      try {
+        saved = await this.me.meControllerUpdate({ body: { language: sent } });
+      } catch {
+        return;
+      }
+      if (this.current() !== me) return;
+      this.current.set(saved);
+      me = saved;
+    }
   }
 }
