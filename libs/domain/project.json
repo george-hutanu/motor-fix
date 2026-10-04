@@ -12,6 +12,7 @@
         "cwd": "libs/domain"
       }
     },
+    "test:mutation": {},
     "typecheck": {
       "cache": true,
       "command": "tsc --noEmit -p libs/domain/tsconfig.lib.json && tsc --noEmit -p libs/domain/tsconfig.spec.json"

@@ -4,6 +4,7 @@
   "projectType": "library",
   "sourceRoot": "scripts",
   "targets": {
+    "test:mutation": {},
     "typecheck": {
       "cache": true,
       "command": "tsc --noEmit -p scripts/tsconfig.json"

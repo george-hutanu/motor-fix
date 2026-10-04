@@ -1,0 +1,7 @@
+{
+  "thresholds": {
+    "break": 95,
+    "high": 80,
+    "low": 60
+  }
+}

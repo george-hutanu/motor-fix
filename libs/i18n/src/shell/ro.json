@@ -1,15 +1,50 @@
 {
   "brand": "MotorFix",
   "frame": {
+    "area": {
+      "admin": "Admin",
+      "driver": "Șofer",
+      "garage": "Service"
+    },
     "empty": "Nimic aici încă.",
     "home": "MotorFix, pagina principală",
     "logo": "MOTORFIX",
     "menu": "Meniu",
+    "nav": {
+      "admin": {
+        "catalogue": "Mărci și lucrări",
+        "garages": "Service-uri",
+        "reviews": "Recenzii raportate",
+        "settings": "Setări",
+        "users": "Utilizatori"
+      },
+      "dashboard": "Panou",
+      "driver": {
+        "cars": "Mașinile mele",
+        "requests": "Cererile mele",
+        "reviews": "Recenziile mele",
+        "savedGarages": "Service-uri salvate",
+        "settings": "Setări"
+      },
+      "garage": {
+        "prices": "Prețuri",
+        "profile": "Profilul service-ului",
+        "requests": "Cereri de ofertă",
+        "reviews": "Recenzii",
+        "schedule": "Programări",
+        "team": "Mecanici"
+      }
+    },
     "signOut": "Ieși din cont"
   },
   "health": {
     "status": "PostgreSQL: {postgres} · Redis: {redis}",
     "unknown": "necunoscut"
+  },
+  "language": {
+    "en": "EN",
+    "label": "Limba",
+    "ro": "RO"
   },
   "version": {
     "unknown": "versiune necunoscută"

@@ -4,6 +4,7 @@ updated: 2026-10-04
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
+  - 431-mutation-testing
 ---
 
 # Capability: Platform
@@ -147,6 +148,54 @@ _From 421-monorepo-platform._
 ### 421-FR-034 — The by-hand checks of the pipeline (a lint error blocks a merge; a stale client fails the contract check; a broken migration stops the run before staging; production does not deploy without approval; a failing production health check restores the previous images) MUST be listed in `quickstart.md`, with a place to record the date and result of each.
 
 _From 421-monorepo-platform._
+
+### 431-FR-001 — Every project with a Jest configuration (`apps/api`, `apps/worker`, `apps/web`, `apps/mcp`, `libs/contracts`, `libs/domain`, `libs/media`, `scripts`) MUST have its own `stryker.config.json` with a `thresholds.break` floor and an Nx `test:mutation` target.
+
+_From 431-mutation-testing._
+
+### 431-FR-002 — A project's mutation run MUST mutate only that project's non-test, non-generated TypeScript source and MUST run that project's own Jest configuration, with the same runtime options as its `test` target.
+
+_From 431-mutation-testing._
+
+### 431-FR-003 — A mutation run MUST report a mutation score and MUST exit non-zero when the score is below the project's `thresholds.break`.
+
+_From 431-mutation-testing._
+
+### 431-FR-004 — A mutation run for a project with no spec files MUST report that and exit zero without starting Stryker; such a project's floor is 0.
+
+_From 431-mutation-testing._
+
+### 431-FR-005 — Projects whose tests need PostgreSQL and Redis MUST reach them through the same `DATABASE_URL` / `REDIS_URL` as `npm test`.
+
+_From 431-mutation-testing._
+
+### 431-FR-006 — The root MUST provide `npm run test:mutation` (every project) and `npm run test:mutation:affected` (only projects affected relative to `main`), both through Nx.
+
+_From 431-mutation-testing._
+
+### 431-FR-007 — A standalone CI workflow, not the pull-request workflow, MUST run every project's mutation target (or the projects named when it is started by hand) nightly on `main` and on demand, one project at a time, in incremental mode with the incremental files cached between runs, against PostgreSQL and Redis service containers like the test step's; it MUST write one score line per project into the job summary and upload the reports as an artifact.
+
+_From 431-mutation-testing._
+
+### 431-FR-008 — The mutation workflow MUST fail when any project is below its floor or the job exceeds its time limit; each project's run MUST start by printing the project's name, so the failing or cut-off project is named in the output.
+
+_From 431-mutation-testing._
+
+### 431-FR-009 — A project's `thresholds.break` MUST start at 5 points below a measured score, rounded down, where one exists, and at 0 otherwise (no spec files, or not yet measured); `low` and `high` MUST be 60 and 80.
+
+_From 431-mutation-testing._
+
+### 431-FR-010 — Every project's `stryker.config.json` MUST be within what `config-protection.mjs` guards, and a harness eval case MUST show that lowering a `thresholds.break` is refused.
+
+_From 431-mutation-testing._
+
+### 431-FR-011 — The `mutation-runner` subagent and `/speckit-harden` MUST invoke the Nx targets and name this repository's projects, not the `npm -w apps/server` / `apps/scanner` form.
+
+_From 431-mutation-testing._
+
+### 431-FR-012 — Stryker's working files and reports MUST stay out of git.
+
+_From 431-mutation-testing._
 
 ## Retired
 

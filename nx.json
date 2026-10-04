@@ -92,6 +92,14 @@
           "transitive": true
         }
       ]
+    },
+    "test:mutation": {
+      "command": "node scripts/mutation.ts {projectName} {projectRoot}",
+      "options": {
+        "env": {
+          "TZ": "UTC"
+        }
+      }
     }
   }
 }

@@ -1,10 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import type { MeDto } from '@motor-fix/data-access';
-import { TranslatePipe } from '@motor-fix/i18n';
+import { LanguageSwitch, TranslatePipe } from '@motor-fix/i18n';
 
 import { Session } from './session';
 
+// `label` and `tag` are shell translation keys.
 interface Entry {
   label: string;
   // Absent: every role of the area sees it.
@@ -14,42 +15,60 @@ interface Entry {
 const MENUS: Record<MeDto['landing'], { tag: string; entries: Entry[] }> = {
   '/app/admin': {
     entries: [
-      { label: 'Panou' },
-      { capability: 'admin.garages', label: 'Service-uri' },
-      { capability: 'admin.users', label: 'Utilizatori' },
-      { capability: 'admin.reviews', label: 'Recenzii raportate' },
-      { capability: 'admin.catalogue', label: 'Mărci și lucrări' },
-      { capability: 'admin.settings', label: 'Setări' },
+      { label: 'shell.frame.nav.dashboard' },
+      { capability: 'admin.garages', label: 'shell.frame.nav.admin.garages' },
+      { capability: 'admin.users', label: 'shell.frame.nav.admin.users' },
+      { capability: 'admin.reviews', label: 'shell.frame.nav.admin.reviews' },
+      {
+        capability: 'admin.catalogue',
+        label: 'shell.frame.nav.admin.catalogue',
+      },
+      { capability: 'admin.settings', label: 'shell.frame.nav.admin.settings' },
     ],
-    tag: 'Admin',
+    tag: 'shell.frame.area.admin',
   },
   '/app/driver': {
     entries: [
-      { label: 'Panou' },
-      { capability: 'driver.requests', label: 'Cererile mele' },
-      { capability: 'driver.cars', label: 'Mașinile mele' },
-      { capability: 'driver.reviews', label: 'Recenziile mele' },
-      { capability: 'driver.saved_garages', label: 'Service-uri salvate' },
-      { capability: 'driver.settings', label: 'Setări' },
+      { label: 'shell.frame.nav.dashboard' },
+      {
+        capability: 'driver.requests',
+        label: 'shell.frame.nav.driver.requests',
+      },
+      { capability: 'driver.cars', label: 'shell.frame.nav.driver.cars' },
+      { capability: 'driver.reviews', label: 'shell.frame.nav.driver.reviews' },
+      {
+        capability: 'driver.saved_garages',
+        label: 'shell.frame.nav.driver.savedGarages',
+      },
+      {
+        capability: 'driver.settings',
+        label: 'shell.frame.nav.driver.settings',
+      },
     ],
-    tag: 'Șofer',
+    tag: 'shell.frame.area.driver',
   },
   '/app/garage': {
     entries: [
-      { label: 'Panou' },
-      { capability: 'garage.requests', label: 'Cereri de ofertă' },
-      { capability: 'garage.schedule', label: 'Programări' },
-      { capability: 'garage.team', label: 'Mecanici' },
-      { capability: 'garage.prices', label: 'Prețuri' },
-      { capability: 'garage.reviews', label: 'Recenzii' },
-      { capability: 'garage.profile', label: 'Profilul service-ului' },
+      { label: 'shell.frame.nav.dashboard' },
+      {
+        capability: 'garage.requests',
+        label: 'shell.frame.nav.garage.requests',
+      },
+      {
+        capability: 'garage.schedule',
+        label: 'shell.frame.nav.garage.schedule',
+      },
+      { capability: 'garage.team', label: 'shell.frame.nav.garage.team' },
+      { capability: 'garage.prices', label: 'shell.frame.nav.garage.prices' },
+      { capability: 'garage.reviews', label: 'shell.frame.nav.garage.reviews' },
+      { capability: 'garage.profile', label: 'shell.frame.nav.garage.profile' },
     ],
-    tag: 'Service',
+    tag: 'shell.frame.area.garage',
   },
 };
 
 @Component({
-  imports: [RouterLink, TranslatePipe],
+  imports: [LanguageSwitch, RouterLink, TranslatePipe],
   selector: 'mf-frame',
   styles: `
     :host { display: grid; grid-template-columns: minmax(0, 16rem) minmax(0, 1fr); min-height: 100vh; }
@@ -61,11 +80,11 @@ const MENUS: Record<MeDto['landing'], { tag: string; entries: Entry[] }> = {
   template: `
     <aside>
       <a routerLink="/" [attr.aria-label]="'shell.frame.home' | t">{{ 'shell.frame.logo' | t }}</a>
-      <span>{{ menu().tag }}</span>
+      <span>{{ menu().tag | t }}</span>
       <nav [attr.aria-label]="'shell.frame.menu' | t">
         @for (entry of entries(); track entry.label) {
           <button type="button" [attr.aria-pressed]="entry.label === view()" (click)="view.set(entry.label)">
-            {{ entry.label }}
+            {{ entry.label | t }}
           </button>
         }
       </nav>
@@ -75,7 +94,7 @@ const MENUS: Record<MeDto['landing'], { tag: string; entries: Entry[] }> = {
       </div>
     </aside>
     <div>
-      <header><h1>{{ view() }}</h1></header>
+      <header><h1>{{ view() | t }}</h1><mf-language-switch /></header>
       <main><p>{{ 'shell.frame.empty' | t }}</p></main>
     </div>
   `,
@@ -92,7 +111,7 @@ export class Frame {
       (e) => !e.capability || allowed.includes(e.capability),
     );
   });
-  protected readonly view = signal('Panou');
+  protected readonly view = signal('shell.frame.nav.dashboard');
 
   protected signOut() {
     this.session.current.set(null);
