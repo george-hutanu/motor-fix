@@ -41,7 +41,8 @@
     "passwordPlaceholder": "Cel puțin 8 caractere",
     "problem": {
       "email_taken": "Există deja un cont cu acest e‑mail.",
-      "too_many_attempts": "Prea multe încercări. Încearcă din nou peste o oră."
+      "too_many_attempts": "Prea multe încercări. Încearcă din nou peste o oră.",
+      "weak_password": "Verifică câmpurile marcate."
     },
     "showPassword": "Arată parola",
     "signIn": "Intră în cont",

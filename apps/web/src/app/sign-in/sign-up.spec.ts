@@ -352,6 +352,7 @@ describe('answers that refuse', () => {
       'Alege o parolă mai greu de ghicit: este printre cele mai folosite.',
     );
     expect(document.activeElement).toBe(field('Parolă'));
+    expect(alertText()).toBe('Verifică câmpurile marcate.');
   });
 
   it.each([

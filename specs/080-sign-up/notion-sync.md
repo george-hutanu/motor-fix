@@ -14,3 +14,7 @@
 - 2026-10-04 · review · ST-80 story Status · Implementing → In review (PR #53 marked ready)
 - 2026-10-04 · review · Foundations timeline row ST-80 · Implementing → In review
 - 2026-10-04 · labels · PR #53 · in review
+- 2026-10-04 · qa · ST-80 story Status · In review → QA
+- 2026-10-04 · qa · Foundations timeline row ST-80 · In review → QA
+- 2026-10-04 · labels · PR #53 · QA
+- 2026-10-04 · debt · 1 deferred bullet filed as To do task 3ef607bff0d281c89193fe63b28bddf4 (HMAC counter keys); proxy-trust bullet already ST-82's task 3ef607bff0d281f2ac88f8453c97d361

@@ -41,7 +41,8 @@
     "passwordPlaceholder": "At least 8 characters",
     "problem": {
       "email_taken": "An account with this e-mail already exists.",
-      "too_many_attempts": "Too many attempts. Try again in an hour."
+      "too_many_attempts": "Too many attempts. Try again in an hour.",
+      "weak_password": "Check the marked fields."
     },
     "showPassword": "Show password",
     "signIn": "Sign in",

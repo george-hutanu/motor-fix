@@ -63,3 +63,8 @@
 
 ## 17. Archive
 - Delta fixed before the merge: FR-005/006/009 were in both Adds and Modifies, and replacing 082-FR-011 / 082-FR-005 would have dropped sign-in's rules. The cross-cutting rules became FR-015 (JSON before validation) and FR-016 (one key per client), both Adds; only 082-FR-013 → FR-009 is a Modifies. `capabilities.mjs merge --apply` → accounts +15 ~1 -0.
+
+## Hand-off
+- PR #53 ready; Notion In review → QA; labels in review → QA. CI green on b5f75d6.
+- PR tester lap 2 (b5f75d6): agent-review success, 0 blocking, 3 medium (2 environment: no object store; 1 real: weak_password also showed the generic error line), 3 low (notes). Fixed the real one test-first: `public.signUp.problem.weak_password`. Report in pr-review/lap2/.
+- Debt: HMAC counter keys filed as To do 3ef607bff0d281c89193fe63b28bddf4; proxy trust already ST-82's task.
