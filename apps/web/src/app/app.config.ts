@@ -1,7 +1,8 @@
 import { provideHttpClient, withFetch } from '@angular/common/http';
-import { ApplicationConfig } from '@angular/core';
+import { ApplicationConfig, isDevMode } from '@angular/core';
 import { provideClientHydration } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
+import { provideServiceWorker } from '@angular/service-worker';
 import { provideI18n, provideRememberedLanguage } from '@motor-fix/i18n';
 import { provideCockpitTheme } from '@motor-fix/ui-cockpit';
 
@@ -17,5 +18,7 @@ export const appConfig: ApplicationConfig = {
     provideCockpitTheme(),
     provideRememberedLanguage(),
     provideLanguageAddresses(),
+    // Only the production build emits ngsw-worker.js.
+    provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode() }),
   ],
 };

@@ -1,4 +1,4 @@
-import { Directive } from '@angular/core';
+import { Directive, input } from '@angular/core';
 
 @Directive({
   host: { class: 'spartan-table-container', 'data-slot': 'table-container' },
@@ -30,17 +30,32 @@ export class HlmTBody {}
 })
 export class HlmTr {}
 
-@Directive({
-  host: { class: 'spartan-table-head', 'data-slot': 'table-head' },
-  selector: 'th[hlmTh]',
-})
-export class HlmTh {}
+// On a phone a table that names a main column shows only main and key.
+type Column = 'main' | 'key';
 
 @Directive({
-  host: { class: 'spartan-table-cell', 'data-slot': 'table-cell' },
+  host: {
+    '[attr.data-column]': 'column()',
+    class: 'spartan-table-head',
+    'data-slot': 'table-head',
+  },
+  selector: 'th[hlmTh]',
+})
+export class HlmTh {
+  readonly column = input<Column>();
+}
+
+@Directive({
+  host: {
+    '[attr.data-column]': 'column()',
+    class: 'spartan-table-cell',
+    'data-slot': 'table-cell',
+  },
   selector: 'td[hlmTd]',
 })
-export class HlmTd {}
+export class HlmTd {
+  readonly column = input<Column>();
+}
 
 export const HlmTableImports = [
   HlmTableContainer,

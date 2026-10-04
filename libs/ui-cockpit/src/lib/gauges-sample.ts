@@ -25,6 +25,7 @@ const ESTIMATES = [
     }
     .stack {
       display: grid;
+      grid-template-columns: minmax(0, 1fr);
       gap: var(--mf-space-5);
     }
     .dial {
