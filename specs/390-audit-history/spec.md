@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-390 — Record every change in the audit history: the audit history writer every module uses inside its own transaction, implementing the AuditPort interface ST-79 introduced (currently a no-op) in libs/domain, with its own Prisma schema file for the audit module. Notion story: https://app.notion.com/p/3ee607bff0d28146adece5076470024d. Spec folder and branch: 390-audit-history."
 
