@@ -1,6 +1,6 @@
 ---
 name: "speckit-watch"
-description: "Watch every worktree on this machine and get stale work moving again: one board of what each agent is doing (feature, phase, holder, last activity, PR), the safe fixes applied (dead locks released, merged clean worktrees removed), and one background agent dispatched per stale item to resume it, re-run QA, fix red CI or merge — at most 4 QA runs and 2 other agents at once. Repeat it with /loop 15m /speckit-watch."
+description: "Watch every worktree on this machine and get stale work moving again: one board of what each agent is doing (feature, phase, holder, last activity, PR), the safe fixes applied (dead locks released, merged clean worktrees removed), and one background agent dispatched per stale item to resume it, re-run QA, fix red CI or merge, within the caps the watcher applies. Repeat it with /loop 15m /speckit-watch."
 argument-hint: "[--stale <phase>=<minutes>,…]"
 compatibility: "Requires git, gh (george-hutanu via GH_TOKEN), Node 24"
 metadata:

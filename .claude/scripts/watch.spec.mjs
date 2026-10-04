@@ -11,6 +11,7 @@ import {
   dispatchPlan,
   fixOf,
   holderOf,
+  isClaudeCommand,
   lockPid,
   main,
   parseStale,
@@ -45,7 +46,6 @@ const porcelain = [
   '',
 ].join('\n');
 
-const rollup = (...entries) => entries;
 const check = (conclusion, status = 'COMPLETED') => ({ __typename: 'CheckRun', name: 'ci', status, conclusion });
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
 
@@ -55,7 +55,7 @@ const pr = (over = {}) => ({
   state: 'OPEN',
   isDraft: false,
   headRefOid: 'abc',
-  statusCheckRollup: rollup(check('SUCCESS')),
+  statusCheckRollup: [check('SUCCESS')],
   ...over,
 });
 
@@ -99,6 +99,16 @@ describe('worktree records', () => {
   });
 });
 
+describe('which process is Claude Code', () => {
+  it('matches the native binary and the npm entry point, not a process that only mentions .claude', () => {
+    assert.ok(isClaudeCommand('/Users/x/Library/Application Support/Claude/claude-code/2.1.286/f2/claude.app/Contents/MacOS/claude\n'));
+    assert.ok(isClaudeCommand('claude --resume'));
+    assert.ok(isClaudeCommand('node /usr/local/lib/node_modules/@anthropic-ai/claude-code/cli.js'));
+    assert.ok(!isClaudeCommand('node -e "x" /Users/me/.claude/settings.json'));
+    assert.ok(!isClaudeCommand('node .claude/scripts/watch.mjs'));
+  });
+});
+
 describe('holder', () => {
   const lock = 'claude agent agent-a1 (pid 2214 start Sun Oct  4 08:07:18 2026)';
   const base = { main: false, lock: null, alive: () => false, qaLive: false, claim: null, threshold: 30, now: NOW };
@@ -136,17 +146,17 @@ describe('PR summary', () => {
   });
 
   it('separates agent-review from the other checks', () => {
-    const s = summarizePr(pr({ statusCheckRollup: rollup(check('SUCCESS'), review('SUCCESS')) }));
+    const s = summarizePr(pr({ statusCheckRollup: [check('SUCCESS'), review('SUCCESS')] }));
     assert.equal(s.checks, 'pass');
     assert.equal(s.agentReview, 'success');
   });
 
   it('reads a failed, a pending and an absent check', () => {
-    assert.equal(summarizePr(pr({ statusCheckRollup: rollup(check('SUCCESS'), check('FAILURE')) })).checks, 'fail');
-    assert.equal(summarizePr(pr({ statusCheckRollup: rollup(check(null, 'IN_PROGRESS')) })).checks, 'pending');
-    assert.equal(summarizePr(pr({ statusCheckRollup: rollup(check('SKIPPED'), check('NEUTRAL')) })).checks, 'pass');
+    assert.equal(summarizePr(pr({ statusCheckRollup: [check('SUCCESS'), check('FAILURE')] })).checks, 'fail');
+    assert.equal(summarizePr(pr({ statusCheckRollup: [check(null, 'IN_PROGRESS')] })).checks, 'pending');
+    assert.equal(summarizePr(pr({ statusCheckRollup: [check('SKIPPED'), check('NEUTRAL')] })).checks, 'pass');
     assert.equal(summarizePr(pr({ statusCheckRollup: [] })).checks, 'none');
-    assert.equal(summarizePr(pr({ statusCheckRollup: rollup(review('FAILURE')) })).agentReview, 'failure');
+    assert.equal(summarizePr(pr({ statusCheckRollup: [review('FAILURE')] })).agentReview, 'failure');
     assert.equal(summarizePr(pr()).agentReview, null);
   });
 });
@@ -172,10 +182,10 @@ describe('phase', () => {
 
   it('is merging, qa or review for a ready PR', () => {
     const ready = (rollupEntries) => summarizePr(pr({ statusCheckRollup: rollupEntries }));
-    assert.equal(phaseOf({ ...none, pr: ready(rollup(check('SUCCESS'), review('SUCCESS'))) }), 'merging');
-    assert.equal(phaseOf({ ...none, pr: ready(rollup(check('SUCCESS'), review('FAILURE'))) }), 'qa');
-    assert.equal(phaseOf({ ...none, pr: ready(rollup(check('SUCCESS'))), qaLive: true }), 'qa');
-    assert.equal(phaseOf({ ...none, pr: ready(rollup(check('SUCCESS'))) }), 'review');
+    assert.equal(phaseOf({ ...none, pr: ready([check('SUCCESS'), review('SUCCESS')]) }), 'merging');
+    assert.equal(phaseOf({ ...none, pr: ready([check('SUCCESS'), review('FAILURE')]) }), 'qa');
+    assert.equal(phaseOf({ ...none, pr: ready([check('SUCCESS')]), qaLive: true }), 'qa');
+    assert.equal(phaseOf({ ...none, pr: ready([check('SUCCESS')]) }), 'review');
   });
 
   it('maps a run-state phase to its stage', () => {
@@ -229,10 +239,10 @@ describe('stale and the fix', () => {
   it('picks the first fix that applies: merge, fix-ci, rerun-qa, resume', () => {
     const quiet = { activity: { at: NOW - 120 * MIN, source: 'commit' } };
     const ready = (entries) => summarizePr(pr({ statusCheckRollup: entries }));
-    assert.equal(fixOf(row({ ...quiet, phase: 'merging', pr: ready(rollup(check('SUCCESS'), review('SUCCESS'))) }), opts).fix, 'merge');
-    assert.equal(fixOf(row({ ...quiet, pr: summarizePr(pr({ isDraft: true, statusCheckRollup: rollup(check('FAILURE')) })) }), opts).fix, 'fix-ci');
-    assert.equal(fixOf(row({ ...quiet, phase: 'review', pr: ready(rollup(check('SUCCESS'))) }), opts).fix, 'rerun-qa');
-    assert.equal(fixOf(row({ ...quiet, phase: 'qa', pr: ready(rollup(check('SUCCESS'), review('FAILURE'))) }), opts).fix, 'resume');
+    assert.equal(fixOf(row({ ...quiet, phase: 'merging', pr: ready([check('SUCCESS'), review('SUCCESS')]) }), opts).fix, 'merge');
+    assert.equal(fixOf(row({ ...quiet, pr: summarizePr(pr({ isDraft: true, statusCheckRollup: [check('FAILURE')] })) }), opts).fix, 'fix-ci');
+    assert.equal(fixOf(row({ ...quiet, phase: 'review', pr: ready([check('SUCCESS')]) }), opts).fix, 'rerun-qa');
+    assert.equal(fixOf(row({ ...quiet, phase: 'qa', pr: ready([check('SUCCESS'), review('FAILURE')]) }), opts).fix, 'resume');
     assert.equal(fixOf(row({ ...quiet, pr: summarizePr(pr({ isDraft: true })) }), opts).fix, 'resume');
   });
 
@@ -252,6 +262,12 @@ describe('stale and the fix', () => {
     assert.equal(fixOf(row({ ...done, holder: 'live' }), opts).fix, null);
     assert.equal(fixOf(row({ ...done, head: 'def' }), opts).fix, null);
     assert.equal(fixOf(row({ ...done, main: true, holder: 'owner' }), opts).fix, null);
+  });
+
+  it('shows a worktree git cannot read as blocked, with no fix', () => {
+    const r = fixOf(row({ gitFailed: true, activity: { at: 0, source: 'commit' } }), opts);
+    assert.equal(r.verdict, 'blocked');
+    assert.equal(r.fix, null);
   });
 
   it('never fixes a blocked worktree', () => {
@@ -436,6 +452,26 @@ describe('--fix and claim', () => {
       assert.ok(existsSync(join(f.repo, 'README.md')), 'the main worktree is kept');
       const branches = git(f.repo, 'branch', '--format=%(refname:short)').split('\n');
       for (const b of ['901-a', '902-b', '903-c', '904-d']) assert.ok(branches.includes(b), `branch ${b} kept`);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('releases and prunes a deleted worktree whose agent lock is dead, but keeps one whose agent is alive', () => {
+    const f = fixture();
+    try {
+      const dead = f.add('agent-dead-gone', '907-dead-gone');
+      const held = f.add('agent-held-gone', '908-held-gone');
+      git(f.repo, 'worktree', 'lock', '--reason', 'claude agent x (pid 999999 start Sun Oct  4 08:07:18 2026)', dead);
+      git(f.repo, 'worktree', 'lock', '--reason', 'claude agent y (pid 4242 start Sun Oct  4 08:07:18 2026)', held);
+      rmSync(dead, { recursive: true, force: true });
+      rmSync(held, { recursive: true, force: true });
+      const report = collect(f.repo, env({ alive: (pid) => pid === 4242 }));
+      assert.deepEqual(report.prunable, [dead]);
+      applyFixes(f.repo, report);
+      const list = git(f.repo, 'worktree', 'list', '--porcelain');
+      assert.ok(!list.includes('agent-dead-gone'), 'the dead agent\'s deleted worktree is pruned');
+      assert.ok(list.includes('agent-held-gone'), 'the live agent\'s record is kept');
     } finally {
       rmSync(f.root, { recursive: true, force: true });
     }

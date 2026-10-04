@@ -76,9 +76,11 @@ export function lockPid(lock) {
  * binary, or `node …/claude-code/cli.js` for an npm install. Lock start times
  * are in another time zone than ps, so they are not compared.
  */
+export const isClaudeCommand = (command) => /(^|\/)claude(\s|$)|claude-code\/cli\.js/.test(command.trim());
+
 function claudeAlive(pid) {
   try {
-    return execFileSync("ps", ["-p", String(pid), "-o", "command="], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).includes("claude");
+    return isClaudeCommand(execFileSync("ps", ["-p", String(pid), "-o", "command="], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }));
   } catch {
     return false;
   }
@@ -144,6 +146,7 @@ export function holderOf({ main, self = false, lock, alive, qaLive, claim, thres
 
 export function fixOf(row, { now, thresholds }) {
   const pr = row.pr && row.pr !== "unknown" ? row.pr : null;
+  if (row.gitFailed) return { verdict: "blocked", fix: null, reason: "git cannot read this worktree" };
   if (row.phase === "blocked") return { verdict: "blocked", fix: null, reason: "run-state blocked" };
   if (row.phase === "done") {
     if (!pr || pr.state !== "merged") return { verdict: "done", fix: null, reason: pr ? `PR ${pr.state}` : "run done" };
@@ -190,7 +193,7 @@ export function parseStale(args, defaults) {
   return thresholds;
 }
 
-/** null when git fails, so a failed `status` is never read as a clean tree. */
+/** null when git fails, so a failed `status` is never read as a clean tree. 64 MB: `--untracked-files=all` on a large tree. */
 const git = (cwd, args) => {
   try {
     return execFileSync("git", ["--no-optional-locks", ...args], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 64 * 1024 * 1024 });
@@ -242,7 +245,7 @@ function activityOf(path, runState) {
     candidates.push({ at: mtime(join(path, entry.slice(3))), source: "file" });
   }
   if (runState.updated) candidates.push({ at: Date.parse(runState.updated) || 0, source: "run-state" });
-  return { activity: candidates.reduce((a, b) => (b.at > a.at ? b : a)), clean: status === "" };
+  return { activity: candidates.reduce((a, b) => (b.at > a.at ? b : a)), clean: status === "", gitFailed: status === null };
 }
 
 function fetchPrs(gh) {
@@ -261,6 +264,7 @@ const defaultGh = () =>
     execFileSync("gh", ["pr", "list", "--state", "all", "--limit", "1000", "--json", "number,headRefName,state,isDraft,headRefOid,statusCheckRollup"], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
+      // A gh that hangs reads as unknown PR state, which dispatches nothing.
       timeout: 30_000,
     }),
   );
@@ -294,7 +298,7 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
     const threshold = thresholds[phase] ?? 0;
     const claim = readJson(claimPath(w.path));
     const holder = holderOf({ main: w.main, self: real(w.path) === here, lock: w.lock, alive, qaLive, claim, threshold, now });
-    const { activity, clean } = activityOf(w.path, runState);
+    const { activity, clean, gitFailed } = activityOf(w.path, runState);
     const row = {
       path: w.path,
       branch: w.branch,
@@ -304,16 +308,23 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
       activity,
       pr,
       clean,
+      gitFailed,
       head: w.head,
       main: w.main,
       claim: claim ? { ...claim, live: claimLive(claim, threshold, now) } : null,
     };
     rows.push({ ...row, ...fixOf(row, { now, thresholds }) });
   }
+  // A deleted worktree is pruned once nothing holds it. Git will not prune a
+  // locked record, so a dead agent's lock is released first; a live agent's
+  // lock and a lock set by hand are left alone.
+  const gone = worktrees.filter((w) => !w.main && (w.prunable || !existsSync(w.path)));
+  const orphans = gone.filter((w) => w.lock === null || (lockPid(w.lock) !== null && !alive(lockPid(w.lock))));
   return {
     rows,
     qaRuns,
-    prunable: worktrees.filter((w) => w.prunable).map((w) => w.path),
+    prunable: orphans.map((w) => w.path),
+    orphanLocks: orphans.filter((w) => w.lock !== null).map((w) => w.path),
     plan: dispatchPlan(rows, { qaLive: qaRuns.length, prsKnown: prs !== null }),
   };
 }
@@ -332,6 +343,7 @@ export function applyFixes(repo, report) {
   for (const r of report.rows.filter((x) => x.holder === "dead")) run(`unlock ${r.path}`, ["worktree", "unlock", r.path]);
   for (const r of report.rows.filter((x) => x.fix === "remove-worktree" && !x.main && x.clean))
     run(`remove ${r.path}`, ["worktree", "remove", r.path]);
+  for (const path of report.orphanLocks ?? []) run(`unlock ${path}`, ["worktree", "unlock", path]);
   if (report.prunable.length > 0) run(`prune ${report.prunable.join(", ")}`, ["worktree", "prune"]);
   return actions;
 }

@@ -112,9 +112,9 @@ decisions are the source for anything the constitution does not fix.
 - Parallel work is watched: `node .claude/scripts/watch.mjs` lists every
   worktree with its feature, phase, holder (a live agent or not), last
   activity, PR and the one fix a stale item needs. `/speckit-watch` applies the
-  safe fixes and dispatches an agent per stale item (at most 4 QA runs and 2
-  other agents at once); `/loop 15m /speckit-watch` repeats it in a session
-  that runs several tasks.
+  safe fixes and dispatches an agent per stale item (QA runs within the limit
+  above, at most 2 other agents at once); `/loop 15m /speckit-watch` repeats it
+  in a session that runs several tasks.
 - Lint and format: Biome only, root `biome.json` (no eslint, no prettier).
   Tests: Jest from the root config, Playwright for end-to-end. NestJS 12 is
   ESM-only, so the Nest projects' `test` targets run Jest with

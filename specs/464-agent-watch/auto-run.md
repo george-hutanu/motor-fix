@@ -37,3 +37,20 @@
 - `watch.mjs`, `speckit-watch` skill, `heavy.sh` 4 slots, AGENTS.md, CLAUDE.local.md (+1 line, recorded with `context-audit --bless --allow-growth`), speckit-auto run-state note. 52/52 green.
 - Real pass on this machine: 30 worktrees in 7.1 s, 0 stale, 14 merged clean worktrees with `remove-worktree`, 7 merged worktrees left alone (uncommitted changes or a live holder). No `--fix` run against the real worktrees in this run.
 - Commits e18eddf (watcher), db46152 (slots and docs). Converge: every FR implemented; nothing appended.
+
+## 12. Harden
+- test-adversary: `watch.adversary.spec.mjs`, 186 tests, 25 failed at first. Every removal and lock safety test passed. Fixed in watch.mjs: heads that are both missing compare as "remove" (now never); the watcher's own worktree read as `none` (now live); gh returning a non-array or null rows threw (now unknown/skipped); `--stale` accepted `a=1=2` and prototype keys; a non-string `feature_directory` threw; files inside untracked directories and symlinks; pid 0; exit 0 outside a repo; `claim` on a missing path. Fixture names renamed off real feature numbers.
+- code-reviewer: 1 HIGH (no test that a live or hand lock survives `--fix`) — test added. MEDIUM fixed: failed `git status` read as clean (now null, never clean; vanished paths skipped); `gh --limit` 200 → 1000 with a comment; liveness by `ps -o command=` so an npm install counts; header narrowed to sequential passes. Decisions: dead scratch worktrees stay unshown (comment says why); the `rollup` test helper kept (readability), declined.
+- spec-reviewer: 1 HIGH (text board lacked path, feature, activity source) — added. MEDIUM fixed: fixture feature numbers; `--dry-run` dropped from the skill; plan/T008 now say the context baseline was blessed (ST key removed from the reason). LOW fixed: pending agent-review no longer means rerun-qa; dead-lock release keyed on holder; exports dropped; skill cost wording; agent-review matched by context or name.
+- Mutation: harness scripts carry no Stryker config and mutation never runs locally (owner rule); not run.
+- 227/227 watcher tests; `diff-audit.mjs` 0 errors, 0 warnings; `artifact-lint.mjs` 0/0. Repair laps: 1. Commit 854163c.
+- Real pass after the fixes: 20 worktrees in 2.5 s; 1 stale — `archive-050` (chore-archive-050-cockpit-theme), no PR, no agent, quiet 198 min, plan `resume`. Not dispatched from this run (another task's work); reported.
+
+## 13. Ticket refresh
+- ST-464: 0 comments. No new evidence.
+
+## 15. Agent context
+- The managed CLAUDE.local.md line names the active plan (421). With several features in flight, pointing it at this harness feature would mislead the others; left unchanged.
+
+## 16. Retrospective evidence
+- `retro-evidence.mjs --since 0dfde6c --jev`: 9/9 tasks, 12 requirements, 4 commits, 18 files +2981 −8, Spec Delta platform +12, 0 deferred. Jev lane unavailable (no key), so no suggested verdict. `instincts.mjs triggered`: none.
