@@ -57,3 +57,7 @@
 - EP-1 Foundations — https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707
 - ST-20 Keep my language on my account for messages — https://app.notion.com/p/3ee607bff0d281c186c2d53b64b7b117
 - ST-21 Give each language its own web address — https://app.notion.com/p/3ee607bff0d281bbaa1de24ea602b2a2
+
+## Refresh 2026-10-04
+
+No changes since 2026-10-04. The story page's only edit since the digest is this run's own Status write (To do → In progress); body, Build brief and comments (none) unchanged.

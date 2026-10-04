@@ -47,3 +47,21 @@
 
 ## 8 Analyze
 - artifact-lint: 0 errors, 0 warnings (Jev lane unavailable: no TYPESAFE_API_KEY). Manual pass: 9/9 FRs mapped to tests; no CRITICAL/HIGH. 0 remediation rounds.
+- Note: first docs commit hit a transient Nx DB error (`SqliteFailure ... FOREIGN KEY constraint failed`) in the pre-commit typecheck; plain retry passed (0a4993b).
+
+## 9 Tests (red)
+- Wrote libs/i18n/src/switch.spec.ts (12), apps/web/src/app/dashboard/session.spec.ts (3), frame.spec.ts (+3), home.spec.ts (+1), apps/web-e2e/src/language.spec.ts (3).
+- Red: `npx jest libs/i18n/src/switch.spec.ts apps/web/src/app/dashboard apps/web/src/app/home` → 4 suites failed (switch.spec: `Cannot find module './switch'`), 6 tests failed, 20 passed (the existing ones).
+
+## 10 Implement
+- One adjustment: the switch first rendered its buttons with `@for` and a built key (`'shell.language.' + language`); ST-16's unknown-key check flagged the literal prefix → two explicit buttons with literal keys.
+- Results: `nx run-many -t test -p web i18n --skip-nx-cache` green; `npm run typecheck` 11/11; `npm run lint` clean.
+- e2e (built SSR on :4217, no API, `BASE_URL=http://localhost:4217`): language.spec 3/3 passed, dashboards.spec passed; skeleton.spec failed only on "dev"/"PostgreSQL: ok" because no API/DB ran (environment, not this change). 11 passed, 1 failed. The e2e file was not proven red before implementation (it needs a running server); unit red was proven.
+- SSR smoke: `<html lang="ro">`, `role="group" aria-label="Limba"` in the server HTML.
+- Commits: 6f83c63 feat(i18n) switch + memory; 94e6e3e feat(web) dashboard menu keys + switch; eed17ea feat(web) account language at session load.
+
+## 11 Converge
+- 9/9 FRs met in code; 13/14 tasks [X] (T014 is the final verification, done at the end). Nothing appended.
+
+## 13 Ticket refresh
+- No new evidence: story unchanged apart from this run's status write; no comments.
