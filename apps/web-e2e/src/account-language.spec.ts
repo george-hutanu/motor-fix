@@ -16,9 +16,6 @@ const driver = {
 async function signedIn(page: Page, language: 'ro' | 'en' = 'ro') {
   const saved: unknown[] = [];
   let current = language;
-  await page.route('**/api/v1/auth/refresh', (route) =>
-    route.fulfill({ json: { accessToken: 'stubbed' } }),
-  );
   await page.route('**/api/v1/me', async (route) => {
     const request = route.request();
     if (request.method() === 'PATCH') {
@@ -33,6 +30,17 @@ async function signedIn(page: Page, language: 'ro' | 'en' = 'ro') {
 
 const languageSwitch = (page: Page, name: 'Limba' | 'Language') =>
   page.getByRole('group', { name });
+
+// Both buttons are on screen and at least 44 px tall.
+async function fits(page: Page, group: 'Limba' | 'Language', width: number) {
+  for (const name of ['RO', 'EN']) {
+    const box = await languageSwitch(page, group)
+      .getByRole('button', { name })
+      .boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+    expect((box?.x ?? -1) + (box?.width ?? 0)).toBeLessThanOrEqual(width);
+  }
+}
 
 for (const [width, height] of [
   [320, 640],
@@ -49,18 +57,15 @@ for (const [width, height] of [
       page.getByRole('button', { name: 'Ieși din cont' }),
     ).toBeVisible();
 
+    await fits(page, 'Limba', width);
     await languageSwitch(page, 'Limba')
       .getByRole('button', { name: 'EN' })
       .click();
 
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
     await expect.poll(() => saved).toEqual([{ language: 'en' }]);
+    await fits(page, 'Language', width);
     const english = languageSwitch(page, 'Language');
-    for (const name of ['RO', 'EN']) {
-      const box = await english.getByRole('button', { name }).boundingBox();
-      expect(box?.height).toBeGreaterThanOrEqual(44);
-      expect((box?.x ?? -1) + (box?.width ?? 0)).toBeLessThanOrEqual(width);
-    }
 
     await english.getByRole('button', { name: 'RO' }).click();
 
