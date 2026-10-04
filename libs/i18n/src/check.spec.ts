@@ -58,6 +58,29 @@ describe('fileProblems', () => {
     ).toEqual([]);
   });
 
+  it('names a Romanian word joined by a hyphen that can break the line', () => {
+    expect(
+      fileProblems(
+        'shell',
+        { a: 'Profilul service-ului', b: 'Nu s-a putut' },
+        { a: 'Garage profile', b: 'Could not' },
+      ),
+    ).toEqual([
+      expect.stringContaining('shell.a'),
+      expect.stringContaining('shell.b'),
+    ]);
+  });
+
+  it('accepts a non-breaking hyphen, a hyphen beside a digit or a space, and any hyphen in English', () => {
+    expect(
+      fileProblems(
+        'shell',
+        { a: 'Profilul service‑ului', b: 'A-1 - Dacia', c: '10-20 lei' },
+        { a: 'Self-service', b: 'A-1 - Dacia', c: '10-20 lei' },
+      ),
+    ).toEqual([]);
+  });
+
   it('accepts plural groups that follow each language’s rules', () => {
     expect(
       fileProblems(
