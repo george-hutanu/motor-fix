@@ -1,8 +1,9 @@
 {
   "file": "CLAUDE.local.md",
   "_comment": "High-water mark for the agent context file, in non-empty lines. A ratchet: the context file may shrink freely and may not grow without a recorded reason. Read by scripts/context-audit.mjs and by the pre:edit:config-protection hook.",
-  "lines": 135,
-  "chars": 9791,
+  "lines": 136,
+  "chars": 10295,
   "managed_lines": 1,
-  "recorded": "2026-10-03"
+  "recorded": "2026-10-04",
+  "growth_reason": "ST-464: the watch command, so the orchestrating session can see every worktree and restart stale ones"
 }
