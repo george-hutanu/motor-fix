@@ -1,8 +1,23 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  type OnInit,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import type { MeDto } from '@motor-fix/data-access';
-import { AsWritten, LanguageSwitch, TranslatePipe } from '@motor-fix/i18n';
+import {
+  AsWritten,
+  I18n,
+  LanguageSwitch,
+  TranslatePipe,
+} from '@motor-fix/i18n';
+import { HlmToaster, toast } from '@motor-fix/ui-cockpit';
 
+import { Live } from './live';
 import { Session } from './session';
 
 // `label` and `tag` are shell translation keys.
@@ -68,7 +83,7 @@ const MENUS: Record<MeDto['landing'], { tag: string; entries: Entry[] }> = {
 };
 
 @Component({
-  imports: [AsWritten, LanguageSwitch, RouterLink, TranslatePipe],
+  imports: [AsWritten, HlmToaster, LanguageSwitch, RouterLink, TranslatePipe],
   selector: 'mf-frame',
   styles: `
     :host { display: grid; grid-template-columns: minmax(0, 16rem) minmax(0, 1fr); min-height: 100vh; }
@@ -97,11 +112,15 @@ const MENUS: Record<MeDto['landing'], { tag: string; entries: Entry[] }> = {
       <header><h1>{{ view() | t }}</h1><mf-language-switch /></header>
       <main><p>{{ 'shell.frame.empty' | t }}</p></main>
     </div>
+    <hlm-toaster />
   `,
 })
-export class Frame {
+export class Frame implements OnInit {
   protected readonly session = inject(Session);
   private readonly router = inject(Router);
+  private readonly live = inject(Live);
+  private readonly i18n = inject(I18n);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly menu = computed(
     () => MENUS[this.session.current()?.landing ?? '/app/driver'],
   );
@@ -113,7 +132,19 @@ export class Frame {
   });
   protected readonly view = signal('shell.frame.nav.dashboard');
 
+  // The frame holds the tab's live connection for as long as it is shown.
+  ngOnInit() {
+    this.live.events
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((message) => {
+        if (message.kind === 'live.test') toast(this.i18n.t('shell.live.test'));
+      });
+    this.live.open();
+    this.destroyRef.onDestroy(() => this.live.close());
+  }
+
   protected async signOut() {
+    this.live.close();
     await this.session.signOut();
     await this.router.navigateByUrl('/');
   }

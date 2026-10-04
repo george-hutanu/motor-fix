@@ -11,7 +11,15 @@ describe('access tokens', () => {
   it('carries the account and the role in use', () => {
     const token = signAccessToken(claims, secret, now);
 
-    expect(verifyAccessToken(token, secret, now)).toEqual(claims);
+    expect(verifyAccessToken(token, secret, now)).toMatchObject(claims);
+  });
+
+  it('tells when the token expires', () => {
+    const token = signAccessToken(claims, secret, now, 15);
+
+    expect(verifyAccessToken(token, secret, now)?.expiresAt).toBe(
+      now + 15 * 60_000,
+    );
   });
 
   it('is a three-part HS256 token', () => {
@@ -28,9 +36,9 @@ describe('access tokens', () => {
   it('lives 15 minutes by default', () => {
     const token = signAccessToken(claims, secret, now);
 
-    expect(verifyAccessToken(token, secret, now + 15 * 60_000 - 1)).toEqual(
-      claims,
-    );
+    expect(
+      verifyAccessToken(token, secret, now + 15 * 60_000 - 1),
+    ).toMatchObject(claims);
     expect(verifyAccessToken(token, secret, now + 15 * 60_000)).toBeNull();
   });
 

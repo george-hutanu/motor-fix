@@ -285,6 +285,54 @@
           "audit-history"
         ]
       }
+    },
+    "/api/v1/live": {
+      "get": {
+        "operationId": "LiveController_live",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "A server-sent events stream"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/v1/admin/live/test": {
+      "post": {
+        "operationId": "LiveController_test",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveTestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The test update was published"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "live"
+        ]
+      }
     }
   },
   "info": {
@@ -685,6 +733,18 @@
           "items",
           "nextCursor",
           "total"
+        ]
+      },
+      "LiveTestDto": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "accountId"
         ]
       }
     }

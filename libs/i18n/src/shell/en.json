@@ -82,6 +82,9 @@
     "label": "Language",
     "ro": "RO"
   },
+  "live": {
+    "test": "Live test update"
+  },
   "notFound": {
     "home": "Back to the home page",
     "text": "This address does not lead to a MotorFix page.",

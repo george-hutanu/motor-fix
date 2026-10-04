@@ -68,6 +68,7 @@ describe('access token verification against forged tokens', () => {
   it('accepts a correctly forged baseline so the attacks below are meaningful', () => {
     expect(verifyAccessToken(forge(hs256, goodClaims()), secret, now)).toEqual({
       accountId: id,
+      expiresAt: expect.any(Number),
       role: 'driver',
     });
   });
@@ -214,6 +215,7 @@ describe('access token verification against forged tokens', () => {
 
     expect(verifyAccessToken(token, secret, now)).toEqual({
       accountId: id,
+      expiresAt: expect.any(Number),
       role: 'driver',
     });
   });

@@ -1,16 +1,27 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import type { LiveMessage } from '@motor-fix/contracts';
 import type { MeDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { toast } from '@motor-fix/ui-cockpit';
+import { Subject } from 'rxjs';
 
 import { Frame } from './frame';
+import { Live } from './live';
 import { Session } from './session';
 
+jest.mock('@motor-fix/ui-cockpit', () => ({
+  ...jest.requireActual('@motor-fix/ui-cockpit'),
+  toast: jest.fn(),
+}));
+
 let signOut: jest.Mock;
+let live: { close: jest.Mock; events: Subject<LiveMessage>; open: jest.Mock };
 
 function render(role: string, landing: string, capabilities: string[]) {
   signOut = jest.fn(async () => current.set(null));
+  live = { close: jest.fn(), events: new Subject(), open: jest.fn() };
   const current = signal<MeDto | null>({
     capabilities,
     email: null,
@@ -26,6 +37,7 @@ function render(role: string, landing: string, capabilities: string[]) {
     providers: [
       provideRouter([]),
       { provide: Session, useValue: { current, signOut } },
+      { provide: Live, useValue: live },
     ],
   });
   const fixture = TestBed.createComponent(Frame);
@@ -255,5 +267,73 @@ describe('Frame', () => {
       'Brands and jobs',
       'Settings',
     ]);
+  });
+
+  it('opens the live connection when the dashboard starts and closes it when the dashboard goes', () => {
+    const { fixture } = render('driver', '/app/driver', []);
+
+    expect(live.open).toHaveBeenCalledTimes(1);
+    expect(live.close).not.toHaveBeenCalled();
+
+    fixture.destroy();
+    expect(live.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes the live connection at sign-out', async () => {
+    const { element } = render('driver', '/app/driver', []);
+    jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+    [...element.querySelectorAll('button')]
+      .find((b) => b.textContent?.trim() === 'Ieși din cont')
+      ?.click();
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(live.close).toHaveBeenCalled();
+    expect(live.close.mock.invocationCallOrder[0]).toBeLessThan(
+      signOut.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it.each([
+    ['driver', '/app/driver'],
+    ['garage', '/app/garage'],
+    ['receptionist', '/app/garage'],
+    ['mechanic', '/app/garage'],
+    ['admin', '/app/admin'],
+  ])('shows the test toast on a live test update for a %s', (role, landing) => {
+    (toast as unknown as jest.Mock).mockClear();
+    const { element } = render(role, landing, []);
+
+    live.events.next({
+      at: '2026-10-04T12:00:00.000Z',
+      id: 'e-1',
+      kind: 'hello',
+    });
+    expect(toast).not.toHaveBeenCalled();
+    live.events.next({
+      at: '2026-10-04T12:00:00.000Z',
+      id: 'e-2',
+      kind: 'live.test',
+    });
+
+    expect(toast).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledWith('Actualizare de test în direct');
+    expect(element.querySelector('hlm-toaster')).not.toBeNull();
+    TestBed.resetTestingModule();
+  });
+
+  it('shows the test toast in English', async () => {
+    (toast as unknown as jest.Mock).mockClear();
+    const { fixture } = render('driver', '/app/driver', []);
+    await TestBed.inject(I18n).use('en');
+    await fixture.whenStable();
+
+    live.events.next({
+      at: '2026-10-04T12:00:00.000Z',
+      id: 'e-2',
+      kind: 'live.test',
+    });
+
+    expect(toast).toHaveBeenCalledWith('Live test update');
   });
 });

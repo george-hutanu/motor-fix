@@ -7,6 +7,11 @@ export interface AccessClaims {
   role: Role;
 }
 
+export interface VerifiedClaims extends AccessClaims {
+  // Epoch milliseconds.
+  expiresAt: number;
+}
+
 const HEADER = Buffer.from(
   JSON.stringify({ alg: 'HS256', typ: 'JWT' }),
 ).toString('base64url');
@@ -36,7 +41,7 @@ export function verifyAccessToken(
   token: string,
   secret: string,
   now = Date.now(),
-): AccessClaims | null {
+): VerifiedClaims | null {
   if (typeof token !== 'string') return null;
   const [header, payload, signature, ...rest] = token.split('.');
   if (header !== HEADER || !payload || !signature || rest.length > 0) {
@@ -65,5 +70,9 @@ export function verifyAccessToken(
   ) {
     return null;
   }
-  return { accountId: claims.sub, role: claims.role as Role };
+  return {
+    accountId: claims.sub,
+    expiresAt: claims.exp * 1000,
+    role: claims.role as Role,
+  };
 }
