@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 
 **Input**: User description: "ST-195 Set up message templates in Romanian and English (Notion story https://app.notion.com/p/3ee607bff0d2813dbda8c0e39bb8c756, epic EP-1 Foundations). Build the template system of the notifications worker per the story's Build brief."
 
