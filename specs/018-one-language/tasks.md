@@ -9,9 +9,9 @@ Paths are `(new)` unless they exist today: `libs/i18n/src/check.ts`, `libs/i18n/
 
 **Independent test**: the workspace check fails on a Romanian text with a plain hyphen between letters, and passes on today's files.
 
-- [ ] T001 [US3] Test: `libs/i18n/src/check.spec.ts` — `fileProblems` names a Romanian key whose text joins two letters with U+002D ("service-ul", "s-a"); accepts U+2011, a hyphen next to a digit or a space, and the same hyphen in English (FR-001)
-- [ ] T002 [US3] `libs/i18n/src/check.ts` — the hyphen rule in `valueProblems` (FR-001)
-- [ ] T003 [US3] `libs/i18n/src/shell/ro.json`, `libs/i18n/src/cockpit/ro.json` — every letter-hyphen-letter written with U+2011; `apps/web/src/app/dashboard/frame.spec.ts` expectations follow (FR-002)
+- [X] T001 [US3] Test: `libs/i18n/src/check.spec.ts` — `fileProblems` names a Romanian key whose text joins two letters with U+002D ("service-ul", "s-a"); accepts U+2011, a hyphen next to a digit or a space, and the same hyphen in English (FR-001)
+- [X] T002 [US3] `libs/i18n/src/check.ts` — the hyphen rule in `valueProblems` (FR-001)
+- [X] T003 [US3] `libs/i18n/src/shell/ro.json`, `libs/i18n/src/cockpit/ro.json` — every letter-hyphen-letter written with U+2011; `apps/web/src/app/dashboard/frame.spec.ts` expectations follow (FR-002)
 
 ## Phase 2: US2 User text and names as written (P1)
 

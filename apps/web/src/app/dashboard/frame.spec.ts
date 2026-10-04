@@ -51,7 +51,7 @@ describe('Frame', () => {
       'Mecanici',
       'Prețuri',
       'Recenzii',
-      'Profilul service-ului',
+      'Profilul service\u2011ului',
     ]);
   });
 
@@ -88,7 +88,7 @@ describe('Frame', () => {
       'Cererile mele',
       'Mașinile mele',
       'Recenziile mele',
-      'Service-uri salvate',
+      'Service\u2011uri salvate',
       'Setări',
     ]);
     TestBed.resetTestingModule();
@@ -104,7 +104,7 @@ describe('Frame', () => {
       ),
     ).toEqual([
       'Panou',
-      'Service-uri',
+      'Service\u2011uri',
       'Utilizatori',
       'Recenzii raportate',
       'Mărci și lucrări',
