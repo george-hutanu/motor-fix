@@ -7,11 +7,13 @@
   },
   "signIn": {
     "brand": "MotorFix",
+    "createAccount": "Create an account",
     "email": "E-mail",
     "emailPlaceholder": "you@example.com",
     "field": {
       "pattern": "That e-mail address does not look right."
     },
+    "newHere": "New to MotorFix?",
     "password": "Password",
     "passwordPlaceholder": "Your password",
     "problem": {
@@ -24,6 +26,28 @@
     "title": "Sign in"
   },
   "signInButton": "Sign in",
+  "signUp": {
+    "blurb": "Your quote requests, your cars and the reviews you wrote.",
+    "brand": "MotorFix",
+    "email": "E-mail",
+    "emailPlaceholder": "you@example.com",
+    "field": {
+      "pattern": "That e-mail address does not look right.",
+      "weak_password": "Choose a password that is harder to guess: this one is among the most used."
+    },
+    "haveAccount": "Already have an account?",
+    "name": "Name",
+    "password": "Password",
+    "passwordPlaceholder": "At least 8 characters",
+    "problem": {
+      "email_taken": "An account with this e-mail already exists.",
+      "too_many_attempts": "Too many attempts. Try again in an hour."
+    },
+    "showPassword": "Show password",
+    "signIn": "Sign in",
+    "submit": "Create account",
+    "title": "New account"
+  },
   "tabs": {
     "account": "Account",
     "garages": "Garages",

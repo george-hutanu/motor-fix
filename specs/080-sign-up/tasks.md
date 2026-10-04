@@ -23,11 +23,11 @@ Independent test: sign up through HTTP against PostgreSQL and Redis; taken e-mai
 
 ## Phase 4: User Story 1 + 2 — the dialog (P1)
 
-- [ ] T008 [US1] `apps/web/src/app/dashboard/session.ts`: `signUp(name, email, password, language)` keeps the token and loads "who am I" (FR-002, FR-013)
-- [ ] T009 [US1] `apps/web/src/app/sign-in/sign-up.ts` (new): the task — "MotorFix" and the driver blurb, Nume / E‑mail / Parolă with show/hide, local checks, busy state, coded messages, the switch back; closes with "signed-in" (FR-009, FR-010, FR-011, FR-012, FR-014)
-- [ ] T010 [US1] `apps/web/src/app/sign-in/sign-in.ts`: "Ești nou pe MotorFix? Creează un cont" under the main button, closing with the switch and the e-mail; an e-mail passed in is typed already (FR-009)
-- [ ] T011 [US1] `apps/web/src/app/sign-in/sign-in-dialog.ts`: the switch loop carrying the e-mail; the landing on "signed-in" (FR-009, FR-013)
-- [ ] T012 [P] [US1] Texts `public.signIn.newHere`, `public.signIn.createAccount`, `public.signUp.*` in `libs/i18n/src/public/ro.json` and `en.json`, U+2011 inside Romanian words (FR-014)
+- [X] T008 [US1] `apps/web/src/app/dashboard/session.ts`: `signUp(name, email, password, language)` keeps the token and loads "who am I" (FR-002, FR-013)
+- [X] T009 [US1] `apps/web/src/app/sign-in/sign-up.ts` (new): the task — "MotorFix" and the driver blurb, Nume / E‑mail / Parolă with show/hide, local checks, busy state, coded messages, the switch back; closes with "signed-in" (FR-009, FR-010, FR-011, FR-012, FR-014)
+- [X] T010 [US1] `apps/web/src/app/sign-in/sign-in.ts`: "Ești nou pe MotorFix? Creează un cont" under the main button, closing with the switch and the e-mail; an e-mail passed in is typed already (FR-009)
+- [X] T011 [US1] `apps/web/src/app/sign-in/sign-in-dialog.ts`: the switch loop carrying the e-mail; the landing on "signed-in" (FR-009, FR-013)
+- [X] T012 [P] [US1] Texts `public.signIn.newHere`, `public.signIn.createAccount`, `public.signUp.*` in `libs/i18n/src/public/ro.json` and `en.json`, U+2011 inside Romanian words (FR-014)
 
 ## Phase 5: End to end
 

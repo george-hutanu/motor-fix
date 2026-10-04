@@ -7,11 +7,13 @@
   },
   "signIn": {
     "brand": "MotorFix",
+    "createAccount": "Creează un cont",
     "email": "E‑mail",
     "emailPlaceholder": "tu@exemplu.ro",
     "field": {
       "pattern": "Adresa de e‑mail nu pare corectă."
     },
+    "newHere": "Ești nou pe MotorFix?",
     "password": "Parolă",
     "passwordPlaceholder": "Parola ta",
     "problem": {
@@ -24,6 +26,28 @@
     "title": "Autentificare"
   },
   "signInButton": "Autentificare",
+  "signUp": {
+    "blurb": "Cererile tale de ofertă, mașinile și recenziile scrise.",
+    "brand": "MotorFix",
+    "email": "E‑mail",
+    "emailPlaceholder": "tu@exemplu.ro",
+    "field": {
+      "pattern": "Adresa de e‑mail nu pare corectă.",
+      "weak_password": "Alege o parolă mai greu de ghicit: este printre cele mai folosite."
+    },
+    "haveAccount": "Ai deja cont?",
+    "name": "Nume",
+    "password": "Parolă",
+    "passwordPlaceholder": "Cel puțin 8 caractere",
+    "problem": {
+      "email_taken": "Există deja un cont cu acest e‑mail.",
+      "too_many_attempts": "Prea multe încercări. Încearcă din nou peste o oră."
+    },
+    "showPassword": "Arată parola",
+    "signIn": "Intră în cont",
+    "submit": "Creează contul",
+    "title": "Cont nou"
+  },
   "tabs": {
     "account": "Cont",
     "garages": "Service‑uri",
