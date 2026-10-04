@@ -242,7 +242,7 @@ describe('who am I', () => {
       landing: '/app/garage',
     });
     expect((await get('/me', bearer(elena, 'mechanic'))).body).toMatchObject({
-      capabilities: ['garage.own_jobs'],
+      capabilities: ['garage.own_jobs', 'garage.audit_history'],
       garageId: garage.id,
       landing: '/app/garage',
     });

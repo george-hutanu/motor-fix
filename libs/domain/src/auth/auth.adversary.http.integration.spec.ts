@@ -336,13 +336,17 @@ describe('who am I over HTTP and account writes under attack', () => {
       });
       const token = bearer(accountId, 'mechanic');
 
-      expect((await me(token)).body.capabilities).toEqual(['garage.own_jobs']);
+      expect((await me(token)).body.capabilities).toEqual([
+        'garage.own_jobs',
+        'garage.audit_history',
+      ]);
       await prisma.mechanic.update({
         data: { canMoveBookings: true },
         where: { accountId },
       });
 
       expect([...(await me(token)).body.capabilities].sort()).toEqual([
+        'garage.audit_history',
         'garage.own_jobs',
         'garage.schedule',
       ]);
