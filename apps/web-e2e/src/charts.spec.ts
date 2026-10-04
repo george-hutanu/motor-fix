@@ -101,6 +101,15 @@ test('draws the charts complete at once with reduced motion', async ({
 });
 
 test('grows the bars in without reduced motion', async ({ page }) => {
+  // The panels' own rise would make the screenshot wait for the panel to
+  // settle, by which time the bars have grown; this test is about the bars.
+  await page.addInitScript(() => {
+    addEventListener('DOMContentLoaded', () => {
+      const still = document.createElement('style');
+      still.textContent = 'section.mf-panel { animation: none !important; }';
+      document.head.append(still);
+    });
+  });
   await open(page, 'dark', 1280, 'no-preference');
   const early = await shot(page);
 

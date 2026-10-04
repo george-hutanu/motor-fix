@@ -16,7 +16,10 @@
     "lampGreen": "Works on Dacia",
     "lampGrey": "Closed now",
     "lampRed": "Does not take Dacia",
-    "swap": "Change the estimate",
+    "live": "Live",
+    "motionFull": "Motion: full",
+    "motionReduced": "Motion: reduced",
+    "swap": "Change the values",
     "title": "Lamps, dials and prices"
   },
   "heading": "Cockpit theme",

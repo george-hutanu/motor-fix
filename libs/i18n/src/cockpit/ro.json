@@ -16,7 +16,10 @@
     "lampGreen": "Lucrează pe Dacia",
     "lampGrey": "Închis acum",
     "lampRed": "Nu ia Dacia",
-    "swap": "Schimbă estimarea",
+    "live": "În direct",
+    "motionFull": "Mișcare: completă",
+    "motionReduced": "Mișcare: redusă",
+    "swap": "Schimbă valorile",
     "title": "Lămpi, cadrane și prețuri"
   },
   "heading": "Tema Cockpit",

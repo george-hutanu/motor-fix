@@ -49,6 +49,9 @@ function toState(value: unknown): LampState {
       background: var(--mf-lamp-colour);
       box-shadow: 0 0 12px var(--mf-lamp-colour);
     }
+    :host([data-pulse]) .mf-lamp-dot {
+      animation: mf-pulse var(--mf-motion-pulse) ease-in-out infinite;
+    }
     @media (forced-colors: active) {
       .mf-lamp-dot {
         outline: 1px solid CanvasText;

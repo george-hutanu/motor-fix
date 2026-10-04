@@ -493,3 +493,67 @@ button.spartan-switch[data-disabled="true"] {
     background: Highlight;
   }
 }
+
+:root {
+  --mf-motion-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --mf-motion-rise: 700ms;
+  --mf-motion-stagger: 60ms;
+  --mf-motion-dial: 1100ms;
+  --mf-motion-pop: 420ms;
+  --mf-motion-roll: 900ms;
+  --mf-motion-pulse: 1.6s;
+  --mf-motion-blink: 1s;
+}
+
+@keyframes mf-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@keyframes mf-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+@keyframes mf-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes mf-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.mf-blink {
+  animation: mf-blink var(--mf-motion-blink) steps(1, end) infinite;
+}
+
+.spartan-dialog-content,
+.spartan-sheet-content {
+  animation: mf-pop var(--mf-motion-pop) var(--mf-motion-ease) backwards;
+}
+
+.spartan-sheet-content[data-side="right"] {
+  transform-origin: right center;
+}
+
+.spartan-sheet-content[data-side="left"] {
+  transform-origin: left center;
+}
+
+/* Removing them, rather than shortening them, puts anything still moving in its end state at once. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

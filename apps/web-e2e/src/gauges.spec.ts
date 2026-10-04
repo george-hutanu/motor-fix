@@ -140,7 +140,7 @@ test('fits a 320 px wide screen without scrolling sideways', async ({
 
     const result = await page.evaluate(() => {
       const panel = document.querySelector(
-        'mf-cockpit-gauges-sample section.mf-panel',
+        'section.mf-panel:has(mf-cockpit-gauges-sample)',
       ) as HTMLElement;
       const frame = panel.getBoundingClientRect();
       const screen = document.documentElement.clientWidth;

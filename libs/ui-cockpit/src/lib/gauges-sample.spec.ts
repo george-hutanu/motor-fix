@@ -67,6 +67,69 @@ describe('CockpitGaugesSample', () => {
     expect(odometers(page)[1]).toBe('1.400–1.800 lei');
   });
 
+  it('swaps the ratings together with the estimate, so the dials and digits move', async () => {
+    const { fixture, page } = await render();
+    const ratings = () =>
+      [...page.querySelectorAll('mf-rating-dial .mf-dial-value')].map((v) =>
+        v.textContent?.trim(),
+      );
+    const swap = () => {
+      [...page.querySelectorAll('button')]
+        .find((b) => b.textContent?.trim() === text('swap'))
+        ?.click();
+      fixture.detectChanges();
+    };
+
+    expect(ratings()).toEqual(['4,8', '—', '4,8', '—']);
+    swap();
+    expect(ratings()).toEqual(['4,2', '—', '4,2', '—']);
+    expect(odometers(page)[1]).toBe('1.400–1.800 lei');
+    swap();
+    expect(ratings()).toEqual(['4,8', '—', '4,8', '—']);
+    expect(odometers(page)[1]).toBe('1.250–1.600 lei');
+  });
+
+  it('shows a live label whose dot blinks, the text staying still, in both languages', async () => {
+    const { fixture, page } = await render();
+    const blink = () => page.querySelector('.mf-live')?.textContent?.trim();
+    const dot = page.querySelector('.mf-live .mf-blink');
+
+    expect(dot?.getAttribute('aria-hidden')).toBe('true');
+    expect(dot?.textContent).toBe('');
+    expect(page.querySelectorAll('.mf-blink')).toHaveLength(1);
+
+    expect(blink()).toBe(text('live'));
+    await TestBed.inject(I18n).use('en');
+    fixture.detectChanges();
+    expect(blink()).toBe(text('live'));
+    expect(text('live')).not.toContain('cockpit.');
+  });
+
+  it('says whether motion is full or reduced, following the device', async () => {
+    let change: (event: MediaQueryListEvent) => void = () => undefined;
+    jest.spyOn(window, 'matchMedia').mockImplementation(
+      (query) =>
+        ({
+          addEventListener: (_: string, l: typeof change) => {
+            if (query.includes('reduced-motion')) change = l;
+          },
+          matches: false,
+          media: query,
+          removeEventListener: () => undefined,
+        }) as unknown as MediaQueryList,
+    );
+    const { fixture, page } = await render();
+    const motion = () =>
+      page.querySelector('[data-motion]')?.textContent?.trim();
+
+    expect(motion()).toBe(text('motionFull'));
+    change({ matches: true } as MediaQueryListEvent);
+    fixture.detectChanges();
+    expect(motion()).toBe(text('motionReduced'));
+    expect(text('motionReduced')).not.toBe(text('motionFull'));
+    jest.restoreAllMocks();
+  });
+
   it('sits on the sample page', async () => {
     TestBed.configureTestingModule({ providers: [provideCockpitTheme()] });
     const fixture = TestBed.createComponent(CockpitSamplePage);
