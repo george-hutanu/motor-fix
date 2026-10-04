@@ -20,18 +20,20 @@ const REPO = new URL('../..', import.meta.url).pathname.replace(/\/$/, '');
 const HOOK = join(REPO, '.claude/hooks/config-protection.mjs');
 
 /** The repo's first stryker config — root, or one workspace level down. */
+// A floor of 0 cannot be lowered, so only a config with a positive floor
+// proves the ratchet.
 const strykerConfig = () => {
-  const root = join(REPO, 'stryker.config.json');
-  if (existsSync(root)) return root;
+  const candidates = [join(REPO, 'stryker.config.json')];
   for (const group of ['apps', 'libs', 'packages']) {
     const dir = join(REPO, group);
     if (!existsSync(dir)) continue;
-    for (const pkg of readdirSync(dir)) {
-      const file = join(dir, pkg, 'stryker.config.json');
-      if (existsSync(file)) return file;
-    }
+    for (const pkg of readdirSync(dir)) candidates.push(join(dir, pkg, 'stryker.config.json'));
   }
-  return null;
+  return (
+    candidates.find(
+      (file) => existsSync(file) && JSON.parse(readFileSync(file, 'utf8')).thresholds?.break > 0,
+    ) ?? null
+  );
 };
 
 const run = (payload, env = {}) =>
@@ -173,7 +175,7 @@ describe('config-protection — as a hook', () => {
   it.skipIf(!strykerConfig())('blocks a real floor drop with exit 2', () => {
     const cfgFile = strykerConfig();
     const current = JSON.parse(readFileSync(cfgFile, 'utf8'));
-    const lowered = { ...current, thresholds: { ...current.thresholds, break: 10 } };
+    const lowered = { ...current, thresholds: { ...current.thresholds, break: current.thresholds.break - 1 } };
     const out = run({ tool_input: { file_path: cfgFile, content: JSON.stringify(lowered) } });
     assert.equal(out.status, 2);
     assert.match(out.stderr, /Config protection/);
