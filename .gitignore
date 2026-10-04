@@ -24,3 +24,9 @@ libs/domain/src/generated/
 apps/web-e2e/test-output/
 coverage/
 .claude/worktrees/
+
+# QA screenshots stay in the PR tester's --out directory; only the report is evidence in git.
+specs/**/pr-review/**/*.png
+specs/**/pr-review/**/*.jpg
+specs/**/pr-review/**/*.jpeg
+specs/**/pr-review/**/*.webp

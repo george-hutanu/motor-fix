@@ -4,20 +4,25 @@ import assert from 'node:assert/strict';
 import { VIEWPORTS, matrix, toFindings } from './sweep.mjs';
 
 describe('the sweep matrix', () => {
-  it('visits every route at three viewports, two schemes and two languages', () => {
+  it('visits every route at four viewports, two schemes and two languages', () => {
     const runs = matrix({ routes: ['/', '/cockpit'] });
-    assert.equal(runs.length, 2 * 3 * 2 * 2);
-    assert.deepEqual([...new Set(runs.map((r) => r.viewport))], ['desktop', 'tablet', 'mobile']);
+    assert.equal(runs.length, 2 * 4 * 2 * 2);
+    assert.deepEqual([...new Set(runs.map((r) => r.viewport))], ['desktop', 'tablet', 'mobile', 'small-phone']);
     assert.deepEqual([...new Set(runs.map((r) => r.scheme))], ['light', 'dark']);
     assert.deepEqual([...new Set(runs.map((r) => r.lang))], ['ro', 'en']);
   });
 
-  it('uses 1440×900 desktop, a tablet, and a 390×844 touch phone', () => {
+  it('uses 1440×900 desktop, a tablet, a 390×844 and a 320×568 touch phone', () => {
     assert.deepEqual([VIEWPORTS.desktop.width, VIEWPORTS.desktop.height], [1440, 900]);
     assert.ok(VIEWPORTS.tablet.width >= 768 && VIEWPORTS.tablet.width < 1024);
     assert.deepEqual([VIEWPORTS.mobile.width, VIEWPORTS.mobile.height], [390, 844]);
     assert.equal(VIEWPORTS.mobile.isMobile, true);
     assert.equal(VIEWPORTS.mobile.hasTouch, true);
+    // The specs ask for no horizontal scrolling down to 320 px, the narrowest
+    // phone still in use; 390 alone lets a 320 px overflow through.
+    assert.deepEqual([VIEWPORTS['small-phone'].width, VIEWPORTS['small-phone'].height], [320, 568]);
+    assert.equal(VIEWPORTS['small-phone'].isMobile, true);
+    assert.equal(VIEWPORTS['small-phone'].hasTouch, true);
   });
 
   it('names one screenshot per combination, readable and unique', () => {
@@ -29,7 +34,7 @@ describe('the sweep matrix', () => {
   });
 
   it('narrows to one language or scheme when asked', () => {
-    assert.equal(matrix({ routes: ['/'], langs: ['ro'], schemes: ['light'] }).length, 3);
+    assert.equal(matrix({ routes: ['/'], langs: ['ro'], schemes: ['light'] }).length, 4);
   });
 });
 
