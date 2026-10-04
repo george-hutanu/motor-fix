@@ -35,3 +35,32 @@
 4. Time-out → one `timeout-minutes` on the step; `--parallel=1`, each run prints its project first; number from measured runs.
 5. SC-004 → dropped (no source; score not stored in repo).
 - `scripts` in scope kept as an assumption (Build brief rule). Checklist 16/16 unchanged.
+
+## Phase 5 — Plan
+- Spikes (2026-10-04): `contracts` 100% in 7 s from the repo root; `domain` 1,071 mutants, 514-test initial run 28 s, static mutants ~67% of time → `ignoreStatic`. Stryker API keeps the CLI's break exit code (`mutation-test-report-helper.js:130-139`) → one small runner script (Complexity Tracking).
+- Found: harness evals already red on main (41/46): the floor cases named `apps/server`, which does not exist here.
+
+## Phase 6 — Checklist
+- `checklists/tooling.md`, 18 items; 3 gaps fixed in spec first (missing config, undefined score, "a few points" = 5, static mutants). 0 unchecked.
+
+## Phase 7–8 — Tasks, Analyze
+- 14 tasks. artifact-lint: Spec Delta missing → added; FR-005 untasked → mapped to T003/T009. Re-run: 0 errors, 0 warnings. No CRITICAL.
+
+## Owner change (mid-run, 2026-10-04)
+- "the running on mutation testing is pretty expensive for this laptop. create the task for fixing the mutants but do not run it again now, open the draft pr tho"
+- Stopped the `domain` spike (killed Stryker and its workers, removed `.stryker-tmp`). Spec FR-009/SC-001 + tasks T005/T007/T009 amended (recorded in Clarifications). Floors 0 except contracts 95. CI timeout 60 min (unmeasured).
+- Follow-up task created in Notion: https://app.notion.com/p/3ef607bff0d28123bf09dc9243e3570d (Task, High, 5 pts, EP-1).
+- Draft PR: https://github.com/george-hutanu/motor-fix/pull/8
+
+## Phase 9 — Tests (red)
+- `scripts/mutation.spec.ts`: suite failed (module missing), 15 tests; later +1 scoping test, red on TS2554. `doctor.spec.mjs`: 1 failed / 19.
+
+## Phase 10 — Implement
+- Green: `jest -c scripts/jest.config.cts scripts` 38/38; vitest doctor 19/19; `tsc -p scripts/tsconfig.json` clean; `nx show projects --with-target test:mutation` = 8; `nx run worker:test:mutation` → skipped, exit 0; harness-eval 43/46 (was 41; remaining 3 pre-existing, unrelated); doctor 16 ok / 0 warn.
+- Commits: 836ab02 feat(mutation), 4f71eee ci(mutation), 3075a16 chore(harness). Pushed.
+
+## Phase 11 — Converge
+- Every task [X]; no unbuilt FR found against the files (FR-001…FR-012 each mapped). No new tasks.
+
+## Phase 12 — Harden
+- Mutation step waived by the owner. diff-audit: 0 errors, 3 warnings (the three Stryker dev deps — named by the story, justified in plan). artifact-lint: clean. test-adversary not run (tooling script with a full unit spec; owner asked to keep the machine light) — noted in report.

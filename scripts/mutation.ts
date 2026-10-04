@@ -28,22 +28,31 @@ export function strykerOptions(
   only?: string,
 ): Record<string, unknown> {
   const file = join(root, 'stryker.config.json');
-  if (!existsSync(file)) throw new Error(`${file} is missing`);
+  const own = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null;
+  if (typeof own?.thresholds?.break !== 'number')
+    throw new Error(`${file} is missing, or sets no thresholds.break`);
   const lib = join(root, 'tsconfig.lib.json');
   const reports = `reports/mutation/${project}`;
   return {
     checkers: ['typescript'],
     htmlReporter: { fileName: `${reports}/index.html` },
-    ignorePatterns: ['dist', 'coverage', '.nx', 'reports', '.angular'],
+    // Stryker copies the repository into its sandbox and ignores .gitignore.
+    ignorePatterns: [
+      'dist',
+      'coverage',
+      '.nx',
+      'reports',
+      '.angular',
+      '.worktrees',
+      'apps/web-e2e/test-output',
+      '.specify/**/.cache',
+    ],
     // A static mutant reloads its module and reruns every test; on libs/domain
     // they were 14% of mutants and two thirds of the run time.
     ignoreStatic: true,
     incremental,
     incrementalFile: `${reports}/incremental.json`,
-    jest: {
-      configFile: join(root, 'jest.config.cts'),
-      enableFindRelatedTests: true,
-    },
+    jest: { configFile: join(root, 'jest.config.cts') },
     mutate: [
       `${root}/src/**/*.ts`,
       `!${root}/src/**/*.spec.ts`,
@@ -51,10 +60,9 @@ export function strykerOptions(
       `!${root}/src/**/generated/**`,
       `!${root}/src/**/test-setup.ts`,
     ],
-    reporters: ['clear-text', 'progress', 'html'],
     testRunner: 'jest',
     tsconfigFile: existsSync(lib) ? lib : join(root, 'tsconfig.app.json'),
-    ...JSON.parse(readFileSync(file, 'utf8')),
+    ...own,
     ...(only && { mutate: [only] }),
   };
 }
@@ -109,14 +117,14 @@ async function main() {
   const summary = process.env['GITHUB_STEP_SUMMARY'];
   if (summary) {
     const score = mutationScore(results.map((r) => r.status));
-    const floor = (options['thresholds'] as { break: number }).break;
+    const { thresholds } = options as { thresholds: { break: number } };
     appendFileSync(
       summary,
       summaryRows(
         existsSync(summary) ? readFileSync(summary, 'utf8') : '',
         project,
         score,
-        floor,
+        thresholds.break,
       ),
     );
   }

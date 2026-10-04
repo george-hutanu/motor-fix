@@ -56,3 +56,7 @@
 - EP-1 Foundations — https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707
 - Architecture decisions — https://app.notion.com/p/3ee607bff0d28111907edddc4bdd066a
 - Technology stack — https://app.notion.com/p/3ee607bff0d2819ab8e3ee6926a249f2
+
+## Refresh 2026-10-04
+
+No changes since 2026-10-04 apart from this run's own writes (Status To do → In progress; follow-up task created). No comments on the story.

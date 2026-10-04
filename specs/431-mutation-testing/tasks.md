@@ -39,7 +39,7 @@ Paths exist today unless marked `(new)`.
 
 **Independent test**: `node .claude/scripts/harness-eval.mjs` passes the floor cases.
 
-- [X] T010 [US4] `.claude/evals/cases/config-protection.json`: the two lowering cases target `apps/api/stryker.config.json` and `libs/domain/stryker.config.json` with a `break` below the committed floor; the raising case targets `apps/api/stryker.config.json` with a `break` above it; Jest-runner content (FR-010)
+- [X] T010 [US4] `.claude/evals/cases/config-protection.json`: the lowering case targets `libs/contracts/stryker.config.json` (the only non-zero floor: 95 → 90); the second lowering case, which named the non-existent `apps/scanner`, is removed because no other floor can be lowered yet; the raising case targets `apps/api/stryker.config.json` (0 → 5); Jest-runner content (FR-010)
 
 ## Phase 7: Harness alignment
 

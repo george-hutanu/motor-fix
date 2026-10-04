@@ -72,7 +72,6 @@
       ]
     },
     "test:mutation": {
-      "cache": false,
       "command": "node scripts/mutation.ts {projectName} {projectRoot}",
       "options": {
         "env": {

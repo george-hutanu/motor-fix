@@ -107,6 +107,14 @@ describe('strykerOptions', () => {
     expect(options.testRunner).toBe('jest');
   });
 
+  it('refuses a config with no floor and names the file', () => {
+    write('libs/x/stryker.config.json', JSON.stringify({ mutate: [] }));
+
+    expect(() => strykerOptions('x', 'libs/x', false)).toThrow(
+      'libs/x/stryker.config.json',
+    );
+  });
+
   it('refuses a project with no stryker.config.json and names the file', () => {
     write('libs/x/tsconfig.lib.json', '{}');
 
