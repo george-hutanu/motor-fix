@@ -24,12 +24,15 @@ export class I18n {
   private readonly entered = new Set<Area>(['shell']);
   private readonly loading = new Map<string, Promise<void>>();
   private switches = 0;
+  // The language being switched to; an area entered mid-switch loads it too.
+  private target: Language = 'ro';
 
   readonly language = this.current.asReadonly();
 
   async use(language: string): Promise<void> {
     if (!isLanguage(language)) return;
     const turn = ++this.switches;
+    this.target = language;
     await Promise.all([...this.entered].map((a) => this.load(a, language)));
     if (turn !== this.switches) return;
     this.current.set(language);
@@ -38,7 +41,7 @@ export class I18n {
 
   async enter(area: Area): Promise<void> {
     this.entered.add(area);
-    await Promise.all([this.load(area, 'ro'), this.load(area, this.current())]);
+    await Promise.all([this.load(area, 'ro'), this.load(area, this.target)]);
   }
 
   t(key: string, params: Params = {}): string {

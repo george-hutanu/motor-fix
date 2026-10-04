@@ -152,6 +152,19 @@ describe('I18n', () => {
       expect(calledLoaders(spies).sort()).toEqual(['driver/en', 'shell/en']);
     });
 
+    it('loads the English file of an area entered while the switch is loading', async () => {
+      const spies = spyOnEveryLoader();
+
+      await Promise.all([i18n.use('en'), i18n.enter('driver')]);
+
+      expect(i18n.language()).toBe('en');
+      expect(calledLoaders(spies).sort()).toEqual([
+        'driver/en',
+        'driver/ro',
+        'shell/en',
+      ]);
+    });
+
     it('prefixes an area file’s keys with the area', async () => {
       jest
         .spyOn(FILES.public, 'ro')

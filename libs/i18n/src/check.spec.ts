@@ -11,14 +11,15 @@ function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { recursive: true, withFileTypes: true })
     .filter((e) => e.isFile())
     .map((e) => join(e.parentPath, e.name))
-    .filter((f) => /(?<!\.spec)\.ts$|(?<!index)\.html$/.test(f));
+    .filter((f) => /(?<!\.spec)\.ts$|\.html$/.test(f))
+    .filter((f) => f !== join(root, 'apps/web/src/index.html'));
 }
 
 const templatesOf = (file: string) => {
   const source = readFileSync(file, 'utf8');
   return file.endsWith('.html')
     ? [source]
-    : [...source.matchAll(/template:\s*`([\s\S]*?)`/g)].map((m) => m[1]);
+    : [...source.matchAll(/template:\s*(['"`])([\s\S]*?)\1/g)].map((m) => m[2]);
 };
 
 const areaFile = (area: string, language: string) =>

@@ -51,6 +51,8 @@ Paths are `(new)` unless they exist today: `tsconfig.base.json`, `apps/web/src/i
 
 - [X] T019 `provideI18n()` exported from `@motor-fix/i18n` and added as its own line in `apps/web/src/app/app.config.ts`; test in `libs/i18n/src/i18n.spec.ts` (starts the runtime, sets `<html lang>`)
 - [X] T020 Check in `libs/i18n/src/check.spec.ts`: every folder of translation files is a registered area; "Adding an area" documented in `contracts/i18n-api.md` (FR-003)
+- [X] T021 Review fix: an area entered while `use('en')` is loading also loads its English file (the switch's target language, not the current one); overlap test in `libs/i18n/src/i18n.spec.ts` (FR-006, FR-009)
+- [X] T022 Review fix: the workspace template scan reads inline templates in any quote style and skips only `apps/web/src/index.html` (FR-004)
 
 ## Dependencies
 
