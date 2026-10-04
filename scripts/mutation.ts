@@ -28,9 +28,14 @@ export function strykerOptions(
   only?: string,
 ): Record<string, unknown> {
   const file = join(root, 'stryker.config.json');
-  const own = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null;
+  let own: { thresholds?: { break?: unknown } } | null = null;
+  try {
+    own = JSON.parse(readFileSync(file, 'utf8'));
+  } catch {}
   if (typeof own?.thresholds?.break !== 'number')
-    throw new Error(`${file} is missing, or sets no thresholds.break`);
+    throw new Error(
+      `${file} is missing, is not JSON, or sets no thresholds.break`,
+    );
   const lib = join(root, 'tsconfig.lib.json');
   const reports = `reports/mutation/${project}`;
   return {
@@ -44,6 +49,7 @@ export function strykerOptions(
       'reports',
       '.angular',
       '.worktrees',
+      '.claude/worktrees',
       'apps/web-e2e/test-output',
       '.specify/**/.cache',
     ],
