@@ -13,7 +13,7 @@ description: "Tasks: private file storage with signed uploads and downloads"
 ## Phase 1: Setup
 
 - [X] T001 Add `@aws-sdk/client-s3`, `@aws-sdk/s3-presigned-post`, `@aws-sdk/s3-request-presigner` 3.1146.0 to `package.json` dependencies and `package-lock.json`
-- [ ] T002 [P] Create the Nx lib `libs/media` (new): `project.json` (name `media`, typecheck target like `libs/contracts/project.json`), `jest.config.cts` (jest-preset-angular, as `apps/web/jest.config.cts`), `tsconfig.json`, `tsconfig.lib.json`, `tsconfig.spec.json`, `src/test-setup.ts` (zoneless, as `apps/web/src/test-setup.ts`), `src/index.ts`; add `@motor-fix/media` to `tsconfig.base.json` paths; add `libs/media/**` to the `noRestrictedImports` override in `biome.json`
+- [X] T002 [P] Create the Nx lib `libs/media` (new): `project.json` (name `media`, typecheck target like `libs/contracts/project.json`), `jest.config.cts` (jest-preset-angular, as `apps/web/jest.config.cts`), `tsconfig.json`, `tsconfig.lib.json`, `tsconfig.spec.json`, `src/test-setup.ts` (zoneless, as `apps/web/src/test-setup.ts`), `src/index.ts`; add `@motor-fix/media` to `tsconfig.base.json` paths; add `libs/media/**` to the `noRestrictedImports` override in `biome.json`
 - [X] T003 [P] Add `minio` and a one-shot bucket-creating `minio-setup` service to `docker-compose.yml`; append `STORAGE_ENDPOINT`, `STORAGE_REGION`, `STORAGE_BUCKET`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY` under an `# api, worker` comment in `.env.example`
 
 ## Phase 2: Foundational
@@ -52,8 +52,8 @@ description: "Tasks: private file storage with signed uploads and downloads"
 
 ## Phase 7: User Story 4 — browser upload helper (P2)
 
-- [ ] T019 [P] [US4] Red tests in `libs/media/src/file-uploader.spec.ts` (new), `HttpTestingController`: posts the fields then the file to the address and reports progress, then confirms and emits the result; retries a dropped connection 3 times then errors; on a 403 asks for one new address and uploads again; a second 403 errors; any other error status errors without retry
-- [ ] T020 [US4] Implement `FileUploader` in `libs/media/src/file-uploader.ts` (new) and export from `libs/media/src/index.ts`
+- [X] T019 [P] [US4] Red tests in `libs/media/src/file-uploader.spec.ts` (new), `HttpTestingController`: posts the fields then the file to the address and reports progress, then confirms and emits the result; retries a dropped connection 3 times then errors; on a 403 asks for one new address and uploads again; a second 403 errors; any other error status errors without retry
+- [X] T020 [US4] Implement `FileUploader` in `libs/media/src/file-uploader.ts` (new) and export from `libs/media/src/index.ts`
 
 ## Phase 8: Polish
 

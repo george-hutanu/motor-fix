@@ -106,7 +106,7 @@
       }
     },
     {
-      "includes": ["apps/web/**", "libs/data-access/**"],
+      "includes": ["apps/web/**", "libs/data-access/**", "libs/media/**"],
       "linter": {
         "rules": {
           "style": {

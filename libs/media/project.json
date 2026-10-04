@@ -1,0 +1,13 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "media",
+  "projectType": "library",
+  "sourceRoot": "libs/media/src",
+  "tags": [],
+  "targets": {
+    "typecheck": {
+      "cache": true,
+      "command": "tsc --noEmit -p libs/media/tsconfig.lib.json && tsc --noEmit -p libs/media/tsconfig.spec.json"
+    }
+  }
+}
