@@ -16,10 +16,10 @@
 //   node .claude/scripts/harness-eval.mjs           run every case
 //   node .claude/scripts/harness-eval.mjs --check   fail below .claude/evals/baseline.json
 //   node .claude/scripts/harness-eval.mjs --json    machine form
-import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 // evals/ lives inside .claude here: the whole harness is git-excluded in this
 // repo, and a tracked top-level evals/ would be the one piece that was not.
@@ -68,17 +68,57 @@ function buildPayload(testCase, scratch) {
   return payload;
 }
 
+/**
+ * A throwaway repository for a case that declares a `fixture`: it gets copies
+ * of this repo's `.claude/hooks` and `.claude/scripts` (the real registry and
+ * gates; copies, not a symlink, because a gate runs only when its resolved path
+ * is the path it was started by), and its files
+ * and history are only what the case lists. A case about a ratchet or a diff
+ * size then holds in any repository, instead of only in the one whose files
+ * and commits it happened to name. Each commit maps a path to its content, or
+ * to null to delete it.
+ */
+function buildFixture(repo, testCase, scratch) {
+  const dir = join(scratch, `fixture-${testCase.id}`);
+  mkdirSync(dir, { recursive: true });
+  for (const part of ["hooks", "scripts"]) cpSync(join(repo, ".claude", part), join(dir, ".claude", part), { recursive: true });
+  const git = (...args) =>
+    execFileSync(
+      "git",
+      ["-c", "core.hooksPath=/dev/null", "-c", "commit.gpgsign=false", "-c", "user.name=harness-eval", "-c", "user.email=harness-eval@localhost", ...args],
+      { cwd: dir, stdio: "pipe" },
+    );
+  git("init", "-q");
+  writeFileSync(join(dir, ".git", "info", "exclude"), ".claude\n");
+  for (const [i, commit] of (testCase.fixture.commits ?? []).entries()) {
+    for (const [rel, content] of Object.entries(commit.files ?? {})) {
+      const file = join(dir, rel);
+      if (content === null) rmSync(file, { force: true });
+      else {
+        mkdirSync(dirname(file), { recursive: true });
+        writeFileSync(file, content);
+      }
+    }
+    git("add", "-A");
+    git("commit", "-q", "--allow-empty", "-m", commit.message ?? `fixture ${i + 1}`);
+  }
+  return dir;
+}
+
 export function runCases(repo, cases = loadCases(repo)) {
   const runner = join(repo, ".claude", "hooks", "run-hook.mjs");
-  const scratch = mkdtempSync(join(tmpdir(), "harness-eval-"));
+  // Resolved: on macOS the temp dir is a symlink (/var → /private/var), and a
+  // gate started through one never sees its own path as the one it was run by.
+  const scratch = realpathSync(mkdtempSync(join(tmpdir(), "harness-eval-")));
   try {
     return cases.map((testCase) => {
       const started = Date.now();
+      const root = testCase.fixture ? buildFixture(repo, testCase, scratch) : repo;
       const result = spawnSync(process.execPath, [runner, testCase.hook], {
         input: JSON.stringify(buildPayload(testCase, scratch)),
         encoding: "utf8",
-        cwd: repo,
-        env: { ...process.env, CLAUDE_PROJECT_DIR: repo, ...(testCase.env ?? {}) },
+        cwd: root,
+        env: { ...process.env, CLAUDE_PROJECT_DIR: root, ...(testCase.env ?? {}) },
       });
       const verdict = evaluate(testCase, result);
       return { id: testCase.id, hook: testCase.hook, rationale: testCase.why, ms: Date.now() - started, ...verdict };

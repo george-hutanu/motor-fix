@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { baselineFor, evaluate, loadCases, passRate, runCases } from './harness-eval.mjs';
@@ -83,6 +83,44 @@ describe('harness-eval — cases and baseline on disk', () => {
     assert.equal(result.pass, true);
     assert.equal(result.hook, 'pre:bash:guard');
     assert.ok(result.ms >= 0);
+  });
+
+  it('runs a case with a fixture in a throwaway repo holding its files and commits', () => {
+    const [result] = runCases(REPO, [
+      {
+        id: 'fixture-floor',
+        hook: 'pre:edit:config-protection',
+        why: 'a ratchet case must not depend on the files this repo happens to have',
+        fixture: { commits: [{ files: { 'apps/x/stryker.config.json': '{ "thresholds": { "break": 60 } }\n' } }] },
+        payload: { tool_input: { file_path: 'apps/x/stryker.config.json', content: '{ "thresholds": { "break": 10 } }\n' } },
+        expect: { exit: 2, stderr: 'ratchet' },
+      },
+    ]);
+    assert.equal(result.pass, true, result.detail);
+  });
+
+  it('gives a fixture real git history, so a range in the payload resolves there', () => {
+    const [result] = runCases(REPO, [
+      {
+        id: 'fixture-range',
+        hook: 'pre:tool:agent-model',
+        why: 'a routing case needs a diff of a known size, not a commit from another repository',
+        env: { SPECKIT_JEV: '0' },
+        fixture: { commits: [{ files: { 'a.txt': 'one\ntwo\n' } }, { files: { 'a.txt': null } }] },
+        payload: { tool_name: 'Agent', tool_input: { subagent_type: 'code-reviewer', prompt: 'Review HEAD~1..HEAD' } },
+        expect: { exit: 0, stdout: '"model":"sonnet"' },
+      },
+    ]);
+    assert.equal(result.pass, true, result.detail);
+  });
+
+  it('leaves no fixture repo behind', () => {
+    const before = new Set(readdirSync(tmpdir()).filter((n) => n.startsWith('harness-eval-')));
+    runCases(REPO, [
+      { id: 'cleanup', hook: 'pre:bash:guard', why: 'scratch is removed', fixture: { commits: [{ files: { 'a.txt': 'x\n' } }] }, payload: { tool_input: { command: 'ls' } }, expect: { exit: 0 } },
+    ]);
+    const after = readdirSync(tmpdir()).filter((n) => n.startsWith('harness-eval-') && !before.has(n));
+    assert.deepEqual(after, []);
   });
 
   it('materialises a transcript for a case that declares one', () => {
