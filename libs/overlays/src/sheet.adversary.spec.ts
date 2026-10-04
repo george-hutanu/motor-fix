@@ -440,7 +440,7 @@ describe('the visual viewport', () => {
     expect(add.mock.calls.length).toBeGreaterThan(0);
   });
 
-  it('two stacked sheets both follow the keyboard and neither leaks after closing', async () => {
+  it('two stacked sheets both follow the keyboard', async () => {
     const viewport = fakeViewport(844);
     await openTask();
     await openTask();

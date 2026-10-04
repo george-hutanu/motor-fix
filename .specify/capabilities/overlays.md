@@ -4,6 +4,7 @@ updated: 2026-10-04
 features:
   - 157-dialog-drawer
   - 159-form-saving
+  - 158-small-action-sheet
 ---
 
 # Capability: overlays
@@ -16,13 +17,13 @@ The shared way a short task opens on top of the current screen, in `libs/overlay
 
 _From 157-dialog-drawer._
 
-### 157-FR-002 — The `dialog` shape MUST be centred, `min(480px, 100% − 32px)` wide and at most `100% − 48px` tall, on the kit's dialog surface; its body MUST scroll inside the panel when the content is taller.
+### 158-FR-010 — On a window at least 768 px wide when the task opens, the `dialog` shape MUST be centred, `min(480px, 100% − 32px)` wide and at most `100% − 48px` tall, on the kit's dialog surface; its body MUST scroll inside the panel when the content is taller. Below 768 px it is the sheet of 158-FR-001. (Replaces 157-FR-002, which applied at every width.)
 
-_From 157-dialog-drawer._
+_From 158-small-action-sheet._
 
-### 157-FR-003 — The `drawer` and `drawer-wide` shapes MUST be anchored to the right edge at full height, `min(480px, 100%)` and `min(720px, 100%)` wide, on the kit's right-hand sheet surface; the header stays while the body scrolls.
+### 158-FR-011 — On a window at least 768 px wide when the task opens, the `drawer` and `drawer-wide` shapes MUST be anchored to the right edge at full height, `min(480px, 100%)` and `min(720px, 100%)` wide, on the kit's right-hand sheet surface; the header stays while the body scrolls. Below 768 px they are the sheet of 158-FR-001. (Replaces 157-FR-003.)
 
-_From 157-dialog-drawer._
+_From 158-small-action-sheet._
 
 ### 157-FR-004 — While any task is open, the page behind MUST be covered by the theme's mask and MUST NOT scroll; after the last task closes, the scroll position MUST be the one before opening.
 
@@ -128,4 +129,43 @@ _From 159-form-saving._
 
 _From 159-form-saving._
 
+### 158-FR-001 — When the window is narrower than 768 px as a task opens, the overlay service MUST show it as a bottom sheet whatever its shape (`dialog`, `drawer`, `drawer-wide`); at 768 px and wider it MUST show the asked-for shape. The callers' options do not change; the shape is chosen when the task opens and kept until it closes.
+
+_From 158-small-action-sheet._
+
+### 158-FR-002 — The sheet MUST be anchored to the bottom edge, the full width of the window, on the kit's sheet surface with its bottom edge (`data-side="bottom"`: top border, `--mf-radius-panel` on the top corners), at most 92 % of the visible height, with the header (title, X) fixed and the body scrolling inside.
+
+_From 158-small-action-sheet._
+
+### 158-FR-003 — The sheet MUST have a grip at its top: a 36 × 4 px bar in the strong line colour, centred in a row at least 44 px tall that is the drag handle; the grip is hidden from assistive technology (X is the named way to close).
+
+_From 158-small-action-sheet._
+
+### 158-FR-004 — Dragging the grip down MUST move the sheet with the pointer (never above its resting place); on release past one third of the sheet's height at the drag's start it MUST return to rest and close as X does (the discard question first when a field changed, else `cancelled`); on release at one third or less, or when the pointer is cancelled, it MUST return to rest.
+
+_From 158-small-action-sheet._
+
+### 158-FR-005 — While the on-screen keyboard (or anything that shrinks the visual viewport) hides the bottom of the window, the sheet's bottom MUST sit at the bottom of the visible area (`visualViewport`) and its height cap MUST be 92 % of the visible height; the focused field inside the sheet MUST be scrolled into view after each change; when the visible area grows back the sheet returns to the bottom edge.
+
+_From 158-small-action-sheet._
+
+### 158-FR-006 — The sheet's body MUST keep its last content above the bottom safe area, its header and body inside the side safe areas, and MUST NOT add the top safe area to its header.
+
+_From 158-small-action-sheet._
+
+### 158-FR-007 — The sheet MUST keep ST-157's and ST-159's behaviour: the mask and the scroll lock, closing by X, Escape and outside with `cancelled` and the scroll position kept, the focus on the sheet itself when it opens (no field focused, so no keyboard), the focus kept inside and returned to the opener, the discard question, stacking, the loader skeleton, and `taskSave`'s messages, busy button and confirmation.
+
+_From 158-small-action-sheet._
+
+### 158-FR-008 — The sheet MUST open with ST-53's `mf-pop` from its bottom edge and return from a short drag with a spring on ST-53's tokens; under reduced motion there is no animation (no pop, no spring, no transition), while a drag still follows the pointer.
+
+_From 158-small-action-sheet._
+
+### 158-FR-009 — The sheet MUST fit 320 px without sideways scroll, keep the 44 × 44 px close button and 12 px minimum text, and pass axe in light and dark, Romanian and English. It adds no text of its own.
+
+_From 158-small-action-sheet._
+
 ## Retired
+
+- `157-FR-002` — superseded by `158-FR-010` (2026-10-04)
+- `157-FR-003` — superseded by `158-FR-011` (2026-10-04)

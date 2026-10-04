@@ -8,3 +8,4 @@
 - 2026-10-04 · implement · ST-158 story Status · Planning → Implementing
 - 2026-10-04 · implement · Foundations timeline row ST-158 · Planning → Implementing
 - 2026-10-04 · labels · PR #48 · in development
+- 2026-10-04 · debt · 4 deferred bullets filed as To do tasks 3ef607bff0d28151b6c3e2f46752c29f (sign-in sheet e2e), 3ef607bff0d281f7a98dfcdd90929a82 (768 px in three places), 3ef607bff0d281d088d9d692fc79dc69 (TaskSave exports), 3ef607bff0d281b9ab17e6273738a6a0 (overlays close/scroll flake)

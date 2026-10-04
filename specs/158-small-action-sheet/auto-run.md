@@ -44,3 +44,4 @@
 - spec-reviewer: APPROVE. MEDIUM sign-in e2e → deferred (ST-82); LOW asking guard → patched with a red-first test; LOW stale plan `focusin` line → plan updated; LOW 768 px in three places → deferred.
 - code-reviewer: BLOCK on HIGH (drag release ignored the discard question) → patched (same fix as above). MEDIUM pointer ids → patched. MEDIUM stacked sheets untested → test added. LOW scrollIntoView on every pan → only on resize, red-first test. LOW e2e waits after Escape → added. LOW dead TaskSave exports (pre-existing) → deferred.
 - Pre-existing flake in overlays.spec close/scroll test (1/16 local) → deferred.
+- code-reviewer re-run: APPROVE; 2 LOWs patched (plan wording, an adversary test title).

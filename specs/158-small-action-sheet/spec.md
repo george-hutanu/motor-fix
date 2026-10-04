@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-158 Open small actions as a bottom sheet on a phone. On a phone a small action opens as a bottom sheet instead of the dialog or drawer, built into libs/overlays with one API. Cover drag-to-dismiss (if designed), the safe-area inset, focus, and the on-screen keyboard pushing the sheet."
 
