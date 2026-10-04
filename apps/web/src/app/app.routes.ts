@@ -1,6 +1,6 @@
 import type { Routes } from '@angular/router';
 
-import { languageAddress, toLanguageAddress } from './addresses';
+import { languageAddress, languageRoot, toLanguageAddress } from './addresses';
 import { areaGuard } from './dashboard/area.guard';
 import { Home } from './home/home';
 import { NotFound } from './not-found/not-found';
@@ -26,7 +26,7 @@ export const routes: Routes = [
   // Public pages: one address per language, the same path after the prefix.
   {
     canMatch: [languageAddress],
-    children: [{ component: Home, path: '' }],
+    children: [{ component: Home, matcher: languageRoot }],
     path: ':lang',
   },
   { component: NotFound, path: '**' },

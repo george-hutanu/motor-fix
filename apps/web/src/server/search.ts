@@ -15,10 +15,9 @@ const xml = (text: string) =>
 
 // The request's own address is the fallback for the dev server only: the
 // deployed server requires PUBLIC_WEB_URL.
-export function mountSearch(app: Express, publicUrl: string | undefined) {
-  const fixed = publicUrl ? new URL(publicUrl).origin : undefined;
+export function mountSearch(app: Express, publicOrigin: string | undefined) {
   const origin = (req: Request) =>
-    fixed ?? `${req.protocol}://${req.get('host')}`;
+    publicOrigin ?? `${req.protocol}://${req.get('host')}`;
 
   app.get('/sitemap.xml', (req, res) => {
     res.type('application/xml').send(sitemap(origin(req)));

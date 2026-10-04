@@ -13,12 +13,12 @@ import { I18n } from '@motor-fix/i18n';
 
 import {
   alternates,
-  PUBLIC_PATHS,
   provideLanguageAddresses,
   SITE_ORIGIN,
   toLanguageAddress,
 } from './addresses';
 import { routes } from './app.routes';
+import { Home } from './home/home';
 
 const ORIGIN = 'https://motorfix.ro';
 
@@ -109,6 +109,42 @@ describe('language addresses', () => {
     await settle(harness);
 
     expect(url()).toBe('/en/no-such-page');
+  });
+
+  it('moves the address for a language change that lands while a page is still opening', async () => {
+    const harness = await open('/ro');
+    const router = TestBed.inject(Router);
+    let open_: () => void = () => undefined;
+    const opened = new Promise<boolean>((resolve) => {
+      open_ = () => resolve(true);
+    });
+    const prefix = routes.find((route) => route.path === ':lang');
+    router.resetConfig(
+      routes.map((route) =>
+        route === prefix
+          ? {
+              ...route,
+              children: [
+                ...(route.children ?? []),
+                { canActivate: [() => opened], component: Home, path: 'slow' },
+              ],
+            }
+          : route,
+      ),
+    );
+
+    const navigation = router.navigateByUrl('/ro/slow');
+    await new Promise((resolve) => setTimeout(resolve));
+    await TestBed.inject(I18n).use('en');
+    // whenStable would wait for the navigation the gate is holding.
+    TestBed.tick();
+    await new Promise((resolve) => setTimeout(resolve));
+    open_();
+    await navigation;
+    await settle(harness);
+
+    expect(url()).toBe('/en/slow');
+    expect(href('link[rel="canonical"]')).toBe(`${ORIGIN}/en/slow`);
   });
 
   it('leaves an address without a language prefix as it is', async () => {
@@ -226,9 +262,5 @@ describe('alternates', () => {
       ro: `${ORIGIN}/ro/garages/atelier-dinamo`,
       'x-default': `${ORIGIN}/ro/garages/atelier-dinamo`,
     });
-  });
-
-  it('lists Home as the public page', () => {
-    expect(PUBLIC_PATHS).toEqual(['']);
   });
 });

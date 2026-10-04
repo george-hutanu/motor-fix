@@ -44,3 +44,11 @@
 - e2e (built SSR on :4221, APP_ENV=test, PUBLIC_WEB_URL=http://localhost:4221, no API, one bounded script): 30 passed, 1 failed — skeleton "release and both checks" needs the API/DB (environment, same as ST-17's run). New addresses.spec 7/7, language.spec 3/3, dashboards.spec 7/7, cockpit 12/12.
 - Existing e2e changed with the behaviour: language.spec blocked-storage reopen uses `goto('/')` (the address now keeps English on reload); dashboards.spec signed-out landing `/ro`.
 - `npm run typecheck` 12 projects green; `npm run lint` clean (238 files); `npm run test:unit -- --maxWorkers=2` 10 projects green.
+
+## 12 Harden
+- artifact-lint clean. diff-audit (vs merge-base 202c88e, so it includes already-merged ST-50/16/17 files): for this feature's files only pre-existing findings (`reqHandler` used by the Angular CLI; the nodenext `.js` rule does not apply here — libs/i18n is bundled by Angular, same as on main).
+- Heavy-work pause from the orchestrator (PR #21 priority): only single-file jest --maxWorkers=1, commits queued locally.
+- test-adversary (report went to the orchestrator): addresses.adversary.spec.ts 25 tests, 2 failed → real defect: in-app `/ro/` and `/en/` (trailing slash = one empty segment) rendered the not-found page. Fixed with a `languageRoot` matcher on the prefix's Home child; adversary 25/25, addresses.spec 15/15. search.adversary.spec.ts 17/17.
+- spec-reviewer (report via orchestrator): APPROVE, 2 LOW patched — padding test on PUBLIC_PATHS deleted; tasks.md T006/T009 now cite the `/cockpit` tests in addresses.adversary.spec.ts.
+- code-reviewer (report via orchestrator, on 13ff490): BLOCK. (1) HIGH: a language change landing mid-navigation was dropped → `align(url)` called from the effect and from NavigationEnd; new spec "moves the address … while a page is still opening" red first (Received "/ro/slow"), then green. (2) MEDIUM: trailing-slash fix to be committed. (3) LOW: padding test deleted. (4) LOW: server.ts parses PUBLIC_WEB_URL once, mountSearch takes the origin. (5) LOW deferred → deferred.md.
+- Single-file jest after fixes: addresses.spec 15/15, addresses.adversary 25/25, search.spec 5/5, search.adversary 17/17. Full checks and commit wait for "#21 QA done".

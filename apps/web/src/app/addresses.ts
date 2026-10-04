@@ -14,6 +14,7 @@ import {
   NavigationEnd,
   PRIMARY_OUTLET,
   Router,
+  type UrlMatcher,
   UrlSegment,
 } from '@angular/router';
 import { I18n, isLanguage, LANGUAGES, LanguageChoice } from '@motor-fix/i18n';
@@ -43,6 +44,13 @@ export const languageAddress: CanMatchFn = async (_route, [first]) => {
   return true;
 };
 
+// `/ro` and the canonical `/ro/`: in-app, the router keeps the trailing slash as
+// one empty segment.
+export const languageRoot: UrlMatcher = (segments) =>
+  segments.length === 0 || (segments.length === 1 && segments[0].path === '')
+    ? { consumed: segments }
+    : null;
+
 // The server cannot read the device's memory, so `/` stays Romanian there; the
 // browser goes on to the address of the remembered or current language.
 export const toLanguageAddress: CanMatchFn = () => {
@@ -64,25 +72,31 @@ export function provideLanguageAddresses(): EnvironmentProviders {
       const document = inject(DOCUMENT);
       const origin = inject(SITE_ORIGIN);
 
-      // A language chosen on the page or in another tab moves the address; while
-      // a navigation runs, its own guard is setting the language.
-      effect(() => {
+      const align = (url: string) => {
         const language = i18n.language();
+        const tree = router.parseUrl(url);
+        const segments = tree.root.children[PRIMARY_OUTLET]?.segments;
+        const first = segments?.[0]?.path;
+        if (!segments || !first || !isLanguage(first) || first === language)
+          return;
+        segments[0] = new UrlSegment(language, {});
+        void router.navigateByUrl(tree, { replaceUrl: true });
+      };
+
+      // A language chosen on the page or in another tab moves the address. While
+      // a navigation runs, its own guard sets the language, and a change that
+      // lands meanwhile is caught when it ends.
+      effect(() => {
+        i18n.language();
         untracked(() => {
-          if (router.currentNavigation()) return;
-          const tree = router.parseUrl(router.url);
-          const segments = tree.root.children[PRIMARY_OUTLET]?.segments;
-          const first = segments?.[0]?.path;
-          if (!segments || !first || !isLanguage(first) || first === language)
-            return;
-          segments[0] = new UrlSegment(language, {});
-          void router.navigateByUrl(tree, { replaceUrl: true });
+          if (!router.currentNavigation()) align(router.url);
         });
       });
 
       router.events.subscribe((event) => {
-        if (event instanceof NavigationEnd)
-          writeHead(document, origin, publicAddress(router));
+        if (!(event instanceof NavigationEnd)) return;
+        align(event.urlAfterRedirects);
+        writeHead(document, origin, publicAddress(router));
       });
     }),
   ]);

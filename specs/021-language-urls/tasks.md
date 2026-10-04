@@ -22,7 +22,7 @@ Paths are `(new)` unless they exist today: `libs/i18n/src/switch.ts`, `libs/i18n
 
 **Independent test**: on `/ro`, a language change moves the address to `/en` with `replaceUrl`; in the browser `/` goes to `/<remembered or current>`; on the server `/` renders Home.
 
-- [X] T006 [US2] Test: `apps/web/src/app/addresses.spec.ts` — on `/ro`, `I18n.use('en')` (a tap or another tab) moves the address to `/en` with `replaceUrl`, keeping the path; on `/cockpit` the address does not change (FR-004)
+- [X] T006 [US2] Test: `apps/web/src/app/addresses.spec.ts` — on `/ro`, `I18n.use('en')` (a tap or another tab) moves the address to `/en` with `replaceUrl`, keeping the path; on `/de` the address does not change, and on `/cockpit` neither (`addresses.adversary.spec.ts`) (FR-004)
 - [X] T007 [US3] Test: `apps/web/src/app/addresses.spec.ts` — in the browser `/` goes to `/en` when `en` is remembered, to `/ro` when nothing is, keeping the query string; on the server `/` renders Home in Romanian (FR-003)
 - [X] T008 [US2] `apps/web/src/app/addresses.ts` — `provideLanguageAddresses()` (language → address effect) and the `toLanguageAddress` guard on the `''` route; `app.config.ts` gains the provider (FR-003, FR-004)
 
@@ -30,7 +30,7 @@ Paths are `(new)` unless they exist today: `libs/i18n/src/switch.ts`, `libs/i18n
 
 **Independent test**: after navigation `<head>` carries the canonical and `hreflang` links of a public page, or `noindex` on a page that is not public; the server answers the sitemap, robots and the `/app` header.
 
-- [X] T009 [US4] Test: `apps/web/src/app/addresses.spec.ts` — `/en` has canonical `<origin>/en/` and `hreflang` `ro`/`en`/`x-default`; `/` has canonical `<origin>/ro/`; `/cockpit` has `noindex` and no canonical; a later navigation replaces the tags instead of adding to them; `alternates()` builds absolute addresses for a nested path (FR-005, FR-008)
+- [X] T009 [US4] Test: `apps/web/src/app/addresses.spec.ts` — `/en` has canonical `<origin>/en/` and `hreflang` `ro`/`en`/`x-default`; `/` has canonical `<origin>/ro/`; `/de` has `noindex` and no canonical, as does `/cockpit` (`addresses.adversary.spec.ts`); a later navigation replaces the tags instead of adding to them; `alternates()` builds absolute addresses for a nested path (FR-005, FR-008)
 - [X] T010 [US4] `apps/web/src/app/addresses.ts` — head tags after every navigation, `alternates()`, `PUBLIC_PATHS`, `SITE_ORIGIN` (default: the document's origin); `app.config.server.ts` provides it from `PUBLIC_WEB_URL` (FR-005, FR-008)
 - [X] T011 [US4] Test: `apps/web/src/server/search.spec.ts` — `/sitemap.xml` is XML listing exactly `<origin>/ro/` and `<origin>/en/` with three alternates each, on `PUBLIC_WEB_URL` or the request origin; `/robots.txt` allows all and names the sitemap; `/app/driver` answers with `X-Robots-Tag: noindex`, `/ro/` without it (FR-006, FR-007, FR-008)
 - [X] T012 [US4] `apps/web/src/server/search.ts` — `mountSearch(app, publicUrl)`; `apps/web/src/server.ts` mounts it (FR-006, FR-007, FR-008)
@@ -55,9 +55,9 @@ Paths are `(new)` unless they exist today: `libs/i18n/src/switch.ts`, `libs/i18n
 | FR-001 | T004, T015 |
 | FR-002 | T004, T015, T016 |
 | FR-003 | T002, T007, T015, T016 |
-| FR-004 | T006, T015 |
+| FR-004 | T006, T015, addresses.adversary.spec.ts |
 | FR-005 | T009, T015 |
 | FR-006 | T011, T015 |
 | FR-007 | T011, T015 |
-| FR-008 | T009, T011, T015 |
+| FR-008 | T009, T011, T015, addresses.adversary.spec.ts, search.adversary.spec.ts |
 | FR-009 | T013, T015 |

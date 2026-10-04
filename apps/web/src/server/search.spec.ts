@@ -20,7 +20,7 @@ const close = (server: Server) =>
 
 async function serve(publicUrl: string | undefined) {
   const app = express();
-  mountSearch(app, publicUrl);
+  mountSearch(app, publicUrl ? new URL(publicUrl).origin : undefined);
   app.use((_req, res) => {
     res.send('page');
   });
