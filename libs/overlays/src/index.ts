@@ -2,7 +2,9 @@
 //
 // Open a task: `inject(Overlays).open(Task, { shape, title, data? })` resolves
 // with the task's result, or 'cancelled'. The task reads its data and closes
-// itself through `injectOverlayTask()`.
+// itself through `injectOverlayTask()`. On a phone (below 768 px when it
+// opens) every shape is a bottom sheet with a grip that drags it closed; the
+// task itself does not change.
 //
 // Save a task's form, the same way in every task:
 //

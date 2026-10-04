@@ -23,24 +23,33 @@ import { OVERLAY_TASK, type OverlayTask, type PanelContext } from './task';
 const FIELD =
   'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [contenteditable]:not([contenteditable="false"])';
 
+// Not a phone: the complement of the kit's phone rule in cockpit.css. Below
+// it every task is a bottom sheet.
+export const TABLET = '(min-width: 768px)';
+
 // A computer: wide enough not to be a phone, and a mouse or trackpad, so
 // focusing a field does not pop up an on-screen keyboard.
-const COMPUTER = '(min-width: 768px) and (pointer: fine)';
+const COMPUTER = `${TABLET} and (pointer: fine)`;
 
 let questions = 0;
 
-// The panel every task is shown in: the kit's dialog or right-hand sheet
-// surface, a header with the title and the X, and the task in a body that
-// scrolls on its own.
+// The panel every task is shown in: the kit's dialog, right-hand sheet or, on
+// a phone, bottom sheet surface (with a grip to drag it down), a header with
+// the title and the X, and the task in a body that scrolls on its own.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    '[attr.data-side]': "context.shape === 'dialog' ? null : 'right'",
-    '[class.mf-overlay-dialog]': "context.shape === 'dialog'",
-    '[class.mf-overlay-drawer-wide]': "context.shape === 'drawer-wide'",
-    '[class.mf-overlay-drawer]': "context.shape === 'drawer'",
-    '[class.spartan-dialog-content]': "context.shape === 'dialog'",
-    '[class.spartan-sheet-content]': "context.shape !== 'dialog'",
+    '[attr.data-side]': 'side',
+    '[class.mf-overlay-dialog]': "shape === 'dialog'",
+    '[class.mf-overlay-dragging]': 'drag() !== null',
+    '[class.mf-overlay-drawer-wide]': "shape === 'drawer-wide'",
+    '[class.mf-overlay-drawer]': "shape === 'drawer'",
+    '[class.mf-overlay-sheet]': 'context.sheet',
+    '[class.spartan-dialog-content]': "shape === 'dialog'",
+    '[class.spartan-sheet-content]': "shape !== 'dialog'",
+    '[style.--mf-drag]': 'drag()',
+    '[style.--mf-keyboard]': 'keyboard()',
+    '[style.--mf-visible-height]': 'visibleHeight()',
   },
   imports: [NgComponentOutlet, TranslatePipe],
   selector: 'mf-overlay-panel',
@@ -61,6 +70,32 @@ let questions = 0;
     :host.mf-overlay-drawer-wide {
       width: min(720px, 100vw);
     }
+    /* [data-side] outranks the kit's own bottom edge, whatever the load order. */
+    :host.mf-overlay-sheet[data-side] {
+      grid-template-rows: auto auto minmax(0, 1fr);
+      max-height: calc(0.92 * var(--mf-visible-height, 100dvh));
+      inset-block-end: var(--mf-keyboard, 0px);
+      transform: translateY(var(--mf-drag, 0px));
+      transition: transform var(--mf-motion-pop) var(--mf-motion-ease);
+    }
+    :host.mf-overlay-sheet.mf-overlay-dragging[data-side] {
+      transition: none;
+    }
+    .mf-overlay-grip {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: var(--mf-tap);
+      touch-action: none;
+      cursor: grab;
+    }
+    .mf-overlay-grip::before {
+      content: "";
+      width: 36px;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--mf-line-strong);
+    }
     .mf-overlay-header {
       display: flex;
       align-items: center;
@@ -70,8 +105,13 @@ let questions = 0;
         var(--mf-space-6);
       border-bottom: 1px solid var(--mf-line);
     }
-    :host.spartan-sheet-content .mf-overlay-header {
+    :host[data-side='right'] .mf-overlay-header {
       padding-top: calc(var(--mf-space-3) + var(--mf-safe-top));
+    }
+    :host.mf-overlay-sheet .mf-overlay-header {
+      padding-top: 0;
+      padding-inline: max(var(--mf-space-6), var(--mf-safe-left))
+        max(var(--mf-space-3), var(--mf-safe-right));
     }
     .mf-overlay-title {
       min-width: 0;
@@ -89,6 +129,11 @@ let questions = 0;
       min-height: 0;
       padding: var(--mf-space-5) var(--mf-space-6)
         max(var(--mf-space-6), var(--mf-safe-bottom));
+    }
+    :host.mf-overlay-sheet .mf-overlay-question,
+    :host.mf-overlay-sheet .mf-overlay-body {
+      padding-inline: max(var(--mf-space-6), var(--mf-safe-left))
+        max(var(--mf-space-6), var(--mf-safe-right));
     }
     .mf-overlay-body {
       overflow-y: auto;
@@ -128,6 +173,17 @@ let questions = 0;
     }
   `,
   template: `
+    @if (context.sheet) {
+      <div
+        class="mf-overlay-grip"
+        aria-hidden="true"
+        (pointerdown)="grab($event)"
+        (pointermove)="pull($event)"
+        (pointerup)="release($event)"
+        (pointercancel)="letGo($event)"
+        (lostpointercapture)="letGo($event)"
+      ></div>
+    }
     <header class="mf-overlay-header">
       <h2 class="mf-label mf-overlay-title" [id]="context.titleId">
         {{ context.title | t }}
@@ -205,11 +261,24 @@ export class OverlayPanel {
   private readonly keepButton =
     viewChild<ElementRef<HTMLButtonElement>>('keepButton');
 
+  protected readonly shape = this.context.sheet ? 'sheet' : this.context.shape;
+  protected readonly side = this.context.sheet
+    ? 'bottom'
+    : this.context.shape === 'dialog'
+      ? null
+      : 'right';
   protected readonly questionId = `mf-overlay-question-${++questions}`;
   protected readonly asking = signal(false);
   protected readonly task = signal<Type<unknown> | null>(null);
   protected changed = false;
   private focusedBeforeAsking: HTMLElement | null = null;
+  // How far the grip is pulled down, and where the pull started.
+  protected readonly drag = signal<string | null>(null);
+  private pullFrom: { height: number; pointer: number; y: number } | null =
+    null;
+  // The part of the window an on-screen keyboard hides, and what is left.
+  protected readonly keyboard = signal<string | null>(null);
+  protected readonly visibleHeight = signal<string | null>(null);
 
   private readonly taskApi: OverlayTask<unknown, unknown> = {
     close: (result) => this.dialog.close(result),
@@ -256,9 +325,76 @@ export class OverlayPanel {
       );
     }
     this.afterRender(() => this.focusStart());
+    if (this.context.sheet) this.followVisibleArea();
   }
 
-  // X, Escape and a click outside: ask first when a field changed.
+  // One pointer drags at a time; a second finger is ignored.
+  protected grab(event: PointerEvent) {
+    if (event.button !== 0 || this.pullFrom) return;
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    this.pullFrom = {
+      height: this.host.nativeElement.offsetHeight,
+      pointer: event.pointerId,
+      y: event.clientY,
+    };
+  }
+
+  protected pull(event: PointerEvent) {
+    if (event.pointerId !== this.pullFrom?.pointer) return;
+    this.drag.set(`${Math.max(0, event.clientY - this.pullFrom.y)}px`);
+  }
+
+  // Past a third of its height the sheet closes as the X does; otherwise,
+  // and when the system takes the pointer, it springs back. While the discard
+  // question shows, a drag only springs back, as Escape and outside only keep.
+  protected release(event: PointerEvent) {
+    const from = this.pullFrom;
+    if (event.pointerId !== from?.pointer) return;
+    this.letGo(event);
+    if (!this.asking() && event.clientY - from.y > from.height / 3)
+      this.dismiss();
+  }
+
+  protected letGo(event: PointerEvent) {
+    if (event.pointerId !== this.pullFrom?.pointer) return;
+    this.pullFrom = null;
+    this.drag.set(null);
+  }
+
+  // iOS does not shrink the layout viewport for the on-screen keyboard, so a
+  // sheet on the bottom edge would sit under it: follow the visual viewport.
+  private followVisibleArea() {
+    const window = this.window;
+    const visible = window?.visualViewport;
+    if (!window || !visible) return;
+    const follow = () => {
+      const hidden = window.innerHeight - visible.offsetTop - visible.height;
+      this.keyboard.set(`${Math.max(0, Math.round(hidden))}px`);
+      this.visibleHeight.set(`${visible.height}px`);
+    };
+    // A resize is the keyboard opening or closing: bring the field into
+    // view then, not on every pan of the visible area.
+    const resize = () => {
+      follow();
+      this.afterRender(() => {
+        const focused = window.document.activeElement;
+        if (
+          focused instanceof HTMLElement &&
+          this.body().nativeElement.contains(focused)
+        )
+          focused.scrollIntoView({ block: 'nearest' });
+      });
+    };
+    follow();
+    visible.addEventListener('resize', resize);
+    visible.addEventListener('scroll', follow);
+    inject(DestroyRef).onDestroy(() => {
+      visible.removeEventListener('resize', resize);
+      visible.removeEventListener('scroll', follow);
+    });
+  }
+
+  // X, Escape, a click outside and a drag down: ask first when a field changed.
   protected dismiss() {
     if (!this.changed || this.context.confirmDiscard === false) {
       this.close();

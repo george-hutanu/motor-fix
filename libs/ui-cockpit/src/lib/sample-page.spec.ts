@@ -90,13 +90,18 @@ describe('CockpitSamplePage', () => {
 
   afterEach(() => {
     document.querySelector('.cdk-overlay-container')?.remove();
+    jest.restoreAllMocks();
   });
 
   it.each([
     ['overlay.openDialog', 'mf-overlay-dialog'],
     ['overlay.openDrawer', 'mf-overlay-drawer'],
     ['overlay.openWide', 'mf-overlay-drawer-wide'],
-  ])('opens the sample task from %s in its shape', async (key, shape) => {
+  ])('opens the sample task from %s in its shape on a computer', async (key, shape) => {
+    const matchMedia = window.matchMedia;
+    jest
+      .spyOn(window, 'matchMedia')
+      .mockImplementation((query) => ({ ...matchMedia(query), matches: true }));
     const page = await render();
 
     buttonNamed(page, text(key))?.click();

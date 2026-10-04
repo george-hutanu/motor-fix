@@ -1,6 +1,6 @@
 ---
 name: "speckit-watch"
-description: "Watch every worktree on this machine and get stale work moving again: one board of what each agent is doing (feature, phase, holder, last activity, PR), the safe fixes applied (dead locks released, merged clean worktrees removed), and one background agent dispatched per stale item to resume it, re-run QA, fix red CI or merge, within the caps the watcher applies. Repeat it with /loop 15m /speckit-watch."
+description: "Watch every worktree on this machine and get stale work moving again: one board of what each agent is doing (feature, phase, holder, last activity, PR), the safe fixes applied (dead locks released, merged clean worktrees removed), and one background agent dispatched per stale item to resume it, re-run QA, fix red CI or merge, within the caps the watcher applies. The orchestrating session schedules it every 15 minutes once two or more tasks run at once."
 argument-hint: "[--stale <phase>=<minutes>,…]"
 compatibility: "Requires git, gh (george-hutanu via GH_TOKEN), Node 24"
 metadata:
@@ -86,15 +86,25 @@ A dispatched agent's claim keeps the next pass off that worktree until the
 claim is older than the phase's stale threshold; if the worktree still has not
 moved by then, it is stale again and gets a new agent.
 
-## Repeating it
+## Keeping it scheduled
 
-```text
-/loop 15m /speckit-watch
-```
+The orchestrating session (the one on the main checkout that dispatches
+tasks) schedules the watch as soon as two or more tasks or worktrees are
+active at once:
 
-repeats the pass every 15 minutes in this session. A pass with nothing to do
-writes nothing and dispatches nothing; it costs one `gh` call and a few
-read-only `git` calls per worktree.
+1. `CronList`. If a job already runs `/speckit-watch`, stop: never a second.
+2. Otherwise `CronCreate` with `cron: "4,19,34,49 * * * *"` (every 15 minutes,
+   off the round minutes), `prompt: "/speckit-watch"`, `recurring: true`.
+3. Run one pass right away.
+
+A CronCreate job lives only in this session and expires after 7 days, so a
+resumed or compacted session has lost it. The SessionStart hook
+`session:start:watch-reminder` says so on the main checkout when two or more
+worktrees are active (`N worktrees active: …`); answer it with the steps
+above. A session isolated in a worktree never schedules the watch.
+
+A pass with nothing to do writes nothing and dispatches nothing; it costs one
+`gh` call and a few read-only `git` calls per worktree.
 
 ## Limits
 

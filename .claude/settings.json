@@ -10,6 +10,10 @@
           },
           {
             "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs session:start:watch-reminder"
+          },
+          {
+            "type": "command",
             "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs session:start:github-identity"
           }
         ]

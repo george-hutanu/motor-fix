@@ -394,6 +394,15 @@ button.spartan-switch[data-disabled="true"] {
   border-width: 0 1px 0 0;
 }
 
+/* A phone's bottom sheet: full width, so the side safe areas are its content's. */
+.spartan-sheet-content[data-side="bottom"] {
+  inset-block: auto 0;
+  inset-inline: 0;
+  width: auto;
+  border-width: 1px 0 0;
+  border-radius: var(--mf-radius-panel) var(--mf-radius-panel) 0 0;
+}
+
 .spartan-popover-content {
   width: 288px;
   padding: var(--mf-space-4);
@@ -548,6 +557,10 @@ button.spartan-switch[data-disabled="true"] {
 
 .spartan-sheet-content[data-side="left"] {
   transform-origin: left center;
+}
+
+.spartan-sheet-content[data-side="bottom"] {
+  transform-origin: center bottom;
 }
 
 /* Removing them, rather than shortening them, puts anything still moving in its end state at once. */

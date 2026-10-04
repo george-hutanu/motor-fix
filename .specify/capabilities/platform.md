@@ -240,7 +240,7 @@ _From 464-agent-watch._
 
 _From 464-agent-watch._
 
-### 464-FR-011 — The `/speckit-watch` skill MUST run the command with `--fix`, claim each item in the dispatch plan, and start one subagent per item that works in that worktree with that fix's instructions, dispatching only from a session on the main checkout (a worktree-isolated session reports the plan instead); a pass with nothing to fix MUST write and dispatch nothing; the skill MUST say how to repeat it with `/loop`.
+### 464-FR-011 — The `/speckit-watch` skill MUST run the command with `--fix`, claim each item in the dispatch plan, and start one subagent per item that works in that worktree with that fix's instructions, dispatching only from a session on the main checkout (a worktree-isolated session reports the plan instead); a pass with nothing to fix MUST write and dispatch nothing; the skill MUST say how the orchestrating session keeps it scheduled (CronList first, never a second job; every 15 minutes once two or more tasks or worktrees are active; never from a worktree session).
 
 _From 464-agent-watch._
 

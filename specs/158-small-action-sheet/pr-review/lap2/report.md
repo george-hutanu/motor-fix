@@ -1,0 +1,24 @@
+**Agent review: failure** — PR #48 at `1fcd7ed`, lap 2
+
+Blocking: 1 (blocker 1, high 0) · medium 2 · low 3. Booted: postgres, redis, api, web.
+- No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.
+- No changed GET endpoint without path parameters.
+
+| # | Severity | Finding | Where | Evidence |
+| --- | --- | --- | --- | --- |
+| 1 | blocker | End-to-end suite failed (exit 1) |  |  |
+| 2 | medium | api readiness: storage down |  |  |
+| 3 | medium (pre-existing) | a mouse wheel over the backdrop just before closing scrolls the page after the task closes (sheet and desktop dialog); this is why the e2e suite failed | /cockpit · libs/overlays (CDK block scroll strategy, unchanged) | probe-wheel.json: 390 px sheet 1885 → 1994 (+109) closing at once, +3 after 250 ms, 0 after 1 s; 320 px sheet 2143 → 2252 / +3 / 0; 1280 px dialog 1256 → 1363 / +3 / 0. Without the wheel nothing moves (probe-scroll.json, 30 runs: none, Escape, X, reduced motion). Chromium's smooth wheel animation still running when the lock lifts lands on the page. FR-007 asks the sheet to keep the scroll position on close. The mechanism predates this PR (the desktop dialog does the same), and it is the cause of the flake in specs/158-small-action-sheet/deferred.md: in this run apps/web-e2e/src/overlays.spec.ts:128 failed twice (Escape: expected 1336, got 1372; click outside: expected 1336, got 1358) because the test closes right after `page.mouse.wheel(0, 600)`. Earlier runs at the same commit passed 167/167 twice. Fix the test (wait until the wheel has settled before closing), or make the restore cancel a scroll that is still moving, then promote the deferred item. |
+| 4 | low | the sheet reads the visual viewport only on resize/scroll, not when it opens | libs/overlays/src/panel.ts followVisibleArea() | If the visual viewport is already smaller when a sheet opens (a pinch-zoomed page, or a keyboard still up when a second sheet stacks), --mf-keyboard and --mf-visible-height stay unset until the next resize or scroll event. Until then the sheet sits at the layout bottom, which can be hidden. FR-005 says the sheet's bottom MUST sit at the bottom of the visible area. Calling follow() once at setup fixes it; add a unit case with the fake viewport already at 500 px. |
+| 5 | low | the sheet's unit specs are not colocated with the code they cover | libs/overlays/src/sheet.spec.ts, sheet.adversary.spec.ts | Constitution II says tests are colocated with the source they cover (`foo.ts` / `foo.spec.ts`). post-edit-check runs only the colocated spec, so an edit to panel.ts never runs the 56 sheet tests at edit time. The same was already true of panel.ts before this PR (no panel.spec.ts). Name them after panel.ts, or accept and record the convention. |
+| 6 | low | the keyboard offset depends on stylesheet order: the kit and the panel set the sheet's bottom with the same specificity | libs/ui-cockpit/src/styles/cockpit.css:398 vs libs/overlays/src/panel.ts styles | Today the component style is inserted after the global stylesheet and wins: the simulated keyboard flow passed in all three runs with the bottom at 500 px. If the order flips (a lazy-loaded global sheet, a style moved into the kit), the sheet silently stops lifting above the keyboard. Raise the panel selector's specificity, or keep the bottom offset in one place. |
+
+### Reproduction
+1. In the PR worktree: BASE_URL=http://127.0.0.1:56451 npx playwright test -c apps/web-e2e/playwright.config.mts --workers=1 → Observe: [167/167] [chromium] › apps/web-e2e/src/task-form.spec.ts:259:3 › with reduced motion › the busy button does not spin /   2 failed /     [chromium] › apps/web-e2e/src/overlays.spec.ts:108:5 › a task over the page › closes with Escape, leaving the address, the scroll and the focus as they were  /     [chromium] › apps/web-e2e/src/overlays.spec.ts:108:5 › a task over the page › closes with a click outside, leaving the address, the scroll and the focus as they were  /   165 passed (4.1m)
+2. No object store on this machine (no Docker); every other check is ok. Environment limit, not the change.
+3. open /cockpit at 390×844 (or 320×640, or 1280×800 for the dialog) → scroll the opener into view, then 80 px further → click "Deschide sarcina ca dialog" → wheel 600 px over the backdrop → press Escape at once (or within ~250 ms) → read window.scrollY over the next 800 ms
+4. Read followVisibleArea(): `visible.addEventListener('resize', resize); visible.addEventListener('scroll', follow);` and no `follow()` call before them
+5. ls libs/overlays/src: there is no sheet.ts; the specs drive panel.ts and overlays.ts
+6. cockpit.css: `.spartan-sheet-content[data-side="bottom"] { inset-block: auto 0; }` (0,2,0) → panel.ts: `:host.mf-overlay-sheet { inset-block-end: var(--mf-keyboard, 0px); }`, which compiles to `.mf-overlay-sheet[_nghost-…]` (0,2,0)
+
+Screenshots: 32, one per route × viewport × scheme × language.
