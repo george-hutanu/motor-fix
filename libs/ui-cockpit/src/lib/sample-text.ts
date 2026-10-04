@@ -1,0 +1,36 @@
+// Every visible string of the sample page, so moving them to translation keys
+// is a change to this file and the template only.
+export const SAMPLE_TEXT = {
+  dialogBody: 'Dialogurile folosesc suprafața ridicată și raza de panou.',
+  dialogTitle: 'Programare confirmată',
+  drawerBody: 'Sertarul folosește aceleași suprafețe și margini.',
+  drawerTitle: 'Detalii service',
+  heading: 'Tema Cockpit',
+  inputLabel: 'Marca mașinii',
+  intro:
+    'Pagina de probă pentru aprobarea temei: comută aspectul dispozitivului între întunecat și luminos.',
+  openDialog: 'Deschide dialogul',
+  openDrawer: 'Deschide sertarul',
+  openPopover: 'Deschide fereastra',
+  panelTitle: 'Service-uri apropiate',
+  popoverBody: 'Ferestrele mici folosesc suprafața ridicată.',
+  primary: 'Caută service-uri',
+  romanian: 'Mașini, țevi, ăsta, câine, înmatriculare',
+  secondary: 'Anulează',
+  showToast: 'Arată o notificare',
+  tabAll: 'Toate',
+  tableArea: 'Zonă',
+  tableGarage: 'Service',
+  tableRating: 'Rating',
+  tabOpen: 'Deschise',
+  tabReviews: 'Recenzii',
+  toastDetail: 'Notificările folosesc suprafața și linia temei.',
+  toastSummary: 'Salvat',
+  toggleLabel: 'Doar service-uri deschise acum',
+} as const;
+
+export const SAMPLE_GARAGES = [
+  { area: 'Militari', name: 'Atelier Dinamo', rating: '4,9' },
+  { area: 'Berceni', name: 'Frații Popa Service', rating: '4,8' },
+  { area: 'Pipera', name: 'Garaj Nordic', rating: '4,7' },
+];

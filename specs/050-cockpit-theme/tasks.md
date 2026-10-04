@@ -15,9 +15,9 @@
 - [X] T004 [P] `libs/ui-cockpit/src/lib/preset.spec.ts` (new): `CockpitPreset` primary colour/contrast/hover = `var(--mf-amber…)`; highlight = amber tint + amber ink; content, overlay, form field, text tokens reference `var(--mf-*)`; focus ring 3 px `var(--mf-focus)` for components and form fields; field font size `var(--mf-size-field)`; `sm` sizes equal the defaults; secondary button not amber; tabs active colour amber ink (FR-006, FR-007, FR-010, FR-012, FR-013)
 - [X] T005 [P] `libs/ui-cockpit/src/lib/provide-cockpit-theme.spec.ts` (new): with `provideCockpitTheme()` the PrimeNG theme is `CockpitPreset` with `darkModeSelector: 'system'`; with `{ license }` the config carries it, without it carries none (FR-008)
 - [X] T006 [P] `libs/ui-cockpit/src/lib/panel.spec.ts` (new): `mf-panel` renders projected content in a section with the `mf-panel` class; a given title renders as an `h2` with the label class and labels the section; no title, no heading (FR-014)
-- [ ] T007 [P] `libs/ui-cockpit/src/lib/sample-page.spec.ts` (new): the sample page contains a primary and a secondary button, a labelled text input, a toggle switch, a table, tabs with one selected, a panel, the Romanian sample label, and buttons for dialog, drawer, toast and popover; exactly one primary (amber) button (FR-007, FR-015)
+- [X] T007 [P] `libs/ui-cockpit/src/lib/sample-page.spec.ts` (new): the sample page contains a primary and a secondary button, a labelled text input, a toggle switch, a table, tabs with one selected, a panel, the Romanian sample label, and buttons for dialog, drawer, toast and popover; exactly one primary (amber) button (FR-007, FR-015)
 - [X] T008 [P] `libs/ui-cockpit/src/colour-literals.spec.ts` (new): no colour literal in front-end source outside the library, per FR-016's scope and patterns; the matcher catches `#fff`, `#FFB000`, `rgba(` and ignores `#tab-1`, `&#123;` style ids (FR-016)
-- [ ] T009 [P] `apps/web-e2e/src/cockpit.spec.ts` (new), all on `/cockpit`: dark emulation → body background, panel surface, hairline, text, primary button fill are the dark values; light emulation → the light values (FR-001, FR-002); type in the input, switch scheme, value kept and colours changed without navigation (FR-003); at 375×812 no visible text node under 12 px, input text 16 px (FR-010); Michroma on labels, Hanken Grotesk on body (FR-011); Tab through every focusable element in both schemes → each shows a non-`none` outline or box-shadow ring (FR-012); buttons, inputs, tabs and toggle hit box ≥ 44 px (FR-013); panel radius 20 px with a visible border, also under `forcedColors: 'active'` (FR-014); dialog, drawer, toast and popover open with themed surfaces (FR-006, FR-015)
+- [X] T009 [P] `apps/web-e2e/src/cockpit.spec.ts` (new), all on `/cockpit`: dark emulation → body background, panel surface, hairline, text, primary button fill are the dark values; light emulation → the light values (FR-001, FR-002); type in the input, switch scheme, value kept and colours changed without navigation (FR-003); at 375×812 no visible text node under 12 px, input text 16 px (FR-010); Michroma on labels, Hanken Grotesk on body (FR-011); Tab through every focusable element in both schemes → each shows a non-`none` outline or box-shadow ring (FR-012); buttons, inputs, tabs and toggle hit box ≥ 44 px (FR-013); panel radius 20 px with a visible border, also under `forcedColors: 'active'` (FR-014); dialog, drawer, toast and popover open with themed surfaces (FR-006, FR-015)
 
 ## Phase 3: User Story 1 — the look follows the device (P1) 🎯 MVP
 
@@ -45,12 +45,12 @@
 
 ## Phase 8: User Story 6 — sample page for the owner (P2)
 
-- [ ] T019 [US6] `libs/ui-cockpit/src/lib/sample-text.ts` (new, every visible string in one place for the later switch to `cockpit.*` translation keys) and `libs/ui-cockpit/src/lib/sample-page.ts` (new), exported from its own entry `libs/ui-cockpit/src/sample.ts` (`@motor-fix/ui-cockpit/sample`) so the lazy route keeps it out of the initial bundle (FR-015)
-- [ ] T020 [US6] `apps/web/src/app/app.routes.ts` (new) `export const routes: Routes = [{ path: 'cockpit', loadComponent }]`; `provideRouter(routes)` as its own line in `app.config.ts`; `<router-outlet />` + `RouterOutlet` import in `apps/web/src/app/app.ts` (FR-015)
+- [X] T019 [US6] `libs/ui-cockpit/src/lib/sample-text.ts` (new, every visible string in one place for the later switch to `cockpit.*` translation keys) and `libs/ui-cockpit/src/lib/sample-page.ts` (new), exported from its own entry `libs/ui-cockpit/src/sample.ts` (`@motor-fix/ui-cockpit/sample`) so the lazy route keeps it out of the initial bundle (FR-015)
+- [X] T020 [US6] `apps/web/src/app/app.routes.ts` (new) `export const routes: Routes = [{ path: 'cockpit', loadComponent }]`; `provideRouter(routes)` as its own line in `app.config.ts`; `<router-outlet />` + `RouterOutlet` import in `apps/web/src/app/app.ts` (FR-015)
 
 ## Phase 9: Polish
 
-- [ ] T021 Run `npm run typecheck`, `npm run lint`, `npx nx run ui-cockpit:test`, `npx nx run web:test`, the e2e spec, and `npx nx run web:build` (CSS and font budget, SC-001…SC-005)
+- [X] T021 Run `npm run typecheck`, `npm run lint`, `npx nx run ui-cockpit:test`, `npx nx run web:test`, the e2e spec, and `npx nx run web:build` (CSS and font budget, SC-001…SC-005)
 
 ## Dependencies
 

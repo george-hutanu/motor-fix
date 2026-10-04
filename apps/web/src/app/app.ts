@@ -10,6 +10,7 @@ import {
   signal,
   TransferState,
 } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
 import { HealthReadyDto, HealthService } from '@motor-fix/data-access';
 
 export const HEALTH = makeStateKey<HealthReadyDto | null>('health');
@@ -22,11 +23,13 @@ const report = (error: unknown) =>
     : null;
 
 @Component({
+  imports: [RouterOutlet],
   selector: 'mf-root',
   template: `
     <h1>MotorFix</h1>
     <p>{{ health()?.version ?? 'version unknown' }}</p>
     <p>{{ status() }}</p>
+    <router-outlet />
   `,
 })
 export class App {
