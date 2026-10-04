@@ -14,7 +14,7 @@
 
 ## Phase 3: Proof
 
-- [ ] T005 The PR runs every job on itself, `CI OK` green (SC-001)
+- [X] T005 The PR runs every job on itself, `CI OK` green (SC-001)
 
 ## FR → test
 
