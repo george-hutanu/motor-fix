@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-288 Reach every dashboard view from a bottom tab bar on a phone (Notion story https://app.notion.com/p/3ee607bff0d2816f83b1d10d181fc8f1, epic EP-1 Foundations https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707). Scope: one shared mf-dashboard-tab-bar component that, below 768 px, replaces each dashboard's (driver, garage, mechanic, admin) side menu with a sideways-scrolling bottom tab bar fed by the same per-dashboard view list (role/permission/garage-feature filtered) as the side menu and route guard, with placeholder views, safe-area aware, active tab aria-current."
 

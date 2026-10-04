@@ -45,3 +45,27 @@
 ## 10 Implement
 - T001–T011 done. Jest apps/web: 22 suites, 391 tests pass. Playwright (dev server on :4288, BASE_URL): dashboard-tab-bar, dashboards, phone, one-language, live, account-language, addresses, motion, sign-in, tab-bar → 65 + 67 passed (@seeded skipped without the API).
 - Fixes during implement: the first-render scroll ran before RouterLinkActive marked the tab (it updates in a microtask) → reveal on isActiveChange; the bar sat above the screen bottom on a phone → host grid rows auto/1fr.
+
+## 11 Converge
+- No unbuilt work; research.md updated for two decisions that changed while building (fall-through redirect, isActiveChange scroll).
+
+## 12 Harden
+- artifact-lint 0/0. diff-audit compares with a stale local `main` (the main checkout holds it), so it listed files from merged PRs; the only finding on this diff, `untested-new-file view.ts`, is covered through the routes (views.spec).
+- test-adversary: 36 cases (views.adversary.spec.ts 26, tab-bar.adversary.spec.ts 10); 3 failed → 2 were one real defect (a view's sub-path redirected), fixed by giving each view route `children: [** → View]`; 1 spec gap (a redirect keeps the query string) recorded as an assumption, and the case asserts the path only.
+- Mutation: not run locally (owner rule; nightly CI).
+
+## 13 Refresh
+- No new evidence: story re-read by spec-reviewer at 19:20Z, no comments.
+
+## 14 Review
+- spec-reviewer APPROVE (1 MEDIUM, 3 LOW); code-reviewer APPROVE (2 MEDIUM, 6 LOW). Patched: menu current entry amber, dead `active` class, segmentsOf shared in addresses.ts, canMatch predicate, routes map, `tabs`→`bar` keys, two comments, deferred.md format. Deferred: lost-session fallback (pre-existing). Decision: account band kept above the header on a phone (spec + design.md amended).
+- CI lap 1: E2E red — @seeded sign-in/sign-up specs looked up menu entries as buttons; now links. origin/main (ST-80) merged in.
+
+## 15 Agent context
+- Skipped: the managed block lives in CLAUDE.local.md, which is not in this worktree.
+
+## 16 Retro evidence
+- retro-evidence.mjs --since ddaf49f --jev and instincts triggered were run; the jev lane was unavailable, so there is no suggested verdict.
+
+## 17 Archive
+- phone-layout: +13 added; spec status Archived.

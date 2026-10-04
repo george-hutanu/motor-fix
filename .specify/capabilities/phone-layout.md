@@ -5,6 +5,7 @@ features:
   - 286-phone-layout
   - 287-public-tab-bar
   - 082-sign-in
+  - 288-dashboard-tab-bar
 ---
 
 # Capability: Phone layout and installable web app
@@ -104,6 +105,58 @@ _From 287-public-tab-bar._
 ### 287-FR-012 — The bar's texts MUST exist in Romanian and English with the same keys; switching the language MUST change the labels and the landmark name in place, and the tabs MUST lead to the addresses of the new language.
 
 _From 287-public-tab-bar._
+
+### 288-FR-001 — Each dashboard (driver, garage, admin; the mechanic uses the garage dashboard in release 1) MUST have exactly one ordered list of views, each view with its menu label, its short tab label (the mock's: "Cereri" for "Cereri de ofertă") and, where it has one, the capability it requires.
+
+_From 288-dashboard-tab-bar._
+
+### 288-FR-002 — Each view MUST have its own language-neutral address under its dashboard (the segments in Clarifications), covering its sub-paths, and the dashboard view MUST be the dashboard's own address.
+
+_From 288-dashboard-tab-bar._
+
+### 288-FR-003 — Opening the address of a view the session's capabilities do not allow, or of a view that does not exist, MUST redirect the person to their dashboard's own address before the view loads; the decision MUST read the same view list as the menus.
+
+_From 288-dashboard-tab-bar._
+
+### 288-FR-004 — Below 768 px, the dashboard MUST show a bottom tab bar instead of the side menu, with one tab per view the session allows, in list order; the bar and the side menu MUST both be rendered from that one filtered list.
+
+_From 288-dashboard-tab-bar._
+
+### 288-FR-005 — At 768 px and wider, the dashboard MUST show the side menu and hide the bar; the side menu MUST offer the same views as the bar.
+
+_From 288-dashboard-tab-bar._
+
+### 288-FR-006 — The open view's tab and menu entry MUST be marked as the current page (`aria-current="page"`, amber), and the active tab MUST be scrolled into sight in the bar.
+
+_From 288-dashboard-tab-bar._
+
+### 288-FR-007 — When the tabs do not fit, the bar MUST scroll sideways on its own; the page MUST never scroll sideways at 320 px.
+
+_From 288-dashboard-tab-bar._
+
+### 288-FR-008 — Each tab MUST be at least 44 px tall with a label of at least 12 px; labels MUST never be cut — a tab grows to fit its label.
+
+_From 288-dashboard-tab-bar._
+
+### 288-FR-009 — The bar MUST sit above the safe-area inset at the bottom of the screen.
+
+_From 288-dashboard-tab-bar._
+
+### 288-FR-010 — The bar MUST be a navigation landmark named after the dashboard.
+
+_From 288-dashboard-tab-bar._
+
+### 288-FR-011 — The bar and the side menu MUST follow the session: when its role or capabilities change, the tabs change, and a view that is no longer allowed is left for the dashboard view.
+
+_From 288-dashboard-tab-bar._
+
+### 288-FR-012 — On a phone the account controls (the person's name, sign out, the language switch) MUST remain reachable without the side menu.
+
+_From 288-dashboard-tab-bar._
+
+### 288-FR-013 — Each view MUST show its title and a placeholder body until the epic that owns the view builds it.
+
+_From 288-dashboard-tab-bar._
 
 ## Retired
 
