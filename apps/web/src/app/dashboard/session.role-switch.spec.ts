@@ -125,6 +125,26 @@ describe('Session, renewing the token', () => {
     });
   });
 
+  it('keeps the switch’s token when a renewal sent before the switch answers after it', async () => {
+    const { auth, session } = setup(async () => ({ accessToken: 'as-driver' }));
+    await session.load();
+    let answer: (value: { accessToken: string }) => void = () => undefined;
+    auth.authControllerRefresh.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const renewing = session.renew();
+
+    await session.switchRole('driver');
+    answer({ accessToken: 'as-garage' });
+    await renewing;
+
+    expect(session.token()).toBe('as-driver');
+    expect(session.current()?.role).toBe('driver');
+  });
+
   it('asks for no role before an account is on screen', async () => {
     const { auth, session } = setup(async () => ({ accessToken: 'x' }));
 

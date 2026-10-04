@@ -129,7 +129,7 @@ export class SignInService {
   // `wanted`: the role the renewing tab shows, kept while the account holds it.
   async refresh(
     token: string | undefined,
-    wanted: Role | null = null,
+    wanted: Role | null,
   ): Promise<Issued> {
     const row = await this.presented(token);
     const now = Date.now();

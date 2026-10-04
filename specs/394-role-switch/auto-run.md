@@ -17,3 +17,13 @@ Start commit: 255ce1f (branch from origin/main 04dc982) · Run in an isolated wo
 - design.md: mock canvas not readable statically ([MOCK PARTIAL]); boards from earlier recordings + Build brief Screens.
 ## plan / checklist / tasks
 - plan.md, checklists/requirements.md (0 unchecked), tasks.md.
+## tests
+- Red first: web 14 failed / 18 (frame + session role-switch specs); domain 16 failed / 27 (role-switch API + seed). Seed specs need DATABASE_URL set locally (the seed child process reads it; pre-existing).
+## implement
+- Slice 1 63c3444 feat(auth): the switch route, refresh role, Session.switchRole, chips, seed, e2e. Pre-commit typecheck + lint + test green.
+## converge
+- tasks.md all [X]; no unbuilt FR.
+## harden
+- artifact-lint clean; diff-audit ERRORs only in generated libs/data-access and pre-existing notifications files (base b581136 is the main checkout's, 154 files).
+## review
+- spec-reviewer APPROVE (MEDIUM task key in a comment, LOW test title, LOW decision → deferred.md, LOW unstaged artifacts). code-reviewer BLOCK: HIGH renew answering after a switch overwrote the new token → fixed test-first (T011); MEDIUM duplicate role list, MEDIUM task key, LOW default param → fixed (T012).

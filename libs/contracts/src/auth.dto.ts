@@ -9,6 +9,8 @@ import {
   Matches,
 } from 'class-validator';
 
+import { ROLE } from './me.dto';
+
 export class SignInDto {
   @ApiProperty({
     description: 'Trimmed; compared without letter case',
@@ -77,8 +79,6 @@ export class SessionDto {
   })
   accessToken!: string;
 }
-
-const ROLE = ['driver', 'garage', 'receptionist', 'mechanic', 'admin'] as const;
 
 export class SwitchRoleDto {
   @ApiProperty({

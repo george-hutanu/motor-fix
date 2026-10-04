@@ -33,7 +33,7 @@ libs/domain/src/seed.ts                        Atelier Dinamo + comutare@example
 apps/api/openapi.json, libs/data-access        regenerated
 apps/web/src/app/dashboard/session.ts          switchRole(role); renew sends the tab's role
 apps/web/src/app/dashboard/frame.ts            the chips, the switch, the failure toast
-libs/i18n/src/shell/{ro,en}.json               texts
+libs/i18n/src/shell/ro.json, en.json         texts
 apps/web-e2e/src/role-switch.spec.ts           switch, sign out, sign in (new)
 ```
 

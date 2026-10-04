@@ -1,7 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsIn } from 'class-validator';
 
-const ROLE = ['driver', 'garage', 'receptionist', 'mechanic', 'admin'] as const;
+export const ROLE = [
+  'driver',
+  'garage',
+  'receptionist',
+  'mechanic',
+  'admin',
+] as const;
 type Role = (typeof ROLE)[number];
 
 const LANGUAGE = ['ro', 'en'] as const;

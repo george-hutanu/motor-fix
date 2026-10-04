@@ -142,7 +142,7 @@ describe('switching my role', () => {
     ['an unknown role', { role: 'owner' }],
     ['a role that is not text', { role: 1 }],
     ['an extra field', { accountId: 'x', role: 'driver' }],
-  ])('answers 400 validation_failed for %s', async (_, body) => {
+  ])('answers 400 for %s', async (_, body) => {
     const id = await account('mihai', ['garage', 'driver']);
 
     const res = await switchTo(body, bearer(id, 'garage'));

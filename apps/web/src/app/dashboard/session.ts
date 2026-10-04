@@ -64,11 +64,15 @@ export class Session {
     const generation = this.generation;
     // The role this tab shows, so a switch in another tab leaves it alone.
     const role = this.current()?.role;
+    // A role switch that answers first wins: this answer is for the old role.
+    const sent = this.accessToken;
+    const replaced = () => this.accessToken !== sent;
     const renewing: Promise<boolean> = this.auth
       .authControllerRefresh({ body: role ? { role } : {} })
       .then(
         (answer) => {
           if (generation !== this.generation) return false;
+          if (replaced()) return true;
           if (typeof answer?.accessToken !== 'string' || !answer.accessToken) {
             this.forget();
             return false;
@@ -77,7 +81,9 @@ export class Session {
           return true;
         },
         () => {
-          if (generation === this.generation) this.forget();
+          if (generation !== this.generation) return false;
+          if (replaced()) return true;
+          this.forget();
           return false;
         },
       )

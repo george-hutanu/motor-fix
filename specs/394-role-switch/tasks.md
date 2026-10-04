@@ -20,12 +20,17 @@ Independent test: through HTTP against PostgreSQL and Redis, a two-role account 
 
 - [X] T006 [US1] `apps/web/src/app/dashboard/session.ts`: `switchRole(role)` — call the API, keep the new token, reload the account; a failure leaves token and account as they were and rejects (FR-006, FR-007)
 - [X] T007 [US2] `apps/web/src/app/dashboard/session.ts`: `renew()` sends the role of the account on screen (FR-008)
-- [X] T008 [US1] `apps/web/src/app/dashboard/frame.ts` + `libs/i18n/src/shell/{ro,en}.json`: the chips group in the account block for two or more roles, the role in use pressed; a tap of another chip closes live, switches, reopens live; the frame's effect opens the new landing; a failure toasts and keeps the role; taps ignored while one is on its way (FR-005, FR-006, FR-007)
+- [X] T008 [US1] `apps/web/src/app/dashboard/frame.ts` + `libs/i18n/src/shell/ro.json` + `libs/i18n/src/shell/en.json`: the chips group in the account block for two or more roles, the role in use pressed; a tap of another chip closes live, switches, reopens live; the frame's effect opens the new landing; a failure toasts and keeps the role; taps ignored while one is on its way (FR-005, FR-006, FR-007)
 
 ## Phase 4: Polish
 
 - [X] T009 `libs/domain/src/seed.ts`: garage "Atelier Dinamo" and `comutare@example.test` (driver + garage owner, last role garage); `seed.integration.spec.ts` updated
 - [X] T010 `apps/web-e2e/src/role-switch.spec.ts` (new): the seeded switch account signs in on the garage dashboard, taps "Șofer", lands on `/app/driver`, signs out, signs in, lands on `/app/driver`, switches back to "Service" (SC-001, SC-002)
+
+## Phase 5: Review fixes
+
+- [X] T011 `apps/web/src/app/dashboard/session.ts`: a renewal sent before a role switch that answers after it leaves the switch's token in place (FR-006, FR-008; code-reviewer HIGH)
+- [X] T012 `libs/contracts/src/auth.dto.ts` reuses the role list of `me.dto.ts`; no task key in `audit-coverage.spec.ts`; `refresh()` takes its role without a default; the 400 test title says what it asserts (code-reviewer MEDIUM ×2, LOW; spec-reviewer MEDIUM, LOW)
 
 ## Dependencies
 
