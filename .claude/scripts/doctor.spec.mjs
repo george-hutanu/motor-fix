@@ -176,6 +176,26 @@ describe('doctor — commands', () => {
     assert.match(detail(results, 'commands/permissions'), /gone\.mjs/);
   });
 
+  it('finds mutation owners by their Nx target, including the root scripts project', () => {
+    write('package.json', fullPackage);
+    write('libs/contracts/stryker.config.json', { thresholds: { break: 0 } });
+    write('libs/contracts/project.json', { targets: { 'test:mutation': {} } });
+    write('scripts/stryker.config.json', { thresholds: { break: 0 } });
+    write('scripts/project.json', { targets: { 'test:mutation': {} } });
+    const results = checkCommands(repo);
+    assert.equal(status(results, 'commands/mutation'), 'ok');
+    assert.match(detail(results, 'commands/mutation'), /^2 /);
+  });
+
+  it('warns about a stryker config whose project has no test:mutation target', () => {
+    write('package.json', fullPackage);
+    write('apps/api/stryker.config.json', { thresholds: { break: 0 } });
+    write('apps/api/project.json', { targets: {} });
+    const results = checkCommands(repo);
+    assert.equal(status(results, 'commands/mutation'), 'warn');
+    assert.match(detail(results, 'commands/mutation'), /apps\/api/);
+  });
+
   it('fails when a spec-kit template is missing', () => {
     write('package.json', fullPackage);
     assert.equal(status(checkCommands(repo), 'commands/templates'), 'fail');

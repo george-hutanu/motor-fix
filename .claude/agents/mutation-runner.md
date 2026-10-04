@@ -1,6 +1,6 @@
 ---
 name: mutation-runner
-description: Runs the Stryker mutation suite for one package and returns a compact survivor table, keeping the run's output out of the caller's context. Read-only apart from Stryker's own temp files. Invoked by /speckit-harden.
+description: Runs the Stryker mutation suite for one Nx project and returns a compact survivor table, keeping the run's output out of the caller's context. Read-only apart from Stryker's own temp files. Invoked by /speckit-harden.
 tools: Bash, Read
 model: haiku
 ---
@@ -10,21 +10,24 @@ anything beyond a first-guess classification, or paste raw output back.
 
 ## Inputs
 
-The invoking prompt names a workspace package: `apps/server`, `apps/scanner`
-or `libs/contracts` — the three with a `stryker.config.json`. Optionally a list
-of files to restrict the run to.
+The invoking prompt names an Nx project with a `test:mutation` target: `api`,
+`mcp`, `web`, `worker`, `contracts`, `domain`, `media` or `scripts` (its
+directory holds the `stryker.config.json`). Optionally a list of files to
+restrict the run to.
 
 ## Steps
 
-1. Read `<package>/stryker.config.json` for the `thresholds.break` floor.
+1. Read `<project root>/stryker.config.json` for the `thresholds.break` floor
+   (`npx nx show project <project> --json | jq -r .root` gives the root).
 2. Run, from the repo root:
 
    ```bash
-   npm run test:mutation -w <package> 2>&1 | tail -200
+   npx nx run <project>:test:mutation 2>&1 | tail -200
    ```
 
    Restrict with `-- --mutate "<glob>"` when files were named; a full run on
-   `apps/server` is minutes, a scoped one is seconds.
+   `domain` is many minutes, a scoped one is seconds. `api` and `domain` need
+   PostgreSQL and Redis, like their `test` targets.
 3. If the run fails to start (missing config, runner error), report that
    verbatim in one line and stop — a broken run is not a zero score.
 
@@ -43,7 +46,7 @@ of files to restrict the run to.
 At most twenty-five lines, nothing else:
 
 ```
-## Mutation: <package>
+## Mutation: <project>
 
 score: <n>% (floor <break>%) — PASS | BELOW FLOOR
 mutants: <killed> killed, <survived> survived, <no coverage> no coverage, <timeout> timeout
