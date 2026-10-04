@@ -49,6 +49,7 @@ Paths exist today unless marked `(new)`.
 - [X] T014 [P] `.claude/skills/speckit-harden/SKILL.md` step 2b and `.specify/contexts/harden.md`: the projects with a `stryker.config.json` and the Nx target, not `-w apps/server` / `apps/scanner` (FR-011)
 
 - [X] T015 [US1] After merging `main`: `libs/i18n` and `libs/ui-cockpit` (new Jest projects) get `stryker.config.json` (floor 0, unmeasured) and `"test:mutation": {}` in their `project.json` (FR-001, FR-009)
+- [X] T016 [US3] From the first workflow run (`contracts`, run 37188772571): Nx forwards `--incremental` as `--incremental=true` and hides a passing task's output, so `scripts/mutation.ts` parses both flag forms (`flags`, tested) and the workflow runs with `--output-style=static` (FR-007, FR-008)
 
 ## Follow-up (separate task, not this branch)
 
