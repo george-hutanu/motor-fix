@@ -9,7 +9,7 @@ Checked: 2026-10-04 · Mock: https://claude.ai/artifact/EoPWH9MHmuY5Jfw7vTWTHr (
 
 ## What to build to match it
 - `mf-lamp`: dot + label as on Results; the dot glows with a token-coloured `box-shadow`; dot hidden from assistive technology.
-- `mf-rating-dial`: one SVG for both sizes — the 240° track and the amber value arc with round caps, the rating centred in Michroma. Large: track, whole-point ticks and the arc, rating in Michroma at display size. Small: 60 px (≥44 px), number 13 px (≥12 px). No needle (ST-53 / Discovery).
+- `mf-rating-dial`: one SVG for both sizes — the 240° track and the amber value arc with round caps, the rating centred in Michroma. Large: track, whole-point ticks and the arc, rating in Michroma at display size. Small: 60 px (≥44 px), number 13 px (≥12 px). Large carries a static needle at the value (ST-53 swings it; pointing it at the best garage is Discovery's).
 - `mf-odometer`: the formatted price on one line ("1.250–1.600 lei") in Michroma numerals, each digit in its own cell as in the mock, so ST-53 can turn a cell into the rolling 0–9 column. Separators, the dash and "lei" sit outside the cells.
 - All colours from `--mf-*` tokens: line, amber, green, red, secondary text, page.
 - Catalogue: a section of the `/cockpit` sample page with every state.
@@ -23,4 +23,4 @@ Checked: 2026-10-04 · Mock: https://claude.ai/artifact/EoPWH9MHmuY5Jfw7vTWTHr (
 - Mock lamp labels are coloured in the lamp colour → Build brief: labels ≥4.5:1; the light theme's green fails that on raised surfaces, so the label uses the text colour and only the dot carries the state colour.
 - Mock grey 9A9DA3 and light-theme amber FFB000 are not tokens / fail 3:1 in light → grey uses the secondary text token, amber the amber ink token (8A5E00 in light).
 - Mock numbers in the mock text use "4,8" / "4.8" by language; the ST-19 rating format already writes them.
-- Mock rolls digits, swings the needle and pulses lamps → all motion is ST-53's (orchestrator); this story leaves the hooks (per-digit cells, the dial's fill custom property).
+- Mock rolls digits, swings the needle and pulses lamps → all motion is ST-53's (orchestrator); this story leaves the hooks (per-digit cells, the dial's fill custom property, the static needle, the lamp's pulse marker).

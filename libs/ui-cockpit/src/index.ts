@@ -8,5 +8,8 @@ export { HlmSwitch } from './lib/helm/switch';
 export { HlmTableImports } from './lib/helm/table';
 export { HlmTabsImports } from './lib/helm/tabs';
 export { HlmToaster, toast } from './lib/helm/toaster';
+export { Lamp, type LampState } from './lib/lamp';
+export { Odometer } from './lib/odometer';
 export { Panel } from './lib/panel';
 export { provideCockpitTheme } from './lib/provide-cockpit-theme';
+export { RatingDial } from './lib/rating-dial';

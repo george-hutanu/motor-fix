@@ -52,9 +52,10 @@ accessible name.
 
 1. **Given** a rating of 4.8, **when** the large dial renders in Romanian, **then** the amber arc fills 4.8/5 of the gauge and the centre reads "4,8"; in English it reads "4.8".
 2. **Given** no rating (no reviews yet), **when** the dial renders, **then** the arc is empty and the centre reads "—".
-3. **Given** a rating of 4.85 or 4.75, **when** the dial renders, **then** it is rounded half up to one decimal: "4,9" and "4,8".
-4. **Given** a small dial on a result card, **when** it renders, **then** it is at least 44 px square and its number is at least 12 px.
-5. **Given** a dial, **when** a screen reader reaches it, **then** it hears one phrase in the current language, such as "Rating 4.8 out of 5", or "No reviews yet".
+3. **Given** a rating of 0, **when** the dial renders, **then** it reads "—" with an empty arc, as with no reviews.
+4. **Given** a rating of 4.85 or 4.75, **when** the dial renders, **then** it is rounded half up to one decimal: "4,9" and "4,8".
+5. **Given** a small dial on a result card, **when** it renders, **then** it is at least 44 px square and its number is at least 12 px.
+6. **Given** a dial, **when** a screen reader reaches it, **then** it hears one phrase in the current language, such as "Rating 4.8 out of 5", or "No reviews yet".
 
 ---
 
@@ -107,6 +108,16 @@ light, and see each part in each state with no horizontal scrolling.
 - An odometer amount in bani that does not round to whole lei is rounded to the nearest leu before formatting.
 - A language switch re-renders the dial and the odometer in place.
 
+## Clarifications
+
+### Session 2026-10-04
+
+- Q: Does a rating of 0 show "—"? → A: Yes; anything that rounds to 0 or less, a missing value and a non-number all read as no rating (MF-3 edge case; a 1–5 review scale gives no real 0). (autonomous, recommended)
+- Q: Which motion hooks does this story leave? → A: The lamp's pulse marker (ST-51 Rules "Lamp pulse: optional"; ST-53 "a lamp marked as pulsing"), a static needle on the large dial (ST-51 "The swing of the needle is ST-53"; mock Home), the dial's fill custom property and per-digit odometer cells. Nothing animates. (autonomous; the Build brief wins over the challenger's Principle I reading)
+- Q: Is the odometer a live region or a labelled image? → A: A polite, atomic live region holding the full value as hidden text; the digits are hidden. (autonomous, recommended)
+- Q: Is the large dial fixed or fluid? → A: Fluid up to 240 px; the small one fixed at 60 px as in the mock. (autonomous, recommended)
+- Q: Tokens for geometry, and which amber draws the arc? → A: Colours, fonts, radii, spacing from existing tokens; geometry local to each part; the arc uses the amber ink token like the amber lamp (no cockpit.css edit while ST-52 works there). (autonomous, recommended)
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
@@ -114,16 +125,16 @@ light, and see each part in each state with no horizontal scrolling.
 - **FR-001**: The indicator lamp MUST show a small glowing dot in one of four states — green, red, amber, grey — with a text label beside it.
 - **FR-002**: The lamp's label MUST be a required input, so a lamp without a label fails to compile.
 - **FR-003**: The lamp's dot MUST be hidden from assistive technology; the label is the text read.
-- **FR-004**: A lamp given an unknown state MUST show grey and, in a development build only, log a warning.
+- **FR-004**: The lamp's state input MUST be typed as the four states; a value outside them arriving at run time (from data) MUST show grey and, when Angular runs in development mode, log one console warning per such value set.
 - **FR-005**: In both themes, every lamp dot MUST have at least 3:1 contrast with the page, panel and raised surfaces, and the label at least 4.5:1.
-- **FR-006**: The rating dial MUST draw a 0–5 gauge whose amber arc fills value/5 of the track, with the rating in the centre written through the language's rating format (one decimal), rounded half up to one decimal and clamped to 0–5.
-- **FR-007**: A dial with no rating (no value, or a value that is not a finite number) MUST show an empty arc and "—".
-- **FR-008**: The dial MUST exist in a large and a small size; the small one is at least 44 px square with its number at least 12 px.
+- **FR-006**: The rating dial MUST draw a 0–5 gauge (a 240° track) whose amber arc fills value/5 of the track, with the rating in the centre written through the language's rating format (one decimal), rounded half up to one decimal and clamped to 0–5. The arc is drawn in the amber ink token, so it keeps 3:1 against the surfaces in both themes.
+- **FR-007**: A dial with no rating — no value, a value that is not a finite number, or a value that rounds to 0 or less — MUST show an empty arc and "—", never "0,0".
+- **FR-008**: The dial MUST exist in a large and a small size. The large one fills its container's width up to 240 px and carries a needle pointing at the value; the small one is 60 px square (at least 44 px) with its number at least 12 px and no needle.
 - **FR-009**: The dial MUST have one accessible name in the current language: "Rating {value} out of 5" with the formatted value, or "No reviews yet" (Romanian and English texts in the shared i18n files).
-- **FR-010**: The odometer MUST take an amount in integer bani, or a from–to range, and show whole lei in the language's price format with an en dash for a range, in the Michroma label face; with no amount it shows "—".
-- **FR-011**: The odometer MUST give assistive technology only the complete formatted value as one polite announcement, with the individual digits hidden from it.
-- **FR-012**: The three parts MUST NOT animate in this story; the dial MUST expose its fill as a custom property and the odometer MUST render each digit as its own element carrying its digit, so the motion story can animate them without changing their markup.
-- **FR-013**: The three parts MUST be styled only by the Cockpit `--mf-*` tokens, in dark and light, and MUST fit a 320 px wide screen.
+- **FR-010**: The odometer MUST take an amount in integer bani, or a from–to range, round each amount to the nearest leu, and show it through the ST-19 price formats (whole lei, en dash for a range, equal ends collapsed, a missing end as "—") in the Michroma label face; with no amount it shows "—".
+- **FR-011**: The odometer MUST give assistive technology only the complete formatted value, in one polite, atomic live region, with the individual digits hidden from it.
+- **FR-012**: The three parts MUST NOT animate in this story, and MUST leave the hooks the motion story needs: the lamp takes an optional pulse marker that only marks the host; the dial exposes its fill (0–1) as a custom property on the host; the odometer renders each digit as its own element carrying its digit as a custom property.
+- **FR-013**: The three parts MUST take every colour, font, radius and spacing from the Cockpit `--mf-*` tokens, in dark and light (part-specific geometry such as stroke widths and the dot size stays in the part's own styles), and MUST fit a 320 px wide screen. In forced-colours mode the lamp dot keeps a visible outline.
 - **FR-014**: The component catalogue (the `/cockpit` sample page) MUST show every state of the three parts, with its texts through i18n keys in Romanian and English.
 - **FR-015**: The three parts MUST be exported from the `@motor-fix/ui-cockpit` library for later screens.
 
@@ -137,7 +148,7 @@ light, and see each part in each state with no horizontal scrolling.
 
 ### Measurable Outcomes
 
-- **SC-001**: All four lamp states pass the contrast floors (3:1 dot, 4.5:1 label) against all three surfaces in both themes — 24 dot pairs and 6 label pairs.
+- **SC-001**: All four lamp states and the dial arc pass the contrast floors (3:1 dot and arc, 4.5:1 label) against all three surfaces in both themes — 30 graphic pairs and 6 label pairs.
 - **SC-002**: The scenario values read exactly as the Build brief writes them in both languages: "4,8" / "4.8", "—", "1.250–1.600 lei", "1.400–1.800 lei".
 - **SC-003**: At 320 px, 375 px and 1280 px wide, none of the parts overflows its container in either theme.
 - **SC-004**: A screen reader is given one text per part: the lamp's label, the dial's one phrase, the odometer's final value.
@@ -145,7 +156,7 @@ light, and see each part in each state with no horizontal scrolling.
 ## Assumptions
 
 - The catalogue is the existing `/cockpit` sample page from ST-50, extended with a section for these parts, rather than a new `/dev/ui` route: the Build brief marks the route *(proposed)*, the sample page is already the theme's catalogue, and a new route would edit the web app's routes while the shell and phone-layout stories work there. (autonomous default)
-- Motion is out of scope by the orchestrator's instruction: the odometer does not roll and the lamp does not pulse in this story. Scenario 5 of User Story 3 holds because nothing rolls; ST-53 adds rolling with its reduced-motion rule on the hooks of FR-012. The optional lamp pulse is left to ST-53 entirely, including any input that switches it on. (autonomous default)
+- Motion is out of scope by the orchestrator's instruction: the odometer does not roll, the needle does not swing and the lamp does not pulse in this story. Scenario 5 of User Story 3 holds because nothing rolls; ST-53 adds the motion with its reduced-motion rule on the hooks of FR-012. (autonomous default)
 - Rounding half up is applied to the decimal value as written (4.85 → 4.9), not to its binary approximation. (autonomous default)
 - The grey lamp uses the secondary text token and the amber lamp the amber ink token, which pass the contrast floors in both themes; no new colour token is added. (autonomous default)
 - The small dial is always at least 44 px square, whether or not a screen makes it tappable. (autonomous default)
@@ -155,14 +166,8 @@ light, and see each part in each state with no horizontal scrolling.
 
 ## Spec Delta
 
-### Adds
+### Capability: `cockpit-gauges`
 
-- **cockpit-gauges** (new capability): FR-001 to FR-015 above — the indicator lamp, the rating dial in two sizes, the odometer digits, their catalogue section and their export.
-
-### Modifies
-
-- None.
-
-### Removes
-
-- None.
+- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-012, FR-013, FR-014, FR-015
+- **Modifies**: none
+- **Removes**: none
