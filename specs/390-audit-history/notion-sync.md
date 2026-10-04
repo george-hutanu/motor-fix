@@ -5,3 +5,5 @@
 - 2026-10-04 start · epic EP-1 Foundations · Status In progress (unchanged)
 - 2026-10-04 review · story ST-390 · Status In progress → In review
 - 2026-10-04 review · Foundations timeline row ST-390 · Build status In progress → In review
+- 2026-10-04 hold · story ST-390 · Status In review → In progress (owner's hold: #12 back to draft until ST-434 merges)
+- 2026-10-04 hold · Foundations timeline row ST-390 · Build status In review → In progress
