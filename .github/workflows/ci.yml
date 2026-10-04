@@ -1,8 +1,9 @@
 name: CI
 
-# Pull requests run the affected projects; merges into main run every project
-# through release.yml. Mutation testing has its own workflow (mutation.yml)
-# and never runs here.
+# Pull requests run the affected projects, and a documentation-only PR runs
+# only the title check, the change detector and CI OK; merges into main run
+# every project through release.yml. Mutation testing has its own workflow
+# (mutation.yml) and never runs here.
 on:
   pull_request:
   workflow_call:
@@ -36,8 +37,31 @@ jobs:
             exit 1
           fi
 
+  # Decides whether the PR changes documentation only (scripts/docs-only.ts).
+  # Off a PR the step does not run, the output is empty and every job runs.
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      docs-only: ${{ steps.classify.outputs.docs-only }}
+    steps:
+      - uses: actions/checkout@v5
+        if: github.event_name == 'pull_request'
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        if: github.event_name == 'pull_request'
+        with:
+          node-version-file: .nvmrc
+      - id: classify
+        if: github.event_name == 'pull_request'
+        run: node scripts/docs-only.ts origin/${{ github.base_ref }}
+
   biome:
     name: Biome
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -47,6 +71,8 @@ jobs:
 
   typecheck:
     name: Typecheck
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -58,6 +84,8 @@ jobs:
 
   unit:
     name: Unit tests
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -71,6 +99,8 @@ jobs:
 
   integration:
     name: Integration tests
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services: &services
@@ -102,6 +132,8 @@ jobs:
 
   e2e:
     name: E2E tests
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services: *services
@@ -147,6 +179,8 @@ jobs:
 
   build:
     name: Build
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -158,6 +192,8 @@ jobs:
 
   harness:
     name: Harness
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -168,6 +204,8 @@ jobs:
 
   contract:
     name: Contract check
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -177,6 +215,8 @@ jobs:
 
   audit:
     name: Dependency audit
+    needs: changes
+    if: needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -189,7 +229,8 @@ jobs:
   # On main, release.yml's images job is the real build.
   docker:
     name: Docker build (${{ matrix.app }})
-    if: github.event_name == 'pull_request'
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -217,7 +258,7 @@ jobs:
     name: CI OK
     if: always()
     needs:
-      [pr-title, biome, typecheck, unit, integration, e2e, build, harness, contract, audit, docker]
+      [pr-title, changes, biome, typecheck, unit, integration, e2e, build, harness, contract, audit, docker]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
