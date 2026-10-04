@@ -72,8 +72,9 @@ test.describe('confirming the e-mail address @seeded', () => {
   });
 
   test('the banner fits a 320 px phone', async ({ page }) => {
-    await page.setViewportSize({ height: 640, width: 320 });
+    // Signed up on the wide page, whose header shows the sign-in button.
     await signUp(page);
+    await page.setViewportSize({ height: 640, width: 320 });
 
     await expect(
       page.getByRole('status').filter({ hasText: 'Confirmă‑ți' }),
