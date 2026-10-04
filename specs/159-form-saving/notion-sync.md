@@ -15,3 +15,8 @@
 - 2026-10-04 · qa · Foundations timeline row ST-159 · In review → QA
 - 2026-10-04 · labels · PR #44 · QA
 - 2026-10-04 · debt · 2 deferred bullets filed as To do tasks 3ef607bff0d2819faf63ebbbbeb59415 (sign-up e-mail-taken e2e), 3ef607bff0d281c29628f4d727071138 (kit input aria-invalid before the press)
+- 2026-10-04 · debt · 2 lap-1 PR-tester lows filed as To do tasks 3ef607bff0d281299753e9793a050162 (two buttons named Close), 3ef607bff0d281de8812e43c26fdc91e (dialog height shifts when the error line clears)
+- 2026-10-04 · finish · ST-159 story Status · QA → Done
+- 2026-10-04 · finish · Foundations timeline row ST-159 · QA → Merged
+- 2026-10-04 · finish · EP-1 Foundations Status · unchanged (In progress: other stories open)
+- 2026-10-04 · labels · PR #44 · none
