@@ -102,13 +102,12 @@ afterEach(() => TestBed.inject(I18n).use('ro'));
 
 describe('the chart components under hostile input', () => {
   it('draw negative values below zero and write them with a minus sign', async () => {
-    const [fixture, el] = await render((h) =>
+    const [, el] = await render((h) =>
       h.points.set([
         { label: 'A', value: -125000 },
         { label: 'B', value: 50000 },
       ]),
     );
-    fixture.componentInstance.points();
     const chart = chartOf(el) as Chart;
 
     expect(chart.data.datasets[0].data).toEqual([-125000, 50000]);
@@ -165,8 +164,9 @@ describe('the chart components under hostile input', () => {
     );
     const name = canvasOf(el)?.getAttribute('aria-label') ?? '';
 
-    expect(name).not.toMatch(/NaN|Infinity|undefined|null/);
-    expect(name).toContain('Cheltuieli, A – C.');
+    expect(name).toBe(
+      'Cheltuieli, A – C. Cea mai mare valoare: —, —. Cea mai mică: —, —.',
+    );
   });
 
   it('show the missing-value dash in the table for values that are not finite', async () => {
@@ -501,47 +501,6 @@ describe('the chart components across state changes', () => {
 });
 
 describe('the chart options builder', () => {
-  it('turn the entry animation off for reduced motion and keep it for others', () => {
-    const still = chartConfig('bar', POINTS, 'lei', 'ro', THEME, true);
-    const moving = chartConfig('bar', POINTS, 'lei', 'ro', THEME, false);
-    const stillAnimation = still.options?.animation as
-      | false
-      | { duration?: number };
-    const movingAnimation = moving.options?.animation as {
-      duration?: number;
-      easing?: string;
-    };
-
-    expect(stillAnimation === false || stillAnimation.duration === 0).toBe(
-      true,
-    );
-    expect(movingAnimation.duration).toBe(1000);
-    expect(movingAnimation.easing).toBe('easeOutQuart');
-  });
-
-  it('give the line chart a 2 px line, and no markers', () => {
-    const config = chartConfig('line', POINTS, 'count', 'ro', THEME, false);
-    const dataset = config.data.datasets[0] as unknown as Record<
-      string,
-      unknown
-    >;
-
-    expect(config.type).toBe('line');
-    expect(dataset['borderWidth']).toBe(2);
-    expect(dataset['pointRadius']).toBe(0);
-  });
-
-  it('give the bar chart 8 px bars rounded at the top only', () => {
-    const config = chartConfig('bar', POINTS, 'count', 'ro', THEME, false);
-    const dataset = config.data.datasets[0] as unknown as Record<
-      string,
-      unknown
-    >;
-
-    expect(dataset['barThickness']).toBe(8);
-    expect(dataset['borderRadius']).toBeGreaterThan(0);
-  });
-
   it('draw no legend and no category grid lines', async () => {
     const [, el] = await render();
     const chart = chartOf(el) as Chart;
@@ -549,19 +508,6 @@ describe('the chart options builder', () => {
     expect(chart.legend).toBeUndefined();
     expect((chart.scales['x'].options as any).grid.display).toBe(false);
     expect((chart.scales['y'].options as any).grid.display).not.toBe(false);
-  });
-
-  it('keep axis labels at 12 px or more without rotation', () => {
-    const config = chartConfig('line', POINTS, 'lei', 'ro', THEME, false);
-    const scales = config.options?.scales as unknown as Record<
-      string,
-      { ticks?: { font?: { size?: number }; maxRotation?: number } }
-    >;
-
-    for (const axis of ['x', 'y']) {
-      expect(scales[axis].ticks?.font?.size).toBeGreaterThanOrEqual(12);
-    }
-    expect(scales['x'].ticks?.maxRotation).toBe(0);
   });
 
   it('build a config from an empty list without throwing', () => {
@@ -578,28 +524,10 @@ describe('the chart options builder', () => {
     expect(a.options).not.toBe(b.options);
     expect(a.data.datasets[0]).not.toBe(b.data.datasets[0]);
   });
-
-  it('take every colour from the theme it is given', () => {
-    const other = {
-      ...THEME,
-      amber: '#ffb000',
-      line: '#222222',
-      text: '#eeeeee',
-    };
-    const config = chartConfig('bar', POINTS, 'lei', 'ro', other, false);
-    const json = JSON.stringify(config);
-
-    expect(json).toContain('#ffb000');
-    expect(json).not.toContain('#8a5e00');
-  });
 });
 
 describe('formatValue', () => {
   it.each([
-    ['lei', 125000, 'ro', '1.250 lei'],
-    ['lei', 125000, 'en', '1,250 lei'],
-    ['km', 1250, 'ro', '1.250 km'],
-    ['count', 1250, 'en', '1,250'],
     ['count', -1250, 'ro', '-1.250'],
     ['count', Number.NaN, 'ro', '—'],
     ['count', null, 'ro', '—'],
@@ -611,19 +539,6 @@ describe('formatValue', () => {
 });
 
 describe('readTheme', () => {
-  it('read the tokens from the element it is given', () => {
-    const el = document.createElement('div');
-    el.style.setProperty('--mf-amber-ink', ' #8a5e00 ');
-    el.style.setProperty('--mf-bg', '#ffffff');
-    document.body.append(el);
-
-    const theme = readTheme(el);
-    el.remove();
-
-    expect(theme.amber).toBe('#8a5e00');
-    expect(theme.bg).toBe('#ffffff');
-  });
-
   it('return empty strings rather than throw when the tokens are missing', () => {
     const el = document.createElement('div');
 

@@ -60,8 +60,9 @@ abstract class CockpitChart {
   protected readonly summary = computed(() => {
     const points = this.points();
     const language = this.i18n.language();
-    const finite = points.filter((p) => Number.isFinite(p.value));
-    const byValue = [...finite].sort((a, b) => b.value - a.value);
+    const byValue = points
+      .filter((p) => Number.isFinite(p.value))
+      .sort((a, b) => b.value - a.value);
     const [high, low] = [byValue[0], byValue.at(-1)];
     const first = points[0]?.label ?? '';
     const last = points.at(-1)?.label ?? '';
@@ -69,9 +70,9 @@ abstract class CockpitChart {
       formatValue(this.unit(), p?.value, language);
     return this.i18n.t('shell.chart.summary', {
       high: value(high),
-      highLabel: high?.label ?? '',
+      highLabel: high?.label ?? value(high),
       low: value(low),
-      lowLabel: low?.label ?? '',
+      lowLabel: low?.label ?? value(low),
       period: first === last ? first : `${first} – ${last}`,
       title: this.title(),
     });

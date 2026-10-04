@@ -233,6 +233,10 @@ describe('the bar and line charts', () => {
     };
     const tap = (target: Element) =>
       target.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    const update = jest.spyOn(chart, 'update');
+
+    tap(el.querySelector('.outside') as Element);
+    expect(update).not.toHaveBeenCalled();
 
     show();
     tap(canvasOf(el) as HTMLCanvasElement);
