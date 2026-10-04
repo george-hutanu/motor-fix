@@ -51,6 +51,8 @@ export class Session {
   private renewing: Promise<boolean> | null = null;
   // Bumped at sign-out, so an answer that arrives later restores nothing.
   private generation = 0;
+  // Bumped when the cookie starts a new session.
+  private starts = 0;
 
   // The language last tapped, and the save sending it, one at a time.
   private wanted: Language | null = null;
@@ -85,9 +87,7 @@ export class Session {
     const { accessToken } = await this.auth.authControllerSignIn({
       body: { email, password, remember },
     });
-    this.accessToken = accessToken;
-    // The cookie now holds the new session: an old sign-out must never reach it.
-    keepPending(null);
+    this.started(accessToken);
     this.current.set(null);
     return this.load();
   }
@@ -103,9 +103,7 @@ export class Session {
     const { accessToken } = await this.auth.authControllerSignUp({
       body: { email, language, name, password },
     });
-    this.accessToken = accessToken;
-    // The cookie now holds the new session: an old sign-out must never reach it.
-    keepPending(null);
+    this.started(accessToken);
     this.current.set(null);
     return this.load();
   }
@@ -174,14 +172,24 @@ export class Session {
   }
 
   private async send(kind: SignOut) {
+    const starts = this.starts;
+    let left: SignOut | null = null;
     try {
       await (kind === 'device'
         ? this.auth.authControllerSignOut()
         : this.auth.authControllerSignOutEverywhere());
-      keepPending(null);
     } catch (error) {
-      keepPending(unanswered(error) ? kind : null);
+      if (unanswered(error)) left = kind;
     }
+    // A session started meanwhile: what is left was for the old cookie.
+    if (starts === this.starts) keepPending(left);
+  }
+
+  // The cookie now holds the new session: an old sign-out must never reach it.
+  private started(accessToken: string) {
+    this.accessToken = accessToken;
+    this.starts++;
+    keepPending(null);
   }
 
   // Before the cookie starts a session, so it never ends a new one.

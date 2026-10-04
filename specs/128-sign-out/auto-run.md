@@ -39,6 +39,7 @@
 ## 14 Review
 - spec-reviewer APPROVE: LOW #1 a third copy of the publisher type → one `LivePublisher` in live.hub.ts; LOW #2 the PR body names the undesigned pieces and the placement decision → done in the body.
 - code-reviewer BLOCK on one HIGH: a pending sign-out whose retry got a 5xx during sign-in/sign-up stayed pending and was sent again by `ask()` with the new cookie, ending the new session (every device for `everywhere`) → test first (2 red), then `keepPending(null)` once a token arrives. MEDIUM: the Redis-down API test closed before the un-awaited publish settled → it waits for the "session.revoked not sent" warning. LOW: e2e `@seeded` tag explained. LOW deferred: notifications `announce()` should use `publishLive` (deferred.md).
+- code-reviewer re-review APPROVE: every earlier finding resolved; new MEDIUM — the `online` retry straddling a sign-in could still re-set the flag after the swap → test first (1 red), then a session-start counter: a retry answered after a new session started leaves the flag alone. Web 616/616.
 - Web dashboard suites 217/217; auth + events + notifications 455/455 after the fixes.
 
 ## 15 Agent context

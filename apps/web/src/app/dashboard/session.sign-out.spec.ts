@@ -305,4 +305,37 @@ describe('a sign-out that gets no answer', () => {
     expect(localStorage.getItem(PENDING)).toBeNull();
     expect(session.token()).not.toBeNull();
   });
+
+  it('is not kept by a retry that was on its way while a sign-in started a new session', async () => {
+    const { api, session } = setup();
+    let answerSignIn: (value: { accessToken: string }) => void = () =>
+      undefined;
+    api.authControllerSignIn.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answerSignIn = resolve;
+        }),
+    );
+    let failRetry: () => void = () => undefined;
+    api.authControllerSignOutEverywhere.mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          failRetry = () => reject(new HttpErrorResponse({ status: 503 }));
+        }),
+    );
+    const signingIn = session.signIn('andrei@example.ro', 'parola', true);
+    await flush();
+    localStorage.setItem(PENDING, 'everywhere');
+    window.dispatchEvent(new Event('online'));
+    await flush();
+
+    answerSignIn({ accessToken: 'signed-in' });
+    await flush();
+    failRetry();
+    await signingIn;
+    await session.load();
+
+    expect(api.authControllerSignOutEverywhere).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem(PENDING)).toBeNull();
+  });
 });
