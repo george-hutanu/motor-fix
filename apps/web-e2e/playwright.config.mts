@@ -12,6 +12,8 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   use: {
     baseURL: deployed ?? 'http://localhost:4200',
+    // A service worker's requests bypass page.route stubs; pwa.spec allows it.
+    serviceWorkers: 'block',
     trace: 'on-first-retry',
   },
   webServer: deployed

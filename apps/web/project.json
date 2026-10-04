@@ -26,7 +26,8 @@
               "type": "anyComponentStyle"
             }
           ],
-          "outputHashing": "all"
+          "outputHashing": "all",
+          "serviceWorker": "apps/web/ngsw-config.json"
         }
       },
       "defaultConfiguration": "production",

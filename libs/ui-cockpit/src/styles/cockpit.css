@@ -45,6 +45,12 @@
   --mf-focus-width: 3px;
   --mf-focus-offset: 3px;
   --mf-tap: 44px;
+
+  /* Non-zero only with viewport-fit=cover on a notched phone. */
+  --mf-safe-top: env(safe-area-inset-top, 0px);
+  --mf-safe-right: env(safe-area-inset-right, 0px);
+  --mf-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --mf-safe-left: env(safe-area-inset-left, 0px);
 }
 
 /* TODO: the owner approves the light set, derived from the dark one, on /cockpit. */
@@ -78,6 +84,39 @@ body {
   font-family: var(--mf-font-body);
   font-size: var(--mf-size-body);
   line-height: 1.45;
+  overflow-wrap: break-word;
+  padding-inline: var(--mf-safe-left) var(--mf-safe-right);
+}
+
+/* Phone rules every screen inherits, at no specificity so components win.
+   Links in running text keep their inline size. */
+:where(
+    button,
+    select,
+    textarea,
+    summary,
+    [role="button"],
+    [role="tab"],
+    [role="switch"],
+    input:not(
+        [type="checkbox"],
+        [type="radio"],
+        [type="hidden"],
+        [type="range"]
+      )
+  ) {
+  min-height: var(--mf-tap);
+}
+
+:where(a:not(:where(p, li) a)) {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mf-tap);
+}
+
+/* Under 16 px, iOS Safari zooms the page when a field is tapped. */
+:where(input, select, textarea) {
+  font-size: var(--mf-size-field);
 }
 
 .mf-label {
@@ -339,6 +378,8 @@ button.spartan-switch[data-disabled="true"] {
   align-content: start;
   width: min(400px, 85vw);
   padding: var(--mf-space-6);
+  padding-block: calc(var(--mf-space-6) + var(--mf-safe-top))
+    calc(var(--mf-space-6) + var(--mf-safe-bottom));
 }
 
 .spartan-sheet-content[data-side="right"] {
@@ -396,6 +437,50 @@ button.spartan-switch[data-disabled="true"] {
 .spartan-toast:focus-visible {
   outline: var(--mf-focus-width) solid var(--mf-focus);
   outline-offset: var(--mf-focus-offset);
+}
+
+/* Phone: the exact complement of the tablet query in layout.ts. */
+@media not all and (min-width: 768px) {
+  .spartan-button {
+    white-space: normal;
+    text-align: center;
+  }
+
+  /* A table that names its main column becomes list rows: main, then key. */
+  .spartan-table:has([data-column="main"]),
+  .spartan-table:has([data-column="main"]) .spartan-table-body {
+    display: block;
+  }
+
+  .spartan-table:has([data-column="main"]) .spartan-table-header {
+    display: none;
+  }
+
+  .spartan-table:has([data-column="main"]) .spartan-table-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--mf-space-3);
+  }
+
+  .spartan-table:has([data-column="main"])
+    .spartan-table-cell:not([data-column="main"], [data-column="key"]),
+  .spartan-table:has([data-column="main"])
+    .spartan-table-head:not([data-column="main"], [data-column="key"]) {
+    display: none;
+  }
+
+  .spartan-table:has([data-column="main"]) [data-column="main"] {
+    order: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .spartan-table:has([data-column="main"]) [data-column="key"] {
+    order: 1;
+    flex: none;
+    text-align: end;
+  }
 }
 
 @media (forced-colors: active) {
