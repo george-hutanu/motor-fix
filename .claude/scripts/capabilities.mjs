@@ -163,11 +163,24 @@ export function parseDelta(specText) {
   return sections;
 }
 
-/** The FR ids a spec DECLARES, with the text of each — same rule as artifact-lint. */
+/**
+ * The FR ids a spec DECLARES, with the text of each — same rule as artifact-lint.
+ * A requirement wrapped over indented lines is one text: the continuation runs
+ * until a blank line, an unindented line or another bullet.
+ */
 export function declaredRequirements(specText) {
   const out = new Map();
-  for (const m of specText.matchAll(/^\s*-\s+\*{0,2}(FR-\d{3})\*{0,2}\s*[:.]\s*(.*)$/gm)) {
-    if (!out.has(m[1])) out.set(m[1], m[2].trim());
+  let current = null;
+  for (const line of specText.split("\n")) {
+    const m = line.match(/^\s*-\s+\*{0,2}(FR-\d{3})\*{0,2}\s*[:.]\s*(.*)$/);
+    if (m) {
+      current = out.has(m[1]) ? null : m[1];
+      if (current) out.set(current, m[2].trim());
+    } else if (current && /^\s+\S/.test(line) && !/^\s*-\s/.test(line)) {
+      out.set(current, `${out.get(current)} ${line.trim()}`);
+    } else {
+      current = null;
+    }
   }
   return out;
 }
@@ -310,6 +323,9 @@ export function planMerge(repo, feature) {
 
     text = text.replace(/^updated:.*$/m, `updated: ${today()}`);
     if (!cap.features.includes(feature.name)) {
+      // `features: []` is how a capability with no feature yet is often written;
+      // turn it into the block list the rest of this file reads and appends to.
+      text = text.replace(/^features:\s*\[\s*\]\s*$/m, "features:");
       text = text.replace(/^(features:\n(?:\s+-\s+\S+\n)*)/m, (m) => `${m}  - ${feature.name}\n`);
     }
     plans.push({ capability: section.capability, file: cap.file, text, added, modified, removed });
