@@ -75,6 +75,7 @@ class ThingController {
 
 const env = {
   APP_ENV: 'test',
+  AUTH_TOKEN_SECRET: 'test-secret',
   DATABASE_URL:
     process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres',
   REDIS_URL: process.env['REDIS_URL'] ?? 'redis://localhost:6379',
@@ -87,10 +88,13 @@ const env = {
 };
 
 async function start(appEnv = 'test') {
-  const config = readEnv(['DATABASE_URL', 'REDIS_URL', ...STORAGE_ENV], {
-    ...env,
-    APP_ENV: appEnv,
-  });
+  const config = readEnv(
+    ['DATABASE_URL', 'REDIS_URL', 'AUTH_TOKEN_SECRET', ...STORAGE_ENV],
+    {
+      ...env,
+      APP_ENV: appEnv,
+    },
+  );
   const moduleRef = await Test.createTestingModule({
     controllers: [ThingController],
     imports: [AppModule.register(config)],

@@ -8,7 +8,12 @@ import { AppModule } from './app.module';
 import { configureApp, openApiDocument } from './bootstrap';
 
 async function bootstrap() {
-  const env = readEnv(['DATABASE_URL', 'REDIS_URL', ...STORAGE_ENV]);
+  const env = readEnv([
+    'DATABASE_URL',
+    'REDIS_URL',
+    'AUTH_TOKEN_SECRET',
+    ...STORAGE_ENV,
+  ]);
   const app = await NestFactory.create(
     AppModule.register(env),
     new ExpressAdapter(),

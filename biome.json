@@ -36,7 +36,8 @@
       "!apps/api/openapi.json",
       "!libs/data-access/src/lib",
       "!libs/domain/src/generated",
-      "!apps/web-e2e/test-output"
+      "!apps/web-e2e/test-output",
+      "!!.claude/worktrees"
     ]
   },
   "formatter": {

@@ -47,9 +47,18 @@ export class ProblemFilter implements ExceptionFilter {
     sendProblem(
       res,
       status,
-      known ? (CODE_BY_STATUS[status] ?? 'error') : 'internal_error',
+      known ? this.code(exception, status) : 'internal_error',
       known ? this.detail(exception) : undefined,
     );
+  }
+
+  private code(exception: HttpException, status: number): string {
+    const body = exception.getResponse();
+    return typeof body === 'object' &&
+      'code' in body &&
+      typeof body.code === 'string'
+      ? body.code
+      : (CODE_BY_STATUS[status] ?? 'error');
   }
 
   private detail(exception: HttpException): string | undefined {

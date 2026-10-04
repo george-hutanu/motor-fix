@@ -71,7 +71,7 @@
   {
     "id": "allows-a-runtime-dependency-install",
     "hook": "pre:bash:guard",
-    "why": "this is the rule speckit-demo has and this repo deliberately dropped — every workspace here ships runtime dependencies, and blocking that would fight normal work",
+    "why": "this is the rule speckit-demo has and this repo deliberately dropped \u2014 every workspace here ships runtime dependencies, and blocking that would fight normal work",
     "payload": {
       "tool_input": {
         "command": "npm install fastify -w apps/server"
@@ -82,12 +82,53 @@
     }
   },
   {
-    "id": "allows-a-plain-push",
+    "id": "allows-a-push-to-the-feature-branch",
     "hook": "pre:bash:guard",
-    "why": "\"never push until asked\" is a rule about acting unasked; a hard block would also break the case where the user does ask, so it stays prose",
+    "why": "work on a task pushes every commit to its own branch behind a draft PR; blocking that would stop the PR following the work",
     "payload": {
       "tool_input": {
-        "command": "git push origin BKP-1304"
+        "command": "git push origin 079-account-model"
+      }
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "blocks-a-push-to-main",
+    "hook": "pre:bash:guard",
+    "why": "main changes only through a PR the user merges; a direct push skips the review and the user's call",
+    "payload": {
+      "tool_input": {
+        "command": "git push origin main"
+      }
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "pushing to main"
+    }
+  },
+  {
+    "id": "blocks-a-refspec-push-to-main",
+    "hook": "pre:bash:guard",
+    "why": "HEAD:main lands the same commits on main as naming the branch",
+    "payload": {
+      "tool_input": {
+        "command": "git push origin HEAD:main"
+      }
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "pushing to main"
+    }
+  },
+  {
+    "id": "allows-a-branch-named-after-main",
+    "hook": "pre:bash:guard",
+    "why": "a feature branch whose name merely contains main must still push",
+    "payload": {
+      "tool_input": {
+        "command": "git push -u origin 101-main-menu"
       }
     },
     "expect": {
