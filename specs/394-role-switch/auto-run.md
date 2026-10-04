@@ -32,3 +32,5 @@ Start commit: 255ce1f (branch from origin/main 04dc982) · Run in an isolated wo
 - Merged origin/main (bc4a940, ST-197) into the branch: generated client conflicts resolved by regenerating; 36c9e90. CI green on 36c9e90.
 ## pr-test
 - Lap 2 on 36c9e90: success, 0 blocker/high, 2 medium (environment: no object store), 6 low. Fixed: #3 renewal during a switch's reload (T013), #4 optional refresh body (T014). Deferred: #5, #6, #8 (deferred.md). Not this PR: #1, #2 (no object store, filed before as ST-459), #7 (tester could not force a renewal in the browser; covered by unit and API tests).
+- Lap 3 on ee51280: success, one new low (pre-existing): the switch-failure toast opens under the phone tab bar at 390 px; deferred and filed.
+- Merged origin/main (6d4a0ef, ST-128 sign-out) into the branch: conflicts in `sign-in.service.ts` and `session.ts` resolved by keeping both sides; the role-chip spec's Session fake gains `ended`; e9c11e2.
