@@ -10,7 +10,7 @@
 // feature artifacts, its lock, one `gh pr list`. The only thing written by the
 // watcher itself is a claim, so a later pass does not dispatch onto work an
 // earlier one already handed out. Two passes running at the same moment are not
-// guarded against: run one /loop per machine.
+// guarded against: schedule one /speckit-watch per machine (`--json` alone is read-only).
 //
 // Usage:
 //   node .claude/scripts/watch.mjs [--json] [--fix] [--stale qa=10,planning=20]
