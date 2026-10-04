@@ -2,7 +2,7 @@
 
 **Feature Branch**: `fix-release-production-queue`
 **Created**: 2026-10-04
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 **Level**: 1 (one-session)
 **Notion story**: none. A follow-up from the QA run of PR #47; no story owns it.
 **Epic**: EP-1 Foundations
