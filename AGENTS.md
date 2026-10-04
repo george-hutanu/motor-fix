@@ -47,15 +47,14 @@ epic or a plan, whether run through spec-kit or by hand.
      CRITICAL/HIGH left), fill in every section of the template
      (`node scripts/pr-body-check.ts --body-file <body> --title "<title>"`
      passes, then `gh pr edit <n> --body-file <body>`), mark the PR ready for
-     review (`gh pr ready`) and set the task to In review
-     (`speckit-notion-sync review`, which also sets the PR's one stage label
-     to `in review`).
+     review (`gh pr ready`) and set the task to QA
+     (`speckit-notion-sync qa`, which also sets the PR's one stage label
+     to `QA`). There is no In review stage: ready is QA.
   5. Get CI green: merge `origin/main` into the branch if it is behind and
      push, wait for the checks (`gh pr checks <n> --watch`); a failing check is
      fixed on the branch and waited for again.
-  6. QA: run the PR tester (`/speckit-pr-test <n>`, the `pr-tester` subagent)
-     and set the task to QA (`speckit-notion-sync qa`, which also sets the
-     PR's one stage label to `QA`). It boots the PR head in
+  6. QA: run the PR tester (`/speckit-pr-test <n>`, the `pr-tester` subagent);
+     the task and the PR's stage label stay QA. It boots the PR head in
      its own worktree, tests it in a browser and against the API, reviews the
      diff, posts a review, fills the template's "Agent review" section and sets
      the `agent-review` status on the head commit. Fix every blocking finding
@@ -75,8 +74,8 @@ epic or a plan, whether run through spec-kit or by hand.
   the task to Blocked with the reason as a Notion comment and a PR comment
   (`speckit-notion-sync blocked <reason>`); `speckit-notion-sync unblock`
   returns it to where it was. Each step also moves the PR's label —
-  `planning` until `/speckit-implement`, then `in development`, `in review`,
-  `QA`, plus `blocked` — so GitHub shows the
+  `planning` until `/speckit-implement`, then `in development`, then `QA`
+  from the moment it is ready, plus `blocked` — so GitHub shows the
   same stage as Notion. Next to its one stage label a PR carries its type
   (`feature`, `bug`, `tech debt`, …, from the title), `breaking`, its scope,
   its epic, `ui` and `dependencies` where they apply (table in

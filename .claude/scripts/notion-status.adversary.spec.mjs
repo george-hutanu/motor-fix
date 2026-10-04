@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { decide } from './notion-status.mjs';
 
-const STAGES = ['planning', 'in development', 'in review', 'QA'];
+const STAGES = ['planning', 'in development', 'QA'];
 const ALL = [...STAGES, 'blocked'];
 const EVENTS = ['start', 'implement', 'review', 'qa', 'finish', 'blocked', 'unblock'];
 const STATUSES = ['To do', 'Planning', 'Implementing', 'In review', 'QA', 'Done', 'Blocked', 'In progress'];
@@ -40,7 +40,7 @@ describe('applying label arguments to any starting label set', () => {
     }
   });
 
-  it('never names a label outside the four stages and blocked', () => {
+  it('never names a label outside the three stages and blocked, never the retired in review', () => {
     for (const current of STATUSES)
       for (const event of EVENTS)
         for (const prior of [null, 'Planning', 'In review']) {

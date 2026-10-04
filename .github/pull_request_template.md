@@ -40,7 +40,7 @@ _(fill in: what could break, and how to undo it)_
 - [ ] Title is a Conventional Commit with a scope: `type(scope): ST-n subject`
 - [ ] Tests were written first and failed before the code
 - [ ] Design checked: `specs/<feature>/design.md`, or the story has no screens
-- [ ] Notion in sync: the story is In progress, In review once ready, Done on merge
+- [ ] Notion in sync: the story is Planning, then Implementing, QA once ready, Done on merge
 
 ## Agent review
 

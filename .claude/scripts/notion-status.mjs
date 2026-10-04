@@ -3,9 +3,12 @@
 // tested rather than re-read from prose on every run. `speckit-notion-sync`
 // asks this script, then makes the Notion writes it names.
 //
-// The story ladder is To do → Planning → Implementing → In review → QA → Done:
+// The story ladder is To do → Planning → Implementing → QA → Done:
 // Planning from the task's start until /speckit-implement, Implementing from
-// there. A legacy In progress reads as Implementing. The build
+// there, QA from the moment the PR is marked ready. There is no In review
+// stage (folded into QA by the owner, 2026-10-04): `review` is kept as an
+// alias of `qa` so a running agent that still sends it lands on QA. A legacy
+// In progress reads as Implementing and a legacy In review as QA. The build
 // timeline row mirrors it (Not started … Merged). Blocked sits off the ladder:
 // `blocked` records the status it left in run-state, and only `unblock` leaves
 // Blocked, returning to that status — the one backwards move. Nothing moves a
@@ -23,10 +26,10 @@
 // Prints { write, story, timeline, prior, note, stage, labels } as JSON.
 import { readState, writeState } from "./run-state.mjs";
 
-export const LADDER = ["To do", "Planning", "Implementing", "In review", "QA", "Done"];
-const TIMELINE = { "To do": "Not started", Planning: "Planning", Implementing: "Implementing", "In review": "In review", QA: "QA", Done: "Merged", Blocked: "Blocked" };
-const TARGET = { start: "Planning", implement: "Implementing", review: "In review", qa: "QA", finish: "Done" };
-const STAGE = { Planning: "planning", Implementing: "in development", "In review": "in review", QA: "QA" };
+export const LADDER = ["To do", "Planning", "Implementing", "QA", "Done"];
+const TIMELINE = { "To do": "Not started", Planning: "Planning", Implementing: "Implementing", QA: "QA", Done: "Merged", Blocked: "Blocked" };
+const TARGET = { start: "Planning", implement: "Implementing", review: "QA", qa: "QA", finish: "Done" };
+const STAGE = { Planning: "planning", Implementing: "in development", QA: "QA" };
 
 function stageLabels(story, prior) {
   const blocked = story === "Blocked";
@@ -40,7 +43,8 @@ function stageLabels(story, prior) {
 
 const result = (write, story, prior, note) => ({ write, story, timeline: TIMELINE[story] ?? null, prior, note, ...stageLabels(story, prior) });
 
-const LEGACY = (status) => (status === "In progress" ? "Implementing" : status);
+const RETIRED = { "In progress": "Implementing", "In review": "QA" };
+const LEGACY = (status) => (Object.hasOwn(RETIRED, status) ? RETIRED[status] : status);
 
 export function decide({ event, current: raw, prior: rawPrior = null }) {
   const current = LEGACY(raw);

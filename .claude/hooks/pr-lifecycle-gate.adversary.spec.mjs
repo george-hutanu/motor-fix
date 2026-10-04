@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 
 import { decide } from './pr-lifecycle-gate.mjs';
 
-const STAGES = ['planning', 'in development', 'in review', 'QA'];
+const STAGES = ['planning', 'in development', 'QA'];
+const RETIRED = 'in review';
 const pending = [{ state: 'PENDING' }];
 const pr = (over = {}) => ({
   isDraft: false,
@@ -31,8 +32,8 @@ const stagesOf = (set) => STAGES.filter((s) => set.has(s));
 describe('stage labels in every combination', () => {
   for (const isDraft of [true, false]) {
     it(`${isDraft ? 'draft' : 'ready'} PR: the named gh command leaves exactly one fitting stage label, and the gate then passes`, () => {
-      const fits = isDraft ? ['planning', 'in development'] : ['in review', 'QA'];
-      for (const have of subsets(STAGES)) {
+      const fits = isDraft ? ['planning', 'in development'] : ['QA'];
+      for (const have of subsets([...STAGES, RETIRED])) {
         const names = [...have, 'feature', 'ui'];
         const why = decide(task(pr({ isDraft, labels: labelsOf(...names) })));
         if (have.length === 1 && fits.includes(have[0])) {
@@ -45,6 +46,7 @@ describe('stage labels in every combination', () => {
         assert.equal(stages.length, 1, `${have.join(',') || 'none'} -> ${stages.join(',')}`);
         assert.ok(fits.includes(stages[0]), `${stages[0]} fits`);
         assert.ok(after.has('ui') && after.has('feature'), 'bystanders kept');
+        assert.equal(after.has(RETIRED), false, 'the retired in review label is dropped');
         assert.equal(decide(task(pr({ isDraft, labels: labelsOf(...after) }))), null, 'second pass is clean');
       }
     });
@@ -56,7 +58,7 @@ describe('labels that only look like stage labels', () => {
 
   it('does not count them as stage labels, so a ready PR with none still gets the default', () => {
     const why = decide(task(pr({ labels: labelsOf(...lookalikes, 'feature') })));
-    assert.match(why, /gh pr edit 6 --add-label "in review"/);
+    assert.match(why, /gh pr edit 6 --add-label "QA"/);
     assert.doesNotMatch(why, /--remove-label/);
   });
 
@@ -81,7 +83,7 @@ describe('labels the gate cannot see', () => {
 describe('order of refusals', () => {
   it('gives a stage refusal before a merge instruction when the ready PR is green and mislabelled', () => {
     const green = [{ conclusion: 'SUCCESS' }, { __typename: 'StatusContext', context: 'agent-review', state: 'SUCCESS' }];
-    const why = decide(task(pr({ statusCheckRollup: green, labels: labelsOf('in review', 'QA', 'feature') })));
+    const why = decide(task(pr({ statusCheckRollup: green, labels: labelsOf('in development', 'QA', 'feature') })));
     assert.match(why, /more than one stage label/);
   });
 });
