@@ -124,6 +124,11 @@ A retired requirement now prints `⊘ retired` instead of `✗ UNTESTED`.
 4. Invoke `speckit-notion-sync finish` (from QA, after the PR tester passed and
    the PR merged): the story goes to Done, its timeline row to Merged, and the epic to Done once every story in it is Done. Skip this if
    the merge to `main` already ran it.
+5. `node .claude/scripts/notion-ready.mjs check specs/<feature>/notion-sync.md`
+   must exit 0: Ready to work was refreshed (or logged PENDING) after the last
+   `finish`. When it exits 1, do what its reason says — usually run
+   `notion-ready <epic>` and log the line (`speckit-notion-sync`, §2d) — and
+   check again. The feature is not archived until it passes.
 
 ## What this never does
 

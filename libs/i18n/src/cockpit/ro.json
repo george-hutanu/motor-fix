@@ -11,6 +11,35 @@
   "dialogTitle": "Programare confirmată",
   "drawerBody": "Sertarul folosește aceleași suprafețe și margini.",
   "drawerTitle": "Detalii service",
+  "form": {
+    "answer": "Răspunsul serverului",
+    "answers": {
+      "conflict": "Conflict (409)",
+      "field": "Număr deja folosit (400)",
+      "network": "Fără răspuns (rețea)",
+      "ok": "Salvat",
+      "server": "Eroare de server (500)"
+    },
+    "ending": "După salvare",
+    "endings": {
+      "close": "Închide formularul",
+      "confirm": "Arată confirmarea"
+    },
+    "intro": "Alege cum răspunde serverul, apoi apasă Salvează.",
+    "messages": {
+      "field": {
+        "plate_taken": "Numărul este deja folosit de altă mașină."
+      }
+    },
+    "none": "niciunul",
+    "open": "Deschide formularul de probă",
+    "plate": "Număr de înmatriculare",
+    "result": "Ultimul număr salvat: {value}",
+    "save": "Salvează",
+    "saved": "Numărul a fost salvat.",
+    "sent": "Cereri trimise:",
+    "title": "Formular de probă"
+  },
   "gauges": {
     "lampAmber": "Necesită atenție",
     "lampGreen": "Lucrează pe Dacia",

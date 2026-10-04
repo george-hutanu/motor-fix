@@ -127,4 +127,36 @@ describe('CockpitSamplePage', () => {
       text('overlay.results.saved'),
     );
   });
+
+  // The whole kit renders on this page, which is slow in jsdom under load.
+  it('opens a sample form task whose server answer and ending can be chosen', async () => {
+    const page = await render();
+    buttonNamed(page, text('form.open'))?.click();
+    await settle();
+
+    const task = openTask() as HTMLElement;
+    const labelled = (key: string) => {
+      const label = [...task.querySelectorAll('label')].find(
+        (l) => l.textContent?.trim() === text(key),
+      );
+      return task.querySelector<HTMLElement>(`#${label?.htmlFor}`);
+    };
+    expect(labelled('form.plate')?.getAttribute('formcontrolname')).toBe(
+      'plate',
+    );
+    const answers = labelled('form.answer') as HTMLSelectElement;
+    expect([...answers.options].map((o) => o.textContent?.trim())).toEqual([
+      text('form.answers.ok'),
+      text('form.answers.field'),
+      text('form.answers.conflict'),
+      text('form.answers.server'),
+      text('form.answers.network'),
+    ]);
+    const endings = labelled('form.ending') as HTMLSelectElement;
+    expect([...endings.options].map((o) => o.textContent?.trim())).toEqual([
+      text('form.endings.close'),
+      text('form.endings.confirm'),
+    ]);
+    expect(buttonNamed(task, text('form.save'))?.type).toBe('submit');
+  }, 20_000);
 });

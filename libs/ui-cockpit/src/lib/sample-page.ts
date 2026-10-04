@@ -16,6 +16,7 @@ import { HlmTableImports } from './helm/table';
 import { HlmTabsImports } from './helm/tabs';
 import { HlmToaster, toast } from './helm/toaster';
 import { Panel } from './panel';
+import { CockpitSampleFormTask, type SampleFormData } from './sample-form-task';
 import { CockpitSampleTask } from './sample-task';
 import { SAMPLE_GARAGES } from './sample-text';
 
@@ -177,6 +178,17 @@ import { SAMPLE_GARAGES } from './sample-text';
         }}
       </p>
 
+      <div class="row">
+        <button hlmBtn variant="secondary" (click)="openForm()">
+          {{ 'cockpit.form.open' | t }}
+        </button>
+      </div>
+      <p class="mf-form-result" aria-live="polite">
+        {{ 'cockpit.form.result' | t: { value: savedPlate() || ('cockpit.form.none' | t) } }}
+        ·
+        {{ 'cockpit.form.sent' | t }} <span class="mf-form-saves">{{ sent() }}</span>
+      </p>
+
       <mf-cockpit-charts-sample />
 
       <hlm-toaster />
@@ -192,6 +204,8 @@ export class CockpitSamplePage {
     saved: 'cockpit.overlay.results.saved',
   } as const;
   protected readonly lastResult = signal<keyof typeof this.results>('none');
+  protected readonly savedPlate = signal('');
+  protected readonly sent = signal(0);
   protected readonly garages = SAMPLE_GARAGES;
   protected readonly brand = signal('');
   protected readonly openNow = signal(true);
@@ -209,6 +223,17 @@ export class CockpitSamplePage {
         title: 'cockpit.overlay.title',
       }),
     );
+  }
+
+  protected openForm() {
+    void this.overlays.open<string, SampleFormData>(CockpitSampleFormTask, {
+      data: {
+        saved: (plate) => this.savedPlate.set(plate),
+        sent: () => this.sent.update((n) => n + 1),
+      },
+      shape: 'dialog',
+      title: 'cockpit.form.title',
+    });
   }
 
   constructor() {

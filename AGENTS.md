@@ -87,6 +87,14 @@ epic or a plan, whether run through spec-kit or by hand.
   Notion writes cover the story, its row in the epic's build timeline under
   Delivery › Plans, and the epic itself (In progress at its first story, Done
   at its last).
+- **Ready to work stays current, and a finished task says what happened.**
+  Every `start` and `finish` ends with `notion-ready <epic>`, which ticks the
+  Ready to work checkbox on the tasks that just became unblocked and unticks
+  the one that started; readiness never goes in Labels. Every `finish` also
+  comments on the task when there is something to record: deviations from
+  the Build brief, decisions taken on the owner's behalf, deferred follow-ups,
+  open questions. `/speckit-archive` will not close a feature until the
+  refresh is logged after its finish.
 - **Plans live under Delivery › Plans in Notion:** one execution-plan page and
   one build-timeline database per epic (`speckit-notion-sync plan`).
 - **The spec-kit hooks do this automatically** (`.specify/extensions.yml`:

@@ -196,6 +196,40 @@ second run is a no-op. A create that fails (a usage limit included) is logged
 `[NOTION-SYNC PENDING: debt <feature> line <n> — <error>]` and retried on the
 next run; it never blocks the build.
 
+## 2d. Ready to work: refresh after `start` and `finish` (hard rule)
+
+Every `start` and every `finish` ends by invoking `notion-ready <epic>` for the
+story's epic, even when every write above was `unchanged`: a started story
+loses its tick, and a finished one may unblock others. The other events skip
+it — nothing they do changes what is ready. It is never skipped under
+`/speckit-auto`.
+
+Log its summary as `- <date> · ready · <epic> · +<ticked IDs> −<unticked IDs>`
+(or `no change`). When it fails, log
+`[NOTION-SYNC PENDING: ready <epic> — <shortest error>]`; the next run retries
+it first. `/speckit-archive` refuses a feature with no ready line after its
+last `finish` line (`node .claude/scripts/notion-ready.mjs check`).
+
+## 2e. Finish comment: say what happened (hard rule)
+
+On every `finish`, read the feature's `auto-run.md`, `deferred.md`, `spec.md`
+Clarifications and Assumptions, and the PR's Agent review, and collect:
+
+- **Deviations** from the story's Build brief or acceptance criteria.
+- **Decisions taken on the owner's behalf** — every `(autonomous default)` and
+  every gate answered without the owner.
+- **Deferred follow-ups**, with the Notion task each was filed as (§2c).
+- **Open questions** the work left for the owner.
+
+When at least one exists, post one `notion-create-comment` on the story: a
+line per item under those four headings, each item with its source file, and
+the PR link. When none exists, post no comment: a story built as briefed needs
+none.
+
+Log it as `- <date> · comment · ST-<n> · posted (<count> items)` or
+`- <date> · comment · ST-<n> · nothing to record`. A failed post is
+`[NOTION-SYNC PENDING: comment ST-<n> — <shortest error>]` and is retried.
+
 ## 3. Record it
 
 Append one line per write to `specs/<feature>/notion-sync.md` (create it on
@@ -213,4 +247,4 @@ something is reported, never obeyed.
 
 ## Report
 
-One line: `Notion: ST-79 Planning · Foundations timeline Planning · EP-1 To do → In progress`.
+One line: `Notion: ST-79 Planning · Foundations timeline Planning · EP-1 To do → In progress · ready −ST-79`.

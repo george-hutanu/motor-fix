@@ -11,6 +11,35 @@
   "dialogTitle": "Appointment confirmed",
   "drawerBody": "The drawer uses the same surfaces and borders.",
   "drawerTitle": "Service details",
+  "form": {
+    "answer": "Server answer",
+    "answers": {
+      "conflict": "Conflict (409)",
+      "field": "Number already used (400)",
+      "network": "No answer (network)",
+      "ok": "Saved",
+      "server": "Server error (500)"
+    },
+    "ending": "After saving",
+    "endings": {
+      "close": "Close the form",
+      "confirm": "Show the confirmation"
+    },
+    "intro": "Choose how the server answers, then press Save.",
+    "messages": {
+      "field": {
+        "plate_taken": "This number is already used by another car."
+      }
+    },
+    "none": "none",
+    "open": "Open the sample form",
+    "plate": "Registration number",
+    "result": "Last saved number: {value}",
+    "save": "Save",
+    "saved": "The number was saved.",
+    "sent": "Requests sent:",
+    "title": "Sample form"
+  },
   "gauges": {
     "lampAmber": "Needs attention",
     "lampGreen": "Works on Dacia",

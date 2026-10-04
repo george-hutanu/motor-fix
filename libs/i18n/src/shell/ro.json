@@ -8,6 +8,30 @@
     "table": "Vezi ca tabel",
     "value": "Valoare"
   },
+  "form": {
+    "close": "Închide",
+    "field": {
+      "email": "Scrie o adresă de e‑mail validă.",
+      "invalid": "Valoarea nu este validă.",
+      "maxlength": "Scrie cel mult {requiredLength} caractere.",
+      "minlength": "Scrie cel puțin {requiredLength} caractere.",
+      "pattern": "Formatul nu este cel așteptat.",
+      "required": "Câmpul este obligatoriu."
+    },
+    "problem": {
+      "conflict": "Altcineva a schimbat asta între timp. Reîncarcă pagina și încearcă din nou.",
+      "error": "Ceva nu a mers. Încearcă din nou.",
+      "internal_error": "Ceva nu a mers la noi. Încearcă din nou.",
+      "maintenance": "MotorFix este în mentenanță. Încearcă din nou în câteva minute.",
+      "network": "Nu am putut ajunge la MotorFix. Verifică conexiunea și încearcă din nou.",
+      "not_found": "Nu mai găsim ce voiai să salvezi. Reîncarcă pagina.",
+      "offline": "Nu ești conectat. Încearcă din nou când revine conexiunea.",
+      "service_unavailable": "MotorFix nu răspunde acum. Încearcă din nou în câteva minute.",
+      "sign_in_required": "Sesiunea a expirat. Autentifică‑te din nou ca să continui.",
+      "validation_failed": "Verifică câmpurile marcate."
+    },
+    "sending": "Se trimite…"
+  },
   "frame": {
     "area": {
       "admin": "Admin",

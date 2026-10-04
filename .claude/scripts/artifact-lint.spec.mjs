@@ -93,7 +93,9 @@ describe('artifact-lint — the semantic lane default', () => {
   });
 });
 
-describe('diff-audit — the same default', () => {
+// Each case spawns the real audit over this repository's diff: about a second
+// alone, past vitest's 5 s default while other sessions load the machine.
+describe('diff-audit — the same default', { timeout: 30_000 }, () => {
   // Run against this repository: the audit needs a real git history, and the
   // assertion is about which branch the flags take, not about the findings.
   const repo = join(import.meta.dirname, '..', '..');

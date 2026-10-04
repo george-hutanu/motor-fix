@@ -8,6 +8,30 @@
     "table": "View as table",
     "value": "Value"
   },
+  "form": {
+    "close": "Close",
+    "field": {
+      "email": "Enter a valid e-mail address.",
+      "invalid": "This value is not valid.",
+      "maxlength": "Use at most {requiredLength} characters.",
+      "minlength": "Use at least {requiredLength} characters.",
+      "pattern": "This is not in the expected format.",
+      "required": "This field is required."
+    },
+    "problem": {
+      "conflict": "Someone else changed this in the meantime. Reload the page and try again.",
+      "error": "Something went wrong. Try again.",
+      "internal_error": "Something went wrong on our side. Try again.",
+      "maintenance": "MotorFix is down for maintenance. Try again in a few minutes.",
+      "network": "We could not reach MotorFix. Check your connection and try again.",
+      "not_found": "What you were saving is no longer there. Reload the page.",
+      "offline": "You are offline. Try again when you are back online.",
+      "service_unavailable": "MotorFix is not answering right now. Try again in a few minutes.",
+      "sign_in_required": "Your session has expired. Sign in again to continue.",
+      "validation_failed": "Check the marked fields."
+    },
+    "sending": "Sending…"
+  },
   "frame": {
     "area": {
       "admin": "Admin",
