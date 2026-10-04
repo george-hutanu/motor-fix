@@ -51,8 +51,9 @@ Gates from the motor-fix Constitution (v1.1.0) — evaluate in order:
 - [ ] **II. Test Discipline**: failing tests first (`/speckit-tests`); Jest
   specs colocated with their source; API tests against real PostgreSQL and
   Redis; Playwright for end-to-end flows.
-- [ ] **III. The Given Stack**: Angular + PrimeNG (Cockpit theme), NestJS,
-  PostgreSQL, Redis — no substitute and no second framework for the same job.
+- [ ] **III. The Given Stack**: Angular + Spartan UI on Angular CDK (Cockpit
+  theme), NestJS, PostgreSQL, Redis — no substitute, no second framework for
+  the same job, no front-end dependency that needs a paid licence or key.
 - [ ] **IV. One Repository, One Toolchain**: fits the Nx apps `web`, `api`,
   `worker`, `mcp` and shared libs; no microservice, GraphQL, global store,
   search engine or broker; no eslint, prettier or per-project Biome config.

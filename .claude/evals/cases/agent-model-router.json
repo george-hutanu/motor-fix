@@ -2,17 +2,53 @@
   {
     "id": "routes-a-large-review-to-fable",
     "hook": "pre:tool:agent-model",
-    "why": "a 10-file, 1157-line diff is the review where a defect spans files, and the band above the ceiling is mechanical so it costs no round trip",
+    "why": "a 20-file diff is the review where a defect spans files, and the band above the ceiling is mechanical so it costs no round trip",
     "payload": {
       "tool_name": "Agent",
       "tool_input": {
         "subagent_type": "spec-reviewer",
-        "prompt": "Review the feature against f66d2c6~1..f66d2c6"
+        "prompt": "Review the feature against HEAD~1..HEAD"
       }
     },
     "expect": {
       "exit": 0,
       "stdout": "\"model\":\"fable\""
+    },
+    "env": {
+      "SPECKIT_JEV": "0"
+    },
+    "fixture": {
+      "commits": [
+        {
+          "files": {
+            "README.md": "fixture\n"
+          }
+        },
+        {
+          "files": {
+            "libs/domain/src/m00.ts": "export const m00 = 0;\n",
+            "libs/domain/src/m01.ts": "export const m01 = 1;\n",
+            "libs/domain/src/m02.ts": "export const m02 = 2;\n",
+            "libs/domain/src/m03.ts": "export const m03 = 3;\n",
+            "libs/domain/src/m04.ts": "export const m04 = 4;\n",
+            "libs/domain/src/m05.ts": "export const m05 = 5;\n",
+            "libs/domain/src/m06.ts": "export const m06 = 6;\n",
+            "libs/domain/src/m07.ts": "export const m07 = 7;\n",
+            "libs/domain/src/m08.ts": "export const m08 = 8;\n",
+            "libs/domain/src/m09.ts": "export const m09 = 9;\n",
+            "libs/domain/src/m10.ts": "export const m10 = 10;\n",
+            "libs/domain/src/m11.ts": "export const m11 = 11;\n",
+            "libs/domain/src/m12.ts": "export const m12 = 12;\n",
+            "libs/domain/src/m13.ts": "export const m13 = 13;\n",
+            "libs/domain/src/m14.ts": "export const m14 = 14;\n",
+            "libs/domain/src/m15.ts": "export const m15 = 15;\n",
+            "libs/domain/src/m16.ts": "export const m16 = 16;\n",
+            "libs/domain/src/m17.ts": "export const m17 = 17;\n",
+            "libs/domain/src/m18.ts": "export const m18 = 18;\n",
+            "libs/domain/src/m19.ts": "export const m19 = 19;\n"
+          }
+        }
+      ]
     }
   },
   {
@@ -23,12 +59,29 @@
       "tool_name": "Agent",
       "tool_input": {
         "subagent_type": "code-reviewer",
-        "prompt": "Review 9e88d85~1..9e88d85"
+        "prompt": "Review HEAD~1..HEAD"
       }
     },
     "expect": {
       "exit": 0,
       "stdout": "\"model\":\"sonnet\""
+    },
+    "env": {
+      "SPECKIT_JEV": "0"
+    },
+    "fixture": {
+      "commits": [
+        {
+          "files": {
+            "apps/api/src/old.ts": "export const l0 = 0;\nexport const l1 = 1;\nexport const l2 = 2;\nexport const l3 = 3;\nexport const l4 = 4;\nexport const l5 = 5;\nexport const l6 = 6;\n"
+          }
+        },
+        {
+          "files": {
+            "apps/api/src/old.ts": null
+          }
+        }
+      ]
     }
   },
   {
