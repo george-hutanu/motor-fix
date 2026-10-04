@@ -37,6 +37,7 @@ import { SAMPLE_GARAGES } from './sample-text';
   styles: `
     main {
       display: grid;
+      grid-template-columns: minmax(0, 1fr);
       gap: var(--mf-space-6);
       max-width: 960px;
       margin: 0 auto;

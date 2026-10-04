@@ -15,7 +15,7 @@ const toWholeLei = (bani: unknown) =>
       display: inline-block;
       color: var(--mf-text);
       font-family: var(--mf-font-label);
-      font-size: 20px;
+      font-size: var(--mf-size-field);
       line-height: 1;
       white-space: nowrap;
     }
@@ -23,6 +23,7 @@ const toWholeLei = (bani: unknown) =>
       display: inline-flex;
       align-items: center;
       gap: 2px;
+      white-space: pre;
     }
     .mf-odometer-digit {
       display: inline-block;

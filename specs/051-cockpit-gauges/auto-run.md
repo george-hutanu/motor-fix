@@ -67,3 +67,9 @@ Start: branch `051-cockpit-gauges` from origin/main 8cb1882 (worktree agent-a68e
 
 ## Lifecycle
 - Merge freeze (owner, via orchestrator) until #21 (ST-434) merges: PR #20 stays draft; then rebase onto origin/main, force-with-lease, `gh pr ready`, `speckit-pr-test`, checks, merge, notion finish, archive.
+
+## QA — speckit-pr-test
+- Rebased onto origin/main b5bd3a6 (#21), npm install, typecheck 12 / test 10 green, force-with-lease push 7276b4c; `gh pr ready 20`; Notion In review → QA (story and timeline row).
+- pr-tester (run as general-purpose with .claude/agents/pr-tester.md, since the agent type post-dates this session) lap 1 on 7276b4c: failure — 3 high: at 320 px the gauges panel's right edge lands at 325 px (the sample page's grid track grew to its min-content) and the range odometer needed ~248 px of 246; the e2e test checked only the panel's width. 5 medium (font sizes as literals; storage readiness and axe on `/` are environment / not this PR), 1 low.
+- Fix, tests first: the 320 px e2e now asserts the panel's edges on screen and no page scroll in both themes → red (pageScrolls, panelOffScreen true); then `grid-template-columns: minmax(0, 1fr)` on the sample page's main and the odometer at `--mf-size-field` (16 px) → gauges + cockpit e2e 18 passed. FR-013 lists the large dial's 40 px numeral as part geometry. The sample-page deferral is closed by the fix; the low caption finding and the `/` axe finding deferred.
+- Own check of the lap-1 phone screenshot: the odometer's space before "lei" collapsed in its flex row ("1.401lei"). Test first (e2e: no zero-width separator → red on " "), then `white-space: pre` on the digit row → gauges + cockpit e2e 19 passed.

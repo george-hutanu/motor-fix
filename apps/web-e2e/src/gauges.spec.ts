@@ -115,29 +115,56 @@ test('updates the estimate and tells screen readers the new value once', async (
   await expect(live).toHaveText('1.400–1.800 lei');
 });
 
-// The rest of the sample page belongs to the theme; this checks the gauges' own panel.
-test('fits a 320 px wide screen inside its panel', async ({ page }) => {
-  await open(page, 'dark', 320);
+test('keeps the space before "lei" and every separator visible', async ({
+  page,
+}) => {
+  await open(page, 'dark', 1280);
 
-  const result = await page.evaluate(() => {
-    const panel = document.querySelector(
-      'mf-cockpit-gauges-sample section.mf-panel',
-    ) as HTMLElement;
-    const frame = panel.getBoundingClientRect();
-    const outside = [
-      ...panel.querySelectorAll('mf-lamp, mf-rating-dial, mf-odometer'),
-    ]
-      .filter((el) => {
-        const box = el.getBoundingClientRect();
-        return box.left < frame.left || box.right > frame.right;
-      })
-      .map((el) => el.outerHTML.slice(0, 80));
-    return {
-      outside,
-      scrolls: panel.scrollWidth > panel.clientWidth,
-      wider: frame.width > 320,
-    };
-  });
+  const empty = await page
+    .locator('mf-cockpit-gauges-sample mf-odometer')
+    .first()
+    .evaluate((el) =>
+      [...el.querySelectorAll('[aria-hidden="true"] > span')]
+        .filter((s) => s.getBoundingClientRect().width === 0)
+        .map((s) => JSON.stringify(s.textContent)),
+    );
 
-  expect(result).toEqual({ outside: [], scrolls: false, wider: false });
+  expect(empty).toEqual([]);
+});
+
+test('fits a 320 px wide screen without scrolling sideways', async ({
+  page,
+}) => {
+  for (const scheme of ['dark', 'light'] as const) {
+    await open(page, scheme, 320);
+
+    const result = await page.evaluate(() => {
+      const panel = document.querySelector(
+        'mf-cockpit-gauges-sample section.mf-panel',
+      ) as HTMLElement;
+      const frame = panel.getBoundingClientRect();
+      const screen = document.documentElement.clientWidth;
+      const outside = [
+        ...panel.querySelectorAll('mf-lamp, mf-rating-dial, mf-odometer'),
+      ]
+        .filter((el) => {
+          const box = el.getBoundingClientRect();
+          return box.left < frame.left || box.right > frame.right;
+        })
+        .map((el) => el.outerHTML.slice(0, 80));
+      return {
+        outside,
+        pageScrolls: document.documentElement.scrollWidth > screen,
+        panelOffScreen: frame.left < 0 || frame.right > screen,
+        panelScrolls: panel.scrollWidth > panel.clientWidth,
+      };
+    });
+
+    expect(result).toEqual({
+      outside: [],
+      pageScrolls: false,
+      panelOffScreen: false,
+      panelScrolls: false,
+    });
+  }
 });
