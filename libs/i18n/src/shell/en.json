@@ -1,0 +1,10 @@
+{
+  "brand": "MotorFix",
+  "health": {
+    "status": "PostgreSQL: {postgres} · Redis: {redis}",
+    "unknown": "unknown"
+  },
+  "version": {
+    "unknown": "version unknown"
+  }
+}
