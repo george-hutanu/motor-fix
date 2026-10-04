@@ -20,6 +20,7 @@ except the public list, exactly:
 | POST | /api/v1/auth/sign-out |
 | GET | /health/live |
 | GET | /health/ready |
+| POST | /api/v1/webhooks/brevo (Brevo's bearer secret; not in OpenAPI) |
 
 A route joins the list only by carrying `@Public()` (`@motor-fix/domain`). The 401 comes before body validation. The 403 `account_suspended` and the capability 404 are unchanged.
 

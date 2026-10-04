@@ -52,3 +52,6 @@
 ## 15 Agent context / 16 Retro evidence
 - AGENTS.md: one bullet on the closed-by-default API and `@Public()`.
 - retro-evidence --since 9be21d3: 40 files, +1703 −50; Spec Delta accounts +8 ~2; 3 deferred.
+
+## Merge origin/main (ST-194 landed)
+- ST-194's Brevo webhook authenticates by its own secret and had no `@Public()`: the app-wide check refused it (3 webhook tests red on the merge). Marked `@Public()`; the admin notifications controller's own `UseGuards(ActorGuard)` removed. notifications + API + auth suites 1062/1062. Spec FR-002 and contracts list the webhook.
