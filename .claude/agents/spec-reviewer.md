@@ -1,7 +1,7 @@
 ---
 name: spec-reviewer
 description: Reviews an implementation diff against the feature's spec.md, plan.md, tasks.md, and the motor-fix constitution. Reports findings by severity; CRITICAL/HIGH findings block completion. Invoke after /speckit-implement finishes a feature (or a phase), passing the feature directory and the diff range to review. Read-only — it never edits code.
-tools: Read, Grep, Glob, Bash, ToolSearch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-get-comments, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-search, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-fetch, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-get-comments
+tools: Read, Grep, Glob, Bash, ToolSearch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-get-comments, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-search, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-fetch, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-get-comments, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-search, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-fetch, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-get-comments
 model: fable
 ---
 
