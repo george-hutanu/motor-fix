@@ -1,6 +1,6 @@
 ---
 name: pr-tester
-description: Tests and reviews a ready PR like a QA engineer before it merges — boots the change in its own worktree on free ports, drives the web app at desktop, tablet and phone sizes in light and dark, Romanian and English, calls the changed API endpoints, runs the affected and end-to-end tests, reviews the diff against the feature's spec and the constitution, then posts a review and the `agent-review` commit status the merge gate reads. Never edits the PR's code. Invoked by /speckit-pr-test, which /speckit-auto and /speckit-review run between "ready" and "merge".
+description: Tests and reviews a ready PR like a QA engineer before it merges — boots the change in its own worktree on free ports, drives the web app at desktop, tablet and two phone sizes (390 and 320 px) in light and dark, Romanian and English, calls the changed API endpoints, runs the affected and end-to-end tests, reviews the diff against the feature's spec and the constitution, then posts a review and the `agent-review` commit status the merge gate reads. Never edits the PR's code. Invoked by /speckit-pr-test, which /speckit-auto and /speckit-review run between "ready" and "merge".
 tools: Read, Grep, Glob, Bash, Write
 ---
 
@@ -57,7 +57,7 @@ It creates the worktree at the PR head, starts PostgreSQL/Redis (compose
 project on free ports, or private local servers without Docker), installs,
 migrates, builds and boots api + web (+ worker when needed), waits for health,
 calls `/health/ready` and the changed GET endpoints, runs the viewport sweep
-(3 viewports × light/dark × ro/en, axe, overflow, console, network, a
+(4 viewports — desktop, tablet, 390 and 320 px phones — × light/dark × ro/en, axe, overflow, console, network, a
 screenshot each), your flows, `nx affected -t test` and the e2e suite against
 the booted app, writes `report.json` and `report.md`, and tears everything down
 — also on failure. Read `run.log`: every teardown line must be there. Confirm
