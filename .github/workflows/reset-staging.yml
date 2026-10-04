@@ -59,6 +59,7 @@ jobs:
           } | railway ssh --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT_ID" --service "$RAILWAY_SERVICE_API" -- sh -s
       - name: Remove the SSH key
         if: always()
+        # By its name, unique to this run; nothing to remove if none was made.
         run: |
           [ -f ~/.ssh/id_ed25519.pub ] || exit 0
-          railway ssh keys remove "$(ssh-keygen -l -E sha256 -f ~/.ssh/id_ed25519.pub | cut -d' ' -f2)"
+          railway ssh keys remove "$KEY_NAME"

@@ -56,7 +56,10 @@ describe('reset-staging workflow', () => {
   });
 
   it('removes its one-off SSH key even when the reset fails', () => {
-    expect(workflow).toContain('railway ssh keys add');
+    expect(workflow).toContain(
+      'railway ssh keys add --key ~/.ssh/id_ed25519.pub --name "$KEY_NAME"',
+    );
+    expect(workflow).toContain('railway ssh keys remove "$KEY_NAME"');
     const at = workflow.indexOf('railway ssh keys remove');
     const step = workflow.slice(workflow.lastIndexOf('- name:', at), at);
 
