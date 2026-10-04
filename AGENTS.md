@@ -159,8 +159,13 @@ decisions are the source for anything the constitution does not fix.
   worktree with its feature, phase, holder (a live agent or not), last
   activity, PR and the one fix a stale item needs. `/speckit-watch` applies the
   safe fixes and dispatches an agent per stale item (QA runs within the limit
-  above, at most 2 other agents at once); `/loop 15m /speckit-watch` repeats it
-  in a session that runs several tasks.
+  above, at most 2 other agents at once). The orchestrating session (the main
+  checkout, the one that dispatches tasks) schedules it as soon as two or more
+  tasks or worktrees are active: `CronList` first so it never doubles up, then
+  `/speckit-watch` every 15 minutes off the round minutes
+  (`4,19,34,49 * * * *`), and one pass right away. A worktree session never
+  schedules it. The SessionStart reminder `session:start:watch-reminder`
+  catches a resumed session whose schedule was lost.
 - Lint and format: Biome only, root `biome.json` (no eslint, no prettier).
   Tests: Jest from the root config, Playwright for end-to-end. NestJS 12 is
   ESM-only, so the Nest projects' `test` targets run Jest with
