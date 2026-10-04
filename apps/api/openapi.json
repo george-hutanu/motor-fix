@@ -52,6 +52,32 @@
           "health"
         ]
       }
+    },
+    "/api/v1/me": {
+      "get": {
+        "operationId": "MeController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      }
     }
   },
   "info": {
@@ -63,6 +89,13 @@
   "tags": [],
   "servers": [],
   "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
     "schemas": {
       "HealthLiveDto": {
         "type": "object",
@@ -94,11 +127,19 @@
               "ok",
               "error"
             ]
+          },
+          "storage": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "error"
+            ]
           }
         },
         "required": [
           "postgres",
-          "redis"
+          "redis",
+          "storage"
         ]
       },
       "HealthReadyDto": {
@@ -123,6 +164,84 @@
           "status",
           "checks",
           "version"
+        ]
+      },
+      "MeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "driver",
+                "garage",
+                "receptionist",
+                "mechanic",
+                "admin"
+              ]
+            }
+          },
+          "role": {
+            "type": "string",
+            "description": "The role in use",
+            "enum": [
+              "driver",
+              "garage",
+              "receptionist",
+              "mechanic",
+              "admin"
+            ]
+          },
+          "garageId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "capabilities": {
+            "description": "What the role in use may do",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "landing": {
+            "type": "string",
+            "enum": [
+              "/app/driver",
+              "/app/garage",
+              "/app/admin"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "language",
+          "roles",
+          "role",
+          "garageId",
+          "capabilities",
+          "landing"
         ]
       }
     }

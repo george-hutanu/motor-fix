@@ -14,11 +14,13 @@
 //   - deletion of .work/ — scan outputs and cloned repos live there and are
 //     expensive to reproduce (see npm run scan:dev).
 //
-// Deliberately NOT blocked: plain `git push`. The rule that matters here —
-// "never push until the user explicitly says to push"
-// (.claude/skills/speckit-git-feature/SKILL.md) — is a rule about acting
-// unasked, and a hard block would also break the case where the user DOES ask.
-// That one stays prose.
+//   - pushing to main: work reaches main only through a PR the user merges.
+//
+// Deliberately NOT blocked: a plain `git push` to a feature branch. Work on a
+// task opens a draft PR at the start and pushes every commit to its own branch
+// (.claude/skills/speckit-git-feature/SKILL.md). A bare `git push` while main
+// is checked out is not caught here: the command alone does not name the
+// branch.
 let raw = "";
 process.stdin.on("data", (d) => (raw += d));
 process.stdin.on("end", () => {
@@ -35,6 +37,8 @@ process.stdin.on("end", () => {
 
   if (/git\s+push\b(?!.*--force-with-lease).*(\s--force\b|\s-f\b)/.test(cmd))
     block("force-push blocked — use --force-with-lease, or ask the user to push.");
+  if (/git\s+push\b[^|;&]*(\s|:|\+)(refs\/heads\/)?main(?=\s|$|[|;&])/.test(cmd))
+    block("pushing to main is blocked — push the feature branch; main changes only through a PR the user merges.");
   if (/git\s+reset\s+--hard/.test(cmd))
     block("`git reset --hard` destroys uncommitted work — use `git stash` or ask the user.");
   if (/git\s+clean\s+-\w*f/.test(cmd))

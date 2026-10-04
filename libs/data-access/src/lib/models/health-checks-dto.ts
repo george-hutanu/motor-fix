@@ -4,4 +4,5 @@
 export interface HealthChecksDto {
   postgres: 'ok' | 'error';
   redis: 'ok' | 'error';
+  storage: 'ok' | 'error';
 }
