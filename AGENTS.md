@@ -90,9 +90,21 @@ decisions are the source for anything the constitution does not fix.
 - Root scripts: `typecheck`, `lint`, `test`, `build`, `e2e` run across every
   project; the harness specs keep `npm run test:harness`; `test:mutation`
   and `test:mutation:affected` run Stryker one project at a time, against the
-  floor in each project's `stryker.config.json`, which only rises. API tests need
-  PostgreSQL and Redis: `docker compose up -d` (or local servers), with
-  `DATABASE_URL` and `REDIS_URL` from `.env.example`.
+  floor in each project's `stryker.config.json`, which only rises. A spec that
+  needs PostgreSQL or Redis is named `*.integration.spec.ts`;
+  `npm run test:unit` leaves those out and `npm run test:integration` runs
+  only them (`JEST_SUITE` in `jest.preset.cjs`; unset runs all). Integration
+  tests need `docker compose up -d` (or local servers), with `DATABASE_URL`
+  and `REDIS_URL` from `.env.example`.
+- PR CI: `.github/workflows/ci.yml`, one job per check, in parallel: PR
+  title (Conventional Commit), Biome, Typecheck, Unit tests, Integration
+  tests (PostgreSQL+PostGIS and Redis services), E2E tests (Playwright
+  `web-e2e`, servers started in the job), Build, Harness, Contract check,
+  Dependency audit, Docker build (`web`, `node-app`), then `CI OK`, which
+  fails when any of them did. PRs run `nx affected`; `release.yml` calls the
+  same workflow, which then runs every project. Mutation testing never runs
+  in PR CI: `.github/workflows/mutation.yml` runs it nightly on `main` and on
+  `workflow_dispatch`.
 - Release: `.github/workflows/release.yml` builds one image per app (root
   `Dockerfile`), deploys staging through `scripts/railway-deploy.ts`, runs the
   end-to-end suite there, and promotes the same digests to production after

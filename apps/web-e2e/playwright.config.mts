@@ -4,6 +4,8 @@ import { defineConfig, devices } from '@playwright/test';
 // BASE_URL points the suite at a deployed environment; without it, the api and
 // the web dev server are started locally.
 const deployed = process.env['BASE_URL'];
+// A cold build on a CI runner takes longer than Playwright's 60-second default.
+const SERVER_START = 180_000;
 
 export default defineConfig({
   ...nxE2EPreset(import.meta.dirname, { testDir: './src' }),
@@ -18,11 +20,13 @@ export default defineConfig({
         {
           command: 'npx nx run api:serve',
           reuseExistingServer: true,
+          timeout: SERVER_START,
           url: 'http://localhost:3000/health/live',
         },
         {
           command: 'npx nx run web:serve',
           reuseExistingServer: true,
+          timeout: SERVER_START,
           url: 'http://localhost:4200',
         },
       ],
