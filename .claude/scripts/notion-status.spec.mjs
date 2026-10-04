@@ -9,10 +9,13 @@ import { readState } from './run-state.mjs';
 
 const go = (event, current, prior = null) => decide({ event, current, prior });
 
-describe('the ladder: In progress → In review → QA → Done', () => {
+describe('the ladder: Planning → Implementing → In review → QA → Done', () => {
   it('moves the story and its timeline row forward on each event', () => {
-    assert.deepEqual(go('start', 'To do'), { write: true, story: 'In progress', timeline: 'In progress', prior: null, note: 'To do → In progress' });
-    assert.equal(go('review', 'In progress').story, 'In review');
+    assert.deepEqual(go('start', 'To do'), { write: true, story: 'Planning', timeline: 'Planning', prior: null, note: 'To do → Planning' });
+    const impl = go('implement', 'Planning');
+    assert.equal(impl.story, 'Implementing');
+    assert.equal(impl.timeline, 'Implementing');
+    assert.equal(go('review', 'Implementing').story, 'In review');
     const qa = go('qa', 'In review');
     assert.equal(qa.story, 'QA');
     assert.equal(qa.timeline, 'QA');
@@ -23,13 +26,15 @@ describe('the ladder: In progress → In review → QA → Done', () => {
 
   it('never moves backwards, and an equal value is not written', () => {
     assert.equal(go('start', 'In review').write, false);
+    assert.equal(go('start', 'Implementing').write, false);
+    assert.equal(go('implement', 'In review').write, false);
     assert.equal(go('review', 'QA').write, false);
     assert.equal(go('qa', 'QA').write, false);
     assert.match(go('qa', 'QA').note, /unchanged/);
   });
 
   it('never moves a Done story', () => {
-    for (const event of ['start', 'review', 'qa', 'blocked', 'unblock']) assert.equal(go(event, 'Done').write, false, event);
+    for (const event of ['start', 'implement', 'review', 'qa', 'blocked', 'unblock']) assert.equal(go(event, 'Done').write, false, event);
   });
 });
 
@@ -58,9 +63,15 @@ describe('Blocked', () => {
     assert.equal(r.prior, null);
   });
 
-  it('returns to In progress when nothing was recorded, and does nothing when not blocked', () => {
-    assert.equal(go('unblock', 'Blocked', null).story, 'In progress');
+  it('returns to Implementing when nothing was recorded, and does nothing when not blocked', () => {
+    assert.equal(go('unblock', 'Blocked', null).story, 'Implementing');
     assert.equal(go('unblock', 'QA', null).write, false);
+  });
+
+  it('reads a legacy In progress record as Implementing', () => {
+    assert.equal(go('unblock', 'Blocked', 'In progress').story, 'Implementing');
+    assert.equal(go('implement', 'In progress').write, true);
+    assert.equal(go('review', 'In progress').story, 'In review');
   });
 
   it('refuses an event it does not know', () => {

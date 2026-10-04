@@ -514,7 +514,8 @@ When phases 14–16 are done, the review left no CRITICAL/HIGH and the last
    mark the PR ready:
    `node scripts/pr-body-check.ts --body-file <body> --title "<PR title>"`,
    `GH_TOKEN=$(gh auth token -u george-hutanu) gh pr edit <branch> --body-file <body>`,
-   `GH_TOKEN=$(gh auth token -u george-hutanu) gh pr ready <branch>`
+   `GH_TOKEN=$(gh auth token -u george-hutanu) gh pr ready <branch>`,
+   `GH_TOKEN=$(gh auth token -u george-hutanu) gh pr edit <branch> --remove-label "in development" --add-label "in review"`
 2. `speckit-notion-sync review`: the story, its timeline row → In review.
 3. If the branch is behind `origin/main`, `git merge --no-edit origin/main`,
    re-run `typecheck`, `lint` and the tests, and push.
@@ -522,7 +523,8 @@ When phases 14–16 are done, the review left no CRITICAL/HIGH and the last
    `agent-review` has passed. A failing check is a repair: fix it on the
    branch, push, wait again; it counts toward `SPECKIT_MAX_REPAIR_ITERATIONS`.
 5. **QA — the PR tester** (`/speckit-pr-test <n>`, Constitution VII): the
-   story and its timeline row → QA (`speckit-notion-sync qa`); the `pr-tester`
+   story and its timeline row → QA and the PR's label `in review` → `QA`
+   (`speckit-notion-sync qa`); the `pr-tester`
    subagent boots the head commit in its own worktree, sweeps the UI, calls the
    API, runs the tests, reviews the diff, posts its review, replaces the
    body's Agent review `Pending.` line (`gh pr edit --body-file`) and sets
