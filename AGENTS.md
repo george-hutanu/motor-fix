@@ -60,12 +60,10 @@ epic or a plan, whether run through spec-kit or by hand.
   `/speckit-review` and `/speckit-archive`. Outside spec-kit, run the skills
   yourself. After every merge to `main`, run `speckit-notion-sync finish`.
 - **Every PR uses the template**, `.github/pull_request_template.md`, whoever
-  opens it. The `PR template` workflow (`scripts/pr-body-check.ts`) fails a
-  draft that drops a section heading, and a ready PR that keeps a
-  `(fill in: …)` placeholder, leaves a section empty or a bare `N/A`, misses a
-  labelled line, leaves a box unticked, has no Notion link or a title that is
-  not `type(scope): subject`. Write `N/A` and the reason where a section does
-  not apply. Agent review is filled in by the automated reviewer.
+  opens it. The `PR template` workflow (`scripts/pr-body-check.ts`, whose
+  header lists the rules) checks a draft's headings and a ready PR's every
+  section, and names what is missing. Write `N/A` and the reason where a
+  section does not apply. Agent review is filled in by the automated reviewer.
 - A Notion or mock failure never blocks the build. It is logged in
   `specs/<feature>/notion-sync.md` or `design.md` and retried on the next run.
 

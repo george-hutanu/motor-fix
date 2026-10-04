@@ -9,14 +9,13 @@ const template = readFileSync(
 );
 
 const answers: Record<string, string> = {
-  'command and result, or N/A and why':
-    '`npx jest scripts/pr-body-check.spec.ts` — 20 passed',
+  'command and result, or N/A and why': '`npx jest <spec>` — all passed',
   'desktop and mobile screenshots of each changed screen, or N/A: no UI change':
     'N/A: no screen changed',
-  'specs/NNN-slug, or N/A and why': '`specs/433-pr-template`',
+  'specs/NNN-slug, or N/A and why': '`specs/001-example`',
   'the main changes, one bullet each': '- Adds the template\n- Adds the check',
   'the story link, e.g. https://app.notion.com/p/… (ST-n)':
-    'https://app.notion.com/p/3ef607bff0d28182a864e99cd80cd6a8 (ST-433)',
+    'https://app.notion.com/p/0000000000000000000000000000000a (ST-1)',
   'what could break, and how to undo it':
     'A PR body the check misreads; revert the workflow.',
   'what this PR does and why, in two or three sentences':
@@ -33,7 +32,7 @@ function filled(): string {
     .replaceAll('- [ ]', '- [x]');
 }
 
-const title = 'feat(ci): ST-433 enforce the PR template';
+const title = 'feat(ci): ST-1 enforce the PR template';
 
 function ready(body: string | null, prTitle = title) {
   return checkPrBody({ body, draft: false, template, title: prTitle });
@@ -143,6 +142,26 @@ describe('checkPrBody on a ready PR', () => {
     ]);
   });
 
+  it('names a labelled line left empty', () => {
+    const body = filled().replace(/- Integration:.*/, '- Integration:');
+    expect(ready(body)).toEqual([
+      '"## How it was tested" leaves "Integration:" empty.',
+    ]);
+  });
+
+  it('reads a repeated heading in another case as the first one', () => {
+    expect(ready(`${filled()}\n## WHY\n`)).toEqual([]);
+  });
+
+  it('does not take prose about a placeholder for one', () => {
+    const body = withSection(
+      filled(),
+      'Why',
+      'Drops the (fill in: x) wording from the docs.',
+    );
+    expect(ready(body)).toEqual([]);
+  });
+
   it('names a labelled line answered with a bare N/A', () => {
     const body = filled().replace(/- End-to-end:.*/, '- End-to-end: N/A');
     expect(ready(body)).toEqual([
@@ -155,6 +174,44 @@ describe('checkPrBody on a ready PR', () => {
     expect(ready(body)).toEqual([
       '"## Checklist" has an unticked box: "Tests were written first and failed before the code".',
     ]);
+  });
+
+  it('names a checklist box deleted instead of ticked', () => {
+    const body = filled().replace(/- \[x\] Tests were.*\n/, '');
+    expect(ready(body)).toEqual([
+      '"## Checklist" is missing its box: "Tests were written first and failed before the code".',
+    ]);
+  });
+
+  it('does not excuse an unticked box that says N/A', () => {
+    const body = filled().replace(
+      /- \[x\] Design checked.*/,
+      '- [ ] Design checked: N/A, no screens',
+    );
+    expect(ready(body)).toEqual([
+      '"## Checklist" has an unticked box: "Design checked: N/A, no screens".',
+    ]);
+  });
+
+  it('ignores headings and placeholders inside code fences', () => {
+    const fenced =
+      'Why it matters.\n\n```md\n## Spec folder\n_(fill in: x)_\n```';
+    const body = withSection(filled(), 'Why', fenced);
+    expect(ready(body)).toEqual([]);
+    const unfilled = body.replace(
+      '`specs/001-example`',
+      '_(fill in: specs/NNN-slug, or N/A and why)_',
+    );
+    expect(ready(unfilled)).toEqual([
+      '"## Spec folder" still has template placeholder text: "(fill in: specs/NNN-slug, or N/A and why)".',
+    ]);
+  });
+
+  it('reads headings with closing hashes or a little indent', () => {
+    const body = filled()
+      .replace('## Why', '## Why ##')
+      .replace('## Spec folder', '  ## Spec folder');
+    expect(ready(body)).toEqual([]);
   });
 
   it('accepts an upper-case tick', () => {
@@ -171,7 +228,7 @@ describe('checkPrBody on a ready PR', () => {
   });
 
   it('wants a Notion link or N/A with a reason in the Notion story section', () => {
-    const body = withSection(filled(), 'Notion story', 'ST-433');
+    const body = withSection(filled(), 'Notion story', 'ST-1');
     expect(ready(body)).toEqual([
       '"## Notion story" has no Notion link (or N/A and the reason).',
     ]);
@@ -180,7 +237,7 @@ describe('checkPrBody on a ready PR', () => {
     const legacy = withSection(
       filled(),
       'Notion story',
-      'https://www.notion.so/motorfix/ST-433-abc',
+      'https://www.notion.so/motorfix/ST-1-abc',
     );
     expect(ready(legacy)).toEqual([]);
   });

@@ -1,9 +1,8 @@
 <!--
-Every PR in this repo uses this template. The "PR template" check fails a
-ready PR that drops a section, keeps a "(fill in: …)" placeholder, leaves a
-box unticked or has a title that is not `type(scope): subject`. A draft only
-needs the headings. Where a section does not apply, write N/A and the reason.
-Comments like this one are invisible on GitHub and may stay.
+Every PR in this repo uses this template, checked by the "PR template"
+workflow. Replace every "(fill in: …)" and tick every box before marking
+the PR ready; a draft only needs the headings. Where a section does not
+apply, write N/A and the reason. Comments like this one may stay.
 -->
 
 ## Why

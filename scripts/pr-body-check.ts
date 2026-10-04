@@ -1,9 +1,10 @@
 // Checks a pull request's title and body against .github/pull_request_template.md.
 // The template is the only list of what a PR must contain: each `## ` heading
-// is a required section, and each `- Label:` line in it a required line.
+// is a required section, and each `- Label:` line and `- [ ]` box in it is
+// required (a box by the words before its colon). Code fences are not read.
 //
 // A draft only needs every heading (its PR opens at the first commit, before
-// anything is tested). A ready PR must also have no "(fill in:" placeholder,
+// anything is tested). A ready PR must also have no "_(fill in: …)_" placeholder,
 // no empty section, no bare N/A, every labelled line, every box ticked, a
 // Notion link and a Conventional title with a scope. HTML comments are hints
 // GitHub does not render, so they are removed before judging.
@@ -16,30 +17,36 @@
 import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 
-export interface PrInput {
+type PrInput = {
   body: string | null;
   title: string;
   draft: boolean;
   template: string;
-}
+};
+
+type Wanted = { labels: string[]; boxes: string[] };
 
 const TEMPLATE_PATH = '.github/pull_request_template.md';
 const TITLE = /^[a-z]+\([^()\s][^()]*\)!?: \S/;
 const NOTION_LINK = /https?:\/\/(?:[\w-]+\.)*notion\.(?:so|site|com)\//;
 const BARE_NA = /^N\/?A[\s.:;,—–-]*$/i;
+const HEADING = /^ {0,3}## (.+?)(?:\s+#+)?\s*$/;
+const FENCE = /^\s*(```|~~~)/;
 const LABEL = /^\s*[-*]\s+([A-Za-z][\w -]*):(.*)$/;
-const UNTICKED = /^\s*[-*]\s+\[ \]\s+(.+)$/;
+const BOX = /^\s*[-*]\s+\[([ xX])\]\s+(.+)$/;
 
 function sections(markdown: string): Map<string, string> {
   const found = new Map<string, string>();
   let heading: string | null = null;
   let lines: string[] = [];
+  let fenced = false;
   const close = () => {
-    if (heading !== null && !found.has(heading))
-      found.set(heading, lines.join('\n'));
+    if (heading !== null && !found.has(heading.toLowerCase()))
+      found.set(heading.toLowerCase(), lines.join('\n'));
   };
   for (const line of markdown.split('\n')) {
-    const match = /^## (.+)$/.exec(line);
+    if (FENCE.test(line)) fenced = !fenced;
+    const match = fenced ? null : HEADING.exec(line);
     if (match) {
       close();
       heading = match[1].trim();
@@ -52,36 +59,53 @@ function sections(markdown: string): Map<string, string> {
   return found;
 }
 
+/** The lines outside code fences, where a template answer can be. */
+function prose(text: string): string[] {
+  let fenced = false;
+  return text.split('\n').filter((line) => {
+    if (FENCE.test(line)) {
+      fenced = !fenced;
+      return false;
+    }
+    return !fenced;
+  });
+}
+
 function clean(markdown: string | null): string {
   return (markdown ?? '')
     .replace(/\r\n?/g, '\n')
     .replace(/<!--[\s\S]*?-->/g, '');
 }
 
-function byKey(map: Map<string, string>): Map<string, string> {
-  return new Map(
-    [...map].map(([heading, text]) => [heading.toLowerCase(), text]),
-  );
+function headings(markdown: string): string[] {
+  let fenced = false;
+  return markdown.split('\n').flatMap((line) => {
+    if (FENCE.test(line)) fenced = !fenced;
+    return (fenced ? null : HEADING.exec(line)?.[1].trim()) ?? [];
+  });
 }
 
-function labels(text: string): string[] {
-  return text.split('\n').flatMap((line) => LABEL.exec(line)?.[1] ?? []);
+function wanted(text: string): Wanted {
+  const lines = text.split('\n');
+  return {
+    boxes: lines.flatMap((line) => BOX.exec(line)?.[2].trim() ?? []),
+    labels: lines.flatMap((line) => LABEL.exec(line)?.[1] ?? []),
+  };
 }
 
 /** The one reason a section has no real answer at all, if it has none. */
-function unanswered(name: string, content: string): string | null {
-  if (content.includes('(fill in:')) {
-    const placeholder =
-      /\(fill in:[^\n]*?\)(?=_|\s*$)/m.exec(content)?.[0] ?? '(fill in: …';
+function unanswered(name: string, content: string, lines: string[]) {
+  const text = lines.join('\n');
+  const placeholder = /_(\(fill in:[^\n]*?\))_/.exec(text)?.[1];
+  if (placeholder)
     return `${name} still has template placeholder text: "${placeholder}".`;
-  }
   if (!content) return `${name} is empty.`;
   if (BARE_NA.test(content)) return `${name} says N/A without a reason.`;
   return null;
 }
 
-function labelProblems(name: string, lines: string[], wanted: string[]) {
-  return wanted.flatMap((label) => {
+function labelProblems(name: string, lines: string[], labels: string[]) {
+  return labels.flatMap((label) => {
     const line = lines
       .map((l) => LABEL.exec(l))
       .find((m) => m?.[1].toLowerCase() === label.toLowerCase());
@@ -94,19 +118,35 @@ function labelProblems(name: string, lines: string[], wanted: string[]) {
   });
 }
 
-function sectionProblems(heading: string, text: string, wanted: string[]) {
+function boxProblems(name: string, lines: string[], boxes: string[]) {
+  const given = lines.flatMap((line) => {
+    const match = BOX.exec(line);
+    return match ? [{ item: match[2].trim(), ticked: match[1] !== ' ' }] : [];
+  });
+  const unticked = given
+    .filter((box) => !box.ticked)
+    .map((box) => `${name} has an unticked box: "${box.item}".`);
+  // A box is known by the words before its colon, so an author may append
+  // to an item without it counting as removed.
+  const lead = (item: string) => item.split(':')[0].trim().toLowerCase();
+  const known = new Set(given.map((box) => lead(box.item)));
+  const missing = boxes
+    .filter((box) => !known.has(lead(box)))
+    .map((box) => `${name} is missing its box: "${box}".`);
+  return [...unticked, ...missing];
+}
+
+function sectionProblems(heading: string, text: string, want: Wanted) {
   const name = `"## ${heading}"`;
   const content = text.trim();
-  const reason = unanswered(name, content);
+  const lines = prose(content);
+  const reason = unanswered(name, content, lines);
   if (reason) return [reason];
 
-  const lines = content.split('\n');
-  const problems = labelProblems(name, lines, wanted);
-  for (const line of lines) {
-    const item = UNTICKED.exec(line)?.[1].trim();
-    if (item && !/\bN\/A\b\W*\w/.test(item))
-      problems.push(`${name} has an unticked box: "${item}".`);
-  }
+  const problems = [
+    ...labelProblems(name, lines, want.labels),
+    ...boxProblems(name, lines, want.boxes),
+  ];
   const isNotion = heading.toLowerCase() === 'notion story';
   if (isNotion && !NOTION_LINK.test(content) && !/^N\/?A\b/i.test(content))
     problems.push(`${name} has no Notion link (or N/A and the reason).`);
@@ -121,17 +161,21 @@ export function checkPrBody({
   template,
 }: PrInput): string[] {
   const required = sections(clean(template));
-  const given = byKey(sections(clean(body)));
+  const given = sections(clean(body));
+  const names = headings(clean(template));
   const problems: string[] = [];
-  for (const heading of required.keys())
+  for (const heading of names)
     if (!given.has(heading.toLowerCase()))
       problems.push(`Missing section: "## ${heading}".`);
   if (draft) return problems;
 
-  for (const [heading, text] of required) {
-    const answer = given.get(heading.toLowerCase());
+  for (const heading of names) {
+    const key = heading.toLowerCase();
+    const answer = given.get(key);
     if (answer !== undefined)
-      problems.push(...sectionProblems(heading, answer, labels(text)));
+      problems.push(
+        ...sectionProblems(heading, answer, wanted(required.get(key) ?? '')),
+      );
   }
   if (!TITLE.test(title))
     problems.push(

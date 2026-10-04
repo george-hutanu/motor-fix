@@ -15,6 +15,10 @@
 - [X] T004 [US1] Add `.github/workflows/pr-template.yml` running `node scripts/pr-body-check.ts` on the five event types, skipping bot authors (FR-007)
 - [X] T005 [P] [US4] Use the template with `--body-file` in `.claude/skills/speckit-git-commit/SKILL.md`, the hand-off of `.claude/skills/speckit-auto/SKILL.md`, the lifecycle in `AGENTS.md` and the message of `.claude/hooks/pr-lifecycle-gate.mjs` (+ its spec); doctor `--bless-hooks`, `npm run test:harness` (FR-008)
 
+## Phase 3: Review fixes
+
+- [X] T006 [US1][US2] Boxes required by their lead text, no N/A excuse for an unticked box, code fences ignored, lenient heading syntax, case-insensitive repeated headings, the visible `_(fill in: …)_` marker only, with tests (FR-002–FR-004)
+
 ## FR → test
 
 | FR | Test |
