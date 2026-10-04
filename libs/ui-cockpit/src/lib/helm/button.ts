@@ -1,7 +1,7 @@
 import { Directive, input } from '@angular/core';
 import { BrnButton } from '@spartan-ng/brain/button';
 
-export type ButtonVariant = 'default' | 'secondary' | 'ghost';
+type ButtonVariant = 'default' | 'secondary' | 'ghost';
 
 // One size only: every button keeps the 44 px target.
 @Directive({

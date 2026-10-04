@@ -47,7 +47,7 @@
   --mf-tap: 44px;
 }
 
-/* The light set is derived from the dark one and awaits the owner's approval. */
+/* TODO: the owner approves the light set, derived from the dark one, on /cockpit. */
 @media (prefers-color-scheme: light), print {
   :root {
     color-scheme: light;
@@ -91,15 +91,6 @@ body {
 :focus-visible {
   outline: var(--mf-focus-width) solid var(--mf-focus);
   outline-offset: var(--mf-focus-offset);
-}
-
-.mf-visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 
 /* Spartan helm components: each carries a spartan-* class painted here. */

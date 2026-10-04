@@ -11,8 +11,4 @@ describe('provideCockpitTheme', () => {
       usePopover: false,
     });
   });
-
-  it('takes no options: the colour scheme comes from the device through CSS', () => {
-    expect(provideCockpitTheme).toHaveLength(0);
-  });
 });

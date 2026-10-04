@@ -11,7 +11,6 @@ export { toast } from '@spartan-ng/brain/sonner';
   selector: 'hlm-toaster',
   template: `
     <brn-sonner-toaster
-      class="spartan-toaster"
       [position]="position()"
       [duration]="duration()"
       [toastOptions]="toastOptions"

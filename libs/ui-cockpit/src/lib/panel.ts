@@ -1,6 +1,5 @@
-import { Component, input } from '@angular/core';
-
-let nextId = 0;
+import { _IdGenerator } from '@angular/cdk/a11y';
+import { Component, inject, input } from '@angular/core';
 
 @Component({
   selector: 'mf-panel',
@@ -27,5 +26,5 @@ let nextId = 0;
 })
 export class Panel {
   readonly title = input<string>();
-  protected readonly headingId = `mf-panel-title-${nextId++}`;
+  protected readonly headingId = inject(_IdGenerator).getId('mf-panel-title-');
 }

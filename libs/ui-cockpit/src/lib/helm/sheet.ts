@@ -4,8 +4,10 @@ import {
   ChangeDetectionStrategy,
   Component,
   Directive,
+  effect,
   forwardRef,
   input,
+  isDevMode,
   signal,
 } from '@angular/core';
 import {
@@ -96,6 +98,17 @@ export class HlmSheetContent {
     transform: booleanAttribute,
   });
   readonly closeLabel = input.required<string>();
+
+  constructor() {
+    if (!isDevMode()) return;
+    effect(() => {
+      if (this.showCloseButton() && !this.closeLabel().trim()) {
+        console.error(
+          'hlm-sheet-content: closeLabel is empty, so the close button has no accessible name.',
+        );
+      }
+    });
+  }
 }
 
 @Directive({

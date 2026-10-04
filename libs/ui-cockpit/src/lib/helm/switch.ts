@@ -28,7 +28,6 @@ export class HlmSwitchThumb {}
     '[attr.aria-describedby]': 'null',
     '[attr.aria-label]': 'null',
     '[attr.aria-labelledby]': 'null',
-    class: 'contents',
     'data-slot': 'switch',
   },
   imports: [BrnSwitch, HlmSwitchThumb],

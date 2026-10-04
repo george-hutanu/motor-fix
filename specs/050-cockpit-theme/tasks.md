@@ -78,3 +78,7 @@ T001 → T002 → T003–T009 (red) → T010–T011 → T012–T015 → T016–T
 ## Implementation strategy
 
 MVP is US1 (tokens + stylesheet). One commit per slice: (1) library, tokens and stylesheet with their tests; (2) preset + provider + web wiring (PrimeNG; replaced forward by the correction slice: Spartan deps, helm parts, component rules, provider, sample page, tests — one commit); (3) panel + sample page + route + e2e.
+
+## Phase 10: Convergence
+
+- [X] T022 Remove the unused `.mf-visually-hidden` rule from `libs/ui-cockpit/src/styles/cockpit.css` (close buttons are named by `aria-label`) per plan: Constitution I (unrequested)

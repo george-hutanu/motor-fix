@@ -96,7 +96,13 @@ for (const scheme of ['dark', 'light'] as const) {
         seen.push(ring.key);
         expect(ring, ring.key).toMatchObject({ marked: true });
       }
-      expect(seen.length).toBeGreaterThanOrEqual(9);
+      const tabStops = await page
+        .locator(
+          'main :is(button, input, [tabindex="0"]):not([tabindex="-1"]):visible',
+        )
+        .count();
+      expect(tabStops).toBeGreaterThan(0);
+      expect(seen.length).toBeGreaterThanOrEqual(tabStops);
     });
 
     test('opens the dialog, drawer, toast and popover on themed surfaces', async ({

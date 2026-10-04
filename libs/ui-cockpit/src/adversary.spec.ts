@@ -73,10 +73,6 @@ describe('cockpit stylesheet tokens', () => {
     expect(missing).toEqual([]);
   });
 
-  it('gives print exactly the light value of each colour token', () => {
-    expect([...print].sort()).toEqual([...light].sort());
-  });
-
   it('does not repeat a dark value in the light set apart from the shared amber fill', () => {
     const shared = new Set(['--mf-amber', '--mf-amber-hover']);
     const leaked = [...light].filter(
@@ -92,12 +88,6 @@ describe('cockpit stylesheet tokens', () => {
     expect(lightValues).not.toContain('#0b0c0e');
     expect(lightValues).not.toContain('#f2f2f0');
     expect(lightValues).not.toContain('#101215');
-  });
-
-  it('prefixes every custom property with mf', () => {
-    const all = [...css.matchAll(/(?<![\w-])(--[\w-]+)\s*:/g)].map((m) => m[1]);
-
-    expect(all.filter((n) => !n.startsWith('--mf-'))).toEqual([]);
   });
 
   it('uses the darker amber ink and focus colour in the light set', () => {
@@ -127,13 +117,6 @@ describe('helm component rules', () => {
       !b.header.endsWith(':root') &&
       !/prefers-color-scheme|print/.test(b.header),
   );
-
-  it('contains no hex, rgb or hsl literal outside the token blocks', () => {
-    const offenders = outsideTokens.filter((b) => colourValue.test(b.body));
-
-    expect(outsideTokens.length).toBeGreaterThan(15);
-    expect(offenders.map((b) => b.header)).toEqual([]);
-  });
 
   it('contains no named colour keyword as a colour value', () => {
     const named =

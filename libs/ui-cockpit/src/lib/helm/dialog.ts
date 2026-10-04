@@ -5,9 +5,11 @@ import {
   Component,
   computed,
   Directive,
+  effect,
   forwardRef,
   inject,
   input,
+  isDevMode,
 } from '@angular/core';
 import { injectCustomClassSettable } from '@spartan-ng/brain/core';
 import {
@@ -86,6 +88,17 @@ export class HlmDialogContent {
     transform: booleanAttribute,
   });
   readonly closeLabel = input.required<string>();
+
+  constructor() {
+    if (!isDevMode()) return;
+    effect(() => {
+      if (this.showCloseButton() && !this.closeLabel().trim()) {
+        console.error(
+          'hlm-dialog-content: closeLabel is empty, so the close button has no accessible name.',
+        );
+      }
+    });
+  }
   readonly state = computed(() => this.dialogRef.state() ?? 'closed');
 }
 
