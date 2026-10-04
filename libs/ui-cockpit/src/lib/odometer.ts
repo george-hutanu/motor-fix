@@ -36,6 +36,28 @@ const toWholeLei = (bani: unknown) =>
       border: 1px solid var(--mf-line);
       border-radius: 8px;
       text-align: center;
+      position: relative;
+      overflow: hidden;
+      color: transparent;
+    }
+    /* The rolling 0–9 column drawn over the cell's own digit. */
+    .mf-odometer-digit::before {
+      content: "0\\A 1\\A 2\\A 3\\A 4\\A 5\\A 6\\A 7\\A 8\\A 9";
+      position: absolute;
+      inset: 0 0 auto;
+      color: var(--mf-text);
+      line-height: 1.4em;
+      white-space: pre;
+      translate: 0 calc(var(--mf-digit) * -1.4em);
+      transition: translate var(--mf-motion-roll) var(--mf-motion-ease);
+    }
+    @media (forced-colors: active) {
+      .mf-odometer-digit {
+        color: inherit;
+      }
+      .mf-odometer-digit::before {
+        content: none;
+      }
     }
     .mf-odometer-spoken {
       position: absolute;

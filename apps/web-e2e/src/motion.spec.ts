@@ -70,8 +70,14 @@ async function openCockpit(page: Page) {
   ).toBeVisible();
 }
 
-const swap = (page: Page) =>
-  page.getByRole('button', { exact: true, name: GAUGES['swap'] }).click();
+// Returns once the range has changed, so a click made before hydration and
+// replayed after it is waited for.
+async function swap(page: Page) {
+  const range = page.locator('mf-odometer').nth(1);
+  const before = await range.textContent();
+  await page.getByRole('button', { exact: true, name: GAUGES['swap'] }).click();
+  await expect(range).not.toHaveText(before ?? '');
+}
 
 const openDialog = (page: Page) =>
   page.getByRole('button', { exact: true, name: COCKPIT.openDialog }).click();
@@ -212,6 +218,42 @@ test.describe('with full motion', () => {
         (m) => m.target === 'line.mf-dial-needle',
       ),
     ).toMatchObject([swing]);
+  });
+
+  test('the odometer digits roll to a new price', async ({ page }) => {
+    await openCockpit(page);
+    await swap(page);
+    const rolls = named(await running(page), 'translate');
+
+    // 1.250–1.600 → 1.400–1.800: three of the eight digits change.
+    expect(rolls).toHaveLength(3);
+    for (const roll of rolls) {
+      expect(roll).toMatchObject({
+        duration: 900,
+        pseudo: '::before',
+        target: 'span.mf-odometer-digit',
+      });
+    }
+    await expect
+      .poll(async () => named(await running(page), 'translate').length)
+      .toBe(0);
+    // At rest each column shows the cell's own digit in the cell's window.
+    const shown = await page
+      .locator('mf-odometer')
+      .nth(1)
+      .locator('.mf-odometer-digit')
+      .evaluateAll((cells) =>
+        cells.map((cell) => {
+          const offset = Number.parseFloat(
+            getComputedStyle(cell, '::before').translate.split(' ')[1] ?? '0',
+          );
+          const line = Number.parseFloat(
+            getComputedStyle(cell, '::before').lineHeight,
+          );
+          return String(Math.round(-offset / line));
+        }),
+      );
+    expect(shown).toEqual(['1', '4', '0', '0', '1', '8', '0', '0']);
   });
 
   test('a dialog pops in, and switching to reduced motion stops everything at once', async ({

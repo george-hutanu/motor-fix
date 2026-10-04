@@ -120,7 +120,7 @@ describe('Cockpit motion', () => {
       ),
     ];
 
-    expect(added.length).toBeGreaterThanOrEqual(6);
+    expect(added.length).toBeGreaterThanOrEqual(7);
     for (const value of added) {
       expect([value, /var\(--mf-motion-(?!ease)[\w-]+\)/.test(value)]).toEqual([
         value,

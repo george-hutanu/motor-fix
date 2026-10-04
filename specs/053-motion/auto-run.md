@@ -35,3 +35,10 @@ Start: branch `053-motion` from origin/main 0dfde6c (contains ST-51, #20), 2026-
 ## 8 Analyze
 - artifact-lint: delta-unknown-capability (cockpit-motion) and delta-base-missing (051-FR-012). Fixed: stub `.specify/capabilities/cockpit-motion.md`; merged ST-51's Spec Delta into `cockpit-gauges.md` (its archive had not run; +15). Re-lint clean; `capabilities validate` clean.
 - spec-challenger: 8 findings, all answered with its recommendation except: 2 (stagger by document order with a counter) → kept per-container `:nth-child` (no script, SSR first paint; Principle I), cap 660 ms as recommended; 8 (blink as an eased fade) → kept a step cut, 0.35 moved into FR-005. Applied: FR-001/SC-004 scoped to this story's motion; SC-002 measured from the first rise; FR-007 sheet origin at its edge; FR-011 a motion line from the shared signal (its consumer); assumptions for first value after "—" and cell kind changes; Complexity Tracking row for the signal and the blink.
+
+## 9 Tests (red first)
+- Unit red: 4 failed + 2 suites failing to run (motion.spec: no reduced-motion block; reduced-motion.spec: no module) of 19 in the 4 touched specs. e2e red: the odometer roll (0 `translate` transitions) and a strict-mode locator in the build-up test (fixed in the test).
+
+## 10 Implement
+- Slice 1 (tokens, keyframes, reduced-motion rule, panel, dial, lamp, pop, blink, signal, catalogue): ui-cockpit 228 passed, i18n 428 passed, typecheck green, motion + gauges + cockpit e2e 25 passed on :4253. The odometer part held back on the orchestrator's word until ST-286 (#22) merged.
+- Rebased onto origin/main 6220b7a (#22): clean. Odometer roll on top of ST-286's wrap (`max-width: 100%`, `flex-wrap: wrap` kept). ui-cockpit 267 passed; motion + gauges + cockpit + phone e2e 88 passed (repeat-each 2), motion alone 35 passed (repeat-each 5). One earlier run right after `npm install` had 4 failures that did not reproduce (likely the dev server re-optimising dependencies on its first start); `swap` in the e2e now waits for the range to change, so a click replayed after hydration is waited for.
