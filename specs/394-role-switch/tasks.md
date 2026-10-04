@@ -37,6 +37,10 @@ Independent test: through HTTP against PostgreSQL and Redis, a two-role account 
 - [X] T013 `apps/web/src/app/dashboard/session.ts`: a renewal that starts while the switched account is still loading asks for the new role (FR-008; pr-tester low #3)
 - [X] T014 `libs/domain/src/auth/auth.controller.ts`: the refresh body is optional in the OpenAPI document; `apps/api/openapi.json` and `libs/data-access` regenerated (FR-004; pr-tester low #4)
 
+## Phase 7: QA fixes (pr-tester lap 4)
+
+- [X] T015 `libs/domain/src/auth/sign-in.service.ts`, `auth.controller.ts`: the switch moves to `POST auth/roles/switch` and renews the refresh cookie's session, so a session signed out here or everywhere cannot switch; `me.controller.ts` loses the route; `apps/web/src/app/dashboard/session.ts` calls the new route; client regenerated (FR-001, FR-009; pr-tester high #1, medium #2)
+
 ## Dependencies
 
 T001 → T002 → T003 → T004 → T005 → T006, T007 → T008 → T009 → T010.
@@ -53,3 +57,4 @@ T001 → T002 → T003 → T004 → T005 → T006, T007 → T008 → T009 → T0
 | FR-006 | `frame.role-switch.spec.ts` "switches to the role tapped…", "reopens the live connection when the new role keeps the same dashboard", "does nothing when the role in use is tapped", "ignores a second tap…"; `session.role-switch.spec.ts` "asks for the role, keeps the new token…"; e2e "…switches to driver, the next sign-in opens it…" |
 | FR-007 | `frame.role-switch.spec.ts` "says so and keeps the role…", "says it in English"; `session.role-switch.spec.ts` "keeps the token and the account when the switch fails…", "…answers no token", "goes back to the old token…", "restores nothing when signed out…" |
 | FR-008 | `session.role-switch.spec.ts` "Session, renewing the token" block |
+| FR-009 | `libs/domain/src/auth/role-switch.api.integration.spec.ts` "answers 401 without a signed-in account", "answers 401 and changes nothing once this device signed out", "answers 401 on every device once the account signed out everywhere", "refuses a request that is not JSON" |

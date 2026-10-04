@@ -383,12 +383,12 @@ describe('the account module', () => {
     expect(controllers.length).toBeGreaterThan(0);
     expect(writes.sort()).toEqual([
       'auth/refresh',
+      'auth/roles/switch',
       'auth/sign-in',
       'auth/sign-out',
       'auth/sign-out-everywhere',
       'auth/sign-up',
       'me//',
-      'me/roles/switch',
     ]);
   });
 });

@@ -4,7 +4,7 @@
 
 ## Summary
 
-One new API call, `POST /api/v1/me/roles/switch`, behind the actor guard: it checks the role is one the account holds (else 404), stores it as `last_role` and answers a new access token for it. `POST /api/v1/auth/refresh` takes an optional `role`, so each tab renews for the role it shows. The web frame shows role chips in its account block for accounts with two or more roles; a tap switches the session, reloads the account, reopens the live connection and lets the frame's existing effect open the new role's dashboard.
+One new API call, `POST /api/v1/auth/roles/switch`, on the refresh cookie (pr-tester lap 4 moved it from `/me`): it renews the cookie's session, checks the role is one the account holds (else 404), stores it as `last_role` and answers a new access token for it; a signed-out session answers 401. `POST /api/v1/auth/refresh` takes an optional `role`, so each tab renews for the role it shows. The web frame shows role chips in its account block for accounts with two or more roles; a tap switches the session, reloads the account, reopens the live connection and lets the frame's existing effect open the new role's dashboard.
 
 ## Technical Context
 
@@ -27,7 +27,7 @@ One new API call, `POST /api/v1/me/roles/switch`, behind the actor guard: it che
 ```
 libs/contracts/src/auth.dto.ts                 RefreshDto { role? }, SwitchRoleDto { role }
 libs/domain/src/auth/sign-in.service.ts        switchRole(actor, role); refresh(token, role?)
-libs/domain/src/auth/me.controller.ts          POST me/roles/switch
+libs/domain/src/auth/auth.controller.ts        POST auth/roles/switch
 libs/domain/src/auth/auth.controller.ts        refresh reads the optional body
 libs/domain/src/seed.ts                        Atelier Dinamo + comutare@example.test (driver + garage)
 apps/api/openapi.json, libs/data-access        regenerated

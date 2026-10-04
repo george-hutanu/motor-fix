@@ -69,7 +69,7 @@ After switching to the driver role, Mihai signs out and signs in again, on this 
 
 ### Functional Requirements
 
-- **FR-001**: `POST /api/v1/me/roles/switch` with `{ "role": <role> }` by a signed-in account that holds that role MUST store it as `ACCOUNT.last_role` and answer 200 with `{ "accessToken" }`, a new access token for that role.
+- **FR-001**: `POST /api/v1/auth/roles/switch` with `{ "role": <role> }` and the browser's refresh cookie, for an account that holds that role, MUST store it as `ACCOUNT.last_role` and answer 200 with `{ "accessToken" }`, a new access token for that role, renewing the session as a refresh does. (Moved from `/me/roles/switch` by pr-tester lap 4: a switch from an access token alone kept a signed-out session alive.)
 - **FR-002**: Switching to a role the account does not hold MUST answer 404 and change nothing; a body without a valid role MUST answer 400 `validation_failed`.
 - **FR-003**: A switch MUST write no audit entry and send no notification.
 - **FR-004**: `POST /api/v1/auth/refresh` MAY carry `{ "role": <role> }`; the new access token MUST be for that role when the account holds it, otherwise for the role it is issued for today; a refresh MUST NOT change `last_role`.
@@ -77,6 +77,7 @@ After switching to the driver role, Mihai signs out and signs in again, on this 
 - **FR-006**: Tapping a chip of another role MUST switch to it (FR-001) with the tab's session, then reload the account, reopen the live connection and open that role's dashboard, without a new sign-in.
 - **FR-007**: A switch that fails (no answer, an error answer) MUST show the toast "Nu am putut schimba rolul. Încearcă din nou." / "Could not switch the role. Try again." and keep the tab's role, token and dashboard.
 - **FR-008**: The web app's token renewal MUST send the role its tab is showing (FR-004), so a tab keeps its role until reloaded.
+- **FR-009**: A switch whose refresh cookie is missing, expired, or ended by a sign-out on this device or on every device MUST answer 401 and change nothing; a request that is not JSON MUST answer 415.
 
 ### Key Entities
 
@@ -95,7 +96,7 @@ After switching to the driver role, Mihai signs out and signs in again, on this 
 
 ### Capability: `accounts`
 
-- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008
+- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009
 - **Modifies**: none
 - **Removes**: none
 

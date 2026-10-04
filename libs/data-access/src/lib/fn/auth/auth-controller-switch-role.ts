@@ -10,12 +10,12 @@ import { RequestBuilder } from '../../request-builder';
 import { SessionDto } from '../../models/session-dto';
 import { SwitchRoleDto } from '../../models/switch-role-dto';
 
-export interface MeControllerSwitchRole$Params {
+export interface AuthControllerSwitchRole$Params {
       body: SwitchRoleDto
 }
 
-export function meControllerSwitchRole(http: HttpClient, rootUrl: string, params: MeControllerSwitchRole$Params, context?: HttpContext): Observable<StrictHttpResponse<SessionDto>> {
-  const rb = new RequestBuilder(rootUrl, meControllerSwitchRole.PATH, 'post');
+export function authControllerSwitchRole(http: HttpClient, rootUrl: string, params: AuthControllerSwitchRole$Params, context?: HttpContext): Observable<StrictHttpResponse<SessionDto>> {
+  const rb = new RequestBuilder(rootUrl, authControllerSwitchRole.PATH, 'post');
   if (params) {
     rb.body(params.body, 'application/json');
   }
@@ -30,4 +30,4 @@ export function meControllerSwitchRole(http: HttpClient, rootUrl: string, params
   );
 }
 
-meControllerSwitchRole.PATH = '/api/v1/me/roles/switch';
+authControllerSwitchRole.PATH = '/api/v1/auth/roles/switch';

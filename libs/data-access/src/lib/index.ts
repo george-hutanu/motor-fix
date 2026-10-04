@@ -47,6 +47,8 @@ export type { AuthControllerSignUp$Params as AuthControllerSignUp$Params } from 
 export { authControllerSignUp as authControllerSignUp } from './fn/auth/auth-controller-sign-up';
 export type { AuthControllerRefresh$Params as AuthControllerRefresh$Params } from './fn/auth/auth-controller-refresh';
 export { authControllerRefresh as authControllerRefresh } from './fn/auth/auth-controller-refresh';
+export type { AuthControllerSwitchRole$Params as AuthControllerSwitchRole$Params } from './fn/auth/auth-controller-switch-role';
+export { authControllerSwitchRole as authControllerSwitchRole } from './fn/auth/auth-controller-switch-role';
 export type { AuthControllerSignOutEverywhere$Params as AuthControllerSignOutEverywhere$Params } from './fn/auth/auth-controller-sign-out-everywhere';
 export { authControllerSignOutEverywhere as authControllerSignOutEverywhere } from './fn/auth/auth-controller-sign-out-everywhere';
 export type { AuthControllerSignOut$Params as AuthControllerSignOut$Params } from './fn/auth/auth-controller-sign-out';
@@ -55,8 +57,6 @@ export type { MeControllerMe$Params as MeControllerMe$Params } from './fn/me/me-
 export { meControllerMe as meControllerMe } from './fn/me/me-controller-me';
 export type { MeControllerUpdate$Params as MeControllerUpdate$Params } from './fn/me/me-controller-update';
 export { meControllerUpdate as meControllerUpdate } from './fn/me/me-controller-update';
-export type { MeControllerSwitchRole$Params as MeControllerSwitchRole$Params } from './fn/me/me-controller-switch-role';
-export { meControllerSwitchRole as meControllerSwitchRole } from './fn/me/me-controller-switch-role';
 export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Params } from './fn/audit-history/audit-history-controller-list';
 export { auditHistoryControllerList as auditHistoryControllerList } from './fn/audit-history/audit-history-controller-list';
 export type { NotificationsControllerTest$Params as NotificationsControllerTest$Params } from './fn/notifications/notifications-controller-test';

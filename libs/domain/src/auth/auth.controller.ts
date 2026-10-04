@@ -3,6 +3,7 @@ import {
   SessionDto,
   SignInDto,
   SignUpDto,
+  SwitchRoleDto,
 } from '@motor-fix/contracts';
 import {
   Body,
@@ -21,6 +22,7 @@ import {
   ApiBody,
   ApiCreatedResponse,
   ApiNoContentResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -148,6 +150,28 @@ export class AuthController {
       return { accessToken: issued.accessToken };
     } catch (error) {
       // Only a refused token ends the session; an outage keeps the cookie.
+      if (refused(error)) forget(res);
+      throw error;
+    }
+  }
+
+  // Under /auth, where the browser sends the refresh cookie.
+  @Post('roles/switch')
+  @UseGuards(JsonOnly)
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: SessionDto })
+  @ApiNotFoundResponse({ description: 'The account does not hold that role' })
+  @ApiUnauthorizedResponse()
+  async switchRole(
+    @Body() body: SwitchRoleDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<SessionDto> {
+    try {
+      const issued = await this.signIns.switchRole(presented(req), body.role);
+      keep(res, issued);
+      return { accessToken: issued.accessToken };
+    } catch (error) {
       if (refused(error)) forget(res);
       throw error;
     }

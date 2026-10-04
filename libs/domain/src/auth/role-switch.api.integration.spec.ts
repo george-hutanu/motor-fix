@@ -2,7 +2,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
-import { signAccessToken, verifyAccessToken } from './access-token';
+import { verifyAccessToken } from './access-token';
 import { AccountsService } from './accounts.service';
 import { AuthModule } from './auth.module';
 import type { Role } from './capabilities';
@@ -58,15 +58,20 @@ async function account(name: string, roles: Role[]) {
   return id;
 }
 
-const bearer = (accountId: string, role: Role) =>
-  `Bearer ${signAccessToken({ accountId, role }, tokenSecret)}`;
+// The browser's session: the refresh cookie of a family just opened.
+const session = async (accountId: string, role: Role = 'garage') =>
+  (await signIns.openSession(accountId, role, true)).refreshToken as string;
 
-const switchTo = (body: unknown, auth?: string) => {
+const switchTo = (body: unknown, cookie?: string) => {
   const call = request(app.getHttpServer())
-    .post('/me/roles/switch')
+    .post('/auth/roles/switch')
+    .set('Content-Type', 'application/json')
     .send(body as object);
-  return auth ? call.set('Authorization', auth) : call;
+  return cookie ? call.set('Cookie', `mf_refresh=${cookie}`) : call;
 };
+
+const rotated = (res: { headers: Record<string, unknown> }) =>
+  String(res.headers['set-cookie'] ?? '').match(/mf_refresh=([^;]+)/)?.[1];
 
 const lastRole = async (id: string) =>
   (await prisma.account.findUniqueOrThrow({ where: { id } })).lastRole;
@@ -86,7 +91,7 @@ describe('switching my role', () => {
   it('stores the role switched to and answers a token for it', async () => {
     const id = await account('mihai', ['garage', 'driver']);
 
-    const res = await switchTo({ role: 'driver' }, bearer(id, 'garage'));
+    const res = await switchTo({ role: 'driver' }, await session(id, 'garage'));
 
     expect(res.status).toBe(200);
     expect(roleOf(res.body.accessToken)).toBe('driver');
@@ -95,7 +100,10 @@ describe('switching my role', () => {
 
   it('opens the role switched to with the new token', async () => {
     const id = await account('mihai', ['garage', 'driver']);
-    const { body } = await switchTo({ role: 'driver' }, bearer(id, 'garage'));
+    const { body } = await switchTo(
+      { role: 'driver' },
+      await session(id, 'garage'),
+    );
 
     const me = await request(app.getHttpServer())
       .get('/me')
@@ -104,11 +112,13 @@ describe('switching my role', () => {
     expect(me.body).toMatchObject({ landing: '/app/driver', role: 'driver' });
   });
 
-  it('switches back', async () => {
+  it('switches back with the cookie the switch rotated', async () => {
     const id = await account('mihai', ['garage', 'driver']);
-    await switchTo({ role: 'driver' }, bearer(id, 'garage'));
+    const first = await switchTo({ role: 'driver' }, await session(id));
+    const next = rotated(first);
+    expect(next).toBeDefined();
 
-    const res = await switchTo({ role: 'garage' }, bearer(id, 'driver'));
+    const res = await switchTo({ role: 'garage' }, next);
 
     expect(roleOf(res.body.accessToken)).toBe('garage');
     expect(await lastRole(id)).toBe('garage');
@@ -117,7 +127,10 @@ describe('switching my role', () => {
   it('works for a mechanic who also drives', async () => {
     const id = await account('elena', ['mechanic', 'driver']);
 
-    const res = await switchTo({ role: 'driver' }, bearer(id, 'mechanic'));
+    const res = await switchTo(
+      { role: 'driver' },
+      await session(id, 'mechanic'),
+    );
 
     expect(roleOf(res.body.accessToken)).toBe('driver');
     expect(await lastRole(id)).toBe('driver');
@@ -130,7 +143,7 @@ describe('switching my role', () => {
   ] as const)('answers 404 for %s, a role the account does not hold, and changes nothing', async (role) => {
     const id = await account('andrei', ['driver']);
 
-    const res = await switchTo({ role }, bearer(id, 'driver'));
+    const res = await switchTo({ role }, await session(id, 'driver'));
 
     expect(res.status).toBe(404);
     expect(res.body.accessToken).toBeUndefined();
@@ -145,7 +158,7 @@ describe('switching my role', () => {
   ])('answers 400 for %s', async (_, body) => {
     const id = await account('mihai', ['garage', 'driver']);
 
-    const res = await switchTo(body, bearer(id, 'garage'));
+    const res = await switchTo(body, await session(id, 'garage'));
 
     expect(res.status).toBe(400);
     expect(await lastRole(id)).toBe('garage');
@@ -157,6 +170,47 @@ describe('switching my role', () => {
     expect(res.status).toBe(401);
   });
 
+  it('answers 401 and changes nothing once this device signed out', async () => {
+    const id = await account('mihai', ['garage', 'driver']);
+    const cookie = await session(id);
+    await request(app.getHttpServer())
+      .post('/auth/sign-out')
+      .set('Cookie', `mf_refresh=${cookie}`);
+
+    const res = await switchTo({ role: 'driver' }, cookie);
+
+    expect(res.status).toBe(401);
+    expect(res.body.accessToken).toBeUndefined();
+    expect(await lastRole(id)).toBe('garage');
+  });
+
+  it('answers 401 on every device once the account signed out everywhere', async () => {
+    const id = await account('mihai', ['garage', 'driver']);
+    const here = await session(id);
+    const elsewhere = await session(id);
+    await request(app.getHttpServer())
+      .post('/auth/sign-out-everywhere')
+      .set('Cookie', `mf_refresh=${elsewhere}`);
+
+    const res = await switchTo({ role: 'driver' }, here);
+
+    expect(res.status).toBe(401);
+    expect(await lastRole(id)).toBe('garage');
+  });
+
+  it('refuses a request that is not JSON', async () => {
+    const id = await account('mihai', ['garage', 'driver']);
+
+    const res = await request(app.getHttpServer())
+      .post('/auth/roles/switch')
+      .set('Cookie', `mf_refresh=${await session(id)}`)
+      .set('Content-Type', 'text/plain')
+      .send('role=driver');
+
+    expect(res.status).toBe(415);
+    expect(await lastRole(id)).toBe('garage');
+  });
+
   it('refuses a suspended account', async () => {
     const id = await account('mihai', ['garage', 'driver']);
     await prisma.account.update({
@@ -164,7 +218,7 @@ describe('switching my role', () => {
       where: { id },
     });
 
-    const res = await switchTo({ role: 'driver' }, bearer(id, 'garage'));
+    const res = await switchTo({ role: 'driver' }, await session(id, 'garage'));
 
     expect(res.status).toBe(403);
     expect(await lastRole(id)).toBe('garage');
@@ -174,7 +228,7 @@ describe('switching my role', () => {
     const id = await account('mihai', ['garage', 'driver']);
     const before = await prisma.activityLog.count();
 
-    await switchTo({ role: 'driver' }, bearer(id, 'garage'));
+    await switchTo({ role: 'driver' }, await session(id, 'garage'));
 
     expect(await prisma.activityLog.count()).toBe(before);
   });

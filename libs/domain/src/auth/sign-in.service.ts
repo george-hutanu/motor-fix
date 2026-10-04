@@ -15,7 +15,7 @@ import { Attempts } from './attempts';
 import type { Role } from './capabilities';
 import { MAINTENANCE, type Maintenance } from './maintenance';
 import { DECOY_HASH, verifyPassword } from './password';
-import { type Actor, roleInUse } from './policy';
+import { roleInUse } from './policy';
 import { PRISMA } from './prisma';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { EVENT_PORT, type EventPort } from '../events/event.port';
@@ -29,6 +29,8 @@ const BROWSER_SESSION_MS = 12 * 3_600_000;
 const GRACE_MS = 20_000;
 const ACTIVE_EVERY_MS = 3_600_000;
 const TOKEN = /^[A-Za-z0-9_-]{43}$/;
+
+type Renewable = NonNullable<Awaited<ReturnType<SignInService['presented']>>>;
 
 // Where the open dashboards hear that their session ended: the live fan-out.
 export const SESSION_EVENTS = Symbol('SESSION_EVENTS');
@@ -124,15 +126,22 @@ export class SignInService {
     };
   }
 
-  // A view preference, not a change of rights: no audit entry. A role the
-  // account does not hold does not exist for it.
-  async switchRole(actor: Actor, role: Role): Promise<string> {
-    if (!actor.roles.includes(role)) throw new NotFoundException();
+  // A renewal of the browser's session in another of its roles, so a session
+  // signed out here or everywhere cannot switch. A view preference, not a
+  // change of rights: no audit entry. A role the account does not hold does
+  // not exist for it.
+  async switchRole(token: string | undefined, role: Role): Promise<Issued> {
+    const now = Date.now();
+    const { inGrace, row } = await this.renewable(token, now);
+    if (!row.account.roles.some((held) => held.role === role)) {
+      throw new NotFoundException();
+    }
+    const issued = await this.renew(row, inGrace, role, now);
     await this.prisma.account.update({
       data: { lastRole: role },
-      where: { id: actor.accountId },
+      where: { id: row.account.id },
     });
-    return this.accessToken(actor.accountId, role);
+    return issued;
   }
 
   // `wanted`: the role the renewing tab shows, kept while the account holds it.
@@ -142,6 +151,15 @@ export class SignInService {
   ): Promise<Issued> {
     const now = Date.now();
     const { inGrace, row } = await this.renewable(token, now);
+    return this.renew(row, inGrace, wanted, now);
+  }
+
+  private async renew(
+    row: Renewable,
+    inGrace: boolean,
+    wanted: Role | null,
+    now: number,
+  ): Promise<Issued> {
     const { account } = row;
     const accessToken = this.accessToken(
       account.id,

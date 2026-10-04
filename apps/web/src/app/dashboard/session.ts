@@ -168,7 +168,7 @@ export class Session {
   // token and the account as they were, and rejects.
   async switchRole(role: MeDto['role']): Promise<MeDto | null> {
     const generation = this.generation;
-    const { accessToken } = await this.me.meControllerSwitchRole({
+    const { accessToken } = await this.auth.authControllerSwitchRole({
       body: { role },
     });
     if (generation !== this.generation) return null;

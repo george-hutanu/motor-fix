@@ -23,14 +23,15 @@ function setup(switches: () => Promise<{ accessToken: string }>) {
       Promise.resolve({ accessToken: 'renewed' }),
     ),
     authControllerSignOut: jest.fn(() => Promise.resolve()),
-  };
-  const me = {
-    meControllerMe: jest.fn(() => Promise.resolve(account(role))),
-    meControllerSwitchRole: jest.fn(async () => {
+    // Through the refresh cookie, so a signed-out session cannot switch.
+    authControllerSwitchRole: jest.fn(async () => {
       const answer = await switches();
       role = 'driver';
       return answer;
     }),
+  };
+  const me = {
+    meControllerMe: jest.fn(() => Promise.resolve(account(role))),
   };
   TestBed.configureTestingModule({
     providers: [
@@ -43,12 +44,14 @@ function setup(switches: () => Promise<{ accessToken: string }>) {
 
 describe('Session, switching the role', () => {
   it('asks for the role, keeps the new token and loads the account in that role', async () => {
-    const { me, session } = setup(async () => ({ accessToken: 'as-driver' }));
+    const { auth, session } = setup(async () => ({
+      accessToken: 'as-driver',
+    }));
     await session.load();
 
     const after = await session.switchRole('driver');
 
-    expect(me.meControllerSwitchRole).toHaveBeenCalledWith({
+    expect(auth.authControllerSwitchRole).toHaveBeenCalledWith({
       body: { role: 'driver' },
     });
     expect(session.token()).toBe('as-driver');
