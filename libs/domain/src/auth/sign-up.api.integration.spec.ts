@@ -486,6 +486,31 @@ describe('the hourly limit per address', () => {
     expect((await signUp(body(), from)).status).toBe(429);
   });
 
+  it('skips the limit for an address that cannot be read, and says so in the log', async () => {
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    for (let i = 0; i < 11; i++) {
+      expect(
+        (await signUp(body({ password: 'scurta' }), 'not-an-address')).status,
+      ).toBe(400);
+    }
+
+    expect((await signUp(body(), 'not-an-address')).status).toBe(201);
+    expect(await redis.keys('auth:signup:*')).toEqual([]);
+    expect(JSON.stringify(warn.mock.calls)).toMatch(/address unreadable/);
+  });
+
+  it("leaves sign-in's per-address count alone for an address that cannot be read", async () => {
+    await request(app.getHttpServer())
+      .post('/auth/sign-in')
+      .set('X-Forwarded-For', 'not-an-address')
+      .send({ email: 'nimeni@example.test', password: PASSWORD });
+
+    expect(await redis.keys('auth:fail:address:*')).toEqual([]);
+    expect(await redis.keys('auth:fail:email:*')).toHaveLength(1);
+  });
+
   it('still signs up when Redis cannot be reached, and says so in the log', async () => {
     const warn = jest
       .spyOn(Logger.prototype, 'warn')

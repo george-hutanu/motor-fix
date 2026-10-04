@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { isIPv6 } from 'node:net';
+import { isIP } from 'node:net';
 
 import { Logger } from '@nestjs/common';
 import type { Redis } from 'ioredis';
@@ -13,11 +13,14 @@ type Kind = keyof typeof LIMIT;
 
 // One client however its address is written: an IPv4 address also in its
 // IPv6-mapped form, and an IPv6 address by its /64, which one subscriber
-// usually holds whole.
-export function clientOf(address: string): string {
-  if (!isIPv6(address)) return address;
+// usually holds whole. Null when the address cannot be read: no one client
+// may stand for every such request.
+export function clientOf(address: string): string | null {
   // A zone id names the local interface, not the client.
   const bare = address.split('%')[0] ?? '';
+  const version = isIP(bare);
+  if (version === 4) return bare;
+  if (version === 0) return null;
   const groups = expand(new URL(`http://[${bare}]`).hostname.slice(1, -1));
   const [, , , , , mark, high = 0, low = 0] = groups;
   if (groups.slice(0, 5).every((x) => x === 0) && mark === 0xffff) {
@@ -43,7 +46,7 @@ function expand(canonical: string): number[] {
 const digest = (value: string) =>
   createHash('sha256').update(value).digest('hex');
 const keyOf = (kind: Kind, value: string) =>
-  `auth:fail:${kind}:${digest(kind === 'address' ? clientOf(value) : value)}`;
+  `auth:fail:${kind}:${digest(value)}`;
 
 // Failed sign-ins per e-mail and per address, and sign-ups per address. Redis
 // only counts: when it is unreachable the limits are skipped rather than
@@ -54,10 +57,11 @@ export class Attempts {
   constructor(private readonly redis: Redis) {}
 
   async blocked(email: string, address: string): Promise<boolean> {
+    const client = this.client('sign-in', address);
     try {
       const [byEmail, byAddress] = await this.redis.mget(
         keyOf('email', email),
-        keyOf('address', address),
+        ...(client ? [keyOf('address', client)] : []),
       );
       return (
         Number(byEmail) >= LIMIT.email || Number(byAddress) >= LIMIT.address
@@ -69,14 +73,18 @@ export class Attempts {
   }
 
   async fail(email: string, address: string): Promise<void> {
+    const client = clientOf(address);
     try {
-      await this.redis
+      const counts = this.redis
         .multi()
         .incr(keyOf('email', email))
-        .expire(keyOf('email', email), WINDOW_SECONDS)
-        .incr(keyOf('address', address))
-        .expire(keyOf('address', address), WINDOW_SECONDS)
-        .exec();
+        .expire(keyOf('email', email), WINDOW_SECONDS);
+      if (client) {
+        counts
+          .incr(keyOf('address', client))
+          .expire(keyOf('address', client), WINDOW_SECONDS);
+      }
+      await counts.exec();
     } catch {
       this.unavailable('sign-in');
     }
@@ -93,8 +101,10 @@ export class Attempts {
   // Counts one sign-up from the address; false once it has had its 10 in the
   // hour that began with its first.
   async admitSignUp(address: string): Promise<boolean> {
+    const client = this.client('sign-up', address);
+    if (!client) return true;
     try {
-      const key = `auth:signup:address:${digest(clientOf(address))}`;
+      const key = `auth:signup:address:${digest(client)}`;
       const replies = await this.redis
         .multi()
         .incr(key)
@@ -107,6 +117,15 @@ export class Attempts {
       this.unavailable('sign-up');
       return true;
     }
+  }
+
+  // The client behind an address, or null, logged, when it cannot be read.
+  private client(what: 'sign-in' | 'sign-up', address: string) {
+    const client = clientOf(address);
+    if (!client) {
+      this.logger.warn(`${what} address limit skipped: address unreadable`);
+    }
+    return client;
   }
 
   private unavailable(what: 'sign-in' | 'sign-up') {
