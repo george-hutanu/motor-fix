@@ -49,3 +49,7 @@
 ## 8. Analyze
 - artifact-lint: 4 errors, all the Spec Delta Modifies format → `079-FR-017 → FR-021` → 0 errors. Jev lane unavailable (no key).
 - Coverage 23/23 FRs in tasks and the FR → test table; no CRITICAL/HIGH.
+
+## 9. Tests (red first)
+- Wrote password, sign-in API (sign-in, limits, maintenance, request, refresh, sign-out), seed, edge, api bootstrap, session, interceptor, sign-in task, sign-in dialog, area guard, frame, tab bar specs and the e2e `sign-in.spec.ts` with `accounts.ts`.
+- RED: `npx jest <the 13 files> --maxWorkers=2` → "Test Suites: 12 failed, 1 passed, 13 total; Tests: 20 failed, 65 passed, 85 total" (7 suites cannot resolve the modules under test; the passing suite is session.adversary, a regression guard).

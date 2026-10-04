@@ -1,12 +1,13 @@
 import {
   Controller,
+  type DynamicModule,
   Get,
   INestApplication,
   Param,
   RequestMethod,
   UseGuards,
 } from '@nestjs/common';
-import { METHOD_METADATA } from '@nestjs/common/constants';
+import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
@@ -23,6 +24,7 @@ import { noEvents } from '../events/event.port';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
+const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
 const tokenSecret = 'test-secret';
 const prisma = createPrisma(databaseUrl);
 const accounts = new AccountsService(prisma, new AuditService(), noEvents);
@@ -85,7 +87,7 @@ let app: INestApplication;
 beforeAll(async () => {
   const moduleRef = await Test.createTestingModule({
     controllers: [ProbeController],
-    imports: [AuthModule.register({ databaseUrl, tokenSecret })],
+    imports: [AuthModule.register({ databaseUrl, redisUrl, tokenSecret })],
   }).compile();
   app = moduleRef.createNestApplication();
   await app.init();
@@ -354,20 +356,37 @@ describe('rights answer 404, never 403', () => {
 });
 
 describe('the account module', () => {
-  it('exposes no route that writes', () => {
+  const writeRoutes = (
+    controllers: NonNullable<DynamicModule['controllers']>,
+  ) =>
+    controllers.flatMap((controller) => {
+      const base = Reflect.getMetadata(PATH_METADATA, controller);
+      const proto = controller.prototype as Record<string, object>;
+      return Object.getOwnPropertyNames(proto)
+        .filter((name) => {
+          const method = Reflect.getMetadata(
+            METHOD_METADATA,
+            proto[name] ?? {},
+          );
+          return method !== undefined && method !== RequestMethod.GET;
+        })
+        .map(
+          (name) =>
+            `${base}/${Reflect.getMetadata(PATH_METADATA, proto[name] ?? {})}`,
+        );
+    });
+
+  it('exposes no route that writes anything but a session', () => {
     const controllers =
-      AuthModule.register({ databaseUrl, tokenSecret }).controllers ?? [];
+      AuthModule.register({ databaseUrl, redisUrl, tokenSecret }).controllers ??
+      [];
+    const writes = writeRoutes(controllers);
 
     expect(controllers.length).toBeGreaterThan(0);
-    for (const controller of controllers) {
-      const proto = controller.prototype as Record<string, unknown>;
-      for (const name of Object.getOwnPropertyNames(proto)) {
-        const method = Reflect.getMetadata(
-          METHOD_METADATA,
-          proto[name] as object,
-        );
-        if (method !== undefined) expect(method).toBe(RequestMethod.GET);
-      }
-    }
+    expect(writes.sort()).toEqual([
+      'auth/refresh',
+      'auth/sign-in',
+      'auth/sign-out',
+    ]);
   });
 });

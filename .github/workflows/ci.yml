@@ -155,6 +155,9 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Migrate the test database
         run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
+      # The sign-in flows use the seeded accounts.
+      - name: Seed the test accounts
+        run: npx nx run domain:seed
       - id: playwright
         run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
       - id: browsers

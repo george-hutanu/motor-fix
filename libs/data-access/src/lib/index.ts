@@ -14,8 +14,11 @@ export type { HealthChecksDto } from './models/health-checks-dto';
 export type { HealthLiveDto } from './models/health-live-dto';
 export type { HealthReadyDto } from './models/health-ready-dto';
 export type { MeDto } from './models/me-dto';
+export type { SessionDto } from './models/session-dto';
+export type { SignInDto } from './models/sign-in-dto';
 export { BaseService } from './base-service';
 export { HealthService } from './services/health.service';
+export { AuthService } from './services/auth.service';
 export { MeService } from './services/me.service';
 export { AuditHistoryService } from './services/audit-history.service';
 
@@ -23,6 +26,12 @@ export type { HealthControllerLive$Params as HealthControllerLive$Params } from 
 export { healthControllerLive as healthControllerLive } from './fn/health/health-controller-live';
 export type { HealthControllerReady$Params as HealthControllerReady$Params } from './fn/health/health-controller-ready';
 export { healthControllerReady as healthControllerReady } from './fn/health/health-controller-ready';
+export type { AuthControllerSignIn$Params as AuthControllerSignIn$Params } from './fn/auth/auth-controller-sign-in';
+export { authControllerSignIn as authControllerSignIn } from './fn/auth/auth-controller-sign-in';
+export type { AuthControllerRefresh$Params as AuthControllerRefresh$Params } from './fn/auth/auth-controller-refresh';
+export { authControllerRefresh as authControllerRefresh } from './fn/auth/auth-controller-refresh';
+export type { AuthControllerSignOut$Params as AuthControllerSignOut$Params } from './fn/auth/auth-controller-sign-out';
+export { authControllerSignOut as authControllerSignOut } from './fn/auth/auth-controller-sign-out';
 export type { MeControllerMe$Params as MeControllerMe$Params } from './fn/me/me-controller-me';
 export { meControllerMe as meControllerMe } from './fn/me/me-controller-me';
 export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Params } from './fn/audit-history/audit-history-controller-list';

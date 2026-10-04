@@ -5,27 +5,27 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Migration `libs/domain/prisma/migrations/20261004140000_refresh_token_remember/migration.sql` (new) and `remember Boolean @default(true)` on `RefreshToken` in `libs/domain/prisma/schema/auth.prisma`; apply to `motorfix_st082`, regenerate the client (FR-007)
-- [ ] T002 [P] `libs/contracts/src/auth.dto.ts` (new): `SignInDto` (`email` string 1–254, `password` string 1–1024, `remember?` boolean) and `SessionDto` (`accessToken`); export from `libs/contracts/src/index.ts` (FR-001, FR-011)
+- [X] T001 Migration `libs/domain/prisma/migrations/20261004140000_refresh_token_remember/migration.sql` (new) and `remember Boolean @default(true)` on `RefreshToken` in `libs/domain/prisma/schema/auth.prisma`; apply to `motorfix_st082`, regenerate the client (FR-007)
+- [X] T002 [P] `libs/contracts/src/auth.dto.ts` (new): `SignInDto` (`email` string 1–254, `password` string 1–1024, `remember?` boolean) and `SessionDto` (`accessToken`); export from `libs/contracts/src/index.ts` (FR-001, FR-011)
 
 ## Phase 2: Foundational
 
-- [ ] T003 [P] `libs/domain/src/auth/password.ts` (new): `hashPassword`, `verifyPassword` (argon2id PHC, `timingSafeEqual`), `DECOY_HASH` (FR-002, FR-003)
-- [ ] T004 [P] `libs/domain/src/auth/attempts.ts` (new): Redis counters per e-mail hash and per address — `blocked`, `fail`, `clear`; Redis errors fail open with a warning log (FR-005, FR-011)
-- [ ] T005 [P] `libs/domain/src/auth/maintenance.ts` (new): `MAINTENANCE` token, `{ on: async () => false }` default (FR-006)
+- [X] T003 [P] `libs/domain/src/auth/password.ts` (new): `hashPassword`, `verifyPassword` (argon2id PHC, `timingSafeEqual`), `DECOY_HASH` (FR-002, FR-003)
+- [X] T004 [P] `libs/domain/src/auth/attempts.ts` (new): Redis counters per e-mail hash and per address hash — `blocked`, `fail`, `clear`; Redis errors fail open with a warning log (FR-005, FR-011)
+- [X] T005 [P] `libs/domain/src/auth/maintenance.ts` (new): `MAINTENANCE` token, `{ on: async () => false }` default (FR-006)
 
 ## Phase 3: User Story 1 + 2 — sign in, and the wrong cases (P1)
 
 Independent test: sign in per role through HTTP against PostgreSQL and Redis; wrong password, unknown e-mail, no-password, deleted, suspended, limits, maintenance.
 
-- [ ] T006 [US1] `libs/domain/src/auth/sign-in.service.ts` (new): `SignInService.signIn` — limits, account lookup by lower-cased e-mail, password or decoy check, status, maintenance, new family, cookie value, last active, access token for the role in use (FR-001, FR-002, FR-004, FR-005, FR-006, FR-007, FR-011)
-- [ ] T007 [US1] `libs/domain/src/auth/auth.controller.ts` (new): `POST auth/sign-in`, `auth/refresh`, `auth/sign-out`; cookie set/clear, `Cookie` header read; Swagger decorators (FR-001, FR-007, FR-008, FR-010)
-- [ ] T008 [US1] `libs/domain/src/auth/auth.module.ts`: controller, service, `MAINTENANCE`, Redis client, `redisUrl` in `AuthOptions`; `apps/api/src/app.module.ts` passes `REDIS_URL`; `apps/api/src/bootstrap.ts` `trust proxy`; `apps/web/src/server/edge.ts` appends `X-Forwarded-For` (FR-005)
-- [ ] T009 [US1] Regenerate `apps/api/openapi.json` and `libs/data-access` (`npx nx run data-access:generate`) (FR-001, FR-008, FR-010)
+- [X] T006 [US1] `libs/domain/src/auth/sign-in.service.ts` (new): `SignInService.signIn` — limits, account lookup by lower-cased e-mail, password or decoy check, status, maintenance, new family, cookie value, last active, access token for the role in use (FR-001, FR-002, FR-004, FR-005, FR-006, FR-007, FR-011)
+- [X] T007 [US1] `libs/domain/src/auth/auth.controller.ts` (new): `POST auth/sign-in`, `auth/refresh`, `auth/sign-out`; cookie set/clear, `Cookie` header read; Swagger decorators (FR-001, FR-007, FR-008, FR-010)
+- [X] T008 [US1] `libs/domain/src/auth/auth.module.ts`: controller, service, `MAINTENANCE`, Redis client, `redisUrl` in `AuthOptions`; `apps/api/src/app.module.ts` passes `REDIS_URL`; `apps/api/src/bootstrap.ts` `trust proxy`; `apps/web/src/server/edge.ts` appends `X-Forwarded-For` (FR-005)
+- [X] T009 [US1] Regenerate `apps/api/openapi.json` and `libs/data-access` (`npx nx run data-access:generate`) (FR-001, FR-008, FR-010)
 
 ## Phase 4: User Story 3 + 4 — renewal and sign-out (P1/P2)
 
-- [ ] T010 [US3] `SignInService.refresh` and `signOut`: rotation, 20 s grace without a cookie, reuse revokes the family, status and role checks revoke, last active at most hourly, sign-out revokes the family (FR-008, FR-009, FR-010)
+- [X] T010 [US3] `SignInService.refresh` and `signOut`: rotation, 20 s grace without a cookie, reuse revokes the family, status and role checks revoke, last active at most hourly, sign-out revokes the family (FR-008, FR-009, FR-010)
 - [ ] T011 [US3] `apps/web/src/app/dashboard/session.ts`: token in memory, `signIn`, shared `renew`, `load` renews first, `signOut` forgets even on failure (FR-018, FR-019, FR-020)
 - [ ] T012 [US3] `apps/web/src/app/auth.interceptor.ts` (new) + `withInterceptors` in `apps/web/src/app/app.config.ts`: bearer on `/api/` outside `/api/v1/auth/`, one shared renewal on a 401 to a call that carried the token, repeat (FR-018)
 - [ ] T013 [US4] `apps/web/src/app/dashboard/frame.ts`: "Ieși din cont" awaits `session.signOut()` then Home (FR-020)
@@ -40,7 +40,7 @@ Independent test: sign in per role through HTTP against PostgreSQL and Redis; wr
 
 ## Phase 6: Seed, end to end, CI
 
-- [ ] T019 `libs/domain/src/seed.ts`: the seven accounts, the garage, memberships and mechanic link with `pg` and `argon2Sync`, insert-if-missing; staging needs `SEED_PASSWORD`; `pg` as a dev dependency in `package.json` (FR-023)
+- [X] T019 `libs/domain/src/seed.ts`: the seven accounts, the garage, memberships and mechanic link with `pg` and `argon2Sync`, insert-if-missing; staging needs `SEED_PASSWORD`; `pg` as a dev dependency in `package.json` (FR-023)
 - [ ] T020 `apps/web-e2e/src/accounts.ts` (new) seeded e-mails and `E2E_PASSWORD`; `apps/web-e2e/src/sign-in.ts` also stubs `/api/v1/auth/refresh`; `.github/workflows/ci.yml` e2e job seeds; `release.yml` and `reset-staging.yml` pass `secrets.SEED_PASSWORD` (FR-023)
 
 ## Phase 7: Polish
@@ -52,9 +52,8 @@ Independent test: sign in per role through HTTP against PostgreSQL and Redis; wr
 | FR | Test file |
 |----|-----------|
 | FR-002, FR-003 | `libs/domain/src/auth/password.spec.ts` |
-| FR-005 | `libs/domain/src/auth/attempts.integration.spec.ts` |
-| FR-001, FR-002, FR-004, FR-005, FR-006, FR-007, FR-011 | `libs/domain/src/auth/sign-in.api.integration.spec.ts` |
-| FR-008, FR-009, FR-010 | `libs/domain/src/auth/refresh.api.integration.spec.ts` |
+| FR-001, FR-002, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011 | `libs/domain/src/auth/sign-in.api.integration.spec.ts` (sign-in, limits, maintenance, request, renewal, sign-out) |
+| FR-001, FR-010 (route list, OpenAPI) | `libs/domain/src/auth/auth.api.integration.spec.ts`, `apps/api/src/bootstrap.integration.spec.ts` |
 | FR-005 (address) | `apps/web/src/server/edge.spec.ts`, `apps/api/src/bootstrap.integration.spec.ts` |
 | FR-018, FR-019, FR-020 | `apps/web/src/app/dashboard/session.spec.ts`, `apps/web/src/app/auth.interceptor.spec.ts` |
 | FR-013, FR-014, FR-015, FR-016, FR-022 | `apps/web/src/app/sign-in/sign-in.spec.ts` |

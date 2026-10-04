@@ -5,6 +5,12 @@ export type { HealthControllerLive$Params as HealthControllerLive$Params } from 
 export { healthControllerLive as healthControllerLive } from './fn/health/health-controller-live';
 export type { HealthControllerReady$Params as HealthControllerReady$Params } from './fn/health/health-controller-ready';
 export { healthControllerReady as healthControllerReady } from './fn/health/health-controller-ready';
+export type { AuthControllerSignIn$Params as AuthControllerSignIn$Params } from './fn/auth/auth-controller-sign-in';
+export { authControllerSignIn as authControllerSignIn } from './fn/auth/auth-controller-sign-in';
+export type { AuthControllerRefresh$Params as AuthControllerRefresh$Params } from './fn/auth/auth-controller-refresh';
+export { authControllerRefresh as authControllerRefresh } from './fn/auth/auth-controller-refresh';
+export type { AuthControllerSignOut$Params as AuthControllerSignOut$Params } from './fn/auth/auth-controller-sign-out';
+export { authControllerSignOut as authControllerSignOut } from './fn/auth/auth-controller-sign-out';
 export type { MeControllerMe$Params as MeControllerMe$Params } from './fn/me/me-controller-me';
 export { meControllerMe as meControllerMe } from './fn/me/me-controller-me';
 export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Params } from './fn/audit-history/audit-history-controller-list';

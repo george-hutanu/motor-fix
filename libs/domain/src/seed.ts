@@ -1,6 +1,177 @@
 // Run directly by Node (type stripping), so this file imports nothing from the
 // workspace. Each module's seed rows are added here by the story that owns it.
+import { argon2, randomBytes } from 'node:crypto';
+
+import { Client } from 'pg';
+
 if (process.env['APP_ENV'] === 'production') {
   console.error('seed refused: APP_ENV=production');
   process.exit(1);
 }
+
+// A public repository: a deployed environment brings its own password.
+const password =
+  process.env['SEED_PASSWORD'] ||
+  (process.env['APP_ENV'] === 'staging' ? null : 'parola-de-test');
+if (!password) {
+  console.error('seed refused: staging needs SEED_PASSWORD');
+  process.exit(1);
+}
+
+type Role = 'driver' | 'garage' | 'receptionist' | 'mechanic' | 'admin';
+
+interface Person {
+  email: string;
+  name: string;
+  roles: Role[];
+  lastRole: Role;
+  status?: 'suspended';
+  // The seeded garage this account works at, and how.
+  at?: { garage: string; as: 'owner' | 'receptionist' | 'mechanic' };
+}
+
+const GARAGES = [
+  { name: 'Atelier Test', slug: 'atelier-test' },
+  { name: 'Service Dobre', slug: 'service-dobre' },
+];
+
+const PEOPLE: Person[] = [
+  {
+    email: 'sofer@example.test',
+    lastRole: 'driver',
+    name: 'Andrei Popescu',
+    roles: ['driver'],
+  },
+  {
+    at: { as: 'owner', garage: 'atelier-test' },
+    email: 'service@example.test',
+    lastRole: 'garage',
+    name: 'Mihai Ionescu',
+    roles: ['garage'],
+  },
+  {
+    at: { as: 'receptionist', garage: 'atelier-test' },
+    email: 'receptie@example.test',
+    lastRole: 'receptionist',
+    name: 'Ioana Marin',
+    roles: ['receptionist'],
+  },
+  {
+    at: { as: 'mechanic', garage: 'atelier-test' },
+    email: 'mecanic@example.test',
+    lastRole: 'mechanic',
+    name: 'Vlad Stan',
+    roles: ['mechanic'],
+  },
+  {
+    email: 'admin@example.test',
+    lastRole: 'admin',
+    name: 'Admin MotorFix',
+    roles: ['admin'],
+  },
+  {
+    at: { as: 'owner', garage: 'service-dobre' },
+    email: 'doua-roluri@example.test',
+    lastRole: 'garage',
+    name: 'Elena Dobre',
+    roles: ['driver', 'garage'],
+  },
+  {
+    email: 'suspendat@example.test',
+    lastRole: 'driver',
+    name: 'Radu Suspendat',
+    roles: ['driver'],
+    status: 'suspended',
+  },
+];
+
+// The same argon2id form the sign-in checks: 19 MiB, 2 passes, 1 lane.
+function hash(secret: string): Promise<string> {
+  const nonce = randomBytes(16);
+  const b64 = (b: Buffer) => b.toString('base64').replace(/=+$/, '');
+  return new Promise((resolve, reject) =>
+    argon2(
+      'argon2id',
+      {
+        memory: 19456,
+        message: secret,
+        nonce,
+        parallelism: 1,
+        passes: 2,
+        tagLength: 32,
+      },
+      (error, tag) =>
+        error
+          ? reject(error)
+          : resolve(`$argon2id$v=19$m=19456,t=2,p=1$${b64(nonce)}$${b64(tag)}`),
+    ),
+  );
+}
+
+function link(db: Client, id: string, at: NonNullable<Person['at']>) {
+  const garage = '(SELECT id FROM garage WHERE slug = $2)';
+  return at.as === 'mechanic'
+    ? db.query(
+        `INSERT INTO mechanic (id, account_id, garage_id) VALUES (gen_random_uuid(), $1, ${garage})`,
+        [id, at.garage],
+      )
+    : db.query(
+        `INSERT INTO garage_member (account_id, garage_id, role) VALUES ($1, ${garage}, $3::garage_member_role)`,
+        [id, at.garage, at.as],
+      );
+}
+
+async function add(db: Client, person: Person, secret: string) {
+  // An account that exists is left as it is.
+  const created = await db.query<{ id: string }>(
+    `INSERT INTO account (id, email, name, last_role, status)
+     VALUES (gen_random_uuid(), $1, $2, $3::role, $4::account_status)
+     ON CONFLICT (email) DO NOTHING RETURNING id`,
+    [person.email, person.name, person.lastRole, person.status ?? 'active'],
+  );
+  const id = created.rows[0]?.id;
+  if (!id) return;
+  for (const role of person.roles) {
+    await db.query(
+      'INSERT INTO account_role (account_id, role) VALUES ($1, $2::role)',
+      [id, role],
+    );
+  }
+  await db.query(
+    `INSERT INTO account_identity (id, account_id, method, subject, password_hash)
+     VALUES (gen_random_uuid(), $1, 'password', $2, $3)`,
+    [id, person.email, await hash(secret)],
+  );
+  if (person.at) await link(db, id, person.at);
+}
+
+async function seed(db: Client, secret: string) {
+  for (const garage of GARAGES) {
+    await db.query(
+      `INSERT INTO garage (id, name, slug) VALUES (gen_random_uuid(), $1, $2)
+       ON CONFLICT (slug) DO NOTHING`,
+      [garage.name, garage.slug],
+    );
+  }
+  for (const person of PEOPLE) await add(db, person, secret);
+}
+
+async function main(secret: string) {
+  const db = new Client({ connectionString: process.env['DATABASE_URL'] });
+  await db.connect();
+  try {
+    await db.query('BEGIN');
+    await seed(db, secret);
+    await db.query('COMMIT');
+  } catch (error) {
+    await db.query('ROLLBACK');
+    throw error;
+  } finally {
+    await db.end();
+  }
+}
+
+main(password).catch((error: unknown) => {
+  console.error('seed failed:', error instanceof Error ? error.message : error);
+  process.exit(1);
+});

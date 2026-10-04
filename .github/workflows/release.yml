@@ -97,6 +97,9 @@ jobs:
         env:
           BASE_URL: ${{ vars.PUBLIC_WEB_URL }}
           RELEASE_SHA: ${{ github.sha }}
+          # The seeded accounts' staging password; without it the flows that
+          # sign in for real are skipped there.
+          E2E_PASSWORD: ${{ secrets.SEED_PASSWORD }}
 
   production:
     needs: [images, staging]
