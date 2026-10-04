@@ -24,6 +24,7 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   OnApplicationShutdown,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -89,6 +90,7 @@ function contentDisposition(
 export class StorageService implements OnApplicationShutdown {
   private readonly s3: S3Client;
   private readonly bucket: string;
+  private readonly logger = new Logger(StorageService.name);
 
   constructor(@Inject(STORAGE_OPTIONS) env: StorageEnv) {
     this.bucket = env.STORAGE_BUCKET;
@@ -159,7 +161,7 @@ export class StorageService implements OnApplicationShutdown {
         throw statusOf(error) === 404 ? missing() : error;
       });
     if ((head.ContentLength ?? 0) > rule.maxBytes) {
-      await this.deleteObject(key);
+      await this.discard(key);
       throw this.tooLarge(purpose, rule);
     }
     const type = head.ContentType ?? '';
@@ -168,7 +170,7 @@ export class StorageService implements OnApplicationShutdown {
       (head.ContentLength ?? 0) > 0 &&
       SIGNATURES[type]?.(await this.firstBytes(key));
     if (!matches) {
-      await this.deleteObject(key);
+      await this.discard(key);
       throw new UnprocessableEntityException({
         code: 'file_type_mismatch',
         message: `The file is not the ${type} it was declared as`,
@@ -194,7 +196,7 @@ export class StorageService implements OnApplicationShutdown {
         const status = statusOf(error);
         throw status === 404 || status === 412 ? missing() : error;
       });
-    await this.deleteObject(key);
+    await this.discard(key);
     return finalKey;
   }
 
@@ -204,6 +206,11 @@ export class StorageService implements OnApplicationShutdown {
     disposition: 'attachment' | 'inline',
     minutes: number,
   ): Promise<string> {
+    if (disposition !== 'inline' && disposition !== 'attachment') {
+      return Promise.reject(
+        new RangeError('a file is served inline or as an attachment'),
+      );
+    }
     if (!(minutes > 0 && Number.isFinite(minutes))) {
       return Promise.reject(
         new RangeError('a download address lives a positive number of minutes'),
@@ -265,6 +272,14 @@ export class StorageService implements OnApplicationShutdown {
     return new UnprocessableEntityException({
       code: 'file_too_large',
       message: `${purpose} takes at most ${rule.maxBytes} bytes`,
+    });
+  }
+
+  // The incoming/ life-cycle rule sweeps what this leaves, so a failed delete
+  // must not hide the confirm's real outcome from the caller.
+  private async discard(key: string): Promise<void> {
+    await this.deleteObject(key).catch((error: unknown) => {
+      this.logger.warn(`could not delete ${key}: ${String(error)}`);
     });
   }
 

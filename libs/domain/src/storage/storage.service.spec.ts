@@ -54,6 +54,7 @@ describe('StorageService', () => {
     store.objects.clear();
     store.now = () => Date.now();
     store.beforeCopy = undefined;
+    store.beforeDelete = undefined;
   });
 
   async function uploaded(
@@ -364,6 +365,30 @@ describe('StorageService', () => {
       ).toEqual({ code: 'file_missing', status: 409 });
       expect(store.objects.has(key.replace(/^incoming\//, ''))).toBe(false);
     });
+
+    it('returns the final key when removing the incoming object fails', async () => {
+      const key = await uploaded(JPEG);
+      store.beforeDelete = () => {
+        throw new Error('store busy');
+      };
+
+      const final = await storage.confirmUpload(key, 'garage_photo', 'acc_1');
+
+      expect(final).toBe(key.replace(/^incoming\//, ''));
+      expect(store.objects.get(final)?.body).toEqual(JPEG);
+    });
+
+    it('still refuses a mismatched file when deleting it fails', async () => {
+      const key = await uploaded(EXE);
+      store.beforeDelete = () => {
+        throw new Error('store busy');
+      };
+
+      expect(
+        await refusal(storage.confirmUpload(key, 'garage_photo', 'acc_1')),
+      ).toEqual({ code: 'file_type_mismatch', status: 422 });
+      expect(store.objects.has(key.replace(/^incoming\//, ''))).toBe(false);
+    });
   });
 
   describe('download addresses', () => {
@@ -421,6 +446,17 @@ describe('StorageService', () => {
 
       store.now = () => Date.now() + 61 * MINUTE;
       expect((await fetch(url)).status).toBe(403);
+    });
+
+    it('refuses a disposition other than inline or attachment', async () => {
+      await expect(
+        storage.createDownloadUrl(
+          key,
+          'a.pdf',
+          'inline; filename=x.exe' as 'inline',
+          5,
+        ),
+      ).rejects.toThrow(RangeError);
     });
 
     it('does not open another file', async () => {

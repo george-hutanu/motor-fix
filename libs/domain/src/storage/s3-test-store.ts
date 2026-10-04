@@ -52,6 +52,7 @@ export class S3TestStore {
   readonly objects = new Map<string, StoredObject>();
   now = () => Date.now();
   beforeCopy: (() => void) | undefined;
+  beforeDelete: (() => void) | undefined;
   private readonly server: Server = createServer((req, res) =>
     this.handle(req, res).catch((error: unknown) => {
       const refusal =
@@ -110,6 +111,7 @@ export class S3TestStore {
     if (!key) this.onBucket(req, body, res);
     else if (req.method === 'PUT') this.putObject(req, key, body, res);
     else if (req.method === 'DELETE') {
+      this.beforeDelete?.();
       this.objects.delete(key);
       res.writeHead(204).end();
     } else this.getObject(req, url, key, res);
