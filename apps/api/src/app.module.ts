@@ -1,5 +1,10 @@
 import type { Env, StorageEnv } from '@motor-fix/contracts';
-import { AuthModule, HealthModule, StorageModule } from '@motor-fix/domain';
+import {
+  AuthModule,
+  EventsModule,
+  HealthModule,
+  StorageModule,
+} from '@motor-fix/domain';
 import { DynamicModule, Module } from '@nestjs/common';
 
 type ApiEnv = Env<'DATABASE_URL' | 'REDIS_URL' | 'AUTH_TOKEN_SECRET'> &
@@ -21,6 +26,7 @@ export class AppModule {
           redisUrl: env.REDIS_URL,
           tokenSecret: env.AUTH_TOKEN_SECRET,
         }),
+        EventsModule.register({ redisUrl: env.REDIS_URL }),
       ],
       module: AppModule,
     };

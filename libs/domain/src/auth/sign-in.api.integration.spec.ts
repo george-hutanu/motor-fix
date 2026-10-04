@@ -150,7 +150,11 @@ describe('signing in with the right e-mail and password', () => {
 
     expect(res.status).toBe(200);
     expect(Object.keys(res.body)).toEqual(['accessToken']);
-    expect(claims(res)).toEqual({ accountId: id, role: 'driver' });
+    expect(claims(res)).toEqual({
+      accountId: id,
+      expiresAt: expect.any(Number),
+      role: 'driver',
+    });
     const cookie = setCookie(res) ?? '';
     expect(cookie).toMatch(/^mf_refresh=[A-Za-z0-9_-]{43};/);
     expect(cookie).toContain('Path=/api/v1/auth');
@@ -646,7 +650,11 @@ describe('renewing with the refresh token', () => {
     const res = await refresh(cookie);
 
     expect(res.status).toBe(200);
-    expect(claims(res)).toEqual({ accountId: id, role: 'garage' });
+    expect(claims(res)).toEqual({
+      accountId: id,
+      expiresAt: expect.any(Number),
+      role: 'garage',
+    });
     const next = cookieValue(res);
     expect(next).not.toBe(cookie);
     expect(setCookie(res)).toContain('Max-Age=2592000');

@@ -7,6 +7,7 @@ export type { AuditHistoryPageDto } from './models/audit-history-page-dto';
 export type { HealthChecksDto } from './models/health-checks-dto';
 export type { HealthLiveDto } from './models/health-live-dto';
 export type { HealthReadyDto } from './models/health-ready-dto';
+export type { LiveTestDto } from './models/live-test-dto';
 export type { MeDto } from './models/me-dto';
 export type { SessionDto } from './models/session-dto';
 export type { SignInDto } from './models/sign-in-dto';

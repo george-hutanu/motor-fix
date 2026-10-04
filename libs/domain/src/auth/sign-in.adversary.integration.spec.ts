@@ -689,7 +689,11 @@ describe('families and accounts', () => {
 
     const res = await refresh(token);
 
-    expect(claims(res)).toEqual({ accountId: id, role: 'garage' });
+    expect(claims(res)).toEqual({
+      accountId: id,
+      expiresAt: expect.any(Number),
+      role: 'garage',
+    });
   });
 
   it('never signs a role the account no longer holds when renewing', async () => {
