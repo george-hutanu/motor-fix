@@ -14,4 +14,12 @@ if (suite && !(suite in suites))
     `JEST_SUITE must be "unit" or "integration", or unset; got "${suite}"`,
   );
 
-module.exports = { ...nxPreset, ...(suite && suites[suite]) };
+// scripts/heavy.sh sets JEST_MAX_WORKERS so a run in a shared heavy-command
+// slot stays small; Jest itself reads no such variable.
+const maxWorkers = process.env.JEST_MAX_WORKERS;
+
+module.exports = {
+  ...nxPreset,
+  ...(suite && suites[suite]),
+  ...(maxWorkers ? { maxWorkers } : {}),
+};

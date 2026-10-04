@@ -1,6 +1,10 @@
 #!/usr/bin/env sh
 set -e
+# No Nx daemon from a commit, slot or not: it outlives the hook in every worktree.
+export NX_DAEMON=false
 sh .husky/identity.sh check
-npm run typecheck
-npm run lint
-npm run test
+# Typecheck, lint and test share the machine with other sessions: they take a
+# heavy-command slot and run with heavy.sh's modest parallelism (NX_PARALLEL,
+# and JEST_MAX_WORKERS, which jest.preset.cjs reads). The commit waits for a
+# slot rather than skipping its checks.
+sh scripts/heavy.sh sh -c 'npm run typecheck && npm run lint && npm run test'

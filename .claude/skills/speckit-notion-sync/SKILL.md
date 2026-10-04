@@ -1,7 +1,7 @@
 ---
 name: "speckit-notion-sync"
-description: "Keep the MotorFix Notion tracker in step with the build: when a story or task starts, goes to review or is finished, set its Status in MotorFix stories, its row in the epic's build timeline under Plans, and its epic's Status. Also files a new epic execution plan under Plans. Runs from the spec-kit hooks (after_specify, before_implement), from /speckit-review, /speckit-archive and /speckit-auto, and after a merge to main."
-argument-hint: "start | review | finish | plan — optionally followed by a Notion story URL or ST-<n>"
+description: "Keep the MotorFix Notion tracker in step with the build: when a story or task starts, goes to review, goes to QA (the PR tester), is blocked or unblocked, or is finished, set its Status in MotorFix stories, its row in the epic's build timeline under Plans, and its epic's Status. Also files a new epic execution plan under Plans. Runs from the spec-kit hooks (after_specify, before_implement), from /speckit-review, /speckit-archive and /speckit-auto, and after a merge to main."
+argument-hint: "start | review | qa | blocked <reason> | unblock | finish | debt | plan — optionally followed by a Notion story URL or ST-<n>"
 compatibility: "Requires the Notion connector and the spec-kit project structure"
 metadata:
   author: "george-hutanu"
@@ -16,7 +16,8 @@ disable-model-invocation: false
 $ARGUMENTS
 ```
 
-The first word is the **event**: `start`, `review`, `finish` or `plan`. When the
+The first word is the **event**: `start`, `review`, `qa`, `blocked`, `unblock`,
+`finish`, `debt` or `plan`. `blocked` is followed by the reason. When the
 skill runs as a spec-kit hook there is no argument; take the event from the
 hook's description (`after_specify` and `before_implement` are `start`).
 
@@ -32,10 +33,10 @@ under `/speckit-auto`.
 
 | What | Notion | Status values |
 | --- | --- | --- |
-| Stories and tasks | data source `collection://326eee3c-abec-41d9-9f96-eb3bd545a802` (MotorFix stories) | `Status`: To do · In progress · In review · Done |
+| Stories and tasks | data source `collection://326eee3c-abec-41d9-9f96-eb3bd545a802` (MotorFix stories) | `Status`: To do · In progress · Blocked · In review · QA · Done |
 | Epics | data source `collection://ca8cf981-a8f2-4cb6-9c9a-ac1a3df0edac` (MotorFix epics) | `Status`: To do · In progress · Done |
 | Plans | page `3ee607bff0d2818493d0dadd2d5a006c` (Delivery › Plans) | one execution-plan page and one build-timeline database per epic |
-| Build timeline rows | each timeline database under Plans, e.g. `collection://2437de64-5c28-4136-b8b6-2d60693d45d7` (Foundations) | `Build status`: Not started · In progress · In review · Merged |
+| Build timeline rows | each timeline database under Plans, e.g. `collection://2437de64-5c28-4136-b8b6-2d60693d45d7` (Foundations) | `Build status`: Not started · In progress · Blocked · In review · QA · Merged |
 
 ## 1. Resolve the Notion item
 
@@ -59,18 +60,41 @@ each database under Plans for a row whose `Story` relation contains the story.
 Use `notion-update-page` with `update_properties`. Touch status properties only:
 never the story's text, points, priority or relations.
 
+The decision is scripted. Read the story's current `Status` (fetch the page; the
+SQL query tool has a workspace quota), then ask:
+
+```bash
+node .claude/scripts/notion-status.mjs <event> --current "<Status>"
+# {"write":true,"story":"QA","timeline":"QA","prior":null,"note":"In review → QA"}
+```
+
+Write `story` to the story and `timeline` to its timeline row only when `write`
+is true; otherwise report the `note` as unchanged. `blocked` records the status
+it left in `.specify/run-state.json` (`notion_prior_status`) and `unblock` reads
+it back, so run both from the feature's checkout.
+
 | Event | Story `Status` | Timeline `Build status` | Epic `Status` |
 | --- | --- | --- | --- |
 | `start`: the task is taken, before its draft PR opens | → In progress | → In progress | To do → In progress |
-| `review`: the work is done and its PR is marked ready for review (not when the draft opens) | → In review | → In review | unchanged |
+| `review`: the work is done and its PR is marked ready for review (not when the draft opens); spec and code review | → In review | → In review | unchanged |
+| `qa`: the PR tester (`/speckit-pr-test`) starts on the ready PR; stays through every fix-and-retest lap | → QA | → QA | unchanged |
+| `blocked <reason>`: the run cannot go on without something outside it — a Hard Stop, a run-state `blocking_condition`, the repair cap in the QA loop, red CI the agent cannot fix, an unresolved Blocked by | → Blocked | → Blocked | unchanged |
+| `unblock`: the run resumes | → the status before Blocked | → the same | unchanged |
 | `finish`: the PR is merged to `main` | → Done | → Merged | → Done when every story of the epic is Done |
 | `plan`: an execution plan is made for an epic | unchanged | create the rows | unchanged |
 
 Rules:
 
-- **Never move backwards.** A Done story stays Done, and `start` on an In review
-  story is a no-op. The only way back is `/speckit-correct-course`, which says
-  so in its proposal.
+- **Never move backwards.** The ladder is To do → In progress → In review → QA
+  → Done. A Done story stays Done, and `start` on an In review story is a
+  no-op. The one backwards move is `unblock`, which returns a Blocked story to
+  the status recorded when it was blocked; nothing but `unblock` leaves
+  Blocked, and a second `blocked` keeps the first record. Any other way back is
+  `/speckit-correct-course`, which says so in its proposal.
+- **Blocked carries its reason.** With every `blocked` write, add a Notion
+  comment on the story (`notion-create-comment`) with the reason and what would
+  unblock it, and the same as a PR comment when a PR exists
+  (`gh pr comment <n> --body …`).
 - **Idempotent.** Read the current value first; an equal value is not written,
   and is reported as `unchanged`.
 - **`plan`** creates, under the Plans page, `<Epic> — execution plan` (a page)
@@ -78,6 +102,32 @@ Rules:
   stories, Wave, Lane, Points, Start, End, Blocked by ↔ Blocking, Build status,
   Outside / open, and a timeline view). Follow the Foundations plan already
   there as the pattern.
+
+## 2b. `debt`: file deferred technical debt as tasks
+
+Every bullet in `specs/<feature>/deferred.md` — a finding spec-reviewer,
+code-reviewer or the PR tester routed to defer — becomes one task. The space
+has no separate tasks database, so it is a row in MotorFix stories with Issue
+type Task, Role System, Status To do, the story's Epic (and Feature when known),
+filed the way ST-431–ST-434 are.
+
+```bash
+node .claude/scripts/debt-tasks.mjs plan specs/<feature>/deferred.md \
+  --story <story URL> --epic <epic URL> --pr <PR URL> --id ST-<n> [--feature <URL>]
+# [{ "line": 6, "properties": { … }, "content": "…" }, …] — pending bullets only
+```
+
+For each entry: `notion-create-pages` in the stories data source with its
+`properties` and `content`, then write the new page's URL back onto the bullet:
+
+```bash
+node .claude/scripts/debt-tasks.mjs mark specs/<feature>/deferred.md --line <line> --url <task URL>
+```
+
+A bullet carrying `— Notion: <url>` is never filed again, so a retest lap or a
+second run is a no-op. A create that fails (a usage limit included) is logged
+`[NOTION-SYNC PENDING: debt <feature> line <n> — <error>]` and retried on the
+next run; it never blocks the build.
 
 ## 3. Record it
 
