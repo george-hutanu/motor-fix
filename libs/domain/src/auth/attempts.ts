@@ -16,7 +16,9 @@ type Kind = keyof typeof LIMIT;
 // usually holds whole.
 export function clientOf(address: string): string {
   if (!isIPv6(address)) return address;
-  const groups = expand(new URL(`http://[${address}]`).hostname.slice(1, -1));
+  // A zone id names the local interface, not the client.
+  const bare = address.split('%')[0] ?? '';
+  const groups = expand(new URL(`http://[${bare}]`).hostname.slice(1, -1));
   const [, , , , , mark, high = 0, low = 0] = groups;
   if (groups.slice(0, 5).every((x) => x === 0) && mark === 0xffff) {
     return [high >> 8, high & 255, low >> 8, low & 255].join('.');
@@ -91,8 +93,8 @@ export class Attempts {
   // Counts one sign-up from the address; false once it has had its 10 in the
   // hour that began with its first.
   async admitSignUp(address: string): Promise<boolean> {
-    const key = `auth:signup:address:${digest(clientOf(address))}`;
     try {
+      const key = `auth:signup:address:${digest(clientOf(address))}`;
       const replies = await this.redis
         .multi()
         .incr(key)

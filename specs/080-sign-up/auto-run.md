@@ -53,3 +53,4 @@
 - test-adversary: 2 files, 142 tests, 11 failing → fixed: IPv4-mapped and IPv6 spellings share one key (/64 for IPv6); JSON-only guard before validation (form posts 415 whatever they hold; prototype keys 400); client lengths in code points; switch disabled while sending. Sign-in's text-body tests moved from 400 to 415.
 - Owner decision relayed by the coordinator: 10 attempts an hour per address, recorded in spec Clarifications, notion-sync.md and the brief (proposed → Decided 2026-10-04).
 - Verification: `npx jest libs/domain/src/auth apps/web/src/app/sign-in` → 716 passed; `npx jest apps/api` → 59 passed.
+- code-reviewer re-review (f40315e): APPROVE, HIGH closed; new MEDIUM: a zone-id address made `clientOf` throw outside the try → zone stripped, key built inside the try, `attempts.spec.ts` (8) red then green. Merge of origin/main (ST-20 #51) as 26af690: auth route guard lists both writes; data-access regenerated.
