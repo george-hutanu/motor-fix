@@ -38,13 +38,13 @@ Independent test: HTTP 401/403/404 and `GET /me` against the real database.
 
 Independent test: with a stubbed "who am I" per role, each address ends on the right frame; menu filtered; no "Vezi ca".
 
-- [ ] T016 [US3] Routing: `apps/web/src/app/app.routes.ts` (new), `provideRouter` in `apps/web/src/app/app.config.ts`, `app.ts` becomes `<router-outlet />`, skeleton moved to `apps/web/src/app/home/home.ts` (new) with its spec moved to `home.spec.ts`; `app/**` client-rendered in `app.routes.server.ts` (FR-017)
-- [ ] T017 [US3] `apps/web/src/app/dashboard/session.ts` (new): loads "who am I" once through the generated client; `area.guard.ts` (new): `canMatch` → true for the actor's area, else `UrlTree` of `landing`, Home `/` when signed out (FR-017)
-- [ ] T018 [US3] `apps/web/src/app/dashboard/frame.ts` (new): aside (logo → `/`, role tag, `nav` "Meniu" filtered by capabilities, name, "Ieși din cont" at the bottom), header `h1`, main empty state "Nimic aici încă."; no "Vezi ca" (FR-017, FR-018)
+- [X] T016 [US3] Routing: `apps/web/src/app/app.routes.ts` (new), `provideRouter` in `apps/web/src/app/app.config.ts`, `app.ts` becomes `<router-outlet />`, skeleton moved to `apps/web/src/app/home/home.ts` (new) with its spec moved to `home.spec.ts`; `app/**` client-rendered in `app.routes.server.ts` (FR-017)
+- [X] T017 [US3] `apps/web/src/app/dashboard/session.ts` (new): loads "who am I" once through the generated client; `area.guard.ts` (new): `canMatch` → true for the actor's area, else `UrlTree` of `landing`, Home `/` when signed out (FR-017)
+- [X] T018 [US3] `apps/web/src/app/dashboard/frame.ts` (new): aside (logo → `/`, role tag, `nav` "Meniu" filtered by capabilities, name, "Ieși din cont" at the bottom), header `h1`, main empty state "Nimic aici încă."; no "Vezi ca" (FR-017, FR-018)
 
 ## Phase 6: Polish
 
-- [ ] T019 Mark tasks, update `specs/079-account-model/auto-run.md`; run `npm run typecheck`, `npm run lint`, the touched Jest projects and the e2e
+- [X] T019 Mark tasks, update `specs/079-account-model/auto-run.md`; run `npm run typecheck`, `npm run lint`, the touched Jest projects and the e2e
 
 ## Tests (written first by `/speckit-tests`; FR → test)
 
