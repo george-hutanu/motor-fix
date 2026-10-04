@@ -330,6 +330,14 @@ describe('the admin test update', () => {
     expect(live.messages.map((m) => m.event)).toEqual(['hello']);
   });
 
+  it('answers 404, not 400, to a non-admin whose body is invalid', async () => {
+    const driver = await account('Andrei', ['driver']);
+
+    const res = await sendTest('andrei', `Bearer ${token(driver, 'driver')}`);
+
+    expect(res.status).toBe(404);
+  });
+
   it('answers 401 without a token', async () => {
     const driver = await account('Andrei', ['driver']);
 

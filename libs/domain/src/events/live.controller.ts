@@ -31,6 +31,7 @@ import {
   AUTH_OPTIONS,
   type AuthOptions,
   CurrentActor,
+  Requires,
 } from '../auth/actor.guard';
 import type { Actor } from '../auth/policy';
 import { PRISMA } from '../auth/prisma';
@@ -71,9 +72,10 @@ export class LiveController {
 
   @Post('admin/live/test')
   @HttpCode(HttpStatus.ACCEPTED)
+  // In the guard, so a non-admin gets 404 before the body is validated.
+  @Requires('admin.users')
   @ApiAcceptedResponse({ description: 'The test update was published' })
-  async test(@CurrentActor() actor: Actor, @Body() body: LiveTestDto) {
-    if (actor.role !== 'admin') throw new NotFoundException();
+  async test(@Body() body: LiveTestDto) {
     const target = await this.prisma.account.findUnique({
       select: { id: true },
       where: { id: body.accountId },
