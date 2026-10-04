@@ -62,7 +62,7 @@ never the story's text, points, priority or relations.
 | Event | Story `Status` | Timeline `Build status` | Epic `Status` |
 | --- | --- | --- | --- |
 | `start`: the spec, or implementation, begins | → In progress | → In progress | To do → In progress |
-| `review`: the verified review starts, or a PR opens | → In review | → In review | unchanged |
+| `review`: the user marks the PR ready for review (not when the draft PR opens) | → In review | → In review | unchanged |
 | `finish`: merged to `main`, or archived | → Done | → Merged | → Done when every story of the epic is Done |
 | `plan`: an execution plan is made for an epic | unchanged | create the rows | unchanged |
 

@@ -49,8 +49,8 @@ Record `RANGE`, `FEATURE_DIR`, and the changed-file list. A range with no
 changes under `apps/`, `libs/` or `e2e/` has nothing to review — say so and
 stop.
 
-Then invoke `speckit-notion-sync review`, which moves the story and its timeline
-row to In review in Notion.
+Do not invoke `speckit-notion-sync review` here: In review follows the user
+marking the draft PR ready for review, not the review run.
 
 ### 2. Run the workflow
 

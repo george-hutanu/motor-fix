@@ -79,12 +79,14 @@ auto_commit:
   one line, e.g. `feat(scanner): add regexp pattern engine`.
 - NO metadata of any kind: no `Co-Authored-By` trailers, no
   "Generated with" lines, no Claude/AI mentions.
-- NEVER push (`git push` in any form) unless the user explicitly asks for it
-  in this conversation. Committing locally is always the default.
+- Push after every commit, to the feature's own branch only (`git push`; the
+  upstream was set when the branch and its draft PR were created). NEVER
+  `--force`, NEVER push `main`, NEVER mark the PR ready or merge it: those
+  are the user's call.
 
 ## Done When
 
 - [ ] Message is a one-line Conventional Commit with a scope, no body, no trailers
 - [ ] Only the intended files staged — no `git add -A` sweeping unrelated work
-- [ ] Nothing pushed; pushing is the user's call
+- [ ] Pushed to the feature's own branch, not forced, not `main`; the PR untouched
 

@@ -7,7 +7,9 @@
 # - Branch name: the ticket code verbatim (e.g. BKP-1270) — pass it as
 #   GIT_BRANCH_NAME; never use the generated {number}-{slug} form when a
 #   ticket exists.
-# - NEVER push a branch until the user explicitly says to push.
+# - Push the feature branch when it is created, open a draft PR, and push
+#   every commit to it. Never --force, never push main, never mark the PR
+#   ready or merge it: those are the owner's call.
 
 # Branch numbering strategy: "sequential" (001, 002, ...) or "timestamp" (YYYYMMDD-HHMMSS)
 branch_numbering: sequential

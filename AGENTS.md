@@ -30,7 +30,7 @@ epic or a plan, whether run through spec-kit or by hand.
   in Notion) and the Build brief's Screens section, and write
   `specs/<feature>/design.md`. Skill: `speckit-design-check`.
 - **Keep Notion in step.** When work starts, the story goes to In progress;
-  when review starts, In review; when it merges to `main`, Done. The same goes
+  when its PR is marked ready for review, In review; when it merges to `main`, Done. The same goes
   for its row in the epic's build timeline under Delivery › Plans, and for the
   epic itself (In progress at its first story, Done at its last). Skill:
   `speckit-notion-sync start | review | finish`. These writes are standing
