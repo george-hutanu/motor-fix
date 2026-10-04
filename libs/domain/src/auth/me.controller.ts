@@ -1,7 +1,15 @@
-import { MeDto } from '@motor-fix/contracts';
-import { Controller, Get, Inject, UseGuards } from '@nestjs/common';
+import { MeDto, UpdateMeDto } from '@motor-fix/contracts';
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Patch,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 
+import { AccountsService } from './accounts.service';
 import { ActorGuard, CurrentActor } from './actor.guard';
 import { capabilitiesOf } from './capabilities';
 import { type Actor, landingFor } from './policy';
@@ -13,7 +21,10 @@ import type { PrismaClient } from '../generated/prisma/client';
 @Controller('me')
 @UseGuards(ActorGuard)
 export class MeController {
-  constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
+  constructor(
+    @Inject(PRISMA) private readonly prisma: PrismaClient,
+    private readonly accounts: AccountsService,
+  ) {}
 
   @Get()
   @ApiOkResponse({ type: MeDto })
@@ -31,5 +42,15 @@ export class MeController {
       role: actor.role,
       roles: actor.roles,
     };
+  }
+
+  @Patch()
+  @ApiOkResponse({ type: MeDto })
+  async update(
+    @CurrentActor() actor: Actor,
+    @Body() body: UpdateMeDto,
+  ): Promise<MeDto> {
+    await this.accounts.setLanguage(actor, body.language);
+    return this.me(actor);
   }
 }

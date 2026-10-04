@@ -7,7 +7,9 @@
 //   node scripts/railway-deploy.ts <staging|production>
 //
 // Reads RAILWAY_API_TOKEN, RAILWAY_ENVIRONMENT_ID, RAILWAY_SERVICE_<APP> and
-// IMAGE_<APP> for APP in API, WORKER, WEB.
+// IMAGE_<APP> for APP in API, WORKER, WEB. RAILWAY_TOKEN_KIND=project sends
+// the token as a project token; unset, a bearer token Railway refuses is
+// retried once as a project token.
 
 export interface Service {
   name: string;
@@ -20,6 +22,9 @@ export interface Service {
 interface Options {
   endpoint: string;
   token: string;
+  // Account and workspace tokens go as a bearer, project tokens in
+  // Project-Access-Token. Unset: bearer first, project if Railway refuses it.
+  tokenKind?: TokenKind;
   environmentId: string;
   services: Service[];
   limitMs: number;
@@ -34,15 +39,29 @@ const HEALTH_TIMEOUT_S = 300;
 const DONE = 'SUCCESS';
 const FAILED = ['FAILED', 'CRASHED', 'REMOVED', 'SKIPPED'];
 
-async function graphql<T>(
+type TokenKind = 'bearer' | 'project';
+
+// Railway answers a refused token with HTTP 200 and this message.
+const REFUSED = 'Not Authorized';
+
+const authHeader = (kind: TokenKind, token: string): Record<string, string> =>
+  kind === 'project'
+    ? { 'project-access-token': token }
+    : { authorization: `Bearer ${token}` };
+
+const errorText = (errors?: { message: string }[]) =>
+  errors?.map((e) => e.message).join('; ') ?? '';
+
+async function request<T>(
   options: Options,
+  kind: TokenKind,
   query: string,
   variables: Record<string, unknown>,
-): Promise<T> {
+) {
   const res = await fetch(options.endpoint, {
     body: JSON.stringify({ query, variables }),
     headers: {
-      authorization: `Bearer ${options.token}`,
+      ...authHeader(kind, options.token),
       'content-type': 'application/json',
     },
     method: 'POST',
@@ -50,16 +69,41 @@ async function graphql<T>(
       ? AbortSignal.any([options.signal, AbortSignal.timeout(30_000)])
       : AbortSignal.timeout(30_000),
   });
-  if (!res.ok) throw new Error(`Railway API answered HTTP ${res.status}`);
-  const body = (await res.json()) as {
+  // A GraphQL validation error comes back as a 400 whose body names it.
+  const body = (await res.json().catch(() => ({}))) as {
     data?: T;
     errors?: { message: string }[];
   };
-  if (!body.data) {
+  if (!res.ok) {
+    const why = errorText(body.errors);
     throw new Error(
-      body.errors?.map((e) => e.message).join('; ') ?? `HTTP ${res.status}`,
+      `Railway API answered HTTP ${res.status}${why ? `: ${why}` : ''}`,
     );
   }
+  return body;
+}
+
+async function graphql<T>(
+  options: Options,
+  query: string,
+  variables: Record<string, unknown>,
+): Promise<T> {
+  let body = await request<T>(
+    options,
+    options.tokenKind ?? 'bearer',
+    query,
+    variables,
+  );
+  if (
+    !options.tokenKind &&
+    !body.data &&
+    body.errors?.some((e) => e.message === REFUSED)
+  ) {
+    body = await request<T>(options, 'project', query, variables);
+    // Remember what worked, so later calls go straight to it.
+    if (body.data) options.tokenKind = 'project';
+  }
+  if (!body.data) throw new Error(errorText(body.errors) || 'no data');
   return body.data;
 }
 
@@ -113,7 +157,7 @@ const previousImage = async (options: Options, service: Service) => {
     serviceInstance: { source: { image: string | null } | null };
   }>(
     options,
-    'query ($serviceId: String, $environmentId: String) { serviceInstance(serviceId: $serviceId, environmentId: $environmentId) { source { image } } }',
+    'query ($serviceId: String!, $environmentId: String!) { serviceInstance(serviceId: $serviceId, environmentId: $environmentId) { source { image } } }',
     { environmentId: options.environmentId, serviceId: service.id },
   );
   return serviceInstance.source?.image ?? undefined;
@@ -251,6 +295,9 @@ async function main() {
     })),
     signal: cancel.signal,
     token: required('RAILWAY_API_TOKEN'),
+    ...(process.env['RAILWAY_TOKEN_KIND'] === 'project' && {
+      tokenKind: 'project' as const,
+    }),
   });
 }
 

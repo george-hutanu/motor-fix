@@ -10,3 +10,14 @@
 - 2026-10-04 · implement · Foundations build timeline · no row
 - 2026-10-04 · labels · PR #50 · in development
 - 2026-10-04 · debt · 1 deferred bullet filed as To do task 3ef607bff0d2817aa0dec871ab9e2964 (e2e mid-growth timing)
+- 2026-10-04 · review · ST-470 story Status · Implementing → In review (PR #50 marked ready)
+- 2026-10-04 · labels · PR #50 · in review
+- 2026-10-04 · qa · ST-470 story Status · In review → QA (pr-tester lap 1 on 6a11659)
+- 2026-10-04 · labels · PR #50 · QA
+- 2026-10-04 · debt · 2 pr-tester lap-1 LOW findings filed directly as To do tasks 3ef607bff0d281d4b1bafe5d38db3c74 (chart.spec matchMedia not restored), 3ef607bff0d281709490d45cfe4b3f24 (unit test checks stop, not final drawing)
+- 2026-10-04 · finish · ST-470 story Status · QA → Done (PR #50 merged, 4586f6e)
+- 2026-10-04 · finish · Foundations build timeline · no row
+- 2026-10-04 · finish · EP-1 Foundations Status · unchanged (In progress; stories still open)
+- 2026-10-04 · labels · PR #50 · none
+- 2026-10-04 · comment · ST-470 · posted (6 items)
+- 2026-10-04 · ready · Foundations · +3ef607bff0d2817aa0dec871ab9e2964 +3ef607bff0d281d4b1bafe5d38db3c74 +3ef607bff0d281709490d45cfe4b3f24 (new debt tasks, no blockers)

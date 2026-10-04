@@ -376,7 +376,7 @@ describe('the account module', () => {
         );
     });
 
-  it('exposes no route that writes anything but a session or a new driver account', () => {
+  it('exposes no route that writes anything but a session, a new driver account or my language', () => {
     const controllers =
       AuthModule.register({ databaseUrl, redisUrl, tokenSecret }).controllers ??
       [];
@@ -388,6 +388,7 @@ describe('the account module', () => {
       'auth/sign-in',
       'auth/sign-out',
       'auth/sign-up',
+      'me//',
     ]);
   });
 });

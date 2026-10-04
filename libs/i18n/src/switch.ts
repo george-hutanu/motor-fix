@@ -9,6 +9,7 @@ import {
   makeEnvironmentProviders,
   provideEnvironmentInitializer,
 } from '@angular/core';
+import { Subject } from 'rxjs';
 
 import { I18n } from './i18n';
 import { isLanguage, type Language } from './languages';
@@ -22,6 +23,16 @@ const KEY = 'mf.lang';
 export class LanguageChoice {
   private readonly i18n = inject(I18n);
   private readonly window = inject(DOCUMENT).defaultView;
+  private readonly tapped = new Subject<Language>();
+  // Languages tapped on the switch; the address, another tab and the session
+  // choose without a tap.
+  readonly taps = this.tapped.asObservable();
+
+  pick(language: string): Promise<void> {
+    const chosen = this.choose(language);
+    if (isLanguage(language)) this.tapped.next(language);
+    return chosen;
+  }
 
   choose(language: string): Promise<void> {
     if (!isLanguage(language)) return Promise.resolve();
@@ -72,10 +83,10 @@ export function provideRememberedLanguage(): EnvironmentProviders {
   `,
   template: `
     <div role="group" [attr.aria-label]="'shell.language.label' | t">
-      <button type="button" [attr.aria-pressed]="i18n.language() === 'ro'" (click)="choice.choose('ro')">
+      <button type="button" [attr.aria-pressed]="i18n.language() === 'ro'" (click)="choice.pick('ro')">
         {{ 'shell.language.ro' | t }}
       </button>
-      <button type="button" [attr.aria-pressed]="i18n.language() === 'en'" (click)="choice.choose('en')">
+      <button type="button" [attr.aria-pressed]="i18n.language() === 'en'" (click)="choice.pick('en')">
         {{ 'shell.language.en' | t }}
       </button>
     </div>

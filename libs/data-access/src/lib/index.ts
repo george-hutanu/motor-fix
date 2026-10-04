@@ -17,6 +17,7 @@ export type { MeDto } from './models/me-dto';
 export type { SessionDto } from './models/session-dto';
 export type { SignInDto } from './models/sign-in-dto';
 export type { SignUpDto } from './models/sign-up-dto';
+export type { UpdateMeDto } from './models/update-me-dto';
 export { BaseService } from './base-service';
 export { HealthService } from './services/health.service';
 export { AuthService } from './services/auth.service';
@@ -37,5 +38,7 @@ export type { AuthControllerSignOut$Params as AuthControllerSignOut$Params } fro
 export { authControllerSignOut as authControllerSignOut } from './fn/auth/auth-controller-sign-out';
 export type { MeControllerMe$Params as MeControllerMe$Params } from './fn/me/me-controller-me';
 export { meControllerMe as meControllerMe } from './fn/me/me-controller-me';
+export type { MeControllerUpdate$Params as MeControllerUpdate$Params } from './fn/me/me-controller-update';
+export { meControllerUpdate as meControllerUpdate } from './fn/me/me-controller-update';
 export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Params } from './fn/audit-history/audit-history-controller-list';
 export { auditHistoryControllerList as auditHistoryControllerList } from './fn/audit-history/audit-history-controller-list';
