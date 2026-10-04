@@ -1,6 +1,6 @@
 {
   "charts": {
-    "error": "Nu s-a putut încărca",
+    "error": "Nu s‑a putut încărca",
     "garages": "Garaje noi pe 12 luni",
     "loading": "Se încarcă",
     "none": "Fără istoric",
@@ -16,7 +16,10 @@
     "lampGreen": "Lucrează pe Dacia",
     "lampGrey": "Închis acum",
     "lampRed": "Nu ia Dacia",
-    "swap": "Schimbă estimarea",
+    "live": "În direct",
+    "motionFull": "Mișcare: completă",
+    "motionReduced": "Mișcare: redusă",
+    "swap": "Schimbă valorile",
     "title": "Lămpi, cadrane și prețuri"
   },
   "heading": "Tema Cockpit",
@@ -25,22 +28,22 @@
   "openDialog": "Deschide dialogul",
   "openDrawer": "Deschide sertarul",
   "openPopover": "Deschide fereastra",
-  "panelTitle": "Service-uri apropiate",
+  "panelTitle": "Service‑uri apropiate",
   "popoverBody": "Ferestrele mici folosesc suprafața ridicată.",
-  "primary": "Caută service-uri",
+  "primary": "Caută service‑uri",
   "romanian": "Mașini, țevi, ăsta, câine, înmatriculare",
   "secondary": "Anulează",
   "showToast": "Arată o notificare",
   "tabAll": "Toate",
-  "tabAllBody": "Toate service-urile din zonă.",
+  "tabAllBody": "Toate service‑urile din zonă.",
   "tableArea": "Zonă",
   "tableGarage": "Service",
   "tableRating": "Rating",
   "tabOpen": "Deschise",
-  "tabOpenBody": "Service-urile deschise acum.",
+  "tabOpenBody": "Service‑urile deschise acum.",
   "tabReviews": "Recenzii",
   "tabReviewsBody": "Recenziile șoferilor.",
   "toastDetail": "Notificările folosesc suprafața și linia temei.",
   "toastSummary": "Salvat",
-  "toggleLabel": "Doar service-uri deschise acum"
+  "toggleLabel": "Doar service‑uri deschise acum"
 }

@@ -50,6 +50,12 @@ function toRating(value: unknown): number | undefined {
     .mf-dial-needle {
       stroke: var(--mf-amber-ink);
     }
+    .mf-dial-arc {
+      transition: stroke-dasharray var(--mf-motion-dial) var(--mf-motion-ease);
+    }
+    .mf-dial-needle {
+      transition: transform var(--mf-motion-dial) var(--mf-motion-ease);
+    }
     .mf-dial-hub {
       fill: var(--mf-bg);
       stroke: var(--mf-amber-ink);

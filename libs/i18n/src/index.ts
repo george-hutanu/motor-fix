@@ -1,3 +1,5 @@
+export { AsWritten } from './as-written';
+export { CatalogueNamePipe } from './catalogue-name.pipe';
 export {
   ClockPipe,
   DayPipe,
