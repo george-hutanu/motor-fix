@@ -1,6 +1,11 @@
 import { STATUS_CODES } from 'node:http';
 
 import {
+  codeForStatus,
+  type FieldProblem,
+  fieldProblems,
+} from '@motor-fix/contracts';
+import {
   ArgumentsHost,
   Catch,
   ExceptionFilter,
@@ -9,17 +14,12 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 
-const CODE_BY_STATUS: Record<number, string> = {
-  400: 'validation_failed',
-  404: 'not_found',
-  503: 'service_unavailable',
-};
-
 export function sendProblem(
   res: Response,
   status: number,
   code: string,
   detail?: string,
+  errors?: FieldProblem[],
 ) {
   res
     .status(status)
@@ -27,6 +27,7 @@ export function sendProblem(
     .json({
       code,
       ...(detail && { detail }),
+      ...(errors && { errors }),
       status,
       title: STATUS_CODES[status],
       type: 'about:blank',
@@ -34,37 +35,36 @@ export function sendProblem(
 }
 
 // Every error leaves the API as RFC 9457 problem details with a stable `code`
-// the front end translates. Unknown errors keep their cause in the log only.
+// the front end translates, and the field errors an exception names. Unknown
+// errors keep their cause in the log only.
 @Catch()
 export class ProblemFilter implements ExceptionFilter {
   private readonly logger = new Logger('Problem');
 
   catch(exception: unknown, host: ArgumentsHost) {
     const res = host.switchToHttp().getResponse<Response>();
-    const known = exception instanceof HttpException;
-    const status = known ? exception.getStatus() : 500;
-    if (!known) this.logger.error(exception);
+    if (!(exception instanceof HttpException)) {
+      this.logger.error(exception);
+      sendProblem(res, 500, 'internal_error');
+      return;
+    }
+    const status = exception.getStatus();
+    const body = exception.getResponse();
+    const own = (typeof body === 'object' ? body : {}) as Record<
+      string,
+      unknown
+    >;
     sendProblem(
       res,
       status,
-      known ? this.code(exception, status) : 'internal_error',
-      known ? this.detail(exception) : undefined,
+      typeof own.code === 'string' ? own.code : codeForStatus(status),
+      detail(typeof body === 'string' ? body : own.message),
+      fieldProblems(own.errors),
     );
   }
+}
 
-  private code(exception: HttpException, status: number): string {
-    const body = exception.getResponse();
-    return typeof body === 'object' &&
-      'code' in body &&
-      typeof body.code === 'string'
-      ? body.code
-      : (CODE_BY_STATUS[status] ?? 'error');
-  }
-
-  private detail(exception: HttpException): string | undefined {
-    const body = exception.getResponse();
-    const message =
-      typeof body === 'object' && 'message' in body ? body.message : body;
-    return Array.isArray(message) ? message.join('; ') : String(message);
-  }
+function detail(message: unknown): string | undefined {
+  if (typeof message === 'string') return message;
+  return Array.isArray(message) ? message.join('; ') : undefined;
 }

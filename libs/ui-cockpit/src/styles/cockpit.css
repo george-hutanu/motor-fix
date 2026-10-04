@@ -19,6 +19,7 @@
   --mf-amber-tint: rgba(255, 176, 0, 0.1);
   --mf-green: #32d74b;
   --mf-red: #ff5a4f;
+  --mf-red-ink: #ff5a4f;
   --mf-focus: #ffb000;
   --mf-mask: rgba(0, 0, 0, 0.6);
 
@@ -72,6 +73,7 @@
     --mf-amber-tint: rgba(138, 94, 0, 0.1);
     --mf-green: #1e8e34;
     --mf-red: #d93a30;
+    --mf-red-ink: #b3261e;
     --mf-focus: #8a5e00;
     --mf-mask: rgba(0, 0, 0, 0.4);
   }

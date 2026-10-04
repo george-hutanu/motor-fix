@@ -127,4 +127,54 @@ describe('CockpitSamplePage', () => {
       text('overlay.results.saved'),
     );
   });
+
+  it('opens a sample form task whose server answer and ending can be chosen', async () => {
+    const page = await render();
+    buttonNamed(page, text('form.open'))?.click();
+    await settle();
+
+    const task = openTask() as HTMLElement;
+    const labelled = (key: string) => {
+      const label = [...task.querySelectorAll('label')].find(
+        (l) => l.textContent?.trim() === text(key),
+      );
+      return task.querySelector<HTMLElement>(`#${label?.htmlFor}`);
+    };
+    expect(labelled('form.plate')?.getAttribute('formcontrolname')).toBe(
+      'plate',
+    );
+    const answers = labelled('form.answer') as HTMLSelectElement;
+    expect([...answers.options].map((o) => o.textContent?.trim())).toEqual([
+      text('form.answers.ok'),
+      text('form.answers.field'),
+      text('form.answers.conflict'),
+      text('form.answers.server'),
+      text('form.answers.network'),
+    ]);
+    const endings = labelled('form.ending') as HTMLSelectElement;
+    expect([...endings.options].map((o) => o.textContent?.trim())).toEqual([
+      text('form.endings.close'),
+      text('form.endings.confirm'),
+    ]);
+    expect(buttonNamed(task, text('form.save'))?.type).toBe('submit');
+  });
+
+  it('shows the saved number on the page once the form closes', async () => {
+    const page = await render();
+    buttonNamed(page, text('form.open'))?.click();
+    await settle();
+    const plate = openTask()?.querySelector<HTMLInputElement>(
+      '[formcontrolname="plate"]',
+    ) as HTMLInputElement;
+    plate.value = 'B 123 ABC';
+    plate.dispatchEvent(new Event('input', { bubbles: true }));
+    buttonNamed(openTask() as HTMLElement, text('form.save'))?.click();
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await settle();
+
+    expect(openTask()).toBeNull();
+    expect(page.querySelector('.mf-form-result')?.textContent).toContain(
+      'B 123 ABC',
+    );
+  });
 });

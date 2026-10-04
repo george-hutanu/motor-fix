@@ -48,4 +48,30 @@ describe('ProblemFilter', () => {
       status: 404,
     });
   });
+
+  it('maps a conflict without a code', () => {
+    expect(send(new HttpException('Taken', 409)).body).toMatchObject({
+      code: 'conflict',
+      status: 409,
+    });
+  });
+
+  it('keeps the field errors an exception carries', () => {
+    const errors = [{ code: 'email_taken', field: 'email' }];
+    const res = send(
+      new HttpException({ code: 'validation_failed', errors }, 400),
+    );
+
+    expect(res.body).toMatchObject({ code: 'validation_failed', errors });
+  });
+
+  it.each([
+    ['no list', { code: 'validation_failed' }],
+    ['a malformed list', { code: 'validation_failed', errors: [{ x: 1 }] }],
+    ['a list that is not one', { code: 'validation_failed', errors: 'email' }],
+  ])('sends no field errors for %s', (_, body) => {
+    expect(send(new HttpException(body, 400)).body).not.toHaveProperty(
+      'errors',
+    );
+  });
 });
