@@ -87,3 +87,8 @@
 - code-reviewer: BLOCK on 1 HIGH: `roleInUse` fell back to `lastRole` when an account had no role rows, so a fully revoked account kept its last role's rights → now returns null and ActorGuard answers 401 `sign_in_required`; spec edge case added; red first (2 failed), then green. Account loading extracted to `activeAccount()` to stay under Biome's complexity limit.
 - Unfixed MEDIUM/LOW (reported): secret length not enforced; web Session treats a /me 5xx or network error as signed out; signAccessToken/AccountsService/assertOwner/assertGarage have no production caller yet (kept: ST-82 and later stories use them, agreed contract); token lifetime a default parameter; AuthModule owns its own PrismaClient; redundant `?.` in capabilitiesOf.
 - After fixes: `npx jest libs/domain apps/api apps/web libs/contracts` → "Tests: 395 passed, 395 total"; typecheck exit 0; lint "Checked 121 files … No fixes applied".
+- Re-review of a81f261 (code-reviewer, once): APPROVE, #1 closed, no new findings. Its note on the CI secret length → CI value lengthened to 41 characters ahead of any length check.
+
+## Phase 15 — Agent context
+- `update-agent-context.sh specs/079-account-model/plan.md` wrote a 3-line block into CLAUDE.local.md (tracked in this repo); context-audit flagged +2 lines → restored the one-line form pointing at specs/079-account-model/plan.md; audit: "the agent context file held its size".
+- Phases 16 (retro evidence) and 17 (archive) not run in this resume: the archive belongs after the merge, which the owner does.
