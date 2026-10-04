@@ -76,6 +76,15 @@ describe('heavy.sh', () => {
     assert.equal(out.status, 0);
   }, 20000);
 
+  it('has four slots by default, so four QA runs hold one each and a fifth command waits', async () => {
+    const dir = scratch();
+    for (const name of ['one', 'two', 'three', 'four']) await hold(dir, name);
+    const fifth = join(dir, 'fifth');
+    const out = run(dir, ['sh', '-c', `touch ${fifth}`], { HEAVY_WAIT: '1' });
+    assert.equal(out.status, 124);
+    assert.equal(existsSync(fifth), false);
+  }, 30000);
+
   it('keeps one slot to one command: slot 1 is the configured lock file', async () => {
     const dir = scratch();
     await hold(dir, 'one', { HEAVY_SLOTS: '1' });

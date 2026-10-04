@@ -47,15 +47,15 @@ epic or a plan, whether run through spec-kit or by hand.
      CRITICAL/HIGH left), fill in every section of the template
      (`node scripts/pr-body-check.ts --body-file <body> --title "<title>"`
      passes, then `gh pr edit <n> --body-file <body>`), mark the PR ready for
-     review (`gh pr ready`), swap its label to `in review`
-     (`gh pr edit <n> --remove-label "in development" --add-label "in review"`) and set the task to In review in Notion
-     (`speckit-notion-sync review`).
+     review (`gh pr ready`) and set the task to In review
+     (`speckit-notion-sync review`, which also sets the PR's one stage label
+     to `in review`).
   5. Get CI green: merge `origin/main` into the branch if it is behind and
      push, wait for the checks (`gh pr checks <n> --watch`); a failing check is
      fixed on the branch and waited for again.
   6. QA: run the PR tester (`/speckit-pr-test <n>`, the `pr-tester` subagent)
-     and set the task to QA (`speckit-notion-sync qa`; the PR's `in review`
-     label becomes `QA`). It boots the PR head in
+     and set the task to QA (`speckit-notion-sync qa`, which also sets the
+     PR's one stage label to `QA`). It boots the PR head in
      its own worktree, tests it in a browser and against the API, reviews the
      diff, posts a review, fills the template's "Agent review" section and sets
      the `agent-review` status on the head commit. Fix every blocking finding
@@ -143,9 +143,16 @@ decisions are the source for anything the constitution does not fix.
   never edited by hand). A lib is created by the story that first needs it.
 - Heavy commands (npm ci/install, nx build/test/typecheck/e2e, Jest over more
   than a few files, docker compose, Playwright, a boot-test-teardown run) go
-  through `scripts/heavy.sh` (3 slots machine-wide); a dev server
+  through `scripts/heavy.sh` (4 slots machine-wide); a dev server
   (`nx serve`) never holds a slot for as long as it lives, and mutation tests
-  never run locally, only in CI.
+  never run locally, only in CI. Up to 4 QA runs (`/speckit-pr-test`) may run
+  at the same time, each holding one slot.
+- Parallel work is watched: `node .claude/scripts/watch.mjs` lists every
+  worktree with its feature, phase, holder (a live agent or not), last
+  activity, PR and the one fix a stale item needs. `/speckit-watch` applies the
+  safe fixes and dispatches an agent per stale item (QA runs within the limit
+  above, at most 2 other agents at once); `/loop 15m /speckit-watch` repeats it
+  in a session that runs several tasks.
 - Lint and format: Biome only, root `biome.json` (no eslint, no prettier).
   Tests: Jest from the root config, Playwright for end-to-end. NestJS 12 is
   ESM-only, so the Nest projects' `test` targets run Jest with

@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-18 "Read every screen in one language, with user text as written" — Notion story https://app.notion.com/p/3ee607bff0d28104acfbf6d2ef09ee7a; EP-1 build-timeline row https://app.notion.com/p/3ee607bff0d281bdb9faff59898748ab (lane B · i18n & shell, W3, 3 points; machine translation of reviews out of scope at launch)."
 

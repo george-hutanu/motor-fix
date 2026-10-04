@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-391 — See the audit history of my garage, or all of it as admin: the GET /api/v1/audit-history API over ST-390's activity_log, with the capability rules from ST-79's policy (404 for no right or another garage's entries), filters and paging per the Build brief; the screens come later with ST-97 and ST-160. Notion story: https://app.notion.com/p/3ee607bff0d281b7acf7cedaa984bb17. Spec folder and branch: 391-audit-history-api."
 

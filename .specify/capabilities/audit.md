@@ -3,6 +3,7 @@ capability: audit
 updated: 2026-10-04
 features:
   - 390-audit-history
+  - 391-audit-history-api
 ---
 
 # Capability: Audit history
@@ -70,3 +71,67 @@ _From 390-audit-history._
 ### 390-FR-015 — The history MUST be indexed by garage, car, job and actor, each with the time (no read API in this story). The time is the database clock at the insert, so entries of one change keep the order they were written.
 
 _From 390-audit-history._
+
+### 391-FR-001 — The system MUST serve `GET /api/v1/audit-history` to signed-in callers; without a valid token it answers 401 `sign_in_required`.
+
+_From 391-audit-history-api._
+
+### 391-FR-002 — The capabilities table MUST grant `garage.audit_history` to the garage owner, the receptionist and the mechanic (whatever their permissions), and `admin.audit_history` to the admin; no other role holds either, and `/me` lists them.
+
+_From 391-audit-history-api._
+
+### 391-FR-003 — For the owner, a receptionist or a mechanic, the system MUST return only entries whose garage id is the caller's own garage; entries of another garage or without a garage are never returned.
+
+_From 391-audit-history-api._
+
+### 391-FR-004 — For the admin, the system MUST return entries of every garage and entries without a garage.
+
+_From 391-audit-history-api._
+
+### 391-FR-005 — A caller without either capability (a driver), or a garage role with no garage, MUST get 404; a garage role passing a `garageId` that is not its own MUST get 404.
+
+_From 391-audit-history-api._
+
+### 391-FR-006 — The system MUST filter by `garageId`, `actorId`, `jobId`, `area`, `from` and `to` (both inclusive, ISO 8601 date-times with a zone), combined with AND.
+
+_From 391-audit-history-api._
+
+### 391-FR-007 — When `from` is absent, the system MUST use 7 days before the time of the call; `to` has no default.
+
+_From 391-audit-history-api._
+
+### 391-FR-008 — The `area` filter MUST be one of `requests`, `quotes`, `bookings`, `jobs`, `prices`, `repair_history`, `photos`, `garage_profile`, `team`, `settings`, `admin_actions`, each matching a fixed set of subject types (Data model table names), and `admin_actions` matching entries made by an admin.
+
+_From 391-audit-history-api._
+
+### 391-FR-009 — The system MUST order entries newest first, equal times by entry id (descending), and return 20 per page with `nextCursor` (null on the last page) and `total`, the number of entries matching the filters.
+
+_From 391-audit-history-api._
+
+### 391-FR-010 — A `cursor` MUST be the id of the last entry of the previous page; one that is not an existing entry inside the caller's scope and matching the current filters MUST answer 400 `invalid_cursor`.
+
+_From 391-audit-history-api._
+
+### 391-FR-011 — Each entry MUST carry id, time (UTC), action, subject type and id, field, old and new value as stored, the actor (id, first name, stored role), `viaAssistant`, garage, car and job ids, `internal`, kind and text; absent values are null.
+
+_From 391-audit-history-api._
+
+### 391-FR-012 — Internal entries MUST be returned to garage staff and the admin.
+
+_From 391-audit-history-api._
+
+### 391-FR-013 — For the owner, the receptionist and the mechanic, a non-null value of a field named `phone` or `plate`, and the value of any `phone` or `plate` key inside an object or array value (names compared without case), MUST be returned masked; `text` is not masked; the admin gets them as stored.
+
+_From 391-audit-history-api._
+
+### 391-FR-014 — Invalid parameters (unknown name, malformed id, a date without time or zone, unknown area, a given `from` after a given `to`) MUST answer 400 `validation_failed`.
+
+_From 391-audit-history-api._
+
+### 391-FR-015 — Reading the history MUST NOT write an audit entry, and the endpoint offers no way to change an entry.
+
+_From 391-audit-history-api._
+
+### 391-FR-016 — The OpenAPI document MUST describe the endpoint, its parameters and its answer, and the generated Angular client MUST include it.
+
+_From 391-audit-history-api._
