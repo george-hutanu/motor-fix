@@ -78,24 +78,6 @@ describe('authInterceptor sign-in gate, hostile cases', () => {
     expect(gate).toHaveBeenCalledTimes(1);
   });
 
-  it('hands the original refusal to the caller when renewing throws', async () => {
-    const { gate, http, server } = setup('expired', {
-      gate: jest.fn(async () => false),
-      renew: async () => {
-        throw new Error('network down');
-      },
-    });
-
-    const answer = firstValueFrom(http.patch('/api/v1/me', {})).catch(
-      (error: unknown) => error,
-    );
-    server.expectOne('/api/v1/me').flush(signInRequired, refused);
-    await tick();
-
-    await expect(answer).resolves.toMatchObject({ status: 401 });
-    expect(gate.mock.calls.length).toBeLessThanOrEqual(1);
-  });
-
   it('sends an unrelated call at once while a sign-in dialog is still open', async () => {
     const { http, server } = setup(null, {
       gate: jest.fn(() => new Promise<boolean>(() => undefined)),

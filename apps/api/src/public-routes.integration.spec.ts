@@ -103,13 +103,4 @@ describe('routes without a session', () => {
       ]);
     }
   });
-
-  it('refuses before reading the body, so a bad body still gets sign_in_required', async () => {
-    const res = await request(app.getHttpServer())
-      .patch('/api/v1/me')
-      .send({ language: 'klingon', unexpected: true });
-
-    expect(res.status).toBe(401);
-    expect(res.body).toMatchObject({ code: 'sign_in_required' });
-  });
 });

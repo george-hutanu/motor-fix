@@ -7,6 +7,7 @@ import {
   type HttpRequest,
 } from '@angular/common/http';
 import { inject, PLATFORM_ID } from '@angular/core';
+import { toProblem } from '@motor-fix/overlays';
 import { catchError, from, type Observable, switchMap, throwError } from 'rxjs';
 
 import { Session } from './dashboard/session';
@@ -23,10 +24,10 @@ const isWhoAmI = (req: HttpRequest<unknown>) =>
 const withToken = (req: HttpRequest<unknown>, token: string) =>
   req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
 
-const signInRequired = (error: unknown): error is HttpErrorResponse =>
-  error instanceof HttpErrorResponse &&
-  error.status === 401 &&
-  (error.error as { code?: unknown } | null)?.code === 'sign_in_required';
+const signInRequired = (error: unknown) => {
+  const problem = toProblem(error);
+  return problem.status === 401 && problem.code === 'sign_in_required';
+};
 
 export const authInterceptor: HttpInterceptorFn = (
   req,
@@ -39,8 +40,8 @@ export const authInterceptor: HttpInterceptorFn = (
   const token = session.token();
   const mayAsk = !onServer && !isWhoAmI(req);
 
-  // The call again with whatever token the session now holds, or the first
-  // refusal when there is none.
+  // Send the call again with whatever token the session now holds; with none,
+  // hand back the first refusal.
   const repeat = (
     ok: boolean,
     refusal: unknown,
@@ -68,7 +69,7 @@ export const authInterceptor: HttpInterceptorFn = (
       if (!(expired && (token || (mayAsk && signInRequired(error))))) {
         return throwError(() => error);
       }
-      return from(session.renew().catch(() => false)).pipe(
+      return from(session.renew()).pipe(
         switchMap((renewed) => (renewed ? repeat(true, error) : ask(error))),
       );
     }),

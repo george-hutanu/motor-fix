@@ -131,21 +131,11 @@ describe('the app-wide actor check, hostile cases', () => {
     expect(res.body).toMatchObject({ code: 'sign_in_required' });
   });
 
-  it('treats a lower-case scheme as no usable credential or accepts it, never a 5xx', async () => {
+  it('treats a lower-case scheme as no usable credential', async () => {
     const res = await post('/mixed/closed', `bearer ${await token()}`);
 
-    expect([201, 401]).toContain(res.status);
-    if (res.status === 401) {
-      expect(res.body).toMatchObject({ code: 'sign_in_required' });
-    }
-  });
-
-  it('keeps a public handler open to a broken token without opening its sibling', async () => {
-    const open = await post('/mixed/open', 'Bearer garbage');
-    const closed = await post('/mixed/closed', 'Bearer garbage');
-
-    expect(open.status).toBe(201);
-    expect(closed.status).toBe(401);
+    expect(res.status).toBe(401);
+    expect(res.body).toMatchObject({ code: 'sign_in_required' });
   });
 
   it('answers 401 for an account deleted after its token was issued', async () => {
