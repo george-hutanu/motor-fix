@@ -1,0 +1,24 @@
+[
+  {
+    "id": "pr-lifecycle-never-blocks-twice-in-a-row",
+    "hook": "stop:pr-lifecycle",
+    "why": "stop_hook_active means the gate already refused this turn; refusing again loops forever, and Claude Code's contract forbids it",
+    "payload": {
+      "stop_hook_active": true
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "pr-lifecycle-fails-open-outside-a-repository",
+    "hook": "stop:pr-lifecycle",
+    "why": "a gate that cannot read the branch has nothing to judge; trapping the session would punish a broken environment, not unfinished work",
+    "payload": {
+      "cwd": "/"
+    },
+    "expect": {
+      "exit": 0
+    }
+  }
+]

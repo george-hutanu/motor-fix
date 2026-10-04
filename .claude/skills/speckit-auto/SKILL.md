@@ -82,7 +82,7 @@ Run these before phase 1, in one batch:
   run auto on a machine that is also being used.
 - `git rev-parse --abbrev-ref HEAD` and `git rev-parse HEAD` — record the
   starting branch and commit.
-- Read `.specify/memory/constitution.md` (v1.2.1 — its Enforcement section
+- Read `.specify/memory/constitution.md` (v1.3.0 — its Enforcement section
   lists the gates that will fire at you).
 - `npm run typecheck && npm run lint && npx jest` — the repo MUST start
   green. A red start is a hard stop; the run has no way to tell a pre-existing

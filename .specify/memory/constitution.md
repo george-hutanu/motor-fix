@@ -1,5 +1,35 @@
 <!--
-Sync Impact Report (v1.1.0)
+Sync Impact Report (v1.4.0)
+- Version change: 1.3.0 → 1.4.0 (MINOR: principle VII added, NON-NEGOTIABLE;
+  Enforcement gains the stop:pr-lifecycle gate; nothing removed)
+- Source: owner decision 2026-10-04 — every task, current or future, runs its
+  own PR lifecycle without waiting for the owner: draft PR at the start, a
+  push per commit, ready when done, merged on green CI. Registered as a hard
+  rule at the owner's request.
+- Templates:
+  - ✅ AGENTS.md — lifecycle marked as Constitution VII
+  - ✅ CLAUDE.local.md — gate table
+  - ✅ .claude/hooks/pr-lifecycle-gate.mjs, registry.json, settings.json
+
+Previous report (v1.3.0)
+- Version change: 1.1.0 → 1.3.0 (MINOR: III. The Given Stack materially
+  changed — the front-end component library is Spartan UI on Angular CDK
+  instead of PrimeNG, and front-end dependencies must be free and open
+  source. No principle removed. No merged code depended on PrimeNG.
+  1.2.0 is skipped: the harness files already cite v1.2.1 as the current
+  rules, so the file's number moves past every reference.)
+- Source: owner decision 2026-10-04 — PrimeNG 22 (the only line for Angular
+  22) moved to the PrimeUI License, which needs a licence key; the owner wants
+  a fully free stack. Notion Architecture decisions A1 amended the same day.
+- Templates:
+  - ✅ .specify/templates/plan-template.md — Constitution Check III
+  - ✅ .claude/agents/spec-reviewer.md — principle III check
+  - ✅ .claude/skills/speckit-design-check/SKILL.md — component naming
+  - ✅ AGENTS.md — Given stack line
+  - ⚠ specs/421-monorepo-platform/{plan,context}.md — archived feature,
+    historical record, left as written
+
+Previous report (v1.1.0)
 - Version change: 1.0.0 → 1.1.0 (MINOR: four principles added, II and the
   Enforcement section materially expanded; nothing removed or redefined)
 - Source: the owner's Notion space "MotorFix — Product documentation",
@@ -82,9 +112,12 @@ prose does not; tests against the real database catch what mocks agree to.
 
 The owner's stack is decided, not proposed:
 
-- Front end: Angular (standalone components, signals) with PrimeNG, styled by
-  the Cockpit theme — design tokens on top of PrimeNG plus the few custom
-  components it needs (dial, lamp, rolling digits).
+- Front end: Angular (standalone components, signals) with Spartan UI
+  (`@spartan-ng/brain` primitives, helm components copied into our own lib)
+  on Angular CDK, styled by the Cockpit theme — design tokens on top of those
+  components plus the few custom ones it needs (dial, lamp, rolling digits).
+  Every front-end dependency is free and open source; a library that needs a
+  paid licence or a licence key MUST NOT land.
 - Back end: NestJS on Node.js, PostgreSQL, Redis.
 - TypeScript everywhere; types are shared between browser, API, worker and
   MCP server.
@@ -141,6 +174,25 @@ changes; a check made only in the browser is not a check.
 Rationale: no change without its event is what keeps trackers, inboxes and
 notifications in step, even when Redis is down.
 
+### VII. The Task Lifecycle Is Autonomous (NON-NEGOTIABLE)
+
+Every task, current or future, runs this lifecycle on its own, and no step
+waits for the owner:
+
+1. Set the task In progress in Notion, then open a draft PR for its branch.
+2. Push every commit to that branch as the work goes: never forced, never to
+   `main`.
+3. When the work is done (tests, typecheck and lint green, review with no
+   CRITICAL/HIGH left), mark the PR ready and set the task In review.
+4. Merge `origin/main` into the branch if it is behind, wait for CI, and
+   merge the PR when every check passes. A failing check is fixed on the
+   branch and waited for again; a pending, failing or missing check is never
+   merged. Then set the task Done.
+
+Rationale: the owner should not have to say when to open a PR or when to
+merge one. A task that ends with its work unpushed, without a PR, or with a
+green PR left unmerged is not finished.
+
 ## Additional Constraints
 
 - Slow work — e-mail, register look-ups, clip processing, PDFs — runs in the
@@ -188,6 +240,7 @@ the hooks live in `.claude/hooks/`, the checks in `.claude/scripts/`.
 | Commit hygiene | `commit-msg-policy.js` | one-line Conventional Commit, no metadata trailers or tool mentions |
 | Identity | `.husky/pre-commit` → `.husky/identity.sh check`; `github-identity.sh` (SessionStart) | refuses a commit not authored by `george-hutanu <hutanugeorge40@gmail.com>`; pins `gh` to the `george-hutanu` account for agent sessions |
 | Destructive commands | `bash-guard.mjs` (PreToolUse) | force-push, `reset --hard`, `clean -f`, deleting `.work/` |
+| VII task lifecycle | `pr-lifecycle-gate.mjs` (Stop hook) | the agent may not finish on a task branch ahead of `main` with unpushed commits, with no PR, or with a ready PR whose checks all passed but that is not merged |
 | Full verification | `.husky/pre-commit` | identity, then `npm run typecheck && npm run lint && npm run test` on every real commit |
 
 The edit-time gates watch `apps/*`, `libs/*` and `e2e/`, and skip Biome or Jest
@@ -260,4 +313,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.1.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-03
+**Version**: 1.4.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-04

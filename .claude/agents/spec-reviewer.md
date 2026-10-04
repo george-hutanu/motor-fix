@@ -41,8 +41,9 @@ range (or "working tree"). Gather your own evidence:
      look for, not the last.
    - **II. Test Discipline**: tests not colocated as `foo.spec.ts`; no failing
      test written before the implementation it covers.
-   - **III. The Given Stack**: a substitute for Angular, PrimeNG, NestJS,
-     PostgreSQL or Redis, or a second framework doing the same job.
+   - **III. The Given Stack**: a substitute for Angular, Spartan UI, NestJS,
+     PostgreSQL or Redis, a second framework doing the same job, or a
+     front-end dependency that needs a paid licence or a licence key.
    - **IV. One Repository, One Toolchain**: a new app beyond web, api, worker
      and mcp without an amendment; a stray per-project lint, format or test
      config (eslint, prettier, a second biome.json) instead of a root override.
