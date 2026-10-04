@@ -89,7 +89,8 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - name: Deploy and wait for /health/ready
-        run: node scripts/railway-deploy.ts staging
+        # exec: the runner's cancel signals reach node, not a waiting shell.
+        run: exec node scripts/railway-deploy.ts staging
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: End to end on staging
@@ -101,13 +102,14 @@ jobs:
   production:
     needs: [images, staging]
     runs-on: ubuntu-latest
-    # Required reviewers on this environment approve each release. A newer
-    # commit that passes staging cancels the approval still waiting here, so
-    # only the latest proven commit can reach production.
+    # No approval: production follows a green staging run. Production
+    # releases run one at a time, in commit order, and a deploy already
+    # running is never cancelled: a newer commit that passes staging waits
+    # for it, and of several waiting only the latest runs next.
     environment: production
     concurrency:
       group: release-production
-      cancel-in-progress: true
+      cancel-in-progress: false
     env:
       IMAGE_WEB: ghcr.io/${{ github.repository }}-web@${{ needs.images.outputs.web }}
       IMAGE_API: ghcr.io/${{ github.repository }}-api@${{ needs.images.outputs.api }}
@@ -123,4 +125,5 @@ jobs:
         with:
           node-version-file: .nvmrc
       - name: Deploy the staging-proven digests and wait for /health/ready
-        run: node scripts/railway-deploy.ts production
+        # exec: the runner's cancel signals reach node, not a waiting shell.
+        run: exec node scripts/railway-deploy.ts production

@@ -37,6 +37,16 @@ function answer(call: Call, status: () => string = () => 'DEPLOYING') {
   return { deployment: { status: status() } };
 }
 
+// Resolves once the fake API has received a call matching the predicate, so a
+// test cancels at a known point rather than after a guessed delay.
+async function seenIn(calls: () => Call[], match: (call: Call) => boolean) {
+  const until = Date.now() + 2_000;
+  while (!calls().some(match)) {
+    if (Date.now() > until) throw new Error('the expected call never came');
+    await new Promise((resolve) => setTimeout(resolve, 2));
+  }
+}
+
 describe('railway deploy', () => {
   let server: Server;
   let endpoint: string;
@@ -75,6 +85,8 @@ describe('railway deploy', () => {
       services,
       token: 't',
     });
+
+  const seen = (match: (call: Call) => boolean) => seenIn(() => calls, match);
 
   const updates = () =>
     calls
@@ -137,6 +149,183 @@ describe('railway deploy', () => {
     expect(calls.some((c) => c.variables['serviceId'] === 'svc-web')).toBe(
       false,
     );
+  });
+
+  it('puts the previous image back when the run is cancelled mid-deploy', async () => {
+    statuses = [];
+    const cancel = new AbortController();
+    const started = deploy({
+      endpoint,
+      environmentId: 'env-1',
+      limitMs: 10_000,
+      pollMs: 5,
+      services,
+      signal: cancel.signal,
+      token: 't',
+    });
+    await seen((c) => c.query.includes('deployment('));
+    cancel.abort();
+
+    await expect(started).rejects.toThrow('cancelled');
+    expect(updates().at(-1)).toEqual({
+      environmentId: 'env-1',
+      input: { source: { image: 'svc-api@sha256:old' } },
+      serviceId: 'svc-api',
+    });
+    const redeploys = calls
+      .filter((c) => c.query.includes('serviceInstanceDeployV2'))
+      .map((c) => c.variables['serviceId']);
+    expect(redeploys).toEqual(['svc-api', 'svc-api']);
+    expect(calls.some((c) => c.variables['serviceId'] === 'svc-web')).toBe(
+      false,
+    );
+  });
+
+  it('redeploys the services already live when the run is cancelled', async () => {
+    statuses = ['SUCCESS'];
+    const cancel = new AbortController();
+    const started = deploy({
+      endpoint,
+      environmentId: 'env-1',
+      limitMs: 10_000,
+      pollMs: 5,
+      services,
+      signal: cancel.signal,
+      token: 't',
+    });
+    await seen(
+      (c) =>
+        c.query.includes('deployment(') && c.variables['id'] === 'dep-svc-web',
+    );
+    cancel.abort();
+
+    await expect(started).rejects.toThrow('cancelled');
+    const restores = updates().filter(
+      (u) => !('healthcheckPath' in (u['input'] as object)),
+    );
+    restores.sort((x, y) =>
+      String(x['serviceId']).localeCompare(String(y['serviceId'])),
+    );
+    expect(restores).toEqual([
+      {
+        environmentId: 'env-1',
+        input: { source: { image: 'svc-api@sha256:old' } },
+        serviceId: 'svc-api',
+      },
+      {
+        environmentId: 'env-1',
+        input: { source: { image: 'svc-web@sha256:old' } },
+        serviceId: 'svc-web',
+      },
+    ]);
+    const redeploys = calls
+      .filter((c) => c.query.includes('serviceInstanceDeployV2'))
+      .map((c) => c.variables['serviceId']);
+    expect(redeploys.slice(0, 2)).toEqual(['svc-api', 'svc-web']);
+    expect(redeploys.slice(2).sort()).toEqual(['svc-api', 'svc-web']);
+  });
+
+  it('redeploys the previous image when cancelled while the deploy request is in flight', async () => {
+    statuses = [];
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const cancel = new AbortController();
+    const slow = createServer((req, res) => {
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk;
+      });
+      req.on('end', async () => {
+        const call = JSON.parse(body) as Call;
+        calls.push(call);
+        if (
+          call.query.includes('serviceInstanceDeployV2') &&
+          !cancel.signal.aborted
+        ) {
+          await held;
+        }
+        res.end(JSON.stringify({ data: answer(call) }));
+      });
+    });
+    await new Promise<void>((resolve) => slow.listen(0, resolve));
+    const started = deploy({
+      endpoint: `http://localhost:${(slow.address() as AddressInfo).port}`,
+      environmentId: 'env-1',
+      limitMs: 10_000,
+      pollMs: 5,
+      services,
+      signal: cancel.signal,
+      token: 't',
+    });
+    await seen((c) => c.query.includes('serviceInstanceDeployV2'));
+    cancel.abort();
+
+    await expect(started).rejects.toThrow('cancelled');
+    release();
+    await new Promise((resolve) => slow.close(resolve));
+    expect(updates().at(-1)).toEqual({
+      environmentId: 'env-1',
+      input: { source: { image: 'svc-api@sha256:old' } },
+      serviceId: 'svc-api',
+    });
+    const redeploys = calls
+      .filter((c) => c.query.includes('serviceInstanceDeployV2'))
+      .map((c) => c.variables['serviceId']);
+    expect(redeploys).toEqual(['svc-api', 'svc-api']);
+  });
+
+  it('still restores the other services when one restore fails', async () => {
+    statuses = ['SUCCESS', 'FAILED'];
+    server.removeAllListeners('request');
+    server.on('request', (req, res) => {
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk;
+      });
+      req.on('end', () => {
+        const call = JSON.parse(body) as Call;
+        calls.push(call);
+        const input = call.variables['input'] as
+          | { source?: { image?: string } }
+          | undefined;
+        if (input?.source?.image === 'svc-api@sha256:old') {
+          res.end(JSON.stringify({ errors: [{ message: 'busy' }] }));
+          return;
+        }
+        res.end(
+          JSON.stringify({
+            data: answer(call, () => statuses.shift() ?? 'DEPLOYING'),
+          }),
+        );
+      });
+    });
+
+    await expect(run()).rejects.toThrow('web: deployment FAILED');
+    expect(updates()).toContainEqual({
+      environmentId: 'env-1',
+      input: { source: { image: 'svc-web@sha256:old' } },
+      serviceId: 'svc-web',
+    });
+  });
+
+  it('fails as cancelled without touching anything when cancelled before it starts', async () => {
+    const cancel = new AbortController();
+    cancel.abort();
+
+    await expect(
+      deploy({
+        endpoint,
+        environmentId: 'env-1',
+        limitMs: 200,
+        pollMs: 5,
+        services,
+        signal: cancel.signal,
+        token: 't',
+      }),
+    ).rejects.toThrow('cancelled');
+    expect(updates()).toEqual([]);
   });
 
   it('puts the previous image back when the health check never passes in time', async () => {
