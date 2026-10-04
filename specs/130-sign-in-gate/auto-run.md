@@ -55,3 +55,7 @@
 
 ## Merge origin/main (ST-194 landed)
 - ST-194's Brevo webhook authenticates by its own secret and had no `@Public()`: the app-wide check refused it (3 webhook tests red on the merge). Marked `@Public()`; the admin notifications controller's own `UseGuards(ActorGuard)` removed. notifications + API + auth suites 1062/1062. Spec FR-002 and contracts list the webhook.
+
+## QA lap 1 (38d2dc3) — failure
+- High: after signing in through the gate, the repeated language save landed but the screen went back to the account's old language (the answer was dropped as "another account"). Fixed test-first: `session.language.spec.ts` new case red, then `Session.save` keeps an answer for the same account id and applies its language. e2e now asserts EN pressed after the gate. Web 475/475, e2e 9/9.
+- Medium/low deferred and filed in Notion (5 tasks): route list beyond OpenAPI, name lost behind the dialog, tester teardown, diff-audit noise, shared-Redis flake.

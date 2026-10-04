@@ -87,6 +87,12 @@ test.describe('the sign-in gate', () => {
       await expect(panel(page)).toBeHidden();
       await expect(page).toHaveURL('/app/driver');
       await expect.poll(() => saves).toEqual(['Bearer after-sign-in']);
+      // The account's old language comes back with the sign-in; the save wins.
+      await expect(
+        page
+          .getByRole('group', { name: 'Language' })
+          .getByRole('button', { name: 'EN' }),
+      ).toHaveAttribute('aria-pressed', 'true');
     });
   }
 

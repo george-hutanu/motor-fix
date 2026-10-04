@@ -213,4 +213,24 @@ describe('saving the language on the account', () => {
     expect(session.current()).toBe(other);
     expect(meControllerUpdate).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps a save that lands after the same account signed in again', async () => {
+    const { choice, i18n, meControllerUpdate, pending, session } =
+      await signedIn('ro');
+
+    await choice.pick('en');
+    session.current.set(null);
+    jest
+      .mocked(TestBed.inject(MeService).meControllerMe)
+      .mockResolvedValueOnce(account('ro'));
+    await session.load();
+    await settle();
+    expect(i18n.language()).toBe('ro');
+    pending[0].resolve(account('en'));
+    await settle();
+
+    expect(session.current()?.language).toBe('en');
+    expect(i18n.language()).toBe('en');
+    expect(meControllerUpdate).toHaveBeenCalledTimes(1);
+  });
 });

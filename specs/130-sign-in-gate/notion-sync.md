@@ -12,3 +12,4 @@
 - 2026-10-04 · review · ST-130 · Implementing → QA
 - 2026-10-04 · review · Foundations timeline ST-130 · Implementing → QA
 - 2026-10-04 · labels · PR #64 · QA
+- 2026-10-05 · debt · ST-130 · 5 tasks filed (To do), URLs on deferred.md bullets
