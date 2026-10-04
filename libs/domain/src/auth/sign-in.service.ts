@@ -17,6 +17,7 @@ import { DECOY_HASH, verifyPassword } from './password';
 import { roleInUse } from './policy';
 import { PRISMA } from './prisma';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
+import { EVENT_PORT, type EventPort } from '../events/event.port';
 import { type LivePublisher, publishLive } from '../events/live.hub';
 import type { PrismaClient } from '../generated/prisma/client';
 
@@ -72,6 +73,7 @@ export class SignInService {
     @Inject(MAINTENANCE) private readonly maintenance: Maintenance,
     private readonly attempts: Attempts,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Inject(EVENT_PORT) private readonly events: EventPort,
     @Inject(SESSION_EVENTS) private readonly sessionEvents: LivePublisher,
   ) {}
 
@@ -160,7 +162,13 @@ export class SignInService {
         subjectId: account.id,
         subjectType: 'account',
       });
+      await this.events.record(tx, {
+        kind: 'account.signed_out_everywhere',
+        payload: { accountId: account.id },
+        subjectId: account.id,
+      });
     });
+    // The live nudge only tells open dashboards; the event above is the record.
     // Not awaited: a tab that misses it is signed out at its next renewal.
     publishLive(
       this.sessionEvents,

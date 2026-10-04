@@ -25,11 +25,11 @@ One new API call, `POST /api/v1/auth/sign-out-everywhere`, read off the refresh 
 ## Project Structure
 
 ```
-libs/domain/src/auth/sign-in.service.ts        signOutEverywhere(token)
+libs/domain/src/auth/sign-in.service.ts        signOutEverywhere(token); audit-coverage.spec already scans it
 libs/domain/src/auth/auth.controller.ts        POST auth/sign-out-everywhere
 libs/domain/src/auth/auth.module.ts            pass the auth Redis to SignInService's publisher
 libs/domain/src/events/live.hub.ts             export publishLive(redis, event, audience) (LiveHub.publish uses it)
-libs/domain/src/audit/audit-coverage.spec.ts   signOutEverywhere is a recorded change
+libs/domain/src/events/event.port.ts           account.signed_out_everywhere recorded in the change's transaction (Constitution VI)
 apps/api/openapi.json, libs/data-access        regenerated
 apps/web/src/app/dashboard/session.ts          signOutEverywhere(), cross-tab channel, pending retry, ended$
 apps/web/src/app/dashboard/sign-out-everywhere.ts  the confirm task (new)

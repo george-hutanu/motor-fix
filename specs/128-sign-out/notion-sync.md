@@ -13,3 +13,4 @@
 - 2026-10-05 · qa · Foundations timeline row ST-128 · Implementing → QA
 - 2026-10-05 · labels · PR #66 · QA
 - 2026-10-05 · debt · ST-128 · 1 task filed https://app.notion.com/p/3ef607bff0d2818bafeec79d6a8b83cb
+- 2026-10-05 · debt · ST-128 · 3 tasks filed (pr-tester lap 1) https://app.notion.com/p/3ef607bff0d2816aadf4d566701b18c2 https://app.notion.com/p/3ef607bff0d281e6ac3acc89b13e7991 https://app.notion.com/p/3ef607bff0d281fa892cfb5e17f6aca8

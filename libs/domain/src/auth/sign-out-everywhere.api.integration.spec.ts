@@ -11,7 +11,7 @@ import * as password from './password';
 import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';
 import { AuditService } from '../audit/audit.service';
-import { noEvents } from '../events/event.port';
+import { EVENT_PORT, type EventPort, noEvents } from '../events/event.port';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
@@ -25,13 +25,17 @@ const accounts = new AccountsService(prisma, new AuditService(), noEvents);
 serialDatabase(databaseUrl);
 
 let hash: string;
+let events: EventPort = noEvents;
 
 async function start(redisAt = redisUrl) {
   const moduleRef = await Test.createTestingModule({
     imports: [
       AuthModule.register({ databaseUrl, redisUrl: redisAt, tokenSecret }),
     ],
-  }).compile();
+  })
+    .overrideProvider(EVENT_PORT)
+    .useValue({ record: (tx, event) => events.record(tx, event) } as EventPort)
+    .compile();
   const nest = moduleRef.createNestApplication<NestExpressApplication>();
   nest.set('trust proxy', 'loopback');
   nest.useGlobalPipes(
@@ -59,6 +63,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  events = noEvents;
   await prisma.$executeRawUnsafe('TRUNCATE account, garage CASCADE');
   const keys = await redis.keys('auth:fail:*');
   if (keys.length) await redis.del(...keys);
@@ -170,6 +175,42 @@ describe('signing out on all devices', () => {
       subjectId: id,
       subjectType: 'account',
     });
+  });
+
+  it('records account.signed_out_everywhere with the change, and ends nothing when that fails', async () => {
+    const id = await person('andrei@example.test');
+    const recorded: unknown[] = [];
+    events = {
+      record: async (_tx, event) => {
+        recorded.push(event);
+      },
+    };
+    expect(
+      (await everywhere(await session('andrei@example.test'))).status,
+    ).toBe(204);
+    expect(recorded).toEqual([
+      {
+        kind: 'account.signed_out_everywhere',
+        payload: { accountId: id },
+        subjectId: id,
+      },
+    ]);
+
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    events = {
+      record: async () => {
+        throw new Error('outbox down');
+      },
+    };
+    const phone = await session('andrei@example.test');
+    const before = (await entries(id)).length;
+
+    expect((await everywhere(phone)).status).toBe(500);
+    expect(await prisma.refreshToken.count({ where: { accountId: id } })).toBe(
+      1,
+    );
+    expect(await entries(id)).toHaveLength(before);
+    jest.restoreAllMocks();
   });
 
   it('writes nothing to the audit history for a sign-out on this device', async () => {

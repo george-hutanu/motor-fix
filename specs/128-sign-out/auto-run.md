@@ -49,3 +49,7 @@
 - `retro-evidence.mjs --since c02b174`: 10 tasks done, 10 FRs, 4 commits then, accounts +10; jev lane unavailable (no key). `instincts.mjs triggered`: nothing proposed.
 
 - The e2e signs up one account per run (the API admits 10 sign-ups an hour per address); its flows run one at a time.
+
+## Hand-off
+- Ready at 884749b; CI green; Notion QA; debt filed (1 task).
+- QA lap 1 on 02dcc71: success, 0 blocking; medium #3 (no domain event in the transaction, Constitution VI) fixed test-first (1 red) with `EVENT_PORT` in the transaction; low #7 plan.md fixed; lows #4–#6 deferred; mediums #1–#2 environment (no object store locally).
