@@ -48,7 +48,7 @@ Whatever is wrong with the credentials, the dialog shows one message, "E‑mailu
 4. **Given** one network address has failed 20 times within 15 minutes, **When** it tries again with any e-mail, **Then** it is refused the same way.
 5. **Given** an empty e-mail, an e-mail without an "@" and a domain, or an empty password, **When** "Intră în cont" is tapped, **Then** the field says what is missing, nothing is sent, and the focus goes to the first wrong field.
 6. **Given** a suspended account with the right password, **When** it signs in, **Then** it is refused with "Contul tău este suspendat." ("Your account is suspended.").
-7. **Given** the device is offline, **When** "Intră în cont" is tapped, **Then** "Nu ești conectat la internet." ("You are offline.") shows and the typed text stays.
+7. **Given** the device is offline, **When** "Intră în cont" is tapped, **Then** "Nu ești conectat. Încearcă din nou când revine conexiunea." ("You are offline. Try again when the connection is back.", ST-159's shared text) shows and the typed text stays.
 8. **Given** a request is on its way, **When** the button is tapped again, **Then** nothing more is sent; the button shows progress and is disabled.
 
 ---
@@ -67,7 +67,7 @@ The access token lives only in the page's memory for 15 minutes; a refresh token
 2. **Given** "Ține-mă autentificat" was ticked, **When** the browser is closed and reopened within 30 days, **Then** the person is still signed in; **Given** it was unticked, **Then** the session ends when the browser closes.
 3. **Given** the access token has expired, **When** the app calls the API, **Then** it renews the token once and repeats the call without the person noticing.
 4. **Given** a refresh token that was already used, **When** it is presented again, **Then** every token of its family stops working and that session is signed out everywhere it was copied.
-5. **Given** two tabs renewing at the same moment, **When** the second presents the token the first just rotated, **Then** that one call fails without closing the family, and the second tab renews again with the new cookie.
+5. **Given** two tabs renewing at the same moment, **When** the second presents the token the first just rotated, **Then** it gets a new access token too, its cookie is left as the first answer set it, and the family stays open.
 
 ---
 
@@ -104,7 +104,7 @@ While maintenance mode is on, only an account holding `admin` signs in; everyone
 ### Edge Cases
 
 - The e-mail is typed with capitals or surrounding spaces: it is trimmed and compared case-insensitively.
-- An unknown e-mail takes as long to answer as a known one with a wrong password: the password check runs either way.
+- An unknown e-mail takes as long to answer as a known one with a wrong password: the password check runs either way (tested by the check running, not by a clock).
 - A deleted account signs in: the "not correct" message, never a hint that it existed.
 - The correct password while the e-mail is locked out: still refused until the 15 minutes pass.
 - A successful sign-in clears the e-mail's failure count; the address count is not cleared by it.
@@ -123,25 +123,25 @@ While maintenance mode is on, only an account holding `admin` signs in; everyone
 - **FR-002**: A wrong password, an unknown e-mail, an account with no password identity and a deleted account MUST all answer 401 with code `invalid_credentials` and the same body, and the password check MUST run in every case (against a fixed decoy hash when there is no account), so the answer does not reveal whether the e-mail exists.
 - **FR-003**: Passwords MUST be checked against an argon2id hash in PHC string form; the comparison MUST be constant-time.
 - **FR-004**: The right password for a suspended account MUST answer 403 `account_suspended`.
-- **FR-005**: Failed attempts MUST be counted per e-mail and per network address in Redis: 5 failures for one e-mail within 15 minutes, or 20 for one address, MUST refuse further attempts from that e-mail or address with 429 `too_many_attempts` for 15 minutes from the last counted failure, before the password is checked. A successful sign-in MUST clear the e-mail's count. When Redis cannot be reached, sign-in MUST proceed without the limits and log the failure.
+- **FR-005**: Failed attempts MUST be counted per e-mail and per network address in Redis; only an `invalid_credentials` answer counts, and each counted failure restarts the key's 15 minutes. Once an e-mail has 5 counted failures, or an address 20, every attempt for that e-mail or from that address MUST be refused with 429 `too_many_attempts` before the password is checked, without being counted, until 15 minutes after the last counted failure. Only a successful sign-in (200) MUST clear the e-mail's count; 400, 403 and 503 answers neither count nor clear. When Redis cannot be reached, sign-in MUST proceed without the limits and log the failure.
 - **FR-006**: While maintenance mode reads as on, a sign-in with the right credentials by an account not holding `admin` MUST answer 503 `maintenance`; an admin MUST sign in. Maintenance MUST read as off until the platform rule exists.
 - **FR-007**: The refresh token MUST be a random value stored only as its hash, sent in a cookie that is `HttpOnly`, `Secure`, `SameSite=Strict` and scoped to `/api/v1/auth`; with "keep me signed in" it MUST carry a 30-day lifetime and the server MUST accept it for 30 days from its issue; without, it MUST be a browser-session cookie the server accepts for 12 hours from its issue. Every token issued by renewal keeps its family's choice.
-- **FR-008**: `POST /api/v1/auth/refresh` MUST, for a valid unused token of an active account, mark it used, issue its successor in the same family (new cookie), and answer a new access token for the role in use; it MUST update the last active time at most once an hour. An unknown, expired or revoked token MUST answer 401 `sign_in_required` and clear the cookie; a suspended account MUST answer 403 `account_suspended` and clear the cookie.
-- **FR-009**: A refresh token presented again after it was used MUST revoke every token of its family and answer 401 `sign_in_required`, unless it was rotated less than 20 seconds earlier, which MUST answer 401 `sign_in_required` without revoking anything (two tabs renewing at once).
+- **FR-008**: `POST /api/v1/auth/refresh` MUST, for a valid unused token of an active account, mark it used, issue its successor in the same family (new cookie), and answer a new access token for the role in use; it MUST update the last active time at most once an hour. An unknown, expired or revoked token MUST answer 401 `sign_in_required` and clear the cookie; for a suspended account (403 `account_suspended`), a deleted account or an account holding no role (401 `sign_in_required`) it MUST also revoke the family and clear the cookie.
+- **FR-009**: A refresh token presented again after it was used MUST revoke every token of its family and answer 401 `sign_in_required`, unless it was rotated less than 20 seconds earlier (two tabs renewing at once), which MUST answer a new access token like a rotation does, without a new cookie and without revoking anything.
 - **FR-010**: `POST /api/v1/auth/sign-out` MUST revoke the family of the presented refresh token, clear the cookie and answer 204, also when no or an unknown token is presented.
 - **FR-011**: A sign-in body without an e-mail or a password, or with values that are not text, MUST answer 400 with the validation problem; the password MUST never be logged, and a failed attempt MUST be logged with its reason and no e-mail, password or address.
 - **FR-012**: Signed out, the "Cont" tab of the phone tab bar and an "Autentificare" button at the top of every public screen on tablets and computers (≥ 768 px) MUST open the sign-in dialog over the current screen without changing the address; signed in, both MUST open the person's dashboard.
 - **FR-013**: The dialog MUST be the shared overlay's `dialog` shape titled "Autentificare" with the name MotorFix under it, and hold "E‑mail" (placeholder "tu@exemplu.ro"), "Parolă" (placeholder "Parola ta"), "Ține‑mă autentificat" ticked by default, and the main button "Intră în cont"; it MUST NOT show the controls of flows not built yet (Apple, Google, "Ai uitat parola?", "Creează un cont", the driver/garage switch).
 - **FR-014**: Before sending, the dialog MUST check that the e-mail is filled in and looks like an address (text, "@", a domain with a dot) and that the password is filled in; each problem MUST show under its field, be announced to screen readers, and move the focus to the first wrong field.
 - **FR-015**: While a sign-in is on its way the main button MUST be disabled and show progress, and a second tap MUST send nothing.
-- **FR-016**: The dialog MUST show the message for the answer's code in the person's language — `invalid_credentials`, `too_many_attempts`, `account_suspended`, `maintenance`, and offline (no answer) — in a region screen readers announce; the typed e-mail MUST stay, and the password MUST be cleared after `invalid_credentials`.
+- **FR-016**: The dialog MUST show the message for the answer's code in the person's language — `invalid_credentials`, `too_many_attempts`, `account_suspended`, `maintenance`, offline (no answer while the device reports no connection), and one generic message for any other answer or a failed call while online — in a region screen readers announce; the typed e-mail MUST stay, and the password MUST be cleared after `invalid_credentials`.
 - **FR-017**: After a successful sign-in the dialog MUST close and the role's landing (`/app/driver`, `/app/garage` for garage owner, receptionist and mechanic, `/app/admin`) MUST open, in the account's language.
-- **FR-018**: The web app MUST hold the access token in memory only and send it as a bearer token on every API call except the three `auth` calls; on a 401 from any other call it MUST renew once (one renewal shared by concurrent calls) and repeat the call, and sign out locally when renewal fails.
+- **FR-018**: The web app MUST hold the access token in memory only and send it as a bearer token on every API call except the three `auth` calls; on a 401 from a call that carried the token it MUST renew once (one renewal shared by concurrent calls) and repeat the call, and when renewal fails forget the token and the "who am I" answer in memory (navigation stays with the guards and FR-020). The sign-in and renewal answers carry only the access token; landing and language come from "who am I".
 - **FR-019**: When the app needs the session and holds no access token (a reload, a reopened browser), it MUST renew from the cookie before asking "who am I"; a failed renewal means signed out.
 - **FR-020**: "Ieși din cont" MUST call sign-out, forget the session in memory even when the call fails, and open Home.
 - **FR-021**: A signed-out visit to `/app/driver`, `/app/garage` or `/app/admin` MUST end on Home with the sign-in dialog open; after signing in, the person's own landing opens (modifies 079-FR-017).
 - **FR-022**: Every new text MUST exist in Romanian and English, Romanian words joined by a hyphen MUST use U+2011, and text the person typed MUST never be shown back as markup.
-- **FR-023**: The seed MUST add, outside production, one account per role (driver; garage owner of a seeded garage; receptionist and mechanic of that garage; admin), one driver-and-garage account whose last role is `garage`, and one suspended driver, all with e-mails under `example.test` and a password that is a clearly fake default in development and test and MUST come from `SEED_PASSWORD` in staging (refused without it); running it twice MUST change nothing.
+- **FR-023**: The seed MUST add, outside production, one account per role (driver; garage owner of a seeded garage; receptionist and mechanic of that garage; admin), one driver-and-garage account whose last role is `garage`, and one suspended driver, all with e-mails under `example.test` and the password `parola-de-test` in development and test, which MUST come from `SEED_PASSWORD` in staging (refused without it); an account whose e-mail exists is left as it is, so running it twice changes nothing.
 
 ### Key Entities
 
@@ -154,7 +154,7 @@ While maintenance mode is on, only an account holding `admin` signs in; everyone
 ### Capability: `accounts`
 
 - **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-012, FR-013, FR-014, FR-015, FR-016, FR-017, FR-018, FR-019, FR-020, FR-021, FR-022, FR-023
-- **Modifies**: 079-FR-017 (a signed-out visit to a dashboard ends on Home with the sign-in dialog open, FR-021)
+- **Modifies**: 079-FR-017 → FR-021
 - **Removes**: none
 
 ## Success Criteria *(mandatory)*
@@ -162,11 +162,22 @@ While maintenance mode is on, only an account holding `admin` signs in; everyone
 ### Measurable Outcomes
 
 - **SC-001**: A person of each of the five roles, and the two-role account, reaches their own dashboard from a public screen in one dialog submit (end to end, 6 of 6).
-- **SC-002**: Wrong password, unknown e-mail, no-password account and deleted account give byte-identical answers (API test, 4 of 4).
+- **SC-002**: Wrong password, unknown e-mail, no-password account and deleted account give the same status and the same body, and every one of them runs the password check (API test, 4 of 4).
 - **SC-003**: The sixth failure for one e-mail within 15 minutes is refused, also with the right password (API test).
 - **SC-004**: A reload of a dashboard keeps the person signed in, and a replayed refresh token signs the whole family out (end to end and API test).
 - **SC-005**: After "Ieși din cont", a reload opens no dashboard (end to end).
 - **SC-006**: The dialog passes an automated accessibility check with no violations at 320 px, 390 px and desktop, in Romanian and English (assumption: the axe-core check the e2e suite already runs).
+
+## Clarifications
+
+### Session 2026-10-04
+
+- Q: What does the server render for a dashboard address, and where does the renewal run? → A: `/app/**` stays client-rendered (ST-79's server routes); the guard runs in the browser and awaits the renewal before deciding. (autonomous, recommended by spec-challenger)
+- Q: How does a test turn maintenance on before ST-261? → A: The sign-in use case reads maintenance through one injectable bound to "off", overridden in the tests, as ST-79's audit and event ports are. (autonomous, recommended)
+- Q: Which answers count toward the limits, and does a refusal extend the lock? → A: Only `invalid_credentials` counts and restarts the 15 minutes; a 429 is not counted; only a 200 clears the e-mail's count (FR-005). A third party cannot keep an account locked by retrying. (autonomous, recommended)
+- Q: Do the sign-in and renewal answers carry the account? → A: No, only the access token; landing and language come from "who am I" (FR-018), one source (Principle V). (autonomous, recommended)
+- Q: Is the family revoked when renewal meets a suspended, deleted or role-less account? → A: Yes, and the cookie is cleared (FR-008). (autonomous, recommended)
+- Resolved from context.md and the challenge without a question: two tabs renewing at once get a usable answer (Sequence diagrams: hot paths §3) — a new access token, no new cookie, within 20 seconds (FR-009); the offline text is ST-159's shared sentence; the interceptor renews only after a 401 to a call that carried the token (FR-018); any other failure shows one generic message (FR-016) until ST-159's shared errors land; timing equality is tested by the decoy check running (SC-002); the seed inserts missing accounts only and names its password (FR-023); sign-out on this device stays in this story, with its reason recorded under Assumptions (ST-128 keeps all devices and cross-tab); failing open on the limits when Redis is down stays (constitution VI: emptying Redis loses nothing, and a sign-in outage is worse than an unthrottled minute), logged.
 
 ## Assumptions
 
@@ -179,10 +190,10 @@ While maintenance mode is on, only an account holding `admin` signs in; everyone
 - Scenario 5 of the brief (return to the action that asked for sign-in) belongs to the sign-in gate story; the dialog resolves with "signed in" so that story can resume instead of navigating. (autonomous default)
 - The per-address limit is 20 failures in 15 minutes: the Security page asks for one and gives no number; 20 leaves room for carrier-grade NAT, where many phones share one address. (autonomous default, *proposed*)
 - A session without "keep me signed in" is accepted by the server for 12 hours from its last renewal, so a restored browser session on a shared computer does not live for 30 days. (autonomous default, *proposed*)
-- The 20-second grace for a just-rotated token covers two tabs renewing at once without letting a replay obtain a token. (autonomous default)
+- The 20-second grace for a just-rotated token covers two tabs renewing at once ("a few seconds", Sequence diagrams: hot paths §3); a replay inside it obtains one 15-minute access token but never a refresh token, and a replay after it closes the family. (autonomous default)
 - The access token lifetime stays the 15 minutes ST-79's signer already uses; the brief's `ACCESS_TOKEN_MINUTES` is not added as a setting nobody changes (Principle I). (autonomous default)
 - argon2id parameters: 19 MiB memory, 2 passes, 1 lane, 16-byte salt, 32-byte tag (OWASP's minimum), with Node's built-in `crypto.argon2` (Node 24, `.nvmrc`), so no new dependency. (autonomous default)
 - The network address is the client's, read through the web app's edge proxy, which appends the address it saw to `X-Forwarded-For`; the API trusts only private and loopback hops. (autonomous default)
 - Failed attempts are logged as structured log lines (`JsonLogger`); the SYSTEM_LOG_ENTRY table does not exist yet. (autonomous default)
-- The e-mail validation messages are local to the dialog, minimal, and will move to ST-159's shared validation when it lands. (autonomous default)
+- The generic failure text is "Ceva nu a mers. Încearcă din nou." ("Something went wrong. Try again."); like the e-mail validation messages it is minimal, and will move to ST-159's shared validation when it lands. (autonomous default)
 - The seed's fake default password lives in `libs/domain/src/seed.ts` and the end-to-end fixture only; staging's comes from a secret, and the end-to-end flows that sign in for real need `E2E_PASSWORD` when they run against a deployed address. (autonomous default)
