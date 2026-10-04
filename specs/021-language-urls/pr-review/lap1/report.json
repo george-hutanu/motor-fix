@@ -1,0 +1,441 @@
+{
+  "pr": 24,
+  "repo": "george-hutanu/motor-fix",
+  "sha": "957c4625dc6eb9c95592eb3f56383e41496d2a87",
+  "base": "cea1552b2457446b11f90fd6f1717ea3fc1f9f25",
+  "lap": 1,
+  "verdict": "failure",
+  "summary": "2 blocking finding(s); 15 in all. Booted postgres, redis, api, web.",
+  "findings": [
+    {
+      "severity": "medium",
+      "kind": "step",
+      "title": "api readiness: storage down",
+      "steps": [
+        "No object store on this machine (no Docker); every other check is ok. Environment limit, not the change."
+      ]
+    },
+    {
+      "severity": "medium",
+      "kind": "axe",
+      "title": "Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element)",
+      "route": "/",
+      "viewport": "desktop",
+      "scheme": "light",
+      "lang": "ro",
+      "steps": [
+        "Open / at the desktop viewport (1440×900), light colour scheme, language ro.",
+        "Run axe-core on the page: rule landmark-one-main on html.",
+        "Observe: Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element)."
+      ],
+      "evidence": "shots/home-desktop-light-ro.png",
+      "seenIn": [
+        "desktop light ro",
+        "desktop light en",
+        "desktop dark ro",
+        "desktop dark en",
+        "tablet light ro",
+        "tablet light en",
+        "tablet dark ro",
+        "tablet dark en",
+        "mobile light ro",
+        "mobile light en",
+        "mobile dark ro",
+        "mobile dark en"
+      ]
+    },
+    {
+      "severity": "medium",
+      "kind": "axe",
+      "title": "Accessibility (moderate): region — All page content should be contained by landmarks (2 elements)",
+      "route": "/",
+      "viewport": "desktop",
+      "scheme": "light",
+      "lang": "ro",
+      "steps": [
+        "Open / at the desktop viewport (1440×900), light colour scheme, language ro.",
+        "Run axe-core on the page: rule region on p:nth-child(2).",
+        "Observe: Accessibility (moderate): region — All page content should be contained by landmarks (2 elements)."
+      ],
+      "evidence": "shots/home-desktop-light-ro.png",
+      "seenIn": [
+        "desktop light ro",
+        "desktop light en",
+        "desktop dark ro",
+        "desktop dark en",
+        "tablet light ro",
+        "tablet light en",
+        "tablet dark ro",
+        "tablet dark en",
+        "mobile light ro",
+        "mobile light en",
+        "mobile dark ro",
+        "mobile dark en"
+      ]
+    },
+    {
+      "severity": "medium",
+      "kind": "axe",
+      "title": "Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element)",
+      "route": "/ro",
+      "viewport": "desktop",
+      "scheme": "light",
+      "lang": "ro",
+      "steps": [
+        "Open /ro at the desktop viewport (1440×900), light colour scheme, language ro.",
+        "Run axe-core on the page: rule landmark-one-main on html.",
+        "Observe: Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element)."
+      ],
+      "evidence": "shots/ro-desktop-light-ro.png",
+      "seenIn": [
+        "desktop light ro",
+        "desktop light en",
+        "desktop dark ro",
+        "desktop dark en",
+        "tablet light ro",
+        "tablet light en",
+        "tablet dark ro",
+        "tablet dark en",
+        "mobile light ro",
+        "mobile light en",
+        "mobile dark ro",
+        "mobile dark en"
+      ]
+    },
+    {
+      "severity": "medium",
+      "kind": "axe",
+      "title": "Accessibility (moderate): region — All page content should be contained by landmarks (2 elements)",
+      "route": "/ro",
+      "viewport": "desktop",
+      "scheme": "light",
+      "lang": "ro",
+      "steps": [
+        "Open /ro at the desktop viewport (1440×900), light colour scheme, language ro.",
+        "Run axe-core on the page: rule region on p:nth-child(2).",
+        "Observe: Accessibility (moderate): region — All page content should be contained by landmarks (2 elements)."
+      ],
+      "evidence": "shots/ro-desktop-light-ro.png",
+      "seenIn": [
+        "desktop light ro",
+        "desktop light en",
+        "desktop dark ro",
+        "desktop dark en",
+        "tablet light ro",
+        "tablet light en",
+        "tablet dark ro",
+        "tablet dark en",
+        "mobile light ro",
+        "mobile light en",
+        "mobile dark ro",
+        "mobile dark en"
+      ]
+    },
+    {
+      "severity": "medium",
+      "kind": "axe",
+      "title": "Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element)",
+      "route": "/en",
+      "viewport": "desktop",
+      "scheme": "light",
+      "lang": "ro",
+      "steps": [
+        "Open /en at the desktop viewport (1440×900), light colour scheme, language ro.",
+        "Run axe-core on the page: rule landmark-one-main on html.",
+        "Observe: Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element)."
+      ],
+      "evidence": "shots/en-desktop-light-ro.png",
+      "seenIn": [
+        "desktop light ro",
+        "desktop light en",
+        "desktop dark ro",
+        "desktop dark en",
+        "tablet light ro",
+        "tablet light en",
+        "tablet dark ro",
+        "tablet dark en",
+        "mobile light ro",
+        "mobile light en",
+        "mobile dark ro",
+        "mobile dark en"
+      ]
+    },
+    {
+      "severity": "medium",
+      "kind": "axe",
+      "title": "Accessibility (moderate): region — All page content should be contained by landmarks (2 elements)",
+      "route": "/en",
+      "viewport": "desktop",
+      "scheme": "light",
+      "lang": "ro",
+      "steps": [
+        "Open /en at the desktop viewport (1440×900), light colour scheme, language ro.",
+        "Run axe-core on the page: rule region on p:nth-child(2).",
+        "Observe: Accessibility (moderate): region — All page content should be contained by landmarks (2 elements)."
+      ],
+      "evidence": "shots/en-desktop-light-ro.png",
+      "seenIn": [
+        "desktop light ro",
+        "desktop light en",
+        "desktop dark ro",
+        "desktop dark en",
+        "tablet light ro",
+        "tablet light en",
+        "tablet dark ro",
+        "tablet dark en",
+        "mobile light ro",
+        "mobile light en",
+        "mobile dark ro",
+        "mobile dark en"
+      ]
+    },
+    {
+      "severity": "medium",
+      "kind": "http",
+      "title": "HTTP 404: http://127.0.0.1:60572/de",
+      "route": "/de",
+      "viewport": "desktop",
+      "scheme": "light",
+      "lang": "ro",
+      "steps": [
+        "Open /de at the desktop viewport (1440×900), light colour scheme, language ro.",
+        "Wait for the network to go idle.",
+        "Observe: HTTP 404: http://127.0.0.1:60572/de."
+      ],
+      "evidence": "shots/de-desktop-light-ro.png",
+      "seenIn": [
+        "desktop light ro",
+        "desktop light en",
+        "desktop dark ro",
+        "desktop dark en",
+        "tablet light ro",
+        "tablet light en",
+        "tablet dark ro",
+        "tablet dark en",
+        "mobile light ro",
+        "mobile light en",
+        "mobile dark ro",
+        "mobile dark en"
+      ]
+    },
+    {
+      "severity": "high",
+      "kind": "console",
+      "title": "Console error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "route": "/de",
+      "viewport": "desktop",
+      "scheme": "light",
+      "lang": "ro",
+      "steps": [
+        "Open /de at the desktop viewport (1440×900), light colour scheme, language ro.",
+        "Wait for the network to go idle.",
+        "Observe: Console error: Failed to load resource: the server responded with a status of 404 (Not Found)."
+      ],
+      "evidence": "shots/de-desktop-light-ro.png",
+      "seenIn": [
+        "desktop light ro",
+        "desktop light en",
+        "desktop dark ro",
+        "desktop dark en",
+        "tablet light ro",
+        "tablet light en",
+        "tablet dark ro",
+        "tablet dark en",
+        "mobile light ro",
+        "mobile light en",
+        "mobile dark ro",
+        "mobile dark en"
+      ]
+    },
+    {
+      "severity": "blocker",
+      "kind": "load",
+      "title": "Page did not load: HTTP 404",
+      "route": "/de",
+      "viewport": "desktop",
+      "scheme": "light",
+      "lang": "ro",
+      "steps": [
+        "Open /de at the desktop viewport (1440×900), light colour scheme, language ro.",
+        "Wait for the network to go idle.",
+        "Observe: Page did not load: HTTP 404."
+      ],
+      "evidence": "shots/de-desktop-light-ro.png",
+      "seenIn": [
+        "desktop light ro",
+        "desktop light en",
+        "desktop dark ro",
+        "desktop dark en",
+        "tablet light ro",
+        "tablet light en",
+        "tablet dark ro",
+        "tablet dark en",
+        "mobile light ro",
+        "mobile light en",
+        "mobile dark ro",
+        "mobile dark en"
+      ]
+    },
+    {
+      "severity": "medium",
+      "kind": "axe",
+      "title": "Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element)",
+      "route": "/de",
+      "viewport": "desktop",
+      "scheme": "light",
+      "lang": "ro",
+      "steps": [
+        "Open /de at the desktop viewport (1440×900), light colour scheme, language ro.",
+        "Run axe-core on the page: rule landmark-one-main on html.",
+        "Observe: Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element)."
+      ],
+      "evidence": "shots/de-desktop-light-ro.png",
+      "seenIn": [
+        "desktop light ro",
+        "desktop light en",
+        "desktop dark ro",
+        "desktop dark en",
+        "tablet light ro",
+        "tablet light en",
+        "tablet dark ro",
+        "tablet dark en",
+        "mobile light ro",
+        "mobile light en",
+        "mobile dark ro",
+        "mobile dark en"
+      ]
+    },
+    {
+      "severity": "medium",
+      "kind": "axe",
+      "title": "Accessibility (moderate): region — All page content should be contained by landmarks (3 elements)",
+      "route": "/de",
+      "viewport": "desktop",
+      "scheme": "light",
+      "lang": "ro",
+      "steps": [
+        "Open /de at the desktop viewport (1440×900), light colour scheme, language ro.",
+        "Run axe-core on the page: rule region on h1.",
+        "Observe: Accessibility (moderate): region — All page content should be contained by landmarks (3 elements)."
+      ],
+      "evidence": "shots/de-desktop-light-ro.png",
+      "seenIn": [
+        "desktop light ro",
+        "desktop light en",
+        "desktop dark ro",
+        "desktop dark en",
+        "tablet light ro",
+        "tablet light en",
+        "tablet dark ro",
+        "tablet dark en",
+        "mobile light ro",
+        "mobile light en",
+        "mobile dark ro",
+        "mobile dark en"
+      ]
+    },
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "Tester note: the /de blocker and console-404 findings are the 404 that FR-009 requires, not a broken page",
+      "steps": [
+        "GET /de/ returns 404, <html lang=\"ro\">, 'Pagina nu există', meta robots noindex, no canonical (flows-24 checked each one and they passed)",
+        "The sweep counts any non-2xx document as 'Page did not load'; it has no notion of an expected status"
+      ],
+      "evidence": "shots/de-desktop-light-ro.png"
+    },
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "/de/ turns English in the browser when English is remembered; FR-009 says 'in Romanian for an unknown language prefix'",
+      "steps": [
+        "Set mf.lang=en",
+        "Open /de/",
+        "The server HTML is Romanian (lang=ro), then the remembered language applies after hydration and the page reads 'Page not found'"
+      ],
+      "evidence": "shots/de-mobile-dark-en.png"
+    },
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "Not-found page has no <main> landmark (axe landmark-one-main/region on /de)",
+      "steps": [
+        "apps/web/src/app/not-found/not-found.ts template: `<header>…</header><h1>…</h1><p>…</p><a>…</a>` with no <main>"
+      ],
+      "evidence": "shots/de-desktop-light-ro.png"
+    }
+  ],
+  "booted": [
+    "postgres",
+    "redis",
+    "api",
+    "web"
+  ],
+  "notes": [
+    "No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.",
+    "No changed GET endpoint without path parameters."
+  ],
+  "screenshots": [
+    "shots/home-desktop-light-ro.png",
+    "shots/home-desktop-light-en.png",
+    "shots/home-desktop-dark-ro.png",
+    "shots/home-desktop-dark-en.png",
+    "shots/home-tablet-light-ro.png",
+    "shots/home-tablet-light-en.png",
+    "shots/home-tablet-dark-ro.png",
+    "shots/home-tablet-dark-en.png",
+    "shots/home-mobile-light-ro.png",
+    "shots/home-mobile-light-en.png",
+    "shots/home-mobile-dark-ro.png",
+    "shots/home-mobile-dark-en.png",
+    "shots/ro-desktop-light-ro.png",
+    "shots/ro-desktop-light-en.png",
+    "shots/ro-desktop-dark-ro.png",
+    "shots/ro-desktop-dark-en.png",
+    "shots/ro-tablet-light-ro.png",
+    "shots/ro-tablet-light-en.png",
+    "shots/ro-tablet-dark-ro.png",
+    "shots/ro-tablet-dark-en.png",
+    "shots/ro-mobile-light-ro.png",
+    "shots/ro-mobile-light-en.png",
+    "shots/ro-mobile-dark-ro.png",
+    "shots/ro-mobile-dark-en.png",
+    "shots/en-desktop-light-ro.png",
+    "shots/en-desktop-light-en.png",
+    "shots/en-desktop-dark-ro.png",
+    "shots/en-desktop-dark-en.png",
+    "shots/en-tablet-light-ro.png",
+    "shots/en-tablet-light-en.png",
+    "shots/en-tablet-dark-ro.png",
+    "shots/en-tablet-dark-en.png",
+    "shots/en-mobile-light-ro.png",
+    "shots/en-mobile-light-en.png",
+    "shots/en-mobile-dark-ro.png",
+    "shots/en-mobile-dark-en.png",
+    "shots/cockpit-desktop-light-ro.png",
+    "shots/cockpit-desktop-light-en.png",
+    "shots/cockpit-desktop-dark-ro.png",
+    "shots/cockpit-desktop-dark-en.png",
+    "shots/cockpit-tablet-light-ro.png",
+    "shots/cockpit-tablet-light-en.png",
+    "shots/cockpit-tablet-dark-ro.png",
+    "shots/cockpit-tablet-dark-en.png",
+    "shots/cockpit-mobile-light-ro.png",
+    "shots/cockpit-mobile-light-en.png",
+    "shots/cockpit-mobile-dark-ro.png",
+    "shots/cockpit-mobile-dark-en.png",
+    "shots/de-desktop-light-ro.png",
+    "shots/de-desktop-light-en.png",
+    "shots/de-desktop-dark-ro.png",
+    "shots/de-desktop-dark-en.png",
+    "shots/de-tablet-light-ro.png",
+    "shots/de-tablet-light-en.png",
+    "shots/de-tablet-dark-ro.png",
+    "shots/de-tablet-dark-en.png",
+    "shots/de-mobile-light-ro.png",
+    "shots/de-mobile-light-en.png",
+    "shots/de-mobile-dark-ro.png",
+    "shots/de-mobile-dark-en.png"
+  ],
+  "markdown": "**Agent review: failure** — PR #24 at `957c462`, lap 1\n\nBlocking: 2 (blocker 1, high 1) · medium 10 · low 3. Booted: postgres, redis, api, web.\n- No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.\n- No changed GET endpoint without path parameters.\n\n| # | Severity | Finding | Where | Evidence |\n| --- | --- | --- | --- | --- |\n| 1 | blocker | Page did not load: HTTP 404 | /de · desktop · light · ro (+11 more) | shots/de-desktop-light-ro.png |\n| 2 | high | Console error: Failed to load resource: the server responded with a status of 404 (Not Found) | /de · desktop · light · ro (+11 more) | shots/de-desktop-light-ro.png |\n| 3 | medium | api readiness: storage down |  |  |\n| 4 | medium | Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element) | / · desktop · light · ro (+11 more) | shots/home-desktop-light-ro.png |\n| 5 | medium | Accessibility (moderate): region — All page content should be contained by landmarks (2 elements) | / · desktop · light · ro (+11 more) | shots/home-desktop-light-ro.png |\n| 6 | medium | Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element) | /ro · desktop · light · ro (+11 more) | shots/ro-desktop-light-ro.png |\n| 7 | medium | Accessibility (moderate): region — All page content should be contained by landmarks (2 elements) | /ro · desktop · light · ro (+11 more) | shots/ro-desktop-light-ro.png |\n| 8 | medium | Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element) | /en · desktop · light · ro (+11 more) | shots/en-desktop-light-ro.png |\n| 9 | medium | Accessibility (moderate): region — All page content should be contained by landmarks (2 elements) | /en · desktop · light · ro (+11 more) | shots/en-desktop-light-ro.png |\n| 10 | medium | HTTP 404: http://127.0.0.1:60572/de | /de · desktop · light · ro (+11 more) | shots/de-desktop-light-ro.png |\n| 11 | medium | Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element) | /de · desktop · light · ro (+11 more) | shots/de-desktop-light-ro.png |\n| 12 | medium | Accessibility (moderate): region — All page content should be contained by landmarks (3 elements) | /de · desktop · light · ro (+11 more) | shots/de-desktop-light-ro.png |\n| 13 | low | Tester note: the /de blocker and console-404 findings are the 404 that FR-009 requires, not a broken page |  | shots/de-desktop-light-ro.png |\n| 14 | low | /de/ turns English in the browser when English is remembered; FR-009 says 'in Romanian for an unknown language prefix' |  | shots/de-mobile-dark-en.png |\n| 15 | low | Not-found page has no <main> landmark (axe landmark-one-main/region on /de) |  | shots/de-desktop-light-ro.png |\n\n### Reproduction\n1. Open /de at the desktop viewport (1440×900), light colour scheme, language ro. → Wait for the network to go idle. → Observe: Page did not load: HTTP 404.\n2. Open /de at the desktop viewport (1440×900), light colour scheme, language ro. → Wait for the network to go idle. → Observe: Console error: Failed to load resource: the server responded with a status of 404 (Not Found).\n3. No object store on this machine (no Docker); every other check is ok. Environment limit, not the change.\n4. Open / at the desktop viewport (1440×900), light colour scheme, language ro. → Run axe-core on the page: rule landmark-one-main on html. → Observe: Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element).\n5. Open / at the desktop viewport (1440×900), light colour scheme, language ro. → Run axe-core on the page: rule region on p:nth-child(2). → Observe: Accessibility (moderate): region — All page content should be contained by landmarks (2 elements).\n6. Open /ro at the desktop viewport (1440×900), light colour scheme, language ro. → Run axe-core on the page: rule landmark-one-main on html. → Observe: Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element).\n7. Open /ro at the desktop viewport (1440×900), light colour scheme, language ro. → Run axe-core on the page: rule region on p:nth-child(2). → Observe: Accessibility (moderate): region — All page content should be contained by landmarks (2 elements).\n8. Open /en at the desktop viewport (1440×900), light colour scheme, language ro. → Run axe-core on the page: rule landmark-one-main on html. → Observe: Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element).\n9. Open /en at the desktop viewport (1440×900), light colour scheme, language ro. → Run axe-core on the page: rule region on p:nth-child(2). → Observe: Accessibility (moderate): region — All page content should be contained by landmarks (2 elements).\n10. Open /de at the desktop viewport (1440×900), light colour scheme, language ro. → Wait for the network to go idle. → Observe: HTTP 404: http://127.0.0.1:60572/de.\n11. Open /de at the desktop viewport (1440×900), light colour scheme, language ro. → Run axe-core on the page: rule landmark-one-main on html. → Observe: Accessibility (moderate): landmark-one-main — Document should have one main landmark (1 element).\n12. Open /de at the desktop viewport (1440×900), light colour scheme, language ro. → Run axe-core on the page: rule region on h1. → Observe: Accessibility (moderate): region — All page content should be contained by landmarks (3 elements).\n13. GET /de/ returns 404, <html lang=\"ro\">, 'Pagina nu există', meta robots noindex, no canonical (flows-24 checked each one and they passed) → The sweep counts any non-2xx document as 'Page did not load'; it has no notion of an expected status\n14. Set mf.lang=en → Open /de/ → The server HTML is Romanian (lang=ro), then the remembered language applies after hydration and the page reads 'Page not found'\n15. apps/web/src/app/not-found/not-found.ts template: `<header>…</header><h1>…</h1><p>…</p><a>…</a>` with no <main>\n\nScreenshots: 60, one per route × viewport × scheme × language.\n"
+}

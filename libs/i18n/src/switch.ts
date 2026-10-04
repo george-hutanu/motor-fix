@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 
 import { I18n } from './i18n';
-import { isLanguage } from './languages';
+import { isLanguage, type Language } from './languages';
 import { TranslatePipe } from './translate.pipe';
 
 const KEY = 'mf.lang';
@@ -31,11 +31,16 @@ export class LanguageChoice {
     return this.i18n.use(language);
   }
 
-  restore(): () => void {
+  saved(): Language | null {
     let saved: string | null = null;
     try {
       saved = this.window?.localStorage.getItem(KEY) ?? null;
     } catch {}
+    return saved && isLanguage(saved) ? saved : null;
+  }
+
+  restore(): () => void {
+    const saved = this.saved();
     if (saved) void this.i18n.use(saved);
     // Another tab's choice; the tab that wrote the value gets no event.
     const follow = ({ key, newValue }: StorageEvent) => {

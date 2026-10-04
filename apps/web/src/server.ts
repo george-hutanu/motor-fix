@@ -12,6 +12,7 @@ import express from 'express';
 
 import { apiInternalUrl } from './api-url';
 import { mountEdge } from './server/edge';
+import { mountSearch } from './server/search';
 
 const browserDistFolder = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -19,12 +20,15 @@ const browserDistFolder = resolve(
 );
 
 const app = express();
-const publicUrl = process.env['PUBLIC_WEB_URL'];
+const publicUrl = process.env['PUBLIC_WEB_URL']
+  ? new URL(process.env['PUBLIC_WEB_URL'])
+  : undefined;
 const angularApp = new AngularNodeAppEngine({
-  allowedHosts: publicUrl ? [new URL(publicUrl).hostname] : undefined,
+  allowedHosts: publicUrl ? [publicUrl.hostname] : undefined,
 });
 
 mountEdge(app, apiInternalUrl());
+mountSearch(app, publicUrl?.origin);
 
 app.use(
   express.static(browserDistFolder, {
