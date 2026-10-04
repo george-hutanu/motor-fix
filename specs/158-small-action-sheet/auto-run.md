@@ -45,3 +45,9 @@
 - code-reviewer: BLOCK on HIGH (drag release ignored the discard question) → patched (same fix as above). MEDIUM pointer ids → patched. MEDIUM stacked sheets untested → test added. LOW scrollIntoView on every pan → only on resize, red-first test. LOW e2e waits after Escape → added. LOW dead TaskSave exports (pre-existing) → deferred.
 - Pre-existing flake in overlays.spec close/scroll test (1/16 local) → deferred.
 - code-reviewer re-run: APPROVE; 2 LOWs patched (plan wording, an adversary test title).
+
+## Hand-off
+- PR #48 body filled (pr-body-check passed), marked ready; Notion review; label `in review`. CI on 1fcd7ed green (15 checks).
+- QA lap 2 (pr-tester at 1fcd7ed): failure — blocker: the pre-existing desktop close/scroll e2e flake (2 of 167), traced to wheel momentum landing after the scroll lock lifts (sheet and dialog alike). All nine requested flows clean; axe clean.
+- Lap 2 fixes, tests first: e2e close tests wait for the wheel scroll to end; the sheet fits an already-shrunk visible area at open; sheet rule specificity above the kit's; specs colocated as panel.spec.ts / panel.adversary.spec.ts. The wheel behaviour itself stays deferred (medium, Notion task already filed, bullet updated). Storage-down readiness is the machine (no Docker).
+- Local: overlays 176 passed; close tests 54/54 over 6 repeats; overlay and kit e2e 90 passed.

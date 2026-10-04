@@ -70,7 +70,8 @@ let questions = 0;
     :host.mf-overlay-drawer-wide {
       width: min(720px, 100vw);
     }
-    :host.mf-overlay-sheet {
+    /* [data-side] outranks the kit's own bottom edge, whatever the load order. */
+    :host.mf-overlay-sheet[data-side] {
       grid-template-rows: auto auto minmax(0, 1fr);
       max-height: calc(0.92 * var(--mf-visible-height, 100dvh));
       inset-block-end: var(--mf-keyboard, 0px);
@@ -384,6 +385,7 @@ export class OverlayPanel {
           focused.scrollIntoView({ block: 'nearest' });
       });
     };
+    follow();
     visible.addEventListener('resize', resize);
     visible.addEventListener('scroll', follow);
     inject(DestroyRef).onDestroy(() => {

@@ -108,6 +108,17 @@ async function dragGrip(page: Page, by: number) {
   await page.mouse.up();
 }
 
+// A wheel scroll runs on for a moment after the wheel; closing before it ends
+// lets the rest land on the page once the scroll lock lifts.
+const wheelSettled = (page: Page) =>
+  page.evaluate(
+    () =>
+      new Promise<void>((done) => {
+        document.addEventListener('scrollend', () => done(), { once: true });
+        setTimeout(done, 1000);
+      }),
+  );
+
 const result = (page: Page) => page.locator('.mf-overlay-result');
 
 test.describe('on a phone, every task is a bottom sheet', () => {
@@ -217,6 +228,7 @@ test.describe('closing a sheet', () => {
       await still(page);
 
       await page.mouse.wheel(0, 600);
+      await wheelSettled(page);
       expect(
         await page.evaluate(
           () => -Number.parseFloat(document.documentElement.style.top),

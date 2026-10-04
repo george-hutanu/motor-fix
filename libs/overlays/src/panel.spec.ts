@@ -291,6 +291,14 @@ describe('dragging the grip', () => {
 });
 
 describe('the on-screen keyboard', () => {
+  it('fits what is already visible when it opens', async () => {
+    fakeViewport(500);
+    await openTask();
+
+    expect(panel().style.getPropertyValue('--mf-keyboard')).toBe('344px');
+    expect(panel().style.getPropertyValue('--mf-visible-height')).toBe('500px');
+  });
+
   it('brings the focused field into view when the keyboard opens, not on every pan', async () => {
     const viewport = fakeViewport(844);
     await openTask();
@@ -368,7 +376,7 @@ describe('the sheet styles', () => {
   };
 
   it('caps the sheet at 92 % of the visible height and lifts it by the keyboard', () => {
-    const sheet = rule(':host.mf-overlay-sheet');
+    const sheet = rule(':host.mf-overlay-sheet[data-side]');
     expect(sheet).toMatch(
       /max-height:\s*calc\(0\.92 \* var\(--mf-visible-height, 100dvh\)\)/,
     );
@@ -400,7 +408,7 @@ describe('the sheet styles', () => {
   });
 
   it('springs back on the motion tokens and follows the finger with no transition', () => {
-    expect(rule(':host.mf-overlay-sheet')).toMatch(
+    expect(rule(':host.mf-overlay-sheet[data-side]')).toMatch(
       /transition:\s*transform var\(--mf-motion-pop\) var\(--mf-motion-ease\)/,
     );
     expect(rule(':host.mf-overlay-dragging')).toMatch(/transition:\s*none/);

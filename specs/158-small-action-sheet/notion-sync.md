@@ -12,3 +12,6 @@
 - 2026-10-04 · review · ST-158 story Status · Implementing → In review
 - 2026-10-04 · review · Foundations timeline row ST-158 · Implementing → In review
 - 2026-10-04 · labels · PR #48 · in review
+- 2026-10-04 · qa · ST-158 story Status · In review → QA
+- 2026-10-04 · qa · Foundations timeline row ST-158 · In review → QA
+- 2026-10-04 · labels · PR #48 · QA

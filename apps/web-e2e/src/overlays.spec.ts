@@ -80,6 +80,17 @@ async function open(page: Page, key = 'cockpit.overlay.openDialog') {
   await shown(page);
 }
 
+// A wheel scroll runs on for a moment after the wheel; closing before it ends
+// lets the rest land on the page once the scroll lock lifts.
+const wheelSettled = (page: Page) =>
+  page.evaluate(
+    () =>
+      new Promise<void>((done) => {
+        document.addEventListener('scrollend', () => done(), { once: true });
+        setTimeout(done, 1000);
+      }),
+  );
+
 const scrollY = (page: Page) => page.evaluate(() => window.scrollY);
 // While the page is locked the root is pinned at minus its scroll position.
 const lockedAt = (page: Page) =>
@@ -119,6 +130,7 @@ test.describe('a task over the page', () => {
       await button.click();
       await shown(page);
       await page.mouse.wheel(0, 600);
+      await wheelSettled(page);
       await expect.poll(() => lockedAt(page)).toBe(before);
       expect(page.url()).toBe(address);
 

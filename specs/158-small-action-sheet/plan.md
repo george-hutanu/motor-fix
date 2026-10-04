@@ -22,7 +22,7 @@
 ## Constitution Check
 
 - **I. No Bloated Code**: no new shape option, no sheet component, no gesture library; one `sheet` flag on the existing panel context, three pointer handlers and one viewport listener inside the panel. The 768 px query is one constant shared with the panel's existing `COMPUTER` query.
-- **II. Test Discipline**: red first: `libs/overlays/src/sheet.spec.ts` (new: shape by width, grip, drag threshold, keyboard, safe-area CSS), `libs/ui-cockpit/src/motion.adversary.spec.ts` (bottom origin), `apps/web-e2e/src/sheet.spec.ts` (new, phone flows), and `apps/web-e2e/src/overlays.spec.ts`'s phone test moved to the sheet.
+- **II. Test Discipline**: red first: `libs/overlays/src/panel.spec.ts` (new: shape by width, grip, drag threshold, keyboard, safe-area CSS), `libs/ui-cockpit/src/motion.adversary.spec.ts` (bottom origin), `apps/web-e2e/src/sheet.spec.ts` (new, phone flows), and `apps/web-e2e/src/overlays.spec.ts`'s phone test moved to the sheet.
 - **III. Given Stack**: Spartan's sheet surface and the CDK, no PrimeNG (A1 amended 2026-10-04).
 - **IV. One Toolchain**: existing Nx targets, Biome, Jest, Playwright.
 - **V. Rules in One Place**: the phone boundary is the kit's 768 px (one constant in overlays, pinned by the e2e at 767/768 against the kit's CSS); the sheet surface's geometry lives in `cockpit.css` beside the right and left edges; the 92 % cap and the keyboard follow live in the panel only.
@@ -45,7 +45,7 @@ specs/158-small-action-sheet/
 libs/overlays/src/overlays.ts      choose the sheet at open; bottom-edge pane
 libs/overlays/src/task.ts          PanelContext.sheet
 libs/overlays/src/panel.ts         sheet host bindings, grip, drag, visualViewport follow, styles
-libs/overlays/src/sheet.spec.ts    (new) unit specs
+libs/overlays/src/panel.spec.ts    (new) unit specs
 libs/ui-cockpit/src/styles/cockpit.css   .spartan-sheet-content[data-side="bottom"] + its origin
 libs/ui-cockpit/src/motion.adversary.spec.ts   bottom origin
 apps/web-e2e/src/sheet.spec.ts     (new) phone flows
