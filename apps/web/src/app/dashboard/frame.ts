@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import type { MeDto } from '@motor-fix/data-access';
-import { LanguageSwitch, TranslatePipe } from '@motor-fix/i18n';
+import { AsWritten, LanguageSwitch, TranslatePipe } from '@motor-fix/i18n';
 
 import { Session } from './session';
 
@@ -68,7 +68,7 @@ const MENUS: Record<MeDto['landing'], { tag: string; entries: Entry[] }> = {
 };
 
 @Component({
-  imports: [LanguageSwitch, RouterLink, TranslatePipe],
+  imports: [AsWritten, LanguageSwitch, RouterLink, TranslatePipe],
   selector: 'mf-frame',
   styles: `
     :host { display: grid; grid-template-columns: minmax(0, 16rem) minmax(0, 1fr); min-height: 100vh; }
@@ -89,7 +89,7 @@ const MENUS: Record<MeDto['landing'], { tag: string; entries: Entry[] }> = {
         }
       </nav>
       <div class="account">
-        <span>{{ session.current()?.name }}</span>
+        <mf-as-written [text]="session.current()?.name ?? ''" />
         <button type="button" (click)="signOut()">{{ 'shell.frame.signOut' | t }}</button>
       </div>
     </aside>
