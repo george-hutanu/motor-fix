@@ -110,6 +110,14 @@ describe('watch reminder — the watcher call', () => {
     assert.deepEqual(readWatch(repo, 5000), { argv: ['--json'] });
   });
 
+  it("runs gh as george-hutanu: keeps the session's GH_TOKEN, never leaves it empty", () => {
+    fake('console.log(JSON.stringify({ token: process.env.GH_TOKEN ?? null }));');
+    assert.deepEqual(readWatch(repo, 5000, { GH_TOKEN: 'session-token' }), { token: 'session-token' });
+    const resolved = readWatch(repo, 5000, { GH_TOKEN: '' }).token;
+    assert.equal(typeof resolved, 'string');
+    assert.notEqual(resolved, '');
+  });
+
   it('gives up at the timeout', () => {
     fake('setTimeout(() => console.log("{}"), 5000);');
     const started = Date.now();

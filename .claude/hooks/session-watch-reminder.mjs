@@ -36,10 +36,30 @@ export function reminder(count) {
   return count >= 2 ? `${count} worktrees active: if no /speckit-watch is scheduled (CronList), schedule it (see speckit-watch).` : "";
 }
 
+/**
+ * The watcher's `gh pr list` must run as george-hutanu, never gh's active
+ * (work) account. SessionStart hooks run before github-identity.sh's GH_TOKEN
+ * reaches the session, so it is resolved here the same way; an unresolvable
+ * one becomes a sentinel, because gh reads an empty GH_TOKEN as unset.
+ */
+function ghToken(env) {
+  if (env.GH_TOKEN) return env.GH_TOKEN;
+  try {
+    const token = execFileSync("gh", ["auth", "token", "--hostname", "github.com", "--user", "george-hutanu"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 3000,
+    }).trim();
+    if (token) return token;
+  } catch {}
+  return "george-hutanu-is-not-logged-in-to-gh";
+}
+
 /** The watcher's report, or null when it fails, times out or prints something unreadable. */
-export function readWatch(repo, timeout) {
+export function readWatch(repo, timeout, env = process.env) {
   const run = spawnSync(process.execPath, [join(repo, ".claude", "scripts", "watch.mjs"), "--json"], {
     cwd: repo,
+    env: { ...env, GH_TOKEN: ghToken(env) },
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
     timeout,

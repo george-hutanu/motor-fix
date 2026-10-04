@@ -30,7 +30,7 @@
         "strict"
       ],
       "description": "On the main checkout, when two or more worktrees hold live or in-flight work (watch.mjs --json, read-only, under a timeout), print one line telling the session to check CronList and schedule /speckit-watch; silent otherwise, and always exits 0",
-      "fingerprint": "f25922e55e5a"
+      "fingerprint": "908aeab0e895"
     },
     {
       "id": "session:start:github-identity",
