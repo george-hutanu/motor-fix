@@ -185,16 +185,17 @@ describe('phase', () => {
 
   it('lets an open ready PR outrank run-state done, but not blocked', () => {
     const ready = summarizePr(pr());
-    assert.equal(phaseOf({ ...none, pr: ready, runState: { status: 'done', phase: 'retro' } }), 'review');
+    assert.equal(phaseOf({ ...none, pr: ready, runState: { status: 'done', phase: 'retro' } }), 'qa');
     assert.equal(phaseOf({ ...none, pr: ready, runState: { status: 'blocked', phase: 'pr-test' } }), 'blocked');
   });
 
-  it('is merging, qa or review for a ready PR', () => {
+  it('is merging or qa for a ready PR: marking it ready puts it in QA, there is no in review stage', () => {
     const ready = (rollupEntries) => summarizePr(pr({ statusCheckRollup: rollupEntries }));
     assert.equal(phaseOf({ ...none, pr: ready([check('SUCCESS'), review('SUCCESS')]) }), 'merging');
     assert.equal(phaseOf({ ...none, pr: ready([check('SUCCESS'), review('FAILURE')]) }), 'qa');
     assert.equal(phaseOf({ ...none, pr: ready([check('SUCCESS')]), qaLive: true }), 'qa');
-    assert.equal(phaseOf({ ...none, pr: ready([check('SUCCESS')]) }), 'review');
+    assert.equal(phaseOf({ ...none, pr: ready([check('SUCCESS')]) }), 'qa');
+    assert.equal(phaseOf({ ...none, pr: ready([check(null, 'IN_PROGRESS')]) }), 'qa');
   });
 
   it('maps a run-state phase to its stage', () => {
@@ -250,7 +251,7 @@ describe('stale and the fix', () => {
     const ready = (entries) => summarizePr(pr({ statusCheckRollup: entries }));
     assert.equal(fixOf(row({ ...quiet, phase: 'merging', pr: ready([check('SUCCESS'), review('SUCCESS')]) }), opts).fix, 'merge');
     assert.equal(fixOf(row({ ...quiet, pr: summarizePr(pr({ isDraft: true, statusCheckRollup: [check('FAILURE')] })) }), opts).fix, 'fix-ci');
-    assert.equal(fixOf(row({ ...quiet, phase: 'review', pr: ready([check('SUCCESS')]) }), opts).fix, 'rerun-qa');
+    assert.equal(fixOf(row({ ...quiet, phase: 'qa', pr: ready([check('SUCCESS')]) }), opts).fix, 'rerun-qa');
     assert.equal(fixOf(row({ ...quiet, phase: 'qa', pr: ready([check('SUCCESS'), review('FAILURE')]) }), opts).fix, 'resume');
     assert.equal(fixOf(row({ ...quiet, pr: summarizePr(pr({ isDraft: true })) }), opts).fix, 'resume');
   });

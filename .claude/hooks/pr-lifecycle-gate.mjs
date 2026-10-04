@@ -7,8 +7,10 @@
 // `speckit-notion-sync pr` records in specs/<branch>/notion-sync.md. A PR
 // carries exactly one stage label, and one that fits its draft state:
 // `planning` until /speckit-implement, then `in development` while a draft,
-// `in review` once ready, `QA` while the PR tester runs. Where it carries
-// several, the furthest fitting one is kept: stages only move forward. It
+// `QA` from the moment it is marked ready (there is no `in review` stage: the
+// owner folded it into QA on 2026-10-04, and a leftover `in review` label is
+// removed like any stage that does not fit). Where it carries several, the
+// furthest fitting one is kept: stages only move forward. It
 // also carries its type, read off the Conventional Commit
 // title: `feature`, `bug`, `tech debt`, `performance`, `documentation`,
 // `tests` or `tooling`, and `breaking` when the title carries a `!`.
@@ -29,21 +31,24 @@ import { fileURLToPath } from "node:url";
 
 const IN_DEVELOPMENT = "in development";
 const DRAFT_LABELS = new Set(["planning", IN_DEVELOPMENT]);
-const IN_REVIEW = "in review";
-const READY_LABELS = new Set([IN_REVIEW, "QA"]);
+const QA = "QA";
+const READY_LABELS = new Set([QA]);
 const STAGES = [...DRAFT_LABELS, ...READY_LABELS];
+const RETIRED = ["in review"];
 const GREEN = new Set(["SUCCESS", "NEUTRAL", "SKIPPED"]);
 
 /** The `gh pr edit` that leaves an open PR one stage label fitting its draft state, or null when it has that. */
 function stageFix(pr) {
   const fits = pr.isDraft ? DRAFT_LABELS : READY_LABELS;
-  const present = STAGES.filter((stage) => pr.labels.some((l) => l.name === stage));
+  const has = (name) => pr.labels.some((l) => l.name === name);
+  const present = STAGES.filter(has);
+  const retired = RETIRED.filter(has);
   const fitting = present.filter((stage) => fits.has(stage));
-  if (present.length === 1 && fitting.length === 1) return null;
-  const keep = fitting.at(-1) ?? (pr.isDraft ? IN_DEVELOPMENT : IN_REVIEW);
-  const args = present.filter((stage) => stage !== keep).map((stage) => `--remove-label "${stage}"`);
+  if (present.length === 1 && fitting.length === 1 && retired.length === 0) return null;
+  const keep = fitting.at(-1) ?? (pr.isDraft ? IN_DEVELOPMENT : QA);
+  const args = [...retired, ...present.filter((stage) => stage !== keep)].map((label) => `--remove-label "${label}"`);
   if (fitting.length === 0) args.push(`--add-label "${keep}"`);
-  return { present, fitting, keep, edit: `gh pr edit ${pr.number} ${args.join(" ")}` };
+  return { present, retired, fitting, keep, edit: `gh pr edit ${pr.number} ${args.join(" ")}` };
 }
 
 /** Every check concluded green; an empty rollup is not green. */
@@ -91,12 +96,14 @@ export function decide({ branch, ahead, unpushed, pr, prLinked = true, blocked =
   if (pr.state === "OPEN" && pr.labels) {
     const has = (name) => pr.labels.some((l) => l.name === name);
     const fix = stageFix(pr);
+    if (fix?.retired.length)
+      return `PR #${pr.number} carries the retired "${fix.retired.join('", "')}" label: in review was folded into QA, so a ready PR is "${QA}" and a draft "planning" or "${IN_DEVELOPMENT}". Swap it (${fix.edit}); every open PR shows its one stage on GitHub.`;
     if (fix?.fitting.length)
       return `PR #${pr.number} carries more than one stage label (${fix.present.join(", ")}); an open PR carries exactly one. Keep "${fix.keep}" (${fix.edit}); every open PR shows its one stage on GitHub.`;
     if (fix && pr.isDraft)
       return `PR #${pr.number} is a draft without its stage label${fix.present.length ? ` (it carries ${fix.present.join(", ")})` : ""}. Add "planning" before /speckit-implement or "${IN_DEVELOPMENT}" from it (${fix.edit}); every open PR shows its stage on GitHub.`;
     if (fix)
-      return `PR #${pr.number} is ready but has no "${IN_REVIEW}" or "QA" label. Swap it in (${fix.edit}); every open PR shows its stage on GitHub.`;
+      return `PR #${pr.number} is ready but has no "${QA}" label: a ready PR is in QA. Swap it in (${fix.edit}); every open PR shows its stage on GitHub.`;
     const type = typeLabel(pr.title);
     if (type && !has(type))
       return `PR #${pr.number} has no "${type}" label for its title's type. Add it (gh pr edit ${pr.number} --add-label "${type}"); every open PR shows its type on GitHub.`;

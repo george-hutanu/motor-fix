@@ -8,7 +8,7 @@ const green = [{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }, review('SUC
 const ready = (over = {}) => ({
   isDraft: false,
   mergeable: 'MERGEABLE',
-  labels: [{ name: 'in review' }, { name: 'feature' }],
+  labels: [{ name: 'QA' }, { name: 'feature' }],
   number: 6,
   title: 'feat(ui-cockpit): ST-50 Cockpit theme',
   state: 'OPEN',
@@ -93,20 +93,16 @@ describe('PR lifecycle gate — the PR link on the story', () => {
   });
 });
 
-describe('PR lifecycle gate — the in review label', () => {
-  it('refuses a ready PR without the in review label, before anything about merging', () => {
+describe('PR lifecycle gate — the QA label', () => {
+  it('refuses a ready PR without the QA label, before anything about merging', () => {
     const why = decide(task({ pr: ready({ labels: [] }) }));
     assert.match(why, /PR #6/);
-    assert.match(why, /gh pr edit 6 --add-label "in review"\)/);
+    assert.match(why, /gh pr edit 6 --add-label "QA"\)/);
   });
 
   it('asks the same of a ready PR with no story and of one whose checks are still running', () => {
-    assert.match(decide(task({ branch: 'chore-x', pr: ready({ labels: [] }) })), /in review/);
-    assert.match(decide(task({ pr: ready({ labels: [], statusCheckRollup: [{ state: 'PENDING' }] }) })), /in review/);
-  });
-
-  it('accepts the QA label in its place: the PR tester swaps one for the other', () => {
-    assert.doesNotMatch(decide(task({ pr: ready({ labels: [{ name: 'QA' }, { name: 'feature' }] }) })), /add-label/);
+    assert.match(decide(task({ branch: 'chore-x', pr: ready({ labels: [] }) })), /--add-label "QA"/);
+    assert.match(decide(task({ pr: ready({ labels: [], statusCheckRollup: [{ state: 'PENDING' }] }) })), /--add-label "QA"/);
   });
 
   it('refuses a draft without the in development label', () => {
@@ -121,13 +117,13 @@ describe('PR lifecycle gate — the in review label', () => {
   });
 
   it('does not take planning for a ready PR, and names the swap', () => {
-    assert.match(decide(task({ pr: ready({ labels: [{ name: 'planning' }] }) })), /gh pr edit 6 --remove-label "planning" --add-label "in review"\)/);
+    assert.match(decide(task({ pr: ready({ labels: [{ name: 'planning' }] }) })), /gh pr edit 6 --remove-label "planning" --add-label "QA"\)/);
   });
 
   it('does not take in development for a ready PR, and names the swap', () => {
     assert.match(
       decide(task({ pr: ready({ labels: [{ name: 'in development' }, { name: 'feature' }] }) })),
-      /gh pr edit 6 --remove-label "in development" --add-label "in review"\)/,
+      /gh pr edit 6 --remove-label "in development" --add-label "QA"\)/,
     );
   });
 
@@ -137,30 +133,49 @@ describe('PR lifecycle gate — the in review label', () => {
   });
 });
 
+describe('PR lifecycle gate — in review is retired, folded into QA', () => {
+  const labels = (...names) => [...names.map((name) => ({ name })), { name: 'feature' }];
+  const pending = [{ state: 'PENDING' }];
+
+  it('does not take in review for a ready PR: ready is QA', () => {
+    const why = decide(task({ pr: ready({ labels: labels('in review'), statusCheckRollup: pending }) }));
+    assert.match(why, /retired/);
+    assert.match(why, /gh pr edit 6 --remove-label "in review" --add-label "QA"\)/);
+  });
+
+  it('drops in review beside QA without adding anything', () => {
+    const why = decide(task({ pr: ready({ labels: labels('in review', 'QA'), statusCheckRollup: pending }) }));
+    assert.match(why, /gh pr edit 6 --remove-label "in review"\)/);
+    assert.doesNotMatch(why, /add-label/);
+  });
+
+  it('swaps in review on a draft for in development', () => {
+    assert.match(decide(task({ pr: ready({ isDraft: true, labels: labels('in review') }) })), /gh pr edit 6 --remove-label "in review" --add-label "in development"\)/);
+  });
+});
+
 describe('PR lifecycle gate — exactly one stage label', () => {
   const labels = (...names) => [...names.map((name) => ({ name })), { name: 'feature' }];
   const pending = [{ state: 'PENDING' }];
 
-  it('refuses a ready PR carrying in review and QA, keeping QA', () => {
-    const why = decide(task({ pr: ready({ labels: labels('in review', 'QA'), statusCheckRollup: pending }) }));
-    assert.match(why, /more than one stage label \(in review, QA\)/);
-    assert.match(why, /Keep "QA" \(gh pr edit 6 --remove-label "in review"\)/);
+  it('refuses a ready PR carrying in development and QA, keeping QA', () => {
+    const why = decide(task({ pr: ready({ labels: labels('in development', 'QA'), statusCheckRollup: pending }) }));
+    assert.match(why, /more than one stage label \(in development, QA\)/);
+    assert.match(why, /Keep "QA" \(gh pr edit 6 --remove-label "in development"\)/);
   });
 
   it('keeps the furthest fitting label of a draft, and drops one that does not fit', () => {
     assert.match(decide(task({ pr: ready({ isDraft: true, labels: labels('planning', 'in development') }) })), /Keep "in development" \(gh pr edit 6 --remove-label "planning"\)/);
     assert.match(decide(task({ pr: ready({ isDraft: true, labels: labels('in development', 'QA') }) })), /Keep "in development" \(gh pr edit 6 --remove-label "QA"\)/);
-    assert.match(decide(task({ pr: ready({ labels: labels('in development', 'in review'), statusCheckRollup: pending }) })), /Keep "in review" \(gh pr edit 6 --remove-label "in development"\)/);
   });
 
-  it('refuses a draft carrying a ready stage label, naming the swap', () => {
-    assert.match(decide(task({ pr: ready({ isDraft: true, labels: labels('in review') }) })), /gh pr edit 6 --remove-label "in review" --add-label "in development"\)/);
+  it('refuses a draft carrying the ready stage label, naming the swap', () => {
     assert.match(decide(task({ pr: ready({ isDraft: true, labels: labels('QA') }) })), /gh pr edit 6 --remove-label "QA" --add-label "in development"\)/);
   });
 
   it('lets one fitting stage label through', () => {
     for (const stage of ['planning', 'in development']) assert.equal(decide(task({ pr: ready({ isDraft: true, labels: labels(stage) }) })), null, stage);
-    for (const stage of ['in review', 'QA']) assert.equal(decide(task({ pr: ready({ labels: labels(stage), statusCheckRollup: pending }) })), null, stage);
+    assert.equal(decide(task({ pr: ready({ labels: labels('QA'), statusCheckRollup: pending }) })), null);
   });
 });
 
@@ -178,13 +193,13 @@ describe('PR lifecycle gate — the type label', () => {
 
   it('refuses an open PR, draft or ready, without its type label', () => {
     for (const isDraft of [true, false]) {
-      const labels = [{ name: isDraft ? 'in development' : 'in review' }];
+      const labels = [{ name: isDraft ? 'in development' : 'QA' }];
       assert.match(decide(task({ pr: ready({ isDraft, labels }) })), /gh pr edit 6 --add-label "feature"/);
     }
   });
 
   it('asks for breaking on a title marked with !', () => {
-    const labels = [{ name: 'in review' }, { name: 'feature' }];
+    const labels = [{ name: 'QA' }, { name: 'feature' }];
     assert.match(decide(task({ pr: ready({ labels, title: 'feat(api)!: ST-9 x' }) })), /--add-label "breaking"/);
   });
 

@@ -1,7 +1,7 @@
 ---
 name: "speckit-notion-sync"
-description: "Keep the MotorFix Notion tracker in step with the build: when a story or task starts, goes to review, goes to QA (the PR tester), is blocked or unblocked, or is finished, set its Status; when its PR opens, write the PR link onto the story in MotorFix stories, its row in the epic's build timeline under Plans, and its epic's Status. Also files a new epic execution plan under Plans. Runs from the spec-kit hooks (after_specify, before_implement), from /speckit-review, /speckit-archive and /speckit-auto, and after a merge to main."
-argument-hint: "start | implement | pr <n> | review | qa | blocked <reason> | unblock | finish | debt | plan — optionally followed by a Notion story URL or ST-<n>"
+description: "Keep the MotorFix Notion tracker in step with the build: when a story or task starts, goes to QA (its PR marked ready, then the PR tester), is blocked or unblocked, or is finished, set its Status; when its PR opens, write the PR link onto the story in MotorFix stories, its row in the epic's build timeline under Plans, and its epic's Status. Also files a new epic execution plan under Plans. Runs from the spec-kit hooks (after_specify, before_implement), from /speckit-review, /speckit-archive and /speckit-auto, and after a merge to main."
+argument-hint: "start | implement | pr <n> | qa | review (alias of qa) | blocked <reason> | unblock | finish | debt | plan — optionally followed by a Notion story URL or ST-<n>"
 compatibility: "Requires the Notion connector and the spec-kit project structure"
 metadata:
   author: "george-hutanu"
@@ -17,7 +17,7 @@ model: sonnet
 $ARGUMENTS
 ```
 
-The first word is the **event**: `start`, `implement`, `pr`, `review`, `qa`, `blocked`,
+The first word is the **event**: `start`, `implement`, `pr`, `qa`, `review` (an alias of `qa`), `blocked`,
 `unblock`, `finish`, `debt` or `plan`. `blocked` is followed by the reason,
 `pr` by the PR number. When the
 skill runs as a spec-kit hook there is no argument; take the event from the
@@ -36,10 +36,10 @@ under `/speckit-auto`.
 
 | What | Notion | Status values |
 | --- | --- | --- |
-| Stories and tasks | data source `collection://326eee3c-abec-41d9-9f96-eb3bd545a802` (MotorFix stories) | `Status`: To do · Planning · Implementing · Blocked · In review · QA · Done; `PR`: the story's own pull request (URL) |
+| Stories and tasks | data source `collection://326eee3c-abec-41d9-9f96-eb3bd545a802` (MotorFix stories) | `Status`: To do · Planning · Implementing · Blocked · QA · Done; `PR`: the story's own pull request (URL) |
 | Epics | data source `collection://ca8cf981-a8f2-4cb6-9c9a-ac1a3df0edac` (MotorFix epics) | `Status`: To do · In progress · Done |
 | Plans | page `3ee607bff0d2818493d0dadd2d5a006c` (Delivery › Plans) | one execution-plan page and one build-timeline database per epic |
-| Build timeline rows | each timeline database under Plans, e.g. `collection://2437de64-5c28-4136-b8b6-2d60693d45d7` (Foundations) | `Build status`: Not started · Planning · Implementing · Blocked · In review · QA · Merged (a timeline still without Planning/Implementing gets them on first write) |
+| Build timeline rows | each timeline database under Plans, e.g. `collection://2437de64-5c28-4136-b8b6-2d60693d45d7` (Foundations) | `Build status`: Not started · Planning · Implementing · Blocked · QA · Merged (a timeline still without Planning/Implementing gets them on first write) |
 
 ## 1. Resolve the Notion item
 
@@ -68,7 +68,7 @@ SQL query tool has a workspace quota), then ask:
 
 ```bash
 node .claude/scripts/notion-status.mjs <event> --current "<Status>"
-# {"write":true,"story":"QA","timeline":"QA","prior":null,"note":"In review → QA",
+# {"write":true,"story":"QA","timeline":"QA","prior":null,"note":"Implementing → QA",
 #  "stage":"QA","labels":"--add-label \"QA\" --remove-label \"planning\" …"}
 ```
 
@@ -82,8 +82,8 @@ it back, so run both from the feature's checkout.
 | --- | --- | --- | --- |
 | `start`: the task is taken — `/speckit-auto` or `/speckit-specify` begins (`after_specify`), or work by hand starts | → Planning | → Planning | To do → In progress |
 | `implement`: `/speckit-implement` begins (`before_implement`); work by hand with no planning runs `start` then `implement` | → Implementing | → Implementing | unchanged |
-| `review`: the work is done and its PR is marked ready for review (not when the draft opens); spec and code review | → In review | → In review | unchanged |
-| `qa`: the PR tester (`/speckit-pr-test`) starts on the ready PR; stays through every fix-and-retest lap | → QA | → QA | unchanged |
+| `qa`: the work is done and its PR is marked ready (`gh pr ready`, not when the draft opens); the PR tester (`/speckit-pr-test`) runs it again and it stays through every fix-and-retest lap | → QA | → QA | unchanged |
+| `review`: an alias of `qa`, kept so a running agent that still sends it lands on QA | → QA | → QA | unchanged |
 | `blocked <reason>`: the run cannot go on without something outside it — a Hard Stop, a run-state `blocking_condition`, the repair cap in the QA loop, red CI the agent cannot fix, an unresolved Blocked by | → Blocked | → Blocked | unchanged |
 | `unblock`: the run resumes | → the status before Blocked | → the same | unchanged |
 | `finish`: the PR is merged to `main` | → Done | → Merged | → Done when every story of the epic is Done |
@@ -91,9 +91,11 @@ it back, so run both from the feature's checkout.
 
 Rules:
 
-- **Never move backwards.** The ladder is To do → Planning → Implementing → In review → QA
-  → Done. A Done story stays Done, and `start` on an In review story is a
-  no-op. The one backwards move is `unblock`, which returns a Blocked story to
+- **Never move backwards.** The ladder is To do → Planning → Implementing → QA
+  → Done. There is no In review stage: the owner folded it into QA on
+  2026-10-04, so a ready PR is QA. A story still carrying In review reads as
+  QA (and the next event writes QA over it). A Done story stays Done, and
+  `start` on a QA story is a no-op. The one backwards move is `unblock`, which returns a Blocked story to
   the status recorded when it was blocked; nothing but `unblock` leaves
   Blocked, and a second `blocked` keeps the first record. Any other way back is
   `/speckit-correct-course`, which says so in its proposal.
@@ -148,8 +150,8 @@ its draft state, no type label, or no `breaking` when the title has a `!`.
 | `dependencies` | flag | the diff changes dependencies in a `package.json` |
 
 **Stage labels: exactly one on an open PR.** The stage follows the story:
-Planning → `planning`, Implementing → `in development`, In review →
-`in review`, QA → `QA`. A Blocked story's PR keeps the stage it left, with
+Planning → `planning`, Implementing → `in development`, QA → `QA` (from
+`gh pr ready` on; there is no `in review` label). A Blocked story's PR keeps the stage it left, with
 `blocked` beside it; a merged PR carries none of them — GitHub's Merged badge
 and the story's Done are the final state. Never add or remove a stage label by
 hand: on every event, apply the decision's `labels` (§2), which adds the one
@@ -158,7 +160,7 @@ leaves one stage label instead of stacking a second:
 
 ```bash
 gh pr edit <n> <labels>   # decoded from the JSON, e.g.
-gh pr edit 33 --add-label "QA" --remove-label "planning" --remove-label "in development" --remove-label "in review" --remove-label "blocked"
+gh pr edit 33 --add-label "QA" --remove-label "planning" --remove-label "in development" --remove-label "blocked"
 ```
 
 Log it as `- <date> · labels · PR #<n> · <stage>` (`stage` from the decision;

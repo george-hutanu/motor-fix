@@ -372,8 +372,9 @@ Gate overrides:
 
 ### 14. Review
 
-Do not invoke `speckit-notion-sync review` here: In review follows the PR
-being marked ready, which is the run's hand-off (below), after phase 16.
+Do not invoke `speckit-notion-sync qa` here: QA follows the PR being marked
+ready, which is the run's hand-off (below), after phase 16. There is no In
+review stage between Implementing and QA.
 `finish` runs after the hand-off merges the PR to `main`.
 Before phase 14, `specs/<feature>/design.md` must exist. The `after_specify` and
 `before_implement` hooks write it, and a run without one is a Hard Stop.
@@ -529,16 +530,16 @@ When phases 14–16 are done, the review left no CRITICAL/HIGH and the last
    `node scripts/pr-body-check.ts --body-file <body> --title "<PR title>"`,
    `GH_TOKEN=$(gh auth token -u george-hutanu) gh pr edit <branch> --body-file <body>`,
    `GH_TOKEN=$(gh auth token -u george-hutanu) gh pr ready <branch>`
-2. `speckit-notion-sync review`: the story, its timeline row → In review, and
-   the PR's one stage label → `in review`.
+2. `speckit-notion-sync qa`: the story, its timeline row → QA, and the PR's
+   one stage label → `QA`. Ready is QA; there is no In review stage.
 3. If the branch is behind `origin/main`, `git merge --no-edit origin/main`,
    re-run `typecheck`, `lint` and the tests, and push.
 4. `gh pr checks <branch> --watch` until every check other than
    `agent-review` has passed. A failing check is a repair: fix it on the
    branch, push, wait again; it counts toward `SPECKIT_MAX_REPAIR_ITERATIONS`.
 5. **QA — the PR tester** (`/speckit-pr-test <n>`, Constitution VII): the
-   story and its timeline row → QA and the PR's one stage label → `QA`
-   (`speckit-notion-sync qa`); the `pr-tester`
+   story, its timeline row and the PR's one stage label stay QA
+   (`speckit-notion-sync qa` again is a no-op); the `pr-tester`
    subagent boots the head commit in its own worktree, sweeps the UI, calls the
    API, runs the tests, reviews the diff, posts its review, replaces the
    body's Agent review `Pending.` line (`gh pr edit --body-file`) and sets
@@ -606,7 +607,7 @@ One report, at the end, standing on its own:
 - [ ] Mutation score at or above the floor for every touched package, with no disable added to reach it
 - [ ] Ticket re-read (comments included) after implementation, and any scope-moving comment reported
 - [ ] One commit per implementation slice, each pushed to the feature branch
-- [ ] Hand-off done on a clean finish: PR ready, story In review → QA, `agent-review` success on the head commit, merged on green, story Done
+- [ ] Hand-off done on a clean finish: PR ready, story Implementing → QA, `agent-review` success on the head commit, merged on green, story Done
 - [ ] Retrospective evidence gathered with `--since`, attached unjudged; no verdict written and no instinct reinforced
 - [ ] Final report delivered with the sections above
 
