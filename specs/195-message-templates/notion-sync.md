@@ -13,3 +13,9 @@
 - 2026-10-05 · qa · Foundations timeline ST-195 · Implementing → QA
 - 2026-10-05 · labels · PR #67 · QA
 - 2026-10-05 · debt · ST-195 · 2 tasks filed (deferred.md lines 2–3)
+- 2026-10-05 · finish · ST-195 · QA → Done (PR #67 merged, fc3b500)
+- 2026-10-05 · finish · Foundations timeline ST-195 · QA → Merged
+- 2026-10-05 · finish · EP-1 Foundations · In progress (unchanged: stories still open)
+- 2026-10-05 · labels · PR #67 · none
+- 2026-10-05 · ready · Foundations · +ST-81 +ST-127 (both To do, every blocker Merged, no hold)
+- 2026-10-05 · comment · ST-195 · finish: deviations, owner decisions, PUBLIC_WEB_URL, 2 debt tasks
