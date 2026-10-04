@@ -1,5 +1,28 @@
 <!--
-Sync Impact Report (v1.6.0)
+Sync Impact Report (v1.6.1)
+- Version change: 1.6.0 → 1.6.1 (PATCH: VII clarified — the In review stage
+  is folded into QA. Marking a PR ready sets the task QA and its one stage
+  label `QA` at once; the PR tester's run keeps QA. Notion Status is Planning
+  → Implementing → QA → Done, plus Blocked; the stage labels are `planning`,
+  `in development`, `QA`, plus `blocked`. No step, gate or check removed: the
+  QA step, the agent-review merge gate and the repair cap are unchanged)
+- Source: owner decision 2026-10-04: remove the "In review" stage and fold it
+  into QA.
+- Templates:
+  - ✅ AGENTS.md — lifecycle steps 4 and 6, the stage label list
+  - ✅ .claude/scripts/notion-status.mjs (`review` kept as an alias of `qa`;
+    a legacy In review reads as QA), .claude/hooks/pr-lifecycle-gate.mjs (a
+    ready PR is `QA`; a leftover `in review` label is removed),
+    .claude/scripts/watch.mjs (a ready PR is in the qa phase), their specs and
+    evals/cases/pr-lifecycle.json
+  - ✅ speckit-notion-sync (§2 table and ladder, §2b stage labels),
+    speckit-auto (§14, hand-off steps 2 and 5), speckit-review,
+    speckit-pr-test, .github/pull_request_template.md, the git extension's
+    git-config.yml
+  - ⚠ CLAUDE.local.md still names v1.6.0: untracked and under a growth
+    ratchet, left for the owner
+
+Previous report (v1.6.0)
 - Version change: 1.5.0 → 1.6.0 (MINOR: VII steps 1 and 3 expanded — every
   task carries the link to its own PR in Notion from the moment the draft
   opens, and every open PR carries its stage as a GitHub label —
@@ -223,11 +246,11 @@ waits for the owner:
 2. Push every commit to that branch as the work goes: never forced, never to
    `main`.
 3. When the work is done (tests, typecheck and lint green, review with no
-   CRITICAL/HIGH left), mark the PR ready, swap its label to `in review`,
-   and set the task In review.
+   CRITICAL/HIGH left), mark the PR ready, swap its label to `QA`, and set
+   the task QA. There is no In review stage: a ready PR is in QA.
 4. Merge `origin/main` into the branch if it is behind and wait for CI. A
    failing check is fixed on the branch and waited for again.
-5. Set the task to QA, swap the PR's `in review` label for `QA`, and run
+5. With the task and the PR's label still QA, run
    the PR tester (`/speckit-pr-test`) on the head
    commit: it boots the change in its own worktree, tests it in a browser and
    against the API, runs the tests, reviews the diff against the spec and this
@@ -241,7 +264,7 @@ waits for the owner:
 A task that cannot go on without something outside it is set Blocked, with the
 reason on the story and the PR and the PR's `blocked` label, and returns to
 its previous status when it resumes. An open PR always carries exactly one
-stage label (`planning`, `in development`, `in review`, `QA`), which the merge
+stage label (`planning`, `in development`, `QA`), which the merge
 removes with `blocked`, and its type label from the title (`feature`, `bug`,
 `tech debt`, `performance`, `documentation`, `tests`, `tooling`), plus
 `breaking` for a `!` title.
@@ -372,4 +395,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.6.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-04
+**Version**: 1.6.1 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-04

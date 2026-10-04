@@ -116,14 +116,15 @@ export function summarizePr(pr) {
   return { number: pr.number, state, head: pr.headRefOid, checks, agentReview };
 }
 
-export function phaseOf({ pr, runState, artifacts, qaLive }) {
+export function phaseOf({ pr, runState, artifacts }) {
   const known = pr && pr !== "unknown";
   if (known && (pr.state === "merged" || pr.state === "closed")) return "done";
   if (runState.status === "blocked") return "blocked";
   if (known && pr.state === "ready") {
     if (pr.checks === "pass" && pr.agentReview === "success") return "merging";
-    if (pr.agentReview || qaLive) return "qa";
-    return "review";
+    // A ready PR is in QA from the moment it is marked ready: there is no
+    // in review stage between the two (owner, 2026-10-04).
+    return "qa";
   }
   if (runState.status === "done") return "done";
   const stage = stageOf(runState.phase);
@@ -303,7 +304,7 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
     const raw = prs && w.branch ? prFor(prs, w.branch) : null;
     const pr = prs ? (raw ? summarizePr(raw) : null) : "unknown";
     const qaLive = Boolean(pr?.number) && qaRuns.some((r) => r.pr === pr.number);
-    const phase = phaseOf({ pr, runState, artifacts: artifactsOf(w.path, feature), qaLive });
+    const phase = phaseOf({ pr, runState, artifacts: artifactsOf(w.path, feature) });
     const threshold = thresholds[phase] ?? 0;
     const claim = readJson(claimPath(w.path));
     const { activity, clean, gitFailed } = activityOf(w.path, runState);

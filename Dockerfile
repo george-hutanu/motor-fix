@@ -19,9 +19,13 @@ RUN npx nx run ${APP}:build --configuration=production
 # The web server is fully bundled; the Node apps install the dependencies
 # their build listed in its own package.json and lockfile.
 RUN cd dist/apps/${APP} && if [ -f package-lock.json ]; then npm ci --omit=dev; fi
-# The api's pre-deploy step runs the migrations from inside its image.
+# The api's pre-deploy step runs the migrations from inside its image, and
+# the staging reset (.github/workflows/reset-staging.yml) runs the seed there:
+# one file, run by Node as it is, with pg already among the api's dependencies.
 RUN if [ "${APP}" = api ]; then \
-      cp -r libs/domain/prisma libs/domain/prisma.config.ts dist/apps/api/; fi
+      cp -r libs/domain/prisma libs/domain/prisma.config.ts dist/apps/api/ \
+      && mkdir -p dist/apps/api/src \
+      && cp libs/domain/src/seed.ts dist/apps/api/src/; fi
 
 FROM node:${NODE_VERSION}-slim AS runtime
 ARG APP
