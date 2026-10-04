@@ -41,7 +41,7 @@ export function decide({ branch, ahead, unpushed, pr, blocked = false }) {
   if (unpushed > 0)
     return `${unpushed} commit(s) on ${branch} are not pushed. Push them (git push -u origin ${branch}); work on a task is pushed as it goes.`;
   if (pr === null)
-    return `${branch} has no PR. Open it as a draft (gh pr create --draft --base main --head ${branch}); a task's PR opens at its start.`;
+    return `${branch} has no PR. Open it as a draft (gh pr create --draft --base main --head ${branch} --body-file <body made from .github/pull_request_template.md>); a task's PR opens at its start.`;
   if (pr.state !== "OPEN" || pr.isDraft || pr.mergeable !== "MERGEABLE") return null;
   const checks = pr.statusCheckRollup ?? [];
   if (!allGreen(checks.filter((c) => !isAgentReview(c)))) return null;

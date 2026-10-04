@@ -26,7 +26,10 @@
       "!{projectRoot}/src/test-setup.[jt]s",
       "!{projectRoot}/test-setup.[jt]s"
     ],
-    "sharedGlobals": []
+    "sharedGlobals": [
+      "{workspaceRoot}/.github/workflows/ci.yml",
+      "{workspaceRoot}/.github/actions/setup/action.yml"
+    ]
   },
   "plugins": [
     {
@@ -70,6 +73,36 @@
           "json": "{workspaceRoot}/tsconfig.json"
         }
       ]
+    },
+    "test": {
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/jest.preset.cjs",
+        {
+          "env": "JEST_SUITE"
+        },
+        {
+          "externalDependencies": [
+            "jest",
+            "@nx/jest",
+            "ts-jest",
+            "jest-preset-angular"
+          ]
+        },
+        {
+          "dependentTasksOutputFiles": "**/*.d.ts",
+          "transitive": true
+        }
+      ]
+    },
+    "test:mutation": {
+      "command": "node scripts/mutation.ts {projectName} {projectRoot}",
+      "options": {
+        "env": {
+          "TZ": "UTC"
+        }
+      }
     }
   }
 }

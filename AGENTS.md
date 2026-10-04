@@ -33,21 +33,27 @@ epic or a plan, whether run through spec-kit or by hand.
   rule, Constitution VII, enforced by the `stop:pr-lifecycle` and
   `pre:bash:merge-gate` gates:
   1. Take the task and set it to In progress in Notion (`speckit-notion-sync start`).
-  2. Open a draft PR for its branch (`speckit-git-commit`, at the first commit).
+  2. Open a draft PR for its branch (`speckit-git-commit`, at the first commit),
+     its body made from `.github/pull_request_template.md`:
+     `gh pr create --draft --body-file <body>`, never `--body` or `--fill`.
   3. Do the work, pushing every commit to that branch: never forced, never `main`.
   4. When it is done (tests, typecheck and lint green, review with no
-     CRITICAL/HIGH left), mark the PR ready for review (`gh pr ready`) and set
-     the task to In review in Notion (`speckit-notion-sync review`).
+     CRITICAL/HIGH left), fill in every section of the template
+     (`node scripts/pr-body-check.ts --body-file <body> --title "<title>"`
+     passes, then `gh pr edit <n> --body-file <body>`), mark the PR ready for
+     review (`gh pr ready`) and set the task to In review in Notion
+     (`speckit-notion-sync review`).
   5. Get CI green: merge `origin/main` into the branch if it is behind and
      push, wait for the checks (`gh pr checks <n> --watch`); a failing check is
      fixed on the branch and waited for again.
   6. QA: run the PR tester (`/speckit-pr-test <n>`, the `pr-tester` subagent)
      and set the task to QA (`speckit-notion-sync qa`). It boots the PR head in
      its own worktree, tests it in a browser and against the API, reviews the
-     diff, posts a review and sets the `agent-review` status on the head
-     commit. Fix every blocking finding (tests first), push, and run it again;
-     each lap counts toward `SPECKIT_MAX_REPAIR_ITERATIONS` (5), and at the cap
-     the task goes to Blocked and the PR stays unmerged.
+     diff, posts a review, fills the template's "Agent review" section and sets
+     the `agent-review` status on the head commit. Fix every blocking finding
+     (tests first), push, and run it again; each lap counts toward
+     `SPECKIT_MAX_REPAIR_ITERATIONS` (5), and at the cap the task goes to
+     Blocked and the PR stays unmerged.
   7. Merge on `agent-review` success with every other check green
      (`gh pr merge <n> --merge`); a PR with a failing, pending or missing check
      is never merged. Then set the task to Done (`speckit-notion-sync finish`).
@@ -69,6 +75,11 @@ epic or a plan, whether run through spec-kit or by hand.
   `after_specify`, `before_plan`, `before_implement`), and so do
   `/speckit-review` and `/speckit-archive`. Outside spec-kit, run the skills
   yourself. After every merge to `main`, run `speckit-notion-sync finish`.
+- **Every PR uses the template**, `.github/pull_request_template.md`, whoever
+  opens it. The `PR template` workflow (`scripts/pr-body-check.ts`, whose
+  header lists the rules) checks a draft's headings and a ready PR's every
+  section, and names what is missing. Write `N/A` and the reason where a
+  section does not apply. Agent review is filled in by the automated reviewer.
 - A Notion or mock failure never blocks the build. It is logged in
   `specs/<feature>/notion-sync.md` or `design.md` and retried on the next run.
 
@@ -96,9 +107,23 @@ decisions are the source for anything the constitution does not fix.
   ESM-only, so the Nest projects' `test` targets run Jest with
   `--experimental-vm-modules`.
 - Root scripts: `typecheck`, `lint`, `test`, `build`, `e2e` run across every
-  project; the harness specs keep `npm run test:harness`. API tests need
-  PostgreSQL and Redis: `docker compose up -d` (or local servers), with
-  `DATABASE_URL` and `REDIS_URL` from `.env.example`.
+  project; the harness specs keep `npm run test:harness`; `test:mutation`
+  and `test:mutation:affected` run Stryker one project at a time, against the
+  floor in each project's `stryker.config.json`, which only rises. A spec that
+  needs PostgreSQL or Redis is named `*.integration.spec.ts`;
+  `npm run test:unit` leaves those out and `npm run test:integration` runs
+  only them (`JEST_SUITE` in `jest.preset.cjs`; unset runs all). Integration
+  tests need `docker compose up -d` (or local servers), with `DATABASE_URL`
+  and `REDIS_URL` from `.env.example`.
+- PR CI: `.github/workflows/ci.yml`, one job per check, in parallel: PR
+  title (Conventional Commit), Biome, Typecheck, Unit tests, Integration
+  tests (PostgreSQL+PostGIS and Redis services), E2E tests (Playwright
+  `web-e2e`, servers started in the job), Build, Harness, Contract check,
+  Dependency audit, Docker build (`web`, `node-app`), then `CI OK`, which
+  fails when any of them did. PRs run `nx affected`; `release.yml` calls the
+  same workflow, which then runs every project. Mutation testing never runs
+  in PR CI: `.github/workflows/mutation.yml` runs it nightly on `main` and on
+  `workflow_dispatch`.
 - Release: `.github/workflows/release.yml` builds one image per app (root
   `Dockerfile`), deploys staging through `scripts/railway-deploy.ts`, runs the
   end-to-end suite there, and promotes the same digests to production after

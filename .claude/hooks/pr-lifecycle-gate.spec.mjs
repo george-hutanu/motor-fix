@@ -45,7 +45,7 @@ describe('PR lifecycle gate — what it refuses', () => {
   });
 
   it('refuses a pushed task branch with no PR', () => {
-    assert.match(decide(task({ pr: null })), /has no PR.*gh pr create --draft/);
+    assert.match(decide(task({ pr: null })), /has no PR.*gh pr create --draft.*--body-file.*pull_request_template\.md/);
   });
 
   it('refuses a ready PR left unmerged after every check and the agent review passed', () => {

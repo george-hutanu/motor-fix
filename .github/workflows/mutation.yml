@@ -1,0 +1,76 @@
+name: Mutation
+
+# Kept out of pull-request CI and off developer machines: a full run is too
+# heavy for either. Runs nightly on main and on demand.
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      projects:
+        description: Comma-separated Nx projects (empty runs every project)
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    runs-on: ubuntu-latest
+    # TODO: set from the first measured durations.
+    timeout-minutes: 180
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      REDIS_URL: redis://localhost:6379
+      AUTH_TOKEN_SECRET: ci-only-test-secret-not-used-in-any-deploy
+      TZ: UTC
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Migrate the test database
+        run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
+      - name: Restore the mutation results of earlier runs
+        uses: actions/cache/restore@v4
+        with:
+          path: reports/mutation
+          key: mutation-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            mutation-${{ github.ref_name }}-
+            mutation-
+      - name: Mutation score per project
+        id: mutation
+        env:
+          PROJECTS: ${{ inputs.projects }}
+        run: npx nx run-many -t test:mutation --parallel=1 --output-style=static ${PROJECTS:+--projects=$PROJECTS} -- --incremental
+      # Saved even when the step fails, so the next run resumes instead of starting over.
+      - name: Save the mutation results
+        if: always() && steps.mutation.outcome != 'skipped'
+        uses: actions/cache/save@v4
+        with:
+          path: reports/mutation
+          key: mutation-${{ github.ref_name }}-${{ github.run_id }}
+      - name: Upload the reports
+        if: always() && steps.mutation.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-reports
+          path: reports/mutation
+          if-no-files-found: ignore
