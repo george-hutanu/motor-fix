@@ -14,6 +14,7 @@ import { MAINTENANCE, maintenanceOff } from './maintenance';
 import { MeController } from './me.controller';
 import { createPrisma, PRISMA } from './prisma';
 import { SignInService } from './sign-in.service';
+import { SignUpService } from './sign-up.service';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { AuditHistoryController } from '../audit/audit-history.controller';
@@ -47,12 +48,15 @@ export class AuthModule implements OnApplicationShutdown {
     return {
       controllers: [AuthController, MeController, AuditHistoryController],
       exports: [AccountsService, ActorGuard, AUTH_OPTIONS, PRISMA],
+      // Every module that checks the actor uses this one guard and client.
+      global: true,
       module: AuthModule,
       providers: [
         AccountsService,
         ActorGuard,
         AuditHistoryService,
         SignInService,
+        SignUpService,
         { provide: AUTH_OPTIONS, useValue: options },
         {
           provide: PRISMA,

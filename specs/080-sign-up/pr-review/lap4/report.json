@@ -1,0 +1,131 @@
+{
+  "pr": 53,
+  "repo": "george-hutanu/motor-fix",
+  "sha": "85d761ad23d3d953c0bf62833e23aeece1072a60",
+  "base": "a3b5de34660103738a5ba69597f4cb71369dab19",
+  "lap": 4,
+  "verdict": "failure",
+  "summary": "1 blocking finding(s); 6 in all. Booted postgres, redis, api, web, worker.",
+  "findings": [
+    {
+      "severity": "medium",
+      "kind": "step",
+      "title": "api readiness: storage down",
+      "steps": [
+        "No object store on this machine (no Docker); every other check is ok. Environment limit, not the change."
+      ]
+    },
+    {
+      "severity": "medium",
+      "kind": "step",
+      "title": "worker readiness: storage down",
+      "steps": [
+        "No object store on this machine (no Docker); every other check is ok. Environment limit, not the change."
+      ]
+    },
+    {
+      "severity": "low",
+      "kind": "flow",
+      "title": "Not a defect: the 390 px RO light phone sign-up hit the hourly limit in the QA run (test artifact)",
+      "steps": [
+        "phone sheet switch + sign-up 390 ro light"
+      ],
+      "evidence": "QA harness, not the change. Every browser sign-up in this run reached the API as one client, so the 11th counted sign-up (this one) got 429 too_many_attempts, as FR-006 says. Rerun on a fresh boot (pr-53-lap4-probe): the same flow at 390 px RO light passed 3 of 3, plus 390 EN light, 320 RO dark and 390 RO dark, all landing on /app/driver. Original: page.waitForURL: Timeout 15000ms exceeded. | =========================== logs =========================== | waiting for navigation until \"load\" | ============================================================"
+    },
+    {
+      "severity": "high",
+      "kind": "review",
+      "title": "FR-016 not met: an address that cannot be read is counted instead of leaving the limit skipped",
+      "where": "libs/domain/src/auth/attempts.ts clientOf() and admitSignUp(); libs/domain/src/auth/auth.controller.ts signUp(); libs/domain/src/auth/attempts.spec.ts line 12",
+      "steps": [
+        "Boot the PR head; from a trusted hop (loopback) POST /api/v1/auth/sign-up 12 times with a valid JSON body and X-Forwarded-For: not-an-address, so req.ip is 'not-an-address'",
+        "The answers are 201 x10, then 429 too_many_attempts x2: the unreadable address got its own counter",
+        "Read the code: the controller passes `req.ip ?? ''`, and `clientOf` does `if (!isIPv6(address)) return address;`, so '' and any non-IP string become a Redis key (every request with no readable address shares the one key digest(''))"
+      ],
+      "evidence": "Live probe on the booted PR head (pr-53-lap4-probe/report.md): codes 201,201,201,201,201,201,201,201,201,201,429,429. FR-016 ends: \"an address that cannot be read leaves the limit skipped, as an unreachable Redis does\", and says it holds \"for the sign-up limit and for sign-in's per-address count alike\". The unit spec asserts the opposite: attempts.spec.ts `['something that is no address', 'not-an-address', 'not-an-address']`. Fix tests first: clientOf returns null when `isIP(bare) === 0` (empty included); admitSignUp returns true and logs, and Attempts.blocked/fail skip the address key, when it is null; change that spec row and add an integration case (empty/garbage address admitted past 10)."
+    },
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "Show/hide password keeps one label ('Show password' / 'Arată parola') while pressed",
+      "where": "apps/web/src/app/sign-in/sign-up.ts",
+      "steps": [
+        "Open sign-up and press the eye button: aria-pressed turns true and the field becomes text, the label stays 'Arată parola'"
+      ],
+      "evidence": "`[attr.aria-label]=\"'public.signUp.showPassword' | t\"` with `[attr.aria-pressed]=\"shown()\"`. A valid toggle-button pattern, carried over from lap 2 as a note only."
+    },
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "Browser sign-ups reach the API as one client through the web app in the booted stack",
+      "where": "web to API path (apps/api/src/bootstrap.ts trust proxy; already in specs/080-sign-up/deferred.md)",
+      "steps": [
+        "Drive more than 10 sign-ups through the browser on the booted head, each page adding its own X-Forwarded-For",
+        "The 11th is refused 429 even though the pages used different addresses"
+      ],
+      "evidence": "Seen in pr-53-lap4 (flow-signup-320-dark-en.png and flow-signup-tablet-dark-ro.png show 'Too many attempts' where a taken e-mail was expected). Locally the web proxy's hop decides req.ip. This is the case deferred.md's first item names for Railway (the whole site sharing 10 sign-ups an hour); verify on staging as that Notion task says. Not a new defect in this change."
+    }
+  ],
+  "booted": [
+    "postgres",
+    "redis",
+    "api",
+    "web",
+    "worker"
+  ],
+  "notes": [
+    "No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.",
+    "No changed GET endpoint without path parameters."
+  ],
+  "screenshots": [
+    "shots/home-desktop-light-ro.png",
+    "shots/home-desktop-light-en.png",
+    "shots/home-desktop-dark-ro.png",
+    "shots/home-desktop-dark-en.png",
+    "shots/home-tablet-light-ro.png",
+    "shots/home-tablet-light-en.png",
+    "shots/home-tablet-dark-ro.png",
+    "shots/home-tablet-dark-en.png",
+    "shots/home-mobile-light-ro.png",
+    "shots/home-mobile-light-en.png",
+    "shots/home-mobile-dark-ro.png",
+    "shots/home-mobile-dark-en.png",
+    "shots/home-small-phone-light-ro.png",
+    "shots/home-small-phone-light-en.png",
+    "shots/home-small-phone-dark-ro.png",
+    "shots/home-small-phone-dark-en.png",
+    "shots/cockpit-desktop-light-ro.png",
+    "shots/cockpit-desktop-light-en.png",
+    "shots/cockpit-desktop-dark-ro.png",
+    "shots/cockpit-desktop-dark-en.png",
+    "shots/cockpit-tablet-light-ro.png",
+    "shots/cockpit-tablet-light-en.png",
+    "shots/cockpit-tablet-dark-ro.png",
+    "shots/cockpit-tablet-dark-en.png",
+    "shots/cockpit-mobile-light-ro.png",
+    "shots/cockpit-mobile-light-en.png",
+    "shots/cockpit-mobile-dark-ro.png",
+    "shots/cockpit-mobile-dark-en.png",
+    "shots/cockpit-small-phone-light-ro.png",
+    "shots/cockpit-small-phone-light-en.png",
+    "shots/cockpit-small-phone-dark-ro.png",
+    "shots/cockpit-small-phone-dark-en.png",
+    "shots/ro-garages-desktop-light-ro.png",
+    "shots/ro-garages-desktop-light-en.png",
+    "shots/ro-garages-desktop-dark-ro.png",
+    "shots/ro-garages-desktop-dark-en.png",
+    "shots/ro-garages-tablet-light-ro.png",
+    "shots/ro-garages-tablet-light-en.png",
+    "shots/ro-garages-tablet-dark-ro.png",
+    "shots/ro-garages-tablet-dark-en.png",
+    "shots/ro-garages-mobile-light-ro.png",
+    "shots/ro-garages-mobile-light-en.png",
+    "shots/ro-garages-mobile-dark-ro.png",
+    "shots/ro-garages-mobile-dark-en.png",
+    "shots/ro-garages-small-phone-light-ro.png",
+    "shots/ro-garages-small-phone-light-en.png",
+    "shots/ro-garages-small-phone-dark-ro.png",
+    "shots/ro-garages-small-phone-dark-en.png"
+  ],
+  "markdown": "**Agent review: failure** — PR #53 at `85d761a`, lap 4\n\nBlocking: 1 (blocker 0, high 1) · medium 2 · low 3. Booted: postgres, redis, api, web, worker.\n- No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.\n- No changed GET endpoint without path parameters.\n\n| # | Severity | Finding | Where | Evidence |\n| --- | --- | --- | --- | --- |\n| 1 | high | FR-016 not met: an address that cannot be read is counted instead of leaving the limit skipped |  | Live probe on the booted PR head (pr-53-lap4-probe/report.md): codes 201,201,201,201,201,201,201,201,201,201,429,429. FR-016 ends: \"an address that cannot be read leaves the limit skipped, as an unreachable Redis does\", and says it holds \"for the sign-up limit and for sign-in's per-address count alike\". The unit spec asserts the opposite: attempts.spec.ts `['something that is no address', 'not-an-address', 'not-an-address']`. Fix tests first: clientOf returns null when `isIP(bare) === 0` (empty included); admitSignUp returns true and logs, and Attempts.blocked/fail skip the address key, when it is null; change that spec row and add an integration case (empty/garbage address admitted past 10). |\n| 2 | medium | api readiness: storage down |  |  |\n| 3 | medium | worker readiness: storage down |  |  |\n| 4 | low | Not a defect: the 390 px RO light phone sign-up hit the hourly limit in the QA run (test artifact) |  | QA harness, not the change. Every browser sign-up in this run reached the API as one client, so the 11th counted sign-up (this one) got 429 too_many_attempts, as FR-006 says. Rerun on a fresh boot (pr-53-lap4-probe): the same flow at 390 px RO light passed 3 of 3, plus 390 EN light, 320 RO dark and 390 RO dark, all landing on /app/driver. Original: page.waitForURL: Timeout 15000ms exceeded. \\| =========================== logs =========================== \\| waiting for navigation until \"load\" \\| ============================================================ |\n| 5 | low | Show/hide password keeps one label ('Show password' / 'Arată parola') while pressed |  | `[attr.aria-label]=\"'public.signUp.showPassword' \\| t\"` with `[attr.aria-pressed]=\"shown()\"`. A valid toggle-button pattern, carried over from lap 2 as a note only. |\n| 6 | low | Browser sign-ups reach the API as one client through the web app in the booted stack |  | Seen in pr-53-lap4 (flow-signup-320-dark-en.png and flow-signup-tablet-dark-ro.png show 'Too many attempts' where a taken e-mail was expected). Locally the web proxy's hop decides req.ip. This is the case deferred.md's first item names for Railway (the whole site sharing 10 sign-ups an hour); verify on staging as that Notion task says. Not a new defect in this change. |\n\n### Reproduction\n1. Boot the PR head; from a trusted hop (loopback) POST /api/v1/auth/sign-up 12 times with a valid JSON body and X-Forwarded-For: not-an-address, so req.ip is 'not-an-address' → The answers are 201 x10, then 429 too_many_attempts x2: the unreadable address got its own counter → Read the code: the controller passes `req.ip ?? ''`, and `clientOf` does `if (!isIPv6(address)) return address;`, so '' and any non-IP string become a Redis key (every request with no readable address shares the one key digest(''))\n2. No object store on this machine (no Docker); every other check is ok. Environment limit, not the change.\n3. No object store on this machine (no Docker); every other check is ok. Environment limit, not the change.\n4. phone sheet switch + sign-up 390 ro light\n5. Open sign-up and press the eye button: aria-pressed turns true and the field becomes text, the label stays 'Arată parola'\n6. Drive more than 10 sign-ups through the browser on the booted head, each page adding its own X-Forwarded-For → The 11th is refused 429 even though the pages used different addresses\n\nScreenshots: 48, one per route × viewport × scheme × language.\n"
+}

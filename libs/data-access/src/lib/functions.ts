@@ -7,6 +7,8 @@ export type { HealthControllerReady$Params as HealthControllerReady$Params } fro
 export { healthControllerReady as healthControllerReady } from './fn/health/health-controller-ready';
 export type { AuthControllerSignIn$Params as AuthControllerSignIn$Params } from './fn/auth/auth-controller-sign-in';
 export { authControllerSignIn as authControllerSignIn } from './fn/auth/auth-controller-sign-in';
+export type { AuthControllerSignUp$Params as AuthControllerSignUp$Params } from './fn/auth/auth-controller-sign-up';
+export { authControllerSignUp as authControllerSignUp } from './fn/auth/auth-controller-sign-up';
 export type { AuthControllerRefresh$Params as AuthControllerRefresh$Params } from './fn/auth/auth-controller-refresh';
 export { authControllerRefresh as authControllerRefresh } from './fn/auth/auth-controller-refresh';
 export type { AuthControllerSignOut$Params as AuthControllerSignOut$Params } from './fn/auth/auth-controller-sign-out';
@@ -19,3 +21,7 @@ export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Pa
 export { auditHistoryControllerList as auditHistoryControllerList } from './fn/audit-history/audit-history-controller-list';
 export type { NotificationsControllerTest$Params as NotificationsControllerTest$Params } from './fn/notifications/notifications-controller-test';
 export { notificationsControllerTest as notificationsControllerTest } from './fn/notifications/notifications-controller-test';
+export type { LiveControllerLive$Params as LiveControllerLive$Params } from './fn/live/live-controller-live';
+export { liveControllerLive as liveControllerLive } from './fn/live/live-controller-live';
+export type { LiveControllerTest$Params as LiveControllerTest$Params } from './fn/live/live-controller-test';
+export { liveControllerTest as liveControllerTest } from './fn/live/live-controller-test';

@@ -13,9 +13,11 @@ export type { AuditHistoryPageDto } from './models/audit-history-page-dto';
 export type { HealthChecksDto } from './models/health-checks-dto';
 export type { HealthLiveDto } from './models/health-live-dto';
 export type { HealthReadyDto } from './models/health-ready-dto';
+export type { LiveTestDto } from './models/live-test-dto';
 export type { MeDto } from './models/me-dto';
 export type { SessionDto } from './models/session-dto';
 export type { SignInDto } from './models/sign-in-dto';
+export type { SignUpDto } from './models/sign-up-dto';
 export type { TestMessageDto } from './models/test-message-dto';
 export type { TestMessageQueuedDto } from './models/test-message-queued-dto';
 export type { UpdateMeDto } from './models/update-me-dto';
@@ -25,6 +27,7 @@ export { AuthService } from './services/auth.service';
 export { MeService } from './services/me.service';
 export { AuditHistoryService } from './services/audit-history.service';
 export { NotificationsService } from './services/notifications.service';
+export { LiveService } from './services/live.service';
 
 export type { HealthControllerLive$Params as HealthControllerLive$Params } from './fn/health/health-controller-live';
 export { healthControllerLive as healthControllerLive } from './fn/health/health-controller-live';
@@ -32,6 +35,8 @@ export type { HealthControllerReady$Params as HealthControllerReady$Params } fro
 export { healthControllerReady as healthControllerReady } from './fn/health/health-controller-ready';
 export type { AuthControllerSignIn$Params as AuthControllerSignIn$Params } from './fn/auth/auth-controller-sign-in';
 export { authControllerSignIn as authControllerSignIn } from './fn/auth/auth-controller-sign-in';
+export type { AuthControllerSignUp$Params as AuthControllerSignUp$Params } from './fn/auth/auth-controller-sign-up';
+export { authControllerSignUp as authControllerSignUp } from './fn/auth/auth-controller-sign-up';
 export type { AuthControllerRefresh$Params as AuthControllerRefresh$Params } from './fn/auth/auth-controller-refresh';
 export { authControllerRefresh as authControllerRefresh } from './fn/auth/auth-controller-refresh';
 export type { AuthControllerSignOut$Params as AuthControllerSignOut$Params } from './fn/auth/auth-controller-sign-out';
@@ -44,3 +49,7 @@ export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Pa
 export { auditHistoryControllerList as auditHistoryControllerList } from './fn/audit-history/audit-history-controller-list';
 export type { NotificationsControllerTest$Params as NotificationsControllerTest$Params } from './fn/notifications/notifications-controller-test';
 export { notificationsControllerTest as notificationsControllerTest } from './fn/notifications/notifications-controller-test';
+export type { LiveControllerLive$Params as LiveControllerLive$Params } from './fn/live/live-controller-live';
+export { liveControllerLive as liveControllerLive } from './fn/live/live-controller-live';
+export type { LiveControllerTest$Params as LiveControllerTest$Params } from './fn/live/live-controller-test';
+export { liveControllerTest as liveControllerTest } from './fn/live/live-controller-test';

@@ -1,6 +1,7 @@
 import type { Env, StorageEnv } from '@motor-fix/contracts';
 import {
   AuthModule,
+  EventsModule,
   emailConfig,
   HealthModule,
   NotificationsModule,
@@ -36,6 +37,7 @@ export class AppModule {
           },
           auth,
         ),
+        EventsModule.register({ redisUrl: env.REDIS_URL }),
       ],
       module: AppModule,
     };

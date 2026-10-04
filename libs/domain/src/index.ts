@@ -3,6 +3,7 @@ export { AccountsService } from './auth/accounts.service';
 export { ActorGuard, CurrentActor, Requires } from './auth/actor.guard';
 export { AuthModule } from './auth/auth.module';
 export { type Actor, assertGarage, assertOwner } from './auth/policy';
+export { EventsModule } from './events/events.module';
 export * from './health/health.module';
 export * from './logging';
 export { emailConfig } from './notifications/email-config';

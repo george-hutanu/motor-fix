@@ -17,6 +17,7 @@ import {
 import { blockedReason, type EmailConfig } from './email-config';
 import { isQuiet, nextMorning } from './quiet-hours';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
+import { LIVE_CHANNEL } from '../events/live.hub';
 import type {
   Notification,
   Prisma,
@@ -29,10 +30,6 @@ export const NOTIFICATIONS_PRISMA = Symbol('NOTIFICATIONS_PRISMA');
 export const NOTIFICATIONS_JOBS = Symbol('NOTIFICATIONS_JOBS');
 export const LIVE_PUBLISHER = Symbol('LIVE_PUBLISHER');
 export const EMAIL_FALLBACK = Symbol('EMAIL_FALLBACK');
-
-// The live connection's channel and message shape (one Redis channel; each
-// API copy writes an event to the streams in its audience).
-const LIVE_CHANNEL = 'live:events';
 
 export const RETRY_MINUTES = [1, 5, 15, 60, 240];
 const WINDOW_MS = 5 * 60_000;

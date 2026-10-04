@@ -84,6 +84,37 @@
         ]
       }
     },
+    "/api/v1/auth/sign-up": {
+      "post": {
+        "operationId": "AuthController_signUp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignUpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/refresh": {
       "post": {
         "operationId": "AuthController_refresh",
@@ -321,6 +352,54 @@
           "notifications"
         ]
       }
+    },
+    "/api/v1/live": {
+      "get": {
+        "operationId": "LiveController_live",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "A server-sent events stream"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/v1/admin/live/test": {
+      "post": {
+        "operationId": "LiveController_test",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveTestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The test update was published"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "live"
+        ]
+      }
     }
   },
   "info": {
@@ -443,6 +522,42 @@
         },
         "required": [
           "accessToken"
+        ]
+      },
+      "SignUpDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 80,
+            "minLength": 2
+          },
+          "email": {
+            "type": "string",
+            "description": "Trimmed; stored and compared in lower case",
+            "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "description": "8 to 128 characters, not a common password",
+            "maxLength": 1024,
+            "minLength": 1
+          },
+          "language": {
+            "type": "string",
+            "description": "The interface language",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "password",
+          "language"
         ]
       },
       "MeDto": {
@@ -751,6 +866,18 @@
         },
         "required": [
           "queued"
+        ]
+      },
+      "LiveTestDto": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "accountId"
         ]
       }
     }
