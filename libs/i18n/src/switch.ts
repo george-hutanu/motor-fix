@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 
 import { I18n } from './i18n';
-import type { Language } from './languages';
+import { isLanguage } from './languages';
 import { TranslatePipe } from './translate.pipe';
 
 const KEY = 'mf.lang';
@@ -23,7 +23,8 @@ export class LanguageChoice {
   private readonly i18n = inject(I18n);
   private readonly window = inject(DOCUMENT).defaultView;
 
-  choose(language: Language): Promise<void> {
+  choose(language: string): Promise<void> {
+    if (!isLanguage(language)) return Promise.resolve();
     try {
       this.window?.localStorage.setItem(KEY, language);
     } catch {}
