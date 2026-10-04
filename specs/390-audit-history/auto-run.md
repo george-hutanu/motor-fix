@@ -57,3 +57,22 @@
 - Wrote `libs/domain/src/audit/audit.service.spec.ts` (writer, DB), `libs/domain/src/audit/audit-coverage.spec.ts` (the write-use-case check), and one real-writer test plus a `recordChanges` mock in `libs/domain/src/auth/accounts.service.spec.ts`.
 - RED: `npx jest src/audit src/auth/accounts.service.spec.ts` (cwd libs/domain) → "Test Suites: 2 failed, 1 passed, 3 total": both DB suites cannot resolve `audit.service`. The coverage spec passes (8 tests): it is the deliverable itself (the check lives in the spec) and a regression guard over ST-79's AccountsService; its fixture cases prove it fails on a write without an entry.
 - Adversarial pass deferred to phase 12 (harden runs test-adversary; one pass, not two).
+
+## Phase 10 — Implement
+- before_implement hooks: design.md current; notion-sync start → story already In progress (unchanged).
+- Schema `audit.prisma` (ActivityLog, enums audit_action / audit_actor_role; `at` timestamptz(6) default clock_timestamp()). Migration `20261004120000_audit_history` generated with `prisma migrate diff --from-schema <main's schema copy> --to-schema prisma/schema --script`, plus the append-only function and two triggers. Applied to motorfix_390 with psql (P1010 workaround).
+- `AuditService` (record, recordChanges, first-name rule, garage→owner, KEY_CHANGES set, JSON nulls → SQL NULL); `AuditPort` gains the brief's fields and `recordChanges`; `noAudit` removed; `AuthModule` binds `useClass: AuditService`; ST-79's two HTTP specs use `new AuditService()`; accounts.service.spec mock gains `recordChanges`.
+- Biome complexity limit (10) on the coverage scanner → split into `isWrite`/`facts`/`scan`.
+- Verification: `npx jest src` (cwd libs/domain) → "Tests: 1 failed, 550 passed, 551 total"; the one failure is health.controller.spec "is ready when PostgreSQL, Redis and storage all answer" (56 s timeout under load; passes alone; nx flagged domain:test as flaky at preflight too). `tsc --noEmit` lib + spec OK; `npm run lint` "Checked 173 files … No fixes applied".
+- Fresh database: `createdb motorfix_390_fresh`, accounts then audit_history migrations with psql → applied, both triggers present. (`prisma migrate diff --from-config-datasource` drift check also hits P1010.)
+- Commit 496b145 `feat(audit): record every change in the append-only audit history inside its transaction` — pre-commit (identity, typecheck, lint, test) green. The coverage spec went in the same commit (it was staged), so the planned separate `test(audit)` slice did not happen.
+- Mid-run rule from the orchestrator ("push as you go, draft PR at first push, then ready → CI → merge → finish"): pushed `390-audit-history`, opened draft PR https://github.com/george-hutanu/motor-fix/pull/12. This replaces the earlier "do not push" instruction.
+
+## Phase 11 — Converge
+- 10/10 tasks built (T009 delivered inside 496b145; T010 is the final verification). No new work appended.
+
+## Phase 12 — Harden
+- artifact-lint: 0 errors. diff-audit (--no-jev): 10 ERROR import-extension, kept: the rule assumes nodenext libs; libs resolve `bundler` (tsconfig.base.json:10) and every existing domain import is extensionless (same call as 422's run). Gate scripts not edited.
+- Mutation: no stryker config in the repo → not measured.
+- test-adversary: `audit.adversary.spec.ts`, 76 tests, 2 failed (report relayed by the orchestrator), both defects against FR-003: (1) key order made equal objects "changed" → compare canonical JSON with sorted object keys; (2) `after` keys like `constructor`/`__proto__` read Object.prototype from `before` and crashed `json()` → `Object.hasOwn`. Spec edge case updated. `npx jest src/audit` → "Tests: 110 passed, 110 total".
+- spec-reviewer: APPROVE; LOW: T009/T010 unchecked → checked.

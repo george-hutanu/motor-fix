@@ -14,6 +14,16 @@ const KEY_CHANGES = new Set([
   'booking.mechanic_id',
 ]);
 
+// JSON with object keys sorted, so equal content compares equal whatever the key order.
+const canonical = (value: unknown): string =>
+  JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(
+          Object.entries(v).sort(([a], [b]) => (a < b ? -1 : 1)),
+        )
+      : v,
+  );
+
 const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? '';
 
 // As it was, through JSON: dates become UTC ISO strings; no value is SQL NULL.
@@ -56,8 +66,8 @@ export class AuditService implements AuditPort {
     after: Record<string, unknown>,
   ) {
     for (const [field, newValue] of Object.entries(after)) {
-      const oldValue = before[field];
-      if (JSON.stringify(oldValue) === JSON.stringify(newValue)) continue;
+      const oldValue = Object.hasOwn(before, field) ? before[field] : undefined;
+      if (canonical(oldValue) === canonical(newValue)) continue;
       await this.record(tx, {
         ...change,
         action: 'update',

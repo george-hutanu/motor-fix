@@ -78,7 +78,7 @@ The history is append-only: the database refuses an update or a delete of an ent
 ### Edge Cases
 
 - An update in which no field changed writes no entry.
-- A field whose value is equal by content but a different object (same JSON) is unchanged.
+- A field whose value is equal by content (same JSON, object keys in any order) is unchanged; arrays keep their order. A field missing from `before`, including one named like an object prototype member (`constructor`, `__proto__`), is compared as absent.
 - Values that are not plain JSON (dates) are stored as JSON, dates as UTC ISO strings; money stays in bani as integers.
 - An actor id whose account does not exist (deleted later, or never stored): the entry is still written, with the name given by the caller or empty; the history never depends on the account row existing.
 - An account is deleted later: its entries stay, with the name they were written with.

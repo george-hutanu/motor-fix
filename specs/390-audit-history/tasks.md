@@ -32,11 +32,11 @@ Independent test: write entries for each actor kind and flag and read the column
 Independent test: UPDATE/DELETE/TRUNCATE refused; the coverage check fails on a fixture service that writes without auditing.
 
 - [X] T008 [US3] Triggers verified by `libs/domain/src/audit/audit.service.spec.ts` (delivered by T002) (FR-011)
-- [ ] T009 [US3] `libs/domain/src/audit/audit-coverage.spec.ts` (new): the check over `libs/domain/src/**/*.service.ts` and over a fixture source (FR-014, SC-004)
+- [X] T009 [US3] `libs/domain/src/audit/audit-coverage.spec.ts` (new): the check over `libs/domain/src/**/*.service.ts` and over a fixture source (FR-014, SC-004)
 
 ## Phase 6: Polish
 
-- [ ] T010 Fresh-database proof of both migrations and full `npm run typecheck && npm run lint && npm test` (SC-005)
+- [X] T010 Fresh-database proof of both migrations and full `npm run typecheck && npm run lint && npm test` (SC-005)
 
 ## FR → test
 
