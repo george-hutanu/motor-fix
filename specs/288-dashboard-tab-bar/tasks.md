@@ -5,7 +5,7 @@
 
 ## Phase 1: Setup
 
-- [X] T001 Add the short tab labels (`shell.frame.tab.*`: Panou/Home, Cereri/Requests, Mașini/Cars, Recenzii/Reviews, Salvate/Saved, Setări/Settings, Program/Schedule, Mecanici/Team, Prețuri/Prices, Profil/Profile, Service‑uri/Garages, Utilizatori/Users, Raportate/Reported, Mărci/Brands) and the bars' landmark names (`shell.frame.tabs.driver|garage|admin`: Panou șofer / Panou service / Panou admin; Driver / Garage / Admin dashboard) in `libs/i18n/src/shell/ro.json` and `libs/i18n/src/shell/en.json`
+- [X] T001 Add the short tab labels (`shell.frame.tab.*`: Panou/Home, Cereri/Requests, Mașini/Cars, Recenzii/Reviews, Salvate/Saved, Setări/Settings, Program/Schedule, Mecanici/Team, Prețuri/Prices, Profil/Profile, Service‑uri/Garages, Utilizatori/Users, Raportate/Reported, Mărci/Brands) and the bars' landmark names (`shell.frame.bar.driver|garage|admin`: Panou șofer / Panou service / Panou admin; Driver / Garage / Admin dashboard) in `libs/i18n/src/shell/ro.json` and `libs/i18n/src/shell/en.json`
 
 ## Phase 2: Foundational
 
