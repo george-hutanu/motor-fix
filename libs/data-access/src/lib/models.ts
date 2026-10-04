@@ -8,4 +8,6 @@ export type { HealthChecksDto } from './models/health-checks-dto';
 export type { HealthLiveDto } from './models/health-live-dto';
 export type { HealthReadyDto } from './models/health-ready-dto';
 export type { MeDto } from './models/me-dto';
+export type { SessionDto } from './models/session-dto';
+export type { SignInDto } from './models/sign-in-dto';
 export type { UpdateMeDto } from './models/update-me-dto';

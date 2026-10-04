@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 
 const bar = 'mf-bar-chart canvas';
 const line = 'mf-line-chart canvas';
@@ -116,6 +116,37 @@ test('grows the bars in without reduced motion', async ({ page }) => {
   await page.waitForTimeout(1500);
 
   expect(await shot(page)).not.toEqual(early);
+});
+
+test('follows reduced motion switched while the charts are on screen', async ({
+  page,
+}) => {
+  // The canvas pixels, not a screenshot: the panel's own rise must not hold
+  // the reading up while the bars grow.
+  const pixels = (chart: Locator) =>
+    chart.locator('canvas').evaluate((c: HTMLCanvasElement) => c.toDataURL());
+  const nextFrame = () =>
+    page.evaluate(
+      () =>
+        new Promise((done) =>
+          requestAnimationFrame(() => requestAnimationFrame(done)),
+        ),
+    );
+  await open(page, 'dark', 1280, 'reduce');
+  const failed = page.locator('mf-bar-chart').nth(2);
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await failed.getByRole('button', { name: 'Reîncearcă' }).click();
+  await expect(failed.locator('canvas')).toHaveAttribute('width', /\d/);
+  const growing = await pixels(failed);
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await nextFrame();
+  const still = await pixels(failed);
+  await page.waitForTimeout(1200);
+
+  expect(await pixels(failed)).toEqual(still);
+  expect(still).not.toEqual(growing);
 });
 
 test('renders the chart panels and their summaries on the server', async ({

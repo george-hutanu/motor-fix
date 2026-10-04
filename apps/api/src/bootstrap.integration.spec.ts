@@ -7,9 +7,11 @@ import {
   INestApplication,
   Logger,
   Post,
+  Req,
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { IsString } from 'class-validator';
+import type { Request } from 'express';
 import request from 'supertest';
 
 import { AppModule } from './app.module';
@@ -33,6 +35,11 @@ class ProbeController {
   log() {
     this.logger.log('probe called');
     return {};
+  }
+
+  @Get('ip')
+  ip(@Req() req: Request) {
+    return { ip: req.ip };
   }
 
   @Get('boom')
@@ -148,6 +155,48 @@ describe('api conventions', () => {
 
     expect(res.status).toBe(401);
     expect(res.body).toMatchObject({ code: 'sign_in_required', status: 401 });
+  });
+
+  it('takes the caller from the right of X-Forwarded-For, past private hops only', async () => {
+    app = await start();
+    const ip = async (forwarded: string) =>
+      (
+        await request(app.getHttpServer())
+          .get('/api/v1/probe/ip')
+          .set('X-Forwarded-For', forwarded)
+      ).body.ip;
+
+    expect(await ip('203.0.113.9, 10.0.0.5')).toBe('203.0.113.9');
+    expect(await ip('203.0.113.9, fd12::1')).toBe('203.0.113.9');
+    expect(await ip('1.2.3.4, 198.51.100.4')).toBe('198.51.100.4');
+  });
+
+  it('serves sign-in under the prefix with problem details', async () => {
+    app = await start();
+
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/auth/sign-in')
+      .send({ email: 'nobody@example.test', password: 'x' });
+
+    expect(res.status).toBe(401);
+    expect(res.headers['content-type']).toContain('application/problem+json');
+    expect(res.body).toMatchObject({
+      code: 'invalid_credentials',
+      status: 401,
+    });
+  });
+
+  it('describes sign-in, refresh and sign-out in the OpenAPI document', async () => {
+    app = await start();
+
+    const { paths, components } = openApiDocument(app);
+
+    expect(paths['/api/v1/auth/sign-in']?.post).toBeDefined();
+    expect(paths['/api/v1/auth/refresh']?.post).toBeDefined();
+    expect(paths['/api/v1/auth/sign-out']?.post).toBeDefined();
+    expect(Object.keys(components?.schemas ?? {})).toEqual(
+      expect.arrayContaining(['SignInDto', 'SessionDto']),
+    );
   });
 
   it('describes the audit history in the OpenAPI document', async () => {

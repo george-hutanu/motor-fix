@@ -13,6 +13,7 @@ import { noEvents } from '../events/event.port';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
+const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
 const tokenSecret = 'test-secret';
 const prisma = createPrisma(databaseUrl);
 const accounts = new AccountsService(prisma, new AuditService(), noEvents);
@@ -22,7 +23,7 @@ let app: INestApplication;
 
 beforeAll(async () => {
   const moduleRef = await Test.createTestingModule({
-    imports: [AuthModule.register({ databaseUrl, tokenSecret })],
+    imports: [AuthModule.register({ databaseUrl, redisUrl, tokenSecret })],
   }).compile();
   app = moduleRef.createNestApplication();
   app.useGlobalPipes(

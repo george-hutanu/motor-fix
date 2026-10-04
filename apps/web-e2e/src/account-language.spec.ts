@@ -11,11 +11,14 @@ const driver = {
   roles: ['driver'],
 };
 
-// Real sign-in is not on main yet, so "who am I" and the language change are
-// stubbed; each change is recorded and answered with the account it saved.
+// The renewal, "who am I" and the language change are stubbed; each change is
+// recorded and answered with the account it saved.
 async function signedIn(page: Page, language: 'ro' | 'en' = 'ro') {
   const saved: unknown[] = [];
   let current = language;
+  await page.route('**/api/v1/auth/refresh', (route) =>
+    route.fulfill({ json: { accessToken: 'stubbed' } }),
+  );
   await page.route('**/api/v1/me', async (route) => {
     const request = route.request();
     if (request.method() === 'PATCH') {

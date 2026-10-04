@@ -66,6 +66,7 @@
     "jest-util": "30.5.1",
     "ng-openapi-gen": "1.1.0",
     "nx": "23.2.1",
+    "pg": "8.23.1",
     "prisma": "7.10.0",
     "supertest": "7.3.1",
     "ts-jest": "29.4.14",

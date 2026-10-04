@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { type MeDto, MeService } from '@motor-fix/data-access';
+import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
 import { I18n, LanguageChoice } from '@motor-fix/i18n';
 
 import { Session } from './session';
@@ -40,6 +40,16 @@ function setup(signedIn: MeDto | null, update?: () => Promise<MeDto>) {
   TestBed.configureTestingModule({
     providers: [
       { provide: MeService, useValue: { meControllerMe, meControllerUpdate } },
+      {
+        provide: AuthService,
+        useValue: {
+          authControllerRefresh: () =>
+            signedIn
+              ? Promise.resolve({ accessToken: 'renewed' })
+              : Promise.reject(new Error('401')),
+          authControllerSignOut: () => Promise.resolve(),
+        },
+      },
     ],
   });
   return {

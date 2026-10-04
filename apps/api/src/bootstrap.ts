@@ -14,6 +14,12 @@ const REQUEST_ID = /^[\w.-]{1,128}$/;
 
 export function configureApp(app: INestApplication, env: { APP_ENV: AppEnv }) {
   app.useLogger(new JsonLogger());
+  // The browser reaches the API through the web app's edge, which appends the
+  // address it saw; only private hops are trusted, so req.ip is the caller's.
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .set('trust proxy', 'loopback, linklocal, uniquelocal');
   app.use((req: Request, res: Response, next: NextFunction) => {
     const given = req.header('x-request-id');
     const requestId = given && REQUEST_ID.test(given) ? given : randomUUID();

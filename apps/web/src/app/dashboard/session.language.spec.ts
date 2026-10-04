@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { type MeDto, MeService } from '@motor-fix/data-access';
+import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
 import { I18n, LanguageChoice } from '@motor-fix/i18n';
 
 import { Session } from './session';
@@ -39,6 +39,16 @@ function setup(signedIn: MeDto | null) {
   TestBed.configureTestingModule({
     providers: [
       { provide: MeService, useValue: { meControllerMe, meControllerUpdate } },
+      {
+        provide: AuthService,
+        useValue: {
+          authControllerRefresh: () =>
+            signedIn
+              ? Promise.resolve({ accessToken: 'renewed' })
+              : Promise.reject(new Error('401')),
+          authControllerSignOut: () => Promise.resolve(),
+        },
+      },
     ],
   });
   return {
@@ -175,6 +185,19 @@ describe('saving the language on the account', () => {
     await settle();
 
     expect(session.current()).toBeNull();
+  });
+
+  it('drops an answer that arrives after signing out with the button', async () => {
+    const { choice, meControllerUpdate, pending, session } =
+      await signedIn('ro');
+
+    await choice.pick('en');
+    await session.signOut();
+    pending[0].resolve(account('en'));
+    await settle();
+
+    expect(session.current()).toBeNull();
+    expect(meControllerUpdate).toHaveBeenCalledTimes(1);
   });
 
   it('drops an answer that arrives after another account signed in', async () => {

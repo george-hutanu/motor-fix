@@ -4,6 +4,7 @@ updated: 2026-10-04
 features:
   - 286-phone-layout
   - 287-public-tab-bar
+  - 082-sign-in
 ---
 
 # Capability: Phone layout and installable web app
@@ -76,9 +77,9 @@ _From 287-public-tab-bar._
 
 _From 287-public-tab-bar._
 
-### 287-FR-006 — "Cont" MUST lead to the account screen (the same address whether signed in or not). Opening the account screen MUST ask the session once and show the signed-in person's dashboard (the landing of the role they used last) when someone is signed in, and the account placeholder otherwise.
+### 082-FR-012 — Signed out, the "Cont" tab of the phone tab bar and an "Autentificare" button at the top of every public screen on tablets and computers (≥ 768 px) MUST open the sign-in dialog over the current screen without changing the address; signed in, both MUST open the person's dashboard.
 
-_From 287-public-tab-bar._
+_From 082-sign-in._
 
 ### 287-FR-007 — The bar's bottom padding MUST be at least the device's bottom safe-area inset; each tab MUST be at least 44 px tall; each label at least 12 px; and no public screen may scroll sideways at 320 px with the bar shown.
 
@@ -105,3 +106,5 @@ _From 287-public-tab-bar._
 _From 287-public-tab-bar._
 
 ## Retired
+
+- `287-FR-006` — superseded by `082-FR-012` (2026-10-04)
