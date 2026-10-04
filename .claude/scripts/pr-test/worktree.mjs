@@ -1,8 +1,8 @@
 // The PR tester's own checkout: the PR head, detached, in a new worktree
 // outside the caller's tree, removed when the run ends.
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 const git = (cwd, ...args) =>
   execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
@@ -30,4 +30,21 @@ export function removeWorktree({ repo, dir }) {
   }
   if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
   git(repo, "worktree", "prune");
+}
+
+/**
+ * The node_modules to copy into the tester's worktree instead of running
+ * `npm ci`, or null to install. A worktree's node_modules is often a symlink
+ * to another checkout's: copying the link would leave a link that points at
+ * nothing from the temp worktree, so copy the directory it resolves to. The
+ * lockfile that counts is the one beside that directory, since it is what
+ * those dependencies were installed from.
+ */
+export function depsToClone({ repoRoot, lock }) {
+  const link = join(repoRoot, "node_modules");
+  if (!existsSync(link)) return null;
+  const deps = realpathSync(link);
+  const installedFrom = join(dirname(deps), "package-lock.json");
+  if (!existsSync(installedFrom) || readFileSync(installedFrom, "utf8") !== lock) return null;
+  return deps;
 }
