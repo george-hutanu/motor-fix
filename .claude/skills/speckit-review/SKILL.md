@@ -172,9 +172,10 @@ findings are not fixed.
 Run standalone (not from `/speckit-auto`, which hands off after its own phase
 16): when no confirmed CRITICAL/HIGH is left and `typecheck`, `lint` and the
 tests are green, mark the PR ready (`GH_TOKEN=$(gh auth token -u george-hutanu)
-gh pr ready <branch>`), invoke `speckit-notion-sync review`, then merge on green
-CI exactly as `/speckit-auto`'s hand-off steps 3–4 do. With a blocker left, do
-none of this.
+gh pr ready <branch>`), invoke `speckit-notion-sync review`, then run the QA
+step and merge exactly as `/speckit-auto`'s hand-off steps 3–6 do: green CI,
+`/speckit-pr-test <n>` (story → QA) until `agent-review` is success on the head
+commit, then merge. With a blocker left, do none of this.
 
 ## Done When
 
@@ -182,7 +183,7 @@ none of this.
 - [ ] Every finding went to the configured number of refuters; none reached the report unverified
 - [ ] Confirmed and refuted findings both listed, with the refuters' reasons available
 - [ ] Confirmed CRITICAL/HIGH fixed and re-reviewed once, or reported as a Hard Stop
-- [ ] Standalone and clean: PR marked ready and the story In review; nothing merged
+- [ ] Standalone and clean: PR ready, story In review → QA, merged only on `agent-review` success
 
 ## Agent Execution Rules: review deltas
 

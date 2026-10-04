@@ -1,7 +1,7 @@
 import { afterEach, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -90,4 +90,15 @@ describe('heavy.sh', () => {
     assert.equal(existsSync(ran), false);
     assert.match(out.stderr, /memory/i);
   }, 20000);
+});
+
+describe('the pre-commit hook', () => {
+  // The worktree guard refuses a wrapper around the commit command, so the
+  // slot is taken inside the hook, around the checks themselves.
+  it('runs typecheck, lint and test inside one heavy.sh slot', () => {
+    const hook = readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8');
+    const line = hook.split('\n').find((l) => l.includes('scripts/heavy.sh'));
+    assert.ok(line, 'pre-commit does not call scripts/heavy.sh');
+    for (const check of ['typecheck', 'lint', 'test']) assert.match(line, new RegExp(`npm run ${check}\\b`));
+  });
 });

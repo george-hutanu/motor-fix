@@ -64,9 +64,9 @@ describe('posting the review', () => {
     const body = '## Summary\nx\n\n## Agent review\n<!-- filled by the PR tester -->\n\n## Checklist\n- [x] a\n';
     const { calls, gh } = fakeGh([[/pr view/, { code: 0, stdout: JSON.stringify({ body }), stderr: '' }]]);
     const out = postVerdict({ ...base, verdict: 'success', gh });
-    const patch = calls.find((c) => c.args.includes('PATCH'));
+    const patch = calls.find((c) => c.args[0] === 'pr' && c.args[1] === 'edit' && c.args.includes('--body-file'));
     assert.ok(patch, 'description not updated');
-    const next = JSON.parse(patch.input).body;
+    const next = patch.input;
     assert.match(next, /## Agent review\n[\s\S]*2 blocking findings[\s\S]*## Checklist/);
     assert.equal(out.section, 'description');
   });
@@ -81,7 +81,7 @@ describe('posting the review', () => {
   it('posts nothing on a dry run and returns what it would have posted', () => {
     const { calls, gh } = fakeGh();
     const out = postVerdict({ ...base, verdict: 'failure', gh, dryRun: true });
-    assert.equal(calls.filter((c) => c.args.includes('POST') || c.args.includes('PATCH') || c.args[1] === 'comment').length, 0);
+    assert.equal(calls.filter((c) => c.args.includes('POST') || c.args[1] === 'edit' || c.args[1] === 'comment').length, 0);
     assert.equal(out.dryRun, true);
     assert.equal(out.status.state, 'failure');
     assert.match(out.reviewBody, /verdict: failure/i);
@@ -92,6 +92,13 @@ describe('replacing a section', () => {
   it('replaces only the section body, up to the next heading of the same level or higher', () => {
     const body = '## A\n1\n## Agent review\nold\n### sub\nold too\n## B\n2';
     assert.equal(replaceSection(body, 'Agent review', 'new'), '## A\n1\n## Agent review\nnew\n\n## B\n2');
+  });
+
+  it('keeps the template\'s marker comment and replaces the Pending line under it', () => {
+    const body = '## Checklist\n- [x] a\n\n## Agent review\n\n<!-- agent-review: the automated reviewer replaces the line below -->\nPending.\n';
+    const next = replaceSection(body, 'Agent review', 'Verdict: success');
+    assert.match(next, /<!-- agent-review: [^>]*-->\nVerdict: success/);
+    assert.doesNotMatch(next, /Pending\./);
   });
 
   it('runs to the end when the section is last, and returns null when it is absent', () => {

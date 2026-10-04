@@ -30,18 +30,33 @@ epic or a plan, whether run through spec-kit or by hand.
   in Notion) and the Build brief's Screens section, and write
   `specs/<feature>/design.md`. Skill: `speckit-design-check`.
 - **Every task follows the same lifecycle, in this order.** This is a hard
-  rule, Constitution VII, enforced by the `stop:pr-lifecycle` gate:
+  rule, Constitution VII, enforced by the `stop:pr-lifecycle` and
+  `pre:bash:merge-gate` gates:
   1. Take the task and set it to In progress in Notion (`speckit-notion-sync start`).
   2. Open a draft PR for its branch (`speckit-git-commit`, at the first commit).
   3. Do the work, pushing every commit to that branch: never forced, never `main`.
   4. When it is done (tests, typecheck and lint green, review with no
      CRITICAL/HIGH left), mark the PR ready for review (`gh pr ready`) and set
      the task to In review in Notion (`speckit-notion-sync review`).
-  5. Merge it on green CI: merge `origin/main` into the branch if it is behind
-     and push, wait for the checks (`gh pr checks <n> --watch`), and when every
-     check passes, `gh pr merge <n> --merge`. A failing check is fixed on the
-     branch and waited for again; a PR with a failing, pending or missing check
+  5. Get CI green: merge `origin/main` into the branch if it is behind and
+     push, wait for the checks (`gh pr checks <n> --watch`); a failing check is
+     fixed on the branch and waited for again.
+  6. QA: run the PR tester (`/speckit-pr-test <n>`, the `pr-tester` subagent)
+     and set the task to QA (`speckit-notion-sync qa`). It boots the PR head in
+     its own worktree, tests it in a browser and against the API, reviews the
+     diff, posts a review and sets the `agent-review` status on the head
+     commit. Fix every blocking finding (tests first), push, and run it again;
+     each lap counts toward `SPECKIT_MAX_REPAIR_ITERATIONS` (5), and at the cap
+     the task goes to Blocked and the PR stays unmerged.
+  7. Merge on `agent-review` success with every other check green
+     (`gh pr merge <n> --merge`); a PR with a failing, pending or missing check
      is never merged. Then set the task to Done (`speckit-notion-sync finish`).
+
+  Whenever the work cannot go on without something outside it (a Hard Stop,
+  red CI the agent cannot fix, the repair cap, an unresolved Blocked by), set
+  the task to Blocked with the reason as a Notion comment and a PR comment
+  (`speckit-notion-sync blocked <reason>`); `speckit-notion-sync unblock`
+  returns it to where it was.
 
   No step waits for the user: opening the draft, pushing, marking it ready,
   merging on green CI and the Notion writes are all standing instructions. The
@@ -73,6 +88,9 @@ decisions are the source for anything the constitution does not fix.
   (NestJS modules, Prisma schema per module), `data-access` (Angular client
   generated from `apps/api/openapi.json`: `npx nx run data-access:generate`,
   never edited by hand). A lib is created by the story that first needs it.
+- Heavy commands (npm ci/install, nx build/serve/test/typecheck/e2e, Jest over
+  more than a few files, docker compose, Playwright, booting the apps) go
+  through `scripts/heavy.sh`; mutation tests never run locally, only in CI.
 - Lint and format: Biome only, root `biome.json` (no eslint, no prettier).
   Tests: Jest from the root config, Playwright for end-to-end. NestJS 12 is
   ESM-only, so the Nest projects' `test` targets run Jest with

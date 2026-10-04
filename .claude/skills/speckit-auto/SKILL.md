@@ -508,15 +508,34 @@ When phases 14–16 are done, the review left no CRITICAL/HIGH and the last
 2. `speckit-notion-sync review`: the story, its timeline row → In review.
 3. If the branch is behind `origin/main`, `git merge --no-edit origin/main`,
    re-run `typecheck`, `lint` and the tests, and push.
-4. `gh pr checks <branch> --watch`. When every check passes,
-   `gh pr merge <branch> --merge`, then `speckit-notion-sync finish` (story →
-   Done, timeline row → Merged). A failing check is a repair: fix it on the
+4. `gh pr checks <branch> --watch` until every check other than
+   `agent-review` has passed. A failing check is a repair: fix it on the
    branch, push, wait again; it counts toward `SPECKIT_MAX_REPAIR_ITERATIONS`.
-   A PR with no checks, or one still failing at the limit, is a Hard Stop: it
-   stays ready and unmerged, and the report says which check and why.
+5. **QA — the PR tester** (`/speckit-pr-test <n>`, Constitution VII): the
+   story and its timeline row → QA (`speckit-notion-sync qa`); the `pr-tester`
+   subagent boots the head commit in its own worktree, sweeps the UI, calls the
+   API, runs the tests, reviews the diff, posts its review and sets
+   `agent-review` on the head commit. On failure: fix every blocking finding,
+   tests first, commit, push, `node .claude/scripts/run-state.mjs repair`, and
+   run the tester again on the new head; the story stays QA. When `repair`
+   exits 1 the run is blocked (`repair-loop-exceeded`): `speckit-notion-sync
+   blocked` with the open findings, the same as a PR comment, and stop — the PR
+   is never merged at the cap.
+6. On `agent-review` success with every other check green: merge `origin/main`
+   in again if it moved (a new head needs a new tester run), then
+   `gh pr merge <branch> --merge` — the `pre:bash:merge-gate` hook refuses it
+   without `agent-review` success on the head — and `speckit-notion-sync
+   finish` (story → Done, timeline row → Merged).
+
+A PR with no checks, or one still failing at the limit, is a Hard Stop: it
+stays ready and unmerged, the story goes to Blocked (`speckit-notion-sync
+blocked <reason>`), and the report says which check and why. Every Hard Stop
+does the same: record `run-state.mjs set --status blocked --blocking <condition>`,
+then `speckit-notion-sync blocked <condition>`; a resumed run starts with
+`speckit-notion-sync unblock`.
 
 None of these steps asks the user. A run that ends on a Hard Stop before the
-hand-off does none of them: the PR stays a draft and the story In progress.
+hand-off does none of them but the Blocked write: the PR stays a draft.
 
 ## Final Report
 
@@ -553,7 +572,7 @@ One report, at the end, standing on its own:
 - [ ] Mutation score at or above the floor for every touched package, with no disable added to reach it
 - [ ] Ticket re-read (comments included) after implementation, and any scope-moving comment reported
 - [ ] One commit per implementation slice, each pushed to the feature branch
-- [ ] Hand-off done on a clean finish: PR marked ready, story In review; nothing merged
+- [ ] Hand-off done on a clean finish: PR ready, story In review → QA, `agent-review` success on the head commit, merged on green, story Done
 - [ ] Retrospective evidence gathered with `--since`, attached unjudged; no verdict written and no instinct reinforced
 - [ ] Final report delivered with the sections above
 

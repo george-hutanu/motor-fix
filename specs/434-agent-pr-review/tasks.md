@@ -40,17 +40,17 @@ description: "Tasks: agent QA review of every ready PR"
 - [X] T017 [P] [US1] Red tests in `.claude/scripts/pr-test/sweep.spec.mjs`: the matrix (routes × 3 viewports × 2 schemes × 2 languages, mobile with touch), screenshot names, observations to findings
 - [X] T018 [US1] Implement `.claude/scripts/pr-test/sweep.mjs` (one browser, sequential contexts, axe, overflow, screenshots)
 - [X] T019 [US1] Implement `.claude/scripts/pr-test/run.mjs`: re-exec under `scripts/heavy.sh`, worktree, services, install, migrate, build, boot, health, sweep, flows file, API calls, affected tests, e2e, report; teardown in `finally` and on SIGINT/SIGTERM
-- [ ] T020 [US1] `.claude/agents/pr-tester.md` and `.claude/skills/speckit-pr-test/SKILL.md`
+- [X] T020 [US1] `.claude/agents/pr-tester.md` and `.claude/skills/speckit-pr-test/SKILL.md`
 
 ## Phase 5: User Story 4 — Notion shows QA and Blocked (P2)
 
 - [X] T021 [P] [US4] Red tests in `.claude/scripts/notion-status.spec.mjs`: start/review/qa/finish ladder, never backwards, blocked records the prior status, unblock returns to it, Done never moves, timeline names
-- [ ] T022 [US4] Implement `.claude/scripts/notion-status.mjs`; update `.claude/skills/speckit-notion-sync/SKILL.md`
+- [X] T022 [US4] Implement `.claude/scripts/notion-status.mjs`; update `.claude/skills/speckit-notion-sync/SKILL.md`
 
 ## Phase 6: User Story 3 — the loop and the lifecycle (P1)
 
-- [ ] T023 [US3] Wire the tester, the QA status, the fix-and-retest loop and the Blocked event into `.claude/skills/speckit-auto/SKILL.md`, `.claude/skills/speckit-review/SKILL.md`, `.claude/skills/speckit-archive/SKILL.md`
-- [ ] T024 [US3] Constitution VII and Enforcement (v1.5.0), AGENTS.md lifecycle and the heavy-lock line, CLAUDE.local.md gate table without growing past its baseline
+- [X] T023 [US3] Wire the tester, the QA status, the fix-and-retest loop and the Blocked event into `.claude/skills/speckit-auto/SKILL.md`, `.claude/skills/speckit-review/SKILL.md`, `.claude/skills/speckit-archive/SKILL.md`
+- [X] T024 [US3] Constitution VII and Enforcement (v1.5.0), AGENTS.md lifecycle and the heavy-lock line, CLAUDE.local.md gate table without growing past its baseline
 
 ## Phase 7: Proof
 

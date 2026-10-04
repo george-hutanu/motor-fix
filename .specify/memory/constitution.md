@@ -1,5 +1,18 @@
 <!--
-Sync Impact Report (v1.4.0)
+Sync Impact Report (v1.5.0)
+- Version change: 1.4.0 → 1.5.0 (MINOR: VII materially expanded — a QA step
+  by the PR tester between ready and merge, the Notion QA and Blocked states;
+  Enforcement gains pre:bash:merge-gate; nothing removed)
+- Source: owner decision 2026-10-04 (ST-434): every ready PR is tested and
+  reviewed by an agent before it merges; the merge waits for the
+  `agent-review` commit status on the head commit.
+- Templates:
+  - ✅ AGENTS.md — lifecycle steps 5–7, Blocked, heavy-command line
+  - ✅ CLAUDE.local.md — gate table
+  - ✅ .claude/hooks/merge-gate.mjs, pr-lifecycle-gate.mjs, registry.json, settings.json
+  - ✅ speckit-auto, speckit-review, speckit-archive, speckit-notion-sync, speckit-pr-test
+
+Previous report (v1.4.0)
 - Version change: 1.3.0 → 1.4.0 (MINOR: principle VII added, NON-NEGOTIABLE;
   Enforcement gains the stop:pr-lifecycle gate; nothing removed)
 - Source: owner decision 2026-10-04 — every task, current or future, runs its
@@ -184,14 +197,26 @@ waits for the owner:
    `main`.
 3. When the work is done (tests, typecheck and lint green, review with no
    CRITICAL/HIGH left), mark the PR ready and set the task In review.
-4. Merge `origin/main` into the branch if it is behind, wait for CI, and
-   merge the PR when every check passes. A failing check is fixed on the
-   branch and waited for again; a pending, failing or missing check is never
-   merged. Then set the task Done.
+4. Merge `origin/main` into the branch if it is behind and wait for CI. A
+   failing check is fixed on the branch and waited for again.
+5. Set the task to QA and run the PR tester (`/speckit-pr-test`) on the head
+   commit: it boots the change in its own worktree, tests it in a browser and
+   against the API, runs the tests, reviews the diff against the spec and this
+   constitution, and sets the `agent-review` commit status. Blocking findings
+   are fixed (tests first) and the tester runs again on the new head, at most
+   `SPECKIT_MAX_REPAIR_ITERATIONS` times; at the cap the task is Blocked.
+6. Merge the PR when `agent-review` is success on its head commit and every
+   other check passes; a pending, failing or missing check is never merged.
+   Then set the task Done.
+
+A task that cannot go on without something outside it is set Blocked, with the
+reason on the story and the PR, and returns to its previous status when it
+resumes.
 
 Rationale: the owner should not have to say when to open a PR or when to
-merge one. A task that ends with its work unpushed, without a PR, or with a
-green PR left unmerged is not finished.
+merge one, and green unit tests are not proof the change works when used. A
+task that ends with its work unpushed, without a PR, untested by the PR
+tester, or with a passed PR left unmerged is not finished.
 
 ## Additional Constraints
 
@@ -240,8 +265,9 @@ the hooks live in `.claude/hooks/`, the checks in `.claude/scripts/`.
 | Commit hygiene | `commit-msg-policy.js` | one-line Conventional Commit, no metadata trailers or tool mentions |
 | Identity | `.husky/pre-commit` → `.husky/identity.sh check`; `github-identity.sh` (SessionStart) | refuses a commit not authored by `george-hutanu <hutanugeorge40@gmail.com>`; pins `gh` to the `george-hutanu` account for agent sessions |
 | Destructive commands | `bash-guard.mjs` (PreToolUse) | force-push, `reset --hard`, `clean -f`, deleting `.work/` |
-| VII task lifecycle | `pr-lifecycle-gate.mjs` (Stop hook) | the agent may not finish on a task branch ahead of `main` with unpushed commits, with no PR, or with a ready PR whose checks all passed but that is not merged |
-| Full verification | `.husky/pre-commit` | identity, then `npm run typecheck && npm run lint && npm run test` on every real commit |
+| VII task lifecycle | `pr-lifecycle-gate.mjs` (Stop hook) | the agent may not finish on a task branch ahead of `main` with unpushed commits, with no PR, with a green ready PR that has no `agent-review` status on its head (unless run-state is blocked), or with a ready PR whose checks and `agent-review` passed but that is not merged |
+| VII QA before merge | `merge-gate.mjs` (PreToolUse) | refuses `gh pr merge` and the REST merge call while the PR's head commit has no `agent-review` success from the PR tester |
+| Full verification | `.husky/pre-commit` | identity, then `npm run typecheck && npm run lint && npm run test` on every real commit, in a `scripts/heavy.sh` slot |
 
 The edit-time gates watch `apps/*`, `libs/*` and `e2e/`, and skip Biome or Jest
 while that tool is not installed yet (before the Nx scaffold lands) rather than
@@ -313,4 +339,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.4.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-04
+**Version**: 1.5.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-04

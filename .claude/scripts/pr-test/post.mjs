@@ -40,7 +40,10 @@ export function replaceSection(body, heading, content) {
       break;
     }
   }
-  return [...lines.slice(0, start + 1), content, "", ...lines.slice(end)].join("\n");
+  // Keep the template's hint comments at the top of the section; replace the rest.
+  let keep = start + 1;
+  while (keep < end && /^\s*(<!--.*-->)?\s*$/.test(lines[keep])) keep++;
+  return [...lines.slice(0, keep), content, "", ...lines.slice(end)].join("\n");
 }
 
 const ownPrRefusal = (stderr) => /own pull request|HTTP 422/i.test(stderr);
@@ -89,7 +92,7 @@ export function postVerdict({ pr, repo, sha, verdict, summary, body, lap, gh = r
 
   let where = "comment";
   if (nextBody !== null) {
-    const patch = gh(["api", "-X", "PATCH", `repos/${repo}/pulls/${pr}`, "--input", "-"], { input: JSON.stringify({ body: nextBody }) });
+    const patch = gh(["pr", "edit", String(pr), "--repo", repo, "--body-file", "-"], { input: nextBody });
     if (patch.code === 0) where = "description";
   }
   if (where === "comment") gh(["pr", "comment", String(pr), "--repo", repo, "--body-file", "-"], { input: section });

@@ -19,12 +19,13 @@ The users of this feature are the agents that build MotorFix and the owner who r
 - Q: The PR author and the reviewer are the same GitHub account, so GitHub refuses APPROVE and REQUEST_CHANGES. What carries the verdict? → A: A commit status `agent-review` (success or failure) on the PR head commit is the machine-readable verdict. The tester still tries the real review event first and falls back to a COMMENT review whose first line states the verdict.
 - Q: A PR that touches no UI (a harness change) shows findings on pages it did not change, for example an accessibility issue already on `main`. Do they block it? → A: No. When the diff touches no web code, sweep findings are reported as pre-existing and capped at medium; only a failed boot, a failed health check, a page that does not load or a failing test blocks. When the diff touches web code, every finding keeps its own severity.
 - Q: How is "the merge waits for the verdict" enforced, given a Stop hook cannot stop a merge? → A: Twice. A PreToolUse gate refuses `gh pr merge` (and the REST merge call) while the PR head commit has no `agent-review` success. The Stop gate refuses to end a session on a ready PR whose other checks passed but that has no `agent-review` success on its head, telling the agent to run the tester.
-- Q: Where does the tester's evidence go? → A: Under `.work/pr-test/<pr>-<sha7>/` in the checkout that ran it (git-ignored): `report.json`, `report.md`, one screenshot per route × viewport × scheme × language. The implementing agent copies the report and a screenshot per viewport into `specs/<feature>/pr-review/`.
+- Q: Where does the tester's evidence go? → A: Under `--out` (default `<tmp>/mf-prtest/<pr>-<sha7>/`, outside every checkout): `report.json`, `report.md`, `run.log`, logs, one screenshot per route × viewport × scheme × language. The implementing agent copies the report and a screenshot per viewport into `specs/<feature>/pr-review/`.
 - Q: Which Notion status holds during the test, fix and retest loop? → A: QA (owner addition). In progress → In review (PR ready, spec and code review) → QA (tester starts) → Done (merged). Blocked whenever the run cannot proceed; resuming returns to the status before Blocked.
 - Q: A blocked run leaves a ready PR with an `agent-review` failure or none; does the Stop gate trap it? → A: No. With a failure on the head it lets the session end (the fix loop owns the PR); with no review at all it refuses unless run-state says `blocked`.
 - Q: Which paths are "web code", and does the cap reach the API calls? → A: `apps/web`, `libs/ui-cockpit`, `libs/i18n`, `libs/data-access`, `libs/media`. The cap applies to browser-sweep findings only; the API calls and test runs exercise the change itself and keep their severity.
 - Q: Do third-party requests and console warnings count? → A: Only requests to the tester's own web and API origins rank by status; a failed request to another host is `low`. Only `console.error` messages count.
-- Q: How long do the gates wait for the lock? → A: post-edit 60 s, Stop 300 s, pre-commit without limit. A skipped check says so in the hook output.
+- Q: How long do the gates wait for a slot? → A: post-edit 60 s, Stop 300 s, pre-commit without limit. A skipped check says so in the hook output. (Owner relaxation, relayed mid-run: one lock became 3 slots at a 20 % memory floor.)
+- Q: Where does the "Agent review" text go now that the PR template landed (PR #17)? → A: Into the template's "Agent review" section, replacing its `Pending.` line, through the description edit (`gh pr edit --body-file` or the REST equivalent), keeping `pr-body-check` green.
 - Q: On a re-run, is the "Agent review" section appended to? → A: Replaced with the latest summary, the tested commit and the lap; earlier laps stay as reviews and statuses.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -90,11 +91,12 @@ An agent finishes a task, marks its PR ready and moves the story to In review. B
 
 **Acceptance Scenarios**:
 
-1. **Given** `scripts/heavy.sh <command>`, **Then** it waits for the lock file (`MOTOR_FIX_HEAVY_LOCK`, default `/tmp/motor-fix-heavy.lock`) and for the free-memory floor (`MOTOR_FIX_HEAVY_MIN_FREE`, default 30 %), runs the command and returns its exit code.
-2. **Given** a command already running under the lock (`MOTOR_FIX_HEAVY_HELD=1`), **When** it calls `heavy.sh` again, **Then** the inner call runs at once instead of waiting on itself.
-3. **Given** `MOTOR_FIX_HEAVY_WAIT=<seconds>`, **When** the lock or the memory floor is not had in that time, **Then** `heavy.sh` exits 75 without running the command.
-4. **Given** a real commit, **Then** `.husky/pre-commit` runs its typecheck, lint and test under the lock with one Nx task at a time and two Jest workers.
-5. **Given** the Stop gate or the post-edit gate needs Jest, **Then** it runs under the lock with a bounded wait and two workers; when the lock is not had in time it reports that the check was skipped and does not block.
+1. **Given** `scripts/heavy.sh <command>`, **Then** it takes one of `HEAVY_SLOTS` (3) lock slots — slot 1 is `HEAVY_LOCK` (default `/tmp/motor-fix-heavy.lock`), slot n the same path with `.n` — waits for the free-memory floor (`HEAVY_MIN_FREE`, 20 %), runs the command and returns its exit code, 75 included.
+2. **Given** every slot is taken, **Then** the command waits, polling every 5 s; **Given** a free slot, it runs at once.
+3. **Given** a command already holding a slot (`HEAVY_HELD=1`), **When** it calls `heavy.sh` again, **Then** the inner call runs at once instead of taking a second slot.
+4. **Given** `HEAVY_WAIT=<seconds>`, **When** no slot or not enough memory is had in that time, **Then** `heavy.sh` exits 124 without running the command.
+5. **Given** a real commit, **Then** `.husky/pre-commit` runs its typecheck, lint and test inside one slot (the hook wraps them; a wrapper around `git commit` is refused by the worktree guard).
+6. **Given** the Stop gate or the post-edit gate needs Jest, **Then** it runs in a slot with a bounded wait and two workers; when no slot is had in time it reports that the check was skipped and does not block.
 
 ### Edge Cases
 
@@ -123,8 +125,8 @@ An agent finishes a task, marks its PR ready and moves the story to In review. B
 - **FR-011**: The merge gate MUST refuse `gh pr merge` and the REST merge call for a PR whose head commit has no `agent-review` success, and allow it otherwise.
 - **FR-012**: The Stop gate MUST refuse to end a session on a ready, mergeable PR whose other checks passed but whose head commit has no `agent-review` status, naming the tester, unless run-state is `blocked`; with an `agent-review` failure it lets the session end; with the success present it keeps its existing "merge it" refusal.
 - **FR-013**: The whole boot-test-teardown sequence MUST run inside one hold of the shared lock, and the tester MUST re-run itself through `scripts/heavy.sh` when started outside it.
-- **FR-014**: `scripts/heavy.sh` MUST serialise on a configurable lock file, wait for a configurable free-memory floor, be re-entrant under `MOTOR_FIX_HEAVY_HELD`, support a bounded wait that exits 75, and return the command's exit code.
-- **FR-015**: `.husky/pre-commit` MUST run under the lock with one Nx task at a time and two Jest workers; the post-edit gate (60 s) and the Stop gate (300 s) MUST run Jest under the lock with that bounded wait and two workers, and skip with a report when the lock is not had.
+- **FR-014**: `scripts/heavy.sh` MUST cap heavy commands at a configurable number of lock slots (3, slot 1 a configurable lock file), wait for a configurable free-memory floor (20 %), be re-entrant under `HEAVY_HELD`, support a bounded wait that exits 124, export `NX_DAEMON=false`, `NX_PARALLEL=2` and `JEST_MAX_WORKERS=2` by default, and return the command's exit code unchanged.
+- **FR-015**: `.husky/pre-commit` MUST run its typecheck, lint and test inside one slot with heavy.sh's parallelism; the post-edit gate (60 s) and the Stop gate (300 s) MUST run Jest in a slot with that bounded wait and two workers, and skip with a report when no slot is had.
 - **FR-016**: The Notion status decision MUST be scripted: events `start`, `review`, `qa`, `finish`, `blocked`, `unblock` map to story and timeline statuses on the order To do < In progress < In review < QA < Done, with Blocked outside it; no event moves a story backwards; `blocked` records the status it left (a second `blocked` keeps the first record); only `unblock` leaves Blocked, returning to the recorded status; nothing moves a Done story.
 - **FR-017**: `/speckit-auto`, `/speckit-review`, AGENTS.md and Constitution VII MUST put the tester between "ready" and "merge", with the fix-and-retest loop counted by `run-state.mjs repair` and the story in QA during it.
 
