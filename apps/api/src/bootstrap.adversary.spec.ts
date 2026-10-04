@@ -75,6 +75,7 @@ class ThingController {
 
 const env = {
   APP_ENV: 'test',
+  AUTH_TOKEN_SECRET: 'test-secret',
   DATABASE_URL:
     process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres',
   REDIS_URL: process.env['REDIS_URL'] ?? 'redis://localhost:6379',
@@ -82,7 +83,7 @@ const env = {
 };
 
 async function start(appEnv = 'test') {
-  const config = readEnv(['DATABASE_URL', 'REDIS_URL'], {
+  const config = readEnv(['DATABASE_URL', 'REDIS_URL', 'AUTH_TOKEN_SECRET'], {
     ...env,
     APP_ENV: appEnv,
   });

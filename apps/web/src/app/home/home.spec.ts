@@ -1,7 +1,7 @@
 import { TransferState } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
-import { App, HEALTH } from './app';
+import { HEALTH, Home } from './home';
 
 function render(checks: { postgres: string; redis: string }) {
   TestBed.inject(TransferState).set(HEALTH, {
@@ -9,12 +9,12 @@ function render(checks: { postgres: string; redis: string }) {
     status: checks.postgres === 'ok' && checks.redis === 'ok' ? 'ok' : 'error',
     version: 'abc123',
   });
-  const fixture = TestBed.createComponent(App);
+  const fixture = TestBed.createComponent(Home);
   fixture.detectChanges();
   return (fixture.nativeElement as HTMLElement).textContent ?? '';
 }
 
-describe('App', () => {
+describe('Home', () => {
   it('shows the name, the version and both checks', () => {
     const text = render({ postgres: 'ok', redis: 'ok' });
 
@@ -30,7 +30,7 @@ describe('App', () => {
   });
 
   it('says the status is unknown when the API did not answer', () => {
-    const text = TestBed.createComponent(App);
+    const text = TestBed.createComponent(Home);
     text.detectChanges();
 
     expect((text.nativeElement as HTMLElement).textContent).toContain(
