@@ -85,6 +85,8 @@ model RefreshToken {
   familyId  String    @map("family_id") @db.Uuid
   expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
   usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  // Whether the family was opened with "keep me signed in".
+  remember  Boolean   @default(true)
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   account   Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
 

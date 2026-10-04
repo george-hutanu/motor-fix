@@ -1,12 +1,16 @@
 import type { Page } from '@playwright/test';
 
-// Real sign-in is not built yet, so the API's "who am I" answer is stubbed.
+// For layout tests that only need a signed-in frame: the renewal and the "who
+// am I" answer are stubbed. sign-in.spec.ts signs in for real.
 export async function signInAs(
   page: Page,
   role: string,
   landing: string,
   capabilities: string[] = [],
 ) {
+  await page.route('**/api/v1/auth/refresh', (route) =>
+    route.fulfill({ json: { accessToken: 'stubbed' } }),
+  );
   await page.route('**/api/v1/me', (route) =>
     route.fulfill({
       json: {

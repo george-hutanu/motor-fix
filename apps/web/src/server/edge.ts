@@ -15,9 +15,16 @@ export function mountEdge(app: Express, apiUrl: string) {
   app.get('/health/ready', ok);
 
   app.use('/api/', (req, res) => {
+    const caller = req.socket.remoteAddress ?? '';
+    const given = req.headers['x-forwarded-for'];
     const upstream = send(
       {
-        headers: { ...req.headers, host: api.host },
+        headers: {
+          ...req.headers,
+          host: api.host,
+          // The API limits sign-in attempts per caller.
+          'x-forwarded-for': given ? `${given}, ${caller}` : caller,
+        },
         hostname: api.hostname,
         method: req.method,
         path: req.originalUrl,

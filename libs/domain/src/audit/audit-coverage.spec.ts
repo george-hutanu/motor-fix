@@ -86,9 +86,18 @@ function scan(source: string) {
   return methods;
 }
 
+// Session bookkeeping is not a change to anyone's data: signing in, renewing
+// and signing out stay out of the audit history by the product's rule.
+const NOT_CHANGES = new Set([
+  'SignInService.openFamily',
+  'SignInService.revoke',
+  'SignInService.rotate',
+  'SignInService.touch',
+]);
+
 const uncovered = (source: string) =>
   scan(source)
-    .filter((m) => m.writes && !m.audits)
+    .filter((m) => m.writes && !m.audits && !NOT_CHANGES.has(m.name))
     .map((m) => m.name);
 
 const root = join(__dirname, '..');
@@ -120,6 +129,17 @@ describe('every write use case in the domain library calls the audit writer', ()
         'AccountsService.grantRole',
       ]),
     );
+  });
+
+  it('excuses only session methods that exist and write', () => {
+    const writing = new Set(
+      files.flatMap((path) =>
+        scan(readFileSync(path, 'utf8'))
+          .filter((m) => m.writes)
+          .map((m) => m.name),
+      ),
+    );
+    expect([...NOT_CHANGES].filter((name) => !writing.has(name))).toEqual([]);
   });
 
   it.each(

@@ -14,6 +14,8 @@ jobs:
     env:
       APP_ENV: staging
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # The seed refuses staging without it: the repository is public.
+      SEED_PASSWORD: ${{ secrets.SEED_PASSWORD }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5

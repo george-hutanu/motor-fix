@@ -26,7 +26,7 @@ import { HlmTabsImports } from './tabs';
     <button hlmBtn id="off" disabled>Oprit</button>
 
     <label hlmLabel for="brand">Marca</label>
-    <input hlmInput id="brand" [(ngModel)]="brand" />
+    <input hlmInput id="brand" [(ngModel)]="brand" aria-describedby="brand-help" />
 
     <hlm-switch inputId="open" [(ngModel)]="open" />
 
@@ -123,6 +123,16 @@ describe('helm input and label', () => {
     input.dispatchEvent(new Event('input'));
 
     expect(fixture.componentInstance.brand()).toBe('Dacia');
+  });
+});
+
+describe('helm input description', () => {
+  it("keeps the field's own aria-describedby", async () => {
+    const { q } = await render();
+
+    expect(q<HTMLInputElement>('#brand').getAttribute('aria-describedby')).toBe(
+      'brand-help',
+    );
   });
 });
 

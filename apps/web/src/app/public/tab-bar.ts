@@ -10,6 +10,8 @@ import {
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { filter } from 'rxjs';
 
+import { SignInDialog } from '../sign-in/sign-in-dialog';
+
 type Tab = 'search' | 'garages' | 'account';
 
 // The section after the language prefix.
@@ -103,7 +105,7 @@ const segmentsOf = (tree: UrlTree) =>
         <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s6.5-6.1 6.5-11A6.5 6.5 0 0 0 5.5 10c0 4.9 6.5 11 6.5 11z" /><circle cx="12" cy="10" r="2.3" /></svg>
         <span>{{ 'public.tabs.garages' | t }}</span>
       </a>
-      <a [routerLink]="['/', language(), 'account']" [attr.aria-current]="active() === 'account' ? 'page' : null">
+      <a [attr.href]="'/' + language() + '/account'" [attr.aria-current]="active() === 'account' ? 'page' : null" (click)="account($event)">
         <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8" /><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4" /></svg>
         <span>{{ 'public.tabs.account' | t }}</span>
       </a>
@@ -124,6 +126,22 @@ export class PublicTabBar {
   protected readonly typing = signal(false);
   protected readonly takesText = takesText;
   protected readonly active = computed(() => TAB_OF[this.segments()[1] ?? '']);
+  private readonly signIn = inject(SignInDialog);
+
+  // A plain click opens sign-in over this screen, or the dashboard; a click
+  // meant for a new tab keeps the account screen's address.
+  protected account(event: MouseEvent) {
+    if (
+      event.button !== 0 ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.altKey
+    )
+      return;
+    event.preventDefault();
+    void this.signIn.start();
+  }
 
   constructor() {
     this.router.events

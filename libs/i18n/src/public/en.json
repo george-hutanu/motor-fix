@@ -5,6 +5,25 @@
     "later": "This page is coming soon.",
     "mechanics": "Mechanic"
   },
+  "signIn": {
+    "brand": "MotorFix",
+    "email": "E-mail",
+    "emailPlaceholder": "you@example.com",
+    "field": {
+      "pattern": "That e-mail address does not look right."
+    },
+    "password": "Password",
+    "passwordPlaceholder": "Your password",
+    "problem": {
+      "account_suspended": "Your account is suspended.",
+      "invalid_credentials": "The e-mail or password is not correct.",
+      "too_many_attempts": "Too many attempts. Try again in 15 minutes."
+    },
+    "remember": "Keep me signed in",
+    "submit": "Sign in",
+    "title": "Sign in"
+  },
+  "signInButton": "Sign in",
   "tabs": {
     "account": "Account",
     "garages": "Garages",

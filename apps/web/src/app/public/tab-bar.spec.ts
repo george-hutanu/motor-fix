@@ -7,6 +7,7 @@ import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { MeDto } from '@motor-fix/data-access';
 import { LanguageChoice } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 
 import { provideLanguageAddresses, SITE_ORIGIN } from '../addresses';
 import { routes } from '../app.routes';
@@ -28,9 +29,11 @@ const DRIVER = {
 } as unknown as MeDto;
 
 let signedIn: MeDto | null;
+let overlays: { open: jest.Mock };
 
 function setUp(platform = 'browser') {
   signedIn = null;
+  overlays = { open: jest.fn(async () => 'cancelled') };
   const current = signal<MeDto | null>(null);
   const load = jest.fn(async () => {
     current.set(signedIn);
@@ -43,6 +46,7 @@ function setUp(platform = 'browser') {
       { provide: SITE_ORIGIN, useValue: 'https://motorfix.ro' },
       { provide: Session, useValue: { current, load } },
       { provide: PLATFORM_ID, useValue: platform },
+      { provide: Overlays, useValue: overlays },
     ],
   });
   return load;
@@ -202,13 +206,33 @@ describe('the public tab bar', () => {
     expect(url()).toBe('/ro/garages?brand=bmw');
   });
 
-  it('shows the account placeholder to a visitor who is not signed in', async () => {
-    await open('/ro');
+  it('opens the sign-in dialog over the current screen for a visitor who is not signed in', async () => {
+    await open('/ro/garages');
 
     await tap('Cont');
 
-    expect(url()).toBe('/ro/account');
-    expect(current()).toEqual(['Cont']);
+    expect(url()).toBe('/ro/garages');
+    expect(overlays.open).toHaveBeenCalledWith(expect.any(Function), {
+      shape: 'dialog',
+      title: 'public.signIn.title',
+    });
+  });
+
+  it('keeps the account address on Cont for a new tab or a page without scripts', async () => {
+    await open('/ro');
+
+    const cont = tabs().find((a) => a.textContent?.trim() === 'Cont');
+    cont?.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        ctrlKey: true,
+      }),
+    );
+    await settle();
+
+    expect(href('Cont')).toBe('/ro/account');
+    expect(overlays.open).not.toHaveBeenCalled();
   });
 
   it('opens the dashboard of a signed-in person from Cont', async () => {
@@ -286,5 +310,59 @@ describe('the public tab bar', () => {
       /@media \(min-width: 768px\) \{[^{]*\{[^}]*display: none/,
     );
     expect(css).toMatch(/:host\(\[hidden\]\) \{ display: none/);
+  });
+});
+
+describe('signing in from a public screen', () => {
+  beforeEach(() => setUp());
+
+  const signInButton = () =>
+    [...page().querySelectorAll('button')].find(
+      (b) => b.textContent?.trim() === 'Autentificare',
+    );
+
+  it('offers "Autentificare" above the content of every public screen', async () => {
+    for (const address of ['/ro', '/ro/garages', '/ro/account']) {
+      await open(address);
+      const button = signInButton();
+      expect(button).toBeDefined();
+      expect(
+        button?.compareDocumentPosition(page().querySelector('main') as Node),
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    }
+  });
+
+  it('opens the dialog from "Autentificare" without changing the address', async () => {
+    await open('/ro/garages');
+
+    signInButton()?.click();
+    await settle();
+
+    expect(url()).toBe('/ro/garages');
+    expect(overlays.open).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads "Sign in" in English', async () => {
+    await open('/en');
+
+    expect(
+      [...page().querySelectorAll('button')].some(
+        (b) => b.textContent?.trim() === 'Sign in',
+      ),
+    ).toBe(true);
+  });
+
+  it('opens Home with the dialog when a signed-out visitor types a dashboard address', async () => {
+    await open('/app/admin');
+
+    expect(url()).toBe('/ro');
+    expect(overlays.open).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not open the dialog on an ordinary visit', async () => {
+    await open('/ro');
+    await open('/ro/garages');
+
+    expect(overlays.open).not.toHaveBeenCalled();
   });
 });

@@ -29,16 +29,29 @@ describe('web edge', () => {
   let base: string;
   let seen: { method?: string; url?: string; body: string }[];
   let release: () => void;
+  let forwarded: { cookie?: string; for?: string }[];
 
   beforeEach(async () => {
     seen = [];
+    forwarded = [];
     upstream = createServer((req, res) => {
+      forwarded.push({
+        cookie: req.headers.cookie,
+        for: req.headers['x-forwarded-for'] as string | undefined,
+      });
       let body = '';
       req.on('data', (chunk) => {
         body += chunk;
       });
       req.on('end', () => {
         seen.push({ body, method: req.method, url: req.url });
+        if (req.url === '/api/v1/auth/refresh') {
+          res.writeHead(200, {
+            'set-cookie': 'mf_refresh=next; Path=/api/v1/auth; HttpOnly',
+          });
+          res.end('{}');
+          return;
+        }
         if (req.url === '/api/v1/stream') {
           res.writeHead(200, { 'content-type': 'text/event-stream' });
           res.write('data: first\n\n');
@@ -95,6 +108,30 @@ describe('web edge', () => {
 
     expect(first).toBe('data: first\n\n');
     release();
+  });
+
+  it('tells the API the address it was called from, after any it was given', async () => {
+    await fetch(`${base}/api/v1/me`);
+    await fetch(`${base}/api/v1/me`, {
+      headers: { 'x-forwarded-for': '203.0.113.9' },
+    });
+
+    expect(forwarded[0]?.for).toMatch(/^(::ffff:)?127\.0\.0\.1$|^::1$/);
+    expect(forwarded[1]?.for).toMatch(
+      /^203\.0\.113\.9, ((::ffff:)?127\.0\.0\.1|::1)$/,
+    );
+  });
+
+  it('passes the refresh cookie to the API and its new value back', async () => {
+    const res = await fetch(`${base}/api/v1/auth/refresh`, {
+      headers: { cookie: 'mf_refresh=old' },
+      method: 'POST',
+    });
+
+    expect(forwarded[0]?.cookie).toBe('mf_refresh=old');
+    expect(res.headers.getSetCookie()).toEqual([
+      'mf_refresh=next; Path=/api/v1/auth; HttpOnly',
+    ]);
   });
 
   it('answers 502 when the API cannot be reached', async () => {

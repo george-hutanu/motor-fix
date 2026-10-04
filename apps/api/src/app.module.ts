@@ -18,6 +18,7 @@ export class AppModule {
         StorageModule.register(env),
         AuthModule.register({
           databaseUrl: env.DATABASE_URL,
+          redisUrl: env.REDIS_URL,
           tokenSecret: env.AUTH_TOKEN_SECRET,
         }),
       ],
