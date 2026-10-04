@@ -4,3 +4,5 @@
 - 2026-10-04 · start · ST-474 story · To do → Planning
 - 2026-10-04 · start · EP-1 Foundations epic · In progress (unchanged)
 - 2026-10-04 · start · Foundations build timeline · no row expected: tasks added after the plan have none
+- 2026-10-04 · pr · ST-474 · PR #38 https://github.com/george-hutanu/motor-fix/pull/38
+- 2026-10-04 · labels · PR #38 · planning, bug, scope: harness, EP-1

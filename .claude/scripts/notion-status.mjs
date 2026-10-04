@@ -11,16 +11,34 @@
 // Blocked, returning to that status — the one backwards move. Nothing moves a
 // Done story.
 //
+// The PR mirrors the story with exactly one stage label: `stage` names it
+// (a Blocked story keeps the one it left, with `blocked` beside it; To do and
+// Done carry none) and `labels` is the `gh pr edit` arguments that leave the PR
+// with exactly that, whatever it carried before. They come with every
+// decision, written or not, so a late, repeated or catch-up event converges
+// instead of stacking a second stage label.
+//
 //   node .claude/scripts/notion-status.mjs <event> --current "<story Status>"
 //   events: start | implement | review | qa | finish | blocked | unblock
-// Prints { write, story, timeline, prior, note } as JSON.
+// Prints { write, story, timeline, prior, note, stage, labels } as JSON.
 import { readState, writeState } from "./run-state.mjs";
 
 export const LADDER = ["To do", "Planning", "Implementing", "In review", "QA", "Done"];
 const TIMELINE = { "To do": "Not started", Planning: "Planning", Implementing: "Implementing", "In review": "In review", QA: "QA", Done: "Merged", Blocked: "Blocked" };
 const TARGET = { start: "Planning", implement: "Implementing", review: "In review", qa: "QA", finish: "Done" };
+const STAGE = { Planning: "planning", Implementing: "in development", "In review": "in review", QA: "QA" };
 
-const result = (write, story, prior, note) => ({ write, story, timeline: TIMELINE[story] ?? null, prior, note });
+function stageLabels(story, prior) {
+  const blocked = story === "Blocked";
+  const stage = STAGE[blocked ? prior : story] ?? null;
+  // Blocked with no known stage: the stage labels it has are the best guess left.
+  if (blocked && !stage) return { stage, labels: '--add-label "blocked"' };
+  const add = blocked ? [stage, "blocked"] : [stage].filter(Boolean);
+  const remove = [...Object.values(STAGE), "blocked"].filter((label) => !add.includes(label));
+  return { stage, labels: [...add.map((l) => `--add-label "${l}"`), ...remove.map((l) => `--remove-label "${l}"`)].join(" ") };
+}
+
+const result = (write, story, prior, note) => ({ write, story, timeline: TIMELINE[story] ?? null, prior, note, ...stageLabels(story, prior) });
 
 const LEGACY = (status) => (status === "In progress" ? "Implementing" : status);
 
