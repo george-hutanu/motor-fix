@@ -3,21 +3,25 @@ import { type Browser, expect, type Page, test } from '@playwright/test';
 import { ready, signIn } from './accounts.js';
 
 // Signing out everywhere ends every session of the account, so these flows
-// use an account of their own, never a seeded one other specs sign in with.
+// use an account of their own, never a seeded one other specs sign in with:
+// one sign-up per run (the API admits 10 an hour from one address), and the
+// flows one at a time, so one's "all devices" never ends another's session.
 const PASSWORD = 'iesire-de-pe-toate-2026';
+let email = '';
 
-async function newAccount(browser: Browser) {
-  const email = `iesire-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
+test.describe.configure({ mode: 'serial' });
+
+test.beforeAll(async ({ browser }) => {
+  email = `iesire-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
   const context = await browser.newContext();
   const res = await context.request.post('/api/v1/auth/sign-up', {
     data: { email, language: 'ro', name: 'Andrei Ieșire', password: PASSWORD },
   });
   expect(res.status()).toBe(201);
   await context.close();
-  return email;
-}
+});
 
-async function signedIn(browser: Browser, email: string) {
+async function signedIn(browser: Browser) {
   const context = await browser.newContext();
   const page = await context.newPage();
   await ready(page, '/ro');
@@ -41,9 +45,8 @@ test.describe('signing out @seeded', () => {
   test('"Ieși de pe toate dispozitivele" signs the other device out within seconds', async ({
     browser,
   }) => {
-    const email = await newAccount(browser);
-    const phone = await signedIn(browser, email);
-    const laptop = await signedIn(browser, email);
+    const phone = await signedIn(browser);
+    const laptop = await signedIn(browser);
 
     await phone
       .getByRole('button', { name: 'Ieși de pe toate dispozitivele' })
@@ -62,8 +65,7 @@ test.describe('signing out @seeded', () => {
   });
 
   test('"Renunță" keeps every session', async ({ browser }) => {
-    const email = await newAccount(browser);
-    const phone = await signedIn(browser, email);
+    const phone = await signedIn(browser);
 
     await phone
       .getByRole('button', { name: 'Ieși de pe toate dispozitivele' })
@@ -81,11 +83,13 @@ test.describe('signing out @seeded', () => {
   test('"Ieși din cont" signs out the other tabs of the browser, and Back shows no dashboard', async ({
     browser,
   }) => {
-    const email = await newAccount(browser);
-    const first = await signedIn(browser, email);
+    const first = await signedIn(browser);
     const second = await first.context().newPage();
-    await ready(second, '/app/driver');
+    // A dashboard's live stream keeps the network busy: no networkidle here.
+    await second.goto('/app/driver');
     await expect(second).toHaveURL('/app/driver');
+    // The name shows once the tab has started in the browser and loaded the session.
+    await expect(second.getByText('Andrei Ieșire')).toBeVisible();
 
     await first.getByRole('button', { name: 'Ieși din cont' }).click();
     await expect(first).toHaveURL(home);

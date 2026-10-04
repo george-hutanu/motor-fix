@@ -28,7 +28,7 @@ Independent test: through HTTP against PostgreSQL and Redis, two sessions of one
 
 ## Phase 5: Polish
 
-- [ ] T010 `apps/web-e2e/src/sign-out.spec.ts` (new): two contexts signed in to one account of its own, created through sign-up (signing out everywhere would end a shared seeded account's sessions in other specs); "all devices" in one; the other on Home signed out; Back shows no dashboard; two tabs of one context, "Ieși din cont" in one, the other on Home (SC-001, SC-002, FR-005, FR-009)
+- [X] T010 `apps/web-e2e/src/sign-out.spec.ts` (new): two contexts signed in to one account of its own, created through sign-up (signing out everywhere would end a shared seeded account's sessions in other specs); "all devices" in one; the other on Home signed out; Back shows no dashboard; two tabs of one context, "Ieși din cont" in one, the other on Home (SC-001, SC-002, FR-005, FR-009)
 
 ## Dependencies
 

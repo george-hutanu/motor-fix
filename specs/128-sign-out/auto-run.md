@@ -32,3 +32,6 @@
 ## 10 Implement
 - Local DB motorfix_st128, Redis db 12 (.env git-ignored).
 - auth + audit coverage + events suites: 23 suites, 821 tests passed. Web: 35 suites passed after adding `ended` to four Session mocks that render the frame. typecheck 13 projects ok; biome clean.
+- e2e (BASE_URL :4128, API :3128, seeded DB): sign-out.spec 3/3 (twice); full suite 248 passed, 2 failed unrelated: pwa.spec needs the production build, motion.spec's dialog case flaked under load and passed alone (8/8).
+- Found by the full run: account-language.spec's `name: 'Sign out'` also matched "Sign out on all devices" → `exact: true`.
+- The e2e signs up one account per run (the API admits 10 sign-ups an hour per address); its flows run one at a time.
