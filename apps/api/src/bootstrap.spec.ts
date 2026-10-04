@@ -42,6 +42,7 @@ class ProbeController {
 
 const env = {
   APP_ENV: 'test',
+  AUTH_TOKEN_SECRET: 'test-secret',
   DATABASE_URL:
     process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres',
   REDIS_URL: process.env['REDIS_URL'] ?? 'redis://localhost:6379',
@@ -49,7 +50,7 @@ const env = {
 } as const;
 
 async function start(appEnv: string = env.APP_ENV) {
-  const config = readEnv(['DATABASE_URL', 'REDIS_URL'], {
+  const config = readEnv(['DATABASE_URL', 'REDIS_URL', 'AUTH_TOKEN_SECRET'], {
     ...env,
     APP_ENV: appEnv,
   });
@@ -86,6 +87,16 @@ describe('api conventions', () => {
     expect(res.status).toBe(404);
     expect(res.headers['content-type']).toContain('application/problem+json');
     expect(res.body).toMatchObject({ code: 'not_found', status: 404 });
+  });
+
+  it('asks for sign-in with problem details and its own code', async () => {
+    app = await start();
+
+    const res = await request(app.getHttpServer()).get('/api/v1/me');
+
+    expect(res.status).toBe(401);
+    expect(res.headers['content-type']).toContain('application/problem+json');
+    expect(res.body).toMatchObject({ code: 'sign_in_required', status: 401 });
   });
 
   it('refuses a body with an unknown field', async () => {

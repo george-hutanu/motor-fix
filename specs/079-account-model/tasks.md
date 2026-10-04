@@ -26,13 +26,13 @@ Independent test: `createAccount` writes account, role, identity; ports called i
 
 Independent test: HTTP 401/403/404 and `GET /me` against the real database.
 
-- [ ] T009 [P] [US2] `libs/domain/src/auth/capabilities.ts` (new): roles, capability names of FR-010, the table, `capabilitiesOf(actor)` with mechanic permission gates (FR-010, FR-014)
-- [ ] T010 [P] [US2] `libs/domain/src/auth/access-token.ts` (new): HS256 `signAccessToken`, `verifyAccessToken` (null for malformed, wrong key, expired) (FR-011)
-- [ ] T011 [P] [US2] `libs/domain/src/auth/policy.ts` (new): `roleInUse`, `landingFor`, `requireCapability`, `assertOwner`, `assertGarage` (404), `describeCustomer(actor, customer, { ownJob })` (FR-012, FR-013, FR-015)
-- [ ] T012 [US2] `libs/domain/src/auth/actor.guard.ts` (new): `ActorGuard` (401 `sign_in_required`, 403 `account_suspended` first, then `@Requires` → 404), `@Requires`, `@CurrentActor`, actor with garage from the matching membership or mechanic link (FR-011, FR-012, FR-013)
-- [ ] T013 [US2] `libs/contracts/src/me.dto.ts` (new) + export in `libs/contracts/src/index.ts`; `libs/domain/src/auth/me.controller.ts` (new) `GET /me` (FR-016)
-- [ ] T014 [US2] `libs/domain/src/auth/auth.module.ts` (new) `AuthModule.register({ databaseUrl, tokenSecret })` with Prisma client, ports, guard, controller; export from `libs/domain/src/index.ts`; one import in `apps/api/src/app.module.ts`; `AUTH_TOKEN_SECRET` in `apps/api/src/main.ts` and the `openapi` target env in `apps/api/project.json` (FR-011, FR-016)
-- [ ] T015 [US2] Regenerate `apps/api/openapi.json` and `libs/data-access` with `npx nx run data-access:generate` (FR-016)
+- [X] T009 [P] [US2] `libs/domain/src/auth/capabilities.ts` (new): roles, capability names of FR-010, the table, `capabilitiesOf(actor)` with mechanic permission gates (FR-010, FR-014)
+- [X] T010 [P] [US2] `libs/domain/src/auth/access-token.ts` (new): HS256 `signAccessToken`, `verifyAccessToken` (null for malformed, wrong key, expired) (FR-011)
+- [X] T011 [P] [US2] `libs/domain/src/auth/policy.ts` (new): `roleInUse`, `landingFor`, `requireCapability`, `assertOwner`, `assertGarage` (404), `describeCustomer(actor, customer, { ownJob })` (FR-012, FR-013, FR-015)
+- [X] T012 [US2] `libs/domain/src/auth/actor.guard.ts` (new): `ActorGuard` (401 `sign_in_required`, 403 `account_suspended` first, then `@Requires` → 404), `@Requires`, `@CurrentActor`, actor with garage from the matching membership or mechanic link (FR-011, FR-012, FR-013)
+- [X] T013 [US2] `libs/contracts/src/me.dto.ts` (new) + export in `libs/contracts/src/index.ts`; `libs/domain/src/auth/me.controller.ts` (new) `GET /me` (FR-016)
+- [X] T014 [US2] `libs/domain/src/auth/auth.module.ts` (new) `AuthModule.register({ databaseUrl, tokenSecret })` with Prisma client, ports, guard, controller; export from `libs/domain/src/index.ts`; one import in `apps/api/src/app.module.ts`; `AUTH_TOKEN_SECRET` in `apps/api/src/main.ts` and the `openapi` target env in `apps/api/project.json` (FR-011, FR-016)
+- [X] T015 [US2] Regenerate `apps/api/openapi.json` and `libs/data-access` with `npx nx run data-access:generate` (FR-016)
 
 ## Phase 5: User Story 3 — each role lands on its frame (P2)
 

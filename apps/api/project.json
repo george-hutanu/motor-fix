@@ -11,6 +11,7 @@
       "options": {
         "env": {
           "APP_ENV": "development",
+          "AUTH_TOKEN_SECRET": "unused",
           "DATABASE_URL": "postgresql://localhost/unused",
           "REDIS_URL": "redis://localhost/unused"
         }
