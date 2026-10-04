@@ -92,9 +92,9 @@ describe('the dashboard view lists', () => {
   });
 
   it('names each dashboard for its bar and tags it for its menu', () => {
-    expect(DASHBOARDS.driver.name).toBe('shell.frame.tabs.driver');
-    expect(DASHBOARDS.garage.name).toBe('shell.frame.tabs.garage');
-    expect(DASHBOARDS.admin.name).toBe('shell.frame.tabs.admin');
+    expect(DASHBOARDS.driver.name).toBe('shell.frame.bar.driver');
+    expect(DASHBOARDS.garage.name).toBe('shell.frame.bar.garage');
+    expect(DASHBOARDS.admin.name).toBe('shell.frame.bar.admin');
     expect(DASHBOARDS.garage.tag).toBe('shell.frame.area.garage');
   });
 

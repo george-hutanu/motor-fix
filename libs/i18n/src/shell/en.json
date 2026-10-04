@@ -38,6 +38,11 @@
       "driver": "Driver",
       "garage": "Garage"
     },
+    "bar": {
+      "admin": "Admin dashboard",
+      "driver": "Driver dashboard",
+      "garage": "Garage dashboard"
+    },
     "empty": "Nothing here yet.",
     "home": "MotorFix, home page",
     "logo": "MOTORFIX",
@@ -83,11 +88,6 @@
       "settings": "Settings",
       "team": "Team",
       "users": "Users"
-    },
-    "tabs": {
-      "admin": "Admin dashboard",
-      "driver": "Driver dashboard",
-      "garage": "Garage dashboard"
     }
   },
   "gauge": {

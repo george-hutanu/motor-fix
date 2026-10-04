@@ -205,9 +205,13 @@ the page width; read the bar's landmark name and the active tab's state.
 - The mock's "AI" tab (Asistent AI) is left out: the AI assistant connection
   is its own epic (release 3) and adds its view to the list then. (autonomous
   default — design.md)
-- On a phone the header carries the person's name and "Ieși din cont" next to
-  the language switch; the mock has no account controls on a phone.
-  (autonomous default — design.md)
+- On a phone the aside stays above the header as an account band (logo,
+  area, the person's name, "Ieși din cont"); only its menu is hidden. The
+  mock has no account controls on a phone; one copy of them is kept rather
+  than a second set in the header. (autonomous default — design.md, review
+  2026-10-04)
+- A redirected address keeps its query string; only the path becomes the
+  dashboard's own. (autonomous default — adversary review 2026-10-04)
 - 768 px is the phone/tablet boundary of the shared phone rules
   (`libs/ui-cockpit/src/lib/layout.ts` `BREAKPOINTS.tablet`).
 

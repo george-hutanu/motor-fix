@@ -27,7 +27,7 @@ export const DASHBOARDS: Record<
   { name: string; tag: string; views: readonly DashboardView[] }
 > = {
   admin: {
-    name: 'shell.frame.tabs.admin',
+    name: 'shell.frame.bar.admin',
     tag: 'shell.frame.area.admin',
     views: [
       HOME,
@@ -64,7 +64,7 @@ export const DASHBOARDS: Record<
     ],
   },
   driver: {
-    name: 'shell.frame.tabs.driver',
+    name: 'shell.frame.bar.driver',
     tag: 'shell.frame.area.driver',
     views: [
       HOME,
@@ -101,7 +101,7 @@ export const DASHBOARDS: Record<
     ],
   },
   garage: {
-    name: 'shell.frame.tabs.garage',
+    name: 'shell.frame.bar.garage',
     tag: 'shell.frame.area.garage',
     views: [
       HOME,
@@ -153,22 +153,21 @@ export const allowedViews = (
     (view) => !view.capability || capabilities.includes(view.capability),
   );
 
-// The area guard has loaded the session before these match. A refused or
-// unknown view falls through to `**`, which sends it to the dashboard view.
+// The area guard has loaded the session before these match. A view owns its
+// sub-paths, so its epic can add pages under it; a refused or unknown view
+// falls through to `**`, which sends it to the dashboard view.
 export const dashboardRoutes = (area: Area): Routes => [
   { component: View, path: '', pathMatch: 'full' },
   ...DASHBOARDS[area].views
     .filter((view) => view.path)
-    .map((view) => ({
+    .map(({ capability, path }) => ({
       canMatch: [
         () =>
-          allowedViews(
-            area,
-            inject(Session).current()?.capabilities ?? [],
-          ).includes(view),
+          !capability ||
+          (inject(Session).current()?.capabilities ?? []).includes(capability),
       ],
-      component: View,
-      path: view.path,
+      children: [{ component: View, path: '**' }],
+      path,
     })),
   { path: '**', redirectTo: '' },
 ];

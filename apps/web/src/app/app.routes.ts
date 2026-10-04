@@ -25,24 +25,12 @@ export const routes: Routes = [
     path: '',
     pathMatch: 'full',
   },
-  {
-    canMatch: [areaGuard('driver')],
-    children: dashboardRoutes('driver'),
+  ...(['driver', 'garage', 'admin'] as const).map((area) => ({
+    canMatch: [areaGuard(area)],
+    children: dashboardRoutes(area),
     loadComponent: frame,
-    path: 'app/driver',
-  },
-  {
-    canMatch: [areaGuard('garage')],
-    children: dashboardRoutes('garage'),
-    loadComponent: frame,
-    path: 'app/garage',
-  },
-  {
-    canMatch: [areaGuard('admin')],
-    children: dashboardRoutes('admin'),
-    loadComponent: frame,
-    path: 'app/admin',
-  },
+    path: `app/${area}`,
+  })),
   {
     loadComponent: () =>
       import('@motor-fix/ui-cockpit/sample').then((m) => m.CockpitSamplePage),

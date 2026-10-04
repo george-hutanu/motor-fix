@@ -55,7 +55,7 @@ import type { DashboardView } from './views';
         <a
           #tab
           [routerLink]="view.path ? [base(), view.path] : base()"
-          routerLinkActive="active"
+          routerLinkActive=""
           ariaCurrentWhenActive="page"
           [routerLinkActiveOptions]="{ exact: !view.path }"
           (isActiveChange)="$event && reveal(tab)"
@@ -71,6 +71,7 @@ export class DashboardTabBar {
   readonly name = input.required<string>();
 
   // Once the tab is marked current; `nearest` keeps the page itself still.
+  // `scrollIntoView` is absent on the server and in jsdom.
   protected reveal(tab: HTMLElement) {
     tab.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
   }

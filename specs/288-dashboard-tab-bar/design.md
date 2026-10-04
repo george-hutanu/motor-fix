@@ -36,9 +36,9 @@ Checked: 2026-10-04 · Mock: https://claude.ai/artifact/EoPWH9MHmuY5Jfw7vTWTHr (
 - One view list per dashboard, each view with its long menu label and its
   short tab label; the side menu shows the long one, the bar the short one.
 - Account controls on a phone: the mock has none (see below). Build: the
-  header keeps the title and the language switch and adds the person's name
-  and "Ieși din cont" on a phone, wrapping to a second row when there is no
-  room.
+  aside stays above the header as an account band (logo, area, name, "Ieși
+  din cont"); only its menu is hidden, and the header keeps the title and the
+  language switch.
 
 ## States
 - Shown in the mock: the active tab (first view by default); the overflowing
@@ -62,4 +62,5 @@ Checked: 2026-10-04 · Mock: https://claude.ai/artifact/EoPWH9MHmuY5Jfw7vTWTHr (
   own epic (release 3) and the current menus have no such view → left out
   until that epic adds the view to the list.
 - Account controls: the mock has no sign-out and no name on a phone; the
-  spec (FR-012) keeps them reachable in the header → flagged in the PR.
+  spec (FR-012) keeps them reachable in the account band above the header →
+  flagged in the PR.

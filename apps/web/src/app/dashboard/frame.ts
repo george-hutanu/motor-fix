@@ -10,12 +10,10 @@ import {
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   NavigationEnd,
-  PRIMARY_OUTLET,
   Router,
   RouterLink,
   RouterLinkActive,
   RouterOutlet,
-  type UrlTree,
 } from '@angular/router';
 import {
   AsWritten,
@@ -30,9 +28,7 @@ import { Live } from './live';
 import { Session } from './session';
 import { DashboardTabBar } from './tab-bar';
 import { type Area, allowedViews, DASHBOARDS } from './views';
-
-const segmentsOf = (tree: UrlTree) =>
-  tree.root.children[PRIMARY_OUTLET]?.segments.map((s) => s.path) ?? [];
+import { segmentsOf } from '../addresses';
 
 // Below 768 px the bar replaces the menu; the rest of the aside (logo, area,
 // name, sign out) stays on top as the account band.
@@ -52,6 +48,7 @@ const segmentsOf = (tree: UrlTree) =>
     :host { display: grid; grid-template: auto 1fr / minmax(0, 1fr); min-height: 100dvh; }
     aside { display: flex; flex-direction: column; gap: 1.25rem; padding: 1rem; }
     aside nav { display: none; flex-direction: column; gap: 0.25rem; }
+    aside nav a[aria-current="page"] { color: var(--mf-amber-ink); }
     .account { margin-top: auto; display: flex; flex-direction: column; gap: 0.25rem; }
     .view { display: flex; flex-direction: column; min-width: 0; }
     main { flex: 1 0 auto; }
@@ -68,7 +65,7 @@ const segmentsOf = (tree: UrlTree) =>
         @for (view of entries(); track view.path) {
           <a
             [routerLink]="view.path ? [base(), view.path] : base()"
-            routerLinkActive="active"
+            routerLinkActive=""
             ariaCurrentWhenActive="page"
             [routerLinkActiveOptions]="{ exact: !view.path }"
           >{{ view.label | t }}</a>
@@ -96,6 +93,7 @@ export class Frame implements OnInit {
   protected readonly base = computed(
     () => this.session.current()?.landing ?? '/app/driver',
   );
+  // The area guard admits only a landing of one of the three dashboards.
   private readonly area = computed(
     () => this.base().slice('/app/'.length) as Area,
   );

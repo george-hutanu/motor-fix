@@ -38,6 +38,11 @@
       "driver": "Șofer",
       "garage": "Service"
     },
+    "bar": {
+      "admin": "Panou admin",
+      "driver": "Panou șofer",
+      "garage": "Panou service"
+    },
     "empty": "Nimic aici încă.",
     "home": "MotorFix, pagina principală",
     "logo": "MOTORFIX",
@@ -83,11 +88,6 @@
       "settings": "Setări",
       "team": "Mecanici",
       "users": "Utilizatori"
-    },
-    "tabs": {
-      "admin": "Panou admin",
-      "driver": "Panou șofer",
-      "garage": "Panou service"
     }
   },
   "gauge": {

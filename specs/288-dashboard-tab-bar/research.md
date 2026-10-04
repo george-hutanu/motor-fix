@@ -1,7 +1,7 @@
 # Research: dashboard tab bar
 
 ## 1. Views as child routes, guarded with canMatch
-- Decision: each dashboard route (`app/driver`, `app/garage`, `app/admin`) gets `children` from `dashboardRoutes(area)`: `''` for the dashboard view, one route per view with `canMatch` reading `Session.current().capabilities` against the view's capability (a refusal returns a `UrlTree` to `/app/<area>`), and `'**'` redirecting to `''`.
+- Decision: each dashboard route (`app/driver`, `app/garage`, `app/admin`) gets `children` from `dashboardRoutes(area)`: `''` for the dashboard view, one route per view with `canMatch` reading `Session.current().capabilities` against the view's capability; a refused or unknown view falls through to `'**'`, which redirects to `''` (the dashboard's own address).
 - Rationale: the spec's redirect-before-load (Clarification 3) and the existing `areaGuard` pattern; the parent's guard has already loaded the session.
 - Alternatives: a `canActivate` (loads the view first); keeping views as frame state (no addresses, no `aria-current="page"`).
 - Evidence: `apps/web/src/app/dashboard/area.guard.ts:8-20`, `apps/web/src/app/app.routes.ts:30-32`.
@@ -17,7 +17,7 @@
 - Evidence: `apps/web/src/app/public/tab-bar.ts` styles (`@media (min-width: 768px) { :host { display: none; } }`).
 
 ## 4. Scrolling the active tab into sight
-- Decision: after each `NavigationEnd` (and first render), `scrollIntoView({ block: 'nearest', inline: 'nearest' })` on the bar's `[aria-current="page"]` link, guarded for environments without it (jsdom).
+- Decision: on the link's `isActiveChange` (true), `scrollIntoView({ block: 'nearest', inline: 'nearest' })` on that link, guarded for environments without it (jsdom, the server). Not on `NavigationEnd`: `RouterLinkActive` sets `aria-current` in a microtask after it (`node_modules/@angular/router/fesm2022/_router_module-chunk.mjs`, `update()`), so a first-render query found no current tab.
 - Rationale: a no-op when already visible; keeps the page from scrolling vertically.
 
 ## 5. Account controls on a phone

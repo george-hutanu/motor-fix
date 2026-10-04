@@ -12,7 +12,7 @@ class Blank {}
 
 @Component({
   imports: [DashboardTabBar],
-  template: `<mf-dashboard-tab-bar base="/app/garage" [views]="views" name="shell.frame.tabs.garage" />`,
+  template: `<mf-dashboard-tab-bar base="/app/garage" [views]="views" name="shell.frame.bar.garage" />`,
 })
 class Host {
   readonly views = DASHBOARDS.garage.views.slice(0, 4);
