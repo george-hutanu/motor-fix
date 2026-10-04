@@ -1,0 +1,82 @@
+[
+  {
+    "id": "merge-gate-refuses-without-agent-review",
+    "hook": "pre:bash:merge-gate",
+    "why": "a green CI says the code compiles and its own tests pass; only the PR tester says the change works when booted and used, and the merge waits for it (Constitution VII)",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\": 21, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"checks\", \"conclusion\": \"SUCCESS\"}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "no agent-review status"
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-failing-agent-review",
+    "hook": "pre:bash:merge-gate",
+    "why": "a failure verdict means blocking findings are open; merging it is the silent merge the loop exists to prevent",
+    "payload": {
+      "tool_input": {
+        "command": "GH_TOKEN=x gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\": 21, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"checks\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"StatusContext\", \"context\": \"agent-review\", \"state\": \"FAILURE\"}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "agent-review is failure"
+    }
+  },
+  {
+    "id": "merge-gate-refuses-the-rest-merge-call",
+    "hook": "pre:bash:merge-gate",
+    "why": "the REST endpoint merges as surely as gh pr merge; a gate on one spelling only is a gate with a side door",
+    "payload": {
+      "tool_input": {
+        "command": "gh api -X PUT repos/george-hutanu/motor-fix/pulls/21/merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\": 21, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"checks\", \"conclusion\": \"SUCCESS\"}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "speckit-pr-test 21"
+    }
+  },
+  {
+    "id": "merge-gate-passes-with-agent-review-success",
+    "hook": "pre:bash:merge-gate",
+    "why": "with the tester's success on the head commit the merge is the next lifecycle step, and the gate must not stand in its way",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\": 21, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"checks\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"StatusContext\", \"context\": \"agent-review\", \"state\": \"SUCCESS\"}]}"
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "merge-gate-ignores-other-commands",
+    "hook": "pre:bash:merge-gate",
+    "why": "merging origin/main into a branch is part of the lifecycle; only merging a PR is gated",
+    "payload": {
+      "tool_input": {
+        "command": "git merge --no-edit origin/main"
+      }
+    },
+    "expect": {
+      "exit": 0
+    }
+  }
+]

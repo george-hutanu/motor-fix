@@ -1,9 +1,10 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { allGreen, decide } from './pr-lifecycle-gate.mjs';
+import { allGreen, decide, hasAgentReview } from './pr-lifecycle-gate.mjs';
 
-const green = [{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }];
+const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
+const green = [{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }, review('SUCCESS')];
 const ready = (over = {}) => ({
   isDraft: false,
   mergeable: 'MERGEABLE',
@@ -47,8 +48,37 @@ describe('PR lifecycle gate — what it refuses', () => {
     assert.match(decide(task({ pr: null })), /has no PR.*gh pr create --draft/);
   });
 
-  it('refuses a ready PR left unmerged after every check passed', () => {
+  it('refuses a ready PR left unmerged after every check and the agent review passed', () => {
     assert.match(decide(task()), /PR #6 is ready and every check passed.*gh pr merge 6 --merge/);
+  });
+
+  it('refuses a green ready PR with no agent-review success on its head, and names the tester', () => {
+    const rollup = [{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }];
+    const why = decide(task({ pr: ready({ statusCheckRollup: rollup }) }));
+    assert.match(why, /agent-review/);
+    assert.match(why, /speckit-pr-test 6/);
+    assert.doesNotMatch(why, /gh pr merge/);
+  });
+
+  it('lets a blocked run end on a green ready PR with no agent review: Blocked is how a run stops', () => {
+    const rollup = [{ conclusion: 'SUCCESS' }];
+    assert.equal(decide(task({ blocked: true, pr: ready({ statusCheckRollup: rollup }) })), null);
+  });
+
+  it('lets a session end while the agent review says failure: the fix loop owns that PR', () => {
+    const rollup = [{ conclusion: 'SUCCESS' }, review('FAILURE')];
+    assert.equal(decide(task({ pr: ready({ statusCheckRollup: rollup }) })), null);
+  });
+});
+
+describe('PR lifecycle gate — the agent review', () => {
+  it('counts only a success status named agent-review', () => {
+    assert.equal(hasAgentReview([review('SUCCESS')]), true);
+    assert.equal(hasAgentReview([review('FAILURE')]), false);
+    assert.equal(hasAgentReview([review('PENDING')]), false);
+    assert.equal(hasAgentReview([{ name: 'agent-review', conclusion: 'SUCCESS' }]), true);
+    assert.equal(hasAgentReview([{ context: 'ci', state: 'SUCCESS' }]), false);
+    assert.equal(hasAgentReview([]), false);
   });
 });
 
