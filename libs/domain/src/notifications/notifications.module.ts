@@ -24,6 +24,8 @@ import {
   NOTIFICATIONS_QUEUE,
   NotificationsService,
 } from './notifications.service';
+import { NotificationPreferencesController } from './preferences.controller';
+import { NotificationPreferencesService } from './preferences.service';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { createPrisma, PRISMA } from '../auth/prisma';
@@ -67,22 +69,30 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional() @Inject(WORKER) private readonly worker?: Worker | null,
   ) {}
 
-  // The API: the entry point, the admin test message and the Brevo webhook.
+  // The API: the entry point, the admin test message, the Brevo webhook and
+  // each person's message choices.
   // `auth` is the application's AuthModule, whose guard the test route uses.
   static register(
     options: NotificationsOptions,
     auth: DynamicModule,
   ): DynamicModule {
     return {
-      controllers: [NotificationsController, BrevoWebhookController],
+      controllers: [
+        NotificationsController,
+        BrevoWebhookController,
+        NotificationPreferencesController,
+      ],
       exports: [NotificationsService],
       imports: [auth],
       module: NotificationsModule,
       // One PostgreSQL pool per API process: the one AuthModule opened.
-      providers: shared(options, {
-        provide: NOTIFICATIONS_PRISMA,
-        useExisting: PRISMA,
-      }),
+      providers: [
+        ...shared(options, {
+          provide: NOTIFICATIONS_PRISMA,
+          useExisting: PRISMA,
+        }),
+        NotificationPreferencesService,
+      ],
     };
   }
 
