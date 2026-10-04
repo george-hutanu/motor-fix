@@ -31,7 +31,7 @@ Independent test: sign up through HTTP against PostgreSQL and Redis; taken e-mai
 
 ## Phase 5: End to end
 
-- [ ] T013 [US1] `apps/web-e2e/src/sign-up.spec.ts` (new): sign up and land signed in; the taken e-mail with the name kept (ST-494); empty, invalid and short fields send nothing; switching both ways; English; sizes × themes × languages with axe; keyboard (FR-003, FR-009, FR-010, FR-012, FR-013, FR-014)
+- [X] T013 [US1] `apps/web-e2e/src/sign-up.spec.ts` (new): sign up and land signed in; the taken e-mail with the name kept (ST-494); empty, invalid and short fields send nothing; switching both ways; English; sizes × themes × languages with axe; keyboard (FR-003, FR-009, FR-010, FR-012, FR-013, FR-014)
 
 ## Dependencies
 
