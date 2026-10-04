@@ -44,3 +44,21 @@
 
 ## Harden
 - diff-audit (vs 18c9e3d, its own baseline) flags only generated `libs/data-access` files (eslint-disable header, `.js` import rule that the repo's bundler resolution does not use) and pre-existing code; nothing hand-written by this feature. Mutation runs skipped: no local mutation tests on this machine (task rule).
+- test-adversary: 67 tests in 3 files; 7 failed. Fixed (tests kept): ten concurrent identical PATCHes wrote two audit entries → compare-and-set `updateMany` on the old value. Dropped as not defects, with reasons: a token naming a role not held answers 200 (existing ST-79 rule: the last role opens); `__proto__` key and form-encoded body accepted (harmless, Express/pipe behaviour); a tap reported before the texts load (emitting after `choose` resolves would reorder fast taps); a throwing `taps` subscriber (the only subscriber is the session); a queued tap after a failed save waits for the next tap (FR-009 as clarified).
+
+## Review
+- spec-reviewer: APPROVE; MEDIUM unused `auth/refresh` stub in the e2e → removed; LOW Romanian sizes not measured → `fits()` in both languages. Fixed in 2307440.
+- code-reviewer: BLOCK (HIGH unbounded save loop when the answer echoes the old language; MEDIUM audit race; MEDIUM non-failing assertion) → fixed tests first in 8552daa (red proven: 1 domain, 1 web) → re-review APPROVE, two LOW deferred (deferred.md).
+- Repair laps: 1 of 5.
+
+## Ticket refresh
+- Story re-read 2026-10-04T15:11Z by spec-reviewer with discussions and comments: none. No new evidence.
+
+## Agent context
+- Not run: `CLAUDE.local.md` is untracked and its ratchet forbids growth; its "Active plan" line is local to the owner's checkout.
+
+## Retrospective evidence (unjudged)
+- `retro-evidence.mjs --since b76ea92 --jev`: 5 commits, 31 files +1960 −20, 9 FRs, Spec Delta accounts +5, i18n +4; 3 deferred open; Jev lane unavailable (no key), so no suggested verdict.
+
+## Polish
+- T012: typecheck 13/13, Biome clean (pre-existing warnings only), touched Jest suites domain 197, i18n 63, web 51, api 12; e2e 22 passed on a production build at :4320.

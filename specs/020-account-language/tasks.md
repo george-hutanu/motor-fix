@@ -28,7 +28,7 @@ Paths are `(new)` unless they exist today: `libs/contracts/src/me.dto.ts`, `libs
 
 ## Phase 3: Polish
 
-- [ ] T012 Run `npm run typecheck`, `npm run lint`, the touched projects' Jest suites and the new e2e spec; record results in auto-run.md
+- [X] T012 Run `npm run typecheck`, `npm run lint`, the touched projects' Jest suites and the new e2e spec; record results in auto-run.md
 
 ## FR → test
 
