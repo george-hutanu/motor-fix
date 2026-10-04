@@ -1,1 +1,94 @@
 // auth module models
+
+enum Role {
+  driver
+  garage
+  receptionist
+  mechanic
+  admin
+
+  @@map("role")
+}
+
+enum Language {
+  ro
+  en
+
+  @@map("language")
+}
+
+enum AccountStatus {
+  active
+  suspended
+  deleted
+
+  @@map("account_status")
+}
+
+enum SignInMethod {
+  password
+  google
+  apple
+  whatsapp_phone
+
+  @@map("sign_in_method")
+}
+
+model Account {
+  id              String            @id @default(uuid()) @db.Uuid
+  email           String?           @unique
+  emailVerifiedAt DateTime?         @map("email_verified_at") @db.Timestamptz(3)
+  phone           String?           @unique
+  phoneVerifiedAt DateTime?         @map("phone_verified_at") @db.Timestamptz(3)
+  name            String
+  city            String?
+  language        Language          @default(ro)
+  status          AccountStatus     @default(active)
+  lastRole        Role              @map("last_role")
+  lastActiveAt    DateTime?         @map("last_active_at") @db.Timestamptz(3)
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  roles           AccountRole[]
+  identities      AccountIdentity[]
+  refreshTokens   RefreshToken[]
+  memberships     GarageMember[]
+  mechanic        Mechanic?
+
+  @@map("account")
+}
+
+model AccountRole {
+  accountId String  @map("account_id") @db.Uuid
+  role      Role
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@id([accountId, role])
+  @@map("account_role")
+}
+
+model AccountIdentity {
+  id           String       @id @default(uuid()) @db.Uuid
+  accountId    String       @map("account_id") @db.Uuid
+  method       SignInMethod
+  subject      String
+  passwordHash String?      @map("password_hash")
+  account      Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([method, subject])
+  @@index([accountId])
+  @@map("account_identity")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  accountId String    @map("account_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  familyId  String    @map("family_id") @db.Uuid
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  account   Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([familyId])
+  @@map("refresh_token")
+}
