@@ -36,6 +36,8 @@ Paths are `(new)` unless they exist today: `apps/web/src/app/app.routes.ts`, `ap
 - [X] T013 Test: `tab-bar.spec.ts` — on the server platform `/ro/account` renders the placeholder and never asks the session; the brand test opens a garage address with a different brand; `public/account.guard.ts` `signedInToDashboard` skips the server; the bar parses the address once per navigation and binds a computed query (FR-005, FR-006)
 - [X] T014 Test: `apps/web-e2e/src/tab-bar.spec.ts` — an editable element hides the bar on a phone; the server render of `/` carries no bar (FR-009)
 
+- [X] T015 Test: `tab-bar.spec.ts` — every public screen sits in one `main` landmark with the bar after it; `public/frame.ts` wraps the outlet in `main` (QA lap 1: axe landmark-one-main and region) (FR-001, FR-010)
+
 ## Phase 5: Polish
 
 - [X] T012 Run `npm run typecheck`, `npm run lint`, `npm run test` and the web-e2e suite; record the results in auto-run.md (SC-004 through the i18n check)

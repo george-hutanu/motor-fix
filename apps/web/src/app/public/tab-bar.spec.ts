@@ -148,6 +148,18 @@ describe('the public tab bar', () => {
     expect(page().textContent).toContain('Pagina vine în curând.');
   });
 
+  it('keeps every public screen in a main landmark, the bar after it', async () => {
+    for (const address of ['/ro', '/ro/garages', '/ro/account']) {
+      await open(address);
+      const main = page().querySelectorAll('main');
+
+      expect(main).toHaveLength(1);
+      expect(main[0].querySelector('mf-public-tab-bar')).toBeNull();
+      expect(main[0].nextElementSibling?.tagName).toBe('MF-PUBLIC-TAB-BAR');
+      expect(main[0].textContent?.trim()).not.toBe('');
+    }
+  });
+
   it('is not on the not-found page or a dashboard', async () => {
     await open('/ro/no-such-page');
     expect(bar()).toBeNull();

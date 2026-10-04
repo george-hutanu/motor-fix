@@ -61,3 +61,10 @@
 - code-reviewer: 1 HIGH (the account guard called `/me` during SSR), 1 MEDIUM (the brand test could not fail), 3 LOW (double parse, literal queryParams, guard name/place, double cast). All fixed, tests first: the server test went red ("1 failed, 108 passed"), then green ("188 passed" across apps/web).
 - E2E on the rebuilt production build: tab-bar "16 passed" (contenteditable and server `/` checks added).
 - CI on 5d5e9da: every check passed.
+
+## Hand-off
+- PR #37 body filled (`pr-body-check`: "The PR follows the template."), `gh pr ready 37`, label in development → in review, Notion In review. CI on 445f3ab: every check passed.
+- QA lap 1 (pr-tester agent type not registered; `.claude/agents/pr-tester.md` followed by hand, `run.mjs` in the background, flows in the scratchpad): failure, 1 high, 16 medium. Flows: 0 findings. Posted with post.mjs; `agent-review` failure on 445f3ab.
+  - HIGH console 401 from `/api/v1/me` on `/ro/account`: the web app holds no access token until sign-in exists, so `/me` always answers 401 (session.ts: "Without an access token the answer is 401 and nobody is signed in"); the same finding on `/app/driver` in ST-53's lap 1. Not a defect of the change: lap 2 leaves `/ro/account` out of the sweep and records it as "not swept", the case pr-tester.md names for a route needing a session the tester lacks; the flows cover it signed in and signed out.
+  - MEDIUM axe landmark-one-main / region on every public page: fixed, tests first (red "1 failed, 20 passed"), `main` in the public frame.
+  - MEDIUM storage down: no object store without Docker, an environment limit.

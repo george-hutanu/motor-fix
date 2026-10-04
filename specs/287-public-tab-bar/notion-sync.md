@@ -7,3 +7,9 @@
 - 2026-10-04 · implement · ST-287 · Planning → Implementing
 - 2026-10-04 · implement · Foundations timeline ST-287 · Planning → Implementing
 - 2026-10-04 · implement · PR #37 label · planning → in development
+- 2026-10-04 · review · ST-287 · Implementing → In review
+- 2026-10-04 · review · Foundations timeline ST-287 · Implementing → In review
+- 2026-10-04 · review · PR #37 ready; label in development → in review
+- 2026-10-04 · qa · ST-287 · In review → QA
+- 2026-10-04 · qa · Foundations timeline ST-287 · In review → QA
+- 2026-10-04 · qa · PR #37 label · in review → QA

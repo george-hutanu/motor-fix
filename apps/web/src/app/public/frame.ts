@@ -7,7 +7,10 @@ import { PublicTabBar } from './tab-bar';
 @Component({
   imports: [RouterOutlet, PublicTabBar],
   selector: 'mf-public-frame',
-  styles: `:host { display: flex; flex-direction: column; min-height: 100dvh; }`,
-  template: '<router-outlet /><mf-public-tab-bar />',
+  styles: `
+    :host { display: flex; flex-direction: column; min-height: 100dvh; }
+    main { flex: 1 0 auto; }
+  `,
+  template: '<main><router-outlet /></main><mf-public-tab-bar />',
 })
 export class PublicFrame {}
