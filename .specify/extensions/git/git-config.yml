@@ -7,7 +7,9 @@
 # - Branch name: the ticket code verbatim (e.g. BKP-1270) — pass it as
 #   GIT_BRANCH_NAME; never use the generated {number}-{slug} form when a
 #   ticket exists.
-# - NEVER push a branch until the user explicitly says to push.
+# - Task lifecycle (AGENTS.md): Notion In progress, then a draft PR at the
+#   first commit, a push per commit, then PR ready + Notion In review when
+#   done. Never --force, never push main, never merge: that is the owner's.
 
 # Branch numbering strategy: "sequential" (001, 002, ...) or "timestamp" (YYYYMMDD-HHMMSS)
 branch_numbering: sequential

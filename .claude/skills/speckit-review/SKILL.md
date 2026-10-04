@@ -49,8 +49,8 @@ Record `RANGE`, `FEATURE_DIR`, and the changed-file list. A range with no
 changes under `apps/`, `libs/` or `e2e/` has nothing to review — say so and
 stop.
 
-Then invoke `speckit-notion-sync review`, which moves the story and its timeline
-row to In review in Notion.
+Do not invoke `speckit-notion-sync review` yet: In review follows the PR being
+marked ready, which happens at the end of this skill if nothing blocks.
 
 ### 2. Run the workflow
 
@@ -167,12 +167,21 @@ Then act as `/speckit-auto` phase 14 does: fix every **confirmed** CRITICAL and
 HIGH, re-run this skill once, and treat survivors as a Hard Stop. Refuted
 findings are not fixed.
 
+### 4. Hand-off
+
+Run standalone (not from `/speckit-auto`, which hands off after its own phase
+16): when no confirmed CRITICAL/HIGH is left and `typecheck`, `lint` and the
+tests are green, mark the PR ready (`GH_TOKEN=$(gh auth token -u george-hutanu)
+gh pr ready <branch>`) and invoke `speckit-notion-sync review`. With a blocker
+left, do neither. Never merge.
+
 ## Done When
 
 - [ ] Both reviewers ran, or the one that did not is reported as not run
 - [ ] Every finding went to the configured number of refuters; none reached the report unverified
 - [ ] Confirmed and refuted findings both listed, with the refuters' reasons available
 - [ ] Confirmed CRITICAL/HIGH fixed and re-reviewed once, or reported as a Hard Stop
+- [ ] Standalone and clean: PR marked ready and the story In review; nothing merged
 
 ## Agent Execution Rules: review deltas
 
