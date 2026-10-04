@@ -1440,7 +1440,7 @@ describe('claims, hostile input', () => {
     const claim = JSON.parse(readFileSync(join(a, '.specify', '.cache', 'watch-claim.json'), 'utf8'));
     assert.equal(claim.fix, 'resume');
     assert.equal(git(a, 'status', '--porcelain'), '');
-    assert.equal(rowOf(collect(f.repo, env({ now: Date.now() })), a).holder, 'live');
+    assert.equal(rowOf(collect(f.repo, env()), a).holder, 'live');
   });
 
   it('refuses a fix that is not one of the four agent fixes and writes no file', () => {

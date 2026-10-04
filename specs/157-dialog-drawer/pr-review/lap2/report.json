@@ -1,0 +1,73 @@
+{
+  "pr": 40,
+  "repo": "george-hutanu/motor-fix",
+  "sha": "0afa5410668c544c5b9b4d497a651f1d06f93496",
+  "base": "74f397fd1990b63c9bfd34b50687e5bb6a78381b",
+  "lap": 2,
+  "verdict": "success",
+  "summary": "No blocking findings; 2 in all. Booted postgres, redis, api, web.",
+  "findings": [
+    {
+      "severity": "medium",
+      "kind": "step",
+      "title": "api readiness: storage down",
+      "steps": [
+        "No object store on this machine (no Docker); every other check is ok. Environment limit, not the change."
+      ]
+    },
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "First /cockpit render in jsdom runs close to Jest's 5 s timeout under a loaded machine",
+      "steps": [
+        "Run the pre-commit hook while two other heavy commands hold slots"
+      ],
+      "evidence": "Twice on this branch, apps/web addresses.adversary.spec.ts 'marks the cockpit sample noindex' and the tab-bar '/cockpit' case timed out at 5000 ms in the first test of the file; both pass alone and passed in CI. The catalogue now also loads @motor-fix/overlays."
+    }
+  ],
+  "booted": [
+    "postgres",
+    "redis",
+    "api",
+    "web"
+  ],
+  "notes": [
+    "No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.",
+    "No changed GET endpoint without path parameters."
+  ],
+  "screenshots": [
+    "shots/home-desktop-light-ro.png",
+    "shots/home-desktop-light-en.png",
+    "shots/home-desktop-dark-ro.png",
+    "shots/home-desktop-dark-en.png",
+    "shots/home-tablet-light-ro.png",
+    "shots/home-tablet-light-en.png",
+    "shots/home-tablet-dark-ro.png",
+    "shots/home-tablet-dark-en.png",
+    "shots/home-mobile-light-ro.png",
+    "shots/home-mobile-light-en.png",
+    "shots/home-mobile-dark-ro.png",
+    "shots/home-mobile-dark-en.png",
+    "shots/home-small-phone-light-ro.png",
+    "shots/home-small-phone-light-en.png",
+    "shots/home-small-phone-dark-ro.png",
+    "shots/home-small-phone-dark-en.png",
+    "shots/cockpit-desktop-light-ro.png",
+    "shots/cockpit-desktop-light-en.png",
+    "shots/cockpit-desktop-dark-ro.png",
+    "shots/cockpit-desktop-dark-en.png",
+    "shots/cockpit-tablet-light-ro.png",
+    "shots/cockpit-tablet-light-en.png",
+    "shots/cockpit-tablet-dark-ro.png",
+    "shots/cockpit-tablet-dark-en.png",
+    "shots/cockpit-mobile-light-ro.png",
+    "shots/cockpit-mobile-light-en.png",
+    "shots/cockpit-mobile-dark-ro.png",
+    "shots/cockpit-mobile-dark-en.png",
+    "shots/cockpit-small-phone-light-ro.png",
+    "shots/cockpit-small-phone-light-en.png",
+    "shots/cockpit-small-phone-dark-ro.png",
+    "shots/cockpit-small-phone-dark-en.png"
+  ],
+  "markdown": "**Agent review: success** — PR #40 at `0afa541`, lap 2\n\nBlocking: 0 (blocker 0, high 0) · medium 1 · low 1. Booted: postgres, redis, api, web.\n- No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.\n- No changed GET endpoint without path parameters.\n\n| # | Severity | Finding | Where | Evidence |\n| --- | --- | --- | --- | --- |\n| 1 | medium | api readiness: storage down |  |  |\n| 2 | low | First /cockpit render in jsdom runs close to Jest's 5 s timeout under a loaded machine |  | Twice on this branch, apps/web addresses.adversary.spec.ts 'marks the cockpit sample noindex' and the tab-bar '/cockpit' case timed out at 5000 ms in the first test of the file; both pass alone and passed in CI. The catalogue now also loads @motor-fix/overlays. |\n\n### Reproduction\n1. No object store on this machine (no Docker); every other check is ok. Environment limit, not the change.\n2. Run the pre-commit hook while two other heavy commands hold slots\n\nScreenshots: 32, one per route × viewport × scheme × language.\n"
+}
