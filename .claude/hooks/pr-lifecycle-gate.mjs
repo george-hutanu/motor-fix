@@ -5,8 +5,9 @@
 // its head commit), and then merged, not left for the user. On a story branch
 // (`NNN-slug`) the open PR must also be linked from its Notion story, which
 // `speckit-notion-sync pr` records in specs/<branch>/notion-sync.md. A PR
-// carries its stage as a label: `in development` while a draft, `in review`
-// once ready, `QA` while the PR tester runs.
+// carries its stage as a label: `planning` until /speckit-implement, then
+// `in development` while a draft, `in review` once ready, `QA` while the PR
+// tester runs.
 //
 // What it does NOT block: main or a detached HEAD, a branch with nothing ahead
 // of origin/main, a draft PR (the work is not done yet), a PR whose checks are
@@ -23,6 +24,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const IN_DEVELOPMENT = "in development";
+const DRAFT_LABELS = new Set(["planning", IN_DEVELOPMENT]);
 const IN_REVIEW = "in review";
 const READY_LABELS = new Set([IN_REVIEW, "QA"]);
 const GREEN = new Set(["SUCCESS", "NEUTRAL", "SKIPPED"]);
@@ -53,8 +55,8 @@ export function decide({ branch, ahead, unpushed, pr, prLinked = true, blocked =
     return `PR #${pr.number} is not linked from its Notion story. Write it to the story's PR property (speckit-notion-sync pr ${pr.number}); every story carries its own PR link from the moment the PR opens.`;
   if (pr.state === "OPEN" && pr.labels) {
     const has = (name) => pr.labels.some((l) => l.name === name);
-    if (pr.isDraft && !has(IN_DEVELOPMENT))
-      return `PR #${pr.number} is a draft without the "${IN_DEVELOPMENT}" label. Add it (gh pr edit ${pr.number} --add-label "${IN_DEVELOPMENT}"); every open PR shows its stage on GitHub.`;
+    if (pr.isDraft && ![...DRAFT_LABELS].some(has))
+      return `PR #${pr.number} is a draft without its stage label. Add "planning" before /speckit-implement or "${IN_DEVELOPMENT}" from it (gh pr edit ${pr.number} --add-label "${IN_DEVELOPMENT}"); every open PR shows its stage on GitHub.`;
     if (!pr.isDraft && ![...READY_LABELS].some(has))
       return `PR #${pr.number} is ready but has no "${IN_REVIEW}" or "QA" label. Swap it in (gh pr edit ${pr.number} --remove-label "${IN_DEVELOPMENT}" --add-label "${IN_REVIEW}"); every open PR shows its stage on GitHub.`;
   }

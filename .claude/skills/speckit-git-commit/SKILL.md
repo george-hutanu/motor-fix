@@ -83,7 +83,11 @@ auto_commit:
   NEVER push `main`. The merge happens once, at the task's hand-off, on green
   CI (AGENTS.md lifecycle step 5) — never mid-task.
 - **The first commit on a branch with no PR yet** opens it, in this order (the
-  task lifecycle in AGENTS.md):
+  task lifecycle in AGENTS.md). Under spec-kit this happens at the task's
+  start (`after_specify`), before planning commits anything: the first commit
+  is then an empty `git commit --allow-empty -m "chore(<scope>): ST-<n> start
+  <story title>"`, so the draft — and its `planning` label — exist from the
+  beginning:
   1. `speckit-notion-sync start`, so the story is In progress before the PR
      exists (idempotent; a no-op when it already is).
   2. Push with the upstream set, then open the PR as a **draft**, its body
@@ -95,14 +99,15 @@ auto_commit:
      # fill in what is known now: Why, Notion story, Spec folder; keep every heading
      GH_TOKEN=$(gh auth token -u george-hutanu) gh pr create --draft --base main \
        --head <branch> --title "<type>(<scope>): ST-<n> <story title>" \
-       --label "in development" \
+       --label planning \
        --body-file "${TMPDIR:-/tmp}/<branch>-pr-body.md"
      ```
 
      The title is a Conventional Commit carrying the story's ST number. Never
      `--body` or `--fill`: the `PR template` check fails a PR whose body drops
      a section. A draft only needs the headings; the rest is filled in before
-     it is marked ready.
+     it is marked ready. The label is `planning` before `/speckit-implement`
+     starts and `in development` from then on (`speckit-notion-sync`, §2b).
   3. `speckit-notion-sync pr <n>`: the PR's link goes onto the story's `PR`
      property. Every story links its own PR (Constitution VII).
 - Every later commit: `git push`. Marking the PR ready is not this skill's

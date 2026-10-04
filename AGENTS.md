@@ -33,9 +33,10 @@ epic or a plan, whether run through spec-kit or by hand.
   rule, Constitution VII, enforced by the `stop:pr-lifecycle` and
   `pre:bash:merge-gate` gates:
   1. Take the task and set it to In progress in Notion (`speckit-notion-sync start`).
-  2. Open a draft PR for its branch (`speckit-git-commit`, at the first commit),
+  2. Open a draft PR for its branch at the start (`speckit-git-commit`; before
+     planning has a commit, an empty `chore(<scope>): ST-<n> start …` one),
      its body made from `.github/pull_request_template.md`:
-     `gh pr create --draft --label "in development" --body-file <body>`, never
+     `gh pr create --draft --label planning --body-file <body>`, never
      `--body` or `--fill`.
      Then write the PR's link onto the task's `PR` property in Notion
      (`speckit-notion-sync pr <n>`): every task links its own PR.
@@ -72,7 +73,8 @@ epic or a plan, whether run through spec-kit or by hand.
   the task to Blocked with the reason as a Notion comment and a PR comment
   (`speckit-notion-sync blocked <reason>`); `speckit-notion-sync unblock`
   returns it to where it was. Each step also moves the PR's label —
-  `in development`, `in review`, `QA`, plus `blocked` — so GitHub shows the
+  `planning` until `/speckit-implement`, then `in development`, `in review`,
+  `QA`, plus `blocked` — so GitHub shows the
   same stage as Notion (table in `speckit-notion-sync`, §2b); the merge
   removes them all.
 

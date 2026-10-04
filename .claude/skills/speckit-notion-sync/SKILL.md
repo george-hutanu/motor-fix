@@ -133,14 +133,16 @@ GitHub shows the same stage as the board. Exactly one stage label at a time;
 
 | Event | Label change (`gh pr edit <n> …`) |
 | --- | --- |
-| `pr` (the draft opens) | `--add-label "in development"` (or `gh pr create --label`) |
+| `start` at the task's beginning (`after_specify`, or by hand) | if the branch has no PR, open the draft now, labelled `planning` (`speckit-git-commit`: empty first commit, push, `gh pr create --draft --label planning`), then `pr <n>` |
+| `start` at `before_implement` (`/speckit-implement` begins) | `--remove-label planning --add-label "in development"` |
 | `review` (marked ready) | `--remove-label "in development" --add-label "in review"` |
 | `qa` (PR tester starts) | `--remove-label "in review" --add-label QA` |
 | `blocked <reason>` | `--add-label blocked` (the stage label stays) |
 | `unblock` | `--remove-label blocked` |
-| `finish` (merged) | `--remove-label "in development" --remove-label "in review" --remove-label QA --remove-label blocked` — a merged PR carries no labels from this table; GitHub's Merged badge and the story's Done are the final state |
+| `finish` (merged) | `--remove-label planning --remove-label "in development" --remove-label "in review" --remove-label QA --remove-label blocked` — a merged PR carries no labels from this table; GitHub's Merged badge and the story's Done are the final state |
 
-A PR with no story (`chore-*`) gets the same labels; only the Notion writes
+A PR first opened at implement or later (work done by hand, with no planning
+phase) starts at `in development`. A PR with no story (`chore-*`) gets the same labels; only the Notion writes
 are skipped. Removing a label the PR does not have is harmless.
 
 ## 2c. `debt`: file deferred technical debt as tasks

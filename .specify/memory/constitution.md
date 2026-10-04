@@ -3,12 +3,13 @@ Sync Impact Report (v1.6.0)
 - Version change: 1.5.0 → 1.6.0 (MINOR: VII steps 1 and 3 expanded — every
   task carries the link to its own PR in Notion from the moment the draft
   opens, and every open PR carries its stage as a GitHub label —
-  `in development`, `in review`, `QA`, plus `blocked`; the stop:pr-lifecycle gate refuses an unlinked
+  `planning`, `in development`, `in review`, `QA`, plus `blocked`; the stop:pr-lifecycle gate refuses an unlinked
   story PR and an open PR without its stage label; nothing removed)
 - Source: owner decision 2026-10-04: "update each notion ticket with its own PR
   link … make it a hard rule" and "when a PR is in review, add a label", "and QA label as well", "in development as well", "and other
   labels that you think are useful" (→ `blocked`), "once merged, remove
-  labels";
+  labels", "planning label … for the beginning of the task until
+  speckit-implement";
   MotorFix stories gains a `PR` URL property, every existing story PR was
   backfilled, and the open ready PRs were labelled.
 - Templates:
@@ -211,7 +212,8 @@ Every task, current or future, runs this lifecycle on its own, and no step
 waits for the owner:
 
 1. Set the task In progress in Notion, then open a draft PR for its branch,
-   labelled `in development`,
+   labelled `planning` until `/speckit-implement` starts and `in development`
+   from then on,
    and write that PR's link onto the task's own `PR` property in Notion. Every
    story and task links its own PR; one opened later for the same task is
    added as a comment, never in place of the first.
@@ -236,7 +238,7 @@ waits for the owner:
 A task that cannot go on without something outside it is set Blocked, with the
 reason on the story and the PR and the PR's `blocked` label, and returns to
 its previous status when it resumes. An open PR always carries exactly one
-stage label (`in development`, `in review`, `QA`); the merge removes them all,
+stage label (`planning`, `in development`, `in review`, `QA`); the merge removes them all,
 `blocked` included.
 
 Rationale: the owner should not have to say when to open a PR or when to

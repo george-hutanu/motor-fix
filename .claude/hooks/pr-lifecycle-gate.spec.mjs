@@ -114,6 +114,15 @@ describe('PR lifecycle gate — the in review label', () => {
     assert.equal(decide(task({ branch: 'chore-x', pr: ready({ isDraft: true, labels: [{ name: 'in development' }] }) })), null);
   });
 
+  it('takes planning for a draft: the task has not reached implement yet', () => {
+    assert.equal(decide(task({ branch: 'chore-x', pr: ready({ isDraft: true, labels: [{ name: 'planning' }] }) })), null);
+    assert.match(decide(task({ branch: 'chore-x', pr: ready({ isDraft: true, labels: [] }) })), /"planning".*"in development"/);
+  });
+
+  it('does not take planning for a ready PR', () => {
+    assert.match(decide(task({ pr: ready({ labels: [{ name: 'planning' }] }) })), /add-label "in review"/);
+  });
+
   it('does not take in development for a ready PR', () => {
     assert.match(decide(task({ pr: ready({ labels: [{ name: 'in development' }] }) })), /add-label "in review"/);
   });
