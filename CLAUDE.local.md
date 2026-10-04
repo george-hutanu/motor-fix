@@ -31,7 +31,7 @@ recency window, and when sources disagree the latest one wins.
 Other entry points: `/speckit-assess-*` for raw ideas that aren't ready for a
 spec, `/speckit-bug-{assess,fix,test}` for bug reports, `/speckit-converge` to
 diff the codebase against a feature's artifacts and append the unbuilt work to
-`tasks.md`.
+`tasks.md`, `/speckit-watch` (repeat with `/loop 15m`) to restart stale worktrees.
 
 Branches use the generated `NNN-slug` form. Every gate resolves the active
 feature through `.specify/feature.json` (`.claude/scripts/lib/feature.mjs`).
@@ -90,6 +90,7 @@ node .claude/scripts/level.mjs                   # how much process this change 
 node .claude/scripts/impact.mjs FR-004           # what rests on a requirement before you change it
 node .claude/scripts/retro-evidence.mjs          # evidence for a feature retrospective
 node .claude/scripts/run-state.mjs               # where an unattended run stands
+node .claude/scripts/watch.mjs                   # every worktree: phase, live agent or not, PR, the fix if stale
 node .claude/scripts/context-audit.mjs           # whether this file still earns every line
 node .claude/scripts/jev.mjs check               # is the Jev lane reachable
 npm run test:harness                             # the harness's own specs

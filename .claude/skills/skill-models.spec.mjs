@@ -44,6 +44,7 @@ const MODELS = {
   'speckit-assess-shape': 'sonnet',
   'speckit-bug-test': 'sonnet',
   'speckit-taskstoissues': 'sonnet',
+  'speckit-watch': 'sonnet',
 
   'speckit-git-commit': 'haiku',
   'speckit-git-feature': 'haiku',

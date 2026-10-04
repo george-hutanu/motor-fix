@@ -143,9 +143,16 @@ decisions are the source for anything the constitution does not fix.
   never edited by hand). A lib is created by the story that first needs it.
 - Heavy commands (npm ci/install, nx build/test/typecheck/e2e, Jest over more
   than a few files, docker compose, Playwright, a boot-test-teardown run) go
-  through `scripts/heavy.sh` (3 slots machine-wide); a dev server
+  through `scripts/heavy.sh` (4 slots machine-wide); a dev server
   (`nx serve`) never holds a slot for as long as it lives, and mutation tests
-  never run locally, only in CI.
+  never run locally, only in CI. Up to 4 QA runs (`/speckit-pr-test`) may run
+  at the same time, each holding one slot.
+- Parallel work is watched: `node .claude/scripts/watch.mjs` lists every
+  worktree with its feature, phase, holder (a live agent or not), last
+  activity, PR and the one fix a stale item needs. `/speckit-watch` applies the
+  safe fixes and dispatches an agent per stale item (QA runs within the limit
+  above, at most 2 other agents at once); `/loop 15m /speckit-watch` repeats it
+  in a session that runs several tasks.
 - Lint and format: Biome only, root `biome.json` (no eslint, no prettier).
   Tests: Jest from the root config, Playwright for end-to-end. NestJS 12 is
   ESM-only, so the Nest projects' `test` targets run Jest with

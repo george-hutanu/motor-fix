@@ -147,6 +147,13 @@ At every phase boundary:
 node .claude/scripts/run-state.mjs set --status in-progress --phase <name> --feature <dir>
 ```
 
+Use exactly these phase names: `size`, `constitution`, `specify`, `context`,
+`clarify`, `plan`, `checklist`, `tasks`, `analyze`, `tests`, `implement`,
+`converge`, `harden`, `refresh`, `review`, `agent-context`, `retro`, `archive`,
+`hand-off`, `pr-test`, `merge`. `/speckit-watch` maps them to a stage
+(`.claude/scripts/watch.mjs`) and judges a worktree stale by that stage's
+threshold; any other name falls back to the feature's artifacts.
+
 On a Hard Stop, record the machine-readable reason instead of only writing prose
 into the run log — an orchestrator reads `.specify/run-state.json`, not the
 transcript:
