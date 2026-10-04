@@ -13,3 +13,9 @@
 - 2026-10-05 · qa · Foundations timeline ST-197 · Implementing → QA
 - 2026-10-05 · labels · PR #68 · QA
 - 2026-10-05 · debt · ST-197 · 3 tasks filed (To do)
+- 2026-10-05 · qa-lap · PR #68 lap 1 · agent-review success (0 blocking; report in pr-review/lap1)
+- 2026-10-05 · finish · ST-197 · QA → Done
+- 2026-10-05 · finish · Foundations timeline ST-197 · QA → Merged
+- 2026-10-05 · finish · EP-1 Foundations · In progress (unchanged; stories still open)
+- 2026-10-05 · comment · ST-197 · posted (12 items)
+- 2026-10-05 · ready · Foundations · +ST-392 +ST-200 +ST-201 (ST-198 still waits on ST-392, ST-196; stories SQL quota hit, pages read by fetch)
