@@ -324,13 +324,13 @@ describe('sign-in input at its limits', () => {
     expect(res.status).toBe(400);
   });
 
-  it('answers 400 for a plain-text body', async () => {
+  it('answers 415 for a plain-text body', async () => {
     const text = await request(app.getHttpServer())
       .post('/auth/sign-in')
       .type('text/plain')
       .send('email=a@example.test&password=x');
 
-    expect(text.status).toBe(400);
+    expect(text.status).toBe(415);
   });
 
   it('refuses a null password and a null e-mail with 400', async () => {

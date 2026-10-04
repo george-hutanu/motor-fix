@@ -15,6 +15,8 @@ import { authControllerSignIn } from '../fn/auth/auth-controller-sign-in';
 import { AuthControllerSignIn$Params } from '../fn/auth/auth-controller-sign-in';
 import { authControllerSignOut } from '../fn/auth/auth-controller-sign-out';
 import { AuthControllerSignOut$Params } from '../fn/auth/auth-controller-sign-out';
+import { authControllerSignUp } from '../fn/auth/auth-controller-sign-up';
+import { AuthControllerSignUp$Params } from '../fn/auth/auth-controller-sign-up';
 import { SessionDto } from '../models/session-dto';
 
 @Injectable({ providedIn: 'root' })
@@ -45,6 +47,31 @@ export class AuthService extends BaseService {
    */
   authControllerSignIn(params: AuthControllerSignIn$Params, context?: HttpContext): Promise<SessionDto> {
     const resp = this.authControllerSignIn$Response(params, context);
+    return resp.then((r: StrictHttpResponse<SessionDto>): SessionDto => r.body);
+  }
+
+  /** Path part for operation `authControllerSignUp()` */
+  static readonly AuthControllerSignUpPath = '/api/v1/auth/sign-up';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `authControllerSignUp()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  authControllerSignUp$Response(params: AuthControllerSignUp$Params, context?: HttpContext): Promise<StrictHttpResponse<SessionDto>> {
+    const obs = authControllerSignUp(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `authControllerSignUp$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  authControllerSignUp(params: AuthControllerSignUp$Params, context?: HttpContext): Promise<SessionDto> {
+    const resp = this.authControllerSignUp$Response(params, context);
     return resp.then((r: StrictHttpResponse<SessionDto>): SessionDto => r.body);
   }
 

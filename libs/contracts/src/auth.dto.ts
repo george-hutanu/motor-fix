@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsBoolean,
+  IsIn,
   IsOptional,
   IsString,
   Length,
@@ -31,6 +32,43 @@ export class SignInDto {
   @IsOptional()
   @IsBoolean()
   remember?: boolean;
+}
+
+const trimmed = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.trim() : value;
+
+export class SignUpDto {
+  @ApiProperty({ description: 'Trimmed', maxLength: 80, minLength: 2 })
+  @Transform(trimmed)
+  @IsString()
+  @Length(2, 80)
+  @Matches(/^\P{Cc}*$/u, { message: 'name must not hold control characters' })
+  name!: string;
+
+  @ApiProperty({
+    description: 'Trimmed; stored and compared in lower case',
+    maxLength: 254,
+  })
+  @Transform(trimmed)
+  @IsString()
+  @Length(3, 254)
+  @Matches(/^[^\s@\p{Cc}]+@[^\s@\p{Cc}]+\.[^\s@\p{Cc}]+$/u, {
+    message: 'email must look like an address',
+  })
+  email!: string;
+
+  @ApiProperty({
+    description: '8 to 128 characters, not a common password',
+    maxLength: 1024,
+    minLength: 1,
+  })
+  @IsString()
+  @Length(1, 1024)
+  password!: string;
+
+  @ApiProperty({ description: 'The interface language', enum: ['ro', 'en'] })
+  @IsIn(['ro', 'en'])
+  language!: 'ro' | 'en';
 }
 
 export class SessionDto {

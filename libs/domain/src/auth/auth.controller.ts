@@ -1,18 +1,27 @@
-import { SessionDto, SignInDto } from '@motor-fix/contracts';
+import { SessionDto, SignInDto, SignUpDto } from '@motor-fix/contracts';
 import {
   Body,
+  type CanActivate,
   Controller,
+  type ExecutionContext,
   HttpCode,
   HttpException,
   HttpStatus,
   Post,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { CookieOptions, Request, Response } from 'express';
 
 import { type Issued, REMEMBERED_MS, SignInService } from './sign-in.service';
+import { SignUpService } from './sign-up.service';
 
 const COOKIE = 'mf_refresh';
 
@@ -42,12 +51,46 @@ function keep(res: Response, issued: Issued) {
 
 const forget = (res: Response) => res.clearCookie(COOKIE, FLAGS);
 
+const PROTOTYPE_KEYS = ['__proto__', 'constructor', 'prototype'];
+
+// A cross-site form can post urlencoded or plain text, never JSON, so another
+// site cannot sign this browser into an account it chose. A guard, so it
+// answers before the body is validated, whatever the body holds; and a key
+// that names the prototype chain is no field of any body.
+class JsonOnly implements CanActivate {
+  canActivate(context: ExecutionContext) {
+    const req = context.switchToHttp().getRequest<Request>();
+    if (!req.is('application/json')) {
+      throw new HttpException(
+        { code: 'unsupported_media_type', message: 'Send JSON' },
+        HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+      );
+    }
+    const body: unknown = req.body;
+    if (
+      typeof body === 'object' &&
+      body !== null &&
+      PROTOTYPE_KEYS.some((key) => Object.hasOwn(body, key))
+    ) {
+      throw new HttpException(
+        { code: 'validation_failed', message: 'Unexpected field' },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return true;
+  }
+}
+
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly signIns: SignInService) {}
+  constructor(
+    private readonly signIns: SignInService,
+    private readonly signUps: SignUpService,
+  ) {}
 
   @Post('sign-in')
+  @UseGuards(JsonOnly)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: SessionDto })
   async signIn(
@@ -55,15 +98,21 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<SessionDto> {
-    // A cross-site form can post urlencoded or plain text, never JSON, so
-    // another site cannot sign this browser into an account it chose.
-    if (!req.is('application/json')) {
-      throw new HttpException(
-        { code: 'unsupported_media_type', message: 'Send JSON' },
-        HttpStatus.UNSUPPORTED_MEDIA_TYPE,
-      );
-    }
     const issued = await this.signIns.signIn(body, req.ip ?? '');
+    keep(res, issued);
+    return { accessToken: issued.accessToken };
+  }
+
+  @Post('sign-up')
+  @UseGuards(JsonOnly)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiCreatedResponse({ type: SessionDto })
+  async signUp(
+    @Body() body: SignUpDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<SessionDto> {
+    const issued = await this.signUps.signUp(body, req.ip ?? '');
     keep(res, issued);
     return { accessToken: issued.accessToken };
   }
