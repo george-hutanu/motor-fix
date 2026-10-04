@@ -1,15 +1,10 @@
 import { Component, computed, Injectable, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import {
-  NavigationEnd,
-  PRIMARY_OUTLET,
-  Router,
-  RouterLink,
-  type UrlTree,
-} from '@angular/router';
+import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { filter } from 'rxjs';
 
+import { segmentsOf } from '../addresses';
 import { SignInDialog } from '../sign-in/sign-in-dialog';
 
 type Tab = 'search' | 'garages' | 'account';
@@ -46,9 +41,6 @@ const takesText = (target: EventTarget | null) =>
 class LastBrand {
   readonly value = signal<string | null>(null);
 }
-
-const segmentsOf = (tree: UrlTree) =>
-  tree.root.children[PRIMARY_OUTLET]?.segments.map((s) => s.path) ?? [];
 
 @Component({
   host: {

@@ -73,7 +73,7 @@ test.describe('creating an account for real @seeded', () => {
 
     await expect(page).toHaveURL('/app/driver');
     await expect(
-      page.getByRole('navigation', { name: 'Meniu' }).getByRole('button', {
+      page.getByRole('navigation', { name: 'Meniu' }).getByRole('link', {
         exact: true,
         name: 'Mașinile mele',
       }),
@@ -158,7 +158,7 @@ test.describe('creating an account for real @seeded', () => {
 
     await expect(page).toHaveURL('/app/driver');
     await expect(
-      page.getByRole('navigation', { name: 'Menu' }).getByRole('button', {
+      page.getByRole('navigation', { name: 'Menu' }).getByRole('link', {
         exact: true,
         name: 'My cars',
       }),

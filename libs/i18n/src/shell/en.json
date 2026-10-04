@@ -38,6 +38,11 @@
       "driver": "Driver",
       "garage": "Garage"
     },
+    "bar": {
+      "admin": "Admin dashboard",
+      "driver": "Driver dashboard",
+      "garage": "Garage dashboard"
+    },
     "empty": "Nothing here yet.",
     "home": "MotorFix, home page",
     "logo": "MOTORFIX",
@@ -67,7 +72,23 @@
         "team": "Mechanics"
       }
     },
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "tab": {
+      "brands": "Brands",
+      "cars": "Cars",
+      "dashboard": "Home",
+      "garages": "Garages",
+      "prices": "Prices",
+      "profile": "Profile",
+      "reported": "Reported",
+      "requests": "Requests",
+      "reviews": "Reviews",
+      "saved": "Saved",
+      "schedule": "Schedule",
+      "settings": "Settings",
+      "team": "Team",
+      "users": "Users"
+    }
   },
   "gauge": {
     "none": "No reviews yet",
