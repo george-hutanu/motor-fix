@@ -5,9 +5,11 @@
 // its head commit), and then merged, not left for the user. On a story branch
 // (`NNN-slug`) the open PR must also be linked from its Notion story, which
 // `speckit-notion-sync pr` records in specs/<branch>/notion-sync.md. A PR
-// carries its stage as a label: `planning` until /speckit-implement, then
-// `in development` while a draft, `in review` once ready, `QA` while the PR
-// tester runs. It also carries its type, read off the Conventional Commit
+// carries exactly one stage label, and one that fits its draft state:
+// `planning` until /speckit-implement, then `in development` while a draft,
+// `in review` once ready, `QA` while the PR tester runs. Where it carries
+// several, the furthest fitting one is kept: stages only move forward. It
+// also carries its type, read off the Conventional Commit
 // title: `feature`, `bug`, `tech debt`, `performance`, `documentation`,
 // `tests` or `tooling`, and `breaking` when the title carries a `!`.
 //
@@ -29,7 +31,20 @@ const IN_DEVELOPMENT = "in development";
 const DRAFT_LABELS = new Set(["planning", IN_DEVELOPMENT]);
 const IN_REVIEW = "in review";
 const READY_LABELS = new Set([IN_REVIEW, "QA"]);
+const STAGES = [...DRAFT_LABELS, ...READY_LABELS];
 const GREEN = new Set(["SUCCESS", "NEUTRAL", "SKIPPED"]);
+
+/** The `gh pr edit` that leaves an open PR one stage label fitting its draft state, or null when it has that. */
+function stageFix(pr) {
+  const fits = pr.isDraft ? DRAFT_LABELS : READY_LABELS;
+  const present = STAGES.filter((stage) => pr.labels.some((l) => l.name === stage));
+  const fitting = present.filter((stage) => fits.has(stage));
+  if (present.length === 1 && fitting.length === 1) return null;
+  const keep = fitting.at(-1) ?? (pr.isDraft ? IN_DEVELOPMENT : IN_REVIEW);
+  const args = present.filter((stage) => stage !== keep).map((stage) => `--remove-label "${stage}"`);
+  if (fitting.length === 0) args.push(`--add-label "${keep}"`);
+  return { present, fitting, keep, edit: `gh pr edit ${pr.number} ${args.join(" ")}` };
+}
 
 /** Every check concluded green; an empty rollup is not green. */
 export function allGreen(checks) {
@@ -75,10 +90,13 @@ export function decide({ branch, ahead, unpushed, pr, prLinked = true, blocked =
     return `PR #${pr.number} is not linked from its Notion story. Write it to the story's PR property (speckit-notion-sync pr ${pr.number}); every story carries its own PR link from the moment the PR opens.`;
   if (pr.state === "OPEN" && pr.labels) {
     const has = (name) => pr.labels.some((l) => l.name === name);
-    if (pr.isDraft && ![...DRAFT_LABELS].some(has))
-      return `PR #${pr.number} is a draft without its stage label. Add "planning" before /speckit-implement or "${IN_DEVELOPMENT}" from it (gh pr edit ${pr.number} --add-label "${IN_DEVELOPMENT}"); every open PR shows its stage on GitHub.`;
-    if (!pr.isDraft && ![...READY_LABELS].some(has))
-      return `PR #${pr.number} is ready but has no "${IN_REVIEW}" or "QA" label. Swap it in (gh pr edit ${pr.number} --remove-label "${IN_DEVELOPMENT}" --add-label "${IN_REVIEW}"); every open PR shows its stage on GitHub.`;
+    const fix = stageFix(pr);
+    if (fix?.fitting.length)
+      return `PR #${pr.number} carries more than one stage label (${fix.present.join(", ")}); an open PR carries exactly one. Keep "${fix.keep}" (${fix.edit}); every open PR shows its one stage on GitHub.`;
+    if (fix && pr.isDraft)
+      return `PR #${pr.number} is a draft without its stage label${fix.present.length ? ` (it carries ${fix.present.join(", ")})` : ""}. Add "planning" before /speckit-implement or "${IN_DEVELOPMENT}" from it (${fix.edit}); every open PR shows its stage on GitHub.`;
+    if (fix)
+      return `PR #${pr.number} is ready but has no "${IN_REVIEW}" or "QA" label. Swap it in (${fix.edit}); every open PR shows its stage on GitHub.`;
     const type = typeLabel(pr.title);
     if (type && !has(type))
       return `PR #${pr.number} has no "${type}" label for its title's type. Add it (gh pr edit ${pr.number} --add-label "${type}"); every open PR shows its type on GitHub.`;

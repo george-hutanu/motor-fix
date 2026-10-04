@@ -47,15 +47,15 @@ epic or a plan, whether run through spec-kit or by hand.
      CRITICAL/HIGH left), fill in every section of the template
      (`node scripts/pr-body-check.ts --body-file <body> --title "<title>"`
      passes, then `gh pr edit <n> --body-file <body>`), mark the PR ready for
-     review (`gh pr ready`), swap its label to `in review`
-     (`gh pr edit <n> --remove-label "in development" --add-label "in review"`) and set the task to In review in Notion
-     (`speckit-notion-sync review`).
+     review (`gh pr ready`) and set the task to In review
+     (`speckit-notion-sync review`, which also sets the PR's one stage label
+     to `in review`).
   5. Get CI green: merge `origin/main` into the branch if it is behind and
      push, wait for the checks (`gh pr checks <n> --watch`); a failing check is
      fixed on the branch and waited for again.
   6. QA: run the PR tester (`/speckit-pr-test <n>`, the `pr-tester` subagent)
-     and set the task to QA (`speckit-notion-sync qa`; the PR's `in review`
-     label becomes `QA`). It boots the PR head in
+     and set the task to QA (`speckit-notion-sync qa`, which also sets the
+     PR's one stage label to `QA`). It boots the PR head in
      its own worktree, tests it in a browser and against the API, reviews the
      diff, posts a review, fills the template's "Agent review" section and sets
      the `agent-review` status on the head commit. Fix every blocking finding
