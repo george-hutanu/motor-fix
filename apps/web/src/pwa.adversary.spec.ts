@@ -125,7 +125,7 @@ describe('service worker as the build will generate it', () => {
 });
 
 describe('manifest under hostile reading', () => {
-  it('is valid JSON with only string and object values the browser accepts', () => {
+  it('carries only the expected members, with six-digit hex colours', () => {
     expect(Object.keys(manifest).sort()).toEqual([
       'background_color',
       'display',

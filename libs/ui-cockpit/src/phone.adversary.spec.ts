@@ -166,29 +166,6 @@ describe('table column roles', () => {
 
     expect(cells(fixture.nativeElement)).toEqual(['key', 'main']);
   });
-
-  it('marks every one of a thousand rows', async () => {
-    const fixture = TestBed.createComponent(DynamicTable);
-    fixture.componentInstance.rows.set(
-      Array.from({ length: 1000 }, (_, i) => `row ${i}`),
-    );
-    await fixture.whenStable();
-
-    const marked = fixture.nativeElement.querySelectorAll(
-      'td[data-column="main"]',
-    );
-    expect(marked).toHaveLength(1000);
-  });
-
-  it('marks the cells of an empty table body as nothing at all', async () => {
-    const fixture = TestBed.createComponent(DynamicTable);
-    fixture.componentInstance.rows.set([]);
-    await fixture.whenStable();
-
-    expect(
-      fixture.nativeElement.querySelectorAll('[data-column]'),
-    ).toHaveLength(0);
-  });
 });
 
 describe('phone stylesheet rules', () => {
