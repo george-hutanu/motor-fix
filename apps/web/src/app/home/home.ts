@@ -11,7 +11,7 @@ import {
   TransferState,
 } from '@angular/core';
 import { HealthReadyDto, HealthService } from '@motor-fix/data-access';
-import { I18n, TranslatePipe } from '@motor-fix/i18n';
+import { I18n, LanguageSwitch, TranslatePipe } from '@motor-fix/i18n';
 
 export const HEALTH = makeStateKey<HealthReadyDto | null>('health');
 
@@ -23,10 +23,10 @@ const report = (error: unknown) =>
     : null;
 
 @Component({
-  imports: [TranslatePipe],
+  imports: [LanguageSwitch, TranslatePipe],
   selector: 'mf-home',
   template: `
-    <h1>{{ 'shell.brand' | t }}</h1>
+    <header><h1>{{ 'shell.brand' | t }}</h1><mf-language-switch /></header>
     <p>{{ health()?.version ?? ('shell.version.unknown' | t) }}</p>
     <p>{{ 'shell.health.status' | t: checks() }}</p>
   `,

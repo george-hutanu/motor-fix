@@ -50,4 +50,20 @@ describe('Home', () => {
     expect(text).toContain('version unknown');
     expect(text).toContain('PostgreSQL: unknown · Redis: unknown');
   });
+
+  it('has the language switch in its header, and EN turns the page English', async () => {
+    const fixture = TestBed.createComponent(Home);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+
+    const en = [
+      ...element.querySelectorAll('header [role="group"] button'),
+    ].find((b) => b.textContent?.trim() === 'EN') as HTMLButtonElement;
+    en.click();
+    await new Promise((resolve) => setTimeout(resolve));
+    await fixture.whenStable();
+
+    expect(element.textContent).toContain('version unknown');
+    expect(en.getAttribute('aria-pressed')).toBe('true');
+  });
 });

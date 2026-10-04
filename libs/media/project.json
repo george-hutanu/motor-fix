@@ -5,6 +5,7 @@
   "sourceRoot": "libs/media/src",
   "tags": [],
   "targets": {
+    "test:mutation": {},
     "typecheck": {
       "cache": true,
       "command": "tsc --noEmit -p libs/media/tsconfig.lib.json && tsc --noEmit -p libs/media/tsconfig.spec.json"

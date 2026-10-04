@@ -22,6 +22,7 @@
         }
       ]
     },
+    "test:mutation": {},
     "typecheck": {
       "cache": true,
       "command": "ngc --noEmit -p libs/i18n/tsconfig.lib.json && tsc --noEmit -p libs/i18n/tsconfig.spec.json"

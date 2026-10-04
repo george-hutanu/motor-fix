@@ -182,7 +182,7 @@ export function checkSkillsAndAgents(repo) {
   return out;
 }
 
-/** Workspace dirs (relative) that carry a stryker.config.json; "." for a root one. */
+/** Project dirs (relative) that carry a stryker.config.json; "." for a root one. */
 export function strykerOwners(repo) {
   if (existsSync(join(repo, "stryker.config.json"))) return ["."];
   const owners = [];
@@ -193,15 +193,23 @@ export function strykerOwners(repo) {
       if (existsSync(join(dir, pkg, "stryker.config.json"))) owners.push(`${group}/${pkg}`);
     }
   }
+  if (existsSync(join(repo, "scripts", "stryker.config.json"))) owners.push("scripts");
   return owners;
 }
+
+/** An npm workspace owns its run through a script, an Nx project through a target. */
+const ownsMutationRun = (repo, owner) =>
+  Boolean(
+    readJson(join(repo, owner, "package.json"))?.scripts?.["test:mutation"] ??
+      readJson(join(repo, owner, "project.json"))?.targets?.["test:mutation"],
+  );
 
 export function checkCommands(repo) {
   const out = [];
   const pkg = readJson(join(repo, "package.json")) ?? {};
   // This repo drives the harness by path rather than by npm script: the root
   // manifest carries only the turbo-level commands, mutation lives in the
-  // workspace that owns it (apps/server, apps/scanner), and the matrix and the
+  // project that owns it (an Nx `test:mutation` target), and the matrix and the
   // audits are `node .claude/scripts/<x>.mjs`. So check both halves.
   // The three `.husky/pre-commit` runs, and nothing else: this check exists to
   // notice a gate that can no longer fire, not to inventory the manifest. A
@@ -241,15 +249,15 @@ export function checkCommands(repo) {
   // somewhere else. A repo with no stryker config owns no mutation run, which
   // is a fact about the repo, not a defect in the harness.
   const mutationOwners = strykerOwners(repo);
-  const noMutation = mutationOwners.filter((w) => !(readJson(join(repo, w, "package.json"))?.scripts ?? {})["test:mutation"]);
+  const noMutation = mutationOwners.filter((w) => !ownsMutationRun(repo, w));
   out.push({
     name: "commands/mutation",
     status: noMutation.length ? WARN : OK,
     detail: !mutationOwners.length
       ? "no stryker config in this repo — nothing owns a mutation run"
       : noMutation.length
-        ? `no test:mutation script in: ${noMutation.join(", ")}`
-        : `${mutationOwners.length} workspace(s) carry their own mutation run`,
+        ? `no test:mutation script or target in: ${noMutation.join(", ")}`
+        : `${mutationOwners.length} project(s) carry their own mutation run`,
   });
 
   const settings = readJson(join(repo, ".claude", "settings.json")) ?? {};

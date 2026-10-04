@@ -28,6 +28,7 @@
         "passWithNoTests": true
       }
     },
+    "test:mutation": {},
     "typecheck": {
       "cache": true,
       "command": "tsc --noEmit -p apps/worker/tsconfig.app.json && tsc --noEmit -p apps/worker/tsconfig.spec.json"
