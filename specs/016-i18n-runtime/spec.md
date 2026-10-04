@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-16 Set up translation files and runtime language switching (Notion story ST-16, epic Foundations EP-1). Romanian and English, switch at runtime with no reload, in the Angular SSR web app. One ro.json/en.json pair per area so parallel lanes never share one translation file."
 
