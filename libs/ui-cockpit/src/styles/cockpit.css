@@ -1,0 +1,105 @@
+@import "@fontsource/michroma/index.css";
+@import "@fontsource-variable/hanken-grotesk/index.css";
+
+:root {
+  color-scheme: dark;
+
+  --mf-bg: #0b0c0e;
+  --mf-panel: #101215;
+  --mf-panel-raised: #15171a;
+  --mf-line: #2a2d31;
+  --mf-line-strong: #4a4e55;
+  --mf-text: #f2f2f0;
+  --mf-text-secondary: #b5b8be;
+  --mf-amber: #ffb000;
+  --mf-amber-hover: #ffc94d;
+  --mf-on-amber: #0b0c0e;
+  --mf-amber-ink: #ffb000;
+  --mf-amber-tint: rgba(255, 176, 0, 0.1);
+  --mf-green: #32d74b;
+  --mf-red: #ff5a4f;
+  --mf-focus: #ffb000;
+  --mf-mask: rgba(0, 0, 0, 0.6);
+
+  --mf-font-label: "Michroma", "Hanken Grotesk Variable", system-ui, sans-serif;
+  --mf-font-body: "Hanken Grotesk Variable", system-ui, sans-serif;
+  --mf-size-label: 12px;
+  --mf-size-small: 13px;
+  --mf-size-body: 15px;
+  --mf-size-field: 16px;
+  --mf-label-tracking: 0.14em;
+
+  --mf-space-1: 4px;
+  --mf-space-2: 8px;
+  --mf-space-3: 12px;
+  --mf-space-4: 16px;
+  --mf-space-5: 20px;
+  --mf-space-6: 24px;
+  --mf-space-8: 32px;
+
+  --mf-radius-panel: 20px;
+  --mf-radius-control: 12px;
+  --mf-radius-chip: 10px;
+
+  --mf-focus-width: 3px;
+  --mf-focus-offset: 3px;
+  --mf-tap: 44px;
+}
+
+/* The light set is derived from the dark one and awaits the owner's approval. */
+@media (prefers-color-scheme: light), print {
+  :root {
+    color-scheme: light;
+
+    --mf-bg: #f4f4f1;
+    --mf-panel: #ffffff;
+    --mf-panel-raised: #ecece8;
+    --mf-line: #d3d5d8;
+    --mf-line-strong: #9a9ea5;
+    --mf-text: #15171a;
+    --mf-text-secondary: #50545b;
+    --mf-amber: #ffb000;
+    --mf-amber-hover: #ffc94d;
+    --mf-on-amber: #15171a;
+    --mf-amber-ink: #8a5e00;
+    --mf-amber-tint: rgba(138, 94, 0, 0.1);
+    --mf-green: #1e8e34;
+    --mf-red: #d93a30;
+    --mf-focus: #8a5e00;
+    --mf-mask: rgba(0, 0, 0, 0.4);
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--mf-bg);
+  color: var(--mf-text);
+  font-family: var(--mf-font-body);
+  font-size: var(--mf-size-body);
+  line-height: 1.45;
+}
+
+.mf-label {
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  font-weight: 400;
+  letter-spacing: var(--mf-label-tracking);
+  text-transform: uppercase;
+}
+
+:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
+
+.p-button,
+.p-inputtext,
+.p-tab {
+  min-height: var(--mf-tap);
+}
+
+/* The switch stays small; its hidden input is the tap target. */
+.p-toggleswitch .p-toggleswitch-input {
+  top: calc((100% - var(--mf-tap)) / 2);
+  height: var(--mf-tap);
+}
