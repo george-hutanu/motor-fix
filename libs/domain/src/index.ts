@@ -5,5 +5,8 @@ export { AuthModule } from './auth/auth.module';
 export { type Actor, assertGarage, assertOwner } from './auth/policy';
 export * from './health/health.module';
 export * from './logging';
+export { emailConfig } from './notifications/email-config';
+export { NotificationsModule } from './notifications/notifications.module';
+export { NotificationsService } from './notifications/notifications.service';
 export * from './storage/storage.module';
 export { type SignedUpload, StorageService } from './storage/storage.service';

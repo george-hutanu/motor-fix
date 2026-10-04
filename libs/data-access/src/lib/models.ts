@@ -10,4 +10,6 @@ export type { HealthReadyDto } from './models/health-ready-dto';
 export type { MeDto } from './models/me-dto';
 export type { SessionDto } from './models/session-dto';
 export type { SignInDto } from './models/sign-in-dto';
+export type { TestMessageDto } from './models/test-message-dto';
+export type { TestMessageQueuedDto } from './models/test-message-queued-dto';
 export type { UpdateMeDto } from './models/update-me-dto';

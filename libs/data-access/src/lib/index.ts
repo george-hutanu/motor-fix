@@ -16,12 +16,15 @@ export type { HealthReadyDto } from './models/health-ready-dto';
 export type { MeDto } from './models/me-dto';
 export type { SessionDto } from './models/session-dto';
 export type { SignInDto } from './models/sign-in-dto';
+export type { TestMessageDto } from './models/test-message-dto';
+export type { TestMessageQueuedDto } from './models/test-message-queued-dto';
 export type { UpdateMeDto } from './models/update-me-dto';
 export { BaseService } from './base-service';
 export { HealthService } from './services/health.service';
 export { AuthService } from './services/auth.service';
 export { MeService } from './services/me.service';
 export { AuditHistoryService } from './services/audit-history.service';
+export { NotificationsService } from './services/notifications.service';
 
 export type { HealthControllerLive$Params as HealthControllerLive$Params } from './fn/health/health-controller-live';
 export { healthControllerLive as healthControllerLive } from './fn/health/health-controller-live';
@@ -39,3 +42,5 @@ export type { MeControllerUpdate$Params as MeControllerUpdate$Params } from './f
 export { meControllerUpdate as meControllerUpdate } from './fn/me/me-controller-update';
 export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Params } from './fn/audit-history/audit-history-controller-list';
 export { auditHistoryControllerList as auditHistoryControllerList } from './fn/audit-history/audit-history-controller-list';
+export type { NotificationsControllerTest$Params as NotificationsControllerTest$Params } from './fn/notifications/notifications-controller-test';
+export { notificationsControllerTest as notificationsControllerTest } from './fn/notifications/notifications-controller-test';

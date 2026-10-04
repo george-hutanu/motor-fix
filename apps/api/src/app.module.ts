@@ -1,5 +1,11 @@
 import type { Env, StorageEnv } from '@motor-fix/contracts';
-import { AuthModule, HealthModule, StorageModule } from '@motor-fix/domain';
+import {
+  AuthModule,
+  emailConfig,
+  HealthModule,
+  NotificationsModule,
+  StorageModule,
+} from '@motor-fix/domain';
 import { DynamicModule, Module } from '@nestjs/common';
 
 type ApiEnv = Env<'DATABASE_URL' | 'REDIS_URL' | 'AUTH_TOKEN_SECRET'> &
@@ -8,6 +14,11 @@ type ApiEnv = Env<'DATABASE_URL' | 'REDIS_URL' | 'AUTH_TOKEN_SECRET'> &
 @Module({})
 export class AppModule {
   static register(env: ApiEnv): DynamicModule {
+    const auth = AuthModule.register({
+      databaseUrl: env.DATABASE_URL,
+      redisUrl: env.REDIS_URL,
+      tokenSecret: env.AUTH_TOKEN_SECRET,
+    });
     return {
       imports: [
         HealthModule.register({
@@ -16,11 +27,15 @@ export class AppModule {
           version: env.RELEASE_SHA,
         }),
         StorageModule.register(env),
-        AuthModule.register({
-          databaseUrl: env.DATABASE_URL,
-          redisUrl: env.REDIS_URL,
-          tokenSecret: env.AUTH_TOKEN_SECRET,
-        }),
+        auth,
+        NotificationsModule.register(
+          {
+            databaseUrl: env.DATABASE_URL,
+            email: emailConfig(env.APP_ENV, process.env),
+            redisUrl: env.REDIS_URL,
+          },
+          auth,
+        ),
       ],
       module: AppModule,
     };

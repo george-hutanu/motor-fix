@@ -1,0 +1,347 @@
+import { randomUUID } from 'node:crypto';
+
+import {
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
+import type { JobsOptions } from 'bullmq';
+
+import {
+  type NotificationType,
+  notificationType,
+  sendsEmail,
+} from './catalogue';
+import { blockedReason, type EmailConfig } from './email-config';
+import { isQuiet, nextMorning } from './quiet-hours';
+import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
+import type {
+  Notification,
+  Prisma,
+  PrismaClient,
+} from '../generated/prisma/client';
+
+export const NOTIFICATIONS_QUEUE = 'notifications';
+export const NOTIFICATIONS_CONFIG = Symbol('NOTIFICATIONS_CONFIG');
+export const NOTIFICATIONS_PRISMA = Symbol('NOTIFICATIONS_PRISMA');
+export const NOTIFICATIONS_JOBS = Symbol('NOTIFICATIONS_JOBS');
+export const LIVE_PUBLISHER = Symbol('LIVE_PUBLISHER');
+export const EMAIL_FALLBACK = Symbol('EMAIL_FALLBACK');
+
+// The live connection's channel and message shape (one Redis channel; each
+// API copy writes an event to the streams in its audience).
+const LIVE_CHANNEL = 'live:events';
+
+export const RETRY_MINUTES = [1, 5, 15, 60, 240];
+const WINDOW_MS = 5 * 60_000;
+
+const JOB: JobsOptions = {
+  attempts: RETRY_MINUTES.length + 1,
+  backoff: { type: 'custom' },
+  removeOnComplete: true,
+  removeOnFail: 1000,
+};
+
+// Called when an e-mail fails for good; the push channel takes over here.
+export type EmailFallback = (row: Notification) => Promise<void>;
+
+export interface Jobs {
+  add(name: string, data: unknown, options: JobsOptions): Promise<unknown>;
+}
+
+export interface Publisher {
+  publish(channel: string, message: string): Promise<unknown>;
+}
+
+export interface NotifyInput {
+  kind: string;
+  recipients: readonly string[];
+  eventId: string;
+  subjectId?: string | null;
+  params?: Record<string, unknown>;
+}
+
+interface NextJob {
+  name: 'send' | 'flush';
+  data: { id: string } | { leaderId: string };
+  jobId: string;
+  delay: number;
+}
+
+const send = (id: string): NextJob => ({
+  data: { id },
+  delay: 0,
+  jobId: `send-${id}`,
+  name: 'send',
+});
+
+@Injectable()
+export class NotificationsService {
+  private readonly logger = new Logger('Notifications');
+  now = () => new Date();
+
+  constructor(
+    @Inject(NOTIFICATIONS_PRISMA) private readonly prisma: PrismaClient,
+    @Inject(NOTIFICATIONS_JOBS) private readonly jobs: Jobs,
+    @Inject(LIVE_PUBLISHER) private readonly publisher: Publisher,
+    @Inject(NOTIFICATIONS_CONFIG) private readonly config: EmailConfig,
+    @Inject(EMAIL_FALLBACK) private readonly fallback: EmailFallback,
+    @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+  ) {}
+
+  async notify(input: NotifyInput): Promise<void> {
+    const type = notificationType(input.kind);
+    for (const accountId of new Set(input.recipients)) {
+      const at = this.now();
+      const written = await this.prisma.$transaction((tx) =>
+        this.build(tx, type, input, accountId, at),
+      );
+      if (!written) continue;
+      await this.announce(written.bell);
+      if (written.next) await this.queue(written.next);
+    }
+  }
+
+  sendAccountEmail(input: {
+    accountId: string;
+    purpose: 'email_check' | 'password_reset';
+    link: string;
+  }): Promise<void> {
+    return this.notify({
+      eventId: randomUUID(),
+      kind: 'ACCOUNT_EMAIL',
+      params: { link: input.link, purpose: input.purpose },
+      recipients: [input.accountId],
+      subjectId: input.accountId,
+    });
+  }
+
+  async sendTestMessage(accountIds: readonly string[]): Promise<number> {
+    const found = await this.prisma.account.count({
+      where: { id: { in: [...accountIds] }, status: { not: 'deleted' } },
+    });
+    if (found !== new Set(accountIds).size) {
+      throw new HttpException(
+        {
+          code: 'unknown_recipient',
+          message: 'Every recipient must be an existing account',
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const eventId = randomUUID();
+    for (const accountId of accountIds) {
+      await this.notify({
+        eventId,
+        kind: 'TEST_MESSAGE',
+        recipients: [accountId],
+        subjectId: accountId,
+      });
+    }
+    return accountIds.length;
+  }
+
+  // A held row reaching its 08:00: it goes through the grouping rule as if
+  // it had just been built. Answers whether the caller should send it now.
+  async release(row: Notification): Promise<boolean> {
+    const at = this.now();
+    const next = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${row.kind}:${row.accountId}`}))`;
+      const released = await tx.notification.update({
+        data: { sendAfter: at, status: 'queued' },
+        where: { id: row.id },
+      });
+      return this.dispatch(tx, released, at);
+    });
+    if (next.name === 'send') return true;
+    await this.queue(next);
+    return false;
+  }
+
+  async fail(
+    rows: readonly Notification[],
+    failure: string,
+    fallback: boolean,
+  ): Promise<void> {
+    await this.prisma.notification.updateMany({
+      data: { failure, status: 'failed' },
+      where: { id: { in: rows.map((r) => r.id) } },
+    });
+    for (const row of rows) {
+      this.logger.warn(
+        `notification ${row.id} ${row.kind} ${row.channel} failed: ${failure}`,
+      );
+      if (fallback) await this.fallback({ ...row, failure, status: 'failed' });
+    }
+  }
+
+  async recordBounce(messageId: string): Promise<void> {
+    const row = await this.prisma.notification.findFirst({
+      where: { channel: 'email', providerMessageId: messageId },
+    });
+    if (!row) return;
+    const at = this.now();
+    await this.prisma.$transaction(async (tx) => {
+      const before = await tx.account.findUniqueOrThrow({
+        select: { emailBouncedAt: true },
+        where: { id: row.accountId },
+      });
+      await tx.account.update({
+        data: { emailBouncedAt: at },
+        where: { id: row.accountId },
+      });
+      await this.audit.recordChanges(
+        tx,
+        {
+          actorId: null,
+          actorRole: 'system',
+          subjectId: row.accountId,
+          subjectType: 'account',
+        },
+        before,
+        { emailBouncedAt: at },
+      );
+    });
+    await this.fail([row], 'bounced', true);
+  }
+
+  // The bell row and the e-mail row of one recipient; null when nothing is
+  // written (a deleted account, or an event already handled).
+  private async build(
+    tx: Prisma.TransactionClient,
+    type: NotificationType,
+    input: NotifyInput,
+    accountId: string,
+    at: Date,
+  ): Promise<{ bell: Notification; next: NextJob | null } | null> {
+    // One builder at a time per kind and person, so a burst opens one window.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${input.kind}:${accountId}`}))`;
+    const account = await tx.account.findUnique({
+      select: { email: true, status: true },
+      where: { id: accountId },
+    });
+    if (!account || account.status === 'deleted') return null;
+    const duplicate = await tx.notification.findUnique({
+      where: {
+        kind_accountId_channel_eventId: {
+          accountId,
+          channel: 'in_app',
+          eventId: input.eventId,
+          kind: input.kind,
+        },
+      },
+    });
+    if (duplicate) return null;
+    const base = {
+      accountId,
+      createdAt: at,
+      eventId: input.eventId,
+      kind: input.kind,
+      params: (input.params ?? {}) as Prisma.InputJsonObject,
+      subjectId: input.subjectId ?? null,
+    };
+    const bell = await tx.notification.create({
+      data: { ...base, channel: 'in_app', sentAt: at, status: 'sent' },
+    });
+    const next =
+      account.email && sendsEmail(type)
+        ? await this.emailRow(tx, type, base, account.email, at)
+        : null;
+    return { bell, next };
+  }
+
+  private async emailRow(
+    tx: Prisma.TransactionClient,
+    type: NotificationType,
+    base: Omit<Prisma.NotificationUncheckedCreateInput, 'channel' | 'status'>,
+    address: string,
+    at: Date,
+  ): Promise<NextJob | null> {
+    const blocked = blockedReason(this.config, address);
+    if (blocked) {
+      await tx.notification.create({
+        data: { ...base, channel: 'email', failure: blocked, status: 'failed' },
+      });
+      return null;
+    }
+    if (!type.urgent && isQuiet(at)) {
+      const sendAfter = nextMorning(at);
+      const held = await tx.notification.create({
+        data: { ...base, channel: 'email', sendAfter, status: 'held' },
+      });
+      return { ...send(held.id), delay: sendAfter.getTime() - at.getTime() };
+    }
+    const email = await tx.notification.create({
+      data: { ...base, channel: 'email', status: 'queued' },
+    });
+    return this.dispatch(tx, email, at);
+  }
+
+  // A queued e-mail of a groupable type joins the window another e-mail of the
+  // same kind opened for the same person in the last five minutes.
+  private async dispatch(
+    tx: Prisma.TransactionClient,
+    row: Notification,
+    at: Date,
+  ): Promise<NextJob> {
+    if (!notificationType(row.kind).groupable) return send(row.id);
+    const since = new Date(at.getTime() - WINDOW_MS);
+    const leader = await tx.notification.findFirst({
+      orderBy: { createdAt: 'desc' },
+      where: {
+        accountId: row.accountId,
+        channel: 'email',
+        groupLeaderId: null,
+        id: { not: row.id },
+        kind: row.kind,
+        OR: [
+          { createdAt: { gt: since }, sendAfter: null },
+          { sendAfter: { gt: since, lte: at } },
+        ],
+        status: { in: ['queued', 'sent'] },
+      },
+    });
+    if (!leader) return send(row.id);
+    const closes = new Date(
+      (leader.sendAfter ?? leader.createdAt).getTime() + WINDOW_MS,
+    );
+    await tx.notification.update({
+      data: { groupLeaderId: leader.id, sendAfter: closes, status: 'held' },
+      where: { id: row.id },
+    });
+    return {
+      data: { leaderId: leader.id },
+      delay: Math.max(0, closes.getTime() - at.getTime()),
+      jobId: `flush-${leader.id}`,
+      name: 'flush',
+    };
+  }
+
+  private queue(next: NextJob) {
+    return this.jobs.add(next.name, next.data, {
+      ...JOB,
+      delay: next.delay,
+      jobId: next.jobId,
+    });
+  }
+
+  private async announce(bell: Notification) {
+    const message = {
+      audience: [`account:${bell.accountId}`],
+      event: {
+        at: bell.createdAt.toISOString(),
+        id: bell.id,
+        kind: 'notification.created',
+      },
+    };
+    try {
+      await this.publisher.publish(LIVE_CHANNEL, JSON.stringify(message));
+    } catch {
+      this.logger.warn(
+        `notification ${bell.id} not announced live: Redis did not answer`,
+      );
+    }
+  }
+}

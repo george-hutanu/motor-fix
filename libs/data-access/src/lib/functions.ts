@@ -17,3 +17,5 @@ export type { MeControllerUpdate$Params as MeControllerUpdate$Params } from './f
 export { meControllerUpdate as meControllerUpdate } from './fn/me/me-controller-update';
 export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Params } from './fn/audit-history/audit-history-controller-list';
 export { auditHistoryControllerList as auditHistoryControllerList } from './fn/audit-history/audit-history-controller-list';
+export type { NotificationsControllerTest$Params as NotificationsControllerTest$Params } from './fn/notifications/notifications-controller-test';
+export { notificationsControllerTest as notificationsControllerTest } from './fn/notifications/notifications-controller-test';
