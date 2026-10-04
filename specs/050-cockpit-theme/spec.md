@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-50 Build the Cockpit theme: colours, type and panels (Notion story ST-50, epic Foundations EP-1 https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707). PrimeNG with the Cockpit theme for every component, including a light theme derived from the dark one that follows the device setting (decision superseding ST-54, 2026-10-03); smallest text on a phone is 12px."
 
