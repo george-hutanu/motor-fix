@@ -11,3 +11,7 @@
 - 2026-10-04 · review · ST-159 story Status · Implementing → In review
 - 2026-10-04 · review · Foundations timeline row ST-159 · Implementing → In review
 - 2026-10-04 · labels · PR #44 · in review
+- 2026-10-04 · qa · ST-159 story Status · In review → QA
+- 2026-10-04 · qa · Foundations timeline row ST-159 · In review → QA
+- 2026-10-04 · labels · PR #44 · QA
+- 2026-10-04 · debt · 2 deferred bullets filed as To do tasks 3ef607bff0d2819faf63ebbbbeb59415 (sign-up e-mail-taken e2e), 3ef607bff0d281c29628f4d727071138 (kit input aria-invalid before the press)
