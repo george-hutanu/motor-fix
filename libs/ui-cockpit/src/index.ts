@@ -1,3 +1,5 @@
+export { BarChart, LineChart } from './lib/chart';
+export type { ChartPoint, ChartUnit } from './lib/chart-config';
 export { HlmButton } from './lib/helm/button';
 export { HlmDialogImports } from './lib/helm/dialog';
 export { HlmInput } from './lib/helm/input';

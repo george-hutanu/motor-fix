@@ -1,5 +1,13 @@
 {
   "brand": "MotorFix",
+  "chart": {
+    "empty": "No data yet",
+    "label": "Period",
+    "retry": "Retry",
+    "summary": "{title}, {period}. Highest: {high}, {highLabel}. Lowest: {low}, {lowLabel}.",
+    "table": "View as table",
+    "value": "Value"
+  },
   "frame": {
     "area": {
       "admin": "Admin",
