@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-159 Build shared saving, validation and errors for small actions (Notion story https://app.notion.com/p/3ee607bff0d28158a0bee4952af0d856) — build onto libs/overlays dialog/drawer from ST-157; match the API ProblemFilter `code` error shape (A28 RFC 9457, proposed); session-expired/offline deferred to ST-130/ST-253."
 
