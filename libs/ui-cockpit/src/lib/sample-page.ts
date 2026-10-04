@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, PendingTasks, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 
@@ -50,9 +50,6 @@ import { SAMPLE_GARAGES } from './sample-text';
       display: grid;
       gap: var(--mf-space-2);
     }
-    .reading {
-      font-family: var(--mf-font-body);
-    }
   `,
   template: `
     <main>
@@ -60,7 +57,7 @@ import { SAMPLE_GARAGES } from './sample-text';
       <p>{{ 'cockpit.intro' | t }}</p>
 
       <p class="mf-label">{{ 'cockpit.romanian' | t }}</p>
-      <p class="reading">{{ 'cockpit.romanian' | t }}</p>
+      <p>{{ 'cockpit.romanian' | t }}</p>
 
       <div class="row">
         <button hlmBtn>{{ 'cockpit.primary' | t }}</button>
@@ -88,7 +85,7 @@ import { SAMPLE_GARAGES } from './sample-text';
         <p hlmTabsContent="reviews">{{ 'cockpit.tabReviewsBody' | t }}</p>
       </div>
 
-      <mf-panel [title]="'cockpit.panelTitle' | t">
+      <mf-panel [heading]="'cockpit.panelTitle' | t">
         <div hlmTableContainer>
           <table hlmTable>
             <thead hlmTHead>
@@ -167,6 +164,7 @@ export class CockpitSamplePage {
   }
 
   constructor() {
-    void this.i18n.enter('cockpit');
+    // Holds the server render until the texts are in, so no raw key ships.
+    void inject(PendingTasks).run(() => this.i18n.enter('cockpit'));
   }
 }

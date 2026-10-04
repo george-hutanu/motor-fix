@@ -112,13 +112,8 @@ export class HlmDialogPortal {}
 
 @Directive({
   host: { 'data-slot': 'dialog-trigger' },
-  hostDirectives: [
-    {
-      directive: BrnDialogTrigger,
-      inputs: ['id', 'brnDialogTriggerFor: hlmDialogTriggerFor', 'type'],
-    },
-  ],
-  selector: 'button[hlmDialogTrigger],button[hlmDialogTriggerFor]',
+  hostDirectives: [{ directive: BrnDialogTrigger, inputs: ['id'] }],
+  selector: 'button[hlmDialogTrigger]',
 })
 export class HlmDialogTrigger {}
 

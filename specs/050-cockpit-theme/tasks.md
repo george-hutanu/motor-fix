@@ -86,3 +86,4 @@ MVP is US1 (tokens + stylesheet). One commit per slice: (1) library, tokens and 
 ## Phase 11: Merge with main (ST-79, ST-422, ST-16)
 
 - [X] T023 Sample page text moved to the `cockpit` translation area: `libs/i18n/src/cockpit/ro.json` and `en.json`, `'cockpit'` in `AREAS` (`libs/i18n/src/languages.ts`) and `FILES` (`libs/i18n/src/files.ts`), `{{ 'cockpit.x' | t }}` and `inject(I18n).enter('cockpit')` in `libs/ui-cockpit/src/lib/sample-page.ts`; `sample-text.ts` keeps only the table rows (FR-015)
+- [X] T024 Second review round: the sample page holds the server render on `PendingTasks` until the `cockpit` texts load (no raw keys in SSR HTML); `Panel` input renamed `title` → `heading` (no native tooltip on the host; contract amended); dead tab inputs, toaster knobs and unbound forwarded trigger/popover names removed; two vacuous adversary assertions tightened, one duplicate removed (FR-014, FR-015)

@@ -8,13 +8,7 @@ import {
 
 @Directive({
   host: { 'data-slot': 'popover' },
-  hostDirectives: [
-    {
-      directive: BrnPopover,
-      inputs: ['align', 'sideOffset', 'offsetX'],
-      outputs: ['stateChanged', 'closed'],
-    },
-  ],
+  hostDirectives: [BrnPopover],
   selector: '[hlmPopover],hlm-popover',
 })
 export class HlmPopover {}
@@ -43,13 +37,8 @@ export class HlmPopoverPortal {}
 
 @Directive({
   host: { 'data-slot': 'popover-trigger' },
-  hostDirectives: [
-    {
-      directive: BrnPopoverTrigger,
-      inputs: ['id', 'brnPopoverTriggerFor: hlmPopoverTriggerFor', 'type'],
-    },
-  ],
-  selector: 'button[hlmPopoverTrigger],button[hlmPopoverTriggerFor]',
+  hostDirectives: [{ directive: BrnPopoverTrigger, inputs: ['id'] }],
+  selector: 'button[hlmPopoverTrigger]',
 })
 export class HlmPopoverTrigger {}
 

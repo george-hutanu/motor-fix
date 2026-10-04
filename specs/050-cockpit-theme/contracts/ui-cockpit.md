@@ -16,7 +16,7 @@ What later stories (ST-286, ST-51, ST-157, …) build on.
 | `HlmSheetImports` | `hlm-sheet` (`side`), `hlmSheetTrigger`, `*hlmSheetPortal`, `hlm-sheet-content` (`closeLabel` required), `hlm-sheet-header`, `hlmSheetTitle`, `hlmSheetClose` | The drawer. |
 | `HlmPopoverImports` | `hlm-popover`, `hlmPopoverTrigger`, `*hlmPopoverPortal`, `hlm-popover-content` | |
 | `HlmToaster`, `toast` | component `hlm-toaster`; function re-exported from `@spartan-ng/brain/sonner` | One toaster per page; `toast(title, { description })`. |
-| `Panel` | standalone component `mf-panel` | Input `title?: string`. Projects its content. Renders a 20 px card with a hairline border; the title, when given, is a Michroma capital label (`h2`). |
+| `Panel` | standalone component `mf-panel` | Input `heading?: string` (not `title`, which would also leave a native tooltip on the host). Projects its content. Renders a 20 px card with a hairline border; the heading, when given, is a Michroma capital label (`h2`). |
 | `CockpitSamplePage` | standalone component | The owner's approval page; routed at `/cockpit`. |
 
 ## Stylesheet (`libs/ui-cockpit/src/styles/cockpit.css`)

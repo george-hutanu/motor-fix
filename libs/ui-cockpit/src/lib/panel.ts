@@ -16,15 +16,15 @@ import { Component, inject, input } from '@angular/core';
     }
   `,
   template: `
-    <section class="mf-panel" [attr.aria-labelledby]="title() ? headingId : null">
-      @if (title()) {
-        <h2 class="mf-label" [id]="headingId">{{ title() }}</h2>
+    <section class="mf-panel" [attr.aria-labelledby]="heading() ? headingId : null">
+      @if (heading()) {
+        <h2 class="mf-label" [id]="headingId">{{ heading() }}</h2>
       }
       <ng-content />
     </section>
   `,
 })
 export class Panel {
-  readonly title = input<string>();
+  readonly heading = input<string>();
   protected readonly headingId = inject(_IdGenerator).getId('mf-panel-title-');
 }

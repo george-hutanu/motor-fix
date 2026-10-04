@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { BrnSonnerImports, type ToasterProps } from '@spartan-ng/brain/sonner';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { BrnSonnerImports } from '@spartan-ng/brain/sonner';
 
 export { toast } from '@spartan-ng/brain/sonner';
 
@@ -10,15 +10,9 @@ export { toast } from '@spartan-ng/brain/sonner';
   imports: [BrnSonnerImports],
   selector: 'hlm-toaster',
   template: `
-    <brn-sonner-toaster
-      [position]="position()"
-      [duration]="duration()"
-      [toastOptions]="toastOptions"
-    />
+    <brn-sonner-toaster [toastOptions]="toastOptions" />
   `,
 })
 export class HlmToaster {
-  readonly position = input<ToasterProps['position']>('bottom-right');
-  readonly duration = input<number>(4000);
   protected readonly toastOptions = { classes: { toast: 'spartan-toast' } };
 }

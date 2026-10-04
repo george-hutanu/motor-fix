@@ -1,4 +1,4 @@
-import { Directive, input } from '@angular/core';
+import { Directive } from '@angular/core';
 import {
   BrnTabs,
   BrnTabsContent,
@@ -17,9 +17,7 @@ import {
   ],
   selector: '[hlmTabs],hlm-tabs',
 })
-export class HlmTabs {
-  readonly tab = input.required<string>();
-}
+export class HlmTabs {}
 
 @Directive({
   host: { class: 'spartan-tabs-list', 'data-slot': 'tabs-list' },
@@ -38,9 +36,7 @@ export class HlmTabsList {}
   ],
   selector: 'button[hlmTabsTrigger]',
 })
-export class HlmTabsTrigger {
-  readonly triggerFor = input.required<string>({ alias: 'hlmTabsTrigger' });
-}
+export class HlmTabsTrigger {}
 
 @Directive({
   host: { class: 'spartan-tabs-content', 'data-slot': 'tabs-content' },
@@ -49,9 +45,7 @@ export class HlmTabsTrigger {
   ],
   selector: '[hlmTabsContent]',
 })
-export class HlmTabsContent {
-  readonly contentFor = input.required<string>({ alias: 'hlmTabsContent' });
-}
+export class HlmTabsContent {}
 
 export const HlmTabsImports = [
   HlmTabs,

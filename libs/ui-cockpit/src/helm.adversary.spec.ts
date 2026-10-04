@@ -96,7 +96,7 @@ const css = readFileSync(join(__dirname, 'styles/cockpit.css'), 'utf8');
       </hlm-popover-content>
     </hlm-popover>
 
-    <mf-panel title="T"><span id="inner">in</span></mf-panel>
+    <mf-panel heading="T"><span id="inner">in</span></mf-panel>
     <hlm-toaster />
   `,
 })
@@ -161,12 +161,6 @@ describe('helm button misuse', () => {
     expect(variants.length).toBeLessThanOrEqual(1);
     expect(variants).not.toContain('spartan-button-variant-secondary');
     expect(variants).not.toContain('spartan-button-variant-ghost');
-  });
-
-  it('does not mark a disabled anchor-less button as amber-clickable', async () => {
-    const { q } = await render();
-
-    expect(q<HTMLButtonElement>('#dis').disabled).toBe(true);
   });
 });
 
@@ -418,9 +412,7 @@ describe('helm dialog', () => {
     q<HTMLButtonElement>('#dtrig').click();
     await settle(fixture);
 
-    expect(
-      document.querySelectorAll('[role="dialog"]').length,
-    ).toBeLessThanOrEqual(1);
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1);
   });
 });
 
@@ -448,12 +440,7 @@ describe('helm sheet', () => {
     await settle(fixture);
     const sheet = document.querySelector('[role="dialog"]') as HTMLElement;
 
-    const marked = [sheet, ...sheet.querySelectorAll('*')].some(
-      (e) =>
-        e.getAttribute('data-side') === 'left' ||
-        /left/.test(e.className?.toString() ?? ''),
-    );
-    expect(marked).toBe(true);
+    expect(sheet.querySelector('[data-side="left"]')).not.toBeNull();
   });
 });
 

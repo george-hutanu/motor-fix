@@ -138,11 +138,11 @@ describe('Panel title edge cases', () => {
   @Component({
     imports: [Panel],
     template: `
-      <mf-panel title="">x</mf-panel>
-      <mf-panel [title]="longTitle">y</mf-panel>
-      <mf-panel title="<b>ș</b>">z</mf-panel>
-      <mf-panel title="Unu">a</mf-panel>
-      <mf-panel title="Doi">b</mf-panel>
+      <mf-panel heading="">x</mf-panel>
+      <mf-panel [heading]="longTitle">y</mf-panel>
+      <mf-panel heading="<b>ș</b>">z</mf-panel>
+      <mf-panel heading="Unu">a</mf-panel>
+      <mf-panel heading="Doi">b</mf-panel>
     `,
   })
   class Host {

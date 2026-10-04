@@ -5,7 +5,7 @@ import { BrnInput } from '@spartan-ng/brain/input';
 @Directive({
   host: { class: 'spartan-input', 'data-slot': 'input' },
   hostDirectives: [
-    { directive: BrnInput, inputs: ['id', 'forceInvalid'] },
+    { directive: BrnInput, inputs: ['id'] },
     BrnFieldControlDescribedBy,
   ],
   selector: '[hlmInput]',

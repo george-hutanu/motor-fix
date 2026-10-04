@@ -6,7 +6,7 @@ import { Panel } from './panel';
 @Component({
   imports: [Panel],
   template: `
-    <mf-panel title="Garaje">
+    <mf-panel heading="Garaje">
       <p>conținut</p>
     </mf-panel>
     <mf-panel><p>fără titlu</p></mf-panel>
@@ -37,6 +37,7 @@ describe('Panel', () => {
     expect(heading?.textContent?.trim()).toBe('Garaje');
     expect(heading?.classList).toContain('mf-label');
     expect(titled.getAttribute('aria-labelledby')).toBe(heading?.id);
+    expect(titled.closest('mf-panel')?.hasAttribute('title')).toBe(false);
   });
 
   it('has no heading without a title', () => {
