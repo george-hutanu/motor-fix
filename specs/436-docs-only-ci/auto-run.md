@@ -26,3 +26,8 @@
 - code-reviewer: APPROVE, 3 LOW. Fixed: `core.quotePath=off` so non-ASCII Markdown paths classify (new test, red with quoting on, green with it off); the output fixture now lives inside the temp repo. Kept: `docs/` (same reason).
 - artifact-lint: 1 ERROR fixed (Spec Delta `Modifies` named a 435 requirement never archived into platform.md); now clean. diff-audit: findings only on `libs/ui-cockpit` and `package.json` from outside this range.
 - Mutation: not run locally (owner rule: never on the laptop); `scripts` floor is `break: 0` and the nightly run covers it.
+
+## Hand-off
+
+- PR #25: 15 checks green (every job ran, as a code PR should), merged 6c69405.
+- Proof PR (this one): Markdown under `specs/` only, so CI should run only PR title, Changes and CI OK — closes the deferred skip-path item.
