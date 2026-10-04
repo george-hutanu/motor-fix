@@ -19,7 +19,7 @@ import { PRISMA } from './prisma';
 import type { PrismaClient } from '../generated/prisma/client';
 
 const DAY_MS = 86_400_000;
-const REMEMBERED_MS = 30 * DAY_MS;
+export const REMEMBERED_MS = 30 * DAY_MS;
 const BROWSER_SESSION_MS = 12 * 3_600_000;
 // Two tabs renewing at once present the same token; the later one is not theft.
 const GRACE_MS = 20_000;

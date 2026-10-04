@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   HttpCode,
+  HttpException,
   HttpStatus,
   Post,
   Req,
@@ -11,10 +12,9 @@ import {
 import { ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import type { CookieOptions, Request, Response } from 'express';
 
-import { type Issued, SignInService } from './sign-in.service';
+import { type Issued, REMEMBERED_MS, SignInService } from './sign-in.service';
 
 const COOKIE = 'mf_refresh';
-const REMEMBERED_MS = 30 * 86_400_000;
 
 // Sent only to these calls, never readable by the page, never cross-site.
 const FLAGS: CookieOptions = {
@@ -55,6 +55,14 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<SessionDto> {
+    // A cross-site form can post urlencoded or plain text, never JSON, so
+    // another site cannot sign this browser into an account it chose.
+    if (!req.is('application/json')) {
+      throw new HttpException(
+        { code: 'unsupported_media_type', message: 'Send JSON' },
+        HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+      );
+    }
     const issued = await this.signIns.signIn(body, req.ip ?? '');
     keep(res, issued);
     return { accessToken: issued.accessToken };
@@ -72,7 +80,15 @@ export class AuthController {
       keep(res, issued);
       return { accessToken: issued.accessToken };
     } catch (error) {
-      forget(res);
+      // Only a refused token ends the session; an outage keeps the cookie.
+      if (
+        error instanceof HttpException &&
+        [HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN].includes(
+          error.getStatus(),
+        )
+      ) {
+        forget(res);
+      }
       throw error;
     }
   }

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { createServer, type Server } from 'node:net';
 
 import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -30,10 +31,14 @@ serialDatabase(databaseUrl);
 let maintenance = false;
 let hash: string;
 
-async function start(redisAt = redisUrl) {
+async function start(redisAt = redisUrl, databaseAt = databaseUrl) {
   const moduleRef = await Test.createTestingModule({
     imports: [
-      AuthModule.register({ databaseUrl, redisUrl: redisAt, tokenSecret }),
+      AuthModule.register({
+        databaseUrl: databaseAt,
+        redisUrl: redisAt,
+        tokenSecret,
+      }),
     ],
   })
     .overrideProvider(MAINTENANCE)
@@ -503,6 +508,32 @@ describe('attempt limits', () => {
       await offline.close();
     }
   }, 20_000);
+
+  it('still signs in when Redis takes the connection and never answers', async () => {
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    await person('andrei@example.test', ['driver']);
+    const sockets: import('node:net').Socket[] = [];
+    const silent: Server = createServer((socket) => sockets.push(socket));
+    await new Promise<void>((resolve) => silent.listen(0, resolve));
+    const port = (silent.address() as { port: number }).port;
+    const stuck = await start(`redis://127.0.0.1:${port}`);
+
+    try {
+      const started = Date.now();
+      const res = await signIn(
+        { email: 'andrei@example.test', password: PASSWORD },
+        address(),
+        stuck,
+      );
+
+      expect(res.status).toBe(200);
+      expect(Date.now() - started).toBeLessThan(10_000);
+    } finally {
+      await stuck.close();
+      for (const socket of sockets) socket.destroy();
+      await new Promise((resolve) => silent.close(resolve));
+    }
+  }, 30_000);
 });
 
 describe('maintenance mode', () => {
@@ -543,6 +574,30 @@ describe('maintenance mode', () => {
 });
 
 describe('the sign-in request', () => {
+  it('refuses a form post, so another site cannot sign this browser in', async () => {
+    await person('andrei@example.test', ['driver']);
+
+    const res = await request(app.getHttpServer())
+      .post('/auth/sign-in')
+      .set('X-Forwarded-For', address())
+      .type('form')
+      .send({ email: 'andrei@example.test', password: PASSWORD });
+    const plain = await request(app.getHttpServer())
+      .post('/auth/sign-in')
+      .set('X-Forwarded-For', address())
+      .set('Content-Type', 'text/plain')
+      .send(
+        JSON.stringify({ email: 'andrei@example.test', password: PASSWORD }),
+      );
+
+    expect(res.status).toBe(415);
+    // A text body is never parsed, so it fails validation first.
+    expect(plain.status).toBe(400);
+    for (const answer of [res, plain]) {
+      expect(setCookie(answer)).toBeUndefined();
+    }
+  });
+
   it.each([
     ['no e-mail', { password: PASSWORD }],
     ['no password', { email: 'a@example.test' }],
@@ -734,6 +789,27 @@ describe('renewing with the refresh token', () => {
     const after = await prisma.account.findUniqueOrThrow({ where: { id } });
     expect(after.lastActiveAt?.getTime()).toBeGreaterThan(Date.now() - 60_000);
   });
+});
+
+describe('renewing while the database is unreachable', () => {
+  it('answers a server error and keeps the cookie', async () => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const down = await start(
+      redisUrl,
+      'postgresql://nobody@127.0.0.1:1/nothing?connect_timeout=2',
+    );
+
+    try {
+      const res = await request(down.getHttpServer())
+        .post('/auth/refresh')
+        .set('Cookie', `mf_refresh=${'A'.repeat(43)}`);
+
+      expect(res.status).toBe(500);
+      expect(setCookie(res)).toBeUndefined();
+    } finally {
+      await down.close();
+    }
+  }, 20_000);
 });
 
 describe('signing out', () => {

@@ -1,5 +1,6 @@
-// Whether the platform is in maintenance. The platform rule and its switch
-// arrive with the maintenance story; until then it reads as off.
+// Whether the platform is in maintenance.
+// TODO: bind the platform rule when the maintenance switch exists; until then
+// it reads as off.
 export const MAINTENANCE = Symbol('MAINTENANCE');
 
 export interface Maintenance {

@@ -25,6 +25,7 @@ const REDIS = Symbol('AUTH_REDIS');
 
 function connect(url: string) {
   const redis = new Redis(url, {
+    commandTimeout: 2000,
     connectTimeout: 2000,
     lazyConnect: true,
     maxRetriesPerRequest: 1,

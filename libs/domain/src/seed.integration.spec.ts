@@ -45,6 +45,17 @@ describe('seed', () => {
     expect(run.stderr).toContain('seed refused: APP_ENV=production');
   });
 
+  it.each([
+    ['unset', ''],
+    ['misspelled', 'stagign'],
+  ])('refuses an APP_ENV that is %s without SEED_PASSWORD, and writes nothing', async (_, appEnv) => {
+    const run = seed(appEnv);
+
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain('SEED_PASSWORD');
+    expect(await seeded()).toHaveLength(0);
+  });
+
   it('refuses staging without SEED_PASSWORD, and writes nothing', async () => {
     const run = seed('staging');
 

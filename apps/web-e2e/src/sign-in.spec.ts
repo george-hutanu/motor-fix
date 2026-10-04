@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 
 import { expect, type Page, test } from '@playwright/test';
 
-import { ACCOUNTS, needsSeededAccounts, ready, signIn } from './accounts.js';
+import { ACCOUNTS, ready, signIn } from './accounts.js';
 
 type Axe = {
   run: (context: unknown) => Promise<{
@@ -22,9 +22,7 @@ const dialog = (page: Page, name = 'Autentificare') =>
 const openFromHeader = (page: Page, name = 'Autentificare') =>
   page.getByRole('button', { exact: true, name }).click();
 
-test.describe('signing in for real', () => {
-  needsSeededAccounts();
-
+test.describe('signing in for real @seeded', () => {
   for (const [who, email, landing, menu] of [
     ['a driver', ACCOUNTS.driver, '/app/driver', 'Mașinile mele'],
     ['a garage owner', ACCOUNTS.garage, '/app/garage', 'Mecanici'],
@@ -160,9 +158,7 @@ test.describe('signing in for real', () => {
   });
 });
 
-test.describe('signing in with something wrong', () => {
-  needsSeededAccounts();
-
+test.describe('signing in with something wrong @seeded', () => {
   test('a wrong password and an unknown e-mail say the same, and keep the e-mail', async ({
     page,
   }) => {

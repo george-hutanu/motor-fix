@@ -53,3 +53,17 @@
 ## 9. Tests (red first)
 - Wrote password, sign-in API (sign-in, limits, maintenance, request, refresh, sign-out), seed, edge, api bootstrap, session, interceptor, sign-in task, sign-in dialog, area guard, frame, tab bar specs and the e2e `sign-in.spec.ts` with `accounts.ts`.
 - RED: `npx jest <the 13 files> --maxWorkers=2` → "Test Suites: 12 failed, 1 passed, 13 total; Tests: 20 failed, 65 passed, 85 total" (7 suites cannot resolve the modules under test; the passing suite is session.adversary, a regression guard).
+
+## 10. Implement
+- before_implement: design.md current; notion-sync implement (story + timeline Planning → Implementing; PR label in development).
+- audit-coverage check: sign-in writes sessions only (brief: audit none; MF-6 rule 16 "sign-ins are not changes") → named the session methods as not-changes in `audit-coverage.spec.ts`, with a test that the list names only real writing methods.
+- ST-79's "no route that writes" test narrowed to "no route writes but the three session routes".
+- Commits: 27d4195 feat(auth) sign in, renew and sign out by cookie; 9dc5dc9 feat(web) sign in from a dialog; f8e87b8 merge origin/main (two-parent, through the hook; brings #46 and #43).
+- Verification: domain/api/edge `npx jest …` → 650 tests passed; web `npx jest apps/web` green; `npm run typecheck` → 13 projects; e2e against local servers (api :3082, web :4282, seeded `motorfix_st082`) → sign-in.spec 33 passed; full suite 166 passed, 3 failed → tab-bar e2e updated for the dialog (18 passed), pwa.spec needs the production build (dev server under BASE_URL; not this change).
+
+## 11. Converge
+- 23/23 FRs in code; no tasks appended. Spec Delta gains `phone-layout` 287-FR-006 → FR-012 (archived on main meanwhile).
+
+## 12. Harden
+- artifact-lint 0 errors. diff-audit (against the stale local main): mine — `.skip(` in the e2e helper → moved to a `grepInvert` on `@seeded` in playwright.config.mts; `eslint-disable` in generated `libs/data-access` files (generator output, never hand-edited); `pg` dev dependency justified in plan.md; others are other stories' files.
+- Mutation run: not run locally (user rule: no mutation tests on this laptop).

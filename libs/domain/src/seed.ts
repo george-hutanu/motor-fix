@@ -10,11 +10,13 @@ if (process.env['APP_ENV'] === 'production') {
 }
 
 // A public repository: a deployed environment brings its own password.
+const local = ['development', 'test'].includes(process.env['APP_ENV'] ?? '');
 const password =
-  process.env['SEED_PASSWORD'] ||
-  (process.env['APP_ENV'] === 'staging' ? null : 'parola-de-test');
+  process.env['SEED_PASSWORD'] || (local ? 'parola-de-test' : null);
 if (!password) {
-  console.error('seed refused: staging needs SEED_PASSWORD');
+  console.error(
+    'seed refused: outside development and test it needs SEED_PASSWORD',
+  );
   process.exit(1);
 }
 

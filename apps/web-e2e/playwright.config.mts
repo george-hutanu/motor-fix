@@ -9,6 +9,9 @@ const SERVER_START = 180_000;
 
 export default defineConfig({
   ...nxE2EPreset(import.meta.dirname, { testDir: './src' }),
+  // Flows tagged @seeded sign in with the seeded accounts; a deployed address
+  // runs them only when it is given their password.
+  grepInvert: deployed && !process.env['E2E_PASSWORD'] ? /@seeded/ : undefined,
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   use: {
     baseURL: deployed ?? 'http://localhost:4200',

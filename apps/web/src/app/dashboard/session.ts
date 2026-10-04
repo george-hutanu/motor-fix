@@ -13,6 +13,8 @@ export class Session {
   private accessToken: string | null = null;
   private loading: Promise<MeDto | null> | null = null;
   private renewing: Promise<boolean> | null = null;
+  // Bumped at sign-out, so an answer that arrives later restores nothing.
+  private generation = 0;
 
   token(): string | null {
     return this.accessToken;
@@ -29,11 +31,17 @@ export class Session {
 
   // One renewal at a time, whoever asks.
   renew(): Promise<boolean> {
+    const generation = this.generation;
     this.renewing ??= this.auth
       .authControllerRefresh()
       .then(
-        ({ accessToken }) => {
-          this.accessToken = accessToken;
+        (answer) => {
+          if (generation !== this.generation) return false;
+          if (typeof answer?.accessToken !== 'string' || !answer.accessToken) {
+            this.forget();
+            return false;
+          }
+          this.accessToken = answer.accessToken;
           return true;
         },
         () => {
@@ -50,17 +58,21 @@ export class Session {
   async load(): Promise<MeDto | null> {
     const known = this.current();
     if (known) return known;
-    this.loading ??= this.ask().then((me) => {
+    const generation = this.generation;
+    this.loading ??= this.ask().then((answer) => {
+      this.loading = null;
+      const me = generation === this.generation ? answer : null;
       // At sign-in the account's language wins over the device's.
       if (me) void this.language.choose(me.language);
       this.current.set(me);
-      this.loading = null;
       return me;
     });
     return this.loading;
   }
 
   async signOut(): Promise<void> {
+    this.generation++;
+    this.forget();
     try {
       await this.auth.authControllerSignOut();
     } catch {

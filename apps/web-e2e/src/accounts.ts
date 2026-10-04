@@ -1,8 +1,8 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 // The accounts libs/domain/src/seed.ts adds outside production. Their password
 // is a fake default locally and in CI; a deployed address has its own secret.
-export const PASSWORD = process.env['E2E_PASSWORD'] || 'parola-de-test';
+const PASSWORD = process.env['E2E_PASSWORD'] || 'parola-de-test';
 
 export const ACCOUNTS = {
   admin: 'admin@example.test',
@@ -13,13 +13,6 @@ export const ACCOUNTS = {
   suspended: 'suspendat@example.test',
   twoRoles: 'doua-roluri@example.test',
 } as const;
-
-export function needsSeededAccounts() {
-  test.skip(
-    Boolean(process.env['BASE_URL']) && !process.env['E2E_PASSWORD'],
-    'a deployed address needs E2E_PASSWORD to sign in with the seeded accounts',
-  );
-}
 
 // Waits for the page to take clicks: the server-rendered HTML arrives first.
 export async function ready(page: Page, path: string) {
