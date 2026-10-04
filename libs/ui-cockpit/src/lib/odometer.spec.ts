@@ -118,13 +118,22 @@ describe('Odometer', () => {
     ).toEqual(['1', '2', '5', '0', '1', '6', '0', '0']);
   });
 
-  it('changes its digits at once: none of the three parts animates', () => {
-    for (const file of ['odometer.ts', 'rating-dial.ts', 'lamp.ts']) {
-      const source = readFileSync(join(__dirname, file), 'utf8');
-      expect([file, /transition|animation|@keyframes/.test(source)]).toEqual([
-        file,
-        false,
-      ]);
-    }
+  it('moves the dial and the lamp only through the hooks they carry', () => {
+    const flat = (file: string) =>
+      readFileSync(join(__dirname, file), 'utf8').replace(/\s+/g, ' ');
+    const dial = flat('rating-dial.ts');
+    const lamp = flat('lamp.ts');
+
+    expect(dial).toContain(
+      '.mf-dial-arc { transition: stroke-dasharray var(--mf-motion-dial) var(--mf-motion-ease); }',
+    );
+    expect(dial).toContain(
+      '.mf-dial-needle { transition: transform var(--mf-motion-dial) var(--mf-motion-ease); }',
+    );
+    expect(dial.match(/animation|transition/g)).toHaveLength(2);
+    expect(lamp).toContain(
+      ':host([data-pulse]) .mf-lamp-dot { animation: mf-pulse var(--mf-motion-pulse) ease-in-out infinite; }',
+    );
+    expect(lamp.match(/animation|transition/g)).toHaveLength(1);
   });
 });

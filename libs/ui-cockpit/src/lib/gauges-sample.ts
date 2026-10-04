@@ -6,12 +6,14 @@ import { Lamp } from './lamp';
 import { Odometer } from './odometer';
 import { Panel } from './panel';
 import { RatingDial } from './rating-dial';
+import { injectReducedMotion } from './reduced-motion';
 
 // Sample estimates in bani: data, not interface text.
 const ESTIMATES = [
   [125000, 160000],
   [140000, 180000],
 ] as const;
+const RATINGS = [4.8, 4.2] as const;
 
 @Component({
   imports: [HlmButton, Lamp, Odometer, Panel, RatingDial, TranslatePipe],
@@ -41,11 +43,12 @@ const ESTIMATES = [
           <mf-lamp state="red" [label]="'cockpit.gauges.lampRed' | t" />
           <mf-lamp state="amber" pulse [label]="'cockpit.gauges.lampAmber' | t" />
           <mf-lamp state="grey" [label]="'cockpit.gauges.lampGrey' | t" />
+          <span class="mf-label mf-blink">{{ 'cockpit.gauges.live' | t }}</span>
         </div>
         <div class="row">
-          <div class="dial"><mf-rating-dial [value]="4.8" /></div>
+          <div class="dial"><mf-rating-dial [value]="rating()" /></div>
           <div class="dial"><mf-rating-dial [value]="null" /></div>
-          <mf-rating-dial size="small" [value]="4.8" />
+          <mf-rating-dial size="small" [value]="rating()" />
           <mf-rating-dial size="small" [value]="null" />
         </div>
         <div class="row">
@@ -56,6 +59,11 @@ const ESTIMATES = [
             {{ 'cockpit.gauges.swap' | t }}
           </button>
         </div>
+        @if (reduced()) {
+          <p data-motion="reduced">{{ 'cockpit.gauges.motionReduced' | t }}</p>
+        } @else {
+          <p data-motion="full">{{ 'cockpit.gauges.motionFull' | t }}</p>
+        }
       </div>
     </mf-panel>
   `,
@@ -63,6 +71,8 @@ const ESTIMATES = [
 export class CockpitGaugesSample {
   private readonly shown = signal(0);
   protected readonly estimate = computed(() => ESTIMATES[this.shown()]);
+  protected readonly rating = computed(() => RATINGS[this.shown()]);
+  protected readonly reduced = injectReducedMotion();
 
   protected swap() {
     this.shown.update((i) => 1 - i);
