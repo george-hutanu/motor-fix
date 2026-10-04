@@ -61,3 +61,34 @@
 - Found: Jest's process.env is sandboxed, so setting TZ in-test never changed the device zone (an assertion on the resolved zone proved it). Replaced with a child Node process (TZ=America/New_York, Pacific/Kiritimati) importing formats.ts via Node 24 type stripping (.nvmrc 24).
 - TS4111 on process.env.TZ → process.env['TZ'] (biome useLiteralKeys is off).
 - `nx run i18n:typecheck` hit an Nx DB "FOREIGN KEY constraint failed" (shared workspace cache); ran ngc/tsc directly: clean.
+
+## 11 Converge
+- Every task [X]; the only unbuilt items are the recorded deferrals (Results e2e, picker wiring). Nothing appended.
+
+## Orchestrator rule change (mid-run)
+- The orchestrator relayed a new standing rule: push as I go, draft PR at first push, then at the end merge origin/main, `gh pr ready`, watch CI, `gh pr merge --merge`, `speckit-notion-sync finish`. This replaces the earlier "no push, no PR" rule. Pushed 019-locale-formats; draft PR https://github.com/george-hutanu/motor-fix/pull/11. Story stays In progress until the PR is marked ready (016's recorded convention).
+
+## 12 Harden
+- diff-audit: `dead-export CalendarNames` → interface removed (return type inferred, `firstDay: 1 as const`). `import-extension` ERRORs ×9: false positive — the rule's regex assumes nodenext for every `libs/`, but libs/i18n uses `module: preserve` and every existing lib file omits `.js` (same finding kept in 016's run). `test-only-export` WARNs on the pipes and calendarNames: they are the library's public API, re-exported by index.ts; kept.
+- Mutation: no Stryker in this workspace (no config, no @stryker-mutator package) — step not run; no score claimed.
+
+## 13 Ticket refresh
+- No new evidence (see context.md › Refresh).
+- test-adversary: libs/i18n/src/formats.adversary.spec.ts, 235 tests; 3 failed on one real defect — non-ISO strings ("9 March 2026", "5") were parsed by `new Date` → strict ISO-8601 check (date, or date-time with offset). Also fixed in the file it wrote: duplicate generated titles (index added), an unused biome-ignore, bigint literals that broke tsc (`BigInt(5)`).
+- code-reviewer: APPROVE. #1 MEDIUM non-ISO strings → fixed (same defect). #2 MEDIUM calendarNames has no caller → kept: FR-009 and the AC ("the date picker … show month and day names") require it; the picker story wires it. #3/#4/#5 LOW → fixed (comment on `unknown` inputs, comment on the child-process constraint, named exports in index.ts).
+
+## 14 Review
+- spec-reviewer: APPROVE. #1 MEDIUM `{{ from | lei: to }}` with `to` undefined printed one amount → rest parameter, "—", test added. #2 LOW CalendarNames committed → removed in the fix commit. #3 LOW `export *` → named exports.
+- No CRITICAL/HIGH from either reviewer; no re-review needed. Repair laps: 1.
+- Commits: ed44bde fix(i18n) (strict ISO, range pipe, named exports; spec edge case + T010), 06fc85d test(i18n) (adversary spec, T011).
+- notion-sync review: deferred to `gh pr ready` (016's convention: In review follows the PR marked ready).
+
+## 15 Agent context
+- AGENTS.md / CLAUDE.md carry no SPECKIT managed block; CLAUDE.local.md's "Active plan" line is local, untracked and shared with the parallel lanes' view of this checkout → left unchanged. No tracked file changed, no docs commit.
+
+## 16 Retrospective evidence (unjudged)
+- retro-evidence --since 202c88e: 11/11 tasks done, 11 FRs, 6 commits in range (2 are the orchestrator's merged #7), Spec Delta locale-formats +11, deferred 0. Jev unavailable → no suggested verdict.
+- instincts triggered: none (jev unavailable line only).
+
+## 17 Archive
+- capabilities merge --apply: +11. The tool cut each requirement at its first line break; rewrote locale-formats.md from spec.md's full FR text by hand. spec.md Status → Archived (2026-10-04). No /speckit-retro (verdict stays the user's, per speckit-auto phase 16).

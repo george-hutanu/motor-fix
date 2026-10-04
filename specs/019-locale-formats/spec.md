@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-04)
 
 **Input**: User description: "ST-19 — See prices, numbers and dates in the format of my language (Romanian and English): number, price (RON) and date formats per active language, built on the ST-16 i18n runtime in libs/i18n. Notion story: https://app.notion.com/p/3ee607bff0d28180a6a4e24b1d161a9b. Spec folder and branch: 019-locale-formats."
 
