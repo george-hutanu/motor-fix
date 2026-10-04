@@ -30,12 +30,12 @@ Paths are `(new)` unless they exist today: `libs/i18n/src/index.ts`.
 
 **Independent test**: a rendered host showing a price, a rating and a date switches to English in place after `I18n.use('en')`, and back.
 
-- [ ] T007 [US4] Test: `libs/i18n/src/format.pipes.spec.ts` — a host template using `lei` (amount and range), `rating`, `num`, `km`, `pct`, `day` and `clock` renders the Romanian formats first (the server's first render), then after `I18n.use('en')` the English formats in the same component instance, then Romanian again after `use('ro')` (FR-010, FR-011, SC-002)
-- [ ] T008 [US4] `libs/i18n/src/format.pipes.ts` — impure standalone pipes `lei`, `rating`, `num`, `km`, `pct`, `day`, `clock` reading `I18n.language()` (research R5); `libs/i18n/src/index.ts` gains one export line for the functions, `calendarNames` and the pipes (FR-010, FR-011)
+- [X] T007 [US4] Test: `libs/i18n/src/format.pipes.spec.ts` — a host template using `lei` (amount and range), `rating`, `num`, `km`, `pct`, `day` and `clock` renders the Romanian formats first (the server's first render), then after `I18n.use('en')` the English formats in the same component instance, then Romanian again after `use('ro')` (FR-010, FR-011, SC-002)
+- [X] T008 [US4] `libs/i18n/src/format.pipes.ts` — impure standalone pipes `lei`, `rating`, `num`, `km`, `pct`, `day`, `clock` reading `I18n.language()` (research R5); `libs/i18n/src/index.ts` gains one export line for the functions, `calendarNames` and the pipes (FR-010, FR-011)
 
 ## Phase 5: Polish
 
-- [ ] T009 `npx nx run i18n:typecheck`, `npx biome check libs/i18n`, `npx jest -c libs/i18n/jest.config.cts` green (quickstart)
+- [X] T009 `npx nx run i18n:typecheck`, `npx biome check libs/i18n`, `npx jest -c libs/i18n/jest.config.cts` green (quickstart)
 
 ## Dependencies
 
