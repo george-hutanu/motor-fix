@@ -57,3 +57,14 @@
 ## 15. Agent context
 
 - AGENTS.md lifecycle steps 4 and 6 changed as part of the requirement (they quoted label moves); no managed-block change.
+
+## 16. Retrospective evidence (unjudged)
+
+- `retro-evidence.mjs --since 418b111 --jev`: 7/7 tasks, 8 FRs, 3 commits, 19 files +642 −49; deferred 1 open (low, constitution wording); jev lane unavailable → no suggested verdict. `instincts.mjs triggered --since 418b111`: none.
+
+## Hand-off
+
+- PR body filled from the template; `pr-body-check.ts`: "The PR follows the template". `gh pr ready 38`; notion-sync review: story Implementing → In review; labels applied from `notion-status.mjs review`'s own `labels` → PR #38 carries `in review` alone.
+- Behind `origin/main` by 17 commits (none touching this diff or the dependencies) → `git merge --no-edit origin/main`, clean.
+- After the merge: `npm run typecheck` 12/12, `npm run lint` clean (294 files), `npm run test` 10 projects green; `npm run test:harness` 511/513 — the two `diff-audit` cases in `artifact-lint.spec.mjs` timed out at 5 s because local `main` (7685810) trailed `origin/main` again; `git fetch origin main:main` (fast-forward only) → that file 10/10.
+- Debt filed before the first QA lap, so the tester's lap runs on the final head: the reviewers' one deferred bullet → Notion task https://app.notion.com/p/3ef607bff0d28119ba28f28e1a5d1624 (To do, Low), URL written back with `debt-tasks.mjs mark`.
