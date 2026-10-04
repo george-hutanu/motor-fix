@@ -9,3 +9,7 @@
 - 2026-10-05 · implement · ST-197 · Planning → Implementing
 - 2026-10-05 · implement · Foundations timeline ST-197 · Planning → Implementing
 - 2026-10-05 · labels · PR #68 · in development
+- 2026-10-05 · qa · ST-197 · Implementing → QA
+- 2026-10-05 · qa · Foundations timeline ST-197 · Implementing → QA
+- 2026-10-05 · labels · PR #68 · QA
+- 2026-10-05 · debt · ST-197 · 3 tasks filed (To do)
