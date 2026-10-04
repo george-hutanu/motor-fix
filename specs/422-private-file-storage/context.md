@@ -79,3 +79,45 @@
 - Front end architecture — https://app.notion.com/p/3ee607bff0d2811688cde6508dfcd09a
 - Backend architecture (search excerpts only) — https://app.notion.com/p/3ee607bff0d281dfa162cd4b9983dd2e
 - Architecture decisions — https://app.notion.com/p/3ee607bff0d28111907edddc4bdd066a
+
+## Refresh 2026-10-04
+
+[UNAVAILABLE: notion — ToolSearch for "+notion search fetch get-comments query-data-sources get-tool-access" returned "No matching deferred tools found"; no Notion tool is loaded in this run]
+
+This refresh could not read the space, so it is not an empty refresh and must not be read as "No changes since 2026-10-04". Nothing was checked: story Status/Priority (expected In progress), page edits and comments after the original gathering are all unknown. Nothing above this section was changed. Re-run `/speckit-context --since 2026-10-04` once the Notion connector is available to the subagent.
+
+### New decisions
+
+not checked
+
+### New constraints
+
+not checked
+
+### New contradictions with spec.md
+
+not checked
+
+### Story changes
+
+not checked
+
+## Refresh 2026-10-04 (re-run from the calling session, Notion reachable)
+
+Story ST-422 fetched (page last edited 2026-10-04T05:25Z, the Status move to In progress) and its comments read (page and blocks, resolved included): none. The Build brief is unchanged ("Current as of 2026-10-03"). No changes since 2026-10-04.
+
+### New decisions
+
+none found
+
+### New constraints
+
+none found
+
+### New contradictions with spec.md
+
+none found (the Build brief's "against MinIO" test line is the contradiction already recorded in spec Clarifications and plan Complexity Tracking)
+
+### Story changes
+
+- Status In progress (expected; set by this run's `start` sync), Priority High — unchanged otherwise.

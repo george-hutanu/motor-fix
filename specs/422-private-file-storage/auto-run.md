@@ -69,3 +69,36 @@
 ## Resume
 - Run resumed after an interruption at 2 commits ahead of main; log sections reordered into phase order (11 had been written before 6/7/8). tasks.md: 21/21 done (T021 ticked). Remaining: 12 harden, 13 ticket refresh, 14 review, 15 agent context.
 - Owner-authorised for this run: push the branch and open a draft PR after the first commit; push after each later commit; never mark ready, never merge, Notion stays In progress (no `review` sync).
+
+## 12 Harden
+- artifact-lint: 0/0. diff-audit hard-codes `merge-base HEAD main` and the local `main` ref is stale (69b1c22, before 421), so it reported 177 files/117 errors; re-run from a scratch copy against 3f717c6: 53 files, 23 ERROR, 10 WARN.
+  - 20 ERROR import-extension: kept. The rule assumes `libs/` are nodenext packages (from another repo); here every lib resolves `bundler` (tsconfig.base.json) and main's own libs import without `.js`. Harness rule mismatch, reported, not edited (gate scripts are fingerprinted).
+  - 3 ERROR new-dependency (`@aws-sdk/client-s3`, `s3-presigned-post`, `s3-request-presigner`): kept; the Build brief names "the AWS SDK's S3 client and its signing helpers" as the only new dependencies; research R1.
+  - WARN test-only-export (lifetime constants, FileUploader, UploadAddress/UploadEvent, SignedUpload, S3TestStore): kept — public surface for the owning stories (constants named by the Build brief) and the `@motor-fix/domain/testing` seam. untested-new-file s3-test-store.ts: imported via the testing alias (false positive); libs/media index.ts/test-setup.ts are barrels/scaffolding.
+- Mutation: no `stryker.config.json` in this repo — step not configured, no score measured.
+- IDE inspections: not run (the IDE project is the main checkout, not this worktree).
+- test-adversary: 63 new tests (storage 41, health 10, media 12) in `*.adversary2.spec.ts`; 1 failed — an unchecked disposition string was signed into the header (`inline; filename=evil.exe`). Defect against FR-006 ("inline or attachment"); fixed: other dispositions refused with RangeError.
+- code-reviewer (BLOCK): HIGH — post-copy `deleteObject(incoming)` failure surfaced a raw error and a retry then answered `file_missing` for a stored file (contradicts spec edge case "repeating the call is safe"). Fixed: incoming deletes in confirm are best-effort (`discard`, logged; the 24 h `incoming/` life-cycle rule sweeps). Also MEDIUM #2 (cleanup delete masking the 422) fixed by the same change. Spec edge case + FR-006 updated first. Tests: two delete-failure cases (test store `beforeDelete` hook) and the disposition refusal.
+  - MEDIUM kept: #3 hard-coded limits (spec Assumption: lifetimes are constants, Principle I); #4 delete DOWNLOAD/PUBLIC_IMAGE constants (Build brief names them for the owning stories); #5 api/worker need the 5 STORAGE_* vars in Railway before deploy — owner action, reported. LOW #6–#8 not fixed.
+- Commits: f4fa0a9 fix(storage) (behaviour restored to spec, so `fix`, not `refactor`), c023a6d test(storage).
+- Verify: `npm test` 8 projects green (447 tests), lint green, typecheck 10 projects green, contract-check clean.
+
+## 13 Ticket refresh
+- org-researcher could not load Notion tools ([UNAVAILABLE] section it appended kept). Re-run from this session: story fetched (last edited 05:25Z, the In progress move), comments none, Build brief unchanged → no new evidence. Appended to context.md.
+
+## 14 Review
+- notion-sync review NOT run: owner rule for this run — Notion stays In progress, PR stays draft.
+- spec-reviewer: APPROVE; FR-001–012 present, constitution I–VI clean, tasks truthful; MEDIUM — the red adversary2 disposition test (fixed in f4fa0a9); LOW — it was untracked (committed).
+- code-reviewer: see phase 12; re-run on f4fa0a9: APPROVE — HIGH and both MEDIUMs resolved, tests non-vacuous; one LOW left unfixed (adversary2 disposition test duplicates the direct RangeError test). No CRITICAL/HIGH survives.
+- Both reviewers run as subagents directly (no Workflow-based /speckit-review; the invocation did not opt into it).
+
+## 15 Agent context
+- CLAUDE.local.md managed block → specs/422-private-file-storage/plan.md, kept to one line (script's 3-line form collapsed); context-audit: held its size (135). Committed 68e8e05 (CLAUDE.local.md is tracked here, 421 precedent).
+
+## 16 Retrospective evidence
+- retro-evidence --since 3f717c6: 21/21 tasks, 12 FRs, 0 retired, Spec Delta storage +10, platform ~2, 0 deferred; jev lane unavailable (no key). instincts triggered: none.
+
+## Final
+- Commits on the branch: fab4e39, 823e904, 5588626, f4fa0a9, c023a6d, 68e8e05 + this log commit; pushed to origin/422-private-file-storage; draft PR https://github.com/george-hutanu/motor-fix/pull/2 (never marked ready, never merged).
+- Post-ST-79 rebase: regenerate openapi.json + data-access (`npx nx run data-access:generate`), and give ST-79's specs that build AppModule.register / HealthModule.register a StorageModule (HealthService now injects StorageService), using S3TestStore from @motor-fix/domain/testing.
+- Deploy prerequisite (owner): the 5 STORAGE_* vars in Railway staging/production before this merges, or api/worker fail at boot.
