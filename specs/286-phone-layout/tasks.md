@@ -49,12 +49,16 @@ Paths are `(new)` unless they exist today: `libs/ui-cockpit/src/index.ts`, `libs
 
 - [X] T018 Run `npm run typecheck`, `npm run lint`, `npm run test`, and the e2e suite against the production build on port 4286; record results in auto-run.md
 
+## Phase 7: QA follow-up
+
+- [X] T019 After the rebase onto the gauges, `/cockpit` at 200 % text scrolled sideways (the range odometer could not wrap): `odometer.ts` wraps inside its width, the gauges stack grid takes `minmax(0, 1fr)`; proven by the existing `phone.spec.ts` 200 % test (FR-002)
+
 ## FR → test
 
 | FR | Tests |
 |----|-------|
 | FR-001 | T003 |
-| FR-002 | T002, T005 |
+| FR-002 | T002, T005, T019 |
 | FR-003 | T002, T005 |
 | FR-004 | T002, T005 |
 | FR-005 | T002, T005 |
