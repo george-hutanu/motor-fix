@@ -149,8 +149,8 @@ touching a gate, and before `--bless-hooks`. `.claude/vitest.config.ts` pins
 Commit style: one-line Conventional Commit with a scope (`feat(api): …`), no
 body, no trailers, no tool mentions — enforced by
 `.claude/hooks/commit-msg-policy.js`. Every task runs the lifecycle in AGENTS.md:
-In progress, draft PR, a push per commit (never forced, never `main`), then PR
-ready plus In review when done, and Done after the user merges.
+In progress, draft PR, a push per commit (never forced, never `main`), PR ready
+plus In review when done, then merge on green CI and Done — without asking.
 
 ## Design work
 

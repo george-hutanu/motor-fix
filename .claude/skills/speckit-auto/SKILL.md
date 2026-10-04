@@ -426,7 +426,7 @@ One Conventional Commit per implementation slice, single line, no body, no
 trailers (`.claude/hooks/commit-msg-policy.js` enforces it). Push after every
 commit, to the feature's own branch only (`git push`, upstream set when the
 branch was created, so the draft PR follows the work). Never `--force`, never
-`main`. Never merge: that is the user's call.
+`main`. Merge only at the Hand-off, on green CI (AGENTS.md lifecycle).
 
 The artifact phases produce **no commits**, and this is not an oversight:
 `specs/`, `.specify/` and `.claude/` are all listed in `.git/info/exclude`, so
@@ -506,10 +506,13 @@ When phases 14–16 are done, the review left no CRITICAL/HIGH and the last
 
 1. `GH_TOKEN=$(gh auth token -u george-hutanu) gh pr ready <branch>`
 2. `speckit-notion-sync review`: the story, its timeline row → In review.
+3. Wait for the PR's CI. Every check green: `gh pr merge <n> --merge
+   --delete-branch`, then `speckit-notion-sync finish`. A red check: fix it on
+   the branch, push, wait again; after three attempts on the same check, stop
+   and report it with the PR left open.
 
-A run that ends on a Hard Stop does neither: the PR stays a draft and the story
-In progress. The run never merges; `speckit-notion-sync finish` follows the
-user's merge.
+A run that ends on a Hard Stop does none of this: the PR stays a draft and the
+story In progress. None of these steps waits for the user's confirmation.
 
 ## Final Report
 

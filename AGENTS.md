@@ -36,9 +36,15 @@ epic or a plan, whether run through spec-kit or by hand.
   4. When it is done (tests, typecheck and lint green, review with no
      CRITICAL/HIGH left), mark the PR ready for review (`gh pr ready`) and set
      the task to In review in Notion (`speckit-notion-sync review`).
-  5. When the PR is merged, set the task to Done (`speckit-notion-sync finish`).
+  5. When every CI check on the PR is green, merge it (`gh pr merge --merge
+     --delete-branch`) and set the task to Done (`speckit-notion-sync finish`).
+     A red check is fixed on the branch and pushed; a check that cannot be
+     made green leaves the PR open and is reported.
 
-  Merging is always the user's. The Notion writes cover the story, its row in
+  The agent runs all five steps without asking: opening, pushing, marking
+  ready and merging on green CI are standing instructions from the owner.
+  Never merge with a red or pending check, never `--admin`, never `--force`.
+  The Notion writes cover the story, its row in
   the epic's build timeline under Delivery › Plans, and the epic itself (In
   progress at its first story, Done at its last). They are standing
   instructions; do not ask before them.
