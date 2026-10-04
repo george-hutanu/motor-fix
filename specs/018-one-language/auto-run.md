@@ -31,3 +31,14 @@
 - Autonomous: the e2e switches dashboards to English with the RO/EN switch (the stubbed account says `ro`, which wins over a remembered `mf.lang`).
 - `npx jest libs/i18n apps/web/src/app/dashboard` → "Test Suites: 16 passed · Tests: 473 passed".
 - Production build `scripts/heavy.sh npx nx run web:build` OK; served on :4218 (APP_ENV=test, no API); `BASE_URL=http://localhost:4218 scripts/heavy.sh npx playwright test --workers=2` → 89 passed, 1 failed (`skeleton.spec` needs the API with PostgreSQL/Redis: environment, as in ST-21/ST-286). one-language.spec 21/21.
+
+## 12. Harden
+- artifact-lint: "0 error(s), 0 warning(s)" (Jev lane unavailable: no key).
+- diff-audit: 7 `import-extension` ERRORs — false positive, confirmed by code-reviewer: `libs/i18n/tsconfig.json` sets `"module": "preserve"` (bundler resolution) and every existing lib file imports without `.js` (same verdict as 016, 017, 019, 051, 052). 3 `test-only-export` WARNs on `check.ts` are pre-existing.
+- test-adversary: 3 files, 42 tests, all pass (`hyphen`, `as-written`, `catalogue-name` adversary specs); kept, like the lib's other adversary specs.
+- Mutation: not run locally (AGENTS.md: CI only, nightly).
+
+## 14. Review
+- spec-reviewer APPROVE: MEDIUM not-found route missing from the e2e → added `/ro/nu-exista`, `/en/no-such-page` (25/25 pass). MEDIUM `CatalogueNamePipe` has no call site → decision: kept; the Build brief's scope says the story "builds the shared helpers" and scenario 3 asks for catalogue names in the interface language (Principle I allows a concrete current requirement). LOW placeholder texts skipped → deferred.md. LOW duplicate Romanian sideways check at 320 px → kept: the same test also checks cut text and 12 px, which phone.spec does not at 320 px. LOW untracked adversary specs → committed.
+- code-reviewer APPROVE: MEDIUM unused pipe (same decision); LOW foreign set rebuilt per text → hoisted (`FOREIGN`). Confirmed no conflict with PR #31 in `cockpit/ro.json` (disjoint hunks, its new texts have no letter-hyphen-letter).
+- No CRITICAL or HIGH.

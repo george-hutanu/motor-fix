@@ -35,15 +35,15 @@ const textsOf = (language: Language) =>
 const TEXTS = { en: textsOf('en'), ro: textsOf('ro') };
 // What only the other language's files say; a word both share ("Service") is
 // not a sign of the other language.
-const foreign = (language: Language) => {
-  const own = TEXTS[language];
-  const other = TEXTS[language === 'ro' ? 'en' : 'ro'];
-  return new Set([...other].filter((text) => !own.has(text)));
-};
+const onlyIn = (other: Language, own: Language) =>
+  new Set([...TEXTS[other]].filter((text) => !TEXTS[own].has(text)));
+const FOREIGN = { en: onlyIn('ro', 'en'), ro: onlyIn('en', 'ro') };
 
 const screens: { path: string; language: Language; role?: string }[] = [
   { language: 'ro', path: '/ro' },
   { language: 'en', path: '/en' },
+  { language: 'ro', path: '/ro/nu-exista' },
+  { language: 'en', path: '/en/no-such-page' },
   ...(['ro', 'en'] as const).flatMap((language) => [
     { language, path: '/cockpit' },
     { language, path: '/app/driver', role: 'driver' },
@@ -109,7 +109,7 @@ for (const screen of screens) {
       await open(page, screen);
 
       const mixed = (await shownTexts(page)).filter((text) =>
-        foreign(language).has(text),
+        FOREIGN[language].has(text),
       );
 
       expect(mixed).toEqual([]);
