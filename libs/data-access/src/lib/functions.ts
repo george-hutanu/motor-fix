@@ -23,6 +23,10 @@ export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Pa
 export { auditHistoryControllerList as auditHistoryControllerList } from './fn/audit-history/audit-history-controller-list';
 export type { NotificationsControllerTest$Params as NotificationsControllerTest$Params } from './fn/notifications/notifications-controller-test';
 export { notificationsControllerTest as notificationsControllerTest } from './fn/notifications/notifications-controller-test';
+export type { NotificationPreferencesControllerRead$Params as NotificationPreferencesControllerRead$Params } from './fn/notifications/notification-preferences-controller-read';
+export { notificationPreferencesControllerRead as notificationPreferencesControllerRead } from './fn/notifications/notification-preferences-controller-read';
+export type { NotificationPreferencesControllerSave$Params as NotificationPreferencesControllerSave$Params } from './fn/notifications/notification-preferences-controller-save';
+export { notificationPreferencesControllerSave as notificationPreferencesControllerSave } from './fn/notifications/notification-preferences-controller-save';
 export type { LiveControllerLive$Params as LiveControllerLive$Params } from './fn/live/live-controller-live';
 export { liveControllerLive as liveControllerLive } from './fn/live/live-controller-live';
 export type { LiveControllerTest$Params as LiveControllerTest$Params } from './fn/live/live-controller-test';

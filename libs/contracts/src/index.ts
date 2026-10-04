@@ -5,5 +5,6 @@ export * from './files';
 export * from './health.dto';
 export * from './live.dto';
 export * from './me.dto';
+export * from './notification-preferences.dto';
 export * from './notifications.dto';
 export * from './problem';

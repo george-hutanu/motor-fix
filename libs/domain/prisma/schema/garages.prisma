@@ -16,6 +16,7 @@ model Garage {
   createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
   members   GarageMember[]
   mechanics Mechanic[]
+  notificationPreferences NotificationPreference[]
 
   @@map("garage")
 }

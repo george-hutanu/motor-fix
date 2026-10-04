@@ -402,6 +402,66 @@
         ]
       }
     },
+    "/api/v1/notification-preferences": {
+      "get": {
+        "operationId": "NotificationPreferencesController_read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPreferencesDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      },
+      "put": {
+        "operationId": "NotificationPreferencesController_save",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNotificationPreferencesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPreferencesDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/api/v1/live": {
       "get": {
         "operationId": "LiveController_live",
@@ -951,6 +1011,169 @@
         "required": [
           "queued"
         ]
+      },
+      "NotificationGroupDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "offers",
+              "bookings",
+              "due_dates",
+              "news",
+              "reviews_history"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "types": {
+            "description": "The notification types the switch covers",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "key",
+          "enabled",
+          "types"
+        ]
+      },
+      "NotificationPreferenceDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "A notification type, e.g. QUOTE_RECEIVED"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "email",
+              "push",
+              "sms",
+              "whatsapp"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "garageId": {
+            "type": "string",
+            "description": "The garage of a staff choice; null for a personal one",
+            "format": "uuid",
+            "nullable": true
+          },
+          "alwaysSent": {
+            "type": "boolean",
+            "description": "Sent whatever the person chooses"
+          }
+        },
+        "required": [
+          "type",
+          "channel",
+          "enabled",
+          "garageId",
+          "alwaysSent"
+        ]
+      },
+      "NotificationPreferencesDto": {
+        "type": "object",
+        "properties": {
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationGroupDto"
+            }
+          },
+          "preferences": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationPreferenceDto"
+            }
+          }
+        },
+        "required": [
+          "groups",
+          "preferences"
+        ]
+      },
+      "UpdateNotificationGroupDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "offers",
+              "bookings",
+              "due_dates",
+              "news",
+              "reviews_history"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "enabled"
+        ]
+      },
+      "UpdateNotificationPreferenceDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "A notification type, e.g. QUOTE_RECEIVED"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "email",
+              "push",
+              "sms",
+              "whatsapp"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "garageId": {
+            "type": "string",
+            "description": "The garage of a staff choice; null for a personal one",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "type",
+          "channel",
+          "enabled",
+          "garageId"
+        ]
+      },
+      "UpdateNotificationPreferencesDto": {
+        "type": "object",
+        "properties": {
+          "groups": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UpdateNotificationGroupDto"
+            }
+          },
+          "preferences": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UpdateNotificationPreferenceDto"
+            }
+          }
+        }
       },
       "LiveTestDto": {
         "type": "object",

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import type { OutsideChannel } from '@motor-fix/contracts';
 import {
   HttpException,
   HttpStatus,
@@ -15,6 +16,7 @@ import {
   sendsEmail,
 } from './catalogue';
 import { blockedReason, type EmailConfig } from './email-config';
+import { isDriverType, mutedChannels } from './preferences';
 import { isQuiet, nextMorning } from './quiet-hours';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { LIVE_CHANNEL } from '../events/live.hub';
@@ -48,7 +50,7 @@ interface Jobs {
   add(name: string, data: unknown, options: JobsOptions): Promise<unknown>;
 }
 
-interface Publisher {
+export interface Publisher {
   publish(channel: string, message: string): Promise<unknown>;
 }
 
@@ -56,6 +58,8 @@ interface NotifyInput {
   kind: string;
   recipients: readonly string[];
   eventId: string;
+  // The garage a staff message is about; its staff's choices for it apply.
+  garageId?: string | null;
   subjectId?: string | null;
   params?: Record<string, unknown>;
 }
@@ -93,9 +97,10 @@ export class NotificationsService {
     const type = notificationType(input.kind);
     let queued = 0;
     for (const accountId of new Set(input.recipients)) {
+      const muted = await this.muted(input, accountId);
       const at = this.now();
       const written = await this.prisma.$transaction((tx) =>
-        this.build(tx, type, input, accountId, at),
+        this.build(tx, type, input, accountId, at, muted),
       );
       if (!written) continue;
       await this.announce(written.bell);
@@ -217,6 +222,33 @@ export class NotificationsService {
     await this.fail(rows, 'bounced', true);
   }
 
+  // Read outside the send's transaction, so a store that fails cannot abort
+  // it: the message then goes as if nothing were saved.
+  private async muted(
+    input: NotifyInput,
+    accountId: string,
+  ): Promise<Set<OutsideChannel>> {
+    try {
+      const rows = await this.prisma.notificationPreference.findMany({
+        select: { channel: true, enabled: true, garageId: true, type: true },
+        where: {
+          accountId,
+          garageId: isDriverType(input.kind) ? null : (input.garageId ?? null),
+          type: input.kind,
+        },
+      });
+      return mutedChannels(
+        input.kind,
+        rows.map((r) => ({ ...r, channel: r.channel as OutsideChannel })),
+      );
+    } catch (error) {
+      this.logger.warn(
+        `preferences for ${input.kind} not read, sending on the default channel: ${String(error)}`,
+      );
+      return mutedChannels(input.kind, []);
+    }
+  }
+
   // The bell row and the e-mail row of one recipient; null when nothing is
   // written (a deleted account, or an event already handled).
   private async build(
@@ -225,6 +257,7 @@ export class NotificationsService {
     input: NotifyInput,
     accountId: string,
     at: Date,
+    muted: ReadonlySet<OutsideChannel>,
   ): Promise<{ bell: Notification; next: NextJob | null } | null> {
     // One builder at a time per kind and person, so a burst opens one window.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${input.kind}:${accountId}`}))`;
@@ -256,7 +289,7 @@ export class NotificationsService {
       data: { ...base, channel: 'in_app', sentAt: at, status: 'sent' },
     });
     const next =
-      account.email && sendsEmail(type)
+      account.email && sendsEmail(type, muted)
         ? await this.emailRow(tx, type, base, account.email, at)
         : null;
     return { bell, next };

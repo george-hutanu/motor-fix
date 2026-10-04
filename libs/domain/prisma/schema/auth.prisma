@@ -54,6 +54,7 @@ model Account {
   memberships     GarageMember[]
   mechanic        Mechanic?
   notifications   Notification[]
+  notificationPreferences NotificationPreference[]
 
   @@map("account")
 }
