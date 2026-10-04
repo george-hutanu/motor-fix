@@ -1,10 +1,11 @@
 import { Component, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
-import { Chart } from 'chart.js';
+import { animator, Chart } from 'chart.js';
 
 import { BarChart, LineChart } from './chart';
 import type { ChartPoint } from './chart-config';
+import { REDUCED_MOTION } from './reduced-motion';
 
 let schemeListeners: (() => void)[] = [];
 
@@ -267,5 +268,77 @@ describe('the bar and line charts', () => {
 
     expect(Chart.getChart(canvas)).toBeUndefined();
     expect(schemeListeners).toHaveLength(0);
+  });
+});
+
+describe('the charts under reduced motion', () => {
+  const reduced = signal(false);
+  let queries: string[] = [];
+
+  beforeEach(() => {
+    reduced.set(false);
+    queries = [];
+    const media = globalThis.matchMedia;
+    globalThis.matchMedia = (query: string) => {
+      queries.push(query);
+      return media(query);
+    };
+    TestBed.configureTestingModule({
+      providers: [{ provide: REDUCED_MOTION, useValue: reduced.asReadonly() }],
+    });
+  });
+
+  it('follow the shared reduced-motion setting while the chart is open', async () => {
+    const [fixture, el] = await render();
+    const chart = chartOf(el) as Chart;
+
+    expect(animator.running(chart)).toBe(true);
+    expect(chart.options.animation).toMatchObject({ duration: 1000 });
+
+    reduced.set(true);
+    await settle(fixture);
+
+    expect(chartOf(el)).toBe(chart);
+    expect(animator.running(chart)).toBe(false);
+    expect(chart.options.animation).toBe(false);
+
+    fixture.componentInstance.points.set([
+      ...POINTS,
+      { label: 'Aprilie 2027', value: 80000 },
+    ]);
+    await settle(fixture);
+
+    expect(animator.running(chart)).toBe(false);
+    expect(chart.options.animation).toBe(false);
+
+    reduced.set(false);
+    await settle(fixture);
+
+    expect(chartOf(el)).toBe(chart);
+    expect(chart.options.animation).toMatchObject({ duration: 1000 });
+  });
+
+  it('draw a new chart still while reduced motion is on, and grow one in once it is off', async () => {
+    reduced.set(true);
+    const [fixture, el] = await render((h) => h.error.set(true));
+
+    fixture.componentInstance.error.set(false);
+    await settle(fixture);
+
+    expect(animator.running(chartOf(el) as Chart)).toBe(false);
+
+    fixture.componentInstance.error.set(true);
+    reduced.set(false);
+    await settle(fixture);
+    fixture.componentInstance.error.set(false);
+    await settle(fixture);
+
+    expect(animator.running(chartOf(el) as Chart)).toBe(true);
+  });
+
+  it('never ask the device for reduced motion themselves', async () => {
+    await render();
+
+    expect(queries.filter((q) => q.includes('reduced-motion'))).toEqual([]);
   });
 });

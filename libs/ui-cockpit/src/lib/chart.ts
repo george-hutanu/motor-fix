@@ -29,6 +29,7 @@ import {
 import { HlmButton } from './helm/button';
 import { HlmTableImports } from './helm/table';
 import { Panel } from './panel';
+import { REDUCED_MOTION } from './reduced-motion';
 
 @Directive()
 abstract class CockpitChart {
@@ -43,6 +44,7 @@ abstract class CockpitChart {
 
   private readonly i18n = inject(I18n);
   private readonly document = inject(DOCUMENT);
+  private readonly reduced = inject(REDUCED_MOTION);
   private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('canvas');
   private readonly scheme = signal(0);
   private chart?: Chart<ChartType, number[], string>;
@@ -84,18 +86,21 @@ abstract class CockpitChart {
       const canvas = this.canvas()?.nativeElement;
       if (this.chart && this.chart.canvas !== canvas) this.destroyChart();
       if (!canvas) return;
+      const reduced = this.reduced();
       const config = chartConfig(
         this.type,
         this.points(),
         this.unit(),
         this.i18n.language(),
         readTheme(canvas),
-        matchMedia('(prefers-reduced-motion: reduce)').matches,
+        reduced,
       );
       if (!this.chart) {
         this.chart = new Chart(canvas, config);
         return;
       }
+      // Chart.js animates in script, out of reach of the stylesheet's rule.
+      if (reduced) this.chart.stop();
       this.chart.data = config.data;
       this.chart.options = config.options ?? {};
       this.chart.update('none');

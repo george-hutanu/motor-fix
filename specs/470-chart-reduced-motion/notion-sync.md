@@ -4,3 +4,8 @@
 - 2026-10-04 · start · Foundations build timeline · no row expected: tasks added after the plan have none
 - 2026-10-04 · start · EP-1 Foundations Status · unchanged (In progress)
 - 2026-10-04 · ready · Foundations · −ST-470 (nothing depends on ST-470, so no other item changes)
+- 2026-10-04 · pr · ST-470 · PR #50 https://github.com/george-hutanu/motor-fix/pull/50
+- 2026-10-04 · labels · PR #50 · planning
+- 2026-10-04 · implement · ST-470 story Status · Planning → Implementing
+- 2026-10-04 · implement · Foundations build timeline · no row
+- 2026-10-04 · labels · PR #50 · in development
