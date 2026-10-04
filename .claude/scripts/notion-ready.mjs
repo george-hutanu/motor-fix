@@ -29,6 +29,7 @@ function holdOf(item) {
 
 export function decideReady(items) {
   if (!Array.isArray(items)) throw new TypeError('items must be an array');
+  if (items.some((item) => item?.id == null)) throw new TypeError('every item needs an id');
   const ready = [];
   const held = [];
   const tick = [];
@@ -63,7 +64,7 @@ export function readyLogged(text) {
     if (event === 'finish') finish = index;
     if (event === 'ready') ready = index;
   });
-  if (finish === -1) return { ok: false, reason: 'no finish line: the story has not been finished in Notion yet' };
+  if (finish === -1) return { ok: false, reason: 'no finish line: run `speckit-notion-sync finish` once the PR has merged' };
   if (ready < finish) return { ok: false, reason: 'no ready line after the last finish: run `notion-ready <epic>` and log it' };
   return { ok: true, reason: 'ready refreshed after finish' };
 }

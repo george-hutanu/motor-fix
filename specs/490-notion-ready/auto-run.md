@@ -39,3 +39,17 @@
 
 - `artifact-lint`: 0 errors, 0 warnings (Jev unavailable). `diff-audit`: clean.
 - No Stryker config covers `.claude/`; no mutation run (laptop rule: never locally).
+- test-adversary: 59 tests, 6 failing — dedupe of repeated IDs (twice), unstable order for digitless IDs, `decide` accepting a non-array, raw stack traces on bad JSON and a missing file. All fixed; adversary spec kept (86 notion-ready tests green).
+- code-reviewer (c7afec8): BLOCK on 1 HIGH — a bullet-form `- [NOTION-SYNC PENDING: ready …]` line was not read, so a Notion outage would have blocked archive. Fixed with a test. MEDIUM vacuous `/comment/i` assertion tightened; LOW archive recipe now follows the check's reason.
+- Autonomous decision (reviewer's MEDIUM "decision"): holds are read in a second pass, only for items the first `decide` finds ready — bounded by the ready count, and complete, since a hold can only stop a ready item. Evidence: the quota note in `.claude/skills/notion-ready/SKILL.md` §1 and Principle I.
+- Commit 57f56c0 `refactor(harness): …`, pushed.
+
+## 14. Review
+
+- spec-reviewer: APPROVE. MEDIUM: the no-finish message named no command (fixed). MEDIUM: padded adversary spec (seven duplicate or out-of-spec cases removed). LOW: title typo (fixed); run log uncommitted (committed here).
+- code-reviewer re-review: APPROVE; all four prior findings resolved. New MEDIUM: an id-less item would tick page `null` (now refused, tested). MEDIUM: two more duplicate cases (removed).
+- notion-ready specs: 78 passed.
+
+## 16. Retrospective evidence
+
+- Gathered for the final report, unjudged.

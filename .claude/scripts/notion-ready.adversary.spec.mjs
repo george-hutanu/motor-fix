@@ -71,14 +71,6 @@ describe('deciding readiness from unusual items', () => {
     assert.doesNotMatch(held[0].reason, /ST-3/);
   });
 
-  it('never marks Blocked, In review, QA, Planning, Implementing, Done or legacy In progress ready', () => {
-    for (const status of ['Blocked', 'In review', 'QA', 'Planning', 'Implementing', 'Done', 'In progress', 'to do', 'To Do', '', null, undefined]) {
-      const { ready, held } = decideReady([item('ST-1', { status, blockers: [] })]);
-      assert.deepEqual(ready, [], `status ${JSON.stringify(status)}`);
-      assert.deepEqual(held, [], `status ${JSON.stringify(status)}`);
-    }
-  });
-
   it('unticks a ticked item in any non-To do status', () => {
     for (const status of ['Blocked', 'In review', 'QA', 'Planning', 'Implementing', 'Done', 'In progress']) {
       const { untick, tick } = decideReady([item('ST-1', { status, ticked: true })]);
@@ -87,46 +79,9 @@ describe('deciding readiness from unusual items', () => {
     }
   });
 
-  it('unticks a ticked To do item that gained an open blocker or a hold', () => {
-    const { untick } = decideReady([
-      item('ST-1', { ticked: true, blockers: [{ id: 'ST-9', status: 'Implementing' }] }),
-      item('ST-2', { ticked: true, hold: 'waits on the lawyer' }),
-    ]);
-    assert.deepEqual(untick, ['ST-1', 'ST-2']);
-  });
-
-  it('writes nothing for items whose tick is already right', () => {
-    const r = decideReady([
-      item('ST-1', { ticked: true }),
-      item('ST-2', { ticked: false, blockers: [{ id: 'ST-9', status: 'Planning' }] }),
-      item('ST-3', { status: 'Done', ticked: false }),
-    ]);
-    assert.deepEqual(r.tick, []);
-    assert.deepEqual(r.untick, []);
-  });
-
-  it('does not tick a ready item that is already ticked', () => {
-    const { tick, ready } = decideReady([item('ST-1', { ticked: true })]);
-    assert.deepEqual(tick, []);
-    assert.deepEqual(ids(ready), ['ST-1']);
-  });
 });
 
 describe('ordering the ready list', () => {
-  it('orders Highest, High, Medium, Low, then none and unknown after Low', () => {
-    const { ready } = decideReady([
-      item('ST-1', { priority: null }),
-      item('ST-2', { priority: 'Low' }),
-      item('ST-3', { priority: 'Medium' }),
-      item('ST-4', { priority: 'High' }),
-      item('ST-5', { priority: 'Highest' }),
-      item('ST-6', { priority: 'Urgent' }),
-      item('ST-7', { priority: undefined }),
-    ]);
-    assert.deepEqual(ids(ready).slice(0, 4), ['ST-5', 'ST-4', 'ST-3', 'ST-2']);
-    assert.deepEqual(ids(ready).slice(4).sort(), ['ST-1', 'ST-6', 'ST-7']);
-  });
-
   it('orders by the number in the ID, not as text', () => {
     const { ready } = decideReady([item('ST-100'), item('ST-9'), item('ST-20')]);
     assert.deepEqual(ids(ready), ['ST-9', 'ST-20', 'ST-100']);
@@ -151,9 +106,13 @@ describe('ordering the ready list', () => {
     assert.deepEqual(a.ready, b.ready);
   });
 
-  it('survives numeric IDs and missing IDs', () => {
+  it('orders numeric IDs by value', () => {
     const { ready } = decideReady([item(7), item(3)]);
     assert.deepEqual(ids(ready), [3, 7]);
+  });
+
+  it('refuses an item with no ID instead of ticking page null', () => {
+    assert.throws(() => decideReady([{ status: 'To do' }, item('ST-1')]), /needs an id/);
   });
 
   it('is deterministic when repeated and does not mutate its input', () => {
@@ -172,15 +131,6 @@ describe('ordering the ready list', () => {
   it('does not tick the same ID twice when it is duplicated', () => {
     const { tick } = decideReady([item('ST-1'), item('ST-1')]);
     assert.deepEqual(tick, ['ST-1']);
-  });
-
-  it('handles ten thousand items and keeps the order', () => {
-    const items = Array.from({ length: 10000 }, (_, i) => item(`ST-${10000 - i}`));
-    const { ready, tick } = decideReady(items);
-    assert.equal(ready.length, 10000);
-    assert.equal(tick.length, 10000);
-    assert.equal(ready[0].id, 'ST-1');
-    assert.equal(ready[9999].id, 'ST-10000');
   });
 
   it('reports not-ready To do items with a reason and never lists them as ready', () => {
@@ -216,11 +166,6 @@ describe('reading the sync log', () => {
     assert.equal(readyLogged([finish, '[NOTION-SYNC PENDING: ready Foundations — down]'].join('\r\n')).ok, true);
   });
 
-  it('reads lines written without the dot after the date', () => {
-    assert.equal(readyLogged('- 2026-10-04 finish ST-1 story\n- 2026-10-04 ready Foundations').ok, true);
-    assert.equal(readyLogged('- 2026-10-04 ready Foundations\n- 2026-10-04 finish ST-1 story').ok, false);
-  });
-
   it('does not count a PENDING comment as a ready line', () => {
     const r = readyLogged([finish, '[NOTION-SYNC PENDING: comment ST-1 — usage limit]'].join('\n'));
     assert.equal(r.ok, false);
@@ -245,7 +190,7 @@ describe('reading the sync log', () => {
     assert.equal(readyLogged([finish, 'The board is ready.', 'ready'].join('\n')).ok, false);
   });
 
-  it('does not count a words that merely contain ready, such as already or readyish', () => {
+  it('does not count words that merely contain ready, such as already or readyish', () => {
     assert.equal(readyLogged([finish, '- 2026-10-04 · already · Foundations', '- 2026-10-04 · readyish · Foundations'].join('\n')).ok, false);
   });
 
@@ -272,12 +217,6 @@ describe('reading the sync log', () => {
     assert.equal(r.ok, false);
   });
 
-  it('survives a huge log', () => {
-    const lines = Array.from({ length: 50000 }, (_, i) => `- 2026-10-04 · start · ST-${i} story · To do → Planning`);
-    const r = readyLogged([...lines, finish, ready].join('\n'));
-    assert.equal(r.ok, true);
-  });
-
   it('returns a reason string on every failure', () => {
     const r = readyLogged(finish);
     assert.equal(r.ok, false);
@@ -285,9 +224,6 @@ describe('reading the sync log', () => {
     assert.match(r.reason, /notion-ready/);
   });
 
-  it('survives unicode and BOM-prefixed logs', () => {
-    assert.equal(readyLogged(`﻿# Notion sync\n${finish}\n${ready}`).ok, true);
-  });
 });
 
 describe('the command line', () => {
