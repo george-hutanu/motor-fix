@@ -5,7 +5,7 @@ import {
   TemplateError,
   templateName,
 } from './templates';
-import { TEMPLATES } from './templates/index';
+import { TEMPLATES } from './templates/registry';
 
 const APP = 'https://motorfix.test';
 
@@ -67,7 +67,7 @@ describe('the test message', () => {
     expect(mail.html).toContain(`href="${APP}"`);
     expect(mail.html).toContain('Open MotorFix');
     expect(mail.text).toContain(`Open MotorFix: ${APP}`);
-    expect(mail.html).toContain('MotorFix');
+    expect(mail.html).toContain('>MotorFix</td>');
   });
 
   it('says why the person gets it and carries no unsubscribe link', () => {

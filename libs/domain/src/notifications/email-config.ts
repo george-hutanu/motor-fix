@@ -28,6 +28,13 @@ function sender(value = '', sending = false): EmailConfig['from'] {
   return from;
 }
 
+// A value that is not a URL would put a broken link in every e-mail;
+// without one, the messages that need it fail instead.
+function webUrl(value = ''): string | undefined {
+  if (!URL.canParse(value)) return undefined;
+  return value.replace(/\/+$/, '');
+}
+
 export function emailConfig(
   appEnv: AppEnv,
   source: Record<string, string | undefined>,
@@ -48,7 +55,7 @@ export function emailConfig(
     production: appEnv === 'production',
     sending: switchValue === 'on',
     webhookSecret: source['BREVO_WEBHOOK_SECRET'] || undefined,
-    webUrl: source['PUBLIC_WEB_URL']?.replace(/\/+$/, '') || undefined,
+    webUrl: webUrl(source['PUBLIC_WEB_URL']),
   };
 }
 

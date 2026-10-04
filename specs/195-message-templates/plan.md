@@ -66,7 +66,7 @@ libs/domain/src/notifications/
 ├── template-check.spec.ts       (new)  real templates pass; one fixture per rule fails
 ├── email-layout.ts              (new)  HTML part: wordmark, amber button, footer
 ├── templates/                   (new)  one file per type
-│   ├── index.ts                        the registry
+│   ├── registry.ts                     the registry
 │   ├── test-message.ts
 │   ├── account-email.ts
 │   ├── quote-received.ts               grouped e-mail

@@ -1,6 +1,6 @@
 import { checkTemplates } from './template-check';
 import type { Template } from './templates';
-import { TEMPLATES } from './templates/index';
+import { TEMPLATES } from './templates/registry';
 
 const mail = (subject: string) => ({
   button: { label: 'Open', link: 'app' },
@@ -114,7 +114,7 @@ describe('the template check', () => {
           ro: good.push?.ro,
         },
       }),
-    ).toEqual(['QUOTE_RECEIVED push en: undeclared value ']);
+    ).toEqual(['QUOTE_RECEIVED push en: no link']);
   });
 
   it('fails an SMS that is over 70 characters in Romanian with diacritics', () => {

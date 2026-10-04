@@ -53,3 +53,17 @@
 ## 9. Tests (red first)
 - New: templates.spec.ts, template-check.spec.ts; changed: brevo.spec.ts / brevo.adversary.spec.ts (HTML part), email-config.spec.ts (webUrl), notifications.processor.integration.spec.ts (exact ro/en subjects, HTML part, template_failed, missing web URL, "2 oferte noi"), notifications.testing.ts (PUBLIC_WEB_URL).
 - `scripts/heavy.sh npx jest … templates.spec templates-check.spec brevo.spec email-config.spec` → "Test Suites: 4 failed, 4 total" (missing modules, missing htmlContent, missing webUrl). Integration spec red by construction (needs services; runs in CI).
+
+## 10. Implement
+- before_implement: design.md current; notion-sync implement (ST-195 + timeline → Implementing, PR label `in development`).
+- Slice 08f9a0c `feat(notifications): ST-195 render every message from Romanian and English templates` — unit 285/285, notifications integration 71/71 (local PostgreSQL + Redis), typecheck 13 projects, lint clean, worker build bundles `@motor-fix/i18n/formats` with no Angular code.
+- Pre-commit hook: seed.integration.spec failed only because the worktree has no DATABASE_URL (seed subprocess fell back to database "georgehutanu"); committed with DATABASE_URL=postgresql://localhost:5432/postgres (the specs' own default) — green.
+
+## 11. Converge
+- Every FR has its task [X] and a test file; nothing unbuilt beyond T011 (polish). No new tasks appended.
+
+## 12. Harden
+- artifact-lint 0/0. diff-audit: 3 dead type exports → unexported; `templates/index.ts` → `templates/registry.ts`; 22 `import-extension` errors are the known false positive for libs/domain (CommonJS + bundler, extensionless imports everywhere; tech debt ST-457) — left; warnings: test-only export `bellText` (Complexity Tracking), untested-new-file for template files (covered through the registry).
+- test-adversary: 237 tests; 5 failed → fixed (inherited properties read as values; bellText threw on hostile kind/params).
+- code-reviewer: APPROVE; #2 (empty link reason), #4 (wordmark assertion), #5 (validate PUBLIC_WEB_URL) patched; #1 MEDIUM decision: keep per-row `template_failed` when the worker has no PUBLIC_WEB_URL rather than refusing to boot (autonomous default: a boot refusal would also stop ACCOUNT_EMAIL, which does not need it) — owner must set PUBLIC_WEB_URL on the worker; #3 keep bellText (plan Complexity Tracking).
+- Mutation: not run locally (AGENTS.md: mutation runs only in CI, nightly on main).

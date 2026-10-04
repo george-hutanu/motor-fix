@@ -17,7 +17,7 @@
 
 Independent test: render the real templates in both languages and send the test message through the recorded Brevo mock.
 
-- [X] T005 [US1] `libs/domain/src/notifications/templates/` (new): `test-message.ts`, `account-email.ts` (email_check, password_reset), `quote-received.ts` (grouped), `generic.ts` (GENERIC, GENERIC.grouped), `index.ts` (registry) — ro and en e-mail and bell texts, per-template footer reason (FR-010, FR-004)
+- [X] T005 [US1] `libs/domain/src/notifications/templates/` (new): `test-message.ts`, `account-email.ts` (email_check, password_reset), `quote-received.ts` (grouped), `generic.ts` (GENERIC, GENERIC.grouped), `registry.ts` — ro and en e-mail and bell texts, per-template footer reason (FR-010, FR-004)
 - [X] T006 [US2] `libs/domain/src/notifications/brevo.ts`: `send` carries `html` as `htmlContent` (FR-005)
 - [X] T007 [US2] `libs/domain/src/notifications/email-config.ts`: `webUrl` from `PUBLIC_WEB_URL`; `.env.example` notes the worker reads it (R8)
 - [X] T008 [US1] `libs/domain/src/notifications/notifications.processor.ts`: render the e-mail with `{ app: webUrl, ...params }` in the account's language (single and grouped); delete `messages.ts`, `messages.spec.ts`, `messages.adversary.spec.ts` (FR-002, FR-005, FR-010)
@@ -32,7 +32,8 @@ Independent test: render the real templates in both languages and send the test 
 
 ## Phase 6: Polish
 
-- [ ] T011 Mark tasks, update `auto-run.md`; `npm run typecheck`, `npm run lint`, the domain Jest project
+- [X] T012 Harden: adversary specs (`templates.adversary.spec.ts`, `template-check.adversary.spec.ts`); a value is read only from the params' own properties; `bellText` never throws (null params, any error → generic); an empty link names `no link`; `PUBLIC_WEB_URL` that is not a URL is ignored; registry file named `registry.ts`; no dead type exports (FR-002, FR-004, FR-009, FR-011)
+- [X] T011 Mark tasks, update `auto-run.md`; `npm run typecheck`, `npm run lint`, the domain Jest project
 
 ## Dependencies
 

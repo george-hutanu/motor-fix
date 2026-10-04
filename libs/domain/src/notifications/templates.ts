@@ -7,13 +7,13 @@ import {
 } from '@motor-fix/i18n/formats';
 
 import { emailHtml } from './email-layout';
-import { TEMPLATES } from './templates/index';
+import { TEMPLATES } from './templates/registry';
 
 type Language = 'ro' | 'en';
 export type Channel = 'email' | 'bell' | 'push' | 'sms' | 'whatsapp';
-export type Format = 'text' | 'link' | 'count' | 'num' | 'lei' | 'when';
+type Format = 'text' | 'link' | 'count' | 'num' | 'lei' | 'when';
 
-export interface EmailText {
+interface EmailText {
   subject: string;
   lines: readonly string[];
   // `link` names the value the button opens.
@@ -21,7 +21,7 @@ export interface EmailText {
   reason: string;
 }
 
-export interface PushText {
+interface PushText {
   title: string;
   body: string;
   link: string;
@@ -119,6 +119,13 @@ function pick(registry: Registry, name: string, channel: Channel) {
   return registry[name.endsWith('.grouped') ? 'GENERIC.grouped' : 'GENERIC'];
 }
 
+// Only the template's own values and the built-in ones; never an inherited
+// property such as `constructor`.
+function declared(template: Template, key: string): Format | undefined {
+  if (Object.hasOwn(template.values, key)) return template.values[key];
+  return Object.hasOwn(BUILT_IN, key) ? BUILT_IN[key] : undefined;
+}
+
 export function render<C extends Channel>(
   name: string,
   channel: C,
@@ -133,12 +140,10 @@ export function render<C extends Channel>(
   const template = pick(registry, name, channel) ?? fail('no template');
   const text = template[channel]?.[language] ?? fail(`no ${language} text`);
   const value = (key: string) => {
-    const kind = Object.hasOwn(template.values, key)
-      ? template.values[key]
-      : Object.hasOwn(BUILT_IN, key)
-        ? BUILT_IN[key]
-        : fail(`undeclared value ${key}`);
-    const given = params[key];
+    const kind =
+      declared(template, key) ??
+      fail(key ? `undeclared value ${key}` : 'no link');
+    const given = Object.hasOwn(params, key) ? params[key] : undefined;
     if (given === undefined || given === null) fail(`missing value ${key}`);
     return format(kind, given, language);
   };
@@ -210,16 +215,17 @@ export function bellText(
   params: Params,
   registry: Registry = TEMPLATES,
 ): string {
+  // A bell row's params come from JSON, which may hold null.
+  const values = params ?? {};
   try {
     return render(
-      templateName(kind, params),
+      templateName(kind, values),
       'bell',
       language,
-      params,
+      values,
       registry,
     );
-  } catch (error) {
-    if (!(error instanceof TemplateError)) throw error;
+  } catch {
     return render('GENERIC', 'bell', language, {}, registry);
   }
 }
