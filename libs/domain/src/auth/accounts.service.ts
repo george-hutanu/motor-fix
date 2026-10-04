@@ -78,7 +78,13 @@ export class AccountsService {
         where,
       });
       if (before.language === language) return;
-      await tx.account.update({ data: { language }, where });
+      // Only the change that still finds the old value writes, so two at once
+      // leave one audit entry.
+      const { count } = await tx.account.updateMany({
+        data: { language },
+        where: { ...where, language: before.language },
+      });
+      if (count === 0) return;
       await this.audit.recordChanges(
         tx,
         {

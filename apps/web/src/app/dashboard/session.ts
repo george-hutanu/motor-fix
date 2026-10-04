@@ -44,12 +44,13 @@ export class Session {
   // next tap; an answer for an account no longer held is dropped.
   private async save() {
     let me = this.current();
-    while (me && this.wanted && this.wanted !== me.language) {
+    // Ends on the language last sent, whatever the answer says.
+    let sent = me?.language;
+    while (me && this.wanted && this.wanted !== sent) {
+      sent = this.wanted;
       let saved: MeDto;
       try {
-        saved = await this.api.meControllerUpdate({
-          body: { language: this.wanted },
-        });
+        saved = await this.api.meControllerUpdate({ body: { language: sent } });
       } catch {
         return;
       }

@@ -156,6 +156,16 @@ describe('saving the language on the account', () => {
     expect(i18n.language()).toBe('ro');
   });
 
+  it('sends a tap once even when the answer still says the old language', async () => {
+    const { choice, meControllerUpdate, pending } = await signedIn('ro');
+
+    await choice.pick('en');
+    pending[0].resolve(account('ro'));
+    await settle();
+
+    expect(meControllerUpdate).toHaveBeenCalledTimes(1);
+  });
+
   it('drops an answer that arrives after signing out', async () => {
     const { choice, pending, session } = await signedIn('ro');
 

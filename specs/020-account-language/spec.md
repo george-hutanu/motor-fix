@@ -76,6 +76,8 @@ A visitor who is not signed in taps "EN". The interface turns English and the de
 - The language changes because the address changed (`/ro/…` to `/en/…`), because another tab chose it, or because the session loaded the account's language: none of these is a choice made with the switch, so none of them saves.
 - Two quick taps (EN then RO): one save is on its way at a time; the last language tapped is sent after the first answer, and the account and the session both end on it.
 - The person signs out while a save is on its way: the answer is ignored and the interface stays as it is.
+- The same change arrives twice at once (two tabs, a retried request): the account is changed once and one audit entry is written.
+- A save is answered with the account still in the old language: it is not sent again until the next tap.
 - A save answers after the account was replaced by another sign-in: the answer is ignored.
 - The switch's elements, texts and styles are unchanged by this story (only what a tap calls changes); Romanian and English both work on phones of 320 and 390 px.
 - A signed-in person opens an `/en/…` address while the account says `ro`: the address sets the interface language and nothing is saved (FR-008); the account's language is applied when the session loads, as today.

@@ -385,7 +385,7 @@ describe('who am I over HTTP and account writes under attack', () => {
         .set('Authorization', bearer(accountId, 'driver'))
         .send({ language: 'en', roles: ['admin'] });
 
-      expect(res.body.roles ?? ['driver']).toEqual(['driver']);
+      expect(res.body.roles).toEqual(['driver']);
       const row = await prisma.accountRole.findMany({ where: { accountId } });
       expect(row.map((r) => r.role)).toEqual(['driver']);
     });
