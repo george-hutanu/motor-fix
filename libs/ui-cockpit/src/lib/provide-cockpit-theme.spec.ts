@@ -1,28 +1,18 @@
+import { OVERLAY_DEFAULT_CONFIG } from '@angular/cdk/overlay';
 import { TestBed } from '@angular/core/testing';
-import { PRIME_NG_CONFIG } from 'primeng/config';
 
-import { CockpitPreset } from './preset';
 import { provideCockpitTheme } from './provide-cockpit-theme';
 
-function configWith(providers: ReturnType<typeof provideCockpitTheme>) {
-  TestBed.configureTestingModule({ providers: [providers] });
-  return TestBed.inject(PRIME_NG_CONFIG);
-}
-
 describe('provideCockpitTheme', () => {
-  it('registers the Cockpit preset following the device colour scheme', () => {
-    const config = configWith(provideCockpitTheme());
+  it('keeps overlays out of the browser top layer so toasts stay above them', () => {
+    TestBed.configureTestingModule({ providers: [provideCockpitTheme()] });
 
-    expect(config.theme).toEqual({
-      options: { darkModeSelector: 'system' },
-      preset: CockpitPreset,
+    expect(TestBed.inject(OVERLAY_DEFAULT_CONFIG)).toEqual({
+      usePopover: false,
     });
-    expect(config.license).toBeUndefined();
   });
 
-  it('passes a licence key through when one is given', () => {
-    const config = configWith(provideCockpitTheme({ license: 'key-123' }));
-
-    expect(config.license).toBe('key-123');
+  it('takes no options: the colour scheme comes from the device through CSS', () => {
+    expect(provideCockpitTheme).toHaveLength(0);
   });
 });

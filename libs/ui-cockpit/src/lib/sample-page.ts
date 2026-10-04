@@ -1,36 +1,34 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MessageService } from 'primeng/api';
-import { Button } from 'primeng/button';
-import { Dialog } from 'primeng/dialog';
-import { Drawer } from 'primeng/drawer';
-import { InputText } from 'primeng/inputtext';
-import { Popover } from 'primeng/popover';
-import { TableModule } from 'primeng/table';
-import { Tab, TabList, Tabs } from 'primeng/tabs';
-import { Toast } from 'primeng/toast';
-import { ToggleSwitch } from 'primeng/toggleswitch';
 
+import { HlmButton } from './helm/button';
+import { HlmDialogImports } from './helm/dialog';
+import { HlmInput } from './helm/input';
+import { HlmLabel } from './helm/label';
+import { HlmPopoverImports } from './helm/popover';
+import { HlmSheetImports } from './helm/sheet';
+import { HlmSwitch } from './helm/switch';
+import { HlmTableImports } from './helm/table';
+import { HlmTabsImports } from './helm/tabs';
+import { HlmToaster, toast } from './helm/toaster';
 import { Panel } from './panel';
 import { SAMPLE_GARAGES, SAMPLE_TEXT } from './sample-text';
 
 @Component({
   imports: [
-    Button,
-    Dialog,
-    Drawer,
     FormsModule,
-    InputText,
+    HlmButton,
+    HlmDialogImports,
+    HlmInput,
+    HlmLabel,
+    HlmPopoverImports,
+    HlmSheetImports,
+    HlmSwitch,
+    HlmTableImports,
+    HlmTabsImports,
+    HlmToaster,
     Panel,
-    Popover,
-    Tab,
-    TabList,
-    TableModule,
-    Tabs,
-    Toast,
-    ToggleSwitch,
   ],
-  providers: [MessageService],
   selector: 'mf-cockpit-sample-page',
   styles: `
     main {
@@ -63,97 +61,104 @@ import { SAMPLE_GARAGES, SAMPLE_TEXT } from './sample-text';
       <p class="reading">{{ text.romanian }}</p>
 
       <div class="row">
-        <p-button [label]="text.primary" />
-        <p-button [label]="text.secondary" severity="secondary" />
+        <button hlmBtn>{{ text.primary }}</button>
+        <button hlmBtn variant="secondary">{{ text.secondary }}</button>
       </div>
 
       <div class="field">
-        <label for="car-brand">{{ text.inputLabel }}</label>
-        <input pInputText id="car-brand" [(ngModel)]="brand" />
+        <label hlmLabel for="car-brand">{{ text.inputLabel }}</label>
+        <input hlmInput id="car-brand" [(ngModel)]="brand" />
       </div>
 
       <div class="row">
-        <p-toggleswitch inputId="open-now" [(ngModel)]="openNow" />
-        <label for="open-now">{{ text.toggleLabel }}</label>
+        <hlm-switch inputId="open-now" [(ngModel)]="openNow" />
+        <label hlmLabel for="open-now">{{ text.toggleLabel }}</label>
       </div>
 
-      <p-tabs value="all">
-        <p-tablist>
-          <p-tab value="all">{{ text.tabAll }}</p-tab>
-          <p-tab value="open">{{ text.tabOpen }}</p-tab>
-          <p-tab value="reviews">{{ text.tabReviews }}</p-tab>
-        </p-tablist>
-      </p-tabs>
+      <div hlmTabs tab="all">
+        <div hlmTabsList>
+          <button hlmTabsTrigger="all">{{ text.tabAll }}</button>
+          <button hlmTabsTrigger="open">{{ text.tabOpen }}</button>
+          <button hlmTabsTrigger="reviews">{{ text.tabReviews }}</button>
+        </div>
+        <p hlmTabsContent="all">{{ text.tabAllBody }}</p>
+        <p hlmTabsContent="open">{{ text.tabOpenBody }}</p>
+        <p hlmTabsContent="reviews">{{ text.tabReviewsBody }}</p>
+      </div>
 
       <mf-panel [title]="text.panelTitle">
-        <p-table [value]="garages">
-          <ng-template #header>
-            <tr>
-              <th>{{ text.tableGarage }}</th>
-              <th>{{ text.tableArea }}</th>
-              <th>{{ text.tableRating }}</th>
-            </tr>
-          </ng-template>
-          <ng-template #body let-garage>
-            <tr>
-              <td>{{ garage.name }}</td>
-              <td>{{ garage.area }}</td>
-              <td>{{ garage.rating }}</td>
-            </tr>
-          </ng-template>
-        </p-table>
+        <div hlmTableContainer>
+          <table hlmTable>
+            <thead hlmTHead>
+              <tr hlmTr>
+                <th hlmTh>{{ text.tableGarage }}</th>
+                <th hlmTh>{{ text.tableArea }}</th>
+                <th hlmTh>{{ text.tableRating }}</th>
+              </tr>
+            </thead>
+            <tbody hlmTBody>
+              @for (garage of garages; track garage.name) {
+                <tr hlmTr>
+                  <td hlmTd>{{ garage.name }}</td>
+                  <td hlmTd>{{ garage.area }}</td>
+                  <td hlmTd>{{ garage.rating }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       </mf-panel>
 
       <div class="row">
-        <p-button
-          [label]="text.openDialog"
-          severity="secondary"
-          (onClick)="dialogOpen.set(true)"
-        />
-        <p-button
-          [label]="text.openDrawer"
-          severity="secondary"
-          (onClick)="drawerOpen.set(true)"
-        />
-        <p-button
-          [label]="text.showToast"
-          severity="secondary"
-          (onClick)="showToast()"
-        />
-        <p-button
-          [label]="text.openPopover"
-          severity="secondary"
-          (onClick)="popover.toggle($event)"
-        />
+        <hlm-dialog>
+          <button hlmBtn hlmDialogTrigger variant="secondary">
+            {{ text.openDialog }}
+          </button>
+          <hlm-dialog-content *hlmDialogPortal="let ctx" [closeLabel]="text.close">
+            <hlm-dialog-header>
+              <h2 hlmDialogTitle class="mf-label">{{ text.dialogTitle }}</h2>
+            </hlm-dialog-header>
+            <p>{{ text.dialogBody }}</p>
+          </hlm-dialog-content>
+        </hlm-dialog>
+
+        <hlm-sheet side="right">
+          <button hlmBtn hlmSheetTrigger variant="secondary">
+            {{ text.openDrawer }}
+          </button>
+          <hlm-sheet-content *hlmSheetPortal="let ctx" [closeLabel]="text.close">
+            <hlm-sheet-header>
+              <h2 hlmSheetTitle class="mf-label">{{ text.drawerTitle }}</h2>
+            </hlm-sheet-header>
+            <p>{{ text.drawerBody }}</p>
+          </hlm-sheet-content>
+        </hlm-sheet>
+
+        <button hlmBtn variant="secondary" (click)="showToast()">
+          {{ text.showToast }}
+        </button>
+
+        <hlm-popover>
+          <button hlmBtn hlmPopoverTrigger variant="secondary">
+            {{ text.openPopover }}
+          </button>
+          <hlm-popover-content *hlmPopoverPortal="let ctx">
+            <p>{{ text.popoverBody }}</p>
+          </hlm-popover-content>
+        </hlm-popover>
       </div>
 
-      <p-dialog [header]="text.dialogTitle" [modal]="true" [(visible)]="dialogOpen">
-        <p>{{ text.dialogBody }}</p>
-      </p-dialog>
-      <p-drawer [header]="text.drawerTitle" [(visible)]="drawerOpen">
-        <p>{{ text.drawerBody }}</p>
-      </p-drawer>
-      <p-popover #popover>
-        <p>{{ text.popoverBody }}</p>
-      </p-popover>
-      <p-toast />
+      <hlm-toaster />
     </main>
   `,
 })
 export class CockpitSamplePage {
-  private readonly messages = inject(MessageService);
   protected readonly text = SAMPLE_TEXT;
   protected readonly garages = SAMPLE_GARAGES;
   protected readonly brand = signal('');
   protected readonly openNow = signal(true);
-  protected readonly dialogOpen = signal(false);
-  protected readonly drawerOpen = signal(false);
 
   protected showToast() {
-    this.messages.add({
-      detail: this.text.toastDetail,
-      severity: 'success',
-      summary: this.text.toastSummary,
-    });
+    toast(this.text.toastSummary, { description: this.text.toastDetail });
   }
 }

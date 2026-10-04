@@ -5,9 +5,13 @@ setupZonelessTestEnv({
   errorOnUnknownProperties: true,
 });
 
-// jsdom has no ResizeObserver; PrimeNG's tab list observes its own size.
-globalThis.ResizeObserver ??= class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-};
+// jsdom has no matchMedia; the toaster reads the colour-scheme query.
+globalThis.matchMedia ??= (query: string) =>
+  ({
+    addEventListener() {},
+    addListener() {},
+    matches: false,
+    media: query,
+    removeEventListener() {},
+    removeListener() {},
+  }) as unknown as MediaQueryList;

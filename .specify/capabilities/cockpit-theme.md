@@ -6,7 +6,7 @@ features:
 
 # Capability: Cockpit theme
 
-The shared look of the web app: the `--mf-*` design tokens in a dark and a light set chosen by the device, the two self-hosted typefaces, the PrimeNG preset every component takes its surfaces, borders and focus rings from, and the panel part.
+The shared look of the web app: the `--mf-*` design tokens in a dark and a light set chosen by the device, the two self-hosted typefaces, the Spartan helm components (on `@spartan-ng/brain`) that take their surfaces, borders and focus rings from those tokens, and the panel part.
 
 ## Requirements
 

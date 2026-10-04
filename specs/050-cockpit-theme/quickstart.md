@@ -5,7 +5,7 @@
 npx nx run ui-cockpit:test
 npx nx run ui-cockpit:typecheck
 ```
-Expect: token presence and values in both themes, contrast pairs, fonts, preset mapping, provider config, panel, sample page, colour-literal scan — all green.
+Expect: token presence and values in both themes, contrast pairs, fonts, helm component classes and component rules, provider config, panel, sample page, colour-literal scan — all green.
 
 ## End to end
 Local Postgres and Redis running, `DATABASE_URL`/`REDIS_URL` set (the e2e config also starts the api).

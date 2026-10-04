@@ -232,6 +232,132 @@ describe('cockpit.css typefaces', () => {
   });
 });
 
+const escapeRegExp = (text: string) =>
+  text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const rule = (selector: string) =>
+  blockAfter(
+    css,
+    new RegExp(`(^|[},]\\s*)${escapeRegExp(selector)}\\s*\\{`, 'm'),
+  );
+
+const componentRules = [
+  ...topLevel.matchAll(/(?<=^|\})\s*([^{}@]*\.spartan-[^{}]*)\{([^{}]*)\}/g),
+].map(([, selector, body]) => ({ body, selector: selector.trim() }));
+
+describe('cockpit.css component rules', () => {
+  it('paints every component colour from the tokens', () => {
+    const colours = componentRules.flatMap(({ body, selector }) =>
+      [
+        ...body.matchAll(
+          /(?:^|;)\s*((?:background|border|outline)(?:-[\w-]+)?|color|fill|box-shadow)\s*:\s*([^;]+)/g,
+        ),
+      ].map(
+        ([, property, value]) => `${selector} { ${property}: ${value.trim()} }`,
+      ),
+    );
+    const literal =
+      /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?|color-mix)\(|\b(?:white|black)\b/i;
+
+    expect(componentRules.length).toBeGreaterThan(15);
+    expect(colours.filter((c) => literal.test(c))).toEqual([]);
+  });
+
+  it('fills the main action with amber and dark text', () => {
+    const main = rule('.spartan-button-variant-default');
+    expect(main).toMatch(/background(-color)?:\s*var\(--mf-amber\)/);
+    expect(main).toMatch(/(^|;)\s*color:\s*var\(--mf-on-amber\)/);
+  });
+
+  it('keeps the secondary and ghost buttons out of amber', () => {
+    for (const variant of ['secondary', 'ghost']) {
+      const body = componentRules
+        .filter(({ selector }) =>
+          selector.includes(`spartan-button-variant-${variant}`),
+        )
+        .map(({ body }) => body)
+        .join(';');
+      expect(body).not.toBe('');
+      expect(body).not.toContain('amber');
+    }
+    expect(rule('.spartan-button-variant-secondary')).toMatch(
+      /border-color:\s*var\(--mf-line-strong\)/,
+    );
+  });
+
+  it('marks the active tab and a selected row with amber ink on the amber tint', () => {
+    for (const selector of [
+      '.spartan-tabs-trigger[data-state="active"]',
+      '.spartan-table-row[data-state="selected"]',
+    ]) {
+      const body = rule(selector);
+      expect(body).toMatch(/background(-color)?:\s*var\(--mf-amber-tint\)/);
+      expect(body).toMatch(/(^|;)\s*color:\s*var\(--mf-amber-ink\)/);
+    }
+    expect(rule('.spartan-tabs-trigger[data-state="active"]')).toMatch(
+      /border-color:\s*var\(--mf-amber-ink\)/,
+    );
+  });
+
+  it('turns a switch that is on amber', () => {
+    expect(rule('button.spartan-switch[data-state="checked"]::before')).toMatch(
+      /background(-color)?:\s*var\(--mf-amber\)/,
+    );
+  });
+
+  it('sets field text at the field size on the page background', () => {
+    const input = rule('.spartan-input');
+    expect(input).toMatch(/font-size:\s*var\(--mf-size-field\)/);
+    expect(input).toMatch(/background(-color)?:\s*var\(--mf-bg\)/);
+    expect(input).toMatch(/border-radius:\s*var\(--mf-radius-control\)/);
+  });
+
+  it('puts dialogs, drawers, popovers and toasts on the raised surface with a hairline', () => {
+    for (const selector of [
+      '.spartan-dialog-content',
+      '.spartan-sheet-content',
+      '.spartan-popover-content',
+    ]) {
+      const body = componentRules
+        .filter((r) =>
+          r.selector
+            .split(',')
+            .map((s) => s.trim())
+            .includes(selector),
+        )
+        .map((r) => r.body)
+        .join(';');
+      expect(body).toMatch(/background(-color)?:\s*var\(--mf-panel-raised\)/);
+      expect(body).toMatch(/var\(--mf-line\)/);
+    }
+    const toast = componentRules
+      .filter((r) => r.selector.includes('.spartan-toast'))
+      .map((r) => r.body)
+      .join(';');
+    expect(toast).toMatch(/background(-color)?:\s*var\(--mf-panel-raised\)/);
+    expect(toast).toMatch(/border-color:\s*var\(--mf-line\)/);
+    expect(rule('.spartan-dialog-content')).toMatch(
+      /border-radius:\s*var\(--mf-radius-panel\)/,
+    );
+  });
+
+  it('dims the page behind dialogs and drawers with the mask token', () => {
+    const body = componentRules
+      .filter((r) => r.selector.includes('.spartan-dialog-overlay'))
+      .map((r) => r.body)
+      .join(';');
+    expect(body).toMatch(/background(-color)?:\s*var\(--mf-mask\)/);
+    expect(
+      componentRules.some((r) => r.selector.includes('.spartan-sheet-overlay')),
+    ).toBe(true);
+  });
+
+  it('keeps a focus ring on toasts, which turn the outline off themselves', () => {
+    expect(rule('.spartan-toast:focus-visible')).toMatch(
+      /outline:\s*var\(--mf-focus-width\) solid var\(--mf-focus\)/,
+    );
+  });
+});
+
 describe('cockpit.css rules', () => {
   it('draws the focus ring from the focus tokens', () => {
     const rule = blockAfter(css, /:focus-visible\s*\{/);
@@ -241,16 +367,15 @@ describe('cockpit.css rules', () => {
     expect(rule).toMatch(/outline-offset:\s*var\(--mf-focus-offset\)/);
   });
 
-  it('gives buttons, inputs, tabs and the toggle hit box the 44 px minimum', () => {
+  it('gives buttons, inputs, tabs and the switch the 44 px minimum', () => {
     for (const selector of [
-      '.p-button',
-      '.p-inputtext',
-      '.p-tab',
-      '.p-toggleswitch-input',
+      '.spartan-button',
+      '.spartan-input',
+      '.spartan-tabs-trigger',
+      'button.spartan-switch',
     ]) {
-      expect(css).toContain(selector);
+      expect(rule(selector)).toMatch(/min-height:\s*var\(--mf-tap\)/);
     }
-    expect(css).toMatch(/min-height:\s*var\(--mf-tap\)/);
   });
 
   it('defines the capital label style', () => {

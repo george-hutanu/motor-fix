@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { OVERLAY_DEFAULT_CONFIG } from '@angular/cdk/overlay';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { PRIME_NG_CONFIG } from 'primeng/config';
 
-import { CockpitPreset, Panel, provideCockpitTheme } from './index';
+import { Panel, provideCockpitTheme } from './index';
 
 const css = readFileSync(join(__dirname, 'styles/cockpit.css'), 'utf8').replace(
   /\/\*[\s\S]*?\*\//g,
@@ -107,98 +107,47 @@ describe('cockpit stylesheet tokens', () => {
 });
 
 describe('provideCockpitTheme under misuse', () => {
-  function config(providers: ReturnType<typeof provideCockpitTheme>[]) {
-    TestBed.configureTestingModule({ providers });
-    return TestBed.inject(PRIME_NG_CONFIG);
-  }
-
-  it('does not carry an empty licence string as a key', () => {
-    const cfg = config([provideCockpitTheme({ license: '' })]);
-
-    expect(cfg.license ?? undefined).toBeUndefined();
-  });
-
-  it('keeps the system dark-mode selector when given an empty options object', () => {
-    const cfg = config([provideCockpitTheme({})]);
-
-    expect(cfg.theme).toEqual({
-      options: { darkModeSelector: 'system' },
-      preset: CockpitPreset,
+  it('gives the same overlay defaults when registered twice', () => {
+    TestBed.configureTestingModule({
+      providers: [provideCockpitTheme(), provideCockpitTheme()],
     });
-  });
 
-  it('gives the same configuration when registered twice', () => {
-    const once = config([provideCockpitTheme({ license: 'k' })]);
-    TestBed.resetTestingModule();
-    const twice = config([
-      provideCockpitTheme({ license: 'k' }),
-      provideCockpitTheme({ license: 'k' }),
-    ]);
-
-    expect(twice.theme).toEqual(once.theme);
-    expect(twice.license).toBe('k');
-  });
-
-  it('does not keep an earlier key when a later registration gives none', () => {
-    const cfg = config([
-      provideCockpitTheme({ license: 'first' }),
-      provideCockpitTheme(),
-    ]);
-
-    expect(cfg.license).toBeUndefined();
+    expect(TestBed.inject(OVERLAY_DEFAULT_CONFIG)).toEqual({
+      usePopover: false,
+    });
   });
 });
 
-describe('CockpitPreset colours', () => {
-  const leaves: [string, string][] = [];
-  const walk = (value: unknown, path: string) => {
-    if (typeof value === 'string') leaves.push([path, value]);
-    else if (value && typeof value === 'object') {
-      for (const [k, v] of Object.entries(value)) walk(v, `${path}.${k}`);
-    }
-  };
-  const semantic = (CockpitPreset as { semantic: Record<string, unknown> })
-    .semantic;
-  for (const group of [
-    'primary',
-    'highlight',
-    'content',
-    'overlay',
-    'formField',
-    'text',
-    'focusRing',
-    'mask',
-  ]) {
-    walk(semantic[group], `semantic.${group}`);
-  }
-  const colourLeaves = leaves.filter(([p]) => /(background|color)$/i.test(p));
+describe('helm component rules', () => {
+  const declared = new Set(
+    [...css.matchAll(/(--mf-[\w-]+)\s*:/g)].map((m) => m[1]),
+  );
+  const outsideTokens = top.filter(
+    (b) =>
+      !b.header.endsWith(':root') &&
+      !/prefers-color-scheme|print/.test(b.header),
+  );
 
-  it('contains no hex, rgb or hsl literal in the surface, border, text or focus colours', () => {
-    const offenders = colourLeaves.filter(([, v]) => colourValue.test(v));
+  it('contains no hex, rgb or hsl literal outside the token blocks', () => {
+    const offenders = outsideTokens.filter((b) => colourValue.test(b.body));
 
-    expect(colourLeaves.length).toBeGreaterThan(20);
-    expect(offenders).toEqual([]);
+    expect(outsideTokens.length).toBeGreaterThan(15);
+    expect(offenders.map((b) => b.header)).toEqual([]);
   });
 
   it('contains no named colour keyword as a colour value', () => {
-    const named = /^(white|black|red|green|blue|gray|grey|orange|yellow)$/i;
-    const offenders = leaves.filter(
-      ([p, v]) => /color|background|border|ring/i.test(p) && named.test(v),
-    );
+    const named =
+      /(?:color|background|border[\w-]*|outline|fill)\s*:\s*(white|black|red|green|blue|gray|grey|orange|yellow)\b/i;
+    const offenders = outsideTokens.filter((b) => named.test(b.body));
 
-    expect(offenders).toEqual([]);
+    expect(offenders.map((b) => b.header)).toEqual([]);
   });
 
   it('only references custom properties that the stylesheet defines', () => {
-    const defined = new Set(
-      [...css.matchAll(/(--mf-[\w-]+)\s*:/g)].map((m) => m[1]),
-    );
-    const used = leaves.flatMap(([, v]) =>
-      [...v.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]),
-    );
+    const used = [...css.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]);
 
     expect(used.length).toBeGreaterThan(0);
-    expect(used.filter((n) => !defined.has(n))).toEqual([]);
+    expect(used.filter((n) => !declared.has(n))).toEqual([]);
   });
 });
 

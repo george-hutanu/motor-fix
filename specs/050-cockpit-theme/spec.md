@@ -10,7 +10,7 @@
 
 **Sources**: the Notion story [ST-50](https://app.notion.com/p/3ee607bff0d281e5a35be24ed2edf607) (acceptance criteria and Build brief, read 2026-10-04; the story has no comments), its feature page [MF-3 Cockpit design system and motion](https://app.notion.com/p/3ee607bff0d2817aa8bdc2f304d558b2), the epic [Foundations (EP-1)](https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707), and `.specify/memory/constitution.md`. The Build brief wins where it and the story's acceptance criteria differ; the 2026-10-03 decision (a light theme at launch following the device; 12 px minimum on a phone) supersedes the earlier dark-only, 9 px-label wording.
 
-This story is the shared look every later screen is built on. Its users are everyone who opens MotorFix (visitors and every role) and, directly, the build team, who style screens only through it. The Build brief names PrimeNG and a theme preset as the requirement itself; the constitution (Principle III) fixes Angular + PrimeNG.
+This story is the shared look every later screen is built on. Its users are everyone who opens MotorFix (visitors and every role) and, directly, the build team, who style screens only through it. The Build brief named PrimeNG and a theme preset; the owner's decision of 2026-10-04 (constitution v1.3.0, Principle III; Notion Architecture decisions A1) replaced PrimeNG with Spartan UI — `@spartan-ng/brain` primitives on Angular CDK with helm components copied into `libs/ui-cockpit` — because PrimeNG 22 needs a licence key and every front-end dependency must be free and open source. The tokens, type, contrast and panel requirements are unchanged; only the component layer moved (see Spec Delta, Correction).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -32,7 +32,7 @@ A person opens MotorFix. If their device is in dark mode, they see the near-blac
 
 ### User Story 2 - Standard components take their look from the theme, never from one-off styling (Priority: P1)
 
-A developer drops a PrimeNG button, input, toggle switch, dialog, drawer, toast, popover or table into a screen. It renders with Cockpit surfaces, hairline borders, radii and amber focus rings without any CSS in the feature code.
+A developer drops a Cockpit helm button, input, toggle switch, dialog, drawer, toast, popover or table (from `@motor-fix/ui-cockpit`) into a screen. It renders with Cockpit surfaces, hairline borders, radii and amber focus rings without any CSS in the feature code.
 
 **Why this priority**: the story's purpose ("every standard component looks the same without one-off styling").
 
@@ -40,7 +40,7 @@ A developer drops a PrimeNG button, input, toggle switch, dialog, drawer, toast,
 
 **Acceptance Scenarios**:
 
-1. **Given** the listed PrimeNG components, **When** they render, **Then** their surfaces, borders and focus rings come from the theme tokens.
+1. **Given** the listed helm components, **When** they render, **Then** their surfaces, borders and focus rings come from the theme tokens.
 2. **Given** the main action on a view, **When** it renders, **Then** it is the only solid amber control; selected chips and tabs use amber text and border on a light amber tint, a toggle that is on uses amber; secondary actions do not.
 3. **Given** anything tappable from the theme (buttons, inputs, toggles, tabs), **When** it renders, **Then** it is at least 44 px tall.
 
@@ -124,9 +124,9 @@ The owner opens a sample page that shows the main components and a panel, and vi
 - **FR-003**: The theme MUST follow the device's colour-scheme setting live, with no reload, no stored choice and no in-app switch, and MUST NOT disturb form input when it changes.
 - **FR-004**: Every colour token MUST exist in both the dark and the light set, and every token MUST be a CSS custom property named `--mf-*`.
 - **FR-005**: The theme MUST define tokens for type (the two families, the size scale, label letter-spacing 0.14em), spacing (a 4 px scale), radius (20 px panels, 12 px controls, 10 px chips) and focus (ring width, offset and colour).
-- **FR-006**: The theme MUST provide one PrimeNG preset, `CockpitPreset`, whose surfaces, borders, text, primary and highlight colours, radii and focus rings resolve to the `--mf-*` tokens, so that button, input, toggle switch, dialog, drawer, toast, popover and table need no CSS in feature code.
-- **FR-007**: The preset's primary colour MUST be amber (solid amber fill with dark text, also the on-state of a toggle switch); the selected state (highlight: selected chips, tabs, rows, options) MUST use amber text and border on a 10% amber tint, as in the mock; secondary and text buttons MUST NOT be amber.
-- **FR-008**: The theme MUST be registered for the whole web app with one provider, `provideCockpitTheme()`, and its PrimeNG dark-mode selector MUST follow the system setting. The provider MUST accept an optional PrimeUI licence key, which the web app takes from the build-time value `PRIMEUI_LICENSE` (documented in `.env.example`); the library holds no key.
+- **FR-006**: The theme MUST provide Spartan helm components in `libs/ui-cockpit` — button, input, label, toggle switch, tabs, table, dialog, drawer (sheet), toast (toaster) and popover, each built on its `@spartan-ng/brain` primitive — whose surfaces, borders, text, primary and selected colours, radii and focus rings resolve to the `--mf-*` tokens through the `spartan-*` style classes in `cockpit.css`, so that feature code needs no CSS. No colour literal sits outside the token blocks of `cockpit.css`, and no styling toolchain beyond that stylesheet (no Tailwind) is added.
+- **FR-007**: The default (primary) button variant MUST be the solid amber fill with dark text, and amber is also the on-state of a toggle switch; the selected state (selected tabs, rows, chips) MUST use amber text and border on a 10% amber tint, as in the mock; the secondary and ghost button variants MUST NOT be amber.
+- **FR-008**: The theme MUST be registered for the whole web app with one provider, `provideCockpitTheme()`, which sets the overlay defaults the helm overlays need (CDK overlays outside the browser top layer, so the toaster stays above dialogs and drawers); the colour scheme follows the system setting through CSS alone. No licence key and no dependency that needs one (constitution v1.3.0, Principle III).
 - **FR-009**: In both themes, each text token (text, secondary text, amber text) MUST reach 4.5:1 against each surface (background, panel, raised panel), and the dark text on the amber fill MUST reach 4.5:1; each status colour (green, red) and the focus ring MUST reach 3:1 against each surface. Status colours are never body text (a lamp or status always has a text label), so 3:1 applies to them.
 - **FR-010**: The type scale MUST be one set of tokens with no per-width variation and a 12 px floor: no rendered text smaller than 12 px at any width (checked at 375 px); body text (the default Hanken Grotesk size) 13 px or more; form-field text 16 px.
 - **FR-011**: Michroma MUST be used for labels, headings and numerals, in capitals with 0.14em spacing; Hanken Grotesk for all other text. Both MUST be self-hosted with `font-display: swap`, cover Latin Extended (ă, â, î, ș, ț), and fall back to Hanken Grotesk then the system sans-serif.
@@ -140,7 +140,7 @@ The owner opens a sample page that shows the main components and a panel, and vi
 
 - **Design token**: a named CSS custom property (`--mf-*`) with one value per theme (colour) or one value for both (type, spacing, radius, focus).
 - **Theme**: dark or light; derived from the device, never stored.
-- **CockpitPreset**: the PrimeNG preset that maps PrimeNG's design tokens onto the `--mf-*` tokens.
+- **Helm component**: a Spartan helm directive or component in `libs/ui-cockpit` wrapping a `@spartan-ng/brain` primitive; it carries `spartan-*` style classes that `cockpit.css` paints from the `--mf-*` tokens.
 - **Panel**: the shared card part.
 
 ## Spec Delta
@@ -148,6 +148,13 @@ The owner opens a sample page that shows the main components and a panel, and vi
 ### Capability: `cockpit-theme`
 
 - **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-012, FR-013, FR-014, FR-015, FR-016
+
+**Correction (2026-10-04, `/speckit-correct-course`)** — the owner replaced PrimeNG with Spartan UI (constitution v1.3.0, Principle III: PrimeNG 22 needs a licence key; front-end dependencies stay free and open source). Nothing here was merged into a capability yet, so the corrected requirements stay `Adds`:
+
+- FR-006 was "one PrimeNG preset, `CockpitPreset`" → is now helm components in `libs/ui-cockpit` painted by `spartan-*` classes in `cockpit.css` from the `--mf-*` tokens.
+- FR-007 was "the preset's primary colour / highlight" → is now the default button variant, the switch on-state and the selected tab/row state.
+- FR-008 was "PrimeNG dark-mode selector + optional PrimeUI licence key from `PRIMEUI_LICENSE`" → is now `provideCockpitTheme()` setting the overlay defaults; scheme by CSS only; no key.
+- Removed with it: `primeng`, `@primeuix/themes`, `CockpitPreset`, `apps/web/src/primeui-license.ts`, `PRIMEUI_LICENSE` in `.env.example`.
 
 ## Success Criteria *(mandatory)*
 
@@ -165,7 +172,8 @@ The owner opens a sample page that shows the main components and a panel, and vi
 
 - Q: Do the light-theme starting values ship as-is? → A: Yes, as the Build brief's *proposed* starting values; the owner approves them on the sample page before launch [X26g]. Approval is the owner's step, outside this run. (autonomous default; Build brief)
 - Q: Where does the sample page live? → A: In the theme library, registered as one lazy route `/cockpit` in the web app. (autonomous default; Build brief scenario 11 needs it reachable, AGENTS.md ownership of `apps/web` by ST-16 keeps the web-app edit to one route entry)
-- Q: How does the PrimeUI licence key reach PrimeNG 22, which shows a small "Invalid PrimeUI License" banner without one? → A: As an optional `license` option of `provideCockpitTheme`, read by the web app from the build-time value `PRIMEUI_LICENSE`; obtaining the key is the owner's step; no test asserts a clean console or inspects the bottom-right corner. (orchestrator decision, 2026-10-04; research.md §2)
+- Q: How does the PrimeUI licence key reach PrimeNG 22? → A: Superseded the same day: the owner dropped PrimeNG for Spartan UI (constitution v1.3.0), so there is no key. (owner decision, 2026-10-04)
+- Q: Spartan helm components ship with Tailwind classes; is Tailwind added? → A: No. The helm components are copied with only their `spartan-*` style-hook classes, and `cockpit.css` styles those classes from the tokens — one stylesheet, no second styling toolchain (Principles I and IV). (autonomous, recommended; research.md §2)
 - Q: Does the end-to-end suite compare stored screenshots of the sample page, as the Build brief's Tests suggest? → A: No stored baseline while the light theme awaits the owner's approval; the suite asserts computed colours per scheme, and the owner reviews `/cockpit` by eye. (autonomous, recommended; context.md contradiction 2)
 - Q: Which pairs does the contrast test cover, and is a status colour used as text held to 4.5:1 or 3:1? → A: Text tokens × surfaces at 4.5:1, dark-on-amber at 4.5:1, status colours and the focus ring × surfaces at 3:1; status colours always sit beside a text label, so 3:1. (autonomous, recommended by spec-challenger; FR-009)
 - Q: Is 44 px the rendered height at every width, or a phone-only tap target? → A: The interactive box including padding, at every width, with no smaller size variant. (autonomous, recommended; FR-013)
@@ -175,11 +183,11 @@ The owner opens a sample page that shows the main components and a panel, and vi
 
 ## Assumptions
 
-- PrimeNG's styled mode with a preset built on Aura is the base (Build brief: "built on the styled mode"); every value the preset sets references a `--mf-*` token. (autonomous default)
-- The tokens' source of truth is one CSS file in `libs/ui-cockpit`; the preset references them with `var()`, so there is one place to change a value (Principle I). (autonomous default)
+- Spartan UI's headless `@spartan-ng/brain` primitives carry behaviour and accessibility; the look comes only from `cockpit.css` (owner decision 2026-10-04, constitution v1.3.0). (autonomous default)
+- The tokens' source of truth is one CSS file in `libs/ui-cockpit`; the component rules reference them with `var()`, so there is one place to change a value (Principle I). (autonomous default)
 - Without a colour-scheme preference, browsers report light, so light is shown; dark is the default only when the device asks for it. (autonomous default, browser behaviour)
 - Printed pages use the light tokens (feature page edge cases, *proposed*). (autonomous default)
-- The lamp, rating dial, odometer digits, charts, motion, phone layouts, dialogs/drawers/sheets as shared parts are out of scope (story Build brief, Out of scope). Dialog, drawer, toast and popover appear on the sample page only to prove the preset styles them.
+- The lamp, rating dial, odometer digits, charts, motion, phone layouts, dialogs/drawers/sheets as shared parts are out of scope (story Build brief, Out of scope). The helm dialog, drawer, toast and popover land here only as Spartan's thin wrappers with the Cockpit look, shown on the sample page; the shared dialog/drawer/sheet patterns (layouts, phone sheets, motion) stay with their own stories.
 - Colour is never the only signal — that rule is applied in ST-51, not here (Build brief).
 - The "no hard-coded colour" check is a Jest test over the repository's source (the Build brief names it "a lint rule"; Biome has no built-in rule for colour literals, so a test keeps it in the existing toolchain — Principle IV). (autonomous default)
 - A Romanian glyph Michroma lacks falls back per glyph to Hanken Grotesk through the font stack, rather than switching the whole label (Principle I; same visible outcome for a label whose other letters Michroma has). (autonomous default)

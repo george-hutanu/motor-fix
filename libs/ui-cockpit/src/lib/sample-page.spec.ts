@@ -19,13 +19,9 @@ const buttonNamed = (page: HTMLElement, name: string) =>
 describe('CockpitSamplePage', () => {
   it('shows exactly one main (amber) action next to a secondary one', () => {
     const page = render();
-    const buttons = [...page.querySelectorAll('button.p-button')];
-    const primary = buttons.filter(
-      (b) =>
-        !['p-button-secondary', 'p-button-text', 'p-button-outlined'].some(
-          (c) => b.classList.contains(c),
-        ),
-    );
+    const primary = [
+      ...page.querySelectorAll('button.spartan-button-variant-default'),
+    ];
 
     expect(primary.map((b) => b.textContent?.trim())).toEqual([
       SAMPLE_TEXT.primary,
@@ -35,18 +31,18 @@ describe('CockpitSamplePage', () => {
 
   it('holds a labelled text input and a toggle switch', () => {
     const page = render();
-    const input = page.querySelector<HTMLInputElement>('input.p-inputtext');
+    const input = page.querySelector<HTMLInputElement>('input.spartan-input');
     const label = page.querySelector(`label[for="${input?.id}"]`);
 
     expect(input).not.toBeNull();
     expect(label?.textContent?.trim()).toBe(SAMPLE_TEXT.inputLabel);
-    expect(page.querySelector('p-toggleswitch')).not.toBeNull();
+    expect(page.querySelector('button[role="switch"]')).not.toBeNull();
   });
 
   it('holds a table, tabs with one selected, and a panel', () => {
     const page = render();
 
-    expect(page.querySelector('table')).not.toBeNull();
+    expect(page.querySelector('table.spartan-table')).not.toBeNull();
     expect(
       page.querySelectorAll('[role="tab"][aria-selected="true"]'),
     ).toHaveLength(1);

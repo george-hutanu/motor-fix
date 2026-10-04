@@ -38,14 +38,13 @@ async function open(page: Page, colorScheme: 'dark' | 'light') {
   await page.emulateMedia({ colorScheme });
   await page.goto('/cockpit');
   await expect(page.locator('section.mf-panel').first()).toBeVisible();
-  await expect(page.locator('input.p-inputtext')).toHaveCSS(
+  await expect(page.locator('input.spartan-input')).toHaveCSS(
     'font-size',
     '16px',
   );
 }
 
-const primaryButton =
-  'button.p-button:not(.p-button-secondary):not(.p-button-text):not(.p-button-outlined)';
+const primaryButton = 'button.spartan-button-variant-default';
 
 for (const scheme of ['dark', 'light'] as const) {
   test.describe(`the ${scheme} theme`, () => {
@@ -107,9 +106,9 @@ for (const scheme of ['dark', 'light'] as const) {
       const raised = rgb(themes[scheme].raised);
 
       for (const [name, surface] of [
-        [SAMPLE_TEXT.openDialog, '.p-dialog'],
-        [SAMPLE_TEXT.openDrawer, '.p-drawer'],
-        [SAMPLE_TEXT.openPopover, '.p-popover'],
+        [SAMPLE_TEXT.openDialog, 'hlm-dialog-content'],
+        [SAMPLE_TEXT.openDrawer, 'hlm-sheet-content'],
+        [SAMPLE_TEXT.openPopover, 'hlm-popover-content'],
       ] as const) {
         await page.getByRole('button', { exact: true, name }).click();
         await expect(page.locator(surface)).toBeVisible();
@@ -121,8 +120,11 @@ for (const scheme of ['dark', 'light'] as const) {
       await page
         .getByRole('button', { exact: true, name: SAMPLE_TEXT.showToast })
         .click();
-      await expect(page.locator('.p-toast-message').first()).toBeVisible();
-      expect(await style(page, '.p-toast-message', 'border-top-color')).toBe(
+      await expect(page.locator('[data-sonner-toast]').first()).toBeVisible();
+      expect(await style(page, '[data-sonner-toast]', 'background-color')).toBe(
+        raised,
+      );
+      expect(await style(page, '[data-sonner-toast]', 'border-top-color')).toBe(
         rgb(themes[scheme].line),
       );
     });
@@ -133,7 +135,7 @@ test('changes theme with the device at once, keeping what was typed', async ({
   page,
 }) => {
   await open(page, 'dark');
-  const input = page.locator('input.p-inputtext').first();
+  const input = page.locator('input.spartan-input').first();
   await input.fill('Dacia Logan 2015');
   const url = page.url();
 
@@ -169,7 +171,7 @@ test('shows no text under 12 px on a phone, and 16 px in form fields', async ({
   });
 
   expect(tooSmall).toEqual([]);
-  expect(await style(page, 'input.p-inputtext', 'font-size')).toBe('16px');
+  expect(await style(page, 'input.spartan-input', 'font-size')).toBe('16px');
 });
 
 test('sets labels in Michroma capitals and reading text in Hanken Grotesk', async ({
@@ -190,10 +192,10 @@ test('makes every button, input, tab and toggle at least 44 px tall', async ({
   await open(page, 'dark');
 
   for (const selector of [
-    'button.p-button',
-    'input.p-inputtext',
+    'button.spartan-button',
+    'input.spartan-input',
     '[role="tab"]',
-    '.p-toggleswitch-input',
+    'button[role="switch"]',
   ]) {
     const boxes = await page
       .locator(selector)
@@ -222,4 +224,25 @@ test('draws a panel as a 20 px rounded card that keeps its border with forced co
       await style(page, 'section.mf-panel', 'border-top-width'),
     ),
   ).toBeGreaterThanOrEqual(1);
+});
+
+test('draws no control over the content around it', async ({ page }) => {
+  await open(page, 'dark');
+
+  for (const target of [
+    page.locator(primaryButton),
+    page.locator('td').first(),
+    page.locator('label[for="open-now"]'),
+  ]) {
+    const covered = await target.evaluate((el) => {
+      el.scrollIntoView({ block: 'center' });
+      const box = el.getBoundingClientRect();
+      const top = document.elementFromPoint(
+        box.x + box.width / 2,
+        box.y + box.height / 2,
+      );
+      return !(top && (el === top || el.contains(top)));
+    });
+    expect(covered).toBe(false);
+  }
 });

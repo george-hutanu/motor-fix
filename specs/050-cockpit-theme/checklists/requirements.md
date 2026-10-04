@@ -6,7 +6,7 @@
 
 ## Content Quality
 
-- [x] No implementation details (languages, frameworks, APIs) — PrimeNG, CSS custom properties and the preset name are named by the Build brief as the requirement itself (constitution Principle III fixes PrimeNG)
+- [x] No implementation details (languages, frameworks, APIs) — PrimeNG (since replaced by Spartan UI, constitution v1.3.0), CSS custom properties and the preset name were named by the Build brief as the requirement itself (constitution Principle III fixes PrimeNG)
 - [x] Focused on user value and business needs
 - [x] Written for non-technical stakeholders
 - [x] All mandatory sections completed

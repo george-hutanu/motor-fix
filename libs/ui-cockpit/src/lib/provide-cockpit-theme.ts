@@ -1,13 +1,13 @@
-import { EnvironmentProviders } from '@angular/core';
-import { providePrimeNG } from 'primeng/config';
+import { OVERLAY_DEFAULT_CONFIG } from '@angular/cdk/overlay';
+import {
+  type EnvironmentProviders,
+  makeEnvironmentProviders,
+} from '@angular/core';
 
-import { CockpitPreset } from './preset';
-
-export function provideCockpitTheme(
-  options: { license?: string } = {},
-): EnvironmentProviders {
-  return providePrimeNG({
-    theme: { options: { darkModeSelector: 'system' }, preset: CockpitPreset },
-    ...(options.license ? { license: options.license } : {}),
-  });
+// The colour scheme follows the device in cockpit.css alone. Overlays stay
+// out of the browser top layer so the toaster is drawn above dialogs.
+export function provideCockpitTheme(): EnvironmentProviders {
+  return makeEnvironmentProviders([
+    { provide: OVERLAY_DEFAULT_CONFIG, useValue: { usePopover: false } },
+  ]);
 }

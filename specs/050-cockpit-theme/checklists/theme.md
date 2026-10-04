@@ -10,7 +10,7 @@ Ownership: `[x]` means the requirements-quality criterion is satisfied, not that
 
 - [x] CHK001 - Is every colour of both themes given an exact value? [Completeness, Spec §FR-001, §FR-002] — US1 scenarios 1–2 list every value; data-model.md adds the derived tokens.
 - [x] CHK002 - Are the non-colour tokens (type, spacing, radius, focus) enumerated with values? [Completeness, Spec §FR-005] — FR-005 + data-model.md.
-- [x] CHK003 - Is the set of PrimeNG components the preset must style named? [Completeness, Spec §FR-006] — button, input, toggle switch, dialog, drawer, toast, popover, table.
+- [x] CHK003 - Is the set of helm components the theme must style named? (corrected 2026-10-04 from PrimeNG) [Completeness, Spec §FR-006] — button, input, toggle switch, dialog, drawer, toast, popover, table.
 - [x] CHK004 - Are the sample page's required contents listed? [Completeness, Spec §FR-015, US6] — US6 scenario 1.
 - [x] CHK005 - Does the spec say how the theme is registered for the app? [Completeness, Spec §FR-008]
 
@@ -38,7 +38,7 @@ Ownership: `[x]` means the requirements-quality criterion is satisfied, not that
 
 - [x] CHK017 - Is the owner's approval of the light theme recorded as outside this build, with its gate? [Assumption, Spec Clarifications, US6] — approval is the owner's step before launch [X26g].
 - [x] CHK018 - Are out-of-scope neighbours (lamp, dial, charts, motion, phone layout, dialogs as parts) named? [Dependency, Spec Assumptions]
-- [x] CHK019 - Is the PrimeNG licence-key dependency documented? [Dependency, plan research.md §2] — research.md §2; carried as an open question to the report.
+- [x] CHK019 - Is the PrimeNG licence-key dependency documented? (moot after the 2026-10-04 correction: no licensed dependency remains; research.md §2) [Dependency, plan research.md §2] — research.md §2; carried as an open question to the report.
 - [x] CHK020 - Is the font-file budget conflict (ST-249, proposed) recorded? [Assumption, Spec Assumptions, research.md §3]
 
 ## Notes

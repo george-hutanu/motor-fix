@@ -1,6 +1,7 @@
 // Every visible string of the sample page, so moving them to translation keys
 // is a change to this file and the template only.
 export const SAMPLE_TEXT = {
+  close: 'Închide',
   dialogBody: 'Dialogurile folosesc suprafața ridicată și raza de panou.',
   dialogTitle: 'Programare confirmată',
   drawerBody: 'Sertarul folosește aceleași suprafețe și margini.',
@@ -19,11 +20,14 @@ export const SAMPLE_TEXT = {
   secondary: 'Anulează',
   showToast: 'Arată o notificare',
   tabAll: 'Toate',
+  tabAllBody: 'Toate service-urile din zonă.',
   tableArea: 'Zonă',
   tableGarage: 'Service',
   tableRating: 'Rating',
   tabOpen: 'Deschise',
+  tabOpenBody: 'Service-urile deschise acum.',
   tabReviews: 'Recenzii',
+  tabReviewsBody: 'Recenziile șoferilor.',
   toastDetail: 'Notificările folosesc suprafața și linia temei.',
   toastSummary: 'Salvat',
   toggleLabel: 'Doar service-uri deschise acum',

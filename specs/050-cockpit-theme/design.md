@@ -7,7 +7,7 @@ Checked: 2026-10-04 · Mock: https://claude.ai/artifact/EoPWH9MHmuY5Jfw7vTWTHr (
 
 ## What to build to match it
 - Tokens (`--mf-*`) for the palette above, the two families, a size scale, 0.14em label tracking, a 4 px spacing scale, radii 20 (panel) / 12 (control) / 10 (chip), and the focus ring (3 px, offset 3 px, amber).
-- A PrimeNG preset where the primary is amber with 0B0C0E text, the selected state is amber, secondary buttons are outlined in the strong line colour, and every control is at least 44 px tall.
+- Spartan helm components (corrected 2026-10-04 from a PrimeNG preset; constitution v1.3.0) where the main action is amber with 0B0C0E text, the selected state is amber, secondary buttons are outlined in the strong line colour, and every control is at least 44 px tall.
 - The panel part: a 20 px card on the panel surface with a 1 px hairline border and a Michroma capital title.
 - Phone: no board text below 12 px (the mock's 10–11 px labels and 11 px tab labels are raised to 12 px — decision 2026-10-03).
 
