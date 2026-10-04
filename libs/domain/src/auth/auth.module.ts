@@ -11,6 +11,8 @@ import { MeController } from './me.controller';
 import { createPrisma, PRISMA } from './prisma';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
+import { AuditHistoryController } from '../audit/audit-history.controller';
+import { AuditHistoryService } from '../audit/audit-history.service';
 import { EVENT_PORT, noEvents } from '../events/event.port';
 import type { PrismaClient } from '../generated/prisma/client';
 
@@ -20,12 +22,13 @@ export class AuthModule implements OnApplicationShutdown {
 
   static register(options: AuthOptions): DynamicModule {
     return {
-      controllers: [MeController],
+      controllers: [MeController, AuditHistoryController],
       exports: [AccountsService, ActorGuard, AUTH_OPTIONS, PRISMA],
       module: AuthModule,
       providers: [
         AccountsService,
         ActorGuard,
+        AuditHistoryService,
         { provide: AUTH_OPTIONS, useValue: options },
         {
           provide: PRISMA,
