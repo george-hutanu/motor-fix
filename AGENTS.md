@@ -78,7 +78,9 @@ decisions are the source for anything the constitution does not fix.
   ESM-only, so the Nest projects' `test` targets run Jest with
   `--experimental-vm-modules`.
 - Root scripts: `typecheck`, `lint`, `test`, `build`, `e2e` run across every
-  project; the harness specs keep `npm run test:harness`. API tests need
+  project; the harness specs keep `npm run test:harness`; `test:mutation`
+  and `test:mutation:affected` run Stryker one project at a time, against the
+  floor in each project's `stryker.config.json`, which only rises. API tests need
   PostgreSQL and Redis: `docker compose up -d` (or local servers), with
   `DATABASE_URL` and `REDIS_URL` from `.env.example`.
 - Release: `.github/workflows/release.yml` builds one image per app (root
