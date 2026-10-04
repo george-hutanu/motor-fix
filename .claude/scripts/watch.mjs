@@ -18,6 +18,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { readState } from "./run-state.mjs";
 
 export const DEFAULT_THRESHOLDS = { planning: 30, tests: 45, development: 45, review: 30, qa: 30, merging: 30 };
@@ -136,12 +137,19 @@ export function phaseOf({ pr, runState, artifacts, qaLive }) {
 
 const claimLive = (claim, threshold, now) => typeof claim?.at === "string" && now - Date.parse(claim.at) <= threshold * MIN;
 
-export function holderOf({ main, self = false, lock, alive, qaLive, claim, threshold, now }) {
+/**
+ * A `claude agent` lock carries the pid of the session that started the
+ * subagent, not the subagent's own, so a live pid there only proves the session
+ * runs: the subagent counts as live while its worktree keeps moving.
+ */
+export function holderOf({ main, self = false, lock, alive, qaLive, claim, threshold, now, activityAt = now }) {
   if (main) return "owner";
   if (self || qaLive || claimLive(claim, threshold, now)) return "live";
   if (lock === null) return "none";
   const pid = lockPid(lock);
-  return pid === null || alive(pid) ? "live" : "dead";
+  if (pid === null) return "live";
+  if (!alive(pid)) return "dead";
+  return lock.startsWith("claude agent ") && now - activityAt > threshold * MIN ? "none" : "live";
 }
 
 export function fixOf(row, { now, thresholds }) {
@@ -161,7 +169,8 @@ export function fixOf(row, { now, thresholds }) {
   if (quiet <= limit) return { verdict: "ok", fix: null, reason: `quiet ${Math.round(quiet)} of ${limit} min` };
   const reason = `no live agent, quiet ${Math.round(quiet)} min (> ${limit} in ${row.phase})`;
   const open = pr && (pr.state === "ready" || pr.state === "draft");
-  if (pr?.state === "ready" && pr.checks === "pass" && pr.agentReview === "success") return { verdict: "stale", fix: "merge", reason };
+  const atPrHead = row.clean && row.head && row.head === pr?.head;
+  if (pr?.state === "ready" && pr.checks === "pass" && pr.agentReview === "success" && atPrHead) return { verdict: "stale", fix: "merge", reason };
   if (open && pr.checks === "fail") return { verdict: "stale", fix: "fix-ci", reason };
   if (pr?.state === "ready" && pr.checks === "pass" && !pr.agentReview) return { verdict: "stale", fix: "rerun-qa", reason };
   return { verdict: "stale", fix: "resume", reason };
@@ -170,7 +179,7 @@ export function fixOf(row, { now, thresholds }) {
 export function dispatchPlan(rows, { qaLive, prsKnown = true }) {
   if (!prsKnown) return [];
   const live = rows.filter((r) => r.claim?.live);
-  let qa = qaLive + live.filter((r) => r.claim.fix === "rerun-qa").length;
+  let qa = qaLive + live.filter((r) => r.claim.fix === "rerun-qa" && !r.qaLive).length;
   let other = live.filter((r) => r.claim.fix !== "rerun-qa").length;
   const plan = [];
   const due = rows.filter((r) => r.verdict === "stale" && FIXES.includes(r.fix)).sort((a, b) => a.activity.at - b.activity.at);
@@ -297,8 +306,8 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
     const phase = phaseOf({ pr, runState, artifacts: artifactsOf(w.path, feature), qaLive });
     const threshold = thresholds[phase] ?? 0;
     const claim = readJson(claimPath(w.path));
-    const holder = holderOf({ main: w.main, self: real(w.path) === here, lock: w.lock, alive, qaLive, claim, threshold, now });
     const { activity, clean, gitFailed } = activityOf(w.path, runState);
+    const holder = holderOf({ main: w.main, self: real(w.path) === here, lock: w.lock, alive, qaLive, claim, threshold, now, activityAt: activity.at });
     const row = {
       path: w.path,
       branch: w.branch,
@@ -309,6 +318,8 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
       pr,
       clean,
       gitFailed,
+      qaLive,
+      locked: w.lock !== null,
       head: w.head,
       main: w.main,
       claim: claim ? { ...claim, live: claimLive(claim, threshold, now) } : null,
@@ -341,8 +352,12 @@ export function applyFixes(repo, report) {
     }
   };
   for (const r of report.rows.filter((x) => x.holder === "dead")) run(`unlock ${r.path}`, ["worktree", "unlock", r.path]);
-  for (const r of report.rows.filter((x) => x.fix === "remove-worktree" && !x.main && x.clean))
+  // A merged worktree whose subagent went quiet still carries its session's
+  // lock, which git will not remove past: release it on this path only.
+  for (const r of report.rows.filter((x) => x.fix === "remove-worktree" && !x.main && x.clean)) {
+    if (r.locked && r.holder === "none") run(`unlock ${r.path}`, ["worktree", "unlock", r.path]);
     run(`remove ${r.path}`, ["worktree", "remove", r.path]);
+  }
   for (const path of report.orphanLocks ?? []) run(`unlock ${path}`, ["worktree", "unlock", path]);
   if (report.prunable.length > 0) run(`prune ${report.prunable.join(", ")}`, ["worktree", "prune"]);
   return actions;
@@ -426,4 +441,11 @@ export function main(argv, { cwd = process.cwd(), now = Date.now(), ...deps } = 
   return 0;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) process.exit(main(process.argv.slice(2)));
+const invoked = (() => {
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+})();
+if (invoked) process.exit(main(process.argv.slice(2)));

@@ -852,11 +852,11 @@ describe('holder from locks and QA runs, with real worktrees', () => {
     assert.equal(r.verdict, 'stale');
   });
 
-  it('reads a lock whose process is claude as live, and never stale', () => {
+  it('reads a session lock whose process is claude as live, and never stale', () => {
     const f = fixture();
     const a = f.add('agent-a', 'chore-x');
     quietCommit(a, 3000);
-    lock(f, a, 'claude agent agent-a (pid 4242 start Sun Oct  4 08:07:18 2026)');
+    lock(f, a, 'claude session agent-a (pid 4242 start Sun Oct  4 08:07:18 2026)');
     const report = collect(f.repo, env({ alive: (pid) => pid === 4242 }));
     assert.equal(rowOf(report, a).holder, 'live');
     assert.equal(rowOf(report, a).verdict, 'ok');
@@ -1082,7 +1082,7 @@ describe('--fix never harms work', () => {
     const f = fixture();
     const live = f.add('live', '921-live');
     const hand = f.add('hand', '922-hand');
-    lock(f, live, 'claude agent live (pid 4242 start Sun Oct  4 08:07:18 2026)');
+    lock(f, live, 'claude session live (pid 4242 start Sun Oct  4 08:07:18 2026)');
     lock(f, hand, 'kept by hand');
     const prs = [mergedFor(live, '921-live', 21), mergedFor(hand, '922-hand', 22)];
     const report = collect(f.repo, env({ gh: () => prs, alive: (pid) => pid === 4242, now: later() }));
@@ -1090,7 +1090,7 @@ describe('--fix never harms work', () => {
     assert.deepEqual(actions, []);
     assert.ok(existsSync(live));
     assert.ok(existsSync(hand));
-    assert.match(listed(f), /locked claude agent live/);
+    assert.match(listed(f), /locked claude session live/);
     assert.match(listed(f), /locked kept by hand/);
   });
 
@@ -1100,7 +1100,7 @@ describe('--fix never harms work', () => {
     const hand = f.add('hand', '922-hand');
     const none = f.add('none', '923-none');
     const dead = f.add('dead', '924-dead');
-    lock(f, live, 'claude agent live (pid 4242 start Sun Oct  4 08:07:18 2026)');
+    lock(f, live, 'claude session live (pid 4242 start Sun Oct  4 08:07:18 2026)');
     lock(f, hand, 'kept by hand');
     lock(f, none);
     lock(f, dead, DEAD_LOCK);
@@ -1108,7 +1108,7 @@ describe('--fix never harms work', () => {
     const actions = applyFixes(f.repo, report);
     assert.equal(actions.filter((a) => a.ok).length, 1, JSON.stringify(actions));
     const text = listed(f);
-    assert.match(text, /locked claude agent live/);
+    assert.match(text, /locked claude session live/);
     assert.match(text, /locked kept by hand/);
     assert.equal((text.match(/^locked/gm) ?? []).length, 3);
     assert.doesNotMatch(text, /999999/);
@@ -1292,7 +1292,7 @@ describe('a pass with nothing to do writes nothing', () => {
     const live = f.add('live', '921-live');
     const hand = f.add('hand', '922-hand');
     const fresh = f.add('fresh', '923-fresh');
-    lock(f, live, 'claude agent live (pid 4242 start Sun Oct  4 08:07:18 2026)');
+    lock(f, live, 'claude session live (pid 4242 start Sun Oct  4 08:07:18 2026)');
     lock(f, hand, 'kept by hand');
     return { f, live, hand, fresh };
   };

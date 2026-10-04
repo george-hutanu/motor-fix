@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -120,6 +120,15 @@ describe('holder', () => {
   it('is live when the lock names a running claude process, dead when it does not', () => {
     assert.equal(holderOf({ ...base, lock, alive: (pid) => pid === 2214 }), 'live');
     assert.equal(holderOf({ ...base, lock }), 'dead');
+  });
+
+  it('reads a subagent lock as live only while its worktree moves within the threshold', () => {
+    const agentLock = 'claude agent agent-a1 (pid 2214 start Sun Oct  4 08:07:18 2026)';
+    const sessionLock = 'claude session agent-watchdog (pid 2214 start Sun Oct  4 10:15:05 2026)';
+    const alive = (pid) => pid === 2214;
+    assert.equal(holderOf({ ...base, lock: agentLock, alive, activityAt: NOW - 10 * MIN }), 'live');
+    assert.equal(holderOf({ ...base, lock: agentLock, alive, activityAt: NOW - 31 * MIN }), 'none');
+    assert.equal(holderOf({ ...base, lock: sessionLock, alive, activityAt: NOW - 600 * MIN }), 'live');
   });
 
   it('is live for a lock set by hand, with no pid, and while a PR-tester run tests its PR', () => {
@@ -246,6 +255,14 @@ describe('stale and the fix', () => {
     assert.equal(fixOf(row({ ...quiet, pr: summarizePr(pr({ isDraft: true })) }), opts).fix, 'resume');
   });
 
+  it('resumes instead of merging when the worktree holds work the PR head does not', () => {
+    const quiet = { activity: { at: NOW - 120 * MIN, source: 'commit' } };
+    const green = summarizePr(pr({ headRefOid: 'abc', statusCheckRollup: [check('SUCCESS'), review('SUCCESS')] }));
+    assert.equal(fixOf(row({ ...quiet, phase: 'merging', pr: green }), opts).fix, 'merge');
+    assert.equal(fixOf(row({ ...quiet, phase: 'merging', pr: green, head: 'def' }), opts).fix, 'resume');
+    assert.equal(fixOf(row({ ...quiet, phase: 'merging', pr: green, clean: false }), opts).fix, 'resume');
+  });
+
   it('proposes no PR fix when the PR state is unknown', () => {
     const r = fixOf(row({ phase: 'review', pr: 'unknown', activity: { at: NOW - 120 * MIN, source: 'commit' } }), opts);
     assert.equal(r.fix, 'resume');
@@ -296,6 +313,12 @@ describe('dispatch plan', () => {
     assert.equal(dispatchPlan(rows, { qaLive: 0, now: NOW }).length, 2);
     const claimed = { path: 'z', verdict: 'ok', fix: null, claim: { fix: 'resume', at: new Date(NOW - MIN).toISOString(), live: true } };
     assert.equal(dispatchPlan([...rows, claimed], { qaLive: 0, now: NOW }).length, 1);
+  });
+
+  it('counts a QA claim once when the QA run it started is already live', () => {
+    const claimed = (path, qaLive) => ({ path, verdict: 'ok', fix: null, qaLive, claim: { fix: 'rerun-qa', at: new Date(NOW - MIN).toISOString(), live: true } });
+    const rows = [claimed('x', true), claimed('y', true), stale('a', 'rerun-qa', 90), stale('b', 'rerun-qa', 80)];
+    assert.equal(dispatchPlan(rows, { qaLive: 2, now: NOW }).length, 2);
   });
 
   it('dispatches nothing when the PR state is unknown', () => {
@@ -477,6 +500,26 @@ describe('--fix and claim', () => {
     }
   });
 
+  it('removes a merged clean worktree whose subagent went quiet, though the session that started it still runs', () => {
+    const f = fixture();
+    try {
+      const done = f.add('agent-done', '909-done');
+      quietCommit(done, 120);
+      git(f.repo, 'worktree', 'lock', '--reason', 'claude agent agent-done (pid 4242 start Sun Oct  4 08:07:18 2026)', done);
+      const sha = git(done, 'rev-parse', 'HEAD');
+      const report = collect(f.repo, env({ alive: (pid) => pid === 4242, gh: () => [pr({ number: 9, headRefName: '909-done', state: 'MERGED', headRefOid: sha })] }));
+      const r = report.rows.find((x) => x.path === done);
+      assert.equal(r.holder, 'none');
+      assert.equal(r.fix, 'remove-worktree');
+      const actions = applyFixes(f.repo, report);
+      assert.ok(actions.every((a) => a.ok), JSON.stringify(actions));
+      assert.ok(!existsSync(done));
+      assert.ok(git(f.repo, 'branch', '--format=%(refname:short)').split('\n').includes('909-done'));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
   it('never unlocks a lock whose agent is alive, or a lock set by hand', () => {
     const f = fixture();
     try {
@@ -523,6 +566,26 @@ describe('--fix and claim', () => {
       assert.equal(r.verdict, 'ok');
       r = collect(f.repo, env({ now: NOW + 60 * MIN })).rows.find((x) => x.path === a);
       assert.equal(r.verdict, 'stale');
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('the command, started from a path with a space or through a symlink', () => {
+  it('still runs', () => {
+    const f = fixture();
+    try {
+      const dir = join(f.root, 'with space', '.claude', 'scripts');
+      mkdirSync(dir, { recursive: true });
+      for (const name of ['watch.mjs', 'run-state.mjs']) writeFileSync(join(dir, name), readFileSync(join(import.meta.dirname, name)));
+      mkdirSync(join(f.root, 'with space', '.claude', 'scripts', 'lib'), { recursive: true });
+      for (const name of ['feature.mjs']) writeFileSync(join(dir, 'lib', name), readFileSync(join(import.meta.dirname, 'lib', name)));
+      symlinkSync(join(f.root, 'with space'), join(f.root, 'linked'));
+      for (const script of [join(dir, 'watch.mjs'), join(f.root, 'linked', '.claude', 'scripts', 'watch.mjs')]) {
+        const out = execFileSync('node', [script, '--json'], { cwd: f.repo, encoding: 'utf8', env: { ...process.env, GH_TOKEN: '' } });
+        assert.ok(JSON.parse(out).rows.length >= 1, script);
+      }
     } finally {
       rmSync(f.root, { recursive: true, force: true });
     }
