@@ -11,3 +11,6 @@
 - 2026-10-04 · labels · PR #53 · in development
 - 2026-10-04 · decision · ST-80 sign-up limit · owner confirmed 10 attempts an hour per network address; brief's Rules line (proposed) → Decided 2026-10-04
 - 2026-10-04 · comment · ST-80 · deviation: scenario 3 ("Am un service") not built, posted
+- 2026-10-04 · review · ST-80 story Status · Implementing → In review (PR #53 marked ready)
+- 2026-10-04 · review · Foundations timeline row ST-80 · Implementing → In review
+- 2026-10-04 · labels · PR #53 · in review
