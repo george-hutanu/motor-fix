@@ -5,3 +5,13 @@
 - 2026-10-04 · start · EP-1 · In progress (unchanged)
 - 2026-10-04 · pr · ST-20 · PR #51 https://github.com/george-hutanu/motor-fix/pull/51
 - 2026-10-04 · labels · PR #51 · planning
+- 2026-10-04 · implement · ST-20 · Planning → Implementing
+- 2026-10-04 · implement · Foundations timeline ST-20 · Planning → Implementing
+- 2026-10-04 · labels · PR #51 · in development
+- 2026-10-04 · review · ST-20 · Implementing → In review
+- 2026-10-04 · review · Foundations timeline ST-20 · Implementing → In review
+- 2026-10-04 · labels · PR #51 · in review
+- 2026-10-04 · debt · ST-20 · 3 tasks filed (To do): 3ef607bff0d28125aa51db664c697062, 3ef607bff0d2819f8eb3ce7800177bda, 3ef607bff0d281078ad8e0ee7f49b5b7
+- 2026-10-04 · qa · ST-20 · In review → QA
+- 2026-10-04 · qa · Foundations timeline ST-20 · In review → QA
+- 2026-10-04 · labels · PR #51 · QA
