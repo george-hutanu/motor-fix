@@ -7,6 +7,7 @@ metadata:
   source: extension:bug
 user-invocable: true
 disable-model-invocation: false
+model: opus
 ---
 
 # Bug Fix Skill

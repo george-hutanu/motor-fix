@@ -8,6 +8,7 @@ metadata:
   source: "adapted from BMAD's bmad-retrospective (docs.bmad-method.org/build/finish-an-epic)"
 user-invocable: true
 disable-model-invocation: false
+model: fable
 ---
 
 ## User Input

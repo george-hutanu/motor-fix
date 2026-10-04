@@ -7,6 +7,7 @@ metadata:
   source: extension:git
 user-invocable: true
 disable-model-invocation: false
+model: haiku
 ---
 
 # Git Commit Skill

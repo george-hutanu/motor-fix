@@ -8,6 +8,7 @@ metadata:
   source: "adapted from BMAD's bmad-correct-course"
 user-invocable: true
 disable-model-invocation: false
+model: fable
 ---
 
 ## User Input
