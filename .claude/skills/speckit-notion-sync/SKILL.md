@@ -138,7 +138,7 @@ GitHub shows the same stage as the board. Exactly one stage label at a time;
 | `qa` (PR tester starts) | `--remove-label "in review" --add-label QA` |
 | `blocked <reason>` | `--add-label blocked` (the stage label stays) |
 | `unblock` | `--remove-label blocked` |
-| `finish` (merged) | `--remove-label QA --remove-label blocked` — a merged PR carries no stage |
+| `finish` (merged) | `--remove-label "in development" --remove-label "in review" --remove-label QA --remove-label blocked` — a merged PR carries no labels from this table; GitHub's Merged badge and the story's Done are the final state |
 
 A PR with no story (`chore-*`) gets the same labels; only the Notion writes
 are skipped. Removing a label the PR does not have is harmless.

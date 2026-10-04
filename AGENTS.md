@@ -73,7 +73,8 @@ epic or a plan, whether run through spec-kit or by hand.
   (`speckit-notion-sync blocked <reason>`); `speckit-notion-sync unblock`
   returns it to where it was. Each step also moves the PR's label —
   `in development`, `in review`, `QA`, plus `blocked` — so GitHub shows the
-  same stage as Notion (table in `speckit-notion-sync`, §2b).
+  same stage as Notion (table in `speckit-notion-sync`, §2b); the merge
+  removes them all.
 
   No step waits for the user: opening the draft, pushing, marking it ready,
   merging on green CI and the Notion writes are all standing instructions. The

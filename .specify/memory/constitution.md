@@ -7,7 +7,8 @@ Sync Impact Report (v1.6.0)
   story PR and an open PR without its stage label; nothing removed)
 - Source: owner decision 2026-10-04: "update each notion ticket with its own PR
   link … make it a hard rule" and "when a PR is in review, add a label", "and QA label as well", "in development as well", "and other
-  labels that you think are useful" (→ `blocked`);
+  labels that you think are useful" (→ `blocked`), "once merged, remove
+  labels";
   MotorFix stories gains a `PR` URL property, every existing story PR was
   backfilled, and the open ready PRs were labelled.
 - Templates:
@@ -235,7 +236,8 @@ waits for the owner:
 A task that cannot go on without something outside it is set Blocked, with the
 reason on the story and the PR and the PR's `blocked` label, and returns to
 its previous status when it resumes. An open PR always carries exactly one
-stage label (`in development`, `in review`, `QA`), and a merged one none.
+stage label (`in development`, `in review`, `QA`); the merge removes them all,
+`blocked` included.
 
 Rationale: the owner should not have to say when to open a PR or when to
 merge one, and green unit tests are not proof the change works when used. A
