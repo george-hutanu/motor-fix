@@ -10,6 +10,16 @@
 
 **Sources**: Notion story ST-288 https://app.notion.com/p/3ee607bff0d2816f83b1d10d181fc8f1 (read 2026-10-04, page edited 2026-10-04; Build brief wins over the story body; Open: none) · timeline row https://app.notion.com/p/3ee607bff0d281088e7ccbe92c50d14b ("build the bar and one per-dashboard view list with placeholder views"; blocked by ST-286, ST-82, ST-79, all merged) · the existing dashboard frame `apps/web/src/app/dashboard/frame.ts` and the capability table `libs/domain/src/auth/capabilities.ts`.
 
+## Clarifications
+
+### Session 2026-10-04
+
+- Q: What is each view's address segment, and are dashboard addresses language-neutral? → A: Language-neutral English segments fixed in the view list: driver `requests, cars, reviews, saved, settings`; garage `requests, schedule, team, prices, reviews, profile`; admin `garages, users, reviews, catalogue, settings`; the dashboard view is the bare `/app/<area>` (the `/app/*` routes already skip the language prefix).
+- Q: Does this story ship garage feature-switch filtering, or is it deferred to the EP-2 "Garage feature switches" story? → A: Deferred whole: nothing produces a garage's switched-off features yet (the session carries none), so a feature field would have no input (Principle I). Recorded in `deferred.md` for the story that introduces the switches, with the `garage.features_changed` / `mechanic.updated` live refresh.
+- Q: Is a refused or unknown address redirected or rendered in place, and does a view's address cover its sub-paths? → A: Redirected, the address replaced by the dashboard's own, decided before the view is loaded; a view's address covers its sub-paths so owning epics can add detail pages.
+- Q: Is the phone/tablet switch a style rule at 768 px or a conditional render? → A: A style rule at 768 px with both the side menu and the bar in the page, both rendered from the one filtered list; unit tests cover the list, the filter and menu = bar, end-to-end tests the visibility at 375 px and 768 px.
+- Q: Is the mechanic's "own jobs" a view with its own tab in release 1? → A: No: it is the dashboard view's body for a mechanic, built by the workspace epic; `garage.own_jobs`, `garage.final_price` and `garage.audit_history` are actions, not views, and get no tab.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Reach every view of my dashboard with one thumb (Priority: P1)
@@ -61,7 +71,8 @@ the menu drift apart as later epics add views.
 
 1. **Given** any role, **when** the dashboard renders at 375 px and at 1024 px,
    **then** the bar's tabs and the side menu's entries are the same views in
-   the same order with the same labels.
+   the same order (the bar uses each view's short label, the menu its long
+   one).
 2. **Given** a screen 768 px wide or more, **when** a dashboard renders,
    **then** the side menu is used and the bar is hidden; below 768 px the side
    menu is hidden and the bar is shown.
@@ -117,14 +128,18 @@ the page width; read the bar's landmark name and the active tab's state.
 
 - **FR-001**: Each dashboard (driver, garage, admin; the mechanic uses the
   garage dashboard in release 1) MUST have exactly one ordered list of views,
-  each view with its label and, where it has one, the capability it requires.
-- **FR-002**: Each view MUST have its own address under its dashboard, and
-  the dashboard view MUST be the dashboard's own address.
+  each view with its menu label, its short tab label (the mock's: "Cereri"
+  for "Cereri de ofertă") and, where it has one, the capability it requires.
+- **FR-002**: Each view MUST have its own language-neutral address under its
+  dashboard (the segments in Clarifications), covering its sub-paths, and the
+  dashboard view MUST be the dashboard's own address.
 - **FR-003**: Opening the address of a view the session's capabilities do not
-  allow, or of a view that does not exist, MUST land the person on their
-  dashboard view; the decision MUST read the same view list as the menus.
+  allow, or of a view that does not exist, MUST redirect the person to their
+  dashboard's own address before the view loads; the decision MUST read the
+  same view list as the menus.
 - **FR-004**: Below 768 px, the dashboard MUST show a bottom tab bar instead
-  of the side menu, with one tab per view the session allows, in list order.
+  of the side menu, with one tab per view the session allows, in list order;
+  the bar and the side menu MUST both be rendered from that one filtered list.
 - **FR-005**: At 768 px and wider, the dashboard MUST show the side menu and
   hide the bar; the side menu MUST offer the same views as the bar.
 - **FR-006**: The open view's tab and menu entry MUST be marked as the current
@@ -166,12 +181,15 @@ the page width; read the bar's landmark name and the active tab's state.
 
 ## Assumptions
 
-- Garage feature switches (GARAGE_FEATURE, day sheets / team off) arrive with
-  their own story in EP-2 ("Garage feature switches", out of scope in the
-  Build brief): every view counts as switched on until then, and the
-  `garage.features_changed` / `mechanic.updated` live refresh lands with
-  those events (ST-257 outbox). (autonomous default — Build brief "Out of
-  scope", timeline note)
+- Out of scope, deferred: the Build brief's scenario 3 (switched-off day
+  sheets / team lose their tab) and the `garage.features_changed` /
+  `mechanic.updated` live refresh. Nothing produces a garage's feature
+  switches yet (EP-2 "Garage feature switches"; ST-254's note "GARAGE_FEATURE
+  arrives with EP-2: every feature counts as on until then"), so every view
+  is on; `deferred.md` carries the work for that story. (autonomous default)
+- A mechanic's "own jobs" is the dashboard view's body, not a tab; their bar
+  is the dashboard tab plus the requests / schedule tabs their permissions
+  grant. (autonomous default — Notion W01, `capabilitiesOf`)
 - The views behind the tabs are placeholders (title + "nothing here yet"),
   built by their epics. (timeline note: "build the bar and one per-dashboard
   view list with placeholder views")
@@ -184,5 +202,17 @@ the page width; read the bar's landmark name and the active tab's state.
 - The view list, labels and order are the ones the dashboard frame already
   shows (ST-82), so existing translations are reused. (autonomous default —
   `apps/web/src/app/dashboard/frame.ts`)
+- The mock's "AI" tab (Asistent AI) is left out: the AI assistant connection
+  is its own epic (release 3) and adds its view to the list then. (autonomous
+  default — design.md)
+- On a phone the header carries the person's name and "Ieși din cont" next to
+  the language switch; the mock has no account controls on a phone.
+  (autonomous default — design.md)
 - 768 px is the phone/tablet boundary of the shared phone rules
   (`libs/ui-cockpit/src/lib/layout.ts` `BREAKPOINTS.tablet`).
+
+## Spec Delta
+
+### Capability: `phone-layout`
+
+- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-012, FR-013

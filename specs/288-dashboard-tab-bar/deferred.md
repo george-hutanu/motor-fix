@@ -1,0 +1,3 @@
+# Deferred — 288-dashboard-tab-bar
+
+- Garage feature switches in the dashboard tabs (Build brief scenario 3): add each view's required garage feature (day sheets → schedule, team and mechanics → team) to the view list in `apps/web/src/app/dashboard/views.ts`, filter by the garage's switched-off features once the session or an endpoint carries them, and refresh the tabs on open screens on `garage.features_changed` and `mechanic.updated` (`garage:{garageId}`). Nothing produces the switches or those events yet (EP-2 "Garage feature switches", ST-257 outbox), so every view counts as on. (spec clarification 2026-10-04)

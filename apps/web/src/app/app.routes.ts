@@ -2,6 +2,7 @@ import type { Routes } from '@angular/router';
 
 import { languageAddress, languageRoot, toLanguageAddress } from './addresses';
 import { areaGuard } from './dashboard/area.guard';
+import { dashboardRoutes } from './dashboard/views';
 import { Home } from './home/home';
 import { NotFound } from './not-found/not-found';
 import { signedInToDashboard } from './public/account.guard';
@@ -24,9 +25,24 @@ export const routes: Routes = [
     path: '',
     pathMatch: 'full',
   },
-  { canMatch: [areaGuard('driver')], loadComponent: frame, path: 'app/driver' },
-  { canMatch: [areaGuard('garage')], loadComponent: frame, path: 'app/garage' },
-  { canMatch: [areaGuard('admin')], loadComponent: frame, path: 'app/admin' },
+  {
+    canMatch: [areaGuard('driver')],
+    children: dashboardRoutes('driver'),
+    loadComponent: frame,
+    path: 'app/driver',
+  },
+  {
+    canMatch: [areaGuard('garage')],
+    children: dashboardRoutes('garage'),
+    loadComponent: frame,
+    path: 'app/garage',
+  },
+  {
+    canMatch: [areaGuard('admin')],
+    children: dashboardRoutes('admin'),
+    loadComponent: frame,
+    path: 'app/admin',
+  },
   {
     loadComponent: () =>
       import('@motor-fix/ui-cockpit/sample').then((m) => m.CockpitSamplePage),
