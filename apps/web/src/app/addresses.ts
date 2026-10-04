@@ -16,6 +16,7 @@ import {
   Router,
   type UrlMatcher,
   UrlSegment,
+  type UrlTree,
 } from '@angular/router';
 import { I18n, isLanguage, LANGUAGES, LanguageChoice } from '@motor-fix/i18n';
 
@@ -145,3 +146,7 @@ function writeHead(
   for (const [hreflang, href] of Object.entries(links))
     add('link', { href, hreflang, rel: 'alternate' });
 }
+
+// ['app', 'driver', …] of an address, without its query or fragment.
+export const segmentsOf = (tree: UrlTree) =>
+  tree.root.children[PRIMARY_OUTLET]?.segments.map((s) => s.path) ?? [];

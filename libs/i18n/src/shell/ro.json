@@ -38,6 +38,11 @@
       "driver": "Șofer",
       "garage": "Service"
     },
+    "bar": {
+      "admin": "Panou admin",
+      "driver": "Panou șofer",
+      "garage": "Panou service"
+    },
     "empty": "Nimic aici încă.",
     "home": "MotorFix, pagina principală",
     "logo": "MOTORFIX",
@@ -67,7 +72,23 @@
         "team": "Mecanici"
       }
     },
-    "signOut": "Ieși din cont"
+    "signOut": "Ieși din cont",
+    "tab": {
+      "brands": "Mărci",
+      "cars": "Mașini",
+      "dashboard": "Panou",
+      "garages": "Service‑uri",
+      "prices": "Prețuri",
+      "profile": "Profil",
+      "reported": "Raportate",
+      "requests": "Cereri",
+      "reviews": "Recenzii",
+      "saved": "Salvate",
+      "schedule": "Program",
+      "settings": "Setări",
+      "team": "Mecanici",
+      "users": "Utilizatori"
+    }
   },
   "gauge": {
     "none": "Nicio recenzie încă",
