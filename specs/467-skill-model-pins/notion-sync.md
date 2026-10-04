@@ -6,3 +6,6 @@
 - 2026-10-04 · start · Foundations build timeline · no row expected: tasks added after the plan have none
 - 2026-10-04 · review · ST-467 story · In progress → In review (PR #33 marked ready)
 - 2026-10-04 · debt · deferred.md line 2 → Notion task https://app.notion.com/p/3ef607bff0d2815cb6cbdd54a2dcc716
+- 2026-10-04 · blocked · ST-467 story · QA → Blocked (CI jobs not started: GitHub billing / spending limit; waiting on PR #30)
+- 2026-10-04 · unblock · ST-467 story · Blocked → QA (PR #30 merged, repo public, CI runs again)
+- 2026-10-04 · labels · PR #33 · tooling, scope: harness, EP-1, QA
