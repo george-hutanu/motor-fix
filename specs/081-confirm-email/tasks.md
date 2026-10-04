@@ -8,8 +8,8 @@
 - [X] T002 [P] API integration tests in `libs/domain/src/auth/email-confirmation.api.integration.spec.ts`: sign-up queues the e-mail in the account's language with the link (FR-001, FR-012), confirm / already confirmed / expired / voided / other address / inactive / concurrent (FR-003, FR-004, FR-007, FR-010), resend by token and for the signed-in account with their refusals and limits (FR-005, FR-006, FR-008), `GET /me` `emailConfirmed` (FR-009), audit entry (FR-003)
 - [X] T003 [P] `AccountsService` integration test: google/apple identity confirmed at creation (FR-011) in `libs/domain/src/auth/accounts.service.integration.spec.ts`
 - [X] T004 [P] Seed test: seeded accounts confirmed (FR-016) in `libs/domain/src/seed.integration.spec.ts`
-- [ ] T005 [P] Web unit tests: banner (FR-013, FR-014) `apps/web/src/app/dashboard/email-banner.spec.ts`; page (FR-015) `apps/web/src/app/public/confirm-email.spec.ts`
-- [ ] T006 [P] End-to-end `apps/web-e2e/src/confirm-email.spec.ts`: sign up → banner → "Retrimite" toast; an unknown link → expired page → "Trimite un link nou" refused politely (FR-013, FR-015)
+- [X] T005 [P] Web unit tests: banner (FR-013, FR-014) `apps/web/src/app/dashboard/email-banner.spec.ts`; page (FR-015) `apps/web/src/app/public/confirm-email.spec.ts`
+- [X] T006 [P] End-to-end `apps/web-e2e/src/confirm-email.spec.ts`: sign up → banner → "Retrimite" toast; an unknown link → expired page → "Trimite un link nou" refused politely (FR-013, FR-015)
 - [X] T007 API wiring test in `apps/api/src/public-routes.integration.spec.ts`: the confirm routes are public, `me/email-confirmation` is not (FR-003, FR-005, FR-006)
 
 ## Phase 2: API
@@ -21,8 +21,8 @@
 
 ## Phase 3: Web
 
-- [ ] T012 Banner in the dashboard frame, live event re-reads the account (FR-013, FR-014)
-- [ ] T013 Confirmation page and route (FR-015); RO/EN texts
+- [X] T012 Banner in the dashboard frame, live event re-reads the account (FR-013, FR-014)
+- [X] T013 Confirmation page and route (FR-015); RO/EN texts
 
 ## FR → test
 

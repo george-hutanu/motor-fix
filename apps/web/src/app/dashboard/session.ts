@@ -104,6 +104,15 @@ export class Session {
     return loading;
   }
 
+  // What the server now says about the signed-in account; the old answer
+  // stays on screen until then, and stays when the server does not answer.
+  async reload(): Promise<void> {
+    if (!this.current()) return;
+    const generation = this.generation;
+    const answer = await this.me.meControllerMe().catch(() => null);
+    if (answer && generation === this.generation) this.current.set(answer);
+  }
+
   async signOut(): Promise<void> {
     this.generation++;
     this.loading = null;

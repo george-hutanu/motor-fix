@@ -45,6 +45,11 @@ export const routes: Routes = [
       placeholder('garages/:garage', 'public.placeholder.garages'),
       placeholder('mechanics/:mechanic', 'public.placeholder.mechanics'),
       {
+        loadComponent: () =>
+          import('./public/confirm-email').then((m) => m.ConfirmEmail),
+        path: 'confirm-email/:token',
+      },
+      {
         ...placeholder('account', 'public.placeholder.account'),
         canActivate: [signedInToDashboard],
       },
