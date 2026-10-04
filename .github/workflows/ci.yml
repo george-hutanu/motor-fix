@@ -43,6 +43,19 @@ jobs:
       - name: Typecheck, test and build the affected projects
         if: github.event_name == 'pull_request'
         run: npx nx affected -t typecheck test build --base=origin/${{ github.base_ref }}
+      - name: Restore the mutation results of earlier runs
+        if: github.event_name == 'pull_request'
+        uses: actions/cache@v4
+        with:
+          path: reports/mutation
+          key: mutation-${{ github.head_ref }}-${{ github.run_id }}
+          restore-keys: |
+            mutation-${{ github.head_ref }}-
+            mutation-
+      - name: Mutation score of the affected projects
+        if: github.event_name == 'pull_request'
+        timeout-minutes: 60
+        run: npx nx affected -t test:mutation --base=origin/${{ github.base_ref }} --parallel=1 -- --incremental
       - name: Typecheck, test and build every project
         if: github.event_name != 'pull_request'
         run: npx nx run-many -t typecheck test build
