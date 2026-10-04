@@ -32,7 +32,7 @@ jobs:
         run: |
           pattern='^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([a-z0-9._/-]+\))?!?: [^ ]'
           if [[ ! "$TITLE" =~ $pattern ]]; then
-            echo "::error::PR title is not a Conventional Commit: \"$TITLE\". Expected type(scope): subject, e.g. feat(api): add the health check."
+            echo "::error::PR title is not a Conventional Commit: \"$TITLE\". Expected type(scope): subject, e.g. feat(api): add the health check. After fixing the title, push again to re-run the check."
             exit 1
           fi
 
@@ -67,7 +67,7 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
-      - run: npx nx $NX_SCOPE -t test
+      - run: npx nx $NX_SCOPE -t test --passWithNoTests
 
   integration:
     name: Integration tests
@@ -162,8 +162,6 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
       - uses: ./.github/actions/setup
       - run: npm run lint:harness
       - run: npm run test:harness
@@ -188,8 +186,10 @@ jobs:
           node-version-file: .nvmrc
       - run: npm audit --omit=dev --audit-level=high
 
+  # On main, release.yml's images job is the real build.
   docker:
     name: Docker build (${{ matrix.app }})
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:

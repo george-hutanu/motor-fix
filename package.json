@@ -94,7 +94,7 @@
     "test:integration": "JEST_SUITE=integration TZ=UTC nx run-many -t test --passWithNoTests",
     "test:mutation": "nx run-many -t test:mutation --parallel=1",
     "test:mutation:affected": "nx affected -t test:mutation --parallel=1",
-    "test:unit": "JEST_SUITE=unit TZ=UTC nx run-many -t test",
+    "test:unit": "JEST_SUITE=unit TZ=UTC nx run-many -t test --passWithNoTests",
     "typecheck": "nx run-many -t typecheck"
   },
   "type": "module",

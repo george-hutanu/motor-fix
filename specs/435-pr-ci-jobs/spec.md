@@ -81,7 +81,7 @@ HTML reports as artifacts.
 ### Capability: `platform`
 
 - **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-012, FR-013, FR-014
-- **Modifies**: 421-FR-027 — PR CI is the jobs of 435-FR-001, run on the affected projects.
+- **Modifies**: 421-FR-027 → FR-001
 
 ## Success Criteria *(mandatory)*
 

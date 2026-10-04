@@ -9,6 +9,7 @@ const INTEGRATION = /\.integration\.spec\.ts$/;
 function listTests(project: string, suite?: string) {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
+    // What nx sets for the test target, so jest can load the .cts configs.
     TS_NODE_COMPILER_OPTIONS: JSON.stringify({
       customConditions: null,
       module: 'commonjs',

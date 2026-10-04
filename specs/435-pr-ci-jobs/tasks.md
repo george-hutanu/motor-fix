@@ -9,13 +9,13 @@
 ## Phase 2: The unit / integration split
 
 - [X] T002 `jest.preset.cjs` selects specs by `JEST_SUITE`; `nx.json` adds `JEST_SUITE` and `ci.yml` to the inputs so caches and `affected` follow them (FR-007, FR-002)
-- [X] T003 Rename the specs that need PostgreSQL or Redis to `*.integration.spec.ts`: `apps/api/src/bootstrap*.spec.ts`, `libs/domain/src/auth/{accounts.service,auth.api,auth.adversary.http}.spec.ts`, `libs/domain/src/health/*.spec.ts`, `libs/domain/src/seed.spec.ts` (FR-008)
+- [X] T003 Rename the specs that need PostgreSQL or Redis to `*.integration.spec.ts`: `apps/api/src/bootstrap.integration.spec.ts`, `apps/api/src/bootstrap.adversary.integration.spec.ts`, `libs/domain/src/auth/accounts.service.integration.spec.ts`, `libs/domain/src/auth/auth.api.integration.spec.ts`, `libs/domain/src/auth/auth.adversary.http.integration.spec.ts`, `libs/domain/src/health/health.controller.integration.spec.ts`, `libs/domain/src/health/health.adversary.integration.spec.ts`, `libs/domain/src/health/health.adversary2.integration.spec.ts`, `libs/domain/src/seed.integration.spec.ts` (FR-008)
 - [X] T004 Root scripts `test:unit` and `test:integration` (FR-007)
 
 ## Phase 3: CI jobs
 
 - [X] T005 `.github/actions/setup/action.yml`: checkout-independent Node + `npm ci` composite (FR-001)
-- [X] T006 `.github/workflows/ci.yml`: jobs pr-title, biome, typecheck, unit, integration, e2e, build, harness, contract, audit, docker (matrix web, api), ci-ok; concurrency, permissions, timeouts; affected on PR, run-many on workflow_call (FR-001–FR-006, FR-009–FR-012)
+- [X] T006 `.github/workflows/ci.yml`: jobs pr-title, biome, typecheck, unit, integration, e2e, build, harness, contract, audit, docker (matrix web, api), ci-ok; concurrency, permissions, timeouts; affected on PR, run-many on workflow_call; contract job runs scripts/contract-check.sh (FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-009, FR-010, FR-011, FR-012)
 - [X] T007 `apps/web-e2e/playwright.config.mts`: a web-server timeout long enough for a cold CI build (FR-010)
 
 ## Phase 4: Mutation workflow
@@ -25,7 +25,7 @@
 ## Phase 5: Docs and proof
 
 - [X] T009 AGENTS.md: the CI jobs and the mutation workflow (FR-014)
-- [ ] T010 PR runs the new CI on itself; trigger `mutation.yml` once (SC-001, SC-002)
+- [X] T010 PR runs the new CI on itself (run 37189061812 green); `mutation.yml` dispatched once by the ST-431 session (run 37189204423, success) (SC-001, SC-002)
 
 ## FR → test
 

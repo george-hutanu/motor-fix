@@ -24,3 +24,9 @@
 ## Implement
 
 - One commit for the split and the CI jobs together: each commit runs the full husky typecheck+lint+test on this shared laptop, so the run keeps commits few.
+
+## Review
+
+- First CI run on PR #18 (run 37189061812): all 13 checks green.
+- spec-reviewer: APPROVE (LOW only). code-reviewer: one HIGH (web-e2e did not depend on api, so api/domain-only PRs skipped e2e) fixed with `implicitDependencies: ["api", "web"]`. Also fixed: docker job only on pull_request (release.yml `images` is the build on main), `--passWithNoTests` on the unit run, no full clone in the harness job, the setup action as a shared global, a comment on the spec's ts-node env, the title error says to push again. The rest is in deferred.md.
+- Mutation: PR #8 merged (mutation.yml on main); origin/main's ci.yml has no mutation steps and this branch's ci.yml has none. Verification run (owned by the #8 session): https://github.com/george-hutanu/motor-fix/actions/runs/37189204423, success, contracts score 100 vs floor 95.
