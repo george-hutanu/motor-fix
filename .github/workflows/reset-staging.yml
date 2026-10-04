@@ -40,6 +40,10 @@ jobs:
           mkdir -p -m 700 ~/.ssh
           ssh-keygen -q -t ed25519 -N '' -C "$KEY_NAME" -f ~/.ssh/id_ed25519
           railway ssh keys add --key ~/.ssh/id_ed25519.pub --name "$KEY_NAME"
+          # No terminal answers ssh's first-connection prompt on a runner:
+          # trust the relay's host key the first time, and check it after.
+          printf 'Host ssh.railway.com\n  StrictHostKeyChecking accept-new\n' >> ~/.ssh/config
+          chmod 600 ~/.ssh/config
       - name: Empty, migrate and seed inside the staging api
         env:
           # The seed refuses staging without it: the repository is public.

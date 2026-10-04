@@ -67,6 +67,19 @@ describe('reset-staging workflow', () => {
     expect(step).toMatch(/^ +if: always\(\)$/m);
   });
 
+  // A runner has no terminal to answer ssh's first-connection prompt, so the
+  // first dispatch failed with "Host key verification failed".
+  it("trusts the Railway ssh relay's host key on first use, before connecting", () => {
+    const trust = workflow.indexOf('Host ssh.railway.com');
+    const config = workflow.slice(trust, workflow.indexOf('- name:', trust));
+
+    expect(trust).toBeGreaterThan(0);
+    expect(config).toMatch(/StrictHostKeyChecking accept-new/);
+    expect(config).toContain('~/.ssh/config');
+    expect(trust).toBeLessThan(workflow.indexOf('railway ssh --project'));
+    expect(workflow).not.toMatch(/StrictHostKeyChecking[ =]no/);
+  });
+
   it('hands SEED_PASSWORD over stdin, masked, and never echoes it', () => {
     expect(setting('SEED_PASSWORD')).toBe(gh('secrets.SEED_PASSWORD'));
     expect(workflow).toContain('::add-mask::');
