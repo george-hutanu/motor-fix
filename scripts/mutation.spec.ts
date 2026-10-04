@@ -3,11 +3,33 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import {
+  flags,
   hasSpecs,
   mutationScore,
   strykerOptions,
   summaryRows,
 } from './mutation.ts';
+
+describe('flags', () => {
+  it('reads the flags as typed and as Nx forwards them', () => {
+    expect(flags(['--incremental', '--mutate', 'a.ts'])).toEqual({
+      incremental: true,
+      only: 'a.ts',
+    });
+    expect(flags(['--incremental=true', '--mutate=a.ts'])).toEqual({
+      incremental: true,
+      only: 'a.ts',
+    });
+  });
+
+  it('defaults to a full run of the whole project', () => {
+    expect(flags([])).toEqual({ incremental: false, only: undefined });
+    expect(flags(['--incremental=false'])).toEqual({
+      incremental: false,
+      only: undefined,
+    });
+  });
+});
 
 let repo: string;
 const cwd = process.cwd();
