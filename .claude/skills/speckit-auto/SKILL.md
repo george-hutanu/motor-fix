@@ -91,6 +91,13 @@ Run these before phase 1, in one batch:
 - `node .claude/scripts/spec-drift.mjs --status` — know the drift baseline
   before you start moving code.
 
+**Parallel runs.** The orchestrating session (the main checkout, which
+dispatches the runs) keeps the watch scheduled as soon as two or more tasks or
+worktrees are active at once: `CronList` first, so it never doubles up; if no
+job runs `/speckit-watch`, schedule it every 15 minutes on off-minutes
+(`4,19,34,49 * * * *`) and run one pass right away (speckit-watch, "Keeping
+it scheduled"). A run isolated in a worktree never schedules it.
+
 Then create the run log `specs/<feature>/auto-run.md` as soon as the feature
 directory exists (phase 2 creates it), with the description, the start commit,
 and one section per phase to append to.
