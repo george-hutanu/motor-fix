@@ -38,16 +38,16 @@ feature through `.specify/feature.json` (`.claude/scripts/lib/feature.mjs`).
 
 ## Gates
 
-Constitution v1.4.0 (`.specify/memory/constitution.md`) maps each rule to its
+Constitution v1.6.0 (`.specify/memory/constitution.md`) maps each rule to its
 check; its Enforcement section is the authority. In short:
 
 | Gate | When | What it does |
 | --- | --- | --- |
-| `github-identity.sh` | at session start | exports `GH_TOKEN` for george-hutanu so `gh` never acts as the QLOG account; reports git identity drift or a missing gh login |
+| `github-identity.sh` | at session start | exports `GH_TOKEN` for george-hutanu so `gh` never acts as the work account; reports git identity drift or a missing gh login |
 | `red-first-gate.mjs` | before an Edit/Write | blocks `apps/*/src`, `libs/*/src` edits while the active feature has FRs + open tasks but the branch touches no `*.spec.*`/`*.test.*` file — run `/speckit-tests` first |
 | `post-edit-check.sh` | after an Edit/Write | `biome check` on the file, then its colocated `*.spec.ts` through Jest |
 | `stop-test-gate.sh` | before the agent finishes | `biome check` + `jest --onlyChanged` must be green |
-| `pr-lifecycle-gate.mjs`, `merge-gate.mjs` | before finishing; before `gh pr merge` | Constitution VII: no unpushed commits, no branch without a PR, no green ready PR untested by `/speckit-pr-test` or left unmerged; no merge without `agent-review` success on the head |
+| `pr-lifecycle-gate.mjs`, `merge-gate.mjs` | before finishing; before `gh pr merge` | Constitution VII: nothing unpushed, no branch without a PR, no story PR unlinked in Notion, no open PR without its stage and type labels, no green ready PR untested or unmerged; no merge without `agent-review` success |
 | `pre-commit-check.sh` | before `git commit` | commit-message policy, `spec-drift --staged` |
 | `bash-guard.mjs` | before any Bash call | blocks force-push, pushes to `main`, `reset --hard`, `clean -f`, deleting `.work/` |
 | `config-protection.mjs` | before an Edit/Write | the ratchets: a `thresholds.break` only rises, `.specify/trace-baseline.json` only shrinks, this file never grows past its baseline |
@@ -160,5 +160,5 @@ ranked, read-only UI audit with `scan.mjs` and `contrast.mjs` helpers; fixes
 only the findings you name).
 
 <!-- SPECKIT START -->
-Active plan (stack, structure, commands): specs/431-mutation-testing/plan.md
+Active plan (stack, structure, commands): specs/390-audit-history/plan.md
 <!-- SPECKIT END -->

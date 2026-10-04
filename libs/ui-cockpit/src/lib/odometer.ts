@@ -13,6 +13,7 @@ const toWholeLei = (bani: unknown) =>
   styles: `
     :host {
       display: inline-block;
+      max-width: 100%;
       color: var(--mf-text);
       font-family: var(--mf-font-label);
       font-size: var(--mf-size-field);
@@ -21,6 +22,7 @@ const toWholeLei = (bani: unknown) =>
     }
     .mf-odometer-value {
       display: inline-flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 2px;
       white-space: pre;

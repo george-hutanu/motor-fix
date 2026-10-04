@@ -2,6 +2,7 @@ import { Component, inject, PendingTasks, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 
+import { CockpitChartsSample } from './charts-sample';
 import { CockpitGaugesSample } from './gauges-sample';
 import { HlmButton } from './helm/button';
 import { HlmDialogImports } from './helm/dialog';
@@ -32,6 +33,7 @@ import { SAMPLE_GARAGES } from './sample-text';
     HlmToaster,
     Panel,
     TranslatePipe,
+    CockpitChartsSample,
   ],
   selector: 'mf-cockpit-sample-page',
   styles: `
@@ -93,17 +95,17 @@ import { SAMPLE_GARAGES } from './sample-text';
           <table hlmTable>
             <thead hlmTHead>
               <tr hlmTr>
-                <th hlmTh>{{ 'cockpit.tableGarage' | t }}</th>
+                <th hlmTh column="main">{{ 'cockpit.tableGarage' | t }}</th>
                 <th hlmTh>{{ 'cockpit.tableArea' | t }}</th>
-                <th hlmTh>{{ 'cockpit.tableRating' | t }}</th>
+                <th hlmTh column="key">{{ 'cockpit.tableRating' | t }}</th>
               </tr>
             </thead>
             <tbody hlmTBody>
               @for (garage of garages; track garage.name) {
                 <tr hlmTr>
-                  <td hlmTd>{{ garage.name }}</td>
+                  <td hlmTd column="main">{{ garage.name }}</td>
                   <td hlmTd>{{ garage.area }}</td>
-                  <td hlmTd>{{ garage.rating }}</td>
+                  <td hlmTd column="key">{{ garage.rating }}</td>
                 </tr>
               }
             </tbody>
@@ -151,6 +153,8 @@ import { SAMPLE_GARAGES } from './sample-text';
           </hlm-popover-content>
         </hlm-popover>
       </div>
+
+      <mf-cockpit-charts-sample />
 
       <hlm-toaster />
     </main>

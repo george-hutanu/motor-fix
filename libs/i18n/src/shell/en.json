@@ -1,5 +1,13 @@
 {
   "brand": "MotorFix",
+  "chart": {
+    "empty": "No data yet",
+    "label": "Period",
+    "retry": "Retry",
+    "summary": "{title}, {period}. Highest: {high}, {highLabel}. Lowest: {low}, {lowLabel}.",
+    "table": "View as table",
+    "value": "Value"
+  },
   "frame": {
     "area": {
       "admin": "Admin",
@@ -49,6 +57,11 @@
     "en": "EN",
     "label": "Language",
     "ro": "RO"
+  },
+  "notFound": {
+    "home": "Back to the home page",
+    "text": "This address does not lead to a MotorFix page.",
+    "title": "Page not found"
   },
   "version": {
     "unknown": "version unknown"

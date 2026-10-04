@@ -1,11 +1,11 @@
 import { afterEach, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { createWorktree, removeWorktree } from './worktree.mjs';
+import { createWorktree, depsToClone, removeWorktree } from './worktree.mjs';
 
 const git = (cwd, ...args) =>
   execFileSync('git', ['-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', '-c', 'user.name=t', '-c', 'user.email=t@localhost', ...args], {
@@ -77,5 +77,58 @@ describe('the tester worktree', () => {
     const wt = createWorktree({ repo: caller, pr: 21, root: join(root, 'runs') });
     removeWorktree({ repo: caller, dir: wt.dir });
     assert.doesNotThrow(() => removeWorktree({ repo: caller, dir: wt.dir }));
+  });
+});
+
+/** A checkout with a lockfile and, if asked, its own installed dependencies. */
+function checkout(root, name, { lock = 'lock-a', deps = true } = {}) {
+  const dir = join(root, name);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'package-lock.json'), lock);
+  if (deps) {
+    mkdirSync(join(dir, 'node_modules', 'left-pad'), { recursive: true });
+    writeFileSync(join(dir, 'node_modules', 'left-pad', 'index.js'), '');
+  }
+  return dir;
+}
+
+describe('the dependencies the tester copies instead of installing', () => {
+  const scratch = () => {
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'prtest-deps-')));
+    dirs.push(root);
+    return root;
+  };
+
+  it('copies the caller\'s own node_modules when the lockfiles match', () => {
+    const repoRoot = checkout(scratch(), 'caller');
+    assert.equal(depsToClone({ repoRoot, lock: 'lock-a' }), join(repoRoot, 'node_modules'));
+  });
+
+  it('copies the directory a symlinked node_modules points at, not the link', () => {
+    const root = scratch();
+    const owner = checkout(root, 'owner');
+    const repoRoot = checkout(root, 'caller', { deps: false });
+    symlinkSync('../owner/node_modules', join(repoRoot, 'node_modules'));
+    assert.equal(depsToClone({ repoRoot, lock: 'lock-a' }), join(owner, 'node_modules'));
+  });
+
+  it('installs when the linked dependencies were installed from another lockfile', () => {
+    const root = scratch();
+    checkout(root, 'owner', { lock: 'lock-old' });
+    const repoRoot = checkout(root, 'caller', { deps: false });
+    symlinkSync('../owner/node_modules', join(repoRoot, 'node_modules'));
+    assert.equal(depsToClone({ repoRoot, lock: 'lock-a' }), null);
+  });
+
+  it('installs when the link points at nothing', () => {
+    const repoRoot = checkout(scratch(), 'caller', { deps: false });
+    symlinkSync('../gone/node_modules', join(repoRoot, 'node_modules'));
+    assert.equal(depsToClone({ repoRoot, lock: 'lock-a' }), null);
+  });
+
+  it('installs when the caller has no dependencies or a different lockfile', () => {
+    const root = scratch();
+    assert.equal(depsToClone({ repoRoot: checkout(root, 'bare', { deps: false }), lock: 'lock-a' }), null);
+    assert.equal(depsToClone({ repoRoot: checkout(root, 'caller'), lock: 'lock-b' }), null);
   });
 });

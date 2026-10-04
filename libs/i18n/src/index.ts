@@ -19,7 +19,13 @@ export {
   formatRating,
 } from './formats';
 export { I18n, provideI18n } from './i18n';
-export { AREAS, type Area, LANGUAGES, type Language } from './languages';
+export {
+  AREAS,
+  type Area,
+  isLanguage,
+  LANGUAGES,
+  type Language,
+} from './languages';
 export {
   LanguageChoice,
   LanguageSwitch,

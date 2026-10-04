@@ -25,8 +25,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { appsFor, changedGetEndpoints, endpointFinding, reportMarkdown, stepFinding, testFinding, touchesWeb, verdict } from "./findings.mjs";
 import { appEnv, composePlan, freePorts, localPlan, waitForHttp } from "./services.mjs";
-import { runSweep, toFindings } from "./sweep.mjs";
-import { createWorktree, removeWorktree } from "./worktree.mjs";
+import { VIEWPORTS, runSweep, toFindings } from "./sweep.mjs";
+import { createWorktree, depsToClone, removeWorktree } from "./worktree.mjs";
 
 const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const self = fileURLToPath(import.meta.url);
@@ -161,9 +161,9 @@ async function main(argv) {
     }
     booted.push("postgres", "redis", ...(plan.storage ? ["minio"] : []));
 
-    const sameLock = existsSync(join(repoRoot, "node_modules")) && readFileSync(join(repoRoot, "package-lock.json"), "utf8") === readFileSync(join(wt.dir, "package-lock.json"), "utf8");
+    const deps = depsToClone({ repoRoot, lock: readFileSync(join(wt.dir, "package-lock.json"), "utf8") });
     let install = { code: 1 };
-    if (sameLock && process.platform === "darwin") install = step("install-clone", "cp", ["-cR", join(repoRoot, "node_modules"), join(wt.dir, "node_modules")]);
+    if (deps && process.platform === "darwin") install = step("install-clone", "cp", ["-cR", deps, join(wt.dir, "node_modules")]);
     if (install.code !== 0) install = step("install", "npm", ["ci", "--no-audit", "--no-fund"], { cwd: wt.dir, env });
     if (!mustPass("install", install)) return finish();
     if (!mustPass("prisma generate", step("prisma-generate", "npx", ["prisma", "generate", "--config", "libs/domain/prisma.config.ts"], { cwd: wt.dir, env }))) return finish();
@@ -231,9 +231,9 @@ async function main(argv) {
     }
     notes.push(endpoints.length ? `Called changed endpoints: ${endpoints.join(", ")}.` : "No changed GET endpoint without path parameters.");
 
-    log(`sweep: ${opt.routes.join(", ")} × 3 viewports × ${opt.schemes.join("/")} × ${opt.langs.join("/")}`);
+    log(`sweep: ${opt.routes.join(", ")} × ${Object.keys(VIEWPORTS).length} viewports × ${opt.schemes.join("/")} × ${opt.langs.join("/")}`);
     const sweep = await runSweep({ baseURL: webURL, routes: opt.routes, outDir: shots, schemes: opt.schemes, langs: opt.langs, repoRoot });
-    // Evidence relative to the report, so the report reads the same once copied into specs/.
+    // Evidence relative to the report: shots/ stays in --out, beside it; only the report is copied into specs/.
     for (const f of toFindings(sweep.observations, { web, origins: [webURL, apiURL] }))
       findings.push(f.evidence ? { ...f, evidence: relative(out, f.evidence) } : f);
     writeFileSync(join(out, "observations.json"), JSON.stringify(sweep.observations, null, 2));

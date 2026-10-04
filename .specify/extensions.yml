@@ -73,8 +73,8 @@ hooks:
     enabled: true
     optional: false
     priority: 5
-    prompt: Make sure the story is In progress in Notion?
-    description: 'Notion sync, event start (no-op when already In progress)'
+    prompt: Move the story to Implementing in Notion?
+    description: 'Notion sync, event implement: story and build-timeline row Planning → Implementing, PR label planning → in development'
     condition: null
   - extension: git
     command: speckit.git.commit
@@ -126,8 +126,8 @@ hooks:
     enabled: true
     optional: false
     priority: 5
-    prompt: Mark the story In progress in Notion?
-    description: 'Notion sync, event start: story, build-timeline row and epic to In progress'
+    prompt: Mark the story Planning in Notion?
+    description: 'Notion sync, event start: story and build-timeline row to Planning, epic to In progress, draft PR opened with the planning label'
     condition: null
   - extension: motorfix
     command: speckit.design.check
