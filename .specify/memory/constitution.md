@@ -1,5 +1,26 @@
 <!--
-Sync Impact Report (v1.5.0)
+Sync Impact Report (v1.6.0)
+- Version change: 1.5.0 → 1.6.0 (MINOR: VII steps 1 and 3 expanded — every
+  task carries the link to its own PR in Notion from the moment the draft
+  opens, and every open PR carries its stage as a GitHub label —
+  `planning`, `in development`, `in review`, `QA`, plus `blocked`; the stop:pr-lifecycle gate refuses an unlinked
+  story PR and an open PR without its stage label; nothing removed)
+- Source: owner decision 2026-10-04: "update each notion ticket with its own PR
+  link … make it a hard rule" and "when a PR is in review, add a label", "and QA label as well", "in development as well", "and other
+  labels that you think are useful" (→ `blocked`), "once merged, remove
+  labels", "planning label … for the beginning of the task until
+  speckit-implement", "in notion keep 2 columns instead of in progress:
+  planning and implementing" (story Status and timeline Build status), "use more labels like: bug,
+  feature, tech debt" (type, breaking, scope, epic, ui, dependencies);
+  MotorFix stories gains a `PR` URL property, every existing story PR was
+  backfilled, and the open ready PRs were labelled.
+- Templates:
+  - ✅ AGENTS.md — lifecycle steps 2, 4 and 6
+  - ✅ .claude/hooks/pr-lifecycle-gate.mjs, evals/cases/pr-lifecycle.json
+  - ✅ speckit-notion-sync (`pr` event, label on `review`), speckit-git-commit,
+    speckit-auto (hand-off steps 1 and 5), speckit-pr-test
+
+Previous report (v1.5.0)
 - Version change: 1.4.0 → 1.5.0 (MINOR: VII materially expanded — a QA step
   by the PR tester between ready and merge, the Notion QA and Blocked states;
   Enforcement gains pre:bash:merge-gate; nothing removed)
@@ -192,14 +213,22 @@ notifications in step, even when Redis is down.
 Every task, current or future, runs this lifecycle on its own, and no step
 waits for the owner:
 
-1. Set the task In progress in Notion, then open a draft PR for its branch.
+1. Set the task Planning in Notion (Implementing once `/speckit-implement`
+   starts), then open a draft PR for its branch,
+   labelled `planning` until `/speckit-implement` starts and `in development`
+   from then on,
+   and write that PR's link onto the task's own `PR` property in Notion. Every
+   story and task links its own PR; one opened later for the same task is
+   added as a comment, never in place of the first.
 2. Push every commit to that branch as the work goes: never forced, never to
    `main`.
 3. When the work is done (tests, typecheck and lint green, review with no
-   CRITICAL/HIGH left), mark the PR ready and set the task In review.
+   CRITICAL/HIGH left), mark the PR ready, swap its label to `in review`,
+   and set the task In review.
 4. Merge `origin/main` into the branch if it is behind and wait for CI. A
    failing check is fixed on the branch and waited for again.
-5. Set the task to QA and run the PR tester (`/speckit-pr-test`) on the head
+5. Set the task to QA, swap the PR's `in review` label for `QA`, and run
+   the PR tester (`/speckit-pr-test`) on the head
    commit: it boots the change in its own worktree, tests it in a browser and
    against the API, runs the tests, reviews the diff against the spec and this
    constitution, and sets the `agent-review` commit status. Blocking findings
@@ -210,8 +239,12 @@ waits for the owner:
    Then set the task Done.
 
 A task that cannot go on without something outside it is set Blocked, with the
-reason on the story and the PR, and returns to its previous status when it
-resumes.
+reason on the story and the PR and the PR's `blocked` label, and returns to
+its previous status when it resumes. An open PR always carries exactly one
+stage label (`planning`, `in development`, `in review`, `QA`), which the merge
+removes with `blocked`, and its type label from the title (`feature`, `bug`,
+`tech debt`, `performance`, `documentation`, `tests`, `tooling`), plus
+`breaking` for a `!` title.
 
 Rationale: the owner should not have to say when to open a PR or when to
 merge one, and green unit tests are not proof the change works when used. A
@@ -236,7 +269,7 @@ tester, or with a passed PR left unmerged is not finished.
 - Code style matches the surrounding file: same comment density, naming, and
   idiom. Comments state constraints the code cannot show — never narration.
 - Every commit and push is authored as `george-hutanu <hutanugeorge40@gmail.com>`
-  on GitHub account `george-hutanu`, never the QLOG work identity.
+  on GitHub account `george-hutanu`, never the work identity.
 - AGENTS.md remains the runtime guidance file; this constitution governs, it
   does not duplicate AGENTS.md operational detail.
 
@@ -339,4 +372,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.5.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-04
+**Version**: 1.6.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-04

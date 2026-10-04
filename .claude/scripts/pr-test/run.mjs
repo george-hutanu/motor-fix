@@ -26,7 +26,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { appsFor, changedGetEndpoints, endpointFinding, reportMarkdown, stepFinding, testFinding, touchesWeb, verdict } from "./findings.mjs";
 import { appEnv, composePlan, freePorts, localPlan, waitForHttp } from "./services.mjs";
 import { VIEWPORTS, runSweep, toFindings } from "./sweep.mjs";
-import { createWorktree, removeWorktree } from "./worktree.mjs";
+import { createWorktree, depsToClone, removeWorktree } from "./worktree.mjs";
 
 const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const self = fileURLToPath(import.meta.url);
@@ -161,9 +161,9 @@ async function main(argv) {
     }
     booted.push("postgres", "redis", ...(plan.storage ? ["minio"] : []));
 
-    const sameLock = existsSync(join(repoRoot, "node_modules")) && readFileSync(join(repoRoot, "package-lock.json"), "utf8") === readFileSync(join(wt.dir, "package-lock.json"), "utf8");
+    const deps = depsToClone({ repoRoot, lock: readFileSync(join(wt.dir, "package-lock.json"), "utf8") });
     let install = { code: 1 };
-    if (sameLock && process.platform === "darwin") install = step("install-clone", "cp", ["-cR", join(repoRoot, "node_modules"), join(wt.dir, "node_modules")]);
+    if (deps && process.platform === "darwin") install = step("install-clone", "cp", ["-cR", deps, join(wt.dir, "node_modules")]);
     if (install.code !== 0) install = step("install", "npm", ["ci", "--no-audit", "--no-fund"], { cwd: wt.dir, env });
     if (!mustPass("install", install)) return finish();
     if (!mustPass("prisma generate", step("prisma-generate", "npx", ["prisma", "generate", "--config", "libs/domain/prisma.config.ts"], { cwd: wt.dir, env }))) return finish();

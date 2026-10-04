@@ -3,24 +3,30 @@
 // tested rather than re-read from prose on every run. `speckit-notion-sync`
 // asks this script, then makes the Notion writes it names.
 //
-// The story ladder is To do → In progress → In review → QA → Done; the build
+// The story ladder is To do → Planning → Implementing → In review → QA → Done:
+// Planning from the task's start until /speckit-implement, Implementing from
+// there. A legacy In progress reads as Implementing. The build
 // timeline row mirrors it (Not started … Merged). Blocked sits off the ladder:
 // `blocked` records the status it left in run-state, and only `unblock` leaves
 // Blocked, returning to that status — the one backwards move. Nothing moves a
 // Done story.
 //
 //   node .claude/scripts/notion-status.mjs <event> --current "<story Status>"
-//   events: start | review | qa | finish | blocked | unblock
+//   events: start | implement | review | qa | finish | blocked | unblock
 // Prints { write, story, timeline, prior, note } as JSON.
 import { readState, writeState } from "./run-state.mjs";
 
-export const LADDER = ["To do", "In progress", "In review", "QA", "Done"];
-const TIMELINE = { "To do": "Not started", "In progress": "In progress", "In review": "In review", QA: "QA", Done: "Merged", Blocked: "Blocked" };
-const TARGET = { start: "In progress", review: "In review", qa: "QA", finish: "Done" };
+export const LADDER = ["To do", "Planning", "Implementing", "In review", "QA", "Done"];
+const TIMELINE = { "To do": "Not started", Planning: "Planning", Implementing: "Implementing", "In review": "In review", QA: "QA", Done: "Merged", Blocked: "Blocked" };
+const TARGET = { start: "Planning", implement: "Implementing", review: "In review", qa: "QA", finish: "Done" };
 
 const result = (write, story, prior, note) => ({ write, story, timeline: TIMELINE[story] ?? null, prior, note });
 
-export function decide({ event, current, prior = null }) {
+const LEGACY = (status) => (status === "In progress" ? "Implementing" : status);
+
+export function decide({ event, current: raw, prior: rawPrior = null }) {
+  const current = LEGACY(raw);
+  const prior = rawPrior && LEGACY(rawPrior);
   if (!(event in TARGET) && event !== "blocked" && event !== "unblock") throw new Error(`unknown event "${event}"`);
   if (current === "Done") return result(false, current, prior, "Done never moves");
 
@@ -30,7 +36,7 @@ export function decide({ event, current, prior = null }) {
   }
   if (event === "unblock") {
     if (current !== "Blocked") return result(false, current, prior, `not Blocked (${current}); unchanged`);
-    const back = prior ?? "In progress";
+    const back = prior ?? "Implementing";
     return result(true, back, null, `Blocked → ${back}`);
   }
   if (current === "Blocked") return result(false, current, prior, `Blocked; only unblock leaves it (recorded: ${prior ?? "none"})`);
@@ -38,9 +44,9 @@ export function decide({ event, current, prior = null }) {
   const target = TARGET[event];
   const from = LADDER.indexOf(current);
   const to = LADDER.indexOf(target);
-  if (to === from) return result(false, current, prior, `${current} unchanged`);
+  if (to === from && raw === current) return result(false, current, prior, `${current} unchanged`);
   if (from !== -1 && to < from) return result(false, current, prior, `${current} → ${target} would move backwards; unchanged`);
-  return result(true, target, prior, `${current} → ${target}`);
+  return result(true, target, prior, `${raw} → ${target}`);
 }
 
 export function main(argv, repo) {
@@ -48,7 +54,7 @@ export function main(argv, repo) {
   const current = i === -1 ? undefined : argv[i + 1];
   const event = argv.find((a, j) => !a.startsWith("--") && (i === -1 || j !== i + 1));
   if (!event || !current) {
-    console.error('usage: notion-status.mjs <start|review|qa|finish|blocked|unblock> --current "<story Status>"');
+    console.error('usage: notion-status.mjs <start|implement|review|qa|finish|blocked|unblock> --current "<story Status>"');
     return 1;
   }
   const state = readState(repo);

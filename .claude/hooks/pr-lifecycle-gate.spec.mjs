@@ -1,19 +1,21 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { allGreen, decide, hasAgentReview } from './pr-lifecycle-gate.mjs';
+import { allGreen, decide, hasAgentReview, typeLabel } from './pr-lifecycle-gate.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
 const green = [{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }, review('SUCCESS')];
 const ready = (over = {}) => ({
   isDraft: false,
   mergeable: 'MERGEABLE',
+  labels: [{ name: 'in review' }, { name: 'feature' }],
   number: 6,
+  title: 'feat(ui-cockpit): ST-50 Cockpit theme',
   state: 'OPEN',
   statusCheckRollup: green,
   ...over,
 });
-const task = (over = {}) => ({ ahead: 3, branch: '050-cockpit-theme', pr: ready(), unpushed: 0, ...over });
+const task = (over = {}) => ({ ahead: 3, branch: '050-cockpit-theme', pr: ready(), prLinked: true, unpushed: 0, ...over });
 
 describe('PR lifecycle gate — what it leaves alone', () => {
   it('lets a session on main, a detached HEAD or a branch with nothing ahead end', () => {
@@ -23,7 +25,7 @@ describe('PR lifecycle gate — what it leaves alone', () => {
   });
 
   it('lets a draft end: the work is not done yet', () => {
-    assert.equal(decide(task({ pr: ready({ isDraft: true }) })), null);
+    assert.equal(decide(task({ pr: ready({ isDraft: true, labels: [{ name: 'in development' }, { name: 'feature' }] }) })), null);
   });
 
   it('lets a ready PR end while its checks are pending, failing or missing', () => {
@@ -68,6 +70,97 @@ describe('PR lifecycle gate — what it refuses', () => {
   it('lets a session end while the agent review says failure: the fix loop owns that PR', () => {
     const rollup = [{ conclusion: 'SUCCESS' }, review('FAILURE')];
     assert.equal(decide(task({ pr: ready({ statusCheckRollup: rollup }) })), null);
+  });
+});
+
+describe('PR lifecycle gate — the PR link on the story', () => {
+  it('refuses a story branch whose open PR is not recorded on its Notion story, draft or ready', () => {
+    for (const pr of [ready({ isDraft: true }), ready()]) {
+      const why = decide(task({ pr, prLinked: false }));
+      assert.match(why, /PR #6/);
+      assert.match(why, /speckit-notion-sync pr/);
+    }
+  });
+
+  it('asks for the link before the merge', () => {
+    assert.doesNotMatch(decide(task({ prLinked: false })), /gh pr merge/);
+  });
+
+  it('leaves a branch with no story alone, and a merged or closed PR', () => {
+    assert.equal(decide(task({ branch: 'chore-harness-evals', pr: ready({ isDraft: true, labels: [{ name: 'in development' }, { name: 'feature' }] }), prLinked: false })), null);
+    assert.equal(decide(task({ pr: ready({ state: 'MERGED' }), prLinked: false })), null);
+    assert.equal(decide(task({ pr: ready({ state: 'CLOSED' }), prLinked: false })), null);
+  });
+});
+
+describe('PR lifecycle gate — the in review label', () => {
+  it('refuses a ready PR without the in review label, before anything about merging', () => {
+    const why = decide(task({ pr: ready({ labels: [] }) }));
+    assert.match(why, /PR #6/);
+    assert.match(why, /gh pr edit 6 --remove-label "in development" --add-label "in review"/);
+  });
+
+  it('asks the same of a ready PR with no story and of one whose checks are still running', () => {
+    assert.match(decide(task({ branch: 'chore-x', pr: ready({ labels: [] }) })), /in review/);
+    assert.match(decide(task({ pr: ready({ labels: [], statusCheckRollup: [{ state: 'PENDING' }] }) })), /in review/);
+  });
+
+  it('accepts the QA label in its place: the PR tester swaps one for the other', () => {
+    assert.doesNotMatch(decide(task({ pr: ready({ labels: [{ name: 'QA' }, { name: 'feature' }] }) })), /add-label/);
+  });
+
+  it('refuses a draft without the in development label', () => {
+    const why = decide(task({ branch: 'chore-x', pr: ready({ isDraft: true, labels: [] }) }));
+    assert.match(why, /gh pr edit 6 --add-label "in development"/);
+    assert.equal(decide(task({ branch: 'chore-x', pr: ready({ isDraft: true, labels: [{ name: 'in development' }, { name: 'feature' }] }) })), null);
+  });
+
+  it('takes planning for a draft: the task has not reached implement yet', () => {
+    assert.equal(decide(task({ branch: 'chore-x', pr: ready({ isDraft: true, labels: [{ name: 'planning' }, { name: 'feature' }] }) })), null);
+    assert.match(decide(task({ branch: 'chore-x', pr: ready({ isDraft: true, labels: [] }) })), /"planning".*"in development"/);
+  });
+
+  it('does not take planning for a ready PR', () => {
+    assert.match(decide(task({ pr: ready({ labels: [{ name: 'planning' }] }) })), /add-label "in review"/);
+  });
+
+  it('does not take in development for a ready PR', () => {
+    assert.match(decide(task({ pr: ready({ labels: [{ name: 'in development' }, { name: 'feature' }] }) })), /add-label "in review"/);
+  });
+
+  it('leaves a merged and a closed PR without the label alone', () => {
+    assert.equal(decide(task({ pr: ready({ labels: [], state: 'MERGED' }) })), null);
+    assert.equal(decide(task({ pr: ready({ labels: [], state: 'CLOSED' }) })), null);
+  });
+});
+
+describe('PR lifecycle gate — the type label', () => {
+  it('reads the type label off the Conventional Commit title', () => {
+    assert.equal(typeLabel('feat(web): ST-21 x'), 'feature');
+    assert.equal(typeLabel('fix(audit): x'), 'bug');
+    assert.equal(typeLabel('refactor(api)!: x'), 'tech debt');
+    assert.equal(typeLabel('perf(web): x'), 'performance');
+    assert.equal(typeLabel('docs(specs): x'), 'documentation');
+    assert.equal(typeLabel('test(api): x'), 'tests');
+    for (const t of ['ci(platform): x', 'build: x', 'chore(harness): x']) assert.equal(typeLabel(t), 'tooling');
+    assert.equal(typeLabel('Merge branch main'), null);
+  });
+
+  it('refuses an open PR, draft or ready, without its type label', () => {
+    for (const isDraft of [true, false]) {
+      const labels = [{ name: isDraft ? 'in development' : 'in review' }];
+      assert.match(decide(task({ pr: ready({ isDraft, labels }) })), /gh pr edit 6 --add-label "feature"/);
+    }
+  });
+
+  it('asks for breaking on a title marked with !', () => {
+    const labels = [{ name: 'in review' }, { name: 'feature' }];
+    assert.match(decide(task({ pr: ready({ labels, title: 'feat(api)!: ST-9 x' }) })), /--add-label "breaking"/);
+  });
+
+  it('leaves a title with no Conventional type, and a merged PR, alone', () => {
+    assert.equal(decide(task({ pr: ready({ isDraft: true, labels: [{ name: 'planning' }], title: 'WIP' }) })), null);
+    assert.equal(decide(task({ pr: ready({ labels: [], state: 'MERGED' }) })), null);
   });
 });
 

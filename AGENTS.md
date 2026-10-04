@@ -3,22 +3,22 @@
 Guidance for AI agents (and humans) working in motor-fix. The spec-kit
 workflow and its gates are in [CLAUDE.local.md](./CLAUDE.local.md).
 
-## Identity — personal repo, not QLOG
+## Identity — personal repo, not work
 
 Every commit and push here is **george-hutanu <hutanugeorge40@gmail.com>** on
-GitHub account **george-hutanu**. Never the QLOG identity (`georgeh@qlog.co`,
-`george-hutanu-qlog`), which is this machine's global default and must stay
+GitHub account **george-hutanu**. Never the work identity (the work e-mail and
+work GitHub account), which is this machine's global default and must stay
 that way for `~/code`.
 
 - `sh .husky/identity.sh apply` writes the repo-local git config: author, and
   credentials pinned to george-hutanu's gh token. `npm install` runs it via
   `prepare`, so a fresh clone is covered.
 - `.husky/pre-commit` refuses any commit not authored as george-hutanu.
-- `gh` follows gh's active account, which stays QLOG. Agent sessions get
+- `gh` follows gh's active account, which stays the work one. Agent sessions get
   `GH_TOKEN` for george-hutanu from the SessionStart hook; in your own
   terminal, prefix: `GH_TOKEN=$(gh auth token -u george-hutanu) gh …`.
 - Never `gh auth switch` to george-hutanu, and never edit `~/.gitconfig` for
-  this repo — both would change every QLOG repo under `~/code` too.
+  this repo — both would change every work repo under `~/code` too.
 
 ## Notion is the tracker, and design comes first
 
@@ -32,22 +32,30 @@ epic or a plan, whether run through spec-kit or by hand.
 - **Every task follows the same lifecycle, in this order.** This is a hard
   rule, Constitution VII, enforced by the `stop:pr-lifecycle` and
   `pre:bash:merge-gate` gates:
-  1. Take the task and set it to In progress in Notion (`speckit-notion-sync start`).
-  2. Open a draft PR for its branch (`speckit-git-commit`, at the first commit),
+  1. Take the task and set it to Planning in Notion (`speckit-notion-sync start`);
+     it moves to Implementing when `/speckit-implement` begins
+     (`speckit-notion-sync implement`, the `before_implement` hook).
+  2. Open a draft PR for its branch at the start (`speckit-git-commit`; before
+     planning has a commit, an empty `chore(<scope>): ST-<n> start …` one),
      its body made from `.github/pull_request_template.md`:
-     `gh pr create --draft --body-file <body>`, never `--body` or `--fill`.
+     `gh pr create --draft --label planning --body-file <body>`, never
+     `--body` or `--fill`.
+     Then write the PR's link onto the task's `PR` property in Notion
+     (`speckit-notion-sync pr <n>`): every task links its own PR.
   3. Do the work, pushing every commit to that branch: never forced, never `main`.
   4. When it is done (tests, typecheck and lint green, review with no
      CRITICAL/HIGH left), fill in every section of the template
      (`node scripts/pr-body-check.ts --body-file <body> --title "<title>"`
      passes, then `gh pr edit <n> --body-file <body>`), mark the PR ready for
-     review (`gh pr ready`) and set the task to In review in Notion
+     review (`gh pr ready`), swap its label to `in review`
+     (`gh pr edit <n> --remove-label "in development" --add-label "in review"`) and set the task to In review in Notion
      (`speckit-notion-sync review`).
   5. Get CI green: merge `origin/main` into the branch if it is behind and
      push, wait for the checks (`gh pr checks <n> --watch`); a failing check is
      fixed on the branch and waited for again.
   6. QA: run the PR tester (`/speckit-pr-test <n>`, the `pr-tester` subagent)
-     and set the task to QA (`speckit-notion-sync qa`). It boots the PR head in
+     and set the task to QA (`speckit-notion-sync qa`; the PR's `in review`
+     label becomes `QA`). It boots the PR head in
      its own worktree, tests it in a browser and against the API, reviews the
      diff, posts a review, fills the template's "Agent review" section and sets
      the `agent-review` status on the head commit. Fix every blocking finding
@@ -66,7 +74,13 @@ epic or a plan, whether run through spec-kit or by hand.
   red CI the agent cannot fix, the repair cap, an unresolved Blocked by), set
   the task to Blocked with the reason as a Notion comment and a PR comment
   (`speckit-notion-sync blocked <reason>`); `speckit-notion-sync unblock`
-  returns it to where it was.
+  returns it to where it was. Each step also moves the PR's label —
+  `planning` until `/speckit-implement`, then `in development`, `in review`,
+  `QA`, plus `blocked` — so GitHub shows the
+  same stage as Notion. Next to its one stage label a PR carries its type
+  (`feature`, `bug`, `tech debt`, …, from the title), `breaking`, its scope,
+  its epic, `ui` and `dependencies` where they apply (table in
+  `speckit-notion-sync`, §2b); the merge removes the stage labels.
 
   No step waits for the user: opening the draft, pushing, marking it ready,
   merging on green CI and the Notion writes are all standing instructions. The
