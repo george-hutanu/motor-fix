@@ -290,8 +290,8 @@ describe('roles', () => {
 
     const res = await get({}, bearer(driver, 'admin'));
 
+    expect(res.status).toBe(404);
     expect(res.body.items).toBeUndefined();
-    expect(res.status).not.toBe(200);
   });
 
   it('does not widen an owner to every garage by naming admin in the token', async () => {
@@ -303,8 +303,8 @@ describe('roles', () => {
 
     const res = await get({}, bearer(ion.id, 'admin'));
 
-    if (res.status === 200) expect(ids(res)).toEqual([own.id]);
-    else expect([401, 404]).toContain(res.status);
+    expect(res.status).toBe(200);
+    expect(ids(res)).toEqual([own.id]);
   });
 
   it('answers 401 to a token signed with another secret', async () => {
@@ -721,7 +721,7 @@ describe('invalid input', () => {
 
     const res = await get({ area: 'reviews' }, bearer(driver, 'driver'));
 
-    expect([400, 404]).toContain(res.status);
+    expect(res.status).toBe(400);
     expect(res.body.items).toBeUndefined();
   });
 
