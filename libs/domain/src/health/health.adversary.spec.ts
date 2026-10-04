@@ -5,18 +5,28 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
 import { HealthModule } from './health.module';
+import { S3TestStore } from '../storage/s3-test-store';
+import { StorageModule } from '../storage/storage.module';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
 const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
 const deadUrl = (scheme: string) => `${scheme}://localhost:1/x`;
+const store = new S3TestStore();
 
 async function start(
   urls: { databaseUrl: string; redisUrl: string },
   version = 'abc123',
+  storageEndpoint = store.env().STORAGE_ENDPOINT,
 ) {
   const moduleRef = await Test.createTestingModule({
-    imports: [HealthModule.register({ ...urls, version })],
+    imports: [
+      StorageModule.register({
+        ...store.env(),
+        STORAGE_ENDPOINT: storageEndpoint,
+      }),
+      HealthModule.register({ ...urls, version }),
+    ],
   }).compile();
   const app = moduleRef.createNestApplication({ logger: false });
   await app.init();
@@ -26,6 +36,8 @@ async function start(
 describe('health under hostile conditions', () => {
   let app: INestApplication;
 
+  beforeAll(() => store.start());
+  afterAll(() => store.stop());
   afterEach(() => app.close());
 
   it('answers 404 to a POST on the live path', async () => {
@@ -51,20 +63,25 @@ describe('health under hostile conditions', () => {
       'status',
       'version',
     ]);
-    expect(Object.keys(res.body.checks).sort()).toEqual(['postgres', 'redis']);
+    expect(Object.keys(res.body.checks).sort()).toEqual([
+      'postgres',
+      'redis',
+      'storage',
+    ]);
   });
 
-  it('reports both dependencies as error when both are down', async () => {
-    app = await start({
-      databaseUrl: deadUrl('postgresql'),
-      redisUrl: deadUrl('redis'),
-    });
+  it('reports every dependency as error when all are down', async () => {
+    app = await start(
+      { databaseUrl: deadUrl('postgresql'), redisUrl: deadUrl('redis') },
+      'abc123',
+      deadUrl('http'),
+    );
 
     const res = await request(app.getHttpServer()).get('/health/ready');
 
     expect(res.status).toBe(503);
     expect(res.body).toEqual({
-      checks: { postgres: 'error', redis: 'error' },
+      checks: { postgres: 'error', redis: 'error', storage: 'error' },
       status: 'error',
       version: 'abc123',
     });
@@ -76,7 +93,40 @@ describe('health under hostile conditions', () => {
     const res = await request(app.getHttpServer()).get('/health/ready');
 
     expect(res.status).toBe(503);
-    expect(res.body.checks).toEqual({ postgres: 'error', redis: 'error' });
+    expect(res.body.checks).toEqual({
+      postgres: 'error',
+      redis: 'error',
+      storage: 'ok',
+    });
+  });
+
+  it('answers 503 rather than 500 when the storage endpoint is garbage', async () => {
+    app = await start({ databaseUrl, redisUrl }, 'abc123', 'not a url');
+
+    const res = await request(app.getHttpServer()).get('/health/ready');
+
+    expect(res.status).toBe(503);
+    expect(res.body.checks).toEqual({
+      postgres: 'ok',
+      redis: 'ok',
+      storage: 'error',
+    });
+  });
+
+  it('answers 503 for a bucket that does not exist', async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        StorageModule.register({ ...store.env(), STORAGE_BUCKET: 'missing' }),
+        HealthModule.register({ databaseUrl, redisUrl, version: 'abc123' }),
+      ],
+    }).compile();
+    app = moduleRef.createNestApplication({ logger: false });
+    await app.init();
+
+    const res = await request(app.getHttpServer()).get('/health/ready');
+
+    expect(res.status).toBe(503);
+    expect(res.body.checks.storage).toBe('error');
   });
 
   it('answers 503 for a database that does not exist', async () => {
@@ -86,7 +136,11 @@ describe('health under hostile conditions', () => {
     const res = await request(app.getHttpServer()).get('/health/ready');
 
     expect(res.status).toBe(503);
-    expect(res.body.checks).toEqual({ postgres: 'error', redis: 'ok' });
+    expect(res.body.checks).toEqual({
+      postgres: 'error',
+      redis: 'ok',
+      storage: 'ok',
+    });
   });
 
   it('answers 503 for wrong credentials without leaking them', async () => {
@@ -159,21 +213,33 @@ describe('health under hostile conditions', () => {
       const res = await request(app.getHttpServer()).get('/health/ready');
 
       expect(res.status).toBe(503);
-      expect(res.body.checks).toEqual({ postgres: 'error', redis: 'ok' });
+      expect(res.body.checks).toEqual({
+        postgres: 'error',
+        redis: 'ok',
+        storage: 'ok',
+      });
       expect(Date.now() - started).toBeLessThan(3000);
     });
 
-    it('runs both checks in parallel, so two hung checks cost 2 seconds not 4', async () => {
-      app = await start({
-        databaseUrl: `postgresql://localhost:${port}/x`,
-        redisUrl: `redis://localhost:${port}`,
-      });
+    it('runs all checks in parallel, so three hung checks cost 2 seconds not 6', async () => {
+      app = await start(
+        {
+          databaseUrl: `postgresql://localhost:${port}/x`,
+          redisUrl: `redis://localhost:${port}`,
+        },
+        'abc123',
+        `http://127.0.0.1:${port}`,
+      );
       const started = Date.now();
 
       const res = await request(app.getHttpServer()).get('/health/ready');
 
       expect(res.status).toBe(503);
-      expect(res.body.checks).toEqual({ postgres: 'error', redis: 'error' });
+      expect(res.body.checks).toEqual({
+        postgres: 'error',
+        redis: 'error',
+        storage: 'error',
+      });
       expect(Date.now() - started).toBeLessThan(3000);
     });
 

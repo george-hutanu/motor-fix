@@ -82,3 +82,20 @@
 - Technology stack — https://app.notion.com/p/3ee607bff0d2819ab8e3ee6926a249f2
 - Security, performance and operations (excerpt) — https://app.notion.com/p/3ee607bff0d2810d852efa0a9346afd3
 - Decisions and ideas / Open decisions (excerpt) — https://app.notion.com/p/3ee607bff0d281df9485ce97dfa3332d
+
+## Refresh 2026-10-04
+
+Read directly by the run after the org-researcher subagent reported no Notion tool in its session: Architecture decisions (last edited 2026-10-04T05:56Z) and the ST-50 story's comments.
+
+### New decisions
+- A1 amended: "Angular with Spartan UI (Cockpit theme) on the front end: @spartan-ng/brain headless primitives and helm components copied into our own `libs/ui-cockpit`, on Angular CDK" — reason: PrimeNG 22 moved to the PrimeUI License with a key; the owner wants a fully free, MIT stack. — [Architecture decisions, A1] (2026-10-04, confidence: high)
+  - supersedes: "Stack is Given: Angular … with PrimeNG" and the `CockpitPreset` wording in the ST-50 Build brief (Decisions above, 2026-10-03/04). spec.md was corrected the same day (Spec Delta › Correction).
+
+### New constraints
+none found
+
+### New contradictions with spec.md
+none — the remaining PrimeNG/`CockpitPreset` lines in the story's Build brief are older than A1's amendment, so the amendment wins and spec.md already follows it.
+
+### Story changes
+ST-50 has no comments (page-level and block-level); status not re-read here.

@@ -1,0 +1,48 @@
+// garages module models — only what links an account to a garage; the
+// garages module extends Garage when it arrives.
+
+enum GarageMemberRole {
+  owner
+  receptionist
+
+  @@map("garage_member_role")
+}
+
+model Garage {
+  id        String         @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String         @unique
+  status    String         @default("draft")
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  members   GarageMember[]
+  mechanics Mechanic[]
+
+  @@map("garage")
+}
+
+model GarageMember {
+  garageId  String           @map("garage_id") @db.Uuid
+  accountId String           @map("account_id") @db.Uuid
+  role      GarageMemberRole
+  joinedAt  DateTime         @default(now()) @map("joined_at") @db.Timestamptz(3)
+  garage    Garage           @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  account   Account          @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@id([garageId, accountId])
+  @@unique([accountId, role])
+  @@map("garage_member")
+}
+
+model Mechanic {
+  id                  String  @id @default(uuid()) @db.Uuid
+  garageId            String  @map("garage_id") @db.Uuid
+  accountId           String  @unique @map("account_id") @db.Uuid
+  canMoveBookings     Boolean @default(false) @map("can_move_bookings")
+  canAnswerQuotes     Boolean @default(false) @map("can_answer_quotes")
+  canRecordFinalPrice Boolean @default(false) @map("can_record_final_price")
+  garage              Garage  @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  account             Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([garageId])
+  @@map("mechanic")
+}

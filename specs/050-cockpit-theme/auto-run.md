@@ -65,3 +65,19 @@ Start: detached `origin/main` at 3f717c6c11b66f23ded60bc502f94477df02105e (workt
 - Green: 7 suites / 63 tests. E2E (`BASE_URL=http://localhost:4250`, own dev server to avoid other worktrees' ports): first 11/11 green, but screenshots showed the switch track covering the page — `brn-switch` copies its `class` onto its host as well as the inner button. Added e2e "draws no control over the content around it" (red on the old CSS, confirmed), scoped the rules to `button.spartan-switch` → 12/12 green.
 - Build: `nx run web:build` OK; warning: initial bundle 546 KB > 500 KB warning budget (error at 1 MB). Not from the theme: an empty provider measures the same; it is Angular + router + hydration in the vendor chunk (router arrives with this story's route; ST-79 brings it anyway). Reported, not changed.
 - impact.mjs reports "no tests" for every FR — expected: tests carry no FR tokens (project rule); FR → test table is in tasks.md.
+
+## Phase 11 — Converge
+- One `unrequested` finding: the `.mf-visually-hidden` rule had no user (close buttons are named by `aria-label`) → T022, removed. Nothing else unbuilt.
+
+## Phase 12 — Harden
+- diff-audit (vs origin/main; the script's `main` is the stale local branch): dead-export ERRORs for helm parts reached only through the `*Imports` arrays — unexporting them broke Angular (NG3004: a standalone import must be exported), so they stay exported; `ButtonVariant` unexported. Kept deliberately: `import-extension` ERRORs (libs resolve with `bundler`; same as 421), `new-dependency` ERRORs (the given stack: brain, CDK, forms, the two fonts, clsx). Mutation: no stryker config in ui-cockpit → not run (reported, not waived).
+- test-adversary: `helm.adversary.spec.ts` (≈40 tests). Two failed: an empty sheet close label still expecting an accessible name (owner decision: `closeLabel` stays required, dev-mode `console.error` naming the component, no default text in the lib — test rewritten to that contract, plus the dialog equivalent) and the rendered-hook count after `spartan-toaster` was removed (floor adjusted by that one class).
+- code-reviewer (BLOCK, 10 findings): fixed all — branch behind main (merged, below), meaningless arity test deleted, dead exports/rule committed, leftover `class: 'contents'` and `spartan-toaster` removed, closeLabel dev-mode check, three duplicate adversary tests deleted, panel ids from CDK `_IdGenerator`, light-set comment made a TODO, e2e tab-stop count derived from a locator.
+
+## Phase 13 — Ticket refresh
+- org-researcher appended `## Refresh 2026-10-04` to context.md (Notion A1 amended to Spartan UI).
+
+## Merge with origin/main (bec0eee)
+- Merge order ST-79 → ST-422 → ST-16 → (frame fix #7) → ST-50 kept. Conflicts resolved as agreed: app.ts = main's bare `<router-outlet />`; app.routes.ts = main's routes + the `cockpit` entry before `**`; app.config.ts = `provideRouter(routes)`, `provideI18n()`, `provideCockpitTheme()` on their own lines; tsconfig.base keeps every alias; lockfile regenerated from main's; CLAUDE.local.md active plan → this plan.
+- ST-16's template check fails on typed interface text, so the sample page moved to `cockpit.*` keys in the merge commit itself (a merge without it would not pass the pre-commit suite). origin/main 202c88e was red on ST-79's frame.ts; held the merge until the coordinator's fix landed (bec0eee).
+- Verification: lint OK; typecheck 12/12; `nx run-many -t test --parallel=1` 10/10 projects; web build OK (initial 564.7 KB, warning budget 500 KB — Angular + router + i18n, not the theme); cockpit e2e 12/12 on a dev server at :4250.

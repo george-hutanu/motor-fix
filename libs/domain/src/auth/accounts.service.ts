@@ -1,0 +1,94 @@
+import { Inject, Injectable } from '@nestjs/common';
+
+import type { Role } from './capabilities';
+import { PRISMA } from './prisma';
+import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
+import { EVENT_PORT, type EventPort } from '../events/event.port';
+import type { Prisma, PrismaClient } from '../generated/prisma/client';
+
+export interface NewAccount {
+  name: string;
+  email?: string;
+  phone?: string;
+  language?: 'ro' | 'en';
+  // Passed by server code only: no public endpoint may choose a role.
+  roles: readonly Role[];
+  identity: {
+    method: 'password' | 'google' | 'apple' | 'whatsapp_phone';
+    subject: string;
+    passwordHash?: string;
+  };
+}
+
+@Injectable()
+export class AccountsService {
+  constructor(
+    @Inject(PRISMA) private readonly prisma: PrismaClient,
+    @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Inject(EVENT_PORT) private readonly events: EventPort,
+  ) {}
+
+  async createAccount(input: NewAccount): Promise<{ id: string }> {
+    const roles = [...new Set(input.roles)];
+    const [first] = roles;
+    if (!first) throw new Error('an account needs at least one role');
+    return this.prisma.$transaction(async (tx) => {
+      const { id } = await tx.account.create({
+        data: {
+          email: input.email?.trim().toLowerCase(),
+          identities: { create: input.identity },
+          language: input.language,
+          lastRole: first,
+          name: input.name,
+          phone: input.phone,
+          roles: { create: roles.map((role) => ({ role })) },
+        },
+        select: { id: true },
+      });
+      for (const role of roles) {
+        await this.audit.record(tx, {
+          action: 'create',
+          actorId: id,
+          actorRole: role,
+          field: 'role',
+          newValue: role,
+          subjectId: id,
+          subjectType: 'account',
+        });
+      }
+      await this.events.record(tx, {
+        kind: 'account.created',
+        payload: {
+          accountId: id,
+          method: input.identity.method,
+          roles,
+        },
+        subjectId: id,
+      });
+      return { id };
+    });
+  }
+
+  async grantRole(
+    tx: Prisma.TransactionClient,
+    by: { id: string | null; role: Role | 'system' },
+    accountId: string,
+    role: Role,
+  ) {
+    const { count } = await tx.accountRole.createMany({
+      data: [{ accountId, role }],
+      skipDuplicates: true,
+    });
+    if (count === 0) return;
+    await this.audit.record(tx, {
+      action: 'update',
+      actorId: by.id,
+      actorRole: by.role,
+      field: 'role',
+      newValue: role,
+      oldValue: null,
+      subjectId: accountId,
+      subjectType: 'account',
+    });
+  }
+}

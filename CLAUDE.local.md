@@ -20,10 +20,9 @@ Specs live under `specs/<NNN-feature-slug>/`. Spec Kit is at **1.0.5**
 handles an intent that changes mid-flight.
 
 `/speckit-auto "<feature description>"` runs the whole chain end-to-end in one
-turn, answering every interactive gate itself. It commits one Conventional
-Commit per implementation slice, never pushes, stops only on the Hard Stops in
-`.claude/skills/speckit-auto/SKILL.md`, and logs its decisions to
-`specs/<feature>/auto-run.md`.
+turn, answering every interactive gate itself. It commits and pushes one
+Conventional Commit per slice to the feature's draft PR, stops only on the Hard
+Stops in `.claude/skills/speckit-auto/SKILL.md`, and logs to `auto-run.md`.
 
 `/speckit-context` reads only the Notion space "MotorFix — Product
 documentation" (story, feature page, epic, architecture, open decisions) — no
@@ -49,7 +48,7 @@ check; its Enforcement section is the authority. In short:
 | `post-edit-check.sh` | after an Edit/Write | `biome check` on the file, then its colocated `*.spec.ts` through Jest |
 | `stop-test-gate.sh` | before the agent finishes | `biome check` + `jest --onlyChanged` must be green |
 | `pre-commit-check.sh` | before `git commit` | commit-message policy, `spec-drift --staged` |
-| `bash-guard.mjs` | before any Bash call | blocks force-push, `reset --hard`, `clean -f`, deleting `.work/` |
+| `bash-guard.mjs` | before any Bash call | blocks force-push, pushes to `main`, `reset --hard`, `clean -f`, deleting `.work/` |
 | `config-protection.mjs` | before an Edit/Write | the ratchets: a `thresholds.break` only rises, `.specify/trace-baseline.json` only shrinks, this file never grows past its baseline |
 | `agent-model-router.mjs` | before an Agent call | routes `code-reviewer`/`spec-reviewer` to sonnet or fable by diff size; rewrites `model` or does nothing, never refuses (`SPECKIT_MODEL_ROUTER=0` to stop it) |
 | `session-context.mjs` | at session start | injects `.specify/contexts/<mode>.md` for the phase the feature is in, plus instincts above the confidence threshold |
@@ -149,8 +148,9 @@ touching a gate, and before `--bless-hooks`. `.claude/vitest.config.ts` pins
 
 Commit style: one-line Conventional Commit with a scope (`feat(api): …`), no
 body, no trailers, no tool mentions — enforced by
-`.claude/hooks/commit-msg-policy.js`. Commit each logical chunk as work
-progresses. Pushing is always the user's call.
+`.claude/hooks/commit-msg-policy.js`. Every task runs the lifecycle in AGENTS.md:
+In progress, draft PR, a push per commit (never forced, never `main`), then PR
+ready plus In review when done, and Done after the user merges.
 
 ## Design work
 
@@ -159,5 +159,5 @@ ranked, read-only UI audit with `scan.mjs` and `contrast.mjs` helpers; fixes
 only the findings you name).
 
 <!-- SPECKIT START -->
-Active plan (stack, structure, commands): specs/421-monorepo-platform/plan.md
+Active plan (stack, structure, commands): specs/050-cockpit-theme/plan.md
 <!-- SPECKIT END -->

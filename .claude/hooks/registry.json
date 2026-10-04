@@ -43,7 +43,7 @@
       ],
       "description": "Block history-destroying git (force-push, reset --hard, clean -f) and deletion of .work/",
       "fail_closed": true,
-      "fingerprint": "4c855619a5f5"
+      "fingerprint": "1a4aa05abaa1"
     },
     {
       "id": "pre:bash:commit-gate",

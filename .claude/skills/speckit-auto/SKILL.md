@@ -358,8 +358,9 @@ Gate overrides:
 
 ### 14. Review
 
-First invoke `speckit-notion-sync review`. The run never merges, so In review is
-where it leaves the story; `finish` runs when the branch merges to `main`.
+Do not invoke `speckit-notion-sync review` here: In review follows the PR
+being marked ready, which is the run's hand-off (below), after phase 16.
+`finish` runs when the user merges the PR to `main`.
 Before phase 14, `specs/<feature>/design.md` must exist. The `after_specify` and
 `before_implement` hooks write it, and a run without one is a Hard Stop.
 
@@ -422,8 +423,10 @@ lane was unavailable, say that — an absent suggestion is not an endorsement.
 ## Commit Protocol
 
 One Conventional Commit per implementation slice, single line, no body, no
-trailers (`.claude/hooks/commit-msg-policy.js` enforces it). Never push —
-pushing is the user's call in this repo.
+trailers (`.claude/hooks/commit-msg-policy.js` enforces it). Push after every
+commit, to the feature's own branch only (`git push`, upstream set when the
+branch was created, so the draft PR follows the work). Never `--force`, never
+`main`. Never merge: that is the user's call.
 
 The artifact phases produce **no commits**, and this is not an oversight:
 `specs/`, `.specify/` and `.claude/` are all listed in `.git/info/exclude`, so
@@ -468,7 +471,7 @@ Three gates shape this and are not negotiable:
 A run takes hours and the user has walked away. Call `PushNotification`
 (`status: "proactive"`, one line under 200 characters, lead with what they
 would act on) exactly twice at most: at the final report — `"<feature>: N
-commits, review APPROVE, ready to push"` — and at any Hard Stop — `"<feature>
+commits, review APPROVE, PR ready for your review"` — and at any Hard Stop — `"<feature>
 stopped at phase N: <reason>"`. Never for phase progress; the tool skips the
 notification when they are watching, and a needless one costs attention that
 accumulates.
@@ -483,7 +486,8 @@ exhaustive — nothing else interrupts the pipeline:
 3. CRITICAL analyze findings surviving 2 remediation rounds (phase 8).
 4. CRITICAL/HIGH `spec-reviewer` findings surviving the re-review (phase 14).
 5. The same test failing after 3 distinct fix attempts in phase 10.
-6. A destructive or outward-facing action the pipeline did not plan: pushing,
+6. A destructive or outward-facing action the pipeline did not plan: pushing
+   anywhere but the feature's own branch, a force-push, merging the PR,
    deleting files outside the feature, wiping `.work/`, or anything
    `bash-guard.mjs` blocks that is genuinely required. Report it; do not work
    around it.
@@ -493,6 +497,19 @@ exhaustive — nothing else interrupts the pipeline:
 
 On any hard stop the run log and every commit already made stay in place, so
 the run is resumable by invoking the remaining phase skills directly.
+
+## Hand-off
+
+When phases 14–16 are done, the review left no CRITICAL/HIGH and the last
+`typecheck`, `lint` and test runs are green, finish the task lifecycle
+(AGENTS.md) before the report:
+
+1. `GH_TOKEN=$(gh auth token -u george-hutanu) gh pr ready <branch>`
+2. `speckit-notion-sync review`: the story, its timeline row → In review.
+
+A run that ends on a Hard Stop does neither: the PR stays a draft and the story
+In progress. The run never merges; `speckit-notion-sync finish` follows the
+user's merge.
 
 ## Final Report
 
@@ -528,7 +545,8 @@ One report, at the end, standing on its own:
       its place. If the lane reported itself unavailable, say so in the report — that is not "clean"
 - [ ] Mutation score at or above the floor for every touched package, with no disable added to reach it
 - [ ] Ticket re-read (comments included) after implementation, and any scope-moving comment reported
-- [ ] One commit per implementation slice, nothing pushed
+- [ ] One commit per implementation slice, each pushed to the feature branch
+- [ ] Hand-off done on a clean finish: PR marked ready, story In review; nothing merged
 - [ ] Retrospective evidence gathered with `--since`, attached unjudged; no verdict written and no instinct reinforced
 - [ ] Final report delivered with the sections above
 

@@ -82,3 +82,7 @@ MVP is US1 (tokens + stylesheet). One commit per slice: (1) library, tokens and 
 ## Phase 10: Convergence
 
 - [X] T022 Remove the unused `.mf-visually-hidden` rule from `libs/ui-cockpit/src/styles/cockpit.css` (close buttons are named by `aria-label`) per plan: Constitution I (unrequested)
+
+## Phase 11: Merge with main (ST-79, ST-422, ST-16)
+
+- [X] T023 Sample page text moved to the `cockpit` translation area: `libs/i18n/src/cockpit/ro.json` and `en.json`, `'cockpit'` in `AREAS` (`libs/i18n/src/languages.ts`) and `FILES` (`libs/i18n/src/files.ts`), `{{ 'cockpit.x' | t }}` and `inject(I18n).enter('cockpit')` in `libs/ui-cockpit/src/lib/sample-page.ts`; `sample-text.ts` keeps only the table rows (FR-015)

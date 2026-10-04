@@ -14,6 +14,9 @@ export class HealthChecksDto {
 
   @ApiProperty({ enum: CHECK })
   redis!: Check;
+
+  @ApiProperty({ enum: CHECK })
+  storage!: Check;
 }
 
 export class HealthReadyDto {

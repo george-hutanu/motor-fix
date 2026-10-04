@@ -97,7 +97,9 @@ The script outputs JSON with:
 - When the feature comes from a ticket (Jira key like `BKP-1270`), the branch
   name IS the ticket code, verbatim — pass `GIT_BRANCH_NAME=<ticket-code>` to
   the script. The generated `{number}-{slug}` form is only for ticketless work.
-- NEVER push the new branch until the user explicitly says to push.
+- This skill only creates the branch. A branch with no commits cannot open a
+  PR, so `speckit-git-commit` sets the story In progress and opens the draft PR
+  at the first commit (the task lifecycle in AGENTS.md).
 
 ## Done When
 

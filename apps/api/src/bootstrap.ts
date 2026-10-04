@@ -45,6 +45,10 @@ export function configureApp(app: INestApplication, env: { APP_ENV: AppEnv }) {
 export function openApiDocument(app: INestApplication) {
   return SwaggerModule.createDocument(
     app,
-    new DocumentBuilder().setTitle('MotorFix API').setVersion('1').build(),
+    new DocumentBuilder()
+      .setTitle('MotorFix API')
+      .setVersion('1')
+      .addBearerAuth()
+      .build(),
   );
 }

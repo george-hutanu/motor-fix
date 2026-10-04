@@ -11,8 +11,14 @@
       "options": {
         "env": {
           "APP_ENV": "development",
+          "AUTH_TOKEN_SECRET": "unused",
           "DATABASE_URL": "postgresql://localhost/unused",
-          "REDIS_URL": "redis://localhost/unused"
+          "REDIS_URL": "redis://localhost/unused",
+          "STORAGE_ACCESS_KEY_ID": "unused",
+          "STORAGE_BUCKET": "unused",
+          "STORAGE_ENDPOINT": "http://localhost/unused",
+          "STORAGE_REGION": "unused",
+          "STORAGE_SECRET_ACCESS_KEY": "unused"
         }
       }
     },

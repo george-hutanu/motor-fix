@@ -1,6 +1,17 @@
+import { readFileSync } from 'node:fs';
+
 import { expect, type Page, test } from '@playwright/test';
 
-import { SAMPLE_TEXT } from '../../../libs/ui-cockpit/src/lib/sample-text.js';
+// The page opens in Romanian, the default language.
+const SAMPLE_TEXT: Record<
+  'openDialog' | 'openDrawer' | 'openPopover' | 'showToast',
+  string
+> = JSON.parse(
+  readFileSync(
+    new URL('../../../libs/i18n/src/cockpit/ro.json', import.meta.url),
+    'utf8',
+  ),
+);
 
 const rgb = (hex: string) => {
   const [r, g, b] = [1, 3, 5].map((i) =>

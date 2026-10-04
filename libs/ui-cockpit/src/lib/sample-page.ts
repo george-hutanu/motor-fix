@@ -1,5 +1,6 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { I18n, TranslatePipe } from '@motor-fix/i18n';
 
 import { HlmButton } from './helm/button';
 import { HlmDialogImports } from './helm/dialog';
@@ -12,7 +13,7 @@ import { HlmTableImports } from './helm/table';
 import { HlmTabsImports } from './helm/tabs';
 import { HlmToaster, toast } from './helm/toaster';
 import { Panel } from './panel';
-import { SAMPLE_GARAGES, SAMPLE_TEXT } from './sample-text';
+import { SAMPLE_GARAGES } from './sample-text';
 
 @Component({
   imports: [
@@ -28,6 +29,7 @@ import { SAMPLE_GARAGES, SAMPLE_TEXT } from './sample-text';
     HlmTabsImports,
     HlmToaster,
     Panel,
+    TranslatePipe,
   ],
   selector: 'mf-cockpit-sample-page',
   styles: `
@@ -54,46 +56,46 @@ import { SAMPLE_GARAGES, SAMPLE_TEXT } from './sample-text';
   `,
   template: `
     <main>
-      <h1>{{ text.heading }}</h1>
-      <p>{{ text.intro }}</p>
+      <h1>{{ 'cockpit.heading' | t }}</h1>
+      <p>{{ 'cockpit.intro' | t }}</p>
 
-      <p class="mf-label">{{ text.romanian }}</p>
-      <p class="reading">{{ text.romanian }}</p>
+      <p class="mf-label">{{ 'cockpit.romanian' | t }}</p>
+      <p class="reading">{{ 'cockpit.romanian' | t }}</p>
 
       <div class="row">
-        <button hlmBtn>{{ text.primary }}</button>
-        <button hlmBtn variant="secondary">{{ text.secondary }}</button>
+        <button hlmBtn>{{ 'cockpit.primary' | t }}</button>
+        <button hlmBtn variant="secondary">{{ 'cockpit.secondary' | t }}</button>
       </div>
 
       <div class="field">
-        <label hlmLabel for="car-brand">{{ text.inputLabel }}</label>
+        <label hlmLabel for="car-brand">{{ 'cockpit.inputLabel' | t }}</label>
         <input hlmInput id="car-brand" [(ngModel)]="brand" />
       </div>
 
       <div class="row">
         <hlm-switch inputId="open-now" [(ngModel)]="openNow" />
-        <label hlmLabel for="open-now">{{ text.toggleLabel }}</label>
+        <label hlmLabel for="open-now">{{ 'cockpit.toggleLabel' | t }}</label>
       </div>
 
       <div hlmTabs tab="all">
         <div hlmTabsList>
-          <button hlmTabsTrigger="all">{{ text.tabAll }}</button>
-          <button hlmTabsTrigger="open">{{ text.tabOpen }}</button>
-          <button hlmTabsTrigger="reviews">{{ text.tabReviews }}</button>
+          <button hlmTabsTrigger="all">{{ 'cockpit.tabAll' | t }}</button>
+          <button hlmTabsTrigger="open">{{ 'cockpit.tabOpen' | t }}</button>
+          <button hlmTabsTrigger="reviews">{{ 'cockpit.tabReviews' | t }}</button>
         </div>
-        <p hlmTabsContent="all">{{ text.tabAllBody }}</p>
-        <p hlmTabsContent="open">{{ text.tabOpenBody }}</p>
-        <p hlmTabsContent="reviews">{{ text.tabReviewsBody }}</p>
+        <p hlmTabsContent="all">{{ 'cockpit.tabAllBody' | t }}</p>
+        <p hlmTabsContent="open">{{ 'cockpit.tabOpenBody' | t }}</p>
+        <p hlmTabsContent="reviews">{{ 'cockpit.tabReviewsBody' | t }}</p>
       </div>
 
-      <mf-panel [title]="text.panelTitle">
+      <mf-panel [title]="'cockpit.panelTitle' | t">
         <div hlmTableContainer>
           <table hlmTable>
             <thead hlmTHead>
               <tr hlmTr>
-                <th hlmTh>{{ text.tableGarage }}</th>
-                <th hlmTh>{{ text.tableArea }}</th>
-                <th hlmTh>{{ text.tableRating }}</th>
+                <th hlmTh>{{ 'cockpit.tableGarage' | t }}</th>
+                <th hlmTh>{{ 'cockpit.tableArea' | t }}</th>
+                <th hlmTh>{{ 'cockpit.tableRating' | t }}</th>
               </tr>
             </thead>
             <tbody hlmTBody>
@@ -112,38 +114,38 @@ import { SAMPLE_GARAGES, SAMPLE_TEXT } from './sample-text';
       <div class="row">
         <hlm-dialog>
           <button hlmBtn hlmDialogTrigger variant="secondary">
-            {{ text.openDialog }}
+            {{ 'cockpit.openDialog' | t }}
           </button>
-          <hlm-dialog-content *hlmDialogPortal="let ctx" [closeLabel]="text.close">
+          <hlm-dialog-content *hlmDialogPortal="let ctx" [closeLabel]="'cockpit.close' | t">
             <hlm-dialog-header>
-              <h2 hlmDialogTitle class="mf-label">{{ text.dialogTitle }}</h2>
+              <h2 hlmDialogTitle class="mf-label">{{ 'cockpit.dialogTitle' | t }}</h2>
             </hlm-dialog-header>
-            <p>{{ text.dialogBody }}</p>
+            <p>{{ 'cockpit.dialogBody' | t }}</p>
           </hlm-dialog-content>
         </hlm-dialog>
 
         <hlm-sheet side="right">
           <button hlmBtn hlmSheetTrigger variant="secondary">
-            {{ text.openDrawer }}
+            {{ 'cockpit.openDrawer' | t }}
           </button>
-          <hlm-sheet-content *hlmSheetPortal="let ctx" [closeLabel]="text.close">
+          <hlm-sheet-content *hlmSheetPortal="let ctx" [closeLabel]="'cockpit.close' | t">
             <hlm-sheet-header>
-              <h2 hlmSheetTitle class="mf-label">{{ text.drawerTitle }}</h2>
+              <h2 hlmSheetTitle class="mf-label">{{ 'cockpit.drawerTitle' | t }}</h2>
             </hlm-sheet-header>
-            <p>{{ text.drawerBody }}</p>
+            <p>{{ 'cockpit.drawerBody' | t }}</p>
           </hlm-sheet-content>
         </hlm-sheet>
 
         <button hlmBtn variant="secondary" (click)="showToast()">
-          {{ text.showToast }}
+          {{ 'cockpit.showToast' | t }}
         </button>
 
         <hlm-popover>
           <button hlmBtn hlmPopoverTrigger variant="secondary">
-            {{ text.openPopover }}
+            {{ 'cockpit.openPopover' | t }}
           </button>
           <hlm-popover-content *hlmPopoverPortal="let ctx">
-            <p>{{ text.popoverBody }}</p>
+            <p>{{ 'cockpit.popoverBody' | t }}</p>
           </hlm-popover-content>
         </hlm-popover>
       </div>
@@ -153,12 +155,18 @@ import { SAMPLE_GARAGES, SAMPLE_TEXT } from './sample-text';
   `,
 })
 export class CockpitSamplePage {
-  protected readonly text = SAMPLE_TEXT;
+  private readonly i18n = inject(I18n);
   protected readonly garages = SAMPLE_GARAGES;
   protected readonly brand = signal('');
   protected readonly openNow = signal(true);
 
   protected showToast() {
-    toast(this.text.toastSummary, { description: this.text.toastDetail });
+    toast(this.i18n.t('cockpit.toastSummary'), {
+      description: this.i18n.t('cockpit.toastDetail'),
+    });
+  }
+
+  constructor() {
+    void this.i18n.enter('cockpit');
   }
 }

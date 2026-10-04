@@ -27,6 +27,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
       REDIS_URL: redis://localhost:6379
+      AUTH_TOKEN_SECRET: ci-only-test-secret-not-used-in-any-deploy
       TZ: UTC
     steps:
       - uses: actions/checkout@v5
@@ -37,6 +38,8 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - name: Migrate the test database
+        run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
       - name: Typecheck, test and build the affected projects
         if: github.event_name == 'pull_request'
         run: npx nx affected -t typecheck test build --base=origin/${{ github.base_ref }}

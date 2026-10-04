@@ -11,3 +11,13 @@ test('the skeleton page shows the release and both checks', async ({
   ).toBeVisible();
   await expect(page.getByText('PostgreSQL: ok · Redis: ok')).toBeVisible();
 });
+
+test('the server sends the page in Romanian, every text filled in', async ({
+  request,
+}) => {
+  const html = await (await request.get('/')).text();
+
+  expect(html).toContain('<html lang="ro"');
+  expect(html).toMatch(/<h1[^>]*>MotorFix<\/h1>/);
+  expect(html).not.toMatch(/shell\.[a-z]/);
+});
