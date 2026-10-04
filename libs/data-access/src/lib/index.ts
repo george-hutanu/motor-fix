@@ -16,6 +16,7 @@ export type { HealthReadyDto } from './models/health-ready-dto';
 export type { MeDto } from './models/me-dto';
 export type { SessionDto } from './models/session-dto';
 export type { SignInDto } from './models/sign-in-dto';
+export type { SignUpDto } from './models/sign-up-dto';
 export { BaseService } from './base-service';
 export { HealthService } from './services/health.service';
 export { AuthService } from './services/auth.service';
@@ -28,6 +29,8 @@ export type { HealthControllerReady$Params as HealthControllerReady$Params } fro
 export { healthControllerReady as healthControllerReady } from './fn/health/health-controller-ready';
 export type { AuthControllerSignIn$Params as AuthControllerSignIn$Params } from './fn/auth/auth-controller-sign-in';
 export { authControllerSignIn as authControllerSignIn } from './fn/auth/auth-controller-sign-in';
+export type { AuthControllerSignUp$Params as AuthControllerSignUp$Params } from './fn/auth/auth-controller-sign-up';
+export { authControllerSignUp as authControllerSignUp } from './fn/auth/auth-controller-sign-up';
 export type { AuthControllerRefresh$Params as AuthControllerRefresh$Params } from './fn/auth/auth-controller-refresh';
 export { authControllerRefresh as authControllerRefresh } from './fn/auth/auth-controller-refresh';
 export type { AuthControllerSignOut$Params as AuthControllerSignOut$Params } from './fn/auth/auth-controller-sign-out';

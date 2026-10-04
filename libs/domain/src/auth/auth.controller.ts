@@ -1,4 +1,4 @@
-import { SessionDto, SignInDto } from '@motor-fix/contracts';
+import { SessionDto, SignInDto, SignUpDto } from '@motor-fix/contracts';
 import {
   Body,
   Controller,
@@ -9,10 +9,16 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
-import { ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { CookieOptions, Request, Response } from 'express';
 
 import { type Issued, REMEMBERED_MS, SignInService } from './sign-in.service';
+import { SignUpService } from './sign-up.service';
 
 const COOKIE = 'mf_refresh';
 
@@ -42,10 +48,24 @@ function keep(res: Response, issued: Issued) {
 
 const forget = (res: Response) => res.clearCookie(COOKIE, FLAGS);
 
+// A cross-site form can post urlencoded or plain text, never JSON, so another
+// site cannot sign this browser into an account it chose.
+function requireJson(req: Request) {
+  if (!req.is('application/json')) {
+    throw new HttpException(
+      { code: 'unsupported_media_type', message: 'Send JSON' },
+      HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+    );
+  }
+}
+
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly signIns: SignInService) {}
+  constructor(
+    private readonly signIns: SignInService,
+    private readonly signUps: SignUpService,
+  ) {}
 
   @Post('sign-in')
   @HttpCode(HttpStatus.OK)
@@ -55,15 +75,22 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<SessionDto> {
-    // A cross-site form can post urlencoded or plain text, never JSON, so
-    // another site cannot sign this browser into an account it chose.
-    if (!req.is('application/json')) {
-      throw new HttpException(
-        { code: 'unsupported_media_type', message: 'Send JSON' },
-        HttpStatus.UNSUPPORTED_MEDIA_TYPE,
-      );
-    }
+    requireJson(req);
     const issued = await this.signIns.signIn(body, req.ip ?? '');
+    keep(res, issued);
+    return { accessToken: issued.accessToken };
+  }
+
+  @Post('sign-up')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiCreatedResponse({ type: SessionDto })
+  async signUp(
+    @Body() body: SignUpDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<SessionDto> {
+    requireJson(req);
+    const issued = await this.signUps.signUp(body, req.ip ?? '');
     keep(res, issued);
     return { accessToken: issued.accessToken };
   }

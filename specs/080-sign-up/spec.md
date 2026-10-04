@@ -53,7 +53,7 @@ A visitor opens "Autentificare", taps "Creează un cont" next to "Ești nou pe M
 
 - The e-mail is typed with capitals or surrounding spaces: it is trimmed and stored lower-case, so "Andrei@Example.test" and "andrei@example.test" are one address.
 - Two sign-ups for one new e-mail at the same moment: one account is created, the other answers `email_taken`.
-- An e-mail held by a suspended or deleted account: the same `email_taken`, never a hint about the account's state.
+- An e-mail held by a suspended account: the same `email_taken`, never a hint about the account's state. Freeing a deleted account's e-mail is account deletion's (MF-6 edge cases).
 - The name has surrounding spaces: it is trimmed; a name that is only spaces is empty.
 - A body that tries to choose a role, a status or any field the endpoint does not take: 400, nothing created.
 - Redis cannot be reached: sign-up works without the limit, and the failure is logged.
@@ -67,8 +67,8 @@ A visitor opens "Autentificare", taps "Creează un cont" next to "Ești nou pe M
 - **FR-001**: `POST /api/v1/auth/sign-up` MUST take a name, an e-mail, a password and the interface language (`ro` or `en`); it MUST create, through the one `createAccount` use case, an account holding only the role `driver`, a `password` identity with the argon2id hash of the password, that language and the last role `driver`, with its audit entry and `account.created` event in the same transaction.
 - **FR-002**: A successful sign-up MUST answer 201 with an access token for the role `driver` in the body and set the refresh-token cookie of a new remembered session family, exactly as a remembered sign-in does, and set the account's last active time.
 - **FR-003**: The e-mail MUST be trimmed and stored lower-case; an e-mail that already belongs to any account, compared without regard to case and whatever that account's state, MUST answer 409 `email_taken` with the same body every time, and create nothing — also when two sign-ups for one e-mail race.
-- **FR-004**: The password MUST be 8 to 128 characters and not on the list of common passwords (compared without regard to case); otherwise the answer MUST be 400 `weak_password` with a field error on `password`, and nothing is created.
-- **FR-005**: A body without a name, an e-mail or a password, with values that are not text, with a name that is not 2 to 80 characters once trimmed, an e-mail longer than 254 characters or without text, "@" and a domain with a dot, control characters in the name or the e-mail, a language other than `ro` or `en`, or any other field, MUST answer 400; a sign-up not sent as JSON MUST be refused with 415 and no cookie.
+- **FR-004**: The password MUST be 8 to 128 characters (code points) and not on the list of common passwords (compared without regard to case); otherwise the answer MUST be 400 `weak_password` with a field error on `password`, and nothing is created.
+- **FR-005**: A body without a name, an e-mail or a password, with values that are not text, with a name that is not 2 to 80 characters once trimmed, an e-mail longer than 254 characters or without text, "@" and a domain with a dot, control characters in the name or the e-mail, a language other than `ro` or `en`, or any other field, MUST answer 400; a form post MUST be refused with 415 and a text body, never parsed, fails the body check (400), as sign-in does; neither sets a cookie.
 - **FR-006**: Sign-up attempts with a valid body MUST be counted per network address in Redis; once an address has 10 within its hour, every further attempt from it MUST be refused with 429 `too_many_attempts` before anything is checked, until the hour that began with its first counted attempt ends. When Redis cannot be reached or does not answer within 2 seconds, sign-up MUST proceed without the limit and log the failure.
 - **FR-007**: While maintenance mode reads as on, sign-up MUST answer 503 `maintenance` and create nothing.
 - **FR-008**: The password MUST never be logged; a refused sign-up MUST be logged with its code and no name, e-mail, password or address, and a created account with no personal data.
@@ -99,20 +99,26 @@ A visitor opens "Autentificare", taps "Creează un cont" next to "Ești nou pe M
 - **SC-001**: A visitor creates a driver account from the dialog on a public screen and lands on `/app/driver` signed in, in one submit (end to end).
 - **SC-002**: A taken e-mail in another letter case, a short password, a common password and a racing duplicate create nothing (API test, 4 of 4).
 - **SC-003**: The eleventh sign-up attempt from one address within an hour is refused (API test).
-- **SC-004**: The sign-up dialog passes the automated accessibility check with no violations at 320 px, 390 px, a tablet and a desktop, light and dark, Romanian and English (assumption: the axe-core check the e2e suite already runs).
+- **SC-004**: The sign-up dialog passes the automated accessibility check with no violations at 320 px, 390 px, 820 px and 1440 px, light and dark, Romanian and English (assumption: the axe-core check the e2e suite already runs).
 
 ## Clarifications
 
 ### Session 2026-10-04
 
-(filled by /speckit-clarify)
+- Q: When the visitor switches sign-in → sign-up and then creates an account, what does the opener's promise resolve with? → A: One entry (`SignInDialog.start`) owns the loop: a task that closes with a switch makes it open the other task, carrying the e-mail; the opener's promise resolves "signed in" or "cancelled" only from the last task (FR-009, FR-013). (autonomous, recommended by spec-challenger)
+- Q: In what order are a sign-up's checks made, and which count toward the limit? → A: 415 → 400 (body) → count and 429 → 503 → `weak_password` → `email_taken` → create; every request that passes the body check is counted, whatever its answer (FR-006). (autonomous, recommended)
+- Q: A taken e-mail and a weak password together? → A: `weak_password` first: it needs no database read and is fixed in place; `email_taken` only for an otherwise acceptable body (FR-003, FR-004). (autonomous, recommended)
+- Q: Is `language` required? → A: Yes; the client always knows its language, and a missing one is a 400 like any missing field (FR-005). (autonomous, recommended)
+- Q: The dialog closes while a sign-up is on its way and the answer then lands? → A: The session is kept (token, then "who am I"), since the cookie is already set; only the navigation is skipped, as sign-in does. (autonomous, recommended)
+- Resolved from the challenge and context.md without a question: password length is counted in code points on the server, which is the authority (the client's `minlength` counts UTF-16 units and only pre-checks); the common-password list is `common-passwords.ts` in `libs/domain` with its source named; only the e-mail moves between sign-in and sign-up, never the password or the name; SC-004's sizes are the sign-in suite's (320, 390, 820 and 1440 px); the session is issued after the account's transaction commits, as sign-in issues it, so a session failure answers 500 and leaves the account; a suspended account's e-mail answers `email_taken`, and a deleted account's e-mail is freed by account deletion (ST-129 removes the personal fields, MF-6), not here.
 
 ## Assumptions
 
 - Revealing that an e-mail is taken is the Build brief's own scenario 4 (`email_taken`, "Există deja un cont cu acest e-mail."), so sign-up does tell whether an address has an account; the per-address limit of 10 an hour (Build brief, *proposed*) is what keeps that from being a cheap way to list accounts, together with sign-in's own limits. The answer never says more than "taken": not the account's state, role or name. (autonomous default)
 - The terms tick, the consent row and `consent_required` are ST-132's (timeline ordering note: "createAccount first; ST-132 adds the terms tick to this form"). (autonomous default)
 - The confirmation e-mail (scenario 6) belongs to the story "Confirm my e-mail address" (https://app.notion.com/p/3ee607bff0d281fbb2b2ed051f341579); `account.created` is recorded for it, and no e-mail is sent here. (autonomous default)
-- "Am un service" and the driver/garage switch are not shown: public sign-up creates drivers only (superseded 2026-10-03), and List your garage has no route or design yet; the story that builds it adds the switch. (autonomous default)
+- "Am un service" and the driver/garage switch are not shown: public sign-up creates drivers only (superseded 2026-10-03), and List your garage has no route and its button no design yet ("the button to List your garage is not designed", Screens); the brief's scenario 3 and its end-to-end check wait for the story that builds List your garage. This deviates from scenario 3 and is named in the PR and on the story. (autonomous default)
+- Until ST-132 adds the terms tick, sign-up creates accounts without a consent row, against MF-6 rule 17 ("consent is required on every path that creates an account"); the timeline's ordering note (2026-10-04) accepts that gap for the time between the two stories. (autonomous default)
 - The common-password list is a short list kept in the domain library — the passwords of 8 or more characters that lead the public breach lists, plus Romanian ones built on "parola" and "motorfix" — not a download or a breach service (Principle I; no new dependency). (autonomous default)
 - The client's "at least 8 characters" message is the shared `minlength` text ("Scrie cel puțin 8 caractere.") rather than the brief's *proposed* "Parola trebuie să aibă cel puțin 8 caractere.": the shared task saving words a message by its validator, and the name's 2-character minimum uses the same validator. (autonomous default)
 - A new account's session is remembered (30 days), the sign-in default; the sign-up mode has no "Ține‑mă autentificat" row (mock). (autonomous default)
