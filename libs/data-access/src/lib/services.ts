@@ -5,4 +5,5 @@ export { HealthService } from './services/health.service';
 export { AuthService } from './services/auth.service';
 export { MeService } from './services/me.service';
 export { AuditHistoryService } from './services/audit-history.service';
+export { NotificationsService } from './services/notifications.service';
 export { LiveService } from './services/live.service';
