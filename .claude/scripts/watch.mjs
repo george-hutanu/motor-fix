@@ -304,7 +304,7 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
     const raw = prs && w.branch ? prFor(prs, w.branch) : null;
     const pr = prs ? (raw ? summarizePr(raw) : null) : "unknown";
     const qaLive = Boolean(pr?.number) && qaRuns.some((r) => r.pr === pr.number);
-    const phase = phaseOf({ pr, runState, artifacts: artifactsOf(w.path, feature), qaLive });
+    const phase = phaseOf({ pr, runState, artifacts: artifactsOf(w.path, feature) });
     const threshold = thresholds[phase] ?? 0;
     const claim = readJson(claimPath(w.path));
     const { activity, clean, gitFailed } = activityOf(w.path, runState);

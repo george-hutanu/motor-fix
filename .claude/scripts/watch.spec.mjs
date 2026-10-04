@@ -193,7 +193,6 @@ describe('phase', () => {
     const ready = (rollupEntries) => summarizePr(pr({ statusCheckRollup: rollupEntries }));
     assert.equal(phaseOf({ ...none, pr: ready([check('SUCCESS'), review('SUCCESS')]) }), 'merging');
     assert.equal(phaseOf({ ...none, pr: ready([check('SUCCESS'), review('FAILURE')]) }), 'qa');
-    assert.equal(phaseOf({ ...none, pr: ready([check('SUCCESS')]), qaLive: true }), 'qa');
     assert.equal(phaseOf({ ...none, pr: ready([check('SUCCESS')]) }), 'qa');
     assert.equal(phaseOf({ ...none, pr: ready([check(null, 'IN_PROGRESS')]) }), 'qa');
   });
