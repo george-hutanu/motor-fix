@@ -36,3 +36,18 @@
 - Prisma model + migration `20261005090000_notification_preferences`; DTOs; `preferences.ts` (groups, defaults, muted channels, save plan); `preferences.service.ts`, `preferences.controller.ts`; `notify` reads the muted channels before its transaction and takes an optional `garageId`; OpenAPI and client regenerated.
 - Biome flagged the save's transaction callback (complexity 28 > 10): the decisions moved into the pure `planSave`, the transaction only writes and records.
 - `jest libs/domain/src/notifications/preferences` → 3 suites, 48 tests passed; notifications + audit → 23 suites, 626 tests passed.
+
+## 11. Converge
+- Every task [X]; no unbuilt work found against spec and contract.
+
+## 12. Harden
+- artifact-lint clean; diff-audit: dead exports fixed (`NotificationGroupKey`/`OutsideChannel` now the one source in contracts; `driverChoice`, `PreferenceChange`, `DRIVER_GROUPS`, `groupTypes` private); its import-extension rows are the known false positive (repo convention) and its suppression rows are in the generated client. Mutation runs only in CI (nightly), not locally (AGENTS.md).
+
+## 13. Refresh
+- Story re-read by spec-reviewer 2026-10-05: no comments, no scope change.
+
+## 14. Review (spec-reviewer + code-reviewer, foreground)
+- Both APPROVE, no CRITICAL/HIGH.
+- Fixed: one source for the group keys and channels (contracts) [both, MEDIUM]; a group switch that mutes the rest of a partly muted group is now recorded (FR-011 reworded) [spec, MEDIUM, decision taken: record]; uniqueness comment corrected [both]; shared `Publisher` type; the failed preference read logs its error; redundant `enabled` description dropped.
+- Deferred (deferred.md): unique index if a second writer appears; live publish onto the outbox with ST-257; the shared `refuse` helper.
+- After the fixes: notifications + audit → 23 suites, 629 tests passed.

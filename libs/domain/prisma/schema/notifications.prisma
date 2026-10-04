@@ -54,8 +54,9 @@ model Notification {
 
 // A person's choice for one type: a driver type has one row (its chosen
 // channel), any other type one row per channel, with the garage for staff.
-// Uniqueness is kept by the save's per-account lock: PostgreSQL treats empty
-// garages as distinct in a unique index.
+// No unique index: a driver row is unique per type whatever its channel, a
+// staff row per channel, which one index cannot say; the save's per-account
+// lock keeps both.
 model NotificationPreference {
   id        String              @id @default(uuid()) @db.Uuid
   accountId String              @map("account_id") @db.Uuid

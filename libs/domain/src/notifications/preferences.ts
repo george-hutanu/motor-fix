@@ -1,17 +1,10 @@
 import {
-  type DriverGroup,
-  NOTIFICATION_TYPES,
-  notificationType,
+  type NotificationGroupKey as DriverGroup,
+  NOTIFICATION_GROUPS,
   type OutsideChannel,
-} from './catalogue';
+} from '@motor-fix/contracts';
 
-export const DRIVER_GROUPS: readonly DriverGroup[] = [
-  'offers',
-  'bookings',
-  'due_dates',
-  'news',
-  'reviews_history',
-];
+import { NOTIFICATION_TYPES, notificationType } from './catalogue';
 
 export interface PreferenceRow {
   type: string;
@@ -22,7 +15,7 @@ export interface PreferenceRow {
 
 const NAMES = Object.keys(NOTIFICATION_TYPES);
 
-export const groupTypes = (group: DriverGroup) =>
+const groupTypes = (group: DriverGroup) =>
   NAMES.filter((name) => NOTIFICATION_TYPES[name].group === group);
 
 // A driver type has one row, its chosen channel; any other type has one row
@@ -38,7 +31,7 @@ export const canMute = (name: string) => {
 const enabledByDefault = (name: string) => name !== 'NEWS';
 
 // What a driver type is when nothing is saved: every driver type allows e-mail.
-export function driverChoice(
+function driverChoice(
   name: string,
   rows: readonly PreferenceRow[],
 ): { channel: OutsideChannel; enabled: boolean } {
@@ -57,7 +50,7 @@ const groupOn = (key: DriverGroup, rows: readonly PreferenceRow[]) =>
     .every((name) => driverChoice(name, rows).enabled);
 
 export function preferencesView(rows: readonly PreferenceRow[]) {
-  const groups = DRIVER_GROUPS.map((key) => ({
+  const groups = NOTIFICATION_GROUPS.map((key) => ({
     enabled: groupOn(key, rows),
     key,
     types: groupTypes(key),
@@ -100,7 +93,7 @@ export function mutedChannels(
 }
 
 // One audit entry: the group or the type (with its channel), old and new.
-export interface PreferenceChange {
+interface PreferenceChange {
   field: string;
   oldValue: unknown;
   newValue: unknown;
@@ -123,16 +116,18 @@ function put(plan: Plan, next: PreferenceRow) {
   plan.writes.push(next);
 }
 
-// Always-sent types of the group are left as they are.
+// Always-sent types of the group are left as they are. A switch is recorded
+// when it changed a type, even if the group already read as switched.
 function switchGroup(plan: Plan, key: DriverGroup, enabled: boolean) {
   const before = groupOn(key, plan.rows);
+  const written = plan.writes.length;
   for (const type of groupTypes(key).filter(canMute)) {
     const was = driverChoice(type, plan.rows);
     if (was.enabled !== enabled) {
       put(plan, { channel: was.channel, enabled, garageId: null, type });
     }
   }
-  if (before === enabled) return;
+  if (before === enabled && plan.writes.length === written) return;
   plan.changes.push({
     field: `group.${key}`,
     newValue: enabled,

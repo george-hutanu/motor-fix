@@ -26,7 +26,7 @@
 ## Phase 5: Polish
 
 - [X] T009 Regenerate `apps/api/openapi.json` and `libs/data-access` (`npx nx run data-access:generate`) (FR-004, FR-005)
-- [ ] T010 Mark tasks, update `auto-run.md`; typecheck, lint, the touched Jest projects
+- [X] T010 Mark tasks, update `auto-run.md`; typecheck, lint, the touched Jest projects
 
 ## Dependencies
 

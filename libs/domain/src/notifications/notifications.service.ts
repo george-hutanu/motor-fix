@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import type { OutsideChannel } from '@motor-fix/contracts';
 import {
   HttpException,
   HttpStatus,
@@ -12,7 +13,6 @@ import type { JobsOptions } from 'bullmq';
 import {
   type NotificationType,
   notificationType,
-  type OutsideChannel,
   sendsEmail,
 } from './catalogue';
 import { blockedReason, type EmailConfig } from './email-config';
@@ -50,7 +50,7 @@ interface Jobs {
   add(name: string, data: unknown, options: JobsOptions): Promise<unknown>;
 }
 
-interface Publisher {
+export interface Publisher {
   publish(channel: string, message: string): Promise<unknown>;
 }
 
@@ -241,9 +241,9 @@ export class NotificationsService {
         input.kind,
         rows.map((r) => ({ ...r, channel: r.channel as OutsideChannel })),
       );
-    } catch {
+    } catch (error) {
       this.logger.warn(
-        `preferences for ${input.kind} not read; sending on the default channel`,
+        `preferences for ${input.kind} not read, sending on the default channel: ${String(error)}`,
       );
       return mutedChannels(input.kind, []);
     }

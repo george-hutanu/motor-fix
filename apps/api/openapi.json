@@ -942,8 +942,7 @@
             ]
           },
           "enabled": {
-            "type": "boolean",
-            "description": "The switch: on or off"
+            "type": "boolean"
           },
           "types": {
             "description": "The notification types the switch covers",
@@ -1032,8 +1031,7 @@
             ]
           },
           "enabled": {
-            "type": "boolean",
-            "description": "The switch: on or off"
+            "type": "boolean"
           }
         },
         "required": [

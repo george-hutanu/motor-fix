@@ -1,10 +1,7 @@
-export type OutsideChannel = 'email' | 'push' | 'sms' | 'whatsapp';
-export type DriverGroup =
-  | 'offers'
-  | 'bookings'
-  | 'due_dates'
-  | 'news'
-  | 'reviews_history';
+import type {
+  NotificationGroupKey as DriverGroup,
+  OutsideChannel,
+} from '@motor-fix/contracts';
 
 export interface NotificationType {
   trigger: 'event' | 'timer' | 'direct';

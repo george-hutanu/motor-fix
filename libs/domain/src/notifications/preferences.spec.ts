@@ -1,9 +1,8 @@
 import { NOTIFICATION_TYPES, notificationType, sendsEmail } from './catalogue';
 import {
-  DRIVER_GROUPS,
-  groupTypes,
   mutedChannels,
   type PreferenceRow,
+  planSave,
   preferencesView,
 } from './preferences';
 
@@ -20,9 +19,12 @@ const row = (
 
 const GARAGE = '0b7e4a52-9a5b-4c1a-8e3f-4a5b6d1f6a9c';
 
+const groupTypes = (key: string) =>
+  preferencesView([]).groups.find((g) => g.key === key)?.types ?? [];
+
 describe('the driver groups', () => {
   it('are the five keys the panels show', () => {
-    expect(DRIVER_GROUPS).toEqual([
+    expect(preferencesView([]).groups.map((g) => g.key)).toEqual([
       'offers',
       'bookings',
       'due_dates',
@@ -48,9 +50,8 @@ describe('the driver groups', () => {
       'REVIEW_INVITE',
       'REVIEW_REPLIED',
     ]);
-    expect(DRIVER_GROUPS.flatMap(groupTypes).sort()).toEqual(
-      [...driverTypes].sort(),
-    );
+    const keys = preferencesView([]).groups.map((g) => g.key);
+    expect(keys.flatMap(groupTypes).sort()).toEqual([...driverTypes].sort());
   });
 });
 
@@ -69,10 +70,12 @@ describe('what a person reads when nothing is saved', () => {
     });
   });
 
-  it('lists each group with its types', () => {
-    expect(view.groups.find((g) => g.key === 'due_dates')?.types).toEqual(
-      groupTypes('due_dates'),
-    );
+  it('lists each group with the catalogue types of its group', () => {
+    for (const group of view.groups) {
+      expect(group.types).toEqual(
+        driverTypes.filter((t) => NOTIFICATION_TYPES[t].group === group.key),
+      );
+    }
   });
 
   it('lists every driver type on e-mail, on except news, with no garage', () => {
@@ -186,5 +189,40 @@ describe('the channels muted for a message', () => {
   it('stops a muted type from going by e-mail', () => {
     const muted = mutedChannels('DUE_ITP', [row('DUE_ITP', 'email', false)]);
     expect(sendsEmail(notificationType('DUE_ITP'), muted)).toBe(false);
+  });
+});
+
+describe('what a save writes and records', () => {
+  it('records a group switch that mutes the rest of a partly muted group', () => {
+    const { changes, writes } = planSave(
+      [row('DUE_ITP', 'email', false)],
+      [{ enabled: false, key: 'due_dates' }],
+      [],
+    );
+    expect(writes.map((w) => w.type)).toEqual([
+      'DUE_RCA',
+      'DUE_ROVINIETA',
+      'SERVICE_DUE',
+      'TYRES_SEASON',
+    ]);
+    expect(changes).toEqual([
+      { field: 'group.due_dates', newValue: false, oldValue: false },
+    ]);
+  });
+
+  it('writes and records nothing for a switch that changes nothing', () => {
+    expect(planSave([], [{ enabled: true, key: 'offers' }], [])).toEqual({
+      changes: [],
+      writes: [],
+    });
+  });
+
+  it('applies a choice after the group switches', () => {
+    const { writes } = planSave(
+      [],
+      [{ enabled: false, key: 'offers' }],
+      [row('QUOTE_RECEIVED', 'push', true)],
+    );
+    expect(writes.at(-1)).toEqual(row('QUOTE_RECEIVED', 'push', true));
   });
 });

@@ -13,24 +13,25 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-const GROUPS = [
+// The driver's switches, and the channels a message goes by outside the app.
+export const NOTIFICATION_GROUPS = [
   'offers',
   'bookings',
   'due_dates',
   'news',
   'reviews_history',
 ] as const;
-const CHANNELS = ['email', 'push', 'sms', 'whatsapp'] as const;
+export const OUTSIDE_CHANNELS = ['email', 'push', 'sms', 'whatsapp'] as const;
 
-export type NotificationGroupKey = (typeof GROUPS)[number];
-export type PreferenceChannel = (typeof CHANNELS)[number];
+export type NotificationGroupKey = (typeof NOTIFICATION_GROUPS)[number];
+export type OutsideChannel = (typeof OUTSIDE_CHANNELS)[number];
 
 export class UpdateNotificationGroupDto {
-  @ApiProperty({ enum: GROUPS })
-  @IsIn(GROUPS)
+  @ApiProperty({ enum: NOTIFICATION_GROUPS })
+  @IsIn(NOTIFICATION_GROUPS)
   key!: NotificationGroupKey;
 
-  @ApiProperty({ description: 'The switch: on or off' })
+  @ApiProperty()
   @IsBoolean()
   enabled!: boolean;
 }
@@ -50,9 +51,9 @@ export class UpdateNotificationPreferenceDto {
   @MaxLength(64)
   type!: string;
 
-  @ApiProperty({ enum: CHANNELS })
-  @IsIn(CHANNELS)
-  channel!: PreferenceChannel;
+  @ApiProperty({ enum: OUTSIDE_CHANNELS })
+  @IsIn(OUTSIDE_CHANNELS)
+  channel!: OutsideChannel;
 
   @ApiProperty()
   @IsBoolean()

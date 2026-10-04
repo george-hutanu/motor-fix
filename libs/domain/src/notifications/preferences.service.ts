@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import type {
   NotificationPreferencesDto,
+  OutsideChannel,
   UpdateNotificationPreferenceDto,
   UpdateNotificationPreferencesDto,
 } from '@motor-fix/contracts';
@@ -13,8 +14,12 @@ import {
   Logger,
 } from '@nestjs/common';
 
-import { NOTIFICATION_TYPES, type OutsideChannel } from './catalogue';
-import { LIVE_PUBLISHER, NOTIFICATIONS_PRISMA } from './notifications.service';
+import { NOTIFICATION_TYPES } from './catalogue';
+import {
+  LIVE_PUBLISHER,
+  NOTIFICATIONS_PRISMA,
+  type Publisher,
+} from './notifications.service';
 import {
   canMute,
   isDriverType,
@@ -26,10 +31,6 @@ import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import type { Actor } from '../auth/policy';
 import { LIVE_CHANNEL } from '../events/live.hub';
 import type { Prisma, PrismaClient } from '../generated/prisma/client';
-
-interface Publisher {
-  publish(channel: string, message: string): Promise<unknown>;
-}
 
 const refuse = (status: HttpStatus, code: string, message: string) =>
   new HttpException({ code, message }, status);
