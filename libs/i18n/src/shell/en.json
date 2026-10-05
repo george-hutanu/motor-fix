@@ -1,4 +1,22 @@
 {
+  "bell": {
+    "empty": "No notifications yet",
+    "failed": "Notifications did not load.",
+    "hours": "{n} h ago",
+    "label": {
+      "one": "Notifications, 1 unread notification",
+      "other": "Notifications, {count} unread notifications"
+    },
+    "minutes": "{n} min ago",
+    "more": "Show more",
+    "new": "You have a new notification",
+    "now": "just now",
+    "readAll": "Mark all as read",
+    "readFailed": "The notification could not be marked as read.",
+    "retry": "Try again",
+    "title": "Notifications",
+    "unread": "unread"
+  },
   "brand": "MotorFix",
   "chart": {
     "empty": "No data yet",

@@ -35,6 +35,14 @@ export type { MeEmailConfirmationControllerAskAgain$Params as MeEmailConfirmatio
 export { meEmailConfirmationControllerAskAgain as meEmailConfirmationControllerAskAgain } from './fn/me/me-email-confirmation-controller-ask-again';
 export type { AuditHistoryControllerList$Params as AuditHistoryControllerList$Params } from './fn/audit-history/audit-history-controller-list';
 export { auditHistoryControllerList as auditHistoryControllerList } from './fn/audit-history/audit-history-controller-list';
+export type { BellControllerList$Params as BellControllerList$Params } from './fn/notifications/bell-controller-list';
+export { bellControllerList as bellControllerList } from './fn/notifications/bell-controller-list';
+export type { BellControllerUnreadCount$Params as BellControllerUnreadCount$Params } from './fn/notifications/bell-controller-unread-count';
+export { bellControllerUnreadCount as bellControllerUnreadCount } from './fn/notifications/bell-controller-unread-count';
+export type { BellControllerReadAll$Params as BellControllerReadAll$Params } from './fn/notifications/bell-controller-read-all';
+export { bellControllerReadAll as bellControllerReadAll } from './fn/notifications/bell-controller-read-all';
+export type { BellControllerRead$Params as BellControllerRead$Params } from './fn/notifications/bell-controller-read';
+export { bellControllerRead as bellControllerRead } from './fn/notifications/bell-controller-read';
 export type { NotificationsControllerTest$Params as NotificationsControllerTest$Params } from './fn/notifications/notifications-controller-test';
 export { notificationsControllerTest as notificationsControllerTest } from './fn/notifications/notifications-controller-test';
 export type { NotificationPreferencesControllerRead$Params as NotificationPreferencesControllerRead$Params } from './fn/notifications/notification-preferences-controller-read';
