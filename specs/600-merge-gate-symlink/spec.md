@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-05
 
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 
 **Input**: "`.claude/hooks/merge-gate.mjs` decides it is the entry point with `process.argv[1] === fileURLToPath(import.meta.url)`; started through a symlinked path that is false and the fail_closed gate exits 0 without checking. Fix: compare real paths in the entry check; same for the other hooks using that idiom; a spec that starts the gate through a symlink. Also: heavy.spec.mjs uses spawnSync('mkdir') — use mkdirSync."
 
@@ -63,14 +63,6 @@ None.
 
 ## Spec Delta
 
-### Adds
+### Capability: `platform`
 
-- Hooks recognise themselves as the entry point by real path, so a hook started through a symlinked path still runs (FR-001, FR-002, FR-003).
-
-### Modifies
-
-None.
-
-### Removes
-
-None.
+- **Adds**: FR-001–FR-003

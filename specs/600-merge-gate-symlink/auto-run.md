@@ -20,3 +20,9 @@
 ## Implement
 - `.claude/scripts/lib/entry.mjs` `isEntryPoint`; six hooks switched; `heavy.spec.mjs` uses `mkdirSync`. Edited hooks' fingerprints re-recorded with `doctor --bless-hooks` after reading the diff.
 - `npm run test:harness` 48 files / 989 tests green. doctor 16 ok. harness-eval 74/75 in this worktree: `red-first-leaves-main-alone` fails here on base too (feature branch with open tasks); 75/75 on main.
+
+## Review
+- spec-reviewer APPROVE (1 LOW, deferred); code-reviewer APPROVE (1 MEDIUM, deferred). Both filed as Tech debt in Notion (deferred.md carries the URLs).
+
+## Archive
+- Spec Delta (`platform`, Adds FR-001–FR-003; FR-004 is test setup only) merged into `.specify/capabilities/platform.md`; spec.md Archived.

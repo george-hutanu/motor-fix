@@ -17,7 +17,7 @@
 
 ## Phase 3: Proof
 
-- [ ] T008 `npm run test:harness` green; `node .claude/scripts/harness-eval.mjs --check`; `node .claude/scripts/doctor.mjs` clean (SC-003)
+- [X] T008 `npm run test:harness` green; `node .claude/scripts/harness-eval.mjs --check`; `node .claude/scripts/doctor.mjs` clean (SC-003)
 
 ## FR → test
 

@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-04
+updated: 2026-10-05
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -8,6 +8,7 @@ features:
   - 464-agent-watch
   - 159-form-saving
   - 516-production-release-queue
+  - 600-merge-gate-symlink
 ---
 
 # Capability: Platform
@@ -255,6 +256,18 @@ _From 159-form-saving._
 ### 516-FR-005 — When the deploy script receives SIGINT or SIGTERM it MUST stop waiting, restore every service the run touched to its previous image (redeploying the ones already live on the new one), and exit non-zero.
 
 _From 516-production-release-queue._
+
+### 600-FR-001 — The harness MUST offer one entry-point check that compares the real path of `process.argv[1]` with the real path of the calling module, and answers false (never throws) when either cannot be resolved.
+
+_From 600-merge-gate-symlink._
+
+### 600-FR-002 — Every hook in `.claude/hooks/` that runs only as the entry point MUST use that check; no hook may compare `process.argv[1]` with its module URL directly.
+
+_From 600-merge-gate-symlink._
+
+### 600-FR-003 — The merge gate started through a symlinked path MUST refuse a merge it refuses through the real path (exit 2).
+
+_From 600-merge-gate-symlink._
 
 ## Retired
 
