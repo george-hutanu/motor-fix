@@ -4,6 +4,7 @@ updated: 2026-10-05
 features:
   - 194-email-sending
   - 195-message-templates
+  - 199-notification-bell
 ---
 
 # Capability: Notifications
@@ -127,6 +128,50 @@ _From 195-message-templates._
 ### 195-FR-011 — When a template cannot render, the system MUST NOT send the message; it MUST set the row `failed` with the reason `template_failed`, log the type, channel and missing value, and answer a generic bell text in the person's language.
 
 _From 195-message-templates._
+
+### 199-FR-001 — `GET /api/v1/notifications?cursor&language` MUST return the signed-in person's own `in_app` rows of the last 90 days, newest first (created, then id), 20 per page, with `nextCursor`; each item has `id`, `kind`, `subjectId`, `text`, `at` and `readAt`.
+
+_From 199-notification-bell._
+
+### 199-FR-002 — Each item's `text` MUST be the kind's bell template rendered from the row's params in the requested language (`ro` or `en`), else the account's language, falling back to the generic text.
+
+_From 199-notification-bell._
+
+### 199-FR-003 — `GET /api/v1/notifications/unread-count` MUST return the number of the person's unread `in_app` rows of the last 90 days.
+
+_From 199-notification-bell._
+
+### 199-FR-004 — `POST /api/v1/notifications/:id/read` MUST set `read_at` once (a second call keeps the first time) and return the item; a row that is not the caller's own `in_app` row answers 404.
+
+_From 199-notification-bell._
+
+### 199-FR-005 — `POST /api/v1/notifications/read-all` MUST set `read_at` on every unread `in_app` row of the caller and no one else's.
+
+_From 199-notification-bell._
+
+### 199-FR-006 — Marking read (one or all) MUST publish `notification.read` on `account:{accountId}`; a Redis failure is logged and does not fail the call.
+
+_From 199-notification-bell._
+
+### 199-FR-007 — Every dashboard's header MUST show the bell button "Notificări" / "Notifications" with the unread badge ("9+" above 9, none at 0), its count also in the button's accessible name.
+
+_From 199-notification-bell._
+
+### 199-FR-008 — The bell MUST open the list in the Overlays drawer (a bottom sheet on a phone) with the empty, loading and error states, relative times up to 24 hours then the date in Europe/Bucharest, an unread mark per row, "Marchează tot ca citit" and loading more on demand.
+
+_From 199-notification-bell._
+
+### 199-FR-009 — Tapping a row MUST mark it read.
+
+_From 199-notification-bell._
+
+### 199-FR-010 — On `notification.created` the bell MUST show a 5-second toast with the row's text and refresh its badge and list without a reload; on `notification.read` it MUST refresh them.
+
+_From 199-notification-bell._
+
+### 199-FR-011 — The bell MUST refresh its badge every 60 seconds while a dashboard is shown, and each time it opens.
+
+_From 199-notification-bell._
 
 ## Retired
 

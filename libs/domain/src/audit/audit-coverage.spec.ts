@@ -106,6 +106,9 @@ const NOT_CHANGES = new Set([
   'NotificationsService.fallBack',
   'NotificationsService.phoneRow',
   'NotificationsService.release',
+  // Reading a notification is not recorded (the bell's story).
+  'BellService.read',
+  'BellService.readAll',
   // Reminders follow a car's or a booking's dates: the stories that change
   // those audit the change, and sending a reminder is not one.
   'RemindersService.cancelBooking',

@@ -30,6 +30,10 @@ async function sessionEndsWhileWorking(page: Page) {
       ? route.fulfill({ json: { accessToken: 'before' } })
       : route.fulfill(refused),
   );
+  // The bell counts on load with the stubbed token; only the save may be refused.
+  await page.route('**/api/v1/notifications/unread-count', (route) =>
+    route.fulfill({ json: { count: 0 } }),
+  );
   await page.route('**/api/v1/auth/sign-in', (route) =>
     route.fulfill({ json: { accessToken: 'after-sign-in' } }),
   );

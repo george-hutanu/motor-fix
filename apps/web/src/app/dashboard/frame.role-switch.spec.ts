@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
-import type { MeDto } from '@motor-fix/data-access';
+import { type MeDto, NotificationsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
 import { Subject } from 'rxjs';
@@ -74,6 +74,10 @@ async function render(
       ),
       { provide: Session, useValue: session },
       { provide: Live, useValue: live },
+      {
+        provide: NotificationsService,
+        useValue: { bellControllerUnreadCount: async () => ({ count: 0 }) },
+      },
     ],
   });
   const harness = await RouterTestingHarness.create();
