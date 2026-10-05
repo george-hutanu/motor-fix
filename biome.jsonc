@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.3.11/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
   "assist": {
     "actions": {
       "source": {
@@ -84,7 +84,7 @@
         "noVoidTypeReturn": "error",
         "useIsNan": "error"
       },
-      "recommended": true,
+      "preset": "recommended",
       "style": {
         "noNonNullAssertion": "off",
         "useConsistentMemberAccessibility": "error",
@@ -96,6 +96,17 @@
     }
   },
   "overrides": [
+    {
+      // The prefers-reduced-motion block must beat every component's own animation and transition, which only !important can do.
+      "includes": ["libs/ui-cockpit/src/styles/cockpit.css"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noImportantStyles": "off"
+          }
+        }
+      }
+    },
     {
       "includes": ["**/*.spec.ts", "**/*.test.ts", "**/*.e2e-spec.ts"],
       "linter": {
