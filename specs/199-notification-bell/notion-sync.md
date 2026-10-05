@@ -19,3 +19,4 @@
 - 2026-10-05 · finish · labels · PR #80 · stage labels removed by the merge
 - 2026-10-05 · comment · ST-199 · posted (5 items): drawer instead of the proposed popover; no kind → screen step or "Nu mai este disponibil" yet (no kind has a screen); `notification.read` straight to Redis like `notification.created` (Constitution VI exception); the list restarts at the top on any read; language sent with the list call
 - 2026-10-05 · ready · Foundations · no change (no Foundations row is blocked by ST-199)
+- 2026-10-05 · debt · ST-199 · 5 deferred pr-tester findings (lap 1) filed as To do tasks
