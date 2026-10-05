@@ -15,32 +15,22 @@ import { LIVE_CHANNEL, LiveHub } from './live.hub';
 import { PRISMA } from '../auth/prisma';
 import type { PrismaClient } from '../generated/prisma/client';
 
-const PUBLISHER = Symbol('LIVE_PUBLISHER');
 const SUBSCRIBER = Symbol('LIVE_SUBSCRIBER');
 
 interface EventsOptions {
   redisUrl: string;
 }
 
-// A Redis that is down never closes a stream: the publisher fails fast so the
-// caller can say so, and the subscriber keeps retrying and resubscribes.
-function connect(url: string, role: 'publisher' | 'subscriber') {
+// A Redis that is down never closes a stream: the subscriber keeps retrying
+// and resubscribes.
+function subscriber(url: string) {
   const logger = new Logger('Live');
-  const redis =
-    role === 'publisher'
-      ? new Redis(url, {
-          commandTimeout: 2000,
-          connectTimeout: 2000,
-          enableOfflineQueue: false,
-          lazyConnect: true,
-          maxRetriesPerRequest: 1,
-        })
-      : new Redis(url, { connectTimeout: 2000, lazyConnect: true });
+  const redis = new Redis(url, { connectTimeout: 2000, lazyConnect: true });
   let reported = false;
   redis.on('error', (error: Error) => {
     if (reported) return;
     reported = true;
-    logger.warn(`live ${role} cannot reach Redis: ${error.message}`);
+    logger.warn(`live subscriber cannot reach Redis: ${error.message}`);
   });
   redis.on('ready', () => {
     reported = false;
@@ -56,7 +46,6 @@ export class EventsModule
 
   constructor(
     private readonly hub: LiveHub,
-    @Inject(PUBLISHER) private readonly publisher: Redis,
     @Inject(SUBSCRIBER) private readonly subscriber: Redis,
   ) {}
 
@@ -67,18 +56,14 @@ export class EventsModule
       module: EventsModule,
       providers: [
         {
-          provide: PUBLISHER,
-          useFactory: () => connect(options.redisUrl, 'publisher'),
-        },
-        {
           provide: SUBSCRIBER,
-          useFactory: () => connect(options.redisUrl, 'subscriber'),
+          useFactory: () => subscriber(options.redisUrl),
         },
         {
-          inject: [PUBLISHER, PRISMA],
+          inject: [PRISMA],
           provide: LiveHub,
-          useFactory: (publisher: Redis, prisma: PrismaClient) =>
-            new LiveHub(publisher, loadGarageAccess(prisma)),
+          useFactory: (prisma: PrismaClient) =>
+            new LiveHub(loadGarageAccess(prisma)),
         },
       ],
     };
@@ -100,7 +85,6 @@ export class EventsModule
           `live updates are off on this copy: ${error.message}`,
         ),
       );
-    this.publisher.connect().catch(() => undefined);
   }
 
   beforeApplicationShutdown() {
@@ -108,7 +92,6 @@ export class EventsModule
   }
 
   onApplicationShutdown() {
-    this.publisher.disconnect();
     this.subscriber.disconnect();
   }
 }

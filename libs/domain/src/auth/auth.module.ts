@@ -20,7 +20,7 @@ import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { AuditHistoryController } from '../audit/audit-history.controller';
 import { AuditHistoryService } from '../audit/audit-history.service';
-import { EVENT_PORT, noEvents } from '../events/event.port';
+import { EVENT_PORT, outbox } from '../events/event.port';
 import type { PrismaClient } from '../generated/prisma/client';
 
 function connect(url: string) {
@@ -51,6 +51,7 @@ export class AuthModule implements OnApplicationShutdown {
         Attempts,
         AUTH_OPTIONS,
         AUTH_REDIS,
+        EVENT_PORT,
         MAINTENANCE,
         PRISMA,
         SESSION_EVENTS,
@@ -80,7 +81,7 @@ export class AuthModule implements OnApplicationShutdown {
         },
         { provide: MAINTENANCE, useValue: maintenanceOff },
         { provide: AUDIT_PORT, useClass: AuditService },
-        { provide: EVENT_PORT, useValue: noEvents },
+        { provide: EVENT_PORT, useValue: outbox },
       ],
     };
   }

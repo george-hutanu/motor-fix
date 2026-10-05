@@ -50,15 +50,13 @@ const access = (over: Partial<GarageAccess> = {}): GarageAccess => ({
   ...over,
 });
 
-let publish: jest.Mock;
 let load: jest.Mock<Promise<GarageAccess>, [string]>;
 let hub: LiveHub;
 
 beforeEach(() => {
   jest.useFakeTimers({ now: NOW });
-  publish = jest.fn(async () => 1);
   load = jest.fn(async (_garageId: string) => access());
-  hub = new LiveHub({ publish }, load);
+  hub = new LiveHub(load);
 });
 
 afterEach(() => {

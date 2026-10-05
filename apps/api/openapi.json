@@ -745,7 +745,7 @@
         },
         "responses": {
           "202": {
-            "description": "The test update was published"
+            "description": "The test update was recorded; the relay sends it"
           }
         },
         "security": [

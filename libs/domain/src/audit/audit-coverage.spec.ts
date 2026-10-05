@@ -106,6 +106,14 @@ const NOT_CHANGES = new Set([
   'NotificationsService.fallBack',
   'NotificationsService.phoneRow',
   'NotificationsService.release',
+  // Reminders follow a car's or a booking's dates: the stories that change
+  // those audit the change, and sending a reminder is not one.
+  'RemindersService.cancelBooking',
+  'RemindersService.removeCar',
+  'RemindersService.send',
+  'RemindersService.setBooking',
+  'RemindersService.setCarDue',
+  'RemindersService.setTyres',
 ]);
 
 const uncovered = (source: string) =>

@@ -4,7 +4,10 @@ import {
   HealthModule,
   JsonLogger,
   NotificationsModule,
+  OutboxRelayModule,
   phoneConfig,
+  RemindersModule,
+  reminderDayMs,
   StorageModule,
 } from '@motor-fix/domain';
 import { Module } from '@nestjs/common';
@@ -12,10 +15,17 @@ import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 
 // The worker serves no routes of its own: its HTTP listener exists so that
-// Railway can health-check it. It consumes the notifications queue, sending
-// e-mail, SMS and WhatsApp.
+// Railway can health-check it. It relays the outbox's events to the live
+// streams, consumes the notifications queue, sending e-mail, SMS and
+// WhatsApp, and runs the daily reminders.
 async function bootstrap() {
   const env = readEnv(['DATABASE_URL', 'REDIS_URL', ...STORAGE_ENV]);
+  const notifications = NotificationsModule.registerWorker({
+    databaseUrl: env.DATABASE_URL,
+    email: emailConfig(env.APP_ENV, process.env),
+    phone: phoneConfig(env.APP_ENV, process.env),
+    redisUrl: env.REDIS_URL,
+  });
 
   @Module({
     imports: [
@@ -25,10 +35,14 @@ async function bootstrap() {
         version: env.RELEASE_SHA,
       }),
       StorageModule.register(env),
-      NotificationsModule.registerWorker({
+      OutboxRelayModule.register({
         databaseUrl: env.DATABASE_URL,
-        email: emailConfig(env.APP_ENV, process.env),
-        phone: phoneConfig(env.APP_ENV, process.env),
+        redisUrl: env.REDIS_URL,
+      }),
+      notifications,
+      RemindersModule.registerWorker({
+        dayMs: reminderDayMs(env.APP_ENV, process.env),
+        notifications,
         redisUrl: env.REDIS_URL,
       }),
     ],

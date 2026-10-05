@@ -1,1 +1,18 @@
 // events module models
+
+// Written in the change's own transaction; the worker's relay publishes each
+// row in id order and sets relayed_at. Relayed rows go after 7 days.
+model OutboxEvent {
+  id        BigInt    @id @default(autoincrement())
+  kind      String
+  subjectId String    @map("subject_id")
+  // Ids and small facts only, never personal data.
+  payload   Json      @default("{}")
+  // The channel keys of everyone who may read the subject.
+  audience  String[]
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  relayedAt DateTime? @map("relayed_at") @db.Timestamptz(3)
+
+  @@index([relayedAt])
+  @@map("outbox_event")
+}

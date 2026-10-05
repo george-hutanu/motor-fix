@@ -15,6 +15,7 @@ import request from 'supertest';
 
 import { EventsModule } from './events.module';
 import { LIVE_CHANNEL } from './live.hub';
+import { OutboxRelayModule } from './outbox-relay.module';
 import { AuditService } from '../audit/audit.service';
 import { signAccessToken } from '../auth/access-token';
 import { AccountsService } from '../auth/accounts.service';
@@ -37,6 +38,8 @@ async function boot(redis = redisUrl) {
     imports: [
       AuthModule.register({ databaseUrl, redisUrl, tokenSecret }),
       EventsModule.register({ redisUrl: redis }),
+      // Each copy runs a relay, as the worker does beside the API.
+      OutboxRelayModule.register({ databaseUrl, redisUrl: redis }),
     ],
   }).compile();
   const app = moduleRef.createNestApplication();
@@ -70,7 +73,9 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await prisma.$executeRawUnsafe('TRUNCATE account, garage CASCADE');
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE outbox_event, account, garage CASCADE',
+  );
 });
 
 afterEach(() => {
@@ -658,7 +663,7 @@ function relay(targetUrl: string) {
 }
 
 describe('Redis going away and coming back', () => {
-  it('resumes delivery to an open stream without a reconnect and answers 503 while down', async () => {
+  it('resumes delivery to an open stream without a reconnect and accepts the test update while down', async () => {
     const proxy = relay(redisUrl);
     await proxy.start();
     const flaky = await boot(`redis://127.0.0.1:${proxy.port()}`);
@@ -684,7 +689,7 @@ describe('Redis going away and coming back', () => {
       await new Promise((r) => setTimeout(r, 3_000));
       await publish([`account:${driver}`], 'after.ping');
 
-      expect(down.status).toBe(503);
+      expect(down.status).toBe(202);
       expect(live.res.destroyed).toBe(false);
       await live.next('after.ping', 5_000);
       await during.next('after.ping', 5_000);
