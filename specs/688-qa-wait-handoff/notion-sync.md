@@ -6,3 +6,5 @@
 - 2026-10-05 · ready · Foundations · no change (ST-688 was already unticked; a start unblocks nothing)
 - 2026-10-05 · pr · ST-688 · PR #140 https://github.com/george-hutanu/motor-fix/pull/140
 - 2026-10-05 · labels · PR #140 · planning
+- 2026-10-05 · implement · ST-688 · Planning → Implementing (no timeline row)
+- 2026-10-05 · labels · PR #140 · in development
