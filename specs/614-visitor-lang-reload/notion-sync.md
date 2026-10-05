@@ -6,3 +6,6 @@
 - 2026-10-05 · ready · Foundations · −ST-614 (started; a start changes no other item's blockers)
 - 2026-10-05 · pr · ST-614 · PR #124 https://github.com/george-hutanu/motor-fix/pull/124
 - 2026-10-05 · labels · PR #124 · planning
+- 2026-10-05 · implement · ST-614 story Status · Planning → Implementing
+- 2026-10-05 · implement · Foundations timeline · no row for ST-614 (nothing to write)
+- 2026-10-05 · labels · PR #124 · in development
