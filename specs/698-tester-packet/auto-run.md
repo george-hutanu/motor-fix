@@ -37,3 +37,10 @@
 - Red: `vitest run` on both → Test Files 2 failed; `packet.spec.mjs` fails at import (no `packet.mjs`), wiring 5 failed | 2 passed (the two passing are guards: opus/constitution/post kept, merge gate and carry never read the packet).
 - FR-009 (autonomous): tested as independence (neither file mentions the packet); byte-equality with `origin/main` is a `git diff` check in T006, not a test that would break on the next legitimate change to the gate.
 - Coordinator note: #140 merged as 3486742; the branch already contains `origin/main` at 3486742.
+
+## 10. Implement
+
+- Notion: ST-698 and its Foundations timeline row Planning → Implementing; PR #142 label `in development`. The timeline row was found by id from the start run because Notion's Query Data Source usage limit was reached (`[NOTION-SYNC NOTE: query limit — row updated by its known id]`).
+- `packet.mjs` written; `packet.spec.mjs` 15/15 green. pr-tester.md: §1 no longer reads the whole diff, new §3c builds the packet, §4 starts from `packet.md` and opens only the screenshots it names; opus, the full constitution review, the verdict rules and post.mjs unchanged. The skill's Test step names the packet.
+- A wiring assertion was made whitespace-tolerant (the prose wraps a line); same claim, no weakening.
+- Verify: `npm run test:harness` 57 files / 1251 tests passed; `harness-eval.mjs --check` 80/80; `doctor.mjs` 16 ok; `git diff origin/main` on merge-gate.mjs, merge-gate.json and carry.mjs is empty.

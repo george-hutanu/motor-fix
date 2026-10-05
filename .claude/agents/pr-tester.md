@@ -31,8 +31,11 @@ a review on the PR and the `agent-review` status on its head commit.
 
 ```bash
 gh pr view <PR> --json number,title,body,headRefName,headRefOid,baseRefName,url,files
-gh pr diff <PR>
 ```
+
+Read the diff of a file when you need it (`gh pr diff <PR>`, or `git show
+<headRefOid> -- <path>`), not the whole diff up front: once the run is
+downloaded, the packet (§3c) lists every changed file with its stat.
 
 Find the feature: `specs/<headRefName>/` at the PR head (`git show
 <headRefOid>:specs/<branch>/spec.md`, likewise `design.md`, `tasks.md`). From
@@ -152,18 +155,40 @@ none is posted with `post.mjs --missing` (§3). It tears everything down, also o
 
 Exit 1 means blocking findings, not a broken run; read the report.
 
+## 3c. Build the packet
+
+Right after the run is in `--out` (either path above, and `--local` too):
+
+```bash
+node .claude/scripts/pr-test/packet.mjs --pr <PR> --out <scratchpad>/pr-<PR>-lap<LAP> [--run <RUN>]
+```
+
+It writes `<out>/packet.md`: the changed files with their stat, the
+requirements the change touches (the FR ids on `tasks.md` lines naming a
+changed file, with their text), the run's verdict, notes and findings, the
+previous lap's findings marked new, persisting or resolved, and the
+screenshots that differ from the baseline run (this PR's last tested commit,
+or a run already on the base branch), named by content hash. A section gh
+could not answer says so; exit 2 means the folder has no `report.json`.
+
 ## 4. Review the diff
 
-Read the diff against the feature's `spec.md` (every FR implemented and tested,
-nothing beyond scope), `tasks.md` (every `[X]` true), and
+Read `<out>/packet.md` first; it is where the review starts, and it tells you
+what else to open. Then read `report.json` only for what the packet leaves
+out, and the diff of the changed files against the feature's `spec.md` (every
+FR implemented and tested, nothing beyond scope; start from the requirements
+the packet lists), `tasks.md` (every `[X]` true), and
 `.specify/memory/constitution.md` (Principle I no bloat first, II tests first
-and colocated, III–VII). Add a finding per real problem, quoting the line.
-Severity: a requirement not met or a principle broken is `high`; a smell is
-`medium` or `low`. Look at the screenshots of every viewport swept
-(`<out>/shots/`): a layout the automated checks missed (overlap, clipped text,
-unreadable contrast in dark mode, untranslated strings in English) is a finding
-with that screenshot as evidence. They are the screen evidence; nobody has to
-watch the screens live.
+and colocated, III–VII), in full on every lap. Add a finding per real problem,
+quoting the line. A previous-lap finding the packet marks resolved is checked
+against the fix, not taken on trust. Severity: a requirement not met or a
+principle broken is `high`; a smell is `medium` or `low`. Open only the
+screenshots the packet names under "Look at only these" (`<out>/shots/`): the
+others are byte-identical to the baseline's, already reviewed. With no
+baseline it names them all. A layout the automated checks missed (overlap,
+clipped text, unreadable contrast in dark mode, untranslated strings in
+English) is a finding with that screenshot as evidence. They are the screen
+evidence; nobody has to watch the screens live.
 
 Write your findings as a JSON array to `<out>/agent-findings.json`.
 

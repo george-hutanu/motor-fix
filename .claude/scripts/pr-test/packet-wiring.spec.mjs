@@ -36,7 +36,7 @@ describe('the tester starts from the packet', () => {
 
   it('opens only the screenshots the packet names, not the whole set', () => {
     const review = section(agent, /Review/);
-    assert.match(review, /only the screenshots the packet (names|lists)/);
+    assert.match(review, /only\s+the\s+screenshots\s+the\s+packet\s+(names|lists)/);
     assert.doesNotMatch(review, /screenshots of every viewport/);
   });
 

@@ -74,7 +74,11 @@ without a status, so the test runs again.
    report and screenshots as an artifact. The
    agent downloads it into its `--out` (through a fresh folder of its own, so
    re-running a lap into the same `--out` is never refused), reviews the diff against the spec and the constitution
-   here, and posts with `post.mjs`; no secret or LLM step runs in CI. With
+   here, starting from the packet `.claude/scripts/pr-test/packet.mjs` writes
+   into `--out` as `packet.md` (changed files, requirements touched, the run's
+   findings, the previous lap's marked new, persisting or resolved, and only
+   the screenshots that differ from the baseline run), and posts with
+   `post.mjs`; no secret or LLM step runs in CI. With
    `LOCAL` it runs `.claude/scripts/pr-test/run.mjs` on this machine instead
    (`--local`: one heavy slot, teardown always). QA in CI holds no heavy slot,
    so ready PRs are not queued behind the laptop. Read its report; check the
