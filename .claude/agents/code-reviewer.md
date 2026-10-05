@@ -146,7 +146,16 @@ is a statement about ownership, not about danger.
 
 ## Output
 
+At most 25 lines, the envelope from AGENTS.md "Agent replies" first
+(you write no file, so `FILES: none`; `STATUS` says whether the review ran,
+`VERDICT` judges the diff):
+
 ```
+STATUS: success | failure | blocked | partial — <one line: what happened>
+PR: #<n> <draft|ready|merged> <sha7> | none
+NEXT: <the one action the caller should take> | none
+FILES: <paths written, comma-separated> | none
+
 ## Code Review: <range>
 
 VERDICT: APPROVE | BLOCK
@@ -164,3 +173,5 @@ Rubric: boundaries <ok|n findings>, failure <…>, resources <…>, order <…>,
   over addition. Never propose a new abstraction as a fix.
 - No praise, no restating the diff. An empty table with APPROVE is a good
   outcome; do not manufacture findings.
+- Over the cap, every CRITICAL and HIGH row stays and the lowest rows give
+  way to one line: `Not listed: <n> LOW — <path:line>, …`.

@@ -139,7 +139,7 @@ invocation, and step 6.
 Feature: <FEATURE_DIR>. Anchor: <Notion URL | story ID | terms: …>.
 Mode: full | refresh (baseline <ISO date>).
 Write context.md per .claude/skills/speckit-context/SKILL.md
-and return the twelve-line report.
+and return the report in your Output format (envelope first, 16 lines).
 ```
 
 Why a subagent: the space is large and most of what a search returns is noise

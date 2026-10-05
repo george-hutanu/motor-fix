@@ -117,18 +117,33 @@ A retired requirement now prints `⊘ retired` instead of `✗ UNTESTED`.
 
 ## Phase 4 — close the feature
 
+Steps 1–3 run on the feature's branch before its PR goes ready, so the
+archive rides in the feature's own PR (AGENTS.md, lifecycle step 4); steps
+4–5 run after the merge, by whoever merged it (under `/speckit-auto`, the
+tail agent), and commit nothing.
+
 1. Mark the feature's `spec.md` status line `Archived (<date>)`.
 2. Run `/speckit-retro` if it has not run — the acceptance verdict belongs with
    the feature, and archiving without one loses the reason it was accepted.
-3. Commit: `chore: archive <feature> into the <capability> capability`.
+3. Commit: `chore: archive <feature> into the <capability> capability`, with
+   `notion-sync.md` as it stands, and push.
 4. Invoke `speckit-notion-sync finish` (from QA, after the PR tester passed and
-   the PR merged): the story goes to Done, its timeline row to Merged, and the epic to Done once every story in it is Done. Skip this if
-   the merge to `main` already ran it.
-5. `node .claude/scripts/notion-ready.mjs check specs/<feature>/notion-sync.md`
-   must exit 0: Ready to work was refreshed (or logged PENDING) after the last
-   `finish`. When it exits 1, do what its reason says — usually run
-   `notion-ready <epic>` and log the line (`speckit-notion-sync`, §2d) — and
-   check again. The feature is not archived until it passes.
+   the PR merged): the story goes to Done, its timeline row to Merged, and the
+   epic to Done once every story in it is Done. Skip this if the merge to
+   `main` already ran it. Its log lines go into one comment on the merged PR,
+   not a commit (`speckit-notion-sync`, §3).
+5. The archive check, over the log and the merged PR's comments, must exit 0:
+
+   ```bash
+   { cat specs/<feature>/notion-sync.md; gh pr view <n> --json comments --jq '.comments[].body'; } \
+     | node .claude/scripts/notion-ready.mjs check -
+   ```
+
+   Ready to work was refreshed (or logged PENDING) after the last `finish`.
+   When it exits 1, do what its reason says — usually run `notion-ready <epic>`
+   and add the line to the PR's finish comment (`speckit-notion-sync`, §2d) —
+   and check again. The feature is not closed until it passes. A feature with
+   no PR checks the file alone: `notion-ready.mjs check specs/<feature>/notion-sync.md`.
 
 ## What this never does
 

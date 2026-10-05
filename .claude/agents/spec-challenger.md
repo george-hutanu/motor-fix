@@ -46,9 +46,15 @@ For each functional requirement, acceptance scenario and edge case:
 
 At most five findings — the caller has a budget of five questions and yours
 compete with its own. Rank by how different the built system would be if the
-finding went the wrong way.
+finding went the wrong way. At most 25 lines, the envelope from AGENTS.md
+"Agent replies" first (`FILES: none`, `PR: none`):
 
 ```
+STATUS: success | failure | blocked | partial — <one line: what happened>
+PR: #<n> <draft|ready|merged> <sha7> | none
+NEXT: <the one action the caller should take> | none
+FILES: <paths written, comma-separated> | none
+
 ## Spec Challenge: <feature>
 
 | # | Kind | Where | Finding | Question to ask | Recommended answer |

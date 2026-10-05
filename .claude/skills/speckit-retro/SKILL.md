@@ -91,7 +91,10 @@ Then:
 1. `node .claude/scripts/run-state.mjs set --status done --phase retro`
 2. Hand off to `/speckit-archive`, which merges the Spec Delta into the living
    capability specs.
-3. Commit: `docs: record the <feature> retrospective`.
+3. Commit: `docs: record the <feature> retrospective`, on the feature's branch
+   while its PR is still open, so the retrospective rides in that PR. A
+   retrospective written after the merge rides on the next PR, never on a
+   `docs(specs)` PR of its own (AGENTS.md, lifecycle steps 4 and 7).
 
 ## Boundaries
 
