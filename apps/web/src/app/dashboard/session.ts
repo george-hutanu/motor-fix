@@ -51,6 +51,8 @@ export class Session {
   private renewing: Promise<boolean> | null = null;
   // Bumped at sign-out, so an answer that arrives later restores nothing.
   private generation = 0;
+  // The role whose token is held while its account is still loading.
+  private switchingTo: MeDto['role'] | null = null;
   // Bumped when the cookie starts a new session.
   private starts = 0;
 
@@ -123,11 +125,17 @@ export class Session {
   renew(): Promise<boolean> {
     if (this.renewing) return this.renewing;
     const generation = this.generation;
+    // The role this tab shows, so a switch in another tab leaves it alone.
+    const role = this.switchingTo ?? this.current()?.role;
+    // A role switch that answers first wins: this answer is for the old role.
+    const sent = this.accessToken;
+    const replaced = () => this.accessToken !== sent;
     const renewing: Promise<boolean> = this.auth
-      .authControllerRefresh()
+      .authControllerRefresh({ body: role ? { role } : {} })
       .then(
         (answer) => {
           if (generation !== this.generation) return false;
+          if (replaced()) return true;
           if (typeof answer?.accessToken !== 'string' || !answer.accessToken) {
             this.forget();
             return false;
@@ -136,7 +144,9 @@ export class Session {
           return true;
         },
         () => {
-          if (generation === this.generation) this.forget();
+          if (generation !== this.generation) return false;
+          if (replaced()) return true;
+          this.forget();
           return false;
         },
       )
@@ -172,6 +182,34 @@ export class Session {
     const generation = this.generation;
     const answer = await this.me.meControllerMe().catch(() => null);
     if (answer && generation === this.generation) this.current.set(answer);
+  }
+
+  // The tab's session in another of the account's roles. A failure leaves the
+  // token and the account as they were, and rejects.
+  async switchRole(role: MeDto['role']): Promise<MeDto | null> {
+    const generation = this.generation;
+    const { accessToken } = await this.auth.authControllerSwitchRole({
+      body: { role },
+    });
+    if (generation !== this.generation) return null;
+    if (typeof accessToken !== 'string' || !accessToken) {
+      throw new Error('no access token in the answer');
+    }
+    const before = this.accessToken;
+    this.accessToken = accessToken;
+    this.switchingTo = role;
+    try {
+      const answer = await this.me.meControllerMe();
+      if (generation !== this.generation) return null;
+      this.current.set(answer);
+      return answer;
+    } catch (error) {
+      // The old token still holds the old role for its last minutes.
+      if (generation === this.generation) this.accessToken = before;
+      throw error;
+    } finally {
+      this.switchingTo = null;
+    }
   }
 
   // This device, every tab of this browser.

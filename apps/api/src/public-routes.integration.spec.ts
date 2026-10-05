@@ -26,6 +26,7 @@ const PUBLIC = [
   'POST /api/v1/auth/password-reset/check',
   'POST /api/v1/auth/password-reset/complete',
   'POST /api/v1/auth/refresh',
+  'POST /api/v1/auth/roles/switch',
   'POST /api/v1/auth/sign-in',
   'POST /api/v1/auth/sign-out',
   'POST /api/v1/auth/sign-out-everywhere',

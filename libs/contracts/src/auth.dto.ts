@@ -9,6 +9,8 @@ import {
   Matches,
 } from 'class-validator';
 
+import { ROLE } from './me.dto';
+
 export class SignInDto {
   @ApiProperty({
     description: 'Trimmed; compared without letter case',
@@ -91,4 +93,24 @@ export class ConfirmEmailDto {
 export class ConfirmEmailAnswerDto {
   @ApiProperty({ enum: ['confirmed'] })
   status!: 'confirmed';
+}
+
+export class SwitchRoleDto {
+  @ApiProperty({
+    description: 'One of the roles the account holds',
+    enum: ROLE,
+  })
+  @IsIn(ROLE)
+  role!: (typeof ROLE)[number];
+}
+
+export class RefreshDto {
+  @ApiPropertyOptional({
+    description:
+      'The role the tab is showing; used when the account still holds it',
+    enum: ROLE,
+  })
+  @IsOptional()
+  @IsIn(ROLE)
+  role?: (typeof ROLE)[number];
 }

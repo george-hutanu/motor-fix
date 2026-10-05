@@ -48,3 +48,7 @@
 
 ## 16. Retro evidence
 - `retro-evidence.mjs --since 4995168`: 2 deferred (low), 1 carry-over from 050; no instincts triggered. Jev lane unavailable (no key).
+
+## Hand-off
+- PR #71 ready, story and timeline → QA. Main merged twice (ST-128 sign-out, ST-394 role switch; conflicts kept both sides).
+- QA lap 2 (89759e0) success, 5 deferred filed; lap 3 (1dade98) success; CI integration race fixed in f6edd0c (api spec takes the database turn); lap 4 (3f77e06) success, 3 more filed in Notion.

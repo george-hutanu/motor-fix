@@ -7,14 +7,17 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
+import { RefreshDto } from '../../models/refresh-dto';
 import { SessionDto } from '../../models/session-dto';
 
 export interface AuthControllerRefresh$Params {
+      body?: RefreshDto
 }
 
 export function authControllerRefresh(http: HttpClient, rootUrl: string, params?: AuthControllerRefresh$Params, context?: HttpContext): Observable<StrictHttpResponse<SessionDto>> {
   const rb = new RequestBuilder(rootUrl, authControllerRefresh.PATH, 'post');
   if (params) {
+    rb.body(params.body, 'application/json');
   }
 
   return http.request(

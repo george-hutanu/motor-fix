@@ -17,9 +17,11 @@ export type { NotificationPreferencesDto } from './models/notification-preferenc
 export type { PasswordResetCheckDto } from './models/password-reset-check-dto';
 export type { PasswordResetCompleteDto } from './models/password-reset-complete-dto';
 export type { PasswordResetDto } from './models/password-reset-dto';
+export type { RefreshDto } from './models/refresh-dto';
 export type { SessionDto } from './models/session-dto';
 export type { SignInDto } from './models/sign-in-dto';
 export type { SignUpDto } from './models/sign-up-dto';
+export type { SwitchRoleDto } from './models/switch-role-dto';
 export type { TestMessageDto } from './models/test-message-dto';
 export type { TestMessageQueuedDto } from './models/test-message-queued-dto';
 export type { UpdateMeDto } from './models/update-me-dto';

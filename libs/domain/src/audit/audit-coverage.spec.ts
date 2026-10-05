@@ -96,6 +96,8 @@ const NOT_CHANGES = new Set([
   // A link's token; confirming it or the new password is the audited change.
   'EmailConfirmationService.issue',
   'PasswordResetService.issue',
+  // The role in use is a view preference.
+  'SignInService.switchRole',
   // A notification's delivery records, not a change to anyone's data.
   'NotificationsService.build',
   'NotificationsService.dispatch',

@@ -64,7 +64,7 @@ describe('seed', () => {
     expect(await seeded()).toHaveLength(0);
   });
 
-  it('adds one account per role, a two-role account and a suspended driver', async () => {
+  it('adds one account per role, two two-role accounts and a suspended driver', async () => {
     expect(seed('test').status).toBe(0);
 
     const accounts = await seeded();
@@ -82,6 +82,11 @@ describe('seed', () => {
       'admin@example.test': {
         lastRole: 'admin',
         roles: ['admin'],
+        status: 'active',
+      },
+      'comutare@example.test': {
+        lastRole: 'garage',
+        roles: ['driver', 'garage'],
         status: 'active',
       },
       'doua-roluri@example.test': {
@@ -130,6 +135,9 @@ describe('seed', () => {
     expect(reception?.garageId).toBe(owner?.garageId);
     expect(mechanic?.garageId).toBe(owner?.garageId);
     expect(by('doua-roluri@example.test')?.memberships[0]?.role).toBe('owner');
+    const switcher = by('comutare@example.test')?.memberships[0];
+    expect(switcher?.role).toBe('owner');
+    expect(switcher?.garageId).not.toBe(owner?.garageId);
   });
 
   it('gives every account the test password as an argon2id hash', async () => {

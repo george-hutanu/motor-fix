@@ -23,9 +23,11 @@ export type { NotificationPreferencesDto } from './models/notification-preferenc
 export type { PasswordResetCheckDto } from './models/password-reset-check-dto';
 export type { PasswordResetCompleteDto } from './models/password-reset-complete-dto';
 export type { PasswordResetDto } from './models/password-reset-dto';
+export type { RefreshDto } from './models/refresh-dto';
 export type { SessionDto } from './models/session-dto';
 export type { SignInDto } from './models/sign-in-dto';
 export type { SignUpDto } from './models/sign-up-dto';
+export type { SwitchRoleDto } from './models/switch-role-dto';
 export type { TestMessageDto } from './models/test-message-dto';
 export type { TestMessageQueuedDto } from './models/test-message-queued-dto';
 export type { UpdateMeDto } from './models/update-me-dto';
@@ -50,6 +52,8 @@ export type { AuthControllerSignUp$Params as AuthControllerSignUp$Params } from 
 export { authControllerSignUp as authControllerSignUp } from './fn/auth/auth-controller-sign-up';
 export type { AuthControllerRefresh$Params as AuthControllerRefresh$Params } from './fn/auth/auth-controller-refresh';
 export { authControllerRefresh as authControllerRefresh } from './fn/auth/auth-controller-refresh';
+export type { AuthControllerSwitchRole$Params as AuthControllerSwitchRole$Params } from './fn/auth/auth-controller-switch-role';
+export { authControllerSwitchRole as authControllerSwitchRole } from './fn/auth/auth-controller-switch-role';
 export type { AuthControllerSignOutEverywhere$Params as AuthControllerSignOutEverywhere$Params } from './fn/auth/auth-controller-sign-out-everywhere';
 export { authControllerSignOutEverywhere as authControllerSignOutEverywhere } from './fn/auth/auth-controller-sign-out-everywhere';
 export type { AuthControllerSignOut$Params as AuthControllerSignOut$Params } from './fn/auth/auth-controller-sign-out';

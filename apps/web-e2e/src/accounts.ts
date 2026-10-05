@@ -11,6 +11,7 @@ export const ACCOUNTS = {
   mechanic: 'mecanic@example.test',
   receptionist: 'receptie@example.test',
   suspended: 'suspendat@example.test',
+  switcher: 'comutare@example.test',
   twoRoles: 'doua-roluri@example.test',
 } as const;
 

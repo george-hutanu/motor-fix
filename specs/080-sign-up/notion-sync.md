@@ -18,3 +18,11 @@
 - 2026-10-04 · qa · Foundations timeline row ST-80 · In review → QA
 - 2026-10-04 · labels · PR #53 · QA
 - 2026-10-04 · debt · 1 deferred bullet filed as To do task 3ef607bff0d281c89193fe63b28bddf4 (HMAC counter keys); proxy-trust bullet already ST-82's task 3ef607bff0d281f2ac88f8453c97d361
+- 2026-10-04 · debt · 2 lap-5 findings filed as To do tasks 3ef607bff0d2817aa5bbcdab29183ddd (attempts.ts one shape), 3ef607bff0d2812f8df3d2369d113739 (tasks.md FR-016 row)
+- 2026-10-04 · finish · ST-80 story Status · QA → Done
+- 2026-10-04 · finish · Foundations timeline row ST-80 · QA → Merged
+- 2026-10-04 · finish · EP-1 Foundations Status · unchanged (In progress)
+- 2026-10-04 · finish · ST-494 Status · To do → Done (e2e in apps/web-e2e/src/sign-up.spec.ts), PR #53
+- 2026-10-04 · labels · PR #53 · none
+- 2026-10-04 · comment · ST-80 · posted (14 items)
+- 2026-10-05 · ready · Foundations · no change (checked in the records PR: ST-80 unticked; ST-132 held: the lawyer)
