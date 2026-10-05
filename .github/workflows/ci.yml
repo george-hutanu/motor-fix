@@ -263,11 +263,32 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
 
+  # The local stack (docker-compose.yml) the PR tester boots: every image still
+  # pulls, the services come up healthy and the one-shot setup creates the bucket.
+  compose:
+    name: Compose stack
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.docs-only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      # The PR tester's boot: the one-shot setup stays out of --wait, which fails
+      # when it exits before compose sees it running; run returns its exit code.
+      - run: docker compose up -d --wait postgres redis minio
+      - run: docker compose run --rm minio-setup
+      - name: The bucket exists
+        run: >-
+          docker compose run --rm --entrypoint sh minio-setup -c
+          "mc alias set local http://minio:9000 motorfix motorfix-secret && mc ls local/motorfix"
+      - if: always()
+        run: docker compose down -v --remove-orphans
+
   ci-ok:
     name: CI OK
     if: always()
     needs:
-      [pr-title, changes, biome, typecheck, unit, integration, e2e, build, harness, contract, audit, docker]
+      [pr-title, changes, biome, typecheck, unit, integration, e2e, build, harness, contract, audit, docker, compose]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
