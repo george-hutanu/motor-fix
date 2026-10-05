@@ -88,14 +88,6 @@ An agent commits in a worktree that has no database running. The commit's checks
 
 ## Spec Delta
 
-### Adds (capability: platform)
+### Capability: `platform`
 
-- 517-FR-001 … 517-FR-006 as above.
-
-### Modifies
-
-- None.
-
-### Removes
-
-- None.
+- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006
