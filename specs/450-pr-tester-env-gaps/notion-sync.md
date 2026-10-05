@@ -11,3 +11,5 @@
 - 2026-10-05 · labels · PR #125 · in development
 - 2026-10-05 · debt · deferred.md line 2 · https://app.notion.com/p/3f0607bff0d281df8a3acfa73150590e
 - 2026-10-05 · debt · deferred.md line 3 · https://app.notion.com/p/3f0607bff0d281bd8b7be2d3d8d9c033
+- 2026-10-05 · qa · ST-450 story Status · Implementing → QA
+- 2026-10-05 · labels · PR #125 · QA
