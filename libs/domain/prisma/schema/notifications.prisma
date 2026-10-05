@@ -58,15 +58,20 @@ model Notification {
 // staff row per channel, which one index cannot say; the save's per-account
 // lock keeps both.
 model NotificationPreference {
-  id        String              @id @default(uuid()) @db.Uuid
-  accountId String              @map("account_id") @db.Uuid
-  garageId  String?             @map("garage_id") @db.Uuid
-  type      String
-  channel   NotificationChannel
-  enabled   Boolean
-  updatedAt DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
-  account   Account             @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  garage    Garage?             @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  id                 String              @id @default(uuid()) @db.Uuid
+  accountId          String              @map("account_id") @db.Uuid
+  garageId           String?             @map("garage_id") @db.Uuid
+  type               String
+  channel            NotificationChannel
+  enabled            Boolean
+  // NEWS only: the driver's consent, kept when it is withdrawn.
+  consentGivenAt     DateTime?           @map("consent_given_at") @db.Timestamptz(3)
+  consentTextVersion String?             @map("consent_text_version")
+  consentSource      String?             @map("consent_source")
+  withdrawnAt        DateTime?           @map("withdrawn_at") @db.Timestamptz(3)
+  updatedAt          DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  account            Account             @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  garage             Garage?             @relation(fields: [garageId], references: [id], onDelete: Cascade)
 
   @@index([accountId, type])
   @@index([garageId])
@@ -83,4 +88,15 @@ model SmsCounter {
 
   @@id([accountId, month])
   @@map("sms_counter")
+}
+
+// One news e-mail a calendar month (Europe/Bucharest): the month is the key,
+// so a second send, or two at once, cannot take it twice.
+model NewsSend {
+  month      String   @id
+  sentById   String   @map("sent_by_id") @db.Uuid
+  recipients Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@map("news_send")
 }

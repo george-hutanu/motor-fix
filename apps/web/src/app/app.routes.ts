@@ -50,6 +50,11 @@ export const routes: Routes = [
         path: 'confirm-email/:token',
       },
       {
+        loadComponent: () =>
+          import('./public/unsubscribe').then((m) => m.Unsubscribe),
+        path: 'unsubscribe/:token',
+      },
+      {
         ...placeholder('account', 'public.placeholder.account'),
         canActivate: [signedInToDashboard],
       },
