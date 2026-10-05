@@ -10,7 +10,10 @@ Sync Impact Report (v1.7.1)
 - Source: owner decision 2026-10-04: the repo is public, so Actions is free;
   move the PR tester's heavy part off the 16 GB laptop.
 - Templates:
-  - ✅ AGENTS.md — lifecycle step 6, heavy commands and the watcher
+  - ✅ AGENTS.md — lifecycle step 6, "Reviewing a change that has screens"
+    (the sweep runs in CI, the artifact's screenshots are the evidence, the
+    built-in browser walk is optional, no laptop limit on QA), heavy commands
+    and the watcher
   - ✅ .claude/agents/pr-tester.md, speckit-pr-test (`--local`), speckit-auto
     (hand-off step 5), speckit-watch, .claude/scripts/watch.mjs,
     scripts/heavy.sh (comment)
