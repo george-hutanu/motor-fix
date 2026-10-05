@@ -2,7 +2,7 @@
 
 **Feature Branch**: `646-notification-send-claim`
 **Created**: 2026-10-05
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 **Level**: 1 (one-session)
 **Notion story**: ST-646 — https://app.notion.com/p/3f0607bff0d2817da2d9fb5babd9f5cd
 **Epic**: EP-1 Foundations — https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707

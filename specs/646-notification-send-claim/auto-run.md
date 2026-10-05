@@ -45,3 +45,12 @@ Worktree: .worktrees/646-notification-send-claim
 ## 14. Review
 - spec-reviewer: APPROVE, 2 LOW: pre-existing `@traces` ids in the processor spec (deferred); T008's evidence narrower than stated → root `npm run typecheck && npm run lint` run: exit 0.
 - Both specs: 67 passed.
+
+## 15. Agent context
+- Skipped: level 1, no plan.md; the managed block would only repoint CLAUDE.local.md's "Active plan" at a feature with no plan.
+
+## 16. Retrospective evidence
+- `retro-evidence.mjs --since 5353159 --jev` and `instincts.mjs triggered --since 5353159` run; Jev lane unavailable (no key), so no suggested verdict. No retro written (an autonomous run does not grade itself).
+
+## 17. Archive
+- Spec Delta merged into `.specify/capabilities/notifications.md` (+4); spec status Archived (2026-10-05).
