@@ -45,7 +45,8 @@ export class BellStore {
       .subscribe((message) => {
         if (message.kind === 'notification.created')
           void this.arrived(message.id);
-        if (message.kind === 'notification.read') void this.refresh();
+        if (message.kind === 'notification.read')
+          void this.readElsewhere(message.id, message.at);
       });
     if (isPlatformBrowser(inject(PLATFORM_ID))) {
       const timer = setInterval(() => void this.refreshCount(), REFRESH_MS);
@@ -141,17 +142,27 @@ export class BellStore {
     toast(text, { duration: 5000 });
   }
 
-  // A read elsewhere may touch any page, so the list starts again at the top.
-  private async refresh() {
+  // A read, this tab's own echo included, may touch any page: the rows loaded
+  // stay, and "Mai multe" keeps following the last one. A "mark all" carries
+  // the account's id, so it shows as an unread count of zero.
+  private async readElsewhere(id: string, at: string) {
+    this.markRead((n) => n.id === id, at);
     await this.refreshCount();
+    if (this.count() === 0) this.markRead(() => true, at);
     if (this.state() !== 'ready') return;
     try {
-      const page = await this.page();
-      this.items.set(page.items);
-      this.follow(page.nextCursor);
+      this.merge((await this.page()).items);
     } catch {
       // The rows shown stay until the next open.
     }
+  }
+
+  private markRead(match: (n: NotificationDto) => boolean, at: string) {
+    this.items.update((items) =>
+      items.map((n) =>
+        n.readAt === null && match(n) ? { ...n, readAt: at } : n,
+      ),
+    );
   }
 
   private merge(first: readonly NotificationDto[]) {

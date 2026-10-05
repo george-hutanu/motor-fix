@@ -18,3 +18,13 @@ Worktree: .worktrees/603-bell-read-echo
 ## 2. Specify
 - Spec written from the story; 4 assumptions marked (autonomous default).
 - Fix chosen: merge the reloaded first page for every `notification.read` (the story's second option), which also fixes other tabs, instead of recognising this tab's own echo.
+- Preflight suite: typecheck and lint green; api and domain tests green once the worktree's PostgreSQL and Redis were started (`scripts/test-services.ts`), every other project green.
+
+## 7. Tasks
+- `tasks.md`: T001–T006 tests, T007 the `BellStore` change, T008 proof.
+
+## 9. Tests
+- 5 tests added in `bell.spec.ts`, replacing the one that encoded the reset to the first page. Red: `npx jest apps/web/src/app/dashboard/bell.spec.ts` → 5 failed, 19 passed (every new test fails, every other passes).
+
+## 10. Implement
+- `BellStore`: on `notification.read` the event's row is marked read with the event's `at`, the count is reloaded (zero marks every row read), and the reloaded first page is merged in with `merge()`; the cursor is left on the last row loaded. 24/24 bell tests green.
