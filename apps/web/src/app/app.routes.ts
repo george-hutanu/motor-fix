@@ -30,6 +30,7 @@ export const routes: Routes = [
     canMatch: [toLanguageAddress, publicTexts],
     children: [{ component: Home, path: '' }],
     component: PublicFrame,
+    data: { tabBar: false },
     path: '',
     pathMatch: 'full',
   },

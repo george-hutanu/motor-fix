@@ -55,3 +55,7 @@
   - LOW: `publicTexts` also runs in the browser before the redirect. Fixed by rewording the comment at `addresses.ts` to cover both cases (the load is shared with `/<lang>`).
   - Note: ST-458 is the same finding. After the merge, close it in Notion as a duplicate, with a comment pointing to ST-454 and #115.
 - code-reviewer: APPROVE. MEDIUM (deferred, `deferred.md`): the axe loader is now in four e2e specs; a shared `apps/web-e2e/src/axe.ts` is the fix. LOW (patched): the two server tests in `addresses.spec.ts` share a `serverSetUp()`; the `''` route's comment says why `toLanguageAddress` comes first. 20/20 in `addresses.spec.ts` after the patch.
+
+## CI repair lap 1
+
+- E2E `tab-bar.spec.ts:159` (ST-287: the server render of `/` carries no tab bar) failed: `/` now rendered in `PublicFrame`, which always held the bar. Merged origin/main; test first in `addresses.spec.ts` (red), then `data: { tabBar: false }` on the `''` route and `@if (tabBar)` in the frame. The bar, now created in the update pass, missed the first navigation's brand (5 adversary tests red); it reads `router.url` on construction. `apps/web/src/app`: 902 passed.

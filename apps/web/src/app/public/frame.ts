@@ -1,6 +1,11 @@
 import { Component, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import {
+  ActivatedRoute,
+  NavigationEnd,
+  Router,
+  RouterOutlet,
+} from '@angular/router';
 import { TranslatePipe } from '@motor-fix/i18n';
 import { filter } from 'rxjs';
 
@@ -28,11 +33,16 @@ import { SignInDialog } from '../sign-in/sign-in-dialog';
       </button>
     </header>
     <main><router-outlet /></main>
-    <mf-public-tab-bar />
+    @if (tabBar) {
+      <mf-public-tab-bar />
+    }
   `,
 })
 export class PublicFrame {
   protected readonly signIn = inject(SignInDialog);
+  // `/` turns this off: its server render is for search engines (ST-287).
+  protected readonly tabBar =
+    inject(ActivatedRoute).snapshot.data['tabBar'] !== false;
 
   constructor() {
     // A signed-out visit to a dashboard lands here asking for sign-in.

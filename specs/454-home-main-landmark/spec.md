@@ -60,6 +60,7 @@ landmark rule.
 ## Assumptions
 
 - (autonomous default) `/` renders the home page inside the same public frame as `/ro` and `/en`, rather than the home page carrying a `<main>` of its own: the frame already holds the one `<main>` for every public page (`apps/web/src/app/public/frame.ts`), and a second one in Home would nest inside it at `/ro` (Principle I: one place for the shell).
+- (CI lap 1) `/` renders the frame without the tab bar (route data `tabBar: false`): ST-287 keeps the bar off the server's render of `/`, which exists for search engines; the browser moves on to `/<lang>`, where the bar shows. The bar now also reads the address it starts on, since the frame may create it after that navigation ended.
 - (autonomous default) The frame's top bar becomes a banner landmark (`<header>`); no new text, no visual change.
 - (autonomous default) No other public page is in scope beyond what the shared frame fixes for them too; the not-found page already has its own `<main>`.
 - (autonomous default) ST-286's note to "add the landmarks when Home's real screen is built in Discovery" is superseded by the ticket being Ready to work; when Discovery replaces Home's content it keeps the frame's landmarks.

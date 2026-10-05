@@ -304,13 +304,15 @@ describe('/ on the server', () => {
     expect(TestBed.inject(I18n).language()).toBe('ro');
   });
 
-  it('renders / in the public frame, with one main around Home', async () => {
+  it('renders / in the public frame, with one main around Home and no tab bar', async () => {
     serverSetUp();
 
     const harness = await open('/');
 
     expect(url()).toBe('/');
     expectLandmarks(harness, 'Autentificare');
+    const root = harness.fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('mf-public-tab-bar')).toBeNull();
   });
 
   it('gives / the canonical and hreflang links of /ro/', async () => {

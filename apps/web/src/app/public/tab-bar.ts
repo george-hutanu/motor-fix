@@ -106,9 +106,7 @@ class LastBrand {
 })
 export class PublicTabBar {
   private readonly router = inject(Router);
-  private readonly segments = signal(
-    segmentsOf(this.router.parseUrl(this.router.url)),
-  );
+  private readonly segments = signal<string[]>([]);
   protected readonly language = inject(I18n).language;
   protected readonly brand = inject(LastBrand).value;
   protected readonly brandQuery = computed(() => {
@@ -135,19 +133,26 @@ export class PublicTabBar {
     void this.signIn.start();
   }
 
+  // The address it starts on counts too: the frame may create the bar after
+  // that navigation has ended.
   constructor() {
+    this.follow(this.router.url);
     this.router.events
       .pipe(
         filter((event) => event instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
       .subscribe(({ urlAfterRedirects }) => {
-        const tree = this.router.parseUrl(urlAfterRedirects);
-        const segments = segmentsOf(tree);
-        this.segments.set(segments);
-        const brand = tree.queryParams['brand'];
-        if (segments.length === 2 && segments[1] === 'garages' && brand)
-          this.brand.set(String(brand));
+        this.follow(urlAfterRedirects);
       });
+  }
+
+  private follow(url: string) {
+    const tree = this.router.parseUrl(url);
+    const segments = segmentsOf(tree);
+    this.segments.set(segments);
+    const brand = tree.queryParams['brand'];
+    if (segments.length === 2 && segments[1] === 'garages' && brand)
+      this.brand.set(String(brand));
   }
 }
