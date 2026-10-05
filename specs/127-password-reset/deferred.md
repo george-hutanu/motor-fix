@@ -1,0 +1,7 @@
+# Deferred findings: 127-password-reset
+
+Findings a review verified but deliberately did not act on in this feature.
+
+- [ ] `libs/domain/src/auth/password-reset.service.ts:138` — **medium** — the reset request writes the token and queues the e-mail before its 202 for a known address only, so response time can hint that an account exists; answering first and issuing after would close it (code-reviewer, 2026-10-05) — https://app.notion.com/p/3f0607bff0d281d5bf39d6e6f897df24
+- [ ] `libs/domain/src/auth/password-reset.service.ts:99` — **medium** — pre-existing pattern: a completed reset records no domain event through `EVENT_PORT` in its transaction (as `signOutEverywhere` does), and the `password_changed` e-mail and `session.revoked` go out after the commit, not through an outbox row (Constitution VI), as sign-in's `session.revoked` already does (spec-reviewer, pr-tester, 2026-10-05) — https://app.notion.com/p/3f0607bff0d28111a434e75fcd9c94d3
+- [ ] `libs/domain/src/auth/attempts.ts:11` — **low** — pre-existing: the auth limits (sign-in, sign-up, reset) and the link lifetimes are constants; decide once whether they take `AUTH_*` environment overrides (code-reviewer, 2026-10-05) — https://app.notion.com/p/3f0607bff0d2817e843bdfd923180dff

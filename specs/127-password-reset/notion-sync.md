@@ -1,0 +1,21 @@
+# Notion sync — 127-password-reset
+
+- 2026-10-05 · start · ST-127 story Status · To do → Planning
+- 2026-10-05 · start · Foundations timeline row ST-127 · Not started → Planning
+- 2026-10-05 · start · EP-1 Foundations Status · unchanged (In progress)
+- 2026-10-05 · pr · ST-127 · PR #72 https://github.com/george-hutanu/motor-fix/pull/72
+- 2026-10-05 · labels · PR #72 · planning
+- 2026-10-05 · ready · Foundations · −ST-127 (started; a start changes no other item's blockers)
+- 2026-10-05 · implement · ST-127 story Status · Planning → Implementing
+- 2026-10-05 · implement · Foundations timeline row ST-127 · Planning → Implementing
+- 2026-10-05 · labels · PR #72 · in development
+- 2026-10-05 · qa · ST-127 story Status · Implementing → QA
+- 2026-10-05 · qa · Foundations timeline row ST-127 · Implementing → QA
+- 2026-10-05 · labels · PR #72 · QA
+- 2026-10-05 · debt · 3 To do tasks filed from deferred.md (EP-1 Foundations): 3f0607bff0d281d5bf39d6e6f897df24, 3f0607bff0d28111a434e75fcd9c94d3, 3f0607bff0d2817e843bdfd923180dff
+- 2026-10-05 · blocked · ST-127 story Status · QA → Blocked (QA cannot boot: Docker hangs, MinIO images gone)
+- 2026-10-05 · blocked · Foundations timeline row ST-127 · QA → Blocked
+- 2026-10-05 · labels · PR #72 · QA + blocked
+- 2026-10-05 · unblock · ST-127 story Status · Blocked → QA (Docker fixed; #89 replaced MinIO and boots the PR's own compose)
+- 2026-10-05 · unblock · Foundations timeline row ST-127 · Blocked → QA
+- 2026-10-05 · labels · PR #72 · QA

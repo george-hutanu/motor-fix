@@ -82,6 +82,54 @@ describe('merge gate — the decision', () => {
     assert.match(decideMerge(pr(rollup)), /CI failed.*Unit tests/);
   });
 
+  // gh reports a run that has not started with startedAt 0001-01-01, which
+  // sorted it as the oldest run of its check (PR tester lap 2 on PR #91).
+  const NOT_STARTED = '0001-01-01T00:00:00Z';
+
+  it('reads a cancelled run followed by its queued replacement as pending, not failed', () => {
+    const rollup = [run('body', 'CANCELLED', 'COMPLETED', '2026-10-05T07:03:51Z'), run('body', null, 'QUEUED', NOT_STARTED), ...green, review('SUCCESS')];
+    const why = decideMerge(pr(rollup));
+    assert.match(why, /still running.*body/);
+    assert.doesNotMatch(why, /CI failed/);
+  });
+
+  it('refuses while a green check has a queued re-run, rather than merging on the old result', () => {
+    const rollup = [run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', null, 'QUEUED', NOT_STARTED), run('CI OK', 'SUCCESS'), review('SUCCESS')];
+    assert.match(decideMerge(pr(rollup)), /still running.*Unit tests/);
+  });
+
+  it('reads an in-progress run as the latest even when its start time is older', () => {
+    const rollup = [run('Unit tests', null, 'IN_PROGRESS', '2026-10-05T06:00:00Z'), run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('CI OK', 'SUCCESS'), review('SUCCESS')];
+    assert.match(decideMerge(pr(rollup)), /still running.*Unit tests/);
+  });
+
+  // The PR template workflow can cancel a run before a runner picks it up:
+  // COMPLETED, CANCELLED and undated. It is the oldest run, not the newest.
+  it('reads a run cancelled while still queued as older than the run that replaced it', () => {
+    const rollup = [run('body', 'CANCELLED', 'COMPLETED', NOT_STARTED), run('body', 'SUCCESS', 'COMPLETED', '2026-10-05T07:04:15Z'), ...green, review('SUCCESS')];
+    assert.equal(decideMerge(pr(rollup)), null);
+  });
+
+  it('keys check runs by workflow and name, so a same-named job in another workflow is not hidden', () => {
+    const rollup = [
+      { ...run('build', 'FAILURE', 'COMPLETED', '2026-10-05T07:00:00Z'), workflowName: 'Docker' },
+      { ...run('build', 'SUCCESS', 'COMPLETED', '2026-10-05T07:05:00Z'), workflowName: 'CI' },
+      { ...run('CI OK', 'SUCCESS'), workflowName: 'CI' },
+      review('SUCCESS'),
+    ];
+    assert.match(decideMerge(pr(rollup)), /CI failed.*Docker \/ build/);
+  });
+
+  it('still judges the latest run within one workflow', () => {
+    const rollup = [
+      { ...run('build', 'FAILURE', 'COMPLETED', '2026-10-05T07:00:00Z'), workflowName: 'CI' },
+      { ...run('build', 'SUCCESS', 'COMPLETED', '2026-10-05T07:05:00Z'), workflowName: 'CI' },
+      { ...run('CI OK', 'SUCCESS'), workflowName: 'CI' },
+      review('SUCCESS'),
+    ];
+    assert.equal(decideMerge(pr(rollup)), null);
+  });
+
   it('reads an expected status context as pending, not failed', () => {
     const rollup = [...green, { __typename: 'StatusContext', context: 'deploy', state: 'EXPECTED' }, review('SUCCESS')];
     assert.match(decideMerge(pr(rollup)), /still running.*deploy/);

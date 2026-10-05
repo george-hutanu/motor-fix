@@ -60,17 +60,21 @@ export function decideMerge(pr) {
 /** Why CI does not yet allow the merge, or null when every other check is green. */
 function ciRefusal(pr, checks, sha) {
   // A check re-run or cancelled by a newer run appears once per run: judge the latest only.
-  const when = (c) => Date.parse(c.startedAt ?? c.createdAt ?? "") || 0;
+  // gh dates a run that has not started 0001-01-01, so an unfinished run counts as the newest;
+  // a run cancelled before it started is finished and keeps that date, the oldest.
+  const when = (c) => (c.status && c.status !== "COMPLETED" ? Infinity : Date.parse(c.startedAt ?? c.createdAt ?? "") || 0);
+  // Jobs in different workflows may share a name; a status context has one entry per context.
+  const key = (c) => c.context ?? `${c.workflowName ?? ""}\u0000${c.name}`;
   const latest = new Map();
   for (const c of checks) {
-    const name = checkName(c);
-    if (name !== "agent-review" && (!latest.has(name) || when(c) >= when(latest.get(name)))) latest.set(name, c);
+    const k = key(c);
+    if (checkName(c) !== "agent-review" && (!latest.has(k) || when(c) >= when(latest.get(k)))) latest.set(k, c);
   }
   const ci = [...latest.values()];
   const result = (c) => c.conclusion ?? c.state;
   const pending = ci.filter((c) => (c.status && c.status !== "COMPLETED") || c.state === "PENDING" || c.state === "EXPECTED" || result(c) == null);
   const red = ci.filter((c) => !pending.includes(c) && !GREEN.has(result(c)));
-  const list = (cs) => cs.map(checkName).join(", ");
+  const list = (cs) => cs.map((c) => (c.workflowName ? `${c.workflowName} / ${c.name}` : checkName(c))).join(", ");
   if (red.length) return `PR #${pr.number} cannot merge: CI failed on ${sha} (${list(red)}). Read gh pr checks ${pr.number}, fix it on the branch, and run the PR tester again on the new head.`;
   if (pending.length) return `PR #${pr.number} cannot merge yet: CI is still running on ${sha} (${list(pending)}). Wait for gh pr checks ${pr.number} --watch, in the background, and merge when it is green.`;
   if (!ci.some((c) => checkName(c) === "CI OK")) return `PR #${pr.number} cannot merge: there is no CI OK check on ${sha}. Wait for CI (gh pr checks ${pr.number}) before merging.`;

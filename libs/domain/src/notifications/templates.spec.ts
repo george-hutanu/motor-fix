@@ -79,6 +79,7 @@ describe('the test message', () => {
   });
 });
 
+// @traces 127-FR-008
 describe('the account e-mails', () => {
   const link = 'https://motorfix.test/reset?t=a&b=<x>';
 
@@ -87,6 +88,8 @@ describe('the account e-mails', () => {
     ['email_check', 'ro', 'Confirmă adresa de e-mail'],
     ['password_reset', 'en', 'Reset your password'],
     ['password_reset', 'ro', 'Resetează parola'],
+    ['password_changed', 'en', 'Your password was changed'],
+    ['password_changed', 'ro', 'Parola ta a fost schimbată'],
   ])('writes the %s e-mail in %s with the link as its button', (purpose, language, subject) => {
     const name = templateName('ACCOUNT_EMAIL', { purpose });
     const mail = render(name, 'email', language, { link });
@@ -108,10 +111,25 @@ describe('the account e-mails', () => {
     expect(check.text).not.toBe(reset.text);
   });
 
+  it('tells the holder of a changed password to reset it if it was not them', () => {
+    const en = render('ACCOUNT_EMAIL.password_changed', 'email', 'en', {
+      link,
+    });
+    const ro = render('ACCOUNT_EMAIL.password_changed', 'email', 'ro', {
+      link,
+    });
+    expect(en.text).toContain('If it was not you');
+    expect(ro.text).toContain('Dacă nu ai fost tu');
+    expect(en.text).not.toContain('ignore it');
+  });
+
   it('names the e-mail check for an unknown purpose, as the sender does', () => {
     expect(templateName('ACCOUNT_EMAIL', {})).toBe('ACCOUNT_EMAIL.email_check');
     expect(templateName('ACCOUNT_EMAIL', { purpose: 'password_reset' })).toBe(
       'ACCOUNT_EMAIL.password_reset',
+    );
+    expect(templateName('ACCOUNT_EMAIL', { purpose: 'password_changed' })).toBe(
+      'ACCOUNT_EMAIL.password_changed',
     );
     expect(templateName('QUOTE_RECEIVED', { purpose: 'x' })).toBe(
       'QUOTE_RECEIVED',

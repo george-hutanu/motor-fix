@@ -129,6 +129,24 @@ describe('the other tabs of this browser', () => {
     expect(ended).toHaveBeenCalledTimes(1);
   });
 
+  it('are not told when a tab forgets a session the server already revoked', async () => {
+    const { api, other, session } = setup({ tabs: 2 });
+    await session.load();
+    await other.load();
+    const ended = jest.fn();
+    other.ended.subscribe(ended);
+
+    session.revoked();
+    await flush();
+
+    expect(session.token()).toBeNull();
+    expect(session.current()).toBeNull();
+    expect(other.token()).not.toBeNull();
+    expect(ended).not.toHaveBeenCalled();
+    expect(api.authControllerSignOut).not.toHaveBeenCalled();
+    expect(api.authControllerSignOutEverywhere).not.toHaveBeenCalled();
+  });
+
   it('do not ask the server again: the tab that signed out did', async () => {
     const { api, other, session } = setup({ tabs: 2 });
     await session.load();

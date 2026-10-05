@@ -36,8 +36,10 @@ function listTests(project: string, suite?: string) {
 function specFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
+    // web-e2e holds Playwright specs, which Jest never runs, so the unit and
+    // integration split does not apply to them.
     if (entry.isDirectory())
-      return ['node_modules', 'test-output'].includes(entry.name)
+      return ['node_modules', 'test-output', 'web-e2e'].includes(entry.name)
         ? []
         : specFiles(path);
     return /\.spec\.ts$/.test(entry.name) ? [path] : [];
