@@ -9,6 +9,9 @@ import type { AddressInfo } from 'node:net';
 
 import type { StorageEnv } from '@motor-fix/contracts';
 
+// The entry point of @motor-fix/domain/testing: the database turn-taking too.
+export { databaseTurn } from '../auth/database-turn.testing';
+
 interface StoredObject {
   body: Buffer;
   contentType: string;

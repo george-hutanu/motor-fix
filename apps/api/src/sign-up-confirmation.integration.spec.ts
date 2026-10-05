@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
 import { NotificationsService } from '@motor-fix/domain';
-import { S3TestStore } from '@motor-fix/domain/testing';
+import { databaseTurn, S3TestStore } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -19,12 +19,15 @@ const env = {
   RELEASE_SHA: 'abc123',
 } as const;
 const store = new S3TestStore();
+// The domain specs empty the account tables meanwhile: wait for our turn.
+const turn = databaseTurn(env.DATABASE_URL);
 const webUrl = process.env['PUBLIC_WEB_URL'];
 
 let app: INestApplication;
 let sent: jest.SpyInstance;
 
 beforeAll(async () => {
+  await turn.take();
   process.env['PUBLIC_WEB_URL'] = 'https://motorfix.test';
   await store.start();
   const config = readEnv(
@@ -40,12 +43,13 @@ beforeAll(async () => {
   app = moduleRef.createNestApplication({ bufferLogs: true });
   configureApp(app, config);
   await app.init();
-});
+}, 120_000);
 
 afterAll(async () => {
   await app.close();
   await store.stop();
   sent.mockRestore();
+  await turn.release();
   if (webUrl === undefined) delete process.env['PUBLIC_WEB_URL'];
   else process.env['PUBLIC_WEB_URL'] = webUrl;
 });
