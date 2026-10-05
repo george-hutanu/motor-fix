@@ -26,6 +26,12 @@ import { emailConfirmationControllerConfirm } from '../fn/auth/email-confirmatio
 import { EmailConfirmationControllerConfirm$Params } from '../fn/auth/email-confirmation-controller-confirm';
 import { emailConfirmationControllerResend } from '../fn/auth/email-confirmation-controller-resend';
 import { EmailConfirmationControllerResend$Params } from '../fn/auth/email-confirmation-controller-resend';
+import { passwordResetControllerAsk } from '../fn/auth/password-reset-controller-ask';
+import { PasswordResetControllerAsk$Params } from '../fn/auth/password-reset-controller-ask';
+import { passwordResetControllerCheck } from '../fn/auth/password-reset-controller-check';
+import { PasswordResetControllerCheck$Params } from '../fn/auth/password-reset-controller-check';
+import { passwordResetControllerComplete } from '../fn/auth/password-reset-controller-complete';
+import { PasswordResetControllerComplete$Params } from '../fn/auth/password-reset-controller-complete';
 import { SessionDto } from '../models/session-dto';
 
 @Injectable({ providedIn: 'root' })
@@ -232,6 +238,81 @@ export class AuthService extends BaseService {
   emailConfirmationControllerResend(params: EmailConfirmationControllerResend$Params, context?: HttpContext): Promise<void> {
     const resp = this.emailConfirmationControllerResend$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `passwordResetControllerAsk()` */
+  static readonly PasswordResetControllerAskPath = '/api/v1/auth/password-reset';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `passwordResetControllerAsk()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  passwordResetControllerAsk$Response(params: PasswordResetControllerAsk$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = passwordResetControllerAsk(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `passwordResetControllerAsk$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  passwordResetControllerAsk(params: PasswordResetControllerAsk$Params, context?: HttpContext): Promise<void> {
+    const resp = this.passwordResetControllerAsk$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `passwordResetControllerCheck()` */
+  static readonly PasswordResetControllerCheckPath = '/api/v1/auth/password-reset/check';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `passwordResetControllerCheck()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  passwordResetControllerCheck$Response(params: PasswordResetControllerCheck$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = passwordResetControllerCheck(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `passwordResetControllerCheck$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  passwordResetControllerCheck(params: PasswordResetControllerCheck$Params, context?: HttpContext): Promise<void> {
+    const resp = this.passwordResetControllerCheck$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `passwordResetControllerComplete()` */
+  static readonly PasswordResetControllerCompletePath = '/api/v1/auth/password-reset/complete';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `passwordResetControllerComplete()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  passwordResetControllerComplete$Response(params: PasswordResetControllerComplete$Params, context?: HttpContext): Promise<StrictHttpResponse<SessionDto>> {
+    const obs = passwordResetControllerComplete(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `passwordResetControllerComplete$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  passwordResetControllerComplete(params: PasswordResetControllerComplete$Params, context?: HttpContext): Promise<SessionDto> {
+    const resp = this.passwordResetControllerComplete$Response(params, context);
+    return resp.then((r: StrictHttpResponse<SessionDto>): SessionDto => r.body);
   }
 
 }

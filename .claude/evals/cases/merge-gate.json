@@ -77,10 +77,60 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\": 21, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"checks\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"StatusContext\", \"context\": \"agent-review\", \"state\": \"SUCCESS\"}]}"
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}"
     },
     "expect": {
       "exit": 0
+    }
+  },
+  {
+    "id": "merge-gate-passes-past-a-cancelled-earlier-run",
+    "hook": "pre:bash:merge-gate",
+    "why": "a body edit cancels the PR template run in progress and starts a new one; the cancelled run is history, not a red check",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"body\",\"status\":\"COMPLETED\",\"conclusion\":\"CANCELLED\",\"startedAt\":\"2026-10-05T07:03:51Z\"},{\"__typename\":\"CheckRun\",\"name\":\"body\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\",\"startedAt\":\"2026-10-05T07:04:15Z\"},{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}"
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "merge-gate-refuses-agent-review-success-on-red-ci",
+    "hook": "pre:bash:merge-gate",
+    "why": "the PR tester runs beside CI, so its success says nothing about CI; a red check still blocks the merge",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"FAILURE\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "CI failed"
+    }
+  },
+  {
+    "id": "merge-gate-refuses-agent-review-success-while-ci-runs",
+    "hook": "pre:bash:merge-gate",
+    "why": "a merge before CI finishes is a merge CI never judged",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"IN_PROGRESS\",\"conclusion\":null},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "still running"
     }
   },
   {
@@ -94,6 +144,23 @@
     },
     "expect": {
       "exit": 0
+    }
+  },
+  {
+    "id": "merge-gate-refuses-while-a-green-check-is-queued-again",
+    "hook": "pre:bash:merge-gate",
+    "why": "gh dates a run that has not started 0001-01-01; read as the oldest run, a queued re-run of a green check let the merge through on the old result",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"workflowName\":\"CI\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\",\"startedAt\":\"2026-10-05T07:00:00Z\"},{\"__typename\":\"CheckRun\",\"workflowName\":\"CI\",\"name\":\"Unit tests\",\"status\":\"QUEUED\",\"conclusion\":null,\"startedAt\":\"0001-01-01T00:00:00Z\"},{\"__typename\":\"CheckRun\",\"workflowName\":\"CI\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\",\"startedAt\":\"2026-10-05T07:00:00Z\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "still running"
     }
   }
 ]
