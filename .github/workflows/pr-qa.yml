@@ -45,7 +45,8 @@ on:
         default: ''
         type: string
 
-run-name: PR QA #${{ inputs.pr }} at ${{ inputs.sha }} lap ${{ inputs.lap }} ${{ inputs.nonce }}
+# Quoted: unquoted, YAML reads ` #` as a comment and every run is titled "PR QA".
+run-name: 'PR QA #${{ inputs.pr }} at ${{ inputs.sha }} lap ${{ inputs.lap }} ${{ inputs.nonce }}'
 
 permissions:
   contents: read
