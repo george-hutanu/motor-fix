@@ -42,10 +42,16 @@ or overrides them.
    instead of a `rerun-qa` agent. A failed action is reported,
    never retried with force.
 
-3. Report the board in a few lines: counts (`stale`, `done`, `blocked`, live
+3. Report the board in a few lines: counts (`stale`, `waiting`, `done`, `blocked`, live
    `--local` QA runs; QA itself runs on GitHub Actions, capped at
    `SPECKIT_QA_CAP`, by default its 20 concurrent jobs), then one line per row whose verdict is not `ok` — worktree, branch,
    phase, PR, fix, `reason`. Rows that are `ok` are summed, not listed.
+   A `waiting` row is a handed-off ready PR whose recorded QA run (the
+   note's `QA run:` line) tests its head while CI or that run is still
+   unfinished: it has no fix and nobody is dispatched for it, since an agent
+   started now would only wait. Once both have finished it turns `stale` with
+   the `tail` fix, without the quiet threshold. A run GitHub cannot report
+   waits only until the quiet threshold, then gets the `tail` as well.
 
    Dispatch only from a session that is not itself isolated in a worktree
    (one opened on the main checkout). An agent started from a worktree
@@ -81,7 +87,7 @@ or overrides them.
    | Fix | Instruction |
    | --- | --- |
    | `resume` | Read `specs/<feature>/auto-run.md`, `tasks.md` and `node .claude/scripts/run-state.mjs show`, then continue `/speckit-auto` from the phase run-state names (its section "After a context compaction" applies), through the hand-off. With an `agent-review` failure on the PR head, that is the QA fix loop: fix the blocking findings tests first, push, `run-state.mjs repair`, run `/speckit-pr-test <pr>` again. Without a feature, read the branch's commits and PR and finish the lifecycle the same way. |
-   | `tail` | The story's agent handed this ready PR off. Read `specs/<feature>/handoff.md`, then run "The tail" in `.claude/skills/speckit-auto/SKILL.md`: CI in the background, `/speckit-pr-test <pr>` laps and their fixes (tests first), the merge, `speckit-notion-sync finish` with its finish comment on the PR, the archive check, then delete `handoff.md`. |
+   | `tail` | The story's agent handed this ready PR off. Read `specs/<feature>/handoff.md`, then run "The tail" in `.claude/skills/speckit-auto/SKILL.md`: the tester on the finished QA run (`RUN`), its fixes (tests first), each followed by a new run dispatched with `--no-wait` and an end, never a wait, the merge, `speckit-notion-sync finish` with its finish comment on the PR, the archive check, then delete `handoff.md`. |
    | `rerun-qa` | Run `/speckit-pr-test <pr>` on the current head, then follow lifecycle steps 6–7. |
    | `fix-ci` | List what did not pass and read the failing job's log tail, both with the summary-only reads in AGENTS.md "Agent replies" (never the whole log); fix it on the branch tests first, push, wait for the checks again; each lap is `run-state.mjs repair`. Then continue the lifecycle. |
    | `merge` | Lifecycle step 7: merge `origin/main` in if behind (a new head needs a new `/speckit-pr-test`), then `gh pr merge <pr> --merge` and `speckit-notion-sync finish`. |

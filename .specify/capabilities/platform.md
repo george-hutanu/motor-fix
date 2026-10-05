@@ -12,6 +12,7 @@ features:
   - 600-merge-gate-symlink
   - 623-precompact-flush
   - 673-story-tail-agents
+  - 688-qa-wait-handoff
 ---
 
 # Capability: Platform
@@ -363,6 +364,54 @@ _From 673-story-tail-agents._
 ### 673-FR-006 — The definition MUST carry the AGENTS.md reply envelope verbatim and a cap of at most 10 lines.
 
 _From 673-story-tail-agents._
+
+### 688-FR-001 — `dispatch.mjs <pr> --no-wait` MUST dispatch the PR QA workflow for the PR's head, find the run by its nonce, print one hand-off line (`- QA run: <id> · head <sha> · lap <n> · <url>`) and exit 0 without watching the run or downloading anything; exit 2 when no run appears.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-002 — `dispatch.mjs <pr> --run <id>` MUST dispatch nothing, read that run's conclusion, download its artifact into `--out` and judge the report exactly as a dispatched lap does (exit 0 success, 1 failure, 2 unusable, including a report about another head than the PR's).
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-003 — The hand-off line MUST have one parser, shared by the watcher, that reads the run id and the head, and nothing from a note without the line.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-004 — `watch.mjs` MUST give a handed-off ready PR whose recorded QA run is about its current head the verdict `waiting` and no fix while CI is pending or has no checks, or the run is not completed, and its head has no `agent-review` success; the reason names what it waits for. A PR with no checks, or a run whose state cannot be read, waits only until the qa quiet threshold, then FR-006 applies.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-005 — `watch.mjs` MUST offer `tail` for such a PR once CI has finished and the run has completed, when no agent holds the worktree, without the phase's quiet threshold.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-006 — A handed-off ready PR with no run recorded, or one about an older head, MUST keep today's rule: `tail` once quiet past the threshold.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-007 — The hand-off (speckit-auto) MUST write the QA flows, dispatch the run with `--no-wait`, record its line in `handoff.md`, and end with `NEXT: tail #<n> after QA run <id>`; it starts no wait.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-008 — The session that receives that NEXT (or the owner-run story itself) MUST wait with one background command until CI and the QA run have finished, printing only what did not pass, then claim the worktree and dispatch the tail.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-009 — The tail MUST start the pr-tester on the finished run (`RUN`), never dispatch and wait itself; with no run for the PR's head it dispatches one with `--no-wait` and ends; an unusable run is dispatched again once per head without counting a lap, and a second one is posted `--missing` and blocks the run; after a fix it MUST push, count the lap with `run-state.mjs repair`, dispatch a run for the new head with `--no-wait`, rewrite the note's `QA run:` line and end with the same NEXT.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-010 — The pr-tester given `RUN` MUST skip writing flows and dispatching, download that run with `--run`, read the flows file that was sent, and raise a `high` "flow not run" finding for each flow from its own list (the spec's scenarios and the diff) that file does not drive.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-011 — `merge-gate.mjs`, `pr-lifecycle-gate.mjs`, `carry.mjs`, the repair cap and their eval cases MUST stay unchanged.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-012 — AGENTS.md lifecycle steps 4–6, speckit-pr-test and the speckit-watch `tail` row MUST describe the dispatch, end, resume loop.
+
+_From 688-qa-wait-handoff._
 
 ## Retired
 
