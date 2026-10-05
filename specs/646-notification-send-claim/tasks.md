@@ -17,7 +17,7 @@
 
 ## Phase 2b: Hardening and review
 
-- [X] T009 [US1] `libs/domain/src/notifications/send-claim.adversary.integration.spec.ts`: 21 tests from outside (5–10 jobs at once, SMS/WhatsApp rows, the SMS cap, deleted account, sending off, the lease boundary, a hung Brevo call taken over) (FR-001–FR-004)
+- [X] T009 [US1] `libs/domain/src/notifications/send-claim.adversary.integration.spec.ts`: 22 tests from outside (5–10 jobs at once, SMS/WhatsApp rows, the SMS cap, deleted account, sending off, the lease boundary, a hung Brevo call taken over) (FR-001–FR-004)
 - [X] T010 Review patches: a claim exactly the lease old is live (`lt`), asserted; the collision tests assert the error's message; out-of-scope findings in `deferred.md`
 
 ## Phase 3: Proof

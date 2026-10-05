@@ -14,3 +14,4 @@
 - 2026-10-05 · qa · ST-646 story Status · Implementing → QA
 - 2026-10-05 · qa · Foundations timeline · no row for ST-646
 - 2026-10-05 · labels · PR #130 · QA (in development removed)
+- 2026-10-05 · debt · ST-646 · 4 tasks filed (deferred.md lines 2–5)
