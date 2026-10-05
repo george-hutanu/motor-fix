@@ -124,3 +124,23 @@ describe('the tester names the API health routes the API serves', () => {
     assert.match(run, /flow\.default\(\{[^}]*\.\.\.apiHealth\(apiURL\)/);
   });
 });
+
+describe('the tester reads a finished run instead of waiting on one', () => {
+  it('pr-tester takes RUN, downloads it with --run and checks the flows that were sent', () => {
+    assert.match(agent, /\bRUN\b/);
+    assert.match(agent, /dispatch\.mjs <PR> --run <RUN>/);
+    assert.match(agent, /flow not run/);
+    assert.match(agent, /\.specify\/\.cache\/qa-flows-<PR>\.mjs/);
+  });
+
+  it('the skill dispatches with --no-wait and reviews with --run', () => {
+    assert.match(skill, /--no-wait/);
+    assert.match(skill, /--run <id>/);
+  });
+
+  it('the watcher waits on a handed-off PR until CI and its QA run have finished', () => {
+    assert.match(watchSkill, /`waiting`/);
+    assert.match(agents, /--no-wait/);
+    assert.match(agents, /`waiting`/);
+  });
+});
