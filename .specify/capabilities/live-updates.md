@@ -5,6 +5,7 @@ features:
   - 253-live-connection
   - 254-live-audience
   - 257-live-events
+  - 256-live-in-place
 ---
 
 # Capability: Live updates
@@ -57,9 +58,9 @@ _From 253-live-connection._
 
 _From 253-live-connection._
 
-### 257-FR-010 — `POST /api/v1/admin/live/test` with an account id MUST record a `live.test` event for that account through the outbox in one transaction and answer 202 for a MotorFix admin; a call with no valid token MUST get 401, a signed-in non-admin 404, and an unknown account 404. The account's open dashboards MUST show the test toast within 2 seconds while the worker runs.
+### 256-FR-012 — `POST /api/v1/admin/live/test` with an account id MUST record a `live.test` event for that account through the outbox in one transaction and answer 202 for a MotorFix admin; a call with no valid token MUST get 401, a signed-in non-admin 404, and an unknown account 404. The account's open dashboards MUST show the test update on their status line within 2 seconds while the worker runs.
 
-_From 257-live-events._
+_From 256-live-in-place._
 
 ### 253-FR-013 — The web app MUST open one live connection per browser tab on a signed-in dashboard, reading the stream with the access token in the `Authorization` header, and MUST close it at sign-out or when the dashboard frame is destroyed; moving between views inside the frame keeps it; no connection is opened during server rendering.
 
@@ -69,9 +70,9 @@ _From 253-live-connection._
 
 _From 253-live-connection._
 
-### 253-FR-015 — Every dashboard (driver; garage, serving owner, receptionist and mechanic; admin) MUST show the shared toast "Actualizare de test în direct" / "Live test update" on a `live.test` event, in the person's language.
+### 256-FR-011 — Every dashboard (driver; garage, serving owner, receptionist and mechanic; admin) MUST show the epic's test update on the status line under its header, "Actualizare de test în direct · <time>" / "Live test update · <time>", changed in place in the person's language, and MUST raise no toast for it.
 
-_From 253-live-connection._
+_From 256-live-in-place._
 
 ### 254-FR-001 — The audience of an event MUST be worked out from its subject: request → the driver's `account:` and each recipient `garage:`; quote → the driver and the quoting garage; booking → the driver, the garage and the booking's `mechanic:` when it has one; job (with its media and live kinds) → the driver, the garage and the job's mechanic when it has one; review → the garage, the author, `public:garage` and `public:mechanic`; message → the driver and the garage; car and repair → the owner's account, plus the named garage for a shared repair; verification and documents → `admin` and the garage; platform rules and copy voices → `admin` and `system`; account → that `account:`.
 
@@ -153,16 +154,56 @@ _From 257-live-events._
 
 _From 257-live-events._
 
-### 257-FR-009 — The web app MUST offer a helper that loads a view's data through the API and re-reads it when a matching event arrives, collapsing the events of 300 ms into one re-read.
+### 256-FR-002 — The web app MUST offer a helper that loads a view's data through the API and re-reads it when an event about the shown object arrives. Events that arrive within 300 ms of each other cause one re-read, events about other objects cause none, and only one read runs at a time.
 
-_From 257-live-events._
+_From 256-live-in-place._
 
 ### 257-FR-011 — Account sign-up (`account.created`) and sign-out everywhere (`account.signed_out_everywhere`) MUST record their events through the outbox, with the account as their subject.
 
 _From 257-live-events._
+
+### 256-FR-001 — A re-read is merged into the view's value by structural sharing. Equal objects and rows (rows matched by `id`) keep their previous reference, and an equal result leaves the value unchanged.
+
+_From 256-live-in-place._
+
+### 256-FR-003 — A background re-read that fails leaves the last value on screen and shows no error. The view re-reads on the next event, or 60 seconds after the failure, whichever comes first.
+
+_From 256-live-in-place._
+
+### 256-FR-004 — A re-read that answers 404 marks a single-object view `gone`, and the view keeps its last value. A drawer that shows it says "Nu mai este disponibil" / "No longer available" and stays open.
+
+_From 256-live-in-place._
+
+### 256-FR-005 — A live update never reloads the page, changes the route, closes a dialog, drawer or sheet, or moves focus.
+
+_From 256-live-in-place._
+
+### 256-FR-006 — A form edits a local copy taken when it opens. A re-read never writes into it. While the shown object differs from that copy's source, `changed()` holds the new object, a line "S-a schimbat între timp: <value>" shows, and accepting it makes the new object the source.
+
+_From 256-live-in-place._
+
+### 256-FR-007 — While a list is not at its top, new rows that sort before the rows shown are held back and counted. A pill "{count} actualizare nouă / actualizări noi / de actualizări noi" (EN "{count} new update / updates") shows at the top. Tapping it shows the held rows and scrolls up to the first. At the top, new rows show at once.
+
+_From 256-live-in-place._
+
+### 256-FR-008 — Across an update, a scrolled list keeps its first visible row at the same place on screen.
+
+_From 256-live-in-place._
+
+### 256-FR-009 — A changed row or value is highlighted for 1 second, and not at all with reduced motion.
+
+_From 256-live-in-place._
+
+### 256-FR-010 — A changed visible value is announced politely (`aria-live="polite"`), without moving focus.
+
+_From 256-live-in-place._
 
 ## Retired
 
 - `253-FR-006` — superseded by `254-FR-013` (2026-10-05)
 
 - `253-FR-012` — superseded by `257-FR-010` (2026-10-05)
+
+- `253-FR-015` — superseded by `256-FR-011` (2026-10-05)
+- `257-FR-009` — superseded by `256-FR-002` (2026-10-05)
+- `257-FR-010` — superseded by `256-FR-012` (2026-10-05)

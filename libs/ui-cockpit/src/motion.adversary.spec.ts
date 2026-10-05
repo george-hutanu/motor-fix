@@ -213,7 +213,7 @@ describe('motion declarations across the kit', () => {
   it('moves only opacity and transform in the keyframes, never hiding a control', () => {
     const frames = [...css.matchAll(/@keyframes [\w-]+\s*{([\s\S]*?)\n}/g)];
 
-    expect(frames).toHaveLength(4);
+    expect(frames).toHaveLength(5);
     for (const [, body] of frames)
       expect(body).not.toMatch(
         /visibility|display|pointer-events|filter|blur|height|width/,
