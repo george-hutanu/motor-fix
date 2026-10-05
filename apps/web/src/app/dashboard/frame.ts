@@ -27,6 +27,7 @@ import { Overlays } from '@motor-fix/overlays';
 import { HlmToaster, toast } from '@motor-fix/ui-cockpit';
 import { filter, map } from 'rxjs';
 
+import { Bell } from './bell';
 import { EmailBanner } from './email-banner';
 import { Live } from './live';
 import { Session } from './session';
@@ -51,6 +52,7 @@ const ROLES: readonly { role: Role; label: string }[] = [
 @Component({
   imports: [
     AsWritten,
+    Bell,
     DashboardTabBar,
     EmailBanner,
     HlmToaster,
@@ -77,6 +79,8 @@ const ROLES: readonly { role: Role; label: string }[] = [
     .roles button[aria-pressed="true"] { border-color: var(--mf-amber); color: var(--mf-amber-ink); cursor: default; }
     .roles button:disabled { cursor: progress; }
     .view { display: flex; flex-direction: column; min-width: 0; }
+    header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mf-space-3); }
+    header h1 { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
     main { flex: 1 0 auto; }
     @media (min-width: 768px) {
       :host { grid-template: 1fr / minmax(0, 16rem) minmax(0, 1fr); }
@@ -116,7 +120,7 @@ const ROLES: readonly { role: Role; label: string }[] = [
       </div>
     </aside>
     <div class="view">
-      <header><h1>{{ open().label | t }}</h1><mf-language-switch /></header>
+      <header><h1>{{ open().label | t }}</h1><mf-language-switch /><mf-bell /></header>
       <mf-email-banner />
       <main><router-outlet /></main>
       <mf-dashboard-tab-bar [base]="base()" [views]="entries()" [name]="dashboard().name" />

@@ -3,7 +3,11 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
-import { type MeDto, MeService } from '@motor-fix/data-access';
+import {
+  type MeDto,
+  MeService,
+  NotificationsService,
+} from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
 import { Subject } from 'rxjs';
@@ -60,6 +64,10 @@ async function render(
         useValue: { current, ended: new Subject<void>(), reload, signOut },
       },
       { provide: Live, useValue: live },
+      {
+        provide: NotificationsService,
+        useValue: { bellControllerUnreadCount: async () => ({ count: 0 }) },
+      },
       { provide: MeService, useValue: {} },
     ],
   });

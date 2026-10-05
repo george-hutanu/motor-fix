@@ -9,6 +9,8 @@ import {
 import { Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 
+import { BellController } from './bell.controller';
+import { BellService } from './bell.service';
 import { Brevo } from './brevo';
 import { BrevoWebhookController } from './brevo-webhook.controller';
 import type { EmailConfig } from './email-config';
@@ -72,8 +74,8 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional() @Inject(WORKER) private readonly worker?: Worker | null,
   ) {}
 
-  // The API: the entry point, the admin test message, the Brevo webhook and
-  // each person's message choices.
+  // The API: the entry point, each person's bell, the admin test message,
+  // the Brevo webhook and each person's message choices.
   // `auth` is the application's AuthModule, whose guard the test route uses.
   static register(
     options: NotificationsOptions,
@@ -81,6 +83,7 @@ export class NotificationsModule implements OnApplicationShutdown {
   ): DynamicModule {
     return {
       controllers: [
+        BellController,
         NotificationsController,
         BrevoWebhookController,
         NotificationPreferencesController,
@@ -95,6 +98,7 @@ export class NotificationsModule implements OnApplicationShutdown {
           provide: NOTIFICATIONS_PRISMA,
           useExisting: PRISMA,
         }),
+        BellService,
         NotificationPreferencesService,
         NewsService,
       ],
