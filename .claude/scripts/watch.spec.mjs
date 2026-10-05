@@ -640,6 +640,10 @@ describe('the command, started from a path with a space or through a symlink', (
       for (const name of ['watch.mjs', 'run-state.mjs']) writeFileSync(join(dir, name), readFileSync(join(import.meta.dirname, name)));
       mkdirSync(join(f.root, 'with space', '.claude', 'scripts', 'lib'), { recursive: true });
       for (const name of ['feature.mjs']) writeFileSync(join(dir, 'lib', name), readFileSync(join(import.meta.dirname, 'lib', name)));
+      mkdirSync(join(dir, 'pr-test'));
+      for (const name of ['carry.mjs', 'post.mjs', 'findings.mjs']) writeFileSync(join(dir, 'pr-test', name), readFileSync(join(import.meta.dirname, 'pr-test', name)));
+      mkdirSync(join(f.root, 'with space', 'scripts'));
+      writeFileSync(join(f.root, 'with space', 'scripts', 'docs-only.ts'), readFileSync(join(import.meta.dirname, '..', '..', 'scripts', 'docs-only.ts')));
       symlinkSync(join(f.root, 'with space'), join(f.root, 'linked'));
       for (const script of [join(dir, 'watch.mjs'), join(f.root, 'linked', '.claude', 'scripts', 'watch.mjs')]) {
         const out = execFileSync('node', [script, '--json'], { cwd: f.repo, encoding: 'utf8', env: { ...process.env, GH_TOKEN: '' } });
@@ -728,5 +732,74 @@ describe('the QA cap', () => {
     }
     assert.match(out[0], /QA runs 0\/3 /);
     assert.equal(JSON.parse(out.at(-1)).qaCap, 3);
+  });
+});
+
+describe('a ready PR whose head is docs-only since its last verdict', () => {
+  const quiet = { phase: 'qa', activity: { at: NOW - 120 * MIN, source: 'commit' } };
+  const ready = summarizePr(pr({ statusCheckRollup: [check('SUCCESS')] }));
+  const opts = { now: NOW, thresholds: DEFAULT_THRESHOLDS };
+  const FROM = 'f'.repeat(40);
+
+  it('carries the verdict instead of re-running QA', () => {
+    const r = fixOf(row({ ...quiet, pr: ready, carry: { from: FROM, head: 'abc' } }), opts);
+    assert.equal(r.fix, 'carry-review');
+    assert.equal(r.verdict, 'stale');
+    assert.match(r.reason, /docs-only since fffffff/);
+    assert.equal(fixOf(row({ ...quiet, pr: ready, carry: { from: FROM, head: 'abc', reason: 'apps/x changed' } }), opts).fix, 'rerun-qa');
+  });
+
+  it('never dispatches an agent for a carry: --fix applies it', () => {
+    const r = { path: 'a', verdict: 'stale', fix: 'carry-review', activity: { at: NOW - 90 * MIN }, claim: null };
+    assert.deepEqual(dispatchPlan([r], { qaLive: 0, now: NOW }), []);
+  });
+
+  it('looks for a carry only on a row that would re-run QA, and posts it on --fix', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-fixture-urls');
+      const b = f.add('agent-b', '902-draft');
+      quietCommit(a, 120);
+      quietCommit(b, 120);
+      const head = git(a, 'rev-parse', 'HEAD');
+      const asked = [];
+      const report = collect(f.repo, env({
+        gh: () => [pr({ headRefOid: head }), pr({ number: 22, headRefName: '902-draft', isDraft: true })],
+        carry: (n) => (asked.push(n), { from: FROM, head }),
+      }));
+      assert.deepEqual(asked, [21]);
+      const row = report.rows.find((x) => x.path === a);
+      assert.equal(row.fix, 'carry-review');
+      assert.ok(!report.plan.some((p) => p.path === a), 'a carry is not dispatched to an agent');
+      const posted = [];
+      const actions = applyFixes(f.repo, report, { postCarry: (c) => (posted.push(c), {}) });
+      assert.deepEqual(posted, [{ pr: 21, from: FROM, head }]);
+      assert.ok(actions.some((x) => x.ok && /carry #21/.test(x.what)), JSON.stringify(actions));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('re-runs QA when the carry lookup fails or finds none', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-fixture-urls');
+      quietCommit(a, 120);
+      const head = git(a, 'rev-parse', 'HEAD');
+      const gh = () => [pr({ headRefOid: head })];
+      const thrown = collect(f.repo, env({ gh, carry: () => { throw new Error('gh down'); } }));
+      assert.equal(thrown.rows.find((x) => x.path === a).fix, 'rerun-qa');
+      const none = collect(f.repo, env({ gh, carry: () => ({ reason: 'no earlier commit has an agent-review success' }) }));
+      assert.equal(none.rows.find((x) => x.path === a).fix, 'rerun-qa');
+      assert.equal(collect(f.repo, env({ gh })).rows.find((x) => x.path === a).fix, 'rerun-qa');
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('reports a carry that could not be posted as a failed action', () => {
+    const r = { path: '/x', fix: 'carry-review', holder: 'none', pr: { number: 21 }, carry: { from: FROM, head: 'abc' } };
+    const actions = applyFixes('/nonexistent', { rows: [r], prunable: [], orphanLocks: [] }, { postCarry: () => { throw new Error('HTTP 403'); } });
+    assert.deepEqual(actions, [{ what: 'carry #21 from fffffff', ok: false, error: 'HTTP 403' }]);
   });
 });
