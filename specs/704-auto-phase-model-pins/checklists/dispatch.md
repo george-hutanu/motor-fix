@@ -38,5 +38,5 @@
 
 - [x] CHK017 Are failure, blocked and pin-miss flows each given a defined outcome (stop, no retry, inline fallback)? [Coverage, Spec §FR-003, FR-009]
 - [x] CHK018 Are skipped phases at size levels 0/1 covered, with no agent dispatched? [Coverage, Spec US1 scenario 5]
-- [x] CHK019 Are concurrent runs and the overlap with PR #140 / lever 4 addressed as a requirement or dependency? [Dependency, Spec §FR-007, Plan Constraints]
+- [x] CHK019 Is the overlap with PR #140 and lever 4 a stated requirement? [Dependency, Spec §FR-007, Plan Constraints] (concurrent-run half struck: Parallel runs is outside phases 2-8 and untouched, plan Design 5)
 - [x] CHK020 Are the dependencies on tools a phase agent needs (git, gh, Notion) documented? [Dependency, Spec Edge Cases, Assumptions]
