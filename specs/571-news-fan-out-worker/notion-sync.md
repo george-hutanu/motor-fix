@@ -12,3 +12,4 @@
 - 2026-10-05 · debt · ST-571 · deferred.md line 2 → https://app.notion.com/p/3f0607bff0d281598676e531d5cbd127
 - 2026-10-05 · unblock · story Status · Blocked → Implementing; blocked label removed from #128; comment posted (finish started tasks, tech debt included)
 - 2026-10-05 · debt · ST-571 · deferred.md line 4 → https://app.notion.com/p/3f0607bff0d2816a91dadeed6306e9ca
+- 2026-10-05 · qa · story Status · Implementing → QA; PR #128 ready, label in development → QA; Foundations timeline has no row for ST-571
