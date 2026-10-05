@@ -332,14 +332,16 @@ export class NotificationsProcessor {
   }
 
   private async sent(rows: Notification[], messageId: string) {
+    const ids = rows.map((r) => r.id);
     await this.prisma.notification.updateMany({
       data: {
         providerMessageId: messageId,
         sentAt: this.now(),
         status: 'sent',
       },
-      where: { id: { in: rows.map((r) => r.id) } },
+      where: { id: { in: ids } },
     });
+    await this.service.forget(ids);
   }
 }
 
