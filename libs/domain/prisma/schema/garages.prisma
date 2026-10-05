@@ -9,14 +9,15 @@ enum GarageMemberRole {
 }
 
 model Garage {
-  id        String         @id @default(uuid()) @db.Uuid
-  name      String
-  slug      String         @unique
-  status    String         @default("draft")
-  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  members   GarageMember[]
-  mechanics Mechanic[]
+  id                      String                   @id @default(uuid()) @db.Uuid
+  name                    String
+  slug                    String                   @unique
+  status                  String                   @default("draft")
+  createdAt               DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  members                 GarageMember[]
+  mechanics               Mechanic[]
   notificationPreferences NotificationPreference[]
+  features                GarageFeature[]
 
   @@map("garage")
 }
@@ -46,4 +47,15 @@ model Mechanic {
 
   @@index([garageId])
   @@map("mechanic")
+}
+
+// A switch the garage turns off for itself (`whatsapp`); a missing row is on.
+model GarageFeature {
+  garageId String  @map("garage_id") @db.Uuid
+  key      String
+  enabled  Boolean
+  garage   Garage  @relation(fields: [garageId], references: [id], onDelete: Cascade)
+
+  @@id([garageId, key])
+  @@map("garage_feature")
 }

@@ -1,4 +1,5 @@
 import { emailConfig } from './email-config';
+import { phoneConfig } from './phone-config';
 import { AuditService } from '../audit/audit.service';
 import { AccountsService } from '../auth/accounts.service';
 import type { Role } from '../auth/capabilities';
@@ -25,6 +26,18 @@ export const testConfig = (
     EMAIL_FROM: 'MotorFix <noreply@example.test>',
     EMAIL_SENDING: 'on',
     PUBLIC_WEB_URL: 'https://motorfix.test',
+    ...overrides,
+  });
+
+// Numbers +40710000000 to +40710000009 are allowlisted.
+export const testPhone = (n: number) => `+4071000000${n}`;
+
+export const testPhoneConfig = (overrides: Record<string, string> = {}) =>
+  phoneConfig('test', {
+    PHONE_ALLOWLIST: Array.from({ length: 10 }, (_, n) => testPhone(n)).join(),
+    PHONE_SENDING: 'on',
+    WHATSAPP_SENDER: '+40700000099',
+    WHATSAPP_TEMPLATES: 'motorfix_due_itp_ro=12,motorfix_due_itp_en=13',
     ...overrides,
   });
 

@@ -8,6 +8,12 @@ import {
   NotificationsService,
   RETRY_MINUTES,
 } from './notifications.service';
+import {
+  PHONE_CONFIG,
+  type PhoneConfig,
+  phoneBlockedReason,
+} from './phone-config';
+import { giveSmsBack, smsMonth, takeSms } from './sms-counter';
 import { render, TemplateError, templateName } from './templates';
 import type {
   Account,
@@ -35,13 +41,17 @@ export class NotificationsProcessor {
     private readonly service: NotificationsService,
     private readonly brevo: Brevo,
     @Inject(NOTIFICATIONS_CONFIG) private readonly config: EmailConfig,
+    @Inject(PHONE_CONFIG) private readonly phone: PhoneConfig,
   ) {}
 
   async ready(): Promise<boolean> {
-    if (!this.config.sending) return true;
-    if (!this.config.apiKey || !this.config.from.email) {
+    if (!this.config.sending && !this.phone.sending) return true;
+    if (
+      !this.config.apiKey ||
+      (this.config.sending && !this.config.from.email)
+    ) {
       this.logger.error(
-        'e-mail sending is on but BREVO_API_KEY or EMAIL_FROM is missing',
+        'sending is on but BREVO_API_KEY or EMAIL_FROM is missing',
       );
       return false;
     }
@@ -68,15 +78,27 @@ export class NotificationsProcessor {
       include: { account: true },
       where: { id },
     });
-    if (!row || (row.status !== 'queued' && row.status !== 'held')) return;
+    if (!row || !(await this.due(row))) return;
+    if (row.channel === 'email') await this.sendEmail(row, attemptsMade);
+    else await this.sendPhone(row, attemptsMade);
+  }
+
+  // Whether the row goes now: a deleted account fails it, a held one is
+  // released through the grouping rule.
+  private async due(row: Notification & { account: Account }) {
+    if (row.status !== 'queued' && row.status !== 'held') return false;
     if (row.account.status === 'deleted') {
       await this.service.fail([row], 'account_deleted', false);
-      return;
+      return false;
     }
-    if (row.status === 'held') {
-      if (row.groupLeaderId) return;
-      if (!(await this.service.release(row))) return;
-    }
+    if (row.status === 'queued') return true;
+    return !row.groupLeaderId && (await this.service.release(row));
+  }
+
+  private async sendEmail(
+    row: Notification & { account: Account },
+    attemptsMade: number,
+  ) {
     const to = await this.allowed([row], row.account);
     if (!to) return;
     const values = params(row);
@@ -176,16 +198,139 @@ export class NotificationsProcessor {
         to,
       });
     } catch (error) {
-      if (!(error instanceof BrevoError)) throw error;
-      if (error.retryable && attemptsMade < RETRY_MINUTES.length) {
-        this.logger.warn(
-          `notification ${rows[0].id} ${rows[0].kind} ${rows[0].channel} will be retried: ${error.reason}`,
-        );
-        throw error;
-      }
-      await this.service.fail(rows, error.reason, true);
+      await this.refused(rows, error, attemptsMade);
       return;
     }
+    await this.sent(rows, messageId);
+  }
+
+  // A phone that is missing, unverified, switched off or not allowlisted
+  // skips WhatsApp too: e-mail reaches the person instead.
+  private async sendPhone(
+    row: Notification & { account: Account },
+    attemptsMade: number,
+  ) {
+    const { phone, phoneVerifiedAt } = row.account;
+    const reason = phone
+      ? phoneVerifiedAt
+        ? phoneBlockedReason(this.phone, phone)
+        : 'phone_not_verified'
+      : 'no_phone';
+    if (!phone || reason) {
+      await this.service.fail([row], reason ?? 'no_phone', 'email');
+      return;
+    }
+    if (row.channel === 'sms') await this.sendSms(row, phone, attemptsMade);
+    else await this.sendWhatsApp(row, phone, attemptsMade);
+  }
+
+  private async sendSms(
+    row: Notification & { account: Account },
+    phone: string,
+    attemptsMade: number,
+  ) {
+    const content = await this.text(row, 'sms');
+    if (content === null) return;
+    const month = smsMonth(this.now());
+    if (!(await takeSms(this.prisma, row.accountId, month))) {
+      await this.service.fail([row], 'sms_cap_reached', true);
+      return;
+    }
+    let messageId: string;
+    try {
+      messageId = await this.brevo.sendSms({
+        content,
+        recipient: phone,
+        sender: this.phone.smsSender,
+      });
+    } catch (error) {
+      // The Brevo error still decides between a retry and the fallback.
+      await giveSmsBack(this.prisma, row.accountId, month).catch((failed) =>
+        this.logger.error(
+          `notification ${row.id} ${row.kind} sms count not given back: ${String(failed)}`,
+        ),
+      );
+      await this.refused([row], error, attemptsMade);
+      return;
+    }
+    await this.sent([row], messageId);
+  }
+
+  private async sendWhatsApp(
+    row: Notification & { account: Account },
+    phone: string,
+    attemptsMade: number,
+  ) {
+    const message = await this.text(row, 'whatsapp');
+    if (message === null) return;
+    const templateId = Object.hasOwn(this.phone.whatsappTemplates, message.name)
+      ? this.phone.whatsappTemplates[message.name]
+      : undefined;
+    if (templateId === undefined) {
+      this.logger.error(
+        `notification ${row.id} ${row.kind}: WhatsApp template ${message.name} is not approved; sent by e-mail`,
+      );
+      await this.service.fail([row], 'template_not_approved', true);
+      return;
+    }
+    let messageId: string;
+    try {
+      messageId = await this.brevo.sendWhatsApp({
+        params: message.params,
+        sender: this.phone.whatsappSender,
+        templateId,
+        to: phone,
+      });
+    } catch (error) {
+      await this.refused([row], error, attemptsMade);
+      return;
+    }
+    await this.sent([row], messageId);
+  }
+
+  // The rendered text, or null when the row failed over to the next channel.
+  private async text<C extends 'sms' | 'whatsapp'>(
+    row: Notification & { account: Account },
+    channel: C,
+  ) {
+    const values = params(row);
+    try {
+      return render(
+        templateName(row.kind, values),
+        channel,
+        row.account.language,
+        {
+          ...values,
+          app: this.config.webUrl,
+        },
+      );
+    } catch (error) {
+      if (!(error instanceof TemplateError)) throw error;
+      this.logger.error(
+        `notification ${row.id} ${row.kind} ${channel} not written: ${error.message}`,
+      );
+      await this.service.fail([row], 'template_failed', true);
+      return null;
+    }
+  }
+
+  // Retried while Brevo may still take it; otherwise failed over.
+  private async refused(
+    rows: Notification[],
+    error: unknown,
+    attemptsMade: number,
+  ) {
+    if (!(error instanceof BrevoError)) throw error;
+    if (error.retryable && attemptsMade < RETRY_MINUTES.length) {
+      this.logger.warn(
+        `notification ${rows[0].id} ${rows[0].kind} ${rows[0].channel} will be retried: ${error.reason}`,
+      );
+      throw error;
+    }
+    await this.service.fail(rows, error.reason, true);
+  }
+
+  private async sent(rows: Notification[], messageId: string) {
     await this.prisma.notification.updateMany({
       data: {
         providerMessageId: messageId,

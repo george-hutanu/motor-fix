@@ -54,7 +54,7 @@ export class NotificationPreferencesService {
     body: UpdateNotificationPreferencesDto,
   ): Promise<NotificationPreferencesDto> {
     const choices = body.preferences ?? [];
-    for (const choice of choices) this.check(choice);
+    for (const choice of choices) this.check(actor, choice);
     await this.checkGarages(actor.accountId, choices);
     const who = {
       actorId: actor.accountId,
@@ -92,17 +92,23 @@ export class NotificationPreferencesService {
     return this.read(actor.accountId);
   }
 
-  private check({
-    channel,
-    enabled,
-    garageId,
-    type,
-  }: UpdateNotificationPreferenceDto) {
+  private check(
+    actor: Actor,
+    { channel, enabled, garageId, type }: UpdateNotificationPreferenceDto,
+  ) {
     if (!Object.hasOwn(NOTIFICATION_TYPES, type)) {
       throw refuse(
         HttpStatus.BAD_REQUEST,
         'unknown_notification_type',
         `${type} is not a notification type`,
+      );
+    }
+    // SMS costs MotorFix; only drivers get it, for their reminders.
+    if (channel === 'sms' && actor.role !== 'driver') {
+      throw refuse(
+        HttpStatus.UNPROCESSABLE_ENTITY,
+        'channel_not_allowed',
+        `only a driver may choose sms`,
       );
     }
     if (!NOTIFICATION_TYPES[type].channels.includes(channel)) {
