@@ -39,3 +39,13 @@ Worktree: .worktrees/614-visitor-lang-reload
 - spec-reviewer: APPROVE. One LOW (empty `auto-run.md`): fixed, this log.
 - code-reviewer: BLOCK, repair lap 1. HIGH: with storage blocked, the move read `language()` while the replayed EN was still loading its texts, so it went to `/ro` and dropped EN. Red first: `language.spec.ts` storage-blocked early tap received `/ro`. Fix: the move prefers the language tapped meanwhile (`LanguageChoice.taps`). A unit version passed without the fix (jsdom loads texts at once) and was dropped. HIGH: adversary spec uncommitted: committed. LOW: the settled-tap reload test duplicated others: deleted.
 - Green after the fix: web addresses and home specs; e2e language, phone, addresses, one-language, account-language on :4614 (63 passed).
+
+## 16. Retrospective evidence
+- `retro-evidence.mjs --since 53ddff0`: 6 tasks done, 2 FRs, Spec Delta i18n +2, nothing deferred; no open carry-over item touches this change. Verdict left to the owner.
+
+## 17. Archive (on the branch)
+- Spec Delta merged into `.specify/capabilities/i18n.md` (+2: 614-FR-001, 614-FR-002); spec status Archived (2026-10-05). The finish runs after the merge.
+
+## Final report
+- Root cause: a tap on the server-rendered `/` before hydration was lost (no event replay, and the client's first navigation replaced `/` with `/ro` before hydrating). The tester's `before=ro after=ro` on PR #99 is this. A tap after hydration always survived a reload.
+- Fix: `withEventReplay()`; `/` hydrates in place on the first browser navigation and moves to the tapped, remembered or current language once the replay has run.

@@ -2,7 +2,7 @@
 
 **Feature Branch**: `614-visitor-lang-reload`
 **Created**: 2026-10-05
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 **Level**: 1 (one-session)
 **Notion story**: ST-614 — https://app.notion.com/p/3f0607bff0d281bb968ef54c590180fa
 **Epic**: EP-1 Foundations — https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707
