@@ -70,3 +70,9 @@
 
 ## 17. Archive
 - spec.md status is Archived (2026-10-05). The Spec Delta merged into platform (+9). Two deferred items were filed as Notion To do tasks. The retro verdict stays with the owner, and the evidence is in section 16.
+
+## Final report
+- PR #142 is ready, labelled QA, and the Notion story and timeline row are at QA. QA run 37365934277 was dispatched with --no-wait at 57850da. The head 5183516 differs by the docs-only qa line.
+- Measured: the old tester used 203,803 weighted tokens and the new one 249,500 (PR #137 replay). The verdict was success in every replay, the same as the recorded agent-review. No token drop, and that is open for the owner.
+- Checks: test:harness 58 files / 1310 tests, harness-eval 80/80, doctor 16 ok, merge gate, evals and carry unchanged. Review lap 2: both reviewers APPROVE.
+- NEXT: tail #142 after QA run 37365934277.
