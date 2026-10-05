@@ -5,6 +5,8 @@ features:
   - 194-email-sending
   - 195-message-templates
   - 199-notification-bell
+  - 555-account-link-params
+  - 646-notification-send-claim
 ---
 
 # Capability: Notifications
@@ -172,6 +174,38 @@ _From 199-notification-bell._
 ### 199-FR-011 — The bell MUST refresh its badge every 60 seconds while a dashboard is shown, and each time it opens.
 
 _From 199-notification-bell._
+
+### 555-FR-001 — The bell (`in_app`) row of a notification MUST NOT store a `link` param.
+
+_From 555-account-link-params._
+
+### 555-FR-002 — An outside row that is sent MUST no longer store its `link` param once it is marked sent; the message itself MUST still carry the link.
+
+_From 555-account-link-params._
+
+### 555-FR-003 — An outside row that fails MUST no longer store its `link` param once it is marked failed, including a row written already failed because sending is off or the address is not allowlisted.
+
+_From 555-account-link-params._
+
+### 555-FR-004 — The end-to-end password reset flow MUST read the reset link from the e-mail as sent (a Brevo stand-in), not from the database.
+
+_From 555-account-link-params._
+
+### 646-FR-001 — Before it reads a row to send, a send job MUST claim it with one conditional update that succeeds only for a `queued` or `held` row holding no claim, or a claim older than the lease; only the job whose update changed the row may send it.
+
+_From 646-notification-send-claim._
+
+### 646-FR-002 — A send job that cannot claim a row still `queued` or `held` MUST NOT call Brevo and MUST fail, so the queue retries it after its backoff; a job that finds the row `sent`, `failed` or gone MUST succeed without sending.
+
+_From 646-notification-send-claim._
+
+### 646-FR-003 — A claim MUST lapse after a lease no longer than the queue's first retry delay (1 minute), so a retry of a job whose worker died after claiming takes the row over and sends it.
+
+_From 646-notification-send-claim._
+
+### 646-FR-004 — When a send job ends — sent, failed, held back, retried or thrown — it MUST release its own claim (and only its own).
+
+_From 646-notification-send-claim._
 
 ## Retired
 
