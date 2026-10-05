@@ -16,6 +16,7 @@ features:
   - 688-qa-wait-handoff
   - 698-tester-packet
   - 704-auto-phase-model-pins
+  - 696-lifecycle-script
   - 703-idle-watch-gate
 ---
 
@@ -509,6 +510,41 @@ _From 704-auto-phase-model-pins._
 
 _From 704-auto-phase-model-pins._
 
+### 696-FR-001 — `lifecycle.mjs open --title <t>` MUST, in this order: make the empty start commit when the branch has no commit ahead of `origin/main`; push with upstream to the feature branch; when the branch has no open PR, open a draft from the PR template with `planning`, the title's type label (`breaking` when the title has `!`) and `scope: <scope>`; then run the Notion `start` and `pr <n>` events.
+
+_From 696-lifecycle-script._
+
+### 696-FR-002 — `lifecycle.mjs ready --body-file <f>` MUST, in this order: file the unfiled `deferred.md` bullets with the Notion `debt` event; commit and push the feature records when they changed; run `pr-body-check.ts` and stop on failure; `gh pr edit --body-file`; `gh pr ready`; the Notion `qa` event; commit and push the `qa` line; write `handoff.md`.
+
+_From 696-lifecycle-script._
+
+### 696-FR-003 — `lifecycle.mjs merge` MUST run the merge gate on `gh pr merge <n> --merge` and refuse exactly when it refuses; otherwise merge, then run the Notion `finish` event, post one finish comment on the merged PR, restore `notion-sync.md` and delete `handoff.md`.
+
+_From 696-lifecycle-script._
+
+### 696-FR-004 — Every step MUST print exactly one JSON line on stdout: `ok`, the step, what it did, and on a stop `stopped` (the command or check) and `fix`.
+
+_From 696-lifecycle-script._
+
+### 696-FR-005 — When the Notion CLI exits 3, the step MUST stop and list the connector events left and the `--notion-done` rerun that completes the step.
+
+_From 696-lifecycle-script._
+
+### 696-FR-006 — Every git and gh command MUST first pass the Bash gates registered in `.claude/settings.json`, judged on that command's text, with the merge gate's test-only state variables removed from their environment.
+
+_From 696-lifecycle-script._
+
+### 696-FR-007 — No step MAY push from `main`, push to `main`, or force-push.
+
+_From 696-lifecycle-script._
+
+### 696-FR-008 — gh MUST run as george-hutanu: the caller's `GH_TOKEN`, else `gh auth token -u george-hutanu`; when that fails or prints nothing, the step MUST stop before any git or gh call.
+
+_From 696-lifecycle-script._
+
+### 696-FR-009 — `speckit-auto/SKILL.md` (the lines listing the open, ready and merge commands) and `speckit-git-commit/SKILL.md` (the first-commit recipe) MUST name one `lifecycle.mjs` call per step instead of the recipe.
+
+_From 696-lifecycle-script._
 ### 703-FR-001 — `watch.mjs --gate` MUST run the same scan as the table, read-only (no fix applied, no claim written), and exit 0 with no output on stdout or stderr when the pass would do nothing: an empty dispatch plan and nothing the no-agent fixes would act on.
 
 _From 703-idle-watch-gate._
