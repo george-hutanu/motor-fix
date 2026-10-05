@@ -28,3 +28,12 @@ Worktree: .worktrees/603-bell-read-echo
 
 ## 10. Implement
 - `BellStore`: on `notification.read` the event's row is marked read with the event's `at`, the count is reloaded (zero marks every row read), and the reloaded first page is merged in with `merge()`; the cursor is left on the last row loaded. 24/24 bell tests green.
+
+## 12. Harden
+- artifact-lint: 0 errors. diff-audit: its base is the stale 7fa0467, and every finding is in ST-199's generated `libs/data-access` and `libs/domain` files, none in this branch's two files.
+- test-adversary: 3 tests added (an unknown id marks nothing; an idle list only reloads the count; an earlier read time is kept), all green.
+- code-reviewer: APPROVE. MEDIUM patched test-first: a failed count reload no longer decides "mark all" from the last count (`refreshCount` now returns the fresh count or null); red 1 failed, 27 passed, then 28/28. Two pre-existing ordering findings (MEDIUM, LOW) were deferred to `deferred.md`. LOW (echo order in the own-read test) was left: the row outcome is the same either way.
+- No local mutation run (mutation tests run only in CI).
+
+## 14. Review
+- spec-reviewer: APPROVE; its one LOW is the stale-count finding, fixed above. code-reviewer as in 12.

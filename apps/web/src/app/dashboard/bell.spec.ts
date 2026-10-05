@@ -476,4 +476,63 @@ describe('BellStore', () => {
     ]);
     expect(store.more()).toBe(true);
   });
+
+  it('marks nothing by id when the event names a row that is not shown and unread remain', async () => {
+    const { fixture, store } = await twoPages(2);
+    api.bellControllerUnreadCount.mockResolvedValue({ count: 2 });
+    api.bellControllerList.mockResolvedValue({
+      items: [row('a')],
+      nextCursor: 'a',
+    });
+
+    readLive('not-loaded');
+    await settle(fixture);
+
+    expect(store.items().map((n) => [n.id, n.readAt])).toEqual([
+      ['a', null],
+      ['b', null],
+    ]);
+    expect(store.count()).toBe(2);
+  });
+
+  it('only reloads the count when a read arrives before the list was ever opened', async () => {
+    const { fixture, store } = await render(2);
+    api.bellControllerList.mockClear();
+    api.bellControllerUnreadCount.mockClear();
+    api.bellControllerUnreadCount.mockResolvedValue({ count: 1 });
+
+    readLive('a');
+    await settle(fixture);
+
+    expect(api.bellControllerList).not.toHaveBeenCalled();
+    expect(api.bellControllerUnreadCount).toHaveBeenCalledTimes(1);
+    expect(store.count()).toBe(1);
+    expect(store.items()).toEqual([]);
+  });
+
+  it('keeps the earlier read time of a row already read when its event arrives', async () => {
+    const { fixture, store } = await twoPages(1);
+    await store.read('b');
+    api.bellControllerUnreadCount.mockResolvedValue({ count: 1 });
+    api.bellControllerList.mockRejectedValue(new Error('offline'));
+
+    readLive('b');
+    await settle(fixture);
+
+    expect(store.items()[1].readAt).toBe('2026-10-05T09:00:00.000Z');
+  });
+
+  it('marks nothing as read when the count fails to reload after a read elsewhere', async () => {
+    const { fixture, store } = await twoPages(0);
+    api.bellControllerUnreadCount.mockRejectedValue(new Error('offline'));
+    api.bellControllerList.mockResolvedValue({
+      items: [row('a')],
+      nextCursor: 'a',
+    });
+
+    readLive('account-1');
+    await settle(fixture);
+
+    expect(store.items().map((n) => n.readAt)).toEqual([null, null]);
+  });
 });

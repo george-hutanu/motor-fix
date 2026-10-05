@@ -58,9 +58,12 @@ export class BellStore {
   // A failed count keeps the last one shown.
   async refreshCount() {
     try {
-      this.count.set((await this.api.bellControllerUnreadCount()).count);
+      const { count } = await this.api.bellControllerUnreadCount();
+      this.count.set(count);
+      return count;
     } catch {
       // Tried again at the next refresh.
+      return null;
     }
   }
 
@@ -147,8 +150,7 @@ export class BellStore {
   // the account's id, so it shows as an unread count of zero.
   private async readElsewhere(id: string, at: string) {
     this.markRead((n) => n.id === id, at);
-    await this.refreshCount();
-    if (this.count() === 0) this.markRead(() => true, at);
+    if ((await this.refreshCount()) === 0) this.markRead(() => true, at);
     if (this.state() !== 'ready') return;
     try {
       this.merge((await this.page()).items);
