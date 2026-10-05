@@ -1,4 +1,4 @@
-import { Component, inject, PendingTasks, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { type OverlayShape, Overlays } from '@motor-fix/overlays';
@@ -234,10 +234,5 @@ export class CockpitSamplePage {
       shape: 'dialog',
       title: 'cockpit.form.title',
     });
-  }
-
-  constructor() {
-    // Holds the server render until the texts are in, so no raw key ships.
-    void inject(PendingTasks).run(() => this.i18n.enter('cockpit'));
   }
 }

@@ -4,6 +4,10 @@
 # staging api service over `railway ssh`, so it uses that service's own private
 # DATABASE_URL. The workflow puts SEED_PASSWORD in front of it on stdin.
 #
+# With SEED_ONLY=1 in front too, it only seeds, which adds the seed accounts
+# that are missing and changes nothing else: the release's staging job does
+# this after each deploy, before the end-to-end run signs in as them.
+#
 # It refuses unless the container says it is staging twice over: APP_ENV,
 # which the app reads, and RAILWAY_ENVIRONMENT_NAME, which Railway sets.
 #
@@ -23,7 +27,9 @@ main() {
   fi
   # The api image keeps the Prisma config, schema, migrations and seed here.
   cd "${APP_DIR:-/app}"
-  npx prisma migrate reset --force
+  if [ "${SEED_ONLY:-}" != 1 ]; then
+    npx prisma migrate reset --force
+  fi
   npx prisma db seed
 }
 

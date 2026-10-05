@@ -1,0 +1,240 @@
+import { NEWS_CONSENT_TEXT_VERSION } from '@motor-fix/contracts';
+import { Logger } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import { Queue } from 'bullmq';
+
+import {
+  NEWS_CONSUMER,
+  NEWS_QUEUE,
+  type NewsEvent,
+  type NewsRun,
+} from './news.fan-out';
+import { NotificationsModule } from './notifications.module';
+import { NotificationsService } from './notifications.service';
+import {
+  databaseUrl,
+  fixtures,
+  redisUrlFor,
+  testConfig,
+  testPhoneConfig,
+} from './notifications.testing';
+import { serialDatabase } from '../auth/serial-db.testing';
+import { OutboxRelayModule } from '../events/outbox-relay.module';
+
+const redisUrl = redisUrlFor(6);
+const { account, prisma, reset } = fixtures();
+serialDatabase(databaseUrl);
+
+const newsJobs = new Queue<NewsEvent>(NEWS_QUEUE, {
+  connection: { url: redisUrl },
+});
+
+afterAll(async () => {
+  await newsJobs.close();
+  await prisma.$disconnect();
+});
+
+beforeEach(async () => {
+  await reset();
+  await prisma.outboxEvent.deleteMany();
+  await newsJobs.obliterate({ force: true });
+});
+
+async function consenting(name: string) {
+  const id = await account(name, ['driver']);
+  await prisma.notificationPreference.create({
+    data: {
+      accountId: id,
+      channel: 'email',
+      consentGivenAt: new Date('2026-10-10T10:00:00Z'),
+      consentSource: 'settings',
+      consentTextVersion: NEWS_CONSENT_TEXT_VERSION,
+      enabled: true,
+      type: 'NEWS',
+    },
+  });
+  return id;
+}
+
+const worker = (
+  tokenSecret?: string,
+  webUrl = 'https://motorfix.test',
+  withRelay = false,
+) =>
+  Test.createTestingModule({
+    imports: [
+      ...(withRelay
+        ? [
+            OutboxRelayModule.register({
+              consumers: [NEWS_CONSUMER],
+              databaseUrl,
+              redisUrl,
+            }),
+          ]
+        : []),
+      NotificationsModule.registerWorker({
+        databaseUrl,
+        email: testConfig('http://127.0.0.1:9', {
+          EMAIL_SENDING: 'off',
+          PUBLIC_WEB_URL: webUrl,
+        }),
+        phone: testPhoneConfig({ PHONE_SENDING: 'off' }),
+        redisUrl,
+        tokenSecret,
+      }),
+    ],
+  }).compile();
+
+const run = (admin: string): NewsRun => ({
+  month: '2026-11',
+  sentBy: { accountId: admin, role: 'admin' },
+  text: { en: 'News', ro: 'Noutăți' },
+  title: { en: 'News for November', ro: 'Noutăți din noiembrie' },
+});
+
+async function queueRun(admin: string, attempts = NEWS_CONSUMER.jobs.attempts) {
+  await newsJobs.add(
+    'event',
+    { payload: run(admin) },
+    {
+      ...NEWS_CONSUMER.jobs,
+      attempts,
+      jobId: 'news-2026-11',
+    },
+  );
+}
+
+const newsEmails = () =>
+  prisma.notification.findMany({ where: { channel: 'email', kind: 'NEWS' } });
+
+describe('the news worker', () => {
+  it('runs a queued news run, one message per consenting driver', async () => {
+    const admin = await account('admin', ['admin']);
+    const andrei = await consenting('andrei');
+    const elena = await consenting('elena');
+    const app = await worker('test-secret');
+    await app.init();
+    try {
+      await queueRun(admin);
+      const deadline = Date.now() + 10_000;
+      while ((await newsEmails()).length < 2 && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+    } finally {
+      await app.close();
+    }
+    const rows = await newsEmails();
+    expect(rows.map((r) => r.accountId).sort()).toEqual([andrei, elena].sort());
+  }, 20_000);
+
+  it('runs the news the outbox holds, queued by the relay', async () => {
+    const admin = await account('admin', ['admin']);
+    const andrei = await consenting('andrei');
+    await prisma.outboxEvent.create({
+      data: {
+        audience: ['admin', 'system'],
+        kind: 'news.sent',
+        payload: JSON.parse(JSON.stringify(run(admin))),
+        subjectId: '2026-11',
+      },
+    });
+    const app = await worker('test-secret', undefined, true);
+    await app.init();
+    try {
+      const deadline = Date.now() + 10_000;
+      while ((await newsEmails()).length < 1 && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+    } finally {
+      await app.close();
+    }
+    expect((await newsEmails()).map((r) => r.accountId)).toEqual([andrei]);
+  }, 20_000);
+
+  it('queues the outbox news with the run’s retries', async () => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const admin = await account('admin', ['admin']);
+    const { id } = await prisma.outboxEvent.create({
+      data: {
+        audience: ['admin', 'system'],
+        kind: 'news.sent',
+        payload: JSON.parse(JSON.stringify(run(admin))),
+        subjectId: '2026-11',
+      },
+    });
+    // No token secret: the job waits in the queue to be read.
+    const app = await worker(undefined, undefined, true);
+    await app.init();
+    let job = await newsJobs.getJob(`event-${id}`);
+    try {
+      const deadline = Date.now() + 10_000;
+      while (!job && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 100));
+        job = await newsJobs.getJob(`event-${id}`);
+      }
+    } finally {
+      await app.close();
+      jest.restoreAllMocks();
+    }
+    expect(job?.opts).toMatchObject({
+      attempts: NEWS_CONSUMER.jobs.attempts,
+      backoff: NEWS_CONSUMER.jobs.backoff,
+    });
+  }, 20_000);
+
+  it.each([
+    ['AUTH_TOKEN_SECRET', undefined, 'https://motorfix.test'],
+    ['PUBLIC_WEB_URL', 'test-secret', ''],
+  ])(
+    'leaves the run queued and says why without %s',
+    async (name, secret, webUrl) => {
+      const error = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => undefined);
+      const admin = await account('admin', ['admin']);
+      await consenting('andrei');
+      const app = await worker(secret, webUrl);
+      await app.init();
+      try {
+        await queueRun(admin);
+        await new Promise((r) => setTimeout(r, 1_000));
+      } finally {
+        await app.close();
+      }
+      const logged = error.mock.calls.flat().join('\n');
+      error.mockRestore();
+      expect(await newsEmails()).toEqual([]);
+      expect(await newsJobs.getJobState('news-2026-11')).toBe('waiting');
+      expect(logged).toContain(name);
+    },
+    20_000,
+  );
+
+  it('gives the month back once the last attempt fails', async () => {
+    const error = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    const admin = await account('admin', ['admin']);
+    await consenting('andrei');
+    await prisma.newsSend.create({
+      data: { month: '2026-11', recipients: 1, sentById: admin },
+    });
+    const app = await worker('test-secret');
+    jest
+      .spyOn(app.get(NotificationsService), 'notify')
+      .mockRejectedValue(new Error('pipeline down'));
+    await app.init();
+    try {
+      await queueRun(admin, 1);
+      const deadline = Date.now() + 10_000;
+      while ((await prisma.newsSend.count()) > 0 && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+    } finally {
+      await app.close();
+      error.mockRestore();
+    }
+    expect(await prisma.newsSend.count()).toBe(0);
+    expect(await newsJobs.getJobState('news-2026-11')).toBe('unknown');
+  }, 20_000);
+});
