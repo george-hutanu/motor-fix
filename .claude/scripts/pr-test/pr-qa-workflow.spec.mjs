@@ -118,6 +118,12 @@ describe('PR QA workflow: services', () => {
     assert.match(steps, /pg_isready -U motorfix/);
   });
 
+  it('fails the step when a service never comes up, rather than running on', () => {
+    assert.match(steps, /pg_isready -U motorfix[^\n]*\n[^\n]*\|\| \{ echo "::error::PostgreSQL[^\n]*exit 1; \}/);
+    assert.match(steps, /minio\/health\/live[^\n]*\n[^\n]*\|\| \{ echo "::error::MinIO[^\n]*exit 1; \}/);
+    assert.match(steps, /timeout \d+ docker compose -p pr-qa -f pr\/docker-compose\.yml run --rm minio-setup/);
+  });
+
   it('serves the standard ports and the credentials and bucket the apps are given', () => {
     const url = new URL(env.DATABASE_URL);
     assert.equal(url.port, String(EXTERNAL_PORTS.postgres));

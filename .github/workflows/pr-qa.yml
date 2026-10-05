@@ -104,8 +104,11 @@ jobs:
         run: |
           docker compose -p pr-qa -f pr/docker-compose.yml up -d --wait postgres redis minio
           for _ in $(seq 1 60); do docker compose -p pr-qa -f pr/docker-compose.yml exec -T postgres pg_isready -U motorfix && break; sleep 1; done
+          docker compose -p pr-qa -f pr/docker-compose.yml exec -T postgres pg_isready -U motorfix || { echo "::error::PostgreSQL did not accept connections within 60 s"; exit 1; }
           for _ in $(seq 1 60); do curl -fsS http://127.0.0.1:9000/minio/health/live && break; sleep 1; done
-          docker compose -p pr-qa -f pr/docker-compose.yml run --rm minio-setup
+          curl -fsS http://127.0.0.1:9000/minio/health/live || { echo "::error::MinIO was not healthy within 60 s"; exit 1; }
+          # minio-setup retries its alias until MinIO answers; bound it.
+          timeout 120 docker compose -p pr-qa -f pr/docker-compose.yml run --rm minio-setup
 
       - uses: actions/setup-node@v5
         with:
