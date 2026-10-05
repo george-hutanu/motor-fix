@@ -6,12 +6,25 @@ import { defineConfig, devices } from '@playwright/test';
 const deployed = process.env['BASE_URL'];
 // A cold build on a CI runner takes longer than Playwright's 60-second default.
 const SERVER_START = 180_000;
+// The api and the worker send e-mail to the test mailbox (mailbox.mjs,
+// web-e2e:mailbox), which the tests read. Nx starts every webServer below as a
+// continuous task before Playwright runs, so a webServer `env` never reaches
+// them, and a command that is not `nx run` breaks that inference: the sending
+// settings (EMAIL_SENDING=on, BREVO_API_URL=<mailbox>/v3, EMAIL_ALLOWLIST=
+// @example.test, EMAIL_FROM, BREVO_API_KEY) come from the environment, set by
+// CI's E2E job and by .env locally.
+const MAILBOX = 'http://127.0.0.1:3025';
 
 export default defineConfig({
   ...nxE2EPreset(import.meta.dirname, { testDir: './src' }),
   // Flows tagged @seeded sign in with the seeded accounts; a deployed address
-  // runs them only when it is given their password.
-  grepInvert: deployed && !process.env['E2E_PASSWORD'] ? /@seeded/ : undefined,
+  // runs them only when it is given their password. Flows tagged @mailbox read
+  // the local test mailbox, which a deployed address does not have.
+  grepInvert: deployed
+    ? process.env['E2E_PASSWORD']
+      ? /@mailbox/
+      : /@seeded|@mailbox/
+    : undefined,
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   use: {
     baseURL: deployed ?? 'http://localhost:4200',
@@ -22,6 +35,11 @@ export default defineConfig({
   webServer: deployed
     ? undefined
     : [
+        {
+          command: 'npx nx run web-e2e:mailbox',
+          reuseExistingServer: true,
+          url: `${MAILBOX}/v3/account`,
+        },
         {
           command: 'npx nx run api:serve',
           reuseExistingServer: true,

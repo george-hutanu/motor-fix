@@ -223,6 +223,122 @@ describe('sending one e-mail', () => {
   });
 });
 
+describe('the link an account e-mail carries', () => {
+  const LINK = 'https://motorfix.test/ro/reset-password/secret-token';
+
+  async function issue(accountId: string) {
+    await service.sendAccountEmail({
+      accountId,
+      link: LINK,
+      purpose: 'password_reset',
+    });
+  }
+
+  const storedLinks = async (accountId: string) =>
+    (
+      await prisma.notification.findMany({
+        orderBy: { createdAt: 'asc' },
+        where: { accountId },
+      })
+    ).map((row) => [row.channel, row.status, 'link' in Object(row.params)]);
+
+  it('is never stored on the bell row', async () => {
+    const ana = await account('ana');
+    await issue(ana);
+    const bell = await prisma.notification.findFirstOrThrow({
+      where: { accountId: ana, channel: 'in_app' },
+    });
+    expect(bell.params).toEqual({ purpose: 'password_reset' });
+  });
+
+  it('reaches the e-mail and is gone from its row once it is sent', async () => {
+    const ana = await account('ana');
+    await issue(ana);
+    await sendJob((await emailRows(ana))[0].id);
+    expect(
+      (mock.emails()[0].body as { textContent: string }).textContent,
+    ).toContain(LINK);
+    expect(await storedLinks(ana)).toEqual([
+      ['in_app', 'sent', false],
+      ['email', 'sent', false],
+    ]);
+    expect((await emailRows(ana))[0].params).toEqual({
+      purpose: 'password_reset',
+    });
+  });
+
+  it('stays on the row while Brevo asks for a retry', async () => {
+    const ana = await account('ana');
+    await issue(ana);
+    mock.answer({ status: 503 });
+    await expect(
+      sendJob((await emailRows(ana))[0].id, 0),
+    ).rejects.toBeDefined();
+    expect(await storedLinks(ana)).toEqual([
+      ['in_app', 'sent', false],
+      ['email', 'queued', true],
+    ]);
+  });
+
+  it('is gone from the row Brevo refuses for good', async () => {
+    const ana = await account('ana');
+    await issue(ana);
+    mock.answer({ status: 400 });
+    await sendJob((await emailRows(ana))[0].id, 0);
+    expect(await storedLinks(ana)).toEqual([
+      ['in_app', 'sent', false],
+      ['email', 'failed', false],
+    ]);
+  });
+
+  it('is gone from the row failed because sending was switched off', async () => {
+    const ana = await account('ana');
+    await issue(ana);
+    const [row] = await emailRows(ana);
+    build({ EMAIL_SENDING: 'off' });
+    await sendJob(row.id);
+    expect(await storedLinks(ana)).toEqual([
+      ['in_app', 'sent', false],
+      ['email', 'failed', false],
+    ]);
+  });
+
+  it('is gone from the row failed because the account was deleted', async () => {
+    const ana = await account('ana');
+    await issue(ana);
+    await prisma.account.update({
+      data: { status: 'deleted' },
+      where: { id: ana },
+    });
+    await sendJob((await emailRows(ana))[0].id);
+    expect(await storedLinks(ana)).toEqual([
+      ['in_app', 'sent', false],
+      ['email', 'failed', false],
+    ]);
+  });
+
+  it('is never stored on a row written failed while sending is off', async () => {
+    build({ EMAIL_SENDING: 'off' });
+    const ana = await account('ana');
+    await issue(ana);
+    expect(await storedLinks(ana)).toEqual([
+      ['in_app', 'sent', false],
+      ['email', 'failed', false],
+    ]);
+  });
+
+  it('is never stored on a row written failed for an address not allowlisted', async () => {
+    build({ EMAIL_ALLOWLIST: 'someone@else.test' });
+    const ana = await account('ana');
+    await issue(ana);
+    const [row] = await emailRows(ana);
+    expect([row.failure, 'link' in Object(row.params)]).toEqual([
+      'not_allowed',
+      false,
+    ]);
+  });
+});
+
 describe('switching sending off after a message was queued', () => {
   it('fails the queued row without calling Brevo', async () => {
     const andrei = await account('andrei');
