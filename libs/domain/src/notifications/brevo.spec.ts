@@ -1,4 +1,4 @@
-// @traces 195-FR-005
+// @traces 195-FR-005 392-FR-001 392-FR-002 392-FR-007
 import { Brevo, BrevoError } from './brevo';
 import { BrevoMock } from './brevo-mock.testing';
 
@@ -81,5 +81,94 @@ describe('the Brevo e-mail adapter', () => {
     });
     mock.answer({ status: 401 });
     await expect(brevo().checkKey()).resolves.toBe(false);
+  });
+});
+
+describe('the Brevo SMS adapter', () => {
+  const sms = {
+    content: 'MotorFix: ITP-ul expiră curând.',
+    recipient: '+40712345678',
+    sender: 'MotorFix',
+  };
+
+  it('sends one transactional SMS to the number without its plus', async () => {
+    mock.answer({ body: { messageId: 7781, reference: 'r' }, status: 201 });
+    await expect(brevo().sendSms(sms)).resolves.toBe('7781');
+    const [call] = mock.sms();
+    expect(call.method).toBe('POST');
+    expect(call.headers['api-key']).toBe('test-key');
+    expect(call.body).toEqual({
+      content: 'MotorFix: ITP-ul expiră curând.',
+      recipient: '40712345678',
+      sender: 'MotorFix',
+      type: 'transactional',
+    });
+  });
+
+  it.each([
+    500, 429,
+  ])('treats a %s answer as worth retrying', async (status) => {
+    mock.answer({ status });
+    await expect(brevo().sendSms(sms)).rejects.toMatchObject({
+      reason: `provider_${status}`,
+      retryable: true,
+    });
+  });
+
+  it('does not retry a refused number', async () => {
+    mock.answer({ body: { code: 'invalid_parameter' }, status: 400 });
+    await expect(brevo().sendSms(sms)).rejects.toMatchObject({
+      reason: 'provider_400',
+      retryable: false,
+    });
+  });
+
+  it('does not retry an answer without a message id', async () => {
+    mock.answer({ body: {}, status: 201 });
+    await expect(brevo().sendSms(sms)).rejects.toMatchObject({
+      reason: 'provider_bad_answer',
+      retryable: false,
+    });
+  });
+});
+
+describe('the Brevo WhatsApp adapter', () => {
+  const message = {
+    params: ['B 123 ABC'],
+    sender: '+40700000099',
+    templateId: 12,
+    to: '+40712345678',
+  };
+
+  it('sends the approved template with its values from the sender number', async () => {
+    mock.answer({ body: { messageId: 'wa-77' }, status: 201 });
+    await expect(brevo().sendWhatsApp(message)).resolves.toBe('wa-77');
+    expect(mock.whatsapp()[0].body).toEqual({
+      contactNumbers: ['40712345678'],
+      params: ['B 123 ABC'],
+      senderNumber: '40700000099',
+      templateId: 12,
+    });
+  });
+
+  it('sends no values for a template without slots', async () => {
+    await brevo().sendWhatsApp({ ...message, params: [] });
+    expect(mock.whatsapp()[0].body).not.toHaveProperty('params');
+  });
+
+  it('does not retry a number that is not on WhatsApp', async () => {
+    mock.answer({ body: { code: 'invalid_parameter' }, status: 400 });
+    await expect(brevo().sendWhatsApp(message)).rejects.toMatchObject({
+      reason: 'provider_400',
+      retryable: false,
+    });
+  });
+
+  it('treats Brevo down as worth retrying', async () => {
+    mock.answer({ status: 503 });
+    await expect(brevo().sendWhatsApp(message)).rejects.toMatchObject({
+      reason: 'provider_503',
+      retryable: true,
+    });
   });
 });

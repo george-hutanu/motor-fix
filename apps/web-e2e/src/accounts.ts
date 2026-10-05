@@ -9,6 +9,7 @@ export const ACCOUNTS = {
   driver: 'sofer@example.test',
   garage: 'service@example.test',
   mechanic: 'mecanic@example.test',
+  otherDriver: 'sofer2@example.test',
   receptionist: 'receptie@example.test',
   suspended: 'suspendat@example.test',
   switcher: 'comutare@example.test',

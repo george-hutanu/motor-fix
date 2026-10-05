@@ -34,7 +34,12 @@ let publish: jest.Mock;
 beforeEach(() => {
   jest.useFakeTimers({ now: NOW });
   publish = jest.fn(async () => 1);
-  hub = new LiveHub({ publish });
+  hub = new LiveHub({ publish }, async () => ({
+    mechanics: new Map(),
+    off: new Set(),
+    owners: new Set(['g1']),
+    receptionists: new Set(),
+  }));
 });
 
 afterEach(() => {
@@ -48,7 +53,13 @@ const open = (
   expiresAt = NOW + 15 * MINUTE,
 ) => {
   const sink = new Sink();
-  const id = hub.open(sink, { accountId, channels, expiresAt });
+  const id = hub.open(sink, {
+    accountId,
+    channels,
+    expiresAt,
+    garageId: channels.includes('garage:x') ? 'x' : null,
+    role: channels.includes('garage:x') ? 'garage' : 'driver',
+  });
   return { id, sink };
 };
 

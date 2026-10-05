@@ -22,7 +22,8 @@ interface Reply {
 }
 
 // Brevo's transactional API as recorded: POST /smtp/email answers 201 with a
-// messageId, GET /account answers 200 for a good key and 401 for a bad one.
+// messageId, POST /transactionalSMS/sms and /whatsapp/sendMessage likewise,
+// GET /account answers 200 for a good key and 401 for a bad one.
 export class BrevoMock {
   readonly calls: RecordedCall[] = [];
   private replies: Reply[] = [];
@@ -65,6 +66,14 @@ export class BrevoMock {
     return this.calls.filter((c) => c.path === '/v3/smtp/email');
   }
 
+  sms() {
+    return this.calls.filter((c) => c.path === '/v3/transactionalSMS/sms');
+  }
+
+  whatsapp() {
+    return this.calls.filter((c) => c.path === '/v3/whatsapp/sendMessage');
+  }
+
   private reply(req: IncomingMessage, res: ServerResponse, raw: string) {
     const path = req.url ?? '';
     this.calls.push({
@@ -83,6 +92,14 @@ export class BrevoMock {
     if (path === '/v3/account')
       return { body: { email: 'owner@example.test' }, status: 200 };
     this.sent += 1;
+    // The SMS API answers a numeric id; WhatsApp a string one.
+    if (path === '/v3/transactionalSMS/sms')
+      return {
+        body: { messageId: 1000 + this.sent, reference: `ref-${this.sent}` },
+        status: 201,
+      };
+    if (path === '/v3/whatsapp/sendMessage')
+      return { body: { messageId: `wa-${this.sent}` }, status: 201 };
     return {
       body: { messageId: `<mock-${this.sent}@smtp-relay.mailin.fr>` },
       status: 201,

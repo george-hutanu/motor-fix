@@ -494,3 +494,122 @@ describe('the end of a stream', () => {
     });
   });
 });
+
+describe('who gets an event at a garage', () => {
+  const fanOut = async (
+    audience: string[],
+    kind: string,
+    id: string = randomUUID(),
+  ) => {
+    const publisher = new Redis(redisUrl);
+    await publisher.publish(
+      LIVE_CHANNEL,
+      JSON.stringify({
+        audience,
+        event: { at: new Date().toISOString(), id, kind },
+      }),
+    );
+    publisher.disconnect();
+  };
+  const settle = () => new Promise((r) => setTimeout(r, 300));
+  const seen = (live: { messages: Message[] }) =>
+    live.messages.map((m) => m.event).filter((k) => k !== 'hello');
+
+  async function team() {
+    const owner = await account('Ion', ['garage']);
+    const receptionist = await account('Maria', ['receptionist']);
+    const elena = await account('Elena', ['mechanic']);
+    const mihai = await account('Mihai', ['mechanic']);
+    const garageId = await garageWith([
+      { accountId: owner, role: 'owner' },
+      { accountId: receptionist, role: 'receptionist' },
+    ]);
+    await prisma.mechanic.create({
+      data: { accountId: elena, canAnswerQuotes: false, garageId },
+    });
+    const mechanic = await prisma.mechanic.create({
+      data: { accountId: mihai, canAnswerQuotes: true, garageId },
+    });
+    const people = [
+      [owner, 'garage'],
+      [receptionist, 'receptionist'],
+      [elena, 'mechanic'],
+      [mihai, 'mechanic'],
+    ] as const;
+    const live = [];
+    for (const [id, role] of people) {
+      const s = await stream(app, `Bearer ${token(id, role)}`);
+      await s.next('hello');
+      live.push(s);
+    }
+    const [ownerLive, deskLive, elenaLive, mihaiLive] = live;
+    if (!ownerLive || !deskLive || !elenaLive || !mihaiLive) throw new Error();
+    return {
+      deskLive,
+      elenaLive,
+      garageId,
+      mechanicId: mechanic.id,
+      mihaiLive,
+      ownerLive,
+      receptionist,
+    };
+  }
+
+  it('gives each staff role only the kinds its role and rights allow', async () => {
+    const { deskLive, elenaLive, garageId, mechanicId, mihaiLive, ownerLive } =
+      await team();
+
+    await fanOut([`garage:${garageId}`], 'request.created');
+    await fanOut([`garage:${garageId}`], 'price_list.updated');
+    await fanOut(
+      [`garage:${garageId}`, `mechanic:${mechanicId}`],
+      'job.updated',
+    );
+    await settle();
+
+    expect(seen(ownerLive)).toEqual([
+      'request.created',
+      'price_list.updated',
+      'job.updated',
+    ]);
+    expect(seen(deskLive)).toEqual(['request.created', 'job.updated']);
+    expect(seen(elenaLive)).toEqual([]);
+    expect(seen(mihaiLive)).toEqual(['request.created', 'job.updated']);
+  });
+
+  it('forwards no media event to the staff of a garage with live media off', async () => {
+    const { garageId, ownerLive } = await team();
+    await prisma.garageFeature.create({
+      data: { enabled: false, garageId, key: 'live_media' },
+    });
+
+    await fanOut([`garage:${garageId}`], 'media.added');
+    await fanOut([`garage:${garageId}`], 'request.created');
+    await settle();
+
+    expect(seen(ownerLive)).toEqual(['request.created']);
+  });
+
+  it('takes a removed member off the garage at once', async () => {
+    const { deskLive, garageId, ownerLive, receptionist } = await team();
+    await fanOut([`garage:${garageId}`], 'member.removed', receptionist);
+    await fanOut([`garage:${garageId}`], 'request.created');
+    await settle();
+
+    expect(seen(deskLive)).toEqual([]);
+    expect(seen(ownerLive)).toEqual(['member.removed', 'request.created']);
+  });
+
+  it('ends the streams of a suspended account with bye evicted', async () => {
+    const driver = await account('Andrei', ['driver']);
+    const live = await stream(app, `Bearer ${token(driver, 'driver')}`);
+    await live.next('hello');
+
+    await fanOut([`account:${driver}`], 'account.suspended', driver);
+    await live.ended;
+
+    expect(live.messages.at(-1)).toMatchObject({
+      data: { kind: 'bye', reason: 'evicted' },
+    });
+  });
+});

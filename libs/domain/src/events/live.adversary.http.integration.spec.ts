@@ -240,12 +240,7 @@ describe('the live stream audiences', () => {
     expect(seen(d)).toEqual(['hello', 'system.ping']);
     expect(seen(o)).toEqual(['garage.ping', 'hello', 'system.ping']);
     expect(seen(r)).toEqual(['garage.ping', 'hello', 'system.ping']);
-    expect(seen(m)).toEqual([
-      'garage.ping',
-      'hello',
-      'mechanic.ping',
-      'system.ping',
-    ]);
+    expect(seen(m)).toEqual(['hello', 'mechanic.ping', 'system.ping']);
     expect(seen(a)).toEqual(['admin.ping', 'hello', 'system.ping']);
     expect(seen(s)).toEqual(['hello', 'other.ping', 'system.ping']);
   });

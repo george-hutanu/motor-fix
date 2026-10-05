@@ -175,8 +175,23 @@ describe('the channels muted for a message', () => {
       mutedChannels('REQUEST_RECEIVED', [
         row('REQUEST_RECEIVED', 'push', false, GARAGE),
       ]),
-    ).toEqual(new Set(['push']));
-    expect(mutedChannels('REQUEST_RECEIVED', [])).toEqual(new Set());
+    ).toEqual(new Set(['push', 'whatsapp']));
+  });
+
+  it('keeps staff WhatsApp off until it is turned on', () => {
+    expect(mutedChannels('REQUEST_RECEIVED', [])).toEqual(
+      new Set(['whatsapp']),
+    );
+    expect(
+      mutedChannels('REQUEST_RECEIVED', [
+        row('REQUEST_RECEIVED', 'whatsapp', true, GARAGE),
+      ]),
+    ).toEqual(new Set());
+    expect(mutedChannels('GARAGE_SUSPENDED', [])).toEqual(
+      new Set(['whatsapp']),
+    );
+    expect(mutedChannels('STAFF_INVITE', [])).toEqual(new Set(['whatsapp']));
+    expect(mutedChannels('CAR_TRANSFER_LINK', [])).toEqual(new Set());
   });
 
   it('never stops an always-sent message from going by e-mail', () => {

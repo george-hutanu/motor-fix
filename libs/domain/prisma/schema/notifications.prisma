@@ -72,3 +72,15 @@ model NotificationPreference {
   @@index([garageId])
   @@map("notification_preference")
 }
+
+// The SMS a driver was sent in one calendar month (Europe/Bucharest); a new
+// month is a new row, so nothing resets it.
+model SmsCounter {
+  accountId String  @map("account_id") @db.Uuid
+  month     String
+  sentCount Int     @default(0) @map("sent_count")
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@id([accountId, month])
+  @@map("sms_counter")
+}

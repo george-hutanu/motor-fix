@@ -103,6 +103,8 @@ const NOT_CHANGES = new Set([
   'NotificationsService.dispatch',
   'NotificationsService.emailRow',
   'NotificationsService.fail',
+  'NotificationsService.fallBack',
+  'NotificationsService.phoneRow',
   'NotificationsService.release',
 ]);
 

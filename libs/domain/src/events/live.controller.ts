@@ -23,6 +23,7 @@ import {
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 
+import { audienceOf } from './audience';
 import { LiveHub } from './live.hub';
 import { verifyAccessToken } from '../auth/access-token';
 import {
@@ -64,7 +65,13 @@ export class LiveController {
       'X-Accel-Buffering': 'no',
     });
     res.flushHeaders();
-    this.hub.open(res, { accountId: actor.accountId, channels, expiresAt });
+    this.hub.open(res, {
+      accountId: actor.accountId,
+      channels,
+      expiresAt,
+      garageId: actor.garageId,
+      role: actor.role,
+    });
   }
 
   @Post('admin/live/test')
@@ -84,7 +91,10 @@ export class LiveController {
       kind: 'live.test',
     };
     try {
-      await this.hub.publish(event, [`account:${target.id}`]);
+      await this.hub.publish(
+        event,
+        audienceOf({ accountId: target.id, type: 'account' }),
+      );
     } catch {
       throw new HttpException(
         { code: 'live_unavailable', message: 'Live updates are unavailable' },

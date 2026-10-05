@@ -84,11 +84,15 @@ export function mutedChannels(
     const { channel, enabled } = driverChoice(name, rows);
     return new Set(channels.filter((c) => !enabled || c !== channel));
   }
+  // Staff WhatsApp is off until the person turns it on, unless the type goes
+  // by nothing else.
+  const optIn = (c: OutsideChannel) =>
+    c === 'whatsapp' && channels.some((other) => other !== 'whatsapp');
   return new Set(
-    channels.filter(
-      (c) =>
-        rows.find((r) => r.type === name && r.channel === c)?.enabled === false,
-    ),
+    channels.filter((c) => {
+      const saved = rows.find((r) => r.type === name && r.channel === c);
+      return optIn(c) ? saved?.enabled !== true : saved?.enabled === false;
+    }),
   );
 }
 

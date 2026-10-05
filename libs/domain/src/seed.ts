@@ -45,6 +45,13 @@ const PEOPLE: Person[] = [
     name: 'Andrei Popescu',
     roles: ['driver'],
   },
+  // A second driver, for what one driver must never see of another.
+  {
+    email: 'sofer2@example.test',
+    lastRole: 'driver',
+    name: 'Maria Stan',
+    roles: ['driver'],
+  },
   {
     at: { as: 'owner', garage: 'atelier-test' },
     email: 'service@example.test',

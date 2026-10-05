@@ -112,11 +112,21 @@ describe('a message whose kind the person switched off', () => {
 });
 
 describe('a driver’s chosen channel', () => {
-  it('writes no e-mail row for a type that goes by WhatsApp', async () => {
+  it('writes no e-mail row for a type that goes by push', async () => {
     const driver = await account('andrei');
-    await prefer(driver, 'QUOTE_RECEIVED', 'whatsapp', true);
+    await prefer(driver, 'QUOTE_RECEIVED', 'push', true);
     expect(await hand('QUOTE_RECEIVED', driver)).toBe(0);
     expect(await channelsOf(driver, 'QUOTE_RECEIVED')).toEqual(['in_app']);
+  });
+
+  it('sends by e-mail a type set to WhatsApp when the phone is not verified', async () => {
+    const driver = await account('andrei');
+    await prefer(driver, 'QUOTE_RECEIVED', 'whatsapp', true);
+    expect(await hand('QUOTE_RECEIVED', driver)).toBe(1);
+    expect(await channelsOf(driver, 'QUOTE_RECEIVED')).toEqual([
+      'in_app',
+      'email',
+    ]);
   });
 
   it('sends by e-mail when nothing is saved', async () => {
