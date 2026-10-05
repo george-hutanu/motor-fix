@@ -82,6 +82,8 @@ export class Live implements OnDestroy {
   private pollTimer: ReturnType<typeof setInterval> | undefined;
 
   private readonly onOnline = () => this.wake?.();
+  // A stream can outlive the network without hearing it; this one is gone.
+  private readonly onOffline = () => this.attempt?.abort('offline');
   private readonly onVisibility = () => {
     if (document.visibilityState === 'hidden') {
       this.hiddenAt ??= Date.now();
@@ -99,6 +101,7 @@ export class Live implements OnDestroy {
   constructor() {
     if (!this.browser) return;
     window.addEventListener('online', this.onOnline);
+    window.addEventListener('offline', this.onOffline);
     document.addEventListener('visibilitychange', this.onVisibility);
   }
 
@@ -106,6 +109,7 @@ export class Live implements OnDestroy {
     this.close();
     if (!this.browser) return;
     window.removeEventListener('online', this.onOnline);
+    window.removeEventListener('offline', this.onOffline);
     document.removeEventListener('visibilitychange', this.onVisibility);
   }
 

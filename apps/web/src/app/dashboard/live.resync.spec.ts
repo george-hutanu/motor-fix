@@ -307,6 +307,21 @@ describe('reconnecting with backoff', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('drops its stream when the browser says the network is gone, and shows the bar 10 seconds later', async () => {
+    const { live } = setUp();
+    live.open();
+    await settle();
+    answers = ['fail', 'fail', 'fail'];
+
+    window.dispatchEvent(new Event('offline'));
+    await settle();
+    expect(live.state()).toBe('reconnecting');
+    await elapse(10_000);
+
+    expect(live.offline()).toBe(true);
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(1);
+  });
+
   it('tries at once when the browser says the network is back', async () => {
     const { live } = setUp();
     answers = ['fail', 'fail', 'fail', 'fail'];
