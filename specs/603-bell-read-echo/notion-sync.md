@@ -12,3 +12,8 @@
 - 2026-10-05 · qa · ST-603 story Status · Implementing → QA
 - 2026-10-05 · labels · PR #109 · QA
 - 2026-10-05 · debt · ST-603 · 2 tasks filed (deferred.md lines 4, 5)
+- 2026-10-05 · labels · PR #109 · none
+- 2026-10-05 · finish · ST-603 story Status · QA → Done
+- 2026-10-05 · finish · Foundations timeline · no row for ST-603
+- 2026-10-05 · comment · ST-603 · posted (6 items)
+- 2026-10-05 · ready · Foundations · +2 debt tasks filed from ST-603 (3f0607bff0d28148…, ST-630); no other item waited on ST-603
