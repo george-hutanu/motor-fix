@@ -1,0 +1,4 @@
+# Deferred findings: 623-precompact-flush
+
+- [ ] `.claude/hooks/precompact-flush.mjs:42` — **medium** — the Archived-status skip also silences the flush between "ready" and "merged": the archive's Status line is committed before the PR goes ready, so during QA fix laps (tail agent, speckit-watch `resume`) a compaction no longer writes the Compaction block to `auto-run.md`; skip on a narrower signal instead (the feature's PR merged, or HEAD not on the feature branch) (pr-tester lap 1, 2026-10-05) — Notion: https://app.notion.com/p/3f0607bff0d2819eb3d3e9f8a4820dd3
+- [ ] `.claude/hooks/precompact-flush.spec.mjs:62` — **low** — the test "clean when only the spec folder differs" runs `git add .` and commits before `run()`, so nothing differs; leave the spec folder uncommitted so the test exercises its name (pr-tester lap 1, 2026-10-05) — Notion: https://app.notion.com/p/3f0607bff0d281e49651d04c8620f6f8
