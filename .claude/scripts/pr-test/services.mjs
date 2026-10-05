@@ -23,12 +23,13 @@ export async function freePorts(n) {
   }
 }
 
-/** The API's health routes (libs/domain/src/health/health.controller.ts), the only two it serves. */
+/** The health routes of the API and the worker (both mount libs/domain/src/health/health.controller.ts), the only two it serves. */
 export const HEALTH = { live: "/health/live", ready: "/health/ready" };
 
 /** What a flows file gets for the API it runs against: each returns the fetch Response. */
 export function apiHealth(apiURL) {
-  return { health: () => fetch(apiURL + HEALTH.live), ready: () => fetch(apiURL + HEALTH.ready) };
+  const get = (path) => fetch(apiURL + path, { signal: AbortSignal.timeout(5000) });
+  return { health: () => get(HEALTH.live), ready: () => get(HEALTH.ready) };
 }
 
 /** Poll a URL until it answers 2xx or the time runs out. */

@@ -53,8 +53,9 @@ describe('the API health routes', () => {
   const controller = readFileSync(fileURLToPath(new URL('../../../libs/domain/src/health/health.controller.ts', import.meta.url)), 'utf8');
 
   it('are the routes the API health controller declares', () => {
-    const base = controller.match(/@Controller\('([^']+)'\)/)[1];
-    const routes = [...controller.matchAll(/@Get\('([^']+)'\)/g)].map((m) => `/${base}/${m[1]}`);
+    const base = controller.match(/@Controller\('([^']+)'\)/)?.[1];
+    assert.ok(base, 'the health controller declares its path in @Controller');
+    const routes = [...controller.matchAll(/@Get\((?:'([^']*)')?\)/g)].map((m) => (m[1] ? `/${base}/${m[1]}` : `/${base}`));
     assert.deepEqual([HEALTH.live, HEALTH.ready].sort(), routes.sort());
   });
 
