@@ -428,6 +428,20 @@ describe('debt', () => {
   });
 });
 
+describe('debt with a bad answer', () => {
+  it('never marks a bullet filed when Notion answers without a page url', async () => {
+    const deferred = '# Deferred\n\n- **low** — `x.mjs` — a follow-up (code-reviewer)\n';
+    const repo = repoWith({ deferred });
+    const ws = workspace({
+      stories: [story(687, 'QA', { pr: PR_URL })],
+      fail: (method, path) => (method === 'POST' && path === '/pages' ? respond({ object: 'page', id: 'new1' }) : null),
+    });
+    const r = await run(['debt'], { ws, repo });
+    assert.equal(r.json.pending, 'debt ST-687 line 2 — bad response');
+    assert.equal(readFileSync(join(repo, FEATURE, 'deferred.md'), 'utf8'), deferred);
+  });
+});
+
 describe('ready', () => {
   it('ticks only the candidates confirmed after the hold review', async () => {
     const ws = workspace({ stories: [story(687, 'Planning'), story(30, 'To do'), story(31, 'To do')] });
@@ -504,6 +518,19 @@ describe('failing open', () => {
     assert.equal(r.code, 0);
     assert.equal(calls, 2);
     assert.equal(r.lines.filter((l) => l.includes('PENDING')).length, 3);
+  });
+
+  it('ends a replayed finish whose comment file is gone instead of retrying it forever', async () => {
+    const repo = repoWith();
+    const logFile = join(repo, FEATURE, 'notion-sync.md');
+    writeFileSync(logFile, '# Notion sync — x\n\n- [NOTION-SYNC PENDING: comment ST-687 — 500 x] retry: ["finish","--body-file","/nowhere/comment.md"]\n');
+    const ws = workspace({ stories: [story(687, 'Implementing')] });
+    const r = await run(['qa'], { ws, repo });
+    assert.equal(r.code, 0);
+    assert.doesNotMatch(r.log, /NOTION-SYNC PENDING/);
+    assert.match(r.log, /^- \[NOTION-SYNC FAILED 2026-10-05: comment ST-687 — 500 x — finish: no comment file at \/nowhere\/comment\.md\]$/m);
+    const again = await run(['qa'], { ws, repo });
+    assert.equal(again.log.match(/NOTION-SYNC FAILED/g).length, 1);
   });
 
   it('refuses a finish whose comment file is missing before writing anything', async () => {

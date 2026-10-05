@@ -31,6 +31,12 @@ describe('speckit-notion-sync', () => {
     for (const tool of ['notion-update-page', 'notion-create-comment', 'notion-create-pages']) assert.ok(skill.includes(tool), `fallback lost ${tool}`);
   });
 
+  it('keeps the finish comment at a fixed, git-ignored path that outlives a retry', () => {
+    assert.match(skill, /specs\/<feature>\/finish-comment\.md/);
+    assert.match(skill, /absolute path/i);
+    assert.match(readFileSync(join(root, '.gitignore'), 'utf8'), /^specs\/\*\*\/finish-comment\.md$/m);
+  });
+
   it('is shorter than the connector-only skill', () => {
     assert.ok(statSync(join(root, SKILL)).size < 14725);
   });

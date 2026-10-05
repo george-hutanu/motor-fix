@@ -171,11 +171,30 @@ async function replayPending(logFile, date, io, stderr) {
     .split("\n")
     .map((line) => line.match(PENDING)?.[2])
     .filter((argv) => argv && !seen.has(argv) && seen.add(argv));
+  const rewrite = (argv, change) =>
+    writeFileSync(
+      logFile,
+      readFileSync(logFile, "utf8")
+        .split("\n")
+        .map((line) => {
+          const m = line.match(PENDING);
+          return m?.[2] === argv ? change(m[1], line) : line;
+        })
+        .join("\n"),
+    );
   for (const argv of pending) {
     let pendingDesc = null;
     try {
       const out = [];
-      const code = await main(JSON.parse(argv), { ...io, stdout: (s) => out.push(s), replay: false });
+      const err = [];
+      const code = await main(JSON.parse(argv), { ...io, stdout: (s) => out.push(s), stderr: (s) => err.push(s), replay: false });
+      if (code === 64) {
+        // It can never succeed (a comment file gone, say): end it, loudly, instead of retrying forever.
+        const why = String(err[0] ?? "usage error").replace(/^notion-sync: /, "").split("\n")[0];
+        stderr(`notion-sync: replay can never succeed, ended: ${why}`);
+        rewrite(argv, (desc) => `- [NOTION-SYNC FAILED ${date}: ${desc} — ${why}]`);
+        continue;
+      }
       const last = out.at(-1) ?? "";
       pendingDesc = code !== 0 || !last.startsWith("{") ? "failed" : (JSON.parse(last).pending ?? null);
     } catch (error) {
@@ -185,10 +204,7 @@ async function replayPending(logFile, date, io, stderr) {
     // Notion unreachable: the rest would fail the same way, one call each.
     if (/ — (timeout|network error)$/.test(pendingDesc ?? "")) return;
     if (pendingDesc) continue;
-    const retried = readFileSync(logFile, "utf8")
-      .split("\n")
-      .map((line) => (line.match(PENDING)?.[2] === argv ? line.replace("[NOTION-SYNC PENDING:", `[NOTION-SYNC RETRIED ${date}:`) : line));
-    writeFileSync(logFile, retried.join("\n"));
+    rewrite(argv, (_, line) => line.replace("[NOTION-SYNC PENDING:", `[NOTION-SYNC RETRIED ${date}:`));
   }
 }
 
@@ -404,6 +420,7 @@ async function fileDebt(ctx) {
     }
     ctx.step = { name: "debt", item: `${st} line ${entry.line}` };
     const page = await client.request("POST", "/pages", { parent: { type: "data_source_id", data_source_id: STORIES }, properties, markdown: task.content });
+    if (typeof page?.url !== "string" || !page.url) throw new NotionError("bad response", "POST /pages answered without a page url");
     markdown = markFiled(markdown, entry.line, page.url);
     writeFileSync(file, markdown);
     ctx.log("debt", st, `deferred.md line ${entry.line} → ${page.url}`);

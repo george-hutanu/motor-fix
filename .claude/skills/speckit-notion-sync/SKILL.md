@@ -157,8 +157,9 @@ Clarifications and Assumptions, and the PR's Agent review, and collect:
 - **Open questions** left for the owner.
 
 When one exists, write one bullet per item under those headings, each with its
-source file, plus the PR link, to a file and pass it as `--body-file`; the
-script posts it (`notion-create-comment` on the connector path) once. When none
+source file, plus the PR link, to `specs/<feature>/finish-comment.md` (git
+ignores it, so a PENDING retry still finds it) and pass its absolute path as
+`--body-file`; the script posts it (`notion-create-comment` on the connector path) once. When none
 exists, pass `--no-comment`: no comment is posted. Logged as
 `- <date> · comment · ST-<n> · posted (<count> items)` or `· nothing to record`.
 
