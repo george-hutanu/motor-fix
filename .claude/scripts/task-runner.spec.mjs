@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 // The story, tail and watch agents run as one definition whose first turn
@@ -22,15 +22,17 @@ const sectionFrom = (text, marker) => {
   return text.slice(start, next === -1 ? undefined : next);
 };
 
-const NEEDED = ['Bash', 'Read', 'Edit', 'Write', 'Grep', 'Glob', 'Skill', 'Agent', 'ToolSearch', 'Monitor', 'TaskStop', 'EnterWorktree', 'PushNotification'];
-const HEAVY = ['Artifact', 'mcp__Claude_Browser', 'mcp__claude-in-chrome', 'mcp__chrome-devtools', 'mcp__Claude_Code_iOS_Simulator', 'mcp__visualize', 'mcp__ccd_session', 'mcp__ccd_session_mgmt'];
-const REREAD = /\b(follow|read|re-read)\s+(the current\s+)?(AGENTS\.md|CLAUDE\.local\.md)/i;
+// Artifact reads the design mock; webstorm is harden's second analyzer.
+const NEEDED = ['Bash', 'Read', 'Edit', 'Write', 'Grep', 'Glob', 'Skill', 'Agent', 'ToolSearch', 'Monitor', 'TaskStop', 'EnterWorktree', 'PushNotification', 'Artifact', 'mcp__webstorm__get_file_problems'];
+const HEAVY = ['ArtifactComments', 'mcp__Claude_Browser', 'mcp__claude-in-chrome', 'mcp__chrome-devtools', 'mcp__Claude_Code_iOS_Simulator', 'mcp__visualize', 'mcp__ccd_session', 'mcp__ccd_session_mgmt'];
+const REREAD = /\b(follow|read|re-read)\s+(AGENTS\.md|CLAUDE\.local\.md)|^\s*- (AGENTS\.md|CLAUDE\.local\.md)\b/im;
+// A quoted prompt wraps across `> ` lines and names files in backticks.
+const prose = (text) => text.replace(/^[ \t]*>[ \t]?/gm, '').replaceAll('`', '');
+const rereads = (text) => REREAD.test(prose(text));
 
 const denies = (denied, tool) => denied.some((d) => tool === d || tool.startsWith(`${d}__`));
 
 describe('the task-runner definition', () => {
-  it('exists', () => assert.ok(existsSync(join(root, AGENT)), `${AGENT} is missing`));
-
   it('runs on Opus with a deny list and no allowlist', () => {
     const fm = frontmatter(read(AGENT));
     assert.equal(field(fm, 'name'), 'task-runner');
@@ -45,9 +47,14 @@ describe('the task-runner definition', () => {
 
   it('says the rules are in context and gives the delta command', () => {
     const body = read(AGENT);
-    assert.doesNotMatch(body, REREAD);
+    assert.ok(!rereads(body));
     assert.match(body, /git diff -R origin\/main -- AGENTS\.md CLAUDE\.local\.md/);
     assert.match(body, /constitution-card\.md/);
+  });
+
+  it('caps its reply at 10 lines', () => {
+    const output = read(AGENT).slice(read(AGENT).indexOf('## Output'));
+    assert.match(output, /at\s+most\s+10\s+lines/);
   });
 });
 
@@ -66,7 +73,7 @@ describe('the dispatches', () => {
   it('send every watch fix as task-runner, merge on Sonnet', () => {
     const step = sectionFrom(watch, '## One pass');
     assert.match(step, /subagent_type: task-runner/);
-    assert.match(step, /`merge`[\s\S]{0,40}model: "sonnet"|model: "sonnet"[\s\S]{0,200}`merge`/);
+    assert.match(step, /model: "sonnet"[\s\S]{0,200}`merge`/);
   });
 
   it('never name general-purpose in speckit-auto or speckit-watch', () => {
@@ -75,10 +82,10 @@ describe('the dispatches', () => {
   });
 
   it('ask no agent to re-read AGENTS.md or CLAUDE.local.md', () => {
-    assert.doesNotMatch(auto, REREAD);
-    assert.doesNotMatch(watch, REREAD);
+    assert.ok(!rereads(auto), 'speckit-auto');
+    assert.ok(!rereads(watch), 'speckit-watch');
     for (const name of readdirSync(join(root, '.claude', 'agents')).filter((f) => f.endsWith('.md')))
-      assert.doesNotMatch(read(`.claude/agents/${name}`), REREAD, name);
+      assert.ok(!rereads(read(`.claude/agents/${name}`)), name);
   });
 
   it('are named in AGENTS.md', () => {

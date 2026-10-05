@@ -29,7 +29,8 @@ range (or "working tree"). Gather your own evidence:
   now. A comment that narrowed the ask after the spec was frozen is the finding
   the implementing agent structurally cannot see
 - `.specify/memory/constitution.md` — the non-negotiable principles
-- `AGENTS.md` — the operational conventions the constitution defers to
+- the operational conventions the constitution defers to: AGENTS.md, already
+  in your context (never Read it again)
 - the real code and tests the diff touches
 
 ## What to check, in priority order

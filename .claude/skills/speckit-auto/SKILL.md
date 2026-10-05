@@ -82,7 +82,7 @@ Run these before phase 1, in one batch:
   run auto on a machine that is also being used.
 - `git rev-parse --abbrev-ref HEAD` and `git rev-parse HEAD` — record the
   starting branch and commit.
-- Read the card, `.specify/memory/constitution-card.md` (v1.8.1: each
+- Read the card, `.specify/memory/constitution-card.md` (each
   principle and the gate that will fire at you), not the full constitution;
   the reviewers and the PR tester read that.
 - `sh scripts/heavy.sh sh -c 'npm run typecheck && npm run lint && npm run test' > <scratchpad>/preflight.log 2>&1; echo "exit $?"; tail -n 40 <scratchpad>/preflight.log`
@@ -100,9 +100,10 @@ dispatches the runs) keeps the watch scheduled as soon as two or more tasks or
 worktrees are active at once: `CronList` first, so it never doubles up; if no
 job runs `/speckit-watch`, schedule it every 15 minutes on off-minutes
 (`4,19,34,49 * * * *`) and run one pass right away (speckit-watch, "Keeping
-it scheduled"). A run isolated in a worktree never schedules it. It sends
-each story's run as `subagent_type: task-runner`, `run_in_background: true`,
-on the default model: the definition carries only the tools a run uses, and
+it scheduled"). A run isolated in a worktree never schedules it. The
+orchestrating session sends each story's run as `subagent_type: task-runner`,
+`run_in_background: true`, on the definition's model (Opus): it carries only
+the tools a run uses, and
 AGENTS.md and CLAUDE.local.md are already in its context, so the prompt names
 the task, the worktree and "run `/speckit-auto` to its hand-off", never a
 re-read of those files.
@@ -691,7 +692,7 @@ The report's sections:
 
 ## Completion Checklist
 
-- [ ] Preflight passed (clean tree, green typecheck/lint/tests, constitution read)
+- [ ] Preflight passed (clean tree, green typecheck/lint/tests, constitution card read)
 - [ ] Phases 1–16 executed in order, no phase skipped silently
 - [ ] Org context gathered, or every unavailable lane named in the report
 - [ ] Every interactive gate answered autonomously and logged

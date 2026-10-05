@@ -16,9 +16,11 @@ story's agent (`/speckit-auto` to its hand-off), the tail agent, and the watch
 fixes. They are `general-purpose` today, so each starts with every built-in and
 every connected server: about 57k tokens of first turn, against about 16k for
 this repo's agents that declare their tools. A dedicated definition removes the
-browser, simulator, visualize, artifact and session-management tools while
-keeping Bash, the file tools, Skill, Agent, ToolSearch, Monitor, TaskStop,
-EnterWorktree, PushNotification and the Notion connector, whatever its id.
+browser, simulator, visualize and session-management tools while keeping
+Bash, the file tools, Skill, Agent, ToolSearch, Monitor, TaskStop,
+EnterWorktree, PushNotification, Artifact (the design check reads the mock
+with it), the WebStorm inspections harden runs, and the Notion connector,
+whatever its id.
 
 **Independent Test**: `claude -p --agent task-runner --output-format json "Reply OK"`
 from the worktree reports a first turn below the `general-purpose` figure, and
@@ -49,16 +51,16 @@ card exists and matches the constitution.
 ### Edge Cases
 
 - A new Notion connector id: a deny list does not name Notion, so its tools stay reachable under any id (an allowlist cannot match `mcp__*__notion-*`; mid-name wildcards are ignored).
-- A connector whose id is a per-session UUID (Gmail, Calendar, Drive) cannot be denied by name; its tools are deferred, so only their names reach the first turn.
+- A connector is denied by its `mcp__claude_ai_<name>` id (Gmail, Calendar, Drive among them); when it connects under a per-session UUID instead, the name no longer matches, and since its tools are deferred only their names reach the first turn.
 - A watch `merge` fix keeps `model: "sonnet"`: the Agent call's `model` overrides the definition's `opus`.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: `.claude/agents/task-runner.md` MUST pin `model: opus`, MUST NOT carry a `tools:` allowlist, and its `disallowedTools` MUST deny the artifact, browser, Chrome, simulator, visualize and session-management tools while denying none of Bash, Read, Edit, Write, Grep, Glob, Skill, Agent, ToolSearch, Monitor, TaskStop, EnterWorktree, PushNotification or any Notion tool.
+- **FR-001**: `.claude/agents/task-runner.md` MUST pin `model: opus`, MUST NOT carry a `tools:` allowlist, and its `disallowedTools` MUST deny the artifact comment and data, browser, Chrome, simulator, visualize and session-management tools while denying none of Bash, Read, Edit, Write, Grep, Glob, Skill, Agent, ToolSearch, Monitor, TaskStop, EnterWorktree, PushNotification, Artifact (the design check's mock read), the WebStorm inspections (harden) or any Notion tool.
 - **FR-002**: The story dispatch and the tail dispatch in `speckit-auto`, and step 4 of `speckit-watch` (resume, tail, rerun-qa, fix-ci, merge), MUST name `subagent_type: task-runner` and no story, tail or watch dispatch MUST name `general-purpose`; `merge` MUST keep `model: "sonnet"`; AGENTS.md MUST name the definition for the story and tail agents.
-- **FR-003**: No dispatch template in `speckit-auto` or `speckit-watch`, and no agent definition, MUST tell an agent to follow or read AGENTS.md or CLAUDE.local.md; `task-runner.md` MUST say they are in context and give the delta command.
+- **FR-003**: No dispatch template in `speckit-auto` or `speckit-watch`, and no agent definition, MUST tell an agent to follow or read AGENTS.md or CLAUDE.local.md, or list either among the files to read; `task-runner.md` MUST say they are in context and give the delta command.
 - **FR-004**: `.specify/memory/constitution-card.md` MUST name every principle of `constitution.md` (numeral and title, in order) and its version, in at most 3,000 bytes; a harness spec MUST fail when they drift.
 - **FR-005**: `speckit-auto`'s Preflight and phase 1 MUST read the card instead of the full constitution; `spec-reviewer`, `code-reviewer` and `pr-tester` MUST keep reading `constitution.md`.
 - **FR-006**: The definition MUST carry the AGENTS.md reply envelope verbatim and a cap of at most 10 lines.

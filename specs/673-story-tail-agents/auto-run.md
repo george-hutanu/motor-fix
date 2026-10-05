@@ -33,3 +33,9 @@ Headless, Opus, first turn = input + cache creation + cache read of "Reply OK": 
 
 ## measure (final definition)
 `claude -p --agent task-runner --output-format json "Reply OK"`, Opus, first turn (input + cache creation + cache read): **34,876**; same call with no agent: **55,346** (brief: ~57k for general-purpose). Saving 20,470 (37%). Direct tools listed by the agent: Agent, Bash, Edit, Read, Skill, ToolSearch, Write; Notion reachable through ToolSearch under `mcp__claude_ai_Notion__`.
+
+## review lap 1
+spec-reviewer BLOCK (CRITICAL: Artifact denied, the design check reads the mock with it; HIGH: code-reviewer and spec-reviewer list AGENTS.md to read). code-reviewer BLOCK (HIGH: Artifact; HIGH: REREAD missed main's wrapped `> Follow\n> AGENTS.md`; MEDIUM: webstorm denied though harden runs it, card claim too wide, EnterWorktree/Monitor unmeasured). Fixed: Artifact and WebStorm reachable (FR-001 amended), the reviewers' AGENTS.md lines say it is in context, REREAD strips quote markers and backticks and catches bullets (proved against origin/main's four files), cap pinned, duplicate exists tests dropped, speckit-auto wording. Deferred (deferred.md): author skills still load the full constitution; Jira steps; reviewer/org-researcher Notion ids.
+
+## measure (after lap 1)
+`claude -p --agent task-runner --output-format json "Reply OK"`: **43,519** (Artifact's schema is ~8.6k of it); no agent: **55,240**. ToolSearch returns EnterWorktree, Monitor, TaskStop, PushNotification; Artifact, Skill and Agent are direct.

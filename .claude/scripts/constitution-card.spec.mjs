@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 // Authors read the card, not the 26 KB constitution; reviewers read the full
@@ -15,8 +15,6 @@ const versionOf = (text, pattern) => text.match(pattern)?.[1];
 
 describe('the constitution card', () => {
   const full = readFileSync(join(memory, 'constitution.md'), 'utf8');
-
-  it('exists', () => assert.ok(existsSync(CARD), 'constitution-card.md is missing'));
 
   it('names every principle of the constitution, in order', () => {
     const card = readFileSync(CARD, 'utf8');
