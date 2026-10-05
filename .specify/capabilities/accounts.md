@@ -8,6 +8,7 @@ features:
   - 020-account-language
   - 130-sign-in-gate
   - 128-sign-out
+  - 394-role-switch
 ---
 
 # Capability: Accounts
@@ -323,6 +324,42 @@ _From 128-sign-out._
 ### 128-FR-010 — A sign-out call (this device or all devices) that gets no answer, a network error or a 5xx MUST be kept pending in the browser and sent again on the browser's `online` event and before the next session load, sign-in or sign-up; a 2xx or 4xx answer MUST clear it.
 
 _From 128-sign-out._
+
+### 394-FR-001 — `POST /api/v1/auth/roles/switch` with `{ "role": <role> }` and the browser's refresh cookie, for an account that holds that role, MUST store it as `ACCOUNT.last_role` and answer 200 with `{ "accessToken" }`, a new access token for that role, renewing the session as a refresh does. (Moved from `/me/roles/switch` by pr-tester lap 4: a switch from an access token alone kept a signed-out session alive.)
+
+_From 394-role-switch._
+
+### 394-FR-002 — Switching to a role the account does not hold MUST answer 404 and change nothing; a body without a valid role MUST answer 400 `validation_failed`.
+
+_From 394-role-switch._
+
+### 394-FR-003 — A switch MUST write no audit entry and send no notification.
+
+_From 394-role-switch._
+
+### 394-FR-004 — `POST /api/v1/auth/refresh` MAY carry `{ "role": <role> }`; the new access token MUST be for that role when the account holds it, otherwise for the role it is issued for today; a refresh MUST NOT change `last_role`.
+
+_From 394-role-switch._
+
+### 394-FR-005 — The dashboard frame of an account with two or more roles MUST show one chip per role it holds, labelled "Șofer", "Service", "Recepție", "Mecanic", "Admin" (EN "Driver", "Garage", "Front desk", "Mechanic", "Admin"), in a group labelled "Rolul tău" / "Your role", the role in use pressed; an account with one role MUST show no chips.
+
+_From 394-role-switch._
+
+### 394-FR-006 — Tapping a chip of another role MUST switch to it (FR-001) with the tab's session, then reload the account, reopen the live connection and open that role's dashboard, without a new sign-in.
+
+_From 394-role-switch._
+
+### 394-FR-007 — A switch that fails (no answer, an error answer) MUST show the toast "Nu am putut schimba rolul. Încearcă din nou." / "Could not switch the role. Try again." and keep the tab's role, token and dashboard.
+
+_From 394-role-switch._
+
+### 394-FR-008 — The web app's token renewal MUST send the role its tab is showing (FR-004), so a tab keeps its role until reloaded.
+
+_From 394-role-switch._
+
+### 394-FR-009 — A switch whose refresh cookie is missing, expired, or ended by a sign-out on this device or on every device MUST answer 401 and change nothing; a request that is not JSON MUST answer 415.
+
+_From 394-role-switch._
 
 ## Retired
 
