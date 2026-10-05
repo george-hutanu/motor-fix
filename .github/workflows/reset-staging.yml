@@ -28,7 +28,7 @@ jobs:
       RAILWAY_SERVICE_API: ${{ vars.RAILWAY_SERVICE_API }}
       KEY_NAME: reset-staging-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc

@@ -39,8 +39,9 @@ or overrides them.
    worktrees removed, deleted worktrees pruned. A failed action is reported,
    never retried with force.
 
-3. Report the board in a few lines: counts (`stale`, `done`, `blocked`, QA runs
-   of 4), then one line per row whose verdict is not `ok` — worktree, branch,
+3. Report the board in a few lines: counts (`stale`, `done`, `blocked`, live
+   `--local` QA runs; QA itself runs on GitHub Actions, capped at
+   `SPECKIT_QA_CAP`, by default its 20 concurrent jobs), then one line per row whose verdict is not `ok` — worktree, branch,
    phase, PR, fix, `reason`. Rows that are `ok` are summed, not listed.
 
    Dispatch only from a session that is not itself isolated in a worktree
@@ -58,7 +59,11 @@ or overrides them.
    ```
 
    Then one `Agent` call per entry, `subagent_type: general-purpose`,
-   `run_in_background: true`, all in one message. The prompt starts with:
+   `run_in_background: true`, all in one message. A `merge` entry also gets
+   `model: "sonnet"`: it merges `origin/main`, merges the PR and syncs Notion,
+   and judges no code (a new head goes back to the PR tester, which is pinned
+   to Opus). `resume`, `rerun-qa` and `fix-ci` write or judge code and keep
+   the default model. The prompt starts with:
 
    > Switch into the existing worktree with `EnterWorktree` and `path: <path>`
    > (branch `<branch>`, feature `<feature>`, PR #<pr>). Work only there. Follow
@@ -80,7 +85,8 @@ or overrides them.
    `speckit-notion-sync blocked <reason>`) and stop."
 
 5. Say which agents were dispatched, one line each. When the plan is empty and
-   `--fix` did nothing, the whole report is one line: `watch: N worktrees, none stale`.
+   `--fix` did nothing, the whole report is one line: `watch: N worktrees, none stale`,
+   and the pass ends there: no further reads, no other tool calls.
 
 A dispatched agent's claim keeps the next pass off that worktree until the
 claim is older than the phase's stale threshold; if the worktree still has not

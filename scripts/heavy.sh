@@ -1,7 +1,8 @@
 #!/bin/sh
 # Cap the memory-heavy commands every motor-fix session on this machine runs at
 # once: npm ci/install, nx build/serve/test/typecheck/e2e, Jest over more than
-# a few files, docker compose, Playwright, booting the apps.
+# a few files, docker compose, Playwright, booting the apps (a --local PR
+# tester run; the PR tester otherwise runs on GitHub Actions, pr-qa.yml).
 #
 #   scripts/heavy.sh <command...>
 #
@@ -11,8 +12,7 @@
 #
 #   HEAVY_LOCK      slot 1's lock file (default /tmp/motor-fix-heavy.lock);
 #                   slot n is the same path with .n before .lock
-#   HEAVY_SLOTS     how many heavy commands at once (default 4, so 4 PR-tester
-#                   runs can each hold one)
+#   HEAVY_SLOTS     how many heavy commands at once (default 4)
 #   HEAVY_MIN_FREE  free-memory floor in percent (default 20)
 #   HEAVY_WAIT      give up after this many seconds, exit 124, command not run
 #                   (default: wait for as long as it takes)

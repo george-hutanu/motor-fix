@@ -11,8 +11,11 @@ const WINDOW_SECONDS = 15 * 60;
 const LIMIT = { address: 20, email: 5 } as const;
 const SIGN_UP_WINDOW_SECONDS = 60 * 60;
 const SIGN_UP_LIMIT = 10;
+const RESET_WINDOW_SECONDS = 60 * 60;
+const RESET_LIMIT = { address: 10, email: 3 } as const;
 
 type Kind = keyof typeof LIMIT;
+type Limited = 'sign-in' | 'sign-up' | 'reset';
 
 // One client however its address is written: an IPv4 address also in its
 // IPv6-mapped form, and an IPv6 address by its /64, which one subscriber
@@ -122,8 +125,32 @@ export class Attempts {
     }
   }
 
+  // Counts one reset request for the e-mail and from the address; false once
+  // either has had its share of the hour that began with its first.
+  async admitReset(email: string, address: string): Promise<boolean> {
+    const client = this.client('reset', address);
+    const keys: [string, number][] = [
+      [`auth:reset:email:${digest(email)}`, RESET_LIMIT.email],
+    ];
+    if (client) {
+      keys.push([`auth:reset:address:${digest(client)}`, RESET_LIMIT.address]);
+    }
+    try {
+      const counts = this.redis.multi();
+      for (const [key] of keys) {
+        counts.incr(key).expire(key, RESET_WINDOW_SECONDS, 'NX');
+      }
+      const replies = (await counts.exec()) ?? [];
+      for (const [error] of replies) if (error) throw error;
+      return keys.every(([, limit], i) => Number(replies[i * 2]?.[1]) <= limit);
+    } catch {
+      this.unavailable('reset');
+      return true;
+    }
+  }
+
   // The client behind an address, or null, logged, when it cannot be read.
-  private client(what: 'sign-in' | 'sign-up', address: string) {
+  private client(what: Limited, address: string) {
     const client = clientOf(address);
     if (!client) {
       this.logger.warn(`${what} address limit skipped: address unreadable`);
@@ -131,7 +158,7 @@ export class Attempts {
     return client;
   }
 
-  private unavailable(what: 'sign-in' | 'sign-up') {
+  private unavailable(what: Limited) {
     this.logger.warn(`${what} attempt limits skipped: Redis unavailable`);
   }
 }

@@ -22,7 +22,15 @@ import { fileURLToPath } from "node:url";
 import { readState } from "./run-state.mjs";
 
 export const DEFAULT_THRESHOLDS = { planning: 30, tests: 45, development: 45, review: 30, qa: 30, merging: 30 };
-const QA_CAP = 4;
+// QA boots on GitHub Actions (.github/workflows/pr-qa.yml), not on the laptop,
+// so the default is Actions' 20 concurrent jobs on a free plan, the ceiling a
+// dispatch can reach. SPECKIT_QA_CAP lowers it, e.g. to leave jobs for PR CI.
+// A `--local` run still waits for a scripts/heavy.sh slot.
+export const QA_CAP = 20;
+export function qaCapFrom(env = process.env) {
+  const value = String(env.SPECKIT_QA_CAP ?? "");
+  return /^[1-9]\d*$/.test(value) ? Number(value) : QA_CAP;
+}
 const AGENT_CAP = 2;
 const MIN = 60_000;
 const FIXES = ["merge", "fix-ci", "rerun-qa", "resume"];
@@ -173,11 +181,12 @@ export function fixOf(row, { now, thresholds }) {
   const atPrHead = row.clean && row.head && row.head === pr?.head;
   if (pr?.state === "ready" && pr.checks === "pass" && pr.agentReview === "success" && atPrHead) return { verdict: "stale", fix: "merge", reason };
   if (open && pr.checks === "fail") return { verdict: "stale", fix: "fix-ci", reason };
-  if (pr?.state === "ready" && pr.checks === "pass" && !pr.agentReview) return { verdict: "stale", fix: "rerun-qa", reason };
+  // QA runs beside CI, so a ready PR without a verdict is tested while CI still runs.
+  if (pr?.state === "ready" && pr.checks !== "fail" && !pr.agentReview) return { verdict: "stale", fix: "rerun-qa", reason };
   return { verdict: "stale", fix: "resume", reason };
 }
 
-export function dispatchPlan(rows, { qaLive, prsKnown = true }) {
+export function dispatchPlan(rows, { qaLive, qaCap = QA_CAP, prsKnown = true }) {
   if (!prsKnown) return [];
   const live = rows.filter((r) => r.claim?.live);
   let qa = qaLive + live.filter((r) => r.claim.fix === "rerun-qa" && !r.qaLive).length;
@@ -185,7 +194,7 @@ export function dispatchPlan(rows, { qaLive, prsKnown = true }) {
   const plan = [];
   const due = rows.filter((r) => r.verdict === "stale" && FIXES.includes(r.fix)).sort((a, b) => a.activity.at - b.activity.at);
   for (const r of due) {
-    if (r.fix === "rerun-qa" ? qa >= QA_CAP : other >= AGENT_CAP) continue;
+    if (r.fix === "rerun-qa" ? qa >= qaCap : other >= AGENT_CAP) continue;
     if (r.fix === "rerun-qa") qa++;
     else other++;
     plan.push({ path: r.path, branch: r.branch, feature: r.feature, phase: r.phase, fix: r.fix, pr: r.pr?.number ?? null });
@@ -284,7 +293,7 @@ function prFor(prs, branch) {
   return mine.find((p) => p.state === "OPEN") ?? mine.sort((a, b) => b.number - a.number)[0] ?? null;
 }
 
-export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claudeAlive, pidAlive = processAlive, thresholds = DEFAULT_THRESHOLDS } = {}) {
+export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claudeAlive, pidAlive = processAlive, thresholds = DEFAULT_THRESHOLDS, qaCap = QA_CAP } = {}) {
   const worktrees = parseWorktrees(git(repo, ["worktree", "list", "--porcelain"]) ?? "");
   const real = (p) => {
     try {
@@ -335,9 +344,10 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
   return {
     rows,
     qaRuns,
+    qaCap,
     prunable: orphans.map((w) => w.path),
     orphanLocks: orphans.filter((w) => w.lock !== null).map((w) => w.path),
-    plan: dispatchPlan(rows, { qaLive: qaRuns.length, prsKnown: prs !== null }),
+    plan: dispatchPlan(rows, { qaLive: qaRuns.length, qaCap, prsKnown: prs !== null }),
   };
 }
 
@@ -378,7 +388,7 @@ function render(report, now) {
   const prText = (pr) => (pr === "unknown" ? "unknown" : pr ? `#${pr.number} ${pr.state}${pr.state === "ready" || pr.state === "draft" ? ` ci:${pr.checks}${pr.agentReview ? ` qa:${pr.agentReview}` : ""}` : ""}` : "-");
   const count = (v) => report.rows.filter((r) => r.verdict === v).length;
   const lines = [
-    `watch — ${report.rows.length} worktrees · QA runs ${report.qaRuns.length}/${QA_CAP} · stale ${count("stale")} · done ${count("done")} · blocked ${count("blocked")}`,
+    `watch — ${report.rows.length} worktrees · QA runs ${report.qaRuns.length}/${report.qaCap} · stale ${count("stale")} · done ${count("done")} · blocked ${count("blocked")}`,
   ];
   const cols = report.rows.map((r) => [
     r.phase,
@@ -428,7 +438,7 @@ export function main(argv, { cwd = process.cwd(), now = Date.now(), ...deps } = 
     console.error(e.message);
     return 1;
   }
-  const report = collect(cwd, { now, thresholds, ...deps });
+  const report = collect(cwd, { now, thresholds, qaCap: qaCapFrom(), ...deps });
   if (report.rows.length === 0) {
     console.error("watch.mjs: not inside a git repository");
     return 1;

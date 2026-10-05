@@ -42,15 +42,15 @@ export async function waitForHttp(url, { timeoutMs = 120000, intervalMs = 1000 }
 
 /**
  * `docker` arguments for the compose services on the run's own ports and project.
- * TODO: not yet run end to end — the machine this was built on has no Docker.
- * Verify `up --wait` with the one-shot minio-setup and `down -v` on the first
- * Docker host that runs the tester (specs/434-agent-pr-review/deferred.md).
+ * The one-shot minio-setup stays out of `up --wait`, which fails whenever it
+ * exits before compose sees it running; `run --rm` returns its exit code.
  */
 export function composePlan({ project, file, ports }) {
   const base = ["compose", "-p", project, "-f", file];
   return {
     kind: "docker",
-    up: [...base, "up", "-d", "--wait", "postgres", "redis", "minio", "minio-setup"],
+    up: [...base, "up", "-d", "--wait", "postgres", "redis", "minio"],
+    setup: [...base, "run", "--rm", "minio-setup"],
     down: [...base, "down", "-v", "--remove-orphans"],
     env: { POSTGRES_PORT: String(ports.postgres), REDIS_PORT: String(ports.redis), MINIO_PORT: String(ports.minio) },
     storage: true,
@@ -79,6 +79,18 @@ export function localPlan({ dir, ports }) {
     ],
     storage: false,
   };
+}
+
+/** Where the PR QA workflow's containers listen (.github/workflows/pr-qa.yml). */
+export const EXTERNAL_PORTS = { postgres: 5432, redis: 6379, minio: 9000 };
+
+/**
+ * Services something else already runs, on EXTERNAL_PORTS: on a GitHub runner
+ * the workflow starts PostgreSQL, Redis and MinIO (with its bucket) and stops
+ * them with the job, so there is nothing to start or tear down here.
+ */
+export function externalPlan() {
+  return { kind: "external", storage: true };
 }
 
 /** What every app gets: the run's services, never the shared defaults. */

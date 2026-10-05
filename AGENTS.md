@@ -51,19 +51,30 @@ epic or a plan, whether run through spec-kit or by hand.
      (`speckit-notion-sync qa`, which also sets the PR's one stage label
      to `QA`). There is no In review stage: ready is QA.
   5. Get CI green: merge `origin/main` into the branch if it is behind and
-     push, wait for the checks (`gh pr checks <n> --watch`); a failing check is
-     fixed on the branch and waited for again.
-  6. QA: run the PR tester (`/speckit-pr-test <n>`, the `pr-tester` subagent);
-     the task and the PR's stage label stay QA. It boots the PR head in
-     its own worktree, tests it in a browser and against the API, reviews the
+     push, then wait for the checks (`gh pr checks <n> --watch`) in the
+     background (`run_in_background`), never in a foreground `sleep` loop; a
+     failing check is fixed on the branch and waited for again.
+  6. QA, started as soon as the PR is ready, beside step 5 rather than after
+     it: run the PR tester (`/speckit-pr-test <n>`, the `pr-tester` subagent);
+     the task and the PR's stage label stay QA. It leaves the unit and
+     end-to-end suites to CI, which runs them on the merge result. It
+     dispatches the PR QA workflow (`.github/workflows/pr-qa.yml`), where a
+     GitHub runner boots the PR head, tests it in a browser and against the
+     API and uploads the report and screenshots; then, locally, it reviews the
      diff, posts a review, fills the template's "Agent review" section and sets
-     the `agent-review` status on the head commit. Fix every blocking finding
+     the `agent-review` status on the head commit (`--local` boots on the
+     laptop instead, behind the heavy lock, when Actions is unavailable). Fix
+     every blocking finding
      (tests first), push, and run it again; each lap counts toward
      `SPECKIT_MAX_REPAIR_ITERATIONS` (5), and at the cap the task goes to
      Blocked and the PR stays unmerged.
   7. Merge on `agent-review` success with every other check green
      (`gh pr merge <n> --merge`); a PR with a failing, pending or missing check
      is never merged. Then set the task to Done (`speckit-notion-sync finish`).
+     A PR opened by Dependabot (its author on GitHub, not its title or branch)
+     and holding only Dependabot's commits skips step 6: it merges on every
+     other check green, `CI OK` included, with no `agent-review` status; a
+     failing, pending or missing check still refuses it.
 
   Technical debt a review defers (`specs/<feature>/deferred.md`) is filed as
   a To do task in Notion (`speckit-notion-sync debt`) before the merge; each
@@ -112,21 +123,24 @@ epic or a plan, whether run through spec-kit or by hand.
 
 - **Phones first.** Every review of a screen covers a 320 px phone, a 390 px
   phone, a tablet and a desktop, in light and dark, Romanian and English. The
-  PR tester's sweep (`.claude/scripts/pr-test/sweep.mjs`) runs all four; a
-  reviewer or agent checking by hand does the same, and a screen that scrolls
-  sideways at 320 px is a finding.
-- **In the built-in browser, where the session has one.** The session that
-  runs the lifecycle walks every changed screen of a ready PR in its built-in
-  browser pane (the `mcp__Claude_Browser__*` tools), so the owner can watch:
-  serve the PR head under `scripts/heavy.sh`, open each screen at the sizes
-  above, use the flows, then stop the server. The headless PR tester still
-  runs; this pass is the one a person can see.
-- **At most four PRs in QA at once.** Each run boots the whole stack on a
-  16 GB laptop, and the heavy lock still runs only three at a time, so a
-  fourth waits for a slot. After a merge, a PR waiting in QA merges
-  `origin/main` and is tested again only if it now conflicts with `main` or
-  shares changed files with what merged (never a rebase, which would need a
-  forced push); its CI already runs on the merge result.
+  PR tester's sweep (`.claude/scripts/pr-test/sweep.mjs`) runs all four, in
+  CI: the PR QA workflow (`.github/workflows/pr-qa.yml`) boots the PR head on
+  a GitHub runner. A reviewer or agent checking by hand does the same, and a
+  screen that scrolls sideways at 320 px is a finding.
+- **The artifact's screenshots are the evidence.** The PR QA run uploads
+  `report.md`, `report.json` and a screenshot per route, size, scheme and
+  language as its `pr-qa-<n>` artifact, and the tester reads them before it
+  posts. Walking the changed screens in the built-in browser pane (the
+  `mcp__Claude_Browser__*` tools) is optional: do it when the owner wants to
+  watch, serving the PR head under `scripts/heavy.sh` and stopping the server
+  after.
+- **QA runs in CI, not on the laptop.** A QA run holds no heavy slot, so ready
+  PRs are not queued behind the 16 GB laptop; only a `--local` run (Actions
+  unavailable) waits for a `scripts/heavy.sh` slot. After a merge, a PR
+  waiting in QA merges `origin/main` and is tested again only if it now
+  conflicts with `main` or shares changed files with what merged (never a
+  rebase, which would need a forced push); its CI already runs on the merge
+  result.
 - **No images in the repo.** Screenshots are evidence for a chat, a review
   or a PR comment, never a commit: QA copies only `report.md` and
   `report.json` into `pr-review/`, and `.gitignore` refuses images there. Real
@@ -152,13 +166,14 @@ decisions are the source for anything the constitution does not fix.
   than a few files, docker compose, Playwright, a boot-test-teardown run) go
   through `scripts/heavy.sh` (4 slots machine-wide); a dev server
   (`nx serve`) never holds a slot for as long as it lives, and mutation tests
-  never run locally, only in CI. Up to 4 QA runs (`/speckit-pr-test`) may run
-  at the same time, each holding one slot.
+  never run locally, only in CI. QA (`/speckit-pr-test`) runs on GitHub
+  Actions and holds no slot; its `--local` fallback holds one.
 - Parallel work is watched: `node .claude/scripts/watch.mjs` lists every
   worktree with its feature, phase, holder (a live agent or not), last
   activity, PR and the one fix a stale item needs. `/speckit-watch` applies the
-  safe fixes and dispatches an agent per stale item (QA runs within the limit
-  above, at most 2 other agents at once). The orchestrating session (the main
+  safe fixes and dispatches an agent per stale item (QA re-runs up to
+  `SPECKIT_QA_CAP`, by default Actions' 20 concurrent jobs; at most 2 other
+  agents at once). The orchestrating session (the main
   checkout, the one that dispatches tasks) schedules it as soon as two or more
   tasks or worktrees are active: `CronList` first so it never doubles up, then
   `/speckit-watch` every 15 minutes off the round minutes
@@ -182,12 +197,17 @@ decisions are the source for anything the constitution does not fix.
   `npm run test:unit` leaves those out and `npm run test:integration` runs
   only them (`JEST_SUITE` in `jest.preset.cjs`; unset runs all). Integration
   tests need `docker compose up -d` (or local servers), with `DATABASE_URL`
-  and `REDIS_URL` from `.env.example`.
+  and `REDIS_URL` from `.env.example`. The pre-commit hook needs neither: when
+  an affected project has integration specs it starts and migrates the
+  worktree's own PostgreSQL and Redis (`scripts/test-services.ts`, compose
+  project `mf-test-<worktree>-<hash>`, left running between commits; Docker
+  required), and it refuses a commit with `JEST_SUITE` set.
 - PR CI: `.github/workflows/ci.yml`, one job per check, in parallel: PR
   title (Conventional Commit), Biome, Typecheck, Unit tests, Integration
   tests (PostgreSQL+PostGIS and Redis services), E2E tests (Playwright
   `web-e2e`, servers started in the job), Build, Harness, Contract check,
-  Dependency audit, Docker build (`web`, `node-app`), then `CI OK`, which
+  Dependency audit, Docker build (`web`, `node-app`), Compose stack
+  (`docker-compose.yml` boots and creates the bucket), then `CI OK`, which
   fails when any of them did. A PR that changes documentation only
   (`scripts/docs-only.ts`: Markdown outside `.claude/`, `.specify/` and
   `.github/`, or `docs/`) runs only the PR title, Changes and `CI OK` jobs;
