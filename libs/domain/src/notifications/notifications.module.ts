@@ -12,6 +12,8 @@ import { Redis } from 'ioredis';
 import { Brevo } from './brevo';
 import { BrevoWebhookController } from './brevo-webhook.controller';
 import type { EmailConfig } from './email-config';
+import { NewsController } from './news.controller';
+import { NewsService } from './news.service';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsProcessor, retryDelay } from './notifications.processor';
 import {
@@ -82,6 +84,7 @@ export class NotificationsModule implements OnApplicationShutdown {
         NotificationsController,
         BrevoWebhookController,
         NotificationPreferencesController,
+        NewsController,
       ],
       exports: [NotificationsService],
       imports: [auth],
@@ -93,6 +96,7 @@ export class NotificationsModule implements OnApplicationShutdown {
           useExisting: PRISMA,
         }),
         NotificationPreferencesService,
+        NewsService,
       ],
     };
   }

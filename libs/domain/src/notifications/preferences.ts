@@ -1,5 +1,7 @@
 import {
   type NotificationGroupKey as DriverGroup,
+  NEWS_CONSENT_TEXT_VERSION,
+  type NewsConsentDto,
   NOTIFICATION_GROUPS,
   type OutsideChannel,
 } from '@motor-fix/contracts';
@@ -97,7 +99,7 @@ export function mutedChannels(
 }
 
 // One audit entry: the group or the type (with its channel), old and new.
-interface PreferenceChange {
+export interface PreferenceChange {
   field: string;
   oldValue: unknown;
   newValue: unknown;
@@ -174,4 +176,64 @@ export function planSave(
   for (const { key, enabled } of groups) switchGroup(plan, key, enabled);
   for (const choice of choices) choose(plan, choice);
   return { changes: plan.changes, writes: plan.writes };
+}
+
+// The NEWS row's record of the driver's consent.
+export interface NewsConsent {
+  consentGivenAt: Date | null;
+  consentTextVersion: string | null;
+  consentSource: string | null;
+  withdrawnAt: Date | null;
+}
+
+const consentState = (row: NewsConsent | null) =>
+  !row?.consentGivenAt ? 'none' : row.withdrawnAt ? 'withdrawn' : 'given';
+
+export const newsConsentView = (row: NewsConsent | null): NewsConsentDto => ({
+  currentTextVersion: NEWS_CONSENT_TEXT_VERSION,
+  givenAt: row?.consentGivenAt?.toISOString() ?? null,
+  state: consentState(row),
+  textVersion: row?.consentTextVersion ?? null,
+  withdrawnAt: row?.withdrawnAt?.toISOString() ?? null,
+});
+
+// Withdrawing keeps when and to which text consent was given; a row that never
+// had consent has nothing to withdraw.
+export const withdrawn = (row: NewsConsent | null, at: Date): NewsConsent => ({
+  consentGivenAt: row?.consentGivenAt ?? null,
+  consentSource: row?.consentSource ?? null,
+  consentTextVersion: row?.consentTextVersion ?? null,
+  withdrawnAt: consentState(row) === 'given' ? at : (row?.withdrawnAt ?? null),
+});
+
+// What a save that switches news writes about consent, and the audit entry
+// it makes; null when news is turned on without the current text version.
+export function consentChange(
+  enabled: boolean,
+  before: NewsConsent | null,
+  version: string | undefined,
+  at: Date,
+): { consent: NewsConsent; change: PreferenceChange | null } | null {
+  const was = consentState(before);
+  if (enabled && version !== NEWS_CONSENT_TEXT_VERSION) return null;
+  const consent = enabled
+    ? {
+        consentGivenAt: at,
+        consentSource: 'settings',
+        consentTextVersion: version ?? null,
+        withdrawnAt: null,
+      }
+    : withdrawn(before, at);
+  const now = consentState(consent);
+  if (now === was) return { change: null, consent };
+  return {
+    change: {
+      field: 'news_consent',
+      newValue: enabled
+        ? { state: now, textVersion: version, via: 'settings' }
+        : { state: now, via: 'settings' },
+      oldValue: was,
+    },
+    consent,
+  };
 }

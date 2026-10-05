@@ -323,11 +323,12 @@ describe('e-mail escaping and layout', () => {
     expect(out.text).toContain('a MotorFix admin sent a test message');
   });
 
-  it('carries no unsubscribe link in any shipped e-mail', () => {
+  it('carries no unsubscribe link in any shipped e-mail but news', () => {
     for (const [name, template] of Object.entries(TEMPLATES)) {
-      if (!template.email) continue;
+      if (!template.email || name === 'NEWS') continue;
       for (const language of ['ro', 'en']) {
         const out = render(name, 'email', language, {
+          ...template.example,
           app: APP,
           count: 3,
           link: `${APP}/x`,
@@ -339,10 +340,13 @@ describe('e-mail escaping and layout', () => {
 
   it('writes no cedilla in any shipped text', () => {
     const params = { app: APP, count: 3, link: `${APP}/x` };
-    const outputs = Object.entries(TEMPLATES).flatMap(([name, template]) => [
-      ...(template.email ? [render(name, 'email', 'ro', params)] : []),
-      ...(template.bell ? [render(name, 'bell', 'ro', params)] : []),
-    ]);
+    const outputs = Object.entries(TEMPLATES).flatMap(([name, template]) => {
+      const values = { ...template.example, ...params };
+      return [
+        ...(template.email ? [render(name, 'email', 'ro', values)] : []),
+        ...(template.bell ? [render(name, 'bell', 'ro', values)] : []),
+      ];
+    });
     expect(JSON.stringify(outputs)).not.toMatch(/[ŞşŢţ]/);
   });
 

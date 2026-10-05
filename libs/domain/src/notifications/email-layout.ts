@@ -20,7 +20,11 @@ export function emailHtml(mail: {
   lines: readonly string[];
   button: { label: string; href: string };
   reason: string;
+  stop?: { label: string; href: string };
 }): string {
+  const stop = mail.stop
+    ? `<br><a href="${escapeHtml(mail.stop.href)}" style="color:${PALETTE.textSecondary};text-decoration:underline">${escapeHtml(mail.stop.label)}</a>`
+    : '';
   const lines = mail.lines
     .map(
       (line) =>
@@ -34,7 +38,7 @@ export function emailHtml(mail: {
 <tr><td style="padding:24px 24px 8px;font-size:20px;font-weight:700;letter-spacing:0.02em;color:${PALETTE.text}">MotorFix</td></tr>
 <tr><td style="padding:16px 24px 8px">${lines}
 <p style="margin:8px 0 24px"><a href="${escapeHtml(mail.button.href)}" style="display:inline-block;padding:12px 20px;border-radius:6px;background:${PALETTE.amber};color:${PALETTE.onAmber};font-size:16px;font-weight:700;text-decoration:none">${escapeHtml(mail.button.label)}</a></p></td></tr>
-<tr><td style="padding:16px 24px 24px;border-top:1px solid ${PALETTE.line};font-size:13px;line-height:20px;color:${PALETTE.textSecondary}">${escapeHtml(mail.reason)}</td></tr>
+<tr><td style="padding:16px 24px 24px;border-top:1px solid ${PALETTE.line};font-size:13px;line-height:20px;color:${PALETTE.textSecondary}">${escapeHtml(mail.reason)}${stop}</td></tr>
 </table>
 </body></html>`;
 }
