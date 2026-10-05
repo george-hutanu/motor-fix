@@ -50,7 +50,7 @@ jobs:
         if: github.event_name == 'pull_request'
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         if: github.event_name == 'pull_request'
         with:
           node-version-file: .nvmrc
@@ -228,7 +228,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
       - run: npm audit --omit=dev --audit-level=high
@@ -255,7 +255,7 @@ jobs:
             target: node-app
     steps:
       - uses: actions/checkout@v7
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - uses: docker/build-push-action@v7
         with:
           context: .

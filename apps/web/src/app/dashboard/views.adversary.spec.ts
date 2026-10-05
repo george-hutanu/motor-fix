@@ -48,7 +48,9 @@ async function open(capabilities: string[] | null, area: Area, url: string) {
         useValue: {
           close: jest.fn(),
           events: new Subject(),
+          offline: signal(false),
           open: jest.fn(),
+          resync: new Subject(),
         },
       },
     ],

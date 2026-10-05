@@ -61,7 +61,8 @@ node .claude/scripts/pr-test/dispatch.mjs <PR> --routes /,/cockpit[,<changed rou
 
 It dispatches `.github/workflows/pr-qa.yml` (`gh workflow run`) for the PR's
 head commit, with the flows file gzipped and base64-encoded as the `flows`
-input, finds the run by its nonce, waits for it (`gh run watch`) and downloads
+input, finds the run by the nonce in its title (the quoted `run-name` in
+`pr-qa.yml`), waits for it (`gh run watch`) and downloads
 the `pr-qa-<PR>` artifact into `--out`. On the runner the workflow checks out
 that exact SHA, starts PostgreSQL with PostGIS, Redis and MinIO with its
 bucket from the PR's own `docker-compose.yml`, and runs `run.mjs --tree`: install, migrate, build, boot api, web and
@@ -72,7 +73,10 @@ each) and your flows; the unit and end-to-end suites are CI's. It holds no
 secret; the posting is yours.
 
 `--out` then holds `report.json`, `report.md`, `run.log`, `logs/`, `shots/`
-and `ci-run.json` (the run's URL and conclusion). Exit 1 means blocking
+and `ci-run.json` (the run's URL and conclusion). The artifact downloads into a
+fresh `.download-*` folder inside `--out` and then replaces only the entries it
+carries, so re-running a lap into the same `--out` works and nothing else in it
+is touched. Exit 1 means blocking
 findings, not a broken run: read the report. Exit 2 means no usable report
 (the run failed before writing one, or the artifact is missing): read the
 run's log through `ci-run.json`'s URL, and if Actions itself is the problem,

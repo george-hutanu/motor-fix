@@ -28,6 +28,7 @@ import { Overlays } from '@motor-fix/overlays';
 import { HlmToaster, toast } from '@motor-fix/ui-cockpit';
 import { filter, map } from 'rxjs';
 
+import { Bell } from './bell';
 import { EmailBanner } from './email-banner';
 import { Live } from './live';
 import { LiveChange } from './live-in-place';
@@ -53,6 +54,7 @@ const ROLES: readonly { role: Role; label: string }[] = [
 @Component({
   imports: [
     AsWritten,
+    Bell,
     ClockPipe,
     DashboardTabBar,
     EmailBanner,
@@ -81,7 +83,15 @@ const ROLES: readonly { role: Role; label: string }[] = [
     .roles button[aria-pressed="true"] { border-color: var(--mf-amber); color: var(--mf-amber-ink); cursor: default; }
     .roles button:disabled { cursor: progress; }
     .view { display: flex; flex-direction: column; min-width: 0; }
+    header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mf-space-3); }
+    header h1 { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
     main { flex: 1 0 auto; }
+    .live-offline:empty { display: none; }
+    .live-offline {
+      margin: 0 0 var(--mf-space-3); padding: var(--mf-space-2) var(--mf-space-4);
+      border-block: 1px solid var(--mf-amber-ink);
+      color: var(--mf-text-secondary); font-size: var(--mf-size-small); overflow-wrap: anywhere;
+    }
     .live-status { margin: 0; padding: 0; color: var(--mf-text-secondary); font-size: var(--mf-size-small); }
     @media (min-width: 768px) {
       :host { grid-template: 1fr / minmax(0, 16rem) minmax(0, 1fr); }
@@ -121,7 +131,8 @@ const ROLES: readonly { role: Role; label: string }[] = [
       </div>
     </aside>
     <div class="view">
-      <header><h1>{{ open().label | t }}</h1><mf-language-switch /></header>
+      <header><h1>{{ open().label | t }}</h1><mf-language-switch /><mf-bell /></header>
+      <p class="live-offline" role="status">@if (offline()) { {{ 'shell.live.offline' | t }} }</p>
       <mf-email-banner />
       <p class="live-status" role="status" [mfLiveChange]="lastTest()">
         @if (lastTest(); as at) { {{ 'shell.live.test' | t }} · {{ at | clock }} }
@@ -136,6 +147,7 @@ export class Frame implements OnInit {
   protected readonly session = inject(Session);
   private readonly router = inject(Router);
   private readonly live = inject(Live);
+  protected readonly offline = this.live.offline;
   private readonly overlays = inject(Overlays);
   private readonly i18n = inject(I18n);
   private readonly destroyRef = inject(DestroyRef);
@@ -204,6 +216,10 @@ export class Frame implements OnInit {
         // Every session ended (all devices, a password reset), here or elsewhere.
         if (message.kind === 'session.revoked') void this.revoked();
       });
+    // The stream may have missed events: read the account again.
+    this.live.resync
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => void this.session.reload());
     // Signed out in another tab of this browser.
     this.session.ended
       .pipe(takeUntilDestroyed(this.destroyRef))

@@ -1,0 +1,28 @@
+# Notion sync — 199-notification-bell
+
+- 2026-10-05 · start · ST-199 story Status · To do → Planning
+- 2026-10-05 · start · Foundations timeline row ST-199 · Not started → Planning
+- 2026-10-05 · start · EP-1 Foundations Status · unchanged (In progress)
+- 2026-10-05 · pr · ST-199 · PR #80 https://github.com/george-hutanu/motor-fix/pull/80
+- 2026-10-05 · labels · PR #80 · planning
+- 2026-10-05 · ready · Foundations · −ST-199 (started; a start changes no other item's blockers)
+- 2026-10-05 · implement · ST-199 story Status · Planning → Implementing
+- 2026-10-05 · implement · Foundations timeline row ST-199 · Planning → Implementing
+- 2026-10-05 · labels · PR #80 · in development
+- 2026-10-05 · qa · ST-199 story Status · Implementing → QA
+- 2026-10-05 · qa · Foundations timeline row ST-199 · Implementing → QA
+- 2026-10-05 · labels · PR #80 · QA
+- 2026-10-05 · debt · nothing deferred (deferred.md has no bullets)
+- 2026-10-05 · finish · ST-199 story Status · QA → Done (written once PR #80 merges)
+- 2026-10-05 · finish · Foundations timeline row ST-199 · QA → Merged (written once PR #80 merges)
+- 2026-10-05 · finish · EP-1 Foundations Status · unchanged (In progress; other stories remain)
+- 2026-10-05 · finish · labels · PR #80 · stage labels removed by the merge
+- 2026-10-05 · comment · ST-199 · posted (5 items): drawer instead of the proposed popover; no kind → screen step or "Nu mai este disponibil" yet (no kind has a screen); `notification.read` straight to Redis like `notification.created` (Constitution VI exception); the list restarts at the top on any read; language sent with the list call
+- 2026-10-05 · ready · Foundations · no change (no Foundations row is blocked by ST-199)
+- 2026-10-05 · debt · ST-199 · 5 deferred pr-tester findings (lap 1) filed as To do tasks
+- 2026-10-05 · finish · ST-199 story Status · QA → Done (PR #80 merged as 93921d0)
+- 2026-10-05 · finish · Foundations timeline row ST-199 · QA → Merged
+- 2026-10-05 · finish · EP-1 Foundations Status · unchanged (In progress; other stories remain)
+- 2026-10-05 · labels · PR #80 · none
+- 2026-10-05 · comment · ST-199 · posted (6 items): 5 deferred follow-ups with their tasks, 1 QA fix (T010)
+- 2026-10-05 · ready · Foundations · no change (ST-199 blocks no timeline row; its debt tasks already ticked; query quota reached, checked by fetch)

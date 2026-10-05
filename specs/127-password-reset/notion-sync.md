@@ -19,3 +19,9 @@
 - 2026-10-05 · unblock · ST-127 story Status · Blocked → QA (Docker fixed; #89 replaced MinIO and boots the PR's own compose)
 - 2026-10-05 · unblock · Foundations timeline row ST-127 · Blocked → QA
 - 2026-10-05 · labels · PR #72 · QA
+- 2026-10-05 · finish · ST-127 story Status · QA → Done (PR #72 merged, 2c95ba5)
+- 2026-10-05 · finish · Foundations timeline row ST-127 · QA → Merged
+- 2026-10-05 · finish · EP-1 Foundations Status · unchanged (In progress; stories still open)
+- 2026-10-05 · labels · PR #72 · none
+- 2026-10-05 · comment · ST-127 · posted (4 items)
+- 2026-10-05 · ready · Foundations · +ST-568 +ST-569 −none (ST-570 held: owner decision)

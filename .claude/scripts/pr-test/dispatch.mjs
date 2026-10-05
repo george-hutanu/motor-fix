@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // The PR tester's mechanical run on GitHub Actions instead of this laptop:
 // dispatch .github/workflows/pr-qa.yml for the PR's head commit, wait for it,
-// and download its artifact (report.json, report.md, shots/, logs/) into --out,
+// and download its artifact (report.json, report.md, shots/, logs/) into --out
+// (through a fresh folder of its own, so files from an earlier run never refuse it),
 // where post.mjs and the pr-tester agent read it exactly as they read a local
 // run.mjs report. It holds no heavy slot: nothing heavy runs here.
 //
@@ -20,9 +21,9 @@
 // success, 1 when it says failure (blocking findings: read the report), 2 when
 // the run left no usable report (an infrastructure failure, not a verdict).
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { gzipSync } from "node:zlib";
 
@@ -68,9 +69,26 @@ export function dispatchCommand({ ref, inputs }) {
 /** The run this dispatch started: its name carries the nonce (`run-name` in pr-qa.yml). */
 export const findRun = (runs, nonce) => runs.find((r) => String(r.displayTitle ?? "").includes(nonce)) ?? null;
 
-/** Remove the last lap's evidence from --out, so a run that uploads nothing leaves no report to misread. */
+const STAGING_PREFIX = ".download-";
+
+/** Remove the last lap's evidence and any download folder an interrupted lap left, so a run that uploads nothing leaves no report to misread. */
 export function clearPrevious(out) {
-  for (const f of ["report.json", "report.md", "ci-run.json", "shots", "logs"]) rmSync(join(out, f), { recursive: true, force: true });
+  const leftovers = readdirSync(out).filter((name) => name.startsWith(STAGING_PREFIX));
+  for (const f of ["report.json", "report.md", "ci-run.json", "shots", "logs", ...leftovers]) rmSync(join(out, f), { recursive: true, force: true });
+}
+
+/** A fresh, empty folder inside --out for one download: `gh run download` refuses to overwrite files an earlier run left. */
+export const stagingDir = (out) => mkdtempSync(join(out, STAGING_PREFIX));
+
+/** Move the downloaded artifact into --out, replacing only the entries it carries, then remove the download folder. */
+export function placeDownload(staging, out) {
+  if (resolve(dirname(staging)) !== resolve(out) || !basename(staging).startsWith(STAGING_PREFIX))
+    throw new Error(`${staging} is not a download folder of ${out}`);
+  for (const name of readdirSync(staging)) {
+    rmSync(join(out, name), { recursive: true, force: true });
+    renameSync(join(staging, name), join(out, name));
+  }
+  rmSync(staging, { recursive: true, force: true });
 }
 
 export const artifactName = (pr) => `${ARTIFACT_PREFIX}${pr}`;
@@ -124,10 +142,14 @@ async function main(argv) {
   } catch {}
   clearPrevious(out);
   const conclusion = gh(["run", "view", String(run.databaseId), "--json", "conclusion", "-q", ".conclusion"]);
+  const staging = stagingDir(out);
   try {
-    gh(["run", "download", String(run.databaseId), "-n", artifactName(opt.pr), "-D", out]);
+    gh(["run", "download", String(run.databaseId), "-n", artifactName(opt.pr), "-D", staging]);
+    placeDownload(staging, out);
   } catch (error) {
     console.error(`dispatch: could not download ${artifactName(opt.pr)}: ${String(error.stderr ?? error.message).trim()}`);
+  } finally {
+    rmSync(staging, { recursive: true, force: true });
   }
   writeFileSync(join(out, "ci-run.json"), JSON.stringify({ id: run.databaseId, url: run.url, conclusion, nonce, sha }, null, 2));
   const file = join(out, "report.json");

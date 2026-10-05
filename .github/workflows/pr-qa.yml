@@ -45,7 +45,8 @@ on:
         default: ''
         type: string
 
-run-name: PR QA #${{ inputs.pr }} at ${{ inputs.sha }} lap ${{ inputs.lap }} ${{ inputs.nonce }}
+# Quoted: unquoted, YAML reads ` #` as a comment and every run is titled "PR QA".
+run-name: 'PR QA #${{ inputs.pr }} at ${{ inputs.sha }} lap ${{ inputs.lap }} ${{ inputs.nonce }}'
 
 permissions:
   contents: read
@@ -110,7 +111,7 @@ jobs:
           # minio-setup retries its alias until MinIO answers; bound it.
           timeout 120 docker compose -p pr-qa -f pr/docker-compose.yml run --rm minio-setup
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: pr/.nvmrc
           cache: npm

@@ -3,7 +3,11 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
-import { type MeDto, MeService } from '@motor-fix/data-access';
+import {
+  type MeDto,
+  MeService,
+  NotificationsService,
+} from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
@@ -21,7 +25,13 @@ jest.mock('@motor-fix/ui-cockpit', () => ({
 
 let signOut: jest.Mock;
 let reload: jest.Mock;
-let live: { close: jest.Mock; events: Subject<LiveMessage>; open: jest.Mock };
+let live: {
+  close: jest.Mock;
+  events: Subject<LiveMessage>;
+  offline: ReturnType<typeof signal<boolean>>;
+  open: jest.Mock;
+  resync: Subject<void>;
+};
 
 const me = (role: string, landing: string, capabilities: string[]) =>
   ({
@@ -45,7 +55,13 @@ async function render(
   Element.prototype.scrollIntoView = jest.fn();
   signOut = jest.fn(async () => current.set(null));
   reload = jest.fn(async () => undefined);
-  live = { close: jest.fn(), events: new Subject(), open: jest.fn() };
+  live = {
+    close: jest.fn(),
+    events: new Subject(),
+    offline: signal(false),
+    open: jest.fn(),
+    resync: new Subject(),
+  };
   const current = signal<MeDto | null>(me(role, landing, capabilities));
   TestBed.configureTestingModule({
     providers: [
@@ -61,6 +77,10 @@ async function render(
         useValue: { current, ended: new Subject<void>(), reload, signOut },
       },
       { provide: Live, useValue: live },
+      {
+        provide: NotificationsService,
+        useValue: { bellControllerUnreadCount: async () => ({ count: 0 }) },
+      },
       { provide: MeService, useValue: {} },
     ],
   });

@@ -1,4 +1,22 @@
 {
+  "bell": {
+    "empty": "No notifications yet",
+    "failed": "Notifications did not load.",
+    "hours": "{n} h ago",
+    "label": {
+      "one": "Notifications, 1 unread notification",
+      "other": "Notifications, {count} unread notifications"
+    },
+    "minutes": "{n} min ago",
+    "more": "Show more",
+    "new": "You have a new notification",
+    "now": "just now",
+    "readAll": "Mark all as read",
+    "readFailed": "The notification could not be marked as read.",
+    "retry": "Try again",
+    "title": "Notifications",
+    "unread": "unread"
+  },
   "brand": "MotorFix",
   "chart": {
     "empty": "No data yet",
@@ -122,7 +140,15 @@
   },
   "live": {
     "changed": "This changed in the meantime: {value}",
+    "expired": "An action made without signal expired and was not sent.",
     "gone": "No longer available",
+    "needsConnection": "You need a connection for this",
+    "offline": "No connection. What you see may be out of date.",
+    "refused": {
+      "changed": "This changed in the meantime. See how it stands now.",
+      "gone": "No longer available.",
+      "other": "The action was not accepted."
+    },
     "test": "Live test update",
     "waiting": {
       "one": "{count} new update",

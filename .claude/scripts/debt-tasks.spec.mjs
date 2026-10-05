@@ -57,15 +57,36 @@ describe('reading deferred.md', () => {
 describe('the Notion task for a debt', () => {
   const [entry] = parseDeferred(DEFERRED);
 
-  it('is a To do Task in MotorFix stories, with the epic, and a priority from the severity', () => {
+  it('is a To do Tech debt row in MotorFix stories, with the epic, and a priority from the severity', () => {
     const t = taskFor(entry, ctx);
-    assert.equal(t.properties['Issue type'], 'Task');
+    assert.equal(t.properties['Issue type'], 'Tech debt');
     assert.equal(t.properties.Status, 'To do');
     assert.equal(t.properties.Role, 'System');
     assert.equal(t.properties.Priority, 'Medium');
     assert.deepEqual(JSON.parse(t.properties.Epic), [ctx.epic]);
     assert.match(t.properties.Story, /^Tech debt \(ST-434\): /);
     assert.ok(t.properties.Story.length <= 120);
+  });
+
+  it('files a finding that waits on the owner as a Decision, titled apart from the debt', () => {
+    const entries = parseDeferred(DEFERRED);
+    assert.deepEqual(entries.map((e) => e.decision), [false, false, false, false, true, false]);
+    const t = taskFor(entries[4], ctx);
+    assert.equal(t.properties['Issue type'], 'Decision');
+    assert.match(t.properties.Story, /^Decision \(ST-434\): /);
+    const q = parseDeferred('- Open question for the owner (spec-reviewer LOW): roles.')[0];
+    assert.equal(taskFor(q, ctx).properties['Issue type'], 'Decision');
+  });
+
+  it('reads "decision" in the prose, not in a cited path, and takes the plural', () => {
+    assert.equal(parseDeferred('- MEDIUM (code-reviewer): `apps/api/src/decision-log.ts` — retry loop leaks a timer.')[0].decision, false);
+    assert.equal(parseDeferred('- LOW (spec-reviewer): two owner decisions pending on roles.')[0].decision, true);
+  });
+
+  it('words a Decision row as a question for the owner, not as debt', () => {
+    const t = taskFor(parseDeferred('- Open question for the owner (spec-reviewer LOW): roles.')[0], ctx);
+    assert.match(t.properties['User story'], /^So that the build can go on, decide what spec-reviewer left open/);
+    assert.match(t.content, /^## Decision to take\n/);
   });
 
   it('carries the severity, the place, the reviewer, the PR and the story it came from', () => {
