@@ -119,7 +119,8 @@ export function addFindings(report, extra) {
 }
 
 /** The report for a lap that ended without one: a failure carrying the reason. */
-export function missingReport({ pr, repo, sha, lap, reason }) {
+export function missingReport({ pr, repo, sha, lap, reason: given }) {
+  const reason = String(given ?? "").trim() || "no reason given";
   const findings = [stepFinding(`The tester left no report: ${reason}`, "The lap ended before it wrote report.json, so nothing it checked counts. Run the lap again.")];
   const summary = `No report from the tester: ${reason}.`;
   const markdown = reportMarkdown({ pr, sha, verdict: "failure", findings, booted: [], lap, notes: [summary] });

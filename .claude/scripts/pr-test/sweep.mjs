@@ -67,6 +67,13 @@ export const dropExpected = (observations) =>
   );
 
 /** The refresh cookie the API sets at sign-in, for the web origin, which forwards /api/ to the API. */
+/** The cookies a context opens a run with: a fresh session of its role (refresh tokens rotate, so never shared), else none. */
+export async function contextCookies(run, { session, baseURL }) {
+  if (!run.role) return [];
+  if (!session) throw new Error(`no session for @${run.role}: the sweep was given no way to sign in`);
+  return [sessionCookie({ refresh: await session(run.role), baseURL })];
+}
+
 export const sessionCookie = ({ refresh, baseURL }) => ({
   name: "mf_refresh",
   value: refresh,
@@ -141,10 +148,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
       });
       page.on("response", (r) => r.status() >= 400 && seen({ kind: "http", url: r.url(), status: r.status() }));
       try {
-        if (run.role) {
-          if (!session) throw new Error(`no session for @${run.role}: the sweep was given no way to sign in`);
-          await context.addCookies([sessionCookie({ refresh: await session(run.role), baseURL })]);
-        }
+        await context.addCookies(await contextCookies(run, { session, baseURL }));
         const res = await page.goto(new URL(run.path, baseURL).href, { waitUntil: "networkidle", timeout: 30000 });
         const problem = loadProblem(res?.status(), run.expect);
         if (problem) seen({ kind: "load", text: problem });

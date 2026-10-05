@@ -20,14 +20,19 @@ export const SEEDED = {
 export const seedPassword = (env = process.env) => env.SEED_PASSWORD || "parola-de-test";
 
 const signsOut = (path) => /sign-out/.test(path);
+const signOutsLast = (list) => [...list.filter((e) => !signsOut(e.path)), ...list.filter((e) => signsOut(e.path))];
+
+/** JSON with object keys sorted, so a reordered document compares equal. */
+const canonical = (value) => JSON.stringify(value, (_, v) => (v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : 1))) : v));
 
 /** Every operation at the head that is new or differs from the base, sign-outs last. */
 export function changedEndpoints(baseDoc, headDoc) {
   const before = baseDoc?.paths ?? {};
-  const list = Object.entries(headDoc?.paths ?? {}).flatMap(([path, ops]) =>
-    METHODS.filter((m) => ops[m] && JSON.stringify(before[path]?.[m]) !== JSON.stringify(ops[m])).map((m) => ({ method: m.toUpperCase(), path, op: ops[m] })),
+  return signOutsLast(
+    Object.entries(headDoc?.paths ?? {}).flatMap(([path, ops]) =>
+      METHODS.filter((m) => ops[m] && canonical(before[path]?.[m]) !== canonical(ops[m])).map((m) => ({ method: m.toUpperCase(), path, op: ops[m] })),
+    ),
   );
-  return [...list.filter((e) => !signsOut(e.path)), ...list.filter((e) => signsOut(e.path))];
 }
 
 /** The role to call a secured operation as: the one a path segment names, otherwise the driver; null when it is open. */
@@ -38,8 +43,9 @@ export function roleFor(path, op) {
 
 function resolve(schema, doc) {
   let s = schema ?? {};
-  while (s.$ref) s = s.$ref.split("/").slice(1).reduce((node, key) => node?.[key], doc) ?? {};
-  return s;
+  // A bound, not a visited set: a reference that only names itself must still end.
+  for (let hops = 0; s.$ref && hops < 16; hops++) s = s.$ref.split("/").slice(1).reduce((node, key) => node?.[key], doc) ?? {};
+  return s.$ref ? {} : s;
 }
 
 /** A value the schema accepts: its example or default, else one built from its type, honouring the bounds. */
@@ -49,8 +55,8 @@ export function exampleValue(schema, doc, depth = 0) {
   if (s.default !== undefined) return s.default;
   if (s.enum?.length) return s.enum[0];
   const branch = s.oneOf ?? s.anyOf ?? s.allOf;
-  if (branch?.length) return exampleValue(branch[0], doc, depth);
   if (depth > 6) return null;
+  if (branch?.length) return exampleValue(branch[0], doc, depth + 1);
   switch (s.type ?? (s.properties ? "object" : undefined)) {
     case "object":
       return Object.fromEntries((s.required ?? []).map((k) => [k, exampleValue(s.properties?.[k], doc, depth + 1)]));
@@ -72,10 +78,13 @@ export function exampleValue(schema, doc, depth = 0) {
 }
 
 /** The first item's value for a path parameter: the field of that name, else its id. */
-export function firstId(json, param) {
+export function firstId(json, param, depth = 0) {
   const list = Array.isArray(json) ? json : (json?.items ?? json?.data ?? Object.values(json ?? {}).find(Array.isArray));
-  const item = list?.[0];
-  return item?.[param] ?? item?.id ?? null;
+  if (!Array.isArray(list)) return depth < 1 && json && typeof json === "object" ? (Object.values(json).map((v) => firstId(v, param, depth + 1)).find((id) => id != null) ?? null) : null;
+  const item = list[0];
+  if (!item || typeof item !== "object") return null;
+  const own = (key) => (Object.hasOwn(item, key) ? item[key] : undefined);
+  return own(param) ?? own("id") ?? null;
 }
 
 export async function signIn(apiURL, role, password) {
@@ -83,10 +92,13 @@ export async function signIn(apiURL, role, password) {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ email: SEEDED[role], password, remember: false }),
+    signal: AbortSignal.timeout(15000),
   });
   if (!res.ok) throw new Error(`could not sign in as ${role} (${SEEDED[role]}): HTTP ${res.status}`);
   const refresh = /mf_refresh=([^;]+)/.exec(res.headers.get("set-cookie") ?? "")?.[1];
-  return { token: (await res.json()).accessToken, refresh };
+  const token = (await res.json().catch(() => null))?.accessToken;
+  if (typeof token !== "string" || !token) throw new Error(`could not sign in as ${role} (${SEEDED[role]}): HTTP ${res.status} with no access token`);
+  return { token, refresh };
 }
 
 /**
@@ -103,7 +115,7 @@ export async function callEndpoints({ apiURL, endpoints, doc, password = seedPas
   const called = [];
   const skipped = [];
 
-  for (const { method, path, op } of endpoints) {
+  for (const { method, path, op } of signOutsLast(endpoints)) {
     const name = `${method} ${path}`;
     try {
       const role = roleFor(path, op);
@@ -117,7 +129,7 @@ export async function callEndpoints({ apiURL, endpoints, doc, password = seedPas
       let url = path;
       for (const [, param] of path.matchAll(/\{([^}]+)\}/g)) {
         const collection = url.slice(0, url.indexOf(`/{${param}}`));
-        const res = await fetch(apiURL + collection, { headers });
+        const res = await fetch(apiURL + collection, { headers, signal: AbortSignal.timeout(15000) });
         if (!res.ok) throw new Error(`GET ${collection} answered ${res.status}, so there is no {${param}} to call it with`);
         const id = firstId(await res.json().catch(() => null), param);
         if (id == null) throw new Error(`no item in GET ${collection} to take {${param}} from`);

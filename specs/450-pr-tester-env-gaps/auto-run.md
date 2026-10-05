@@ -32,3 +32,11 @@ Worktree: .worktrees/450-pr-tester-env-gaps
 - `endpoints.mjs` (new), `findings.mjs`, `services.mjs`, `post.mjs`, `sweep.mjs`, `run.mjs`, `pr-qa.yml`, `.claude/agents/pr-tester.md`.
 - Green: pr-test 154/154; `npm run test:harness` 1024/1024. Biome ignores `.claude/`, so the harness specs are the check.
 - (autonomous default) The seed runs as `npx prisma db seed` in `libs/domain`, only when `libs/domain/src/seed.ts` exists at the head.
+
+## 12. Harden and 14. Review
+
+- artifact-lint and diff-audit clean. No Nx project touched, so no mutation run.
+- test-adversary: 98 tests, 8 failed at first. Fixed: a self-referencing `$ref`, inherited property names in `firstId`, a list one level further down, sign-in with no token, sign-outs passed first, an empty `--missing` reason, pid 0 in a pid file, and key order in operation comparison.
+- code-reviewer BLOCK → fixed: app pid files cleaned after a kill, timeouts on sign-in, collection and readiness fetches, a bounded `$ref` walk, endpoint calls moved after the sweep and the flows, pg/redis/minio/app kills only on an exact command match, `isAlive` unexported. Deferred (LOW): synchronous steps delay signal handling.
+- spec-reviewer APPROVE. MEDIUM fixed: `contextCookies` is tested to sign in per context. LOW fixed: phases for the app start, health and readiness. LOW deferred: the console line in `dropExpected`.
+- Green: harness 1155 tests.

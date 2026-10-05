@@ -40,6 +40,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { callEndpoints, changedEndpoints, SEEDED, seedPassword, signIn } from "./endpoints.mjs";
 import { appsFor, cutOffFinding, readinessOutcome, reportMarkdown, stepFinding, testFinding, touchesWeb, verdict } from "./findings.mjs";
 import {
+  APP_SCRIPTS,
   EXTERNAL_PORTS,
   HEALTH,
   apiHealth,
@@ -278,10 +279,13 @@ async function main(argv) {
 
     const apiURL = `http://127.0.0.1:${apiPort}`;
     const webURL = `http://127.0.0.1:${webPort}`;
-    const launch = (name, script, extra) => {
+    const launch = (name, extra) => {
+      phase = `start ${name}`;
       const fd = openSync(join(logs, `${name}.out.log`), "w");
-      const child = spawn(process.execPath, [script], { cwd: wt.dir, env: { ...env, ...extra }, stdio: ["ignore", fd, fd], detached: true });
+      const child = spawn(process.execPath, [APP_SCRIPTS[name]], { cwd: wt.dir, env: { ...env, ...extra }, stdio: ["ignore", fd, fd], detached: true });
       closeSync(fd);
+      // A killed lap cannot tear its apps down; the next lap stops them by this file (cleanStale).
+      if (!opt.tree) writeFileSync(join(runDir, `${name}.pid`), String(child.pid));
       teardown.push({
         name: `stop ${name} (pid ${child.pid})`,
         run: () => {
@@ -292,10 +296,11 @@ async function main(argv) {
       });
       booted.push(name);
     };
-    launch("api", "dist/apps/api/main.js", { PORT: String(apiPort) });
-    launch("web", "dist/apps/web/server/server.mjs", { PORT: String(webPort), API_INTERNAL_URL: apiURL, PUBLIC_WEB_URL: webURL });
-    if (apps.worker) launch("worker", "dist/apps/worker/main.js", { PORT: String(workerPort) });
+    launch("api", { PORT: String(apiPort) });
+    launch("web", { PORT: String(webPort), API_INTERNAL_URL: apiURL, PUBLIC_WEB_URL: webURL });
+    if (apps.worker) launch("worker", { PORT: String(workerPort) });
 
+    phase = "health";
     const live = [
       ["api", apiURL + HEALTH.live],
       ["web", `${webURL}/`],
@@ -308,29 +313,15 @@ async function main(argv) {
     }
     if (findings.length) return finish();
 
+    phase = "readiness";
     for (const [name, origin] of [["api", apiURL], ...(apps.worker ? [["worker", `http://127.0.0.1:${workerPort}`]] : [])]) {
-      const res = await fetch(origin + HEALTH.ready).catch((e) => ({ status: 0, text: async () => e.message }));
+      const res = await fetch(origin + HEALTH.ready, { signal: AbortSignal.timeout(15000) }).catch((e) => ({ status: 0, text: async () => e.message }));
       const body = await res.text();
       log(`ready ${name}: ${res.status} ${body.slice(0, 200)}`);
       const outcome = readinessOutcome({ name, status: res.status, body, storage: plan.storage, url: origin + HEALTH.ready });
       if (outcome.note) notes.push(outcome.note);
       if (outcome.finding) findings.push(outcome.finding);
     }
-
-    let baseDoc = null;
-    try {
-      baseDoc = JSON.parse(sh("git", ["show", `${base}:apps/api/openapi.json`], { cwd: root }));
-    } catch {}
-    const headFile = join(wt.dir, "apps/api/openapi.json");
-    const headDoc = existsSync(headFile) ? JSON.parse(readFileSync(headFile, "utf8")) : null;
-    const endpoints = changedEndpoints(baseDoc, headDoc);
-    phase = "endpoint calls";
-    const calls = await callEndpoints({ apiURL, endpoints, doc: headDoc });
-    for (const line of [...calls.called, ...calls.skipped]) log(`endpoint ${line}`);
-    findings.push(...calls.findings);
-    if (calls.called.length) notes.push(`Called the changed operations: ${calls.called.join("; ")}.`);
-    if (calls.skipped.length) notes.push(`Not called: ${calls.skipped.join("; ")}.`);
-    if (!endpoints.length) notes.push("No API operation changed.");
 
     phase = "sweep";
     log(`sweep: ${opt.routes.join(", ")} × ${Object.keys(VIEWPORTS).length} viewports × ${opt.schemes.join("/")} × ${opt.langs.join("/")}`);
@@ -356,6 +347,22 @@ async function main(argv) {
         findings.push(stepFinding("A flow threw", String(error.stack ?? error).split("\n").slice(0, 3).join(" / "), "high"));
       }
     }
+
+    // Last before the suites: a changed DELETE or POST may change the rows the sweep and the flows sign in with.
+    let baseDoc = null;
+    try {
+      baseDoc = JSON.parse(sh("git", ["show", `${base}:apps/api/openapi.json`], { cwd: root }));
+    } catch {}
+    const headFile = join(wt.dir, "apps/api/openapi.json");
+    const headDoc = existsSync(headFile) ? JSON.parse(readFileSync(headFile, "utf8")) : null;
+    const endpoints = changedEndpoints(baseDoc, headDoc);
+    phase = "endpoint calls";
+    const calls = await callEndpoints({ apiURL, endpoints, doc: headDoc });
+    for (const line of [...calls.called, ...calls.skipped]) log(`endpoint ${line}`);
+    findings.push(...calls.findings);
+    if (calls.called.length) notes.push(`Called the changed operations: ${calls.called.join("; ")}.`);
+    if (calls.skipped.length) notes.push(`Not called: ${calls.skipped.join("; ")}.`);
+    if (!endpoints.length) notes.push("No API operation changed.");
 
     if (opt.tests) {
       const unit = step("affected-tests", "npx", testsCommand({ base, sha }), { cwd: wt.dir, env });

@@ -194,9 +194,11 @@ describe('what a killed lap left behind', () => {
     const older = join(tmp, 'mf-prtest-12-k9Lm2P');
     for (const d of [dead, live]) {
       mkdirSync(join(d, 'pg'), { recursive: true });
-      writeFileSync(join(d, 'pg', 'postmaster.pid'), '1');
+      writeFileSync(join(d, 'pg', 'postmaster.pid'), `9000\n${join(d, 'pg')}\n`);
       writeFileSync(join(d, 'redis.pid'), '9001\n');
       writeFileSync(join(d, 'minio.pid'), '9002');
+      writeFileSync(join(d, 'api.pid'), '9003');
+      writeFileSync(join(d, 'web.pid'), '9004');
       mkdirSync(join(d, 'mf-prtest-12-abc1234-x'), { recursive: true });
     }
     mkdirSync(join(older, 'mf-prtest-12-abc1234-111'), { recursive: true });
@@ -205,7 +207,14 @@ describe('what a killed lap left behind', () => {
     const calls = [];
     const run = (cmd, args) => {
       calls.push([cmd, ...args].join(' '));
-      if (cmd === 'ps') return { code: 0, stdout: args.includes('9001') ? 'redis-server 127.0.0.1:6000' : 'minio server x' };
+      const ps = {
+        9000: '/opt/homebrew/bin/postgres -D x',
+        9001: 'redis-server 127.0.0.1:6000',
+        9002: '/usr/local/bin/minio server x',
+        9003: '/usr/local/bin/node dist/apps/api/main.js',
+        9004: '/usr/local/bin/node dist/apps/web/server/server.mjs',
+      };
+      if (cmd === 'ps') return { code: 0, stdout: ps[args[1]] ?? '' };
       if (cmd === 'docker') return { code: 0, stdout: args.includes('ls') ? 'mf-prtest-12-111\nmf-prtest-12-222\nmotorfix\n' : '' };
       return { code: 0, stdout: '' };
     };
@@ -220,6 +229,8 @@ describe('what a killed lap left behind', () => {
       assert.ok(s.calls.includes(`pg_ctl -D ${join(s.dead, 'pg')} -m immediate -w stop`));
       assert.ok(s.calls.includes('kill 9001'));
       assert.ok(s.calls.includes('kill 9002'));
+      assert.ok(s.calls.includes('kill 9003'), 'the api a killed lap started');
+      assert.ok(s.calls.includes('kill 9004'), 'the web server a killed lap started');
       assert.ok(s.calls.includes('docker compose -p mf-prtest-12-111 down -v --remove-orphans'));
       assert.ok(s.calls.includes('git -C /repo worktree prune'));
       assert.equal(existsSync(s.dead), false);
@@ -249,12 +260,12 @@ describe('what a killed lap left behind', () => {
     const s = scene();
     const run = (cmd, args) => {
       s.calls.push([cmd, ...args].join(' '));
-      return { code: 0, stdout: cmd === 'ps' ? 'node something-else.js' : '' };
+      return { code: 0, stdout: cmd === 'ps' ? 'vim /tmp/minio.pid redis-server postgres dist/apps/api/main.js.bak' : '' };
     };
     try {
       cleanStale({ tmp: s.tmp, repo: '/repo', isAlive: s.isAlive, run });
-      assert.ok(!s.calls.includes('kill 9001'));
-      assert.ok(!s.calls.includes('kill 9002'));
+      assert.ok(!s.calls.some((c) => c.startsWith('kill')));
+      assert.ok(!s.calls.some((c) => c.startsWith('pg_ctl')), 'PostgreSQL is stopped only while its pid is still postgres');
     } finally {
       rmSync(s.tmp, { recursive: true, force: true });
     }

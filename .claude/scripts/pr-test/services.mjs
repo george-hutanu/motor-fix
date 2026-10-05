@@ -6,7 +6,7 @@
 import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { createServer } from "node:net";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 /** `n` distinct ports the OS reports free right now. */
 export async function freePorts(n) {
@@ -131,7 +131,25 @@ const runOwner = (name) => pidIn(/^mf-prtest-\d+-(\d+)-[A-Za-z0-9]{6}$/, name);
 /** The process that owns a test worktree, `mf-prtest-<pr>-<sha7>-<pid>` (worktree.mjs). */
 const worktreeOwner = (name) => pidIn(/^mf-prtest-\d+-[0-9a-f]{7}-(\d+)$/, name);
 
-export function isAlive(pid) {
+/** The built entry point of each app a lap boots; a pid file `<app>.pid` beside them names its process. */
+export const APP_SCRIPTS = { api: "dist/apps/api/main.js", web: "dist/apps/web/server/server.mjs", worker: "dist/apps/worker/main.js" };
+
+/** What a run's pid files name: a program (its command's first word) or a script it runs. */
+const PID_FILES = [["redis.pid", "redis-server"], ["minio.pid", "minio"], ...Object.entries(APP_SCRIPTS).map(([app, script]) => [`${app}.pid`, script])];
+
+/** The pid on a file's first line, when it is one a process can have and is not init. */
+function pidFrom(file) {
+  const first = readFileSync(file, "utf8").split("\n")[0].trim();
+  return /^\d+$/.test(first) && Number(first) > 1 ? first : null;
+}
+
+/** Whether a process's command line is still `want`: the program, or a command running that script. */
+function runs(command, want) {
+  const words = command.trim().split(/\s+/);
+  return want.includes("/") ? words.slice(1).includes(want) : basename(words[0] ?? "") === want;
+}
+
+function isAlive(pid) {
   try {
     process.kill(pid, 0);
     return true;
@@ -142,7 +160,7 @@ export function isAlive(pid) {
 
 /**
  * Remove what killed local runs left in `tmp`: for each run directory whose
- * owning process is gone, stop its PostgreSQL, its Redis and MinIO (by pid
+ * owning process is gone, stop its PostgreSQL, Redis, MinIO and apps (by pid
  * file, only while that pid is still the service), delete the directory with
  * its worktree; take down compose projects of dead runs; then prune the
  * repository's worktree list. `run(cmd, args)` returns { code, stdout } and
@@ -161,12 +179,14 @@ export function cleanStale({ tmp, repo, isAlive: alive = isAlive, run }) {
       } catch {}
     }
     if (!pid || alive(pid)) continue;
-    if (existsSync(join(dir, "pg", "postmaster.pid"))) run("pg_ctl", ["-D", join(dir, "pg"), "-m", "immediate", "-w", "stop"]);
-    for (const [file, service] of [["redis.pid", "redis-server"], ["minio.pid", "minio"]]) {
-      const pidFile = join(dir, file);
-      if (!existsSync(pidFile)) continue;
-      const servicePid = readFileSync(pidFile, "utf8").trim();
-      if (/^\d+$/.test(servicePid) && run("ps", ["-p", servicePid, "-o", "command="]).stdout.includes(service)) run("kill", [servicePid]);
+    const still = (file, want) => {
+      const servicePid = existsSync(file) ? pidFrom(file) : null;
+      return servicePid && runs(run("ps", ["-p", servicePid, "-o", "command="]).stdout, want) ? servicePid : null;
+    };
+    if (still(join(dir, "pg", "postmaster.pid"), "postgres")) run("pg_ctl", ["-D", join(dir, "pg"), "-m", "immediate", "-w", "stop"]);
+    for (const [file, want] of PID_FILES) {
+      const servicePid = still(join(dir, file), want);
+      if (servicePid) run("kill", [servicePid]);
     }
     rmSync(dir, { recursive: true, force: true });
     cleaned.push(`removed ${dir} (pid ${pid} gone)`);

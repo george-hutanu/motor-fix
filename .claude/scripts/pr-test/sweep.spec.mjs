@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { VIEWPORTS, dropExpected, loadProblem, matrix, parseRoute, sessionCookie, toFindings } from './sweep.mjs';
+import { VIEWPORTS, contextCookies, dropExpected, loadProblem, matrix, parseRoute, sessionCookie, toFindings } from './sweep.mjs';
 
 describe('the sweep matrix', () => {
   it('visits every route at four viewports, two schemes and two languages', () => {
@@ -115,5 +115,21 @@ describe('route syntax: path[@role][:status]', () => {
     assert.equal(c.domain, '127.0.0.1');
     assert.equal(c.path, '/api/v1/auth');
     assert.equal(c.httpOnly, true);
+  });
+
+  it('signs in afresh for every browser context of a role route, and not at all for the others', async () => {
+    const asked = [];
+    const session = async (role) => {
+      asked.push(role);
+      return `r-${asked.length}`;
+    };
+    const baseURL = 'http://127.0.0.1:4100';
+    const [first] = await contextCookies({ role: 'driver' }, { session, baseURL });
+    const [second] = await contextCookies({ role: 'driver' }, { session, baseURL });
+    assert.deepEqual(asked, ['driver', 'driver']);
+    assert.deepEqual([first.value, second.value], ['r-1', 'r-2']);
+    assert.deepEqual(await contextCookies({ role: null }, { session, baseURL }), []);
+    assert.equal(asked.length, 2);
+    await assert.rejects(contextCookies({ role: 'admin' }, { baseURL }), /no session for @admin/);
   });
 });

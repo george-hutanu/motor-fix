@@ -80,10 +80,10 @@ input, finds the run by the nonce in its title (the quoted `run-name` in
 the `pr-qa-<PR>` artifact into `--out`. On the runner the workflow checks out
 that exact SHA, starts PostgreSQL with PostGIS, Redis and MinIO with its
 bucket from the PR's own `docker-compose.yml`, and runs `run.mjs --tree`: install, migrate, build, boot api, web and
-worker, `/health/live` and `/health/ready` (storage included), the seed, the changed
-API operations, the viewport sweep (4 viewports — desktop, tablet, 390 and 320 px
-phones — × light/dark × ro/en, axe, overflow, console, network, a screenshot
-each) and your flows; the unit and end-to-end suites are CI's. It holds no
+worker, `/health/live` and `/health/ready` (storage included), the seed, the viewport
+sweep (4 viewports — desktop, tablet, 390 and 320 px phones — × light/dark ×
+ro/en, axe, overflow, console, network, a screenshot each), your flows, and last
+the changed API operations, which may change the seeded rows; the unit and end-to-end suites are CI's. It holds no
 secret; the posting is yours.
 
 `--out` then holds `report.json`, `report.md`, `run.log`, `logs/`, `shots/`
