@@ -268,7 +268,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       # The PR tester's boot: the one-shot setup stays out of --wait, which fails
       # when it exits before compose sees it running; run returns its exit code.
       - run: docker compose up -d --wait postgres redis minio
