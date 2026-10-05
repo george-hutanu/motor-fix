@@ -108,6 +108,17 @@ export class Session {
     return this.load();
   }
 
+  // A new password from a reset link: the answer is a session, as sign-in's.
+  async resetPassword(token: string, password: string) {
+    await this.sendPending();
+    const { accessToken } = await this.auth.passwordResetControllerComplete({
+      body: { password, token },
+    });
+    this.started(accessToken);
+    this.current.set(null);
+    return this.load();
+  }
+
   // One renewal at a time, whoever asks.
   renew(): Promise<boolean> {
     if (this.renewing) return this.renewing;
@@ -171,6 +182,13 @@ export class Session {
   // Every session of the account, on every device.
   signOutEverywhere(): Promise<void> {
     return this.end('everywhere');
+  }
+
+  // The server already ended this session (session.revoked): forgotten here
+  // only. Asking it, or telling the other tabs, could reach a session this
+  // browser started since, under the same cookie (a password reset).
+  revoked(): void {
+    this.drop();
   }
 
   // Signed out here at once, whatever the server answers.

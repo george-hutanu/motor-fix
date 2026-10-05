@@ -13,6 +13,24 @@
     "sent": "We sent a new link by e-mail.",
     "tooMany": "You already asked for a link. Try again a little later."
   },
+  "newPassword": {
+    "askAgain": "Ask for a new link",
+    "checking": "Checking the link…",
+    "expired": "The link has expired",
+    "expiredLine": "The link was already used or is more than an hour old. Ask for a new one.",
+    "hint": "At least 8 characters.",
+    "password": "New password",
+    "retry": "Try again",
+    "submit": "Save the password",
+    "title": "New password"
+  },
+  "passwordReset": {
+    "back": "Back to sign in",
+    "line": "We will e-mail you a link to choose a new password.",
+    "sent": "If an account uses this address, we have sent a link.",
+    "submit": "Send the link",
+    "title": "Reset your password"
+  },
   "placeholder": {
     "account": "Account",
     "garages": "Garages",
@@ -27,6 +45,7 @@
     "field": {
       "pattern": "That e-mail address does not look right."
     },
+    "forgot": "Forgot your password?",
     "newHere": "New to MotorFix?",
     "password": "Password",
     "passwordPlaceholder": "Your password",

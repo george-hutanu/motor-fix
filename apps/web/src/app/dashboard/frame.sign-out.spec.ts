@@ -32,6 +32,7 @@ async function render(role: string, landing: string, answer: unknown = true) {
   const session = {
     current,
     ended: new Subject<void>(),
+    revoked: jest.fn(() => current.set(null)),
     signOut: jest.fn(async () => current.set(null)),
     signOutEverywhere: jest.fn(async () => current.set(null)),
   };
@@ -151,7 +152,7 @@ describe('signing out on all devices', () => {
 });
 
 describe('a session ended elsewhere', () => {
-  it('signs the tab out and opens Home on a session.revoked live message', async () => {
+  it('forgets the session and opens Home on a session.revoked live message, asking the server nothing', async () => {
     const { live, navigate, session } = await render('admin', '/app/admin');
 
     live.events.next({
@@ -162,7 +163,8 @@ describe('a session ended elsewhere', () => {
     await flush();
 
     expect(live.close).toHaveBeenCalled();
-    expect(session.signOut).toHaveBeenCalledTimes(1);
+    expect(session.revoked).toHaveBeenCalledTimes(1);
+    expect(session.signOut).not.toHaveBeenCalled();
     expect(navigate).toHaveBeenLastCalledWith('/');
   });
 

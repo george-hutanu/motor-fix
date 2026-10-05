@@ -41,6 +41,11 @@ export const routes: Routes = [
     canMatch: [languageAddress],
     children: [
       { component: Home, matcher: languageRoot },
+      {
+        loadComponent: () =>
+          import('./public/reset-password').then((m) => m.ResetPassword),
+        path: 'reset-password/:token',
+      },
       placeholder('garages', 'public.placeholder.garages'),
       placeholder('garages/:garage', 'public.placeholder.garages'),
       placeholder('mechanics/:mechanic', 'public.placeholder.mechanics'),
