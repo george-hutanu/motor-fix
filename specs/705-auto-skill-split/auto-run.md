@@ -1,0 +1,37 @@
+# Auto run — 705-auto-skill-split (ST-704)
+
+- **Description**: split speckit-auto into a lean run order and phase references, and drop the stale text (harness tech debt, EP-1).
+- **Base**: origin/main 3486742.
+- **Start commit**: aa54ebf.
+- **Branch**: 705-auto-skill-split.
+- **PR**: #145 (draft).
+- **Level**: 1.
+
+## Size
+- **Level 1 (one-session)**: one skill file plus its specs, done in one session.
+
+## Decisions
+- **Feature number 705**: the 704 branch is ST-697's (PR #144).
+- **Inventory spec**: `layout.spec.mjs`, beside SKILL.md, the way #144 puts `phase-dispatch.spec.mjs` there.
+- **Byte budget of 15000**: leaves room for #144's "Phase agents" paragraph.
+- **Phase 9 red**: `layout.spec.mjs` has 6 of 7 tests failing (the stale-text test passes). `npm run test:harness`: 1 file failed, 55 passed; 6 tests failed, 1230 passed. The pre-commit hook does not run the harness specs.
+
+## Stale text fixed
+- **Line 49**: `biome.json` is now `biome.jsonc`.
+- **Phase 5, import-extension rule**: names the real apps. web-e2e uses `nodenext` and needs `.js`; the others use `bundler` or `preserve`. The source cited is now the tsconfigs, not AGENTS.md.
+- **Phase 9 and the checklist**: "Jira key" is now "story id".
+- **Phase 12 and the checklist**: no local mutation-runner. Mutation runs only in `mutation.yml`.
+- **Phases 3 (table) and 13, and the checklist**: "lane" is now "connector", and "ticket" is now "story".
+- **Phase 15**: dropped the "git-excluded" sentence.
+- **Phase 16**: `--since` rationale restated.
+- **Commit Protocol**: artifacts are tracked and committed as `docs(specs)`; the phase 2–8 and 17 rows are corrected.
+
+## Overlap check (2026-10-05)
+- **#141** (696-lifecycle-script): OPEN, draft. It changes SKILL.md (+27/−35: Hand-off steps and tail steps 5–6).
+- **#144** (704-auto-phase-model-pins, ST-697): OPEN. It changes SKILL.md (+40) and adds `phase-dispatch.spec.mjs`.
+- **Result**: the move waits for both (plan.md, "Overlap"). Resume at T004.
+
+## Follow-ups (not in this change)
+- `speckit-harden` and `.claude/agents/mutation-runner.md` still describe local mutation runs.
+- Phase 14 calls a missing `design.md` a Hard Stop, but the Hard Stops list says it is exhaustive.
+- The comment in `.claude/vitest.config.ts` still says `.claude/` is git-excluded.
