@@ -13,3 +13,6 @@
 - 2026-10-05 · qa · Foundations timeline row ST-127 · Implementing → QA
 - 2026-10-05 · labels · PR #72 · QA
 - 2026-10-05 · debt · 3 To do tasks filed from deferred.md (EP-1 Foundations): 3f0607bff0d281d5bf39d6e6f897df24, 3f0607bff0d28111a434e75fcd9c94d3, 3f0607bff0d2817e843bdfd923180dff
+- 2026-10-05 · blocked · ST-127 story Status · QA → Blocked (QA cannot boot: Docker hangs, MinIO images gone)
+- 2026-10-05 · blocked · Foundations timeline row ST-127 · QA → Blocked
+- 2026-10-05 · labels · PR #72 · QA + blocked

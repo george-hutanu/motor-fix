@@ -42,3 +42,4 @@
 ## Resume 2026-10-05
 - Resumed in .worktrees/127-password-reset at a9ff83c (merge of origin/main with #77; auth.module.ts exports keep both lists). Lap-4 conflict finding resolved by that merge.
 - Lap-2 low finding fixed: the finish and ready lines logged before the merge are dropped from notion-sync.md (Notion still QA, no finish comment posted).
+- QA lap 5 on 3b2c8ea not run: Docker daemon hangs (docker info times out), MinIO images gone from Docker Hub, no local postgres/redis fallback. No agent-review posted. Blocked until the MinIO fix merges and Docker answers.
