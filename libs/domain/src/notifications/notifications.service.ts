@@ -77,6 +77,16 @@ interface NextJob {
   delay: number;
 }
 
+// A param that opens something by itself (an account e-mail's link carries
+// its token): only the message in flight holds it, never the bell, and not
+// once the message is sent or has failed.
+const IN_FLIGHT_ONLY = ['link'];
+
+const settled = (params: Prisma.InputJsonObject): Prisma.InputJsonObject =>
+  Object.fromEntries(
+    Object.entries(params).filter(([key]) => !IN_FLIGHT_ONLY.includes(key)),
+  );
+
 const send = (id: string): NextJob => ({
   data: { id },
   delay: 0,
@@ -180,10 +190,14 @@ export class NotificationsService {
     failure: string,
     fallback: Fallback,
   ): Promise<void> {
-    await this.prisma.notification.updateMany({
-      data: { failure, status: 'failed' },
-      where: { id: { in: rows.map((r) => r.id) } },
-    });
+    const ids = rows.map((r) => r.id);
+    await this.prisma.$transaction([
+      this.prisma.notification.updateMany({
+        data: { failure, status: 'failed' },
+        where: { id: { in: ids } },
+      }),
+      this.forget(ids),
+    ]);
     for (const row of rows) {
       this.logger.warn(
         `notification ${row.id} ${row.kind} ${row.channel} failed: ${failure}`,
@@ -193,6 +207,13 @@ export class NotificationsService {
       if (next) await this.fallBack(row, next);
       else await this.fallback({ ...row, failure, status: 'failed' });
     }
+  }
+
+  // Run in the transaction that marks the rows sent or failed: they no longer
+  // hold what only the message in flight needed.
+  forget(ids: readonly string[]) {
+    return this.prisma
+      .$executeRaw`UPDATE notification SET params = params - ${IN_FLIGHT_ONLY}::text[] WHERE id = ANY(${ids}::uuid[])`;
   }
 
   // The same message on the next channel, unless the event already has a
@@ -346,7 +367,13 @@ export class NotificationsService {
       subjectId: input.subjectId ?? null,
     };
     const bell = await tx.notification.create({
-      data: { ...base, channel: 'in_app', sentAt: at, status: 'sent' },
+      data: {
+        ...base,
+        channel: 'in_app',
+        params: settled(base.params),
+        sentAt: at,
+        status: 'sent',
+      },
     });
     const channels = outsideChannels(input.kind, choice.muted, {
       email: Boolean(account.email),
@@ -406,7 +433,13 @@ export class NotificationsService {
     const blocked = blockedReason(this.config, address);
     if (blocked) {
       await tx.notification.create({
-        data: { ...base, channel: 'email', failure: blocked, status: 'failed' },
+        data: {
+          ...base,
+          channel: 'email',
+          failure: blocked,
+          params: settled(base.params as Prisma.InputJsonObject),
+          status: 'failed',
+        },
       });
       return null;
     }
