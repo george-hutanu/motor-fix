@@ -187,6 +187,27 @@ describe('the pre-commit hook', () => {
     assert.equal(existsSync(join(repo, 'heavy-ran')), false);
   });
 
+  // JEST_SUITE=unit was how commits slipped past a missing database.
+  it('refuses a commit with JEST_SUITE set, before anything else runs', () => {
+    const root = fileURLToPath(new URL('../..', import.meta.url));
+    // No node or npx on this PATH, and no slot to wait for: if the refusal
+    // were missing, the hook would fail fast on the missing tools instead.
+    const run = spawnSync('sh', ['.husky/pre-commit'], {
+      cwd: root,
+      encoding: 'utf8',
+      env: { PATH: '/usr/bin:/bin', JEST_SUITE: 'unit', HEAVY_WAIT: '0', HEAVY_LOCK: join(scratch(), 'slot.lock') },
+    });
+    assert.equal(run.status, 1);
+    assert.match(run.stderr, /JEST_SUITE/);
+    assert.doesNotMatch(run.stdout + run.stderr, /identity|heavy/i);
+  });
+
+  it('starts the worktree services in the slot, chained so their failure skips the checks', () => {
+    const hook = readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8');
+    const line = hook.split('\n').find((l) => l.includes('scripts/heavy.sh'));
+    assert.match(line, /services=\\\$\(node scripts\/test-services\.ts \$base\) && eval \\"\\\$services\\" && TZ=UTC npx nx affected/);
+  });
+
   it('turns the Nx daemon off before anything runs, slot or not', () => {
     const hook = readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8');
     const lines = hook.split('\n');

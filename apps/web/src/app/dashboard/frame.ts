@@ -19,6 +19,7 @@ import {
 import type { MeDto } from '@motor-fix/data-access';
 import {
   AsWritten,
+  ClockPipe,
   I18n,
   LanguageSwitch,
   TranslatePipe,
@@ -29,6 +30,7 @@ import { filter, map } from 'rxjs';
 
 import { EmailBanner } from './email-banner';
 import { Live } from './live';
+import { LiveChange } from './live-in-place';
 import { Session } from './session';
 import { SignOutEverywhere } from './sign-out-everywhere';
 import { DashboardTabBar } from './tab-bar';
@@ -51,10 +53,12 @@ const ROLES: readonly { role: Role; label: string }[] = [
 @Component({
   imports: [
     AsWritten,
+    ClockPipe,
     DashboardTabBar,
     EmailBanner,
     HlmToaster,
     LanguageSwitch,
+    LiveChange,
     RouterLink,
     RouterLinkActive,
     RouterOutlet,
@@ -78,6 +82,7 @@ const ROLES: readonly { role: Role; label: string }[] = [
     .roles button:disabled { cursor: progress; }
     .view { display: flex; flex-direction: column; min-width: 0; }
     main { flex: 1 0 auto; }
+    .live-status { margin: 0; padding: 0; color: var(--mf-text-secondary); font-size: var(--mf-size-small); }
     @media (min-width: 768px) {
       :host { grid-template: 1fr / minmax(0, 16rem) minmax(0, 1fr); }
       aside nav { display: flex; }
@@ -118,6 +123,9 @@ const ROLES: readonly { role: Role; label: string }[] = [
     <div class="view">
       <header><h1>{{ open().label | t }}</h1><mf-language-switch /></header>
       <mf-email-banner />
+      <p class="live-status" role="status" [mfLiveChange]="lastTest()">
+        @if (lastTest(); as at) { {{ 'shell.live.test' | t }} · {{ at | clock }} }
+      </p>
       <main><router-outlet /></main>
       <mf-dashboard-tab-bar [base]="base()" [views]="entries()" [name]="dashboard().name" />
     </div>
@@ -144,6 +152,8 @@ export class Frame implements OnInit {
     return ROLES.filter(({ role }) => held.includes(role));
   });
   protected readonly switching = signal(false);
+  // When the epic's test update last arrived: it changes this line in place.
+  protected readonly lastTest = signal<string | null>(null);
   protected readonly entries = computed(() =>
     allowedViews(this.area(), this.session.current()?.capabilities ?? []),
   );
@@ -187,7 +197,7 @@ export class Frame implements OnInit {
     this.live.events
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((message) => {
-        if (message.kind === 'live.test') toast(this.i18n.t('shell.live.test'));
+        if (message.kind === 'live.test') this.lastTest.set(message.at);
         if (message.kind === 'account.email_confirmed') {
           void this.session.reload();
         }

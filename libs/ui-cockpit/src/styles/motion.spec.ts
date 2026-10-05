@@ -39,6 +39,7 @@ describe('Cockpit motion', () => {
       '--mf-motion-blink': '1s',
       '--mf-motion-dial': '1100ms',
       '--mf-motion-ease': 'cubic-bezier(0.32, 0.72, 0, 1)',
+      '--mf-motion-flash': '1s',
       '--mf-motion-pop': '420ms',
       '--mf-motion-pulse': '1.6s',
       '--mf-motion-rise': '700ms',

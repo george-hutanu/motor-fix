@@ -509,6 +509,7 @@ button.spartan-switch[data-disabled="true"] {
   --mf-motion-roll: 900ms;
   --mf-motion-pulse: 1.6s;
   --mf-motion-blink: 1s;
+  --mf-motion-flash: 1s;
 }
 
 @keyframes mf-rise {
@@ -556,6 +557,32 @@ button.spartan-switch[data-disabled="true"] {
 
 .spartan-sheet-content[data-side="bottom"] {
   transform-origin: center bottom;
+}
+
+/* A value or row a live update just changed: an amber tint over it that fades out. */
+@keyframes mf-live-changed {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Without weight, so a sticky or absolute host keeps its own position. */
+:where(.mf-live-changed) {
+  position: relative;
+}
+
+.mf-live-changed::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--mf-amber-tint);
+  pointer-events: none;
+  opacity: 0;
+  animation: mf-live-changed var(--mf-motion-flash) var(--mf-motion-ease);
 }
 
 /* Removing them, rather than shortening them, puts anything still moving in its end state at once. */

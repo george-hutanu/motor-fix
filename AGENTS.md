@@ -189,7 +189,11 @@ decisions are the source for anything the constitution does not fix.
   `npm run test:unit` leaves those out and `npm run test:integration` runs
   only them (`JEST_SUITE` in `jest.preset.cjs`; unset runs all). Integration
   tests need `docker compose up -d` (or local servers), with `DATABASE_URL`
-  and `REDIS_URL` from `.env.example`.
+  and `REDIS_URL` from `.env.example`. The pre-commit hook needs neither: when
+  an affected project has integration specs it starts and migrates the
+  worktree's own PostgreSQL and Redis (`scripts/test-services.ts`, compose
+  project `mf-test-<worktree>-<hash>`, left running between commits; Docker
+  required), and it refuses a commit with `JEST_SUITE` set.
 - PR CI: `.github/workflows/ci.yml`, one job per check, in parallel: PR
   title (Conventional Commit), Biome, Typecheck, Unit tests, Integration
   tests (PostgreSQL+PostGIS and Redis services), E2E tests (Playwright
