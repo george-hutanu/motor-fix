@@ -84,8 +84,9 @@ Run these before phase 1, in one batch:
   starting branch and commit.
 - Read `.specify/memory/constitution.md` (v1.8.1 — its Enforcement section
   lists the gates that will fire at you).
-- `sh scripts/heavy.sh sh -c 'npm run typecheck && npm run lint && npm run test'`
-  — the repo MUST start green. Through Nx, whose cache every worktree shares
+- `sh scripts/heavy.sh sh -c 'npm run typecheck && npm run lint && npm run test' > <scratchpad>/preflight.log 2>&1; echo "exit $?"; tail -n 40 <scratchpad>/preflight.log`
+  — the repo MUST start green (on a failure, `grep -nE '✕|●|FAIL|Error'` the log
+  rather than reading all of it). Through Nx, whose cache every worktree shares
   (`~/.nx/<workspace hash>`), a project unchanged since another worktree
   checked it is a cache hit, not a rerun. A red start is a hard stop; the run has no way to tell a pre-existing
   failure from one it caused. This is the one time the full suite runs; after
@@ -546,10 +547,14 @@ When phases 14–16 are done, the review left no CRITICAL/HIGH and the last
    one stage label → `QA`. Ready is QA; there is no In review stage.
 3. If the branch is behind `origin/main`, `git merge --no-edit origin/main`,
    re-run `typecheck`, `lint` and the tests, and push.
-4. Start the CI wait in the background — `gh pr checks <branch> --watch`
-   with `run_in_background`, never a foreground `sleep` or `until` loop — and
-   go straight on to step 5: QA runs beside CI, not after it. When the wait
-   reports, every check other than `agent-review` must have passed. A failing
+4. Start the CI wait in the background — `run_in_background`, never a
+   foreground `sleep` or `until` loop — with the command that prints only what
+   did not pass (AGENTS.md "Agent replies"):
+   `gh pr checks <branch> --watch >/dev/null 2>&1; gh pr checks <branch> --json name,bucket --jq '.[] | select(.bucket != "pass" and .bucket != "skipping") | "\(.name): \(.bucket)"'`
+   — and go straight on to step 5: QA runs beside CI, not after it. When the
+   wait reports, every check other than `agent-review` must have passed (its
+   output lists nothing else). For a failing one read
+   `gh run view <run-id> --log-failed | tail -n 80`, not the whole log. A failing
    check is a repair: fix it on the branch, push (the new head needs a new
    tester run), wait again; it counts toward `SPECKIT_MAX_REPAIR_ITERATIONS`.
 5. **QA — the PR tester** (`/speckit-pr-test <n>`, Constitution VII), started
@@ -592,7 +597,23 @@ hand-off does none of them but the Blocked write: the PR stays a draft.
 
 ## Final Report
 
-One report, at the end, standing on its own:
+One report, at the end, standing on its own. Write it into
+`specs/<feature>/auto-run.md` under `## Final Report`, never only into the
+reply. When this run was dispatched as an agent (by the orchestrating session
+or `/speckit-watch`), the reply is the envelope from AGENTS.md "Agent
+replies" and at most 10 lines in all, the report itself left in the file:
+
+```
+STATUS: success | failure | blocked | partial — <one line: what happened>
+PR: #<n> <draft|ready|merged> <sha7> | none
+NEXT: <the one action the caller should take> | none
+FILES: <paths written, comma-separated> | none
+```
+
+Then up to six lines: commits and test counts, review verdicts, decisions
+taken on the owner's behalf, follow-ups. Run by the owner in their own
+session, the same envelope opens the report and the sections below follow.
+The report's sections:
 
 - Branch, feature directory, commit range (`<start>..HEAD`), commit count.
 - Phases run, with each one's outcome in a line.
