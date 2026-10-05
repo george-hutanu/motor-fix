@@ -26,12 +26,14 @@ const REMINDERS_WORKER = Symbol('REMINDERS_WORKER');
 // The reminders run at 09:00 in Bucharest. The proposed time of the brief.
 const RUN_HOUR = 9;
 
-// A failed run is tried 3 more times, 1, 2 and 4 minutes later.
+// A failed run is tried 3 more times, 1, 2 and 4 minutes later. A finished
+// day keeps its id for two days, so a restart does not run it again; a day
+// that failed for good gives it back, so a restart tries it once more.
 const RUN: JobsOptions = {
   attempts: 4,
   backoff: { delay: 60_000, type: 'exponential' },
-  removeOnComplete: true,
-  removeOnFail: 100,
+  removeOnComplete: { age: 2 * 86_400 },
+  removeOnFail: true,
 };
 
 interface Daily {
@@ -40,6 +42,7 @@ interface Daily {
 
 // One job a day, under the id of its day, so a restart or a second worker
 // cannot queue a day twice; a day run twice still sends nothing twice.
+// The next day is queued before the run, so a failing run cannot stop it.
 @Injectable()
 export class RemindersScheduler {
   private readonly logger = new Logger('Reminders');
@@ -59,8 +62,8 @@ export class RemindersScheduler {
   }
 
   async handle(job: Job<Daily>): Promise<void> {
-    await this.reminders.run(job.data.day);
     await this.queueNext(this.now());
+    await this.reminders.run(job.data.day);
   }
 
   failed(job: Job<Daily>, error: Error): void {
@@ -104,7 +107,6 @@ export class RemindersModule
 
   static registerWorker(options: RemindersOptions): DynamicModule {
     return {
-      exports: [RemindersService, REMINDERS_CLOCK],
       imports: [options.notifications],
       module: RemindersModule,
       providers: [

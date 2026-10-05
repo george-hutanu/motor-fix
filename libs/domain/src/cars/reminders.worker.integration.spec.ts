@@ -88,6 +88,15 @@ describe('the reminders schedule at start-up', () => {
     expect(await queue.getJob('daily-2026-11-11')).toBeDefined();
   });
 
+  it('still queues the next day when the run fails', async () => {
+    run.mockRejectedValueOnce(new Error('database down'));
+    const s = scheduler('2026-11-10T07:00:01Z');
+    await expect(
+      s.handle({ data: { day: '2026-11-10' } } as Job),
+    ).rejects.toThrow('database down');
+    expect(await queue.getJob('daily-2026-11-11')).toBeDefined();
+  });
+
   it('retries a failed run 3 times with backoff', async () => {
     await scheduler('2026-11-10T05:00:00Z').start();
     const [job] = await queue.getJobs(['delayed']);

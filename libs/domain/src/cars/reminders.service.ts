@@ -6,7 +6,6 @@ import type {
   Prisma,
   PrismaClient,
   Reminder,
-  ReminderKind,
 } from '../generated/prisma/client';
 import {
   NOTIFICATIONS_PRISMA,
@@ -104,7 +103,17 @@ export class RemindersService {
             OR: [{ sent30: false }, { sent7: false }],
           },
           { dueOn: date(addDays(today, 1)), kind: 'booking', sentAt: null },
-          ...(season ? [{ kind: season as ReminderKind }] : []),
+          ...(season
+            ? [
+                {
+                  kind: season,
+                  OR: [
+                    { seasonYear: null },
+                    { seasonYear: { not: Number(today.slice(0, 4)) } },
+                  ],
+                },
+              ]
+            : []),
         ],
       },
     });

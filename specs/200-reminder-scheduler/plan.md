@@ -4,7 +4,7 @@
 
 ## Summary
 
-A `reminders` BullMQ queue in the worker runs one job a day at 09:00 Europe/Bucharest (job id `daily:<day>`), computed in local time; at start the worker runs a missed day at once. The run reads the REMINDER table and sends each due stage through `NotificationsService.notify` with an event id per reminder, stage and date, then sets the reminder's flag; the pipeline's one-message-per-event rule and its quiet hours do the rest. Registration hooks let later stories set and clear reminders. A small `ObjectTimers` class gives later queues stable-id timers and a sweep.
+A `reminders` BullMQ queue in the worker runs one job a day at 09:00 Europe/Bucharest (job id `daily-<day>`), computed in local time; at start the worker runs a missed day at once. The run reads the REMINDER table and sends each due stage through `NotificationsService.notify` with an event id per reminder, stage and date, then sets the reminder's flag; the pipeline's one-message-per-event rule and its quiet hours do the rest. Registration hooks let later stories set and clear reminders. A small `ObjectTimers` class gives later queues stable-id timers and a sweep.
 
 ## Technical Context
 

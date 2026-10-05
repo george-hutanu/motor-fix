@@ -190,6 +190,38 @@ describe('an ITP reminder due on 10 December 2026', () => {
   });
 });
 
+describe('a run that fails part-way', () => {
+  it('fails, keeps what it sent, and a retry sends the rest once', async () => {
+    const driver = await account('george');
+    for (const _ of [1, 2, 3]) {
+      await reminders.setCarDue({
+        accountId: driver,
+        carId: randomUUID(),
+        dueOn: '2026-12-10',
+        kind: 'itp',
+      });
+    }
+    notifications.now = MORNING('2026-11-10');
+    const notify = notifications.notify.bind(notifications);
+    let calls = 0;
+    const spy = jest
+      .spyOn(notifications, 'notify')
+      .mockImplementation(async (input) => {
+        calls += 1;
+        if (calls === 2) throw new Error('database down');
+        return notify(input);
+      });
+
+    await expect(reminders.run('2026-11-10')).rejects.toThrow('database down');
+    expect(await rows('DUE_ITP')).toHaveLength(1);
+    expect(await prisma.reminder.count({ where: { sent30: true } })).toBe(1);
+
+    expect(await reminders.run('2026-11-10')).toBe(2);
+    expect(await rows('DUE_ITP')).toHaveLength(3);
+    spy.mockRestore();
+  });
+});
+
 describe('every 30 and 7 day kind', () => {
   it('sends its own type', async () => {
     const driver = await account('bogdan');

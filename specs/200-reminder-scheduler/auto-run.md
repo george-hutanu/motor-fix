@@ -27,3 +27,9 @@
 
 ## 10. Implement
 - T001–T009; the feature's 8 suites green, 100 tests (quiet-hours' own suites included, after moving its Bucharest reading to `bucharest.ts`).
+
+## 12–14. Harden, review (repair lap 1 of 5)
+- spec-reviewer BLOCK on one HIGH: a run that failed for good stopped the schedule (the next day was queued only after a success). code-reviewer BLOCK on one HIGH: the part-way failure path had no test.
+- Fixed, tests first: the next day is queued before the run; a run failing part-way keeps what it sent and its retry sends the rest once (both new tests). Also: the tyre query reads only rows not sent this season; a finished day keeps its job id for two days (a restart does not rerun it) and a failed one frees it (a restart retries it); the module exports nothing; `REMINDER_DAY_MS` documented (commented out) in `.env.example`; plan's job id corrected.
+- Kept, owner's call: `ObjectTimers` with no production caller yet (FR-010, the brief's scope; plan Complexity Tracking). Deferred: the Playwright bell check (deferred.md).
+- diff-audit: its `import-extension` errors are the known repo-wide false positive (the libs use extensionless imports throughout); its base is the stale local `main`. Mutation testing: CI only.
