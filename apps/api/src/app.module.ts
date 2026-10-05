@@ -6,6 +6,7 @@ import {
   emailConfig,
   HealthModule,
   NotificationsModule,
+  oauthSettings,
   PasswordResetModule,
   StorageModule,
 } from '@motor-fix/domain';
@@ -19,6 +20,7 @@ export class AppModule {
   static register(env: ApiEnv): DynamicModule {
     const auth = AuthModule.register({
       databaseUrl: env.DATABASE_URL,
+      oauth: oauthSettings(env.APP_ENV, process.env),
       redisUrl: env.REDIS_URL,
       tokenSecret: env.AUTH_TOKEN_SECRET,
     });

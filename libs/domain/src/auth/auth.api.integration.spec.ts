@@ -384,6 +384,8 @@ describe('the account module', () => {
 
     expect(controllers.length).toBeGreaterThan(0);
     expect(writes.sort()).toEqual([
+      'auth/oauth/apple/callback',
+      'auth/oauth/complete',
       'auth/refresh',
       'auth/roles/switch',
       'auth/sign-in',

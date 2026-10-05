@@ -13,6 +13,7 @@ import type { Request } from 'express';
 
 import { verifyAccessToken } from './access-token';
 import type { Capability } from './capabilities';
+import type { OAuthSettings } from './oauth/providers';
 import { type Actor, requireCapability, roleInUse } from './policy';
 import { PRISMA } from './prisma';
 import type { PrismaClient } from '../generated/prisma/client';
@@ -24,6 +25,8 @@ export interface AuthOptions {
   // Counts failed sign-ins only.
   redisUrl: string;
   tokenSecret: string;
+  // Sign-in with Google and Apple; a provider left out is not offered.
+  oauth?: OAuthSettings;
 }
 
 const REQUIRES = 'auth:requires';

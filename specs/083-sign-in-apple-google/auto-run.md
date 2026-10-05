@@ -30,3 +30,8 @@
 
 ## 5–8. Plan, checklist, tasks, analyze
 - plan.md (no OpenID library: `fetch` + `node:crypto`), checklists/requirements.md (all checked), tasks.md with FR → test; artifact-lint clean.
+
+## 9. Tests (red first)
+- Domain: `oauth/providers.spec.ts`, `oauth/openid.spec.ts`, `oauth/oauth.api.integration.spec.ts` against an in-process stub issuer (`oauth/openid-stub.testing.ts`); never the real providers.
+- Web: `sign-in/providers.spec.ts`, `sign-in/provider-sign-up.spec.ts`, `sign-in/sign-in.returned.spec.ts`, `sign-in/sign-in-dialog.returned.spec.ts`, `public/sign-in-return.spec.ts`, `dashboard/session.providers.spec.ts`; e2e `sign-in-providers.spec.ts` (`@openid`).
+- Red: 8 of 8 unit suites failed, 12 of 12 tests (modules missing); the integration suite needs the same modules.
