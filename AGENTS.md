@@ -12,7 +12,10 @@ that way for `~/code`.
 
 - `sh .husky/identity.sh apply` writes the repo-local git config: author, and
   credentials pinned to george-hutanu's gh token. `npm install` runs it via
-  `prepare`, so a fresh clone is covered.
+  `prepare`, so a fresh clone is covered. It also drops the desktop app's
+  pin of a new worktree's `core.hooksPath` to the main checkout once the
+  worktree has its own `.husky/_`, and `check` reports a checkout whose
+  hooks run from elsewhere.
 - `.husky/pre-commit` refuses any commit not authored as george-hutanu.
 - `gh` follows gh's active account, which stays the work one. Agent sessions get
   `GH_TOKEN` for george-hutanu from the SessionStart hook; in your own
@@ -185,7 +188,7 @@ decisions are the source for anything the constitution does not fix.
   the list in `apps/api/src/public-routes.integration.spec.ts`. The web
   interceptor answers a `sign_in_required` 401 with the sign-in dialog over
   the screen, then sends the call again once.
-- Lint and format: Biome only, root `biome.json` (no eslint, no prettier).
+- Lint and format: Biome only, root `biome.jsonc` (no eslint, no prettier).
   Tests: Jest from the root config, Playwright for end-to-end. NestJS 12 is
   ESM-only, so the Nest projects' `test` targets run Jest with
   `--experimental-vm-modules`.

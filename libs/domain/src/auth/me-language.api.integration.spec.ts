@@ -74,24 +74,21 @@ const languageEntries = (id: string) =>
   });
 
 describe('changing my language', () => {
-  it.each([
-    'driver',
-    'garage',
-    'receptionist',
-    'mechanic',
-    'admin',
-  ] as const)('saves en for a %s and answers with who am I', async (role) => {
-    const id = await account(`ana-${role}`, [role]);
+  it.each(['driver', 'garage', 'receptionist', 'mechanic', 'admin'] as const)(
+    'saves en for a %s and answers with who am I',
+    async (role) => {
+      const id = await account(`ana-${role}`, [role]);
 
-    const res = await patch({ language: 'en' }, bearer(id, role));
+      const res = await patch({ language: 'en' }, bearer(id, role));
 
-    expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ id, language: 'en', role });
-    const me = await request(app.getHttpServer())
-      .get('/me')
-      .set('Authorization', bearer(id, role));
-    expect(me.body).toEqual(res.body);
-  });
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ id, language: 'en', role });
+      const me = await request(app.getHttpServer())
+        .get('/me')
+        .set('Authorization', bearer(id, role));
+      expect(me.body).toEqual(res.body);
+    },
+  );
 
   it('gives a fresh account Romanian', async () => {
     const id = await account('andrei', ['driver']);

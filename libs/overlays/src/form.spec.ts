@@ -370,9 +370,12 @@ describe('toProblem', () => {
     [409, { message: 'taken' }, 'conflict'],
     [503, null, 'service_unavailable'],
     [401, { code: 7 }, 'error'],
-  ])('gives a %i answer that is not a problem the code for its status', (status, body, code) => {
-    expect(toProblem(problem(status, body))).toEqual({ code, status });
-  });
+  ])(
+    'gives a %i answer that is not a problem the code for its status',
+    (status, body, code) => {
+      expect(toProblem(problem(status, body))).toEqual({ code, status });
+    },
+  );
 
   it('calls anything else a general error', () => {
     expect(toProblem(new Error('boom'))).toEqual({ code: 'error', status: 0 });
@@ -385,19 +388,22 @@ describe('failures', () => {
     ['internal_error', 500],
     ['maintenance', 503],
     ['sign_in_required', 401],
-  ])('keeps the task and the text and shows the %s message next to the button', async (code, status) => {
-    answer = () => Promise.reject(problem(status, { code, status }));
-    await openTask();
-    await type('name', 'Ana Pop');
-    await press();
+  ])(
+    'keeps the task and the text and shows the %s message next to the button',
+    async (code, status) => {
+      answer = () => Promise.reject(problem(status, { code, status }));
+      await openTask();
+      await type('name', 'Ana Pop');
+      await press();
 
-    expect(current.save.state()).toBe('failed');
-    expect(current.save.problem()?.code).toBe(code);
-    expect($('mf-task-error')?.getAttribute('role')).toBe('alert');
-    expect(text('mf-task-error')).toBe(ro(`shell.form.problem.${code}`));
-    expect($<HTMLInputElement>('#name')?.value).toBe('Ana Pop');
-    expect($('form')).not.toBeNull();
-  });
+      expect(current.save.state()).toBe('failed');
+      expect(current.save.problem()?.code).toBe(code);
+      expect($('mf-task-error')?.getAttribute('role')).toBe('alert');
+      expect(text('mf-task-error')).toBe(ro(`shell.form.problem.${code}`));
+      expect($<HTMLInputElement>('#name')?.value).toBe('Ana Pop');
+      expect($('form')).not.toBeNull();
+    },
+  );
 
   it('shows the general message for a code with no message of its own', async () => {
     answer = () => Promise.reject(problem(400, { code: 'brand_new_code' }));

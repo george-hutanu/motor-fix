@@ -263,22 +263,23 @@ describe('Live failing connections', () => {
     expect(renew).not.toHaveBeenCalled();
   });
 
-  it.each([
-    401, 403, 500,
-  ])('emits nothing and does not reconnect on a %s answer', async (status) => {
-    const { live, seen } = setUp((body) => ({
-      body: { getReader: () => body.reader },
-      ok: false,
-      status,
-    }));
+  it.each([401, 403, 500])(
+    'emits nothing and does not reconnect on a %s answer',
+    async (status) => {
+      const { live, seen } = setUp((body) => ({
+        body: { getReader: () => body.reader },
+        ok: false,
+        status,
+      }));
 
-    live.open();
-    await flush();
-    await new Promise((r) => setTimeout(r, 50));
+      live.open();
+      await flush();
+      await new Promise((r) => setTimeout(r, 50));
 
-    expect(seen).toEqual([]);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
+      expect(seen).toEqual([]);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it('does not throw when the response has no body', async () => {
     const { live, seen } = setUp(() => ({ body: null, ok: true, status: 200 }));

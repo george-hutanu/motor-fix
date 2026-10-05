@@ -323,16 +323,19 @@ describe('answers that refuse', () => {
       'maintenance',
       'MotorFix este în mentenanță. Încearcă din nou în câteva minute.',
     ],
-  ])('shows the message for %s %s and keeps the e-mail', async (status, code, message) => {
-    await open();
-    signIn.mockRejectedValueOnce(problem(status, code));
+  ])(
+    'shows the message for %s %s and keeps the e-mail',
+    async (status, code, message) => {
+      await open();
+      signIn.mockRejectedValueOnce(problem(status, code));
 
-    await submit('andrei@example.ro', 'parola');
+      await submit('andrei@example.ro', 'parola');
 
-    expect(alertText()).toBe(message);
-    expect(field('E‑mail').value).toBe('andrei@example.ro');
-    expect(button('Intră în cont').disabled).toBe(false);
-  });
+      expect(alertText()).toBe(message);
+      expect(field('E‑mail').value).toBe('andrei@example.ro');
+      expect(button('Intră în cont').disabled).toBe(false);
+    },
+  );
 
   it('clears the password after the e-mail or password did not match, and focuses it', async () => {
     await open();

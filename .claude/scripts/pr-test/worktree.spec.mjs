@@ -72,6 +72,30 @@ describe('the tester worktree', () => {
     assert.equal(git(caller, 'for-each-ref', '--format=%(refname)'), before);
   });
 
+  it('checks out the PR head even when another run fetches in between', () => {
+    const { caller, head, root } = repos();
+    // A git that, right after the PR fetch, runs the fetch a concurrent QA run
+    // would: same repository, so the same FETCH_HEAD, now pointing at main.
+    const bin = join(root, 'bin');
+    mkdirSync(bin);
+    const real = execFileSync('sh', ['-c', 'command -v git'], { encoding: 'utf8' }).trim();
+    writeFileSync(
+      join(bin, 'git'),
+      `#!/bin/sh\n"${real}" "$@" || exit $?\ncase "$*" in fetch*refs/pull/*) "${real}" fetch --quiet origin main ;; esac\n`,
+      { mode: 0o755 },
+    );
+    const path = process.env.PATH;
+    process.env.PATH = `${bin}:${path}`;
+    try {
+      const wt = createWorktree({ repo: caller, pr: 21, sha: head.slice(0, 7), root: join(root, 'runs') });
+      assert.equal(wt.sha, head);
+      assert.equal(git(wt.dir, 'rev-parse', 'HEAD'), head);
+      removeWorktree({ repo: caller, dir: wt.dir });
+    } finally {
+      process.env.PATH = path;
+    }
+  });
+
   it('is safe to remove twice', () => {
     const { caller, root } = repos();
     const wt = createWorktree({ repo: caller, pr: 21, root: join(root, 'runs') });

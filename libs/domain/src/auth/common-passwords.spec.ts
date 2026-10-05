@@ -18,13 +18,12 @@ describe('the list of common passwords', () => {
     expect(isCommonPassword('PAROLA123')).toBe(true);
   });
 
-  it.each([
-    'o-parola-lunga',
-    'parola-de-test',
-    'Andrei-Marin-1987!',
-  ])('does not hold "%s"', (password) => {
-    expect(isCommonPassword(password)).toBe(false);
-  });
+  it.each(['o-parola-lunga', 'parola-de-test', 'Andrei-Marin-1987!'])(
+    'does not hold "%s"',
+    (password) => {
+      expect(isCommonPassword(password)).toBe(false);
+    },
+  );
 
   it('holds only passwords that pass the length rule, so the list is the only reason for a refusal', () => {
     for (const password of COMMON_PASSWORDS) {

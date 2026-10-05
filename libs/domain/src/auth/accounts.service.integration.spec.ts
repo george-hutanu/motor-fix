@@ -103,24 +103,24 @@ describe('createAccount', () => {
     ).toBeNull();
   });
 
-  it.each([
-    'google',
-    'apple',
-  ] as const)('counts an e-mail that %s vouches for as confirmed at once', async (method) => {
-    const { service } = ports();
+  it.each(['google', 'apple'] as const)(
+    'counts an e-mail that %s vouches for as confirmed at once',
+    async (method) => {
+      const { service } = ports();
 
-    const { id } = await service.createAccount({
-      email: 'andrei@example.ro',
-      identity: { method, subject: 'provider-subject' },
-      name: 'Andrei',
-      roles: ['driver'],
-    });
+      const { id } = await service.createAccount({
+        email: 'andrei@example.ro',
+        identity: { method, subject: 'provider-subject' },
+        name: 'Andrei',
+        roles: ['driver'],
+      });
 
-    expect(
-      (await prisma.account.findUniqueOrThrow({ where: { id } }))
-        .emailVerifiedAt,
-    ).toBeInstanceOf(Date);
-  });
+      expect(
+        (await prisma.account.findUniqueOrThrow({ where: { id } }))
+          .emailVerifiedAt,
+      ).toBeInstanceOf(Date);
+    },
+  );
 
   it('hands account.created and one audit entry per role to the ports, inside the transaction', async () => {
     const { audit, events, service } = ports();
@@ -160,18 +160,18 @@ describe('createAccount', () => {
     expect(eventTx).not.toBe(prisma);
   });
 
-  it.each([
-    'audit',
-    'events',
-  ] as const)('leaves no row behind when the %s port fails', async (failing) => {
-    const all = ports();
-    all[failing].record.mockRejectedValueOnce(new Error('port down'));
+  it.each(['audit', 'events'] as const)(
+    'leaves no row behind when the %s port fails',
+    async (failing) => {
+      const all = ports();
+      all[failing].record.mockRejectedValueOnce(new Error('port down'));
 
-    await expect(all.service.createAccount(andrei)).rejects.toThrow(
-      'port down',
-    );
-    expect(await prisma.account.count()).toBe(0);
-  });
+      await expect(all.service.createAccount(andrei)).rejects.toThrow(
+        'port down',
+      );
+      expect(await prisma.account.count()).toBe(0);
+    },
+  );
 
   it('refuses an account with no role', async () => {
     const { service } = ports();

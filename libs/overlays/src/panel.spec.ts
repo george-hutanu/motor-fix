@@ -142,37 +142,39 @@ async function drag(by: number, end = 'pointerup') {
 }
 
 describe('the bottom sheet on a phone', () => {
-  it.each([
-    'dialog',
-    'drawer',
-    'drawer-wide',
-  ] as const)('shows a %s as a bottom sheet with a grip below 768 px', async (shape) => {
-    await openTask(shape);
+  it.each(['dialog', 'drawer', 'drawer-wide'] as const)(
+    'shows a %s as a bottom sheet with a grip below 768 px',
+    async (shape) => {
+      await openTask(shape);
 
-    const host = panel();
-    expect(host.getAttribute('data-side')).toBe('bottom');
-    expect(host.classList).toContain('spartan-sheet-content');
-    expect(host.classList).toContain('mf-overlay-sheet');
-    expect(host.classList).not.toContain('mf-overlay-dialog');
-    expect(host.classList).not.toContain('mf-overlay-drawer');
-    expect(host.classList).not.toContain('mf-overlay-drawer-wide');
-    expect(host.classList).not.toContain('spartan-dialog-content');
-    expect(grip()?.getAttribute('aria-hidden')).toBe('true');
-  });
+      const host = panel();
+      expect(host.getAttribute('data-side')).toBe('bottom');
+      expect(host.classList).toContain('spartan-sheet-content');
+      expect(host.classList).toContain('mf-overlay-sheet');
+      expect(host.classList).not.toContain('mf-overlay-dialog');
+      expect(host.classList).not.toContain('mf-overlay-drawer');
+      expect(host.classList).not.toContain('mf-overlay-drawer-wide');
+      expect(host.classList).not.toContain('spartan-dialog-content');
+      expect(grip()?.getAttribute('aria-hidden')).toBe('true');
+    },
+  );
 
   it.each([
     ['dialog', 'mf-overlay-dialog', null],
     ['drawer', 'mf-overlay-drawer', 'right'],
     ['drawer-wide', 'mf-overlay-drawer-wide', 'right'],
-  ] as const)('keeps a %s as asked at 768 px and wider, with no grip', async (shape, cls, side) => {
-    wide = true;
-    await openTask(shape);
+  ] as const)(
+    'keeps a %s as asked at 768 px and wider, with no grip',
+    async (shape, cls, side) => {
+      wide = true;
+      await openTask(shape);
 
-    expect(panel().classList).toContain(cls);
-    expect(panel().classList).not.toContain('mf-overlay-sheet');
-    expect(panel().getAttribute('data-side')).toBe(side);
-    expect(grip()).toBeNull();
-  });
+      expect(panel().classList).toContain(cls);
+      expect(panel().classList).not.toContain('mf-overlay-sheet');
+      expect(panel().getAttribute('data-side')).toBe(side);
+      expect(grip()).toBeNull();
+    },
+  );
 
   it('keeps the shape it opened with when the width changes', async () => {
     await openTask();

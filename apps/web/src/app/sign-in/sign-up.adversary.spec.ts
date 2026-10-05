@@ -323,22 +323,25 @@ describe('answers the dialog does not expect', () => {
       problem(400, 'weak_password', [{ code: 'weak_password', field: 'zip' }]),
     ],
     ['an error with an empty list of field errors', problem(400, 'x', [])],
-  ])('shows a message and keeps what was typed after %s', async (_, failure) => {
-    await open();
-    signUp.mockRejectedValueOnce(failure);
+  ])(
+    'shows a message and keeps what was typed after %s',
+    async (_, failure) => {
+      await open();
+      signUp.mockRejectedValueOnce(failure);
 
-    await submit('Andrei Marin', 'andrei@example.ro', 'o-parola-lunga');
+      await submit('Andrei Marin', 'andrei@example.ro', 'o-parola-lunga');
 
-    expect(field('Nume').value).toBe('Andrei Marin');
-    expect(field('E‑mail').value).toBe('andrei@example.ro');
-    expect(field('Parolă').value).toBe('o-parola-lunga');
-    expect(
-      alertText() +
-        describedBy(field('Parolă')) +
-        describedBy(field('Nume')) +
-        describedBy(field('E‑mail')),
-    ).not.toBe('');
-  });
+      expect(field('Nume').value).toBe('Andrei Marin');
+      expect(field('E‑mail').value).toBe('andrei@example.ro');
+      expect(field('Parolă').value).toBe('o-parola-lunga');
+      expect(
+        alertText() +
+          describedBy(field('Parolă')) +
+          describedBy(field('Nume')) +
+          describedBy(field('E‑mail')),
+      ).not.toBe('');
+    },
+  );
 
   it('shows the weak-password text in English under the password', async () => {
     await open('en');

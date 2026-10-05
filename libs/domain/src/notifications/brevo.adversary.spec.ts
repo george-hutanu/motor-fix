@@ -20,24 +20,26 @@ const brevo = (timeoutMs?: number, apiUrl = mock.url) =>
 const failure = (promise: Promise<unknown>) => promise.catch((e: unknown) => e);
 
 describe('the Brevo adapter against odd answers', () => {
-  it.each([
-    400, 401, 403, 404, 422,
-  ])('does not retry a %i and names the status', async (status) => {
-    mock.answer({ status });
-    const error = (await failure(brevo().send(mail))) as BrevoError;
-    expect(error).toBeInstanceOf(BrevoError);
-    expect(error.retryable).toBe(false);
-    expect(error.reason).toBe(`provider_${status}`);
-  });
+  it.each([400, 401, 403, 404, 422])(
+    'does not retry a %i and names the status',
+    async (status) => {
+      mock.answer({ status });
+      const error = (await failure(brevo().send(mail))) as BrevoError;
+      expect(error).toBeInstanceOf(BrevoError);
+      expect(error.retryable).toBe(false);
+      expect(error.reason).toBe(`provider_${status}`);
+    },
+  );
 
-  it.each([
-    500, 502, 503, 504, 429,
-  ])('retries a %i and names the status', async (status) => {
-    mock.answer({ status });
-    const error = (await failure(brevo().send(mail))) as BrevoError;
-    expect(error.retryable).toBe(true);
-    expect(error.reason).toBe(`provider_${status}`);
-  });
+  it.each([500, 502, 503, 504, 429])(
+    'retries a %i and names the status',
+    async (status) => {
+      mock.answer({ status });
+      const error = (await failure(brevo().send(mail))) as BrevoError;
+      expect(error.retryable).toBe(true);
+      expect(error.reason).toBe(`provider_${status}`);
+    },
+  );
 
   it('fails retryably when Brevo does not answer in time', async () => {
     mock.answer({ hang: true, status: 200 });

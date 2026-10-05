@@ -260,18 +260,21 @@ describe('signing in with the right e-mail and password', () => {
       'garage',
       '/app/garage',
     ],
-  ] as const)('gives %s a token for the role in use, which lands on its dashboard', async (_, roles, lastRole, role, landing) => {
-    await person('p@example.test', [...roles], { lastRole });
+  ] as const)(
+    'gives %s a token for the role in use, which lands on its dashboard',
+    async (_, roles, lastRole, role, landing) => {
+      await person('p@example.test', [...roles], { lastRole });
 
-    const res = await signIn({ email: 'p@example.test', password: PASSWORD });
+      const res = await signIn({ email: 'p@example.test', password: PASSWORD });
 
-    expect(res.status).toBe(200);
-    expect(claims(res)?.role).toBe(role);
-    const me = await request(app.getHttpServer())
-      .get('/me')
-      .set('Authorization', `Bearer ${res.body.accessToken}`);
-    expect(me.body.landing).toBe(landing);
-  });
+      expect(res.status).toBe(200);
+      expect(claims(res)?.role).toBe(role);
+      const me = await request(app.getHttpServer())
+        .get('/me')
+        .set('Authorization', `Bearer ${res.body.accessToken}`);
+      expect(me.body.landing).toBe(landing);
+    },
+  );
 });
 
 describe('signing in with credentials that do not match', () => {
@@ -717,13 +720,16 @@ describe('renewing with the refresh token', () => {
     ['no cookie', undefined],
     ['an unknown token', 'A'.repeat(43)],
     ['a malformed token', 'not a token;'],
-  ])('answers 401 sign_in_required and clears the cookie for %s', async (_, cookie) => {
-    const res = await refresh(cookie);
+  ])(
+    'answers 401 sign_in_required and clears the cookie for %s',
+    async (_, cookie) => {
+      const res = await refresh(cookie);
 
-    expect(res.status).toBe(401);
-    expect(res.body.code).toBe('sign_in_required');
-    expect(setCookie(res)).toMatch(/^mf_refresh=;.*Path=\/api\/v1\/auth/);
-  });
+      expect(res.status).toBe(401);
+      expect(res.body.code).toBe('sign_in_required');
+      expect(setCookie(res)).toMatch(/^mf_refresh=;.*Path=\/api\/v1\/auth/);
+    },
+  );
 
   it('answers 401 for an expired token', async () => {
     const { cookie } = await signedIn();
@@ -751,19 +757,20 @@ describe('renewing with the refresh token', () => {
     );
   });
 
-  it.each([
-    ['a deleted account', { status: 'deleted' as const }],
-  ])('answers 401 and closes the family for %s', async (_, data) => {
-    const { cookie, id } = await signedIn();
-    await prisma.account.update({ data, where: { id } });
+  it.each([['a deleted account', { status: 'deleted' as const }]])(
+    'answers 401 and closes the family for %s',
+    async (_, data) => {
+      const { cookie, id } = await signedIn();
+      await prisma.account.update({ data, where: { id } });
 
-    const res = await refresh(cookie);
+      const res = await refresh(cookie);
 
-    expect(res.status).toBe(401);
-    expect(await prisma.refreshToken.count({ where: { accountId: id } })).toBe(
-      0,
-    );
-  });
+      expect(res.status).toBe(401);
+      expect(
+        await prisma.refreshToken.count({ where: { accountId: id } }),
+      ).toBe(0);
+    },
+  );
 
   it('answers 401 and closes the family for an account holding no role', async () => {
     const { cookie, id } = await signedIn();

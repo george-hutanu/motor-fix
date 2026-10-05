@@ -174,14 +174,14 @@ describe('describeCustomer', () => {
     expect(seen).not.toHaveProperty('phone');
   });
 
-  it.each([
-    'receptionist',
-    'garage',
-  ] as const)('gives a %s the phone and the plate', (role) => {
-    const staff = actor({ garageId: 'g1', role, roles: [role] });
+  it.each(['receptionist', 'garage'] as const)(
+    'gives a %s the phone and the plate',
+    (role) => {
+      const staff = actor({ garageId: 'g1', role, roles: [role] });
 
-    expect(describeCustomer(staff, customer, { ownJob: false })).toEqual(
-      customer,
-    );
-  });
+      expect(describeCustomer(staff, customer, { ownJob: false })).toEqual(
+        customer,
+      );
+    },
+  );
 });

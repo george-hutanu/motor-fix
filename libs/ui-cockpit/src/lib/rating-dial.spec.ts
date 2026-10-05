@@ -60,26 +60,21 @@ describe('RatingDial', () => {
     expect(Number(fill())).toBe(1);
   });
 
-  it.each([
-    null,
-    undefined,
-    0,
-    0.04,
-    -1,
-    Number.NaN,
-    '4.8',
-  ])('shows an empty arc and "—" for %p, never 0,0', async (value) => {
-    const { arc, centre, dial, fill, fixture } = render(value);
+  it.each([null, undefined, 0, 0.04, -1, Number.NaN, '4.8'])(
+    'shows an empty arc and "—" for %p, never 0,0',
+    async (value) => {
+      const { arc, centre, dial, fill, fixture } = render(value);
 
-    expect(centre()).toBe('—');
-    expect(Number(fill())).toBe(0);
-    expect(arc.getAttribute('stroke-dasharray')).toBe('0 360');
-    expect(dial.getAttribute('aria-label')).toBe('Nicio recenzie încă');
+      expect(centre()).toBe('—');
+      expect(Number(fill())).toBe(0);
+      expect(arc.getAttribute('stroke-dasharray')).toBe('0 360');
+      expect(dial.getAttribute('aria-label')).toBe('Nicio recenzie încă');
 
-    await TestBed.inject(I18n).use('en');
-    fixture.detectChanges();
-    expect(dial.getAttribute('aria-label')).toBe('No reviews yet');
-  });
+      await TestBed.inject(I18n).use('en');
+      fixture.detectChanges();
+      expect(dial.getAttribute('aria-label')).toBe('No reviews yet');
+    },
+  );
 
   it('hides its drawing and its number from screen readers behind one name', () => {
     const { dial } = render(4.8);

@@ -37,14 +37,14 @@ const read = () => TestBed.runInInjectionContext(() => inject(REDUCED_MOTION));
 afterEach(() => jest.restoreAllMocks());
 
 describe('REDUCED_MOTION', () => {
-  it.each([
-    true,
-    false,
-  ])('reads the device setting at start (%p)', (matches) => {
-    fakeDevice(matches);
+  it.each([true, false])(
+    'reads the device setting at start (%p)',
+    (matches) => {
+      fakeDevice(matches);
 
-    expect(read()()).toBe(matches);
-  });
+      expect(read()()).toBe(matches);
+    },
+  );
 
   it('follows the device setting live', () => {
     const device = fakeDevice(false);

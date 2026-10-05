@@ -143,43 +143,43 @@ describe('audienceOf', () => {
     );
   });
 
-  it.each([
-    'quote',
-    'message',
-  ] as const)('puts a %s to the driver and the one garage', (type) => {
-    expect(sorted({ driverAccountId: 'd1', garageId: 'g1', type })).toEqual([
-      'account:d1',
-      'garage:g1',
-    ]);
-  });
+  it.each(['quote', 'message'] as const)(
+    'puts a %s to the driver and the one garage',
+    (type) => {
+      expect(sorted({ driverAccountId: 'd1', garageId: 'g1', type })).toEqual([
+        'account:d1',
+        'garage:g1',
+      ]);
+    },
+  );
 
-  it.each([
-    'booking',
-    'job',
-  ] as const)('puts a %s with a mechanic to the driver, garage and mechanic', (type) => {
-    expect(
-      sorted({
-        driverAccountId: 'd1',
-        garageId: 'g1',
-        mechanicId: 'm1',
-        type,
-      }),
-    ).toEqual(['account:d1', 'garage:g1', 'mechanic:m1']);
-  });
+  it.each(['booking', 'job'] as const)(
+    'puts a %s with a mechanic to the driver, garage and mechanic',
+    (type) => {
+      expect(
+        sorted({
+          driverAccountId: 'd1',
+          garageId: 'g1',
+          mechanicId: 'm1',
+          type,
+        }),
+      ).toEqual(['account:d1', 'garage:g1', 'mechanic:m1']);
+    },
+  );
 
-  it.each([
-    'booking',
-    'job',
-  ] as const)('puts a %s with no mechanic only to the driver and garage', (type) => {
-    expect(
-      sorted({
-        driverAccountId: 'd1',
-        garageId: 'g1',
-        mechanicId: null,
-        type,
-      }),
-    ).toEqual(['account:d1', 'garage:g1']);
-  });
+  it.each(['booking', 'job'] as const)(
+    'puts a %s with no mechanic only to the driver and garage',
+    (type) => {
+      expect(
+        sorted({
+          driverAccountId: 'd1',
+          garageId: 'g1',
+          mechanicId: null,
+          type,
+        }),
+      ).toEqual(['account:d1', 'garage:g1']);
+    },
+  );
 
   it('puts a review to the garage, the author and both public feeds', () => {
     expect(
@@ -307,15 +307,18 @@ describe('what each garage role gets through the garage channel', () => {
     ['message.created', 'quoter'],
     ['booking.moved', 'mover'],
     ['booking.move_requested', 'mover'],
-  ])('gives a mechanic %s only with the matching right', async (kind, withRight) => {
-    const allowed = staff(withRight, 'mechanic', 'mx');
-    const denied = staff('elena', 'mechanic', 'm1');
+  ])(
+    'gives a mechanic %s only with the matching right',
+    async (kind, withRight) => {
+      const allowed = staff(withRight, 'mechanic', 'mx');
+      const denied = staff('elena', 'mechanic', 'm1');
 
-    await fanOut(['garage:g1'], kind);
+      await fanOut(['garage:g1'], kind);
 
-    expect(allowed.kinds()).toEqual([kind]);
-    expect(denied.kinds()).toEqual([]);
-  });
+      expect(allowed.kinds()).toEqual([kind]);
+      expect(denied.kinds()).toEqual([]);
+    },
+  );
 
   it.each([
     'quote.created',
@@ -415,22 +418,21 @@ describe('who still counts as staff', () => {
 });
 
 describe('garage feature switches', () => {
-  it.each([
-    'media.added',
-    'media.removed',
-    'media.anything',
-  ])('keeps %s from every staff role when live_media is off', async (kind) => {
-    load.mockResolvedValue(access({ off: new Set(['live_media']) }));
-    const owner = staff('ion', 'garage');
-    const receptionist = staff('maria', 'receptionist');
-    const mechanic = staff('elena', 'mechanic', 'm1');
+  it.each(['media.added', 'media.removed', 'media.anything'])(
+    'keeps %s from every staff role when live_media is off',
+    async (kind) => {
+      load.mockResolvedValue(access({ off: new Set(['live_media']) }));
+      const owner = staff('ion', 'garage');
+      const receptionist = staff('maria', 'receptionist');
+      const mechanic = staff('elena', 'mechanic', 'm1');
 
-    await fanOut(['garage:g1', 'mechanic:m1'], kind);
+      await fanOut(['garage:g1', 'mechanic:m1'], kind);
 
-    expect(owner.kinds()).toEqual([]);
-    expect(receptionist.kinds()).toEqual([]);
-    expect(mechanic.kinds()).toEqual([]);
-  });
+      expect(owner.kinds()).toEqual([]);
+      expect(receptionist.kinds()).toEqual([]);
+      expect(mechanic.kinds()).toEqual([]);
+    },
+  );
 
   it('still gives the driver a media event when the garage switched live_media off', async () => {
     load.mockResolvedValue(access({ off: new Set(['live_media']) }));
@@ -526,20 +528,19 @@ describe('the staff cache', () => {
     expect(load).toHaveBeenCalledTimes(1);
   });
 
-  it.each([
-    'member.removed',
-    'mechanic.updated',
-    'garage.features_changed',
-  ])('reads the garage again right after %s passes through', async (kind) => {
-    staff('ion', 'garage');
-    await fanOut(['garage:g1'], 'request.created');
-    load.mockClear();
+  it.each(['member.removed', 'mechanic.updated', 'garage.features_changed'])(
+    'reads the garage again right after %s passes through',
+    async (kind) => {
+      staff('ion', 'garage');
+      await fanOut(['garage:g1'], 'request.created');
+      load.mockClear();
 
-    await fanOut(['garage:g1'], kind, 'ghost');
-    await fanOut(['garage:g1'], 'request.created');
+      await fanOut(['garage:g1'], kind, 'ghost');
+      await fanOut(['garage:g1'], 'request.created');
 
-    expect(load).toHaveBeenCalledTimes(1);
-  });
+      expect(load).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it('turns a feature off for staff as soon as the features change event passes', async () => {
     const owner = staff('ion', 'garage');
@@ -657,22 +658,22 @@ describe('a removed member', () => {
 });
 
 describe('suspended and deleted accounts', () => {
-  it.each([
-    'account.suspended',
-    'account.deleted',
-  ])('sends bye evicted to every stream of the account on %s and ends them', async (kind) => {
-    const tabs = [driver('a1'), staff('a1', 'garage'), driver('a1')];
-    const bystander = driver('b2');
+  it.each(['account.suspended', 'account.deleted'])(
+    'sends bye evicted to every stream of the account on %s and ends them',
+    async (kind) => {
+      const tabs = [driver('a1'), staff('a1', 'garage'), driver('a1')];
+      const bystander = driver('b2');
 
-    await fanOut(['account:a1'], kind, 'a1');
+      await fanOut(['account:a1'], kind, 'a1');
 
-    for (const tab of tabs) {
-      expect(tab.byeReasons()).toEqual(['evicted']);
-      expect(tab.ended).toBe(true);
-    }
-    expect(bystander.byeReasons()).toEqual([]);
-    expect(bystander.ended).toBe(false);
-  });
+      for (const tab of tabs) {
+        expect(tab.byeReasons()).toEqual(['evicted']);
+        expect(tab.ended).toBe(true);
+      }
+      expect(bystander.byeReasons()).toEqual([]);
+      expect(bystander.ended).toBe(false);
+    },
+  );
 
   it('evicts the account named by the id even when the audience names another', async () => {
     const victim = driver('a1');

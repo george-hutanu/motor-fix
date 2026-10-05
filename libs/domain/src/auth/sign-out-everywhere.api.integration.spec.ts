@@ -140,23 +140,21 @@ describe('signing out on all devices', () => {
     expect((await refresh(ioana)).status).toBe(200);
   });
 
-  it.each([
-    'driver',
-    'garage',
-    'mechanic',
-    'admin',
-  ] as const)('works the same for a %s', async (role) => {
-    const id = await person(`${role}@example.test`, [role]);
-    const one = await session(`${role}@example.test`);
-    const two = await session(`${role}@example.test`);
+  it.each(['driver', 'garage', 'mechanic', 'admin'] as const)(
+    'works the same for a %s',
+    async (role) => {
+      const id = await person(`${role}@example.test`, [role]);
+      const one = await session(`${role}@example.test`);
+      const two = await session(`${role}@example.test`);
 
-    expect((await everywhere(one)).status).toBe(204);
+      expect((await everywhere(one)).status).toBe(204);
 
-    expect(await prisma.refreshToken.count({ where: { accountId: id } })).toBe(
-      0,
-    );
-    expect((await refresh(two)).status).toBe(401);
-  });
+      expect(
+        await prisma.refreshToken.count({ where: { accountId: id } }),
+      ).toBe(0);
+      expect((await refresh(two)).status).toBe(401);
+    },
+  );
 
   it('writes one "signed out on all devices" entry to the audit history', async () => {
     const id = await person('andrei@example.test');
@@ -263,17 +261,20 @@ describe('signing out on all devices', () => {
     ['no cookie', undefined],
     ['an unknown token', 'A'.repeat(43)],
     ['a malformed token', 'not-a-token'],
-  ])('answers 401 sign_in_required for %s and clears the cookie', async (_, cookie) => {
-    await person('andrei@example.test');
-    const laptop = await session('andrei@example.test');
+  ])(
+    'answers 401 sign_in_required for %s and clears the cookie',
+    async (_, cookie) => {
+      await person('andrei@example.test');
+      const laptop = await session('andrei@example.test');
 
-    const res = await everywhere(cookie);
+      const res = await everywhere(cookie);
 
-    expect(res.status).toBe(401);
-    expect(res.body.code).toBe('sign_in_required');
-    expect(setCookie(res)).toMatch(CLEARED);
-    expect((await refresh(laptop)).status).toBe(200);
-  });
+      expect(res.status).toBe(401);
+      expect(res.body.code).toBe('sign_in_required');
+      expect(setCookie(res)).toMatch(CLEARED);
+      expect((await refresh(laptop)).status).toBe(200);
+    },
+  );
 
   it('answers 401 for an expired token and revokes nothing', async () => {
     const id = await person('andrei@example.test');

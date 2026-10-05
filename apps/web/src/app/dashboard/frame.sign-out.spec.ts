@@ -80,18 +80,21 @@ describe('the dashboard account block', () => {
     ['receptionist', '/app/garage'],
     ['mechanic', '/app/garage'],
     ['admin', '/app/admin'],
-  ])('offers "Ieși de pe toate dispozitivele" under "Ieși din cont" for a %s', async (role, landing) => {
-    const { element } = await render(role, landing);
+  ])(
+    'offers "Ieși de pe toate dispozitivele" under "Ieși din cont" for a %s',
+    async (role, landing) => {
+      const { element } = await render(role, landing);
 
-    const here = button(element, 'Ieși din cont');
-    const everywhere = button(element, EVERYWHERE);
+      const here = button(element, 'Ieși din cont');
+      const everywhere = button(element, EVERYWHERE);
 
-    expect(here).toBeDefined();
-    expect(everywhere).toBeDefined();
-    expect(here?.compareDocumentPosition(everywhere as Node)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
-    );
-  });
+      expect(here).toBeDefined();
+      expect(everywhere).toBeDefined();
+      expect(here?.compareDocumentPosition(everywhere as Node)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    },
+  );
 
   it('names it in English', async () => {
     const { element, harness } = await render('driver', '/app/driver');

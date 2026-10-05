@@ -342,17 +342,20 @@ describe('the password rule', () => {
     ['7 emoji, 14 UTF-16 units', '😀'.repeat(7)],
     ['a common password', 'password1'],
     ['a common password in capitals', 'PAROLA123'],
-  ])('refuses %s with weak_password on the password field, creating nothing', async (_, password) => {
-    const res = await signUp(body({ password }));
+  ])(
+    'refuses %s with weak_password on the password field, creating nothing',
+    async (_, password) => {
+      const res = await signUp(body({ password }));
 
-    expect(res.status).toBe(400);
-    expect(res.body.code).toBe('weak_password');
-    expect(res.body.errors).toEqual([
-      { code: 'weak_password', field: 'password' },
-    ]);
-    expect(setCookie(res)).toBeUndefined();
-    expect(await accountCount()).toBe(0);
-  });
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('weak_password');
+      expect(res.body.errors).toEqual([
+        { code: 'weak_password', field: 'password' },
+      ]);
+      expect(setCookie(res)).toBeUndefined();
+      expect(await accountCount()).toBe(0);
+    },
+  );
 
   it.each([
     ['8 characters', 'opt-chr8'],
