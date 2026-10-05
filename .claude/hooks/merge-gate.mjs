@@ -2,6 +2,11 @@
 // after the PR tester passed it. Refuses `gh pr merge` and the REST merge
 // call while the PR's head commit has no `agent-review` success status.
 //
+// A PR opened by Dependabot (its author, read from gh) whose every commit
+// Dependabot wrote needs no agent-review status, only the same CI rule below:
+// a failing, pending or missing check still refuses it, and so does an
+// agent review that failed.
+//
 // The status is per commit, so a push after the tester ran (a fix, a merge of
 // origin/main) leaves the new head without one, and the tester runs again.
 //
@@ -16,7 +21,7 @@
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-import { hasAgentReview } from "./pr-lifecycle-gate.mjs";
+import { hasAgentReview, isDependabot } from "./pr-lifecycle-gate.mjs";
 
 const GREEN = new Set(["SUCCESS", "NEUTRAL", "SKIPPED"]);
 const checkName = (c) => c.context ?? c.name;
@@ -53,6 +58,7 @@ export function decideMerge(pr) {
   const sha = String(pr.headRefOid ?? "").slice(0, 7);
   if (hasAgentReview(checks)) return ciRefusal(pr, checks, sha);
   const review = checks.find((c) => (c.context ?? c.name) === "agent-review");
+  if (!review && isDependabot(pr)) return ciRefusal(pr, checks, sha);
   const said = review ? `agent-review is ${String(review.state ?? review.conclusion).toLowerCase()}` : "there is no agent-review status";
   return `PR #${pr.number} cannot merge: on its head commit ${sha} ${said}. Run the PR tester (/speckit-pr-test ${pr.number}), fix every blocking finding, and merge on an agent-review success.`;
 }
@@ -86,7 +92,7 @@ function readPr(target, cwd) {
   if (raw) return JSON.parse(raw);
   const out = execFileSync(
     "gh",
-    ["pr", "view", ...(target ? [target] : []), "--json", "number,state,headRefOid,statusCheckRollup"],
+    ["pr", "view", ...(target ? [target] : []), "--json", "author,commits,number,state,headRefOid,statusCheckRollup"],
     { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 15000 },
   );
   return JSON.parse(out);
