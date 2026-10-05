@@ -7,15 +7,15 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
-import { RefreshDto } from '../../models/refresh-dto';
 import { SessionDto } from '../../models/session-dto';
+import { SwitchRoleDto } from '../../models/switch-role-dto';
 
-export interface AuthControllerRefresh$Params {
-      body?: RefreshDto
+export interface AuthControllerSwitchRole$Params {
+      body: SwitchRoleDto
 }
 
-export function authControllerRefresh(http: HttpClient, rootUrl: string, params?: AuthControllerRefresh$Params, context?: HttpContext): Observable<StrictHttpResponse<SessionDto>> {
-  const rb = new RequestBuilder(rootUrl, authControllerRefresh.PATH, 'post');
+export function authControllerSwitchRole(http: HttpClient, rootUrl: string, params: AuthControllerSwitchRole$Params, context?: HttpContext): Observable<StrictHttpResponse<SessionDto>> {
+  const rb = new RequestBuilder(rootUrl, authControllerSwitchRole.PATH, 'post');
   if (params) {
     rb.body(params.body, 'application/json');
   }
@@ -30,4 +30,4 @@ export function authControllerRefresh(http: HttpClient, rootUrl: string, params?
   );
 }
 
-authControllerRefresh.PATH = '/api/v1/auth/refresh';
+authControllerSwitchRole.PATH = '/api/v1/auth/roles/switch';

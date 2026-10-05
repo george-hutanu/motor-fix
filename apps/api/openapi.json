@@ -119,6 +119,16 @@
       "post": {
         "operationId": "AuthController_refresh",
         "parameters": [],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -129,6 +139,52 @@
                 }
               }
             }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/roles/switch": {
+      "post": {
+        "operationId": "AuthController_switchRole",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwitchRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No valid role in the body"
+          },
+          "401": {
+            "description": "No live session on this device"
+          },
+          "403": {
+            "description": "The account is suspended"
+          },
+          "404": {
+            "description": "The account does not hold that role"
+          },
+          "415": {
+            "description": "The body is not JSON"
           }
         },
         "tags": [
@@ -709,6 +765,41 @@
           "email",
           "password",
           "language"
+        ]
+      },
+      "RefreshDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "The role the tab is showing; used when the account still holds it",
+            "enum": [
+              "driver",
+              "garage",
+              "receptionist",
+              "mechanic",
+              "admin"
+            ]
+          }
+        }
+      },
+      "SwitchRoleDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "One of the roles the account holds",
+            "enum": [
+              "driver",
+              "garage",
+              "receptionist",
+              "mechanic",
+              "admin"
+            ]
+          }
+        },
+        "required": [
+          "role"
         ]
       },
       "MeDto": {

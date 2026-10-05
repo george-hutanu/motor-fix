@@ -374,7 +374,7 @@ describe('the account module', () => {
         );
     });
 
-  it('exposes no route that writes anything but a session, a new driver account or my language', () => {
+  it('exposes no route that writes anything but a session, a new driver account, my language or my role in use', () => {
     const controllers =
       AuthModule.register({ databaseUrl, redisUrl, tokenSecret }).controllers ??
       [];
@@ -383,6 +383,7 @@ describe('the account module', () => {
     expect(controllers.length).toBeGreaterThan(0);
     expect(writes.sort()).toEqual([
       'auth/refresh',
+      'auth/roles/switch',
       'auth/sign-in',
       'auth/sign-out',
       'auth/sign-out-everywhere',

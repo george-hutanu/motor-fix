@@ -6,6 +6,7 @@ import {
   Inject,
   Injectable,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 
 import { signAccessToken } from './access-token';
@@ -28,6 +29,8 @@ const BROWSER_SESSION_MS = 12 * 3_600_000;
 const GRACE_MS = 20_000;
 const ACTIVE_EVERY_MS = 3_600_000;
 const TOKEN = /^[A-Za-z0-9_-]{43}$/;
+
+type Renewable = NonNullable<Awaited<ReturnType<SignInService['presented']>>>;
 
 // Where the open dashboards hear that their session ended: the live fan-out.
 export const SESSION_EVENTS = Symbol('SESSION_EVENTS');
@@ -123,13 +126,44 @@ export class SignInService {
     };
   }
 
-  async refresh(token: string | undefined): Promise<Issued> {
+  // A renewal of the browser's session in another of its roles, so a session
+  // signed out here or everywhere cannot switch. A view preference, not a
+  // change of rights: no audit entry. A role the account does not hold does
+  // not exist for it.
+  async switchRole(token: string | undefined, role: Role): Promise<Issued> {
     const now = Date.now();
     const { inGrace, row } = await this.renewable(token, now);
+    if (!row.account.roles.some((held) => held.role === role)) {
+      throw new NotFoundException();
+    }
+    const issued = await this.renew(row, inGrace, role, now);
+    await this.prisma.account.update({
+      data: { lastRole: role },
+      where: { id: row.account.id },
+    });
+    return issued;
+  }
+
+  // `wanted`: the role the renewing tab shows, kept while the account holds it.
+  async refresh(
+    token: string | undefined,
+    wanted: Role | null,
+  ): Promise<Issued> {
+    const now = Date.now();
+    const { inGrace, row } = await this.renewable(token, now);
+    return this.renew(row, inGrace, wanted, now);
+  }
+
+  private async renew(
+    row: Renewable,
+    inGrace: boolean,
+    wanted: Role | null,
+    now: number,
+  ): Promise<Issued> {
     const { account } = row;
     const accessToken = this.accessToken(
       account.id,
-      await this.stillAllowed(row),
+      await this.stillAllowed(row, wanted),
     );
     const next = inGrace ? null : await this.rotate(row, now);
     // In the grace, or another tab rotated it between the read and the write.
@@ -245,13 +279,16 @@ export class SignInService {
 
   // The role in use of an account that may still be signed in; otherwise the
   // family is closed.
-  private async stillAllowed(row: {
-    familyId: string;
-    account: { lastRole: Role; status: string; roles: { role: Role }[] };
-  }): Promise<Role> {
+  private async stillAllowed(
+    row: {
+      familyId: string;
+      account: { lastRole: Role; status: string; roles: { role: Role }[] };
+    },
+    wanted: Role | null,
+  ): Promise<Role> {
     const { account } = row;
     const role = roleInUse(
-      null,
+      wanted,
       account.lastRole,
       account.roles.map((r) => r.role),
     );

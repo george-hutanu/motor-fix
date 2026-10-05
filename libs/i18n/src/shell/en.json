@@ -79,6 +79,15 @@
         "team": "Mechanics"
       }
     },
+    "roles": {
+      "admin": "Admin",
+      "driver": "Driver",
+      "failed": "Could not switch the role. Try again.",
+      "garage": "Garage",
+      "label": "Your role",
+      "mechanic": "Mechanic",
+      "receptionist": "Front desk"
+    },
     "signOut": "Sign out",
     "signOutEverywhere": "Sign out on all devices",
     "tab": {
