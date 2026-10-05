@@ -11,6 +11,7 @@ import { PRISMA } from './prisma';
 import { type Issued, SESSION_EVENTS, SignInService } from './sign-in.service';
 import { refusal, weakPassword } from './sign-up.service';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
+import { audienceOf } from '../events/audience';
 import { type LivePublisher, publishLive } from '../events/live.hub';
 import type { PrismaClient } from '../generated/prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -207,7 +208,7 @@ export class PasswordResetService {
     publishLive(
       this.sessionEvents,
       { at: at.toISOString(), id: randomUUID(), kind: 'session.revoked' },
-      [`account:${accountId}`],
+      audienceOf({ accountId, type: 'account' }),
     ).catch((error: Error) =>
       this.logger.warn(`session.revoked not sent: ${error.message}`),
     );
