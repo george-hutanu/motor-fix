@@ -55,6 +55,12 @@ export const languageRoot: UrlMatcher = (segments) =>
     ? { consumed: segments }
     : null;
 
+// The public frame's own texts, for `/`, which renders it on the server.
+export const publicTexts: CanMatchFn = async () => {
+  await inject(I18n).enter('public');
+  return true;
+};
+
 // The server cannot read the device's memory, so `/` stays Romanian there; the
 // browser goes on to the address of the remembered or current language.
 export const toLanguageAddress: CanMatchFn = () => {

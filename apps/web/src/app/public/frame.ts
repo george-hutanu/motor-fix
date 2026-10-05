@@ -22,11 +22,11 @@ import { SignInDialog } from '../sign-in/sign-in-dialog';
     }
   `,
   template: `
-    <div class="top">
+    <header class="top">
       <button type="button" class="spartan-button spartan-button-variant-ghost" (click)="signIn.start()">
         {{ 'public.signInButton' | t }}
       </button>
-    </div>
+    </header>
     <main><router-outlet /></main>
     <mf-public-tab-bar />
   `,

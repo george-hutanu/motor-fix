@@ -58,6 +58,32 @@ const robots = () =>
     m.getAttribute('content'),
   );
 
+const LANDMARKS = 'header, main, nav, footer, aside, section[aria-label]';
+
+// One main, at the top level, holding Home; every other part of the frame in a
+// landmark of its own.
+function expectLandmarks(harness: RouterTestingHarness, signIn: string) {
+  const root = harness.fixture.nativeElement as HTMLElement;
+  const mains = root.querySelectorAll('main');
+  expect(mains).toHaveLength(1);
+  const main = mains[0];
+  expect(main.parentElement?.closest(LANDMARKS)).toBeNull();
+  expect(main.querySelector('h1')?.textContent).toContain('MotorFix');
+  expect(main.querySelector('[role="group"]')).not.toBeNull();
+  expect(main.textContent).toContain('PostgreSQL');
+
+  const frame = root.querySelector('mf-public-frame');
+  expect(frame).not.toBeNull();
+  for (const part of Array.from(frame?.children ?? [])) {
+    const landmark = part.matches(LANDMARKS)
+      ? part
+      : part.querySelector(LANDMARKS);
+    expect(landmark).not.toBeNull();
+  }
+  const banner = frame?.querySelector(':scope > header');
+  expect(banner?.querySelector('button')?.textContent).toContain(signIn);
+}
+
 beforeEach(() => {
   localStorage.clear();
   document.head
@@ -78,6 +104,12 @@ describe('language addresses', () => {
     expect(lang()).toBe('en');
     expect(text(harness)).toContain('version unknown');
     expect(localStorage.getItem('mf.lang')).toBe('en');
+  });
+
+  it('gives /ro one top-level main around Home, and the sign-in bar a header', async () => {
+    const harness = await open('/ro');
+
+    expectLandmarks(harness, 'Autentificare');
   });
 
   it('opens /ro in Romanian', async () => {
@@ -243,6 +275,26 @@ describe('/ on the server', () => {
 
     expect(result).toBe(true);
     expect(TestBed.inject(I18n).language()).toBe('ro');
+  });
+
+  it('renders / in the public frame, with one main around Home', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(routes),
+        provideLanguageAddresses(),
+        { provide: SITE_ORIGIN, useValue: ORIGIN },
+        { provide: PLATFORM_ID, useValue: 'server' },
+        {
+          provide: HealthService,
+          useValue: { healthControllerReady: () => Promise.reject() },
+        },
+      ],
+    });
+
+    const harness = await open('/');
+
+    expect(url()).toBe('/');
+    expectLandmarks(harness, 'Autentificare');
   });
 
   it('gives / the canonical and hreflang links of /ro/', async () => {

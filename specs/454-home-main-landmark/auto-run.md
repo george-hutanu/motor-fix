@@ -20,3 +20,19 @@
 - (autonomous default) `/` renders Home inside the public frame instead of Home carrying its own `<main>`: the frame already owns the one `<main>` (Principle I).
 - (autonomous default) frame top bar becomes `<header>`; no visual change.
 - (autonomous default) Spec Delta capability `phone-layout` (the public frame's capability).
+- 2026-10-05 · design-check · design.md written (semantic change, no visual change)
+
+## 7. Tasks
+
+- tasks.md: T001–T005, one story. Before-implement hooks: design.md current; Notion ST-454 Planning → Implementing, PR #115 label `in development`.
+
+## 9. Tests (red-first)
+
+- `addresses.spec.ts`: 2 new tests (/ro browser, / server) — `npx jest apps/web/src/app/addresses.spec.ts`: 2 failed, 16 passed (red).
+- `apps/web-e2e/src/landmarks.spec.ts`: axe landmark rules on `/` at 320 px and 1440 px, RO and EN, plus the server HTML for `/` holding one `<main>`. Not run locally (needs the three servers; CI's E2E job runs it). Evidence it is red today: the 390 lap-2 QA report listed `landmark-one-main` and `region` on `/`, and the frame's top bar was a bare `<div>`.
+
+## 10. Implement
+
+- `/` now renders Home inside `PublicFrame` (route `''` with a child), with a `publicTexts` canMatch loading the frame's texts on the server; the browser still moves `/` to `/<lang>`.
+- The frame's top bar `<div class="top">` → `<header class="top">`, same class, no style change.
+- `npx jest -c apps/web/jest.config.cts apps/web/src/app`: 883 passed.
