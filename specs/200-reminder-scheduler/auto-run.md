@@ -33,3 +33,7 @@
 - Fixed, tests first: the next day is queued before the run; a run failing part-way keeps what it sent and its retry sends the rest once (both new tests). Also: the tyre query reads only rows not sent this season; a finished day keeps its job id for two days (a restart does not rerun it) and a failed one frees it (a restart retries it); the module exports nothing; `REMINDER_DAY_MS` documented (commented out) in `.env.example`; plan's job id corrected.
 - Kept, owner's call: `ObjectTimers` with no production caller yet (FR-010, the brief's scope; plan Complexity Tracking). Deferred: the Playwright bell check (deferred.md).
 - diff-audit: its `import-extension` errors are the known repo-wide false positive (the libs use extensionless imports throughout); its base is the stale local `main`. Mutation testing: CI only.
+
+## Hand-off
+- Merged origin/main (ST-257's outbox relay): `apps/worker/src/main.ts` conflict resolved (both modules imported); the reminders migration renamed `20261005160000_reminders` to sort after ST-257's `20261005150000_outbox_event`. PR body filled and checked, PR #78 ready, story and timeline QA.
+- Deferred findings filed as 2 To do tasks. The finish and ready lines are committed before the merge, as the last commit QA tests; the Notion writes they name happen right after the merge.
