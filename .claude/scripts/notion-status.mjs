@@ -71,6 +71,11 @@ export function decide({ event, current: raw, prior: rawPrior = null }) {
   return result(true, target, prior, `${raw} → ${target}`);
 }
 
+/** After the writes land: `blocked` records the status it left, for `unblock` to read back. */
+export function recordPrior(repo, event, decision) {
+  if (decision.write && (event === "blocked" || event === "unblock")) writeState(repo, { ...readState(repo), notion_prior_status: decision.prior });
+}
+
 export function main(argv, repo) {
   const i = argv.indexOf("--current");
   const current = i === -1 ? undefined : argv[i + 1];
@@ -79,15 +84,14 @@ export function main(argv, repo) {
     console.error('usage: notion-status.mjs <start|implement|review|qa|finish|blocked|unblock> --current "<story Status>"');
     return 1;
   }
-  const state = readState(repo);
   let decision;
   try {
-    decision = decide({ event, current, prior: state.notion_prior_status ?? null });
+    decision = decide({ event, current, prior: readState(repo).notion_prior_status ?? null });
   } catch (error) {
     console.error(`notion-status: ${error.message}`);
     return 1;
   }
-  if (decision.write && (event === "blocked" || event === "unblock")) writeState(repo, { ...state, notion_prior_status: decision.prior });
+  recordPrior(repo, event, decision);
   console.log(JSON.stringify(decision));
   return 0;
 }
