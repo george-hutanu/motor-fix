@@ -93,8 +93,11 @@ describe('the unit and integration suites', () => {
         String.raw`['"]seed\.ts['"]`,
       ].join('|'),
     );
+    // Playwright runs the web-e2e specs against a booted stack; JEST_SUITE never splits them.
+    const playwright = join(root, 'apps', 'web-e2e');
     const misnamed = ['apps', 'libs', 'scripts']
       .flatMap((dir) => specFiles(join(root, dir)))
+      .filter((file) => !file.startsWith(playwright))
       .filter((file) => file !== __filename && !INTEGRATION.test(file))
       .filter((file) => needsServices.test(readFileSync(file, 'utf8')))
       .map((file) => relative(root, file));
