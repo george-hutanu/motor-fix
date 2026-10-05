@@ -67,3 +67,5 @@
 
 ## 17. Archive
 - Spec Delta merged into `.specify/capabilities/accounts.md` (+8); spec.md `Archived (2026-10-05)`.
+- Lap 2: spec-reviewer APPROVE (one LOW: T003 text still named the removed re-export, fixed).
+- After the merge, `artifact-lint` reports every Add as `delta-adds-existing`: the capability check does not skip a feature that is already merged. This is a harness gap, not a defect in this delta. No gate or CI job runs it.

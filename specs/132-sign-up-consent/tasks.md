@@ -9,7 +9,7 @@
 
 ## Phase 2: User Story 1 — no account without consent (P1)
 
-- [X] T003 [US1] `libs/domain/src/auth/consent.ts` (new): `Consent`, `isCurrentConsent`, `consentRequired`; export from `libs/domain/src/index.ts` (FR-001)
+- [X] T003 [US1] `libs/domain/src/auth/consent.ts` (new): `Consent`, `isCurrentConsent`, `consentRequired` (used inside the lib only) (FR-001)
 - [X] T004 [US1] `libs/domain/src/auth/accounts.service.ts`: `NewAccount.consent` required, refusal before the transaction, two consent rows and the audit entry in it (FR-001, FR-002, FR-003)
 - [X] T005 [US1] `libs/domain/src/auth/sign-up.service.ts`: refuse without current consent after maintenance, pass it on (FR-004)
 - [X] T006 [US1] Every other `createAccount` call (`libs/domain/src/notifications/notifications.testing.ts` and the integration specs) passes `CURRENT_CONSENT` (FR-001)
