@@ -11,14 +11,17 @@ const UPDATE = `data: ${JSON.stringify({
 // A confirmed e-mail keeps the e-mail banner out from between the header and
 // the line. The first stream carries one test update; with `thenDrop` every
 // later try fails, so the offline bar comes up under the header.
-async function openWithUpdate(page: Page, { thenDrop = false } = {}) {
+async function openWithUpdate(
+  page: Page,
+  { emailConfirmed = true, thenDrop = false } = {},
+) {
   await signInAs(page, 'driver', '/app/driver');
   await page.route('**/api/v1/me', (route) =>
     route.fulfill({
       json: {
         capabilities: [],
         email: 'driver@example.ro',
-        emailConfirmed: true,
+        emailConfirmed,
         garageId: null,
         id: 'driver-1',
         landing: '/app/driver',
@@ -69,6 +72,12 @@ for (const [name, width, height] of [
     expect(status.y - (header.y + header.height)).toBeGreaterThanOrEqual(8);
     expect(status.x).toBe(header.x);
     expect(
+      await line.evaluate((el) => {
+        const s = getComputedStyle(el);
+        return [s.marginLeft, s.marginRight, s.paddingLeft, s.paddingRight];
+      }),
+    ).toEqual(['0px', '0px', '0px', '0px']);
+    expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
@@ -90,4 +99,15 @@ test("under the offline bar, the live status line adds its own 8 px to the bar's
 
   expect(status.y - (offline.y + offline.height)).toBeGreaterThanOrEqual(20);
   expect(status.x).toBe((await box(page.locator('.view > header'))).x);
+});
+
+test('under the e-mail banner, the live status line keeps 8 px clear of it', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 640, width: 320 });
+  const line = await openWithUpdate(page, { emailConfirmed: false });
+  const banner = await box(page.locator('mf-email-banner [role="status"]'));
+  const status = await box(line);
+
+  expect(status.y - (banner.y + banner.height)).toBeGreaterThanOrEqual(8);
 });

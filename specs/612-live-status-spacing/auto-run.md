@@ -32,3 +32,12 @@ Worktree: .worktrees/612-live-status-spacing
 - `speckit-notion-sync implement`: ST-612 Planning → Implementing, PR #114 label `in development`.
 - `frame.ts`: `.live-status { margin: var(--mf-space-2) 0 0; padding: 0; … }`.
 - Green: live-status, live, dashboards, dashboard-tab-bar, phone specs on :4612 → "45 passed" (`@seeded` flows left to CI).
+
+## 12. Harden
+- artifact-lint: 0 errors. diff-audit: every finding is in files outside this branch's diff (it diffs against the stale local `main`); none in the 7 files this branch changes.
+- test-adversary: `apps/web-e2e/src/live-status.adversary.spec.ts`, 3 tests (English driver, unconfirmed e-mail with the banner, garage dashboard), 3 passed against :4612.
+- Decision taken for the owner (Principle I, spec review's option A): the adversary file's 320 px switch-gap and no-scroll checks duplicated `live-status.spec.ts`, so its computed-style check (no horizontal margin or padding) and its e-mail banner case moved into `live-status.spec.ts` and the file was dropped. `live-status.spec.ts`: 6 passed against :4612.
+- Mutation: none locally (CI only, nightly); a CSS value has no Stryker mutant in a TS project.
+
+## 14. Review
+- spec-reviewer: APPROVE (FR-001 met). Two MEDIUM, both fixed: `deferred.md` committed and filed as a Notion debt task (https://app.notion.com/p/3f0607bff0d2816bb941df4c46810caa); the adversary file folded into `live-status.spec.ts` (decision above).

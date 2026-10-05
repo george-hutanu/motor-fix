@@ -5,8 +5,8 @@
 ## Phase 1: Tests first
 
 - [x] ~~T001 jsdom computed-style test~~ — dropped: Jest's jsdom lays nothing out and resolves no component margin (`getComputedStyle` returned empty strings), so the spacing is proven in a real browser only (T002, T003)
-- [x] T002 [US1] Test: `apps/web-e2e/src/live-status.spec.ts` (API stubbed, no `@seeded`) — at 320 px, 390 px, tablet and desktop, after a live test update the status line's top is at least 8 px below the RO/EN switch and the header, its left edge matches the header's, and the page does not scroll sideways (FR-001)
-- [x] T003 [US1] Test: same file — with the stream dropped and the offline bar shown, the status line's top is at least 20 px (the bar's 12 px plus its own 8 px) below the bar's bottom (FR-001)
+- [x] T002 [US1] Test: `apps/web-e2e/src/live-status.spec.ts` (API stubbed, no `@seeded`) — at 320 px, 390 px, tablet and desktop, after a live test update the status line's top is at least 8 px below the RO/EN switch and the header, its left edge matches the header's, the line has no horizontal margin or padding, and the page does not scroll sideways (FR-001)
+- [x] T003 [US1] Test: same file — with the stream dropped and the offline bar shown, the status line's top is at least 20 px (the bar's 12 px plus its own 8 px) below the bar's bottom; with the e-mail unconfirmed, the line keeps 8 px clear of the e-mail banner (FR-001)
 
 ## Phase 2: Implementation
 
