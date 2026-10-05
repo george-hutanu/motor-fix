@@ -248,12 +248,13 @@ decisions are the source for anything the constitution does not fix.
   safe fixes and dispatches an agent per stale item (QA re-runs up to
   `SPECKIT_QA_CAP`, by default Actions' 20 concurrent jobs; at most 2 other
   agents at once). The orchestrating session (the main
-  checkout, the one that dispatches tasks) schedules it as soon as two or more
-  tasks or worktrees are active: `CronList` first so it never doubles up, then
-  `/speckit-watch` every 15 minutes off the round minutes
-  (`4,19,34,49 * * * *`), and one pass right away. A worktree session never
-  schedules it. The SessionStart reminder `session:start:watch-reminder`
-  catches a resumed session whose schedule was lost.
+  checkout, the one that dispatches tasks) keeps it armed as soon as two or
+  more tasks or worktrees are active: one background
+  `node .claude/scripts/watch.mjs --wait` (never a second), which runs the
+  model-free `--gate` every 15 minutes and wakes the session only when a pass
+  has something to do, or after 110 idle minutes to be re-armed; and one pass
+  right away. A worktree session never arms it. The SessionStart reminder
+  `session:start:watch-reminder` catches a resumed session whose wait was lost.
 - Every API route needs a session: `ActorGuard` runs app-wide (`APP_GUARD`
   in `AuthModule`). A route open to visitors carries `@Public()` and joins
   the list in `apps/api/src/public-routes.integration.spec.ts`. The web
