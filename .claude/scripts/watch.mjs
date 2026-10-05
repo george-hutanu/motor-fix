@@ -596,19 +596,31 @@ function waitLoop({ cwd, every, limit, sleep, commandOf, runGate }) {
     console.error("watch.mjs: not inside a git repository");
     return 1;
   }
-  const holder = waitHolder(cwd, { commandOf });
-  if (holder !== null) {
-    console.log(`watch: a wait is already armed (pid ${holder})`);
-    return 0;
-  }
   const record = join(dir, WAIT_RECORD);
-  // Exclusive create, so two waits started at the same moment cannot both hold it.
-  rmSync(record, { force: true });
+  // Exclusive create, so two waits started at the same moment cannot both hold
+  // it; a record left by a gone process is removed only once that is known.
+  const take = () => {
+    try {
+      writeFileSync(record, `${process.pid}\n`, { flag: "wx" });
+      return true;
+    } catch (e) {
+      if (e.code === "EEXIST") return false;
+      throw e;
+    }
+  };
   try {
-    writeFileSync(record, `${process.pid}\n`, { flag: "wx" });
-  } catch {
-    console.log(`watch: a wait is already armed (pid ${readFileSync(record, "utf8").trim()})`);
-    return 0;
+    let taken = take();
+    if (!taken && waitHolder(cwd, { commandOf }) === null) {
+      rmSync(record, { force: true });
+      taken = take();
+    }
+    if (!taken) {
+      console.log(`watch: a wait is already armed (pid ${waitHolder(cwd, { commandOf }) ?? "unknown"})`);
+      return 0;
+    }
+  } catch (e) {
+    console.error(`watch.mjs: cannot take the wait record ${record}: ${e.message}`);
+    return 1;
   }
   try {
     let elapsed = 0;

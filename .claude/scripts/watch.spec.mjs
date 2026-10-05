@@ -1250,6 +1250,20 @@ describe('--wait', () => {
     }
   });
 
+  it('is an error, without polling, when the record cannot be taken', () => {
+    const f = fixture();
+    try {
+      mkdirSync(record(f));
+      const io = captured();
+      let slept = false;
+      assert.equal(main(['--wait'], { cwd: f.repo, ...env({ sleep: () => (slept = true), commandOf: () => null }) }), 1);
+      assert.equal(slept, false);
+      assert.ok(io.err.some((l) => l.includes('speckit-watch-wait.pid')), io.err.join('\n'));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
   it('rejects a limit shorter than its interval, a non-positive number and other flags', () => {
     const f = fixture();
     try {

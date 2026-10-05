@@ -46,3 +46,9 @@
 
 ## 14. Review (opus)
 - spec-reviewer APPROVE (3 LOW); code-reviewer BLOCK (1 HIGH untested wait error path; MEDIUM check-then-write race, no timeouts in the record lib, test-only re-export). Lap 1 (repair 1/5): spec for a poll that throws (exit 1, record removed), exclusive-create record, 5 s timeouts on git/ps, re-export dropped, plan.md updated. test:harness 1257 passed, doctor 16 ok, eval 80/80.
+
+## Review lap 2
+
+- code-reviewer re-review BLOCK (HIGH): the record was removed before the exclusive write, so the race stayed open and a non-EEXIST error read as "already armed".
+- Fix: `wx` write first; only on EEXIST with no live holder is the stale record removed and the write retried once; a second EEXIST is "already armed"; any other error exits 1 naming the record. New spec: an unwritable record exits 1 without polling.
+- watch.spec 96/96, doctor 16 ok, harness-eval --check 80/80, test:harness 1258 (one harness-eval tmpdir race with a concurrent worktree, green on rerun).
