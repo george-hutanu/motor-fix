@@ -73,7 +73,10 @@ each) and your flows; the unit and end-to-end suites are CI's. It holds no
 secret; the posting is yours.
 
 `--out` then holds `report.json`, `report.md`, `run.log`, `logs/`, `shots/`
-and `ci-run.json` (the run's URL and conclusion). Exit 1 means blocking
+and `ci-run.json` (the run's URL and conclusion). The artifact downloads into a
+fresh `.download-*` folder inside `--out` and then replaces only the entries it
+carries, so re-running a lap into the same `--out` works and nothing else in it
+is touched. Exit 1 means blocking
 findings, not a broken run: read the report. Exit 2 means no usable report
 (the run failed before writing one, or the artifact is missing): read the
 run's log through `ci-run.json`'s URL, and if Actions itself is the problem,
