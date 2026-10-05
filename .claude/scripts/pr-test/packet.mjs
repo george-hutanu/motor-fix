@@ -12,7 +12,7 @@
 // exits 0 with packet.md written (a section gh could not answer says so), 2
 // when the folder has no report.json.
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,6 +23,9 @@ import { realGh } from "./post.mjs";
 
 const FILE_CAP = 100;
 const FINISHED = new Set(["success", "failure"]);
+const MAX_RANGE = 999;
+/** One line of Markdown: a newline in a title or evidence would start a heading of its own. */
+const flat = (s) => String(s ?? "").replace(/\s*[\r\n]+\s*/g, " ");
 const IMAGE = /\.(png|jpe?g|webp)$/i;
 const short = (sha) => String(sha ?? "").slice(0, 7);
 const reason = (res) => (res.stderr || res.stdout || `exit ${res.code}`).trim().split("\n")[0];
@@ -39,7 +42,7 @@ export function frIds(line) {
   const ids = [];
   for (const m of line.matchAll(/FR-(\d+)(?:\s*[–—-]\s*FR-(\d+))?/g)) {
     const from = Number(m[1]);
-    const to = m[2] ? Number(m[2]) : from;
+    const to = m[2] ? Math.min(Number(m[2]), from + MAX_RANGE) : from;
     for (let n = from; n <= to; n++) ids.push(`FR-${String(n).padStart(m[1].length, "0")}`);
   }
   return [...new Set(ids)];
@@ -89,8 +92,9 @@ function shotHashes(dir) {
   const walk = (rel) => {
     for (const name of readdirSync(join(root, rel))) {
       const path = rel ? `${rel}/${name}` : name;
-      if (statSync(join(root, path)).isDirectory()) walk(path);
-      else if (IMAGE.test(name)) out[`shots/${path}`] = createHash("sha256").update(readFileSync(join(root, path))).digest("hex");
+      const st = lstatSync(join(root, path));
+      if (st.isDirectory()) walk(path);
+      else if (st.isFile() && IMAGE.test(name)) out[`shots/${path}`] = createHash("sha256").update(readFileSync(join(root, path))).digest("hex");
     }
   };
   if (existsSync(root)) walk("");
@@ -202,15 +206,15 @@ function committedLap(gh, repo, feature, head) {
 
 const where = (f) => [f.route, [f.viewport, f.scheme, f.lang].filter(Boolean).join(" ")].filter(Boolean).join(" · ");
 const fullFinding = (f) =>
-  [`- **${f.severity}** ${f.kind}: ${f.title}`, where(f) && `  - where: ${where(f)}`, f.evidence && `  - evidence: ${f.evidence}`, f.steps?.length && `  - steps: ${f.steps.join(" → ")}`]
+  [`- **${f.severity}** ${f.kind}: ${flat(f.title)}`, where(f) && `  - where: ${flat(where(f))}`, f.evidence && `  - evidence: ${flat(f.evidence)}`, f.steps?.length && `  - steps: ${flat(f.steps.join(" → "))}`]
     .filter(Boolean)
     .join("\n");
-const brief = (f) => `- ${f.severity} ${f.kind}: ${f.title}${f.route ? ` (${f.route})` : ""}`;
+const brief = (f) => `- ${f.severity} ${f.kind}: ${flat(f.title)}${f.route ? ` (${flat(f.route)})` : ""}`;
 
 /** packet.md's text from its parts. */
 export function packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, delta, web = true }) {
   const out = [`# Packet: PR #${pr} at ${short(view?.headRefOid ?? report.sha)}, lap ${report.lap ?? "?"}`, ""];
-  if (view) out.push(`${view.title} · branch ${view.headRefName} · head ${view.headRefOid} · base ${view.baseRefName}`, "");
+  if (view) out.push(`${flat(view.title)} · branch ${view.headRefName} · head ${view.headRefOid} · base ${view.baseRefName}`, "");
   out.push("## Changed files", "");
   if (viewError) out.push(`Unavailable: ${viewError}`);
   else {
@@ -239,7 +243,7 @@ export function packetMarkdown({ pr, report, view, viewError, reqs, prev, baseli
       ["new", d.new],
       ["resolved", d.resolved],
     ])
-      for (const f of list) out.push(`- ${label}: ${f.severity} ${f.title}${f.route ? ` (${f.route})` : ""}`);
+      for (const f of list) out.push(`- ${label}: ${f.severity} ${flat(f.title)}${f.route ? ` (${flat(f.route)})` : ""}`);
     if (!findings.length && !prev.findings.length) out.push("No findings on either lap.");
   }
   out.push("", "## Baseline", "");
@@ -278,7 +282,7 @@ export function buildPacket({ out, pr, repo, run, baseline: explicit, gh = realG
       committed ??
       (baseline.report ? { label: `${baseline.label} (the workflow's findings only)`, findings: baseline.report.findings ?? [] } : null);
     const cited = (report.findings ?? []).flatMap((f) => String(f.evidence ?? "").match(/shots\/\S+?\.png/g) ?? []);
-    const web = view ? touchesWeb((view.files ?? []).map((f) => f.path)) : true;
+    const web = view?.files?.length ? touchesWeb(view.files.map((f) => f.path)) : true;
     const delta = shotDelta({ current: shotHashes(out), baseline: baseline.dir ? shotHashes(baseline.dir) : null, cited, web });
     const path = join(out, "packet.md");
     writeFileSync(path, packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, delta, web }));
@@ -291,7 +295,7 @@ export function buildPacket({ out, pr, repo, run, baseline: explicit, gh = realG
 function main(argv) {
   const opt = {};
   for (let i = 0; i < argv.length; i += 2) opt[argv[i].replace(/^--/, "")] = argv[i + 1];
-  if (!opt.pr || !opt.out) {
+  if (!/^\d+$/.test(opt.pr ?? "") || !opt.out) {
     console.error("usage: packet.mjs --pr <n> --out <dir> [--repo o/r] [--run <id>] [--baseline <run-id|dir>]");
     return 2;
   }
