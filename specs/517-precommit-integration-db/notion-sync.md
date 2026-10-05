@@ -1,0 +1,3 @@
+- 2026-10-05 · start · ST-599 · Planning (created as a Task row in MotorFix stories, Epic EP-1)
+- 2026-10-05 · pr · ST-599 · PR #94 https://github.com/george-hutanu/motor-fix/pull/94
+- 2026-10-05 · labels · PR #94 · planning

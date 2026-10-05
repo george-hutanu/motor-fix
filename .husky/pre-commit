@@ -1,5 +1,11 @@
 #!/usr/bin/env sh
 set -e
+# JEST_SUITE=unit was how commits skipped a missing database, and with it the
+# integration specs. The hook brings that database up itself instead.
+if [ -n "${JEST_SUITE:-}" ]; then
+  echo "pre-commit: JEST_SUITE=$JEST_SUITE would leave affected specs out; unset it and commit again (the hook starts the integration services itself)." >&2
+  exit 1
+fi
 # No Nx daemon from a commit, slot or not: it outlives the hook in every worktree.
 export NX_DAEMON=false
 sh .husky/identity.sh check
@@ -12,5 +18,9 @@ sh .husky/identity.sh check
 # unstaged changes included, against its merge base with origin/main: the
 # same scope PR CI runs, and the shared Nx cache (heavy.sh) answers the rest.
 # release.yml still runs every project before anything reaches production.
+#
+# When an affected project has integration specs, scripts/test-services.ts
+# starts this worktree's own PostgreSQL and Redis, migrates them and points
+# DATABASE_URL and REDIS_URL at them; when it cannot, the commit stops.
 base=$(git merge-base origin/main HEAD 2>/dev/null || echo origin/main)
-sh scripts/heavy.sh sh -c "TZ=UTC npx nx affected -t typecheck test --base=$base && npm run lint"
+sh scripts/heavy.sh sh -c "services=\$(node scripts/test-services.ts $base) && eval \"\$services\" && TZ=UTC npx nx affected -t typecheck test --base=$base && npm run lint"
