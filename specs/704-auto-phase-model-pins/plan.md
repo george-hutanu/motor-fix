@@ -133,7 +133,9 @@ file (`agent-replies.spec.mjs`, `task-runner.spec.mjs`, `tail-handoff-wiring.spe
    - `### 8. Analyze`: one sentence, "Runs inline: its pin (`opus`) is the run's model."
    - Phase 3 keeps its text (its reading already runs in `org-researcher`).
 4. **Run log**: the per-phase entry gains the agent's model and its `STATUS:`
-   line (one line each), so FR-004's per-phase model list is in `auto-run.md`.
+   line (one line each), so FR-004's per-phase model list is in `auto-run.md`. The instruction sits in the `## Phases` lead-in paragraph (above
+   `## Commit Protocol`), so FR-007's frozen region and the verification diff
+   below are unaffected.
 5. **Untouched**: everything from `## Commit Protocol` down, in particular
    `## Hand-off`, `## The tail` and lines 557–558 and 637 (FR-007); the
    "Parallel runs" paragraph (lines 98–109, owned by the orchestration text).
@@ -154,9 +156,11 @@ regex of `skill-models.spec.mjs:65-72`. Three tests:
    and `<x>` equals the pin of `speckit-specify|plan|checklist|tasks`; the
    same line names `subagent_type: task-runner` and `run_in_background: false`.
 2. phases 3, 4, 8: no `` `model:` `` token; 4 and 8 contain `inline`.
-3. phases 9–12 (tests, implement, converge, harden): no `` `model:` `` token
-   (they stay on the run's model; the reviewers of phase 14 are routed by the
-   hook and carry no model in the text today).
+3. phases 9–13 (tests, implement, converge, harden, ticket refresh): no
+   `` `model:` `` token (they stay on the run's model). Phase 14 (review) is
+   out of this test: its reviewers are routed by the hook and mutation-runner
+   keeps its own pin, so its text may name models; spec FR-002 covers it as
+   "stays Opus" and the trial transcript (SC-001) shows it.
 
 Red first: on today's text test 1 fails (no token), tests 2 and 3 pass; that
 is the failing count phase 9 quotes.

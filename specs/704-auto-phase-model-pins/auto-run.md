@@ -58,3 +58,16 @@ Autonomous decisions:
 6. Spec: `.claude/skills/speckit-auto/phase-dispatch.spec.mjs` (vitest), red on today's text (test 1), green after the edit.
 7. Measurement: `jq` over `~/.claude/projects` transcripts, `<synthetic>` turns excluded, grouped by `.meta.json` description; after = session `565e5c5f-…` (story agent `agent-a7bb69b0abfa95090`), before = ST-673's story agent under session `2b506914-…`; money not measurable (`telemetry.mjs:11`), stated, never estimated.
 8. `after_plan` agent-context hook (optional) not run here: phase 15 refreshes the context file once, under the context ratchet.
+
+## 6. Checklist
+
+`checklists/dispatch.md` (CHK001-CHK020), requirements quality of spec.md + plan.md. Zero unchecked.
+
+Fixes:
+- CHK010: plan "The spec" test 3 covered phases 9-12 only while FR-002 says 9-14; now 9-13, with phase 14 stated as out of the test and why (routed reviewers, mutation-runner pin; SC-001 transcript covers it).
+- CHK004/CHK011: plan Design 4 now says where the run-log line lives (`## Phases` lead-in, above `## Commit Protocol`), so FR-007's frozen region and the verification diff are unaffected.
+
+Strikes:
+- CHK019 (concurrent-run half): "Parallel runs" is outside phases 2-8 and not edited; only the PR #140 / lever 4 overlap stays as a requirement (FR-007).
+
+Other items were satisfied as written (no edit).
