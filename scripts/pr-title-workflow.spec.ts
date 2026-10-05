@@ -1,14 +1,11 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 // The workflows read as indented text: the repository has no YAML parser as a
 // direct dependency, and these few keys are enough.
 const workflows = join(__dirname, '..', '.github', 'workflows');
-const read = (name: string) => {
-  const file = join(workflows, name);
-  return existsSync(file) ? readFileSync(file, 'utf8') : '';
-};
+const read = (name: string) => readFileSync(join(workflows, name), 'utf8');
 
 /** The lines nested under the first `key:` line at `indent` spaces. */
 function block(text: string, key: string, indent: number): string {
@@ -17,7 +14,7 @@ function block(text: string, key: string, indent: number): string {
   const start = lines.findIndex(
     (l) => l === `${pad}${key}:` || l.startsWith(`${pad}${key}: `),
   );
-  if (start < 0) return '';
+  if (start < 0) throw new Error(`no ${key}: at indent ${indent}`);
   const end = lines.findIndex(
     (l, i) => i > start && l.trim() !== '' && !l.startsWith(`${pad} `),
   );
@@ -28,7 +25,7 @@ function block(text: string, key: string, indent: number): string {
 function script(): string {
   const lines = read('pr-title.yml').split('\n');
   const start = lines.findIndex((l) => /^ +run: \|$/.test(l));
-  if (start < 0) return 'exit 2';
+  if (start < 0) throw new Error('pr-title.yml has no run: | step');
   const indent = (lines[start + 1] ?? '').search(/\S/);
   const body: string[] = [];
   for (const l of lines.slice(start + 1)) {
@@ -75,7 +72,7 @@ describe('PR title workflow', () => {
   it.each([
     'feat(api): add the health check',
     'fix: ST-1 subject',
-    'ci(ci)!: ST-440 breaking subject',
+    'ci(ci)!: a breaking subject',
     'build(deps): bump @biomejs/biome from 2.5.14 to 2.5.15',
   ])('accepts %s', (title) => {
     expect(check(title).code).toBe(0);
@@ -104,7 +101,7 @@ describe('CI workflow', () => {
   });
 
   it('holds no title job, and CI OK does not wait for one', () => {
-    expect(block(ci, 'pr-title', 2)).toBe('');
+    expect(ci).not.toMatch(/^ {2}pr-title:$/m);
     expect(block(ci, 'ci-ok', 2)).not.toMatch(/pr-title/);
   });
 });

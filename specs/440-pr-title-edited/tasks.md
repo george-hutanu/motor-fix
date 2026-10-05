@@ -14,12 +14,12 @@
 
 ## Phase 3: Proof
 
-- [ ] T005 On this PR: correct the title and see the PR title check run again with no push, and no CI run start (SC-001, SC-002)
+- [X] T005 On this PR: correct the title and see the PR title check run again with no push, and no CI run start (SC-001, SC-002) — PR #118, 2026-10-05: title broken then restored, PR title runs 37299262204 (failure) and 37299306793 (success), no CI run beyond 37299000553 from the push
 
 ## FR → test
 
 | FR | Proof |
 |---|---|
-| FR-001, FR-002, FR-003, FR-004, FR-005 | `scripts/pr-title-workflow.spec.ts` |
+| FR-001, FR-002, FR-003, FR-004, FR-005 | `scripts/pr-title-workflow.spec.ts`, `scripts/pr-title-workflow.adversary.spec.ts` |
 | FR-006 | AGENTS.md diff |
 | SC-001, SC-002 | this PR's own runs after a title edit |

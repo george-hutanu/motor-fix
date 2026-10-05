@@ -27,3 +27,31 @@
 
 ## 10. Implement
 - pr-title.yml added, the title job and its CI OK need removed from ci.yml, AGENTS.md updated. Spec: "Tests: 14 passed, 14 total".
+
+## Harden
+
+| Check | Before | After |
+|-------|--------|-------|
+| diff-audit errors | 0 | 0 |
+| artifact-lint errors | 0 | 0 |
+| mutation score | waived: no mutable source (workflow YAML and Markdown only) | — |
+| tests (pr-title specs) | 14 | 58 |
+
+- test-adversary added `scripts/pr-title-workflow.adversary.spec.ts` (44 tests); 1 failed: a refused title holding a line break printed a second `::` workflow command. Defect, fixed: the echoed title is escaped as a workflow command expects (`%`, CR, LF). Now green.
+- Its Biome findings (sorted keys, `${` in plain strings) fixed without suppressions.
+- Lint and typecheck green after the fixes. Inspections: IDE not running. Repair lap 1 of 5.
+
+## Review
+
+- spec-reviewer: APPROVE. LOW fixed: a ticket key in a generated test title replaced with a neutral subject.
+- code-reviewer: APPROVE. MEDIUM fixed: the spec's helpers threw nothing on a missing file, key or step and could pass vacuously; they now throw, and the job's absence is asserted on the file. LOW deferred to `deferred.md`: two Conventional Commit rules (`pr-body-check.ts` and the workflow) disagree, pre-existing.
+
+## Proof (T005, SC-001, SC-002)
+
+- 2026-10-05, PR #118: title set to a non-Conventional one, PR title run 37299262204 failed; title restored, run 37299306793 passed. No push, and no CI run started beyond 37299000553 (from the last push). The PR template workflow also re-ran on each edit, as before.
+
+## Retrospective evidence
+
+- retro-evidence since 2aa27d2: Spec Delta platform +6; no new carryover from this feature; Jev lane unavailable.
+- trace-matrix reports 0/6 tagged for this feature, as for every feature in the repo: the constitution keeps ids out of source, so the FR → test map is in `tasks.md`. The verdict stays the owner's (`/speckit-retro`).
+- Agent context: nothing to change; AGENTS.md already updated as FR-006.

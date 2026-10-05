@@ -6,3 +6,5 @@
 - 2026-10-05 · labels · PR #118 · planning
 - 2026-10-05 · pr · ST-440 · PR #118 https://github.com/george-hutanu/motor-fix/pull/118
 - 2026-10-05 · ready · EP-1 · −ST-440 (unticked at start; no item names ST-440 as a prerequisite; found by notion-search, not query-data-sources)
+- 2026-10-05 · implement · ST-440 story · Planning → Implementing
+- 2026-10-05 · labels · PR #118 · in development

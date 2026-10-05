@@ -24,6 +24,11 @@ jobs:
         run: |
           pattern='^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([a-z0-9._/-]+\))?!?: [^ ]'
           if [[ ! "$TITLE" =~ $pattern ]]; then
-            echo "::error::PR title is not a Conventional Commit: \"$TITLE\". Expected type(scope): subject, e.g. feat(api): add the health check. Edit the title and this check runs again."
+            # Escaped as a workflow command expects, so a line break in the
+            # title cannot start a second command.
+            shown=${TITLE//'%'/'%25'}
+            shown=${shown//$'\r'/'%0D'}
+            shown=${shown//$'\n'/'%0A'}
+            echo "::error::PR title is not a Conventional Commit: \"$shown\". Expected type(scope): subject, e.g. feat(api): add the health check. Edit the title and this check runs again."
             exit 1
           fi
