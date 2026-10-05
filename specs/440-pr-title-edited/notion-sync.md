@@ -11,3 +11,6 @@
 - 2026-10-05 · debt · ST-440 · deferred line 2 → https://app.notion.com/p/3f0607bff0d281a2aaa4ead475394453
 - 2026-10-05 · qa · ST-440 story · Implementing → QA
 - 2026-10-05 · labels · PR #118 · QA
+- 2026-10-05 · debt · ST-440 · deferred line 3 → https://app.notion.com/p/3f0607bff0d281298215e4c5edb820e8 (already filed; URL written back)
+- 2026-10-05 · debt · ST-440 · deferred line 4 → https://app.notion.com/p/3f0607bff0d2812999c6e007531a883a (already filed; URL written back)
+- 2026-10-05 · debt · ST-440 · deferred line 5 → https://app.notion.com/p/3f0607bff0d281bb8af7c7cfc2815d4c (already filed; URL written back)
