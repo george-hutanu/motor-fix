@@ -29,8 +29,8 @@
         "standard",
         "strict"
       ],
-      "description": "On the main checkout, when two or more worktrees hold live or in-flight work (watch.mjs --json, read-only, under a timeout), print one line telling the session to check CronList and schedule /speckit-watch; silent otherwise, and always exits 0",
-      "fingerprint": "6ea6fcba2b8e"
+      "description": "On the main checkout, when two or more worktrees hold live or in-flight work (watch.mjs --json, read-only, under a timeout), and no live watch.mjs --wait holds the repository, print one line telling the session to arm the wait; silent otherwise, and always exits 0",
+      "fingerprint": "d70b4e5e9eaf"
     },
     {
       "id": "session:start:github-identity",
@@ -81,7 +81,8 @@
       ],
       "description": "Constitution VII: refuse `gh pr merge` (and the REST merge call) while the PR's head commit has no `agent-review` success from the PR tester",
       "fail_closed": true,
-      "fingerprint": "e4ee21503165"
+      "timeout_ms": 45000,
+      "fingerprint": "a6f3c3b5cc29"
     },
     {
       "id": "pre:tool:agent-model",

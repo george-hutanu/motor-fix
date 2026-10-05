@@ -118,6 +118,31 @@ Run in this order. Each phase: invoke the skill, apply the gate override,
 verify, commit if there is anything committable, append to the run log,
 continue.
 
+**Phase agents.** A skill's `model:` pin is not applied when the skill runs
+in this run's own turn, so phases 2, 5, 6 and 7 (pins below Opus, the run's
+model) each run as their own agent: `subagent_type: task-runner`, `model` set
+to the pin named in the subsection (the call's `model` overrides the definition's),
+`run_in_background: false` (the next phase reads its artifact). Its prompt
+names the worktree (every Bash starts `cd <worktree> &&`), the feature
+directory, the branch and draft PR, the skill and its `args`, that phase's
+gate overrides from its subsection, and the reply envelope with "at most 10
+lines":
+
+```
+STATUS: success | failure | blocked | partial — <one line: what happened>
+PR: #<n> <draft|ready|merged> <sha7> | none
+NEXT: <the one action the caller should take> | none
+FILES: <paths written, comma-separated> | none
+```
+
+The phase's hooks run inside the agent with the same yes answers. Read its
+`STATUS:` line: `success` continues; `failure` or `blocked` is the phase
+failing, handled as the inline phase's failure would be, never as a pass;
+`partial` passes only when `FILES` names the phase's artifact and what failed
+was a Notion or mock write. No retry. If the Agent call itself errors, run the
+phase inline and log a pin miss in `auto-run.md`. The phase's run-log entry
+records the agent's model and its `STATUS:` line.
+
 Two groups need no output from each other, so run them at once:
 
 - Phase 3 starts in the background as soon as phase 2 has written the spec
@@ -218,6 +243,8 @@ continue. Note it in the run log as a material autonomous action.
 
 ### 2. Specify
 
+Phase agent: `model: fable`.
+
 Invoke `speckit-specify` with the description. Its `before_specify` hook runs
 `speckit.git.feature`, which creates the branch — let it, and branches here use
 the generated `NNN-slug` form, and `.specify/feature.json` ties the branch to
@@ -261,6 +288,8 @@ and this phase never edits `spec.md`.
 
 ### 4. Clarify
 
+Runs inline: its pin (`opus`) is the run's model.
+
 Invoke `speckit-clarify`. It first runs the `spec-challenger` subagent — which
 matters most here, where this context wrote the spec it is about to question.
 Its loop then presents one question at a time and waits;
@@ -273,6 +302,8 @@ If the skill reports there is nothing material left to clarify, that is a
 complete phase, not a failure.
 
 ### 5. Plan
+
+Phase agent: `model: fable`. The `before_plan` design check and the plan commit run inside it.
 
 Invoke `speckit-plan`. Technical Context values come from `package.json`, the
 lockfile, `tsconfig*.json`, `nx.json`, `jest.config.ts`, and the touched
@@ -288,6 +319,8 @@ Getting this wrong fails at build time, not typecheck time.
 
 ### 6. Checklist
 
+Phase agent: `model: sonnet`.
+
 Invoke `speckit-checklist` for the requirements checklist. Then drive it to
 zero unchecked items: for each unchecked item, either fix the underlying
 spec/plan gap and check it, or — when the item does not apply to this feature —
@@ -296,10 +329,14 @@ checklist gate on the merits instead of overriding it.
 
 ### 7. Tasks
 
+Phase agent: `model: sonnet`. Its prompt says not to run `speckit.analyze` from `after_tasks`.
+
 Invoke `speckit-tasks`. Its `after_tasks` hook dispatches `speckit.analyze`
 (non-optional) — that is phase 8; run it there rather than twice.
 
 ### 8. Analyze
+
+Runs inline: its pin (`opus`) is the run's model.
 
 Invoke `speckit-analyze`, which now runs `artifact-lint.mjs` as its first step.
 Treat a linter ERROR exactly as a CRITICAL analyze finding: it is mechanical,
@@ -544,42 +581,36 @@ to a fresh agent (AGENTS.md, lifecycle step 4). This run ends here: a story's
 context is about a million tokens by now, and re-reading it on every CI wait
 and QA lap is where most of a story's cost went.
 
-1. Commit what the feature records before ready, so it rides in this PR and
-   never in a later `docs(specs)` one: the archive's status line and Spec
-   Delta merge (phase 17) and `specs/<feature>/notion-sync.md` so far.
-2. Fill in every section of the PR body made from
-   `.github/pull_request_template.md` (the draft was opened from it with
-   `--body-file`): what changed, the exact test commands and results, UI
-   evidence or `N/A` and the reason, risk and rollback, every checklist box
-   ticked; leave Agent review at `Pending.`. Check it, then publish it and
-   mark the PR ready:
-   `node scripts/pr-body-check.ts --body-file <body> --title "<PR title>"`,
-   `GH_TOKEN=$(gh auth token -u george-hutanu) gh pr edit <branch> --body-file <body>`,
-   `GH_TOKEN=$(gh auth token -u george-hutanu) gh pr ready <branch>`
-3. `speckit-notion-sync qa`: the story, its timeline row → QA, and the PR's
-   one stage label → `QA`. Ready is QA; there is no In review stage. Commit
-   and push the `qa` line in `notion-sync.md` at once, before anything waits
-   on CI or tests the head.
-4. Start the QA run, beside CI, and do not wait for it. Write the flows the
+1. Fill in every section of the PR body from the template: what changed, the
+   exact test commands and results, UI evidence or `N/A` and why, risk and
+   rollback, every box ticked; Agent review stays `Pending.`.
+2. `node .claude/scripts/lifecycle.mjs ready --body-file <body> --decisions "<open decisions | none>"`
+   commits and pushes the feature records (phase 17's status line and Spec
+   Delta merge, `notion-sync.md`), files unfiled deferred bullets, runs
+   `pr-body-check.ts`, publishes the body, marks the PR ready, runs Notion
+   `qa` (story and PR label → QA), commits and pushes the `qa` line, and
+   writes the note below. On a stop, do its `fix` and run it again; on
+   `left`, run those events through `speckit-notion-sync`, then its `then`.
+3. Start the QA run, beside CI, and do not wait for it. Write the flows the
    way `.claude/agents/pr-tester.md` §2 says, to
    `.specify/.cache/qa-flows-<n>.mjs` (git ignores it), then
    `node .claude/scripts/pr-test/dispatch.mjs <n> --no-wait --lap 1 --routes /,/cockpit[,<changed routes>] --flows .specify/.cache/qa-flows-<n>.mjs`:
    it dispatches the PR QA workflow for the head, prints one line,
    `- QA run: <id> · head <sha> · lap <n> · <url>`, and exits. On exit 2 (no
    run appeared) the note records no run and the tail dispatches one.
-5. Write `specs/<feature>/handoff.md` (git ignores it; the tail deletes it),
-   with that line as printed:
+4. Add that line, as printed, to `specs/<feature>/handoff.md` (step 2 wrote
+   the rest; git ignores it; the tail deletes it):
 
    ```markdown
    # Hand-off — <feature>
    - PR: #<n> <url> · branch <branch> · worktree <absolute path> · head <sha>
-   - Notion: story <page id> · timeline row <page id> · epic <page id>
+   - Notion: story <page id> · timeline row and epic in specs/<feature>/notion-sync.md
    - QA run: <id> · head <sha> · lap 1 · <url>
    - Open decisions: <each, with its source file> | none
    - Deferred: <each deferred.md bullet not yet filed, or "all filed"> | none
    ```
 
-6. `node .claude/scripts/run-state.mjs set --status in-progress --phase hand-off`,
+5. `node .claude/scripts/run-state.mjs set --status in-progress --phase hand-off`,
    write the Final Report, and reply with `NEXT: tail #<n> after QA run <id>`
    (`NEXT: tail #<n>` when no run was recorded). That reply is this agent's
    last action: it starts no CI wait and waits on no run, since a context
@@ -675,20 +706,18 @@ never waits on either: a lap that needs a new run dispatches it and ends.
    the PR's Agent review section, and their bullets, with the task URLs, ride
    on the next PR, so the loop ends.
 5. On `agent-review` success with every other check green: merge `origin/main`
-   in again if it moved (a new head needs a new tester run), then
-   `gh pr merge <n> --merge` — the `pre:bash:merge-gate` hook refuses it
-   without `agent-review` success on the head, and while any other check is
-   failing, running or missing.
-6. Close it without a commit: `speckit-notion-sync finish` (story → Done,
-   timeline row → Merged, then `notion-ready <epic>` and the finish comment).
-   Post the lines that run wrote, and the merge sha, as one comment on the
-   merged PR (`gh pr comment <n> --body-file <file>`), then restore
-   `notion-sync.md` (`git checkout -- specs/<feature>/notion-sync.md`). Run
-   the archive check over the log and the PR's comments (`speckit-archive`,
-   Phase 4 step 5); when it exits 1, do what its reason says and check again,
-   once. A Notion write still PENDING is retried by the next
-   `speckit-notion-sync` run and does not hold the tail. Delete `handoff.md`
-   and reply with the envelope: `PR: #<n> merged <sha7>`.
+   in again if it moved (a new head needs a new tester run), write
+   `specs/<feature>/finish-comment.md` (`speckit-notion-sync` §2e) when there
+   is something to record, then `node .claude/scripts/lifecycle.mjs merge --pr <n>`.
+   It refuses exactly when the merge gate does (its message is the `fix`);
+   otherwise it merges, runs Notion `finish`, posts one finish comment on the
+   merged PR, restores `notion-sync.md` and deletes `handoff.md`. On `left`,
+   run those events through `speckit-notion-sync`, then its `then`.
+6. Run the hold review on its `review` candidates (`speckit-notion-sync` §2d)
+   and the archive check (`speckit-archive`, Phase 4 step 5); when it exits 1,
+   do what its reason says and check again, once. A Notion write still PENDING
+   is retried by the next `speckit-notion-sync` run and does not hold the
+   tail. Reply with the envelope: `PR: #<n> merged <sha7>`.
 
 A PR with no checks, or one still failing at the limit, is a Hard Stop: it
 stays ready and unmerged, the story goes to Blocked (`speckit-notion-sync
