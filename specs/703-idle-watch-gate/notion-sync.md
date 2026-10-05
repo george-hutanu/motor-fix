@@ -9,3 +9,5 @@
 - 2026-10-05 · implement · ST-703 story Status · Planning → Implementing
 - 2026-10-05 · labels · PR #143 · in development
 - 2026-10-05 · debt · ST-703 · deferred.md line 2 → https://app.notion.com/p/3f0607bff0d281958e9fd07e210e13e7
+- 2026-10-05 · qa · ST-703 · Implementing → QA (timeline: none for this harness task)
+- 2026-10-05 · labels · PR #143 · QA
