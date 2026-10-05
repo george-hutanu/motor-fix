@@ -102,10 +102,12 @@ test.describe('the live connection @seeded', () => {
     });
     expect(sent.status()).toBe(202);
 
+    // The open modal hides the page behind it from the accessibility tree,
+    // so the line is found by its role attribute, not by getByRole.
     await expect(
-      page
-        .getByRole('status')
-        .filter({ hasText: 'Actualizare de test în direct' }),
+      page.locator('[role="status"]', {
+        hasText: 'Actualizare de test în direct',
+      }),
     ).toBeVisible({ timeout: 2_000 });
     await expect(dialog).toBeVisible();
     await expect(cancel).toBeFocused();
