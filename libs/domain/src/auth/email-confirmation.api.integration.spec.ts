@@ -1,3 +1,4 @@
+import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
@@ -88,6 +89,7 @@ async function signUp(
     .post('/auth/sign-up')
     .set('X-Forwarded-For', address())
     .send({
+      consent: CURRENT_CONSENT,
       email: 'andrei@example.test',
       language: 'ro',
       name: 'Andrei Marin',

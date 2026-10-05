@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
+import { CURRENT_CONSENT, readEnv, STORAGE_ENV } from '@motor-fix/contracts';
 import { NotificationsService } from '@motor-fix/domain';
 import { databaseTurn, S3TestStore } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
@@ -59,6 +59,7 @@ describe('signing up through the api', () => {
     await request(app.getHttpServer())
       .post('/api/v1/auth/sign-up')
       .send({
+        consent: CURRENT_CONSENT,
         email: `confirm-${randomUUID()}@example.test`,
         language: 'en',
         name: 'Andrei Marin',
