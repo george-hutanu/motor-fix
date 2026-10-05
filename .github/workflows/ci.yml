@@ -1,9 +1,10 @@
 name: CI
 
 # Pull requests run the affected projects, and a documentation-only PR runs
-# only the title check, the change detector and CI OK; merges into main run
-# every project through release.yml. Mutation testing has its own workflow
-# (mutation.yml) and never runs here.
+# only the change detector and CI OK; merges into main run every project
+# through release.yml. The PR title has its own workflow (pr-title.yml), so an
+# edited title is re-checked without re-running these jobs. Mutation testing
+# has its own workflow (mutation.yml) and never runs here.
 on:
   pull_request:
   workflow_call:
@@ -21,22 +22,6 @@ env:
   TZ: UTC
 
 jobs:
-  pr-title:
-    name: PR title
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    steps:
-      - name: The title is a Conventional Commit
-        env:
-          TITLE: ${{ github.event.pull_request.title }}
-        run: |
-          pattern='^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([a-z0-9._/-]+\))?!?: [^ ]'
-          if [[ ! "$TITLE" =~ $pattern ]]; then
-            echo "::error::PR title is not a Conventional Commit: \"$TITLE\". Expected type(scope): subject, e.g. feat(api): add the health check. After fixing the title, push again to re-run the check."
-            exit 1
-          fi
-
   # Decides whether the PR changes documentation only (scripts/docs-only.ts).
   # Off a PR the step does not run, the output is empty and every job runs.
   changes:
@@ -297,7 +282,7 @@ jobs:
     name: CI OK
     if: always()
     needs:
-      [pr-title, changes, biome, typecheck, unit, integration, e2e, build, harness, contract, audit, docker, compose]
+      [changes, biome, typecheck, unit, integration, e2e, build, harness, contract, audit, docker, compose]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
