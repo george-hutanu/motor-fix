@@ -20,7 +20,7 @@ cheaper. Anything that writes or judges business logic keeps its model.
 | 5 | `pr-tester` pinned to `model: opus`; speckit-watch dispatches `merge` fixes on Sonnet; an empty watch pass ends after one line | – | High | Implementation and every verdict stay on Opus or Fable |
 | 6 | speckit-auto runs independent phases at once: Notion context beside clarify's challenger; ticket refresh, agent context and retro evidence beside review | Medium | – | Same inputs |
 | 7 | Autocompact at 20% of the window instead of 40% | – | Medium: sessions peaked at 170–220k and never compacted | Same: `pre:compact:flush` and speckit-auto's recovery keep the run state |
-| 8 | Pre-commit runs `nx affected` typecheck and test from the merge base with `origin/main`, plus lint; speckit-auto preflight goes through Nx and the cache | 1–2 min per commit | – | Same scope as PR CI; `release.yml` still runs everything |
+| 8 | Pre-commit runs `nx affected` typecheck and test from the merge base with `origin/main`, plus lint; speckit-auto preflight goes through Nx and the cache. Affected integration specs run against the worktree's own PostgreSQL and Redis, started and migrated by the hook (~15 s cold, ~3 s warm); `JEST_SUITE` is refused | 1–2 min per commit | – | Same scope as PR CI; `release.yml` still runs everything |
 | 9 | Local compose uses `imresamu/postgis:17-3.5` (multi-arch, same PostGIS) | High: no amd64 emulation, no `exec format error` | Fewer retry turns | Same database; CI keeps `postgis/postgis` |
 
 ## Left for later
