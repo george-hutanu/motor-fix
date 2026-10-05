@@ -34,6 +34,7 @@ Measured from session transcripts: 97% of token cost is context (cache read
 | 10 | One reply envelope (`STATUS`, `PR`, `NEXT`, `FILES`) for every agent and dispatched task agent, 25 lines at most, long reports in a named file (AGENTS.md "Agent replies", `agent-replies.spec.mjs`) | – | Every reply is re-read on each later turn of its caller | Same: `VERDICT:` lines and tables kept for their parsers |
 | 11 | Reads only what decides the next step: CI waits print the non-passing checks, failing jobs `--log-failed \| tail -n 80`, test runs their summary and failures | – | Less log in context | Same: every check still runs |
 | 12 | `notion-ready` and its read-only Notion fallback on Sonnet; watch dispatches that only move state on Sonnet | – | Medium | Implementation, reviewers and the PR tester keep their models |
+| 15 | A head that differs from the last tested commit by documentation only (`scripts/docs-only.ts`) carries its `agent-review` success instead of a new tester lap (`pr-test/carry.mjs`, speckit-pr-test step 2, `watch.mjs` fix `carry-review`); the merge gate re-checks the named commit's success, its ancestry and the docs-only diff before it merges (spec, evals) | One tester lap per story (the `deferred.md` URLs commit) | One Opus lap | Same: a carry never crosses a code change or a failing verdict, and the gate verifies it rather than trusting it |
 
 ## Done since: the tail hand-off
 
@@ -48,9 +49,7 @@ QA laps re-read after a >5 min idle gap (74% of them, median 9 min).
 
 ## Left for later
 
-- A deferred-only commit (`deferred.md` URLs after `speckit-notion-sync debt`)
-  forces one more full tester lap. A docs-only head could reuse the previous
-  verdict; that is a merge-gate rule change, so its own PR.
+- Nothing open: the tail hand-off and the docs-only carry are both done.
 
 ## Not doing
 

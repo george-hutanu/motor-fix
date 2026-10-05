@@ -129,6 +129,13 @@ jobs:
       AUTH_TOKEN_SECRET: ci-only-test-secret-not-used-in-any-deploy
       # The api writes the e-mail confirmation link with it.
       PUBLIC_WEB_URL: http://localhost:4200
+      # The api and the worker send e-mail to the test mailbox (apps/web-e2e/mailbox.mjs,
+      # web-e2e:mailbox), never to Brevo; the password-reset flow reads the link from it.
+      EMAIL_SENDING: 'on'
+      EMAIL_ALLOWLIST: '@example.test'
+      EMAIL_FROM: 'MotorFix <noreply@example.test>'
+      BREVO_API_KEY: e2e-mailbox-key
+      BREVO_API_URL: http://127.0.0.1:3025/v3
       # The e2e suite does not upload files; the api only needs the settings.
       STORAGE_ENDPOINT: http://localhost:9000
       STORAGE_REGION: eu-central-1

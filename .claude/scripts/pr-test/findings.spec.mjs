@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 
 import {
   appsFor,
-  changedGetEndpoints,
+  cutOffFinding,
   endpointFinding,
+  readinessOutcome,
   reportMarkdown,
   sweepFinding,
   testFinding,
@@ -109,20 +110,50 @@ describe('what the diff asks for', () => {
     assert.deepEqual(appsFor(['apps/worker/src/main.ts']), { api: true, web: true, worker: true });
     assert.deepEqual(appsFor(['libs/domain/src/health/health.service.ts']), { api: true, web: true, worker: true });
   });
+});
 
-  it('lists the GET endpoints without path parameters that are new or changed', () => {
-    const base = { paths: { '/health/live': { get: { summary: 'a' } }, '/garages': { get: { summary: 'old' } } } };
-    const head = {
-      paths: {
-        '/health/live': { get: { summary: 'a' } },
-        '/garages': { get: { summary: 'new' } },
-        '/garages/{id}': { get: { summary: 'one' } },
-        '/bookings': { get: {}, post: {} },
-        '/quotes': { post: {} },
-      },
-    };
-    assert.deepEqual(changedGetEndpoints(base, head).sort(), ['/bookings', '/garages']);
-    assert.deepEqual(changedGetEndpoints(null, { paths: { '/x': { get: {} } } }), ['/x']);
+describe('readiness', () => {
+  const body = (checks) => JSON.stringify({ status: 'error', checks });
+
+  it('is a note, not a finding, when storage alone is down and no object store was started', () => {
+    const out = readinessOutcome({ name: 'api', status: 503, body: body({ postgres: 'ok', redis: 'ok', storage: 'down' }), storage: false, url: 'http://x/health/ready' });
+    assert.equal(out.finding, undefined);
+    assert.match(out.note, /api/);
+    assert.match(out.note, /storage/i);
+    assert.match(out.note, /no object store/i);
+  });
+
+  it('blocks when storage is down although an object store was started', () => {
+    const out = readinessOutcome({ name: 'api', status: 503, body: body({ postgres: 'ok', redis: 'ok', storage: 'down' }), storage: true, url: 'http://x/health/ready' });
+    assert.equal(out.note, undefined);
+    assert.equal(out.finding.severity, 'blocker');
+    assert.match(out.finding.title, /storage/);
+  });
+
+  it('blocks when another check failed, with or without an object store', () => {
+    const out = readinessOutcome({ name: 'worker', status: 503, body: body({ postgres: 'down', redis: 'ok', storage: 'down' }), storage: false, url: 'http://x/health/ready' });
+    assert.equal(out.finding.severity, 'blocker');
+    assert.match(out.finding.title, /postgres, storage/);
+  });
+
+  it('blocks on an answer that is not JSON, naming the status', () => {
+    const out = readinessOutcome({ name: 'api', status: 502, body: 'Bad gateway', storage: false, url: 'http://x/health/ready' });
+    assert.equal(out.finding.severity, 'blocker');
+    assert.match(out.finding.title, /502/);
+  });
+
+  it('says nothing on 200', () => {
+    assert.deepEqual(readinessOutcome({ name: 'api', status: 200, body: body({}), storage: false, url: 'u' }), {});
+  });
+});
+
+describe('a lap cut off', () => {
+  it('is a blocker naming the signal and the phase it was in', () => {
+    const f = cutOffFinding('SIGTERM', 'sweep');
+    assert.equal(f.severity, 'blocker');
+    assert.match(f.title, /SIGTERM/);
+    assert.match(f.title, /sweep/);
+    assert.equal(verdict([f]), 'failure');
   });
 });
 

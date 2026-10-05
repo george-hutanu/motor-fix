@@ -115,6 +115,7 @@ const NOT_CHANGES = new Set([
   'NotificationsService.emailRow',
   'NotificationsService.fail',
   'NotificationsService.fallBack',
+  'NotificationsService.forget',
   'NotificationsService.phoneRow',
   'NotificationsService.release',
   // Reading a notification is not recorded (the bell's story).

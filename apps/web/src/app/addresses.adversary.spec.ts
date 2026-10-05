@@ -301,3 +301,46 @@ describe('alternates edge cases', () => {
     }
   });
 });
+
+describe('the first page on / in the browser', () => {
+  beforeEach(() => setUp());
+
+  async function first(target: string) {
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl(target);
+    return harness;
+  }
+
+  it('keeps the query string and fragment through the move to Romanian', async () => {
+    await open('/?utm=a&utm=b#top');
+
+    expect(url()).toBe('/ro?utm=a&utm=b#top');
+  });
+
+  it('does not pull the first page to a language address when it leaves / before stable', async () => {
+    const harness = await first('/');
+
+    await harness.navigateByUrl('/cockpit');
+    await settle(harness);
+
+    expect(url()).toBe('/cockpit');
+  });
+
+  it('redirects a later navigation to / at once, with its query and fragment', async () => {
+    const harness = await open('/cockpit');
+
+    await harness.navigateByUrl('/?q=1#h');
+
+    expect(url()).toBe('/ro?q=1#h');
+  });
+
+  it('redirects every visit to / after the first page at once', async () => {
+    const harness = await open('/');
+    expect(url()).toBe('/ro');
+
+    await harness.navigateByUrl('/cockpit');
+    await harness.navigateByUrl('/');
+
+    expect(url()).toBe('/ro');
+  });
+});

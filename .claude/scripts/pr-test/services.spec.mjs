@@ -2,10 +2,12 @@ import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { createServer as createTcp } from 'node:net';
-import { readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { HEALTH, apiHealth, appEnv, composePlan, freePorts, localPlan, waitForHttp } from './services.mjs';
+import { HEALTH, apiHealth, appEnv, cleanStale, composePlan, createBucket, freePorts, localPlan, runDirPrefix, waitForHttp } from './services.mjs';
 
 const listen = (server, port = 0) =>
   new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve(server.address().port)));
@@ -113,5 +115,171 @@ describe('service plans', () => {
     assert.match(env.REDIS_URL, /:55002/);
     assert.match(env.STORAGE_ENDPOINT, /:55003/);
     assert.doesNotMatch(JSON.stringify(env), /:5432|:6379|:9000/);
+  });
+});
+
+describe('an object store without Docker', () => {
+  const ports = { postgres: 55001, redis: 55002, minio: 55003, minioConsole: 55004 };
+
+  it('starts MinIO on the run ports, inside the run directory, with the storage keys the apps get', () => {
+    const plan = localPlan({ dir: '/tmp/run', ports, minio: true });
+    assert.equal(plan.storage, true);
+    assert.deepEqual(plan.minio.cmd, ['minio', 'server', '/tmp/run/minio', '--address', '127.0.0.1:55003', '--console-address', '127.0.0.1:55004']);
+    const env = appEnv({ ports });
+    assert.equal(plan.minio.env.MINIO_ROOT_USER, env.STORAGE_ACCESS_KEY_ID);
+    assert.equal(plan.minio.env.MINIO_ROOT_PASSWORD, env.STORAGE_SECRET_ACCESS_KEY);
+    assert.equal(plan.minio.health, 'http://127.0.0.1:55003/minio/health/live');
+    assert.equal(plan.minio.pidFile, '/tmp/run/minio.pid');
+  });
+
+  it('has none without the binary', () => {
+    const plan = localPlan({ dir: '/tmp/run', ports, minio: false });
+    assert.equal(plan.storage, false);
+    assert.equal(plan.minio, undefined);
+  });
+
+  /** A fake S3 endpoint answering bucket creation with `status` and `body`. */
+  async function fakeS3(status, body = '') {
+    const seen = [];
+    const server = createServer((req, res) => {
+      seen.push(`${req.method} ${req.url}`);
+      res.writeHead(status, { 'content-type': 'application/xml' });
+      res.end(body);
+    });
+    const port = await listen(server);
+    return { server, seen, env: appEnv({ ports: { ...ports, minio: port } }) };
+  }
+  const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
+
+  it('creates the bucket the apps use', async () => {
+    const s3 = await fakeS3(200);
+    try {
+      await createBucket({ repoRoot, env: s3.env });
+      assert.ok(s3.seen.some((l) => /^PUT \/motorfix\/?$/.test(l)), s3.seen.join(', '));
+    } finally {
+      await close(s3.server);
+    }
+  });
+
+  it('accepts a bucket that is already there', async () => {
+    const s3 = await fakeS3(409, '<?xml version="1.0"?><Error><Code>BucketAlreadyOwnedByYou</Code><Message>yours</Message></Error>');
+    try {
+      await createBucket({ repoRoot, env: s3.env });
+    } finally {
+      await close(s3.server);
+    }
+  });
+
+  it('fails on any other refusal', async () => {
+    const s3 = await fakeS3(403, '<?xml version="1.0"?><Error><Code>AccessDenied</Code><Message>no</Message></Error>');
+    try {
+      await assert.rejects(createBucket({ repoRoot, env: s3.env }));
+    } finally {
+      await close(s3.server);
+    }
+  });
+});
+
+describe('what a killed lap left behind', () => {
+  it('names a run directory after the PR and the process that owns it', () => {
+    assert.equal(runDirPrefix(125, 4242), 'mf-prtest-125-4242-');
+  });
+
+  /** A temp dir holding a dead lap (pid 111) and a live one (pid 222), and a fake runner. */
+  function scene() {
+    const tmp = mkdtempSync(join(tmpdir(), 'stale-scene-'));
+    const dead = join(tmp, 'mf-prtest-12-111-aB3dE9');
+    const live = join(tmp, 'mf-prtest-12-222-xY7zQ1');
+    // A run directory from before the pid was in its name: its worktree still names it.
+    const older = join(tmp, 'mf-prtest-12-k9Lm2P');
+    for (const d of [dead, live]) {
+      mkdirSync(join(d, 'pg'), { recursive: true });
+      writeFileSync(join(d, 'pg', 'postmaster.pid'), `9000\n${join(d, 'pg')}\n`);
+      writeFileSync(join(d, 'redis.pid'), '9001\n');
+      writeFileSync(join(d, 'minio.pid'), '9002');
+      writeFileSync(join(d, 'api.pid'), '9003');
+      writeFileSync(join(d, 'web.pid'), '9004');
+      mkdirSync(join(d, 'mf-prtest-12-abc1234-x'), { recursive: true });
+    }
+    mkdirSync(join(older, 'mf-prtest-12-abc1234-111'), { recursive: true });
+    mkdirSync(join(tmp, 'mf-prtest'), { recursive: true }); // the reports folder
+    mkdirSync(join(tmp, 'unrelated-111'), { recursive: true });
+    const calls = [];
+    const run = (cmd, args) => {
+      calls.push([cmd, ...args].join(' '));
+      const ps = {
+        9000: '/opt/homebrew/bin/postgres -D x',
+        9001: 'redis-server 127.0.0.1:6000',
+        9002: '/usr/local/bin/minio server x',
+        9003: '/usr/local/bin/node dist/apps/api/main.js',
+        9004: '/usr/local/bin/node dist/apps/web/server/server.mjs',
+      };
+      if (cmd === 'ps') return { code: 0, stdout: ps[args[1]] ?? '' };
+      if (cmd === 'docker') return { code: 0, stdout: args.includes('ls') ? 'mf-prtest-12-111\nmf-prtest-12-222\nmotorfix\n' : '' };
+      return { code: 0, stdout: '' };
+    };
+    const isAlive = (pid) => pid === 222;
+    return { tmp, dead, live, older, calls, run, isAlive };
+  }
+
+  it('stops the services of a dead lap, removes its directory and compose project, and prunes worktrees', () => {
+    const s = scene();
+    try {
+      const cleaned = cleanStale({ tmp: s.tmp, repo: '/repo', isAlive: s.isAlive, run: s.run });
+      assert.ok(s.calls.includes(`pg_ctl -D ${join(s.dead, 'pg')} -m immediate -w stop`));
+      assert.ok(s.calls.includes('kill 9001'));
+      assert.ok(s.calls.includes('kill 9002'));
+      assert.ok(s.calls.includes('kill 9003'), 'the api a killed lap started');
+      assert.ok(s.calls.includes('kill 9004'), 'the web server a killed lap started');
+      assert.ok(s.calls.includes('docker compose -p mf-prtest-12-111 down -v --remove-orphans'));
+      assert.ok(s.calls.includes('git -C /repo worktree prune'));
+      assert.equal(existsSync(s.dead), false);
+      assert.equal(existsSync(s.older), false);
+      assert.ok(cleaned.length >= 3);
+    } finally {
+      rmSync(s.tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('leaves a live lap, the reports folder and anything else alone', () => {
+    const s = scene();
+    try {
+      cleanStale({ tmp: s.tmp, repo: '/repo', isAlive: s.isAlive, run: s.run });
+      assert.equal(existsSync(s.live), true);
+      assert.equal(existsSync(join(s.tmp, 'mf-prtest')), true);
+      assert.equal(existsSync(join(s.tmp, 'unrelated-111')), true);
+      assert.ok(!s.calls.some((c) => c.includes(join(s.live, 'pg'))));
+      assert.ok(!s.calls.includes('docker compose -p mf-prtest-12-222 down -v --remove-orphans'));
+      assert.ok(!s.calls.some((c) => c.includes('motorfix down')));
+    } finally {
+      rmSync(s.tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('kills a pid from a pid file only when that process is still the service', () => {
+    const s = scene();
+    const run = (cmd, args) => {
+      s.calls.push([cmd, ...args].join(' '));
+      return { code: 0, stdout: cmd === 'ps' ? 'vim /tmp/minio.pid redis-server postgres dist/apps/api/main.js.bak' : '' };
+    };
+    try {
+      cleanStale({ tmp: s.tmp, repo: '/repo', isAlive: s.isAlive, run });
+      assert.ok(!s.calls.some((c) => c.startsWith('kill')));
+      assert.ok(!s.calls.some((c) => c.startsWith('pg_ctl')), 'PostgreSQL is stopped only while its pid is still postgres');
+    } finally {
+      rmSync(s.tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('does nothing and prunes nothing when no lap is dead', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'stale-none-'));
+    const calls = [];
+    try {
+      const cleaned = cleanStale({ tmp, repo: '/repo', isAlive: () => true, run: (c, a) => (calls.push([c, ...a].join(' ')), { code: 0, stdout: '' }) });
+      assert.deepEqual(cleaned, []);
+      assert.ok(!calls.some((c) => c.includes('worktree prune')));
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
   });
 });

@@ -7,19 +7,22 @@
 // fallback; the commit status is what the gates read.
 //
 //   node .claude/scripts/pr-test/post.mjs --report <report.json> [--add <findings.json>] [--repo o/r] [--dry-run]
+//   node .claude/scripts/pr-test/post.mjs --missing "<reason>" --pr <n> --sha <sha> [--lap n] [--repo o/r] [--dry-run]
 // --add folds the agent's own findings (a JSON array) into the report first.
+// --missing posts a failure for a lap that left no report, so the head never
+// sits without an agent-review status.
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 
-import { isBlocking, reportMarkdown, verdict } from "./findings.mjs";
+import { isBlocking, reportMarkdown, stepFinding, verdict } from "./findings.mjs";
 
 export const STATUS_CONTEXT = "agent-review";
 const SECTION = "Agent review";
 
 /** `gh` as a function: { code, stdout, stderr }, never throws. */
-export function realGh(args, { input } = {}) {
+export function realGh(args, { input, cwd, timeout = 60000 } = {}) {
   try {
-    const stdout = execFileSync("gh", args, { encoding: "utf8", input, stdio: ["pipe", "pipe", "pipe"], timeout: 60000 });
+    const stdout = execFileSync("gh", args, { cwd, encoding: "utf8", input, stdio: ["pipe", "pipe", "pipe"], timeout });
     return { code: 0, stdout, stderr: "" };
   } catch (error) {
     return { code: error.status ?? 1, stdout: `${error.stdout ?? ""}`, stderr: `${error.stderr ?? error.message}` };
@@ -115,12 +118,30 @@ export function addFindings(report, extra) {
   return { ...report, findings, verdict: v, summary, markdown };
 }
 
+/** The report for a lap that ended without one: a failure carrying the reason. */
+export function missingReport({ pr, repo, sha, lap, reason: given }) {
+  const reason = String(given ?? "").trim() || "no reason given";
+  const findings = [stepFinding(`The tester left no report: ${reason}`, "The lap ended before it wrote report.json, so nothing it checked counts. Run the lap again.")];
+  const summary = `No report from the tester: ${reason}.`;
+  const markdown = reportMarkdown({ pr, sha, verdict: "failure", findings, booted: [], lap, notes: [summary] });
+  return { pr: Number(pr), repo, sha, lap, verdict: "failure", summary, findings, booted: [], notes: [summary], markdown };
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const argv = process.argv.slice(2);
   const file = flag(argv, "report");
-  let report = JSON.parse(readFileSync(file, "utf8"));
+  const missing = flag(argv, "missing");
+  let report;
+  if (missing) {
+    if (!/^\d+$/.test(flag(argv, "pr") ?? "") || !/^[0-9a-f]{40}$/.test(flag(argv, "sha") ?? "")) {
+      console.error('usage: post.mjs --missing "<reason>" --pr <n> --sha <40-hex sha> [--lap n] [--repo o/r] [--dry-run]');
+      process.exit(64);
+    }
+    const repo = flag(argv, "repo") ?? execFileSync("gh", ["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"], { encoding: "utf8" }).trim();
+    report = missingReport({ pr: flag(argv, "pr"), repo, sha: flag(argv, "sha"), lap: Number(flag(argv, "lap") ?? 0) || undefined, reason: missing });
+  } else report = JSON.parse(readFileSync(file, "utf8"));
   const add = flag(argv, "add");
-  if (add) {
+  if (add && file) {
     report = addFindings(report, JSON.parse(readFileSync(add, "utf8")));
     writeFileSync(file, JSON.stringify(report, null, 2));
     writeFileSync(file.replace(/\.json$/, ".md"), report.markdown);
