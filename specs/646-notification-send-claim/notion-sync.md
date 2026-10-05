@@ -10,3 +10,7 @@
 - 2026-10-05 · implement · Foundations timeline · no row for ST-646
 - 2026-10-05 · labels · PR #130 · in development
 - 2026-10-05 · resume · ST-646 · parked by the coordinator, unblocked; Notion back to Implementing, `blocked` label off (by the coordinator)
+- 2026-10-05 · ready · PR #130 · marked ready for review, body passes pr-body-check
+- 2026-10-05 · qa · ST-646 story Status · Implementing → QA
+- 2026-10-05 · qa · Foundations timeline · no row for ST-646
+- 2026-10-05 · labels · PR #130 · QA (in development removed)
