@@ -12,3 +12,12 @@
 - 2026-10-05 · debt · deferred.md line 3 → To do task https://app.notion.com/p/3f0607bff0d28116812ce6dfd2ce06e1
 - 2026-10-05 · debt · deferred.md line 4 → To do task https://app.notion.com/p/3f0607bff0d281cab9d7cc0f31ca0c08
 - 2026-10-05 · debt · deferred.md line 5 → To do task https://app.notion.com/p/3f0607bff0d2817d8635f57addb49c88
+- 2026-10-05 · qa · ST-256 story Status · Implementing → QA
+- 2026-10-05 · qa · Foundations timeline row ST-256 · Implementing → QA
+- 2026-10-05 · labels · PR #79 · QA
+- 2026-10-05 · finish · ST-256 story Status · QA → Done
+- 2026-10-05 · finish · Foundations timeline row ST-256 · QA → Merged
+- 2026-10-05 · finish · EP-1 Foundations Status · unchanged (In progress; other stories open)
+- 2026-10-05 · labels · PR #79 · none
+- 2026-10-05 · comment · ST-256 · posted (6 items)
+- 2026-10-05 · ready · Foundations · +ST-255
