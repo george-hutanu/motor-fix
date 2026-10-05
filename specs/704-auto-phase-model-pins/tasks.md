@@ -39,7 +39,7 @@ None: the pins, the mapping spec and the model router are unchanged (FR-006).
 
 - [x] T011 [US3] Run `npm run test:harness` (new spec green, `skill-models.spec.mjs`, `task-runner.spec.mjs`, `agent-replies.spec.mjs` green), `node .claude/scripts/harness-eval.mjs --check` and `node .claude/scripts/doctor.mjs`; all exit 0 (FR-006, FR-008, SC-005)
 - [x] T012 [US3] Confirm no `speckit-*` skill `model:` line differs from `origin/main` (`git diff origin/main -- '.claude/skills/*/SKILL.md' | grep '^[+-]model:'` empty) (FR-006)
-- [ ] T013 [US3] Record the phase 14 spec-reviewer verdict (APPROVE, 0 CRITICAL/HIGH) in `specs/704-auto-phase-model-pins/auto-run.md` once the review has run (SC-004)
+- [x] T013 [US3] Record the phase 14 spec-reviewer verdict (APPROVE, 0 CRITICAL/HIGH) in `specs/704-auto-phase-model-pins/auto-run.md` once the review has run (SC-004)
 
 ## Dependencies
 

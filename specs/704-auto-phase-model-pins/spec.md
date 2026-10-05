@@ -2,7 +2,7 @@
 
 **Feature Branch**: `704-auto-phase-model-pins`
 **Created**: 2026-10-05
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 **Level**: 2 (feature)
 **Notion story**: ST-697 — https://app.notion.com/p/3f0607bff0d2816f9b06f0ebbbff4c53 (Task, EP-1)
 **Epic**: EP-1 Foundations

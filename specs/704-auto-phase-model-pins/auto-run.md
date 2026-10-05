@@ -134,3 +134,15 @@ Not measurable, stated as such:
 - code-reviewer: BLOCK, 1 HIGH (the rule sentence read as "every non-Opus pin dispatches", but size/context/archive pin sonnet and stay inline), 1 MEDIUM (no guard against a dispatched phase's pin becoming opus), 2 LOW (repeated dispatch fields, a restated hook sentence). All four patched: the lead names phases 2, 5, 6 and 7; the spec asserts a dispatched pin is not opus and checks `subagent_type`/`run_in_background` once in the lead; dispatch lines carry only `model:`.
 - spec-reviewer: APPROVE, 0 CRITICAL/HIGH, 1 LOW deferred (`deferred.md`: the trial's phase agents were `general-purpose`, not `task-runner`).
 - After the patch: harness 56 files / 1236 tests, eval 80/80, doctor 16 ok, frozen region unchanged, no `model:` line changed.
+- code-reviewer re-review of 5a5026c: APPROVE, all four findings closed, nothing new.
+
+## SC-004 — review verdicts, before and after (T013)
+
+- Before, ST-673 (phases inline on Opus): spec-reviewer first pass BLOCK (1 CRITICAL, 1 HIGH, 1 MEDIUM, 3 LOW), re-review APPROVE (1 MEDIUM, 3 LOW). Transcripts `ac3b789339e550e62`, `ab962b585f439b6e9` of session `2b506914`.
+- After, ST-697 (phases 2, 5-7 on their pins): spec-reviewer first pass APPROVE (0 CRITICAL/HIGH/MEDIUM, 1 LOW deferred). No worse.
+
+## Phases 15-17
+
+- 15 Agent context: skipped. The managed block lives in `CLAUDE.local.md`, which git does not track, and the ratchet forbids growth; nothing to commit.
+- 16 Retrospective evidence: `retro-evidence.mjs` gathered (commits 91e6465..5a5026c, open action items carried from earlier features); no verdict recorded, left to the owner.
+- 17 Archive steps 1-3: `capabilities.mjs merge --apply` → platform +9 added, 0 modified, 0 removed; spec status `Archived (2026-10-05)`; `/speckit-retro` not run by this run (phase 16 bars self-grading).
