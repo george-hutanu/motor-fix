@@ -91,7 +91,7 @@ def read_feature_json_feature_directory(repo_root: Path) -> str:
     return value if isinstance(value, str) else ""
 
 
-def _json_dump(data: dict[str, str]) -> str:
+def _json_dump(data: dict) -> str:
     return json.dumps(data, ensure_ascii=False, separators=(",", ":")) + "\n"
 
 
@@ -112,11 +112,28 @@ def persist_feature_json(repo_root: Path, feature_dir_value: str) -> None:
     if current == value:
         return
 
+    # Keep a level /speckit-size chose for this work ("next", or this directory)
+    # and drop one sized for another feature. Mirrors pointTo() in
+    # .claude/scripts/lib/feature.mjs.
+    data: dict = {}
+    feature_json = repo_root / ".specify" / "feature.json"
+    if feature_json.is_file():
+        try:
+            loaded = json.loads(feature_json.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                data = loaded
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            data = {}
+    data["feature_directory"] = value
+    if "level" in data and data.get("level_for") in ("next", value):
+        data["level_for"] = value
+    else:
+        data.pop("level", None)
+        data.pop("level_for", None)
+
     specify_dir = repo_root / ".specify"
     specify_dir.mkdir(parents=True, exist_ok=True)
-    (specify_dir / "feature.json").write_bytes(
-        _json_dump({"feature_directory": value}).encode("utf-8")
-    )
+    (specify_dir / "feature.json").write_bytes(_json_dump(data).encode("utf-8"))
 
 
 @dataclass(frozen=True)

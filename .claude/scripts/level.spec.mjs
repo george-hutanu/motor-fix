@@ -4,8 +4,8 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, cpSync } f
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
-import { LEVELS, DEFAULT_LEVEL, featureLevel } from './lib/feature.mjs';
-import { main, resolveLevel, setLevel } from './level.mjs';
+import { LEVELS, DEFAULT_LEVEL, featureLevel, levelApplies, pointTo } from './lib/feature.mjs';
+import { classifyLevel, levelTarget, main, pointFeature, resolveLevel, setLevel } from './level.mjs';
 import { checkFeatureState } from './doctor.mjs';
 
 const root = join(import.meta.dirname, '..', '..');
@@ -105,7 +105,7 @@ describe('setting a level', () => {
   it('writes the level without disturbing the active feature pointer', () => {
     const dir = fixture({ '.specify/feature.json': JSON.stringify({ feature_directory: 'specs/002-x' }) });
     try {
-      assert.deepEqual(setLevel(dir, 1), { level: 1 });
+      assert.deepEqual(setLevel(dir, 1), { level: 1, level_for: 'next' });
       const state = JSON.parse(readFileSync(join(dir, '.specify/feature.json'), 'utf8'));
       assert.equal(state.level, 1);
       assert.equal(state.feature_directory, 'specs/002-x', 'choosing a level must not un-choose the feature');
@@ -127,7 +127,7 @@ describe('setting a level', () => {
   it('replaces a malformed file rather than refusing to work', () => {
     const dir = fixture({ '.specify/feature.json': 'not json at all' });
     try {
-      assert.deepEqual(setLevel(dir, 0), { level: 0 });
+      assert.deepEqual(setLevel(dir, 0), { level: 0, level_for: 'next' });
       assert.equal(JSON.parse(readFileSync(join(dir, '.specify/feature.json'), 'utf8')).level, 0);
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -299,5 +299,123 @@ describe('suggestLevel', () => {
     );
     assert.equal(result.unavailable, true);
     assert.equal(result.level, undefined);
+  });
+});
+
+describe('a level reaches the feature it was sized for', () => {
+  const state = (dir) => JSON.parse(readFileSync(join(dir, '.specify/feature.json'), 'utf8'));
+
+  it('sizes the next feature from main or a fresh worktree, and the current one on its own branch', () => {
+    const pointer = { feature_directory: 'specs/002-x' };
+    assert.equal(levelTarget('.', pointer, { branch: 'main' }), 'next');
+    assert.equal(levelTarget('.', pointer, { branch: '002-x' }), 'specs/002-x');
+    assert.equal(levelTarget('.', {}, { branch: '002-x' }), 'next');
+    assert.equal(levelTarget('.', pointer, { for: 'current', branch: 'main' }), 'specs/002-x');
+    assert.equal(levelTarget('.', pointer, { for: 'next', branch: '002-x' }), 'next');
+  });
+
+  it('survives /speckit-specify pointing feature.json at the new feature', () => {
+    const dir = fixture({ '.specify/feature.json': JSON.stringify({ feature_directory: 'specs/001-old' }) });
+    try {
+      withEnv(undefined, () => {
+        setLevel(dir, 1, { for: 'next' });
+        pointFeature(dir, 'specs/002-new');
+        assert.deepEqual(state(dir), { feature_directory: 'specs/002-new', level: 1, level_for: 'specs/002-new' });
+        assert.equal(featureLevel(dir), 1);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('never lets an old feature\'s small level shrink the next one', () => {
+    const dir = fixture({
+      '.specify/feature.json': JSON.stringify({ feature_directory: 'specs/001-old', level: 0, level_for: 'specs/001-old' }),
+    });
+    try {
+      withEnv(undefined, () => {
+        assert.equal(featureLevel(dir), 0, 'the old feature keeps its own level');
+        pointFeature(dir, 'specs/002-new');
+        assert.deepEqual(state(dir), { feature_directory: 'specs/002-new' });
+        assert.equal(featureLevel(dir), DEFAULT_LEVEL);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('ignores a level sized for another feature, and says why', () => {
+    const dir = fixture({
+      '.specify/feature.json': JSON.stringify({ feature_directory: 'specs/002-new', level: 0, level_for: 'specs/001-old' }),
+    });
+    try {
+      withEnv(undefined, () => {
+        assert.equal(featureLevel(dir), DEFAULT_LEVEL);
+        assert.match(resolveLevel(dir, {}).source, /sized for specs\/001-old/);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('honours a level written before level_for existed', () => {
+    assert.equal(levelApplies({ level: 1 }), true);
+    assert.equal(levelApplies({ feature_directory: 'specs/1-a', level: 1, level_for: 'specs/1-a' }), true);
+    assert.equal(levelApplies({ feature_directory: 'specs/1-a', level: 1, level_for: 'specs/0-z' }), false);
+    assert.equal(levelApplies({ feature_directory: 'specs/1-a' }), false);
+  });
+
+  it('keeps the pointer and the level in step in the Python helper too', () => {
+    const probe = spawnSync('python3', ['--version']);
+    if (probe.status !== 0) return;
+    const run = (before, value) => {
+      const dir = fixture({ '.specify/feature.json': JSON.stringify(before) });
+      try {
+        const py = spawnSync(
+          'python3',
+          ['-c', 'import sys; from pathlib import Path; from common import persist_feature_json; persist_feature_json(Path(sys.argv[1]), sys.argv[2])', dir, value],
+          { cwd: join(root, '.specify/scripts/python'), encoding: 'utf8' },
+        );
+        assert.equal(py.status, 0, py.stderr);
+        return state(dir);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    };
+    for (const before of [
+      { feature_directory: 'specs/001-old', level: 1, level_for: 'next' },
+      { feature_directory: 'specs/001-old', level: 0, level_for: 'specs/001-old' },
+      { feature_directory: 'specs/001-old', level: 1 },
+    ]) {
+      assert.deepEqual(run(before, 'specs/002-new'), pointTo(before, 'specs/002-new'));
+    }
+  });
+});
+
+describe('classifyLevel', () => {
+  it('calls the obvious cases without a model', () => {
+    assert.deepEqual(
+      ['fix a typo in the footer', 'rename the helper in the garage card', 'bump the readme badge'].map((d) => classifyLevel(d).level),
+      [0, 0, 0],
+    );
+    assert.equal(classifyLevel('build the reviews epic').level, 3);
+    assert.equal(classifyLevel('add a --json flag to the rule check').level, 2);
+  });
+
+  it('lets a risky word outrank a trivial one, so it only ever pushes a level up', () => {
+    assert.equal(classifyLevel('rename the column in the bookings table').level, 2);
+    assert.equal(classifyLevel('fix a typo in the sign-in email').level, 2);
+    assert.equal(classifyLevel('update the docs for the payments endpoint').level, 2);
+  });
+
+  it('is unsure rather than guessing, and never claims level 1', () => {
+    assert.equal(classifyLevel('add a filter chip to the garage list').unsure, true);
+    assert.equal(
+      classifyLevel('rename things across the garage list, the detail page, the map pin, the card and the summary tile').unsure,
+      true,
+    );
+    for (const d of ['make the garage card nicer', 'show the opening hours', 'fix a typo']) {
+      assert.notEqual(classifyLevel(d).level, 1);
+    }
   });
 });

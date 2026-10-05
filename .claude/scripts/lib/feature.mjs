@@ -64,13 +64,44 @@ export function featureLevel(repo) {
   const stateFile = join(repo, ".specify", "feature.json");
   if (existsSync(stateFile)) {
     try {
-      const parsed = parse(JSON.parse(readFileSync(stateFile, "utf8")).level);
+      const state = JSON.parse(readFileSync(stateFile, "utf8"));
+      const parsed = levelApplies(state) ? parse(state.level) : null;
       if (parsed !== null) return parsed;
     } catch {
       // Malformed state is not this resolver's problem to report.
     }
   }
   return DEFAULT_LEVEL;
+}
+
+/**
+ * Whether the level in feature.json was chosen for the work in hand. A level
+ * carries `level_for`: the feature directory it was sized for, or "next" when
+ * /speckit-size ran before /speckit-specify created one. A level sized for some
+ * other feature is stale and is ignored, so an old "trivial" never shrinks the
+ * process of new work — the default (the full chain) applies instead. A file
+ * written before `level_for` existed is honoured as it always was.
+ */
+export function levelApplies(state) {
+  if (!state || typeof state !== "object" || state.level === undefined) return false;
+  if (state.level_for === undefined) return true;
+  return state.level_for === "next" || state.level_for === state.feature_directory;
+}
+
+/**
+ * The feature.json that points at `featureDirectory`, keeping a level sized for
+ * it ("next" or that directory) and dropping one sized for anything else.
+ * Mirrored by `persist_feature_json` in .specify/scripts/python/common.py.
+ */
+export function pointTo(state, featureDirectory) {
+  const next = { ...(state && typeof state === "object" ? state : {}), feature_directory: featureDirectory };
+  if (next.level !== undefined && (next.level_for === "next" || next.level_for === featureDirectory)) {
+    next.level_for = featureDirectory;
+  } else {
+    delete next.level;
+    delete next.level_for;
+  }
+  return next;
 }
 
 export function activeFeature(repo) {
