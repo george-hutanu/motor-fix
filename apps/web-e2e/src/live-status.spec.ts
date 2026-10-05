@@ -78,10 +78,8 @@ for (const [name, width, height] of [
       }),
     ).toEqual(['0px', '0px', '0px', '0px']);
     expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= window.innerWidth,
-      ),
-    ).toBe(true);
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width);
   });
 }
 
@@ -92,6 +90,7 @@ test("under the offline bar, the live status line adds its own 8 px to the bar's
   const line = await openWithUpdate(page, { thenDrop: true });
   const bar = page.locator('.live-offline');
   await expect(bar).toHaveText('Fără conexiune. Ce vezi poate fi vechi.', {
+    // OFFLINE_AFTER is 10 s; twice that.
     timeout: 20_000,
   });
   const offline = await box(bar);

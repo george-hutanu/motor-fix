@@ -41,3 +41,7 @@ Worktree: .worktrees/612-live-status-spacing
 
 ## 14. Review
 - spec-reviewer: APPROVE (FR-001 met). Two MEDIUM, both fixed: `deferred.md` committed and filed as a Notion debt task (https://app.notion.com/p/3f0607bff0d2816bb941df4c46810caa); the adversary file folded into `live-status.spec.ts` (decision above).
+- code-reviewer: APPROVE, LOW only. Applied: a comment on the offline wait (twice `OFFLINE_AFTER`); the no-scroll check compares `scrollWidth` with the viewport width so a failure shows both. Deferred and filed: the shared `signInAs` stub omits `emailConfirmed` (https://app.notion.com/p/3f0607bff0d2816ca660e1b3f7086f4d). `live-status.spec.ts`: 6 passed.
+
+## 16. Retrospective evidence
+- `retro-evidence.mjs --since 990df69`: 3 commits on the branch; no open retro action item touches this change. Verdict left to the owner.

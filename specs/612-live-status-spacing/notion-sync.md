@@ -9,3 +9,4 @@
 - 2026-10-05 · implement · ST-612 story Status · Planning → Implementing
 - 2026-10-05 · labels · PR #114 · in development
 - 2026-10-05 · debt · deferred.md line 4 · filed https://app.notion.com/p/3f0607bff0d2816bb941df4c46810caa
+- 2026-10-05 · debt · deferred.md line 5 · filed https://app.notion.com/p/3f0607bff0d2816ca660e1b3f7086f4d
