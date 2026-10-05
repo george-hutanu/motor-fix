@@ -1,6 +1,7 @@
 import type { Routes } from '@angular/router';
 
 import {
+  cockpitTexts,
   languageAddress,
   languageRoot,
   publicTexts,
@@ -41,6 +42,7 @@ export const routes: Routes = [
     path: `app/${area}`,
   })),
   {
+    canMatch: [cockpitTexts],
     loadComponent: () =>
       import('@motor-fix/ui-cockpit/sample').then((m) => m.CockpitSamplePage),
     path: 'cockpit',

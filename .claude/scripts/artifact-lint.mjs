@@ -136,7 +136,7 @@ if (tasks === null) {
 // demanding one is noise — the point of routing by size is that a one-session
 // change is not made to carry a feature's paperwork. The level never softens a
 // finding about an artifact the level DOES owe.
-const level = featureLevel(repo);
+const level = featureLevel(repo, feature.dir);
 const owes = new Set(LEVELS[level].artifacts);
 if (plan === null && owes.has("plan.md")) add("WARN", "plan-missing", `${feature.name}/plan.md does not exist`);
 
