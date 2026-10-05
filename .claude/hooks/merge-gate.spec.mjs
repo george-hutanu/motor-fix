@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { decideMerge, mergeTarget } from './merge-gate.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
+const run = (name, conclusion, status = 'COMPLETED', startedAt = '2026-10-05T07:00:00Z') => ({ __typename: 'CheckRun', name, status, conclusion, startedAt });
+const green = [run('Unit tests', 'SUCCESS'), run('CI OK', 'SUCCESS')];
 const pr = (rollup) => ({ number: 21, state: 'OPEN', headRefOid: 'abc1234def5678', statusCheckRollup: rollup });
 
 describe('merge gate — which commands are merges', () => {
@@ -35,18 +37,106 @@ describe('merge gate — which commands are merges', () => {
 
 describe('merge gate — the decision', () => {
   it('refuses a PR whose head commit has no agent-review success, and names the tester', () => {
-    const why = decideMerge(pr([{ conclusion: 'SUCCESS' }]));
+    const why = decideMerge(pr(green));
     assert.match(why, /agent-review/);
     assert.match(why, /abc1234/);
     assert.match(why, /speckit-pr-test 21/);
   });
 
   it('refuses a failing agent review', () => {
-    assert.match(decideMerge(pr([{ conclusion: 'SUCCESS' }, review('FAILURE')])), /failure/i);
+    assert.match(decideMerge(pr([...green, review('FAILURE')])), /failure/i);
   });
 
   it('lets the merge run with agent-review success on the head commit', () => {
-    assert.equal(decideMerge(pr([{ conclusion: 'SUCCESS' }, review('SUCCESS')])), null);
+    assert.equal(decideMerge(pr([...green, review('SUCCESS')])), null);
+  });
+
+  it('counts skipped and neutral checks as green', () => {
+    assert.equal(decideMerge(pr([...green, run('E2E tests', 'SKIPPED'), run('Lint', 'NEUTRAL'), review('SUCCESS')])), null);
+  });
+
+  // The PR tester now runs beside CI rather than after it, so agent-review
+  // success alone no longer implies CI finished: the gate checks both.
+  it('refuses agent-review success while a CI check failed, and names it', () => {
+    const why = decideMerge(pr([run('Unit tests', 'FAILURE'), run('CI OK', 'FAILURE'), review('SUCCESS')]));
+    assert.match(why, /Unit tests/);
+    assert.match(why, /CI OK/);
+    assert.match(why, /gh pr checks 21/);
+  });
+
+  it('refuses agent-review success while a CI check is still running', () => {
+    const why = decideMerge(pr([run('Unit tests', 'SUCCESS'), run('CI OK', null, 'IN_PROGRESS'), review('SUCCESS')]));
+    assert.match(why, /CI OK/);
+    assert.match(why, /pending|running/i);
+  });
+
+  // PR #91's own rollup: the PR template workflow cancels a run in progress
+  // when the body is edited again, leaving the cancelled run beside the new one.
+  it('judges only the latest run of each check, so a cancelled earlier run does not block', () => {
+    const rollup = [run('body', 'CANCELLED', 'COMPLETED', '2026-10-05T07:03:51Z'), run('body', 'SUCCESS', 'COMPLETED', '2026-10-05T07:04:15Z'), ...green, review('SUCCESS')];
+    assert.equal(decideMerge(pr(rollup)), null);
+  });
+
+  it('still refuses when the latest run of a check is the failing one', () => {
+    const rollup = [run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', 'FAILURE', 'COMPLETED', '2026-10-05T07:10:00Z'), run('CI OK', 'SUCCESS'), review('SUCCESS')];
+    assert.match(decideMerge(pr(rollup)), /CI failed.*Unit tests/);
+  });
+
+  // gh reports a run that has not started with startedAt 0001-01-01, which
+  // sorted it as the oldest run of its check (PR tester lap 2 on PR #91).
+  const NOT_STARTED = '0001-01-01T00:00:00Z';
+
+  it('reads a cancelled run followed by its queued replacement as pending, not failed', () => {
+    const rollup = [run('body', 'CANCELLED', 'COMPLETED', '2026-10-05T07:03:51Z'), run('body', null, 'QUEUED', NOT_STARTED), ...green, review('SUCCESS')];
+    const why = decideMerge(pr(rollup));
+    assert.match(why, /still running.*body/);
+    assert.doesNotMatch(why, /CI failed/);
+  });
+
+  it('refuses while a green check has a queued re-run, rather than merging on the old result', () => {
+    const rollup = [run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', null, 'QUEUED', NOT_STARTED), run('CI OK', 'SUCCESS'), review('SUCCESS')];
+    assert.match(decideMerge(pr(rollup)), /still running.*Unit tests/);
+  });
+
+  it('reads an in-progress run as the latest even when its start time is older', () => {
+    const rollup = [run('Unit tests', null, 'IN_PROGRESS', '2026-10-05T06:00:00Z'), run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('CI OK', 'SUCCESS'), review('SUCCESS')];
+    assert.match(decideMerge(pr(rollup)), /still running.*Unit tests/);
+  });
+
+  // The PR template workflow can cancel a run before a runner picks it up:
+  // COMPLETED, CANCELLED and undated. It is the oldest run, not the newest.
+  it('reads a run cancelled while still queued as older than the run that replaced it', () => {
+    const rollup = [run('body', 'CANCELLED', 'COMPLETED', NOT_STARTED), run('body', 'SUCCESS', 'COMPLETED', '2026-10-05T07:04:15Z'), ...green, review('SUCCESS')];
+    assert.equal(decideMerge(pr(rollup)), null);
+  });
+
+  it('keys check runs by workflow and name, so a same-named job in another workflow is not hidden', () => {
+    const rollup = [
+      { ...run('build', 'FAILURE', 'COMPLETED', '2026-10-05T07:00:00Z'), workflowName: 'Docker' },
+      { ...run('build', 'SUCCESS', 'COMPLETED', '2026-10-05T07:05:00Z'), workflowName: 'CI' },
+      { ...run('CI OK', 'SUCCESS'), workflowName: 'CI' },
+      review('SUCCESS'),
+    ];
+    assert.match(decideMerge(pr(rollup)), /CI failed.*Docker \/ build/);
+  });
+
+  it('still judges the latest run within one workflow', () => {
+    const rollup = [
+      { ...run('build', 'FAILURE', 'COMPLETED', '2026-10-05T07:00:00Z'), workflowName: 'CI' },
+      { ...run('build', 'SUCCESS', 'COMPLETED', '2026-10-05T07:05:00Z'), workflowName: 'CI' },
+      { ...run('CI OK', 'SUCCESS'), workflowName: 'CI' },
+      review('SUCCESS'),
+    ];
+    assert.equal(decideMerge(pr(rollup)), null);
+  });
+
+  it('reads an expected status context as pending, not failed', () => {
+    const rollup = [...green, { __typename: 'StatusContext', context: 'deploy', state: 'EXPECTED' }, review('SUCCESS')];
+    assert.match(decideMerge(pr(rollup)), /still running.*deploy/);
+  });
+
+  it('refuses agent-review success when CI has not reported at all', () => {
+    assert.match(decideMerge(pr([review('SUCCESS')])), /no CI OK check/);
   });
 
   it('leaves a PR that is not open to GitHub to refuse', () => {
@@ -57,33 +147,47 @@ describe('merge gate — the decision', () => {
 describe('merge gate — Dependabot PRs need no agent review', () => {
   const bot = (rollup, login = 'app/dependabot') => ({ ...pr(rollup), author: { login, is_bot: true }, commits: [{ authors: [{ login: 'dependabot[bot]' }] }] });
 
-  it('lets a Dependabot PR merge with every other check green and no agent-review status', () => {
-    assert.equal(decideMerge(bot([{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }])), null);
-    assert.equal(decideMerge(bot([{ conclusion: 'SUCCESS' }], 'dependabot[bot]')), null);
+  it('lets a Dependabot PR merge on green CI with no agent-review status', () => {
+    assert.equal(decideMerge(bot(green)), null);
+    assert.equal(decideMerge(bot([...green, run('body', 'SKIPPED')], 'dependabot[bot]')), null);
   });
 
-  it('refuses a Dependabot PR with a failing, pending or missing check, and names it', () => {
-    const red = decideMerge(bot([{ conclusion: 'SUCCESS' }, { name: 'Unit tests', conclusion: 'FAILURE' }]));
+  it('refuses a Dependabot PR with a failing, running or missing check, and names it', () => {
+    const red = decideMerge(bot([run('Unit tests', 'FAILURE'), run('CI OK', 'FAILURE')]));
+    assert.match(red, /CI failed/);
     assert.match(red, /Unit tests/);
-    assert.match(red, /Dependabot/);
-    assert.match(decideMerge(bot([{ name: 'Build', status: 'IN_PROGRESS', conclusion: '' }])), /Build/);
-    assert.match(decideMerge(bot([{ context: 'CI OK', state: 'PENDING' }])), /CI OK/);
-    assert.match(decideMerge(bot([])), /no checks/);
+    assert.match(decideMerge(bot([run('Build', null, 'IN_PROGRESS'), run('CI OK', 'SUCCESS')])), /still running.*Build/);
+    assert.match(decideMerge(bot([{ context: 'CI OK', state: 'PENDING' }])), /still running.*CI OK/);
+    assert.match(decideMerge(bot([])), /no CI OK check/);
+    assert.match(decideMerge(bot([run('Unit tests', 'SUCCESS')])), /no CI OK check/);
+  });
+
+  it('judges the latest run of each check, as for any other PR', () => {
+    const NOT_STARTED = '0001-01-01T00:00:00Z';
+    const rerunRed = [run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', 'FAILURE', 'COMPLETED', '2026-10-05T07:10:00Z'), run('CI OK', 'SUCCESS')];
+    assert.match(decideMerge(bot(rerunRed)), /CI failed/);
+    const queued = [run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', null, 'QUEUED', NOT_STARTED), run('CI OK', 'SUCCESS')];
+    assert.match(decideMerge(bot(queued)), /still running/);
+    const fixed = [run('Unit tests', 'FAILURE', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:10:00Z'), run('CI OK', 'SUCCESS')];
+    assert.equal(decideMerge(bot(fixed)), null);
   });
 
   it('still refuses a Dependabot PR whose agent review failed', () => {
-    assert.match(decideMerge(bot([{ conclusion: 'SUCCESS' }, review('FAILURE')])), /agent-review is failure/);
+    assert.match(decideMerge(bot([...green, review('FAILURE')])), /agent-review is failure/);
   });
 
   it('reads the author, not the title or branch: anyone else still needs the agent review', () => {
-    const human = { ...pr([{ conclusion: 'SUCCESS' }]), title: 'chore(deps): bump vitest', headRefName: 'dependabot/npm_and_yarn/vitest-5', author: { login: 'george-hutanu' } };
+    const human = { ...pr(green), title: 'chore(deps): bump vitest', headRefName: 'dependabot/npm_and_yarn/vitest-5', author: { login: 'george-hutanu' } };
     assert.match(decideMerge(human), /no agent-review status/);
-    assert.match(decideMerge({ ...pr([{ conclusion: 'SUCCESS' }]), author: { login: 'dependabot-fan' } }), /no agent-review status/);
+    assert.match(decideMerge({ ...pr(green), author: { login: 'dependabot-fan' } }), /no agent-review status/);
   });
 
   it('takes back the exemption once anyone else pushed a commit to the branch', () => {
-    const pushed = { ...bot([{ conclusion: 'SUCCESS' }]), commits: [{ authors: [{ login: 'dependabot[bot]' }] }, { authors: [{ login: 'george-hutanu' }] }] };
+    const pushed = { ...bot(green), commits: [{ authors: [{ login: 'dependabot[bot]' }] }, { authors: [{ login: 'george-hutanu' }] }] };
     assert.match(decideMerge(pushed), /no agent-review status/);
-    assert.match(decideMerge({ ...bot([{ conclusion: 'SUCCESS' }]), commits: undefined }), /no agent-review status/);
+    const coAuthored = { ...bot(green), commits: [{ authors: [{ login: 'dependabot[bot]' }, { login: 'george-hutanu' }] }] };
+    assert.match(decideMerge(coAuthored), /no agent-review status/);
+    assert.match(decideMerge({ ...bot(green), commits: undefined }), /no agent-review status/);
+    assert.match(decideMerge({ ...bot(green), commits: [] }), /no agent-review status/);
   });
 });

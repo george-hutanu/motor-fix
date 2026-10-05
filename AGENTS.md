@@ -51,10 +51,13 @@ epic or a plan, whether run through spec-kit or by hand.
      (`speckit-notion-sync qa`, which also sets the PR's one stage label
      to `QA`). There is no In review stage: ready is QA.
   5. Get CI green: merge `origin/main` into the branch if it is behind and
-     push, wait for the checks (`gh pr checks <n> --watch`); a failing check is
-     fixed on the branch and waited for again.
-  6. QA: run the PR tester (`/speckit-pr-test <n>`, the `pr-tester` subagent);
-     the task and the PR's stage label stay QA. It boots the PR head in
+     push, then wait for the checks (`gh pr checks <n> --watch`) in the
+     background (`run_in_background`), never in a foreground `sleep` loop; a
+     failing check is fixed on the branch and waited for again.
+  6. QA, started as soon as the PR is ready, beside step 5 rather than after
+     it: run the PR tester (`/speckit-pr-test <n>`, the `pr-tester` subagent);
+     the task and the PR's stage label stay QA. It leaves the unit and
+     end-to-end suites to CI, which runs them on the merge result. It boots the PR head in
      its own worktree, tests it in a browser and against the API, reviews the
      diff, posts a review, fills the template's "Agent review" section and sets
      the `agent-review` status on the head commit. Fix every blocking finding
@@ -65,8 +68,9 @@ epic or a plan, whether run through spec-kit or by hand.
      (`gh pr merge <n> --merge`); a PR with a failing, pending or missing check
      is never merged. Then set the task to Done (`speckit-notion-sync finish`).
      A PR opened by Dependabot (its author on GitHub, not its title or branch)
-     and holding only Dependabot's commits skips step 6: it merges on every other check green with no `agent-review`
-     status, and a failing, pending or missing check still refuses it.
+     and holding only Dependabot's commits skips step 6: it merges on every
+     other check green, `CI OK` included, with no `agent-review` status; a
+     failing, pending or missing check still refuses it.
 
   Technical debt a review defers (`specs/<feature>/deferred.md`) is filed as
   a To do task in Notion (`speckit-notion-sync debt`) before the merge; each
@@ -190,7 +194,8 @@ decisions are the source for anything the constitution does not fix.
   title (Conventional Commit), Biome, Typecheck, Unit tests, Integration
   tests (PostgreSQL+PostGIS and Redis services), E2E tests (Playwright
   `web-e2e`, servers started in the job), Build, Harness, Contract check,
-  Dependency audit, Docker build (`web`, `node-app`), then `CI OK`, which
+  Dependency audit, Docker build (`web`, `node-app`), Compose stack
+  (`docker-compose.yml` boots and creates the bucket), then `CI OK`, which
   fails when any of them did. A PR that changes documentation only
   (`scripts/docs-only.ts`: Markdown outside `.claude/`, `.specify/` and
   `.github/`, or `docs/`) runs only the PR title, Changes and `CI OK` jobs;

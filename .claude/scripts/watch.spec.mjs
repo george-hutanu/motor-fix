@@ -251,6 +251,8 @@ describe('stale and the fix', () => {
     assert.equal(fixOf(row({ ...quiet, phase: 'merging', pr: ready([check('SUCCESS'), review('SUCCESS')]) }), opts).fix, 'merge');
     assert.equal(fixOf(row({ ...quiet, pr: summarizePr(pr({ isDraft: true, statusCheckRollup: [check('FAILURE')] })) }), opts).fix, 'fix-ci');
     assert.equal(fixOf(row({ ...quiet, phase: 'qa', pr: ready([check('SUCCESS')]) }), opts).fix, 'rerun-qa');
+    // QA runs beside CI: a ready PR with no verdict gets the tester while CI still runs.
+    assert.equal(fixOf(row({ ...quiet, phase: 'qa', pr: ready([check(null, 'IN_PROGRESS')]) }), opts).fix, 'rerun-qa');
     assert.equal(fixOf(row({ ...quiet, phase: 'qa', pr: ready([check('SUCCESS'), review('FAILURE')]) }), opts).fix, 'resume');
     assert.equal(fixOf(row({ ...quiet, pr: summarizePr(pr({ isDraft: true })) }), opts).fix, 'resume');
   });

@@ -1,6 +1,6 @@
 <!--
-Sync Impact Report (v1.7.0)
-- Version change: 1.6.1 → 1.7.0 (MINOR: VII gains an exemption — a PR opened
+Sync Impact Report (v1.8.0)
+- Version change: 1.7.0 → 1.8.0 (MINOR: VII gains an exemption — a PR opened
   by Dependabot, known by its author on GitHub, with no commit by anyone
   else, merges on every other check
   green without the PR tester's `agent-review` status; a failing, pending or
@@ -12,10 +12,23 @@ Sync Impact Report (v1.7.0)
   - ✅ AGENTS.md — lifecycle step 7
   - ✅ .claude/hooks/merge-gate.mjs, pr-lifecycle-gate.mjs, their specs and
     evals/cases/merge-gate.json
-  - ⚠ CLAUDE.local.md still names v1.6.0: untracked and under a growth
-    ratchet, left for the owner
+  - ✅ .claude/skills/speckit-auto and CLAUDE.local.md name v1.8.0
 
-Previous report (v1.6.1)
+Sync Impact Report (v1.7.0)
+- Version change: 1.6.1 → 1.7.0 (MINOR: VII steps 4–6 reordered and
+  enforced — the PR tester starts when the PR is ready and runs beside CI,
+  not after it; the unit and end-to-end suites are CI's, the tester no longer
+  reruns them; the merge gate now also refuses while any other check is
+  failing, pending or missing. No check removed: each suite runs once, in CI)
+- Source: owner decision 2026-10-05: make the lifecycle faster and cheaper
+  without lowering quality (docs/speed-and-cost-plan.md).
+- Templates:
+  - ✅ AGENTS.md — lifecycle steps 5 and 6
+  - ✅ .claude/skills/speckit-auto, speckit-pr-test, speckit-watch; .claude/scripts/watch.mjs
+  - ✅ .claude/hooks/merge-gate.mjs, its spec and eval cases
+  - ✅ .claude/scripts/pr-test/run.mjs, .claude/agents/pr-tester.md
+
+Sync Impact Report (v1.6.1)
 - Version change: 1.6.0 → 1.6.1 (PATCH: VII clarified — the In review stage
   is folded into QA. Marking a PR ready sets the task QA and its one stage
   label `QA` at once; the PR tester's run keeps QA. Notion Status is Planning
@@ -264,13 +277,15 @@ waits for the owner:
 3. When the work is done (tests, typecheck and lint green, review with no
    CRITICAL/HIGH left), mark the PR ready, swap its label to `QA`, and set
    the task QA. There is no In review stage: a ready PR is in QA.
-4. Merge `origin/main` into the branch if it is behind and wait for CI. A
-   failing check is fixed on the branch and waited for again.
-5. With the task and the PR's label still QA, run
-   the PR tester (`/speckit-pr-test`) on the head
+4. Merge `origin/main` into the branch if it is behind and wait for CI, in
+   the background. A failing check is fixed on the branch and waited for
+   again.
+5. Beside step 4, as soon as the PR is ready and with the task and the PR's
+   label still QA, run the PR tester (`/speckit-pr-test`) on the head
    commit: it boots the change in its own worktree, tests it in a browser and
-   against the API, runs the tests, reviews the diff against the spec and this
-   constitution, and sets the `agent-review` commit status. Blocking findings
+   against the API, reviews the diff against the spec and this constitution,
+   and sets the `agent-review` commit status. The unit and end-to-end suites
+   are CI's; the tester does not run them again. Blocking findings
    are fixed (tests first) and the tester runs again on the new head, at most
    `SPECKIT_MAX_REPAIR_ITERATIONS` times; at the cap the task is Blocked.
 6. Merge the PR when `agent-review` is success on its head commit and every
@@ -340,7 +355,7 @@ the hooks live in `.claude/hooks/`, the checks in `.claude/scripts/`.
 | Identity | `.husky/pre-commit` → `.husky/identity.sh check`; `github-identity.sh` (SessionStart) | refuses a commit not authored by `george-hutanu <hutanugeorge40@gmail.com>`; pins `gh` to the `george-hutanu` account for agent sessions |
 | Destructive commands | `bash-guard.mjs` (PreToolUse) | force-push, `reset --hard`, `clean -f`, deleting `.work/` |
 | VII task lifecycle | `pr-lifecycle-gate.mjs` (Stop hook) | the agent may not finish on a task branch ahead of `main` with unpushed commits, with no PR, with a green ready PR that has no `agent-review` status on its head (unless run-state is blocked), or with a ready PR whose checks and `agent-review` passed but that is not merged; a green Dependabot PR is asked to merge, not to be tested |
-| VII QA before merge | `merge-gate.mjs` (PreToolUse) | refuses `gh pr merge` and the REST merge call while the PR's head commit has no `agent-review` success from the PR tester; a PR authored by Dependabot with only Dependabot's commits needs none, but is refused while any other check is failing, pending or missing |
+| VII QA before merge | `merge-gate.mjs` (PreToolUse) | refuses `gh pr merge` and the REST merge call while the PR's head commit has no `agent-review` success from the PR tester, or while the latest run of any other check is failing or pending, or `CI OK` is missing; a PR authored by Dependabot with only Dependabot's commits needs no `agent-review`, but the same CI rule still refuses it |
 | Full verification | `.husky/pre-commit` | identity, then `npm run typecheck && npm run lint && npm run test` on every real commit, in a `scripts/heavy.sh` slot |
 
 The edit-time gates watch `apps/*`, `libs/*` and `e2e/`, and skip Biome or Jest
@@ -413,4 +428,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.7.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-05
+**Version**: 1.8.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-05
