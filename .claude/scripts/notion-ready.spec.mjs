@@ -1,5 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { join } from 'node:path';
 
 import { decideReady, readyLogged } from './notion-ready.mjs';
 
@@ -107,5 +109,24 @@ describe('the archive check', () => {
   it('reads lines written without the separator after the date', () => {
     const result = readyLogged(log('- 2026-10-04 finish · ST-19 story Status: In review → Done', '- 2026-10-04 ready · Foundations · +ST-20'));
     assert.equal(result.ok, true);
+  });
+});
+
+// After the merge the finish and ready lines live in a comment on the story's
+// merged PR, not in a commit, so the check reads the log and those comments
+// together from stdin.
+describe('the archive check from stdin', () => {
+  const cli = (input) => spawnSync('node', [join(import.meta.dirname, 'notion-ready.mjs'), 'check', '-'], { input, encoding: 'utf8' });
+
+  it('passes when the PR comment after the log carries finish then ready', () => {
+    const comment = ['Finish log', '', '- 2026-10-04 · finish · ST-490 story · QA → Done', '- 2026-10-04 · ready · Foundations · +ST-82'].join('\n');
+    const result = cli(`${log('- 2026-10-04 · start · ST-490 story · To do → Planning', '- 2026-10-04 · qa · ST-490 story · Implementing → QA')}\n${comment}\n`);
+    assert.equal(result.status, 0, result.stderr);
+  });
+
+  it('fails, naming what to run, when stdin has no ready line after the finish', () => {
+    const result = cli(log('- 2026-10-04 · finish · ST-490 story · QA → Done'));
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /notion-ready/);
   });
 });

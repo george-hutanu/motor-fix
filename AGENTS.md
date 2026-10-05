@@ -52,7 +52,23 @@ epic or a plan, whether run through spec-kit or by hand.
      passes, then `gh pr edit <n> --body-file <body>`), mark the PR ready for
      review (`gh pr ready`) and set the task to QA
      (`speckit-notion-sync qa`, which also sets the PR's one stage label
-     to `QA`). There is no In review stage: ready is QA.
+     to `QA`). There is no In review stage: ready is QA. A feature's own
+     records ride in its own PR, never in a later `docs(specs)` one: the
+     archive's status line and Spec Delta merge, a retrospective if one was
+     written, and `specs/<feature>/notion-sync.md` are committed on the
+     branch before it goes ready; the `qa` line is committed and pushed
+     right after, before CI is waited for and QA starts.
+
+     Then the story's agent hands off and ends. It writes
+     `specs/<feature>/handoff.md` (PR, branch, worktree, head sha, the Notion
+     page ids, open decisions, deferred items; git ignores it) and returns
+     `NEXT: tail #<n>`. A fresh **tail agent**, given only the PR number, the
+     worktree and that path, runs steps 5–7 and the finish. The orchestrating
+     session dispatches it on that NEXT (a story run in the owner's own
+     session dispatches its own); `/speckit-watch` dispatches one (its
+     `tail` fix) for a handed-off ready PR with no live holder. It implements
+     QA fixes, so it keeps the default model (Opus). It deletes the note
+     when the task is Done.
   5. Get CI green: merge `origin/main` into the branch if it is behind and
      push, then wait for the checks (`gh pr checks <n> --watch`) in the
      background (`run_in_background`), never in a foreground `sleep` loop; a
@@ -74,6 +90,10 @@ epic or a plan, whether run through spec-kit or by hand.
   7. Merge on `agent-review` success with every other check green
      (`gh pr merge <n> --merge`); a PR with a failing, pending or missing check
      is never merged. Then set the task to Done (`speckit-notion-sync finish`).
+     What only exists after the merge (the merge sha, the finish, ready and
+     comment lines) goes to Notion and into one comment on the merged PR
+     (`gh pr comment <n>`), never a commit of its own; whatever must reach a
+     file rides on the next PR.
      A PR opened by Dependabot (its author on GitHub, not its title or branch)
      and holding only Dependabot's commits skips step 6: it merges on every
      other check green, `CI OK` included, with no `agent-review` status; a
@@ -107,7 +127,8 @@ epic or a plan, whether run through spec-kit or by hand.
   comments on the task when there is something to record: deviations from
   the Build brief, decisions taken on the owner's behalf, deferred follow-ups,
   open questions. `/speckit-archive` will not close a feature until the
-  refresh is logged after its finish.
+  refresh is logged after its finish, in `notion-sync.md` or the merged
+  PR's finish comment (`notion-ready.mjs check -`).
 - **Plans live under Delivery › Plans in Notion:** one execution-plan page and
   one build-timeline database per epic (`speckit-notion-sync plan`).
 - **The spec-kit hooks do this automatically** (`.specify/extensions.yml`:
@@ -121,6 +142,38 @@ epic or a plan, whether run through spec-kit or by hand.
   section does not apply. Agent review is filled in by the automated reviewer.
 - A Notion or mock failure never blocks the build. It is logged in
   `specs/<feature>/notion-sync.md` or `design.md` and retried on the next run.
+
+## Agent replies
+
+Every reply is re-read by its caller on each later turn, so it is short and
+the same shape everywhere. Every subagent in `.claude/agents/` and every
+dispatched task agent (speckit-watch's fixes, a story's `/speckit-auto`, a
+skill's `general-purpose` helper) opens its final reply with these four lines,
+nothing before them:
+
+```
+STATUS: success | failure | blocked | partial — <one line: what happened>
+PR: #<n> <draft|ready|merged> <sha7> | none
+NEXT: <the one action the caller should take> | none
+FILES: <paths written, comma-separated> | none
+```
+
+Then the agent's own body (a reviewer's `VERDICT:` line and table, which
+`subagent-verdict.mjs` and the callers parse, stay as they are). The whole
+reply is at most 25 lines, or the agent's lower cap: no prose, praise or
+restated diff. Anything longer goes to a file named in `FILES`
+(`specs/<feature>/auto-run.md`, the tester's `report.md`) and is not pasted.
+Agents cannot include files, so each definition and dispatch template repeats
+the block verbatim; `.claude/agents/agent-replies.spec.mjs` keeps them equal.
+
+Read only what decides the next step; every check still runs:
+
+- CI: the background wait prints only what did not pass —
+  `gh pr checks <n> --watch >/dev/null 2>&1; gh pr checks <n> --json name,bucket --jq '.[] | select(.bucket != "pass" and .bucket != "skipping") | "\(.name): \(.bucket)"'`
+  (empty means green). A failing job: `gh run view <run-id> --log-failed | tail -n 80`.
+- Jest, Playwright, Nx: run into a log file, then read the exit code, the
+  summary and the failures — `<command> > <log> 2>&1; echo "exit $?"; tail -n 40 <log>`,
+  and `grep -nE '✕|●|FAIL|Error' <log> | head -n 40` when it failed.
 
 ## Reviewing a change that has screens
 

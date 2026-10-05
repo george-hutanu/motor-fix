@@ -33,7 +33,9 @@ export function qaCapFrom(env = process.env) {
 }
 const AGENT_CAP = 2;
 const MIN = 60_000;
-const FIXES = ["merge", "fix-ci", "rerun-qa", "resume"];
+const FIXES = ["merge", "tail", "fix-ci", "rerun-qa", "resume"];
+// A tail agent runs QA laps like a re-run does, so both take a QA place.
+const usesQa = (fix) => fix === "rerun-qa" || fix === "tail";
 const claimPath = (path) => join(path, ".specify", ".cache", "watch-claim.json");
 
 const STAGES = {
@@ -180,6 +182,9 @@ export function fixOf(row, { now, thresholds }) {
   const open = pr && (pr.state === "ready" || pr.state === "draft");
   const atPrHead = row.clean && row.head && row.head === pr?.head;
   if (pr?.state === "ready" && pr.checks === "pass" && pr.agentReview === "success" && atPrHead) return { verdict: "stale", fix: "merge", reason };
+  // A story agent that handed its ready PR off (specs/<feature>/handoff.md)
+  // has ended: a fresh tail agent takes CI, QA laps and the merge from there.
+  if (pr?.state === "ready" && row.handoff) return { verdict: "stale", fix: "tail", reason };
   if (open && pr.checks === "fail") return { verdict: "stale", fix: "fix-ci", reason };
   // QA runs beside CI, so a ready PR without a verdict is tested while CI still runs.
   if (pr?.state === "ready" && pr.checks !== "fail" && !pr.agentReview) return { verdict: "stale", fix: "rerun-qa", reason };
@@ -189,13 +194,13 @@ export function fixOf(row, { now, thresholds }) {
 export function dispatchPlan(rows, { qaLive, qaCap = QA_CAP, prsKnown = true }) {
   if (!prsKnown) return [];
   const live = rows.filter((r) => r.claim?.live);
-  let qa = qaLive + live.filter((r) => r.claim.fix === "rerun-qa" && !r.qaLive).length;
-  let other = live.filter((r) => r.claim.fix !== "rerun-qa").length;
+  let qa = qaLive + live.filter((r) => usesQa(r.claim.fix) && !r.qaLive).length;
+  let other = live.filter((r) => !usesQa(r.claim.fix)).length;
   const plan = [];
   const due = rows.filter((r) => r.verdict === "stale" && FIXES.includes(r.fix)).sort((a, b) => a.activity.at - b.activity.at);
   for (const r of due) {
-    if (r.fix === "rerun-qa" ? qa >= qaCap : other >= AGENT_CAP) continue;
-    if (r.fix === "rerun-qa") qa++;
+    if (usesQa(r.fix) ? qa >= qaCap : other >= AGENT_CAP) continue;
+    if (usesQa(r.fix)) qa++;
     else other++;
     plan.push({ path: r.path, branch: r.branch, feature: r.feature, phase: r.phase, fix: r.fix, pr: r.pr?.number ?? null });
   }
@@ -332,6 +337,7 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
       locked: w.lock !== null,
       head: w.head,
       main: w.main,
+      handoff: Boolean(feature) && existsSync(join(w.path, feature, "handoff.md")),
       claim: claim ? { ...claim, live: claimLive(claim, threshold, now) } : null,
     };
     rows.push({ ...row, ...fixOf(row, { now, thresholds }) });
