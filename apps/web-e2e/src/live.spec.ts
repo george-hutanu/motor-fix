@@ -144,4 +144,53 @@ test.describe('the live connection @seeded', () => {
     await oneContext.close();
     await otherContext.close();
   });
+
+  test('after a minute without network the dashboard gets back in step within 5 seconds, and says so while it is out', async ({
+    browser,
+    request,
+  }) => {
+    test.setTimeout(120_000);
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await openDashboard(page, ACCOUNTS.driver, '/app/driver');
+    const token = await accessToken(request, ACCOUNTS.driver);
+    const setLanguage = (language: 'ro' | 'en') =>
+      request.patch('/api/v1/me', {
+        data: { language },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    const bar = page.locator('.live-offline');
+
+    try {
+      await context.setOffline(true);
+      await expect(bar).toHaveText('Fără conexiune. Ce vezi poate fi vechi.', {
+        timeout: 15_000,
+      });
+      // Changed elsewhere while this tab cannot hear about it.
+      expect((await setLanguage('en')).ok()).toBe(true);
+      await page.waitForTimeout(50_000);
+
+      const live = page.waitForResponse(
+        (r) => r.url().endsWith('/api/v1/live') && r.status() === 200,
+        { timeout: 5_000 },
+      );
+      const me = page.waitForResponse(
+        async (r) =>
+          r.url().endsWith('/api/v1/me') &&
+          r.request().method() === 'GET' &&
+          r.ok() &&
+          ((await r.json()) as { language: string }).language === 'en',
+        { timeout: 5_000 },
+      );
+      await context.setOffline(false);
+
+      await live;
+      await me;
+      await expect(bar).toHaveText('');
+    } finally {
+      await context.setOffline(false);
+      await setLanguage('ro');
+      await context.close();
+    }
+  });
 });
