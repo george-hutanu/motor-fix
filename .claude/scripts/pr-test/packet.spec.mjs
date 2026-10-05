@@ -224,7 +224,7 @@ describe('the baseline run', () => {
 
   it('says why there is none and asks for every screenshot', () => {
     const out = artifact(report(), shots);
-    const { gh } = fakeGh({ prView: ok(pr([])), runs: [] });
+    const { gh } = fakeGh({ prView: ok(pr(files(['apps/web/src/main.ts']))), runs: [] });
     buildPacket({ out, pr: 137, repo: REPO, gh });
     const md = packetOf(out);
     assert.match(md, /no baseline/i);
@@ -261,6 +261,31 @@ describe('the screenshot delta', () => {
   it('names every screenshot when there is no baseline', () => {
     const d = shotDelta({ current: { 'shots/a.png': 'h1', 'shots/b.png': 'h2' }, baseline: null, cited: [] });
     assert.deepEqual(d.look, ['shots/a.png', 'shots/b.png']);
+  });
+});
+
+describe('a change that touches no web file', () => {
+  const shots = { 'shots/a.png': 'new-bytes', 'shots/b.png': 'same', 'shots/run.log': 'x' };
+  const base = () => artifact(report({ sha: OLD, lap: 1 }), { 'shots/a.png': 'old-bytes', 'shots/b.png': 'same' });
+
+  it('names only the screenshots a finding cites, still counting what differs', () => {
+    const out = artifact(report({ findings: [{ severity: 'high', kind: 'sweep', title: 'Clipped', route: '/', evidence: 'shots/b.png' }] }), shots);
+    const { gh } = fakeGh({ prView: ok(pr(files(['.claude/scripts/x.mjs']))) });
+    buildPacket({ out, pr: 137, repo: REPO, baseline: base(), gh });
+    const look = packetOf(out).split(/^## Screenshots$/m)[1];
+    assert.match(look, /changed 1/);
+    assert.match(look, /no web file/i);
+    assert.match(look, /- shots\/b\.png/);
+    assert.doesNotMatch(look, /- shots\/a\.png/);
+  });
+
+  it('names the changed ones when the change touches the web app, and never a file that is not an image', () => {
+    const out = artifact(report({ findings: [] }), shots);
+    const { gh } = fakeGh({ prView: ok(pr(files(['libs/ui-cockpit/src/button.ts']))) });
+    buildPacket({ out, pr: 137, repo: REPO, baseline: base(), gh });
+    const look = packetOf(out).split(/^## Screenshots$/m)[1];
+    assert.match(look, /- shots\/a\.png/);
+    assert.doesNotMatch(look, /run\.log/);
   });
 });
 
