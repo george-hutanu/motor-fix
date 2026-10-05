@@ -14,7 +14,7 @@ Independent test: through HTTP against PostgreSQL and Redis; one `ACCOUNT_EMAIL`
 
 - [x] T003 [US1] `libs/domain/src/auth/attempts.ts`: `admitReset(email, address)` — counts every request against the e-mail digest (3 an hour) and the client address (10 an hour); a down Redis admits (FR-003)
 - [x] T004 [US1] `libs/domain/src/auth/password-reset.service.ts`: `ask(email, address)` — limit, then for an active account a new token (older unused ones deleted) and `sendAccountEmail` `password_reset` with `{webUrl}/{language}/reset-password/{token}`; any failure logged, never thrown (FR-001, FR-002, FR-003)
-- [x] T005 [US1] `libs/contracts/src/auth.dto.ts` + `libs/domain/src/auth/password-reset.controller.ts` + `password-reset.module.ts` + `apps/api/src/app.module.ts`: `POST auth/password-reset` 202, JSON only (FR-001)
+- [x] T005 [US1] `libs/contracts/src/password-reset.dto.ts` + `libs/domain/src/auth/password-reset.controller.ts` + `password-reset.module.ts` + `apps/api/src/app.module.ts`: `POST auth/password-reset` 202, JSON only (FR-001)
 
 ## Phase 3: User Story 2 and 3 — check and complete, API (P1)
 

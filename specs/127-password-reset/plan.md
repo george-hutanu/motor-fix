@@ -37,7 +37,7 @@ libs/domain/src/auth/auth.controller.ts                  export the refresh-cook
 libs/domain/src/auth/auth.module.ts                      export SignInService, Attempts, SESSION_EVENTS
 libs/domain/src/auth/sign-up.service.ts                  export the weak-password rule
 libs/domain/src/notifications/…                          ACCOUNT_EMAIL.password_changed (template, registry, templateName, sendAccountEmail purpose)
-libs/contracts/src/auth.dto.ts                           PasswordResetDto, PasswordResetCheckDto, PasswordResetCompleteDto
+libs/contracts/src/password-reset.dto.ts                 PasswordResetDto, PasswordResetCheckDto, PasswordResetCompleteDto
 apps/api/src/app.module.ts                               PasswordResetModule.register
 apps/api/openapi.json, libs/data-access                  regenerated
 apps/web/src/app/sign-in/sign-in.ts                      "Ai uitat parola?" → switch to reset
