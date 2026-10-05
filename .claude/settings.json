@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "env": {
-    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "40"
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "20"
   },
   "hooks": {
     "SessionStart": [
