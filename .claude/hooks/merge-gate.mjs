@@ -16,8 +16,9 @@
 //
 // A success carried over a docs-only head (`carried from <sha>: docs-only
 // change`, set by .claude/scripts/pr-test/carry.mjs) is verified, not trusted:
-// the named commit must have a success of its own, be an ancestor of head, and
-// differ from it by documentation only (scripts/docs-only.ts); otherwise the
+// the named commit must be one of the PR's own commits with a success of its
+// own, an ancestor of head, differing from it by documentation only
+// (scripts/docs-only.ts), with no real failing lap after it; otherwise the
 // merge is refused as if there were no verdict. A carry the gate cannot verify
 // is refused too. SPECKIT_CARRY_STATE replaces those reads for the eval cases.
 //
@@ -62,8 +63,8 @@ export function mergeTarget(command) {
 
 /**
  * The refusal for this PR, or null when it may merge. `carry` reads what a
- * carried verdict needs: `description(head)` when the rollup leaves it out,
- * and `state(from, head)` for judgeCarry.
+ * carried verdict needs: `description(head)`, since gh's rollup never carries
+ * a status description, and `state(from, head)` for judgeCarry.
  */
 export function decideMerge(pr, carry) {
   if (pr.state && pr.state !== "OPEN") return null;
@@ -89,6 +90,9 @@ function carryRefusal(pr, review, sha, carry) {
   const from = carriedFrom(description);
   if (!from) return null;
   const rerun = `Run the PR tester (/speckit-pr-test ${pr.number}) for a real lap on this head.`;
+  // A commit off main, before the branch, was tested for another PR.
+  if (!(pr.commits ?? []).some((c) => String(c.oid ?? "").startsWith(from)))
+    return `PR #${pr.number} cannot merge: agent-review on ${sha} is carried from ${from.slice(0, 7)}, which is not one of this PR's commits. ${rerun}`;
   let state;
   try {
     if (!carry) throw new Error("no way to read GitHub");
@@ -137,8 +141,16 @@ function readPr(target, cwd) {
 
 function carryReader(cwd) {
   const raw = process.env.SPECKIT_CARRY_STATE;
-  if (process.env.SPECKIT_PR_STATE) return { description: () => null, state: () => JSON.parse(raw ?? "null") ?? {} };
-  const gh = (args, opts = {}) => realGh(args, { ...opts, cwd });
+  if (process.env.SPECKIT_PR_STATE)
+    return {
+      description: () => null,
+      state: () => {
+        if (!raw) throw new Error("SPECKIT_CARRY_STATE is not set");
+        return JSON.parse(raw);
+      },
+    };
+  // Short reads: Claude Code lets a hook run about a minute, and a timed-out gate does not block.
+  const gh = (args, opts = {}) => realGh(args, { ...opts, cwd, timeout: 10000 });
   return {
     description(head) {
       const out = gh(["api", `repos/{owner}/{repo}/commits/${head}/statuses?per_page=100`]);

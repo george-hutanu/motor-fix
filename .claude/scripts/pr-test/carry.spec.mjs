@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { carriedFrom, carryDescription, findCarry, judgeCarry, latestReview, postCarry, readCarryState } from './carry.mjs';
+import { MAX_COMMITS, carriedFrom, carryDescription, findCarry, judgeCarry, latestReview, postCarry, readCarryState } from './carry.mjs';
 
 const FROM = 'a'.repeat(40);
 const MID = 'b'.repeat(40);
@@ -78,6 +78,14 @@ describe('judging a carry', () => {
     assert.match(judgeCarry(passing({ compare: docsCompare({ total_commits: 300 }) })), /too large/);
   });
 
+  it('refuses a docs-only tail longer than the commit cap, before reading a status per commit', () => {
+    const many = Array.from({ length: MAX_COMMITS + 1 }, (_, i) => ({ sha: String(i).padStart(40, '0') }));
+    const { calls, gh } = fakeGh([[/compare\//, ok(docsCompare({ total_commits: many.length, commits: many }))]]);
+    const state = readCarryState({ from: FROM, head: HEAD, gh });
+    assert.equal(calls.length, 1);
+    assert.match(judgeCarry({ from: FROM, head: HEAD, ...state }), /too large/);
+  });
+
   it('refuses a carry past a real failing verdict, on a commit between or on head itself', () => {
     assert.match(judgeCarry(passing({ between: [{ sha: MID, review: { state: 'failure', description: 'x' } }] })), /bbbbbbb.*failure/);
     assert.equal(judgeCarry(passing({ between: [{ sha: MID, review: { state: 'success', description: carryDescription(FROM) } }] })), null);
@@ -136,7 +144,7 @@ describe('finding a carry for a PR', () => {
     const judged = fakeGh([[/pr view/, viewOf([FROM, HEAD])], statuses({ [FROM]: [status('success')], [HEAD]: [status('pending')] })]);
     assert.match(findCarry({ pr: 21, gh: judged.gh }).reason, /already has/);
     const none = fakeGh([[/pr view/, viewOf([FROM, HEAD])], statuses({})]);
-    assert.match(findCarry({ pr: 21, gh: none.gh }).reason, /no earlier commit/);
+    assert.match(findCarry({ pr: 21, gh: none.gh }).reason, /no agent-review success/);
   });
 
   it('does not carry over a code change', () => {
@@ -158,8 +166,8 @@ describe('posting a carry', () => {
       [/statuses\//, ok({})],
       [/pr edit/, ok({})],
     ]);
-    const out = postCarry({ pr: 21, repo: 'george-hutanu/motor-fix', from: FROM, head: HEAD, gh });
-    const set = calls.find((c) => c.args.includes(`repos/george-hutanu/motor-fix/statuses/${HEAD}`));
+    const out = postCarry({ pr: 21, from: FROM, head: HEAD, gh });
+    const set = calls.find((c) => c.args.includes(`repos/{owner}/{repo}/statuses/${HEAD}`));
     assert.ok(set.args.includes('state=success'));
     assert.ok(set.args.includes('context=agent-review'));
     assert.ok(set.args.includes(`description=${carryDescription(FROM)}`));

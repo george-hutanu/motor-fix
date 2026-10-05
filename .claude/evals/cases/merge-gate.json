@@ -257,7 +257,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
       "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\"}],\"files\":[{\"filename\":\"specs/194-email-sending/deferred.md\"}]},\"between\":[],\"headReviews\":[]}"
     },
     "expect": {
@@ -274,7 +274,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
       "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings\"},\"compare\":{\"status\":\"diverged\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\"}],\"files\":[{\"filename\":\"specs/194-email-sending/deferred.md\"}]},\"between\":[],\"headReviews\":[]}"
     },
     "expect": {
@@ -292,7 +292,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
       "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"failure\",\"description\":\"2 blocking findings\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\"}],\"files\":[{\"filename\":\"specs/194-email-sending/deferred.md\"}]},\"between\":[],\"headReviews\":[]}"
     },
     "expect": {
@@ -310,12 +310,29 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
       "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\"}],\"files\":[{\"filename\":\"specs/x/deferred.md\"},{\"filename\":\"apps/api/src/main.ts\"}]},\"between\":[],\"headReviews\":[]}"
     },
     "expect": {
       "exit": 2,
       "stderr": "not documentation only"
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-carry-it-cannot-verify",
+    "hook": "pre:bash:merge-gate",
+    "why": "a carried status whose evidence cannot be read is a claim, not a verdict; the gate refuses rather than trusting it",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "could not verify"
     }
   }
 ]
