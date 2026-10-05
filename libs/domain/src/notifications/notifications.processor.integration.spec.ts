@@ -12,6 +12,7 @@ import {
   fixtures,
   redisUrlFor,
   testConfig,
+  testPhoneConfig,
 } from './notifications.testing';
 import { AuditService } from '../audit/audit.service';
 import { serialDatabase } from '../auth/serial-db.testing';
@@ -47,6 +48,7 @@ function build(overrides: Record<string, string> = {}) {
     service,
     new Brevo({ apiKey: config.apiKey ?? '', apiUrl: config.apiUrl }),
     config,
+    testPhoneConfig({ PHONE_SENDING: 'off', WHATSAPP_SENDER: '' }),
   );
 }
 

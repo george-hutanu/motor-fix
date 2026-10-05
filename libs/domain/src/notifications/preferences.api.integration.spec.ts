@@ -1,3 +1,4 @@
+// @traces 392-FR-009
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
@@ -237,6 +238,22 @@ describe('choosing for one type', () => {
     ).toMatchObject({ channel: 'whatsapp', enabled: true });
   });
 
+  it('lets a driver choose SMS for a reminder', async () => {
+    const driver = await account('sms-driver');
+    const res = await save(
+      {
+        preferences: [
+          { channel: 'sms', enabled: true, garageId: null, type: 'DUE_ITP' },
+        ],
+      },
+      bearer(driver),
+    );
+    expect(res.status).toBe(200);
+    expect(
+      (await stored(driver)).map((r) => [r.type, r.channel, r.enabled]),
+    ).toEqual([['DUE_ITP', 'sms', true]]);
+  });
+
   it('records who changed which type, its channel, and the old and new value', async () => {
     const driver = await account('andrei');
     await save(
@@ -416,6 +433,38 @@ describe('a save that is refused', () => {
       },
       400,
       'channel_not_allowed',
+    ));
+
+  it('answers 400 to SMS for a review invite, which never goes by SMS', () =>
+    refused(
+      {
+        preferences: [
+          {
+            channel: 'sms',
+            enabled: true,
+            garageId: null,
+            type: 'REVIEW_INVITE',
+          },
+        ],
+      },
+      400,
+      'channel_not_allowed',
+    ));
+
+  it.each([
+    'garage',
+    'mechanic',
+    'admin',
+  ] as const)('answers 422 to SMS chosen by a %s, even for a reminder', (role) =>
+    refused(
+      {
+        preferences: [
+          { channel: 'sms', enabled: true, garageId: null, type: 'DUE_ITP' },
+        ],
+      },
+      422,
+      'channel_not_allowed',
+      role,
     ));
 
   it('answers 400 to a garage on a driver type', async () => {

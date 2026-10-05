@@ -24,6 +24,7 @@ import {
   NOTIFICATIONS_QUEUE,
   NotificationsService,
 } from './notifications.service';
+import { PHONE_CONFIG, type PhoneConfig } from './phone-config';
 import { NotificationPreferencesController } from './preferences.controller';
 import { NotificationPreferencesService } from './preferences.service';
 import { AUDIT_PORT } from '../audit/audit.port';
@@ -96,8 +97,11 @@ export class NotificationsModule implements OnApplicationShutdown {
     };
   }
 
-  // The worker: the same entry point plus the queue's consumer.
-  static registerWorker(options: NotificationsOptions): DynamicModule {
+  // The worker: the same entry point plus the queue's consumer, which also
+  // sends SMS and WhatsApp.
+  static registerWorker(
+    options: NotificationsOptions & { phone: PhoneConfig },
+  ): DynamicModule {
     return {
       module: NotificationsModule,
       providers: [
@@ -106,6 +110,7 @@ export class NotificationsModule implements OnApplicationShutdown {
           useFactory: () => createPrisma(options.databaseUrl),
         }),
         NotificationsProcessor,
+        { provide: PHONE_CONFIG, useValue: options.phone },
         {
           provide: Brevo,
           useFactory: () =>

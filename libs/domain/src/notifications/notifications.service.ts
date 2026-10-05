@@ -10,14 +10,11 @@ import {
 } from '@nestjs/common';
 import type { JobsOptions } from 'bullmq';
 
-import {
-  type NotificationType,
-  notificationType,
-  sendsEmail,
-} from './catalogue';
+import { type NotificationType, notificationType } from './catalogue';
 import { blockedReason, type EmailConfig } from './email-config';
 import { isDriverType, mutedChannels } from './preferences';
 import { isQuiet, nextMorning } from './quiet-hours';
+import { outsideChannels, type SentChannel } from './routing';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { LIVE_CHANNEL } from '../events/live.hub';
 import type {
@@ -45,6 +42,15 @@ const JOB: JobsOptions = {
 
 // Called when an e-mail fails for good; the push channel takes over here.
 export type EmailFallback = (row: Notification) => Promise<void>;
+
+// What a failed row falls back to: the next channel, e-mail at once (a stop
+// that would also stop WhatsApp), or nothing.
+type Fallback = boolean | 'email';
+
+const NEXT: Partial<Record<Notification['channel'], SentChannel>> = {
+  sms: 'whatsapp',
+  whatsapp: 'email',
+};
 
 interface Jobs {
   add(name: string, data: unknown, options: JobsOptions): Promise<unknown>;
@@ -92,21 +98,21 @@ export class NotificationsService {
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
-  // Answers how many e-mails it queued.
+  // Answers how many outside messages it queued.
   async notify(input: NotifyInput): Promise<number> {
     const type = notificationType(input.kind);
+    const whatsapp = await this.garageAllowsWhatsApp(input);
     let queued = 0;
     for (const accountId of new Set(input.recipients)) {
       const muted = await this.muted(input, accountId);
       const at = this.now();
       const written = await this.prisma.$transaction((tx) =>
-        this.build(tx, type, input, accountId, at, muted),
+        this.build(tx, type, input, accountId, at, { muted, whatsapp }),
       );
       if (!written) continue;
       await this.announce(written.bell);
-      if (!written.next) continue;
-      await this.queue(written.next);
-      queued++;
+      for (const next of written.next) await this.queue(next);
+      queued += written.next.length;
     }
     return queued;
   }
@@ -168,10 +174,11 @@ export class NotificationsService {
     return false;
   }
 
+  // SMS falls back to WhatsApp, WhatsApp to e-mail, e-mail to push.
   async fail(
     rows: readonly Notification[],
     failure: string,
-    fallback: boolean,
+    fallback: Fallback,
   ): Promise<void> {
     await this.prisma.notification.updateMany({
       data: { failure, status: 'failed' },
@@ -181,8 +188,37 @@ export class NotificationsService {
       this.logger.warn(
         `notification ${row.id} ${row.kind} ${row.channel} failed: ${failure}`,
       );
-      if (fallback) await this.fallback({ ...row, failure, status: 'failed' });
+      if (!fallback) continue;
+      const next = fallback === 'email' ? 'email' : NEXT[row.channel];
+      if (next) await this.fallBack(row, next);
+      else await this.fallback({ ...row, failure, status: 'failed' });
     }
+  }
+
+  // The same message on the next channel, unless the event already has a
+  // row there for the person or the type does not go by it.
+  private async fallBack(row: Notification, channel: SentChannel) {
+    if (!notificationType(row.kind).channels.includes(channel)) return;
+    const account = await this.prisma.account.findUnique({
+      select: { email: true },
+      where: { id: row.accountId },
+    });
+    if (channel === 'email' && !account?.email) return;
+    const [written] = await this.prisma.notification.createManyAndReturn({
+      data: {
+        accountId: row.accountId,
+        channel,
+        createdAt: this.now(),
+        eventId: row.eventId,
+        fallbackOf: row.id,
+        kind: row.kind,
+        params: (row.params ?? {}) as Prisma.InputJsonObject,
+        status: 'queued',
+        subjectId: row.subjectId,
+      },
+      skipDuplicates: true,
+    });
+    if (written) await this.queue(send(written.id));
   }
 
   // Brevo may report a bounce twice; a grouped e-mail carries one message id
@@ -222,6 +258,23 @@ export class NotificationsService {
     await this.fail(rows, 'bounced', true);
   }
 
+  // A garage's staff get no WhatsApp once it switched it off; a driver's
+  // message is never stopped by it.
+  private async garageAllowsWhatsApp(input: NotifyInput): Promise<boolean> {
+    if (!input.garageId || isDriverType(input.kind)) return true;
+    try {
+      const feature = await this.prisma.garageFeature.findUnique({
+        where: { garageId_key: { garageId: input.garageId, key: 'whatsapp' } },
+      });
+      return feature?.enabled ?? true;
+    } catch (error) {
+      this.logger.warn(
+        `garage WhatsApp switch not read, taking it as on: ${String(error)}`,
+      );
+      return true;
+    }
+  }
+
   // Read outside the send's transaction, so a store that fails cannot abort
   // it: the message then goes as if nothing were saved.
   private async muted(
@@ -249,7 +302,7 @@ export class NotificationsService {
     }
   }
 
-  // The bell row and the e-mail row of one recipient; null when nothing is
+  // The bell row and the outside rows of one recipient; null when nothing is
   // written (a deleted account, or an event already handled).
   private async build(
     tx: Prisma.TransactionClient,
@@ -257,12 +310,12 @@ export class NotificationsService {
     input: NotifyInput,
     accountId: string,
     at: Date,
-    muted: ReadonlySet<OutsideChannel>,
-  ): Promise<{ bell: Notification; next: NextJob | null } | null> {
+    choice: { muted: ReadonlySet<OutsideChannel>; whatsapp: boolean },
+  ): Promise<{ bell: Notification; next: NextJob[] } | null> {
     // One builder at a time per kind and person, so a burst opens one window.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${input.kind}:${accountId}`}))`;
     const account = await tx.account.findUnique({
-      select: { email: true, status: true },
+      select: { email: true, phone: true, phoneVerifiedAt: true, status: true },
       where: { id: accountId },
     });
     if (!account || account.status === 'deleted') return null;
@@ -288,20 +341,61 @@ export class NotificationsService {
     const bell = await tx.notification.create({
       data: { ...base, channel: 'in_app', sentAt: at, status: 'sent' },
     });
-    const next =
-      account.email && sendsEmail(type, muted)
-        ? await this.emailRow(tx, type, base, account.email, at)
-        : null;
+    const channels = outsideChannels(input.kind, choice.muted, {
+      email: Boolean(account.email),
+      phone: Boolean(account.phone && account.phoneVerifiedAt),
+      whatsapp: choice.whatsapp,
+    });
+    const next: NextJob[] = [];
+    for (const channel of channels) {
+      const job = await this.outsideRow(tx, type, base, channel, account, at);
+      if (job) next.push(job);
+    }
     return { bell, next };
+  }
+
+  private outsideRow(
+    tx: Prisma.TransactionClient,
+    type: NotificationType,
+    base: Omit<Prisma.NotificationUncheckedCreateInput, 'channel' | 'status'>,
+    channel: SentChannel,
+    account: { email: string | null },
+    at: Date,
+  ): Promise<NextJob | null> {
+    return channel === 'email'
+      ? this.emailRow(tx, type, base, account.email, at)
+      : this.phoneRow(tx, type, base, channel, at);
+  }
+
+  // Never grouped; the switch and the allowlist are checked when it is sent.
+  private async phoneRow(
+    tx: Prisma.TransactionClient,
+    type: NotificationType,
+    base: Omit<Prisma.NotificationUncheckedCreateInput, 'channel' | 'status'>,
+    channel: 'sms' | 'whatsapp',
+    at: Date,
+  ): Promise<NextJob> {
+    if (!type.urgent && isQuiet(at)) {
+      const sendAfter = nextMorning(at);
+      const held = await tx.notification.create({
+        data: { ...base, channel, sendAfter, status: 'held' },
+      });
+      return { ...send(held.id), delay: sendAfter.getTime() - at.getTime() };
+    }
+    const row = await tx.notification.create({
+      data: { ...base, channel, status: 'queued' },
+    });
+    return send(row.id);
   }
 
   private async emailRow(
     tx: Prisma.TransactionClient,
     type: NotificationType,
     base: Omit<Prisma.NotificationUncheckedCreateInput, 'channel' | 'status'>,
-    address: string,
+    address: string | null,
     at: Date,
   ): Promise<NextJob | null> {
+    if (!address) return null;
     const blocked = blockedReason(this.config, address);
     if (blocked) {
       await tx.notification.create({
@@ -329,7 +423,9 @@ export class NotificationsService {
     row: Notification,
     at: Date,
   ): Promise<NextJob> {
-    if (!notificationType(row.kind).groupable) return send(row.id);
+    if (row.channel !== 'email' || !notificationType(row.kind).groupable) {
+      return send(row.id);
+    }
     const since = new Date(at.getTime() - WINDOW_MS);
     const leader = await tx.notification.findFirst({
       orderBy: { createdAt: 'desc' },
