@@ -40,11 +40,11 @@ message exists yet; run the queued job; each consenting driver has one message.
 
 ### Functional Requirements
 
-- **FR-001**: Sending news MUST claim the month, queue one job for that month carrying the title, the text and the sender, and answer 202 with the number of consenting drivers, writing no news message in the request.
+- **FR-001**: Sending news MUST claim the month and answer 202 with the number of consenting drivers, writing no news message in the request; the month's run (title, text, sender) MUST reach the worker as one queued job.
 - **FR-002**: The worker MUST run the month's job by writing one news message per consenting driver, in the driver's language, with the driver's unsubscribe links.
 - **FR-003**: A run that fails MUST be retried by the queue; a retry MUST reach each driver once and MUST keep the month claimed.
 - **FR-004**: A run that fails on its last attempt MUST give the month back and record the release against the sender.
-- **FR-005**: When the job cannot be queued, the send MUST give the month back and fail.
+- **FR-005**: The run MUST be saved in PostgreSQL in the same transaction as the month's claim (a `news.sent` outbox event), and queued from there by the worker's outbox relay, so a Redis that is down at the send, or emptied before the run, loses no run and holds no month without one.
 - **FR-006**: The worker MUST run news jobs only when it has the token secret the unsubscribe links are signed with and the public web address the links point to; without either, it MUST log an error at start and leave the jobs queued.
 
 ## Spec Delta
@@ -64,7 +64,6 @@ message exists yet; run the queued job; each consenting driver has one message.
 
 - (autonomous default) A queue of its own, `news`, consumed in the worker by its own BullMQ worker, rather than a job on the notifications queue: the notifications processor is left untouched (PR #127 changes it) and a news run is a different shape of work from one message's send. Evidence: `libs/domain/src/cars/reminders.module.ts` runs its daily job on a queue of its own the same way.
 - (autonomous default) Retries: 6 attempts, exponential from one minute (1, 2, 4, 8, 16 minutes), as the reminders run does with 4. A retry is safe because the pipeline writes one message per event and person (`eventId news:<month>`).
-- (autonomous default) The job id is `news-<month>`, so the month's claim and the queue agree on one job per month; a finished or failed job is removed, so a month given back can be sent again.
-- (autonomous default) The content travels in the job's data (Redis), not in a new column: no migration, and the job lives only until it has run.
+- (review decision, Constitution VI) The content travels in the `news.sent` outbox event's payload, saved with the claim, and the worker's relay queues it (job id `event-<id>`); first chosen as job data in Redis only, which spec-reviewer found breaks "nothing in Redis is the only copy". No migration: the outbox table exists.
 - (autonomous default) The worker reads `AUTH_TOKEN_SECRET` as optional. It is not set on the worker today, and making it required would stop the worker, and every notification with it, on a deploy without it. Without it the news queue waits and an error says why; setting it on the worker service is an operations step named in the PR.
 - (autonomous default) The answer's count is taken at the send; the run reads the list again, so a driver who withdrew in between is not sent to. The count recorded on the month's claim stays the count at the send.

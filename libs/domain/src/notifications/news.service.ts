@@ -1,22 +1,9 @@
 import type { NewsSentDto, SendNewsDto } from '@motor-fix/contracts';
-import {
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
-import type { Queue } from 'bullmq';
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import type { EmailConfig } from './email-config';
 import { unsubscribedAccount } from './news';
-import {
-  CONSENTING_DRIVERS,
-  giveMonthBack,
-  NEWS_JOBS,
-  NEWS_RUN,
-  type NewsRun,
-} from './news.fan-out';
+import { CONSENTING_DRIVERS, type NewsRun } from './news.fan-out';
 import {
   NOTIFICATIONS_CONFIG,
   NOTIFICATIONS_PRISMA,
@@ -26,6 +13,7 @@ import { smsMonth } from './sms-counter';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { AUTH_OPTIONS, type AuthOptions } from '../auth/actor.guard';
 import type { Actor } from '../auth/policy';
+import { outbox } from '../events/event.port';
 import { Prisma, type PrismaClient } from '../generated/prisma/client';
 
 const invalidLink = () =>
@@ -43,7 +31,6 @@ const taken = (error: unknown) =>
 
 @Injectable()
 export class NewsService {
-  private readonly logger = new Logger('News');
   now = () => new Date();
 
   constructor(
@@ -51,7 +38,6 @@ export class NewsService {
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(NOTIFICATIONS_CONFIG) private readonly config: EmailConfig,
     @Inject(AUTH_OPTIONS) private readonly auth: AuthOptions,
-    @Inject(NEWS_JOBS) private readonly jobs: Queue<NewsRun>,
   ) {}
 
   // No session: the link is the proof. An account with nothing to withdraw
@@ -108,27 +94,18 @@ export class NewsService {
     const recipients = await this.prisma.notificationPreference.count({
       where: CONSENTING_DRIVERS,
     });
-    await this.claim(actor, month, recipients);
-    const run: NewsRun = {
+    await this.claim(actor, recipients, {
       month,
       sentBy: { accountId: actor.accountId, role: actor.role },
       text: body.text,
       title: body.title,
-    };
-    try {
-      await this.jobs.add('fan-out', run, {
-        ...NEWS_RUN,
-        jobId: `news-${month}`,
-      });
-    } catch (error) {
-      this.logger.error(`news for ${month} was not queued; the month is free`);
-      await giveMonthBack(this.prisma, this.audit, month, run.sentBy);
-      throw error;
-    }
+    });
     return { recipients };
   }
 
-  private async claim(actor: Actor, month: string, recipients: number) {
+  // The run is saved with the claim, as the event the worker's relay queues.
+  private async claim(actor: Actor, recipients: number, run: NewsRun) {
+    const { month } = run;
     try {
       await this.prisma.$transaction(async (tx) => {
         await tx.newsSend.create({
@@ -141,6 +118,12 @@ export class NewsService {
           newValue: { month, recipients },
           subjectId: actor.accountId,
           subjectType: 'news_send',
+        });
+        await outbox.record(tx, {
+          audience: { type: 'platform' },
+          kind: 'news.sent',
+          payload: { ...run },
+          subjectId: month,
         });
       });
     } catch (error) {

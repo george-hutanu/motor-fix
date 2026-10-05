@@ -37,3 +37,9 @@ Worktree: .worktrees/571-news-fan-out-worker
 - test-adversary: 33 tests in `news.adversary.integration.spec.ts`, 1 failed: a repeated final failure wrote a second release entry. Fixed: `giveMonthBack` records the release only when it removed a claim.
 - code-reviewer BLOCK: #1 HIGH no real last-attempt failure through the BullMQ worker — added a worker test (attempts 1, notify rejects, the claim goes, the job is removed) and typed `failed` on bullmq's `Job`, dropping the stub interface. #2 MEDIUM missing PUBLIC_WEB_URL would release a month after ~31 min — autonomous answer Option A: the news worker does not start without it, like the token secret (FR-006 amended). #3 `.env.example` comment, #4 one logger: fixed. #5 retry policy env knob: deferred, filed as a Notion task.
 - Mutation: CI only (repo rule).
+
+## 14. Review
+
+- spec-reviewer BLOCK, CRITICAL (Constitution VI): the run lived only in Redis and was queued outside the claim's transaction. Answered with Option A: the send saves a `news.sent` outbox event with the claim; `OutboxRelayModule.register` takes queue consumers (`NEWS_CONSUMER`), the worker's relay queues it. FR-001/FR-005 amended. The queue-failure release path is gone (the relay retries from PostgreSQL).
+- code-reviewer re-review APPROVE with MEDIUMs on the adversary spec's copied harness: the file is removed and its distinct cases folded into `news.api.integration.spec.ts`.
+- Paused (orchestrator parked the task), resumed on the owner's rule; origin/main merged in (incl. #127).

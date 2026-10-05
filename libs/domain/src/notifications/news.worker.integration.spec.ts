@@ -3,7 +3,13 @@ import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Queue } from 'bullmq';
 
-import { NEWS_QUEUE, NEWS_RUN, type NewsRun } from './news.fan-out';
+import {
+  NEWS_CONSUMER,
+  NEWS_QUEUE,
+  NEWS_RUN,
+  type NewsEvent,
+  type NewsRun,
+} from './news.fan-out';
 import { NotificationsModule } from './notifications.module';
 import { NotificationsService } from './notifications.service';
 import {
@@ -14,12 +20,13 @@ import {
   testPhoneConfig,
 } from './notifications.testing';
 import { serialDatabase } from '../auth/serial-db.testing';
+import { OutboxRelayModule } from '../events/outbox-relay.module';
 
 const redisUrl = redisUrlFor(6);
 const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
 
-const newsJobs = new Queue<NewsRun>(NEWS_QUEUE, {
+const newsJobs = new Queue<NewsEvent>(NEWS_QUEUE, {
   connection: { url: redisUrl },
 });
 
@@ -30,6 +37,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await reset();
+  await prisma.outboxEvent.deleteMany();
   await newsJobs.obliterate({ force: true });
 });
 
@@ -49,9 +57,22 @@ async function consenting(name: string) {
   return id;
 }
 
-const worker = (tokenSecret?: string, webUrl = 'https://motorfix.test') =>
+const worker = (
+  tokenSecret?: string,
+  webUrl = 'https://motorfix.test',
+  withRelay = false,
+) =>
   Test.createTestingModule({
     imports: [
+      ...(withRelay
+        ? [
+            OutboxRelayModule.register({
+              consumers: [NEWS_CONSUMER],
+              databaseUrl,
+              redisUrl,
+            }),
+          ]
+        : []),
       NotificationsModule.registerWorker({
         databaseUrl,
         email: testConfig('http://127.0.0.1:9', {
@@ -65,18 +86,23 @@ const worker = (tokenSecret?: string, webUrl = 'https://motorfix.test') =>
     ],
   }).compile();
 
+const run = (admin: string): NewsRun => ({
+  month: '2026-11',
+  sentBy: { accountId: admin, role: 'admin' },
+  text: { en: 'News', ro: 'Noutăți' },
+  title: { en: 'News for November', ro: 'Noutăți din noiembrie' },
+});
+
 async function queueRun(admin: string, attempts = NEWS_RUN.attempts) {
-  const run: NewsRun = {
-    month: '2026-11',
-    sentBy: { accountId: admin, role: 'admin' },
-    text: { en: 'News', ro: 'Noutăți' },
-    title: { en: 'News for November', ro: 'Noutăți din noiembrie' },
-  };
-  await newsJobs.add('fan-out', run, {
-    ...NEWS_RUN,
-    attempts,
-    jobId: 'news-2026-11',
-  });
+  await newsJobs.add(
+    'event',
+    { payload: run(admin) },
+    {
+      ...NEWS_RUN,
+      attempts,
+      jobId: 'news-2026-11',
+    },
+  );
 }
 
 const newsEmails = () =>
@@ -100,6 +126,30 @@ describe('the news worker', () => {
     }
     const rows = await newsEmails();
     expect(rows.map((r) => r.accountId).sort()).toEqual([andrei, elena].sort());
+  }, 20_000);
+
+  it('runs the news the outbox holds, queued by the relay', async () => {
+    const admin = await account('admin', ['admin']);
+    const andrei = await consenting('andrei');
+    await prisma.outboxEvent.create({
+      data: {
+        audience: ['admin', 'system'],
+        kind: 'news.sent',
+        payload: JSON.parse(JSON.stringify(run(admin))),
+        subjectId: '2026-11',
+      },
+    });
+    const app = await worker('test-secret', undefined, true);
+    await app.init();
+    try {
+      const deadline = Date.now() + 10_000;
+      while ((await newsEmails()).length < 1 && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+    } finally {
+      await app.close();
+    }
+    expect((await newsEmails()).map((r) => r.accountId)).toEqual([andrei]);
   }, 20_000);
 
   it.each([

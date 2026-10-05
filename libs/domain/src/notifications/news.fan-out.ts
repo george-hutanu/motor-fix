@@ -1,4 +1,4 @@
-import type { SendNewsDto } from '@motor-fix/contracts';
+import type { EventKind, SendNewsDto } from '@motor-fix/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Job, JobsOptions } from 'bullmq';
 
@@ -14,13 +14,11 @@ import type { Actor } from '../auth/policy';
 import type { Prisma, PrismaClient } from '../generated/prisma/client';
 
 export const NEWS_QUEUE = 'news';
-export const NEWS_JOBS = Symbol('NEWS_JOBS');
 // The key the unsubscribe links are signed with: the API's token secret.
 export const NEWS_TOKEN_SECRET = Symbol('NEWS_TOKEN_SECRET');
 
-// A failed run is tried 5 more times, 1, 2, 4, 8 and 16 minutes later. The
-// job is removed once it has run or failed for good, so a month given back
-// can be sent again under the same id.
+// A failed run is tried 5 more times, 1, 2, 4, 8 and 16 minutes later, and
+// removed once it has run or failed for good.
 export const NEWS_RUN: JobsOptions = {
   attempts: 6,
   backoff: { delay: 60_000, type: 'exponential' },
@@ -31,6 +29,19 @@ export const NEWS_RUN: JobsOptions = {
 export interface NewsRun extends Pick<SendNewsDto, 'text' | 'title'> {
   month: string;
   sentBy: Pick<Actor, 'accountId' | 'role'>;
+}
+
+// The send saves its run as a `news.sent` outbox event with the month's
+// claim; the worker's relay queues it, so emptying Redis loses no run.
+export const NEWS_CONSUMER = {
+  jobs: NEWS_RUN,
+  kinds: ['news.sent'] as readonly EventKind[],
+  queue: NEWS_QUEUE,
+};
+
+// A job as the relay queues it: the event, its payload the run.
+export interface NewsEvent {
+  payload: NewsRun;
 }
 
 // News is for drivers: another role gets it only as a driver who consented.
@@ -81,7 +92,8 @@ export class NewsFanOut {
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
-  async handle({ data }: Pick<Job<NewsRun>, 'data'>): Promise<void> {
+  async handle(job: Pick<Job<NewsEvent>, 'data'>): Promise<void> {
+    const data = job.data.payload;
     const webUrl = this.config.webUrl;
     if (!webUrl) throw new Error('PUBLIC_WEB_URL is needed to send news');
     const rows = await this.prisma.notificationPreference.findMany({
@@ -110,11 +122,11 @@ export class NewsFanOut {
 
   // After the last attempt the month is given back for the admin to send again.
   async failed(
-    job: Pick<Job<NewsRun>, 'attemptsMade' | 'data' | 'opts'>,
+    job: Pick<Job<NewsEvent>, 'attemptsMade' | 'data' | 'opts'>,
     error: Error,
   ): Promise<void> {
     if (job.attemptsMade < (job.opts.attempts ?? 1)) return;
-    const { month, sentBy } = job.data;
+    const { month, sentBy } = job.data.payload;
     this.logger.error(
       `news for ${month} failed for good (${error.message}); the month is free`,
     );

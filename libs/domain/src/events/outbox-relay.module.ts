@@ -1,3 +1,4 @@
+import type { EventKind } from '@motor-fix/contracts';
 import {
   type DynamicModule,
   Inject,
@@ -5,6 +6,7 @@ import {
   type OnApplicationShutdown,
   type OnModuleInit,
 } from '@nestjs/common';
+import { type JobsOptions, Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 
 import { OutboxRelay } from './outbox-relay';
@@ -13,10 +15,21 @@ import type { PrismaClient } from '../generated/prisma/client';
 
 const RELAY_PRISMA = Symbol('RELAY_PRISMA');
 const RELAY_REDIS = Symbol('RELAY_REDIS');
+const RELAY_QUEUES = Symbol('RELAY_QUEUES');
+
+type Consumers = { kinds: readonly EventKind[]; queue: Queue }[];
+
+// A queue the relay hands each event of its kinds to, with its jobs' options.
+export interface RelayConsumer {
+  kinds: readonly EventKind[];
+  queue: string;
+  jobs: JobsOptions;
+}
 
 interface RelayOptions {
   databaseUrl: string;
   redisUrl: string;
+  consumers?: readonly RelayConsumer[];
 }
 
 // The worker's outbox-relay. A Redis that is down fails each publish fast, so
@@ -27,6 +40,7 @@ export class OutboxRelayModule implements OnModuleInit, OnApplicationShutdown {
     private readonly relay: OutboxRelay,
     @Inject(RELAY_PRISMA) private readonly prisma: PrismaClient,
     @Inject(RELAY_REDIS) private readonly redis: Redis,
+    @Inject(RELAY_QUEUES) private readonly queues: Consumers,
   ) {}
 
   static register(options: RelayOptions): DynamicModule {
@@ -52,10 +66,26 @@ export class OutboxRelayModule implements OnModuleInit, OnApplicationShutdown {
           },
         },
         {
-          inject: [RELAY_PRISMA, RELAY_REDIS],
+          provide: RELAY_QUEUES,
+          // Fails fast like the publisher: the add runs inside the batch.
+          useFactory: (): Consumers =>
+            (options.consumers ?? []).map(({ jobs, kinds, queue }) => ({
+              kinds,
+              queue: new Queue(queue, {
+                connection: {
+                  enableOfflineQueue: false,
+                  maxRetriesPerRequest: 1,
+                  url: options.redisUrl,
+                },
+                defaultJobOptions: jobs,
+              }),
+            })),
+        },
+        {
+          inject: [RELAY_PRISMA, RELAY_REDIS, RELAY_QUEUES],
           provide: OutboxRelay,
-          useFactory: (prisma: PrismaClient, redis: Redis) =>
-            new OutboxRelay(prisma, redis),
+          useFactory: (prisma: PrismaClient, redis: Redis, queues: Consumers) =>
+            new OutboxRelay(prisma, redis, queues),
         },
       ],
     };
@@ -67,6 +97,7 @@ export class OutboxRelayModule implements OnModuleInit, OnApplicationShutdown {
 
   async onApplicationShutdown() {
     await this.relay.stop();
+    for (const { queue } of this.queues) await queue.close();
     this.redis.disconnect();
     await this.prisma.$disconnect();
   }

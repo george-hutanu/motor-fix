@@ -3,6 +3,7 @@ import {
   emailConfig,
   HealthModule,
   JsonLogger,
+  NEWS_CONSUMER,
   NotificationsModule,
   OutboxRelayModule,
   phoneConfig,
@@ -38,6 +39,7 @@ async function bootstrap() {
       }),
       StorageModule.register(env),
       OutboxRelayModule.register({
+        consumers: [NEWS_CONSUMER],
         databaseUrl: env.DATABASE_URL,
         redisUrl: env.REDIS_URL,
       }),

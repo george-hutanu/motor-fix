@@ -17,11 +17,10 @@ import { BrevoWebhookController } from './brevo-webhook.controller';
 import type { EmailConfig } from './email-config';
 import { NewsController } from './news.controller';
 import {
-  NEWS_JOBS,
   NEWS_QUEUE,
   NEWS_TOKEN_SECRET,
+  type NewsEvent,
   NewsFanOut,
-  type NewsRun,
 } from './news.fan-out';
 import { NewsService } from './news.service';
 import { NotificationsController } from './notifications.controller';
@@ -68,11 +67,6 @@ function shared(options: NotificationsOptions, prisma: Provider): Provider[] {
           connection: { url: options.redisUrl },
         }),
     },
-    {
-      provide: NEWS_JOBS,
-      useFactory: () =>
-        new Queue(NEWS_QUEUE, { connection: { url: options.redisUrl } }),
-    },
     { provide: LIVE_PUBLISHER, useFactory: () => new Redis(options.redisUrl) },
     { provide: EMAIL_FALLBACK, useValue: noFallback },
     { provide: AUDIT_PORT, useClass: AuditService },
@@ -84,7 +78,6 @@ export class NotificationsModule implements OnApplicationShutdown {
   constructor(
     @Inject(NOTIFICATIONS_PRISMA) private readonly prisma: PrismaClient,
     @Inject(NOTIFICATIONS_JOBS) private readonly jobs: Queue,
-    @Inject(NEWS_JOBS) private readonly newsJobs: Queue,
     @Inject(LIVE_PUBLISHER) private readonly publisher: Redis,
     @Optional() @Inject(WORKER) private readonly worker?: Worker | null,
     @Optional()
@@ -190,7 +183,7 @@ export class NotificationsModule implements OnApplicationShutdown {
               );
               return null;
             }
-            const worker = new Worker<NewsRun>(
+            const worker = new Worker<NewsEvent>(
               NEWS_QUEUE,
               (job) => fanOut.handle(job),
               {
@@ -204,7 +197,7 @@ export class NotificationsModule implements OnApplicationShutdown {
               if (!job) return;
               fanOut.failed(job, error).catch((e: Error) => {
                 log.error(
-                  `news for ${job.data.month} was not given back: ${e.message}`,
+                  `news for ${job.data.payload.month} was not given back: ${e.message}`,
                 );
               });
             });
@@ -219,7 +212,6 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.newsWorker?.close();
     await this.worker?.close();
     await this.jobs.close();
-    await this.newsJobs.close();
     this.publisher.disconnect();
     // In the API the client is AuthModule's, which closes it.
     if (this.worker !== undefined) await this.prisma.$disconnect();

@@ -2,14 +2,16 @@ import { NEWS_CONSENT_TEXT_VERSION } from '@motor-fix/contracts';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { type Job, Queue } from 'bullmq';
+import { Redis } from 'ioredis';
 import request from 'supertest';
 
 import { unsubscribedAccount, unsubscribeToken } from './news';
 import {
-  NEWS_JOBS,
+  NEWS_CONSUMER,
   NEWS_QUEUE,
+  NEWS_RUN,
+  type NewsEvent,
   NewsFanOut,
-  type NewsRun,
 } from './news.fan-out';
 import { NewsService } from './news.service';
 import { NotificationsModule } from './notifications.module';
@@ -25,6 +27,7 @@ import { signAccessToken } from '../auth/access-token';
 import { AuthModule } from '../auth/auth.module';
 import type { Role } from '../auth/capabilities';
 import { serialDatabase } from '../auth/serial-db.testing';
+import { OutboxRelay } from '../events/outbox-relay';
 
 const redisUrl = redisUrlFor(6);
 const tokenSecret = 'test-secret';
@@ -33,9 +36,15 @@ serialDatabase(databaseUrl);
 
 let app: INestApplication;
 let fanOut: NewsFanOut;
-const newsJobs = new Queue<NewsRun>(NEWS_QUEUE, {
+const newsJobs = new Queue<NewsEvent>(NEWS_QUEUE, {
   connection: { url: redisUrl },
+  defaultJobOptions: NEWS_RUN,
 });
+const publisher = new Redis(redisUrl);
+// The worker's relay, handing the outbox's news to the queue.
+const relay = new OutboxRelay(prisma, publisher, [
+  { kinds: NEWS_CONSUMER.kinds, queue: newsJobs },
+]);
 
 beforeAll(async () => {
   const auth = AuthModule.register({ databaseUrl, redisUrl, tokenSecret });
@@ -69,12 +78,14 @@ beforeAll(async () => {
 afterAll(async () => {
   await app.close();
   await newsJobs.close();
+  publisher.disconnect();
   await prisma.$disconnect();
 });
 
 beforeEach(async () => {
   await reset();
   await prisma.newsSend.deleteMany();
+  await prisma.outboxEvent.deleteMany();
   await newsJobs.obliterate({ force: true });
   clock('2026-11-05T10:00:00Z');
 });
@@ -135,7 +146,10 @@ const send = (admin: string, body: object = NEWS, role: Role = 'admin') =>
     .set('Authorization', bearer(admin, role))
     .send(body);
 
-const queued = () => newsJobs.getJobs(['waiting', 'delayed', 'prioritized']);
+const queued = async () => {
+  await relay.relay();
+  return newsJobs.getJobs(['waiting', 'delayed', 'prioritized']);
+};
 
 // What the worker does with each queued run: run it, and drop it once done.
 async function deliver() {
@@ -153,7 +167,7 @@ const sent = async (admin: string) => {
 
 // The queue calls `failed` after each failed attempt; `made` is how many
 // attempts it has made so far.
-const failedAfter = (job: Job<NewsRun>, made: number) =>
+const failedAfter = (job: Job<NewsEvent>, made: number) =>
   fanOut.failed(
     { attemptsMade: made, data: job.data, opts: job.opts },
     new Error('redis down'),
@@ -304,8 +318,7 @@ describe('an admin sending news', () => {
     const jobs = await queued();
     expect(jobs).toHaveLength(1);
     const [job] = jobs;
-    expect(job.id).toBe('news-2026-11');
-    expect(job.data).toEqual({
+    expect(job.data.payload).toEqual({
       month: '2026-11',
       sentBy: { accountId: admin, role: 'admin' },
       text: NEWS.text,
@@ -474,24 +487,117 @@ describe('an admin sending news', () => {
     expect(await prisma.newsSend.count()).toBe(1);
   });
 
-  it('gives the month back and fails when the run cannot be queued', async () => {
+  it('saves the run with the claim, so it waits in PostgreSQL until it is queued', async () => {
     const admin = await account('admin', ['admin']);
     await consenting('andrei');
-    const jobs = app.get<Queue>(NEWS_JOBS);
-    const add = jobs.add;
-    jobs.add = () => Promise.reject(new Error('redis down'));
-    try {
-      expect((await send(admin)).status).toBe(500);
-    } finally {
-      jobs.add = add;
-    }
+    expect((await send(admin)).status).toBe(202);
+    expect((await send(admin)).status).toBe(409);
+    expect(await newsJobs.getJobs(['waiting'])).toEqual([]);
+    const events = await prisma.outboxEvent.findMany({
+      where: { kind: 'news.sent' },
+    });
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      audience: ['admin', 'system'],
+      payload: {
+        month: '2026-11',
+        sentBy: { accountId: admin, role: 'admin' },
+        text: NEWS.text,
+        title: NEWS.title,
+      },
+      subjectId: '2026-11',
+    });
+    expect(await queued()).toHaveLength(1);
+    await deliver();
+    expect(await newsEmails()).toHaveLength(1);
+  });
+
+  it('lets only one of ten simultaneous sends through', async () => {
+    const admin = await account('admin', ['admin']);
+    await consenting('andrei');
+    const answers = await Promise.all(
+      Array.from({ length: 10 }, () => send(admin)),
+    );
+    expect(answers.filter((a) => a.status === 202)).toHaveLength(1);
+    expect(answers.filter((a) => a.status === 409)).toHaveLength(9);
+    expect(await queued()).toHaveLength(1);
+    expect(await prisma.newsSend.count()).toBe(1);
+  });
+
+  it('takes no month for a body the validation refuses', async () => {
+    const admin = await account('admin', ['admin']);
+    await consenting('andrei');
+    expect((await send(admin, { ...NEWS, extra: 'x' })).status).toBe(400);
     expect(await prisma.newsSend.count()).toBe(0);
+    expect(await queued()).toEqual([]);
+  });
+
+  it('carries markup and unicode to the message unchanged', async () => {
+    const admin = await account('admin', ['admin']);
+    await consenting('andrei', ['driver'], 'en');
+    const body = {
+      text: { en: '<b>Hi</b> \u{1F697} & "quotes"', ro: 'Ștefan și țara' },
+      title: { en: 'Ünïcode title', ro: 'Titlu' },
+    };
+    expect((await send(admin, body)).status).toBe(202);
+    await deliver();
+    const [row] = await newsEmails();
+    const params = row.params as unknown as NewsParams;
+    expect(params.title).toBe(body.title.en);
+    expect(params.text).toBe(body.text.en);
+  });
+
+  it.each([1, 2, 3, 4, 5])(
+    'keeps the month after failed attempt %i of 6',
+    async (made) => {
+      const admin = await account('admin', ['admin']);
+      await consenting('andrei');
+      await send(admin);
+      const [job] = await queued();
+      expect(job.opts.attempts).toBe(6);
+      await failedAfter(job, made);
+      expect(await prisma.newsSend.count()).toBe(1);
+      expect((await sendLog(admin)).map((e) => e.action)).toEqual(['create']);
+    },
+  );
+
+  it('records one release when the last failure is reported twice', async () => {
+    const admin = await account('admin', ['admin']);
+    await consenting('andrei');
+    await send(admin);
+    const [job] = await queued();
+    await failedAfter(job, 6);
+    await failedAfter(job, 6);
     expect((await sendLog(admin)).map((e) => e.action)).toEqual([
       'create',
       'delete',
     ]);
-    expect((await sent(admin)).status).toBe(202);
-    expect(await newsEmails()).toHaveLength(1);
+  });
+
+  it('writes nothing more when a finished run is delivered again', async () => {
+    const admin = await account('admin', ['admin']);
+    await consenting('andrei');
+    await consenting('elena');
+    await send(admin);
+    const [job] = await queued();
+    await fanOut.handle(job);
+    await fanOut.handle(job);
+    expect(await newsEmails()).toHaveLength(2);
+  });
+
+  it('leaves out a driver whose account was deleted before the run', async () => {
+    const admin = await account('admin', ['admin']);
+    const gone = await consenting('gone');
+    await consenting('kept');
+    await send(admin);
+    await prisma.account.update({
+      data: { status: 'deleted' },
+      where: { id: gone },
+    });
+    await deliver();
+    const rows = await newsEmails();
+    expect(rows.map((r) => r.accountId)).not.toContain(gone);
+    expect(rows).toHaveLength(1);
   });
 
   it('leaves out a driver who withdrew between the send and the run', async () => {

@@ -10,3 +10,4 @@
 - 2026-10-05 · implement · Foundations timeline · no row for ST-571
 - 2026-10-05 · labels · PR #128 · in development
 - 2026-10-05 · debt · ST-571 · deferred.md line 2 → https://app.notion.com/p/3f0607bff0d281598676e531d5cbd127
+- 2026-10-05 · unblock · story Status · Blocked → Implementing; blocked label removed from #128; comment posted (finish started tasks, tech debt included)
