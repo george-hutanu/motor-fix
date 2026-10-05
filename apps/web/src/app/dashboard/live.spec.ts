@@ -294,21 +294,8 @@ describe('liveResource', () => {
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   async function view(id = 'request-123') {
-    const { live } = setUp();
     let reads = 0;
-    const ref = TestBed.runInInjectionContext(() =>
-      liveResource(
-        async () => {
-          reads++;
-          return { id, reads };
-        },
-        ['quote.sent'],
-        () => id,
-      ),
-    );
-    live.open();
-    await flush();
-    await wait(10);
+    const { ref } = await viewOf(async () => ({ id, reads: ++reads }), id);
     return { reads: () => reads, ref };
   }
 
@@ -451,6 +438,35 @@ describe('liveResource', () => {
 
     expect(ref.gone()).toBe(true);
     expect(ref.value()).toEqual({ id: 'quote-1' });
+  });
+
+  it('leaves no retry behind when the view is gone before its re-read fails', async () => {
+    jest.useFakeTimers({ advanceTimers: true });
+    try {
+      let reads = 0;
+      let fail: (() => void) | undefined;
+      const { send } = await viewOf(async () => {
+        reads++;
+        if (reads === 2) {
+          await new Promise<void>((_, reject) => {
+            fail = () => reject(new HttpErrorResponse({ status: 503 }));
+          });
+        }
+        return { reads };
+      });
+      await send();
+
+      TestBed.resetTestingModule();
+      fail?.();
+      await flush();
+
+      expect(jest.getTimerCount()).toBe(0);
+      jest.advanceTimersByTime(60_000);
+      await flush();
+      expect(reads).toBe(2);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('gives the error of a first read that fails, with nothing to show', async () => {

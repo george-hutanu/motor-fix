@@ -30,3 +30,13 @@
 - The kit's motion specs pin the token set and keyframe count, and require keyframes to move only opacity or transform. So the highlight is an amber-tint `::after` whose opacity fades over the new token `--mf-motion-flash: 1s`, and both pins were raised by one.
 - The Romanian "S‑a" uses U+2011 (the i18n check).
 - End-to-end: not run locally (it boots API, worker, web and the databases); CI's E2E job runs it.
+
+## Harden
+- artifact-lint: 0 errors after two fixes (T007 named both shell files; the Spec Delta block in the capabilities format: Modifies 253-FR-015 → FR-011, 257-FR-009 → FR-002, 257-FR-010 → FR-012, FR-012 added). `capabilities.mjs validate`: merges cleanly.
+- diff-audit on this change's files: 3 dead exports (the return-type interfaces, now unexported); the `@ts-expect-error` in live.spec.ts is ST-257's, on main already; test-only-export warnings on the helpers are expected (no live list, form or drawer exists in EP-1).
+- Mutation testing: CI only (AGENTS.md).
+
+## Review (lap 1 of 5)
+- code-reviewer BLOCK: HIGH a re-read that fails after the view is destroyed left a 60 s timer (guard in `failed`, test proven to fail without it). MEDIUM `:where()` for the highlight's `position: relative`; the highlight's 1 s lived twice (timer removed, the class leaves on `animationend`); the unexported interfaces. LOW 404 read through `HttpErrorResponse`; the anchor's per-scroll scan loops without copying; the pill looks only in its own container; the duplicate test helper folded into the other.
+- code-reviewer MEDIUM decision (helpers with no caller): kept (option A). The Build brief scopes "the front-end rules in the shared live library" to this story, and FR-006–FR-008 are its requirements; the first callers are ST-199 (the bell's list) and later screens. Recorded for the owner. (autonomous default)
+- spec-reviewer BLOCK: HIGH the spec said the two brief e2e checks were deferred, but no deferred.md existed (written; filed as Notion tasks); MEDIUM the gone/changed texts are not shown by any screen yet (deferred, filed); LOW the dialog label in the assumption corrected; the pill's scope; the destroy timer.

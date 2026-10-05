@@ -70,7 +70,7 @@ function reuseFields<T>(previous: Record<string, unknown>, next: T): T {
   return (same ? previous : Object.fromEntries(entries)) as T;
 }
 
-export interface LiveDraft<T> {
+interface LiveDraft<T> {
   // What the form was filled from; a re-read never replaces it.
   readonly source: Signal<T | undefined>;
   // The object on screen, while it differs from that source.
@@ -96,7 +96,7 @@ export function liveDraft<T>(shown: Signal<T | undefined>): LiveDraft<T> {
   };
 }
 
-export interface LiveRows<T> {
+interface LiveRows<T> {
   readonly rows: Signal<readonly T[]>;
   // New rows held back above the rows shown.
   readonly waiting: Signal<number>;
@@ -138,7 +138,7 @@ export function liveRows<T extends { id: string }>(
 }
 
 // "1 actualizare nouă": shows the held rows and scrolls up to the first one.
-// Rows carry `data-live-id`.
+// Put it beside its list, in one container; rows carry `data-live-id`.
 @Component({
   imports: [TranslatePipe],
   selector: 'mf-live-pill',
@@ -159,20 +159,25 @@ export function liveRows<T extends { id: string }>(
 })
 export class LivePill {
   readonly rows = input.required<LiveRows<{ id: string }>>();
-  private readonly document = inject(DOCUMENT);
+  private readonly host =
+    inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly injector = inject(Injector);
 
   protected show() {
     const id = this.rows().showAll();
     afterNextRender(
       () =>
-        [...this.document.querySelectorAll<HTMLElement>('[data-live-id]')]
+        rowsIn(this.host.parentElement)
           .find((row) => row.dataset['liveId'] === id)
           ?.scrollIntoView({ block: 'start' }),
       { injector: this.injector },
     );
   }
 }
+
+const rowsIn = (element: HTMLElement | null) => [
+  ...(element?.querySelectorAll<HTMLElement>('[data-live-id]') ?? []),
+];
 
 // On the list of a page that scrolls: after each update, the first row that
 // was visible (`data-live-id`) is put back where it was on screen.
@@ -197,24 +202,26 @@ export class LiveAnchor {
     });
   }
 
-  private rows() {
-    return [...this.host.querySelectorAll<HTMLElement>('[data-live-id]')];
-  }
-
+  // Runs on every scroll: stops at the first row still on screen.
   private record(view: Window | null) {
-    const first =
-      (view?.scrollY ?? 0) > 0
-        ? this.rows().find((row) => row.getBoundingClientRect().bottom > 0)
-        : undefined;
-    const id = first?.dataset['liveId'];
-    this.anchor =
-      first && id ? { id, top: first.getBoundingClientRect().top } : null;
+    this.anchor = null;
+    if ((view?.scrollY ?? 0) <= 0) return;
+    for (const row of this.host.querySelectorAll<HTMLElement>(
+      '[data-live-id]',
+    )) {
+      const { bottom, top } = row.getBoundingClientRect();
+      const id = row.dataset['liveId'];
+      if (bottom > 0 && id) {
+        this.anchor = { id, top };
+        return;
+      }
+    }
   }
 
   private restore(view: Window | null) {
     const anchor = this.anchor;
     const row = anchor
-      ? this.rows().find((r) => r.dataset['liveId'] === anchor.id)
+      ? rowsIn(this.host).find((r) => r.dataset['liveId'] === anchor.id)
       : undefined;
     if (!anchor || !row) return this.record(view);
     const moved = row.getBoundingClientRect().top - anchor.top;
@@ -222,7 +229,7 @@ export class LiveAnchor {
   }
 }
 
-// On a value that changes live: a 1 s highlight (none with reduced motion),
+// On a value that changes live: a short highlight (none with reduced motion),
 // and `mfLiveChangeSay`, when given, is announced politely. Nothing happens
 // when the value first shows.
 @Directive({ selector: '[mfLiveChange]' })
@@ -235,7 +242,10 @@ export class LiveChange {
     const reduced = inject(REDUCED_MOTION);
     const announcer = inject(LiveAnnouncer);
     let first = true;
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    // The highlight's length is the CSS token's; the class goes when it ends.
+    host.addEventListener('animationend', () =>
+      host.classList.remove('mf-live-changed'),
+    );
     effect(() => {
       this.mfLiveChange();
       if (first) {
@@ -246,17 +256,11 @@ export class LiveChange {
         const say = this.mfLiveChangeSay();
         if (say) void announcer.announce(say, 'polite');
         if (reduced()) return;
-        clearTimeout(timer);
         host.classList.remove('mf-live-changed');
-        // Restarts the animation when the value changes again within 1 s.
+        // Restarts the animation when the value changes again before it ends.
         void host.offsetWidth;
         host.classList.add('mf-live-changed');
-        timer = setTimeout(
-          () => host.classList.remove('mf-live-changed'),
-          1000,
-        );
       });
     });
-    inject(DestroyRef).onDestroy(() => clearTimeout(timer));
   }
 }

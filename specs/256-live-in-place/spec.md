@@ -95,7 +95,7 @@ A background re-read that fails is invisible. An object that is gone leaves in p
 ### Functional Requirements
 
 - **FR-001**: A re-read is merged into the view's value by structural sharing. Equal objects and rows (rows matched by `id`) keep their previous reference, and an equal result leaves the value unchanged.
-- **FR-002**: Events about the shown object that arrive within 300 ms of each other cause one re-read. Events about other objects cause none.
+- **FR-002**: The web app MUST offer a helper that loads a view's data through the API and re-reads it when an event about the shown object arrives. Events that arrive within 300 ms of each other cause one re-read, events about other objects cause none, and only one read runs at a time.
 - **FR-003**: A background re-read that fails leaves the last value on screen and shows no error. The view re-reads on the next event, or 60 seconds after the failure, whichever comes first.
 - **FR-004**: A re-read that answers 404 marks a single-object view `gone`, and the view keeps its last value. A drawer that shows it says "Nu mai este disponibil" / "No longer available" and stays open.
 - **FR-005**: A live update never reloads the page, changes the route, closes a dialog, drawer or sheet, or moves focus.
@@ -104,7 +104,8 @@ A background re-read that fails is invisible. An object that is gone leaves in p
 - **FR-008**: Across an update, a scrolled list keeps its first visible row at the same place on screen.
 - **FR-009**: A changed row or value is highlighted for 1 second, and not at all with reduced motion.
 - **FR-010**: A changed visible value is announced politely (`aria-live="polite"`), without moving focus.
-- **FR-011**: The epic's test update changes the status line under every dashboard's header to "Actualizare de test în direct · <time>" / "Live test update · <time>", in place, and raises no toast.
+- **FR-011**: Every dashboard (driver; garage, serving owner, receptionist and mechanic; admin) MUST show the epic's test update on the status line under its header, "Actualizare de test în direct · <time>" / "Live test update · <time>", changed in place in the person's language, and MUST raise no toast for it.
+- **FR-012**: `POST /api/v1/admin/live/test` with an account id MUST record a `live.test` event for that account through the outbox in one transaction and answer 202 for a MotorFix admin; a call with no valid token MUST get 401, a signed-in non-admin 404, and an unknown account 404. The account's open dashboards MUST show the test update on their status line within 2 seconds while the worker runs.
 
 ### Key Entities
 
@@ -121,7 +122,7 @@ A background re-read that fails is invisible. An object that is gone leaves in p
 - The pill's text is generic ("actualizare nouă"), because no list exists in EP-1. The request inbox brings its own "cerere nouă" text in Quotes and booking. (autonomous default)
 - The "changed meanwhile" line is generic ("S-a schimbat între timp"). The job dialog brings "Lucrarea s-a schimbat între timp" with ST-395. (autonomous default)
 - A new row shows with the same 1 s highlight as a changed one. The mock's 420 ms pop is not used: the brief's highlight wins and stills under reduced motion. (autonomous default)
-- The end-to-end proof uses the dashboard's one dialog, "Deconectează-mă de pe toate dispozitivele", which has no text field. The typed-text part of scenario 7 is proven in the component test with a dialog that has one. The end-to-end typed-text check and the scroll-and-pill check come with the first live form and list (filed as deferred). (autonomous default)
+- The end-to-end proof uses the dashboard's one dialog, "Ieși de pe toate dispozitivele?", which has no text field. The typed-text part of scenario 7 is proven in the component test with a dialog that has one. The end-to-end typed-text check and the scroll-and-pill check come with the first live form and list (deferred.md, filed as Notion tasks). (autonomous default)
 - The retry after 60 seconds and the 1 s highlight are the brief's *(proposed)* values.
 
 ## Out of scope
@@ -130,11 +131,8 @@ A background re-read that fails is invisible. An object that is gone leaves in p
 
 ## Spec Delta
 
-### Adds (capability: live-updates)
+### Capability: `live-updates`
 
-- FR-001 to FR-011 above.
-
-### Modifies (capability: live-updates)
-
-- The ST-253 test toast: the test update now changes a status line in place instead of raising a toast (FR-011).
-- `liveResource` returns `{ value, error, gone, isLoading, reload }` rather than Angular's `ResourceRef`, so that a failed re-read keeps its value (FR-003).
+- **Adds**: FR-001, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010
+- **Modifies**: 253-FR-015 → FR-011, 257-FR-009 → FR-002, 257-FR-010 → FR-012
+- **Removes**: none

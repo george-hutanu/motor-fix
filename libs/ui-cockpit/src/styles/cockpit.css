@@ -574,7 +574,8 @@ button.spartan-switch[data-disabled="true"] {
   }
 }
 
-.mf-live-changed {
+/* Without weight, so a sticky or absolute host keeps its own position. */
+:where(.mf-live-changed) {
   position: relative;
 }
 

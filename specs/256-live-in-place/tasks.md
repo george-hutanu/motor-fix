@@ -14,7 +14,7 @@
 
 - [X] T005 `apps/web/src/app/dashboard/live-in-place.ts`: `reuse`, `liveDraft`, `liveRows`, `LiveAnchor`, `LiveChange`, `LivePill` (the "changed meanwhile" and "no longer available" lines are the `shell.live.changed` and `shell.live.gone` texts each view shows)
 - [X] T006 `apps/web/src/app/dashboard/live.ts`: `liveResource` with merge, silent failure and retry, gone, and one re-read at a time
-- [X] T007 `apps/web/src/app/dashboard/frame.ts`: the status line for the test update, no toast; `libs/i18n/src/shell/{ro,en}.json`: `shell.live.*` texts; `libs/ui-cockpit/src/styles/cockpit.css`: `.mf-live-changed` highlight and the `--mf-motion-flash` token (the motion specs pin the token set and the keyframe count)
+- [X] T007 `apps/web/src/app/dashboard/frame.ts`: the status line for the test update, no toast; `libs/i18n/src/shell/ro.json` and `libs/i18n/src/shell/en.json`: `shell.live.*` texts; `libs/ui-cockpit/src/styles/cockpit.css`: `.mf-live-changed` highlight and the `--mf-motion-flash` token (the motion specs pin the token set and the keyframe count)
 
 ## FR → test
 
@@ -30,4 +30,5 @@
 | FR-008 | live-in-place.spec.ts `LiveAnchor` |
 | FR-009 | live-in-place.spec.ts `LiveChange` |
 | FR-010 | live-in-place.spec.ts `LiveChange`; frame.spec.ts status role |
-| FR-011 | frame.spec.ts; web-e2e live.spec.ts |
+| FR-011 | frame.spec.ts |
+| FR-012 | web-e2e live.spec.ts (all three tests); the endpoint is unchanged, its API tests stay in libs/domain |

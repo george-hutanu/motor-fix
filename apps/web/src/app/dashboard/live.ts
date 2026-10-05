@@ -1,4 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   DestroyRef,
   Injectable,
@@ -141,7 +142,7 @@ export class Live {
   }
 }
 
-export interface LiveResource<T> {
+interface LiveResource<T> {
   // The last data read; a re-read changes only its parts that changed.
   readonly value: Signal<T | undefined>;
   // Why the first read failed, while there is nothing to show.
@@ -172,7 +173,8 @@ export function liveResource<T>(
   let retry: ReturnType<typeof setTimeout> | undefined;
 
   const failed = (failure: unknown) => {
-    if ((failure as { status?: unknown } | null)?.status === 404) {
+    if (destroyRef.destroyed) return;
+    if (failure instanceof HttpErrorResponse && failure.status === 404) {
       gone.set(true);
       return;
     }

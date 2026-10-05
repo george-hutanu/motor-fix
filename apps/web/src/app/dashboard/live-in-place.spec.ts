@@ -18,7 +18,6 @@ interface Row {
 }
 
 afterEach(() => {
-  jest.useRealTimers();
   TestBed.resetTestingModule();
 });
 
@@ -210,8 +209,7 @@ function changing(reduced = false) {
 }
 
 describe('LiveChange', () => {
-  it('highlights a value that changed for one second, and not when it first shows', () => {
-    jest.useFakeTimers();
+  it('highlights a value that changed until the highlight ends, and not when it first shows', () => {
     const { fixture, p } = changing();
     expect(p.classList.contains('mf-live-changed')).toBe(false);
 
@@ -219,9 +217,7 @@ describe('LiveChange', () => {
     fixture.detectChanges();
     expect(p.classList.contains('mf-live-changed')).toBe(true);
 
-    jest.advanceTimersByTime(999);
-    expect(p.classList.contains('mf-live-changed')).toBe(true);
-    jest.advanceTimersByTime(1);
+    p.dispatchEvent(new Event('animationend'));
     expect(p.classList.contains('mf-live-changed')).toBe(false);
   });
 
