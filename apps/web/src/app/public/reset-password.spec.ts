@@ -44,6 +44,7 @@ const flush = async () => {
   for (let i = 0; i < 4; i++) await new Promise((r) => setTimeout(r));
 };
 
+// @traces 127-FR-011
 describe('the reset link page', () => {
   it('shows Home and opens the new-password dialog over it for the token', async () => {
     const { fixture, newPassword } = setup(true);

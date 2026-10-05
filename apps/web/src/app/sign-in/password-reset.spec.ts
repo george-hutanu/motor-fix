@@ -76,6 +76,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
+// @traces 127-FR-010
 describe('the reset task', () => {
   it('shows its title, one e-mail field holding the typed e-mail and "Trimite linkul"', async () => {
     await open('ro', 'andrei@example.ro');

@@ -154,6 +154,7 @@ describe('SignInDialog', () => {
     );
   });
 
+  // @traces 127-FR-009
   describe('a forgotten password', () => {
     it('opens the reset task with the e-mail, and sign-in again from it', async () => {
       const { dialog, open } = setup(

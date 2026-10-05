@@ -98,6 +98,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
+// @traces 127-FR-011 127-FR-012
 describe('the new-password task', () => {
   it('checks the link, then asks for a new password', async () => {
     await open();

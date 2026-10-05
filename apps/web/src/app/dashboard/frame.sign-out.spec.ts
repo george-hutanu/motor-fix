@@ -151,6 +151,7 @@ describe('signing out on all devices', () => {
   });
 });
 
+// @traces 127-FR-013
 describe('a session ended elsewhere', () => {
   it('forgets the session and opens Home on a session.revoked live message, asking the server nothing', async () => {
     const { live, navigate, session } = await render('admin', '/app/admin');

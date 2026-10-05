@@ -172,6 +172,7 @@ async function settled(done: () => boolean | Promise<boolean>) {
   }
 }
 
+// @traces 127-FR-001 127-FR-002 127-FR-003
 describe('asking for a reset link', () => {
   it('answers 202 with no body and queues the link in the account language', async () => {
     const id = await person();
@@ -337,6 +338,7 @@ describe('asking for a reset link', () => {
   });
 });
 
+// @traces 127-FR-004
 describe('checking a link', () => {
   it('answers 204 for a link that works', async () => {
     const id = await person();
@@ -425,6 +427,7 @@ describe('checking a link', () => {
   });
 });
 
+// @traces 127-FR-005 127-FR-006 127-FR-007
 describe('completing a reset', () => {
   it('replaces the password: the new one signs in and the old one does not', async () => {
     const id = await person();
