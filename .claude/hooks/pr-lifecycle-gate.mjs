@@ -18,8 +18,10 @@
 // What it does NOT block: main or a detached HEAD, a branch with nothing ahead
 // of origin/main, a draft PR (the work is not done yet), a PR whose checks are
 // pending, failing or missing (fix or wait, then merge), a merged or closed PR,
-// an `agent-review` failure (the fix loop owns it), and a missing agent review
-// while run-state says the run is blocked (Blocked is how a run stops).
+// an `agent-review` failure (the fix loop owns it), a missing agent review
+// while run-state says the run is blocked (Blocked is how a run stops), and a
+// ready PR the story agent handed off (`specs/<feature>/handoff.md`): a fresh
+// tail agent tests and merges it, so the story agent ends at ready.
 //
 // A PR opened by Dependabot (its author, read from gh, never its title or
 // branch) with only Dependabot's commits needs no agent review: green on every
@@ -97,7 +99,7 @@ export function typeLabel(title = "") {
 }
 
 /** The refusal for this state, or null when the session may end. */
-export function decide({ branch, ahead, unpushed, pr, prLinked = true, blocked = false }) {
+export function decide({ branch, ahead, unpushed, pr, prLinked = true, blocked = false, handedOff = false }) {
   if (!branch || branch === "HEAD" || branch === "main" || ahead === 0)
     return null;
   if (unpushed > 0)
@@ -123,7 +125,7 @@ export function decide({ branch, ahead, unpushed, pr, prLinked = true, blocked =
     if (/^\w+(\([^)]*\))?!:/.test(pr.title ?? "") && !has("breaking"))
       return `PR #${pr.number} is a breaking change (! in its title) without the "breaking" label. Add it (gh pr edit ${pr.number} --add-label "breaking").`;
   }
-  if (pr.state !== "OPEN" || pr.isDraft || pr.mergeable !== "MERGEABLE") return null;
+  if (pr.state !== "OPEN" || pr.isDraft || pr.mergeable !== "MERGEABLE" || handedOff) return null;
   const checks = pr.statusCheckRollup ?? [];
   if (!allGreen(checks.filter((c) => !isAgentReview(c)))) return null;
   if (!checks.some(isAgentReview) && !isDependabot(pr))
@@ -145,6 +147,17 @@ function runBlocked(cwd) {
   } catch {
     return false;
   }
+}
+
+/** The story agent left a hand-off note for the tail agent (speckit-auto "Hand-off"). */
+export function handedOff(cwd, branch) {
+  let feature = `specs/${branch}`;
+  try {
+    feature = JSON.parse(readFileSync(join(cwd, ".specify", "feature.json"), "utf8")).feature_directory || feature;
+  } catch {
+    // no pointer: the branch names the feature
+  }
+  return existsSync(join(cwd, feature, "handoff.md"));
 }
 
 /** `speckit-notion-sync pr` logged this PR for the branch's story. */
@@ -187,7 +200,7 @@ function readState(cwd) {
     if (!/no pull requests found/i.test(said)) return null;
   }
   const linked = pr === null || prLinked(cwd, branch, pr.number);
-  return { ahead, blocked: runBlocked(cwd), branch, pr, prLinked: linked, unpushed };
+  return { ahead, blocked: runBlocked(cwd), branch, handedOff: handedOff(cwd, branch), pr, prLinked: linked, unpushed };
 }
 
 /**

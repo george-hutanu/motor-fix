@@ -565,7 +565,9 @@ and QA lap is where most of a story's cost went.
 5. `node .claude/scripts/run-state.mjs set --status in-progress --phase hand-off`,
    write the Final Report, and reply with `NEXT: tail #<n>`. Start no CI wait
    and no PR tester run here: the tail starts both at once, so QA still runs
-   beside CI.
+   beside CI. Run by the owner in their own session rather than dispatched,
+   nobody reads that NEXT: dispatch the tail yourself (below) before the
+   report, so the merge never waits on the owner.
 
 A run that ends on a Hard Stop before the hand-off does none of this but the
 Blocked write: the PR stays a draft.
@@ -574,7 +576,8 @@ Blocked write: the PR stays a draft.
 
 A fresh agent finishes the lifecycle from the hand-off note alone. The
 orchestrating session dispatches it on `NEXT: tail #<n>`, and `/speckit-watch`
-on its `tail` fix: `subagent_type: general-purpose`, `run_in_background: true`,
+on its `tail` fix, each after `node .claude/scripts/watch.mjs claim <worktree> tail`
+so the other does not send a second one: `subagent_type: general-purpose`, `run_in_background: true`,
 the default model (it implements QA fixes, so it stays on Opus), and a prompt
 holding only the PR number, the worktree and the note's path:
 
@@ -630,8 +633,10 @@ and runs lifecycle steps 5–7:
    merged PR (`gh pr comment <n> --body-file <file>`), then restore
    `notion-sync.md` (`git checkout -- specs/<feature>/notion-sync.md`). Run
    the archive check over the log and the PR's comments (`speckit-archive`,
-   Phase 4 step 5) until it exits 0, delete `handoff.md`, and reply with the
-   envelope: `PR: #<n> merged <sha7>`.
+   Phase 4 step 5); when it exits 1, do what its reason says and check again,
+   once. A Notion write still PENDING is retried by the next
+   `speckit-notion-sync` run and does not hold the tail. Delete `handoff.md`
+   and reply with the envelope: `PR: #<n> merged <sha7>`.
 
 A PR with no checks, or one still failing at the limit, is a Hard Stop: it
 stays ready and unmerged, the story goes to Blocked (`speckit-notion-sync

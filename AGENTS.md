@@ -64,7 +64,8 @@ epic or a plan, whether run through spec-kit or by hand.
      page ids, open decisions, deferred items; git ignores it) and returns
      `NEXT: tail #<n>`. A fresh **tail agent**, given only the PR number, the
      worktree and that path, runs steps 5–7 and the finish. The orchestrating
-     session dispatches it on that NEXT; `/speckit-watch` dispatches one (its
+     session dispatches it on that NEXT (a story run in the owner's own
+     session dispatches its own); `/speckit-watch` dispatches one (its
      `tail` fix) for a handed-off ready PR with no live holder. It implements
      QA fixes, so it keeps the default model (Opus). It deletes the note
      when the task is Done.
