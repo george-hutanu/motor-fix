@@ -19,6 +19,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { findCarry, postCarry } from "./pr-test/carry.mjs";
 import { readState } from "./run-state.mjs";
 
 export const DEFAULT_THRESHOLDS = { planning: 30, tests: 45, development: 45, review: 30, qa: 30, merging: 30 };
@@ -181,8 +182,13 @@ export function fixOf(row, { now, thresholds }) {
   const atPrHead = row.clean && row.head && row.head === pr?.head;
   if (pr?.state === "ready" && pr.checks === "pass" && pr.agentReview === "success" && atPrHead) return { verdict: "stale", fix: "merge", reason };
   if (open && pr.checks === "fail") return { verdict: "stale", fix: "fix-ci", reason };
-  // QA runs beside CI, so a ready PR without a verdict is tested while CI still runs.
-  if (pr?.state === "ready" && pr.checks !== "fail" && !pr.agentReview) return { verdict: "stale", fix: "rerun-qa", reason };
+  // QA runs beside CI, so a ready PR without a verdict is tested while CI still runs,
+  // unless its head only adds documentation to a tested commit: then the verdict
+  // is carried (pr-test/carry.mjs, applied by --fix) and the merge gate checks it.
+  if (pr?.state === "ready" && pr.checks !== "fail" && !pr.agentReview) {
+    if (row.carry?.from && !row.carry.reason) return { verdict: "stale", fix: "carry-review", reason: `${reason}; docs-only since ${row.carry.from.slice(0, 7)}` };
+    return { verdict: "stale", fix: "rerun-qa", reason };
+  }
   return { verdict: "stale", fix: "resume", reason };
 }
 
@@ -293,7 +299,11 @@ function prFor(prs, branch) {
   return mine.find((p) => p.state === "OPEN") ?? mine.sort((a, b) => b.number - a.number)[0] ?? null;
 }
 
-export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claudeAlive, pidAlive = processAlive, thresholds = DEFAULT_THRESHOLDS, qaCap = QA_CAP } = {}) {
+const defaultCarry = (pr) => findCarry({ pr });
+
+// The carry lookup reads the same GitHub the PR list came from: a PR list
+// given by a caller (a test) gets no lookup unless it gives one too.
+export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claudeAlive, pidAlive = processAlive, thresholds = DEFAULT_THRESHOLDS, qaCap = QA_CAP, carry = gh === defaultGh ? defaultCarry : null } = {}) {
   const worktrees = parseWorktrees(git(repo, ["worktree", "list", "--porcelain"]) ?? "");
   const real = (p) => {
     try {
@@ -334,7 +344,17 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
       main: w.main,
       claim: claim ? { ...claim, live: claimLive(claim, threshold, now) } : null,
     };
-    rows.push({ ...row, ...fixOf(row, { now, thresholds }) });
+    let fixed = fixOf(row, { now, thresholds });
+    // Only a row about to re-run QA is worth the few gh calls a carry lookup costs.
+    if (fixed.fix === "rerun-qa" && carry) {
+      try {
+        row.carry = carry(pr.number);
+      } catch {
+        row.carry = null;
+      }
+      fixed = fixOf(row, { now, thresholds });
+    }
+    rows.push({ ...row, ...fixed });
   }
   // A deleted worktree is pruned once nothing holds it. Git will not prune a
   // locked record, so a dead agent's lock is released first; a live agent's
@@ -351,8 +371,8 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
   };
 }
 
-/** The fixes that need no agent. Never forced, never a branch, never the main worktree. */
-export function applyFixes(repo, report) {
+/** The fixes that need no agent. Never forced, never a branch, never the main worktree; a carry writes only a commit status and the PR's Agent review section. */
+export function applyFixes(repo, report, { postCarry: post = postCarry } = {}) {
   const actions = [];
   const run = (what, args) => {
     try {
@@ -368,6 +388,16 @@ export function applyFixes(repo, report) {
   for (const r of report.rows.filter((x) => x.fix === "remove-worktree" && !x.main && x.clean)) {
     if (r.locked && r.holder === "none") run(`unlock ${r.path}`, ["worktree", "unlock", r.path]);
     run(`remove ${r.path}`, ["worktree", "remove", r.path]);
+  }
+  // A carry sets the agent-review status on the PR head; the merge gate re-checks it.
+  for (const r of report.rows.filter((x) => x.fix === "carry-review" && x.carry?.from)) {
+    const what = `carry #${r.pr.number} from ${r.carry.from.slice(0, 7)}`;
+    try {
+      post({ pr: r.pr.number, from: r.carry.from, head: r.carry.head });
+      actions.push({ what, ok: true });
+    } catch (e) {
+      actions.push({ what, ok: false, error: e.message });
+    }
   }
   for (const path of report.orphanLocks ?? []) run(`unlock ${path}`, ["worktree", "unlock", path]);
   if (report.prunable.length > 0) run(`prune ${report.prunable.join(", ")}`, ["worktree", "prune"]);
