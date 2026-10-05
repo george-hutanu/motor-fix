@@ -40,4 +40,5 @@ Independent test: hub unit tests with a garage-access loader; HTTP integration a
 | FR-009 | `live.hub.audience.spec.ts` "never forwards a private kind through a public key"; `audience.spec.ts` "puts no private subject on a public key" |
 | FR-010 | `live.hub.audience.spec.ts` "drops the event for that garage's staff only and logs it" |
 | FR-011 | `apps/web/src/app/dashboard/frame.role-switch.spec.ts` (ST-394) |
+| FR-013 | `live.hub.spec.ts` "forwards an event only to the streams whose channels meet its audience", "sends an event once …"; `live.api.integration.spec.ts` "the fan-out across API copies" |
 | FR-012 | `apps/web-e2e/src/live.spec.ts` "a test update sent to one driver never shows on another driver's dashboard" |

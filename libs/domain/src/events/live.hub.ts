@@ -220,10 +220,12 @@ export class LiveHub {
 
   // What an event changes about the streams themselves, before it goes out.
   private follow(kind: string, id: string, keys: string[]) {
+    const rereads = REREAD_ACCESS.has(kind);
+    if (!rereads && !ENDS_ACCOUNT.has(kind)) return;
     const garages = keys
       .filter((key) => key.startsWith('garage:'))
       .map((key) => key.slice('garage:'.length));
-    if (REREAD_ACCESS.has(kind)) {
+    if (rereads) {
       for (const garageId of garages) this.access.delete(garageId);
     }
     const own = [...this.connections.values()].filter(

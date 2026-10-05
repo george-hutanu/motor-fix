@@ -86,7 +86,11 @@ export class EventsModule
 
   onModuleInit() {
     this.subscriber.on('message', (_channel: string, message: string) =>
-      this.hub.deliver(message),
+      this.hub
+        .deliver(message)
+        .catch((error: Error) =>
+          this.logger.error(`live event dropped: ${error.message}`),
+        ),
     );
     // Not awaited: the API starts, and streams open, whether Redis answers or not.
     this.subscriber

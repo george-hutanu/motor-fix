@@ -93,6 +93,7 @@ A suspended or deleted account's open streams close; a role switch reconnects wi
 - **FR-010**: A failure to read a garage's staff or switches MUST drop that event for that garage's staff connections only and be logged; every other connection MUST still get it.
 - **FR-011**: After a role switch the web app MUST close its live connection and open a new one, so it joins the new role's channels.
 - **FR-012**: A test update sent to one driver MUST show on that driver's open dashboard and MUST NOT reach another driver's open dashboard.
+- **FR-013**: Events MUST be fanned out through one Redis pub/sub channel, each message holding the event and its audience as a list of channel keys; every API copy MUST forward an event only to its own connections whose channels meet the audience and whose role, rights and garage switches allow it (FR-003 to FR-005, FR-009), each such connection exactly once.
 
 ### Key Entities
 
@@ -111,7 +112,7 @@ A suspended or deleted account's open streams close; a role switch reconnects wi
 ### Capability: `live-updates`
 
 - **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-012
-- **Modifies**: 253-FR-006 (an API copy forwards an event to its connections whose channels meet the audience and whose role, rights and the garage's switches allow it)
+- **Modifies**: 253-FR-006 → FR-013
 - **Removes**: none
 
 ## Assumptions
