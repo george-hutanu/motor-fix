@@ -9,7 +9,7 @@ import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 import { Subject } from 'rxjs';
 
-import { ago, Bell, BellStore } from './bell';
+import { Bell, BellStore } from './bell';
 import { Live } from './live';
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
@@ -79,29 +79,6 @@ async function render(count = 0, items: NotificationDto[] = []) {
 
 beforeEach(() => jest.mocked(toast).mockClear());
 afterEach(() => jest.useRealTimers());
-
-describe('ago', () => {
-  const now = new Date('2026-10-05T12:00:00.000Z');
-  const at = (minutes: number) =>
-    new Date(now.getTime() - minutes * 60_000).toISOString();
-
-  it('formats times relative up to a day, then as a date', async () => {
-    setup();
-    const i18n = TestBed.inject(I18n);
-
-    expect(ago(at(0.5), now, i18n)).toBe('acum');
-    expect(ago(at(5), now, i18n)).toBe('acum 5 min');
-    expect(ago(at(59), now, i18n)).toBe('acum 59 min');
-    expect(ago(at(60), now, i18n)).toBe('acum 1 h');
-    expect(ago(at(23 * 60 + 59), now, i18n)).toBe('acum 23 h');
-    // A day old, shown as its day in Bucharest (UTC+3 in October).
-    expect(ago('2026-10-03T22:30:00.000Z', now, i18n)).toBe('4 oct. 2026');
-
-    await i18n.use('en');
-    expect(ago(at(5), now, i18n)).toBe('5 min ago');
-    expect(ago(at(0.5), now, i18n)).toBe('just now');
-  });
-});
 
 describe('Bell', () => {
   it('shows the unread count, 9+ above 9 and nothing at 0', async () => {
@@ -259,7 +236,9 @@ describe('BellStore', () => {
     await store.read('a');
 
     expect(api.bellControllerRead).toHaveBeenCalledWith({ id: 'a' });
-    expect(store.items().find((n) => n.id === 'a')?.readAt).toBeTruthy();
+    expect(store.items().find((n) => n.id === 'a')?.readAt).toBe(
+      '2026-10-05T09:00:00.000Z',
+    );
     expect(store.count()).toBe(1);
   });
 
@@ -304,5 +283,104 @@ describe('BellStore', () => {
     await store.load();
 
     expect(api.bellControllerList).toHaveBeenLastCalledWith({ language: 'en' });
+  });
+  it('does not ask again for a row already read', async () => {
+    const { store } = await render(1, [row('a', { readAt: 'x' })]);
+    await store.load();
+
+    await store.read('a');
+
+    expect(api.bellControllerRead).not.toHaveBeenCalled();
+    expect(store.count()).toBe(1);
+  });
+
+  it('says so when a read fails, and keeps the row and the count', async () => {
+    const { store } = await render(1, [row('a')]);
+    await store.load();
+    api.bellControllerRead.mockRejectedValue(new Error('offline'));
+
+    await store.read('a');
+
+    expect(toast).toHaveBeenCalledWith(
+      'Notificarea nu a putut fi marcată ca citită.',
+    );
+    expect(store.items()[0].readAt).toBeNull();
+    expect(store.count()).toBe(1);
+  });
+
+  it('says so when marking all fails, and keeps the rows and the count', async () => {
+    const { store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    api.bellControllerReadAll.mockRejectedValue(new Error('offline'));
+
+    await store.readAll();
+
+    expect(toast).toHaveBeenCalledWith(
+      'Notificarea nu a putut fi marcată ca citită.',
+    );
+    expect(store.items().every((n) => n.readAt === null)).toBe(true);
+    expect(store.count()).toBe(2);
+  });
+
+  it('loads one next page for two taps in a row', async () => {
+    const { store } = await render(0);
+    api.bellControllerList.mockResolvedValueOnce({
+      items: [row('a')],
+      nextCursor: 'a',
+    });
+    await store.load();
+    api.bellControllerList.mockResolvedValue({
+      items: [row('b')],
+      nextCursor: null,
+    });
+
+    await Promise.all([store.loadMore(), store.loadMore()]);
+
+    expect(store.items().map((n) => n.id)).toEqual(['a', 'b']);
+  });
+
+  it('says so when the next page fails, and lets it be asked again', async () => {
+    const { store } = await render(0);
+    api.bellControllerList.mockResolvedValueOnce({
+      items: [row('a')],
+      nextCursor: 'a',
+    });
+    await store.load();
+    api.bellControllerList.mockRejectedValueOnce(new Error('offline'));
+
+    await store.loadMore();
+
+    expect(toast).toHaveBeenCalledWith('Notificările nu s‑au încărcat.');
+    expect(store.items().map((n) => n.id)).toEqual(['a']);
+    expect(store.more()).toBe(true);
+  });
+
+  it('starts the list again from the top on a read elsewhere', async () => {
+    const { fixture, store } = await render(0);
+    api.bellControllerList.mockResolvedValueOnce({
+      items: [row('a')],
+      nextCursor: 'a',
+    });
+    await store.load();
+    api.bellControllerList.mockResolvedValueOnce({
+      items: [row('b')],
+      nextCursor: null,
+    });
+    await store.loadMore();
+    api.bellControllerList.mockResolvedValue({
+      items: [row('a', { readAt: 'x' })],
+      nextCursor: 'a',
+    });
+
+    events.next({
+      at: '2026-10-05T08:00:00.000Z',
+      id: 'account-1',
+      kind: 'notification.read',
+    });
+    await settle(fixture);
+
+    expect(store.items().map((n) => n.id)).toEqual(['a']);
+    expect(store.items()[0].readAt).toBe('x');
+    expect(store.more()).toBe(true);
   });
 });

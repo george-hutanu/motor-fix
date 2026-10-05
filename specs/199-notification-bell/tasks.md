@@ -24,11 +24,11 @@
 | FR-001 | `bell.api.integration.spec.ts` "lists the person's own bell rows newest first, 20 a page", "leaves out rows older than 90 days and other channels", "refuses a cursor that is not one of the person's rows" |
 | FR-002 | `bell.api.integration.spec.ts` "renders each text in the language asked, else the account's" |
 | FR-003 | `bell.api.integration.spec.ts` "counts the unread bell rows of the last 90 days" |
-| FR-004 | `bell.api.integration.spec.ts` "marks one read and keeps the first read time", "answers 404 for another person's notification" |
-| FR-005 | `bell.api.integration.spec.ts` "marks all of the person's rows read and no one else's" |
-| FR-006 | `bell.api.integration.spec.ts` "announces a read on the person's channel" |
+| FR-004 | `bell.api.integration.spec.ts` "marks one read and keeps the first read time", "answers 404 for another person's notification"; `bell.spec.ts` "does not ask again for a row already read", "says so when a read fails, and keeps the row and the count" |
+| FR-005 | `bell.api.integration.spec.ts` "marks all of the person's rows read and no one else's"; `bell.spec.ts` "says so when marking all fails, and keeps the rows and the count" |
+| FR-006 | `bell.api.integration.spec.ts` "announces a read on the person's channel, and a read that changed nothing not at all", "still marks read when Redis does not answer" |
 | FR-007 | `bell.spec.ts` "shows the unread count, 9+ above 9 and nothing at 0", "names the count in the button's label" |
-| FR-008 | `bell-list.spec.ts` "shows the rows with their time and unread mark", "shows the empty, loading and error states", "marks all read", "loads more on demand"; `bell.spec.ts` "formats times relative up to a day, then as a date" |
+| FR-008 | `bell-list.spec.ts` "shows the rows with their time and unread mark", "shows the empty state", "shows three row skeletons while loading", "offers a retry when the list fails to load", "marks all read", "hides mark all when nothing is unread", "loads more on demand", "formats times relative up to a day, then as a date"; `bell.spec.ts` "loads one next page for two taps in a row", "says so when the next page fails, and lets it be asked again" |
 | FR-009 | `bell-list.spec.ts` "marks a tapped row read" |
-| FR-010 | `bell.spec.ts` "toasts a new notification and refreshes", "refreshes on a read in another tab"; `apps/web-e2e/src/bell.spec.ts` |
+| FR-010 | `bell.spec.ts` "toasts a new notification and refreshes", "refreshes on a read in another tab", "starts the list again from the top on a read elsewhere"; `apps/web-e2e/src/bell.spec.ts` |
 | FR-011 | `bell.spec.ts` "refreshes the count every 60 seconds" |

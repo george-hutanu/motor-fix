@@ -5,6 +5,7 @@ import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
 import request from 'supertest';
 
+import { BellService } from './bell.service';
 import { NotificationsModule } from './notifications.module';
 import {
   databaseUrl,
@@ -250,11 +251,14 @@ describe('marking read', () => {
     expect(row.readAt).toBeNull();
   });
 
-  it("announces a read on the person's channel", async () => {
+  it("announces a read on the person's channel, and a read that changed nothing not at all", async () => {
     const andrei = await account('andrei');
     const id = await bell(andrei);
+    await bell(andrei, { ago: 1000 });
 
     await post(`/notifications/${id}/read`, andrei).expect(200);
+    await post(`/notifications/${id}/read`, andrei).expect(200);
+    await post('/notifications/read-all', andrei).expect(204);
     await post('/notifications/read-all', andrei).expect(204);
 
     const reads = () =>
@@ -266,6 +270,22 @@ describe('marking read', () => {
     for (let i = 0; i < 50 && reads().length < 2; i++) {
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
+    // Long enough for a third, wrong, announcement to arrive.
+    await new Promise((resolve) => setTimeout(resolve, 200));
     expect(reads()).toHaveLength(2);
+  });
+
+  it('still marks read when Redis does not answer', async () => {
+    const andrei = await account('andrei');
+    const id = await bell(andrei);
+    await bell(andrei, { ago: 1000 });
+    const down = new BellService(prisma, {
+      publish: () => Promise.reject(new Error('redis down')),
+    });
+
+    await expect(down.read(andrei, id)).resolves.toMatchObject({ id });
+    await expect(down.readAll(andrei)).resolves.toBeUndefined();
+
+    expect(await down.unreadCount(andrei)).toBe(0);
   });
 });

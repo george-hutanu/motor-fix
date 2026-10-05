@@ -14,7 +14,7 @@ import {
   type NotificationDto,
   NotificationsService,
 } from '@motor-fix/data-access';
-import { formatDay, I18n, TranslatePipe } from '@motor-fix/i18n';
+import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 
@@ -22,18 +22,6 @@ import { BellList } from './bell-list';
 import { Live } from './live';
 
 const REFRESH_MS = 60_000;
-const MINUTE = 60_000;
-
-// "acum 5 min" up to a day, then the day in Bucharest.
-export function ago(at: string, now: Date, i18n: I18n): string {
-  const minutes = Math.floor((now.getTime() - new Date(at).getTime()) / MINUTE);
-  if (minutes < 1) return i18n.t('shell.bell.now');
-  if (minutes < 60) return i18n.t('shell.bell.minutes', { n: minutes });
-  if (minutes < 24 * 60) {
-    return i18n.t('shell.bell.hours', { n: Math.floor(minutes / 60) });
-  }
-  return formatDay(at, i18n.language());
-}
 
 // The bell's count and rows, kept current by the live connection and a
 // one-minute refresh for when that connection is down.
@@ -84,23 +72,28 @@ export class BellStore {
     }
   }
 
+  // One page at a time: a second tap while one loads does nothing.
   async loadMore() {
-    if (!this.next) return;
+    const cursor = this.next;
+    if (!cursor) return;
+    this.follow(null);
     try {
-      const page = await this.page(this.next);
+      const page = await this.page(cursor);
       this.items.update((items) => [...items, ...page.items]);
       this.follow(page.nextCursor);
     } catch {
+      this.follow(cursor);
       toast(this.i18n.t('shell.bell.failed'));
     }
   }
 
   async read(id: string) {
-    const unread = this.items().some((n) => n.id === id && !n.readAt);
+    const shown = this.items().find((n) => n.id === id);
+    if (shown?.readAt) return;
     try {
       const read = await this.api.bellControllerRead({ id });
       this.items.update((items) => items.map((n) => (n.id === id ? read : n)));
-      if (unread) this.count.update((count) => Math.max(0, count - 1));
+      this.count.update((count) => Math.max(0, count - 1));
     } catch {
       toast(this.i18n.t('shell.bell.readFailed'));
     }
@@ -145,11 +138,14 @@ export class BellStore {
     toast(text, { duration: 5000 });
   }
 
+  // A read elsewhere may touch any page, so the list starts again at the top.
   private async refresh() {
     await this.refreshCount();
     if (this.state() !== 'ready') return;
     try {
-      this.merge((await this.page()).items);
+      const page = await this.page();
+      this.items.set(page.items);
+      this.follow(page.nextCursor);
     } catch {
       // The rows shown stay until the next open.
     }

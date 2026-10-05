@@ -4,11 +4,24 @@ import {
   computed,
   inject,
 } from '@angular/core';
-import { I18n, TranslatePipe } from '@motor-fix/i18n';
+import { formatDay, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { injectOverlayTask } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
-import { ago, type BellStore } from './bell';
+import type { BellStore } from './bell';
+
+const MINUTE = 60_000;
+
+// "acum 5 min" up to a day, then the day in Bucharest.
+export function ago(at: string, now: Date, i18n: I18n): string {
+  const minutes = Math.floor((now.getTime() - new Date(at).getTime()) / MINUTE);
+  if (minutes < 1) return i18n.t('shell.bell.now');
+  if (minutes < 60) return i18n.t('shell.bell.minutes', { n: minutes });
+  if (minutes < 24 * 60) {
+    return i18n.t('shell.bell.hours', { n: Math.floor(minutes / 60) });
+  }
+  return formatDay(at, i18n.language());
+}
 
 // The person's notifications, newest first; opening one marks it read.
 @Component({

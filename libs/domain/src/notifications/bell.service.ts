@@ -79,7 +79,7 @@ export class BellService {
   // The first read time stays: a second open changes nothing.
   async read(accountId: string, id: string): Promise<NotificationDto> {
     const where = { accountId, channel: 'in_app' as const, id };
-    await this.prisma.notification.updateMany({
+    const { count } = await this.prisma.notification.updateMany({
       data: { readAt: new Date() },
       where: { ...where, readAt: null },
     });
@@ -88,16 +88,16 @@ export class BellService {
       this.language(accountId),
     ]);
     if (!row) throw new NotFoundException();
-    await this.announce(accountId, id);
+    if (count) await this.announce(accountId, id);
     return view(row, language);
   }
 
   async readAll(accountId: string): Promise<void> {
-    await this.prisma.notification.updateMany({
+    const { count } = await this.prisma.notification.updateMany({
       data: { readAt: new Date() },
       where: { accountId, channel: 'in_app', readAt: null },
     });
-    await this.announce(accountId, accountId);
+    if (count) await this.announce(accountId, accountId);
   }
 
   private shown(accountId: string) {
@@ -116,8 +116,8 @@ export class BellService {
     return account?.language ?? 'ro';
   }
 
-  // The person's other tabs follow; `id` is the row read, or the account
-  // when all were.
+  // The person's other tabs follow a read that changed something; `id` is
+  // the row read, or the account when all were.
   private async announce(accountId: string, id: string) {
     const message = {
       audience: [`account:${accountId}`],

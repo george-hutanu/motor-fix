@@ -4,11 +4,12 @@ import {
   type NotificationDto,
   NotificationsService,
 } from '@motor-fix/data-access';
+import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { Subject } from 'rxjs';
 
 import { BellStore } from './bell';
-import { BellList } from './bell-list';
+import { ago, BellList } from './bell-list';
 import { Live } from './live';
 
 const minutesAgo = (n: number) =>
@@ -194,5 +195,27 @@ describe('BellList', () => {
 
     expect(element.querySelectorAll('li')).toHaveLength(2);
     expect(button(element, 'Mai multe')).toBeUndefined();
+  });
+});
+
+describe('ago', () => {
+  const now = new Date('2026-10-05T12:00:00.000Z');
+  const at = (minutes: number) =>
+    new Date(now.getTime() - minutes * 60_000).toISOString();
+
+  it('formats times relative up to a day, then as a date', async () => {
+    const i18n = TestBed.inject(I18n);
+
+    expect(ago(at(0.5), now, i18n)).toBe('acum');
+    expect(ago(at(5), now, i18n)).toBe('acum 5 min');
+    expect(ago(at(59), now, i18n)).toBe('acum 59 min');
+    expect(ago(at(60), now, i18n)).toBe('acum 1 h');
+    expect(ago(at(23 * 60 + 59), now, i18n)).toBe('acum 23 h');
+    // A day old, shown as its day in Bucharest (UTC+3 in October).
+    expect(ago('2026-10-03T22:30:00.000Z', now, i18n)).toBe('4 oct. 2026');
+
+    await i18n.use('en');
+    expect(ago(at(5), now, i18n)).toBe('5 min ago');
+    expect(ago(at(0.5), now, i18n)).toBe('just now');
   });
 });

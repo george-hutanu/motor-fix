@@ -27,3 +27,7 @@
 - Specs green: bell API 10/10; web dashboard 23 suites, 286 tests; i18n 506 (one hyphen in "s-au" changed to U+2011).
 - Dropped the kind → screen map: no current kind has a screen (spec Clarifications, FR-009 narrowed). (autonomous default)
 - Read one lowers the count locally instead of asking again; the `notification.read` event refreshes it.
+
+## Review (lap 1 of 5)
+- code-reviewer BLOCK, all patched: #1 Redis-down path of a read untested (test added); #2 two taps on "Mai multe" appended one page twice (the cursor is taken before the call); #3 failure toasts of read, read all and next page untested (tests added); #4 `ago` moved into bell-list.ts (no value import cycle); #5 exact readAt asserted; #6 a tap on a read row no longer calls the API; #7 FR → test names fixed.
+- spec-reviewer APPROVE: MEDIUM #2 a read in another tab left stale rows past page 1 (the list now restarts at the top; test added); LOW #4 a read that changed nothing no longer announces (test added). MEDIUM #1 `notification.read` published after the write, not through the outbox (Constitution VI): accepted as the same exception `notification.created` already takes (a lost nudge costs at most a 60-second-stale badge); recorded for the owner in the finish comment. LOW #3 opening a kind's screen and "Nu mai este disponibil" not built (no kind has a screen yet): recorded for the owner in the finish comment. (autonomous default)
