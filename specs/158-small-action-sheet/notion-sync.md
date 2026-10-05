@@ -16,3 +16,8 @@
 - 2026-10-04 · qa · Foundations timeline row ST-158 · In review → QA
 - 2026-10-04 · labels · PR #48 · QA
 - 2026-10-04 · debt · 3ef607bff0d28151b6c3e2f46752c29f (sign-in sheet e2e) · To do → Done (resolved in PR #48 after ST-82 merged)
+- 2026-10-04 · finish · ST-158 story Status · QA → Done
+- 2026-10-04 · finish · Foundations timeline row ST-158 · QA → Merged
+- 2026-10-04 · labels · PR #48 · none
+- 2026-10-04 · ready · EP-1 · +ST-516 −ST-502
+- 2026-10-04 · comment · ST-158 · posted (9 items)

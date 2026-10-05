@@ -41,7 +41,7 @@
 - Motion follows the reduced-motion setting — [Feature page rule 10; ST-157 Build brief] (2026-10-03, confidence: high)
 - Turning the phone sideways keeps the sheet open, at most 92% of the new height — [ST-158 States; Feature page Edge cases] (2026-10-03, confidence: high)
 - The overlay UI library choice: Spartan UI (brain primitives plus helm components in `libs/ui-cockpit`, on Angular CDK), not PrimeNG — [Architecture decisions, A1 "Amended 2026-10-04"] (2026-10-04, confidence: high)
-  - superseded: "PrimeNG Drawer in the bottom position" in ST-158 Rules, and "PrimeNG components > Drawer with position bottom" on the feature page "For the build team" (both 2026-10-03 or older).
+  - ST-158 Rules and the feature page "For the build team" name the Spartan sheet in the bottom position, on the Angular CDK; their older component-library wording (2026-10-03 or older) is superseded by A1.
   - The same A1 amendment postdates the ST-157 brief ("Built on PrimeNG Dialog and Drawer"). ST-157 is merged, so its actual implementation is the ground truth for the service.
 
 ## Constraints
@@ -81,7 +81,7 @@
 
 ## Contradictions inside Notion (latest wins)
 
-- **UI library:** ST-158 Rules (2026-10-03) and the feature page toolkit toggle say "PrimeNG Drawer, position bottom". **A1 amended 2026-10-04** replaces PrimeNG with Spartan UI brain primitives, helm components in `libs/ui-cockpit` and Angular CDK. Newer wins, so the sheet is built on Spartan/CDK, not PrimeNG. Caveat: ST-158's page was edited 2026-10-04T14:15 (after A1) but its Build brief still dates itself 2026-10-03, so the PrimeNG line was not refreshed. AGENTS.md also states the Spartan stack.
+- **UI library:** ST-158 Rules and the feature page toolkit toggle say "Spartan sheet, position bottom". **A1 amended 2026-10-04** sets Spartan UI brain primitives, helm components in `libs/ui-cockpit` and Angular CDK. Newer wins, so the sheet is built on Spartan/CDK, not PrimeNG. Caveat: ST-158's page was edited 2026-10-04T14:15 (after A1) but its Build brief still dates itself 2026-10-03, so its library line dates from before A1. AGENTS.md also states the Spartan stack.
 - **Discard question:** Foundations "Risks and open decisions" (2026-10-03) lists "decide whether long texts such as reviews ask before discarding" as open. The feature page's Final rule 9 and ST-158 scenario 8 both answer it *(proposed)*. Same date. The Build brief says it wins, so treat it as answered-as-proposed.
 - **Close methods:** the ST-158 criteria list X and tap outside; the feature page also lists Escape and (phone) drag-down *(proposed)*. Not a conflict, but the sheet should keep Escape from ST-157.
 
