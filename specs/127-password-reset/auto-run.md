@@ -24,3 +24,17 @@
 
 ## 5–8 Plan, checklist, tasks, analyze
 - plan.md (Complexity Tracking: a separate global module for the notifications cycle; the check call; the e2e reading the queued notification with `pg`); checklists/requirements.md 8/8; tasks.md 16 tasks; artifact-lint 0/0; capabilities validate clean.
+
+## 9 Tests (red first)
+- Merged `origin/081-confirm-email` (89759e0, already holding main) for the token table; the `frame.ts` conflict kept ST-81's `account.email_confirmed` reload.
+- Race found while writing FR-007: an old dashboard tab in the same browser, told `session.revoked`, would sign out with the new shared cookie. Decision: FR-013 — a dashboard forgets the tab's session locally, no sign-out call, no broadcast.
+- Red: 10 failed / 59 passed in 6 suites before the code.
+
+## 10 Implement
+- API (`PasswordResetModule`, ask/check/complete, `admitReset`, `password_changed` template, migration adding `password_reset`), web (forgot link, reset task, new-password task, `/:lang/reset-password/:token`), e2e reading the link from the queued notification.
+- Found by the local e2e: a no-body call's failure arrives as text, so `toProblem` never saw its code and an expired link read "unreachable". Fixed in `libs/overlays` (`toProblem` parses a text body), with a test.
+- Local: domain 60 suites / 2086 tests, web 45 / 717, api 6 / 67, e2e password-reset + sign-in 42 passed, typecheck 13 projects, Biome clean (3 pre-existing warnings).
+
+## 11 Review
+- spec-reviewer APPROVE (3 LOW: 2 deferred, plan line patched); code-reviewer APPROVE (3 MEDIUM, 4 LOW). Patched: announce before opening the session (+ test), sign-up's `refusal` reused, `ResetOptions` typed, `session.revoked` failure test, a restored spy. Decision taken: response timing for known vs unknown addresses accepted and recorded (spec Assumptions, deferred.md).
+- Built-in browser walk: 320 px light RO dialog → reset task with the e-mail carried → sent; 390 px dark link → new password → signed in at /app/driver; tablet light EN used link → "The link has expired"; desktop dark RO → "Cere un link nou" → reset task. No sideways scroll.
