@@ -9,3 +9,5 @@
 - 2026-10-05 · implement · ST-603 story Status · Planning → Implementing
 - 2026-10-05 · implement · Foundations timeline · no row for ST-603
 - 2026-10-05 · labels · PR #109 · in development
+- 2026-10-05 · qa · ST-603 story Status · Implementing → QA
+- 2026-10-05 · labels · PR #109 · QA
