@@ -23,7 +23,12 @@ export type { NotificationPreferencesDto } from './models/notification-preferenc
 export type { PasswordResetCheckDto } from './models/password-reset-check-dto';
 export type { PasswordResetCompleteDto } from './models/password-reset-complete-dto';
 export type { PasswordResetDto } from './models/password-reset-dto';
+export type { PushKeyDto } from './models/push-key-dto';
+export type { PushKeysDto } from './models/push-keys-dto';
+export type { PushSubscriptionDto } from './models/push-subscription-dto';
+export type { PushTestQueuedDto } from './models/push-test-queued-dto';
 export type { RefreshDto } from './models/refresh-dto';
+export type { SavePushSubscriptionDto } from './models/save-push-subscription-dto';
 export type { SendNewsDto } from './models/send-news-dto';
 export type { SessionDto } from './models/session-dto';
 export type { SignInDto } from './models/sign-in-dto';

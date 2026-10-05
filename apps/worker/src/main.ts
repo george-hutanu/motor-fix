@@ -6,6 +6,7 @@ import {
   NotificationsModule,
   OutboxRelayModule,
   phoneConfig,
+  pushConfig,
   RemindersModule,
   reminderDayMs,
   StorageModule,
@@ -24,6 +25,7 @@ async function bootstrap() {
     databaseUrl: env.DATABASE_URL,
     email: emailConfig(env.APP_ENV, process.env),
     phone: phoneConfig(env.APP_ENV, process.env),
+    push: pushConfig(process.env),
     redisUrl: env.REDIS_URL,
   });
 

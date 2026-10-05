@@ -19,8 +19,6 @@ import { NewsService } from './news.service';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsProcessor, retryDelay } from './notifications.processor';
 import {
-  EMAIL_FALLBACK,
-  type EmailFallback,
   LIVE_PUBLISHER,
   NOTIFICATIONS_CONFIG,
   NOTIFICATIONS_JOBS,
@@ -31,6 +29,10 @@ import {
 import { PHONE_CONFIG, type PhoneConfig } from './phone-config';
 import { NotificationPreferencesController } from './preferences.controller';
 import { NotificationPreferencesService } from './preferences.service';
+import { PUSH_SENDER, PushSender } from './push';
+import { PUSH_CONFIG, type PushConfig } from './push-config';
+import { PushSubscriptionsController } from './push-subscriptions.controller';
+import { PushSubscriptionsService } from './push-subscriptions.service';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { createPrisma, PRISMA } from '../auth/prisma';
@@ -40,12 +42,11 @@ interface NotificationsOptions {
   databaseUrl: string;
   redisUrl: string;
   email: EmailConfig;
+  // The VAPID identity; null (the default) leaves push off.
+  push?: PushConfig | null;
 }
 
 const WORKER = Symbol('NOTIFICATIONS_WORKER');
-
-// No channel takes over from a failed e-mail yet.
-const noFallback: EmailFallback = async () => undefined;
 
 function shared(options: NotificationsOptions, prisma: Provider): Provider[] {
   return [
@@ -60,7 +61,7 @@ function shared(options: NotificationsOptions, prisma: Provider): Provider[] {
         }),
     },
     { provide: LIVE_PUBLISHER, useFactory: () => new Redis(options.redisUrl) },
-    { provide: EMAIL_FALLBACK, useValue: noFallback },
+    { provide: PUSH_CONFIG, useValue: options.push ?? null },
     { provide: AUDIT_PORT, useClass: AuditService },
   ];
 }
@@ -88,6 +89,7 @@ export class NotificationsModule implements OnApplicationShutdown {
         BrevoWebhookController,
         NotificationPreferencesController,
         NewsController,
+        PushSubscriptionsController,
       ],
       exports: [NotificationsService],
       imports: [auth],
@@ -101,12 +103,13 @@ export class NotificationsModule implements OnApplicationShutdown {
         BellService,
         NotificationPreferencesService,
         NewsService,
+        PushSubscriptionsService,
       ],
     };
   }
 
   // The worker: the same entry point plus the queue's consumer, which also
-  // sends SMS and WhatsApp. The reminders send through its service and
+  // sends SMS, WhatsApp and push. The reminders send through its service and
   // share its PostgreSQL pool.
   static registerWorker(
     options: NotificationsOptions & { phone: PhoneConfig },
@@ -121,6 +124,10 @@ export class NotificationsModule implements OnApplicationShutdown {
         }),
         NotificationsProcessor,
         { provide: PHONE_CONFIG, useValue: options.phone },
+        {
+          provide: PUSH_SENDER,
+          useValue: options.push ? new PushSender(options.push) : null,
+        },
         {
           provide: Brevo,
           useFactory: () =>
