@@ -20,7 +20,7 @@ import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { AuditHistoryController } from '../audit/audit-history.controller';
 import { AuditHistoryService } from '../audit/audit-history.service';
-import { EVENT_PORT, noEvents } from '../events/event.port';
+import { EVENT_PORT, outbox } from '../events/event.port';
 import type { PrismaClient } from '../generated/prisma/client';
 
 function connect(url: string) {
@@ -46,7 +46,7 @@ export class AuthModule implements OnApplicationShutdown {
   static register(options: AuthOptions): DynamicModule {
     return {
       controllers: [AuthController, MeController, AuditHistoryController],
-      exports: [AccountsService, AUTH_OPTIONS, AUTH_REDIS, PRISMA],
+      exports: [AccountsService, AUTH_OPTIONS, AUTH_REDIS, EVENT_PORT, PRISMA],
       // One actor check for every route of the app, and one client.
       global: true,
       module: AuthModule,
@@ -71,7 +71,7 @@ export class AuthModule implements OnApplicationShutdown {
         },
         { provide: MAINTENANCE, useValue: maintenanceOff },
         { provide: AUDIT_PORT, useClass: AuditService },
-        { provide: EVENT_PORT, useValue: noEvents },
+        { provide: EVENT_PORT, useValue: outbox },
       ],
     };
   }

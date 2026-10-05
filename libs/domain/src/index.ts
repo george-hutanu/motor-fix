@@ -5,6 +5,7 @@ export { AuthModule } from './auth/auth.module';
 export { EmailConfirmationModule } from './auth/email-confirmation.module';
 export { type Actor, assertGarage, assertOwner } from './auth/policy';
 export { EventsModule } from './events/events.module';
+export { OutboxRelayModule } from './events/outbox-relay.module';
 export * from './health/health.module';
 export * from './logging';
 export { emailConfig } from './notifications/email-config';

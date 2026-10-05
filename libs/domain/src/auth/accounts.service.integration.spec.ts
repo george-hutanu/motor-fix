@@ -133,6 +133,7 @@ describe('createAccount', () => {
     expect(events.record).toHaveBeenCalledTimes(1);
     const [eventTx, event] = events.record.mock.calls[0] ?? [];
     expect(event).toEqual({
+      audience: { accountId: id, type: 'account' },
       kind: 'account.created',
       payload: {
         accountId: id,

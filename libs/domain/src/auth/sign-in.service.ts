@@ -198,6 +198,7 @@ export class SignInService {
         subjectType: 'account',
       });
       await this.events.record(tx, {
+        audience: { accountId: account.id, type: 'account' },
         kind: 'account.signed_out_everywhere',
         payload: { accountId: account.id },
         subjectId: account.id,

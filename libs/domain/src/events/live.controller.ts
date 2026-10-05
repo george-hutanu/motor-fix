@@ -6,7 +6,6 @@ import {
   Controller,
   Get,
   HttpCode,
-  HttpException,
   HttpStatus,
   Inject,
   NotFoundException,
@@ -23,7 +22,7 @@ import {
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 
-import { audienceOf } from './audience';
+import { EVENT_PORT, type EventPort } from './event.port';
 import { LiveHub } from './live.hub';
 import { verifyAccessToken } from '../auth/access-token';
 import {
@@ -44,6 +43,7 @@ export class LiveController {
     private readonly hub: LiveHub,
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(AUTH_OPTIONS) private readonly auth: AuthOptions,
+    @Inject(EVENT_PORT) private readonly events: EventPort,
   ) {}
 
   @Get('live')
@@ -78,29 +78,24 @@ export class LiveController {
   @HttpCode(HttpStatus.ACCEPTED)
   // In the guard, so a non-admin gets 404 before the body is validated.
   @Requires('admin.users')
-  @ApiAcceptedResponse({ description: 'The test update was published' })
+  @ApiAcceptedResponse({
+    description: 'The test update was recorded; the relay sends it',
+  })
   async test(@Body() body: LiveTestDto) {
-    const target = await this.prisma.account.findUnique({
-      select: { id: true },
-      where: { id: body.accountId },
+    await this.prisma.$transaction(async (tx) => {
+      const target = await tx.account.findUnique({
+        select: { id: true },
+        where: { id: body.accountId },
+      });
+      if (!target) throw new NotFoundException();
+      // A fresh id: the update is about nothing a screen would re-read.
+      await this.events.record(tx, {
+        audience: { accountId: target.id, type: 'account' },
+        kind: 'live.test',
+        payload: {},
+        subjectId: randomUUID(),
+      });
     });
-    if (!target) throw new NotFoundException();
-    const event = {
-      at: new Date().toISOString(),
-      id: randomUUID(),
-      kind: 'live.test',
-    };
-    try {
-      await this.hub.publish(
-        event,
-        audienceOf({ accountId: target.id, type: 'account' }),
-      );
-    } catch {
-      throw new HttpException(
-        { code: 'live_unavailable', message: 'Live updates are unavailable' },
-        HttpStatus.SERVICE_UNAVAILABLE,
-      );
-    }
   }
 
   private async channels(actor: Actor) {
