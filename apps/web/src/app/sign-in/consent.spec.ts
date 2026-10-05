@@ -57,4 +57,35 @@ describe('the consent tick in any account form', () => {
 
     expect(element.textContent).not.toContain('Bifează pentru a continua.');
   });
+
+  it('gives two ticks on one page their own error message', async () => {
+    @Component({
+      imports: [Consent],
+      template: `
+        <mf-consent [control]="first" [save]="save" />
+        <mf-consent [control]="second" [save]="save" errorId="second-consent-error" />
+      `,
+    })
+    class TwoTicks {
+      readonly first = consentControl();
+      readonly second = consentControl();
+      readonly save = taskSave({
+        form: new FormGroup({ first: this.first, second: this.second }),
+        send: async () => 'ok',
+      });
+    }
+    await TestBed.inject(I18n).enter('public');
+    const fixture = TestBed.createComponent(TwoTicks);
+    fixture.autoDetectChanges();
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+
+    const described = [...element.querySelectorAll('input')].map((box) =>
+      box.getAttribute('aria-describedby'),
+    );
+    expect(new Set(described).size).toBe(2);
+    for (const id of described) {
+      expect(element.querySelectorAll(`[id="${id}"]`)).toHaveLength(1);
+    }
+  });
 });

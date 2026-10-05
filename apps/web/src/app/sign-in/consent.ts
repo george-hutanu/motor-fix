@@ -35,7 +35,7 @@ export const consentControl = () =>
       <input
         type="checkbox"
         [formControl]="control()"
-        aria-describedby="mf-consent-error"
+        [attr.aria-describedby]="errorId()"
         [attr.aria-invalid]="invalid() || null"
       />
       <span
@@ -44,12 +44,14 @@ export const consentControl = () =>
         >{{ 'public.consent.after' | t }}</span
       >
     </label>
-    <p id="mf-consent-error" class="error">@if (invalid()) {{{ 'public.consent.required' | t }}}</p>
+    <p [id]="errorId()" class="error">@if (invalid()) {{{ 'public.consent.required' | t }}}</p>
   `,
 })
 export class Consent {
   readonly control = input.required<FormControl<boolean>>();
   readonly save = input.required<TaskSave<unknown>>();
+  // A page holding two ticks gives each its own.
+  readonly errorId = input('mf-consent-error');
 
   protected readonly lang = inject(I18n).language;
   protected readonly invalid = computed(

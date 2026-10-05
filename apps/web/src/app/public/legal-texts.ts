@@ -7,7 +7,7 @@ import { PRIVACY_VERSION, TERMS_VERSION } from '@motor-fix/contracts/consent';
 
 export type LegalText = 'terms' | 'privacy';
 type Section = { heading: string; paragraphs: readonly string[] };
-type Document = {
+type LegalDocument = {
   title: string;
   version: string;
   sections: readonly Section[];
@@ -21,7 +21,10 @@ export const LEGAL_LABELS = {
   },
 } as const;
 
-export const LEGAL_TEXTS: Record<'ro' | 'en', Record<LegalText, Document>> = {
+export const LEGAL_TEXTS: Record<
+  'ro' | 'en',
+  Record<LegalText, LegalDocument>
+> = {
   en: {
     privacy: {
       sections: [
