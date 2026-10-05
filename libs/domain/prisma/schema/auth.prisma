@@ -57,6 +57,7 @@ model Account {
   notificationPreferences NotificationPreference[]
   smsCounters             SmsCounter[]
   tokens                  AccountToken[]
+  reminders               Reminder[]
 
   @@map("account")
 }
