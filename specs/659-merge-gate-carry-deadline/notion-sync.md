@@ -11,3 +11,6 @@
 - 2026-10-05 · implement · Foundations timeline row ST-659 · Planning → Implementing
 - 2026-10-05 · labels · PR #137 · planning → in development
 - 2026-10-05 · debt · ST-659 · 3 filed (Decision 3f0607bff0d2819b9492f3e7e9eaf6c1, Tech debt 3f0607bff0d281f9ab4ec33f8647dccb, 3f0607bff0d281e4acfcdda5dfb5acce)
+- 2026-10-05 · qa · ST-659 · Implementing → QA
+- 2026-10-05 · qa · Foundations timeline row ST-659 · Implementing → QA
+- 2026-10-05 · labels · PR #137 · in development → QA
