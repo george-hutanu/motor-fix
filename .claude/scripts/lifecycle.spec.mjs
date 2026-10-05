@@ -1,6 +1,6 @@
-import { describe, it, beforeEach } from 'vitest';
+import { afterEach, describe, it, beforeEach } from 'vitest';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -394,8 +394,48 @@ describe('gates, main and identity', () => {
   });
 });
 
-describe('review lap 1', () => {
+afterEach(() => {
+  if (repo) rmSync(repo, { recursive: true, force: true });
+});
+
+describe('temp files, the token stop, reruns and the finish order', () => {
   beforeEach(() => fixture());
+
+  it('removes the temp files when gh pr create or gh pr comment fails', () => {
+    let body = '';
+    const o = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '' }], ['gh pr create', (cmd) => { body = cmd.match(/--body-file (\S+)/)[1]; return { code: 1, stderr: 'boom' }; }]] });
+    assert.equal(step(['open', '--title', TITLE], o.io).ok, false);
+    assert.ok(body && !existsSync(body), body);
+    let finish = '';
+    const m = harness({ answers: [['gh pr comment', (cmd) => { finish = cmd.match(/--body-file (\S+)/)[1]; return { code: 1, stderr: 'boom' }; }]] });
+    assert.equal(step(['merge', '--pr', '141'], m.io).ok, false);
+    assert.ok(finish && !existsSync(finish), finish);
+  });
+
+  it('keeps the finish comment and names the command that posts it when the comment fails', () => {
+    writeFileSync(join(featureDir, 'handoff.md'), 'note\n');
+    const h = harness({ answers: [['git diff -U0', { stdout: '+- 2026-10-05 · finish · ST-696 · QA → Done\n' }], ['gh pr comment', { code: 1, stderr: 'HTTP 502' }]] });
+    const result = step(['merge', '--pr', '141'], h.io);
+    assert.equal(result.ok, false);
+    assert.match(readFileSync(result.comment, 'utf8'), /finish · ST-696 · QA → Done/);
+    assert.equal(result.then, `gh pr comment 141 --body-file ${result.comment} && rm -f ${join(featureDir, 'handoff.md')}`);
+    assert.ok(existsSync(join(featureDir, 'handoff.md')));
+    rmSync(result.comment, { force: true });
+  });
+
+  it('ready takes the commit ST from the PR title', () => {
+    const body = join(repo, 'body.md');
+    writeFileSync(body, '## Why\n');
+    let i = 0;
+    const h = harness({
+      answers: [
+        ['git diff --cached --quiet', () => ({ code: i++ === 0 ? 1 : 0 })],
+        [`gh pr view ${BRANCH} --json`, { stdout: JSON.stringify({ number: 141, title: 'fix(web): ST-702 a fix', isDraft: true, url: PR_URL }) }],
+      ],
+    });
+    step(['ready', '--body-file', body], h.io);
+    assert.ok(h.calls.includes('git commit -m chore(specs): ST-702 feature records'), h.calls.join('\n'));
+  });
 
   it('removes the draft body temp file after gh pr create', () => {
     let file = '';

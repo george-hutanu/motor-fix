@@ -228,6 +228,7 @@ function ready(ctx, flags) {
   const view = ctx.ghTry("pr", "view", ctx.branch, "--json", "number,title,isDraft,url");
   if (view.code !== 0) throw new Stop(`gh pr view ${ctx.branch}`, `the branch has no PR: run ${SELF} open --title "<title>" first`);
   const pr = JSON.parse(view.stdout);
+  ctx.story = /: (ST-\d+) /.exec(pr.title)?.[1] ?? ctx.story;
   const rerun = [SELF, "ready", "--body-file", quote(bodyFile), ...(flags.decisions ? ["--decisions", quote(flags.decisions)] : []), "--notion-done"].join(" ");
   const deferredFile = join(ctx.feature.dir, "deferred.md");
   const unfiled = existsSync(deferredFile) ? parseDeferred(readFileSync(deferredFile, "utf8")).filter((e) => e.pending) : [];
@@ -281,8 +282,18 @@ function merge(ctx, flags) {
   const lines = ctx.git("diff", "-U0", "--", log).stdout.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++")).map((l) => l.slice(1));
   const body = ["## Finish log", "", `Merged as ${sha}.`, ...(hasComment ? ["", readFileSync(commentFile, "utf8").trim()] : []), "", ...lines, ""].join("\n");
   // Restore the log first: a rerun after a failed restore must not post twice.
+  // If the comment then fails, its body (with the restored lines) is kept in a
+  // file and `then` posts exactly that, so nothing is lost and nothing repeats.
   ctx.git("checkout", "--", log);
-  withTemp("finish.md", body, (file) => ctx.gh("pr", "comment", n, "--body-file", file));
+  try {
+    withTemp("finish.md", body, (file) => ctx.gh("pr", "comment", n, "--body-file", file));
+  } catch (err) {
+    if (!(err instanceof Stop)) throw err;
+    const kept = join(mkdtempSync(join(tmpdir(), "lifecycle-")), "finish.md");
+    writeFileSync(kept, body);
+    err.extra = { ...err.extra, comment: kept, then: `gh pr comment ${n} --body-file ${quote(kept)} && rm -f ${quote(join(ctx.feature.dir, "handoff.md"))}` };
+    throw err;
+  }
   ctx.did.push("finish comment");
   rmSync(join(ctx.feature.dir, "handoff.md"), { force: true });
   ctx.did.push("handoff.md removed");
