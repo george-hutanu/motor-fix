@@ -21,7 +21,7 @@ jobs:
       worker: ${{ steps.worker.outputs.digest }}
       mcp: ${{ steps.mcp.outputs.digest }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -29,7 +29,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: web
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           build-args: |
             APP=web
@@ -38,7 +38,7 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}-web:${{ github.sha }}
       - id: api
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           build-args: |
             APP=api
@@ -47,7 +47,7 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}-api:${{ github.sha }}
       - id: worker
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           build-args: |
             APP=worker
@@ -56,7 +56,7 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}-worker:${{ github.sha }}
       - id: mcp
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           build-args: |
             APP=mcp
@@ -83,7 +83,7 @@ jobs:
       RAILWAY_SERVICE_API: ${{ vars.RAILWAY_SERVICE_API }}
       RAILWAY_SERVICE_WORKER: ${{ vars.RAILWAY_SERVICE_WORKER }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
@@ -123,7 +123,7 @@ jobs:
       RAILWAY_SERVICE_API: ${{ vars.RAILWAY_SERVICE_API }}
       RAILWAY_SERVICE_WORKER: ${{ vars.RAILWAY_SERVICE_WORKER }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
