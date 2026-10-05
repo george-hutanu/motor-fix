@@ -10,3 +10,6 @@
 - 2026-10-05 · implement · timeline row ST-698 (Foundations, 3f0607bf-f0d2-8189-8bcc-eab5d0b103d7) · Planning → Implementing
 - 2026-10-05 · labels · PR #142 · in development
 - 2026-10-05 · debt · ST-698 · 2 To do tasks filed: 3f0607bf-f0d2-816f-aa70-d4c383db0db6 (web re-lap measurement), 3f0607bf-f0d2-8115-888f-ea9f81cabc29 (baseline before-rule without --run)
+- 2026-10-05 · qa · ST-698 · Implementing → QA
+- 2026-10-05 · qa · timeline row ST-698 (Foundations, 3f0607bf-f0d2-8189-8bcc-eab5d0b103d7) · Implementing → QA
+- 2026-10-05 · labels · PR #142 · QA
