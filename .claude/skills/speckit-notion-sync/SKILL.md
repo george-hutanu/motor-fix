@@ -175,10 +175,12 @@ writes are skipped. Removing a label the PR does not have is harmless.
 ## 2c. `debt`: file deferred technical debt as tasks
 
 Every bullet in `specs/<feature>/deferred.md` — a finding spec-reviewer,
-code-reviewer or the PR tester routed to defer — becomes one task. The space
-has no separate tasks database, so it is a row in MotorFix stories with Issue
-type Task, Role System, Status To do, the story's Epic (and Feature when known),
-filed the way ST-431–ST-434 are.
+code-reviewer or the PR tester routed to defer — becomes one row in MotorFix
+stories with Role System, Status To do, the story's Epic (and Feature when
+known). Its Issue type is **Tech debt**, or **Decision** when the bullet says
+"decision" or "open question" (it waits on the owner, not on code). Each has
+its own view of the database: the **Tech debt** board and **Decisions to take**;
+the story views leave both out.
 
 ```bash
 node .claude/scripts/debt-tasks.mjs plan specs/<feature>/deferred.md \
