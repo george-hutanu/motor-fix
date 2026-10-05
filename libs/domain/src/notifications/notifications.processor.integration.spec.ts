@@ -707,7 +707,9 @@ describe('two send jobs for one row', () => {
     const row = await quote(andrei, 'evt-1');
     processor.now = at('2026-10-05T11:00:30Z');
     await claim(row.id, new Date('2026-10-05T11:00:00Z'));
-    await expect(sendJob(row.id)).rejects.toThrow();
+    await expect(sendJob(row.id)).rejects.toThrow(
+      'is being sent by another job',
+    );
     expect(mock.emails()).toEqual([]);
     expect((await emailRows(andrei))[0]).toMatchObject({
       claimedAt: new Date('2026-10-05T11:00:00Z'),
@@ -720,7 +722,9 @@ describe('two send jobs for one row', () => {
     const row = await quote(andrei, 'evt-1');
     await claim(row.id, new Date('2026-10-05T11:00:00Z'));
     processor.now = at('2026-10-05T11:00:30Z');
-    await expect(sendJob(row.id)).rejects.toThrow();
+    await expect(sendJob(row.id)).rejects.toThrow(
+      'is being sent by another job',
+    );
     processor.now = at('2026-10-05T11:01:01Z');
     await sendJob(row.id, 1);
     expect(mock.emails()).toHaveLength(1);

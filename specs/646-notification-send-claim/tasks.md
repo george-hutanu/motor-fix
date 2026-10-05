@@ -15,6 +15,11 @@
 - [X] T006 [US1] `libs/domain/prisma/schema/notifications.prisma` + migration: nullable `claimed_at` on `notification` (FR-001)
 - [X] T007 [US1] `libs/domain/src/notifications/notifications.processor.ts`: `send()` claims the row before reading it, fails when another job holds it, releases its claim when it ends (FR-001–FR-004)
 
+## Phase 2b: Hardening and review
+
+- [X] T009 [US1] `libs/domain/src/notifications/send-claim.adversary.integration.spec.ts`: 21 tests from outside (5–10 jobs at once, SMS/WhatsApp rows, the SMS cap, deleted account, sending off, the lease boundary, a hung Brevo call taken over) (FR-001–FR-004)
+- [X] T010 Review patches: a claim exactly the lease old is live (`lt`), asserted; the collision tests assert the error's message; out-of-scope findings in `deferred.md`
+
 ## Phase 3: Proof
 
 - [X] T008 domain tests, `npm run typecheck` and `npm run lint` green (SC-001–SC-003)
@@ -23,7 +28,7 @@
 
 | FR | Proof |
 |---|---|
-| FR-001 | processor integration spec › T001, T002 |
+| FR-001 | processor integration spec › T001, T002; adversary spec › concurrent jobs |
 | FR-002 | › T003 |
-| FR-003 | › T004 |
+| FR-003 | › T004; adversary spec › lease boundary (59.999 s, 60 s, 60.001 s) |
 | FR-004 | › T005 |
