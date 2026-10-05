@@ -4,6 +4,7 @@ updated: 2026-10-05
 features:
   - 253-live-connection
   - 254-live-audience
+  - 257-live-events
 ---
 
 # Capability: Live updates
@@ -56,9 +57,9 @@ _From 253-live-connection._
 
 _From 253-live-connection._
 
-### 253-FR-012 — `POST /api/v1/admin/live/test` with an account id MUST publish a `live.test` event to `account:{accountId}` for a MotorFix admin; a call with no valid token MUST get 401 and a signed-in non-admin 404; an unknown account MUST get 404; with Redis unavailable it MUST answer 503.
+### 257-FR-010 — `POST /api/v1/admin/live/test` with an account id MUST record a `live.test` event for that account through the outbox in one transaction and answer 202 for a MotorFix admin; a call with no valid token MUST get 401, a signed-in non-admin 404, and an unknown account 404. The account's open dashboards MUST show the test toast within 2 seconds while the worker runs.
 
-_From 253-live-connection._
+_From 257-live-events._
 
 ### 253-FR-013 — The web app MUST open one live connection per browser tab on a signed-in dashboard, reading the stream with the access token in the `Authorization` header, and MUST close it at sign-out or when the dashboard frame is destroyed; moving between views inside the frame keeps it; no connection is opened during server rendering.
 
@@ -120,6 +121,48 @@ _From 254-live-audience._
 
 _From 254-live-audience._
 
+### 257-FR-001 — The backend MUST offer one call that records an event (kind, subject id, payload, subject) inside the caller's transaction, writing one OUTBOX_EVENT row with the audience worked out from the subject (254-FR-001), so the change and its event commit or roll back together.
+
+_From 257-live-events._
+
+### 257-FR-002 — The worker's relay MUST read unrelayed OUTBOX_EVENT rows in ascending id order, publish each to Redis `live:events` as `{ event: { kind, id: subject id, at: created at }, audience }`, and set `relayed_at`, polling every 200 ms.
+
+_From 257-live-events._
+
+### 257-FR-003 — When publishing fails, the relay MUST leave the rows unrelayed and retry them, oldest first, on the next poll; a row whose `relayed_at` was not saved MUST be published again (at least once).
+
+_From 257-live-events._
+
+### 257-FR-004 — Two relays polling at once MUST each relay a different row set (`FOR UPDATE SKIP LOCKED`), so each row is relayed once.
+
+_From 257-live-events._
+
+### 257-FR-005 — For each relayed event whose kind has registered consumers, the relay MUST add one job per consumer to that consumer's queue, with the job id derived from the event id, so a second relay of the same event adds no second job.
+
+_From 257-live-events._
+
+### 257-FR-006 — Every event kind of the Backend architecture events list, plus `account.signed_out_everywhere` and `live.test`, MUST be named in one typed catalogue in the shared contracts library; recording or subscribing to a kind outside it MUST fail to compile.
+
+_From 257-live-events._
+
+### 257-FR-007 — The relay MUST delete relayed rows older than 7 days, and MUST log an error when the oldest waiting row is older than 30 seconds, at most once every 30 seconds.
+
+_From 257-live-events._
+
+### 257-FR-008 — The web app's live service MUST let a view subscribe to a list of kinds, optionally for one object id, and receive only the matching events.
+
+_From 257-live-events._
+
+### 257-FR-009 — The web app MUST offer a helper that loads a view's data through the API and re-reads it when a matching event arrives, collapsing the events of 300 ms into one re-read.
+
+_From 257-live-events._
+
+### 257-FR-011 — Account sign-up (`account.created`) and sign-out everywhere (`account.signed_out_everywhere`) MUST record their events through the outbox, with the account as their subject.
+
+_From 257-live-events._
+
 ## Retired
 
 - `253-FR-006` — superseded by `254-FR-013` (2026-10-05)
+
+- `253-FR-012` — superseded by `257-FR-010` (2026-10-05)

@@ -1,7 +1,19 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Injectable, inject, PLATFORM_ID } from '@angular/core';
-import type { LiveByeReason, LiveMessage } from '@motor-fix/contracts';
-import { Subject } from 'rxjs';
+import {
+  DestroyRef,
+  Injectable,
+  inject,
+  PLATFORM_ID,
+  type ResourceRef,
+  resource,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import type {
+  EventKind,
+  LiveByeReason,
+  LiveMessage,
+} from '@motor-fix/contracts';
+import { debounceTime, filter, type Observable, Subject } from 'rxjs';
 
 import { Session } from './session';
 
@@ -47,6 +59,17 @@ export class Live {
   close() {
     this.current?.abort();
     this.current = null;
+  }
+
+  // The events of these kinds, about one object when an id is given.
+  on(
+    kinds: readonly EventKind[],
+    { id }: { id?: string } = {},
+  ): Observable<LiveMessage> {
+    const wanted: ReadonlySet<string> = new Set(kinds);
+    return this.events.pipe(
+      filter((m) => wanted.has(m.kind) && (id === undefined || m.id === id)),
+    );
   }
 
   // One renew-and-reconnect after the server says it ended the stream for a
@@ -115,4 +138,24 @@ export class Live {
     }
     return reason;
   }
+}
+
+// A view's data, read through the API and read again when an event of these
+// kinds arrives about the object it shows; a burst of 300 ms is one re-read.
+// Call it in an injection context.
+export function liveResource<T>(
+  load: () => Promise<T>,
+  kinds: readonly EventKind[],
+  id: () => string,
+): ResourceRef<T | undefined> {
+  const ref = resource({ loader: load });
+  inject(Live)
+    .on(kinds)
+    .pipe(
+      filter((m) => m.id === id()),
+      debounceTime(300),
+      takeUntilDestroyed(inject(DestroyRef)),
+    )
+    .subscribe(() => ref.reload());
+  return ref;
 }

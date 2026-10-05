@@ -7,6 +7,7 @@ export { type Actor, assertGarage, assertOwner } from './auth/policy';
 export { RemindersModule } from './cars/reminders.module';
 export { reminderDayMs } from './cars/reminders-config';
 export { EventsModule } from './events/events.module';
+export { OutboxRelayModule } from './events/outbox-relay.module';
 export * from './health/health.module';
 export * from './logging';
 export { emailConfig } from './notifications/email-config';

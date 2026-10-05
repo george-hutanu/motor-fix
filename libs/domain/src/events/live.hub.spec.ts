@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 
-import { LIVE_CHANNEL, LiveHub } from './live.hub';
+import { LIVE_CHANNEL, LiveHub, publishLive } from './live.hub';
 
 class Sink extends EventEmitter {
   chunks: string[] = [];
@@ -37,7 +37,7 @@ let hub: LiveHub;
 beforeEach(() => {
   jest.useFakeTimers({ now: NOW });
   publish = jest.fn(async () => 1);
-  hub = new LiveHub({ publish }, async () => ({
+  hub = new LiveHub(async () => ({
     mechanics: new Map(),
     off: new Set(),
     owners: new Set(['g1']),
@@ -278,7 +278,7 @@ describe('LiveHub', () => {
   });
 
   it('publishes an event with its audience on the one fan-out channel', async () => {
-    await hub.publish(testEvent, ['account:a1']);
+    await publishLive({ publish }, testEvent, ['account:a1']);
 
     expect(publish).toHaveBeenCalledWith(
       LIVE_CHANNEL,
@@ -290,6 +290,8 @@ describe('LiveHub', () => {
   it('lets a failed publish reach the caller', async () => {
     publish.mockRejectedValueOnce(new Error('Connection is closed.'));
 
-    await expect(hub.publish(testEvent, ['account:a1'])).rejects.toThrow();
+    await expect(
+      publishLive({ publish }, testEvent, ['account:a1']),
+    ).rejects.toThrow();
   });
 });

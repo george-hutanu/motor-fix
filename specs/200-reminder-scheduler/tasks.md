@@ -5,7 +5,7 @@
 
 ## Phase 1: Setup
 
-- [X] T001 Prisma: `libs/domain/prisma/schema/cars.prisma` (new) `ReminderKind` and `Reminder`, `Account.reminders` in `auth.prisma`; migration `libs/domain/prisma/migrations/20261005150000_reminders/migration.sql` with one row per car and kind, one per booking, and a check that a reminder is about a car or a booking; regenerate the client (FR-001)
+- [X] T001 Prisma: `libs/domain/prisma/schema/cars.prisma` (new) `ReminderKind` and `Reminder`, `Account.reminders` in `auth.prisma`; migration `libs/domain/prisma/migrations/20261005160000_reminders/migration.sql` with one row per car and kind, one per booking, and a check that a reminder is about a car or a booking; regenerate the client (FR-001)
 
 ## Phase 2: Foundational
 

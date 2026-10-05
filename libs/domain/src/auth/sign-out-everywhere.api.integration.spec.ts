@@ -192,6 +192,7 @@ describe('signing out on all devices', () => {
     ).toBe(204);
     expect(recorded).toEqual([
       {
+        audience: { accountId: id, type: 'account' },
         kind: 'account.signed_out_everywhere',
         payload: { accountId: id },
         subjectId: id,

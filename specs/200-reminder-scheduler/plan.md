@@ -10,7 +10,7 @@ A `reminders` BullMQ queue in the worker runs one job a day at 09:00 Europe/Buch
 
 - **Language/Version**: TypeScript (root `tsconfig.base.json`), Node 24, NestJS 12 (ESM-only; Jest with `--experimental-vm-modules`).
 - **Primary Dependencies**: `bullmq` 6.3.11 and `ioredis` 6.0.0 (`package.json`), already used by the notifications queue; Prisma 7.10.0. No new dependency.
-- **Storage**: PostgreSQL: migration `20261005150000_reminders` creates `reminder` (enum `reminder_kind`), with a foreign key to `account` (cascade) unique (car_id, kind) and unique booking_id, and a check that a row is about a car or a booking. Redis: the `reminders` queue.
+- **Storage**: PostgreSQL: migration `20261005160000_reminders` creates `reminder` (enum `reminder_kind`), with a foreign key to `account` (cascade) unique (car_id, kind) and unique booking_id, and a check that a row is about a car or a booking. Redis: the `reminders` queue.
 - **Testing**: Jest from the root preset: unit specs for the local-time clock and the stage rule; `*.integration.spec.ts` for the run, the hooks, the timers and the worker against PostgreSQL and Redis (Redis databases 3 and 4).
 - **Target Platform**: `apps/worker` (Railway).
 - **Constraints**: Europe/Bucharest local time across 25 Oct 2026 and 28 Mar 2027; shortened days never in staging or production.
@@ -26,7 +26,7 @@ A `reminders` BullMQ queue in the worker runs one job a day at 09:00 Europe/Buch
 ```
 libs/domain/prisma/schema/cars.prisma                 (new) ReminderKind, Reminder
 libs/domain/prisma/schema/auth.prisma                 Account.reminders
-libs/domain/prisma/migrations/20261005150000_reminders/migration.sql (new)
+libs/domain/prisma/migrations/20261005160000_reminders/migration.sql (new)
 libs/domain/src/bucharest.ts                          (new) local(), atLocal(), addDays(), daysBetween()
 libs/domain/src/notifications/quiet-hours.ts          uses bucharest.ts
 libs/domain/src/scheduler/daily.ts                    (new) DailyClock: bucharestDaily(), shortenedDaily(), nextRun(), runDue()
