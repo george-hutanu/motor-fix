@@ -37,7 +37,8 @@
       "!libs/data-access/src/lib",
       "!libs/domain/src/generated",
       "!apps/web-e2e/test-output",
-      "!!.claude/worktrees"
+      "!!.claude/worktrees",
+      "!!.worktrees"
     ]
   },
   "formatter": {
