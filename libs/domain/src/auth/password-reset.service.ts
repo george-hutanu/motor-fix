@@ -1,6 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  type BeforeApplicationShutdown,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 
 import { Attempts } from './attempts';
 import { hashToken, newToken } from './email-confirmation';
@@ -42,8 +48,9 @@ const reason = (error: unknown) =>
 // "Ai uitat parola?": a 60-minute, single-use link to the account's address,
 // then a new password that ends every other session.
 @Injectable()
-export class PasswordResetService {
+export class PasswordResetService implements BeforeApplicationShutdown {
   private readonly logger = new Logger('PasswordReset');
+  private readonly issuing = new Set<Promise<void>>();
   now = () => new Date();
 
   constructor(
@@ -57,19 +64,29 @@ export class PasswordResetService {
     @Inject(RESET_OPTIONS) private readonly options: ResetOptions,
   ) {}
 
-  // Answers the same whatever happens, so nobody learns which addresses have
-  // an account; a failure is only logged, without the address.
+  // Answers the same, and as fast, whatever happens, so nobody learns which
+  // addresses have an account: the link is issued after the answer, and a
+  // failure is only logged, without the address.
   async ask(input: string, address: string): Promise<void> {
     const email = input.trim().toLowerCase();
     if (!(await this.attempts.admitReset(email, address))) {
       this.logger.warn('password reset not sent: over the request limit');
       return;
     }
-    try {
-      await this.issue(email);
-    } catch (error) {
-      this.logger.error(`password reset link not sent: ${reason(error)}`);
-    }
+    const issuing = this.issue(email).catch((error: unknown) =>
+      this.logger.error(`password reset link not sent: ${reason(error)}`),
+    );
+    this.issuing.add(issuing);
+    issuing.then(() => this.issuing.delete(issuing));
+  }
+
+  // Settles once every link asked for so far is issued or has failed.
+  async drain(): Promise<void> {
+    await Promise.all(this.issuing);
+  }
+
+  async beforeApplicationShutdown(): Promise<void> {
+    await this.drain();
   }
 
   async check(token: string): Promise<void> {

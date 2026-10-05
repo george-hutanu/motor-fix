@@ -125,8 +125,10 @@ const signIn = (email: string, secret: string) =>
     .set('X-Forwarded-For', address())
     .send({ email, password: secret });
 
-const resetEmails = (accountId: string, purpose = 'password_reset') =>
-  prisma.notification.findMany({
+// The link is issued after the 202, so every read of what it writes waits for it.
+async function resetEmails(accountId: string, purpose = 'password_reset') {
+  await resets.drain();
+  return prisma.notification.findMany({
     orderBy: { createdAt: 'asc' },
     where: {
       accountId,
@@ -135,6 +137,7 @@ const resetEmails = (accountId: string, purpose = 'password_reset') =>
       params: { equals: purpose, path: ['purpose'] },
     },
   });
+}
 
 async function lastLink(accountId: string): Promise<string> {
   const last = (await resetEmails(accountId)).at(-1);
@@ -165,6 +168,30 @@ const refreshWith = (res: request.Response) =>
     .set('Cookie', cookieOf(res)?.split(';')[0] ?? '');
 
 const MINUTE = 60_000;
+
+const holds: (() => void)[] = [];
+afterEach(() => {
+  for (const release of holds.splice(0)) release();
+});
+
+// Holds every account e-mail until the returned release is called, or the
+// test ends.
+function holdResetEmails(): () => void {
+  const notifications = app.get(NotificationsService);
+  const send = notifications.sendAccountEmail.bind(notifications);
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  holds.push(release);
+  jest
+    .spyOn(notifications, 'sendAccountEmail')
+    .mockImplementation(async (input) => {
+      await held;
+      return send(input);
+    });
+  return release;
+}
 
 // Waits up to two seconds for something the request set going in the background.
 async function settled(done: () => boolean | Promise<boolean>) {
@@ -203,6 +230,7 @@ describe('asking for a reset link', () => {
     const known = await ask('andrei@example.test').expect(202);
     const unknown = await ask('nimeni@example.test').expect(202);
     expect(unknown.text).toBe(known.text);
+    await resets.drain();
     expect(
       await prisma.notification.count({ where: { channel: 'email' } }),
     ).toBe(1);
@@ -334,8 +362,43 @@ describe('asking for a reset link', () => {
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     await ask('andrei@example.test').expect(202);
+    await resets.drain();
     expect(logged).toHaveBeenCalled();
     expect(JSON.stringify(logged.mock.calls)).not.toContain('andrei');
+  });
+
+  it('answers 202 before the link is issued, then issues it', async () => {
+    const id = await person();
+    const release = holdResetEmails();
+    await ask('andrei@example.test').timeout(2000).expect(202);
+    expect(await prisma.notification.count()).toBe(0);
+    release();
+    expect(await resetEmails(id)).toHaveLength(1);
+    expect(await prisma.accountToken.count({ where: { accountId: id } })).toBe(
+      1,
+    );
+  });
+
+  it('waits, on shutdown, for a link still being issued', async () => {
+    const id = await person();
+    const release = holdResetEmails();
+    await ask('andrei@example.test').timeout(2000).expect(202);
+    let closed = false;
+    const closing = resets.beforeApplicationShutdown().then(() => {
+      closed = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(closed).toBe(false);
+    release();
+    await closing;
+    const queued = await prisma.notification.findMany({
+      where: {
+        accountId: id,
+        channel: 'email',
+        params: { equals: 'password_reset', path: ['purpose'] },
+      },
+    });
+    expect(queued).toHaveLength(1);
   });
 });
 

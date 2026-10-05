@@ -4,3 +4,7 @@
 - 2026-10-05 · start · Foundations timeline · no row for ST-568 (a filed tech-debt task; nothing to write)
 - 2026-10-05 · start · EP-1 Foundations Status · unchanged (In progress)
 - 2026-10-05 · ready · Foundations · −ST-568 (started; a start changes no other item's blockers)
+- 2026-10-05 · pr · ST-568 · PR #107 https://github.com/george-hutanu/motor-fix/pull/107
+- 2026-10-05 · labels · PR #107 · planning
+- 2026-10-05 · implement · ST-568 · Planning → Implementing
+- 2026-10-05 · labels · PR #107 · in development

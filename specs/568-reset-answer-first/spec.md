@@ -50,8 +50,10 @@ and check that the token and the e-mail are written.
 ### Capability: `accounts`
 
 - **Adds**: FR-001, FR-002, FR-003
-- **Modifies**: 127-FR-001 (its answer no longer waits on the issuing); `accounts.md` does not hold ST-127's requirements yet (ST-127 is not archived), so its archive takes this wording.
+- **Modifies**: none
 - **Removes**: none
+
+FR-001 changes when ST-127's request answers (127-FR-001): its answer no longer waits on the issuing. `accounts.md` does not hold ST-127's requirements yet (ST-127 is not archived), so ST-127's archive takes this wording.
 
 ## Success Criteria *(mandatory)*
 
