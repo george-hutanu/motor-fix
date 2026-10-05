@@ -7,6 +7,7 @@ features:
   - 080-sign-up
   - 020-account-language
   - 130-sign-in-gate
+  - 128-sign-out
 ---
 
 # Capability: Accounts
@@ -282,6 +283,46 @@ _From 130-sign-in-gate._
 ### 130-FR-010 — Every new text MUST exist in Romanian and English, and Romanian words joined by a hyphen MUST use U+2011.
 
 _From 130-sign-in-gate._
+
+### 128-FR-001 — `POST /api/v1/auth/sign-out-everywhere` with a refresh-token cookie that would renew MUST delete every refresh token of that account and write one audit entry (action `delete`, subject `account` = the account, actor = the account with its last role, kind `signed_out_everywhere`) in one transaction, clear the cookie and answer 204.
+
+_From 128-sign-out._
+
+### 128-FR-002 — Sign-out on all devices with no, an unknown, an expired or a reused (outside the 20-second grace) refresh token MUST answer 401 `sign_in_required`, clear the cookie, and revoke no other family than refresh would.
+
+_From 128-sign-out._
+
+### 128-FR-003 — After sign-out on all devices, `POST /api/v1/auth/refresh` with any refresh token the account held MUST answer 401.
+
+_From 128-sign-out._
+
+### 128-FR-004 — After the revocation is saved, the API MUST publish a `session.revoked` live event to `account:{accountId}`; a failed publish MUST be logged and MUST NOT change the answer.
+
+_From 128-sign-out._
+
+### 128-FR-005 — When "Ieși din cont" signs this tab out, the web app MUST tell the other tabs of the same browser, and each of them MUST forget its session, close its live connection and open Home.
+
+_From 128-sign-out._
+
+### 128-FR-006 — Every dashboard (driver, garage — owner, receptionist, mechanic — and admin) MUST show "Ieși de pe toate dispozitivele" / "Sign out on all devices" in its account block, under "Ieși din cont".
+
+_From 128-sign-out._
+
+### 128-FR-007 — Choosing it MUST open a confirmation dialog titled "Ieși de pe toate dispozitivele?" / "Sign out on all devices?" with the text "Va trebui să te autentifici din nou peste tot." / "You will need to sign in again everywhere." and the buttons "Ieși" / "Sign out" and "Renunță" / "Cancel"; "Renunță" or closing the dialog MUST change nothing.
+
+_From 128-sign-out._
+
+### 128-FR-008 — Confirming MUST close the tab's live connection, forget the session in memory, call sign-out on all devices, tell the other tabs (FR-005) and open Home, also when the call fails.
+
+_From 128-sign-out._
+
+### 128-FR-009 — On a `session.revoked` live message the dashboard MUST sign the tab out as "Ieși din cont" does and open Home.
+
+_From 128-sign-out._
+
+### 128-FR-010 — A sign-out call (this device or all devices) that gets no answer, a network error or a 5xx MUST be kept pending in the browser and sent again on the browser's `online` event and before the next session load, sign-in or sign-up; a 2xx or 4xx answer MUST clear it.
+
+_From 128-sign-out._
 
 ## Retired
 
