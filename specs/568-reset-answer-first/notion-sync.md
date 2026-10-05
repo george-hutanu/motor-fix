@@ -11,3 +11,6 @@
 - 2026-10-05 · qa · ST-568 · Implementing → QA
 - 2026-10-05 · labels · PR #107 · QA
 - 2026-10-05 · debt · ST-568 · 2 tech-debt tasks filed (3f0607bff0d281d89baf…, 3f0607bff0d281a38d3b…)
+- 2026-10-05 · merge · PR #107 · merged 2aa27d2 (agent-review success lap 3 on 7d89074, 17 checks green); stage labels removed
+- 2026-10-05 · finish · ST-568 · QA → Done; finish comment (decisions, deviation, deferred, records follow-up)
+- 2026-10-05 · notion-ready · Foundations · +tech-debt 3f0607bff0d281a38d3b (scanner) −none; held 3f0607bff0d281d89baf (may be covered by ST-450)

@@ -43,9 +43,15 @@ restrict the run to.
 
 ## Output
 
-At most twenty-five lines, nothing else:
+At most 25 lines, nothing else, the envelope from AGENTS.md "Agent replies"
+first (`FILES: none`):
 
 ```
+STATUS: success | failure | blocked | partial — <one line: what happened>
+PR: #<n> <draft|ready|merged> <sha7> | none
+NEXT: <the one action the caller should take> | none
+FILES: <paths written, comma-separated> | none
+
 ## Mutation: <project>
 
 score: <n>% (floor <break>%) — PASS | BELOW FLOOR
@@ -56,6 +62,6 @@ mutants: <killed> killed, <survived> survived, <no coverage> no coverage, <timeo
 | src/x.ts:42 | ConditionalExpression | `a > 0` → `true` | missing-assertion |
 ```
 
-List every survivor when there are fifteen or fewer; above that, list the
-fifteen in the files with the most survivors and give per-file counts for the
+List every survivor when there are twelve or fewer; above that, list the
+twelve in the files with the most survivors and give per-file counts for the
 rest. Never paste Stryker's progress output, test logs, or the full report.

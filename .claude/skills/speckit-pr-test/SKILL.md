@@ -62,7 +62,8 @@ without a status, so the test runs again.
    ```
 
 4. **Success**: return to the caller, which merges on green CI
-   (`gh pr checks <n> --watch` with `run_in_background`, then
+   (`gh pr checks <n> --watch` with `run_in_background`, printing only the
+   checks that did not pass as AGENTS.md "Agent replies" shows, then
    `gh pr merge <n> --merge`, then `speckit-notion-sync finish`). The merge
    gate refuses while any check is failing, running or missing.
 5. **Failure**: the implementing agent fixes every blocking finding — a failing
@@ -77,7 +78,7 @@ without a status, so the test runs again.
    `specs/<feature>/deferred.md` unless they are one-line fixes, and every
    deferred bullet is filed as a Notion task (`speckit-notion-sync debt`).
    On success, file the lap's deferred findings the same way before merging,
-   in the order `/speckit-auto`'s hand-off step 6 gives (commit the task URLs,
+   in the order `/speckit-auto`'s "The tail" step 4 gives (commit the task URLs,
    one more lap; the last lap's new findings go to Notion directly).
 6. **Cap reached** (`repair` exits 1): the run is blocked with
    `repair-loop-exceeded`. Run `speckit-notion-sync blocked` with the reason
@@ -88,7 +89,11 @@ without a status, so the test runs again.
 ## Evidence
 
 Copy `report.md` and `report.json` from the tester's `--out` directory into
-`specs/<feature>/pr-review/lap<n>/`. Never commit the screenshots: they stay in
+`specs/<feature>/pr-review/lap<n>/`. A failing lap's copy is committed with
+that lap's fix, so it rides in the PR it tested. A passing lap's is not
+committed: a commit would make a new head for another lap, and its verdict is
+already the PR review, the Agent review section and the run's artifact, never
+a later `docs(specs)` PR. Never commit the screenshots: they stay in
 `--out`, outside the repo, and in the run's `pr-qa-<n>` artifact (kept 7
 days); the report names them and gives the run's URL. A lap's images would
 otherwise add hundreds of kilobytes to every clone for good, since a merge

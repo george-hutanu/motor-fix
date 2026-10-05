@@ -84,7 +84,8 @@ carries, so re-running a lap into the same `--out` works and nothing else in it
 is touched. Exit 1 means blocking
 findings, not a broken run: read the report. Exit 2 means no usable report
 (the run failed before writing one, or the artifact is missing): read the
-run's log through `ci-run.json`'s URL, and if Actions itself is the problem,
+failed steps of the run named in `ci-run.json` (`gh run view <run-id>
+--log-failed | tail -n 80`), not the whole log, and if Actions itself is the problem,
 run the lap with `LOCAL` (§3b) and say so in your report. An encoded flows
 file over the input limit is refused with the same advice.
 
@@ -138,7 +139,16 @@ never treat it as posted.
 
 ## Report
 
+At most 25 lines, the envelope from AGENTS.md "Agent replies" first (`PR:`
+is the tested head, `FILES:` your `<out>/report.md` and
+`<out>/agent-findings.json`, `NEXT:` merge on green CI, or the fixes):
+
 ```
+STATUS: success | failure | blocked | partial — <one line: what happened>
+PR: #<n> <draft|ready|merged> <sha7> | none
+NEXT: <the one action the caller should take> | none
+FILES: <paths written, comma-separated> | none
+
 ## PR Test: #<PR> at <sha7>, lap <LAP>
 
 VERDICT: success | failure
@@ -151,5 +161,6 @@ Evidence: <out>/report.md, <out>/shots/ (<n> screenshots)
 | # | Severity | Finding | Where | Evidence |
 ```
 
-Then one line per blocking finding with its reproduction steps. Never claim a
-run you did not make or a status you did not see set.
+Then one line per blocking finding with its reproduction steps. Over the cap,
+every blocker and high stays and the rest are left to `<out>/report.md`. Never
+claim a run you did not make or a status you did not see set.

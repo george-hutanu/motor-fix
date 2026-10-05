@@ -45,6 +45,8 @@ const MODELS = {
   'speckit-bug-test': 'sonnet',
   'speckit-taskstoissues': 'sonnet',
   'speckit-watch': 'sonnet',
+  // Not a phase, but run at every start and finish: it only moves Notion state.
+  'notion-ready': 'sonnet',
 
   'speckit-git-commit': 'haiku',
   'speckit-git-feature': 'haiku',
@@ -70,9 +72,9 @@ const modelOf = (skill) => {
 };
 
 describe('the model each spec-kit phase runs on', () => {
-  it('places every speckit skill, and only those', () => {
+  it('places every speckit skill and notion-ready, and only those', () => {
     const skills = readdirSync(skillsDir, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() && entry.name.startsWith('speckit-'))
+      .filter((entry) => entry.isDirectory() && (entry.name.startsWith('speckit-') || entry.name === 'notion-ready'))
       .map((entry) => entry.name)
       .sort();
     assert.deepEqual(skills, Object.keys(MODELS).sort());

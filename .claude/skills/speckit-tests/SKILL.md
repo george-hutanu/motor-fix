@@ -81,7 +81,7 @@ plain; track which FR each test verifies for the report table.
 
 ### 4. Verify RED
 
-Run the affected workspace's tests (`npm run test -w apps/<name>`). Required outcome:
+Run the affected workspace's tests (`npm run test -w apps/<name>`); run it into a log and read only the exit code, the summary and the failures (AGENTS.md "Agent replies": `tail -n 40`, then `grep -nE '✕|●|FAIL|Error'` on a failure). Required outcome:
 
 - every **new** test FAILS (red), because the behavior does not exist yet;
 - every **pre-existing** test still PASSES (you broke nothing by adding files).

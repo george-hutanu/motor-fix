@@ -212,7 +212,8 @@ Log its summary as `- <date> · ready · <epic> · +<ticked IDs> −<unticked ID
 (or `no change`). When it fails, log
 `[NOTION-SYNC PENDING: ready <epic> — <shortest error>]`; the next run retries
 it first. `/speckit-archive` refuses a feature with no ready line after its
-last `finish` line (`node .claude/scripts/notion-ready.mjs check`).
+last `finish` line, read from the log and the merged PR's finish comment
+(`notion-ready.mjs check -`, §3).
 
 ## 2e. Finish comment: say what happened (hard rule)
 
@@ -238,6 +239,19 @@ Log it as `- <date> · comment · ST-<n> · posted (<count> items)` or
 
 Append one line per write to `specs/<feature>/notion-sync.md` (create it on
 first use): date, event, item, `from → to`.
+
+The log rides in the story's own PR, never in a `docs(specs)` PR of its own:
+
+- **Before the merge** the lines are committed on the story's branch: with
+  the next commit, the `qa` line on its own right after `gh pr ready` (pushed
+  before CI is waited for and QA starts), a QA lap's lines with that lap's fix.
+- **After the merge** (`finish`, its `ready` and `comment` lines, the merge
+  sha) nothing is committed. Post the lines not yet committed as one comment on
+  the merged PR, headed `Finish log`:
+  `gh pr comment <n> --body-file <file>`. Then restore the file
+  (`git checkout -- specs/<feature>/notion-sync.md`) so the worktree stays
+  clean. A PENDING line retried later goes into another comment on the same
+  PR, never into a commit of its own.
 
 If a Notion call fails twice, append
 `[NOTION-SYNC PENDING: <event> <item> — <shortest error>]` and carry on: the

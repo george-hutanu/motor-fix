@@ -295,7 +295,7 @@ The constitution's Agent Execution Rules apply in full. Specific to this command
   under Follow-ups in the completion report; it is not fixed here.
 - Verify by running the touched workspace's tests
   (`npm run test -w apps/<name>` or `-w libs/<name>`) and quote the result
-  line. A task is `[X]` only after that.
+  line: run it into a log and read only the exit code, the summary and the failures (AGENTS.md "Agent replies": `tail -n 40`, then `grep -nE '✕|●|FAIL|Error'` on a failure). A task is `[X]` only after that.
 - One line of progress per completed task. The completion report stands
   alone: what was built, what was verified (command + result), follow-ups,
   anything left out and why.

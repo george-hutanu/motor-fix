@@ -1,7 +1,10 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
-import { allGreen, decide, hasAgentReview, isDependabot, typeLabel } from './pr-lifecycle-gate.mjs';
+import { allGreen, decide, handedOff, hasAgentReview, isDependabot, typeLabel } from './pr-lifecycle-gate.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
 const green = [{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }, review('SUCCESS')];
@@ -65,6 +68,29 @@ describe('PR lifecycle gate — what it refuses', () => {
   it('lets a blocked run end on a green ready PR with no agent review: Blocked is how a run stops', () => {
     const rollup = [{ conclusion: 'SUCCESS' }];
     assert.equal(decide(task({ blocked: true, pr: ready({ statusCheckRollup: rollup }) })), null);
+  });
+
+  it('lets the story agent end on a ready PR it handed off: the tail agent tests and merges it', () => {
+    assert.equal(decide(task({ handedOff: true, pr: ready({ statusCheckRollup: [{ conclusion: 'SUCCESS' }] }) })), null);
+    // Green and passed by the tester, it still has to merge: a tail that stopped short is caught.
+    assert.match(decide(task({ handedOff: true, pr: ready() })), /gh pr merge 6/);
+    // The hand-off covers only the tail's steps: labels are still the story agent's.
+    assert.match(decide(task({ handedOff: true, pr: ready({ labels: [{ name: 'feature' }] }) })), /QA/);
+  });
+
+  it('reads the hand-off note from the active feature, or from specs/<branch>', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gate-'));
+    try {
+      assert.equal(handedOff(dir, '050-cockpit-theme'), false);
+      mkdirSync(join(dir, 'specs', '050-cockpit-theme'), { recursive: true });
+      writeFileSync(join(dir, 'specs', '050-cockpit-theme', 'handoff.md'), '# hand-off\n');
+      assert.equal(handedOff(dir, '050-cockpit-theme'), true);
+      mkdirSync(join(dir, '.specify'), { recursive: true });
+      writeFileSync(join(dir, '.specify', 'feature.json'), JSON.stringify({ feature_directory: 'specs/051-other' }));
+      assert.equal(handedOff(dir, '050-cockpit-theme'), false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it('lets a session end while the agent review says failure: the fix loop owns that PR', () => {
