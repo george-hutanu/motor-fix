@@ -13,3 +13,10 @@
 - 2026-10-05 · qa · Foundations timeline ST-392 · Implementing → QA
 - 2026-10-05 · labels · PR #73 · QA
 - 2026-10-05 · debt · ST-392 · 3 tasks filed (To do)
+- 2026-10-05 · debt · ST-392 · 1 task filed (To do): openapi 422 (pr-tester lap 1)
+- 2026-10-05 · finish · ST-392 · QA → Done
+- 2026-10-05 · finish · Foundations timeline ST-392 · QA → Merged
+- 2026-10-05 · finish · EP-1 Foundations · In progress (unchanged: other stories open)
+- 2026-10-05 · comment · ST-392 · finish comment (deviations, decisions, 4 deferred tasks, open questions)
+- 2026-10-05 · labels · PR #73 · stage labels removed on merge
+- 2026-10-05 · ready · Foundations · no change (ST-131, ST-393 still wait on ST-132; ST-198 on ST-196)

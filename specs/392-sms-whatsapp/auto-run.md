@@ -32,3 +32,10 @@
 ## 10. Implement
 - 12–14. Harden and review: artifact-lint clean; diff-audit shows only the known import-extension false positive (deferred ST-457). spec-reviewer BLOCK on one HIGH (FR-005: always-sent staff types sent WhatsApp by default) → fixed (opt-in for every staff type with another channel), re-review APPROVE. code-reviewer APPROVE: allowlist E.164 check, `giveSmsBack` failure logged, garage-switch read fails open, `emailRow` takes a missing address, cap comment — fixed; two MEDIUM and one LOW deferred (`deferred.md`, filed in Notion). Preflight note: `seed.integration.spec.ts` needs `DATABASE_URL` set in the shell (pre-existing).
 - T001–T009 done; `npx jest libs/domain/src/notifications` → 23 suites, 652 tests passed (integration included, local PostgreSQL and Redis).
+
+## 15. QA
+- PR tester lap 1 on 6b3c8f3: agent-review success, 0 blocking (`pr-review/lap1/`). MEDIUM: fallback rows skipped the quiet-hours hold (FR-004). Fixed with a red test first: a fallback of a type that is not urgent, written at night, is held until 08:00. LOW openapi 422 deferred (Notion task). Two "storage down" findings came from the environment (no Docker).
+- `npx jest libs/domain/src/notifications` → 23 suites, 655 tests passed.
+
+## 16. Finish
+- Notion finish written before the merge, so these log lines land on the branch before it merges: story Done, timeline Merged, epic unchanged, finish comment, ready no change.

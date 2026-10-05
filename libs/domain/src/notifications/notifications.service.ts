@@ -197,28 +197,35 @@ export class NotificationsService {
 
   // The same message on the next channel, unless the event already has a
   // row there for the person or the type does not go by it.
+  // At night a type that is not urgent waits until 08:00, as when it was built.
   private async fallBack(row: Notification, channel: SentChannel) {
-    if (!notificationType(row.kind).channels.includes(channel)) return;
+    const type = notificationType(row.kind);
+    if (!type.channels.includes(channel)) return;
     const account = await this.prisma.account.findUnique({
       select: { email: true },
       where: { id: row.accountId },
     });
     if (channel === 'email' && !account?.email) return;
+    const at = this.now();
+    const sendAfter = !type.urgent && isQuiet(at) ? nextMorning(at) : null;
     const [written] = await this.prisma.notification.createManyAndReturn({
       data: {
         accountId: row.accountId,
         channel,
-        createdAt: this.now(),
+        createdAt: at,
         eventId: row.eventId,
         fallbackOf: row.id,
         kind: row.kind,
         params: (row.params ?? {}) as Prisma.InputJsonObject,
-        status: 'queued',
+        sendAfter,
+        status: sendAfter ? 'held' : 'queued',
         subjectId: row.subjectId,
       },
       skipDuplicates: true,
     });
-    if (written) await this.queue(send(written.id));
+    if (!written) return;
+    const delay = sendAfter ? sendAfter.getTime() - at.getTime() : 0;
+    await this.queue({ ...send(written.id), delay });
   }
 
   // Brevo may report a bounce twice; a grouped e-mail carries one message id

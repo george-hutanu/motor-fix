@@ -236,6 +236,26 @@ describe('a reminder a driver chose to get by SMS', () => {
     expect(await counter(ana, '2026-10')).toBeNull();
   });
 
+  it('holds its WhatsApp fallback until 08:00 when the SMS fails at night', async () => {
+    const ana = await person('ana', 1);
+    await choose(ana, 'DUE_ITP', 'sms');
+    // 1 November, 20:00 in Bucharest; the retries run out at 23:21.
+    setNow('2026-11-01T18:00:00Z');
+    await remind(ana, 'itp-night');
+    const [sms] = await rows(ana);
+    setNow('2026-11-01T21:21:00Z');
+    mock.answer({ status: 503 });
+    await sendJob(sms.id, RETRY_MINUTES.length);
+    const whatsapp = (await rows(ana)).find((r) => r.channel === 'whatsapp');
+    expect(whatsapp).toMatchObject({ status: 'held' });
+    expect(whatsapp?.sendAfter?.toISOString()).toBe('2026-11-02T06:00:00.000Z');
+    expect(mock.whatsapp()).toHaveLength(0);
+    setNow('2026-11-02T06:00:05Z');
+    mock.reset();
+    await sendJob(whatsapp?.id ?? '');
+    expect(mock.whatsapp()).toHaveLength(1);
+  });
+
   it('goes by e-mail for a driver whose phone is not verified', async () => {
     const ana = await person('ana', 1, { verified: false });
     await choose(ana, 'DUE_ITP', 'sms');
