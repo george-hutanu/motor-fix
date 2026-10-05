@@ -97,3 +97,175 @@
 ## 17. Archive
 - validate --check: 0 errors. merge --apply: platform +34. Capability FR-001 text edited to state current truth (adds the `scripts` project). Spec status → Archived (2026-10-04).
 - Not run here: /speckit-retro (the verdict is the owner's; this run made every decision) and notion-sync finish (runs on the merge to main).
+
+## Compaction 2026-10-04T16:01:01.195Z (manual)
+
+- branch `main` at `18c9e3d`
+- tasks: 39 done, 0 open
+- uncommitted (1):
+  - M .claude/settings.json
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Compaction 2026-10-04T18:07:53.192Z (auto)
+
+- branch `main` at `e58ed38`
+- tasks: 39 done, 0 open
+- uncommitted (2):
+  - M .claude/settings.json
+  -  M specs/421-monorepo-platform/auto-run.md
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Compaction 2026-10-04T18:10:28.244Z (auto)
+
+- branch `main` at `e58ed38`
+- tasks: 39 done, 0 open
+- uncommitted (2):
+  - M .claude/settings.json
+  -  M specs/421-monorepo-platform/auto-run.md
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Compaction 2026-10-04T18:26:26.185Z (auto)
+
+- branch `main` at `e58ed38`
+- tasks: 39 done, 0 open
+- uncommitted (2):
+  - M .claude/settings.json
+  -  M specs/421-monorepo-platform/auto-run.md
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Compaction 2026-10-04T18:34:54.839Z (auto)
+
+- branch `main` at `e58ed38`
+- tasks: 39 done, 0 open
+- uncommitted (2):
+  - M .claude/settings.json
+  -  M specs/421-monorepo-platform/auto-run.md
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Compaction 2026-10-04T19:30:08.530Z (manual)
+
+- branch `main` at `e58ed38`
+- tasks: 39 done, 0 open
+- uncommitted (3):
+  - M .claude/settings.json
+  -  M CLAUDE.local.md
+  -  M specs/421-monorepo-platform/auto-run.md
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Compaction 2026-10-04T19:53:22.643Z (auto)
+
+- branch `main` at `e58ed38`
+- tasks: 39 done, 0 open
+- uncommitted (3):
+  - M .claude/settings.json
+  -  M CLAUDE.local.md
+  -  M specs/421-monorepo-platform/auto-run.md
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Compaction 2026-10-04T20:04:32.519Z (auto)
+
+- branch `main` at `b581136`
+- tasks: 39 done, 0 open
+- uncommitted (2):
+  - M CLAUDE.local.md
+  -  M specs/421-monorepo-platform/auto-run.md
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Compaction 2026-10-04T20:18:52.519Z (auto)
+
+- branch `main` at `b581136`
+- tasks: 39 done, 0 open
+- uncommitted (2):
+  - M CLAUDE.local.md
+  -  M specs/421-monorepo-platform/auto-run.md
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Compaction 2026-10-04T20:55:24.607Z (auto)
+
+- branch `main` at `b581136`
+- tasks: 39 done, 0 open
+- uncommitted (2):
+  - M CLAUDE.local.md
+  -  M specs/421-monorepo-platform/auto-run.md
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Compaction 2026-10-04T21:16:12.430Z (auto)
+
+- branch `main` at `b581136`
+- tasks: 39 done, 0 open
+- uncommitted (2):
+  - M CLAUDE.local.md
+  -  M specs/421-monorepo-platform/auto-run.md
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Compaction 2026-10-04T22:01:16.206Z (auto)
+
+- branch `main` at `b581136`
+- tasks: 39 done, 0 open
+- uncommitted (2):
+  - M CLAUDE.local.md
+  -  M specs/421-monorepo-platform/auto-run.md
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Compaction 2026-10-04T23:10:58.766Z (auto)
+
+- branch `main` at `b581136`
+- tasks: 39 done, 0 open
+- uncommitted (2):
+  - M CLAUDE.local.md
+  -  M specs/421-monorepo-platform/auto-run.md
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Compaction 2026-10-04T23:31:24.300Z (auto)
+
+- branch `main` at `b581136`
+- tasks: 39 done, 0 open
+- uncommitted (2):
+  - M CLAUDE.local.md
+  -  M specs/421-monorepo-platform/auto-run.md
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Compaction 2026-10-05T00:04:58.041Z (auto)
+
+- branch `main` at `b581136`
+- tasks: 39 done, 0 open
+- uncommitted (2):
+  - M CLAUDE.local.md
+  -  M specs/421-monorepo-platform/auto-run.md
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Compaction 2026-10-05T01:21:41.472Z (auto)
+
+- branch `main` at `b581136`
+- tasks: 39 done, 0 open
+- uncommitted (2):
+  - M CLAUDE.local.md
+  -  M specs/421-monorepo-platform/auto-run.md
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Compaction 2026-10-05T02:21:17.826Z (auto)
+
+- branch `main` at `b581136`
+- tasks: 39 done, 0 open
+- uncommitted (2):
+  - M CLAUDE.local.md
+  -  M specs/421-monorepo-platform/auto-run.md
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Compaction 2026-10-05T03:15:41.494Z (auto)
+
+- branch `main` at `b581136`
+- tasks: 39 done, 0 open
+- uncommitted (2):
+  - M CLAUDE.local.md
+  -  M specs/421-monorepo-platform/auto-run.md
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Compaction 2026-10-05T05:06:32.228Z (auto)
+
+- branch `main` at `b581136`
+- tasks: 39 done, 0 open
+- uncommitted (2):
+  - M CLAUDE.local.md
+  -  M specs/421-monorepo-platform/auto-run.md
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
