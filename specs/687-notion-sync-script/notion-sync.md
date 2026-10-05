@@ -9,3 +9,5 @@
 - 2026-10-05 · implement · ST-687 · Planning → Implementing
 - 2026-10-05 · labels · PR #139 · in development
 - 2026-10-05 · debt · ST-687 · deferred.md line 2 → https://www.notion.so/3f0607bff0d281ddb370df3d1a2ac6de
+- 2026-10-05 · qa · ST-687 · Implementing → QA
+- 2026-10-05 · labels · PR #139 · QA
