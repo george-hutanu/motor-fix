@@ -19,6 +19,8 @@ import { authControllerSignOutEverywhere } from '../fn/auth/auth-controller-sign
 import { AuthControllerSignOutEverywhere$Params } from '../fn/auth/auth-controller-sign-out-everywhere';
 import { authControllerSignUp } from '../fn/auth/auth-controller-sign-up';
 import { AuthControllerSignUp$Params } from '../fn/auth/auth-controller-sign-up';
+import { authControllerSwitchRole } from '../fn/auth/auth-controller-switch-role';
+import { AuthControllerSwitchRole$Params } from '../fn/auth/auth-controller-switch-role';
 import { SessionDto } from '../models/session-dto';
 
 @Injectable({ providedIn: 'root' })
@@ -84,7 +86,7 @@ export class AuthService extends BaseService {
    * This method provides access to the full `HttpResponse`, allowing access to response headers.
    * To access only the response body, use `authControllerRefresh()` instead.
    *
-   * This method doesn't expect any request body.
+   * This method sends `application/json` and handles request body of type `application/json`.
    */
   authControllerRefresh$Response(params?: AuthControllerRefresh$Params, context?: HttpContext): Promise<StrictHttpResponse<SessionDto>> {
     const obs = authControllerRefresh(this.http, this.rootUrl, params, context);
@@ -95,10 +97,35 @@ export class AuthService extends BaseService {
    * This method provides access only to the response body.
    * To access the full response (for headers, for example), `authControllerRefresh$Response()` instead.
    *
-   * This method doesn't expect any request body.
+   * This method sends `application/json` and handles request body of type `application/json`.
    */
   authControllerRefresh(params?: AuthControllerRefresh$Params, context?: HttpContext): Promise<SessionDto> {
     const resp = this.authControllerRefresh$Response(params, context);
+    return resp.then((r: StrictHttpResponse<SessionDto>): SessionDto => r.body);
+  }
+
+  /** Path part for operation `authControllerSwitchRole()` */
+  static readonly AuthControllerSwitchRolePath = '/api/v1/auth/roles/switch';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `authControllerSwitchRole()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  authControllerSwitchRole$Response(params: AuthControllerSwitchRole$Params, context?: HttpContext): Promise<StrictHttpResponse<SessionDto>> {
+    const obs = authControllerSwitchRole(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `authControllerSwitchRole$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  authControllerSwitchRole(params: AuthControllerSwitchRole$Params, context?: HttpContext): Promise<SessionDto> {
+    const resp = this.authControllerSwitchRole$Response(params, context);
     return resp.then((r: StrictHttpResponse<SessionDto>): SessionDto => r.body);
   }
 

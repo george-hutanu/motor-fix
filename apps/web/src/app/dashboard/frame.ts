@@ -5,6 +5,7 @@ import {
   effect,
   inject,
   type OnInit,
+  signal,
   untracked,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
@@ -15,6 +16,7 @@ import {
   RouterLinkActive,
   RouterOutlet,
 } from '@angular/router';
+import type { MeDto } from '@motor-fix/data-access';
 import {
   AsWritten,
   I18n,
@@ -31,6 +33,17 @@ import { SignOutEverywhere } from './sign-out-everywhere';
 import { DashboardTabBar } from './tab-bar';
 import { type Area, allowedViews, DASHBOARDS } from './views';
 import { segmentsOf } from '../addresses';
+
+type Role = MeDto['role'];
+
+// The chips' order, whatever order the account holds its roles in.
+const ROLES: readonly { role: Role; label: string }[] = [
+  { label: 'shell.frame.roles.driver', role: 'driver' },
+  { label: 'shell.frame.roles.garage', role: 'garage' },
+  { label: 'shell.frame.roles.receptionist', role: 'receptionist' },
+  { label: 'shell.frame.roles.mechanic', role: 'mechanic' },
+  { label: 'shell.frame.roles.admin', role: 'admin' },
+];
 
 // Below 768 px the bar replaces the menu; the rest of the aside (logo, area,
 // name, the two sign-outs) stays on top as the account band.
@@ -52,6 +65,15 @@ import { segmentsOf } from '../addresses';
     aside nav { display: none; flex-direction: column; gap: 0.25rem; }
     aside nav a[aria-current="page"] { color: var(--mf-amber-ink); }
     .account { margin-top: auto; display: flex; flex-direction: column; gap: 0.25rem; }
+    .roles { display: flex; flex-wrap: wrap; gap: var(--mf-space-2); margin-bottom: var(--mf-space-2); }
+    .roles button {
+      min-height: var(--mf-tap); padding: 0 var(--mf-space-3);
+      border: 1px solid var(--mf-line-strong); border-radius: var(--mf-radius-chip);
+      background: transparent; color: var(--mf-text-secondary);
+      font: inherit; font-size: var(--mf-size-small); cursor: pointer;
+    }
+    .roles button[aria-pressed="true"] { border-color: var(--mf-amber); color: var(--mf-amber-ink); cursor: default; }
+    .roles button:disabled { cursor: progress; }
     .view { display: flex; flex-direction: column; min-width: 0; }
     main { flex: 1 0 auto; }
     @media (min-width: 768px) {
@@ -74,6 +96,18 @@ import { segmentsOf } from '../addresses';
         }
       </nav>
       <div class="account">
+        @if (roles().length > 1) {
+          <div class="roles" role="group" [attr.aria-label]="'shell.frame.roles.label' | t">
+            @for (chip of roles(); track chip.role) {
+              <button
+                type="button"
+                [attr.aria-pressed]="chip.role === session.current()?.role"
+                [disabled]="switching()"
+                (click)="switchTo(chip.role)"
+              >{{ chip.label | t }}</button>
+            }
+          </div>
+        }
         <mf-as-written [text]="session.current()?.name ?? ''" />
         <button type="button" (click)="signOut()">{{ 'shell.frame.signOut' | t }}</button>
         <button type="button" (click)="signOutEverywhere()">{{ 'shell.frame.signOutEverywhere' | t }}</button>
@@ -102,6 +136,11 @@ export class Frame implements OnInit {
     () => this.base().slice('/app/'.length) as Area,
   );
   protected readonly dashboard = computed(() => DASHBOARDS[this.area()]);
+  protected readonly roles = computed(() => {
+    const held = this.session.current()?.roles ?? [];
+    return ROLES.filter(({ role }) => held.includes(role));
+  });
+  protected readonly switching = signal(false);
   protected readonly entries = computed(() =>
     allowedViews(this.area(), this.session.current()?.capabilities ?? []),
   );
@@ -158,6 +197,23 @@ export class Frame implements OnInit {
       });
     this.live.open();
     this.destroyRef.onDestroy(() => this.live.close());
+  }
+
+  // The effect above opens the new role's dashboard once the account reloads;
+  // the live connection reopens to join that role's channels.
+  protected async switchTo(role: Role) {
+    if (this.switching() || role === this.session.current()?.role) return;
+    this.switching.set(true);
+    try {
+      if (await this.session.switchRole(role)) {
+        this.live.close();
+        this.live.open();
+      }
+    } catch {
+      toast(this.i18n.t('shell.frame.roles.failed'));
+    } finally {
+      this.switching.set(false);
+    }
   }
 
   protected async signOut() {

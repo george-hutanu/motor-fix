@@ -93,6 +93,8 @@ const NOT_CHANGES = new Set([
   'SignInService.revoke',
   'SignInService.rotate',
   'SignInService.touch',
+  // The role in use is a view preference.
+  'SignInService.switchRole',
   // A notification's delivery records, not a change to anyone's data.
   'NotificationsService.build',
   'NotificationsService.dispatch',

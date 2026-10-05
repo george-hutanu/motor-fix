@@ -1,4 +1,10 @@
-import { SessionDto, SignInDto, SignUpDto } from '@motor-fix/contracts';
+import {
+  RefreshDto,
+  SessionDto,
+  SignInDto,
+  SignUpDto,
+  SwitchRoleDto,
+} from '@motor-fix/contracts';
 import {
   Body,
   type CanActivate,
@@ -13,11 +19,16 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
+  ApiBody,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNoContentResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
   ApiUnauthorizedResponse,
+  ApiUnsupportedMediaTypeResponse,
 } from '@nestjs/swagger';
 import type { CookieOptions, Request, Response } from 'express';
 
@@ -126,17 +137,47 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @ApiBody({ required: false, type: RefreshDto })
   @ApiOkResponse({ type: SessionDto })
   async refresh(
+    @Body() body: RefreshDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<SessionDto> {
     try {
-      const issued = await this.signIns.refresh(presented(req));
+      const issued = await this.signIns.refresh(
+        presented(req),
+        body.role ?? null,
+      );
       keep(res, issued);
       return { accessToken: issued.accessToken };
     } catch (error) {
       // Only a refused token ends the session; an outage keeps the cookie.
+      if (refused(error)) forget(res);
+      throw error;
+    }
+  }
+
+  // Under /auth, where the browser sends the refresh cookie.
+  @Post('roles/switch')
+  @UseGuards(JsonOnly)
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: SessionDto })
+  @ApiBadRequestResponse({ description: 'No valid role in the body' })
+  @ApiUnauthorizedResponse({ description: 'No live session on this device' })
+  @ApiForbiddenResponse({ description: 'The account is suspended' })
+  @ApiNotFoundResponse({ description: 'The account does not hold that role' })
+  @ApiUnsupportedMediaTypeResponse({ description: 'The body is not JSON' })
+  async switchRole(
+    @Body() body: SwitchRoleDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<SessionDto> {
+    try {
+      const issued = await this.signIns.switchRole(presented(req), body.role);
+      keep(res, issued);
+      return { accessToken: issued.accessToken };
+    } catch (error) {
       if (refused(error)) forget(res);
       throw error;
     }
