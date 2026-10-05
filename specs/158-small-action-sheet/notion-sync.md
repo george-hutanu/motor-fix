@@ -21,3 +21,4 @@
 - 2026-10-04 · labels · PR #48 · none
 - 2026-10-04 · ready · EP-1 · +ST-516 −ST-502
 - 2026-10-04 · comment · ST-158 · posted (9 items)
+- 2026-10-05 · brief · ST-158 Rules · "PrimeNG Drawer in the bottom position" → "Spartan sheet in the bottom position" (follows A1)

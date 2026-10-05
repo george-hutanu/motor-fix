@@ -81,7 +81,7 @@
 
 ## Contradictions inside Notion (latest wins)
 
-- **UI library:** ST-158 Rules and the feature page toolkit toggle say "Spartan sheet, position bottom". **A1 amended 2026-10-04** sets Spartan UI brain primitives, helm components in `libs/ui-cockpit` and Angular CDK. Newer wins, so the sheet is built on Spartan/CDK, not PrimeNG. Caveat: ST-158's page was edited 2026-10-04T14:15 (after A1) but its Build brief still dates itself 2026-10-03, so its library line dates from before A1. AGENTS.md also states the Spartan stack.
+- **UI library:** **A1 amended 2026-10-04** sets Spartan UI brain primitives, helm components in `libs/ui-cockpit` and Angular CDK, so the sheet is built on Spartan/CDK, not PrimeNG. ST-158 Rules now say "Spartan sheet in the bottom position" (brief line updated 2026-10-05 to follow A1), and AGENTS.md states the same stack.
 - **Discard question:** Foundations "Risks and open decisions" (2026-10-03) lists "decide whether long texts such as reviews ask before discarding" as open. The feature page's Final rule 9 and ST-158 scenario 8 both answer it *(proposed)*. Same date. The Build brief says it wins, so treat it as answered-as-proposed.
 - **Close methods:** the ST-158 criteria list X and tap outside; the feature page also lists Escape and (phone) drag-down *(proposed)*. Not a conflict, but the sheet should keep Escape from ST-157.
 

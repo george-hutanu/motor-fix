@@ -10,7 +10,7 @@ verdict: accepted
 
 Accepted, against the spec's 9 functional requirements and its acceptance
 scenarios. PR #51 merged as `8c1291e` with CI green and `agent-review` success
-on its head `52da9d4` ("No blocking findings; 3 in all"). Nothing outstanding
+on its head `52da9d4` (the GitHub commit status reads "No blocking findings; 3 in all"; no report was kept in `pr-review/`). Nothing outstanding
 blocks the next feature: the three deferred findings are filed as Notion tasks.
 
 ## Evidence

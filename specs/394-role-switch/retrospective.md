@@ -21,7 +21,7 @@ From `node .claude/scripts/retro-evidence.mjs specs/394-role-switch`:
 - **Tasks:** 15 done, 0 open.
 - **Requirements:** 9 declared, 0 retired.
 - **Spec Delta:** `accounts` +9.
-- **Commits:** 9, from `63c3444` to `e3905f2` (the lap 4 fix is `1a01e1b`).
+- **Commits:** 9, from `63c3444` to `d6cd10e` (the lap 4 fix is `1a01e1b`).
 - **Deferred:** 7 findings, each filed as a Notion task (`notion-sync.md`, debt lines).
 
 ## What accumulated across the feature
