@@ -18,11 +18,12 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { artifactName, WORKFLOW } from "./dispatch.mjs";
-import { isBlocking } from "./findings.mjs";
+import { isBlocking, touchesWeb } from "./findings.mjs";
 import { realGh } from "./post.mjs";
 
 const FILE_CAP = 100;
 const FINISHED = new Set(["success", "failure"]);
+const IMAGE = /\.(png|jpe?g|webp)$/i;
 const short = (sha) => String(sha ?? "").slice(0, 7);
 const reason = (res) => (res.stderr || res.stdout || `exit ${res.code}`).trim().split("\n")[0];
 const parseJson = (text) => {
@@ -63,17 +64,21 @@ export function findingDelta(prev, cur) {
   };
 }
 
-/** Screenshots by content: `current` and `baseline` map a file name to its hash; `look` is what the tester opens. */
-export function shotDelta({ current, baseline, cited }) {
+/**
+ * Screenshots by content: `current` and `baseline` map a file name to its hash; `look` is what the tester opens.
+ * A change with no web file (`web` false) cannot be what moved a screen, so only the cited ones are named.
+ */
+export function shotDelta({ current, baseline, cited, web = true }) {
   const names = Object.keys(current).sort();
-  if (!baseline) return { changed: [], added: [], removed: [], unchanged: 0, look: names };
+  const only = [...new Set(cited)].sort();
+  if (!baseline) return { changed: [], added: [], removed: [], unchanged: 0, look: web ? names : only };
   const changed = names.filter((n) => n in baseline && baseline[n] !== current[n]);
   const added = names.filter((n) => !(n in baseline));
   const removed = Object.keys(baseline)
     .filter((n) => !(n in current))
     .sort();
   const unchanged = names.length - changed.length - added.length;
-  const look = [...new Set([...changed, ...added, ...cited])].sort();
+  const look = web ? [...new Set([...changed, ...added, ...cited])].sort() : only;
   return { changed, added, removed, unchanged, look };
 }
 
@@ -85,7 +90,7 @@ function shotHashes(dir) {
     for (const name of readdirSync(join(root, rel))) {
       const path = rel ? `${rel}/${name}` : name;
       if (statSync(join(root, path)).isDirectory()) walk(path);
-      else out[`shots/${path}`] = createHash("sha256").update(readFileSync(join(root, path))).digest("hex");
+      else if (IMAGE.test(name)) out[`shots/${path}`] = createHash("sha256").update(readFileSync(join(root, path))).digest("hex");
     }
   };
   if (existsSync(root)) walk("");
@@ -203,7 +208,7 @@ const fullFinding = (f) =>
 const brief = (f) => `- ${f.severity} ${f.kind}: ${f.title}${f.route ? ` (${f.route})` : ""}`;
 
 /** packet.md's text from its parts. */
-export function packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, delta }) {
+export function packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, delta, web = true }) {
   const out = [`# Packet: PR #${pr} at ${short(view?.headRefOid ?? report.sha)}, lap ${report.lap ?? "?"}`, ""];
   if (view) out.push(`${view.title} · branch ${view.headRefName} · head ${view.headRefOid} · base ${view.baseRefName}`, "");
   out.push("## Changed files", "");
@@ -241,12 +246,16 @@ export function packetMarkdown({ pr, report, view, viewError, reqs, prev, baseli
   out.push(baseline.none ? `No baseline: ${baseline.none}.` : `Baseline: ${baseline.label}.`);
   for (const s of baseline.skipped ?? []) out.push(`- skipped ${s}`);
   out.push("", "## Screenshots", "");
-  if (baseline.none) out.push("No baseline, so look at every screenshot:");
-  else {
+  if (!baseline.none) {
     out.push(`changed ${delta.changed.length} · new ${delta.added.length} · removed ${delta.removed.length} · unchanged ${delta.unchanged}`);
     for (const n of delta.removed) out.push(`- removed: ${n}`);
-    out.push("", "Look at only these:");
+    out.push("");
   }
+  if (!web)
+    out.push(
+      "The change touches no web file, so a screenshot that differs comes from main or from what the screen shows at run time, not from this PR. Look at only these (the ones a finding cites):",
+    );
+  else out.push(baseline.none ? "No baseline, so look at every screenshot:" : "Look at only these:");
   out.push(...(delta.look.length ? delta.look.map((n) => `- ${n}`) : ["- none"]));
   return `${out.join("\n")}\n`;
 }
@@ -269,9 +278,10 @@ export function buildPacket({ out, pr, repo, run, baseline: explicit, gh = realG
       committed ??
       (baseline.report ? { label: `${baseline.label} (the workflow's findings only)`, findings: baseline.report.findings ?? [] } : null);
     const cited = (report.findings ?? []).flatMap((f) => String(f.evidence ?? "").match(/shots\/\S+?\.png/g) ?? []);
-    const delta = shotDelta({ current: shotHashes(out), baseline: baseline.dir ? shotHashes(baseline.dir) : null, cited });
+    const web = view ? touchesWeb((view.files ?? []).map((f) => f.path)) : true;
+    const delta = shotDelta({ current: shotHashes(out), baseline: baseline.dir ? shotHashes(baseline.dir) : null, cited, web });
     const path = join(out, "packet.md");
-    writeFileSync(path, packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, delta }));
+    writeFileSync(path, packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, delta, web }));
     return { code: 0, path };
   } finally {
     if (baseline.temp) rmSync(baseline.dir, { recursive: true, force: true });
