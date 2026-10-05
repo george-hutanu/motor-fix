@@ -230,6 +230,10 @@ jobs:
         with:
           node-version-file: .nvmrc
       - run: npm audit --omit=dev --audit-level=high
+      # npm ci installs the lockfile as is; this re-resolves package.json,
+      # so a peer conflict the lockfile hides (ERESOLVE) fails here.
+      - name: npm install resolves
+        run: npm install --dry-run --ignore-scripts --no-audit --no-fund
 
   # On main, release.yml's images job is the real build.
   docker:
