@@ -51,7 +51,8 @@ labels (§2b) and the `notion-sync.md` lines (§3), and prints one JSON line.
   `[NOTION-SYNC PENDING: <step> <item> — <error>] retry: […]`, exits 0, and its
   next run retries that line first, marking it RETRIED only once it succeeds.
   Each call times out after `NOTION_SYNC_TIMEOUT_MS` (30 s) and a 429 is retried
-  `NOTION_SYNC_MAX_RETRIES` times (3); a Retry-After above 60 s logs PENDING.
+  `NOTION_SYNC_MAX_RETRIES` times (3); a Retry-After above `NOTION_SYNC_MAX_WAIT_S`
+  (60) logs PENDING, and a query stops at `NOTION_SYNC_MAX_PAGES` (100).
 - `start` and `finish` print `ready.review`: run the hold review (§2d).
 - `node .claude/scripts/notion-sync.mjs check` is read-only: does the token
   reach the stories data source, the Plans page and one story.

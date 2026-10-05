@@ -477,13 +477,46 @@ describe('failing open', () => {
     const down = () =>
       workspace({ stories: [story(687, 'Planning')], fail: (method) => (method === 'PATCH' ? respond({ code: 'internal_server_error', message: 'boom' }, 500) : null) });
     await run(['implement'], { ws: down(), repo });
+    await run(['implement'], { ws: down(), repo });
     const again = await run(['implement'], { ws: down(), repo });
     assert.equal(again.code, 0);
-    assert.equal(again.lines.filter((l) => l.includes('PENDING: implement ST-687')).length, 2);
+    assert.equal(again.lines.filter((l) => l.includes('PENDING: implement ST-687')).length, 1);
     assert.doesNotMatch(again.log, /RETRIED/);
     const third = await run(['qa'], { ws: workspace({ stories: [story(687, 'Planning')] }), repo });
-    assert.equal(third.lines.filter((l) => l.includes('RETRIED')).length, 2);
+    assert.equal(third.lines.filter((l) => l.includes('RETRIED')).length, 1);
     assert.doesNotMatch(third.log, /PENDING/);
+  });
+
+  it('stops replaying at the first network error, so an outage costs one call per run', async () => {
+    const repo = repoWith();
+    writeFileSync(
+      join(repo, FEATURE, 'notion-sync.md'),
+      '# Notion sync — x\n\n- [NOTION-SYNC PENDING: implement ST-687 — 500 x] retry: ["implement"]\n- [NOTION-SYNC PENDING: pr ST-687 — 500 x] retry: ["pr","139"]\n',
+    );
+    let calls = 0;
+    const ws = {
+      fetchImpl: async () => {
+        calls++;
+        throw new TypeError('fetch failed');
+      },
+    };
+    const r = await run(['qa'], { ws, repo });
+    assert.equal(r.code, 0);
+    assert.equal(calls, 2);
+    assert.equal(r.lines.filter((l) => l.includes('PENDING')).length, 3);
+  });
+
+  it('refuses a finish whose comment file is missing before writing anything', async () => {
+    const r = await run(['finish', '--body-file', '/nowhere/comment.md']);
+    assert.equal(r.code, 64);
+    assert.match(r.err[0], /comment\.md/);
+  });
+
+  it('logs a successful Notion answer it cannot parse as PENDING', async () => {
+    const ws = { fetchImpl: async () => new Response('<html>proxy</html>', { status: 200 }) };
+    const r = await run(['implement'], { ws });
+    assert.equal(r.code, 0);
+    assert.equal(r.json.pending, 'implement ST-687 — bad response');
   });
 
   it('runs the event even when a replay throws something other than a Notion error', async () => {

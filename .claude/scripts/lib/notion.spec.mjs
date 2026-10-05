@@ -150,10 +150,39 @@ describe('limits', () => {
     assert.equal(waits.length, 1);
   });
 
-  it('reads the timeout and the retry count from the environment, ignoring nonsense', () => {
-    assert.deepEqual(clientLimits({}), { timeoutMs: 30000, maxRetries: 3 });
-    assert.deepEqual(clientLimits({ NOTION_SYNC_TIMEOUT_MS: '5000', NOTION_SYNC_MAX_RETRIES: '0' }), { timeoutMs: 5000, maxRetries: 0 });
-    assert.deepEqual(clientLimits({ NOTION_SYNC_TIMEOUT_MS: 'soon', NOTION_SYNC_MAX_RETRIES: '-2' }), { timeoutMs: 30000, maxRetries: 3 });
+  it('reads every limit from the environment, ignoring nonsense', () => {
+    const defaults = { timeoutMs: 30000, maxRetries: 3, maxPages: 100, maxWaitS: 60 };
+    assert.deepEqual(clientLimits({}), defaults);
+    assert.deepEqual(
+      clientLimits({ NOTION_SYNC_TIMEOUT_MS: '5000', NOTION_SYNC_MAX_RETRIES: '0', NOTION_SYNC_MAX_PAGES: '7', NOTION_SYNC_MAX_WAIT_S: '0' }),
+      { timeoutMs: 5000, maxRetries: 0, maxPages: 7, maxWaitS: 0 },
+    );
+    assert.deepEqual(
+      clientLimits({ NOTION_SYNC_TIMEOUT_MS: 'soon', NOTION_SYNC_MAX_RETRIES: '-2', NOTION_SYNC_MAX_PAGES: '0', NOTION_SYNC_MAX_WAIT_S: 'x' }),
+      defaults,
+    );
+  });
+
+  it('does not wait longer than maxWaitS allows', async () => {
+    const waits = [];
+    const client = notionClient({
+      token: TOKEN,
+      maxWaitS: 5,
+      sleep: async (ms) => waits.push(ms),
+      fetchImpl: async () => json({ code: 'rate_limited', message: 'later' }, 429, { 'Retry-After': '10' }),
+    });
+    await assert.rejects(client.request('GET', '/pages/p1'), (error) => error.short === '429 rate_limited');
+    assert.deepEqual(waits, []);
+  });
+
+  it('names a successful answer it cannot parse a bad response', async () => {
+    const client = notionClient({ token: TOKEN, fetchImpl: async () => new Response('<html>proxy</html>', { status: 200 }) });
+    await assert.rejects(client.request('GET', '/pages/p1'), (error) => error instanceof NotionError && error.short === 'bad response');
+  });
+
+  it('names a query answer without a results list a bad response', async () => {
+    const client = notionClient({ token: TOKEN, fetchImpl: async () => json({ object: 'list', has_more: false }) });
+    await assert.rejects(client.query('ds1'), (error) => error instanceof NotionError && error.short === 'bad response');
   });
 });
 

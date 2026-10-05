@@ -49,10 +49,17 @@ export function notionToken(repo, env = process.env) {
 
 const whole = (value, fallback, min) => (/^\d+$/.test(String(value ?? "")) && Number(value) >= min ? Number(value) : fallback);
 
-/** The per-call timeout and the 429 retry count: NOTION_SYNC_TIMEOUT_MS, NOTION_SYNC_MAX_RETRIES, or the defaults. */
+/** The client's limits from NOTION_SYNC_TIMEOUT_MS, _MAX_RETRIES, _MAX_PAGES and _MAX_WAIT_S, or the defaults. */
 export function clientLimits(env = process.env) {
-  return { timeoutMs: whole(env.NOTION_SYNC_TIMEOUT_MS, TIMEOUT_MS, 1), maxRetries: whole(env.NOTION_SYNC_MAX_RETRIES, MAX_RETRIES, 0) };
+  return {
+    timeoutMs: whole(env.NOTION_SYNC_TIMEOUT_MS, TIMEOUT_MS, 1),
+    maxRetries: whole(env.NOTION_SYNC_MAX_RETRIES, MAX_RETRIES, 0),
+    maxPages: whole(env.NOTION_SYNC_MAX_PAGES, MAX_PAGES, 1),
+    maxWaitS: whole(env.NOTION_SYNC_MAX_WAIT_S, MAX_WAIT_S, 0),
+  };
 }
+
+const UNPARSED = Symbol("unparsed");
 
 export function notionClient({
   token,
@@ -61,6 +68,7 @@ export function notionClient({
   timeoutMs = TIMEOUT_MS,
   maxRetries = MAX_RETRIES,
   maxPages = MAX_PAGES,
+  maxWaitS = MAX_WAIT_S,
 }) {
   const scrub = (text) => String(text).replaceAll(token, "[token]");
 
@@ -78,7 +86,7 @@ export function notionClient({
         signal: controller.signal,
       });
       const response = await Promise.race([call, aborted]);
-      const data = await Promise.race([response.json().catch(() => ({})), aborted]);
+      const data = await Promise.race([response.json().catch(() => UNPARSED), aborted]);
       return { response, data };
     } catch (error) {
       if (controller.signal.aborted) throw new NotionError("timeout", `${method} ${path} timed out after ${timeoutMs} ms`);
@@ -90,11 +98,15 @@ export function notionClient({
 
   async function request(method, path, body) {
     for (let attempt = 0; ; attempt++) {
-      const { response, data } = await once(method, path, body);
-      if (response.ok) return data;
+      const { response, data: parsed } = await once(method, path, body);
+      if (response.ok && (parsed === UNPARSED || parsed === null || typeof parsed !== "object")) {
+        throw new NotionError("bad response", `${method} ${path}: ${response.status} with a body that is not a JSON object`);
+      }
+      if (response.ok) return parsed;
+      const data = parsed === UNPARSED || parsed === null || typeof parsed !== "object" ? {} : parsed;
       const short = `${response.status} ${data.code ?? "error"}`;
       const wait = Number(response.headers?.get?.("Retry-After")) || 1;
-      if (response.status === 429 && attempt < maxRetries && wait <= MAX_WAIT_S) {
+      if (response.status === 429 && attempt < maxRetries && wait <= maxWaitS) {
         await sleep(wait * 1000);
         continue;
       }
@@ -110,6 +122,7 @@ export function notionClient({
     do {
       if (++pages > maxPages) throw new NotionError("too many pages", `${dataSource} query passed ${maxPages} pages`);
       const page = await request("POST", `/data_sources/${dataSource}/query`, cursor ? { ...body, start_cursor: cursor } : body);
+      if (!Array.isArray(page.results)) throw new NotionError("bad response", `${dataSource} query answered without a results list`);
       results.push(...page.results);
       cursor = page.has_more ? page.next_cursor : undefined;
     } while (cursor);

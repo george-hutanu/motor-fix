@@ -64,7 +64,11 @@ function parseArgs(argv) {
 
 function usageError({ positional: [event, ...rest], flags }) {
   if (event === "blocked") return rest.length ? null : "blocked needs a reason";
-  if (event === "finish") return flags["body-file"] || flags["no-comment"] ? null : "finish needs --body-file <comment.md> or --no-comment";
+  if (event === "finish") {
+    if (flags["no-comment"]) return null;
+    if (!flags["body-file"]) return "finish needs --body-file <comment.md> or --no-comment";
+    return existsSync(flags["body-file"]) ? null : `finish: no comment file at ${flags["body-file"]}`;
+  }
   if (STATUS_EVENTS.has(event) || event === "debt" || event === "ready" || event === "check") return null;
   if (event === "pr") return /^\d+$/.test(rest[0] ?? "") ? null : "pr needs the PR number";
   if (event === "log") return rest.length >= 3 ? null : "log needs <event> <item> <text>";
@@ -150,7 +154,7 @@ export async function main(argv, io = {}) {
   } catch (error) {
     if (!(error instanceof NotionError)) throw error;
     const desc = `${ctx.step.name} ${ctx.step.item} — ${error.short}`;
-    if (io.replay !== false) append(pendingLine(desc, argv));
+    if (io.replay !== false && !queued(logFile, argv)) append(pendingLine(desc, argv));
     return done({ event, story: ctx.st, pending: desc });
   }
 }
@@ -162,27 +166,39 @@ export async function main(argv, io = {}) {
  */
 async function replayPending(logFile, date, io, stderr) {
   if (!existsSync(logFile)) return;
+  const seen = new Set();
   const pending = readFileSync(logFile, "utf8")
     .split("\n")
-    .filter((line) => PENDING.test(line));
-  for (const line of pending) {
-    let result = null;
+    .map((line) => line.match(PENDING)?.[2])
+    .filter((argv) => argv && !seen.has(argv) && seen.add(argv));
+  for (const argv of pending) {
+    let pendingDesc = null;
     try {
       const out = [];
-      const code = await main(JSON.parse(line.match(PENDING)[2]), { ...io, stdout: (s) => out.push(s), replay: false });
+      const code = await main(JSON.parse(argv), { ...io, stdout: (s) => out.push(s), replay: false });
       const last = out.at(-1) ?? "";
-      result = code === 0 && last.startsWith("{") && !JSON.parse(last).pending ? "ok" : null;
+      pendingDesc = code !== 0 || !last.startsWith("{") ? "failed" : (JSON.parse(last).pending ?? null);
     } catch (error) {
+      pendingDesc = "failed";
       stderr(`notion-sync: replay failed, kept PENDING: ${error?.message ?? error}`);
     }
-    if (result !== "ok") continue;
-    const text = readFileSync(logFile, "utf8");
-    const at = text.indexOf(line);
-    if (at !== -1) {
-      const retried = line.replace("[NOTION-SYNC PENDING:", `[NOTION-SYNC RETRIED ${date}:`);
-      writeFileSync(logFile, text.slice(0, at) + retried + text.slice(at + line.length));
-    }
+    // Notion unreachable: the rest would fail the same way, one call each.
+    if (/ — (timeout|network error)$/.test(pendingDesc ?? "")) return;
+    if (pendingDesc) continue;
+    const retried = readFileSync(logFile, "utf8")
+      .split("\n")
+      .map((line) => (line.match(PENDING)?.[2] === argv ? line.replace("[NOTION-SYNC PENDING:", `[NOTION-SYNC RETRIED ${date}:`) : line));
+    writeFileSync(logFile, retried.join("\n"));
   }
+}
+
+/** Whether a PENDING line already queues this exact argv, so an outage does not pile up copies. */
+function queued(logFile, argv) {
+  if (!existsSync(logFile)) return false;
+  const json = JSON.stringify(argv);
+  return readFileSync(logFile, "utf8")
+    .split("\n")
+    .some((line) => line.match(PENDING)?.[2] === json);
 }
 
 async function check(client, done) {
