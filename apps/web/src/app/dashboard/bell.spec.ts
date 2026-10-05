@@ -288,6 +288,30 @@ describe('BellStore', () => {
     expect(store.count()).toBe(2);
   });
 
+  it('keeps the count its echo reloaded when the read fails to reload it', async () => {
+    const { fixture, store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    let answer: (value: NotificationDto) => void = () => undefined;
+    api.bellControllerRead.mockReturnValue(
+      new Promise((resolve) => (answer = resolve)),
+    );
+    api.bellControllerUnreadCount
+      .mockResolvedValueOnce({ count: 1 })
+      .mockRejectedValueOnce(new Error('offline'));
+
+    const reading = store.read('a');
+    events.next({
+      at: '2026-10-05T10:00:00.000Z',
+      id: 'a',
+      kind: 'notification.read',
+    });
+    await settle(fixture);
+    answer(row('a', { readAt: '2026-10-05T09:00:00.000Z' }));
+    await reading;
+
+    expect(store.count()).toBe(1);
+  });
+
   it('lowers the count by one when it fails to reload after a read', async () => {
     const { store } = await render(2, [row('a'), row('b')]);
     await store.load();

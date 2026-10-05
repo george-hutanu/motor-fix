@@ -28,3 +28,12 @@ Worktree: .worktrees/629-bell-badge-echo
 
 ## 10. Implement
 - `BellStore.read()`: after the read's answer it reloads the count with `refreshCount()`, and lowers it by one only when that reload fails. `sh scripts/heavy.sh npx nx run web:test` → 51 suites, 824 tests passed.
+
+## 12. Harden
+- artifact-lint: 0 errors. diff-audit: base is the stale 7fa0467; every finding is in ST-199's generated `libs/data-access` and `libs/domain` files, none in this branch's files. Jev lane unavailable (no key).
+- code-reviewer: APPROVE, no findings (on 946bb7f).
+- test-adversary: `bell.badge.adversary.spec.ts`, 16 tests; 3 failed on 946bb7f. Per the coordinator: two are a real defect (an older count answer landing last overwrote a newer one), one a double tap lowering the badge twice when the count fails; plus a spec gap (echo reload shown, then the read's reload fails, the fallback lowered the badge again). Gap test added to `bell.spec.ts`; red: 4 failed, 45 passed. Fixed in `refreshCount()` (answers ordered by request) and `read()` (fallback skipped after a later-asked count; one read in flight per row). One adversary test was mis-modelled (its echo marked the tapped row read, so the tap sent nothing): it now echoes another row. A first cut that returned null for a stale answer broke "mark all elsewhere during a new arrival"; the caller now keeps its own answer. `npx jest apps/web/src/app/dashboard/bell` → 59 passed.
+- No local mutation run (mutation tests run only in CI).
+
+## 14. Review
+- spec-reviewer: APPROVE, no findings (on 946bb7f). The adversarial fixes are re-reviewed below.
