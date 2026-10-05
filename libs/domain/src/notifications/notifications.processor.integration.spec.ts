@@ -663,3 +663,108 @@ describe('starting the worker', () => {
     error.mockRestore();
   });
 });
+
+describe('two send jobs for one row', () => {
+  const NIGHT = '2026-10-04T20:10:00Z';
+  const MORNING = '2026-10-05T05:00:00Z';
+  const claim = (id: string, claimedAt: Date) =>
+    prisma.notification.update({ data: { claimedAt }, where: { id } });
+
+  it('sends a queued account e-mail once when both run at once', async () => {
+    const ana = await account('ana');
+    await service.sendAccountEmail({
+      accountId: ana,
+      link: 'https://motorfix.test/ro/reset/tok',
+      purpose: 'password_reset',
+    });
+    const [row] = await emailRows(ana);
+    await Promise.allSettled([sendJob(row.id), sendJob(row.id)]);
+    expect(mock.emails()).toHaveLength(1);
+    expect((await emailRows(ana))[0]).toMatchObject({
+      claimedAt: null,
+      status: 'sent',
+    });
+  });
+
+  it('sends a held row once when both run at its send time', async () => {
+    const ion = await account('ion', ['garage']);
+    service.now = at(NIGHT);
+    await service.notify({
+      eventId: 'r',
+      kind: 'REQUEST_REMINDER',
+      recipients: [ion],
+    });
+    service.now = at(MORNING);
+    processor.now = at(MORNING);
+    const [row] = await emailRows(ion);
+    await Promise.allSettled([sendJob(row.id), sendJob(row.id)]);
+    expect(mock.emails()).toHaveLength(1);
+    expect((await emailRows(ion))[0].status).toBe('sent');
+  });
+
+  it('leaves a row another job is sending to it, and fails so the queue retries', async () => {
+    const andrei = await account('andrei');
+    const row = await quote(andrei, 'evt-1');
+    processor.now = at('2026-10-05T11:00:30Z');
+    await claim(row.id, new Date('2026-10-05T11:00:00Z'));
+    await expect(sendJob(row.id)).rejects.toThrow();
+    expect(mock.emails()).toEqual([]);
+    expect((await emailRows(andrei))[0]).toMatchObject({
+      claimedAt: new Date('2026-10-05T11:00:00Z'),
+      status: 'queued',
+    });
+  });
+
+  it('takes over a row whose claim outlived its worker and sends it once', async () => {
+    const andrei = await account('andrei');
+    const row = await quote(andrei, 'evt-1');
+    await claim(row.id, new Date('2026-10-05T11:00:00Z'));
+    processor.now = at('2026-10-05T11:00:30Z');
+    await expect(sendJob(row.id)).rejects.toThrow();
+    processor.now = at('2026-10-05T11:01:01Z');
+    await sendJob(row.id, 1);
+    expect(mock.emails()).toHaveLength(1);
+    expect((await emailRows(andrei))[0]).toMatchObject({
+      claimedAt: null,
+      status: 'sent',
+    });
+  });
+
+  it('succeeds without sending when the row was sent meanwhile', async () => {
+    const andrei = await account('andrei');
+    const row = await quote(andrei, 'evt-1');
+    await sendJob(row.id);
+    await sendJob(row.id);
+    expect(mock.emails()).toHaveLength(1);
+  });
+
+  it('gives the claim back when Brevo asks for a retry, so the next attempt sends at once', async () => {
+    const andrei = await account('andrei');
+    const row = await quote(andrei, 'evt-1');
+    mock.answer({ status: 503 });
+    await expect(sendJob(row.id, 0)).rejects.toThrow();
+    expect((await emailRows(andrei))[0]).toMatchObject({
+      claimedAt: null,
+      status: 'queued',
+    });
+    await sendJob(row.id, 1);
+    expect(mock.emails()).toHaveLength(2);
+    expect((await emailRows(andrei))[0].status).toBe('sent');
+  });
+
+  it('leaves no claim on a held row grouped behind another', async () => {
+    const ana = await account('ana');
+    service.now = at('2026-10-04T20:10:00Z');
+    await service.notify({ eventId: 'd1', kind: 'DUE_ITP', recipients: [ana] });
+    service.now = at('2026-10-04T20:10:02Z');
+    await service.notify({ eventId: 'd3', kind: 'DUE_ITP', recipients: [ana] });
+    service.now = at(MORNING);
+    processor.now = at(MORNING);
+    for (const row of await emailRows(ana)) await sendJob(row.id);
+    const rows = await emailRows(ana);
+    expect(rows.map((r) => [r.status, r.claimedAt])).toEqual([
+      ['sent', null],
+      ['held', null],
+    ]);
+  });
+});
