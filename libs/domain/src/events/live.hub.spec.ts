@@ -37,7 +37,12 @@ let hub: LiveHub;
 beforeEach(() => {
   jest.useFakeTimers({ now: NOW });
   publish = jest.fn(async () => 1);
-  hub = new LiveHub({ publish });
+  hub = new LiveHub({ publish }, async () => ({
+    mechanics: new Map(),
+    off: new Set(),
+    owners: new Set(['g1']),
+    receptionists: new Set(),
+  }));
 });
 
 afterEach(() => {
@@ -51,7 +56,13 @@ const open = (
   expiresAt = NOW + 15 * MINUTE,
 ) => {
   const sink = new Sink();
-  const id = hub.open(sink, { accountId, channels, expiresAt });
+  const id = hub.open(sink, {
+    accountId,
+    channels,
+    expiresAt,
+    garageId: channels.includes('garage:x') ? 'x' : null,
+    role: channels.includes('garage:x') ? 'garage' : 'driver',
+  });
   return { id, sink };
 };
 
@@ -87,12 +98,12 @@ describe('LiveHub', () => {
     );
   });
 
-  it('forwards an event only to the streams whose channels meet its audience', () => {
+  it('forwards an event only to the streams whose channels meet its audience', async () => {
     const driver = open('a1', ['account:a1', 'system']);
     const garage = open('g1', ['account:g1', 'system', 'garage:x']);
     const admin = open('ad', ['account:ad', 'system', 'admin']);
 
-    fanOut(['garage:x', 'admin']);
+    await fanOut(['garage:x', 'admin']);
 
     expect(driver.sink.messages().map((m) => m.event)).toEqual(['hello']);
     expect(garage.sink.messages().map((m) => m.event)).toEqual([
@@ -230,6 +241,8 @@ describe('LiveHub', () => {
       accountId: 'a1',
       channels: ['account:a1'],
       expiresAt: NOW + 15 * MINUTE,
+      garageId: null,
+      role: 'driver',
     });
     const streams = Array.from({ length: 10 }, () =>
       open('a1', ['account:a1']),

@@ -18,6 +18,7 @@ import { DECOY_HASH, verifyPassword } from './password';
 import { roleInUse } from './policy';
 import { PRISMA } from './prisma';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
+import { audienceOf } from '../events/audience';
 import { EVENT_PORT, type EventPort } from '../events/event.port';
 import { type LivePublisher, publishLive } from '../events/live.hub';
 import type { PrismaClient } from '../generated/prisma/client';
@@ -211,7 +212,7 @@ export class SignInService {
         id: randomUUID(),
         kind: 'session.revoked',
       },
-      [`account:${account.id}`],
+      audienceOf({ accountId: account.id, type: 'account' }),
     ).catch((error: Error) =>
       this.logger.warn(`session.revoked not sent: ${error.message}`),
     );

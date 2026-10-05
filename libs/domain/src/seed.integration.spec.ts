@@ -114,6 +114,11 @@ describe('seed', () => {
         roles: ['driver'],
         status: 'active',
       },
+      'sofer2@example.test': {
+        lastRole: 'driver',
+        roles: ['driver'],
+        status: 'active',
+      },
       'suspendat@example.test': {
         lastRole: 'driver',
         roles: ['driver'],

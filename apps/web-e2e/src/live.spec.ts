@@ -73,4 +73,34 @@ test.describe('the live connection @seeded', () => {
     await driverContext.close();
     await garageContext.close();
   });
+
+  test("a test update sent to one driver never shows on another driver's dashboard", async ({
+    browser,
+    request,
+  }) => {
+    const oneContext = await browser.newContext();
+    const otherContext = await browser.newContext();
+    const one = await oneContext.newPage();
+    const other = await otherContext.newPage();
+    await openDashboard(one, ACCOUNTS.driver, '/app/driver');
+    await openDashboard(other, ACCOUNTS.otherDriver, '/app/driver');
+    const admin = await accessToken(request, ACCOUNTS.admin);
+
+    const sent = await request.post('/api/v1/admin/live/test', {
+      data: { accountId: await accountId(request, ACCOUNTS.driver) },
+      headers: { Authorization: `Bearer ${admin}` },
+    });
+    expect(sent.status()).toBe(202);
+    await expect(one.getByText('Actualizare de test în direct')).toBeVisible({
+      timeout: 2_000,
+    });
+    // The other dashboard has had the same time and more to receive it.
+    await one.waitForTimeout(1_000);
+
+    await expect(other.getByText('Actualizare de test în direct')).toHaveCount(
+      0,
+    );
+    await oneContext.close();
+    await otherContext.close();
+  });
 });

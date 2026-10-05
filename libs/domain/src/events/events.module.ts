@@ -9,8 +9,11 @@ import {
 } from '@nestjs/common';
 import { Redis } from 'ioredis';
 
+import { loadGarageAccess } from './garage-access';
 import { LiveController } from './live.controller';
 import { LIVE_CHANNEL, LiveHub } from './live.hub';
+import { PRISMA } from '../auth/prisma';
+import type { PrismaClient } from '../generated/prisma/client';
 
 const PUBLISHER = Symbol('LIVE_PUBLISHER');
 const SUBSCRIBER = Symbol('LIVE_SUBSCRIBER');
@@ -72,9 +75,10 @@ export class EventsModule
           useFactory: () => connect(options.redisUrl, 'subscriber'),
         },
         {
-          inject: [PUBLISHER],
+          inject: [PUBLISHER, PRISMA],
           provide: LiveHub,
-          useFactory: (publisher: Redis) => new LiveHub(publisher),
+          useFactory: (publisher: Redis, prisma: PrismaClient) =>
+            new LiveHub(publisher, loadGarageAccess(prisma)),
         },
       ],
     };
