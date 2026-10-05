@@ -133,6 +133,18 @@ const GATES = [
   ['run-state.mjs repair', 'tail.md'],
   ['--missing', 'tail.md'],
   ['RUN', 'tail.md'],
+  ['stays on Opus', 'tail.md'],
+  ['Notion `finish`', 'tail.md'],
+  // lifecycle-wiring.spec.mjs
+  ['node .claude/scripts/lifecycle.mjs ready --body-file', 'hand-off.md'],
+  ['node .claude/scripts/lifecycle.mjs merge --pr <n>', 'tail.md'],
+  // phase-dispatch.spec.mjs: the lead before phase 0, and the pinned phases
+  ['phases 2, 5, 6 and 7', 'SKILL.md'],
+  ['subagent_type: task-runner', 'SKILL.md'],
+  ['run_in_background: false', 'SKILL.md'],
+  ['pin miss', 'SKILL.md'],
+  ['Phase agent: `model: fable`.', 'phases-plan.md'],
+  ['Phase agent: `model: sonnet`.', 'phases-plan.md'],
   // task-runner.spec.mjs
   ['subagent_type: task-runner', 'preflight.md'],
   ['subagent_type: task-runner', 'tail.md'],

@@ -18,8 +18,10 @@ const section = (text, heading) => {
   return text.slice(start, next === -1 ? undefined : next);
 };
 
+// speckit-auto keeps the hand-off and the tail beside SKILL.md, read when the run reaches them.
+const auto = ['hand-off.md', 'tail.md'].map((f) => read(`.claude/skills/speckit-auto/${f}`)).join('\n');
+
 describe('the hand-off', () => {
-  const auto = read('.claude/skills/speckit-auto/SKILL.md');
 
   it('ends the story agent at ready with a hand-off note and NEXT: tail', () => {
     const handoff = section(auto, '## Hand-off');
@@ -76,7 +78,6 @@ describe('the finish log rides in the story PR', () => {
 });
 
 describe('no agent holds its context across the CI and QA wait', () => {
-  const auto = read('.claude/skills/speckit-auto/SKILL.md');
   const steps = (text) => text.split(/\n(?=\d+\. )/);
 
   it('starts the QA run at hand-off without waiting, records it in the note and ends', () => {

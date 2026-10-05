@@ -7,7 +7,7 @@ const root = join(import.meta.dirname, '..', '..');
 const read = (p) => readFileSync(join(root, p), 'utf8');
 
 describe('the skills name one lifecycle.mjs call per step', () => {
-  const auto = read('.claude/skills/speckit-auto/SKILL.md');
+  const auto = ['hand-off.md', 'tail.md'].map((f) => read(`.claude/skills/speckit-auto/${f}`)).join('\n');
   const commit = read('.claude/skills/speckit-git-commit/SKILL.md');
 
   it('speckit-git-commit opens the PR with lifecycle.mjs open, not the recipe', () => {
