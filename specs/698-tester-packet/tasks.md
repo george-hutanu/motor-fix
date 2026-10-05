@@ -1,6 +1,6 @@
 # Tasks - 698-tester-packet
 
-- [ ] T001 Merge #140 (`origin/688-qa-wait-handoff`, or `origin/main` once it lands) before any `.claude/` change.
+- [x] T001 Merge #140 (`origin/688-qa-wait-handoff`, or `origin/main` once it lands) before any `.claude/` change.
 - [x] T002 Red: `.claude/scripts/pr-test/packet.spec.mjs` covers FR-001 (header, file lines with cap and totals, verdict, blocker/high findings in full, medium/low by title), FR-002 (FR ids on `tasks.md` lines naming a changed path, ranges expanded, text from `spec.md`, missing feature dir said), FR-003 (previous findings new/persisting/resolved, source `pr-review/lap<n>/report.json` else the baseline report), FR-004 (baseline order, skip same head, same run, cancelled, later, no report), FR-005 (changed/new/removed/unchanged by hash; to look at = changed + new + cited; all when no baseline), FR-006 (exit 2 without report.json; gh failure marks the section unavailable, exit 0).
 - [x] T003 Red: `.claude/scripts/pr-test/packet-wiring.spec.mjs` covers FR-007 (pr-tester.md builds and reads the packet before the report, the screenshots, the spec or the diff; opens only named screenshots; keeps `model: opus`, the constitution review, the verdict rules and `post.mjs`), FR-008 (the skill's Test step names the packet), FR-009 (`merge-gate.mjs` and `carry.mjs` never read the packet; their equality with `origin/main` is checked by `git diff` in T006, since a test pinned to `origin/main` would break on the next legitimate change).
 - [x] T004 Green: `.claude/scripts/pr-test/packet.mjs` (FR-001–FR-006).

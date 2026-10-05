@@ -45,3 +45,19 @@
 - A wiring assertion was made whitespace-tolerant (the prose wraps a line); same claim, no weakening.
 - Verify: `npm run test:harness` 57 files / 1251 tests passed; `harness-eval.mjs --check` 80/80; `doctor.mjs` 16 ok; `git diff origin/main` on merge-gate.mjs, merge-gate.json and carry.mjs is empty.
 - Replay (T007), PR #137 run 37326786521. The first packet named 18 entries: 17 screenshots differed by run-time noise, plus `harness-eval.log`. New tests (red 2/17, then green) and a fix: only images count, and a change with no web file names only the cited screenshots. Measured weighted per run: old 203,803 (a2e3ea570a207207c); new 252,396 (a73a568a871f4db70), then 249,500 after the fix (ab937b48d68830784). Verdict `success` in every replay, the same as the recorded lap. No token drop on this PR; spec.md has the Measurement section, and the web-PR re-lap measurement is deferred.
+
+## 11. Converge
+- Every task is ticked and every FR maps to packet.spec.mjs or packet-wiring.spec.mjs. The repo rule keeps FR ids out of tests, so trace-matrix tags are not used (as in the other harness features). No new work was found.
+
+## 12. Harden
+- artifact-lint is clean. diff-audit errors are only in libs/domain files outside this diff. Mutation testing was skipped because .claude/ is not an Nx project. test-adversary and code-reviewer were dispatched.
+- npm run test:harness: 57 files, 1253 tests passed. harness-eval --check: 80/80. doctor: 16 ok. merge-gate.mjs, carry.mjs and evals/ show no diff against origin/main.
+
+## 13. Ticket refresh
+- The story has no new comments, so the refresh is empty and passes.
+
+## 15. Agent context
+- No change. CLAUDE.local.md is not checked in, and this feature adds no stack or command to it.
+
+## 16. Retrospective evidence
+- retro-evidence covers 22 commits since 50cdaaa. One fix lap came from the replay measurement: a harness-only PR still had run-time screenshot noise. The Jev lane was unavailable (no key). The verdict stays with the owner.

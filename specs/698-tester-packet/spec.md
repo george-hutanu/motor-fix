@@ -116,7 +116,11 @@ findings and the changed, new and removed screenshots exactly.
 3. **Given** no usable baseline (none found, or its artifact expired or failed
    to download), **When** the packet is built, **Then** it says so with the
    reason and tells the tester to review every screenshot.
-4. **Given** a screenshot that is unchanged from the baseline but cited as a
+4. **Given** a change that touches no web file, **When** the packet lists what
+   to look at, **Then** it names only the screenshots a finding cites, still
+   counting what differs, because such a change cannot be what moved a screen
+   (with or without a baseline).
+5. **Given** a screenshot that is unchanged from the baseline but cited as a
    finding's evidence, **When** the packet lists what to look at, **Then** it
    is listed.
 
@@ -202,7 +206,10 @@ uses fewer tokens, measured from both transcripts.
   baseline's by content hash and list, per file name, the changed, new and
   removed screenshots, with the unchanged ones counted; it MUST name, as the
   screenshots to look at, the changed and new ones plus every screenshot a
-  current finding cites, and every screenshot when there is no baseline.
+  current finding cites, and every screenshot when there is no baseline;
+  when none of the PR's changed files is a web file (the prefixes
+  `findings.mjs`'s `touchesWeb` uses), it MUST name only the cited ones.
+  Only image files count as screenshots.
 - **FR-006**: The script MUST exit 2, writing nothing, when the folder has no
   `report.json`; a failing `gh` call or baseline download MUST NOT fail it:
   the affected section is marked unavailable with the reason and the script
@@ -229,10 +236,12 @@ uses fewer tokens, measured from both transcripts.
 
 ### Measurable Outcomes
 
-- **SC-001**: On a replayed real PR's finished run, the tester following the
-  new instructions uses fewer tokens per run than the tester following the old
-  ones on the same run, both measured from their transcripts (total tokens and
-  weighted), never estimated.
+- **SC-001**: On a replayed real PR's finished run, the tokens per run of the
+  tester following the new instructions and of the one following the old ones
+  are measured from their transcripts (total tokens and weighted), never
+  estimated, and reported whatever they show. A drop is the aim, not a
+  threshold (Clarifications). The one replay so far showed none; a web PR's
+  re-lap is still to be measured (deferred.md).
 - **SC-002**: Both replays reach the same verdict, and it equals the
   `agent-review` the PR's head received.
 - **SC-003**: `npm run test:harness`, `node .claude/scripts/harness-eval.mjs

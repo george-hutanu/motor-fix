@@ -59,3 +59,7 @@ The subagent had no Notion tool; the run fetched the story page directly for the
 - Acceptance: tokens per run before and after on a real PR, measured; the same `agent-review` verdict on a replayed PR; merge gate and evals unchanged.
 - Overlap: all files are in ST-688's (#140) territory; merge origin/main once #140 lands, before touching them.
 - No comments read; the spec matches the story's scope.
+
+## Refresh (2026-10-05)
+
+- The story has no new comments since it was gathered, so nothing in scope changed.
