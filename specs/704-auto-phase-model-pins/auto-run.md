@@ -39,3 +39,22 @@ Autonomous answers, each an `(autonomous default)` line under the spec's Assumpt
   - Q3 rule or list → fixed list against Opus (`task-runner` pin); Principle I.
   - Q4 pin miss → only an Agent tool error; a silent substitution is a trial finding failing SC-001.
   - Q5 `partial` → passes only for a Notion/mock miss with the artifact in FILES; no retry.
+
+## 5. Plan (dispatched agent, pin `fable`)
+
+Phase 5 ran as a dispatched agent on the plan skill's pin (`fable`, `speckit-plan/SKILL.md:11`); transcript `565e5c5f-…/subagents/agent-ac0a7434ee0bfdd46.jsonl` (`.meta.json`: `model: fable`, depth 2). `before_plan` design check skipped: `design.md` is current (harness task, no screens); the optional commit hook found a clean tree.
+
+- `plan.md`, `research.md` (R1–R7, each with Evidence), `data-model.md`, `quickstart.md`; no `contracts/` (no external interface; the dispatch prompt is specified in the plan's Design).
+- Constitution Check: all gates pass, Principle I first; no Complexity Tracking entry.
+- `context.md` is an `[UNAVAILABLE: notion]` stub: no Constraints fed the plan; not a stop.
+
+Autonomous decisions:
+
+1. No research agents: every unknown resolved from files read here (Principle I).
+2. Phase agent = `subagent_type: task-runner` with explicit `model` (overrides its `model: opus`; tool surface already right; the trial's phase agents used `general-purpose`, which carries the heavy first-turn tools), `run_in_background: false` (phases 2/5/6/7 are serial).
+3. Router untouched: `agent-model-router.mjs:178` exits on an explicit `model`; `:40` routes only the two reviewers.
+4. Pins untouched; the new spec reads each pin from the skill's frontmatter rather than a second table.
+5. Edit scope: `## Phases` lead-in + `### 2/4/5/6/7/8` of `speckit-auto/SKILL.md`, one clause in `task-runner.md`; PR #140 is merged and this branch is behind it, with its hunks at lines 560+ (below every touched line), so implement merges `origin/main` first and the edit is clean.
+6. Spec: `.claude/skills/speckit-auto/phase-dispatch.spec.mjs` (vitest), red on today's text (test 1), green after the edit.
+7. Measurement: `jq` over `~/.claude/projects` transcripts, `<synthetic>` turns excluded, grouped by `.meta.json` description; after = session `565e5c5f-…` (story agent `agent-a7bb69b0abfa95090`), before = ST-673's story agent under session `2b506914-…`; money not measurable (`telemetry.mjs:11`), stated, never estimated.
+8. `after_plan` agent-context hook (optional) not run here: phase 15 refreshes the context file once, under the context ratchet.
