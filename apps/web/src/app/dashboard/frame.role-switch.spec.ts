@@ -51,7 +51,9 @@ async function render(
   const live = {
     close: jest.fn(),
     events: new Subject<LiveMessage>(),
+    offline: signal(false),
     open: jest.fn(),
+    resync: new Subject<void>(),
   };
   const session = {
     current,

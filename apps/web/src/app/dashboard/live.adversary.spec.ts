@@ -132,31 +132,36 @@ describe('Live reconnecting', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('does not reconnect when the stream drops without a bye', async () => {
+  it('reconnects on its backoff, without renewing, when the stream drops without a bye', async () => {
+    jest.useFakeTimers();
     const { live } = setUp();
     live.open();
     await flush();
 
     bodies[0]?.send(event('hello'));
     bodies[0]?.end();
-    await flush();
-    await new Promise((r) => setTimeout(r, 50));
+    await jest.advanceTimersByTimeAsync(800);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(400);
 
     expect(renew).not.toHaveBeenCalled();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('does not reconnect after a bye with a reason it does not know', async () => {
+  it('reconnects on its backoff, without renewing, after a bye with a reason it does not know', async () => {
+    jest.useFakeTimers();
     const { live } = setUp();
     live.open();
     await flush();
 
     bodies[0]?.send(bye('banned'));
     bodies[0]?.end();
-    await flush();
-    await new Promise((r) => setTimeout(r, 50));
-
+    await jest.advanceTimersByTimeAsync(800);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(400);
+
+    expect(renew).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('does not reconnect when closed while the renewal is still running', async () => {
@@ -251,21 +256,24 @@ describe('Live reconnecting', () => {
 });
 
 describe('Live failing connections', () => {
-  it('does not throw or reconnect when the request rejects', async () => {
+  it('does not throw, and tries again on its backoff, when the request rejects', async () => {
+    jest.useFakeTimers();
     const { live } = setUp();
     fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
     expect(() => live.open()).not.toThrow();
-    await flush();
-    await new Promise((r) => setTimeout(r, 50));
-
+    await jest.advanceTimersByTimeAsync(800);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(400);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(renew).not.toHaveBeenCalled();
   });
 
   it.each([
-    401, 403, 500,
-  ])('emits nothing and does not reconnect on a %s answer', async (status) => {
+    403, 500,
+  ])('emits nothing and tries again on its backoff on a %s answer', async (status) => {
+    jest.useFakeTimers();
     const { live, seen } = setUp((body) => ({
       body: { getReader: () => body.reader },
       ok: false,
@@ -273,11 +281,13 @@ describe('Live failing connections', () => {
     }));
 
     live.open();
-    await flush();
-    await new Promise((r) => setTimeout(r, 50));
+    await jest.advanceTimersByTimeAsync(800);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(400);
 
     expect(seen).toEqual([]);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(renew).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('does not throw when the response has no body', async () => {

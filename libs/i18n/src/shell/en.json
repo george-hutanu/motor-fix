@@ -122,7 +122,15 @@
   },
   "live": {
     "changed": "This changed in the meantime: {value}",
+    "expired": "An action made without signal expired and was not sent.",
     "gone": "No longer available",
+    "needsConnection": "You need a connection for this",
+    "offline": "No connection. What you see may be out of date.",
+    "refused": {
+      "changed": "This changed in the meantime. See how it stands now.",
+      "gone": "No longer available.",
+      "other": "The action was not accepted."
+    },
     "test": "Live test update",
     "waiting": {
       "one": "{count} new update",

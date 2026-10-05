@@ -4,7 +4,9 @@ import {
   computed,
   DestroyRef,
   Injectable,
+  InjectionToken,
   inject,
+  type OnDestroy,
   PLATFORM_ID,
   type Signal,
   signal,
@@ -20,7 +22,25 @@ import { debounceTime, filter, type Observable, Subject } from 'rxjs';
 import { reuse } from './live-in-place';
 import { Session } from './session';
 
-const RECONNECT_AFTER: readonly LiveByeReason[] = ['expired', 'shutdown'];
+const RENEW_AFTER: readonly LiveByeReason[] = ['expired', 'shutdown'];
+// Seconds between failed tries; the last one repeats.
+const BACKOFF = [1_000, 2_000, 5_000, 10_000, 30_000];
+// After this many failed tries in a row the views are re-read on a timer.
+const POLL_AFTER = 3;
+const POLL_EVERY = 60_000;
+// The server sends a heartbeat every 25 s; a minute of nothing is a dead stream.
+const SILENT_FOR = 60_000;
+const OFFLINE_AFTER = 10_000;
+const ASLEEP_FOR = 60_000;
+
+export type LiveState = 'closed' | 'reconnecting' | 'polling' | 'open';
+
+// The jitter source, replaceable so a test can pin the waits.
+export const LIVE_RANDOM = new InjectionToken<() => number>('LIVE_RANDOM', {
+  factory: () => Math.random,
+});
+
+type Outcome = 'failed' | 'renew' | 'unauthorized' | 'stop' | 'wake';
 
 function parse(block: string): LiveMessage | null {
   const data = block
@@ -45,23 +65,79 @@ function parse(block: string): LiveMessage | null {
 // the stream is read through fetch with the Authorization header: EventSource
 // cannot send it, and it never goes in the address.
 @Injectable({ providedIn: 'root' })
-export class Live {
+export class Live implements OnDestroy {
   private readonly session = inject(Session);
+  private readonly random = inject(LIVE_RANDOM);
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly messages = new Subject<LiveMessage>();
   readonly events = this.messages.asObservable();
-  private current: AbortController | null = null;
+  private readonly resyncs = new Subject<void>();
+  // Every view re-reads its data: the stream may have missed events.
+  readonly resync: Observable<void> = this.resyncs.asObservable();
+  private readonly status = signal<LiveState>('closed');
+  readonly state = this.status.asReadonly();
+  private readonly isOffline = signal(false);
+  // True once the connection has been wanted but missing for 10 s.
+  readonly offline = this.isOffline.asReadonly();
+
+  private wanted: AbortController | null = null;
+  private attempt: AbortController | null = null;
+  private failures = 0;
+  private hiddenAt: number | null = null;
+  private wake: (() => void) | null = null;
+  private offlineTimer: ReturnType<typeof setTimeout> | undefined;
+  private pollTimer: ReturnType<typeof setInterval> | undefined;
+
+  private readonly onOnline = () => this.wake?.();
+  private readonly onVisibility = () => {
+    if (document.visibilityState === 'hidden') {
+      this.hiddenAt ??= Date.now();
+      return;
+    }
+    const slept =
+      this.hiddenAt !== null && Date.now() - this.hiddenAt >= ASLEEP_FOR;
+    this.hiddenAt = null;
+    if (!slept || !this.wanted) return;
+    this.failures = 0;
+    this.attempt?.abort('wake');
+    this.wake?.();
+  };
+
+  constructor() {
+    if (!this.browser) return;
+    window.addEventListener('online', this.onOnline);
+    document.addEventListener('visibilitychange', this.onVisibility);
+  }
+
+  ngOnDestroy() {
+    this.close();
+    if (!this.browser) return;
+    window.removeEventListener('online', this.onOnline);
+    document.removeEventListener('visibilitychange', this.onVisibility);
+  }
 
   open() {
-    if (!this.browser || this.current) return;
-    const abort = new AbortController();
-    this.current = abort;
-    void this.run(abort);
+    if (!this.browser || this.wanted) return;
+    const wanted = new AbortController();
+    this.wanted = wanted;
+    this.failures = 0;
+    this.status.set('reconnecting');
+    this.startOfflineTimer();
+    void this.run(wanted.signal);
   }
 
   close() {
-    this.current?.abort();
-    this.current = null;
+    const wanted = this.wanted;
+    this.wanted = null;
+    wanted?.abort();
+    this.attempt?.abort('stop');
+    this.attempt = null;
+    this.wake?.();
+    this.settle('closed');
+  }
+
+  catchUp() {
+    this.resyncs.next();
   }
 
   // The events of these kinds, about one object when an id is given.
@@ -75,46 +151,155 @@ export class Live {
     );
   }
 
-  // One renew-and-reconnect after the server says it ended the stream for a
-  // reason a fresh connection fixes; backoff and catch-up are not built here.
-  private async run(abort: AbortController) {
-    const reason = await this.read(abort.signal).catch(() => null);
-    const again =
-      reason !== null &&
-      RECONNECT_AFTER.includes(reason) &&
-      !abort.signal.aborted &&
-      (await this.session.renew().catch(() => false));
-    if (this.current !== abort) return;
-    this.current = null;
-    if (again && !abort.signal.aborted) this.open();
+  // Tries, waits and renews until close(), an eviction or a refused renewal.
+  private async run(wanted: AbortSignal) {
+    const tab = { opened: false, renewed: false };
+    while (!wanted.aborted && (await this.step(wanted, tab)));
+    if (this.wanted?.signal === wanted) {
+      this.wanted = null;
+      this.settle('closed');
+    }
   }
 
-  private async read(signal: AbortSignal): Promise<LiveByeReason | null> {
+  // One try and what follows it; false ends the connection.
+  private async step(
+    wanted: AbortSignal,
+    tab: { opened: boolean; renewed: boolean },
+  ): Promise<boolean> {
+    const outcome = await this.attemptOnce(wanted, () => {
+      if (tab.opened) this.resyncs.next();
+      tab.opened = true;
+      tab.renewed = false;
+    }).catch((): Outcome => 'stop');
+    if (outcome === 'stop') return false;
+    if (outcome === 'wake') return true;
+    // A second 401 straight after a renewal is a failure, not another renewal.
+    const renew =
+      outcome === 'renew' || (outcome === 'unauthorized' && !tab.renewed);
+    tab.renewed = renew;
+    if (renew) return this.session.renew().catch(() => false);
+    await this.backOff(wanted);
+    return true;
+  }
+
+  private async attemptOnce(
+    wanted: AbortSignal,
+    onOpen: () => void,
+  ): Promise<Outcome> {
     const token = this.session.token();
-    if (!token) return null;
-    const res = await fetch('/api/v1/live', {
-      headers: {
-        Accept: 'text/event-stream',
-        Authorization: `Bearer ${token}`,
-        'ngsw-bypass': 'true',
-      },
-      signal,
-    });
-    if (!res.ok || !res.body) return null;
-    const reader = res.body.getReader();
-    signal.addEventListener(
-      'abort',
-      () => void reader.cancel().catch(() => undefined),
+    if (!token) return 'stop';
+    const attempt = new AbortController();
+    this.attempt = attempt;
+    const outcome = await this.stream(token, attempt, onOpen).catch(
+      (): Outcome => 'failed',
     );
-    return this.consume(reader, signal);
+    if (this.attempt === attempt) this.attempt = null;
+    if (wanted.aborted) return 'stop';
+    this.lost();
+    return attempt.signal.reason === 'wake' ? 'wake' : outcome;
+  }
+
+  private async stream(
+    token: string,
+    attempt: AbortController,
+    onOpen: () => void,
+  ): Promise<Outcome> {
+    let silence: ReturnType<typeof setTimeout> | undefined;
+    const heard = () => {
+      clearTimeout(silence);
+      silence = setTimeout(() => attempt.abort('silent'), SILENT_FOR);
+    };
+    try {
+      const res = await fetch('/api/v1/live', {
+        headers: {
+          Accept: 'text/event-stream',
+          Authorization: `Bearer ${token}`,
+          'ngsw-bypass': 'true',
+        },
+        signal: attempt.signal,
+      });
+      if (res.status === 401) return 'unauthorized';
+      if (!res.ok || !res.body) return 'failed';
+      const reader = res.body.getReader();
+      attempt.signal.addEventListener(
+        'abort',
+        () => void reader.cancel().catch(() => undefined),
+      );
+      this.opened();
+      onOpen();
+      heard();
+      const reason = await this.consume(reader, attempt.signal, heard);
+      if (reason === 'evicted') return 'stop';
+      return reason !== null && RENEW_AFTER.includes(reason)
+        ? 'renew'
+        : 'failed';
+    } finally {
+      clearTimeout(silence);
+    }
+  }
+
+  private opened() {
+    this.failures = 0;
+    clearInterval(this.pollTimer);
+    this.pollTimer = undefined;
+    clearTimeout(this.offlineTimer);
+    this.offlineTimer = undefined;
+    this.isOffline.set(false);
+    this.status.set('open');
+  }
+
+  // The stream is gone (or never came) while it is still wanted.
+  private lost() {
+    if (this.status() === 'open') this.status.set('reconnecting');
+    this.startOfflineTimer();
+  }
+
+  private async backOff(wanted: AbortSignal) {
+    this.failures++;
+    if (this.failures >= POLL_AFTER && this.pollTimer === undefined) {
+      this.status.set('polling');
+      this.resyncs.next();
+      this.pollTimer = setInterval(() => this.resyncs.next(), POLL_EVERY);
+    }
+    const base = BACKOFF[Math.min(this.failures, BACKOFF.length) - 1] ?? 0;
+    const delay = Math.round(base * (0.9 + 0.2 * this.random()));
+    // online or a long sleep ending wakes the wait early.
+    await new Promise<void>((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        if (this.wake === done) this.wake = null;
+        resolve();
+      };
+      const timer = setTimeout(done, delay);
+      this.wake = done;
+      if (wanted.aborted) done();
+    });
+  }
+
+  private startOfflineTimer() {
+    if (this.offlineTimer !== undefined || this.isOffline()) return;
+    this.offlineTimer = setTimeout(() => {
+      this.offlineTimer = undefined;
+      if (this.wanted && this.status() !== 'open') this.isOffline.set(true);
+    }, OFFLINE_AFTER);
+  }
+
+  private settle(state: LiveState) {
+    clearTimeout(this.offlineTimer);
+    this.offlineTimer = undefined;
+    clearInterval(this.pollTimer);
+    this.pollTimer = undefined;
+    this.isOffline.set(false);
+    this.status.set(state);
   }
 
   // Server-sent events arrive in blocks that end with a blank line; a chunk
   // may end in the middle of one. The loop ends when the server closes the
-  // stream or close() cancels the reader.
+  // stream or an abort cancels the reader.
   private async consume(
     reader: ReadableStreamDefaultReader<Uint8Array>,
     signal: AbortSignal,
+    heard: () => void,
   ) {
     const decoder = new TextDecoder();
     let buffer = '';
@@ -122,6 +307,7 @@ export class Live {
     for (;;) {
       const { done, value } = await reader.read();
       if (done || signal.aborted) return reason;
+      heard();
       buffer = (buffer + decoder.decode(value, { stream: true })).replace(
         /\r\n/g,
         '\n',
@@ -217,6 +403,9 @@ export function liveResource<T>(
       debounceTime(300),
       takeUntilDestroyed(destroyRef),
     )
+    .subscribe(() => void read());
+  inject(Live)
+    .resync.pipe(takeUntilDestroyed(destroyRef))
     .subscribe(() => void read());
   destroyRef.onDestroy(() => clearTimeout(retry));
   void read();
