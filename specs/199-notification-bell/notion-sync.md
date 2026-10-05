@@ -9,3 +9,13 @@
 - 2026-10-05 · implement · ST-199 story Status · Planning → Implementing
 - 2026-10-05 · implement · Foundations timeline row ST-199 · Planning → Implementing
 - 2026-10-05 · labels · PR #80 · in development
+- 2026-10-05 · qa · ST-199 story Status · Implementing → QA
+- 2026-10-05 · qa · Foundations timeline row ST-199 · Implementing → QA
+- 2026-10-05 · labels · PR #80 · QA
+- 2026-10-05 · debt · nothing deferred (deferred.md has no bullets)
+- 2026-10-05 · finish · ST-199 story Status · QA → Done (written once PR #80 merges)
+- 2026-10-05 · finish · Foundations timeline row ST-199 · QA → Merged (written once PR #80 merges)
+- 2026-10-05 · finish · EP-1 Foundations Status · unchanged (In progress; other stories remain)
+- 2026-10-05 · finish · labels · PR #80 · stage labels removed by the merge
+- 2026-10-05 · comment · ST-199 · posted (5 items): drawer instead of the proposed popover; no kind → screen step or "Nu mai este disponibil" yet (no kind has a screen); `notification.read` straight to Redis like `notification.created` (Constitution VI exception); the list restarts at the top on any read; language sent with the list call
+- 2026-10-05 · ready · Foundations · no change (no Foundations row is blocked by ST-199)

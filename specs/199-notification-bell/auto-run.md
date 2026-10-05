@@ -31,3 +31,18 @@
 ## Review (lap 1 of 5)
 - code-reviewer BLOCK, all patched: #1 Redis-down path of a read untested (test added); #2 two taps on "Mai multe" appended one page twice (the cursor is taken before the call); #3 failure toasts of read, read all and next page untested (tests added); #4 `ago` moved into bell-list.ts (no value import cycle); #5 exact readAt asserted; #6 a tap on a read row no longer calls the API; #7 FR → test names fixed.
 - spec-reviewer APPROVE: MEDIUM #2 a read in another tab left stale rows past page 1 (the list now restarts at the top; test added); LOW #4 a read that changed nothing no longer announces (test added). MEDIUM #1 `notification.read` published after the write, not through the outbox (Constitution VI): accepted as the same exception `notification.created` already takes (a lost nudge costs at most a 60-second-stale badge); recorded for the owner in the finish comment. LOW #3 opening a kind's screen and "Nu mai este disponibil" not built (no kind has a screen yet): recorded for the owner in the finish comment. (autonomous default)
+- code-reviewer re-review APPROVE; LOW: the person's own read echoes back as `notification.read` and restarts an open list at the top (kept: simple, pages never go stale). (autonomous default)
+
+## Agent context
+- Skipped: CLAUDE.local.md is the owner's private file with local edits; nothing tracked needed a change.
+
+## Retrospective evidence (unjudged)
+- `retro-evidence.mjs --since 1338d30 --jev`: 2 commits, 34 files +2358 −7, Spec Delta notifications +11, deferred 0 of 0; jev lane unavailable (no key), so no suggested verdict.
+- `instincts.mjs triggered --since 1338d30`: nothing triggered; jev lane unavailable.
+
+## Hand-off
+- PR #80 ready; story and timeline row set to QA; branch level with origin/main.
+
+## Archive
+- `capabilities.mjs merge specs/199-notification-bell --apply`: notifications +11 added.
+- Retro skipped at level 1.
