@@ -26,7 +26,7 @@ One new API call, `POST /api/v1/auth/roles/switch`, on the refresh cookie (pr-te
 
 ```
 libs/contracts/src/auth.dto.ts                 RefreshDto { role? }, SwitchRoleDto { role }
-libs/domain/src/auth/sign-in.service.ts        switchRole(actor, role); refresh(token, role?)
+libs/domain/src/auth/sign-in.service.ts        switchRole(cookie, role); refresh(cookie, role?)
 libs/domain/src/auth/auth.controller.ts        POST auth/roles/switch
 libs/domain/src/auth/auth.controller.ts        refresh reads the optional body
 libs/domain/src/seed.ts                        Atelier Dinamo + comutare@example.test (driver + garage)

@@ -171,11 +171,20 @@
               }
             }
           },
+          "400": {
+            "description": "No valid role in the body"
+          },
           "401": {
-            "description": ""
+            "description": "No live session on this device"
+          },
+          "403": {
+            "description": "The account is suspended"
           },
           "404": {
             "description": "The account does not hold that role"
+          },
+          "415": {
+            "description": "The body is not JSON"
           }
         },
         "tags": [

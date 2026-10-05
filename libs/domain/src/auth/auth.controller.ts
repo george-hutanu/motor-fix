@@ -19,13 +19,16 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBody,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
   ApiUnauthorizedResponse,
+  ApiUnsupportedMediaTypeResponse,
 } from '@nestjs/swagger';
 import type { CookieOptions, Request, Response } from 'express';
 
@@ -160,8 +163,11 @@ export class AuthController {
   @UseGuards(JsonOnly)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: SessionDto })
+  @ApiBadRequestResponse({ description: 'No valid role in the body' })
+  @ApiUnauthorizedResponse({ description: 'No live session on this device' })
+  @ApiForbiddenResponse({ description: 'The account is suspended' })
   @ApiNotFoundResponse({ description: 'The account does not hold that role' })
-  @ApiUnauthorizedResponse()
+  @ApiUnsupportedMediaTypeResponse({ description: 'The body is not JSON' })
   async switchRole(
     @Body() body: SwitchRoleDto,
     @Req() req: Request,
