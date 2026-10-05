@@ -19,9 +19,9 @@ import { Live } from './live';
 import { Session } from './session';
 
 // The workshop actions that may be made without signal and sent later.
-export type WaitingKind = 'job.step' | 'job.stage' | 'job.eta';
+type WaitingKind = 'job.step' | 'job.stage' | 'job.eta';
 
-export interface WaitingRequest {
+interface WaitingRequest {
   method: 'POST' | 'PATCH' | 'PUT';
   url: string;
   body: unknown;
@@ -35,7 +35,7 @@ interface Stored extends WaitingRequest {
   seq: number;
 }
 
-export interface WaitingAction extends Stored {
+interface WaitingAction extends Stored {
   state: 'waiting' | 'sent';
 }
 
@@ -182,21 +182,27 @@ export class Waiting {
     }
   }
 
+  // Each turn sends, drops or stops at the oldest action, so the list only
+  // shrinks until it is empty or one is kept.
   private async sendAll(): Promise<boolean> {
     clearTimeout(this.retry);
-    for (;;) {
-      const next = this.actions()[0];
-      if (!next || next.account !== this.account) return false;
+    let next = this.oldest();
+    while (next) {
       if (Date.now() - next.madeAt > EXPIRES_AFTER) {
         await this.drop(next.key);
         toast(this.i18n.t('shell.live.expired'));
-        continue;
-      }
-      if (!(await this.send(next))) {
+      } else if (!(await this.send(next))) {
         this.retry = setTimeout(() => void this.flush(), RETRY_AFTER);
         return true;
       }
+      next = this.oldest();
     }
+    return false;
+  }
+
+  private oldest(): WaitingAction | undefined {
+    const next = this.actions()[0];
+    return next?.account === this.account ? next : undefined;
   }
 
   // False when the action is kept to be sent again.

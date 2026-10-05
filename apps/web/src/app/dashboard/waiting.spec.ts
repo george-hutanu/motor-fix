@@ -300,8 +300,8 @@ describe('Waiting: kept across a reload', () => {
 
   it('still keeps actions for the life of the tab when IndexedDB is missing', async () => {
     const saved = globalThis.indexedDB;
-    // @ts-expect-error: a browser that blocks IndexedDB
-    delete globalThis.indexedDB;
+    // A browser that blocks IndexedDB.
+    Reflect.deleteProperty(globalThis, 'indexedDB');
     try {
       const { http, waiting } = await start();
       await waiting.add('job.step', step(1));
