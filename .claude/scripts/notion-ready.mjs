@@ -13,6 +13,10 @@
 //     prints { tick, untick, ready: [{ id, priority }], held: [{ id, reason }] }
 //   node .claude/scripts/notion-ready.mjs check specs/<feature>/notion-sync.md
 //     exits 0 when a ready line follows the last finish line, else 1 with why
+//   { cat specs/<feature>/notion-sync.md; gh pr view <n> --json comments \
+//       --jq '.comments[].body'; } | node .claude/scripts/notion-ready.mjs check -
+//     the same, over the log and the story PR's comments: after the merge the
+//     finish and ready lines are a comment on the merged PR, not a commit
 import { readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -75,11 +79,11 @@ function main([command, file]) {
     return 0;
   }
   if (command === 'check' && file) {
-    const result = readyLogged(readFileSync(file, 'utf8'));
+    const result = readyLogged(readFileSync(file === '-' ? 0 : file, 'utf8'));
     (result.ok ? console.log : console.error)(result.reason);
     return result.ok ? 0 : 1;
   }
-  console.error('usage: notion-ready.mjs decide < items.json | check <notion-sync.md>');
+  console.error('usage: notion-ready.mjs decide < items.json | check <notion-sync.md | ->');
   return 2;
 }
 
