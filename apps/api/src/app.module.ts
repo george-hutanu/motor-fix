@@ -6,6 +6,7 @@ import {
   emailConfig,
   HealthModule,
   NotificationsModule,
+  PasswordResetModule,
   StorageModule,
 } from '@motor-fix/domain';
 import { DynamicModule, Module } from '@nestjs/common';
@@ -40,6 +41,7 @@ export class AppModule {
           { webUrl: email.webUrl },
           notifications,
         ),
+        PasswordResetModule.register({ webUrl: email.webUrl }, notifications),
         EventsModule.register({ redisUrl: env.REDIS_URL }),
       ],
       module: AppModule,

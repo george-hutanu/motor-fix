@@ -38,6 +38,9 @@ function setup({
       Promise.resolve({ accessToken: 'signed-in' }),
     ),
     authControllerSignOut: jest.fn(() => Promise.resolve()),
+    passwordResetControllerComplete: jest.fn(() =>
+      Promise.resolve({ accessToken: 'reset' }),
+    ),
   };
   const meControllerMe = jest.fn(() => (me ? Promise.resolve(me) : refused()));
   TestBed.configureTestingModule({
@@ -127,6 +130,29 @@ describe('Session tokens', () => {
     expect(session.token()).toBe('signed-in');
     expect(me?.landing).toBe('/app/driver');
     expect(session.current()).toBe(me);
+  });
+
+  it('starts the session a completed password reset answers with', async () => {
+    const { api, session } = setup();
+
+    const me = await session.resetPassword('the-token', 'parola-noua');
+
+    expect(api.passwordResetControllerComplete).toHaveBeenCalledWith({
+      body: { password: 'parola-noua', token: 'the-token' },
+    });
+    expect(session.token()).toBe('reset');
+    expect(me?.landing).toBe('/app/driver');
+    expect(session.current()).toBe(me);
+  });
+
+  it('lets a refused password reset reach the caller, holding no token', async () => {
+    const { api, session } = setup();
+    api.passwordResetControllerComplete.mockImplementationOnce(refused);
+
+    await expect(session.resetPassword('t', 'parola-noua')).rejects.toThrow(
+      '401',
+    );
+    expect(session.token()).toBeNull();
   });
 
   it('lets a failed sign-in reach the caller, holding no token', async () => {

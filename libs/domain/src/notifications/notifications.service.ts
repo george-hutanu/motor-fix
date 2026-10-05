@@ -119,7 +119,7 @@ export class NotificationsService {
 
   async sendAccountEmail(input: {
     accountId: string;
-    purpose: 'email_check' | 'password_reset';
+    purpose: 'email_check' | 'password_reset' | 'password_changed';
     link: string;
   }): Promise<void> {
     await this.notify({
