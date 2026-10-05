@@ -2,3 +2,4 @@
 - 2026-10-05 · qa · ST-623 · Planning → QA (no timeline row for this task)
 - 2026-10-05 · labels · PR #132 · QA
 - 2026-10-05 · labels · PR #132 · tooling, scope: harness, EP-1
+- 2026-10-05 · debt · ST-623 · filed 2 (line 2 https://app.notion.com/p/3f0607bff0d2819eb3d3e9f8a4820dd3, line 3 https://app.notion.com/p/3f0607bff0d281e49651d04c8620f6f8)
