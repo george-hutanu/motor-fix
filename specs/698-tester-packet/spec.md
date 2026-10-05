@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-05
 
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 
 **Story**: ST-698 (Tech debt, epic EP-1) — https://app.notion.com/p/3f0607bff0d281aa9841fd35636fd69d
 
@@ -192,7 +192,8 @@ uses fewer tokens, measured from both transcripts.
   `specs/<feature>/pr-review/lap<n>/report.json` at the PR's head (a failing
   lap's report, committed with its fix, holding the tester's findings
   `post.mjs` folded in); when there is none, the baseline run's own
-  `report.json` (the workflow's findings only, which the packet says).
+  `report.json` (the workflow's findings only, which the packet says) if that
+  run tested this same PR; another PR's run never gives the previous lap.
 - **FR-004**: The script MUST choose the baseline run as: an explicit
   baseline (a run id or a folder) when given; otherwise the newest finished
   PR QA run of the same PR at a different head than the one under review;
@@ -215,8 +216,9 @@ uses fewer tokens, measured from both transcripts.
   the affected section is marked unavailable with the reason and the script
   exits 0.
 - **FR-007**: `.claude/agents/pr-tester.md` MUST tell the tester to build the
-  packet right after the run's artifact is in its folder and to read it before
-  the report, the screenshots, the spec or the diff; to open only the
+  packet right after the run's artifact is in its folder and, in the review,
+  to read it before the report, the screenshots, the spec or the diff (the
+  spec's first read, to list the flows, comes before the run); to open only the
   screenshots the packet names; and MUST keep `model: opus`, the full
   constitution review, the verdict rules and `post.mjs` posting unchanged.
 - **FR-008**: `.claude/skills/speckit-pr-test/SKILL.md` MUST describe the
