@@ -26,3 +26,9 @@
 
 ## Archive
 - Spec Delta (`platform`, Adds FR-001–FR-003; FR-004 is test setup only) merged into `.specify/capabilities/platform.md`; spec.md Archived.
+
+## Final Report
+- PR #126 ready (QA), head c332d9f; story and timeline row QA in Notion.
+- Shared `isEntryPoint` check; six hooks use it; merge gate refuses through a symlinked path (red→green). Harness 989/989, doctor clean.
+- Reviews APPROVE ×2; two deferred items filed as Tech debt.
+- Hand-off: `specs/600-merge-gate-symlink/handoff.md`; NEXT: tail #126.
