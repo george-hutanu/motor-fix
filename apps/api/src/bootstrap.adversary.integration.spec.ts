@@ -241,24 +241,23 @@ describe('api conventions under hostile requests', () => {
     });
   });
 
-  it.each([
-    'throw-string',
-    'throw-null',
-    'throw-object',
-  ])('answers 500 internal_error with no detail when the route does %s', async (route) => {
-    app = await start();
+  it.each(['throw-string', 'throw-null', 'throw-object'])(
+    'answers 500 internal_error with no detail when the route does %s',
+    async (route) => {
+      app = await start();
 
-    const res = await request(app.getHttpServer()).get(
-      `/api/v1/thing/${route}`,
-    );
+      const res = await request(app.getHttpServer()).get(
+        `/api/v1/thing/${route}`,
+      );
 
-    expect(res.status).toBe(500);
-    expect(res.headers['content-type']).toContain('application/problem+json');
-    expect(res.body.code).toBe('internal_error');
-    expect(res.body.detail).toBeUndefined();
-    expect(res.body.stack).toBeUndefined();
-    expect(res.text).not.toContain('hunter2');
-  });
+      expect(res.status).toBe(500);
+      expect(res.headers['content-type']).toContain('application/problem+json');
+      expect(res.body.code).toBe('internal_error');
+      expect(res.body.detail).toBeUndefined();
+      expect(res.body.stack).toBeUndefined();
+      expect(res.text).not.toContain('hunter2');
+    },
+  );
 
   describe('request id', () => {
     it('is present on a 404, a 400 and a 500', async () => {
@@ -349,15 +348,14 @@ describe('api conventions under hostile requests', () => {
   });
 
   describe('api documentation', () => {
-    it.each([
-      'development',
-      'test',
-      'staging',
-    ])('is served in %s', async (e) => {
-      app = await start(e);
+    it.each(['development', 'test', 'staging'])(
+      'is served in %s',
+      async (e) => {
+        app = await start(e);
 
-      await request(app.getHttpServer()).get('/api/docs').expect(200);
-    });
+        await request(app.getHttpServer()).get('/api/docs').expect(200);
+      },
+    );
 
     it('is not served in production under any of its paths', async () => {
       app = await start('production');

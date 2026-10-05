@@ -129,13 +129,12 @@ describe('the privacy rule', () => {
     values: { ...good.values, plate: 'text' as const },
   };
 
-  it.each([
-    'garage',
-    'mechanic',
-    'admin',
-  ] as const)('fails a %s template that uses a plate', (audience) => {
-    withProblems(only('QUOTE_RECEIVED', { ...plated, audience }), 'plate');
-  });
+  it.each(['garage', 'mechanic', 'admin'] as const)(
+    'fails a %s template that uses a plate',
+    (audience) => {
+      withProblems(only('QUOTE_RECEIVED', { ...plated, audience }), 'plate');
+    },
+  );
 
   it('fails a plate in an e-mail line of a garage template', () => {
     withProblems(
@@ -158,24 +157,21 @@ describe('the privacy rule', () => {
     expect(only('DAY_SHEET', { ...plated, audience: 'garage' })).toEqual([]);
   });
 
-  it.each([
-    'driver',
-    'garage',
-    'mechanic',
-    'admin',
-    'any',
-  ] as const)('fails a phone value in a %s template', (audience) => {
-    withProblems(
-      only('QUOTE_RECEIVED', {
-        ...good,
-        audience,
-        bell: { en: 'Call {phone}', ro: 'Sună {phone}' },
-        example: { ...good.example, phone: '+40700000000' },
-        values: { ...good.values, phone: 'text' },
-      }),
-      'phone',
-    );
-  });
+  it.each(['driver', 'garage', 'mechanic', 'admin', 'any'] as const)(
+    'fails a phone value in a %s template',
+    (audience) => {
+      withProblems(
+        only('QUOTE_RECEIVED', {
+          ...good,
+          audience,
+          bell: { en: 'Call {phone}', ro: 'Sună {phone}' },
+          example: { ...good.example, phone: '+40700000000' },
+          values: { ...good.values, phone: 'text' },
+        }),
+        'phone',
+      );
+    },
+  );
 
   it('fails a phone value in the day sheet', () => {
     withProblems(
@@ -402,39 +398,36 @@ describe('the cedilla rule', () => {
 });
 
 describe('undeclared values, unknown types and unrenderable templates', () => {
-  it.each([
-    'bell',
-    'email',
-    'push',
-    'sms',
-    'whatsapp',
-  ] as const)('fails an undeclared placeholder in the %s text', (channel) => {
-    const ghosted: Record<string, unknown> = {
-      bell: { en: 'a {ghost}', ro: 'a {ghost}' },
-      email: {
-        en: { ...mail('x'), lines: ['{ghost}'] },
-        ro: { ...mail('x'), lines: ['{ghost}'] },
-      },
-      push: {
-        en: { body: '{ghost}', link: 'link', title: 't' },
-        ro: { body: '{ghost}', link: 'link', title: 't' },
-      },
-      sms: { en: '{ghost}', ro: '{ghost}' },
-      whatsapp: {
-        en: { name: 'q', slots: ['{ghost}'] },
-        ro: { name: 'q', slots: ['{ghost}'] },
-      },
-    };
-    withProblems(
-      only('QUOTE_RECEIVED', {
-        ...good,
-        [channel]: ghosted[channel],
-        example: { ...good.example, ghost: 'x' },
-      }),
-      'QUOTE_RECEIVED',
-      'ghost',
-    );
-  });
+  it.each(['bell', 'email', 'push', 'sms', 'whatsapp'] as const)(
+    'fails an undeclared placeholder in the %s text',
+    (channel) => {
+      const ghosted: Record<string, unknown> = {
+        bell: { en: 'a {ghost}', ro: 'a {ghost}' },
+        email: {
+          en: { ...mail('x'), lines: ['{ghost}'] },
+          ro: { ...mail('x'), lines: ['{ghost}'] },
+        },
+        push: {
+          en: { body: '{ghost}', link: 'link', title: 't' },
+          ro: { body: '{ghost}', link: 'link', title: 't' },
+        },
+        sms: { en: '{ghost}', ro: '{ghost}' },
+        whatsapp: {
+          en: { name: 'q', slots: ['{ghost}'] },
+          ro: { name: 'q', slots: ['{ghost}'] },
+        },
+      };
+      withProblems(
+        only('QUOTE_RECEIVED', {
+          ...good,
+          [channel]: ghosted[channel],
+          example: { ...good.example, ghost: 'x' },
+        }),
+        'QUOTE_RECEIVED',
+        'ghost',
+      );
+    },
+  );
 
   it('fails an undeclared placeholder in an e-mail subject', () => {
     withProblems(

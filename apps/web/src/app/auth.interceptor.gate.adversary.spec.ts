@@ -118,18 +118,21 @@ describe('authInterceptor sign-in gate, hostile cases', () => {
     ['null', null],
     ['an array', ['sign_in_required']],
     ['an object without a code', { status: 401 }],
-  ])('does not open the dialog for a 401 whose body is %s', async (_t, body) => {
-    const { gate, http, server } = setup(null);
+  ])(
+    'does not open the dialog for a 401 whose body is %s',
+    async (_t, body) => {
+      const { gate, http, server } = setup(null);
 
-    const answer = expect(
-      firstValueFrom(http.patch('/api/v1/me', {})),
-    ).rejects.toMatchObject({ status: 401 });
-    server.expectOne('/api/v1/me').flush(body, refused);
-    await tick();
+      const answer = expect(
+        firstValueFrom(http.patch('/api/v1/me', {})),
+      ).rejects.toMatchObject({ status: 401 });
+      server.expectOne('/api/v1/me').flush(body, refused);
+      await tick();
 
-    await answer;
-    expect(gate).not.toHaveBeenCalled();
-  });
+      await answer;
+      expect(gate).not.toHaveBeenCalled();
+    },
+  );
 
   it('never opens the dialog for the sign-out call', async () => {
     const { gate, http, server } = setup(null);

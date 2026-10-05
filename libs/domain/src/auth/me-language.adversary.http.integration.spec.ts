@@ -103,27 +103,22 @@ describe('PATCH /me with hostile bodies', () => {
     expect(await entries(id)).toHaveLength(0);
   });
 
-  it.each([
-    'id',
-    'name',
-    'email',
-    'roles',
-    'role',
-    'garageId',
-    'status',
-  ])('refuses an extra %s field, names it, and changes nothing', async (field) => {
-    const id = await account('andrei', ['driver']);
+  it.each(['id', 'name', 'email', 'roles', 'role', 'garageId', 'status'])(
+    'refuses an extra %s field, names it, and changes nothing',
+    async (field) => {
+      const id = await account('andrei', ['driver']);
 
-    const res = await patch(
-      { language: 'en', [field]: 'x' },
-      bearer(id, 'driver'),
-    );
+      const res = await patch(
+        { language: 'en', [field]: 'x' },
+        bearer(id, 'driver'),
+      );
 
-    expect(res.status).toBe(400);
-    expect(JSON.stringify(res.body.message)).toContain(field);
-    expect(await savedLanguage(id)).toBe('ro');
-    expect(await entries(id)).toHaveLength(0);
-  });
+      expect(res.status).toBe(400);
+      expect(JSON.stringify(res.body.message)).toContain(field);
+      expect(await savedLanguage(id)).toBe('ro');
+      expect(await entries(id)).toHaveLength(0);
+    },
+  );
 
   it('answers 400, not 500, for malformed JSON', async () => {
     const id = await account('andrei', ['driver']);

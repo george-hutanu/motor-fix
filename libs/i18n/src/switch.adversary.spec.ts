@@ -106,21 +106,17 @@ describe('LanguageSwitch under hostile conditions', () => {
     expect(i18n.language()).toBe('ro');
   });
 
-  it.each([
-    'xx',
-    'EN',
-    '',
-    '__proto__',
-    'constructor',
-    '[object Object]',
-  ])('ignores a value from another tab that is %j', async (value) => {
-    const { i18n } = await start();
+  it.each(['xx', 'EN', '', '__proto__', 'constructor', '[object Object]'])(
+    'ignores a value from another tab that is %j',
+    async (value) => {
+      const { i18n } = await start();
 
-    storageEvent(value);
-    await settle();
+      storageEvent(value);
+      await settle();
 
-    expect(i18n.language()).toBe('ro');
-  });
+      expect(i18n.language()).toBe('ro');
+    },
+  );
 
   it('does not write back a value received from another tab', async () => {
     const { i18n } = await start();

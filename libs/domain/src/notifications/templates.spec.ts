@@ -90,16 +90,19 @@ describe('the account e-mails', () => {
     ['password_reset', 'ro', 'Resetează parola'],
     ['password_changed', 'en', 'Your password was changed'],
     ['password_changed', 'ro', 'Parola ta a fost schimbată'],
-  ])('writes the %s e-mail in %s with the link as its button', (purpose, language, subject) => {
-    const name = templateName('ACCOUNT_EMAIL', { purpose });
-    const mail = render(name, 'email', language, { link });
-    expect(mail.subject).toBe(subject);
-    expect(mail.text).toContain(link);
-    expect(mail.html).toContain(
-      'href="https://motorfix.test/reset?t=a&amp;b=&lt;x&gt;"',
-    );
-    expect(mail.html.match(/<a /g)).toHaveLength(1);
-  });
+  ])(
+    'writes the %s e-mail in %s with the link as its button',
+    (purpose, language, subject) => {
+      const name = templateName('ACCOUNT_EMAIL', { purpose });
+      const mail = render(name, 'email', language, { link });
+      expect(mail.subject).toBe(subject);
+      expect(mail.text).toContain(link);
+      expect(mail.html).toContain(
+        'href="https://motorfix.test/reset?t=a&amp;b=&lt;x&gt;"',
+      );
+      expect(mail.html.match(/<a /g)).toHaveLength(1);
+    },
+  );
 
   it('gives each purpose its own reason in the footer', () => {
     const check = render('ACCOUNT_EMAIL.email_check', 'email', 'en', { link });
@@ -267,26 +270,26 @@ describe('values in a template', () => {
     ).toBe('Quote — for —, — km');
   });
 
-  it.each([
-    undefined,
-    null,
-  ])('does not render with a value that is %s', (value) => {
-    const error = failure(() =>
-      render(
-        'QUOTE_RECEIVED',
-        'bell',
-        'en',
-        { at: value, n: 1, range: 1 },
-        priced,
-      ),
-    );
-    expect(error).toBeInstanceOf(TemplateError);
-    expect(error).toMatchObject({
-      channel: 'bell',
-      reason: 'missing value at',
-      template: 'QUOTE_RECEIVED',
-    });
-  });
+  it.each([undefined, null])(
+    'does not render with a value that is %s',
+    (value) => {
+      const error = failure(() =>
+        render(
+          'QUOTE_RECEIVED',
+          'bell',
+          'en',
+          { at: value, n: 1, range: 1 },
+          priced,
+        ),
+      );
+      expect(error).toBeInstanceOf(TemplateError);
+      expect(error).toMatchObject({
+        channel: 'bell',
+        reason: 'missing value at',
+        template: 'QUOTE_RECEIVED',
+      });
+    },
+  );
 
   it('does not render a placeholder the template does not declare', () => {
     const loose = fixture({ bell: { en: 'Hi {who}', ro: 'Salut {who}' } });

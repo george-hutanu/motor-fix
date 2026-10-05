@@ -141,19 +141,18 @@ describe('switching my role', () => {
     expect(await lastRole(id)).toBe('driver');
   });
 
-  it.each([
-    'garage',
-    'admin',
-    'mechanic',
-  ] as const)('answers 404 for %s, a role the account does not hold, and changes nothing', async (role) => {
-    const id = await account('andrei', ['driver']);
+  it.each(['garage', 'admin', 'mechanic'] as const)(
+    'answers 404 for %s, a role the account does not hold, and changes nothing',
+    async (role) => {
+      const id = await account('andrei', ['driver']);
 
-    const res = await switchTo({ role }, await session(id, 'driver'));
+      const res = await switchTo({ role }, await session(id, 'driver'));
 
-    expect(res.status).toBe(404);
-    expect(res.body.accessToken).toBeUndefined();
-    expect(await lastRole(id)).toBe('driver');
-  });
+      expect(res.status).toBe(404);
+      expect(res.body.accessToken).toBeUndefined();
+      expect(await lastRole(id)).toBe('driver');
+    },
+  );
 
   it.each([
     ['no role', {}],

@@ -463,13 +463,16 @@ describe('placeholder screens', () => {
     '/en/garages/atelier-pop',
     '/en/mechanics/ion',
     '/en/account',
-  ])('shows one heading and a line saying it comes later at %s', async (address) => {
-    await open(address);
+  ])(
+    'shows one heading and a line saying it comes later at %s',
+    async (address) => {
+      await open(address);
 
-    expect(page().querySelectorAll('h1')).toHaveLength(1);
-    expect(heading().length).toBeGreaterThan(0);
-    expect(line().length).toBeGreaterThan(0);
-  });
+      expect(page().querySelectorAll('h1')).toHaveLength(1);
+      expect(heading().length).toBeGreaterThan(0);
+      expect(line().length).toBeGreaterThan(0);
+    },
+  );
 
   it('writes the heading and line in the language of the address', async () => {
     await open('/ro/garages');
