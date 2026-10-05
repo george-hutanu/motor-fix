@@ -41,3 +41,10 @@ Worktree: .worktrees/568-reset-answer-first
 - 6 tasks done, 3 FRs, 2 commits, 9 files +292 −24; Spec Delta accounts +3. Jev lane unavailable (no key).
 - Carryover applied: the story touches more than one project (domain, web-e2e), so `npm run test` runs over the whole workspace before ready.
 - test-adversary: 15 tests in `password-reset.adversary.integration.spec.ts`, 14 passed, 1 failed: a lookup error whose message holds the address was logged verbatim (FR-002 says without the address). Fixed: the issuing's log carries the error's class (and code, if any), never its message. Reset specs: 69 passed, 69 total.
+
+## 14. Review (lap 1)
+- code-reviewer and spec-reviewer: both APPROVE; no CRITICAL/HIGH.
+- MEDIUM (both): a scenario's link could still be issuing when the next test reset the database (P2034 seen). Fixed: `beforeEach` drains first, in both reset suites.
+- MEDIUM decision: the scanner exempted every `this.<field>.<write>`. Chose exempt-by-argument-shape: a field call with Prisma's arguments object still counts as a write. Self-check added (red, then green).
+- LOW decision: `drain()` took one snapshot, and Nest answers requests until after the shutdown hooks. Chose a bounded re-drain (up to 3 rounds), not a deferral. Test "waits, on shutdown, for a link asked for while it was waiting": red (Expected false, Received true), then green. The hold helper now binds the unspied method so two holds do not recurse.
+- Reset and audit suites: 93 passed, twice. Repair laps: 1 of 5.

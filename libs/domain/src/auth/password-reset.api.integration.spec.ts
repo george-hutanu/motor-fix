@@ -81,6 +81,8 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  // A link the last test asked for must not write into this one.
+  await resets.drain();
   await reset();
   await redis.flushdb();
   published.length = 0;
@@ -178,7 +180,9 @@ afterEach(() => {
 // test ends.
 function holdResetEmails(): () => void {
   const notifications = app.get(NotificationsService);
-  const send = notifications.sendAccountEmail.bind(notifications);
+  // The unspied method, so a second hold does not wrap the first.
+  const send =
+    NotificationsService.prototype.sendAccountEmail.bind(notifications);
   let release = () => {};
   const held = new Promise<void>((resolve) => {
     release = resolve;
@@ -399,6 +403,38 @@ describe('asking for a reset link', () => {
       },
     });
     expect(queued).toHaveLength(1);
+  });
+
+  it('waits, on shutdown, for a link asked for while it was waiting', async () => {
+    const first = await person('ana@example.test');
+    const second = await person('ion@example.test');
+    const releaseFirst = holdResetEmails();
+    await ask('ana@example.test').timeout(2000).expect(202);
+    const sending = jest.mocked(app.get(NotificationsService).sendAccountEmail);
+    while (sending.mock.calls.length === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    let closed = false;
+    const closing = resets.beforeApplicationShutdown().then(() => {
+      closed = true;
+    });
+    const releaseSecond = holdResetEmails();
+    await ask('ion@example.test').timeout(2000).expect(202);
+    releaseFirst();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(closed).toBe(false);
+    releaseSecond();
+    await closing;
+    for (const id of [first, second]) {
+      const queued = await prisma.notification.findMany({
+        where: {
+          accountId: id,
+          channel: 'email',
+          params: { equals: 'password_reset', path: ['purpose'] },
+        },
+      });
+      expect(queued).toHaveLength(1);
+    }
   });
 });
 

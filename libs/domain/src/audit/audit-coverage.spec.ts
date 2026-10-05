@@ -39,16 +39,22 @@ const sqlOf = (node: ts.Node) => {
   return text ? text.getText().replace(/^[`'"]/, '') : '';
 };
 
-// `this.prisma.account` or `tx.account`, not a service's own map or set
-// (`this.issuing.delete`).
-const isModel = (node: ts.Expression) =>
-  ts.isPropertyAccessExpression(node) &&
-  node.expression.kind !== ts.SyntaxKind.ThisKeyword;
+// `tx.account.create(...)`, or a model held as a field when it is called with
+// Prisma's arguments object; not a service's own map or set
+// (`this.issuing.delete(link)`).
+const isModelWrite = (node: ts.Node, target: ts.PropertyAccessExpression) => {
+  const receiver = target.expression;
+  if (!MODEL_WRITES.has(target.name.text)) return false;
+  if (!ts.isPropertyAccessExpression(receiver)) return false;
+  if (receiver.expression.kind !== ts.SyntaxKind.ThisKeyword) return true;
+  const [first] = ts.isCallExpression(node) ? node.arguments : [];
+  return first !== undefined && ts.isObjectLiteralExpression(first);
+};
 
 const isWrite = (node: ts.Node, target: ts.PropertyAccessExpression) =>
   RAW_WRITES.has(target.name.text) ||
   (RAW_QUERIES.has(target.name.text) && WRITE_SQL.test(sqlOf(node))) ||
-  (MODEL_WRITES.has(target.name.text) && isModel(target.expression));
+  isModelWrite(node, target);
 
 // A method "writes" when it calls a Prisma write on a model (`tx.account.create`)
 // or runs raw SQL; it is covered when it also calls the writer through `this.audit`.
@@ -242,6 +248,17 @@ describe('the check itself', () => {
         class GaragesService {
           remove(id) {
             return this.prisma.garage.delete({ where: { id } });
+          }
+        }`),
+    ).toEqual(['GaragesService.remove']);
+  });
+
+  it('names a method that writes through a model held as a field without an entry', () => {
+    expect(
+      uncovered(`
+        class GaragesService {
+          remove(id) {
+            return this.garages.delete({ where: { id } });
           }
         }`),
     ).toEqual(['GaragesService.remove']);

@@ -88,9 +88,13 @@ export class PasswordResetService implements BeforeApplicationShutdown {
     issuing.then(() => this.issuing.delete(issuing));
   }
 
-  // Settles once every link asked for so far is issued or has failed.
+  // Settles once every link in flight is issued or has failed. The server
+  // still answers while the app shuts down, so links asked for meanwhile are
+  // waited for too, for a few rounds rather than forever.
   async drain(): Promise<void> {
-    await Promise.all(this.issuing);
+    for (let round = 0; round < 3 && this.issuing.size > 0; round++) {
+      await Promise.all(this.issuing);
+    }
   }
 
   async beforeApplicationShutdown(): Promise<void> {

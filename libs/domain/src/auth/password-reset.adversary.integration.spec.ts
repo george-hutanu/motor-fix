@@ -80,6 +80,8 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  // A link the last test asked for must not write into this one.
+  await resets.drain();
   await reset();
   await redis.flushdb();
   published.length = 0;
