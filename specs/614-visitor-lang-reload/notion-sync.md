@@ -9,3 +9,6 @@
 - 2026-10-05 · implement · ST-614 story Status · Planning → Implementing
 - 2026-10-05 · implement · Foundations timeline · no row for ST-614 (nothing to write)
 - 2026-10-05 · labels · PR #124 · in development
+- 2026-10-05 · qa · ST-614 story Status · Implementing → QA
+- 2026-10-05 · qa · Foundations timeline · no row for ST-614 (nothing to write)
+- 2026-10-05 · labels · PR #124 · QA
