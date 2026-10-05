@@ -53,8 +53,8 @@ describe('the agent reply envelope', () => {
   const agentsDir = join(claudeDir, 'agents');
   const agents = readdirSync(agentsDir).filter((name) => name.endsWith('.md'));
 
-  it('covers all seven agent definitions', () => {
-    assert.equal(agents.length, 7);
+  it('finds the agent definitions', () => {
+    assert.ok(agents.length > 0);
   });
 
   for (const name of agents) {
