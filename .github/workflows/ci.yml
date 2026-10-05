@@ -181,6 +181,8 @@ jobs:
             dist/.playwright
             apps/web-e2e/test-output
           if-no-files-found: ignore
+          # The report sits under dist/.playwright, a dot directory upload-artifact skips by default.
+          include-hidden-files: true
 
   build:
     name: Build
