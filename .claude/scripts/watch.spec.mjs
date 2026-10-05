@@ -259,6 +259,21 @@ describe('stale and the fix', () => {
     assert.equal(fixOf(row({ ...quiet, pr: summarizePr(pr({ isDraft: true })) }), opts).fix, 'resume');
   });
 
+  it('hands a quiet ready PR with a hand-off note to a tail agent, after merge', () => {
+    const quiet = { activity: { at: NOW - 120 * MIN, source: 'commit' }, phase: 'qa', handoff: true };
+    const ready = (entries) => summarizePr(pr({ statusCheckRollup: entries }));
+    assert.equal(fixOf(row({ ...quiet, phase: 'merging', pr: ready([check('SUCCESS'), review('SUCCESS')]) }), opts).fix, 'merge');
+    assert.equal(fixOf(row({ ...quiet, pr: ready([check('SUCCESS')]) }), opts).fix, 'tail');
+    assert.equal(fixOf(row({ ...quiet, pr: ready([check(null, 'IN_PROGRESS')]) }), opts).fix, 'tail');
+    assert.equal(fixOf(row({ ...quiet, pr: ready([check('FAILURE')]) }), opts).fix, 'tail');
+    assert.equal(fixOf(row({ ...quiet, pr: ready([check('SUCCESS'), review('FAILURE')]) }), opts).fix, 'tail');
+    // A draft is still the story agent's: no hand-off has happened yet.
+    assert.equal(fixOf(row({ ...quiet, phase: 'development', pr: summarizePr(pr({ isDraft: true })) }), opts).fix, 'resume');
+    // A held or recent PR is left alone.
+    assert.equal(fixOf(row({ ...quiet, holder: 'live', pr: ready([check('SUCCESS')]) }), opts).fix, null);
+    assert.equal(fixOf(row({ ...quiet, activity: { at: NOW - 5 * MIN, source: 'commit' }, pr: ready([check('SUCCESS')]) }), opts).fix, null);
+  });
+
   it('resumes instead of merging when the worktree holds work the PR head does not', () => {
     const quiet = { activity: { at: NOW - 120 * MIN, source: 'commit' } };
     const green = summarizePr(pr({ headRefOid: 'abc', statusCheckRollup: [check('SUCCESS'), review('SUCCESS')] }));
@@ -329,6 +344,14 @@ describe('dispatch plan', () => {
   it('does not count QA re-runs against the 2 other agent fixes', () => {
     const rows = [stale('a', 'rerun-qa', 90), stale('b', 'resume', 80), stale('c', 'fix-ci', 70), stale('d', 'merge', 60)];
     assert.deepEqual(dispatchPlan(rows, { qaLive: 0, now: NOW }).map((p) => p.path), ['a', 'b', 'c']);
+  });
+
+  it('counts a tail against the QA cap, like a QA re-run', () => {
+    const rows = [stale('a', 'tail', 90), stale('b', 'rerun-qa', 80), stale('c', 'resume', 70), stale('d', 'fix-ci', 60)];
+    assert.deepEqual(dispatchPlan(rows, { qaLive: 0, now: NOW }).map((p) => p.path), ['a', 'b', 'c', 'd']);
+    assert.deepEqual(dispatchPlan(rows, { qaLive: 1, qaCap: 2, now: NOW }).map((p) => p.path), ['a', 'c', 'd']);
+    const claimed = { path: 'z', verdict: 'ok', fix: null, qaLive: false, claim: { fix: 'tail', at: new Date(NOW - MIN).toISOString(), live: true } };
+    assert.deepEqual(dispatchPlan([...rows, claimed], { qaLive: 0, qaCap: 2, now: NOW }).map((p) => p.path), ['a', 'c', 'd']);
   });
 
   it('dispatches nothing when the PR state is unknown', () => {
@@ -439,6 +462,21 @@ describe('collect', () => {
     }
   });
 
+  it('marks a worktree whose feature folder holds a hand-off note', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-fixture-urls');
+      const b = f.add('agent-b', 'chore-y');
+      mkdirSync(join(a, 'specs', '901-fixture-urls'), { recursive: true });
+      writeFileSync(join(a, 'specs', '901-fixture-urls', 'handoff.md'), '# hand-off\n');
+      const rows = collect(f.repo, env()).rows;
+      assert.equal(rows.find((x) => x.path === a).handoff, true);
+      assert.equal(rows.find((x) => x.path === b).handoff, false);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
   it('still lists every row when gh fails, with the PR state unknown', () => {
     const f = fixture();
     try {
@@ -457,6 +495,17 @@ describe('collect', () => {
 });
 
 describe('--fix and claim', () => {
+  it('accepts a tail claim', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      assert.equal(main(['claim', a, 'tail'], { now: NOW }), 0);
+      assert.equal(JSON.parse(readFileSync(join(a, '.specify', '.cache', 'watch-claim.json'), 'utf8')).fix, 'tail');
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
   it('unlocks a dead lock, removes a merged clean worktree, prunes a deleted one, and leaves the rest alone', () => {
     const f = fixture();
     try {

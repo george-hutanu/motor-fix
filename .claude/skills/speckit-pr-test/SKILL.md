@@ -93,7 +93,7 @@ without a status, so the test runs again.
    `specs/<feature>/deferred.md` unless they are one-line fixes, and every
    deferred bullet is filed as a Notion task (`speckit-notion-sync debt`).
    On success, file the lap's deferred findings the same way before merging,
-   in the order `/speckit-auto`'s hand-off step 6 gives (commit the task URLs,
+   in the order `/speckit-auto`'s "The tail" step 4 gives (commit the task URLs,
    which step 2 carries without a lap; the new head's own findings, if a lap
    ran, go to Notion directly).
 7. **Cap reached** (`repair` exits 1): the run is blocked with
@@ -105,7 +105,11 @@ without a status, so the test runs again.
 ## Evidence
 
 Copy `report.md` and `report.json` from the tester's `--out` directory into
-`specs/<feature>/pr-review/lap<n>/`. Never commit the screenshots: they stay in
+`specs/<feature>/pr-review/lap<n>/`. A failing lap's copy is committed with
+that lap's fix, so it rides in the PR it tested. A passing lap's is not
+committed: a commit would make a new head for another lap, and its verdict is
+already the PR review, the Agent review section and the run's artifact, never
+a later `docs(specs)` PR. Never commit the screenshots: they stay in
 `--out`, outside the repo, and in the run's `pr-qa-<n>` artifact (kept 7
 days); the report names them and gives the run's URL. A lap's images would
 otherwise add hundreds of kilobytes to every clone for good, since a merge

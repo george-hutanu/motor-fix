@@ -30,3 +30,6 @@ specs/**/pr-review/**/*.png
 specs/**/pr-review/**/*.jpg
 specs/**/pr-review/**/*.jpeg
 specs/**/pr-review/**/*.webp
+
+# A story agent's note to the tail agent that takes its ready PR; local only.
+specs/**/handoff.md
