@@ -24,8 +24,8 @@ const sectionFrom = (text, marker) => {
 
 // Artifact reads the design mock; webstorm is harden's second analyzer.
 const NEEDED = ['Bash', 'Read', 'Edit', 'Write', 'Grep', 'Glob', 'Skill', 'Agent', 'ToolSearch', 'Monitor', 'TaskStop', 'EnterWorktree', 'PushNotification', 'Artifact', 'mcp__webstorm__get_file_problems'];
-const HEAVY = ['ArtifactComments', 'mcp__Claude_Browser', 'mcp__claude-in-chrome', 'mcp__chrome-devtools', 'mcp__Claude_Code_iOS_Simulator', 'mcp__visualize', 'mcp__ccd_session', 'mcp__ccd_session_mgmt'];
-const REREAD = /\b(follow|read|re-read)\s+(AGENTS\.md|CLAUDE\.local\.md)|^\s*- (AGENTS\.md|CLAUDE\.local\.md)\b/im;
+const HEAVY = ['ArtifactComments', 'ArtifactData', 'mcp__Claude_Browser', 'mcp__claude-in-chrome', 'mcp__chrome-devtools', 'mcp__Claude_Code_iOS_Simulator', 'mcp__visualize', 'mcp__ccd_session', 'mcp__ccd_session_mgmt'];
+const REREAD = /\b(follow|read)\s+(the current\s+|both\s+)?(AGENTS\.md|CLAUDE\.local\.md)|^\s*(-|\d+\.) (AGENTS\.md|CLAUDE\.local\.md)\b/im;
 // A quoted prompt wraps across `> ` lines and names files in backticks.
 const prose = (text) => text.replace(/^[ \t]*>[ \t]?/gm, '').replaceAll('`', '');
 const rereads = (text) => REREAD.test(prose(text));
@@ -48,6 +48,7 @@ describe('the task-runner definition', () => {
   it('says the rules are in context and gives the delta command', () => {
     const body = read(AGENT);
     assert.ok(!rereads(body));
+    assert.match(body, /are in your context/);
     assert.match(body, /git diff -R origin\/main -- AGENTS\.md CLAUDE\.local\.md/);
     assert.match(body, /constitution-card\.md/);
   });

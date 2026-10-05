@@ -39,3 +39,6 @@ spec-reviewer BLOCK (CRITICAL: Artifact denied, the design check reads the mock 
 
 ## measure (after lap 1)
 `claude -p --agent task-runner --output-format json "Reply OK"`: **43,519** (Artifact's schema is ~8.6k of it); no agent: **55,240**. ToolSearch returns EnterWorktree, Monitor, TaskStop, PushNotification; Artifact, Skill and Agent are direct.
+
+## review lap 2
+spec-reviewer APPROVE, code-reviewer APPROVE (no CRITICAL/HIGH). Patched: task-runner no longer says "you do not" read the constitution; FR-003's "in your context" pinned; ArtifactData pinned; REREAD covers "the current"/"both" and numbered lists (still flags main's four texts); deferred.md in the severity/path format retro-evidence parses; spec assumption dates its 34.9k/36.0k figures. Harness 54 files / 1199 tests green.

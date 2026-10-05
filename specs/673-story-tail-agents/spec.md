@@ -74,7 +74,7 @@ card exists and matches the constitution.
 ## Assumptions
 
 - One definition, `task-runner`, serves the story agent, the tail and every watch fix: their tools, model, context rules and envelope are the same, and the prompt names the part to run; two files would duplicate every line. (autonomous default)
-- A deny list rather than an allowlist: measured, the allowlist saves about 1.1k tokens (34.9k against 36.0k) but drops Notion whenever the connector's id changes (seen: `claude_ai_Notion`, `828510aa-…`, `fd62790a-…`); the deny list keeps it under any id. (autonomous default)
+- A deny list rather than an allowlist: measured before review lap 1 (Artifact and WebStorm still denied), the allowlist saved about 1.1k tokens (34.9k against 36.0k) but drops Notion whenever the connector's id changes (seen: `claude_ai_Notion`, `828510aa-…`, `fd62790a-…`); the deny list keeps it under any id. (autonomous default)
 - `disallowedTools` in an agent file's frontmatter is honoured by Claude Code 2.1.289, verified by listing the agent's tools headless. (autonomous default)
 - The delta command runs in the checkout the agent starts in (the dispatcher's, whose copy CLAUDE.md loaded), before `EnterWorktree`; `-R` makes `+` lines the ones `main` added. (autonomous default)
 - The card cap is 3,000 bytes, a little above the ~2 KB asked, so each principle keeps its gate. (autonomous default)

@@ -20,7 +20,7 @@ for a handed-off PR, or one `/speckit-watch` fix.
 - **The constitution:** `/speckit-auto`'s Preflight and phase 1 read the card,
   `.specify/memory/constitution-card.md` (each principle and the gate that
   enforces it). The reviewers and the PR tester read the full
-  `.specify/memory/constitution.md` themselves; you do not.
+  `.specify/memory/constitution.md` themselves.
 - **Notion:** the connector's tools are deferred and their server id changes
   between sessions. Load the ones a skill needs in one `ToolSearch` call
   (`+notion fetch update-page …`), whatever id they carry.
