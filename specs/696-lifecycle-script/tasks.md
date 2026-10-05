@@ -4,4 +4,4 @@
 - [X] T002 Red: .claude/scripts/lifecycle-wiring.spec.mjs covers FR-009 (speckit-auto and speckit-git-commit name one lifecycle.mjs call per step and no longer spell out the recipe).
 - [X] T003 Green: .claude/scripts/lifecycle.mjs (FR-001..FR-008), reusing typeLabel (pr-lifecycle-gate), parseDeferred (debt-tasks), readyLogged (notion-ready), activeFeature, and the gates through run-hook.mjs.
 - [X] T004 Green: shorten .claude/skills/speckit-auto/SKILL.md (the open, ready and merge command lines) and .claude/skills/speckit-git-commit/SKILL.md (the first-commit recipe) to one lifecycle.mjs call each (FR-009).
-- [ ] T005 Harden: npm run test:harness, doctor, artifact-lint, diff-audit; review.
+- [X] T005 Harden: npm run test:harness, doctor, artifact-lint, diff-audit; review.
