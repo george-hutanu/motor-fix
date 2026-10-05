@@ -242,10 +242,15 @@ export class LiveChange {
     const reduced = inject(REDUCED_MOTION);
     const announcer = inject(LiveAnnouncer);
     let first = true;
-    // The highlight's length is the CSS token's; the class goes when it ends.
-    host.addEventListener('animationend', () =>
-      host.classList.remove('mf-live-changed'),
-    );
+    // The highlight's length is the CSS token's; the class goes when it ends,
+    // or when it is cancelled. A row's own animations bubble up here too.
+    const ended = (event: AnimationEvent) => {
+      if (event.animationName === 'mf-live-changed') {
+        host.classList.remove('mf-live-changed');
+      }
+    };
+    host.addEventListener('animationend', ended);
+    host.addEventListener('animationcancel', ended);
     effect(() => {
       this.mfLiveChange();
       if (first) {

@@ -40,3 +40,12 @@
 - code-reviewer BLOCK: HIGH a re-read that fails after the view is destroyed left a 60 s timer (guard in `failed`, test proven to fail without it). MEDIUM `:where()` for the highlight's `position: relative`; the highlight's 1 s lived twice (timer removed, the class leaves on `animationend`); the unexported interfaces. LOW 404 read through `HttpErrorResponse`; the anchor's per-scroll scan loops without copying; the pill looks only in its own container; the duplicate test helper folded into the other.
 - code-reviewer MEDIUM decision (helpers with no caller): kept (option A). The Build brief scopes "the front-end rules in the shared live library" to this story, and FR-006–FR-008 are its requirements; the first callers are ST-199 (the bell's list) and later screens. Recorded for the owner. (autonomous default)
 - spec-reviewer BLOCK: HIGH the spec said the two brief e2e checks were deferred, but no deferred.md existed (written; filed as Notion tasks); MEDIUM the gone/changed texts are not shown by any screen yet (deferred, filed); LOW the dialog label in the assumption corrected; the pill's scope; the destroy timer.
+- Re-review: code-reviewer APPROVE, spec-reviewer APPROVE. Both raised the bubbling `animationend` (a child's animation ended the highlight early): filtered on `animationName`, and `animationcancel` handled too, each with a test. The code-reviewer keeps the no-caller decision open for the owner (not blocking).
+- `npm run test:unit` (whole workspace, 11 projects) green; the retro carryover from 195 asks for it on a multi-lib story.
+
+## Retrospective evidence (unjudged)
+- `retro-evidence.mjs --since 86017d0`: 3 commits; 3 deferred medium items (all filed); 10 carryover items from earlier retros; Jev lane unavailable (no key). `instincts.mjs triggered`: nothing proposed.
+
+## Archive
+- `capabilities.mjs merge specs/256-live-in-place --apply`: live-updates +9 added, ~3 modified.
+- Retro skipped at level 1.

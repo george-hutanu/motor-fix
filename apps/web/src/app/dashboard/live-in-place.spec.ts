@@ -217,7 +217,17 @@ describe('LiveChange', () => {
     fixture.detectChanges();
     expect(p.classList.contains('mf-live-changed')).toBe(true);
 
-    p.dispatchEvent(new Event('animationend'));
+    // A row's own animation ending inside it leaves the highlight on.
+    const ended = (type: string, animationName: string) =>
+      Object.assign(new Event(type, { bubbles: true }), { animationName });
+    p.dispatchEvent(ended('animationend', 'mf-blink'));
+    expect(p.classList.contains('mf-live-changed')).toBe(true);
+    p.dispatchEvent(ended('animationend', 'mf-live-changed'));
+    expect(p.classList.contains('mf-live-changed')).toBe(false);
+
+    fixture.componentInstance.value.set(3);
+    fixture.detectChanges();
+    p.dispatchEvent(ended('animationcancel', 'mf-live-changed'));
     expect(p.classList.contains('mf-live-changed')).toBe(false);
   });
 
