@@ -1,0 +1,80 @@
+{
+  "pr": 112,
+  "repo": "george-hutanu/motor-fix",
+  "sha": "550218c2a5e8da356adef195f17a330842adb89b",
+  "base": "990df691f210056af177b7dc0004400a11dd811a",
+  "lap": 1,
+  "verdict": "success",
+  "summary": "No blocking findings; 2 in all. Booted postgres, redis, minio, api, web, worker.",
+  "findings": [
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "FR-004's \"no second read is sent\" has no unit assertion: the double-tap test checks only the count",
+      "where": "apps/web/src/app/dashboard/bell.badge.adversary.spec.ts:187",
+      "steps": [
+        "await Promise.all([store.read('a'), store.read('a')]);",
+        "expect(store.count()).toBe(1); — bellControllerRead's call count is never asserted"
+      ],
+      "evidence": "The PR QA flow did prove it in the browser (one POST /read for two taps while the answer was held 1.5 s, flow-112.log). Adding expect(api.bellControllerRead).toHaveBeenCalledTimes(1) would pin it in the unit suite as well."
+    },
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "The PR body says 6 new tests in bell.spec.ts; the diff adds 5 (plus 1 reworded)",
+      "where": "PR description, What changed",
+      "steps": [
+        "git diff origin/main...550218c -- apps/web/src/app/dashboard/bell.spec.ts"
+      ],
+      "evidence": "New: 'counts the read once when its live echo lands before its answer', 'shows a notification that arrived while the read was answered', 'keeps the count its echo reloaded when the read fails to reload it', 'lowers the count by one when it fails to reload after a read', 'keeps the count at zero after mark all when an earlier count answers late'."
+    }
+  ],
+  "booted": [
+    "postgres",
+    "redis",
+    "minio",
+    "api",
+    "web",
+    "worker"
+  ],
+  "notes": [
+    "Ran on GitHub Actions (https://github.com/george-hutanu/motor-fix/actions/runs/37296299108): PostgreSQL with PostGIS, Redis and MinIO from the PR's own compose file, started by the PR QA workflow.",
+    "No changed GET endpoint without path parameters.",
+    "Unit and end-to-end tests left to CI (Unit tests and E2E tests; the merge gate waits for them)."
+  ],
+  "screenshots": [
+    "shots/home-desktop-light-ro.png",
+    "shots/home-desktop-light-en.png",
+    "shots/home-desktop-dark-ro.png",
+    "shots/home-desktop-dark-en.png",
+    "shots/home-tablet-light-ro.png",
+    "shots/home-tablet-light-en.png",
+    "shots/home-tablet-dark-ro.png",
+    "shots/home-tablet-dark-en.png",
+    "shots/home-mobile-light-ro.png",
+    "shots/home-mobile-light-en.png",
+    "shots/home-mobile-dark-ro.png",
+    "shots/home-mobile-dark-en.png",
+    "shots/home-small-phone-light-ro.png",
+    "shots/home-small-phone-light-en.png",
+    "shots/home-small-phone-dark-ro.png",
+    "shots/home-small-phone-dark-en.png",
+    "shots/cockpit-desktop-light-ro.png",
+    "shots/cockpit-desktop-light-en.png",
+    "shots/cockpit-desktop-dark-ro.png",
+    "shots/cockpit-desktop-dark-en.png",
+    "shots/cockpit-tablet-light-ro.png",
+    "shots/cockpit-tablet-light-en.png",
+    "shots/cockpit-tablet-dark-ro.png",
+    "shots/cockpit-tablet-dark-en.png",
+    "shots/cockpit-mobile-light-ro.png",
+    "shots/cockpit-mobile-light-en.png",
+    "shots/cockpit-mobile-dark-ro.png",
+    "shots/cockpit-mobile-dark-en.png",
+    "shots/cockpit-small-phone-light-ro.png",
+    "shots/cockpit-small-phone-light-en.png",
+    "shots/cockpit-small-phone-dark-ro.png",
+    "shots/cockpit-small-phone-dark-en.png"
+  ],
+  "markdown": "**Agent review: success** — PR #112 at `550218c`, lap 1\n\nBlocking: 0 (blocker 0, high 0) · medium 0 · low 2. Booted: postgres, redis, minio, api, web, worker.\n- Ran on GitHub Actions (https://github.com/george-hutanu/motor-fix/actions/runs/37296299108): PostgreSQL with PostGIS, Redis and MinIO from the PR's own compose file, started by the PR QA workflow.\n- No changed GET endpoint without path parameters.\n- Unit and end-to-end tests left to CI (Unit tests and E2E tests; the merge gate waits for them).\n\n| # | Severity | Finding | Where | Evidence |\n| --- | --- | --- | --- | --- |\n| 1 | low | FR-004's \"no second read is sent\" has no unit assertion: the double-tap test checks only the count |  | The PR QA flow did prove it in the browser (one POST /read for two taps while the answer was held 1.5 s, flow-112.log). Adding expect(api.bellControllerRead).toHaveBeenCalledTimes(1) would pin it in the unit suite as well. |\n| 2 | low | The PR body says 6 new tests in bell.spec.ts; the diff adds 5 (plus 1 reworded) |  | New: 'counts the read once when its live echo lands before its answer', 'shows a notification that arrived while the read was answered', 'keeps the count its echo reloaded when the read fails to reload it', 'lowers the count by one when it fails to reload after a read', 'keeps the count at zero after mark all when an earlier count answers late'. |\n\n### Reproduction\n1. await Promise.all([store.read('a'), store.read('a')]); → expect(store.count()).toBe(1); — bellControllerRead's call count is never asserted\n2. git diff origin/main...550218c -- apps/web/src/app/dashboard/bell.spec.ts\n\nScreenshots: 32, one per route × viewport × scheme × language.\n"
+}
