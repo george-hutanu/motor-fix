@@ -11,7 +11,13 @@ const prisma = createPrisma(databaseUrl);
 serialDatabase(databaseUrl);
 
 const seed = (APP_ENV: string, extra: Record<string, string> = {}) => {
-  const env: NodeJS.ProcessEnv = { ...process.env, APP_ENV, ...extra };
+  // The seed reads DATABASE_URL itself: hand it the database this spec checks.
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    APP_ENV,
+    DATABASE_URL: databaseUrl,
+    ...extra,
+  };
   if (!('SEED_PASSWORD' in extra)) delete env['SEED_PASSWORD'];
   return spawnSync(process.execPath, [join(__dirname, 'seed.ts')], {
     encoding: 'utf8',

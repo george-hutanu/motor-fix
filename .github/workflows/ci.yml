@@ -171,7 +171,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       - if: steps.browsers.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
-      # Playwright starts the api and web dev servers itself (playwright.config.mts).
+      # Playwright starts the api, the worker and the web dev server itself (playwright.config.mts).
       - run: npx nx $NX_SCOPE -t e2e
       - if: failure()
         uses: actions/upload-artifact@v4

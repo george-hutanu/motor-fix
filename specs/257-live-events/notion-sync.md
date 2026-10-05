@@ -9,3 +9,5 @@
 - 2026-10-05 · implement · ST-257 story Status · Planning → Implementing
 - 2026-10-05 · implement · Foundations timeline row ST-257 · Planning → Implementing
 - 2026-10-05 · labels · PR #77 · in development
+- 2026-10-05 · debt · deferred.md line 2 → To do task https://app.notion.com/p/3f0607bff0d281a79071ebe63bd8779e
+- 2026-10-05 · debt · deferred.md line 3 → To do task https://app.notion.com/p/3f0607bff0d281c1a09ec67b308f6b4a

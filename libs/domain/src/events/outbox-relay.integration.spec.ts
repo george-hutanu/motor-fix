@@ -234,7 +234,6 @@ describe('the relay', () => {
     const added: { name: string; data: unknown; jobId?: string }[] = [];
     const consumer: EventConsumer = {
       kinds: ['quote.sent'],
-      name: 'notifications',
       queue: {
         add: async (name, data, options) => {
           added.push({ data, jobId: options.jobId, name });
@@ -275,7 +274,6 @@ describe('the relay', () => {
   it('leaves the events waiting when a consumer’s queue cannot take the job', async () => {
     const consumer: EventConsumer = {
       kinds: ['quote.sent'],
-      name: 'notifications',
       queue: {
         add: async () => {
           throw new Error('queue unavailable');

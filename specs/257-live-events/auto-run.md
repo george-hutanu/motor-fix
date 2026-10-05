@@ -26,3 +26,16 @@
 ## Implement
 - Database `motorfix_st257` (local). Whole suite green: domain 68 suites, 2287 tests.
 - The relay spec at first failed beside other suites (they record account events into the same outbox); its assertions are now scoped to its own kinds and subjects.
+- The outbox migration was also applied to the shared local `postgres` database, which the pre-commit hook's integration specs use (additive table; earlier stories' migrations are there the same way).
+
+## Harden
+- artifact-lint: 0 errors. diff-audit: only the known import-extension false positives on libs/ (ST-457), pre-existing dead exports, and the untested-new-file false positive on outbox-relay.ts (its integration spec imports it). Mutation testing: CI only (AGENTS.md).
+- code-reviewer APPROVE: #1 unread `EventConsumer.name` (removed); #2 a hanging consumer queue would hold the batch's locks (documented on the interface: a consumer's client must fail fast; no consumer exists yet); #3 the web compile-time test of `Live.on` (kept: the only check that `on` takes catalogue kinds); #4 `liveResource` without a caller (kept: FR-009, the story's front-end scope); #5 two Prisma pools and Redis clients in the worker (deferred, Notion task filed).
+- Repair lap 1 of 5.
+
+## Review
+- spec-reviewer APPROVE; LOW: unread `EventConsumer.name` (removed); the CI e2e comment now names the worker.
+- Deferred by the author: `account.email_confirmed` still goes straight to Redis (Notion task filed).
+
+## Agent context
+- Skipped: CLAUDE.local.md is the owner's private file with local edits; nothing tracked needed a change.

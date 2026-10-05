@@ -18,9 +18,10 @@ interface Jobs {
   ): Promise<unknown>;
 }
 
-// A queue that gets one job for each relayed event of its kinds.
+// A queue that gets one job for each relayed event of its kinds. Its add()
+// runs inside the batch's transaction, so its client must fail fast when its
+// Redis is down (no offline queue) rather than hold the batch's row locks.
 export interface EventConsumer {
-  name: string;
   kinds: readonly EventKind[];
   queue: Jobs;
 }
