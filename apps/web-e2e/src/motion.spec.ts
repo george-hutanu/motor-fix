@@ -68,8 +68,14 @@ async function swap(page: Page) {
   await expect(range).not.toHaveText(before ?? '');
 }
 
-const openDialog = (page: Page) =>
-  page.getByRole('button', { exact: true, name: COCKPIT.openDialog }).click();
+// Returns once the dialog is open: a click made before hydration is replayed
+// after it, so on a slow host the dialog can open a few hundred ms later.
+async function openDialog(page: Page) {
+  await page
+    .getByRole('button', { exact: true, name: COCKPIT.openDialog })
+    .click();
+  await expect(page.locator('hlm-dialog-content')).toBeVisible();
+}
 
 // Slows every animation tenfold, so a build-up is still running when the
 // test acts on it.

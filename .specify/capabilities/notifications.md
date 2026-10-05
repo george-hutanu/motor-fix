@@ -8,6 +8,7 @@ features:
   - 555-account-link-params
   - 196-push-notifications
   - 646-notification-send-claim
+  - 571-news-fan-out-worker
 ---
 
 # Capability: Notifications
@@ -279,6 +280,30 @@ _From 646-notification-send-claim._
 ### 646-FR-004 — When a send job ends — sent, failed, held back, retried or thrown — it MUST release its own claim (and only its own).
 
 _From 646-notification-send-claim._
+
+### 571-FR-001 — Sending news MUST claim the month and answer 202 with the number of consenting drivers, writing no news message in the request; the month's run (title, text, sender) MUST reach the worker as one queued job.
+
+_From 571-news-fan-out-worker._
+
+### 571-FR-002 — The worker MUST run the month's job by writing one news message per consenting driver, in the driver's language, with the driver's unsubscribe links.
+
+_From 571-news-fan-out-worker._
+
+### 571-FR-003 — A run that fails MUST be retried by the queue; a retry MUST reach each driver once and MUST keep the month claimed.
+
+_From 571-news-fan-out-worker._
+
+### 571-FR-004 — A run that fails on its last attempt MUST give the month back and record the release against the sender.
+
+_From 571-news-fan-out-worker._
+
+### 571-FR-005 — The run MUST be saved in PostgreSQL in the same transaction as the month's claim (a `news.sent` outbox event), and queued from there by the worker's outbox relay, so a Redis that is down at the send, or emptied before the run, loses no run and holds no month without one.
+
+_From 571-news-fan-out-worker._
+
+### 571-FR-006 — The worker MUST run news jobs only when it has the token secret the unsubscribe links are signed with and the public web address the links point to; without either, it MUST log an error at start and leave the jobs queued.
+
+_From 571-news-fan-out-worker._
 
 ## Retired
 

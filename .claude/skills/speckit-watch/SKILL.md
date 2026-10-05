@@ -61,20 +61,20 @@ or overrides them.
    node .claude/scripts/watch.mjs claim <path> <fix>
    ```
 
-   Then one `Agent` call per entry, `subagent_type: general-purpose`,
+   Then one `Agent` call per entry, `subagent_type: task-runner`,
    `run_in_background: true`, all in one message. An entry whose work only
    moves state (labels, Notion, a finish log, a merge) and writes or judges no
    code also gets `model: "sonnet"`; today that is `merge`: it merges
    `origin/main`, merges the PR and syncs Notion (a new head goes back to the
    PR tester, which is pinned to Opus). `resume`, `tail`, `rerun-qa` and
-   `fix-ci` write or judge code and keep the default model (Opus). The prompt
-   starts with:
+   `fix-ci` write or judge code and keep the default model (Opus). The
+   definition already has AGENTS.md and CLAUDE.local.md in context and the
+   command for what `main` changed since, so the prompt does not send it back
+   to them. It starts with:
 
    > Switch into the existing worktree with `EnterWorktree` and `path: <path>`
-   > (branch `<branch>`, feature `<feature>`, PR #<pr>). Work only there. Follow
-   > AGENTS.md (task lifecycle, identity, heavy commands through
-   > `scripts/heavy.sh`) and CLAUDE.local.md. A watcher found this worktree
-   > stale in phase `<phase>` with no live agent.
+   > (branch `<branch>`, feature `<feature>`, PR #<pr>). Work only there. A
+   > watcher found this worktree stale in phase `<phase>` with no live agent.
 
    and continues with the fix's instruction:
 
