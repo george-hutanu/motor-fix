@@ -46,7 +46,7 @@ This is the whole point of the command — read it before phase 1.
    `**Recommended:** Option X` or `**Suggested:** <answer>`, that is the
    answer. Where it computes none, pick the option that best fits the
    constitution (`.specify/memory/constitution.md`, Principle I first) and
-   this repo's real code — `package.json`, `nx.json`, `biome.json`,
+   this repo's real code — `package.json`, `nx.json`, `biome.jsonc`,
    `jest.config.ts`, the touched workspace — and say which evidence decided
    it.
 3. **Assumptions are written down, not held in memory.** Every autonomous
@@ -133,7 +133,7 @@ Two groups need no output from each other, so run them at once:
 | 0 | Size | `speckit-size` | Choose a level; record it before anything else |
 | 1 | Constitution | *(read only)* | Verify, do not rewrite — see below |
 | 2 | Specify | `speckit-specify` | Self-answer the clarification table |
-| 3 | Org context | `speckit-context` | Overwrite freely; a dead lane is not a stop |
+| 3 | Org context | `speckit-context` | Overwrite freely; a dead connector is not a stop |
 | 4 | Clarify | `speckit-clarify` | Self-answer all ≤5 questions |
 | 5 | Plan | `speckit-plan` | none (no interactive gate) |
 | 6 | Checklist | `speckit-checklist` | Drive to 0 unchecked items |
@@ -280,10 +280,11 @@ workspace's own config — read them and cite them; never a version from memory.
 Parse the setup script's JSON for `FEATURE_SPEC`, `IMPL_PLAN`, `FEATURE_DIR`,
 `BRANCH` (spec-kit ≥1.0.5 renamed `SPECS_DIR` to `FEATURE_DIR`).
 
-Watch the import-extension rule while planning file layout: `apps/server`,
-`apps/scanner` and `libs/*` use `nodenext` and need the literal `.js`
-extension on relative imports; `apps/client` and `apps/docs` must not have it
-(AGENTS.md). Getting this wrong fails at build time, not typecheck time.
+Watch the import-extension rule while planning file layout: `apps/web-e2e`
+uses `nodenext` and needs the literal `.js` extension on relative imports;
+`apps/api`, `apps/worker`, `apps/mcp`, `apps/web` and the libs resolve with
+`bundler` or `preserve` and do not use it (each project's `tsconfig*.json`).
+Getting this wrong fails at build time, not typecheck time.
 
 ### 6. Checklist
 
@@ -314,7 +315,7 @@ Invoke `speckit-tests`. Every spec FR must get at least one test in a
 colocated `*.spec.ts` next to the code it covers (API tests against real PostgreSQL and
 Redis, end-to-end flows in the app's `*-e2e` Playwright project — constitution II),
 No internal identifier goes into the source — not in a title, not in a comment:
-no FR id, feature number, task id or Jira key (project rule,
+no FR id, feature number, task id or story id (project rule,
 `.claude/skills/speckit-tests/SKILL.md`). The FR → test mapping belongs to the
 completion report and `tasks.md`, where those ids resolve. Comments are held to
 the same bar as code: one only where it says something the code cannot. Then
@@ -355,8 +356,10 @@ the report, and list what remains — do not spin.
 
 Invoke `speckit-harden`. It runs the mechanical audits (`artifact-lint.mjs`,
 `diff-audit.mjs`), then three subagents: `test-adversary` (tests from outside
-the author's model), one `mutation-runner` per touched package (in parallel),
-and `code-reviewer` (the durability read) — then fixes what they find.
+the author's model) and `code-reviewer` (the durability read) — then fixes
+what they find. Mutation testing is not part of this phase: it never runs on
+this machine or in PR CI, only in `.github/workflows/mutation.yml` (nightly on
+`main`, or `workflow_dispatch` with `projects`).
 
 Gate overrides:
 
@@ -365,9 +368,8 @@ Gate overrides:
 - **A suppression is never the fix** — not a `biome-ignore`, not a `.skip`, not
   a Stryker disable added to reach the floor. Hard Stop 5 applies if the same
   finding survives three attempts.
-- Mutation runs are slow; run them only for packages this branch touched. If a
-  run exceeds the patience of the session, record the score you have and say
-  the step was partial — never report a floor you did not measure.
+- Never report a mutation score this run did not get from CI; a project's
+  floor in `stryker.config.json` only rises.
 - Fixes here are refactors, deletions and added tests. A finding that needs a
   behavior change is Hard Stop 7, not an edit.
 
@@ -377,8 +379,8 @@ Commit the result as its own slice: `refactor(<scope>): …` or
 ### 13. Ticket refresh
 
 Invoke `speckit-context --since`. A run takes hours and the organisation does
-not pause for it: a comment that narrows the ask, a flag, a linked ticket that
-now owns half the work. This phase re-runs the lanes against the digest's own
+not pause for it: a comment that narrows the ask, a flag, a linked story that
+now owns half the work. This phase re-reads Notion against the digest's own
 `Gathered` date and appends a `## Refresh` section to `context.md`.
 
 Gate overrides:
@@ -389,7 +391,7 @@ Gate overrides:
   the final report and, if it contradicts what was delivered, into `spec.md` as
   a recorded conflict. Expanding the run to satisfy a comment found here is a
   scope change only the user can make (Hard Stop 7).
-- A dead lane is logged `[UNAVAILABLE: …]`, exactly as in phase 3.
+- A dead connector is logged `[UNAVAILABLE: notion — …]`, exactly as in phase 3.
 
 ### 14. Review
 
@@ -422,8 +424,7 @@ Invoke `speckit-agent-context-update` to refresh the managed
 `<!-- SPECKIT START/END -->` block. Note that `AGENTS.md` is a tracked,
 shared file and `CLAUDE.md` only points at it — if the update would write
 spec-kit content into a tracked file, keep it in `CLAUDE.local.md` instead and
-say so in the report. `specs/`, `.specify/` and `.claude/` are git-excluded
-here on purpose; do not "fix" that by committing them.
+say so in the report.
 
 ### 16. Retrospective evidence — gather it, do not grade yourself
 
@@ -448,9 +449,9 @@ damages work that has not started. Same reasoning bars `/speckit-learn`: an
 instinct recorded without a human agreeing to it is indistinguishable from a
 hallucination that got persisted, which is why `triggered` only proposes.
 
-`--since` is not optional. `specs/` is git-excluded here, so a feature's
-commits are not derivable from its directory and the evidence report will say
-so rather than inventing a range.
+`--since` is not optional. A feature's directory does not bound its commits
+(the start commit, merges of `origin/main` and code outside `specs/` all fall
+outside it), so the evidence report says so rather than inventing a range.
 
 `--jev` is what adds the **suggested** verdict, with a stated confidence.
 Unlike `artifact-lint` and `diff-audit` this script has no `--check` form, so
@@ -466,23 +467,22 @@ commit, to the feature's own branch only (`git push`, upstream set when the
 branch was created, so the draft PR follows the work). Never `--force`, never
 `main`. Never merge mid-run: the tail agent merges, on green CI only.
 
-The artifact phases produce **no commits**, and this is not an oversight:
-`specs/`, `.specify/` and `.claude/` are all listed in `.git/info/exclude`, so
-`spec.md`, `plan.md`, `tasks.md` and the run log are local-only files with
-nothing to stage. If a git-extension hook offers to commit them, let it run and
-expect it to find nothing; do not `git add -f` an excluded path to make a
-commit happen.
+`specs/`, `.specify/` and `.claude/` are tracked: the artifact phases commit
+what they wrote as `docs(specs): ST-<n> …` (or `chore(specs): …` for logs), so
+the draft PR shows the spec as it forms. `.specify/feature.json`,
+`.specify/run-state.json` and `specs/<feature>/handoff.md` are git-ignored and
+are never forced in.
 
 | Phase | Commit |
 |-------|--------|
-| 2–8 | none — artifacts are git-excluded |
+| 2–8 | `docs(specs): ST-<n> …` per phase that wrote an artifact |
 | 9 | none — see below |
 | 10 | `feat(<scope>): <slice>` per implementation slice, staging the code and its tests together |
 | 11 | further `feat(<scope>):` slices for the converged work |
 | 12 | `refactor(<scope>): …` / `test(<scope>): …` for the hardening pass — never `feat` |
 | 15 | `docs: …` only if a *tracked* file genuinely changed |
 | 16 | no commit — the phase is read-only; it writes no artifact at all |
-| 17 | no commit — `.specify/capabilities/` is untracked here too |
+| 17 | `docs(specs): ST-<n> …` for the archive status line and the merged Spec Delta in `.specify/capabilities/` |
 
 Three gates shape this and are not negotiable:
 
@@ -736,19 +736,19 @@ The report's sections:
 
 - [ ] Preflight passed (clean tree, green typecheck/lint/tests, constitution card read)
 - [ ] Phases 1–16 executed in order, no phase skipped silently
-- [ ] Org context gathered, or every unavailable lane named in the report
+- [ ] Org context gathered, or the unavailable connector named in the report
 - [ ] Every interactive gate answered autonomously and logged
 - [ ] Red-first proven before implementation (failing count quoted)
 - [ ] All `tasks.md` items `[X]` or explicitly reported as not done
 - [ ] Converge run; appended work implemented or reported
 - [ ] `spec-reviewer` run; CRITICAL/HIGH resolved
 - [ ] Tests and lint green; every FR covered by a test named in the report's FR → test table
-- [ ] No internal identifier (FR id, feature number, task id, Jira key) left in any source file, comments included
+- [ ] No internal identifier (FR id, feature number, task id, story id) left in any source file, comments included
 - [ ] `artifact-lint.mjs` and `diff-audit.mjs` clean, or every remaining finding explained in the report
 - [ ] both were run in their REPORT form, not `--check`: `--check` turns the semantic lane off, so a
       run that only ever used it has not asked whether a requirement is testable or a dependency earns
       its place. If the lane reported itself unavailable, say so in the report — that is not "clean"
-- [ ] Mutation score at or above the floor for every touched package, with no disable added to reach it
+- [ ] No Stryker disable added; no mutation score reported that CI did not produce
 - [ ] Ticket re-read (comments included) after implementation, and any scope-moving comment reported
 - [ ] One commit per implementation slice, each pushed to the feature branch
 - [ ] Hand-off done on a clean finish: records committed, PR ready, story Implementing → QA, `qa` line pushed, `handoff.md` written, `NEXT: tail #<n>` returned
