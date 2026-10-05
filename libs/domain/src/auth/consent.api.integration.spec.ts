@@ -56,12 +56,14 @@ afterAll(async () => {
 
 // The audit history is append-only: count from where each test starts.
 let consentEntries = 0;
+let outboxEvents = 0;
 const countConsentEntries = () =>
   prisma.activityLog.count({ where: { field: 'consent' } });
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe('TRUNCATE account, garage CASCADE');
   consentEntries = await countConsentEntries();
+  outboxEvents = await prisma.outboxEvent.count();
   const keys = await redis.keys('auth:*');
   if (keys.length) await redis.del(...keys);
 });
@@ -84,6 +86,9 @@ const nothingWritten = async () => {
   expect(await prisma.account.count()).toBe(0);
   expect(await prisma.accountConsent.count()).toBe(0);
   expect(await countConsentEntries()).toBe(consentEntries);
+  expect(await prisma.accountToken.count()).toBe(0);
+  expect(await prisma.refreshToken.count()).toBe(0);
+  expect(await prisma.outboxEvent.count()).toBe(outboxEvents);
 };
 
 const refusedForConsent = (res: request.Response) => {
