@@ -25,6 +25,7 @@ import { Overlays } from '@motor-fix/overlays';
 import { HlmToaster, toast } from '@motor-fix/ui-cockpit';
 import { filter, map } from 'rxjs';
 
+import { EmailBanner } from './email-banner';
 import { Live } from './live';
 import { Session } from './session';
 import { SignOutEverywhere } from './sign-out-everywhere';
@@ -38,6 +39,7 @@ import { segmentsOf } from '../addresses';
   imports: [
     AsWritten,
     DashboardTabBar,
+    EmailBanner,
     HlmToaster,
     LanguageSwitch,
     RouterLink,
@@ -81,6 +83,7 @@ import { segmentsOf } from '../addresses';
     </aside>
     <div class="view">
       <header><h1>{{ open().label | t }}</h1><mf-language-switch /></header>
+      <mf-email-banner />
       <main><router-outlet /></main>
       <mf-dashboard-tab-bar [base]="base()" [views]="entries()" [name]="dashboard().name" />
     </div>
@@ -146,6 +149,9 @@ export class Frame implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((message) => {
         if (message.kind === 'live.test') toast(this.i18n.t('shell.live.test'));
+        if (message.kind === 'account.email_confirmed') {
+          void this.session.reload();
+        }
         // Signed out on all devices, from this one or another.
         if (message.kind === 'session.revoked') void this.signOut();
       });

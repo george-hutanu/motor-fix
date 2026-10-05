@@ -77,3 +77,18 @@ export class SessionDto {
   })
   accessToken!: string;
 }
+
+export class ConfirmEmailDto {
+  @ApiProperty({
+    description: 'The token of a confirmation link: 43 base64url characters',
+    pattern: '^[A-Za-z0-9_-]{43}$',
+  })
+  @IsString()
+  @Matches(/^[A-Za-z0-9_-]{43}$/, { message: 'token must be a link token' })
+  token!: string;
+}
+
+export class ConfirmEmailAnswerDto {
+  @ApiProperty({ enum: ['confirmed'] })
+  status!: 'confirmed';
+}

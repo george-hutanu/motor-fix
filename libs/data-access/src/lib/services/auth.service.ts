@@ -19,6 +19,11 @@ import { authControllerSignOutEverywhere } from '../fn/auth/auth-controller-sign
 import { AuthControllerSignOutEverywhere$Params } from '../fn/auth/auth-controller-sign-out-everywhere';
 import { authControllerSignUp } from '../fn/auth/auth-controller-sign-up';
 import { AuthControllerSignUp$Params } from '../fn/auth/auth-controller-sign-up';
+import { ConfirmEmailAnswerDto } from '../models/confirm-email-answer-dto';
+import { emailConfirmationControllerConfirm } from '../fn/auth/email-confirmation-controller-confirm';
+import { EmailConfirmationControllerConfirm$Params } from '../fn/auth/email-confirmation-controller-confirm';
+import { emailConfirmationControllerResend } from '../fn/auth/email-confirmation-controller-resend';
+import { EmailConfirmationControllerResend$Params } from '../fn/auth/email-confirmation-controller-resend';
 import { SessionDto } from '../models/session-dto';
 
 @Injectable({ providedIn: 'root' })
@@ -149,6 +154,56 @@ export class AuthService extends BaseService {
    */
   authControllerSignOut(params?: AuthControllerSignOut$Params, context?: HttpContext): Promise<void> {
     const resp = this.authControllerSignOut$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `emailConfirmationControllerConfirm()` */
+  static readonly EmailConfirmationControllerConfirmPath = '/api/v1/auth/confirm-email';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `emailConfirmationControllerConfirm()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  emailConfirmationControllerConfirm$Response(params: EmailConfirmationControllerConfirm$Params, context?: HttpContext): Promise<StrictHttpResponse<ConfirmEmailAnswerDto>> {
+    const obs = emailConfirmationControllerConfirm(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `emailConfirmationControllerConfirm$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  emailConfirmationControllerConfirm(params: EmailConfirmationControllerConfirm$Params, context?: HttpContext): Promise<ConfirmEmailAnswerDto> {
+    const resp = this.emailConfirmationControllerConfirm$Response(params, context);
+    return resp.then((r: StrictHttpResponse<ConfirmEmailAnswerDto>): ConfirmEmailAnswerDto => r.body);
+  }
+
+  /** Path part for operation `emailConfirmationControllerResend()` */
+  static readonly EmailConfirmationControllerResendPath = '/api/v1/auth/confirm-email/resend';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `emailConfirmationControllerResend()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  emailConfirmationControllerResend$Response(params: EmailConfirmationControllerResend$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = emailConfirmationControllerResend(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `emailConfirmationControllerResend$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  emailConfirmationControllerResend(params: EmailConfirmationControllerResend$Params, context?: HttpContext): Promise<void> {
+    const resp = this.emailConfirmationControllerResend$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 

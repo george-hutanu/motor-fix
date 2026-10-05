@@ -1,6 +1,7 @@
 import type { Env, StorageEnv } from '@motor-fix/contracts';
 import {
   AuthModule,
+  EmailConfirmationModule,
   EventsModule,
   emailConfig,
   HealthModule,
@@ -20,6 +21,11 @@ export class AppModule {
       redisUrl: env.REDIS_URL,
       tokenSecret: env.AUTH_TOKEN_SECRET,
     });
+    const email = emailConfig(env.APP_ENV, process.env);
+    const notifications = NotificationsModule.register(
+      { databaseUrl: env.DATABASE_URL, email, redisUrl: env.REDIS_URL },
+      auth,
+    );
     return {
       imports: [
         HealthModule.register({
@@ -29,13 +35,10 @@ export class AppModule {
         }),
         StorageModule.register(env),
         auth,
-        NotificationsModule.register(
-          {
-            databaseUrl: env.DATABASE_URL,
-            email: emailConfig(env.APP_ENV, process.env),
-            redisUrl: env.REDIS_URL,
-          },
-          auth,
+        notifications,
+        EmailConfirmationModule.register(
+          { webUrl: email.webUrl },
+          notifications,
         ),
         EventsModule.register({ redisUrl: env.REDIS_URL }),
       ],

@@ -14,6 +14,8 @@ import { MeControllerMe$Params } from '../fn/me/me-controller-me';
 import { meControllerUpdate } from '../fn/me/me-controller-update';
 import { MeControllerUpdate$Params } from '../fn/me/me-controller-update';
 import { MeDto } from '../models/me-dto';
+import { meEmailConfirmationControllerAskAgain } from '../fn/me/me-email-confirmation-controller-ask-again';
+import { MeEmailConfirmationControllerAskAgain$Params } from '../fn/me/me-email-confirmation-controller-ask-again';
 
 @Injectable({ providedIn: 'root' })
 export class MeService extends BaseService {
@@ -69,6 +71,31 @@ export class MeService extends BaseService {
   meControllerUpdate(params: MeControllerUpdate$Params, context?: HttpContext): Promise<MeDto> {
     const resp = this.meControllerUpdate$Response(params, context);
     return resp.then((r: StrictHttpResponse<MeDto>): MeDto => r.body);
+  }
+
+  /** Path part for operation `meEmailConfirmationControllerAskAgain()` */
+  static readonly MeEmailConfirmationControllerAskAgainPath = '/api/v1/me/email-confirmation';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `meEmailConfirmationControllerAskAgain()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  meEmailConfirmationControllerAskAgain$Response(params?: MeEmailConfirmationControllerAskAgain$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = meEmailConfirmationControllerAskAgain(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `meEmailConfirmationControllerAskAgain$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  meEmailConfirmationControllerAskAgain(params?: MeEmailConfirmationControllerAskAgain$Params, context?: HttpContext): Promise<void> {
+    const resp = this.meEmailConfirmationControllerAskAgain$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
 }

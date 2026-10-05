@@ -5,11 +5,13 @@ import {
   Inject,
   Injectable,
   Logger,
+  Optional,
 } from '@nestjs/common';
 
 import { AccountsService } from './accounts.service';
 import { Attempts } from './attempts';
 import { isCommonPassword } from './common-passwords';
+import { EmailConfirmationService } from './email-confirmation.service';
 import { MAINTENANCE, type Maintenance } from './maintenance';
 import { hashPassword } from './password';
 import { type Issued, SignInService } from './sign-in.service';
@@ -47,6 +49,8 @@ export class SignUpService {
     private readonly attempts: Attempts,
     private readonly signIns: SignInService,
     @Inject(MAINTENANCE) private readonly maintenance: Maintenance,
+    // Registered by the API next to the notifications it needs.
+    @Optional() private readonly confirmations?: EmailConfirmationService,
   ) {}
 
   async signUp(input: SignUpDto, address: string): Promise<Issued> {
@@ -100,7 +104,19 @@ export class SignUpService {
       );
     }
     this.logger.log('account created: driver, password');
+    await this.sendConfirmation(id);
     return this.signIns.openSession(id, 'driver', true);
+  }
+
+  // The account stands without it: the dashboard offers to send it again.
+  private async sendConfirmation(accountId: string) {
+    try {
+      await this.confirmations?.issue(accountId);
+    } catch (error) {
+      this.logger.error(
+        `confirmation link not sent: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   private refused(error: HttpException) {

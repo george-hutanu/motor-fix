@@ -4,6 +4,8 @@
 export type { AuditActorDto } from './models/audit-actor-dto';
 export type { AuditEntryDto } from './models/audit-entry-dto';
 export type { AuditHistoryPageDto } from './models/audit-history-page-dto';
+export type { ConfirmEmailAnswerDto } from './models/confirm-email-answer-dto';
+export type { ConfirmEmailDto } from './models/confirm-email-dto';
 export type { HealthChecksDto } from './models/health-checks-dto';
 export type { HealthLiveDto } from './models/health-live-dto';
 export type { HealthReadyDto } from './models/health-ready-dto';
