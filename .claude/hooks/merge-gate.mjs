@@ -14,13 +14,23 @@
 // does not imply CI finished: the gate also refuses while any other check is
 // failing or still running, or while CI OK has not reported at all.
 //
+// A success carried over a docs-only head (`carried from <sha>: docs-only
+// change`, set by .claude/scripts/pr-test/carry.mjs) is verified, not trusted:
+// the named commit must be one of the PR's own commits with a success of its
+// own, an ancestor of head, differing from it by documentation only
+// (scripts/docs-only.ts), with no real failing lap after it; otherwise the
+// merge is refused as if there were no verdict. A carry the gate cannot verify
+// is refused too. SPECKIT_CARRY_STATE replaces those reads for the eval cases.
+//
 // Fail-open where the gate cannot see: a gh that cannot be reached cannot
 // merge either. SPECKIT_PR_STATE (the PR as JSON) replaces the gh read for the
 // eval cases; hook processes take Claude Code's environment, not a Bash
 // call's, so an agent cannot set it for a real gate run.
 import { execFileSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 
+import { isEntryPoint } from "../scripts/lib/entry.mjs";
+import { carriedFrom, judgeCarry, latestReview, readCarryState } from "../scripts/pr-test/carry.mjs";
+import { realGh } from "../scripts/pr-test/post.mjs";
 import { hasAgentReview, isDependabot } from "./pr-lifecycle-gate.mjs";
 
 const GREEN = new Set(["SUCCESS", "NEUTRAL", "SKIPPED"]);
@@ -51,16 +61,47 @@ export function mergeTarget(command) {
   return null;
 }
 
-/** The refusal for this PR, or null when it may merge. */
-export function decideMerge(pr) {
+/**
+ * The refusal for this PR, or null when it may merge. `carry` reads what a
+ * carried verdict needs: `description(head)`, since gh's rollup never carries
+ * a status description, and `state(from, head)` for judgeCarry.
+ */
+export function decideMerge(pr, carry) {
   if (pr.state && pr.state !== "OPEN") return null;
   const checks = pr.statusCheckRollup ?? [];
   const sha = String(pr.headRefOid ?? "").slice(0, 7);
-  if (hasAgentReview(checks)) return ciRefusal(pr, checks, sha);
   const review = checks.find((c) => (c.context ?? c.name) === "agent-review");
+  if (hasAgentReview(checks)) return carryRefusal(pr, review, sha, carry) ?? ciRefusal(pr, checks, sha);
   if (!review && isDependabot(pr)) return ciRefusal(pr, checks, sha);
   const said = review ? `agent-review is ${String(review.state ?? review.conclusion).toLowerCase()}` : "there is no agent-review status";
   return `PR #${pr.number} cannot merge: on its head commit ${sha} ${said}. Run the PR tester (/speckit-pr-test ${pr.number}), fix every blocking finding, and merge on an agent-review success.`;
+}
+
+/** Why a carried agent-review success does not hold, or null when it holds or is not a carry. */
+function carryRefusal(pr, review, sha, carry) {
+  let description = review.description;
+  if (description == null && carry) {
+    try {
+      description = carry.description(pr.headRefOid);
+    } catch (e) {
+      return `PR #${pr.number} cannot merge: could not read the agent-review status on ${sha} to tell a carried verdict from a tested one (${e.message}). Try the merge again.`;
+    }
+  }
+  const from = carriedFrom(description);
+  if (!from) return null;
+  const rerun = `Run the PR tester (/speckit-pr-test ${pr.number}) for a real lap on this head.`;
+  // A commit off main, before the branch, was tested for another PR.
+  if (!(pr.commits ?? []).some((c) => String(c.oid ?? "").startsWith(from)))
+    return `PR #${pr.number} cannot merge: agent-review on ${sha} is carried from ${from.slice(0, 7)}, which is not one of this PR's commits. ${rerun}`;
+  let state;
+  try {
+    if (!carry) throw new Error("no way to read GitHub");
+    state = carry.state(from, pr.headRefOid);
+  } catch (e) {
+    return `PR #${pr.number} cannot merge: agent-review on ${sha} is carried from ${from.slice(0, 7)}, and the gate could not verify it (${e.message}). ${rerun}`;
+  }
+  const why = judgeCarry({ from, head: pr.headRefOid, ...state });
+  return why ? `PR #${pr.number} cannot merge: agent-review on ${sha} is carried from ${from.slice(0, 7)}, but ${why}. ${rerun}` : null;
 }
 
 /** Why CI does not yet allow the merge, or null when every other check is green. */
@@ -98,7 +139,29 @@ function readPr(target, cwd) {
   return JSON.parse(out);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+function carryReader(cwd) {
+  const raw = process.env.SPECKIT_CARRY_STATE;
+  if (process.env.SPECKIT_PR_STATE)
+    return {
+      description: () => null,
+      state: () => {
+        if (!raw) throw new Error("SPECKIT_CARRY_STATE is not set");
+        return JSON.parse(raw);
+      },
+    };
+  // Short reads: Claude Code lets a hook run about a minute, and a timed-out gate does not block.
+  const gh = (args, opts = {}) => realGh(args, { ...opts, cwd, timeout: 10000 });
+  return {
+    description(head) {
+      const out = gh(["api", `repos/{owner}/{repo}/commits/${head}/statuses?per_page=100`]);
+      if (out.code !== 0) throw new Error(String(out.stderr).trim());
+      return latestReview(JSON.parse(out.stdout))?.description ?? null;
+    },
+    state: (from, head) => readCarryState({ from, head, gh }),
+  };
+}
+
+if (isEntryPoint(import.meta.url)) {
   let raw = "";
   process.stdin.on("data", (d) => (raw += d));
   process.stdin.on("end", () => {
@@ -111,7 +174,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     } catch {
       process.exit(0);
     }
-    const why = decideMerge(pr);
+    const why = decideMerge(pr, carryReader(payload.cwd ?? process.env.CLAUDE_PROJECT_DIR ?? process.cwd()));
     if (!why) process.exit(0);
     console.error(`Merge gate (Constitution VII): ${why}`);
     process.exit(2);

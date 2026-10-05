@@ -1,5 +1,10 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { decideMerge, mergeTarget } from './merge-gate.mjs';
 
@@ -189,5 +194,87 @@ describe('merge gate — Dependabot PRs need no agent review', () => {
     assert.match(decideMerge(coAuthored), /no agent-review status/);
     assert.match(decideMerge({ ...bot(green), commits: undefined }), /no agent-review status/);
     assert.match(decideMerge({ ...bot(green), commits: [] }), /no agent-review status/);
+  });
+});
+
+describe('merge gate — started through a symlinked path', () => {
+  const hooks = fileURLToPath(new URL('.', import.meta.url));
+  const gate = (dir) =>
+    spawnSync(process.execPath, [join(dir, 'merge-gate.mjs')], {
+      input: JSON.stringify({ tool_input: { command: 'gh pr merge 21 --merge' } }),
+      encoding: 'utf8',
+      env: { ...process.env, SPECKIT_PR_STATE: JSON.stringify(pr(green)) },
+    });
+
+  it('refuses a merge with no agent-review, as it does through the real path', () => {
+    const root = mkdtempSync(join(tmpdir(), 'merge-gate-link-'));
+    try {
+      symlinkSync(hooks, join(root, 'hooks'));
+      assert.equal(gate(hooks).status, 2);
+      const linked = gate(join(root, 'hooks'));
+      assert.equal(linked.status, 2);
+      assert.match(linked.stderr, /agent-review/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('merge gate — a verdict carried over a docs-only head is verified, not trusted', () => {
+  const FROM = 'f'.repeat(40);
+  const carried = (description = `carried from ${FROM}: docs-only change`) => ({ ...review('SUCCESS'), description });
+  const state = (over = {}) => ({
+    fromReview: { state: 'success', description: 'No blocking findings' },
+    compare: { status: 'ahead', total_commits: 1, commits: [{ sha: 'abc1234def5678' }], files: [{ filename: 'specs/194-email-sending/deferred.md' }] },
+    between: [],
+    headReviews: [],
+    ...over,
+  });
+  const prc = (rollup) => ({ ...pr(rollup), commits: [{ oid: FROM }, { oid: 'abc1234def5678' }] });
+  const lookup = (s, seen = []) => ({ description: () => null, state: (from, head) => (seen.push([from, head]), s) });
+
+  it('lets a verified carry merge on green CI, checking the commit it names against head', () => {
+    const seen = [];
+    assert.equal(decideMerge(prc([...green, carried()]), lookup(state(), seen)), null);
+    assert.deepEqual(seen, [[FROM, 'abc1234def5678']]);
+  });
+
+  it('reads the description from GitHub when the rollup leaves it out', () => {
+    const reads = { description: () => `carried from ${FROM}: docs-only change`, state: () => state({ fromReview: { state: 'failure' } }) };
+    assert.match(decideMerge(prc([...green, review('SUCCESS')]), reads), /carried from fffffff.*no agent-review success/);
+  });
+
+  it('refuses a carry naming a commit whose agent review failed', () => {
+    const why = decideMerge(prc([...green, carried()]), lookup(state({ fromReview: { state: 'failure', description: 'x' } })));
+    assert.match(why, /no agent-review success/);
+    assert.match(why, /speckit-pr-test 21/);
+  });
+
+  it('refuses a carry naming a commit that is not an ancestor of head', () => {
+    assert.match(decideMerge(prc([...green, carried()]), lookup(state({ compare: { ...state().compare, status: 'diverged' } }))), /not an ancestor/);
+  });
+
+  it('refuses a carry over a diff that is not documentation only', () => {
+    const compare = { ...state().compare, files: [{ filename: 'specs/x/deferred.md' }, { filename: '.claude/hooks/merge-gate.mjs' }] };
+    assert.match(decideMerge(prc([...green, carried()]), lookup(state({ compare }))), /merge-gate\.mjs/);
+  });
+
+  it('refuses a carry naming a commit that is not one of the PR\'s own, such as a tested commit on main', () => {
+    const why = decideMerge({ ...prc([...green, carried()]), commits: [{ oid: 'abc1234def5678' }] }, lookup(state()));
+    assert.match(why, /not one of this PR's commits/);
+    assert.match(decideMerge(pr([...green, carried()]), lookup(state())), /not one of this PR's commits/);
+  });
+
+  it('refuses a carry it cannot verify, rather than trusting it', () => {
+    const broken = { description: () => null, state: () => { throw new Error('HTTP 502'); } };
+    assert.match(decideMerge(prc([...green, carried()]), broken), /could not verify.*HTTP 502/);
+    assert.match(decideMerge(prc([...green, carried()])), /could not verify/);
+    const unreadable = { description: () => { throw new Error('HTTP 502'); }, state: () => state() };
+    assert.match(decideMerge(prc([...green, review('SUCCESS')]), unreadable), /could not read/);
+  });
+
+  it('still needs every CI check after a verified carry', () => {
+    assert.match(decideMerge(prc([run('Unit tests', 'FAILURE'), run('CI OK', 'FAILURE'), carried()]), lookup(state())), /CI failed/);
+    assert.match(decideMerge(prc([carried()]), lookup(state())), /no CI OK check/);
   });
 });

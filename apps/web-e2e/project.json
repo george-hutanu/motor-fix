@@ -6,6 +6,10 @@
   "projectType": "application",
   "sourceRoot": "apps/web-e2e/src",
   "targets": {
+    "mailbox": {
+      "command": "node apps/web-e2e/mailbox.mjs",
+      "continuous": true
+    },
     "typecheck": {
       "cache": true,
       "command": "tsc --noEmit -p apps/web-e2e/tsconfig.json"
