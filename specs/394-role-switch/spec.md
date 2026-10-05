@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-05
 
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 
 **Input**: User description: "ST-394 Switch between my driver and garage roles in one account (Notion story https://app.notion.com/p/3ee607bff0d281029850d5192fa1e164, epic EP-1 Foundations). Role chips in the dashboard menu of an account that holds more than one role; tapping one opens that role's dashboard without signing in again and stores `ACCOUNT.last_role`, which opens after the next sign-in on any device."
 

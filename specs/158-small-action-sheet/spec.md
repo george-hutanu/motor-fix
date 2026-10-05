@@ -148,7 +148,7 @@ Everything a task does in a dialog it does in a sheet: focus stays inside and re
 ## Assumptions
 
 - The sign-in dialog (ST-82, PR #45, open) opens through `Overlays`, so it becomes a sheet on a phone with no change of its own; this story shows the sheet with the catalogue's sample tasks. (Build brief, PR #45 file list)
-- The Build brief's "PrimeNG Drawer in the bottom position" is superseded by Architecture decisions A1 (2026-10-04): the kit's Spartan sheet surface on the Angular CDK. (context.md, constitution III)
+- The Build brief's "Spartan sheet in the bottom position" follows Architecture decisions A1 (2026-10-04): the kit's Spartan sheet surface on the Angular CDK. (context.md, constitution III)
 - Grip 36 × 4 px in `--mf-line-strong` (the mock's `#4A4E55`) in a 44 px row; radius `--mf-radius-panel` on the top corners (mock 24 px). (design.md, autonomous default)
 - The grip is not keyboard-operable and is hidden from assistive technology; X, Escape and outside are the accessible ways to close. (autonomous default; ST-157 FR-009)
 - Back closing a task is not in this story (ST-157 left it not designed). (design.md)

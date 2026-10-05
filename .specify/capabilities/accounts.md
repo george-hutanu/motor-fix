@@ -1,10 +1,14 @@
 ---
 capability: accounts
-updated: 2026-10-04
+updated: 2026-10-05
 features:
   - 079-account-model
   - 082-sign-in
   - 080-sign-up
+  - 020-account-language
+  - 130-sign-in-gate
+  - 128-sign-out
+  - 394-role-switch
 ---
 
 # Capability: Accounts
@@ -53,9 +57,9 @@ _From 079-account-model._
 
 _From 079-account-model._
 
-### 079-FR-011 — Every protected call MUST resolve an actor (account id, role in use, garage id for garage-side roles, mechanic permissions) from a bearer access token; without a valid token it MUST answer 401 `sign_in_required`; for a suspended account it MUST answer 403 `account_suspended`, before any right is checked. The garage id comes from the membership (or mechanic link) matching the role in use; when none exists it is empty and every garage capability answers 404.
+### 130-FR-001 — The API MUST check the actor on every route by default; a route MUST be explicitly marked public to be reachable without a session. Without a valid access token a gated route MUST answer 401 `sign_in_required` before its body is validated (modifies 079-FR-011).
 
-_From 079-account-model._
+_From 130-sign-in-gate._
 
 ### 079-FR-012 — The role in use MUST be the role the access token carries when the account still holds it (the token is issued for the last role at sign-in, and for the new role at a role switch), otherwise the account's last role when held, otherwise the first held role in the order admin, garage, receptionist, mechanic, driver; the fallback is computed per call, never written back.
 
@@ -149,9 +153,9 @@ _From 082-sign-in._
 
 _From 082-sign-in._
 
-### 082-FR-018 — The web app MUST hold the access token in memory only and send it as a bearer token on every API call except the three `auth` calls; on a 401 from a call that carried the token it MUST renew once (one renewal shared by concurrent calls) and repeat the call, and when renewal fails forget the token and the "who am I" answer in memory (navigation stays with the guards and 082-FR-020). The sign-in and renewal answers carry only the access token; landing and language come from "who am I".
+### 130-FR-004 — In the browser, an API call made through the app's HTTP client, outside the session calls (`/api/v1/auth/*`) and outside "who am I", that is answered 401 with code `sign_in_required` MUST first be renewed once from the cookie (one renewal shared by concurrent calls, whether or not the call carried a token) and repeated; when the renewal fails it MUST open the sign-in dialog over the current screen without changing the address, showing the line "Intră în cont ca să continui." under the brand line (modifies 082-FR-018). The live stream, which does not go through that client, keeps its own renew-and-reconnect and never opens the dialog.
 
-_From 082-sign-in._
+_From 130-sign-in-gate._
 
 ### 082-FR-019 — When the app needs the session and holds no access token (a reload, a reopened browser), it MUST renew from the cookie before asking "who am I"; a failed renewal means signed out.
 
@@ -229,8 +233,139 @@ _From 080-sign-up._
 
 _From 080-sign-up._
 
+### 020-FR-001 — The API MUST let a signed-in account change its own language with `PATCH /api/v1/me` and a body `{ "language": "ro" | "en" }`, in every role, and answer with that account's "who am I", the same shape `GET /api/v1/me` returns.
+
+_From 020-account-language._
+
+### 020-FR-002 — The change MUST be refused with 401 `sign_in_required` without a valid token, and with 403 `account_suspended` for a suspended account, leaving the account unchanged.
+
+_From 020-account-language._
+
+### 020-FR-003 — The change MUST accept only `ro` or `en`: any other value, a missing language or an extra field is refused with 400 `validation_failed` whose detail names the offending field, and nothing is saved.
+
+_From 020-account-language._
+
+### 020-FR-004 — The saved language MUST be the one `GET /api/v1/me` returns afterwards; an account that never chose has `ro`.
+
+_From 020-account-language._
+
+### 020-FR-005 — A change to a different language MUST add one audit entry on the account (an update of the field `language`, old value to new value), by the account in the role it is using, saved in the same transaction as the change; setting the same language MUST add none.
+
+_From 020-account-language._
+
+### 130-FR-002 — The public list MUST be exactly: `POST /api/v1/auth/sign-in`, `POST /api/v1/auth/sign-up`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/sign-out`, `GET /health/live`, `GET /health/ready` (outside the `/api/v1` prefix), `POST /api/v1/webhooks/brevo`, which checks Brevo's own bearer secret and is left out of the OpenAPI document (it arrived with ST-194; its own integration spec boots the app-wide check), and the two cookie-authenticated routes added since, `POST /api/v1/auth/sign-out-everywhere` (128-FR-001) and `POST /api/v1/auth/roles/switch` (394-FR-001); a test MUST enumerate every route the API serves, call each without a token, and fail when the set of routes not answering 401 `sign_in_required` differs from this list.
+
+_From 130-sign-in-gate._
+
+### 130-FR-003 — The suspended (403 `account_suspended`) and capability (404) answers of the actor check MUST stay as they are for gated routes.
+
+_From 130-sign-in-gate._
+
+### 130-FR-005 — When the person signs in, or switches to sign-up and creates an account, in a dialog opened by FR-004, the dialog MUST close without navigating and the refused call MUST be sent again once with the new access token, its answer going to the code that made the call; a repeated call that is refused again fails with that answer and opens no further dialog.
+
+_From 130-sign-in-gate._
+
+### 130-FR-006 — When a dialog opened by FR-004 is closed without signing in, the refused call MUST fail with its original 401 `sign_in_required`; the shared task saving MUST map `sign_in_required` to "Intră în cont ca să continui." for every form, once, so a form keeps its values and shows that line in its message region with no text of its own.
+
+_From 130-sign-in-gate._
+
+### 130-FR-007 — There MUST be at most one sign-in dialog open: while any sign-in dialog is open (opened by FR-004, or by "Autentificare" / "Cont"), a further refused call waits on it and is repeated after sign-in, or failed when it closes without one.
+
+_From 130-sign-in-gate._
+
+### 130-FR-008 — "Autentificare" and "Cont" MUST keep opening the dialog without the reason line and, after sign-in or sign-up, open the person's landing (082-FR-017, 080-FR-013 unchanged), also when a refused call was waiting on that dialog.
+
+_From 130-sign-in-gate._
+
+### 130-FR-009 — The gate MUST NOT open on the server-rendered page.
+
+_From 130-sign-in-gate._
+
+### 130-FR-010 — Every new text MUST exist in Romanian and English, and Romanian words joined by a hyphen MUST use U+2011.
+
+_From 130-sign-in-gate._
+
+### 128-FR-001 — `POST /api/v1/auth/sign-out-everywhere` with a refresh-token cookie that would renew MUST delete every refresh token of that account and write one audit entry (action `delete`, subject `account` = the account, actor = the account with its last role, kind `signed_out_everywhere`) in one transaction, clear the cookie and answer 204.
+
+_From 128-sign-out._
+
+### 128-FR-002 — Sign-out on all devices with no, an unknown, an expired or a reused (outside the 20-second grace) refresh token MUST answer 401 `sign_in_required`, clear the cookie, and revoke no other family than refresh would.
+
+_From 128-sign-out._
+
+### 128-FR-003 — After sign-out on all devices, `POST /api/v1/auth/refresh` with any refresh token the account held MUST answer 401.
+
+_From 128-sign-out._
+
+### 128-FR-004 — After the revocation is saved, the API MUST publish a `session.revoked` live event to `account:{accountId}`; a failed publish MUST be logged and MUST NOT change the answer.
+
+_From 128-sign-out._
+
+### 128-FR-005 — When "Ieși din cont" signs this tab out, the web app MUST tell the other tabs of the same browser, and each of them MUST forget its session, close its live connection and open Home.
+
+_From 128-sign-out._
+
+### 128-FR-006 — Every dashboard (driver, garage — owner, receptionist, mechanic — and admin) MUST show "Ieși de pe toate dispozitivele" / "Sign out on all devices" in its account block, under "Ieși din cont".
+
+_From 128-sign-out._
+
+### 128-FR-007 — Choosing it MUST open a confirmation dialog titled "Ieși de pe toate dispozitivele?" / "Sign out on all devices?" with the text "Va trebui să te autentifici din nou peste tot." / "You will need to sign in again everywhere." and the buttons "Ieși" / "Sign out" and "Renunță" / "Cancel"; "Renunță" or closing the dialog MUST change nothing.
+
+_From 128-sign-out._
+
+### 128-FR-008 — Confirming MUST close the tab's live connection, forget the session in memory, call sign-out on all devices, tell the other tabs (FR-005) and open Home, also when the call fails.
+
+_From 128-sign-out._
+
+### 128-FR-009 — On a `session.revoked` live message the dashboard MUST sign the tab out as "Ieși din cont" does and open Home.
+
+_From 128-sign-out._
+
+### 128-FR-010 — A sign-out call (this device or all devices) that gets no answer, a network error or a 5xx MUST be kept pending in the browser and sent again on the browser's `online` event and before the next session load, sign-in or sign-up; a 2xx or 4xx answer MUST clear it.
+
+_From 128-sign-out._
+
+### 394-FR-001 — `POST /api/v1/auth/roles/switch` with `{ "role": <role> }` and the browser's refresh cookie, for an account that holds that role, MUST store it as `ACCOUNT.last_role` and answer 200 with `{ "accessToken" }`, a new access token for that role, renewing the session as a refresh does. (Moved from `/me/roles/switch` by pr-tester lap 4: a switch from an access token alone kept a signed-out session alive.)
+
+_From 394-role-switch._
+
+### 394-FR-002 — Switching to a role the account does not hold MUST answer 404 and change nothing; a body without a valid role MUST answer 400 `validation_failed`.
+
+_From 394-role-switch._
+
+### 394-FR-003 — A switch MUST write no audit entry and send no notification.
+
+_From 394-role-switch._
+
+### 394-FR-004 — `POST /api/v1/auth/refresh` MAY carry `{ "role": <role> }`; the new access token MUST be for that role when the account holds it, otherwise for the role it is issued for today; a refresh MUST NOT change `last_role`.
+
+_From 394-role-switch._
+
+### 394-FR-005 — The dashboard frame of an account with two or more roles MUST show one chip per role it holds, labelled "Șofer", "Service", "Recepție", "Mecanic", "Admin" (EN "Driver", "Garage", "Front desk", "Mechanic", "Admin"), in a group labelled "Rolul tău" / "Your role", the role in use pressed; an account with one role MUST show no chips.
+
+_From 394-role-switch._
+
+### 394-FR-006 — Tapping a chip of another role MUST switch to it (FR-001) with the tab's session, then reload the account, reopen the live connection and open that role's dashboard, without a new sign-in.
+
+_From 394-role-switch._
+
+### 394-FR-007 — A switch that fails (no answer, an error answer) MUST show the toast "Nu am putut schimba rolul. Încearcă din nou." / "Could not switch the role. Try again." and keep the tab's role, token and dashboard.
+
+_From 394-role-switch._
+
+### 394-FR-008 — The web app's token renewal MUST send the role its tab is showing (FR-004), so a tab keeps its role until reloaded.
+
+_From 394-role-switch._
+
+### 394-FR-009 — A switch whose refresh cookie is missing, expired, or ended by a sign-out on this device or on every device MUST answer 401 and change nothing; a request that is not JSON MUST answer 415.
+
+_From 394-role-switch._
+
 ## Retired
 
 - `079-FR-017` — superseded by `082-FR-021` (2026-10-04)
 
 - `082-FR-013` — superseded by `080-FR-009` (2026-10-04)
+
+- `079-FR-011` — superseded by `130-FR-001` (2026-10-05)
+- `082-FR-018` — superseded by `130-FR-004` (2026-10-05)
