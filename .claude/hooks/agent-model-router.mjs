@@ -33,6 +33,7 @@
 //   SPECKIT_MODEL_ROUTER=0   turn the routing off, leaving the frontmatter
 //   SPECKIT_JEV=0            turn the middle band off (extremes still apply)
 import { execFileSync } from "node:child_process";
+import { isEntryPoint } from "../scripts/lib/entry.mjs";
 
 /** Only the agents whose difficulty varies per invocation. Everything else is
  *  a fixed answer and belongs in frontmatter, not here. */
@@ -161,7 +162,7 @@ export function routerOff(env = process.env) {
   return /^(0|false|no|off)$/i.test(env.SPECKIT_MODEL_ROUTER ?? "");
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
   let raw = "";
   process.stdin.on("data", (d) => (raw += d));

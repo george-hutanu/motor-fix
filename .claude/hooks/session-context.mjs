@@ -18,6 +18,7 @@ import { join } from "node:path";
 import { activeFeature } from "../scripts/lib/feature.mjs";
 import { readHarnessSettings } from "../scripts/lib/harness-settings.mjs";
 import { loadInstincts, selectByRelevance, selectForInjection } from "../scripts/instincts.mjs";
+import { isEntryPoint } from "../scripts/lib/entry.mjs";
 
 const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
 
@@ -112,7 +113,7 @@ export function contextMaxChars(env = process.env, dir = repo) {
   return Number.isFinite(n) && n > 0 ? n : 3000;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   if (contextOff()) process.exit(0);
 
   const state = readState();
