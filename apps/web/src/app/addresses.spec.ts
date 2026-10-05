@@ -80,8 +80,9 @@ function expectLandmarks(harness: RouterTestingHarness, signIn: string) {
       : part.querySelector(LANDMARKS);
     expect(landmark).not.toBeNull();
   }
-  const banner = frame?.querySelector(':scope > header');
-  expect(banner?.querySelector('button')?.textContent).toContain(signIn);
+  const banners = frame?.querySelectorAll(':scope > header') ?? [];
+  expect(banners).toHaveLength(1);
+  expect(banners[0].querySelector('button')?.textContent).toContain(signIn);
 }
 
 beforeEach(() => {
@@ -110,6 +111,17 @@ describe('language addresses', () => {
     const harness = await open('/ro');
 
     expectLandmarks(harness, 'Autentificare');
+  });
+
+  it.each([
+    ['another public page', '/ro/garages'],
+    ['a not-found page', '/ro/no-such-page'],
+  ])('keeps one main, never nested, on %s', async (_page, address) => {
+    const harness = await open(address);
+    const root = harness.fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelectorAll('main')).toHaveLength(1);
+    expect(root.querySelectorAll('main main')).toHaveLength(0);
   });
 
   it('opens /ro in Romanian', async () => {

@@ -36,3 +36,15 @@
 - `/` now renders Home inside `PublicFrame` (route `''` with a child), with a `publicTexts` canMatch loading the frame's texts on the server; the browser still moves `/` to `/<lang>`.
 - The frame's top bar `<div class="top">` → `<header class="top">`, same class, no style change.
 - `npx jest -c apps/web/jest.config.cts apps/web/src/app`: 883 passed.
+
+## 12. Harden
+
+- artifact-lint --check: 0 errors, 0 warnings. diff-audit: no finding in this diff's files (its other findings are generated `libs/data-access` files outside this change).
+- trace-matrix shows FR-001/FR-002 untagged: the project rule keeps FR ids out of test source; the mapping is tasks.md (T001, T002).
+- Mutation: not run locally (AGENTS.md: mutation runs only in CI, nightly on main).
+- test-adversary dispatched.
+
+## 16. Retrospective evidence
+
+- `retro-evidence.mjs --since a55fa6e`: 2 commits (docs spec, fix); 10 carried-over open items from earlier features, none touching this change. Jev lane unavailable (no key). Verdict left to the owner.
+- test-adversary: 3 tests, all passing. Folded 2 into `addresses.spec.ts` as one `it.each` (`/ro/garages` and `/ro/no-such-page`: one main, never nested), because they add evidence about the shared frame and the not-found page. Dropped its server-side `/` test because it repeated the existing one; kept its one extra assertion by tightening the helper to exactly one frame banner. Separate adversary file not kept (Principle I: same setup helpers twice). `addresses.spec.ts`: 20 passed.
