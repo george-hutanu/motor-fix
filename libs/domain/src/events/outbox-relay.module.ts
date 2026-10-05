@@ -20,7 +20,7 @@ const RELAY_QUEUES = Symbol('RELAY_QUEUES');
 type Consumers = { kinds: readonly EventKind[]; queue: Queue }[];
 
 // A queue the relay hands each event of its kinds to, with its jobs' options.
-export interface RelayConsumer {
+interface RelayConsumer {
   kinds: readonly EventKind[];
   queue: string;
   jobs: JobsOptions;
@@ -73,6 +73,7 @@ export class OutboxRelayModule implements OnModuleInit, OnApplicationShutdown {
               kinds,
               queue: new Queue(queue, {
                 connection: {
+                  commandTimeout: 2000,
                   enableOfflineQueue: false,
                   maxRetriesPerRequest: 1,
                   url: options.redisUrl,

@@ -172,13 +172,12 @@ export class NotificationsModule implements OnApplicationShutdown {
           inject: [NewsFanOut],
           provide: NEWS_WORKER,
           useFactory: (fanOut: NewsFanOut) => {
-            const log = new Logger('News');
             const missing = [
               !options.tokenSecret && 'AUTH_TOKEN_SECRET',
               !options.email.webUrl && 'PUBLIC_WEB_URL',
             ].filter(Boolean);
             if (missing.length > 0) {
-              log.error(
+              new Logger('News').error(
                 `${missing.join(' and ')} missing; news runs wait in their queue`,
               );
               return null;
@@ -193,14 +192,6 @@ export class NotificationsModule implements OnApplicationShutdown {
                 },
               },
             );
-            worker.on('failed', (job, error) => {
-              if (!job) return;
-              fanOut.failed(job, error).catch((e: Error) => {
-                log.error(
-                  `news for ${job.data.payload.month} was not given back: ${e.message}`,
-                );
-              });
-            });
             return worker;
           },
         },

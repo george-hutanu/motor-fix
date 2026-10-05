@@ -6,7 +6,6 @@ import { Queue } from 'bullmq';
 import {
   NEWS_CONSUMER,
   NEWS_QUEUE,
-  NEWS_RUN,
   type NewsEvent,
   type NewsRun,
 } from './news.fan-out';
@@ -93,12 +92,12 @@ const run = (admin: string): NewsRun => ({
   title: { en: 'News for November', ro: 'Noutăți din noiembrie' },
 });
 
-async function queueRun(admin: string, attempts = NEWS_RUN.attempts) {
+async function queueRun(admin: string, attempts = NEWS_CONSUMER.jobs.attempts) {
   await newsJobs.add(
     'event',
     { payload: run(admin) },
     {
-      ...NEWS_RUN,
+      ...NEWS_CONSUMER.jobs,
       attempts,
       jobId: 'news-2026-11',
     },
@@ -150,6 +149,37 @@ describe('the news worker', () => {
       await app.close();
     }
     expect((await newsEmails()).map((r) => r.accountId)).toEqual([andrei]);
+  }, 20_000);
+
+  it('queues the outbox news with the run’s retries', async () => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const admin = await account('admin', ['admin']);
+    const { id } = await prisma.outboxEvent.create({
+      data: {
+        audience: ['admin', 'system'],
+        kind: 'news.sent',
+        payload: JSON.parse(JSON.stringify(run(admin))),
+        subjectId: '2026-11',
+      },
+    });
+    // No token secret: the job waits in the queue to be read.
+    const app = await worker(undefined, undefined, true);
+    await app.init();
+    let job = await newsJobs.getJob(`event-${id}`);
+    try {
+      const deadline = Date.now() + 10_000;
+      while (!job && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 100));
+        job = await newsJobs.getJob(`event-${id}`);
+      }
+    } finally {
+      await app.close();
+      jest.restoreAllMocks();
+    }
+    expect(job?.opts).toMatchObject({
+      attempts: NEWS_CONSUMER.jobs.attempts,
+      backoff: NEWS_CONSUMER.jobs.backoff,
+    });
   }, 20_000);
 
   it.each([

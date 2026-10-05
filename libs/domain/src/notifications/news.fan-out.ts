@@ -19,7 +19,7 @@ export const NEWS_TOKEN_SECRET = Symbol('NEWS_TOKEN_SECRET');
 
 // A failed run is tried 5 more times, 1, 2, 4, 8 and 16 minutes later, and
 // removed once it has run or failed for good.
-export const NEWS_RUN: JobsOptions = {
+const NEWS_RUN: JobsOptions = {
   attempts: 6,
   backoff: { delay: 60_000, type: 'exponential' },
   removeOnComplete: true,
@@ -57,7 +57,7 @@ export const CONSENTING_DRIVERS: Prisma.NotificationPreferenceWhereInput = {
   withdrawnAt: null,
 };
 
-export async function giveMonthBack(
+async function giveMonthBack(
   prisma: PrismaClient,
   audit: AuditPort,
   month: string,
@@ -92,8 +92,26 @@ export class NewsFanOut {
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
-  async handle(job: Pick<Job<NewsEvent>, 'data'>): Promise<void> {
-    const data = job.data.payload;
+  // A failure on the last attempt gives the month back for the admin to send
+  // again, before the queue drops the job.
+  async handle(
+    job: Pick<Job<NewsEvent>, 'attemptsMade' | 'data' | 'opts'>,
+  ): Promise<void> {
+    try {
+      await this.run(job.data.payload);
+    } catch (error) {
+      if (job.attemptsMade + 1 >= (job.opts.attempts ?? 1)) {
+        const { month, sentBy } = job.data.payload;
+        this.logger.error(
+          `news for ${month} failed for good (${(error as Error).message}); the month is free`,
+        );
+        await giveMonthBack(this.prisma, this.audit, month, sentBy);
+      }
+      throw error;
+    }
+  }
+
+  private async run(data: NewsRun): Promise<void> {
     const webUrl = this.config.webUrl;
     if (!webUrl) throw new Error('PUBLIC_WEB_URL is needed to send news');
     const rows = await this.prisma.notificationPreference.findMany({
@@ -118,18 +136,5 @@ export class NewsFanOut {
       });
     }
     this.logger.log(`news for ${data.month} sent to ${rows.length} drivers`);
-  }
-
-  // After the last attempt the month is given back for the admin to send again.
-  async failed(
-    job: Pick<Job<NewsEvent>, 'attemptsMade' | 'data' | 'opts'>,
-    error: Error,
-  ): Promise<void> {
-    if (job.attemptsMade < (job.opts.attempts ?? 1)) return;
-    const { month, sentBy } = job.data.payload;
-    this.logger.error(
-      `news for ${month} failed for good (${error.message}); the month is free`,
-    );
-    await giveMonthBack(this.prisma, this.audit, month, sentBy);
   }
 }

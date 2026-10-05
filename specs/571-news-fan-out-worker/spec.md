@@ -27,7 +27,7 @@ message exists yet; run the queued job; each consenting driver has one message.
 2. **Given** the month's job, **When** the worker runs it, **Then** each consenting driver gets one message in their own language with their own unsubscribe links, as before.
 3. **Given** a run that fails part-way, **When** the queue runs it again, **Then** each driver has exactly one message and the month stays claimed.
 4. **Given** a run that fails on its last attempt, **When** the queue gives up, **Then** the month is given back, the release is recorded against the sender, and the admin can send again.
-5. **Given** the job cannot be queued, **When** the admin sends, **Then** the month is given back and the answer is an error.
+5. **Given** Redis is down or emptied before the run, **When** the admin sends, **Then** the answer is 202 and the run waits in PostgreSQL until the worker's relay queues it.
 6. **Given** a worker started without the token secret, **When** a news job is queued, **Then** it stays queued (an error is logged at start) and the worker's other queues run as before.
 
 ### Edge Cases

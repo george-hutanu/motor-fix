@@ -9,7 +9,6 @@ import { unsubscribedAccount, unsubscribeToken } from './news';
 import {
   NEWS_CONSUMER,
   NEWS_QUEUE,
-  NEWS_RUN,
   type NewsEvent,
   NewsFanOut,
 } from './news.fan-out';
@@ -38,7 +37,7 @@ let app: INestApplication;
 let fanOut: NewsFanOut;
 const newsJobs = new Queue<NewsEvent>(NEWS_QUEUE, {
   connection: { url: redisUrl },
-  defaultJobOptions: NEWS_RUN,
+  defaultJobOptions: NEWS_CONSUMER.jobs,
 });
 const publisher = new Redis(redisUrl);
 // The worker's relay, handing the outbox's news to the queue.
@@ -165,14 +164,6 @@ const sent = async (admin: string) => {
   return res;
 };
 
-// The queue calls `failed` after each failed attempt; `made` is how many
-// attempts it has made so far.
-const failedAfter = (job: Job<NewsEvent>, made: number) =>
-  fanOut.failed(
-    { attemptsMade: made, data: job.data, opts: job.opts },
-    new Error('redis down'),
-  );
-
 const failingOn = (call: number) => {
   const notifications = app.get(NotificationsService);
   const notify = notifications.notify;
@@ -186,6 +177,18 @@ const failingOn = (call: number) => {
     notifications.notify = notify;
   };
 };
+
+// The `made`-th attempt of the job, failing at its first message.
+async function failedAttempt(job: Job<NewsEvent>, made: number) {
+  const restore = failingOn(1);
+  try {
+    await expect(
+      fanOut.handle({ attemptsMade: made - 1, data: job.data, opts: job.opts }),
+    ).rejects.toThrow('redis down');
+  } finally {
+    restore();
+  }
+}
 
 const sendLog = (admin: string) =>
   prisma.activityLog.findMany({
@@ -450,7 +453,6 @@ describe('an admin sending news', () => {
     } finally {
       restore();
     }
-    await failedAfter(job, 1);
     expect(await newsEmails()).toHaveLength(1);
     expect(await prisma.newsSend.count()).toBe(1);
     await fanOut.handle(job);
@@ -468,9 +470,9 @@ describe('an admin sending news', () => {
     expect((await send(admin)).status).toBe(202);
     const [job] = await queued();
     const attempts = job.opts.attempts ?? 1;
-    await failedAfter(job, attempts - 1);
+    await failedAttempt(job, attempts - 1);
     expect(await prisma.newsSend.count()).toBe(1);
-    await failedAfter(job, attempts);
+    await failedAttempt(job, attempts);
     expect(await prisma.newsSend.count()).toBe(0);
     const entries = await sendLog(admin);
     expect(entries.map((e) => e.action)).toEqual(['create', 'delete']);
@@ -555,7 +557,7 @@ describe('an admin sending news', () => {
       await send(admin);
       const [job] = await queued();
       expect(job.opts.attempts).toBe(6);
-      await failedAfter(job, made);
+      await failedAttempt(job, made);
       expect(await prisma.newsSend.count()).toBe(1);
       expect((await sendLog(admin)).map((e) => e.action)).toEqual(['create']);
     },
@@ -566,8 +568,8 @@ describe('an admin sending news', () => {
     await consenting('andrei');
     await send(admin);
     const [job] = await queued();
-    await failedAfter(job, 6);
-    await failedAfter(job, 6);
+    await failedAttempt(job, 6);
+    await failedAttempt(job, 6);
     expect((await sendLog(admin)).map((e) => e.action)).toEqual([
       'create',
       'delete',

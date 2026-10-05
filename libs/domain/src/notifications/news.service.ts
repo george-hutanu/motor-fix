@@ -1,13 +1,9 @@
 import type { NewsSentDto, SendNewsDto } from '@motor-fix/contracts';
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 
-import type { EmailConfig } from './email-config';
 import { unsubscribedAccount } from './news';
 import { CONSENTING_DRIVERS, type NewsRun } from './news.fan-out';
-import {
-  NOTIFICATIONS_CONFIG,
-  NOTIFICATIONS_PRISMA,
-} from './notifications.service';
+import { NOTIFICATIONS_PRISMA } from './notifications.service';
 import { withdrawn } from './preferences';
 import { smsMonth } from './sms-counter';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
@@ -36,7 +32,6 @@ export class NewsService {
   constructor(
     @Inject(NOTIFICATIONS_PRISMA) private readonly prisma: PrismaClient,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
-    @Inject(NOTIFICATIONS_CONFIG) private readonly config: EmailConfig,
     @Inject(AUTH_OPTIONS) private readonly auth: AuthOptions,
   ) {}
 
@@ -87,9 +82,6 @@ export class NewsService {
   // this one, is refused before anything goes. The drivers are reached by
   // the month's run in the worker, which the queue retries by itself.
   async send(actor: Actor, body: SendNewsDto): Promise<NewsSentDto> {
-    if (!this.config.webUrl) {
-      throw new Error('PUBLIC_WEB_URL is needed to send news');
-    }
     const month = smsMonth(this.now());
     const recipients = await this.prisma.notificationPreference.count({
       where: CONSENTING_DRIVERS,
