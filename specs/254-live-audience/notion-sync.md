@@ -9,3 +9,13 @@
 - 2026-10-05 · implement · ST-254 story Status · Planning → Implementing
 - 2026-10-05 · implement · Foundations timeline row ST-254 · Planning → Implementing
 - 2026-10-05 · labels · PR #75 · in development
+- 2026-10-05 · qa · ST-254 story Status · Implementing → QA (PR #75 marked ready)
+- 2026-10-05 · qa · Foundations timeline row ST-254 · Implementing → QA
+- 2026-10-05 · labels · PR #75 · QA
+- 2026-10-05 · debt · deferred.md line 3 → To do task ST-567 https://app.notion.com/p/3f0607bff0d281faa095eb3e4b2c1028
+- 2026-10-05 · finish · ST-254 story Status · QA → Done (PR #75 merged on agent-review success)
+- 2026-10-05 · finish · Foundations timeline row ST-254 · QA → Merged
+- 2026-10-05 · finish · EP-1 Foundations Status · unchanged (In progress: other stories open)
+- 2026-10-05 · labels · PR #75 · none
+- 2026-10-05 · comment · ST-254 · posted (8 items)
+- 2026-10-05 · ready · Foundations · +ST-257 +ST-567 (ST-257's blockers ST-253, ST-254, ST-194, ST-390 all Merged; ST-567 has none; ST-419 held: waits on ST-257; stories query quota reached, pages read by fetch)

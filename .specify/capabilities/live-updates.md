@@ -3,6 +3,7 @@ capability: live-updates
 updated: 2026-10-05
 features:
   - 253-live-connection
+  - 254-live-audience
 ---
 
 # Capability: Live updates
@@ -31,9 +32,9 @@ _From 253-live-connection._
 
 _From 253-live-connection._
 
-### 253-FR-006 — Events MUST be fanned out through one Redis pub/sub channel, each message holding the event and its audience as a list of channel keys; every API copy MUST forward an event only to its own connections whose channels meet the audience, each such connection exactly once.
+### 254-FR-013 — Events MUST be fanned out through one Redis pub/sub channel, each message holding the event and its audience as a list of channel keys; every API copy MUST forward an event only to its own connections whose channels meet the audience and whose role, rights and garage switches allow it (FR-003 to FR-005, FR-009), each such connection exactly once.
 
-_From 253-live-connection._
+_From 254-live-audience._
 
 ### 253-FR-007 — A stream with no event for 25 seconds MUST receive a comment line.
 
@@ -70,3 +71,55 @@ _From 253-live-connection._
 ### 253-FR-015 — Every dashboard (driver; garage, serving owner, receptionist and mechanic; admin) MUST show the shared toast "Actualizare de test în direct" / "Live test update" on a `live.test` event, in the person's language.
 
 _From 253-live-connection._
+
+### 254-FR-001 — The audience of an event MUST be worked out from its subject: request → the driver's `account:` and each recipient `garage:`; quote → the driver and the quoting garage; booking → the driver, the garage and the booking's `mechanic:` when it has one; job (with its media and live kinds) → the driver, the garage and the job's mechanic when it has one; review → the garage, the author, `public:garage` and `public:mechanic`; message → the driver and the garage; car and repair → the owner's account, plus the named garage for a shared repair; verification and documents → `admin` and the garage; platform rules and copy voices → `admin` and `system`; account → that `account:`.
+
+_From 254-live-audience._
+
+### 254-FR-002 — An API copy MUST drop and log an event whose audience is empty, and MUST NOT forward it to any connection.
+
+_From 254-live-audience._
+
+### 254-FR-003 — Through `garage:{garageId}`, an owner MUST get every kind; a receptionist MUST NOT get price-list, settings, feature-switch or team kinds (`price_list.*`, `garage.settings_changed`, `garage.features_changed`, `member.*`, `mechanic.*`); a mechanic MUST get only `request.*` and `message.*` kinds with *can_answer_quotes* and `booking.move*` kinds with *can_move_bookings*, and nothing else.
+
+_From 254-live-audience._
+
+### 254-FR-004 — A garage-staff connection MUST receive through `garage:{garageId}` or `mechanic:{mechanicId}` only while its account is still that garage's staff in the role of the connection (owner or receptionist membership, or the mechanic record).
+
+_From 254-live-audience._
+
+### 254-FR-005 — An event of a feature the garage switched off MUST NOT be forwarded to that garage's staff connections: `media.*` kinds belong to `live_media`; a garage with no row for a feature has it on.
+
+_From 254-live-audience._
+
+### 254-FR-006 — Each API copy MUST read a garage's staff, mechanic permissions and feature switches once and keep them for 60 seconds, and MUST drop them at once when `member.removed`, `mechanic.updated` or `garage.features_changed` for that garage passes through it.
+
+_From 254-live-audience._
+
+### 254-FR-007 — When `member.removed` passes through with `garage:{garageId}` in its audience, the open connections of the account named by its `id` MUST leave `garage:{garageId}` and their `mechanic:` channel at once.
+
+_From 254-live-audience._
+
+### 254-FR-008 — When `account.suspended` or `account.deleted` passes through, every open stream of the account named by its `id` MUST receive `bye` with reason `evicted` and end.
+
+_From 254-live-audience._
+
+### 254-FR-009 — A request, quote, booking, job, media, live, message, car or repair kind MUST NOT be forwarded through a `public:` key.
+
+_From 254-live-audience._
+
+### 254-FR-010 — A failure to read a garage's staff or switches MUST drop that event for that garage's staff connections only and be logged; every other connection MUST still get it.
+
+_From 254-live-audience._
+
+### 254-FR-011 — After a role switch the web app MUST close its live connection and open a new one, so it joins the new role's channels.
+
+_From 254-live-audience._
+
+### 254-FR-012 — A test update sent to one driver MUST show on that driver's open dashboard and MUST NOT reach another driver's open dashboard.
+
+_From 254-live-audience._
+
+## Retired
+
+- `253-FR-006` — superseded by `254-FR-013` (2026-10-05)

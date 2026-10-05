@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-05
 
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 
 **Input**: User description: "ST-254 Send live updates only to the people involved (Notion story https://app.notion.com/p/3ee607bff0d281769e64ff763a743def, epic EP-1 Foundations)."
 
