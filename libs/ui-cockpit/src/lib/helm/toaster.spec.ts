@@ -93,6 +93,38 @@ describe('the toast stack', () => {
     expect(byText('Urgent').getAttribute('aria-live')).toBe('assertive');
   });
 
+  it('passes axe for a toast with an action button', async () => {
+    const { host } = await shown();
+    toast('Șters', { action: { label: 'Anulează', onClick: () => undefined } });
+    await new Promise((r) => setTimeout(r, 0));
+
+    const li = host.querySelector('li[data-sonner-toast]') as HTMLElement;
+    expect(li.querySelector('button')?.textContent).toContain('Anulează');
+    expect(li.hasAttribute('role')).toBe(false);
+    expect(await violations(host)).toEqual([]);
+  });
+
+  it('keeps the roles when a toast is dismissed and another added', async () => {
+    const { fixture, host } = await shown();
+    const first = toast('Unu');
+    toast('Doi');
+    await settle(fixture);
+    toast.dismiss(first);
+    await new Promise((r) => setTimeout(r, 500));
+    toast('Trei', { important: true });
+    await settle(fixture);
+
+    const list = host.querySelector('ol[data-sonner-toaster]') as HTMLElement;
+    expect(list.getAttribute('role')).toBe('list');
+    for (const wrapper of list.children)
+      expect(wrapper.getAttribute('role')).toBe('none');
+    const trei = [...host.querySelectorAll('li[data-sonner-toast]')].find(
+      (li) => li.textContent?.includes('Trei'),
+    );
+    expect(trei?.getAttribute('aria-live')).toBe('assertive');
+    expect(await violations(host)).toEqual([]);
+  });
+
   it('stops watching the stack once the toaster is gone', async () => {
     const { fixture, host } = await shown(['Salvat']);
     fixture.destroy();

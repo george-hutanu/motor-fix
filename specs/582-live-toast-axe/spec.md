@@ -64,10 +64,6 @@ None.
 
 ## Spec Delta
 
-Capability: `live-updates`
+### Capability: `live-updates`
 
-### Adds
-
-- **FR-001**: The toast stack passes axe with no violation whenever a toast is shown, on every screen that mounts the toaster.
-- **FR-002**: Each shown toast is a live region (`aria-live` polite, assertive when important; `aria-atomic="true"`).
-- **FR-003**: The toast stack is a list and each toast one item of it, toasts added later included.
+- **Adds**: FR-001–FR-004
