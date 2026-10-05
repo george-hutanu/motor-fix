@@ -1,0 +1,37 @@
+// cars module models — only the reminders so far; the car stories add CAR,
+// and with it the foreign key from car_id.
+
+enum ReminderKind {
+  itp
+  service
+  rca
+  rovinieta
+  tyres_winter
+  tyres_summer
+  booking
+
+  @@map("reminder_kind")
+}
+
+// One per car and kind, or one per booking. The flags are the guard that
+// sends each stage once; a new due date resets them.
+model Reminder {
+  id         String       @id @default(uuid()) @db.Uuid
+  accountId  String       @map("account_id") @db.Uuid
+  carId      String?      @map("car_id") @db.Uuid
+  bookingId  String?      @unique @map("booking_id") @db.Uuid
+  kind       ReminderKind
+  // None for tyres, which go on fixed days every year.
+  dueOn      DateTime?    @map("due_on") @db.Date
+  sent30     Boolean      @default(false) @map("sent_30")
+  sent7      Boolean      @default(false) @map("sent_7")
+  seasonYear Int?         @map("season_year")
+  sentAt     DateTime?    @map("sent_at") @db.Timestamptz(3)
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  account    Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([carId, kind])
+  @@index([accountId])
+  @@index([dueOn])
+  @@map("reminder")
+}

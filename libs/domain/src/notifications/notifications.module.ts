@@ -102,11 +102,13 @@ export class NotificationsModule implements OnApplicationShutdown {
   }
 
   // The worker: the same entry point plus the queue's consumer, which also
-  // sends SMS and WhatsApp.
+  // sends SMS and WhatsApp. The reminders send through its service and
+  // share its PostgreSQL pool.
   static registerWorker(
     options: NotificationsOptions & { phone: PhoneConfig },
   ): DynamicModule {
     return {
+      exports: [NotificationsService, NOTIFICATIONS_PRISMA],
       module: NotificationsModule,
       providers: [
         ...shared(options, {
