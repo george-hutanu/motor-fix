@@ -137,6 +137,7 @@ FR-013 narrows ST-128's FR-009, which `accounts.md` does not hold yet (ST-128 is
 ## Assumptions
 
 - (autonomous default) The three calls and their shapes are as in Clarifications Q1; the check call exists so that scenario 6 holds when the link is opened.
+- (autonomous default) FR-001 fixes the answer's body, not its timing: a known address also writes the token and queues the e-mail before the 202, so response time can hint that an account exists. Accepted for now (the per-address and per-e-mail limits of FR-003 cap how often anyone can ask); answering before the work is recorded in `deferred.md`.
 - (autonomous default) The reset task's title is "Resetează parola" / "Reset your password"; the link page's dialog title is "Parolă nouă" / "New password"; the English texts are this run's, the Build brief gives only the Romanian.
 - (autonomous default) `password_changed`'s button is "Intră în cont" / "Sign in" and opens `{PUBLIC_WEB_URL}/{language}`.
 - (autonomous default) Every request counts against its client address and its e-mail digest, sent or not, so the limit cannot be used to learn whether an account exists.

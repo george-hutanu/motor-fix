@@ -15,7 +15,7 @@ Three public JSON calls under `/api/v1/auth/password-reset` (ask, check, complet
 **Target Platform**: API on Railway; web SSR + browser
 **Constraints**: no new dependency; the request answers the same for every address; nothing written on any refusal
 
-**Depends on unmerged work**: ST-81 (PR #71) creates `account_token` and the token helpers (`libs/domain/src/auth/email-confirmation.ts`: `newToken`, `hashToken`, `isTokenShape`). This branch merges `origin/081-confirm-email` to build on it, and goes ready only after #71 is on `main` (then `origin/main` is merged and the diff is this story's alone).
+**Depends on unmerged work**: ST-81 (PR #71) creates `account_token` and the token helpers (`libs/domain/src/auth/email-confirmation.ts`: `newToken`, `hashToken`). This branch merges `origin/081-confirm-email` to build on it, and goes ready only after #71 is on `main` (then `origin/main` is merged and the diff is this story's alone).
 
 ## Constitution Check
 

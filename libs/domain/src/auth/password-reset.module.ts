@@ -1,7 +1,11 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 
 import { PasswordResetController } from './password-reset.controller';
-import { PasswordResetService, RESET_OPTIONS } from './password-reset.service';
+import {
+  PasswordResetService,
+  RESET_OPTIONS,
+  type ResetOptions,
+} from './password-reset.service';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 
@@ -11,7 +15,7 @@ import { AuditService } from '../audit/audit.service';
 export class PasswordResetModule {
   // `notifications` is the application's NotificationsModule.
   static register(
-    options: { webUrl?: string },
+    options: ResetOptions,
     notifications: DynamicModule,
   ): DynamicModule {
     return {

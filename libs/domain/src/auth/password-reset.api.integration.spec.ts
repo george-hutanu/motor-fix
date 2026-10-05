@@ -12,6 +12,7 @@ import * as password from './password';
 import { PasswordResetModule } from './password-reset.module';
 import { PasswordResetService } from './password-reset.service';
 import { serialDatabase } from './serial-db.testing';
+import { SESSION_EVENTS, SignInService } from './sign-in.service';
 import { AuditService } from '../audit/audit.service';
 import { noEvents } from '../events/event.port';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -534,6 +535,36 @@ describe('completing a reset', () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     await complete(token).expect(200);
     await signIn('andrei@example.test', NEW).expect(200);
+  });
+
+  it('still answers 200 when the other tabs cannot be told', async () => {
+    const id = await person();
+    const token = await linkFor(id);
+    jest
+      .spyOn(app.get(SESSION_EVENTS), 'publish')
+      .mockRejectedValue(new Error('Redis did not answer'));
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    await complete(token).expect(200);
+    await settled(() => warn.mock.calls.length > 0);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('session.revoked not sent'),
+    );
+  });
+
+  // The password is already changed: the holder hears of it all the same.
+  it('e-mails and signs out the other tabs even when no session opens', async () => {
+    const id = await person();
+    const token = await linkFor(id);
+    jest
+      .spyOn(app.get(SignInService), 'openSession')
+      .mockRejectedValue(new Error('Redis did not answer'));
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    await complete(token).expect(500);
+    expect(await resetEmails(id, 'password_changed')).toHaveLength(1);
+    await settled(() => published.length > 0);
+    expect(published.join()).toContain('session.revoked');
   });
 
   it.each([

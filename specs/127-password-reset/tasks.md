@@ -26,7 +26,7 @@ Independent test: through HTTP against PostgreSQL and Redis; one `ACCOUNT_EMAIL`
 ## Phase 4: User Story 1 — the e-mail step, web (P1)
 
 - [X] T010 [US1] `apps/web/src/app/sign-in/sign-in.ts`: "Ai uitat parola?" in the remember row closes with a switch to `reset` carrying the e-mail (FR-009)
-- [X] T011 [US1] `apps/web/src/app/sign-in/password-reset.ts` (new): the e-mail task, the sent state, "Înapoi la autentificare"; texts in `libs/i18n/src/public/{ro,en}.json` (FR-010)
+- [X] T011 [US1] `apps/web/src/app/sign-in/password-reset.ts` (new): the e-mail task, the sent state, "Înapoi la autentificare"; texts in `libs/i18n/src/public/ro.json` and `libs/i18n/src/public/en.json` (FR-010)
 - [X] T012 [US1] `apps/web/src/app/sign-in/sign-in-dialog.ts`: the reset lap between sign-in and the e-mail task (FR-009, FR-010)
 
 ## Phase 5: User Story 2 and 3 — the link, web (P1)

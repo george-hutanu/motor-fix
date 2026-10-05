@@ -20,7 +20,7 @@ import { Prisma } from '../generated/prisma/client';
 const MIN_PASSWORD = 8;
 const MAX_PASSWORD = 128;
 
-const refusal = (
+export const refusal = (
   status: HttpStatus,
   code: string,
   message: string,

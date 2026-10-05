@@ -11,13 +11,16 @@ describe('the reset request limit', () => {
   } as unknown as Redis;
 
   it('admits every request when Redis does not answer', async () => {
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
     const attempts = new Attempts(down);
     for (let i = 0; i < 5; i++) {
       expect(
         await attempts.admitReset('andrei@example.test', '198.51.100.7'),
       ).toBe(true);
     }
+    warn.mockRestore();
   });
 });
 

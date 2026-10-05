@@ -1,12 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import {
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 
 import { Attempts } from './attempts';
 import { hashToken, newToken } from './email-confirmation';
@@ -15,7 +9,7 @@ import { hashPassword } from './password';
 import { roleInUse } from './policy';
 import { PRISMA } from './prisma';
 import { type Issued, SESSION_EVENTS, SignInService } from './sign-in.service';
-import { weakPassword } from './sign-up.service';
+import { refusal, weakPassword } from './sign-up.service';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { type LivePublisher, publishLive } from '../events/live.hub';
 import type { PrismaClient } from '../generated/prisma/client';
@@ -31,13 +25,6 @@ export interface ResetOptions {
 const PURPOSE = 'password_reset';
 const LINK_TTL_MS = 60 * 60 * 1000;
 const TOKEN_SHAPE = /^[A-Za-z0-9_-]{43}$/;
-
-const refusal = (
-  status: HttpStatus,
-  code: string,
-  message: string,
-  errors?: { code: string; field: string }[],
-) => new HttpException({ code, message, ...(errors && { errors }) }, status);
 
 const invalid = () =>
   refusal(HttpStatus.GONE, 'token_invalid', 'This link does not work');
@@ -142,9 +129,9 @@ export class PasswordResetService {
       });
     });
     this.logger.log('password reset');
-    const issued = await this.signIns.openSession(account.id, role, true);
+    // Before the session: the password changed even if no session opens.
     await this.announce(account.id, account.language, at);
-    return issued;
+    return this.signIns.openSession(account.id, role, true);
   }
 
   // A new link; the account's older unused ones stop working.
