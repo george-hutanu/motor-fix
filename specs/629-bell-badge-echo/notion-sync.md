@@ -10,3 +10,7 @@
 - 2026-10-05 · implement · Foundations timeline · no row for ST-629
 - 2026-10-05 · labels · PR #112 · in development
 - 2026-10-05 · qa · ST-629 · Implementing → QA; labels QA (−planning, −in development, −blocked)
+- 2026-10-05 · merge · PR #112 · merged as 7389ea3 (head 44a1bdd, agent-review success lap 2, CI OK green)
+- 2026-10-05 · finish · ST-629 · QA → Done; labels −QA (no timeline row for debt tasks; EP-1 stays In progress)
+- 2026-10-05 · comment · ST-629 · posted (7 items)
+- 2026-10-05 · ready · EP-1 · no change (no item names ST-629 as a prerequisite; found by notion-search, not query-data-sources)
