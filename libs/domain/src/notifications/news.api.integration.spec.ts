@@ -1,9 +1,16 @@
 import { NEWS_CONSENT_TEXT_VERSION } from '@motor-fix/contracts';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { type Job, Queue } from 'bullmq';
 import request from 'supertest';
 
 import { unsubscribedAccount, unsubscribeToken } from './news';
+import {
+  NEWS_JOBS,
+  NEWS_QUEUE,
+  NewsFanOut,
+  type NewsRun,
+} from './news.fan-out';
 import { NewsService } from './news.service';
 import { NotificationsModule } from './notifications.module';
 import { NotificationsService } from './notifications.service';
@@ -13,6 +20,7 @@ import {
   redisUrlFor,
   testConfig,
 } from './notifications.testing';
+import { AuditService } from '../audit/audit.service';
 import { signAccessToken } from '../auth/access-token';
 import { AuthModule } from '../auth/auth.module';
 import type { Role } from '../auth/capabilities';
@@ -24,6 +32,10 @@ const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
 
 let app: INestApplication;
+let fanOut: NewsFanOut;
+const newsJobs = new Queue<NewsRun>(NEWS_QUEUE, {
+  connection: { url: redisUrl },
+});
 
 beforeAll(async () => {
   const auth = AuthModule.register({ databaseUrl, redisUrl, tokenSecret });
@@ -45,16 +57,25 @@ beforeAll(async () => {
     }),
   );
   await app.init();
+  fanOut = new NewsFanOut(
+    prisma,
+    app.get(NotificationsService),
+    testConfig('http://127.0.0.1:9'),
+    tokenSecret,
+    new AuditService(),
+  );
 });
 
 afterAll(async () => {
   await app.close();
+  await newsJobs.close();
   await prisma.$disconnect();
 });
 
 beforeEach(async () => {
   await reset();
   await prisma.newsSend.deleteMany();
+  await newsJobs.obliterate({ force: true });
   clock('2026-11-05T10:00:00Z');
 });
 
@@ -113,6 +134,50 @@ const send = (admin: string, body: object = NEWS, role: Role = 'admin') =>
     .post('/admin/news')
     .set('Authorization', bearer(admin, role))
     .send(body);
+
+const queued = () => newsJobs.getJobs(['waiting', 'delayed', 'prioritized']);
+
+// What the worker does with each queued run: run it, and drop it once done.
+async function deliver() {
+  for (const job of await queued()) {
+    await fanOut.handle(job);
+    await job.remove();
+  }
+}
+
+const sent = async (admin: string) => {
+  const res = await send(admin);
+  await deliver();
+  return res;
+};
+
+// The queue calls `failed` after each failed attempt; `made` is how many
+// attempts it has made so far.
+const failedAfter = (job: Job<NewsRun>, made: number) =>
+  fanOut.failed(
+    { attemptsMade: made, data: job.data, opts: job.opts },
+    new Error('redis down'),
+  );
+
+const failingOn = (call: number) => {
+  const notifications = app.get(NotificationsService);
+  const notify = notifications.notify;
+  let calls = 0;
+  notifications.notify = (input) => {
+    calls += 1;
+    if (calls === call) return Promise.reject(new Error('redis down'));
+    return notify.call(notifications, input);
+  };
+  return () => {
+    notifications.notify = notify;
+  };
+};
+
+const sendLog = (admin: string) =>
+  prisma.activityLog.findMany({
+    orderBy: { at: 'asc' },
+    where: { subjectId: admin, subjectType: 'news_send' },
+  });
 
 interface NewsParams {
   title: string;
@@ -206,7 +271,7 @@ describe('the one-click stop', () => {
     const driver = await consenting('andrei');
     const other = await consenting('elena');
     clock('2026-11-05T21:00:00Z');
-    await send(admin);
+    await sent(admin);
     await unsubscribe(unsubscribeToken(driver, tokenSecret));
     const rows = await newsEmails();
     expect(rows.find((r) => r.accountId === driver)).toMatchObject({
@@ -228,6 +293,29 @@ describe('the one-click stop', () => {
 });
 
 describe('an admin sending news', () => {
+  it('answers with the count and leaves the messages to one queued run of the month', async () => {
+    const admin = await account('admin', ['admin']);
+    await consenting('andrei');
+    await consenting('elena');
+    const res = await send(admin);
+    expect(res.status).toBe(202);
+    expect(res.body).toEqual({ recipients: 2 });
+    expect(await newsEmails()).toEqual([]);
+    const jobs = await queued();
+    expect(jobs).toHaveLength(1);
+    const [job] = jobs;
+    expect(job.id).toBe('news-2026-11');
+    expect(job.data).toEqual({
+      month: '2026-11',
+      sentBy: { accountId: admin, role: 'admin' },
+      text: NEWS.text,
+      title: NEWS.title,
+    });
+    expect(job.opts.attempts).toBeGreaterThan(1);
+    await deliver();
+    expect(await newsEmails()).toHaveLength(2);
+  });
+
   it('reaches only drivers who consented, each in their own language', async () => {
     const admin = await account('admin', ['admin']);
     const ro = await consenting('ro-driver', ['driver'], 'ro');
@@ -240,7 +328,7 @@ describe('an admin sending news', () => {
       where: { accountId: withdrawn },
     });
     const owner = await consenting('owner', ['garage']);
-    const res = await send(admin);
+    const res = await sent(admin);
     expect(res.status).toBe(202);
     expect(res.body).toEqual({ recipients: 3 });
     const rows = await newsEmails();
@@ -273,7 +361,7 @@ describe('an admin sending news', () => {
   it('sends nothing but e-mail outside the app', async () => {
     const admin = await account('admin', ['admin']);
     const driver = await consenting('andrei');
-    await send(admin);
+    await sent(admin);
     const outside = await prisma.notification.findMany({
       where: { accountId: driver, channel: { not: 'in_app' }, kind: 'NEWS' },
     });
@@ -283,14 +371,14 @@ describe('an admin sending news', () => {
   it('refuses a second send in the same month, and allows the next month', async () => {
     const admin = await account('admin', ['admin']);
     await consenting('andrei');
-    expect((await send(admin)).status).toBe(202);
+    expect((await sent(admin)).status).toBe(202);
     clock('2026-11-20T10:00:00Z');
-    const again = await send(admin);
+    const again = await sent(admin);
     expect(again.status).toBe(409);
     expect(again.body.code).toBe('news_already_sent_this_month');
     expect(await newsEmails()).toHaveLength(1);
     clock('2026-12-01T10:00:00Z');
-    expect((await send(admin)).status).toBe(202);
+    expect((await sent(admin)).status).toBe(202);
     expect(await newsEmails()).toHaveLength(2);
   });
 
@@ -307,6 +395,8 @@ describe('an admin sending news', () => {
     await consenting('andrei');
     const answers = await Promise.all([send(admin), send(admin)]);
     expect(answers.map((a) => a.status).sort()).toEqual([202, 409]);
+    expect(await queued()).toHaveLength(1);
+    await deliver();
     expect(await newsEmails()).toHaveLength(1);
   });
 
@@ -322,10 +412,8 @@ describe('an admin sending news', () => {
     const admin = await account('admin', ['admin']);
     await consenting('andrei');
     await consenting('elena');
-    await send(admin);
-    const entries = await prisma.activityLog.findMany({
-      where: { subjectId: admin, subjectType: 'news_send' },
-    });
+    await sent(admin);
+    const entries = await sendLog(admin);
     expect(entries).toHaveLength(1);
     const [entry] = entries;
     expect(entry).toMatchObject({
@@ -337,42 +425,95 @@ describe('an admin sending news', () => {
     expect(entry.at).toBeInstanceOf(Date);
   });
 
-  it('gives the month back when a send fails part-way, and a retry reaches each driver once', async () => {
+  it('keeps the month when a run fails part-way, and its retry reaches each driver once', async () => {
     const admin = await account('admin', ['admin']);
     await consenting('andrei');
     await consenting('elena');
-    const notifications = app.get(NotificationsService);
-    const notify = notifications.notify;
-    let calls = 0;
-    notifications.notify = (input) => {
-      calls += 1;
-      if (calls === 2) return Promise.reject(new Error('redis down'));
-      return notify.call(notifications, input);
-    };
+    expect((await send(admin)).status).toBe(202);
+    const [job] = await queued();
+    const restore = failingOn(2);
     try {
-      expect((await send(admin)).status).toBe(500);
+      await expect(fanOut.handle(job)).rejects.toThrow('redis down');
     } finally {
-      notifications.notify = notify;
+      restore();
     }
-    expect(await prisma.newsSend.count()).toBe(0);
+    await failedAfter(job, 1);
     expect(await newsEmails()).toHaveLength(1);
-    const entries = await prisma.activityLog.findMany({
-      orderBy: { at: 'asc' },
-      where: { subjectId: admin, subjectType: 'news_send' },
-    });
+    expect(await prisma.newsSend.count()).toBe(1);
+    await fanOut.handle(job);
+    const rows = await newsEmails();
+    expect(rows).toHaveLength(2);
+    expect(new Set(rows.map((r) => r.accountId)).size).toBe(2);
+    expect(await prisma.newsSend.count()).toBe(1);
+    expect((await sendLog(admin)).map((e) => e.action)).toEqual(['create']);
+  });
+
+  it('gives the month back when the last attempt fails, and lets the admin send again', async () => {
+    const admin = await account('admin', ['admin']);
+    await consenting('andrei');
+    await consenting('elena');
+    expect((await send(admin)).status).toBe(202);
+    const [job] = await queued();
+    const attempts = job.opts.attempts ?? 1;
+    await failedAfter(job, attempts - 1);
+    expect(await prisma.newsSend.count()).toBe(1);
+    await failedAfter(job, attempts);
+    expect(await prisma.newsSend.count()).toBe(0);
+    const entries = await sendLog(admin);
     expect(entries.map((e) => e.action)).toEqual(['create', 'delete']);
-    const retry = await send(admin);
+    expect(entries[1]).toMatchObject({
+      actorId: admin,
+      actorRole: 'admin',
+      oldValue: { month: '2026-11' },
+    });
+    await job.remove();
+    const retry = await sent(admin);
     expect(retry.status).toBe(202);
     expect(retry.body).toEqual({ recipients: 2 });
     expect(await newsEmails()).toHaveLength(2);
     expect(await prisma.newsSend.count()).toBe(1);
   });
 
+  it('gives the month back and fails when the run cannot be queued', async () => {
+    const admin = await account('admin', ['admin']);
+    await consenting('andrei');
+    const jobs = app.get<Queue>(NEWS_JOBS);
+    const add = jobs.add;
+    jobs.add = () => Promise.reject(new Error('redis down'));
+    try {
+      expect((await send(admin)).status).toBe(500);
+    } finally {
+      jobs.add = add;
+    }
+    expect(await prisma.newsSend.count()).toBe(0);
+    expect((await sendLog(admin)).map((e) => e.action)).toEqual([
+      'create',
+      'delete',
+    ]);
+    expect((await sent(admin)).status).toBe(202);
+    expect(await newsEmails()).toHaveLength(1);
+  });
+
+  it('leaves out a driver who withdrew between the send and the run', async () => {
+    const admin = await account('admin', ['admin']);
+    await consenting('andrei');
+    const elena = await consenting('elena');
+    expect((await send(admin)).body).toEqual({ recipients: 2 });
+    await prisma.notificationPreference.updateMany({
+      data: { enabled: false, withdrawnAt: new Date('2026-11-05T10:01:00Z') },
+      where: { accountId: elena },
+    });
+    await deliver();
+    const rows = await newsEmails();
+    expect(rows.map((r) => r.accountId)).not.toContain(elena);
+    expect(rows).toHaveLength(1);
+  });
+
   it('holds the e-mails of a send at night until 08:00 in Bucharest', async () => {
     const admin = await account('admin', ['admin']);
     await consenting('andrei');
     clock('2026-11-05T21:00:00Z');
-    await send(admin);
+    await sent(admin);
     const [row] = await newsEmails();
     expect(row.status).toBe('held');
     expect(row.sendAfter?.toISOString()).toBe('2026-11-06T06:00:00.000Z');
@@ -386,6 +527,7 @@ describe('an admin sending news', () => {
     await consenting('andrei');
     const res = await send(caller, NEWS, role);
     expect(res.status).toBe(404);
+    expect(await queued()).toEqual([]);
     expect(await newsEmails()).toEqual([]);
     expect(await prisma.newsSend.count()).toBe(0);
   });

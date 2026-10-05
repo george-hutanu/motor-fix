@@ -6,13 +6,20 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
+import type { Queue } from 'bullmq';
 
 import type { EmailConfig } from './email-config';
-import { newsLinks, unsubscribedAccount, unsubscribeToken } from './news';
+import { unsubscribedAccount } from './news';
+import {
+  CONSENTING_DRIVERS,
+  giveMonthBack,
+  NEWS_JOBS,
+  NEWS_RUN,
+  type NewsRun,
+} from './news.fan-out';
 import {
   NOTIFICATIONS_CONFIG,
   NOTIFICATIONS_PRISMA,
-  NotificationsService,
 } from './notifications.service';
 import { withdrawn } from './preferences';
 import { smsMonth } from './sms-counter';
@@ -44,7 +51,7 @@ export class NewsService {
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(NOTIFICATIONS_CONFIG) private readonly config: EmailConfig,
     @Inject(AUTH_OPTIONS) private readonly auth: AuthOptions,
-    private readonly notifications: NotificationsService,
+    @Inject(NEWS_JOBS) private readonly jobs: Queue<NewsRun>,
   ) {}
 
   // No session: the link is the proof. An account with nothing to withdraw
@@ -91,39 +98,34 @@ export class NewsService {
   }
 
   // The month is claimed first: a second send in the month, or one racing
-  // this one, is refused before anything goes. A send that fails part-way
-  // gives the month back; a retry skips the drivers it already reached, as
-  // the pipeline writes one message per event and person.
+  // this one, is refused before anything goes. The drivers are reached by
+  // the month's run in the worker, which the queue retries by itself.
   async send(actor: Actor, body: SendNewsDto): Promise<NewsSentDto> {
-    const webUrl = this.config.webUrl;
-    if (!webUrl) throw new Error('PUBLIC_WEB_URL is needed to send news');
+    if (!this.config.webUrl) {
+      throw new Error('PUBLIC_WEB_URL is needed to send news');
+    }
     const month = smsMonth(this.now());
-    const drivers = await this.consentingDrivers();
-    await this.claim(actor, month, drivers.length);
+    const recipients = await this.prisma.notificationPreference.count({
+      where: CONSENTING_DRIVERS,
+    });
+    await this.claim(actor, month, recipients);
+    const run: NewsRun = {
+      month,
+      sentBy: { accountId: actor.accountId, role: actor.role },
+      text: body.text,
+      title: body.title,
+    };
     try {
-      for (const { id, language } of drivers) {
-        await this.notifications.notify({
-          eventId: `news:${month}`,
-          kind: 'NEWS',
-          params: {
-            text: body.text[language],
-            title: body.title[language],
-            ...newsLinks(
-              webUrl,
-              language,
-              unsubscribeToken(id, this.auth.tokenSecret),
-            ),
-          },
-          recipients: [id],
-          subjectId: id,
-        });
-      }
+      await this.jobs.add('fan-out', run, {
+        ...NEWS_RUN,
+        jobId: `news-${month}`,
+      });
     } catch (error) {
-      await this.release(actor, month);
+      this.logger.error(`news for ${month} was not queued; the month is free`);
+      await giveMonthBack(this.prisma, this.audit, month, run.sentBy);
       throw error;
     }
-    this.logger.log(`news for ${month} sent to ${drivers.length} drivers`);
-    return { recipients: drivers.length };
+    return { recipients };
   }
 
   private async claim(actor: Actor, month: string, recipients: number) {
@@ -151,39 +153,5 @@ export class NewsService {
         HttpStatus.CONFLICT,
       );
     }
-  }
-
-  private async release(actor: Actor, month: string) {
-    this.logger.error(`news for ${month} failed part-way; the month is free`);
-    await this.prisma.$transaction(async (tx) => {
-      await tx.newsSend.delete({ where: { month } });
-      await this.audit.record(tx, {
-        action: 'delete',
-        actorId: actor.accountId,
-        actorRole: actor.role,
-        oldValue: { month },
-        subjectId: actor.accountId,
-        subjectType: 'news_send',
-      });
-    });
-  }
-
-  // News is for drivers: another role gets it only as a driver who consented.
-  private async consentingDrivers() {
-    const rows = await this.prisma.notificationPreference.findMany({
-      select: { account: { select: { id: true, language: true } } },
-      where: {
-        account: {
-          roles: { some: { role: 'driver' } },
-          status: { not: 'deleted' },
-        },
-        consentGivenAt: { not: null },
-        enabled: true,
-        garageId: null,
-        type: 'NEWS',
-        withdrawnAt: null,
-      },
-    });
-    return rows.map((r) => r.account);
   }
 }

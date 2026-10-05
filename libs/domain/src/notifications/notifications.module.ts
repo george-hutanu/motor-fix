@@ -1,6 +1,7 @@
 import {
   type DynamicModule,
   Inject,
+  Logger,
   Module,
   type OnApplicationShutdown,
   Optional,
@@ -15,6 +16,13 @@ import { Brevo } from './brevo';
 import { BrevoWebhookController } from './brevo-webhook.controller';
 import type { EmailConfig } from './email-config';
 import { NewsController } from './news.controller';
+import {
+  NEWS_JOBS,
+  NEWS_QUEUE,
+  NEWS_TOKEN_SECRET,
+  NewsFanOut,
+  type NewsRun,
+} from './news.fan-out';
 import { NewsService } from './news.service';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsProcessor, retryDelay } from './notifications.processor';
@@ -43,6 +51,7 @@ interface NotificationsOptions {
 }
 
 const WORKER = Symbol('NOTIFICATIONS_WORKER');
+const NEWS_WORKER = Symbol('NEWS_WORKER');
 
 // No channel takes over from a failed e-mail yet.
 const noFallback: EmailFallback = async () => undefined;
@@ -59,6 +68,11 @@ function shared(options: NotificationsOptions, prisma: Provider): Provider[] {
           connection: { url: options.redisUrl },
         }),
     },
+    {
+      provide: NEWS_JOBS,
+      useFactory: () =>
+        new Queue(NEWS_QUEUE, { connection: { url: options.redisUrl } }),
+    },
     { provide: LIVE_PUBLISHER, useFactory: () => new Redis(options.redisUrl) },
     { provide: EMAIL_FALLBACK, useValue: noFallback },
     { provide: AUDIT_PORT, useClass: AuditService },
@@ -70,8 +84,12 @@ export class NotificationsModule implements OnApplicationShutdown {
   constructor(
     @Inject(NOTIFICATIONS_PRISMA) private readonly prisma: PrismaClient,
     @Inject(NOTIFICATIONS_JOBS) private readonly jobs: Queue,
+    @Inject(NEWS_JOBS) private readonly newsJobs: Queue,
     @Inject(LIVE_PUBLISHER) private readonly publisher: Redis,
     @Optional() @Inject(WORKER) private readonly worker?: Worker | null,
+    @Optional()
+    @Inject(NEWS_WORKER)
+    private readonly newsWorker?: Worker | null,
   ) {}
 
   // The API: the entry point, each person's bell, the admin test message,
@@ -106,10 +124,14 @@ export class NotificationsModule implements OnApplicationShutdown {
   }
 
   // The worker: the same entry point plus the queue's consumer, which also
-  // sends SMS and WhatsApp. The reminders send through its service and
-  // share its PostgreSQL pool.
+  // sends SMS and WhatsApp, and the monthly news run. The reminders send
+  // through its service and share its PostgreSQL pool. News needs the API's
+  // token secret to sign its unsubscribe links; without it the runs wait.
   static registerWorker(
-    options: NotificationsOptions & { phone: PhoneConfig },
+    options: NotificationsOptions & {
+      phone: PhoneConfig;
+      tokenSecret?: string;
+    },
   ): DynamicModule {
     return {
       exports: [NotificationsService, NOTIFICATIONS_PRISMA],
@@ -151,13 +173,48 @@ export class NotificationsModule implements OnApplicationShutdown {
                 )
               : null,
         },
+        NewsFanOut,
+        { provide: NEWS_TOKEN_SECRET, useValue: options.tokenSecret ?? '' },
+        {
+          inject: [NewsFanOut],
+          provide: NEWS_WORKER,
+          useFactory: (fanOut: NewsFanOut) => {
+            if (!options.tokenSecret) {
+              new Logger('News').error(
+                'AUTH_TOKEN_SECRET is missing; news runs wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<NewsRun>(
+              NEWS_QUEUE,
+              (job) => fanOut.handle(job),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+              },
+            );
+            worker.on('failed', (job, error) => {
+              if (!job) return;
+              fanOut.failed(job, error).catch((e: Error) => {
+                new Logger('News').error(
+                  `news for ${job.data.month} was not given back: ${e.message}`,
+                );
+              });
+            });
+            return worker;
+          },
+        },
       ],
     };
   }
 
   async onApplicationShutdown() {
+    await this.newsWorker?.close();
     await this.worker?.close();
     await this.jobs.close();
+    await this.newsJobs.close();
     this.publisher.disconnect();
     // In the API the client is AuthModule's, which closes it.
     if (this.worker !== undefined) await this.prisma.$disconnect();
