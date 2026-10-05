@@ -1,5 +1,5 @@
 /**
- * @jest-environment node
+ * @jest-environment @stryker-mutator/jest-runner/jest-env/node
  */
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
