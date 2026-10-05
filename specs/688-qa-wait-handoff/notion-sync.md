@@ -8,3 +8,4 @@
 - 2026-10-05 · labels · PR #140 · planning
 - 2026-10-05 · implement · ST-688 · Planning → Implementing (no timeline row)
 - 2026-10-05 · labels · PR #140 · in development
+- 2026-10-05 · debt · ST-688 · deferred.md line 2 → https://app.notion.com/p/3f0607bff0d28141a3ebf5bb39a440ba

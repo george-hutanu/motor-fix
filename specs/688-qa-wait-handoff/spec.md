@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-05
 
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 
 **Input**: User description: "ST-688 No agent holds its context across the CI and QA wait" — Notion story https://app.notion.com/p/3f0607bff0d28183be81dbf78b072125 (epic EP-1, Tech debt).
 
@@ -145,9 +145,10 @@ still exits 1 at the fifth lap.
   that reads the run id and the head, and nothing from a note without the line.
 - **FR-004**: `watch.mjs` MUST give a handed-off ready PR whose recorded QA run
   is about its current head the verdict `waiting` and no fix while CI is
-  pending or has no checks, or the run is not completed, or its state cannot be
-  read; the reason names what it waits for. A PR with no checks waits only
-  until the qa quiet threshold, then FR-006 applies.
+  pending or has no checks, or the run is not completed, and its head has no
+  `agent-review` success; the reason names what it waits for. A PR with no
+  checks, or a run whose state cannot be read, waits only until the qa quiet
+  threshold, then FR-006 applies.
 - **FR-005**: `watch.mjs` MUST offer `tail` for such a PR once CI has finished
   and the run has completed, when no agent holds the worktree, without the
   phase's quiet threshold.
