@@ -1,7 +1,7 @@
 # Tasks - 696-lifecycle-script
 
 - [X] T001 Red: .claude/scripts/lifecycle.spec.mjs covers FR-001 (open: commands in order, a second open makes no commit and no PR), FR-002 (ready: commands in order, records and qa commits, handoff.md), FR-003 (merge: commands in order, finish comment, notion-sync.md restored, handoff.md gone), FR-004 (one JSON line), FR-005 (Notion exit 3 and a missing notion-sync.mjs list the connector events and the `--notion-done` rerun), FR-006 (each command judged by the registered Bash gates first, a refusal stops the step; the merge gate's test-only variables stripped), FR-007 (nothing runs from main; every push is `-u origin <branch>`), FR-008 (gh runs with george-hutanu's token) with git, gh, the gates and the Notion CLI stubbed.
-- [ ] T002 Red: .claude/scripts/lifecycle-wiring.spec.mjs covers FR-009 (speckit-auto and speckit-git-commit name one lifecycle.mjs call per step and no longer spell out the recipe).
+- [X] T002 Red: .claude/scripts/lifecycle-wiring.spec.mjs covers FR-009 (speckit-auto and speckit-git-commit name one lifecycle.mjs call per step and no longer spell out the recipe).
 - [X] T003 Green: .claude/scripts/lifecycle.mjs (FR-001..FR-008), reusing typeLabel (pr-lifecycle-gate), parseDeferred (debt-tasks), readyLogged (notion-ready), activeFeature, and the gates through run-hook.mjs.
-- [ ] T004 Green: shorten .claude/skills/speckit-auto/SKILL.md (the open, ready and merge command lines) and .claude/skills/speckit-git-commit/SKILL.md (the first-commit recipe) to one lifecycle.mjs call each (FR-009).
+- [X] T004 Green: shorten .claude/skills/speckit-auto/SKILL.md (the open, ready and merge command lines) and .claude/skills/speckit-git-commit/SKILL.md (the first-commit recipe) to one lifecycle.mjs call each (FR-009).
 - [ ] T005 Harden: npm run test:harness, doctor, artifact-lint, diff-audit; review.
