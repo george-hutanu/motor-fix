@@ -10,6 +10,7 @@ features:
   - 516-production-release-queue
   - 450-pr-tester-env-gaps
   - 600-merge-gate-symlink
+  - 623-precompact-flush
 ---
 
 # Capability: Platform
@@ -325,6 +326,18 @@ _From 600-merge-gate-symlink._
 ### 600-FR-003 — The merge gate started through a symlinked path MUST refuse a merge it refuses through the real path (exit 2).
 
 _From 600-merge-gate-symlink._
+
+### 623-FR-001 — The hook MUST NOT write to `auto-run.md` when the active feature's `spec.md` has a `**Status**:` line whose value begins with `Archived`, and MUST exit 0.
+
+_From 623-precompact-flush._
+
+### 623-FR-002 — The hook MUST still append its Compaction block for a feature whose status is not Archived.
+
+_From 623-precompact-flush._
+
+### 623-FR-003 — Each uncommitted entry in the block MUST keep the full porcelain line, both status columns included, for the first entry as for every other.
+
+_From 623-precompact-flush._
 
 ## Retired
 

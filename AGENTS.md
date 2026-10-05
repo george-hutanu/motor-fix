@@ -261,16 +261,19 @@ decisions are the source for anything the constitution does not fix.
   worktree's own PostgreSQL and Redis (`scripts/test-services.ts`, compose
   project `mf-test-<worktree>-<hash>`, left running between commits; Docker
   required), and it refuses a commit with `JEST_SUITE` set.
-- PR CI: `.github/workflows/ci.yml`, one job per check, in parallel: PR
-  title (Conventional Commit), Biome, Typecheck, Unit tests, Integration
+- PR CI: `.github/workflows/ci.yml`, one job per check, in parallel:
+  Biome, Typecheck, Unit tests, Integration
   tests (PostgreSQL+PostGIS and Redis services), E2E tests (Playwright
   `web-e2e`, servers started in the job), Build, Harness, Contract check,
   Dependency audit, Docker build (`web`, `node-app`), Compose stack
   (`docker-compose.yml` boots and creates the bucket), then `CI OK`, which
   fails when any of them did. A PR that changes documentation only
   (`scripts/docs-only.ts`: Markdown outside `.claude/`, `.specify/` and
-  `.github/`, or `docs/`) runs only the PR title, Changes and `CI OK` jobs;
-  the others are skipped. PRs run `nx affected`; `release.yml` calls the
+  `.github/`, or `docs/`) runs only the Changes and `CI OK` jobs; the
+  others are skipped. The PR title (Conventional Commit) is checked by its
+  own workflow, `.github/workflows/pr-title.yml`, which also runs when the
+  PR is edited, so a corrected title re-checks without re-running CI. PRs
+  run `nx affected`; `release.yml` calls the
   same workflow, which then runs every project. Mutation testing never runs
   in PR CI: `.github/workflows/mutation.yml` runs it nightly on `main` and on
   `workflow_dispatch`.

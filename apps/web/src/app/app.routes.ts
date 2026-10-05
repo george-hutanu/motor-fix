@@ -1,6 +1,11 @@
 import type { Routes } from '@angular/router';
 
-import { languageAddress, languageRoot, toLanguageAddress } from './addresses';
+import {
+  languageAddress,
+  languageRoot,
+  publicTexts,
+  toLanguageAddress,
+} from './addresses';
 import { areaGuard } from './dashboard/area.guard';
 import { dashboardRoutes } from './dashboard/views';
 import { Home } from './home/home';
@@ -19,9 +24,13 @@ const placeholder = (path: string, title: string) => ({
 
 // canMatch, not canActivate: a refused area is never downloaded.
 export const routes: Routes = [
+  // In the public frame, like /ro, so the server's page has its landmarks too.
+  // `toLanguageAddress` first: its redirect wins without waiting for the texts.
   {
-    canMatch: [toLanguageAddress],
-    component: Home,
+    canMatch: [toLanguageAddress, publicTexts],
+    children: [{ component: Home, path: '' }],
+    component: PublicFrame,
+    data: { tabBar: false },
     path: '',
     pathMatch: 'full',
   },

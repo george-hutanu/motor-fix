@@ -7,6 +7,7 @@ features:
   - 199-notification-bell
   - 555-account-link-params
   - 196-push-notifications
+  - 646-notification-send-claim
 ---
 
 # Capability: Notifications
@@ -262,6 +263,22 @@ _From 196-push-notifications._
 ### 196-FR-021 — The panel MUST show the add-to-Home-Screen hint on an iPhone or iPad not running from the Home Screen, whether or not the browser exposes push; an installed app without push support MUST show "browser without push".
 
 _From 196-push-notifications._
+
+### 646-FR-001 — Before it reads a row to send, a send job MUST claim it with one conditional update that succeeds only for a `queued` or `held` row holding no claim, or a claim older than the lease; only the job whose update changed the row may send it.
+
+_From 646-notification-send-claim._
+
+### 646-FR-002 — A send job that cannot claim a row still `queued` or `held` MUST NOT call Brevo and MUST fail, so the queue retries it after its backoff; a job that finds the row `sent`, `failed` or gone MUST succeed without sending.
+
+_From 646-notification-send-claim._
+
+### 646-FR-003 — A claim MUST lapse after a lease no longer than the queue's first retry delay (1 minute), so a retry of a job whose worker died after claiming takes the row over and sends it.
+
+_From 646-notification-send-claim._
+
+### 646-FR-004 — When a send job ends — sent, failed, held back, retried or thrown — it MUST release its own claim (and only its own).
+
+_From 646-notification-send-claim._
 
 ## Retired
 
