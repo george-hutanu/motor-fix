@@ -2,7 +2,7 @@
 
 **Feature Branch**: `696-lifecycle-script`
 **Created**: 2026-10-05
-**Status**: In progress
+**Status**: Archived (2026-10-05)
 **Level**: 1 (one-session)
 **Notion story**: ST-696, https://app.notion.com/p/3f0607bff0d2812e96e9c2882339f2bd (Task, Medium)
 **Epic**: EP-1 Foundations

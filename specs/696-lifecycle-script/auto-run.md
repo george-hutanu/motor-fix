@@ -39,3 +39,6 @@ artifact-lint clean after the Spec Delta was put in the `### Capability:` form; 
 
 ## Stop
 PR #139 (687) is still open, so per the brief the run stops at review: merge origin/main once #139 lands, then retro, archive, PR body, `lifecycle.mjs ready`, QA dispatch, `NEXT: tail #141`.
+
+## Resume after #139
+Merged origin/main (#139 9b702f7, #144 c9f1e31) cleanly; harness 1345 passed, doctor 16 ok. Retro accepted; Spec Delta merged into platform.md (+9). Body check passed; ready via lifecycle.mjs.
