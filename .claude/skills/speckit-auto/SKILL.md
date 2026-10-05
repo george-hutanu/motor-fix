@@ -617,11 +617,13 @@ and runs lifecycle steps 5–7:
    never merged at the cap.
 4. After a passing lap, `speckit-notion-sync debt` files every deferred bullet
    not yet filed (reviewers' and the tester's) as a To do task in Notion. Its
-   URLs change `deferred.md`, so commit and push that, and the tester runs once
-   more on the new head (it re-raises nothing already deferred). Non-blocking
-   findings new in that last lap are filed in Notion directly and named in the
-   PR's Agent review section; their bullets, with the task URLs, ride on the
-   next PR, so the loop ends.
+   URLs change `deferred.md`, so commit and push that and run
+   `/speckit-pr-test` on the new head: a docs-only head carries the passing
+   verdict (`pr-test/carry.mjs`) with no new lap. If the commit touched
+   anything else, a lap runs (it re-raises nothing already deferred);
+   non-blocking findings new in it are filed in Notion directly and named in
+   the PR's Agent review section, and their bullets, with the task URLs, ride
+   on the next PR, so the loop ends.
 5. On `agent-review` success with every other check green: merge `origin/main`
    in again if it moved (a new head needs a new tester run), then
    `gh pr merge <n> --merge` — the `pre:bash:merge-gate` hook refuses it
