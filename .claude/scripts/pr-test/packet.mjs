@@ -18,10 +18,13 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { artifactName, WORKFLOW } from "./dispatch.mjs";
-import { isBlocking, touchesWeb } from "./findings.mjs";
+import { findingKey as keyOf, isBlocking, touchesWeb } from "./findings.mjs";
 import { realGh } from "./post.mjs";
 
+/** Changed files listed one per line before the rest are only counted. */
 const FILE_CAP = 100;
+/** PR QA runs read when looking for a baseline, newest first. */
+const RUN_LIMIT = 100;
 const FINISHED = new Set(["success", "failure"]);
 const MAX_RANGE = 999;
 /** One line of Markdown: a newline in a title or evidence would start a heading of its own. */
@@ -54,7 +57,6 @@ export function parseRunName(title) {
   return m ? { pr: Number(m[1]), sha: m[2], lap: Number(m[3]) } : null;
 }
 
-const keyOf = (f) => f.key ?? `${f.kind}|${f.title}|${f.route ?? ""}`;
 
 /** The previous lap's findings sorted against the current ones by the key mergeFindings uses. */
 export function findingDelta(prev, cur) {
@@ -131,7 +133,7 @@ function chooseBaseline({ gh, repo, pr, head, base, run, explicit }) {
     const got = download(gh, repo, explicit, pr);
     return got.error ? { none: `run ${explicit}: ${got.error}`, skipped } : { ...got, temp: true, label: `run ${explicit} · PR #${got.report.pr} · commit ${short(got.report.sha)} · lap ${got.report.lap}`, skipped };
   }
-  const list = gh(["run", "list", "--repo", repo, "--workflow", WORKFLOW, "--json", "databaseId,displayTitle,conclusion,createdAt", "--limit", "100"]);
+  const list = gh(["run", "list", "--repo", repo, "--workflow", WORKFLOW, "--json", "databaseId,displayTitle,conclusion,createdAt", "--limit", String(RUN_LIMIT)]);
   if (list.code !== 0) return { none: `unavailable: gh run list failed: ${reason(list)}`, skipped };
   const runs = (parseJson(list.stdout) ?? [])
     .map((r) => ({ ...r, ...parseRunName(r.displayTitle) }))
@@ -212,7 +214,7 @@ const fullFinding = (f) =>
 const brief = (f) => `- ${f.severity} ${f.kind}: ${flat(f.title)}${f.route ? ` (${flat(f.route)})` : ""}`;
 
 /** packet.md's text from its parts. */
-export function packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, delta, web = true }) {
+function packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, delta, web = true }) {
   const out = [`# Packet: PR #${pr} at ${short(view?.headRefOid ?? report.sha)}, lap ${report.lap ?? "?"}`, ""];
   if (view) out.push(`${flat(view.title)} · branch ${view.headRefName} · head ${view.headRefOid} · base ${view.baseRefName}`, "");
   out.push("## Changed files", "");
@@ -234,7 +236,7 @@ export function packetMarkdown({ pr, report, view, viewError, reqs, prev, baseli
   const rest = findings.filter((f) => !isBlocking(f));
   if (rest.length) out.push("", "### Other findings", "", ...rest.map(brief));
   out.push("", "## Previous lap", "");
-  if (!prev) out.push("None: no committed lap report and no baseline run.");
+  if (!prev) out.push("None: no committed lap report and no baseline run of this PR.");
   else {
     out.push(`From ${prev.label}.`, "");
     const d = findingDelta(prev.findings, findings);
@@ -280,7 +282,7 @@ export function buildPacket({ out, pr, repo, run, baseline: explicit, gh = realG
     const committed = feature ? committedLap(gh, repo, feature, head) : null;
     const prev =
       committed ??
-      (baseline.report ? { label: `${baseline.label} (the workflow's findings only)`, findings: baseline.report.findings ?? [] } : null);
+      (baseline.report?.pr === Number(pr) ? { label: `${baseline.label} (the workflow's findings only)`, findings: baseline.report.findings ?? [] } : null);
     const cited = (report.findings ?? []).flatMap((f) => String(f.evidence ?? "").match(/shots\/\S+?\.png/g) ?? []);
     const web = view?.files?.length ? touchesWeb(view.files.map((f) => f.path)) : true;
     const delta = shotDelta({ current: shotHashes(out), baseline: baseline.dir ? shotHashes(baseline.dir) : null, cited, web });

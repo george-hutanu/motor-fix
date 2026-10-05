@@ -185,7 +185,8 @@ against the fix, not taken on trust. Severity: a requirement not met or a
 principle broken is `high`; a smell is `medium` or `low`. Open only the
 screenshots the packet names under "Look at only these" (`<out>/shots/`): the
 others are byte-identical to the baseline's, already reviewed. With no
-baseline it names them all. A layout the automated checks missed (overlap,
+baseline it names them all, unless the change touches no web file: then only
+the cited ones. A layout the automated checks missed (overlap,
 clipped text, unreadable contrast in dark mode, untranslated strings in
 English) is a finding with that screenshot as evidence. They are the screen
 evidence; nobody has to watch the screens live.
