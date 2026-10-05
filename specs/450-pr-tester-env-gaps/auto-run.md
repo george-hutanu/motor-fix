@@ -40,3 +40,8 @@ Worktree: .worktrees/450-pr-tester-env-gaps
 - code-reviewer BLOCK → fixed: app pid files cleaned after a kill, timeouts on sign-in, collection and readiness fetches, a bounded `$ref` walk, endpoint calls moved after the sweep and the flows, pg/redis/minio/app kills only on an exact command match, `isAlive` unexported. Deferred (LOW): synchronous steps delay signal handling.
 - spec-reviewer APPROVE. MEDIUM fixed: `contextCookies` is tested to sign in per context. LOW fixed: phases for the app start, health and readiness. LOW deferred: the console line in `dropExpected`.
 - Green: harness 1155 tests.
+
+## 16. Retro evidence and 17. Archive
+
+- `retro-evidence.mjs --since b75ade3^` gathered. The verdict stays the owner's, so no retro was written.
+- Spec Delta merged into `.specify/capabilities/platform.md` (+14). spec.md marked Archived.

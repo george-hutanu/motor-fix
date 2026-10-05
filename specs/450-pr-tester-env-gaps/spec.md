@@ -2,7 +2,7 @@
 
 **Feature Branch**: `450-pr-tester-env-gaps`
 **Created**: 2026-10-05
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 **Level**: 1 (one-session)
 **Notion story**: ST-450 — https://app.notion.com/p/3ef607bff0d281deb5fdc1c96d6d9d46
 **Epic**: EP-1 Foundations — https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707
