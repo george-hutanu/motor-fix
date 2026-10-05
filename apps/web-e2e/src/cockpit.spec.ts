@@ -263,3 +263,43 @@ test('draws no control over the content around it', async ({ page }) => {
     expect(covered).toBe(false);
   }
 });
+
+// The server sends the page with its texts in; the browser used to hydrate
+// it before its own copy of them had loaded, so the keys showed until they
+// had, and the layout shifted under the chart screenshots on staging.
+test('never shows a text key while the page wakes up, however slow the scripts', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const seen: string[] = [];
+    (window as unknown as { keysSeen: string[] }).keysSeen = seen;
+    const check = (text: string | null) => {
+      const key = text?.match(/\bcockpit\.[A-Za-z]+/)?.[0];
+      if (key) seen.push(key);
+    };
+    // A record's target holds what changed: the text itself, or the
+    // element whose children did.
+    new MutationObserver((records) => {
+      for (const record of records) check(record.target.textContent);
+    }).observe(document, {
+      characterData: true,
+      childList: true,
+      subtree: true,
+    });
+  });
+  await page.route('**/*.js', async (route) => {
+    await new Promise((done) => setTimeout(done, 300));
+    await route.continue();
+  });
+  await page.goto('/cockpit');
+  await expect(
+    page.getByRole('button', { exact: true, name: SAMPLE_TEXT.openDialog }),
+  ).toBeVisible();
+  await page.waitForLoadState('networkidle');
+
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { keysSeen: string[] }).keysSeen,
+    ),
+  ).toEqual([]);
+});
