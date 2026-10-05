@@ -8,3 +8,5 @@
 - 2026-10-05 · labels · PR #135 · planning
 - 2026-10-05 · implement · ST-663 story Status · Planning → Implementing
 - 2026-10-05 · labels · PR #135 · in development
+- 2026-10-05 · qa · ST-663 story Status · Implementing → QA
+- 2026-10-05 · labels · PR #135 · QA
