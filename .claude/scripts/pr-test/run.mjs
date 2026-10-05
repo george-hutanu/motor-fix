@@ -180,7 +180,7 @@ async function main(argv) {
     if (opt.tree) {
       plan = externalPlan();
       const { GITHUB_SERVER_URL: server, GITHUB_REPOSITORY: repo, GITHUB_RUN_ID: id } = process.env;
-      notes.push(`Ran on GitHub Actions${server && repo && id ? ` (${server}/${repo}/actions/runs/${id})` : ""}: PostgreSQL with PostGIS, Redis and MinIO in the PR QA workflow's containers.`);
+      notes.push(`Ran on GitHub Actions${server && repo && id ? ` (${server}/${repo}/actions/runs/${id})` : ""}: PostgreSQL with PostGIS, Redis and MinIO from the PR's own compose file, started by the PR QA workflow.`);
     } else if (has("docker", ["info"])) {
       // The PR's own compose file: a PR that changes the stack is tested on it.
       plan = composePlan({ project, file: join(wt.dir, "docker-compose.yml"), ports });

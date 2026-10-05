@@ -99,36 +99,42 @@ describe('PR QA workflow: the commit tested is the commit asked for', () => {
 });
 
 describe('PR QA workflow: services', () => {
-  const services = block('services', 4, job);
+  // The PR's own docker-compose.yml, as run.mjs uses locally: a PR that
+  // changes the stack (an image, a service) is tested on it.
+  const compose = readFileSync(fileURLToPath(new URL('../../../docker-compose.yml', import.meta.url)), 'utf8');
+  const env = appEnv({ ports: EXTERNAL_PORTS });
 
-  it('runs PostgreSQL with PostGIS and Redis as service containers on the standard ports', () => {
-    assert.deepEqual(keysAt(services, 6), ['postgres', 'redis']);
-    assert.ok(services.some((l) => l.includes('image: postgis/postgis:')));
-    assert.ok(services.some((l) => l.includes('image: redis:')));
-    assert.ok(services.some((l) => l.includes(`'${EXTERNAL_PORTS.postgres}:5432'`)));
-    assert.ok(services.some((l) => l.includes(`'${EXTERNAL_PORTS.redis}:6379'`)));
+  it('runs no service container of its own, so no image is pinned twice', () => {
+    assert.doesNotMatch(job.join('\n'), /^ {4}services:/m);
+    assert.doesNotMatch(code, /docker run [^\n]*minio\/(minio|mc)\b/);
   });
 
-  it('starts MinIO beside them and creates the bucket the apps are given', () => {
-    // A service container cannot be given a command, and MinIO needs `server /data`.
-    const env = appEnv({ ports: EXTERNAL_PORTS });
-    assert.match(steps, new RegExp(`docker run [^\\n]*-p ${EXTERNAL_PORTS.minio}:9000[^\\n]*minio/minio[^\\n]* server /data`));
-    assert.match(steps, new RegExp(`MINIO_ROOT_USER=${env.STORAGE_ACCESS_KEY_ID}\\b`));
-    assert.match(steps, new RegExp(`MINIO_ROOT_PASSWORD=${env.STORAGE_SECRET_ACCESS_KEY}\\b`));
-    assert.match(steps, new RegExp(`mc mb --ignore-existing local/${env.STORAGE_BUCKET}\\b`));
+  it("starts PostgreSQL, Redis and MinIO from the PR's own compose file, then the bucket", () => {
+    assert.match(steps, /docker compose -p pr-qa -f pr\/docker-compose\.yml up -d --wait postgres redis minio/);
+    assert.match(steps, /docker compose -p pr-qa -f pr\/docker-compose\.yml run --rm minio-setup/);
   });
 
-  it('gives PostgreSQL the credentials the apps connect with', () => {
-    const url = new URL(appEnv({ ports: EXTERNAL_PORTS }).DATABASE_URL);
-    const env = block('env', 8, services).map((l) => l.trim());
-    assert.ok(env.includes(`POSTGRES_USER: ${url.username}`));
-    assert.ok(env.includes(`POSTGRES_PASSWORD: ${url.password}`));
-    assert.ok(env.includes(`POSTGRES_DB: ${url.pathname.slice(1)}`));
+  it('waits until PostgreSQL accepts connections before the run migrates', () => {
+    assert.match(steps, /pg_isready -U motorfix/);
+  });
+
+  it('serves the standard ports and the credentials and bucket the apps are given', () => {
+    const url = new URL(env.DATABASE_URL);
+    assert.equal(url.port, String(EXTERNAL_PORTS.postgres));
+    assert.match(compose, /\$\{POSTGRES_PORT:-5432\}:5432/);
+    assert.match(compose, /\$\{REDIS_PORT:-6379\}:6379/);
+    assert.match(compose, /\$\{MINIO_PORT:-9000\}:9000/);
+    assert.match(compose, new RegExp(`POSTGRES_USER: ${url.username}\\b`));
+    assert.match(compose, new RegExp(`POSTGRES_PASSWORD: ${url.password}\\b`));
+    assert.match(compose, new RegExp(`POSTGRES_DB: ${url.pathname.slice(1)}\\b`));
+    assert.match(compose, new RegExp(`MINIO_ROOT_USER: ${env.STORAGE_ACCESS_KEY_ID}\\b`));
+    assert.match(compose, new RegExp(`MINIO_ROOT_PASSWORD: ${env.STORAGE_SECRET_ACCESS_KEY}\\b`));
+    assert.match(compose, new RegExp(`mc mb --ignore-existing local/${env.STORAGE_BUCKET}\\b`));
   });
 });
 
 describe('PR QA workflow: the run and its evidence', () => {
-  it('installs Playwright Chromium for the sweep, the flows and e2e', () => {
+  it('installs Playwright Chromium for the sweep and the flows', () => {
     assert.match(steps, /npx playwright install --with-deps chromium/);
   });
 
@@ -139,6 +145,10 @@ describe('PR QA workflow: the run and its evidence', () => {
 
   it('runs inside the slot it already has: HEAVY_HELD, no heavy.sh on the runner', () => {
     assert.match(block('env', 4, job).join('\n'), /HEAVY_HELD: '1'/);
+  });
+
+  it('leaves the unit and end-to-end suites to CI: run.mjs gets no --tests', () => {
+    assert.doesNotMatch(code, /--tests\b/);
   });
 
   it('prints the readiness lines, so storage up is visible in the log', () => {

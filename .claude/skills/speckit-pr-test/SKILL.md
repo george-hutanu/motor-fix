@@ -46,8 +46,9 @@ without a status, so the test runs again.
    `LOCAL` for `--local`. By default it dispatches `.github/workflows/pr-qa.yml`
    through `.claude/scripts/pr-test/dispatch.mjs` (`gh workflow run`, then
    `gh run watch`): a GitHub runner boots the PR head with PostgreSQL, Redis
-   and MinIO, sweeps the screens, runs its flows, the API calls, the affected
-   tests and e2e, and uploads the report and screenshots as an artifact. The
+   and MinIO from the PR's own compose file, sweeps the screens, runs its flows
+   and the API calls (the unit and end-to-end suites are CI's), and uploads the
+   report and screenshots as an artifact. The
    agent downloads it, reviews the diff against the spec and the constitution
    here, and posts with `post.mjs`; no secret or LLM step runs in CI. With
    `LOCAL` it runs `.claude/scripts/pr-test/run.mjs` on this machine instead

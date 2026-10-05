@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-// The PR tester's boot, sweep, flows, API calls and tests run on GitHub Actions
+// The PR tester's boot, sweep, flows and API calls run on GitHub Actions
 // (pr-qa.yml); the agent dispatches the run, reads the artifact and does the
 // LLM half (the review) locally. Booting on the laptop is the --local fallback.
 const read = (rel) => readFileSync(fileURLToPath(new URL(`../../../${rel}`, import.meta.url)), 'utf8');
@@ -21,6 +21,12 @@ const sections = (md) =>
 const frontmatter = (md) => md.split('---')[1];
 const RUN = 'node .claude/scripts/pr-test/run.mjs';
 const DISPATCH = 'node .claude/scripts/pr-test/dispatch.mjs';
+
+describe('the tester leaves the unit and end-to-end suites to CI', () => {
+  it('neither the agent nor the skill says the run executes them', () => {
+    for (const md of [agent, skill]) assert.doesNotMatch(md, /affected[\s\n]+tests|nx affected -t test|and the e2e suite|tests and e2e/);
+  });
+});
 
 describe('pr-tester agent dispatches the run to GitHub Actions', () => {
   it('says so in its description, which is what the caller reads', () => {

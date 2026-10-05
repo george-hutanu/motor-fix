@@ -64,7 +64,7 @@ head commit, with the flows file gzipped and base64-encoded as the `flows`
 input, finds the run by its nonce, waits for it (`gh run watch`) and downloads
 the `pr-qa-<PR>` artifact into `--out`. On the runner the workflow checks out
 that exact SHA, starts PostgreSQL with PostGIS, Redis and MinIO with its
-bucket, and runs `run.mjs --tree`: install, migrate, build, boot api, web and
+bucket from the PR's own `docker-compose.yml`, and runs `run.mjs --tree`: install, migrate, build, boot api, web and
 worker, health and `/health/ready` (storage included), the changed GET
 endpoints, the viewport sweep (4 viewports — desktop, tablet, 390 and 320 px
 phones — × light/dark × ro/en, axe, overflow, console, network, a screenshot

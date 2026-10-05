@@ -60,21 +60,6 @@ jobs:
     name: PR QA
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    services:
-      postgres:
-        image: postgis/postgis:17-3.5
-        env:
-          POSTGRES_USER: motorfix
-          POSTGRES_PASSWORD: motorfix
-          POSTGRES_DB: motorfix
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U motorfix" --health-interval 5s --health-timeout 5s --health-retries 10
-      redis:
-        image: redis:7
-        ports: ['6379:6379']
-        options: >-
-          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       PR: ${{ inputs.pr }}
       SHA: ${{ inputs.sha }}
@@ -110,15 +95,17 @@ jobs:
       - name: The checkout is the commit asked for
         run: test "$(git -C pr rev-parse HEAD)" = "$SHA"
 
-      # A service container cannot be given a command, and MinIO needs
-      # `server /data`, so it runs as a plain container beside the services.
-      # Credentials and bucket are the ones run.mjs gives the apps (services.mjs).
-      - name: Start MinIO and create the bucket
+      # The PR's own docker-compose.yml, as a --local run uses: a PR that
+      # changes the stack (an image, a service) is tested on it, and no image
+      # is pinned here a second time. Its default ports are the ones run.mjs
+      # --tree gives the apps (services.mjs EXTERNAL_PORTS), and so are its
+      # credentials and bucket. The job's end removes the containers.
+      - name: Start PostgreSQL, Redis and MinIO from the PR's compose file, and the bucket
         run: |
-          docker run -d --name minio -p 9000:9000 -e MINIO_ROOT_USER=motorfix -e MINIO_ROOT_PASSWORD=motorfix-secret minio/minio server /data
+          docker compose -p pr-qa -f pr/docker-compose.yml up -d --wait postgres redis minio
+          for _ in $(seq 1 60); do docker compose -p pr-qa -f pr/docker-compose.yml exec -T postgres pg_isready -U motorfix && break; sleep 1; done
           for _ in $(seq 1 60); do curl -fsS http://127.0.0.1:9000/minio/health/live && break; sleep 1; done
-          docker run --rm --network host --entrypoint sh minio/mc -c \
-            "mc alias set local http://127.0.0.1:9000 motorfix motorfix-secret && mc mb --ignore-existing local/motorfix"
+          docker compose -p pr-qa -f pr/docker-compose.yml run --rm minio-setup
 
       - uses: actions/setup-node@v5
         with:
