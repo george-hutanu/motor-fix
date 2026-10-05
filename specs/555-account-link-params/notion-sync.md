@@ -10,3 +10,4 @@
 - 2026-10-05 · implement · Foundations timeline · no row for ST-555
 - 2026-10-05 · labels · PR #127 · in development
 - 2026-10-05 · debt · ST-555 · filed 2 tech-debt tasks: https://app.notion.com/p/3f0607bff0d2817da2d9fb5babd9f5cd (send race, Medium), https://app.notion.com/p/3f0607bff0d281fda531eb0624975a8e (empty link, Low)
+- 2026-10-05 · qa · ST-555 · Implementing → QA; labels QA (−planning, −in development, −blocked)
