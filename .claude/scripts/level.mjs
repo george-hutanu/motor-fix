@@ -9,73 +9,259 @@
 //   node .claude/scripts/level.mjs                 what level is active, and why
 //   node .claude/scripts/level.mjs set 1           write it to .specify/feature.json
 //   node .claude/scripts/level.mjs --json
+//   node .claude/scripts/level.mjs suggest "<work>" [--set]   classify; --set records a confident answer
+//   node .claude/scripts/level.mjs point specs/NNN-x            point feature.json at a new feature, keeping its level
+import { execFileSync, execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { DEFAULT_LEVEL, LEVELS, activeFeature, featureLevel } from "./lib/feature.mjs";
+import { basename, dirname, join } from "node:path";
+import {
+  DEFAULT_LEVEL,
+  LEVELS,
+  activeFeature,
+  featureKey,
+  featureLevel,
+  keyedState,
+  levelApplies,
+  parseLevel,
+  pendingLevel,
+  pendingTtlMinutes,
+  pointTo,
+} from "./lib/feature.mjs";
 
 const statePath = (repo) => join(repo, ".specify", "feature.json");
 
-/** The level, and the source that decided it — the second half is what makes a surprise debuggable. */
+/**
+ * The level of the feature in hand, and the source that decided it — the
+ * second half is what makes a surprise debuggable. "In hand" is the feature the
+ * gates resolve (`activeFeature`), or the one feature.json points at when its
+ * spec.md is not written yet.
+ */
 export function resolveLevel(repo, env = process.env) {
-  const level = featureLevel(repo);
-  const fromEnv = env.SPECKIT_FEATURE_LEVEL;
-  if (fromEnv !== undefined && fromEnv !== "" && Number(fromEnv) in LEVELS) return { level, source: "SPECKIT_FEATURE_LEVEL" };
-  try {
-    if (existsSync(statePath(repo)) && Number(JSON.parse(readFileSync(statePath(repo), "utf8")).level) in LEVELS)
-      return { level, source: ".specify/feature.json" };
-  } catch {
-    // fall through to the default
+  const state = keyedState(repo, readState(repo));
+  const active = activeFeature(repo);
+  const target = active ? featureKey(repo, active.dir) : state.feature_directory;
+  const level = featureLevel(repo, target);
+  if (parseLevel(env.SPECKIT_FEATURE_LEVEL) !== null) return { level, source: "SPECKIT_FEATURE_LEVEL" };
+  if (parseLevel(state.level) !== null && state.level_for !== "next") {
+    if (levelApplies(state, target)) return { level, source: ".specify/feature.json" };
+    const owner = state.level_for ?? state.feature_directory;
+    return { level, source: owner ? `default — the recorded level ${state.level} was sized for ${owner}` : `default — the recorded level ${state.level} names no feature` };
   }
   return { level, source: "default" };
 }
 
-export function setLevel(repo, value) {
-  const level = Number(value);
-  if (!Number.isInteger(level) || !(level in LEVELS))
-    return { error: `level must be one of ${Object.keys(LEVELS).join(", ")} — got "${value}"` };
-  const file = statePath(repo);
-  let state = {};
-  if (existsSync(file)) {
-    try {
-      state = JSON.parse(readFileSync(file, "utf8"));
-    } catch {
-      state = {};
-    }
+const readState = (repo) => {
+  try {
+    const state = JSON.parse(readFileSync(statePath(repo), "utf8"));
+    return state && typeof state === "object" ? state : {};
+  } catch {
+    return {};
   }
-  mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, `${JSON.stringify({ ...state, level }, null, 2)}\n`);
-  return { level };
+};
+
+const writeState = (repo, state) => {
+  mkdirSync(dirname(statePath(repo)), { recursive: true });
+  writeFileSync(statePath(repo), `${JSON.stringify(state, null, 2)}\n`);
+};
+
+const currentBranch = (repo) => {
+  try {
+    return execSync("git rev-parse --abbrev-ref HEAD", { cwd: repo, stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+  } catch {
+    return "";
+  }
+};
+
+/**
+ * What a level is being chosen for. On the feature's own branch, the feature
+ * feature.json already points at; anywhere else (main, a fresh worktree), the
+ * work /speckit-specify is about to create. `for` forces either.
+ */
+export function levelTarget(repo, state, { for: target, branch = currentBranch(repo) } = {}) {
+  const dir = state.feature_directory;
+  if (target === "next" || !dir) return "next";
+  if (target === "current") return dir;
+  return branch && basename(dir) === branch ? dir : "next";
+}
+
+/**
+ * Record a level. Sized for a feature that exists, it is that feature's until
+ * it is changed. Sized for "next", it is stamped: it waits `pendingTtlMinutes`
+ * for /speckit-specify to create the feature, and applies to nothing meanwhile.
+ */
+export function setLevel(repo, value, options = {}) {
+  const level = parseLevel(value);
+  if (level === null) return { error: `level must be one of ${Object.keys(LEVELS).join(", ")} — got "${value}"` };
+  const state = keyedState(repo, readState(repo));
+  // "Current" is the feature the gates resolve, which is the pointer's unless
+  // the environment or the branch names another.
+  const active = activeFeature(repo);
+  const current = active ? featureKey(repo, active.dir) : state.feature_directory;
+  const level_for = levelTarget(repo, { ...state, feature_directory: current }, options);
+  const next = { ...state, level, level_for };
+  if (level_for === "next") next.level_at = new Date(options.now ?? Date.now()).toISOString();
+  else delete next.level_at;
+  writeState(repo, next);
+  return { level, level_for };
+}
+
+// Whether HEAD already holds this feature's spec. Such a feature was specified
+// before the level was sized, so it cannot be "the next one". No git, no
+// commit yet or a path outside the repository all read as "new".
+const inHead = (repo, key) => {
+  try {
+    execFileSync("git", ["cat-file", "-e", `HEAD:./${key}/spec.md`], { cwd: repo, stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/** Point feature.json at a feature directory; `pointTo` decides what happens to the level. */
+export function pointFeature(repo, featureDirectory, { now = Date.now() } = {}) {
+  const key = featureKey(repo, featureDirectory);
+  const state = keyedState(repo, readState(repo));
+  const next = pointTo(state, key, { now, existing: inHead(repo, key) });
+  if (next !== state) writeState(repo, next);
+  return next;
 }
 
 export function main(argv, repo, env = process.env) {
   const [command, value] = argv.filter((a) => !a.startsWith("--"));
 
   if (command === "set") {
-    const result = setLevel(repo, value);
+    const target = argv.includes("--next") ? "next" : argv.includes("--current") ? "current" : undefined;
+    const result = setLevel(repo, value, { for: target });
     if (result.error) {
       console.error(`level: ${result.error}`);
       return 1;
     }
-    console.log(`level ${result.level} (${LEVELS[result.level].name}) — ${LEVELS[result.level].note}`);
+    const where =
+      result.level_for !== "next"
+        ? `for ${result.level_for}`
+        : result.level === 0
+          ? "for the change in hand; it is never carried onto a feature"
+          : `for the next feature, if /speckit-specify creates it within ${pendingTtlMinutes(env)} minutes`;
+    console.log(`level ${result.level} (${LEVELS[result.level].name}) ${where} — ${LEVELS[result.level].note}`);
+    return 0;
+  }
+
+  if (command === "point") {
+    if (!value) {
+      console.error("level: point needs a feature directory, e.g. level point specs/123-thing");
+      return 1;
+    }
+    const before = keyedState(repo, readState(repo));
+    const state = pointFeature(repo, value);
+    const waited = before.level_for === "next" ? parseLevel(before.level) : null;
+    if (levelApplies(state)) {
+      console.log(`feature ${state.feature_directory}, level ${state.level} (${LEVELS[state.level].name})`);
+      return 0;
+    }
+    // Say why a level that was waiting did not land: silence here reads as
+    // "sized at 1" to whoever ran /speckit-size a moment ago.
+    const why =
+      waited === null || before.feature_directory === state.feature_directory
+        ? ""
+        : state.level_for === "next"
+          ? ` — level ${waited} keeps waiting for a new feature; this one is already in HEAD`
+          : waited === 0
+            ? " — the level 0 sized earlier is not carried: a trivial change creates no feature"
+            : ` — the level ${waited} sized earlier had expired (${pendingTtlMinutes(env)} minutes)`;
+    const again = why && state.level_for !== "next" ? "; size this one with: node .claude/scripts/level.mjs set <0-3> --current" : "";
+    console.log(`feature ${state.feature_directory}, level ${DEFAULT_LEVEL} (default)${why}${again}`);
     return 0;
   }
 
   if (command !== undefined) {
-    console.error(`level: unknown command "${command}" (no argument to show, "set <0-3>" to change)`);
+    console.error(`level: unknown command "${command}" (no argument to show, "set <0-3>" to change, "suggest", "point")`);
     return 1;
   }
 
   const { level, source } = resolveLevel(repo, env);
   const feature = activeFeature(repo);
+  const pending = pendingLevel(readState(repo), Date.now(), env);
   if (argv.includes("--json")) {
-    console.log(JSON.stringify({ level, source, name: LEVELS[level].name, artifacts: LEVELS[level].artifacts, feature: feature?.name ?? null }, null, 2));
+    const waiting = pending ? { level: pending.level, name: LEVELS[pending.level].name, minutes_left: pending.minutesLeft } : null;
+    console.log(JSON.stringify({ level, source, name: LEVELS[level].name, artifacts: LEVELS[level].artifacts, feature: feature?.name ?? null, pending: waiting }, null, 2));
     return 0;
   }
   console.log(`level ${level} (${LEVELS[level].name}), from ${source}${level === DEFAULT_LEVEL && source === "default" ? " — nothing has chosen one" : ""}`);
   console.log(`  ${LEVELS[level].note}`);
   console.log(`  owes: ${LEVELS[level].artifacts.join(", ") || "no artifacts"}`);
   console.log(`  feature: ${feature?.name ?? "none"}`);
+  if (pending) {
+    const fate = pending.level === 0 ? "the change in hand, never carried onto a feature" : "the next feature /speckit-specify creates";
+    console.log(`  pending: level ${pending.level} (${LEVELS[pending.level].name}) for ${fate} — ${pending.minutesLeft} min left`);
+  }
   return 0;
+}
+
+// Words that put a change's intent beyond "obviously small". Any one of them
+// means a contract, data, money, identity or a new surface is involved, and the
+// classifier will not suggest less than level 2 — it may push a level up,
+// never down. Kept deliberately broad: a false hit costs a plan.md, a miss
+// ships a contract change with no design.
+const RISK = [
+  /\bapi\b/, /\bendpoints?\b/, /\broutes?\b/, /\bcontracts?\b/, /\bdtos?\b/, /\bopenapi\b/, /--json\b/, /\bwebhooks?\b/,
+  /\bschema\b/, /\bmigrations?\b/, /\bmigrate\b/, /\bprisma\b/, /\bdatabase\b/, /\bpostgres/, /\bredis\b/, /\btables?\b/, /\bcolumns?\b/,
+  /\bauth/, /\bsign[- ]?(in|up)\b/, /\blog[- ]?in\b/, /\bsessions?\b/, /\bpermissions?\b/, /\broles?\b/, /\bsecurity\b/, /\btokens?\b/,
+  /\bpayments?\b/, /\bbilling\b/, /\binvoices?\b/, /\bsubscriptions?\b/, /\bprices?\b/, /\bpricing\b/,
+  /\bgdpr\b/, /\bconsent\b/, /\bpersonal data\b/, /\bprivacy\b/,
+  /\bmodels?\b/, /\benums?\b/, /\bentit(y|ies)\b/, /\b(request|response|payload)s?\b/,
+  /\bbreaking\b/, /\bpublic\b/, /\bqueues?\b/, /\bworkers?\b/, /\bnotifications?\b/, /\bemails?\b/, /\bsms\b/, /\bcron\b/,
+  /\bnew (screen|page|flow|feature|module|lib|library|integration)\b/, /\bintegrat/, /\bthird[- ]party\b/, /\bcache\b/, /\bsearch\b/,
+];
+const PROJECT = [/\bepics?\b/, /\bseveral features\b/, /\bmultiple features\b/, /\bnew (app|application|service|product)\b/, /\bre-?architect/, /\brewrite (the|our)\b/];
+// "Trivial" is read off an edit to text, or to a name only the code reads —
+// phrases, not single words: "comments", "copy", "docs" and "rename" are as
+// often a feature ("a comments section", "copy the records") as a tidy-up.
+const CODE_NAME = "helper|variable|function|method|constant|const|class|file|folder|directory|test|spec|import|alias|component|mixin|util|utility|hook|script";
+const TRIVIAL = [
+  /\btypos?\b/, /\bmisspell\w*\b/, /\bspelling\b/, /\bwording\b/, /\breword\b/,
+  new RegExp(`\\brename (the |a |an |this |that )?(\\w+ ){0,2}(${CODE_NAME})\\b`),
+  /\breadme\b/, /\bchangelog\b/, /\bjsdoc\b/, /\bdocumentation\b/, /\b(dev|developer|code|repo|contributing) docs\b/,
+  /\b(code|inline|doc|todo|stale|outdated) comments?\b/, /\bwhitespace\b/, /\bindentation\b/, /\b(code|source|import) formatting\b/,
+  /\blint (errors?|warnings?|fix(es)?)\b/, /\bdead code\b/, /\bunused (imports?|variables?|exports?|code|functions?|helpers?|files?)\b/,
+  /\blog (message|line)\b/, /\b(ui|button|label|error|help|placeholder|tooltip|micro) ?copy\b/, /\bcopy (change|tweak|fix|edit|update)\b/,
+];
+// Words that say behaviour is being added, or that a name or a text something
+// outside the code reads is changing. They do not make the change a feature;
+// they mean "trivial" cannot be read off the words, so the answer is "unsure".
+// Level 0 runs no phase at all, which makes a wrong 0 the costly mistake.
+const NOT_TRIVIAL = [
+  /\b(add|adds|adding|create|build|implement|introduce|support|allow|enable|let|show|display|make|new)\b/,
+  /\burls?\b/, /\bslugs?\b/, /\blinks?\b/, /\bpaths?\b/, /\bfields?\b/, /\bkeys?\b/, /\benv\b/, /\bconfig/, /\bsettings?\b/, /\bflags?\b/,
+  /\bparam/, /\bquery\b/, /\bcookies?\b/, /\bevents?\b/, /\bstatus(es)?\b/, /\brecords?\b/, /\bdata\b/, /\barchive/, /\bstorage\b/,
+  /\bbuckets?\b/, /\bupload/, /\bdownload/, /\bexport/, /\bsections?\b/, /\busers?\b/, /\bdrivers?\b/, /\bmechanics?\b/, /\bcustomers?\b/,
+  /\bdependenc(y|ies)\b/, /\bupgrade/, /\bversions?\b/, /\bmajor\b/,
+  // More than one change, or one change in many places: the trivial word
+  // describes only part of it.
+  /\band\b/, /\balso\b/, /\bthen\b/, /\bplus\b/, /[,;&+]/, /\beverywhere\b/, /\bacross\b/, /\b(all|every|entire|whole)\b/, /\bglobal/,
+];
+
+/**
+ * The classifier that runs before anything that costs a model call. It answers
+ * only when the description leaves no room — a typo, a contract change, an
+ * epic — and says "unsure" for everything else, which is where the judgement
+ * (Jev, or the model running /speckit-size) is worth its tokens. It never
+ * suggests level 1: "one coherent unit with clear intent" is a judgement, not a
+ * keyword.
+ */
+export function classifyLevel(description) {
+  const text = ` ${String(description).toLowerCase()} `;
+  const hits = (patterns) => patterns.filter((p) => p.test(text)).map((p) => text.match(p)[0].trim());
+  const project = hits(PROJECT);
+  if (project.length) return { level: 3, confidence: 0.75, reason: `names ${project.join(", ")}` };
+  const risk = hits(RISK);
+  if (risk.length) return { level: 2, confidence: 0.8, reason: `touches ${risk.slice(0, 4).join(", ")}` };
+  const trivial = hits(TRIVIAL);
+  if (!trivial.length) return { unsure: true, reason: "no decisive words" };
+  const more = hits(NOT_TRIVIAL);
+  if (more.length) return { unsure: true, reason: `${trivial.join(", ")}, but also ${more.slice(0, 4).join(", ")}` };
+  const words = text.trim().split(/\s+/).length;
+  if (words > 15) return { unsure: true, reason: "too long to call trivial from words alone" };
+  return { level: 0, confidence: 0.85, reason: `${trivial.join(", ")}, nothing riskier` };
 }
 
 /**
@@ -117,19 +303,32 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       console.error('level: suggest needs a description, e.g. level suggest "add a --json flag to the rule check"');
       process.exit(1);
     }
-    const result = await suggestLevel(description, { repo });
-    if (result.unavailable) {
-      console.log(result.note);
-      process.exit(0);
+    // The local classifier first: a clear case costs nothing. Only an unsure
+    // one goes to Jev, and only if Jev is also unavailable does the caller
+    // have to reason it out.
+    const local = classifyLevel(description);
+    let result = local.unsure ? null : { ...local, by: "classifier" };
+    if (!result) {
+      const jev = await suggestLevel(description, { repo });
+      if (!jev.unavailable) result = { ...jev, by: "jev" };
+      else {
+        console.log(`unsure (${local.reason}) — answer the size question yourself, then: node .claude/scripts/level.mjs set <0-3>`);
+        process.exit(0);
+      }
     }
     const meta = LEVELS[result.level];
     // Below 0.6 the model is guessing between two levels, and guessing wrong
     // either buries a small change in paperwork or ships a project with none.
-    const hedge = result.confidence < 0.6 ? " — low confidence, ask rather than set it" : "";
-    console.log(`level ${result.level} (${meta.name}) suggested at ${result.confidence.toFixed(2)} confidence${hedge}`);
-    console.log(`  ${meta.note}`);
+    const confident = result.confidence >= 0.6;
+    const hedge = confident ? "" : " — low confidence, ask rather than set it";
+    console.log(`level ${result.level} (${meta.name}) suggested by ${result.by} at ${result.confidence.toFixed(2)} confidence${result.reason ? ` (${result.reason})` : ""}${hedge}`);
     console.log(`  owes: ${meta.artifacts.join(", ") || "no artifacts"}`);
-    console.log(`  nothing was written — run: node .claude/scripts/level.mjs set ${result.level}`);
+    if (argv.includes("--set") && confident) {
+      const set = setLevel(repo, result.level);
+      console.log(`  recorded for ${set.level_for}`);
+    } else {
+      console.log(`  nothing was written — run: node .claude/scripts/level.mjs set ${result.level}`);
+    }
     process.exit(0);
   }
 
