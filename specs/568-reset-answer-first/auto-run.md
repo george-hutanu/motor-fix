@@ -31,3 +31,13 @@ Worktree: .worktrees/568-reset-answer-first
 - web-e2e read the mailbox right after the confirmation; it now polls (`expect.poll`), since the link lands just after the 202.
 - First commit attempt refused by pre-commit: `audit-coverage.spec.ts` read `this.issuing.delete(...)` (a Set) as a Prisma model write and named `PasswordResetService.ask`. Narrowed the scanner (a model write is never on `this.<field>` directly; every such call in the code is a Map or Set) instead of exempting `ask`, with two self-checks: the injected client is still caught, a service's own set is not.
 - Spec Delta: 127-FR-001 is not in `accounts.md` yet, so Modifies is none and the change to it is a note under the delta (artifact-lint clean).
+
+## 12. Harden
+- artifact-lint: clean after the Spec Delta fix. diff-audit: clean.
+- Mutation: not run locally (AGENTS.md: mutation tests only in CI; nightly `mutation.yml`).
+- test-adversary, code-reviewer and spec-reviewer dispatched in parallel on be4813d..HEAD.
+
+## 16. Retro evidence
+- 6 tasks done, 3 FRs, 2 commits, 9 files +292 −24; Spec Delta accounts +3. Jev lane unavailable (no key).
+- Carryover applied: the story touches more than one project (domain, web-e2e), so `npm run test` runs over the whole workspace before ready.
+- test-adversary: 15 tests in `password-reset.adversary.integration.spec.ts`, 14 passed, 1 failed: a lookup error whose message holds the address was logged verbatim (FR-002 says without the address). Fixed: the issuing's log carries the error's class (and code, if any), never its message. Reset specs: 69 passed, 69 total.

@@ -45,6 +45,14 @@ const expired = () =>
 const reason = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
 
+// What failed, never its message: a driver's or a database's message can
+// carry the address the link was asked for.
+const kindOf = (error: unknown) => {
+  if (!(error instanceof Error)) return 'unknown error';
+  const { code } = error as { code?: unknown };
+  return typeof code === 'string' ? `${error.name} ${code}` : error.name;
+};
+
 // "Ai uitat parola?": a 60-minute, single-use link to the account's address,
 // then a new password that ends every other session.
 @Injectable()
@@ -74,7 +82,7 @@ export class PasswordResetService implements BeforeApplicationShutdown {
       return;
     }
     const issuing = this.issue(email).catch((error: unknown) =>
-      this.logger.error(`password reset link not sent: ${reason(error)}`),
+      this.logger.error(`password reset link not sent: ${kindOf(error)}`),
     );
     this.issuing.add(issuing);
     issuing.then(() => this.issuing.delete(issuing));
