@@ -29,7 +29,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: web
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           build-args: |
             APP=web
@@ -38,7 +38,7 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}-web:${{ github.sha }}
       - id: api
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           build-args: |
             APP=api
@@ -47,7 +47,7 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}-api:${{ github.sha }}
       - id: worker
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           build-args: |
             APP=worker
@@ -56,7 +56,7 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}-worker:${{ github.sha }}
       - id: mcp
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           build-args: |
             APP=mcp
