@@ -21,6 +21,10 @@
 // an `agent-review` failure (the fix loop owns it), and a missing agent review
 // while run-state says the run is blocked (Blocked is how a run stops).
 //
+// A PR opened by Dependabot (its author, read from gh, never its title or
+// branch) with only Dependabot's commits needs no agent review: green on every
+// check, it is asked to merge. A commit anyone else pushed takes that back.
+//
 // Fail-open on purpose where the gate cannot see: no origin/main ref, or a gh
 // that cannot be reached. A gate that traps a session because GitHub is down
 // helps nobody. Blocks once per turn: `stop_hook_active` means it already did.
@@ -60,6 +64,15 @@ export function allGreen(checks) {
 }
 
 const isAgentReview = (c) => (c.context ?? c.name) === "agent-review";
+
+const DEPENDABOT = new Set(["app/dependabot", "dependabot[bot]"]);
+
+/** Dependabot opened the PR and wrote every commit on it: read off gh's authors, never the title or branch. */
+export const isDependabot = (pr) =>
+  DEPENDABOT.has(pr?.author?.login ?? "") &&
+  Array.isArray(pr.commits) &&
+  pr.commits.length > 0 &&
+  pr.commits.every((c) => c.authors?.length > 0 && c.authors.every((a) => DEPENDABOT.has(a.login ?? "")));
 
 /** An `agent-review` success among the head commit's checks. */
 export const hasAgentReview = (checks) =>
@@ -113,11 +126,11 @@ export function decide({ branch, ahead, unpushed, pr, prLinked = true, blocked =
   if (pr.state !== "OPEN" || pr.isDraft || pr.mergeable !== "MERGEABLE") return null;
   const checks = pr.statusCheckRollup ?? [];
   if (!allGreen(checks.filter((c) => !isAgentReview(c)))) return null;
-  if (!checks.some(isAgentReview))
+  if (!checks.some(isAgentReview) && !isDependabot(pr))
     return blocked
       ? null
       : `PR #${pr.number} is ready and its checks passed, but its head commit has no agent-review status. Run the PR tester (/speckit-pr-test ${pr.number}), fix its blocking findings, and merge only on an agent-review success.`;
-  if (hasAgentReview(checks))
+  if (hasAgentReview(checks) || !checks.some(isAgentReview))
     return `PR #${pr.number} is ready and every check passed. Merge it (gh pr merge ${pr.number} --merge), then run speckit-notion-sync finish; merging on green CI does not wait for the user.`;
   return null;
 }
@@ -165,7 +178,7 @@ function readState(cwd) {
   try {
     const out = execFileSync(
       "gh",
-      ["pr", "view", branch, "--json", "number,state,isDraft,labels,mergeable,statusCheckRollup,title"],
+      ["pr", "view", branch, "--json", "author,commits,number,state,isDraft,labels,mergeable,statusCheckRollup,title"],
       { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 15000 },
     );
     pr = JSON.parse(out);

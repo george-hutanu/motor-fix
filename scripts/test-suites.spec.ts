@@ -1,10 +1,16 @@
 import { spawnSync } from 'node:child_process';
-import { readdirSync, readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
 
 const root = join(__dirname, '..');
 const jestBin = require.resolve('jest/bin/jest');
 const INTEGRATION = /\.integration\.spec\.ts$/;
+const NEEDS_SERVICES = new RegExp(
+  [
+    String.raw`process\.env\[['"](DATABASE_URL|REDIS_URL)['"]\]`,
+    String.raw`['"]seed\.ts['"]`,
+  ].join('|'),
+);
 
 function listTests(project: string, suite?: string) {
   const env: NodeJS.ProcessEnv = {
@@ -36,14 +42,27 @@ function listTests(project: string, suite?: string) {
 function specFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
-    // web-e2e holds Playwright specs, which Jest never runs, so the unit and
-    // integration split does not apply to them.
     if (entry.isDirectory())
-      return ['node_modules', 'test-output', 'web-e2e'].includes(entry.name)
+      return ['node_modules', 'test-output'].includes(entry.name)
         ? []
         : specFiles(path);
     return /\.spec\.ts$/.test(entry.name) ? [path] : [];
   });
+}
+
+// Only a project with a Jest config splits into JEST_SUITE's unit and
+// integration suites; apps/web-e2e's specs run under Playwright in the E2E job.
+function runByJest(file: string): boolean {
+  for (let dir = dirname(file); dir.startsWith(root); dir = dirname(dir))
+    if (existsSync(join(dir, 'project.json')))
+      return readdirSync(dir).some((name) => name.startsWith('jest.config.'));
+  return false;
+}
+
+function misnamedIntegrationSpec(file: string, source: string): boolean {
+  return (
+    runByJest(file) && !INTEGRATION.test(file) && NEEDS_SERVICES.test(source)
+  );
 }
 
 describe('the unit and integration suites', () => {
@@ -89,18 +108,31 @@ describe('the unit and integration suites', () => {
   });
 
   it('names every spec that needs PostgreSQL, Redis or the seed as an integration spec', () => {
-    const needsServices = new RegExp(
-      [
-        String.raw`process\.env\[['"](DATABASE_URL|REDIS_URL)['"]\]`,
-        String.raw`['"]seed\.ts['"]`,
-      ].join('|'),
-    );
     const misnamed = ['apps', 'libs', 'scripts']
       .flatMap((dir) => specFiles(join(root, dir)))
-      .filter((file) => file !== __filename && !INTEGRATION.test(file))
-      .filter((file) => needsServices.test(readFileSync(file, 'utf8')))
+      .filter((file) => file !== __filename)
+      .filter((file) =>
+        misnamedIntegrationSpec(file, readFileSync(file, 'utf8')),
+      )
       .map((file) => relative(root, file));
 
     expect(misnamed).toEqual([]);
+  });
+
+  it('leaves out the end-to-end specs, which Playwright runs and Jest never does', () => {
+    const seeded = "spawnSync(process.execPath, [join(domain, 'seed.ts')]);";
+
+    expect(
+      misnamedIntegrationSpec(
+        join(root, 'apps/api/src/seeded.spec.ts'),
+        seeded,
+      ),
+    ).toBe(true);
+    expect(
+      misnamedIntegrationSpec(
+        join(root, 'apps/web-e2e/src/seeded.spec.ts'),
+        seeded,
+      ),
+    ).toBe(false);
   });
 });
