@@ -26,19 +26,17 @@ describe('mcp server under odd requests', () => {
     expect(await res.json()).toEqual({ status: 'ok' });
   });
 
-  it.each([
-    'POST',
-    'PUT',
-    'DELETE',
-    'PATCH',
-  ])('answers 404 to %s on the live path', async (method) => {
-    const res = await fetch(`${base}/health/live`, {
-      body: '{"a":1}',
-      method,
-    });
+  it.each(['POST', 'PUT', 'DELETE', 'PATCH'])(
+    'answers 404 to %s on the live path',
+    async (method) => {
+      const res = await fetch(`${base}/health/live`, {
+        body: '{"a":1}',
+        method,
+      });
 
-    expect(res.status).toBe(404);
-  });
+      expect(res.status).toBe(404);
+    },
+  );
 
   it.each([
     '/',

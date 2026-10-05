@@ -1,6 +1,6 @@
 import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
 import { Public } from '@motor-fix/domain';
-import { S3TestStore } from '@motor-fix/domain/testing';
+import { databaseTurn, S3TestStore } from '@motor-fix/domain/testing';
 import {
   Body,
   Controller,
@@ -59,6 +59,9 @@ const env = {
   RELEASE_SHA: 'abc123',
 } as const;
 const store = new S3TestStore();
+// Its refused sign-in leaves failure counters in Redis that the domain's
+// sign-in specs count exactly: wait for their turn to end.
+const turn = databaseTurn(env.DATABASE_URL);
 
 async function start(appEnv: string = env.APP_ENV) {
   const config = readEnv(
@@ -82,8 +85,14 @@ async function start(appEnv: string = env.APP_ENV) {
 describe('api conventions', () => {
   let app: INestApplication;
 
-  beforeAll(() => store.start());
-  afterAll(() => store.stop());
+  beforeAll(async () => {
+    await turn.take();
+    await store.start();
+  }, 120_000);
+  afterAll(async () => {
+    await store.stop();
+    await turn.release();
+  });
   afterEach(() => app.close());
 
   it('serves health outside the /api/v1 prefix and routes under it', async () => {

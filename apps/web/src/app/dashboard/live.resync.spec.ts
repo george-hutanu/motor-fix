@@ -176,18 +176,21 @@ describe('reconnecting with backoff', () => {
   it.each([
     [0, 900],
     [0.999_999, 1_100],
-  ])('moves each wait by up to 10%% (random %s waits %s ms)', async (value, wait) => {
-    const { live } = setUp();
-    random = value;
-    answers = ['fail', 'fail'];
-    live.open();
-    await settle();
+  ])(
+    'moves each wait by up to 10%% (random %s waits %s ms)',
+    async (value, wait) => {
+      const { live } = setUp();
+      random = value;
+      answers = ['fail', 'fail'];
+      live.open();
+      await settle();
 
-    await elapse(wait - 2);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    await elapse(2);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-  });
+      await elapse(wait - 2);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      await elapse(2);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it('tries again with backoff after the request fails, an error answer, a stream with no body, or a drop', async () => {
     const { live } = setUp();

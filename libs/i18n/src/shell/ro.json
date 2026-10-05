@@ -1,4 +1,23 @@
 {
+  "bell": {
+    "empty": "Nicio notificare încă",
+    "failed": "Notificările nu s‑au încărcat.",
+    "hours": "acum {n} h",
+    "label": {
+      "few": "Notificări, {count} notificări necitite",
+      "one": "Notificări, o notificare necitită",
+      "other": "Notificări, {count} de notificări necitite"
+    },
+    "minutes": "acum {n} min",
+    "more": "Mai multe",
+    "new": "Ai o notificare nouă",
+    "now": "acum",
+    "readAll": "Marchează tot ca citit",
+    "readFailed": "Notificarea nu a putut fi marcată ca citită.",
+    "retry": "Reîncearcă",
+    "title": "Notificări",
+    "unread": "necitită"
+  },
   "brand": "MotorFix",
   "chart": {
     "empty": "Încă nu sunt date",

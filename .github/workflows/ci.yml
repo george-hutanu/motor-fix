@@ -50,7 +50,7 @@ jobs:
         if: github.event_name == 'pull_request'
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         if: github.event_name == 'pull_request'
         with:
           node-version-file: .nvmrc
@@ -174,13 +174,15 @@ jobs:
       # Playwright starts the api, the worker and the web dev server itself (playwright.config.mts).
       - run: npx nx $NX_SCOPE -t e2e
       - if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: |
             dist/.playwright
             apps/web-e2e/test-output
           if-no-files-found: ignore
+          # The report sits under dist/.playwright, a dot directory upload-artifact skips by default.
+          include-hidden-files: true
 
   build:
     name: Build
@@ -226,7 +228,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
       - run: npm audit --omit=dev --audit-level=high
@@ -253,7 +255,7 @@ jobs:
             target: node-app
     steps:
       - uses: actions/checkout@v7
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - uses: docker/build-push-action@v7
         with:
           context: .

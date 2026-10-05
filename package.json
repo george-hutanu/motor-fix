@@ -38,7 +38,7 @@
     "@angular-devkit/schematics": "22.2.1",
     "@angular/build": "22.2.1",
     "@angular/compiler-cli": "22.2.1",
-    "@biomejs/biome": "2.3.11",
+    "@biomejs/biome": "2.5.15",
     "@nestjs/testing": "12.1.2",
     "@nx/angular": "23.2.1",
     "@nx/devkit": "23.2.1",

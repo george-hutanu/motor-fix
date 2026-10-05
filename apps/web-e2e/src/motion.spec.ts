@@ -290,7 +290,15 @@ test('the live label keeps its contrast through the whole blink', async ({
   // Five looks across one blink period catch both halves of it.
   for (let look = 0; look < 5; look++) {
     const found = await page.evaluate(async () => {
-      const axe = (globalThis as unknown as { axe: { run: Function } }).axe;
+      const axe = (
+        globalThis as unknown as {
+          axe: {
+            run: (
+              ...args: unknown[]
+            ) => Promise<{ violations: { id: string }[] }>;
+          };
+        }
+      ).axe;
       const result = await axe.run(
         { include: [['.mf-live']] },
         { runOnly: ['color-contrast'] },

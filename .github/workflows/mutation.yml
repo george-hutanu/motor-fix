@@ -40,7 +40,7 @@ jobs:
       TZ: UTC
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -69,7 +69,7 @@ jobs:
           key: mutation-${{ github.ref_name }}-${{ github.run_id }}
       - name: Upload the reports
         if: always() && steps.mutation.outcome != 'skipped'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mutation-reports
           path: reports/mutation

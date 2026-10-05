@@ -1,8 +1,8 @@
 ---
 name: "speckit-pr-test"
-description: "Test and review a ready PR like a QA engineer before it merges: run the pr-tester subagent on the PR head in its own worktree, post its review and the agent-review commit status, move the Notion story to QA, and drive the fix-and-retest loop until agent-review is success or the repair cap blocks the run. Mandatory between 'mark ready' and 'merge' (Constitution VII); /speckit-auto and /speckit-review run it."
-argument-hint: "<PR number> [--dry-run]"
-compatibility: "Requires gh, Node 24, Playwright's Chromium, and Docker or local PostgreSQL/Redis binaries"
+description: "Test and review a ready PR like a QA engineer before it merges: run the pr-tester subagent, which tests the PR head on GitHub Actions (the PR QA workflow) and reviews it here, post its review and the agent-review commit status, move the Notion story to QA, and drive the fix-and-retest loop until agent-review is success or the repair cap blocks the run. Mandatory between 'mark ready' and 'merge' (Constitution VII); /speckit-auto and /speckit-review run it."
+argument-hint: "<PR number> [--dry-run] [--local]"
+compatibility: "Requires gh and Node 24; the boot and sweep run on GitHub Actions. --local also needs Playwright's Chromium and Docker or local PostgreSQL/Redis binaries"
 metadata:
   author: "george-hutanu"
   source: "project-local — QA step of the PR lifecycle"
@@ -17,7 +17,9 @@ $ARGUMENTS
 ```
 
 The first number is the PR. `--dry-run` posts nothing to GitHub or Notion: use
-it for a PR another session owns.
+it for a PR another session owns. `--local` boots the PR on this machine
+instead of GitHub Actions: only when Actions is unavailable, or for a PR whose
+tester change cannot yet run there. It waits for a `scripts/heavy.sh` slot.
 
 ## Why
 
@@ -40,9 +42,18 @@ without a status, so the test runs again.
 2. **Lap**: `node .claude/scripts/run-state.mjs show --json` — the lap is
    `repair_iterations + 1`.
 3. **Test**: invoke the `pr-tester` subagent (Agent tool,
-   `subagent_type: pr-tester`) with `PR`, `LAP`, and `DRY_RUN` when asked. It
-   runs `.claude/scripts/pr-test/run.mjs` (one heavy slot, teardown always),
-   reviews the diff, and posts with `post.mjs`. Read its report; check the
+   `subagent_type: pr-tester`) with `PR`, `LAP`, `DRY_RUN` when asked and
+   `LOCAL` for `--local`. By default it dispatches `.github/workflows/pr-qa.yml`
+   through `.claude/scripts/pr-test/dispatch.mjs` (`gh workflow run`, then
+   `gh run watch`): a GitHub runner boots the PR head with PostgreSQL, Redis
+   and MinIO from the PR's own compose file, sweeps the screens, runs its flows
+   and the API calls (the unit and end-to-end suites are CI's), and uploads the
+   report and screenshots as an artifact. The
+   agent downloads it, reviews the diff against the spec and the constitution
+   here, and posts with `post.mjs`; no secret or LLM step runs in CI. With
+   `LOCAL` it runs `.claude/scripts/pr-test/run.mjs` on this machine instead
+   (`--local`: one heavy slot, teardown always). QA in CI holds no heavy slot,
+   so ready PRs are not queued behind the laptop. Read its report; check the
    status yourself:
 
    ```bash
@@ -77,7 +88,8 @@ without a status, so the test runs again.
 
 Copy `report.md` and `report.json` from the tester's `--out` directory into
 `specs/<feature>/pr-review/lap<n>/`. Never commit the screenshots: they stay in
-`--out`, outside the repo, and the report names them. A lap's images would
+`--out`, outside the repo, and in the run's `pr-qa-<n>` artifact (kept 7
+days); the report names them and gives the run's URL. A lap's images would
 otherwise add hundreds of kilobytes to every clone for good, since a merge
 keeps them in history; `.gitignore` refuses them under `pr-review/`.
 

@@ -217,22 +217,23 @@ describe('Waiting: order and one at a time', () => {
 });
 
 describe('Waiting: answers that keep an action', () => {
-  it.each([
-    0, 401, 408, 429, 500, 502, 503, 504, 599,
-  ])('keeps the action waiting after %s with no notice and no re-read', async (status) => {
-    const { http, waiting } = await start();
-    await waiting.add('job.step', step(1));
-    await settle();
+  it.each([0, 401, 408, 429, 500, 502, 503, 504, 599])(
+    'keeps the action waiting after %s with no notice and no re-read',
+    async (status) => {
+      const { http, waiting } = await start();
+      await waiting.add('job.step', step(1));
+      await settle();
 
-    const req = take(http)[0] as TestRequest;
-    if (status === 0) noAnswer(req);
-    else req.flush(null, { status, statusText: 'x' });
-    await settle();
+      const req = take(http)[0] as TestRequest;
+      if (status === 0) noAnswer(req);
+      else req.flush(null, { status, statusText: 'x' });
+      await settle();
 
-    expect(waiting.actions().map((a) => a.state)).toEqual(['waiting']);
-    expect(toasts).not.toHaveBeenCalled();
-    expect(live.catchUp).not.toHaveBeenCalled();
-  });
+      expect(waiting.actions().map((a) => a.state)).toEqual(['waiting']);
+      expect(toasts).not.toHaveBeenCalled();
+      expect(live.catchUp).not.toHaveBeenCalled();
+    },
+  );
 
   it('tries a kept action again every 60 seconds, not sooner', async () => {
     const { http, waiting } = await start();
@@ -296,20 +297,23 @@ describe('Waiting: answers that refuse an action', () => {
     [499, 'The action was not accepted.'],
     [409, 'This changed in the meantime. See how it stands now.'],
     [404, 'No longer available.'],
-  ])('drops the action on %s with the generic notice and goes on to the next', async (status, notice) => {
-    const { http, waiting } = await start();
-    await waiting.add('job.step', step(1));
-    await waiting.add('job.step', step(2));
-    await settle();
+  ])(
+    'drops the action on %s with the generic notice and goes on to the next',
+    async (status, notice) => {
+      const { http, waiting } = await start();
+      await waiting.add('job.step', step(1));
+      await waiting.add('job.step', step(2));
+      await settle();
 
-    take(http)[0]?.flush(null, { status, statusText: 'x' });
-    await settle();
+      take(http)[0]?.flush(null, { status, statusText: 'x' });
+      await settle();
 
-    expect(toasts).toHaveBeenCalledTimes(1);
-    expect(toasts).toHaveBeenCalledWith(notice);
-    expect(live.catchUp).toHaveBeenCalledTimes(1);
-    expect(take(http).map((r) => r.request.url)).toEqual([step(2).url]);
-  });
+      expect(toasts).toHaveBeenCalledTimes(1);
+      expect(toasts).toHaveBeenCalledWith(notice);
+      expect(live.catchUp).toHaveBeenCalledTimes(1);
+      expect(take(http).map((r) => r.request.url)).toEqual([step(2).url]);
+    },
+  );
 
   it('shows the API detail for a 404 and a 409 too', async () => {
     const { http, waiting } = await start();

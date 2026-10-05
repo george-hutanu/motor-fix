@@ -254,26 +254,25 @@ describe('the cached garage access', () => {
     expect(receptionist.kinds()).toEqual(['request.created']);
   });
 
-  it.each([
-    'member.removed',
-    'mechanic.updated',
-    'garage.features_changed',
-  ])('reads the garage again at once after %s', async (kind) => {
-    const mechanic = staff('elena', 'mechanic', 'm1');
-    await fanOut(['garage:g1'], 'request.created');
-    expect(mechanic.kinds()).toEqual([]);
+  it.each(['member.removed', 'mechanic.updated', 'garage.features_changed'])(
+    'reads the garage again at once after %s',
+    async (kind) => {
+      const mechanic = staff('elena', 'mechanic', 'm1');
+      await fanOut(['garage:g1'], 'request.created');
+      expect(mechanic.kinds()).toEqual([]);
 
-    load.mockResolvedValue(
-      access({
-        mechanics: new Map([['elena', { ...NONE, canAnswerQuotes: true }]]),
-      }),
-    );
-    await fanOut(['garage:g1'], kind, 'someone-else');
-    await fanOut(['garage:g1'], 'request.updated');
+      load.mockResolvedValue(
+        access({
+          mechanics: new Map([['elena', { ...NONE, canAnswerQuotes: true }]]),
+        }),
+      );
+      await fanOut(['garage:g1'], kind, 'someone-else');
+      await fanOut(['garage:g1'], 'request.updated');
 
-    expect(load).toHaveBeenCalledTimes(2);
-    expect(mechanic.kinds()).toEqual(['request.updated']);
-  });
+      expect(load).toHaveBeenCalledTimes(2);
+      expect(mechanic.kinds()).toEqual(['request.updated']);
+    },
+  );
 
   it("drops the event for that garage's staff only and logs it when the garage cannot be read", async () => {
     const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
@@ -314,22 +313,22 @@ describe('streams that follow the account', () => {
     expect(elsewhere.kinds()).toEqual(['request.created']);
   });
 
-  it.each([
-    'account.suspended',
-    'account.deleted',
-  ])('ends every stream of the account with bye evicted on %s', async (kind) => {
-    const phone = open('andrei', 'driver', []);
-    const laptop = open('andrei', 'driver', []);
-    const other = open('elena', 'driver', []);
+  it.each(['account.suspended', 'account.deleted'])(
+    'ends every stream of the account with bye evicted on %s',
+    async (kind) => {
+      const phone = open('andrei', 'driver', []);
+      const laptop = open('andrei', 'driver', []);
+      const other = open('elena', 'driver', []);
 
-    await fanOut(['account:andrei'], kind, 'andrei');
+      await fanOut(['account:andrei'], kind, 'andrei');
 
-    for (const sink of [phone, laptop]) {
-      expect(sink.byes()).toEqual([
-        expect.objectContaining({ reason: 'evicted' }),
-      ]);
-      expect(sink.ended).toBe(true);
-    }
-    expect(other.ended).toBe(false);
-  });
+      for (const sink of [phone, laptop]) {
+        expect(sink.byes()).toEqual([
+          expect.objectContaining({ reason: 'evicted' }),
+        ]);
+        expect(sink.ended).toBe(true);
+      }
+      expect(other.ended).toBe(false);
+    },
+  );
 });

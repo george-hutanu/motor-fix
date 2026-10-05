@@ -106,6 +106,9 @@ const NOT_CHANGES = new Set([
   'NotificationsService.fallBack',
   'NotificationsService.phoneRow',
   'NotificationsService.release',
+  // Reading a notification is not recorded (the bell's story).
+  'BellService.read',
+  'BellService.readAll',
   // Reminders follow a car's or a booking's dates: the stories that change
   // those audit the change, and sending a reminder is not one.
   'RemindersService.cancelBooking',
@@ -163,14 +166,15 @@ describe('every write use case in the domain library calls the audit writer', ()
     expect([...NOT_CHANGES].filter((name) => !writing.has(name))).toEqual([]);
   });
 
-  it.each(
-    files.map((path) => [relative(root, path), path]),
-  )('%s writes nothing without an audit entry', (_name, path) => {
-    const missing = uncovered(readFileSync(path, 'utf8')).map(
-      (method) => `${relative(root, path)}#${method}`,
-    );
-    expect(missing).toEqual([]);
-  });
+  it.each(files.map((path) => [relative(root, path), path]))(
+    '%s writes nothing without an audit entry',
+    (_name, path) => {
+      const missing = uncovered(readFileSync(path, 'utf8')).map(
+        (method) => `${relative(root, path)}#${method}`,
+      );
+      expect(missing).toEqual([]);
+    },
+  );
 });
 
 describe('the check itself', () => {

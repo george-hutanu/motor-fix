@@ -76,17 +76,20 @@ describe('the offline bar', () => {
   it.each([
     ['ro', 'Fără conexiune. Ce vezi poate fi vechi.'],
     ['en', 'No connection. What you see may be out of date.'],
-  ] as const)('says the screen may be out of date while offline (%s), and clears once back', async (language, text) => {
-    const { element, harness, live } = await render(language);
+  ] as const)(
+    'says the screen may be out of date while offline (%s), and clears once back',
+    async (language, text) => {
+      const { element, harness, live } = await render(language);
 
-    live.offline.set(true);
-    harness.detectChanges();
-    expect(bar(element)?.textContent?.trim()).toBe(text);
+      live.offline.set(true);
+      harness.detectChanges();
+      expect(bar(element)?.textContent?.trim()).toBe(text);
 
-    live.offline.set(false);
-    harness.detectChanges();
-    expect(bar(element)?.textContent?.trim()).toBe('');
-  });
+      live.offline.set(false);
+      harness.detectChanges();
+      expect(bar(element)?.textContent?.trim()).toBe('');
+    },
+  );
 
   it('sits under the header, above the e-mail banner', async () => {
     const { element } = await render();

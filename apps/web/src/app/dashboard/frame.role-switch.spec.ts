@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
-import type { MeDto } from '@motor-fix/data-access';
+import { type MeDto, NotificationsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
 import { Subject } from 'rxjs';
@@ -76,6 +76,10 @@ async function render(
       ),
       { provide: Session, useValue: session },
       { provide: Live, useValue: live },
+      {
+        provide: NotificationsService,
+        useValue: { bellControllerUnreadCount: async () => ({ count: 0 }) },
+      },
     ],
   });
   const harness = await RouterTestingHarness.create();
@@ -143,15 +147,14 @@ describe('Frame, the role chips', () => {
     ]);
   });
 
-  it.each([
-    'driver',
-    'garage',
-    'admin',
-  ] as const)('shows no chips to an account that is only a %s', async (role) => {
-    const { element } = await render(role, [role]);
+  it.each(['driver', 'garage', 'admin'] as const)(
+    'shows no chips to an account that is only a %s',
+    async (role) => {
+      const { element } = await render(role, [role]);
 
-    expect(group(element)).toBeNull();
-  });
+      expect(group(element)).toBeNull();
+    },
+  );
 
   it('names them in English', async () => {
     const { element, harness } = await render('garage', [

@@ -270,25 +270,26 @@ describe('Live failing connections', () => {
     expect(renew).not.toHaveBeenCalled();
   });
 
-  it.each([
-    403, 500,
-  ])('emits nothing and tries again on its backoff on a %s answer', async (status) => {
-    jest.useFakeTimers();
-    const { live, seen } = setUp((body) => ({
-      body: { getReader: () => body.reader },
-      ok: false,
-      status,
-    }));
+  it.each([403, 500])(
+    'emits nothing and tries again on its backoff on a %s answer',
+    async (status) => {
+      jest.useFakeTimers();
+      const { live, seen } = setUp((body) => ({
+        body: { getReader: () => body.reader },
+        ok: false,
+        status,
+      }));
 
-    live.open();
-    await jest.advanceTimersByTimeAsync(800);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    await jest.advanceTimersByTimeAsync(400);
+      live.open();
+      await jest.advanceTimersByTimeAsync(800);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      await jest.advanceTimersByTimeAsync(400);
 
-    expect(seen).toEqual([]);
-    expect(renew).not.toHaveBeenCalled();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-  });
+      expect(seen).toEqual([]);
+      expect(renew).not.toHaveBeenCalled();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it('does not throw when the response has no body', async () => {
     const { live, seen } = setUp(() => ({ body: null, ok: true, status: 200 }));

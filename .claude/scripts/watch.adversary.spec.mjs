@@ -18,6 +18,7 @@ import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import {
   DEFAULT_THRESHOLDS,
+  QA_CAP,
   applyFixes,
   collect,
   dispatchPlan,
@@ -486,36 +487,36 @@ describe('dispatch plan, edges', () => {
     assert.deepEqual(dispatchPlan([], { qaLive: 0, now: NOW }), []);
   });
 
-  it('never exceeds 4 QA runs or 2 other agents across thousands of stale rows', () => {
+  it('never exceeds the QA cap or 2 other agents across thousands of stale rows', () => {
     const rows = [];
     for (let i = 0; i < 5000; i += 1) rows.push(stale(`q${i}`, 'rerun-qa', 40 + i), stale(`r${i}`, i % 2 ? 'resume' : 'fix-ci', 40 + i));
     const plan = dispatchPlan(rows, { qaLive: 0, now: NOW });
-    assert.equal(plan.filter((p) => p.fix === 'rerun-qa').length, 4);
+    assert.equal(plan.filter((p) => p.fix === 'rerun-qa').length, QA_CAP);
     assert.equal(plan.filter((p) => p.fix !== 'rerun-qa').length, 2);
   });
 
-  it('plans no QA run when more than 4 are already live', () => {
-    for (const qaLive of [4, 5, 6, 100]) {
+  it('plans no QA run when the cap or more are already live', () => {
+    for (const qaLive of [QA_CAP, QA_CAP + 1, QA_CAP + 2, 1000]) {
       assert.deepEqual(dispatchPlan([stale('a', 'rerun-qa', 90), stale('b', 'rerun-qa', 80)], { qaLive, now: NOW }), [], String(qaLive));
     }
   });
 
   it('still plans other agents while the QA places are full, and the reverse', () => {
     const rows = [stale('a', 'rerun-qa', 90), stale('b', 'resume', 80), stale('c', 'merge', 70), stale('d', 'fix-ci', 60)];
-    assert.deepEqual(dispatchPlan(rows, { qaLive: 4, now: NOW }).map((p) => p.path), ['b', 'c']);
+    assert.deepEqual(dispatchPlan(rows, { qaLive: QA_CAP, now: NOW }).map((p) => p.path), ['b', 'c']);
     const claimed = [liveClaim('x', 'resume'), liveClaim('y', 'fix-ci')];
     assert.deepEqual(dispatchPlan([...rows, ...claimed], { qaLive: 0, now: NOW }).map((p) => p.path), ['a']);
   });
 
   it('counts a live QA claim against the QA places and not against the other agents', () => {
     const rows = [stale('a', 'rerun-qa', 90), stale('b', 'rerun-qa', 80), stale('c', 'resume', 70)];
-    const plan = dispatchPlan([...rows, liveClaim('z', 'rerun-qa')], { qaLive: 3, now: NOW });
+    const plan = dispatchPlan([...rows, liveClaim('z', 'rerun-qa')], { qaLive: QA_CAP - 1, now: NOW });
     assert.deepEqual(plan.map((p) => p.path), ['c']);
   });
 
-  it('counts a live QA claim together with live QA runs, so 2 runs and 1 claim leave one place', () => {
+  it('counts a live QA claim together with live QA runs, so cap − 2 runs and 1 claim leave one place', () => {
     const rows = [stale('a', 'rerun-qa', 50), stale('b', 'rerun-qa', 90), stale('c', 'rerun-qa', 70)];
-    assert.deepEqual(dispatchPlan([...rows, liveClaim('z', 'rerun-qa')], { qaLive: 2, now: NOW }).map((p) => p.path), ['b']);
+    assert.deepEqual(dispatchPlan([...rows, liveClaim('z', 'rerun-qa')], { qaLive: QA_CAP - 2, now: NOW }).map((p) => p.path), ['b']);
   });
 
   it('does not count an expired claim', () => {
@@ -939,23 +940,22 @@ describe('the QA cap with live claims and live runs, with real worktrees', () =>
     return { path: p, pr: pr({ number, headRefName: `0${number}-${name}`, headRefOid: head(p), statusCheckRollup: [check('SUCCESS')] }) };
   };
 
-  it('leaves one QA place when 2 runs and 1 claim are live, and gives it to the oldest', () => {
+  it('leaves one QA place when cap − 2 runs and 1 claim are live, and gives it to the oldest', () => {
     const f = fixture();
-    f.scratch(90, 1001);
-    f.scratch(91, 1002);
+    for (let i = 0; i < QA_CAP - 2; i += 1) f.scratch(90 + i, 1001 + i);
     const claimed = staleReady(f, 'claimed', 30, 120);
     writeClaim(claimed.path, 'rerun-qa', NOW - MIN);
     const s1 = staleReady(f, 's1', 31, 100);
     const s2 = staleReady(f, 's2', 32, 200);
     const s3 = staleReady(f, 's3', 33, 150);
-    const report = collect(f.repo, env({ gh: () => [claimed.pr, s1.pr, s2.pr, s3.pr], pidAlive: (pid) => pid === 1001 || pid === 1002 }));
-    assert.equal(report.qaRuns.length, 2);
+    const report = collect(f.repo, env({ gh: () => [claimed.pr, s1.pr, s2.pr, s3.pr], pidAlive: (pid) => pid >= 1001 && pid < 1001 + QA_CAP - 2 }));
+    assert.equal(report.qaRuns.length, QA_CAP - 2);
     assert.deepEqual(report.plan.map((p) => [p.path, p.fix]), [[s2.path, 'rerun-qa']]);
   });
 
-  it('plans no QA run while 4 scratch runs are live, but still plans 2 other agents', () => {
+  it('plans no QA run while the cap of scratch runs are live, but still plans 2 other agents', () => {
     const f = fixture();
-    for (let i = 0; i < 4; i += 1) f.scratch(90 + i, 1000 + i);
+    for (let i = 0; i < QA_CAP; i += 1) f.scratch(90 + i, 1000 + i);
     const qa = staleReady(f, 'qa', 31, 100);
     const r1 = f.add('r1', 'chore-r1');
     const r2 = f.add('r2', 'chore-r2');
@@ -963,8 +963,8 @@ describe('the QA cap with live claims and live runs, with real worktrees', () =>
     quietCommit(r1, 90);
     quietCommit(r2, 120);
     quietCommit(r3, 150);
-    const report = collect(f.repo, env({ gh: () => [qa.pr], pidAlive: (pid) => pid >= 1000 && pid < 1004 }));
-    assert.equal(report.qaRuns.length, 4);
+    const report = collect(f.repo, env({ gh: () => [qa.pr], pidAlive: (pid) => pid >= 1000 && pid < 1000 + QA_CAP }));
+    assert.equal(report.qaRuns.length, QA_CAP);
     assert.equal(report.plan.filter((p) => p.fix === 'rerun-qa').length, 0);
     assert.deepEqual(report.plan.map((p) => p.path), [r3, r2]);
   });

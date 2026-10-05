@@ -9,11 +9,21 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { bellControllerList } from '../fn/notifications/bell-controller-list';
+import { BellControllerList$Params } from '../fn/notifications/bell-controller-list';
+import { bellControllerRead } from '../fn/notifications/bell-controller-read';
+import { BellControllerRead$Params } from '../fn/notifications/bell-controller-read';
+import { bellControllerReadAll } from '../fn/notifications/bell-controller-read-all';
+import { BellControllerReadAll$Params } from '../fn/notifications/bell-controller-read-all';
+import { bellControllerUnreadCount } from '../fn/notifications/bell-controller-unread-count';
+import { BellControllerUnreadCount$Params } from '../fn/notifications/bell-controller-unread-count';
 import { newsControllerSend } from '../fn/notifications/news-controller-send';
 import { NewsControllerSend$Params } from '../fn/notifications/news-controller-send';
 import { newsControllerUnsubscribe } from '../fn/notifications/news-controller-unsubscribe';
 import { NewsControllerUnsubscribe$Params } from '../fn/notifications/news-controller-unsubscribe';
 import { NewsSentDto } from '../models/news-sent-dto';
+import { NotificationDto } from '../models/notification-dto';
+import { NotificationPageDto } from '../models/notification-page-dto';
 import { notificationPreferencesControllerRead } from '../fn/notifications/notification-preferences-controller-read';
 import { NotificationPreferencesControllerRead$Params } from '../fn/notifications/notification-preferences-controller-read';
 import { notificationPreferencesControllerSave } from '../fn/notifications/notification-preferences-controller-save';
@@ -22,11 +32,112 @@ import { NotificationPreferencesDto } from '../models/notification-preferences-d
 import { notificationsControllerTest } from '../fn/notifications/notifications-controller-test';
 import { NotificationsControllerTest$Params } from '../fn/notifications/notifications-controller-test';
 import { TestMessageQueuedDto } from '../models/test-message-queued-dto';
+import { UnreadCountDto } from '../models/unread-count-dto';
 
 @Injectable({ providedIn: 'root' })
 export class NotificationsService extends BaseService {
   constructor(config: ApiConfiguration, http: HttpClient) {
     super(config, http);
+  }
+
+  /** Path part for operation `bellControllerList()` */
+  static readonly BellControllerListPath = '/api/v1/notifications';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `bellControllerList()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  bellControllerList$Response(params?: BellControllerList$Params, context?: HttpContext): Promise<StrictHttpResponse<NotificationPageDto>> {
+    const obs = bellControllerList(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `bellControllerList$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  bellControllerList(params?: BellControllerList$Params, context?: HttpContext): Promise<NotificationPageDto> {
+    const resp = this.bellControllerList$Response(params, context);
+    return resp.then((r: StrictHttpResponse<NotificationPageDto>): NotificationPageDto => r.body);
+  }
+
+  /** Path part for operation `bellControllerUnreadCount()` */
+  static readonly BellControllerUnreadCountPath = '/api/v1/notifications/unread-count';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `bellControllerUnreadCount()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  bellControllerUnreadCount$Response(params?: BellControllerUnreadCount$Params, context?: HttpContext): Promise<StrictHttpResponse<UnreadCountDto>> {
+    const obs = bellControllerUnreadCount(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `bellControllerUnreadCount$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  bellControllerUnreadCount(params?: BellControllerUnreadCount$Params, context?: HttpContext): Promise<UnreadCountDto> {
+    const resp = this.bellControllerUnreadCount$Response(params, context);
+    return resp.then((r: StrictHttpResponse<UnreadCountDto>): UnreadCountDto => r.body);
+  }
+
+  /** Path part for operation `bellControllerReadAll()` */
+  static readonly BellControllerReadAllPath = '/api/v1/notifications/read-all';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `bellControllerReadAll()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  bellControllerReadAll$Response(params?: BellControllerReadAll$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = bellControllerReadAll(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `bellControllerReadAll$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  bellControllerReadAll(params?: BellControllerReadAll$Params, context?: HttpContext): Promise<void> {
+    const resp = this.bellControllerReadAll$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `bellControllerRead()` */
+  static readonly BellControllerReadPath = '/api/v1/notifications/{id}/read';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `bellControllerRead()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  bellControllerRead$Response(params: BellControllerRead$Params, context?: HttpContext): Promise<StrictHttpResponse<NotificationDto>> {
+    const obs = bellControllerRead(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `bellControllerRead$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  bellControllerRead(params: BellControllerRead$Params, context?: HttpContext): Promise<NotificationDto> {
+    const resp = this.bellControllerRead$Response(params, context);
+    return resp.then((r: StrictHttpResponse<NotificationDto>): NotificationDto => r.body);
   }
 
   /** Path part for operation `notificationsControllerTest()` */

@@ -119,24 +119,27 @@ describe('backoff edges', () => {
   it.each([
     [0, 27_000],
     [0.999_999, 33_000],
-  ])('keeps the 30 second wait inside 10%% either way (random %s waits %s ms)', async (value, wait) => {
-    const { live } = setUp();
-    answers = Array(10).fill('fail');
-    live.open();
-    await settle();
-    random = 0.5;
-    await elapse(1_000 + 2_000 + 5_000 + 10_000);
-    expect(fetchMock).toHaveBeenCalledTimes(5);
-    random = value;
-    answers = Array(10).fill('fail');
-    await elapse(30_000);
-    const before = fetchMock.mock.calls.length;
+  ])(
+    'keeps the 30 second wait inside 10%% either way (random %s waits %s ms)',
+    async (value, wait) => {
+      const { live } = setUp();
+      answers = Array(10).fill('fail');
+      live.open();
+      await settle();
+      random = 0.5;
+      await elapse(1_000 + 2_000 + 5_000 + 10_000);
+      expect(fetchMock).toHaveBeenCalledTimes(5);
+      random = value;
+      answers = Array(10).fill('fail');
+      await elapse(30_000);
+      const before = fetchMock.mock.calls.length;
 
-    await elapse(wait - 2);
-    expect(fetchMock).toHaveBeenCalledTimes(before);
-    await elapse(2);
-    expect(fetchMock).toHaveBeenCalledTimes(before + 1);
-  });
+      await elapse(wait - 2);
+      expect(fetchMock).toHaveBeenCalledTimes(before);
+      await elapse(2);
+      expect(fetchMock).toHaveBeenCalledTimes(before + 1);
+    },
+  );
 
   it('never goes beyond 33 seconds between tries however many have failed', async () => {
     const { live } = setUp();

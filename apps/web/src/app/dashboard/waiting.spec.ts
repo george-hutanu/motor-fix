@@ -147,23 +147,24 @@ describe('Waiting: sending', () => {
     expect(again.request.method).toBe('PATCH');
   });
 
-  it.each([
-    401, 408, 429, 503,
-  ])('keeps the action waiting after a %s answer', async (status) => {
-    const { http, waiting } = await start();
-    await waiting.add('job.eta', {
-      body: { at: '2026-10-05T16:00:00.000Z' },
-      method: 'PUT',
-      url: '/api/v1/jobs/job-1/eta',
-    });
+  it.each([401, 408, 429, 503])(
+    'keeps the action waiting after a %s answer',
+    async (status) => {
+      const { http, waiting } = await start();
+      await waiting.add('job.eta', {
+        body: { at: '2026-10-05T16:00:00.000Z' },
+        method: 'PUT',
+        url: '/api/v1/jobs/job-1/eta',
+      });
 
-    (await nextRequest(http)).flush(null, { status, statusText: 'no' });
+      (await nextRequest(http)).flush(null, { status, statusText: 'no' });
 
-    expect(await until(() => waiting.actions()[0]?.state === 'waiting')).toBe(
-      true,
-    );
-    expect(toast).not.toHaveBeenCalled();
-  });
+      expect(await until(() => waiting.actions()[0]?.state === 'waiting')).toBe(
+        true,
+      );
+      expect(toast).not.toHaveBeenCalled();
+    },
+  );
 
   it('sends one action at a time, in the order they were made', async () => {
     const { http, waiting } = await start();
@@ -372,21 +373,26 @@ describe('Waiting: refused', () => {
     [409, null, 'This changed in the meantime. See how it stands now.'],
     [404, null, 'No longer available.'],
     [422, null, 'The action was not accepted.'],
-  ])('drops the action on a %s, says why, and re-reads every view', async (status, body, notice) => {
-    const { http, waiting } = await start();
-    await waiting.add('job.step', step(1));
-    await waiting.add('job.step', step(2));
+  ])(
+    'drops the action on a %s, says why, and re-reads every view',
+    async (status, body, notice) => {
+      const { http, waiting } = await start();
+      await waiting.add('job.step', step(1));
+      await waiting.add('job.step', step(2));
 
-    (await nextRequest(http)).flush(body, { status, statusText: 'no' });
+      (await nextRequest(http)).flush(body, { status, statusText: 'no' });
 
-    expect(
-      await until(() => (toast as unknown as jest.Mock).mock.calls.length > 0),
-    ).toBe(true);
-    expect(toast).toHaveBeenCalledWith(notice);
-    expect(live.catchUp).toHaveBeenCalledTimes(1);
-    expect((await nextRequest(http)).request.url).toContain('step-2');
-    expect(waiting.actions().map((a) => a.url)).toEqual([step(2).url]);
-  });
+      expect(
+        await until(
+          () => (toast as unknown as jest.Mock).mock.calls.length > 0,
+        ),
+      ).toBe(true);
+      expect(toast).toHaveBeenCalledWith(notice);
+      expect(live.catchUp).toHaveBeenCalledTimes(1);
+      expect((await nextRequest(http)).request.url).toContain('step-2');
+      expect(waiting.actions().map((a) => a.url)).toEqual([step(2).url]);
+    },
+  );
 });
 
 describe('Waiting: a send that fails in the app', () => {

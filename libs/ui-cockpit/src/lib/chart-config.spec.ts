@@ -226,15 +226,20 @@ describe('chartConfig', () => {
   it.each([
     ['dark', darkTokens],
     ['light', lightTokens],
-  ])('keeps the %s chart amber at 3:1 or more against the panel and the page', (_, t) => {
-    expect(
-      contrast(t['--mf-amber-ink'], t['--mf-panel']),
-    ).toBeGreaterThanOrEqual(3);
-    expect(contrast(t['--mf-amber-ink'], t['--mf-bg'])).toBeGreaterThanOrEqual(
-      3,
-    );
-    expect(contrast(t['--mf-text'], t['--mf-bg'])).toBeGreaterThanOrEqual(4.5);
-  });
+  ])(
+    'keeps the %s chart amber at 3:1 or more against the panel and the page',
+    (_, t) => {
+      expect(
+        contrast(t['--mf-amber-ink'], t['--mf-panel']),
+      ).toBeGreaterThanOrEqual(3);
+      expect(
+        contrast(t['--mf-amber-ink'], t['--mf-bg']),
+      ).toBeGreaterThanOrEqual(3);
+      expect(contrast(t['--mf-text'], t['--mf-bg'])).toBeGreaterThanOrEqual(
+        4.5,
+      );
+    },
+  );
 });
 
 describe('readTheme', () => {

@@ -172,13 +172,16 @@ describe('reading the refresh cookie', () => {
     ['an empty value', 'mf_refresh='],
     ['a name without a value', 'mf_refresh'],
     ['a 5000-character value', `mf_refresh=${'a'.repeat(5000)}`],
-  ])('answers 401 sign_in_required and clears the cookie for %s', async (_, cookie) => {
-    const res = await withCookie('/auth/refresh', cookie);
+  ])(
+    'answers 401 sign_in_required and clears the cookie for %s',
+    async (_, cookie) => {
+      const res = await withCookie('/auth/refresh', cookie);
 
-    expect(res.status).toBe(401);
-    expect(res.body.code).toBe('sign_in_required');
-    expect(setCookie(res)).toMatch(/^mf_refresh=;/);
-  });
+      expect(res.status).toBe(401);
+      expect(res.body.code).toBe('sign_in_required');
+      expect(setCookie(res)).toMatch(/^mf_refresh=;/);
+    },
+  );
 
   it('rejects a token with its letter case changed', async () => {
     await person('andrei@example.test');

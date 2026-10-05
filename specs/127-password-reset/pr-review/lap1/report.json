@@ -1,76 +1,38 @@
 {
   "pr": 72,
   "repo": "george-hutanu/motor-fix",
-  "sha": "a6745cd019c6ba8bc2e4af7d5cab0ad510446ae4",
-  "base": "c28fbd0757779d24015096244153ed3e52e1488b",
+  "sha": "f6399ea0f5677e4cb01239d5dfb86f78b83e416f",
+  "base": "2b43d43230abe9f3683c7aa0c71ce46e17ec797e",
   "lap": 1,
   "verdict": "success",
-  "summary": "No blocking findings; 5 in all. Booted postgres, redis, api, web, worker.",
+  "summary": "No blocking findings; 1 in all. Booted postgres, redis, minio, api, web, worker.",
   "findings": [
     {
       "severity": "medium",
-      "kind": "step",
-      "title": "api readiness: storage down",
-      "steps": [
-        "No object store on this machine (no Docker); every other check is ok. Environment limit, not the change."
-      ]
-    },
-    {
-      "severity": "medium",
-      "kind": "step",
-      "title": "worker readiness: storage down",
-      "steps": [
-        "No object store on this machine (no Docker); every other check is ok. Environment limit, not the change."
-      ]
-    },
-    {
-      "severity": "medium",
       "kind": "review",
-      "title": "A completed reset records no domain event in its transaction (Constitution VI)",
-      "route": "libs/domain/src/auth/password-reset.service.ts:99-130",
+      "title": "A completed reset records no domain event in its transaction, and session.revoked goes out after the commit (Constitution VI)",
+      "where": "libs/domain/src/auth/password-reset.service.ts:100-131, 208-214",
       "steps": [
-        "Read complete(): the transaction takes the token, replaces the password, deletes every refresh token and writes the audit entry",
-        "Compare SignInService.signOutEverywhere (libs/domain/src/auth/sign-in.service.ts:199)"
+        "Read complete(): the $transaction ends with `await this.audit.record(tx, { action: 'update', ... kind: 'password_reset' ... })` and has no `this.events.record(tx, ...)`",
+        "Compare SignInService.signOutEverywhere (libs/domain/src/auth/sign-in.service.ts:200), which records its event through EVENT_PORT inside the transaction before publishLive"
       ],
-      "evidence": "The reset's $transaction ends with `await this.audit.record(tx, { action: 'update', ... kind: 'password_reset', ... })` and no `this.events.record(tx, ...)`. signOutEverywhere, which also ends every session, records `account.signed_out_everywhere` through EVENT_PORT in its transaction (noEvents until the outbox lands). deferred.md:6 says the reset follows 'sign-in's session.revoked', but sign-in records the event in the transaction, so the deferral does not cover this. plan.md:24's VI check cites only the Redis clause. Fix: record e.g. `account.password_reset` through EVENT_PORT inside the transaction, or write the deviation into plan.md's Complexity Tracking. Medium, as for the same gap on ST-128 lap 1 (#66): today's port is a no-op, so nothing a user sees changes."
-    },
-    {
-      "severity": "low",
-      "kind": "review",
-      "title": "tasks.md T005 and plan.md name libs/contracts/src/auth.dto.ts; the DTOs are in password-reset.dto.ts",
-      "route": "specs/127-password-reset/tasks.md:17, specs/127-password-reset/plan.md:40",
-      "steps": [
-        "Read tasks.md T005 and plan.md structure",
-        "gh pr view 72 --json files"
-      ],
-      "evidence": "`- [x] T005 [US1] `libs/contracts/src/auth.dto.ts` + ...` and `libs/contracts/src/auth.dto.ts   PasswordResetDto, PasswordResetCheckDto, PasswordResetCompleteDto`, but the PR adds libs/contracts/src/password-reset.dto.ts and leaves auth.dto.ts alone. This only affects the docs."
-    },
-    {
-      "severity": "low",
-      "kind": "review",
-      "title": "Deferred debt is not filed in Notion yet",
-      "route": "specs/127-password-reset/deferred.md",
-      "steps": [
-        "Read deferred.md",
-        "Read notion-sync.md"
-      ],
-      "evidence": "All three bullets (the request's timing, the outbox, the auth limits as constants) have no Notion task URL, and notion-sync.md has no `debt` line. AGENTS.md says to file the debt as a To do task (`speckit-notion-sync debt`) before the merge."
+      "evidence": "Principle VI: 'Every state change is saved with the event that announces it, in the same transaction.' plan.md:24 checks only VI's Redis clause and Complexity Tracking does not record this. It is deferred with a Notion task (deferred.md:6), and today's EVENT_PORT records nothing until the outbox exists, so no user sees a difference. Kept at medium, as on lap 1 and ST-128. The fix is one `this.events.record(tx, { kind: 'account.password_reset', ... })` in the transaction."
     }
   ],
   "booted": [
     "postgres",
     "redis",
+    "minio",
     "api",
     "web",
     "worker"
   ],
   "notes": [
-    "No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.",
     "No changed GET endpoint without path parameters.",
-    "Retracted by the tester: the flow's \"'Ask for a new link' does not open the reset task\" was a locator timing miss. Its own screenshot (shots/flow-ask-again.png) shows the reset task open, and a direct re-check on the booted app (save answers token_expired, then Ask for a new link) found exactly one dialog named 'Reset your password' at 390 px dark and 1440 px light (shots/flow-ask-again-check-390.png, -1440.png).",
-    "Harness gap, not this change: run.mjs starts the api without PUBLIC_WEB_URL, so no reset link can be written (the api logs 'password reset link not sent: PUBLIC_WEB_URL is not set' and still answers 202, as the spec's edge case asks). The flows started a second api from the same build on the same PostgreSQL and Redis with PUBLIC_WEB_URL set, for the calls that need a link (logs/api2.out.log).",
-    "Environment, not this change: the private local PostgreSQL runs in Europe/Bucharest, and Prisma's timestamps sit 3 h off the server's now(). Links were aged against their own created_at, which the api reads consistently: aged links answer 410 token_expired on check and on complete, a weak password included.",
-    "Flows: 29 API checks and the browser flows passed: sign-in to reset task to sent and back with the e-mail carried; malformed address and 503 errors; the full reset in the browser (common-password error under the field, the driver dashboard opens, the other tab of the same browser goes Home without a sign-out call, the reset tab stays signed in after a reload, the used link says expired); mid-form expiry in English at 390 px dark; check 503 with retry; 6 states x 4 viewports x light/dark x ro/en with axe and overflow; the link page through sweep.mjs (32 shots, only the expected 410s left out)."
+    "Unit and end-to-end tests left to CI (Unit tests and E2E tests; the merge gate waits for them).",
+    "Flows (50 checks, all passed): request 202 empty and identical for known and unknown addresses; one e-mail-channel password_reset notification with an /en/reset-password/<43-char token> link for an English account; token stored only as SHA-256, valid 60 min; a newer link voids the older one (410 token_invalid); spaces and capitals find the account; the 4th request per e-mail and the 11th per address in an hour send nothing; Redis keys hashed; 400 validation_failed for missing, malformed and non-string e-mail, 415 for text/plain; check 204, 410 token_invalid for malformed and unknown, 410 token_expired for aged and used; complete 400 weak_password on password (short, common, 129 chars) without using the link up; 200 with an access token and a remembered mf_refresh cookie; reuse 410 token_expired; old password 401 and new password 200; pre-reset refresh token 401; password_changed queued; one audit update entry (field password, kind password_reset, no values); expired link plus weak password gives 410 first; a concurrent pair gives 200/410; a suspended account gets token_invalid and no link.",
+    "Browser: the e-mail carries from sign-in into the reset task and back; a malformed address shows an error under the field and makes no call; a 503 shows its error; full reset at 390 px dark: the common-password error shows under the field, saving opens /app/driver, the other dashboard tab of the same browser goes Home with no sign-out call, the reset tab stays signed in after a reload; the used link says Linkul a expirat and Cere un link nou opens the reset task; a link used mid-form switches to The link has expired (EN, 320 px) and the refresh tokens stay; checking state, unreachable state with retry; closing the link dialog leaves for /en. State sweep: sign-in, reset, sent, new password, weak password and expired × 4 viewports × light/dark × ro/en: no serious or critical axe issue, no overflow, no console error, no Romanian on English pages (104 screenshots).",
+    "Harness gaps, not this change: (1) run.mjs boots the api without PUBLIC_WEB_URL, so no reset link can be written; the flows started a second api from the same build with PUBLIC_WEB_URL set (logs/api2.out.log). (2) The main checkout has no node_modules, so sweep.mjs cannot resolve Playwright or axe-core from repoRoot; the run used NODE_PATH pointing at another worktree's node_modules (Playwright 1.63.0, the same version). (3) The production web build registers ngsw, which hides requests from page.route, so the flows that fake errors block service workers."
   ],
   "screenshots": [
     "shots/home-desktop-light-ro.png",
@@ -106,5 +68,5 @@
     "shots/cockpit-small-phone-dark-ro.png",
     "shots/cockpit-small-phone-dark-en.png"
   ],
-  "markdown": "**Agent review: success** — PR #72 at `a6745cd`, lap 1\n\nBlocking: 0 (blocker 0, high 0) · medium 3 · low 2. Booted: postgres, redis, api, web, worker.\n- No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.\n- No changed GET endpoint without path parameters.\n- Retracted by the tester: the flow's \"'Ask for a new link' does not open the reset task\" was a locator timing miss. Its own screenshot (shots/flow-ask-again.png) shows the reset task open, and a direct re-check on the booted app (save answers token_expired, then Ask for a new link) found exactly one dialog named 'Reset your password' at 390 px dark and 1440 px light (shots/flow-ask-again-check-390.png, -1440.png).\n- Harness gap, not this change: run.mjs starts the api without PUBLIC_WEB_URL, so no reset link can be written (the api logs 'password reset link not sent: PUBLIC_WEB_URL is not set' and still answers 202, as the spec's edge case asks). The flows started a second api from the same build on the same PostgreSQL and Redis with PUBLIC_WEB_URL set, for the calls that need a link (logs/api2.out.log).\n- Environment, not this change: the private local PostgreSQL runs in Europe/Bucharest, and Prisma's timestamps sit 3 h off the server's now(). Links were aged against their own created_at, which the api reads consistently: aged links answer 410 token_expired on check and on complete, a weak password included.\n- Flows: 29 API checks and the browser flows passed: sign-in to reset task to sent and back with the e-mail carried; malformed address and 503 errors; the full reset in the browser (common-password error under the field, the driver dashboard opens, the other tab of the same browser goes Home without a sign-out call, the reset tab stays signed in after a reload, the used link says expired); mid-form expiry in English at 390 px dark; check 503 with retry; 6 states x 4 viewports x light/dark x ro/en with axe and overflow; the link page through sweep.mjs (32 shots, only the expected 410s left out).\n\n| # | Severity | Finding | Where | Evidence |\n| --- | --- | --- | --- | --- |\n| 1 | medium | api readiness: storage down |  |  |\n| 2 | medium | worker readiness: storage down |  |  |\n| 3 | medium | A completed reset records no domain event in its transaction (Constitution VI) | libs/domain/src/auth/password-reset.service.ts:99-130 | The reset's $transaction ends with `await this.audit.record(tx, { action: 'update', ... kind: 'password_reset', ... })` and no `this.events.record(tx, ...)`. signOutEverywhere, which also ends every session, records `account.signed_out_everywhere` through EVENT_PORT in its transaction (noEvents until the outbox lands). deferred.md:6 says the reset follows 'sign-in's session.revoked', but sign-in records the event in the transaction, so the deferral does not cover this. plan.md:24's VI check cites only the Redis clause. Fix: record e.g. `account.password_reset` through EVENT_PORT inside the transaction, or write the deviation into plan.md's Complexity Tracking. Medium, as for the same gap on ST-128 lap 1 (#66): today's port is a no-op, so nothing a user sees changes. |\n| 4 | low | tasks.md T005 and plan.md name libs/contracts/src/auth.dto.ts; the DTOs are in password-reset.dto.ts | specs/127-password-reset/tasks.md:17, specs/127-password-reset/plan.md:40 | `- [x] T005 [US1] `libs/contracts/src/auth.dto.ts` + ...` and `libs/contracts/src/auth.dto.ts   PasswordResetDto, PasswordResetCheckDto, PasswordResetCompleteDto`, but the PR adds libs/contracts/src/password-reset.dto.ts and leaves auth.dto.ts alone. This only affects the docs. |\n| 5 | low | Deferred debt is not filed in Notion yet | specs/127-password-reset/deferred.md | All three bullets (the request's timing, the outbox, the auth limits as constants) have no Notion task URL, and notion-sync.md has no `debt` line. AGENTS.md says to file the debt as a To do task (`speckit-notion-sync debt`) before the merge. |\n\n### Reproduction\n1. No object store on this machine (no Docker); every other check is ok. Environment limit, not the change.\n2. No object store on this machine (no Docker); every other check is ok. Environment limit, not the change.\n3. Read complete(): the transaction takes the token, replaces the password, deletes every refresh token and writes the audit entry → Compare SignInService.signOutEverywhere (libs/domain/src/auth/sign-in.service.ts:199)\n4. Read tasks.md T005 and plan.md structure → gh pr view 72 --json files\n5. Read deferred.md → Read notion-sync.md\n\nScreenshots: 32, one per route × viewport × scheme × language.\n"
+  "markdown": "**Agent review: success** — PR #72 at `f6399ea`, lap 1\n\nBlocking: 0 (blocker 0, high 0) · medium 1 · low 0. Booted: postgres, redis, minio, api, web, worker.\n- No changed GET endpoint without path parameters.\n- Unit and end-to-end tests left to CI (Unit tests and E2E tests; the merge gate waits for them).\n- Flows (50 checks, all passed): request 202 empty and identical for known and unknown addresses; one e-mail-channel password_reset notification with an /en/reset-password/<43-char token> link for an English account; token stored only as SHA-256, valid 60 min; a newer link voids the older one (410 token_invalid); spaces and capitals find the account; the 4th request per e-mail and the 11th per address in an hour send nothing; Redis keys hashed; 400 validation_failed for missing, malformed and non-string e-mail, 415 for text/plain; check 204, 410 token_invalid for malformed and unknown, 410 token_expired for aged and used; complete 400 weak_password on password (short, common, 129 chars) without using the link up; 200 with an access token and a remembered mf_refresh cookie; reuse 410 token_expired; old password 401 and new password 200; pre-reset refresh token 401; password_changed queued; one audit update entry (field password, kind password_reset, no values); expired link plus weak password gives 410 first; a concurrent pair gives 200/410; a suspended account gets token_invalid and no link.\n- Browser: the e-mail carries from sign-in into the reset task and back; a malformed address shows an error under the field and makes no call; a 503 shows its error; full reset at 390 px dark: the common-password error shows under the field, saving opens /app/driver, the other dashboard tab of the same browser goes Home with no sign-out call, the reset tab stays signed in after a reload; the used link says Linkul a expirat and Cere un link nou opens the reset task; a link used mid-form switches to The link has expired (EN, 320 px) and the refresh tokens stay; checking state, unreachable state with retry; closing the link dialog leaves for /en. State sweep: sign-in, reset, sent, new password, weak password and expired × 4 viewports × light/dark × ro/en: no serious or critical axe issue, no overflow, no console error, no Romanian on English pages (104 screenshots).\n- Harness gaps, not this change: (1) run.mjs boots the api without PUBLIC_WEB_URL, so no reset link can be written; the flows started a second api from the same build with PUBLIC_WEB_URL set (logs/api2.out.log). (2) The main checkout has no node_modules, so sweep.mjs cannot resolve Playwright or axe-core from repoRoot; the run used NODE_PATH pointing at another worktree's node_modules (Playwright 1.63.0, the same version). (3) The production web build registers ngsw, which hides requests from page.route, so the flows that fake errors block service workers.\n\n| # | Severity | Finding | Where | Evidence |\n| --- | --- | --- | --- | --- |\n| 1 | medium | A completed reset records no domain event in its transaction, and session.revoked goes out after the commit (Constitution VI) |  | Principle VI: 'Every state change is saved with the event that announces it, in the same transaction.' plan.md:24 checks only VI's Redis clause and Complexity Tracking does not record this. It is deferred with a Notion task (deferred.md:6), and today's EVENT_PORT records nothing until the outbox exists, so no user sees a difference. Kept at medium, as on lap 1 and ST-128. The fix is one `this.events.record(tx, { kind: 'account.password_reset', ... })` in the transaction. |\n\n### Reproduction\n1. Read complete(): the $transaction ends with `await this.audit.record(tx, { action: 'update', ... kind: 'password_reset' ... })` and has no `this.events.record(tx, ...)` → Compare SignInService.signOutEverywhere (libs/domain/src/auth/sign-in.service.ts:200), which records its event through EVENT_PORT inside the transaction before publishLive\n\nScreenshots: 32, one per route × viewport × scheme × language.\n"
 }

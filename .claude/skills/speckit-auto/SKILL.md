@@ -82,7 +82,7 @@ Run these before phase 1, in one batch:
   run auto on a machine that is also being used.
 - `git rev-parse --abbrev-ref HEAD` and `git rev-parse HEAD` — record the
   starting branch and commit.
-- Read `.specify/memory/constitution.md` (v1.8.0 — its Enforcement section
+- Read `.specify/memory/constitution.md` (v1.8.1 — its Enforcement section
   lists the gates that will fire at you).
 - `sh scripts/heavy.sh sh -c 'npm run typecheck && npm run lint && npm run test'`
   — the repo MUST start green. Through Nx, whose cache every worktree shares
@@ -556,8 +556,9 @@ When phases 14–16 are done, the review left no CRITICAL/HIGH and the last
    at once, beside step 4: the
    story, its timeline row and the PR's one stage label stay QA
    (`speckit-notion-sync qa` again is a no-op); the `pr-tester`
-   subagent boots the head commit in its own worktree, sweeps the UI, calls the
-   API, reviews the diff (the unit and end-to-end suites are CI's), posts its review, replaces the
+   subagent dispatches the PR QA workflow, where a GitHub runner boots the head
+   commit, sweeps the UI and calls the API (the unit and end-to-end suites are
+   CI's); it then reads the artifact, reviews the diff, posts its review, replaces the
    body's Agent review `Pending.` line (`gh pr edit --body-file`) and sets
    `agent-review` on the head commit. On failure: fix every blocking finding,
    tests first, commit, push, `node .claude/scripts/run-state.mjs repair`, and
