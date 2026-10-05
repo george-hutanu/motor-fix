@@ -187,7 +187,8 @@ decisions are the source for anything the constitution does not fix.
   title (Conventional Commit), Biome, Typecheck, Unit tests, Integration
   tests (PostgreSQL+PostGIS and Redis services), E2E tests (Playwright
   `web-e2e`, servers started in the job), Build, Harness, Contract check,
-  Dependency audit, Docker build (`web`, `node-app`), then `CI OK`, which
+  Dependency audit, Docker build (`web`, `node-app`), Compose stack
+  (`docker-compose.yml` boots and creates the bucket), then `CI OK`, which
   fails when any of them did. A PR that changes documentation only
   (`scripts/docs-only.ts`: Markdown outside `.claude/`, `.specify/` and
   `.github/`, or `docs/`) runs only the PR title, Changes and `CI OK` jobs;
