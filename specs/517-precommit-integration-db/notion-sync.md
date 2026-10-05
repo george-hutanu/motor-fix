@@ -3,3 +3,4 @@
 - 2026-10-05 · labels · PR #94 · planning
 - 2026-10-05 · implement · ST-599 · Planning → Implementing; PR #94 label in development
 - 2026-10-05 · debt · ST-599 · deferred.md line 5 → https://app.notion.com/p/3f0607bff0d281d299a3de132688c38e
+- 2026-10-05 · qa · ST-599 · Implementing → QA; PR #94 label QA
