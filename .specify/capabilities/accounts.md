@@ -1,10 +1,11 @@
 ---
 capability: accounts
-updated: 2026-10-04
+updated: 2026-10-05
 features:
   - 079-account-model
   - 082-sign-in
   - 080-sign-up
+  - 020-account-language
 ---
 
 # Capability: Accounts
@@ -228,6 +229,26 @@ _From 080-sign-up._
 ### 080-FR-016 — A network address MUST count as one client however it is written — an IPv4 address also in its IPv4-mapped IPv6 form, an IPv6 address in any spelling and without its zone id, grouped by its /64 — for the sign-up limit and for sign-in's per-address count alike; an address that cannot be read leaves the limit skipped, as an unreachable Redis does.
 
 _From 080-sign-up._
+
+### 020-FR-001 — The API MUST let a signed-in account change its own language with `PATCH /api/v1/me` and a body `{ "language": "ro" | "en" }`, in every role, and answer with that account's "who am I", the same shape `GET /api/v1/me` returns.
+
+_From 020-account-language._
+
+### 020-FR-002 — The change MUST be refused with 401 `sign_in_required` without a valid token, and with 403 `account_suspended` for a suspended account, leaving the account unchanged.
+
+_From 020-account-language._
+
+### 020-FR-003 — The change MUST accept only `ro` or `en`: any other value, a missing language or an extra field is refused with 400 `validation_failed` whose detail names the offending field, and nothing is saved.
+
+_From 020-account-language._
+
+### 020-FR-004 — The saved language MUST be the one `GET /api/v1/me` returns afterwards; an account that never chose has `ro`.
+
+_From 020-account-language._
+
+### 020-FR-005 — A change to a different language MUST add one audit entry on the account (an update of the field `language`, old value to new value), by the account in the role it is using, saved in the same transaction as the change; setting the same language MUST add none.
+
+_From 020-account-language._
 
 ## Retired
 

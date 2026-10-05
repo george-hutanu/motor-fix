@@ -15,3 +15,10 @@
 - 2026-10-04 · qa · ST-20 · In review → QA
 - 2026-10-04 · qa · Foundations timeline ST-20 · In review → QA
 - 2026-10-04 · labels · PR #51 · QA
+- 2026-10-04 · debt · ST-20 · PR tester lap 2 low finding filed directly: https://app.notion.com/p/3ef607bff0d281a584e4d9f888c248be
+- 2026-10-04 · finish · ST-20 · QA → Done
+- 2026-10-04 · finish · Foundations timeline ST-20 · QA → Merged
+- 2026-10-04 · finish · EP-1 · In progress (unchanged, stories still open)
+- 2026-10-04 · labels · PR #51 · none
+- 2026-10-04 · comment · ST-20 · posted (9 items)
+- 2026-10-04 · ready · Foundations · no change

@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 
 **Input**: User description: "Notion story ST-20 'Keep my language on my account for messages' (https://app.notion.com/p/3ee607bff0d281c186c2d53b64b7b117): As a driver, I want my language saved on my account, so that e-mails and other messages from MotorFix reach me in that language. API: authenticated PATCH of the account language (ro|en), persisted, returned by /me. Web: switching language while signed in saves it to the account; signed out stays local."
 
