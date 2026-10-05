@@ -27,6 +27,8 @@ describe('the hand-off', () => {
     assert.match(handoff, /speckit-notion-sync qa/);
     assert.match(handoff, /handoff\.md/);
     assert.match(handoff, /NEXT: tail #<n>/);
+    // Run in the owner's session, nobody reads that NEXT: the run sends its own tail.
+    assert.match(handoff, /dispatch the tail yourself/);
     assert.doesNotMatch(handoff, /gh pr merge/);
   });
 
