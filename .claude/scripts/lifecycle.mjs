@@ -17,7 +17,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { typeLabel } from "../hooks/pr-lifecycle-gate.mjs";
 import { parseDeferred } from "./debt-tasks.mjs";
 import { isEntryPoint } from "./lib/entry.mjs";
@@ -291,7 +291,7 @@ function merge(ctx, flags) {
     if (!(err instanceof Stop)) throw err;
     const kept = join(mkdtempSync(join(tmpdir(), "lifecycle-")), "finish.md");
     writeFileSync(kept, body);
-    err.extra = { ...err.extra, comment: kept, then: `gh pr comment ${n} --body-file ${quote(kept)} && rm -f ${quote(join(ctx.feature.dir, "handoff.md"))}` };
+    err.extra = { ...err.extra, comment: kept, then: `gh pr comment ${n} --body-file ${quote(kept)} && rm -f ${quote(join(ctx.feature.dir, "handoff.md"))} && rm -rf ${quote(dirname(kept))}` };
     throw err;
   }
   ctx.did.push("finish comment");

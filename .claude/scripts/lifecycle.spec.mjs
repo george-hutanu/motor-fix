@@ -2,7 +2,7 @@ import { afterEach, describe, it, beforeEach } from 'vitest';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 import { gateEnv, runGates, step } from './lifecycle.mjs';
 
@@ -408,8 +408,10 @@ describe('temp files, the token stop, reruns and the finish order', () => {
     assert.ok(body && !existsSync(body), body);
     let finish = '';
     const m = harness({ answers: [['gh pr comment', (cmd) => { finish = cmd.match(/--body-file (\S+)/)[1]; return { code: 1, stderr: 'boom' }; }]] });
-    assert.equal(step(['merge', '--pr', '141'], m.io).ok, false);
+    const failed = step(['merge', '--pr', '141'], m.io);
+    assert.equal(failed.ok, false);
     assert.ok(finish && !existsSync(finish), finish);
+    rmSync(dirname(failed.comment), { recursive: true, force: true });
   });
 
   it('keeps the finish comment and names the command that posts it when the comment fails', () => {
@@ -418,9 +420,9 @@ describe('temp files, the token stop, reruns and the finish order', () => {
     const result = step(['merge', '--pr', '141'], h.io);
     assert.equal(result.ok, false);
     assert.match(readFileSync(result.comment, 'utf8'), /finish · ST-696 · QA → Done/);
-    assert.equal(result.then, `gh pr comment 141 --body-file ${result.comment} && rm -f ${join(featureDir, 'handoff.md')}`);
+    assert.equal(result.then, `gh pr comment 141 --body-file ${result.comment} && rm -f ${join(featureDir, 'handoff.md')} && rm -rf ${dirname(result.comment)}`);
     assert.ok(existsSync(join(featureDir, 'handoff.md')));
-    rmSync(result.comment, { force: true });
+    rmSync(dirname(result.comment), { recursive: true, force: true });
   });
 
   it('ready takes the commit ST from the PR title', () => {
