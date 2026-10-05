@@ -37,7 +37,10 @@ function specFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
     if (entry.isDirectory())
-      return ['node_modules', 'test-output'].includes(entry.name)
+      // Playwright projects run against the whole stack and have no unit or
+      // integration suite to split.
+      return ['node_modules', 'test-output'].includes(entry.name) ||
+        entry.name.endsWith('-e2e')
         ? []
         : specFiles(path);
     return /\.spec\.ts$/.test(entry.name) ? [path] : [];
