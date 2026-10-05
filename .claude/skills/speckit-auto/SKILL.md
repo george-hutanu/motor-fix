@@ -82,7 +82,7 @@ Run these before phase 1, in one batch:
   run auto on a machine that is also being used.
 - `git rev-parse --abbrev-ref HEAD` and `git rev-parse HEAD` — record the
   starting branch and commit.
-- Read `.specify/memory/constitution.md` (v1.3.0 — its Enforcement section
+- Read `.specify/memory/constitution.md` (v1.7.0 — its Enforcement section
   lists the gates that will fire at you).
 - `sh scripts/heavy.sh sh -c 'npm run typecheck && npm run lint && npm run test'`
   — the repo MUST start green. Through Nx, whose cache every worktree shares

@@ -145,5 +145,22 @@
     "expect": {
       "exit": 0
     }
+  },
+  {
+    "id": "merge-gate-refuses-while-a-green-check-is-queued-again",
+    "hook": "pre:bash:merge-gate",
+    "why": "gh dates a run that has not started 0001-01-01; read as the oldest run, a queued re-run of a green check let the merge through on the old result",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"workflowName\":\"CI\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\",\"startedAt\":\"2026-10-05T07:00:00Z\"},{\"__typename\":\"CheckRun\",\"workflowName\":\"CI\",\"name\":\"Unit tests\",\"status\":\"QUEUED\",\"conclusion\":null,\"startedAt\":\"0001-01-01T00:00:00Z\"},{\"__typename\":\"CheckRun\",\"workflowName\":\"CI\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\",\"startedAt\":\"2026-10-05T07:00:00Z\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "still running"
+    }
   }
 ]
