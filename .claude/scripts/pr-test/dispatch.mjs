@@ -69,12 +69,13 @@ export function dispatchCommand({ ref, inputs }) {
 /** The run this dispatch started: its name carries the nonce (`run-name` in pr-qa.yml). */
 export const findRun = (runs, nonce) => runs.find((r) => String(r.displayTitle ?? "").includes(nonce)) ?? null;
 
-/** Remove the last lap's evidence from --out, so a run that uploads nothing leaves no report to misread. */
-export function clearPrevious(out) {
-  for (const f of ["report.json", "report.md", "ci-run.json", "shots", "logs"]) rmSync(join(out, f), { recursive: true, force: true });
-}
-
 const STAGING_PREFIX = ".download-";
+
+/** Remove the last lap's evidence and any download folder an interrupted lap left, so a run that uploads nothing leaves no report to misread. */
+export function clearPrevious(out) {
+  const leftovers = readdirSync(out).filter((name) => name.startsWith(STAGING_PREFIX));
+  for (const f of ["report.json", "report.md", "ci-run.json", "shots", "logs", ...leftovers]) rmSync(join(out, f), { recursive: true, force: true });
+}
 
 /** A fresh, empty folder inside --out for one download: `gh run download` refuses to overwrite files an earlier run left. */
 export const stagingDir = (out) => mkdtempSync(join(out, STAGING_PREFIX));

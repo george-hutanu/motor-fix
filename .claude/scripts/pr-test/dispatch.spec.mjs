@@ -142,5 +142,18 @@ describe('dispatch: a lap downloads into a fresh folder, so files from an earlie
     const elsewhere = mkdtempSync(join(tmpdir(), 'dispatch-spec-'));
     assert.throws(() => placeDownload(elsewhere, out), /not a download folder/);
     assert.equal(existsSync(elsewhere), true);
+    const unprefixed = mkdtempSync(join(out, 'x-'));
+    assert.throws(() => placeDownload(unprefixed, out), /not a download folder/);
+    assert.equal(existsSync(unprefixed), true);
+  });
+
+  it('clears a download folder an interrupted lap left behind', () => {
+    const out = mkdtempSync(join(tmpdir(), 'dispatch-spec-'));
+    const left = stagingDir(out);
+    writeFileSync(join(left, 'observations.json'), 'old');
+    writeFileSync(join(out, 'notes.txt'), 'mine');
+    clearPrevious(out);
+    assert.equal(existsSync(left), false);
+    assert.equal(existsSync(join(out, 'notes.txt')), true);
   });
 });
