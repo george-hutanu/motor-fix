@@ -1,0 +1,9 @@
+# Tasks - 698-tester-packet
+
+- [x] T001 Merge #140 (`origin/688-qa-wait-handoff`, or `origin/main` once it lands) before any `.claude/` change.
+- [x] T002 Red: `.claude/scripts/pr-test/packet.spec.mjs` covers FR-001 (header, file lines with cap and totals, verdict, blocker/high findings in full, medium/low by title), FR-002 (FR ids on `tasks.md` lines naming a changed path, ranges expanded, text from `spec.md`, missing feature dir said), FR-003 (previous findings new/persisting/resolved, source `pr-review/lap<n>/report.json` else the baseline report), FR-004 (baseline order, skip same head, same run, cancelled, later, no report), FR-005 (changed/new/removed/unchanged by hash; to look at = changed + new + cited; all when no baseline), FR-006 (exit 2 without report.json; gh failure marks the section unavailable, exit 0).
+- [x] T003 Red: `.claude/scripts/pr-test/packet-wiring.spec.mjs` covers FR-007 (pr-tester.md builds and reads the packet before the report, the screenshots, the spec or the diff; opens only named screenshots; keeps `model: opus`, the constitution review, the verdict rules and `post.mjs`), FR-008 (the skill's Test step names the packet), FR-009 (`merge-gate.mjs` and `carry.mjs` never read the packet; their equality with `origin/main` is checked by `git diff` in T006, since a test pinned to `origin/main` would break on the next legitimate change).
+- [x] T004 Green: `.claude/scripts/pr-test/packet.mjs` (FR-001–FR-006).
+- [x] T005 Green: `.claude/agents/pr-tester.md` and `.claude/skills/speckit-pr-test/SKILL.md` (FR-007, FR-008).
+- [x] T006 Verify: `npm run test:harness`, `node .claude/scripts/harness-eval.mjs --check`, `node .claude/scripts/doctor.mjs`; FR-009 byte-equal.
+- [x] T007 Measure (SC-001, SC-002): run the packet on PR #137's run 37326786521, then a dry-run pr-tester with the new instructions on it; record tokens before and after and both verdicts in spec.md's Baseline and auto-run.md.

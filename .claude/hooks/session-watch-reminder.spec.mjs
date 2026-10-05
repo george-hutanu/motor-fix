@@ -6,10 +6,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DEFAULT_TIMEOUT_MS, activeCount, readWatch, reminder, runReminder } from './session-watch-reminder.mjs';
 
-// A resumed or compacted session has lost its CronCreate schedule, and a hook
-// cannot see or create one. So the session-start reminder only says, once, that
-// parallel work is running and the watch may need scheduling — and says
-// nothing at all otherwise, in a worktree session, or when the watcher fails.
+// A resumed or compacted session has lost its background watch wait, and a hook
+// cannot start one. So the session-start reminder only says, once, that
+// parallel work is running and the wait may need arming — and says nothing at
+// all otherwise, in a worktree session, while a wait is armed, or when the
+// watcher fails.
 
 const HOOK = new URL('./session-watch-reminder.mjs', import.meta.url).pathname;
 const row = (over = {}) => ({ main: false, verdict: 'ok', ...over });
@@ -33,11 +34,9 @@ describe('watch reminder — the line', () => {
     assert.equal(reminder(1), '');
   });
 
-  it('names the count and the check from two on', () => {
-    assert.equal(
-      reminder(3),
-      '3 worktrees active: if no /speckit-watch is scheduled (CronList), schedule it (see speckit-watch).',
-    );
+  it('names the count and the wait to arm from two on, and no cron', () => {
+    assert.equal(reminder(3), '3 worktrees active: if no watch wait is armed, arm one (see speckit-watch, "Keeping it scheduled").');
+    assert.doesNotMatch(reminder(3), /CronList|CronCreate|\* \* \*/);
   });
 });
 
@@ -62,7 +61,19 @@ describe('watch reminder — where it speaks', () => {
   afterEach(() => rmSync(scratch, { recursive: true, force: true }));
 
   it('reminds the main checkout when two worktrees are active', () => {
-    assert.match(runReminder({ repo, watch: busy }), /^2 worktrees active: /);
+    assert.match(runReminder({ repo, watch: busy, armed: () => null }), /^2 worktrees active: /);
+  });
+
+  it('stays silent while a live wait holds the record, without running the watcher', () => {
+    let ran = false;
+    assert.equal(runReminder({ repo, watch: () => ((ran = true), busy()), armed: () => 4242 }), '');
+    assert.equal(ran, false);
+  });
+
+  it('reads the wait record in the repository by default', () => {
+    const common = git(repo, 'rev-parse', '--path-format=absolute', '--git-common-dir').trim();
+    writeFileSync(join(common, 'speckit-watch-wait.pid'), `${process.pid}\n`);
+    assert.match(runReminder({ repo, watch: busy }), /^2 worktrees active: /, 'this test runner is not a wait, so the record is stale');
   });
 
   it('stays silent in a session isolated in a worktree, without running the watcher', () => {

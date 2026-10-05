@@ -11,10 +11,13 @@ features:
   - 450-pr-tester-env-gaps
   - 600-merge-gate-symlink
   - 623-precompact-flush
+  - 659-merge-gate-carry-deadline
   - 673-story-tail-agents
   - 688-qa-wait-handoff
+  - 698-tester-packet
   - 704-auto-phase-model-pins
   - 696-lifecycle-script
+  - 703-idle-watch-gate
 ---
 
 # Capability: Platform
@@ -247,9 +250,9 @@ _From 464-agent-watch._
 
 _From 464-agent-watch._
 
-### 464-FR-011 — The `/speckit-watch` skill MUST run the command with `--fix`, claim each item in the dispatch plan, and start one subagent per item that works in that worktree with that fix's instructions, dispatching only from a session on the main checkout (a worktree-isolated session reports the plan instead); a pass with nothing to fix MUST write and dispatch nothing; the skill MUST say how the orchestrating session keeps it scheduled (CronList first, never a second job; every 15 minutes once two or more tasks or worktrees are active; never from a worktree session).
+### 703-FR-009 — The `/speckit-watch` skill MUST run the command with `--fix`, claim each item in the dispatch plan, and start one subagent per item that works in that worktree with that fix's instructions, dispatching only from a session on the main checkout (a worktree-isolated session reports the plan instead); a pass with nothing to fix MUST write and dispatch nothing; the skill MUST say how the orchestrating session keeps it scheduled (one background `watch.mjs --wait`, never a second; armed once two or more tasks or worktrees are active; never from a worktree session).
 
-_From 464-agent-watch._
+_From 703-idle-watch-gate._
 
 ### 464-FR-012 — `scripts/heavy.sh` MUST default to 4 slots, and AGENTS.md MUST state that up to 4 PR-tester (QA) runs may run at the same time and name the watcher and how to repeat it.
 
@@ -343,6 +346,26 @@ _From 623-precompact-flush._
 
 _From 623-precompact-flush._
 
+### 659-FR-001 — The merge gate MUST refuse the merge (exit 2) when its GitHub reads do not finish within an overall deadline, and the refusal MUST say so.
+
+_From 659-merge-gate-carry-deadline._
+
+### 659-FR-002 — The merge gate MUST refuse the merge (exit 2) when reading the PR fails.
+
+_From 659-merge-gate-carry-deadline._
+
+### 659-FR-003 — The overall deadline MUST be shorter than `run-hook.mjs`'s limit for the gate, which MUST be shorter than the hook timeout declared for it in `.claude/settings.json`.
+
+_From 659-merge-gate-carry-deadline._
+
+### 659-FR-004 — `run-hook.mjs` MUST stop a fail-closed gate that outlives the gate's registered limit and refuse (exit 2); a fail-closed gate killed by a signal MUST refuse, not pass.
+
+_From 659-merge-gate-carry-deadline._
+
+### 659-FR-005 — Verifying a carry MUST read the statuses of the named commit, the commits between and head concurrently once the compare is known, and MUST read head's statuses at most once per gate run.
+
+_From 659-merge-gate-carry-deadline._
+
 ### 673-FR-001 — `.claude/agents/task-runner.md` MUST pin `model: opus`, MUST NOT carry a `tools:` allowlist, and its `disallowedTools` MUST deny the artifact comment and data, browser, Chrome, simulator, visualize and session-management tools while denying none of Bash, Read, Edit, Write, Grep, Glob, Skill, Agent, ToolSearch, Monitor, TaskStop, EnterWorktree, PushNotification, Artifact (the design check's mock read), the WebStorm inspections (harden) or any Notion tool.
 
 _From 673-story-tail-agents._
@@ -415,6 +438,42 @@ _From 688-qa-wait-handoff._
 
 _From 688-qa-wait-handoff._
 
+### 698-FR-001 — A packet script under `.claude/scripts/pr-test/` MUST write `packet.md` into a given artifact folder holding `report.json`, containing: the PR number, title, branch, head and base; one line per changed file with additions and deletions (from `gh pr view --json files`), capped at 100 files with the rest counted, and exact totals; the report's verdict, summary and notes; and every blocker and high finding with severity, title, where and evidence, plus the medium and low findings by title.
+
+_From 698-tester-packet._
+
+### 698-FR-002 — The packet MUST list the FR ids touched by the change: the FR ids on the `tasks.md` lines that name a changed file's path, each with its text from `spec.md`, both read at the PR's head through the GitHub contents API; a line names a file when it contains the file's repo-relative path, and an id range `FR-a–FR-b` counts as every id in it; when the feature directory or either file is missing, or no task names a changed file, the section says which.
+
+_From 698-tester-packet._
+
+### 698-FR-003 — The packet MUST include the previous lap's findings, each marked new, persisting or resolved against the current report by the key `mergeFindings` already uses (`kind|title|route`). The source is the newest `specs/<feature>/pr-review/lap<n>/report.json` at the PR's head (a failing lap's report, committed with its fix, holding the tester's findings `post.mjs` folded in); when there is none, the baseline run's own `report.json` (the workflow's findings only, which the packet says) if that run tested this same PR; another PR's run never gives the previous lap.
+
+_From 698-tester-packet._
+
+### 698-FR-004 — The script MUST choose the baseline run as: an explicit baseline (a run id or a folder) when given; otherwise the newest finished PR QA run of the same PR at a different head than the one under review; otherwise the newest finished PR QA run whose tested commit is an ancestor of the PR's base branch; otherwise none. A finished run is one with conclusion `success` or `failure`, created before the run under review, whose artifact downloads with a `report.json`; any other candidate is skipped. It MUST name the chosen run (id, PR, commit, lap) or the reason there is none.
+
+_From 698-tester-packet._
+
+### 698-FR-005 — The packet MUST compare the screenshots of the run with the baseline's by content hash and list, per file name, the changed, new and removed screenshots, with the unchanged ones counted; it MUST name, as the screenshots to look at, the changed and new ones plus every screenshot a current finding cites, and every screenshot when there is no baseline; when none of the PR's changed files is a web file (the prefixes `findings.mjs`'s `touchesWeb` uses), it MUST name only the cited ones. Only image files count as screenshots.
+
+_From 698-tester-packet._
+
+### 698-FR-006 — The script MUST exit 2, writing nothing, when the folder has no `report.json`; a failing `gh` call or baseline download MUST NOT fail it: the affected section is marked unavailable with the reason and the script exits 0.
+
+_From 698-tester-packet._
+
+### 698-FR-007 — `.claude/agents/pr-tester.md` MUST tell the tester to build the packet right after the run's artifact is in its folder and, in the review, to read it before the report, the screenshots, the spec or the diff (the spec's first read, to list the flows, comes before the run); to open only the screenshots the packet names; and MUST keep `model: opus`, the full constitution review, the verdict rules and `post.mjs` posting unchanged.
+
+_From 698-tester-packet._
+
+### 698-FR-008 — `.claude/skills/speckit-pr-test/SKILL.md` MUST describe the packet step in its Test step.
+
+_From 698-tester-packet._
+
+### 698-FR-009 — The merge gate, its eval cases and `carry.mjs` MUST keep their behaviour: `merge-gate.mjs`, `.claude/evals/cases/merge-gate.json` and `carry.mjs` are not changed by this feature.
+
+_From 698-tester-packet._
+
 ### 704-FR-001 — Under `/speckit-auto`, each of phases 2 (specify), 5 (plan), 6 (checklist) and 7 (tasks) MUST run as its own dispatched agent with its `model` set to the pin in that phase's skill frontmatter (a fixed list: those are the phase 2–8 skills whose pin differs from Opus).
 
 _From 704-auto-phase-model-pins._
@@ -486,6 +545,37 @@ _From 696-lifecycle-script._
 ### 696-FR-009 — `speckit-auto/SKILL.md` (the lines listing the open, ready and merge commands) and `speckit-git-commit/SKILL.md` (the first-commit recipe) MUST name one `lifecycle.mjs` call per step instead of the recipe.
 
 _From 696-lifecycle-script._
+### 703-FR-001 — `watch.mjs --gate` MUST run the same scan as the table, read-only (no fix applied, no claim written), and exit 0 with no output on stdout or stderr when the pass would do nothing: an empty dispatch plan and nothing the no-agent fixes would act on.
+
+_From 703-idle-watch-gate._
+
+### 703-FR-002 — When the pass would do something, `--gate` MUST exit 2 and print one line per item: each dispatch-plan entry and each no-agent action (dead holder, worktree removal, review carry, orphan lock, prune), naming the fix and the worktree or path.
+
+_From 703-idle-watch-gate._
+
+### 703-FR-003 — The gate MUST fire exactly when `--fix --json` on the same state would produce a non-empty plan or a non-empty action list; its verdict uses the table's detection unchanged and accepts the same `--stale` thresholds.
+
+_From 703-idle-watch-gate._
+
+### 703-FR-004 — An error MUST exit 1: a usage error, no git repository (no rows), or a scan that throws; `--gate` combined with `--fix`, `--json` or `--wait` MUST be a usage error. An unreachable `gh` is not an error: it leaves PRs unknown, the full pass dispatches nothing for them, and the gate is silent for them too.
+
+_From 703-idle-watch-gate._
+
+### 703-FR-005 — `watch.mjs --wait` MUST sleep its interval (default 15 minutes, `--every <minutes>`), then run the gate, and repeat while another full interval fits in its limit (default 110 minutes, `--for <minutes>`); it ends when the gate fires (exit 2 with the gate's lines), errors (exit 1), or no further interval fits, when it MUST exit 0 printing `watch: idle for <n> min; re-arm the wait`. It never sleeps past its limit. `--wait` accepts only `--every`, `--for` and `--stale`; a limit shorter than the interval, a non-positive number, or any other flag is a usage error.
+
+_From 703-idle-watch-gate._
+
+### 703-FR-006 — Only one wait MUST hold the repository at a time: a wait records its process in the git common directory, a second wait while that process lives MUST exit 0 at once printing `watch: a wait is already armed (pid <pid>)`, and a record whose process is gone (no such process, or its command line is not a `watch.mjs --wait`) MUST be taken over; the wait MUST remove its own record when it ends.
+
+_From 703-idle-watch-gate._
+
+### 703-FR-007 — `speckit-watch/SKILL.md` MUST describe arming the wait as a background command within the background limit, what each ending means keyed on the printed line, not the exit code alone (exit 2: run a full pass, then re-arm; `re-arm the wait`: re-arm; `already armed`: nothing; exit 1: report the error), that an existing `/speckit-watch` cron job is deleted once the wait is armed, and that a pass with nothing to do ends in one line; it MUST NOT instruct `CronCreate` for the watch.
+
+_From 703-idle-watch-gate._
+
+### 703-FR-008 — The AGENTS.md watch bullet MUST describe the wait instead of the cron string, and the session-start reminder MUST tell the session to arm the watch wait, naming neither `CronList` nor a cron string, and MUST print nothing when a live wait already holds the record.
+
+_From 703-idle-watch-gate._
 
 ## Retired
 
@@ -495,3 +585,5 @@ _From 696-lifecycle-script._
 - `421-FR-029` — superseded by `516-FR-002` (2026-10-04)
 - `421-FR-030` — superseded by `516-FR-003` (2026-10-04)
 - `421-FR-034` — superseded by `516-FR-004` (2026-10-04)
+
+- `464-FR-011` — superseded by `703-FR-009` (2026-10-05)

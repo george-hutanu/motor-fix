@@ -1,6 +1,6 @@
 ---
 name: "speckit-watch"
-description: "Watch every worktree on this machine and get stale work moving again: one board of what each agent is doing (feature, phase, holder, last activity, PR), the safe fixes applied (dead locks released, merged clean worktrees removed), and one background agent dispatched per stale item to resume it, take a handed-off PR to merge as its tail, re-run QA, fix red CI or merge, within the caps the watcher applies. The orchestrating session schedules it every 15 minutes once two or more tasks run at once."
+description: "Watch every worktree on this machine and get stale work moving again: one board of what each agent is doing (feature, phase, holder, last activity, PR), the safe fixes applied (dead locks released, merged clean worktrees removed), and one background agent dispatched per stale item to resume it, take a handed-off PR to merge as its tail, re-run QA, fix red CI or merge, within the caps the watcher applies. The orchestrating session keeps one background `watch.mjs --wait` armed once two or more tasks run at once; it wakes the model only when the gate finds something to do."
 argument-hint: "[--stale <phase>=<minutes>,…]"
 compatibility: "Requires git, gh (george-hutanu via GH_TOKEN), Node 24"
 metadata:
@@ -26,6 +26,10 @@ fix, caps) live only in `.claude/scripts/watch.mjs`; this file never restates
 or overrides them.
 
 ## One pass
+
+A pass runs when the wait (below) ends with exit 2, when the owner asks, or
+once right after the wait is first armed. The wait has already run the gate,
+which uses the same scan, so a pass started by it always has something to do.
 
 1. Run the watcher, from any checkout of the repository:
 
@@ -119,23 +123,41 @@ moved by then, it is stale again and gets a new agent.
 
 ## Keeping it scheduled
 
-The orchestrating session (the one on the main checkout that dispatches
-tasks) schedules the watch as soon as two or more tasks or worktrees are
-active at once:
+An idle check costs no model turn: `watch.mjs --gate` runs the same scan as a
+pass and exits 0 with no output when the pass would do nothing, 2 with one line
+per dispatch or fix when it would, and 1 on an error. `watch.mjs --wait` runs
+that gate every 15 minutes outside the model and returns only when it fires,
+fails, or reaches its 110-minute limit.
 
-1. `CronList`. If a job already runs `/speckit-watch`, stop: never a second.
-2. Otherwise `CronCreate` with `cron: "4,19,34,49 * * * *"` (every 15 minutes,
-   off the round minutes), `prompt: "/speckit-watch"`, `recurring: true`.
+The orchestrating session (the one on the main checkout that dispatches
+tasks) arms the wait as soon as two or more tasks or worktrees are active at
+once:
+
+1. Arm it: a Bash call with `run_in_background: true` and `timeout: 7200000`
+   (the background limit; the wait ends itself first), command
+   `node .claude/scripts/watch.mjs --wait`. One wait per repository, never a
+   second: a second one ends at once with `already armed`.
+2. Once it is armed, delete any `/speckit-watch` cron job left from the old
+   schedule (`CronList`, then `CronDelete` its id).
 3. Run one pass right away.
 
-A CronCreate job lives only in this session and expires after 7 days, so a
-resumed or compacted session has lost it. The SessionStart hook
-`session:start:watch-reminder` says so on the main checkout when two or more
-worktrees are active (`N worktrees active: …`); answer it with the steps
-above. A session isolated in a worktree never schedules the watch.
+When the wait's background task completes, read its last line:
 
-A pass with nothing to do writes nothing and dispatches nothing; it costs one
-`gh` call and a few read-only `git` calls per worktree.
+| Ending | Means | Do |
+| --- | --- | --- |
+| exit 2, one line per item | the gate fired | run a full pass, then re-arm |
+| exit 0, `watch: idle for <n> min; re-arm the wait` | nothing happened within the limit | re-arm, nothing else |
+| exit 0, `watch: a wait is already armed (pid <pid>)` | another wait watches | nothing |
+| exit 1 | an error | report it in one line; re-arm once it is fixed |
+
+The wait belongs to its session, so a resumed or compacted session may have
+lost it. The SessionStart hook `session:start:watch-reminder` says so on the
+main checkout when two or more worktrees are active and no live wait holds the
+record (`N worktrees active: …`); answer it with the steps above. A session
+isolated in a worktree never arms the wait.
+
+A pass with nothing to do writes nothing and dispatches nothing; under the
+wait it never starts, since the gate stays silent.
 
 ## Limits
 
