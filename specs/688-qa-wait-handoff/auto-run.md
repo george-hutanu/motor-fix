@@ -20,3 +20,15 @@
 
 ## clarify
 - spec-challenger: 8 findings; all answered with its recommendation except #1 (owner-run session holds the wait, the agent still ends at hand-off), #5 (blocks `verification-failed`, an existing condition, rather than a new one) and #6 (judged by reading the flows file, no new report field). Recorded under Clarifications.
+
+## plan
+- plan.md: new pr-test/qa-run.mjs (shared line writer/parser), dispatch --no-wait/--run, watch waiting verdict via runOf dep; gates untouched.
+
+## checklist
+- checklists/requirements.md: 16/16 checked.
+
+## tasks
+- tasks.md: 16 tasks, tests before each script and prose change.
+
+## analyze
+- artifact-lint --check: 0 errors after adding the Spec Delta (platform, Adds FR-001-FR-012); capabilities validate clean. Every FR maps to a task; no CRITICAL.

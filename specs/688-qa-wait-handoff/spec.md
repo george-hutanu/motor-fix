@@ -211,3 +211,9 @@ still exits 1 at the fifth lap.
   is not an autonomous decision).
 - PR #138 (ST-673) rewrites the tail dispatch paragraphs; this change leaves
   them and the speckit-watch step-4 prompt as they are.
+
+## Spec Delta
+
+### Capability: `platform`
+
+- **Adds**: FR-001-FR-012
