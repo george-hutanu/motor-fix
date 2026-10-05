@@ -270,6 +270,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: docker compose up -d --wait postgres redis minio minio-setup
+      # --wait returns once the one-shot setup is running, not once it is done.
+      - run: docker compose wait minio-setup
       - name: The bucket exists
         run: >-
           docker compose run --rm --entrypoint sh minio-setup -c
