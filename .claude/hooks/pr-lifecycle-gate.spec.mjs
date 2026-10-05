@@ -72,7 +72,8 @@ describe('PR lifecycle gate — what it refuses', () => {
 
   it('lets the story agent end on a ready PR it handed off: the tail agent tests and merges it', () => {
     assert.equal(decide(task({ handedOff: true, pr: ready({ statusCheckRollup: [{ conclusion: 'SUCCESS' }] }) })), null);
-    assert.equal(decide(task({ handedOff: true, pr: ready() })), null);
+    // Green and passed by the tester, it still has to merge: a tail that stopped short is caught.
+    assert.match(decide(task({ handedOff: true, pr: ready() })), /gh pr merge 6/);
     // The hand-off covers only the tail's steps: labels are still the story agent's.
     assert.match(decide(task({ handedOff: true, pr: ready({ labels: [{ name: 'feature' }] }) })), /QA/);
   });

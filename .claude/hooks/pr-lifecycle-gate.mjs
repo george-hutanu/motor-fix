@@ -19,9 +19,10 @@
 // of origin/main, a draft PR (the work is not done yet), a PR whose checks are
 // pending, failing or missing (fix or wait, then merge), a merged or closed PR,
 // an `agent-review` failure (the fix loop owns it), a missing agent review
-// while run-state says the run is blocked (Blocked is how a run stops), and a
-// ready PR the story agent handed off (`specs/<feature>/handoff.md`): a fresh
-// tail agent tests and merges it, so the story agent ends at ready.
+// while run-state says the run is blocked (Blocked is how a run stops) or the
+// story agent handed the PR off (`specs/<feature>/handoff.md`): a fresh tail
+// agent tests it, so the story agent ends at ready. A handed-off PR that
+// passed QA and every check is still refused until it is merged.
 //
 // A PR opened by Dependabot (its author, read from gh, never its title or
 // branch) with only Dependabot's commits needs no agent review: green on every
@@ -125,11 +126,11 @@ export function decide({ branch, ahead, unpushed, pr, prLinked = true, blocked =
     if (/^\w+(\([^)]*\))?!:/.test(pr.title ?? "") && !has("breaking"))
       return `PR #${pr.number} is a breaking change (! in its title) without the "breaking" label. Add it (gh pr edit ${pr.number} --add-label "breaking").`;
   }
-  if (pr.state !== "OPEN" || pr.isDraft || pr.mergeable !== "MERGEABLE" || handedOff) return null;
+  if (pr.state !== "OPEN" || pr.isDraft || pr.mergeable !== "MERGEABLE") return null;
   const checks = pr.statusCheckRollup ?? [];
   if (!allGreen(checks.filter((c) => !isAgentReview(c)))) return null;
   if (!checks.some(isAgentReview) && !isDependabot(pr))
-    return blocked
+    return blocked || handedOff
       ? null
       : `PR #${pr.number} is ready and its checks passed, but its head commit has no agent-review status. Run the PR tester (/speckit-pr-test ${pr.number}), fix its blocking findings, and merge only on an agent-review success.`;
   if (hasAgentReview(checks) || !checks.some(isAgentReview))

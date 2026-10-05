@@ -566,8 +566,8 @@ and QA lap is where most of a story's cost went.
    write the Final Report, and reply with `NEXT: tail #<n>`. Start no CI wait
    and no PR tester run here: the tail starts both at once, so QA still runs
    beside CI. Run by the owner in their own session rather than dispatched,
-   nobody reads that NEXT: dispatch the tail yourself (below) before the
-   report, so the merge never waits on the owner.
+   nobody reads that NEXT: claim the worktree and dispatch the tail yourself
+   (below) before the report, so the merge never waits on the owner.
 
 A run that ends on a Hard Stop before the hand-off does none of this but the
 Blocked write: the PR stays a draft.
@@ -575,8 +575,8 @@ Blocked write: the PR stays a draft.
 ## The tail
 
 A fresh agent finishes the lifecycle from the hand-off note alone. The
-orchestrating session dispatches it on `NEXT: tail #<n>`, and `/speckit-watch`
-on its `tail` fix, each after `node .claude/scripts/watch.mjs claim <worktree> tail`
+orchestrating session dispatches it on `NEXT: tail #<n>` (an owner-run story
+dispatches its own), and `/speckit-watch` on its `tail` fix, each after `node .claude/scripts/watch.mjs claim <worktree> tail`
 so the other does not send a second one: `subagent_type: general-purpose`, `run_in_background: true`,
 the default model (it implements QA fixes, so it stays on Opus), and a prompt
 holding only the PR number, the worktree and the note's path:
