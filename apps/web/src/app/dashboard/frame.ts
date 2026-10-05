@@ -191,8 +191,8 @@ export class Frame implements OnInit {
         if (message.kind === 'account.email_confirmed') {
           void this.session.reload();
         }
-        // Signed out on all devices, from this one or another.
-        if (message.kind === 'session.revoked') void this.signOut();
+        // Every session ended (all devices, a password reset), here or elsewhere.
+        if (message.kind === 'session.revoked') void this.revoked();
       });
     // Signed out in another tab of this browser.
     this.session.ended
@@ -225,6 +225,12 @@ export class Frame implements OnInit {
   protected async signOut() {
     this.live.close();
     await this.session.signOut();
+    await this.router.navigateByUrl('/');
+  }
+
+  private async revoked() {
+    this.live.close();
+    this.session.revoked();
     await this.router.navigateByUrl('/');
   }
 

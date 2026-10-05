@@ -54,7 +54,7 @@ function presented(req: Request): string | undefined {
   return undefined;
 }
 
-function keep(res: Response, issued: Issued) {
+export function keep(res: Response, issued: Issued) {
   if (!issued.refreshToken) return;
   res.cookie(COOKIE, issued.refreshToken, {
     ...FLAGS,

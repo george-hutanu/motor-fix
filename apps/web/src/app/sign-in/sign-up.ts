@@ -28,7 +28,7 @@ import { Session } from '../dashboard/session';
 // Between min and max characters, counted in code points as the server counts
 // them, so an emoji is one; `trim` checks the value as it will be stored. The
 // messages are the shared ones for these validators.
-const characters =
+export const characters =
   (min: number, max: number, trim = false) =>
   (control: AbstractControl): ValidationErrors | null => {
     const value = String(control.value ?? '');

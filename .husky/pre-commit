@@ -18,7 +18,10 @@ sh .husky/identity.sh check
 # unstaged changes included, against its merge base with origin/main: the
 # same scope PR CI runs, and the shared Nx cache (heavy.sh) answers the rest.
 # release.yml still runs every project before anything reaches production.
-#
+if ! git rev-parse --verify --quiet origin/main >/dev/null; then
+  echo "pre-commit: origin/main is missing, so the affected projects cannot be worked out. Run: git fetch origin main" >&2
+  exit 1
+fi
 # When an affected project has integration specs, scripts/test-services.ts
 # starts this worktree's own PostgreSQL and Redis, migrates them and points
 # DATABASE_URL and REDIS_URL at them; when it cannot, the commit stops.

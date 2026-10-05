@@ -54,3 +54,30 @@ export const PASSWORD_RESET: Template = {
   example,
   values,
 };
+
+// After a reset: the button opens MotorFix, where the holder can reset again.
+export const PASSWORD_CHANGED: Template = {
+  audience: 'any',
+  bell: {
+    en: 'Your password was changed.',
+    ro: 'Parola ta a fost schimbată.',
+  },
+  email: {
+    en: {
+      button: { label: 'Sign in', link: 'link' },
+      lines: ['The password of your MotorFix account was changed.'],
+      reason:
+        'You get this e-mail because the password of this MotorFix account was changed. If it was not you, reset your password now from the sign-in screen.',
+      subject: 'Your password was changed',
+    },
+    ro: {
+      button: { label: 'Intră în cont', link: 'link' },
+      lines: ['Parola contului tău MotorFix a fost schimbată.'],
+      reason:
+        'Primești acest e-mail pentru că parola acestui cont MotorFix a fost schimbată. Dacă nu ai fost tu, resetează parola acum din ecranul de autentificare.',
+      subject: 'Parola ta a fost schimbată',
+    },
+  },
+  example,
+  values,
+};

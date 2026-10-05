@@ -12,8 +12,10 @@ const isSwitch = (answer: Answer): answer is AuthSwitch =>
 
 // "Autentificare" and "Cont": a signed-in person goes to their dashboard;
 // anyone else gets the sign-in dialog over the screen they are on, and can
-// switch to sign-up and back, the typed e-mail going along. An API call
-// refused for want of a session waits on the same dialog through gate().
+// switch to sign-up or the password reset and back, the typed e-mail going
+// along. An API call refused for want of a session waits on the same dialog
+// through gate(); a reset link opens the new-password task through
+// newPassword().
 @Injectable({ providedIn: 'root' })
 export class SignInDialog {
   private readonly overlays = inject(Overlays);
@@ -40,6 +42,23 @@ export class SignInDialog {
     return this.dialog(true);
   }
 
+  // From the reset e-mail's link: true once the new password signed the
+  // person in, and the landing of their role is open.
+  async newPassword(token: string): Promise<boolean> {
+    const first = await this.overlays.open<
+      'signed-in' | AuthSwitch,
+      { token: string }
+    >(() => import('./new-password').then((m) => m.NewPassword), {
+      data: { token },
+      shape: 'dialog',
+      title: 'public.newPassword.title',
+    });
+    const signedIn = await this.laps(first, false);
+    const landing = signedIn ? this.session.current()?.landing : undefined;
+    if (landing) await this.router.navigateByUrl(landing);
+    return signedIn;
+  }
+
   private dialog(reason: boolean): Promise<boolean> {
     if (this.open) return this.open;
     const open = this.ask(reason).finally(() => {
@@ -50,17 +69,38 @@ export class SignInDialog {
   }
 
   private async ask(reason: boolean): Promise<boolean> {
-    let result = await this.signIn(reason ? { reason } : undefined);
-    // Each lap waits on a dialog; it ends when one closes signed in or cancelled.
+    return this.laps(
+      await this.signIn(reason ? { reason } : undefined),
+      reason,
+    );
+  }
+
+  // Each lap waits on a dialog; it ends when one closes signed in or cancelled.
+  private async laps(first: Answer, reason: boolean): Promise<boolean> {
+    let result = first;
     while (isSwitch(result)) {
       const data = { email: result.email, ...(reason && { reason }) };
-      result =
-        result.switchTo === 'sign-up'
-          ? await this.overlays.open<'signed-in' | AuthSwitch, typeof data>(
-              () => import('./sign-up').then((m) => m.SignUp),
-              { data, shape: 'dialog', title: 'public.signUp.title' },
-            )
-          : await this.signIn(data);
+      if (result.switchTo === 'sign-up') {
+        result = await this.overlays.open<
+          'signed-in' | AuthSwitch,
+          typeof data
+        >(() => import('./sign-up').then((m) => m.SignUp), {
+          data,
+          shape: 'dialog',
+          title: 'public.signUp.title',
+        });
+      } else if (result.switchTo === 'reset') {
+        result = await this.overlays.open<AuthSwitch, { email: string }>(
+          () => import('./password-reset').then((m) => m.PasswordReset),
+          {
+            data: { email: result.email },
+            shape: 'dialog',
+            title: 'public.passwordReset.title',
+          },
+        );
+      } else {
+        result = await this.signIn(data);
+      }
     }
     return result === 'signed-in' && this.session.current() !== null;
   }
