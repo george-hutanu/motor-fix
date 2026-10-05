@@ -77,10 +77,44 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\": 21, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"checks\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"StatusContext\", \"context\": \"agent-review\", \"state\": \"SUCCESS\"}]}"
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}"
     },
     "expect": {
       "exit": 0
+    }
+  },
+  {
+    "id": "merge-gate-refuses-agent-review-success-on-red-ci",
+    "hook": "pre:bash:merge-gate",
+    "why": "the PR tester runs beside CI, so its success says nothing about CI; a red check still blocks the merge",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"FAILURE\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "CI failed"
+    }
+  },
+  {
+    "id": "merge-gate-refuses-agent-review-success-while-ci-runs",
+    "hook": "pre:bash:merge-gate",
+    "why": "a merge before CI finishes is a merge CI never judged",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"IN_PROGRESS\",\"conclusion\":null},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "still running"
     }
   },
   {

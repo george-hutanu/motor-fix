@@ -29,6 +29,9 @@
 LOCK="${HEAVY_LOCK:-/tmp/motor-fix-heavy.lock}"
 SLOTS="${HEAVY_SLOTS:-4}"
 export NX_DAEMON=false NX_PARALLEL="${NX_PARALLEL:-2}" JEST_MAX_WORKERS="${JEST_MAX_WORKERS:-2}"
+# One Nx cache for every worktree on this machine, so a worktree reuses what
+# another already built or tested from the same inputs instead of starting cold.
+export NX_CACHE_DIRECTORY="${NX_CACHE_DIRECTORY:-$HOME/.cache/motor-fix/nx}"
 export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=3072}"
 
 [ $# -gt 0 ] || { echo "usage: heavy.sh <command...>" >&2; exit 64; }
