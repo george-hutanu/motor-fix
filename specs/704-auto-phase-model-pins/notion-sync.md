@@ -7,3 +7,4 @@
 - 2026-10-05 · pr · ST-697 · PR #144 https://github.com/george-hutanu/motor-fix/pull/144
 - 2026-10-05 · labels · PR #144 · planning (+tech debt, scope: harness, EP-1)
 - 2026-10-05 · implement · ST-697 story Status · Planning → Implementing; PR #144 label planning → in development
+- 2026-10-05 · qa · ST-697 story Status · Implementing → QA; PR #144 ready, label in development → QA
