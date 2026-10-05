@@ -86,6 +86,7 @@ export const EVENT_KINDS = [
   'media_export.ready',
   'member.removed',
   'message.sent',
+  'news.sent',
   'platform_rule.change_decided',
   'platform_rule.change_requested',
   'platform_rule.changed',
