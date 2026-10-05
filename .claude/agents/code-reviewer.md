@@ -24,7 +24,8 @@ handed:
   git, `npx jest`, and `node .claude/scripts/diff-audit.mjs` only — never
   modify anything)
 - every source and test file the diff touches, in full, plus its callers
-- `AGENTS.md` for the repo's known traps and the stack it is built on
+- the repo's known traps and the stack in AGENTS.md, already in your context
+  (never Read it again)
 - `.specify/memory/constitution.md`, Principle I first
 
 Run `node .claude/scripts/diff-audit.mjs` and fold its ERRORs in; do not
