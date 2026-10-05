@@ -23,11 +23,31 @@ cheaper. Anything that writes or judges business logic keeps its model.
 | 8 | Pre-commit runs `nx affected` typecheck and test from the merge base with `origin/main`, plus lint; speckit-auto preflight goes through Nx and the cache. Affected integration specs run against the worktree's own PostgreSQL and Redis, started and migrated by the hook (~15 s cold, ~3 s warm); `JEST_SUITE` is refused | 1–2 min per commit | – | Same scope as PR CI; `release.yml` still runs everything |
 | 9 | Local compose uses `imresamu/postgis:17-3.5` (multi-arch, same PostGIS) | High: no amd64 emulation, no `exec format error` | Fewer retry turns | Same database; CI keeps `postgis/postgis` |
 
+## Done since: agent replies and reads
+
+Measured from session transcripts: 97% of token cost is context (cache read
+58%, cache write 39%), output 3%; the median turn carries 106k tokens (p90
+169k). Task agents are 69% of spend, the PR tester 17%.
+
+| # | Change | Speed | Cost | Quality |
+|---|---|---|---|---|
+| 10 | One reply envelope (`STATUS`, `PR`, `NEXT`, `FILES`) for every agent and dispatched task agent, 25 lines at most, long reports in a named file (AGENTS.md "Agent replies", `agent-replies.spec.mjs`) | – | Every reply is re-read on each later turn of its caller | Same: `VERDICT:` lines and tables kept for their parsers |
+| 11 | Reads only what decides the next step: CI waits print the non-passing checks, failing jobs `--log-failed \| tail -n 80`, test runs their summary and failures | – | Less log in context | Same: every check still runs |
+| 12 | `notion-ready` and its read-only Notion fallback on Sonnet; watch dispatches that only move state on Sonnet | – | Medium | Implementation, reviewers and the PR tester keep their models |
+
+## Done since: the tail hand-off
+
+A story's agent reaches about a million input-token-equivalents by ready, and
+92 full-context cache rewrites (40% of cache writes) were mostly CI waits and
+QA laps re-read after a >5 min idle gap (74% of them, median 9 min).
+
+| # | Change | Speed | Cost | Quality |
+|---|---|---|---|---|
+| 13 | Split a story's agent at the hand-off: `/speckit-auto` ends at ready with `specs/<feature>/handoff.md` and `NEXT: tail #<n>`; a fresh tail agent (Opus) runs CI, QA laps, the merge and the finish; `/speckit-watch` has a `tail` fix for a handed-off PR nobody holds | Same | The tail re-reads a note, not the story's whole context, on every wait and lap | Same: every step and check of Constitution VII kept, the tail on the same model |
+| 14 | Finish logs in the story's own PR: records committed before ready, post-merge lines in a comment on the merged PR (`notion-ready.mjs check -` reads it) | One PR fewer per story | No `docs(specs)` PR, its CI and its QA lap per story | Same: the archive check still refuses a feature without the refresh |
+
 ## Left for later
 
-- Split a story's agent at the hand-off (a fresh agent for ready → CI → QA →
-  merge): roughly halves the context of the expensive tail. It changes how
-  speckit-auto ends its turn, so it gets its own PR.
 - A deferred-only commit (`deferred.md` URLs after `speckit-notion-sync debt`)
   forces one more full tester lap. A docs-only head could reuse the previous
   verdict; that is a merge-gate rule change, so its own PR.

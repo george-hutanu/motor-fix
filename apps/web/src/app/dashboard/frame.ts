@@ -92,7 +92,7 @@ const ROLES: readonly { role: Role; label: string }[] = [
       border-block: 1px solid var(--mf-amber-ink);
       color: var(--mf-text-secondary); font-size: var(--mf-size-small); overflow-wrap: anywhere;
     }
-    .live-status { margin: 0; padding: 0; color: var(--mf-text-secondary); font-size: var(--mf-size-small); }
+    .live-status { margin: var(--mf-space-2) 0 0; padding: 0; color: var(--mf-text-secondary); font-size: var(--mf-size-small); }
     @media (min-width: 768px) {
       :host { grid-template: 1fr / minmax(0, 16rem) minmax(0, 1fr); }
       aside nav { display: flex; }

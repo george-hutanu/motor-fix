@@ -36,6 +36,10 @@ export class BellStore {
   // The bell left the screen (a sign-out navigates away): its open list closes.
   readonly ended = signal(false);
   private next: string | null = null;
+  // Count requests in the order they were sent, and the one the badge shows.
+  private asked = 0;
+  private shown = 0;
+  private readonly reading = new Set<string>();
 
   constructor() {
     const destroyRef = inject(DestroyRef);
@@ -55,11 +59,16 @@ export class BellStore {
     void this.refreshCount();
   }
 
-  // A failed count keeps the last one shown.
+  // A failed count keeps the last one shown, and so does an answer to an
+  // older request than the one shown; the caller still gets its own answer.
   async refreshCount() {
+    const asked = ++this.asked;
     try {
       const { count } = await this.api.bellControllerUnreadCount();
-      this.count.set(count);
+      if (asked > this.shown) {
+        this.shown = asked;
+        this.count.set(count);
+      }
       return count;
     } catch {
       // Tried again at the next refresh.
@@ -95,14 +104,21 @@ export class BellStore {
   }
 
   async read(id: string) {
-    const shown = this.items().find((n) => n.id === id);
-    if (shown?.readAt) return;
+    const row = this.items().find((n) => n.id === id);
+    if (row?.readAt || this.reading.has(id)) return;
+    this.reading.add(id);
+    const sent = this.asked;
     try {
       const read = await this.api.bellControllerRead({ id });
       this.items.update((items) => items.map((n) => (n.id === id ? read : n)));
-      this.count.update((count) => Math.max(0, count - 1));
+      // The live echo of this read may already have lowered the count; a
+      // count asked for after the read was sent already holds it.
+      if ((await this.refreshCount()) === null && this.shown <= sent)
+        this.count.update((count) => Math.max(0, count - 1));
     } catch {
       toast(this.i18n.t('shell.bell.readFailed'));
+    } finally {
+      this.reading.delete(id);
     }
   }
 
@@ -113,6 +129,8 @@ export class BellStore {
       this.items.update((items) =>
         items.map((n) => (n.readAt ? n : { ...n, readAt: at })),
       );
+      // A count already in flight was asked before this and answers too late.
+      this.shown = ++this.asked;
       this.count.set(0);
     } catch {
       toast(this.i18n.t('shell.bell.readFailed'));
