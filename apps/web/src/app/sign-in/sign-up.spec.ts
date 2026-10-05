@@ -87,10 +87,25 @@ const describedBy = (input: HTMLInputElement) =>
     .filter(Boolean)
     .join(' ');
 
-async function submit(name: string, email: string, password: string) {
+const consentBox = () =>
+  panel().querySelector<HTMLInputElement>(
+    'input[type="checkbox"]',
+  ) as HTMLInputElement;
+
+function tick() {
+  consentBox().click();
+}
+
+async function submit(
+  name: string,
+  email: string,
+  password: string,
+  consent = true,
+) {
   type(field('Nume'), name);
   type(field('E‑mail'), email);
   type(field('Parolă'), password);
+  if (consent) tick();
   button('Creează contul').click();
   await settle();
 }
@@ -288,6 +303,7 @@ describe('sending', () => {
     type(field('Name'), 'Andrei Marin');
     type(field('E-mail'), 'andrei@example.ro');
     type(field('Password'), 'o-parola-lunga');
+    tick();
     button('Create account').click();
     await settle();
 
@@ -396,9 +412,119 @@ describe('answers that refuse', () => {
     type(field('Name'), 'Andrei Marin');
     type(field('E-mail'), 'andrei@example.ro');
     type(field('Password'), 'o-parola-lunga');
+    tick();
     button('Create account').click();
     await settle();
 
     expect(alertText()).toBe('An account with this e-mail already exists.');
+  });
+});
+
+describe('the consent to the terms and the privacy notice', () => {
+  const links = () =>
+    [...panel().querySelectorAll<HTMLAnchorElement>('label a')].map((a) => ({
+      href: a.getAttribute('href'),
+      rel: a.rel,
+      target: a.target,
+      text: a.textContent?.trim(),
+    }));
+
+  it('asks for the tick, unticked, above the main button, with both texts linked in a new tab', async () => {
+    await open();
+
+    const box = consentBox();
+    expect(box.checked).toBe(false);
+    expect(box.closest('label')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Accept Termenii de utilizare și am citit Nota de informare privind datele personale.',
+    );
+    expect(links()).toEqual([
+      {
+        href: '/ro/terms',
+        rel: 'noopener',
+        target: '_blank',
+        text: 'Termenii de utilizare',
+      },
+      {
+        href: '/ro/privacy',
+        rel: 'noopener',
+        target: '_blank',
+        text: 'Nota de informare privind datele personale',
+      },
+    ]);
+    expect(
+      box.compareDocumentPosition(button('Creează contul')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('sends nothing with the tick empty, says to tick it and focuses it', async () => {
+    await open();
+
+    await submit('Andrei Marin', 'andrei@example.ro', 'o-parola-lunga', false);
+
+    expect(signUp).not.toHaveBeenCalled();
+    const box = consentBox();
+    expect(box.getAttribute('aria-invalid')).toBe('true');
+    expect(describedBy(box)).toBe('Bifează pentru a continua.');
+    expect(document.activeElement).toBe(box);
+  });
+
+  it('sends once the tick is set after the message', async () => {
+    await open();
+    await submit('Andrei Marin', 'andrei@example.ro', 'o-parola-lunga', false);
+
+    tick();
+    await settle();
+    expect(describedBy(consentBox())).toBe('');
+    button('Creează contul').click();
+    await settle();
+
+    expect(signUp).toHaveBeenCalledTimes(1);
+  });
+
+  it('says to tick it again when it is cleared before sending', async () => {
+    await open();
+    tick();
+    tick();
+
+    await submit('Andrei Marin', 'andrei@example.ro', 'o-parola-lunga', false);
+
+    expect(signUp).not.toHaveBeenCalled();
+    expect(describedBy(consentBox())).toBe('Bifează pentru a continua.');
+  });
+
+  it('reads English, with the English texts linked', async () => {
+    await open('en');
+
+    expect(
+      consentBox().closest('label')?.textContent?.replace(/\s+/g, ' ').trim(),
+    ).toBe('I accept the Terms of use and have read the Privacy notice.');
+    expect(links().map(({ href, text }) => ({ href, text }))).toEqual([
+      { href: '/en/terms', text: 'Terms of use' },
+      { href: '/en/privacy', text: 'Privacy notice' },
+    ]);
+
+    type(field('Name'), 'Andrei Marin');
+    type(field('E-mail'), 'andrei@example.ro');
+    type(field('Password'), 'o-parola-lunga');
+    button('Create account').click();
+    await settle();
+
+    expect(signUp).not.toHaveBeenCalled();
+    expect(describedBy(consentBox())).toBe('Tick to continue.');
+  });
+
+  it('shows a refusal for the consent under the tick', async () => {
+    await open();
+    signUp.mockRejectedValueOnce(
+      problem(400, 'consent_required', [
+        { code: 'consent_required', field: 'consent' },
+      ]),
+    );
+
+    await submit('Andrei Marin', 'andrei@example.ro', 'o-parola-lunga');
+
+    expect(describedBy(consentBox())).toBe('Bifează pentru a continua.');
+    expect(document.activeElement).toBe(consentBox());
   });
 });

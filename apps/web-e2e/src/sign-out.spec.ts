@@ -1,3 +1,4 @@
+import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
 import { type Browser, expect, type Page, test } from '@playwright/test';
 
 import { ready, signIn } from './accounts.js';
@@ -15,7 +16,13 @@ test.beforeAll(async ({ browser }) => {
   email = `iesire-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
   const context = await browser.newContext();
   const res = await context.request.post('/api/v1/auth/sign-up', {
-    data: { email, language: 'ro', name: 'Andrei Ieșire', password: PASSWORD },
+    data: {
+      consent: CURRENT_CONSENT,
+      email,
+      language: 'ro',
+      name: 'Andrei Ieșire',
+      password: PASSWORD,
+    },
   });
   expect(res.status()).toBe(201);
   await context.close();

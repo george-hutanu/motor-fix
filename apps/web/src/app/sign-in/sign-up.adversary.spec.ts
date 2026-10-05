@@ -49,6 +49,9 @@ async function open(language: 'ro' | 'en' = 'ro', email?: string) {
     title: 'public.signUp.title',
   });
   await settle();
+  // These cases are about the other fields: the terms are accepted up front.
+  panel().querySelector<HTMLInputElement>('input[type="checkbox"]')?.click();
+  await settle();
 }
 
 const panel = () =>

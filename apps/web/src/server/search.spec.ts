@@ -39,7 +39,7 @@ describe('search engine rules', () => {
       ({ base, server } = await serve('https://motorfix.ro/'));
     });
 
-    it('lists both language addresses of Home in the sitemap, with their alternates', async () => {
+    it('lists both language addresses of Home, the terms and the privacy notice in the sitemap, with their alternates', async () => {
       const answer = await fetch(`${base}/sitemap.xml`);
       const xml = await answer.text();
 
@@ -53,7 +53,14 @@ describe('search engine rules', () => {
       );
       expect(
         [...xml.matchAll(/<loc>([^<]*)<\/loc>/g)].map((m) => m[1]),
-      ).toEqual(['https://motorfix.ro/ro/', 'https://motorfix.ro/en/']);
+      ).toEqual([
+        'https://motorfix.ro/ro/',
+        'https://motorfix.ro/en/',
+        'https://motorfix.ro/ro/terms',
+        'https://motorfix.ro/en/terms',
+        'https://motorfix.ro/ro/privacy',
+        'https://motorfix.ro/en/privacy',
+      ]);
       for (const [hreflang, href] of [
         ['ro', 'https://motorfix.ro/ro/'],
         ['en', 'https://motorfix.ro/en/'],

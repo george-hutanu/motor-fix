@@ -17,12 +17,12 @@
 
 ## Phase 3: User Story 2 — the tick (P1)
 
-- [ ] T008 [US2] `apps/web/src/app/sign-in/consent.ts` (new) `Consent` component and `consentControl()`; texts `public.consent.*` in `libs/i18n/src/public/{ro,en}.json` (FR-005, FR-006, FR-007)
-- [ ] T009 [US2] `apps/web/src/app/sign-in/sign-up.ts` places the tick above the button; `apps/web/src/app/dashboard/session.ts` sends `CURRENT_CONSENT` (FR-005, FR-006)
+- [X] T008 [US2] `apps/web/src/app/sign-in/consent.ts` (new) `Consent` component and `consentControl()`; texts `public.consent.*` in `libs/i18n/src/public/{ro,en}.json` (FR-005, FR-006, FR-007)
+- [X] T009 [US2] `apps/web/src/app/sign-in/sign-up.ts` places the tick above the button; `apps/web/src/app/dashboard/session.ts` sends `CURRENT_CONSENT` (FR-005, FR-006)
 
 ## Phase 4: User Story 3 — the texts (P2)
 
-- [ ] T010 [US3] `apps/web/src/app/public/legal-texts.ts` (new) draft texts RO and EN; `apps/web/src/app/public/legal.ts` (new) page; routes `terms`, `privacy` in `apps/web/src/app/app.routes.ts`; `PUBLIC_PATHS` in `apps/web/src/app/addresses.ts`; texts `public.legal.*` (FR-008)
+- [X] T010 [US3] `apps/web/src/app/public/legal-texts.ts` (new) draft texts RO and EN; `apps/web/src/app/public/legal.ts` (new) page; routes `terms`, `privacy` in `apps/web/src/app/app.routes.ts`; `PUBLIC_PATHS` in `apps/web/src/app/addresses.ts`; the version word and draft notice live beside the texts (FR-008)
 
 ## Phase 5: Polish
 

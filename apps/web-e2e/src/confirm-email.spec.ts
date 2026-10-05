@@ -41,6 +41,7 @@ async function signUp(page: Page) {
   await form.getByLabel('Nume').fill('Andrei Marin');
   await form.getByLabel('E‑mail').fill(fresh());
   await form.getByLabel('Parolă', { exact: true }).fill(NEW_PASSWORD);
+  await form.getByRole('checkbox').check();
   await form.getByRole('button', { name: 'Creează contul' }).click();
   await expect(page).toHaveURL('/app/driver');
 }

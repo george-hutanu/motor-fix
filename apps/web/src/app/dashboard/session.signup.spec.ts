@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { PRIVACY_VERSION, TERMS_VERSION } from '@motor-fix/contracts/consent';
 import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
 
 import { Session } from './session';
@@ -35,7 +36,7 @@ function setup() {
 beforeEach(() => localStorage.clear());
 
 describe('creating an account', () => {
-  it('sends the name, the e-mail, the password and the language, then holds the session', async () => {
+  it('sends the name, the e-mail, the password, the language and the consent to the current texts, then holds the session', async () => {
     const { api, meControllerMe, session } = setup();
 
     const me = await session.signUp(
@@ -47,6 +48,10 @@ describe('creating an account', () => {
 
     expect(api.authControllerSignUp).toHaveBeenCalledWith({
       body: {
+        consent: {
+          privacyVersion: PRIVACY_VERSION,
+          termsVersion: TERMS_VERSION,
+        },
         email: 'andrei@example.ro',
         language: 'en',
         name: 'Andrei Marin',

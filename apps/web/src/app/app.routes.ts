@@ -59,6 +59,11 @@ export const routes: Routes = [
           import('./public/unsubscribe').then((m) => m.Unsubscribe),
         path: 'unsubscribe/:token',
       },
+      ...(['terms', 'privacy'] as const).map((text) => ({
+        data: { text },
+        loadComponent: () => import('./public/legal').then((m) => m.Legal),
+        path: text,
+      })),
       {
         ...placeholder('account', 'public.placeholder.account'),
         canActivate: [signedInToDashboard],
