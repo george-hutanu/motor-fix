@@ -12,7 +12,7 @@ const GARAGE = { landing: '/app/garage' } as MeDto;
 type Answer =
   | 'signed-in'
   | 'cancelled'
-  | { switchTo: 'sign-in' | 'sign-up'; email: string };
+  | { switchTo: 'sign-in' | 'sign-up' | 'reset'; email: string };
 
 function setup(signedIn: MeDto | null, ...answers: Answer[]) {
   const current = signal<MeDto | null>(signedIn);
@@ -152,6 +152,91 @@ describe('SignInDialog', () => {
       'name',
       'SignIn',
     );
+  });
+
+  // @traces 127-FR-009
+  describe('a forgotten password', () => {
+    it('opens the reset task with the e-mail, and sign-in again from it', async () => {
+      const { dialog, open } = setup(
+        null,
+        { email: 'andrei@example.ro', switchTo: 'reset' },
+        { email: 'andrei@example.com', switchTo: 'sign-in' },
+        'cancelled',
+      );
+
+      await dialog.start();
+
+      expect(open.mock.calls.map((call) => call[1])).toEqual([
+        { shape: 'dialog', title: 'public.signIn.title' },
+        {
+          data: { email: 'andrei@example.ro' },
+          shape: 'dialog',
+          title: 'public.passwordReset.title',
+        },
+        {
+          data: { email: 'andrei@example.com' },
+          shape: 'dialog',
+          title: 'public.signIn.title',
+        },
+      ]);
+    });
+
+    it('loads the reset task only when it is opened', async () => {
+      const { dialog, open } = setup(null, { email: '', switchTo: 'reset' });
+
+      await dialog.start();
+      const loader = (
+        open.mock.calls[1] as unknown[]
+      )[0] as () => Promise<unknown>;
+
+      expect((await loader()) as { name: string }).toHaveProperty(
+        'name',
+        'PasswordReset',
+      );
+    });
+
+    it('opens the new-password task for a link and the dashboard once it is saved', async () => {
+      const { dialog, navigate, open } = setup(null, 'signed-in');
+
+      await expect(dialog.newPassword('the-token')).resolves.toBe(true);
+
+      expect(open).toHaveBeenCalledWith(expect.any(Function), {
+        data: { token: 'the-token' },
+        shape: 'dialog',
+        title: 'public.newPassword.title',
+      });
+      const loader = (
+        open.mock.calls[0] as unknown[]
+      )[0] as () => Promise<unknown>;
+      expect((await loader()) as { name: string }).toHaveProperty(
+        'name',
+        'NewPassword',
+      );
+      expect(navigate).toHaveBeenCalledWith('/app/garage');
+    });
+
+    it('goes on to the reset task when a new link is asked for', async () => {
+      const { dialog, open } = setup(
+        null,
+        { email: '', switchTo: 'reset' },
+        'cancelled',
+      );
+
+      await expect(dialog.newPassword('the-token')).resolves.toBe(false);
+
+      expect(open.mock.calls[1]?.[1]).toEqual({
+        data: { email: '' },
+        shape: 'dialog',
+        title: 'public.passwordReset.title',
+      });
+    });
+
+    it('resolves false and stays when the new-password task is closed', async () => {
+      const { dialog, navigate } = setup(null, 'cancelled');
+
+      await expect(dialog.newPassword('the-token')).resolves.toBe(false);
+      expect(navigate).not.toHaveBeenCalled();
+    });
   });
 
   describe('as the gate of an account action', () => {

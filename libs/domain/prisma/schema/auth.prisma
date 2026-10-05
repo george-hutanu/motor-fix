@@ -64,6 +64,7 @@ model Account {
 
 enum AccountTokenPurpose {
   email_confirm
+  password_reset
 
   @@map("account_token_purpose")
 }

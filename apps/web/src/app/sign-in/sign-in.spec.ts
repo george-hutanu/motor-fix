@@ -125,13 +125,7 @@ describe('the sign-in dialog', () => {
     await open();
 
     const text = panel().textContent ?? '';
-    for (const absent of [
-      'Apple',
-      'Google',
-      'Ai uitat parola?',
-      'Sunt șofer',
-      'Am un service',
-    ]) {
+    for (const absent of ['Apple', 'Google', 'Sunt șofer', 'Am un service']) {
       expect(text).not.toContain(absent);
     }
   });
@@ -162,6 +156,36 @@ describe('the sign-in dialog', () => {
       switchTo: 'sign-up',
     });
     expect(document.querySelector('mf-overlay-panel')).toBeNull();
+  });
+
+  it('offers "Ai uitat parola?" in the row of "Ține‑mă autentificat"', async () => {
+    await open();
+
+    const forgot = button('Ai uitat parola?');
+    expect(forgot.type).toBe('button');
+    expect(forgot.closest('.remember-row')).toBe(
+      field('Ține‑mă autentificat').closest('.remember-row'),
+    );
+  });
+
+  it('switches to the reset with the e-mail typed so far, without sending', async () => {
+    await open();
+    type(field('E‑mail'), ' andrei@example.ro ');
+
+    button('Ai uitat parola?').click();
+    await settle();
+
+    expect(signIn).not.toHaveBeenCalled();
+    await expect(result).resolves.toEqual({
+      email: 'andrei@example.ro',
+      switchTo: 'reset',
+    });
+  });
+
+  it('names the reset in English', async () => {
+    await open('en');
+
+    expect(button('Forgot your password?')).toBeDefined();
   });
 
   it('starts with the e-mail typed in the sign-up dialog', async () => {
