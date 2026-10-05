@@ -49,10 +49,10 @@ run-name: PR QA #${{ inputs.pr }} at ${{ inputs.sha }} lap ${{ inputs.lap }} ${{
 permissions:
   contents: read
 
-# A new lap on the same PR replaces the older run.
-concurrency:
-  group: pr-qa-${{ inputs.pr }}
-  cancel-in-progress: true
+# No concurrency group: every run is a lap a dispatch.mjs is waiting on, and a
+# group would cancel a running or pending one (GitHub keeps one pending per
+# group) and turn that agent's lap into a run with no verdict. A run on an
+# older head only costs runner minutes; the agent reads the report for its SHA.
 
 jobs:
   qa:

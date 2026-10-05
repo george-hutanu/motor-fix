@@ -71,7 +71,8 @@ export const findRun = (runs, nonce) => runs.find((r) => String(r.displayTitle ?
 export const artifactName = (pr) => `${ARTIFACT_PREFIX}${pr}`;
 
 /** Why a downloaded report cannot be used, or null when it can. */
-export function checkReport(report, sha) {
+export function checkReport(report, sha, conclusion) {
+  if (conclusion === "cancelled") return "the run was cancelled before it finished, so its report is no verdict";
   if (!report) return "the run left no report (see the run's log)";
   if (report.sha !== sha) return `the report is about ${String(report.sha).slice(0, 7)}, not ${sha.slice(0, 7)}`;
   if (report.verdict !== "success" && report.verdict !== "failure") return "the report has no verdict";
@@ -125,7 +126,7 @@ async function main(argv) {
   writeFileSync(join(out, "ci-run.json"), JSON.stringify({ id: run.databaseId, url: run.url, conclusion, nonce, sha }, null, 2));
   const file = join(out, "report.json");
   const report = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : null;
-  const problem = checkReport(report, sha);
+  const problem = checkReport(report, sha, conclusion);
   if (problem) {
     console.error(`dispatch: ${problem}. Run: ${run.url} (${conclusion})`);
     return 2;

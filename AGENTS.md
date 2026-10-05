@@ -163,8 +163,9 @@ decisions are the source for anything the constitution does not fix.
 - Parallel work is watched: `node .claude/scripts/watch.mjs` lists every
   worktree with its feature, phase, holder (a live agent or not), last
   activity, PR and the one fix a stale item needs. `/speckit-watch` applies the
-  safe fixes and dispatches an agent per stale item (QA re-runs up to Actions'
-  20 concurrent jobs, at most 2 other agents at once). The orchestrating session (the main
+  safe fixes and dispatches an agent per stale item (QA re-runs up to
+  `SPECKIT_QA_CAP`, by default Actions' 20 concurrent jobs; at most 2 other
+  agents at once). The orchestrating session (the main
   checkout, the one that dispatches tasks) schedules it as soon as two or more
   tasks or worktrees are active: `CronList` first so it never doubles up, then
   `/speckit-watch` every 15 minutes off the round minutes

@@ -79,4 +79,10 @@ describe('dispatch: finding the run and its evidence', () => {
     assert.match(checkReport({ sha: 'b'.repeat(40), verdict: 'success' }, SHA), /bbbbbbb/);
     assert.match(checkReport({ sha: SHA }, SHA), /verdict/);
   });
+
+  it('never reads a cancelled run as a verdict, even when it left a report', () => {
+    assert.match(checkReport({ sha: SHA, verdict: 'failure' }, SHA, 'cancelled'), /cancelled/);
+    assert.match(checkReport({ sha: SHA, verdict: 'success' }, SHA, 'cancelled'), /cancelled/);
+    assert.equal(checkReport({ sha: SHA, verdict: 'failure' }, SHA, 'failure'), null);
+  });
 });

@@ -44,6 +44,10 @@ describe('PR QA workflow: trigger', () => {
     assert.match(code, /^run-name: .*\$\{\{ inputs\.nonce \}\}/m);
   });
 
+  it('never cancels a run: each one is a lap an agent is waiting on', () => {
+    assert.doesNotMatch(code, /cancel-in-progress:\s*true/);
+  });
+
   it('reads the repository only', () => {
     assert.deepEqual(block('permissions').map((l) => l.trim()).filter(Boolean), ['contents: read']);
   });

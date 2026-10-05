@@ -16,7 +16,7 @@ Sync Impact Report (v1.6.2)
     and the watcher
   - ✅ .claude/agents/pr-tester.md, speckit-pr-test (`--local`), speckit-auto
     (hand-off step 5), speckit-watch, .claude/scripts/watch.mjs (QA cap is
-    Actions' 20 concurrent jobs), scripts/heavy.sh (comment)
+    `SPECKIT_QA_CAP`, by default Actions' 20 concurrent jobs), scripts/heavy.sh (comment)
   - ⚠ CLAUDE.local.md still names v1.6.0: untracked and under a growth
     ratchet, left for the owner
 
