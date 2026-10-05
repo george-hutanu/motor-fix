@@ -1,6 +1,6 @@
 ---
 name: "speckit-watch"
-description: "Watch every worktree on this machine and get stale work moving again: one board of what each agent is doing (feature, phase, holder, last activity, PR), the safe fixes applied (dead locks released, merged clean worktrees removed), and one background agent dispatched per stale item to resume it, re-run QA, fix red CI or merge, within the caps the watcher applies. The orchestrating session schedules it every 15 minutes once two or more tasks run at once."
+description: "Watch every worktree on this machine and get stale work moving again: one board of what each agent is doing (feature, phase, holder, last activity, PR), the safe fixes applied (dead locks released, merged clean worktrees removed), and one background agent dispatched per stale item to resume it, take a handed-off PR to merge as its tail, re-run QA, fix red CI or merge, within the caps the watcher applies. The orchestrating session schedules it every 15 minutes once two or more tasks run at once."
 argument-hint: "[--stale <phase>=<minutes>,…]"
 compatibility: "Requires git, gh (george-hutanu via GH_TOKEN), Node 24"
 metadata:
@@ -63,8 +63,9 @@ or overrides them.
    moves state (labels, Notion, a finish log, a merge) and writes or judges no
    code also gets `model: "sonnet"`; today that is `merge`: it merges
    `origin/main`, merges the PR and syncs Notion (a new head goes back to the
-   PR tester, which is pinned to Opus). `resume`, `rerun-qa` and `fix-ci`
-   write or judge code and keep the default model. The prompt starts with:
+   PR tester, which is pinned to Opus). `resume`, `tail`, `rerun-qa` and
+   `fix-ci` write or judge code and keep the default model (Opus). The prompt
+   starts with:
 
    > Switch into the existing worktree with `EnterWorktree` and `path: <path>`
    > (branch `<branch>`, feature `<feature>`, PR #<pr>). Work only there. Follow
@@ -77,8 +78,9 @@ or overrides them.
    | Fix | Instruction |
    | --- | --- |
    | `resume` | Read `specs/<feature>/auto-run.md`, `tasks.md` and `node .claude/scripts/run-state.mjs show`, then continue `/speckit-auto` from the phase run-state names (its section "After a context compaction" applies), through the hand-off. With an `agent-review` failure on the PR head, that is the QA fix loop: fix the blocking findings tests first, push, `run-state.mjs repair`, run `/speckit-pr-test <pr>` again. Without a feature, read the branch's commits and PR and finish the lifecycle the same way. |
+   | `tail` | The story's agent handed this ready PR off. Read `specs/<feature>/handoff.md`, then run "The tail" in `.claude/skills/speckit-auto/SKILL.md`: CI in the background, `/speckit-pr-test <pr>` laps and their fixes (tests first), the merge, `speckit-notion-sync finish` with its finish comment on the PR, the archive check, then delete `handoff.md`. |
    | `rerun-qa` | Run `/speckit-pr-test <pr>` on the current head, then follow lifecycle steps 6–7. |
-   | `fix-ci` | List what did not pass (`gh pr checks <pr> --json name,bucket,link --jq '.[] \| select(.bucket != "pass" and .bucket != "skipping")'`); read the failing job's log tail (`gh run view <run-id> --log-failed \| tail -n 80`), fix it on the branch tests first, push, wait for the checks again; each lap is `run-state.mjs repair`. Then continue the lifecycle. |
+   | `fix-ci` | List what did not pass and read the failing job's log tail, both with the summary-only reads in AGENTS.md "Agent replies" (never the whole log); fix it on the branch tests first, push, wait for the checks again; each lap is `run-state.mjs repair`. Then continue the lifecycle. |
    | `merge` | Lifecycle step 7: merge `origin/main` in if behind (a new head needs a new `/speckit-pr-test`), then `gh pr merge <pr> --merge` and `speckit-notion-sync finish`. |
 
    End the prompt with: "If the work cannot go on without the owner, set it
@@ -89,10 +91,10 @@ or overrides them.
    goes to `specs/<feature>/auto-run.md`, named in FILES:"
 
    ```
-STATUS: success | failure | blocked | partial — <one line: what happened>
-PR: #<n> <draft|ready|merged> <sha7> | none
-NEXT: <the one action the caller should take> | none
-FILES: <paths written, comma-separated> | none
+   STATUS: success | failure | blocked | partial — <one line: what happened>
+   PR: #<n> <draft|ready|merged> <sha7> | none
+   NEXT: <the one action the caller should take> | none
+   FILES: <paths written, comma-separated> | none
    ```
 
    A dispatched agent's reply is read only for its envelope: `STATUS` and

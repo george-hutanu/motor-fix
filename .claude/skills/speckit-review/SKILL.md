@@ -170,12 +170,12 @@ findings are not fixed.
 ### 4. Hand-off
 
 Run standalone (not from `/speckit-auto`, which hands off after its own phase
-16): when no confirmed CRITICAL/HIGH is left and `typecheck`, `lint` and the
+17): when no confirmed CRITICAL/HIGH is left and `typecheck`, `lint` and the
 tests are green, fill in the PR body from `.github/pull_request_template.md`
-and mark the PR ready exactly as `/speckit-auto`'s hand-off step 1 does
-(`pr-body-check.ts`, `gh pr edit --body-file`, `gh pr ready`), invoke
-`speckit-notion-sync qa` (ready is QA), then run the QA step and merge exactly as
-`/speckit-auto`'s hand-off steps 3–7 do: green CI, `/speckit-pr-test <n>`
+and mark the PR ready exactly as `/speckit-auto`'s hand-off steps 1–3 do
+(records committed, `pr-body-check.ts`, `gh pr edit --body-file`, `gh pr ready`,
+`speckit-notion-sync qa` and its line pushed; ready is QA), then run the QA step
+and merge exactly as `/speckit-auto`'s "The tail" steps 1–6 do: green CI, `/speckit-pr-test <n>`
 (story → QA) until `agent-review` is success on the head commit, then merge.
 Findings routed to defer go to `specs/<feature>/deferred.md` and are filed as
 Notion tasks (`speckit-notion-sync debt`). With a blocker left, do none of this.

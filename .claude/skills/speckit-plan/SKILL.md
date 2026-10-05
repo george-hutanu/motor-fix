@@ -133,10 +133,10 @@ Command ends after Phase 1 design. Report branch, IMPL_PLAN path, and generated 
    all, no pasted pages or files:
 
    ```
-STATUS: success | failure | blocked | partial — <one line: what happened>
-PR: #<n> <draft|ready|merged> <sha7> | none
-NEXT: <the one action the caller should take> | none
-FILES: <paths written, comma-separated> | none
+   STATUS: success | failure | blocked | partial — <one line: what happened>
+   PR: #<n> <draft|ready|merged> <sha7> | none
+   NEXT: <the one action the caller should take> | none
+   FILES: <paths written, comma-separated> | none
    ```
 
 3. **Consolidate findings** in `research.md` using format:

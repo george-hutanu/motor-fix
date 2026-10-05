@@ -30,7 +30,8 @@ const capOf = (text) => {
   const caps = [...text.matchAll(/at\s+most\s+(\d+)\s+lines/gi)].map((m) => Number(m[1]));
   return caps.length ? Math.max(...caps) : null;
 };
-const hasEnvelope = (text) => text.includes(ENVELOPE.join('\n'));
+// A block nested in a numbered list is indented to stay in the list.
+const hasEnvelope = (text) => text.split('\n').map((line) => line.trimStart()).join('\n').includes(ENVELOPE.join('\n'));
 
 // The output section runs from its heading to the end of the file: the
 // templates inside it carry their own `## ` headings.

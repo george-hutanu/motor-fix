@@ -35,11 +35,19 @@ Measured from session transcripts: 97% of token cost is context (cache read
 | 11 | Reads only what decides the next step: CI waits print the non-passing checks, failing jobs `--log-failed \| tail -n 80`, test runs their summary and failures | – | Less log in context | Same: every check still runs |
 | 12 | `notion-ready` and its read-only Notion fallback on Sonnet; watch dispatches that only move state on Sonnet | – | Medium | Implementation, reviewers and the PR tester keep their models |
 
+## Done since: the tail hand-off
+
+A story's agent reaches about a million input-token-equivalents by ready, and
+92 full-context cache rewrites (40% of cache writes) were mostly CI waits and
+QA laps re-read after a >5 min idle gap (74% of them, median 9 min).
+
+| # | Change | Speed | Cost | Quality |
+|---|---|---|---|---|
+| 13 | Split a story's agent at the hand-off: `/speckit-auto` ends at ready with `specs/<feature>/handoff.md` and `NEXT: tail #<n>`; a fresh tail agent (Opus) runs CI, QA laps, the merge and the finish; `/speckit-watch` has a `tail` fix for a handed-off PR nobody holds | Same | The tail re-reads a note, not the story's whole context, on every wait and lap | Same: every step and check of Constitution VII kept, the tail on the same model |
+| 14 | Finish logs in the story's own PR: records committed before ready, post-merge lines in a comment on the merged PR (`notion-ready.mjs check -` reads it) | One PR fewer per story | No `docs(specs)` PR, its CI and its QA lap per story | Same: the archive check still refuses a feature without the refresh |
+
 ## Left for later
 
-- Split a story's agent at the hand-off (a fresh agent for ready → CI → QA →
-  merge): roughly halves the context of the expensive tail. It changes how
-  speckit-auto ends its turn, so it gets its own PR.
 - A deferred-only commit (`deferred.md` URLs after `speckit-notion-sync debt`)
   forces one more full tester lap. A docs-only head could reuse the previous
   verdict; that is a merge-gate rule change, so its own PR.

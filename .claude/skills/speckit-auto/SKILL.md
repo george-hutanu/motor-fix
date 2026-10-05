@@ -140,7 +140,7 @@ Two groups need no output from each other, so run them at once:
 | 14 | Review | `spec-reviewer` subagent | CRITICAL/HIGH block completion |
 | 15 | Agent context | `speckit-agent-context-update` | The file may shrink, never grow — see below |
 | 16 | Retrospective evidence | *(scripts, read-only)* | Gather it; the verdict stays the user's — see below |
-| 17 | Archive | `speckit-archive` | Merge the Spec Delta into the capability specs |
+| 17 | Archive | `speckit-archive` | Phase 4 steps 1–3 on the branch, before the hand-off; the tail closes it after the merge |
 
 ### 0. Size — decide how much of this to run
 
@@ -388,7 +388,7 @@ Gate overrides:
 Do not invoke `speckit-notion-sync qa` here: QA follows the PR being marked
 ready, which is the run's hand-off (below), after phase 16. There is no In
 review stage between Implementing and QA.
-`finish` runs after the hand-off merges the PR to `main`.
+`finish` runs after the tail agent (below) merges the PR to `main`.
 Before phase 14, `specs/<feature>/design.md` must exist. The `after_specify` and
 `before_implement` hooks write it, and a run without one is a Hard Stop.
 
@@ -456,7 +456,7 @@ One Conventional Commit per implementation slice, single line, no body, no
 trailers (`.claude/hooks/commit-msg-policy.js` enforces it). Push after every
 commit, to the feature's own branch only (`git push`, upstream set when the
 branch was created, so the draft PR follows the work). Never `--force`, never
-`main`. Never merge mid-run: the hand-off merges, on green CI only.
+`main`. Never merge mid-run: the tail agent merges, on green CI only.
 
 The artifact phases produce **no commits**, and this is not an oversight:
 `specs/`, `.specify/` and `.claude/` are all listed in `.git/info/exclude`, so
@@ -530,11 +530,16 @@ the run is resumable by invoking the remaining phase skills directly.
 
 ## Hand-off
 
-When phases 14–16 are done, the review left no CRITICAL/HIGH and the last
-`typecheck`, `lint` and test runs are green, finish the task lifecycle
-(AGENTS.md) before the report:
+When phases 14–17 are done, the review left no CRITICAL/HIGH and the last
+`typecheck`, `lint` and test runs are green, take the PR to ready and hand it
+to a fresh agent (AGENTS.md, lifecycle step 4). This run ends here: a story's
+context is about a million tokens by now, and re-reading it on every CI wait
+and QA lap is where most of a story's cost went.
 
-1. Fill in every section of the PR body made from
+1. Commit what the feature records before ready, so it rides in this PR and
+   never in a later `docs(specs)` one: the archive's status line and Spec
+   Delta merge (phase 17) and `specs/<feature>/notion-sync.md` so far.
+2. Fill in every section of the PR body made from
    `.github/pull_request_template.md` (the draft was opened from it with
    `--body-file`): what changed, the exact test commands and results, UI
    evidence or `N/A` and the reason, risk and rollback, every checklist box
@@ -543,57 +548,99 @@ When phases 14–16 are done, the review left no CRITICAL/HIGH and the last
    `node scripts/pr-body-check.ts --body-file <body> --title "<PR title>"`,
    `GH_TOKEN=$(gh auth token -u george-hutanu) gh pr edit <branch> --body-file <body>`,
    `GH_TOKEN=$(gh auth token -u george-hutanu) gh pr ready <branch>`
-2. `speckit-notion-sync qa`: the story, its timeline row → QA, and the PR's
-   one stage label → `QA`. Ready is QA; there is no In review stage.
-3. If the branch is behind `origin/main`, `git merge --no-edit origin/main`,
+3. `speckit-notion-sync qa`: the story, its timeline row → QA, and the PR's
+   one stage label → `QA`. Ready is QA; there is no In review stage. Commit
+   and push the `qa` line in `notion-sync.md` at once, before anything waits
+   on CI or tests the head.
+4. Write `specs/<feature>/handoff.md` (git ignores it; the tail deletes it):
+
+   ```markdown
+   # Hand-off — <feature>
+   - PR: #<n> <url> · branch <branch> · worktree <absolute path> · head <sha>
+   - Notion: story <page id> · timeline row <page id> · epic <page id>
+   - Open decisions: <each, with its source file> | none
+   - Deferred: <each deferred.md bullet not yet filed, or "all filed"> | none
+   ```
+
+5. `node .claude/scripts/run-state.mjs set --status in-progress --phase hand-off`,
+   write the Final Report, and reply with `NEXT: tail #<n>`. Start no CI wait
+   and no PR tester run here: the tail starts both at once, so QA still runs
+   beside CI.
+
+A run that ends on a Hard Stop before the hand-off does none of this but the
+Blocked write: the PR stays a draft.
+
+## The tail
+
+A fresh agent finishes the lifecycle from the hand-off note alone. The
+orchestrating session dispatches it on `NEXT: tail #<n>`, and `/speckit-watch`
+on its `tail` fix: `subagent_type: general-purpose`, `run_in_background: true`,
+the default model (it implements QA fixes, so it stays on Opus), and a prompt
+holding only the PR number, the worktree and the note's path:
+
+> Switch into the existing worktree with `EnterWorktree` and `path: <worktree>`
+> and work only there. Follow AGENTS.md and CLAUDE.local.md. You are the tail
+> agent for PR #<n>: read `<worktree>/specs/<feature>/handoff.md`, then run
+> "The tail" in `.claude/skills/speckit-auto/SKILL.md`.
+
+The tail reads the note, `deferred.md` and the PR, not the story's transcript,
+and runs lifecycle steps 5–7:
+
+1. If the branch is behind `origin/main`, `git merge --no-edit origin/main`,
    re-run `typecheck`, `lint` and the tests, and push.
-4. Start the CI wait in the background — `run_in_background`, never a
+2. Start the CI wait in the background — `run_in_background`, never a
    foreground `sleep` or `until` loop — with the command that prints only what
    did not pass (AGENTS.md "Agent replies"):
-   `gh pr checks <branch> --watch >/dev/null 2>&1; gh pr checks <branch> --json name,bucket --jq '.[] | select(.bucket != "pass" and .bucket != "skipping") | "\(.name): \(.bucket)"'`
-   — and go straight on to step 5: QA runs beside CI, not after it. When the
+   `gh pr checks <n> --watch >/dev/null 2>&1; gh pr checks <n> --json name,bucket --jq '.[] | select(.bucket != "pass" and .bucket != "skipping") | "\(.name): \(.bucket)"'`
+   — and go straight on to step 3: QA runs beside CI, not after it. When the
    wait reports, every check other than `agent-review` must have passed (its
    output lists nothing else). For a failing one read
    `gh run view <run-id> --log-failed | tail -n 80`, not the whole log. A failing
    check is a repair: fix it on the branch, push (the new head needs a new
    tester run), wait again; it counts toward `SPECKIT_MAX_REPAIR_ITERATIONS`.
-5. **QA — the PR tester** (`/speckit-pr-test <n>`, Constitution VII), started
-   at once, beside step 4: the
-   story, its timeline row and the PR's one stage label stay QA
-   (`speckit-notion-sync qa` again is a no-op); the `pr-tester`
-   subagent dispatches the PR QA workflow, where a GitHub runner boots the head
-   commit, sweeps the UI and calls the API (the unit and end-to-end suites are
-   CI's); it then reads the artifact, reviews the diff, posts its review, replaces the
-   body's Agent review `Pending.` line (`gh pr edit --body-file`) and sets
-   `agent-review` on the head commit. On failure: fix every blocking finding,
-   tests first, commit, push, `node .claude/scripts/run-state.mjs repair`, and
-   run the tester again on the new head; the story stays QA. When `repair`
-   exits 1 the run is blocked (`repair-loop-exceeded`): `speckit-notion-sync
-   blocked` with the open findings, the same as a PR comment, and stop — the PR
-   is never merged at the cap.
-6. After a passing lap, `speckit-notion-sync debt` files every deferred bullet
+3. **QA — the PR tester** (`/speckit-pr-test <n>`, Constitution VII), started
+   at once, beside step 2: the story, its timeline row and the PR's one stage
+   label stay QA; the `pr-tester` subagent dispatches the PR QA workflow,
+   where a GitHub runner boots the head commit, sweeps the UI and calls the
+   API (the unit and end-to-end suites are CI's); it then reads the artifact,
+   reviews the diff, posts its review, replaces the body's Agent review
+   `Pending.` line (`gh pr edit --body-file`) and sets `agent-review` on the
+   head commit. On failure: fix every blocking finding, tests first, commit
+   (the lap's report and any new `notion-sync.md` lines go in the same
+   commit), push, `node .claude/scripts/run-state.mjs repair`, and run the
+   tester again on the new head; the story stays QA. When `repair` exits 1
+   the run is blocked (`repair-loop-exceeded`): `speckit-notion-sync blocked`
+   with the open findings, the same as a PR comment, and stop — the PR is
+   never merged at the cap.
+4. After a passing lap, `speckit-notion-sync debt` files every deferred bullet
    not yet filed (reviewers' and the tester's) as a To do task in Notion. Its
    URLs change `deferred.md`, so commit and push that, and the tester runs once
    more on the new head (it re-raises nothing already deferred). Non-blocking
    findings new in that last lap are filed in Notion directly and named in the
-   PR's Agent review section; their bullets, with the task URLs, join
-   `deferred.md` in the feature's next commit (the archive), so the loop ends.
-7. On `agent-review` success with every other check green: merge `origin/main`
+   PR's Agent review section; their bullets, with the task URLs, ride on the
+   next PR, so the loop ends.
+5. On `agent-review` success with every other check green: merge `origin/main`
    in again if it moved (a new head needs a new tester run), then
-   `gh pr merge <branch> --merge` — the `pre:bash:merge-gate` hook refuses it
+   `gh pr merge <n> --merge` — the `pre:bash:merge-gate` hook refuses it
    without `agent-review` success on the head, and while any other check is
-   failing, running or missing — and `speckit-notion-sync
-   finish` (story → Done, timeline row → Merged).
+   failing, running or missing.
+6. Close it without a commit: `speckit-notion-sync finish` (story → Done,
+   timeline row → Merged, then `notion-ready <epic>` and the finish comment).
+   Post the lines that run wrote, and the merge sha, as one comment on the
+   merged PR (`gh pr comment <n> --body-file <file>`), then restore
+   `notion-sync.md` (`git checkout -- specs/<feature>/notion-sync.md`). Run
+   the archive check over the log and the PR's comments (`speckit-archive`,
+   Phase 4 step 5) until it exits 0, delete `handoff.md`, and reply with the
+   envelope: `PR: #<n> merged <sha7>`.
 
 A PR with no checks, or one still failing at the limit, is a Hard Stop: it
 stays ready and unmerged, the story goes to Blocked (`speckit-notion-sync
-blocked <reason>`), and the report says which check and why. Every Hard Stop
+blocked <reason>`), and the reply says which check and why. Every Hard Stop
 does the same: record `run-state.mjs set --status blocked --blocking <condition>`,
-then `speckit-notion-sync blocked <condition>`; a resumed run starts with
+then `speckit-notion-sync blocked <condition>`; a resumed tail starts with
 `speckit-notion-sync unblock`.
 
-None of these steps asks the user. A run that ends on a Hard Stop before the
-hand-off does none of them but the Blocked write: the PR stays a draft.
+None of these steps asks the user.
 
 ## Final Report
 
@@ -611,7 +658,8 @@ FILES: <paths written, comma-separated> | none
 ```
 
 Then up to six lines: commits and test counts, review verdicts, decisions
-taken on the owner's behalf, follow-ups. Run by the owner in their own
+taken on the owner's behalf, follow-ups. A clean run ends at the hand-off
+with `PR: #<n> ready <sha7>` and `NEXT: tail #<n>`. Run by the owner in their own
 session, the same envelope opens the report and the sections below follow.
 The report's sections:
 
@@ -646,7 +694,7 @@ The report's sections:
 - [ ] Mutation score at or above the floor for every touched package, with no disable added to reach it
 - [ ] Ticket re-read (comments included) after implementation, and any scope-moving comment reported
 - [ ] One commit per implementation slice, each pushed to the feature branch
-- [ ] Hand-off done on a clean finish: PR ready, story Implementing → QA, `agent-review` success on the head commit, merged on green, story Done
+- [ ] Hand-off done on a clean finish: records committed, PR ready, story Implementing → QA, `qa` line pushed, `handoff.md` written, `NEXT: tail #<n>` returned
 - [ ] Retrospective evidence gathered with `--since`, attached unjudged; no verdict written and no instinct reinforced
 - [ ] Final report delivered with the sections above
 
