@@ -1,6 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  type BeforeApplicationShutdown,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 
 import { Attempts } from './attempts';
 import { hashToken, newToken } from './email-confirmation';
@@ -39,11 +45,20 @@ const expired = () =>
 const reason = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
 
+// What failed, never its message: a driver's or a database's message can
+// carry the address the link was asked for.
+const kindOf = (error: unknown) => {
+  if (!(error instanceof Error)) return 'unknown error';
+  const { code } = error as { code?: unknown };
+  return typeof code === 'string' ? `${error.name} ${code}` : error.name;
+};
+
 // "Ai uitat parola?": a 60-minute, single-use link to the account's address,
 // then a new password that ends every other session.
 @Injectable()
-export class PasswordResetService {
+export class PasswordResetService implements BeforeApplicationShutdown {
   private readonly logger = new Logger('PasswordReset');
+  private readonly issuing = new Set<Promise<void>>();
   now = () => new Date();
 
   constructor(
@@ -57,19 +72,33 @@ export class PasswordResetService {
     @Inject(RESET_OPTIONS) private readonly options: ResetOptions,
   ) {}
 
-  // Answers the same whatever happens, so nobody learns which addresses have
-  // an account; a failure is only logged, without the address.
+  // Answers the same, and as fast, whatever happens, so nobody learns which
+  // addresses have an account: the link is issued after the answer, and a
+  // failure is only logged, without the address.
   async ask(input: string, address: string): Promise<void> {
     const email = input.trim().toLowerCase();
     if (!(await this.attempts.admitReset(email, address))) {
       this.logger.warn('password reset not sent: over the request limit');
       return;
     }
-    try {
-      await this.issue(email);
-    } catch (error) {
-      this.logger.error(`password reset link not sent: ${reason(error)}`);
+    const issuing = this.issue(email).catch((error: unknown) =>
+      this.logger.error(`password reset link not sent: ${kindOf(error)}`),
+    );
+    this.issuing.add(issuing);
+    issuing.then(() => this.issuing.delete(issuing));
+  }
+
+  // Settles once every link in flight is issued or has failed. The server
+  // still answers while the app shuts down, so links asked for meanwhile are
+  // waited for too, for a few rounds rather than forever.
+  async drain(): Promise<void> {
+    for (let round = 0; round < 3 && this.issuing.size > 0; round++) {
+      await Promise.all(this.issuing);
     }
+  }
+
+  async beforeApplicationShutdown(): Promise<void> {
+    await this.drain();
   }
 
   async check(token: string): Promise<void> {
@@ -143,7 +172,12 @@ export class PasswordResetService {
     });
     if (account?.status !== 'active') return;
     const { webUrl } = this.options;
-    if (!webUrl) throw new Error('PUBLIC_WEB_URL is not set');
+    if (!webUrl) {
+      this.logger.error(
+        'password reset link not sent: PUBLIC_WEB_URL is not set',
+      );
+      return;
+    }
     const { hash, token } = newToken();
     await this.prisma.$transaction([
       this.prisma.accountToken.deleteMany({

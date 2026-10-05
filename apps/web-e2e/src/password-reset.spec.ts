@@ -9,23 +9,32 @@ const NEW = 'parola-noua-de-test';
 
 // The test mailbox: the reset e-mail's link as the API queued it. It needs the
 // API's own database, so a deployed address (no DATABASE_URL here) skips it.
+// The API answers before it issues the link, so this waits for it to land.
 const databaseUrl = process.env['DATABASE_URL'];
 
 async function lastResetLink(email: string): Promise<string> {
   const client = new pg.Client({ connectionString: databaseUrl });
   await client.connect();
   try {
-    const { rows } = await client.query<{ link: string }>(
-      `SELECT n.params->>'link' AS link
-         FROM notification n JOIN account a ON a.id = n.account_id
-        WHERE a.email = $1 AND n.kind = 'ACCOUNT_EMAIL'
-          AND n.params->>'purpose' = 'password_reset'
-        ORDER BY n.created_at DESC LIMIT 1`,
-      [email],
-    );
-    const link = rows[0]?.link;
-    if (!link) throw new Error('no reset e-mail queued');
-    return new URL(link).pathname;
+    let link: string | undefined;
+    await expect
+      .poll(
+        async () => {
+          const { rows } = await client.query<{ link: string }>(
+            `SELECT n.params->>'link' AS link
+               FROM notification n JOIN account a ON a.id = n.account_id
+              WHERE a.email = $1 AND n.kind = 'ACCOUNT_EMAIL'
+                AND n.params->>'purpose' = 'password_reset'
+              ORDER BY n.created_at DESC LIMIT 1`,
+            [email],
+          );
+          link = rows[0]?.link;
+          return link;
+        },
+        { message: 'no reset e-mail queued' },
+      )
+      .toBeDefined();
+    return new URL(String(link)).pathname;
   } finally {
     await client.end();
   }
