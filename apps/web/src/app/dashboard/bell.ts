@@ -100,7 +100,9 @@ export class BellStore {
     try {
       const read = await this.api.bellControllerRead({ id });
       this.items.update((items) => items.map((n) => (n.id === id ? read : n)));
-      this.count.update((count) => Math.max(0, count - 1));
+      // The live echo of this read may already have lowered the count.
+      if ((await this.refreshCount()) === null)
+        this.count.update((count) => Math.max(0, count - 1));
     } catch {
       toast(this.i18n.t('shell.bell.readFailed'));
     }

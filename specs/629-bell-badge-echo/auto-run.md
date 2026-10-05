@@ -22,3 +22,9 @@ Worktree: .worktrees/629-bell-badge-echo
 
 ## 7. Tasks
 - `tasks.md`: T001–T004 tests, T005 the `BellStore` change, T006 proof.
+
+## 9. Tests
+- 3 tests added in `bell.spec.ts` and "marks one read and lowers the count" reworded to read the server's count. Red: `npx jest apps/web/src/app/dashboard/bell.spec.ts` → 2 failed, 30 passed (the echo-first and new-arrival tests). The count-reload-fails test passed before the change by design: FR-002 keeps today's fallback, and the test guards it.
+
+## 10. Implement
+- `BellStore.read()`: after the read's answer it reloads the count with `refreshCount()`, and lowers it by one only when that reload fails. `sh scripts/heavy.sh npx nx run web:test` → 51 suites, 824 tests passed.

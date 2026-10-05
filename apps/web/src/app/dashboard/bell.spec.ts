@@ -238,9 +238,10 @@ describe('Bell', () => {
 });
 
 describe('BellStore', () => {
-  it('marks one read and lowers the count', async () => {
+  it('marks one read and shows the count the server gives after it', async () => {
     const { store } = await render(2, [row('a'), row('b')]);
     await store.load();
+    api.bellControllerUnreadCount.mockResolvedValue({ count: 1 });
 
     await store.read('a');
 
@@ -248,6 +249,52 @@ describe('BellStore', () => {
     expect(store.items().find((n) => n.id === 'a')?.readAt).toBe(
       '2026-10-05T09:00:00.000Z',
     );
+    expect(store.count()).toBe(1);
+  });
+
+  it('counts the read once when its live echo lands before its answer', async () => {
+    const { fixture, store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    let answer: (value: NotificationDto) => void = () => undefined;
+    api.bellControllerRead.mockReturnValue(
+      new Promise((resolve) => (answer = resolve)),
+    );
+    api.bellControllerUnreadCount.mockResolvedValue({ count: 1 });
+
+    const reading = store.read('a');
+    events.next({
+      at: '2026-10-05T10:00:00.000Z',
+      id: 'a',
+      kind: 'notification.read',
+    });
+    await settle(fixture);
+    answer(row('a', { readAt: '2026-10-05T09:00:00.000Z' }));
+    await reading;
+    await settle(fixture);
+
+    expect(store.count()).toBe(1);
+    expect(
+      fixture.nativeElement.querySelector('.badge')?.textContent?.trim(),
+    ).toBe('1');
+  });
+
+  it('shows a notification that arrived while the read was answered', async () => {
+    const { store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    api.bellControllerUnreadCount.mockResolvedValue({ count: 2 });
+
+    await store.read('a');
+
+    expect(store.count()).toBe(2);
+  });
+
+  it('lowers the count by one when it fails to reload after a read', async () => {
+    const { store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    api.bellControllerUnreadCount.mockRejectedValue(new Error('offline'));
+
+    await store.read('a');
+
     expect(store.count()).toBe(1);
   });
 
