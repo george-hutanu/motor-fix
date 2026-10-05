@@ -18,6 +18,9 @@
 - [X] T007 [US1] Tests: `apps/web/src/app/dashboard/bell.badge.adversary.spec.ts` (16 tests from outside) and `bell.spec.ts` "keeps the count its echo reloaded when the read fails to reload it" (FR-002, FR-003, FR-004)
 - [X] T008 [US1] `bell.ts`: `refreshCount()` shows only an answer newer than the one shown and returns its own answer; `read()` skips the fallback when a later-asked count was shown, and ignores a row whose read is in flight (FR-002, FR-003, FR-004)
 
+- [X] T009 [US1] Test then fix, from the code re-review: `bell.spec.ts` "keeps the count at zero after mark all when an earlier count answers late"; `readAll()` takes a request number before it sets 0 (FR-003a)
+- [X] T010 Review patches: 4 adversary tests that repeat `bell.spec.ts` deleted; the local `shown` in `read()` renamed `row`
+
 ## Phase 3: Proof
 
 - [X] T006 `npx nx run web:test`, `npm run typecheck` and `npm run lint` green (SC-001, SC-002)
@@ -29,4 +32,5 @@
 | FR-001 | `bell.spec.ts` › T001, T002, T004 |
 | FR-002 | `bell.spec.ts` › T003, T007 |
 | FR-003 | `bell.badge.adversary.spec.ts` › the two stale-answer tests; `bell.spec.ts` › mark all elsewhere during a new arrival |
+| FR-003a | `bell.spec.ts` › T009 |
 | FR-004 | `bell.badge.adversary.spec.ts` › two taps on the same row |

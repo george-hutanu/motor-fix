@@ -37,3 +37,8 @@ Worktree: .worktrees/629-bell-badge-echo
 
 ## 14. Review
 - spec-reviewer: APPROVE, no findings (on 946bb7f). The adversarial fixes are re-reviewed below.
+
+## Re-review patches (lap 2)
+
+- Code re-review APPROVE, spec re-review APPROVE. Applied: 4 adversary tests that repeated `bell.spec.ts` deleted (its MEDIUM at :242 among them); the local `shown` in `read()` renamed `row`.
+- Re-review MEDIUM (readAll's 0 not ordered against a count already in flight): fixed in this story, test first, rather than deferred. Red: "keeps the count at zero after mark all when an earlier count answers late"; green after `readAll()` takes a request number before it sets 0 (FR-003a). Bell suites 56/56; `web:test` green. Nothing deferred.

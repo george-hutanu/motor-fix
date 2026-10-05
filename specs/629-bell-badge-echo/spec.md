@@ -46,13 +46,14 @@ not 0.
 - **FR-001**: After this tab's read of a notification is answered, the bell's badge MUST show the unread count the server gives at that moment, whether or not the live echo of that read was handled before the answer.
 - **FR-002**: When that count cannot be loaded, the badge MUST be lowered by one from what it shows, never below 0 — unless a count asked for after the read was sent (the live echo's reload) has already been shown, which already leaves the read one out.
 - **FR-003**: An unread count that answers a request older than the one the badge shows MUST NOT replace it; the request's own caller still reads its answer (a "mark all" elsewhere is still recognised by it).
+- **FR-003a**: After "mark all" in this tab, a count answering a request sent before it MUST NOT bring the badge back above 0.
 - **FR-004**: A second tap on a row whose read is still waiting for its answer MUST NOT send a second read or lower the badge a second time.
 
 ## Spec Delta
 
 ### Capability: `notifications`
 
-- **Adds**: FR-001, FR-002, FR-003, FR-004
+- **Adds**: FR-001, FR-002, FR-003, FR-003a, FR-004
 - **Modifies**: none
 - **Removes**: none
 

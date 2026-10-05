@@ -98,18 +98,6 @@ function deferred<T>() {
 afterEach(() => TestBed.resetTestingModule());
 
 describe('BellStore badge after a read in this tab', () => {
-  it('shows the server count when the echo and its reload land after the answer', async () => {
-    const { element, fixture, store } = await render(2, [row('a'), row('b')]);
-    api.bellControllerUnreadCount.mockResolvedValue({ count: 1 });
-
-    await store.read('a');
-    echo('a');
-    await settle(fixture);
-
-    expect(store.count()).toBe(1);
-    expect(badge(element)).toBe('1');
-  });
-
   it('shows the count of the later request when the echo reload answers after the read reload', async () => {
     const { fixture, store } = await render(3, [row('a'), row('b'), row('c')]);
     const first = deferred<{ count: number }>();
@@ -161,15 +149,6 @@ describe('BellStore badge after a read in this tab', () => {
     await settle(fixture);
 
     expect(store.count()).toBe(1);
-  });
-
-  it('raises the badge when the server counts more than it showed', async () => {
-    const { store } = await render(1, [row('a')]);
-    api.bellControllerUnreadCount.mockResolvedValue({ count: 4 });
-
-    await store.read('a');
-
-    expect(store.count()).toBe(4);
   });
 
   it('hides the badge when the server counts none after the last read', async () => {
@@ -239,15 +218,6 @@ describe('BellStore badge after a read in this tab', () => {
     expect(api.bellControllerUnreadCount).not.toHaveBeenCalled();
   });
 
-  it('keeps the badge when the read fails after its echo reloaded the count', async () => {
-    const { store } = await render(2, [row('a'), row('b')]);
-    api.bellControllerRead.mockRejectedValue(new Error('offline'));
-
-    await store.read('a');
-
-    expect(store.count()).toBe(2);
-  });
-
   it('shows the server count for a read whose row is not loaded', async () => {
     const { store } = await render(2, [row('a')]);
     api.bellControllerUnreadCount.mockResolvedValue({ count: 1 });
@@ -255,16 +225,6 @@ describe('BellStore badge after a read in this tab', () => {
     await store.read('elsewhere');
 
     expect(store.count()).toBe(1);
-  });
-
-  it('shows the 9+ cap when the server counts above nine after a read', async () => {
-    const { element, fixture, store } = await render(2, [row('a')]);
-    api.bellControllerUnreadCount.mockResolvedValue({ count: 25 });
-
-    await store.read('a');
-    await settle(fixture);
-
-    expect(badge(element)).toBe('9+');
   });
 
   it('asks for the count once after the read when no echo arrives', async () => {

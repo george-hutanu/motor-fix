@@ -104,8 +104,8 @@ export class BellStore {
   }
 
   async read(id: string) {
-    const shown = this.items().find((n) => n.id === id);
-    if (shown?.readAt || this.reading.has(id)) return;
+    const row = this.items().find((n) => n.id === id);
+    if (row?.readAt || this.reading.has(id)) return;
     this.reading.add(id);
     const sent = this.asked;
     try {
@@ -129,6 +129,8 @@ export class BellStore {
       this.items.update((items) =>
         items.map((n) => (n.readAt ? n : { ...n, readAt: at })),
       );
+      // A count already in flight was asked before this and answers too late.
+      this.shown = ++this.asked;
       this.count.set(0);
     } catch {
       toast(this.i18n.t('shell.bell.readFailed'));

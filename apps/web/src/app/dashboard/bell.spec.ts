@@ -333,6 +333,22 @@ describe('BellStore', () => {
     expect(store.count()).toBe(0);
   });
 
+  it('keeps the count at zero after mark all when an earlier count answers late', async () => {
+    const { store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    let answer: (value: { count: number }) => void = () => undefined;
+    api.bellControllerUnreadCount.mockReturnValueOnce(
+      new Promise((resolve) => (answer = resolve)),
+    );
+
+    const counting = store.refreshCount();
+    await store.readAll();
+    answer({ count: 2 });
+    await counting;
+
+    expect(store.count()).toBe(0);
+  });
+
   it('loads the next page after the last row', async () => {
     const { store } = await render(0);
     api.bellControllerList.mockResolvedValueOnce({
