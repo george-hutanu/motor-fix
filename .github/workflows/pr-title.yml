@@ -1,0 +1,29 @@
+name: PR title
+
+# Apart from ci.yml so that a corrected title re-runs this check alone: an
+# edit (title or body) must not re-run the build and test jobs.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  title:
+    name: PR title
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: The title is a Conventional Commit
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([a-z0-9._/-]+\))?!?: [^ ]'
+          if [[ ! "$TITLE" =~ $pattern ]]; then
+            echo "::error::PR title is not a Conventional Commit: \"$TITLE\". Expected type(scope): subject, e.g. feat(api): add the health check. Edit the title and this check runs again."
+            exit 1
+          fi
