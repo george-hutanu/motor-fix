@@ -641,7 +641,7 @@ describe('the command, started from a path with a space or through a symlink', (
       mkdirSync(join(f.root, 'with space', '.claude', 'scripts', 'lib'), { recursive: true });
       for (const name of ['feature.mjs']) writeFileSync(join(dir, 'lib', name), readFileSync(join(import.meta.dirname, 'lib', name)));
       mkdirSync(join(dir, 'pr-test'));
-      for (const name of ['carry.mjs', 'post.mjs', 'findings.mjs']) writeFileSync(join(dir, 'pr-test', name), readFileSync(join(import.meta.dirname, 'pr-test', name)));
+      for (const name of ['carry.mjs', 'post.mjs', 'findings.mjs', 'qa-run.mjs']) writeFileSync(join(dir, 'pr-test', name), readFileSync(join(import.meta.dirname, 'pr-test', name)));
       mkdirSync(join(f.root, 'with space', 'scripts'));
       writeFileSync(join(f.root, 'with space', 'scripts', 'docs-only.ts'), readFileSync(join(import.meta.dirname, '..', '..', 'scripts', 'docs-only.ts')));
       symlinkSync(join(f.root, 'with space'), join(f.root, 'linked'));
@@ -801,5 +801,135 @@ describe('a ready PR whose head is docs-only since its last verdict', () => {
     const r = { path: '/x', fix: 'carry-review', holder: 'none', pr: { number: 21 }, carry: { from: FROM, head: 'abc' } };
     const actions = applyFixes('/nonexistent', { rows: [r], prunable: [], orphanLocks: [] }, { postCarry: () => { throw new Error('HTTP 403'); } });
     assert.deepEqual(actions, [{ what: 'carry #21 from fffffff', ok: false, error: 'HTTP 403' }]);
+  });
+});
+
+describe('a handed-off ready PR waits for CI and its QA run with no agent alive', () => {
+  const opts = { now: NOW, thresholds: DEFAULT_THRESHOLDS };
+  const HEAD = 'd'.repeat(40);
+  const ready = (entries) => summarizePr(pr({ headRefOid: HEAD, statusCheckRollup: entries }));
+  const handed = (over = {}) =>
+    row({ phase: 'qa', head: HEAD, handoff: true, qaRun: { id: '77', head: HEAD, lap: 1 }, activity: { at: NOW - 5 * MIN, source: 'commit' }, ...over });
+
+  it('waits, with no fix, while CI is pending, even long past the quiet threshold', () => {
+    for (const at of [NOW - 5 * MIN, NOW - 300 * MIN]) {
+      const r = fixOf(handed({ activity: { at, source: 'commit' }, pr: ready([check(null, 'IN_PROGRESS')]), qaRunState: { status: 'completed', conclusion: 'success' } }), opts);
+      assert.equal(r.verdict, 'waiting');
+      assert.equal(r.fix, null);
+      assert.match(r.reason, /CI/);
+    }
+  });
+
+  it('waits while the QA run is queued or in progress, even long past the quiet threshold', () => {
+    for (const state of [{ status: 'queued' }, { status: 'in_progress' }]) {
+      const r = fixOf(handed({ activity: { at: NOW - 300 * MIN, source: 'commit' }, pr: ready([check('SUCCESS')]), qaRunState: state }), opts);
+      assert.equal(r.verdict, 'waiting', JSON.stringify(state));
+      assert.equal(r.fix, null);
+      assert.match(r.reason, /QA run 77/);
+    }
+  });
+
+  it('waits on a run that cannot be read only until the quiet threshold, then falls back to the tail', () => {
+    for (const state of [null, undefined]) {
+      const recent = fixOf(handed({ pr: ready([check('SUCCESS')]), qaRunState: state }), opts);
+      assert.equal(recent.verdict, 'waiting', JSON.stringify(state));
+      assert.match(recent.reason, /QA run 77 \(state unreadable\)/);
+      const quiet = fixOf(handed({ activity: { at: NOW - 300 * MIN, source: 'commit' }, pr: ready([check('SUCCESS')]), qaRunState: state }), opts);
+      assert.equal(quiet.fix, 'tail', JSON.stringify(state));
+    }
+  });
+
+  it('offers the merge, not the tail, once the head already has agent-review success', () => {
+    const passed = summarizePr(pr({ headRefOid: HEAD, statusCheckRollup: [check('SUCCESS'), review('SUCCESS')] }));
+    assert.equal(passed.agentReview, 'success');
+    const r = fixOf(handed({ activity: { at: NOW - 300 * MIN, source: 'commit' }, clean: true, pr: passed, qaRunState: { status: 'completed' } }), opts);
+    assert.equal(r.fix, 'merge');
+  });
+
+  it('offers the tail at once when CI has finished, passing or failing, and the run has completed', () => {
+    for (const ci of [check('SUCCESS'), check('FAILURE')]) {
+      const r = fixOf(handed({ pr: ready([ci]), qaRunState: { status: 'completed', conclusion: 'failure' } }), opts);
+      assert.equal(r.verdict, 'stale');
+      assert.equal(r.fix, 'tail');
+    }
+  });
+
+  it('leaves a held worktree alone even when both have finished', () => {
+    const r = fixOf(handed({ holder: 'live', pr: ready([check('SUCCESS')]), qaRunState: { status: 'completed' } }), opts);
+    assert.equal(r.fix, null);
+  });
+
+  it('waits on a PR with no checks only until the quiet threshold, then falls back to the tail', () => {
+    const none = summarizePr(pr({ headRefOid: HEAD, statusCheckRollup: [] }));
+    assert.equal(fixOf(handed({ pr: none, qaRunState: { status: 'completed' } }), opts).verdict, 'waiting');
+    assert.equal(fixOf(handed({ activity: { at: NOW - 120 * MIN, source: 'commit' }, pr: none, qaRunState: { status: 'completed' } }), opts).fix, 'tail');
+  });
+
+  it('keeps today\'s rule with no run recorded, or a run about an older head', () => {
+    for (const qaRun of [null, { id: '77', head: 'e'.repeat(40), lap: 1 }]) {
+      const recent = fixOf(handed({ qaRun, pr: ready([check(null, 'IN_PROGRESS')]) }), opts);
+      assert.equal(recent.verdict, 'ok');
+      const quiet = fixOf(handed({ qaRun, activity: { at: NOW - 120 * MIN, source: 'commit' }, pr: ready([check(null, 'IN_PROGRESS')]) }), opts);
+      assert.equal(quiet.fix, 'tail');
+    }
+  });
+
+  it('dispatches nothing for a waiting row', () => {
+    const waiting = { ...handed(), verdict: 'waiting', fix: null };
+    assert.deepEqual(dispatchPlan([waiting], { qaLive: 0 }), []);
+  });
+
+  it('reads the run line from the note and asks for the run only for a ready PR at the recorded head', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-fixture-urls');
+      quietCommit(a, 5);
+      const head = git(a, 'rev-parse', 'HEAD');
+      mkdirSync(join(a, 'specs', '901-fixture-urls'), { recursive: true });
+      writeFileSync(join(a, '.specify', 'feature.json'), JSON.stringify({ feature_directory: 'specs/901-fixture-urls' }));
+      writeFileSync(join(a, 'specs', '901-fixture-urls', 'handoff.md'), `# hand-off\n- QA run: 77 · head ${head} · lap 1 · https://x/runs/77\n`);
+      const asked = [];
+      const runOf = (id) => {
+        asked.push(id);
+        return { status: 'in_progress', conclusion: '' };
+      };
+      let r = collect(f.repo, env({ gh: () => [pr({ headRefOid: head, statusCheckRollup: [check('SUCCESS')] })], runOf })).rows.find((x) => x.path === a);
+      assert.deepEqual(r.qaRun, { id: '77', head, lap: 1 });
+      assert.deepEqual(asked, ['77']);
+      assert.equal(r.verdict, 'waiting');
+      r = collect(f.repo, env({ gh: () => [pr({ headRefOid: head, statusCheckRollup: [check('SUCCESS')] })], runOf: () => ({ status: 'completed', conclusion: 'success' }) })).rows.find((x) => x.path === a);
+      assert.equal(r.fix, 'tail');
+      asked.length = 0;
+      collect(f.repo, env({ gh: () => [pr({ headRefOid: 'f'.repeat(40) })], runOf }));
+      collect(f.repo, env({ gh: () => [pr({ headRefOid: head, isDraft: true })], runOf }));
+      assert.deepEqual(asked, []);
+      r = collect(f.repo, env({ gh: () => [pr({ headRefOid: head })], runOf: () => { throw new Error('gh: 404'); } })).rows.find((x) => x.path === a);
+      assert.equal(r.verdict, 'waiting');
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('counts waiting rows in the board header', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-fixture-urls');
+      quietCommit(a, 5);
+      const head = git(a, 'rev-parse', 'HEAD');
+      mkdirSync(join(a, 'specs', '901-fixture-urls'), { recursive: true });
+      writeFileSync(join(a, '.specify', 'feature.json'), JSON.stringify({ feature_directory: 'specs/901-fixture-urls' }));
+      writeFileSync(join(a, 'specs', '901-fixture-urls', 'handoff.md'), `- QA run: 77 · head ${head} · lap 1 · u\n`);
+      const lines = [];
+      const log = console.log;
+      console.log = (s) => lines.push(s);
+      try {
+        main([], { cwd: f.repo, now: NOW, gh: () => [pr({ headRefOid: head })], alive: () => false, pidAlive: () => false, runOf: () => ({ status: 'queued' }) });
+      } finally {
+        console.log = log;
+      }
+      assert.match(lines.join('\n'), /waiting 1/);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
   });
 });

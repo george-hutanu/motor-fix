@@ -20,6 +20,8 @@ The first number is the PR. `--dry-run` posts nothing to GitHub or Notion: use
 it for a PR another session owns. `--local` boots the PR on this machine
 instead of GitHub Actions: only when Actions is unavailable, or for a PR whose
 tester change cannot yet run there. It waits for a `scripts/heavy.sh` slot.
+`--run <id>` reviews a PR QA run already dispatched for the head and
+finished (the hand-off note's `QA run:` line) instead of dispatching one.
 
 ## Why
 
@@ -57,8 +59,14 @@ without a status, so the test runs again.
 3. **Lap**: `node .claude/scripts/run-state.mjs show --json` — the lap is
    `repair_iterations + 1`.
 4. **Test**: invoke the `pr-tester` subagent (Agent tool,
-   `subagent_type: pr-tester`) with `PR`, `LAP`, `DRY_RUN` when asked and
-   `LOCAL` for `--local`. By default it dispatches `.github/workflows/pr-qa.yml`
+   `subagent_type: pr-tester`) with `PR`, `LAP`, `DRY_RUN` when asked,
+   `LOCAL` for `--local` and `RUN` for `--run <id>`. Within the lifecycle the
+   run is always given: the agent that marks the PR ready, or pushes a fix,
+   dispatches it with `dispatch.mjs <n> --no-wait` and ends, and the tail
+   brings `RUN` once CI and the run have finished (speckit-auto "The wait"),
+   so no agent sleeps on a run. With `RUN` the tester downloads that run
+   (`dispatch.mjs <n> --run <id>`) and checks that the flows sent with it
+   cover the spec's. Without it, by hand, it dispatches `.github/workflows/pr-qa.yml`
    through `.claude/scripts/pr-test/dispatch.mjs` (`gh workflow run`, the
    run found by the nonce in its title, then `gh run watch`): a GitHub runner boots the PR head with PostgreSQL, Redis
    and MinIO from the PR's own compose file, sweeps the screens, runs its flows
@@ -89,7 +97,9 @@ without a status, so the test runs again.
    node .claude/scripts/run-state.mjs repair   # exits 1 past SPECKIT_MAX_REPAIR_ITERATIONS (5)
    ```
 
-   Then go back to step 2 on the new head. Medium and low findings go to
+   Then dispatch the new head's run with `dispatch.mjs <n> --no-wait` and
+   end (speckit-auto "The tail"); the next tail comes back to step 2 with its
+   `RUN`. Medium and low findings go to
    `specs/<feature>/deferred.md` unless they are one-line fixes, and every
    deferred bullet is filed as a Notion task (`speckit-notion-sync debt`).
    On success, file the lap's deferred findings the same way before merging,
