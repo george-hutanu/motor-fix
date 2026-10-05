@@ -1,4 +1,4 @@
-import { EMAIL_CHECK, PASSWORD_RESET } from './account-email';
+import { EMAIL_CHECK, PASSWORD_CHANGED, PASSWORD_RESET } from './account-email';
 import { DUE_ITP } from './due-itp';
 import { GENERIC, GENERIC_GROUPED } from './generic';
 import { NEWS } from './news';
@@ -10,6 +10,7 @@ import type { Registry } from '../templates';
 // type with no e-mail or bell text.
 export const TEMPLATES: Registry = {
   'ACCOUNT_EMAIL.email_check': EMAIL_CHECK,
+  'ACCOUNT_EMAIL.password_changed': PASSWORD_CHANGED,
   'ACCOUNT_EMAIL.password_reset': PASSWORD_RESET,
   DUE_ITP,
   GENERIC,

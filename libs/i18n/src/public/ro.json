@@ -13,6 +13,24 @@
     "sent": "Am trimis un link nou pe e‑mail.",
     "tooMany": "Ai cerut deja un link. Încearcă din nou puțin mai târziu."
   },
+  "newPassword": {
+    "askAgain": "Cere un link nou",
+    "checking": "Verificăm linkul…",
+    "expired": "Linkul a expirat",
+    "expiredLine": "Linkul a fost deja folosit sau este mai vechi de o oră. Cere unul nou.",
+    "hint": "Cel puțin 8 caractere.",
+    "password": "Parolă nouă",
+    "retry": "Încearcă din nou",
+    "submit": "Salvează parola",
+    "title": "Parolă nouă"
+  },
+  "passwordReset": {
+    "back": "Înapoi la autentificare",
+    "line": "Îți trimitem pe e‑mail un link cu care alegi o parolă nouă.",
+    "sent": "Dacă există un cont cu această adresă, ți‑am trimis un link.",
+    "submit": "Trimite linkul",
+    "title": "Resetează parola"
+  },
   "placeholder": {
     "account": "Cont",
     "garages": "Service‑uri",
@@ -27,6 +45,7 @@
     "field": {
       "pattern": "Adresa de e‑mail nu pare corectă."
     },
+    "forgot": "Ai uitat parola?",
     "newHere": "Ești nou pe MotorFix?",
     "password": "Parolă",
     "passwordPlaceholder": "Parola ta",

@@ -46,7 +46,17 @@ export class AuthModule implements OnApplicationShutdown {
   static register(options: AuthOptions): DynamicModule {
     return {
       controllers: [AuthController, MeController, AuditHistoryController],
-      exports: [AccountsService, AUTH_OPTIONS, AUTH_REDIS, EVENT_PORT, PRISMA],
+      exports: [
+        AccountsService,
+        Attempts,
+        AUTH_OPTIONS,
+        AUTH_REDIS,
+        EVENT_PORT,
+        MAINTENANCE,
+        PRISMA,
+        SESSION_EVENTS,
+        SignInService,
+      ],
       // One actor check for every route of the app, and one client.
       global: true,
       module: AuthModule,

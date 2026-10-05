@@ -32,7 +32,7 @@ export const ADDRESS = /^\s*[^\s@]+@[^\s@]+\.[^\s@]+\s*$/;
 
 // What a sign-in or sign-up task closes with to hand over to the other one.
 export interface AuthSwitch {
-  switchTo: 'sign-in' | 'sign-up';
+  switchTo: 'sign-in' | 'sign-up' | 'reset';
   email: string;
 }
 
@@ -61,12 +61,13 @@ export type AuthData = { email?: string; reason?: boolean } | undefined;
     .brand { margin: 0; color: var(--mf-text-secondary); }
     .field { display: grid; gap: var(--mf-space-2); }
     label { font-weight: 700; }
+    .remember-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--mf-space-3); }
     .remember { display: flex; align-items: center; gap: var(--mf-space-3); min-height: var(--mf-tap); font-weight: 400; cursor: pointer; }
     .remember input { width: 20px; height: 20px; margin: 0; accent-color: var(--mf-amber); }
     button[type='submit'] { width: 100%; min-height: 54px; white-space: normal; }
     .switch { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--mf-space-2); margin: 0; color: var(--mf-text-secondary); }
-    .switch button { min-height: var(--mf-tap); padding: 0; border: 0; background: transparent; color: var(--mf-amber-ink); font: inherit; font-weight: 700; cursor: pointer; }
-    .switch button:focus-visible { outline: 2px solid var(--mf-amber-ink); outline-offset: 2px; }
+    .switch button, .forgot { min-height: var(--mf-tap); padding: 0; border: 0; background: transparent; color: var(--mf-amber-ink); font: inherit; font-weight: 700; cursor: pointer; }
+    .switch button:focus-visible, .forgot:focus-visible { outline: 2px solid var(--mf-amber-ink); outline-offset: 2px; }
   `,
   template: `
     <form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
@@ -103,17 +104,22 @@ export type AuthData = { email?: string; reason?: boolean } | undefined;
         />
         <mf-field-error id="mf-sign-in-password-error" [save]="save" [control]="form.controls.password" />
       </div>
-      <label class="remember">
-        <input type="checkbox" formControlName="remember" />
-        <span>{{ 'public.signIn.remember' | t }}</span>
-      </label>
+      <div class="remember-row">
+        <label class="remember">
+          <input type="checkbox" formControlName="remember" />
+          <span>{{ 'public.signIn.remember' | t }}</span>
+        </label>
+        <button type="button" class="forgot" [disabled]="save.state() === 'sending'" (click)="switchTo('reset')">
+          {{ 'public.signIn.forgot' | t }}
+        </button>
+      </div>
       <mf-task-error [save]="save" />
       <button hlmBtn type="submit" [mfTaskSubmit]="save">
         {{ 'public.signIn.submit' | t }}
       </button>
       <p class="switch">
         <span>{{ 'public.signIn.newHere' | t }}</span>
-        <button type="button" [disabled]="save.state() === 'sending'" (click)="switchToSignUp()">
+        <button type="button" [disabled]="save.state() === 'sending'" (click)="switchTo('sign-up')">
           {{ 'public.signIn.createAccount' | t }}
         </button>
       </p>
@@ -154,10 +160,10 @@ export class SignIn {
     },
   });
 
-  protected switchToSignUp() {
+  protected switchTo(task: 'sign-up' | 'reset') {
     this.task.close({
       email: this.form.controls.email.value.trim(),
-      switchTo: 'sign-up',
+      switchTo: task,
     });
   }
 
