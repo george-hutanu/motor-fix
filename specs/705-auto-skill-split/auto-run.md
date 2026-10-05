@@ -35,3 +35,21 @@
 - `speckit-harden` and `.claude/agents/mutation-runner.md` still describe local mutation runs.
 - Phase 14 calls a missing `design.md` a Hard Stop, but the Hard Stops list says it is exhaustive.
 - The comment in `.claude/vitest.config.ts` still says `.claude/` is git-excluded.
+
+## Resume (2026-10-06)
+- **T004**: #141 and #144 merged. `git merge --no-edit origin/main` was clean (bce892a). SKILL.md grew to 43867 bytes with #141's lifecycle steps and #144's "Phase agents".
+- **T005**: moved the sections by line range (no rewording), then fixed the pointers: Autonomy Contract 4 names `commit-protocol.md`; phase 14 names `hand-off.md` and `tail.md`; the tail prompt reads SKILL.md, then runs `tail.md`; the Final Report points to `report.md`. SKILL.md gains a file → when-to-read table and a Detail column in the run order. Phase 17 gets a pointer subsection in `phases-close.md`.
+- **Outside the skill**: `speckit-watch` (`tail` fix) and `task-runner.md` now name `tail.md`.
+- **T006**: tail-handoff-wiring and lifecycle-wiring read `hand-off.md` + `tail.md`; task-runner reads all nine files; phase-dispatch slices phases 1–17 from the three phase files and stops at any heading.
+- **T007**: GATES gained the lifecycle-wiring and phase-dispatch literals. `npx vitest run --config .claude/vitest.config.ts`: 66 files, 1480 tests passed. `doctor.mjs`: 16 ok, 0 failures.
+- **Deferred**: two bullets filed by the coordinator (#143 waitLoop race, #141 `lifecycle.mjs:253` → ST-710); URLs in `deferred.md`.
+
+## Measurement (`wc -c`)
+| What | Bytes |
+|---|---|
+| SKILL.md before (origin/main 3486742) | 42492 |
+| SKILL.md before the split, after #141/#144 merged | 43867 |
+| SKILL.md after | 13697 |
+| Loaded every turn: saving against 43867 | 30170 (69%) |
+| Typical level-2 story run, each file read once (SKILL + preflight + phases-plan/build/close + commit-protocol + hand-off + report) | 39174 |
+| Tail agent (SKILL.md + tail.md) | 20565 |
