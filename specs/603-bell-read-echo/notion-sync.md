@@ -11,3 +11,4 @@
 - 2026-10-05 · labels · PR #109 · in development
 - 2026-10-05 · qa · ST-603 story Status · Implementing → QA
 - 2026-10-05 · labels · PR #109 · QA
+- 2026-10-05 · debt · ST-603 · 2 tasks filed (deferred.md lines 4, 5)

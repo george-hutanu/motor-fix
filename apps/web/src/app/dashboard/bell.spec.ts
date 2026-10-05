@@ -535,4 +535,31 @@ describe('BellStore', () => {
 
     expect(store.items().map((n) => n.readAt)).toEqual([null, null]);
   });
+
+  it('leaves a notification that arrives during a mark all elsewhere unread', async () => {
+    const { fixture, store } = await twoPages(2);
+    let answer: (value: { count: number }) => void = () => undefined;
+    api.bellControllerUnreadCount
+      .mockReturnValueOnce(new Promise((resolve) => (answer = resolve)))
+      .mockResolvedValueOnce({ count: 1 });
+    api.bellControllerList
+      .mockResolvedValueOnce({ items: [row('new'), row('a')], nextCursor: 'a' })
+      .mockRejectedValueOnce(new Error('offline'));
+
+    readLive('account-1');
+    events.next({
+      at: '2026-10-05T10:00:01.000Z',
+      id: 'new',
+      kind: 'notification.created',
+    });
+    await settle(fixture);
+    answer({ count: 0 });
+    await settle(fixture);
+
+    expect(store.items().map((n) => [n.id, n.readAt])).toEqual([
+      ['new', null],
+      ['a', '2026-10-05T10:00:00.000Z'],
+      ['b', '2026-10-05T10:00:00.000Z'],
+    ]);
+  });
 });

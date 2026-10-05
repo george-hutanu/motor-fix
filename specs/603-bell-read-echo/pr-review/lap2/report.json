@@ -1,0 +1,106 @@
+{
+  "pr": 109,
+  "repo": "george-hutanu/motor-fix",
+  "sha": "d6aea31d69a563861ffd60b6dbb37cbf8f09a5ff",
+  "base": "8664a7bba64230560f0267c8cb3d374111179066",
+  "lap": 2,
+  "verdict": "failure",
+  "summary": "1 blocking finding(s); 4 in all. Booted postgres, redis, minio, api, web, worker.",
+  "findings": [
+    {
+      "severity": "high",
+      "kind": "review",
+      "title": "PR description is the unfilled template; the required \"PR template\" (body) check fails on d6aea31",
+      "where": "PR #109 description",
+      "steps": [
+        "gh pr view 109 --json body: every section still reads \"_(fill in: ...)_\" and no checklist box is ticked",
+        "gh pr checks 109: body fail (https://github.com/george-hutanu/motor-fix/actions/runs/37291504099)",
+        "the description was overwritten with the bare template at 2026-10-05T09:38:51Z (userContentEdits); it held filled Why/Notion story/Spec folder sections at 09:30:08Z",
+        "fill every section, run node scripts/pr-body-check.ts --body-file <body> --title \"<title>\", then gh pr edit 109 --body-file <body>"
+      ],
+      "evidence": "Constitution VII (3, 6) and AGENTS.md lifecycle step 4: a ready PR has every template section filled, and no PR merges with a failing check. specs/603-bell-read-echo/auto-run.md says \"PR body filled (pr-body-check passes); marked ready\", which is not true of the PR as it stands."
+    },
+    {
+      "severity": "medium",
+      "kind": "review",
+      "title": "deferred.md items are not filed in Notion: neither bullet carries its task's URL",
+      "where": "specs/603-bell-read-echo/deferred.md:5-6",
+      "steps": [
+        "read specs/603-bell-read-echo/deferred.md",
+        "both bullets (bell.ts:103 badge one fewer after own echo; bell.ts:156 out-of-order first-page merges) end without a Notion task URL"
+      ],
+      "evidence": "AGENTS.md: technical debt a review defers is filed as a To do task (speckit-notion-sync debt) before the merge, each bullet carrying its task's URL."
+    },
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "\"Count is 0, mark every row read\" applies to rows that arrived after the count was taken",
+      "where": "apps/web/src/app/dashboard/bell.ts:153",
+      "steps": [
+        "`if ((await this.refreshCount()) === 0) this.markRead(() => true, at);`",
+        "a notification.created during that await merges a new unread first row (arrived(), bell.ts:141) when its page answers before the count does",
+        "the count answered 0 from before the insert, so markRead(() => true) marks the new row read in the view until the next reload"
+      ],
+      "evidence": "A new ordering race of the same family as the deferred bell.ts:156 item; narrow window, corrected by the next first-page reload. Could restrict the mark-all to rows whose `at` is not later than the event's `at`."
+    },
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "Spec Delta says \"Modifies: none\" while FR-001 modifies 199-FR-010",
+      "where": "specs/603-bell-read-echo/spec.md (Spec Delta)",
+      "steps": [
+        "FR-001 ends \"(modifies 199-FR-010)\"",
+        "Spec Delta lists FR-001 under Adds and \"Modifies: none\""
+      ],
+      "evidence": "/speckit-archive merges the Delta into .specify/capabilities/notifications.md; listing 199-FR-010 under Modifies keeps the capability spec from holding both the old reset rule and the new merge rule."
+    }
+  ],
+  "booted": [
+    "postgres",
+    "redis",
+    "minio",
+    "api",
+    "web",
+    "worker"
+  ],
+  "notes": [
+    "Ran on GitHub Actions (https://github.com/george-hutanu/motor-fix/actions/runs/37292259016): PostgreSQL with PostGIS, Redis and MinIO from the PR's own compose file, started by the PR QA workflow.",
+    "No changed GET endpoint without path parameters.",
+    "Unit and end-to-end tests left to CI (Unit tests and E2E tests; the merge gate waits for them)."
+  ],
+  "screenshots": [
+    "shots/home-desktop-light-ro.png",
+    "shots/home-desktop-light-en.png",
+    "shots/home-desktop-dark-ro.png",
+    "shots/home-desktop-dark-en.png",
+    "shots/home-tablet-light-ro.png",
+    "shots/home-tablet-light-en.png",
+    "shots/home-tablet-dark-ro.png",
+    "shots/home-tablet-dark-en.png",
+    "shots/home-mobile-light-ro.png",
+    "shots/home-mobile-light-en.png",
+    "shots/home-mobile-dark-ro.png",
+    "shots/home-mobile-dark-en.png",
+    "shots/home-small-phone-light-ro.png",
+    "shots/home-small-phone-light-en.png",
+    "shots/home-small-phone-dark-ro.png",
+    "shots/home-small-phone-dark-en.png",
+    "shots/cockpit-desktop-light-ro.png",
+    "shots/cockpit-desktop-light-en.png",
+    "shots/cockpit-desktop-dark-ro.png",
+    "shots/cockpit-desktop-dark-en.png",
+    "shots/cockpit-tablet-light-ro.png",
+    "shots/cockpit-tablet-light-en.png",
+    "shots/cockpit-tablet-dark-ro.png",
+    "shots/cockpit-tablet-dark-en.png",
+    "shots/cockpit-mobile-light-ro.png",
+    "shots/cockpit-mobile-light-en.png",
+    "shots/cockpit-mobile-dark-ro.png",
+    "shots/cockpit-mobile-dark-en.png",
+    "shots/cockpit-small-phone-light-ro.png",
+    "shots/cockpit-small-phone-light-en.png",
+    "shots/cockpit-small-phone-dark-ro.png",
+    "shots/cockpit-small-phone-dark-en.png"
+  ],
+  "markdown": "**Agent review: failure** — PR #109 at `d6aea31`, lap 2\n\nBlocking: 1 (blocker 0, high 1) · medium 1 · low 2. Booted: postgres, redis, minio, api, web, worker.\n- Ran on GitHub Actions (https://github.com/george-hutanu/motor-fix/actions/runs/37292259016): PostgreSQL with PostGIS, Redis and MinIO from the PR's own compose file, started by the PR QA workflow.\n- No changed GET endpoint without path parameters.\n- Unit and end-to-end tests left to CI (Unit tests and E2E tests; the merge gate waits for them).\n\n| # | Severity | Finding | Where | Evidence |\n| --- | --- | --- | --- | --- |\n| 1 | high | PR description is the unfilled template; the required \"PR template\" (body) check fails on d6aea31 |  | Constitution VII (3, 6) and AGENTS.md lifecycle step 4: a ready PR has every template section filled, and no PR merges with a failing check. specs/603-bell-read-echo/auto-run.md says \"PR body filled (pr-body-check passes); marked ready\", which is not true of the PR as it stands. |\n| 2 | medium | deferred.md items are not filed in Notion: neither bullet carries its task's URL |  | AGENTS.md: technical debt a review defers is filed as a To do task (speckit-notion-sync debt) before the merge, each bullet carrying its task's URL. |\n| 3 | low | \"Count is 0, mark every row read\" applies to rows that arrived after the count was taken |  | A new ordering race of the same family as the deferred bell.ts:156 item; narrow window, corrected by the next first-page reload. Could restrict the mark-all to rows whose `at` is not later than the event's `at`. |\n| 4 | low | Spec Delta says \"Modifies: none\" while FR-001 modifies 199-FR-010 |  | /speckit-archive merges the Delta into .specify/capabilities/notifications.md; listing 199-FR-010 under Modifies keeps the capability spec from holding both the old reset rule and the new merge rule. |\n\n### Reproduction\n1. gh pr view 109 --json body: every section still reads \"_(fill in: ...)_\" and no checklist box is ticked → gh pr checks 109: body fail (https://github.com/george-hutanu/motor-fix/actions/runs/37291504099) → the description was overwritten with the bare template at 2026-10-05T09:38:51Z (userContentEdits); it held filled Why/Notion story/Spec folder sections at 09:30:08Z → fill every section, run node scripts/pr-body-check.ts --body-file <body> --title \"<title>\", then gh pr edit 109 --body-file <body>\n2. read specs/603-bell-read-echo/deferred.md → both bullets (bell.ts:103 badge one fewer after own echo; bell.ts:156 out-of-order first-page merges) end without a Notion task URL\n3. `if ((await this.refreshCount()) === 0) this.markRead(() => true, at);` → a notification.created during that await merges a new unread first row (arrived(), bell.ts:141) when its page answers before the count does → the count answered 0 from before the insert, so markRead(() => true) marks the new row read in the view until the next reload\n4. FR-001 ends \"(modifies 199-FR-010)\" → Spec Delta lists FR-001 under Adds and \"Modifies: none\"\n\nScreenshots: 32, one per route × viewport × scheme × language.\n"
+}

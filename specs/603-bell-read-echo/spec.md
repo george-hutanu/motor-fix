@@ -44,7 +44,7 @@ row is read, and "Mai multe" still follows the second page.
 
 ### Functional Requirements
 
-- **FR-001**: On `notification.read`, the bell's list MUST keep every row already loaded and MUST NOT lose its place for "Mai multe": the reloaded first page is merged in front of the rows below it (as a new notification's arrival already does), and the next page still follows the last row loaded (modifies 199-FR-010).
+- **FR-001**: On `notification.read`, the bell's list MUST keep every row already loaded and MUST NOT lose its place for "Mai multe": the reloaded first page is merged in front of the rows below it (as a new notification's arrival already does), and the next page still follows the last row loaded.
 - **FR-002**: On `notification.read` whose id names a row shown, the bell MUST show that row as read, wherever it sits in the list.
 - **FR-003**: On `notification.read`, when the reloaded unread count is 0, the bell MUST show every row shown as read.
 

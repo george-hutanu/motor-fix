@@ -43,3 +43,8 @@ Worktree: .worktrees/603-bell-read-echo
 
 ## Hand-off
 - PR body filled (pr-body-check passes); marked ready; Notion QA.
+
+## QA lap 2 (pr-tester, run 37292259016)
+- Browser and API flows passed: two tabs keep 40 rows across a read on page 2, "Mai multe" continues to 45, mark all reaches the other tab.
+- Failure on one HIGH: the PR body had been overwritten with the bare template (another session's run reused the shared `scratchpad/pr-body.md`); the body is rebuilt from a PR-specific file.
+- MEDIUM: the deferred items are filed as Notion tasks. LOW: a notification arriving while the count reloads during a "mark all" elsewhere no longer gets marked read (test first: 1 failed, 28 passed → 29/29). LOW: FR-001 no longer names a Modifies the Spec Delta does not carry.

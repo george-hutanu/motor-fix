@@ -150,7 +150,10 @@ export class BellStore {
   // the account's id, so it shows as an unread count of zero.
   private async readElsewhere(id: string, at: string) {
     this.markRead((n) => n.id === id, at);
-    if ((await this.refreshCount()) === 0) this.markRead(() => true, at);
+    // Rows that join while the count is reloading are newer than it.
+    const shown = new Set(this.items().map((n) => n.id));
+    if ((await this.refreshCount()) === 0)
+      this.markRead((n) => shown.has(n.id), at);
     if (this.state() !== 'ready') return;
     try {
       this.merge((await this.page()).items);
