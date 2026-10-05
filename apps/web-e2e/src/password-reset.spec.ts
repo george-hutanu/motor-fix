@@ -7,9 +7,9 @@ const OLD = 'parola-veche-de-test';
 const NEW = 'parola-noua-de-test';
 
 // The reset e-mail as the worker sent it, read from the test mailbox the
-// local run starts (mailbox.mjs); a deployed address has none, so it skips.
-// The API answers before it issues the link, so this waits for it to land.
-const deployed = Boolean(process.env['BASE_URL']);
+// local run starts (mailbox.mjs); a deployed address has none, so the config
+// leaves out flows tagged @mailbox there. The API answers before it issues the
+// link, so this waits for it to land.
 const RESET_LINK = /https?:\/\/[^\s"<>]+\/reset-password\/[A-Za-z0-9_-]{43}/;
 
 async function lastResetLink(page: Page, email: string): Promise<string> {
@@ -47,9 +47,7 @@ const noSideScroll = (page: Page) =>
 const openSignIn = (page: Page) =>
   page.getByRole('button', { exact: true, name: 'Autentificare' }).click();
 
-test.describe('resetting a forgotten password @seeded', () => {
-  test.skip(deployed, 'reads the sent e-mail from the local test mailbox');
-
+test.describe('resetting a forgotten password @seeded @mailbox', () => {
   test('from the sign-in dialog through the e-mail: the new password works and the old one does not', async ({
     browser,
     page,

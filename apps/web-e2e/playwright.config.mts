@@ -20,8 +20,13 @@ const sending = {
 export default defineConfig({
   ...nxE2EPreset(import.meta.dirname, { testDir: './src' }),
   // Flows tagged @seeded sign in with the seeded accounts; a deployed address
-  // runs them only when it is given their password.
-  grepInvert: deployed && !process.env['E2E_PASSWORD'] ? /@seeded/ : undefined,
+  // runs them only when it is given their password. Flows tagged @mailbox read
+  // the local test mailbox, which a deployed address does not have.
+  grepInvert: deployed
+    ? process.env['E2E_PASSWORD']
+      ? /@mailbox/
+      : /@seeded|@mailbox/
+    : undefined,
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   use: {
     baseURL: deployed ?? 'http://localhost:4200',
