@@ -26,7 +26,7 @@ stubbed, and compare the commands run, in order, with the expected ones.
 
 1. **Given** a feature branch with no commit ahead of main and no PR, **When** `open --title "chore(harness): ST-696 …"` runs, **Then** it makes the empty `chore(harness): ST-696 start …` commit, pushes with upstream to the feature branch, opens a draft PR from `.github/pull_request_template.md` with the labels `planning`, the title's type label and `scope: harness`, then runs the Notion `start` and `pr <n>` events, and prints `{"step":"open","ok":true,"pr":<n>,…}`.
 2. **Given** a branch that already has commits and an open PR, **When** `open` runs again, **Then** it makes no commit, opens no second PR, and runs only the push and the Notion events.
-3. **Given** a finished feature and a filled body file, **When** `ready --body-file <f>` runs, **Then** it commits and pushes the feature records (the feature's `specs/` folder and `.specify/capabilities/`), runs `scripts/pr-body-check.ts` on the body, `gh pr edit --body-file`, `gh pr ready`, the Notion `qa` event, commits and pushes the `qa` line, and writes `specs/<feature>/handoff.md` with the PR, branch, worktree, head sha, Notion story, open decisions and deferred items.
+3. **Given** a finished feature and a filled body file, **When** `ready --body-file <f>` runs, **Then** it files any unfiled `deferred.md` bullets (the Notion `debt` event), commits and pushes the feature records (the feature's `specs/` folder and `.specify/capabilities/`), runs `scripts/pr-body-check.ts` on the body, `gh pr edit --body-file`, `gh pr ready`, the Notion `qa` event, commits and pushes the `qa` line, and writes `specs/<feature>/handoff.md` with the PR, branch, worktree, head sha, Notion story, open decisions and deferred items.
 4. **Given** a ready PR whose head has `agent-review` success and every other check green, **When** `merge` runs, **Then** it runs `gh pr merge <n> --merge`, the Notion `finish` event with `specs/<feature>/finish-comment.md` (absolute path), posts one finish comment on the merged PR (that file, the merge sha and the new `notion-sync.md` lines), restores `notion-sync.md`, deletes `handoff.md`, and reports the Ready to work candidates left for the hold review.
 
 ### User Story 2 - A step stops at the first failure, with the fix (Priority: P1)
@@ -60,13 +60,13 @@ stubbed, and compare the commands run, in order, with the expected ones.
 ### Functional Requirements
 
 - **FR-001**: `lifecycle.mjs open --title <t>` MUST, in this order: make the empty start commit when the branch has no commit ahead of `origin/main`; push with upstream to the feature branch; when the branch has no open PR, open a draft from the PR template with `planning`, the title's type label (`breaking` when the title has `!`) and `scope: <scope>`; then run the Notion `start` and `pr <n>` events.
-- **FR-002**: `lifecycle.mjs ready --body-file <f>` MUST, in this order: commit and push the feature records when they changed; run `pr-body-check.ts` and stop on failure; `gh pr edit --body-file`; `gh pr ready`; the Notion `qa` event; commit and push the `qa` line; write `handoff.md`.
+- **FR-002**: `lifecycle.mjs ready --body-file <f>` MUST, in this order: file the unfiled `deferred.md` bullets with the Notion `debt` event; commit and push the feature records when they changed; run `pr-body-check.ts` and stop on failure; `gh pr edit --body-file`; `gh pr ready`; the Notion `qa` event; commit and push the `qa` line; write `handoff.md`.
 - **FR-003**: `lifecycle.mjs merge` MUST run the merge gate on `gh pr merge <n> --merge` and refuse exactly when it refuses; otherwise merge, then run the Notion `finish` event, post one finish comment on the merged PR, restore `notion-sync.md` and delete `handoff.md`.
 - **FR-004**: Every step MUST print exactly one JSON line on stdout: `ok`, the step, what it did, and on a stop `stopped` (the command or check) and `fix`.
 - **FR-005**: When the Notion CLI exits 3, the step MUST stop and list the connector events left and the `--notion-done` rerun that completes the step.
 - **FR-006**: Every git and gh command MUST first pass the Bash gates registered in `.claude/settings.json`, judged on that command's text, with the merge gate's test-only state variables removed from their environment.
 - **FR-007**: No step MAY push from `main`, push to `main`, or force-push.
-- **FR-008**: gh MUST run as george-hutanu: the caller's `GH_TOKEN`, else `gh auth token -u george-hutanu`.
+- **FR-008**: gh MUST run as george-hutanu: the caller's `GH_TOKEN`, else `gh auth token -u george-hutanu`; when that fails or prints nothing, the step MUST stop before any git or gh call.
 - **FR-009**: `speckit-auto/SKILL.md` (the lines listing the open, ready and merge commands) and `speckit-git-commit/SKILL.md` (the first-commit recipe) MUST name one `lifecycle.mjs` call per step instead of the recipe.
 
 ### Key Entities
@@ -92,6 +92,6 @@ stubbed, and compare the commands run, in order, with the expected ones.
 
 ## Spec Delta
 
-### Adds
+### Capability: `platform`
 
-- **Lifecycle steps as one call**: `lifecycle.mjs open|ready|merge` runs a Constitution VII step in one Bash call, through the same gates, and prints one JSON line.
+- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009

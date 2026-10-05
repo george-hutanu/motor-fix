@@ -17,3 +17,17 @@ Scratchpad `measure.mjs` over every transcript in ~/.claude/projects/-Users-geor
 
 ## Tasks
 tasks.md T001-T005.
+
+## Tests (red)
+lifecycle.spec.mjs failed to import (no lifecycle.mjs); lifecycle-wiring.spec.mjs 3 failed.
+
+## Implement
+Notion implement via connector (story Implementing, PR label in development). lifecycle.mjs green: 30 specs; full harness 1262 passed. Merged origin/main (ST-688 #140) and resolved speckit-auto Hand-off: kept 688's QA dispatch step, replaced the records/body/ready/qa recipe with one `lifecycle.mjs ready` call; tail step 5-6 now `lifecycle.mjs merge`. tail-handoff-wiring.spec.mjs updated to the new calls.
+
+## Measured skill shrink (vs origin/main 3486742)
+- speckit-auto/SKILL.md: 775 → 767 lines, 42492 → 42130 bytes (−8 lines, −362 bytes)
+- speckit-git-commit/SKILL.md: 125 → 109 lines, 6959 → 5825 bytes (−16 lines, −1134 bytes)
+- total: −24 lines, −1496 bytes
+
+## Harden
+artifact-lint clean after the Spec Delta was put in the `### Capability:` form; capabilities validate clean; doctor 16 ok; lint:harness ok. diff-audit findings are all in libs/ code merged from main, none in this change.
