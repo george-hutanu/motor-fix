@@ -71,3 +71,11 @@ Strikes:
 - CHK019 (concurrent-run half): "Parallel runs" is outside phases 2-8 and not edited; only the PR #140 / lever 4 overlap stays as a requirement (FR-007).
 
 Other items were satisfied as written (no edit).
+
+## 7. Tasks
+
+`tasks.md`: 13 tasks (T001 setup; T002-T007 US1; T008-T010 US2; T011-T013 US3). Phase run on `sonnet` as a dispatched agent; analyze (`after_tasks` hook) not run here, phase 8 does it inline.
+
+FR to task: FR-001 T002 T003 T004 · FR-002 T002 T005 · FR-003 T003 T004 · FR-004 T003 T008 · FR-005 T008 T009 T010 · FR-006 T011 T012 · FR-007 T001 T007 · FR-008 T002 T011 · FR-009 T003.
+
+Autonomous: tests included because FR-008 requires a failing-first spec; no foundational phase (nothing blocking).
