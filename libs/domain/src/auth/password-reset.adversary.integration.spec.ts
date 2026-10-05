@@ -143,6 +143,7 @@ const emailCount = () =>
     where: { channel: 'email', kind: 'ACCOUNT_EMAIL' },
   });
 
+// @traces 568-FR-001 568-FR-002 568-FR-003
 describe('answering a reset request before the link is issued', () => {
   it('waits in drain for every one of many concurrent issuings', async () => {
     const release = holdResetEmails();
@@ -350,7 +351,7 @@ describe('answering a reset request before the link is issued', () => {
     expect(after.map((t) => t.tokenHash)).toEqual(live.map((t) => t.tokenHash));
   });
 
-  it('answers 202 for an invalid body without issuing anything', async () => {
+  it('refuses an invalid body with 400 without issuing anything', async () => {
     await person();
     const send = jest.spyOn(app.get(NotificationsService), 'sendAccountEmail');
     await http()

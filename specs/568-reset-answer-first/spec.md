@@ -65,4 +65,5 @@ FR-001 changes when ST-127's request answers (127-FR-001): its answer no longer 
 - (autonomous default) The issuing runs in the same process after the answer rather than as a queued job: the story's brief says "answer 202 first and issue the link after (the issue step never throws)"; a job queue would add a worker hop for one lookup and one insert (Principle I).
 - (autonomous default) The request-limit check stays before the 202: it is one Redis round trip made for every address alike, so it does not tell addresses apart, and keeping it first keeps a refused request from doing any work.
 - (autonomous default) Shutdown waits for in-flight issuing (FR-003) without a timeout of its own: each issuing is one lookup, one transaction and one queue write, bounded by their clients' own timeouts.
+- (autonomous default) Links asked for while shutdown is already waiting are waited for too, for at most three rounds: the server still answers during shutdown, and a fixed number of rounds keeps a steady stream of requests from holding the shutdown open.
 - (autonomous default) No screen changes; the web app already shows the same neutral line whatever the answer.

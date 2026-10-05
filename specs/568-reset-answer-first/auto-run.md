@@ -53,3 +53,11 @@ Worktree: .worktrees/568-reset-answer-first
 ## Hand-off
 - Merged origin/main (62 behind, no conflicts; rules unchanged, constitution v1.8.1). `audit-coverage.spec.ts` changed on main too (BellService exemptions): 24 passed after the merge.
 - PR body filled (pr-body-check passes), `gh pr ready 107`, Notion Implementing → QA, label QA.
+
+## QA lap 2 → repair lap 3 (iteration 2 of 5)
+- QA lap 2 passed (agent-review success on ef1a3f8); fixed the cheap findings anyway.
+- `@traces 568-FR-00n` tags on the new tests (trace-matrix 3/3); adversary test at :353 renamed to match its 400.
+- Missing `PUBLIC_WEB_URL` now logs its own fixed message (red test first, then `issue()` logs and returns).
+- Spec assumption added for the three-round drain bound.
+- Deferred to `deferred.md`, filed as To do tech debt: tester boots the api without `PUBLIC_WEB_URL`; audit-coverage misses `this.<field>.delete(variable)`.
+- Reset + audit specs: 95 passed.

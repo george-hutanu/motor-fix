@@ -357,6 +357,28 @@ describe('asking for a reset link', () => {
     }
   });
 
+  // @traces 568-FR-002
+  it('logs that PUBLIC_WEB_URL is missing when it cannot build the link', async () => {
+    await person();
+    const options = (resets as unknown as { options: { webUrl?: string } })
+      .options;
+    options.webUrl = undefined;
+    const logged = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    try {
+      await ask('andrei@example.test').expect(202);
+      await resets.drain();
+    } finally {
+      options.webUrl = webUrl;
+    }
+    expect(JSON.stringify(logged.mock.calls)).toContain(
+      'PUBLIC_WEB_URL is not set',
+    );
+    expect(JSON.stringify(logged.mock.calls)).not.toContain('andrei');
+  });
+
+  // @traces 568-FR-002
   it('answers 202 and logs, without the address, when the e-mail cannot be queued', async () => {
     await person();
     jest
@@ -371,6 +393,7 @@ describe('asking for a reset link', () => {
     expect(JSON.stringify(logged.mock.calls)).not.toContain('andrei');
   });
 
+  // @traces 568-FR-001 568-FR-002
   it('answers 202 before the link is issued, then issues it', async () => {
     const id = await person();
     const release = holdResetEmails();
@@ -383,6 +406,7 @@ describe('asking for a reset link', () => {
     );
   });
 
+  // @traces 568-FR-003
   it('waits, on shutdown, for a link still being issued', async () => {
     const id = await person();
     const release = holdResetEmails();
@@ -405,6 +429,7 @@ describe('asking for a reset link', () => {
     expect(queued).toHaveLength(1);
   });
 
+  // @traces 568-FR-003
   it('waits, on shutdown, for a link asked for while it was waiting', async () => {
     const first = await person('ana@example.test');
     const second = await person('ion@example.test');

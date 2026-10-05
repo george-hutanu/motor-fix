@@ -172,7 +172,12 @@ export class PasswordResetService implements BeforeApplicationShutdown {
     });
     if (account?.status !== 'active') return;
     const { webUrl } = this.options;
-    if (!webUrl) throw new Error('PUBLIC_WEB_URL is not set');
+    if (!webUrl) {
+      this.logger.error(
+        'password reset link not sent: PUBLIC_WEB_URL is not set',
+      );
+      return;
+    }
     const { hash, token } = newToken();
     await this.prisma.$transaction([
       this.prisma.accountToken.deleteMany({
