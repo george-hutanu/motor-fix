@@ -6,7 +6,8 @@ model OutboxEvent {
   id        BigInt    @id @default(autoincrement())
   kind      String
   subjectId String    @map("subject_id")
-  // Ids and small facts only, never personal data.
+  // Ids and small facts, never personal data; `news.sent` also carries the
+  // month's news, bounded by the send's limits.
   payload   Json      @default("{}")
   // The channel keys of everyone who may read the subject.
   audience  String[]

@@ -82,6 +82,8 @@ jobs:
       RAILWAY_SERVICE_WEB: ${{ vars.RAILWAY_SERVICE_WEB }}
       RAILWAY_SERVICE_API: ${{ vars.RAILWAY_SERVICE_API }}
       RAILWAY_SERVICE_WORKER: ${{ vars.RAILWAY_SERVICE_WORKER }}
+      RAILWAY_PROJECT_ID: 8dd6e2d9-ee17-4935-b160-9282308d5ac7
+      KEY_NAME: release-staging-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -91,6 +93,42 @@ jobs:
       - name: Deploy and wait for /health/ready
         # exec: the runner's cancel signals reach node, not a waiting shell.
         run: exec node scripts/railway-deploy.ts staging
+      # The end-to-end run signs in as the seed accounts, and only a reset used
+      # to seed staging, so an account added since the last one was missing.
+      # The seed only adds what is missing. Staging's Postgres has no public
+      # address: the seed runs inside the api over `railway ssh`, as in
+      # reset-staging.yml, whose script it shares.
+      - name: Install the Railway CLI
+        run: npm install --global @railway/cli@5.63.1
+      - name: Register an SSH key for this run
+        run: |
+          mkdir -p -m 700 ~/.ssh
+          ssh-keygen -q -t ed25519 -N '' -C "$KEY_NAME" -f ~/.ssh/id_ed25519
+          railway ssh keys add --key ~/.ssh/id_ed25519.pub --name "$KEY_NAME"
+          printf 'Host ssh.railway.com\n  StrictHostKeyChecking accept-new\n' >> ~/.ssh/config
+          chmod 600 ~/.ssh/config
+      - name: Seed staging inside the api
+        env:
+          SEED_PASSWORD: ${{ secrets.SEED_PASSWORD }}
+        # The password travels on stdin, base64 and masked, never as an argument.
+        run: |
+          if [ -z "$SEED_PASSWORD" ]; then
+            echo 'The staging environment has no SEED_PASSWORD secret.' >&2
+            exit 1
+          fi
+          encoded=$(printf %s "$SEED_PASSWORD" | base64 -w0)
+          echo "::add-mask::$encoded"
+          {
+            printf 'SEED_PASSWORD=$(printf %%s %s | base64 -d)\n' "$encoded"
+            printf 'export SEED_PASSWORD\n'
+            printf 'export SEED_ONLY=1\n'
+            cat scripts/reset-staging.sh
+          } | railway ssh --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT_ID" --service "$RAILWAY_SERVICE_API" -- sh -s
+      - name: Remove the SSH key
+        if: always()
+        run: |
+          [ -f ~/.ssh/id_ed25519.pub ] || exit 0
+          railway ssh keys remove "$KEY_NAME"
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: End to end on staging

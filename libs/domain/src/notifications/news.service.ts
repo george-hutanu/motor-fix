@@ -1,24 +1,15 @@
 import type { NewsSentDto, SendNewsDto } from '@motor-fix/contracts';
-import {
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 
-import type { EmailConfig } from './email-config';
-import { newsLinks, unsubscribedAccount, unsubscribeToken } from './news';
-import {
-  NOTIFICATIONS_CONFIG,
-  NOTIFICATIONS_PRISMA,
-  NotificationsService,
-} from './notifications.service';
+import { unsubscribedAccount } from './news';
+import { CONSENTING_DRIVERS, type NewsRun } from './news.fan-out';
+import { NOTIFICATIONS_PRISMA } from './notifications.service';
 import { withdrawn } from './preferences';
 import { smsMonth } from './sms-counter';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { AUTH_OPTIONS, type AuthOptions } from '../auth/actor.guard';
 import type { Actor } from '../auth/policy';
+import { outbox } from '../events/event.port';
 import { Prisma, type PrismaClient } from '../generated/prisma/client';
 
 const invalidLink = () =>
@@ -36,15 +27,12 @@ const taken = (error: unknown) =>
 
 @Injectable()
 export class NewsService {
-  private readonly logger = new Logger('News');
   now = () => new Date();
 
   constructor(
     @Inject(NOTIFICATIONS_PRISMA) private readonly prisma: PrismaClient,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
-    @Inject(NOTIFICATIONS_CONFIG) private readonly config: EmailConfig,
     @Inject(AUTH_OPTIONS) private readonly auth: AuthOptions,
-    private readonly notifications: NotificationsService,
   ) {}
 
   // No session: the link is the proof. An account with nothing to withdraw
@@ -91,42 +79,25 @@ export class NewsService {
   }
 
   // The month is claimed first: a second send in the month, or one racing
-  // this one, is refused before anything goes. A send that fails part-way
-  // gives the month back; a retry skips the drivers it already reached, as
-  // the pipeline writes one message per event and person.
+  // this one, is refused before anything goes. The drivers are reached by
+  // the month's run in the worker, which the queue retries by itself.
   async send(actor: Actor, body: SendNewsDto): Promise<NewsSentDto> {
-    const webUrl = this.config.webUrl;
-    if (!webUrl) throw new Error('PUBLIC_WEB_URL is needed to send news');
     const month = smsMonth(this.now());
-    const drivers = await this.consentingDrivers();
-    await this.claim(actor, month, drivers.length);
-    try {
-      for (const { id, language } of drivers) {
-        await this.notifications.notify({
-          eventId: `news:${month}`,
-          kind: 'NEWS',
-          params: {
-            text: body.text[language],
-            title: body.title[language],
-            ...newsLinks(
-              webUrl,
-              language,
-              unsubscribeToken(id, this.auth.tokenSecret),
-            ),
-          },
-          recipients: [id],
-          subjectId: id,
-        });
-      }
-    } catch (error) {
-      await this.release(actor, month);
-      throw error;
-    }
-    this.logger.log(`news for ${month} sent to ${drivers.length} drivers`);
-    return { recipients: drivers.length };
+    const recipients = await this.prisma.notificationPreference.count({
+      where: CONSENTING_DRIVERS,
+    });
+    await this.claim(actor, recipients, {
+      month,
+      sentBy: { accountId: actor.accountId, role: actor.role },
+      text: body.text,
+      title: body.title,
+    });
+    return { recipients };
   }
 
-  private async claim(actor: Actor, month: string, recipients: number) {
+  // The run is saved with the claim, as the event the worker's relay queues.
+  private async claim(actor: Actor, recipients: number, run: NewsRun) {
+    const { month } = run;
     try {
       await this.prisma.$transaction(async (tx) => {
         await tx.newsSend.create({
@@ -140,6 +111,12 @@ export class NewsService {
           subjectId: actor.accountId,
           subjectType: 'news_send',
         });
+        await outbox.record(tx, {
+          audience: { type: 'platform' },
+          kind: 'news.sent',
+          payload: { ...run },
+          subjectId: month,
+        });
       });
     } catch (error) {
       if (!taken(error)) throw error;
@@ -151,39 +128,5 @@ export class NewsService {
         HttpStatus.CONFLICT,
       );
     }
-  }
-
-  private async release(actor: Actor, month: string) {
-    this.logger.error(`news for ${month} failed part-way; the month is free`);
-    await this.prisma.$transaction(async (tx) => {
-      await tx.newsSend.delete({ where: { month } });
-      await this.audit.record(tx, {
-        action: 'delete',
-        actorId: actor.accountId,
-        actorRole: actor.role,
-        oldValue: { month },
-        subjectId: actor.accountId,
-        subjectType: 'news_send',
-      });
-    });
-  }
-
-  // News is for drivers: another role gets it only as a driver who consented.
-  private async consentingDrivers() {
-    const rows = await this.prisma.notificationPreference.findMany({
-      select: { account: { select: { id: true, language: true } } },
-      where: {
-        account: {
-          roles: { some: { role: 'driver' } },
-          status: { not: 'deleted' },
-        },
-        consentGivenAt: { not: null },
-        enabled: true,
-        garageId: null,
-        type: 'NEWS',
-        withdrawnAt: null,
-      },
-    });
-    return rows.map((r) => r.account);
   }
 }
