@@ -82,7 +82,7 @@ const ROLES: readonly { role: Role; label: string }[] = [
     .roles button:disabled { cursor: progress; }
     .view { display: flex; flex-direction: column; min-width: 0; }
     main { flex: 1 0 auto; }
-    .live-status { margin: 0; padding: var(--mf-space-2) var(--mf-space-3); color: var(--mf-text-secondary); font-size: var(--mf-size-small); }
+    .live-status { margin: 0; padding: 0; color: var(--mf-text-secondary); font-size: var(--mf-size-small); }
     @media (min-width: 768px) {
       :host { grid-template: 1fr / minmax(0, 16rem) minmax(0, 1fr); }
       aside nav { display: flex; }
@@ -123,9 +123,9 @@ const ROLES: readonly { role: Role; label: string }[] = [
     <div class="view">
       <header><h1>{{ open().label | t }}</h1><mf-language-switch /></header>
       <mf-email-banner />
-      @if (lastTest(); as at) {
-        <p class="live-status" role="status" [mfLiveChange]="at">{{ 'shell.live.test' | t }} · {{ at | clock }}</p>
-      }
+      <p class="live-status" role="status" [mfLiveChange]="lastTest()">
+        @if (lastTest(); as at) { {{ 'shell.live.test' | t }} · {{ at | clock }} }
+      </p>
       <main><router-outlet /></main>
       <mf-dashboard-tab-bar [base]="base()" [views]="entries()" [name]="dashboard().name" />
     </div>

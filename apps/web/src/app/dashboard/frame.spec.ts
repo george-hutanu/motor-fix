@@ -94,9 +94,7 @@ const testUpdate = (at: string): LiveMessage => ({
   kind: 'live.test',
 });
 const statusLine = (element: HTMLElement) =>
-  [...element.querySelectorAll('[role="status"]')].find((e) =>
-    /test/.test(e.textContent ?? ''),
-  );
+  element.querySelector('.live-status[role="status"]');
 
 // A small action with a field, open on the dashboard.
 @Component({ template: `<input aria-label="Notă" />` })
@@ -464,10 +462,12 @@ describe('Frame', () => {
       kind: 'hello',
     });
     await settle(harness);
-    expect(statusLine(element)).toBeUndefined();
+    // The region exists, empty, before the first update, so that the update is announced.
+    const line = statusLine(element);
+    expect(line).not.toBeNull();
+    expect(line?.textContent?.trim()).toBe('');
     live.events.next(testUpdate('2026-10-04T12:00:00.000Z'));
     await settle(harness);
-    const line = statusLine(element);
     expect(line?.textContent?.trim()).toBe(
       'Actualizare de test în direct · 15:00',
     );
@@ -514,7 +514,7 @@ describe('Frame', () => {
     live.events.next(testUpdate('2026-10-04T12:00:00.000Z'));
     await settle(harness);
 
-    expect(statusLine(element)).toBeDefined();
+    expect(statusLine(element)?.textContent?.trim()).not.toBe('');
     expect(note()).toBe(input);
     expect(input.value).toBe('Zgomot la frânare');
     expect(document.activeElement).toBe(input);

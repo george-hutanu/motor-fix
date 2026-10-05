@@ -493,7 +493,8 @@ describe('liveResource', () => {
     });
 
     await send();
-    expect(ref.isLoading()).toBe(true);
+    // A background re-read keeps the data on screen: not a loading state.
+    expect(ref.isLoading()).toBe(false);
     await send();
     await send();
     finish?.();

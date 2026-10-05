@@ -1,6 +1,7 @@
 import { isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
+  computed,
   DestroyRef,
   Injectable,
   inject,
@@ -149,6 +150,7 @@ interface LiveResource<T> {
   readonly error: Signal<unknown>;
   // The object is deleted or no longer the person's (the read answered 404).
   readonly gone: Signal<boolean>;
+  // True only for the first read; a background re-read keeps the data shown.
   readonly isLoading: Signal<boolean>;
   reload(): void;
 }
@@ -168,6 +170,7 @@ export function liveResource<T>(
   const error = signal<unknown>(undefined);
   const gone = signal(false);
   const isLoading = signal(false);
+  const firstRead = computed(() => isLoading() && value() === undefined);
   const destroyRef = inject(DestroyRef);
   let again = false;
   let retry: ReturnType<typeof setTimeout> | undefined;
@@ -220,7 +223,7 @@ export function liveResource<T>(
   return {
     error: error.asReadonly(),
     gone: gone.asReadonly(),
-    isLoading: isLoading.asReadonly(),
+    isLoading: firstRead,
     reload: () => void read(),
     value: value.asReadonly(),
   };

@@ -117,8 +117,7 @@ export function liveRows<T extends { id: string }>(
   >({
     computation: (next = [], previous) => {
       const before = previous?.value.rows ?? [];
-      if (before.length === 0 || untracked(atTop))
-        return { held: [], rows: next };
+      if (before.length === 0 || atTop()) return { held: [], rows: next };
       const known = new Set(before.map((row) => row.id));
       const first = next.findIndex((row) => known.has(row.id));
       const cut = first === -1 ? 0 : first;

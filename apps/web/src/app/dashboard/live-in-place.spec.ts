@@ -129,6 +129,20 @@ describe('liveRows', () => {
     expect(list.waiting()).toBe(1);
   });
 
+  it('shows the held rows when the list is scrolled back to its top', () => {
+    const shown = signal<Row[] | undefined>([b, c]);
+    const top = signal(false);
+    const list = liveRows(shown, top);
+    list.rows();
+    shown.set([a, b, c]);
+    expect(list.waiting()).toBe(1);
+
+    top.set(true);
+
+    expect(list.rows()).toEqual([a, b, c]);
+    expect(list.waiting()).toBe(0);
+  });
+
   it('updates the rows shown in place while holding a new one', () => {
     const shown = signal<Row[] | undefined>([b, c]);
     const list = liveRows(shown, () => false);

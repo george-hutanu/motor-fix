@@ -21,3 +21,7 @@
 - 2026-10-05 · labels · PR #79 · none
 - 2026-10-05 · comment · ST-256 · posted (6 items)
 - 2026-10-05 · ready · Foundations · +ST-255
+- 2026-10-05 · correction · the finish above ran before QA and the merge (QA lap 1 finding): ST-256 story Status · Done → QA
+- 2026-10-05 · correction · Foundations timeline row ST-256 · Merged → QA
+- 2026-10-05 · correction · ST-255 · Ready to work unticked until ST-256 merges
+- 2026-10-05 · correction · PR #79 label stays QA; the "finish" comment on ST-256 is superseded, finish runs again after the merge
