@@ -35,3 +35,6 @@
 
 ## Decisions taken on the owner's behalf
 - Error codes lowercase like the rest of the API; the send reuses `admin.settings`; no consent dialog (its panel is ST-138); consent text version 2026-10-03 pending the lawyer; the bell row stays for news; the send runs in the request; the migration switches existing NEWS rows off.
+
+## 13. QA (repair lap 2 of 5)
+- PR tester lap 1 failed on one tracking finding: the notion-sync finish lines read as already done before the merge. Reworded as written right after the merge (the run commits them before the merge, as the last commit QA tests). Also: spec clarification brought in line with the month given back on a failed send; the 400 and 409 answers documented in the API description. All flows, 32 of 32 page renders and 234 e2e passed.

@@ -111,7 +111,7 @@ Only a MotorFix admin can send news, through the API (no screen at launch). Each
 - Q: Is the consent version needed on every save that carries news on? → A: Only when the save turns news from off to on; news already on with consent is a no-op and records nothing (FR-002). (autonomous, recommended by spec-challenger)
 - Q: Which month does a send accepted at 23:30 on 31 October occupy, when quiet hours deliver it on 1 November? → A: The month the admin's request was accepted in, Europe/Bucharest (FR-008). (autonomous, recommended by spec-challenger)
 - Q: Who is the audit actor of a withdrawal by the link, which has no session? → A: `system`, with the account as the subject; the entry's value says `via: 'link'` or `via: 'settings'` (FR-011). (autonomous, recommended by spec-challenger)
-- Q: What does the send's count mean, and what if it fails halfway? → A: The number of consenting drivers it was sent to. The month is claimed first (its unique row also settles a race); a failure part-way keeps the month taken and is logged, rather than letting a second send reach the same drivers twice. Resuming a failed send is deferred. (autonomous default, Principle I)
+- Q: What does the send's count mean, and what if it fails halfway? → A: The number of consenting drivers it was sent to. The month is claimed first (its unique row also settles a race); a failure part-way gives the month back, audited and logged, and a retry reaches each driver once, as the pipeline writes one message per event and person. Moving the fan-out to a worker job is deferred. (autonomous default, Principle I; changed at review lap 1)
 
 ## Spec Delta
 

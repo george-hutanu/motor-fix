@@ -9,7 +9,9 @@ import {
 } from '@nestjs/common';
 import {
   ApiAcceptedResponse,
+  ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiNoContentResponse,
   ApiQuery,
   ApiTags,
@@ -31,6 +33,9 @@ export class NewsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiQuery({ name: 'token', type: String })
   @ApiNoContentResponse()
+  @ApiBadRequestResponse({
+    description: 'invalid_unsubscribe_link: the link is not one of ours',
+  })
   unsubscribe(@Query('token') token?: string): Promise<void> {
     return this.news.unsubscribe(token);
   }
@@ -40,6 +45,9 @@ export class NewsController {
   @Requires('admin.settings')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiAcceptedResponse({ type: NewsSentDto })
+  @ApiConflictResponse({
+    description: 'news_already_sent_this_month: news went out this month',
+  })
   send(
     @CurrentActor() actor: Actor,
     @Body() body: SendNewsDto,

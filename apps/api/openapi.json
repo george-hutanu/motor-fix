@@ -502,6 +502,9 @@
         "responses": {
           "204": {
             "description": ""
+          },
+          "400": {
+            "description": "invalid_unsubscribe_link: the link is not one of ours"
           }
         },
         "tags": [
@@ -533,6 +536,9 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "news_already_sent_this_month: news went out this month"
           }
         },
         "security": [
