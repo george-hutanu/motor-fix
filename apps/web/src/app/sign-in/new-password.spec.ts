@@ -135,6 +135,18 @@ describe('the new-password task', () => {
     await expect(result).resolves.toEqual({ email: '', switchTo: 'reset' });
   });
 
+  // The check answers nothing on success, so the client reads a refusal as text.
+  it('says the link expired when the refusal arrives as text', async () => {
+    await open('ro', async () => {
+      throw new HttpErrorResponse({
+        error: JSON.stringify({ code: 'token_invalid', status: 410 }),
+        status: 410,
+      });
+    });
+
+    expect(text()).toContain('Linkul a expirat');
+  });
+
   it('saves the password, signs in and closes signed in', async () => {
     await open();
     type(field('Parolă nouă'), 'parola-noua-buna');

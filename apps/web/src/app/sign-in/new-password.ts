@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -15,6 +14,7 @@ import {
   TaskError,
   TaskSubmit,
   taskSave,
+  toProblem,
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
@@ -26,10 +26,10 @@ type State = 'checking' | 'ready' | 'expired' | 'unreachable';
 
 const EXPIRED = new Set(['token_expired', 'token_invalid']);
 
-const expired = (error: unknown) =>
-  error instanceof HttpErrorResponse &&
-  error.status === 410 &&
-  EXPIRED.has(error.error?.code);
+const expired = (error: unknown) => {
+  const { code, status } = toProblem(error);
+  return status === 410 && EXPIRED.has(code);
+};
 
 // Opened from the reset e-mail's link: the link is checked first, so an old
 // one says so before anything is typed. It closes signed in, or with a switch
