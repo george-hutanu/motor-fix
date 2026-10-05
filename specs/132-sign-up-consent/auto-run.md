@@ -69,3 +69,15 @@
 - Spec Delta merged into `.specify/capabilities/accounts.md` (+8); spec.md `Archived (2026-10-05)`.
 - Lap 2: spec-reviewer APPROVE (one LOW: T003 text still named the removed re-export, fixed).
 - After the merge, `artifact-lint` reports every Add as `delta-adds-existing`: the capability check does not skip a feature that is already merged. This is a harness gap, not a defect in this delta. No gate or CI job runs it.
+
+## Hand-off
+- PR #133 is ready, its body passes `pr-body-check`, and its label is QA. The story and its timeline row are both at QA. NEXT: tail #133 (CI, the PR tester, the merge, the finish).
+
+## Final Report
+- Built: the consent contract on `createAccount` for every method, the `account_consent` table, the `consent` audit entry, sign-up's `consent_required`, the `mf-consent` tick, and the `/terms` and `/privacy` draft pages.
+- Tests: written first (27 red). Domain, web and adversary suites are green. E2E is left to CI. Mutation testing runs only in CI.
+- Review: code APPROVE, spec APPROVE on lap 2. 3 low findings are deferred and filed in Notion.
+- Open for the owner:
+  - The draft texts show on every environment, not only staging. The pages say they are drafts.
+  - Whether a new text version needs re-acceptance is the lawyer's call.
+  - The final texts come with Launch readiness.
