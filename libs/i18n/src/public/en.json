@@ -45,6 +45,26 @@
     "later": "This page is coming soon.",
     "mechanics": "Mechanic"
   },
+  "providerSignUp": {
+    "cancel": "Cancel",
+    "email": "E-mail: {email}",
+    "expired": "This step has expired. Sign in again.",
+    "intro": "Your first time on MotorFix through {provider}. Tell us your name and accept the terms.",
+    "name": "Name",
+    "problem": {
+      "consent_required": "Tick the agreement to create the account.",
+      "email_taken": "An account already uses this e-mail. Sign in with e-mail and password.",
+      "provider_failed": "This step has expired. Sign in again."
+    },
+    "signIn": "Sign in",
+    "submit": "Create account",
+    "title": "New account"
+  },
+  "providers": {
+    "apple": "Continue with Apple",
+    "google": "Continue with Google",
+    "or": "or"
+  },
   "signIn": {
     "brand": "MotorFix",
     "createAccount": "Create an account",
@@ -64,6 +84,12 @@
     },
     "reason": "Sign in to continue.",
     "remember": "Keep me signed in",
+    "returned": {
+      "email_taken": "An account already uses this e-mail. Sign in with e-mail and password.",
+      "failed": "We could not reach {provider}. Try again, or sign in with e-mail or phone.",
+      "maintenance": "MotorFix is down for maintenance. Try again in a few minutes.",
+      "suspended": "Your account is suspended."
+    },
     "submit": "Sign in",
     "title": "Sign in"
   },

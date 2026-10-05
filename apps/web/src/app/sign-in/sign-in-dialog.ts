@@ -2,8 +2,11 @@ import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 
-import type { AuthData, AuthSwitch } from './sign-in';
-import { Session } from '../dashboard/session';
+import type { AuthData, AuthSwitch, ProviderProblem } from './sign-in';
+import { type Provider, Session } from '../dashboard/session';
+
+// What the server says on the way back from a provider, besides a session.
+export type ProviderResult = 'consent' | 'cancelled' | ProviderProblem;
 
 type Answer = OverlayResult<'signed-in' | AuthSwitch>;
 
@@ -57,6 +60,25 @@ export class SignInDialog {
     const landing = signedIn ? this.session.current()?.landing : undefined;
     if (landing) await this.router.navigateByUrl(landing);
     return signedIn;
+  }
+
+  // Back from a provider without a session: a new person's terms step, or
+  // sign-in again, with the reason it did not work. True once signed in.
+  async returned(result: ProviderResult, provider: Provider): Promise<boolean> {
+    let first: Answer;
+    if (result === 'consent') {
+      first = await this.overlays.open<'signed-in' | AuthSwitch>(
+        () => import('./provider-sign-up').then((m) => m.ProviderSignUp),
+        { shape: 'dialog', title: 'public.providerSignUp.title' },
+      );
+    } else {
+      first = await this.signIn(
+        result === 'cancelled'
+          ? undefined
+          : { problem: { code: result, provider } },
+      );
+    }
+    return this.laps(first, false);
   }
 
   private dialog(reason: boolean): Promise<boolean> {

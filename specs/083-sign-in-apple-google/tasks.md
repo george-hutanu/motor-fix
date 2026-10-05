@@ -12,16 +12,16 @@
 - [X] T003 [US1] `libs/domain/src/auth/oauth/openid.ts` (new) discovery, authorisation address, code exchange, Apple client secret, ID token check (FR-003, FR-004)
 - [X] T004 [US1] `libs/domain/src/auth/oauth/oauth.service.ts` (new) start, finish: flow use-up, match, link with audit, sign-in, suspended, deleted, maintenance (FR-003, FR-004, FR-005, FR-006, FR-010)
 - [X] T005 [US1] `libs/domain/src/auth/oauth/oauth.controller.ts` (new) providers, start, callback (GET and POST), cookies; registered in `libs/domain/src/auth/auth.module.ts`; `apps/api/src/public-routes.integration.spec.ts` lists the routes (FR-001, FR-003, FR-004)
-- [ ] T006 [US1] Web: `apps/web/src/app/sign-in/providers.ts` (new) buttons under the main button of `sign-in.ts` and `sign-up.ts`; `Session.leaveFor` in `apps/web/src/app/dashboard/session.ts`; `apps/web/src/app/public/sign-in-return.ts` (new) and its route in `apps/web/src/app/app.routes.ts`; `SignInDialog.returned` in `apps/web/src/app/sign-in/sign-in-dialog.ts` (FR-001, FR-003, FR-009)
+- [X] T006 [US1] Web: `apps/web/src/app/sign-in/providers.ts` (new) buttons under the main button of `sign-in.ts` and `sign-up.ts`; `Session.leaveFor` in `apps/web/src/app/dashboard/session.ts`; `apps/web/src/app/public/sign-in-return.ts` (new) and its route in `apps/web/src/app/app.routes.ts`; `SignInDialog.returned` in `apps/web/src/app/sign-in/sign-in-dialog.ts` (FR-001, FR-003, FR-009)
 
 ## Phase 3: User Story 2 — a new person (P1)
 
 - [X] T007 [US2] Pending sign-up in `libs/domain/src/auth/oauth/oauth.service.ts`: keep, read, complete through `createAccount` with `NewAccount.emailVerified` (`libs/domain/src/auth/accounts.service.ts`); routes `pending` and `complete` (FR-007, FR-008)
-- [ ] T008 [US2] Web: `apps/web/src/app/sign-in/provider-sign-up.ts` (new) the new-person step with `mf-consent`; `Session.completeProviderSignUp` (FR-009)
+- [X] T008 [US2] Web: `apps/web/src/app/sign-in/provider-sign-up.ts` (new) the new-person step with `mf-consent`; `Session.completeProviderSignUp` (FR-009)
 
 ## Phase 4: User Story 3 — cancel, failure, maintenance, unconfigured (P2)
 
-- [ ] T009 [US3] `SignIn` shows a returned problem (`failed` per provider, `maintenance`, `suspended`); texts in `libs/i18n/src/public/ro.json` and `libs/i18n/src/public/en.json` (FR-009, FR-010, FR-011)
+- [X] T009 [US3] `SignIn` shows a returned problem (`failed` per provider, `maintenance`, `suspended`); texts in `libs/i18n/src/public/ro.json` and `libs/i18n/src/public/en.json` (FR-009, FR-010, FR-011)
 
 ## Phase 5: Polish
 
