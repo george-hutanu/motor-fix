@@ -43,3 +43,6 @@ Worktree: .worktrees/555-account-link-params
 
 ## 16. Retrospective evidence
 - `retro-evidence.mjs --since 591fcc3`: Spec Delta notifications +4; 0 open deferred before this run's 2 (filed); carryover item from 195 (run the whole workspace `npm run test` before ready) applied.
+
+## 17. Archive
+- Spec Delta merged into `.specify/capabilities/notifications.md` (+4); spec status Archived. No retrospective verdict (level 1; the verdict stays the owner's).

@@ -5,6 +5,7 @@ features:
   - 194-email-sending
   - 195-message-templates
   - 199-notification-bell
+  - 555-account-link-params
 ---
 
 # Capability: Notifications
@@ -172,6 +173,22 @@ _From 199-notification-bell._
 ### 199-FR-011 — The bell MUST refresh its badge every 60 seconds while a dashboard is shown, and each time it opens.
 
 _From 199-notification-bell._
+
+### 555-FR-001 — The bell (`in_app`) row of a notification MUST NOT store a `link` param.
+
+_From 555-account-link-params._
+
+### 555-FR-002 — An outside row that is sent MUST no longer store its `link` param once it is marked sent; the message itself MUST still carry the link.
+
+_From 555-account-link-params._
+
+### 555-FR-003 — An outside row that fails MUST no longer store its `link` param once it is marked failed, including a row written already failed because sending is off or the address is not allowlisted.
+
+_From 555-account-link-params._
+
+### 555-FR-004 — The end-to-end password reset flow MUST read the reset link from the e-mail as sent (a Brevo stand-in), not from the database.
+
+_From 555-account-link-params._
 
 ## Retired
 
