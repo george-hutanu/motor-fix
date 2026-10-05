@@ -13,3 +13,4 @@
 - 2026-10-05 · qa · ST-132 · Implementing → QA (PR #133 ready)
 - 2026-10-05 · qa · Foundations timeline ST-132 · Build status Implementing → QA
 - 2026-10-05 · labels · PR #133 · in development → QA
+- 2026-10-05 · debt · ST-132 · filed 2 (deferred.md lines 5–6)
