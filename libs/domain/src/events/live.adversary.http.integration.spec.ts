@@ -629,7 +629,7 @@ function relay(targetUrl: string) {
   let port = 0;
   const start = () =>
     new Promise<void>((resolve) => {
-      server = createServer((client) => {
+      const listening = createServer((client) => {
         const upstream = connect(Number(target.port || 6379), target.hostname);
         sockets.add(client);
         sockets.add(upstream);
@@ -644,8 +644,9 @@ function relay(targetUrl: string) {
         client.on('close', drop);
         upstream.on('close', drop);
       });
-      server.listen(port, '127.0.0.1', () => {
-        port = (server?.address() as AddressInfo).port;
+      server = listening;
+      listening.listen(port, '127.0.0.1', () => {
+        port = (listening.address() as AddressInfo).port;
         resolve();
       });
     });

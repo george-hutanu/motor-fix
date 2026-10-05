@@ -489,7 +489,9 @@ describe('the chart components across state changes', () => {
     fixture.componentInstance.kind.set('bar');
     await settle(fixture);
     expect(liveCharts()).toBe(1);
-    expect((chartOf(el)?.config as { type?: string }).type).toBe('bar');
+    expect(((chartOf(el) as Chart).config as { type?: string }).type).toBe(
+      'bar',
+    );
   });
 
   it('leave no chart behind when the host is destroyed while loading or in error', async () => {
