@@ -94,3 +94,36 @@ Autonomous: tests included because FR-008 requires a failing-first spec; no foun
 - SKILL.md: "Phase agents" paragraph in the `## Phases` lead-in; dispatch lines in 2 (fable), 5 (fable), 6 (sonnet), 7 (sonnet); "Runs inline" in 4 and 8. task-runner.md: one clause. 40 + 2 lines.
 - `npm run test:harness`: 56 files, 1236 tests passed. `harness-eval.mjs --check`: 80/80. `doctor.mjs`: 16 ok, 0 failures.
 - FR-007: the diff from `## Commit Protocol` down against `origin/main` is empty; only `speckit-auto/SKILL.md` among skills changed; no `model:` line changed.
+
+## Measurement (FR-004, FR-005, SC-001..SC-003)
+
+Method: plan "Measurement" jq, assistant turns only, `<synthetic>` dropped. in / out / cache-creation / cache-read are token sums.
+
+Per-phase model, after run (session `565e5c5f`, subagents dir):
+
+| Agent | Phase | Model | Turns | out | cache-read |
+|---|---|---|---|---|---|
+| a001294d4b9e51176 | 2 specify | fable-5-1 | 48 | 24,648 | 5,919,897 |
+| ab4a0002ed9d18532 | 3 org-researcher | sonnet-5-5 | 4 | 1,544 | 68,862 |
+| acf8746c664c16edc | 4 spec-challenger | fable-5-1 | 7 | 4,825 | 100,619 |
+| ac0a7434ee0bfdd46 | 5 plan | fable-5-1 | 35 | 26,938 | 3,836,300 |
+| a6141f2846a3f7f2f | 6 checklist | sonnet-5-5 | 15 | 6,000 | 1,116,323 |
+| a721d7581e170d874 | 7 tasks | sonnet-5-5 | 9 | 4,626 | 587,436 |
+| a7bb69b0abfa95090 | story agent (4, 8, 9, 10 inline) | opus-5-5 | 155 | 39,143 | 18,140,616 |
+
+Every dispatched phase turn ran on its skill's pin (SC-001). Trial probes (haiku, 11 turns) are excluded from the totals.
+
+| Run | Model | Turns | in | out | cache-creation | cache-read |
+|---|---|---|---|---|---|---|
+| Before: ST-673 (story agent a9bbb71f37e2b6e58 + its 4 reviewers, session `2b506914`) | opus-5-5 | 264 | 534 | 94,310 | 1,369,630 | 37,335,102 |
+| | fable-5-1 | 112 | 248 | 95,614 | 1,092,087 | 5,445,303 |
+| After: ST-697 through phase 10 | opus-5-5 | 155 | 312 | 39,143 | 1,018,187 | 18,140,616 |
+| | fable-5-1 | 90 | 2,580 | 56,411 | 807,175 | 9,856,816 |
+| | sonnet-5-5 | 28 | 56 | 12,170 | 340,679 | 1,772,621 |
+
+Opus share of turns: before 264/376 = 70.2% (this run; the 95% is the dispatching session's 50-run figure, cited, not re-read). After, through phase 10: 155/273 = 56.8%. Phases 2 and 5-7 moved 107 turns off Opus.
+
+Not measurable, stated as such:
+- Money: a transcript carries no price and the harness keeps no price table (`.claude/scripts/lib/telemetry.mjs:11`).
+- A like-for-like total: ST-673's row includes its review (4 fable reviewer agents) and the after row stops at phase 10; the two stories differ in size. The per-phase split of ST-673's inline phases 2-8 cannot be read from one transcript without phase markers.
+- The 95% / 50-run baseline and the 58% story-and-tail cost share are cited from the dispatching session.

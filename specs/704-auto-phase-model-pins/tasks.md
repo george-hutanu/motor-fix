@@ -29,16 +29,16 @@ None: the pins, the mapping spec and the model router are unchanged (FR-006).
 **Goal**: measured rows in the run log, no estimates.
 **Independent test**: `auto-run.md` has a before row, an after row, and a not-measurable list.
 
-- [ ] T008 [US2] Measure the after run with the `jq` command of plan "Measurement" over session `565e5c5f-3244-431a-b602-206141d9b9d0` (story agent `agent-a7bb69b0abfa95090` and its `ST-697` subagents, `<synthetic>` dropped); per model turns and input, output, cache-creation, cache-read totals, plus per-phase model list; write to `specs/704-auto-phase-model-pins/auto-run.md` (FR-004, FR-005, SC-001)
-- [ ] T009 [US2] Measure the before run (ST-673's story agent and its subagents under session `2b506914-0798-46cf-8306-143d93248a6a`) the same way and write the before row beside the after row in `specs/704-auto-phase-model-pins/auto-run.md` (FR-005, SC-003)
-- [ ] T010 [US2] In `specs/704-auto-phase-model-pins/auto-run.md` state the after Opus-turn share beside the 95% baseline and list every not-measurable item with its reason (money: no price in a transcript, `.claude/scripts/lib/telemetry.mjs:11`) (SC-002, SC-003)
+- [x] T008 [US2] Measure the after run with the `jq` command of plan "Measurement" over session `565e5c5f-3244-431a-b602-206141d9b9d0` (story agent `agent-a7bb69b0abfa95090` and its `ST-697` subagents, `<synthetic>` dropped); per model turns and input, output, cache-creation, cache-read totals, plus per-phase model list; write to `specs/704-auto-phase-model-pins/auto-run.md` (FR-004, FR-005, SC-001)
+- [x] T009 [US2] Measure the before run (ST-673's story agent and its subagents under session `2b506914-0798-46cf-8306-143d93248a6a`) the same way and write the before row beside the after row in `specs/704-auto-phase-model-pins/auto-run.md` (FR-005, SC-003)
+- [x] T010 [US2] In `specs/704-auto-phase-model-pins/auto-run.md` state the after Opus-turn share beside the 95% baseline and list every not-measurable item with its reason (money: no price in a transcript, `.claude/scripts/lib/telemetry.mjs:11`) (SC-002, SC-003)
 
 ## Phase 5: User Story 3 - quality and the harness hold (P3)
 
 **Independent test**: the three harness checks exit 0; pins unchanged.
 
-- [ ] T011 [US3] Run `npm run test:harness` (new spec green, `skill-models.spec.mjs`, `task-runner.spec.mjs`, `agent-replies.spec.mjs` green), `node .claude/scripts/harness-eval.mjs --check` and `node .claude/scripts/doctor.mjs`; all exit 0 (FR-006, FR-008, SC-005)
-- [ ] T012 [US3] Confirm no `speckit-*` skill `model:` line differs from `origin/main` (`git diff origin/main -- '.claude/skills/*/SKILL.md' | grep '^[+-]model:'` empty) (FR-006)
+- [x] T011 [US3] Run `npm run test:harness` (new spec green, `skill-models.spec.mjs`, `task-runner.spec.mjs`, `agent-replies.spec.mjs` green), `node .claude/scripts/harness-eval.mjs --check` and `node .claude/scripts/doctor.mjs`; all exit 0 (FR-006, FR-008, SC-005)
+- [x] T012 [US3] Confirm no `speckit-*` skill `model:` line differs from `origin/main` (`git diff origin/main -- '.claude/skills/*/SKILL.md' | grep '^[+-]model:'` empty) (FR-006)
 - [ ] T013 [US3] Record the phase 14 spec-reviewer verdict (APPROVE, 0 CRITICAL/HIGH) in `specs/704-auto-phase-model-pins/auto-run.md` once the review has run (SC-004)
 
 ## Dependencies
