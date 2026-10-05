@@ -219,7 +219,17 @@ export function toProblem(error: unknown): Problem {
       code: globalThis.navigator?.onLine === false ? 'offline' : 'network',
       status,
     };
-  return fromBody(error.error, status);
+  return fromBody(parsed(error.error), status);
+}
+
+// A call that answers nothing on success reads its failure as text.
+function parsed(answer: unknown): unknown {
+  if (typeof answer !== 'string') return answer;
+  try {
+    return JSON.parse(answer);
+  } catch {
+    return null;
+  }
 }
 
 function fromBody(answer: unknown, status: number): Problem {

@@ -758,6 +758,91 @@
         ]
       }
     },
+    "/api/v1/auth/password-reset": {
+      "post": {
+        "operationId": "PasswordResetController_ask",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The same answer whether or not an account uses the address"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/password-reset/check": {
+      "post": {
+        "operationId": "PasswordResetController_check",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetCheckDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "The link still works"
+          },
+          "410": {
+            "description": "token_expired or token_invalid"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/password-reset/complete": {
+      "post": {
+        "operationId": "PasswordResetController_complete",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetCompleteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionDto"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "token_expired or token_invalid"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/live": {
       "get": {
         "operationId": "LiveController_live",
@@ -1687,6 +1772,52 @@
         },
         "required": [
           "status"
+        ]
+      },
+      "PasswordResetDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Trimmed; compared without letter case",
+            "maxLength": 254
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "PasswordResetCheckDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The token of a reset link: the link's last part",
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "PasswordResetCompleteDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The token of a reset link: the link's last part",
+            "maxLength": 256
+          },
+          "password": {
+            "type": "string",
+            "description": "8 to 128 characters, not a common password",
+            "maxLength": 1024,
+            "minLength": 1
+          }
+        },
+        "required": [
+          "token",
+          "password"
         ]
       },
       "LiveTestDto": {

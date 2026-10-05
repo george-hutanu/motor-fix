@@ -327,6 +327,10 @@ test.describe('the dialog on every screen size', () => {
     await expect(form.getByLabel('Ține‑mă autentificat')).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(
+      form.getByRole('button', { name: 'Ai uitat parola?' }),
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(
       form.getByRole('button', { name: 'Intră în cont' }),
     ).toBeFocused();
 

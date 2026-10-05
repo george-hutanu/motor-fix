@@ -329,6 +329,15 @@ describe('toProblem', () => {
     });
   });
 
+  // A call that answers nothing on success reads its failure as text.
+  it('reads a problem the API sent as text', () => {
+    expect(
+      toProblem(
+        problem(410, JSON.stringify({ code: 'token_expired', status: 410 })),
+      ),
+    ).toEqual({ code: 'token_expired', status: 410 });
+  });
+
   it('drops field errors that are not a list of field and code', () => {
     expect(
       toProblem(problem(400, { code: 'validation_failed', errors: 'email' })),

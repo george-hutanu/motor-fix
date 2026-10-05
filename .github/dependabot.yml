@@ -4,6 +4,12 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # @nx/webpack (23.2.1, the latest) peers on webpack-dev-server ^5, so a
+      # v6 bump breaks `npm install` with ERESOLVE. Drop this once @nx/webpack
+      # accepts v6.
+      - dependency-name: webpack-dev-server
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
