@@ -1,10 +1,15 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import {
   composeProject,
   needsServices,
   noDockerMessage,
   parsePort,
+  projectName,
+  schemaDrift,
   serviceEnv,
   shellExports,
 } from './test-services.ts';
@@ -101,4 +106,71 @@ describe('noDockerMessage', () => {
     expect(message).toContain('npx prisma migrate deploy');
     expect(message).toMatch(/JEST_SUITE/);
   });
+});
+
+describe('projectName', () => {
+  it('reads the name from project.json', () => {
+    expect(projectName('libs/domain/project.json', { name: 'domain' })).toBe(
+      'domain',
+    );
+  });
+
+  it('refuses a project.json without a name rather than skip its specs', () => {
+    expect(() => projectName('libs/x/project.json', {})).toThrow(
+      /libs\/x\/project\.json has no name/,
+    );
+  });
+});
+
+describe('schemaDrift', () => {
+  const a = { checksum: 'aaa', name: '20261004_a' };
+  const b = { checksum: 'bbb', name: '20261005_b' };
+
+  it('is false when the database holds only the branch migrations, some still to apply', () => {
+    expect(schemaDrift([], [a, b])).toBe(false);
+    expect(schemaDrift([a], [a, b])).toBe(false);
+    expect(schemaDrift([a, b], [a, b])).toBe(false);
+  });
+
+  it('is true when the database holds a migration the branch does not have', () => {
+    expect(schemaDrift([a, b], [a])).toBe(true);
+  });
+
+  it('is true when a migration of the same name was applied with other SQL', () => {
+    expect(schemaDrift([{ ...b, checksum: 'other' }], [a, b])).toBe(true);
+  });
+});
+
+describe('the script, without Docker', () => {
+  it('stops with the commands to run and prints no exports', () => {
+    const bin = mkdtempSync(join(tmpdir(), 'no-docker-'));
+    try {
+      writeFileSync(join(bin, 'docker'), '#!/bin/sh\nexit 1\n');
+      chmodSync(join(bin, 'docker'), 0o755);
+      // From the first commit every project is affected, domain included.
+      const root = execFileSync(
+        'git',
+        ['rev-list', '--max-parents=0', 'HEAD'],
+        {
+          encoding: 'utf8',
+        },
+      ).split('\n')[0];
+      // Nx runs this project's tests from scripts/; the hook runs the script
+      // from the repository root.
+      const run = spawnSync('node', ['scripts/test-services.ts', root], {
+        cwd: join(__dirname, '..'),
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          NX_DAEMON: 'false',
+          PATH: `${bin}:${process.env.PATH}`,
+        },
+      });
+      expect(run.status).toBe(1);
+      expect(run.stdout).toBe('');
+      expect(run.stderr).toMatch(/docker compose -p mf-test-.* up -d --wait/);
+    } finally {
+      rmSync(bin, { force: true, recursive: true });
+    }
+  }, 120000);
 });

@@ -65,14 +65,14 @@ An agent commits in a worktree that has no database running. The commit's checks
 
 - **FR-001**: The pre-commit hook MUST refuse the commit when `JEST_SUITE` is set in its environment, naming the variable.
 - **FR-002**: When at least one affected project with a `test` target contains an `*.integration.spec.ts`, the hook MUST make a PostgreSQL and a Redis private to the worktree available — a compose project whose name is derived from the worktree's directory, on host ports Docker assigns — starting them only if they are not already running, inside the heavy-command slot.
-- **FR-003**: Before the tests, the hook MUST apply the branch's migrations to that database and run the affected tests with `DATABASE_URL` and `REDIS_URL` pointing at those services, overriding any value in the environment.
+- **FR-003**: Before the tests, the hook MUST apply the branch's migrations to that database (recreating it first when it holds a migration the branch does not have, or one applied with other SQL) and run the affected tests with `DATABASE_URL` and `REDIS_URL` pointing at those services, overriding any value in the environment.
 - **FR-004**: When no affected test project contains integration specs, the hook MUST start no services and run the affected tests as before.
 - **FR-005**: When the services are needed and Docker is unavailable, or the services or migrations fail, the hook MUST fail the commit before the tests run, printing the command that failed and, for missing Docker, the commands that would bring the services up by hand.
 - **FR-006**: The affected scope, the typecheck and the lint the hook runs MUST stay as they are: both suites, same base, same projects.
 
 ### Key Entities
 
-- **Worktree services**: one compose project per worktree (PostgreSQL with PostGIS, Redis), kept between commits; its volume holds that branch's migrated schema.
+- **Worktree services**: one compose project per worktree (PostgreSQL with PostGIS, Redis), kept between commits; its volume holds the schema of the branch last committed there, recreated when the worktree's branch carries other migrations.
 
 ## Success Criteria *(mandatory)*
 

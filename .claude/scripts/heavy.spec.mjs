@@ -186,7 +186,7 @@ describe('the pre-commit hook', () => {
     assert.doesNotMatch(run.stdout + run.stderr, /identity|heavy/i);
   });
 
-  it('starts the worktree services in the slot and stops the commit when that fails', () => {
+  it('starts the worktree services in the slot, chained so their failure skips the checks', () => {
     const hook = readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8');
     const line = hook.split('\n').find((l) => l.includes('scripts/heavy.sh'));
     assert.match(line, /services=\\\$\(node scripts\/test-services\.ts \$base\) && eval \\"\\\$services\\" && TZ=UTC npx nx affected/);

@@ -11,15 +11,22 @@
 // running without its integration specs.
 //
 // The services stay up between commits, so only the first one pays the start.
-// `docker compose -p <project> down -v` removes them.
+// A database holding a migration this branch does not have, or one applied
+// with other SQL (the worktree changed branch), is recreated before the
+// migrations run. `docker compose -p <project> down -v` removes them.
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { basename, dirname } from 'node:path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
 
 type Project = { name: string; root: string };
 type Ports = { postgres: number; redis: number };
+type Migration = { name: string; checksum: string };
+
+const migrations = 'libs/domain/prisma/migrations';
+// How long PostgreSQL gets to accept connections after `up`.
+const waitSeconds = Number(process.env.TEST_SERVICES_WAIT_SECONDS ?? 60);
 
 export function composeProject(worktree: string): string {
   const slug = basename(worktree)
@@ -39,6 +46,17 @@ export function needsServices(
       affected.includes(name) &&
       specs.some((spec) => spec.startsWith(`${root}/`)),
   );
+}
+
+export function projectName(file: string, json: unknown): string {
+  const name = (json as { name?: unknown } | null)?.name;
+  if (typeof name !== 'string') throw new Error(`${file} has no name`);
+  return name;
+}
+
+export function schemaDrift(applied: Migration[], local: Migration[]): boolean {
+  const sql = new Map(local.map((m) => [m.name, m.checksum]));
+  return applied.some((m) => sql.get(m.name) !== m.checksum);
 }
 
 export function parsePort(output: string): number {
@@ -91,7 +109,7 @@ function run(command: string, args: string[], env = process.env): string {
 function waitForPostgres(compose: string[]) {
   // The image restarts PostgreSQL once after its first initdb; a TCP answer
   // inside the container is the server that stays.
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < waitSeconds; i++) {
     const ready = spawnSync('docker', [
       ...compose,
       'exec',
@@ -106,14 +124,58 @@ function waitForPostgres(compose: string[]) {
     if (ready.status === 0) return;
     spawnSync('sleep', ['1']);
   }
-  throw new Error('PostgreSQL did not accept connections within 60 s');
+  throw new Error(
+    `PostgreSQL did not accept connections within ${waitSeconds} s`,
+  );
+}
+
+function localMigrations(): Migration[] {
+  return readdirSync(migrations)
+    .filter((dir) => existsSync(join(migrations, dir, 'migration.sql')))
+    .map((dir) => ({
+      // Prisma's checksum: SHA-256 of migration.sql.
+      checksum: createHash('sha256')
+        .update(readFileSync(join(migrations, dir, 'migration.sql')))
+        .digest('hex'),
+      name: dir,
+    }));
+}
+
+function appliedMigrations(compose: string[]): Migration[] {
+  const psql = (sql: string) =>
+    run('docker', [
+      ...compose,
+      'exec',
+      '-T',
+      'postgres',
+      'psql',
+      '-U',
+      'motorfix',
+      '-tAF',
+      ' ',
+      '-c',
+      sql,
+    ]).trim();
+  if (psql("select to_regclass('public._prisma_migrations') is null") === 't')
+    return [];
+  // A migration that started and never finished counts as other SQL, so the
+  // database is recreated rather than left for deploy to refuse.
+  return psql(
+    "select migration_name, case when finished_at is null then '' else checksum end from _prisma_migrations where rolled_back_at is null",
+  )
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      const [name, checksum = ''] = line.split(' ');
+      return { checksum, name };
+    });
 }
 
 function main() {
   const base = process.argv[2];
   if (!base) throw new Error('Usage: node scripts/test-services.ts <base-ref>');
   const projects = git('ls-files', '*project.json').map((file) => ({
-    name: JSON.parse(readFileSync(file, 'utf8')).name as string,
+    name: projectName(file, JSON.parse(readFileSync(file, 'utf8'))),
     root: dirname(file),
   }));
   // JSON.parse throws on anything else, so a changed Nx output stops the
@@ -130,7 +192,18 @@ function main() {
     ]),
   );
   if (
-    !needsServices(affected, git('ls-files', '*.integration.spec.ts'), projects)
+    !needsServices(
+      affected,
+      // New specs not yet added count too: nx affected runs them.
+      git(
+        'ls-files',
+        '--cached',
+        '--others',
+        '--exclude-standard',
+        '*.integration.spec.ts',
+      ),
+      projects,
+    )
   )
     return;
 
@@ -140,23 +213,45 @@ function main() {
     process.exit(1);
   }
   const compose = ['compose', '-p', project, '-f', 'docker-compose.yml'];
-  run('docker', [...compose, 'up', '-d', '--wait', 'postgres', 'redis'], {
-    ...process.env,
-    POSTGRES_PORT: '0',
-    REDIS_PORT: '0',
-  });
-  waitForPostgres(compose);
+  const up = () => {
+    run('docker', [...compose, 'up', '-d', '--wait', 'postgres', 'redis'], {
+      ...process.env,
+      POSTGRES_PORT: '0',
+      REDIS_PORT: '0',
+    });
+    waitForPostgres(compose);
+  };
+  up();
+  if (schemaDrift(appliedMigrations(compose), localMigrations())) {
+    console.error(
+      `pre-commit: ${project} holds another branch's schema; recreating it`,
+    );
+    run('docker', [...compose, 'down', '-v']);
+    up();
+  }
   const env = serviceEnv({
     postgres: parsePort(
       run('docker', [...compose, 'port', 'postgres', '5432']),
     ),
     redis: parsePort(run('docker', [...compose, 'port', 'redis', '6379'])),
   });
-  run(
-    'npx',
-    ['prisma', 'migrate', 'deploy', '--config', 'libs/domain/prisma.config.ts'],
-    { ...process.env, ...env, PRISMA_HIDE_UPDATE_MESSAGE: '1' },
-  );
+  try {
+    run(
+      'npx',
+      [
+        'prisma',
+        'migrate',
+        'deploy',
+        '--config',
+        'libs/domain/prisma.config.ts',
+      ],
+      { ...process.env, ...env, PRISMA_HIDE_UPDATE_MESSAGE: '1' },
+    );
+  } catch (error) {
+    throw new Error(
+      `${(error as Error).message}; to start from an empty database: docker compose -p ${project} down -v`,
+    );
+  }
   console.error(`pre-commit: integration specs run against ${project}`);
   console.log(shellExports(env));
 }
