@@ -33,3 +33,37 @@
 - Red: 6 of 6 unit suites fail, 27 tests failing, 12 passing (the passing ones are pre-existing sign-up cases).
 
 ## 10. Implement
+- Slice 1 (68b1d63, `feat(auth)`): the consent contract (`SignUpDto.consent`, `CURRENT_CONSENT`, `isCurrentConsent`, `consentRequired`), the `account_consent` table and migration, `createAccount` requires it for every method, one `consent` audit entry; client regenerated. Landed first so the Google/Apple sign-in story can reuse it.
+- Slice 2 (c3e7576, `feat(web)`): `mf-consent` tick on the sign-up form, `/terms` and `/privacy` pages (draft texts, SSR, public paths).
+- Notion implement step: story Planning → Implementing, timeline Build status → Implementing, PR label planning → in development.
+- Domain 84 suites green; web 218/218; pre-commit typecheck + test green on 11 projects.
+
+## 11. Converge
+- Nothing unbuilt: every task from T001–T010 has its code and test.
+
+## 12. Harden
+- artifact-lint clean. diff-audit: two findings not from this diff (an import extension in `notifications/account-link.adversary.integration.spec.ts`; the generator's eslint comments in `libs/data-access`), left alone.
+- Mutation: not run; AGENTS.md keeps mutation tests in CI only (nightly `mutation.yml`).
+
+## 13. Refresh
+- No new comments on the story; no new evidence.
+
+## 12b. Adversary
+- test-adversary: 4 files, 85 tests, 0 failing; no defect found. Committed 712645b (`test(auth)`).
+
+## 14. Review
+- Lap 1: code-reviewer APPROVE (2 MEDIUM, 4 LOW); spec-reviewer BLOCK (1 CRITICAL, 4 LOW).
+- Fixed (a9223b5, `refactor(auth)`): the domain barrel's unused consent re-exports (CRITICAL, Principle I); the tick's fixed error id is now an `errorId` input, with a test for two ticks on one page; `Document` type renamed `LegalDocument`. Added to the consent API spec: no confirmation token, session or outbox event after a refusal.
+- Decision (code-reviewer #1, autonomous default): `consent` stays optional in the DTO so a missing consent answers `consent_required`, as the spec's clarification chose, not `validation_failed`.
+- Over-long version: covered by the adversary spec (32 accepted, 33 refused).
+- Deferred, filed as Tech debt in Notion: labels into i18n, `consentRequired` reusing `refusal`, the unused `NewAccount` export (deferred.md).
+- Repair laps: 1.
+
+## 15. Agent context
+- No change: no new stack, command or convention.
+
+## 16. Retro evidence
+- retro-evidence: 11 tasks done; review lap 1 above; the verdict stays the owner's.
+
+## 17. Archive
+- Spec Delta merged into `.specify/capabilities/accounts.md` (+8); spec.md `Archived (2026-10-05)`.

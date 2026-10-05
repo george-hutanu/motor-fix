@@ -17,7 +17,7 @@
 
 ## Phase 3: User Story 2 — the tick (P1)
 
-- [X] T008 [US2] `apps/web/src/app/sign-in/consent.ts` (new) `Consent` component and `consentControl()`; texts `public.consent.*` in `libs/i18n/src/public/{ro,en}.json` (FR-005, FR-006, FR-007)
+- [X] T008 [US2] `apps/web/src/app/sign-in/consent.ts` (new) `Consent` component and `consentControl()`; texts `public.consent.*` in `libs/i18n/src/public/ro.json` and `libs/i18n/src/public/en.json` (FR-005, FR-006, FR-007)
 - [X] T009 [US2] `apps/web/src/app/sign-in/sign-up.ts` places the tick above the button; `apps/web/src/app/dashboard/session.ts` sends `CURRENT_CONSENT` (FR-005, FR-006)
 
 ## Phase 4: User Story 3 — the texts (P2)
@@ -26,7 +26,7 @@
 
 ## Phase 5: Polish
 
-- [ ] T011 Mark tasks, update `auto-run.md`; typecheck, lint, the touched Jest projects
+- [X] T011 Mark tasks, update `auto-run.md`; typecheck, lint, the touched Jest projects
 
 ## Dependencies
 

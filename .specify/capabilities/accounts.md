@@ -9,6 +9,7 @@ features:
   - 130-sign-in-gate
   - 128-sign-out
   - 394-role-switch
+  - 132-sign-up-consent
 ---
 
 # Capability: Accounts
@@ -360,6 +361,38 @@ _From 394-role-switch._
 ### 394-FR-009 — A switch whose refresh cookie is missing, expired, or ended by a sign-out on this device or on every device MUST answer 401 and change nothing; a request that is not JSON MUST answer 415.
 
 _From 394-role-switch._
+
+### 132-FR-001 — Creating an account MUST require a consent naming the terms version and the privacy notice version the person accepted. When either is missing or is not the current version (TERMS_VERSION, PRIVACY_VERSION in `@motor-fix/contracts`), creation MUST be refused with 400 `consent_required` (error field `consent`) and nothing MUST be written. This holds for every caller of the shared account creation, whatever the sign-in method.
+
+_From 132-sign-up-consent._
+
+### 132-FR-002 — Creating an account MUST store, in the same transaction as the account, two consent rows, kind `terms` and `privacy_notice`, each with the text version, the language the account is created with, the sign-in method of the identity created, and the time of acceptance.
+
+_From 132-sign-up-consent._
+
+### 132-FR-003 — Creating an account MUST record in the audit history, in the same transaction, one "consent given" entry by the new account (field `consent`) whose value carries both versions.
+
+_From 132-sign-up-consent._
+
+### 132-FR-004 — `POST /api/v1/auth/sign-up` MUST take a `consent` object `{ termsVersion, privacyVersion }` and pass it to the account creation; without it the call MUST answer 400 `consent_required` before any account is written.
+
+_From 132-sign-up-consent._
+
+### 132-FR-005 — The sign-up form MUST show, above its main button, a required tick, unticked at first, with the text "Accept Termenii de utilizare și am citit Nota de informare privind datele personale." (EN "I accept the Terms of use and have read the Privacy notice."), whose two titles link to `/{lang}/terms` and `/{lang}/privacy` in a new tab.
+
+_From 132-sign-up-consent._
+
+### 132-FR-006 — Sending the sign-up form with the tick empty MUST show "Bifează pentru a continua." (EN "Tick to continue.") under the tick, move the focus to it, and send nothing; with the tick set the request MUST carry the current versions.
+
+_From 132-sign-up-consent._
+
+### 132-FR-007 — The tick MUST be one component that any form creating an account can place above its main button as a form control.
+
+_From 132-sign-up-consent._
+
+### 132-FR-008 — `/{lang}/terms` and `/{lang}/privacy` MUST show the terms of use and the privacy notice in the address's language to anyone without an account, rendered on the server, with the text version and a notice that the text is a draft pending legal review; both MUST be listed in the sitemap for both languages, and MUST NOT scroll sideways on a 320 px phone.
+
+_From 132-sign-up-consent._
 
 ## Retired
 

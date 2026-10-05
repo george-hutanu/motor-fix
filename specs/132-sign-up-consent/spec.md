@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-05
 
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 
 **Input**: User description: "ST-132 Accept the terms and the privacy notice at sign-up (Notion story https://app.notion.com/p/3ee607bff0d281538378d451b545ec2b, epic EP-1 Foundations https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707)."
 

@@ -9,3 +9,4 @@
 - 2026-10-05 · implement · ST-132 · Planning → Implementing
 - 2026-10-05 · implement · Foundations timeline ST-132 · Build status Planning → Implementing
 - 2026-10-05 · labels · PR #133 · planning → in development
+- 2026-10-05 · debt · ST-132 · 3 Tech debt tasks filed (deferred.md lines 2–4)
