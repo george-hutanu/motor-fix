@@ -84,3 +84,13 @@ Autonomous: tests included because FR-008 requires a failing-first spec; no foun
 
 - artifact-lint: 4 errors (Spec Delta `Modifies` named ST-467 FRs that `platform.md` never held) → fixed: Adds FR-001..FR-009, Modifies none. Re-run: 0 errors, 0 warnings. Jev lane unavailable (no key).
 - Cross-artifact read: every FR maps to a task (tasks.md "FR to task"); plan's frozen region matches FR-007; no CRITICAL/HIGH left.
+
+## Phase 9 — Tests
+
+- `phase-dispatch.spec.mjs` (7 tests). First draft's slicer read every subsection as empty (sliced at `start + 1`, so `## N.` matched at offset 0); fixed in phase 10. Against `origin/main`'s SKILL.md: 6 failed, 1 passed (phases 3, 9-13 carry no model token). Red for the right reason.
+
+## Phase 10 — Implement
+
+- SKILL.md: "Phase agents" paragraph in the `## Phases` lead-in; dispatch lines in 2 (fable), 5 (fable), 6 (sonnet), 7 (sonnet); "Runs inline" in 4 and 8. task-runner.md: one clause. 40 + 2 lines.
+- `npm run test:harness`: 56 files, 1236 tests passed. `harness-eval.mjs --check`: 80/80. `doctor.mjs`: 16 ok, 0 failures.
+- FR-007: the diff from `## Commit Protocol` down against `origin/main` is empty; only `speckit-auto/SKILL.md` among skills changed; no `model:` line changed.

@@ -118,6 +118,31 @@ Run in this order. Each phase: invoke the skill, apply the gate override,
 verify, commit if there is anything committable, append to the run log,
 continue.
 
+**Phase agents.** A skill's `model:` pin is not applied when the skill runs
+in this run's own turn, so a phase whose pin differs from the run's model
+(Opus) runs as its own agent: `subagent_type: task-runner`, `model` set to
+that skill's pin (the call's `model` overrides the definition's),
+`run_in_background: false` (the next phase reads its artifact). Its prompt
+names the worktree (every Bash starts `cd <worktree> &&`), the feature
+directory, the branch and draft PR, the skill and its `args`, that phase's
+gate overrides from its subsection, and the reply envelope with "at most 10
+lines":
+
+```
+STATUS: success | failure | blocked | partial — <one line: what happened>
+PR: #<n> <draft|ready|merged> <sha7> | none
+NEXT: <the one action the caller should take> | none
+FILES: <paths written, comma-separated> | none
+```
+
+The phase's hooks run inside the agent with the same yes answers. Read its
+`STATUS:` line: `success` continues; `failure` or `blocked` is the phase
+failing, handled as the inline phase's failure would be, never as a pass;
+`partial` passes only when `FILES` names the phase's artifact and what failed
+was a Notion or mock write. No retry. If the Agent call itself errors, run the
+phase inline and log a pin miss in `auto-run.md`. The phase's run-log entry
+records the agent's model and its `STATUS:` line.
+
 Two groups need no output from each other, so run them at once:
 
 - Phase 3 starts in the background as soon as phase 2 has written the spec
@@ -218,6 +243,9 @@ continue. Note it in the run log as a material autonomous action.
 
 ### 2. Specify
 
+Phase agent: `subagent_type: task-runner`, `model: fable`, `run_in_background: false`.
+It runs the `before_specify` branch hook and the `after_specify` hooks.
+
 Invoke `speckit-specify` with the description. Its `before_specify` hook runs
 `speckit.git.feature`, which creates the branch — let it, and branches here use
 the generated `NNN-slug` form, and `.specify/feature.json` ties the branch to
@@ -261,6 +289,8 @@ and this phase never edits `spec.md`.
 
 ### 4. Clarify
 
+Runs inline: its pin (`opus`) is the run's model.
+
 Invoke `speckit-clarify`. It first runs the `spec-challenger` subagent — which
 matters most here, where this context wrote the spec it is about to question.
 Its loop then presents one question at a time and waits;
@@ -273,6 +303,9 @@ If the skill reports there is nothing material left to clarify, that is a
 complete phase, not a failure.
 
 ### 5. Plan
+
+Phase agent: `subagent_type: task-runner`, `model: fable`, `run_in_background: false`.
+The `before_plan` design check and the plan commit run inside it.
 
 Invoke `speckit-plan`. Technical Context values come from `package.json`, the
 lockfile, `tsconfig*.json`, `nx.json`, `jest.config.ts`, and the touched
@@ -287,6 +320,8 @@ extension on relative imports; `apps/client` and `apps/docs` must not have it
 
 ### 6. Checklist
 
+Phase agent: `subagent_type: task-runner`, `model: sonnet`, `run_in_background: false`.
+
 Invoke `speckit-checklist` for the requirements checklist. Then drive it to
 zero unchecked items: for each unchecked item, either fix the underlying
 spec/plan gap and check it, or — when the item does not apply to this feature —
@@ -295,10 +330,15 @@ checklist gate on the merits instead of overriding it.
 
 ### 7. Tasks
 
+Phase agent: `subagent_type: task-runner`, `model: sonnet`, `run_in_background: false`.
+Its prompt says not to run `speckit.analyze` from `after_tasks`.
+
 Invoke `speckit-tasks`. Its `after_tasks` hook dispatches `speckit.analyze`
 (non-optional) — that is phase 8; run it there rather than twice.
 
 ### 8. Analyze
+
+Runs inline: its pin (`opus`) is the run's model.
 
 Invoke `speckit-analyze`, which now runs `artifact-lint.mjs` as its first step.
 Treat a linter ERROR exactly as a CRITICAL analyze finding: it is mechanical,

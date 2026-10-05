@@ -6,7 +6,7 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Merge `origin/main` into branch `704-auto-phase-model-pins` (`git merge --no-edit origin/main`) and push, so PR #140's hunks in `.claude/skills/speckit-auto/SKILL.md` are present before any edit (plan R5, FR-007)
+- [x] T001 Merge `origin/main` into branch `704-auto-phase-model-pins` (`git merge --no-edit origin/main`) and push, so PR #140's hunks in `.claude/skills/speckit-auto/SKILL.md` are present before any edit (plan R5, FR-007)
 
 ## Phase 2: Foundational
 
@@ -17,12 +17,12 @@ None: the pins, the mapping spec and the model router are unchanged (FR-006).
 **Goal**: phases 2, 5, 6, 7 dispatch as `task-runner` agents on the skill's pin; 4 and 8 stay inline.
 **Independent test**: `npm run test:harness` green with the new spec; the transcript shows pinned models (US2).
 
-- [ ] T002 [US1] Write failing spec `.claude/skills/speckit-auto/phase-dispatch.spec.mjs` (new): slice `### N.` subsections of `SKILL.md`; test 1: phases 2, 5, 6, 7 each hold exactly one `` `model: <x>` `` token equal to the pin of `speckit-specify|plan|checklist|tasks` plus `subagent_type: task-runner` and `run_in_background: false`; test 2: phases 3, 4, 8 hold no `model:` token and 4, 8 say `inline`; test 3: phases 9-13 hold no `model:` token (FR-001, FR-002, FR-008). Run `npm run test:harness` and quote the red count.
-- [ ] T003 [US1] Edit the `## Phases` lead-in of `.claude/skills/speckit-auto/SKILL.md`: add the "Phase agents" paragraph (prompt contents, four-line reply envelope capped at 10 lines, `STATUS:` handling for success/partial/failure/blocked, no retry, Agent-tool error falls back inline and logs a pin miss, run-log line per dispatched phase with model and `STATUS:`) (FR-001, FR-003, FR-004, FR-009)
-- [ ] T004 [US1] Edit subsections `### 2. Specify`, `### 5. Plan`, `### 6. Checklist`, `### 7. Tasks` of `.claude/skills/speckit-auto/SKILL.md`: one dispatch line each (`model: fable`, `fable`, `sonnet`, `sonnet`), keep their gate overrides; phase 7 prompt says not to run `speckit.analyze` (FR-001, FR-003)
-- [ ] T005 [US1] Edit `### 4. Clarify` and `### 8. Analyze` of `.claude/skills/speckit-auto/SKILL.md`: one sentence each, "Runs inline: its pin (`opus`) is the run's model", no `model:` token (FR-002)
-- [ ] T006 [P] [US1] Add one clause to the first paragraph of `.claude/agents/task-runner.md`: its prompt may name one phase of a story run (speckit-auto, Phase agents); frontmatter unchanged (plan "task-runner.md")
-- [ ] T007 [US1] Verify FR-007: the diff of `.claude/skills/speckit-auto/SKILL.md` from `## Commit Protocol` down is empty against `origin/main`, and `git diff origin/main --stat -- '.claude/skills/*/SKILL.md'` lists only `speckit-auto`
+- [x] T002 [US1] Write failing spec `.claude/skills/speckit-auto/phase-dispatch.spec.mjs` (new): slice `### N.` subsections of `SKILL.md`; test 1: phases 2, 5, 6, 7 each hold exactly one `` `model: <x>` `` token equal to the pin of `speckit-specify|plan|checklist|tasks` plus `subagent_type: task-runner` and `run_in_background: false`; test 2: phases 3, 4, 8 hold no `model:` token and 4, 8 say `inline`; test 3: phases 9-13 hold no `model:` token (FR-001, FR-002, FR-008). Run `npm run test:harness` and quote the red count.
+- [x] T003 [US1] Edit the `## Phases` lead-in of `.claude/skills/speckit-auto/SKILL.md`: add the "Phase agents" paragraph (prompt contents, four-line reply envelope capped at 10 lines, `STATUS:` handling for success/partial/failure/blocked, no retry, Agent-tool error falls back inline and logs a pin miss, run-log line per dispatched phase with model and `STATUS:`) (FR-001, FR-003, FR-004, FR-009)
+- [x] T004 [US1] Edit subsections `### 2. Specify`, `### 5. Plan`, `### 6. Checklist`, `### 7. Tasks` of `.claude/skills/speckit-auto/SKILL.md`: one dispatch line each (`model: fable`, `fable`, `sonnet`, `sonnet`), keep their gate overrides; phase 7 prompt says not to run `speckit.analyze` (FR-001, FR-003)
+- [x] T005 [US1] Edit `### 4. Clarify` and `### 8. Analyze` of `.claude/skills/speckit-auto/SKILL.md`: one sentence each, "Runs inline: its pin (`opus`) is the run's model", no `model:` token (FR-002)
+- [x] T006 [P] [US1] Add one clause to the first paragraph of `.claude/agents/task-runner.md`: its prompt may name one phase of a story run (speckit-auto, Phase agents); frontmatter unchanged (plan "task-runner.md")
+- [x] T007 [US1] Verify FR-007: the diff of `.claude/skills/speckit-auto/SKILL.md` from `## Commit Protocol` down is empty against `origin/main`, and `git diff origin/main --stat -- '.claude/skills/*/SKILL.md'` lists only `speckit-auto`
 
 ## Phase 4: User Story 2 - cost measured before and after (P2)
 
