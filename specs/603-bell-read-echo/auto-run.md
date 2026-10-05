@@ -37,3 +37,9 @@ Worktree: .worktrees/603-bell-read-echo
 
 ## 14. Review
 - spec-reviewer: APPROVE; its one LOW is the stale-count finding, fixed above. code-reviewer as in 12.
+
+## 16. Retrospective evidence
+- retro-evidence and instincts gathered since 93921d0; no instinct triggered by this change. Verdict left to the owner.
+
+## Hand-off
+- PR body filled (pr-body-check passes); marked ready; Notion QA.
