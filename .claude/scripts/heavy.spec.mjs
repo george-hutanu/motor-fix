@@ -143,6 +143,15 @@ describe('heavy.sh', () => {
   }, 20000);
 });
 
+describe('heavy.sh environment', () => {
+  // Nx 23 already shares one cache per user across worktrees (~/.nx/<hash>);
+  // setting NX_CACHE_DIRECTORY turns that sharing off (share: 'none').
+  it('leaves the Nx cache location to Nx, which shares it across worktrees', () => {
+    const sh = readFileSync(fileURLToPath(new URL('../../scripts/heavy.sh', import.meta.url)), 'utf8');
+    assert.doesNotMatch(sh, /NX_CACHE_DIRECTORY/);
+  });
+});
+
 describe('the pre-commit hook', () => {
   // The worktree guard refuses a wrapper around the commit command, so the
   // slot is taken inside the hook, around the checks themselves.
@@ -150,7 +159,16 @@ describe('the pre-commit hook', () => {
     const hook = readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8');
     const line = hook.split('\n').find((l) => l.includes('scripts/heavy.sh'));
     assert.ok(line, 'pre-commit does not call scripts/heavy.sh');
-    for (const check of ['typecheck', 'lint', 'test']) assert.match(line, new RegExp(`npm run ${check}\\b`));
+    assert.match(line, /nx affected -t typecheck test --base=\$base\b/);
+    assert.match(line, /npm run lint\b/);
+  });
+
+  // Same scope as PR CI: the projects the branch affects since its merge base
+  // with origin/main, uncommitted changes included (no --head).
+  it('takes the affected base from the merge base with origin/main', () => {
+    const hook = readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8');
+    assert.match(hook, /^base=\$\(git merge-base origin\/main HEAD/m);
+    assert.doesNotMatch(hook, /--head=/);
   });
 
   it('turns the Nx daemon off before anything runs, slot or not', () => {

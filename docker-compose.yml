@@ -1,6 +1,9 @@
 services:
   postgres:
-    image: postgis/postgis:17-3.5
+    # Multi-arch build of the same PostGIS 17-3.5: postgis/postgis has no arm64
+    # image, and emulating it on Apple silicon was slow and failed with
+    # "exec format error". CI keeps postgis/postgis on its amd64 runners.
+    image: imresamu/postgis:17-3.5
     environment:
       POSTGRES_USER: motorfix
       POSTGRES_PASSWORD: motorfix
