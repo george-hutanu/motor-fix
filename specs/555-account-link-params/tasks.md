@@ -15,15 +15,20 @@
 - [X] T006 [US1] `libs/domain/src/notifications/notifications.service.ts`: the bell row and a row written failed leave out `link`; `fail()` and a new `forget()` remove it from rows marked failed (FR-001, FR-003)
 - [X] T007 [US1] `libs/domain/src/notifications/notifications.processor.ts`: `sent()` removes it from rows marked sent (FR-002)
 
+## Phase 2b: Harden and review
+
+- [X] T009 [US1] Tests: `libs/domain/src/notifications/account-link.adversary.integration.spec.ts` (31 tests from outside); the concurrent-send race it found is pre-existing and deferred (FR-001, FR-002, FR-003)
+- [X] T010 Review patches: marking a row sent or failed and dropping its link run in one transaction; the e2e mailbox has one fixed port and answers a malformed POST with 400
+
 ## Phase 3: Proof
 
-- [ ] T008 `npx nx run domain:test` (unit and integration), `npm run typecheck` and `npm run lint` green (SC-001, SC-002)
+- [X] T008 `npx nx run domain:test` (unit and integration), `npm run typecheck` and `npm run lint` green (SC-001, SC-002)
 
 ## FR → test
 
 | FR | Proof |
 |---|---|
-| FR-001 | `notifications.processor.integration.spec.ts` › T001 |
+| FR-001 | `notifications.processor.integration.spec.ts` › T001; `account-link.adversary.integration.spec.ts` |
 | FR-002 | `notifications.processor.integration.spec.ts` › T002 |
 | FR-003 | `notifications.processor.integration.spec.ts` › T003, T004 |
 | FR-004 | `password-reset.spec.ts` › T005 |

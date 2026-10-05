@@ -6,7 +6,7 @@
 //   GET  /messages?to=a   the messages kept for address a, oldest first
 import { createServer } from 'node:http';
 
-const port = Number(process.env['E2E_MAILBOX_PORT'] ?? 3025);
+const port = 3025;
 const messages = [];
 
 const answer = (res, status, body) => {
@@ -22,7 +22,11 @@ createServer((req, res) => {
   });
   req.on('end', () => {
     if (req.method === 'POST' && url.pathname === '/v3/smtp/email') {
-      messages.push(JSON.parse(raw));
+      try {
+        messages.push(JSON.parse(raw));
+      } catch {
+        return answer(res, 400, { code: 'bad_request' });
+      }
       return answer(res, 201, {
         messageId: `<e2e-${messages.length}@mailbox>`,
       });

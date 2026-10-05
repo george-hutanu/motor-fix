@@ -191,11 +191,13 @@ export class NotificationsService {
     fallback: Fallback,
   ): Promise<void> {
     const ids = rows.map((r) => r.id);
-    await this.prisma.notification.updateMany({
-      data: { failure, status: 'failed' },
-      where: { id: { in: ids } },
-    });
-    await this.forget(ids);
+    await this.prisma.$transaction([
+      this.prisma.notification.updateMany({
+        data: { failure, status: 'failed' },
+        where: { id: { in: ids } },
+      }),
+      this.forget(ids),
+    ]);
     for (const row of rows) {
       this.logger.warn(
         `notification ${row.id} ${row.kind} ${row.channel} failed: ${failure}`,
@@ -207,10 +209,10 @@ export class NotificationsService {
     }
   }
 
-  // Rows just marked sent or failed no longer hold what only the message in
-  // flight needed.
-  async forget(ids: readonly string[]): Promise<void> {
-    await this.prisma
+  // Run in the transaction that marks the rows sent or failed: they no longer
+  // hold what only the message in flight needed.
+  forget(ids: readonly string[]) {
+    return this.prisma
       .$executeRaw`UPDATE notification SET params = params - ${IN_FLIGHT_ONLY}::text[] WHERE id = ANY(${ids}::uuid[])`;
   }
 
