@@ -119,9 +119,9 @@ verify, commit if there is anything committable, append to the run log,
 continue.
 
 **Phase agents.** A skill's `model:` pin is not applied when the skill runs
-in this run's own turn, so a phase whose pin differs from the run's model
-(Opus) runs as its own agent: `subagent_type: task-runner`, `model` set to
-that skill's pin (the call's `model` overrides the definition's),
+in this run's own turn, so phases 2, 5, 6 and 7 (pins below Opus, the run's
+model) each run as their own agent: `subagent_type: task-runner`, `model` set
+to the pin named in the subsection (the call's `model` overrides the definition's),
 `run_in_background: false` (the next phase reads its artifact). Its prompt
 names the worktree (every Bash starts `cd <worktree> &&`), the feature
 directory, the branch and draft PR, the skill and its `args`, that phase's
@@ -243,8 +243,7 @@ continue. Note it in the run log as a material autonomous action.
 
 ### 2. Specify
 
-Phase agent: `subagent_type: task-runner`, `model: fable`, `run_in_background: false`.
-It runs the `before_specify` branch hook and the `after_specify` hooks.
+Phase agent: `model: fable`.
 
 Invoke `speckit-specify` with the description. Its `before_specify` hook runs
 `speckit.git.feature`, which creates the branch — let it, and branches here use
@@ -304,8 +303,7 @@ complete phase, not a failure.
 
 ### 5. Plan
 
-Phase agent: `subagent_type: task-runner`, `model: fable`, `run_in_background: false`.
-The `before_plan` design check and the plan commit run inside it.
+Phase agent: `model: fable`. The `before_plan` design check and the plan commit run inside it.
 
 Invoke `speckit-plan`. Technical Context values come from `package.json`, the
 lockfile, `tsconfig*.json`, `nx.json`, `jest.config.ts`, and the touched
@@ -320,7 +318,7 @@ extension on relative imports; `apps/client` and `apps/docs` must not have it
 
 ### 6. Checklist
 
-Phase agent: `subagent_type: task-runner`, `model: sonnet`, `run_in_background: false`.
+Phase agent: `model: sonnet`.
 
 Invoke `speckit-checklist` for the requirements checklist. Then drive it to
 zero unchecked items: for each unchecked item, either fix the underlying
@@ -330,8 +328,7 @@ checklist gate on the merits instead of overriding it.
 
 ### 7. Tasks
 
-Phase agent: `subagent_type: task-runner`, `model: sonnet`, `run_in_background: false`.
-Its prompt says not to run `speckit.analyze` from `after_tasks`.
+Phase agent: `model: sonnet`. Its prompt says not to run `speckit.analyze` from `after_tasks`.
 
 Invoke `speckit-tasks`. Its `after_tasks` hook dispatches `speckit.analyze`
 (non-optional) — that is phase 8; run it there rather than twice.

@@ -127,3 +127,10 @@ Not measurable, stated as such:
 - Money: a transcript carries no price and the harness keeps no price table (`.claude/scripts/lib/telemetry.mjs:11`).
 - A like-for-like total: ST-673's row includes its review (4 fable reviewer agents) and the after row stops at phase 10; the two stories differ in size. The per-phase split of ST-673's inline phases 2-8 cannot be read from one transcript without phase markers.
 - The 95% / 50-run baseline and the 58% story-and-tail cost share are cited from the dispatching session.
+
+## Phase 12/14 — Harden and review, lap 1
+
+- Audits: artifact-lint 0/0; capabilities validate clean; diff-audit ERRORs are all in `libs/domain` files this branch does not touch (from `main`); no Nx project touched, so no mutation run and no test-adversary (nothing but harness text and one vitest spec).
+- code-reviewer: BLOCK, 1 HIGH (the rule sentence read as "every non-Opus pin dispatches", but size/context/archive pin sonnet and stay inline), 1 MEDIUM (no guard against a dispatched phase's pin becoming opus), 2 LOW (repeated dispatch fields, a restated hook sentence). All four patched: the lead names phases 2, 5, 6 and 7; the spec asserts a dispatched pin is not opus and checks `subagent_type`/`run_in_background` once in the lead; dispatch lines carry only `model:`.
+- spec-reviewer: APPROVE, 0 CRITICAL/HIGH, 1 LOW deferred (`deferred.md`: the trial's phase agents were `general-purpose`, not `task-runner`).
+- After the patch: harness 56 files / 1236 tests, eval 80/80, doctor 16 ok, frozen region unchanged, no `model:` line changed.

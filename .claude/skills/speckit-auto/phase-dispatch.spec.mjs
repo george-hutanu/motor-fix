@@ -33,10 +33,8 @@ describe('the phase agents of /speckit-auto', () => {
 
   for (const [n, skill] of Object.entries(dispatched)) {
     it(`dispatches phase ${n} on the pin of ${skill}`, () => {
-      const text = phase(n);
-      assert.deepEqual(modelsIn(text), [pinOf(skill)]);
-      assert.match(text, /subagent_type: task-runner/);
-      assert.match(text, /run_in_background: false/);
+      assert.notEqual(pinOf(skill), 'opus', 'an Opus pin runs inline: move this phase to the inline list');
+      assert.deepEqual(modelsIn(phase(n)), [pinOf(skill)]);
     });
   }
 
@@ -57,6 +55,9 @@ describe('the phase agents of /speckit-auto', () => {
 
   it('says how a phase agent reports and what a failed one means', () => {
     const lead = auto.slice(auto.indexOf('## Phases'), auto.search(/^### 0\. /m));
+    assert.match(lead, /phases 2, 5, 6 and 7/);
+    assert.match(lead, /subagent_type: task-runner/);
+    assert.match(lead, /run_in_background: false/);
     assert.match(lead, /STATUS: success \| failure \| blocked \| partial/);
     assert.match(lead, /pin miss/);
   });
