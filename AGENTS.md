@@ -52,7 +52,23 @@ epic or a plan, whether run through spec-kit or by hand.
      passes, then `gh pr edit <n> --body-file <body>`), mark the PR ready for
      review (`gh pr ready`) and set the task to QA
      (`speckit-notion-sync qa`, which also sets the PR's one stage label
-     to `QA`). There is no In review stage: ready is QA.
+     to `QA`). There is no In review stage: ready is QA. A feature's own
+     records ride in its own PR, never in a later `docs(specs)` one: the
+     archive's status line and Spec Delta merge, a retrospective if one was
+     written, and `specs/<feature>/notion-sync.md` are committed on the
+     branch before it goes ready; the `qa` line is committed and pushed
+     right after, before CI is waited for and QA starts.
+
+     Then the story's agent hands off and ends. It writes
+     `specs/<feature>/handoff.md` (PR, branch, worktree, head sha, the Notion
+     page ids, open decisions, deferred items; git ignores it) and returns
+     `NEXT: tail #<n>`. A fresh **tail agent**, given only the PR number, the
+     worktree and that path, runs steps 5–7 and the finish. The orchestrating
+     session dispatches it on that NEXT (a story run in the owner's own
+     session dispatches its own); `/speckit-watch` dispatches one (its
+     `tail` fix) for a handed-off ready PR with no live holder. It implements
+     QA fixes, so it keeps the default model (Opus). It deletes the note
+     when the task is Done.
   5. Get CI green: merge `origin/main` into the branch if it is behind and
      push, then wait for the checks (`gh pr checks <n> --watch`) in the
      background (`run_in_background`), never in a foreground `sleep` loop; a
@@ -74,6 +90,10 @@ epic or a plan, whether run through spec-kit or by hand.
   7. Merge on `agent-review` success with every other check green
      (`gh pr merge <n> --merge`); a PR with a failing, pending or missing check
      is never merged. Then set the task to Done (`speckit-notion-sync finish`).
+     What only exists after the merge (the merge sha, the finish, ready and
+     comment lines) goes to Notion and into one comment on the merged PR
+     (`gh pr comment <n>`), never a commit of its own; whatever must reach a
+     file rides on the next PR.
      A PR opened by Dependabot (its author on GitHub, not its title or branch)
      and holding only Dependabot's commits skips step 6: it merges on every
      other check green, `CI OK` included, with no `agent-review` status; a
@@ -107,7 +127,8 @@ epic or a plan, whether run through spec-kit or by hand.
   comments on the task when there is something to record: deviations from
   the Build brief, decisions taken on the owner's behalf, deferred follow-ups,
   open questions. `/speckit-archive` will not close a feature until the
-  refresh is logged after its finish.
+  refresh is logged after its finish, in `notion-sync.md` or the merged
+  PR's finish comment (`notion-ready.mjs check -`).
 - **Plans live under Delivery › Plans in Notion:** one execution-plan page and
   one build-timeline database per epic (`speckit-notion-sync plan`).
 - **The spec-kit hooks do this automatically** (`.specify/extensions.yml`:
