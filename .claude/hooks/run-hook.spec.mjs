@@ -225,7 +225,7 @@ describe('hook registry — fail-closed stdin', () => {
     assert.match(run.stderr, /DRY RUN/);
   });
 
-  // ST-659: Claude Code does not block on a hook it stopped for running long,
+  // Claude Code does not block on a hook it stopped for running long,
   // so the wrapper stops a fail-closed gate first, at its registered limit,
   // and refuses on its behalf.
   it('refuses a fail-closed gate that outlives its registered limit', () => {

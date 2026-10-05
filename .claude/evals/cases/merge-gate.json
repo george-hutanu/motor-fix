@@ -338,7 +338,7 @@
   {
     "id": "merge-gate-refuses-a-carry-it-cannot-verify-in-time",
     "hook": "pre:bash:merge-gate",
-    "why": "a gate Claude Code stops for running long does not block, so the gate stops itself at its deadline and refuses: verifying a carried verdict that outlasts it has not approved the merge (ST-659)",
+    "why": "a gate Claude Code stops for running long does not block, so the gate stops itself at its deadline and refuses: verifying a carried verdict that outlasts it has not approved the merge",
     "payload": {
       "tool_input": {
         "command": "gh pr merge 21 --merge"

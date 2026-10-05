@@ -11,6 +11,7 @@ features:
   - 450-pr-tester-env-gaps
   - 600-merge-gate-symlink
   - 623-precompact-flush
+  - 659-merge-gate-carry-deadline
 ---
 
 # Capability: Platform
@@ -338,6 +339,26 @@ _From 623-precompact-flush._
 ### 623-FR-003 — Each uncommitted entry in the block MUST keep the full porcelain line, both status columns included, for the first entry as for every other.
 
 _From 623-precompact-flush._
+
+### 659-FR-001 — The merge gate MUST refuse the merge (exit 2) when its GitHub reads do not finish within an overall deadline, and the refusal MUST say so.
+
+_From 659-merge-gate-carry-deadline._
+
+### 659-FR-002 — The merge gate MUST refuse the merge (exit 2) when reading the PR fails.
+
+_From 659-merge-gate-carry-deadline._
+
+### 659-FR-003 — The overall deadline MUST be shorter than `run-hook.mjs`'s limit for the gate, which MUST be shorter than the hook timeout declared for it in `.claude/settings.json`.
+
+_From 659-merge-gate-carry-deadline._
+
+### 659-FR-004 — `run-hook.mjs` MUST stop a fail-closed gate that outlives the gate's registered limit and refuse (exit 2); a fail-closed gate killed by a signal MUST refuse, not pass.
+
+_From 659-merge-gate-carry-deadline._
+
+### 659-FR-005 — Verifying a carry MUST read the statuses of the named commit, the commits between and head concurrently once the compare is known, and MUST read head's statuses at most once per gate run.
+
+_From 659-merge-gate-carry-deadline._
 
 ## Retired
 

@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-05
 
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 
 **Input**: "Checking a carried agent-review takes up to ~13 sequential gh calls (`.claude/hooks/merge-gate.mjs` ~line 152, `.claude/scripts/pr-test/carry.mjs` ~line 83). That can outlast the hook timeout and let `gh pr merge` through unchecked. Make the gate fail closed: a timeout or error refuses the merge. Bound the calls: an overall deadline well inside the hook timeout, and parallel or fewer calls."
 

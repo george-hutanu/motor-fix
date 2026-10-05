@@ -279,7 +279,7 @@ describe('merge gate — a verdict carried over a docs-only head is verified, no
   });
 });
 
-// ST-659: a gate Claude Code stops for running long does not block, so the
+// A gate Claude Code stops for running long does not block, so the
 // gate stops itself first, and refuses: a merge it could not finish checking
 // has not been approved.
 describe('merge gate — a check it cannot finish refuses the merge', () => {

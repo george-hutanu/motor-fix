@@ -149,7 +149,7 @@ function ciRefusal(pr, checks, sha) {
 function ghAsync(cwd, signal) {
   return (args) =>
     new Promise((resolve) =>
-      execFile("gh", args, { cwd, encoding: "utf8", signal, maxBuffer: 16 * 1024 * 1024 }, (error, stdout, stderr) =>
+      execFile("gh", args, { cwd, encoding: "utf8", signal }, (error, stdout, stderr) =>
         resolve(error ? { code: typeof error.code === "number" ? error.code : 1, stdout: String(stdout ?? ""), stderr: String(stderr || error.message) } : { code: 0, stdout, stderr: "" }),
       ),
     );
@@ -223,8 +223,9 @@ if (isEntryPoint(import.meta.url)) {
   };
   let raw = "";
   process.stdin.on("data", (d) => (raw += d));
-  // Every way out is an exit: 0 approves, 2 refuses. A throw would exit 1,
-  // which Claude Code reads as a non-blocking error, so it refuses too.
+  // Every way out of this handler is an exit: 0 approves, 2 refuses. A throw
+  // here would exit 1, which Claude Code reads as a non-blocking error, so it
+  // refuses too.
   process.stdin.on("end", async () => {
     try {
       const payload = JSON.parse(raw || "{}");
@@ -233,6 +234,11 @@ if (isEntryPoint(import.meta.url)) {
       const which = target.pr ? `PR ${target.pr}` : "this branch's PR";
       const limit = deadlineMs();
       const stop = new AbortController();
+      // run-hook.mjs's backstop: take the gh calls down with the gate.
+      process.once("SIGTERM", () => {
+        stop.abort();
+        process.exit(2);
+      });
       setTimeout(() => {
         stop.abort();
         refuse(`could not finish checking ${which} on GitHub within ${limit / 1000} s, so the merge is not approved. Try the merge again; if GitHub stays this slow, wait and retry rather than merging unchecked.`);

@@ -116,7 +116,7 @@ describe('reading the state from GitHub', () => {
     assert.throws(() => readCarryState({ from: FROM, head: HEAD, gh }), /unexpected gh/);
   });
 
-  // ST-659: inside the merge gate every statuses read waits on the compare
+  // Inside the merge gate every statuses read waits on the compare
   // alone, so they go out together rather than one 10 s timeout after another.
   it('reads every status after the compare at once, and judges the same state as the one-by-one read', async () => {
     const rules = [

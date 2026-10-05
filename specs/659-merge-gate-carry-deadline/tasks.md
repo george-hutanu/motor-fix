@@ -12,7 +12,7 @@
 
 ## Phase 2: Implementation
 
-- [x] T006 [US2] `.claude/scripts/pr-test/carry.mjs`: `readCarryState` and `findCarry` async; statuses after the compare read with `Promise.all` (FR-005)
+- [x] T006 [US2] `.claude/scripts/pr-test/carry.mjs`: `fetchCarryState`, the async read the gate uses, with every statuses read after the compare in one `Promise.all`; `readCarryState` stays sync for `findCarry`, sharing the shas and the assembly (FR-005)
 - [x] T007 [US1] `.claude/hooks/merge-gate.mjs`: async gh reads under one deadline with an abort; prefetch the carry state; refuse on timeout and on a failed PR read; memoise statuses per sha (FR-001, FR-002, FR-005)
 - [x] T008 [US1] `.claude/hooks/run-hook.mjs`: honour an entry's `timeout_ms`; a fail-closed gate that timed out or died on a signal refuses (FR-004)
 - [x] T009 [US1] `.claude/hooks/registry.json` `timeout_ms: 45000` on `pre:bash:merge-gate`; `.claude/settings.json` `timeout: 60` on its command (FR-003)
