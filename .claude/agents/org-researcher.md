@@ -47,9 +47,14 @@ changes when the work runs in a subagent.
 
 Write `specs/<feature>/context.md` yourself, exactly in the skill's template —
 in `refresh` mode, append a `## Refresh <ISO date>` section and change nothing
-above it. Then return to the caller a report of **at most twelve lines**:
+above it. Then return to the caller a report of **at most 16 lines**, the
+envelope from AGENTS.md "Agent replies" first, then the digest summary:
 
 ```
+STATUS: success | failure | blocked | partial — <one line: what happened>
+PR: #<n> <draft|ready|merged> <sha7> | none
+NEXT: <the one action the caller should take> | none
+FILES: <paths written, comma-separated> | none
 read: story ok | feature ok | epic ok | architecture ok | decisions ok
 findings: <n> (decisions <n>, constraints <n>, open <n>, contradictions <n>, proposed clarifications <n>)
 story: <ID> <status>, <n> comments, scope moved by a comment: yes|no

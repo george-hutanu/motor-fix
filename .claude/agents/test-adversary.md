@@ -67,9 +67,15 @@ For each public entry point:
 
 ## Output
 
-Return a report of at most twenty lines:
+Return a report of at most 24 lines, the envelope from AGENTS.md "Agent
+replies" first (`FILES:` the spec files you added):
 
 ```
+STATUS: success | failure | blocked | partial — <one line: what happened>
+PR: #<n> <draft|ready|merged> <sha7> | none
+NEXT: <the one action the caller should take> | none
+FILES: <paths written, comma-separated> | none
+
 ## Adversarial tests: <feature>
 
 | Test file | Added | Passing | Failing |

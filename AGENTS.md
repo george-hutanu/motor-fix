@@ -125,6 +125,38 @@ epic or a plan, whether run through spec-kit or by hand.
 - A Notion or mock failure never blocks the build. It is logged in
   `specs/<feature>/notion-sync.md` or `design.md` and retried on the next run.
 
+## Agent replies
+
+Every reply is re-read by its caller on each later turn, so it is short and
+the same shape everywhere. Every subagent in `.claude/agents/` and every
+dispatched task agent (speckit-watch's fixes, a story's `/speckit-auto`, a
+skill's `general-purpose` helper) opens its final reply with these four lines,
+nothing before them:
+
+```
+STATUS: success | failure | blocked | partial — <one line: what happened>
+PR: #<n> <draft|ready|merged> <sha7> | none
+NEXT: <the one action the caller should take> | none
+FILES: <paths written, comma-separated> | none
+```
+
+Then the agent's own body (a reviewer's `VERDICT:` line and table, which
+`subagent-verdict.mjs` and the callers parse, stay as they are). The whole
+reply is at most 25 lines, or the agent's lower cap: no prose, praise or
+restated diff. Anything longer goes to a file named in `FILES`
+(`specs/<feature>/auto-run.md`, the tester's `report.md`) and is not pasted.
+Agents cannot include files, so each definition and dispatch template repeats
+the block verbatim; `.claude/agents/agent-replies.spec.mjs` keeps them equal.
+
+Read only what decides the next step; every check still runs:
+
+- CI: the background wait prints only what did not pass —
+  `gh pr checks <n> --watch >/dev/null 2>&1; gh pr checks <n> --json name,bucket --jq '.[] | select(.bucket != "pass" and .bucket != "skipping") | "\(.name): \(.bucket)"'`
+  (empty means green). A failing job: `gh run view <run-id> --log-failed | tail -n 80`.
+- Jest, Playwright, Nx: run into a log file, then read the exit code, the
+  summary and the failures — `<command> > <log> 2>&1; echo "exit $?"; tail -n 40 <log>`,
+  and `grep -nE '✕|●|FAIL|Error' <log> | head -n 40` when it failed.
+
 ## Reviewing a change that has screens
 
 - **Phones first.** Every review of a screen covers a 320 px phone, a 390 px

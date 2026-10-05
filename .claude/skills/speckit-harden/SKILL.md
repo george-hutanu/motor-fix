@@ -163,6 +163,8 @@ Apply the fixes in one pass, then:
 npx jest --onlyChanged && npm run lint && npm run typecheck
 ```
 
+Each of these: run it into a log and read only the exit code, the summary and the failures (AGENTS.md "Agent replies": `tail -n 40`, then `grep -nE '✕|●|FAIL|Error'` on a failure).
+
 Re-run the audits from step 1. Loop at most twice; a third round means the
 finding needs the user, not another attempt.
 

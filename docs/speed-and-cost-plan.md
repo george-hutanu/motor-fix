@@ -23,11 +23,18 @@ cheaper. Anything that writes or judges business logic keeps its model.
 | 8 | Pre-commit runs `nx affected` typecheck and test from the merge base with `origin/main`, plus lint; speckit-auto preflight goes through Nx and the cache. Affected integration specs run against the worktree's own PostgreSQL and Redis, started and migrated by the hook (~15 s cold, ~3 s warm); `JEST_SUITE` is refused | 1–2 min per commit | – | Same scope as PR CI; `release.yml` still runs everything |
 | 9 | Local compose uses `imresamu/postgis:17-3.5` (multi-arch, same PostGIS) | High: no amd64 emulation, no `exec format error` | Fewer retry turns | Same database; CI keeps `postgis/postgis` |
 
-## Done later
+## Done since: agent replies and reads
+
+Measured from session transcripts: 97% of token cost is context (cache read
+58%, cache write 39%), output 3%; the median turn carries 106k tokens (p90
+169k). Task agents are 69% of spend, the PR tester 17%.
 
 | # | Change | Speed | Cost | Quality |
 |---|---|---|---|---|
-| 10 | A head that differs from the last tested commit by documentation only (`scripts/docs-only.ts`) carries its `agent-review` success instead of a new tester lap (`pr-test/carry.mjs`, speckit-pr-test step 2, `watch.mjs` fix `carry-review`); the merge gate re-checks the named commit's success, its ancestry and the docs-only diff before it merges (spec, evals) | One tester lap per story (the `deferred.md` URLs commit) | One Opus lap | Same: a carry never crosses a code change or a failing verdict, and the gate verifies it rather than trusting it |
+| 10 | One reply envelope (`STATUS`, `PR`, `NEXT`, `FILES`) for every agent and dispatched task agent, 25 lines at most, long reports in a named file (AGENTS.md "Agent replies", `agent-replies.spec.mjs`) | – | Every reply is re-read on each later turn of its caller | Same: `VERDICT:` lines and tables kept for their parsers |
+| 11 | Reads only what decides the next step: CI waits print the non-passing checks, failing jobs `--log-failed \| tail -n 80`, test runs their summary and failures | – | Less log in context | Same: every check still runs |
+| 12 | `notion-ready` and its read-only Notion fallback on Sonnet; watch dispatches that only move state on Sonnet | – | Medium | Implementation, reviewers and the PR tester keep their models |
+| 13 | A head that differs from the last tested commit by documentation only (`scripts/docs-only.ts`) carries its `agent-review` success instead of a new tester lap (`pr-test/carry.mjs`, speckit-pr-test step 2, `watch.mjs` fix `carry-review`); the merge gate re-checks the named commit's success, its ancestry and the docs-only diff before it merges (spec, evals) | One tester lap per story (the `deferred.md` URLs commit) | One Opus lap | Same: a carry never crosses a code change or a failing verdict, and the gate verifies it rather than trusting it |
 
 ## Left for later
 
