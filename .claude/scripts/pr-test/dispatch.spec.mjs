@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
@@ -18,6 +18,8 @@ import {
   encodeFlows,
   findRun,
   parseArgs,
+  placeDownload,
+  stagingDir,
 } from './dispatch.mjs';
 
 const SHA = 'a'.repeat(40);
@@ -101,5 +103,57 @@ describe('dispatch: a lap never reads the last lap\'s evidence', () => {
     clearPrevious(out);
     for (const f of ['report.json', 'report.md', 'shots']) assert.equal(existsSync(join(out, f)), false, f);
     assert.match(checkReport(null, SHA, 'failure'), /no report/);
+  });
+});
+
+describe('dispatch: a lap downloads into a fresh folder, so files from an earlier run never refuse the download', () => {
+  it('gives every download its own empty folder inside --out', () => {
+    const out = mkdtempSync(join(tmpdir(), 'dispatch-spec-'));
+    const a = stagingDir(out);
+    const b = stagingDir(out);
+    assert.notEqual(a, b);
+    for (const d of [a, b]) {
+      assert.equal(join(d, '..'), out);
+      assert.deepEqual(readdirSync(d), []);
+    }
+  });
+
+  it('replaces what the new artifact carries, keeps everything else in --out, and removes its own folder', () => {
+    const out = mkdtempSync(join(tmpdir(), 'dispatch-spec-'));
+    writeFileSync(join(out, 'observations.json'), 'old');
+    mkdirSync(join(out, 'shots'));
+    writeFileSync(join(out, 'shots', 'old.png'), 'x');
+    writeFileSync(join(out, 'notes.txt'), 'mine');
+    const staging = stagingDir(out);
+    writeFileSync(join(staging, 'observations.json'), 'new');
+    writeFileSync(join(staging, 'report.json'), JSON.stringify({ sha: SHA, verdict: 'success' }));
+    mkdirSync(join(staging, 'shots'));
+    writeFileSync(join(staging, 'shots', 'new.png'), 'y');
+    placeDownload(staging, out);
+    assert.equal(readFileSync(join(out, 'observations.json'), 'utf8'), 'new');
+    assert.equal(existsSync(join(out, 'report.json')), true);
+    assert.deepEqual(readdirSync(join(out, 'shots')), ['new.png']);
+    assert.equal(readFileSync(join(out, 'notes.txt'), 'utf8'), 'mine');
+    assert.equal(existsSync(staging), false);
+  });
+
+  it('refuses a folder that is not directly inside --out, so it never deletes outside the run\'s folder', () => {
+    const out = mkdtempSync(join(tmpdir(), 'dispatch-spec-'));
+    const elsewhere = mkdtempSync(join(tmpdir(), 'dispatch-spec-'));
+    assert.throws(() => placeDownload(elsewhere, out), /not a download folder/);
+    assert.equal(existsSync(elsewhere), true);
+    const unprefixed = mkdtempSync(join(out, 'x-'));
+    assert.throws(() => placeDownload(unprefixed, out), /not a download folder/);
+    assert.equal(existsSync(unprefixed), true);
+  });
+
+  it('clears a download folder an interrupted lap left behind', () => {
+    const out = mkdtempSync(join(tmpdir(), 'dispatch-spec-'));
+    const left = stagingDir(out);
+    writeFileSync(join(left, 'observations.json'), 'old');
+    writeFileSync(join(out, 'notes.txt'), 'mine');
+    clearPrevious(out);
+    assert.equal(existsSync(left), false);
+    assert.equal(existsSync(join(out, 'notes.txt')), true);
   });
 });

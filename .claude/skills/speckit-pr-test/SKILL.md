@@ -49,7 +49,8 @@ without a status, so the test runs again.
    and MinIO from the PR's own compose file, sweeps the screens, runs its flows
    and the API calls (the unit and end-to-end suites are CI's), and uploads the
    report and screenshots as an artifact. The
-   agent downloads it, reviews the diff against the spec and the constitution
+   agent downloads it into its `--out` (through a fresh folder of its own, so
+   re-running a lap into the same `--out` is never refused), reviews the diff against the spec and the constitution
    here, and posts with `post.mjs`; no secret or LLM step runs in CI. With
    `LOCAL` it runs `.claude/scripts/pr-test/run.mjs` on this machine instead
    (`--local`: one heavy slot, teardown always). QA in CI holds no heavy slot,
