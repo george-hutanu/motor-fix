@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
-import type {
-  NotificationPreferencesDto,
-  OutsideChannel,
+import {
+  NEWS_CONSENT_TEXT_VERSION,
+  type NotificationPreferencesDto,
+  type OutsideChannel,
   UpdateNotificationPreferenceDto,
   UpdateNotificationPreferencesDto,
 } from '@motor-fix/contracts';
@@ -22,7 +23,11 @@ import {
 } from './notifications.service';
 import {
   canMute,
+  consentChange,
   isDriverType,
+  type NewsConsent,
+  newsConsentView,
+  type PreferenceChange,
   type PreferenceRow,
   planSave,
   preferencesView,
@@ -46,7 +51,14 @@ export class NotificationPreferencesService {
   ) {}
 
   async read(accountId: string): Promise<NotificationPreferencesDto> {
-    return preferencesView(await this.rows(this.prisma, accountId));
+    const [rows, consent] = await Promise.all([
+      this.rows(this.prisma, accountId),
+      this.newsConsent(this.prisma, accountId),
+    ]);
+    return {
+      ...preferencesView(rows),
+      newsConsent: newsConsentView(consent),
+    };
   }
 
   async save(
@@ -70,6 +82,12 @@ export class NotificationPreferencesService {
         body.groups ?? [],
         choices,
       );
+      const { consented, consent } = await this.newsWrite(
+        tx,
+        actor.accountId,
+        writes,
+        body.newsConsentTextVersion,
+      );
       for (const row of writes) {
         await tx.notificationPreference.deleteMany({
           where: {
@@ -81,11 +99,11 @@ export class NotificationPreferencesService {
           },
         });
         await tx.notificationPreference.create({
-          data: { ...row, accountId: actor.accountId },
+          data: { ...row, ...consent[row.type], accountId: actor.accountId },
         });
       }
-      for (const change of changes) {
-        await this.audit.record(tx, { ...who, ...change, action: 'update' });
+      for (const entry of [...changes, ...consented]) {
+        await this.audit.record(tx, { ...who, ...entry, action: 'update' });
       }
     });
     await this.announce(actor.accountId);
@@ -163,6 +181,49 @@ export class NotificationPreferencesService {
       where: { accountId },
     });
     return rows.map((r) => ({ ...r, channel: r.channel as OutsideChannel }));
+  }
+
+  // What a save that switches news records about consent, by type; turning
+  // it on needs the text version the driver was shown.
+  private async newsWrite(
+    tx: Prisma.TransactionClient,
+    accountId: string,
+    writes: readonly PreferenceRow[],
+    version: string | undefined,
+  ): Promise<{
+    consented: PreferenceChange[];
+    consent: Partial<Record<string, NewsConsent>>;
+  }> {
+    const news = writes.find((row) => row.type === 'NEWS');
+    if (!news) return { consent: {}, consented: [] };
+    const before = await this.newsConsent(tx, accountId);
+    const result = consentChange(news.enabled, before, version, new Date());
+    if (!result) {
+      throw refuse(
+        HttpStatus.UNPROCESSABLE_ENTITY,
+        'news_consent_required',
+        `turning news on needs the consent text version ${NEWS_CONSENT_TEXT_VERSION}`,
+      );
+    }
+    return {
+      consent: { NEWS: result.consent },
+      consented: result.change ? [result.change] : [],
+    };
+  }
+
+  private newsConsent(
+    client: PrismaClient | Prisma.TransactionClient,
+    accountId: string,
+  ): Promise<NewsConsent | null> {
+    return client.notificationPreference.findFirst({
+      select: {
+        consentGivenAt: true,
+        consentSource: true,
+        consentTextVersion: true,
+        withdrawnAt: true,
+      },
+      where: { accountId, garageId: null, type: 'NEWS' },
+    });
   }
 
   private async announce(accountId: string) {

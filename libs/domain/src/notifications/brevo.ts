@@ -9,6 +9,7 @@ interface OutgoingEmail {
   subject: string;
   text: string;
   html: string;
+  headers?: Record<string, string>;
 }
 
 interface OutgoingSms {
@@ -51,6 +52,7 @@ export class Brevo {
 
   send(mail: OutgoingEmail): Promise<string> {
     return this.post('/smtp/email', {
+      ...(mail.headers ? { headers: mail.headers } : {}),
       htmlContent: mail.html,
       sender: mail.from,
       subject: mail.subject,

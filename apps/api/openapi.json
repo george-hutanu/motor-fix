@@ -486,6 +486,71 @@
         ]
       }
     },
+    "/api/v1/notification-preferences/unsubscribe": {
+      "post": {
+        "operationId": "NewsController_unsubscribe",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "invalid_unsubscribe_link: the link is not one of ours"
+          }
+        },
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/admin/news": {
+      "post": {
+        "operationId": "NewsController_send",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendNewsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsSentDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "news_already_sent_this_month: news went out this month"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/api/v1/auth/confirm-email": {
       "post": {
         "operationId": "EmailConfirmationController_confirm",
@@ -1183,6 +1248,45 @@
           "alwaysSent"
         ]
       },
+      "NewsConsentDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "none",
+              "given",
+              "withdrawn"
+            ]
+          },
+          "givenAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "textVersion": {
+            "type": "string",
+            "description": "The consent text version the driver confirmed",
+            "nullable": true
+          },
+          "withdrawnAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "currentTextVersion": {
+            "type": "string",
+            "description": "The version to show, and send back on saving"
+          }
+        },
+        "required": [
+          "state",
+          "givenAt",
+          "textVersion",
+          "withdrawnAt",
+          "currentTextVersion"
+        ]
+      },
       "NotificationPreferencesDto": {
         "type": "object",
         "properties": {
@@ -1197,11 +1301,15 @@
             "items": {
               "$ref": "#/components/schemas/NotificationPreferenceDto"
             }
+          },
+          "newsConsent": {
+            "$ref": "#/components/schemas/NewsConsentDto"
           }
         },
         "required": [
           "groups",
-          "preferences"
+          "preferences",
+          "newsConsent"
         ]
       },
       "UpdateNotificationGroupDto": {
@@ -1275,8 +1383,79 @@
             "items": {
               "$ref": "#/components/schemas/UpdateNotificationPreferenceDto"
             }
+          },
+          "newsConsentTextVersion": {
+            "type": "string",
+            "description": "The consent text version shown, needed when the save turns news on"
           }
         }
+      },
+      "NewsTitleDto": {
+        "type": "object",
+        "properties": {
+          "ro": {
+            "type": "string"
+          },
+          "en": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ro",
+          "en"
+        ]
+      },
+      "NewsTextDto": {
+        "type": "object",
+        "properties": {
+          "ro": {
+            "type": "string"
+          },
+          "en": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ro",
+          "en"
+        ]
+      },
+      "SendNewsDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "description": "The subject, in both languages",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NewsTitleDto"
+              }
+            ]
+          },
+          "text": {
+            "description": "The text, in both languages",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NewsTextDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "title",
+          "text"
+        ]
+      },
+      "NewsSentDto": {
+        "type": "object",
+        "properties": {
+          "recipients": {
+            "type": "number",
+            "description": "How many drivers it was sent to"
+          }
+        },
+        "required": [
+          "recipients"
+        ]
       },
       "ConfirmEmailDto": {
         "type": "object",
