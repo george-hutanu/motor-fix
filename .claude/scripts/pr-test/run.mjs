@@ -151,9 +151,12 @@ async function main(argv) {
     const project = `mf-prtest-${opt.pr}-${process.pid}`;
     let plan;
     if (has("docker", ["info"])) {
-      plan = composePlan({ project, file: join(repoRoot, "docker-compose.yml"), ports });
-      teardown.push({ name: `docker compose -p ${project} down -v`, run: () => sh("docker", plan.down, { env: { ...process.env, ...plan.env } }) });
-      if (!mustPass("services", step("services", "docker", plan.up, { env: { ...process.env, ...plan.env } }))) return finish();
+      // The PR's own compose file: a PR that changes the stack is tested on it.
+      plan = composePlan({ project, file: join(wt.dir, "docker-compose.yml"), ports });
+      const composeEnv = { env: { ...process.env, ...plan.env } };
+      teardown.push({ name: `docker compose -p ${project} down -v`, run: () => sh("docker", plan.down, composeEnv) });
+      if (!mustPass("services", step("services", "docker", plan.up, composeEnv))) return finish();
+      if (!mustPass("bucket setup", step("bucket-setup", "docker", plan.setup, composeEnv))) return finish();
     } else {
       plan = localPlan({ dir: runDir, ports });
       notes.push("No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.");
