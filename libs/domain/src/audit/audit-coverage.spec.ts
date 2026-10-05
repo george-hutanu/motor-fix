@@ -93,8 +93,9 @@ const NOT_CHANGES = new Set([
   'SignInService.revoke',
   'SignInService.rotate',
   'SignInService.touch',
-  // A confirmation link's token; confirming it is the audited change.
+  // A link's token; confirming it or the new password is the audited change.
   'EmailConfirmationService.issue',
+  'PasswordResetService.issue',
   // A notification's delivery records, not a change to anyone's data.
   'NotificationsService.build',
   'NotificationsService.dispatch',

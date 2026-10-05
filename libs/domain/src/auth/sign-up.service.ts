@@ -28,7 +28,7 @@ const refusal = (
 ) => new HttpException({ code, message, ...(errors && { errors }) }, status);
 
 // Counted in code points, so "8 characters" means what a person typed.
-const weak = (password: string) => {
+export const weakPassword = (password: string) => {
   const length = [...password].length;
   return (
     length < MIN_PASSWORD || length > MAX_PASSWORD || isCommonPassword(password)
@@ -72,7 +72,7 @@ export class SignUpService {
         ),
       );
     }
-    if (weak(input.password)) {
+    if (weakPassword(input.password)) {
       throw this.refused(
         refusal(
           HttpStatus.BAD_REQUEST,

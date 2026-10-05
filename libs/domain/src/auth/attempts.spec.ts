@@ -1,4 +1,25 @@
-import { clientOf } from './attempts';
+import { Logger } from '@nestjs/common';
+import type { Redis } from 'ioredis';
+
+import { Attempts, clientOf } from './attempts';
+
+describe('the reset request limit', () => {
+  const down = {
+    multi: () => {
+      throw new Error('Redis did not answer');
+    },
+  } as unknown as Redis;
+
+  it('admits every request when Redis does not answer', async () => {
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const attempts = new Attempts(down);
+    for (let i = 0; i < 5; i++) {
+      expect(
+        await attempts.admitReset('andrei@example.test', '198.51.100.7'),
+      ).toBe(true);
+    }
+  });
+});
 
 describe('one client however its address is written', () => {
   it.each([
