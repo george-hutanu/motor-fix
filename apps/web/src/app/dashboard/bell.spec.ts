@@ -226,6 +226,15 @@ describe('Bell', () => {
     jest.advanceTimersByTime(120_000);
     expect(api.bellControllerUnreadCount).toHaveBeenCalledTimes(1);
   });
+
+  it('marks its store ended when it leaves the screen', async () => {
+    const { fixture, store } = await render(1, [row('a')]);
+    expect(store.ended()).toBe(false);
+
+    fixture.destroy();
+
+    expect(store.ended()).toBe(true);
+  });
 });
 
 describe('BellStore', () => {

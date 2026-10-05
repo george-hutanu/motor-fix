@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
 } from '@angular/core';
 import { formatDay, I18n, TranslatePipe } from '@motor-fix/i18n';
@@ -100,12 +101,20 @@ export function ago(at: string, now: Date, i18n: I18n): string {
   `,
 })
 export class BellList {
-  protected readonly store = injectOverlayTask<BellStore>().data;
+  private readonly task = injectOverlayTask<BellStore, void>();
+  protected readonly store = this.task.data;
   private readonly i18n = inject(I18n);
   private readonly now = new Date();
   protected readonly unread = computed(() =>
     this.store.items().some((n) => !n.readAt),
   );
+
+  constructor() {
+    // The overlay outlives a navigation, so it does not close with the bell.
+    effect(() => {
+      if (this.store.ended()) this.task.close();
+    });
+  }
 
   protected when(at: string) {
     return ago(at, this.now, this.i18n);

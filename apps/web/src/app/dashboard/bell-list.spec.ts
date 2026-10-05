@@ -203,6 +203,19 @@ describe('ago', () => {
   const at = (minutes: number) =>
     new Date(now.getTime() - minutes * 60_000).toISOString();
 
+  it('closes when its bell leaves the screen, as on a sign-out', async () => {
+    const { store } = await render(async () => ({
+      items: [row('a')],
+      nextCursor: null,
+    }));
+    expect(panel()).not.toBeNull();
+
+    store.ended.set(true);
+    await settle();
+
+    expect(panel()).toBeNull();
+  });
+
   it('formats times relative up to a day, then as a date', async () => {
     const i18n = TestBed.inject(I18n);
 

@@ -33,10 +33,13 @@ export class BellStore {
   readonly items = signal<readonly NotificationDto[]>([]);
   readonly state = signal<'idle' | 'loading' | 'ready' | 'error'>('idle');
   readonly more = signal(false);
+  // The bell left the screen (a sign-out navigates away): its open list closes.
+  readonly ended = signal(false);
   private next: string | null = null;
 
   constructor() {
     const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(() => this.ended.set(true));
     inject(Live)
       .events.pipe(takeUntilDestroyed(destroyRef))
       .subscribe((message) => {
