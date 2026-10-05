@@ -62,6 +62,13 @@ export const languageRoot: UrlMatcher = (segments) =>
     ? { consumed: segments }
     : null;
 
+// The public frame's own texts, for `/`: the server renders the frame there;
+// in the browser the redirect wins and the load is one /<lang> needs anyway.
+export const publicTexts: CanMatchFn = async () => {
+  await inject(I18n).enter('public');
+  return true;
+};
+
 // The server cannot read the device's memory, so `/` stays Romanian there; the
 // browser goes on to the address of the remembered or current language. The
 // first page is the server's `/`: it hydrates where it is, so a tap made before
