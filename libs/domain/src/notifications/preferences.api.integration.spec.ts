@@ -452,21 +452,20 @@ describe('a save that is refused', () => {
       'channel_not_allowed',
     ));
 
-  it.each([
-    'garage',
-    'mechanic',
-    'admin',
-  ] as const)('answers 422 to SMS chosen by a %s, even for a reminder', (role) =>
-    refused(
-      {
-        preferences: [
-          { channel: 'sms', enabled: true, garageId: null, type: 'DUE_ITP' },
-        ],
-      },
-      422,
-      'channel_not_allowed',
-      role,
-    ));
+  it.each(['garage', 'mechanic', 'admin'] as const)(
+    'answers 422 to SMS chosen by a %s, even for a reminder',
+    (role) =>
+      refused(
+        {
+          preferences: [
+            { channel: 'sms', enabled: true, garageId: null, type: 'DUE_ITP' },
+          ],
+        },
+        422,
+        'channel_not_allowed',
+        role,
+      ),
+  );
 
   it('answers 400 to a garage on a driver type', async () => {
     const owner = await garageOwner('ion');

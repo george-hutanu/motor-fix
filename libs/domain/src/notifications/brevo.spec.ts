@@ -35,19 +35,20 @@ describe('the Brevo e-mail adapter', () => {
     });
   });
 
-  it.each([
-    500, 503, 429,
-  ])('treats a %s answer as worth retrying', async (status) => {
-    mock.answer({ status });
-    const error = await brevo()
-      .send(mail)
-      .catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(BrevoError);
-    expect(error).toMatchObject({
-      reason: `provider_${status}`,
-      retryable: true,
-    });
-  });
+  it.each([500, 503, 429])(
+    'treats a %s answer as worth retrying',
+    async (status) => {
+      mock.answer({ status });
+      const error = await brevo()
+        .send(mail)
+        .catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(BrevoError);
+      expect(error).toMatchObject({
+        reason: `provider_${status}`,
+        retryable: true,
+      });
+    },
+  );
 
   it.each([400, 401, 403])('does not retry a %s answer', async (status) => {
     mock.answer({ status });
@@ -105,15 +106,16 @@ describe('the Brevo SMS adapter', () => {
     });
   });
 
-  it.each([
-    500, 429,
-  ])('treats a %s answer as worth retrying', async (status) => {
-    mock.answer({ status });
-    await expect(brevo().sendSms(sms)).rejects.toMatchObject({
-      reason: `provider_${status}`,
-      retryable: true,
-    });
-  });
+  it.each([500, 429])(
+    'treats a %s answer as worth retrying',
+    async (status) => {
+      mock.answer({ status });
+      await expect(brevo().sendSms(sms)).rejects.toMatchObject({
+        reason: `provider_${status}`,
+        retryable: true,
+      });
+    },
+  );
 
   it('does not retry a refused number', async () => {
     mock.answer({ body: { code: 'invalid_parameter' }, status: 400 });

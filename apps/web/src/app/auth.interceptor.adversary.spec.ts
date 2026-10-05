@@ -84,15 +84,18 @@ describe('authInterceptor against odd addresses', () => {
     '/api/v1/author',
     '/api/v1/authorisations',
     '/api/v1/me?x=/auth/refresh',
-  ])('sends the token to %s, which is not one of the three auth calls', (url) => {
-    const { http, server } = fakeSession('abc', async () => true);
+  ])(
+    'sends the token to %s, which is not one of the three auth calls',
+    (url) => {
+      const { http, server } = fakeSession('abc', async () => true);
 
-    http.get(url).subscribe();
-    const call = server.expectOne(() => true);
+      http.get(url).subscribe();
+      const call = server.expectOne(() => true);
 
-    expect(call.request.headers.get('Authorization')).toBe('Bearer abc');
-    call.flush({});
-  });
+      expect(call.request.headers.get('Authorization')).toBe('Bearer abc');
+      call.flush({});
+    },
+  );
 });
 
 describe('authInterceptor on a 401', () => {

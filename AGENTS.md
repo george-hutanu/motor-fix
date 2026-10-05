@@ -188,7 +188,7 @@ decisions are the source for anything the constitution does not fix.
   the list in `apps/api/src/public-routes.integration.spec.ts`. The web
   interceptor answers a `sign_in_required` 401 with the sign-in dialog over
   the screen, then sends the call again once.
-- Lint and format: Biome only, root `biome.json` (no eslint, no prettier).
+- Lint and format: Biome only, root `biome.jsonc` (no eslint, no prettier).
   Tests: Jest from the root config, Playwright for end-to-end. NestJS 12 is
   ESM-only, so the Nest projects' `test` targets run Jest with
   `--experimental-vm-modules`.

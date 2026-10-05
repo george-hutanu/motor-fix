@@ -68,9 +68,14 @@ describe('password hashing under hostile input', () => {
     ],
     ['a null byte', `${phc('m=19456,t=2,p=1')}\u0000`],
     ['argon2d', phc('m=19456,t=2,p=1').replace('argon2id', 'argon2d')],
-  ])('answers false without throwing for a stored hash with %s', async (_, stored) => {
-    await expect(verifyPassword('parola-de-test', stored)).resolves.toBe(false);
-  });
+  ])(
+    'answers false without throwing for a stored hash with %s',
+    async (_, stored) => {
+      await expect(verifyPassword('parola-de-test', stored)).resolves.toBe(
+        false,
+      );
+    },
+  );
 
   it('answers false for a stored hash of a million characters, without throwing', async () => {
     await expect(

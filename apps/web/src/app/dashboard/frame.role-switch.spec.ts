@@ -145,15 +145,14 @@ describe('Frame, the role chips', () => {
     ]);
   });
 
-  it.each([
-    'driver',
-    'garage',
-    'admin',
-  ] as const)('shows no chips to an account that is only a %s', async (role) => {
-    const { element } = await render(role, [role]);
+  it.each(['driver', 'garage', 'admin'] as const)(
+    'shows no chips to an account that is only a %s',
+    async (role) => {
+      const { element } = await render(role, [role]);
 
-    expect(group(element)).toBeNull();
-  });
+      expect(group(element)).toBeNull();
+    },
+  );
 
   it('names them in English', async () => {
     const { element, harness } = await render('garage', [

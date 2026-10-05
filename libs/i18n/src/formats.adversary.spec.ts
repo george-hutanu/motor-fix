@@ -108,12 +108,13 @@ describe('formatLei at the edges', () => {
     expect(formatLei(-0, 'en')).toBe('0 lei');
   });
 
-  it.each(
-    hostileNumbers.map((value, i) => [`${typeof value} #${i}`, value]),
-  )('shows a dash for a %s value', (_kind, value) => {
-    expect(formatLei(value, 'ro')).toBe(MISSING);
-    expect(formatLei(value, 'en')).toBe(MISSING);
-  });
+  it.each(hostileNumbers.map((value, i) => [`${typeof value} #${i}`, value]))(
+    'shows a dash for a %s value',
+    (_kind, value) => {
+      expect(formatLei(value, 'ro')).toBe(MISSING);
+      expect(formatLei(value, 'en')).toBe(MISSING);
+    },
+  );
 
   it('groups thousands correctly across a wide sweep of amounts', () => {
     for (let lei = 0; lei <= 30000; lei += 7) {
@@ -166,13 +167,14 @@ describe('formatLeiRange at the edges', () => {
     expect(formatLeiRange(0, 100050, 'en')).toBe('0.00–1,000.50 lei');
   });
 
-  it.each(
-    hostileNumbers.map((value, i) => [`${typeof value} #${i}`, value]),
-  )('shows a dash when one end is a %s value', (_kind, bad) => {
-    expect(formatLeiRange(bad, 120000, 'ro')).toBe(MISSING);
-    expect(formatLeiRange(80000, bad, 'ro')).toBe(MISSING);
-    expect(formatLeiRange(bad, bad, 'en')).toBe(MISSING);
-  });
+  it.each(hostileNumbers.map((value, i) => [`${typeof value} #${i}`, value]))(
+    'shows a dash when one end is a %s value',
+    (_kind, bad) => {
+      expect(formatLeiRange(bad, 120000, 'ro')).toBe(MISSING);
+      expect(formatLeiRange(80000, bad, 'ro')).toBe(MISSING);
+      expect(formatLeiRange(bad, bad, 'en')).toBe(MISSING);
+    },
+  );
 
   it('shows a dash for a missing end even when the other end is equal-looking', () => {
     expect(formatLeiRange(undefined, undefined, 'ro')).toBe(MISSING);
@@ -198,12 +200,13 @@ describe('formatRating at the edges', () => {
     expect(formatRating(value, 'en')).toBe(en);
   });
 
-  it.each(
-    hostileNumbers.map((value, i) => [`${typeof value} #${i}`, value]),
-  )('shows a dash for a %s value', (_kind, value) => {
-    expect(formatRating(value, 'ro')).toBe(MISSING);
-    expect(formatRating(value, 'en')).toBe(MISSING);
-  });
+  it.each(hostileNumbers.map((value, i) => [`${typeof value} #${i}`, value]))(
+    'shows a dash for a %s value',
+    (_kind, value) => {
+      expect(formatRating(value, 'ro')).toBe(MISSING);
+      expect(formatRating(value, 'en')).toBe(MISSING);
+    },
+  );
 });
 
 describe('formatNum at the edges', () => {
@@ -222,12 +225,13 @@ describe('formatNum at the edges', () => {
     expect(formatNum(value, 'en')).toBe(en);
   });
 
-  it.each(
-    hostileNumbers.map((value, i) => [`${typeof value} #${i}`, value]),
-  )('shows a dash for a %s value', (_kind, value) => {
-    expect(formatNum(value, 'ro')).toBe(MISSING);
-    expect(formatNum(value, 'en')).toBe(MISSING);
-  });
+  it.each(hostileNumbers.map((value, i) => [`${typeof value} #${i}`, value]))(
+    'shows a dash for a %s value',
+    (_kind, value) => {
+      expect(formatNum(value, 'ro')).toBe(MISSING);
+      expect(formatNum(value, 'en')).toBe(MISSING);
+    },
+  );
 });
 
 describe('formatKm at the edges', () => {
@@ -252,12 +256,13 @@ describe('formatKm at the edges', () => {
     expect(formatKm(3, 'en').codePointAt(1)).toBe(0x20);
   });
 
-  it.each(
-    hostileNumbers.map((value, i) => [`${typeof value} #${i}`, value]),
-  )('shows a dash for a %s value', (_kind, value) => {
-    expect(formatKm(value, 'ro')).toBe(MISSING);
-    expect(formatKm(value, 'en')).toBe(MISSING);
-  });
+  it.each(hostileNumbers.map((value, i) => [`${typeof value} #${i}`, value]))(
+    'shows a dash for a %s value',
+    (_kind, value) => {
+      expect(formatKm(value, 'ro')).toBe(MISSING);
+      expect(formatKm(value, 'en')).toBe(MISSING);
+    },
+  );
 });
 
 describe('formatPct at the edges', () => {
@@ -282,12 +287,13 @@ describe('formatPct at the edges', () => {
     expect(formatPct(92, 'en')).not.toMatch(/\s/);
   });
 
-  it.each(
-    hostileNumbers.map((value, i) => [`${typeof value} #${i}`, value]),
-  )('shows a dash for a %s value', (_kind, value) => {
-    expect(formatPct(value, 'ro')).toBe(MISSING);
-    expect(formatPct(value, 'en')).toBe(MISSING);
-  });
+  it.each(hostileNumbers.map((value, i) => [`${typeof value} #${i}`, value]))(
+    'shows a dash for a %s value',
+    (_kind, value) => {
+      expect(formatPct(value, 'ro')).toBe(MISSING);
+      expect(formatPct(value, 'en')).toBe(MISSING);
+    },
+  );
 });
 
 describe('formatDay and formatClock in Bucharest time', () => {
@@ -320,13 +326,14 @@ describe('formatDay and formatClock in Bucharest time', () => {
     'Dec',
   ];
 
-  it.each(
-    RO_MONTHS.map((name, month) => [month, name, EN_MONTHS[month]]),
-  )('names month %p as %p / %p', (month, ro, en) => {
-    const noon = Date.UTC(2026, month as number, 15, 9);
-    expect(formatDay(noon, 'ro')).toBe(`15 ${ro} 2026`);
-    expect(formatDay(noon, 'en')).toBe(`15 ${en} 2026`);
-  });
+  it.each(RO_MONTHS.map((name, month) => [month, name, EN_MONTHS[month]]))(
+    'names month %p as %p / %p',
+    (month, ro, en) => {
+      const noon = Date.UTC(2026, month as number, 15, 9);
+      expect(formatDay(noon, 'ro')).toBe(`15 ${ro} 2026`);
+      expect(formatDay(noon, 'en')).toBe(`15 ${en} 2026`);
+    },
+  );
 
   it('accepts a Date, an ISO string and epoch milliseconds for the same instant', () => {
     const inputs = [
@@ -409,13 +416,14 @@ describe('formatDay and formatClock in Bucharest time', () => {
     expect(formatClock(at)).toBe('14:30');
   });
 
-  it.each(
-    hostileInstants.map((value, i) => [`${typeof value} #${i}`, value]),
-  )('shows a dash for a %s value', (_kind, value) => {
-    expect(formatDay(value, 'ro')).toBe(MISSING);
-    expect(formatDay(value, 'en')).toBe(MISSING);
-    expect(formatClock(value)).toBe(MISSING);
-  });
+  it.each(hostileInstants.map((value, i) => [`${typeof value} #${i}`, value]))(
+    'shows a dash for a %s value',
+    (_kind, value) => {
+      expect(formatDay(value, 'ro')).toBe(MISSING);
+      expect(formatDay(value, 'en')).toBe(MISSING);
+      expect(formatClock(value)).toBe(MISSING);
+    },
+  );
 
   it('shows a dash for an invalid Date object rather than Invalid Date', () => {
     const text = formatDay(new Date('nope'), 'en');

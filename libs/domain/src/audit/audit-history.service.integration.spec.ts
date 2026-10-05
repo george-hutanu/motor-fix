@@ -88,18 +88,17 @@ const rejects400 = async (call: Promise<unknown>, code: string) => {
 };
 
 describe('who reads which history', () => {
-  it.each([
-    'garage',
-    'receptionist',
-    'mechanic',
-  ] as const)('the %s reads only their own garage', async (role) => {
-    const g = await twoGarages();
+  it.each(['garage', 'receptionist', 'mechanic'] as const)(
+    'the %s reads only their own garage',
+    async (role) => {
+      const g = await twoGarages();
 
-    const page = await history.list(actor(role, g.nord), {});
+      const page = await history.list(actor(role, g.nord), {});
 
-    expect(ids(page)).toEqual([g.inNord2.id, g.inNord.id]);
-    expect(page.total).toBe(2);
-  });
+      expect(ids(page)).toEqual([g.inNord2.id, g.inNord.id]);
+      expect(page.total).toBe(2);
+    },
+  );
 
   it('the mechanic reads it whatever their permissions', async () => {
     const g = await twoGarages();
@@ -126,15 +125,14 @@ describe('who reads which history', () => {
     expect(page.total).toBe(2);
   });
 
-  it.each([
-    'garage',
-    'receptionist',
-    'mechanic',
-  ] as const)('the %s asking for another garage gets 404', async (role) => {
-    const g = await twoGarages();
+  it.each(['garage', 'receptionist', 'mechanic'] as const)(
+    'the %s asking for another garage gets 404',
+    async (role) => {
+      const g = await twoGarages();
 
-    await rejects404(history.list(actor(role, g.nord), { garageId: g.sud }));
-  });
+      await rejects404(history.list(actor(role, g.nord), { garageId: g.sud }));
+    },
+  );
 
   it('the admin reads every garage and entries without a garage', async () => {
     const g = await twoGarages();
@@ -184,13 +182,12 @@ describe('who reads which history', () => {
     await rejects404(history.list(actor('driver', null), {}));
   });
 
-  it.each([
-    'garage',
-    'receptionist',
-    'mechanic',
-  ] as const)('the %s with no garage gets 404', async (role) => {
-    await rejects404(history.list(actor(role, null), {}));
-  });
+  it.each(['garage', 'receptionist', 'mechanic'] as const)(
+    'the %s with no garage gets 404',
+    async (role) => {
+      await rejects404(history.list(actor(role, null), {}));
+    },
+  );
 
   it('the admin is not scoped by a garage they also belong to', async () => {
     const now = quietMoment();
@@ -288,18 +285,17 @@ describe('each entry', () => {
     });
   });
 
-  it.each([
-    'garage',
-    'receptionist',
-    'mechanic',
-  ] as const)('shows internal entries to the %s', async (role) => {
-    const garageId = randomUUID();
-    const note = await entry({ garageId, internal: true });
+  it.each(['garage', 'receptionist', 'mechanic'] as const)(
+    'shows internal entries to the %s',
+    async (role) => {
+      const garageId = randomUUID();
+      const note = await entry({ garageId, internal: true });
 
-    const [item] = (await history.list(actor(role, garageId), {})).items;
+      const [item] = (await history.list(actor(role, garageId), {})).items;
 
-    expect(item).toMatchObject({ id: note.id, internal: true });
-  });
+      expect(item).toMatchObject({ id: note.id, internal: true });
+    },
+  );
 
   it('shows internal entries to the admin', async () => {
     const garageId = randomUUID();
@@ -346,27 +342,26 @@ describe('phone and plate values', () => {
     });
   }
 
-  it.each([
-    'garage',
-    'receptionist',
-    'mechanic',
-  ] as const)('are masked for the %s', async (role) => {
-    const garageId = randomUUID();
-    await sensitive(garageId);
+  it.each(['garage', 'receptionist', 'mechanic'] as const)(
+    'are masked for the %s',
+    async (role) => {
+      const garageId = randomUUID();
+      await sensitive(garageId);
 
-    const [whole, plate, phone] = (
-      await history.list(actor(role, garageId), {})
-    ).items;
+      const [whole, plate, phone] = (
+        await history.list(actor(role, garageId), {})
+      ).items;
 
-    expect(phone).toMatchObject({ newValue: '•••', oldValue: '•••' });
-    expect(plate).toMatchObject({ newValue: '•••', oldValue: null });
-    expect(whole?.newValue).toEqual({
-      car: { model: 'Logan', plate: '•••' },
-      name: 'Andrei',
-      phone: '•••',
-      visits: [{ phone: '•••' }],
-    });
-  });
+      expect(phone).toMatchObject({ newValue: '•••', oldValue: '•••' });
+      expect(plate).toMatchObject({ newValue: '•••', oldValue: null });
+      expect(whole?.newValue).toEqual({
+        car: { model: 'Logan', plate: '•••' },
+        name: 'Andrei',
+        phone: '•••',
+        visits: [{ phone: '•••' }],
+      });
+    },
+  );
 
   it('are shown to the admin as stored', async () => {
     const garageId = randomUUID();

@@ -209,15 +209,15 @@ describe('asking for a reset link', () => {
     expect(await prisma.accountToken.count()).toBe(1);
   });
 
-  it.each([
-    'suspended',
-    'deleted',
-  ] as const)('sends nothing to a %s account', async (status) => {
-    const id = await account('ioana', ['driver'], { status });
-    await ask('ioana@example.test').expect(202);
-    expect(await resetEmails(id)).toHaveLength(0);
-    expect(await prisma.accountToken.count()).toBe(0);
-  });
+  it.each(['suspended', 'deleted'] as const)(
+    'sends nothing to a %s account',
+    async (status) => {
+      const id = await account('ioana', ['driver'], { status });
+      await ask('ioana@example.test').expect(202);
+      expect(await resetEmails(id)).toHaveLength(0);
+      expect(await prisma.accountToken.count()).toBe(0);
+    },
+  );
 
   it('keeps only the hash of a 60-minute token', async () => {
     const id = await person();
@@ -389,16 +389,16 @@ describe('checking a link', () => {
     expect(res.body.code).toBe('token_invalid');
   });
 
-  it.each([
-    'suspended',
-    'deleted',
-  ] as const)('answers 410 token_invalid once the account is %s', async (status) => {
-    const id = await person();
-    const token = await linkFor(id);
-    await prisma.account.update({ data: { status }, where: { id } });
-    const res = await check(token).expect(410);
-    expect(res.body.code).toBe('token_invalid');
-  });
+  it.each(['suspended', 'deleted'] as const)(
+    'answers 410 token_invalid once the account is %s',
+    async (status) => {
+      const id = await person();
+      const token = await linkFor(id);
+      await prisma.account.update({ data: { status }, where: { id } });
+      const res = await check(token).expect(410);
+      expect(res.body.code).toBe('token_invalid');
+    },
+  );
 
   it('answers 410 token_invalid once the account address changed', async () => {
     const id = await person();
@@ -571,17 +571,20 @@ describe('completing a reset', () => {
     ['7 characters', 'a'.repeat(7)],
     ['129 characters', 'a'.repeat(129)],
     ['a common password', 'password123'],
-  ])('refuses %s with weak_password and changes nothing', async (_name, weak) => {
-    const id = await person();
-    const token = await linkFor(id);
-    const res = await complete(token, weak).expect(400);
-    expect(res.body.code).toBe('weak_password');
-    expect(res.body.errors).toEqual([
-      { code: 'weak_password', field: 'password' },
-    ]);
-    await signIn('andrei@example.test', OLD).expect(200);
-    await check(token).expect(204);
-  });
+  ])(
+    'refuses %s with weak_password and changes nothing',
+    async (_name, weak) => {
+      const id = await person();
+      const token = await linkFor(id);
+      const res = await complete(token, weak).expect(400);
+      expect(res.body.code).toBe('weak_password');
+      expect(res.body.errors).toEqual([
+        { code: 'weak_password', field: 'password' },
+      ]);
+      await signIn('andrei@example.test', OLD).expect(200);
+      await check(token).expect(204);
+    },
+  );
 
   it('counts 8 emoji as 8 characters', async () => {
     const id = await person();

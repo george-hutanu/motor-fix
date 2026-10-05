@@ -65,15 +65,12 @@ describe('access tokens', () => {
     ).toBeNull();
   });
 
-  it.each([
-    '',
-    'abc',
-    'a.b',
-    'a.b.c',
-    'a.b.c.d',
-  ])('refuses the malformed token %p', (token) => {
-    expect(verifyAccessToken(token, secret, now)).toBeNull();
-  });
+  it.each(['', 'abc', 'a.b', 'a.b.c', 'a.b.c.d'])(
+    'refuses the malformed token %p',
+    (token) => {
+      expect(verifyAccessToken(token, secret, now)).toBeNull();
+    },
+  );
 
   it('refuses a token naming a role that does not exist', () => {
     const token = signAccessToken(

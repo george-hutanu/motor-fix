@@ -156,11 +156,10 @@ describe('dates and times', () => {
   // Jest cannot change the zone of its own process, so a child Node process
   // on another device zone runs the formats. Plain Node loads formats.ts only
   // while it keeps erasable TypeScript and `import type` relative imports.
-  it.each([
-    ['America/New_York'],
-    ['Pacific/Kiritimati'],
-  ])('read in Bucharest time on a device in %s', (zone) => {
-    const script = `
+  it.each([['America/New_York'], ['Pacific/Kiritimati']])(
+    'read in Bucharest time on a device in %s',
+    (zone) => {
+      const script = `
       const f = await import(${JSON.stringify(join(__dirname, 'formats.ts'))});
       console.log(JSON.stringify([
         Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -168,18 +167,19 @@ describe('dates and times', () => {
         f.formatDay('2026-03-09T21:30:00Z', 'en'),
         f.formatClock('2026-03-09T12:30:00Z'),
       ]));`;
-    const out = execFileSync(
-      process.execPath,
-      ['--input-type=module', '-e', script],
-      { encoding: 'utf8', env: { ...process.env, TZ: zone } },
-    );
-    expect(JSON.parse(out)).toEqual([
-      zone,
-      '9 mart. 2026',
-      '9 Mar 2026',
-      '14:30',
-    ]);
-  });
+      const out = execFileSync(
+        process.execPath,
+        ['--input-type=module', '-e', script],
+        { encoding: 'utf8', env: { ...process.env, TZ: zone } },
+      );
+      expect(JSON.parse(out)).toEqual([
+        zone,
+        '9 mart. 2026',
+        '9 Mar 2026',
+        '14:30',
+      ]);
+    },
+  );
 
   it('writes 9 March 2026 with the short month of each language', () => {
     const instant = new Date('2026-03-09T10:00:00Z');

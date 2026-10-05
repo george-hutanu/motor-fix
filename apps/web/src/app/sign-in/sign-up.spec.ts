@@ -252,20 +252,19 @@ describe('checking the form before sending', () => {
     expect(describedBy(field('Nume'))).toContain(message);
   });
 
-  it.each([
-    'andrei',
-    'andrei@example',
-    'an drei@example.ro',
-  ])('refuses "%s" as an e-mail address', async (email) => {
-    await open();
+  it.each(['andrei', 'andrei@example', 'an drei@example.ro'])(
+    'refuses "%s" as an e-mail address',
+    async (email) => {
+      await open();
 
-    await submit('Andrei Marin', email, 'o-parola-lunga');
+      await submit('Andrei Marin', email, 'o-parola-lunga');
 
-    expect(signUp).not.toHaveBeenCalled();
-    expect(describedBy(field('E‑mail'))).toContain(
-      'Adresa de e‑mail nu pare corectă.',
-    );
-  });
+      expect(signUp).not.toHaveBeenCalled();
+      expect(describedBy(field('E‑mail'))).toContain(
+        'Adresa de e‑mail nu pare corectă.',
+      );
+    },
+  );
 });
 
 describe('sending', () => {

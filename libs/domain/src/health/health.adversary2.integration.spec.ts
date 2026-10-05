@@ -89,21 +89,22 @@ describe('readiness with a misbehaving store', () => {
     expect(res.body.checks.storage).toBe('ok');
   });
 
-  it.each([
-    500, 502, 503, 301, 404,
-  ])('answers 503 naming storage when the bucket check gets %i', async (status) => {
-    const endpoint = await listen(
-      createHttp((_req, res) => {
-        res.writeHead(status, { location: 'http://127.0.0.1:1/' }).end();
-      }),
-    );
-    app = await start(endpoint);
+  it.each([500, 502, 503, 301, 404])(
+    'answers 503 naming storage when the bucket check gets %i',
+    async (status) => {
+      const endpoint = await listen(
+        createHttp((_req, res) => {
+          res.writeHead(status, { location: 'http://127.0.0.1:1/' }).end();
+        }),
+      );
+      app = await start(endpoint);
 
-    const res = await request(app.getHttpServer()).get('/health/ready');
+      const res = await request(app.getHttpServer()).get('/health/ready');
 
-    expect(res.status).toBe(503);
-    expect(res.body.checks.storage).toBe('error');
-  });
+      expect(res.status).toBe(503);
+      expect(res.body.checks.storage).toBe('error');
+    },
+  );
 
   it('answers 503 when the store closes the connection mid-response', async () => {
     const endpoint = await listen(
