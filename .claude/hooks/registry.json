@@ -30,7 +30,7 @@
         "strict"
       ],
       "description": "On the main checkout, when two or more worktrees hold live or in-flight work (watch.mjs --json, read-only, under a timeout), and no live watch.mjs --wait holds the repository, print one line telling the session to arm the wait; silent otherwise, and always exits 0",
-      "fingerprint": "7821bba7f396"
+      "fingerprint": "d70b4e5e9eaf"
     },
     {
       "id": "session:start:github-identity",

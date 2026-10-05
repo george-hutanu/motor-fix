@@ -31,6 +31,9 @@ import { fileURLToPath } from "node:url";
 import { findCarry, postCarry } from "./pr-test/carry.mjs";
 import { parseQaRun } from "./pr-test/qa-run.mjs";
 import { readState } from "./run-state.mjs";
+import { WAIT_RECORD, commonDir, defaultCommandOf, waitHolder } from "./lib/watch-wait.mjs";
+
+export { waitHolder };
 
 export const DEFAULT_THRESHOLDS = { planning: 30, tests: 45, development: 45, review: 30, qa: 30, merging: 30 };
 // QA boots on GitHub Actions (.github/workflows/pr-qa.yml), not on the laptop,
@@ -472,32 +475,6 @@ export function applyFixes(repo, report, { postCarry: post = postCarry } = {}) {
 /** One line per thing a full pass would do: each dispatch and each no-agent fix. Empty means the pass would do nothing. */
 const gateLines = (report) =>
   [...report.plan, ...dueFixes(report)].map((d) => `${d.fix} ${d.path}${d.pr ? ` #${d.pr}` : ""}`);
-
-const WAIT_RECORD = "speckit-watch-wait.pid";
-const commonDir = (cwd) => git(cwd, ["rev-parse", "--path-format=absolute", "--git-common-dir"])?.trim() || null;
-
-const defaultCommandOf = (pid) => {
-  try {
-    return execFileSync("ps", ["-p", String(pid), "-o", "command="], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
-  } catch {
-    return null;
-  }
-};
-
-/** The pid of the live `watch.mjs --wait` holding this repository's record, or null: a dead or recycled pid holds nothing. */
-export function waitHolder(repo, { commandOf = defaultCommandOf } = {}) {
-  const dir = commonDir(repo);
-  if (!dir) return null;
-  let pid;
-  try {
-    pid = Number(readFileSync(join(dir, WAIT_RECORD), "utf8").trim());
-  } catch {
-    return null;
-  }
-  if (!Number.isInteger(pid) || pid <= 0) return null;
-  const command = commandOf(pid);
-  return command && /watch\.mjs/.test(command) && /(^|\s)--wait(\s|$)/.test(command) ? pid : null;
-}
 
 const blockingSleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 

@@ -20,7 +20,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
-import { waitHolder } from "../scripts/watch.mjs";
+import { waitHolder } from "../scripts/lib/watch-wait.mjs";
 
 export const DEFAULT_TIMEOUT_MS = 20_000;
 

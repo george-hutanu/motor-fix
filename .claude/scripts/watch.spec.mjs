@@ -641,7 +641,7 @@ describe('the command, started from a path with a space or through a symlink', (
       mkdirSync(dir, { recursive: true });
       for (const name of ['watch.mjs', 'run-state.mjs']) writeFileSync(join(dir, name), readFileSync(join(import.meta.dirname, name)));
       mkdirSync(join(f.root, 'with space', '.claude', 'scripts', 'lib'), { recursive: true });
-      for (const name of ['feature.mjs']) writeFileSync(join(dir, 'lib', name), readFileSync(join(import.meta.dirname, 'lib', name)));
+      for (const name of ['feature.mjs', 'watch-wait.mjs']) writeFileSync(join(dir, 'lib', name), readFileSync(join(import.meta.dirname, 'lib', name)));
       mkdirSync(join(dir, 'pr-test'));
       for (const name of ['carry.mjs', 'post.mjs', 'findings.mjs', 'qa-run.mjs']) writeFileSync(join(dir, 'pr-test', name), readFileSync(join(import.meta.dirname, 'pr-test', name)));
       mkdirSync(join(f.root, 'with space', 'scripts'));
