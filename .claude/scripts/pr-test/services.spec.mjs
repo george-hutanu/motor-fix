@@ -2,8 +2,10 @@ import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { createServer as createTcp } from 'node:net';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
-import { appEnv, composePlan, freePorts, localPlan, waitForHttp } from './services.mjs';
+import { HEALTH, apiHealth, appEnv, composePlan, freePorts, localPlan, waitForHttp } from './services.mjs';
 
 const listen = (server, port = 0) =>
   new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve(server.address().port)));
@@ -44,6 +46,34 @@ describe('waiting for health', () => {
     assert.equal(result.ok, false);
     assert.ok(Date.now() - started < 3000);
     assert.ok(result.error);
+  });
+});
+
+describe('the API health routes', () => {
+  const controller = readFileSync(fileURLToPath(new URL('../../../libs/domain/src/health/health.controller.ts', import.meta.url)), 'utf8');
+
+  it('are the routes the API health controller declares', () => {
+    const base = controller.match(/@Controller\('([^']+)'\)/)?.[1];
+    assert.ok(base, 'the health controller declares its path in @Controller');
+    const routes = [...controller.matchAll(/@Get\((?:'([^']*)')?\)/g)].map((m) => (m[1] ? `/${base}/${m[1]}` : `/${base}`));
+    assert.deepEqual([HEALTH.live, HEALTH.ready].sort(), routes.sort());
+  });
+
+  it('health() and ready() call them on the API they are given', async () => {
+    const seen = [];
+    const server = createServer((req, res) => {
+      seen.push(req.url);
+      res.statusCode = req.url === '/health/ready' ? 503 : 200;
+      res.end('{}');
+    });
+    const port = await listen(server);
+    const { health, ready } = apiHealth(`http://127.0.0.1:${port}`);
+    const live = await health();
+    const readiness = await ready();
+    await close(server);
+    assert.deepEqual(seen, ['/health/live', '/health/ready']);
+    assert.equal(live.status, 200);
+    assert.equal(readiness.status, 503);
   });
 });
 

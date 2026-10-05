@@ -2,7 +2,7 @@ name: PR QA
 
 # The PR tester's mechanical half on a GitHub runner instead of the owner's
 # 16 GB laptop: boot the PR head with PostgreSQL+PostGIS, Redis and MinIO,
-# check /health/ready, call the changed endpoints, run the viewport sweep
+# check /health/live and /health/ready, call the changed endpoints, run the viewport sweep
 # (desktop, tablet, 390 and 320 px phones x light/dark x ro/en), the agent's
 # flows, and upload the report and the screenshots. The unit and end-to-end
 # suites are CI's (ci.yml runs them on the merge result), not run again here.
