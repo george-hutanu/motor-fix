@@ -151,18 +151,16 @@ describe('access token verification against forged tokens', () => {
     ).toBeNull();
   });
 
-  it.each([
-    ['null'],
-    ['[]'],
-    ['"text"'],
-    ['42'],
-  ])('refuses a signed payload of %s', (json) => {
-    const raw = Buffer.from(json).toString('base64url');
+  it.each([['null'], ['[]'], ['"text"'], ['42']])(
+    'refuses a signed payload of %s',
+    (json) => {
+      const raw = Buffer.from(json).toString('base64url');
 
-    expect(
-      verifyAccessToken(forge(hs256, null, secret, raw), secret, now),
-    ).toBeNull();
-  });
+      expect(
+        verifyAccessToken(forge(hs256, null, secret, raw), secret, now),
+      ).toBeNull();
+    },
+  );
 
   it('refuses a token whose signature is one character short or one longer', () => {
     const token = forge(hs256, goodClaims());
@@ -181,17 +179,14 @@ describe('access token verification against forged tokens', () => {
     ).toBeNull();
   });
 
-  it.each([
-    null,
-    undefined,
-    42,
-    {},
-    [],
-  ])('refuses the non-string token %p without throwing', (token) => {
-    expect(
-      verifyAccessToken(token as unknown as string, secret, now),
-    ).toBeNull();
-  });
+  it.each([null, undefined, 42, {}, []])(
+    'refuses the non-string token %p without throwing',
+    (token) => {
+      expect(
+        verifyAccessToken(token as unknown as string, secret, now),
+      ).toBeNull();
+    },
+  );
 
   it('refuses a five megabyte junk token without throwing', () => {
     expect(

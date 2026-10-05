@@ -177,18 +177,16 @@ describe('missing values', () => {
     expect(error.reason).toContain('name');
   });
 
-  it.each([
-    'constructor',
-    'toString',
-    '__proto__',
-    'hasOwnProperty',
-  ])('does not treat the inherited property %s as supplied', (key) => {
-    const registry = lineTemplate(`Hello {${key}}`, { [key]: 'text' });
-    const error = failure(() =>
-      render('QUOTE_RECEIVED', 'bell', 'en', {}, registry),
-    );
-    expect(error.reason).toContain(key);
-  });
+  it.each(['constructor', 'toString', '__proto__', 'hasOwnProperty'])(
+    'does not treat the inherited property %s as supplied',
+    (key) => {
+      const registry = lineTemplate(`Hello {${key}}`, { [key]: 'text' });
+      const error = failure(() =>
+        render('QUOTE_RECEIVED', 'bell', 'en', {}, registry),
+      );
+      expect(error.reason).toContain(key);
+    },
+  );
 
   it('accepts zero and false as supplied values', () => {
     const registry = lineTemplate('N={n}', { n: 'text' });
@@ -239,15 +237,12 @@ describe('substitution', () => {
     expect(bell({ a: '{nope}', b: 'X' })).toBe('{nope} and X');
   });
 
-  it.each([
-    '$&',
-    '$1',
-    '$$',
-    '$`',
-    "$'",
-  ])('keeps the value %s literal', (value) => {
-    expect(bell({ a: value, b: 'X' })).toBe(`${value} and X`);
-  });
+  it.each(['$&', '$1', '$$', '$`', "$'"])(
+    'keeps the value %s literal',
+    (value) => {
+      expect(bell({ a: value, b: 'X' })).toBe(`${value} and X`);
+    },
+  );
 
   it('keeps unicode beyond the basic plane intact', () => {
     expect(bell({ a: '🚗 Škoda', b: 'ț' })).toBe('🚗 Škoda and ț');
@@ -375,18 +370,17 @@ describe('e-mail escaping and layout', () => {
 });
 
 describe('types without a template', () => {
-  it.each([
-    'UNKNOWN_TYPE',
-    '',
-    'constructor',
-    '__proto__',
-    'toString',
-  ])('renders the generic bell and e-mail for %j', (name) => {
-    expect(render(name, 'bell', 'en', {})).toBe('You have a new notification');
-    expect(render(name, 'email', 'ro', { app: APP }).subject).toBe(
-      'Ai o notificare nouă',
-    );
-  });
+  it.each(['UNKNOWN_TYPE', '', 'constructor', '__proto__', 'toString'])(
+    'renders the generic bell and e-mail for %j',
+    (name) => {
+      expect(render(name, 'bell', 'en', {})).toBe(
+        'You have a new notification',
+      );
+      expect(render(name, 'email', 'ro', { app: APP }).subject).toBe(
+        'Ai o notificare nouă',
+      );
+    },
+  );
 
   it('renders the generic grouped e-mail for an unknown grouped type', () => {
     expect(
@@ -399,15 +393,14 @@ describe('types without a template', () => {
     ).toBe('Ai 25 de notificări noi');
   });
 
-  it.each([
-    'push',
-    'sms',
-    'whatsapp',
-  ] as const)('fails on %s instead of falling back to the generic text', (channel) => {
-    const error = failure(() => render('UNKNOWN_TYPE', channel, 'en', {}));
-    expect(error.channel).toBe(channel);
-    expect(error.template).toBe('UNKNOWN_TYPE');
-  });
+  it.each(['push', 'sms', 'whatsapp'] as const)(
+    'fails on %s instead of falling back to the generic text',
+    (channel) => {
+      const error = failure(() => render('UNKNOWN_TYPE', channel, 'en', {}));
+      expect(error.channel).toBe(channel);
+      expect(error.template).toBe('UNKNOWN_TYPE');
+    },
+  );
 
   it('lists the five channels', () => {
     expect([...CHANNELS].sort()).toEqual(

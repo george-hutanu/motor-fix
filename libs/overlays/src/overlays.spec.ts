@@ -274,15 +274,18 @@ describe('Overlays: shapes', () => {
   it.each([
     ['drawer', 'mf-overlay-drawer'],
     ['drawer-wide', 'mf-overlay-drawer-wide'],
-  ] as const)('opens a %s on the right-hand sheet surface', async (shape, cls) => {
-    await openTask((host) => {
-      host.options = { shape, title: 'shell.brand' };
-    });
+  ] as const)(
+    'opens a %s on the right-hand sheet surface',
+    async (shape, cls) => {
+      await openTask((host) => {
+        host.options = { shape, title: 'shell.brand' };
+      });
 
-    expect(panel()?.classList).toContain('spartan-sheet-content');
-    expect(panel()?.classList).toContain(cls);
-    expect(panel()?.getAttribute('data-side')).toBe('right');
-  });
+      expect(panel()?.classList).toContain('spartan-sheet-content');
+      expect(panel()?.classList).toContain(cls);
+      expect(panel()?.getAttribute('data-side')).toBe('right');
+    },
+  );
 
   it('scrolls the body, not the header with the X', async () => {
     await openTask();

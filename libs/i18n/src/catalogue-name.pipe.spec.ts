@@ -41,14 +41,13 @@ describe('CatalogueNamePipe', () => {
     expect(text()).toBe('Brakes');
   });
 
-  it.each([
-    [undefined],
-    [null],
-    ['  '],
-  ])('shows the Romanian name in English when the English one is %p', async (name_en) => {
-    await TestBed.inject(I18n).use('en');
-    const { text } = await render({ name_en, name_ro: 'Distribuție' });
+  it.each([[undefined], [null], ['  ']])(
+    'shows the Romanian name in English when the English one is %p',
+    async (name_en) => {
+      await TestBed.inject(I18n).use('en');
+      const { text } = await render({ name_en, name_ro: 'Distribuție' });
 
-    expect(text()).toBe('Distribuție');
-  });
+      expect(text()).toBe('Distribuție');
+    },
+  );
 });

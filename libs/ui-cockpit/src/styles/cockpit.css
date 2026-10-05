@@ -93,20 +93,15 @@ body {
 /* Phone rules every screen inherits, at no specificity so components win.
    Links in running text keep their inline size. */
 :where(
-    button,
-    select,
-    textarea,
-    summary,
-    [role="button"],
-    [role="tab"],
-    [role="switch"],
-    input:not(
-        [type="checkbox"],
-        [type="radio"],
-        [type="hidden"],
-        [type="range"]
-      )
-  ) {
+  button,
+  select,
+  textarea,
+  summary,
+  [role="button"],
+  [role="tab"],
+  [role="switch"],
+  input:not([type="checkbox"], [type="radio"], [type="hidden"], [type="range"])
+) {
   min-height: var(--mf-tap);
 }
 

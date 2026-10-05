@@ -370,22 +370,25 @@ describe('Overlays adversary: confirmDiscard and data', () => {
     ['the X', () => closeButton()?.click()],
     ['Escape', pressEscape],
     ['a click outside', clickOutside],
-  ])('confirmDiscard false closes a changed task at once by %s', async (_, close) => {
-    const { host } = await openTask((h) => {
-      h.options = {
-        confirmDiscard: false,
-        shape: 'dialog',
-        title: 'shell.brand',
-      };
-    });
-    type('Ion');
+  ])(
+    'confirmDiscard false closes a changed task at once by %s',
+    async (_, close) => {
+      const { host } = await openTask((h) => {
+        h.options = {
+          confirmDiscard: false,
+          shape: 'dialog',
+          title: 'shell.brand',
+        };
+      });
+      type('Ion');
 
-    close();
-    await settle();
+      close();
+      await settle();
 
-    expect(dialogs()).toHaveLength(0);
-    await expect(host.results[0]).resolves.toBe('cancelled');
-  });
+      expect(dialogs()).toHaveLength(0);
+      await expect(host.results[0]).resolves.toBe('cancelled');
+    },
+  );
 
   it('confirmDiscard true asks the same as leaving it out', async () => {
     await openTask((h) => {

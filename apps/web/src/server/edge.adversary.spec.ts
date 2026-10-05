@@ -148,22 +148,19 @@ describe('web edge under hostile conditions', () => {
     expect(await res.text()).toBe('');
   });
 
-  it.each([
-    'GET',
-    'POST',
-    'PUT',
-    'PATCH',
-    'DELETE',
-  ])('forwards the %s method', async (method) => {
-    await boot();
+  it.each(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])(
+    'forwards the %s method',
+    async (method) => {
+      await boot();
 
-    await fetch(`${base}/api/v1/m`, {
-      body: method === 'GET' ? undefined : 'x',
-      method,
-    });
+      await fetch(`${base}/api/v1/m`, {
+        body: method === 'GET' ? undefined : 'x',
+        method,
+      });
 
-    expect(seen.map((s) => s.method)).toEqual([method]);
-  });
+      expect(seen.map((s) => s.method)).toEqual([method]);
+    },
+  );
 
   it('forwards the request id and authorization headers', async () => {
     await boot();

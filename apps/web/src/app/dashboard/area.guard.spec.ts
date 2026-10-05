@@ -55,12 +55,12 @@ describe('areaGuard', () => {
     expect(path(await run('driver', me('/app/driver')))).toBe(true);
   });
 
-  it.each([
-    'garage',
-    'admin',
-  ] as const)('sends a driver who types /app/%s to /app/driver', async (area) => {
-    expect(path(await run(area, me('/app/driver')))).toBe('/app/driver');
-  });
+  it.each(['garage', 'admin'] as const)(
+    'sends a driver who types /app/%s to /app/driver',
+    async (area) => {
+      expect(path(await run(area, me('/app/driver')))).toBe('/app/driver');
+    },
+  );
 
   it('sends a mechanic who types /app/admin to /app/garage', async () => {
     expect(path(await run('admin', me('/app/garage')))).toBe('/app/garage');
@@ -95,15 +95,14 @@ describe('areaGuard', () => {
 });
 
 describe('dashboard routes', () => {
-  it.each([
-    'driver',
-    'garage',
-    'admin',
-  ])('guard app/%s before its code downloads', (area) => {
-    const route = routes.find((r) => r.path === `app/${area}`);
+  it.each(['driver', 'garage', 'admin'])(
+    'guard app/%s before its code downloads',
+    (area) => {
+      const route = routes.find((r) => r.path === `app/${area}`);
 
-    expect(route?.canMatch).toHaveLength(1);
-    expect(route?.loadComponent).toBeDefined();
-    expect(route?.component).toBeUndefined();
-  });
+      expect(route?.canMatch).toHaveLength(1);
+      expect(route?.loadComponent).toBeDefined();
+      expect(route?.component).toBeUndefined();
+    },
+  );
 });

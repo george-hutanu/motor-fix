@@ -39,14 +39,14 @@ describe('the phone sending config', () => {
     );
   });
 
-  it.each([
-    '0712345678',
-    '+40 712 345 678',
-  ])('refuses the allowlist entry %p, which is not E.164', (entry) => {
-    expect(() =>
-      phoneConfig('staging', { ...on, PHONE_ALLOWLIST: entry }),
-    ).toThrow('PHONE_ALLOWLIST must be E.164 numbers');
-  });
+  it.each(['0712345678', '+40 712 345 678'])(
+    'refuses the allowlist entry %p, which is not E.164',
+    (entry) => {
+      expect(() =>
+        phoneConfig('staging', { ...on, PHONE_ALLOWLIST: entry }),
+      ).toThrow('PHONE_ALLOWLIST must be E.164 numbers');
+    },
+  );
 
   it('refuses sending without a WhatsApp sender number', () => {
     expect(() =>

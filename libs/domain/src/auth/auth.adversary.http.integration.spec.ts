@@ -148,18 +148,21 @@ describe('who am I over HTTP and account writes under attack', () => {
       'not-a-uuid',
       '00000000-0000-0000-0000-00000000000Z',
       'a'.repeat(5000),
-    ])('answers 401 rather than 500 for a signed token whose subject is %p', async (sub) => {
-      const token = forge(
-        hs256,
-        { exp: live() + 900, iat: live(), role: 'driver', sub },
-        tokenSecret,
-      );
+    ])(
+      'answers 401 rather than 500 for a signed token whose subject is %p',
+      async (sub) => {
+        const token = forge(
+          hs256,
+          { exp: live() + 900, iat: live(), role: 'driver', sub },
+          tokenSecret,
+        );
 
-      const res = await me(`Bearer ${token}`);
+        const res = await me(`Bearer ${token}`);
 
-      expect(res.status).toBe(401);
-      expect(res.body.code).toBe('sign_in_required');
-    });
+        expect(res.status).toBe(401);
+        expect(res.body.code).toBe('sign_in_required');
+      },
+    );
 
     it('answers 401 for a bad token even when the account is suspended', async () => {
       const accountId = await make('mihai', ['driver']);
@@ -363,22 +366,21 @@ describe('who am I over HTTP and account writes under attack', () => {
       expect(second.body).toEqual(first.body);
     });
 
-    it.each([
-      'post',
-      'put',
-      'delete',
-    ] as const)('does not serve %s on the me route', async (method) => {
-      const accountId = await make('andrei', ['driver']);
+    it.each(['post', 'put', 'delete'] as const)(
+      'does not serve %s on the me route',
+      async (method) => {
+        const accountId = await make('andrei', ['driver']);
 
-      const res = await request(app.getHttpServer())
-        [method]('/me')
-        .set('Authorization', bearer(accountId, 'driver'))
-        .send({ roles: ['admin'] });
+        const res = await request(app.getHttpServer())
+          [method]('/me')
+          .set('Authorization', bearer(accountId, 'driver'))
+          .send({ roles: ['admin'] });
 
-      expect(res.status).toBe(404);
-      const row = await prisma.accountRole.findMany({ where: { accountId } });
-      expect(row.map((r) => r.role)).toEqual(['driver']);
-    });
+        expect(res.status).toBe(404);
+        const row = await prisma.accountRole.findMany({ where: { accountId } });
+        expect(row.map((r) => r.role)).toEqual(['driver']);
+      },
+    );
     it('grants no role through the language change', async () => {
       const accountId = await make('andrei', ['driver']);
 

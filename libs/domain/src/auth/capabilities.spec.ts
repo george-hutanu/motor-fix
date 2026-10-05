@@ -65,16 +65,19 @@ describe('capabilities by role', () => {
     ['canAnswerQuotes', 'garage.requests'],
     ['canMoveBookings', 'garage.schedule'],
     ['canRecordFinalPrice', 'garage.final_price'],
-  ] as const)('a mechanic with %s may use %s and nothing more', (permission, capability) => {
-    const mechanic = capabilitiesOf('mechanic', {
-      ...none,
-      [permission]: true,
-    });
+  ] as const)(
+    'a mechanic with %s may use %s and nothing more',
+    (permission, capability) => {
+      const mechanic = capabilitiesOf('mechanic', {
+        ...none,
+        [permission]: true,
+      });
 
-    expect([...mechanic].sort()).toEqual(
-      ['garage.own_jobs', 'garage.audit_history', capability].sort(),
-    );
-  });
+      expect([...mechanic].sort()).toEqual(
+        ['garage.own_jobs', 'garage.audit_history', capability].sort(),
+      );
+    },
+  );
 
   it('ignores mechanic permissions for every other role', () => {
     const all = {

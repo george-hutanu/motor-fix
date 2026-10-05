@@ -91,16 +91,19 @@ describe('Session under concurrent and failing calls', () => {
     ['a server error', Object.assign(new Error('500'), { status: 500 })],
     ['a network failure', Object.assign(new Error('offline'), { status: 0 })],
     ['a thrown string', 'boom'],
-  ])('answers false and holds no token when the renewal fails with %s', async (_, failure) => {
-    const { api, session } = setup();
-    await session.signIn('a@b.ro', 'x', true);
-    api.authControllerRefresh.mockRejectedValueOnce(failure);
+  ])(
+    'answers false and holds no token when the renewal fails with %s',
+    async (_, failure) => {
+      const { api, session } = setup();
+      await session.signIn('a@b.ro', 'x', true);
+      api.authControllerRefresh.mockRejectedValueOnce(failure);
 
-    await expect(session.renew()).resolves.toBe(false);
+      await expect(session.renew()).resolves.toBe(false);
 
-    expect(session.token()).toBeNull();
-    expect(session.current()).toBeNull();
-  });
+      expect(session.token()).toBeNull();
+      expect(session.current()).toBeNull();
+    },
+  );
 
   it('lets the next renewal run after a failed one', async () => {
     const { api, session } = setup();

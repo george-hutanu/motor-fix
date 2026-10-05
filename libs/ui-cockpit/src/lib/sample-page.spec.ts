@@ -97,26 +97,32 @@ describe('CockpitSamplePage', () => {
     ['overlay.openDialog', 'mf-overlay-dialog'],
     ['overlay.openDrawer', 'mf-overlay-drawer'],
     ['overlay.openWide', 'mf-overlay-drawer-wide'],
-  ])('opens the sample task from %s in its shape on a computer', async (key, shape) => {
-    const matchMedia = window.matchMedia;
-    jest
-      .spyOn(window, 'matchMedia')
-      .mockImplementation((query) => ({ ...matchMedia(query), matches: true }));
-    const page = await render();
+  ])(
+    'opens the sample task from %s in its shape on a computer',
+    async (key, shape) => {
+      const matchMedia = window.matchMedia;
+      jest.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+        ...matchMedia(query),
+        matches: true,
+      }));
+      const page = await render();
 
-    buttonNamed(page, text(key))?.click();
-    await settle();
+      buttonNamed(page, text(key))?.click();
+      await settle();
 
-    const task = openTask();
-    expect(task?.querySelector('mf-overlay-panel')?.classList).toContain(shape);
-    const input = task?.querySelector<HTMLInputElement>('input');
-    expect(task?.querySelector(`label[for="${input?.id}"]`)?.textContent).toBe(
-      text('overlay.field'),
-    );
-    expect(
-      buttonNamed(task as HTMLElement, text('overlay.again')),
-    ).toBeDefined();
-  });
+      const task = openTask();
+      expect(task?.querySelector('mf-overlay-panel')?.classList).toContain(
+        shape,
+      );
+      const input = task?.querySelector<HTMLInputElement>('input');
+      expect(
+        task?.querySelector(`label[for="${input?.id}"]`)?.textContent,
+      ).toBe(text('overlay.field'));
+      expect(
+        buttonNamed(task as HTMLElement, text('overlay.again')),
+      ).toBeDefined();
+    },
+  );
 
   it('shows the result the sample task closes with', async () => {
     const page = await render();

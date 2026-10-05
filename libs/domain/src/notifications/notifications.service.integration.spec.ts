@@ -411,20 +411,20 @@ describe('quiet hours', () => {
     );
   });
 
-  it.each([
-    'JOB_READY',
-    'BOOKING_CONFIRM_REMINDER',
-  ])('sends %s at once at night', async (kind) => {
-    const andrei = await account('andrei');
-    service.now = at('2026-10-04T23:00:00Z');
-    await service.notify({ eventId: 'evt-n2', kind, recipients: [andrei] });
-    expect(
-      (await rows(andrei)).find((r) => r.channel === 'email'),
-    ).toMatchObject({
-      sendAfter: null,
-      status: 'queued',
-    });
-  });
+  it.each(['JOB_READY', 'BOOKING_CONFIRM_REMINDER'])(
+    'sends %s at once at night',
+    async (kind) => {
+      const andrei = await account('andrei');
+      service.now = at('2026-10-04T23:00:00Z');
+      await service.notify({ eventId: 'evt-n2', kind, recipients: [andrei] });
+      expect(
+        (await rows(andrei)).find((r) => r.channel === 'email'),
+      ).toMatchObject({
+        sendAfter: null,
+        status: 'queued',
+      });
+    },
+  );
 });
 
 describe('account e-mails', () => {

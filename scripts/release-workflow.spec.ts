@@ -23,12 +23,15 @@ describe('release workflow', () => {
   it.each([
     ['production', 'release-production'],
     ['staging', 'release-staging'],
-  ])('%s deploys queue in their own group and never cancel one in progress', (name, group) => {
-    const block = job(name);
+  ])(
+    '%s deploys queue in their own group and never cancel one in progress',
+    (name, group) => {
+      const block = job(name);
 
-    expect(setting(block, 'group')).toBe(group);
-    expect(setting(block, 'cancel-in-progress')).toBe('false');
-  });
+      expect(setting(block, 'group')).toBe(group);
+      expect(setting(block, 'cancel-in-progress')).toBe('false');
+    },
+  );
 
   it('promotes to production only after images and staging pass', () => {
     const block = job('production');
@@ -41,12 +44,15 @@ describe('release workflow', () => {
     );
   });
 
-  it.each([
-    'staging',
-    'production',
-  ])('%s runs the deploy script as the step process, so a cancel reaches it', (name) => {
-    expect(job(name)).toMatch(
-      new RegExp(`^ +run: exec node scripts/railway-deploy\\.ts ${name}$`, 'm'),
-    );
-  });
+  it.each(['staging', 'production'])(
+    '%s runs the deploy script as the step process, so a cancel reaches it',
+    (name) => {
+      expect(job(name)).toMatch(
+        new RegExp(
+          `^ +run: exec node scripts/railway-deploy\\.ts ${name}$`,
+          'm',
+        ),
+      );
+    },
+  );
 });

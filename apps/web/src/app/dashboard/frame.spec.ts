@@ -439,27 +439,30 @@ describe('Frame', () => {
     ['receptionist', '/app/garage'],
     ['mechanic', '/app/garage'],
     ['admin', '/app/admin'],
-  ])('shows the test toast on a live test update for a %s', async (role, landing) => {
-    (toast as unknown as jest.Mock).mockClear();
-    const { element } = await render(role, landing, []);
+  ])(
+    'shows the test toast on a live test update for a %s',
+    async (role, landing) => {
+      (toast as unknown as jest.Mock).mockClear();
+      const { element } = await render(role, landing, []);
 
-    live.events.next({
-      at: '2026-10-04T12:00:00.000Z',
-      id: 'e-1',
-      kind: 'hello',
-    });
-    expect(toast).not.toHaveBeenCalled();
-    live.events.next({
-      at: '2026-10-04T12:00:00.000Z',
-      id: 'e-2',
-      kind: 'live.test',
-    });
+      live.events.next({
+        at: '2026-10-04T12:00:00.000Z',
+        id: 'e-1',
+        kind: 'hello',
+      });
+      expect(toast).not.toHaveBeenCalled();
+      live.events.next({
+        at: '2026-10-04T12:00:00.000Z',
+        id: 'e-2',
+        kind: 'live.test',
+      });
 
-    expect(toast).toHaveBeenCalledTimes(1);
-    expect(toast).toHaveBeenCalledWith('Actualizare de test în direct');
-    expect(element.querySelector('hlm-toaster')).not.toBeNull();
-    TestBed.resetTestingModule();
-  });
+      expect(toast).toHaveBeenCalledTimes(1);
+      expect(toast).toHaveBeenCalledWith('Actualizare de test în direct');
+      expect(element.querySelector('hlm-toaster')).not.toBeNull();
+      TestBed.resetTestingModule();
+    },
+  );
 
   it('shows the test toast in English', async () => {
     (toast as unknown as jest.Mock).mockClear();

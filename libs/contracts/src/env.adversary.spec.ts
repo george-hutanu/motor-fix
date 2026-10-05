@@ -22,14 +22,12 @@ describe('readEnv under hostile input', () => {
     expect(() => readEnv([], { APP_ENV: undefined })).toThrow('APP_ENV');
   });
 
-  it.each([
-    'development',
-    'test',
-    'staging',
-    'production',
-  ])('accepts APP_ENV %s', (value) => {
-    expect(readEnv([], { APP_ENV: value }).APP_ENV).toBe(value);
-  });
+  it.each(['development', 'test', 'staging', 'production'])(
+    'accepts APP_ENV %s',
+    (value) => {
+      expect(readEnv([], { APP_ENV: value }).APP_ENV).toBe(value);
+    },
+  );
 
   it('does not echo a bad APP_ENV value in the error', () => {
     expect(() => readEnv([], { APP_ENV: 'hunter2-secret' })).not.toThrow(

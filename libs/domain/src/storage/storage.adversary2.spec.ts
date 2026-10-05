@@ -79,15 +79,18 @@ describe('StorageService second round of hostile input', () => {
       ['a leading slash', `/incoming/garage_photo/acc_1/${ID}`],
       ['a doubled slash', `incoming//garage_photo/acc_1/${ID}`],
       ['a different case', `INCOMING/garage_photo/acc_1/${ID}`],
-    ])('answers file_missing for %s and leaves every object', async (_, key) => {
-      store.put(key, JPEG, 'image/jpeg');
-      const before = [...store.objects.keys()];
+    ])(
+      'answers file_missing for %s and leaves every object',
+      async (_, key) => {
+        store.put(key, JPEG, 'image/jpeg');
+        const before = [...store.objects.keys()];
 
-      expect(
-        await refusal(storage.confirmUpload(key, 'garage_photo', 'acc_1')),
-      ).toEqual({ code: 'file_missing', status: 409 });
-      expect([...store.objects.keys()]).toEqual(before);
-    });
+        expect(
+          await refusal(storage.confirmUpload(key, 'garage_photo', 'acc_1')),
+        ).toEqual({ code: 'file_missing', status: 409 });
+        expect([...store.objects.keys()]).toEqual(before);
+      },
+    );
 
     it('answers file_missing for an issued key confirmed as another purpose that takes the same type', async () => {
       const upload = await storage.createUpload(

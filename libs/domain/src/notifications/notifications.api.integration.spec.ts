@@ -109,17 +109,18 @@ describe('the admin test message', () => {
     ).toBe(2);
   });
 
-  it.each([
-    'driver',
-    'garage',
-    'receptionist',
-    'mechanic',
-  ] as const)('answers 404 to a %s', async (role) => {
-    const caller = await account(`caller-${role}`, [role]);
-    const res = await sendTest({ accountIds: [caller] }, bearer(caller, role));
-    expect(res.status).toBe(404);
-    expect(await prisma.notification.count()).toBe(0);
-  });
+  it.each(['driver', 'garage', 'receptionist', 'mechanic'] as const)(
+    'answers 404 to a %s',
+    async (role) => {
+      const caller = await account(`caller-${role}`, [role]);
+      const res = await sendTest(
+        { accountIds: [caller] },
+        bearer(caller, role),
+      );
+      expect(res.status).toBe(404);
+      expect(await prisma.notification.count()).toBe(0);
+    },
+  );
 
   it('asks for a session without one', async () => {
     const res = await sendTest({ accountIds: [randomUUID()] });
