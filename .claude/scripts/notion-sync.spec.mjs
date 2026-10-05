@@ -6,6 +6,7 @@ import { join } from 'node:path';
 
 import { parseDeferred, taskFor } from './debt-tasks.mjs';
 import { logLine, main, PLANS_PAGE, STORIES } from './notion-sync.mjs';
+import { readProp } from './lib/notion.mjs';
 import { readState } from './run-state.mjs';
 
 // Every run injects fetch and gh: nothing here reaches Notion or GitHub.
@@ -119,8 +120,9 @@ function repoWith({ deferred, body } = {}) {
   return repo;
 }
 
-async function run(argv, { repo = repoWith(), ws, env = { NOTION_TOKEN: TOKEN }, ghOut = {} } = {}) {
+async function run(argv, { repo = repoWith(), ws, env = { NOTION_TOKEN: TOKEN }, ghOut = {}, ghImpl } = {}) {
   const out = [];
+  const sleeps = [];
   const err = [];
   const gh = [];
   const code = await main(argv, {
@@ -129,11 +131,12 @@ async function run(argv, { repo = repoWith(), ws, env = { NOTION_TOKEN: TOKEN },
     fetchImpl: ws?.fetchImpl ?? (async () => assert.fail('fetch must not be called')),
     gh: (args) => {
       gh.push(args);
+      if (ghImpl) return ghImpl(args);
       if (args[0] === 'pr' && args[1] === 'view') return args.includes('.url') ? `${PR_URL}\n` : '139\n';
       return ghOut[args.slice(0, 2).join(' ')] ?? '';
     },
     now: () => new Date(2026, 9, 5, 12),
-    sleep: async () => {},
+    sleep: async (ms) => sleeps.push(ms),
     stdout: (s) => out.push(s),
     stderr: (s) => err.push(s),
   });
@@ -142,7 +145,7 @@ async function run(argv, { repo = repoWith(), ws, env = { NOTION_TOKEN: TOKEN },
   try {
     log = readFileSync(logFile, 'utf8');
   } catch {}
-  return { code, out, err, gh, log, lines: log.split('\n').filter((l) => l.startsWith('- ')), repo, json: out.at(-1)?.startsWith('{') ? JSON.parse(out.at(-1)) : null };
+  return { code, out, err, gh, sleeps, log, lines: log.split('\n').filter((l) => l.startsWith('- ')), repo, json: out.at(-1)?.startsWith('{') ? JSON.parse(out.at(-1)) : null };
 }
 
 /** The requests that change Notion, as `METHOD path body`. */
@@ -254,8 +257,8 @@ describe('blocked and unblock', () => {
     const ws = workspace({ stories: [story(687, 'Implementing')], rows: [row('r687', 'ST-687', 'story687', 'Implementing')] });
     const blocked = await run(['blocked', 'CI red: the e2e job needs a secret only the owner can add'], { ws, repo });
     assert.deepEqual(writes(ws.calls), [
-      'POST /comments {"parent":{"page_id":"story687"},"markdown":"Blocked: CI red: the e2e job needs a secret only the owner can add"}',
       'PATCH /pages/story687 {"properties":{"Status":{"select":{"name":"Blocked"}}}}',
+      'POST /comments {"parent":{"page_id":"story687"},"markdown":"Blocked: CI red: the e2e job needs a secret only the owner can add"}',
       'PATCH /pages/r687 {"properties":{"Build status":{"select":{"name":"Blocked"}}}}',
     ]);
     assert.deepEqual(blocked.gh.slice(1), [
@@ -273,6 +276,27 @@ describe('blocked and unblock', () => {
     ]);
     assert.equal(readState(repo).notion_prior_status, null);
     assert.equal(unblocked.lines.at(-3), '- 2026-10-05 · unblock · ST-687 · Blocked → Implementing');
+  });
+
+  it('keeps the prior and lets the replay write the row when the row write fails, commenting once', async () => {
+    const repo = repoWith();
+    let down = true;
+    const ws = workspace({
+      stories: [story(687, 'Implementing')],
+      rows: [row('r687', 'ST-687', 'story687', 'Implementing')],
+      fail: (method, path) => (down && method === 'PATCH' && path === '/pages/r687' ? respond({ code: 'internal_server_error', message: 'boom' }, 500) : null),
+    });
+    const first = await run(['blocked', 'needs a secret'], { ws, repo });
+    assert.equal(first.json.pending, 'blocked ST-687 — 500 internal_server_error');
+    assert.equal(readState(repo).notion_prior_status, 'Implementing');
+
+    down = false;
+    const next = await run(['qa'], { ws, repo });
+    assert.equal(readProp(ws.pages.get('r687'), 'Build status'), 'Blocked');
+    assert.equal(ws.calls.filter((c) => c.path === '/comments').length, 1);
+    assert.equal([...first.gh, ...next.gh].filter((a) => a[1] === 'comment').length, 1);
+    assert.equal(readState(repo).notion_prior_status, 'Implementing');
+    assert.doesNotMatch(next.log, /NOTION-SYNC PENDING/);
   });
 
   it('refuses a blocked event with no reason', async () => {
@@ -446,6 +470,46 @@ describe('failing open', () => {
     ]);
     assert.match(next.log, /^- \[NOTION-SYNC RETRIED 2026-10-05: implement ST-687 — 500 internal_server_error\]/m);
     assert.doesNotMatch(next.log, /NOTION-SYNC PENDING/);
+  });
+
+  it('leaves a replay that fails again as one PENDING line, never marked RETRIED', async () => {
+    const repo = repoWith();
+    const down = () =>
+      workspace({ stories: [story(687, 'Planning')], fail: (method) => (method === 'PATCH' ? respond({ code: 'internal_server_error', message: 'boom' }, 500) : null) });
+    await run(['implement'], { ws: down(), repo });
+    const again = await run(['implement'], { ws: down(), repo });
+    assert.equal(again.code, 0);
+    assert.equal(again.lines.filter((l) => l.includes('PENDING: implement ST-687')).length, 2);
+    assert.doesNotMatch(again.log, /RETRIED/);
+    const third = await run(['qa'], { ws: workspace({ stories: [story(687, 'Planning')] }), repo });
+    assert.equal(third.lines.filter((l) => l.includes('RETRIED')).length, 2);
+    assert.doesNotMatch(third.log, /PENDING/);
+  });
+
+  it('runs the event even when a replay throws something other than a Notion error', async () => {
+    const repo = repoWith();
+    const logFile = join(repo, FEATURE, 'notion-sync.md');
+    writeFileSync(logFile, '# Notion sync — x\n\n- [NOTION-SYNC PENDING: pr ST-687 — 500 x] retry: ["pr","139"]\n');
+    const ws = workspace({ stories: [story(687, 'Implementing')] });
+    const r = await run(['qa', '--pr', '139'], { ws, repo, ghImpl: () => '' });
+    assert.equal(r.code, 0);
+    assert.equal(r.json.event, 'qa');
+    assert.equal(readProp(ws.pages.get('story687'), 'Status'), 'QA');
+    assert.match(r.log, /^- \[NOTION-SYNC PENDING: pr ST-687/m);
+  });
+
+  it('exits 3 without a token even with no active feature', async () => {
+    const bare = mkdtempSync(join(tmpdir(), 'notion-sync-bare-'));
+    const r = await run(['start'], { repo: bare, env: {} });
+    assert.equal(r.code, 3);
+    assert.deepEqual(r.out, ['notion-sync: no NOTION_TOKEN, use the connector']);
+  });
+
+  it('takes the retry count from NOTION_SYNC_MAX_RETRIES', async () => {
+    const ws = workspace({ stories: [story(687, 'Planning')], fail: () => respond({ code: 'rate_limited', message: 'slow' }, 429) });
+    const r = await run(['implement'], { ws, env: { NOTION_TOKEN: TOKEN, NOTION_SYNC_MAX_RETRIES: '0' } });
+    assert.deepEqual(r.sleeps, []);
+    assert.equal(r.json.pending, 'implement ST-687 — 429 rate_limited');
   });
 
   it('names a failed ready refresh so the archive check still sees it', async () => {

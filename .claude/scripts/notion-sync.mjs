@@ -23,7 +23,7 @@ import { join } from "node:path";
 import { markFiled, parseDeferred, taskFor } from "./debt-tasks.mjs";
 import { isEntryPoint } from "./lib/entry.mjs";
 import { activeFeature } from "./lib/feature.mjs";
-import { NotionError, notionClient, notionToken, readProp, writeProp } from "./lib/notion.mjs";
+import { clientLimits, NotionError, notionClient, notionToken, readProp, writeProp } from "./lib/notion.mjs";
 import { decideReady } from "./notion-ready.mjs";
 import { decide, recordPrior } from "./notion-status.mjs";
 import { readState } from "./run-state.mjs";
@@ -90,7 +90,7 @@ function gitRoot() {
 export async function main(argv, io = {}) {
   const parsed = parseArgs(argv);
   const { env = process.env, gh = defaultGh, now = () => new Date(), stdout = console.log, stderr = console.error } = io;
-  const repo = io.repo ?? parsed.flags.repo ?? gitRoot();
+  const repo = io.repo ?? gitRoot();
   const problem = usageError(parsed);
   if (problem) {
     stderr(`notion-sync: ${problem}\n${USAGE}`);
@@ -114,6 +114,10 @@ export async function main(argv, io = {}) {
     return code;
   };
 
+  if (event !== "log" && !token) {
+    stdout(NO_TOKEN);
+    return 3;
+  }
   if (event !== "check" && !feature) {
     stderr("notion-sync: no active feature (.specify/feature.json, or specs/<branch>/spec.md)");
     return 64;
@@ -124,14 +128,10 @@ export async function main(argv, io = {}) {
     else log(ev, item, text.join(" "));
     return done({ event, line: lines[0] });
   }
-  if (!token) {
-    stdout(NO_TOKEN);
-    return 3;
-  }
 
-  const client = notionClient({ token, fetchImpl: io.fetchImpl ?? fetch, ...(io.sleep ? { sleep: io.sleep } : {}) });
+  const client = notionClient({ token, fetchImpl: io.fetchImpl ?? fetch, ...clientLimits(env), ...(io.sleep ? { sleep: io.sleep } : {}) });
   if (event === "check") return check(client, done);
-  if (io.replay !== false) await replayPending(logFile, date, io);
+  if (io.replay !== false) await replayPending(logFile, date, io, stderr);
 
   const storyNum = Number(String(parsed.flags.story ?? feature.num).match(/\d+/)?.[0]);
   const ctx = { client, gh, repo, feature, flags: parsed.flags, rest, event, storyNum, st: `ST-${storyNum}`, log, append, lines };
@@ -150,25 +150,39 @@ export async function main(argv, io = {}) {
   } catch (error) {
     if (!(error instanceof NotionError)) throw error;
     const desc = `${ctx.step.name} ${ctx.step.item} — ${error.short}`;
-    append(pendingLine(desc, argv));
+    if (io.replay !== false) append(pendingLine(desc, argv));
     return done({ event, story: ctx.st, pending: desc });
   }
 }
 
-/** Retries every PENDING line a script run left, before this run's own event. */
-async function replayPending(logFile, date, io) {
+/**
+ * Retries every PENDING line a script run left, before this run's own event.
+ * A line is marked RETRIED only once its replay succeeded; a replay that fails,
+ * or throws, leaves its line PENDING for the next run and never stops this one.
+ */
+async function replayPending(logFile, date, io, stderr) {
   if (!existsSync(logFile)) return;
-  const text = readFileSync(logFile, "utf8").split("\n");
-  const retries = [];
-  const marked = text.map((line) => {
-    const m = line.match(PENDING);
-    if (!m) return line;
-    retries.push(JSON.parse(m[2]));
-    return line.replace("[NOTION-SYNC PENDING:", `[NOTION-SYNC RETRIED ${date}:`);
-  });
-  if (!retries.length) return;
-  writeFileSync(logFile, marked.join("\n"));
-  for (const argv of retries) await main(argv, { ...io, stdout: () => {}, replay: false });
+  const pending = readFileSync(logFile, "utf8")
+    .split("\n")
+    .filter((line) => PENDING.test(line));
+  for (const line of pending) {
+    let result = null;
+    try {
+      const out = [];
+      const code = await main(JSON.parse(line.match(PENDING)[2]), { ...io, stdout: (s) => out.push(s), replay: false });
+      const last = out.at(-1) ?? "";
+      result = code === 0 && last.startsWith("{") && !JSON.parse(last).pending ? "ok" : null;
+    } catch (error) {
+      stderr(`notion-sync: replay failed, kept PENDING: ${error?.message ?? error}`);
+    }
+    if (result !== "ok") continue;
+    const text = readFileSync(logFile, "utf8");
+    const at = text.indexOf(line);
+    if (at !== -1) {
+      const retried = line.replace("[NOTION-SYNC PENDING:", `[NOTION-SYNC RETRIED ${date}:`);
+      writeFileSync(logFile, text.slice(0, at) + retried + text.slice(at + line.length));
+    }
+  }
 }
 
 async function check(client, done) {
@@ -215,20 +229,22 @@ async function statusEvent(ctx) {
   const row = rows.find((r) => readProp(r, "Story")?.includes(story.id));
   const decision = decide({ event, current, prior: readState(ctx.repo).notion_prior_status ?? null });
 
-  if (decision.write) {
-    if (event === "blocked") {
-      await client.request("POST", "/comments", { parent: { page_id: story.id }, markdown: `Blocked: ${reason}` });
-      if (ctx.prNumber()) ctx.gh(["pr", "comment", ctx.prNumber(), "--body", `Blocked: ${reason}`]);
-    }
-    await patch(client, story, "Status", decision.story);
-  }
-  log(event, st, `${decision.note}${event === "blocked" && decision.write ? ` — ${reason}` : ""}`);
-  if (decision.write && !row) log(event, "timeline", `no row for ${st}`);
-  if (decision.write && row && readProp(row, "Build status") !== decision.timeline) {
-    await patch(client, row, "Build status", decision.timeline);
-    log(event, "timeline", `${readProp(row, "Build status")} → ${decision.timeline}`);
-  }
+  // Status first, then the prior it left, so a failure further on replays
+  // into the same decision; the reason is posted once, after the Status.
+  if (decision.write) await patch(client, story, "Status", decision.story);
   recordPrior(ctx.repo, event, decision);
+  const comment = event === "blocked" && (decision.write || !blockLogged(ctx, reason));
+  if (comment) {
+    await client.request("POST", "/comments", { parent: { page_id: story.id }, markdown: `Blocked: ${reason}` });
+    if (ctx.prNumber()) ctx.gh(["pr", "comment", ctx.prNumber(), "--body", `Blocked: ${reason}`]);
+  }
+  log(event, st, `${decision.note}${comment ? ` — ${reason}` : ""}`);
+  if (decision.write && !row) log(event, "timeline", `no row for ${st}`);
+  const was = row && readProp(row, "Build status");
+  if (row && was !== decision.timeline) {
+    await patch(client, row, "Build status", decision.timeline);
+    log(event, "timeline", `${was} → ${decision.timeline}`);
+  }
 
   if (epic && (event === "start" || event === "finish")) await moveEpic(ctx, epic, event, decision.story);
   if (event === "finish") await finishComment(ctx);
@@ -243,6 +259,15 @@ async function statusEvent(ctx) {
     out.ready = await refreshReady(ctx, { epic, rows, self: { id: story.id, status: decision.story, row: row?.id, timeline: decision.timeline } });
   }
   return out;
+}
+
+/** Whether this block's reason already reached the story: its log line ends with it. */
+function blockLogged(ctx, reason) {
+  const file = join(ctx.feature.dir, "notion-sync.md");
+  if (!existsSync(file)) return false;
+  return readFileSync(file, "utf8")
+    .split("\n")
+    .some((line) => line.includes(` · blocked · ${ctx.st} · `) && line.endsWith(` — ${reason}`));
 }
 
 async function moveEpic(ctx, epic, event, storyStatus) {

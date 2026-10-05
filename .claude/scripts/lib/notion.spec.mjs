@@ -5,7 +5,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { NOTION_API, NOTION_VERSION, NotionError, notionClient, notionToken, readProp, writeProp } from './notion.mjs';
+import { clientLimits, NOTION_API, NOTION_VERSION, NotionError, notionClient, notionToken, readProp, writeProp } from './notion.mjs';
 
 const TOKEN = 'ntn_SECRET_never_print_me';
 const json = (data, status = 200, headers = {}) =>
@@ -100,6 +100,60 @@ describe('rate limits and timeouts', () => {
       assert.ok(!JSON.stringify(error).includes(TOKEN));
       return true;
     });
+  });
+});
+
+describe('limits', () => {
+  it('stops paginating at the page cap instead of looping forever', async () => {
+    let calls = 0;
+    const client = notionClient({
+      token: TOKEN,
+      maxPages: 3,
+      fetchImpl: async () => {
+        calls++;
+        return json({ results: [{ id: `r${calls}` }], has_more: true, next_cursor: `c${calls}` });
+      },
+    });
+    await assert.rejects(client.query('ds1'), (error) => error instanceof NotionError && error.short === 'too many pages');
+    assert.equal(calls, 3);
+  });
+
+  it('does not sleep through a Retry-After above the cap: the 429 is the error', async () => {
+    const waits = [];
+    const client = notionClient({
+      token: TOKEN,
+      sleep: async (ms) => waits.push(ms),
+      fetchImpl: async () => json({ code: 'rate_limited', message: 'later' }, 429, { 'Retry-After': '3600' }),
+    });
+    await assert.rejects(client.request('GET', '/pages/p1'), (error) => error.short === '429 rate_limited');
+    assert.deepEqual(waits, []);
+  });
+
+  it('times out a response whose body never arrives', async () => {
+    const client = notionClient({
+      token: TOKEN,
+      timeoutMs: 10,
+      fetchImpl: async () => ({ ok: true, status: 200, headers: new Headers(), json: () => new Promise(() => {}) }),
+    });
+    await assert.rejects(client.request('GET', '/pages/p1'), (error) => error instanceof NotionError && error.short === 'timeout');
+  });
+
+  it('retries as many times as maxRetries allows', async () => {
+    const waits = [];
+    const client = notionClient({
+      token: TOKEN,
+      maxRetries: 1,
+      sleep: async (ms) => waits.push(ms),
+      fetchImpl: async () => json({ code: 'rate_limited', message: 'slow' }, 429, { 'Retry-After': '1' }),
+    });
+    await assert.rejects(client.request('GET', '/pages/p1'));
+    assert.equal(waits.length, 1);
+  });
+
+  it('reads the timeout and the retry count from the environment, ignoring nonsense', () => {
+    assert.deepEqual(clientLimits({}), { timeoutMs: 30000, maxRetries: 3 });
+    assert.deepEqual(clientLimits({ NOTION_SYNC_TIMEOUT_MS: '5000', NOTION_SYNC_MAX_RETRIES: '0' }), { timeoutMs: 5000, maxRetries: 0 });
+    assert.deepEqual(clientLimits({ NOTION_SYNC_TIMEOUT_MS: 'soon', NOTION_SYNC_MAX_RETRIES: '-2' }), { timeoutMs: 30000, maxRetries: 3 });
   });
 });
 
