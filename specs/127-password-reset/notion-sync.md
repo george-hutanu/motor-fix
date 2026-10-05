@@ -13,7 +13,3 @@
 - 2026-10-05 · qa · Foundations timeline row ST-127 · Implementing → QA
 - 2026-10-05 · labels · PR #72 · QA
 - 2026-10-05 · debt · 3 To do tasks filed from deferred.md (EP-1 Foundations): 3f0607bff0d281d5bf39d6e6f897df24, 3f0607bff0d28111a434e75fcd9c94d3, 3f0607bff0d2817e843bdfd923180dff
-- 2026-10-05 · finish · ST-127 story Status · QA → Done (on merge of PR #72)
-- 2026-10-05 · finish · Foundations timeline row ST-127 · QA → Merged
-- 2026-10-05 · finish · ST-127 comment · decisions on the owner's behalf (FR-013 local forget, timing trade-off, check call, toProblem fix)
-- 2026-10-05 · ready · Foundations · refresh after ST-127 finish

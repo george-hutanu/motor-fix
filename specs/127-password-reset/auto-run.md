@@ -38,3 +38,7 @@
 ## 11 Review
 - spec-reviewer APPROVE (3 LOW: 2 deferred, plan line patched); code-reviewer APPROVE (3 MEDIUM, 4 LOW). Patched: announce before opening the session (+ test), sign-up's `refusal` reused, `ResetOptions` typed, `session.revoked` failure test, a restored spy. Decision taken: response timing for known vs unknown addresses accepted and recorded (spec Assumptions, deferred.md).
 - Built-in browser walk: 320 px light RO dialog → reset task with the e-mail carried → sent; 390 px dark link → new password → signed in at /app/driver; tablet light EN used link → "The link has expired"; desktop dark RO → "Cere un link nou" → reset task. No sideways scroll.
+
+## Resume 2026-10-05
+- Resumed in .worktrees/127-password-reset at a9ff83c (merge of origin/main with #77; auth.module.ts exports keep both lists). Lap-4 conflict finding resolved by that merge.
+- Lap-2 low finding fixed: the finish and ready lines logged before the merge are dropped from notion-sync.md (Notion still QA, no finish comment posted).
