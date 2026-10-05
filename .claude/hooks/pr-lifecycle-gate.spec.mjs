@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { allGreen, decide, hasAgentReview, typeLabel } from './pr-lifecycle-gate.mjs';
+import { allGreen, decide, hasAgentReview, isDependabot, typeLabel } from './pr-lifecycle-gate.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
 const green = [{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }, review('SUCCESS')];
@@ -230,5 +230,34 @@ describe('PR lifecycle gate — green means every check', () => {
 
   it('never treats an empty rollup as green', () => {
     assert.equal(allGreen([]), false);
+  });
+});
+
+describe('PR lifecycle gate — Dependabot PRs need no agent review', () => {
+  const checks = [{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }];
+  const bot = (over = {}) =>
+    ready({ author: { login: 'app/dependabot', is_bot: true }, labels: [{ name: 'QA' }, { name: 'tooling' }], title: 'chore(deps): bump actions/cache from 4 to 6', statusCheckRollup: checks, ...over });
+
+  it('knows Dependabot by the PR author only', () => {
+    assert.equal(isDependabot({ author: { login: 'app/dependabot' } }), true);
+    assert.equal(isDependabot({ author: { login: 'dependabot[bot]' } }), true);
+    assert.equal(isDependabot({ author: { login: 'george-hutanu' }, title: 'chore(deps): bump x', headRefName: 'dependabot/npm_and_yarn/x' }), false);
+    assert.equal(isDependabot({}), false);
+  });
+
+  it('asks for the merge, not the tester, on a green Dependabot PR', () => {
+    const why = decide(task({ branch: 'dependabot/github_actions/actions/cache-6', pr: bot() }));
+    assert.match(why, /gh pr merge 6 --merge/);
+    assert.doesNotMatch(why, /speckit-pr-test/);
+  });
+
+  it('lets a Dependabot PR with a failing or pending check end: fix or wait', () => {
+    assert.equal(decide(task({ pr: bot({ statusCheckRollup: [{ conclusion: 'FAILURE' }] }) })), null);
+    assert.equal(decide(task({ pr: bot({ statusCheckRollup: [{ state: 'PENDING' }] }) })), null);
+  });
+
+  it('still names the tester for a green PR by anyone else', () => {
+    const why = decide(task({ pr: ready({ statusCheckRollup: checks, author: { login: 'george-hutanu' } }) }));
+    assert.match(why, /speckit-pr-test 6/);
   });
 });

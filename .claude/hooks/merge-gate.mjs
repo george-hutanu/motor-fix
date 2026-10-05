@@ -2,6 +2,10 @@
 // after the PR tester passed it. Refuses `gh pr merge` and the REST merge
 // call while the PR's head commit has no `agent-review` success status.
 //
+// A PR opened by Dependabot (its author, read from gh) needs no agent-review
+// status, only every other check green: a failing, pending or missing one
+// still refuses, and so does an agent review that failed.
+//
 // The status is per commit, so a push after the tester ran (a fix, a merge of
 // origin/main) leaves the new head without one, and the tester runs again.
 //
@@ -12,7 +16,7 @@
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-import { hasAgentReview } from "./pr-lifecycle-gate.mjs";
+import { allGreen, hasAgentReview, isDependabot } from "./pr-lifecycle-gate.mjs";
 
 /** The PR a command merges ({ pr: null } for the current branch), or null for any other command. */
 // Flags of `gh` and `gh pr merge` that take a value, so the value is not read as the PR.
@@ -46,8 +50,17 @@ export function decideMerge(pr) {
   if (hasAgentReview(checks)) return null;
   const sha = String(pr.headRefOid ?? "").slice(0, 7);
   const review = checks.find((c) => (c.context ?? c.name) === "agent-review");
+  if (!review && isDependabot(pr)) return dependabotRefusal(pr, checks);
   const said = review ? `agent-review is ${String(review.state ?? review.conclusion).toLowerCase()}` : "there is no agent-review status";
   return `PR #${pr.number} cannot merge: on its head commit ${sha} ${said}. Run the PR tester (/speckit-pr-test ${pr.number}), fix every blocking finding, and merge on an agent-review success.`;
+}
+
+/** A Dependabot PR merges on every check green; the refusal names the ones that are not. */
+function dependabotRefusal(pr, checks) {
+  if (allGreen(checks)) return null;
+  const waiting = checks.filter((c) => !allGreen([c])).map((c) => c.name ?? c.context ?? "unnamed check");
+  const said = checks.length ? `${waiting.join(", ")} is not green` : "it has no checks yet";
+  return `PR #${pr.number} cannot merge: it is a Dependabot PR, so it needs no agent review, but every other check must be green and ${said}. Wait for the checks or fix them, then merge.`;
 }
 
 function readPr(target, cwd) {
@@ -55,7 +68,7 @@ function readPr(target, cwd) {
   if (raw) return JSON.parse(raw);
   const out = execFileSync(
     "gh",
-    ["pr", "view", ...(target ? [target] : []), "--json", "number,state,headRefOid,statusCheckRollup"],
+    ["pr", "view", ...(target ? [target] : []), "--json", "author,number,state,headRefOid,statusCheckRollup"],
     { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 15000 },
   );
   return JSON.parse(out);

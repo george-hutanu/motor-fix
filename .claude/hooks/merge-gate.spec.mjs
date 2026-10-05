@@ -53,3 +53,31 @@ describe('merge gate — the decision', () => {
     assert.equal(decideMerge({ ...pr([]), state: 'MERGED' }), null);
   });
 });
+
+describe('merge gate — Dependabot PRs need no agent review', () => {
+  const bot = (rollup, login = 'app/dependabot') => ({ ...pr(rollup), author: { login, is_bot: true } });
+
+  it('lets a Dependabot PR merge with every other check green and no agent-review status', () => {
+    assert.equal(decideMerge(bot([{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }])), null);
+    assert.equal(decideMerge(bot([{ conclusion: 'SUCCESS' }], 'dependabot[bot]')), null);
+  });
+
+  it('refuses a Dependabot PR with a failing, pending or missing check, and names it', () => {
+    const red = decideMerge(bot([{ conclusion: 'SUCCESS' }, { name: 'Unit tests', conclusion: 'FAILURE' }]));
+    assert.match(red, /Unit tests/);
+    assert.match(red, /Dependabot/);
+    assert.match(decideMerge(bot([{ name: 'Build', status: 'IN_PROGRESS', conclusion: '' }])), /Build/);
+    assert.match(decideMerge(bot([{ context: 'CI OK', state: 'PENDING' }])), /CI OK/);
+    assert.match(decideMerge(bot([])), /no checks/);
+  });
+
+  it('still refuses a Dependabot PR whose agent review failed', () => {
+    assert.match(decideMerge(bot([{ conclusion: 'SUCCESS' }, review('FAILURE')])), /agent-review is failure/);
+  });
+
+  it('reads the author, not the title or branch: anyone else still needs the agent review', () => {
+    const human = { ...pr([{ conclusion: 'SUCCESS' }]), title: 'chore(deps): bump vitest', headRefName: 'dependabot/npm_and_yarn/vitest-5', author: { login: 'george-hutanu' } };
+    assert.match(decideMerge(human), /no agent-review status/);
+    assert.match(decideMerge({ ...pr([{ conclusion: 'SUCCESS' }]), author: { login: 'dependabot-fan' } }), /no agent-review status/);
+  });
+});

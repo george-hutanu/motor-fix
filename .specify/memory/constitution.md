@@ -1,5 +1,20 @@
 <!--
-Sync Impact Report (v1.6.1)
+Sync Impact Report (v1.7.0)
+- Version change: 1.6.1 → 1.7.0 (MINOR: VII gains an exemption — a PR opened
+  by Dependabot, known by its author on GitHub, merges on every other check
+  green without the PR tester's `agent-review` status; a failing, pending or
+  missing check still refuses it, as does an `agent-review` failure. Every
+  other PR's lifecycle is unchanged)
+- Source: owner decision 2026-10-05: exempt Dependabot PRs from the
+  agent-review requirement.
+- Templates:
+  - ✅ AGENTS.md — lifecycle step 7
+  - ✅ .claude/hooks/merge-gate.mjs, pr-lifecycle-gate.mjs, their specs and
+    evals/cases/merge-gate.json
+  - ⚠ CLAUDE.local.md still names v1.6.0: untracked and under a growth
+    ratchet, left for the owner
+
+Previous report (v1.6.1)
 - Version change: 1.6.0 → 1.6.1 (PATCH: VII clarified — the In review stage
   is folded into QA. Marking a PR ready sets the task QA and its one stage
   label `QA` at once; the PR tester's run keeps QA. Notion Status is Planning
@@ -259,7 +274,9 @@ waits for the owner:
    `SPECKIT_MAX_REPAIR_ITERATIONS` times; at the cap the task is Blocked.
 6. Merge the PR when `agent-review` is success on its head commit and every
    other check passes; a pending, failing or missing check is never merged.
-   Then set the task Done.
+   Then set the task Done. A PR opened by Dependabot (read from its author on
+   GitHub) skips step 5 and merges on every other check green with no
+   `agent-review` status; a pending, failing or missing check still refuses it.
 
 A task that cannot go on without something outside it is set Blocked, with the
 reason on the story and the PR and the PR's `blocked` label, and returns to
@@ -321,8 +338,8 @@ the hooks live in `.claude/hooks/`, the checks in `.claude/scripts/`.
 | Commit hygiene | `commit-msg-policy.js` | one-line Conventional Commit, no metadata trailers or tool mentions |
 | Identity | `.husky/pre-commit` → `.husky/identity.sh check`; `github-identity.sh` (SessionStart) | refuses a commit not authored by `george-hutanu <hutanugeorge40@gmail.com>`; pins `gh` to the `george-hutanu` account for agent sessions |
 | Destructive commands | `bash-guard.mjs` (PreToolUse) | force-push, `reset --hard`, `clean -f`, deleting `.work/` |
-| VII task lifecycle | `pr-lifecycle-gate.mjs` (Stop hook) | the agent may not finish on a task branch ahead of `main` with unpushed commits, with no PR, with a green ready PR that has no `agent-review` status on its head (unless run-state is blocked), or with a ready PR whose checks and `agent-review` passed but that is not merged |
-| VII QA before merge | `merge-gate.mjs` (PreToolUse) | refuses `gh pr merge` and the REST merge call while the PR's head commit has no `agent-review` success from the PR tester |
+| VII task lifecycle | `pr-lifecycle-gate.mjs` (Stop hook) | the agent may not finish on a task branch ahead of `main` with unpushed commits, with no PR, with a green ready PR that has no `agent-review` status on its head (unless run-state is blocked), or with a ready PR whose checks and `agent-review` passed but that is not merged; a green Dependabot PR is asked to merge, not to be tested |
+| VII QA before merge | `merge-gate.mjs` (PreToolUse) | refuses `gh pr merge` and the REST merge call while the PR's head commit has no `agent-review` success from the PR tester; a PR authored by Dependabot needs none, but is refused while any other check is failing, pending or missing |
 | Full verification | `.husky/pre-commit` | identity, then `npm run typecheck && npm run lint && npm run test` on every real commit, in a `scripts/heavy.sh` slot |
 
 The edit-time gates watch `apps/*`, `libs/*` and `e2e/`, and skip Biome or Jest
@@ -395,4 +412,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.6.1 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-04
+**Version**: 1.7.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-05
