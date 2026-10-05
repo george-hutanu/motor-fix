@@ -31,6 +31,7 @@ const PUBLIC = [
   'POST /api/v1/auth/sign-out',
   'POST /api/v1/auth/sign-out-everywhere',
   'POST /api/v1/auth/sign-up',
+  'POST /api/v1/notification-preferences/unsubscribe',
 ];
 
 const SOME_ID = '00000000-0000-4000-8000-000000000000';

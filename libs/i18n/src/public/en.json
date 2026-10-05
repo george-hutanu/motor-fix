@@ -88,5 +88,15 @@
     "garages": "Garages",
     "label": "Main navigation",
     "search": "Search"
+  },
+  "unsubscribe": {
+    "error": "We could not stop the news right now.",
+    "home": "Go to MotorFix",
+    "invalid": "This link is not valid",
+    "invalidLine": "Open the link exactly as you received it.",
+    "retry": "Try again",
+    "stopped": "You will no longer get MotorFix news",
+    "stoppedLine": "Messages about your cars and jobs still come.",
+    "stopping": "Stopping the news…"
   }
 }

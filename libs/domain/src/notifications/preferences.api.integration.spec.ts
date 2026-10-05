@@ -1,4 +1,5 @@
 // @traces 392-FR-009
+import { NEWS_CONSENT_TEXT_VERSION } from '@motor-fix/contracts';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
@@ -541,7 +542,13 @@ describe('the person’s other tabs', () => {
   it('are told the preferences changed', async () => {
     const driver = await account('andrei');
     await save({ groups: [{ enabled: false, key: 'news' }] }, bearer(driver));
-    await save({ groups: [{ enabled: true, key: 'news' }] }, bearer(driver));
+    await save(
+      {
+        groups: [{ enabled: true, key: 'news' }],
+        newsConsentTextVersion: NEWS_CONSENT_TEXT_VERSION,
+      },
+      bearer(driver),
+    );
     await new Promise((resolve) => setTimeout(resolve, 200));
     const told = published
       .map((m) => JSON.parse(m))

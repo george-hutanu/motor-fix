@@ -9,6 +9,11 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { newsControllerSend } from '../fn/notifications/news-controller-send';
+import { NewsControllerSend$Params } from '../fn/notifications/news-controller-send';
+import { newsControllerUnsubscribe } from '../fn/notifications/news-controller-unsubscribe';
+import { NewsControllerUnsubscribe$Params } from '../fn/notifications/news-controller-unsubscribe';
+import { NewsSentDto } from '../models/news-sent-dto';
 import { notificationPreferencesControllerRead } from '../fn/notifications/notification-preferences-controller-read';
 import { NotificationPreferencesControllerRead$Params } from '../fn/notifications/notification-preferences-controller-read';
 import { notificationPreferencesControllerSave } from '../fn/notifications/notification-preferences-controller-save';
@@ -97,6 +102,56 @@ export class NotificationsService extends BaseService {
   notificationPreferencesControllerSave(params: NotificationPreferencesControllerSave$Params, context?: HttpContext): Promise<NotificationPreferencesDto> {
     const resp = this.notificationPreferencesControllerSave$Response(params, context);
     return resp.then((r: StrictHttpResponse<NotificationPreferencesDto>): NotificationPreferencesDto => r.body);
+  }
+
+  /** Path part for operation `newsControllerUnsubscribe()` */
+  static readonly NewsControllerUnsubscribePath = '/api/v1/notification-preferences/unsubscribe';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `newsControllerUnsubscribe()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  newsControllerUnsubscribe$Response(params: NewsControllerUnsubscribe$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = newsControllerUnsubscribe(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `newsControllerUnsubscribe$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  newsControllerUnsubscribe(params: NewsControllerUnsubscribe$Params, context?: HttpContext): Promise<void> {
+    const resp = this.newsControllerUnsubscribe$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `newsControllerSend()` */
+  static readonly NewsControllerSendPath = '/api/v1/admin/news';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `newsControllerSend()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  newsControllerSend$Response(params: NewsControllerSend$Params, context?: HttpContext): Promise<StrictHttpResponse<NewsSentDto>> {
+    const obs = newsControllerSend(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `newsControllerSend$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  newsControllerSend(params: NewsControllerSend$Params, context?: HttpContext): Promise<NewsSentDto> {
+    const resp = this.newsControllerSend$Response(params, context);
+    return resp.then((r: StrictHttpResponse<NewsSentDto>): NewsSentDto => r.body);
   }
 
 }

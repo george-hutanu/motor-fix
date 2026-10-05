@@ -88,5 +88,15 @@
     "garages": "Service‑uri",
     "label": "Navigare principală",
     "search": "Caută"
+  },
+  "unsubscribe": {
+    "error": "Nu am putut opri noutățile acum.",
+    "home": "Mergi la MotorFix",
+    "invalid": "Linkul nu este valid",
+    "invalidLine": "Deschide linkul exact așa cum l‑ai primit.",
+    "retry": "Încearcă din nou",
+    "stopped": "Nu vei mai primi noutăți MotorFix",
+    "stoppedLine": "Mesajele despre mașinile și lucrările tale vin în continuare.",
+    "stopping": "Oprim noutățile…"
   }
 }

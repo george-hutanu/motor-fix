@@ -5,5 +5,10 @@ import { UpdateNotificationGroupDto } from '../models/update-notification-group-
 import { UpdateNotificationPreferenceDto } from '../models/update-notification-preference-dto';
 export interface UpdateNotificationPreferencesDto {
   groups?: Array<UpdateNotificationGroupDto>;
+
+  /**
+   * The consent text version shown, needed when the save turns news on
+   */
+  newsConsentTextVersion?: string;
   preferences?: Array<UpdateNotificationPreferenceDto>;
 }

@@ -41,6 +41,10 @@ export type { NotificationPreferencesControllerRead$Params as NotificationPrefer
 export { notificationPreferencesControllerRead as notificationPreferencesControllerRead } from './fn/notifications/notification-preferences-controller-read';
 export type { NotificationPreferencesControllerSave$Params as NotificationPreferencesControllerSave$Params } from './fn/notifications/notification-preferences-controller-save';
 export { notificationPreferencesControllerSave as notificationPreferencesControllerSave } from './fn/notifications/notification-preferences-controller-save';
+export type { NewsControllerUnsubscribe$Params as NewsControllerUnsubscribe$Params } from './fn/notifications/news-controller-unsubscribe';
+export { newsControllerUnsubscribe as newsControllerUnsubscribe } from './fn/notifications/news-controller-unsubscribe';
+export type { NewsControllerSend$Params as NewsControllerSend$Params } from './fn/notifications/news-controller-send';
+export { newsControllerSend as newsControllerSend } from './fn/notifications/news-controller-send';
 export type { LiveControllerLive$Params as LiveControllerLive$Params } from './fn/live/live-controller-live';
 export { liveControllerLive as liveControllerLive } from './fn/live/live-controller-live';
 export type { LiveControllerTest$Params as LiveControllerTest$Params } from './fn/live/live-controller-test';

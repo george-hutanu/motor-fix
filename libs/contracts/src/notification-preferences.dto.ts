@@ -5,6 +5,8 @@ import {
   IsArray,
   IsBoolean,
   IsIn,
+  IsNotEmpty,
+  IsObject,
   IsOptional,
   IsString,
   IsUUID,
@@ -75,12 +77,41 @@ export class NotificationPreferenceDto extends UpdateNotificationPreferenceDto {
   alwaysSent!: boolean;
 }
 
+// The consent text the driver confirms before news is turned on (draft,
+// pending the lawyer's review): a new text is a new version.
+export const NEWS_CONSENT_TEXT_VERSION = '2026-10-03';
+const NEWS_CONSENT_STATES = ['none', 'given', 'withdrawn'] as const;
+
+export class NewsConsentDto {
+  @ApiProperty({ enum: NEWS_CONSENT_STATES })
+  state!: (typeof NEWS_CONSENT_STATES)[number];
+
+  @ApiProperty({ format: 'date-time', nullable: true, type: String })
+  givenAt!: string | null;
+
+  @ApiProperty({
+    description: 'The consent text version the driver confirmed',
+    nullable: true,
+    type: String,
+  })
+  textVersion!: string | null;
+
+  @ApiProperty({ format: 'date-time', nullable: true, type: String })
+  withdrawnAt!: string | null;
+
+  @ApiProperty({ description: 'The version to show, and send back on saving' })
+  currentTextVersion!: string;
+}
+
 export class NotificationPreferencesDto {
   @ApiProperty({ isArray: true, type: NotificationGroupDto })
   groups!: NotificationGroupDto[];
 
   @ApiProperty({ isArray: true, type: NotificationPreferenceDto })
   preferences!: NotificationPreferenceDto[];
+
+  @ApiProperty({ type: NewsConsentDto })
+  newsConsent!: NewsConsentDto;
 }
 
 export class UpdateNotificationPreferencesDto {
@@ -109,4 +140,62 @@ export class UpdateNotificationPreferencesDto {
   @ValidateNested({ each: true })
   @Type(() => UpdateNotificationPreferenceDto)
   preferences?: UpdateNotificationPreferenceDto[];
+
+  @ApiProperty({
+    description:
+      'The consent text version shown, needed when the save turns news on',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  newsConsentTextVersion?: string;
+}
+
+class NewsTextDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(5000)
+  ro!: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(5000)
+  en!: string;
+}
+
+// A title is the e-mail's subject line.
+class NewsTitleDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  ro!: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  en!: string;
+}
+
+export class SendNewsDto {
+  @ApiProperty({ description: 'The subject, in both languages' })
+  @IsObject()
+  @ValidateNested()
+  @Type(() => NewsTitleDto)
+  title!: NewsTitleDto;
+
+  @ApiProperty({ description: 'The text, in both languages' })
+  @IsObject()
+  @ValidateNested()
+  @Type(() => NewsTextDto)
+  text!: NewsTextDto;
+}
+
+export class NewsSentDto {
+  @ApiProperty({ description: 'How many drivers it was sent to' })
+  recipients!: number;
 }

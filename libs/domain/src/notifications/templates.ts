@@ -19,6 +19,8 @@ interface EmailText {
   // `link` names the value the button opens.
   button: { label: string; link: string };
   reason: string;
+  // A stop link under the reason, for mail the person may refuse.
+  stop?: { label: string; link: string };
 }
 
 interface PushText {
@@ -170,12 +172,20 @@ function renderText(
         label: fill(mail.button.label),
       };
       const reason = fill(mail.reason);
+      const stop = mail.stop && {
+        href: value(mail.stop.link),
+        label: fill(mail.stop.label),
+      };
       return {
-        html: emailHtml({ button, language, lines, reason, subject }),
+        html: emailHtml({ button, language, lines, reason, stop, subject }),
         subject,
-        text: [...lines, `${button.label}: ${button.href}`, '—', reason].join(
-          '\n\n',
-        ),
+        text: [
+          ...lines,
+          `${button.label}: ${button.href}`,
+          '—',
+          reason,
+          ...(stop ? [`${stop.label}: ${stop.href}`] : []),
+        ].join('\n\n'),
       };
     }
     case 'push': {

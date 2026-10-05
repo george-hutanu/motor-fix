@@ -192,6 +192,7 @@ export class NotificationsProcessor {
     try {
       messageId = await this.brevo.send({
         from: this.config.from,
+        headers: oneClickHeaders(rows[0]),
         html: mail.html,
         subject: mail.subject,
         text: mail.text,
@@ -344,3 +345,14 @@ export class NotificationsProcessor {
 
 const params = (row: Notification) =>
   (row.params ?? {}) as Record<string, unknown>;
+
+// Mail apps offer their own unsubscribe button for a row that carries a
+// one-click link (RFC 8058); only news does.
+function oneClickHeaders(row: Notification) {
+  const link = params(row)['oneClick'];
+  if (typeof link !== 'string') return undefined;
+  return {
+    'List-Unsubscribe': `<${link}>`,
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+  };
+}
