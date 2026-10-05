@@ -42,3 +42,11 @@ spec-reviewer BLOCK (CRITICAL: Artifact denied, the design check reads the mock 
 
 ## review lap 2
 spec-reviewer APPROVE, code-reviewer APPROVE (no CRITICAL/HIGH). Patched: task-runner no longer says "you do not" read the constitution; FR-003's "in your context" pinned; ArtifactData pinned; REREAD covers "the current"/"both" and numbered lists (still flags main's four texts); deferred.md in the severity/path format retro-evidence parses; spec assumption dates its 34.9k/36.0k figures. Harness 54 files / 1199 tests green.
+
+## Final Report
+ST-673, PR #138 ready at 0492ec2 (labels QA, tooling, scope: harness, EP-1); Notion QA. Start 10bdb8f (origin/main merged at 39b1165 and 479d592).
+- First turn (headless, Opus, input + cache creation + cache read of "Reply OK"): task-runner 43,519 vs no agent 55,240 (brief: ~57k general-purpose). Deny list chosen over allowlist: the allowlist can't follow the Notion connector's changing id.
+- Harness 54 files / 1199 tests green; doctor 16 ok; config-scan 0 high/0 medium; context-audit held.
+- Review: two laps, both reviewers APPROVE at lap 2; 3 deferred items filed as Notion tech debt.
+- Retrospective evidence (unjudged): retro-evidence --since eab31fe lists the 4 feature commits; Jev lane unavailable; no instincts triggered.
+- Owner decision: a lighter second definition without Artifact for tail/watch fixes (~8.6k less).
