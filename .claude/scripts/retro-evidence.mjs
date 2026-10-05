@@ -136,7 +136,7 @@ export function gather(repo, feature, { since } = {}) {
 
   return {
     feature: feature.name,
-    level: { value: feature.level ?? featureLevel(repo), name: LEVELS[feature.level ?? featureLevel(repo)].name },
+    level: { value: feature.level ?? featureLevel(repo, feature.dir), name: LEVELS[feature.level ?? featureLevel(repo, feature.dir)].name },
     artifacts: ["spec.md", "plan.md", "tasks.md", "research.md", "data-model.md", "quickstart.md", "retrospective.md", "deferred.md"]
       .filter((name) => existsSync(join(feature.dir, name))),
     tasks: { open: open.length, done: done.length, openTitles: open.map((l) => l.trim()).slice(0, 20) },
@@ -255,7 +255,7 @@ export function main(argv, repo, out = {}) {
   // `specs/HEAD~5` and the run died on "no feature to read".
   const named = argv.find((a, i) => !a.startsWith("--") && argv[i - 1] !== "--since");
   const feature = named
-    ? { dir: join(repo, named), name: basename(named), num: basename(named).match(/^(\d{3})-/)?.[1] ?? "000", level: featureLevel(repo) }
+    ? { dir: join(repo, named), name: basename(named), num: basename(named).match(/^(\d{3})-/)?.[1] ?? "000", level: featureLevel(repo, join(repo, named)) }
     : activeFeature(repo);
 
   if (!feature || !existsSync(join(feature.dir, "spec.md"))) {

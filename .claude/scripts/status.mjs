@@ -121,7 +121,7 @@ export function featureStatus(repo, dir, { covered, retired, capabilities, stale
 
   return {
     feature: dir,
-    level: featureLevel(repo),
+    level: featureLevel(repo, featureDir),
     grandfathered: isExempt,
     state,
     tasks: { open, done },
