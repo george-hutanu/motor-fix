@@ -6,4 +6,4 @@
 - [x] T004 Green: `.claude/scripts/pr-test/packet.mjs` (FR-001–FR-006).
 - [x] T005 Green: `.claude/agents/pr-tester.md` and `.claude/skills/speckit-pr-test/SKILL.md` (FR-007, FR-008).
 - [x] T006 Verify: `npm run test:harness`, `node .claude/scripts/harness-eval.mjs --check`, `node .claude/scripts/doctor.mjs`; FR-009 byte-equal.
-- [ ] T007 Measure (SC-001, SC-002): run the packet on PR #137's run 37326786521, then a dry-run pr-tester with the new instructions on it; record tokens before and after and both verdicts in spec.md's Baseline and auto-run.md.
+- [x] T007 Measure (SC-001, SC-002): run the packet on PR #137's run 37326786521, then a dry-run pr-tester with the new instructions on it; record tokens before and after and both verdicts in spec.md's Baseline and auto-run.md.

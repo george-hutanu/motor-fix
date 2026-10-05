@@ -32,6 +32,34 @@ inputs (the PR, its files and diff stat, the spec and tasks, the report, the
 screenshot list, the previous lap), not to judging them; reading the rules is
 under 3% of cost, so keeping the full constitution costs little.
 
+## Measurement (after, 2026-10-05)
+
+Replay of PR #137 (harness-only, head `b255ff1`) on the same finished run
+37326786521, lap 2, dry run, Opus, same weights as the Baseline. Each line is
+one transcript under `565e5c5f-…/subagents/`.
+
+| Run | Transcript | Turns | Tokens | Weighted | Verdict |
+| --- | --- | --- | --- | --- | --- |
+| The real lap (recorded) | a12fd20b9713ddf41 | 18 | 589,100 | 179,737 | success |
+| Old instructions (main), replay | a2e3ea570a207207c | 12 | 1,004,144 | 203,803 | success |
+| New, first packet (every changed screenshot named) | a73a568a871f4db70 | 12 | 1,003,348 | 252,396 | success |
+| New, a no-web change names only cited screenshots | ab937b48d68830784 | 16 | 1,375,792 | 249,500 | success |
+
+Result: on this PR the packet saved no tokens. The new tester costs about 22%
+more weighted than the old replay. All three replays and the recorded lap
+reached `success` with no blocking finding, so the verdict holds (SC-002).
+SC-001 is reported as measured, with no drop. The first replay showed that a
+harness-only PR still had 17 of 32 screenshots differ from the baseline. That
+is run-time noise, so the packet named all of them. The fix lets a change with
+no web file name only the screenshots a finding cites. The second replay
+opened no screenshot (the old one opened one), but it took more turns. On a PR
+like this the cost is cumulative cache reads per turn. Most of that comes from
+reading the diff and the spec, which the tester still does in full, and less
+from the inputs the packet precomputes. One replay per arm is a small sample:
+turn counts vary by 4 between the two runs of the same instructions. Whether
+the packet pays off on a web PR's re-lap with failing flows, where the
+screenshot and report delta matters, is not measured here (deferred.md).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - The tester starts from one precomputed packet (Priority: P1)
