@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   DEFAULT_THRESHOLDS,
+  QA_CAP,
   applyFixes,
   collect,
   dispatchPlan,
@@ -17,6 +18,7 @@ import {
   parseStale,
   parseWorktrees,
   phaseOf,
+  qaCapFrom,
   scratchRun,
   summarizePr,
   writeClaim,
@@ -299,15 +301,16 @@ describe('stale and the fix', () => {
 describe('dispatch plan', () => {
   const stale = (path, fix, minutesQuiet) => ({ path, verdict: 'stale', fix, activity: { at: NOW - minutesQuiet * MIN }, claim: null });
 
-  it('dispatches no QA run while 4 are live', () => {
-    const plan = dispatchPlan([stale('a', 'rerun-qa', 50), stale('b', 'rerun-qa', 60)], { qaLive: 4, now: NOW });
+  it('dispatches no QA run while the cap is live', () => {
+    const plan = dispatchPlan([stale('a', 'rerun-qa', 50), stale('b', 'rerun-qa', 60)], { qaLive: 4, qaCap: 4, now: NOW });
     assert.deepEqual(plan, []);
   });
 
   it('fills the free QA places, oldest first', () => {
     const rows = [stale('a', 'rerun-qa', 50), stale('b', 'rerun-qa', 90), stale('c', 'rerun-qa', 70)];
-    const plan = dispatchPlan(rows, { qaLive: 2, now: NOW });
-    assert.deepEqual(plan.map((p) => p.path), ['b', 'c']);
+    assert.deepEqual(dispatchPlan(rows, { qaLive: 2, qaCap: 4, now: NOW }).map((p) => p.path), ['b', 'c']);
+    assert.deepEqual(dispatchPlan(rows, { qaLive: QA_CAP - 2, now: NOW }).map((p) => p.path), ['b', 'c']);
+    assert.deepEqual(dispatchPlan(rows, { qaLive: QA_CAP, now: NOW }), []);
   });
 
   it('runs at most 2 other agent fixes at once, counting live claims', () => {
@@ -320,7 +323,12 @@ describe('dispatch plan', () => {
   it('counts a QA claim once when the QA run it started is already live', () => {
     const claimed = (path, qaLive) => ({ path, verdict: 'ok', fix: null, qaLive, claim: { fix: 'rerun-qa', at: new Date(NOW - MIN).toISOString(), live: true } });
     const rows = [claimed('x', true), claimed('y', true), stale('a', 'rerun-qa', 90), stale('b', 'rerun-qa', 80)];
-    assert.equal(dispatchPlan(rows, { qaLive: 2, now: NOW }).length, 2);
+    assert.equal(dispatchPlan(rows, { qaLive: 2, qaCap: 4, now: NOW }).length, 2);
+  });
+
+  it('does not count QA re-runs against the 2 other agent fixes', () => {
+    const rows = [stale('a', 'rerun-qa', 90), stale('b', 'resume', 80), stale('c', 'fix-ci', 70), stale('d', 'merge', 60)];
+    assert.deepEqual(dispatchPlan(rows, { qaLive: 0, now: NOW }).map((p) => p.path), ['a', 'b', 'c']);
   });
 
   it('dispatches nothing when the PR state is unknown', () => {
@@ -636,5 +644,40 @@ describe('the command', () => {
     } finally {
       rmSync(f.root, { recursive: true, force: true });
     }
+  });
+});
+
+describe('the QA cap', () => {
+  it('reads SPECKIT_QA_CAP, so the cap is configuration and not code', () => {
+    assert.equal(qaCapFrom({ SPECKIT_QA_CAP: '6' }), 6);
+    assert.equal(qaCapFrom({ SPECKIT_QA_CAP: '1' }), 1);
+  });
+
+  it('falls back to the default when the value is unset or not a positive whole number', () => {
+    for (const v of [undefined, '', '0', '-3', '2.5', 'many', ' 4x']) assert.equal(qaCapFrom({ SPECKIT_QA_CAP: v }), QA_CAP, String(v));
+    assert.equal(qaCapFrom({}), QA_CAP);
+  });
+
+  it('dispatches up to the cap it is given', () => {
+    const stale = (path, minutesQuiet) => ({ path, verdict: 'stale', fix: 'rerun-qa', activity: { at: NOW - minutesQuiet * MIN }, claim: null });
+    const rows = [stale('a', 50), stale('b', 90), stale('c', 70)];
+    assert.deepEqual(dispatchPlan(rows, { qaLive: 0, qaCap: 1, now: NOW }).map((p) => p.path), ['b']);
+    assert.deepEqual(dispatchPlan(rows, { qaLive: 0, qaCap: 2, now: NOW }).map((p) => p.path), ['b', 'c']);
+  });
+
+  it('prints the cap it was given in the header and the JSON', () => {
+    const f = fixture();
+    const out = [];
+    const log = console.log;
+    console.log = (...a) => out.push(a.join(' '));
+    try {
+      assert.equal(main([], { cwd: f.repo, ...env(), qaCap: 3 }), 0);
+      assert.equal(main(['--json'], { cwd: f.repo, ...env(), qaCap: 3 }), 0);
+    } finally {
+      console.log = log;
+      rmSync(f.root, { recursive: true, force: true });
+    }
+    assert.match(out[0], /QA runs 0\/3 /);
+    assert.equal(JSON.parse(out.at(-1)).qaCap, 3);
   });
 });
