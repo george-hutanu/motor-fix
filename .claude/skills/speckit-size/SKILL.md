@@ -24,12 +24,14 @@ node .claude/scripts/level.mjs suggest "<the work, one sentence>" --set
 ```
 
 A local classifier answers first and costs nothing. It decides only the clear
-cases: a typo or rename is 0, anything touching a contract, data, identity,
-money or a new surface is 2, and an epic is 3. A risky word always outranks a
-trivial one. Jev answers next if it has a key. Then:
+cases: an edit to text or to a name only the code reads is 0, anything touching
+a contract, data, identity, money or a new surface is 2, and an epic is 3. A
+risky word always outranks a trivial one, and a word that adds behaviour makes
+it `unsure`, never 0. Jev answers next if it has a key. Then:
 
 - **It printed a level and `recorded for …`**: done, go to Phase 3. Do not
-  re-argue a confident answer.
+  re-argue a confident answer, except a 0 the description plainly contradicts
+  (it adds or changes behaviour): then `set` the level it deserves.
 - **It printed `unsure`, or `low confidence`**: answer the one question below
   in one or two sentences, then `node .claude/scripts/level.mjs set <0-3>`.
 
@@ -56,11 +58,15 @@ few minutes; a missing one costs a rewrite.
 
 `set` binds the level to the work it was sized for (`level_for` in
 `.specify/feature.json`). On the feature's own branch that is the current
-feature; anywhere else it is `next`, which `/speckit-specify` carries onto the
-directory it creates (`level.mjs point`). A level sized for another feature is
-ignored, so an old "trivial" never shrinks new work. Force it with `--current`
-or `--next`; for one command only, use `SPECKIT_FEATURE_LEVEL=1 <command>`.
-`node .claude/scripts/level.mjs` reads it back with its source.
+feature. Anywhere else it is `next`: it applies to no feature that exists, and
+`/speckit-specify` hands it to the directory it creates (`level.mjs point`),
+once, if that happens within 30 minutes. After that, or for a feature HEAD
+already holds, the default applies and `point` says so: size again with
+`--current`. Level 0 is never carried, since a trivial change creates no
+feature. A level sized for another feature is ignored, so an old "trivial"
+never shrinks new work. Force the target with `--current` or `--next`; for one
+command only, use `SPECKIT_FEATURE_LEVEL=1 <command>`.
+`node .claude/scripts/level.mjs` reads it back with its source and what waits.
 
 ## Phase 3 — say what it changed
 

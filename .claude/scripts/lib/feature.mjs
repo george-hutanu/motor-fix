@@ -46,58 +46,134 @@ export const LEVELS = {
 
 export const DEFAULT_LEVEL = 2;
 
+/** How long a level sized for "the next feature" waits for /speckit-specify. */
+export const PENDING_TTL_MINUTES = 30;
+
+/** A level from the vocabulary, or null: `""`, `null` and `true` are not 0 or 1. */
+export const parseLevel = (value) => {
+  const n = typeof value === "number" || (typeof value === "string" && value.trim() !== "") ? Number(value) : Number.NaN;
+  return Number.isInteger(n) && n in LEVELS ? n : null;
+};
+
+export const pendingTtlMinutes = (env = process.env) => {
+  const minutes = Number(env.SPECKIT_LEVEL_TTL_MINUTES);
+  return Number.isFinite(minutes) && minutes > 0 ? minutes : PENDING_TTL_MINUTES;
+};
+
 /**
- * The active level: $SPECKIT_FEATURE_LEVEL, then `.specify/feature.json`, then
- * the default. Same precedence as every other harness setting — the
- * environment wins so a one-off run never has to edit a file.
+ * A feature directory as feature.json stores it: relative to the repository,
+ * forward slashes, no trailing one. `specs/002-x`, `./specs/002-x/` and
+ * `<repo>/specs/002-x` are the same feature and must compare equal, or a
+ * level is lost (or kept) on how a path was typed.
  */
-export function featureLevel(repo) {
-  const fromEnv = process.env.SPECKIT_FEATURE_LEVEL;
-  const parse = (value) => {
-    const n = Number(value);
-    return Number.isInteger(n) && n in LEVELS ? n : null;
-  };
-  if (fromEnv !== undefined && fromEnv !== "") {
-    const parsed = parse(fromEnv);
-    if (parsed !== null) return parsed;
+export function featureKey(repo, dir) {
+  if (typeof dir !== "string" || dir === "") return undefined;
+  let key = dir.replaceAll("\\", "/");
+  const base = typeof repo === "string" && repo !== "" ? `${repo.replaceAll("\\", "/").replace(/\/+$/, "")}/` : null;
+  if (base && key.startsWith(base)) key = key.slice(base.length);
+  key = key.replace(/^(\.\/)+/, "").replace(/\/+$/, "");
+  return key === "" ? undefined : key;
+}
+
+const readState = (repo) => {
+  try {
+    const state = JSON.parse(readFileSync(join(repo, ".specify", "feature.json"), "utf8"));
+    return state && typeof state === "object" && !Array.isArray(state) ? state : null;
+  } catch {
+    // Missing or malformed state is not this resolver's problem to report.
+    return null;
   }
-  const stateFile = join(repo, ".specify", "feature.json");
-  if (existsSync(stateFile)) {
-    try {
-      const state = JSON.parse(readFileSync(stateFile, "utf8"));
-      const parsed = levelApplies(state) ? parse(state.level) : null;
-      if (parsed !== null) return parsed;
-    } catch {
-      // Malformed state is not this resolver's problem to report.
-    }
-  }
-  return DEFAULT_LEVEL;
+};
+
+/** feature.json with its two paths as `featureKey`s, so they compare however they were written. */
+export function keyedState(repo, state) {
+  if (!state || typeof state !== "object" || Array.isArray(state)) return {};
+  const keyed = { ...state };
+  if (typeof state.feature_directory === "string") keyed.feature_directory = featureKey(repo, state.feature_directory);
+  if (typeof state.level_for === "string" && state.level_for !== "next") keyed.level_for = featureKey(repo, state.level_for);
+  return keyed;
 }
 
 /**
- * Whether the level in feature.json was chosen for the work in hand. A level
- * carries `level_for`: the feature directory it was sized for, or "next" when
- * /speckit-size ran before /speckit-specify created one. A level sized for some
- * other feature is stale and is ignored, so an old "trivial" never shrinks the
- * process of new work — the default (the full chain) applies instead. A file
- * written before `level_for` existed is honoured as it always was.
+ * The level of one feature: $SPECKIT_FEATURE_LEVEL, then the level
+ * `.specify/feature.json` holds FOR THAT FEATURE, then the default. Same
+ * precedence as every other harness setting — the environment wins so a
+ * one-off run never has to edit a file.
+ *
+ * `featureDir` is the feature being asked about; without it, the one
+ * feature.json points at. The file holds one level and says whose it is, so a
+ * feature resolved some other way (the branch, $SPECIFY_FEATURE_DIRECTORY, a
+ * path on the command line) gets the default rather than a neighbour's level.
  */
-export function levelApplies(state) {
-  if (!state || typeof state !== "object" || state.level === undefined) return false;
-  if (state.level_for === undefined) return true;
-  return state.level_for === "next" || state.level_for === state.feature_directory;
+export function featureLevel(repo, featureDir) {
+  const fromEnv = parseLevel(process.env.SPECKIT_FEATURE_LEVEL);
+  if (fromEnv !== null) return fromEnv;
+  const state = keyedState(repo, readState(repo));
+  const target = featureKey(repo, featureDir) ?? state.feature_directory;
+  return (levelApplies(state, target) ? parseLevel(state.level) : null) ?? DEFAULT_LEVEL;
 }
 
 /**
- * The feature.json that points at `featureDirectory`, keeping a level sized for
- * it ("next" or that directory) and dropping one sized for anything else.
- * Mirrored by `persist_feature_json` in .specify/scripts/python/common.py.
+ * Whether the level in feature.json belongs to `target` (by default the
+ * feature the file points at). A level carries `level_for`: the feature
+ * directory it was sized for, or "next" when /speckit-size ran before
+ * /speckit-specify created one.
+ *
+ * - Sized for another feature: stale, ignored, so an old "trivial" never
+ *   shrinks the process of new work — the default (the full chain) applies.
+ * - Sized for "next": belongs to no feature that exists. It waits for
+ *   `pointTo` to hand it to the feature /speckit-specify creates.
+ * - Written before `level_for` existed: the pointed feature's, nobody else's.
  */
-export function pointTo(state, featureDirectory) {
-  const next = { ...(state && typeof state === "object" ? state : {}), feature_directory: featureDirectory };
-  if (next.level !== undefined && (next.level_for === "next" || next.level_for === featureDirectory)) {
+export function levelApplies(state, target = state?.feature_directory) {
+  if (!state || typeof state !== "object" || state.level === undefined || !target) return false;
+  const owner = state.level_for === undefined ? state.feature_directory : state.level_for;
+  return owner !== "next" && owner === target;
+}
+
+/**
+ * The level waiting for the next feature, while it is still fresh. It was
+ * sized at `level_at` for work about to be specified; after
+ * PENDING_TTL_MINUTES ($SPECKIT_LEVEL_TTL_MINUTES) it is somebody else's
+ * work, and the default is the safe answer.
+ */
+export function pendingLevel(state, now = Date.now(), env = process.env) {
+  if (!state || typeof state !== "object" || state.level_for !== "next") return null;
+  const level = parseLevel(state.level);
+  const at = typeof state.level_at === "string" ? Date.parse(state.level_at) : Number.NaN;
+  if (level === null || Number.isNaN(at)) return null;
+  const left = pendingTtlMinutes(env) * 60_000 - (now - at);
+  // One minute of slack for two clocks; a level from further ahead is not trusted.
+  if (left <= 0 || at - now > 60_000) return null;
+  return { level, minutesLeft: Math.ceil(left / 60_000) };
+}
+
+/**
+ * The feature.json that points at `featureDirectory` (already a
+ * `featureKey`). Mirrored by `persist_feature_json` in
+ * .specify/scripts/python/common.py; level.spec.mjs holds the two together.
+ *
+ * - The same directory again: nothing changes. A waiting level is for a NEW
+ *   feature, and re-writing the pointer creates none.
+ * - A new directory: a fresh waiting level becomes this feature's — once; it
+ *   is used up. Level 0 never does: a trivial change creates no feature, so a
+ *   feature being created was not what was sized.
+ * - `existing`: the directory is a feature HEAD already holds, so it cannot be
+ *   "the next one". A fresh waiting level keeps waiting.
+ * - Anything else — a level sized for another feature, an expired one — is
+ *   dropped, and the default applies.
+ */
+export function pointTo(state, featureDirectory, { now = Date.now(), existing = false, env = process.env } = {}) {
+  const base = state && typeof state === "object" && !Array.isArray(state) ? state : {};
+  if (base.feature_directory === featureDirectory) return base;
+  const next = { ...base, feature_directory: featureDirectory };
+  const pending = pendingLevel(base, now, env);
+  if (pending && existing) return next;
+  delete next.level_at;
+  if (pending && pending.level !== 0) {
+    next.level = pending.level;
     next.level_for = featureDirectory;
-  } else {
+  } else if (base.level === undefined || base.level_for !== featureDirectory) {
     delete next.level;
     delete next.level_for;
   }
@@ -111,7 +187,7 @@ export function activeFeature(repo) {
     if (!existsSync(join(abs, "spec.md"))) return null;
     const m = basename(abs).match(/^(\d{3})-/);
     if (!m) return null;
-    return { dir: abs, name: basename(abs), num: m[1], level: featureLevel(repo) };
+    return { dir: abs, name: basename(abs), num: m[1], level: featureLevel(repo, abs) };
   };
 
   const fromEnv = fromDir(process.env.SPECIFY_FEATURE_DIRECTORY);

@@ -137,9 +137,10 @@ Given that feature description, do this:
    - Set `SPEC_FILE` to `SPECIFY_FEATURE_DIRECTORY/spec.md`
    - Persist the resolved path to `.specify/feature.json` with
      `node .claude/scripts/level.mjs point <resolved feature dir>`, never by
-     writing the file: it sets `feature_directory` and keeps the level
-     `/speckit-size` chose for this work (dropping one sized for another
-     feature). Pass the actual resolved directory path value (for example, `specs/003-user-auth`), not the literal string `SPECIFY_FEATURE_DIRECTORY`.
+     writing the file: it sets `feature_directory` and hands the new
+     feature the level `/speckit-size` chose for it a moment ago (dropping
+     one sized for another feature, an expired one, or a 0). Read its one
+     line of output: it names the level in force and why. Pass the actual resolved directory path value (for example, `specs/003-user-auth`), not the literal string `SPECIFY_FEATURE_DIRECTORY`.
      This allows downstream commands (`/speckit-plan`, `/speckit-tasks`, etc.) to locate the feature directory without relying on git branch name conventions.
 
    **IMPORTANT**:
