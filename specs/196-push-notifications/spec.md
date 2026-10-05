@@ -169,18 +169,8 @@ A device that signs out stops getting the account's pushes.
 
 ## Spec Delta
 
-### Adds
+### Capability: `notifications`
 
-- Push devices: save, replace, delete, deletion on sign-out and on 404/410.
-- The push channel of the sending service, with its fallback to e-mail.
-- The notifications panel and the service worker's push display.
-
-### Modifies
-
-- Routing: push is no longer skipped; a push choice with no device goes by e-mail.
-- Fallback: an e-mail that fails for good goes by push when the person has a device; a fallback row never falls back again.
-- The test message also goes by push.
-
-### Removes
-
-- None.
+- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-008, FR-009, FR-010, FR-011, FR-012, FR-013, FR-015, FR-016, FR-017, FR-018, FR-020, FR-021
+- **Modifies**: `194-FR-003` → `FR-007`, `194-FR-008` → `FR-019`, `194-FR-013` → `FR-014`
+- **Removes**: none
