@@ -8,3 +8,6 @@
 - 2026-10-05 · labels · PR #141 · planning (+tooling, scope: harness, EP-1)
 - 2026-10-05 · implement · ST-696 · Planning → Implementing
 - 2026-10-05 · labels · PR #141 · in development
+- 2026-10-05 · qa · ST-696 · Implementing → QA
+- 2026-10-05 · qa · timeline · no row for ST-696
+- 2026-10-05 · labels · PR #141 · QA
