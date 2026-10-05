@@ -12,3 +12,4 @@
 - 2026-10-05 · qa · ST-614 story Status · Implementing → QA
 - 2026-10-05 · qa · Foundations timeline · no row for ST-614 (nothing to write)
 - 2026-10-05 · labels · PR #124 · QA
+- 2026-10-05 · debt · deferred.md line 2 · filed https://app.notion.com/p/3f0607bff0d281bfbd6df879bb27f98e
