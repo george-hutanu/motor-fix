@@ -97,3 +97,14 @@
 ## 17. Archive
 - validate --check: 0 errors. merge --apply: platform +34. Capability FR-001 text edited to state current truth (adds the `scripts` project). Spec status → Archived (2026-10-04).
 - Not run here: /speckit-retro (the verdict is the owner's; this run made every decision) and notion-sync finish (runs on the merge to main).
+
+## Compactions 2026-10-04/05
+
+19 compactions of the orchestrator session on `main` after the archive (2 manual, 17 auto); tasks stayed 39 done, 0 open throughout. Consecutive entries with the same state are folded into one row.
+
+| From (UTC) | To (UTC) | Count | `main` at | Uncommitted (modified) |
+| --- | --- | --- | --- | --- |
+| 2026-10-04 16:01 | 2026-10-04 16:01 | 1 (manual) | `18c9e3d` | `.claude/settings.json` |
+| 2026-10-04 18:07 | 2026-10-04 18:34 | 4 | `e58ed38` | `.claude/settings.json`, `specs/421-monorepo-platform/auto-run.md` |
+| 2026-10-04 19:30 | 2026-10-04 19:53 | 2 (1 manual) | `e58ed38` | `.claude/settings.json`, `CLAUDE.local.md`, `specs/421-monorepo-platform/auto-run.md` |
+| 2026-10-04 20:04 | 2026-10-05 05:06 | 12 | `b581136` | `CLAUDE.local.md`, `specs/421-monorepo-platform/auto-run.md` |
