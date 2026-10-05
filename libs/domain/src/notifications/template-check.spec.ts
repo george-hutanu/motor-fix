@@ -54,21 +54,19 @@ describe('the template check', () => {
     ).toEqual(['QUOTE_RECEIVED sms: no ro text']);
   });
 
-  it.each([
-    'garage',
-    'mechanic',
-    'admin',
-    'any',
-  ] as const)('fails a %s template that uses a plate', (audience) => {
-    expect(
-      only('QUOTE_RECEIVED', {
-        ...good,
-        audience,
-        example: { ...good.example, plate: 'B 12 ABC' },
-        values: { ...good.values, plate: 'text' },
-      }),
-    ).toEqual(['QUOTE_RECEIVED: plate in a template for a non-driver']);
-  });
+  it.each(['garage', 'mechanic', 'admin', 'any'] as const)(
+    'fails a %s template that uses a plate',
+    (audience) => {
+      expect(
+        only('QUOTE_RECEIVED', {
+          ...good,
+          audience,
+          example: { ...good.example, plate: 'B 12 ABC' },
+          values: { ...good.values, plate: 'text' },
+        }),
+      ).toEqual(['QUOTE_RECEIVED: plate in a template for a non-driver']);
+    },
+  );
 
   it('lets the day sheet and a driver template use a plate', () => {
     const plated = {

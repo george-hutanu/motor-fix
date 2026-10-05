@@ -97,20 +97,21 @@ describe('FileUploader second round of hostile conditions', () => {
     expect(confirm).not.toHaveBeenCalledWith('incoming/k1');
   });
 
-  it.each([
-    500, 502, 503, 400, 413,
-  ])('gives up at once on a %i from the store without asking again', (status) => {
-    start();
-    http
-      .expectOne(address(1).url)
-      .flush('<Error/>', { status, statusText: 'Refused' });
+  it.each([500, 502, 503, 400, 413])(
+    'gives up at once on a %i from the store without asking again',
+    (status) => {
+      start();
+      http
+        .expectOne(address(1).url)
+        .flush('<Error/>', { status, statusText: 'Refused' });
 
-    expect(ask).toHaveBeenCalledTimes(1);
-    expect(confirm).not.toHaveBeenCalled();
-    expect(failure).toBeInstanceOf(HttpErrorResponse);
-    expect((failure as HttpErrorResponse).status).toBe(status);
-    jest.advanceTimersByTime(10_000);
-  });
+      expect(ask).toHaveBeenCalledTimes(1);
+      expect(confirm).not.toHaveBeenCalled();
+      expect(failure).toBeInstanceOf(HttpErrorResponse);
+      expect((failure as HttpErrorResponse).status).toBe(status);
+      jest.advanceTimersByTime(10_000);
+    },
+  );
 
   it.each([
     ['without a total', { loaded: 50, total: undefined }],

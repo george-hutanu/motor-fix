@@ -280,27 +280,30 @@ describe('a sign-out that gets no answer', () => {
       (s: Session) =>
         s.signUp('Andrei', 'andrei@example.ro', 'parola-lunga', 'ro'),
     ],
-  ])('is sent before a %s, so it never ends the new session', async (_, start) => {
-    localStorage.setItem(PENDING, 'everywhere');
-    const { api, session } = setup();
-    const order: string[] = [];
-    api.authControllerSignOutEverywhere.mockImplementationOnce(async () => {
-      order.push('sign-out-everywhere');
-    });
-    api.authControllerSignIn.mockImplementationOnce(async () => {
-      order.push('start');
-      return { accessToken: 'signed-in' };
-    });
-    api.authControllerSignUp.mockImplementationOnce(async () => {
-      order.push('start');
-      return { accessToken: 'signed-up' };
-    });
+  ])(
+    'is sent before a %s, so it never ends the new session',
+    async (_, start) => {
+      localStorage.setItem(PENDING, 'everywhere');
+      const { api, session } = setup();
+      const order: string[] = [];
+      api.authControllerSignOutEverywhere.mockImplementationOnce(async () => {
+        order.push('sign-out-everywhere');
+      });
+      api.authControllerSignIn.mockImplementationOnce(async () => {
+        order.push('start');
+        return { accessToken: 'signed-in' };
+      });
+      api.authControllerSignUp.mockImplementationOnce(async () => {
+        order.push('start');
+        return { accessToken: 'signed-up' };
+      });
 
-    await start(session);
+      await start(session);
 
-    expect(order).toEqual(['sign-out-everywhere', 'start']);
-    expect(localStorage.getItem(PENDING)).toBeNull();
-  });
+      expect(order).toEqual(['sign-out-everywhere', 'start']);
+      expect(localStorage.getItem(PENDING)).toBeNull();
+    },
+  );
 
   it.each([
     ['sign-in', (s: Session) => s.signIn('andrei@example.ro', 'parola', true)],
@@ -309,20 +312,23 @@ describe('a sign-out that gets no answer', () => {
       (s: Session) =>
         s.signUp('Andrei', 'andrei@example.ro', 'parola-lunga', 'ro'),
     ],
-  ])('is dropped once a %s succeeds, even when its retry got no answer, so it never ends the new session', async (_, start) => {
-    localStorage.setItem(PENDING, 'everywhere');
-    const { api, session } = setup();
-    api.authControllerSignOutEverywhere.mockImplementationOnce(() =>
-      answered(503),
-    );
+  ])(
+    'is dropped once a %s succeeds, even when its retry got no answer, so it never ends the new session',
+    async (_, start) => {
+      localStorage.setItem(PENDING, 'everywhere');
+      const { api, session } = setup();
+      api.authControllerSignOutEverywhere.mockImplementationOnce(() =>
+        answered(503),
+      );
 
-    await start(session);
-    await session.load();
+      await start(session);
+      await session.load();
 
-    expect(api.authControllerSignOutEverywhere).toHaveBeenCalledTimes(1);
-    expect(localStorage.getItem(PENDING)).toBeNull();
-    expect(session.token()).not.toBeNull();
-  });
+      expect(api.authControllerSignOutEverywhere).toHaveBeenCalledTimes(1);
+      expect(localStorage.getItem(PENDING)).toBeNull();
+      expect(session.token()).not.toBeNull();
+    },
+  );
 
   it('is not kept by a retry that was on its way while a sign-in started a new session', async () => {
     const { api, session } = setup();

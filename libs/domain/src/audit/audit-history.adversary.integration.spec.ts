@@ -390,15 +390,18 @@ describe('masking', () => {
     ['false', false],
     ['an empty list', []],
     ['an empty object', {}],
-  ])('masks %s under a plate field because it is not null', async (_, value) => {
-    const { staff } = await seeded({
-      field: 'plate',
-      newValue: value as Prisma.InputJsonValue,
-      oldValue: undefined,
-    });
+  ])(
+    'masks %s under a plate field because it is not null',
+    async (_, value) => {
+      const { staff } = await seeded({
+        field: 'plate',
+        newValue: value as Prisma.InputJsonValue,
+        oldValue: undefined,
+      });
 
-    expect(staff.newValue).toBe(MASK);
-  });
+      expect(staff.newValue).toBe(MASK);
+    },
+  );
 
   it('leaves null under a phone field as null', async () => {
     const { staff } = await seeded({

@@ -162,26 +162,30 @@ describe('rating dial rounding and clamping', () => {
     [0.05, '0,1'],
     [1, '1,0'],
     [5, '5,0'],
-  ])('reads %p as %s, rounding half up on the decimal as written', (v, text) => {
-    const t = render();
+  ])(
+    'reads %p as %s, rounding half up on the decimal as written',
+    (v, text) => {
+      const t = render();
 
-    t.host.value.set(v);
-    t.poke();
+      t.host.value.set(v);
+      t.poke();
 
-    expect(t.centre()).toBe(text);
-  });
+      expect(t.centre()).toBe(text);
+    },
+  );
 
-  it.each([
-    5.04, 5.05, 100, 1e308,
-  ])('clamps %p to a full arc reading 5,0', (v) => {
-    const t = render();
+  it.each([5.04, 5.05, 100, 1e308])(
+    'clamps %p to a full arc reading 5,0',
+    (v) => {
+      const t = render();
 
-    t.host.value.set(v);
-    t.poke();
+      t.host.value.set(v);
+      t.poke();
 
-    expect(t.centre()).toBe('5,0');
-    expect(t.fill()).toBe(1);
-  });
+      expect(t.centre()).toBe('5,0');
+      expect(t.fill()).toBe(1);
+    },
+  );
 
   it.each<unknown>([
     Number.POSITIVE_INFINITY,

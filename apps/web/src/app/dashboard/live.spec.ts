@@ -163,30 +163,30 @@ describe('Live', () => {
     expect(seen.map((m) => m.kind)).toEqual(['live.test', 'hello']);
   });
 
-  it.each([
-    'expired',
-    'shutdown',
-  ])('renews the token and reconnects within 3 seconds after bye %s', async (reason) => {
-    jest.useFakeTimers();
-    try {
-      const { live } = setUp();
-      live.open();
-      await flush();
+  it.each(['expired', 'shutdown'])(
+    'renews the token and reconnects within 3 seconds after bye %s',
+    async (reason) => {
+      jest.useFakeTimers();
+      try {
+        const { live } = setUp();
+        live.open();
+        await flush();
 
-      bodies[0]?.send(event('bye', { reason }));
-      bodies[0]?.end();
-      await flush();
-      jest.advanceTimersByTime(3_000);
-      await flush();
+        bodies[0]?.send(event('bye', { reason }));
+        bodies[0]?.end();
+        await flush();
+        jest.advanceTimersByTime(3_000);
+        await flush();
 
-      expect(renew).toHaveBeenCalledTimes(1);
-      expect(fetchMock).toHaveBeenCalledTimes(2);
-      const [, init] = fetchMock.mock.calls[1] as [string, RequestInit];
-      expect(init.headers).toMatchObject({ Authorization: 'Bearer token-2' });
-    } finally {
-      jest.useRealTimers();
-    }
-  });
+        expect(renew).toHaveBeenCalledTimes(1);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        const [, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+        expect(init.headers).toMatchObject({ Authorization: 'Bearer token-2' });
+      } finally {
+        jest.useRealTimers();
+      }
+    },
+  );
 
   it('does not reconnect after bye evicted', async () => {
     const { live } = setUp();

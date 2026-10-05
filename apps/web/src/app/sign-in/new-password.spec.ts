@@ -121,20 +121,20 @@ describe('the new-password task', () => {
     expect(panel().querySelector('[aria-busy="true"]')).not.toBeNull();
   });
 
-  it.each([
-    'token_expired',
-    'token_invalid',
-  ])('says the link expired for %s and offers a new one', async (code) => {
-    await open('ro', async () => {
-      throw problem(410, code);
-    });
+  it.each(['token_expired', 'token_invalid'])(
+    'says the link expired for %s and offers a new one',
+    async (code) => {
+      await open('ro', async () => {
+        throw problem(410, code);
+      });
 
-    expect(text()).toContain('Linkul a expirat');
-    expect(panel().querySelector('input')).toBeNull();
-    button('Cere un link nou')?.click();
-    await settle();
-    await expect(result).resolves.toEqual({ email: '', switchTo: 'reset' });
-  });
+      expect(text()).toContain('Linkul a expirat');
+      expect(panel().querySelector('input')).toBeNull();
+      button('Cere un link nou')?.click();
+      await settle();
+      await expect(result).resolves.toEqual({ email: '', switchTo: 'reset' });
+    },
+  );
 
   // The check answers nothing on success, so the client reads a refusal as text.
   it('says the link expired when the refusal arrives as text', async () => {

@@ -452,36 +452,39 @@ describe('Frame', () => {
     ['receptionist', '/app/garage'],
     ['mechanic', '/app/garage'],
     ['admin', '/app/admin'],
-  ])('changes the status line in place on a live test update, with no toast, for a %s', async (role, landing) => {
-    (toast as unknown as jest.Mock).mockClear();
-    const { element, harness } = await render(role, landing, []);
+  ])(
+    'changes the status line in place on a live test update, with no toast, for a %s',
+    async (role, landing) => {
+      (toast as unknown as jest.Mock).mockClear();
+      const { element, harness } = await render(role, landing, []);
 
-    live.events.next({
-      at: '2026-10-04T12:00:00.000Z',
-      id: 'e-1',
-      kind: 'hello',
-    });
-    await settle(harness);
-    // The region exists, empty, before the first update, so that the update is announced.
-    const line = statusLine(element);
-    expect(line).not.toBeNull();
-    expect(line?.textContent?.trim()).toBe('');
-    live.events.next(testUpdate('2026-10-04T12:00:00.000Z'));
-    await settle(harness);
-    expect(line?.textContent?.trim()).toBe(
-      'Actualizare de test în direct · 15:00',
-    );
+      live.events.next({
+        at: '2026-10-04T12:00:00.000Z',
+        id: 'e-1',
+        kind: 'hello',
+      });
+      await settle(harness);
+      // The region exists, empty, before the first update, so that the update is announced.
+      const line = statusLine(element);
+      expect(line).not.toBeNull();
+      expect(line?.textContent?.trim()).toBe('');
+      live.events.next(testUpdate('2026-10-04T12:00:00.000Z'));
+      await settle(harness);
+      expect(line?.textContent?.trim()).toBe(
+        'Actualizare de test în direct · 15:00',
+      );
 
-    live.events.next(testUpdate('2026-10-04T12:05:00.000Z'));
-    await settle(harness);
+      live.events.next(testUpdate('2026-10-04T12:05:00.000Z'));
+      await settle(harness);
 
-    expect(statusLine(element)).toBe(line);
-    expect(line?.textContent?.trim()).toBe(
-      'Actualizare de test în direct · 15:05',
-    );
-    expect(toast).not.toHaveBeenCalled();
-    TestBed.resetTestingModule();
-  });
+      expect(statusLine(element)).toBe(line);
+      expect(line?.textContent?.trim()).toBe(
+        'Actualizare de test în direct · 15:05',
+      );
+      expect(toast).not.toHaveBeenCalled();
+      TestBed.resetTestingModule();
+    },
+  );
 
   it('shows the test update in English', async () => {
     const { element, harness } = await render('driver', '/app/driver', []);

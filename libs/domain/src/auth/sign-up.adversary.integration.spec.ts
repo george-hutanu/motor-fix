@@ -119,13 +119,16 @@ describe('the shape of a body', () => {
     ['a language with a trailing space', { language: 'ro ' }],
     ['an empty language', { language: '' }],
     ['an extra field set to null', { extra: null }],
-  ])('answers 400 for %s, with no cookie and no account', async (_, overrides) => {
-    const res = await signUp(body(overrides));
+  ])(
+    'answers 400 for %s, with no cookie and no account',
+    async (_, overrides) => {
+      const res = await signUp(body(overrides));
 
-    expect(res.status).toBe(400);
-    expect(cookies(res)).toEqual([]);
-    expect(await accountCount()).toBe(0);
-  });
+      expect(res.status).toBe(400);
+      expect(cookies(res)).toEqual([]);
+      expect(await accountCount()).toBe(0);
+    },
+  );
 
   it.each([
     ['an empty object', '{}'],
@@ -271,11 +274,14 @@ describe('text encodings', () => {
   it.each([
     ['name', { name: 'Andrei \ud800 Marin' }],
     ['e-mail', { email: 'andrei\ud800@example.test' }],
-  ])('never answers 500 to a lone surrogate in the %s', async (_, overrides) => {
-    const res = await raw(JSON.stringify(body(overrides)));
+  ])(
+    'never answers 500 to a lone surrogate in the %s',
+    async (_, overrides) => {
+      const res = await raw(JSON.stringify(body(overrides)));
 
-    expect(res.status).toBeLessThan(500);
-  });
+      expect(res.status).toBeLessThan(500);
+    },
+  );
 
   it('keeps a name of accents, CJK and emoji exactly as typed', async () => {
     const name = 'Zoë Müller 田中 😀';
@@ -790,11 +796,14 @@ describe('the hourly limit', () => {
     ['a word', 'not-an-address'],
     ['empty entries', ', ,'],
     ['a very long chain', Array(500).fill('203.0.113.9').join(', ')],
-  ])('answers a sign-up forwarded from %s without a server error', async (_, from) => {
-    const res = await signUp(body(), from);
+  ])(
+    'answers a sign-up forwarded from %s without a server error',
+    async (_, from) => {
+      const res = await signUp(body(), from);
 
-    expect(res.status).toBeLessThan(500);
-  });
+      expect(res.status).toBeLessThan(500);
+    },
+  );
 
   it('answers a sign-up with no forwarding header at all', async () => {
     const res = await signUp(body(), undefined);

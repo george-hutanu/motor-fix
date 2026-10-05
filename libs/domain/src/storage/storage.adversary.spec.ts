@@ -226,23 +226,26 @@ describe('StorageService under hostile input', () => {
       ['an empty string', ''],
       ['a subtype suffix', 'image/jpeg+xml'],
       ['a similar type', 'image/jpg'],
-    ])('never signs a form for a type with %s unless the form pins the exact allowed type', async (_, type) => {
-      const outcome = await storage
-        .createUpload('garage_photo', 'acc_1', type, 10)
-        .then(
-          (upload) => ({ upload }),
-          (error: unknown) => ({ error }),
-        );
+    ])(
+      'never signs a form for a type with %s unless the form pins the exact allowed type',
+      async (_, type) => {
+        const outcome = await storage
+          .createUpload('garage_photo', 'acc_1', type, 10)
+          .then(
+            (upload) => ({ upload }),
+            (error: unknown) => ({ error }),
+          );
 
-      if ('error' in outcome) {
-        expect(outcome.error).toBeInstanceOf(HttpException);
-        expect((outcome.error as HttpException).getStatus()).toBe(422);
-      } else {
-        expect(FILE_RULES.garage_photo.types).toContain(
-          outcome.upload.fields['Content-Type'],
-        );
-      }
-    });
+        if ('error' in outcome) {
+          expect(outcome.error).toBeInstanceOf(HttpException);
+          expect((outcome.error as HttpException).getStatus()).toBe(422);
+        } else {
+          expect(FILE_RULES.garage_photo.types).toContain(
+            outcome.upload.fields['Content-Type'],
+          );
+        }
+      },
+    );
 
     it.each([
       ['capitals', 'IMAGE/JPEG'],
@@ -341,22 +344,25 @@ describe('StorageService under hostile input', () => {
     it.each([
       ['capitals', 'IMAGE/JPEG'],
       ['a parameter', 'image/jpeg; charset=x'],
-    ])('is refused by the store for a content type with %s', async (_, type) => {
-      const upload = await storage.createUpload(
-        'garage_photo',
-        'acc_1',
-        'image/jpeg',
-        JPEG.length,
-      );
+    ])(
+      'is refused by the store for a content type with %s',
+      async (_, type) => {
+        const upload = await storage.createUpload(
+          'garage_photo',
+          'acc_1',
+          'image/jpeg',
+          JPEG.length,
+        );
 
-      const res = await send(upload, JPEG, {
-        ...upload.fields,
-        'Content-Type': type,
-      });
+        const res = await send(upload, JPEG, {
+          ...upload.fields,
+          'Content-Type': type,
+        });
 
-      expect(res.status).toBe(403);
-      expect(store.objects.size).toBe(0);
-    });
+        expect(res.status).toBe(403);
+        expect(store.objects.size).toBe(0);
+      },
+    );
 
     it('takes a file of exactly the declared size and refuses one byte more', async () => {
       const upload = await storage.createUpload(

@@ -114,20 +114,18 @@ describe('railway deploy under failure', () => {
     ]);
   });
 
-  it.each([
-    'FAILED',
-    'CRASHED',
-    'REMOVED',
-    'SKIPPED',
-  ])('restores the previous image when the deployment ends as %s', async (status) => {
-    statusFor = () => status;
+  it.each(['FAILED', 'CRASHED', 'REMOVED', 'SKIPPED'])(
+    'restores the previous image when the deployment ends as %s',
+    async (status) => {
+      statusFor = () => status;
 
-    await expect(run()).rejects.toThrow(status);
-    expect(updates().at(-1)).toEqual({
-      id: 'svc-api',
-      input: { source: { image: 'svc-api@sha256:old' } },
-    });
-  });
+      await expect(run()).rejects.toThrow(status);
+      expect(updates().at(-1)).toEqual({
+        id: 'svc-api',
+        input: { source: { image: 'svc-api@sha256:old' } },
+      });
+    },
+  );
 
   it('restores the previous images of the services already deployed when a later one fails', async () => {
     statusFor = (id) => (id === 'svc-web' ? 'FAILED' : 'SUCCESS');

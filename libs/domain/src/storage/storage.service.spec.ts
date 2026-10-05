@@ -264,19 +264,22 @@ describe('StorageService', () => {
       ['a WebP', WEBP, 'image/webp', 'message_photo'],
       ['a PDF', PDF, 'application/pdf', 'legal_document'],
       ['a JPEG invoice', JPEG, 'image/jpeg', 'repair_invoice'],
-    ] as const)('accepts %s whose first bytes match its type', async (_, file, type, purpose) => {
-      const upload = await storage.createUpload(
-        purpose,
-        'acc_1',
-        type,
-        file.length,
-      );
-      await send(upload, file);
+    ] as const)(
+      'accepts %s whose first bytes match its type',
+      async (_, file, type, purpose) => {
+        const upload = await storage.createUpload(
+          purpose,
+          'acc_1',
+          type,
+          file.length,
+        );
+        await send(upload, file);
 
-      await expect(
-        storage.confirmUpload(upload.key, purpose, 'acc_1'),
-      ).resolves.toBe(upload.key.replace(/^incoming\//, ''));
-    });
+        await expect(
+          storage.confirmUpload(upload.key, purpose, 'acc_1'),
+        ).resolves.toBe(upload.key.replace(/^incoming\//, ''));
+      },
+    );
 
     it('deletes a file whose first bytes do not match its type', async () => {
       const key = await uploaded(EXE);
@@ -334,17 +337,20 @@ describe('StorageService', () => {
     it.each([
       ['another owner', 'garage_photo', 'acc_2'],
       ['another purpose', 'message_photo', 'acc_1'],
-    ] as const)('answers file_missing for a key of %s and touches nothing', async (_, purpose, owner) => {
-      const key = await uploaded(JPEG);
+    ] as const)(
+      'answers file_missing for a key of %s and touches nothing',
+      async (_, purpose, owner) => {
+        const key = await uploaded(JPEG);
 
-      expect(await refusal(storage.confirmUpload(key, purpose, owner))).toEqual(
-        {
+        expect(
+          await refusal(storage.confirmUpload(key, purpose, owner)),
+        ).toEqual({
           code: 'file_missing',
           status: 409,
-        },
-      );
-      expect([...store.objects.keys()]).toEqual([key]);
-    });
+        });
+        expect([...store.objects.keys()]).toEqual([key]);
+      },
+    );
 
     it('answers file_missing for a key outside incoming/ and touches nothing', async () => {
       const key = 'garage_photo/acc_1/00000000-0000-4000-8000-000000000000';

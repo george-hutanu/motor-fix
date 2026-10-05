@@ -3,20 +3,14 @@ import { blockedReason, emailConfig } from './email-config';
 const on = { EMAIL_SENDING: 'on' };
 
 describe('e-mail configuration under hostile input', () => {
-  it.each([
-    'ON',
-    'On',
-    'true',
-    '1',
-    'yes',
-    ' on',
-    'on ',
-    'off!',
-  ])('refuses the switch value %j', (value) => {
-    expect(() => emailConfig('test', { EMAIL_SENDING: value })).toThrow(
-      /EMAIL_SENDING/,
-    );
-  });
+  it.each(['ON', 'On', 'true', '1', 'yes', ' on', 'on ', 'off!'])(
+    'refuses the switch value %j',
+    (value) => {
+      expect(() => emailConfig('test', { EMAIL_SENDING: value })).toThrow(
+        /EMAIL_SENDING/,
+      );
+    },
+  );
 
   it('never turns sending on for an empty switch', () => {
     let sending: boolean;
@@ -93,17 +87,16 @@ describe('who may be mailed', () => {
     ).toBeNull();
   });
 
-  it.each([
-    'development',
-    'test',
-    'staging',
-  ] as const)('allows nobody in %s with an empty, blank or comma-only list', (env) => {
-    for (const list of [undefined, '', '  ', ',', ' , ,']) {
-      const config = emailConfig(env, { ...on, EMAIL_ALLOWLIST: list });
-      expect(blockedReason(config, 'ana@example.test')).toBe('not_allowed');
-      expect(blockedReason(config, '')).toBe('not_allowed');
-    }
-  });
+  it.each(['development', 'test', 'staging'] as const)(
+    'allows nobody in %s with an empty, blank or comma-only list',
+    (env) => {
+      for (const list of [undefined, '', '  ', ',', ' , ,']) {
+        const config = emailConfig(env, { ...on, EMAIL_ALLOWLIST: list });
+        expect(blockedReason(config, 'ana@example.test')).toBe('not_allowed');
+        expect(blockedReason(config, '')).toBe('not_allowed');
+      }
+    },
+  );
 
   it('does not let a bare @ entry allow everybody', () => {
     const config = emailConfig('staging', { ...on, EMAIL_ALLOWLIST: '@' });
