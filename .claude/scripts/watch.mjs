@@ -20,6 +20,7 @@ import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, writeFile
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { findCarry, postCarry } from "./pr-test/carry.mjs";
+import { parseQaRun } from "./pr-test/qa-run.mjs";
 import { readState } from "./run-state.mjs";
 
 export const DEFAULT_THRESHOLDS = { planning: 30, tests: 45, development: 45, review: 30, qa: 30, merging: 30 };
@@ -178,6 +179,19 @@ export function fixOf(row, { now, thresholds }) {
   if (row.holder === "live" || row.holder === "owner") return { verdict: "ok", fix: null, reason: `held (${row.holder})` };
   const quiet = (now - row.activity.at) / MIN;
   const limit = thresholds[row.phase];
+  // A handed-off PR whose QA run tests its head needs nobody until CI and that
+  // run have both finished: an agent started sooner would only wait, and pay
+  // for its whole context again when the cache goes cold. A PR with no checks
+  // waits only until the quiet threshold, then gets a tail like any other.
+  if (pr?.state === "ready" && row.handoff && row.qaRun && row.qaRun.head === pr.head && !(pr.checks === "none" && quiet > limit)) {
+    const ciDone = pr.checks === "pass" || pr.checks === "fail";
+    const status = row.qaRunState?.status;
+    if (ciDone && status === "completed") return { verdict: "stale", fix: "tail", reason: `CI ${pr.checks} and QA run ${row.qaRun.id} completed` };
+    const waits = [];
+    if (!ciDone) waits.push(pr.checks === "none" ? "CI (no checks yet)" : "CI");
+    if (status !== "completed") waits.push(`QA run ${row.qaRun.id} (${status ?? "state unreadable"})`);
+    return { verdict: "waiting", fix: null, reason: `waiting for ${waits.join(" and ")}` };
+  }
   if (quiet <= limit) return { verdict: "ok", fix: null, reason: `quiet ${Math.round(quiet)} of ${limit} min` };
   const reason = `no live agent, quiet ${Math.round(quiet)} min (> ${limit} in ${row.phase})`;
   const open = pr && (pr.state === "ready" || pr.state === "draft");
@@ -306,9 +320,20 @@ function prFor(prs, branch) {
 
 const defaultCarry = (pr) => findCarry({ pr });
 
+const defaultRunOf = (id) =>
+  JSON.parse(execFileSync("gh", ["run", "view", String(id), "--json", "status,conclusion"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 30_000 }));
+
+function qaRunOf(path, feature) {
+  try {
+    return parseQaRun(readFileSync(join(path, feature, "handoff.md"), "utf8"));
+  } catch {
+    return null;
+  }
+}
+
 // The carry lookup reads the same GitHub the PR list came from: a PR list
 // given by a caller (a test) gets no lookup unless it gives one too.
-export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claudeAlive, pidAlive = processAlive, thresholds = DEFAULT_THRESHOLDS, qaCap = QA_CAP, carry = gh === defaultGh ? defaultCarry : null } = {}) {
+export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claudeAlive, pidAlive = processAlive, thresholds = DEFAULT_THRESHOLDS, qaCap = QA_CAP, carry = gh === defaultGh ? defaultCarry : null, runOf = gh === defaultGh ? defaultRunOf : null } = {}) {
   const worktrees = parseWorktrees(git(repo, ["worktree", "list", "--porcelain"]) ?? "");
   const real = (p) => {
     try {
@@ -348,8 +373,18 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
       head: w.head,
       main: w.main,
       handoff: Boolean(feature) && existsSync(join(w.path, feature, "handoff.md")),
+      qaRun: feature ? qaRunOf(w.path, feature) : null,
       claim: claim ? { ...claim, live: claimLive(claim, threshold, now) } : null,
     };
+    // The run's state is asked of GitHub only when it decides the row: a ready
+    // handed-off PR still at the head the run tests. Unreadable reads as unfinished.
+    if (row.handoff && row.qaRun && pr?.state === "ready" && row.qaRun.head === pr.head && runOf) {
+      try {
+        row.qaRunState = runOf(row.qaRun.id);
+      } catch {
+        row.qaRunState = null;
+      }
+    }
     let fixed = fixOf(row, { now, thresholds });
     // Only a row about to re-run QA is worth the few gh calls a carry lookup costs.
     if (fixed.fix === "rerun-qa" && carry) {
@@ -424,7 +459,7 @@ function render(report, now) {
   const prText = (pr) => (pr === "unknown" ? "unknown" : pr ? `#${pr.number} ${pr.state}${pr.state === "ready" || pr.state === "draft" ? ` ci:${pr.checks}${pr.agentReview ? ` qa:${pr.agentReview}` : ""}` : ""}` : "-");
   const count = (v) => report.rows.filter((r) => r.verdict === v).length;
   const lines = [
-    `watch — ${report.rows.length} worktrees · QA runs ${report.qaRuns.length}/${report.qaCap} · stale ${count("stale")} · done ${count("done")} · blocked ${count("blocked")}`,
+    `watch — ${report.rows.length} worktrees · QA runs ${report.qaRuns.length}/${report.qaCap} · stale ${count("stale")} · waiting ${count("waiting")} · done ${count("done")} · blocked ${count("blocked")}`,
   ];
   const cols = report.rows.map((r) => [
     r.phase,

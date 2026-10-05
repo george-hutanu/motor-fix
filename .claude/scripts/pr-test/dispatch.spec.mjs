@@ -1,7 +1,8 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
@@ -27,11 +28,18 @@ const SHA = 'a'.repeat(40);
 describe('dispatch: arguments', () => {
   it('reads the PR, the flows, the routes, the lap, the output and the ref', () => {
     const o = parseArgs(['62', '--flows', 'f.mjs', '--routes', '/,/cockpit,/app', '--lap', '2', '--out', '/tmp/x', '--ref', 'chore-x']);
-    assert.deepEqual(o, { pr: '62', flows: 'f.mjs', routes: '/,/cockpit,/app', lap: '2', out: '/tmp/x', ref: 'chore-x' });
+    assert.deepEqual(o, { pr: '62', flows: 'f.mjs', routes: '/,/cockpit,/app', lap: '2', out: '/tmp/x', ref: 'chore-x', noWait: false, run: undefined });
   });
 
   it('dispatches on main, lap 1, the default routes, without flows', () => {
-    assert.deepEqual(parseArgs(['7']), { pr: '7', flows: undefined, routes: '/,/cockpit', lap: '1', out: undefined, ref: 'main' });
+    assert.deepEqual(parseArgs(['7']), { pr: '7', flows: undefined, routes: '/,/cockpit', lap: '1', out: undefined, ref: 'main', noWait: false, run: undefined });
+  });
+
+  it('reads the start-only form and the read-a-finished-run form', () => {
+    assert.equal(parseArgs(['7', '--no-wait']).noWait, true);
+    const o = parseArgs(['7', '--run', '123456']);
+    assert.equal(o.run, '123456');
+    assert.equal(o.pr, '7');
   });
 });
 
@@ -155,5 +163,103 @@ describe('dispatch: a lap downloads into a fresh folder, so files from an earlie
     clearPrevious(out);
     assert.equal(existsSync(left), false);
     assert.equal(existsSync(join(out, 'notes.txt')), true);
+  });
+});
+
+// A fake `gh` on PATH: it answers the calls dispatch.mjs makes and logs every one.
+const SCRIPT = join(import.meta.dirname, 'dispatch.mjs');
+const FAKE_GH = `#!/usr/bin/env node
+const { appendFileSync, readFileSync, writeFileSync, mkdirSync } = require('node:fs');
+const { join } = require('node:path');
+const dir = process.env.FAKE_GH_DIR;
+const args = process.argv.slice(2);
+appendFileSync(join(dir, 'calls.log'), args.join(' ') + '\\n');
+const say = (v) => process.stdout.write(typeof v === 'string' ? v : JSON.stringify(v));
+const [a, b] = args;
+if (a === 'pr' && b === 'view') say({ state: 'OPEN', headRefOid: process.env.FAKE_HEAD });
+else if (a === 'workflow' && b === 'run') writeFileSync(join(dir, 'nonce'), JSON.parse(readFileSync(0, 'utf8')).nonce);
+else if (a === 'run' && b === 'list') {
+  if (process.env.FAKE_NO_RUN) say([]);
+  else say([{ databaseId: 77, displayTitle: 'PR QA ' + readFileSync(join(dir, 'nonce'), 'utf8'), url: 'https://x/runs/77' }]);
+} else if (a === 'run' && b === 'view') {
+  const run = { status: process.env.FAKE_STATUS || 'completed', conclusion: process.env.FAKE_CONCLUSION || 'success', url: 'https://x/runs/77' };
+  const q = args.indexOf('-q');
+  say(q === -1 ? run : String(run[args[q + 1].slice(1)]));
+} else if (a === 'run' && b === 'download') {
+  const out = args[args.indexOf('-D') + 1];
+  mkdirSync(out, { recursive: true });
+  if (process.env.FAKE_REPORT_SHA) writeFileSync(join(out, 'report.json'), JSON.stringify({ sha: process.env.FAKE_REPORT_SHA, verdict: process.env.FAKE_VERDICT || 'success', summary: 'ok.' }));
+}
+`;
+
+function fakeGh(env = {}) {
+  const dir = mkdtempSync(join(tmpdir(), 'dispatch-gh-'));
+  const bin = join(dir, 'bin');
+  mkdirSync(bin);
+  writeFileSync(join(bin, 'gh'), FAKE_GH);
+  chmodSync(join(bin, 'gh'), 0o755);
+  const out = join(dir, 'out');
+  const run = (...args) => {
+    const r = spawnSync(process.execPath, [SCRIPT, '62', '--out', out, ...args], {
+      encoding: 'utf8',
+      timeout: 15_000,
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, FAKE_GH_DIR: dir, FAKE_HEAD: SHA, PR_QA_POLL_MS: '1', ...env },
+    });
+    const calls = existsSync(join(dir, 'calls.log')) ? readFileSync(join(dir, 'calls.log'), 'utf8').trim().split('\n') : [];
+    return { code: r.status, stdout: r.stdout, stderr: r.stderr, calls, out };
+  };
+  return run;
+}
+
+const called = (calls, prefix) => calls.filter((c) => c.startsWith(prefix));
+
+describe('dispatch --no-wait: start the run, record it and end', () => {
+  it('dispatches once, prints the hand-off line and never watches or downloads', () => {
+    const r = fakeGh()('--no-wait', '--lap', '2');
+    assert.equal(r.code, 0, r.stderr);
+    assert.equal(r.stdout.trim(), `- QA run: 77 · head ${SHA} · lap 2 · https://x/runs/77`);
+    assert.equal(called(r.calls, 'workflow run').length, 1);
+    assert.deepEqual(called(r.calls, 'run watch'), []);
+    assert.deepEqual(called(r.calls, 'run download'), []);
+  });
+
+  it('exits 2 with no hand-off line when the run never appears', () => {
+    const r = fakeGh({ FAKE_NO_RUN: '1' })('--no-wait');
+    assert.equal(r.code, 2);
+    assert.equal(r.stdout.trim(), '');
+    assert.match(r.stderr, /no pr-qa\.yml run/);
+  });
+});
+
+describe('dispatch --run <id>: read a finished run, start nothing', () => {
+  it('dispatches nothing and downloads that run\'s artifact into --out', () => {
+    const r = fakeGh({ FAKE_REPORT_SHA: SHA })('--run', '77');
+    assert.equal(r.code, 0, r.stderr);
+    assert.deepEqual(called(r.calls, 'workflow run'), []);
+    assert.deepEqual(called(r.calls, 'run watch'), []);
+    assert.equal(called(r.calls, 'run download 77').length, 1);
+    assert.equal(JSON.parse(readFileSync(join(r.out, 'report.json'), 'utf8')).sha, SHA);
+    assert.equal(JSON.parse(readFileSync(join(r.out, 'ci-run.json'), 'utf8')).id, 77);
+  });
+
+  it('exits 1 on a failing report, as a dispatched lap does', () => {
+    assert.equal(fakeGh({ FAKE_REPORT_SHA: SHA, FAKE_VERDICT: 'failure', FAKE_CONCLUSION: 'failure' })('--run', '77').code, 1);
+  });
+
+  it('exits 2 on a run not yet completed, naming its status, and downloads nothing', () => {
+    const r = fakeGh({ FAKE_STATUS: 'in_progress', FAKE_REPORT_SHA: SHA })('--run', '77');
+    assert.equal(r.code, 2);
+    assert.match(r.stderr, /in_progress/);
+    assert.deepEqual(called(r.calls, 'run download'), []);
+    assert.deepEqual(called(r.calls, 'run watch'), []);
+  });
+
+  it('refuses a report about another head than the PR\'s, and a cancelled run', () => {
+    assert.equal(fakeGh({ FAKE_REPORT_SHA: 'c'.repeat(40) })('--run', '77').code, 2);
+    assert.equal(fakeGh({ FAKE_REPORT_SHA: SHA, FAKE_CONCLUSION: 'cancelled' })('--run', '77').code, 2);
+  });
+
+  it('refuses an id that is not a run number', () => {
+    assert.notEqual(fakeGh({ FAKE_REPORT_SHA: SHA })('--run', 'latest').code, 0);
   });
 });
