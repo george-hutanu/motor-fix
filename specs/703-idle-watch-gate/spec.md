@@ -8,6 +8,16 @@
 **Epic**: EP-1 Foundations
 **Input**: User description: "Idle watch tick without a model turn: watch.mjs --gate mode that exits 0 silently when nothing needs a fix; schedule wakes the model only when the gate fires"
 
+## Clarifications
+
+### Session 2026-10-05
+
+- Q: When does the wait end, and is a limit shorter than the interval allowed? → A: it polls only while another full interval fits in the limit, never sleeping past it; a limit shorter than the interval is a usage error.
+- Q: What is a "gone" holder of the wait record? → A: no such process, or a process whose command line is not a `watch.mjs --wait` (a recycled pid must not lock out every later wait).
+- Q: Is an unreachable `gh` a failed scan? → A: no: the full pass dispatches nothing for an unknown PR, so the gate stays silent for it; a failed scan is no rows or a thrown scan.
+- Q: May the reminder read the wait record? → A: yes: it prints nothing when a live wait holds it, so a resumed session does not spend a turn finding one already armed.
+- Q: Which flags does `--wait` take, and how does the skill tell its endings apart? → A: `--every`, `--for`, `--stale` only; the skill keys on the printed line, since a re-arm and an already-armed wait both exit 0.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - The watch check answers "nothing to do" without a model (Priority: P1)
@@ -89,17 +99,18 @@ wait and no longer creates the 15-minute cron prompt.
 - **FR-001**: `watch.mjs --gate` MUST run the same scan as the table, read-only (no fix applied, no claim written), and exit 0 with no output on stdout or stderr when the pass would do nothing: an empty dispatch plan and nothing the no-agent fixes would act on.
 - **FR-002**: When the pass would do something, `--gate` MUST exit 2 and print one line per item: each dispatch-plan entry and each no-agent action (dead holder, worktree removal, review carry, orphan lock, prune), naming the fix and the worktree or path.
 - **FR-003**: The gate MUST fire exactly when `--fix --json` on the same state would produce a non-empty plan or a non-empty action list; its verdict uses the table's detection unchanged and accepts the same `--stale` thresholds.
-- **FR-004**: An error MUST exit 1 (usage, not a git repository, a failed scan), and `--gate` combined with `--fix` or `--json` MUST be a usage error.
-- **FR-005**: `watch.mjs --wait` MUST sleep its interval (default 15 minutes, `--every <minutes>`), then run the gate, and repeat until the gate fires (exit 2 with the gate's lines) or errors (exit 1), or until its limit (default 110 minutes, `--for <minutes>`) passes, when it MUST exit 0 printing one line saying to re-arm.
-- **FR-006**: Only one wait MUST hold the repository at a time: a wait records its process in the git common directory, a second wait while that process lives MUST exit 0 at once with a line saying one is armed, and a record whose process is gone MUST be taken over; the wait MUST remove its own record when it ends.
-- **FR-007**: `speckit-watch/SKILL.md` MUST describe arming the wait as a background command within the background limit, what each ending means (fires: run a full pass, then re-arm; re-arm line: re-arm; already armed: nothing), that an existing `/speckit-watch` cron job is deleted once the wait is armed, and that a pass with nothing to do ends in one line; it MUST NOT instruct `CronCreate` for the watch.
-- **FR-008**: The AGENTS.md watch bullet MUST describe the wait instead of the cron string, and the session-start reminder MUST tell the session to arm the watch wait if none is armed, naming neither `CronList` nor a cron string.
+- **FR-004**: An error MUST exit 1: a usage error, no git repository (no rows), or a scan that throws; `--gate` combined with `--fix`, `--json` or `--wait` MUST be a usage error. An unreachable `gh` is not an error: it leaves PRs unknown, the full pass dispatches nothing for them, and the gate is silent for them too.
+- **FR-005**: `watch.mjs --wait` MUST sleep its interval (default 15 minutes, `--every <minutes>`), then run the gate, and repeat while another full interval fits in its limit (default 110 minutes, `--for <minutes>`); it ends when the gate fires (exit 2 with the gate's lines), errors (exit 1), or no further interval fits, when it MUST exit 0 printing `watch: idle for <n> min; re-arm the wait`. It never sleeps past its limit. `--wait` accepts only `--every`, `--for` and `--stale`; a limit shorter than the interval, a non-positive number, or any other flag is a usage error.
+- **FR-006**: Only one wait MUST hold the repository at a time: a wait records its process in the git common directory, a second wait while that process lives MUST exit 0 at once printing `watch: a wait is already armed (pid <pid>)`, and a record whose process is gone (no such process, or its command line is not a `watch.mjs --wait`) MUST be taken over; the wait MUST remove its own record when it ends.
+- **FR-007**: `speckit-watch/SKILL.md` MUST describe arming the wait as a background command within the background limit, what each ending means keyed on the printed line, not the exit code alone (exit 2: run a full pass, then re-arm; `re-arm the wait`: re-arm; `already armed`: nothing; exit 1: report the error), that an existing `/speckit-watch` cron job is deleted once the wait is armed, and that a pass with nothing to do ends in one line; it MUST NOT instruct `CronCreate` for the watch.
+- **FR-008**: The AGENTS.md watch bullet MUST describe the wait instead of the cron string, and the session-start reminder MUST tell the session to arm the watch wait, naming neither `CronList` nor a cron string, and MUST print nothing when a live wait already holds the record.
+- **FR-009**: The `/speckit-watch` skill MUST run the command with `--fix`, claim each item in the dispatch plan, and start one subagent per item that works in that worktree with that fix's instructions, dispatching only from a session on the main checkout (a worktree-isolated session reports the plan instead); a pass with nothing to fix MUST write and dispatch nothing; the skill MUST say how the orchestrating session keeps it scheduled (one background `watch.mjs --wait`, never a second; armed once two or more tasks or worktrees are active; never from a worktree session).
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: While idle, the model takes at most one turn per wait limit (110 minutes) instead of four full passes an hour.
+- **SC-001**: While idle, the model takes at most one turn per wait limit (110 minutes) instead of four full passes an hour; evidenced by the SC-002 transcript measurement, not by a harness spec.
 - **SC-002**: The idle cost before and after is measured from real transcripts (model calls, cache writes, cache reads, output per idle tick and per idle hour) and reported in the PR body with the method; no number is reported that was not measured.
 - **SC-003**: No gate is loosened: every harness spec, `doctor.mjs` and the eval baseline pass, and the full table's verdicts are unchanged.
 
@@ -120,4 +131,4 @@ wait and no longer creates the 15-minute cron prompt.
 ### Capability: `platform`
 
 - **Adds**: FR-001–FR-008
-- **Modifies**: 464-FR-011 — the skill keeps the watch scheduled with a background wait on `watch.mjs --wait` (FR-005–FR-007) instead of a 15-minute cron prompt; the rest of the requirement stands.
+- **Modifies**: 464-FR-011 → FR-009
