@@ -20,7 +20,7 @@ import {
   testPhoneConfig,
 } from './notifications.testing';
 import { PushSender } from './push';
-import { plainAgent } from './push-test-agent';
+import { plainAgent } from './push.testing';
 import { AuditService } from '../audit/audit.service';
 import type { Role } from '../auth/capabilities';
 import { serialDatabase } from '../auth/serial-db.testing';

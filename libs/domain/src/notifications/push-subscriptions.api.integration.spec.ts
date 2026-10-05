@@ -140,6 +140,18 @@ describe('POST /push-subscriptions', () => {
     expect(await prisma.pushSubscription.count()).toBe(1);
   });
 
+  it('keeps the ten newest devices of an account: the oldest makes room', async () => {
+    const ana = await account('ana');
+    for (let i = 0; i < 11; i++) {
+      await save(ana, body(i)).expect(200);
+    }
+    const kept = await prisma.pushSubscription.findMany({
+      orderBy: { createdAt: 'asc' },
+    });
+    expect(kept).toHaveLength(10);
+    expect(kept[0].endpoint).toBe('https://push.example.test/send/1');
+  });
+
   it('moves a shared browser to the account that saved it last, with a new id', async () => {
     const ana = await account('ana');
     const bob = await account('bob');

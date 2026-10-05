@@ -5,7 +5,7 @@ import type { AddressInfo } from 'node:net';
 import { generateVAPIDKeys } from 'web-push';
 
 import { PushSender, pushPayload } from './push';
-import { plainAgent } from './push-test-agent';
+import { plainAgent } from './push.testing';
 
 const vapid = generateVAPIDKeys();
 const config = {

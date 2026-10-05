@@ -45,7 +45,7 @@ export class PushSubscriptionsController {
     @CurrentActor() actor: Actor,
     @Body() body: SavePushSubscriptionDto,
   ): Promise<PushSubscriptionDto> {
-    return this.devices.save(actor, body);
+    return this.devices.save(actor.accountId, body);
   }
 
   @Post('test')
@@ -59,6 +59,6 @@ export class PushSubscriptionsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   remove(@CurrentActor() actor: Actor, @Param('id') id: string) {
-    return this.devices.remove(actor, id);
+    return this.devices.remove(actor.accountId, id);
   }
 }

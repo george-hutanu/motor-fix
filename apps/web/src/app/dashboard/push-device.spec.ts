@@ -120,7 +120,7 @@ describe('PushDevice', () => {
     expect(d.state()).toBe('blocked');
   });
 
-  it('saves a device the browser already holds again on refresh (FR-017)', async () => {
+  it('saves a device the browser already holds again on refresh', async () => {
     const d = device();
     permission = 'granted';
     current.next(subscription);
@@ -130,11 +130,12 @@ describe('PushDevice', () => {
       body: {
         endpoint: 'https://push.example.test/abc',
         keys: { auth: 'AUTH', p256dh: 'P256' },
+        label: 'Chrome',
       },
     });
   });
 
-  it('keeps on when the save on refresh fails, to try again next start', async () => {
+  it('reads off when the save on refresh fails, to try again next start', async () => {
     const d = device();
     permission = 'granted';
     current.next(subscription);

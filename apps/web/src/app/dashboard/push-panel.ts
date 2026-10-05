@@ -44,12 +44,12 @@ const TEXT: Partial<Record<PushState, string>> = {
         }
         <div class="actions">
           @if (device.state() === 'off') {
-            <button hlmBtn type="button" [disabled]="device.busy()" (click)="enable()">
+            <button hlmBtn type="button" [disabled]="device.busy()" (click)="device.enable()">
               {{ 'shell.push.enable' | t }}
             </button>
           }
           @if (device.state() === 'on') {
-            <button hlmBtn variant="secondary" type="button" [disabled]="device.busy()" (click)="disable()">
+            <button hlmBtn variant="secondary" type="button" [disabled]="device.busy()" (click)="device.disable()">
               {{ 'shell.push.disable' | t }}
             </button>
             <button hlmBtn variant="secondary" type="button" [disabled]="device.busy()" (click)="test()">
@@ -71,14 +71,6 @@ export class PushPanel implements OnInit {
 
   ngOnInit() {
     void this.device.refresh();
-  }
-
-  protected enable() {
-    return this.device.enable();
-  }
-
-  protected disable() {
-    return this.device.disable();
   }
 
   protected async test() {

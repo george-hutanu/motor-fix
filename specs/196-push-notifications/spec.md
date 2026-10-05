@@ -157,6 +157,8 @@ A device that signs out stops getting the account's pushes.
 
 ## Assumptions
 
+- An account keeps at most 10 push devices; saving an eleventh deletes the oldest, and the worker sends to no more than 10 per message. (autonomous default, from code review)
+- Saving or deleting a push device writes no audit history: the address is delivery data, not a change to anyone's data.
 - Push is sent directly by the worker with the standard Web Push protocol and the server's VAPID keys, not through Brevo: Brevo's transactional API has no Web Push to browser subscriptions. This answers the brief's open question within A18, which leaves it to the build team. (autonomous default)
 - The panel's placement: Setări of the driver and admin dashboards; the garage dashboard has no Setări view, so the panel sits on its home view. The one-time panel after the first quote request waits for the quote request flow, which does not exist yet. (autonomous default; Build brief › Screens, proposed)
 - The device label is the browser's own description (platform and browser), cut to 100 characters. (autonomous default)

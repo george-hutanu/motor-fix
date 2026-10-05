@@ -229,7 +229,7 @@ export class Frame implements OnInit {
         this.live.close();
         void this.router.navigateByUrl('/');
       });
-    // A browser with push on saves its device again (FR-017).
+    // A browser with push on saves its device again.
     void this.push.refresh();
     this.live.open();
     this.destroyRef.onDestroy(() => this.live.close());

@@ -20,6 +20,7 @@ import {
   type PushSender,
   pushPayload,
 } from './push';
+import { MAX_DEVICES } from './push-subscriptions.service';
 import { giveSmsBack, smsMonth, takeSms } from './sms-counter';
 import { render, TemplateError, templateName } from './templates';
 import type {
@@ -228,6 +229,8 @@ export class NotificationsProcessor {
       return;
     }
     const devices = await this.prisma.pushSubscription.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: MAX_DEVICES,
       where: { accountId: row.accountId },
     });
     if (devices.length === 0) {
@@ -237,8 +240,9 @@ export class NotificationsProcessor {
     const payload = await this.pushText(row);
     if (payload === null) return;
     const urgent = notificationType(row.kind).alwaysSent;
+    const sender = this.pushSender;
     const results = await Promise.all(
-      devices.map((d) => this.pushSender?.send(d, payload, urgent)),
+      devices.map((d) => sender.send(d, payload, urgent)),
     );
     const ids = (wanted: PushResult) =>
       devices.filter((_, i) => results[i] === wanted).map((d) => d.id);

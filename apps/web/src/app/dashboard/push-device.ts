@@ -36,7 +36,7 @@ export class PushDevice {
 
   // On app start and when the panel opens: read the state from the browser.
   // A browser that already has push on saves its device again, so an address
-  // the service worker changed is not lost (FR-017).
+  // the service worker changed is not lost.
   async refresh(): Promise<void> {
     if (this.busy()) return;
     const support = pushSupport(this.env);
@@ -130,6 +130,7 @@ export class PushDevice {
           auth: json.keys?.['auth'] ?? '',
           p256dh: json.keys?.['p256dh'] ?? '',
         },
+        label: this.env.userAgent.slice(0, 100),
       },
     });
     this.id = id;

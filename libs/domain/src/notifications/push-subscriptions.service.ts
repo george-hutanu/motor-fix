@@ -6,9 +6,10 @@ import {
   NotificationsService,
 } from './notifications.service';
 import { PUSH_CONFIG, type PushConfig } from './push-config';
-import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
-import type { Actor } from '../auth/policy';
 import type { PrismaClient } from '../generated/prisma/client';
+
+// What one account can keep; the worker sends to no more.
+export const MAX_DEVICES = 10;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -22,7 +23,6 @@ export class PushSubscriptionsService {
     @Inject(NOTIFICATIONS_PRISMA) private readonly prisma: PrismaClient,
     @Inject(PUSH_CONFIG) private readonly config: PushConfig | null,
     private readonly notifications: NotificationsService,
-    @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
   key(): PushKeyDto {
@@ -32,13 +32,12 @@ export class PushSubscriptionsService {
   // A browser belongs to the account that saved it last: its address is
   // unique, and another account's row for it is replaced, never moved.
   async save(
-    actor: Actor,
+    accountId: string,
     input: SavePushSubscriptionDto,
   ): Promise<{ id: string }> {
     if (!this.config) {
       throw refuse(HttpStatus.BAD_REQUEST, 'push_off', 'Push is not set up');
     }
-    const accountId = actor.accountId;
     const data = {
       auth: input.keys.auth,
       endpoint: input.endpoint,
@@ -60,23 +59,33 @@ export class PushSubscriptionsService {
       if (existing) {
         await tx.pushSubscription.delete({ where: { id: existing.id } });
       }
+      await this.evictOldest(tx, accountId);
       const { id } = await tx.pushSubscription.create({
         data: { ...data, accountId },
-      });
-      // The address is a capability, so the entry never carries it.
-      await this.audit.record(tx, {
-        action: 'create',
-        actorId: accountId,
-        actorRole: actor.role,
-        subjectId: id,
-        subjectType: 'push_subscription',
       });
       return { id };
     });
   }
 
-  async remove(actor: Actor, id: string): Promise<void> {
-    const { accountId } = actor;
+  // A person keeps the newest devices; the oldest one makes room.
+  private async evictOldest(
+    tx: Pick<PrismaClient, 'pushSubscription'>,
+    accountId: string,
+  ) {
+    const old = await tx.pushSubscription.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+      skip: MAX_DEVICES - 1,
+      where: { accountId },
+    });
+    if (old.length > 0) {
+      await tx.pushSubscription.deleteMany({
+        where: { id: { in: old.map((d) => d.id) } },
+      });
+    }
+  }
+
+  async remove(accountId: string, id: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       const { count } = UUID.test(id)
         ? await tx.pushSubscription.deleteMany({ where: { accountId, id } })
@@ -84,13 +93,6 @@ export class PushSubscriptionsService {
       if (count === 0) {
         throw refuse(HttpStatus.NOT_FOUND, 'not_found', 'Not found');
       }
-      await this.audit.record(tx, {
-        action: 'delete',
-        actorId: accountId,
-        actorRole: actor.role,
-        subjectId: id,
-        subjectType: 'push_subscription',
-      });
     });
   }
 
