@@ -6,6 +6,7 @@ import {
 } from '@playwright/test';
 
 import { ACCOUNTS, PASSWORD, ready, signIn } from './accounts.js';
+import { signInAs } from './sign-in.js';
 
 async function accessToken(request: APIRequestContext, email: string) {
   const res = await request.post('/api/v1/auth/sign-in', {
@@ -71,9 +72,35 @@ test.describe('the notification bell @seeded', () => {
       .getByRole('button', { name: new RegExp(text) })
       .first()
       .click();
+    // Reading a row keeps the list open; the bell shows again once it closes.
+    await expect(list.getByText('necitită')).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(list).toBeHidden();
 
     await expect(bell).toHaveAccessibleName('Notificări');
     expect(reloads).toBe(0);
     await context.close();
   });
+});
+
+test.describe('the notification bell on a phone', () => {
+  for (const width of [320, 390]) {
+    test(`its badge fits a ${width} px screen`, async ({ page }) => {
+      await signInAs(page, 'driver', '/app/driver');
+      await page.route('**/api/v1/notifications/unread-count', (route) =>
+        route.fulfill({ json: { count: 12 } }),
+      );
+      await page.setViewportSize({ height: 640, width });
+      await page.goto('/app/driver');
+
+      await expect(
+        page.getByRole('button', { name: /^Notificări, 12/ }),
+      ).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+    });
+  }
 });

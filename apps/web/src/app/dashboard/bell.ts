@@ -168,7 +168,8 @@ export class BellStore {
   providers: [BellStore],
   selector: 'mf-bell',
   styles: `
-    :host { display: inline-flex; }
+    /* Room for the badge that sits over the corner, at the screen's edge. */
+    :host { display: inline-flex; margin-inline-end: 6px; }
     button {
       position: relative; display: inline-flex; align-items: center; justify-content: center;
       width: var(--mf-tap); height: var(--mf-tap); padding: 0;
