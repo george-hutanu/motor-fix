@@ -1,5 +1,5 @@
 import { NEWS_CONSENT_TEXT_VERSION } from '@motor-fix/contracts';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { type Job, Queue } from 'bullmq';
 import { Redis } from 'ioredis';
@@ -574,6 +574,32 @@ describe('an admin sending news', () => {
       'create',
       'delete',
     ]);
+  });
+
+  it("keeps the run's own error and says so when the month cannot be given back", async () => {
+    const admin = await account('admin', ['admin']);
+    await consenting('andrei');
+    await send(admin);
+    const [job] = await queued();
+    const release = jest
+      .spyOn(prisma, '$transaction')
+      .mockRejectedValueOnce(new Error('postgres down'));
+    const logged = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    try {
+      await failedAttempt(job, 6);
+    } finally {
+      release.mockRestore();
+    }
+    const lines = logged.mock.calls.map(([line]) => String(line));
+    logged.mockRestore();
+    expect(lines).toContainEqual(
+      expect.stringContaining(
+        'news for 2026-11 was not given back (postgres down)',
+      ),
+    );
+    expect(await prisma.newsSend.count()).toBe(1);
   });
 
   it('writes nothing more when a finished run is delivered again', async () => {

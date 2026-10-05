@@ -105,7 +105,12 @@ export class NewsFanOut {
         this.logger.error(
           `news for ${month} failed for good (${(error as Error).message}); the month is free`,
         );
-        await giveMonthBack(this.prisma, this.audit, month, sentBy);
+        await giveMonthBack(this.prisma, this.audit, month, sentBy).catch(
+          (e: Error) =>
+            this.logger.error(
+              `news for ${month} was not given back (${e.message}); free the month by hand`,
+            ),
+        );
       }
       throw error;
     }
