@@ -166,8 +166,9 @@ commands); every `speckit-*` skill's `model:` line is unchanged.
 
 ### Capability: `platform`
 
-- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-007, FR-008, FR-009
-- **Modifies**: ST-467 FR-001..FR-005 gain the sentence "under `/speckit-auto`, a phase's pin is applied by dispatching the phase as its own agent with that model" (FR-006 here restates that the pins are unchanged)
+- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009
+- **Modifies**: none
+- **Removes**: none
 
 ## Success Criteria *(mandatory)*
 

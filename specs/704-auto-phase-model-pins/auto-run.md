@@ -79,3 +79,8 @@ Other items were satisfied as written (no edit).
 FR to task: FR-001 T002 T003 T004 · FR-002 T002 T005 · FR-003 T003 T004 · FR-004 T003 T008 · FR-005 T008 T009 T010 · FR-006 T011 T012 · FR-007 T001 T007 · FR-008 T002 T011 · FR-009 T003.
 
 Autonomous: tests included because FR-008 requires a failing-first spec; no foundational phase (nothing blocking).
+
+## 8. Analyze (inline, pin `opus` = run model)
+
+- artifact-lint: 4 errors (Spec Delta `Modifies` named ST-467 FRs that `platform.md` never held) → fixed: Adds FR-001..FR-009, Modifies none. Re-run: 0 errors, 0 warnings. Jev lane unavailable (no key).
+- Cross-artifact read: every FR maps to a task (tasks.md "FR to task"); plan's frozen region matches FR-007; no CRITICAL/HIGH left.
