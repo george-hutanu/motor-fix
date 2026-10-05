@@ -39,3 +39,12 @@
 
 ## Agent context
 - Skipped: CLAUDE.local.md is the owner's private file with local edits; nothing tracked needed a change.
+
+## Hand-off
+- PR #77 ready; story and timeline row set to QA; CI green on 74e834c (origin/main merged in: ST-201).
+- The local pre-commit run failed three times on suites that share the local Redis with other worktrees' runs (rate-limit keys, `live:events`), then passed on a quiet machine; the seed spec now hands its database to the seed process (it read no DATABASE_URL locally).
+- Notion stories query quota hit; the ready refresh was read by fetching the five Blocking rows.
+
+## Archive
+- `capabilities.mjs merge specs/257-live-events --apply`: live-updates +10 added, ~1 modified.
+- Retro skipped at level 1.
