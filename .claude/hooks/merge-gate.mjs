@@ -19,9 +19,9 @@
 // eval cases; hook processes take Claude Code's environment, not a Bash
 // call's, so an agent cannot set it for a real gate run.
 import { execFileSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 
 import { hasAgentReview, isDependabot } from "./pr-lifecycle-gate.mjs";
+import { isEntryPoint } from "../scripts/lib/entry.mjs";
 
 const GREEN = new Set(["SUCCESS", "NEUTRAL", "SKIPPED"]);
 const checkName = (c) => c.context ?? c.name;
@@ -98,7 +98,7 @@ function readPr(target, cwd) {
   return JSON.parse(out);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isEntryPoint(import.meta.url)) {
   let raw = "";
   process.stdin.on("data", (d) => (raw += d));
   process.stdin.on("end", () => {

@@ -26,6 +26,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, join, relative } from "node:path";
 import { profileOf } from "../scripts/lib/hooks.mjs";
 import { contextFileName, measure, readBaseline } from "../scripts/context-audit.mjs";
+import { isEntryPoint } from "../scripts/lib/entry.mjs";
 
 const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
 
@@ -129,7 +130,7 @@ export function verdict({ rel, current, next, profile, allowHookEdit, contextBas
 
 // Only listen on stdin when run as the hook itself — the tests import the
 // rules above and must not block on a stdin that never ends.
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (isEntryPoint(import.meta.url)) main();
 
 function main() {
   let raw = "";
