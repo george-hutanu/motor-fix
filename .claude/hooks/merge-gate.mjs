@@ -59,9 +59,16 @@ export function decideMerge(pr) {
 
 /** Why CI does not yet allow the merge, or null when every other check is green. */
 function ciRefusal(pr, checks, sha) {
-  const ci = checks.filter((c) => checkName(c) !== "agent-review");
+  // A check re-run or cancelled by a newer run appears once per run: judge the latest only.
+  const when = (c) => Date.parse(c.startedAt ?? c.createdAt ?? "") || 0;
+  const latest = new Map();
+  for (const c of checks) {
+    const name = checkName(c);
+    if (name !== "agent-review" && (!latest.has(name) || when(c) >= when(latest.get(name)))) latest.set(name, c);
+  }
+  const ci = [...latest.values()];
   const result = (c) => c.conclusion ?? c.state;
-  const pending = ci.filter((c) => (c.status && c.status !== "COMPLETED") || c.state === "PENDING" || result(c) == null);
+  const pending = ci.filter((c) => (c.status && c.status !== "COMPLETED") || c.state === "PENDING" || c.state === "EXPECTED" || result(c) == null);
   const red = ci.filter((c) => !pending.includes(c) && !GREEN.has(result(c)));
   const list = (cs) => cs.map(checkName).join(", ");
   if (red.length) return `PR #${pr.number} cannot merge: CI failed on ${sha} (${list(red)}). Read gh pr checks ${pr.number}, fix it on the branch, and run the PR tester again on the new head.`;

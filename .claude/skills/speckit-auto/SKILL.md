@@ -85,9 +85,9 @@ Run these before phase 1, in one batch:
 - Read `.specify/memory/constitution.md` (v1.3.0 — its Enforcement section
   lists the gates that will fire at you).
 - `sh scripts/heavy.sh sh -c 'npm run typecheck && npm run lint && npm run test'`
-  — the repo MUST start green. Through Nx and the shared cache
-  (`NX_CACHE_DIRECTORY`, set by heavy.sh), a project unchanged since another
-  worktree checked it is a cache hit, not a rerun. A red start is a hard stop; the run has no way to tell a pre-existing
+  — the repo MUST start green. Through Nx, whose cache every worktree shares
+  (`~/.nx/<workspace hash>`), a project unchanged since another worktree
+  checked it is a cache hit, not a rerun. A red start is a hard stop; the run has no way to tell a pre-existing
   failure from one it caused. This is the one time the full suite runs; after
   this, verification is scoped to what changed.
 - `node .claude/scripts/spec-drift.mjs --status` — know the drift baseline

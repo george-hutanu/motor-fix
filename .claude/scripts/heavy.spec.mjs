@@ -144,9 +144,11 @@ describe('heavy.sh', () => {
 });
 
 describe('heavy.sh environment', () => {
-  it('points every worktree at one shared Nx cache', () => {
+  // Nx 23 already shares one cache per user across worktrees (~/.nx/<hash>);
+  // setting NX_CACHE_DIRECTORY turns that sharing off (share: 'none').
+  it('leaves the Nx cache location to Nx, which shares it across worktrees', () => {
     const sh = readFileSync(fileURLToPath(new URL('../../scripts/heavy.sh', import.meta.url)), 'utf8');
-    assert.match(sh, /^export NX_CACHE_DIRECTORY="\$\{NX_CACHE_DIRECTORY:-\$HOME\/\.cache\/motor-fix\/nx\}"/m);
+    assert.doesNotMatch(sh, /NX_CACHE_DIRECTORY/);
   });
 });
 

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { decideMerge, mergeTarget } from './merge-gate.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
-const run = (name, conclusion, status = 'COMPLETED') => ({ __typename: 'CheckRun', name, status, conclusion });
+const run = (name, conclusion, status = 'COMPLETED', startedAt = '2026-10-05T07:00:00Z') => ({ __typename: 'CheckRun', name, status, conclusion, startedAt });
 const green = [run('Unit tests', 'SUCCESS'), run('CI OK', 'SUCCESS')];
 const pr = (rollup) => ({ number: 21, state: 'OPEN', headRefOid: 'abc1234def5678', statusCheckRollup: rollup });
 
@@ -68,6 +68,23 @@ describe('merge gate — the decision', () => {
     const why = decideMerge(pr([run('Unit tests', 'SUCCESS'), run('CI OK', null, 'IN_PROGRESS'), review('SUCCESS')]));
     assert.match(why, /CI OK/);
     assert.match(why, /pending|running/i);
+  });
+
+  // PR #91's own rollup: the PR template workflow cancels a run in progress
+  // when the body is edited again, leaving the cancelled run beside the new one.
+  it('judges only the latest run of each check, so a cancelled earlier run does not block', () => {
+    const rollup = [run('body', 'CANCELLED', 'COMPLETED', '2026-10-05T07:03:51Z'), run('body', 'SUCCESS', 'COMPLETED', '2026-10-05T07:04:15Z'), ...green, review('SUCCESS')];
+    assert.equal(decideMerge(pr(rollup)), null);
+  });
+
+  it('still refuses when the latest run of a check is the failing one', () => {
+    const rollup = [run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', 'FAILURE', 'COMPLETED', '2026-10-05T07:10:00Z'), run('CI OK', 'SUCCESS'), review('SUCCESS')];
+    assert.match(decideMerge(pr(rollup)), /CI failed.*Unit tests/);
+  });
+
+  it('reads an expected status context as pending, not failed', () => {
+    const rollup = [...green, { __typename: 'StatusContext', context: 'deploy', state: 'EXPECTED' }, review('SUCCESS')];
+    assert.match(decideMerge(pr(rollup)), /still running.*deploy/);
   });
 
   it('refuses agent-review success when CI has not reported at all', () => {
