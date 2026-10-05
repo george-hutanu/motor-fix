@@ -82,8 +82,9 @@ Run these before phase 1, in one batch:
   run auto on a machine that is also being used.
 - `git rev-parse --abbrev-ref HEAD` and `git rev-parse HEAD` — record the
   starting branch and commit.
-- Read `.specify/memory/constitution.md` (v1.8.1 — its Enforcement section
-  lists the gates that will fire at you).
+- Read the card, `.specify/memory/constitution-card.md` (v1.8.1: each
+  principle and the gate that will fire at you), not the full constitution;
+  the reviewers and the PR tester read that.
 - `sh scripts/heavy.sh sh -c 'npm run typecheck && npm run lint && npm run test' > <scratchpad>/preflight.log 2>&1; echo "exit $?"; tail -n 40 <scratchpad>/preflight.log`
   — the repo MUST start green (on a failure, `grep -nE '✕|●|FAIL|Error'` the log
   rather than reading all of it). Through Nx, whose cache every worktree shares
@@ -99,7 +100,12 @@ dispatches the runs) keeps the watch scheduled as soon as two or more tasks or
 worktrees are active at once: `CronList` first, so it never doubles up; if no
 job runs `/speckit-watch`, schedule it every 15 minutes on off-minutes
 (`4,19,34,49 * * * *`) and run one pass right away (speckit-watch, "Keeping
-it scheduled"). A run isolated in a worktree never schedules it.
+it scheduled"). A run isolated in a worktree never schedules it. It sends
+each story's run as `subagent_type: task-runner`, `run_in_background: true`,
+on the default model: the definition carries only the tools a run uses, and
+AGENTS.md and CLAUDE.local.md are already in its context, so the prompt names
+the task, the worktree and "run `/speckit-auto` to its hand-off", never a
+re-read of those files.
 
 Then create the run log `specs/<feature>/auto-run.md` as soon as the feature
 directory exists (phase 2 creates it), with the description, the start commit,
@@ -199,10 +205,11 @@ from converging; report what the findings are and which decision is unresolved.
 
 Do **not** invoke `/speckit-constitution`: it rewrites the constitution and
 propagates into templates and installed skill files, which is not a decision
-an autonomous run gets to make. Instead read
-`.specify/memory/constitution.md`, confirm it has a version and no unfilled
-`[PLACEHOLDER]` tokens, and carry its principles — Principle I (No
-Bloated Code) first — into every later phase.
+an autonomous run gets to make. Instead confirm with
+`grep -nE '^\*\*Version\*\*|\[[A-Z_]+\]' .specify/memory/constitution.md`
+that it has a version and no unfilled `[PLACEHOLDER]` tokens, and carry the
+principles on the card read in Preflight (`.specify/memory/constitution-card.md`)
+— Principle I (No Bloated Code) first — into every later phase.
 
 Only if the file is missing or still a bare template: invoke
 `speckit-constitution` with the repo's existing conventions as input, then
@@ -577,14 +584,14 @@ Blocked write: the PR stays a draft.
 A fresh agent finishes the lifecycle from the hand-off note alone. The
 orchestrating session dispatches it on `NEXT: tail #<n>` (an owner-run story
 dispatches its own), and `/speckit-watch` on its `tail` fix, each after `node .claude/scripts/watch.mjs claim <worktree> tail`
-so the other does not send a second one: `subagent_type: general-purpose`, `run_in_background: true`,
-the default model (it implements QA fixes, so it stays on Opus), and a prompt
+so the other does not send a second one: `subagent_type: task-runner`, `run_in_background: true`,
+the definition's model (it implements QA fixes, so it stays on Opus), and a prompt
 holding only the PR number, the worktree and the note's path:
 
 > Switch into the existing worktree with `EnterWorktree` and `path: <worktree>`
-> and work only there. Follow AGENTS.md and CLAUDE.local.md. You are the tail
-> agent for PR #<n>: read `<worktree>/specs/<feature>/handoff.md`, then run
-> "The tail" in `.claude/skills/speckit-auto/SKILL.md`.
+> and work only there. You are the tail agent for PR #<n>: read
+> `<worktree>/specs/<feature>/handoff.md`, then run "The tail" in
+> `.claude/skills/speckit-auto/SKILL.md`.
 
 The tail reads the note, `deferred.md` and the PR, not the story's transcript,
 and runs lifecycle steps 5–7:
