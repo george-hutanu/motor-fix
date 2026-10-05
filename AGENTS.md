@@ -68,7 +68,11 @@ epic or a plan, whether run through spec-kit or by hand.
      session dispatches its own); `/speckit-watch` dispatches one (its
      `tail` fix) for a handed-off ready PR with no live holder. It implements
      QA fixes, so it keeps the default model (Opus). It deletes the note
-     when the task is Done.
+     when the task is Done. The story's agent, the tail agent and every
+     `/speckit-watch` fix run as `task-runner` (`.claude/agents/`), never
+     `general-purpose`: it denies the heavy tools those runs never use, and
+     its prompt names no re-read of this file or CLAUDE.local.md, which are
+     already in its context.
   5. Get CI green: merge `origin/main` into the branch if it is behind and
      push, then wait for the checks (`gh pr checks <n> --watch`) in the
      background (`run_in_background`), never in a foreground `sleep` loop; a
@@ -150,8 +154,8 @@ epic or a plan, whether run through spec-kit or by hand.
 
 Every reply is re-read by its caller on each later turn, so it is short and
 the same shape everywhere. Every subagent in `.claude/agents/` and every
-dispatched task agent (speckit-watch's fixes, a story's `/speckit-auto`, a
-skill's `general-purpose` helper) opens its final reply with these four lines,
+dispatched task agent (a `task-runner` for a story, its tail or a
+speckit-watch fix, a skill's `general-purpose` helper) opens its final reply with these four lines,
 nothing before them:
 
 ```
