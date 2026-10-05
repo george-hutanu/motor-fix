@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-05
 
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 
 **Input**: User description: "ST-199 See my notifications in a list behind the bell (Notion https://app.notion.com/p/3ee607bff0d281e0a903f6f4d2ccf719, EP-1 Foundations)."
 
