@@ -78,6 +78,17 @@ describe('the Notion task for a debt', () => {
     assert.equal(taskFor(q, ctx).properties['Issue type'], 'Decision');
   });
 
+  it('reads "decision" in the prose, not in a cited path, and takes the plural', () => {
+    assert.equal(parseDeferred('- MEDIUM (code-reviewer): `apps/api/src/decision-log.ts` — retry loop leaks a timer.')[0].decision, false);
+    assert.equal(parseDeferred('- LOW (spec-reviewer): two owner decisions pending on roles.')[0].decision, true);
+  });
+
+  it('words a Decision row as a question for the owner, not as debt', () => {
+    const t = taskFor(parseDeferred('- Open question for the owner (spec-reviewer LOW): roles.')[0], ctx);
+    assert.match(t.properties['User story'], /^So that the build can go on, decide what spec-reviewer left open/);
+    assert.match(t.content, /^## Decision to take\n/);
+  });
+
   it('carries the severity, the place, the reviewer, the PR and the story it came from', () => {
     const t = taskFor(entry, ctx);
     for (const piece of ['medium', '.claude/scripts/pr-test/post.mjs:125', 'pr-tester', ctx.pr, ctx.story]) assert.ok(t.content.includes(piece), piece);

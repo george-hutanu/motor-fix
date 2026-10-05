@@ -32,7 +32,7 @@ export function parseDeferred(markdown) {
     const sev = text.match(/\*\*(blocker|high|medium|low)\*\*/i)?.[1] ?? text.match(/^- (?:\[[ xX]\] )?(BLOCKER|HIGH|MEDIUM|LOW)\b/i)?.[1] ?? "low";
     const severity = SEVERITIES.includes(sev.toLowerCase()) ? sev.toLowerCase() : "low";
     const where = text.match(/`([^`]+)`/)?.[1] ?? "";
-    const decision = /\bdecision\b|open question/i.test(text);
+    const decision = /\bdecisions?\b|open questions?\b/i.test(text.replace(/`[^`]*`/g, ""));
     const reviewer = text.match(/\b(spec-reviewer|code-reviewer|pr-tester|test-adversary)\b/)?.[1] ?? "review";
     const title = text
       .replace(NOTION, "")
@@ -57,12 +57,17 @@ export function taskFor(entry, { story, epic, feature, pr, storyId }) {
     Role: "System",
     Status: "To do",
     Priority: PRIORITY[entry.severity],
-    "User story": shorten(`So that the code stays sound, fix what ${entry.reviewer} deferred in ${storyId}: ${summary}`, 400),
+    "User story": shorten(
+      entry.decision
+        ? `So that the build can go on, decide what ${entry.reviewer} left open in ${storyId}: ${summary}`
+        : `So that the code stays sound, fix what ${entry.reviewer} deferred in ${storyId}: ${summary}`,
+      400,
+    ),
     Epic: JSON.stringify([epic]),
     ...(feature ? { Feature: JSON.stringify([feature]) } : {}),
   };
   const content = [
-    "## Technical debt",
+    entry.decision ? "## Decision to take" : "## Technical debt",
     `- **Severity:** ${entry.severity}`,
     `- **Where:** \`${entry.where || "see the finding"}\``,
     `- **Found by:** ${entry.reviewer}`,
