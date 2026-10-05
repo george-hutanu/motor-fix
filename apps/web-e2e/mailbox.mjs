@@ -39,7 +39,9 @@ createServer((req, res) => {
       return answer(
         res,
         200,
-        messages.filter((m) => m.to.some((r) => r.email.toLowerCase() === to)),
+        messages.filter((m) =>
+          (m.to ?? []).some((r) => r.email.toLowerCase() === to),
+        ),
       );
     }
     answer(res, 404, { code: 'not_found' });

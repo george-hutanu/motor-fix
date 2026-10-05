@@ -409,7 +409,7 @@ describe('rows written failed at issue time', () => {
     expect((await rowsOf(ana)).some(hasLink)).toBe(false);
   });
 
-  it('holds no link when the allow-list matches by domain case-insensitively refused', async () => {
+  it('holds no link once sent to an address the allow-list matches by domain in another case', async () => {
     build({ EMAIL_ALLOWLIST: '@EXAMPLE.TEST,nobody@else.test' });
     const ana = await account('ana');
     await service.sendAccountEmail({
@@ -417,12 +417,10 @@ describe('rows written failed at issue time', () => {
       link: 'https://motorfix.test/case',
       purpose: 'password_reset',
     });
+    await sendJob((await emailRow(ana)).id);
     const row = await emailRow(ana);
-    if (row.status === 'failed') expect(hasLink(row)).toBe(false);
-    else {
-      await sendJob(row.id);
-      expect(hasLink(await emailRow(ana))).toBe(false);
-    }
+    expect(row.status).toBe('sent');
+    expect(hasLink(row)).toBe(false);
   });
 });
 
