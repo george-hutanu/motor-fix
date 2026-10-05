@@ -35,14 +35,15 @@ A background-task completion turn measured in this repo: 1 call, cache write 0.6
 
 ## Constitution Check
 
-- I No Bloated Code: two flags and three small functions in the existing script; no new file, dependency or config. The no-agent selection is moved, not copied. Pass.
+- I No Bloated Code: two flags and a few small functions in the existing script, plus `lib/watch-wait.mjs` (the wait record, readable by the reminder with Node and git only, so the hook never fails on an import the watcher needs); no dependency or config. The no-agent selection is moved, not copied. Pass.
 - II Test Discipline: harness specs first (gate on a clean fixture and each stale kind, parity with `--fix --json`, wait on a fake clock, lock takeover, reminder silence). Pass.
 - VII Lifecycle: draft PR #143, Notion ST-703 linked. Pass.
 
 ## Project Structure
 
 ```text
-.claude/scripts/watch.mjs                     # dueFixes(), gateLines(), waitFor(), waitHolder(); --gate, --wait in main()
+.claude/scripts/watch.mjs                     # dueFixes(), gateLines(), waitLoop(); --gate, --wait in main()
+.claude/scripts/lib/watch-wait.mjs            # waitHolder() and the record path, shared with the reminder
 .claude/scripts/watch.spec.mjs                # new describe blocks
 .claude/hooks/session-watch-reminder.mjs      # new line; silent when a wait is armed
 .claude/hooks/session-watch-reminder.spec.mjs
@@ -55,7 +56,7 @@ AGENTS.md                                     # watch bullet
 
 - `dueFixes(report)` returns the no-agent actions `applyFixes` would take, in its order (unlock dead holders, unlock/remove finished clean worktrees, carry reviews, unlock orphan locks, prune); `applyFixes` iterates it. The gate is `report.plan` plus `dueFixes(report)`: one line each, `<fix> <path>` (`#<pr>` when known).
 - `--gate`: exit 0 and no output when both are empty, else exit 2 and the lines. Errors exit 1.
-- `--wait [--every 15] [--for 110] [--stale …]`: take the record `<git common dir>/speckit-watch-wait.pid` (refused while `waitHolder` finds a live `watch.mjs --wait` there), then `sleep(every)` and gate while `elapsed + every <= for`; remove the record on every ending (`try/finally`).
+- `--wait [--every 15] [--for 110] [--stale …]`: take the record `<git common dir>/speckit-watch-wait.pid` (refused while `waitHolder` finds a live `watch.mjs --wait` there), written with exclusive create; then `sleep(every)` and gate while `elapsed + every <= for`; remove the record on every ending (`try/finally`).
 - `waitHolder(repo, { commandOf })`: the pid in the record if `ps -o command=` for it contains `watch.mjs` and `--wait`, else null. The reminder imports it and stays silent when it returns a pid.
 - Skill: arm with Bash `run_in_background: true`, `timeout: 7200000`, command `node .claude/scripts/watch.mjs --wait`; endings keyed on the printed line; delete an existing `/speckit-watch` cron job (CronList, CronDelete) once the wait is armed; one pass right away as today.
 

@@ -22,9 +22,9 @@ import {
   qaCapFrom,
   scratchRun,
   summarizePr,
-  waitHolder,
   writeClaim,
 } from './watch.mjs';
+import { waitHolder } from './lib/watch-wait.mjs';
 
 const MIN = 60_000;
 const NOW = Date.parse('2026-10-04T12:00:00Z');
@@ -1191,6 +1191,26 @@ describe('--wait', () => {
       assert.ok(!existsSync(record(f)));
       git(f.repo, 'worktree', 'unlock', a);
       assert.equal(main(['--wait', '--every', '1', '--for', '1'], { cwd: f.repo, ...env({ sleep: () => {} }) }), 0);
+      assert.ok(!existsSync(record(f)));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('ends with the error as soon as a poll fails, and removes its record', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      git(f.repo, 'worktree', 'lock', '--reason', 'claude agent x (pid 4242 start Sun Oct  4 08:07:18 2026)', a);
+      const io = captured();
+      let polls = 0;
+      const alive = () => {
+        if (polls === 2) throw new Error('ps went away');
+        return true;
+      };
+      assert.equal(main(['--wait'], { cwd: f.repo, ...env({ alive, sleep: () => polls++ }) }), 1);
+      assert.equal(polls, 2);
+      assert.ok(io.err.some((l) => l.includes('ps went away')), io.err.join('\n'));
       assert.ok(!existsSync(record(f)));
     } finally {
       rmSync(f.root, { recursive: true, force: true });

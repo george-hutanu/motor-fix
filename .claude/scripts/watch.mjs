@@ -33,8 +33,6 @@ import { parseQaRun } from "./pr-test/qa-run.mjs";
 import { readState } from "./run-state.mjs";
 import { WAIT_RECORD, commonDir, defaultCommandOf, waitHolder } from "./lib/watch-wait.mjs";
 
-export { waitHolder };
-
 export const DEFAULT_THRESHOLDS = { planning: 30, tests: 45, development: 45, review: 30, qa: 30, merging: 30 };
 // QA boots on GitHub Actions (.github/workflows/pr-qa.yml), not on the laptop,
 // so the default is Actions' 20 concurrent jobs on a free plan, the ceiling a
@@ -604,7 +602,14 @@ function waitLoop({ cwd, every, limit, sleep, commandOf, runGate }) {
     return 0;
   }
   const record = join(dir, WAIT_RECORD);
-  writeFileSync(record, `${process.pid}\n`);
+  // Exclusive create, so two waits started at the same moment cannot both hold it.
+  rmSync(record, { force: true });
+  try {
+    writeFileSync(record, `${process.pid}\n`, { flag: "wx" });
+  } catch {
+    console.log(`watch: a wait is already armed (pid ${readFileSync(record, "utf8").trim()})`);
+    return 0;
+  }
   try {
     let elapsed = 0;
     while (elapsed + every <= limit) {

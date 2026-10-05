@@ -9,7 +9,7 @@ export const WAIT_RECORD = "speckit-watch-wait.pid";
 
 export const commonDir = (cwd) => {
   try {
-    return execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim() || null;
+    return execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 }).trim() || null;
   } catch {
     return null;
   }
@@ -17,7 +17,7 @@ export const commonDir = (cwd) => {
 
 export const defaultCommandOf = (pid) => {
   try {
-    return execFileSync("ps", ["-p", String(pid), "-o", "command="], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    return execFileSync("ps", ["-p", String(pid), "-o", "command="], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 });
   } catch {
     return null;
   }

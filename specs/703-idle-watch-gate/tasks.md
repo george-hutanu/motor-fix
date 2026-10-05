@@ -7,5 +7,5 @@
 - [x] T005 Green: watch.mjs waitHolder(), the wait loop and --wait in main(); usage line and header updated.
 - [x] T006 Green: session-watch-reminder.mjs line and armed check; doctor --bless-hooks after reading the diff.
 - [x] T007 Green: speckit-watch/SKILL.md (scheduling, step 1, empty pass; FR-007, FR-009) and the AGENTS.md watch bullet.
-- [ ] T008 Measure: run a real `--wait` as a background command in this session, read its notification turn's usage from the transcript; record before and after (per tick and per idle hour) and the method in auto-run.md and the PR body (SC-001, SC-002). doctor.mjs, harness-eval --check and npm run test:harness green (SC-003).
-- [ ] T009 Follow-up: speckit-auto/SKILL.md "Parallel runs" still names the cron schedule (off limits here): file it in deferred.md.
+- [x] T008 Measure: run a real `--wait` as a background command in this session, read its notification turn's usage from the transcript; record before and after (per tick and per idle hour) and the method in auto-run.md and the PR body (SC-001, SC-002). doctor.mjs, harness-eval --check and npm run test:harness green (SC-003).
+- [x] T009 Follow-up: speckit-auto/SKILL.md "Parallel runs" still names the cron schedule (off limits here): file it in deferred.md.
