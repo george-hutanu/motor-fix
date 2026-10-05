@@ -9,13 +9,19 @@ import { Session } from '../dashboard/session';
 
 const GARAGE = { landing: '/app/garage' } as MeDto;
 
-function setup(signedIn: MeDto | null, answer: 'signed-in' | 'cancelled') {
+type Answer =
+  | 'signed-in'
+  | 'cancelled'
+  | { switchTo: 'sign-in' | 'sign-up'; email: string };
+
+function setup(signedIn: MeDto | null, ...answers: Answer[]) {
   const current = signal<MeDto | null>(signedIn);
   const session = {
     current,
     load: jest.fn(async () => current()),
   };
-  const open = jest.fn(async () => {
+  const open = jest.fn(async (..._: unknown[]) => {
+    const answer = answers.shift() ?? 'cancelled';
     if (answer === 'signed-in') current.set(GARAGE);
     return answer;
   });
@@ -69,6 +75,71 @@ describe('SignInDialog', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  it('switches to the sign-up dialog and back, carrying the e-mail', async () => {
+    const { dialog, open } = setup(
+      null,
+      { email: 'andrei@example.ro', switchTo: 'sign-up' },
+      { email: 'andrei@example.com', switchTo: 'sign-in' },
+      'cancelled',
+    );
+
+    await dialog.start();
+
+    expect(open.mock.calls.map((call) => call[1])).toEqual([
+      { shape: 'dialog', title: 'public.signIn.title' },
+      {
+        data: { email: 'andrei@example.ro' },
+        shape: 'dialog',
+        title: 'public.signUp.title',
+      },
+      {
+        data: { email: 'andrei@example.com' },
+        shape: 'dialog',
+        title: 'public.signIn.title',
+      },
+    ]);
+  });
+
+  it('opens the dashboard after an account is created in the sign-up dialog', async () => {
+    const { dialog, navigate, open } = setup(
+      null,
+      { email: '', switchTo: 'sign-up' },
+      'signed-in',
+    );
+
+    await dialog.start();
+
+    expect(open).toHaveBeenCalledTimes(2);
+    expect(navigate).toHaveBeenCalledWith('/app/garage');
+  });
+
+  it('stays on the screen when the sign-up dialog is closed', async () => {
+    const { dialog, navigate, open } = setup(
+      null,
+      { email: '', switchTo: 'sign-up' },
+      'cancelled',
+    );
+
+    await dialog.start();
+
+    expect(open).toHaveBeenCalledTimes(2);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('loads the sign-up task only when it is opened', async () => {
+    const { dialog, open } = setup(null, { email: '', switchTo: 'sign-up' });
+
+    await dialog.start();
+    const loader = (
+      open.mock.calls[1] as unknown[]
+    )[0] as () => Promise<unknown>;
+
+    expect((await loader()) as { name: string }).toHaveProperty(
+      'name',
+      'SignUp',
+    );
+  });
+
   it('loads the sign-in task only when it is opened', async () => {
     const { dialog, open } = setup(null, 'cancelled');
 
@@ -81,5 +152,95 @@ describe('SignInDialog', () => {
       'name',
       'SignIn',
     );
+  });
+
+  describe('as the gate of an account action', () => {
+    const reason = {
+      data: { reason: true },
+      shape: 'dialog',
+      title: 'public.signIn.title',
+    };
+
+    it('opens the sign-in dialog with the reason and stays on the screen after sign-in', async () => {
+      const { dialog, navigate, open } = setup(null, 'signed-in');
+
+      await expect(dialog.gate()).resolves.toBe(true);
+
+      expect(open).toHaveBeenCalledWith(expect.any(Function), reason);
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('resolves signed in after an account is created in the sign-up dialog', async () => {
+      const { dialog, navigate } = setup(
+        null,
+        { email: 'andrei@example.ro', switchTo: 'sign-up' },
+        'signed-in',
+      );
+
+      await expect(dialog.gate()).resolves.toBe(true);
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('keeps the reason when the person switches to sign-up and back', async () => {
+      const { dialog, open } = setup(
+        null,
+        { email: 'andrei@example.ro', switchTo: 'sign-up' },
+        { email: 'andrei@example.ro', switchTo: 'sign-in' },
+        'cancelled',
+      );
+
+      await dialog.gate();
+
+      expect(open.mock.calls[2]?.[1]).toEqual({
+        data: { email: 'andrei@example.ro', reason: true },
+        shape: 'dialog',
+        title: 'public.signIn.title',
+      });
+    });
+
+    it('resolves not signed in when the dialog is closed', async () => {
+      const { dialog } = setup(null, 'cancelled');
+
+      await expect(dialog.gate()).resolves.toBe(false);
+    });
+
+    it('opens one dialog for calls that ask at the same time', async () => {
+      const { dialog, open } = setup(null, 'signed-in');
+
+      const answers = await Promise.all([dialog.gate(), dialog.gate()]);
+
+      expect(answers).toEqual([true, true]);
+      expect(open).toHaveBeenCalledTimes(1);
+    });
+
+    it('waits on a sign-in dialog already open from "Autentificare", which still opens the dashboard', async () => {
+      const { dialog, navigate, open, session } = setup(null);
+      let answer: (value: Answer) => void = () => undefined;
+      open.mockImplementationOnce(
+        () =>
+          new Promise<Answer>((resolve) => {
+            answer = resolve;
+          }),
+      );
+
+      const started = dialog.start();
+      await new Promise((resolve) => setTimeout(resolve));
+      const gated = dialog.gate();
+      session.current.set(GARAGE);
+      answer('signed-in');
+      await started;
+
+      await expect(gated).resolves.toBe(true);
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledWith('/app/garage');
+    });
+
+    it('opens a new dialog once the previous one has closed', async () => {
+      const { dialog, open } = setup(null, 'cancelled', 'signed-in');
+
+      await expect(dialog.gate()).resolves.toBe(false);
+      await expect(dialog.gate()).resolves.toBe(true);
+      expect(open).toHaveBeenCalledTimes(2);
+    });
   });
 });

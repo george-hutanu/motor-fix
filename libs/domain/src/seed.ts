@@ -35,6 +35,7 @@ interface Person {
 const GARAGES = [
   { name: 'Atelier Test', slug: 'atelier-test' },
   { name: 'Service Dobre', slug: 'service-dobre' },
+  { name: 'Atelier Dinamo', slug: 'atelier-dinamo' },
 ];
 
 const PEOPLE: Person[] = [
@@ -42,6 +43,13 @@ const PEOPLE: Person[] = [
     email: 'sofer@example.test',
     lastRole: 'driver',
     name: 'Andrei Popescu',
+    roles: ['driver'],
+  },
+  // A second driver, for what one driver must never see of another.
+  {
+    email: 'sofer2@example.test',
+    lastRole: 'driver',
+    name: 'Maria Stan',
     roles: ['driver'],
   },
   {
@@ -76,6 +84,15 @@ const PEOPLE: Person[] = [
     email: 'doua-roluri@example.test',
     lastRole: 'garage',
     name: 'Elena Dobre',
+    roles: ['driver', 'garage'],
+  },
+  // Switches roles in the end-to-end tests; nothing else may rely on its
+  // role used last.
+  {
+    at: { as: 'owner', garage: 'atelier-dinamo' },
+    email: 'comutare@example.test',
+    lastRole: 'garage',
+    name: 'Mihai Ionescu',
     roles: ['driver', 'garage'],
   },
   {
@@ -126,8 +143,8 @@ function link(db: Client, id: string, at: NonNullable<Person['at']>) {
 async function add(db: Client, person: Person, secret: string) {
   // An account that exists is left as it is.
   const created = await db.query<{ id: string }>(
-    `INSERT INTO account (id, email, name, last_role, status)
-     VALUES (gen_random_uuid(), $1, $2, $3::role, $4::account_status)
+    `INSERT INTO account (id, email, email_verified_at, name, last_role, status)
+     VALUES (gen_random_uuid(), $1, now(), $2, $3::role, $4::account_status)
      ON CONFLICT (email) DO NOTHING RETURNING id`,
     [person.email, person.name, person.lastRole, person.status ?? 'active'],
   );

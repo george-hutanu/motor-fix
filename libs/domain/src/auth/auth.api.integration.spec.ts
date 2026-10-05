@@ -5,7 +5,6 @@ import {
   INestApplication,
   Param,
   RequestMethod,
-  UseGuards,
 } from '@nestjs/common';
 import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { Test } from '@nestjs/testing';
@@ -13,7 +12,7 @@ import request from 'supertest';
 
 import { signAccessToken } from './access-token';
 import { AccountsService } from './accounts.service';
-import { ActorGuard, CurrentActor, Requires } from './actor.guard';
+import { CurrentActor, Requires } from './actor.guard';
 import { AuthModule } from './auth.module';
 import type { Role } from './capabilities';
 import { type Actor, assertOwner } from './policy';
@@ -31,7 +30,6 @@ const accounts = new AccountsService(prisma, new AuditService(), noEvents);
 serialDatabase(databaseUrl);
 
 @Controller('probe')
-@UseGuards(ActorGuard)
 class ProbeController {
   @Get('team')
   @Requires('garage.team')
@@ -376,7 +374,7 @@ describe('the account module', () => {
         );
     });
 
-  it('exposes no route that writes anything but a session or my language', () => {
+  it('exposes no route that writes anything but a session, a new driver account, my language or my role in use', () => {
     const controllers =
       AuthModule.register({ databaseUrl, redisUrl, tokenSecret }).controllers ??
       [];
@@ -385,8 +383,11 @@ describe('the account module', () => {
     expect(controllers.length).toBeGreaterThan(0);
     expect(writes.sort()).toEqual([
       'auth/refresh',
+      'auth/roles/switch',
       'auth/sign-in',
       'auth/sign-out',
+      'auth/sign-out-everywhere',
+      'auth/sign-up',
       'me//',
     ]);
   });

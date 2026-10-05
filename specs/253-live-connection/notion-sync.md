@@ -1,0 +1,23 @@
+# Notion sync — 253-live-connection
+
+- 2026-10-04 · start · ST-253 story Status · To do → Planning
+- 2026-10-04 · start · Foundations timeline row ST-253 · Not started → Planning
+- 2026-10-04 · start · EP-1 Foundations Status · unchanged (In progress)
+- 2026-10-04 · pr · ST-253 · PR #57 https://github.com/george-hutanu/motor-fix/pull/57
+- 2026-10-04 · labels · PR #57 · planning
+- 2026-10-04 · ready · Foundations · −ST-253 (started; a start changes no other item's blockers)
+- 2026-10-04 · implement · ST-253 story Status · Planning → Implementing
+- 2026-10-04 · implement · Foundations timeline row ST-253 · Planning → Implementing
+- 2026-10-04 · labels · PR #57 · in development
+- 2026-10-04 · review · ST-253 story Status · Implementing → In review (PR #57 marked ready)
+- 2026-10-04 · review · Foundations timeline row ST-253 · Implementing → In review
+- 2026-10-04 · labels · PR #57 · in review
+- 2026-10-04 · qa · ST-253 story Status · In review → QA
+- 2026-10-04 · qa · Foundations timeline row ST-253 · In review → QA
+- 2026-10-04 · labels · PR #57 · QA
+- 2026-10-04 · qa · lap 1 agent-review failure: a non-admin with an invalid body got 400, not 404 (FR-012); fixed by moving the admin check into the guard
+- 2026-10-04 · debt · deferred.md line 2 → To do task https://app.notion.com/p/3ef607bff0d281ca8a96e03e40701d3c
+- 2026-10-05 · finish · ST-253 · QA → Done (checked in Notion; PR #57 merged ddaf49f)
+- 2026-10-05 · finish · Foundations timeline ST-253 · QA → Merged (checked in Notion)
+- 2026-10-05 · finish · EP-1 Foundations · In progress (unchanged)
+- 2026-10-05 · ready · Foundations · +ST-254 (ST-253 and ST-79 both merged; ST-257 still waits on ST-254)

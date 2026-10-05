@@ -2,6 +2,7 @@ import type { Routes } from '@angular/router';
 
 import { languageAddress, languageRoot, toLanguageAddress } from './addresses';
 import { areaGuard } from './dashboard/area.guard';
+import { dashboardRoutes } from './dashboard/views';
 import { Home } from './home/home';
 import { NotFound } from './not-found/not-found';
 import { signedInToDashboard } from './public/account.guard';
@@ -24,9 +25,12 @@ export const routes: Routes = [
     path: '',
     pathMatch: 'full',
   },
-  { canMatch: [areaGuard('driver')], loadComponent: frame, path: 'app/driver' },
-  { canMatch: [areaGuard('garage')], loadComponent: frame, path: 'app/garage' },
-  { canMatch: [areaGuard('admin')], loadComponent: frame, path: 'app/admin' },
+  ...(['driver', 'garage', 'admin'] as const).map((area) => ({
+    canMatch: [areaGuard(area)],
+    children: dashboardRoutes(area),
+    loadComponent: frame,
+    path: `app/${area}`,
+  })),
   {
     loadComponent: () =>
       import('@motor-fix/ui-cockpit/sample').then((m) => m.CockpitSamplePage),
@@ -40,6 +44,16 @@ export const routes: Routes = [
       placeholder('garages', 'public.placeholder.garages'),
       placeholder('garages/:garage', 'public.placeholder.garages'),
       placeholder('mechanics/:mechanic', 'public.placeholder.mechanics'),
+      {
+        loadComponent: () =>
+          import('./public/confirm-email').then((m) => m.ConfirmEmail),
+        path: 'confirm-email/:token',
+      },
+      {
+        loadComponent: () =>
+          import('./public/unsubscribe').then((m) => m.Unsubscribe),
+        path: 'unsubscribe/:token',
+      },
       {
         ...placeholder('account', 'public.placeholder.account'),
         canActivate: [signedInToDashboard],

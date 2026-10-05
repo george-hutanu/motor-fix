@@ -35,25 +35,55 @@ enum SignInMethod {
 }
 
 model Account {
-  id              String            @id @default(uuid()) @db.Uuid
-  email           String?           @unique
-  emailVerifiedAt DateTime?         @map("email_verified_at") @db.Timestamptz(3)
-  phone           String?           @unique
-  phoneVerifiedAt DateTime?         @map("phone_verified_at") @db.Timestamptz(3)
-  name            String
-  city            String?
-  language        Language          @default(ro)
-  status          AccountStatus     @default(active)
-  lastRole        Role              @map("last_role")
-  lastActiveAt    DateTime?         @map("last_active_at") @db.Timestamptz(3)
-  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
-  roles           AccountRole[]
-  identities      AccountIdentity[]
-  refreshTokens   RefreshToken[]
-  memberships     GarageMember[]
-  mechanic        Mechanic?
+  id                      String                   @id @default(uuid()) @db.Uuid
+  email                   String?                  @unique
+  emailVerifiedAt         DateTime?                @map("email_verified_at") @db.Timestamptz(3)
+  phone                   String?                  @unique
+  phoneVerifiedAt         DateTime?                @map("phone_verified_at") @db.Timestamptz(3)
+  name                    String
+  city                    String?
+  language                Language                 @default(ro)
+  status                  AccountStatus            @default(active)
+  lastRole                Role                     @map("last_role")
+  lastActiveAt            DateTime?                @map("last_active_at") @db.Timestamptz(3)
+  emailBouncedAt          DateTime?                @map("email_bounced_at") @db.Timestamptz(3)
+  createdAt               DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  roles                   AccountRole[]
+  identities              AccountIdentity[]
+  refreshTokens           RefreshToken[]
+  memberships             GarageMember[]
+  mechanic                Mechanic?
+  notifications           Notification[]
+  notificationPreferences NotificationPreference[]
+  smsCounters             SmsCounter[]
+  tokens                  AccountToken[]
+  reminders               Reminder[]
 
   @@map("account")
+}
+
+enum AccountTokenPurpose {
+  email_confirm
+
+  @@map("account_token_purpose")
+}
+
+// A single-use link sent to the account holder; only the token's SHA-256
+// hash is kept.
+model AccountToken {
+  id        String              @id @default(uuid()) @db.Uuid
+  accountId String              @map("account_id") @db.Uuid
+  purpose   AccountTokenPurpose
+  tokenHash String              @unique @map("token_hash")
+  // The address the link was sent to: it confirms that one only.
+  email     String
+  expiresAt DateTime            @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime?           @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  account   Account             @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, purpose])
+  @@map("account_token")
 }
 
 model AccountRole {

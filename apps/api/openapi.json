@@ -84,10 +84,51 @@
         ]
       }
     },
+    "/api/v1/auth/sign-up": {
+      "post": {
+        "operationId": "AuthController_signUp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignUpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/refresh": {
       "post": {
         "operationId": "AuthController_refresh",
         "parameters": [],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -98,6 +139,69 @@
                 }
               }
             }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/roles/switch": {
+      "post": {
+        "operationId": "AuthController_switchRole",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwitchRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No valid role in the body"
+          },
+          "401": {
+            "description": "No live session on this device"
+          },
+          "403": {
+            "description": "The account is suspended"
+          },
+          "404": {
+            "description": "The account does not hold that role"
+          },
+          "415": {
+            "description": "The body is not JSON"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/sign-out-everywhere": {
+      "post": {
+        "operationId": "AuthController_signOutEverywhere",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": ""
           }
         },
         "tags": [
@@ -285,6 +389,289 @@
           "audit-history"
         ]
       }
+    },
+    "/api/v1/admin/notifications/test": {
+      "post": {
+        "operationId": "NotificationsController_test",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestMessageQueuedDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/notification-preferences": {
+      "get": {
+        "operationId": "NotificationPreferencesController_read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPreferencesDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      },
+      "put": {
+        "operationId": "NotificationPreferencesController_save",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNotificationPreferencesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPreferencesDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/notification-preferences/unsubscribe": {
+      "post": {
+        "operationId": "NewsController_unsubscribe",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "400": {
+            "description": "invalid_unsubscribe_link: the link is not one of ours"
+          }
+        },
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/admin/news": {
+      "post": {
+        "operationId": "NewsController_send",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendNewsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsSentDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "news_already_sent_this_month: news went out this month"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/auth/confirm-email": {
+      "post": {
+        "operationId": "EmailConfirmationController_confirm",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmEmailAnswerDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/confirm-email/resend": {
+      "post": {
+        "operationId": "EmailConfirmationController_resend",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "A new link was sent"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/me/email-confirmation": {
+      "post": {
+        "operationId": "MeEmailConfirmationController_askAgain",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": "A new link was sent"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/live": {
+      "get": {
+        "operationId": "LiveController_live",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "A server-sent events stream"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "live"
+        ]
+      }
+    },
+    "/api/v1/admin/live/test": {
+      "post": {
+        "operationId": "LiveController_test",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveTestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The test update was recorded; the relay sends it"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "live"
+        ]
+      }
     }
   },
   "info": {
@@ -409,6 +796,77 @@
           "accessToken"
         ]
       },
+      "SignUpDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 80,
+            "minLength": 2
+          },
+          "email": {
+            "type": "string",
+            "description": "Trimmed; stored and compared in lower case",
+            "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "description": "8 to 128 characters, not a common password",
+            "maxLength": 1024,
+            "minLength": 1
+          },
+          "language": {
+            "type": "string",
+            "description": "The interface language",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "password",
+          "language"
+        ]
+      },
+      "RefreshDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "The role the tab is showing; used when the account still holds it",
+            "enum": [
+              "driver",
+              "garage",
+              "receptionist",
+              "mechanic",
+              "admin"
+            ]
+          }
+        }
+      },
+      "SwitchRoleDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "One of the roles the account holds",
+            "enum": [
+              "driver",
+              "garage",
+              "receptionist",
+              "mechanic",
+              "admin"
+            ]
+          }
+        },
+        "required": [
+          "role"
+        ]
+      },
       "MeDto": {
         "type": "object",
         "properties": {
@@ -422,6 +880,10 @@
           "email": {
             "type": "string",
             "nullable": true
+          },
+          "emailConfirmed": {
+            "type": "boolean",
+            "description": "Whether the e-mail is confirmed; false when there is none"
           },
           "language": {
             "type": "string",
@@ -479,6 +941,7 @@
           "id",
           "name",
           "email",
+          "emailConfirmed",
           "language",
           "roles",
           "role",
@@ -685,6 +1148,352 @@
           "items",
           "nextCursor",
           "total"
+        ]
+      },
+      "TestMessageDto": {
+        "type": "object",
+        "properties": {
+          "accountIds": {
+            "description": "The accounts that get the test e-mail",
+            "maxItems": 20,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "accountIds"
+        ]
+      },
+      "TestMessageQueuedDto": {
+        "type": "object",
+        "properties": {
+          "queued": {
+            "type": "number",
+            "description": "How many test e-mails were queued"
+          }
+        },
+        "required": [
+          "queued"
+        ]
+      },
+      "NotificationGroupDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "offers",
+              "bookings",
+              "due_dates",
+              "news",
+              "reviews_history"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "types": {
+            "description": "The notification types the switch covers",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "key",
+          "enabled",
+          "types"
+        ]
+      },
+      "NotificationPreferenceDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "A notification type, e.g. QUOTE_RECEIVED"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "email",
+              "push",
+              "sms",
+              "whatsapp"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "garageId": {
+            "type": "string",
+            "description": "The garage of a staff choice; null for a personal one",
+            "format": "uuid",
+            "nullable": true
+          },
+          "alwaysSent": {
+            "type": "boolean",
+            "description": "Sent whatever the person chooses"
+          }
+        },
+        "required": [
+          "type",
+          "channel",
+          "enabled",
+          "garageId",
+          "alwaysSent"
+        ]
+      },
+      "NewsConsentDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "none",
+              "given",
+              "withdrawn"
+            ]
+          },
+          "givenAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "textVersion": {
+            "type": "string",
+            "description": "The consent text version the driver confirmed",
+            "nullable": true
+          },
+          "withdrawnAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "currentTextVersion": {
+            "type": "string",
+            "description": "The version to show, and send back on saving"
+          }
+        },
+        "required": [
+          "state",
+          "givenAt",
+          "textVersion",
+          "withdrawnAt",
+          "currentTextVersion"
+        ]
+      },
+      "NotificationPreferencesDto": {
+        "type": "object",
+        "properties": {
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationGroupDto"
+            }
+          },
+          "preferences": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationPreferenceDto"
+            }
+          },
+          "newsConsent": {
+            "$ref": "#/components/schemas/NewsConsentDto"
+          }
+        },
+        "required": [
+          "groups",
+          "preferences",
+          "newsConsent"
+        ]
+      },
+      "UpdateNotificationGroupDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "offers",
+              "bookings",
+              "due_dates",
+              "news",
+              "reviews_history"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "enabled"
+        ]
+      },
+      "UpdateNotificationPreferenceDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "A notification type, e.g. QUOTE_RECEIVED"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "email",
+              "push",
+              "sms",
+              "whatsapp"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "garageId": {
+            "type": "string",
+            "description": "The garage of a staff choice; null for a personal one",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "type",
+          "channel",
+          "enabled",
+          "garageId"
+        ]
+      },
+      "UpdateNotificationPreferencesDto": {
+        "type": "object",
+        "properties": {
+          "groups": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UpdateNotificationGroupDto"
+            }
+          },
+          "preferences": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UpdateNotificationPreferenceDto"
+            }
+          },
+          "newsConsentTextVersion": {
+            "type": "string",
+            "description": "The consent text version shown, needed when the save turns news on"
+          }
+        }
+      },
+      "NewsTitleDto": {
+        "type": "object",
+        "properties": {
+          "ro": {
+            "type": "string"
+          },
+          "en": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ro",
+          "en"
+        ]
+      },
+      "NewsTextDto": {
+        "type": "object",
+        "properties": {
+          "ro": {
+            "type": "string"
+          },
+          "en": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ro",
+          "en"
+        ]
+      },
+      "SendNewsDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "description": "The subject, in both languages",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NewsTitleDto"
+              }
+            ]
+          },
+          "text": {
+            "description": "The text, in both languages",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NewsTextDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "title",
+          "text"
+        ]
+      },
+      "NewsSentDto": {
+        "type": "object",
+        "properties": {
+          "recipients": {
+            "type": "number",
+            "description": "How many drivers it was sent to"
+          }
+        },
+        "required": [
+          "recipients"
+        ]
+      },
+      "ConfirmEmailDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The token of a confirmation link: 43 base64url characters",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "ConfirmEmailAnswerDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "confirmed"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "LiveTestDto": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "accountId"
         ]
       }
     }

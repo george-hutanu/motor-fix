@@ -1,0 +1,22 @@
+# Notion sync — 257-live-events
+
+- 2026-10-05 · start · ST-257 story Status · To do → Planning
+- 2026-10-05 · start · Foundations timeline row ST-257 · Not started → Planning
+- 2026-10-05 · start · EP-1 Foundations Status · unchanged (In progress)
+- 2026-10-05 · pr · ST-257 · PR #77 https://github.com/george-hutanu/motor-fix/pull/77
+- 2026-10-05 · labels · PR #77 · planning
+- 2026-10-05 · ready · Foundations · −ST-257 (started; a start changes no other item's blockers)
+- 2026-10-05 · implement · ST-257 story Status · Planning → Implementing
+- 2026-10-05 · implement · Foundations timeline row ST-257 · Planning → Implementing
+- 2026-10-05 · labels · PR #77 · in development
+- 2026-10-05 · debt · deferred.md line 2 → To do task https://app.notion.com/p/3f0607bff0d281a79071ebe63bd8779e
+- 2026-10-05 · debt · deferred.md line 3 → To do task https://app.notion.com/p/3f0607bff0d281c1a09ec67b308f6b4a
+- 2026-10-05 · qa · ST-257 story Status · Implementing → QA
+- 2026-10-05 · qa · Foundations timeline row ST-257 · Implementing → QA
+- 2026-10-05 · labels · PR #77 · QA
+- 2026-10-05 · finish · ST-257 story Status · QA → Done (written once PR #77 merges)
+- 2026-10-05 · finish · Foundations timeline row ST-257 · QA → Merged (written once PR #77 merges)
+- 2026-10-05 · finish · EP-1 Foundations Status · unchanged (In progress; other stories remain)
+- 2026-10-05 · finish · labels · PR #77 · stage labels removed by the merge
+- 2026-10-05 · finish · ST-257 comment · decisions: ST-432 skipped (mutation runs are CI-only); no consumer registered yet (the first kind that sends a message registers notifications); admin test update answers 202 through the outbox instead of 503 (253-FR-012 modified); live.test keeps a fresh id; level 1; polling every 200 ms rather than LISTEN/NOTIFY; two deferred tasks filed
+- 2026-10-05 · ready · Foundations · +ST-256, +ST-199 (every blocker Merged once ST-257 merges); ST-255 still waits on ST-256; ST-419 and ST-395 held (built in EP-4 / blocked outside the epic by ST-276)

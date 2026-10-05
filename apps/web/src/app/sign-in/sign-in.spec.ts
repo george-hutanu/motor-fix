@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 
-import { SignIn } from './sign-in';
+import { type AuthSwitch, SignIn } from './sign-in';
 import { Session } from '../dashboard/session';
 
 @Component({ template: '' })
@@ -19,7 +19,7 @@ const problem = (status: number, code?: string) =>
   });
 
 let signIn: jest.Mock;
-let result: Promise<OverlayResult<'signed-in'>>;
+let result: Promise<OverlayResult<'signed-in' | AuthSwitch>>;
 let online = true;
 
 async function settle() {
@@ -29,14 +29,18 @@ async function settle() {
   }
 }
 
-async function open(language: 'ro' | 'en' = 'ro') {
+async function open(language: 'ro' | 'en' = 'ro', email?: string) {
   signIn = jest.fn(async () => ({ landing: '/app/driver' }));
   TestBed.configureTestingModule({
     providers: [{ provide: Session, useValue: { signIn } }],
   });
   if (language === 'en') await TestBed.inject(I18n).use('en');
   const host = TestBed.createComponent(Host);
-  result = host.componentInstance.overlays.open<'signed-in'>(SignIn, {
+  result = host.componentInstance.overlays.open<
+    'signed-in' | AuthSwitch,
+    { email?: string } | undefined
+  >(SignIn, {
+    data: email === undefined ? undefined : { email },
     shape: 'dialog',
     title: 'public.signIn.title',
   });
@@ -125,7 +129,6 @@ describe('the sign-in dialog', () => {
       'Apple',
       'Google',
       'Ai uitat parola?',
-      'Creează un cont',
       'Sunt șofer',
       'Am un service',
     ]) {
@@ -133,9 +136,46 @@ describe('the sign-in dialog', () => {
     }
   });
 
+  it('offers to create an account under the main button', async () => {
+    await open();
+
+    expect(panel().textContent).toContain('Ești nou pe MotorFix?');
+    const create = button('Creează un cont');
+    expect(create.type).toBe('button');
+    const buttons = [...panel().querySelectorAll('form button')];
+    expect(buttons.indexOf(create)).toBeGreaterThan(
+      buttons.indexOf(button('Intră în cont')),
+    );
+  });
+
+  it('switches to sign-up with the e-mail typed so far, without sending', async () => {
+    await open();
+    type(field('E‑mail'), ' andrei@example.ro ');
+    type(field('Parolă'), 'parola');
+
+    button('Creează un cont').click();
+    await settle();
+
+    expect(signIn).not.toHaveBeenCalled();
+    await expect(result).resolves.toEqual({
+      email: 'andrei@example.ro',
+      switchTo: 'sign-up',
+    });
+    expect(document.querySelector('mf-overlay-panel')).toBeNull();
+  });
+
+  it('starts with the e-mail typed in the sign-up dialog', async () => {
+    await open('ro', 'andrei@example.ro');
+
+    expect(field('E‑mail').value).toBe('andrei@example.ro');
+    expect(field('Parolă').value).toBe('');
+  });
+
   it('reads English', async () => {
     await open('en');
 
+    expect(panel().textContent).toContain('New to MotorFix?');
+    expect(button('Create an account')).toBeDefined();
     expect(panel().querySelector('h2')?.textContent?.trim()).toBe('Sign in');
     expect(field('E-mail').placeholder).toBe('you@example.com');
     expect(field('Password').placeholder).toBe('Your password');
@@ -345,5 +385,32 @@ describe('answers that refuse', () => {
     await submit('andrei@example.ro', 'parola-buna');
 
     expect(alertText()).toBe('');
+  });
+});
+
+describe('the reason line', () => {
+  async function openWith(data: { reason?: boolean } | undefined) {
+    TestBed.configureTestingModule({
+      providers: [{ provide: Session, useValue: { signIn: jest.fn() } }],
+    });
+    const host = TestBed.createComponent(Host);
+    host.componentInstance.overlays.open(SignIn, {
+      data,
+      shape: 'dialog',
+      title: 'public.signIn.title',
+    });
+    await settle();
+  }
+
+  it('says why sign-in is asked when an action opened the dialog', async () => {
+    await openWith({ reason: true });
+
+    expect(panel().textContent).toContain('Intră în cont ca să continui.');
+  });
+
+  it('is not shown when the person opened the dialog themselves', async () => {
+    await openWith(undefined);
+
+    expect(panel().textContent).not.toContain('ca să continui');
   });
 });

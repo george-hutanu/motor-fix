@@ -1,16 +1,9 @@
 import { MeDto, UpdateMeDto } from '@motor-fix/contracts';
-import {
-  Body,
-  Controller,
-  Get,
-  Inject,
-  Patch,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Inject, Patch } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 
 import { AccountsService } from './accounts.service';
-import { ActorGuard, CurrentActor } from './actor.guard';
+import { CurrentActor } from './actor.guard';
 import { capabilitiesOf } from './capabilities';
 import { type Actor, landingFor } from './policy';
 import { PRISMA } from './prisma';
@@ -19,7 +12,6 @@ import type { PrismaClient } from '../generated/prisma/client';
 @ApiTags('me')
 @ApiBearerAuth()
 @Controller('me')
-@UseGuards(ActorGuard)
 export class MeController {
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
@@ -29,13 +21,20 @@ export class MeController {
   @Get()
   @ApiOkResponse({ type: MeDto })
   async me(@CurrentActor() actor: Actor): Promise<MeDto> {
-    const account = await this.prisma.account.findUniqueOrThrow({
-      select: { email: true, language: true, name: true },
-      where: { id: actor.accountId },
-    });
+    const { emailVerifiedAt, ...account } =
+      await this.prisma.account.findUniqueOrThrow({
+        select: {
+          email: true,
+          emailVerifiedAt: true,
+          language: true,
+          name: true,
+        },
+        where: { id: actor.accountId },
+      });
     return {
       ...account,
       capabilities: capabilitiesOf(actor.role, actor.permissions),
+      emailConfirmed: Boolean(account.email && emailVerifiedAt),
       garageId: actor.garageId,
       id: actor.accountId,
       landing: landingFor(actor.role),

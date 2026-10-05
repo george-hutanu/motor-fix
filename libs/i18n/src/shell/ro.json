@@ -8,6 +8,13 @@
     "table": "Vezi ca tabel",
     "value": "Valoare"
   },
+  "emailBanner": {
+    "failed": "Nu am putut trimite linkul. Încearcă din nou.",
+    "resend": "Retrimite",
+    "sent": "Am trimis un link nou pe e‑mail.",
+    "text": "Confirmă‑ți adresa de e‑mail",
+    "tooMany": "Ai cerut deja un link. Încearcă din nou puțin mai târziu."
+  },
   "form": {
     "close": "Închide",
     "field": {
@@ -27,7 +34,7 @@
       "not_found": "Nu mai găsim ce voiai să salvezi. Reîncarcă pagina.",
       "offline": "Nu ești conectat. Încearcă din nou când revine conexiunea.",
       "service_unavailable": "MotorFix nu răspunde acum. Încearcă din nou în câteva minute.",
-      "sign_in_required": "Sesiunea a expirat. Autentifică‑te din nou ca să continui.",
+      "sign_in_required": "Intră în cont ca să continui.",
       "validation_failed": "Verifică câmpurile marcate."
     },
     "sending": "Se trimite…"
@@ -37,6 +44,11 @@
       "admin": "Admin",
       "driver": "Șofer",
       "garage": "Service"
+    },
+    "bar": {
+      "admin": "Panou admin",
+      "driver": "Panou șofer",
+      "garage": "Panou service"
     },
     "empty": "Nimic aici încă.",
     "home": "MotorFix, pagina principală",
@@ -67,7 +79,33 @@
         "team": "Mecanici"
       }
     },
-    "signOut": "Ieși din cont"
+    "roles": {
+      "admin": "Admin",
+      "driver": "Șofer",
+      "failed": "Nu am putut schimba rolul. Încearcă din nou.",
+      "garage": "Service",
+      "label": "Rolul tău",
+      "mechanic": "Mecanic",
+      "receptionist": "Recepție"
+    },
+    "signOut": "Ieși din cont",
+    "signOutEverywhere": "Ieși de pe toate dispozitivele",
+    "tab": {
+      "brands": "Mărci",
+      "cars": "Mașini",
+      "dashboard": "Panou",
+      "garages": "Service‑uri",
+      "prices": "Prețuri",
+      "profile": "Profil",
+      "reported": "Raportate",
+      "requests": "Cereri",
+      "reviews": "Recenzii",
+      "saved": "Salvate",
+      "schedule": "Program",
+      "settings": "Setări",
+      "team": "Mecanici",
+      "users": "Utilizatori"
+    }
   },
   "gauge": {
     "none": "Nicio recenzie încă",
@@ -82,6 +120,9 @@
     "label": "Limba",
     "ro": "RO"
   },
+  "live": {
+    "test": "Actualizare de test în direct"
+  },
   "notFound": {
     "home": "Înapoi la pagina principală",
     "text": "Adresa nu duce la nicio pagină MotorFix.",
@@ -94,6 +135,12 @@
       "keep": "Continuă editarea",
       "question": "Renunți la modificări?"
     }
+  },
+  "signOutEverywhere": {
+    "cancel": "Renunță",
+    "confirm": "Ieși",
+    "text": "Va trebui să te autentifici din nou peste tot.",
+    "title": "Ieși de pe toate dispozitivele?"
   },
   "version": {
     "unknown": "versiune necunoscută"

@@ -1,7 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsIn } from 'class-validator';
 
-const ROLE = ['driver', 'garage', 'receptionist', 'mechanic', 'admin'] as const;
+export const ROLE = [
+  'driver',
+  'garage',
+  'receptionist',
+  'mechanic',
+  'admin',
+] as const;
 type Role = (typeof ROLE)[number];
 
 const LANGUAGE = ['ro', 'en'] as const;
@@ -21,6 +27,11 @@ export class MeDto {
 
   @ApiProperty({ nullable: true, type: String })
   email!: string | null;
+
+  @ApiProperty({
+    description: 'Whether the e-mail is confirmed; false when there is none',
+  })
+  emailConfirmed!: boolean;
 
   @ApiProperty({ enum: LANGUAGE })
   language!: (typeof LANGUAGE)[number];

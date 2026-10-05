@@ -11,7 +11,13 @@ const prisma = createPrisma(databaseUrl);
 serialDatabase(databaseUrl);
 
 const seed = (APP_ENV: string, extra: Record<string, string> = {}) => {
-  const env: NodeJS.ProcessEnv = { ...process.env, APP_ENV, ...extra };
+  // The seed reads DATABASE_URL itself: hand it the database this spec checks.
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    APP_ENV,
+    DATABASE_URL: databaseUrl,
+    ...extra,
+  };
   if (!('SEED_PASSWORD' in extra)) delete env['SEED_PASSWORD'];
   return spawnSync(process.execPath, [join(__dirname, 'seed.ts')], {
     encoding: 'utf8',
@@ -64,7 +70,7 @@ describe('seed', () => {
     expect(await seeded()).toHaveLength(0);
   });
 
-  it('adds one account per role, a two-role account and a suspended driver', async () => {
+  it('adds one account per role, two two-role accounts and a suspended driver', async () => {
     expect(seed('test').status).toBe(0);
 
     const accounts = await seeded();
@@ -82,6 +88,11 @@ describe('seed', () => {
       'admin@example.test': {
         lastRole: 'admin',
         roles: ['admin'],
+        status: 'active',
+      },
+      'comutare@example.test': {
+        lastRole: 'garage',
+        roles: ['driver', 'garage'],
         status: 'active',
       },
       'doua-roluri@example.test': {
@@ -109,6 +120,11 @@ describe('seed', () => {
         roles: ['driver'],
         status: 'active',
       },
+      'sofer2@example.test': {
+        lastRole: 'driver',
+        roles: ['driver'],
+        status: 'active',
+      },
       'suspendat@example.test': {
         lastRole: 'driver',
         roles: ['driver'],
@@ -130,6 +146,9 @@ describe('seed', () => {
     expect(reception?.garageId).toBe(owner?.garageId);
     expect(mechanic?.garageId).toBe(owner?.garageId);
     expect(by('doua-roluri@example.test')?.memberships[0]?.role).toBe('owner');
+    const switcher = by('comutare@example.test')?.memberships[0];
+    expect(switcher?.role).toBe('owner');
+    expect(switcher?.garageId).not.toBe(owner?.garageId);
   });
 
   it('gives every account the test password as an argon2id hash', async () => {
@@ -141,6 +160,16 @@ describe('seed', () => {
       await expect(
         verifyPassword('parola-de-test', identity?.passwordHash ?? ''),
       ).resolves.toBe(true);
+    }
+  });
+
+  it('gives every account a confirmed e-mail address', async () => {
+    seed('test');
+
+    const accounts = await seeded();
+    expect(accounts.length).toBeGreaterThan(0);
+    for (const account of accounts) {
+      expect(account.emailVerifiedAt).toBeInstanceOf(Date);
     }
   });
 

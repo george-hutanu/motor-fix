@@ -1,0 +1,111 @@
+{
+  "pr": 53,
+  "repo": "george-hutanu/motor-fix",
+  "sha": "b5f75d606d3d50b3cafda5c74968c6f9eb83908e",
+  "base": "e58ed38ae69139f99e49731dab6c294a8918a65b",
+  "lap": 2,
+  "verdict": "success",
+  "summary": "No blocking findings; 6 in all. Booted postgres, redis, api, web, worker.",
+  "findings": [
+    {
+      "severity": "medium",
+      "kind": "step",
+      "title": "api readiness: storage down",
+      "steps": [
+        "No object store on this machine (no Docker); every other check is ok. Environment limit, not the change."
+      ]
+    },
+    {
+      "severity": "medium",
+      "kind": "step",
+      "title": "worker readiness: storage down",
+      "steps": [
+        "No object store on this machine (no Docker); every other check is ok. Environment limit, not the change."
+      ]
+    },
+    {
+      "severity": "low",
+      "kind": "flow",
+      "title": "a11y probe info (not a defect)",
+      "steps": [
+        "open sign-up, tab through"
+      ],
+      "evidence": "{\"info\":{\"modal\":\"true\",\"name\":\"mf-overlay-title-2\",\"role\":\"dialog\"},\"labelBefore\":\"Arată parola\",\"order\":[\"mf-sign-up-email\",\"mf-sign-up-password\",\"\",\"Creează contul\",\"Intră în cont\",\"\"]}"
+    },
+    {
+      "severity": "low",
+      "kind": "flow",
+      "title": "api info: sign-up cookie",
+      "steps": [
+        "POST sign-up"
+      ],
+      "evidence": "mf_refresh=<redacted>; Max-Age=2592000; Path=/api/v1/auth; Expires=Tue, 03 Nov 2026 17:38:24 GMT; HttpOnly; Secure; SameSite=Strict"
+    },
+    {
+      "severity": "medium",
+      "kind": "review",
+      "title": "A common password shows the right field message and also the generic 'Something went wrong. Try again.' next to the button",
+      "steps": [
+        "Open Autentificare, tap Creează un cont",
+        "Fill a name and an e-mail, type the password password1, tap Creează contul",
+        "The password field says it is among the most used, and a second line under it reads 'Ceva nu a mers. Încearcă din nou.' (English: 'Something went wrong. Try again.')"
+      ],
+      "evidence": "flow-weak-ro.png and flow-weak-en.png in shots/. libs/i18n/src/public/en.json and ro.json: public.signUp.problem holds only email_taken and too_many_attempts, so for code weak_password the shared form (libs/overlays/src/form.ts errors(), lines 164-170) falls back to shell.form.problem.error. Add public.signUp.problem.weak_password (for example 'Check the marked fields.' as validation_failed reads) and assert the line in apps/web/src/app/sign-in/sign-up.spec.ts 'shows a weak password under the password field' (it only checks the field text and focus)."
+    },
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "Show/hide password keeps one label while pressed",
+      "steps": [
+        "Open sign-up, press the eye button: aria-pressed turns true and the field type becomes text, the label stays 'Show password' / 'Arată parola'"
+      ],
+      "evidence": "apps/web/src/app/sign-in/sign-up.ts: the button's aria-label is constant with aria-pressed toggling. Valid toggle-button pattern, so a note only; the sign-in dialog should use the same pattern."
+    }
+  ],
+  "booted": [
+    "postgres",
+    "redis",
+    "api",
+    "web",
+    "worker"
+  ],
+  "notes": [
+    "No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.",
+    "No changed GET endpoint without path parameters."
+  ],
+  "screenshots": [
+    "shots/home-desktop-light-ro.png",
+    "shots/home-desktop-light-en.png",
+    "shots/home-desktop-dark-ro.png",
+    "shots/home-desktop-dark-en.png",
+    "shots/home-tablet-light-ro.png",
+    "shots/home-tablet-light-en.png",
+    "shots/home-tablet-dark-ro.png",
+    "shots/home-tablet-dark-en.png",
+    "shots/home-mobile-light-ro.png",
+    "shots/home-mobile-light-en.png",
+    "shots/home-mobile-dark-ro.png",
+    "shots/home-mobile-dark-en.png",
+    "shots/home-small-phone-light-ro.png",
+    "shots/home-small-phone-light-en.png",
+    "shots/home-small-phone-dark-ro.png",
+    "shots/home-small-phone-dark-en.png",
+    "shots/cockpit-desktop-light-ro.png",
+    "shots/cockpit-desktop-light-en.png",
+    "shots/cockpit-desktop-dark-ro.png",
+    "shots/cockpit-desktop-dark-en.png",
+    "shots/cockpit-tablet-light-ro.png",
+    "shots/cockpit-tablet-light-en.png",
+    "shots/cockpit-tablet-dark-ro.png",
+    "shots/cockpit-tablet-dark-en.png",
+    "shots/cockpit-mobile-light-ro.png",
+    "shots/cockpit-mobile-light-en.png",
+    "shots/cockpit-mobile-dark-ro.png",
+    "shots/cockpit-mobile-dark-en.png",
+    "shots/cockpit-small-phone-light-ro.png",
+    "shots/cockpit-small-phone-light-en.png",
+    "shots/cockpit-small-phone-dark-ro.png",
+    "shots/cockpit-small-phone-dark-en.png"
+  ],
+  "markdown": "**Agent review: success** — PR #53 at `b5f75d6`, lap 2\n\nBlocking: 0 (blocker 0, high 0) · medium 3 · low 3. Booted: postgres, redis, api, web, worker.\n- No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.\n- No changed GET endpoint without path parameters.\n\n| # | Severity | Finding | Where | Evidence |\n| --- | --- | --- | --- | --- |\n| 1 | medium | api readiness: storage down |  |  |\n| 2 | medium | worker readiness: storage down |  |  |\n| 3 | medium | A common password shows the right field message and also the generic 'Something went wrong. Try again.' next to the button |  | flow-weak-ro.png and flow-weak-en.png in shots/. libs/i18n/src/public/en.json and ro.json: public.signUp.problem holds only email_taken and too_many_attempts, so for code weak_password the shared form (libs/overlays/src/form.ts errors(), lines 164-170) falls back to shell.form.problem.error. Add public.signUp.problem.weak_password (for example 'Check the marked fields.' as validation_failed reads) and assert the line in apps/web/src/app/sign-in/sign-up.spec.ts 'shows a weak password under the password field' (it only checks the field text and focus). |\n| 4 | low | a11y probe info (not a defect) |  | {\"info\":{\"modal\":\"true\",\"name\":\"mf-overlay-title-2\",\"role\":\"dialog\"},\"labelBefore\":\"Arată parola\",\"order\":[\"mf-sign-up-email\",\"mf-sign-up-password\",\"\",\"Creează contul\",\"Intră în cont\",\"\"]} |\n| 5 | low | api info: sign-up cookie |  | mf_refresh=<redacted>; Max-Age=2592000; Path=/api/v1/auth; Expires=Tue, 03 Nov 2026 17:38:24 GMT; HttpOnly; Secure; SameSite=Strict |\n| 6 | low | Show/hide password keeps one label while pressed |  | apps/web/src/app/sign-in/sign-up.ts: the button's aria-label is constant with aria-pressed toggling. Valid toggle-button pattern, so a note only; the sign-in dialog should use the same pattern. |\n\n### Reproduction\n1. No object store on this machine (no Docker); every other check is ok. Environment limit, not the change.\n2. No object store on this machine (no Docker); every other check is ok. Environment limit, not the change.\n3. Open Autentificare, tap Creează un cont → Fill a name and an e-mail, type the password password1, tap Creează contul → The password field says it is among the most used, and a second line under it reads 'Ceva nu a mers. Încearcă din nou.' (English: 'Something went wrong. Try again.')\n4. open sign-up, tab through\n5. POST sign-up\n6. Open sign-up, press the eye button: aria-pressed turns true and the field type becomes text, the label stays 'Show password' / 'Arată parola'\n\nScreenshots: 32, one per route × viewport × scheme × language.\n"
+}

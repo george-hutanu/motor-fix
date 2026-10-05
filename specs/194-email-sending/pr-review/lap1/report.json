@@ -1,0 +1,30 @@
+{
+  "pr": 65,
+  "repo": "george-hutanu/motor-fix",
+  "sha": "3b5bf48ac1aeff5c6ffa7cba5aa87537fcdde4df",
+  "lap": 1,
+  "booted": [],
+  "screenshots": [],
+  "notes": [
+    "Docs-only PR (.specify/capabilities/notifications.md, specs/194-email-sending/{spec,retrospective,notion-sync}.md): nothing booted, no viewport sweep, no API calls, no test runs. run.mjs has no docs-only mode (it always installs, builds and boots), so this report was assembled from the review checks below.",
+    "Spec Delta merged faithfully: the 20 FR texts in spec.md (FR-001..FR-020) are byte-identical to 194-FR-001..194-FR-020 in the capability (diff: no differences); frontmatter lists 194-email-sending; `capabilities.mjs list` shows notifications 20 requirement(s), 0 retired (194-email-sending).",
+    "`capabilities.mjs validate specs/194-email-sending --check` now reports delta-adds-existing for every FR, which is the normal post-archive state (080-sign-up reports the same against accounts.md).",
+    "Retrospective references resolve: all 10 named files exist under libs/domain/src/notifications/, the 6 commits (3d03f46, 5fad0d7, ef2f9ec, 5992ffa, 777880e, b016b2f) exist, the line refs match deferred.md, tasks.md has 17 [X] and 0 [ ], deferred.md has 8 items each with a Notion URL.",
+    "Markdown well-formed: both frontmatter blocks parse, files end with a newline, no tabs or trailing whitespace; Status wording matches the other archived specs. All 15 CI checks pass on 3b5bf48."
+  ],
+  "findings": [
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "retrospective.md says the taken-e-mail e2e \"shipped in ST-494\"; ST-494 is the debt task, the flow shipped in ST-80 (PR #53, apps/web-e2e/src/sign-up.spec.ts:86)",
+      "steps": [
+        "Read specs/194-email-sending/retrospective.md, section Carried in",
+        "Compare with specs/080-sign-up/spec.md line 9-11: ST-494 is the debt task folded into ST-80"
+      ],
+      "evidence": "specs/194-email-sending/retrospective.md: \"has since shipped in ST-494, so it closes in its own feature's records\"; git log --grep ST-494 finds no commit"
+    }
+  ],
+  "verdict": "success",
+  "summary": "No blocking findings; 1 in all. Booted nothing.",
+  "markdown": "**Agent review: success** — PR #65 at `3b5bf48`, lap 1\n\nBlocking: 0 (blocker 0, high 0) · medium 0 · low 1. Booted: nothing.\n- Docs-only PR (.specify/capabilities/notifications.md, specs/194-email-sending/{spec,retrospective,notion-sync}.md): nothing booted, no viewport sweep, no API calls, no test runs. run.mjs has no docs-only mode (it always installs, builds and boots), so this report was assembled from the review checks below.\n- Spec Delta merged faithfully: the 20 FR texts in spec.md (FR-001..FR-020) are byte-identical to 194-FR-001..194-FR-020 in the capability (diff: no differences); frontmatter lists 194-email-sending; `capabilities.mjs list` shows notifications 20 requirement(s), 0 retired (194-email-sending).\n- `capabilities.mjs validate specs/194-email-sending --check` now reports delta-adds-existing for every FR, which is the normal post-archive state (080-sign-up reports the same against accounts.md).\n- Retrospective references resolve: all 10 named files exist under libs/domain/src/notifications/, the 6 commits (3d03f46, 5fad0d7, ef2f9ec, 5992ffa, 777880e, b016b2f) exist, the line refs match deferred.md, tasks.md has 17 [X] and 0 [ ], deferred.md has 8 items each with a Notion URL.\n- Markdown well-formed: both frontmatter blocks parse, files end with a newline, no tabs or trailing whitespace; Status wording matches the other archived specs. All 15 CI checks pass on 3b5bf48.\n\n| # | Severity | Finding | Where | Evidence |\n| --- | --- | --- | --- | --- |\n| 1 | low | retrospective.md says the taken-e-mail e2e \"shipped in ST-494\"; ST-494 is the debt task, the flow shipped in ST-80 (PR #53, apps/web-e2e/src/sign-up.spec.ts:86) |  | specs/194-email-sending/retrospective.md: \"has since shipped in ST-494, so it closes in its own feature's records\"; git log --grep ST-494 finds no commit |\n\n### Reproduction\n1. Read specs/194-email-sending/retrospective.md, section Carried in → Compare with specs/080-sign-up/spec.md line 9-11: ST-494 is the debt task folded into ST-80\n"
+}

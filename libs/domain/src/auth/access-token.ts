@@ -2,9 +2,14 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 
 import { ROLES, type Role } from './capabilities';
 
-export interface AccessClaims {
+interface AccessClaims {
   accountId: string;
   role: Role;
+}
+
+interface VerifiedClaims extends AccessClaims {
+  // Epoch milliseconds.
+  expiresAt: number;
 }
 
 const HEADER = Buffer.from(
@@ -36,7 +41,7 @@ export function verifyAccessToken(
   token: string,
   secret: string,
   now = Date.now(),
-): AccessClaims | null {
+): VerifiedClaims | null {
   if (typeof token !== 'string') return null;
   const [header, payload, signature, ...rest] = token.split('.');
   if (header !== HEADER || !payload || !signature || rest.length > 0) {
@@ -65,5 +70,9 @@ export function verifyAccessToken(
   ) {
     return null;
   }
-  return { accountId: claims.sub, role: claims.role as Role };
+  return {
+    accountId: claims.sub,
+    expiresAt: claims.exp * 1000,
+    role: claims.role as Role,
+  };
 }

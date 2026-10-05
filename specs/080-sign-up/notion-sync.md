@@ -1,0 +1,28 @@
+# Notion sync — 080-sign-up
+
+- 2026-10-04 · start · ST-80 story Status · To do → Planning
+- 2026-10-04 · start · Foundations timeline row ST-80 · Not started → Planning
+- 2026-10-04 · start · EP-1 Foundations Status · unchanged (In progress)
+- 2026-10-04 · ready · Foundations · −ST-80 −ST-20 −ST-158
+- 2026-10-04 · pr · ST-80 · PR #53 https://github.com/george-hutanu/motor-fix/pull/53
+- 2026-10-04 · labels · PR #53 · planning
+- 2026-10-04 · implement · ST-80 story Status · Planning → Implementing
+- 2026-10-04 · implement · Foundations timeline row ST-80 · Planning → Implementing
+- 2026-10-04 · labels · PR #53 · in development
+- 2026-10-04 · decision · ST-80 sign-up limit · owner confirmed 10 attempts an hour per network address; brief's Rules line (proposed) → Decided 2026-10-04
+- 2026-10-04 · comment · ST-80 · deviation: scenario 3 ("Am un service") not built, posted
+- 2026-10-04 · review · ST-80 story Status · Implementing → In review (PR #53 marked ready)
+- 2026-10-04 · review · Foundations timeline row ST-80 · Implementing → In review
+- 2026-10-04 · labels · PR #53 · in review
+- 2026-10-04 · qa · ST-80 story Status · In review → QA
+- 2026-10-04 · qa · Foundations timeline row ST-80 · In review → QA
+- 2026-10-04 · labels · PR #53 · QA
+- 2026-10-04 · debt · 1 deferred bullet filed as To do task 3ef607bff0d281c89193fe63b28bddf4 (HMAC counter keys); proxy-trust bullet already ST-82's task 3ef607bff0d281f2ac88f8453c97d361
+- 2026-10-04 · debt · 2 lap-5 findings filed as To do tasks 3ef607bff0d2817aa5bbcdab29183ddd (attempts.ts one shape), 3ef607bff0d2812f8df3d2369d113739 (tasks.md FR-016 row)
+- 2026-10-04 · finish · ST-80 story Status · QA → Done
+- 2026-10-04 · finish · Foundations timeline row ST-80 · QA → Merged
+- 2026-10-04 · finish · EP-1 Foundations Status · unchanged (In progress)
+- 2026-10-04 · finish · ST-494 Status · To do → Done (e2e in apps/web-e2e/src/sign-up.spec.ts), PR #53
+- 2026-10-04 · labels · PR #53 · none
+- 2026-10-04 · comment · ST-80 · posted (14 items)
+- 2026-10-05 · ready · Foundations · no change (checked in the records PR: ST-80 unticked; ST-132 held: the lawyer)

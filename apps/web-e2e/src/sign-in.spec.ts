@@ -47,7 +47,7 @@ test.describe('signing in for real @seeded', () => {
 
       await expect(page).toHaveURL(landing);
       await expect(
-        page.getByRole('navigation', { name: 'Meniu' }).getByRole('button', {
+        page.getByRole('navigation', { name: 'Meniu' }).getByRole('link', {
           exact: true,
           name: menu,
         }),
@@ -61,11 +61,9 @@ test.describe('signing in for real @seeded', () => {
     await signIn(page, ACCOUNTS.receptionist);
 
     const menu = page.getByRole('navigation', { name: 'Meniu' });
-    await expect(
-      menu.getByRole('button', { name: 'Programări' }),
-    ).toBeVisible();
+    await expect(menu.getByRole('link', { name: 'Programări' })).toBeVisible();
     for (const hidden of ['Mecanici', 'Prețuri', 'Profilul service‑ului']) {
-      await expect(menu.getByRole('button', { name: hidden })).toHaveCount(0);
+      await expect(menu.getByRole('link', { name: hidden })).toHaveCount(0);
     }
   });
 

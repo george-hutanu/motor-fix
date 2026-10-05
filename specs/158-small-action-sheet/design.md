@@ -24,7 +24,7 @@ The story's Design boards roll up from EP-1 ("Mobile (Cockpit): Mobile · Sign-i
 - Breakpoint: mock 640 px → Build brief 768 px *(proposed)*, the phone rule ST-286 merged. The Build brief wins.
 - Grip: mock 44 × 5 px → Build brief 36 × 4 px with a 44 px touch area *(proposed)*. The Build brief wins.
 - Drag: not in the mock → Build brief scenario 4, past a third closes, less springs back *(proposed)*. Built.
-- Built on: the Build brief says PrimeNG Drawer in the bottom position → the constitution's given stack rules out PrimeNG; the kit's Spartan sheet surface on the Angular CDK replaces it.
+- Built on: the Build brief says the Spartan sheet in the bottom position → the kit's Spartan sheet surface on the Angular CDK, as the constitution's given stack requires.
 - Entry: the mock's `mf-ovsheet` (rise from 60 %) → ST-53's merged `mf-pop` (420 ms, from 94 %, anchored to the edge), as ST-157 kept for the dialog and drawer.
 - Radius: mock 24 px → the theme's `--mf-radius-panel` (20 px), as ST-157's dialog and drawer.
 - Backdrop: mock `rgba(5,6,8,.74)` → the theme's `--mf-mask`.

@@ -28,12 +28,22 @@ import { Session } from '../dashboard/session';
 
 // Text, "@", and a domain with a dot, spaces around it allowed; the server
 // decides the rest.
-const ADDRESS = /^\s*[^\s@]+@[^\s@]+\.[^\s@]+\s*$/;
+export const ADDRESS = /^\s*[^\s@]+@[^\s@]+\.[^\s@]+\s*$/;
 
-// The sign-in task shown in the shared dialog. It closes with "signed-in";
-// whoever opened it decides where to go next. Saving, field errors and the
-// answer's message are the shared task behaviour; the codes only sign-in has
-// are under public.signIn.problem.
+// What a sign-in or sign-up task closes with to hand over to the other one.
+export interface AuthSwitch {
+  switchTo: 'sign-in' | 'sign-up';
+  email: string;
+}
+
+// The e-mail typed in the other task, if any, and whether an action that
+// needs an account opened the dialog.
+export type AuthData = { email?: string; reason?: boolean } | undefined;
+
+// The sign-in task shown in the shared dialog. It closes with "signed-in", or
+// with a switch to sign-up; whoever opened it decides where to go next.
+// Saving, field errors and the answer's message are the shared task
+// behaviour; the codes only sign-in has are under public.signIn.problem.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -53,11 +63,17 @@ const ADDRESS = /^\s*[^\s@]+@[^\s@]+\.[^\s@]+\s*$/;
     label { font-weight: 700; }
     .remember { display: flex; align-items: center; gap: var(--mf-space-3); min-height: var(--mf-tap); font-weight: 400; cursor: pointer; }
     .remember input { width: 20px; height: 20px; margin: 0; accent-color: var(--mf-amber); }
-    button { width: 100%; min-height: 54px; white-space: normal; }
+    button[type='submit'] { width: 100%; min-height: 54px; white-space: normal; }
+    .switch { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--mf-space-2); margin: 0; color: var(--mf-text-secondary); }
+    .switch button { min-height: var(--mf-tap); padding: 0; border: 0; background: transparent; color: var(--mf-amber-ink); font: inherit; font-weight: 700; cursor: pointer; }
+    .switch button:focus-visible { outline: 2px solid var(--mf-amber-ink); outline-offset: 2px; }
   `,
   template: `
     <form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
       <p class="brand">{{ 'public.signIn.brand' | t }}</p>
+      @if (reason) {
+        <p class="brand">{{ 'public.signIn.reason' | t }}</p>
+      }
       <div class="field">
         <label for="mf-sign-in-email">{{ 'public.signIn.email' | t }}</label>
         <input
@@ -95,17 +111,28 @@ const ADDRESS = /^\s*[^\s@]+@[^\s@]+\.[^\s@]+\s*$/;
       <button hlmBtn type="submit" [mfTaskSubmit]="save">
         {{ 'public.signIn.submit' | t }}
       </button>
+      <p class="switch">
+        <span>{{ 'public.signIn.newHere' | t }}</span>
+        <button type="button" [disabled]="save.state() === 'sending'" (click)="switchToSignUp()">
+          {{ 'public.signIn.createAccount' | t }}
+        </button>
+      </p>
     </form>
   `,
 })
 export class SignIn {
   private readonly session = inject(Session);
-  private readonly task = injectOverlayTask<undefined, 'signed-in'>();
+  private readonly task = injectOverlayTask<
+    AuthData,
+    'signed-in' | AuthSwitch
+  >();
   private readonly passwordInput =
     viewChild.required<ElementRef<HTMLInputElement>>('passwordInput');
 
+  protected readonly reason = this.task.data?.reason === true;
+
   protected readonly form = new FormGroup({
-    email: new FormControl('', {
+    email: new FormControl(this.task.data?.email ?? '', {
       nonNullable: true,
       validators: [Validators.required, Validators.pattern(ADDRESS)],
     }),
@@ -126,6 +153,13 @@ export class SignIn {
       return me;
     },
   });
+
+  protected switchToSignUp() {
+    this.task.close({
+      email: this.form.controls.email.value.trim(),
+      switchTo: 'sign-up',
+    });
+  }
 
   constructor() {
     void inject(I18n).enter('public');

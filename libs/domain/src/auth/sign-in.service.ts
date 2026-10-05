@@ -6,6 +6,7 @@ import {
   Inject,
   Injectable,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 
 import { signAccessToken } from './access-token';
@@ -16,6 +17,10 @@ import { MAINTENANCE, type Maintenance } from './maintenance';
 import { DECOY_HASH, verifyPassword } from './password';
 import { roleInUse } from './policy';
 import { PRISMA } from './prisma';
+import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
+import { audienceOf } from '../events/audience';
+import { EVENT_PORT, type EventPort } from '../events/event.port';
+import { type LivePublisher, publishLive } from '../events/live.hub';
 import type { PrismaClient } from '../generated/prisma/client';
 
 const DAY_MS = 86_400_000;
@@ -25,6 +30,11 @@ const BROWSER_SESSION_MS = 12 * 3_600_000;
 const GRACE_MS = 20_000;
 const ACTIVE_EVERY_MS = 3_600_000;
 const TOKEN = /^[A-Za-z0-9_-]{43}$/;
+
+type Renewable = NonNullable<Awaited<ReturnType<SignInService['presented']>>>;
+
+// Where the open dashboards hear that their session ended: the live fan-out.
+export const SESSION_EVENTS = Symbol('SESSION_EVENTS');
 
 export interface Issued {
   accessToken: string;
@@ -66,6 +76,9 @@ export class SignInService {
     @Inject(AUTH_OPTIONS) private readonly options: AuthOptions,
     @Inject(MAINTENANCE) private readonly maintenance: Maintenance,
     private readonly attempts: Attempts,
+    @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Inject(EVENT_PORT) private readonly events: EventPort,
+    @Inject(SESSION_EVENTS) private readonly sessionEvents: LivePublisher,
   ) {}
 
   async signIn(
@@ -98,27 +111,60 @@ export class SignInService {
       );
     }
     await this.attempts.clear(email);
-    const remember = input.remember ?? true;
+    return this.openSession(account.id, role, input.remember ?? true);
+  }
+
+  // A new session: its access token, and the refresh token of a new family.
+  async openSession(
+    accountId: string,
+    role: Role,
+    remember: boolean,
+  ): Promise<Issued> {
     return {
-      accessToken: this.accessToken(account.id, role),
-      refreshToken: await this.openFamily(account.id, remember),
+      accessToken: this.accessToken(accountId, role),
+      refreshToken: await this.openFamily(accountId, remember),
       remember,
     };
   }
 
-  async refresh(token: string | undefined): Promise<Issued> {
-    const row = await this.presented(token);
+  // A renewal of the browser's session in another of its roles, so a session
+  // signed out here or everywhere cannot switch. A view preference, not a
+  // change of rights: no audit entry. A role the account does not hold does
+  // not exist for it.
+  async switchRole(token: string | undefined, role: Role): Promise<Issued> {
     const now = Date.now();
-    if (!row || row.expiresAt.getTime() <= now) throw signInRequired();
-    const inGrace = row.usedAt && now - row.usedAt.getTime() < GRACE_MS;
-    if (row.usedAt && !inGrace) {
-      await this.revoke(row.familyId);
-      throw signInRequired();
+    const { inGrace, row } = await this.renewable(token, now);
+    if (!row.account.roles.some((held) => held.role === role)) {
+      throw new NotFoundException();
     }
+    const issued = await this.renew(row, inGrace, role, now);
+    await this.prisma.account.update({
+      data: { lastRole: role },
+      where: { id: row.account.id },
+    });
+    return issued;
+  }
+
+  // `wanted`: the role the renewing tab shows, kept while the account holds it.
+  async refresh(
+    token: string | undefined,
+    wanted: Role | null,
+  ): Promise<Issued> {
+    const now = Date.now();
+    const { inGrace, row } = await this.renewable(token, now);
+    return this.renew(row, inGrace, wanted, now);
+  }
+
+  private async renew(
+    row: Renewable,
+    inGrace: boolean,
+    wanted: Role | null,
+    now: number,
+  ): Promise<Issued> {
     const { account } = row;
     const accessToken = this.accessToken(
       account.id,
-      await this.stillAllowed(row),
+      await this.stillAllowed(row, wanted),
     );
     const next = inGrace ? null : await this.rotate(row, now);
     // In the grace, or another tab rotated it between the read and the write.
@@ -135,6 +181,55 @@ export class SignInService {
       where: { tokenHash: hashOf(token) },
     });
     if (row) await this.revoke(row.familyId);
+  }
+
+  // Every session of the account the token belongs to, when it would renew.
+  async signOutEverywhere(token: string | undefined): Promise<void> {
+    const now = Date.now();
+    const { account } = (await this.renewable(token, now)).row;
+    await this.prisma.$transaction(async (tx) => {
+      await tx.refreshToken.deleteMany({ where: { accountId: account.id } });
+      await this.audit.record(tx, {
+        action: 'delete',
+        actorId: account.id,
+        actorRole: account.lastRole,
+        kind: 'signed_out_everywhere',
+        subjectId: account.id,
+        subjectType: 'account',
+      });
+      await this.events.record(tx, {
+        audience: { accountId: account.id, type: 'account' },
+        kind: 'account.signed_out_everywhere',
+        payload: { accountId: account.id },
+        subjectId: account.id,
+      });
+    });
+    // The live nudge only tells open dashboards; the event above is the record.
+    // Not awaited: a tab that misses it is signed out at its next renewal.
+    publishLive(
+      this.sessionEvents,
+      {
+        at: new Date(now).toISOString(),
+        id: randomUUID(),
+        kind: 'session.revoked',
+      },
+      audienceOf({ accountId: account.id, type: 'account' }),
+    ).catch((error: Error) =>
+      this.logger.warn(`session.revoked not sent: ${error.message}`),
+    );
+  }
+
+  // The presented token's row, when it may renew. A token used again after
+  // the grace was taken from its holder: its family is closed.
+  private async renewable(token: string | undefined, now: number) {
+    const row = await this.presented(token);
+    if (!row || row.expiresAt.getTime() <= now) throw signInRequired();
+    const inGrace = !!row.usedAt && now - row.usedAt.getTime() < GRACE_MS;
+    if (row.usedAt && !inGrace) {
+      await this.revoke(row.familyId);
+      throw signInRequired();
+    }
+    return { inGrace, row };
   }
 
   private revoke(familyId: string) {
@@ -186,13 +281,16 @@ export class SignInService {
 
   // The role in use of an account that may still be signed in; otherwise the
   // family is closed.
-  private async stillAllowed(row: {
-    familyId: string;
-    account: { lastRole: Role; status: string; roles: { role: Role }[] };
-  }): Promise<Role> {
+  private async stillAllowed(
+    row: {
+      familyId: string;
+      account: { lastRole: Role; status: string; roles: { role: Role }[] };
+    },
+    wanted: Role | null,
+  ): Promise<Role> {
     const { account } = row;
     const role = roleInUse(
-      null,
+      wanted,
       account.lastRole,
       account.roles.map((r) => r.role),
     );

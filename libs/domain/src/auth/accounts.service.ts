@@ -7,6 +7,9 @@ import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { EVENT_PORT, type EventPort } from '../events/event.port';
 import type { Prisma, PrismaClient } from '../generated/prisma/client';
 
+// Identities whose provider has already checked the e-mail.
+const VOUCHED = new Set(['google', 'apple']);
+
 export interface NewAccount {
   name: string;
   email?: string;
@@ -37,6 +40,10 @@ export class AccountsService {
       const { id } = await tx.account.create({
         data: {
           email: input.email?.trim().toLowerCase(),
+          emailVerifiedAt:
+            input.email && VOUCHED.has(input.identity.method)
+              ? new Date()
+              : undefined,
           identities: { create: input.identity },
           language: input.language,
           lastRole: first,
@@ -58,6 +65,7 @@ export class AccountsService {
         });
       }
       await this.events.record(tx, {
+        audience: { accountId: id, type: 'account' },
         kind: 'account.created',
         payload: {
           accountId: id,

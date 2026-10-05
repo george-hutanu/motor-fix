@@ -27,6 +27,10 @@ export interface AuthOptions {
 }
 
 const REQUIRES = 'auth:requires';
+const PUBLIC = 'auth:public';
+
+// Every route needs a signed-in account unless it carries this mark.
+export const Public = () => SetMetadata(PUBLIC, true);
 
 export const Requires = (capability: Capability) =>
   SetMetadata(REQUIRES, capability);
@@ -53,6 +57,11 @@ export class ActorGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const open = this.reflector.getAllAndOverride<boolean | undefined>(PUBLIC, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (open) return true;
     const request = context.switchToHttp().getRequest<WithActor>();
     const actor = await this.actor(request.header('authorization'));
     const capability = this.reflector.get<Capability | undefined>(

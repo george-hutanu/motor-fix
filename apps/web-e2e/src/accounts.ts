@@ -2,15 +2,17 @@ import { expect, type Page } from '@playwright/test';
 
 // The accounts libs/domain/src/seed.ts adds outside production. Their password
 // is a fake default locally and in CI; a deployed address has its own secret.
-const PASSWORD = process.env['E2E_PASSWORD'] || 'parola-de-test';
+export const PASSWORD = process.env['E2E_PASSWORD'] || 'parola-de-test';
 
 export const ACCOUNTS = {
   admin: 'admin@example.test',
   driver: 'sofer@example.test',
   garage: 'service@example.test',
   mechanic: 'mecanic@example.test',
+  otherDriver: 'sofer2@example.test',
   receptionist: 'receptie@example.test',
   suspended: 'suspendat@example.test',
+  switcher: 'comutare@example.test',
   twoRoles: 'doua-roluri@example.test',
 } as const;
 

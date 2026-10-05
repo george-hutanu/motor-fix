@@ -8,6 +8,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import type { MeDto } from '@motor-fix/data-access';
 import { LanguageChoice } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import { Subject } from 'rxjs';
 
 import { provideLanguageAddresses, SITE_ORIGIN } from '../addresses';
 import { routes } from '../app.routes';
@@ -44,7 +45,10 @@ function setUp(platform = 'browser') {
       provideRouter(routes),
       provideLanguageAddresses(),
       { provide: SITE_ORIGIN, useValue: 'https://motorfix.ro' },
-      { provide: Session, useValue: { current, load } },
+      {
+        provide: Session,
+        useValue: { current, ended: new Subject<void>(), load },
+      },
       { provide: PLATFORM_ID, useValue: platform },
       { provide: Overlays, useValue: overlays },
     ],

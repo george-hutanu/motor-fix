@@ -1,4 +1,18 @@
 {
+  "confirmEmail": {
+    "confirmed": "Your e-mail address is confirmed.",
+    "confirming": "Confirming your address…",
+    "error": "We could not confirm your address just now.",
+    "expired": "The link has expired",
+    "expiredLine": "A confirmation link works once, for 72 hours.",
+    "failed": "We could not send the link. Try again.",
+    "home": "Go to MotorFix",
+    "refused": "We cannot send another link from this one. Sign in and press “Send again”.",
+    "retry": "Try again",
+    "sendNew": "Send a new link",
+    "sent": "We sent a new link by e-mail.",
+    "tooMany": "You already asked for a link. Try again a little later."
+  },
   "placeholder": {
     "account": "Account",
     "garages": "Garages",
@@ -7,11 +21,13 @@
   },
   "signIn": {
     "brand": "MotorFix",
+    "createAccount": "Create an account",
     "email": "E-mail",
     "emailPlaceholder": "you@example.com",
     "field": {
       "pattern": "That e-mail address does not look right."
     },
+    "newHere": "New to MotorFix?",
     "password": "Password",
     "passwordPlaceholder": "Your password",
     "problem": {
@@ -19,15 +35,49 @@
       "invalid_credentials": "The e-mail or password is not correct.",
       "too_many_attempts": "Too many attempts. Try again in 15 minutes."
     },
+    "reason": "Sign in to continue.",
     "remember": "Keep me signed in",
     "submit": "Sign in",
     "title": "Sign in"
   },
   "signInButton": "Sign in",
+  "signUp": {
+    "blurb": "Your quote requests, your cars and the reviews you wrote.",
+    "brand": "MotorFix",
+    "email": "E-mail",
+    "emailPlaceholder": "you@example.com",
+    "field": {
+      "pattern": "That e-mail address does not look right.",
+      "weak_password": "Choose a password that is harder to guess: this one is among the most used."
+    },
+    "haveAccount": "Already have an account?",
+    "name": "Name",
+    "password": "Password",
+    "passwordPlaceholder": "At least 8 characters",
+    "problem": {
+      "email_taken": "An account with this e-mail already exists.",
+      "too_many_attempts": "Too many attempts. Try again in an hour.",
+      "weak_password": "Check the marked fields."
+    },
+    "showPassword": "Show password",
+    "signIn": "Sign in",
+    "submit": "Create account",
+    "title": "New account"
+  },
   "tabs": {
     "account": "Account",
     "garages": "Garages",
     "label": "Main navigation",
     "search": "Search"
+  },
+  "unsubscribe": {
+    "error": "We could not stop the news right now.",
+    "home": "Go to MotorFix",
+    "invalid": "This link is not valid",
+    "invalidLine": "Open the link exactly as you received it.",
+    "retry": "Try again",
+    "stopped": "You will no longer get MotorFix news",
+    "stoppedLine": "Messages about your cars and jobs still come.",
+    "stopping": "Stopping the news…"
   }
 }

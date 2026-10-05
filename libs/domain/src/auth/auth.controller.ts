@@ -1,18 +1,40 @@
-import { SessionDto, SignInDto } from '@motor-fix/contracts';
+import {
+  RefreshDto,
+  SessionDto,
+  SignInDto,
+  SignUpDto,
+  SwitchRoleDto,
+} from '@motor-fix/contracts';
 import {
   Body,
+  type CanActivate,
   Controller,
+  type ExecutionContext,
   HttpCode,
   HttpException,
   HttpStatus,
   Post,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBadRequestResponse,
+  ApiBody,
+  ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiNoContentResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+  ApiUnsupportedMediaTypeResponse,
+} from '@nestjs/swagger';
 import type { CookieOptions, Request, Response } from 'express';
 
+import { Public } from './actor.guard';
 import { type Issued, REMEMBERED_MS, SignInService } from './sign-in.service';
+import { SignUpService } from './sign-up.service';
 
 const COOKIE = 'mf_refresh';
 
@@ -42,12 +64,51 @@ function keep(res: Response, issued: Issued) {
 
 const forget = (res: Response) => res.clearCookie(COOKIE, FLAGS);
 
+const refused = (error: unknown) =>
+  error instanceof HttpException &&
+  [HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN].includes(error.getStatus());
+
+const PROTOTYPE_KEYS = ['__proto__', 'constructor', 'prototype'];
+
+// A cross-site form can post urlencoded or plain text, never JSON, so another
+// site cannot sign this browser into an account it chose. A guard, so it
+// answers before the body is validated, whatever the body holds; and a key
+// that names the prototype chain is no field of any body.
+export class JsonOnly implements CanActivate {
+  canActivate(context: ExecutionContext) {
+    const req = context.switchToHttp().getRequest<Request>();
+    if (!req.is('application/json')) {
+      throw new HttpException(
+        { code: 'unsupported_media_type', message: 'Send JSON' },
+        HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+      );
+    }
+    const body: unknown = req.body;
+    if (
+      typeof body === 'object' &&
+      body !== null &&
+      PROTOTYPE_KEYS.some((key) => Object.hasOwn(body, key))
+    ) {
+      throw new HttpException(
+        { code: 'validation_failed', message: 'Unexpected field' },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return true;
+  }
+}
+
 @ApiTags('auth')
 @Controller('auth')
+@Public()
 export class AuthController {
-  constructor(private readonly signIns: SignInService) {}
+  constructor(
+    private readonly signIns: SignInService,
+    private readonly signUps: SignUpService,
+  ) {}
 
   @Post('sign-in')
+  @UseGuards(JsonOnly)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: SessionDto })
   async signIn(
@@ -55,42 +116,89 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<SessionDto> {
-    // A cross-site form can post urlencoded or plain text, never JSON, so
-    // another site cannot sign this browser into an account it chose.
-    if (!req.is('application/json')) {
-      throw new HttpException(
-        { code: 'unsupported_media_type', message: 'Send JSON' },
-        HttpStatus.UNSUPPORTED_MEDIA_TYPE,
-      );
-    }
     const issued = await this.signIns.signIn(body, req.ip ?? '');
+    keep(res, issued);
+    return { accessToken: issued.accessToken };
+  }
+
+  @Post('sign-up')
+  @UseGuards(JsonOnly)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiCreatedResponse({ type: SessionDto })
+  async signUp(
+    @Body() body: SignUpDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<SessionDto> {
+    const issued = await this.signUps.signUp(body, req.ip ?? '');
     keep(res, issued);
     return { accessToken: issued.accessToken };
   }
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @ApiBody({ required: false, type: RefreshDto })
   @ApiOkResponse({ type: SessionDto })
   async refresh(
+    @Body() body: RefreshDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<SessionDto> {
     try {
-      const issued = await this.signIns.refresh(presented(req));
+      const issued = await this.signIns.refresh(
+        presented(req),
+        body.role ?? null,
+      );
       keep(res, issued);
       return { accessToken: issued.accessToken };
     } catch (error) {
       // Only a refused token ends the session; an outage keeps the cookie.
-      if (
-        error instanceof HttpException &&
-        [HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN].includes(
-          error.getStatus(),
-        )
-      ) {
-        forget(res);
-      }
+      if (refused(error)) forget(res);
       throw error;
     }
+  }
+
+  // Under /auth, where the browser sends the refresh cookie.
+  @Post('roles/switch')
+  @UseGuards(JsonOnly)
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: SessionDto })
+  @ApiBadRequestResponse({ description: 'No valid role in the body' })
+  @ApiUnauthorizedResponse({ description: 'No live session on this device' })
+  @ApiForbiddenResponse({ description: 'The account is suspended' })
+  @ApiNotFoundResponse({ description: 'The account does not hold that role' })
+  @ApiUnsupportedMediaTypeResponse({ description: 'The body is not JSON' })
+  async switchRole(
+    @Body() body: SwitchRoleDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<SessionDto> {
+    try {
+      const issued = await this.signIns.switchRole(presented(req), body.role);
+      keep(res, issued);
+      return { accessToken: issued.accessToken };
+    } catch (error) {
+      if (refused(error)) forget(res);
+      throw error;
+    }
+  }
+
+  @Post('sign-out-everywhere')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse()
+  @ApiUnauthorizedResponse()
+  async signOutEverywhere(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    try {
+      await this.signIns.signOutEverywhere(presented(req));
+    } catch (error) {
+      // An outage keeps the cookie, so the browser can ask again.
+      if (refused(error)) forget(res);
+      throw error;
+    }
+    forget(res);
   }
 
   @Post('sign-out')
