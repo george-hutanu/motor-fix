@@ -560,25 +560,56 @@ and QA lap is where most of a story's cost went.
    one stage label → `QA`. Ready is QA; there is no In review stage. Commit
    and push the `qa` line in `notion-sync.md` at once, before anything waits
    on CI or tests the head.
-4. Write `specs/<feature>/handoff.md` (git ignores it; the tail deletes it):
+4. Start the QA run, beside CI, and do not wait for it. Write the flows the
+   way `.claude/agents/pr-tester.md` §2 says, to
+   `.specify/.cache/qa-flows-<n>.mjs` (git ignores it), then
+   `node .claude/scripts/pr-test/dispatch.mjs <n> --no-wait --lap 1 --flows .specify/.cache/qa-flows-<n>.mjs`:
+   it dispatches the PR QA workflow for the head, prints one line,
+   `- QA run: <id> · head <sha> · lap <n> · <url>`, and exits. On exit 2 (no
+   run appeared) the note records no run and the tail dispatches one.
+5. Write `specs/<feature>/handoff.md` (git ignores it; the tail deletes it),
+   with that line as printed:
 
    ```markdown
    # Hand-off — <feature>
    - PR: #<n> <url> · branch <branch> · worktree <absolute path> · head <sha>
    - Notion: story <page id> · timeline row <page id> · epic <page id>
+   - QA run: <id> · head <sha> · lap 1 · <url>
    - Open decisions: <each, with its source file> | none
    - Deferred: <each deferred.md bullet not yet filed, or "all filed"> | none
    ```
 
-5. `node .claude/scripts/run-state.mjs set --status in-progress --phase hand-off`,
-   write the Final Report, and reply with `NEXT: tail #<n>`. Start no CI wait
-   and no PR tester run here: the tail starts both at once, so QA still runs
-   beside CI. Run by the owner in their own session rather than dispatched,
-   nobody reads that NEXT: claim the worktree and dispatch the tail yourself
-   (below) before the report, so the merge never waits on the owner.
+6. `node .claude/scripts/run-state.mjs set --status in-progress --phase hand-off`,
+   write the Final Report, and reply with `NEXT: tail #<n> after QA run <id>`
+   (`NEXT: tail #<n>` when no run was recorded). That reply is this agent's
+   last action: it starts no CI wait and waits on no run, since a context
+   that sleeps past the 5-minute prompt cache is written again in full when
+   it wakes. Run by the owner in their own session rather than dispatched,
+   nobody reads that NEXT: hold the wait (below) in that session and, when
+   it reports, claim the worktree and dispatch the tail yourself, so the
+   merge never waits on the owner.
 
 A run that ends on a Hard Stop before the hand-off does none of this but the
 Blocked write: the PR stays a draft.
+
+## The wait
+
+No agent is alive while CI and the QA run work. The session that receives
+`NEXT: tail #<n> after QA run <id>` (the orchestrating one, or the owner's own
+session for a story run there) starts one background command
+(`run_in_background`) that ends when both have finished and prints only what
+did not pass:
+
+```bash
+gh pr checks <n> --watch >/dev/null 2>&1; gh run watch <id> >/dev/null 2>&1
+gh pr checks <n> --json name,bucket --jq '.[] | select(.bucket != "pass" and .bucket != "skipping") | "\(.name): \(.bucket)"'
+gh run view <id> --json conclusion -q '"QA run: \(.conclusion)"'
+```
+
+When it reports, `node .claude/scripts/watch.mjs claim <worktree> tail` and
+dispatch the tail (below). Should the session end first, the watcher holds
+the same rule: it shows the PR `waiting`, with no fix, until CI and that run
+have finished, then offers `tail` at once.
 
 ## The tail
 
@@ -595,39 +626,50 @@ holding only the PR number, the worktree and the note's path:
 > `.claude/skills/speckit-auto/SKILL.md`.
 
 The tail reads the note, `deferred.md` and the PR, not the story's transcript,
-and runs lifecycle steps 5–7:
+and runs lifecycle steps 5–7. It starts on a finished CI and QA run, and it
+never waits on either: a lap that needs a new run dispatches it and ends.
 
 1. If the branch is behind `origin/main`, `git merge --no-edit origin/main`,
-   re-run `typecheck`, `lint` and the tests, and push.
-2. Start the CI wait in the background — `run_in_background`, never a
-   foreground `sleep` or `until` loop — with the command that prints only what
-   did not pass (AGENTS.md "Agent replies"):
-   `gh pr checks <n> --watch >/dev/null 2>&1; gh pr checks <n> --json name,bucket --jq '.[] | select(.bucket != "pass" and .bucket != "skipping") | "\(.name): \(.bucket)"'`
-   — and go straight on to step 3: QA runs beside CI, not after it. When the
-   wait reports, every check other than `agent-review` must have passed (its
-   output lists nothing else). For a failing one read
-   `gh run view <run-id> --log-failed | tail -n 80`, not the whole log. A failing
-   check is a repair: fix it on the branch, push (the new head needs a new
-   tester run), wait again; it counts toward `SPECKIT_MAX_REPAIR_ITERATIONS`.
-3. **QA — the PR tester** (`/speckit-pr-test <n>`, Constitution VII), started
-   at once, beside step 2: the story, its timeline row and the PR's one stage
-   label stay QA; the `pr-tester` subagent dispatches the PR QA workflow,
-   where a GitHub runner boots the head commit, sweeps the UI and calls the
-   API (the unit and end-to-end suites are CI's); it then reads the artifact,
-   reviews the diff, posts its review, replaces the body's Agent review
-   `Pending.` line (`gh pr edit --body-file`) and sets `agent-review` on the
-   head commit. On failure: fix every blocking finding, tests first, commit
-   (the lap's report and any new `notion-sync.md` lines go in the same
-   commit), push, `node .claude/scripts/run-state.mjs repair`, and run the
-   tester again on the new head; the story stays QA. When `repair` exits 1
-   the run is blocked (`repair-loop-exceeded`): `speckit-notion-sync blocked`
-   with the open findings, the same as a PR comment, and stop — the PR is
-   never merged at the cap.
+   re-run `typecheck`, `lint` and the tests, and push: the new head needs a
+   new run (step 3's "no run" case).
+2. Read CI: `gh pr checks <n> --json name,bucket --jq '.[] | select(.bucket != "pass" and .bucket != "skipping") | "\(.name): \(.bucket)"'`
+   lists what did not pass (`agent-review` aside). For a failing check read
+   `gh run view <run-id> --log-failed | tail -n 80`, not the whole log. A
+   failing check is a repair, fixed as step 3's failing lap is.
+3. **QA — the PR tester** (`/speckit-pr-test <n>`, Constitution VII) on the
+   note's `QA run:` line. When its head is the PR's head, give the tester
+   `RUN: <id>`: the `pr-tester` subagent downloads that finished run
+   (`dispatch.mjs <n> --run <id>`), checks the flows that were sent, reviews
+   the diff, posts its review, replaces the body's Agent review `Pending.`
+   line (`gh pr edit --body-file`) and sets `agent-review` on the head commit;
+   the story and the PR's stage label stay QA.
+   - **No run for the head** (none recorded, or one about an older head):
+     write the flows to `.specify/.cache/qa-flows-<n>.mjs`, run
+     `node .claude/scripts/pr-test/dispatch.mjs <n> --no-wait --lap <repair_iterations + 1> --flows .specify/.cache/qa-flows-<n>.mjs`,
+     replace the note's `QA run:` line with the one it prints, and end with
+     `NEXT: tail #<n> after QA run <id>`.
+   - **An unusable run** (the tester's dispatch exits 2: cancelled, no
+     report): dispatch again once for that head, the same way, at the same
+     lap. A second unusable run for the head is posted with
+     `post.mjs --missing` and blocks the run (`verification-failed`).
+   - **A failing lap** (blocking findings, or a failing check): fix every
+     one, tests first, commit (the lap's report and any new `notion-sync.md`
+     lines go in the same commit), push, then
+     `node .claude/scripts/run-state.mjs repair`, which counts the lap in
+     `.specify/run-state.json` so the cap holds across tails. When it exits 1
+     the run is blocked (`repair-loop-exceeded`): `speckit-notion-sync
+     blocked` with the open findings, the same as a PR comment, and stop: the
+     PR is never merged at the cap. Otherwise dispatch the new head's run
+     with `--no-wait` as above, rewrite the note's `QA run:` line, and end
+     with `NEXT: tail #<n> after QA run <id>`.
 4. After a passing lap, `speckit-notion-sync debt` files every deferred bullet
    not yet filed (reviewers' and the tester's) as a To do task in Notion. Its
    URLs change `deferred.md`, so commit and push that and run
    `/speckit-pr-test` on the new head: a docs-only head carries the passing
-   verdict (`pr-test/carry.mjs`) with no new lap. If the commit touched
+   verdict (`pr-test/carry.mjs`) with no new lap. Only the Changes and `CI OK`
+   jobs run on a docs-only head, so this is the one wait a tail holds, in the
+   background (`run_in_background`):
+   `gh pr checks <n> --watch >/dev/null 2>&1; gh pr checks <n> --json name,bucket --jq '.[] | select(.bucket != "pass" and .bucket != "skipping") | "\(.name): \(.bucket)"'`. If the commit touched
    anything else, a lap runs (it re-raises nothing already deferred);
    non-blocking findings new in it are filed in Notion directly and named in
    the PR's Agent review section, and their bullets, with the task URLs, ride

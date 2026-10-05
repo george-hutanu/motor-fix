@@ -42,3 +42,6 @@
 
 - qa-run.mjs (line format and parser), dispatch.mjs `--no-wait` / `--run <id>` (polls before it sleeps; `PR_QA_POLL_MS` for the specs), watch.mjs `waiting` verdict with `runOf`.
 - The symlink fixture in watch.spec.mjs copies the watcher's imports by name: qa-run.mjs added there.
+- Prose: speckit-auto Hand-off steps 4-6, new "The wait" section, The tail steps 1-3 (the #138 dispatch paragraph untouched); pr-tester `RUN` input, §2 flows in `.specify/.cache/qa-flows-<PR>.mjs` with the "flow not run" check, §3 `--run`; speckit-pr-test step 4/6; speckit-watch `waiting`; AGENTS.md steps 4-6.
+- The wiring check for the agent uses `<PR>`, the agent file's own placeholder, not `<n>`.
+- T016: test:harness 1226/1226, harness-eval --check 80/80, doctor 16 ok, gate files byte-identical to origin/main.

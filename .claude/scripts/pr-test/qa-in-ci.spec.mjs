@@ -128,9 +128,9 @@ describe('the tester names the API health routes the API serves', () => {
 describe('the tester reads a finished run instead of waiting on one', () => {
   it('pr-tester takes RUN, downloads it with --run and checks the flows that were sent', () => {
     assert.match(agent, /\bRUN\b/);
-    assert.match(agent, /dispatch\.mjs <n> --run <RUN>/);
+    assert.match(agent, /dispatch\.mjs <PR> --run <RUN>/);
     assert.match(agent, /flow not run/);
-    assert.match(agent, /\.specify\/\.cache\/qa-flows-<n>\.mjs/);
+    assert.match(agent, /\.specify\/\.cache\/qa-flows-<PR>\.mjs/);
   });
 
   it('the skill dispatches with --no-wait and reviews with --run', () => {
