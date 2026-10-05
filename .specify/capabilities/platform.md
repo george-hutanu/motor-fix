@@ -8,6 +8,7 @@ features:
   - 464-agent-watch
   - 159-form-saving
   - 516-production-release-queue
+  - 450-pr-tester-env-gaps
   - 600-merge-gate-symlink
 ---
 
@@ -256,6 +257,62 @@ _From 159-form-saving._
 ### 516-FR-005 — When the deploy script receives SIGINT or SIGTERM it MUST stop waiting, restore every service the run touched to its previous image (redeploying the ones already live on the new one), and exit non-zero.
 
 _From 516-production-release-queue._
+
+### 450-FR-001 — Without Docker, when a `minio` binary is on the PATH, the local plan MUST start MinIO on the lap's own API and console ports with its data inside the run directory and the apps' storage credentials, wait for it to answer, create the `motorfix` bucket (an existing bucket is fine), and stop it at teardown; the lap then reports storage booted.
+
+_From 450-pr-tester-env-gaps._
+
+### 450-FR-002 — When the plan has no object store and readiness fails only on `storage`, the review MUST carry that as a note and MUST NOT raise a finding; with an object store, or with any other check failing, readiness failure stays a blocking finding.
+
+_From 450-pr-tester-env-gaps._
+
+### 450-FR-003 — The tester MUST call every operation (GET, POST, PUT, PATCH, DELETE) of `apps/api/openapi.json` at the PR head that is new or different from the base, including operations with path parameters.
+
+_From 450-pr-tester-env-gaps._
+
+### 450-FR-004 — After migrating, the tester MUST run the PR's seed; a secured operation MUST be called with the access token of a seeded account signed in through the API: the role named by a path segment (`admin`, `garage`, `mechanic`, `receptionist`, `driver`), otherwise the driver. An operation under `/api/v1/auth/` also gets that account's refresh cookie.
+
+_From 450-pr-tester-env-gaps._
+
+### 450-FR-005 — A path parameter MUST be taken from the first item of the parent collection's GET (its `id`, or the field named like the parameter); a request body MUST be built from the operation's JSON schema: every required field, from its `example`, `default`, first `enum` value, `format` or type, honouring `minLength`, `minimum` and `minItems`; a required query parameter likewise.
+
+_From 450-pr-tester-env-gaps._
+
+### 450-FR-006 — Operations whose path names a sign-out MUST be called last; an answer of 500 or more MUST be a high finding; every call MUST be listed in the notes with its answer; every changed operation that could not be called MUST be listed by method and path with the reason; the note "No changed GET endpoint without path parameters" MUST be gone.
+
+_From 450-pr-tester-env-gaps._
+
+### 450-FR-007 — On SIGINT, SIGTERM or SIGHUP the run MUST write `report.json` and `report.md` with a blocker finding naming the signal and the phase it was in, then tear down.
+
+_From 450-pr-tester-env-gaps._
+
+### 450-FR-008 — `post.mjs --missing "<reason>" --pr <n> --sha <sha>` MUST post a failure verdict whose summary and blocker finding carry the reason, so `agent-review` on the head is failure.
+
+_From 450-pr-tester-env-gaps._
+
+### 450-FR-009 — A local lap's run directory MUST carry its process id; before a local lap boots, every PR-tester run directory and compose project whose process is gone MUST have its PostgreSQL, Redis and MinIO stopped, its compose project removed with volumes, its directory deleted, and `git worktree prune` run. A run whose process is alive MUST be left alone.
+
+_From 450-pr-tester-env-gaps._
+
+### 450-FR-010 — A sweep route MAY be written `path[@role][:status]`; with a status, an answer of that status MUST NOT raise a load, HTTP or console finding for that page, and any other status MUST raise a load finding.
+
+_From 450-pr-tester-env-gaps._
+
+### 450-FR-011 — A route with `@role` MUST be opened with a real session of that role's seeded account: signed in through the API for each browser context, its refresh cookie set on the web origin.
+
+_From 450-pr-tester-env-gaps._
+
+### 450-FR-012 — The PR QA workflow's routes check MUST accept `@` and `:` in routes and still refuse anything else outside paths.
+
+_From 450-pr-tester-env-gaps._
+
+### 450-FR-013 — `--tests` MUST run the affected unit tests with `--skip-nx-cache`, so they never come from the Nx cache.
+
+_From 450-pr-tester-env-gaps._
+
+### 450-FR-014 — The pr-tester agent definition MUST describe the storage note, running a `--local` lap in the background, posting `--missing` when a lap left no report, the route syntax and the endpoint calls.
+
+_From 450-pr-tester-env-gaps._
 
 ### 600-FR-001 — The harness MUST offer one entry-point check that compares the real path of `process.argv[1]` with the real path of the calling module, and answers false (never throws) when either cannot be resolved.
 

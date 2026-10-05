@@ -178,3 +178,16 @@ describe('PR QA workflow: the run and its evidence', () => {
     assert.match(upload, /if-no-files-found: error/);
   });
 });
+
+describe('PR QA workflow: the routes input', () => {
+  // The check is a bash [[ =~ ]] with a POSIX bracket expression, which reads the same as JavaScript here.
+  const pattern = new RegExp(/\[\[ "\$ROUTES" =~ (\S+) \]\]/.exec(code)?.[1] ?? 'missing');
+
+  it('accepts paths, signed-in routes and expected statuses', () => {
+    for (const ok of ['/,/cockpit', '/de:404', '/app/driver@driver', '/app/admin@driver:403,/']) assert.ok(pattern.test(ok), ok);
+  });
+
+  it('refuses anything that is not a path', () => {
+    for (const bad of ['cockpit', '/a b', "/a'", '/a;rm', '/$(x)', '/a"b']) assert.ok(!pattern.test(bad), bad);
+  });
+});
