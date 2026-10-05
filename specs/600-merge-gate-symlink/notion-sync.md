@@ -9,3 +9,5 @@
 - 2026-10-05 · ready · Foundations · −ST-600 −ST-623 (both started, no longer To do; a start unblocks nothing, so no ticks)
 - 2026-10-05T12:29:52Z implement Planning → Implementing; timeline row → Implementing; label planning → in development
 - 2026-10-05 · debt · 2 filed (ST-600 deferred.md lines 2, 3)
+- 2026-10-05 · qa · Implementing → QA; timeline row → QA
+- 2026-10-05 · labels · PR #126 · QA
