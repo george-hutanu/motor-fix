@@ -60,11 +60,15 @@ export function decideMerge(pr) {
 /** Why CI does not yet allow the merge, or null when every other check is green. */
 function ciRefusal(pr, checks, sha) {
   // A check re-run or cancelled by a newer run appears once per run: judge the latest only.
-  const when = (c) => Date.parse(c.startedAt ?? c.createdAt ?? "") || 0;
+  // gh dates a run that has not started 0001-01-01, so an unfinished run counts as the newest;
+  // a run cancelled before it started is finished and keeps that date, the oldest.
+  const when = (c) => (c.status && c.status !== "COMPLETED" ? Infinity : Date.parse(c.startedAt ?? c.createdAt ?? "") || 0);
+  // Jobs in different workflows may share a name; a status context has one entry per context.
+  const key = (c) => c.context ?? `${c.workflowName ?? ""}\u0000${c.name}`;
   const latest = new Map();
   for (const c of checks) {
-    const name = checkName(c);
-    if (name !== "agent-review" && (!latest.has(name) || when(c) >= when(latest.get(name)))) latest.set(name, c);
+    const k = key(c);
+    if (checkName(c) !== "agent-review" && (!latest.has(k) || when(c) >= when(latest.get(k)))) latest.set(k, c);
   }
   const ci = [...latest.values()];
   const result = (c) => c.conclusion ?? c.state;
