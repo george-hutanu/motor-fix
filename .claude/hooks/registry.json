@@ -180,7 +180,7 @@
         "strict"
       ],
       "description": "Append branch, HEAD, task counts and the dirty tree to auto-run.md before context is summarised",
-      "fingerprint": "5c72a5f75ceb"
+      "fingerprint": "32f329357c02"
     },
     {
       "id": "subagent:verdict",
