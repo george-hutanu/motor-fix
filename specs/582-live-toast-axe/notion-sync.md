@@ -8,3 +8,4 @@
 - 2026-10-05 · labels · PR #129 · EP-1, ui, scope: ui-cockpit, bug added
 - 2026-10-05 · ready · Foundations · −ST-582 (started; a start unblocks nothing, so no ticks; Query Data Source quota hit, epic-wide scan left for the finish)
 - 2026-10-05 · implement · ST-582 · Planning → Implementing; timeline row Build status → Implementing; PR #129 labels planning → in development
+- 2026-10-05 · qa · ST-582 · Implementing → QA; timeline row Build status → QA; PR #129 ready, label in development → QA
