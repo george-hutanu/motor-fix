@@ -12,3 +12,4 @@
 - 2026-10-05 · qa · ST-81 story Status · Implementing → QA
 - 2026-10-05 · qa · Foundations timeline row ST-81 · Implementing → QA
 - 2026-10-05 · labels · PR #71 · QA
+- 2026-10-05 · debt · ST-81 · 5 tasks filed (To do)
