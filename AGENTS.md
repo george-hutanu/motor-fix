@@ -70,7 +70,10 @@ epic or a plan, whether run through spec-kit or by hand.
      every blocking finding
      (tests first), push, and run it again; each lap counts toward
      `SPECKIT_MAX_REPAIR_ITERATIONS` (5), and at the cap the task goes to
-     Blocked and the PR stays unmerged.
+     Blocked and the PR stays unmerged. A head that differs from the last
+     tested commit by documentation only (`scripts/docs-only.ts`, e.g. the
+     `deferred.md` task URLs) carries that verdict instead of a new lap
+     (`.claude/scripts/pr-test/carry.mjs`); the merge gate verifies the carry.
   7. Merge on `agent-review` success with every other check green
      (`gh pr merge <n> --merge`); a PR with a failing, pending or missing check
      is never merged. Then set the task to Done (`speckit-notion-sync finish`).

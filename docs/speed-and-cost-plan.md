@@ -23,14 +23,17 @@ cheaper. Anything that writes or judges business logic keeps its model.
 | 8 | Pre-commit runs `nx affected` typecheck and test from the merge base with `origin/main`, plus lint; speckit-auto preflight goes through Nx and the cache. Affected integration specs run against the worktree's own PostgreSQL and Redis, started and migrated by the hook (~15 s cold, ~3 s warm); `JEST_SUITE` is refused | 1–2 min per commit | – | Same scope as PR CI; `release.yml` still runs everything |
 | 9 | Local compose uses `imresamu/postgis:17-3.5` (multi-arch, same PostGIS) | High: no amd64 emulation, no `exec format error` | Fewer retry turns | Same database; CI keeps `postgis/postgis` |
 
+## Done later
+
+| # | Change | Speed | Cost | Quality |
+|---|---|---|---|---|
+| 10 | A head that differs from the last tested commit by documentation only (`scripts/docs-only.ts`) carries its `agent-review` success instead of a new tester lap (`pr-test/carry.mjs`, speckit-pr-test step 2, `watch.mjs` fix `carry-review`); the merge gate re-checks the named commit's success, its ancestry and the docs-only diff before it merges (spec, evals) | One tester lap per story (the `deferred.md` URLs commit) | One Opus lap | Same: a carry never crosses a code change or a failing verdict, and the gate verifies it rather than trusting it |
+
 ## Left for later
 
 - Split a story's agent at the hand-off (a fresh agent for ready → CI → QA →
   merge): roughly halves the context of the expensive tail. It changes how
   speckit-auto ends its turn, so it gets its own PR.
-- A deferred-only commit (`deferred.md` URLs after `speckit-notion-sync debt`)
-  forces one more full tester lap. A docs-only head could reuse the previous
-  verdict; that is a merge-gate rule change, so its own PR.
 
 ## Not doing
 
