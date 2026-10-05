@@ -154,7 +154,7 @@ jobs:
           args=()
           [ -n "$FLOWS" ] && args+=(--flows "$RUNNER_TEMP/flows.mjs")
           set +e
-          node tester/.claude/scripts/pr-test/run.mjs "$PR" --tree pr --sha "$SHA" --base origin/main \
+          node tester/.claude/scripts/pr-test/run.mjs "$PR" --tree pr --sha "$SHA" \
             --routes "$ROUTES" --lap "$LAP" --out "$RUNNER_TEMP/pr-qa" "${args[@]}"
           echo "code=$?" >> "$GITHUB_OUTPUT"
 

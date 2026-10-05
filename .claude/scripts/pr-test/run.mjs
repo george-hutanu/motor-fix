@@ -16,12 +16,12 @@
 // runs it on a GitHub runner: the PR is already checked out at <dir>, pinned
 // to <sha>, with its dependencies installed; PostgreSQL, Redis and MinIO are
 // the workflow's containers on the standard ports; the worker always boots.
-// No gh, no worktree, nothing to tear down but the apps. --base (default
-// origin/main) is what the change is measured against.
+// No gh, no worktree, nothing to tear down but the apps; the change is
+// measured against origin/main.
 //
 //   node .claude/scripts/pr-test/run.mjs <pr> [--routes /,/cockpit] [--flows <file.mjs>]
 //        [--out <dir>] [--lap <n>] [--langs ro,en] [--schemes light,dark] [--no-tests] [--allow-closed]
-//        [--tree <dir> --sha <sha> [--base <ref>]]
+//        [--tree <dir> --sha <sha>]
 //
 // It posts nothing: the pr-tester agent adds its own findings and posts with
 // post.mjs. The report lands in --out (default <tmp>/mf-prtest/<pr>-<sha7>).
@@ -56,7 +56,6 @@ export function parseArgs(argv) {
     allowClosed: argv.includes("--allow-closed"),
     tree: flag("tree"),
     sha: flag("sha"),
-    base: flag("base", "origin/main"),
   };
 }
 
@@ -66,7 +65,7 @@ const has = (cmd, list) => spawnSync(cmd, list, { stdio: "ignore" }).status === 
 async function main(argv) {
   const opt = parseArgs(argv);
   if (!opt.pr || (opt.tree && !/^[0-9a-f]{40}$/.test(opt.sha ?? ""))) {
-    console.error("usage: run.mjs <pr> [--routes …] [--flows file.mjs] [--out dir] [--lap n] [--no-tests] [--tree dir --sha <40-hex sha> [--base ref]]");
+    console.error("usage: run.mjs <pr> [--routes …] [--flows file.mjs] [--out dir] [--lap n] [--no-tests] [--tree dir --sha <40-hex sha>]");
     return 64;
   }
   // The whole boot-test-teardown sequence holds one heavy-command slot.
@@ -82,7 +81,7 @@ async function main(argv) {
   const root = opt.tree ? resolve(opt.tree) : repoRoot;
   let info;
   if (opt.tree) {
-    info = { number: Number(opt.pr), state: "OPEN", headRefOid: opt.sha, baseRefName: opt.base.replace(/^origin\//, ""), repo: process.env.GITHUB_REPOSITORY ?? "" };
+    info = { number: Number(opt.pr), state: "OPEN", headRefOid: opt.sha, baseRefName: "main", repo: process.env.GITHUB_REPOSITORY ?? "" };
   } else {
     info = JSON.parse(sh("gh", ["pr", "view", opt.pr, "--json", "number,state,headRefOid,baseRefName,headRefName,url,mergeCommit"], { cwd: repoRoot }));
     if (info.state !== "OPEN" && !opt.allowClosed) {
@@ -151,7 +150,7 @@ async function main(argv) {
       const head = sh("git", ["rev-parse", "HEAD"], { cwd: root });
       if (head !== sha) throw new Error(`the tree at ${root} is at ${head}, not ${sha}`);
       wt = { dir: root, sha };
-      against = opt.base;
+      against = "origin/main";
       log(`tree ${root} at ${sha}`);
     } else {
       wt = createWorktree({ repo: repoRoot, pr: opt.pr, sha, root: runDir });

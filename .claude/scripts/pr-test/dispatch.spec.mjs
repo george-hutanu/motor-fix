@@ -1,6 +1,9 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 
 import {
@@ -9,6 +12,7 @@ import {
   WORKFLOW,
   artifactName,
   checkReport,
+  clearPrevious,
   dispatchCommand,
   dispatchInputs,
   encodeFlows,
@@ -84,5 +88,18 @@ describe('dispatch: finding the run and its evidence', () => {
     assert.match(checkReport({ sha: SHA, verdict: 'failure' }, SHA, 'cancelled'), /cancelled/);
     assert.match(checkReport({ sha: SHA, verdict: 'success' }, SHA, 'cancelled'), /cancelled/);
     assert.equal(checkReport({ sha: SHA, verdict: 'failure' }, SHA, 'failure'), null);
+  });
+});
+
+describe('dispatch: a lap never reads the last lap\'s evidence', () => {
+  it('clears the previous report and screenshots before downloading, so a run that uploaded nothing leaves no report', () => {
+    const out = mkdtempSync(join(tmpdir(), 'dispatch-spec-'));
+    writeFileSync(join(out, 'report.json'), JSON.stringify({ sha: SHA, verdict: 'success' }));
+    writeFileSync(join(out, 'report.md'), 'old');
+    mkdirSync(join(out, 'shots'));
+    writeFileSync(join(out, 'shots', 'a.png'), 'x');
+    clearPrevious(out);
+    for (const f of ['report.json', 'report.md', 'shots']) assert.equal(existsSync(join(out, f)), false, f);
+    assert.match(checkReport(null, SHA, 'failure'), /no report/);
   });
 });

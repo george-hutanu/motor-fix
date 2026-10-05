@@ -16,14 +16,9 @@ describe('run: arguments', () => {
   });
 
   it('tests a tree already checked out at a pinned SHA (the PR QA workflow)', () => {
-    const o = parseArgs(['53', '--tree', 'pr', '--sha', 'f'.repeat(40), '--base', 'origin/main']);
+    const o = parseArgs(['53', '--tree', 'pr', '--sha', 'f'.repeat(40)]);
     assert.equal(o.tree, 'pr');
     assert.equal(o.sha, 'f'.repeat(40));
-    assert.equal(o.base, 'origin/main');
-  });
-
-  it('measures a tree against origin/main unless told otherwise', () => {
-    assert.equal(parseArgs(['53', '--tree', 'pr', '--sha', 'f'.repeat(40)]).base, 'origin/main');
   });
 });
 

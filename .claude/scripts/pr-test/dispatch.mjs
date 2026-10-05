@@ -20,7 +20,7 @@
 // success, 1 when it says failure (blocking findings: read the report), 2 when
 // the run left no usable report (an infrastructure failure, not a verdict).
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -67,6 +67,11 @@ export function dispatchCommand({ ref, inputs }) {
 
 /** The run this dispatch started: its name carries the nonce (`run-name` in pr-qa.yml). */
 export const findRun = (runs, nonce) => runs.find((r) => String(r.displayTitle ?? "").includes(nonce)) ?? null;
+
+/** Remove the last lap's evidence from --out, so a run that uploads nothing leaves no report to misread. */
+export function clearPrevious(out) {
+  for (const f of ["report.json", "report.md", "ci-run.json", "shots", "logs"]) rmSync(join(out, f), { recursive: true, force: true });
+}
 
 export const artifactName = (pr) => `${ARTIFACT_PREFIX}${pr}`;
 
@@ -117,6 +122,7 @@ async function main(argv) {
   try {
     execFileSync("gh", ["run", "watch", String(run.databaseId), "--exit-status", "--interval", "30"], { cwd: repoRoot, stdio: ["ignore", "ignore", "inherit"] });
   } catch {}
+  clearPrevious(out);
   const conclusion = gh(["run", "view", String(run.databaseId), "--json", "conclusion", "-q", ".conclusion"]);
   try {
     gh(["run", "download", String(run.databaseId), "-n", artifactName(opt.pr), "-D", out]);
