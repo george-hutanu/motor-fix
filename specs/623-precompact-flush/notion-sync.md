@@ -1,3 +1,4 @@
 - 2026-10-05 · pr · ST-623 · PR #132 https://github.com/george-hutanu/motor-fix/pull/132
 - 2026-10-05 · qa · ST-623 · Planning → QA (no timeline row for this task)
 - 2026-10-05 · labels · PR #132 · QA
+- 2026-10-05 · labels · PR #132 · tooling, scope: harness, EP-1
