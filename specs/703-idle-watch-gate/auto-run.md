@@ -28,3 +28,8 @@
 
 ## 9. Tests (red)
 - watch.spec.mjs (--gate, dueFixes, --wait, waitHolder), session-watch-reminder.spec.mjs (new line, silent while armed), new watch-schedule-wiring.spec.mjs (skill and AGENTS text). Red: 24 failed, 92 passed across the 3 files.
+
+## 10. Implement
+- Notion: Planning → Implementing; PR label in development.
+- watch.mjs: dueFixes() now drives applyFixes (same actions, same order, same `what` strings) and the gate; `--gate`, `--wait` (`--every`, `--for`), waitHolder(), record `<git common dir>/speckit-watch-wait.pid`. Reminder hook: new line, silent while a live wait holds the record; registry text updated; doctor --bless-hooks after reading the diff (6ea6fcba2b8e → 7821bba7f396). Skill "Keeping it scheduled" and the AGENTS.md bullet rewritten.
+- Green: test:harness 1256 passed after making the wording spec wrap-tolerant. Smoke: `--gate` on this repo exit 2 with 5 lines in 10.5 s; a second real `--wait` beside a live one printed `already armed (pid …)`.

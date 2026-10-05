@@ -6,3 +6,5 @@
 - 2026-10-05 · ready · Foundations · no change (ST-703 was not ticked and blocks nothing)
 - 2026-10-05 · pr · ST-703 · PR #143 https://github.com/george-hutanu/motor-fix/pull/143
 - 2026-10-05 · labels · PR #143 · planning (+feature, scope: harness, EP-1)
+- 2026-10-05 · implement · ST-703 story Status · Planning → Implementing
+- 2026-10-05 · labels · PR #143 · in development
