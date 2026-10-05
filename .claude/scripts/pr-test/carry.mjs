@@ -23,9 +23,9 @@ import { isDocsOnly, isDocumentation } from "../../../scripts/docs-only.ts";
 import { STATUS_CONTEXT, realGh, replaceSection } from "./post.mjs";
 
 const CARRY = /^carried from ([0-9a-f]{7,40}): docs-only change/;
-// GitHub's compare lists at most 300 files. MAX_COMMITS bounds the gh calls
-// (one per commit) a carry costs, inside a hook with a timeout: a docs-only
-// tail longer than that gets a real lap.
+// GitHub's compare lists at most 300 files. MAX_COMMITS bounds the statuses
+// reads (one per commit) a carry costs: a docs-only tail longer than that gets
+// a real lap.
 const MAX_FILES = 300;
 export const MAX_COMMITS = 10;
 const REPO = "{owner}/{repo}";
@@ -66,23 +66,50 @@ export function judgeCarry({ from, head, fromReview, compare, between = [], head
   return null;
 }
 
-function ghJson(gh, args) {
-  const out = gh(args);
+const parsed = (args, out) => {
   if (out.code !== 0) throw new Error(`gh ${args.join(" ")}: ${String(out.stderr).trim()}`);
   return JSON.parse(out.stdout);
+};
+const ghJson = (gh, args) => parsed(args, gh(args));
+
+const compareArgs = (from, head) => ["api", `repos/${REPO}/compare/${from}...${head}`];
+export const statusesArgs = (sha) => ["api", `repos/${REPO}/commits/${sha}/statuses?per_page=100`];
+const statusesOf = (gh, sha) => ghJson(gh, statusesArgs(sha));
+
+/** The commits whose statuses judgeCarry needs once the compare is known: the named commit, those between, head. None past the cap, where judgeCarry refuses anyway. */
+function statusShas(compare, from, head) {
+  if ((compare.total_commits ?? 0) > MAX_COMMITS) return [];
+  return [compare.base_commit?.sha ?? from, ...(compare.commits ?? []).slice(0, -1).map((c) => c.sha), head];
 }
 
-const statusesOf = (gh, sha) => ghJson(gh, ["api", `repos/${REPO}/commits/${sha}/statuses?per_page=100`]);
+/** judgeCarry's input from the compare and the statuses of statusShas, in that order. */
+function carryState(compare, shas, lists) {
+  if (!shas.length) return { compare, fromReview: null, between: [], headReviews: [] };
+  return {
+    compare,
+    fromReview: latestReview(lists[0]),
+    between: shas.slice(1, -1).map((sha, i) => ({ sha, review: latestReview(lists[i + 1]) })),
+    headReviews: lists.at(-1).filter((s) => s?.context === STATUS_CONTEXT),
+  };
+}
 
-/** What `judgeCarry` needs, read from GitHub. Throws when gh fails. */
+/** What `judgeCarry` needs, read from GitHub one call at a time. Throws when gh fails. */
 export function readCarryState({ from, head, gh = realGh }) {
-  const compare = ghJson(gh, ["api", `repos/${REPO}/compare/${from}...${head}`]);
-  // Past the cap judgeCarry refuses anyway: read nothing more.
-  if ((compare.total_commits ?? 0) > MAX_COMMITS) return { compare, fromReview: null, between: [], headReviews: [] };
-  const fromReview = latestReview(statusesOf(gh, compare.base_commit?.sha ?? from));
-  const between = (compare.commits ?? []).slice(0, -1).map((c) => ({ sha: c.sha, review: latestReview(statusesOf(gh, c.sha)) }));
-  const headReviews = statusesOf(gh, head).filter((s) => s?.context === STATUS_CONTEXT);
-  return { compare, fromReview, between, headReviews };
+  const compare = ghJson(gh, compareArgs(from, head));
+  const shas = statusShas(compare, from, head);
+  return carryState(compare, shas, shas.map((sha) => statusesOf(gh, sha)));
+}
+
+/**
+ * The same, for a `gh` that answers with a promise: every statuses read goes
+ * out at once after the compare, so a carry costs two rounds, not one per
+ * commit (the merge gate runs under a deadline). Rejects when gh fails.
+ */
+export async function fetchCarryState({ from, head, gh }) {
+  const json = async (args) => parsed(args, await gh(args));
+  const compare = await json(compareArgs(from, head));
+  const shas = statusShas(compare, from, head);
+  return carryState(compare, shas, await Promise.all(shas.map((sha) => json(statusesArgs(sha)))));
 }
 
 /**

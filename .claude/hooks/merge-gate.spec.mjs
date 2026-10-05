@@ -333,6 +333,12 @@ describe('merge gate — a check it cannot finish refuses the merge', () => {
     });
   });
 
+  it('refuses when the PR it read cannot be judged, rather than exiting 1, which does not block', () => {
+    const out = gate({ SPECKIT_PR_STATE: '{"number":21,"state":"OPEN","statusCheckRollup":{}}' });
+    assert.equal(out.status, 2);
+    assert.match(out.stderr, /the gate failed/);
+  });
+
   it('refuses a carried verdict whose verification outlasts the deadline', () => {
     const out = gate({
       SPECKIT_PR_STATE: JSON.stringify(carriedPr()),
