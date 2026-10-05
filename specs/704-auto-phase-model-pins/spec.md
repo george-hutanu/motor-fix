@@ -123,27 +123,37 @@ commands); every `speckit-*` skill's `model:` line is unchanged.
 
 ### Edge Cases
 
-- The run's own model is not Opus (the owner starts `/speckit-auto` on another model): "differs from the run's model" is decided against the model the run is actually on, so the set of dispatched phases may differ; the rule, not the list, is what the skill states.
-- A pinned model the dispatch cannot start on (unavailable, refused): the phase runs inline on the run's model and the run log records a pin miss for that phase; the saving is lost for that phase, the run is not stopped.
+- The run's own model is not Opus: the dispatch list is fixed against Opus, the model `task-runner` pins (see Clarifications); a run started on another model still dispatches the same four phases.
+- A pinned model the dispatch cannot start on: only an Agent tool error counts; the phase runs inline on the run's model and the run log records a pin miss; the run is not stopped. A model silently substituted is visible only in the transcript after the run, and is a trial finding (it fails SC-001), not something the run detects.
 - The model router hook (`agent-model-router.mjs`) sees the phase dispatch: it routes only `code-reviewer` and `spec-reviewer`, and an explicit `model` already wins, so it leaves a phase agent alone; if any change there is needed it is only to keep that true.
 - A phase agent runs the phase's spec-kit hooks (the branch creation, Notion sync, design check and commit hooks of `after_specify`, `before_plan`, `after_tasks`): it needs the tools those hooks use (git, `gh`, the Notion connector) and the same gate answers `/speckit-auto` gives inline; those hooks run on the phase agent's model, whatever their own skill pins say.
 - The story agent is itself a dispatched agent (the orchestrating session dispatches `task-runner`): a phase agent is then a depth-3 agent, which the trial showed can be started.
 - Phase 6 drives the checklist to zero unchecked items by editing `spec.md`/`plan.md`; done inside the phase agent, those edits are on disk when it returns, and the run commits them as today.
 - Phase 7's `after_tasks` hook dispatches analyze; today the skill says to run it as phase 8 rather than twice. The same holds: the tasks agent does not run analyze, phase 8 does, inline.
 
+## Clarifications
+
+### Session 2026-10-05
+
+- Q: Which run is the trial, given this feature's own phases ran before the skill changed? → A: This feature's own run. Its dispatcher ran phases 2, 5, 6 and 7 by the new rule by hand, ahead of the skill edit, so its transcript is a real story run under the dispatch. No second backlog story is started for the purpose (scope: nobody chose it). The run log names the transcripts. (autonomous default)
+- Q: Which turns count, and is phase 14 bound to "all Opus"? → A: Every assistant turn of the story agent and of each subagent it started, grouped by agent. "Opus" in FR-002 means the story agent's own turns and the PR tester. The routed reviewers keep the router's choice and `mutation-runner` keeps its pin; neither belongs to this feature. (autonomous default)
+- Q: Is the dispatch a rule evaluated at run time, or a fixed list? → A: A fixed list: specify and plan on `fable`, checklist and tasks on `sonnet`, against Opus, the model `task-runner` pins. A skill cannot read the model it is served on, and a rule for a run model nobody starts would be a knob (Principle I). (autonomous default)
+- Q: What counts as "cannot start" for FR-009, and does a pin miss fail SC-001? → A: Only an Agent tool error. A silently substituted model is found in the transcript after the run, is a trial finding, and fails SC-001. (autonomous default)
+- Q: How is a `partial` phase reply treated, and is a failed phase retried? → A: `partial` passes only when FILES names the phase's artifact and what failed is a Notion or mock write (AGENTS.md: such a failure never blocks the build). Anything else is a failure, and there is no retry, as inline. (autonomous default)
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: Under `/speckit-auto`, each of phases 2 (specify), 5 (plan), 6 (checklist) and 7 (tasks) MUST run as its own dispatched agent with its `model` set to the pin in that phase's skill frontmatter, whenever that pin differs from the model the run is on.
+- **FR-001**: Under `/speckit-auto`, each of phases 2 (specify), 5 (plan), 6 (checklist) and 7 (tasks) MUST run as its own dispatched agent with its `model` set to the pin in that phase's skill frontmatter (a fixed list: those are the phase 2–8 skills whose pin differs from Opus).
 - **FR-002**: A phase whose skill pin equals the run's model (clarify and analyze on an Opus run) MUST stay inline; phases 9–14, the review fixes and the PR tester MUST stay on Opus regardless of any pin.
-- **FR-003**: A dispatched phase agent MUST produce the same artifacts, run the same spec-kit hooks and answer the same gates as the inline phase does today (the "Gate override" rules of `/speckit-auto` phases 2–8), and MUST open its reply with the four `STATUS:/PR:/NEXT:/FILES:` lines of AGENTS.md "Agent replies"; the run MUST treat a `failure` or `blocked` status as the inline phase's failure, never as a pass.
+- **FR-003**: A dispatched phase agent MUST produce the same artifacts, run the same spec-kit hooks and answer the same gates as the inline phase does today (the "Gate override" rules of `/speckit-auto` phases 2–8), and MUST open its reply with the four `STATUS:/PR:/NEXT:/FILES:` lines of AGENTS.md "Agent replies"; the run MUST treat a `failure` or `blocked` status as the inline phase's failure, never as a pass, and a `partial` one as a pass only when FILES names the phase's artifact and what failed is a Notion or mock write. A failed phase agent is not retried.
 - **FR-004**: The dispatch MUST be proven by one measured trial: a story run through `/speckit-auto` whose transcript shows every assistant turn of the dispatched phases served by the pinned model, recorded in the feature's run log with the transcript's path and the per-phase model list.
 - **FR-005**: The feature MUST record, in the run log, the cost of one story run before the change and one after, read from transcripts: per model, the count of assistant turns and the input, output, cache-creation and cache-read token totals; every measure that was not measurable MUST be named with its reason, and no estimate MAY stand in for a measurement.
 - **FR-006**: The `model:` line of every `speckit-*` skill MUST be unchanged, and the ST-467 mapping spec MUST stay green.
 - **FR-007**: Within `.claude/skills/speckit-auto/SKILL.md` the change MUST be confined to the phase 2–8 dispatch lines and the lines that describe the dispatch; the Hand-off, The wait and The tail sections and the lines listing the open, ready and merge commands MUST be identical to `origin/main`.
 - **FR-008**: `npm run test:harness`, `node .claude/scripts/harness-eval.mjs --check` and `node .claude/scripts/doctor.mjs` MUST pass on the branch; a harness spec MUST fail if a phase 2–8 dispatch line names a model other than that phase skill's pin.
-- **FR-009**: A pinned model the dispatch cannot start on MUST NOT stop the run: the phase runs inline on the run's model and the run log records the pin miss.
+- **FR-009**: A phase agent the Agent tool cannot start on its pinned model (a tool error) MUST NOT stop the run: the phase runs inline on the run's model and the run log records the pin miss.
 
 ### Key Entities
 
@@ -174,7 +184,7 @@ commands); every `speckit-*` skill's `model:` line is unchanged.
 
 - (autonomous default) The route is the agent dispatch, not the Skill tool: the dispatching session's trial showed a Skill-tool pin inside a subagent served `claude-opus-5-5` (117,012-token cache read after `Skill speckit-git-validate`, pin `haiku`), while an Agent call with `model: haiku` ran every turn on `claude-haiku-4-5-20251001`. The spec cites that trial and does not re-run it; the feature's own trial (FR-004) proves the dispatch inside a real story run.
 - (autonomous default) Phase 3 (Notion context) stays inline even though `speckit-context` pins `sonnet`: its reading already runs inside the `org-researcher` subagent, whose own frontmatter pin applies, so the orchestrating turns around it are few. The description names specify, clarify, checklist, tasks and analyze; plan is included because its pin (`fable`) differs from Opus and the dispatching session named it.
-- (autonomous default) "The run's model" is the model the `/speckit-auto` session is served on at the time, Opus for a story dispatched as `task-runner`; the skill states the rule ("differs from the run's model"), and the list of dispatched phases follows from it.
+- (autonomous default) "The run's model" is Opus, the model `task-runner` pins (`.claude/agents/task-runner.md`); the skill states the fixed list (see Clarifications).
 - (autonomous default) The before measurement is read from an existing story-run transcript from before this change (one of the 50 runs the dispatching session measured, or the ST-673 run), not from a run repeated for the purpose; the after measurement is this feature's own trial. Both are single runs, so the comparison is indicative, and SC-002 names only the 95% baseline it has a source for.
 - (autonomous default) The transcript carries the serving model and token usage per assistant turn but no price, so monetary cost is expected to be among the not-measurable items; the run log says so rather than multiplying by a remembered price.
 - (autonomous default) The dispatched phase agent is given the tools the phase's hooks need (git, `gh`, the Notion connector); which agent definition carries them is a plan decision, within the harness's existing agents where one fits (Principle I).

@@ -26,3 +26,16 @@ Autonomous answers, each an `(autonomous default)` line under the spec's Assumpt
 6. The phase agent's tool set (git, `gh`, Notion) is a plan decision within the harness's existing agents (Principle I).
 7. An unstartable pinned model falls back inline with a logged pin miss (FR-009), after the harness's fail-open habit.
 8. Spec-reviewer baseline for "no worse": ST-467 and ST-673, both APPROVE.
+
+## 3. Org context
+
+- `org-researcher` (background) returned blocked: no Notion read tool reached it (its tool list names connector ids this session does not carry). `context.md` is an `[UNAVAILABLE: notion]` stub. A dead lane is not a Hard Stop; phase 4 went on without a digest.
+
+## 4. Clarify (inline, pin `opus` = run model)
+
+- `spec-challenger` raised 5 findings; each answered with its recommended default except Q1 (see spec Clarifications):
+  - Q1 trial run → this feature's own run, phases 2/5/6/7 dispatched by the new rule by hand (no second backlog story: scope).
+  - Q2 turns counted → every assistant turn of the story agent and its subagents, grouped by agent; routed reviewers and mutation-runner keep their own models.
+  - Q3 rule or list → fixed list against Opus (`task-runner` pin); Principle I.
+  - Q4 pin miss → only an Agent tool error; a silent substitution is a trial finding failing SC-001.
+  - Q5 `partial` → passes only for a Notion/mock miss with the artifact in FILES; no retry.
