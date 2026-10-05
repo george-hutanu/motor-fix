@@ -5,14 +5,18 @@ import { parseArgs } from './run.mjs';
 import { EXTERNAL_PORTS, appEnv, externalPlan } from './services.mjs';
 
 describe('run: arguments', () => {
-  it('keeps the local defaults: its own worktree, ro and en, light and dark, tests on', () => {
+  it('keeps the local defaults: its own worktree, ro and en, light and dark, tests off (CI runs them)', () => {
     const o = parseArgs(['53']);
     assert.equal(o.pr, '53');
     assert.equal(o.tree, undefined);
     assert.deepEqual(o.routes, ['/', '/cockpit']);
     assert.deepEqual(o.langs, ['ro', 'en']);
     assert.deepEqual(o.schemes, ['light', 'dark']);
-    assert.equal(o.tests, true);
+    assert.equal(o.tests, false);
+  });
+
+  it('runs the unit and end-to-end suites only on --tests', () => {
+    assert.equal(parseArgs(['53', '--tests']).tests, true);
   });
 
   it('tests a tree already checked out at a pinned SHA (the PR QA workflow)', () => {

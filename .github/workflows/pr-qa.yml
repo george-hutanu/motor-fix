@@ -4,7 +4,8 @@ name: PR QA
 # 16 GB laptop: boot the PR head with PostgreSQL+PostGIS, Redis and MinIO,
 # check /health/ready, call the changed endpoints, run the viewport sweep
 # (desktop, tablet, 390 and 320 px phones x light/dark x ro/en), the agent's
-# flows, the affected tests and e2e, and upload the report and the screenshots.
+# flows, and upload the report and the screenshots. The unit and end-to-end
+# suites are CI's (ci.yml runs them on the merge result), not run again here.
 # It is .claude/scripts/pr-test/run.mjs in --tree mode, not a copy of it.
 #
 # Dispatched by .claude/scripts/pr-test/dispatch.mjs (the pr-tester agent),
@@ -148,7 +149,7 @@ jobs:
         if: inputs.flows != ''
         run: printf '%s' "$FLOWS" | base64 -d | gunzip > "$RUNNER_TEMP/flows.mjs"
 
-      - name: Boot, readiness, API, sweep, flows, affected tests, e2e
+      - name: Boot, readiness, API, sweep, flows
         id: run
         run: |
           args=()

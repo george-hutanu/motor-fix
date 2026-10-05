@@ -51,16 +51,20 @@ epic or a plan, whether run through spec-kit or by hand.
      (`speckit-notion-sync qa`, which also sets the PR's one stage label
      to `QA`). There is no In review stage: ready is QA.
   5. Get CI green: merge `origin/main` into the branch if it is behind and
-     push, wait for the checks (`gh pr checks <n> --watch`); a failing check is
-     fixed on the branch and waited for again.
-  6. QA: run the PR tester (`/speckit-pr-test <n>`, the `pr-tester` subagent);
-     the task and the PR's stage label stay QA. It dispatches the PR QA
-     workflow (`.github/workflows/pr-qa.yml`), where a GitHub runner boots the
-     PR head, tests it in a browser and against the API and uploads the report
-     and screenshots; then, locally, it reviews the diff, posts a review, fills
-     the template's "Agent review" section and sets the `agent-review` status
-     on the head commit (`--local` boots on the laptop instead, behind the
-     heavy lock, when Actions is unavailable). Fix every blocking finding
+     push, then wait for the checks (`gh pr checks <n> --watch`) in the
+     background (`run_in_background`), never in a foreground `sleep` loop; a
+     failing check is fixed on the branch and waited for again.
+  6. QA, started as soon as the PR is ready, beside step 5 rather than after
+     it: run the PR tester (`/speckit-pr-test <n>`, the `pr-tester` subagent);
+     the task and the PR's stage label stay QA. It leaves the unit and
+     end-to-end suites to CI, which runs them on the merge result. It
+     dispatches the PR QA workflow (`.github/workflows/pr-qa.yml`), where a
+     GitHub runner boots the PR head, tests it in a browser and against the
+     API and uploads the report and screenshots; then, locally, it reviews the
+     diff, posts a review, fills the template's "Agent review" section and sets
+     the `agent-review` status on the head commit (`--local` boots on the
+     laptop instead, behind the heavy lock, when Actions is unavailable). Fix
+     every blocking finding
      (tests first), push, and run it again; each lap counts toward
      `SPECKIT_MAX_REPAIR_ITERATIONS` (5), and at the cap the task goes to
      Blocked and the PR stays unmerged.
@@ -194,7 +198,8 @@ decisions are the source for anything the constitution does not fix.
   title (Conventional Commit), Biome, Typecheck, Unit tests, Integration
   tests (PostgreSQL+PostGIS and Redis services), E2E tests (Playwright
   `web-e2e`, servers started in the job), Build, Harness, Contract check,
-  Dependency audit, Docker build (`web`, `node-app`), then `CI OK`, which
+  Dependency audit, Docker build (`web`, `node-app`), Compose stack
+  (`docker-compose.yml` boots and creates the bucket), then `CI OK`, which
   fails when any of them did. A PR that changes documentation only
   (`scripts/docs-only.ts`: Markdown outside `.claude/`, `.specify/` and
   `.github/`, or `docs/`) runs only the PR title, Changes and `CI OK` jobs;

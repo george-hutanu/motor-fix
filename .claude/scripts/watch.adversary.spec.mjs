@@ -377,8 +377,11 @@ describe('stale and the fix, edges', () => {
     assert.equal(fixOf(row({ ...quiet, phase: 'qa', pr: ready([check('FAILURE'), review('SUCCESS')]) }), opts).fix, 'fix-ci');
   });
 
-  it('resumes a ready PR whose checks are still pending, never merging or rerunning QA on it', () => {
-    assert.equal(fixOf(row({ ...quiet, phase: 'qa', pr: ready([check(null, 'IN_PROGRESS')]) }), opts).fix, 'resume');
+  // Constitution VII v1.7.0: QA runs beside CI, so pending checks start the
+  // tester; they still never start a merge.
+  it('reruns QA, never merges, on a ready PR whose checks are still pending', () => {
+    assert.equal(fixOf(row({ ...quiet, phase: 'qa', pr: ready([check(null, 'IN_PROGRESS')]) }), opts).fix, 'rerun-qa');
+    assert.notEqual(fixOf(row({ ...quiet, phase: 'qa', pr: ready([check(null, 'IN_PROGRESS'), review('SUCCESS')]) }), opts).fix, 'merge');
   });
 
   it('resumes, not reruns QA, for an agent-review failure on a ready PR with passed checks', () => {

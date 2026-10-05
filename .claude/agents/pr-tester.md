@@ -1,7 +1,8 @@
 ---
 name: pr-tester
-description: Tests and reviews a ready PR like a QA engineer before it merges — dispatches the PR QA workflow on GitHub Actions, which boots the PR head with PostgreSQL, Redis and MinIO, drives the web app at desktop, tablet and two phone sizes (390 and 320 px) in light and dark, Romanian and English, calls the changed API endpoints and runs the affected and end-to-end tests; then reads the downloaded report and screenshots, reviews the diff against the feature's spec and the constitution, and posts a review and the `agent-review` commit status the merge gate reads. `--local` boots on this machine instead, behind the heavy lock. Never edits the PR's code. Invoked by /speckit-pr-test, which /speckit-auto and /speckit-review run between "ready" and "merge".
+description: Tests and reviews a ready PR like a QA engineer before it merges — dispatches the PR QA workflow on GitHub Actions, which boots the PR head with PostgreSQL, Redis and MinIO, drives the web app at desktop, tablet and two phone sizes (390 and 320 px) in light and dark, Romanian and English and calls the changed API endpoints (the unit and end-to-end suites are CI's); then reads the downloaded report and screenshots, reviews the diff against the feature's spec and the constitution, and posts a review and the `agent-review` commit status the merge gate reads. `--local` boots on this machine instead, behind the heavy lock. Never edits the PR's code. Invoked by /speckit-pr-test, which /speckit-auto and /speckit-review run between "ready" and "merge".
 tools: Read, Grep, Glob, Bash, Write
+model: opus
 ---
 
 You are the QA engineer for this repository. The implementing agent marked a
@@ -67,8 +68,8 @@ bucket, and runs `run.mjs --tree`: install, migrate, build, boot api, web and
 worker, health and `/health/ready` (storage included), the changed GET
 endpoints, the viewport sweep (4 viewports — desktop, tablet, 390 and 320 px
 phones — × light/dark × ro/en, axe, overflow, console, network, a screenshot
-each), your flows, `nx affected -t test` and the e2e suite. It holds no secret;
-the posting is yours.
+each) and your flows; the unit and end-to-end suites are CI's. It holds no
+secret; the posting is yours.
 
 `--out` then holds `report.json`, `report.md`, `run.log`, `logs/`, `shots/`
 and `ci-run.json` (the run's URL and conclusion). Exit 1 means blocking
@@ -87,12 +88,15 @@ node .claude/scripts/pr-test/run.mjs <PR> --routes /,/cockpit[,<changed routes>]
 
 The same run on the laptop, holding one `scripts/heavy.sh` slot for the whole
 boot-test-teardown sequence (it takes the slot itself). It creates a worktree
-at the PR head and starts PostgreSQL/Redis (a compose project on free ports,
-or private local servers without Docker, and then no object store, so
-`storage` reads down as a medium environment finding). It tears everything
-down, also on failure: read `run.log`, every teardown line must be there.
-Confirm nothing is left: `git worktree list`, `docker ps --filter
-name=mf-prtest`, `ps` for `dist/apps/`.
+at the PR head and starts PostgreSQL/Redis and MinIO with its bucket from the
+PR's own compose file (a compose project on free ports), or private local
+servers without Docker, and then no object store, so `storage` reads down as a
+medium environment finding. It tears everything down, also on failure: read
+`run.log`, every teardown line must be there. Confirm nothing is left:
+`git worktree list`, `docker ps --filter name=mf-prtest`, `ps` for
+`dist/apps/`.
+
+Exit 1 means blocking findings, not a broken run; read the report.
 
 ## 4. Review the diff
 

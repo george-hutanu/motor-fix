@@ -59,7 +59,11 @@ or overrides them.
    ```
 
    Then one `Agent` call per entry, `subagent_type: general-purpose`,
-   `run_in_background: true`, all in one message. The prompt starts with:
+   `run_in_background: true`, all in one message. A `merge` entry also gets
+   `model: "sonnet"`: it merges `origin/main`, merges the PR and syncs Notion,
+   and judges no code (a new head goes back to the PR tester, which is pinned
+   to Opus). `resume`, `rerun-qa` and `fix-ci` write or judge code and keep
+   the default model. The prompt starts with:
 
    > Switch into the existing worktree with `EnterWorktree` and `path: <path>`
    > (branch `<branch>`, feature `<feature>`, PR #<pr>). Work only there. Follow
@@ -81,7 +85,8 @@ or overrides them.
    `speckit-notion-sync blocked <reason>`) and stop."
 
 5. Say which agents were dispatched, one line each. When the plan is empty and
-   `--fix` did nothing, the whole report is one line: `watch: N worktrees, none stale`.
+   `--fix` did nothing, the whole report is one line: `watch: N worktrees, none stale`,
+   and the pass ends there: no further reads, no other tool calls.
 
 A dispatched agent's claim keeps the next pass off that worktree until the
 claim is older than the phase's stale threshold; if the worktree still has not

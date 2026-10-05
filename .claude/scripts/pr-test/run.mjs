@@ -1,16 +1,20 @@
 #!/usr/bin/env node
 // The PR tester's mechanical run, start to finish, inside one heavy-command
 // slot: a worktree at the PR head, private services and apps on free ports,
-// health, the API calls, the viewport sweep, the agent's flows, the affected
-// tests and the end-to-end suite, a report — and teardown of everything it
+// health, the API calls, the viewport sweep, the agent's flows, a report — and teardown of everything it
 // started, on success, on failure, and on SIGINT, SIGTERM or SIGHUP to this
 // process (passed through heavy.sh to the inner run). SIGKILL cannot be
 // caught: after one, `git worktree prune` and the run directory under the
 // temp dir are what is left to clean.
 //
 // --allow-closed sweeps a merged or closed PR (dry runs looking back);
-// --langs and --schemes narrow the matrix for a quick lap; --no-tests skips
-// the test runs. The pr-tester agent uses none of them on a real review.
+// --langs and --schemes narrow the matrix for a quick lap. The pr-tester
+// agent uses none of them on a real review.
+//
+// The affected unit tests and the end-to-end suite are off by default: CI's
+// Unit tests and E2E tests jobs run them on the merge result, and the merge
+// gate refuses until CI is green, so running them here as well held a heavy
+// slot for minutes and proved nothing new. --tests runs them anyway.
 //
 // --tree <dir> --sha <sha> is how the PR QA workflow (.github/workflows/pr-qa.yml)
 // runs it on a GitHub runner: the PR is already checked out at <dir>, pinned
@@ -20,7 +24,7 @@
 // measured against origin/main.
 //
 //   node .claude/scripts/pr-test/run.mjs <pr> [--routes /,/cockpit] [--flows <file.mjs>]
-//        [--out <dir>] [--lap <n>] [--langs ro,en] [--schemes light,dark] [--no-tests] [--allow-closed]
+//        [--out <dir>] [--lap <n>] [--langs ro,en] [--schemes light,dark] [--tests] [--allow-closed]
 //        [--tree <dir> --sha <sha>]
 //
 // It posts nothing: the pr-tester agent adds its own findings and posts with
@@ -52,7 +56,7 @@ export function parseArgs(argv) {
     lap: Number(flag("lap", "1")),
     langs: flag("langs", "ro,en").split(","),
     schemes: flag("schemes", "light,dark").split(","),
-    tests: !argv.includes("--no-tests"),
+    tests: argv.includes("--tests"),
     allowClosed: argv.includes("--allow-closed"),
     tree: flag("tree"),
     sha: flag("sha"),
@@ -65,7 +69,7 @@ const has = (cmd, list) => spawnSync(cmd, list, { stdio: "ignore" }).status === 
 async function main(argv) {
   const opt = parseArgs(argv);
   if (!opt.pr || (opt.tree && !/^[0-9a-f]{40}$/.test(opt.sha ?? ""))) {
-    console.error("usage: run.mjs <pr> [--routes …] [--flows file.mjs] [--out dir] [--lap n] [--no-tests] [--tree dir --sha <40-hex sha>]");
+    console.error("usage: run.mjs <pr> [--routes …] [--flows file.mjs] [--out dir] [--lap n] [--tests] [--tree dir --sha <40-hex sha>]");
     return 64;
   }
   // The whole boot-test-teardown sequence holds one heavy-command slot.
@@ -178,9 +182,12 @@ async function main(argv) {
       const { GITHUB_SERVER_URL: server, GITHUB_REPOSITORY: repo, GITHUB_RUN_ID: id } = process.env;
       notes.push(`Ran on GitHub Actions${server && repo && id ? ` (${server}/${repo}/actions/runs/${id})` : ""}: PostgreSQL with PostGIS, Redis and MinIO in the PR QA workflow's containers.`);
     } else if (has("docker", ["info"])) {
-      plan = composePlan({ project, file: join(repoRoot, "docker-compose.yml"), ports });
-      teardown.push({ name: `docker compose -p ${project} down -v`, run: () => sh("docker", plan.down, { env: { ...process.env, ...plan.env } }) });
-      if (!mustPass("services", step("services", "docker", plan.up, { env: { ...process.env, ...plan.env } }))) return finish();
+      // The PR's own compose file: a PR that changes the stack is tested on it.
+      plan = composePlan({ project, file: join(wt.dir, "docker-compose.yml"), ports });
+      const composeEnv = { env: { ...process.env, ...plan.env } };
+      teardown.push({ name: `docker compose -p ${project} down -v`, run: () => sh("docker", plan.down, composeEnv) });
+      if (!mustPass("services", step("services", "docker", plan.up, composeEnv))) return finish();
+      if (!mustPass("bucket setup", step("bucket-setup", "docker", plan.setup, composeEnv))) return finish();
     } else {
       plan = localPlan({ dir: runDir, ports });
       notes.push("No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.");
@@ -291,7 +298,7 @@ async function main(argv) {
         const f2 = testFinding({ name: "End-to-end suite", command: `BASE_URL=${webURL} npx playwright test -c apps/web-e2e/playwright.config.mts --workers=1`, code: e2e.code, tail: e2e.tail });
         if (f2) findings.push(f2);
       }
-    } else notes.push("Tests not run (--no-tests).");
+    } else notes.push("Unit and end-to-end tests left to CI (Unit tests and E2E tests; the merge gate waits for them).");
 
     return finish(screenshots);
   } catch (error) {

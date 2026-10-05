@@ -24,7 +24,10 @@ tester change cannot yet run there. It waits for a `scripts/heavy.sh` slot.
 ## Why
 
 CI proves the code compiles and its own tests pass. Nobody has yet booted the
-change and used it. This step does, on every PR, before it merges, and its
+change and used it. This step does, on every PR, before it merges. It starts
+as soon as the PR is ready and runs beside CI, not after it: the two check
+different things, and the merge gate waits for both. It leaves the unit and
+end-to-end suites to CI's jobs rather than running them a second time. Its
 verdict is a commit status the merge gate (`pre:bash:merge-gate`) and the Stop
 gate (`stop:pr-lifecycle`) read. A push after it ran leaves the new head
 without a status, so the test runs again.
@@ -57,8 +60,9 @@ without a status, so the test runs again.
    ```
 
 4. **Success**: return to the caller, which merges on green CI
-   (`gh pr checks <n> --watch`, then `gh pr merge <n> --merge`, then
-   `speckit-notion-sync finish`).
+   (`gh pr checks <n> --watch` with `run_in_background`, then
+   `gh pr merge <n> --merge`, then `speckit-notion-sync finish`). The merge
+   gate refuses while any check is failing, running or missing.
 5. **Failure**: the implementing agent fixes every blocking finding — a failing
    test first that reproduces it (`/speckit-tests` rules), then the fix — commits,
    pushes, and counts the lap:

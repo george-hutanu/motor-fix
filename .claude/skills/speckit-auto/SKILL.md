@@ -84,8 +84,10 @@ Run these before phase 1, in one batch:
   starting branch and commit.
 - Read `.specify/memory/constitution.md` (v1.3.0 — its Enforcement section
   lists the gates that will fire at you).
-- `npm run typecheck && npm run lint && npx jest` — the repo MUST start
-  green. A red start is a hard stop; the run has no way to tell a pre-existing
+- `sh scripts/heavy.sh sh -c 'npm run typecheck && npm run lint && npm run test'`
+  — the repo MUST start green. Through Nx, whose cache every worktree shares
+  (`~/.nx/<workspace hash>`), a project unchanged since another worktree
+  checked it is a cache hit, not a rerun. A red start is a hard stop; the run has no way to tell a pre-existing
   failure from one it caused. This is the one time the full suite runs; after
   this, verification is scoped to what changed.
 - `node .claude/scripts/spec-drift.mjs --status` — know the drift baseline
@@ -107,6 +109,16 @@ and one section per phase to append to.
 Run in this order. Each phase: invoke the skill, apply the gate override,
 verify, commit if there is anything committable, append to the run log,
 continue.
+
+Two groups need no output from each other, so run them at once:
+
+- Phase 3 starts in the background as soon as phase 2 has written the spec
+  (the `org-researcher` agent with `run_in_background`), beside phase 4's
+  `spec-challenger`. Phase 4 answers its questions only once `context.md`
+  exists.
+- Phases 13, 15 and 16 run beside phase 14's reviewers: none of them reads
+  the review. Fixes from phase 14 that change code rerun phase 15 only if
+  they changed what it records.
 
 | # | Phase | Skill | Gate override |
 |---|-------|-------|---------------|
@@ -534,15 +546,19 @@ When phases 14–16 are done, the review left no CRITICAL/HIGH and the last
    one stage label → `QA`. Ready is QA; there is no In review stage.
 3. If the branch is behind `origin/main`, `git merge --no-edit origin/main`,
    re-run `typecheck`, `lint` and the tests, and push.
-4. `gh pr checks <branch> --watch` until every check other than
-   `agent-review` has passed. A failing check is a repair: fix it on the
-   branch, push, wait again; it counts toward `SPECKIT_MAX_REPAIR_ITERATIONS`.
-5. **QA — the PR tester** (`/speckit-pr-test <n>`, Constitution VII): the
+4. Start the CI wait in the background — `gh pr checks <branch> --watch`
+   with `run_in_background`, never a foreground `sleep` or `until` loop — and
+   go straight on to step 5: QA runs beside CI, not after it. When the wait
+   reports, every check other than `agent-review` must have passed. A failing
+   check is a repair: fix it on the branch, push (the new head needs a new
+   tester run), wait again; it counts toward `SPECKIT_MAX_REPAIR_ITERATIONS`.
+5. **QA — the PR tester** (`/speckit-pr-test <n>`, Constitution VII), started
+   at once, beside step 4: the
    story, its timeline row and the PR's one stage label stay QA
    (`speckit-notion-sync qa` again is a no-op); the `pr-tester`
    subagent dispatches the PR QA workflow, where a GitHub runner boots the head
-   commit, sweeps the UI, calls the API and runs the tests; it then reads the
-   artifact, reviews the diff, posts its review, replaces the
+   commit, sweeps the UI and calls the API (the unit and end-to-end suites are
+   CI's); it then reads the artifact, reviews the diff, posts its review, replaces the
    body's Agent review `Pending.` line (`gh pr edit --body-file`) and sets
    `agent-review` on the head commit. On failure: fix every blocking finding,
    tests first, commit, push, `node .claude/scripts/run-state.mjs repair`, and
@@ -560,7 +576,8 @@ When phases 14–16 are done, the review left no CRITICAL/HIGH and the last
 7. On `agent-review` success with every other check green: merge `origin/main`
    in again if it moved (a new head needs a new tester run), then
    `gh pr merge <branch> --merge` — the `pre:bash:merge-gate` hook refuses it
-   without `agent-review` success on the head — and `speckit-notion-sync
+   without `agent-review` success on the head, and while any other check is
+   failing, running or missing — and `speckit-notion-sync
    finish` (story → Done, timeline row → Merged).
 
 A PR with no checks, or one still failing at the limit, is a Hard Stop: it

@@ -181,7 +181,8 @@ export function fixOf(row, { now, thresholds }) {
   const atPrHead = row.clean && row.head && row.head === pr?.head;
   if (pr?.state === "ready" && pr.checks === "pass" && pr.agentReview === "success" && atPrHead) return { verdict: "stale", fix: "merge", reason };
   if (open && pr.checks === "fail") return { verdict: "stale", fix: "fix-ci", reason };
-  if (pr?.state === "ready" && pr.checks === "pass" && !pr.agentReview) return { verdict: "stale", fix: "rerun-qa", reason };
+  // QA runs beside CI, so a ready PR without a verdict is tested while CI still runs.
+  if (pr?.state === "ready" && pr.checks !== "fail" && !pr.agentReview) return { verdict: "stale", fix: "rerun-qa", reason };
   return { verdict: "stale", fix: "resume", reason };
 }
 
