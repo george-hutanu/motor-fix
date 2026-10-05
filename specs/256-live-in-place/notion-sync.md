@@ -25,3 +25,5 @@
 - 2026-10-05 · correction · Foundations timeline row ST-256 · Merged → QA
 - 2026-10-05 · correction · ST-255 · Ready to work unticked until ST-256 merges
 - 2026-10-05 · correction · PR #79 label stays QA; the "finish" comment on ST-256 is superseded, finish runs again after the merge
+- 2026-10-05 · check · ST-256 story Status QA, Foundations timeline row ST-256 QA, ST-255 Ready to work unticked: the correction above is in Notion
+- 2026-10-05 · correction · the "comment · ST-256 · posted (6 items)" line above is not in Notion (the story has no comment); the finish comment is posted after the merge
