@@ -328,4 +328,20 @@ describe('the previous lap', () => {
     assert.match(md, /run 7/i);
     assert.match(md, /resolved.*FR-003 untested/is);
   });
+
+  it('never takes another PR\'s findings as this PR\'s previous lap', () => {
+    const out = artifact(report());
+    const { gh } = fakeGh({
+      prView: ok(pr([])),
+      runs: [run(4, 120, MAIN_SHA, 1, 'failure')],
+      artifacts: { 4: artifactFiles({ ...prev, pr: 120, sha: MAIN_SHA }) },
+      compare: { [MAIN_SHA]: 'behind' },
+    });
+    buildPacket({ out, pr: 137, repo: REPO, gh });
+    const md = packetOf(out);
+    const section = md.slice(md.indexOf('## Previous lap'), md.indexOf('## Baseline'));
+    assert.match(md, /run 4/i);
+    assert.doesNotMatch(section, /FR-003 untested/);
+    assert.match(section, /None/);
+  });
 });
