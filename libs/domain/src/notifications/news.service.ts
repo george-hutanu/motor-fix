@@ -62,10 +62,20 @@ export class NewsService {
       const row = await tx.notificationPreference.findFirst({
         where: { accountId, garageId: null, type: 'NEWS' },
       });
-      if (!row?.enabled) return;
+      if (!row?.enabled || !row.consentGivenAt || row.withdrawnAt) return;
       await tx.notificationPreference.update({
         data: { enabled: false, ...withdrawn(row, at) },
         where: { id: row.id },
+      });
+      // A news e-mail still waiting (for 08:00, say) does not go either.
+      await tx.notification.updateMany({
+        data: { failure: 'unsubscribed', status: 'failed' },
+        where: {
+          accountId,
+          channel: 'email',
+          kind: 'NEWS',
+          status: { in: ['queued', 'held'] },
+        },
       });
       await this.audit.record(tx, {
         action: 'update',
@@ -80,28 +90,53 @@ export class NewsService {
     });
   }
 
-  // The month is claimed first, with its audit entry: a second send in the
-  // month, or one racing this one, is refused before anything goes.
+  // The month is claimed first: a second send in the month, or one racing
+  // this one, is refused before anything goes. A send that fails part-way
+  // gives the month back; a retry skips the drivers it already reached, as
+  // the pipeline writes one message per event and person.
   async send(actor: Actor, body: SendNewsDto): Promise<NewsSentDto> {
     const webUrl = this.config.webUrl;
     if (!webUrl) throw new Error('PUBLIC_WEB_URL is needed to send news');
-    const at = this.now();
-    const month = smsMonth(at);
+    const month = smsMonth(this.now());
     const drivers = await this.consentingDrivers();
+    await this.claim(actor, month, drivers.length);
+    try {
+      for (const { id, language } of drivers) {
+        await this.notifications.notify({
+          eventId: `news:${month}`,
+          kind: 'NEWS',
+          params: {
+            text: body.text[language],
+            title: body.title[language],
+            ...newsLinks(
+              webUrl,
+              language,
+              unsubscribeToken(id, this.auth.tokenSecret),
+            ),
+          },
+          recipients: [id],
+          subjectId: id,
+        });
+      }
+    } catch (error) {
+      await this.release(actor, month);
+      throw error;
+    }
+    this.logger.log(`news for ${month} sent to ${drivers.length} drivers`);
+    return { recipients: drivers.length };
+  }
+
+  private async claim(actor: Actor, month: string, recipients: number) {
     try {
       await this.prisma.$transaction(async (tx) => {
         await tx.newsSend.create({
-          data: {
-            month,
-            recipients: drivers.length,
-            sentById: actor.accountId,
-          },
+          data: { month, recipients, sentById: actor.accountId },
         });
         await this.audit.record(tx, {
           action: 'create',
           actorId: actor.accountId,
           actorRole: actor.role,
-          newValue: { month, recipients: drivers.length },
+          newValue: { month, recipients },
           subjectId: actor.accountId,
           subjectType: 'news_send',
         });
@@ -116,26 +151,21 @@ export class NewsService {
         HttpStatus.CONFLICT,
       );
     }
-    const eventId = `news:${month}`;
-    for (const { id, language } of drivers) {
-      await this.notifications.notify({
-        eventId,
-        kind: 'NEWS',
-        params: {
-          text: body.text[language],
-          title: body.title[language],
-          ...newsLinks(
-            webUrl,
-            language,
-            unsubscribeToken(id, this.auth.tokenSecret),
-          ),
-        },
-        recipients: [id],
-        subjectId: id,
+  }
+
+  private async release(actor: Actor, month: string) {
+    this.logger.error(`news for ${month} failed part-way; the month is free`);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.newsSend.delete({ where: { month } });
+      await this.audit.record(tx, {
+        action: 'delete',
+        actorId: actor.accountId,
+        actorRole: actor.role,
+        oldValue: { month },
+        subjectId: actor.accountId,
+        subjectType: 'news_send',
       });
-    }
-    this.logger.log(`news for ${month} sent to ${drivers.length} drivers`);
-    return { recipients: drivers.length };
+    });
   }
 
   // News is for drivers: another role gets it only as a driver who consented.

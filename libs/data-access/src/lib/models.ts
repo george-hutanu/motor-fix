@@ -14,6 +14,7 @@ export type { MeDto } from './models/me-dto';
 export type { NewsConsentDto } from './models/news-consent-dto';
 export type { NewsSentDto } from './models/news-sent-dto';
 export type { NewsTextDto } from './models/news-text-dto';
+export type { NewsTitleDto } from './models/news-title-dto';
 export type { NotificationGroupDto } from './models/notification-group-dto';
 export type { NotificationPreferenceDto } from './models/notification-preference-dto';
 export type { NotificationPreferencesDto } from './models/notification-preferences-dto';

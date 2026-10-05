@@ -44,5 +44,5 @@ T001, T002 → T003 → T004 → T005 → T006, T007 → T008 → T009 → T010 
 | FR-005, FR-009 | `libs/domain/src/notifications/news.spec.ts` |
 | FR-001, FR-002, FR-003, FR-011 | `libs/domain/src/notifications/news-consent.api.integration.spec.ts` |
 | FR-004, FR-006, FR-007, FR-008, FR-011 | `libs/domain/src/notifications/news.api.integration.spec.ts` |
-| FR-009 | `libs/domain/src/notifications/news.processor.integration.spec.ts`, `libs/domain/src/notifications/templates.spec.ts` |
+| FR-009 | `libs/domain/src/notifications/news.processor.integration.spec.ts`, `libs/domain/src/notifications/news.spec.ts` |
 | FR-010 | `apps/web/src/app/public/unsubscribe.spec.ts`, `apps/web-e2e/src/news.spec.ts` |

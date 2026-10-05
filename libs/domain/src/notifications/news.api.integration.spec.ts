@@ -201,6 +201,21 @@ describe('the one-click stop', () => {
     expect((await unsubscribe(token)).status).toBe(204);
   });
 
+  it('stops a news e-mail still held for the morning, and only that driver’s', async () => {
+    const admin = await account('admin', ['admin']);
+    const driver = await consenting('andrei');
+    const other = await consenting('elena');
+    clock('2026-11-05T21:00:00Z');
+    await send(admin);
+    await unsubscribe(unsubscribeToken(driver, tokenSecret));
+    const rows = await newsEmails();
+    expect(rows.find((r) => r.accountId === driver)).toMatchObject({
+      failure: 'unsubscribed',
+      status: 'failed',
+    });
+    expect(rows.find((r) => r.accountId === other)?.status).toBe('held');
+  });
+
   it('leaves the driver’s other messages on', async () => {
     const driver = await consenting('andrei');
     await unsubscribe(unsubscribeToken(driver, tokenSecret));
@@ -322,6 +337,37 @@ describe('an admin sending news', () => {
     expect(entry.at).toBeInstanceOf(Date);
   });
 
+  it('gives the month back when a send fails part-way, and a retry reaches each driver once', async () => {
+    const admin = await account('admin', ['admin']);
+    await consenting('andrei');
+    await consenting('elena');
+    const notifications = app.get(NotificationsService);
+    const notify = notifications.notify;
+    let calls = 0;
+    notifications.notify = (input) => {
+      calls += 1;
+      if (calls === 2) return Promise.reject(new Error('redis down'));
+      return notify.call(notifications, input);
+    };
+    try {
+      expect((await send(admin)).status).toBe(500);
+    } finally {
+      notifications.notify = notify;
+    }
+    expect(await prisma.newsSend.count()).toBe(0);
+    expect(await newsEmails()).toHaveLength(1);
+    const entries = await prisma.activityLog.findMany({
+      orderBy: { at: 'asc' },
+      where: { subjectId: admin, subjectType: 'news_send' },
+    });
+    expect(entries.map((e) => e.action)).toEqual(['create', 'delete']);
+    const retry = await send(admin);
+    expect(retry.status).toBe(202);
+    expect(retry.body).toEqual({ recipients: 2 });
+    expect(await newsEmails()).toHaveLength(2);
+    expect(await prisma.newsSend.count()).toBe(1);
+  });
+
   it('holds the e-mails of a send at night until 08:00 in Bucharest', async () => {
     const admin = await account('admin', ['admin']);
     await consenting('andrei');
@@ -354,6 +400,10 @@ describe('an admin sending news', () => {
   it.each([
     ['without an English title', { ...NEWS, title: { ro: 'Noutăți' } }],
     ['with an empty text', { ...NEWS, text: { en: '', ro: '' } }],
+    [
+      'with a title too long for a subject',
+      { ...NEWS, title: { ...NEWS.title, en: 'x'.repeat(151) } },
+    ],
     ['with nothing', {}],
   ])('refuses a send %s', async (_, body) => {
     const admin = await account('admin', ['admin']);

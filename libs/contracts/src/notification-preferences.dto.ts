@@ -80,7 +80,7 @@ export class NotificationPreferenceDto extends UpdateNotificationPreferenceDto {
 // The consent text the driver confirms before news is turned on (draft,
 // pending the lawyer's review): a new text is a new version.
 export const NEWS_CONSENT_TEXT_VERSION = '2026-10-03';
-export const NEWS_CONSENT_STATES = ['none', 'given', 'withdrawn'] as const;
+const NEWS_CONSENT_STATES = ['none', 'given', 'withdrawn'] as const;
 
 export class NewsConsentDto {
   @ApiProperty({ enum: NEWS_CONSENT_STATES })
@@ -166,12 +166,27 @@ class NewsTextDto {
   en!: string;
 }
 
+// A title is the e-mail's subject line.
+class NewsTitleDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  ro!: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  en!: string;
+}
+
 export class SendNewsDto {
   @ApiProperty({ description: 'The subject, in both languages' })
   @IsObject()
   @ValidateNested()
-  @Type(() => NewsTextDto)
-  title!: NewsTextDto;
+  @Type(() => NewsTitleDto)
+  title!: NewsTitleDto;
 
   @ApiProperty({ description: 'The text, in both languages' })
   @IsObject()

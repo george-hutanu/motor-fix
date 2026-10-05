@@ -220,7 +220,7 @@ export function consentChange(
     ? {
         consentGivenAt: at,
         consentSource: 'settings',
-        consentTextVersion: version ?? null,
+        consentTextVersion: NEWS_CONSENT_TEXT_VERSION,
         withdrawnAt: null,
       }
     : withdrawn(before, at);
@@ -230,7 +230,11 @@ export function consentChange(
     change: {
       field: 'news_consent',
       newValue: enabled
-        ? { state: now, textVersion: version, via: 'settings' }
+        ? {
+            state: now,
+            textVersion: NEWS_CONSENT_TEXT_VERSION,
+            via: 'settings',
+          }
         : { state: now, via: 'settings' },
       oldValue: was,
     },

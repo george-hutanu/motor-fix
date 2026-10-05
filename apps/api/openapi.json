@@ -1384,6 +1384,21 @@
           }
         }
       },
+      "NewsTitleDto": {
+        "type": "object",
+        "properties": {
+          "ro": {
+            "type": "string"
+          },
+          "en": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ro",
+          "en"
+        ]
+      },
       "NewsTextDto": {
         "type": "object",
         "properties": {
@@ -1406,7 +1421,7 @@
             "description": "The subject, in both languages",
             "allOf": [
               {
-                "$ref": "#/components/schemas/NewsTextDto"
+                "$ref": "#/components/schemas/NewsTitleDto"
               }
             ]
           },
