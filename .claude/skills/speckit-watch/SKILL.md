@@ -39,8 +39,9 @@ or overrides them.
    worktrees removed, deleted worktrees pruned. A failed action is reported,
    never retried with force.
 
-3. Report the board in a few lines: counts (`stale`, `done`, `blocked`, QA runs
-   of 4), then one line per row whose verdict is not `ok` — worktree, branch,
+3. Report the board in a few lines: counts (`stale`, `done`, `blocked`, live
+   `--local` QA runs; QA itself runs on GitHub Actions, capped at
+   `SPECKIT_QA_CAP`, by default its 20 concurrent jobs), then one line per row whose verdict is not `ok` — worktree, branch,
    phase, PR, fix, `reason`. Rows that are `ok` are summed, not listed.
 
    Dispatch only from a session that is not itself isolated in a worktree
