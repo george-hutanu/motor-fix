@@ -81,7 +81,7 @@
       ],
       "description": "Constitution VII: refuse `gh pr merge` (and the REST merge call) while the PR's head commit has no `agent-review` success from the PR tester",
       "fail_closed": true,
-      "fingerprint": "9e88afd1478e"
+      "fingerprint": "5596e72f3886"
     },
     {
       "id": "pre:tool:agent-model",
@@ -156,7 +156,7 @@
         "strict"
       ],
       "description": "Constitution VII: refuse to end a session on a task branch with unpushed commits, with no PR, with a green ready PR the PR tester has not passed (no `agent-review` on its head), or with a ready PR whose checks and agent review passed but that is not merged",
-      "fingerprint": "06d51627d761"
+      "fingerprint": "a0712b537ac5"
     },
     {
       "id": "stop:telemetry",

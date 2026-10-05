@@ -2,8 +2,8 @@
 // after the PR tester passed it. Refuses `gh pr merge` and the REST merge
 // call while the PR's head commit has no `agent-review` success status.
 //
-// A PR opened by Dependabot (its author, read from gh) needs no agent-review
-// status, only every other check green: a failing, pending or missing one
+// A PR opened by Dependabot (its author, read from gh) whose every commit
+// Dependabot wrote needs no agent-review status, only every other check green: a failing, pending or missing one
 // still refuses, and so does an agent review that failed.
 //
 // The status is per commit, so a push after the tester ran (a fix, a merge of
@@ -68,7 +68,7 @@ function readPr(target, cwd) {
   if (raw) return JSON.parse(raw);
   const out = execFileSync(
     "gh",
-    ["pr", "view", ...(target ? [target] : []), "--json", "author,number,state,headRefOid,statusCheckRollup"],
+    ["pr", "view", ...(target ? [target] : []), "--json", "author,commits,number,state,headRefOid,statusCheckRollup"],
     { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 15000 },
   );
   return JSON.parse(out);

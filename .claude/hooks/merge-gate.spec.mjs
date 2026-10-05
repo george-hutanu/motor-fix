@@ -55,7 +55,7 @@ describe('merge gate — the decision', () => {
 });
 
 describe('merge gate — Dependabot PRs need no agent review', () => {
-  const bot = (rollup, login = 'app/dependabot') => ({ ...pr(rollup), author: { login, is_bot: true } });
+  const bot = (rollup, login = 'app/dependabot') => ({ ...pr(rollup), author: { login, is_bot: true }, commits: [{ authors: [{ login: 'dependabot[bot]' }] }] });
 
   it('lets a Dependabot PR merge with every other check green and no agent-review status', () => {
     assert.equal(decideMerge(bot([{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }])), null);
@@ -79,5 +79,11 @@ describe('merge gate — Dependabot PRs need no agent review', () => {
     const human = { ...pr([{ conclusion: 'SUCCESS' }]), title: 'chore(deps): bump vitest', headRefName: 'dependabot/npm_and_yarn/vitest-5', author: { login: 'george-hutanu' } };
     assert.match(decideMerge(human), /no agent-review status/);
     assert.match(decideMerge({ ...pr([{ conclusion: 'SUCCESS' }]), author: { login: 'dependabot-fan' } }), /no agent-review status/);
+  });
+
+  it('takes back the exemption once anyone else pushed a commit to the branch', () => {
+    const pushed = { ...bot([{ conclusion: 'SUCCESS' }]), commits: [{ authors: [{ login: 'dependabot[bot]' }] }, { authors: [{ login: 'george-hutanu' }] }] };
+    assert.match(decideMerge(pushed), /no agent-review status/);
+    assert.match(decideMerge({ ...bot([{ conclusion: 'SUCCESS' }]), commits: undefined }), /no agent-review status/);
   });
 });

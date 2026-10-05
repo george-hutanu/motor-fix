@@ -236,11 +236,14 @@ describe('PR lifecycle gate — green means every check', () => {
 describe('PR lifecycle gate — Dependabot PRs need no agent review', () => {
   const checks = [{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }];
   const bot = (over = {}) =>
-    ready({ author: { login: 'app/dependabot', is_bot: true }, labels: [{ name: 'QA' }, { name: 'tooling' }], title: 'chore(deps): bump actions/cache from 4 to 6', statusCheckRollup: checks, ...over });
+    ready({ author: { login: 'app/dependabot', is_bot: true }, commits: [{ authors: [{ login: 'dependabot[bot]' }] }], labels: [{ name: 'QA' }, { name: 'tooling' }], title: 'chore(deps): bump actions/cache from 4 to 6', statusCheckRollup: checks, ...over });
 
-  it('knows Dependabot by the PR author only', () => {
-    assert.equal(isDependabot({ author: { login: 'app/dependabot' } }), true);
-    assert.equal(isDependabot({ author: { login: 'dependabot[bot]' } }), true);
+  it('knows Dependabot by the PR author and every commit author, never the title or branch', () => {
+    assert.equal(isDependabot({ author: { login: 'app/dependabot' }, commits: [{ authors: [{ login: 'dependabot[bot]' }] }] }), true);
+    assert.equal(isDependabot({ author: { login: 'dependabot[bot]' }, commits: [{ authors: [{ login: 'dependabot[bot]' }] }] }), true);
+    assert.equal(isDependabot({ author: { login: 'app/dependabot' }, commits: [{ authors: [{ login: 'dependabot[bot]' }] }, { authors: [{ login: 'george-hutanu' }] }] }), false);
+    assert.equal(isDependabot({ author: { login: 'app/dependabot' } }), false);
+    assert.equal(isDependabot({ author: { login: 'app/dependabot' }, commits: [] }), false);
     assert.equal(isDependabot({ author: { login: 'george-hutanu' }, title: 'chore(deps): bump x', headRefName: 'dependabot/npm_and_yarn/x' }), false);
     assert.equal(isDependabot({}), false);
   });

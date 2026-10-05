@@ -123,7 +123,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\": 82, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"author\": {\"login\": \"app/dependabot\", \"is_bot\": true}, \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"body\", \"conclusion\": \"SKIPPED\"}]}"
+      "SPECKIT_PR_STATE": "{\"number\": 82, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"author\": {\"login\": \"app/dependabot\", \"is_bot\": true}, \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"body\", \"conclusion\": \"SKIPPED\"}], \"commits\": [{\"authors\": [{\"login\": \"dependabot[bot]\"}]}]}"
     },
     "expect": {
       "exit": 0
@@ -139,11 +139,28 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\": 82, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"author\": {\"login\": \"app/dependabot\", \"is_bot\": true}, \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"Unit tests\", \"conclusion\": \"FAILURE\"}]}"
+      "SPECKIT_PR_STATE": "{\"number\": 82, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"author\": {\"login\": \"app/dependabot\", \"is_bot\": true}, \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"Unit tests\", \"conclusion\": \"FAILURE\"}], \"commits\": [{\"authors\": [{\"login\": \"dependabot[bot]\"}]}]}"
     },
     "expect": {
       "exit": 2,
       "stderr": "Unit tests is not green"
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-dependabot-pr-with-a-foreign-commit",
+    "hook": "pre:bash:merge-gate",
+    "why": "the PR author never changes when someone else pushes to the branch; a commit not written by Dependabot puts the PR back under the PR tester",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 82 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\": 82, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"author\": {\"login\": \"app/dependabot\", \"is_bot\": true}, \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"body\", \"conclusion\": \"SKIPPED\"}], \"commits\": [{\"authors\": [{\"login\": \"dependabot[bot]\"}]}, {\"authors\": [{\"login\": \"george-hutanu\"}]}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "no agent-review status"
     }
   }
 ]

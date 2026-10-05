@@ -22,7 +22,8 @@
 // while run-state says the run is blocked (Blocked is how a run stops).
 //
 // A PR opened by Dependabot (its author, read from gh, never its title or
-// branch) needs no agent review: green on every check, it is asked to merge.
+// branch) with only Dependabot's commits needs no agent review: green on every
+// check, it is asked to merge. A commit anyone else pushed takes that back.
 //
 // Fail-open on purpose where the gate cannot see: no origin/main ref, or a gh
 // that cannot be reached. A gate that traps a session because GitHub is down
@@ -66,8 +67,12 @@ const isAgentReview = (c) => (c.context ?? c.name) === "agent-review";
 
 const DEPENDABOT = new Set(["app/dependabot", "dependabot[bot]"]);
 
-/** Dependabot opened the PR: read off its author, never its title or branch. */
-export const isDependabot = (pr) => DEPENDABOT.has(pr?.author?.login ?? "");
+/** Dependabot opened the PR and wrote every commit on it: read off gh's authors, never the title or branch. */
+export const isDependabot = (pr) =>
+  DEPENDABOT.has(pr?.author?.login ?? "") &&
+  Array.isArray(pr.commits) &&
+  pr.commits.length > 0 &&
+  pr.commits.every((c) => c.authors?.length > 0 && c.authors.every((a) => DEPENDABOT.has(a.login ?? "")));
 
 /** An `agent-review` success among the head commit's checks. */
 export const hasAgentReview = (checks) =>
@@ -173,7 +178,7 @@ function readState(cwd) {
   try {
     const out = execFileSync(
       "gh",
-      ["pr", "view", branch, "--json", "author,number,state,isDraft,labels,mergeable,statusCheckRollup,title"],
+      ["pr", "view", branch, "--json", "author,commits,number,state,isDraft,labels,mergeable,statusCheckRollup,title"],
       { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 15000 },
     );
     pr = JSON.parse(out);

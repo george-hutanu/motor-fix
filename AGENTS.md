@@ -65,7 +65,7 @@ epic or a plan, whether run through spec-kit or by hand.
      (`gh pr merge <n> --merge`); a PR with a failing, pending or missing check
      is never merged. Then set the task to Done (`speckit-notion-sync finish`).
      A PR opened by Dependabot (its author on GitHub, not its title or branch)
-     skips step 6: it merges on every other check green with no `agent-review`
+     and holding only Dependabot's commits skips step 6: it merges on every other check green with no `agent-review`
      status, and a failing, pending or missing check still refuses it.
 
   Technical debt a review defers (`specs/<feature>/deferred.md`) is filed as
