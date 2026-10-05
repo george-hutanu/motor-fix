@@ -1,4 +1,18 @@
 {
+  "confirmEmail": {
+    "confirmed": "Adresa ta de e‑mail este confirmată.",
+    "confirming": "Confirmăm adresa…",
+    "error": "Nu am putut confirma adresa acum.",
+    "expired": "Linkul a expirat",
+    "expiredLine": "Un link de confirmare merge o singură dată, timp de 72 de ore.",
+    "failed": "Nu am putut trimite linkul. Încearcă din nou.",
+    "home": "Mergi la MotorFix",
+    "refused": "Din acest link nu mai putem trimite altul. Intră în cont și apasă „Retrimite”.",
+    "retry": "Încearcă din nou",
+    "sendNew": "Trimite un link nou",
+    "sent": "Am trimis un link nou pe e‑mail.",
+    "tooMany": "Ai cerut deja un link. Încearcă din nou puțin mai târziu."
+  },
   "placeholder": {
     "account": "Cont",
     "garages": "Service‑uri",

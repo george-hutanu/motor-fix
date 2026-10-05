@@ -93,6 +93,8 @@ const NOT_CHANGES = new Set([
   'SignInService.revoke',
   'SignInService.rotate',
   'SignInService.touch',
+  // A confirmation link's token; confirming it is the audited change.
+  'EmailConfirmationService.issue',
   // The role in use is a view preference.
   'SignInService.switchRole',
   // A notification's delivery records, not a change to anyone's data.

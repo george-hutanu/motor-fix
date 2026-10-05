@@ -1,4 +1,18 @@
 {
+  "confirmEmail": {
+    "confirmed": "Your e-mail address is confirmed.",
+    "confirming": "Confirming your address…",
+    "error": "We could not confirm your address just now.",
+    "expired": "The link has expired",
+    "expiredLine": "A confirmation link works once, for 72 hours.",
+    "failed": "We could not send the link. Try again.",
+    "home": "Go to MotorFix",
+    "refused": "We cannot send another link from this one. Sign in and press “Send again”.",
+    "retry": "Try again",
+    "sendNew": "Send a new link",
+    "sent": "We sent a new link by e-mail.",
+    "tooMany": "You already asked for a link. Try again a little later."
+  },
   "placeholder": {
     "account": "Account",
     "garages": "Garages",

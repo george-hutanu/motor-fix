@@ -142,6 +142,8 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
       REDIS_URL: redis://localhost:6379
       AUTH_TOKEN_SECRET: ci-only-test-secret-not-used-in-any-deploy
+      # The api writes the e-mail confirmation link with it.
+      PUBLIC_WEB_URL: http://localhost:4200
       # The e2e suite does not upload files; the api only needs the settings.
       STORAGE_ENDPOINT: http://localhost:9000
       STORAGE_REGION: eu-central-1

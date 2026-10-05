@@ -21,13 +21,20 @@ export class MeController {
   @Get()
   @ApiOkResponse({ type: MeDto })
   async me(@CurrentActor() actor: Actor): Promise<MeDto> {
-    const account = await this.prisma.account.findUniqueOrThrow({
-      select: { email: true, language: true, name: true },
-      where: { id: actor.accountId },
-    });
+    const { emailVerifiedAt, ...account } =
+      await this.prisma.account.findUniqueOrThrow({
+        select: {
+          email: true,
+          emailVerifiedAt: true,
+          language: true,
+          name: true,
+        },
+        where: { id: actor.accountId },
+      });
     return {
       ...account,
       capabilities: capabilitiesOf(actor.role, actor.permissions),
+      emailConfirmed: Boolean(account.email && emailVerifiedAt),
       garageId: actor.garageId,
       id: actor.accountId,
       landing: landingFor(actor.role),
