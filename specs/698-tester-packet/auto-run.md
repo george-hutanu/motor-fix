@@ -30,3 +30,10 @@
 
 ## 7–8. Tasks, analyze
 - tasks.md T001–T007; every FR mapped. artifact-lint: Spec Delta was missing (platform, Adds FR-001–FR-009), added; now clean.
+
+## 9. Tests
+
+- `packet.spec.mjs` (FR-001–FR-006, fake `gh`, temp artifact folders) and `packet-wiring.spec.mjs` (FR-007–FR-009) written first.
+- Red: `vitest run` on both → Test Files 2 failed; `packet.spec.mjs` fails at import (no `packet.mjs`), wiring 5 failed | 2 passed (the two passing are guards: opus/constitution/post kept, merge gate and carry never read the packet).
+- FR-009 (autonomous): tested as independence (neither file mentions the packet); byte-equality with `origin/main` is a `git diff` check in T006, not a test that would break on the next legitimate change to the gate.
+- Coordinator note: #140 merged as 3486742; the branch already contains `origin/main` at 3486742.
