@@ -11,3 +11,5 @@
 - 2026-10-05 · debt · ST-688 · deferred.md line 2 → https://app.notion.com/p/3f0607bff0d28141a3ebf5bb39a440ba
 - 2026-10-05 · qa · ST-688 · Implementing → QA (no timeline row)
 - 2026-10-05 · labels · PR #140 · QA
+- 2026-10-05 · debt · ST-688 · deferred.md line 3 → https://app.notion.com/p/3f0607bff0d281ee9504c1e2cb64d094
+- 2026-10-05 · debt · ST-688 · deferred.md line 4 → https://app.notion.com/p/3f0607bff0d2810b878df218a9fcb465
