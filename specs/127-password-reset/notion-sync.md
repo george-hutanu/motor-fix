@@ -16,3 +16,6 @@
 - 2026-10-05 · blocked · ST-127 story Status · QA → Blocked (QA cannot boot: Docker hangs, MinIO images gone)
 - 2026-10-05 · blocked · Foundations timeline row ST-127 · QA → Blocked
 - 2026-10-05 · labels · PR #72 · QA + blocked
+- 2026-10-05 · unblock · ST-127 story Status · Blocked → QA (Docker fixed; #89 replaced MinIO and boots the PR's own compose)
+- 2026-10-05 · unblock · Foundations timeline row ST-127 · Blocked → QA
+- 2026-10-05 · labels · PR #72 · QA
