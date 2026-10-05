@@ -162,5 +162,89 @@
       "exit": 2,
       "stderr": "still running"
     }
+  },
+  {
+    "id": "merge-gate-refuses-a-green-human-pr-without-agent-review",
+    "hook": "pre:bash:merge-gate",
+    "why": "the Dependabot exemption is read off the author; a PR anyone else opened still waits for the PR tester however green its CI",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 82 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\": 82, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"author\": {\"login\": \"george-hutanu\", \"is_bot\": false}, \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"body\", \"conclusion\": \"SKIPPED\"}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "no agent-review status"
+    }
+  },
+  {
+    "id": "merge-gate-passes-a-green-dependabot-pr",
+    "hook": "pre:bash:merge-gate",
+    "why": "a Dependabot version bump merges on every check green with no agent review (owner decision, Constitution VII)",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 82 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\": 82, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"author\": {\"login\": \"app/dependabot\", \"is_bot\": true}, \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"body\", \"conclusion\": \"SKIPPED\"}], \"commits\": [{\"authors\": [{\"login\": \"dependabot[bot]\"}]}]}"
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-red-dependabot-pr",
+    "hook": "pre:bash:merge-gate",
+    "why": "the exemption covers the agent review only; a failing check still keeps a Dependabot PR out of main",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 82 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\": 82, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"author\": {\"login\": \"app/dependabot\", \"is_bot\": true}, \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"Unit tests\", \"conclusion\": \"FAILURE\"}], \"commits\": [{\"authors\": [{\"login\": \"dependabot[bot]\"}]}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "CI failed"
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-dependabot-pr-with-a-foreign-commit",
+    "hook": "pre:bash:merge-gate",
+    "why": "the PR author never changes when someone else pushes to the branch; a commit not written by Dependabot puts the PR back under the PR tester",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 82 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\": 82, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"author\": {\"login\": \"app/dependabot\", \"is_bot\": true}, \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"body\", \"conclusion\": \"SKIPPED\"}], \"commits\": [{\"authors\": [{\"login\": \"dependabot[bot]\"}]}, {\"authors\": [{\"login\": \"george-hutanu\"}]}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "no agent-review status"
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-dependabot-pr-before-ci-ok",
+    "hook": "pre:bash:merge-gate",
+    "why": "the exemption skips the agent review, not CI: a Dependabot PR whose CI OK has not reported waits like any other",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 82 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\": 82, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"author\": {\"login\": \"app/dependabot\", \"is_bot\": true}, \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"workflowName\": \"CI\", \"name\": \"Unit tests\", \"status\": \"COMPLETED\", \"conclusion\": \"SUCCESS\"}], \"commits\": [{\"authors\": [{\"login\": \"dependabot[bot]\"}]}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "no CI OK check"
+    }
   }
 ]
