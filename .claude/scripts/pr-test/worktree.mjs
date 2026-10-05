@@ -11,15 +11,29 @@ const git = (cwd, ...args) =>
  * Fetch `pull/<pr>/head` from origin and add a detached worktree at it under
  * `root`. With `sha`, refuse a head that moved: the tester reports on one
  * commit, and that commit is the one its status lands on.
+ *
+ * The head lands in a ref of this run's own, never FETCH_HEAD: that file is
+ * shared by every run in the repository, and a concurrent QA run's fetch can
+ * overwrite it between our fetch and our read. The worktree's HEAD keeps the
+ * commit once the ref is gone, so the ref only lives for this call.
  */
 export function createWorktree({ repo, pr, sha, root }) {
-  git(repo, "fetch", "--quiet", "origin", `refs/pull/${pr}/head`);
-  const head = git(repo, "rev-parse", "FETCH_HEAD");
-  if (sha && !head.startsWith(sha)) throw new Error(`PR #${pr} head is ${head}, not ${sha}; it moved since the tester was asked to run`);
-  mkdirSync(root, { recursive: true });
-  const dir = join(root, `mf-prtest-${pr}-${head.slice(0, 7)}-${process.pid}`);
-  git(repo, "worktree", "add", "--quiet", "--detach", dir, head);
-  return { dir, sha: head };
+  const ref = `refs/prtest/${pr}-${process.pid}`;
+  try {
+    git(repo, "fetch", "--quiet", "--no-write-fetch-head", "origin", `+refs/pull/${pr}/head:${ref}`);
+    const head = git(repo, "rev-parse", "--verify", `${ref}^{commit}`);
+    if (sha && !head.startsWith(sha)) throw new Error(`PR #${pr} head is ${head}, not ${sha}; it moved since the tester was asked to run`);
+    mkdirSync(root, { recursive: true });
+    const dir = join(root, `mf-prtest-${pr}-${head.slice(0, 7)}-${process.pid}`);
+    git(repo, "worktree", "add", "--quiet", "--detach", dir, head);
+    return { dir, sha: head };
+  } finally {
+    try {
+      git(repo, "update-ref", "-d", ref);
+    } catch {
+      // the fetch never created it
+    }
+  }
 }
 
 export function removeWorktree({ repo, dir }) {
