@@ -25,6 +25,7 @@ const placeholder = (path: string, title: string) => ({
 // canMatch, not canActivate: a refused area is never downloaded.
 export const routes: Routes = [
   // In the public frame, like /ro, so the server's page has its landmarks too.
+  // `toLanguageAddress` first: its redirect wins without waiting for the texts.
   {
     canMatch: [toLanguageAddress, publicTexts],
     children: [{ component: Home, path: '' }],

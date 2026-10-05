@@ -55,7 +55,8 @@ export const languageRoot: UrlMatcher = (segments) =>
     ? { consumed: segments }
     : null;
 
-// The public frame's own texts, for `/`, which renders it on the server.
+// The public frame's own texts, for `/`: the server renders the frame there;
+// in the browser the redirect wins and the load is one /<lang> needs anyway.
 export const publicTexts: CanMatchFn = async () => {
   await inject(I18n).enter('public');
   return true;

@@ -48,3 +48,10 @@
 
 - `retro-evidence.mjs --since a55fa6e`: 2 commits (docs spec, fix); 10 carried-over open items from earlier features, none touching this change. Jev lane unavailable (no key). Verdict left to the owner.
 - test-adversary: 3 tests, all passing. Folded 2 into `addresses.spec.ts` as one `it.each` (`/ro/garages` and `/ro/no-such-page`: one main, never nested), because they add evidence about the shared frame and the not-found page. Dropped its server-side `/` test because it repeated the existing one; kept its one extra assertion by tightening the helper to exactly one frame banner. Separate adversary file not kept (Principle I: same setup helpers twice). `addresses.spec.ts`: 20 passed.
+
+## 14. Review
+
+- spec-reviewer: APPROVE. FR-001, FR-002 and SC-001 verified; constitution I–VI hold.
+  - LOW: `publicTexts` also runs in the browser before the redirect. Fixed by rewording the comment at `addresses.ts` to cover both cases (the load is shared with `/<lang>`).
+  - Note: ST-458 is the same finding. After the merge, close it in Notion as a duplicate, with a comment pointing to ST-454 and #115.
+- code-reviewer: APPROVE. MEDIUM (deferred, `deferred.md`): the axe loader is now in four e2e specs; a shared `apps/web-e2e/src/axe.ts` is the fix. LOW (patched): the two server tests in `addresses.spec.ts` share a `serverSetUp()`; the `''` route's comment says why `toLanguageAddress` comes first. 20/20 in `addresses.spec.ts` after the patch.

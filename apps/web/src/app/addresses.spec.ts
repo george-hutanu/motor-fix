@@ -32,6 +32,21 @@ function setUp() {
   });
 }
 
+function serverSetUp() {
+  TestBed.configureTestingModule({
+    providers: [
+      provideRouter(routes),
+      provideLanguageAddresses(),
+      { provide: SITE_ORIGIN, useValue: ORIGIN },
+      { provide: PLATFORM_ID, useValue: 'server' },
+      {
+        provide: HealthService,
+        useValue: { healthControllerReady: () => Promise.reject() },
+      },
+    ],
+  });
+}
+
 async function open(url: string) {
   const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl(url);
@@ -290,18 +305,7 @@ describe('/ on the server', () => {
   });
 
   it('renders / in the public frame, with one main around Home', async () => {
-    TestBed.configureTestingModule({
-      providers: [
-        provideRouter(routes),
-        provideLanguageAddresses(),
-        { provide: SITE_ORIGIN, useValue: ORIGIN },
-        { provide: PLATFORM_ID, useValue: 'server' },
-        {
-          provide: HealthService,
-          useValue: { healthControllerReady: () => Promise.reject() },
-        },
-      ],
-    });
+    serverSetUp();
 
     const harness = await open('/');
 
@@ -310,18 +314,7 @@ describe('/ on the server', () => {
   });
 
   it('gives / the canonical and hreflang links of /ro/', async () => {
-    TestBed.configureTestingModule({
-      providers: [
-        provideRouter(routes),
-        provideLanguageAddresses(),
-        { provide: SITE_ORIGIN, useValue: ORIGIN },
-        { provide: PLATFORM_ID, useValue: 'server' },
-        {
-          provide: HealthService,
-          useValue: { healthControllerReady: () => Promise.reject() },
-        },
-      ],
-    });
+    serverSetUp();
 
     await open('/');
 
