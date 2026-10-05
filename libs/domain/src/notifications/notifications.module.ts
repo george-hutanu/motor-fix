@@ -126,7 +126,7 @@ export class NotificationsModule implements OnApplicationShutdown {
   // The worker: the same entry point plus the queue's consumer, which also
   // sends SMS and WhatsApp, and the monthly news run. The reminders send
   // through its service and share its PostgreSQL pool. News needs the API's
-  // token secret to sign its unsubscribe links; without it the runs wait.
+  // token secret and the web address for its links; without them the runs wait.
   static registerWorker(
     options: NotificationsOptions & {
       phone: PhoneConfig;
@@ -179,9 +179,14 @@ export class NotificationsModule implements OnApplicationShutdown {
           inject: [NewsFanOut],
           provide: NEWS_WORKER,
           useFactory: (fanOut: NewsFanOut) => {
-            if (!options.tokenSecret) {
-              new Logger('News').error(
-                'AUTH_TOKEN_SECRET is missing; news runs wait in their queue',
+            const log = new Logger('News');
+            const missing = [
+              !options.tokenSecret && 'AUTH_TOKEN_SECRET',
+              !options.email.webUrl && 'PUBLIC_WEB_URL',
+            ].filter(Boolean);
+            if (missing.length > 0) {
+              log.error(
+                `${missing.join(' and ')} missing; news runs wait in their queue`,
               );
               return null;
             }
@@ -198,7 +203,7 @@ export class NotificationsModule implements OnApplicationShutdown {
             worker.on('failed', (job, error) => {
               if (!job) return;
               fanOut.failed(job, error).catch((e: Error) => {
-                new Logger('News').error(
+                log.error(
                   `news for ${job.data.month} was not given back: ${e.message}`,
                 );
               });

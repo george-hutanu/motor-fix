@@ -5,6 +5,7 @@ import { Queue } from 'bullmq';
 
 import { NEWS_QUEUE, NEWS_RUN, type NewsRun } from './news.fan-out';
 import { NotificationsModule } from './notifications.module';
+import { NotificationsService } from './notifications.service';
 import {
   databaseUrl,
   fixtures,
@@ -48,12 +49,15 @@ async function consenting(name: string) {
   return id;
 }
 
-const worker = (tokenSecret?: string) =>
+const worker = (tokenSecret?: string, webUrl = 'https://motorfix.test') =>
   Test.createTestingModule({
     imports: [
       NotificationsModule.registerWorker({
         databaseUrl,
-        email: testConfig('http://127.0.0.1:9', { EMAIL_SENDING: 'off' }),
+        email: testConfig('http://127.0.0.1:9', {
+          EMAIL_SENDING: 'off',
+          PUBLIC_WEB_URL: webUrl,
+        }),
         phone: testPhoneConfig({ PHONE_SENDING: 'off' }),
         redisUrl,
         tokenSecret,
@@ -61,14 +65,18 @@ const worker = (tokenSecret?: string) =>
     ],
   }).compile();
 
-async function queueRun(admin: string) {
+async function queueRun(admin: string, attempts = NEWS_RUN.attempts) {
   const run: NewsRun = {
     month: '2026-11',
     sentBy: { accountId: admin, role: 'admin' },
     text: { en: 'News', ro: 'Noutăți' },
     title: { en: 'News for November', ro: 'Noutăți din noiembrie' },
   };
-  await newsJobs.add('fan-out', run, { ...NEWS_RUN, jobId: 'news-2026-11' });
+  await newsJobs.add('fan-out', run, {
+    ...NEWS_RUN,
+    attempts,
+    jobId: 'news-2026-11',
+  });
 }
 
 const newsEmails = () =>
@@ -94,24 +102,59 @@ describe('the news worker', () => {
     expect(rows.map((r) => r.accountId).sort()).toEqual([andrei, elena].sort());
   }, 20_000);
 
-  it('leaves the run queued and says why when it has no token secret', async () => {
+  it.each([
+    ['AUTH_TOKEN_SECRET', undefined, 'https://motorfix.test'],
+    ['PUBLIC_WEB_URL', 'test-secret', ''],
+  ])(
+    'leaves the run queued and says why without %s',
+    async (name, secret, webUrl) => {
+      const error = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => undefined);
+      const admin = await account('admin', ['admin']);
+      await consenting('andrei');
+      const app = await worker(secret, webUrl);
+      await app.init();
+      try {
+        await queueRun(admin);
+        await new Promise((r) => setTimeout(r, 1_000));
+      } finally {
+        await app.close();
+      }
+      const logged = error.mock.calls.flat().join('\n');
+      error.mockRestore();
+      expect(await newsEmails()).toEqual([]);
+      expect(await newsJobs.getJobState('news-2026-11')).toBe('waiting');
+      expect(logged).toContain(name);
+    },
+    20_000,
+  );
+
+  it('gives the month back once the last attempt fails', async () => {
     const error = jest
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const admin = await account('admin', ['admin']);
     await consenting('andrei');
-    const app = await worker(undefined);
+    await prisma.newsSend.create({
+      data: { month: '2026-11', recipients: 1, sentById: admin },
+    });
+    const app = await worker('test-secret');
+    jest
+      .spyOn(app.get(NotificationsService), 'notify')
+      .mockRejectedValue(new Error('pipeline down'));
     await app.init();
     try {
-      await queueRun(admin);
-      await new Promise((r) => setTimeout(r, 1_000));
+      await queueRun(admin, 1);
+      const deadline = Date.now() + 10_000;
+      while ((await prisma.newsSend.count()) > 0 && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
     } finally {
       await app.close();
+      error.mockRestore();
     }
-    const logged = error.mock.calls.flat().join('\n');
-    error.mockRestore();
-    expect(await newsEmails()).toEqual([]);
-    expect(await newsJobs.getJobState('news-2026-11')).toBe('waiting');
-    expect(logged).toContain('AUTH_TOKEN_SECRET');
+    expect(await prisma.newsSend.count()).toBe(0);
+    expect(await newsJobs.getJobState('news-2026-11')).toBe('unknown');
   }, 20_000);
 });

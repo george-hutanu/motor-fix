@@ -1,6 +1,6 @@
 import type { SendNewsDto } from '@motor-fix/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { JobsOptions } from 'bullmq';
+import type { Job, JobsOptions } from 'bullmq';
 
 import type { EmailConfig } from './email-config';
 import { newsLinks, unsubscribeToken } from './news';
@@ -33,12 +33,6 @@ export interface NewsRun extends Pick<SendNewsDto, 'text' | 'title'> {
   sentBy: Pick<Actor, 'accountId' | 'role'>;
 }
 
-interface Attempt {
-  data: NewsRun;
-  attemptsMade: number;
-  opts: { attempts?: number };
-}
-
 // News is for drivers: another role gets it only as a driver who consented.
 export const CONSENTING_DRIVERS: Prisma.NotificationPreferenceWhereInput = {
   account: {
@@ -59,7 +53,8 @@ export async function giveMonthBack(
   by: NewsRun['sentBy'],
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
-    await tx.newsSend.deleteMany({ where: { month } });
+    const { count } = await tx.newsSend.deleteMany({ where: { month } });
+    if (count === 0) return;
     await audit.record(tx, {
       action: 'delete',
       actorId: by.accountId,
@@ -86,7 +81,7 @@ export class NewsFanOut {
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
-  async handle({ data }: Pick<Attempt, 'data'>): Promise<void> {
+  async handle({ data }: Pick<Job<NewsRun>, 'data'>): Promise<void> {
     const webUrl = this.config.webUrl;
     if (!webUrl) throw new Error('PUBLIC_WEB_URL is needed to send news');
     const rows = await this.prisma.notificationPreference.findMany({
@@ -114,7 +109,10 @@ export class NewsFanOut {
   }
 
   // After the last attempt the month is given back for the admin to send again.
-  async failed(job: Attempt, error: Error): Promise<void> {
+  async failed(
+    job: Pick<Job<NewsRun>, 'attemptsMade' | 'data' | 'opts'>,
+    error: Error,
+  ): Promise<void> {
     if (job.attemptsMade < (job.opts.attempts ?? 1)) return;
     const { month, sentBy } = job.data;
     this.logger.error(

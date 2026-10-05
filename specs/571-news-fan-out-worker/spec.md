@@ -45,7 +45,7 @@ message exists yet; run the queued job; each consenting driver has one message.
 - **FR-003**: A run that fails MUST be retried by the queue; a retry MUST reach each driver once and MUST keep the month claimed.
 - **FR-004**: A run that fails on its last attempt MUST give the month back and record the release against the sender.
 - **FR-005**: When the job cannot be queued, the send MUST give the month back and fail.
-- **FR-006**: The worker MUST run news jobs only when it has the token secret the unsubscribe links are signed with; without it, it MUST log an error at start and leave the jobs queued.
+- **FR-006**: The worker MUST run news jobs only when it has the token secret the unsubscribe links are signed with and the public web address the links point to; without either, it MUST log an error at start and leave the jobs queued.
 
 ## Spec Delta
 
