@@ -6,6 +6,7 @@ features:
   - 195-message-templates
   - 199-notification-bell
   - 555-account-link-params
+  - 196-push-notifications
 ---
 
 # Capability: Notifications
@@ -22,9 +23,9 @@ _From 194-email-sending._
 
 _From 194-email-sending._
 
-### 194-FR-003 — For each recipient, the service MUST skip a `deleted` account, write one `in_app` row with status `sent`, and write one `email` row when the type allows e-mail and the account has an e-mail address; it MUST NOT write rows for the other outside channels in this story.
+### 196-FR-007 — The routing MUST send a message by push when push is one of its type's channels, the person did not mute it, and the person has at least one push device; a person with no device MUST get it by e-mail instead when the type goes by e-mail. Push is on for a person, driver or staff, once they save a device, unless they muted it for that type; for a driver type the e-mail used instead goes whenever the type's channels include e-mail, even when choosing push muted e-mail; for a staff type it goes only when the person did not mute e-mail.
 
-_From 194-email-sending._
+_From 196-push-notifications._
 
 ### 194-FR-004 — A type that is always sent MUST include e-mail whenever it allows e-mail, whatever channels are muted; the channel choice MUST take the muted channels as input (empty until ST-197 stores preferences).
 
@@ -42,9 +43,9 @@ _From 194-email-sending._
 
 _From 195-message-templates._
 
-### 194-FR-008 — A Brevo 5xx, a 429, a timeout or a network error MUST be retried after 1, 5, 15, 60 and 240 minutes; any other 4xx, or the failure of the last retry, MUST set the row `failed` with the reason and call the e-mail fallback with the failed row. The fallback does nothing in this story; ST-196 makes it send push.
+### 196-FR-019 — An e-mail row that fails for good and is not itself a fallback MUST fall back to push when the type lists push and the person has a push device; a push row that is itself a fallback MUST NOT fall back to e-mail.
 
-_From 194-email-sending._
+_From 196-push-notifications._
 
 ### 194-FR-009 — For a groupable type, the first `email` row for a (type, recipient) MUST be sent at once and open a 5-minute window; every further row of the same type and recipient built within that window MUST be held, and when the window closes one e-mail MUST go naming the count of held rows (a single held row goes as an ordinary e-mail), with every held row set `sent` together; when that e-mail fails for good, every held row is set `failed` and the fallback is called for each. A row built after the window closed opens a new window. Non-groupable types MUST NOT open a window. A row released from quiet hours MUST go through this rule as if it were built at its release.
 
@@ -62,9 +63,9 @@ _From 194-email-sending._
 
 _From 194-email-sending._
 
-### 194-FR-013 — `POST /api/v1/admin/notifications/test` with 1 to 20 distinct account ids MUST, for an admin, send a TEST_MESSAGE to each, with one fresh event id per call and each account as its subject, and answer 202; for any other signed-in role it MUST answer 404, without a session 401, and with an id that is not an existing non-deleted account 400 with nothing queued.
+### 196-FR-014 — The test message MUST go by push as well as e-mail, and a signed-in person MUST be able to send a push-only test to their own devices; the test push has no e-mail fallback.
 
-_From 194-email-sending._
+_From 196-push-notifications._
 
 ### 194-FR-014 — `POST /api/v1/webhooks/brevo` MUST accept only a request carrying the configured webhook secret (compared in constant time), else answer 401 and change nothing; for a `hard_bounce` event it MUST set the matching `email` row (by Brevo's message id) `failed` with the reason `bounced`, set `email_bounced_at` on the account with that address, and call the e-mail fallback with the row; every other event or unknown message id MUST answer 204 and change nothing.
 
@@ -190,7 +191,83 @@ _From 555-account-link-params._
 
 _From 555-account-link-params._
 
+### 196-FR-001 — A signed-in person MUST be able to save the current browser as a push device (address, two keys, optional device label up to 100 characters); saving an address that exists again replaces it and answers the same device id.
+
+_From 196-push-notifications._
+
+### 196-FR-002 — A signed-in person MUST be able to delete one of their own push devices; another account's device or an unknown id answers 404 `not_found`.
+
+_From 196-push-notifications._
+
+### 196-FR-003 — A save MUST be refused with 400 when the address is not an https URL or a key is missing or empty.
+
+_From 196-push-notifications._
+
+### 196-FR-004 — The web app MUST ask for the browser's notification permission only after a tap on "Activează notificările", never on page load.
+
+_From 196-push-notifications._
+
+### 196-FR-005 — The notifications panel MUST show the state read live from the browser: on, off, blocked ("Notificările sunt blocate în browser" with unblock steps), iPhone outside the Home Screen (the add-to-Home-Screen hint), unsupported browser, and push not set up on the server.
+
+_From 196-push-notifications._
+
+### 196-FR-006 — The panel MUST be reachable by every role: the Setări (settings) view of the driver and admin dashboards, and the garage dashboard's home view, which every garage role sees.
+
+_From 196-push-notifications._
+
+### 196-FR-008 — The worker MUST send one push row to every push device of the person, with the template's push title, body and link, a time to live of 24 hours, and urgency high for always-sent types and normal for the rest.
+
+_From 196-push-notifications._
+
+### 196-FR-009 — A device the push service answers 404 or 410 for MUST be deleted; when no device took the message, the row MUST fail with `no_device` and fall back to e-mail.
+
+_From 196-push-notifications._
+
+### 196-FR-010 — A retryable push failure (network, 429, 5xx) MUST be retried on the e-mail schedule; once the retries are used up, or on any other refusal, the row MUST fail and fall back to e-mail.
+
+_From 196-push-notifications._
+
+### 196-FR-011 — A push row MUST record its successful send on the row (`sent`, time) and the time of the last success on each device that took it.
+
+_From 196-push-notifications._
+
+### 196-FR-012 — A push row of a type that is not urgent, built in quiet hours, MUST wait until 08:00.
+
+_From 196-push-notifications._
+
+### 196-FR-013 — A type with no push text MUST fail its push row with `template_failed` and fall back to e-mail.
+
+_From 196-push-notifications._
+
+### 196-FR-015 — The service worker MUST show a received push as a notification and, when it is tapped, open (or focus) the app at the push's link.
+
+_From 196-push-notifications._
+
+### 196-FR-016 — Signing out on a device MUST delete that device's push device and unsubscribe the browser; signing out everywhere MUST delete every push device of the account.
+
+_From 196-push-notifications._
+
+### 196-FR-017 — On app start, a browser with push on MUST save its current device again, so a changed address after a service worker update is not lost.
+
+_From 196-push-notifications._
+
+### 196-FR-018 — Push MUST be off, with no device saved and no push sent, when the server has no push keys configured; messages then go by e-mail. Routing then treats every person as having no push device.
+
+_From 196-push-notifications._
+
+### 196-FR-020 — A push row MUST be `sent` when at least one device took it, and MUST be retried only when no device took it and at least one refusal was retryable.
+
+_From 196-push-notifications._
+
+### 196-FR-021 — The panel MUST show the add-to-Home-Screen hint on an iPhone or iPad not running from the Home Screen, whether or not the browser exposes push; an installed app without push support MUST show "browser without push".
+
+_From 196-push-notifications._
+
 ## Retired
 
 - `194-FR-007` — superseded by `195-FR-005` (2026-10-04)
 - `194-FR-018` — superseded by `195-FR-010` (2026-10-04)
+
+- `194-FR-003` — superseded by `196-FR-007` (2026-10-05)
+- `194-FR-008` — superseded by `196-FR-019` (2026-10-05)
+- `194-FR-013` — superseded by `196-FR-014` (2026-10-05)

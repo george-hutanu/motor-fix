@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-05
 
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 
 **Input**: User description: "ST-196 Set up push notifications (Notion page https://app.notion.com/p/3ee607bff0d28156a023d73a7262de80): Web Push as the second channel of the notifications service from the installable web app — permission prompt after a tap, PUSH_SUBSCRIPTION storage (POST/DELETE /api/v1/push-subscriptions), service worker that shows the notification and opens the right screen, push adapter in the worker with fallback to e-mail and deletion on 404/410, iPhone Home Screen hint, deletion on sign-out. Follow the story's Build brief."
 

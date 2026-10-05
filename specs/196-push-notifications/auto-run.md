@@ -34,3 +34,11 @@ spec-challenger: 5 questions + 4 notes. Answers (its recommendations; applied to
 4. iPhone hint wins over "no push" when not standalone; installed without push → unsupported (FR-021).
 5. Push→e-mail fallback ignores the mute coming from choosing push (type.channels), like SMS/WhatsApp.
 Notes folded: SC-001 measured in the integration test; shared-laptop save re-creates the device; no keys → routing sees no device. Kept the self-service push test (autonomous default, flagged for the owner).
+
+## 10-14. Implement, converge, harden, review
+- Slices: feat(notifications) server, feat(web) panel, fix(notifications) after review. Unit, integration and typecheck green; e2e `apps/web-e2e/src/push.spec.ts` left to CI (local boot needs full env). Mutation left to the nightly run.
+- Review: spec-reviewer APPROVE (2 MEDIUM patched); code-reviewer BLOCK on no device cap (HIGH, decision: evict the oldest at 10) then APPROVE on re-review. Deferred: env-configurable timeouts and cap, throttle on the test route (`deferred.md`).
+- Decision for the owner: push is sent directly with VAPID, not through Brevo (autonomous default, Brevo has no browser Web Push API).
+
+## 15-16. Archive
+- Spec Delta merged into `.specify/capabilities/notifications.md` (+18 ~3). Status line set to Archived.
