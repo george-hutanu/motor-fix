@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { decideMerge, mergeTarget } from './merge-gate.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
+const run = (name, conclusion, status = 'COMPLETED', startedAt = '2026-10-05T07:00:00Z') => ({ __typename: 'CheckRun', name, status, conclusion, startedAt });
+const green = [run('Unit tests', 'SUCCESS'), run('CI OK', 'SUCCESS')];
 const pr = (rollup) => ({ number: 21, state: 'OPEN', headRefOid: 'abc1234def5678', statusCheckRollup: rollup });
 
 describe('merge gate — which commands are merges', () => {
@@ -35,18 +37,58 @@ describe('merge gate — which commands are merges', () => {
 
 describe('merge gate — the decision', () => {
   it('refuses a PR whose head commit has no agent-review success, and names the tester', () => {
-    const why = decideMerge(pr([{ conclusion: 'SUCCESS' }]));
+    const why = decideMerge(pr(green));
     assert.match(why, /agent-review/);
     assert.match(why, /abc1234/);
     assert.match(why, /speckit-pr-test 21/);
   });
 
   it('refuses a failing agent review', () => {
-    assert.match(decideMerge(pr([{ conclusion: 'SUCCESS' }, review('FAILURE')])), /failure/i);
+    assert.match(decideMerge(pr([...green, review('FAILURE')])), /failure/i);
   });
 
   it('lets the merge run with agent-review success on the head commit', () => {
-    assert.equal(decideMerge(pr([{ conclusion: 'SUCCESS' }, review('SUCCESS')])), null);
+    assert.equal(decideMerge(pr([...green, review('SUCCESS')])), null);
+  });
+
+  it('counts skipped and neutral checks as green', () => {
+    assert.equal(decideMerge(pr([...green, run('E2E tests', 'SKIPPED'), run('Lint', 'NEUTRAL'), review('SUCCESS')])), null);
+  });
+
+  // The PR tester now runs beside CI rather than after it, so agent-review
+  // success alone no longer implies CI finished: the gate checks both.
+  it('refuses agent-review success while a CI check failed, and names it', () => {
+    const why = decideMerge(pr([run('Unit tests', 'FAILURE'), run('CI OK', 'FAILURE'), review('SUCCESS')]));
+    assert.match(why, /Unit tests/);
+    assert.match(why, /CI OK/);
+    assert.match(why, /gh pr checks 21/);
+  });
+
+  it('refuses agent-review success while a CI check is still running', () => {
+    const why = decideMerge(pr([run('Unit tests', 'SUCCESS'), run('CI OK', null, 'IN_PROGRESS'), review('SUCCESS')]));
+    assert.match(why, /CI OK/);
+    assert.match(why, /pending|running/i);
+  });
+
+  // PR #91's own rollup: the PR template workflow cancels a run in progress
+  // when the body is edited again, leaving the cancelled run beside the new one.
+  it('judges only the latest run of each check, so a cancelled earlier run does not block', () => {
+    const rollup = [run('body', 'CANCELLED', 'COMPLETED', '2026-10-05T07:03:51Z'), run('body', 'SUCCESS', 'COMPLETED', '2026-10-05T07:04:15Z'), ...green, review('SUCCESS')];
+    assert.equal(decideMerge(pr(rollup)), null);
+  });
+
+  it('still refuses when the latest run of a check is the failing one', () => {
+    const rollup = [run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', 'FAILURE', 'COMPLETED', '2026-10-05T07:10:00Z'), run('CI OK', 'SUCCESS'), review('SUCCESS')];
+    assert.match(decideMerge(pr(rollup)), /CI failed.*Unit tests/);
+  });
+
+  it('reads an expected status context as pending, not failed', () => {
+    const rollup = [...green, { __typename: 'StatusContext', context: 'deploy', state: 'EXPECTED' }, review('SUCCESS')];
+    assert.match(decideMerge(pr(rollup)), /still running.*deploy/);
+  });
+
+  it('refuses agent-review success when CI has not reported at all', () => {
+    assert.match(decideMerge(pr([review('SUCCESS')])), /no CI OK check/);
   });
 
   it('leaves a PR that is not open to GitHub to refuse', () => {
