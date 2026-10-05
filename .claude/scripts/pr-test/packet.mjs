@@ -29,7 +29,7 @@ const FINISHED = new Set(["success", "failure"]);
 const MAX_RANGE = 999;
 /** One line of Markdown: a newline in a title or evidence would start a heading of its own. */
 const flat = (s) => String(s ?? "").replace(/\s*[\r\n]+\s*/g, " ");
-const IMAGE = /\.(png|jpe?g|webp)$/i;
+const IMAGE = /\.png$/i;
 const short = (sha) => String(sha ?? "").slice(0, 7);
 const reason = (res) => (res.stderr || res.stdout || `exit ${res.code}`).trim().split("\n")[0];
 const parseJson = (text) => {
@@ -228,8 +228,8 @@ function packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, del
   }
   out.push("", "## Requirements touched", "", ...(reqs.lines ?? [reqs.note]));
   const findings = report.findings ?? [];
-  out.push("", "## Run", "", `Verdict: ${report.verdict} — ${report.summary ?? ""}`.trim());
-  for (const n of report.notes ?? []) out.push(`- note: ${n}`);
+  out.push("", "## Run", "", `Verdict: ${report.verdict} — ${flat(report.summary)}`.trim());
+  for (const n of report.notes ?? []) out.push(`- note: ${flat(n)}`);
   out.push("", "### Blocking findings", "");
   const blocking = findings.filter(isBlocking);
   out.push(...(blocking.length ? blocking.map(fullFinding) : ["None."]));
