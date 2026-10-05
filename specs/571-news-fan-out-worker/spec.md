@@ -2,7 +2,7 @@
 
 **Feature Branch**: `571-news-fan-out-worker`
 **Created**: 2026-10-05
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 **Level**: 1 (one-session)
 **Notion story**: ST-571 — https://app.notion.com/p/3f0607bff0d28174bc4bc680309bc8c1
 **Epic**: EP-1 Foundations — https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707

@@ -44,3 +44,11 @@ Worktree: .worktrees/571-news-fan-out-worker
 - code-reviewer re-review APPROVE with MEDIUMs on the adversary spec's copied harness: the file is removed and its distinct cases folded into `news.api.integration.spec.ts`.
 - Paused (orchestrator parked the task), resumed on the owner's rule; origin/main merged in (incl. #127).
 - Re-review: spec-reviewer APPROVE (2 LOW fixed: scenario 5, unexported RelayConsumer). code-reviewer BLOCK, all fixed: HIGH relay job options untested → worker test reads the relayed job's opts (fails with them removed); the month release moved into `handle` (no unawaited `failed` listener lost at shutdown); the API's dead PUBLIC_WEB_URL check removed; outbox payload comment; queue `commandTimeout`; `giveMonthBack`/`NEWS_RUN` unexported.
+
+## 16. Retrospective evidence (unjudged)
+
+`retro-evidence.mjs --since d5afba7`: level 1, 10/10 tasks done, 6 FRs, Spec Delta notifications +6, deferred 2 open (both filed in Notion), 10 carryover items from earlier retrospectives. No verdict written; `/speckit-retro` is the owner's.
+
+## 17. Archive
+
+Spec Delta merged into `.specify/capabilities/notifications.md` (+6, validate clean); status line `Archived (2026-10-05)`. Steps 4–5 (finish, notion-ready check) are the tail agent's after the merge.
