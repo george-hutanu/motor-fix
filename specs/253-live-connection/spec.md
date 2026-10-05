@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 
 **Input**: User description: "ST-253 Set up the real-time connection to open dashboards (Notion story https://app.notion.com/p/3ee607bff0d281739e3df7b8fc484d49, epic EP-1 Foundations). Scope: signed-in SSE stream GET /api/v1/live in the events module (fetch-based reader with Authorization header, channels per role: account/garage/mechanic/admin/system, Redis pub/sub fan-out across API copies, 25s heartbeat, end at token expiry + one reconnect, 10-stream cap), the Angular `live` library opening one connection per tab, and an admin-only POST /api/v1/admin/live/test event shown as a toast on each role's dashboard within 2 seconds."
 
