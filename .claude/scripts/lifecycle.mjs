@@ -122,14 +122,20 @@ function context(io, flags, did) {
   ctx.ghTry = (...args) => exec("gh", args, { ok: [0, 1] });
   ctx.node = (args, ok) => exec("node", args, { gated: false, ok });
 
-  if (!env.GH_TOKEN) env.GH_TOKEN = io.run("gh", ["auth", "token", "-u", "george-hutanu"], { env }).stdout.trim();
+  if (!env.GH_TOKEN) {
+    const r = io.run("gh", ["auth", "token", "-u", "george-hutanu"], { env });
+    const token = r.code === 0 ? r.stdout.trim() : "";
+    if (!token) throw new Stop("gh auth token -u george-hutanu", "no gh token for george-hutanu, so gh would run as the work account: gh auth login as george-hutanu (never gh auth switch), then the rerun");
+    env.GH_TOKEN = token;
+  }
   ctx.branch = ctx.git("rev-parse", "--abbrev-ref", "HEAD").stdout.trim();
   if (ctx.branch === "main" || ctx.branch === "HEAD")
     throw new Stop(`on ${ctx.branch}`, "run the step on the feature branch: work reaches main only through a merged PR");
   ctx.feature = activeFeature(io.repo);
   if (!ctx.feature) throw new Stop("no feature", "no active feature: .specify/feature.json or specs/<branch>/spec.md");
   ctx.rel = relative(io.repo, ctx.feature.dir);
-  ctx.story = flags.story ?? `ST-${Number(ctx.feature.num)}`;
+  const titled = /: (ST-\d+) /.exec(flags.title ?? "")?.[1];
+  ctx.story = titled ?? `ST-${Number(ctx.feature.num)}`;
   ctx.push = () => {
     ctx.git("push", "-u", "origin", ctx.branch);
     did.push("pushed");
@@ -186,11 +192,13 @@ function open(ctx, flags) {
   if (!pr) {
     const labels = ["planning", typeLabel(title), bang && "breaking", `scope: ${scope}`].filter(Boolean);
     ctx.gh("label", "create", `scope: ${scope}`, "--force");
-    const out = ctx.gh("pr", "create", "--draft", "--base", "main", "--head", ctx.branch, "--title", title, "--body-file", flags["body-file"] ?? draftBody(ctx), ...labels.flatMap((l) => ["--label", l]));
+    const create = (body) => ctx.gh("pr", "create", "--draft", "--base", "main", "--head", ctx.branch, "--title", title, "--body-file", body, ...labels.flatMap((l) => ["--label", l]));
+    const out = flags["body-file"] ? create(flags["body-file"]) : withTemp("body.md", draftBody(ctx), create);
     pr = Number(out.stdout.match(/\/pull\/(\d+)/)?.[1]);
+    if (!pr) throw new Stop("gh pr create", `no PR URL in its output: ${out.stdout.trim().slice(-200)}`);
     ctx.did.push(`opened draft #${pr}`);
   }
-  const rerun = `${SELF} open --title "${title}" --notion-done`;
+  const rerun = `${SELF} open --title ${quote(title)} --notion-done`;
   const [start] = ctx.notion([["start", "--pr", String(pr)], ["pr", String(pr)]], rerun);
   return { pr, review: start?.ready?.review ?? [] };
 }
@@ -200,9 +208,18 @@ function draftBody(ctx) {
   const body = readFileSync(join(ctx.repo, ".github", "pull_request_template.md"), "utf8")
     .replace(/_\(fill in: the story link[^\n]*\)_/, page ? `https://app.notion.com/p/${page} (${ctx.story})` : "$&")
     .replace(/_\(fill in: specs\/NNN-slug[^\n]*\)_/, ctx.rel);
-  const file = join(mkdtempSync(join(tmpdir(), "lifecycle-")), "body.md");
-  writeFileSync(file, body);
-  return file;
+  return body;
+}
+
+/** Write `text` to a temp file, hand its path to `fn`, and remove it whatever happens. */
+function withTemp(name, text, fn) {
+  const dir = mkdtempSync(join(tmpdir(), "lifecycle-"));
+  try {
+    writeFileSync(join(dir, name), text);
+    return fn(join(dir, name));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 function ready(ctx, flags) {
@@ -211,7 +228,7 @@ function ready(ctx, flags) {
   const view = ctx.ghTry("pr", "view", ctx.branch, "--json", "number,title,isDraft,url");
   if (view.code !== 0) throw new Stop(`gh pr view ${ctx.branch}`, `the branch has no PR: run ${SELF} open --title "<title>" first`);
   const pr = JSON.parse(view.stdout);
-  const rerun = `${SELF} ready --body-file ${bodyFile} --notion-done`;
+  const rerun = [SELF, "ready", "--body-file", quote(bodyFile), ...(flags.decisions ? ["--decisions", quote(flags.decisions)] : []), "--notion-done"].join(" ");
   const deferredFile = join(ctx.feature.dir, "deferred.md");
   const unfiled = existsSync(deferredFile) ? parseDeferred(readFileSync(deferredFile, "utf8")).filter((e) => e.pending) : [];
   const qa = ["qa", "--pr", String(pr.number)];
@@ -263,11 +280,10 @@ function merge(ctx, flags) {
   const log = `${ctx.rel}/notion-sync.md`;
   const lines = ctx.git("diff", "-U0", "--", log).stdout.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++")).map((l) => l.slice(1));
   const body = ["## Finish log", "", `Merged as ${sha}.`, ...(hasComment ? ["", readFileSync(commentFile, "utf8").trim()] : []), "", ...lines, ""].join("\n");
-  const file = join(mkdtempSync(join(tmpdir(), "lifecycle-")), "finish.md");
-  writeFileSync(file, body);
-  ctx.gh("pr", "comment", n, "--body-file", file);
-  ctx.did.push("finish comment");
+  // Restore the log first: a rerun after a failed restore must not post twice.
   ctx.git("checkout", "--", log);
+  withTemp("finish.md", body, (file) => ctx.gh("pr", "comment", n, "--body-file", file));
+  ctx.did.push("finish comment");
   rmSync(join(ctx.feature.dir, "handoff.md"), { force: true });
   ctx.did.push("handoff.md removed");
   return { pr: view.number, merged: sha.slice(0, 7), review: finish?.ready?.review ?? [], ready_logged: readyLogged(lines.join("\n")).ok };

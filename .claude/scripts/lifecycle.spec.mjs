@@ -271,8 +271,8 @@ describe('merge', () => {
     assert.equal(calls[2], 'gh pr view 141 --json mergeCommit --jq .mergeCommit.oid');
     assert.equal(calls[3], `node .claude/scripts/notion-sync.mjs finish --pr 141 --body-file ${join(featureDir, 'finish-comment.md')}`);
     assert.equal(calls[4], `git diff -U0 -- specs/${FEATURE}/notion-sync.md`);
-    assert.match(calls[5], /^gh pr comment 141 --body-file \S+$/);
-    assert.equal(calls[6], `git checkout -- specs/${FEATURE}/notion-sync.md`);
+    assert.equal(calls[5], `git checkout -- specs/${FEATURE}/notion-sync.md`);
+    assert.match(calls[6], /^gh pr comment 141 --body-file \S+$/);
     assert.equal(calls.length, 7);
     assert.match(comment, /^## Finish log/);
     assert.match(comment, /feed1234beef/);
@@ -391,5 +391,75 @@ describe('gates, main and identity', () => {
     const result = step(['deploy'], h.io);
     assert.equal(result.ok, false);
     assert.match(result.fix, /open \| ready \| merge/);
+  });
+});
+
+describe('review lap 1', () => {
+  beforeEach(() => fixture());
+
+  it('removes the draft body temp file after gh pr create', () => {
+    let file = '';
+    const h = harness({
+      answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '' }], ['gh pr create', (cmd) => { file = cmd.match(/--body-file (\S+)/)[1]; return { stdout: `${PR_URL}\n` }; }]],
+    });
+    assert.equal(step(['open', '--title', TITLE], h.io).ok, true);
+    assert.ok(file && !existsSync(file), file);
+  });
+
+  it('removes the finish comment temp file after gh pr comment', () => {
+    let file = '';
+    const h = harness({ answers: [['gh pr comment', (cmd) => { file = cmd.match(/--body-file (\S+)/)[1]; return {}; }]] });
+    assert.equal(step(['merge', '--pr', '141'], h.io).ok, true);
+    assert.ok(file && !existsSync(file), file);
+  });
+
+  it('stops when gh auth token fails or prints nothing, before any git or gh call', () => {
+    for (const answer of [{ code: 1, stderr: 'no account' }, { stdout: '\n' }]) {
+      const h = harness({ env: {}, answers: [['gh auth token -u george-hutanu', answer]] });
+      const result = step(['open', '--title', TITLE], h.io);
+      assert.equal(result.ok, false);
+      assert.equal(result.stopped, 'gh auth token -u george-hutanu');
+      assert.deepEqual(h.calls, ['gh auth token -u george-hutanu']);
+    }
+  });
+
+  it('carries --decisions into the ready rerun', () => {
+    const body = join(repo, 'body.md');
+    writeFileSync(body, '## Why\n');
+    const h = harness({ answers: [['node .claude/scripts/notion-sync.mjs qa', { code: 3 }]] });
+    const result = step(['ready', '--body-file', body, '--decisions', 'keep "x" as is'], h.io);
+    assert.equal(result.then, `node .claude/scripts/lifecycle.mjs ready --body-file ${body} --decisions "keep \\"x\\" as is" --notion-done`);
+  });
+
+  it('quotes the title and the body path in the reruns', () => {
+    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }], ['node .claude/scripts/notion-sync.mjs start', { code: 3 }]] });
+    const title = 'feat(api): ST-696 a $HOME `x` "y"';
+    assert.equal(step(['open', '--title', title], h.io).then, 'node .claude/scripts/lifecycle.mjs open --title "feat(api): ST-696 a \\$HOME \\`x\\` \\"y\\"" --notion-done');
+    const spaced = join(repo, 'my body.md');
+    writeFileSync(spaced, '## Why\n');
+    const r = harness({ answers: [['node .claude/scripts/notion-sync.mjs qa', { code: 3 }]] });
+    assert.equal(step(['ready', '--body-file', spaced], r.io).then, `node .claude/scripts/lifecycle.mjs ready --body-file "${spaced}" --notion-done`);
+  });
+
+  it('takes the start commit ST from the title when it has one', () => {
+    const h = harness({ answers: [['git rev-list', { stdout: '0\n' }], ['gh pr list', { stdout: '141\n' }]] });
+    step(['open', '--title', 'fix(web): ST-701 a fix', '--notion-done'], h.io);
+    assert.ok(h.calls.includes('git commit --allow-empty -m chore(web): ST-701 start a fix'), h.calls.join('\n'));
+  });
+
+  it('stops when gh pr create prints no PR URL', () => {
+    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '' }], ['gh pr create', { stdout: 'something else\n' }]] });
+    const result = step(['open', '--title', TITLE], h.io);
+    assert.equal(result.ok, false);
+    assert.match(result.stopped, /^gh pr create/);
+    assert.ok(!h.calls.some((c) => c.includes('notion-sync')));
+  });
+
+  it('restores the log before posting the finish comment', () => {
+    const h = harness();
+    step(['merge', '--pr', '141'], h.io);
+    const restore = h.calls.findIndex((c) => c.startsWith('git checkout --'));
+    const comment = h.calls.findIndex((c) => c.startsWith('gh pr comment'));
+    assert.ok(restore > -1 && restore < comment, h.calls.join('\n'));
   });
 });
