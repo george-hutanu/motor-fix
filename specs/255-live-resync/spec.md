@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-05
 
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 
 **Input**: User description: "ST-255 Get back in step after a lost connection (EP-1 Foundations, High, 5 points). Builds on ST-256 live-in-place (live.ts, live-in-place.ts, outbox -> worker -> stream)."
 
