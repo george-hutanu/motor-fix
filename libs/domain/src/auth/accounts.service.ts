@@ -65,6 +65,7 @@ export class AccountsService {
         });
       }
       await this.events.record(tx, {
+        audience: { accountId: id, type: 'account' },
         kind: 'account.created',
         payload: {
           accountId: id,

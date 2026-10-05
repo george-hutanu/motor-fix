@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 
-import { LiveHub } from './live.hub';
+import { LiveHub, publishLive } from './live.hub';
 
 class Sink extends EventEmitter {
   chunks: string[] = [];
@@ -34,7 +34,7 @@ let publish: jest.Mock;
 beforeEach(() => {
   jest.useFakeTimers({ now: NOW });
   publish = jest.fn(async () => 1);
-  hub = new LiveHub({ publish }, async () => ({
+  hub = new LiveHub(async () => ({
     mechanics: new Map(),
     off: new Set(),
     owners: new Set(['g1']),
@@ -422,19 +422,19 @@ describe('LiveHub stream cap', () => {
   });
 });
 
-describe('LiveHub publishing', () => {
+describe('publishing to the fan-out', () => {
   it('passes the audience list to the fan-out channel unchanged and in order', async () => {
     const audience = ['account:z', 'system', 'admin'];
 
-    await hub.publish(good, audience);
+    await publishLive({ publish }, good, audience);
 
     const [, message] = publish.mock.calls[0] as [string, string];
     expect(JSON.parse(message)).toEqual({ audience, event: good });
   });
 
   it('publishes once per call, so the same call twice is two messages', async () => {
-    await hub.publish(good, ['system']);
-    await hub.publish(good, ['system']);
+    await publishLive({ publish }, good, ['system']);
+    await publishLive({ publish }, good, ['system']);
 
     expect(publish).toHaveBeenCalledTimes(2);
   });
@@ -442,7 +442,7 @@ describe('LiveHub publishing', () => {
   it('does not deliver to its own streams directly, only through the fan-out', async () => {
     const { sink } = open('a1', ['account:a1']);
 
-    await hub.publish(good, ['account:a1']);
+    await publishLive({ publish }, good, ['account:a1']);
 
     expect(sink.events()).toEqual(['hello']);
   });
@@ -450,6 +450,8 @@ describe('LiveHub publishing', () => {
   it('rejects when the publisher fails with something other than an Error', async () => {
     publish.mockRejectedValueOnce('down');
 
-    await expect(hub.publish(good, ['system'])).rejects.toBe('down');
+    await expect(publishLive({ publish }, good, ['system'])).rejects.toBe(
+      'down',
+    );
   });
 });

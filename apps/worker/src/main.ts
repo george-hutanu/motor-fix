@@ -4,6 +4,7 @@ import {
   HealthModule,
   JsonLogger,
   NotificationsModule,
+  OutboxRelayModule,
   phoneConfig,
   StorageModule,
 } from '@motor-fix/domain';
@@ -12,8 +13,9 @@ import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 
 // The worker serves no routes of its own: its HTTP listener exists so that
-// Railway can health-check it. It consumes the notifications queue, sending
-// e-mail, SMS and WhatsApp.
+// Railway can health-check it. It relays the outbox's events to the live
+// streams, and consumes the notifications queue, sending e-mail, SMS and
+// WhatsApp.
 async function bootstrap() {
   const env = readEnv(['DATABASE_URL', 'REDIS_URL', ...STORAGE_ENV]);
 
@@ -25,6 +27,10 @@ async function bootstrap() {
         version: env.RELEASE_SHA,
       }),
       StorageModule.register(env),
+      OutboxRelayModule.register({
+        databaseUrl: env.DATABASE_URL,
+        redisUrl: env.REDIS_URL,
+      }),
       NotificationsModule.registerWorker({
         databaseUrl: env.DATABASE_URL,
         email: emailConfig(env.APP_ENV, process.env),

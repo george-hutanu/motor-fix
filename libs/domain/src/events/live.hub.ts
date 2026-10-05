@@ -133,10 +133,7 @@ export class LiveHub {
     { until: number; access: Promise<GarageAccess> }
   >();
 
-  constructor(
-    private readonly redis: LivePublisher,
-    private readonly loadAccess: LoadGarageAccess,
-  ) {}
+  constructor(private readonly loadAccess: LoadGarageAccess) {}
 
   open(sink: LiveSink, target: LiveTarget): string | null {
     // A client that left before the stream opened has already emitted close.
@@ -185,10 +182,6 @@ export class LiveHub {
       }
     }
     await Promise.all(staff);
-  }
-
-  async publish(event: LiveMessage, audience: string[]) {
-    await publishLive(this.redis, event, audience);
   }
 
   shutdown() {

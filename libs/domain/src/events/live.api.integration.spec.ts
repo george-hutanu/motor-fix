@@ -9,6 +9,7 @@ import request from 'supertest';
 
 import { EventsModule } from './events.module';
 import { LIVE_CHANNEL } from './live.hub';
+import { OutboxRelayModule } from './outbox-relay.module';
 import { AuditService } from '../audit/audit.service';
 import { signAccessToken } from '../auth/access-token';
 import { AccountsService } from '../auth/accounts.service';
@@ -31,6 +32,8 @@ async function boot(redis = redisUrl) {
     imports: [
       AuthModule.register({ databaseUrl, redisUrl, tokenSecret }),
       EventsModule.register({ redisUrl: redis }),
+      // Each copy runs a relay, as the worker does beside the API.
+      OutboxRelayModule.register({ databaseUrl, redisUrl: redis }),
     ],
   }).compile();
   const app = moduleRef.createNestApplication();
@@ -63,7 +66,9 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  await prisma.$executeRawUnsafe('TRUNCATE account, garage CASCADE');
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE outbox_event, account, garage CASCADE',
+  );
 });
 
 afterEach(() => {
@@ -446,7 +451,7 @@ describe('a copy whose Redis does not answer', () => {
     await deaf.close();
   });
 
-  it('still opens a stream with hello and answers the test update with 503', async () => {
+  it('still opens a stream with hello and records the test update in the outbox', async () => {
     const admin = await account('Admin', ['admin']);
     const driver = await account('Andrei', ['driver']);
 
@@ -458,8 +463,12 @@ describe('a copy whose Redis does not answer', () => {
       .send({ accountId: driver });
 
     expect(live.res.statusCode).toBe(200);
-    expect(res.status).toBe(503);
-    expect(res.body.code).toBe('live_unavailable');
+    expect(res.status).toBe(202);
+    expect(
+      await prisma.outboxEvent.findMany({
+        select: { audience: true, kind: true },
+      }),
+    ).toEqual([{ audience: [`account:${driver}`], kind: 'live.test' }]);
   });
 });
 

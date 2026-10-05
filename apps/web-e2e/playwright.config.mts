@@ -1,8 +1,8 @@
 import { nxE2EPreset } from '@nx/playwright/preset';
 import { defineConfig, devices } from '@playwright/test';
 
-// BASE_URL points the suite at a deployed environment; without it, the api and
-// the web dev server are started locally.
+// BASE_URL points the suite at a deployed environment; without it, the api, the
+// worker and the web dev server are started locally.
 const deployed = process.env['BASE_URL'];
 // A cold build on a CI runner takes longer than Playwright's 60-second default.
 const SERVER_START = 180_000;
@@ -27,6 +27,13 @@ export default defineConfig({
           reuseExistingServer: true,
           timeout: SERVER_START,
           url: 'http://localhost:3000/health/live',
+        },
+        // The worker relays the outbox's events to the live streams.
+        {
+          command: 'npx nx run worker:serve',
+          reuseExistingServer: true,
+          timeout: SERVER_START,
+          url: 'http://localhost:3001/health/live',
         },
         {
           command: 'npx nx run web:serve',

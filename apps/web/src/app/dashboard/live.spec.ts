@@ -7,7 +7,7 @@ import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
 
-import { Live } from './live';
+import { Live, liveResource } from './live';
 import { Session } from './session';
 
 // jsdom has neither; the browser and Node both do.
@@ -251,5 +251,95 @@ describe('Live', () => {
     await flush();
 
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('Live.on', () => {
+  it('gives a view only the kinds and the object it asked for', async () => {
+    const { live } = setUp();
+    const quotes: LiveMessage[] = [];
+    const any: LiveMessage[] = [];
+    live
+      .on(['quote.sent'], { id: 'request-123' })
+      .subscribe((m) => quotes.push(m));
+    live.on(['quote.sent', 'quote.accepted']).subscribe((m) => any.push(m));
+    live.open();
+    await flush();
+
+    bodies[0]?.send(event('quote.sent', { id: 'request-456' }));
+    bodies[0]?.send(event('quote.accepted', { id: 'request-123' }));
+    bodies[0]?.send(event('quote.sent', { id: 'request-123' }));
+    bodies[0]?.send(event('live.test', { id: 'request-123' }));
+    await flush();
+
+    expect(quotes.map((m) => [m.kind, m.id])).toEqual([
+      ['quote.sent', 'request-123'],
+    ]);
+    expect(any.map((m) => [m.kind, m.id])).toEqual([
+      ['quote.sent', 'request-456'],
+      ['quote.accepted', 'request-123'],
+      ['quote.sent', 'request-123'],
+    ]);
+  });
+
+  it('refuses a kind outside the catalogue at compile time', () => {
+    const { live } = setUp();
+    // @ts-expect-error: not an event kind
+    expect(() => live.on(['quote.snet'])).not.toThrow();
+  });
+});
+
+describe('liveResource', () => {
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  async function view(id = 'request-123') {
+    const { live } = setUp();
+    let reads = 0;
+    const ref = TestBed.runInInjectionContext(() =>
+      liveResource(
+        async () => {
+          reads++;
+          return { id, reads };
+        },
+        ['quote.sent'],
+        () => id,
+      ),
+    );
+    live.open();
+    await flush();
+    await wait(10);
+    return { reads: () => reads, ref };
+  }
+
+  it('loads the view’s data first, through the given call', async () => {
+    const { ref, reads } = await view();
+
+    expect(reads()).toBe(1);
+    expect(ref.value()).toEqual({ id: 'request-123', reads: 1 });
+  });
+
+  it('does nothing when the event is about another object, and re-reads for its own', async () => {
+    const { ref, reads } = await view();
+
+    bodies[0]?.send(event('quote.sent', { id: 'request-456' }));
+    await wait(400);
+    expect(reads()).toBe(1);
+
+    bodies[0]?.send(event('quote.sent', { id: 'request-123' }));
+    await wait(400);
+    expect(reads()).toBe(2);
+    expect(ref.value()).toEqual({ id: 'request-123', reads: 2 });
+  });
+
+  it('re-reads once for the events of 300 ms', async () => {
+    const { reads } = await view();
+
+    for (let i = 0; i < 3; i++) {
+      bodies[0]?.send(event('quote.sent', { id: 'request-123' }));
+      await wait(50);
+    }
+    await wait(400);
+
+    expect(reads()).toBe(2);
   });
 });
