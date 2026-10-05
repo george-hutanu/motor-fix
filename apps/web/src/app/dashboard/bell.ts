@@ -45,7 +45,8 @@ export class BellStore {
       .subscribe((message) => {
         if (message.kind === 'notification.created')
           void this.arrived(message.id);
-        if (message.kind === 'notification.read') void this.refresh();
+        if (message.kind === 'notification.read')
+          void this.readElsewhere(message.id, message.at);
       });
     if (isPlatformBrowser(inject(PLATFORM_ID))) {
       const timer = setInterval(() => void this.refreshCount(), REFRESH_MS);
@@ -57,9 +58,12 @@ export class BellStore {
   // A failed count keeps the last one shown.
   async refreshCount() {
     try {
-      this.count.set((await this.api.bellControllerUnreadCount()).count);
+      const { count } = await this.api.bellControllerUnreadCount();
+      this.count.set(count);
+      return count;
     } catch {
       // Tried again at the next refresh.
+      return null;
     }
   }
 
@@ -141,17 +145,29 @@ export class BellStore {
     toast(text, { duration: 5000 });
   }
 
-  // A read elsewhere may touch any page, so the list starts again at the top.
-  private async refresh() {
-    await this.refreshCount();
+  // A read, this tab's own echo included, may touch any page: the rows loaded
+  // stay, and "Mai multe" keeps following the last one. A "mark all" carries
+  // the account's id, so it shows as an unread count of zero.
+  private async readElsewhere(id: string, at: string) {
+    this.markRead((n) => n.id === id, at);
+    // Rows that join while the count is reloading are newer than it.
+    const shown = new Set(this.items().map((n) => n.id));
+    if ((await this.refreshCount()) === 0)
+      this.markRead((n) => shown.has(n.id), at);
     if (this.state() !== 'ready') return;
     try {
-      const page = await this.page();
-      this.items.set(page.items);
-      this.follow(page.nextCursor);
+      this.merge((await this.page()).items);
     } catch {
       // The rows shown stay until the next open.
     }
+  }
+
+  private markRead(match: (n: NotificationDto) => boolean, at: string) {
+    this.items.update((items) =>
+      items.map((n) =>
+        n.readAt === null && match(n) ? { ...n, readAt: at } : n,
+      ),
+    );
   }
 
   private merge(first: readonly NotificationDto[]) {

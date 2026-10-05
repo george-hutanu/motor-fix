@@ -364,32 +364,202 @@ describe('BellStore', () => {
     expect(store.more()).toBe(true);
   });
 
-  it('starts the list again from the top on a read elsewhere', async () => {
-    const { fixture, store } = await render(0);
+  async function twoPages(count: number) {
+    const shown = await render(count);
     api.bellControllerList.mockResolvedValueOnce({
       items: [row('a')],
       nextCursor: 'a',
     });
-    await store.load();
+    await shown.store.load();
     api.bellControllerList.mockResolvedValueOnce({
       items: [row('b')],
-      nextCursor: null,
+      nextCursor: 'b',
     });
-    await store.loadMore();
+    await shown.store.loadMore();
+    return shown;
+  }
+
+  const readLive = (id: string) =>
+    events.next({
+      at: '2026-10-05T10:00:00.000Z',
+      id,
+      kind: 'notification.read',
+    });
+
+  it('keeps every loaded page when its own read comes back live', async () => {
+    const { fixture, store } = await twoPages(2);
+    await store.read('b');
+    api.bellControllerList.mockResolvedValue({
+      items: [row('a')],
+      nextCursor: 'a',
+    });
+
+    readLive('b');
+    await settle(fixture);
+
+    expect(store.items().map((n) => n.id)).toEqual(['a', 'b']);
+    expect(store.items()[1].readAt).toBe('2026-10-05T09:00:00.000Z');
+    expect(store.more()).toBe(true);
+  });
+
+  it('marks the row another tab read, wherever it sits, and keeps the rest unread', async () => {
+    const { fixture, store } = await twoPages(1);
+    api.bellControllerUnreadCount.mockResolvedValue({ count: 1 });
+    api.bellControllerList.mockResolvedValue({
+      items: [row('a')],
+      nextCursor: 'a',
+    });
+
+    readLive('b');
+    await settle(fixture);
+
+    expect(store.items().map((n) => [n.id, n.readAt])).toEqual([
+      ['a', null],
+      ['b', '2026-10-05T10:00:00.000Z'],
+    ]);
+  });
+
+  it('merges the reloaded first page in front of the rows below it, and loads on after the last row', async () => {
+    const { fixture, store } = await twoPages(2);
+    api.bellControllerUnreadCount.mockResolvedValue({ count: 1 });
     api.bellControllerList.mockResolvedValue({
       items: [row('a', { readAt: 'x' })],
       nextCursor: 'a',
     });
 
-    events.next({
-      at: '2026-10-05T08:00:00.000Z',
-      id: 'account-1',
-      kind: 'notification.read',
-    });
+    readLive('a');
     await settle(fixture);
 
-    expect(store.items().map((n) => n.id)).toEqual(['a']);
-    expect(store.items()[0].readAt).toBe('x');
+    expect(store.items().map((n) => [n.id, n.readAt])).toEqual([
+      ['a', 'x'],
+      ['b', null],
+    ]);
+    api.bellControllerList.mockResolvedValueOnce({
+      items: [row('c')],
+      nextCursor: null,
+    });
+    await store.loadMore();
+    expect(api.bellControllerList).toHaveBeenLastCalledWith({
+      cursor: 'b',
+      language: 'ro',
+    });
+    expect(store.items().map((n) => n.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('shows every loaded row read when a read elsewhere leaves nothing unread', async () => {
+    const { fixture, store } = await twoPages(2);
+    api.bellControllerUnreadCount.mockResolvedValue({ count: 0 });
+    api.bellControllerList.mockResolvedValue({
+      items: [row('a', { readAt: 'x' })],
+      nextCursor: 'a',
+    });
+
+    readLive('account-1');
+    await settle(fixture);
+
+    expect(store.items().map((n) => n.id)).toEqual(['a', 'b']);
+    expect(store.items()[1].readAt).toBe('2026-10-05T10:00:00.000Z');
+    expect(store.count()).toBe(0);
+  });
+
+  it('keeps the rows and marks the read one when the first page fails to reload', async () => {
+    const { fixture, store } = await twoPages(2);
+    api.bellControllerUnreadCount.mockResolvedValue({ count: 1 });
+    api.bellControllerList.mockRejectedValue(new Error('offline'));
+
+    readLive('b');
+    await settle(fixture);
+
+    expect(store.items().map((n) => [n.id, n.readAt])).toEqual([
+      ['a', null],
+      ['b', '2026-10-05T10:00:00.000Z'],
+    ]);
     expect(store.more()).toBe(true);
+  });
+
+  it('marks nothing by id when the event names a row that is not shown and unread remain', async () => {
+    const { fixture, store } = await twoPages(2);
+    api.bellControllerUnreadCount.mockResolvedValue({ count: 2 });
+    api.bellControllerList.mockResolvedValue({
+      items: [row('a')],
+      nextCursor: 'a',
+    });
+
+    readLive('not-loaded');
+    await settle(fixture);
+
+    expect(store.items().map((n) => [n.id, n.readAt])).toEqual([
+      ['a', null],
+      ['b', null],
+    ]);
+    expect(store.count()).toBe(2);
+  });
+
+  it('only reloads the count when a read arrives before the list was ever opened', async () => {
+    const { fixture, store } = await render(2);
+    api.bellControllerList.mockClear();
+    api.bellControllerUnreadCount.mockClear();
+    api.bellControllerUnreadCount.mockResolvedValue({ count: 1 });
+
+    readLive('a');
+    await settle(fixture);
+
+    expect(api.bellControllerList).not.toHaveBeenCalled();
+    expect(api.bellControllerUnreadCount).toHaveBeenCalledTimes(1);
+    expect(store.count()).toBe(1);
+    expect(store.items()).toEqual([]);
+  });
+
+  it('keeps the earlier read time of a row already read when its event arrives', async () => {
+    const { fixture, store } = await twoPages(1);
+    await store.read('b');
+    api.bellControllerUnreadCount.mockResolvedValue({ count: 1 });
+    api.bellControllerList.mockRejectedValue(new Error('offline'));
+
+    readLive('b');
+    await settle(fixture);
+
+    expect(store.items()[1].readAt).toBe('2026-10-05T09:00:00.000Z');
+  });
+
+  it('marks nothing as read when the count fails to reload after a read elsewhere', async () => {
+    const { fixture, store } = await twoPages(0);
+    api.bellControllerUnreadCount.mockRejectedValue(new Error('offline'));
+    api.bellControllerList.mockResolvedValue({
+      items: [row('a')],
+      nextCursor: 'a',
+    });
+
+    readLive('account-1');
+    await settle(fixture);
+
+    expect(store.items().map((n) => n.readAt)).toEqual([null, null]);
+  });
+
+  it('leaves a notification that arrives during a mark all elsewhere unread', async () => {
+    const { fixture, store } = await twoPages(2);
+    let answer: (value: { count: number }) => void = () => undefined;
+    api.bellControllerUnreadCount
+      .mockReturnValueOnce(new Promise((resolve) => (answer = resolve)))
+      .mockResolvedValueOnce({ count: 1 });
+    api.bellControllerList
+      .mockResolvedValueOnce({ items: [row('new'), row('a')], nextCursor: 'a' })
+      .mockRejectedValueOnce(new Error('offline'));
+
+    readLive('account-1');
+    events.next({
+      at: '2026-10-05T10:00:01.000Z',
+      id: 'new',
+      kind: 'notification.created',
+    });
+    await settle(fixture);
+    answer({ count: 0 });
+    await settle(fixture);
+
+    expect(store.items().map((n) => [n.id, n.readAt])).toEqual([
+      ['new', null],
+      ['a', '2026-10-05T10:00:00.000Z'],
+      ['b', '2026-10-05T10:00:00.000Z'],
+    ]);
   });
 });
