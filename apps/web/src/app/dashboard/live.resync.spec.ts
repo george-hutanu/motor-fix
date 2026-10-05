@@ -6,7 +6,7 @@ import {
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
-import { LIVE_RANDOM, Live, liveResource } from './live';
+import { Live, liveResource } from './live';
 import { Session } from './session';
 
 globalThis.TextEncoder ??= NodeEncoder as typeof TextEncoder;
@@ -64,6 +64,7 @@ function setUp() {
   bodies = [];
   answers = [];
   random = 0.5;
+  jest.spyOn(Math, 'random').mockImplementation(() => random);
   renew = jest.fn(async () => true);
   fetchMock = jest.fn(async () => {
     const answer = answers.shift() ?? 'open';
@@ -79,7 +80,6 @@ function setUp() {
     providers: [
       { provide: PLATFORM_ID, useValue: 'browser' },
       { provide: Session, useValue: { renew, token: () => 'token' } },
-      { provide: LIVE_RANDOM, useValue: () => random },
     ],
   });
   const live = TestBed.inject(Live);
@@ -106,6 +106,7 @@ afterEach(() => {
   TestBed.inject(Live).close();
   TestBed.resetTestingModule();
   jest.useRealTimers();
+  jest.restoreAllMocks();
 });
 
 describe('the connection state', () => {
@@ -266,6 +267,26 @@ describe('reconnecting with backoff', () => {
     expect(live.state()).toBe('reconnecting');
     await elapse(1_000);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('gives up on a request that gets no answer for 60 seconds and tries again', async () => {
+    const { live } = setUp();
+    fetchMock.mockImplementationOnce(
+      (_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) =>
+          init.signal?.addEventListener('abort', () =>
+            reject(new DOMException('aborted', 'AbortError')),
+          ),
+        ),
+    );
+    live.open();
+    await settle();
+
+    await elapse(60_000);
+    await elapse(1_000);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(live.state()).toBe('open');
   });
 
   it('keeps a stream that sends its heartbeat', async () => {

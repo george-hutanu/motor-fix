@@ -4,7 +4,6 @@ import {
   computed,
   DestroyRef,
   Injectable,
-  InjectionToken,
   inject,
   type OnDestroy,
   PLATFORM_ID,
@@ -23,7 +22,7 @@ import { reuse } from './live-in-place';
 import { Session } from './session';
 
 const RENEW_AFTER: readonly LiveByeReason[] = ['expired', 'shutdown'];
-// Seconds between failed tries; the last one repeats.
+// Milliseconds between failed tries; the last one repeats.
 const BACKOFF = [1_000, 2_000, 5_000, 10_000, 30_000];
 // After this many failed tries in a row the views are re-read on a timer.
 const POLL_AFTER = 3;
@@ -34,11 +33,6 @@ const OFFLINE_AFTER = 10_000;
 const ASLEEP_FOR = 60_000;
 
 export type LiveState = 'closed' | 'reconnecting' | 'polling' | 'open';
-
-// The jitter source, replaceable so a test can pin the waits.
-export const LIVE_RANDOM = new InjectionToken<() => number>('LIVE_RANDOM', {
-  factory: () => Math.random,
-});
 
 type Outcome = 'failed' | 'renew' | 'unauthorized' | 'stop' | 'wake';
 
@@ -67,7 +61,6 @@ function parse(block: string): LiveMessage | null {
 @Injectable({ providedIn: 'root' })
 export class Live implements OnDestroy {
   private readonly session = inject(Session);
-  private readonly random = inject(LIVE_RANDOM);
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly messages = new Subject<LiveMessage>();
   readonly events = this.messages.asObservable();
@@ -209,6 +202,8 @@ export class Live implements OnDestroy {
       clearTimeout(silence);
       silence = setTimeout(() => attempt.abort('silent'), SILENT_FOR);
     };
+    // The same minute bounds a request whose answer never comes.
+    heard();
     try {
       const res = await fetch('/api/v1/live', {
         headers: {
@@ -218,8 +213,18 @@ export class Live implements OnDestroy {
         },
         signal: attempt.signal,
       });
-      if (res.status === 401) return 'unauthorized';
-      if (!res.ok || !res.body) return 'failed';
+      // An answer that comes after the abort is not a stream.
+      if (
+        attempt.signal.aborted ||
+        res.status === 401 ||
+        !res.ok ||
+        !res.body
+      ) {
+        void res.body?.cancel().catch(() => undefined);
+        return res.status === 401 && !attempt.signal.aborted
+          ? 'unauthorized'
+          : 'failed';
+      }
       const reader = res.body.getReader();
       attempt.signal.addEventListener(
         'abort',
@@ -262,7 +267,7 @@ export class Live implements OnDestroy {
       this.pollTimer = setInterval(() => this.resyncs.next(), POLL_EVERY);
     }
     const base = BACKOFF[Math.min(this.failures, BACKOFF.length) - 1] ?? 0;
-    const delay = Math.round(base * (0.9 + 0.2 * this.random()));
+    const delay = Math.round(base * (0.9 + 0.2 * Math.random()));
     // online or a long sleep ending wakes the wait early.
     await new Promise<void>((resolve) => {
       const done = () => {

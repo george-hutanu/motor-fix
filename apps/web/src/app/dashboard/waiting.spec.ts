@@ -6,7 +6,7 @@ globalThis.structuredClone ??= ((value: unknown) =>
 
 import 'fake-indexeddb/auto';
 
-import { provideHttpClient } from '@angular/common/http';
+import { HttpClient, provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
   provideHttpClientTesting,
@@ -17,6 +17,7 @@ import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
 import { IDBFactory } from 'fake-indexeddb';
+import { throwError } from 'rxjs';
 
 import { Live, type LiveState } from './live';
 import { Session } from './session';
@@ -147,7 +148,7 @@ describe('Waiting: sending', () => {
   });
 
   it.each([
-    408, 429, 503,
+    401, 408, 429, 503,
   ])('keeps the action waiting after a %s answer', async (status) => {
     const { http, waiting } = await start();
     await waiting.add('job.eta', {
@@ -298,6 +299,51 @@ describe('Waiting: kept across a reload', () => {
     expect(http.match(() => true)).toEqual([]);
   });
 
+  it('says once, not per action, that actions expired', async () => {
+    const first = await start();
+    const made = Date.now();
+    await first.waiting.add('job.step', step(1));
+    await first.waiting.add('job.step', step(2));
+    noAnswer(await nextRequest(first.http));
+    await until(() => first.waiting.actions()[0]?.state === 'waiting');
+
+    jest.spyOn(Date, 'now').mockReturnValue(made + 24 * 3_600_000 + 1_000);
+    const { waiting } = await reload();
+    await until(() => false);
+
+    expect(toast).toHaveBeenCalledTimes(1);
+    expect(waiting.actions()).toEqual([]);
+  });
+
+  it('ignores a stored record it cannot send, so it never blocks the line', async () => {
+    const first = await start();
+    await first.waiting.add('job.step', step(1));
+    noAnswer(await nextRequest(first.http));
+    await until(() => first.waiting.actions()[0]?.state === 'waiting');
+    await new Promise<void>((resolve) => {
+      const request = indexedDB.open('motor-fix', 1);
+      request.onsuccess = () => {
+        const tx = request.result.transaction('waiting', 'readwrite');
+        tx.objectStore('waiting').put({
+          account: 'account-1',
+          key: 'broken',
+          kind: 'job.step',
+          madeAt: Date.now() - 60_000,
+          seq: 0,
+        });
+        tx.oncomplete = () => {
+          request.result.close();
+          resolve();
+        };
+      };
+    });
+
+    const { http, waiting } = await reload();
+
+    expect((await nextRequest(http)).request.url).toContain('step-1');
+    expect(waiting.actions().map((a) => a.key)).not.toContain('broken');
+  });
+
   it('still keeps actions for the life of the tab when IndexedDB is missing', async () => {
     const saved = globalThis.indexedDB;
     // A browser that blocks IndexedDB.
@@ -339,6 +385,25 @@ describe('Waiting: refused', () => {
     expect(toast).toHaveBeenCalledWith(notice);
     expect(live.catchUp).toHaveBeenCalledTimes(1);
     expect((await nextRequest(http)).request.url).toContain('step-2');
+    expect(waiting.actions().map((a) => a.url)).toEqual([step(2).url]);
+  });
+});
+
+describe('Waiting: a send that fails in the app', () => {
+  it('drops the action and says so when the request cannot be made at all', async () => {
+    const { http, waiting } = await start();
+    const request = TestBed.inject(HttpClient).request.bind(
+      TestBed.inject(HttpClient),
+    );
+    jest
+      .spyOn(TestBed.inject(HttpClient), 'request')
+      .mockImplementationOnce(() => throwError(() => new TypeError('broken')))
+      .mockImplementation(request);
+    await waiting.add('job.step', step(1));
+    await waiting.add('job.step', step(2));
+
+    expect((await nextRequest(http)).request.url).toContain('step-2');
+    expect(toast).toHaveBeenCalledWith('The action was not accepted.');
     expect(waiting.actions().map((a) => a.url)).toEqual([step(2).url]);
   });
 });

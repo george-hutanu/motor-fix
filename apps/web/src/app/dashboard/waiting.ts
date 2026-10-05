@@ -54,6 +54,15 @@ const kept = (status: number) =>
   status === 429 ||
   status >= 500;
 
+// A record left by an older build, or damaged, is never sent.
+const sendable = (record: Partial<Stored> | null): record is Stored =>
+  typeof record?.key === 'string' &&
+  typeof record.account === 'string' &&
+  typeof record.url === 'string' &&
+  typeof record.method === 'string' &&
+  typeof record.seq === 'number' &&
+  Number.isFinite(record.madeAt);
+
 function openDatabase(): Promise<IDBDatabase | null> {
   return new Promise((resolve) => {
     try {
@@ -187,10 +196,13 @@ export class Waiting {
   private async sendAll(): Promise<boolean> {
     clearTimeout(this.retry);
     let next = this.oldest();
+    // One notice per pass, however many actions expired.
+    let told = false;
     while (next) {
       if (Date.now() - next.madeAt > EXPIRES_AFTER) {
         await this.drop(next.key);
-        toast(this.i18n.t('shell.live.expired'));
+        if (!told) toast(this.i18n.t('shell.live.expired'));
+        told = true;
       } else if (!(await this.send(next))) {
         this.retry = setTimeout(() => void this.flush(), RETRY_AFTER);
         return true;
@@ -218,9 +230,13 @@ export class Waiting {
       await this.drop(action.key);
       return true;
     } catch (error) {
-      const status = error instanceof HttpErrorResponse ? error.status : 0;
+      // An error that is not an answer comes from the app: sending it again
+      // would fail the same way.
+      const status = error instanceof HttpErrorResponse ? error.status : -1;
       if (kept(status)) return false;
       await this.drop(action.key);
+      // The answer came after a sign-out: the next person sees nothing of it.
+      if (action.account !== this.account) return true;
       toast(toProblem(error).detail ?? this.refused(status));
       this.live.catchUp();
       return true;
@@ -265,7 +281,8 @@ export class Waiting {
           .transaction(STORE, 'readonly')
           .objectStore(STORE)
           .getAll();
-        request.onsuccess = () => resolve(request.result as Stored[]);
+        request.onsuccess = () =>
+          resolve((request.result as Partial<Stored>[]).filter(sendable));
         request.onerror = () => resolve([]);
       } catch {
         resolve([]);
