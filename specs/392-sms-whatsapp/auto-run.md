@@ -30,4 +30,5 @@
 - New and changed specs before code: `npx jest sms-counter phone-config routing brevo preferences` → 5 suites failed (3 do not compile, 2 tests failing), 20 passed.
 
 ## 10. Implement
+- 12–14. Harden and review: artifact-lint clean; diff-audit shows only the known import-extension false positive (deferred ST-457). spec-reviewer BLOCK on one HIGH (FR-005: always-sent staff types sent WhatsApp by default) → fixed (opt-in for every staff type with another channel), re-review APPROVE. code-reviewer APPROVE: allowlist E.164 check, `giveSmsBack` failure logged, garage-switch read fails open, `emailRow` takes a missing address, cap comment — fixed; two MEDIUM and one LOW deferred (`deferred.md`, filed in Notion). Preflight note: `seed.integration.spec.ts` needs `DATABASE_URL` set in the shell (pre-existing).
 - T001–T009 done; `npx jest libs/domain/src/notifications` → 23 suites, 652 tests passed (integration included, local PostgreSQL and Redis).

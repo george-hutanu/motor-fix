@@ -26,7 +26,7 @@
 
 ## Phase 5: Polish
 
-- [ ] T010 Mark tasks, update `auto-run.md`; typecheck, lint, the touched Jest projects
+- [X] T010 Mark tasks, update `auto-run.md`; typecheck, lint, the touched Jest projects
 
 ## Dependencies
 

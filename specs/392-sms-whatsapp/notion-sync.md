@@ -9,3 +9,7 @@
 - 2026-10-05 · implement · ST-392 · Planning → Implementing
 - 2026-10-05 · implement · Foundations timeline ST-392 · Planning → Implementing
 - 2026-10-05 · labels · PR #73 · in development
+- 2026-10-05 · qa · ST-392 · Implementing → QA
+- 2026-10-05 · qa · Foundations timeline ST-392 · Implementing → QA
+- 2026-10-05 · labels · PR #73 · QA
+- 2026-10-05 · debt · ST-392 · 3 tasks filed (To do)
