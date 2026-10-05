@@ -52,12 +52,13 @@ const ok = (stdout) => ({ code: 0, stdout: typeof stdout === 'string' ? stdout :
 const fail = (stderr) => ({ code: 1, stdout: '', stderr });
 
 /** A fake gh: the first rule whose pattern matches the joined args answers; downloads copy a fixture folder into -D. */
-function fakeGh({ prView = ok(pr([])), runs = [], artifacts = {}, contents = {}, compare = {} } = {}) {
+function fakeGh({ prView = ok(pr([])), prDiff = fail('no diff'), runs = [], artifacts = {}, contents = {}, compare = {} } = {}) {
   const calls = [];
   const gh = (args) => {
     const line = args.join(' ');
     calls.push(line);
     if (/^pr view/.test(line)) return prView;
+    if (/^pr diff/.test(line)) return prDiff;
     if (/^run list/.test(line)) return ok(runs);
     if (/^run download/.test(line)) {
       const id = args[2];
@@ -144,6 +145,63 @@ describe('the packet', () => {
     assert.match(md, /unavailable/i);
     assert.match(md, /HTTP 502/);
     assert.match(md, /Text clipped/);
+  });
+});
+
+describe('the review diff', () => {
+  const chunk = (path, body) => `diff --git a/${path} b/${path}\nindex 1..2 100644\n--- a/${path}\n+++ b/${path}\n@@ -1 +1 @@\n${body}\n`;
+  const DIFF = [
+    chunk('.claude/hooks/gate.mjs', '+const code = 1;'),
+    chunk('.claude/hooks/gate.spec.mjs', '+it("refuses")'),
+    chunk('specs/001-thing/spec.md', '+FR-001 text'),
+    chunk('specs/001-thing/tasks.md', '+- [X] T001 gate.mjs'),
+    chunk('specs/001-thing/auto-run.md', '+log'),
+    chunk('.specify/capabilities/platform.md', '+merged'),
+  ].join('');
+
+  it('writes the code, its tests and the tasks file, leaving out the records the packet already sums up', () => {
+    const out = artifact(report());
+    const { gh } = fakeGh({ prView: ok(pr(files(['.claude/hooks/gate.mjs']))), prDiff: ok(DIFF) });
+    buildPacket({ out, pr: 137, repo: REPO, gh });
+    const diff = readFileSync(join(out, 'review.diff'), 'utf8');
+    assert.match(diff, /^diff --git a\/\.claude\/hooks\/gate\.mjs/m);
+    assert.match(diff, /\+const code = 1;/);
+    assert.match(diff, /gate\.spec\.mjs/);
+    assert.match(diff, /specs\/001-thing\/tasks\.md/);
+    assert.doesNotMatch(diff, /spec\.md b|auto-run|capabilities/);
+    assert.match(packetOf(out), /^## Review diff$/m);
+    assert.match(packetOf(out), /review\.diff: 3 files/);
+  });
+
+  it('says why when gh cannot give the diff, and writes no file', () => {
+    const out = artifact(report());
+    const { gh } = fakeGh({ prView: ok(pr(files(['a.mjs']))), prDiff: fail('HTTP 406: diff too large') });
+    buildPacket({ out, pr: 137, repo: REPO, gh });
+    assert.equal(existsSync(join(out, 'review.diff')), false);
+    assert.match(packetOf(out).split(/^## Review diff$/m)[1], /Unavailable: .*diff too large/);
+  });
+});
+
+describe('readiness', () => {
+  it('carries the api and worker readiness lines from run.log into the run section', () => {
+    const out = artifact(report());
+    writeFileSync(
+      join(out, 'run.log'),
+      [
+        '2026-10-05T14:55:10.700Z booting api',
+        '2026-10-05T14:55:10.801Z ready api: 200 {"checks":{"postgres":"ok","redis":"ok","storage":"ok"},"status":"ok"}',
+        '2026-10-05T14:55:10.847Z ready worker: 503 {"checks":{"postgres":"ok","redis":"ok","storage":"down"},"status":"error"}',
+      ].join('\n'),
+    );
+    buildPacket({ out, pr: 137, repo: REPO, gh: fakeGh({ prView: ok(pr(files(['a.mjs']))) }).gh });
+    const run = packetOf(out).split(/^## Run$/m)[1].split(/^## /m)[0];
+    assert.match(run, /^- readiness: api 200 \(postgres ok, redis ok, storage ok\) · worker 503 \(postgres ok, redis ok, storage down\)$/m);
+  });
+
+  it('says so when run.log has no readiness line', () => {
+    const out = artifact(report());
+    buildPacket({ out, pr: 137, repo: REPO, gh: fakeGh({ prView: ok(pr(files(['a.mjs']))) }).gh });
+    assert.match(packetOf(out), /^- readiness: not in run\.log$/m);
   });
 });
 

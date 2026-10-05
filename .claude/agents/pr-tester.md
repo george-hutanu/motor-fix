@@ -27,21 +27,27 @@ a review on the PR and the `agent-review` status on its head commit.
   that run. Nobody waits on a run, so a lap after a fix comes back with a new
   `RUN`.
 
+Every Bash call re-reads the whole conversation, so a lap is a handful of
+calls, each doing one step whole: the commands below are meant to run
+together, not one per call. Never run a command twice for the same answer.
+
 ## 1. Read the change
+
+With `RUN`, skip this step: §3 and §3c run first, in one call, and the
+packet they print is your reading of the change (title, branch, head, base,
+the changed files with their stat, the requirements touched with their text,
+the run). List the flows and routes from it.
+
+Without `RUN`, the flows come before the run, so read the change in one call:
 
 ```bash
 gh pr view <PR> --json number,title,body,headRefName,headRefOid,baseRefName,url,files
+git fetch -q origin <headRefName> && for f in spec design tasks; do git show <headRefOid>:specs/<headRefName>/$f.md; done
 ```
 
-Read the diff of a file when you need it (`gh pr diff <PR>`, or `git show
-<headRefOid> -- <path>`), not the whole diff up front: once the run is
-downloaded, the packet (§3c) lists every changed file with its stat.
-
-Find the feature: `specs/<headRefName>/` at the PR head (`git show
-<headRefOid>:specs/<branch>/spec.md`, likewise `design.md`, `tasks.md`). From
-the spec's acceptance scenarios, `design.md` and the diff, list the flows a
-user or a client would go through, and which routes and endpoints the change
-touches. A route is written `path[@role][:status]`: `/app/driver@driver` is
+From the spec's acceptance scenarios, `design.md` and the changed files, list
+the flows a user or a client would go through, and which routes and
+endpoints the change touches. A route is written `path[@role][:status]`: `/app/driver@driver` is
 opened with a real session of the seeded driver (signed in through the API for
 each browser context; roles `admin`, `driver`, `garage`, `mechanic`,
 `receptionist`), and `/de:404` expects that status, so the 404 raises no
@@ -83,10 +89,13 @@ runs from a temporary directory beside the PR's checkout.
 
 ## 3. Run it on GitHub Actions
 
-With `RUN`, read the finished run; nothing is dispatched and nothing waits:
+With `RUN`, read the finished run, build the packet (§3c) and print it with
+the flows file, all in one call; nothing is dispatched and nothing waits:
 
 ```bash
-node .claude/scripts/pr-test/dispatch.mjs <PR> --run <RUN> --out <scratchpad>/pr-<PR>-lap<LAP>
+node .claude/scripts/pr-test/dispatch.mjs <PR> --run <RUN> --out <scratchpad>/pr-<PR>-lap<LAP>; echo "dispatch exit $?"
+node .claude/scripts/pr-test/packet.mjs --pr <PR> --out <scratchpad>/pr-<PR>-lap<LAP> --run <RUN> && cat <scratchpad>/pr-<PR>-lap<LAP>/packet.md
+cat <PR worktree>/.specify/.cache/qa-flows-<PR>.mjs
 ```
 
 It exits 2 on a run that has not completed, and judges the downloaded report
@@ -157,7 +166,8 @@ Exit 1 means blocking findings, not a broken run; read the report.
 
 ## 3c. Build the packet
 
-Right after the run is in `--out` (either path above, and `--local` too):
+Right after the run is in `--out` (either path above, and `--local` too; with
+`RUN` it is already part of §3's call):
 
 ```bash
 node .claude/scripts/pr-test/packet.mjs --pr <PR> --out <scratchpad>/pr-<PR>-lap<LAP> [--run <RUN>]
@@ -166,36 +176,63 @@ node .claude/scripts/pr-test/packet.mjs --pr <PR> --out <scratchpad>/pr-<PR>-lap
 It writes `<out>/packet.md`: the changed files with their stat, the
 requirements the change touches (the FR ids on `tasks.md` lines naming a
 changed file, with their text), the run's verdict, notes and findings, the
-previous lap's findings marked new, persisting or resolved, and the
-screenshots that differ from the baseline run (this PR's last tested commit,
-or a run already on the base branch), named by content hash. A section gh
+previous lap's findings marked new, persisting or resolved, the api and
+worker readiness from `run.log`, and the screenshots that differ from the
+baseline run (this PR's last tested commit, or a run already on the base
+branch), named by content hash. A section gh
 could not answer says so; exit 2 means the folder has no `report.json`.
 
 ## 4. Review the diff
 
-Read `<out>/packet.md` first; it is where the review starts, and it tells you
-what else to open. Then read `report.json` only for what the packet leaves
-out, and the diff of the changed files against the feature's `spec.md` (every
-FR implemented and tested, nothing beyond scope; start from the requirements
-the packet lists), `tasks.md` (every `[X]` true), and
-`.specify/memory/constitution.md` (Principle I no bloat first, II tests first
-and colocated, III–VII), in full on every lap. Add a finding per real problem,
-quoting the line. A previous-lap finding the packet marks resolved is checked
-against the fix, not taken on trust. Severity: a requirement not met or a
-principle broken is `high`; a smell is `medium` or `low`. Open only the
-screenshots the packet names under "Look at only these" (`<out>/shots/`): the
-others are byte-identical to the baseline's, already reviewed. With no
-baseline it names them all, unless the change touches no web file: then only
-the cited ones. A layout the automated checks missed (overlap,
-clipped text, unreadable contrast in dark mode, untranslated strings in
-English) is a finding with that screenshot as evidence. They are the screen
-evidence; nobody has to watch the screens live.
+`<out>/packet.md` is where the review starts, and it replaces your own
+reading of the report, the spec and the diff: do not open `report.json`,
+`report.md`, `run.log` or the folder, and take readiness and the findings
+from the packet. Open `report.json` only when a packet section says it is
+unavailable. The requirements to check are the packet's "Requirements
+touched", with their text; open `spec.md` only for one it says it could not
+read. The packet also wrote `<out>/review.diff`: the code, its tests and
+`tasks.md`, without the feature's other records and the capability files it
+already sums up. In one turn, read it and the constitution with Read, as
+parallel calls: `<out>/review.diff` (a diff over 2000 lines in further parts
+of that same turn) and `.specify/memory/constitution.md`. Only when the
+packet's "Review diff" says it is unavailable, run instead:
 
-Write your findings as a JSON array to `<out>/agent-findings.json`.
+```bash
+git fetch -q origin <base> <headRefName>
+git diff origin/<base>...<headRefOid> -- . ':!specs' ':!.specify/capabilities' > <out>/review.diff
+git show <headRefOid>:specs/<headRefName>/tasks.md >> <out>/review.diff
+```
+
+Review that diff against the requirements (every FR implemented and tested,
+nothing beyond scope), its `tasks.md` (every `[X]` true) and
+`.specify/memory/constitution.md` (Principle I no bloat first, II tests first
+and colocated, III–VII), in full on every lap. Do not diff a file again or
+read the repository around it to understand it; open another file only to
+confirm one specific claim before you raise it, in one call. Add a finding
+per real problem, quoting the line. A previous-lap finding the packet marks
+resolved is checked against the fix, not taken on trust. Severity: a
+requirement not met or a principle broken is `high`; a smell is `medium` or
+`low`. Open only the screenshots the packet names under "Look at only these"
+(`<out>/shots/`): the others are byte-identical to the baseline's, already
+reviewed. With no baseline it names them all, unless the change touches no
+web file: then only the cited ones. A layout the automated checks missed
+(overlap, clipped text, unreadable contrast in dark mode, untranslated
+strings in English) is a finding with that screenshot as evidence. They are
+the screen evidence; nobody has to watch the screens live.
 
 ## 5. Post
 
+Write your findings and post them in one call. `agent-findings.json` is a
+JSON array, `[]` when you found nothing; each finding is `{ "severity":
+"blocker" | "high" | "medium" | "low", "kind": "review", "title", "steps":
+["…"], "evidence": "<path>:<line>: <the quoted line>" }` (a screen finding
+adds `"route"`, which the review shows as Where, and cites
+`shots/<name>.png` in its evidence):
+
 ```bash
+cat > <out>/agent-findings.json <<'JSON'
+[ … ]
+JSON
 node .claude/scripts/pr-test/post.mjs --report <out>/report.json \
   --add <out>/agent-findings.json [--dry-run]
 ```
@@ -225,7 +262,7 @@ VERDICT: success | failure
 Findings: blocker N · high N · medium N · low N
 Ran: GitHub Actions <run URL> | --local (why)
 Booted: api, web, worker; services: postgres, redis, minio | compose | local
-Readiness: api <status> · worker <status> (storage up | down)
+Readiness: <the packet's readiness line>
 Evidence: <out>/report.md, <out>/shots/ (<n> screenshots)
 
 | # | Severity | Finding | Where | Evidence |

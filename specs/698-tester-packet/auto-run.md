@@ -76,3 +76,10 @@
 - Measured: the old tester used 203,803 weighted tokens and the new one 249,500 (PR #137 replay). The verdict was success in every replay, the same as the recorded agent-review. No token drop, and that is open for the owner.
 - Checks: test:harness 58 files / 1310 tests, harness-eval 80/80, doctor 16 ok, merge gate, evals and carry unchanged. Review lap 2: both reviewers APPROVE.
 - NEXT: tail #142 after QA run 37365934277.
+
+## Rework (owner held the merge at +22%)
+- Cause, from the two replay transcripts: 16 turns against 12; the diff read twice, separate fetch and cat-file turns, readiness grepped twice, post.mjs read for the findings shape. The packet sat on top of the tester's own reading.
+- Change: packet.mjs carries readiness from run.log and writes review.diff (tests first: 4 red, then green); pr-tester.md batches the read, packet and review, reads review.diff and the full constitution in one turn, and gives the findings shape inline; the skill says so.
+- Re-measured, PR #137 replay: 181,606 weighted (6 turns) against 203,803 (12 turns); 533,189 tokens against 1,004,144; verdict success both.
+- Merged origin/main (ST-697 #144, ST-688 #140, ST-704's capability lines kept beside ST-698's).
+

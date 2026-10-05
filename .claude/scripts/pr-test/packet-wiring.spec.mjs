@@ -40,6 +40,18 @@ describe('the tester starts from the packet', () => {
     assert.doesNotMatch(review, /screenshots of every viewport/);
   });
 
+  it('reads the review diff the packet wrote instead of its own diff, report and spec', () => {
+    const review = section(agent, /Review/);
+    assert.match(review, /<out>\/review\.diff/);
+    assert.match(review, /replaces your own\s+reading of the report, the spec and the diff/);
+  });
+
+  it('gives the findings file its shape, so the tester never reads post.mjs for it', () => {
+    const post = section(agent, /Post/);
+    assert.match(post, /"kind": "review"/);
+    assert.match(post, /"severity":\s+"blocker" \| "high" \| "medium" \| "low"/);
+  });
+
   it('no longer reads the whole diff up front', () => {
     const change = section(agent, /Read the change/);
     assert.doesNotMatch(change, /^gh pr diff <PR>$/m);

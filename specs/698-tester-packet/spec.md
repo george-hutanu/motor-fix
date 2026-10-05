@@ -44,6 +44,8 @@ one transcript under `565e5c5f-…/subagents/`.
 | Old instructions (main), replay | a2e3ea570a207207c | 12 | 1,004,144 | 203,803 | success |
 | New, first packet (every changed screenshot named) | a73a568a871f4db70 | 12 | 1,003,348 | 252,396 | success |
 | New, a no-web change names only cited screenshots | ab937b48d68830784 | 16 | 1,375,792 | 249,500 | success |
+| Rework: the packet replaces the reading (batched calls, readiness, review.diff, inline findings shape) | accd7a2823e946c5b | 9 | 742,379 | 208,644 | success |
+| Rework with review.diff (final) | aa5dfed8b386d3d7c | 6 | 533,189 | 181,606 | success |
 
 Result: on this PR the packet saved no tokens. The new tester costs about 22%
 more weighted than the old replay. All three replays and the recorded lap
@@ -59,6 +61,23 @@ from the inputs the packet precomputes. One replay per arm is a small sample:
 turn counts vary by 4 between the two runs of the same instructions. Whether
 the packet pays off on a web PR's re-lap with failing flows, where the
 screenshot and report delta matters, is not measured here (deferred.md).
+
+Rework before merge (the owner held the merge at +22%). The two transcripts
+showed the packet added to the tester's reading rather than replacing it: the
+diff was read twice, fetch and cat-file took turns of their own, readiness
+was grepped from the run's files twice, and post.mjs was read to learn the
+findings shape. Each extra turn re-reads about 75–100k tokens of context. The
+packet now carries the readiness lines and writes `review.diff` (the code,
+its tests and `tasks.md`, without the records it already sums up), and the
+tester runs the read, packet and review in a handful of batched calls with
+the findings shape given inline; it still reads the full constitution on
+Opus. Final: 6 turns, 181,606 weighted against the old replay's 203,803
+(−10.9%), 533,189 tokens against 1,004,144 (−47%), verdict success as before.
+The 208,644 run started with a cold prompt cache (its first turn read
+nothing from cache, about +37k weighted); the final run and the old replay
+both started warm. PR #137 merged between those runs, so the final replay was
+given the same run's artifact already downloaded (dispatch.mjs refuses a
+merged PR); its packet's diff was the PR's own code, unchanged.
 
 ## User Scenarios & Testing *(mandatory)*
 
