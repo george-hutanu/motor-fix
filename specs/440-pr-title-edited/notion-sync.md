@@ -9,3 +9,5 @@
 - 2026-10-05 · implement · ST-440 story · Planning → Implementing
 - 2026-10-05 · labels · PR #118 · in development
 - 2026-10-05 · debt · ST-440 · deferred line 2 → https://app.notion.com/p/3f0607bff0d281a2aaa4ead475394453
+- 2026-10-05 · qa · ST-440 story · Implementing → QA
+- 2026-10-05 · labels · PR #118 · QA
