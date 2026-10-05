@@ -1,4 +1,4 @@
-import { describe, it } from 'vitest';
+import { afterEach, describe, it, vi } from 'vitest';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
@@ -10,6 +10,7 @@ import {
   applyFixes,
   collect,
   dispatchPlan,
+  dueFixes,
   fixOf,
   holderOf,
   isClaudeCommand,
@@ -23,6 +24,7 @@ import {
   summarizePr,
   writeClaim,
 } from './watch.mjs';
+import { waitHolder } from './lib/watch-wait.mjs';
 
 const MIN = 60_000;
 const NOW = Date.parse('2026-10-04T12:00:00Z');
@@ -639,7 +641,7 @@ describe('the command, started from a path with a space or through a symlink', (
       mkdirSync(dir, { recursive: true });
       for (const name of ['watch.mjs', 'run-state.mjs']) writeFileSync(join(dir, name), readFileSync(join(import.meta.dirname, name)));
       mkdirSync(join(f.root, 'with space', '.claude', 'scripts', 'lib'), { recursive: true });
-      for (const name of ['feature.mjs']) writeFileSync(join(dir, 'lib', name), readFileSync(join(import.meta.dirname, 'lib', name)));
+      for (const name of ['feature.mjs', 'watch-wait.mjs']) writeFileSync(join(dir, 'lib', name), readFileSync(join(import.meta.dirname, 'lib', name)));
       mkdirSync(join(dir, 'pr-test'));
       for (const name of ['carry.mjs', 'post.mjs', 'findings.mjs', 'qa-run.mjs']) writeFileSync(join(dir, 'pr-test', name), readFileSync(join(import.meta.dirname, 'pr-test', name)));
       mkdirSync(join(f.root, 'with space', 'scripts'));
@@ -928,6 +930,374 @@ describe('a handed-off ready PR waits for CI and its QA run with no agent alive'
         console.log = log;
       }
       assert.match(lines.join('\n'), /waiting 1/);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+});
+
+// The gate answers the one question a scheduled pass asks first, with no model:
+// would this pass do anything? Its verdict is the full pass's, never looser.
+const captured = () => {
+  const out = [];
+  const err = [];
+  vi.spyOn(console, 'log').mockImplementation((...a) => out.push(a.join(' ')));
+  vi.spyOn(console, 'error').mockImplementation((...a) => err.push(a.join(' ')));
+  return { out, err };
+};
+
+const deadLock = (f, path) => git(f.repo, 'worktree', 'lock', '--reason', 'claude agent x (pid 999999 start Sun Oct  4 08:07:18 2026)', path);
+
+describe('--gate', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('exits 0 and prints nothing when a pass would do nothing', () => {
+    const f = fixture();
+    try {
+      f.add('agent-a', '901-a');
+      const io = captured();
+      assert.equal(main(['--gate'], { cwd: f.repo, ...env() }), 0);
+      assert.deepEqual(io.out, []);
+      assert.deepEqual(io.err, []);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('fires with the agent fix a stale worktree needs', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      quietCommit(a, 120);
+      const io = captured();
+      assert.equal(main(['--gate'], { cwd: f.repo, ...env() }), 2);
+      assert.equal(io.out.length, 1);
+      assert.match(io.out[0], /^resume /);
+      assert.ok(io.out[0].includes(a));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('fires on a dead holder, and leaves its lock in place', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      deadLock(f, a);
+      const io = captured();
+      assert.equal(main(['--gate'], { cwd: f.repo, ...env() }), 2);
+      assert.ok(io.out.some((l) => l.startsWith('unlock ') && l.includes(a)), io.out.join('\n'));
+      assert.ok(git(f.repo, 'worktree', 'list', '--porcelain').includes('locked'));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('fires on a finished clean worktree to remove, and keeps it', () => {
+    const f = fixture();
+    try {
+      const done = f.add('agent-done', '902-b');
+      const sha = git(done, 'rev-parse', 'HEAD');
+      const io = captured();
+      const code = main(['--gate'], { cwd: f.repo, ...env({ gh: () => [pr({ number: 22, headRefName: '902-b', state: 'MERGED', headRefOid: sha })] }) });
+      assert.equal(code, 2);
+      assert.ok(io.out.some((l) => l.startsWith('remove-worktree ') && l.includes(done)), io.out.join('\n'));
+      assert.ok(existsSync(done));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('fires on a deleted worktree to prune and its orphan lock', () => {
+    const f = fixture();
+    try {
+      const gone = f.add('agent-gone', '904-d');
+      deadLock(f, gone);
+      rmSync(gone, { recursive: true, force: true });
+      const io = captured();
+      assert.equal(main(['--gate'], { cwd: f.repo, ...env() }), 2);
+      assert.ok(io.out.some((l) => l.startsWith('unlock ') && l.includes(gone)), io.out.join('\n'));
+      assert.ok(io.out.some((l) => l.startsWith('prune ') && l.includes(gone)), io.out.join('\n'));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('stays silent for an item a live agent has already claimed', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      quietCommit(a, 120);
+      writeClaim(a, 'resume', NOW - 5 * MIN);
+      const io = captured();
+      assert.equal(main(['--gate'], { cwd: f.repo, ...env() }), 0);
+      assert.deepEqual(io.out, []);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('fires exactly when the full pass would dispatch or apply something', () => {
+    const states = {
+      idle: () => {},
+      stale: (f) => quietCommit(f.add('agent-a', '901-a'), 120),
+      claimed: (f) => {
+        const a = f.add('agent-a', '901-a');
+        quietCommit(a, 120);
+        writeClaim(a, 'resume', NOW - 5 * MIN);
+      },
+      dead: (f) => deadLock(f, f.add('agent-a', '901-a')),
+      dirtyDone: (f) => writeFileSync(join(f.add('agent-a', '901-a'), 'wip.txt'), 'x\n'),
+      gone: (f) => rmSync(f.add('agent-gone', '904-d'), { recursive: true, force: true }),
+    };
+    for (const [name, arrange] of Object.entries(states)) {
+      const f = fixture();
+      try {
+        arrange(f);
+        const merged = (branch) => ({ number: 30, headRefName: branch, state: 'MERGED', headRefOid: 'zzz' });
+        const deps = { cwd: f.repo, ...env({ gh: () => (name === 'dirtyDone' ? [pr(merged('901-a'))] : []) }) };
+        const io = captured();
+        const gate = main(['--gate'], deps);
+        io.out.length = 0;
+        assert.equal(main(['--fix', '--json'], deps), 0);
+        const full = JSON.parse(io.out.join('\n'));
+        vi.restoreAllMocks();
+        assert.equal(gate === 2, full.plan.length > 0 || full.actions.length > 0, name);
+        assert.ok(gate === 0 || gate === 2, name);
+      } finally {
+        rmSync(f.root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it('is an error outside a repository and with --fix, --json or --wait', () => {
+    const f = fixture();
+    try {
+      captured();
+      const plain = join(f.root, 'plain');
+      mkdirSync(plain);
+      assert.equal(main(['--gate'], { cwd: plain, ...env() }), 1);
+      for (const other of ['--fix', '--json', '--wait']) assert.equal(main(['--gate', other], { cwd: f.repo, ...env() }), 1, other);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('dueFixes', () => {
+  it('lists every action the no-agent fixer would take, in its order', () => {
+    const report = {
+      rows: [
+        row({ path: '/w/dead', holder: 'dead' }),
+        row({ path: '/w/done', fix: 'remove-worktree', clean: true }),
+        row({ path: '/w/dirty', fix: 'remove-worktree', clean: false }),
+        row({ path: '/w/main', main: true, fix: 'remove-worktree', clean: true }),
+        row({ path: '/w/carry', fix: 'carry-review', pr: { number: 5 }, carry: { from: 'abcdef1234', head: 'def' } }),
+        row({ path: '/w/nocarry', fix: 'carry-review', pr: { number: 6 }, carry: null }),
+      ],
+      orphanLocks: ['/w/orphan'],
+      prunable: ['/w/orphan', '/w/gone'],
+      plan: [],
+    };
+    assert.deepEqual(
+      dueFixes(report).map((d) => `${d.fix} ${d.path}`),
+      ['unlock /w/dead', 'remove-worktree /w/done', 'carry-review /w/carry', 'unlock /w/orphan', 'prune /w/orphan, /w/gone'],
+    );
+  });
+
+  it('is empty for an empty board', () => {
+    assert.deepEqual(dueFixes({ rows: [], orphanLocks: [], prunable: [], plan: [] }), []);
+  });
+});
+
+// The wait is the schedule: it polls the gate outside the model and returns only
+// when the gate fires, an error happens, or its time is up.
+const commonDir = (f) => git(f.repo, 'rev-parse', '--path-format=absolute', '--git-common-dir');
+const record = (f) => join(commonDir(f), 'speckit-watch-wait.pid');
+const waitCommand = 'node /repo/.claude/scripts/watch.mjs --wait';
+
+describe('--wait', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('polls while an interval fits in its limit, then says to re-arm', () => {
+    const f = fixture();
+    try {
+      f.add('agent-a', '901-a');
+      const io = captured();
+      const sleeps = [];
+      const code = main(['--wait', '--every', '15', '--for', '110'], { cwd: f.repo, ...env({ sleep: (ms) => sleeps.push(ms) }) });
+      assert.equal(code, 0);
+      assert.deepEqual(sleeps, Array(7).fill(15 * MIN));
+      assert.deepEqual(io.out, ['watch: idle for 105 min; re-arm the wait']);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('waits 15 minutes for 110 by default', () => {
+    const f = fixture();
+    try {
+      captured();
+      const sleeps = [];
+      assert.equal(main(['--wait'], { cwd: f.repo, ...env({ sleep: (ms) => sleeps.push(ms) }) }), 0);
+      assert.deepEqual(sleeps, Array(7).fill(15 * MIN));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('never sleeps past its limit', () => {
+    const f = fixture();
+    try {
+      captured();
+      const sleeps = [];
+      assert.equal(main(['--wait', '--every', '15', '--for', '20'], { cwd: f.repo, ...env({ sleep: (ms) => sleeps.push(ms) }) }), 0);
+      assert.deepEqual(sleeps, [15 * MIN]);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('ends with the gate lines as soon as a poll fires', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      const io = captured();
+      let sleeps = 0;
+      const sleep = () => {
+        sleeps++;
+        if (sleeps === 2) deadLock(f, a);
+      };
+      assert.equal(main(['--wait'], { cwd: f.repo, ...env({ sleep }) }), 2);
+      assert.equal(sleeps, 2);
+      assert.ok(io.out.some((l) => l.startsWith('unlock ') && l.includes(a)), io.out.join('\n'));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('holds the record while it waits and removes it however it ends', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      captured();
+      const seen = [];
+      const sleep = () => {
+        seen.push(readFileSync(record(f), 'utf8').trim());
+        deadLock(f, a);
+      };
+      assert.equal(main(['--wait'], { cwd: f.repo, ...env({ sleep }) }), 2);
+      assert.deepEqual(seen, [String(process.pid)]);
+      assert.ok(!existsSync(record(f)));
+      git(f.repo, 'worktree', 'unlock', a);
+      assert.equal(main(['--wait', '--every', '1', '--for', '1'], { cwd: f.repo, ...env({ sleep: () => {} }) }), 0);
+      assert.ok(!existsSync(record(f)));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('ends with the error as soon as a poll fails, and removes its record', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      git(f.repo, 'worktree', 'lock', '--reason', 'claude agent x (pid 4242 start Sun Oct  4 08:07:18 2026)', a);
+      const io = captured();
+      let polls = 0;
+      const alive = () => {
+        if (polls === 2) throw new Error('ps went away');
+        return true;
+      };
+      assert.equal(main(['--wait'], { cwd: f.repo, ...env({ alive, sleep: () => polls++ }) }), 1);
+      assert.equal(polls, 2);
+      assert.ok(io.err.some((l) => l.includes('ps went away')), io.err.join('\n'));
+      assert.ok(!existsSync(record(f)));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses to run beside a live wait, without polling or touching its record', () => {
+    const f = fixture();
+    try {
+      writeFileSync(record(f), '4242\n');
+      const io = captured();
+      let slept = false;
+      const deps = env({ sleep: () => (slept = true), commandOf: (pid) => (pid === 4242 ? waitCommand : null) });
+      assert.equal(main(['--wait'], { cwd: f.repo, ...deps }), 0);
+      assert.deepEqual(io.out, ['watch: a wait is already armed (pid 4242)']);
+      assert.equal(slept, false);
+      assert.equal(readFileSync(record(f), 'utf8').trim(), '4242');
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('takes over a record whose process is gone or is something else', () => {
+    for (const command of [null, 'vim notes.txt']) {
+      const f = fixture();
+      try {
+        writeFileSync(record(f), '4242\n');
+        captured();
+        const seen = [];
+        const deps = env({ sleep: () => seen.push(readFileSync(record(f), 'utf8').trim()), commandOf: () => command });
+        assert.equal(main(['--wait', '--every', '15', '--for', '15'], { cwd: f.repo, ...deps }), 0, String(command));
+        assert.deepEqual(seen, [String(process.pid)]);
+        vi.restoreAllMocks();
+      } finally {
+        rmSync(f.root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it('is an error, without polling, when the record cannot be taken', () => {
+    const f = fixture();
+    try {
+      mkdirSync(record(f));
+      const io = captured();
+      let slept = false;
+      assert.equal(main(['--wait'], { cwd: f.repo, ...env({ sleep: () => (slept = true), commandOf: () => null }) }), 1);
+      assert.equal(slept, false);
+      assert.ok(io.err.some((l) => l.includes('speckit-watch-wait.pid')), io.err.join('\n'));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a limit shorter than its interval, a non-positive number and other flags', () => {
+    const f = fixture();
+    try {
+      captured();
+      let slept = false;
+      const deps = { cwd: f.repo, ...env({ sleep: () => (slept = true) }) };
+      for (const argv of [
+        ['--wait', '--every', '15', '--for', '10'],
+        ['--wait', '--every', '0'],
+        ['--wait', '--for', '-5'],
+        ['--wait', '--every', 'x'],
+        ['--wait', '--json'],
+        ['--wait', '--fix'],
+        ['--every', '15'],
+      ]) assert.equal(main(argv, deps), 1, argv.join(' '));
+      assert.equal(slept, false);
+      assert.ok(!existsSync(record(f)));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('waitHolder', () => {
+  it('names the pid of a live wait, and nothing for a missing, dead or foreign record', () => {
+    const f = fixture();
+    try {
+      assert.equal(waitHolder(f.repo, { commandOf: () => waitCommand }), null);
+      writeFileSync(record(f), '4242\n');
+      assert.equal(waitHolder(f.repo, { commandOf: (pid) => (pid === 4242 ? waitCommand : null) }), 4242);
+      assert.equal(waitHolder(f.repo, { commandOf: () => null }), null);
+      assert.equal(waitHolder(f.repo, { commandOf: () => 'node .claude/scripts/watch.mjs --json' }), null);
+      writeFileSync(record(f), 'garbage\n');
+      assert.equal(waitHolder(f.repo, { commandOf: () => waitCommand }), null);
     } finally {
       rmSync(f.root, { recursive: true, force: true });
     }
