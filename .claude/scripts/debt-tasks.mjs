@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Technical debt a review defers becomes a task in Notion. Every bullet in
 // specs/<feature>/deferred.md — routed there by spec-reviewer, code-reviewer
-// or the PR tester — is one "To do" Task row in MotorFix stories (the space
-// has no separate tasks database), linked to the story and epic it came from.
+// or the PR tester — is one "To do" row in MotorFix stories, linked to the
+// story and epic it came from: Issue type "Tech debt", or "Decision" when the
+// finding waits on the owner, so each has its own board in Notion.
 //
 // This script decides; `speckit-notion-sync debt` makes the Notion writes:
 //
@@ -31,6 +32,7 @@ export function parseDeferred(markdown) {
     const sev = text.match(/\*\*(blocker|high|medium|low)\*\*/i)?.[1] ?? text.match(/^- (?:\[[ xX]\] )?(BLOCKER|HIGH|MEDIUM|LOW)\b/i)?.[1] ?? "low";
     const severity = SEVERITIES.includes(sev.toLowerCase()) ? sev.toLowerCase() : "low";
     const where = text.match(/`([^`]+)`/)?.[1] ?? "";
+    const decision = /\bdecision\b|open question/i.test(text);
     const reviewer = text.match(/\b(spec-reviewer|code-reviewer|pr-tester|test-adversary)\b/)?.[1] ?? "review";
     const title = text
       .replace(NOTION, "")
@@ -39,7 +41,7 @@ export function parseDeferred(markdown) {
       .replace(/\s+—\s+\*\*\w+\*\*\s+—\s+/, " — ")
       .replace(/\s*\([^()]*(reviewer|pr-tester|adversary)[^()]*\)\.?\s*$/, "")
       .trim();
-    return { line, text, title, severity, where, reviewer, notion, done, pending: !done && !notion };
+    return { line, text, title, severity, where, reviewer, decision, notion, done, pending: !done && !notion };
   });
 }
 
@@ -48,9 +50,10 @@ const shorten = (s, n) => (s.length <= n ? s : `${s.slice(0, n - 1).trimEnd()}�
 /** The MotorFix stories row for one deferred finding. */
 export function taskFor(entry, { story, epic, feature, pr, storyId }) {
   const summary = entry.title.replace(/`|\*\*/g, "").replace(/^\S+\s+—\s+/, "");
+  const kind = entry.decision ? "Decision" : "Tech debt";
   const properties = {
-    Story: shorten(`Tech debt (${storyId}): ${summary}`, 120),
-    "Issue type": "Task",
+    Story: shorten(`${kind} (${storyId}): ${summary}`, 120),
+    "Issue type": kind,
     Role: "System",
     Status: "To do",
     Priority: PRIORITY[entry.severity],
