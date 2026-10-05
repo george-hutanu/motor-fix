@@ -112,9 +112,16 @@ is a statement about ownership, not about danger.
 
 ## Output format
 
-Return a single report:
+Return a single report of at most 25 lines, the envelope from AGENTS.md
+"Agent replies" first (you write no file, so `FILES: none`; `STATUS` says
+whether the review ran, `VERDICT` judges the diff):
 
 ```
+STATUS: success | failure | blocked | partial — <one line: what happened>
+PR: #<n> <draft|ready|merged> <sha7> | none
+NEXT: <the one action the caller should take> | none
+FILES: <paths written, comma-separated> | none
+
 ## Spec Review: <feature> (<range>)
 
 VERDICT: APPROVE | BLOCK
@@ -138,3 +145,5 @@ story <Notion page> re-read <date> (or "not fetched: <reason>").
 - No praise, no restating the diff — findings only. An empty table with
   VERDICT: APPROVE is a valid, good outcome; do not invent findings to look
   thorough.
+- Over the cap, every CRITICAL and HIGH row stays and the lowest rows give
+  way to one line: `Not listed: <n> LOW — <path:line>, …`.

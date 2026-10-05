@@ -62,7 +62,8 @@ without a status, so the test runs again.
    ```
 
 4. **Success**: return to the caller, which merges on green CI
-   (`gh pr checks <n> --watch` with `run_in_background`, then
+   (`gh pr checks <n> --watch` with `run_in_background`, printing only the
+   checks that did not pass as AGENTS.md "Agent replies" shows, then
    `gh pr merge <n> --merge`, then `speckit-notion-sync finish`). The merge
    gate refuses while any check is failing, running or missing.
 5. **Failure**: the implementing agent fixes every blocking finding — a failing

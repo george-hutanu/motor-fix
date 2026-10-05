@@ -3,6 +3,7 @@ name: "notion-ready"
 description: "Mark which stories and tasks of a MotorFix epic are ready to work on: still To do, and nothing they depend on is still open. Ticks and unticks the Ready to work checkbox in MotorFix stories and reports the ready list by Priority. Runs at the end of every speckit-notion-sync start and finish; use it by hand for \"what can we start\", \"mark ready tasks\", \"refresh ready to work\"."
 argument-hint: "[epic name, default Foundations] [--dry-run]"
 compatibility: "Requires the Notion connector"
+model: sonnet
 metadata:
   author: "george-hutanu"
   source: "project-local — readiness flag for the MotorFix Notion tracker"
@@ -34,8 +35,19 @@ SQL calls: the epic row, the timeline rows, and the epic's stories (`Status`,
 `Priority`, `Ready to work`, `userDefined:ID`, `Story`, filtered with
 `"Epic" LIKE '%<epic page id>%'`, paging with `LIMIT 100 OFFSET n`). When the
 quota is hit, fall back to `notion-fetch` per page through a `general-purpose`
-subagent that returns only a compact table, so page bodies stay out of this
-context, and name the quota once in the report with the recovery link the
+subagent (`model: "sonnet"`: a read-only lookup) that returns only a compact
+table, so page bodies stay out of this context. Its prompt ends with the reply
+format (AGENTS.md "Agent replies"): these four lines first, then the table, at
+most 25 lines in all; a longer table goes to a scratchpad file named in FILES:
+
+```
+STATUS: success | failure | blocked | partial — <one line: what happened>
+PR: #<n> <draft|ready|merged> <sha7> | none
+NEXT: <the one action the caller should take> | none
+FILES: <paths written, comma-separated> | none
+```
+
+Name the quota once in the report with the recovery link the
 error gives.
 
 For each story build one item:
