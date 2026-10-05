@@ -12,5 +12,9 @@ sh .husky/identity.sh check
 # unstaged changes included, against its merge base with origin/main: the
 # same scope PR CI runs, and the shared Nx cache (heavy.sh) answers the rest.
 # release.yml still runs every project before anything reaches production.
+if ! git rev-parse --verify --quiet origin/main >/dev/null; then
+  echo "pre-commit: origin/main is missing, so the affected projects cannot be worked out. Run: git fetch origin main" >&2
+  exit 1
+fi
 base=$(git merge-base origin/main HEAD 2>/dev/null || echo origin/main)
 sh scripts/heavy.sh sh -c "TZ=UTC npx nx affected -t typecheck test --base=$base && npm run lint"
