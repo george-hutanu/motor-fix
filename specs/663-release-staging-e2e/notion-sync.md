@@ -10,3 +10,4 @@
 - 2026-10-05 · labels · PR #135 · in development
 - 2026-10-05 · qa · ST-663 story Status · Implementing → QA
 - 2026-10-05 · labels · PR #135 · QA
+- 2026-10-05 · debt · ST-663 · 3 Tech debt tasks filed from deferred.md (lap 1 lows)
