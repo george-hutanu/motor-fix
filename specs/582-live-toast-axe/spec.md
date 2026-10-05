@@ -2,7 +2,7 @@
 
 **Feature Branch**: `582-live-toast-axe`
 **Created**: 2026-10-05
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 **Level**: 1 (one-session)
 **Notion**: https://app.notion.com/p/3f0607bff0d281abbe99d98e58a87bd3 (ST-582, Tech debt from ST-257, PR #77 QA lap 2) · Epic: https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707 (EP-1 Foundations)
 

@@ -7,6 +7,7 @@ features:
   - 257-live-events
   - 256-live-in-place
   - 255-live-resync
+  - 582-live-toast-axe
 ---
 
 # Capability: Live updates
@@ -246,6 +247,22 @@ _From 255-live-resync._
 ### 255-FR-012 — While the device is offline (the browser says so, or the offline bar shows), an action of a kind that may not wait MUST NOT be kept or sent, and the message "Ai nevoie de conexiune pentru asta" / "You need a connection for this" MUST show.
 
 _From 255-live-resync._
+
+### 582-FR-001 — The toast stack MUST pass axe with no violation (`list` and `aria-allowed-role` included) whenever at least one toast is shown, on every screen that mounts `hlm-toaster`.
+
+_From 582-live-toast-axe._
+
+### 582-FR-002 — Each shown toast MUST stay a live region: `aria-live="polite"` (`"assertive"` for an important toast) and `aria-atomic="true"` on the element that holds its text.
+
+_From 582-live-toast-axe._
+
+### 582-FR-003 — The toast stack MUST keep list semantics: the stack is a list and each toast one item of it.
+
+_From 582-live-toast-axe._
+
+### 582-FR-004 — FR-001–FR-003 MUST hold for every toast, including toasts added while others are shown.
+
+_From 582-live-toast-axe._
 
 ## Retired
 
