@@ -50,7 +50,8 @@ or overrides them.
    note's `QA run:` line) tests its head while CI or that run is still
    unfinished: it has no fix and nobody is dispatched for it, since an agent
    started now would only wait. Once both have finished it turns `stale` with
-   the `tail` fix, without the quiet threshold.
+   the `tail` fix, without the quiet threshold. A run GitHub cannot report
+   waits only until the quiet threshold, then gets the `tail` as well.
 
    Dispatch only from a session that is not itself isolated in a worktree
    (one opened on the main checkout). An agent started from a worktree

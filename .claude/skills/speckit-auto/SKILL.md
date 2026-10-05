@@ -563,7 +563,7 @@ and QA lap is where most of a story's cost went.
 4. Start the QA run, beside CI, and do not wait for it. Write the flows the
    way `.claude/agents/pr-tester.md` §2 says, to
    `.specify/.cache/qa-flows-<n>.mjs` (git ignores it), then
-   `node .claude/scripts/pr-test/dispatch.mjs <n> --no-wait --lap 1 --flows .specify/.cache/qa-flows-<n>.mjs`:
+   `node .claude/scripts/pr-test/dispatch.mjs <n> --no-wait --lap 1 --routes /,/cockpit[,<changed routes>] --flows .specify/.cache/qa-flows-<n>.mjs`:
    it dispatches the PR QA workflow for the head, prints one line,
    `- QA run: <id> · head <sha> · lap <n> · <url>`, and exits. On exit 2 (no
    run appeared) the note records no run and the tail dispatches one.
@@ -645,7 +645,7 @@ never waits on either: a lap that needs a new run dispatches it and ends.
    the story and the PR's stage label stay QA.
    - **No run for the head** (none recorded, or one about an older head):
      write the flows to `.specify/.cache/qa-flows-<n>.mjs`, run
-     `node .claude/scripts/pr-test/dispatch.mjs <n> --no-wait --lap <repair_iterations + 1> --flows .specify/.cache/qa-flows-<n>.mjs`,
+     `node .claude/scripts/pr-test/dispatch.mjs <n> --no-wait --lap <repair_iterations + 1> --routes /,/cockpit[,<changed routes>] --flows .specify/.cache/qa-flows-<n>.mjs`,
      replace the note's `QA run:` line with the one it prints, and end with
      `NEXT: tail #<n> after QA run <id>`.
    - **An unusable run** (the tester's dispatch exits 2: cancelled, no

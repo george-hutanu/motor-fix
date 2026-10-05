@@ -115,6 +115,7 @@ export function checkReport(report, sha, conclusion) {
 
 const gh = (args, opts = {}) => execFileSync("gh", args, { cwd: repoRoot, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], ...opts }).trim();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// How often the run is looked for after the dispatch; the specs set PR_QA_POLL_MS to poll at once.
 const POLL_MS = Number(process.env.PR_QA_POLL_MS) || 5000;
 
 /** Download a finished run's artifact into `out` and judge its report: 0 success, 1 failure, 2 unusable. */
@@ -150,6 +151,10 @@ async function main(argv) {
   }
   if (opt.run !== undefined && !/^\d+$/.test(opt.run)) {
     console.error(`dispatch: --run takes a run's number, got "${opt.run}"`);
+    return 64;
+  }
+  if (opt.run !== undefined && opt.noWait) {
+    console.error("dispatch: --no-wait dispatches a run and --run reads one; pass one of them");
     return 64;
   }
   const info = JSON.parse(gh(["pr", "view", opt.pr, "--json", "state,headRefOid"]));

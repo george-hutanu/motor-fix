@@ -71,9 +71,12 @@ combination of CI state and run state.
 
 1. **Given** a handed-off ready PR whose CI is pending, **When** the watcher
    runs, **Then** its verdict is `waiting` and it has no fix.
-2. **Given** CI finished and the QA run still queued or in progress (or its
-   state cannot be read), **When** the watcher runs, **Then** the verdict is
-   `waiting` with no fix.
+2. **Given** CI finished and the QA run still queued or in progress, **When**
+   the watcher runs, **Then** the verdict is `waiting` with no fix. A run whose
+   state cannot be read (deleted, `gh` down) waits only until the phase's quiet
+   threshold, then gets the `tail` fix, so no PR stalls on it (changed in
+   review: an unreadable run used to wait with no bound). A head that already
+   has `agent-review` success skips the wait and gets today's `merge`.
 3. **Given** CI finished (pass or fail) and the QA run completed, **When** the
    watcher runs and nobody holds the worktree, **Then** the fix is `tail`, with
    no quiet threshold to wait out.

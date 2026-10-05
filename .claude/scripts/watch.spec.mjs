@@ -820,13 +820,30 @@ describe('a handed-off ready PR waits for CI and its QA run with no agent alive'
     }
   });
 
-  it('waits while the QA run is queued, in progress, or cannot be read', () => {
-    for (const state of [{ status: 'queued' }, { status: 'in_progress' }, null, undefined]) {
+  it('waits while the QA run is queued or in progress, even long past the quiet threshold', () => {
+    for (const state of [{ status: 'queued' }, { status: 'in_progress' }]) {
       const r = fixOf(handed({ activity: { at: NOW - 300 * MIN, source: 'commit' }, pr: ready([check('SUCCESS')]), qaRunState: state }), opts);
       assert.equal(r.verdict, 'waiting', JSON.stringify(state));
       assert.equal(r.fix, null);
       assert.match(r.reason, /QA run 77/);
     }
+  });
+
+  it('waits on a run that cannot be read only until the quiet threshold, then falls back to the tail', () => {
+    for (const state of [null, undefined]) {
+      const recent = fixOf(handed({ pr: ready([check('SUCCESS')]), qaRunState: state }), opts);
+      assert.equal(recent.verdict, 'waiting', JSON.stringify(state));
+      assert.match(recent.reason, /QA run 77 \(state unreadable\)/);
+      const quiet = fixOf(handed({ activity: { at: NOW - 300 * MIN, source: 'commit' }, pr: ready([check('SUCCESS')]), qaRunState: state }), opts);
+      assert.equal(quiet.fix, 'tail', JSON.stringify(state));
+    }
+  });
+
+  it('offers the merge, not the tail, once the head already has agent-review success', () => {
+    const passed = summarizePr(pr({ headRefOid: HEAD, statusCheckRollup: [check('SUCCESS'), review('SUCCESS')] }));
+    assert.equal(passed.agentReview, 'success');
+    const r = fixOf(handed({ activity: { at: NOW - 300 * MIN, source: 'commit' }, clean: true, pr: passed, qaRunState: { status: 'completed' } }), opts);
+    assert.equal(r.fix, 'merge');
   });
 
   it('offers the tail at once when CI has finished, passing or failing, and the run has completed', () => {

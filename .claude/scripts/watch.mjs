@@ -181,9 +181,11 @@ export function fixOf(row, { now, thresholds }) {
   const limit = thresholds[row.phase];
   // A handed-off PR whose QA run tests its head needs nobody until CI and that
   // run have both finished: an agent started sooner would only wait, and pay
-  // for its whole context again when the cache goes cold. A PR with no checks
-  // waits only until the quiet threshold, then gets a tail like any other.
-  if (pr?.state === "ready" && row.handoff && row.qaRun && row.qaRun.head === pr.head && !(pr.checks === "none" && quiet > limit)) {
+  // for its whole context again when the cache goes cold. A PR with no checks,
+  // or a run GitHub cannot report (deleted, gh down), waits only until the quiet
+  // threshold, then gets a tail like any other. A head already passed merges.
+  const unknown = pr?.checks === "none" || row.qaRunState == null;
+  if (pr?.state === "ready" && pr.agentReview !== "success" && row.handoff && row.qaRun && row.qaRun.head === pr.head && !(unknown && quiet > limit)) {
     const ciDone = pr.checks === "pass" || pr.checks === "fail";
     const status = row.qaRunState?.status;
     if (ciDone && status === "completed") return { verdict: "stale", fix: "tail", reason: `CI ${pr.checks} and QA run ${row.qaRun.id} completed` };

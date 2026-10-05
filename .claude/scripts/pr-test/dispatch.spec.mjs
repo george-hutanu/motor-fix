@@ -1,8 +1,8 @@
-import { describe, it } from 'vitest';
+import { afterAll, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
@@ -192,8 +192,14 @@ else if (a === 'run' && b === 'list') {
 }
 `;
 
+const fakeDirs = [];
+afterAll(() => {
+  for (const dir of fakeDirs) rmSync(dir, { recursive: true, force: true });
+});
+
 function fakeGh(env = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'dispatch-gh-'));
+  fakeDirs.push(dir);
   const bin = join(dir, 'bin');
   mkdirSync(bin);
   writeFileSync(join(bin, 'gh'), FAKE_GH);
@@ -260,6 +266,13 @@ describe('dispatch --run <id>: read a finished run, start nothing', () => {
   });
 
   it('refuses an id that is not a run number', () => {
-    assert.notEqual(fakeGh({ FAKE_REPORT_SHA: SHA })('--run', 'latest').code, 0);
+    assert.equal(fakeGh({ FAKE_REPORT_SHA: SHA })('--run', 'latest').code, 64);
+  });
+
+  it('refuses --no-wait with --run, which would read a run and wait for nothing', () => {
+    const run = fakeGh({ FAKE_REPORT_SHA: SHA });
+    const r = run('--run', '77', '--no-wait');
+    assert.equal(r.code, 64);
+    assert.deepEqual(r.calls, []);
   });
 });

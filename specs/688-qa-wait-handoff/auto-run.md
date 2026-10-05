@@ -45,3 +45,8 @@
 - Prose: speckit-auto Hand-off steps 4-6, new "The wait" section, The tail steps 1-3 (the #138 dispatch paragraph untouched); pr-tester `RUN` input, §2 flows in `.specify/.cache/qa-flows-<PR>.mjs` with the "flow not run" check, §3 `--run`; speckit-pr-test step 4/6; speckit-watch `waiting`; AGENTS.md steps 4-6.
 - The wiring check for the agent uses `<PR>`, the agent file's own placeholder, not `<n>`.
 - T016: test:harness 1226/1226, harness-eval --check 80/80, doctor 16 ok, gate files byte-identical to origin/main.
+
+## Review
+- spec-reviewer APPROVE; code-reviewer BLOCK on one HIGH (an unreadable QA run kept a handed-off PR waiting with no bound). Fixed tests first: it now waits only until the quiet threshold, then gets the tail; a head with agent-review success gets merge. Also patched: --routes on the hand-off and fix-lap dispatch, AGENTS.md step 6 wording, --no-wait with --run exits 64, the --run usage test asserts 64, fake-gh temp dirs removed, PR_QA_POLL_MS commented.
+- Left as is (LOW): parseQaRun returns lap, which only its spec reads; runOf is asked while CI is still pending (one gh call per pass, and it names the run state in the reason).
+- diff-audit errors in libs/domain came with the origin/main merge, not this diff.

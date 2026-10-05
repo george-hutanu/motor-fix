@@ -90,10 +90,10 @@ epic or a plan, whether run through spec-kit or by hand.
      (`/speckit-pr-test <n>`, the `pr-tester` subagent) reviews it once it
      has finished (`--run <id>`);
      the task and the PR's stage label stay QA. It leaves the unit and
-     end-to-end suites to CI, which runs them on the merge result. It
-     dispatches the PR QA workflow (`.github/workflows/pr-qa.yml`), where a
+     end-to-end suites to CI, which runs them on the merge result. The run is
+     the PR QA workflow (`.github/workflows/pr-qa.yml`), where a
      GitHub runner boots the PR head, tests it in a browser and against the
-     API and uploads the report and screenshots; then, locally, it reviews the
+     API and uploads the report and screenshots; then, locally, the tester reviews the
      diff, posts a review, fills the template's "Agent review" section and sets
      the `agent-review` status on the head commit (`--local` boots on the
      laptop instead, behind the heavy lock, when Actions is unavailable). Fix
