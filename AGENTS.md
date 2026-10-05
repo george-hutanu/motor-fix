@@ -59,14 +59,21 @@ epic or a plan, whether run through spec-kit or by hand.
      branch before it goes ready; the `qa` line is committed and pushed
      right after, before CI is waited for and QA starts.
 
-     Then the story's agent hands off and ends. It writes
+     Then the story's agent starts QA and hands off. It dispatches the PR QA
+     run for the head without waiting for it
+     (`.claude/scripts/pr-test/dispatch.mjs <n> --no-wait`), writes
      `specs/<feature>/handoff.md` (PR, branch, worktree, head sha, the Notion
-     page ids, open decisions, deferred items; git ignores it) and returns
-     `NEXT: tail #<n>`. A fresh **tail agent**, given only the PR number, the
-     worktree and that path, runs steps 5–7 and the finish. The orchestrating
-     session dispatches it on that NEXT (a story run in the owner's own
-     session dispatches its own); `/speckit-watch` dispatches one (its
-     `tail` fix) for a handed-off ready PR with no live holder. It implements
+     page ids, the `QA run:` line, open decisions, deferred items; git
+     ignores it) and returns `NEXT: tail #<n> after QA run <id>`, its last
+     action. No agent is alive while CI and the run work: a context that
+     sleeps past the 5-minute prompt cache is written again in full. The
+     session holds one background wait until both have finished, then
+     dispatches a fresh **tail agent**, given only the PR number, the
+     worktree and that path, which runs steps 5–7 and the finish. The
+     orchestrating session does this on that NEXT (a story run in the owner's
+     own session does its own); `/speckit-watch` shows such a PR `waiting`,
+     with no fix, until both have finished, and then dispatches one (its
+     `tail` fix) when nobody holds it. It implements
      QA fixes, so it keeps the default model (Opus). It deletes the note
      when the task is Done. The story's agent, the tail agent and every
      `/speckit-watch` fix run as `task-runner` (`.claude/agents/`), never
@@ -74,21 +81,25 @@ epic or a plan, whether run through spec-kit or by hand.
      its prompt names no re-read of this file or CLAUDE.local.md, which are
      already in its context.
   5. Get CI green: merge `origin/main` into the branch if it is behind and
-     push, then wait for the checks (`gh pr checks <n> --watch`) in the
-     background (`run_in_background`), never in a foreground `sleep` loop; a
-     failing check is fixed on the branch and waited for again.
+     push; the checks are waited for in the background (`run_in_background`),
+     by the session before the tail starts, never in a foreground `sleep`
+     loop and never by an agent that would sleep through it. A failing check
+     is fixed on the branch like a failing QA lap (step 6).
   6. QA, started as soon as the PR is ready, beside step 5 rather than after
-     it: run the PR tester (`/speckit-pr-test <n>`, the `pr-tester` subagent);
+     it: its run is dispatched at ready, and the PR tester
+     (`/speckit-pr-test <n>`, the `pr-tester` subagent) reviews it once it
+     has finished (`--run <id>`);
      the task and the PR's stage label stay QA. It leaves the unit and
-     end-to-end suites to CI, which runs them on the merge result. It
-     dispatches the PR QA workflow (`.github/workflows/pr-qa.yml`), where a
+     end-to-end suites to CI, which runs them on the merge result. The run is
+     the PR QA workflow (`.github/workflows/pr-qa.yml`), where a
      GitHub runner boots the PR head, tests it in a browser and against the
-     API and uploads the report and screenshots; then, locally, it reviews the
+     API and uploads the report and screenshots; then, locally, the tester reviews the
      diff, posts a review, fills the template's "Agent review" section and sets
      the `agent-review` status on the head commit (`--local` boots on the
      laptop instead, behind the heavy lock, when Actions is unavailable). Fix
      every blocking finding
-     (tests first), push, and run it again; each lap counts toward
+     (tests first), push, dispatch the new head's run with `--no-wait` and
+     end, as at ready; each lap counts toward
      `SPECKIT_MAX_REPAIR_ITERATIONS` (5), and at the cap the task goes to
      Blocked and the PR stays unmerged. A head that differs from the last
      tested commit by documentation only (`scripts/docs-only.ts`, e.g. the
