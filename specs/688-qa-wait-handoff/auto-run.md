@@ -14,3 +14,9 @@
 - spec.md written; no clarification markers. Autonomous defaults in Assumptions (flows written by the dispatcher, docs-only CI wait, unreadable run = waiting, no constitution amendment, #138 paragraphs left alone).
 - Notion start: Planning; draft PR #140 opened and linked.
 - design.md: no screens.
+
+## context
+- org-researcher had no Notion tools ([UNAVAILABLE: notion]); main session read the story page and wrote context.md. Overlap with PR #138 noted: leave its tail-dispatch paragraphs alone.
+
+## clarify
+- spec-challenger: 8 findings; all answered with its recommendation except #1 (owner-run session holds the wait, the agent still ends at hand-off), #5 (blocks `verification-failed`, an existing condition, rather than a new one) and #6 (judged by reading the flows file, no new report field). Recorded under Clarifications.

@@ -15,6 +15,19 @@ A subagent's prompt cache lives 5 minutes. A story or tail agent that waits on
 whole context again: over 92 story and tail runs that happened 96 times, about
 7% of all cost (owner's measurement, from the story).
 
+## Clarifications
+
+### Session 2026-10-05 (autonomous, from spec-challenger)
+
+- Q: Does an owner-run story wait, and who wins when the session and the watcher both see the finished run? → A: The story agent's last action is still the hand-off; in the owner's own session the session itself holds the one background wait and, when it reports, dispatches the tail. Every dispatcher runs `watch.mjs claim <worktree> tail` first, so the second is a no-op.
+- Q: How long does a ready PR with no checks count as waiting? → A: Until the qa quiet threshold; past it the row falls back to today's rule (`tail` once quiet), and the tail records the Hard Stop for a PR with no checks.
+- Q: Which form does a tail started with no run, or a run about an older head, use? → A: It dispatches with `--no-wait`, writes the `QA run:` line and ends with the same NEXT, like a fix lap.
+- Q: Does `--run` ever watch a run? → A: Never; on a run not yet completed it exits 2 naming the run's status.
+- Q: Does a re-dispatch after an unusable run (cancelled, no report) count a lap? → A: No: one re-dispatch per head at the same lap; a second unusable run is posted with `post.mjs --missing` and blocks the run (`verification-failed`).
+- Q: How does the tester tell a flow was not run? → A: It reads the flows file that was sent and compares it with its own list of flows from the spec and the diff; a flow the file does not drive is a `high` "flow not run" finding.
+- Q: Which flows file is the one sent? → A: `.specify/.cache/qa-flows-<pr>.mjs` in the worktree (git ignored); pr-tester §2 writes it there too, and the tester trusts it only when the `QA run:` line's head is the PR's head.
+- Q: What does "CI has finished" mean? → A: Every check except `agent-review` in a terminal state (watch.mjs `checks` is `pass` or `fail`); the QA run is finished when `gh run view <id>` says `status: completed`.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - The story agent ends at hand-off with QA already running (Priority: P1)
@@ -130,7 +143,8 @@ still exits 1 at the fifth lap.
 - **FR-004**: `watch.mjs` MUST give a handed-off ready PR whose recorded QA run
   is about its current head the verdict `waiting` and no fix while CI is
   pending or has no checks, or the run is not completed, or its state cannot be
-  read; the reason names what it waits for.
+  read; the reason names what it waits for. A PR with no checks waits only
+  until the qa quiet threshold, then FR-006 applies.
 - **FR-005**: `watch.mjs` MUST offer `tail` for such a PR once CI has finished
   and the run has completed, when no agent holds the worktree, without the
   phase's quiet threshold.
@@ -144,13 +158,16 @@ still exits 1 at the fifth lap.
   finished, printing only what did not pass, then claim the worktree and
   dispatch the tail.
 - **FR-009**: The tail MUST start the pr-tester on the finished run (`RUN`),
-  never dispatch and wait itself; after a fix it MUST push, count the lap with
+  never dispatch and wait itself; with no run for the PR's head it dispatches
+  one with `--no-wait` and ends; an unusable run is dispatched again once per
+  head without counting a lap, and a second one is posted `--missing` and
+  blocks the run; after a fix it MUST push, count the lap with
   `run-state.mjs repair`, dispatch a run for the new head with `--no-wait`,
   rewrite the note's `QA run:` line and end with the same NEXT.
 - **FR-010**: The pr-tester given `RUN` MUST skip writing flows and
   dispatching, download that run with `--run`, read the flows file that was
-  sent, and raise a `high` "flow not run" finding for each flow the change
-  needs that the run did not exercise.
+  sent, and raise a `high` "flow not run" finding for each flow from its own
+  list (the spec's scenarios and the diff) that file does not drive.
 - **FR-011**: `merge-gate.mjs`, `pr-lifecycle-gate.mjs`, `carry.mjs`, the
   repair cap and their eval cases MUST stay unchanged.
 - **FR-012**: AGENTS.md lifecycle steps 4–6, speckit-pr-test and the
