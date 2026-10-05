@@ -67,6 +67,10 @@ epic or a plan, whether run through spec-kit or by hand.
   7. Merge on `agent-review` success with every other check green
      (`gh pr merge <n> --merge`); a PR with a failing, pending or missing check
      is never merged. Then set the task to Done (`speckit-notion-sync finish`).
+     A PR opened by Dependabot (its author on GitHub, not its title or branch)
+     and holding only Dependabot's commits skips step 6: it merges on every
+     other check green, `CI OK` included, with no `agent-review` status; a
+     failing, pending or missing check still refuses it.
 
   Technical debt a review defers (`specs/<feature>/deferred.md`) is filed as
   a To do task in Notion (`speckit-notion-sync debt`) before the merge; each
@@ -185,7 +189,11 @@ decisions are the source for anything the constitution does not fix.
   `npm run test:unit` leaves those out and `npm run test:integration` runs
   only them (`JEST_SUITE` in `jest.preset.cjs`; unset runs all). Integration
   tests need `docker compose up -d` (or local servers), with `DATABASE_URL`
-  and `REDIS_URL` from `.env.example`.
+  and `REDIS_URL` from `.env.example`. The pre-commit hook needs neither: when
+  an affected project has integration specs it starts and migrates the
+  worktree's own PostgreSQL and Redis (`scripts/test-services.ts`, compose
+  project `mf-test-<worktree>-<hash>`, left running between commits; Docker
+  required), and it refuses a commit with `JEST_SUITE` set.
 - PR CI: `.github/workflows/ci.yml`, one job per check, in parallel: PR
   title (Conventional Commit), Biome, Typecheck, Unit tests, Integration
   tests (PostgreSQL+PostGIS and Redis services), E2E tests (Playwright

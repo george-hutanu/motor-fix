@@ -143,3 +143,51 @@ describe('merge gate — the decision', () => {
     assert.equal(decideMerge({ ...pr([]), state: 'MERGED' }), null);
   });
 });
+
+describe('merge gate — Dependabot PRs need no agent review', () => {
+  const bot = (rollup, login = 'app/dependabot') => ({ ...pr(rollup), author: { login, is_bot: true }, commits: [{ authors: [{ login: 'dependabot[bot]' }] }] });
+
+  it('lets a Dependabot PR merge on green CI with no agent-review status', () => {
+    assert.equal(decideMerge(bot(green)), null);
+    assert.equal(decideMerge(bot([...green, run('body', 'SKIPPED')], 'dependabot[bot]')), null);
+  });
+
+  it('refuses a Dependabot PR with a failing, running or missing check, and names it', () => {
+    const red = decideMerge(bot([run('Unit tests', 'FAILURE'), run('CI OK', 'FAILURE')]));
+    assert.match(red, /CI failed/);
+    assert.match(red, /Unit tests/);
+    assert.match(decideMerge(bot([run('Build', null, 'IN_PROGRESS'), run('CI OK', 'SUCCESS')])), /still running.*Build/);
+    assert.match(decideMerge(bot([{ context: 'CI OK', state: 'PENDING' }])), /still running.*CI OK/);
+    assert.match(decideMerge(bot([])), /no CI OK check/);
+    assert.match(decideMerge(bot([run('Unit tests', 'SUCCESS')])), /no CI OK check/);
+  });
+
+  it('judges the latest run of each check, as for any other PR', () => {
+    const NOT_STARTED = '0001-01-01T00:00:00Z';
+    const rerunRed = [run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', 'FAILURE', 'COMPLETED', '2026-10-05T07:10:00Z'), run('CI OK', 'SUCCESS')];
+    assert.match(decideMerge(bot(rerunRed)), /CI failed/);
+    const queued = [run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', null, 'QUEUED', NOT_STARTED), run('CI OK', 'SUCCESS')];
+    assert.match(decideMerge(bot(queued)), /still running/);
+    const fixed = [run('Unit tests', 'FAILURE', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:10:00Z'), run('CI OK', 'SUCCESS')];
+    assert.equal(decideMerge(bot(fixed)), null);
+  });
+
+  it('still refuses a Dependabot PR whose agent review failed', () => {
+    assert.match(decideMerge(bot([...green, review('FAILURE')])), /agent-review is failure/);
+  });
+
+  it('reads the author, not the title or branch: anyone else still needs the agent review', () => {
+    const human = { ...pr(green), title: 'chore(deps): bump vitest', headRefName: 'dependabot/npm_and_yarn/vitest-5', author: { login: 'george-hutanu' } };
+    assert.match(decideMerge(human), /no agent-review status/);
+    assert.match(decideMerge({ ...pr(green), author: { login: 'dependabot-fan' } }), /no agent-review status/);
+  });
+
+  it('takes back the exemption once anyone else pushed a commit to the branch', () => {
+    const pushed = { ...bot(green), commits: [{ authors: [{ login: 'dependabot[bot]' }] }, { authors: [{ login: 'george-hutanu' }] }] };
+    assert.match(decideMerge(pushed), /no agent-review status/);
+    const coAuthored = { ...bot(green), commits: [{ authors: [{ login: 'dependabot[bot]' }, { login: 'george-hutanu' }] }] };
+    assert.match(decideMerge(coAuthored), /no agent-review status/);
+    assert.match(decideMerge({ ...bot(green), commits: undefined }), /no agent-review status/);
+    assert.match(decideMerge({ ...bot(green), commits: [] }), /no agent-review status/);
+  });
+});

@@ -121,7 +121,14 @@
     "ro": "RO"
   },
   "live": {
-    "test": "Actualizare de test în direct"
+    "changed": "S‑a schimbat între timp: {value}",
+    "gone": "Nu mai este disponibil",
+    "test": "Actualizare de test în direct",
+    "waiting": {
+      "few": "{count} actualizări noi",
+      "one": "{count} actualizare nouă",
+      "other": "{count} de actualizări noi"
+    }
   },
   "notFound": {
     "home": "Înapoi la pagina principală",

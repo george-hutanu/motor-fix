@@ -121,7 +121,13 @@
     "ro": "RO"
   },
   "live": {
-    "test": "Live test update"
+    "changed": "This changed in the meantime: {value}",
+    "gone": "No longer available",
+    "test": "Live test update",
+    "waiting": {
+      "one": "{count} new update",
+      "other": "{count} new updates"
+    }
   },
   "notFound": {
     "home": "Back to the home page",
