@@ -2,7 +2,7 @@
 name: "speckit-notion-sync"
 description: "Keep the MotorFix Notion tracker in step with the build: when a story or task starts, goes to QA (its PR marked ready, then the PR tester), is blocked or unblocked, or is finished, set its Status; when its PR opens, write the PR link onto the story in MotorFix stories, its row in the epic's build timeline under Plans, and its epic's Status. Also files a new epic execution plan under Plans. Runs from the spec-kit hooks (after_specify, before_implement), from /speckit-review, /speckit-archive and /speckit-auto, and after a merge to main."
 argument-hint: "start | implement | pr <n> | qa | review (alias of qa) | blocked <reason> | unblock | finish | debt | plan — optionally followed by a Notion story URL or ST-<n>"
-compatibility: "Requires the Notion connector and the spec-kit project structure"
+compatibility: "NOTION_TOKEN (env or .env) for the script; the Notion connector otherwise. Requires the spec-kit project structure"
 metadata:
   author: "george-hutanu"
   source: "project-local — Notion status sync for motor-fix"
@@ -17,203 +17,131 @@ model: sonnet
 $ARGUMENTS
 ```
 
-The first word is the **event**: `start`, `implement`, `pr`, `qa`, `review` (an alias of `qa`), `blocked`,
-`unblock`, `finish`, `debt` or `plan`. `blocked` is followed by the reason,
-`pr` by the PR number. When the
-skill runs as a spec-kit hook there is no argument; take the event from the
-hook's description (`after_specify` is `start`, `before_implement` is
-`implement`).
+The first word is the **event**: `start`, `implement`, `pr`, `qa`, `review` (an
+alias of `qa`), `blocked`, `unblock`, `finish`, `debt` or `plan`. `blocked` is
+followed by the reason, `pr` by the PR number. As a spec-kit hook there is no
+argument: `after_specify` is `start`, `before_implement` is `implement`.
 
-## Why
+Notion is the owner's tracker and these writes are a standing instruction
+(AGENTS.md): never ask before them, even under `/speckit-auto`.
 
-Notion is the owner's tracker. The owner reads the board, the epic and the
-build timeline, not the repo, so a story that is being built must say so there
-the moment it starts, and say Done the moment it is merged. This is a standing
-instruction from the owner (AGENTS.md); do not ask before these writes, even
-under `/speckit-auto`.
+## 1. Run the script (one call per event)
+
+Run it from the feature's checkout; it finds the story by the feature number
+(`687-…` → ST-687), or by `--story ST-<n>`, and the PR by the branch, or by
+`--pr <n>`.
+
+```bash
+node .claude/scripts/notion-sync.mjs start
+node .claude/scripts/notion-sync.mjs pr <n>
+node .claude/scripts/notion-sync.mjs implement
+node .claude/scripts/notion-sync.mjs qa
+node .claude/scripts/notion-sync.mjs blocked "<reason and what would unblock it>"
+node .claude/scripts/notion-sync.mjs unblock
+node .claude/scripts/notion-sync.mjs debt
+node .claude/scripts/notion-sync.mjs finish --body-file <comment.md>   # or --no-comment (§2e)
+```
+
+Each call writes the story `Status`, its build-timeline row, the epic, the PR's
+labels (§2b) and the `notion-sync.md` lines (§3), and prints one JSON line.
+
+- **Exit 3** prints `notion-sync: no NOTION_TOKEN, use the connector`: run the
+  same event through the connector (§4).
+- A Notion error is not a failure: the script logs
+  `[NOTION-SYNC PENDING: <step> <item> — <error>] retry: […]`, exits 0, and its
+  next run retries that line first.
+- `start` and `finish` print `ready.review`: run the hold review (§2d).
+- `node .claude/scripts/notion-sync.mjs check` is read-only: does the token
+  reach the stories data source, the Plans page and one story.
+
+`plan` has no script: it stays on the connector (§4).
 
 ## Where things live
 
-| What | Notion | Status values |
+| What | Notion | Values |
 | --- | --- | --- |
-| Stories and tasks | data source `collection://326eee3c-abec-41d9-9f96-eb3bd545a802` (MotorFix stories) | `Status`: To do · Planning · Implementing · Blocked · QA · Done; `PR`: the story's own pull request (URL) |
-| Epics | data source `collection://ca8cf981-a8f2-4cb6-9c9a-ac1a3df0edac` (MotorFix epics) | `Status`: To do · In progress · Done |
-| Plans | page `3ee607bff0d2818493d0dadd2d5a006c` (Delivery › Plans) | one execution-plan page and one build-timeline database per epic |
-| Build timeline rows | each timeline database under Plans, e.g. `collection://2437de64-5c28-4136-b8b6-2d60693d45d7` (Foundations) | `Build status`: Not started · Planning · Implementing · Blocked · QA · Merged (a timeline still without Planning/Implementing gets them on first write) |
+| Stories and tasks | data source `collection://326eee3c-abec-41d9-9f96-eb3bd545a802` (MotorFix stories) | `Status`: To do · Planning · Implementing · Blocked · QA · Done; `PR`: the story's own PR (URL) |
+| Epics | data source `collection://ca8cf981-a8f2-4cb6-9c9a-ac1a3df0edac` | `Status`: To do · In progress · Done |
+| Plans | page `3ee607bff0d2818493d0dadd2d5a006c` (Delivery › Plans) | per epic: `<Epic> — execution plan` and `<Epic> (EP-<n>) — build timeline` |
+| Timeline rows | each build timeline, e.g. `collection://2437de64-5c28-4136-b8b6-2d60693d45d7` (Foundations) | `Build status`: Not started · Planning · Implementing · Blocked · QA · Merged |
 
-## 1. Resolve the Notion item
+## 2. What each event does
 
-Stop at the first that answers:
+The decision is `node .claude/scripts/notion-status.mjs <event> --current "<Status>"`
+(the script calls the same module). Only status properties and `PR` are written,
+never a story's text, points, priority or relations.
 
-1. A Notion URL or `ST-<n>` in `$ARGUMENTS`.
-2. A Notion story link in `specs/<feature>/spec.md` or `specs/<feature>/context.md`.
-3. The branch or feature number: branches are named after the story number
-   (`079-account-model` → ST-79). Confirm by the title.
-4. `notion-search` in the stories data source on the feature's title.
-
-If nothing matches with confidence, write nothing. Report
-`[NOTION-SYNC SKIPPED: no Notion item for <feature>]` and continue: never
-create a story to have something to update.
-
-From the story page, read its `Epic` relation. Find its timeline row by querying
-each database under Plans for a row whose `Story` relation contains the story.
-
-## 2. Apply the event
-
-Use `notion-update-page` with `update_properties`. Touch status properties and
-`PR` only: never the story's text, points, priority or relations.
-
-The decision is scripted. Read the story's current `Status` (fetch the page; the
-SQL query tool has a workspace quota), then ask:
-
-```bash
-node .claude/scripts/notion-status.mjs <event> --current "<Status>"
-# {"write":true,"story":"QA","timeline":"QA","prior":null,"note":"Implementing → QA",
-#  "stage":"QA","labels":"--add-label \"QA\" --remove-label \"planning\" …"}
-```
-
-Write `story` to the story and `timeline` to its timeline row only when `write`
-is true; otherwise report the `note` as unchanged. Apply `labels` to the PR
-every time, written or not (§2b). `blocked` records the status
-it left in `.specify/run-state.json` (`notion_prior_status`) and `unblock` reads
-it back, so run both from the feature's checkout.
-
-| Event | Story `Status` | Timeline `Build status` | Epic `Status` |
+| Event | Story `Status` | Timeline | Epic |
 | --- | --- | --- | --- |
-| `start`: the task is taken — `/speckit-auto` or `/speckit-specify` begins (`after_specify`), or work by hand starts | → Planning | → Planning | To do → In progress |
-| `implement`: `/speckit-implement` begins (`before_implement`); work by hand with no planning runs `start` then `implement` | → Implementing | → Implementing | unchanged |
-| `qa`: the work is done and its PR is marked ready (`gh pr ready`, not when the draft opens); the PR tester (`/speckit-pr-test`) runs it again and it stays through every fix-and-retest lap | → QA | → QA | unchanged |
-| `review`: an alias of `qa`, kept so a running agent that still sends it lands on QA | → QA | → QA | unchanged |
-| `blocked <reason>`: the run cannot go on without something outside it — a Hard Stop, a run-state `blocking_condition`, the repair cap in the QA loop, red CI the agent cannot fix, an unresolved Blocked by | → Blocked | → Blocked | unchanged |
-| `unblock`: the run resumes | → the status before Blocked | → the same | unchanged |
-| `finish`: the PR is merged to `main` | → Done | → Merged | → Done when every story of the epic is Done |
-| `plan`: an execution plan is made for an epic | unchanged | create the rows | unchanged |
+| `start`: the task is taken | → Planning | → Planning | To do → In progress |
+| `implement`: `/speckit-implement` begins | → Implementing | → Implementing | unchanged |
+| `qa` (`review` is an alias): the PR is marked ready; stays through every QA lap | → QA | → QA | unchanged |
+| `blocked <reason>`: the run cannot go on without something outside it | → Blocked | → Blocked | unchanged |
+| `unblock` | → the status before Blocked | → the same | unchanged |
+| `finish`: the PR merged to `main` | → Done | → Merged | → Done when every story of the epic is Done |
 
-Rules:
+- **Never backwards.** To do → Planning → Implementing → QA → Done; a legacy In
+  review reads as QA; Done never moves. Only `unblock` leaves Blocked, returning
+  to the status `blocked` recorded in run-state (`notion_prior_status`); a second
+  `blocked` keeps the first record.
+- **Blocked carries its reason** as a story comment and a PR comment.
+- **Idempotent.** An equal value is not written; the line says `unchanged`.
 
-- **Never move backwards.** The ladder is To do → Planning → Implementing → QA
-  → Done. There is no In review stage: the owner folded it into QA on
-  2026-10-04, so a ready PR is QA. A story still carrying In review reads as
-  QA (and the next event writes QA over it). A Done story stays Done, and
-  `start` on a QA story is a no-op. The one backwards move is `unblock`, which returns a Blocked story to
-  the status recorded when it was blocked; nothing but `unblock` leaves
-  Blocked, and a second `blocked` keeps the first record. Any other way back is
-  `/speckit-correct-course`, which says so in its proposal.
-- **Blocked carries its reason.** With every `blocked` write, add a Notion
-  comment on the story (`notion-create-comment`) with the reason and what would
-  unblock it, and the same as a PR comment when a PR exists
-  (`gh pr comment <n> --body …`).
-- **Idempotent.** Read the current value first; an equal value is not written,
-  and is reported as `unchanged`.
-- **`plan`** creates, under the Plans page, `<Epic> — execution plan` (a page)
-  and `<Epic> — build timeline` (a database with Item, ST, Story → MotorFix
-  stories, Wave, Lane, Points, Start, End, Blocked by ↔ Blocking, Build status,
-  Outside / open, and a timeline view). Follow the Foundations plan already
-  there as the pattern.
+## 2a. `pr`: the story links its own PR (hard rule)
 
-## 2a. `pr`: link the story to its own PR (hard rule)
+Written the moment the draft opens, right after `start`. `PR` empty → the URL;
+the same URL → unchanged; a different PR of the same story → keep the first and
+comment `Follow-up PR: <url>`. It also adds the epic label (`EP-<n>`). The line
+`- <date> · pr · ST-<n> · PR #<n> <url>` is what `stop:pr-lifecycle` reads. A
+branch with no story (`chore-*`) has nothing to link.
 
-Every story or task carries the link to its own pull request, written the
-moment the PR opens (the draft, right after `start`) — Constitution VII, and
-the `stop:pr-lifecycle` gate refuses to end a session on a story branch whose
-open PR is not logged here.
+## 2b. PR labels
 
-```bash
-gh pr view <n> --json url,headRefName -q .url
-```
+Exactly one **stage** label on an open PR, set by every event: Planning →
+`planning`, Implementing → `in development`, QA → `QA`; a Blocked story keeps
+the stage it left plus `blocked`; a merged PR carries none. The decision's
+`labels` adds the one and removes the others, so a late or repeated event
+converges. Logged as `- <date> · labels · PR #<n> · <stage or none>`.
 
-- `PR` empty → write the URL (`update_properties`, `{"PR": "<url>"}`).
-- `PR` already this URL → `unchanged`.
-- `PR` holds a different PR of the same story (a follow-up fix, a docs proof)
-  → keep the first, and add a story comment `Follow-up PR: <url>`. One story,
-  one `PR`; never overwrite it.
+The other labels are added when the PR opens and stay to the merge:
 
-Log it in `specs/<feature>/notion-sync.md` as
-`- <date> · pr · ST-<n> · PR #<n> <url>` — the gate reads that line. A branch
-with no Notion story (`chore-*`) has nothing to link.
+| Label | Added when |
+| --- | --- |
+| type, one of `feature`, `bug`, `tech debt`, `performance`, `documentation`, `tests`, `tooling` | from the title's type: feat, fix, refactor, perf, docs, test, ci/build/chore |
+| `breaking` | the title carries `!` |
+| `scope: <scope>` | from the title's scope (`gh label create "scope: <scope>" --force` first) |
+| `EP-<n>` | `pr`, from the story's Epic |
+| `ui` | the diff touches `apps/web` or `libs/ui-cockpit` |
+| `dependencies` | the diff changes a `package.json`'s dependencies |
 
-## 2b. PR labels: the stage, the type and the rest on GitHub
+At `start` a branch with no PR opens its draft labelled `planning`
+(`speckit-git-commit`), then `pr <n>`. A PR with no story asks
+`notion-status.mjs` with `--current` at its work's status and applies only the
+labels: `gh pr edit <n> <labels>`.
 
-A PR carries several labels at once. Exactly one is its **stage**, set by
-every event, so the PR list on GitHub shows the same stage as the board. The
-others describe the PR and stay until the merge. `stop:pr-lifecycle` refuses an
-open PR with no stage label or more than one, a stage label that does not fit
-its draft state, no type label, or no `breaking` when the title has a `!`.
+## 2c. `debt`: deferred findings become tasks
 
-| Label | Kind | Added when |
-| --- | --- | --- |
-| `feature`, `bug`, `tech debt`, `performance`, `documentation`, `tests`, `tooling` | type (one) | the PR opens, from its title's type: feat, fix, refactor, perf, docs, test, ci/build/chore |
-| `breaking` | flag | the title carries `!` |
-| `scope: <scope>` | area | the PR opens, from its title's scope (`gh label create "scope: <scope>" --force` first) |
-| `EP-<n>` | epic | `pr`, from the story's Epic (`gh label create EP-<n> --force` first) |
-| `ui` | flag | the diff touches `apps/web` or `libs/ui-cockpit`: the screens need the 320/390 px review |
-| `dependencies` | flag | the diff changes dependencies in a `package.json` |
-
-**Stage labels: exactly one on an open PR.** The stage follows the story:
-Planning → `planning`, Implementing → `in development`, QA → `QA` (from
-`gh pr ready` on; there is no `in review` label). A Blocked story's PR keeps the stage it left, with
-`blocked` beside it; a merged PR carries none of them — GitHub's Merged badge
-and the story's Done are the final state. Never add or remove a stage label by
-hand: on every event, apply the decision's `labels` (§2), which adds the one
-stage label and removes every other one, so a repeated, late or catch-up event
-leaves one stage label instead of stacking a second:
-
-```bash
-gh pr edit <n> <labels>   # decoded from the JSON, e.g.
-gh pr edit 33 --add-label "QA" --remove-label "planning" --remove-label "in development" --remove-label "blocked"
-```
-
-Log it as `- <date> · labels · PR #<n> · <stage>` (`stage` from the decision;
-`none` when it is null).
-
-At `start`, a branch with no PR opens its draft labelled `planning`
-(`speckit-git-commit`: first commit, push, `gh pr create --draft --label
-planning`), then `pr <n>`. A PR with no story (`chore-*`) asks the same
-decision with `--current` set to the status its work is at; only the Notion
-writes are skipped. Removing a label the PR does not have is harmless.
-
-## 2c. `debt`: file deferred technical debt as tasks
-
-Every bullet in `specs/<feature>/deferred.md` — a finding spec-reviewer,
-code-reviewer or the PR tester routed to defer — becomes one row in MotorFix
-stories with Role System, Status To do, the story's Epic (and Feature when
-known). Its Issue type is **Tech debt**, or **Decision** when the bullet says
-"decision" or "open question" (it waits on the owner, not on code). Each has
-its own view of the database: the **Tech debt** board and **Decisions to take**;
-the story views leave both out.
-
-```bash
-node .claude/scripts/debt-tasks.mjs plan specs/<feature>/deferred.md \
-  --story <story URL> --epic <epic URL> --pr <PR URL> --id ST-<n> [--feature <URL>]
-# [{ "line": 6, "properties": { … }, "content": "…" }, …] — pending bullets only
-```
-
-For each entry: `notion-create-pages` in the stories data source with its
-`properties` and `content`, then write the new page's URL back onto the bullet:
-
-```bash
-node .claude/scripts/debt-tasks.mjs mark specs/<feature>/deferred.md --line <line> --url <task URL>
-```
-
-A bullet carrying `— Notion: <url>` is never filed again, so a retest lap or a
-second run is a no-op. A create that fails (a usage limit included) is logged
-`[NOTION-SYNC PENDING: debt <feature> line <n> — <error>]` and retried on the
-next run; it never blocks the build.
+Each pending bullet of `specs/<feature>/deferred.md` becomes a To do row in
+MotorFix stories (Role System, the story's Epic and Feature; Issue type Tech
+debt, or Decision when it waits on the owner), built by `debt-tasks.mjs`, and
+the bullet gets `— Notion: <url>` so it is never filed twice.
 
 ## 2d. Ready to work: refresh after `start` and `finish` (hard rule)
 
-Every `start` and every `finish` ends by invoking `notion-ready <epic>` for the
-story's epic, even when every write above was `unchanged`: a started story
-loses its tick, and a finished one may unblock others. The other events skip
-it — nothing they do changes what is ready. It is never skipped under
-`/speckit-auto`.
+Every `start` and `finish` refreshes the epic's Ready to work boxes, even when
+every write was unchanged; other events skip it. The script unticks what
+stopped being ready and lists the tick candidates as `ready.review`: whether one
+waits on someone outside the build is judgement, so read each candidate's
+page and comments as `notion-ready` says, then tick only those it clears:
 
-Log its summary as `- <date> · ready · <epic> · +<ticked IDs> −<unticked IDs>`
-(or `no change`). When it fails, log
-`[NOTION-SYNC PENDING: ready <epic> — <shortest error>]`; the next run retries
-it first. `/speckit-archive` refuses a feature with no ready line after its
-last `finish` line, read from the log and the merged PR's finish comment
-(`notion-ready.mjs check -`, §3).
+```bash
+node .claude/scripts/notion-sync.mjs ready --tick ST-30,ST-31 --hold "ST-32=waits on the lawyer"
+```
+
+Logged as `- <date> · ready · <epic> · +<ticked> −<unticked>` (or `no change`);
+a failed refresh is `[NOTION-SYNC PENDING: ready <epic> — <error>]`, retried
+first next run. `/speckit-archive` refuses a feature with no ready line after
+its last `finish` line (`notion-ready.mjs check -`, §3).
 
 ## 2e. Finish comment: say what happened (hard rule)
 
@@ -221,42 +149,65 @@ On every `finish`, read the feature's `auto-run.md`, `deferred.md`, `spec.md`
 Clarifications and Assumptions, and the PR's Agent review, and collect:
 
 - **Deviations** from the story's Build brief or acceptance criteria.
-- **Decisions taken on the owner's behalf** — every `(autonomous default)` and
-  every gate answered without the owner.
+- **Decisions taken on the owner's behalf** — every `(autonomous default)`.
 - **Deferred follow-ups**, with the Notion task each was filed as (§2c).
-- **Open questions** the work left for the owner.
+- **Open questions** left for the owner.
 
-When at least one exists, post one `notion-create-comment` on the story: a
-line per item under those four headings, each item with its source file, and
-the PR link. When none exists, post no comment: a story built as briefed needs
-none.
-
-Log it as `- <date> · comment · ST-<n> · posted (<count> items)` or
-`- <date> · comment · ST-<n> · nothing to record`. A failed post is
-`[NOTION-SYNC PENDING: comment ST-<n> — <shortest error>]` and is retried.
+When one exists, write one bullet per item under those headings, each with its
+source file, plus the PR link, to a file and pass it as `--body-file`; the
+script posts it (`notion-create-comment` on the connector path) once. When none
+exists, pass `--no-comment`: no comment is posted. Logged as
+`- <date> · comment · ST-<n> · posted (<count> items)` or `· nothing to record`.
 
 ## 3. Record it
 
-Append one line per write to `specs/<feature>/notion-sync.md` (create it on
-first use): date, event, item, `from → to`.
+`specs/<feature>/notion-sync.md`, one line per write:
+`- <date> · <event> · <item> · <text>`. The script appends them; the connector
+path writes them with the same formatter:
 
-The log rides in the story's own PR, never in a `docs(specs)` PR of its own:
+```bash
+node .claude/scripts/notion-sync.mjs log start ST-79 "To do → Planning"
+node .claude/scripts/notion-sync.mjs log --pending ready Foundations "usage limit"
+```
 
-- **Before the merge** the lines are committed on the story's branch: with
-  the next commit, the `qa` line on its own right after `gh pr ready` (pushed
-  before CI is waited for and QA starts), a QA lap's lines with that lap's fix.
-- **After the merge** (`finish`, its `ready` and `comment` lines, the merge
-  sha) nothing is committed. Post the lines not yet committed as one comment on
-  the merged PR, headed `Finish log`:
-  `gh pr comment <n> --body-file <file>`. Then restore the file
-  (`git checkout -- specs/<feature>/notion-sync.md`) so the worktree stays
-  clean. A PENDING line retried later goes into another comment on the same
-  PR, never into a commit of its own.
+The log rides in the story's own PR. **Before the merge** its lines are
+committed with the next commit; the `qa` line on its own right after
+`gh pr ready`, pushed before CI is waited for. **After the merge** (`finish`,
+its `ready` and `comment` lines) nothing is committed: post the uncommitted
+lines as one comment on the merged PR headed `Finish log`
+(`gh pr comment <n> --body-file <file>`), then
+`git checkout -- specs/<feature>/notion-sync.md`. A PENDING line retried later
+goes into another comment on that PR.
 
-If a Notion call fails twice, append
-`[NOTION-SYNC PENDING: <event> <item> — <shortest error>]` and carry on: the
-build never waits on the tracker. The next run of this skill retries every
-PENDING line first and marks it done.
+## 4. Connector path (exit 3, and `plan`)
+
+1. **Find the story**: `ST-<n>` or URL in `$ARGUMENTS`, else the story link in
+   `spec.md`/`context.md`, else the feature number confirmed by title
+   (`notion-search` in the stories data source). No confident match: write
+   nothing, report `[NOTION-SYNC SKIPPED: no Notion item for <feature>]`; never
+   create a story. `notion-fetch` it for `Status`, `PR` and `Epic`; its row is in
+   the epic's build timeline under Plans (its `Story` relation).
+2. **Decide**: `notion-status.mjs <event> --current "<Status>"`. When `write`,
+   `notion-update-page` (`update_properties`) the story with `story` and the row
+   with `timeline`; for `blocked`, first `notion-create-comment` with the reason
+   and `gh pr comment <n>`. Apply `labels` with `gh pr edit` every time.
+3. **Epic**: `start` moves To do → In progress; `finish` sets Done once every
+   story in the epic is Done.
+4. **`pr`**: as §2a, with `notion-update-page` (`{"PR": "<url>"}`) or a
+   follow-up `notion-create-comment`.
+5. **`debt`**: `debt-tasks.mjs plan specs/<feature>/deferred.md --story <url>
+   --epic <url> --pr <url> --id ST-<n>`, then per entry `notion-create-pages`
+   with its `properties` and `content`, and `debt-tasks.mjs mark … --line <n>
+   --url <task url>`.
+6. **Ready and the finish comment**: invoke `notion-ready <epic>` (§2d) and
+   post the §2e comment with `notion-create-comment`.
+7. **Log** every write with `notion-sync.mjs log`, and a call that fails twice
+   with `log --pending`; the next run retries it.
+
+**`plan`** creates under Plans `<Epic> — execution plan` (a page) and
+`<Epic> (EP-<n>) — build timeline` (a database: Item, ST, Story → MotorFix
+stories, Wave, Lane, Points, Start, End, Blocked by ↔ Blocking, Build status,
+Outside / open, a timeline view), following the Foundations plan.
 
 ## Untrusted content
 
