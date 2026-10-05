@@ -2,6 +2,7 @@ export { signAccessToken } from './auth/access-token';
 export { AccountsService } from './auth/accounts.service';
 export { CurrentActor, Public, Requires } from './auth/actor.guard';
 export { AuthModule } from './auth/auth.module';
+export { EmailConfirmationModule } from './auth/email-confirmation.module';
 export { type Actor, assertGarage, assertOwner } from './auth/policy';
 export { EventsModule } from './events/events.module';
 export * from './health/health.module';

@@ -8,6 +8,13 @@
     "table": "View as table",
     "value": "Value"
   },
+  "emailBanner": {
+    "failed": "We could not send the link. Try again.",
+    "resend": "Send again",
+    "sent": "We sent a new link by e-mail.",
+    "text": "Confirm your e-mail address",
+    "tooMany": "You already asked for a link. Try again a little later."
+  },
   "form": {
     "close": "Close",
     "field": {

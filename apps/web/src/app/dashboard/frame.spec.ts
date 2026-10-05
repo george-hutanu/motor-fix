@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
-import type { MeDto } from '@motor-fix/data-access';
+import { type MeDto, MeService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
 import { Subject } from 'rxjs';
@@ -19,6 +19,7 @@ jest.mock('@motor-fix/ui-cockpit', () => ({
 }));
 
 let signOut: jest.Mock;
+let reload: jest.Mock;
 let live: { close: jest.Mock; events: Subject<LiveMessage>; open: jest.Mock };
 
 const me = (role: string, landing: string, capabilities: string[]) =>
@@ -42,6 +43,7 @@ async function render(
 ) {
   Element.prototype.scrollIntoView = jest.fn();
   signOut = jest.fn(async () => current.set(null));
+  reload = jest.fn(async () => undefined);
   live = { close: jest.fn(), events: new Subject(), open: jest.fn() };
   const current = signal<MeDto | null>(me(role, landing, capabilities));
   TestBed.configureTestingModule({
@@ -55,9 +57,10 @@ async function render(
       ),
       {
         provide: Session,
-        useValue: { current, ended: new Subject<void>(), signOut },
+        useValue: { current, ended: new Subject<void>(), reload, signOut },
       },
       { provide: Live, useValue: live },
+      { provide: MeService, useValue: {} },
     ],
   });
   const harness = await RouterTestingHarness.create();
@@ -471,5 +474,39 @@ describe('Frame', () => {
     });
 
     expect(toast).toHaveBeenCalledWith('Live test update');
+  });
+
+  it('reads the account again when its e-mail is confirmed in another tab', async () => {
+    await render('driver', '/app/driver', []);
+
+    live.events.next({
+      at: '2026-10-05T12:00:00.000Z',
+      id: 'account-1',
+      kind: 'account.email_confirmed',
+    });
+
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks an account with an unconfirmed e-mail to confirm it, on every dashboard', async () => {
+    for (const [role, landing] of [
+      ['driver', '/app/driver'],
+      ['garage', '/app/garage'],
+      ['admin', '/app/admin'],
+    ] as const) {
+      const { current, element, harness } = await render(role, landing, []);
+      const me = current();
+      current.set({
+        ...(me as MeDto),
+        email: 'ioana@example.test',
+        emailConfirmed: false,
+      } as MeDto);
+      await settle(harness);
+
+      expect(element.querySelector('mf-email-banner')?.textContent).toContain(
+        'Confirmă‑ți adresa de e‑mail',
+      );
+      TestBed.resetTestingModule();
+    }
   });
 });

@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 
 **Input**: User description: "ST-130 Be asked to sign in when an action needs an account (Notion story https://app.notion.com/p/3ee607bff0d281faa438efc7098315c1, epic EP-1 Foundations). Scope: the shared sign-in gate — visitors browse freely; an action that needs an account opens the sign-in dialog over the screen and resumes with the form intact after sign-in or sign-up; the API denies by default and answers 401 sign_in_required for gated endpoints without a session."
 

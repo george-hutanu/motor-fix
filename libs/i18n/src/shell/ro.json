@@ -8,6 +8,13 @@
     "table": "Vezi ca tabel",
     "value": "Valoare"
   },
+  "emailBanner": {
+    "failed": "Nu am putut trimite linkul. Încearcă din nou.",
+    "resend": "Retrimite",
+    "sent": "Am trimis un link nou pe e‑mail.",
+    "text": "Confirmă‑ți adresa de e‑mail",
+    "tooMany": "Ai cerut deja un link. Încearcă din nou puțin mai târziu."
+  },
   "form": {
     "close": "Închide",
     "field": {

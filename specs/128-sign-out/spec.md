@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-04
 
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 
 **Input**: User description: "ST-128 Sign out, on this device or on all devices (Notion story https://app.notion.com/p/3ee607bff0d2819d83d4c981dc0ac1e7, epic EP-1 Foundations). \"Ieși din cont\" at the bottom of every dashboard menu ends the session on this device; \"Ieși de pe toate dispozitivele\" ends every session of the account; open tabs of that account sign out at once."
 

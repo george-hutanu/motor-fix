@@ -20,6 +20,8 @@ const store = new S3TestStore();
 const PUBLIC = [
   'GET /health/live',
   'GET /health/ready',
+  'POST /api/v1/auth/confirm-email',
+  'POST /api/v1/auth/confirm-email/resend',
   'POST /api/v1/auth/refresh',
   'POST /api/v1/auth/roles/switch',
   'POST /api/v1/auth/sign-in',

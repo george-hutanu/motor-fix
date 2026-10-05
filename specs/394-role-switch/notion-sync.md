@@ -16,3 +16,7 @@
 - 2026-10-05 · debt · ST-394 · 1 task filed https://app.notion.com/p/3ef607bff0d281d0934ae35e1229691a
 - 2026-10-05 · debt · ST-394 · 1 task filed https://app.notion.com/p/3ef607bff0d281b4817fed789f7aa743
 - 2026-10-05 · debt · ST-394 · 1 task filed (pr-tester lap 5) https://app.notion.com/p/3f0607bff0d28120ad44cccb95a6994f
+- 2026-10-05 · finish · ST-394 · QA → Done (checked in Notion; PR #70 merged e69f6c0)
+- 2026-10-05 · finish · Foundations timeline ST-394 · QA → Merged (checked in Notion)
+- 2026-10-05 · finish · EP-1 Foundations · In progress (unchanged)
+- 2026-10-05 · ready · Foundations · no change (ST-394 blocks no timeline row; already unticked)

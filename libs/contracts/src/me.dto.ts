@@ -28,6 +28,11 @@ export class MeDto {
   @ApiProperty({ nullable: true, type: String })
   email!: string | null;
 
+  @ApiProperty({
+    description: 'Whether the e-mail is confirmed; false when there is none',
+  })
+  emailConfirmed!: boolean;
+
   @ApiProperty({ enum: LANGUAGE })
   language!: (typeof LANGUAGE)[number];
 

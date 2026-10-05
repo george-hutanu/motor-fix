@@ -13,3 +13,8 @@
 - 2026-10-04 · review · Foundations timeline ST-130 · Implementing → QA
 - 2026-10-04 · labels · PR #64 · QA
 - 2026-10-05 · debt · ST-130 · 5 tasks filed (To do), URLs on deferred.md bullets
+- 2026-10-05 · finish · ST-130 · QA → Done (PR #64 merged 9e6afb1)
+- 2026-10-05 · finish · Foundations timeline ST-130 · QA → Merged
+- 2026-10-05 · labels · PR #64 · stage labels removed
+- 2026-10-05 · comment · ST-130 · posted (10 items)
+- 2026-10-05 · ready · EP-1 · no change (ST-130 blocks no timeline row; already unticked)

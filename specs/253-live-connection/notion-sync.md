@@ -17,3 +17,7 @@
 - 2026-10-04 · labels · PR #57 · QA
 - 2026-10-04 · qa · lap 1 agent-review failure: a non-admin with an invalid body got 400, not 404 (FR-012); fixed by moving the admin check into the guard
 - 2026-10-04 · debt · deferred.md line 2 → To do task https://app.notion.com/p/3ef607bff0d281ca8a96e03e40701d3c
+- 2026-10-05 · finish · ST-253 · QA → Done (checked in Notion; PR #57 merged ddaf49f)
+- 2026-10-05 · finish · Foundations timeline ST-253 · QA → Merged (checked in Notion)
+- 2026-10-05 · finish · EP-1 Foundations · In progress (unchanged)
+- 2026-10-05 · ready · Foundations · +ST-254 (ST-253 and ST-79 both merged; ST-257 still waits on ST-254)

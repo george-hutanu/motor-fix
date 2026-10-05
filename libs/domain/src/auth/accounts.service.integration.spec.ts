@@ -89,6 +89,39 @@ describe('createAccount', () => {
     ).toBe('ro');
   });
 
+  it('leaves an e-mail given with a password unconfirmed', async () => {
+    const { service } = ports();
+
+    const { id } = await service.createAccount({
+      ...andrei,
+      email: 'andrei@example.ro',
+    });
+
+    expect(
+      (await prisma.account.findUniqueOrThrow({ where: { id } }))
+        .emailVerifiedAt,
+    ).toBeNull();
+  });
+
+  it.each([
+    'google',
+    'apple',
+  ] as const)('counts an e-mail that %s vouches for as confirmed at once', async (method) => {
+    const { service } = ports();
+
+    const { id } = await service.createAccount({
+      email: 'andrei@example.ro',
+      identity: { method, subject: 'provider-subject' },
+      name: 'Andrei',
+      roles: ['driver'],
+    });
+
+    expect(
+      (await prisma.account.findUniqueOrThrow({ where: { id } }))
+        .emailVerifiedAt,
+    ).toBeInstanceOf(Date);
+  });
+
   it('hands account.created and one audit entry per role to the ports, inside the transaction', async () => {
     const { audit, events, service } = ports();
 

@@ -14,3 +14,9 @@
 - 2026-10-05 · labels · PR #66 · QA
 - 2026-10-05 · debt · ST-128 · 1 task filed https://app.notion.com/p/3ef607bff0d2818bafeec79d6a8b83cb
 - 2026-10-05 · debt · ST-128 · 3 tasks filed (pr-tester lap 1) https://app.notion.com/p/3ef607bff0d2816aadf4d566701b18c2 https://app.notion.com/p/3ef607bff0d281e6ac3acc89b13e7991 https://app.notion.com/p/3ef607bff0d281fa892cfb5e17f6aca8
+- 2026-10-05 · finish · ST-128 · QA → Done (PR #66 merged as 6d4a0ef)
+- 2026-10-05 · finish · Foundations timeline ST-128 · QA → Merged
+- 2026-10-05 · finish · EP-1 Foundations · In progress (unchanged)
+- 2026-10-05 · labels · PR #66 · none
+- 2026-10-05 · comment · ST-128 · finish comment (owner decisions, deviations, 4 debt tasks)
+- 2026-10-05 · ready · Foundations · no change (ST-129 still waits on ST-132)

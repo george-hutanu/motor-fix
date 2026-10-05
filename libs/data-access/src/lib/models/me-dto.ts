@@ -8,6 +8,11 @@ export interface MeDto {
    */
   capabilities: Array<string>;
   email: string | null;
+
+  /**
+   * Whether the e-mail is confirmed; false when there is none
+   */
+  emailConfirmed: boolean;
   garageId: string | null;
   id: string;
   landing: '/app/driver' | '/app/garage' | '/app/admin';
