@@ -14,6 +14,7 @@
 ## Phase 3: Proof
 
 - [X] T004 `npm run test:harness` green; `node .claude/scripts/doctor.mjs` clean (identity.sh is not a registered gate script, so no bless)
+- [X] T005 Review fixes: `check` names `npm install` as the fix when the worktree has no `.husky/_` yet; `apply` unsets only with `extensions.worktreeConfig` on, so a lone checkout never loses its shared hooks path; `core.hooksPath` read as a path (`~` expands)
 
 ## FR → test
 

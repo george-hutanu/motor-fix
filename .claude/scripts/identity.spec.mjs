@@ -21,7 +21,7 @@ const git = (cwd, ...args) => spawnSync('git', args, { cwd, encoding: 'utf8', en
 const sh = (cwd, mode) => spawnSync('sh', ['.husky/identity.sh', mode], { cwd, encoding: 'utf8', env: env() });
 
 /** A main checkout with hooks in .husky/_ and one linked worktree, the way the desktop app lays them out. */
-function checkouts({ worktreeHooks = true } = {}) {
+function checkouts({ worktreeHooks = true, worktreeConfig = true } = {}) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'identity-')));
   dirs.push(root);
   const main = join(root, 'main');
@@ -33,7 +33,7 @@ function checkouts({ worktreeHooks = true } = {}) {
   git(main, 'add', '.husky/identity.sh');
   git(main, '-c', 'user.name=x', '-c', 'user.email=x@x', 'commit', '-qm', 'init');
   git(main, 'config', 'core.hooksPath', '.husky/_');
-  git(main, 'config', 'extensions.worktreeConfig', 'true');
+  if (worktreeConfig) git(main, 'config', 'extensions.worktreeConfig', 'true');
   git(main, 'worktree', 'add', '-q', worktree);
   if (worktreeHooks) {
     mkdirSync(join(worktree, '.husky/_'), { recursive: true });
@@ -61,6 +61,24 @@ describe('identity.sh and the hooks a worktree runs', () => {
     assert.equal(out.status, 1);
     assert.ok(out.stderr.includes(join(repos.main, '.husky/_')), out.stderr);
     assert.match(out.stderr, /identity\.sh apply/);
+  });
+
+  it('check tells a worktree with no hooks of its own yet to install them', () => {
+    const repos = checkouts({ worktreeHooks: false });
+    sh(repos.worktree, 'apply');
+    pinToMain(repos);
+    const out = sh(repos.worktree, 'check');
+    assert.equal(out.status, 1);
+    assert.match(out.stderr, /npm install/);
+  });
+
+  it('apply never unsets a hooks path shared by every checkout', () => {
+    // A lone checkout: without the extension, git reads --worktree as the shared config.
+    const { main, worktree } = checkouts({ worktreeConfig: false });
+    git(main, 'worktree', 'remove', '--force', worktree);
+    git(main, 'config', 'core.hooksPath', join(worktree, '.husky/_'));
+    sh(main, 'apply');
+    assert.equal(git(main, 'config', 'core.hooksPath').stdout.trim(), join(worktree, '.husky/_'));
   });
 
   it('check passes the main checkout and a worktree on their own hooks', () => {

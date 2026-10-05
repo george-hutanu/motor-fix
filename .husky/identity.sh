@@ -21,7 +21,7 @@ top="$(git rev-parse --show-toplevel)"
 # desktop app pins a new worktree's core.hooksPath to the main checkout, so
 # its commits would run main's pre-commit and miss this branch's changes.
 hooks_elsewhere() {
-  hp="$(git config core.hooksPath || true)"
+  hp="$(git config --type=path core.hooksPath || true)"
   [ -n "$hp" ] || return 1
   case "$hp" in /*) ;; *) hp="$top/$hp" ;; esac
   [ "$(cd "$hp" 2>/dev/null && pwd -P || echo "$hp")" != "$(cd "$top/.husky/_" 2>/dev/null && pwd -P || echo "$top/.husky/_")" ]
@@ -41,7 +41,8 @@ case "${1:-}" in
     git config credential.https://github.com.username "$account"
     echo "motor-fix: git identity pinned to $name <$email>, GitHub account $account"
     # Only once this checkout has hooks of its own, so it is never left with none.
-    if git config --worktree --get core.hooksPath >/dev/null 2>&1 && hooks_elsewhere && [ -f "$top/.husky/_/h" ]; then
+    if [ "$(git config --bool extensions.worktreeConfig 2>/dev/null)" = true ] &&
+      git config --worktree --get core.hooksPath >/dev/null 2>&1 && hooks_elsewhere && [ -f "$top/.husky/_/h" ]; then
       git config --worktree --unset core.hooksPath
       echo "motor-fix: hooks now run from this checkout's .husky/_"
     fi
@@ -67,7 +68,7 @@ case "${1:-}" in
     esac
     if hooks_elsewhere; then
       problems="$problems
-  - hooks run from $(git config core.hooksPath), not this checkout's .husky/_ (commits would run another checkout's pre-commit)"
+  - hooks run from $(git config core.hooksPath), not this checkout's .husky/_ (commits would run another checkout's pre-commit; run npm install, which creates .husky/_ and drops the pin, or sh .husky/identity.sh apply)"
     fi
     if [ -n "$problems" ]; then
       echo "motor-fix identity check failed:$problems" >&2
