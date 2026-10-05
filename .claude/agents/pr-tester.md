@@ -40,7 +40,7 @@ naming the route.
 ## 2. Write the flows (before the run)
 
 Write `<scratchpad>/flows-<PR>.mjs`: a default export `async ({ baseURL,
-apiURL, outDir, repoRoot }) => findings[]` that drives Playwright
+apiURL, outDir, repoRoot, health, ready }) => findings[]` that drives Playwright
 (`createRequire(join(repoRoot, 'package.json'))('@playwright/test').chromium`,
 one browser, closed in `finally`) through each flow from step 1: click, type,
 switch the language, reload, open a second tab where the spec asks for it, and
@@ -48,7 +48,12 @@ check the empty, error and loading states the spec or design names. Each
 failure is a finding `{ severity, kind: 'flow', title, steps: [...], evidence }`
 with a screenshot under `outDir`. Call the changed API endpoints with
 `fetch(apiURL + path)` — valid input, then invalid input — and check the status
-codes and shapes the spec and `apps/api/openapi.json` promise. The file imports
+codes and shapes the spec and `apps/api/openapi.json` promise. The API's
+only health routes are `/health/live` and `/health/ready` (nothing answers at
+the bare health path), and the run checks both before your flows start. If a
+flow needs them anyway (a change to health or readiness), call `health()` and
+`ready()`, which fetch those two routes on `apiURL` and return the Response.
+The file imports
 nothing but Node built-ins and what `repoRoot` resolves: on GitHub Actions it
 runs from a temporary directory beside the PR's checkout.
 
@@ -66,7 +71,7 @@ input, finds the run by the nonce in its title (the quoted `run-name` in
 the `pr-qa-<PR>` artifact into `--out`. On the runner the workflow checks out
 that exact SHA, starts PostgreSQL with PostGIS, Redis and MinIO with its
 bucket from the PR's own `docker-compose.yml`, and runs `run.mjs --tree`: install, migrate, build, boot api, web and
-worker, health and `/health/ready` (storage included), the changed GET
+worker, `/health/live` and `/health/ready` (storage included), the changed GET
 endpoints, the viewport sweep (4 viewports — desktop, tablet, 390 and 320 px
 phones — × light/dark × ro/en, axe, overflow, console, network, a screenshot
 each) and your flows; the unit and end-to-end suites are CI's. It holds no

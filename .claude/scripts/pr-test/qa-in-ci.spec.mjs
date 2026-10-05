@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 // The PR tester's boot, sweep, flows and API calls run on GitHub Actions
@@ -94,5 +94,33 @@ describe('AGENTS.md and the watcher', () => {
     const screens = sections(agents).find((s) => s.heading.startsWith('Reviewing a change that has screens'));
     assert.match(screens.body, /built-in browser[^.]*optional|optional[^.]*built-in browser/i);
     assert.match(screens.body, /artifact/);
+  });
+});
+
+describe('the tester names the API health routes the API serves', () => {
+  const scripts = readdirSync(fileURLToPath(new URL('.', import.meta.url))).filter((f) => f.endsWith('.mjs') && !f.endsWith('.spec.mjs'));
+  const sources = [
+    ['.claude/agents/pr-tester.md', agent],
+    ['.claude/skills/speckit-pr-test/SKILL.md', skill],
+    ['.github/workflows/pr-qa.yml', read('.github/workflows/pr-qa.yml')],
+    ...scripts.map((f) => [f, read(`.claude/scripts/pr-test/${f}`)]),
+  ];
+
+  it('nowhere names a bare /health route, which the API does not serve', () => {
+    for (const [name, text] of sources) assert.doesNotMatch(text, /(?<![\w/])\/health(?!\/(live|ready)\b)/, name);
+  });
+
+  it('tells the agent its flows get health() and ready() for /health/live and /health/ready', () => {
+    const flows = sections(agent).find((s) => s.heading.includes('Write the flows'));
+    assert.ok(flows);
+    for (const word of ['health()', 'ready()', '/health/live', '/health/ready']) assert.ok(flows.body.includes(word), word);
+  });
+
+  it('run.mjs checks the routes from HEALTH and hands health and ready to the flows', () => {
+    const run = read('.claude/scripts/pr-test/run.mjs');
+    assert.ok(!run.includes('/health/'), 'run.mjs spells a health route instead of reading HEALTH');
+    assert.match(run, /HEALTH\.live/);
+    assert.match(run, /HEALTH\.ready/);
+    assert.match(run, /flow\.default\(\{[^}]*\.\.\.apiHealth\(apiURL\)/);
   });
 });
