@@ -102,6 +102,10 @@ describe('the reminders schedule at start-up', () => {
     const [job] = await queue.getJobs(['delayed']);
     expect(job.opts.attempts).toBe(4);
     expect(job.opts.backoff).toMatchObject({ type: 'exponential' });
+    // A finished day keeps its id, so a restart that day does not rerun it;
+    // a failed one frees it, so a restart tries it again.
+    expect(job.opts.removeOnComplete).toEqual({ age: 2 * 86_400 });
+    expect(job.opts.removeOnFail).toBe(true);
   });
 
   it('logs an error when a run fails for good, not before', () => {
