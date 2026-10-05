@@ -61,6 +61,12 @@ describe('service plans', () => {
     assert.equal(plan.storage, true);
   });
 
+  it('waits only for the long-running services, then runs the one-shot bucket setup to its exit', () => {
+    const plan = composePlan({ project: 'mf-prtest-21-x1', file: '/wt/docker-compose.yml', ports });
+    assert.deepEqual(plan.up.slice(5), ['up', '-d', '--wait', 'postgres', 'redis', 'minio']);
+    assert.deepEqual(plan.setup, ['compose', '-p', 'mf-prtest-21-x1', '-f', '/wt/docker-compose.yml', 'run', '--rm', 'minio-setup']);
+  });
+
   it('without Docker, starts a private PostgreSQL and Redis on the given ports inside the run directory', () => {
     const plan = localPlan({ dir: '/tmp/run', ports });
     const flat = plan.start.map((c) => c.join(' ')).join('\n');

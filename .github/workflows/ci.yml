@@ -260,7 +260,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
 
   # The local stack (docker-compose.yml) the PR tester boots: every image still
-  # pulls, the one-shot setup creates the bucket, and up --wait returns.
+  # pulls, the services come up healthy and the one-shot setup creates the bucket.
   compose:
     name: Compose stack
     needs: changes
@@ -269,9 +269,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
-      - run: docker compose up -d --wait postgres redis minio minio-setup
-      # --wait returns once the one-shot setup is running, not once it is done.
-      - run: docker compose wait minio-setup
+      # The PR tester's boot: the one-shot setup stays out of --wait, which fails
+      # when it exits before compose sees it running; run returns its exit code.
+      - run: docker compose up -d --wait postgres redis minio
+      - run: docker compose run --rm minio-setup
       - name: The bucket exists
         run: >-
           docker compose run --rm --entrypoint sh minio-setup -c
