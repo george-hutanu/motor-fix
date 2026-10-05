@@ -2,7 +2,7 @@
 
 **Feature Branch**: `673-story-tail-agents`
 **Created**: 2026-10-05
-**Status**: In progress
+**Status**: Archived (2026-10-05)
 **Level**: 1 (one-session)
 **Notion story**: ST-673, https://app.notion.com/p/3f0607bff0d281feb2adccfde12ec4ef (Task, EP-1)
 **Epic**: EP-1 Foundations

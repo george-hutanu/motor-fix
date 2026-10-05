@@ -9,3 +9,4 @@
 - 2026-10-05 · implement · ST-673 story Status · Planning → Implementing
 - 2026-10-05 · implement · Foundations timeline · no row for ST-673
 - 2026-10-05 · labels · PR #138 · in development
+- 2026-10-05 · debt · ST-673 · 3 tech-debt tasks filed (3f0607bff0d28102…, 3f0607bff0d28167…, 3f0607bff0d281b3…)
