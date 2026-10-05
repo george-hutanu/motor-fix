@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, sep } from 'node:path';
 
 const root = join(__dirname, '..');
 const jestBin = require.resolve('jest/bin/jest');
@@ -94,7 +94,7 @@ describe('the unit and integration suites', () => {
       ].join('|'),
     );
     // Playwright runs the web-e2e specs against a booted stack; JEST_SUITE never splits them.
-    const playwright = join(root, 'apps', 'web-e2e');
+    const playwright = join(root, 'apps', 'web-e2e') + sep;
     const misnamed = ['apps', 'libs', 'scripts']
       .flatMap((dir) => specFiles(join(root, dir)))
       .filter((file) => !file.startsWith(playwright))
