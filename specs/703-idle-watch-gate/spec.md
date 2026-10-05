@@ -2,7 +2,7 @@
 
 **Feature Branch**: `703-idle-watch-gate`
 **Created**: 2026-10-05
-**Status**: Draft
+**Status**: Archived (2026-10-05)
 **Level**: 2 (feature)
 **Notion story**: ST-703, https://app.notion.com/p/3f0607bff0d2811c9381d8dee97c729c (Tech debt, EP-1)
 **Epic**: EP-1 Foundations

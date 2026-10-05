@@ -8,3 +8,4 @@
 - 2026-10-05 · labels · PR #143 · planning (+feature, scope: harness, EP-1)
 - 2026-10-05 · implement · ST-703 story Status · Planning → Implementing
 - 2026-10-05 · labels · PR #143 · in development
+- 2026-10-05 · debt · ST-703 · deferred.md line 2 → https://app.notion.com/p/3f0607bff0d281958e9fd07e210e13e7

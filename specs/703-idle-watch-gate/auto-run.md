@@ -52,3 +52,13 @@
 - code-reviewer re-review BLOCK (HIGH): the record was removed before the exclusive write, so the race stayed open and a non-EEXIST error read as "already armed".
 - Fix: `wx` write first; only on EEXIST with no live holder is the stale record removed and the write retried once; a second EEXIST is "already armed"; any other error exits 1 naming the record. New spec: an unwritable record exits 1 without polling.
 - watch.spec 96/96, doctor 16 ok, harness-eval --check 80/80, test:harness 1258 (one harness-eval tmpdir race with a concurrent worktree, green on rerun).
+- Re-review after lap 2: APPROVE, no findings (a two-wait-at-once race over a crashed wait's record noted, not listed).
+
+## 15. Agent context
+- No change: CLAUDE.local.md is untracked and its "Active plan" line stays as the owner set it; nothing in it names the cron schedule.
+
+## 16. Retrospective evidence (unjudged)
+- retro-evidence --since 50cdaaa: level 2, 9/9 tasks, 9 requirements, Spec Delta platform +8 ~1 -0, 10 carryover items from earlier features. Jev lane unavailable. No verdict recorded.
+
+## 17. Archive (steps 1-3)
+- capabilities merge --apply: platform +8 added, ~1 modified (464-FR-011 → 703-FR-009); spec.md Archived (2026-10-05). Debt filed: https://app.notion.com/p/3f0607bff0d281958e9fd07e210e13e7
