@@ -13,6 +13,7 @@ features:
   - 623-precompact-flush
   - 673-story-tail-agents
   - 688-qa-wait-handoff
+  - 704-auto-phase-model-pins
   - 703-idle-watch-gate
 ---
 
@@ -413,6 +414,42 @@ _From 688-qa-wait-handoff._
 ### 688-FR-012 — AGENTS.md lifecycle steps 4–6, speckit-pr-test and the speckit-watch `tail` row MUST describe the dispatch, end, resume loop.
 
 _From 688-qa-wait-handoff._
+
+### 704-FR-001 — Under `/speckit-auto`, each of phases 2 (specify), 5 (plan), 6 (checklist) and 7 (tasks) MUST run as its own dispatched agent with its `model` set to the pin in that phase's skill frontmatter (a fixed list: those are the phase 2–8 skills whose pin differs from Opus).
+
+_From 704-auto-phase-model-pins._
+
+### 704-FR-002 — A phase whose skill pin equals the run's model (clarify and analyze on an Opus run) MUST stay inline; phases 9–14, the review fixes and the PR tester MUST stay on Opus regardless of any pin.
+
+_From 704-auto-phase-model-pins._
+
+### 704-FR-003 — A dispatched phase agent MUST produce the same artifacts, run the same spec-kit hooks and answer the same gates as the inline phase does today (the "Gate override" rules of `/speckit-auto` phases 2–8), and MUST open its reply with the four `STATUS:/PR:/NEXT:/FILES:` lines of AGENTS.md "Agent replies"; the run MUST treat a `failure` or `blocked` status as the inline phase's failure, never as a pass, and a `partial` one as a pass only when FILES names the phase's artifact and what failed is a Notion or mock write. A failed phase agent is not retried.
+
+_From 704-auto-phase-model-pins._
+
+### 704-FR-004 — The dispatch MUST be proven by one measured trial: a story run through `/speckit-auto` whose transcript shows every assistant turn of the dispatched phases served by the pinned model, recorded in the feature's run log with the transcript's path and the per-phase model list.
+
+_From 704-auto-phase-model-pins._
+
+### 704-FR-005 — The feature MUST record, in the run log, the cost of one story run before the change and one after, read from transcripts: per model, the count of assistant turns and the input, output, cache-creation and cache-read token totals; every measure that was not measurable MUST be named with its reason, and no estimate MAY stand in for a measurement.
+
+_From 704-auto-phase-model-pins._
+
+### 704-FR-006 — The `model:` line of every `speckit-*` skill MUST be unchanged, and the ST-467 mapping spec MUST stay green.
+
+_From 704-auto-phase-model-pins._
+
+### 704-FR-007 — Within `.claude/skills/speckit-auto/SKILL.md` the change MUST be confined to the phase 2–8 dispatch lines and the lines that describe the dispatch; the Hand-off, The wait and The tail sections and the lines listing the open, ready and merge commands MUST be identical to `origin/main`.
+
+_From 704-auto-phase-model-pins._
+
+### 704-FR-008 — `npm run test:harness`, `node .claude/scripts/harness-eval.mjs --check` and `node .claude/scripts/doctor.mjs` MUST pass on the branch; a harness spec MUST fail if a phase 2–8 dispatch line names a model other than that phase skill's pin.
+
+_From 704-auto-phase-model-pins._
+
+### 704-FR-009 — A phase agent the Agent tool cannot start on its pinned model (a tool error) MUST NOT stop the run: the phase runs inline on the run's model and the run log records the pin miss.
+
+_From 704-auto-phase-model-pins._
 
 ### 703-FR-001 — `watch.mjs --gate` MUST run the same scan as the table, read-only (no fix applied, no claim written), and exit 0 with no output on stdout or stderr when the pass would do nothing: an empty dispatch plan and nothing the no-agent fixes would act on.
 
