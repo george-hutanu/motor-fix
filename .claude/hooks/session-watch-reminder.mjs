@@ -17,6 +17,7 @@
 //     or unreadable output prints nothing, and the hook always exits 0.
 import { execFileSync, spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
+import { isEntryPoint } from "../scripts/lib/entry.mjs";
 
 export const DEFAULT_TIMEOUT_MS = 20_000;
 
@@ -84,7 +85,7 @@ export function runReminder({ repo, watch }) {
   return reminder(activeCount(watch()));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   try {
     const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
     const timeout = Number(process.env.SPECKIT_WATCH_REMINDER_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;

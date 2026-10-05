@@ -34,7 +34,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { isEntryPoint } from "../scripts/lib/entry.mjs";
 
 const IN_DEVELOPMENT = "in development";
 const DRAFT_LABELS = new Set(["planning", IN_DEVELOPMENT]);
@@ -219,7 +219,7 @@ function declaredState() {
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isEntryPoint(import.meta.url)) {
   let raw = "";
   process.stdin.on("data", (d) => (raw += d));
   process.stdin.on("end", () => {

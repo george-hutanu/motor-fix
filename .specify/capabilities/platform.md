@@ -9,6 +9,7 @@ features:
   - 159-form-saving
   - 516-production-release-queue
   - 450-pr-tester-env-gaps
+  - 600-merge-gate-symlink
 ---
 
 # Capability: Platform
@@ -312,6 +313,18 @@ _From 450-pr-tester-env-gaps._
 ### 450-FR-014 — The pr-tester agent definition MUST describe the storage note, running a `--local` lap in the background, posting `--missing` when a lap left no report, the route syntax and the endpoint calls.
 
 _From 450-pr-tester-env-gaps._
+
+### 600-FR-001 — The harness MUST offer one entry-point check that compares the real path of `process.argv[1]` with the real path of the calling module, and answers false (never throws) when either cannot be resolved.
+
+_From 600-merge-gate-symlink._
+
+### 600-FR-002 — Every hook in `.claude/hooks/` that runs only as the entry point MUST use that check; no hook may compare `process.argv[1]` with its module URL directly.
+
+_From 600-merge-gate-symlink._
+
+### 600-FR-003 — The merge gate started through a symlinked path MUST refuse a merge it refuses through the real path (exit 2).
+
+_From 600-merge-gate-symlink._
 
 ## Retired
 

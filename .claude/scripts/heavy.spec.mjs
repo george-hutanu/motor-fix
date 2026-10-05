@@ -1,7 +1,7 @@
 import { afterEach, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -176,7 +176,7 @@ describe('the pre-commit hook', () => {
   it('stops with a clear message when origin/main is missing, before taking a slot', () => {
     const repo = scratch();
     spawnSync('git', ['init', '-q'], { cwd: repo });
-    for (const dir of ['.husky', 'scripts']) spawnSync('mkdir', ['-p', join(repo, dir)]);
+    for (const dir of ['.husky', 'scripts']) mkdirSync(join(repo, dir), { recursive: true });
     writeFileSync(join(repo, '.husky/pre-commit'), readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8'));
     writeFileSync(join(repo, '.husky/identity.sh'), 'exit 0\n');
     writeFileSync(join(repo, 'scripts/heavy.sh'), 'touch heavy-ran\n');

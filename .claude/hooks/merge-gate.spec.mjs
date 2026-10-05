@@ -1,5 +1,10 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { decideMerge, mergeTarget } from './merge-gate.mjs';
 
@@ -189,6 +194,29 @@ describe('merge gate — Dependabot PRs need no agent review', () => {
     assert.match(decideMerge(coAuthored), /no agent-review status/);
     assert.match(decideMerge({ ...bot(green), commits: undefined }), /no agent-review status/);
     assert.match(decideMerge({ ...bot(green), commits: [] }), /no agent-review status/);
+  });
+});
+
+describe('merge gate — started through a symlinked path', () => {
+  const hooks = fileURLToPath(new URL('.', import.meta.url));
+  const gate = (dir) =>
+    spawnSync(process.execPath, [join(dir, 'merge-gate.mjs')], {
+      input: JSON.stringify({ tool_input: { command: 'gh pr merge 21 --merge' } }),
+      encoding: 'utf8',
+      env: { ...process.env, SPECKIT_PR_STATE: JSON.stringify(pr(green)) },
+    });
+
+  it('refuses a merge with no agent-review, as it does through the real path', () => {
+    const root = mkdtempSync(join(tmpdir(), 'merge-gate-link-'));
+    try {
+      symlinkSync(hooks, join(root, 'hooks'));
+      assert.equal(gate(hooks).status, 2);
+      const linked = gate(join(root, 'hooks'));
+      assert.equal(linked.status, 2);
+      assert.match(linked.stderr, /agent-review/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 

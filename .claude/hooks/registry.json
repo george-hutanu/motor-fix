@@ -18,7 +18,7 @@
         "strict"
       ],
       "description": "Re-anchor a new session: branch and feature state, the mode context for where the feature stands, earned instincts, and the check commands — inside a character budget",
-      "fingerprint": "2945fc12f49b"
+      "fingerprint": "efbe2a68fb12"
     },
     {
       "id": "session:start:watch-reminder",
@@ -30,7 +30,7 @@
         "strict"
       ],
       "description": "On the main checkout, when two or more worktrees hold live or in-flight work (watch.mjs --json, read-only, under a timeout), print one line telling the session to check CronList and schedule /speckit-watch; silent otherwise, and always exits 0",
-      "fingerprint": "18e5993ee5fa"
+      "fingerprint": "6ea6fcba2b8e"
     },
     {
       "id": "session:start:github-identity",
@@ -81,7 +81,7 @@
       ],
       "description": "Constitution VII: refuse `gh pr merge` (and the REST merge call) while the PR's head commit has no `agent-review` success from the PR tester",
       "fail_closed": true,
-      "fingerprint": "26a94414e99c"
+      "fingerprint": "e4ee21503165"
     },
     {
       "id": "pre:tool:agent-model",
@@ -93,7 +93,7 @@
         "strict"
       ],
       "description": "Route a reviewer subagent to sonnet or fable from the size of the diff it is about to read — mechanical at both extremes, jev in the middle band. Advisory: it rewrites the model or does nothing, and can never refuse a call",
-      "fingerprint": "0d19e2b12535"
+      "fingerprint": "be55fdf8dfa1"
     },
     {
       "id": "pre:edit:config-protection",
@@ -106,7 +106,7 @@
       ],
       "description": "Protect the ratchets: the mutation floor, the traceability baseline, the NNN-FR- tokens in tests, and (under strict) the harness itself",
       "fail_closed": true,
-      "fingerprint": "ff59d1b33d7c"
+      "fingerprint": "c828d0978eb7"
     },
     {
       "id": "pre:edit:red-first",
@@ -156,7 +156,7 @@
         "strict"
       ],
       "description": "Constitution VII: refuse to end a session on a task branch with unpushed commits, with no PR, with a green ready PR the PR tester has not passed (no `agent-review` on its head, unless it was handed off to a tail agent), or with a ready PR whose checks and agent review passed but that is not merged",
-      "fingerprint": "b4e8adb47bda"
+      "fingerprint": "2b1954d163a9"
     },
     {
       "id": "stop:telemetry",
