@@ -9,3 +9,4 @@
 - 2026-10-05 · ready · Foundations · −ST-582 (started; a start unblocks nothing, so no ticks; Query Data Source quota hit, epic-wide scan left for the finish)
 - 2026-10-05 · implement · ST-582 · Planning → Implementing; timeline row Build status → Implementing; PR #129 labels planning → in development
 - 2026-10-05 · qa · ST-582 · Implementing → QA; timeline row Build status → QA; PR #129 ready, label in development → QA
+- 2026-10-05 · debt · ST-582 · filed 2 pr-tester lap 1 findings as To do tasks: https://app.notion.com/p/3f0607bff0d281b687ccc5911bede8b1 (low, toaster fixRoles), https://app.notion.com/p/3f0607bff0d281dc909edde62e7b3fc1 (medium, QA sweep guarded route)
