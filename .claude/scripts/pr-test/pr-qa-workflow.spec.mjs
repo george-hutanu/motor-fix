@@ -25,6 +25,12 @@ function block(key, indent = 0, from = lines) {
   }
   return out;
 }
+/** The run-name as YAML reads it: an unquoted value ends where ` #` starts a comment. */
+function runName() {
+  const raw = lines.find((l) => l.startsWith('run-name:'))?.slice('run-name:'.length).trim() ?? '';
+  const quoted = /^(['"])(.*)\1$/.exec(raw);
+  return quoted ? quoted[2] : raw.replace(/\s#.*$/, '');
+}
 const keysAt = (body, indent) => body.filter((l) => new RegExp(`^ {${indent}}[A-Za-z_-]+:`).test(l)).map((l) => l.trim().split(':')[0]);
 const job = block('qa', 2, block('jobs'));
 const steps = block('steps', 4, job).join('\n');
@@ -41,7 +47,8 @@ describe('PR QA workflow: trigger', () => {
   });
 
   it('names the run after its nonce, so the dispatcher can find it', () => {
-    assert.match(code, /^run-name: .*\$\{\{ inputs\.nonce \}\}/m);
+    const title = runName();
+    for (const input of ['pr', 'sha', 'nonce']) assert.ok(title.includes(`\${{ inputs.${input} }}`), `the run's title "${title}" carries inputs.${input}`);
   });
 
   it('never cancels a run: each one is a lap an agent is waiting on', () => {

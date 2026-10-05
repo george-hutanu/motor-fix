@@ -61,7 +61,8 @@ node .claude/scripts/pr-test/dispatch.mjs <PR> --routes /,/cockpit[,<changed rou
 
 It dispatches `.github/workflows/pr-qa.yml` (`gh workflow run`) for the PR's
 head commit, with the flows file gzipped and base64-encoded as the `flows`
-input, finds the run by its nonce, waits for it (`gh run watch`) and downloads
+input, finds the run by the nonce in its title (the quoted `run-name` in
+`pr-qa.yml`), waits for it (`gh run watch`) and downloads
 the `pr-qa-<PR>` artifact into `--out`. On the runner the workflow checks out
 that exact SHA, starts PostgreSQL with PostGIS, Redis and MinIO with its
 bucket from the PR's own `docker-compose.yml`, and runs `run.mjs --tree`: install, migrate, build, boot api, web and
