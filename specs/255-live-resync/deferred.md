@@ -1,0 +1,4 @@
+# Deferred — 255-live-resync
+
+- A refused token renewal ends the session in memory (`Session.forget`), and the waiting queue treats that like a sign-out and drops the account's waiting actions. A live stream's 401 now asks for a renewal too, so a session that cannot be renewed loses actions made without signal before the person can sign in again. Nothing calls the queue yet; the first job-screen story that does should keep the actions through a refused renewal and drop them only at a real sign-out. (found by CI E2E, PR #103) — Notion: https://app.notion.com/p/3f0607bff0d2810188d0c76989d30409
+- The queue's send has no time limit: a request that never answers holds the line, and the 60 s retry, `online` and stream-open never send again. Bound each send (for example 30 s, then kept) when the first caller arrives. (PR tester, PR #103, waiting.ts send) — Notion: https://app.notion.com/p/3f0607bff0d2819e98b7d47e59b9c783

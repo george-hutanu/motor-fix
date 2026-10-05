@@ -20,9 +20,9 @@ export const STATUS_CONTEXT = "agent-review";
 const SECTION = "Agent review";
 
 /** `gh` as a function: { code, stdout, stderr }, never throws. */
-export function realGh(args, { input } = {}) {
+export function realGh(args, { input, cwd, timeout = 60000 } = {}) {
   try {
-    const stdout = execFileSync("gh", args, { encoding: "utf8", input, stdio: ["pipe", "pipe", "pipe"], timeout: 60000 });
+    const stdout = execFileSync("gh", args, { cwd, encoding: "utf8", input, stdio: ["pipe", "pipe", "pipe"], timeout });
     return { code: 0, stdout, stderr: "" };
   } catch (error) {
     return { code: error.status ?? 1, stdout: `${error.stdout ?? ""}`, stderr: `${error.stderr ?? error.message}` };
