@@ -4,8 +4,8 @@ import {
   Injectable,
   inject,
   PLATFORM_ID,
-  type ResourceRef,
-  resource,
+  type Signal,
+  signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type {
@@ -15,6 +15,7 @@ import type {
 } from '@motor-fix/contracts';
 import { debounceTime, filter, type Observable, Subject } from 'rxjs';
 
+import { reuse } from './live-in-place';
 import { Session } from './session';
 
 const RECONNECT_AFTER: readonly LiveByeReason[] = ['expired', 'shutdown'];
@@ -140,22 +141,85 @@ export class Live {
   }
 }
 
+export interface LiveResource<T> {
+  // The last data read; a re-read changes only its parts that changed.
+  readonly value: Signal<T | undefined>;
+  // Why the first read failed, while there is nothing to show.
+  readonly error: Signal<unknown>;
+  // The object is deleted or no longer the person's (the read answered 404).
+  readonly gone: Signal<boolean>;
+  readonly isLoading: Signal<boolean>;
+  reload(): void;
+}
+
+const RETRY_AFTER = 60_000;
+
 // A view's data, read through the API and read again when an event of these
 // kinds arrives about the object it shows; a burst of 300 ms is one re-read.
-// Call it in an injection context.
+// A background re-read that fails keeps the data and shows nothing; it reads
+// again on the next event or after 60 s. Call it in an injection context.
 export function liveResource<T>(
   load: () => Promise<T>,
   kinds: readonly EventKind[],
   id: () => string,
-): ResourceRef<T | undefined> {
-  const ref = resource({ loader: load });
+): LiveResource<T> {
+  const value = signal<T | undefined>(undefined);
+  const error = signal<unknown>(undefined);
+  const gone = signal(false);
+  const isLoading = signal(false);
+  const destroyRef = inject(DestroyRef);
+  let again = false;
+  let retry: ReturnType<typeof setTimeout> | undefined;
+
+  const failed = (failure: unknown) => {
+    if ((failure as { status?: unknown } | null)?.status === 404) {
+      gone.set(true);
+      return;
+    }
+    if (value() === undefined) error.set(failure);
+    retry = setTimeout(() => void read(), RETRY_AFTER);
+  };
+  const readOnce = async () => {
+    clearTimeout(retry);
+    isLoading.set(true);
+    try {
+      value.set(reuse(value(), await load()));
+      error.set(undefined);
+      gone.set(false);
+    } catch (failure) {
+      failed(failure);
+    } finally {
+      isLoading.set(false);
+    }
+  };
+  // One read at a time: events during a read make one more after it.
+  const read = async () => {
+    if (destroyRef.destroyed) return;
+    if (isLoading()) {
+      again = true;
+      return;
+    }
+    do {
+      again = false;
+      await readOnce();
+    } while (again && !destroyRef.destroyed);
+  };
+
   inject(Live)
     .on(kinds)
     .pipe(
       filter((m) => m.id === id()),
       debounceTime(300),
-      takeUntilDestroyed(inject(DestroyRef)),
+      takeUntilDestroyed(destroyRef),
     )
-    .subscribe(() => ref.reload());
-  return ref;
+    .subscribe(() => void read());
+  destroyRef.onDestroy(() => clearTimeout(retry));
+  void read();
+  return {
+    error: error.asReadonly(),
+    gone: gone.asReadonly(),
+    isLoading: isLoading.asReadonly(),
+    reload: () => void read(),
+    value: value.asReadonly(),
+  };
 }

@@ -1,10 +1,11 @@
-import { signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
 import { type MeDto, MeService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 import { Subject } from 'rxjs';
 
@@ -86,6 +87,20 @@ const settle = async (harness: RouterTestingHarness) => {
   await harness.fixture.whenStable();
   harness.detectChanges();
 };
+
+const testUpdate = (at: string): LiveMessage => ({
+  at,
+  id: 'e-2',
+  kind: 'live.test',
+});
+const statusLine = (element: HTMLElement) =>
+  [...element.querySelectorAll('[role="status"]')].find((e) =>
+    /test/.test(e.textContent ?? ''),
+  );
+
+// A small action with a field, open on the dashboard.
+@Component({ template: `<input aria-label="Notă" />` })
+class Note {}
 
 const OWNER = [
   'garage.requests',
@@ -439,41 +454,71 @@ describe('Frame', () => {
     ['receptionist', '/app/garage'],
     ['mechanic', '/app/garage'],
     ['admin', '/app/admin'],
-  ])('shows the test toast on a live test update for a %s', async (role, landing) => {
+  ])('changes the status line in place on a live test update, with no toast, for a %s', async (role, landing) => {
     (toast as unknown as jest.Mock).mockClear();
-    const { element } = await render(role, landing, []);
+    const { element, harness } = await render(role, landing, []);
 
     live.events.next({
       at: '2026-10-04T12:00:00.000Z',
       id: 'e-1',
       kind: 'hello',
     });
-    expect(toast).not.toHaveBeenCalled();
-    live.events.next({
-      at: '2026-10-04T12:00:00.000Z',
-      id: 'e-2',
-      kind: 'live.test',
-    });
+    await settle(harness);
+    expect(statusLine(element)).toBeUndefined();
+    live.events.next(testUpdate('2026-10-04T12:00:00.000Z'));
+    await settle(harness);
+    const line = statusLine(element);
+    expect(line?.textContent?.trim()).toBe(
+      'Actualizare de test în direct · 15:00',
+    );
 
-    expect(toast).toHaveBeenCalledTimes(1);
-    expect(toast).toHaveBeenCalledWith('Actualizare de test în direct');
-    expect(element.querySelector('hlm-toaster')).not.toBeNull();
+    live.events.next(testUpdate('2026-10-04T12:05:00.000Z'));
+    await settle(harness);
+
+    expect(statusLine(element)).toBe(line);
+    expect(line?.textContent?.trim()).toBe(
+      'Actualizare de test în direct · 15:05',
+    );
+    expect(toast).not.toHaveBeenCalled();
     TestBed.resetTestingModule();
   });
 
-  it('shows the test toast in English', async () => {
-    (toast as unknown as jest.Mock).mockClear();
-    const { harness } = await render('driver', '/app/driver', []);
+  it('shows the test update in English', async () => {
+    const { element, harness } = await render('driver', '/app/driver', []);
     await TestBed.inject(I18n).use('en');
     await settle(harness);
 
-    live.events.next({
-      at: '2026-10-04T12:00:00.000Z',
-      id: 'e-2',
-      kind: 'live.test',
-    });
+    live.events.next(testUpdate('2026-10-04T12:00:00.000Z'));
+    await settle(harness);
 
-    expect(toast).toHaveBeenCalledWith('Live test update');
+    expect(statusLine(element)?.textContent?.trim()).toBe(
+      'Live test update · 15:00',
+    );
+  });
+
+  it('leaves an open dialog, the text typed in it, the focus and the address as they were', async () => {
+    const { element, harness } = await render('driver', '/app/driver', []);
+    void TestBed.inject(Overlays).open(Note, {
+      shape: 'dialog',
+      title: 'shell.signOutEverywhere.title',
+    });
+    await settle(harness);
+    const note = () =>
+      document.querySelector<HTMLInputElement>('input[aria-label="Notă"]');
+    const input = note();
+    if (!input) throw new Error('the dialog did not open');
+    input.focus();
+    input.value = 'Zgomot la frânare';
+    input.dispatchEvent(new Event('input'));
+
+    live.events.next(testUpdate('2026-10-04T12:00:00.000Z'));
+    await settle(harness);
+
+    expect(statusLine(element)).toBeDefined();
+    expect(note()).toBe(input);
+    expect(input.value).toBe('Zgomot la frânare');
+    expect(document.activeElement).toBe(input);
+    expect(url()).toBe('/app/driver');
   });
 
   it('reads the account again when its e-mail is confirmed in another tab', async () => {

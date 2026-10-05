@@ -3,6 +3,7 @@ import {
   TextEncoder as NodeEncoder,
 } from 'node:util';
 
+import { HttpErrorResponse } from '@angular/common/http';
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
@@ -341,5 +342,149 @@ describe('liveResource', () => {
     await wait(400);
 
     expect(reads()).toBe(2);
+  });
+
+  async function viewOf<T>(load: () => Promise<T>, id = 'request-123') {
+    const { live } = setUp();
+    const ref = TestBed.runInInjectionContext(() =>
+      liveResource(load, ['quote.sent'], () => id),
+    );
+    live.open();
+    await flush();
+    await wait(10);
+    const send = async () => {
+      bodies[0]?.send(event('quote.sent', { id }));
+      await wait(400);
+    };
+    return { ref, send };
+  }
+
+  it('keeps every unchanged row as it was and replaces only the one that changed', async () => {
+    let rows = [
+      { id: 'a', price: 100 },
+      { id: 'b', price: 200 },
+    ];
+    const { ref, send } = await viewOf(
+      async () => JSON.parse(JSON.stringify(rows)) as typeof rows,
+    );
+    const [a, b] = ref.value() ?? [];
+
+    rows = [
+      { id: 'a', price: 100 },
+      { id: 'b', price: 250 },
+    ];
+    await send();
+
+    expect(ref.value()?.[0]).toBe(a);
+    expect(ref.value()?.[1]).not.toBe(b);
+    expect(ref.value()?.[1]).toEqual({ id: 'b', price: 250 });
+  });
+
+  it('keeps the very same value when a re-read brings nothing new', async () => {
+    const { ref, send } = await viewOf(async () => ({ id: 'r', price: 1 }));
+    const before = ref.value();
+
+    await send();
+
+    expect(ref.value()).toBe(before);
+  });
+
+  it('keeps the data on screen and shows no error when a re-read fails, and reads again on the next event', async () => {
+    let fail = false;
+    let reads = 0;
+    const { ref, send } = await viewOf(async () => {
+      reads++;
+      if (fail) throw new HttpErrorResponse({ status: 503 });
+      return { reads };
+    });
+
+    fail = true;
+    await send();
+    expect(reads).toBe(2);
+    expect(ref.value()).toEqual({ reads: 1 });
+    expect(ref.error()).toBeUndefined();
+    expect(ref.gone()).toBe(false);
+
+    fail = false;
+    await send();
+    expect(ref.value()).toEqual({ reads: 3 });
+  });
+
+  it('reads again 60 seconds after a failed re-read', async () => {
+    jest.useFakeTimers({ advanceTimers: true });
+    try {
+      let fail = false;
+      let reads = 0;
+      const { ref, send } = await viewOf(async () => {
+        reads++;
+        if (fail) throw new HttpErrorResponse({ status: 0 });
+        return { reads };
+      });
+      fail = true;
+      await send();
+      fail = false;
+      expect(reads).toBe(2);
+
+      jest.advanceTimersByTime(59_000);
+      await flush();
+      expect(reads).toBe(2);
+      jest.advanceTimersByTime(1_000);
+      await flush();
+
+      expect(reads).toBe(3);
+      expect(ref.value()).toEqual({ reads: 3 });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('marks the object gone when its re-read answers 404, and keeps what was shown', async () => {
+    let gone = false;
+    const { ref, send } = await viewOf(async () => {
+      if (gone) throw new HttpErrorResponse({ status: 404 });
+      return { id: 'quote-1' };
+    });
+    expect(ref.gone()).toBe(false);
+
+    gone = true;
+    await send();
+
+    expect(ref.gone()).toBe(true);
+    expect(ref.value()).toEqual({ id: 'quote-1' });
+  });
+
+  it('gives the error of a first read that fails, with nothing to show', async () => {
+    const failure = new HttpErrorResponse({ status: 500 });
+    const { ref } = await viewOf(async () => {
+      throw failure;
+    });
+
+    expect(ref.value()).toBeUndefined();
+    expect(ref.error()).toBe(failure);
+  });
+
+  it('reads once more after a read still running, however many events came meanwhile', async () => {
+    let reads = 0;
+    let finish: (() => void) | undefined;
+    const { ref, send } = await viewOf(async () => {
+      reads++;
+      if (reads === 2) {
+        await new Promise<void>((r) => {
+          finish = r;
+        });
+      }
+      return { reads };
+    });
+
+    await send();
+    expect(ref.isLoading()).toBe(true);
+    await send();
+    await send();
+    finish?.();
+    await wait(10);
+
+    expect(reads).toBe(3);
+    expect(ref.value()).toEqual({ reads: 3 });
+    expect(ref.isLoading()).toBe(false);
   });
 });

@@ -74,6 +74,45 @@ test.describe('the live connection @seeded', () => {
     await garageContext.close();
   });
 
+  test('a test update changes the dashboard in place while an open dialog keeps the focus', async ({
+    browser,
+    request,
+  }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await openDashboard(page, ACCOUNTS.driver, '/app/driver');
+    let reloads = 0;
+    page.on('framenavigated', (frame) => {
+      if (frame === page.mainFrame()) reloads++;
+    });
+    await page
+      .getByRole('button', { name: 'Ieși de pe toate dispozitivele' })
+      .click();
+    const dialog = page.getByRole('dialog', {
+      name: 'Ieși de pe toate dispozitivele?',
+    });
+    await expect(dialog).toBeVisible();
+    const cancel = dialog.getByRole('button', { name: 'Renunță' });
+    await cancel.focus();
+    const admin = await accessToken(request, ACCOUNTS.admin);
+
+    const sent = await request.post('/api/v1/admin/live/test', {
+      data: { accountId: await accountId(request, ACCOUNTS.driver) },
+      headers: { Authorization: `Bearer ${admin}` },
+    });
+    expect(sent.status()).toBe(202);
+
+    await expect(
+      page
+        .getByRole('status')
+        .filter({ hasText: 'Actualizare de test în direct' }),
+    ).toBeVisible({ timeout: 2_000 });
+    await expect(dialog).toBeVisible();
+    await expect(cancel).toBeFocused();
+    expect(reloads).toBe(0);
+    await context.close();
+  });
+
   test("a test update sent to one driver never shows on another driver's dashboard", async ({
     browser,
     request,
