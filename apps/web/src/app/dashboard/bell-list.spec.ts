@@ -196,12 +196,6 @@ describe('BellList', () => {
     expect(element.querySelectorAll('li')).toHaveLength(2);
     expect(button(element, 'Mai multe')).toBeUndefined();
   });
-});
-
-describe('ago', () => {
-  const now = new Date('2026-10-05T12:00:00.000Z');
-  const at = (minutes: number) =>
-    new Date(now.getTime() - minutes * 60_000).toISOString();
 
   it('closes when its bell leaves the screen, as on a sign-out', async () => {
     const { store } = await render(async () => ({
@@ -215,6 +209,12 @@ describe('ago', () => {
 
     expect(panel()).toBeNull();
   });
+});
+
+describe('ago', () => {
+  const now = new Date('2026-10-05T12:00:00.000Z');
+  const at = (minutes: number) =>
+    new Date(now.getTime() - minutes * 60_000).toISOString();
 
   it('formats times relative up to a day, then as a date', async () => {
     const i18n = TestBed.inject(I18n);
