@@ -8,3 +8,5 @@
 - 2026-10-05 · labels · PR #107 · planning
 - 2026-10-05 · implement · ST-568 · Planning → Implementing
 - 2026-10-05 · labels · PR #107 · in development
+- 2026-10-05 · qa · ST-568 · Implementing → QA
+- 2026-10-05 · labels · PR #107 · QA

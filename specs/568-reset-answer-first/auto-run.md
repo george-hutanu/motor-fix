@@ -48,3 +48,8 @@ Worktree: .worktrees/568-reset-answer-first
 - MEDIUM decision: the scanner exempted every `this.<field>.<write>`. Chose exempt-by-argument-shape: a field call with Prisma's arguments object still counts as a write. Self-check added (red, then green).
 - LOW decision: `drain()` took one snapshot, and Nest answers requests until after the shutdown hooks. Chose a bounded re-drain (up to 3 rounds), not a deferral. Test "waits, on shutdown, for a link asked for while it was waiting": red (Expected false, Received true), then green. The hold helper now binds the unspied method so two holds do not recurse.
 - Reset and audit suites: 93 passed, twice. Repair laps: 1 of 5.
+- Whole workspace (`npm run typecheck && npm run lint && npm run test` under heavy.sh): typecheck 13 projects, test 11 projects, green.
+
+## Hand-off
+- Merged origin/main (62 behind, no conflicts; rules unchanged, constitution v1.8.1). `audit-coverage.spec.ts` changed on main too (BellService exemptions): 24 passed after the merge.
+- PR body filled (pr-body-check passes), `gh pr ready 107`, Notion Implementing → QA, label QA.
