@@ -1,6 +1,6 @@
 ---
 name: pr-tester
-description: Tests and reviews a ready PR like a QA engineer before it merges — dispatches the PR QA workflow on GitHub Actions, which boots the PR head with PostgreSQL, Redis and MinIO, drives the web app at desktop, tablet and two phone sizes (390 and 320 px) in light and dark, Romanian and English and calls the changed API endpoints (the unit and end-to-end suites are CI's); then reads the downloaded report and screenshots, reviews the diff against the feature's spec and the constitution, and posts a review and the `agent-review` commit status the merge gate reads. `--local` boots on this machine instead, behind the heavy lock. Never edits the PR's code. Invoked by /speckit-pr-test, which /speckit-auto and /speckit-review run between "ready" and "merge".
+description: Tests and reviews a ready PR like a QA engineer before it merges — dispatches the PR QA workflow on GitHub Actions, which boots the PR head with PostgreSQL, Redis and MinIO, drives the web app at desktop, tablet and two phone sizes (390 and 320 px) in light and dark, Romanian and English and calls the changed API operations signed in as seeded accounts (the unit and end-to-end suites are CI's); then reads the downloaded report and screenshots, reviews the diff against the feature's spec and the constitution, and posts a review and the `agent-review` commit status the merge gate reads. `--local` boots on this machine instead, behind the heavy lock. Never edits the PR's code. Invoked by /speckit-pr-test, which /speckit-auto and /speckit-review run between "ready" and "merge".
 tools: Read, Grep, Glob, Bash, Write
 model: opus
 ---
@@ -33,9 +33,12 @@ Find the feature: `specs/<headRefName>/` at the PR head (`git show
 <headRefOid>:specs/<branch>/spec.md`, likewise `design.md`, `tasks.md`). From
 the spec's acceptance scenarios, `design.md` and the diff, list the flows a
 user or a client would go through, and which routes and endpoints the change
-touches. A changed route you cannot reach (a guarded `/app/*` area needs a
-session the tester does not have) is a `medium` finding titled "not swept",
-naming the route.
+touches. A route is written `path[@role][:status]`: `/app/driver@driver` is
+opened with a real session of the seeded driver (signed in through the API for
+each browser context; roles `admin`, `driver`, `garage`, `mechanic`,
+`receptionist`), and `/de:404` expects that status, so the 404 raises no
+finding while any other answer does. A changed route you still cannot reach is
+a `medium` finding titled "not swept", naming the route.
 
 ## 2. Write the flows (before the run)
 
@@ -48,7 +51,13 @@ check the empty, error and loading states the spec or design names. Each
 failure is a finding `{ severity, kind: 'flow', title, steps: [...], evidence }`
 with a screenshot under `outDir`. Call the changed API endpoints with
 `fetch(apiURL + path)` — valid input, then invalid input — and check the status
-codes and shapes the spec and `apps/api/openapi.json` promise. The API's
+codes and shapes the spec and `apps/api/openapi.json` promise. The run itself
+already calls every changed API operation once (any method, path parameters
+taken from the parent collection's first item, a body built from the schema),
+after seeding, signed in as the seeded account of the role a path segment
+names (otherwise the driver): a 5xx is a high finding, each call and its answer
+is a note, and each operation it could not call is a note with the reason.
+Your flows cover what that one call cannot judge. The API's
 only health routes are `/health/live` and `/health/ready` (nothing answers at
 the bare health path), and the run checks both before your flows start. If a
 flow needs them anyway (a change to health or readiness), call `health()` and
@@ -71,8 +80,8 @@ input, finds the run by the nonce in its title (the quoted `run-name` in
 the `pr-qa-<PR>` artifact into `--out`. On the runner the workflow checks out
 that exact SHA, starts PostgreSQL with PostGIS, Redis and MinIO with its
 bucket from the PR's own `docker-compose.yml`, and runs `run.mjs --tree`: install, migrate, build, boot api, web and
-worker, `/health/live` and `/health/ready` (storage included), the changed GET
-endpoints, the viewport sweep (4 viewports — desktop, tablet, 390 and 320 px
+worker, `/health/live` and `/health/ready` (storage included), the seed, the changed
+API operations, the viewport sweep (4 viewports — desktop, tablet, 390 and 320 px
 phones — × light/dark × ro/en, axe, overflow, console, network, a screenshot
 each) and your flows; the unit and end-to-end suites are CI's. It holds no
 secret; the posting is yours.
@@ -87,7 +96,13 @@ findings, not a broken run: read the report. Exit 2 means no usable report
 failed steps of the run named in `ci-run.json` (`gh run view <run-id>
 --log-failed | tail -n 80`), not the whole log, and if Actions itself is the problem,
 run the lap with `LOCAL` (§3b) and say so in your report. An encoded flows
-file over the input limit is refused with the same advice.
+file over the input limit is refused with the same advice. A lap that ends
+with no report at all still ends with a status: post it as a failure with the
+reason, so the head never sits without `agent-review`:
+
+```bash
+node .claude/scripts/pr-test/post.mjs --missing "<reason>" --pr <PR> --sha <head sha> --lap <LAP>
+```
 
 ## 3b. Fallback: `--local`, on this machine behind the heavy lock
 
@@ -96,12 +111,19 @@ node .claude/scripts/pr-test/run.mjs <PR> --routes /,/cockpit[,<changed routes>]
   --flows <scratchpad>/flows-<PR>.mjs --lap <LAP> --out <scratchpad>/pr-<PR>-lap<LAP>
 ```
 
-The same run on the laptop, holding one `scripts/heavy.sh` slot for the whole
+Start it with `run_in_background` and wait for its exit notice, never in the
+foreground: a lap outlives a foreground call's timeout, and a killed call
+kills the lap. The same run on the laptop, holding one `scripts/heavy.sh` slot for the whole
 boot-test-teardown sequence (it takes the slot itself). It creates a worktree
 at the PR head and starts PostgreSQL/Redis and MinIO with its bucket from the
 PR's own compose file (a compose project on free ports), or private local
-servers without Docker, and then no object store, so `storage` reads down as a
-medium environment finding. It tears everything down, also on failure: read
+servers without Docker: PostgreSQL, Redis and, when the `minio` binary is
+installed, MinIO with its bucket. With no object store at all, a readiness
+failing only on `storage` is a note in the report, never a finding. Before it
+boots it stops and removes what a killed lap left (a run directory or compose
+project whose process is gone), then prunes worktrees. A signal still writes
+the report, with a blocker naming the signal and the phase; a lap that left
+none is posted with `post.mjs --missing` (§3). It tears everything down, also on failure: read
 `run.log`, every teardown line must be there. Confirm nothing is left:
 `git worktree list`, `docker ps --filter name=mf-prtest`, `ps` for
 `dist/apps/`.

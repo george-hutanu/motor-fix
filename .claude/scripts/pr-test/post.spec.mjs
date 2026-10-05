@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { postVerdict, replaceSection } from './post.mjs';
+import { missingReport, postVerdict, replaceSection } from './post.mjs';
 
 const OWN = 'gh: Unprocessable Entity (HTTP 422)\nCan not request changes on your own pull request';
 
@@ -116,5 +116,31 @@ describe('adding the agent\'s own findings', () => {
     assert.match(next.summary, /1 blocking/);
     assert.match(next.markdown, /A required behaviour is not implemented/);
     assert.equal(next.findings.length, 2);
+  });
+});
+
+describe('a lap that left no report', () => {
+  const missing = { pr: 21, repo: 'george-hutanu/motor-fix', sha: 'abc1234def', lap: 2, reason: 'killed by SIGKILL during the sweep' };
+
+  it('is a failure whose summary and finding carry the reason', () => {
+    const r = missingReport(missing);
+    assert.equal(r.verdict, 'failure');
+    assert.match(r.summary, /SIGKILL during the sweep/);
+    assert.equal(r.findings.length, 1);
+    assert.equal(r.findings[0].severity, 'blocker');
+    assert.match(r.findings[0].title, /no report/i);
+    assert.match(r.markdown, /SIGKILL during the sweep/);
+    assert.equal(r.sha, 'abc1234def');
+  });
+
+  it('sets agent-review to failure on the head when posted', () => {
+    const r = missingReport(missing);
+    const a = fakeGh();
+    postVerdict({ pr: r.pr, repo: r.repo, sha: r.sha, verdict: r.verdict, summary: r.summary, body: r.markdown, lap: r.lap, gh: a.gh });
+    const status = a.calls.find((c) => c.args.some((x) => /statuses\/abc1234def$/.test(x)));
+    assert.ok(status, 'a status was set on the head');
+    assert.ok(status.args.includes('state=failure'));
+    assert.ok(status.args.includes('context=agent-review'));
+    assert.ok(status.args.some((x) => /^description=.*SIGKILL/.test(x)));
   });
 });

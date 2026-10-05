@@ -3,9 +3,11 @@
 // slot: a worktree at the PR head, private services and apps on free ports,
 // health, the API calls, the viewport sweep, the agent's flows, a report — and teardown of everything it
 // started, on success, on failure, and on SIGINT, SIGTERM or SIGHUP to this
-// process (passed through heavy.sh to the inner run). SIGKILL cannot be
-// caught: after one, `git worktree prune` and the run directory under the
-// temp dir are what is left to clean.
+// process (passed through heavy.sh to the inner run). A signal first writes
+// the report, with a finding that names the signal and the phase, so the lap
+// still ends with a verdict. SIGKILL cannot be caught: the next local lap
+// removes what such a run left (cleanStale), and `post.mjs --missing` posts
+// the failure the lap could not.
 //
 // --allow-closed sweeps a merged or closed PR (dry runs looking back);
 // --langs and --schemes narrow the matrix for a quick lap. The pr-tester
@@ -35,8 +37,22 @@ import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { appsFor, changedGetEndpoints, endpointFinding, reportMarkdown, stepFinding, testFinding, touchesWeb, verdict } from "./findings.mjs";
-import { EXTERNAL_PORTS, HEALTH, apiHealth, appEnv, composePlan, externalPlan, freePorts, localPlan, waitForHttp } from "./services.mjs";
+import { callEndpoints, changedEndpoints, SEEDED, seedPassword, signIn } from "./endpoints.mjs";
+import { appsFor, cutOffFinding, readinessOutcome, reportMarkdown, stepFinding, testFinding, touchesWeb, verdict } from "./findings.mjs";
+import {
+  EXTERNAL_PORTS,
+  HEALTH,
+  apiHealth,
+  appEnv,
+  cleanStale,
+  composePlan,
+  createBucket,
+  externalPlan,
+  freePorts,
+  localPlan,
+  runDirPrefix,
+  waitForHttp,
+} from "./services.mjs";
 import { VIEWPORTS, runSweep, toFindings } from "./sweep.mjs";
 import { createWorktree, depsToClone, removeWorktree } from "./worktree.mjs";
 
@@ -62,6 +78,9 @@ export function parseArgs(argv) {
     sha: flag("sha"),
   };
 }
+
+/** The affected unit tests between the base and the head, never answered from the Nx cache. */
+export const testsCommand = ({ base, sha }) => ["nx", "affected", "-t", "test", `--base=${base}`, `--head=${sha}`, "--parallel=1", "--skip-nx-cache"];
 
 const sh = (cmd, list, opts = {}) => execFileSync(cmd, list, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], ...opts }).trim();
 const has = (cmd, list) => spawnSync(cmd, list, { stdio: "ignore" }).status === 0;
@@ -100,7 +119,6 @@ async function main(argv) {
   const logs = join(out, "logs");
   mkdirSync(shots, { recursive: true });
   mkdirSync(logs, { recursive: true });
-  const runDir = mkdtempSync(join(tmpdir(), `mf-prtest-${opt.pr}-`));
   const findings = [];
   const notes = [];
   const booted = [];
@@ -109,6 +127,15 @@ async function main(argv) {
     console.error(`run: ${line}`);
     writeFileSync(join(out, "run.log"), `${new Date().toISOString()} ${line}\n`, { flag: "a" });
   };
+  if (!opt.tree) {
+    const run = (cmd, list) => {
+      const r = spawnSync(cmd, list, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 120000 });
+      return { code: r.status ?? 1, stdout: r.stdout ?? "" };
+    };
+    for (const line of cleanStale({ tmp: tmpdir(), repo: repoRoot, run })) log(`stale: ${line}`);
+  }
+  const runDir = mkdtempSync(join(tmpdir(), runDirPrefix(opt.pr)));
+  let phase = "setup";
 
   let tornDown = false;
   const tearDown = () => {
@@ -125,13 +152,20 @@ async function main(argv) {
   };
   for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"])
     process.on(signal, () => {
-      log(`${signal}: tearing down`);
+      log(`${signal} during ${phase}: writing the report, then tearing down`);
+      findings.push(cutOffFinding(signal, phase));
+      try {
+        finish();
+      } catch (error) {
+        log(`report FAILED: ${error.message}`);
+      }
       tearDown();
       process.exit(130);
     });
 
   /** Run a step to a log file; a non-zero exit is a blocking finding and stops the run. */
   const step = (name, cmd, list, opts = {}) => {
+    phase = name;
     log(`${name}: ${cmd} ${list.join(" ")}`);
     const file = join(logs, `${name.replace(/\W+/g, "-")}.log`);
     const fd = openSync(file, "w");
@@ -172,8 +206,8 @@ async function main(argv) {
     const apps = { ...appsFor(files), ...(opt.tree ? { worker: true } : {}) };
     log(`${files.length} changed files; web code ${web ? "touched" : "untouched"}; worker ${apps.worker ? "booted" : "not needed"}`);
 
-    const [pgPort, redisPort, minioPort, apiPort, webPort, workerPort] = await freePorts(6);
-    const ports = opt.tree ? EXTERNAL_PORTS : { postgres: pgPort, redis: redisPort, minio: minioPort };
+    const [pgPort, redisPort, minioPort, minioConsole, apiPort, webPort, workerPort] = await freePorts(7);
+    const ports = opt.tree ? EXTERNAL_PORTS : { postgres: pgPort, redis: redisPort, minio: minioPort, minioConsole };
     const env = { ...process.env, ...appEnv({ ports }), NX_DAEMON: "false" };
     const project = `mf-prtest-${opt.pr}-${process.pid}`;
     let plan;
@@ -189,13 +223,41 @@ async function main(argv) {
       if (!mustPass("services", step("services", "docker", plan.up, composeEnv))) return finish();
       if (!mustPass("bucket setup", step("bucket-setup", "docker", plan.setup, composeEnv))) return finish();
     } else {
-      plan = localPlan({ dir: runDir, ports });
-      notes.push("No Docker on this machine: private PostgreSQL and Redis on free ports, no object store.");
+      plan = localPlan({ dir: runDir, ports, minio: has("minio", ["--version"]) });
+      notes.push(
+        plan.storage
+          ? "No Docker on this machine: private PostgreSQL, Redis and MinIO (its binary) on free ports."
+          : "No Docker on this machine: private PostgreSQL and Redis on free ports, and no object store (no minio binary; `brew install minio` adds one).",
+      );
       // PostgreSQL refuses to start under a locale the C library cannot load.
       const cEnv = { ...process.env, LC_ALL: "C", LANG: "C" };
       teardown.push({ name: "stop private PostgreSQL and Redis", run: () => plan.stop.forEach(([c, ...l]) => spawnSync(c, l, { stdio: "ignore", env: cEnv })) });
       for (const [i, [cmd, ...list]] of plan.start.entries())
         if (!mustPass(`services-${i + 1}`, step(`services-${i + 1}`, cmd, list, { env: cEnv }))) return finish();
+      if (plan.minio) {
+        phase = "minio";
+        const fd = openSync(join(logs, "minio.out.log"), "w");
+        const [cmd, ...list] = plan.minio.cmd;
+        const child = spawn(cmd, list, { env: { ...process.env, ...plan.minio.env }, stdio: ["ignore", fd, fd], detached: true });
+        closeSync(fd);
+        writeFileSync(plan.minio.pidFile, String(child.pid));
+        teardown.push({
+          name: `stop MinIO (pid ${child.pid})`,
+          run: () => {
+            try {
+              process.kill(-child.pid, "SIGTERM");
+            } catch {}
+          },
+        });
+        const h = await waitForHttp(plan.minio.health, { timeoutMs: 30000, intervalMs: 250 });
+        log(`health minio: ${h.ok ? `HTTP ${h.status}` : h.error}`);
+        if (!h.ok) findings.push(stepFinding("MinIO did not come up", `${h.error}; see ${join(logs, "minio.out.log")}`));
+        else
+          await createBucket({ repoRoot, env })
+            .then(() => log(`bucket ${env.STORAGE_BUCKET} ready`))
+            .catch((error) => findings.push(stepFinding("Bucket setup failed", String(error.message).split("\n")[0])));
+        if (findings.length) return finish();
+      }
     }
     booted.push("postgres", "redis", ...(plan.storage ? ["minio"] : []));
 
@@ -207,6 +269,10 @@ async function main(argv) {
     if (!mustPass("install", install)) return finish();
     if (!mustPass("prisma generate", step("prisma-generate", "npx", ["prisma", "generate", "--config", "libs/domain/prisma.config.ts"], { cwd: wt.dir, env }))) return finish();
     if (!mustPass("migrate", step("migrate", "npx", ["prisma", "migrate", "deploy", "--config", "libs/domain/prisma.config.ts"], { cwd: wt.dir, env }))) return finish();
+    // The seeded accounts sign the endpoint calls and the signed-in routes in (CI's E2E job seeds the same way).
+    const seeded = existsSync(join(wt.dir, "libs/domain/src/seed.ts"));
+    if (seeded && !mustPass("seed", step("seed", "npx", ["prisma", "db", "seed"], { cwd: join(wt.dir, "libs/domain"), env }))) return finish();
+    if (!seeded) notes.push("No seed in this PR (libs/domain/src/seed.ts): nothing can sign in.");
     const projects = ["api", "web", ...(apps.worker ? ["worker"] : [])];
     if (!mustPass("build", step("build", "npx", ["nx", "run-many", "-t", "build", "-p", projects.join(","), "--parallel=1"], { cwd: wt.dir, env }))) return finish();
 
@@ -246,14 +312,9 @@ async function main(argv) {
       const res = await fetch(origin + HEALTH.ready).catch((e) => ({ status: 0, text: async () => e.message }));
       const body = await res.text();
       log(`ready ${name}: ${res.status} ${body.slice(0, 200)}`);
-      if (res.status === 200) continue;
-      let failed = [];
-      try {
-        failed = Object.entries(JSON.parse(body).checks ?? {}).filter(([, v]) => v !== "ok").map(([k]) => k);
-      } catch {}
-      if (!plan.storage && failed.length === 1 && failed[0] === "storage")
-        findings.push(stepFinding(`${name} readiness: storage down`, "No object store on this machine (no Docker); every other check is ok. Environment limit, not the change.", "medium"));
-      else findings.push(stepFinding(`${name} readiness failed: ${failed.join(", ") || res.status}`, `GET ${origin}${HEALTH.ready} answered ${res.status}: ${body.slice(0, 300)}`));
+      const outcome = readinessOutcome({ name, status: res.status, body, storage: plan.storage, url: origin + HEALTH.ready });
+      if (outcome.note) notes.push(outcome.note);
+      if (outcome.finding) findings.push(outcome.finding);
     }
 
     let baseDoc = null;
@@ -261,17 +322,23 @@ async function main(argv) {
       baseDoc = JSON.parse(sh("git", ["show", `${base}:apps/api/openapi.json`], { cwd: root }));
     } catch {}
     const headFile = join(wt.dir, "apps/api/openapi.json");
-    const endpoints = existsSync(headFile) ? changedGetEndpoints(baseDoc, JSON.parse(readFileSync(headFile, "utf8"))) : [];
-    for (const path of endpoints) {
-      const res = await fetch(`${apiURL}${path}`).catch(() => ({ status: 599, text: async () => "no answer" }));
-      const f = endpointFinding({ method: "GET", path, status: res.status, body: await res.text() });
-      log(`GET ${path}: ${res.status}`);
-      if (f) findings.push(f);
-    }
-    notes.push(endpoints.length ? `Called changed endpoints: ${endpoints.join(", ")}.` : "No changed GET endpoint without path parameters.");
+    const headDoc = existsSync(headFile) ? JSON.parse(readFileSync(headFile, "utf8")) : null;
+    const endpoints = changedEndpoints(baseDoc, headDoc);
+    phase = "endpoint calls";
+    const calls = await callEndpoints({ apiURL, endpoints, doc: headDoc });
+    for (const line of [...calls.called, ...calls.skipped]) log(`endpoint ${line}`);
+    findings.push(...calls.findings);
+    if (calls.called.length) notes.push(`Called the changed operations: ${calls.called.join("; ")}.`);
+    if (calls.skipped.length) notes.push(`Not called: ${calls.skipped.join("; ")}.`);
+    if (!endpoints.length) notes.push("No API operation changed.");
 
+    phase = "sweep";
     log(`sweep: ${opt.routes.join(", ")} × ${Object.keys(VIEWPORTS).length} viewports × ${opt.schemes.join("/")} × ${opt.langs.join("/")}`);
-    const sweep = await runSweep({ baseURL: webURL, routes: opt.routes, outDir: shots, schemes: opt.schemes, langs: opt.langs, repoRoot: root });
+    const session = async (role) => {
+      if (!SEEDED[role]) throw new Error(`no seeded account for the role ${role}`);
+      return (await signIn(apiURL, role, seedPassword())).refresh;
+    };
+    const sweep = await runSweep({ baseURL: webURL, routes: opt.routes, outDir: shots, schemes: opt.schemes, langs: opt.langs, repoRoot: root, session });
     // Evidence relative to the report: shots/ stays in --out, beside it; only the report is copied into specs/.
     for (const f of toFindings(sweep.observations, { web, origins: [webURL, apiURL] }))
       findings.push(f.evidence ? { ...f, evidence: relative(out, f.evidence) } : f);
@@ -279,6 +346,7 @@ async function main(argv) {
     const screenshots = sweep.screenshots;
 
     if (opt.flows) {
+      phase = "flows";
       const flow = await import(pathToFileURL(resolve(opt.flows)).href);
       try {
         const extra = (await flow.default({ baseURL: webURL, apiURL, outDir: shots, repoRoot: root, worktree: wt.dir, ...apiHealth(apiURL) })) ?? [];
@@ -290,8 +358,8 @@ async function main(argv) {
     }
 
     if (opt.tests) {
-      const unit = step("affected-tests", "npx", ["nx", "affected", "-t", "test", `--base=${base}`, `--head=${sha}`, "--parallel=1"], { cwd: wt.dir, env });
-      const f1 = testFinding({ name: "Affected unit tests", command: `npx nx affected -t test --base=${base.slice(0, 7)} --head=${sha.slice(0, 7)}`, code: unit.code, tail: unit.tail });
+      const unit = step("affected-tests", "npx", testsCommand({ base, sha }), { cwd: wt.dir, env });
+      const f1 = testFinding({ name: "Affected unit tests", command: `npx ${testsCommand({ base: base.slice(0, 7), sha: sha.slice(0, 7) }).join(" ")}`, code: unit.code, tail: unit.tail });
       if (f1) findings.push(f1);
       if (existsSync(join(wt.dir, "apps/web-e2e/playwright.config.mts"))) {
         const e2e = step("e2e", "npx", ["playwright", "test", "-c", "apps/web-e2e/playwright.config.mts", "--workers=1", "--reporter=line"], { cwd: wt.dir, env: { ...env, BASE_URL: webURL } });

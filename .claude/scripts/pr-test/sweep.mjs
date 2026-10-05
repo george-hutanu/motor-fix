@@ -4,6 +4,10 @@
 // responses, axe violations and horizontal overflow, and a screenshot of each
 // combination. Playwright and axe-core come from this checkout, not the PR's,
 // so a PR from before either existed can still be swept.
+//
+// A route is `path[@role][:status]`: `/de:404` must answer 404, and that 404
+// is no finding; `/app/driver@driver` is opened with a real session of the
+// seeded driver, signed in afresh for each browser context.
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
@@ -24,15 +28,54 @@ const LANG_KEY = "mf.lang";
 
 const slug = (route) => route.replace(/^\/+|\/+$/g, "").replace(/[^a-z0-9]+/gi, "-") || "home";
 
-export function matrix({ routes, schemes = ["light", "dark"], langs = ["ro", "en"] }) {
-  return routes.flatMap((route) =>
-    Object.keys(VIEWPORTS).flatMap((viewport) =>
-      schemes.flatMap((scheme) =>
-        langs.map((lang) => ({ route, viewport, scheme, lang, shot: `${slug(route)}-${viewport}-${scheme}-${lang}.png` })),
-      ),
-    ),
-  );
+export function parseRoute(spec) {
+  const [, path, role, status] = /^([^@:]*)(?:@([a-z]+))?(?::(\d{3}))?$/.exec(spec) ?? [null, spec];
+  return { path: path || "/", role: role ?? null, expect: status ? Number(status) : null };
 }
+
+export function matrix({ routes, schemes = ["light", "dark"], langs = ["ro", "en"] }) {
+  return routes.flatMap((route) => {
+    const { path, role, expect } = parseRoute(route);
+    const name = `${slug(path)}${role ? `-as-${role}` : ""}${expect ? `-${expect}` : ""}`;
+    return Object.keys(VIEWPORTS).flatMap((viewport) =>
+      schemes.flatMap((scheme) => langs.map((lang) => ({ route, path, role, expect, viewport, scheme, lang, shot: `${name}-${viewport}-${scheme}-${lang}.png` }))),
+    );
+  });
+}
+
+/** What is wrong with a page's own answer, or null: any error status, unless the route expects exactly that one. */
+export function loadProblem(status, expect) {
+  if (status == null) return "HTTP no response";
+  if (expect) return status === expect ? null : `HTTP ${status}, expected ${expect}`;
+  return status >= 400 ? `HTTP ${status}` : null;
+}
+
+const pathOf = (url) => {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return null;
+  }
+};
+
+/** Without the error response, and the console line it logs, that a route's expected status causes. */
+export const dropExpected = (observations) =>
+  observations.filter(
+    (o) =>
+      !o.expect ||
+      !((o.kind === "http" && o.status === o.expect && pathOf(o.url) === o.path) || (o.kind === "console" && String(o.text).includes(`status of ${o.expect}`))),
+  );
+
+/** The refresh cookie the API sets at sign-in, for the web origin, which forwards /api/ to the API. */
+export const sessionCookie = ({ refresh, baseURL }) => ({
+  name: "mf_refresh",
+  value: refresh,
+  domain: new URL(baseURL).hostname,
+  path: "/api/v1/auth",
+  httpOnly: true,
+  secure: false,
+  sameSite: "Strict",
+});
 
 const keyOf = (o) => `${o.kind}|${o.route}|${o.rule ?? o.text ?? ""}|${o.kind === "http" ? `${o.url}|${o.status}` : (o.url ?? "")}`;
 
@@ -56,8 +99,12 @@ export function toFindings(observations, { web, origins }) {
   return merged.map(({ key, ...f }) => f);
 }
 
-/** Drive the running web app through the matrix; returns observations and screenshot paths. */
-export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRoot }) {
+/**
+ * Drive the running web app through the matrix; returns observations and
+ * screenshot paths. `session(role)` signs a seeded account of that role in
+ * and returns its refresh token, for routes marked `@role`.
+ */
+export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRoot, session }) {
   const require = createRequire(join(repoRoot, "package.json"));
   const { chromium } = require("@playwright/test");
   const axeSource = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
@@ -94,8 +141,13 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
       });
       page.on("response", (r) => r.status() >= 400 && seen({ kind: "http", url: r.url(), status: r.status() }));
       try {
-        const res = await page.goto(new URL(run.route, baseURL).href, { waitUntil: "networkidle", timeout: 30000 });
-        if (!res || res.status() >= 400) seen({ kind: "load", text: `HTTP ${res?.status() ?? "no response"}` });
+        if (run.role) {
+          if (!session) throw new Error(`no session for @${run.role}: the sweep was given no way to sign in`);
+          await context.addCookies([sessionCookie({ refresh: await session(run.role), baseURL })]);
+        }
+        const res = await page.goto(new URL(run.path, baseURL).href, { waitUntil: "networkidle", timeout: 30000 });
+        const problem = loadProblem(res?.status(), run.expect);
+        if (problem) seen({ kind: "load", text: problem });
         await page.waitForTimeout(300);
         await page.evaluate(axeSource);
         const axe = await page.evaluate(() => globalThis.axe.run(document, { resultTypes: ["violations"] }));
@@ -114,7 +166,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
   } finally {
     await browser.close();
   }
-  return { observations, screenshots };
+  return { observations: dropExpected(observations), screenshots };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
