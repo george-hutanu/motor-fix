@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { MAX_COMMITS, carriedFrom, carryDescription, findCarry, judgeCarry, latestReview, postCarry, readCarryState } from './carry.mjs';
+import { MAX_COMMITS, carriedFrom, carryDescription, fetchCarryState, findCarry, judgeCarry, latestReview, postCarry, readCarryState } from './carry.mjs';
 
 const FROM = 'a'.repeat(40);
 const MID = 'b'.repeat(40);
@@ -114,6 +114,40 @@ describe('reading the state from GitHub', () => {
   it('throws when gh fails, so the gate never reads silence as a pass', () => {
     const { gh } = fakeGh([]);
     assert.throws(() => readCarryState({ from: FROM, head: HEAD, gh }), /unexpected gh/);
+  });
+
+  // ST-659: inside the merge gate every statuses read waits on the compare
+  // alone, so they go out together rather than one 10 s timeout after another.
+  it('reads every status after the compare at once, and judges the same state as the one-by-one read', async () => {
+    const rules = [
+      [/compare\//, ok(docsCompare({ total_commits: 2, commits: [{ sha: MID }, { sha: HEAD }] }))],
+      [/commits\/a{40}\/statuses/, ok([status('success')])],
+      [/commits\/b{40}\/statuses/, ok([])],
+      [/commits\/c{40}\/statuses/, ok([status('success', carryDescription(FROM))])],
+    ];
+    const { gh: sync } = fakeGh(rules);
+    let inFlight = 0;
+    let most = 0;
+    const gh = async (args) => {
+      inFlight++;
+      most = Math.max(most, inFlight);
+      await new Promise((r) => setTimeout(r, 10));
+      inFlight--;
+      return sync(args);
+    };
+    const state = await fetchCarryState({ from: FROM, head: HEAD, gh });
+    assert.equal(most, 3, 'the named commit, the commit between and head are read together');
+    assert.deepEqual(state, readCarryState({ from: FROM, head: HEAD, gh: sync }));
+    assert.equal(judgeCarry({ from: FROM, head: HEAD, ...state }), null);
+  });
+
+  it('reads nothing past the compare for a tail over the cap, and rejects when gh fails', async () => {
+    const { calls, gh } = fakeGh([[/compare\//, ok(docsCompare({ total_commits: MAX_COMMITS + 1 }))]]);
+    const state = await fetchCarryState({ from: FROM, head: HEAD, gh: async (a) => gh(a) });
+    assert.equal(calls.length, 1);
+    assert.match(judgeCarry({ from: FROM, head: HEAD, ...state }), /too large/);
+    const broken = fakeGh([]);
+    await assert.rejects(fetchCarryState({ from: FROM, head: HEAD, gh: async (a) => broken.gh(a) }), /unexpected gh/);
   });
 });
 

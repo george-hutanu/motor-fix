@@ -225,6 +225,35 @@ describe('hook registry — fail-closed stdin', () => {
     assert.match(run.stderr, /DRY RUN/);
   });
 
+  // ST-659: Claude Code does not block on a hook it stopped for running long,
+  // so the wrapper stops a fail-closed gate first, at its registered limit,
+  // and refuses on its behalf.
+  it('refuses a fail-closed gate that outlives its registered limit', () => {
+    const FROM = 'f'.repeat(40);
+    const pr = {
+      number: 21,
+      state: 'OPEN',
+      headRefOid: 'abc1234def5678',
+      commits: [{ oid: FROM }, { oid: 'abc1234def5678' }],
+      statusCheckRollup: [
+        { __typename: 'CheckRun', name: 'CI OK', status: 'COMPLETED', conclusion: 'SUCCESS' },
+        { __typename: 'StatusContext', context: 'agent-review', state: 'SUCCESS', description: `carried from ${FROM}: docs-only change` },
+      ],
+    };
+    const started = Date.now();
+    const run = runHook('pre:bash:merge-gate', { tool_input: { command: 'gh pr merge 21 --merge' } }, {
+      SPECKIT_PR_STATE: JSON.stringify(pr),
+      SPECKIT_CARRY_STATE: '{}',
+      SPECKIT_CARRY_DELAY_MS: '15000',
+      SPECKIT_MERGE_GATE_DEADLINE_MS: '',
+      SPECKIT_HOOK_TIMEOUT_MS: '500',
+    });
+    assert.equal(run.status, 2, 'a gate stopped mid-check has not approved the request');
+    assert.match(run.stderr, /pre:bash:merge-gate refused: .*did not finish within 0\.5 s/);
+    assert.ok(Date.now() - started < 10000);
+    assert.ok(loadRegistry(REPO).hooks.find((h) => h.id === 'pre:bash:merge-gate').timeout_ms > 0, 'the merge gate has a limit of its own');
+  });
+
   it('still runs a fail-closed gate on a payload it can read', () => {
     const run = runHook('pre:bash:guard', DESTRUCTIVE);
     assert.equal(run.status, 2, 'the gate itself must still be the one deciding');

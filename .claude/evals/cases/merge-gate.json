@@ -334,5 +334,25 @@
       "exit": 2,
       "stderr": "could not verify"
     }
+  },
+  {
+    "id": "merge-gate-refuses-a-carry-it-cannot-verify-in-time",
+    "hook": "pre:bash:merge-gate",
+    "why": "a gate Claude Code stops for running long does not block, so the gate stops itself at its deadline and refuses: verifying a carried verdict that outlasts it has not approved the merge (ST-659)",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\"}],\"files\":[{\"filename\":\"specs/194-email-sending/deferred.md\"}]},\"between\":[],\"headReviews\":[]}",
+      "SPECKIT_CARRY_DELAY_MS": "15000",
+      "SPECKIT_MERGE_GATE_DEADLINE_MS": "500"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "within 0.5 s"
+    }
   }
 ]
