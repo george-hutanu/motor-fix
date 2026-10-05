@@ -74,3 +74,36 @@ describe('the finish log rides in the story PR', () => {
     assert.match(section(read('.claude/skills/speckit-pr-test/SKILL.md'), '## Evidence'), /passing lap's is not\s+committed/);
   });
 });
+
+describe('no agent holds its context across the CI and QA wait', () => {
+  const auto = read('.claude/skills/speckit-auto/SKILL.md');
+  const steps = (text) => text.split(/\n(?=\d+\. )/);
+
+  it('starts the QA run at hand-off without waiting, records it in the note and ends', () => {
+    const handoff = section(auto, '## Hand-off');
+    assert.match(handoff, /dispatch\.mjs <n> --no-wait/);
+    assert.match(handoff, /- QA run: <id> · head <sha> · lap <n> · <url>/);
+    assert.match(handoff, /NEXT: tail #<n> after QA run <id>/);
+    assert.match(handoff, /\.specify\/\.cache\/qa-flows-<n>\.mjs/);
+    assert.doesNotMatch(handoff, /--watch|gh run watch/);
+  });
+
+  it('lets the session, not an agent, hold the one background wait before the tail', () => {
+    const wait = section(auto, '## The wait');
+    assert.match(wait, /run_in_background/);
+    assert.match(wait, /gh pr checks <n> --watch/);
+    assert.match(wait, /gh run watch <id>/);
+    assert.match(wait, /watch\.mjs claim <worktree> tail/);
+  });
+
+  it('runs the tester on the finished run, and ends a fix lap with a new run instead of waiting', () => {
+    const tail = section(auto, '## The tail');
+    assert.match(tail, /RUN/);
+    assert.match(tail, /--no-wait/);
+    assert.match(tail, /run-state\.mjs repair/);
+    assert.match(tail, /NEXT: tail #<n> after QA run <id>/);
+    assert.match(tail, /--missing/);
+    // The only wait a tail holds is CI on a docs-only head, which runs two short jobs.
+    for (const step of steps(tail).filter((s) => /--watch|gh run watch/.test(s))) assert.match(step, /docs-only/);
+  });
+});

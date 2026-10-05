@@ -21,6 +21,11 @@ a review on the PR and the `agent-review` status on its head commit.
   `main`, the minutes used up) or when asked.
 - `REF`: the branch whose `pr-qa.yml` and tester scripts run, default `main`.
   A PR that changes the tester itself may name its own branch.
+- `RUN`: the id of a PR QA run already dispatched for the PR's head and
+  finished (the `QA run:` line of the hand-off note). With it you write no
+  flows and dispatch nothing: §2 checks the flows that were sent, §3 reads
+  that run. Nobody waits on a run, so a lap after a fix comes back with a new
+  `RUN`.
 
 ## 1. Read the change
 
@@ -42,7 +47,14 @@ a `medium` finding titled "not swept", naming the route.
 
 ## 2. Write the flows (before the run)
 
-Write `<scratchpad>/flows-<PR>.mjs`: a default export `async ({ baseURL,
+With `RUN`, the flows were written by whoever dispatched it: read
+`.specify/.cache/qa-flows-<PR>.mjs` in the PR's worktree (git ignores it) and
+trust it only when the note's `QA run:` head is the PR's head. Compare it
+with your own list from step 1: each flow from the spec or the diff the file
+does not drive is a `high` finding titled "flow not run", naming the flow, so
+the PR cannot merge on that run. With no file, every flow is not run.
+
+Otherwise write `.specify/.cache/qa-flows-<PR>.mjs`: a default export `async ({ baseURL,
 apiURL, outDir, repoRoot, health, ready }) => findings[]` that drives Playwright
 (`createRequire(join(repoRoot, 'package.json'))('@playwright/test').chromium`,
 one browser, closed in `finally`) through each flow from step 1: click, type,
@@ -68,9 +80,19 @@ runs from a temporary directory beside the PR's checkout.
 
 ## 3. Run it on GitHub Actions
 
+With `RUN`, read the finished run; nothing is dispatched and nothing waits:
+
+```bash
+node .claude/scripts/pr-test/dispatch.mjs <PR> --run <RUN> --out <scratchpad>/pr-<PR>-lap<LAP>
+```
+
+It exits 2 on a run that has not completed, and judges the downloaded report
+exactly as below (exit 0, 1 or 2; a report about another head than the PR's
+is 2). Otherwise dispatch and watch the run:
+
 ```bash
 node .claude/scripts/pr-test/dispatch.mjs <PR> --routes /,/cockpit[,<changed routes>] \
-  --flows <scratchpad>/flows-<PR>.mjs --lap <LAP> --out <scratchpad>/pr-<PR>-lap<LAP> [--ref <REF>]
+  --flows .specify/.cache/qa-flows-<PR>.mjs --lap <LAP> --out <scratchpad>/pr-<PR>-lap<LAP> [--ref <REF>]
 ```
 
 It dispatches `.github/workflows/pr-qa.yml` (`gh workflow run`) for the PR's
@@ -108,7 +130,7 @@ node .claude/scripts/pr-test/post.mjs --missing "<reason>" --pr <PR> --sha <head
 
 ```bash
 node .claude/scripts/pr-test/run.mjs <PR> --routes /,/cockpit[,<changed routes>] \
-  --flows <scratchpad>/flows-<PR>.mjs --lap <LAP> --out <scratchpad>/pr-<PR>-lap<LAP>
+  --flows .specify/.cache/qa-flows-<PR>.mjs --lap <LAP> --out <scratchpad>/pr-<PR>-lap<LAP>
 ```
 
 Start it with `run_in_background` and wait for its exit notice, never in the
