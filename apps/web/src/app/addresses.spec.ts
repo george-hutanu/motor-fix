@@ -9,7 +9,11 @@ import {
 } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { HealthService } from '@motor-fix/data-access';
-import { I18n, provideRememberedLanguage } from '@motor-fix/i18n';
+import {
+  I18n,
+  LanguageChoice,
+  provideRememberedLanguage,
+} from '@motor-fix/i18n';
 
 import {
   alternates,
@@ -169,6 +173,19 @@ describe('language addresses', () => {
     await open('/');
 
     expect(url()).toBe('/ro');
+  });
+
+  it('keeps the first page at / until the app is stable, and a language picked meanwhile wins', async () => {
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/');
+
+    expect(url()).toBe('/');
+
+    await TestBed.inject(LanguageChoice).pick('en');
+    await settle(harness);
+
+    expect(url()).toBe('/en');
+    expect(lang()).toBe('en');
   });
 
   it('gives a public page its canonical and hreflang links', async () => {

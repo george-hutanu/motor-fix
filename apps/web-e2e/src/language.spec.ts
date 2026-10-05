@@ -89,3 +89,48 @@ test('with storage blocked the app works in Romanian and still switches', async 
   await expect(page.locator('html')).toHaveAttribute('lang', 'ro');
   expect(errors).toEqual([]);
 });
+
+test.describe('on a 320 px phone', () => {
+  test.use({ viewport: { height: 640, width: 320 } });
+
+  test('EN tapped before the app has loaded is kept, and a reload stays English', async ({
+    page,
+  }) => {
+    let release = () => {};
+    const scripts = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route('**/*.js', async (route) => {
+      await scripts;
+      await route.continue();
+    });
+
+    await page.goto('/', { waitUntil: 'commit' });
+    await languageSwitch(page, 'Limba')
+      .getByRole('button', { name: 'EN' })
+      .click();
+    release();
+
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page).toHaveURL(/\/en$/);
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(
+      languageSwitch(page, 'Language').getByRole('button', { name: 'EN' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('EN tapped on the loaded page survives a reload', async ({ page }) => {
+    await openHome(page);
+    await languageSwitch(page, 'Limba')
+      .getByRole('button', { name: 'EN' })
+      .click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(
+      languageSwitch(page, 'Language').getByRole('button', { name: 'EN' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+  });
+});
