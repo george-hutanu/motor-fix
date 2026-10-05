@@ -14,3 +14,9 @@
 - 2026-10-05 · labels · PR #71 · QA
 - 2026-10-05 · debt · ST-81 · 5 tasks filed (To do)
 - 2026-10-05 · debt · ST-81 · 3 more tasks filed from QA laps 3 and 4 (To do)
+- 2026-10-05 · finish · ST-81 · QA → Done (PR #71 merged as c28fbd0)
+- 2026-10-05 · finish · Foundations timeline ST-81 · QA → Merged
+- 2026-10-05 · finish · EP-1 Foundations · In progress (unchanged)
+- 2026-10-05 · labels · PR #71 · stage labels removed
+- 2026-10-05 · comment · ST-81 · posted (16 items)
+- 2026-10-05 · ready · Foundations · no change (the ST-81 row blocks no timeline row; query quota reached, off-timeline items not re-read)
