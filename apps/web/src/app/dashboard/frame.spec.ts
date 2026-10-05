@@ -25,7 +25,13 @@ jest.mock('@motor-fix/ui-cockpit', () => ({
 
 let signOut: jest.Mock;
 let reload: jest.Mock;
-let live: { close: jest.Mock; events: Subject<LiveMessage>; open: jest.Mock };
+let live: {
+  close: jest.Mock;
+  events: Subject<LiveMessage>;
+  offline: ReturnType<typeof signal<boolean>>;
+  open: jest.Mock;
+  resync: Subject<void>;
+};
 
 const me = (role: string, landing: string, capabilities: string[]) =>
   ({
@@ -49,7 +55,13 @@ async function render(
   Element.prototype.scrollIntoView = jest.fn();
   signOut = jest.fn(async () => current.set(null));
   reload = jest.fn(async () => undefined);
-  live = { close: jest.fn(), events: new Subject(), open: jest.fn() };
+  live = {
+    close: jest.fn(),
+    events: new Subject(),
+    offline: signal(false),
+    open: jest.fn(),
+    resync: new Subject(),
+  };
   const current = signal<MeDto | null>(me(role, landing, capabilities));
   TestBed.configureTestingModule({
     providers: [

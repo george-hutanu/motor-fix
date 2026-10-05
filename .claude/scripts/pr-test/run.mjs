@@ -36,7 +36,7 @@ import { join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { appsFor, changedGetEndpoints, endpointFinding, reportMarkdown, stepFinding, testFinding, touchesWeb, verdict } from "./findings.mjs";
-import { EXTERNAL_PORTS, appEnv, composePlan, externalPlan, freePorts, localPlan, waitForHttp } from "./services.mjs";
+import { EXTERNAL_PORTS, HEALTH, apiHealth, appEnv, composePlan, externalPlan, freePorts, localPlan, waitForHttp } from "./services.mjs";
 import { VIEWPORTS, runSweep, toFindings } from "./sweep.mjs";
 import { createWorktree, depsToClone, removeWorktree } from "./worktree.mjs";
 
@@ -231,9 +231,9 @@ async function main(argv) {
     if (apps.worker) launch("worker", "dist/apps/worker/main.js", { PORT: String(workerPort) });
 
     const live = [
-      ["api", `${apiURL}/health/live`],
+      ["api", apiURL + HEALTH.live],
       ["web", `${webURL}/`],
-      ...(apps.worker ? [["worker", `http://127.0.0.1:${workerPort}/health/live`]] : []),
+      ...(apps.worker ? [["worker", `http://127.0.0.1:${workerPort}${HEALTH.live}`]] : []),
     ];
     for (const [name, url] of live) {
       const h = await waitForHttp(url, { timeoutMs: 90000 });
@@ -243,7 +243,7 @@ async function main(argv) {
     if (findings.length) return finish();
 
     for (const [name, origin] of [["api", apiURL], ...(apps.worker ? [["worker", `http://127.0.0.1:${workerPort}`]] : [])]) {
-      const res = await fetch(`${origin}/health/ready`).catch((e) => ({ status: 0, text: async () => e.message }));
+      const res = await fetch(origin + HEALTH.ready).catch((e) => ({ status: 0, text: async () => e.message }));
       const body = await res.text();
       log(`ready ${name}: ${res.status} ${body.slice(0, 200)}`);
       if (res.status === 200) continue;
@@ -253,7 +253,7 @@ async function main(argv) {
       } catch {}
       if (!plan.storage && failed.length === 1 && failed[0] === "storage")
         findings.push(stepFinding(`${name} readiness: storage down`, "No object store on this machine (no Docker); every other check is ok. Environment limit, not the change.", "medium"));
-      else findings.push(stepFinding(`${name} readiness failed: ${failed.join(", ") || res.status}`, `GET ${origin}/health/ready answered ${res.status}: ${body.slice(0, 300)}`));
+      else findings.push(stepFinding(`${name} readiness failed: ${failed.join(", ") || res.status}`, `GET ${origin}${HEALTH.ready} answered ${res.status}: ${body.slice(0, 300)}`));
     }
 
     let baseDoc = null;
@@ -281,7 +281,7 @@ async function main(argv) {
     if (opt.flows) {
       const flow = await import(pathToFileURL(resolve(opt.flows)).href);
       try {
-        const extra = (await flow.default({ baseURL: webURL, apiURL, outDir: shots, repoRoot: root, worktree: wt.dir })) ?? [];
+        const extra = (await flow.default({ baseURL: webURL, apiURL, outDir: shots, repoRoot: root, worktree: wt.dir, ...apiHealth(apiURL) })) ?? [];
         findings.push(...extra);
         log(`flows: ${extra.length} finding(s)`);
       } catch (error) {

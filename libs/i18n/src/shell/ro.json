@@ -141,7 +141,15 @@
   },
   "live": {
     "changed": "S‑a schimbat între timp: {value}",
+    "expired": "O acțiune făcută fără semnal a expirat și nu a fost trimisă.",
     "gone": "Nu mai este disponibil",
+    "needsConnection": "Ai nevoie de conexiune pentru asta",
+    "offline": "Fără conexiune. Ce vezi poate fi vechi.",
+    "refused": {
+      "changed": "S‑a schimbat între timp. Vezi starea de acum.",
+      "gone": "Nu mai este disponibil.",
+      "other": "Acțiunea nu a fost primită."
+    },
     "test": "Actualizare de test în direct",
     "waiting": {
       "few": "{count} actualizări noi",
