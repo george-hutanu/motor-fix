@@ -12,6 +12,7 @@ features:
   - 600-merge-gate-symlink
   - 623-precompact-flush
   - 659-merge-gate-carry-deadline
+  - 673-story-tail-agents
 ---
 
 # Capability: Platform
@@ -359,6 +360,30 @@ _From 659-merge-gate-carry-deadline._
 ### 659-FR-005 — Verifying a carry MUST read the statuses of the named commit, the commits between and head concurrently once the compare is known, and MUST read head's statuses at most once per gate run.
 
 _From 659-merge-gate-carry-deadline._
+
+### 673-FR-001 — `.claude/agents/task-runner.md` MUST pin `model: opus`, MUST NOT carry a `tools:` allowlist, and its `disallowedTools` MUST deny the artifact comment and data, browser, Chrome, simulator, visualize and session-management tools while denying none of Bash, Read, Edit, Write, Grep, Glob, Skill, Agent, ToolSearch, Monitor, TaskStop, EnterWorktree, PushNotification, Artifact (the design check's mock read), the WebStorm inspections (harden) or any Notion tool.
+
+_From 673-story-tail-agents._
+
+### 673-FR-002 — The story dispatch and the tail dispatch in `speckit-auto`, and step 4 of `speckit-watch` (resume, tail, rerun-qa, fix-ci, merge), MUST name `subagent_type: task-runner` and no story, tail or watch dispatch MUST name `general-purpose`; `merge` MUST keep `model: "sonnet"`; AGENTS.md MUST name the definition for the story and tail agents.
+
+_From 673-story-tail-agents._
+
+### 673-FR-003 — No dispatch template in `speckit-auto` or `speckit-watch`, and no agent definition, MUST tell an agent to follow or read AGENTS.md or CLAUDE.local.md, or list either among the files to read; `task-runner.md` MUST say they are in context and give the delta command.
+
+_From 673-story-tail-agents._
+
+### 673-FR-004 — `.specify/memory/constitution-card.md` MUST name every principle of `constitution.md` (numeral and title, in order) and its version, in at most 3,000 bytes; a harness spec MUST fail when they drift.
+
+_From 673-story-tail-agents._
+
+### 673-FR-005 — `speckit-auto`'s Preflight and phase 1 MUST read the card instead of the full constitution; `spec-reviewer`, `code-reviewer` and `pr-tester` MUST keep reading `constitution.md`.
+
+_From 673-story-tail-agents._
+
+### 673-FR-006 — The definition MUST carry the AGENTS.md reply envelope verbatim and a cap of at most 10 lines.
+
+_From 673-story-tail-agents._
 
 ## Retired
 
