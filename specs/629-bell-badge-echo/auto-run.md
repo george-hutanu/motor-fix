@@ -42,3 +42,9 @@ Worktree: .worktrees/629-bell-badge-echo
 
 - Code re-review APPROVE, spec re-review APPROVE. Applied: 4 adversary tests that repeated `bell.spec.ts` deleted (its MEDIUM at :242 among them); the local `shown` in `read()` renamed `row`.
 - Re-review MEDIUM (readAll's 0 not ordered against a count already in flight): fixed in this story, test first, rather than deferred. Red: "keeps the count at zero after mark all when an earlier count answers late"; green after `readAll()` takes a request number before it sets 0 (FR-003a). Bell suites 56/56; `web:test` green. Nothing deferred.
+
+## Hand-off
+
+- PR #112 body updated (pr-body-check passes), marked ready; ST-629 Implementing → QA, labels QA. `origin/main` merged in (13 behind; no conflict; web test 982/982, typecheck green).
+- CI on 550218c: every check green, CI OK included.
+- QA lap 1 (PR QA run 37296299108, report in `pr-review/lap1/`): agent-review success, 0 blocking, 2 low. Both one-line, fixed rather than deferred: the double-tap adversary test now also asserts one read is sent (FR-004); the PR body's test count corrected to 5 new. The tester's first dispatch (run 37295866259) was discarded by the tester itself: the production service worker bypassed its network holds. Records committed with that fix; tester runs once more on the new head.

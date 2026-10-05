@@ -9,3 +9,4 @@
 - 2026-10-05 · implement · ST-629 story Status · Planning → Implementing
 - 2026-10-05 · implement · Foundations timeline · no row for ST-629
 - 2026-10-05 · labels · PR #112 · in development
+- 2026-10-05 · qa · ST-629 · Implementing → QA; labels QA (−planning, −in development, −blocked)

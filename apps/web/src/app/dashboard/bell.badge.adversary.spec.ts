@@ -184,12 +184,13 @@ describe('BellStore badge after a read in this tab', () => {
     expect(store.count()).toBe(0);
   });
 
-  it('lowers the badge once for two taps on the same row when the count fails', async () => {
+  it('sends one read and lowers the badge once for two taps on the same row when the count fails', async () => {
     const { store } = await render(2, [row('a'), row('b')]);
     api.bellControllerUnreadCount.mockRejectedValue(new Error('offline'));
 
     await Promise.all([store.read('a'), store.read('a')]);
 
+    expect(api.bellControllerRead).toHaveBeenCalledTimes(1);
     expect(store.count()).toBe(1);
   });
 
