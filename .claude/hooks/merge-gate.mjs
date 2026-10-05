@@ -74,7 +74,7 @@ function ciRefusal(pr, checks, sha) {
   const result = (c) => c.conclusion ?? c.state;
   const pending = ci.filter((c) => (c.status && c.status !== "COMPLETED") || c.state === "PENDING" || c.state === "EXPECTED" || result(c) == null);
   const red = ci.filter((c) => !pending.includes(c) && !GREEN.has(result(c)));
-  const list = (cs) => cs.map(checkName).join(", ");
+  const list = (cs) => cs.map((c) => (c.workflowName ? `${c.workflowName} / ${c.name}` : checkName(c))).join(", ");
   if (red.length) return `PR #${pr.number} cannot merge: CI failed on ${sha} (${list(red)}). Read gh pr checks ${pr.number}, fix it on the branch, and run the PR tester again on the new head.`;
   if (pending.length) return `PR #${pr.number} cannot merge yet: CI is still running on ${sha} (${list(pending)}). Wait for gh pr checks ${pr.number} --watch, in the background, and merge when it is green.`;
   if (!ci.some((c) => checkName(c) === "CI OK")) return `PR #${pr.number} cannot merge: there is no CI OK check on ${sha}. Wait for CI (gh pr checks ${pr.number}) before merging.`;

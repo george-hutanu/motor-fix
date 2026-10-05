@@ -117,7 +117,7 @@ describe('merge gate — the decision', () => {
       { ...run('CI OK', 'SUCCESS'), workflowName: 'CI' },
       review('SUCCESS'),
     ];
-    assert.match(decideMerge(pr(rollup)), /CI failed.*build/);
+    assert.match(decideMerge(pr(rollup)), /CI failed.*Docker \/ build/);
   });
 
   it('still judges the latest run within one workflow', () => {
