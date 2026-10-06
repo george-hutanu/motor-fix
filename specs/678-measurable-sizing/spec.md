@@ -2,7 +2,7 @@
 
 **Feature Branch**: `678-measurable-sizing`
 **Created**: 2026-10-06
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 **Level**: 2 (feature)
 **Notion story**: ST-678 — https://app.notion.com/p/3f0607bff0d2817d8a94d9a31fa161b4
 **Sources**: the Notion story (read in clarify, 2026-10-06), the description below, the constitution card, and the repository (`.claude/scripts/level.mjs`, `lib/feature.mjs`, `lib/telemetry.mjs`, `telemetry.mjs`, `.claude/hooks/session-telemetry.mjs`, `lifecycle.mjs`, the `speckit-size`, `speckit-auto` and `speckit-review` skills).

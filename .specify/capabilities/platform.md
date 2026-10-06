@@ -19,6 +19,7 @@ features:
   - 696-lifecycle-script
   - 703-idle-watch-gate
   - 705-auto-skill-split
+  - 678-measurable-sizing
 ---
 
 # Capability: Platform
@@ -598,6 +599,70 @@ _From 705-auto-skill-split._
 ### 705-FR-006 — The report measures bytes with `wc -c`:
 
 _From 705-auto-skill-split._
+
+### 678-FR-001 — Each session ledger MUST record, for every write, the level of the active feature and the phase from the run state at that moment, and MUST bucket the tokens consumed since the previous write under that (level, phase) pair, so a promotion mid-run splits the run's cost between the two levels, at the granularity of Stop writes (a turn lands whole in the level current at its Stop), rather than rewriting it.
+
+_From 678-measurable-sizing._
+
+### 678-FR-002 — The ledger MUST include the usage of every subagent transcript beside the session's transcript (the `subagents/` folder of the session), counting a streamed message once per `message.id`, attributing it to the agent type its meta file names (`unknown` when the file is missing), reading each file incrementally from its own byte offset, and including those tokens in the session's total and in the (level, phase) buckets.
+
+_From 678-measurable-sizing._
+
+### 678-FR-003 — `node .claude/scripts/telemetry.mjs --by-level` MUST print, per level, the token totals and, beside them, the tokens spent by subagents (absolute counts); under each level the totals per phase; and per feature its level and total; it MUST report tokens from ledgers that carry no level under "unknown level" and exit 0 when there are none at all. It MUST also list the features marked `too heavy` (FR-009).
+
+_From 678-measurable-sizing._
+
+### 678-FR-004 — The Stop hook MUST keep every failure path exiting 0 and MUST keep recording counts and token totals only — no prompts, message text or file contents, from the subagent transcripts either.
+
+_From 678-measurable-sizing._
+
+### 678-FR-005 — A check command on `level.mjs` MUST evaluate four tripwires for the active feature: (a) the count of functional requirements in `spec.md` above a threshold (more than 5, see Assumptions); (b) a `[NEEDS CLARIFICATION]` marker in `spec.md`; (c) a file under the contracts library, a Prisma schema or a migration in the branch's diff against `origin/main`; (d) files in more than one Nx project in that diff. Any tripped wire MUST raise the recorded level to at least 2; no wire MUST ever lower a level or touch a level already at 2 or 3.
+
+_From 678-measurable-sizing._
+
+### 678-FR-006 — Every promotion of a feature with a directory MUST append one line to its `auto-run.md` naming the old level, the new level and the fact that caused it (the count, the marker, the file or the projects), creating the file when it does not exist; a check that trips nothing MUST write nothing; the same promotion MUST NOT be logged twice.
+
+_From 678-measurable-sizing._
+
+### 678-FR-007 — `/speckit-auto` MUST run the check after the specify, clarify and tasks phases (the pre-ready check, FR-009, is the net for diff facts that appear during implementation); from a promotion on, it MUST run the phases the new level owes that have not run yet before continuing, in the run order they would have had.
+
+_From 678-measurable-sizing._
+
+### 678-FR-008 — A wire that cannot be evaluated (no remote, no diff) MUST report itself as not checked and MUST neither promote nor refuse on its own.
+
+_From 678-measurable-sizing._
+
+### 678-FR-009 — The ready step MUST run the check before publishing the PR body. A level 0 or 1 feature whose diff trips a wire MUST be promoted, the PR MUST stay a draft, and the step MUST exit non-zero naming the owed phases and the artifacts the level owes that are missing from the feature directory; a rerun once they exist MUST proceed. A level 2 feature whose diff against `origin/main` is exactly one file outside the contract, schema and migration paths MUST be recorded as `too heavy` in the ledger with the feature and the file, with no refusal and no level change. A level 3 feature is neither promoted nor marked by the ready step.
+
+_From 678-measurable-sizing._
+
+### 678-FR-010 — Nothing in this feature MUST read the level to decide whether tests run or which gates fire; the red-first, spec-drift and lifecycle gates MUST be left untouched.
+
+_From 678-measurable-sizing._
+
+### 678-FR-011 — `level.mjs suggest` given a story id (`ST-<n>`) or a Notion story URL MUST, before any classifier, Jev or model call, read the story's Issue type, Labels, Design, Design boards, Story points when present, and whether each Build brief section has content, and MUST print the level with the facts it used, or `unsure` with the reason and the facts read.
+
+_From 678-measurable-sizing._
+
+### 678-FR-012 — The sizing rules MUST be: the free word classifier runs on the story's text first; a Bug with no Design boards and every Build brief section filled is level 1 with no Jev or model call, unless the classifier answered 2 or more, which stands; a story with Design boards, an empty or missing Build brief section, or Story points above the threshold is never below 2; any other combination is `unsure` and continues with today's path on the story's text. Labels and Design are read and printed as facts but decide nothing. A rule MUST only ever raise the answer above what the text path would give, never lower it.
+
+_From 678-measurable-sizing._
+
+### 678-FR-013 — When Notion cannot be read (no token, network failure, page not found), `suggest` MUST print one line saying so and why, then behave as `suggest "<text>"` does today, exit 0. `--set` MUST keep writing only a confident answer.
+
+_From 678-measurable-sizing._
+
+### 678-FR-014 — The `speckit-size`, `speckit-auto` and `speckit-review` skill texts MUST describe the new check points, the promotion log line, the pre-ready refusal and `suggest` with a story id, in the lines that describe sizing and ready only.
+
+_From 678-measurable-sizing._
+
+### 678-FR-015 — Each tripwire MUST have one harness test that promotes a level 1 feature and one that leaves it alone; a test MUST show no wire lowers a level 3; the pre-ready refusal, the `too heavy` mark, the ledger's subagent and level buckets, the `--by-level` report and each `suggest` rule and its fallback MUST each have a harness test. `npm run test:harness`, `node .claude/scripts/harness-eval.mjs --check` and `node .claude/scripts/doctor.mjs` MUST pass, the latter after the hook edit is blessed.
+
+_From 678-measurable-sizing._
+
+### 678-FR-016 — The change MUST stay in the harness (`.claude/`, `.specify/`), with no file under `apps/` or `libs/`.
+
+_From 678-measurable-sizing._
 
 ## Retired
 
