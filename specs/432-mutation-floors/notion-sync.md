@@ -14,3 +14,6 @@
 - 2026-10-06 · qa · ST-432 · story Status · Implementing → QA
 - 2026-10-06 · qa · Foundations timeline · no row for ST-432 (a task added after the plan; nothing to write)
 - 2026-10-06 · labels · PR #116 · QA
+- 2026-10-06 · debt · ST-432 · deferred.md line 13 filed as a To do task (PR test lap 1)
+- 2026-10-06 · debt · ST-432 · deferred.md line 14 filed as a To do task (PR test lap 1)
+- 2026-10-06 · debt · ST-432 · deferred.md line 15 filed as a To do task (PR test lap 1)
