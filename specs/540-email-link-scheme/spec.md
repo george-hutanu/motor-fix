@@ -16,6 +16,16 @@ Notion: ST-540 https://app.notion.com/p/3ef607bff0d281199d95ca3170698652 (Task, 
 - `libs/domain/src/notifications/templates.ts` `render()` (email case) takes both hrefs from a `link` value, which `format()` only stringifies; every other bad value already fails with `TemplateError`, which `notifications.processor.ts` (row set `failed`, reason `template_failed`) and `template-check.ts` (reported problem) already handle.
 - CI's `PUBLIC_WEB_URL` is `http://localhost:4200` (`.github/workflows/ci.yml:158`), so `http:` on a local host must stay allowed; `template-check.ts` renders with `https://motorfix.example`.
 
+## Clarifications
+
+### Session 2026-10-06
+
+- Q: When the stop (or button) link is absent, does the render refuse? → A: No: only a value that becomes an href is checked; an e-mail with no stop link renders as today, and an empty string is refused (it is not a URL).
+- Q: Does the check live in `emailHtml` or in `render()`'s email case? → A: In `render()`'s email case, through its `fail`, so the refusal is a `TemplateError` carrying the template and channel; `emailHtml`'s only caller is `render()` (`templates.ts:180`).
+- Q: Is the link name carried in the `TemplateError` message only, with the worker row reason staying `template_failed`? → A: Yes.
+- Q: Which specs must be red first? → A: Scenarios 3–5 (button and stop link); scenarios 1–2 are regression guards that pass before and after.
+- Q: Is "exactly localhost or 127.0.0.1" applied to the parsed hostname or the raw text? → A: The parsed, normalised hostname (`new URL(...).hostname`), so `http://LOCALHOST/x` is local.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - An e-mail never carries a link of an unsafe scheme (Priority: P1)
@@ -38,7 +48,7 @@ A person who receives a MotorFix e-mail can trust that its button and its stop l
 ### Edge Cases
 
 - Scheme case: `HTTPS://motorfix.ro` is accepted (schemes are read case-insensitively, as a browser reads them).
-- A local host is exactly `localhost` or `127.0.0.1`, with any port; `localhost.evil.com`, `127.0.0.1.evil.com` or `[::1]` are not local and are refused over http.
+- A local host is exactly `localhost` or `127.0.0.1` as the parsed URL's hostname, with any port; `localhost.evil.com`, `127.0.0.1.evil.com` or `[::1]` are not local and are refused over http.
 - Push, SMS and WhatsApp links, and the plain-text part's own text, are unchanged: only the e-mail render refuses, and when it refuses neither the HTML nor the text part is produced.
 - The reason of the refusal names which link (button or stop) was refused, so the worker's log and the self-check say what is wrong.
 
@@ -59,13 +69,13 @@ None.
 
 ### Measurable Outcomes
 
-- **SC-001**: The colocated Jest specs for scenarios 1–5 (button and stop link each) fail before the change and pass after it.
+- **SC-001**: The colocated Jest specs for scenarios 3–5 (button and stop link each) fail before the change and pass after it; scenarios 1–2 pass before and after.
 - **SC-002**: The existing template specs and the template self-check still pass: every shipped template renders with the example app URL `https://motorfix.example`.
 - **SC-003**: `npm run test:unit` for the domain library, typecheck and lint are green.
 
 ## Assumptions
 
-- The check lives in the e-mail render path (the render's email case or the HTML layout), where the link value is already turned into the href, and refuses through `TemplateError` as every other bad value does; no new error type. (autonomous default)
+- The check lives in `render()`'s email case and refuses through `TemplateError` as every other bad value does; no new error type. The worker row reason stays `template_failed`; the link name is in the error message. An absent stop link is not checked. (autonomous default)
 - The local hosts are exactly `localhost` and `127.0.0.1`; `[::1]` and other loopback names are not added, since nothing in the repo uses them (`PUBLIC_WEB_URL` in CI is `http://localhost:4200`). (autonomous default)
 - The scheme and host are read as a browser would (URL parsing), so scheme case does not matter and a value that does not parse as an absolute URL is refused. (autonomous default)
 - The plain-text part is not produced for a refused e-mail, since the render fails as a whole; it needs no separate check. (autonomous default)
