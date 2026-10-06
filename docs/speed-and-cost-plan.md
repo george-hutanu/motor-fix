@@ -58,7 +58,7 @@ installs, CI OK at 675 s, of which E2E 629 s on one Playwright worker.
 
 | # | Change | Speed | Cost | Quality |
 |---|---|---|---|---|
-| 16 | `ci.yml` from 14 jobs to 7 runners (Checks, Unit and integration tests, E2E tests, Docker build web and api, Changes, CI OK) with 3 installs; E2E on 4 Playwright workers; `release.yml` runs one release check at a time and its `images` job writes the Docker layer cache PRs read (ST-750) | Result: see `specs/750-ci-speed/auto-run.md` | Half the runners per push, so fewer evening waits | Same checks, each still named in the log; a test that passes only on a retry now fails PR CI |
+| 16 | `ci.yml` from 14 jobs to 7 runners (Checks, Unit and integration tests, E2E tests, Docker build web and api, Changes, CI OK) with 3 installs; E2E on 4 Playwright workers; `release.yml` runs one release check at a time and its `images` job writes the Docker layer cache PRs read | Run 37492214599: CI OK at 389 s (from 675 s), E2E 305 s (from 629 s), 3 installs | Half the runners per push, so fewer evening waits | Same checks, each still named in the log; a test that passes only on a retry now fails PR CI |
 
 ## Left for later
 
@@ -71,7 +71,7 @@ installs, CI OK at 675 s, of which E2E 629 s on one Playwright worker.
   sharing off. Found by the PR tester, lap 1.
 - Checklist and analyze in parallel: analyze should read the finished checklist.
 - Running E2E only after the merge: nothing else runs it before `main`, and a
-  red `main` blocks every release (ST-750).
+  red `main` blocks every release.
 - Path-filtering CI's Docker builds: a filter that misses an input lets a
   broken image through to release.
 - Moving the PR tester or implementation to a cheaper model.

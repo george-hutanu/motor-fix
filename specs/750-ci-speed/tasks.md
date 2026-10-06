@@ -32,7 +32,7 @@
 
 ## Phase 6: Measurement (before ready)
 
-- [ ] T012 Read SC-001, SC-002, SC-003 and SC-007 from this PR's own CI runs (`gh run view <id> --json jobs`, per quickstart.md); tune the worker count in T004's constant and T002 if SC-002 is missed; record the numbers and chosen count in plan.md D1, the `docs/speed-and-cost-plan.md` row and `specs/750-ci-speed/auto-run.md`. Check SC-006 once with a scratch Biome violation (CI OK red), then revert. SC-004 and SC-005 go to the merged PR's finish comment. (FR-001, FR-002, FR-004, FR-007)
+- [X] T012 Read SC-001, SC-002, SC-003 and SC-007 from this PR's own CI runs (`gh run view <id> --json jobs`, per quickstart.md); tune the worker count in T004's constant and T002 if SC-002 is missed; record the numbers and chosen count in plan.md D1, the `docs/speed-and-cost-plan.md` row and `specs/750-ci-speed/auto-run.md`. Check SC-006 once with a scratch Biome violation (CI OK red), then revert. SC-004 and SC-005 go to the merged PR's finish comment. (FR-001, FR-002, FR-004, FR-007)
 
 ## Dependencies
 

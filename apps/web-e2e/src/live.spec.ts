@@ -173,6 +173,7 @@ test.describe('the live connection @seeded', () => {
         name: 'Ioana Offline',
         password,
       },
+      headers: { 'x-forwarded-for': `203.0.113.${Date.now() % 250}` },
     });
     expect(signUp.status()).toBe(201);
     const context = await browser.newContext();

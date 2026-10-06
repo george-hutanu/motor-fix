@@ -124,6 +124,8 @@ flaky test still records its trace (`trace: 'on-first-retry'`).
   the web dev server, the mailbox and the OpenID stand-in. The final count is
   set from this PR's measured E2E runs against SC-002 (≤ 7 min); the chosen
   number and its measured run are recorded here before ready.
+- Measured (run 37492214599, head b8d520e): E2E job 305 s at 4 workers,
+  under SC-002's 7 min, so 4 stays.
 - Evidence: preset `workers`/`retries`, preset.js:86-88;
   `failOnFlakyTests` typed, test.d.ts:1274; the config's `deployed` switch,
   playwright.config.mts:6.

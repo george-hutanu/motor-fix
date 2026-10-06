@@ -45,3 +45,17 @@ Start: main checkout dirty (.env.bak) → own worktree `.worktrees/750-ci-speed`
 - test-adversary: 63 tests, 0 failing (2 Biome template warnings fixed without suppression).
 - code-reviewer BLOCK → fixed: HIGH live.spec offline test changed the shared seeded driver's language for ~50 s, racing parallel sign-ins → own signed-up account (≈6 real sign-ups per run, under the 10/h limit); MEDIUM CI_WORKERS renamed WORKERS (applies locally too). LOW kept: the adversary spec overlaps ci-workflow.spec by design (independent view).
 - Checks job serial chain measured 130 s on run 37491151921.
+
+## Resumed in a cloud session (2026-10-06)
+- Merged origin/main (26 commits, #158 cloud sessions) at 29cbee8, no conflicts. Lint 0, typecheck 0; harness 1789/1790 — the 1 is `cloud-setup.spec.mjs` "never lets sudo ask for a password", which fails only because this VM runs as root (main's ST-749 code, not this PR). cloud-setup.sh installed Node 24 into /usr/bin but /opt/node22/bin precedes it on PATH; worked around with PATH=/usr/bin first. Docker Hub answered 429, so no local integration run (CI runs them).
+
+## 11. Converge / T012 — measured on this PR's CI
+- Run 37492214599 (b8d520e): 7 jobs (SC-001 ≤ 8 ✓); installs in Checks, tests, E2E = 3 (SC-003 ≤ 4 ✓); E2E 305 s at 4 workers (SC-002 ≤ 7 min ✓, workers stay 4); CI OK 389 s from start (SC-007 ≤ ~11 min ✓). Recorded in plan.md D1 and docs/speed-and-cost-plan.md row 16.
+- SC-006: not run live. A Biome violation cannot be committed without `--no-verify` (the pre-commit hook lints), and bypassing the gate is not taken on the owner's behalf. Covered statically: CI OK needs all five jobs and exits 1 on any result but success/skipped (ci-workflow.spec.ts "CI OK needs every job…"); a failed `!cancelled()` step still fails its job. SC-004 and SC-005 go to the merged PR's finish comment.
+
+## 13. Ticket refresh
+- org-researcher (Notion reachable): ST-750 has 0 comments; nothing narrows the ask. Three older pages disagree with the newer spec, which stands: ST-435 "separate parallel jobs" vs FR-002, ST-421 "one release at a time, in commit order" vs FR-006, the Testing table's "E2E before every release, on staging". ST-663 constraint (release and reset-staging in different groups): the new `release-checks` group covers the checks job only, not staging, so the race is not widened. Epic body and "Decisions and ideas" not fully read (tool size limit).
+
+## 16. Retrospective evidence (unjudged)
+- `retro-evidence.mjs --since 4a499cd --jev`: 10 FRs, Spec Delta platform +10; 1 open task at the time (T012, now done); 0 deferred; Jev lane unavailable (no key), so no suggested verdict. Its commit/diff range includes main's merged commits (ST-745, ST-749).
+- `instincts.mjs triggered --since 4a499cd`: nothing triggered.
