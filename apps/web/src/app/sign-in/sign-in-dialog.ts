@@ -15,8 +15,8 @@ const isSwitch = (answer: Answer): answer is AuthSwitch =>
 
 // "Autentificare" and "Cont": a signed-in person goes to their dashboard;
 // anyone else gets the sign-in dialog over the screen they are on, and can
-// switch to sign-up or the password reset and back, the typed e-mail going
-// along. An API call refused for want of a session waits on the same dialog
+// switch to sign-up, the password reset or the phone and back, the typed
+// e-mail and number going along. An API call refused for want of a session waits on the same dialog
 // through gate(); a reset link opens the new-password task through
 // newPassword().
 @Injectable({ providedIn: 'root' })
@@ -94,11 +94,9 @@ export class SignInDialog {
       if (result.switchTo === 'sign-up') {
         from = 'sign-up';
         result = await this.signUp({ email: result.email, name: invited.name });
-      } else if (result.switchTo === 'reset') {
-        result = await this.reset(result.email);
       } else {
-        from = 'sign-in';
-        result = await this.signIn({ email: result.email });
+        if (result.switchTo !== 'reset') from = 'sign-in';
+        result = await this.lap(result, false);
       }
     }
     if (result !== 'signed-in' || this.session.current() === null) return null;
@@ -124,17 +122,29 @@ export class SignInDialog {
   // Each lap waits on a dialog; it ends when one closes signed in or cancelled.
   private async laps(first: Answer, reason: boolean): Promise<boolean> {
     let result = first;
-    while (isSwitch(result)) {
-      const data = { email: result.email, ...(reason && { reason }) };
-      if (result.switchTo === 'sign-up') {
-        result = await this.signUp(data);
-      } else if (result.switchTo === 'reset') {
-        result = await this.reset(result.email);
-      } else {
-        result = await this.signIn(data);
-      }
-    }
+    while (isSwitch(result)) result = await this.lap(result, reason);
     return result === 'signed-in' && this.session.current() !== null;
+  }
+
+  private lap(to: AuthSwitch, reason: boolean): Promise<Answer> {
+    const data = {
+      email: to.email,
+      ...(to.phone && { phone: to.phone }),
+      ...(reason && { reason }),
+    };
+    switch (to.switchTo) {
+      case 'sign-up':
+        return this.signUp(data);
+      case 'reset':
+        return this.reset(to.email);
+      case 'phone':
+        return this.overlays.open<'signed-in' | AuthSwitch, AuthData>(
+          () => import('./phone-sign-in').then((m) => m.PhoneSignIn),
+          { data, shape: 'dialog', title: 'public.signIn.title' },
+        );
+      default:
+        return this.signIn(data);
+    }
   }
 
   private signUp(data: AuthData): Promise<Answer> {

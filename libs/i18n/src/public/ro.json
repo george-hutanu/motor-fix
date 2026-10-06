@@ -80,6 +80,30 @@
   },
   "signIn": {
     "brand": "MotorFix",
+    "code": {
+      "again": "Trimite din nou",
+      "attemptsLeft": {
+        "few": "Mai ai {count} încercări.",
+        "one": "Mai ai o încercare.",
+        "other": "Mai ai {count} de încercări."
+      },
+      "change": "Schimbă numărul",
+      "expires": "Codul expiră în {time}",
+      "field": {
+        "pattern": "Codul are 6 cifre."
+      },
+      "label": "Cod",
+      "problem": {
+        "account_suspended": "Contul tău este suspendat.",
+        "code_expired": "Codul a expirat. Cere un cod nou.",
+        "code_invalid": "Codul nu este corect.",
+        "consent_required": "Bifează acordul pentru a crea contul.",
+        "phone_taken": "Numărul acesta nu poate intra în cont. Intră cu e‑mail și parolă.",
+        "too_many_attempts": "Prea multe încercări. Așteaptă puțin sau cere un cod nou."
+      },
+      "sent": "Am trimis un cod pe WhatsApp la {phone}.",
+      "submit": "Intră în cont"
+    },
     "createAccount": "Creează un cont",
     "email": "E‑mail",
     "emailPlaceholder": "tu@exemplu.ro",
@@ -88,12 +112,30 @@
     },
     "forgot": "Ai uitat parola?",
     "newHere": "Ești nou pe MotorFix?",
+    "or": "sau",
     "password": "Parolă",
     "passwordPlaceholder": "Parola ta",
+    "phone": {
+      "field": {
+        "pattern": "Scrie un număr de telefon valid, de exemplu 0722 123 456."
+      },
+      "number": "Număr de telefon",
+      "problem": {
+        "too_many_attempts": "Prea multe încercări. Așteaptă puțin sau cere un cod nou.",
+        "whatsapp_failed": "Nu am putut trimite codul pe WhatsApp."
+      },
+      "send": "Trimite codul",
+      "withEmail": "Intră cu e‑mail și parolă"
+    },
     "problem": {
       "account_suspended": "Contul tău este suspendat.",
       "invalid_credentials": "E‑mailul sau parola nu sunt corecte.",
       "too_many_attempts": "Prea multe încercări. Încearcă din nou în 15 minute."
+    },
+    "profile": {
+      "intro": "Numărul nu are încă un cont. Creează unul de șofer.",
+      "name": "Nume",
+      "submit": "Creează contul"
     },
     "reason": "Intră în cont ca să continui.",
     "remember": "Ține‑mă autentificat",
@@ -104,7 +146,8 @@
       "suspended": "Contul tău este suspendat."
     },
     "submit": "Intră în cont",
-    "title": "Autentificare"
+    "title": "Autentificare",
+    "withPhone": "Continuă cu telefonul"
   },
   "signInButton": "Autentificare",
   "signUp": {

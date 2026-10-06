@@ -8,5 +8,10 @@
     "hash": "3888e5d365dc81f5",
     "recorded_at": "2026-10-04T08:56:14.363Z",
     "commit": "5cf93e9"
+  },
+  "393-whatsapp-phone-sign-in": {
+    "hash": "5e444a30fb718064",
+    "recorded_at": "2026-10-06T17:01:13.447Z",
+    "commit": "9eab58e"
   }
 }

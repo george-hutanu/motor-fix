@@ -94,6 +94,19 @@ enum AccountTokenPurpose {
   @@map("account_token_purpose")
 }
 
+// The live WhatsApp sign-in code of a number: one per number, a new code
+// replaces the old. Only an HMAC of the code is kept.
+model SignInCode {
+  phone     String    @id
+  codeHash  String    @map("code_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  attempts  Int       @default(0)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@map("sign_in_code")
+}
+
 // A single-use link sent to the account holder; only the token's SHA-256
 // hash is kept.
 model AccountToken {

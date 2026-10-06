@@ -247,9 +247,15 @@ function fromBody(answer: unknown, status: number): Problem {
   if (!code) return { code: codeForStatus(status), status };
   const errors = fieldProblems(body['errors']);
   const detail = typeof body['detail'] === 'string' ? body['detail'] : null;
+  const left = body['attemptsLeft'];
+  const attemptsLeft =
+    typeof left === 'number' && Number.isInteger(left) && left >= 0
+      ? left
+      : null;
   return {
     code,
     status,
+    ...(attemptsLeft !== null && { attemptsLeft }),
     ...(detail && { detail }),
     ...(errors && { errors }),
   };

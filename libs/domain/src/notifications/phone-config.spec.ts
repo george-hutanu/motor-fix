@@ -85,3 +85,38 @@ describe('who a message may be sent to', () => {
     expect(phoneBlockedReason(config, '+40711111111')).toBe('not_allowed');
   });
 });
+
+describe('an allowlist entry ending in *', () => {
+  const allowed = (phone: string) =>
+    phoneBlockedReason(
+      phoneConfig('staging', {
+        ...on,
+        PHONE_ALLOWLIST: '+4070000*, +40722123456',
+      }),
+      phone,
+    );
+
+  it('allows every number that starts with it', () => {
+    expect(allowed('+40700000101')).toBeNull();
+    expect(allowed('+407000009999')).toBeNull();
+  });
+
+  it('allows no number that does not', () => {
+    expect(allowed('+40700010101')).toBe('not_allowed');
+    expect(allowed('+40800000101')).toBe('not_allowed');
+  });
+
+  it('leaves an entry without * matching one number exactly', () => {
+    expect(allowed('+40722123456')).toBeNull();
+    expect(allowed('+407221234567')).toBe('not_allowed');
+  });
+
+  it.each(['+40*700', '4070000*', '+*', '+4070000**'])(
+    'refuses the entry %p',
+    (entry) => {
+      expect(() =>
+        phoneConfig('staging', { ...on, PHONE_ALLOWLIST: entry }),
+      ).toThrow('PHONE_ALLOWLIST must be E.164 numbers');
+    },
+  );
+});

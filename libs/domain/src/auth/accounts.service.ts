@@ -38,7 +38,12 @@ export class AccountsService {
     @Inject(EVENT_PORT) private readonly events: EventPort,
   ) {}
 
-  async createAccount(input: NewAccount): Promise<{ id: string }> {
+  // `before` runs at the start of the account's transaction; when it throws,
+  // nothing is created.
+  async createAccount(
+    input: NewAccount,
+    before?: (tx: Prisma.TransactionClient) => Promise<void>,
+  ): Promise<{ id: string }> {
     const roles = [...new Set(input.roles)];
     const [first] = roles;
     if (!first) throw new Error('an account needs at least one role');
@@ -47,6 +52,7 @@ export class AccountsService {
     const language = input.language ?? 'ro';
     const { method } = input.identity;
     return this.prisma.$transaction(async (tx) => {
+      await before?.(tx);
       const { id } = await tx.account.create({
         data: {
           consents: {
@@ -71,6 +77,12 @@ export class AccountsService {
           lastRole: first,
           name: input.name,
           phone: input.phone,
+          // A WhatsApp sign-in proved the number by its code.
+          phoneVerifiedAt:
+            method === 'whatsapp_phone' &&
+            input.phone === input.identity.subject
+              ? new Date()
+              : undefined,
           roles: { create: roles.map((role) => ({ role })) },
         },
         select: { id: true },

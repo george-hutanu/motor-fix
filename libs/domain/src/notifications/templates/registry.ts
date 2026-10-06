@@ -4,6 +4,7 @@ import { GENERIC, GENERIC_GROUPED } from './generic';
 import { NEWS } from './news';
 import { PUSH_TEST } from './push-test';
 import { QUOTE_RECEIVED_GROUPED } from './quote-received';
+import { SIGN_IN_CODE } from './sign-in-code';
 import {
   STAFF_INVITE_MECHANIC,
   STAFF_INVITE_RECEPTIONIST,
@@ -24,6 +25,7 @@ export const TEMPLATES: Registry = {
   NEWS,
   PUSH_TEST,
   'QUOTE_RECEIVED.grouped': QUOTE_RECEIVED_GROUPED,
+  SIGN_IN_CODE,
   'STAFF_INVITE.mechanic': STAFF_INVITE_MECHANIC,
   'STAFF_INVITE.receptionist': STAFF_INVITE_RECEPTIONIST,
   STAFF_JOINED,

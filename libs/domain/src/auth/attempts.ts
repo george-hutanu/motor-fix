@@ -13,9 +13,11 @@ const SIGN_UP_WINDOW_SECONDS = 60 * 60;
 const SIGN_UP_LIMIT = 10;
 const RESET_WINDOW_SECONDS = 60 * 60;
 const RESET_LIMIT = { address: 10, email: 3 } as const;
+const HOUR_SECONDS = 60 * 60;
+const PHONE_CODE_LIMIT = { address: 20, hour: 5, minute: 1 } as const;
 
 type Kind = keyof typeof LIMIT;
-type Limited = 'sign-in' | 'sign-up' | 'reset';
+type Limited = 'sign-in' | 'sign-up' | 'reset' | 'phone-code';
 
 // One client however its address is written: an IPv4 address also in its
 // IPv6-mapped form, and an IPv6 address by its /64, which one subscriber
@@ -53,6 +55,7 @@ const digest = (value: string) =>
   createHash('sha256').update(value).digest('hex');
 const keyOf = (kind: Kind, value: string) =>
   `auth:fail:${kind}:${digest(value)}`;
+const phoneHourKey = (phone: string) => `auth:code:hour:${digest(phone)}`;
 
 // Failed sign-ins per e-mail and per address, and sign-ups per address. Redis
 // only counts: when it is unreachable the limits are skipped rather than
@@ -146,6 +149,49 @@ export class Attempts {
     } catch {
       this.unavailable('reset');
       return true;
+    }
+  }
+
+  // Counts one code sent to the number and one request from the address;
+  // false once the number had a code this minute or five this hour, or the
+  // address twenty requests this hour. Each window begins with its first.
+  async admitPhoneCode(phone: string, address: string): Promise<boolean> {
+    const client = this.client('phone-code', address);
+    const keys: [string, number, number][] = [
+      [`auth:code:minute:${digest(phone)}`, 60, PHONE_CODE_LIMIT.minute],
+      [phoneHourKey(phone), HOUR_SECONDS, PHONE_CODE_LIMIT.hour],
+    ];
+    if (client) {
+      keys.push([
+        `auth:code:address:${digest(client)}`,
+        HOUR_SECONDS,
+        PHONE_CODE_LIMIT.address,
+      ]);
+    }
+    try {
+      const counts = this.redis.multi();
+      for (const [key, seconds] of keys) {
+        counts.incr(key).expire(key, seconds, 'NX');
+      }
+      const replies = (await counts.exec()) ?? [];
+      for (const [error] of replies) if (error) throw error;
+      return keys.every(
+        ([, , limit], i) => Number(replies[i * 2]?.[1]) <= limit,
+      );
+    } catch {
+      this.unavailable('phone-code');
+      return true;
+    }
+  }
+
+  // A code that was never sent does not count toward the number's hour.
+  async uncountPhoneCode(phone: string): Promise<void> {
+    try {
+      const key = phoneHourKey(phone);
+      // Should the hour have ended meanwhile, the key still expires.
+      await this.redis.multi().decr(key).expire(key, HOUR_SECONDS, 'NX').exec();
+    } catch {
+      this.unavailable('phone-code');
     }
   }
 

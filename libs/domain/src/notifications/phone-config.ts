@@ -1,4 +1,4 @@
-import type { AppEnv } from '@motor-fix/contracts';
+import { type AppEnv, E164 } from '@motor-fix/contracts';
 
 export const PHONE_CONFIG = Symbol('PHONE_CONFIG');
 
@@ -6,7 +6,8 @@ export const PHONE_CONFIG = Symbol('PHONE_CONFIG');
 export interface PhoneConfig {
   sending: boolean;
   production: boolean;
-  // E.164 numbers; outside production only these are sent to.
+  // E.164 numbers, or prefixes ending in * (+4070000*); outside production
+  // only these are sent to.
   allowlist: string[];
   smsSender: string;
   whatsappSender: string;
@@ -15,14 +16,14 @@ export interface PhoneConfig {
 }
 
 const ENTRY = /^([\w.-]+)=(\d+)$/;
-const E164 = /^\+[1-9]\d{6,14}$/;
+const PREFIX = /^\+[1-9]\d{0,14}\*$/;
 
 function numbers(value = ''): string[] {
   const list = value
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean);
-  if (list.some((entry) => !E164.test(entry))) {
+  if (list.some((entry) => !E164.test(entry) && !PREFIX.test(entry))) {
     throw new Error('PHONE_ALLOWLIST must be E.164 numbers');
   }
   return list;
@@ -68,6 +69,11 @@ export function phoneBlockedReason(
   phone: string,
 ): 'sending_off' | 'not_allowed' | null {
   if (!config.sending) return 'sending_off';
-  if (config.production || config.allowlist.includes(phone)) return null;
-  return 'not_allowed';
+  if (config.production) return null;
+  const allowed = config.allowlist.some((entry) =>
+    entry.endsWith('*')
+      ? phone.startsWith(entry.slice(0, -1))
+      : entry === phone,
+  );
+  return allowed ? null : 'not_allowed';
 }

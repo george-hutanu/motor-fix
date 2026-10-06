@@ -47,6 +47,11 @@ import { passwordResetControllerCheck } from '../fn/auth/password-reset-controll
 import { PasswordResetControllerCheck$Params } from '../fn/auth/password-reset-controller-check';
 import { passwordResetControllerComplete } from '../fn/auth/password-reset-controller-complete';
 import { PasswordResetControllerComplete$Params } from '../fn/auth/password-reset-controller-complete';
+import { PhoneSessionDto } from '../models/phone-session-dto';
+import { phoneSignInControllerPhoneCode } from '../fn/auth/phone-sign-in-controller-phone-code';
+import { PhoneSignInControllerPhoneCode$Params } from '../fn/auth/phone-sign-in-controller-phone-code';
+import { phoneSignInControllerPhoneSignIn } from '../fn/auth/phone-sign-in-controller-phone-sign-in';
+import { PhoneSignInControllerPhoneSignIn$Params } from '../fn/auth/phone-sign-in-controller-phone-sign-in';
 import { ProvidersDto } from '../models/providers-dto';
 import { SessionDto } from '../models/session-dto';
 
@@ -504,6 +509,56 @@ export class AuthService extends BaseService {
   passwordResetControllerComplete(params: PasswordResetControllerComplete$Params, context?: HttpContext): Promise<SessionDto> {
     const resp = this.passwordResetControllerComplete$Response(params, context);
     return resp.then((r: StrictHttpResponse<SessionDto>): SessionDto => r.body);
+  }
+
+  /** Path part for operation `phoneSignInControllerPhoneCode()` */
+  static readonly PhoneSignInControllerPhoneCodePath = '/api/v1/auth/phone-code';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `phoneSignInControllerPhoneCode()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  phoneSignInControllerPhoneCode$Response(params: PhoneSignInControllerPhoneCode$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = phoneSignInControllerPhoneCode(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `phoneSignInControllerPhoneCode$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  phoneSignInControllerPhoneCode(params: PhoneSignInControllerPhoneCode$Params, context?: HttpContext): Promise<void> {
+    const resp = this.phoneSignInControllerPhoneCode$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `phoneSignInControllerPhoneSignIn()` */
+  static readonly PhoneSignInControllerPhoneSignInPath = '/api/v1/auth/phone-sign-in';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `phoneSignInControllerPhoneSignIn()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  phoneSignInControllerPhoneSignIn$Response(params: PhoneSignInControllerPhoneSignIn$Params, context?: HttpContext): Promise<StrictHttpResponse<PhoneSessionDto>> {
+    const obs = phoneSignInControllerPhoneSignIn(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `phoneSignInControllerPhoneSignIn$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  phoneSignInControllerPhoneSignIn(params: PhoneSignInControllerPhoneSignIn$Params, context?: HttpContext): Promise<PhoneSessionDto> {
+    const resp = this.phoneSignInControllerPhoneSignIn$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PhoneSessionDto>): PhoneSessionDto => r.body);
   }
 
 }

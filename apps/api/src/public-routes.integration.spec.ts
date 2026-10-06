@@ -37,6 +37,8 @@ const PUBLIC = [
   'POST /api/v1/auth/password-reset',
   'POST /api/v1/auth/password-reset/check',
   'POST /api/v1/auth/password-reset/complete',
+  'POST /api/v1/auth/phone-code',
+  'POST /api/v1/auth/phone-sign-in',
   'POST /api/v1/auth/refresh',
   'POST /api/v1/auth/roles/switch',
   'POST /api/v1/auth/sign-in',

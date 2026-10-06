@@ -41,6 +41,10 @@ export type { PasswordResetControllerCheck$Params as PasswordResetControllerChec
 export { passwordResetControllerCheck as passwordResetControllerCheck } from './fn/auth/password-reset-controller-check';
 export type { PasswordResetControllerComplete$Params as PasswordResetControllerComplete$Params } from './fn/auth/password-reset-controller-complete';
 export { passwordResetControllerComplete as passwordResetControllerComplete } from './fn/auth/password-reset-controller-complete';
+export type { PhoneSignInControllerPhoneCode$Params as PhoneSignInControllerPhoneCode$Params } from './fn/auth/phone-sign-in-controller-phone-code';
+export { phoneSignInControllerPhoneCode as phoneSignInControllerPhoneCode } from './fn/auth/phone-sign-in-controller-phone-code';
+export type { PhoneSignInControllerPhoneSignIn$Params as PhoneSignInControllerPhoneSignIn$Params } from './fn/auth/phone-sign-in-controller-phone-sign-in';
+export { phoneSignInControllerPhoneSignIn as phoneSignInControllerPhoneSignIn } from './fn/auth/phone-sign-in-controller-phone-sign-in';
 export type { MeControllerMe$Params as MeControllerMe$Params } from './fn/me/me-controller-me';
 export { meControllerMe as meControllerMe } from './fn/me/me-controller-me';
 export type { MeControllerUpdate$Params as MeControllerUpdate$Params } from './fn/me/me-controller-update';

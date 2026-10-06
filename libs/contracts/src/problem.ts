@@ -6,6 +6,8 @@ export interface Problem {
   detail?: string;
   // Errors that belong to one field; `field` is the form control's name.
   errors?: FieldProblem[];
+  // A wrong sign-in code (`code_invalid`): the tries the code has left.
+  attemptsLeft?: number;
   title?: string;
   type?: string;
 }

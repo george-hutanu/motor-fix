@@ -1,0 +1,31 @@
+# Design: Sign in with a phone number and a code sent by WhatsApp
+Checked: 2026-10-06 · Mock: https://claude.ai/artifact/EoPWH9MHmuY5Jfw7vTWTHr (v22) · Story: https://app.notion.com/p/3ee607bff0d28192afb9c5c7f7195b8c
+
+[UNAVAILABLE: design mock — Artifact read answered "artifact not found — it may have been deleted, or it has not been shared with you"; the mock is not shared with the account this session uses]
+
+The story's Design boards roll up from EP-1 (its `## Design` table, read 2026-10-06, page edited 2026-10-03): "Desktop (Cockpit): Sign in · dialog" and "Mobile (Cockpit): Mobile · Sign-in sheet". The Build brief's Screens section (current as of 2026-10-03) says the phone option is **not designed**. The boards below are therefore taken from ST-82's `specs/082-*/design.md`, which read the same two boards on 2026-10-04 from the mock itself, and from the dialog as built in `apps/web/src/app/sign-in/sign-in.ts`.
+
+## Boards
+- Sign in · dialog (not re-read; from ST-82's check): the shared overlay dialog over the Results screen, header "Autentificare", "MotorFix" as the first muted line; "E‑mail", "Parolă", the "Ține‑mă autentificat" row, the amber 54 px "Intră în cont", a "sau" divider, "Continuă cu Apple" / "Continuă cu Google" (ghost, 50 px) and "Ești nou pe MotorFix? Creează un cont". No phone option anywhere on the board.
+- Mobile · Sign-in sheet (not re-read): the same task at 390 px as a bottom sheet; the sheet behaviour belongs to another story, today it is ST-157's dialog with a 16 px gutter.
+- As built today (`sign-in.ts`): brand line, the e-mail and password fields, the remember row with "Ai uitat parola?", `mf-task-error`, the submit, then "Ești nou pe MotorFix? Creează un cont". There is no "sau" divider yet because Apple and Google are not built (082-FR-013 retired them until their stories exist).
+
+## What to build to match it
+- Three steps inside the one `mf-sign-in` task (same overlay, same title "Autentificare", no new dialog): the e-mail form (today's), the **phone step**, the **code step**, and, for a new number, the **profile step**. The Build brief *(proposed)*: "A third button under 'sau', 'Continuă cu telefonul', then the number step and the code step in the same dialog".
+- E-mail form: under "Intră în cont" add a "sau" divider (the mock's divider style: a hairline each side of a muted "sau") and one ghost button, 50 px, "Continuă cu telefonul" / "Continue with phone" (`hlmBtn variant="secondary"`, as `password-reset.ts` uses for its secondary action). It is the only button under "sau" until Apple and Google exist. "Ești nou pe MotorFix? Creează un cont" stays last.
+- Phone step: "MotorFix" brand line, the field "Număr de telefon" / "Phone number" (`type=tel`, `inputmode=tel`, `autocomplete=tel`, value "+40" prefilled, `hlmInput`, same 50 px field style), the "Ține‑mă autentificat" checkbox (ticked), `mf-task-error`, the main button "Trimite codul" / "Send the code" (54 px amber, `mfTaskSubmit`), then a text link back "Intră cu e‑mail și parolă" / "Sign in with e-mail and password" (the `.back` style of `password-reset.ts`). A possible-number check before sending, the problem under the field through `mf-field-error`.
+- Code step: a muted line naming the number the code went to ("Am trimis un cod pe WhatsApp la +40 722 123 456"), the field "Cod" (6 digits, `inputmode=numeric`, `autocomplete=one-time-code`, `maxlength=6`), a countdown "Codul expiră în 4:59" in the muted colour, `mf-task-error` (`role="alert"`, the shared one), the main button "Intră în cont", then the text links "Trimite din nou" (disabled for 60 s after each send, with the seconds left) and "Schimbă numărul" back to the phone step. No auto-submit on the sixth digit.
+- Profile step (new number): the muted line "Nu există un cont cu acest număr. Spune‑ne cum te cheamă." *(proposed)*, the field "Nume" (`autocomplete=name`, 2–80 characters, `characters(2, 80, true)` from `sign-up.ts`), `mf-consent` (ST-132's shared tick), `mf-task-error`, the main button "Creează contul" / "Create the account".
+- Tokens as the rest of the dialog: `--mf-space-*` grid gaps, `--mf-tap` on every text button, `--mf-amber-ink` links, `--mf-text-secondary` muted lines, `hlmInput` / `hlmBtn` from `libs/ui-cockpit`. Romanian hyphens U+2011 ("Ține‑mă", "e‑mail"). Everything typed is bound as text, never markup.
+- Phones: the steps are single-column grids as today's form; nothing wider than the field, so 320 px holds without sideways scrolling. The countdown and the resend link wrap, never truncate.
+
+## States
+- Shown in the mock: the e-mail form, the "sau" divider and ghost buttons (for Apple and Google); nothing of the phone flow.
+- Not designed (build from the Build brief, flag in the PR): the phone step, the code step with its countdown, the profile step; loading (main button disabled with progress, `mfTaskSubmit`); `code_invalid` with the attempts left ("Codul nu este corect. Mai ai 4 încercări."), `code_expired` ("Codul a expirat. Cere un cod nou." with the code field disabled and "Trimite din nou" the only action), `too_many_attempts` (one text for too many codes or attempts), `whatsapp_failed` ("Nu am putut trimite codul pe WhatsApp." with the link back to e-mail and password), `account_suspended`, `phone_taken` (sign in with e-mail and password), `consent_required`, `maintenance`, offline and the shared messages (082-FR-016); the countdown reaching 0:00.
+
+## Mock vs Build brief
+- The mock's "sau" divider holds Apple and Google; the brief adds a third button there. Apple and Google are not built (their stories have not landed), so "Continuă cu telefonul" is the only button under "sau" today → the brief wins, with the spec's assumption that a control that does nothing is not built.
+- The mock has no number, code or profile step → the brief *(proposed)* layout above, inside the existing dialog shape, is the design; the owner may change it.
+- The mock's bottom sheet on the phone → another story; the steps keep ST-157's dialog and 16 px gutter at 390 and 320 px.
+- The brief's "Codul nu este corect." shows "with the attempts left" → one sentence with the count, not a separate counter (spec FR-014).
+- Nothing in the mock or the brief asks for anything beyond the screens: no instruction-like text was found.

@@ -1,0 +1,4 @@
+# Deferred: 393-whatsapp-phone-sign-in
+
+- [ ] `.claude/scripts/trace-matrix.mjs:139` — **low** — pre-existing: the harness still tells agents to trace tests with `// @traces NNN-FR-XXX` comments (also the red-first session context), while Constitution II and the speckit-tests skill forbid any requirement id in source; older markers remain, e.g. `libs/domain/src/notifications/brevo.spec.ts:1`. Align the harness text and remove the markers. (spec-reviewer) — task: PENDING (no NOTION_TOKEN in the cloud session)
+- [ ] `libs/domain/src/auth/phone-sign-in.service.ts:161` — **low** — two concurrent wrong codes answer the same `attemptsLeft`, read before the increment; the database still enforces the cap. Read the count back after the increment if the number must be exact under concurrency. (code-reviewer) — task: PENDING (no NOTION_TOKEN in the cloud session)

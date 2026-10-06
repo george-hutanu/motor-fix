@@ -45,6 +45,27 @@ describe('ProblemFilter', () => {
     expect(res.body).toMatchObject({ code: 'sign_in_required', status: 401 });
   });
 
+  it('forwards the tries a sign-in code has left', () => {
+    const res = send(
+      new HttpException(
+        { attemptsLeft: 3, code: 'code_invalid', message: 'Wrong code' },
+        401,
+      ),
+    );
+
+    expect(res.body).toMatchObject({ attemptsLeft: 3, code: 'code_invalid' });
+  });
+
+  it('drops an attemptsLeft that is not a whole count', () => {
+    for (const attemptsLeft of [-1, 1.5, '2', null]) {
+      const res = send(
+        new HttpException({ attemptsLeft, code: 'code_invalid' }, 401),
+      );
+
+      expect(res.body).not.toHaveProperty('attemptsLeft');
+    }
+  });
+
   it('still maps a status without a code', () => {
     expect(send(new NotFoundException()).body).toMatchObject({
       code: 'not_found',

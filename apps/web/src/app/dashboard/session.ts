@@ -118,6 +118,39 @@ export class Session {
     return this.load();
   }
 
+  // A code by WhatsApp; the answer is the same whether or not an account
+  // holds the number.
+  async phoneCode(phone: string, language: 'ro' | 'en') {
+    await this.auth.phoneSignInControllerPhoneCode({
+      body: { language, phone },
+    });
+  }
+
+  // 'profile' when no account holds the number: the same code with a name
+  // creates one, sending the current consent the form's tick stands for.
+  async signInWithPhone(
+    phone: string,
+    code: string,
+    remember: boolean,
+    profile?: { name: string; language: 'ro' | 'en' },
+  ) {
+    await this.sendPending();
+    const answer = await this.auth.phoneSignInControllerPhoneSignIn({
+      body: {
+        code,
+        phone,
+        remember,
+        ...(profile && { consent: CURRENT_CONSENT, ...profile }),
+      },
+    });
+    if (answer.next === 'profile') return 'profile';
+    const { accessToken } = answer;
+    if (!accessToken) throw new Error('no session opened');
+    this.started(accessToken);
+    this.current.set(null);
+    return this.load();
+  }
+
   // A new driver account, signed in as a sign-in would be. The form calls it
   // only once the consent tick is set, so it sends the current versions.
   async signUp(
