@@ -2,7 +2,7 @@
 
 **Feature Branch**: `564-session-reload-role-race`
 **Created**: 2026-10-06
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 **Level**: 1 (one-session)
 **Notion story**: ST-564 — https://app.notion.com/p/3f0607bff0d281cb8b9ad4180f54e7e4
 **Epic**: EP-1 Foundations — https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707
@@ -50,7 +50,7 @@ let the reload answer: the account on screen is the switched role's.
 ### Functional Requirements
 
 - **FR-001**: An answer to a re-read of the signed-in account MUST be dropped when a role switch or a new session (sign-in, sign-up, password reset, provider sign-up) completed while the read was in flight; the account on screen stays what it was. A token renewal for the same session MUST NOT drop it.
-- **FR-002**: A re-read whose token was not replaced MUST keep its contract: the answer replaces the account, a failed read keeps it, and an answer after a sign-out restores nothing.
+- **FR-002**: A re-read that no role switch or new session overtook MUST keep its contract: the answer replaces the account, a failed read keeps it, and an answer after a sign-out restores nothing.
 
 ## Spec Delta
 

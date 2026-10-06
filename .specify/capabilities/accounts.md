@@ -12,6 +12,7 @@ features:
   - 132-sign-up-consent
   - 563-expired-token-sweep
   - 083-sign-in-apple-google
+  - 564-session-reload-role-race
 ---
 
 # Capability: Accounts
@@ -459,6 +460,14 @@ _From 083-sign-in-apple-google._
 ### 083-FR-011 — Every new text MUST exist in Romanian and English, and the buttons, divider and new-person step MUST NOT scroll sideways on a 320 px phone.
 
 _From 083-sign-in-apple-google._
+
+### 564-FR-001 — An answer to a re-read of the signed-in account MUST be dropped when a role switch or a new session (sign-in, sign-up, password reset, provider sign-up) completed while the read was in flight; the account on screen stays what it was. A token renewal for the same session MUST NOT drop it.
+
+_From 564-session-reload-role-race._
+
+### 564-FR-002 — A re-read that no role switch or new session overtook MUST keep its contract: the answer replaces the account, a failed read keeps it, and an answer after a sign-out restores nothing.
+
+_From 564-session-reload-role-race._
 
 ## Retired
 
