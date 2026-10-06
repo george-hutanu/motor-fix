@@ -172,11 +172,12 @@ export class NotificationSettings implements OnInit {
   ) {
     const { garageId } = entry;
     this.set(garageId, type, channel, enabled);
+    // The switch already shows the choice; a save's answer may predate a
+    // later toggle, so the live update re-reads instead.
     try {
-      const answer = await this.api.notificationPreferencesControllerSave({
+      await this.api.notificationPreferencesControllerSave({
         body: { preferences: [{ channel, enabled, garageId, type }] },
       });
-      this.entries.set(answer.staff);
     } catch {
       this.set(garageId, type, channel, !enabled);
       toast(this.i18n.t('shell.notifications.saveFailed'));

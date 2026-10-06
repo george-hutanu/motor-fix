@@ -292,6 +292,35 @@ describe('NotificationSettings', () => {
   });
 
   // @traces 198-FR-014
+  it('keeps a second toggle when the first save answers after it', async () => {
+    const { element, settle } = await render();
+    await settle();
+    let first: (value: NotificationPreferencesDto) => void = () => undefined;
+    save.mockReturnValueOnce(
+      new Promise<NotificationPreferencesDto>((r) => {
+        first = r;
+      }),
+    );
+    save.mockReturnValueOnce(new Promise(() => undefined));
+    const before = owner();
+
+    named(element, 'Cerere de ofertă nouă, Push')?.click();
+    await settle();
+    named(element, 'Cerere de ofertă nouă, E‑mail')?.click();
+    await settle();
+    // The first save's answer knows nothing of the second toggle.
+    before.sections[0].types[0].channels[1].enabled = false;
+    first(answer([before]));
+    await settle();
+
+    expect(
+      named(element, 'Cerere de ofertă nouă, E‑mail')?.getAttribute(
+        'aria-checked',
+      ),
+    ).toBe('false');
+  });
+
+  // @traces 198-FR-014
   it('puts the switch back and says so when the save fails', async () => {
     jest.mocked(toast).mockClear();
     const { element, settle } = await render();
