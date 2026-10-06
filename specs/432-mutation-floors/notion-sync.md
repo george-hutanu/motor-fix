@@ -13,3 +13,4 @@
 - 2026-10-06 · debt · ST-432 · 9 deferred bullets filed as To do tasks (Tech debt), each marked in deferred.md
 - 2026-10-06 · qa · ST-432 · story Status · Implementing → QA
 - 2026-10-06 · qa · Foundations timeline · no row for ST-432 (a task added after the plan; nothing to write)
+- 2026-10-06 · labels · PR #116 · QA
