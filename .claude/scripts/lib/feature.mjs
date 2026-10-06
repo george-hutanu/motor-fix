@@ -146,12 +146,15 @@ export function levelApplies(state, target = state?.feature_directory) {
  * PENDING_TTL_MINUTES ($SPECKIT_LEVEL_TTL_MINUTES) it is somebody else's
  * work, and the default is the safe answer.
  */
+// The one stamp shape both this and `_pending_level` in common.py read alike on
+// every machine and Python version: a zone is required, since Date.parse reads
+// a zone-less stamp as local time and Python as UTC.
+const LEVEL_AT = /^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d{3}|\.\d{6})?)?(?:Z|[+-]\d\d:\d\d)$/;
+
 export function pendingLevel(state, now = Date.now(), env = process.env) {
   if (!state || typeof state !== "object" || state.level_for !== "next") return null;
   const level = parseLevel(state.level);
-  // A stamp with no zone is local time to Date.parse and UTC to the Python helper: read it as none.
-  const zoned = typeof state.level_at === "string" && /(?:Z|[+-]\d\d:\d\d)$/.test(state.level_at);
-  const at = zoned ? Date.parse(state.level_at) : Number.NaN;
+  const at = typeof state.level_at === "string" && LEVEL_AT.test(state.level_at) ? Date.parse(state.level_at) : Number.NaN;
   if (level === null || Number.isNaN(at)) return null;
   const left = pendingTtlMinutes(env) * 60_000 - (now - at);
   // One minute of slack for two clocks; a level from further ahead is not trusted.

@@ -5,6 +5,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { checkLevel, main, suggestCommand } from './level.mjs';
+import { pointTo } from './lib/feature.mjs';
 
 const dirs = [];
 afterEach(() => {
@@ -540,5 +541,61 @@ describe('suggest --set only records a confident answer', () => {
     const run = await suggest(['ST-9', '--set'], { fake: notionFake({ fail: 'network' }) });
     assert.equal(run.status, 0);
     assert.equal(existsSync(join(run.dir, '.specify/feature.json')), false);
+  });
+});
+
+describe('a level_at without a zone is no waiting level, in both readers', () => {
+  const NOW = Date.parse('2026-10-06T20:19:13Z');
+  const pyProbe = spawnSync('python3', ['--version']);
+  const pyIt = pyProbe.status === 0 ? it : it.skip;
+
+  const jsPoint = (levelAt) =>
+    pointTo({ level: 3, level_for: 'next', level_at: levelAt }, 'specs/050-new', { now: NOW, env: {} });
+
+  const pyPoint = (levelAt) => {
+    const dir = mkdtempSync(join(tmpdir(), 'adv-zone-'));
+    dirs.push(dir);
+    mkdirSync(join(dir, '.specify'), { recursive: true });
+    writeFileSync(join(dir, '.specify/feature.json'), JSON.stringify({ level: 3, level_for: 'next', level_at: levelAt }));
+    const code = [
+      'import sys, time, pathlib',
+      `sys.path.insert(0, ${JSON.stringify(join(process.cwd(), '.specify/scripts/python'))})`,
+      'import common',
+      `time.time = lambda: ${NOW / 1000}`,
+      `common.time.time = time.time`,
+      `common.persist_feature_json(pathlib.Path(${JSON.stringify(dir)}), 'specs/050-new')`,
+    ].join('\n');
+    const run = spawnSync('python3', ['-c', code], { encoding: 'utf8' });
+    assert.equal(run.status, 0, run.stderr);
+    return JSON.parse(readFileSync(join(dir, '.specify/feature.json'), 'utf8'));
+  };
+
+  const zoneless = ['2026-10-06T20:18:13', '2026-10-06', '2026-10-06T20:18:13.123', '2026-10-06 20:18:13', '2026-10-06T20:18'];
+  for (const stamp of zoneless) {
+    it(`drops the level for ${JSON.stringify(stamp)} in JS`, () => {
+      assert.deepEqual(jsPoint(stamp), { feature_directory: 'specs/050-new' });
+    });
+    pyIt(`drops the level for ${JSON.stringify(stamp)} in Python`, () => {
+      assert.deepEqual(pyPoint(stamp), { feature_directory: 'specs/050-new' });
+    });
+  }
+
+  const zoned = ['2026-10-06T20:18:13Z', '2026-10-06T20:18:13+00:00', '2026-10-06T22:18:13+02:00', '2026-10-06T15:18:13-05:00', '2026-10-06T20:18:13.123Z', '2026-10-06T20:18:13.5Z'];
+  for (const stamp of zoned) {
+    pyIt(`JS and Python agree on ${JSON.stringify(stamp)}`, () => {
+      assert.deepEqual(pyPoint(stamp), jsPoint(stamp));
+    });
+  }
+
+  it('keeps a Z stamp fresh in JS', () => {
+    assert.deepEqual(jsPoint('2026-10-06T20:18:13Z'), { feature_directory: 'specs/050-new', level: 3, level_for: 'specs/050-new' });
+  });
+
+  it('refuses a date followed by an offset with no time', () => {
+    assert.deepEqual(jsPoint('2026-10-06-05:00'), { feature_directory: 'specs/050-new' });
+  });
+
+  it('refuses a non-string level_at', () => {
+    assert.deepEqual(jsPoint(NOW), { feature_directory: 'specs/050-new' });
   });
 });

@@ -401,8 +401,12 @@ describe('a level reaches only the feature it was sized for', () => {
         assert.equal(pendingLevel(state(dir), T + minutes(PENDING_TTL_MINUTES) + 1), null);
         assert.equal(pendingLevel(state(dir), T - minutes(5)), null, 'a level from the future is not trusted');
         const zoneless = { ...state(dir), level_at: at(T).replace(/Z$/, '') };
-        assert.equal(pendingLevel(zoneless, T + minutes(1)), null, 'a stamp with no zone is read the same on every machine: as none');
-        assert.equal(pendingLevel({ ...zoneless, level_at: at(T).slice(0, 10) }, T + minutes(1)), null);
+        // `now` is one minute after the stamp as Date.parse reads it, so only the zone check can drop it.
+        assert.equal(pendingLevel(zoneless, Date.parse(zoneless.level_at) + minutes(1)), null, 'a stamp with no zone is read as none');
+        const dateOnly = { ...zoneless, level_at: at(T).slice(0, 10) };
+        assert.equal(pendingLevel(dateOnly, Date.parse(dateOnly.level_at) + minutes(1)), null);
+        const shortFraction = { ...zoneless, level_at: at(T).replace(/\.\d+Z$/, '.5Z') };
+        assert.equal(pendingLevel(shortFraction, T + minutes(1)), null, 'a shape Python cannot parse is none on both sides');
         const offset = { ...state(dir), level_at: at(T + minutes(120)).replace(/Z$/, '+02:00') };
         assert.deepEqual(pendingLevel(offset, T + minutes(1)), { level: 1, minutesLeft: PENDING_TTL_MINUTES - 1 });
 

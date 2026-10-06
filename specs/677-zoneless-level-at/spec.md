@@ -40,7 +40,7 @@ The harness records a level sized "for the next feature" together with the momen
 
 - **FR-001**: The JS pending-level reader MUST report no waiting level when `level_at` is a string without a time-zone designator (`Z` or `±hh:mm`), regardless of the machine's time zone.
 - **FR-002**: The Python pending-level reader MUST report no waiting level for the same input, so the two readers agree on every machine.
-- **FR-003**: A `level_at` that carries `Z` or a `±hh:mm` offset MUST keep its current freshness behaviour in both readers.
+- **FR-003**: A `level_at` of the one shape both readers parse alike (`YYYY-MM-DDTHH:MM`, optional seconds with an optional 3- or 6-digit fraction, then `Z` or `±hh:mm`) MUST keep its current freshness behaviour in both readers; any other shape is no waiting level in both.
 - **FR-004**: The Python-vs-JS parity test MUST include a fresh, zone-less `level_at` among its compared states, and both helpers MUST produce the same `feature.json` for it (the pointer alone, no level).
 
 ### Key Entities
@@ -70,9 +70,3 @@ The harness records a level sized "for the next feature" together with the momen
 - The parity case uses a fresh zone-less stamp (one minute old) so that it would be carried if either reader accepted it; a stale zone-less one would hide the bug (autonomous default).
 - No behaviour outside the two readers changes: `setLevel` keeps writing `toISOString()`, and the TTL, the clock-skew slack and the level-0 rule stay as they are (autonomous default — Constitution I).
 - Design check: N/A, there are no screens; `design.md` records this (autonomous default).
-
-## Spec Delta
-
-- **Adds**: a zone-less `level_at` is refused as a waiting level by both the JS and the Python feature-pointer helpers (capability: harness feature pointer / sizing).
-- **Modifies**: nothing else.
-- **Removes**: nothing.

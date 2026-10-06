@@ -893,7 +893,7 @@ _From 677-zoneless-level-at._
 
 _From 677-zoneless-level-at._
 
-### 677-FR-003 — A `level_at` that carries `Z` or a `±hh:mm` offset MUST keep its current freshness behaviour in both readers.
+### 677-FR-003 — A `level_at` of the one shape both readers parse alike (`YYYY-MM-DDTHH:MM`, optional seconds with an optional 3- or 6-digit fraction, then `Z` or `±hh:mm`) MUST keep its current freshness behaviour in both readers; any other shape is no waiting level in both.
 
 _From 677-zoneless-level-at._
 
