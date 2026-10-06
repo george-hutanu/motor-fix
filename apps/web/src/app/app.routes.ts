@@ -75,6 +75,11 @@ export const routes: Routes = [
           import('./public/unsubscribe').then((m) => m.Unsubscribe),
         path: 'unsubscribe/:token',
       },
+      {
+        loadComponent: () =>
+          import('./public/invite').then((m) => m.InvitePage),
+        path: 'invite/:token',
+      },
       ...(['terms', 'privacy'] as const).map((text) => ({
         data: { text },
         loadComponent: () => import('./public/legal').then((m) => m.Legal),

@@ -4,6 +4,11 @@ import { GENERIC, GENERIC_GROUPED } from './generic';
 import { NEWS } from './news';
 import { PUSH_TEST } from './push-test';
 import { QUOTE_RECEIVED_GROUPED } from './quote-received';
+import {
+  STAFF_INVITE_MECHANIC,
+  STAFF_INVITE_RECEPTIONIST,
+  STAFF_JOINED,
+} from './staff';
 import { TEST_MESSAGE } from './test-message';
 import type { Registry } from '../templates';
 
@@ -19,5 +24,8 @@ export const TEMPLATES: Registry = {
   NEWS,
   PUSH_TEST,
   'QUOTE_RECEIVED.grouped': QUOTE_RECEIVED_GROUPED,
+  'STAFF_INVITE.mechanic': STAFF_INVITE_MECHANIC,
+  'STAFF_INVITE.receptionist': STAFF_INVITE_RECEPTIONIST,
+  STAFF_JOINED,
   TEST_MESSAGE,
 };
