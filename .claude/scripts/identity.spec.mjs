@@ -13,12 +13,15 @@ afterEach(() => {
 });
 
 // No GIT_* from a surrounding hook, and no global config reaching the scratch repos.
-const env = () => {
-  const clean = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_')));
-  return { ...clean, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' };
+// No CLAUDE_CODE_REMOTE either, unless a case sets it: the local cases stay local in a cloud run.
+const env = (extra = {}) => {
+  const clean = Object.fromEntries(Object.entries(process.env).filter(([k]) => !k.startsWith('GIT_') && k !== 'CLAUDE_CODE_REMOTE'));
+  return { ...clean, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1', ...extra };
 };
 const git = (cwd, ...args) => spawnSync('git', args, { cwd, encoding: 'utf8', env: env() });
-const sh = (cwd, mode) => spawnSync('sh', ['.husky/identity.sh', mode], { cwd, encoding: 'utf8', env: env() });
+const sh = (cwd, mode, extra) => spawnSync('sh', ['.husky/identity.sh', mode], { cwd, encoding: 'utf8', env: env(extra) });
+const CLOUD = { CLAUDE_CODE_REMOTE: 'true' };
+const credentialKeys = (cwd) => git(cwd, 'config', '--get-regexp', '^credential\\.').stdout.trim();
 
 /** A main checkout with hooks in .husky/_ and one linked worktree, the way the desktop app lays them out. */
 function checkouts({ worktreeHooks = true, worktreeConfig = true } = {}) {
@@ -96,5 +99,60 @@ describe('identity.sh and the hooks a worktree runs', () => {
     pinToMain(repos);
     assert.equal(sh(repos.worktree, 'apply').status, 0);
     assert.equal(git(repos.worktree, 'config', 'core.hooksPath').stdout.trim(), join(repos.main, '.husky/_'));
+  });
+});
+
+// @traces 749-FR-001
+describe('identity.sh in a cloud session (CLAUDE_CODE_REMOTE=true), where a proxy holds the GitHub credentials', () => {
+  it('apply writes the author and no credential helper or username', () => {
+    const { main } = checkouts();
+    const out = sh(main, 'apply', CLOUD);
+    assert.equal(out.status, 0, out.stderr);
+    assert.equal(git(main, 'config', 'user.name').stdout.trim(), 'george-hutanu');
+    assert.equal(git(main, 'config', 'user.email').stdout.trim(), 'hutanugeorge40@gmail.com');
+    assert.equal(credentialKeys(main), '');
+  });
+
+  it('check passes without credential pinning', () => {
+    const { main } = checkouts();
+    sh(main, 'apply', CLOUD);
+    const out = sh(main, 'check', CLOUD);
+    assert.equal(out.status, 0, out.stderr);
+  });
+
+  it('check still fails a wrong author or committer', () => {
+    const { main } = checkouts();
+    sh(main, 'apply', CLOUD);
+    git(main, 'config', 'user.email', 'someone@work.example');
+    const out = sh(main, 'check', CLOUD);
+    assert.equal(out.status, 1);
+    assert.match(out.stderr, /commit author/);
+    assert.match(out.stderr, /committer/);
+    assert.doesNotMatch(out.stderr, /not pinned/);
+  });
+
+  it('check still fails hooks that run from another checkout', () => {
+    const repos = checkouts();
+    sh(repos.worktree, 'apply', CLOUD);
+    pinToMain(repos);
+    const out = sh(repos.worktree, 'check', CLOUD);
+    assert.equal(out.status, 1);
+    assert.ok(out.stderr.includes(join(repos.main, '.husky/_')), out.stderr);
+  });
+
+  it('outside the cloud, check still fails a checkout whose credentials are not pinned', () => {
+    const { main } = checkouts();
+    sh(main, 'apply', CLOUD);
+    for (const remote of [undefined, '', 'false', '1']) {
+      const out = sh(main, 'check', remote === undefined ? {} : { CLAUDE_CODE_REMOTE: remote });
+      assert.equal(out.status, 1, `CLAUDE_CODE_REMOTE=${remote}`);
+      assert.match(out.stderr, /not pinned to george-hutanu/);
+    }
+  });
+
+  it('outside the cloud, apply still pins the credentials to george-hutanu', () => {
+    const { main } = checkouts();
+    sh(main, 'apply');
+    assert.match(credentialKeys(main), /--user george-hutanu/);
   });
 });

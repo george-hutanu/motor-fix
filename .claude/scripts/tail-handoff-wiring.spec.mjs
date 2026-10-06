@@ -108,3 +108,44 @@ describe('no agent holds its context across the CI and QA wait', () => {
     for (const step of steps(tail).filter((s) => /--watch|gh run watch/.test(s))) assert.match(step, /docs-only/);
   });
 });
+
+// @traces 749-FR-002 749-FR-003
+describe('the hand-off survives a cloud session resumed on a fresh VM', () => {
+  it('posts the note as a marked PR comment whenever its QA run line is written', () => {
+    assert.match(section(auto, '## Hand-off'), /lifecycle\.mjs handoff --pr <n>/);
+    assert.match(section(auto, '## Hand-off'), /<!-- speckit-handoff -->/);
+    const tail = section(auto, '## The tail');
+    assert.match(tail, /lifecycle\.mjs handoff --pr <n>/);
+  });
+
+  it('has the tail and the watcher\'s tail fix restore a missing note before reading it', () => {
+    assert.match(section(auto, '## The tail'), /lifecycle\.mjs handoff --restore --pr <n>/);
+    assert.match(read('.claude/skills/speckit-watch/SKILL.md'), /lifecycle\.mjs handoff --restore --pr <n>/);
+  });
+});
+
+// @traces 749-FR-005
+describe('AGENTS.md says how to run in a cloud session', () => {
+  const cloudSection = () => section(read('AGENTS.md'), '## Cloud sessions');
+
+  it('names the setup script, the environment and the network it needs', () => {
+    const cloud = cloudSection();
+    for (const fact of [/scripts\/cloud-setup\.sh/, /CLAUDE_CODE_REMOTE/, /NOTION_TOKEN/, /\bJEV\b/, /\.env\.example/, /api\.notion\.com/, /api\.typesafe\.ai/, /proxy-injected/])
+      assert.match(cloud, fact);
+  });
+
+  it('keeps a cloud session to one repo and one story, never arming the watcher', () => {
+    const cloud = cloudSection();
+    assert.match(cloud, /single-repo/i);
+    assert.match(cloud, /one story/i);
+    assert.match(cloud, /watch\.mjs/);
+  });
+
+  it('names the fallbacks and the connector prefix', () => {
+    const cloud = cloudSection();
+    assert.match(cloud, /Workflow/);
+    assert.match(cloud, /Artifact/);
+    assert.match(cloud, /connector/i);
+    assert.match(read('.claude/skills/speckit-review/SKILL.md'), /Workflow tool is not available/);
+  });
+});

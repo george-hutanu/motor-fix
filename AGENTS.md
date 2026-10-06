@@ -22,6 +22,9 @@ that way for `~/code`.
   terminal, prefix: `GH_TOKEN=$(gh auth token -u george-hutanu) gh …`.
 - Never `gh auth switch` to george-hutanu, and never edit `~/.gitconfig` for
   this repo — both would change every work repo under `~/code` too.
+- In a cloud session (`CLAUDE_CODE_REMOTE=true`) a proxy carries GitHub's
+  credentials: the hook exports nothing, `apply` sets the author only, and
+  `check` skips credential pinning (see "Cloud sessions").
 
 ## Notion is the tracker, and design comes first
 
@@ -220,6 +223,37 @@ Read only what decides the next step; every check still runs:
   `report.json` into `pr-review/`, and `.gitignore` refuses images there. Real
   app assets, such as the web app's icons, are the only images git holds.
 
+## Cloud sessions
+
+A story can run in a Claude Code cloud session (claude.ai/code), where
+`CLAUDE_CODE_REMOTE=true`. Every cloud difference in the scripts is gated on
+that variable, so the laptop behaves as before.
+
+- **Environment.** Setup script: `bash scripts/cloud-setup.sh` (Node 24,
+  `npm ci`, the Docker daemon, `docker compose pull postgres redis`; it is
+  idempotent and unverified until the first real cloud run). Variables, by
+  name only: `NOTION_TOKEN`, `JEV`, and from `.env.example` the ones the
+  tests read (`DATABASE_URL`, `REDIS_URL`, `AUTH_TOKEN_SECRET`; CI's job env
+  in `.github/workflows/ci.yml` lists the end-to-end set). Network level
+  Trusted, or a custom list that allows `api.notion.com` and
+  `api.typesafe.ai`.
+- **GitHub.** `GH_TOKEN` and `GITHUB_TOKEN` hold the proxy's placeholder
+  `proxy-injected`; nothing overwrites them, and no gh login is needed.
+- **Single-repo sessions only:** a multi-repo session loads no hooks, so no
+  gate would run.
+- **One story per cloud session.** Never arm `watch.mjs` there; the
+  orchestrating session and `/speckit-watch` stay on the laptop.
+- **A resumed session is a fresh VM** with none of the gitignored files.
+  The hand-off note is also posted on the PR as a `<!-- speckit-handoff -->`
+  comment, and the tail runs `lifecycle.mjs handoff --restore --pr <n>`
+  before reading it.
+- **Tools.** The Workflow and Artifact tools are unverified in the cloud:
+  `/speckit-review` falls back to Agent-tool reviewers, and
+  `/speckit-design-check` logs a mock it cannot open. The Notion tool lists
+  in `.claude/agents/org-researcher.md`, `spec-reviewer.md` and
+  `.claude/settings.json` name connector-id prefixes; a cloud session's
+  connector prefix may differ and must be added to them.
+
 ## Product and stack
 
 MotorFix: drivers in Romania find a garage or mechanic for their car. The
@@ -238,7 +272,7 @@ decisions are the source for anything the constitution does not fix.
   never edited by hand). A lib is created by the story that first needs it.
 - Heavy commands (npm ci/install, nx build/test/typecheck/e2e, Jest over more
   than a few files, docker compose, Playwright, a boot-test-teardown run) go
-  through `scripts/heavy.sh` (4 slots machine-wide); a dev server
+  through `scripts/heavy.sh` (4 slots machine-wide, 2 in a cloud session); a dev server
   (`nx serve`) never holds a slot for as long as it lives, and mutation tests
   never run locally, only in CI. QA (`/speckit-pr-test`) runs on GitHub
   Actions and holds no slot; its `--local` fallback holds one.
