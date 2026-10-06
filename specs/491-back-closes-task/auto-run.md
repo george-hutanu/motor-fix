@@ -26,3 +26,59 @@ Start: branch 491-back-closes-task at 282fbcdb (carries `docs(specs): ST-628 log
 - Phase 15 agent context: CLAUDE.local.md SPECKIT block points at this plan (one line swapped, size held; context-audit clean).
 - Phase 16 retro evidence: gathered, unjudged (Final Report). Jev unavailable.
 - Phase 17 archive steps 1–3: spec Archived (2026-10-07); Spec Delta merged into `.specify/capabilities/overlays.md` (+6 ~3 −0; the merge wrote 491-FR-002 twice, once per replaced requirement, fixed by hand to one).
+
+## Final Report
+
+- Branch 491-back-closes-task · specs/491-back-closes-task · range b00d55b6..HEAD · PR #173 ready at eb1f470 · QA run 37535878594 (lap 1, dispatched, not waited on).
+- Phases 0–17 run at level 2; outcomes are the lines above. Autonomous answers are logged per phase above and in spec.md Clarifications/Assumptions.
+- Verification: Jest overlays 224/224 (12 red first); typecheck + Biome green for overlays and web-e2e; Playwright overlays+sheet 44/44 and Back describe 6/6 on :4291 (the @seeded sign-in Back case runs in CI); QA flows (Back on dialog and drawer at 320/390/1280 px, discard on Back) smoke-run green locally before dispatch.
+- FR → test (tasks.md T001–T006): FR-001 overlays.spec "adds one entry on open" + e2e Back describe; FR-002 overlays.spec stacked Back + e2e dialog/drawer/stacked + sheet phones; FR-003 panel.spec discard on Back + e2e discard; FR-004 overlays.spec it.each X/Escape/outside/result + adversary repeated closes; FR-005 overlays.spec "hands the opener its result only once the browser has stepped back" + sign-in e2e; FR-006 overlays.spec Forward + e2e goForward; FR-007 overlays.spec "moves no history when it closes after the page moved on"; FR-008 overlays.spec no-window DOCUMENT.
+- Review: spec-reviewer APPROVE (MEDIUM drawer case fixed; LOW sign-in e2e left to CI); code-reviewer APPROVE (2 LOW deferred, filed in Notion). Harden: 1 repair lap; diff-audit's 8 ERRORs are in libs/ui-cockpit table.ts from origin/main, not this branch; Jev lane unavailable for both audits.
+- Follow-ups: deferred.md (Chrome history intervention before user activation; fragment links inside a task). Web typecheck fails locally on `fake-indexeddb` missing from the shared node_modules (pre-existing, unrelated).
+
+### Retrospective evidence (unjudged)
+
+```
+Retrospective evidence — 491-back-closes-task (level 2, feature)
+
+Artifacts     spec.md, plan.md, tasks.md, quickstart.md, deferred.md
+Tasks         9 done, 0 open
+Requirements  8 declared, 0 retired
+Commits       10 (2026-10-07 → 2026-10-07)
+Diff          19 files, +1218 −13 over b00d55b68ec94045354ba169af0992af2a34218e..HEAD
+
+Spec Delta
+  overlays: +6 ~3 -0
+
+Deferred      2 open of 2
+  [unspecified] no source — A task opened before the visitor has touched the page (the sign-in dialog a 401 raises while the page loads) pushes a hi
+  [unspecified] no source — Every popstate whose state lacks the task's marker reads as Back, so a fragment link inside a task (hashchange also fire
+
+Carryover     10 open item(s) from earlier retrospectives
+  050-cockpit-theme: The owner approves, or changes, the light theme's starting values on
+  130-sign-in-gate: Add the expired-token case to the public-route sweep in `apps/api/src/public-routes.integration.spec.ts` (unassigned).
+  157-dialog-drawer: Back closes the open task and keeps the page (Build brief scenario 8):
+  157-dialog-drawer: A task whose code fails to load shows an error message and a retry,
+  159-form-saving: Make the kit's `hlmInput` follow the shared reveal rule, so an empty required
+  159-form-saving: Add the "sign up with an e-mail that is taken" end-to-end flow to the
+  194-email-sending: Turn on `EMAIL_SENDING` on staging (worker and api) now that ST-194 has
+  194-email-sending: Owner decides whether the worker crashes or keeps retrying when Brevo
+  195-message-templates: The owner sets `PUBLIC_WEB_URL` on the Railway worker service (staging and production) before turning on `EMAIL_SENDING`
+  195-message-templates: Before a story that touches more than one lib is marked ready, run `npm run test` (the whole workspace), not just the pr
+
+Commits
+  282fbcdb 2026-10-07 docs(specs): ST-628 log its finish on main
+  c82ea3ad 2026-10-07 docs(specs): ST-491 specify Back closing the open task
+  298a8d06 2026-10-07 docs(specs): ST-491 clarify Back closing and the history entry
+  9afb0acf 2026-10-07 docs(specs): ST-491 plan the history entry per open task
+  b3fb1a9e 2026-10-07 docs(specs): ST-491 requirements checklist
+  574822fd 2026-10-07 docs(specs): ST-491 tasks
+  f646902a 2026-10-07 docs(specs): ST-491 analyze remediation
+  91a3b1b6 2026-10-07 fix(overlays): ST-491 Back closes the open task and keeps the page
+  89688de1 2026-10-07 test(overlays): ST-491 attack Back on stacked and repeated closes
+  d3ddadca 2026-10-07 test(overlays): ST-491 Back closes a drawer as it closes a dialog
+
+· jev lane unavailable (no TYPESAFE_API_KEY (or JEV) in env or .env) — mechanical findings only
+
+  · jev lane unavailable (no TYPESAFE_API_KEY (or JEV) in env or .env) — mechanical findings only
+```
