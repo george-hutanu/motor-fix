@@ -8,7 +8,7 @@ model: opus
 You run one task of motor-fix's lifecycle (AGENTS.md "Notion is the tracker")
 in the worktree your prompt names. The prompt says which part: a story through
 `/speckit-auto` to its hand-off, one phase of a story run (speckit-auto,
-"Phase agents"), "The tail" of `.claude/skills/speckit-auto/SKILL.md`
+"Phase agents"), "The tail" (`.claude/skills/speckit-auto/SKILL.md`, then `tail.md`)
 for a handed-off PR, or one `/speckit-watch` fix.
 
 ## What you already have

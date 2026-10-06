@@ -10,6 +10,10 @@ import { join } from 'node:path';
 
 const skillsDir = join(import.meta.dirname, '..');
 const auto = readFileSync(join(import.meta.dirname, 'SKILL.md'), 'utf8');
+// Phase 0 and the run order stay in SKILL.md; phases 1-17 sit in the phase files beside it.
+const phases = ['phases-plan.md', 'phases-build.md', 'phases-close.md']
+  .map((f) => readFileSync(join(import.meta.dirname, f), 'utf8'))
+  .join('\n');
 
 const pinOf = (skill) => {
   const text = readFileSync(join(skillsDir, skill, 'SKILL.md'), 'utf8');
@@ -18,12 +22,12 @@ const pinOf = (skill) => {
 };
 
 const phase = (n) => {
-  const start = auto.search(new RegExp(`^### ${n}\\. `, 'm'));
+  const start = phases.search(new RegExp(`^### ${n}\\. `, 'm'));
   assert.notEqual(start, -1, `no "### ${n}." subsection`);
-  const body = auto.indexOf('\n', start) + 1;
-  const rest = auto.slice(body);
+  const body = phases.indexOf('\n', start) + 1;
+  const rest = phases.slice(body);
   const next = rest.search(/^##+ /m);
-  return auto.slice(start, next === -1 ? undefined : body + next);
+  return phases.slice(start, next === -1 ? undefined : body + next);
 };
 
 const modelsIn = (text) => [...text.matchAll(/`model: ([a-z]+)`/g)].map((m) => m[1]);
