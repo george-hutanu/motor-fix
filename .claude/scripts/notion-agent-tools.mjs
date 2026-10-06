@@ -4,9 +4,12 @@
 // changes between sessions; an agent's `tools:` line cannot name a server by
 // pattern, so each id it should reach is listed, read tools only.
 //
-//   node .claude/scripts/notion-agent-tools.mjs check         # agents and allowlist agree, no write tool
+//   node .claude/scripts/notion-agent-tools.mjs check         # agents and allowlist agree, no write tool by name
 //   node .claude/scripts/notion-agent-tools.mjs detect        # ids recent sessions carried that the agents lack
 //   node .claude/scripts/notion-agent-tools.mjs add <id>      # add one server's read tools everywhere
+//
+// A whole-server grant in permissions.allow (mcp__<id>) is the owner's choice
+// to run Notion without a prompt; the agents' own tool lines stay read-only.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
@@ -25,8 +28,6 @@ const RECENT = 20;
 const NOTION = /^mcp__(.+?)__(notion-[a-z-]+)$/;
 // Write verbs; `create` covers notion-create-comment.
 const WRITE = /^notion-(create|update|move|duplicate|delete|upload)/;
-// A whole-server grant (mcp__<id> or mcp__<id>__*) reaches every write tool.
-const WILDCARD = /^mcp__([^*]+?)(?:__\*)?$/;
 const ID = /^[A-Za-z0-9_-]+$/;
 
 const agentFile = (name) => `.claude/agents/${name}.md`;
@@ -96,11 +97,6 @@ export function check(repo) {
   const settings = readAllow(repo);
   if (settings?.error) out.push(settings.error);
   else if (settings && agents.length) {
-    const notion = new Set([...all, ...servers(settings.allow)]);
-    for (const t of settings.allow) {
-      const server = String(t).match(WILDCARD)?.[1];
-      if (server && notion.has(server)) out.push(`${SETTINGS}: wildcard ${t} in permissions.allow grants every Notion write tool`);
-    }
     const allowed = new Set(servers(settings.allow));
     for (const server of all) if (!allowed.has(server)) out.push(`${SETTINGS}: permissions.allow lacks server ${server}`);
     for (const n of notionOf(settings.allow)) if (WRITE.test(n.name)) out.push(`${SETTINGS}: write tool ${n.tool} in permissions.allow`);
