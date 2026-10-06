@@ -24,3 +24,15 @@ spec-challenger: 5 findings, none blocking. Answers (its recommendations): title
 
 ## 5. Plan
 task-runner (fable): success — plan.md (one branch in `toProblem`, ~6 lines, no new export), research.md (R1 worker 504 from `ngsw-worker.js:935`, R2 branch placement, R3 `navigator.onLine`), data-model.md (N/A), quickstart.md. Design check: design.md current (no boards). No research agents: nothing NEEDS CLARIFICATION. Constitution check clean, Complexity Tracking empty.
+
+## Resume (cloud session, 2026-10-06)
+Worktree .worktrees/509-offline-on-worker-504; merged origin/main (647d2b9, pushed). No Agent tool in this run: phases 6 and 7 ran inline (pin miss: sonnet → opus); phase 14's reviewers likewise.
+
+## 6. Checklist
+inline (pin miss): checklists/error-mapping.md, 14 items, 0 unchecked (every item answered by a spec section; none struck). requirements.md 16/16.
+
+## 7. Tasks
+inline (pin miss): tasks.md, 5 tasks (3 tests first, 1 implementation, 1 proof) with the FR → test table. level check: 2 stands.
+
+## 8. Analyze
+artifact-lint: 2 ERRORs (Spec Delta `Modifies` had no `→ FR-XXX` replacement). Remediation applied: FR-002 rewritten as the full replacement of 159-FR-008 (offline reading gains the 504 rule, the status table restated unchanged); delta now Adds FR-001, FR-003, Modifies 159-FR-008 → FR-002. Re-run: 0 errors, 1 warning (FR-004 unassigned: a scope rule, by design). capabilities validate clean. Coverage: every FR has a task; no CRITICAL left.

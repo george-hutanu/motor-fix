@@ -103,8 +103,16 @@ for a 504 with a problem body while offline.
   string `code`, after the text-body parse the mapping already does) MUST
   read as code `offline`, status 504, while the browser reports itself
   offline (`navigator.onLine === false`, read once when the failure is mapped, as the status-0 rule already does).
-- **FR-002**: A failed save answered with status 0 MUST keep today's reading:
-  `offline` while the browser reports itself offline, `network` otherwise.
+- **FR-002**: A failure with no server answer (status 0), or a 504 with no
+  problem body while the browser reports itself offline (FR-001), MUST show
+  "Nu ești conectat. Încearcă din nou când revine conexiunea." / "You are
+  offline. Try again when you are back online."; a failure with no server
+  answer while the browser does not report itself offline MUST show the
+  network message; any other answer that is not a problem MUST take the code
+  for its status from the shared table (400 `validation_failed`, 404
+  `not_found`, 409 `conflict`, 503 `service_unavailable`, other 5xx
+  `internal_error`, else `error`), the same table the API's filter uses.
+  (Replaces 159-FR-008; the status-0 reading is unchanged.)
 - **FR-003**: A failed save answered with status 504 and no problem body
   while the browser does not report itself offline (online, or no
   `navigator`) MUST read as `internal_error`, status 504; a 504 answer that
@@ -121,12 +129,11 @@ for a 504 with a problem body while offline.
 
 ### Capability: `overlays`
 
-- **Adds**: FR-001
-- **Modifies**: 159-FR-008 — "a failure with no server answer" becomes "a
-  failure with no server answer, or a 504 with no problem body while the
-  browser reports itself offline" (FR-002, FR-003 restate the unchanged
-  parts of 159-FR-008 to bound FR-001; FR-004 is a scope rule and merges
-  nowhere)
+- **Adds**: FR-001, FR-003
+- **Modifies**: 159-FR-008 → FR-002 (adds "or a 504 with no problem body
+  while the browser reports itself offline" to the offline reading; the rest
+  of 159-FR-008 is restated unchanged). FR-004 is a scope rule and merges
+  nowhere.
 - **Removes**: none
 
 ## Success Criteria *(mandatory)*
