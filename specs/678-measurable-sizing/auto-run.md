@@ -80,3 +80,27 @@ ends up in the session ledger.
 ## 13. Ticket refresh
 
 - Empty: story last edited 10:05 (our Implementing write), brief unchanged, no comments.
+- test-adversary: 89 specs (`level.adversary`, `telemetry-levels.adversary`), 2 real defects: git quoted non-ASCII paths (now `-z`), a `subagents` path that is not a folder lost the session ledger (now skipped).
+- code-reviewer: BLOCK → APPROVE on re-review. HIGH unbounded block paging (now `maxPages`, "too many pages"); MEDIUM dead `existsSync(LEVEL)` guard (removed, stubs dropped); MEDIUM one unreadable subagent file aborted the write (per-file try); LOW too-heavy dedupe (in `byLevel`); LOW re-resolved feature; optional LOW NotionError re-import (passed in). All tests first. Repair laps: 1.
+- Suite after fixes: 1619/1619; harness-eval 81/81; doctor 16 ok after blessing `stop:telemetry` (2153858662c8, own diff read).
+
+## 14. Review
+
+- spec-reviewer APPROVE. Patched: phase bucket only for this feature's live run (MEDIUM), owed list after phase 2 now includes clarify (LOW), one `k` formatter (LOW), too-heavy dedupe (LOW, same as code review). Decision taken: ready keeps refusing a level 3 missing level 2 artifacts (errs toward more process), recorded under the spec's Assumptions.
+
+## 15. Agent context
+
+- `CLAUDE.local.md` Active plan → `specs/678-measurable-sizing/plan.md` (one line replaced; context-audit clean).
+
+## 16. Retrospective evidence (unjudged)
+
+- `retro-evidence.mjs --since 621cb20`: level 2, 19/19 tasks, 16 FRs, Spec Delta platform +16, deferred 0, 10 carryover items from earlier features (none in scope). `instincts.mjs triggered`: none (Jev lane unavailable).
+
+## 17. Archive
+
+- Spec status `Archived (2026-10-06)`; Spec Delta merged into `.specify/capabilities/platform.md` (+16), `e75dcbd`.
+
+## Open decisions
+
+- The three ST-662 debt tasks (classifier words, `point` crash, zone-less `level_at`) stay out of this branch.
+- Pre-existing flake: `notion-ready.adversary` "decision larger than a pipe buffer" hung once under the full suite (Node 26, child never saw EOF); passes alone and on the rerun. Not touched here.

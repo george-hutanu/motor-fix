@@ -480,8 +480,7 @@ const rollupCount = (prop) => {
   return 0;
 };
 
-async function childrenOf(client, id, maxPages) {
-  const { NotionError } = await import("./lib/notion.mjs");
+async function childrenOf(client, id, { maxPages, NotionError }) {
   const blocks = [];
   let cursor;
   let pages = 0;
@@ -495,12 +494,12 @@ async function childrenOf(client, id, maxPages) {
 }
 
 /** The Build brief's sections and whether each has content, or "not found". */
-async function briefOf(client, blocks, maxPages) {
+async function briefOf(client, blocks, paging) {
   const at = blocks.findIndex((b) => headingLevel(b) && /build brief/i.test(plain(b)));
   if (at === -1) return { brief: "not found", text: "" };
   const head = blocks[at];
   let body = [];
-  if (head.has_children) body = await childrenOf(client, head.id, maxPages);
+  if (head.has_children) body = await childrenOf(client, head.id, paging);
   else for (const b of blocks.slice(at + 1)) {
     if (headingLevel(b) && headingLevel(b) <= headingLevel(head)) break;
     body.push(b);
@@ -524,6 +523,7 @@ async function readStory(ref, { repo, env, fetchImpl }) {
   if (!token) return { error: "no NOTION_TOKEN" };
   const limits = clientLimits(env);
   const client = notionClient({ token, fetchImpl, ...limits });
+  const paging = { maxPages: limits.maxPages, NotionError };
   try {
     let page;
     const story = ref.match(STORY_REF);
@@ -532,7 +532,7 @@ async function readStory(ref, { repo, env, fetchImpl }) {
       page = (await client.query(STORIES, { filter: { property: "ID", unique_id: { equals: Number(story[1]) } } }))[0];
     } else page = await client.request("GET", `/pages/${ref.match(PAGE_REF)[1]}`);
     if (!page) return { error: `${ref} not found` };
-    const { brief, text } = await briefOf(client, await childrenOf(client, page.id, limits.maxPages), limits.maxPages);
+    const { brief, text } = await briefOf(client, await childrenOf(client, page.id, paging), paging);
     const title = Object.values(page.properties ?? {}).find((p) => p?.type === "title");
     const points = readProp(page, "Story points");
     return {
