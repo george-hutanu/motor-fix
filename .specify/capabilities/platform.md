@@ -29,6 +29,7 @@ features:
   - 766-cloud-rest-fallback
   - 767-cloud-qa-merge
   - 602-watcher-counts-qa-runs
+  - 677-zoneless-level-at
   - 675-size-not-trivial
 ---
 
@@ -901,6 +902,22 @@ _From 602-watcher-counts-qa-runs._
 ### 602-FR-004 — When the run list cannot be read, the watcher MUST count no Actions runs and otherwise behave as before.
 
 _From 602-watcher-counts-qa-runs._
+
+### 677-FR-001 — The JS pending-level reader MUST report no waiting level when `level_at` is a string without a time-zone designator (`Z` or `±hh:mm`), regardless of the machine's time zone.
+
+_From 677-zoneless-level-at._
+
+### 677-FR-002 — The Python pending-level reader MUST report no waiting level for the same input, so the two readers agree on every machine.
+
+_From 677-zoneless-level-at._
+
+### 677-FR-003 — A `level_at` of the one shape both readers parse alike (`YYYY-MM-DDTHH:MM`, optional seconds with an optional 3- or 6-digit fraction, then `Z` or `±hh:mm`) MUST keep its current freshness behaviour in both readers; any other shape is no waiting level in both.
+
+_From 677-zoneless-level-at._
+
+### 677-FR-004 — The Python-vs-JS parity test MUST include a fresh, zone-less `level_at` among its compared states, and both helpers MUST produce the same `feature.json` for it (the pointer alone, no level).
+
+_From 677-zoneless-level-at._
 
 ### 675-FR-001 — `NOT_TRIVIAL` in `.claude/scripts/level.mjs` MUST include remove, delete, drop, disable, page, screen, folder, directory, workflow and deploy, so a description with a trivial word and one of them is `unsure`.
 

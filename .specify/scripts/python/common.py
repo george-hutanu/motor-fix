@@ -9,7 +9,7 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 
@@ -149,20 +149,23 @@ def _pending_ttl_minutes() -> float:
     return minutes if 0 < minutes < float("inf") else PENDING_TTL_MINUTES
 
 
+# The stamp shape pendingLevel in .claude/scripts/lib/feature.mjs also reads:
+# a zone is required, since JS reads a zone-less stamp as local time.
+_LEVEL_AT = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(?::[0-9]{2}(?:\.[0-9]{3}|\.[0-9]{6})?)?(?:Z|[+-][0-9]{2}:[0-9]{2})")
+
+
 def _pending_level(data: dict, now: float) -> int | None:
     """The level waiting for the next feature, while it is still fresh."""
     if data.get("level_for") != "next":
         return None
     level = _parse_level(data.get("level"))
     stamp = data.get("level_at")
-    if level is None or not isinstance(stamp, str):
+    if level is None or not isinstance(stamp, str) or not _LEVEL_AT.fullmatch(stamp):
         return None
     try:
         at = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
     except ValueError:
         return None
-    if at.tzinfo is None:
-        at = at.replace(tzinfo=timezone.utc)
     age = now - at.timestamp()
     if age >= _pending_ttl_minutes() * 60 or age < -60:
         return None
