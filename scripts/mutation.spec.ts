@@ -76,6 +76,14 @@ describe('strykerOptions', () => {
     expect(options.thresholds).toEqual({ break: 70, high: 80, low: 60 });
   });
 
+  // A mutated `{ alias: 'x' }` given to input() is no longer a literal
+  // Angular can analyse (error 1010); Stryker's angular ignorer leaves it be.
+  it("turns on Stryker's angular ignorer", () => {
+    write('libs/x/stryker.config.json', floor(0));
+
+    expect(strykerOptions('x', 'libs/x', false).ignorers).toEqual(['angular']);
+  });
+
   it('uses the app tsconfig when a project has no lib tsconfig', () => {
     write('apps/y/stryker.config.json', floor(0));
     write('apps/y/tsconfig.app.json', '{}');

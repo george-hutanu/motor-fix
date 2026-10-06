@@ -54,6 +54,9 @@ export function strykerOptions(
       'apps/web-e2e/test-output',
       '.specify/**/.cache',
     ],
+    // Leaves the option objects of input(), output() and the signal queries
+    // unmutated: Angular's compiler refuses one that is not a literal (1010).
+    ignorers: ['angular'],
     // A static mutant reloads its module and reruns every test; on libs/domain
     // they were 14% of mutants and two thirds of the run time.
     ignoreStatic: true,

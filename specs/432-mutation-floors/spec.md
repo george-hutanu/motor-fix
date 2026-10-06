@@ -124,10 +124,16 @@ duration.
 - Q: Which failure does FR-003 fix? → A: Angular's error 1010 in Stryker's first test run of `overlays`; only constants used solely as compile-time metadata are silenced.
 - Q: Does the kill-until-it-passes rule apply to every project? → A: Only to `contracts`, `mcp` and `api`; elsewhere it goes into the follow-up.
 
+### Session 2026-10-06 (resume, from the full runs on 642127f)
+
+- Q: The full runs of `overlays` (37360179393) and `ui-cockpit` (37360184588) still stop on error 1010 with `ERROR_TEXT` silenced. What else does FR-003 cover? → A: the option objects of `input()`, `output()` and the signal queries (`{ alias: 'mfTaskSubmit' }` in `libs/overlays/src/form-parts.ts`, the aliases in `libs/ui-cockpit/src/lib/helm/switch.ts`). Stryker ships an ignorer for exactly these (`ignorers: ['angular']`); it is turned on for every project in `scripts/mutation.ts`, since it only matches those calls. No line-level silence is added for them (autonomous default; evidence: `@stryker-mutator/instrumenter/dist/src/frameworks/angular-ignorer.js`).
+- Q: `scripts`' full run (37360170703) fails its first test run in `test-services.spec.ts`. Why, and is it in scope? → A: Stryker runs the specs from a copy under the git-ignored `.stryker-tmp/`, where `git ls-files` lists nothing, so the script finds no projects and exits 0. In scope (SC-001: every project scores). The spec now tells git the copy is the work tree (`GIT_DIR`, `GIT_WORK_TREE`); outside Stryker that is the same checkout.
+- Q: `domain`'s full run (37360166653) was cancelled at the 360-minute job ceiling with no score. What floor does it get? → A: it keeps its current floor (0): FR-007 sets floors from a full run and none fits in one job. The overflow is a follow-up (the per-runner database, per the clarification above) in `deferred.md`; the assumption that one runner is fast enough for `domain` no longer holds.
+
 ## Assumptions
 
 - The Notion acceptance criteria list ten projects including `worker` and without `overlays`; `overlays` was added to the tooling after the story was written and is included, and `worker` is listed but has no specs (autonomous default).
 - `worker` has no specs (only `apps/worker/src/main.ts`), so it has no score and its floor stays 0 (autonomous default).
 - The headroom rule in SC-004 (30%, rounded up to 10 minutes) is an assumption, not a number from any source (autonomous default).
 - Static mutants stay ignored (`ignoreStatic`), and what is mutated does not change (Build brief: out of scope).
-- `domain`'s duration (95 minutes on 2026-10-04) is acceptable with one runner; no per-runner database is needed (autonomous default; the Build brief allows it only if one runner is too slow).
+- ~~`domain`'s duration (95 minutes on 2026-10-04) is acceptable with one runner~~: refuted by the full run 37360166653 (over 360 minutes, incremental results dropped); see Session 2026-10-06.

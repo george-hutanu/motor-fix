@@ -48,3 +48,13 @@
 ## Resume (2026-10-05, after the watcher found the worktree stale)
 - Uncommitted implement work (22 code files + records) kept; tasks T001–T017 marked done; T006/T016 reworded to the phase 7–8 entry-point decision.
 - T001 baseline, run 37215034382 (main, incremental, 104 min job): contracts 51.25 (floor 95, failed); domain 71.51; api 70.59; mcp 80.00; scripts 66.26; i18n, overlays, ui-cockpit, web, media failed before scoring (environment / coverage / error 1010); worker skipped (no specs).
+
+## Resume 2 (2026-10-05, second watcher restart)
+- Head 642127f full runs (--full): contracts 100.00 (run 37317816085, floor 95), api 100.00 (37317821365), mcp 100.00 (37307366441, on b254daf); T019 met: no survivors.
+- The all-project full run 37307358856 was cancelled; dispatched full runs for domain, scripts, i18n, overlays, ui-cockpit, web, media, one per project in parallel (T018 rest); floors and limit follow from them.
+
+## Resume 3 (2026-10-06, after the merge of origin/main as bb951cb)
+- Full runs on 642127f: media 90.63 (37360193873, 23 s), i18n 90.96 (37360174934, 3 min 36 s), web 84.28 (37360189195, 141 min 37 s; job 143 min). No score: overlays (37360179393) and ui-cockpit (37360184588) on error 1010; scripts (37360170703) failed its first test run; domain (37360166653) cancelled at the 360-minute ceiling.
+- Cause of 1010: Stryker mutated the option objects of `input()` (`alias`), which Angular must read as literals; its `angular` ignorer is off unless named. Fix: `ignorers: ['angular']` in the shared options (test first: scripts/mutation.spec.ts).
+- Cause of scripts: `git ls-files` lists nothing in Stryker's git-ignored sandbox; test-services.spec.ts now sets `GIT_DIR`/`GIT_WORK_TREE`. Reproduced red and then green in a copy under `.stryker-tmp/` (plain Jest, no mutation), scripts suite 234/234 there and in the tree.
+- domain: no full score fits one job; keeps floor 0, follow-up in deferred.md (spec Session 2026-10-06).
