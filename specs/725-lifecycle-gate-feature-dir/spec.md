@@ -57,6 +57,6 @@ None.
 
 ## Spec Delta
 
-### Adds
+### Capability: `platform`
 
-- The PR lifecycle gate resolves a branch's feature folder through `.specify/feature.json`, then `specs/<branch>`, then a `specs/` folder with the same number (leading zeros ignored) and slug, for both the Notion PR link and the hand-off note.
+- **Adds**: FR-001–FR-003

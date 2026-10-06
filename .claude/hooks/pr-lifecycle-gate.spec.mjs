@@ -93,6 +93,7 @@ describe('PR lifecycle gate — what it refuses', () => {
     }
   });
 
+  // @traces 725-FR-003
   it('reads the hand-off note from a zero-padded feature folder when nothing points at it', () => {
     const dir = mkdtempSync(join(tmpdir(), 'gate-'));
     try {
@@ -129,6 +130,7 @@ describe('PR lifecycle gate — the feature folder', () => {
   };
   const linked = '- 2026-10-05 · pr · ST-83 · PR #136 https://github.com/o/r/pull/136\n';
 
+  // @traces 725-FR-001
   it('takes the feature.json pointer first, then specs/<branch>', () =>
     withRepo((dir) => {
       folder(dir, '050-cockpit-theme');
@@ -149,6 +151,7 @@ describe('PR lifecycle gate — the feature folder', () => {
       assert.equal(featureDir(dir, '83-sign-in-apple-google'), join('specs', '83-sign-in-apple-google'));
     }));
 
+  // @traces 725-FR-002
   it('sees the PR link in a zero-padded folder, with and without feature.json', () =>
     withRepo((dir) => {
       folder(dir, '083-sign-in-apple-google', { 'notion-sync.md': linked });
