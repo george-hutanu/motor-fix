@@ -13,6 +13,14 @@
     "sent": "Am trimis un link nou pe e‑mail.",
     "tooMany": "Ai cerut deja un link. Încearcă din nou puțin mai târziu."
   },
+  "consent": {
+    "after": ".",
+    "before": "Accept ",
+    "between": " și am citit ",
+    "privacy": "Nota de informare privind datele personale",
+    "required": "Bifează pentru a continua.",
+    "terms": "Termenii de utilizare"
+  },
   "newPassword": {
     "askAgain": "Cere un link nou",
     "checking": "Verificăm linkul…",
@@ -74,6 +82,7 @@
     "password": "Parolă",
     "passwordPlaceholder": "Cel puțin 8 caractere",
     "problem": {
+      "consent_required": "Bifează acordul pentru a crea contul.",
       "email_taken": "Există deja un cont cu acest e‑mail.",
       "too_many_attempts": "Prea multe încercări. Încearcă din nou peste o oră.",
       "weak_password": "Verifică câmpurile marcate."

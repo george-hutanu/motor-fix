@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import {
   Body,
   Controller,
@@ -78,6 +79,7 @@ const post = (path: string, authorization?: string) => {
 
 async function token(secret = tokenSecret, now = Date.now()) {
   const { id } = await accounts.createAccount({
+    consent: CURRENT_CONSENT,
     identity: { method: 'google', subject: `driver-${randomUUID()}` },
     name: 'Andrei',
     roles: ['driver'],

@@ -1,5 +1,6 @@
 import { createHmac } from 'node:crypto';
 
+import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -62,6 +63,7 @@ describe('who am I over HTTP and account writes under attack', () => {
     extra: Record<string, unknown> = {},
   ) {
     const { id: accountId } = await accounts.createAccount({
+      consent: CURRENT_CONSENT,
       identity: { method: 'google', subject: `${name}-subject` },
       name,
       roles,
@@ -432,6 +434,7 @@ describe('who am I over HTTP and account writes under attack', () => {
 
       await expect(
         accounts.createAccount({
+          consent: CURRENT_CONSENT,
           identity: { method: 'google', subject: 'andrei-subject' },
           name: 'copy',
           roles: ['driver'],

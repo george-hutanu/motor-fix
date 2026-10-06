@@ -1,5 +1,6 @@
 import { createServer, type Server } from 'node:net';
 
+import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
@@ -69,6 +70,7 @@ let addresses = 0;
 const address = () => `192.0.2.${++addresses % 250}`;
 
 const body = (overrides: Record<string, unknown> = {}) => ({
+  consent: CURRENT_CONSENT,
   email: 'andrei@example.test',
   language: 'ro',
   name: 'Andrei Marin',
