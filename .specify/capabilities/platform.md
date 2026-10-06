@@ -28,6 +28,7 @@ features:
   - 750-ci-speed
   - 766-cloud-rest-fallback
   - 767-cloud-qa-merge
+  - 677-zoneless-level-at
 ---
 
 # Capability: Platform
@@ -883,6 +884,22 @@ _From 767-cloud-qa-merge._
 ### 767-FR-006 — AGENTS.md "Cloud sessions" MUST say QA starts by itself on ready or push and sets `agent-review`, and the merge goes over REST.
 
 _From 767-cloud-qa-merge._
+
+### 677-FR-001 — The JS pending-level reader MUST report no waiting level when `level_at` is a string without a time-zone designator (`Z` or `±hh:mm`), regardless of the machine's time zone.
+
+_From 677-zoneless-level-at._
+
+### 677-FR-002 — The Python pending-level reader MUST report no waiting level for the same input, so the two readers agree on every machine.
+
+_From 677-zoneless-level-at._
+
+### 677-FR-003 — A `level_at` that carries `Z` or a `±hh:mm` offset MUST keep its current freshness behaviour in both readers.
+
+_From 677-zoneless-level-at._
+
+### 677-FR-004 — The Python-vs-JS parity test MUST include a fresh, zone-less `level_at` among its compared states, and both helpers MUST produce the same `feature.json` for it (the pointer alone, no level).
+
+_From 677-zoneless-level-at._
 
 ## Retired
 

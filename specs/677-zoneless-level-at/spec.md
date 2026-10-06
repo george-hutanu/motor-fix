@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 
 **Input**: User description: "ST-677 "A zone-less level_at is read as local time in JS and UTC in Python" (Notion https://app.notion.com/3f0607bff0d281fe8d32e51335e46153)"
 
