@@ -13,6 +13,8 @@ import { Attempts, AUTH_REDIS } from './attempts';
 import { AuthController } from './auth.controller';
 import { MAINTENANCE, maintenanceOff } from './maintenance';
 import { MeController } from './me.controller';
+import { OauthController } from './oauth/oauth.controller';
+import { OAuthService } from './oauth/oauth.service';
 import { createPrisma, PRISMA } from './prisma';
 import { SESSION_EVENTS, SignInService } from './sign-in.service';
 import { SignUpService } from './sign-up.service';
@@ -45,7 +47,12 @@ export class AuthModule implements OnApplicationShutdown {
 
   static register(options: AuthOptions): DynamicModule {
     return {
-      controllers: [AuthController, MeController, AuditHistoryController],
+      controllers: [
+        AuthController,
+        OauthController,
+        MeController,
+        AuditHistoryController,
+      ],
       exports: [
         AccountsService,
         Attempts,
@@ -65,6 +72,7 @@ export class AuthModule implements OnApplicationShutdown {
         ActorGuard,
         { provide: APP_GUARD, useExisting: ActorGuard },
         AuditHistoryService,
+        OAuthService,
         SignInService,
         SignUpService,
         { provide: AUTH_OPTIONS, useValue: options },

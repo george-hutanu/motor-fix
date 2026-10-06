@@ -13,6 +13,7 @@ import type { JobsOptions } from 'bullmq';
 import { type NotificationType, notificationType } from './catalogue';
 import { blockedReason, type EmailConfig } from './email-config';
 import { isDriverType, mutedChannels } from './preferences';
+import { PUSH_CONFIG, type PushConfig } from './push-config';
 import { isQuiet, nextMorning } from './quiet-hours';
 import { outsideChannels, type SentChannel } from './routing';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
@@ -28,7 +29,6 @@ export const NOTIFICATIONS_CONFIG = Symbol('NOTIFICATIONS_CONFIG');
 export const NOTIFICATIONS_PRISMA = Symbol('NOTIFICATIONS_PRISMA');
 export const NOTIFICATIONS_JOBS = Symbol('NOTIFICATIONS_JOBS');
 export const LIVE_PUBLISHER = Symbol('LIVE_PUBLISHER');
-export const EMAIL_FALLBACK = Symbol('EMAIL_FALLBACK');
 
 export const RETRY_MINUTES = [1, 5, 15, 60, 240];
 const WINDOW_MS = 5 * 60_000;
@@ -40,14 +40,13 @@ const JOB: JobsOptions = {
   removeOnFail: 1000,
 };
 
-// Called when an e-mail fails for good; the push channel takes over here.
-export type EmailFallback = (row: Notification) => Promise<void>;
-
 // What a failed row falls back to: the next channel, e-mail at once (a stop
 // that would also stop WhatsApp), or nothing.
 type Fallback = boolean | 'email';
 
 const NEXT: Partial<Record<Notification['channel'], SentChannel>> = {
+  email: 'push',
+  push: 'email',
   sms: 'whatsapp',
   whatsapp: 'email',
 };
@@ -104,7 +103,7 @@ export class NotificationsService {
     @Inject(NOTIFICATIONS_JOBS) private readonly jobs: Jobs,
     @Inject(LIVE_PUBLISHER) private readonly publisher: Publisher,
     @Inject(NOTIFICATIONS_CONFIG) private readonly config: EmailConfig,
-    @Inject(EMAIL_FALLBACK) private readonly fallback: EmailFallback,
+    @Inject(PUSH_CONFIG) private readonly push: PushConfig | null,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
@@ -138,6 +137,16 @@ export class NotificationsService {
       params: { link: input.link, purpose: input.purpose },
       recipients: [input.accountId],
       subjectId: input.accountId,
+    });
+  }
+
+  // A push to the person's own devices; it queues nothing without a device.
+  sendPushTest(accountId: string): Promise<number> {
+    return this.notify({
+      eventId: randomUUID(),
+      kind: 'PUSH_TEST',
+      recipients: [accountId],
+      subjectId: accountId,
     });
   }
 
@@ -184,7 +193,8 @@ export class NotificationsService {
     return false;
   }
 
-  // SMS falls back to WhatsApp, WhatsApp to e-mail, e-mail to push.
+  // SMS falls back to WhatsApp, WhatsApp to e-mail, e-mail and push to each
+  // other; an e-mail or push that is itself a fallback never falls back again.
   async fail(
     rows: readonly Notification[],
     failure: string,
@@ -204,8 +214,10 @@ export class NotificationsService {
       );
       if (!fallback) continue;
       const next = fallback === 'email' ? 'email' : NEXT[row.channel];
-      if (next) await this.fallBack(row, next);
-      else await this.fallback({ ...row, failure, status: 'failed' });
+      const stops =
+        (row.channel === 'email' || row.channel === 'push') &&
+        row.fallbackOf !== null;
+      if (next && !stops) await this.fallBack(row, next);
     }
   }
 
@@ -222,11 +234,7 @@ export class NotificationsService {
   private async fallBack(row: Notification, channel: SentChannel) {
     const type = notificationType(row.kind);
     if (!type.channels.includes(channel)) return;
-    const account = await this.prisma.account.findUnique({
-      select: { email: true },
-      where: { id: row.accountId },
-    });
-    if (channel === 'email' && !account?.email) return;
+    if (!(await this.canReach(row.accountId, channel))) return;
     const at = this.now();
     const sendAfter = !type.urgent && isQuiet(at) ? nextMorning(at) : null;
     const [written] = await this.prisma.notification.createManyAndReturn({
@@ -247,6 +255,25 @@ export class NotificationsService {
     if (!written) return;
     const delay = sendAfter ? sendAfter.getTime() - at.getTime() : 0;
     await this.queue({ ...send(written.id), delay });
+  }
+
+  private async canReach(accountId: string, channel: SentChannel) {
+    if (channel === 'push') return this.hasDevice(this.prisma, accountId);
+    if (channel !== 'email') return true;
+    const account = await this.prisma.account.findUnique({
+      select: { email: true },
+      where: { id: accountId },
+    });
+    return Boolean(account?.email);
+  }
+
+  // Push is off while the server has no keys, whatever devices were saved.
+  private async hasDevice(
+    db: Pick<PrismaClient, 'pushSubscription'>,
+    accountId: string,
+  ): Promise<boolean> {
+    if (!this.push) return false;
+    return (await db.pushSubscription.count({ where: { accountId } })) > 0;
   }
 
   // Brevo may report a bounce twice; a grouped e-mail carries one message id
@@ -378,6 +405,7 @@ export class NotificationsService {
     const channels = outsideChannels(input.kind, choice.muted, {
       email: Boolean(account.email),
       phone: Boolean(account.phone && account.phoneVerifiedAt),
+      push: await this.hasDevice(tx, accountId),
       whatsapp: choice.whatsapp,
     });
     const next: NextJob[] = [];
@@ -401,12 +429,13 @@ export class NotificationsService {
       : this.phoneRow(tx, type, base, channel, at);
   }
 
-  // Never grouped; the switch and the allowlist are checked when it is sent.
+  // Never grouped; the switch, the allowlist and the devices are checked when
+  // it is sent.
   private async phoneRow(
     tx: Prisma.TransactionClient,
     type: NotificationType,
     base: Omit<Prisma.NotificationUncheckedCreateInput, 'channel' | 'status'>,
-    channel: 'sms' | 'whatsapp',
+    channel: 'push' | 'sms' | 'whatsapp',
     at: Date,
   ): Promise<NextJob> {
     if (!type.urgent && isQuiet(at)) {

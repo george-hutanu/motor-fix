@@ -223,6 +223,198 @@
         ]
       }
     },
+    "/api/v1/auth/providers": {
+      "get": {
+        "operationId": "OauthController_providers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProvidersDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/pending": {
+      "get": {
+        "operationId": "OauthController_pending",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthPendingDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No pending sign-up in this browser"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/complete": {
+      "post": {
+        "operationId": "OauthController_complete",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthCompleteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "consent_required, or provider_failed: no pending sign-up"
+          },
+          "409": {
+            "description": "email_taken"
+          },
+          "415": {
+            "description": "The body is not JSON"
+          },
+          "503": {
+            "description": "maintenance"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/google": {
+      "get": {
+        "operationId": "OauthController_startGoogle",
+        "parameters": [
+          {
+            "name": "remember",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "language",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "ro",
+                "en"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "To Google's authorisation"
+          },
+          "404": {
+            "description": "Google is not configured"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/apple": {
+      "get": {
+        "operationId": "OauthController_startApple",
+        "parameters": [
+          {
+            "name": "remember",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "language",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "ro",
+                "en"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "To Apple's authorisation"
+          },
+          "404": {
+            "description": "Apple is not configured"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/google/callback": {
+      "get": {
+        "operationId": "OauthController_google",
+        "parameters": [],
+        "responses": {
+          "302": {
+            "description": "To the web's return page, with the result"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/apple/callback": {
+      "post": {
+        "operationId": "OauthController_apple",
+        "parameters": [],
+        "responses": {
+          "302": {
+            "description": "To the web's return page, with the result"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/me": {
       "get": {
         "operationId": "MeController_me",
@@ -684,6 +876,122 @@
         ]
       }
     },
+    "/api/v1/push-subscriptions/key": {
+      "get": {
+        "operationId": "PushSubscriptionsController_key",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushKeyDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/push-subscriptions": {
+      "post": {
+        "operationId": "PushSubscriptionsController_save",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavePushSubscriptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushSubscriptionDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/push-subscriptions/test": {
+      "post": {
+        "operationId": "PushSubscriptionsController_test",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushTestQueuedDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/push-subscriptions/{id}": {
+      "delete": {
+        "operationId": "PushSubscriptionsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/api/v1/auth/confirm-email": {
       "post": {
         "operationId": "EmailConfirmationController_confirm",
@@ -1110,6 +1418,78 @@
         },
         "required": [
           "role"
+        ]
+      },
+      "ProvidersDto": {
+        "type": "object",
+        "properties": {
+          "apple": {
+            "type": "boolean",
+            "description": "Sign-in with Apple is configured"
+          },
+          "google": {
+            "type": "boolean",
+            "description": "Sign-in with Google is configured"
+          }
+        },
+        "required": [
+          "apple",
+          "google"
+        ]
+      },
+      "OAuthPendingDto": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "google",
+              "apple"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "The name the provider gave; may be empty"
+          },
+          "email": {
+            "type": "string",
+            "description": "The e-mail the provider gave"
+          }
+        },
+        "required": [
+          "provider",
+          "name"
+        ]
+      },
+      "OAuthCompleteDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 80,
+            "minLength": 2
+          },
+          "language": {
+            "type": "string",
+            "description": "The interface language",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          },
+          "consent": {
+            "description": "The current terms and privacy versions; without them the answer is 400 consent_required",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConsentDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "language"
         ]
       },
       "MeDto": {
@@ -1772,6 +2152,80 @@
         },
         "required": [
           "recipients"
+        ]
+      },
+      "PushKeyDto": {
+        "type": "object",
+        "properties": {
+          "publicKey": {
+            "type": "string",
+            "description": "The server’s VAPID public key; null when push is off",
+            "nullable": true
+          }
+        },
+        "required": [
+          "publicKey"
+        ]
+      },
+      "PushKeysDto": {
+        "type": "object",
+        "properties": {
+          "p256dh": {
+            "type": "string",
+            "description": "The browser’s public key (base64url)"
+          },
+          "auth": {
+            "type": "string",
+            "description": "The browser’s auth secret (base64url)"
+          }
+        },
+        "required": [
+          "p256dh",
+          "auth"
+        ]
+      },
+      "SavePushSubscriptionDto": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "description": "The push service address of the browser"
+          },
+          "keys": {
+            "$ref": "#/components/schemas/PushKeysDto"
+          },
+          "label": {
+            "type": "string",
+            "description": "The browser’s own description"
+          }
+        },
+        "required": [
+          "endpoint",
+          "keys"
+        ]
+      },
+      "PushSubscriptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "PushTestQueuedDto": {
+        "type": "object",
+        "properties": {
+          "queued": {
+            "type": "number",
+            "description": "How many test pushes were queued"
+          }
+        },
+        "required": [
+          "queued"
         ]
       },
       "ConfirmEmailDto": {

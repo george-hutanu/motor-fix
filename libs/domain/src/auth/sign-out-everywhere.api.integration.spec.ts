@@ -131,6 +131,29 @@ describe('signing out on all devices', () => {
     expect((await refresh(laptop)).status).toBe(401);
   });
 
+  it('deletes every push device of the account and no other', async () => {
+    const id = await person('andrei@example.test');
+    const other = await person('ioana@example.test');
+    const cookie = await session('andrei@example.test');
+    const device = (accountId: string, n: number) =>
+      prisma.pushSubscription.create({
+        data: {
+          accountId,
+          auth: 'a',
+          endpoint: `https://push.example.test/${n}`,
+          p256dh: 'p',
+        },
+      });
+    await device(id, 1);
+    await device(id, 2);
+    await device(other, 3);
+
+    await everywhere(cookie);
+
+    const left = await prisma.pushSubscription.findMany();
+    expect(left.map((d) => d.accountId)).toEqual([other]);
+  });
+
   it("leaves another account's sessions alone", async () => {
     await person('andrei@example.test');
     await person('ioana@example.test');

@@ -189,6 +189,9 @@ export class SignInService {
     const { account } = (await this.renewable(token, now)).row;
     await this.prisma.$transaction(async (tx) => {
       await tx.refreshToken.deleteMany({ where: { accountId: account.id } });
+      await tx.pushSubscription.deleteMany({
+        where: { accountId: account.id },
+      });
       await this.audit.record(tx, {
         action: 'delete',
         actorId: account.id,

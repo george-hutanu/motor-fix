@@ -32,6 +32,7 @@ import { Bell } from './bell';
 import { EmailBanner } from './email-banner';
 import { Live } from './live';
 import { LiveChange } from './live-in-place';
+import { PushDevice } from './push-device';
 import { Session } from './session';
 import { SignOutEverywhere } from './sign-out-everywhere';
 import { DashboardTabBar } from './tab-bar';
@@ -149,6 +150,7 @@ export class Frame implements OnInit {
   private readonly live = inject(Live);
   protected readonly offline = this.live.offline;
   private readonly overlays = inject(Overlays);
+  private readonly push = inject(PushDevice);
   private readonly i18n = inject(I18n);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly base = computed(
@@ -227,6 +229,8 @@ export class Frame implements OnInit {
         this.live.close();
         void this.router.navigateByUrl('/');
       });
+    // A browser with push on saves its device again.
+    void this.push.refresh();
     this.live.open();
     this.destroyRef.onDestroy(() => this.live.close());
   }
@@ -249,6 +253,7 @@ export class Frame implements OnInit {
   }
 
   protected async signOut() {
+    await this.push.forget();
     this.live.close();
     await this.session.signOut();
     await this.router.navigateByUrl('/');
@@ -266,6 +271,7 @@ export class Frame implements OnInit {
       title: 'shell.signOutEverywhere.title',
     });
     if (answer !== true) return;
+    await this.push.forget();
     this.live.close();
     await this.session.signOutEverywhere();
     await this.router.navigateByUrl('/');

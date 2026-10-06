@@ -453,3 +453,28 @@ describe('the bell text', () => {
     );
   });
 });
+
+describe('the push texts of the test messages', () => {
+  it.each([
+    ['TEST_MESSAGE', 'en', 'MotorFix test message'],
+    ['TEST_MESSAGE', 'ro', 'Mesaj de test MotorFix'],
+    ['PUSH_TEST', 'en', 'MotorFix test notification'],
+    ['PUSH_TEST', 'ro', 'Notificare de test MotorFix'],
+  ])('writes %s in %s with the app link', (name, language, title) => {
+    const push = render(name, 'push', language, { app: APP });
+    expect(push.title).toBe(title);
+    expect(push.link).toBe(APP);
+    expect(push.body.length).toBeGreaterThan(0);
+  });
+
+  it('writes a bell text for the push-only test', () => {
+    expect(render('PUSH_TEST', 'bell', 'en', {})).toMatch(/test/i);
+    expect(render('PUSH_TEST', 'bell', 'ro', {})).toMatch(/test/i);
+  });
+
+  it('has no push text for a type that never got one', () => {
+    expect(() => render('DUE_ITP', 'push', 'en', { app: APP })).toThrow(
+      TemplateError,
+    );
+  });
+});

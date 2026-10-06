@@ -143,3 +143,49 @@ export class RefreshDto {
   @IsIn(ROLE)
   role?: (typeof ROLE)[number];
 }
+
+export const OAUTH_PROVIDER = ['google', 'apple'] as const;
+export type OAuthProvider = (typeof OAUTH_PROVIDER)[number];
+
+export class ProvidersDto {
+  @ApiProperty({ description: 'Sign-in with Apple is configured' })
+  apple!: boolean;
+
+  @ApiProperty({ description: 'Sign-in with Google is configured' })
+  google!: boolean;
+}
+
+// What a provider gave for a person who has no account yet.
+export class OAuthPendingDto {
+  @ApiProperty({ enum: OAUTH_PROVIDER })
+  provider!: OAuthProvider;
+
+  @ApiProperty({ description: 'The name the provider gave; may be empty' })
+  name!: string;
+
+  @ApiPropertyOptional({ description: 'The e-mail the provider gave' })
+  email?: string;
+}
+
+export class OAuthCompleteDto {
+  @ApiProperty({ description: 'Trimmed', maxLength: 80, minLength: 2 })
+  @Transform(trimmed)
+  @IsString()
+  @Length(2, 80)
+  @Matches(/^\P{Cc}*$/u, { message: 'name must not hold control characters' })
+  name!: string;
+
+  @ApiProperty({ description: 'The interface language', enum: ['ro', 'en'] })
+  @IsIn(['ro', 'en'])
+  language!: 'ro' | 'en';
+
+  @ApiPropertyOptional({
+    description:
+      'The current terms and privacy versions; without them the answer is 400 consent_required',
+    type: ConsentDto,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ConsentDto)
+  consent?: ConsentDto;
+}

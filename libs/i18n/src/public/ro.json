@@ -45,6 +45,26 @@
     "later": "Pagina vine în curând.",
     "mechanics": "Mecanic"
   },
+  "providerSignUp": {
+    "cancel": "Anulează",
+    "email": "E‑mail: {email}",
+    "expired": "Pasul a expirat. Intră din nou în cont.",
+    "intro": "Intri prima dată pe MotorFix prin {provider}. Spune‑ne cum te numești și acceptă termenii.",
+    "name": "Nume",
+    "problem": {
+      "consent_required": "Bifează acordul pentru a crea contul.",
+      "email_taken": "Există deja un cont cu acest e‑mail. Intră cu e‑mail și parolă.",
+      "provider_failed": "Pasul a expirat. Intră din nou în cont."
+    },
+    "signIn": "Intră în cont",
+    "submit": "Creează contul",
+    "title": "Cont nou"
+  },
+  "providers": {
+    "apple": "Continuă cu Apple",
+    "google": "Continuă cu Google",
+    "or": "sau"
+  },
   "signIn": {
     "brand": "MotorFix",
     "createAccount": "Creează un cont",
@@ -64,6 +84,12 @@
     },
     "reason": "Intră în cont ca să continui.",
     "remember": "Ține‑mă autentificat",
+    "returned": {
+      "email_taken": "Există deja un cont cu acest e‑mail. Intră cu e‑mail și parolă.",
+      "failed": "Nu am putut contacta {provider}. Încearcă din nou sau intră cu e‑mail sau telefon.",
+      "maintenance": "MotorFix este în mentenanță. Încearcă din nou în câteva minute.",
+      "suspended": "Contul tău este suspendat."
+    },
     "submit": "Intră în cont",
     "title": "Autentificare"
   },
