@@ -164,6 +164,7 @@ describe('calling the changed operations', () => {
       '/api/v1/notification-preferences/unsubscribe': { post: { parameters: [{ in: 'query', name: 'token', required: true, schema: { type: 'string', example: 'tok' } }] } },
       '/api/v1/auth/sign-out': { post: {} },
       '/api/v1/boom': { get: {} },
+      '/api/v1/auth/phone-code': { post: { responses: { 201: {}, 502: { description: 'whatsapp_failed' } } } },
     },
   };
   const endpoints = changedEndpoints(null, doc).filter((e) => e.path !== '/api/v1/notifications');
@@ -176,6 +177,7 @@ describe('calling the changed operations', () => {
       'POST /api/v1/notification-preferences/unsubscribe?token=tok': [200, {}],
       'POST /api/v1/auth/sign-out': [204, {}],
       'GET /api/v1/boom': [500, { code: 'internal_error' }],
+      'POST /api/v1/auth/phone-code': [502, { code: 'whatsapp_failed' }],
     });
     try {
       const out = await callEndpoints({ apiURL: api.apiURL, endpoints, doc, password: 'parola-de-test' });
@@ -192,9 +194,12 @@ describe('calling the changed operations', () => {
 
       assert.ok(out.called.includes('POST /api/v1/notifications/n1/read → 204'));
       assert.ok(out.called.includes('POST /api/v1/admin/news → 201'));
-      assert.equal(out.findings.length, 1);
-      assert.equal(out.findings[0].severity, 'high');
-      assert.match(out.findings[0].title, /GET \/api\/v1\/boom answered 500/);
+      assert.equal(out.findings.length, 2);
+      const boom = out.findings.find((f) => /boom/.test(f.title));
+      assert.equal(boom.severity, 'high');
+      assert.match(boom.title, /GET \/api\/v1\/boom answered 500/);
+      const documented = out.findings.find((f) => /phone-code/.test(f.title));
+      assert.equal(documented.severity, 'low', 'a 5xx the operation documents is reported, not blocking');
     } finally {
       await close(api.server);
     }

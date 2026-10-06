@@ -102,8 +102,9 @@ export async function signIn(apiURL, role, password) {
 }
 
 /**
- * Call each changed operation once. Returns the high findings (5xx), the calls
- * made with their answers, and the operations skipped with the reason.
+ * Call each changed operation once. Returns the findings (each 5xx, see
+ * endpointFinding), the calls made with their answers, and the operations
+ * skipped with the reason.
  */
 export async function callEndpoints({ apiURL, endpoints, doc, password = seedPassword() }) {
   const sessions = new Map();
@@ -150,7 +151,7 @@ export async function callEndpoints({ apiURL, endpoints, doc, password = seedPas
       const res = await fetch(apiURL + url, { method, headers, body, signal: AbortSignal.timeout(15000) }).catch((error) => ({ status: 599, text: async () => error.message }));
       const text = await res.text();
       called.push(`${method} ${url} → ${res.status}`);
-      const finding = endpointFinding({ method, path: url, status: res.status, body: text });
+      const finding = endpointFinding({ method, path: url, status: res.status, body: text, responses: op.responses });
       if (finding) findings.push(finding);
     } catch (error) {
       skipped.push(`${name}: ${String(error.message).split("\n")[0]}`);

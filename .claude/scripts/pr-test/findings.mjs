@@ -91,12 +91,32 @@ export function sweepFinding(o, { web }) {
   };
 }
 
-export function endpointFinding({ method, path, status, body }) {
+/** The problem code a body carries, when it is JSON with one. */
+function problemCode(body) {
+  try {
+    const code = JSON.parse(body)?.code;
+    return typeof code === "string" ? code : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A server error on a changed operation is high, unless the operation's
+ * OpenAPI `responses` document that status with that very problem code as its
+ * description (an upstream refusal the tester's environment cannot satisfy,
+ * such as `502 whatsapp_failed` with sending off): then it is low, still in
+ * the report but not blocking.
+ */
+export function endpointFinding({ method, path, status, body, responses }) {
   if (status < 500) return null;
+  const code = problemCode(body);
+  const documented = code !== null && responses?.[status]?.description === code;
   return {
-    severity: "high",
+    severity: documented ? "low" : "high",
     kind: "api",
-    title: `${method} ${path} answered ${status}`,
+    title: `${method} ${path} answered ${status}${documented ? ` ${code}, as its contract documents` : ""}`,
+    ...(documented ? { documented: true } : {}),
     steps: [`${method} ${path} against the tester's API.`, `Observe: HTTP ${status}${body ? ` ${String(body).slice(0, 200)}` : ""}.`],
   };
 }
