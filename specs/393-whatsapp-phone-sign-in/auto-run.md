@@ -42,3 +42,7 @@
 - Phase agent: model sonnet. `checklists/phone-sign-in.md`: 37 items (auth API, WhatsApp delivery, rate limits, privacy, dialog, tests); 35 checked, 2 struck, 0 unchecked.
 - Fixed in spec/contract: FR-006 gains `language`; FR-001 defines "possible phone number" (`+`, 7 to 15 digits, first not 0); FR-005 quantifies the timeout (5 s); Key Entities states what a code row holds and that nothing sweeps it; FR-013 adds focus, heading announcement and visible labels; contracts/auth-phone.md 503 `maintenance` no longer contradicts FR-010 (an admin's number gets its code).
 - Struck: CHK016 delivery receipts (not in the story); CHK027 Brevo in the privacy notice (owned by ST-132, already a processor for ST-392).
+
+## 7. Tasks
+- Phase agent: model sonnet. `tasks.md`: 48 tasks in 8 phases (Setup 1, Foundational 11, US1 14, US2 6, US3 5, US4 5, US5 4, Polish 2); tests first in every phase, every task cites its FRs and exact paths. The `after_tasks` analyze hook was not run (phase 8).
+- `level.mjs check`: level 2 unchanged. `artifact-lint --check`: 0 errors, 0 warnings (first pass had 15 fr-untasked errors, fixed by citing FRs on each task).
