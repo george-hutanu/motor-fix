@@ -13,16 +13,16 @@
 
 ## Phase 2: Implementation
 
-- [ ] T007 [US1] `.claude/hooks/github-identity.sh` and `.husky/identity.sh`: the cloud branches (FR-001)
-- [ ] T008 [US1] `.claude/scripts/lifecycle.mjs`: post the note at `ready`; the `handoff` step with `--restore` (FR-002, FR-003)
-- [ ] T009 [US1] `scripts/heavy.sh`: cloud default of 2 slots (FR-004)
-- [ ] T010 [US1] `scripts/cloud-setup.sh` (FR-005)
-- [ ] T011 [US1] Docs: `hand-off.md`, `tail.md`, speckit-watch `tail` fix, speckit-review's Workflow fallback, AGENTS.md "Cloud sessions" (FR-002, FR-003, FR-005)
-- [ ] T012 Re-record the edited hook's fingerprint: read the diff, `node .claude/scripts/doctor.mjs --bless-hooks`, then `doctor.mjs` clean
+- [x] T007 [US1] `.claude/hooks/github-identity.sh` and `.husky/identity.sh`: the cloud branches (FR-001)
+- [x] T008 [US1] `.claude/scripts/lifecycle.mjs`: post the note at `ready`; the `handoff` step with `--restore` (FR-002, FR-003)
+- [x] T009 [US1] `scripts/heavy.sh`: cloud default of 2 slots (FR-004)
+- [x] T010 [US1] `scripts/cloud-setup.sh` (FR-005)
+- [x] T011 [US1] Docs: `hand-off.md`, `tail.md`, speckit-watch `tail` fix, speckit-review's Workflow fallback, AGENTS.md "Cloud sessions" (FR-002, FR-003, FR-005)
+- [x] T012 Re-record the edited hook's fingerprint: read the diff, `node .claude/scripts/doctor.mjs --bless-hooks`, then `doctor.mjs` clean
 
 ## Phase 3: Proof
 
-- [ ] T013 `npm run test:harness` green; `node .claude/scripts/harness-eval.mjs --check`; `node .claude/scripts/doctor.mjs` (SC-002)
+- [x] T013 `npm run test:harness` green; `node .claude/scripts/harness-eval.mjs --check`; `node .claude/scripts/doctor.mjs` (SC-002)
 
 ## FR → test
 
