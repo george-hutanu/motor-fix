@@ -7,7 +7,7 @@ import {
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
-import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import { CURRENT_CONSENT, type OAuthProvider } from '@motor-fix/contracts';
 import { ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
@@ -218,8 +218,6 @@ export const ELENA: StubPerson = {
   sub: 'google-elena',
 };
 
-export type Provider = 'google' | 'apple';
-
 export function cookieLine(res: request.Response, name: string): string {
   const all = (res.headers['set-cookie'] ?? []) as unknown as string[];
   return all.find((c) => c.startsWith(`${name}=`)) ?? '';
@@ -286,12 +284,11 @@ export function oauthHarness(maintenance: () => boolean = () => false) {
   }
 
   const h = {
-    accounts,
     app: undefined as unknown as NestExpressApplication,
     boot,
 
     callback(
-      provider: Provider,
+      provider: OAuthProvider,
       fields: Record<string, string>,
       flow: string | undefined,
     ) {
@@ -307,7 +304,7 @@ export function oauthHarness(maintenance: () => boolean = () => false) {
     },
 
     async continueWith(
-      provider: Provider,
+      provider: OAuthProvider,
       person: StubPerson,
       extra: Record<string, string> = {},
       query?: string,
@@ -346,7 +343,7 @@ export function oauthHarness(maintenance: () => boolean = () => false) {
     prisma,
     redis,
 
-    async start(provider: Provider, query = 'language=ro&remember=true') {
+    async start(provider: OAuthProvider, query = 'language=ro&remember=true') {
       const res = await h.http().get(`/auth/oauth/${provider}?${query}`);
       expect(res.status).toBe(302);
       return {

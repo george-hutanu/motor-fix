@@ -1,4 +1,4 @@
-import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import { CURRENT_CONSENT, type OAuthProvider } from '@motor-fix/contracts';
 import request from 'supertest';
 
 import {
@@ -7,7 +7,6 @@ import {
   cookieLine,
   ELENA,
   oauthHarness,
-  type Provider,
   type StubPerson,
   WEB,
 } from './openid-stub.testing';
@@ -368,7 +367,7 @@ describe('maintenance', () => {
 describe('a new person', () => {
   async function pendingFrom(
     person: StubPerson,
-    provider: Provider = 'google',
+    provider: OAuthProvider = 'google',
     extra = {},
   ) {
     const res = await continueWith(provider, person, extra);

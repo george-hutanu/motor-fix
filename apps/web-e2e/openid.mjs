@@ -98,7 +98,7 @@ function published(path) {
 function answer(req, url, raw) {
   if (req.method === 'POST' && url.pathname === '/next') {
     try {
-      next = JSON.parse(raw);
+      next = { ...JSON.parse(raw) };
     } catch {
       return [400, { error: 'bad_request' }];
     }
