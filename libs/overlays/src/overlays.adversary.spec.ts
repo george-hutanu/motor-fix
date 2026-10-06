@@ -550,6 +550,8 @@ describe('Overlays adversary: the Back button', () => {
 
     click('#saved');
     await settle();
+    // The result comes a task after the close.
+    await settle();
 
     expect(stateAtResult).toEqual(page);
   });

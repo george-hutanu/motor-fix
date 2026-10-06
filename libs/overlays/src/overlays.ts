@@ -81,8 +81,15 @@ export class Overlays {
         role: 'dialog',
       },
     );
+    // Handed a task after the close: the router replays the address of a
+    // step back over a task's entry a task after the popstate, and a
+    // navigation the opener starts on the result (sign-in going to a landing)
+    // must come after that replay, or the replay undoes it.
     return firstValueFrom(ref.closed$, { defaultValue: undefined }).then(
-      (result) => result ?? 'cancelled',
+      (result) =>
+        new Promise<OverlayResult<R>>((resolve) =>
+          setTimeout(() => resolve(result ?? 'cancelled')),
+        ),
     );
   }
 }

@@ -1,4 +1,4 @@
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, Location } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { NavigationStart, provideRouter, Router } from '@angular/router';
@@ -254,6 +254,7 @@ describe('Overlays: open and close', () => {
 
     top().querySelector<HTMLButtonElement>('#done')?.click();
     await settle();
+    await settle();
     window.removeEventListener('popstate', stepped);
 
     expect(seen).toEqual(['step back', 'saved']);
@@ -347,6 +348,27 @@ describe('Overlays: the browser’s Back button', () => {
 
     expect(dialogs()).toHaveLength(0);
     expect(starts).toEqual([]);
+  });
+
+  it('lets an opener that navigates on the result stay where it went', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideRouter([{ component: ReadTask, path: '**' }])],
+    });
+    const router = TestBed.inject(Router);
+    router.initialNavigation();
+    await settle();
+    const { host } = await openTask();
+    void host.result?.then(
+      (result) => result === 'saved' && router.navigateByUrl('/elsewhere'),
+    );
+
+    top().querySelector<HTMLButtonElement>('#done')?.click();
+    await settle();
+    await settle();
+
+    expect(dialogs()).toHaveLength(0);
+    expect(router.url).toBe('/elsewhere');
+    expect(TestBed.inject(Location).path()).toBe('/elsewhere');
   });
 
   it('adds no entry and closes at once where there is no window', async () => {
