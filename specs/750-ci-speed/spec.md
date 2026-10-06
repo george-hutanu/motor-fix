@@ -20,6 +20,16 @@ Every number in this spec comes from this section or from the repo; a number wit
 - **Evening queueing.** UTC 19–20: average 144 s, longest 1823 s (about 30 min) from a job's creation to its start. At the moment each long-queued job was created, 18–27 of this account's own jobs were running: the free plan's account-wide cap of 20 concurrent jobs. Contributors: 14 CI jobs per push, the PR title and PR template jobs per push and edit, the PR QA runs, and on every merge `release.yml`, which re-runs the whole of `ci.yml` (`run-many`) plus `images`, `staging` and `production`; six releases started between 19:57 and 20:26 UTC on 2026-10-05.
 - **Node versions.** CI runs one Node, `.nvmrc` = 24, with no matrix. A Node matrix would add jobs, not slots; a different runner label (`ubuntu-24.04-arm`, `ubuntu-slim`) draws from the same account-wide cap.
 
+## Clarifications
+
+### Session 2026-10-06
+
+- Q: Where does a "pending" release end, so collapsing never skips a staging-proven production deploy? → A: Collapsing applies to the release's `checks` job only (a job-level concurrency group, never cancelling a running one); `images`, `staging` and `production` follow the release whose checks ran, so from the moment checks start a release runs to the end, and production still waits for its own green staging.
+- Q: Does each folded check need its own check on the PR, and does a failed step stop the rest of its group? → A: One check per group; each check is its own named step and runs with `if: ${{ !cancelled() }}`, so the failed log names every failed check, as the parallel jobs did. `Changes` and `CI OK` keep their names; the other job names may change and AGENTS.md follows.
+- Q: Does total PR wall time bind, and what is the E2E floor? → A: Both bind: CI OK completes no later than today's measured ~11 min on a web-affecting PR, and the E2E job is at most 7 min on the feature PR's own runs; the worker count is chosen from that measurement and recorded in the plan.
+- Q: Who writes the `main` Docker cache, and where? → A: Release's `images` job writes it to the Actions cache (`type=gha`, the same scopes the PR builds read: `web`, and `api` for the shared node-app stage), so no new job runs and PR builds need no registry login.
+- Q: Does a test that passes only on retry fail the PR's E2E job? → A: Yes on PR CI (`failOnFlakyTests` when CI runs locally started servers); retries stay at 2 so a trace is kept, and the staging run (`BASE_URL` set) keeps today's tolerance.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - A PR's CI finishes sooner (Priority: P1)
@@ -79,7 +89,7 @@ When several merges land close together, only the newest pending release goes on
 
 **Acceptance Scenarios**:
 
-1. **Given** a release is pending (queued, not yet deploying) and a newer merge lands, **When** the newer release starts, **Then** the pending older one is superseded.
+1. **Given** a release is waiting for its checks to start and a newer merge lands, **When** the newer release queues, **Then** the waiting older one is superseded.
 2. **Given** a release is deploying to staging or production, **When** a newer merge lands, **Then** the running deploy completes and the newer release waits.
 3. **Given** staging failed for a commit, **When** that release reaches the production step, **Then** production does not deploy.
 
@@ -113,10 +123,11 @@ Someone reading AGENTS.md's PR CI bullet or `docs/speed-and-cost-plan.md` sees t
 
 - **FR-001**: The end-to-end suite on CI MUST run its tests in parallel across the runner's cores, and every test in the suite MUST still run on every non-docs PR that affects `web`.
 - **FR-002**: A non-docs PR push MUST create fewer runner jobs than today's 14, and every check that CI performs today (Biome, typecheck, unit, integration, e2e, build, harness, contract check, dependency audit, Docker build of web and api, compose stack) MUST still run and MUST still fail CI OK when it fails.
-- **FR-003**: A failing check inside a shared job MUST be identifiable by name from the job's failed log and from the PR's checks.
+- **FR-003**: A failing check inside a shared job MUST be identifiable by name from the job's failed log, and the other checks of that job MUST still run and report.
+- **FR-010**: On PR CI, an end-to-end test that passes only on retry MUST fail the E2E job; a run against a deployed address keeps today's retry tolerance.
 - **FR-004**: A non-docs PR push MUST install dependencies fewer times than today's seven.
 - **FR-005**: PR Docker builds MUST reuse a layer cache written by builds on `main`, and a change to the build's inputs (lockfile, Dockerfile, base image) MUST invalidate the affected layers.
-- **FR-006**: Of several releases pending for `main`, only the newest MUST run; a release whose deploy is already running MUST never be cancelled; production MUST deploy only after staging passed for the same commit.
+- **FR-006**: Of several releases waiting for their checks on `main`, only the newest MUST run its checks; a release whose checks have started MUST run to the end and MUST never be cancelled; production MUST deploy only after staging passed for the same commit.
 - **FR-007**: The semantics the merge gate relies on MUST be unchanged: CI OK fails when any check fails, is skipped-aware for docs-only PRs, and a PR with a failing, pending or missing check is never merged.
 - **FR-008**: The documentation MUST describe the new layout: AGENTS.md's PR CI bullet lists the jobs as they are, and `docs/speed-and-cost-plan.md` records this change with the measured baseline and the measured result.
 - **FR-009**: A docs-only PR MUST keep running only the change detector and CI OK.
@@ -127,13 +138,15 @@ Someone reading AGENTS.md's PR CI bullet or `docs/speed-and-cost-plan.md` sees t
 - Removing any check, or moving unit, integration or e2e suites out of PR CI.
 - Mutation testing (`mutation.yml`, nightly) and the PR QA workflow's own job count.
 - Paid runners or a larger concurrency plan.
+- **Running E2E only after merge** (asked by the owner during this run): rejected. Nothing else runs the end-to-end flows before a merge (the PR tester leaves them to CI), a broken flow would turn `main` red and stop every release until a fix PR merged, and Principle II's Playwright end-to-end rule would need an amendment. The parallel workers in FR-001 remove most of the E2E cost instead.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
 - **SC-001**: Jobs per non-docs PR push in `ci.yml`: at most 8, from the measured 14 (the PR title and PR template workflows are not counted; they are separate workflows).
-- **SC-002**: E2E job wall time on a PR that affects `web`: at most 6 min, from the measured 10–11 min (Playwright run about 9 min at one worker). The target assumes the 4-vCPU runner gives at least a 2x speed-up at 4 workers (autonomous default; verified on the first run and adjusted in the plan if the measurement disagrees).
+- **SC-002**: E2E job wall time on a PR that affects `web`: at most 7 min on the feature PR's own runs, from the measured 10–11 min (Playwright run about 9 min at one worker).
+- **SC-007**: CI OK on a web-affecting PR completes no later than today's measured ~11 min from the run's start.
 - **SC-003**: Dependency installs (`setup` runs) per non-docs PR push: at most 4, from the measured 7.
 - **SC-004**: A PR Docker build after a `main` build with the same lockfile reports cache hits for its dependency layers (measured from the build log; today 0 on a PR's first build).
 - **SC-005**: Three merges to `main` within 10 minutes produce one completed release for the newest commit and no cancelled running deploy (today: one full release per merge).
@@ -144,8 +157,7 @@ Someone reading AGENTS.md's PR CI bullet or `docs/speed-and-cost-plan.md` sees t
 - The PR title and PR template workflows stay as separate workflows; they are cheap and re-run on edit without re-running CI (autonomous default).
 - The 4-vCPU `ubuntu-latest` runner can run 4 Playwright workers with the api, worker and web dev server alongside; the worker count is tuned on the measured run rather than fixed here (autonomous default).
 - Checks are grouped by shared setup and runtime (the quick Node checks together; the service-backed suites keep their own jobs) so that a group's failure is still attributable; the exact grouping is the plan's decision (autonomous default).
-- Docker layer caching across branches uses the registry or the Actions cache written on `main`; which one is the plan's decision (autonomous default).
-- "Only the newest pending release runs" is read as: superseded releases stop before deploying; a deploy in progress always completes (autonomous default).
+- SC-001, SC-002, SC-003 and SC-007 are measured on the feature PR's own runs before ready; SC-004 and SC-005 can only be observed after the merge and go into the merged PR's finish comment (autonomous default).
 - No Notion page other than ST-750 describes this work; the card's Direction section is the only product input beyond the owner's description.
 - Evidence numbers are from the GitHub API over 2026-10-03..06 as supplied to this run; they are not re-measured here.
 
