@@ -30,6 +30,7 @@ features:
   - 767-cloud-qa-merge
   - 602-watcher-counts-qa-runs
   - 677-zoneless-level-at
+  - 628-tester-dispatch-cleanup
 ---
 
 # Capability: Platform
@@ -917,6 +918,14 @@ _From 677-zoneless-level-at._
 ### 677-FR-004 — The Python-vs-JS parity test MUST include a fresh, zone-less `level_at` among its compared states, and both helpers MUST produce the same `feature.json` for it (the pointer alone, no level).
 
 _From 677-zoneless-level-at._
+
+### 628-FR-001 — Clearing `--out` before a lap MUST remove `run.log` and `observations.json` along with the report, the screenshots, the logs and `ci-run.json` it removes today, and MUST keep any other file.
+
+_From 628-tester-dispatch-cleanup._
+
+### 628-FR-002 — After a lap, whether its download succeeded or failed, no download folder MUST remain in `--out`, and the folder MUST be removed by exactly one cleanup step in the code.
+
+_From 628-tester-dispatch-cleanup._
 
 ## Retired
 

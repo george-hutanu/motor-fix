@@ -12,3 +12,5 @@
 - 2026-10-06 · qa · ST-677 · Implementing → QA
 - 2026-10-06 · qa · timeline · no row for ST-677
 - 2026-10-06 · labels · PR #167 · QA
+- 2026-10-06 · ready · Foundations · no change
+- 2026-10-06 · debt · ST-677 · deferred.md line 2 → https://app.notion.com/p/Tech-debt-ST-677-hour-24-fits-LEVEL_AT-but-Python-s-fromisoformat-refuses-it-while-Date-parse-acc-3f1607bff0d281fb915bc842545c4624
