@@ -14,6 +14,8 @@ export type LiveSubject =
   | { type: 'car'; ownerAccountId: string }
   | { type: 'repair'; ownerAccountId: string; sharedGarageId: string | null }
   | { type: 'verification'; garageId: string }
+  // The garages' staff only: an invite, a mechanic row.
+  | { type: 'garage'; garageIds: readonly string[] }
   | { type: 'platform' };
 
 const account = (id: string) => `account:${id}`;
@@ -53,6 +55,8 @@ export function audienceOf(subject: LiveSubject): string[] {
         account(subject.ownerAccountId),
         ...(subject.sharedGarageId ? [garage(subject.sharedGarageId)] : []),
       ];
+    case 'garage':
+      return subject.garageIds.map(garage);
     case 'verification':
       return ['admin', garage(subject.garageId)];
     case 'platform':

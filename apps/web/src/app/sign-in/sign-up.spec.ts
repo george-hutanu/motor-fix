@@ -34,7 +34,11 @@ async function settle() {
   }
 }
 
-async function open(language: 'ro' | 'en' = 'ro', email?: string) {
+async function open(
+  language: 'ro' | 'en' = 'ro',
+  email?: string,
+  name?: string,
+) {
   signUp = jest.fn(async () => ({ landing: '/app/driver' }));
   TestBed.configureTestingModule({
     providers: [{ provide: Session, useValue: { signUp } }],
@@ -43,9 +47,9 @@ async function open(language: 'ro' | 'en' = 'ro', email?: string) {
   const host = TestBed.createComponent(Host);
   result = host.componentInstance.overlays.open<
     'signed-in' | AuthSwitch,
-    { email?: string }
+    { email?: string; name?: string }
   >(SignUp, {
-    data: { email },
+    data: { email, name },
     shape: 'dialog',
     title: 'public.signUp.title',
   });
@@ -164,6 +168,13 @@ describe('the sign-up dialog', () => {
     await open('ro', 'andrei@example.ro');
 
     expect(field('E‑mail').value).toBe('andrei@example.ro');
+  });
+
+  it('starts with the invited name when it comes from an invite link', async () => {
+    await open('ro', 'elena@example.ro', 'Elena Stan');
+
+    expect(field('Nume').value).toBe('Elena Stan');
+    expect(field('E‑mail').value).toBe('elena@example.ro');
   });
 
   it('shows and hides the password', async () => {

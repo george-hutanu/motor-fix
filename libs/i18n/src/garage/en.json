@@ -1,1 +1,34 @@
-{}
+{
+  "invite": {
+    "canAnswerQuotes": "Can answer quote requests",
+    "cancel": "Cancel",
+    "canMoveBookings": "Can move bookings",
+    "canRecordFinalPrice": "Can record the final price",
+    "copied": "Link copied.",
+    "copy": "Copy the link",
+    "copyFailed": "We couldn't copy the link.",
+    "done": "Done",
+    "email": "Email",
+    "field": {
+      "pattern": "That email address doesn't look right."
+    },
+    "kind": "Role",
+    "mechanic": "Mechanic",
+    "name": "Name",
+    "notSent": "We couldn't send the invite.",
+    "notSentLine": "Copy the link and send it to the person another way.",
+    "permissions": "What they can do",
+    "problem": {
+      "already_in_team": "This person is already in the team.",
+      "feature_off": "Inviting mechanics isn't available right now.",
+      "forbidden": "Only the garage's owner can invite.",
+      "invite_open": "This address already has an open invite."
+    },
+    "receptionist": "Receptionist",
+    "resend": "Send again",
+    "sent": "The invite was sent.",
+    "sentLine": "The link is valid for 7 days.",
+    "submit": "Send the invite",
+    "title": "Invite to the team"
+  }
+}

@@ -21,6 +21,19 @@
     "required": "Bifează pentru a continua.",
     "terms": "Termenii de utilizare"
   },
+  "invite": {
+    "accept": "Acceptă",
+    "acceptFailed": "Nu am putut accepta invitația. Încearcă din nou.",
+    "error": "Nu am putut verifica invitația. Încearcă din nou.",
+    "home": "Mergi la MotorFix",
+    "invalid": "Invitația nu mai este valabilă. Cere service‑ului una nouă.",
+    "loading": "Verificăm invitația…",
+    "mechanic": "{garage} te invită să te alături echipei ca mecanic.",
+    "profile": "Dacă accepți, numele tău apare pe profilul public al service‑ului. Îl poți ascunde mai târziu.",
+    "receptionist": "{garage} te invită să te alături echipei ca recepționer.",
+    "retry": "Încearcă din nou",
+    "title": "Invitație în echipă"
+  },
   "newPassword": {
     "askAgain": "Cere un link nou",
     "checking": "Verificăm linkul…",

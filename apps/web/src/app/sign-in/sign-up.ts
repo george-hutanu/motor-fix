@@ -174,7 +174,7 @@ export class SignUp {
       nonNullable: true,
       validators: [Validators.required, Validators.pattern(ADDRESS)],
     }),
-    name: new FormControl('', {
+    name: new FormControl(this.task.data?.name ?? '', {
       nonNullable: true,
       validators: [characters(2, 80, true)],
     }),
