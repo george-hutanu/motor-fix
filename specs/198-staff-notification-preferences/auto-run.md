@@ -46,3 +46,12 @@ Start: origin/main bdd5b87, worktree .worktrees/198-staff-notification-preferenc
 - Slice F: e2e `notification-settings.spec.ts` (real sign-in as the seeded owner; restores the rows before and after so reruns stay clean); push.spec garage panel moved to `/app/garage/settings`; tab bar expects Setări in the three garage bars (8 owner tabs).
 - Traces: `@traces 198-FR-001..010` added to the domain specs; trace matrix 16/16.
 
+
+## Compaction 2026-10-06T16:40:36.408Z (auto)
+
+- branch `198-staff-notification-preferences` at `216db05`
+- tasks: 21 done, 1 open
+- uncommitted (2):
+  -  M libs/domain/src/notifications/preferences.api.integration.spec.ts
+  -  M libs/domain/src/notifications/preferences.service.ts
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
