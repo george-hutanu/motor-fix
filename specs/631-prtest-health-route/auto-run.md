@@ -26,3 +26,18 @@ Description: see spec.md Input. Start commit: c2fb3a3 (origin/main), branch `fix
 
 ## Retrospective evidence
 - Gathered at hand-off, unjudged.
+
+## QA lap 1
+- Added by ST-637 (PR #151) from the run's own records: PR #111's events and review, GitHub run 37293814364, the `agent-review` status on 4ef5982 and the Notion story ST-631.
+- PR #111 marked ready 2026-10-05T10:00:12Z; label `in development` → `QA` at 10:00:14Z.
+- PR QA run 37293814364 (https://github.com/george-hutanu/motor-fix/actions/runs/37293814364), head 4ef5982, lap 1: success, 10:01:01Z–10:03:36Z.
+- `agent-review` success on 4ef5982 at 10:04:31Z, review posted 10:04:30Z: 0 findings (blocker 0, high 0, medium 0, low 0); booted postgres, redis, minio, api, web, worker; 32 screenshots. Repair laps: 0.
+- The lap-1 report (`pr-review/lap1/report.md`, `report.json`) was committed by ST-635 (#113, 3c3b16a).
+
+## Merge
+- CI on 4ef5982 all green: Biome, Typecheck, Unit tests, Integration tests, E2E tests, Build, Harness, Contract check, Dependency audit, Docker build (api, web), Compose stack, Changes, PR title, PR QA, `CI OK` (10:06:19Z).
+- Merged 2026-10-05T10:07:20Z by george-hutanu as 990df69 (`gh pr merge --merge`); label `QA` removed at 10:07:31Z.
+
+## Finish
+- Notion ST-631: Status Done, `PR` https://github.com/george-hutanu/motor-fix/pull/111; finish comment 2026-10-05T10:07:29Z (deviation: readiness route is `/health/ready`; decision: helpers in `services.mjs`; deferred `worktree` flows argument filed as https://app.notion.com/p/3f0607bff0d281b9a297f3f7019a9cd0).
+- Not found in any record: a Foundations build-timeline row for ST-631, a merged-PR finish comment on #111, and a Ready to work refresh after the finish. Not reconstructed.
