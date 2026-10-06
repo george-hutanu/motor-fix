@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 
 import { generateVAPIDKeys } from 'web-push';
 
-import { PushSender, pushPayload } from './push';
+import { PushSender, pushPayload, pushResult } from './push';
 import { plainAgent } from './push.testing';
 
 const vapid = generateVAPIDKeys();
@@ -124,5 +124,25 @@ describe('pushPayload', () => {
         title: 't',
       },
     });
+  });
+});
+
+describe('pushResult', () => {
+  it('says retry for a network error whatever its message names', () => {
+    const error = Object.assign(
+      new Error('socket hang up while reading auth key'),
+      {
+        code: 'ECONNRESET',
+      },
+    );
+    expect(pushResult(error)).toBe('retry');
+  });
+
+  it('says refused for a web-push validation error with no network code', () => {
+    expect(
+      pushResult(
+        new Error('The subscription p256dh value should be 65 bytes long.'),
+      ),
+    ).toBe('refused');
   });
 });

@@ -48,22 +48,27 @@ export class PushSender {
       );
       return 'sent';
     } catch (error) {
-      return result(error);
+      return pushResult(error);
     }
   }
 }
 
-function result(error: unknown): PushResult {
-  if (!(error instanceof WebPushError)) {
-    // A network error or timeout reaches us as a plain Error; keys the
-    // browser could not have made are refused by web-push before any request.
-    const message = error instanceof Error ? error.message : '';
-    return /subscription|key|auth|vapid/i.test(message) ? 'refused' : 'retry';
-  }
+export function pushResult(error: unknown): PushResult {
+  if (!(error instanceof WebPushError)) return plainResult(error);
   const { statusCode } = error;
   if (statusCode === 404 || statusCode === 410) return 'gone';
   if (statusCode === 429 || statusCode >= 500) return 'retry';
   return 'refused';
+}
+
+// A network error carries Node's code (ECONNRESET, ENOTFOUND…) and a timeout
+// reaches us as a plain Error; keys the browser could not have made are
+// refused by web-push before any request.
+function plainResult(error: unknown): PushResult {
+  if (typeof (error as { code?: unknown } | null)?.code === 'string')
+    return 'retry';
+  const message = error instanceof Error ? error.message : '';
+  return /subscription|key|auth|vapid/i.test(message) ? 'refused' : 'retry';
 }
 
 // What Angular's service worker shows, and where a tap on it goes.

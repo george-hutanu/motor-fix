@@ -109,15 +109,23 @@ export class PushDevice {
   }
 
   // Before a sign-out: this browser stops getting the signed-out person's
-  // messages. Never throws, never holds the sign-out back.
-  async forget(): Promise<void> {
+  // messages. Never throws, and holds the sign-out back at most waitMs.
+  async forget(waitMs = 3000): Promise<void> {
     if (this.state() !== 'on') return;
-    try {
-      await this.removeFromServer();
-      await this.sw?.unsubscribe();
-    } catch {
-      // The server drops a dead device by itself on the first push.
-    }
+    const removed = (async () => {
+      try {
+        await this.removeFromServer();
+        await this.sw?.unsubscribe();
+      } catch {
+        // The server drops a dead device by itself on the first push.
+      }
+    })();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const waited = new Promise<void>((done) => {
+      timer = setTimeout(done, waitMs);
+    });
+    await Promise.race([removed, waited]);
+    clearTimeout(timer);
     this.state.set('off');
   }
 

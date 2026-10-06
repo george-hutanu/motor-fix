@@ -237,6 +237,17 @@ describe('PushDevice', () => {
     expect(sw.unsubscribe).not.toHaveBeenCalled();
   });
 
+  it('signs out after a short wait when the delete never answers', async () => {
+    const d = device();
+    await d.refresh();
+    await d.enable();
+    api.pushSubscriptionsControllerRemove.mockReturnValue(
+      new Promise(() => undefined),
+    );
+    await expect(d.forget(10)).resolves.toBeUndefined();
+    expect(d.state()).toBe('off');
+  });
+
   it('does nothing on forget when push is not on', async () => {
     const d = device();
     await d.refresh();
