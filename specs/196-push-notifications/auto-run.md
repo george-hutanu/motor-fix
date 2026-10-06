@@ -57,3 +57,10 @@ Notes folded: SC-001 measured in the integration test; shared-laptop save re-cre
 - Flows fixed (`.specify/.cache/qa-flows-119.mjs`): they now tap the header's RO/EN switch and wait for `aria-pressed`, and they set `Notification.permission` to `granted` in the init script.
 - Low findings fixed, tests first: concurrent `refresh()` calls share one read, so the device is saved once (`push-device.ts`); `web-push` is pinned to 3.6.7. Deferred: classifying push errors by message text (`deferred.md`).
 - Merged `origin/main` (15 files, no conflicts). Typecheck, lint and unit tests are green.
+
+## Tail, lap 3 (2026-10-06)
+
+- PR tester on run 37423639476 (head fe6f395): failure, 2 high, both the turn-on/test/turn-off/sign-out flow (ro, en); every panel check at 320 px, the API checks and the sweep passed. Again a flow problem, not the product: the screenshot shows "That did not work" after Turn on because the POST reached the real API (no VAPID keys, 400 `push_off`). The Angular service worker registers once the app is stable or after 30 s and then claims the page; from then on API calls leave from the worker, which `page.route` and `page.on('request')` never see.
+- Flows fixed (`.specify/.cache/qa-flows-119.mjs`): the stubs and the request log are on the browser context (`context.route`, `context.on('request')`, `context.waitForEvent('request')`), which sees the worker's requests. No product code changed.
+- Noted, not blocking: the first Turn on after a fresh load waits for the worker to register (up to 30 s while `/api/v1/live` keeps the app unstable). Later visits already have it.
+- Merged `origin/main` (harness and specs only, no conflicts); harness specs and Biome green. Repair iteration 3 of 5.
