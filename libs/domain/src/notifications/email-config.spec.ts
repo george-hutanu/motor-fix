@@ -58,9 +58,9 @@ describe('e-mail configuration', () => {
     expect(
       emailConfig('staging', { PUBLIC_WEB_URL: '' }).webUrl,
     ).toBeUndefined();
-    expect(() =>
-      emailConfig('staging', { PUBLIC_WEB_URL: 'secret-host' }),
-    ).not.toThrow();
+    expect(
+      emailConfig('staging', { PUBLIC_WEB_URL: 'secret-host' }).webUrl,
+    ).toBeUndefined();
   });
 
   it('talks to Brevo by default', () => {
