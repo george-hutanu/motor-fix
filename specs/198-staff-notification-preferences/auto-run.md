@@ -24,3 +24,7 @@ Start: origin/main bdd5b87, worktree .worktrees/198-staff-notification-preferenc
 ## 4. Clarify
 - spec-challenger: 8 findings. Five answered into spec Clarifications (row rule for driver-group types with a garage; staff WhatsApp default off; GET reports saved WhatsApp choice; last-channel rule on the whole save; no new capability for garage Setări). Also: FR-005 is the authoritative Garage list; admin entry garage id/name null; out-of-type channels stay 400 as in ST-197.
 - level check: stays 2.
+- context.md contradictions answered (autonomous): (1) 403 for another staff person: kept FR-008's reading — no route addresses another account, so the 403 of A31/A34 (Proposed) has no resource to guard; adding a route only to refuse it would be speculative (Principle I). Decision for the finish comment. (2) E-mail lock on BOOKING_CANCELLED/BOOKING_LAPSED/BOOKING_CONFIRM_REMINDER/FACILITY_REMOVED: kept — the catalogue marks them always sent and `sendsEmail` (catalogue.ts) sends their e-mail whatever is muted, so an unlocked switch would lie. (3) BOOKING_MOVE_LAPSED locked for both variants (one catalogue type). (4) REQUEST_REMINDER not listed (W17). (5) staff default stays ST-197's.
+
+## 5. Plan
+- Phase agent, model fable: STATUS success — plan.md, research.md, data-model.md, contracts/, quickstart.md; commits b9bf379, c08e6eb. Panel subscribes with Live.on/resync directly; the seeded owner has no phone, so the e2e toggles E-mail and Push and asserts WhatsApp disabled.
