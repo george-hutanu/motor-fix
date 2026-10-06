@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 
 **Input**: "Tighten the Dependabot merge exemption: committer check and refusal wording". Deferred from the PR tester's review of PR #90 (lap 2, two LOW findings): (1) `.claude/hooks/merge-gate.mjs` gives a red Dependabot PR the shared `ciRefusal` advice to fix it on the branch and run the PR tester again, which is wrong for an exempt PR; (2) `.claude/hooks/pr-lifecycle-gate.mjs` `isDependabot` checks commit authors only, so a commit that keeps author dependabot[bot] but was committed by someone else (cherry-pick, `--author`, rebase) stays exempt.
 
