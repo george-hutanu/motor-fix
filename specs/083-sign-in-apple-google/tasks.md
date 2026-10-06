@@ -27,7 +27,7 @@
 
 - [X] T010 Regenerate `apps/api/openapi.json` and `libs/data-access` (`npx nx run data-access:generate`)
 - [X] T011 End to end: `apps/web-e2e/openid.mjs` (new), `apps/web-e2e/project.json` target, `apps/web-e2e/playwright.config.mts`, `.github/workflows/ci.yml` E2E env (FR-001, FR-003, FR-008)
-- [ ] T012 Mark tasks, update `auto-run.md`; typecheck, lint, the touched Jest projects
+- [X] T012 Mark tasks, update `auto-run.md`; typecheck, lint, the touched Jest projects
 
 ## FR → test
 
