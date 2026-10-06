@@ -30,3 +30,15 @@
   4. 2,000 counts code points (recommendation).
   5. `random` and `now` injectable; backoff 500 ms·2^a·(1+random) (recommendation).
 - level.mjs check: level 2 unchanged.
+
+## 5. Plan
+- Phase agent (fable): STATUS success — design.md (no screens), plan.md, research.md, data-model.md, quickstart.md; `childrenOf` moves into the client as `children(id)`; no registered hook script touched.
+
+## 6. Checklist
+- Phase agent (sonnet): STATUS success — checklists/notion-limits.md 27/27; spec fixes: backoff attempt index, Retry-After edge values, comment limit in code points.
+
+## 7. Tasks
+- Phase agent (sonnet): STATUS success — 16 tasks, test-first, FR → test map in tasks.md; level.mjs check: level 2 unchanged.
+
+## 8. Analyze
+- artifact-lint: 0 errors, 1 warning (delta-missing: Spec Delta lacked a `### Capability:` block) → rewritten as `platform` Adds FR-001..FR-008; re-lint 0/0; `capabilities.mjs validate` merges cleanly. Coverage: every FR has a spec task before its code task; 0 CRITICAL. Jev lane unavailable (no key).

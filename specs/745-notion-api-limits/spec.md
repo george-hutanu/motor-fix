@@ -166,16 +166,10 @@ body of each page request.
 
 ## Spec Delta
 
-### Adds
+### Capability: `platform`
 
-- Pacing (3/s token bucket), retries on 429/502/503/504/409 `conflict_error` with `Retry-After` or jittered backoff, and GET-only retry of timeouts and network errors in the harness Notion client.
-- Rich-text splitting (2,000 characters, 100 objects), relation cap (100 ids), block-children append helper (100 per request), and a local 500 KB body refusal.
-- Explicit `page_size: 100` on data-source queries.
+- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008
+- **Modifies**: none
+- **Removes**: none
 
-### Modifies
-
-- `notion-sync` comments over 2,000 characters are posted as `rich_text` (split), not `markdown`.
-
-### Removes
-
-- Nothing.
+The capability holds no requirement on the Notion client's request limits today: the client of ST-687 paced nothing and retried only a 429.
