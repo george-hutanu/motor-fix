@@ -112,6 +112,5 @@ describe('mutation workflow', () => {
     const limit = workflow.match(/^ {4}# (.+)\n {4}timeout-minutes: (\d+)$/m);
     expect(limit?.[1]).toMatch(/measured/);
     expect(Number(limit?.[2])).toBeLessThanOrEqual(360);
-    expect(workflow).not.toContain('TODO');
   });
 });

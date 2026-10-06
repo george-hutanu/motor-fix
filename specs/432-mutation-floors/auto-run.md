@@ -64,3 +64,5 @@
 - T021: limit stays 360, the cap: domain alone overflows it; the derivation comment names runs 37360166653 and 37360189195.
 - T022: one follow-up per project in deferred.md (domain's carries the per-runner database).
 - Phase 13 (refresh): the org-researcher subagent had no Notion tools; the run re-read ST-432 itself: no changes (context.md Refresh 2026-10-06).
+- Phase 11 converge: converged, no tasks appended (domain's missing full score is the recorded overflow follow-up; FR-010/SC-005 are in the PR body at hand-off).
+- Phase 12 harden: code-reviewer APPROVE, its four findings applied (mutation-setup TODO check dropped, main.spec name, app.module.spec types, problem.filter mocks restored in afterEach). test-adversary added scripts/mutation-floors.spec.ts; its duplicates of mutation-setup.spec (workflow input, schedule, restore, concurrency) and the exact-floor pins (the ratchet already guards falls) were trimmed. scripts 268/268, api specs green, lint and typecheck green, artifact-lint clean; diff-audit's 3 import-extension errors are false positives (bundler resolution), deferred as a harness item.

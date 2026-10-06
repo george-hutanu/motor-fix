@@ -31,6 +31,8 @@ function send(exception: unknown) {
 }
 
 describe('ProblemFilter', () => {
+  afterEach(() => jest.restoreAllMocks());
+
   it('keeps the code an exception carries', () => {
     const res = send(
       new HttpException(
@@ -78,7 +80,6 @@ describe('ProblemFilter', () => {
     expect(res.statusCode).toBe(500);
     expect(res.body).toMatchObject({ code: 'internal_error' });
     expect(JSON.stringify(res.body)).not.toContain('connection reset');
-    log.mockRestore();
   });
 
   it('joins a list of messages into one detail', () => {

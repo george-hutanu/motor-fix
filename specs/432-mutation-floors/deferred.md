@@ -9,3 +9,4 @@ Survivors left outside `contracts`, `mcp` and `api` (FR-011), one task per proje
 - `libs/overlays`: 81.85 (run 37417177305), floor 76; 40 survived, 7 uncovered mutants to kill.
 - `libs/i18n`: 90.96 (run 37360174934), floor 85; 15 survived, 2 uncovered mutants to kill.
 - `libs/media`: 90.63 (run 37360193873), floor 85; 3 survived mutants to kill.
+- Harness: `.claude/scripts/diff-audit.mjs` flags `libs/contracts` specs' extensionless relative imports as nodenext errors, but the project resolves with `moduleResolution: bundler` and typechecks clean; teach the import-extension rule to read each project's tsconfig.

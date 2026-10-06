@@ -71,7 +71,7 @@ describe('api entry point', () => {
     expect(mockConfigure).toHaveBeenCalledWith(mockApp, { APP_ENV: 'test' });
   });
 
-  it('serves on port 3000 by default, closing cleanly on a signal', async () => {
+  it('serves on port 3000 by default with shutdown hooks on', async () => {
     await run([]);
 
     expect(mockApp.enableShutdownHooks).toHaveBeenCalled();

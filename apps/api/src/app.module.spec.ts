@@ -2,7 +2,7 @@ import {
   EmailConfirmationModule,
   PasswordResetModule,
 } from '@motor-fix/domain';
-import type { DynamicModule } from '@nestjs/common';
+import type { DynamicModule, Type } from '@nestjs/common';
 
 import { AppModule } from './app.module';
 
@@ -21,7 +21,7 @@ const env = {
 
 // Built inside the test, not in a hook: what runs in a hook is out of reach
 // of the mutants Stryker switches on per test.
-function optionsOf(module: unknown) {
+function optionsOf(module: Type<unknown>) {
   const imports = AppModule.register(env).imports as DynamicModule[];
   const found = imports.find((entry) => entry.module === module);
   return found?.providers?.flatMap((provider) =>

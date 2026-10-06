@@ -25,7 +25,7 @@ Mutation runs happen only in the Mutation workflow on GitHub
 ## Phase 3: User Story 1 — every project gets a score
 
 - [X] T012 [US1] `testEnvironment: 'jsdom'` in `apps/web`, `libs/ui-cockpit`, `libs/i18n`, `libs/overlays`, `libs/media` jest configs
-- [X] T013 [US1] `apps/web/src/server/*.spec.ts`: docblock `@jest-environment @stryker-mutator/jest-runner/jest-env/node`
+- [X] T013 [US1] `apps/web/src/server/search.spec.ts`, `search.adversary.spec.ts`, `edge.spec.ts`, `edge.adversary.spec.ts`: docblock `@jest-environment @stryker-mutator/jest-runner/jest-env/node`
 - [X] T014 [US1] `libs/overlays/src/form-parts.ts`: silence `ERROR_TEXT` (StringLiteral, compile-time metadata)
 - [X] T015 [US1] Confirm `worker` is skipped with its line (FR-004, existing `hasSpecs` behaviour)
 
