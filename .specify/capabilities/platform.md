@@ -20,6 +20,7 @@ features:
   - 703-idle-watch-gate
   - 705-auto-skill-split
   - 432-mutation-floors
+  - 725-lifecycle-gate-feature-dir
 ---
 
 # Capability: Platform
@@ -647,6 +648,18 @@ _From 432-mutation-floors._
 ### 432-FR-012 — The Mutation workflow MUST accept a dispatch input that runs without the incremental results of earlier runs, so a full measurement can be taken on demand; the nightly run stays incremental.
 
 _From 432-mutation-floors._
+
+### 725-FR-001 — The gate MUST resolve a branch's feature folder in one place: `.specify/feature.json`'s `feature_directory` when it is a path to a folder that exists, then `specs/<branch>` when it exists, then the `specs/` folder whose numeric prefix equals the branch's, compared as numbers, and whose slug equals the branch's slug.
+
+_From 725-lifecycle-gate-feature-dir._
+
+### 725-FR-002 — `prLinked` MUST read `notion-sync.md` from the resolved folder.
+
+_From 725-lifecycle-gate-feature-dir._
+
+### 725-FR-003 — `handedOff` MUST read `handoff.md` from the resolved folder.
+
+_From 725-lifecycle-gate-feature-dir._
 
 ## Retired
 

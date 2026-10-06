@@ -1,0 +1,4 @@
+# Deferred — 725-lifecycle-gate-feature-dir
+
+- MEDIUM (code-reviewer) `.claude/hooks/pr-lifecycle-gate.mjs` `featureDir` — a second feature resolver beside `.claude/scripts/lib/feature.mjs` `activeFeature`: only this one has the zero-padded fallback, so `red-first-gate` and the other `activeFeature` callers still resolve branch `83-x` differently. Move the zero-pad lookup into `activeFeature` and have the hook call it with its branch. — Notion: https://app.notion.com/p/3f1607bff0d28185a894ca95efedcf21
+- LOW (pr-tester, lap 2) `.claude/hooks/pr-lifecycle-gate.mjs:40` `featureDir` — the `.specify/feature.json` pointer is accepted when it names a file, since `existsSync(join(cwd, pointer))` is also true for one, but FR-001 says "a path to a folder that exists". Check `statSync(...).isDirectory()` instead, with a spec case for a pointer that names a file. — Notion: https://app.notion.com/p/3f1607bff0d28143ad36d63adf8fa87e
