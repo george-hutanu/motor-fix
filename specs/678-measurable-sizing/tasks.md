@@ -26,7 +26,7 @@
 **Independent test**: temp repository with a level 1 feature; each wire present and absent.
 
 - [x] T007 [US2] Write failing specs in `.claude/scripts/level.spec.mjs`: per wire (`fr-count`, `clarification`, `contract`, `projects`) one test that promotes a level 1 and one that leaves it at 1 with no `auto-run.md` write; level 3 stays 3 across all four; promotion line in `auto-run.md` (created when missing, never logged twice); diff wires `not checked` when merge-base or diff fails; level 0 with no feature directory records level 2 and writes no file (FR-005, FR-006, FR-008, FR-015)
-- [x] T008 [US2] Add `checkTripwires(repo)` and the `check [--ready] [--json]` command (promotion, `auto-run.md` line, per-wire output, exit 0) to `.claude/scripts/level.mjs` (FR-005, FR-006, FR-008)
+- [x] T008 [US2] Add `tripwires` and `checkLevel(repo)` with the `check [--ready] [--json]` command (promotion, `auto-run.md` line, per-wire output, exit 0) to `.claude/scripts/level.mjs` (FR-005, FR-006, FR-008)
 
 ## Phase 4: User Story 3 - Pre-ready check (P3)
 

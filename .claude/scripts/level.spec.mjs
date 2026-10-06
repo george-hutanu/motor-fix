@@ -1098,4 +1098,54 @@ describe('suggest from a Notion story', () => {
       done();
     }
   });
+
+  // FR-012: a Notion fact only raises the text path's answer. When the
+  // classifier is unsure the text path is Jev, so a floor of 2 must not cap a
+  // Jev answer of 3.
+  const notionThenJev = (notion, answers) => {
+    const jev = jevReply(answers);
+    return { fetchImpl: (url, init) => (String(url).startsWith('https://api.notion.com/') ? notion.fetchImpl(url, init) : jev(url, init)), urls: notion.urls };
+  };
+  const suggestWithJev = async (argv, fake) => {
+    const out = [];
+    const previous = process.env.SPECKIT_JEV;
+    delete process.env.SPECKIT_JEV;
+    try {
+      const status = await withKey(() => suggestCommand(argv, { repo: dir, env: { NOTION_TOKEN: 'secret_t' }, fetchImpl: fake.fetchImpl, out: (line) => out.push(line) }));
+      return { status, out: out.join('\n') };
+    } finally {
+      if (previous !== undefined) process.env.SPECKIT_JEV = previous;
+    }
+  };
+
+  it('lets the text path raise a story with boards above the floor of 2', async () => {
+    fresh();
+    try {
+      const fake = notionThenJev(notionFake({ page: storyPage({ boards: 2 }), blocks: brief() }), { level: { choice: '3', confidence: 0.9 } });
+      const run = await suggestWithJev(['ST-9'], fake);
+      assert.equal(run.status, 0);
+      assert.match(run.out, /level 3 \(project\) suggested by jev/);
+      assert.match(run.out, /boards: 2/);
+    } finally {
+      done();
+    }
+  });
+
+  it('keeps the floor of 2 when the text path answers lower', async () => {
+    fresh();
+    try {
+      const fake = notionThenJev(notionFake({ page: storyPage({ boards: 2 }), blocks: brief() }), { level: { choice: '1', confidence: 0.9 } });
+      const run = await suggestWithJev(['ST-9'], fake);
+      assert.match(run.out, /level 2 \(feature\) suggested by notion/);
+    } finally {
+      done();
+    }
+  });
+});
+
+describe('level.mjs public surface', () => {
+  it('exports only what another module or spec imports', async () => {
+    const exported = Object.keys(await import('./level.mjs')).sort();
+    assert.deepEqual(exported, ['checkLevel', 'classifyLevel', 'levelTarget', 'main', 'pointFeature', 'resolveLevel', 'setLevel', 'suggestCommand', 'suggestLevel', 'suggestText']);
+  });
 });

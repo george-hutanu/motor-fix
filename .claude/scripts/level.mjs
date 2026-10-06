@@ -136,7 +136,7 @@ export function pointFeature(repo, featureDirectory, { now = Date.now() } = {}) 
 const OWED_BY_PROMOTION = ["context", "clarify", "plan", "checklist", "analyze", "converge", "refresh", "agent-context", "archive"];
 
 /** Files the branch changed against origin/main, committed or not; null when that cannot be computed. */
-export function changedFiles(repo) {
+function changedFiles(repo) {
   try {
     // -z: git quotes a path with non-ASCII bytes otherwise, and a quoted path
     // matches no project.
@@ -164,7 +164,7 @@ function nxProject(repo, file) {
 }
 
 /** The four wires, each tripped, clear or not checked, with the fact it read. */
-export function tripwires(repo, featureDir, files) {
+function tripwires(repo, featureDir, files) {
   const specFile = featureDir ? join(featureDir, "spec.md") : null;
   const spec = specFile && existsSync(specFile) ? readFileSync(specFile, "utf8") : null;
   const wire = (name, state, fact) => ({ name, state, fact });
@@ -558,7 +558,7 @@ async function readStory(ref, { repo, env, fetchImpl }) {
  * STORY_POINTS_THRESHOLD points mean at least 2; a bug with no boards and a
  * complete brief is 1. Labels and Design are facts only. Never lowers.
  */
-export function sizeFromFacts(facts, classified) {
+function sizeFromFacts(facts, classified) {
   const floors = [];
   if (facts.boards) floors.push(`boards: ${facts.boards}`);
   if (facts.brief === "not found") floors.push("brief: not found");
@@ -569,7 +569,7 @@ export function sizeFromFacts(facts, classified) {
   if (facts.points !== null && facts.points > STORY_POINTS_THRESHOLD) floors.push(`points: ${facts.points}`);
   if (!classified.unsure && classified.level >= 2)
     return { ...classified, by: "classifier", reason: [classified.reason, ...floors].join("; ") };
-  if (floors.length) return { level: 2, confidence: 0.8, by: "notion", reason: floors.join("; ") };
+  if (floors.length) return { level: 2, confidence: 0.8, by: "notion", reason: floors.join("; "), askText: Boolean(classified.unsure) };
   if (facts.type === "Bug" && facts.brief.length && facts.brief.every((s) => s.filled))
     return { level: 1, confidence: 0.8, by: "notion", reason: "a bug with no boards and a complete brief" };
   return { unsure: true, reason: `no decisive facts: type ${facts.type ?? "none"}, no boards, brief complete` };
@@ -604,6 +604,15 @@ export async function suggestCommand(argv, { repo, env = process.env, fetchImpl,
   if (verdict.unsure) {
     out(`unsure (notion: ${verdict.reason}) — sizing from the story's text`);
     return suggestText(story.text, { repo, argv, out, fetchImpl });
+  }
+  // A floor only raises (FR-012): with the classifier unsure, the text path is
+  // Jev, and a Jev answer above the floor stands.
+  if (verdict.askText) {
+    const jev = await suggestLevel(story.text, { repo, fetchImpl });
+    if (!jev.unavailable && jev.level > verdict.level) {
+      printLevel({ ...jev, by: "jev", reason: verdict.reason }, { repo, argv, out });
+      return 0;
+    }
   }
   printLevel(verdict, { repo, argv, out });
   return 0;
