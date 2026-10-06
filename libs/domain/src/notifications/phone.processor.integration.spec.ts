@@ -1,4 +1,4 @@
-// @traces 392-FR-001 392-FR-002 392-FR-003 392-FR-004 392-FR-005 392-FR-006 392-FR-007 392-FR-008 392-FR-010
+// @traces 392-FR-001 392-FR-002 392-FR-003 392-FR-004 392-FR-005 392-FR-006 392-FR-007 392-FR-008 392-FR-010 522-FR-001
 import type { OutsideChannel } from '@motor-fix/contracts';
 import { Logger } from '@nestjs/common';
 import { Queue } from 'bullmq';
@@ -10,6 +10,7 @@ import { NotificationsProcessor } from './notifications.processor';
 import { NotificationsService, RETRY_MINUTES } from './notifications.service';
 import {
   databaseUrl,
+  failWritesAfter,
   fixtures,
   redisUrlFor,
   testConfig,
@@ -505,4 +506,33 @@ describe('the garage’s WhatsApp switch', () => {
     });
     expect(await summary(ana)).toEqual([['whatsapp', 'queued', null]]);
   });
+});
+
+describe('a database error after Brevo accepted a phone message', () => {
+  it.each([
+    ['sms', () => mock.sms()],
+    ['whatsapp', () => mock.whatsapp()],
+  ] as const)(
+    'records the %s on a later write and does not send it again',
+    async (channel, calls) => {
+      const ana = await person('ana', 1);
+      await choose(ana, 'DUE_ITP', channel);
+      await remind(ana, 'itp-1');
+      const [sent] = (await rows(ana)).filter((r) => r.channel === channel);
+      const undo = failWritesAfter(prisma, () => calls().length > 0, 1);
+      try {
+        await expect(sendJob(sent.id)).resolves.toBeUndefined();
+      } finally {
+        undo();
+      }
+      expect(calls()).toHaveLength(1);
+      expect(
+        (
+          await prisma.notification.findUniqueOrThrow({
+            where: { id: sent.id },
+          })
+        ).status,
+      ).toBe('sent');
+    },
+  );
 });

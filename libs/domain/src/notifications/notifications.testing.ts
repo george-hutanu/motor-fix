@@ -79,3 +79,23 @@ export function fixtures(prisma: PrismaClient = createPrisma(databaseUrl)) {
     reset: () => prisma.$executeRawUnsafe('TRUNCATE account, garage CASCADE'),
   };
 }
+
+// The next `times` transactions that start once `called` says the provider
+// had the message fail, as a dropped connection would. Returns the undo.
+export function failWritesAfter(
+  prisma: PrismaClient,
+  called: () => boolean,
+  times: number,
+) {
+  const real = prisma.$transaction;
+  prisma.$transaction = ((...args: never[]) => {
+    if (times > 0 && called()) {
+      times -= 1;
+      return Promise.reject(new Error('connection lost'));
+    }
+    return (real as (...a: never[]) => unknown).apply(prisma, args);
+  }) as never;
+  return () => {
+    prisma.$transaction = real;
+  };
+}
