@@ -26,6 +26,7 @@ features:
   - 678-measurable-sizing
   - 745-notion-api-limits
   - 750-ci-speed
+  - 766-cloud-rest-fallback
   - 767-cloud-qa-merge
 ---
 
@@ -838,6 +839,26 @@ _From 750-ci-speed._
 ### 750-FR-010 — On PR CI, an end-to-end test that passes only on retry MUST fail the E2E job; a run against a deployed address keeps today's retry tolerance.
 
 _From 750-ci-speed._
+
+### 766-FR-001 — With `CLAUDE_CODE_REMOTE=true`, `gh pr list|view|create|edit|ready|comment|checks` and `gh label create`, as the lifecycle scripts call them, MUST be answered through `gh api` REST calls with gh's output shape (`--json` fields, `--jq`/`-q`, the URL that `pr create` prints, gh's exit codes); any other gh command MUST run unchanged. Without it, gh MUST be called exactly as before.
+
+_From 766-cloud-rest-fallback._
+
+### 766-FR-002 — `lifecycle.mjs` MUST route its gh calls through FR-001 while still putting the original `gh …` command to the Bash gates first.
+
+_From 766-cloud-rest-fallback._
+
+### 766-FR-003 — `pr-lifecycle-gate.mjs` and `notion-sync.mjs` MUST read and write the PR through FR-001.
+
+_From 766-cloud-rest-fallback._
+
+### 766-FR-004 — `node .claude/scripts/gh.mjs <gh args>` MUST run one gh command through FR-001 (stdout, stderr and exit code passed through), and `pr checks --watch` MUST poll until no check is pending.
+
+_From 766-cloud-rest-fallback._
+
+### 766-FR-005 — `scripts/cloud-setup.sh` MUST put a Node 24 first on PATH and persist it for the session (one marked line in `~/.bashrc`, and in `CLAUDE_ENV_FILE` when set), reusing an installed Node 24 before installing one, and MUST install the chromium revision the installed `playwright-core` pins when it is missing; AGENTS.md "Cloud sessions" MUST say so and name `gh.mjs`.
+
+_From 766-cloud-rest-fallback._
 
 ### 767-FR-001 — `.github/workflows/pr-qa.yml` MUST also run on `pull_request` (`ready_for_review`, `synchronize`, `reopened`) for non-draft PRs whose head is in this repository, with one concurrency group per PR that cancels older runs; `workflow_dispatch` stays.
 

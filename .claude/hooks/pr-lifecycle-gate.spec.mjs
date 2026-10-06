@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { allGreen, attachCommitters, committerArgs, decide, withCommitters, featureDir, handedOff, hasAgentReview, isDependabot, parseCommitters, prLinked, typeLabel } from './pr-lifecycle-gate.mjs';
+import { allGreen, attachCommitters, committerArgs, decide, withCommitters, featureDir, handedOff, hasAgentReview, isDependabot, parseCommitters, prLinked, readPr, typeLabel } from './pr-lifecycle-gate.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
 const green = [{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }, review('SUCCESS')];
@@ -412,5 +412,47 @@ describe('PR lifecycle gate — Dependabot PRs need no agent review', () => {
   it('still names the tester for a green PR by anyone else', () => {
     const why = decide(task({ pr: ready({ statusCheckRollup: checks, author: { login: 'george-hutanu' } }) }));
     assert.match(why, /speckit-pr-test 6/);
+  });
+});
+
+describe('PR lifecycle gate — reading the PR', () => {
+  const BRANCH = '766-cloud-rest-fallback';
+  const failing = (stderr) => () => ({ code: 1, stdout: '', stderr });
+
+  it('tells no PR from a read that failed', () => {
+    assert.deepEqual(readPr(BRANCH, '.', { env: {}, run: failing('no pull requests found for branch "x"') }), { pr: null });
+    assert.equal(readPr(BRANCH, '.', { env: {}, run: failing('HTTP 403: GitHub GraphQL is not available') }), null);
+  });
+
+  it('on the laptop asks gh pr view for the fields it judges', () => {
+    const calls = [];
+    const run = (file, args) => {
+      calls.push([file, ...args].join(' '));
+      return { code: 0, stdout: JSON.stringify({ number: 7, state: 'OPEN', isDraft: true, labels: [], author: { login: 'george-hutanu' } }), stderr: '' };
+    };
+    assert.equal(readPr(BRANCH, '.', { env: {}, run }).pr.number, 7);
+    assert.deepEqual(calls, [`gh pr view ${BRANCH} --json author,commits,number,state,isDraft,labels,mergeable,statusCheckRollup,title`]);
+  });
+
+  it('in a cloud session reads it through REST and judges it the same', () => {
+    const REPO = 'repos/{owner}/{repo}/';
+    const routes = {
+      [`pulls?head={owner}:${BRANCH}&state=all&per_page=100`]: [[{ number: 160 }]],
+      'pulls/160': { number: 160, title: 'chore(harness): ST-766 x', state: 'open', draft: false, merged_at: null, mergeable: true, head: { ref: BRANCH, sha: 'h1' }, user: { login: 'george-hutanu' }, labels: [{ name: 'QA' }, { name: 'tooling' }] },
+      'pulls/160/commits?per_page=100': [[{ sha: 'h1', author: { login: 'george-hutanu' }, commit: { author: { name: 'g', email: 'e' } } }]],
+      'commits/h1/check-runs?per_page=100': [{ check_runs: [{ name: 'CI OK', status: 'completed', conclusion: 'success' }] }],
+      'commits/h1/status': { statuses: [] },
+    };
+    const calls = [];
+    const run = (file, args) => {
+      calls.push([file, ...args].join(' '));
+      const hit = routes[args[1].replace(REPO, '')];
+      return hit === undefined ? { code: 1, stdout: '', stderr: 'HTTP 403' } : { code: 0, stdout: JSON.stringify(hit), stderr: '' };
+    };
+    const read = readPr(BRANCH, '.', { env: { CLAUDE_CODE_REMOTE: 'true' }, run });
+    assert.ok(calls.every((c) => c.startsWith('gh api ')), calls.join('\n'));
+    assert.deepEqual(read.pr.statusCheckRollup, [{ __typename: 'CheckRun', name: 'CI OK', status: 'COMPLETED', conclusion: 'SUCCESS' }]);
+    assert.equal(read.pr.mergeable, 'MERGEABLE');
+    assert.match(decide({ branch: BRANCH, ahead: 1, unpushed: 0, pr: read.pr }), /no agent-review status/);
   });
 });

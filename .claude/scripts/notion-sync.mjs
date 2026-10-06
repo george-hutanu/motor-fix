@@ -23,6 +23,7 @@ import { join } from "node:path";
 import { markFiled, parseDeferred, taskFor } from "./debt-tasks.mjs";
 import { isEntryPoint } from "./lib/entry.mjs";
 import { activeFeature } from "./lib/feature.mjs";
+import { ghSync } from "./lib/gh-rest.mjs";
 import { clientLimits, NotionError, notionClient, notionToken, readProp, richText, writeProp } from "./lib/notion.mjs";
 import { decideReady } from "./notion-ready.mjs";
 import { decide, recordPrior } from "./notion-status.mjs";
@@ -84,9 +85,10 @@ function usageError({ positional: [event, ...rest], flags }) {
   return `unknown event "${event ?? ""}"`;
 }
 
-function defaultGh(args) {
+/** gh's stdout, or "" when it fails; through REST in a cloud session (lib/gh-rest.mjs). */
+export function defaultGh(args, opts = {}) {
   try {
-    return execFileSync("gh", args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    return ghSync(args, opts);
   } catch {
     return "";
   }
