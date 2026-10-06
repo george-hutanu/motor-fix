@@ -488,3 +488,233 @@ describe('Overlays adversary: focus and history', () => {
     expect(location.href).toBe(href);
   });
 });
+
+describe('Overlays adversary: the Back button', () => {
+  const page = { page: 'here' };
+
+  async function back() {
+    history.back();
+    await settle();
+  }
+
+  async function onPage() {
+    history.pushState(page, '');
+    return openTask();
+  }
+
+  const discardButton = () =>
+    [...(question()?.querySelectorAll('button') ?? [])].find(
+      (b) => b.textContent?.trim() === text('shell.overlay.discard.discard'),
+    );
+
+  it('Back closes the task with cancelled and keeps the page entry and address', async () => {
+    const href = location.href;
+    const { host } = await onPage();
+
+    await back();
+
+    expect(dialogs()).toHaveLength(0);
+    await expect(host.results[0]).resolves.toBe('cancelled');
+    expect(history.state).toEqual(page);
+    expect(location.href).toBe(href);
+  });
+
+  it('a double click on the X steps the history back only once', async () => {
+    const { host } = await onPage();
+    const x = closeButton();
+
+    x?.click();
+    x?.click();
+    await settle();
+
+    await expect(host.results[0]).resolves.toBe('cancelled');
+    expect(history.state).toEqual(page);
+  });
+
+  it('a task closing itself twice steps the history back only once', async () => {
+    const { host } = await onPage();
+
+    click('#twice');
+    await settle();
+
+    await expect(host.results[0]).resolves.toBe('saved');
+    expect(history.state).toEqual(page);
+  });
+
+  it('the opener hears the result only after the history entry is gone', async () => {
+    const { host } = await onPage();
+    let stateAtResult: unknown = 'unset';
+    host.results[0]?.then(() => {
+      stateAtResult = history.state;
+    });
+
+    click('#saved');
+    await settle();
+
+    expect(stateAtResult).toEqual(page);
+  });
+
+  it('Back while the discard question shows keeps asking and leaves one entry above the page', async () => {
+    await onPage();
+    type('Ion');
+
+    await back();
+    expect(question()).not.toBeNull();
+    const markedState = history.state;
+    expect(markedState).not.toEqual(page);
+
+    await back();
+
+    expect(dialogs()).toHaveLength(1);
+    expect(question()).not.toBeNull();
+    expect(history.state).toEqual(markedState);
+    expect(top().querySelector<HTMLInputElement>('#name')?.value).toBe('Ion');
+  });
+
+  it('Keep editing after a Back returns to the task and a further Back asks again', async () => {
+    await onPage();
+    type('Ion');
+    await back();
+    expect(question()).not.toBeNull();
+
+    pressEscape();
+    await settle();
+    expect(question()).toBeNull();
+    expect(dialogs()).toHaveLength(1);
+
+    await back();
+
+    expect(question()).not.toBeNull();
+    expect(dialogs()).toHaveLength(1);
+  });
+
+  it('Discard after a Back closes with cancelled and leaves the page entry current', async () => {
+    const { host } = await onPage();
+    type('Ion');
+    await back();
+
+    discardButton()?.click();
+    await settle();
+
+    expect(dialogs()).toHaveLength(0);
+    await expect(host.results[0]).resolves.toBe('cancelled');
+    expect(history.state).toEqual(page);
+  });
+
+  it('Escape on a changed task then Back keeps asking and the task open', async () => {
+    await onPage();
+    type('Ion');
+    pressEscape();
+    await settle();
+    expect(question()).not.toBeNull();
+
+    await back();
+
+    expect(dialogs()).toHaveLength(1);
+    expect(question()).not.toBeNull();
+  });
+
+  it('Back closes only the top of two stacked tasks and a second Back closes the first', async () => {
+    const { host } = await onPage();
+    click('#again');
+    await settle();
+
+    await back();
+    expect(dialogs()).toHaveLength(1);
+    await expect(FormTask.inners[0]).resolves.toBe('cancelled');
+    expect(history.state).not.toEqual(page);
+
+    await back();
+    expect(dialogs()).toHaveLength(0);
+    await expect(host.results[0]).resolves.toBe('cancelled');
+    expect(history.state).toEqual(page);
+  });
+
+  it('two Backs in a row with two stacked tasks close both and land on the page entry', async () => {
+    const { host } = await onPage();
+    click('#again');
+    await settle();
+
+    await back();
+    await back();
+
+    expect(dialogs()).toHaveLength(0);
+    await expect(FormTask.inners[0]).resolves.toBe('cancelled');
+    await expect(host.results[0]).resolves.toBe('cancelled');
+    expect(history.state).toEqual(page);
+  });
+
+  it('the first task closing itself under a second moves no history, so one extra Back reaches the page', async () => {
+    await onPage();
+    click('#again');
+    await settle();
+    const lower = dialogs()[0]?.querySelector<HTMLButtonElement>('#saved');
+
+    lower?.click();
+    await settle();
+
+    expect(dialogs()).toHaveLength(1);
+    await back();
+    expect(dialogs()).toHaveLength(0);
+    expect(history.state).toEqual({ ...page, mfOverlay: expect.any(Number) });
+    await back();
+    expect(history.state).toEqual(page);
+  });
+
+  it('the top task closing itself with a result leaves the first task and its entry', async () => {
+    await onPage();
+    click('#again');
+    await settle();
+
+    click('#saved');
+    await settle();
+
+    expect(dialogs()).toHaveLength(1);
+    await expect(FormTask.inners[0]).resolves.toBe('saved');
+    expect(history.state).not.toEqual(page);
+  });
+
+  it('Forward after a Back close reopens nothing and moves nothing', async () => {
+    await onPage();
+    await back();
+
+    history.forward();
+    await settle();
+
+    expect(dialogs()).toHaveLength(0);
+  });
+
+  it('a close after the app replaced the entry moves the history nowhere', async () => {
+    const { host } = await onPage();
+    history.replaceState({ page: 'elsewhere' }, '');
+
+    click('#saved');
+    await settle();
+
+    await expect(host.results[0]).resolves.toBe('saved');
+    expect(history.state).toEqual({ page: 'elsewhere' });
+  });
+
+  it('a close after the app pushed a new entry stays on that entry', async () => {
+    const { host } = await onPage();
+    history.pushState({ page: 'next' }, '');
+
+    pressEscape();
+    await settle();
+
+    await expect(host.results[0]).resolves.toBe('cancelled');
+    expect(history.state).toEqual({ page: 'next' });
+  });
+
+  it('opening and closing a task many times leaves the page entry current each time', async () => {
+    const { host } = await onPage();
+    for (let i = 0; i < 5; i++) {
+      pressEscape();
+      await settle();
+      expect(history.state).toEqual(page);
+      host.open();
+      await settle();
+    }
+    expect(dialogs()).toHaveLength(1);
+  });
+});

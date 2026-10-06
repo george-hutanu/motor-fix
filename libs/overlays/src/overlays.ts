@@ -7,6 +7,7 @@ import { OverlayPositionBuilder } from '@angular/cdk/overlay';
 import { DOCUMENT } from '@angular/common';
 import {
   createEnvironmentInjector,
+  DestroyRef,
   EnvironmentInjector,
   Injectable,
   inject,
@@ -33,7 +34,7 @@ export class Overlays {
   // The CDK's default closes every open dialog on any popstate, the panel's
   // own history entry included; the panel handles Back itself, one task at a
   // time. Only these dialogs opt out: the kit's other dialogs keep the default.
-  private readonly dialogs = createEnvironmentInjector(
+  private readonly scope = createEnvironmentInjector(
     [
       {
         provide: DEFAULT_DIALOG_CONFIG,
@@ -43,9 +44,14 @@ export class Overlays {
       BrnDialogService,
     ],
     inject(EnvironmentInjector),
-  ).get(BrnDialogService);
+  );
+  private readonly dialogs = this.scope.get(BrnDialogService);
   private readonly positions = inject(OverlayPositionBuilder);
   private readonly window = inject(DOCUMENT).defaultView;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.scope.destroy());
+  }
 
   open<R = never, D = undefined>(
     source: OverlaySource,
