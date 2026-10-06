@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 
 **Input**: User description: "how can you make the CI complete faster? what tasks can be run in parallel? also take into consideration other versions of node because im on a free tier on github and sometimes i have to wait to get a container to run my ci, in the evening especially being very crowded"
 

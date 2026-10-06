@@ -59,3 +59,14 @@ Start: main checkout dirty (.env.bak) → own worktree `.worktrees/750-ci-speed`
 ## 16. Retrospective evidence (unjudged)
 - `retro-evidence.mjs --since 4a499cd --jev`: 10 FRs, Spec Delta platform +10; 1 open task at the time (T012, now done); 0 deferred; Jev lane unavailable (no key), so no suggested verdict. Its commit/diff range includes main's merged commits (ST-745, ST-749).
 - `instincts.mjs triggered --since 4a499cd`: nothing triggered.
+
+## 14. Review
+- spec-reviewer BLOCK, code-reviewer BLOCK, both on one HIGH: the Checks job's install had no `if:`, so a Biome failure skipped `npm ci` and broke every later check (FR-003). Fixed in 4b15dab (install first, `npx biome ci`, setup-biome dropped, two specs). LOWs fixed: x-forwarded-for on the offline test's sign-up, ticket keys out of the docs rows, "five runners" on main. MEDIUM deferred: the e2e sign-up limit on a second local run (deferred.md, Notion task filed). MEDIUM kept, owner's call: the adversary spec repeats ci-workflow.spec cases (harden convention, as in pr-title-workflow and railway-deploy).
+- Re-review (once, repair lap 1): spec-reviewer APPROVE, code-reviewer APPROVE. Its one MEDIUM (T012's live SC-006 check) accepted: the CI OK spec covers it; T012 reworded.
+- **4b15dab is not on GitHub.** The cloud session's GitHub App lacks the `workflows` permission, so any push touching `.github/workflows/` is refused. It is held on the local branch `750-ci-workflow-fix` and posted on PR #157 as a patch; the PR stays draft until it is pushed from the laptop (or the app is granted `workflows`), then it goes ready.
+
+## 15. Agent context
+- CLAUDE.local.md's Active plan line points at specs/750-ci-speed/plan.md (held its size).
+
+## 17. Archive
+- Spec Delta merged into `.specify/capabilities/platform.md` (+10); spec.md Archived (2026-10-06). Retro left to the owner (phase 16 evidence only).

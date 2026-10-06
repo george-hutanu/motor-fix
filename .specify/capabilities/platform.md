@@ -25,6 +25,7 @@ features:
   - 610-dependabot-exemption
   - 678-measurable-sizing
   - 745-notion-api-limits
+  - 750-ci-speed
 ---
 
 # Capability: Platform
@@ -796,6 +797,46 @@ _From 745-notion-api-limits._
 ### 745-FR-008 — `query()` MUST send `page_size: 100` on every page request unless the caller supplies its own `page_size`; the block-children read in `level.mjs` MUST keep sending `page_size=100`.
 
 _From 745-notion-api-limits._
+
+### 750-FR-001 — The end-to-end suite on CI MUST run its tests in parallel across the runner's cores, and every test in the suite MUST still run on every non-docs PR that affects `web`.
+
+_From 750-ci-speed._
+
+### 750-FR-002 — A non-docs PR push MUST create fewer runner jobs than today's 14, and every check that CI performs today (Biome, typecheck, unit, integration, e2e, build, harness, contract check, dependency audit, Docker build of web and api, compose stack) MUST still run and MUST still fail CI OK when it fails.
+
+_From 750-ci-speed._
+
+### 750-FR-003 — A failing check inside a shared job MUST be identifiable by name from the job's failed log, and the other checks of that job MUST still run and report.
+
+_From 750-ci-speed._
+
+### 750-FR-004 — A non-docs PR push MUST install dependencies fewer times than today's seven.
+
+_From 750-ci-speed._
+
+### 750-FR-005 — PR Docker builds MUST reuse a layer cache written by builds on `main`, and a change to the build's inputs (lockfile, Dockerfile, base image) MUST invalidate the affected layers.
+
+_From 750-ci-speed._
+
+### 750-FR-006 — Of several releases waiting for their checks on `main`, only the newest MUST run its checks; a release whose checks have started MUST run to the end and MUST never be cancelled; production MUST deploy only after staging passed for the same commit.
+
+_From 750-ci-speed._
+
+### 750-FR-007 — The semantics the merge gate relies on MUST be unchanged: CI OK fails when any check fails, is skipped-aware for docs-only PRs, and a PR with a failing, pending or missing check is never merged.
+
+_From 750-ci-speed._
+
+### 750-FR-008 — The documentation MUST describe the new layout: AGENTS.md's PR CI bullet lists the jobs as they are, and `docs/speed-and-cost-plan.md` records this change with the measured baseline and the measured result.
+
+_From 750-ci-speed._
+
+### 750-FR-009 — A docs-only PR MUST keep running only the change detector and CI OK.
+
+_From 750-ci-speed._
+
+### 750-FR-010 — On PR CI, an end-to-end test that passes only on retry MUST fail the E2E job; a run against a deployed address keeps today's retry tolerance.
+
+_From 750-ci-speed._
 
 ## Retired
 
