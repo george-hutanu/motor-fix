@@ -7,7 +7,7 @@
 # Ported from speckit-demo. motor-fix is a TypeScript Nx monorepo with colocated
 # tests, so:
 #   1. `biome check` on the edited file — the same linter `npm run lint` runs,
-#      scoped to one file (fast, and honours biome.json's per-path overrides)
+#      scoped to one file (fast, and honours biome.jsonc's per-path overrides)
 #   2. the AFFECTED colocated test, not the suite:
 #        foo.spec.ts  -> itself
 #        foo.ts       -> foo.spec.ts when it exists, else nothing

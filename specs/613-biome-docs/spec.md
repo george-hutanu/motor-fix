@@ -32,7 +32,7 @@ No script opens the file by name, so nothing is broken; the text is out of date.
 ### Edge Cases
 
 - Sync Impact Report entries and frozen `specs/*/` artifacts are history and keep the name they had.
-- The spec-reviewer's "a second biome.json" means any per-project Biome config; it names both spellings.
+- The spec-reviewer's "a second biome.json" means any per-project Biome config; it says "a second Biome config".
 
 ## Requirements *(mandatory)*
 

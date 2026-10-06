@@ -7,3 +7,9 @@ Description: ST-613 "Point the constitution and harness docs at biome.jsonc". St
 
 ## Specify
 - spec.md written from the story; SKILL.md:49 already clean, so four live lines remain.
+
+## Tests
+- biome-config-name.spec.mjs red (4 stale lines + no 1.8.2), then green.
+
+## Implement
+- constitution 1.8.2 PATCH + card; implement.md, spec-reviewer.md, post-edit-check.sh comment; hook re-blessed. Harness 1880 green after fix, doctor 0 failures.
