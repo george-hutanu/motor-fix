@@ -430,6 +430,78 @@ describe('merge', () => {
   });
 });
 
+describe('merge in a cloud session: REST only', () => {
+  beforeEach(() => {
+    fixture();
+    writeFileSync(join(featureDir, 'handoff.md'), '# Hand-off\n');
+  });
+
+  const cloud = { GH_TOKEN: 'proxy-injected', CLAUDE_CODE_REMOTE: 'true' };
+  const diff = ['git diff -U0 --', { stdout: '+++ b/x\n+- 2026-10-05 · finish · ST-696 · QA → Done\n' }];
+  // What gh prints after lifecycle's --jq: the state MERGED once merged, else upper-cased.
+  const restView = (pr) => ['gh api repos/{owner}/{repo}/pulls/141 --jq', { stdout: `${JSON.stringify(pr)}\n` }];
+  const open = restView({ number: 141, state: 'OPEN', merge_commit_sha: null });
+  const MERGE = 'gh api -X PUT repos/{owner}/{repo}/pulls/141/merge -f merge_method=merge';
+
+  it('reads, merges, reads the merge commit and comments over REST, never through gh pr', () => {
+    let merged = false;
+    let comment = '';
+    const h = harness({
+      env: cloud,
+      answers: [
+        diff,
+        ['gh api repos/{owner}/{repo}/pulls/141 --jq', () => ({ stdout: `${JSON.stringify({ number: 141, state: merged ? 'MERGED' : 'OPEN', merge_commit_sha: merged ? 'feed1234beef' : null })}\n` })],
+        [MERGE, () => ((merged = true), {})],
+        ['gh api -X POST repos/{owner}/{repo}/issues/141/comments', (cmd) => ((comment = readFileSync(cmd.match(/body=@(\S+)/)[1], 'utf8')), {})],
+      ],
+    });
+    const result = step(['merge', '--pr', '141'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(result.merged, 'feed123');
+    assert.equal(h.calls.filter((c) => c.startsWith('gh pr ')).length, 0);
+    assert.equal(h.calls.filter((c) => c === MERGE).length, 1);
+    assert.ok(h.gated.some((c) => c.replace(/"/g, '') === MERGE), 'the merge gate judged the REST merge');
+    assert.match(comment, /^## Finish log/);
+    assert.match(comment, /Merged as feed1234beef/);
+    assert.equal(existsSync(join(featureDir, 'handoff.md')), false);
+  });
+
+  it('refuses exactly when the merge gate does, and merges nothing', () => {
+    const message = 'Merge gate (Constitution VII): PR #141 cannot merge: agent-review is pending.';
+    const h = harness({ env: cloud, answers: [open], refuse: { prefix: 'gh api -X PUT "repos/{owner}/{repo}/pulls/141/merge"', message } });
+    const result = step(['merge', '--pr', '141'], h.io);
+    assert.equal(result.ok, false, JSON.stringify(result));
+    assert.equal(result.fix, message);
+    assert.ok(!h.calls.some((c) => c.startsWith('gh api -X PUT')));
+    assert.equal(existsSync(join(featureDir, 'handoff.md')), true);
+  });
+
+  it('skips the merge on a PR already merged', () => {
+    const h = harness({ env: cloud, answers: [diff, restView({ number: 141, state: 'MERGED', merge_commit_sha: 'feed1234beef' })] });
+    const result = step(['merge', '--pr', '141', '--notion-done'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(!h.calls.some((c) => c.startsWith('gh api -X PUT')));
+  });
+
+  it('needs --pr: without GraphQL the branch cannot be resolved to its PR', () => {
+    const h = harness({ env: cloud });
+    const result = step(['merge'], h.io);
+    assert.equal(result.ok, false);
+    assert.match(result.fix, /--pr/);
+    assert.ok(!h.calls.some((c) => c.startsWith('gh ')));
+  });
+
+  it('keeps the comment for a rerun over REST when posting it fails', () => {
+    const h = harness({
+      env: cloud,
+      answers: [diff, restView({ number: 141, state: 'MERGED', merge_commit_sha: 'feed1234beef' }), ['gh api -X POST repos/{owner}/{repo}/issues/141/comments', { code: 1, stderr: 'HTTP 502' }]],
+    });
+    const result = step(['merge', '--pr', '141', '--notion-done'], h.io);
+    assert.equal(result.ok, false);
+    assert.match(result.then, /^gh api -X POST "repos\/\{owner\}\/\{repo\}\/issues\/141\/comments" -F body=@\S+ && rm/);
+  });
+});
+
 describe('gates, main and identity', () => {
   beforeEach(() => fixture());
 

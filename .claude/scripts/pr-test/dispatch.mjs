@@ -22,6 +22,12 @@
 // run as a dispatched lap would, exiting 2 while it has not completed. With
 // neither, it dispatches and watches the run, for a lap run by hand.
 //
+// A cloud session (CLAUDE_CODE_REMOTE=true) cannot dispatch (403) or use
+// GraphQL, so it dispatches nothing: the workflow starts by itself when the PR
+// is marked ready or pushed to, and this finds that pull_request run for the
+// head commit over REST and prints the same hand-off line. --flows, --routes
+// and --ref cannot reach such a run (it runs the default routes, no flows).
+//
 // --ref is the branch whose pr-qa.yml and tester scripts run (main; a branch
 // that changes the tester itself can name its own). Exit 0 when the report says
 // success, 1 when it says failure (blocking findings: read the report), 2 when
@@ -79,6 +85,12 @@ export function dispatchCommand({ ref, inputs }) {
 
 /** The run this dispatch started: its name carries the nonce (`run-name` in pr-qa.yml). */
 export const findRun = (runs, nonce) => runs.find((r) => String(r.displayTitle ?? "").includes(nonce)) ?? null;
+
+/** The newest pull_request run among a REST listing of the workflow's runs for one head. */
+export function findPrRun(workflowRuns) {
+  const newest = [...workflowRuns].sort((x, y) => String(y.created_at).localeCompare(String(x.created_at)))[0];
+  return newest ? { databaseId: newest.id, url: newest.html_url } : null;
+}
 
 const STAGING_PREFIX = ".download-";
 
@@ -143,6 +155,38 @@ function readRun({ pr, sha, out, run, conclusion, nonce = null }) {
   return report.verdict === "failure" ? 1 : 0;
 }
 
+/** The PR's state and head over REST, shaped as `gh pr view --json state,headRefOid`. */
+function restPr(pr) {
+  const p = JSON.parse(gh(["api", `repos/{owner}/{repo}/pulls/${pr}`]));
+  return { state: String(p.state).toUpperCase(), headRefOid: p.head.sha };
+}
+
+/** Cloud: wait for the run the pull_request event started for `sha`, print the hand-off line. */
+async function awaitPrRun(opt, sha) {
+  if (opt.flows) console.error(`dispatch: the flows in ${opt.flows} are not sent: a cloud session cannot dispatch, and the pull_request run takes no flows`);
+  const path = `repos/{owner}/{repo}/actions/workflows/${WORKFLOW}/runs?head_sha=${sha}&event=pull_request&per_page=30`;
+  let run = null;
+  for (let i = 0; i < 36 && !run; i++) {
+    run = findPrRun(JSON.parse(gh(["api", path])).workflow_runs ?? []);
+    if (!run) await sleep(POLL_MS);
+  }
+  if (!run) {
+    console.error(`dispatch: no ${WORKFLOW} run for #${opt.pr} at ${sha.slice(0, 7)} appeared within ${Math.round((36 * POLL_MS) / 1000)} s (is the PR ready, not a draft?)`);
+    return 2;
+  }
+  console.error(`dispatch: run ${run.url}`);
+  if (opt.noWait) {
+    console.log(qaRunLine({ id: run.databaseId, sha, lap: opt.lap, url: run.url }));
+    return 0;
+  }
+  try {
+    execFileSync("gh", ["run", "watch", String(run.databaseId), "--exit-status", "--interval", "30"], { cwd: repoRoot, stdio: ["ignore", "ignore", "inherit"] });
+  } catch {}
+  const conclusion = gh(["run", "view", String(run.databaseId), "--json", "conclusion", "-q", ".conclusion"]);
+  const out = resolve(opt.out ?? join(tmpdir(), "mf-prtest", `${opt.pr}-${sha.slice(0, 7)}`));
+  return readRun({ pr: opt.pr, sha, out, run, conclusion });
+}
+
 async function main(argv) {
   const opt = parseArgs(argv);
   if (!opt.pr) {
@@ -157,7 +201,8 @@ async function main(argv) {
     console.error("dispatch: --no-wait dispatches a run and --run reads one; pass one of them");
     return 64;
   }
-  const info = JSON.parse(gh(["pr", "view", opt.pr, "--json", "state,headRefOid"]));
+  const cloud = process.env.CLAUDE_CODE_REMOTE === "true";
+  const info = cloud ? restPr(opt.pr) : JSON.parse(gh(["pr", "view", opt.pr, "--json", "state,headRefOid"]));
   if (info.state !== "OPEN") {
     console.error(`dispatch: PR #${opt.pr} is ${info.state}; nothing to test`);
     return 3;
@@ -172,6 +217,7 @@ async function main(argv) {
     }
     return readRun({ pr: opt.pr, sha, out, run: { databaseId: Number(opt.run), url: run.url }, conclusion: run.conclusion });
   }
+  if (cloud) return awaitPrRun(opt, sha);
   const flows = opt.flows ? encodeFlows(readFileSync(opt.flows, "utf8")) : null;
   const nonce = `${opt.pr}-${sha.slice(0, 7)}-${Date.now().toString(36)}`;
   const { args, input } = dispatchCommand({ ref: opt.ref, inputs: dispatchInputs({ pr: opt.pr, sha, lap: opt.lap, routes: opt.routes, flows, nonce }) });

@@ -11,6 +11,10 @@
 // --add folds the agent's own findings (a JSON array) into the report first.
 // --missing posts a failure for a lap that left no report, so the head never
 // sits without an agent-review status.
+//
+// In a cloud session (CLAUDE_CODE_REMOTE=true) the proxy refuses commit
+// statuses and GraphQL: the PR QA workflow sets agent-review itself, so this
+// writes no status, and reads and fills the description over REST.
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 
@@ -51,17 +55,19 @@ export function replaceSection(body, heading, content) {
 
 const ownPrRefusal = (stderr) => /own pull request|HTTP 422/i.test(stderr);
 
-export function postVerdict({ pr, repo, sha, verdict, summary, body, lap, gh = realGh, dryRun = false }) {
+export function postVerdict({ pr, repo, sha, verdict, summary, body, lap, gh = realGh, dryRun = false, cloud = process.env.CLAUDE_CODE_REMOTE === "true" }) {
   const wanted = verdict === "failure" ? "REQUEST_CHANGES" : "APPROVE";
   const headline = `Verdict: ${verdict} (agent-review on ${String(sha).slice(0, 7)}${lap ? `, lap ${lap}` : ""})`;
   const reviewBody = `${headline}\n\n${summary}\n\n${body ?? ""}`.trimEnd();
-  const status = {
-    state: verdict === "failure" ? "failure" : "success",
-    description: summary.slice(0, 140),
-  };
+  const status = cloud
+    ? null
+    : {
+        state: verdict === "failure" ? "failure" : "success",
+        description: summary.slice(0, 140),
+      };
   const section = `${headline}\n\n${summary}`;
 
-  const read = gh(["pr", "view", String(pr), "--repo", repo, "--json", "body"]);
+  const read = cloud ? gh(["api", `repos/${repo}/pulls/${pr}`]) : gh(["pr", "view", String(pr), "--repo", repo, "--json", "body"]);
   const current = read.code === 0 ? (JSON.parse(read.stdout).body ?? "") : "";
   const nextBody = replaceSection(current, SECTION, section);
 
@@ -79,6 +85,24 @@ export function postVerdict({ pr, repo, sha, verdict, summary, body, lap, gh = r
   }
   const reviewError = result.code === 0 ? null : result.stderr.trim();
 
+  if (status) setStatus(gh, repo, sha, status);
+
+  let where = "comment";
+  if (nextBody !== null) {
+    const patch = cloud
+      ? gh(["api", "-X", "PATCH", `repos/${repo}/pulls/${pr}`, "--input", "-"], { input: JSON.stringify({ body: nextBody }) })
+      : gh(["pr", "edit", String(pr), "--repo", repo, "--body-file", "-"], { input: nextBody });
+    if (patch.code === 0) where = "description";
+  }
+  if (where === "comment") {
+    if (cloud) gh(["api", "-X", "POST", `repos/${repo}/issues/${pr}/comments`, "--input", "-"], { input: JSON.stringify({ body: section }) });
+    else gh(["pr", "comment", String(pr), "--repo", repo, "--body-file", "-"], { input: section });
+  }
+
+  return { dryRun: false, review: posted, reviewError, status, section: where };
+}
+
+function setStatus(gh, repo, sha, status) {
   const set = gh([
     "api",
     "-X",
@@ -92,15 +116,6 @@ export function postVerdict({ pr, repo, sha, verdict, summary, body, lap, gh = r
     `description=${status.description}`,
   ]);
   if (set.code !== 0) throw new Error(`could not set the ${STATUS_CONTEXT} status on ${sha}: ${set.stderr.trim()}`);
-
-  let where = "comment";
-  if (nextBody !== null) {
-    const patch = gh(["pr", "edit", String(pr), "--repo", repo, "--body-file", "-"], { input: nextBody });
-    if (patch.code === 0) where = "description";
-  }
-  if (where === "comment") gh(["pr", "comment", String(pr), "--repo", repo, "--body-file", "-"], { input: section });
-
-  return { dryRun: false, review: posted, reviewError, status, section: where };
 }
 
 function flag(argv, name) {
@@ -137,7 +152,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       console.error('usage: post.mjs --missing "<reason>" --pr <n> --sha <40-hex sha> [--lap n] [--repo o/r] [--dry-run]');
       process.exit(64);
     }
-    const repo = flag(argv, "repo") ?? execFileSync("gh", ["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"], { encoding: "utf8" }).trim();
+    const repo = flag(argv, "repo") ?? execFileSync("gh", ["api", "repos/{owner}/{repo}", "--jq", ".full_name"], { encoding: "utf8" }).trim();
     report = missingReport({ pr: flag(argv, "pr"), repo, sha: flag(argv, "sha"), lap: Number(flag(argv, "lap") ?? 0) || undefined, reason: missing });
   } else report = JSON.parse(readFileSync(file, "utf8"));
   const add = flag(argv, "add");

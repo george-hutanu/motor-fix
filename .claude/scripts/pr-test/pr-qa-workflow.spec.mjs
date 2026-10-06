@@ -36,8 +36,22 @@ const job = block('qa', 2, block('jobs'));
 const steps = block('steps', 4, job).join('\n');
 
 describe('PR QA workflow: trigger', () => {
-  it('is dispatched by hand only, never on push or pull_request', () => {
-    assert.deepEqual(keysAt(block('on'), 2), ['workflow_dispatch']);
+  it('runs on a ready, pushed or reopened PR, and by hand; never on push', () => {
+    assert.deepEqual(keysAt(block('on'), 2), ['pull_request', 'workflow_dispatch']);
+    assert.deepEqual(block('pull_request', 2, block('on')).map((l) => l.trim()).filter(Boolean), ['types: [ready_for_review, synchronize, reopened]']);
+  });
+
+  it('skips a draft and a PR from a fork, but never a dispatched run', () => {
+    const cond = job.find((l) => l.startsWith('    if: '))?.slice('    if: '.length) ?? '';
+    assert.equal(cond, "github.event_name == 'workflow_dispatch' || (!github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository)");
+  });
+
+  it('falls back to the pull_request event for every input the run reads', () => {
+    const env = block('env', 4, job).join('\n');
+    assert.match(env, /PR: \$\{\{ inputs\.pr \|\| github\.event\.pull_request\.number \}\}/);
+    assert.match(env, /SHA: \$\{\{ inputs\.sha \|\| github\.event\.pull_request\.head\.sha \}\}/);
+    assert.match(env, /LAP: \$\{\{ inputs\.lap \|\| '1' \}\}/);
+    assert.match(env, /ROUTES: \$\{\{ inputs\.routes \|\| '\/,\/cockpit' \}\}/);
   });
 
   it('takes the PR number, the head SHA, the lap, the routes, the flows and a nonce', () => {
@@ -48,22 +62,57 @@ describe('PR QA workflow: trigger', () => {
 
   it('names the run after its nonce, so the dispatcher can find it', () => {
     const title = runName();
-    for (const input of ['pr', 'sha', 'nonce']) assert.ok(title.includes(`\${{ inputs.${input} }}`), `the run's title "${title}" carries inputs.${input}`);
+    assert.ok(title.includes('${{ inputs.nonce }}'), `the run's title "${title}" carries inputs.nonce`);
+    assert.ok(title.includes('${{ inputs.pr || github.event.pull_request.number }}'), title);
+    assert.ok(title.includes('${{ inputs.sha || github.event.pull_request.head.sha }}'), title);
   });
 
-  it('never cancels a run: each one is a lap an agent is waiting on', () => {
-    assert.doesNotMatch(code, /cancel-in-progress:\s*true/);
+  it('keeps one run per PR: a newer one cancels the older', () => {
+    assert.deepEqual(block('concurrency').map((l) => l.trim()).filter(Boolean), [
+      'group: pr-qa-${{ inputs.pr || github.event.pull_request.number }}',
+      'cancel-in-progress: true',
+    ]);
   });
 
-  it('reads the repository only', () => {
-    assert.deepEqual(block('permissions').map((l) => l.trim()).filter(Boolean), ['contents: read']);
+  it('reads the repository and writes commit statuses, nothing else', () => {
+    assert.deepEqual(block('permissions').map((l) => l.trim()).filter(Boolean), ['contents: read', 'statuses: write']);
+  });
+});
+
+describe('PR QA workflow: the agent-review status', () => {
+  const stepList = steps.split(/\n(?= {6}- )/);
+  const statusSteps = stepList.filter((st) => /repos\/\$REPO\/statuses\/\$SHA/.test(st));
+
+  it('sets pending once the inputs are checked, before anything is booted', () => {
+    const at = stepList.findIndex((st) => /state=pending/.test(st));
+    assert.ok(at > stepList.findIndex((st) => /id: inputs/.test(st)));
+    assert.ok(at < stepList.findIndex((st) => /path: tester/.test(st)));
+    assert.match(stepList[at], /-f context=agent-review/);
+  });
+
+  it('ends with success only when the run passed with no blocking findings, failure otherwise', () => {
+    const last = stepList.at(-1);
+    assert.match(last, /-f state="\$STATE" -f context=agent-review/);
+    assert.match(last, /STATE: \$\{\{ job\.status == 'success' && steps\.run\.outputs\.code == '0' && 'success' \|\| 'failure' \}\}/);
+  });
+
+  it('writes no final status for a cancelled run or one whose inputs were refused', () => {
+    assert.match(stepList.at(-1), /if: \$\{\{ !cancelled\(\) && steps\.inputs\.outcome == 'success' \}\}/);
+  });
+
+  it("uses the run's own token, on the commit under test, linking the run", () => {
+    assert.equal(statusSteps.length, 2);
+    for (const st of statusSteps) {
+      assert.match(st, /GH_TOKEN: \$\{\{ github\.token \}\}/);
+      assert.match(st, /target_url="\$RUN_URL"/);
+    }
   });
 });
 
 describe('PR QA workflow: no secrets', () => {
-  it('references no secret, not even GITHUB_TOKEN', () => {
-    assert.doesNotMatch(code, /secrets\./);
-    assert.doesNotMatch(code, /GITHUB_TOKEN|github\.token|ANTHROPIC|TYPESAFE/i);
+  it('references no secret, and its own token only in the two status steps', () => {
+    assert.doesNotMatch(code, /secrets\.|GITHUB_TOKEN|ANTHROPIC|TYPESAFE/i);
+    assert.equal(code.match(/github\.token/g)?.length, 2);
   });
 
   it('keeps no git credentials in either checkout', () => {
@@ -89,8 +138,8 @@ describe('PR QA workflow: no secrets', () => {
 });
 
 describe('PR QA workflow: the commit tested is the commit asked for', () => {
-  it('checks the PR out at the SHA input, with the history nx affected needs', () => {
-    assert.match(steps, /ref: \$\{\{ inputs\.sha \}\}/);
+  it('checks the PR out at the SHA input or the event head, with the history nx affected needs', () => {
+    assert.match(steps, /ref: \$\{\{ inputs\.sha \|\| github\.event\.pull_request\.head\.sha \}\}/);
     assert.match(steps, /path: pr\n\s+fetch-depth: 0/);
   });
 
@@ -99,8 +148,8 @@ describe('PR QA workflow: the commit tested is the commit asked for', () => {
     assert.match(steps, /git -C pr rev-parse HEAD\)" = "\$SHA"/);
   });
 
-  it('runs the tester from the dispatched ref, not from the PR under test', () => {
-    assert.match(steps, /path: tester/);
+  it('runs the tester from the dispatched ref or the base branch, not from the PR under test', () => {
+    assert.match(steps, /ref: \$\{\{ github\.event_name == 'pull_request' && github\.event\.pull_request\.base\.ref \|\| '' \}\}\n\s+path: tester/);
     assert.match(steps, /node tester\/\.claude\/scripts\/pr-test\/run\.mjs "\$PR" --tree pr --sha "\$SHA"/);
   });
 });
@@ -172,7 +221,7 @@ describe('PR QA workflow: the run and its evidence', () => {
     const upload = steps.slice(steps.indexOf('uses: actions/upload-artifact@'));
     assert.ok(upload.length > 0);
     assert.match(upload, /if: always\(\)/);
-    assert.match(upload, new RegExp(`name: ${ARTIFACT_PREFIX}\\$\\{\\{ inputs\\.pr \\}\\}`));
+    assert.ok(upload.includes(`name: ${ARTIFACT_PREFIX}\${{ inputs.pr || github.event.pull_request.number }}`));
     assert.match(upload, /path: \$\{\{ runner\.temp \}\}\/pr-qa\n/);
     assert.match(upload, /retention-days: \d+/);
     assert.match(upload, /if-no-files-found: error/);
