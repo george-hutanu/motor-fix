@@ -242,7 +242,12 @@ high), tries REQUEST_CHANGES or APPROVE and falls back to a COMMENT review that
 states the verdict (GitHub refuses both on your own PR), sets the
 `agent-review` status on the tested commit, and replaces the PR description's
 "Agent review" section (or comments). A failed status call exits 1: report it,
-never treat it as posted.
+never treat it as posted. In a cloud session (`CLAUDE_CODE_REMOTE=true`) the
+proxy refuses statuses: the PR QA workflow has already set `agent-review`
+from its run, so `post.mjs` writes no `agent-review` status there and reads and
+fills the description over REST. A blocking finding of yours then stands in
+the review and your verdict, not in the status: the caller fixes and pushes it,
+which runs QA again, and never merges past it.
 
 ## Report
 
