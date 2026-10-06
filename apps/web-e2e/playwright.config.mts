@@ -18,9 +18,17 @@ const MAILBOX = 'http://127.0.0.1:3025';
 // Google when GOOGLE_ISSUER points at it, with any GOOGLE_CLIENT_ID and
 // GOOGLE_CLIENT_SECRET: CI's E2E job and .env locally set them.
 const OPENID = 'http://127.0.0.1:3026';
+// The local suite runs this many browsers at once (the preset gives CI one);
+// a GitHub runner has four cores. A deployed address keeps one, so a release
+// does not load staging with parallel sign-ins.
+const CI_WORKERS = 4;
 
 export default defineConfig({
   ...nxE2EPreset(import.meta.dirname, { testDir: './src' }),
+  // Locally started servers: run in parallel, and a test that passed only on
+  // a retry fails the run instead of hiding a race. Against a deployed
+  // address the preset's one worker and retries stay.
+  ...(deployed ? {} : { failOnFlakyTests: true, workers: CI_WORKERS }),
   // Flows tagged @seeded sign in with the seeded accounts; a deployed address
   // runs them only when it is given their password. Flows tagged @mailbox read
   // the local test mailbox, and flows tagged @openid the local stand-in
