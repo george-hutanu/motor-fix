@@ -10,3 +10,6 @@
 - 2026-10-06 · implement · ST-637 · Planning → Implementing (connector)
 - 2026-10-06 · implement · Foundations timeline row ST-637 · Planning → Implementing
 - 2026-10-06 · labels · PR #151 · planning → in development
+- 2026-10-06 · qa · ST-637 · Implementing → QA (connector)
+- 2026-10-06 · qa · Foundations timeline row ST-637 · Implementing → QA
+- 2026-10-06 · labels · PR #151 · in development → QA
