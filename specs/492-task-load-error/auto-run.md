@@ -59,3 +59,13 @@ Hooks after specify: `notion-sync start` (ST-492 To do → Planning, EP-1 unchan
 ## 8. Analyze
 
 - artifact-lint: the Spec Delta was free-form → rewritten as `### Capability: overlays`, Adds FR-001..FR-010, Modifies none (157-FR-012 still holds for a loader that answers). Re-run: 0 errors, 0 warnings. Every FR maps to a task (T001–T009); no CRITICAL finding. 1 round.
+
+## 9. Tests (red first)
+
+- `npx jest overlays.spec overlays.adversary.spec sample-page.spec`: `Tests: 9 failed, 60 passed, 69 total` — 7 new overlay tests, the rewritten adversary test (busy-for-ever → alert) and the catalogue test, all red for the missing state. T001/T002 went to `overlays.spec.ts` (computer/phone switch and i18n in its harness), not `panel.spec.ts`.
+
+## 10. Implement
+
+- `panel.ts`: `failed` signal, `load()` shared by the constructor and `retry()` (sync throw and non-component answer fail too), `focusRetry()` (computer only, not when on the X), retry hands the focus to the panel, `console.error` removed, `.mf-overlay-error` styles. `sample-page.ts`: `openFailing()` fails the first try of each press. i18n: `shell.overlay.retry`, `cockpit.overlay.openFailing`/`failing`.
+- overlays + ui-cockpit sample-page + i18n jest: `Tests: 718 passed, 718 total`. Typecheck overlays, ui-cockpit, web, web-e2e: green.
+- e2e against `nx serve web` :4492: overlays.spec `17 passed` (incl. the new Retry test); cockpit, sheet, phone, one-language, task-form `93 passed`.

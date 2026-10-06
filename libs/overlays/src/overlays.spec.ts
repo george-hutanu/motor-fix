@@ -457,3 +457,159 @@ describe('Overlays: a task still loading', () => {
     expect(document.activeElement?.id).toBe('name');
   });
 });
+
+describe('Overlays: a task that fails to load', () => {
+  const alert = () => body()?.querySelector<HTMLElement>('[role="alert"]');
+  const retryButton = () =>
+    [...(body()?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find(
+      (button) => button.textContent?.trim() === text('shell.overlay.retry'),
+    );
+
+  function deferred() {
+    let resolve!: (task: typeof FormTask) => void;
+    let reject!: (error: unknown) => void;
+    const promise = new Promise<typeof FormTask>((yes, no) => {
+      resolve = yes;
+      reject = no;
+    });
+    return { promise, reject, resolve };
+  }
+
+  function expectFailed() {
+    expect(alert()?.textContent?.trim()).toBe(text('shell.form.problem.error'));
+    expect(body()?.querySelectorAll('[role="alert"]')).toHaveLength(1);
+    expect(retryButton()).toBeDefined();
+    expect(body()?.getAttribute('aria-busy')).toBeNull();
+    expect(body()?.querySelector('.mf-overlay-skeleton')).toBeNull();
+  }
+
+  it('shows the error and a focused retry button in place of the skeleton, and logs nothing', async () => {
+    const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+    await openTask((host) => {
+      host.task = () => Promise.reject(new Error('chunk failed'));
+    });
+
+    expectFailed();
+    expect(closeButton()).not.toBeNull();
+    expect(document.activeElement).toBe(retryButton());
+    expect(log).not.toHaveBeenCalled();
+    log.mockRestore();
+  });
+
+  it('treats a loader that throws, or answers with no component, as a failure', async () => {
+    const answers: Array<() => Promise<never>> = [
+      () => {
+        throw new Error('no loader');
+      },
+      () => Promise.resolve({} as never),
+    ];
+    for (const answer of answers) {
+      await openTask((host) => {
+        host.task = answer;
+      });
+      expectFailed();
+      closeButton()?.click();
+      await settle();
+    }
+  });
+
+  it('leaves the focus on the X when the person moved it there, and puts nothing on a phone', async () => {
+    const late = deferred();
+    await openTask((host) => {
+      host.task = () => late.promise;
+    });
+    closeButton()?.focus();
+    late.reject(new Error('chunk failed'));
+    await settle();
+    expectFailed();
+    expect(document.activeElement).toBe(closeButton());
+    closeButton()?.click();
+    await settle();
+
+    computer = false;
+    await openTask((host) => {
+      host.task = () => Promise.reject(new Error('chunk failed'));
+    });
+    expectFailed();
+    expect(document.activeElement).not.toBe(retryButton());
+  });
+
+  it('tries again on Retry: busy skeleton while it runs, then the task with its field focused', async () => {
+    const second = deferred();
+    const loader = jest
+      .fn<Promise<typeof FormTask>, []>()
+      .mockRejectedValueOnce(new Error('chunk failed'))
+      .mockReturnValueOnce(second.promise);
+    await openTask((host) => {
+      host.task = loader;
+    });
+    expectFailed();
+
+    const retry = retryButton();
+    retry?.click();
+    retry?.click();
+    await settle();
+
+    expect(loader).toHaveBeenCalledTimes(2);
+    expect(alert()).toBeNull();
+    expect(body()?.getAttribute('aria-busy')).toBe('true');
+    expect(body()?.querySelector('.mf-overlay-skeleton')).not.toBeNull();
+    expect(document.activeElement).not.toBe(document.body);
+
+    second.resolve(FormTask);
+    await settle();
+
+    expect(body()?.getAttribute('aria-busy')).toBeNull();
+    expect(document.activeElement?.id).toBe('name');
+  });
+
+  it('shows the error again each time a retry fails', async () => {
+    const loader = jest.fn(() => Promise.reject(new Error('chunk failed')));
+    await openTask((host) => {
+      host.task = loader;
+    });
+    for (let attempt = 0; attempt < 2; attempt++) {
+      retryButton()?.click();
+      await settle();
+      expectFailed();
+    }
+    expect(loader).toHaveBeenCalledTimes(3);
+  });
+
+  it('closes from the error by X, Escape or outside with cancelled and no question', async () => {
+    const closers = [() => closeButton()?.click(), pressEscape, clickOutside];
+    for (const close of closers) {
+      const { host } = await openTask((h) => {
+        h.task = () => Promise.reject(new Error('chunk failed'));
+      });
+      close();
+      await settle();
+      expect(dialogs()).toHaveLength(0);
+      await expect(host.result).resolves.toBe('cancelled');
+    }
+  });
+
+  it('ignores a retry that answers after the panel closed, either way', async () => {
+    for (const answer of ['resolve', 'reject'] as const) {
+      const late = deferred();
+      const loader = jest
+        .fn<Promise<typeof FormTask>, []>()
+        .mockRejectedValueOnce(new Error('chunk failed'))
+        .mockReturnValueOnce(late.promise);
+      const { host } = await openTask((h) => {
+        h.task = loader;
+      });
+      retryButton()?.click();
+      await settle();
+      closeButton()?.click();
+      await settle();
+
+      if (answer === 'resolve') late.resolve(FormTask);
+      else late.reject(new Error('chunk failed'));
+      await settle();
+
+      expect(dialogs()).toHaveLength(0);
+      await expect(host.result).resolves.toBe('cancelled');
+    }
+  });
+});
