@@ -335,6 +335,35 @@ const defaultCarry = (pr) => findCarry({ pr });
 const defaultRunOf = (id) =>
   JSON.parse(execFileSync("gh", ["run", "view", String(id), "--json", "status,conclusion"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 30_000 }));
 
+// QA laps run on GitHub Actions; every one not completed holds its PR and an
+// Actions job. The run name is "PR QA #<n> at <sha> lap <k> …" for both the
+// pull_request and the workflow_dispatch event (.github/workflows/pr-qa.yml).
+const defaultActionsRuns = () =>
+  JSON.parse(
+    execFileSync("gh", ["run", "list", "--workflow", "pr-qa.yml", "--limit", "50", "--json", "databaseId,displayTitle,status"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 30_000,
+    }),
+  );
+
+/** The pr-qa runs still in flight, as `{ pr, run, status }`; anything unreadable is dropped. */
+export function actionsQaRuns(runs) {
+  if (!Array.isArray(runs)) return [];
+  return runs.flatMap((r) => {
+    const m = String(r?.displayTitle ?? "").match(/^PR QA #([1-9]\d*) /);
+    return m && typeof r.status === "string" && r.status !== "completed" ? [{ pr: Number(m[1]), run: r.databaseId, status: r.status }] : [];
+  });
+}
+
+function readActionsRuns(actionsRuns) {
+  try {
+    return actionsQaRuns(actionsRuns?.());
+  } catch {
+    return [];
+  }
+}
+
 function qaRunOf(path, feature) {
   try {
     return parseQaRun(readFileSync(join(path, feature, "handoff.md"), "utf8"));
@@ -345,7 +374,7 @@ function qaRunOf(path, feature) {
 
 // The carry lookup reads the same GitHub the PR list came from: a PR list
 // given by a caller (a test) gets no lookup unless it gives one too.
-export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claudeAlive, pidAlive = processAlive, thresholds = DEFAULT_THRESHOLDS, qaCap = QA_CAP, carry = gh === defaultGh ? defaultCarry : null, runOf = gh === defaultGh ? defaultRunOf : null } = {}) {
+export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claudeAlive, pidAlive = processAlive, thresholds = DEFAULT_THRESHOLDS, qaCap = QA_CAP, carry = gh === defaultGh ? defaultCarry : null, runOf = gh === defaultGh ? defaultRunOf : null, actionsRuns = gh === defaultGh ? defaultActionsRuns : null } = {}) {
   const worktrees = parseWorktrees(git(repo, ["worktree", "list", "--porcelain"]) ?? "");
   const real = (p) => {
     try {
@@ -355,7 +384,9 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
     }
   };
   const here = real((git(repo, ["rev-parse", "--show-toplevel"]) ?? "").trim());
-  const qaRuns = worktrees.map((w) => scratchRun(w.path)).filter((r) => r && pidAlive(r.pid));
+  const laptopRuns = worktrees.map((w) => scratchRun(w.path)).filter((r) => r && pidAlive(r.pid));
+  const onActions = readActionsRuns(actionsRuns);
+  const qaRuns = [...laptopRuns, ...onActions];
   const prs = fetchPrs(gh);
   const rows = [];
   for (const w of worktrees) {
@@ -364,7 +395,12 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
     const feature = featureOf(w);
     const raw = prs && w.branch ? prFor(prs, w.branch) : null;
     const pr = prs ? (raw ? summarizePr(raw) : null) : "unknown";
-    const qaLive = Boolean(pr?.number) && qaRuns.some((r) => r.pr === pr.number);
+    const handoff = Boolean(feature) && existsSync(join(w.path, feature, "handoff.md"));
+    const qaRun = feature ? qaRunOf(w.path, feature) : null;
+    // A handed-off PR whose recorded run tests its head stays `waiting` (fixOf):
+    // its Actions run counts toward the budget only, not as a holder.
+    const tracked = handoff && qaRun && pr?.state === "ready" && qaRun.head === pr.head;
+    const qaLive = Boolean(pr?.number) && (laptopRuns.some((r) => r.pr === pr.number) || (!tracked && onActions.some((r) => r.pr === pr.number)));
     const phase = phaseOf({ pr, runState, artifacts: artifactsOf(w.path, feature) });
     const threshold = thresholds[phase] ?? 0;
     const claim = readJson(claimPath(w.path));
@@ -384,8 +420,8 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
       locked: w.lock !== null,
       head: w.head,
       main: w.main,
-      handoff: Boolean(feature) && existsSync(join(w.path, feature, "handoff.md")),
-      qaRun: feature ? qaRunOf(w.path, feature) : null,
+      handoff,
+      qaRun,
       claim: claim ? { ...claim, live: claimLive(claim, threshold, now) } : null,
     };
     // The run's state is asked of GitHub only when it decides the row: a ready
