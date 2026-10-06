@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 
 **Input**: User description: "ST-393 Sign in with a phone number and a code sent by WhatsApp (Notion story https://app.notion.com/p/3ee607bff0d28192afb9c5c7f7195b8c, epic EP-1 Foundations). As a visitor, I want to sign in with my phone number and a one-time code sent by WhatsApp, so that I can sign in without e-mail and password. Phone option in the sign-in dialog ('Continuă cu telefonul'), +40 prefilled, E.164; 6-digit code by WhatsApp through Brevo, valid 5 minutes, single use, void after 5 wrong attempts, resend after 60 s, at most 5 codes per number per hour, per-IP limit, new code voids the old one; a number matching an account signs in to it, any role; a number with no account asks for Nume and the terms tick, then creates a driver account; Brevo failure shows the fallback message; maintenance mode lets only admins in; POST /api/v1/auth/phone-code and POST /api/v1/auth/phone-sign-in; error codes code_invalid, code_expired, too_many_attempts, whatsapp_failed, maintenance; audit 'account created' method whatsapp_phone; emits account.created; Jest unit/API tests and a Playwright end-to-end test with a Brevo stub."
 
@@ -163,6 +163,8 @@ While maintenance is on, only an admin's number gets a code and signs in; everyo
 - **Adds**: FR-001, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-013, FR-014, FR-015, FR-016, FR-017
 - **Modifies**: 080-FR-009 → FR-012
 - **Removes**: none
+
+- **Notes** (decided at review, 2026-10-06): FR-013's focus follows the shared panel rule. On a phone (below 768 px, or a coarse pointer) the number field is shown but not focused when the dialog opens, so no on-screen keyboard pops up; the code and name steps still move the focus to their field. At the profile step a `code_invalid` answer means the code can no longer open the account, and that step has no code field, so it returns to the code step in its expired state ("Codul a expirat. Cere un cod nou.") rather than show FR-014's "Codul nu este corect.".
 
 ### Capability: `notifications`
 

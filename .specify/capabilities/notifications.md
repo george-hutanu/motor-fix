@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-05
+updated: 2026-10-06
 features:
   - 194-email-sending
   - 195-message-templates
@@ -9,6 +9,7 @@ features:
   - 196-push-notifications
   - 646-notification-send-claim
   - 571-news-fan-out-worker
+  - 393-whatsapp-phone-sign-in
 ---
 
 # Capability: Notifications
@@ -304,6 +305,10 @@ _From 571-news-fan-out-worker._
 ### 571-FR-006 — The worker MUST run news jobs only when it has the token secret the unsubscribe links are signed with and the public web address the links point to; without either, it MUST log an error at start and leave the jobs queued.
 
 _From 571-news-fan-out-worker._
+
+### 393-FR-002 — The code message MUST hold only the code and how long it is valid, in the interface language, through one SIGN_IN_CODE WhatsApp template in Romanian and English registered like ST-392's templates; it MUST be sent from the request itself (not through the notifications outbox and without a NOTIFICATION record), so the request can answer whether it was sent; it MUST NOT count as an SMS against anyone's monthly SMS share.
+
+_From 393-whatsapp-phone-sign-in._
 
 ## Retired
 
