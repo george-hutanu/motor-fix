@@ -81,6 +81,30 @@ export class SignInDialog {
     return this.laps(first, false);
   }
 
+  // From an invite link: account creation with the invited name and e-mail
+  // filled in, with sign-in one switch away. Says which way the person got a
+  // session, or null when they closed it; no dashboard opens.
+  async join(invited: {
+    email: string;
+    name: string;
+  }): Promise<'signed-in' | 'signed-up' | null> {
+    let from: 'sign-in' | 'sign-up' = 'sign-up';
+    let result = await this.signUp(invited);
+    while (isSwitch(result)) {
+      if (result.switchTo === 'sign-up') {
+        from = 'sign-up';
+        result = await this.signUp({ email: result.email, name: invited.name });
+      } else if (result.switchTo === 'reset') {
+        result = await this.reset(result.email);
+      } else {
+        from = 'sign-in';
+        result = await this.signIn({ email: result.email });
+      }
+    }
+    if (result !== 'signed-in' || this.session.current() === null) return null;
+    return from === 'sign-up' ? 'signed-up' : 'signed-in';
+  }
+
   private dialog(reason: boolean): Promise<boolean> {
     if (this.open) return this.open;
     const open = this.ask(reason).finally(() => {
@@ -103,28 +127,28 @@ export class SignInDialog {
     while (isSwitch(result)) {
       const data = { email: result.email, ...(reason && { reason }) };
       if (result.switchTo === 'sign-up') {
-        result = await this.overlays.open<
-          'signed-in' | AuthSwitch,
-          typeof data
-        >(() => import('./sign-up').then((m) => m.SignUp), {
-          data,
-          shape: 'dialog',
-          title: 'public.signUp.title',
-        });
+        result = await this.signUp(data);
       } else if (result.switchTo === 'reset') {
-        result = await this.overlays.open<AuthSwitch, { email: string }>(
-          () => import('./password-reset').then((m) => m.PasswordReset),
-          {
-            data: { email: result.email },
-            shape: 'dialog',
-            title: 'public.passwordReset.title',
-          },
-        );
+        result = await this.reset(result.email);
       } else {
         result = await this.signIn(data);
       }
     }
     return result === 'signed-in' && this.session.current() !== null;
+  }
+
+  private signUp(data: AuthData): Promise<Answer> {
+    return this.overlays.open<'signed-in' | AuthSwitch, AuthData>(
+      () => import('./sign-up').then((m) => m.SignUp),
+      { data, shape: 'dialog', title: 'public.signUp.title' },
+    );
+  }
+
+  private reset(email: string): Promise<Answer> {
+    return this.overlays.open<AuthSwitch, { email: string }>(
+      () => import('./password-reset').then((m) => m.PasswordReset),
+      { data: { email }, shape: 'dialog', title: 'public.passwordReset.title' },
+    );
   }
 
   private signIn(data?: AuthData): Promise<Answer> {

@@ -52,11 +52,13 @@ const RETURNED: Record<ProviderProblem, string> = {
   suspended: 'public.signIn.returned.suspended',
 };
 
-// The e-mail typed in the other task, if any, whether an action that needs an
-// account opened the dialog, and what went wrong with a provider.
+// The e-mail typed in the other task, if any, the name an invite link brings
+// to sign-up, whether an action that needs an account opened the dialog, and
+// what went wrong with a provider.
 export type AuthData =
   | {
       email?: string;
+      name?: string;
       reason?: boolean;
       problem?: { code: ProviderProblem; provider: Provider };
     }

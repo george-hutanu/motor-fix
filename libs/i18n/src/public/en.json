@@ -21,6 +21,19 @@
     "required": "Tick to continue.",
     "terms": "Terms of use"
   },
+  "invite": {
+    "accept": "Accept",
+    "acceptFailed": "We couldn't accept the invitation. Try again.",
+    "error": "We couldn't check the invitation. Try again.",
+    "home": "Go to MotorFix",
+    "invalid": "This invitation is no longer valid. Ask the garage for a new one.",
+    "loading": "Checking the invitation…",
+    "mechanic": "{garage} invites you to join the team as a mechanic.",
+    "profile": "If you accept, your name appears on the garage's public profile. You can hide it later.",
+    "receptionist": "{garage} invites you to join the team as a receptionist.",
+    "retry": "Try again",
+    "title": "Team invitation"
+  },
   "newPassword": {
     "askAgain": "Ask for a new link",
     "checking": "Checking the link…",

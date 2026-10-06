@@ -75,6 +75,16 @@ export type { PushSubscriptionsControllerTest$Params as PushSubscriptionsControl
 export { pushSubscriptionsControllerTest as pushSubscriptionsControllerTest } from './fn/notifications/push-subscriptions-controller-test';
 export type { PushSubscriptionsControllerRemove$Params as PushSubscriptionsControllerRemove$Params } from './fn/notifications/push-subscriptions-controller-remove';
 export { pushSubscriptionsControllerRemove as pushSubscriptionsControllerRemove } from './fn/notifications/push-subscriptions-controller-remove';
+export type { GarageInvitesControllerSend$Params as GarageInvitesControllerSend$Params } from './fn/garages/garage-invites-controller-send';
+export { garageInvitesControllerSend as garageInvitesControllerSend } from './fn/garages/garage-invites-controller-send';
+export type { GarageInvitesControllerResend$Params as GarageInvitesControllerResend$Params } from './fn/garages/garage-invites-controller-resend';
+export { garageInvitesControllerResend as garageInvitesControllerResend } from './fn/garages/garage-invites-controller-resend';
+export type { GarageInvitesControllerRevoke$Params as GarageInvitesControllerRevoke$Params } from './fn/garages/garage-invites-controller-revoke';
+export { garageInvitesControllerRevoke as garageInvitesControllerRevoke } from './fn/garages/garage-invites-controller-revoke';
+export type { InvitesControllerCheck$Params as InvitesControllerCheck$Params } from './fn/invites/invites-controller-check';
+export { invitesControllerCheck as invitesControllerCheck } from './fn/invites/invites-controller-check';
+export type { InvitesControllerAccept$Params as InvitesControllerAccept$Params } from './fn/invites/invites-controller-accept';
+export { invitesControllerAccept as invitesControllerAccept } from './fn/invites/invites-controller-accept';
 export type { LiveControllerLive$Params as LiveControllerLive$Params } from './fn/live/live-controller-live';
 export { liveControllerLive as liveControllerLive } from './fn/live/live-controller-live';
 export type { LiveControllerTest$Params as LiveControllerTest$Params } from './fn/live/live-controller-test';
