@@ -1,0 +1,6 @@
+# Notion sync — 725-lifecycle-gate-feature-dir
+
+- 2026-10-06 · start · ST-725 · created (Bug, Medium, epic Foundations) · To do → Planning
+- 2026-10-06 · start · Foundations timeline row ST-725 (3f1607bff0d281668025d607b4bcb629) · created → Planning
+- 2026-10-06 · start · EP-1 · In progress (unchanged)
+- [NOTION-SYNC PENDING: ready Foundations — Query Data Source usage limit reached on the connector]
