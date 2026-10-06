@@ -10,6 +10,9 @@
 #     back to the active (work) account.
 #   - git drift (author, committer, credential pinning) and a missing gh login
 #     are reported into context. Advisory: .husky/pre-commit is the gate.
+# In a Claude Code cloud session (CLAUDE_CODE_REMOTE=true) a proxy injects the
+# GitHub credentials and GH_TOKEN holds its placeholder: neither the export nor
+# the gh login check applies, and identity.sh check skips credential pinning.
 # ---------------------------------------------------------------------------
 set -uo pipefail
 cat >/dev/null
@@ -19,7 +22,10 @@ repo="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 cd "$repo" || exit 0
 gh_bin="$(command -v gh || echo "$HOME/.local/bin/gh")"
 
-if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+cloud=false
+[ "${CLAUDE_CODE_REMOTE:-}" = true ] && cloud=true
+
+if [ "$cloud" = false ] && [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   printf 'export GH_TOKEN="$(%s auth token --hostname github.com --user %s 2>/dev/null || echo %s-is-not-logged-in-to-gh)"\n' \
     "$gh_bin" "$account" "$account" >> "$CLAUDE_ENV_FILE"
 fi
@@ -29,7 +35,7 @@ echo "GitHub identity for this repo: george-hutanu <hutanugeorge40@gmail.com>, a
 if ! drift="$(sh .husky/identity.sh check 2>&1)"; then
   echo "$drift"
 fi
-if ! "$gh_bin" auth token --hostname github.com --user "$account" >/dev/null 2>&1; then
+if [ "$cloud" = false ] && ! "$gh_bin" auth token --hostname github.com --user "$account" >/dev/null 2>&1; then
   echo "gh has no login for $account: gh commands and pushes here will fail until the user runs \`gh auth login --hostname github.com\` as $account, then \`gh auth switch --hostname github.com --user <work account>\` so ~/code keeps the work account. Do not push or call gh until then."
 fi
 exit 0

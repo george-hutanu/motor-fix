@@ -175,9 +175,9 @@ describe('start', () => {
       `POST /data_sources/${STORIES}/query`,
       'PATCH /pages/story687',
     ]);
-    assert.deepEqual(ws.calls[0].body, { filter: { property: 'ID', unique_id: { equals: 687 } } });
+    assert.deepEqual(ws.calls[0].body, { page_size: 100, filter: { property: 'ID', unique_id: { equals: 687 } } });
     assert.deepEqual(ws.calls[2].body, { query: '(EP-1) — build timeline', filter: { property: 'object', value: 'data_source' } });
-    assert.deepEqual(ws.calls[7].body, { filter: { property: 'Epic', relation: { contains: 'epic1' } } });
+    assert.deepEqual(ws.calls[7].body, { page_size: 100, filter: { property: 'Epic', relation: { contains: 'epic1' } } });
     assert.deepEqual(writes(ws.calls), [
       'PATCH /pages/story687 {"properties":{"Status":{"select":{"name":"Planning"}}}}',
       'PATCH /pages/r687 {"properties":{"Build status":{"select":{"name":"Planning"}}}}',
@@ -247,7 +247,7 @@ describe('implement, qa and review', () => {
   it('takes the story from --story instead of the feature number', async () => {
     const ws = workspace({ stories: [story(12, 'Planning')] });
     await run(['implement', '--story', 'ST-12'], { ws });
-    assert.deepEqual(ws.calls[0].body, { filter: { property: 'ID', unique_id: { equals: 12 } } });
+    assert.deepEqual(ws.calls[0].body, { page_size: 100, filter: { property: 'ID', unique_id: { equals: 12 } } });
   });
 });
 
@@ -276,6 +276,16 @@ describe('blocked and unblock', () => {
     ]);
     assert.equal(readState(repo).notion_prior_status, null);
     assert.equal(unblocked.lines.at(-3), '- 2026-10-05 · unblock · ST-687 · Blocked → Implementing');
+  });
+
+  // @traces 745-FR-005
+  it('splits a blocked reason too long for one comment object', async () => {
+    const reason = 'r'.repeat(2100);
+    const ws = workspace({ stories: [story(687, 'Implementing')] });
+    await run(['blocked', reason], { ws });
+    const sent = ws.calls.find((c) => c.path === '/comments').body;
+    assert.deepEqual(sent.rich_text.map((t) => t.text.content.length), [2000, 109]);
+    assert.equal(sent.rich_text.map((t) => t.text.content).join(''), `Blocked: ${reason}`);
   });
 
   it('keeps the prior and lets the replay write the row when the row write fails, commenting once', async () => {
@@ -343,6 +353,28 @@ describe('finish', () => {
     assert.ok(!ws.calls.some((c) => c.path === '/comments'));
     assert.ok(r.lines.includes('- 2026-10-05 · finish · EP-1 · In progress (unchanged)'));
     assert.ok(r.lines.includes('- 2026-10-05 · comment · ST-687 · nothing to record'));
+  });
+
+  // @traces 745-FR-005
+  it('posts a comment over 2,000 characters as rich text objects of at most 2,000, in order', async () => {
+    const body = `- ${'a'.repeat(2500)}\n- ${'b'.repeat(495)}\n`;
+    const repo = repoWith({ body });
+    const ws = workspace({ stories: [story(687, 'QA'), story(20, 'Done')], rows: [row('r687', 'ST-687', 'story687', 'QA')] });
+    await run(['finish', '--body-file', join(repo, 'comment.md')], { ws, repo });
+    const sent = ws.calls.find((c) => c.path === '/comments').body;
+    assert.equal(sent.markdown, undefined);
+    assert.deepEqual(sent.parent, { page_id: 'story687' });
+    assert.deepEqual(sent.rich_text.map((t) => t.text.content.length), [2000, 1001]);
+    assert.equal(sent.rich_text.map((t) => t.text.content).join(''), body);
+  });
+
+  // @traces 745-FR-005
+  it('keeps a comment of exactly 2,000 characters as markdown', async () => {
+    const body = 'c'.repeat(2000);
+    const repo = repoWith({ body });
+    const ws = workspace({ stories: [story(687, 'QA'), story(20, 'Done')] });
+    await run(['finish', '--body-file', join(repo, 'comment.md')], { ws, repo });
+    assert.deepEqual(ws.calls.find((c) => c.path === '/comments').body, { parent: { page_id: 'story687' }, markdown: body });
   });
 
   it('never posts the finish comment twice', async () => {

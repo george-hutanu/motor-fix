@@ -963,6 +963,20 @@ describe('suggest from a Notion story', () => {
     }
   });
 
+  // @traces 745-FR-008
+  it('reads a story\'s blocks 100 at a time', async () => {
+    fresh();
+    try {
+      const fake = notionFake({ page: storyPage(), blocks: brief() });
+      await suggestRun(['ST-9'], { fake, dir });
+      const reads = fake.urls.filter((u) => u.includes('/blocks/'));
+      assert.ok(reads.length > 0);
+      assert.ok(reads.every((u) => u.endsWith('/children?page_size=100')), reads.join('\n'));
+    } finally {
+      done();
+    }
+  });
+
   it('sizes a bug with no boards and a complete brief at 1, with no Jev or model call', async () => {
     fresh();
     try {
