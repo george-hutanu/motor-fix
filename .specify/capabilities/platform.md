@@ -28,6 +28,7 @@ features:
   - 750-ci-speed
   - 766-cloud-rest-fallback
   - 767-cloud-qa-merge
+  - 602-watcher-counts-qa-runs
 ---
 
 # Capability: Platform
@@ -883,6 +884,22 @@ _From 767-cloud-qa-merge._
 ### 767-FR-006 — AGENTS.md "Cloud sessions" MUST say QA starts by itself on ready or push and sets `agent-review`, and the merge goes over REST.
 
 _From 767-cloud-qa-merge._
+
+### 602-FR-001 — The watcher MUST read the `pr-qa.yml` runs from GitHub with one call per pass and keep those whose status is not `completed`, each with the PR number parsed from its run name.
+
+_From 602-watcher-counts-qa-runs._
+
+### 602-FR-002 — A worktree row whose PR has an Actions run in flight MUST be held (`live`), unless the row has a hand-off note whose recorded QA run tests the PR's head, which keeps its `waiting` verdict.
+
+_From 602-watcher-counts-qa-runs._
+
+### 602-FR-003 — The report's QA run count, its header and the dispatch plan's QA budget MUST count laptop runs and Actions runs in flight together.
+
+_From 602-watcher-counts-qa-runs._
+
+### 602-FR-004 — When the run list cannot be read, the watcher MUST count no Actions runs and otherwise behave as before.
+
+_From 602-watcher-counts-qa-runs._
 
 ## Retired
 

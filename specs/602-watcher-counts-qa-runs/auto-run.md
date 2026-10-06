@@ -20,3 +20,12 @@ Input: ST-602 "Make the watcher count PR QA runs on GitHub Actions". Start commi
 
 ## 10. Implement
 - watch.mjs: actionsQaRuns + default gh run list reader; collect counts them in qaRuns and per-row qaLive (not for a tracked hand-off). speckit-watch SKILL.md step 3 wording updated. watch specs 292/292 green.
+
+## 12. Harden
+- doctor 16 ok / 1 warning (pre-existing), diff-audit clean, harness 1883/1883.
+
+## 14. Review
+- spec-reviewer APPROVE (no findings); code-reviewer APPROVE, 1 LOW (the --limit 50 reason) patched in the comment above defaultActionsRuns.
+
+## 16–17. Retro evidence, archive
+- Retro verdict left to the owner (phase 16 is read-only). Spec Delta merged into platform (FR-001–FR-004); status Archived.

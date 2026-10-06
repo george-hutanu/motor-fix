@@ -338,6 +338,8 @@ const defaultRunOf = (id) =>
 // QA laps run on GitHub Actions; every one not completed holds its PR and an
 // Actions job. The run name is "PR QA #<n> at <sha> lap <k> …" for both the
 // pull_request and the workflow_dispatch event (.github/workflows/pr-qa.yml).
+// The 50 newest cover every run in flight: one per PR (its concurrency group)
+// and at most SPECKIT_QA_CAP (20) at once.
 const defaultActionsRuns = () =>
   JSON.parse(
     execFileSync("gh", ["run", "list", "--workflow", "pr-qa.yml", "--limit", "50", "--json", "databaseId,displayTitle,status"], {

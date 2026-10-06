@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 
 **Input**: User description: "ST-602 Make the watcher count PR QA runs on GitHub Actions" — Notion story https://app.notion.com/p/3f0607bff0d28134bb0ec384e5b5c5ba (epic EP-1, Task, deferred from the review of PR #62).
 
