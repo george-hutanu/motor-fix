@@ -56,7 +56,11 @@ Inline. artifact-lint: 0 errors, 1 WARN (delta-missing: Spec Delta had no `### C
 
 ## 9. Tests
 
+One new `it` in `apps/api/src/public-routes.integration.spec.ts` (databaseTurn, a driver account in beforeAll, fresh-token `GET /api/v1/me` 200, then the expired token, one day old, swept over every non-public route with the guard-refusal check, now a shared `byGuard`). Red proof: the behaviour already exists, so the new test is a regression guard; against a working-tree mutant of `verifyAccessToken` that ignores `exp`, it failed (1 failed, 5 passed); mutant reverted, never committed. On the real code: 6 passed. Adversary pass deferred to phase 12, which runs test-adversary on the same surface.
+
 ## 10. Implement
+
+No product code (FR-006). before_implement: design-check `design.md current` (no screens); Notion ST-563 and its timeline row → Implementing via the connector; PR label → in development. T001, T002 [X].
 
 ## 11. Converge
 

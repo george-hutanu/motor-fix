@@ -1,5 +1,8 @@
+import { randomUUID } from 'node:crypto';
+
 import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
-import { S3TestStore } from '@motor-fix/domain/testing';
+import { AccountsService, signAccessToken } from '@motor-fix/domain';
+import { databaseTurn, S3TestStore } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -16,6 +19,8 @@ const env = {
   RELEASE_SHA: 'abc123',
 } as const;
 const store = new S3TestStore();
+// The domain specs empty the account tables meanwhile: wait for our turn.
+const turn = databaseTurn(env.DATABASE_URL);
 
 const PUBLIC = [
   'GET /health/live',
@@ -39,8 +44,10 @@ const METHODS = ['get', 'post', 'put', 'patch', 'delete'] as const;
 
 let app: INestApplication;
 let routes: { method: (typeof METHODS)[number]; path: string }[];
+let accountId: string;
 
 beforeAll(async () => {
+  await turn.take();
   await store.start();
   const config = readEnv(
     ['DATABASE_URL', 'REDIS_URL', 'AUTH_TOKEN_SECRET', ...STORAGE_ENV],
@@ -58,12 +65,25 @@ beforeAll(async () => {
       path: path.replace(/\{[^}]+\}/g, SOME_ID),
     })),
   );
-});
+  ({ id: accountId } = await app.get(AccountsService).createAccount({
+    identity: { method: 'google', subject: `driver-${randomUUID()}` },
+    name: 'Andrei',
+    roles: ['driver'],
+  }));
+}, 120_000);
 
 afterAll(async () => {
   await app.close();
   await store.stop();
+  await turn.release();
 });
+
+// The renewal refuses a missing cookie with the same code, but it is its own
+// answer: it clears the cookie, which the guard never does.
+const byGuard = (res: request.Response) =>
+  res.status === 401 &&
+  res.body?.code === 'sign_in_required' &&
+  !res.headers['set-cookie'];
 
 const call = (
   method: (typeof METHODS)[number],
@@ -82,14 +102,9 @@ describe('routes without a session', () => {
   it('refuses every route but the public list with sign_in_required', async () => {
     const open: string[] = [];
     for (const { method, path } of routes) {
-      const res = await call(method, path);
-      // The renewal refuses a missing cookie with the same code, but it is its
-      // own answer: it clears the cookie, which the guard never does.
-      const byGuard =
-        res.status === 401 &&
-        res.body?.code === 'sign_in_required' &&
-        !res.headers['set-cookie'];
-      if (!byGuard) open.push(`${method.toUpperCase()} ${path}`);
+      if (!byGuard(await call(method, path))) {
+        open.push(`${method.toUpperCase()} ${path}`);
+      }
     }
 
     expect(open.sort()).toEqual(PUBLIC);
@@ -110,5 +125,23 @@ describe('routes without a session', () => {
         'sign_in_required',
       ]);
     }
+  });
+
+  it('refuses an expired token for a real account on every gated route', async () => {
+    const sign = (now: number) =>
+      `Bearer ${signAccessToken({ accountId, role: 'driver' }, env.AUTH_TOKEN_SECRET, now)}`;
+    expect((await call('get', '/api/v1/me', sign(Date.now()))).status).toBe(
+      200,
+    );
+
+    const expired = sign(Date.now() - 24 * 60 * 60 * 1000);
+    const honoured: string[] = [];
+    for (const { method, path } of routes) {
+      const route = `${method.toUpperCase()} ${path}`;
+      if (PUBLIC.includes(route)) continue;
+      if (!byGuard(await call(method, path, expired))) honoured.push(route);
+    }
+
+    expect(honoured).toEqual([]);
   });
 });

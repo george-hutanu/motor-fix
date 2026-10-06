@@ -8,3 +8,6 @@
 - 2026-10-06 · pr · ST-563 · PR #146 https://github.com/george-hutanu/motor-fix/pull/146
 - 2026-10-06 · labels · PR #146 · planning (+tests, scope: api, EP-1)
 - 2026-10-06 · pr · timeline row 3f0607bf-f0d2-810d-98b9-fc8b596ff6c6 has no PR property; the link lives on the story only
+- 2026-10-06 · implement · ST-563 · Planning → Implementing (via the connector)
+- 2026-10-06 · timeline · ST-563 · Planning → Implementing (row 3f0607bf-f0d2-810d-98b9-fc8b596ff6c6)
+- 2026-10-06 · labels · PR #146 · in development
