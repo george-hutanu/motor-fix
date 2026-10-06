@@ -29,7 +29,11 @@ async function settle() {
   }
 }
 
-async function open(language: 'ro' | 'en' = 'ro', email?: string) {
+async function open(
+  language: 'ro' | 'en' = 'ro',
+  email?: string,
+  phone?: string,
+) {
   signIn = jest.fn(async () => ({ landing: '/app/driver' }));
   TestBed.configureTestingModule({
     providers: [{ provide: Session, useValue: { signIn } }],
@@ -38,9 +42,12 @@ async function open(language: 'ro' | 'en' = 'ro', email?: string) {
   const host = TestBed.createComponent(Host);
   result = host.componentInstance.overlays.open<
     'signed-in' | AuthSwitch,
-    { email?: string } | undefined
+    { email?: string; phone?: string } | undefined
   >(SignIn, {
-    data: email === undefined ? undefined : { email },
+    data:
+      email === undefined && phone === undefined
+        ? undefined
+        : { email, ...(phone && { phone }) },
     shape: 'dialog',
     title: 'public.signIn.title',
   });
@@ -156,6 +163,59 @@ describe('the sign-in dialog', () => {
       switchTo: 'sign-up',
     });
     expect(document.querySelector('mf-overlay-panel')).toBeNull();
+  });
+
+  it('offers "Continuă cu telefonul" under a "sau" divider, below the main button', async () => {
+    await open();
+
+    const phone = button('Continuă cu telefonul');
+    expect(phone.type).toBe('button');
+    const divider = panel().querySelector('.or');
+    expect(divider?.textContent?.trim()).toBe('sau');
+    const order = [...panel().querySelectorAll('form *')];
+    expect(order.indexOf(divider as Element)).toBeGreaterThan(
+      order.indexOf(button('Intră în cont')),
+    );
+    expect(order.indexOf(phone)).toBeGreaterThan(
+      order.indexOf(divider as Element),
+    );
+    expect(order.indexOf(button('Creează un cont'))).toBeGreaterThan(
+      order.indexOf(phone),
+    );
+  });
+
+  it('switches to the phone with the e-mail typed so far, without sending', async () => {
+    await open();
+    type(field('E‑mail'), ' andrei@example.ro ');
+
+    button('Continuă cu telefonul').click();
+    await settle();
+
+    expect(signIn).not.toHaveBeenCalled();
+    await expect(result).resolves.toEqual({
+      email: 'andrei@example.ro',
+      switchTo: 'phone',
+    });
+  });
+
+  it('hands back the number typed in the phone step', async () => {
+    await open('ro', undefined, '+40722123456');
+
+    button('Continuă cu telefonul').click();
+    await settle();
+
+    await expect(result).resolves.toEqual({
+      email: '',
+      phone: '+40722123456',
+      switchTo: 'phone',
+    });
+  });
+
+  it('names the phone in English', async () => {
+    await open('en');
+
+    expect(button('Continue with phone')).toBeDefined();
+    expect(panel().querySelector('.or')?.textContent?.trim()).toBe('or');
   });
 
   it('offers "Ai uitat parola?" in the row of "Ține‑mă autentificat"', async () => {

@@ -12,7 +12,11 @@ const GARAGE = { landing: '/app/garage' } as MeDto;
 type Answer =
   | 'signed-in'
   | 'cancelled'
-  | { switchTo: 'sign-in' | 'sign-up' | 'reset'; email: string };
+  | {
+      switchTo: 'sign-in' | 'sign-up' | 'reset' | 'phone';
+      email: string;
+      phone?: string;
+    };
 
 function setup(signedIn: MeDto | null, ...answers: Answer[]) {
   const current = signal<MeDto | null>(signedIn);
@@ -152,6 +156,88 @@ describe('SignInDialog', () => {
       'name',
       'SignIn',
     );
+  });
+
+  describe('the phone', () => {
+    it('opens the phone task under the sign-in title, and e-mail again from it, carrying both', async () => {
+      const { dialog, open } = setup(
+        null,
+        { email: 'andrei@example.ro', switchTo: 'phone' },
+        {
+          email: 'andrei@example.ro',
+          phone: '+40722123456',
+          switchTo: 'sign-in',
+        },
+        {
+          email: 'andrei@example.ro',
+          phone: '+40722123456',
+          switchTo: 'phone',
+        },
+        'cancelled',
+      );
+
+      await dialog.start();
+
+      expect(open.mock.calls.map((call) => call[1])).toEqual([
+        { shape: 'dialog', title: 'public.signIn.title' },
+        {
+          data: { email: 'andrei@example.ro' },
+          shape: 'dialog',
+          title: 'public.signIn.title',
+        },
+        {
+          data: { email: 'andrei@example.ro', phone: '+40722123456' },
+          shape: 'dialog',
+          title: 'public.signIn.title',
+        },
+        {
+          data: { email: 'andrei@example.ro', phone: '+40722123456' },
+          shape: 'dialog',
+          title: 'public.signIn.title',
+        },
+      ]);
+    });
+
+    it('loads the phone task only when it is opened', async () => {
+      const { dialog, open } = setup(null, { email: '', switchTo: 'phone' });
+
+      await dialog.start();
+      const loader = (
+        open.mock.calls[1] as unknown[]
+      )[0] as () => Promise<unknown>;
+
+      expect((await loader()) as { name: string }).toHaveProperty(
+        'name',
+        'PhoneSignIn',
+      );
+    });
+
+    it("opens the person's dashboard after they sign in by phone", async () => {
+      const { dialog, navigate } = setup(
+        null,
+        { email: '', switchTo: 'phone' },
+        'signed-in',
+      );
+
+      await dialog.start();
+
+      expect(navigate).toHaveBeenCalledWith('/app/garage');
+    });
+
+    it('keeps the reason for the gate', async () => {
+      const { dialog, open } = setup(
+        null,
+        { email: '', switchTo: 'phone' },
+        'signed-in',
+      );
+
+      await expect(dialog.gate()).resolves.toBe(true);
+      expect(open.mock.calls[1]?.[1]).toEqual({
+        data: { email: '', reason: true },
+        shape: 'dialog',
+        title: 'public.signIn.title',
+      });
+    });
   });
 
   // @traces 127-FR-009

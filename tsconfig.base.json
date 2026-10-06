@@ -15,6 +15,7 @@
       "@motor-fix/contracts": ["./libs/contracts/src/index.ts"],
       "@motor-fix/contracts/consent": ["./libs/contracts/src/consent.ts"],
       "@motor-fix/contracts/env": ["./libs/contracts/src/env.ts"],
+      "@motor-fix/contracts/phone": ["./libs/contracts/src/phone.ts"],
       "@motor-fix/contracts/problem": ["./libs/contracts/src/problem.ts"],
       "@motor-fix/data-access": ["./libs/data-access/src/index.ts"],
       "@motor-fix/domain": ["./libs/domain/src/index.ts"],

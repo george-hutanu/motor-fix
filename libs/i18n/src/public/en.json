@@ -47,6 +47,23 @@
   },
   "signIn": {
     "brand": "MotorFix",
+    "code": {
+      "again": "Send again",
+      "change": "Change the number",
+      "expires": "The code expires in {time}",
+      "field": {
+        "pattern": "The code has 6 digits."
+      },
+      "label": "Code",
+      "problem": {
+        "code_expired": "The code has expired. Ask for a new one.",
+        "code_invalid": "The code is not correct.",
+        "too_many_attempts": "Too many wrong codes. Ask for a new one.",
+        "whatsapp_failed": "We could not send the code by WhatsApp. Try again."
+      },
+      "sent": "We sent a code by WhatsApp to {phone}.",
+      "submit": "Sign in"
+    },
     "createAccount": "Create an account",
     "email": "E-mail",
     "emailPlaceholder": "you@example.com",
@@ -55,8 +72,21 @@
     },
     "forgot": "Forgot your password?",
     "newHere": "New to MotorFix?",
+    "or": "or",
     "password": "Password",
     "passwordPlaceholder": "Your password",
+    "phone": {
+      "field": {
+        "pattern": "Type a valid phone number, for example 0722 123 456."
+      },
+      "number": "Phone number",
+      "problem": {
+        "too_many_attempts": "You have asked for too many codes. Try again later.",
+        "whatsapp_failed": "We could not send the code by WhatsApp. Try again."
+      },
+      "send": "Send the code",
+      "withEmail": "Sign in with e-mail and password"
+    },
     "problem": {
       "account_suspended": "Your account is suspended.",
       "invalid_credentials": "The e-mail or password is not correct.",
@@ -65,7 +95,8 @@
     "reason": "Sign in to continue.",
     "remember": "Keep me signed in",
     "submit": "Sign in",
-    "title": "Sign in"
+    "title": "Sign in",
+    "withPhone": "Continue with phone"
   },
   "signInButton": "Sign in",
   "signUp": {

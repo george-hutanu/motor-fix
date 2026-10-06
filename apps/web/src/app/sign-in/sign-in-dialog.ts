@@ -12,8 +12,8 @@ const isSwitch = (answer: Answer): answer is AuthSwitch =>
 
 // "Autentificare" and "Cont": a signed-in person goes to their dashboard;
 // anyone else gets the sign-in dialog over the screen they are on, and can
-// switch to sign-up or the password reset and back, the typed e-mail going
-// along. An API call refused for want of a session waits on the same dialog
+// switch to sign-up, the password reset or the phone and back, the typed
+// e-mail and number going along. An API call refused for want of a session waits on the same dialog
 // through gate(); a reset link opens the new-password task through
 // newPassword().
 @Injectable({ providedIn: 'root' })
@@ -78,31 +78,39 @@ export class SignInDialog {
   // Each lap waits on a dialog; it ends when one closes signed in or cancelled.
   private async laps(first: Answer, reason: boolean): Promise<boolean> {
     let result = first;
-    while (isSwitch(result)) {
-      const data = { email: result.email, ...(reason && { reason }) };
-      if (result.switchTo === 'sign-up') {
-        result = await this.overlays.open<
-          'signed-in' | AuthSwitch,
-          typeof data
-        >(() => import('./sign-up').then((m) => m.SignUp), {
-          data,
-          shape: 'dialog',
-          title: 'public.signUp.title',
-        });
-      } else if (result.switchTo === 'reset') {
-        result = await this.overlays.open<AuthSwitch, { email: string }>(
+    while (isSwitch(result)) result = await this.lap(result, reason);
+    return result === 'signed-in' && this.session.current() !== null;
+  }
+
+  private lap(to: AuthSwitch, reason: boolean): Promise<Answer> {
+    const data = {
+      email: to.email,
+      ...(to.phone && { phone: to.phone }),
+      ...(reason && { reason }),
+    };
+    switch (to.switchTo) {
+      case 'sign-up':
+        return this.overlays.open<'signed-in' | AuthSwitch, typeof data>(
+          () => import('./sign-up').then((m) => m.SignUp),
+          { data, shape: 'dialog', title: 'public.signUp.title' },
+        );
+      case 'reset':
+        return this.overlays.open<AuthSwitch, { email: string }>(
           () => import('./password-reset').then((m) => m.PasswordReset),
           {
-            data: { email: result.email },
+            data: { email: to.email },
             shape: 'dialog',
             title: 'public.passwordReset.title',
           },
         );
-      } else {
-        result = await this.signIn(data);
-      }
+      case 'phone':
+        return this.overlays.open<'signed-in' | AuthSwitch, AuthData>(
+          () => import('./phone-sign-in').then((m) => m.PhoneSignIn),
+          { data, shape: 'dialog', title: 'public.signIn.title' },
+        );
+      default:
+        return this.signIn(data);
     }
-    return result === 'signed-in' && this.session.current() !== null;
   }
 
   private signIn(data?: AuthData): Promise<Answer> {

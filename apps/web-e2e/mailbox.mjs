@@ -4,14 +4,45 @@
 //   POST /v3/smtp/email   keeps the message, answers 201 with a messageId
 //   GET  /v3/account      answers 200, so the worker accepts its key
 //   GET  /messages?to=a   the messages kept for address a, oldest first
+//   POST /v3/whatsapp/sendMessage   keeps the WhatsApp message, likewise
+//   GET  /whatsapp?to=n   the WhatsApp messages kept for number n (digits,
+//                         as Brevo takes them), oldest first
 import { createServer } from 'node:http';
 
 const port = 3025;
 const messages = [];
+const whatsapp = [];
 
 const answer = (res, status, body) => {
   res.writeHead(status, { 'content-type': 'application/json' });
   res.end(JSON.stringify(body));
+};
+
+// Keeps a posted message in `into`, answering as Brevo does.
+const keep = (into, id) => (res, raw) => {
+  try {
+    into.push(JSON.parse(raw));
+  } catch {
+    return answer(res, 400, { code: 'bad_request' });
+  }
+  return answer(res, 201, { messageId: id(into.length) });
+};
+
+const POSTS = {
+  '/v3/smtp/email': keep(messages, (n) => `<e2e-${n}@mailbox>`),
+  '/v3/whatsapp/sendMessage': keep(whatsapp, (n) => `e2e-wa-${n}`),
+};
+
+const GETS = {
+  '/messages': (to) =>
+    messages.filter((m) =>
+      (m.to ?? []).some((r) => r.email.toLowerCase() === to?.toLowerCase()),
+    ),
+  '/v3/account': () => ({ email: 'mailbox@example.test' }),
+  '/whatsapp': (to) =>
+    whatsapp.filter((m) =>
+      (m.contactNumbers ?? []).includes(to?.replace(/^\+/, '')),
+    ),
 };
 
 createServer((req, res) => {
@@ -21,29 +52,10 @@ createServer((req, res) => {
     raw += chunk;
   });
   req.on('end', () => {
-    if (req.method === 'POST' && url.pathname === '/v3/smtp/email') {
-      try {
-        messages.push(JSON.parse(raw));
-      } catch {
-        return answer(res, 400, { code: 'bad_request' });
-      }
-      return answer(res, 201, {
-        messageId: `<e2e-${messages.length}@mailbox>`,
-      });
-    }
-    if (url.pathname === '/v3/account') {
-      return answer(res, 200, { email: 'mailbox@example.test' });
-    }
-    if (url.pathname === '/messages') {
-      const to = url.searchParams.get('to')?.toLowerCase();
-      return answer(
-        res,
-        200,
-        messages.filter((m) =>
-          (m.to ?? []).some((r) => r.email.toLowerCase() === to),
-        ),
-      );
-    }
+    const post = req.method === 'POST' && POSTS[url.pathname];
+    if (post) return post(res, raw);
+    const get = Object.hasOwn(GETS, url.pathname) && GETS[url.pathname];
+    if (get) return answer(res, 200, get(url.searchParams.get('to')));
     answer(res, 404, { code: 'not_found' });
   });
 }).listen(port, '127.0.0.1');

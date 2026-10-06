@@ -47,6 +47,23 @@
   },
   "signIn": {
     "brand": "MotorFix",
+    "code": {
+      "again": "Trimite din nou",
+      "change": "Schimbă numărul",
+      "expires": "Codul expiră în {time}",
+      "field": {
+        "pattern": "Codul are 6 cifre."
+      },
+      "label": "Cod",
+      "problem": {
+        "code_expired": "Codul a expirat. Cere unul nou.",
+        "code_invalid": "Codul nu este corect.",
+        "too_many_attempts": "Prea multe coduri greșite. Cere unul nou.",
+        "whatsapp_failed": "Nu am putut trimite codul pe WhatsApp. Încearcă din nou."
+      },
+      "sent": "Am trimis un cod pe WhatsApp la {phone}.",
+      "submit": "Intră în cont"
+    },
     "createAccount": "Creează un cont",
     "email": "E‑mail",
     "emailPlaceholder": "tu@exemplu.ro",
@@ -55,8 +72,21 @@
     },
     "forgot": "Ai uitat parola?",
     "newHere": "Ești nou pe MotorFix?",
+    "or": "sau",
     "password": "Parolă",
     "passwordPlaceholder": "Parola ta",
+    "phone": {
+      "field": {
+        "pattern": "Scrie un număr de telefon valid, de exemplu 0722 123 456."
+      },
+      "number": "Număr de telefon",
+      "problem": {
+        "too_many_attempts": "Ai cerut prea multe coduri. Încearcă din nou mai târziu.",
+        "whatsapp_failed": "Nu am putut trimite codul pe WhatsApp. Încearcă din nou."
+      },
+      "send": "Trimite codul",
+      "withEmail": "Intră cu e‑mail și parolă"
+    },
     "problem": {
       "account_suspended": "Contul tău este suspendat.",
       "invalid_credentials": "E‑mailul sau parola nu sunt corecte.",
@@ -65,7 +95,8 @@
     "reason": "Intră în cont ca să continui.",
     "remember": "Ține‑mă autentificat",
     "submit": "Intră în cont",
-    "title": "Autentificare"
+    "title": "Autentificare",
+    "withPhone": "Continuă cu telefonul"
   },
   "signInButton": "Autentificare",
   "signUp": {
