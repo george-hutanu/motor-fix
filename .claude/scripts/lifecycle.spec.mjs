@@ -430,6 +430,78 @@ describe('merge', () => {
   });
 });
 
+describe('merge in a cloud session: REST only', () => {
+  beforeEach(() => {
+    fixture();
+    writeFileSync(join(featureDir, 'handoff.md'), '# Hand-off\n');
+  });
+
+  const cloud = { GH_TOKEN: 'proxy-injected', CLAUDE_CODE_REMOTE: 'true' };
+  const diff = ['git diff -U0 --', { stdout: '+++ b/x\n+- 2026-10-05 · finish · ST-696 · QA → Done\n' }];
+  // What gh prints after lifecycle's --jq: the state MERGED once merged, else upper-cased.
+  const restView = (pr) => ['gh api repos/{owner}/{repo}/pulls/141 --jq', { stdout: `${JSON.stringify(pr)}\n` }];
+  const open = restView({ number: 141, state: 'OPEN', merge_commit_sha: null });
+  const MERGE = 'gh api -X PUT repos/{owner}/{repo}/pulls/141/merge -f merge_method=merge';
+
+  it('reads, merges, reads the merge commit and comments over REST, never through gh pr', () => {
+    let merged = false;
+    let comment = '';
+    const h = harness({
+      env: cloud,
+      answers: [
+        diff,
+        ['gh api repos/{owner}/{repo}/pulls/141 --jq', () => ({ stdout: `${JSON.stringify({ number: 141, state: merged ? 'MERGED' : 'OPEN', merge_commit_sha: merged ? 'feed1234beef' : null })}\n` })],
+        [MERGE, () => ((merged = true), {})],
+        ['gh api -X POST repos/{owner}/{repo}/issues/141/comments', (cmd) => ((comment = readFileSync(cmd.match(/body=@(\S+)/)[1], 'utf8')), {})],
+      ],
+    });
+    const result = step(['merge', '--pr', '141'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(result.merged, 'feed123');
+    assert.equal(h.calls.filter((c) => c.startsWith('gh pr ')).length, 0);
+    assert.equal(h.calls.filter((c) => c === MERGE).length, 1);
+    assert.ok(h.gated.some((c) => c.replace(/"/g, '') === MERGE), 'the merge gate judged the REST merge');
+    assert.match(comment, /^## Finish log/);
+    assert.match(comment, /Merged as feed1234beef/);
+    assert.equal(existsSync(join(featureDir, 'handoff.md')), false);
+  });
+
+  it('refuses exactly when the merge gate does, and merges nothing', () => {
+    const message = 'Merge gate (Constitution VII): PR #141 cannot merge: agent-review is pending.';
+    const h = harness({ env: cloud, answers: [open], refuse: { prefix: 'gh api -X PUT "repos/{owner}/{repo}/pulls/141/merge"', message } });
+    const result = step(['merge', '--pr', '141'], h.io);
+    assert.equal(result.ok, false, JSON.stringify(result));
+    assert.equal(result.fix, message);
+    assert.ok(!h.calls.some((c) => c.startsWith('gh api -X PUT')));
+    assert.equal(existsSync(join(featureDir, 'handoff.md')), true);
+  });
+
+  it('skips the merge on a PR already merged', () => {
+    const h = harness({ env: cloud, answers: [diff, restView({ number: 141, state: 'MERGED', merge_commit_sha: 'feed1234beef' })] });
+    const result = step(['merge', '--pr', '141', '--notion-done'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(!h.calls.some((c) => c.startsWith('gh api -X PUT')));
+  });
+
+  it('needs --pr: without GraphQL the branch cannot be resolved to its PR', () => {
+    const h = harness({ env: cloud });
+    const result = step(['merge'], h.io);
+    assert.equal(result.ok, false);
+    assert.match(result.fix, /--pr/);
+    assert.ok(!h.calls.some((c) => c.startsWith('gh ')));
+  });
+
+  it('keeps the comment for a rerun over REST when posting it fails', () => {
+    const h = harness({
+      env: cloud,
+      answers: [diff, restView({ number: 141, state: 'MERGED', merge_commit_sha: 'feed1234beef' }), ['gh api -X POST repos/{owner}/{repo}/issues/141/comments', { code: 1, stderr: 'HTTP 502' }]],
+    });
+    const result = step(['merge', '--pr', '141', '--notion-done'], h.io);
+    assert.equal(result.ok, false);
+    assert.match(result.then, /^gh api -X POST "repos\/\{owner\}\/\{repo\}\/issues\/141\/comments" -F body=@\S+ && rm/);
+  });
+});
+
 describe('gates, main and identity', () => {
   beforeEach(() => fixture());
 
@@ -613,5 +685,80 @@ describe('temp files, the token stop, reruns and the finish order', () => {
     const restore = h.calls.findIndex((c) => c.startsWith('git checkout --'));
     const comment = h.calls.findIndex((c) => c.startsWith('gh pr comment'));
     assert.ok(restore > -1 && restore < comment, h.calls.join('\n'));
+  });
+});
+
+describe('in a cloud session, where GitHub answers GraphQL with 403', () => {
+  const CLOUD_ENV = { GH_TOKEN: 'proxy-injected', CLAUDE_CODE_REMOTE: 'true' };
+  const API = 'gh api repos/{owner}/{repo}/';
+  const pull = { number: 141, title: TITLE, html_url: PR_URL, state: 'open', draft: true, merged_at: null, head: { ref: BRANCH, sha: 'abc' }, labels: [] };
+  const json = (value) => ({ stdout: JSON.stringify(value) });
+  const graphql = (calls) => calls.filter((c) => /^gh (pr|label) /.test(c));
+  beforeEach(() => fixture());
+
+  it('open lists, labels and opens the draft through REST, and the gates still judge gh pr create', () => {
+    const h = harness({
+      env: CLOUD_ENV,
+      answers: [
+        ['git rev-list --count origin/main..HEAD', { stdout: '1\n' }],
+        [`${API}pulls?head={owner}:${BRANCH}&state=open`, json([[]])],
+        [`${API}labels -X POST`, json({})],
+        [`${API}pulls -X POST`, json(pull)],
+        [`${API}issues/141/labels -X POST`, json([])],
+      ],
+    });
+    const result = step(['open', '--title', TITLE], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(result.pr, 141);
+    assert.deepEqual(graphql(h.calls), []);
+    assert.ok(h.gated.some((c) => c.startsWith('gh pr create --draft')));
+    assert.ok(h.gated.some((c) => c.startsWith('gh pr list --head')));
+  });
+
+  it('ready publishes the body, marks ready and posts the note through REST', () => {
+    let i = 0;
+    const h = harness({
+      env: CLOUD_ENV,
+      answers: [
+        ['git diff --cached --quiet', () => ({ code: [1, 1][i++] ?? 0 })],
+        [`${API}pulls?head={owner}:${BRANCH}&state=all`, json([[pull]])],
+        [`${API}pulls/141 -X GET`, json(pull)],
+        [`${API}pulls/141 -X PATCH`, json(pull)],
+        [`${API}pulls/141/ccr/ready_for_review -X POST`, json({})],
+        [`${API}issues/141/comments -X POST`, json({})],
+      ],
+    });
+    writeFileSync(join(repo, 'body.md'), '## Why\n\nfilled\n');
+    const result = step(['ready', '--body-file', join(repo, 'body.md'), '--decisions', 'none'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.deepEqual(graphql(h.calls), []);
+    const api = h.calls.filter((c) => c.startsWith('gh api'));
+    assert.ok(api.some((c) => c.startsWith(`${API}pulls/141 -X PATCH`)));
+    assert.ok(api.some((c) => c.startsWith(`${API}pulls/141/ccr/ready_for_review -X POST`)));
+    assert.ok(api.some((c) => c.startsWith(`${API}issues/141/comments -X POST`)));
+    for (const asked of ['gh pr ready 141', `gh pr edit 141 --body-file ${join(repo, 'body.md')}`]) assert.ok(h.gated.includes(asked), asked);
+    assert.ok(existsSync(join(featureDir, 'handoff.md')));
+  });
+
+  it('handoff --restore reads the comments through REST', () => {
+    const MARK = '<!-- speckit-handoff -->';
+    const h = harness({
+      env: CLOUD_ENV,
+      answers: [
+        [`${API}pulls/141 -X GET`, json(pull)],
+        [`${API}issues/141/comments?per_page=100 -X GET`, json([[{ user: { login: 'george-hutanu' }, body: `${MARK}\n# Hand-off\n- QA run: 3\n`, created_at: '2026-10-06T10:00:00Z' }]])],
+      ],
+    });
+    const result = step(['handoff', '--restore', '--pr', '141'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(readFileSync(join(featureDir, 'handoff.md'), 'utf8'), '# Hand-off\n- QA run: 3\n');
+    assert.deepEqual(graphql(h.calls), []);
+  });
+
+  it('on the laptop the same steps call gh pr as before', () => {
+    const h = harness({ answers: [['git rev-list --count origin/main..HEAD', { stdout: '1\n' }], ['gh pr list', { stdout: '\n' }]] });
+    step(['open', '--title', TITLE], h.io);
+    assert.ok(h.calls.some((c) => c.startsWith('gh pr create --draft')));
+    assert.ok(!h.calls.some((c) => c.startsWith('gh api')));
   });
 });

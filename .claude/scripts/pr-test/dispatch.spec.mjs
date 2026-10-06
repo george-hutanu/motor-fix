@@ -17,6 +17,7 @@ import {
   dispatchCommand,
   dispatchInputs,
   encodeFlows,
+  findPrRun,
   findRun,
   parseArgs,
   placeDownload,
@@ -177,6 +178,15 @@ appendFileSync(join(dir, 'calls.log'), args.join(' ') + '\\n');
 const say = (v) => process.stdout.write(typeof v === 'string' ? v : JSON.stringify(v));
 const [a, b] = args;
 if (a === 'pr' && b === 'view') say({ state: 'OPEN', headRefOid: process.env.FAKE_HEAD });
+else if (a === 'api' && b === 'repos/{owner}/{repo}/pulls/62') say({ state: 'open', head: { sha: process.env.FAKE_HEAD } });
+else if (a === 'api' && b.startsWith('repos/{owner}/{repo}/actions/workflows/pr-qa.yml/runs?')) {
+  const q = new URLSearchParams(b.split('?')[1]);
+  const runs = process.env.FAKE_NO_RUN || q.get('head_sha') !== process.env.FAKE_HEAD || q.get('event') !== 'pull_request' ? [] : [
+    { id: 76, html_url: 'https://x/runs/76', created_at: '2026-10-06T10:00:00Z', head_sha: process.env.FAKE_HEAD },
+    { id: 77, html_url: 'https://x/runs/77', created_at: '2026-10-06T11:00:00Z', head_sha: process.env.FAKE_HEAD },
+  ];
+  say({ total_count: runs.length, workflow_runs: runs });
+}
 else if (a === 'workflow' && b === 'run') writeFileSync(join(dir, 'nonce'), JSON.parse(readFileSync(0, 'utf8')).nonce);
 else if (a === 'run' && b === 'list') {
   if (process.env.FAKE_NO_RUN) say([]);
@@ -209,7 +219,7 @@ function fakeGh(env = {}) {
     const r = spawnSync(process.execPath, [SCRIPT, '62', '--out', out, ...args], {
       encoding: 'utf8',
       timeout: 15_000,
-      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, FAKE_GH_DIR: dir, FAKE_HEAD: SHA, PR_QA_POLL_MS: '1', ...env },
+      env: { ...process.env, CLAUDE_CODE_REMOTE: '', PATH: `${bin}:${process.env.PATH}`, FAKE_GH_DIR: dir, FAKE_HEAD: SHA, PR_QA_POLL_MS: '1', ...env },
     });
     const calls = existsSync(join(dir, 'calls.log')) ? readFileSync(join(dir, 'calls.log'), 'utf8').trim().split('\n') : [];
     return { code: r.status, stdout: r.stdout, stderr: r.stderr, calls, out };
@@ -274,5 +284,50 @@ describe('dispatch --run <id>: read a finished run, start nothing', () => {
     const r = run('--run', '77', '--no-wait');
     assert.equal(r.code, 64);
     assert.deepEqual(r.calls, []);
+  });
+});
+
+describe('dispatch in a cloud session: the pull_request run, found over REST', () => {
+  const cloud = { CLAUDE_CODE_REMOTE: 'true' };
+
+  it('picks the newest run for the head, or none', () => {
+    const runs = [
+      { id: 5, html_url: 'u5', created_at: '2026-10-06T10:00:00Z' },
+      { id: 9, html_url: 'u9', created_at: '2026-10-06T12:00:00Z' },
+      { id: 7, html_url: 'u7', created_at: '2026-10-06T11:00:00Z' },
+    ];
+    assert.deepEqual(findPrRun(runs), { databaseId: 9, url: 'u9' });
+    assert.equal(findPrRun([]), null);
+  });
+
+  it('dispatches nothing, reads the PR and the run over REST, and prints the same hand-off line', () => {
+    const r = fakeGh(cloud)('--no-wait');
+    assert.equal(r.code, 0, r.stderr);
+    assert.equal(r.stdout.trim(), `- QA run: 77 · head ${SHA} · lap 1 · https://x/runs/77`);
+    assert.deepEqual(called(r.calls, 'workflow run'), []);
+    assert.deepEqual(called(r.calls, 'pr '), []);
+    assert.deepEqual(called(r.calls, 'run list'), []);
+    assert.equal(called(r.calls, 'api repos/{owner}/{repo}/pulls/62').length, 1);
+    assert.match(called(r.calls, 'api repos/{owner}/{repo}/actions/workflows/pr-qa.yml/runs?')[0], new RegExp(`head_sha=${SHA}&event=pull_request`));
+  });
+
+  it('exits 2 with no hand-off line when no run for the head appears', () => {
+    const r = fakeGh({ ...cloud, FAKE_NO_RUN: '1' })('--no-wait');
+    assert.equal(r.code, 2);
+    assert.equal(r.stdout.trim(), '');
+    assert.match(r.stderr, /no pr-qa\.yml run/);
+  });
+
+  it('says the flows cannot travel, rather than dropping them unseen', () => {
+    const r = fakeGh(cloud)('--no-wait', '--flows', 'nowhere.mjs');
+    assert.equal(r.code, 0, r.stderr);
+    assert.match(r.stderr, /flows .*not sent/);
+  });
+
+  it('reads a finished run with --run as on the laptop, with the PR read over REST', () => {
+    const r = fakeGh({ ...cloud, FAKE_REPORT_SHA: SHA })('--run', '77');
+    assert.equal(r.code, 0, r.stderr);
+    assert.deepEqual(called(r.calls, 'pr '), []);
+    assert.equal(called(r.calls, 'run download 77').length, 1);
   });
 });

@@ -25,6 +25,8 @@ features:
   - 610-dependabot-exemption
   - 678-measurable-sizing
   - 745-notion-api-limits
+  - 766-cloud-rest-fallback
+  - 767-cloud-qa-merge
 ---
 
 # Capability: Platform
@@ -796,6 +798,50 @@ _From 745-notion-api-limits._
 ### 745-FR-008 — `query()` MUST send `page_size: 100` on every page request unless the caller supplies its own `page_size`; the block-children read in `level.mjs` MUST keep sending `page_size=100`.
 
 _From 745-notion-api-limits._
+
+### 766-FR-001 — With `CLAUDE_CODE_REMOTE=true`, `gh pr list|view|create|edit|ready|comment|checks` and `gh label create`, as the lifecycle scripts call them, MUST be answered through `gh api` REST calls with gh's output shape (`--json` fields, `--jq`/`-q`, the URL that `pr create` prints, gh's exit codes); any other gh command MUST run unchanged. Without it, gh MUST be called exactly as before.
+
+_From 766-cloud-rest-fallback._
+
+### 766-FR-002 — `lifecycle.mjs` MUST route its gh calls through FR-001 while still putting the original `gh …` command to the Bash gates first.
+
+_From 766-cloud-rest-fallback._
+
+### 766-FR-003 — `pr-lifecycle-gate.mjs` and `notion-sync.mjs` MUST read and write the PR through FR-001.
+
+_From 766-cloud-rest-fallback._
+
+### 766-FR-004 — `node .claude/scripts/gh.mjs <gh args>` MUST run one gh command through FR-001 (stdout, stderr and exit code passed through), and `pr checks --watch` MUST poll until no check is pending.
+
+_From 766-cloud-rest-fallback._
+
+### 766-FR-005 — `scripts/cloud-setup.sh` MUST put a Node 24 first on PATH and persist it for the session (one marked line in `~/.bashrc`, and in `CLAUDE_ENV_FILE` when set), reusing an installed Node 24 before installing one, and MUST install the chromium revision the installed `playwright-core` pins when it is missing; AGENTS.md "Cloud sessions" MUST say so and name `gh.mjs`.
+
+_From 766-cloud-rest-fallback._
+
+### 767-FR-001 — `.github/workflows/pr-qa.yml` MUST also run on `pull_request` (`ready_for_review`, `synchronize`, `reopened`) for non-draft PRs whose head is in this repository, with one concurrency group per PR that cancels older runs; `workflow_dispatch` stays.
+
+_From 767-cloud-qa-merge._
+
+### 767-FR-002 — The workflow MUST set `agent-review` on the tested head with its own `GITHUB_TOKEN` (`statuses: write`): pending at start, success only when the run passed with no blocking findings, failure otherwise.
+
+_From 767-cloud-qa-merge._
+
+### 767-FR-003 — With `CLAUDE_CODE_REMOTE=true`, `dispatch.mjs` MUST NOT call `workflow_dispatch`; it MUST read the PR over REST and find the `pull_request` run for the head SHA over REST.
+
+_From 767-cloud-qa-merge._
+
+### 767-FR-004 — With `CLAUDE_CODE_REMOTE=true`, `post.mjs` MUST NOT write the `agent-review` status: only the workflow sets it.
+
+_From 767-cloud-qa-merge._
+
+### 767-FR-005 — With `CLAUDE_CODE_REMOTE=true`, `lifecycle.mjs merge` MUST merge with `gh api -X PUT repos/{owner}/{repo}/pulls/<n>/merge -f merge_method=merge` and read and comment over REST, and `merge-gate.mjs` MUST read the PR over REST and apply the unchanged rule (agent-review success and every other check green); harness-eval cases MUST cover the cloud merge command.
+
+_From 767-cloud-qa-merge._
+
+### 767-FR-006 — AGENTS.md "Cloud sessions" MUST say QA starts by itself on ready or push and sets `agent-review`, and the merge goes over REST.
+
+_From 767-cloud-qa-merge._
 
 ## Retired
 

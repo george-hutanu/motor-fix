@@ -8,12 +8,18 @@ name: PR QA
 # suites are CI's (ci.yml runs them on the merge result), not run again here.
 # It is .claude/scripts/pr-test/run.mjs in --tree mode, not a copy of it.
 #
-# Dispatched by .claude/scripts/pr-test/dispatch.mjs (the pr-tester agent),
-# which waits for the run and downloads the artifact. The review, the
-# agent-review status and the PR description's Agent review section are posted
-# by that agent from the report: this workflow holds no secret and writes
-# nothing to the repository or the PR.
+# It starts by itself when a same-repository PR is marked ready, pushed to or
+# reopened (pull_request), and by hand from .claude/scripts/pr-test/dispatch.mjs
+# (workflow_dispatch, which carries the agent's flows). A cloud session cannot
+# dispatch, so it finds the pull_request run for its head over REST instead.
+# The run sets the agent-review status on the head it tested, with its own
+# GITHUB_TOKEN: pending at the start, success only when the run passed with no
+# blocking findings, failure otherwise. The pr-tester agent still reads the
+# report and posts the review and the PR description's Agent review section;
+# on the laptop its own verdict, posted after the run, is the newer status.
 on:
+  pull_request:
+    types: [ready_for_review, synchronize, reopened]
   workflow_dispatch:
     inputs:
       pr:
@@ -46,49 +52,67 @@ on:
         type: string
 
 # Quoted: unquoted, YAML reads ` #` as a comment and every run is titled "PR QA".
-run-name: 'PR QA #${{ inputs.pr }} at ${{ inputs.sha }} lap ${{ inputs.lap }} ${{ inputs.nonce }}'
+# On pull_request the inputs are empty, so each falls back to the event's value.
+run-name: "PR QA #${{ inputs.pr || github.event.pull_request.number }} at ${{ inputs.sha || github.event.pull_request.head.sha }} lap ${{ inputs.lap || '1' }} ${{ inputs.nonce }}"
 
 permissions:
   contents: read
+  statuses: write
 
-# No concurrency group: every run is a lap a dispatch.mjs is waiting on, and a
-# group would cancel a running or pending one (GitHub keeps one pending per
-# group) and turn that agent's lap into a run with no verdict. A run on an
-# older head only costs runner minutes; the agent reads the report for its SHA.
+# One run per PR: a newer head, or a lap dispatched after the run the push
+# started, cancels the older one. A cancelled run writes no final status; the
+# newer run sets pending on its own head.
+concurrency:
+  group: pr-qa-${{ inputs.pr || github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   qa:
     name: PR QA
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # A draft is not ready for QA, and a fork's PR gets no write token.
+    if: github.event_name == 'workflow_dispatch' || (!github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository)
     env:
-      PR: ${{ inputs.pr }}
-      SHA: ${{ inputs.sha }}
-      LAP: ${{ inputs.lap }}
-      ROUTES: ${{ inputs.routes }}
+      PR: ${{ inputs.pr || github.event.pull_request.number }}
+      SHA: ${{ inputs.sha || github.event.pull_request.head.sha }}
+      LAP: ${{ inputs.lap || '1' }}
+      ROUTES: ${{ inputs.routes || '/,/cockpit' }}
       FLOWS: ${{ inputs.flows }}
       # The runner is the slot: run.mjs does not queue on scripts/heavy.sh here.
       HEAVY_HELD: '1'
       TZ: UTC
     steps:
       - name: The inputs are a PR number, a full commit SHA, a lap and plain routes
+        id: inputs
         run: |
           [[ "$PR" =~ ^[1-9][0-9]*$ ]] || { echo "::error::pr must be a PR number"; exit 1; }
           [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::sha must be the full 40-character head commit"; exit 1; }
           [[ "$LAP" =~ ^[1-9][0-9]*$ ]] || { echo "::error::lap must be a positive number"; exit 1; }
           [[ "$ROUTES" =~ ^/[A-Za-z0-9/_.,@:-]*$ ]] || { echo "::error::routes must be comma-separated paths, each path[@role][:status]"; exit 1; }
 
-      # The tester comes from the ref this run was dispatched on (main), so a
-      # PR branched before a tester change is tested by today's tester.
+      - name: agent-review pending on the head under test
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api -X POST "repos/$REPO/statuses/$SHA" -f state=pending -f context=agent-review \
+            -f description="PR QA lap $LAP running" -f target_url="$RUN_URL" > /dev/null
+
+      # The tester comes from the ref this run was dispatched on (main), or
+      # the PR's base branch on pull_request, so a PR branched before a tester
+      # change is tested by today's tester and never by its own.
       - uses: actions/checkout@v7
         with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || '' }}
           path: tester
           sparse-checkout: .claude/scripts
           persist-credentials: false
 
       - uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.sha }}
+          ref: ${{ inputs.sha || github.event.pull_request.head.sha }}
           path: pr
           fetch-depth: 0
           persist-credentials: false
@@ -159,7 +183,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: pr-qa-${{ inputs.pr }}
+          name: pr-qa-${{ inputs.pr || github.event.pull_request.number }}
           path: ${{ runner.temp }}/pr-qa
           retention-days: 7
           if-no-files-found: error
@@ -168,3 +192,16 @@ jobs:
         env:
           CODE: ${{ steps.run.outputs.code }}
         run: exit "${CODE:-1}"
+
+      # Not on cancel: a newer run on this PR owns the status then.
+      - name: agent-review success or failure on the head under test
+        if: ${{ !cancelled() && steps.inputs.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          STATE: ${{ job.status == 'success' && steps.run.outputs.code == '0' && 'success' || 'failure' }}
+        run: |
+          if [ "$STATE" = success ]; then desc="PR QA lap $LAP passed"; else desc="PR QA lap $LAP: blocking findings or a failed step"; fi
+          gh api -X POST "repos/$REPO/statuses/$SHA" -f state="$STATE" -f context=agent-review \
+            -f description="$desc" -f target_url="$RUN_URL" > /dev/null

@@ -94,7 +94,10 @@ never waits on either: a lap that needs a new run dispatches it and ends.
 5. On `agent-review` success with every other check green: merge `origin/main`
    in again if it moved (a new head needs a new tester run), write
    `specs/<feature>/finish-comment.md` (`speckit-notion-sync` §2e) when there
-   is something to record, then `node .claude/scripts/lifecycle.mjs merge --pr <n>`.
+   is something to record, then `node .claude/scripts/lifecycle.mjs merge --pr <n>`
+   (in a cloud session it merges over REST, `gh api -X PUT …/pulls/<n>/merge`;
+   never merge past a blocking finding of the tester's, which the workflow's
+   status there does not carry).
    It refuses exactly when the merge gate does (its message is the `fix`);
    otherwise it merges, runs Notion `finish`, posts one finish comment on the
    merged PR, restores `notion-sync.md` and deletes `handoff.md`. On `left`,
