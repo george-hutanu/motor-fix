@@ -12,11 +12,11 @@
 **Goal**: ledgers carry level, phase and subagent tokens; `--by-level` reports them.
 **Independent test**: fixture session transcript plus `subagents/` folder with a streamed agent transcript and meta file; the hook's merge and `--by-level` totals equal the fixture sums.
 
-- [ ] T002 [US1] Write failing specs in `.claude/scripts/telemetry.spec.mjs`: level/phase buckets (a promotion mid-run splits tokens without rewriting the earlier bucket), subagent fold (streamed `message.id` counted once, `agentType` from meta, `unknown` when meta is missing, partial trailing line left for the next Stop, same id in two transcripts counted in both), `--by-level` report per level/phase/feature, ledgers without a level under unknown level, `too heavy` marks listed, exit 0 with no ledgers, Stop hook exits 0 on every failure path and records counts only (FR-001, FR-002, FR-003, FR-004, FR-015)
-- [ ] T003 [US1] Extend `emptyRecord` and add `mergeTranscript(record, text, { bucket, agentType, transcript })` in `.claude/scripts/lib/telemetry.mjs` (new fields `level`, `phase`, `buckets`, `subagents`, `subagent_tokens`, `too_heavy` per data-model.md) (FR-001, FR-002)
-- [ ] T004 [US1] Edit `.claude/hooks/session-telemetry.mjs`: compute the (level, phase) bucket per Stop, fold the session transcript and each `<session>/subagents/agent-*.jsonl` from its own byte offset, fold `.specify/telemetry/pending.json` marks into `too_heavy` and delete the file, all inside the existing exit-0 try (FR-001, FR-002, FR-004)
-- [ ] T005 [US1] Add `byLevel(records)` and the `--by-level` flag to `.claude/scripts/telemetry.mjs` (FR-003)
-- [ ] T006 [US1] Run `node .claude/scripts/doctor.mjs --bless-hooks` after reviewing the T004 diff of `.claude/hooks/session-telemetry.mjs` (FR-004, FR-015)
+- [x] T002 [US1] Write failing specs in `.claude/scripts/telemetry.spec.mjs`: level/phase buckets (a promotion mid-run splits tokens without rewriting the earlier bucket), subagent fold (streamed `message.id` counted once, `agentType` from meta, `unknown` when meta is missing, partial trailing line left for the next Stop, same id in two transcripts counted in both), `--by-level` report per level/phase/feature, ledgers without a level under unknown level, `too heavy` marks listed, exit 0 with no ledgers, Stop hook exits 0 on every failure path and records counts only (FR-001, FR-002, FR-003, FR-004, FR-015)
+- [x] T003 [US1] Extend `emptyRecord` and add `mergeTranscript(record, text, { bucket, agentType, transcript })` in `.claude/scripts/lib/telemetry.mjs` (new fields `level`, `phase`, `buckets`, `subagents`, `subagent_tokens`, `too_heavy` per data-model.md) (FR-001, FR-002)
+- [x] T004 [US1] Edit `.claude/hooks/session-telemetry.mjs`: compute the (level, phase) bucket per Stop, fold the session transcript and each `<session>/subagents/agent-*.jsonl` from its own byte offset, fold `.specify/telemetry/pending.json` marks into `too_heavy` and delete the file, all inside the existing exit-0 try (FR-001, FR-002, FR-004)
+- [x] T005 [US1] Add `byLevel(records)` and the `--by-level` flag to `.claude/scripts/telemetry.mjs` (FR-003)
+- [x] T006 [US1] Run `node .claude/scripts/doctor.mjs --bless-hooks` after reviewing the T004 diff of `.claude/hooks/session-telemetry.mjs` (FR-004, FR-015)
 
 **Checkpoint**: US1 specs green; MVP.
 
