@@ -33,3 +33,15 @@ Start: main checkout dirty (.env.bak) → own worktree `.worktrees/750-ci-speed`
 
 ## 8. Analyze
 - artifact-lint: 10 fr-untasked + delta-missing. Remediated: FR ids on every task; Spec Delta under capability `platform` (Adds FR-001–FR-010). Re-run: 0 errors, delta merges.
+
+## 9. Tests
+- ci-workflow.spec.ts (new) and release-workflow.spec.ts extended: 24 red before implementation; the deployed Playwright case passed already (it pins today's behaviour).
+
+## 10. Implement
+- 3 slices: ci.yml six jobs + Playwright 4 workers (471e43a), release queue + docker cache (7f5d39e), docs (ef6ea90). pr-title-workflow.adversary.spec.ts updated to the new job ids (pinned the old list).
+
+## 12. Harden
+- artifact-lint 0/0, diff-audit 0/0; mutation n/a (no product source changed; CI-only anyway).
+- test-adversary: 63 tests, 0 failing (2 Biome template warnings fixed without suppression).
+- code-reviewer BLOCK → fixed: HIGH live.spec offline test changed the shared seeded driver's language for ~50 s, racing parallel sign-ins → own signed-up account (≈6 real sign-ups per run, under the 10/h limit); MEDIUM CI_WORKERS renamed WORKERS (applies locally too). LOW kept: the adversary spec overlaps ci-workflow.spec by design (independent view).
+- Checks job serial chain measured 130 s on run 37491151921.

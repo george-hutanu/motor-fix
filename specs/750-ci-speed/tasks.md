@@ -13,7 +13,7 @@
 ## Phase 2: Playwright config (US1, P1)
 
 - [X] T004 [US1] Edit `apps/web-e2e/playwright.config.mts`: when not `deployed`, set `workers: 4` and `failOnFlakyTests: true` after the preset spread; deployed keeps the preset. T002 passes. (FR-001, FR-010)
-- [ ] T005 [US1] Run the e2e suite in parallel, read the report, and fix in `apps/web-e2e/` any test that fails only in parallel (shared account, mailbox, OpenID stand-in, port); no retry-masking. (FR-001)
+- [X] T005 [US1] Run the e2e suite in parallel, read the report, and fix in `apps/web-e2e/` any test that fails only in parallel (shared account, mailbox, OpenID stand-in, port); no retry-masking. (FR-001)
 
 ## Phase 3: ci.yml (US2, P1)
 
