@@ -39,3 +39,11 @@ Hooks after specify: `notion-sync start` (ST-492 To do → Planning, EP-1 unchan
 ## 4. Clarify
 
 - spec-challenger: 5 findings, all answered with its recommendation (focus only when on the panel; per-press catalogue failure; mirror alert markup; remove console.error; reflectComponentType check). Spec Clarifications section added; FR-002/007/008/009 and one edge case edited.
+
+## 5. Plan
+
+- before_plan hooks: design check skipped (design.md checked 2026-10-06, current); nothing to commit.
+- `plan.md` written from the template: Technical Context cited from `package.json`, `nx.json`, `libs/overlays/{jest.config.cts,tsconfig*.json}`, `jest.preset.cjs`, the stryker floors; Constitution Check passes on every gate, no Complexity Tracking entry.
+- Decisions: `failed` signal beside `task` in `panel.ts` (loading | failed | shown), one `load()` shared by the constructor and `retry()`, `console.error` removed, a synchronous throw and a non-component resolution are failures; message reuses `shell.form.problem.error`, button label is a new `shell.overlay.retry` (each section owns its retry label, as `notifications.retry` and `chart.retry`); the error block is three template lines in the panel; catalogue: fourth button in `sample-page.ts`'s overlay row with a per-press fail-once loader (`cockpit.overlay.openFailing`, `cockpit.overlay.failing`); one Playwright test in `apps/web-e2e/src/overlays.spec.ts`. The two adversary tests pinning the busy-for-ever state (`overlays.adversary.spec.ts:319`, `panel.adversary.spec.ts:559`) are rewritten.
+- No research.md, data-model.md, contracts/ or quickstart.md (no open unknown, no entity, no API), as ST-157 and ST-159.
+- after_plan hooks: commit (below); agent-context update skipped (CLAUDE.local.md is ratcheted and the Active plan line is the owner's).
