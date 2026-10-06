@@ -47,6 +47,14 @@ The harness records a level sized "for the next feature" together with the momen
 
 - **Waiting level**: the `level`, `level_for: "next"` and `level_at` trio in `.specify/feature.json`, written by `/speckit-size` for the feature about to be created and consumed once by the first pointer move.
 
+## Spec Delta
+
+### Capability: `platform`
+
+- **Adds**: FR-001, FR-002, FR-003, FR-004
+- **Modifies**: none
+- **Removes**: none
+
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
