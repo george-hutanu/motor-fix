@@ -25,13 +25,11 @@ import { characters } from '../sign-in/sign-up';
 
 type Kind = 'mechanic' | 'receptionist';
 
-// The open invite a refused send names, read from the problem's extension.
-function openInvite(error: unknown): string | null {
-  if (!(error instanceof HttpErrorResponse)) return null;
-  const body = error.error as { code?: unknown; inviteId?: unknown } | null;
-  return body?.code === 'invite_open' && typeof body.inviteId === 'string'
-    ? body.inviteId
-    : null;
+// The code of a refused send, and the open invite it names, if any.
+function refusal(error: unknown): { code?: unknown; inviteId?: unknown } {
+  return error instanceof HttpErrorResponse && error.error
+    ? (error.error as { code?: unknown; inviteId?: unknown })
+    : {};
 }
 
 // "Invită în echipă": the owner invites a mechanic or a receptionist by
@@ -112,7 +110,9 @@ function openInvite(error: unknown): string | null {
         </div>
         <fieldset>
           <legend>{{ 'garage.invite.kind' | t }}</legend>
-          <label class="choice"><input type="radio" formControlName="kind" value="mechanic" />{{ 'garage.invite.mechanic' | t }}</label>
+          @if (mechanics()) {
+            <label class="choice"><input type="radio" formControlName="kind" value="mechanic" />{{ 'garage.invite.mechanic' | t }}</label>
+          }
           <label class="choice"><input type="radio" formControlName="kind" value="receptionist" />{{ 'garage.invite.receptionist' | t }}</label>
         </fieldset>
         @if (form.controls.kind.value === 'mechanic') {
@@ -150,6 +150,7 @@ export class InviteStaff {
   protected readonly outcome = signal<StaffInviteSentDto | null>(null);
   protected readonly inviteId = signal<string | null>(null);
   protected readonly resending = signal(false);
+  protected readonly mechanics = signal(true);
 
   protected readonly form = new FormGroup({
     canAnswerQuotes: new FormControl(false, { nonNullable: true }),
@@ -178,7 +179,17 @@ export class InviteStaff {
           garageId: this.task.data.garageId,
         });
       } catch (error) {
-        this.inviteId.set(openInvite(error));
+        const { code, inviteId } = refusal(error);
+        this.inviteId.set(
+          code === 'invite_open' && typeof inviteId === 'string'
+            ? inviteId
+            : null,
+        );
+        // The garage has mechanics switched off: only a receptionist is left.
+        if (code === 'feature_off') {
+          this.mechanics.set(false);
+          this.form.controls.kind.setValue('receptionist');
+        }
         throw error;
       }
     },

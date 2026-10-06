@@ -248,6 +248,26 @@ describe('the invite dialog', () => {
     expect(text()).toContain('Invitația a fost trimisă.');
   });
 
+  // @traces 131-FR-011
+  it('stops offering a mechanic once the garage has mechanics switched off', async () => {
+    await open();
+    send.mockRejectedValueOnce(
+      new HttpErrorResponse({
+        error: { code: 'feature_off', message: 'off' },
+        status: 404,
+      }),
+    );
+    await fill();
+
+    button('Trimite invitația')?.click();
+    await settle();
+
+    expect(text()).toContain('Invitarea mecanicilor nu este disponibilă acum.');
+    expect(has('Mecanic')).toBe(false);
+    expect(field('Recepționer').checked).toBe(true);
+    for (const label of TICKS) expect(has(label)).toBe(false);
+  });
+
   it("says so when the person is already in the garage's team", async () => {
     await open();
     send.mockRejectedValueOnce(

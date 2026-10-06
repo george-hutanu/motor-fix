@@ -64,3 +64,7 @@ Parallel: T001/T002; T003..T005; T009/T010; T014/T015.
 ## Strategy
 
 MVP is US1 plus US2 (one flow, SC-002). US3 and US4 add to the same service afterwards. Tests are written and seen failing before each implementation task.
+
+## Phase 8: Convergence
+
+- [X] T023 In `apps/web/src/app/dashboard/invite-staff.ts`, on a `feature_off` answer drop the mechanic choice and select receptionist, so mechanics are not offered while the garage has them switched off per FR-011 (partial)
