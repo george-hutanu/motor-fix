@@ -237,8 +237,19 @@ that variable, so the laptop behaves as before.
   in `.github/workflows/ci.yml` lists the end-to-end set). Network level
   Trusted, or a custom list that allows `api.notion.com` and
   `api.typesafe.ai`.
+- **Node and Playwright.** The image puts Node 22 first on PATH;
+  `cloud-setup.sh` puts an installed Node 24 first instead (one marked line
+  at the top of `~/.bashrc`, and in `CLAUDE_ENV_FILE` when set) and installs
+  the chromium revision the installed `playwright-core` pins.
 - **GitHub.** `GH_TOKEN` and `GITHUB_TOKEN` hold the proxy's placeholder
-  `proxy-injected`; nothing overwrites them, and no gh login is needed.
+  `proxy-injected`; nothing overwrites them, and no gh login is needed. The
+  proxy answers GraphQL with 403, so every `gh pr …` fails; REST (`gh api`)
+  works. `lifecycle.mjs`, the `stop:pr-lifecycle` gate and `notion-sync.mjs`
+  fall back to REST on their own (`.claude/scripts/lib/gh-rest.mjs`); by
+  hand, run `node .claude/scripts/gh.mjs` in place of `gh` for `pr
+  list|view|create|edit|ready|comment|checks` (`--watch` too) and `label
+  create`. Starting PR QA and merging stay where they are: a cloud story
+  hands off at ready with no QA run, and the tail runs from the laptop.
 - **Single-repo sessions only:** a multi-repo session loads no hooks, so no
   gate would run.
 - **One story per cloud session.** Never arm `watch.mjs` there; the

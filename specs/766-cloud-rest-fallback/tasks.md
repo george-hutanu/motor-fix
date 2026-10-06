@@ -19,19 +19,19 @@ description: "Tasks for ST-766 Make the cloud session setup and lifecycle script
 
 ## Phase 1: Tests first
 
-- [ ] T001 [P] [US1] New `.claude/scripts/lib/gh-rest.spec.mjs`: laptop passthrough; `pr list --head --jq`; `pr view` by branch, number, URL and current branch with the GraphQL field shapes (state, mergeable, labels, author, commits, comments over pages, statusCheckRollup); no PR → gh's message, exit 1; `pr create` prints the URL and labels the PR; `pr edit` body/title/add/remove (absent label ignored); `pr ready` uses the ccr route; `pr comment`; `label create` with and without `--force` on 422; `pr checks` buckets, exit 8/1/0, "no checks reported", `--json name,bucket --jq`, `--watch` polling; untranslated commands pass through; `ghSync` throws with stderr; `jq` path vs binary. CLI `gh.mjs` passes stdout, stderr, code.
-- [ ] T002 [P] [US1] `.claude/scripts/lifecycle.spec.mjs`: with `CLAUDE_CODE_REMOTE=true`, `open`, `ready` and `handoff --restore` make only `gh api` calls and the gates still see `gh pr …`; without it, unchanged.
-- [ ] T003 [P] [US1] `.claude/hooks/pr-lifecycle-gate.spec.mjs` and `.claude/scripts/notion-sync.spec.mjs`: `readPr` returns `{pr}`, `{pr:null}` on no PR, `null` on another error, through an injected sync; in the cloud it reads REST; `defaultGh` goes through the REST layer and returns "" on failure.
-- [ ] T004 [P] [US2] `.claude/scripts/cloud-setup.spec.mjs`: uid-independent (stub `id`); a Node 24 under `/opt/nvm`-like root behind a Node 22 → no install, PATH line in `~/.bashrc` and `CLAUDE_ENV_FILE`, second run keeps one line; installer leaves Node 24 behind → found, exit 0.
-- [ ] T005 [P] [US2] `.claude/scripts/cloud-setup.spec.mjs`: pinned chromium missing → `npx playwright install chromium` with `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` empty; present → nothing.
+- [x] T001 [P] [US1] New `.claude/scripts/lib/gh-rest.spec.mjs`: laptop passthrough; `pr list --head --jq`; `pr view` by branch, number, URL and current branch with the GraphQL field shapes (state, mergeable, labels, author, commits, comments over pages, statusCheckRollup); no PR → gh's message, exit 1; `pr create` prints the URL and labels the PR; `pr edit` body/title/add/remove (absent label ignored); `pr ready` uses the ccr route; `pr comment`; `label create` with and without `--force` on 422; `pr checks` buckets, exit 8/1/0, "no checks reported", `--json name,bucket --jq`, `--watch` polling; untranslated commands pass through; `ghSync` throws with stderr; `jq` path vs binary. CLI `gh.mjs` passes stdout, stderr, code.
+- [x] T002 [P] [US1] `.claude/scripts/lifecycle.spec.mjs`: with `CLAUDE_CODE_REMOTE=true`, `open`, `ready` and `handoff --restore` make only `gh api` calls and the gates still see `gh pr …`; without it, unchanged.
+- [x] T003 [P] [US1] `.claude/hooks/pr-lifecycle-gate.spec.mjs` and `.claude/scripts/notion-sync.spec.mjs`: `readPr` returns `{pr}`, `{pr:null}` on no PR, `null` on another error, through an injected sync; in the cloud it reads REST; `defaultGh` goes through the REST layer and returns "" on failure.
+- [x] T004 [P] [US2] `.claude/scripts/cloud-setup.spec.mjs`: uid-independent (stub `id`); a Node 24 under `/opt/nvm`-like root behind a Node 22 → no install, PATH line in `~/.bashrc` and `CLAUDE_ENV_FILE`, second run keeps one line; installer leaves Node 24 behind → found, exit 0.
+- [x] T005 [P] [US2] `.claude/scripts/cloud-setup.spec.mjs`: pinned chromium missing → `npx playwright install chromium` with `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` empty; present → nothing.
 
 ## Phase 2: Implement
 
-- [ ] T006 [US1] `.claude/scripts/lib/gh-rest.mjs` and `.claude/scripts/gh.mjs`; T001 green.
-- [ ] T007 [US1] `.claude/scripts/lifecycle.mjs` `exec` routes gh through `ghRun` after its gates; T002 green.
-- [ ] T008 [US1] `.claude/hooks/pr-lifecycle-gate.mjs` `readPr` via `ghSync`; `.claude/scripts/notion-sync.mjs` `defaultGh` via `ghSync`; T003 green; read the gate's diff, `doctor.mjs --bless-hooks`.
-- [ ] T009 [US2] `scripts/cloud-setup.sh` Node 24 lookup and PATH persistence; T004 green.
-- [ ] T010 [US2] `scripts/cloud-setup.sh` chromium; T005 green; AGENTS.md "Cloud sessions".
+- [x] T006 [US1] `.claude/scripts/lib/gh-rest.mjs` and `.claude/scripts/gh.mjs`; T001 green.
+- [x] T007 [US1] `.claude/scripts/lifecycle.mjs` `exec` routes gh through `ghRun` after its gates; T002 green.
+- [x] T008 [US1] `.claude/hooks/pr-lifecycle-gate.mjs` `readPr` via `ghSync`; `.claude/scripts/notion-sync.mjs` `defaultGh` via `ghSync`; T003 green; read the gate's diff, `doctor.mjs --bless-hooks`.
+- [x] T009 [US2] `scripts/cloud-setup.sh` Node 24 lookup and PATH persistence; T004 green.
+- [x] T010 [US2] `scripts/cloud-setup.sh` chromium; T005 green; AGENTS.md "Cloud sessions".
 
 ## Phase 3: Polish
 
