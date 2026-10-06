@@ -615,3 +615,78 @@ describe('temp files, the token stop, reruns and the finish order', () => {
     assert.ok(restore > -1 && restore < comment, h.calls.join('\n'));
   });
 });
+
+describe('in a cloud session, where GitHub answers GraphQL with 403', () => {
+  const CLOUD_ENV = { GH_TOKEN: 'proxy-injected', CLAUDE_CODE_REMOTE: 'true' };
+  const API = 'gh api repos/{owner}/{repo}/';
+  const pull = { number: 141, title: TITLE, html_url: PR_URL, state: 'open', draft: true, merged_at: null, head: { ref: BRANCH, sha: 'abc' }, labels: [] };
+  const json = (value) => ({ stdout: JSON.stringify(value) });
+  const graphql = (calls) => calls.filter((c) => /^gh (pr|label) /.test(c));
+  beforeEach(() => fixture());
+
+  it('open lists, labels and opens the draft through REST, and the gates still judge gh pr create', () => {
+    const h = harness({
+      env: CLOUD_ENV,
+      answers: [
+        ['git rev-list --count origin/main..HEAD', { stdout: '1\n' }],
+        [`${API}pulls?head={owner}:${BRANCH}&state=open`, json([[]])],
+        [`${API}labels -X POST`, json({})],
+        [`${API}pulls -X POST`, json(pull)],
+        [`${API}issues/141/labels -X POST`, json([])],
+      ],
+    });
+    const result = step(['open', '--title', TITLE], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(result.pr, 141);
+    assert.deepEqual(graphql(h.calls), []);
+    assert.ok(h.gated.some((c) => c.startsWith('gh pr create --draft')));
+    assert.ok(h.gated.some((c) => c.startsWith('gh pr list --head')));
+  });
+
+  it('ready publishes the body, marks ready and posts the note through REST', () => {
+    let i = 0;
+    const h = harness({
+      env: CLOUD_ENV,
+      answers: [
+        ['git diff --cached --quiet', () => ({ code: [1, 1][i++] ?? 0 })],
+        [`${API}pulls?head={owner}:${BRANCH}&state=all`, json([[pull]])],
+        [`${API}pulls/141 -X GET`, json(pull)],
+        [`${API}pulls/141 -X PATCH`, json(pull)],
+        [`${API}pulls/141/ccr/ready_for_review -X POST`, json({})],
+        [`${API}issues/141/comments -X POST`, json({})],
+      ],
+    });
+    writeFileSync(join(repo, 'body.md'), '## Why\n\nfilled\n');
+    const result = step(['ready', '--body-file', join(repo, 'body.md'), '--decisions', 'none'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.deepEqual(graphql(h.calls), []);
+    const api = h.calls.filter((c) => c.startsWith('gh api'));
+    assert.ok(api.some((c) => c.startsWith(`${API}pulls/141 -X PATCH`)));
+    assert.ok(api.some((c) => c.startsWith(`${API}pulls/141/ccr/ready_for_review -X POST`)));
+    assert.ok(api.some((c) => c.startsWith(`${API}issues/141/comments -X POST`)));
+    for (const asked of ['gh pr ready 141', `gh pr edit 141 --body-file ${join(repo, 'body.md')}`]) assert.ok(h.gated.includes(asked), asked);
+    assert.ok(existsSync(join(featureDir, 'handoff.md')));
+  });
+
+  it('handoff --restore reads the comments through REST', () => {
+    const MARK = '<!-- speckit-handoff -->';
+    const h = harness({
+      env: CLOUD_ENV,
+      answers: [
+        [`${API}pulls/141 -X GET`, json(pull)],
+        [`${API}issues/141/comments?per_page=100 -X GET`, json([[{ user: { login: 'george-hutanu' }, body: `${MARK}\n# Hand-off\n- QA run: 3\n`, created_at: '2026-10-06T10:00:00Z' }]])],
+      ],
+    });
+    const result = step(['handoff', '--restore', '--pr', '141'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(readFileSync(join(featureDir, 'handoff.md'), 'utf8'), '# Hand-off\n- QA run: 3\n');
+    assert.deepEqual(graphql(h.calls), []);
+  });
+
+  it('on the laptop the same steps call gh pr as before', () => {
+    const h = harness({ answers: [['git rev-list --count origin/main..HEAD', { stdout: '1\n' }], ['gh pr list', { stdout: '\n' }]] });
+    step(['open', '--title', TITLE], h.io);
+    assert.ok(h.calls.some((c) => c.startsWith('gh pr create --draft')));
+    assert.ok(!h.calls.some((c) => c.startsWith('gh api')));
+  });
+});
