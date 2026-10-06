@@ -32,6 +32,8 @@ export const TABLET = '(min-width: 768px)';
 const COMPUTER = `${TABLET} and (pointer: fine)`;
 
 let questions = 0;
+// Each open task's history entry carries its number; a later task's is higher.
+let entries = 0;
 
 // The panel every task is shown in: the kit's dialog, right-hand sheet or, on
 // a phone, bottom sheet surface (with a grip to drag it down), a header with
@@ -268,6 +270,9 @@ export class OverlayPanel {
       ? null
       : 'right';
   protected readonly questionId = `mf-overlay-question-${++questions}`;
+  private readonly entry = ++entries;
+  // A close waiting for the browser to step back over this task's entry.
+  private leaving: { result?: unknown } | null = null;
   protected readonly asking = signal(false);
   protected readonly task = signal<Type<unknown> | null>(null);
   protected changed = false;
@@ -281,7 +286,7 @@ export class OverlayPanel {
   protected readonly visibleHeight = signal<string | null>(null);
 
   private readonly taskApi: OverlayTask<unknown, unknown> = {
-    close: (result) => this.dialog.close(result),
+    close: (result) => this.close(result),
     data: this.context.data,
     markUnchanged: () => {
       this.changed = false;
@@ -326,6 +331,33 @@ export class OverlayPanel {
     }
     this.afterRender(() => this.focusStart());
     if (this.context.sheet) this.followVisibleArea();
+    this.followHistory();
+  }
+
+  // One same-address entry per open task, so the browser's Back closes the
+  // top task instead of leaving the page. The router ignores it: the address
+  // does not change, and the router's own state is copied into it.
+  private followHistory() {
+    const window = this.window;
+    if (!window) return;
+    const history = window.history;
+    const mark = () =>
+      history.pushState({ ...history.state, mfOverlay: this.entry }, '');
+    const popped = () => {
+      if ((history.state?.mfOverlay ?? 0) >= this.entry) return;
+      if (this.leaving) {
+        this.dialog.close(this.leaving.result);
+        return;
+      }
+      if (!this.asking()) this.dismiss();
+      // Asking instead of closing: the entry comes back, so Back asks again.
+      if (this.asking()) mark();
+    };
+    mark();
+    window.addEventListener('popstate', popped);
+    inject(DestroyRef).onDestroy(() =>
+      window.removeEventListener('popstate', popped),
+    );
   }
 
   // One pointer drags at a time; a second finger is ignored.
@@ -415,8 +447,18 @@ export class OverlayPanel {
     });
   }
 
-  protected close() {
-    this.dialog.close();
+  // Steps back over this task's entry first and closes once the browser has,
+  // so an opener that navigates on the result is not undone by that step.
+  // An entry no longer on top (the page moved on) is left where it is.
+  protected close(result?: unknown) {
+    if (this.leaving) return;
+    const history = this.window?.history;
+    if (history?.state?.mfOverlay !== this.entry) {
+      this.dialog.close(result);
+      return;
+    }
+    this.leaving = { result };
+    history.back();
   }
 
   private focusStart() {

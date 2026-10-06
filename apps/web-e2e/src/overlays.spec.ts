@@ -49,6 +49,14 @@ async function openCockpit(page: Page, language: Language = 'ro') {
   await page.waitForLoadState('networkidle');
 }
 
+// The cockpit reached from Home, so one Back too many leaves it.
+async function fromHome(page: Page) {
+  await page.goto('/ro');
+  const home = page.url();
+  await openCockpit(page);
+  return home;
+}
+
 const opener = (page: Page, key: string, language: Language = 'ro') =>
   page.getByRole('button', { exact: true, name: t(language, key) });
 
@@ -119,7 +127,7 @@ test.describe('a task over the page', () => {
     test(`closes with ${how}, leaving the address, the scroll and the focus as they were`, async ({
       page,
     }) => {
-      await openCockpit(page);
+      const home = await fromHome(page);
       const button = opener(page, 'cockpit.overlay.openDialog');
       await button.scrollIntoViewIfNeeded();
       await page.evaluate(() => window.scrollBy(0, 120));
@@ -142,6 +150,9 @@ test.describe('a task over the page', () => {
       await expect(page.locator('.mf-overlay-result')).toContainText(
         t('ro', 'cockpit.overlay.results.cancelled'),
       );
+
+      await page.goBack();
+      await expect(page).toHaveURL(home);
     });
   }
 
@@ -275,6 +286,117 @@ test.describe('stacked tasks', () => {
     await page.keyboard.press('Escape');
     await expect(task(page)).toHaveCount(1);
     expect(await focusedInsideTask(page)).toBe(true);
+  });
+});
+
+test.describe('the browser’s Back button', () => {
+  test('closes the task and keeps the page, its address, scroll and focus', async ({
+    page,
+  }) => {
+    await openCockpit(page);
+    const button = opener(page, 'cockpit.overlay.openDialog');
+    await button.scrollIntoViewIfNeeded();
+    await page.evaluate(() => window.scrollBy(0, 120));
+    const address = page.url();
+    const before = await scrollY(page);
+    const result = page.locator('.mf-overlay-result');
+    await result.evaluate((node) => {
+      (globalThis as { pageNode?: Element }).pageNode = node;
+    });
+    await button.click();
+    await shown(page);
+
+    await page.goBack();
+
+    await expect(task(page)).toHaveCount(0);
+    expect(page.url()).toBe(address);
+    expect(await scrollY(page)).toBe(before);
+    await expect(button).toBeFocused();
+    await expect(result).toContainText(
+      t('ro', 'cockpit.overlay.results.cancelled'),
+    );
+    expect(
+      await result.evaluate(
+        (node) => (globalThis as { pageNode?: Element }).pageNode === node,
+      ),
+    ).toBe(true);
+
+    await page.goForward();
+    await expect(task(page)).toHaveCount(0);
+    expect(page.url()).toBe(address);
+  });
+
+  test('closes stacked tasks one at a time, the top one first', async ({
+    page,
+  }) => {
+    await openCockpit(page);
+    await open(page);
+    await task(page)
+      .getByRole('button', {
+        exact: true,
+        name: t('ro', 'cockpit.overlay.again'),
+      })
+      .click();
+    await expect(task(page)).toHaveCount(2);
+
+    await page.goBack();
+    await expect(task(page)).toHaveCount(1);
+    expect(await focusedInsideTask(page)).toBe(true);
+
+    await page.goBack();
+    await expect(task(page)).toHaveCount(0);
+  });
+
+  test('after a task closes with its result, one Back leaves the page', async ({
+    page,
+  }) => {
+    const home = await fromHome(page);
+    await open(page);
+    await task(page)
+      .getByRole('button', {
+        exact: true,
+        name: t('ro', 'cockpit.overlay.done'),
+      })
+      .click();
+    await expect(task(page)).toHaveCount(0);
+
+    await page.goBack();
+    await expect(page).toHaveURL(home);
+  });
+
+  test('asks first on a changed task, again on each Back, until kept or discarded', async ({
+    page,
+  }) => {
+    const home = await fromHome(page);
+    await open(page);
+    await field(page).fill('B 123 ABC');
+    const question = page.getByRole('alertdialog', {
+      name: t('ro', 'shell.overlay.discard.question'),
+    });
+
+    await page.goBack();
+    await expect(question).toBeVisible();
+    await page.goBack();
+    await expect(question).toBeVisible();
+    await expect(task(page)).toHaveCount(1);
+
+    await question
+      .getByRole('button', { name: t('ro', 'shell.overlay.discard.keep') })
+      .click();
+    await expect(question).toHaveCount(0);
+    await expect(field(page)).toHaveValue('B 123 ABC');
+
+    await page.goBack();
+    await question
+      .getByRole('button', { name: t('ro', 'shell.overlay.discard.discard') })
+      .click();
+    await expect(task(page)).toHaveCount(0);
+    await expect(page.locator('.mf-overlay-result')).toContainText(
+      t('ro', 'cockpit.overlay.results.cancelled'),
+    );
+
+    await page.goBack();
+    await expect(page).toHaveURL(home);
   });
 });
 

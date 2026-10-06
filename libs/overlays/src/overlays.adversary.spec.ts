@@ -470,20 +470,21 @@ describe('Overlays adversary: focus and history', () => {
     expect(document.activeElement).not.toBe(opener);
   });
 
-  it('adds no history entry across open, stack, and close', async () => {
+  it('adds one entry per open task and leaves none behind across open, stack, and close', async () => {
+    history.pushState({ page: 'here' }, '');
     const length = history.length;
     const href = location.href;
     await openTask();
     click('#again');
     await settle();
-    expect(history.length).toBe(length);
+    expect(history.length).toBe(length + 2);
 
     pressEscape();
     await settle();
     pressEscape();
     await settle();
 
-    expect(history.length).toBe(length);
+    expect(history.state).toEqual({ page: 'here' });
     expect(location.href).toBe(href);
   });
 });
