@@ -1,0 +1,11 @@
+# Notion sync — 539-public-web-url-boot
+
+- 2026-10-07 · start · ST-539 · To do → Planning
+- 2026-10-07 · start · timeline · no row for ST-539
+- 2026-10-07 · start · EP-1 · In progress (unchanged)
+- 2026-10-07 · labels · PR #176 · planning
+- 2026-10-07 · ready · Foundations · −ST-539, review: ST-776, ST-682, ST-670, ST-604, ST-601, ST-570, ST-552, ST-547, ST-455, ST-451, ST-445, ST-289, ST-129, ST-5
+- 2026-10-07 · pr · ST-539 · PR #176 https://github.com/george-hutanu/motor-fix/pull/176
+- 2026-10-07 · implement · ST-539 · Planning → Implementing
+- 2026-10-07 · implement · timeline · no row for ST-539
+- 2026-10-07 · labels · PR #176 · in development

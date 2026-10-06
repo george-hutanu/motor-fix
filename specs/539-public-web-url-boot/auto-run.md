@@ -6,3 +6,4 @@
 - context: stories read directly from Notion (ST-539, ST-465)
 - plan, checklist (0 open), tasks (4)
 - analyze: each FR covered by a test task and a code task; no findings
+- tests: 2 worker tests red (ready true), env.spec red (no export); implement: 1018 + 244 green, typecheck 3 projects
