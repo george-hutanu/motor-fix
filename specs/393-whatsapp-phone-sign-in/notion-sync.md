@@ -12,3 +12,5 @@
 - 2026-10-06 · implement · timeline · Planning → Implementing
 - 2026-10-06 · labels · PR #153 · in development
 - [NOTION-SYNC PENDING 2026-10-06: debt — 2 deferred items in deferred.md not filed as To do tasks: no NOTION_TOKEN in the cloud session]
+- 2026-10-06 · labels · PR #153 · in development → QA
+- [NOTION-SYNC PENDING 2026-10-06: qa — ST-393 and its timeline row Implementing → QA not written: no NOTION_TOKEN in the cloud session]
