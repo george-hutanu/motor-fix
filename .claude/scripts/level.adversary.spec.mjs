@@ -562,7 +562,6 @@ describe('a level_at without a zone is no waiting level, in both readers', () =>
       `sys.path.insert(0, ${JSON.stringify(join(process.cwd(), '.specify/scripts/python'))})`,
       'import common',
       `time.time = lambda: ${NOW / 1000}`,
-      `common.time.time = time.time`,
       `common.persist_feature_json(pathlib.Path(${JSON.stringify(dir)}), 'specs/050-new')`,
     ].join('\n');
     const run = spawnSync('python3', ['-c', code], { encoding: 'utf8' });
