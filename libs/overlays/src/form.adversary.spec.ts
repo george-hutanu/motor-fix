@@ -487,4 +487,34 @@ describe('toProblem with hostile input', () => {
       online.mockRestore();
     }
   });
+
+  it.each([
+    ['a problem sent as text', '{"code":"maintenance"}', 'maintenance'],
+    ['a JSON string', '"Gateway Timeout"', 'offline'],
+    ['a number', 504, 'offline'],
+    ['an array', [{ code: 'x' }], 'offline'],
+  ])('reads a 504 carrying %s while offline', (_, body, code) => {
+    const online = jest
+      .spyOn(navigator, 'onLine', 'get')
+      .mockReturnValue(false);
+    try {
+      expect(toProblem(problem(504, body)).code).toBe(code);
+    } finally {
+      online.mockRestore();
+    }
+  });
+
+  it('keeps a bare 504 as a server error where there is no browser', () => {
+    const browser = jest
+      .spyOn(globalThis, 'navigator', 'get')
+      .mockReturnValue(undefined as unknown as Navigator);
+    try {
+      expect(toProblem(problem(504, null))).toEqual({
+        code: 'internal_error',
+        status: 504,
+      });
+    } finally {
+      browser.mockRestore();
+    }
+  });
 });
