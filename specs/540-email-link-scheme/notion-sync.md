@@ -9,3 +9,6 @@
 - 2026-10-06 · implement · ST-540 · Planning → Implementing
 - 2026-10-06 · implement · timeline · no row for ST-540
 - 2026-10-06 · labels · PR #168 · in development
+- 2026-10-06 · qa · ST-540 · Implementing → QA
+- 2026-10-06 · qa · timeline · no row for ST-540
+- 2026-10-06 · labels · PR #168 · QA
