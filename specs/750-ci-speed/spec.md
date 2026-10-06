@@ -164,6 +164,8 @@ Someone reading AGENTS.md's PR CI bullet or `docs/speed-and-cost-plan.md` sees t
 
 ## Spec Delta
 
-- **Adds**: `ci` capability — PR CI runs its checks in fewer, grouped jobs with a parallel end-to-end suite and a Docker cache shared from `main`; stacked releases collapse to the newest pending one.
-- **Modifies**: none.
-- **Removes**: none.
+### Capability: `platform`
+
+- **Adds**: FR-001–FR-010
+- **Modifies**: none
+- **Removes**: none
