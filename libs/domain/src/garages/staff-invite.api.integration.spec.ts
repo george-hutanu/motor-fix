@@ -140,9 +140,9 @@ const accept = (token: unknown, auth?: string) => {
   return auth ? call.set('Authorization', auth) : call;
 };
 
-// The token of the n-th e-mail Brevo was asked to send (the last by default).
-function tokenOf(n = -1) {
-  const mail = brevo.emails().at(n);
+// The token of the last e-mail Brevo was asked to send.
+function tokenOf() {
+  const mail = brevo.emails().at(-1);
   if (!mail) throw new Error('no e-mail sent');
   const { textContent: text } = mail.body as { textContent: string };
   const match = /\/(ro|en)\/invite\/([A-Za-z0-9_-]+)/.exec(text);
@@ -263,6 +263,23 @@ describe('sending an invite', () => {
       where: { id: res.body.id },
     });
     expect(row.status).toBe('sent');
+  });
+
+  it('stores nothing and sends nothing while the web address is not set', async () => {
+    const { dinamo, mihai } = await world();
+    const config = (invites as unknown as { config: { webUrl?: string } })
+      .config;
+    const { webUrl } = config;
+    config.webUrl = undefined;
+    try {
+      const res = await send(dinamo.id, bearer(mihai, 'garage'));
+
+      expect(res.status).toBe(500);
+      expect(await prisma.staffInvite.count()).toBe(0);
+      expect(brevo.emails()).toHaveLength(0);
+    } finally {
+      config.webUrl = webUrl;
+    }
   });
 
   it.each([
@@ -466,7 +483,7 @@ describe('opening and accepting a link', () => {
     const joined = await prisma.notification.findMany({
       where: { accountId: mihai, kind: 'STAFF_JOINED' },
     });
-    expect(joined.length).toBeGreaterThan(0);
+    expect(joined.map((n) => n.channel).sort()).toEqual(['email', 'in_app']);
   });
 
   it('lets the new mechanic act in the garage as a mechanic', async () => {

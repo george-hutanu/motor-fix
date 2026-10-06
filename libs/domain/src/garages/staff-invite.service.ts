@@ -91,6 +91,7 @@ export class StaffInviteService {
       );
     }
     const mechanic = dto.kind === 'mechanic';
+    this.webUrl();
     const { hash, token } = newToken();
     const invite = await this.prisma.$transaction(async (tx) => {
       const row = await tx.staffInvite.create({
@@ -138,6 +139,7 @@ export class StaffInviteService {
   ): Promise<StaffInviteSentDto> {
     const found = await this.ownInvite(actor, garageId, id);
     if (found.kind === 'mechanic') await this.assertMechanics(garageId);
+    this.webUrl();
     const { hash, token } = newToken();
     const invite = await this.prisma.$transaction(async (tx) => {
       const { count } = await tx.staffInvite.updateMany({
@@ -366,6 +368,13 @@ export class StaffInviteService {
     }
   }
 
+  // The link needs an absolute address; without one nothing is stored, rather
+  // than handing the owner a link that opens nowhere.
+  private webUrl(): string {
+    if (!this.config.webUrl) throw new Error('PUBLIC_WEB_URL is not set');
+    return this.config.webUrl;
+  }
+
   // In the owner's language. A refused e-mail leaves the invite in place and
   // hands the link to the owner instead.
   private async mail(
@@ -378,7 +387,7 @@ export class StaffInviteService {
       this.prisma.garage.findUniqueOrThrow({ where: { id: invite.garageId } }),
     ]);
     const language = owner.language === 'en' ? 'en' : 'ro';
-    const link = `${this.config.webUrl ?? ''}/${language}/invite/${token}`;
+    const link = `${this.webUrl()}/${language}/invite/${token}`;
     const reason = blockedReason(this.config, invite.email);
     try {
       if (reason) throw new Error(reason);

@@ -62,22 +62,11 @@ export class ProblemFilter implements ExceptionFilter {
       typeof own.code === 'string' ? own.code : codeForStatus(status),
       detail(typeof body === 'string' ? body : own.message),
       fieldProblems(own.errors),
-      extensionsOf(own),
+      // The one member beyond the problem shape a refusal carries: the open
+      // invite a refused send names. Nothing else an exception holds leaves.
+      typeof own.inviteId === 'string' ? { inviteId: own.inviteId } : {},
     );
   }
-}
-
-// Members beyond the problem shape a refusal may carry for the front end to
-// act on, named here so nothing else an exception holds leaves the API.
-const EXTENSIONS = ['inviteId'] as const;
-
-function extensionsOf(own: Record<string, unknown>): Record<string, string> {
-  const kept: Record<string, string> = {};
-  for (const name of EXTENSIONS) {
-    const value = own[name];
-    if (typeof value === 'string') kept[name] = value;
-  }
-  return kept;
 }
 
 function detail(message: unknown): string | undefined {
