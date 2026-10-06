@@ -20,7 +20,7 @@ Request (`PhoneCodeDto`):
 | 400 | `validation_failed` | the number is not a possible phone number, a field is of the wrong type, an unknown field |
 | 429 | `too_many_attempts` | a code went to this number less than 60 s ago, 5 codes went to it in the current hour, or 20 requests came from the address in the current hour |
 | 502 | `whatsapp_failed` | Brevo refused or timed out, phone sending is off, the number is outside the allow-list in a non-production environment, or the template has no id; no code is stored and the request does not count toward the hourly five |
-| 503 | `maintenance` | maintenance on (no account is known at this point, so no admin exception) |
+| 503 | `maintenance` | maintenance on and the number holds no account with the `admin` role (an admin's number gets its code: spec FR-010) |
 
 ## POST /api/v1/auth/phone-sign-in
 
