@@ -55,3 +55,7 @@ Hooks after specify: `notion-sync start` (ST-492 To do → Planning, EP-1 unchan
 ## 7. Tasks
 
 - `tasks.md`: 10 tasks (7 failing-test/i18n tasks first, 2 implementation in `panel.ts` and `sample-page.ts`, 1 proof run); includes rewriting the two adversary tests. level check: 2 unchanged; artifact-lint: 0 errors (1 warning `delta-missing`, though spec.md carries a Spec Delta; left as is).
+
+## 8. Analyze
+
+- artifact-lint: the Spec Delta was free-form → rewritten as `### Capability: overlays`, Adds FR-001..FR-010, Modifies none (157-FR-012 still holds for a loader that answers). Re-run: 0 errors, 0 warnings. Every FR maps to a task (T001–T009); no CRITICAL finding. 1 round.

@@ -121,14 +121,8 @@ The component catalogue's overlay section gets a way to open a task whose loader
 
 ## Spec Delta
 
-### Modifies
+### Capability: `overlays`
 
-- `overlays`: 157-FR-012 — a task given as a loader MUST show its panel, title and X at once with a skeleton in a body marked busy (`aria-busy="true"`), replaced by the task when it arrives; when the loader fails the skeleton MUST be replaced by the shared error message and a retry button and the busy mark dropped (FR-001 to FR-008 here).
-
-### Adds
-
-- `overlays`: FR-001 to FR-010 as 492-FR-001 to 492-FR-010.
-
-### Removes
-
-- none.
+- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010
+- **Modifies**: none
+- **Removes**: none
