@@ -5,7 +5,7 @@
 
 ## Phase 1: Foundational
 
-- [ ] T001 Add `FR_THRESHOLD = 5`, `STORY_POINTS_THRESHOLD = 5` and `CONTRACT_PATHS` (`libs/contracts/`, `libs/data-access/`, `apps/api/openapi.json`, `schema.prisma`, `/migrations/`) beside `LEVELS` in `.claude/scripts/lib/feature.mjs` (FR-005, FR-012)
+- [x] T001 Add `FR_THRESHOLD = 5`, `STORY_POINTS_THRESHOLD = 5` and `CONTRACT_PATHS` (`libs/contracts/`, `libs/data-access/`, `apps/api/openapi.json`, `schema.prisma`, `/migrations/`) beside `LEVELS` in `.claude/scripts/lib/feature.mjs` (FR-005, FR-012)
 
 ## Phase 2: User Story 1 - The ledger shows what each level costs (P1)
 
@@ -25,16 +25,16 @@
 **Goal**: `level.mjs check` raises a level 0/1 to 2 on a fact and logs it.
 **Independent test**: temp repository with a level 1 feature; each wire present and absent.
 
-- [ ] T007 [US2] Write failing specs in `.claude/scripts/level.spec.mjs`: per wire (`fr-count`, `clarification`, `contract`, `projects`) one test that promotes a level 1 and one that leaves it at 1 with no `auto-run.md` write; level 3 stays 3 across all four; promotion line in `auto-run.md` (created when missing, never logged twice); diff wires `not checked` when merge-base or diff fails; level 0 with no feature directory records level 2 and writes no file (FR-005, FR-006, FR-008, FR-015)
-- [ ] T008 [US2] Add `checkTripwires(repo)` and the `check [--ready] [--json]` command (promotion, `auto-run.md` line, per-wire output, exit 0) to `.claude/scripts/level.mjs` (FR-005, FR-006, FR-008)
+- [x] T007 [US2] Write failing specs in `.claude/scripts/level.spec.mjs`: per wire (`fr-count`, `clarification`, `contract`, `projects`) one test that promotes a level 1 and one that leaves it at 1 with no `auto-run.md` write; level 3 stays 3 across all four; promotion line in `auto-run.md` (created when missing, never logged twice); diff wires `not checked` when merge-base or diff fails; level 0 with no feature directory records level 2 and writes no file (FR-005, FR-006, FR-008, FR-015)
+- [x] T008 [US2] Add `checkTripwires(repo)` and the `check [--ready] [--json]` command (promotion, `auto-run.md` line, per-wire output, exit 0) to `.claude/scripts/level.mjs` (FR-005, FR-006, FR-008)
 
 ## Phase 4: User Story 3 - Pre-ready check (P3)
 
 **Goal**: ready refuses a promoted level 0/1 with owed artifacts missing; a one-file level 2 leaves a `too heavy` mark.
 **Independent test**: ready step on a level 1 two-project diff without `plan.md` refuses; on a one-file level 2 diff writes the mark and proceeds.
 
-- [ ] T009 [US3] Write failing specs: in `.claude/scripts/level.spec.mjs` the `--ready` owed phases and missing artifacts with exit 2 (level 0: "run /speckit-specify first"), the `pending.json` mark for a one-file level 2 diff outside `specs/` and `.specify/` and contract paths, none for a contract file or level 3, and a pass once `plan.md` exists; in `.claude/scripts/lifecycle.spec.mjs` exit 2 stops `ready` before the records commit (`ok: false`, PR stays a draft) and exit 0 passes through (FR-009, FR-015)
-- [ ] T010 [US3] Add the `--ready` behaviour (owed phases, refusal, `pending.json` write) to `.claude/scripts/level.mjs` (FR-009)
+- [x] T009 [US3] Write failing specs: in `.claude/scripts/level.spec.mjs` the `--ready` owed phases and missing artifacts with exit 2 (level 0: "run /speckit-specify first"), the `pending.json` mark for a one-file level 2 diff outside `specs/` and `.specify/` and contract paths, none for a contract file or level 3, and a pass once `plan.md` exists; in `.claude/scripts/lifecycle.spec.mjs` exit 2 stops `ready` before the records commit (`ok: false`, PR stays a draft) and exit 0 passes through (FR-009, FR-015)
+- [x] T010 [US3] Add the `--ready` behaviour (owed phases, refusal, `pending.json` write) to `.claude/scripts/level.mjs` (FR-009)
 - [ ] T011 [US3] In `.claude/scripts/lifecycle.mjs` `ready()`, run `level.mjs check --ready --json` after `gh pr view` and throw `Stop("level check", …)` on code 2 (FR-009)
 
 ## Phase 5: User Story 4 - Size from Notion (P4)

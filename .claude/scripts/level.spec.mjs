@@ -1,11 +1,11 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, cpSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, cpSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { LEVELS, DEFAULT_LEVEL, PENDING_TTL_MINUTES, activeFeature, featureLevel, levelApplies, pendingLevel, pointTo } from './lib/feature.mjs';
-import { classifyLevel, levelTarget, main, pointFeature, resolveLevel, setLevel } from './level.mjs';
+import { checkLevel, classifyLevel, levelTarget, main, pointFeature, resolveLevel, setLevel } from './level.mjs';
 import { checkFeatureState } from './doctor.mjs';
 
 const root = join(import.meta.dirname, '..', '..');
@@ -654,6 +654,248 @@ describe('classifyLevel', () => {
     }
     for (const d of ['fix a typo in the footer', 'remove dead code from the garage card', 'reword the code comment in the helper', 'tweak the button copy']) {
       assert.equal(classifyLevel(d).level, 0, d);
+    }
+  });
+});
+
+// A git repository with an origin/main to diff against: `base` is committed and
+// becomes origin/main, `branch` is committed on top of it.
+function gitFixture({ level = 1, spec = '# Spec\n\n- **FR-001**: one\n', base = {}, branch = {}, feature = true } = {}) {
+  const dir = mkdtempSync(join(tmpdir(), 'taskr-wire-'));
+  const write = (files) => {
+    for (const [rel, body] of Object.entries(files)) {
+      mkdirSync(dirname(join(dir, rel)), { recursive: true });
+      writeFileSync(join(dir, rel), body);
+    }
+  };
+  const git = (...a) => spawnSync('git', a, { cwd: dir, encoding: 'utf8' });
+  git('init', '-q', '-b', 'main');
+  git('config', 'user.email', 't@example.com');
+  git('config', 'user.name', 't');
+  write({
+    'apps/api/project.json': '{"name":"api"}',
+    'apps/web/project.json': '{"name":"web"}',
+    'libs/contracts/project.json': '{"name":"contracts"}',
+    'README.md': 'x\n',
+    ...base,
+  });
+  git('add', '-A');
+  git('commit', '-qm', 'base');
+  git('update-ref', 'refs/remotes/origin/main', 'HEAD');
+  git('checkout', '-qb', '042-small');
+  if (feature) write({ 'specs/042-small/spec.md': spec, 'specs/042-small/tasks.md': '# Tasks\n' });
+  write(branch);
+  git('add', '-A');
+  git('commit', '-qm', 'work');
+  mkdirSync(join(dir, '.specify'), { recursive: true });
+  writeFileSync(
+    join(dir, '.specify/feature.json'),
+    JSON.stringify(feature ? { feature_directory: 'specs/042-small', level, level_for: 'specs/042-small' } : { level, level_for: 'next', level_at: new Date().toISOString() }),
+  );
+  return dir;
+}
+
+const manyFrs = `# Spec\n\n${Array.from({ length: 6 }, (_, i) => `- **FR-00${i + 1}**: r${i}\n`).join('')}`;
+const WIRES = {
+  'fr-count': { trip: { spec: manyFrs }, clear: {} },
+  clarification: { trip: { spec: '# Spec\n\n- **FR-001**: [NEEDS CLARIFICATION: which cap?]\n' }, clear: { spec: '# Spec\n\nthe `[NEEDS CLARIFICATION]` marker is named, not used\n' } },
+  contract: { trip: { branch: { 'libs/contracts/src/dto.ts': 'x\n' } }, clear: { branch: { 'apps/api/src/a.ts': 'x\n' } } },
+  projects: { trip: { branch: { 'apps/api/src/a.ts': 'x\n', 'apps/web/src/b.ts': 'x\n' } }, clear: { branch: { 'apps/api/src/a.ts': 'x\n', 'apps/api/src/c.ts': 'x\n' } } },
+};
+
+const withLevelEnv = (fn) => withEnv(undefined, fn);
+const autoRun = (dir) => {
+  try {
+    return readFileSync(join(dir, 'specs/042-small/auto-run.md'), 'utf8');
+  } catch {
+    return '';
+  }
+};
+
+describe('tripwires promote a level, never lower it', () => {
+  for (const [wire, cases] of Object.entries(WIRES)) {
+    it(`${wire}: promotes a level 1 feature to 2 and logs the fact`, () => {
+      const dir = gitFixture(cases.trip);
+      try {
+        withLevelEnv(() => {
+          const result = checkLevel(dir);
+          assert.deepEqual(result.promoted, { from: 1, to: 2 });
+          assert.equal(result.wires.find((w) => w.name === wire).state, 'tripped');
+          assert.equal(featureLevel(dir, 'specs/042-small'), 2);
+          const lines = autoRun(dir).trim().split('\n');
+          assert.equal(lines.length, 1);
+          assert.match(lines[0], new RegExp(`level 1 → 2 · .*${wire}`));
+        });
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    it(`${wire}: leaves a level 1 feature at 1 when the fact is absent`, () => {
+      const dir = gitFixture(cases.clear);
+      try {
+        withLevelEnv(() => {
+          const result = checkLevel(dir);
+          assert.equal(result.promoted, null);
+          assert.equal(result.wires.find((w) => w.name === wire).state, 'clear');
+          assert.equal(featureLevel(dir, 'specs/042-small'), 1);
+          assert.equal(autoRun(dir), '');
+        });
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
+
+  it('leaves a level 3 at 3 with every wire tripped', () => {
+    const dir = gitFixture({
+      level: 3,
+      spec: `${manyFrs}\n[NEEDS CLARIFICATION: x]\n`,
+      branch: { 'libs/contracts/src/dto.ts': 'x\n', 'apps/web/src/b.ts': 'x\n' },
+    });
+    try {
+      withLevelEnv(() => {
+        const result = checkLevel(dir);
+        assert.equal(result.wires.filter((w) => w.state === 'tripped').length, 4);
+        assert.equal(result.promoted, null);
+        assert.equal(featureLevel(dir, 'specs/042-small'), 3);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('logs a promotion once: a second check finds level 2 and writes nothing', () => {
+    const dir = gitFixture(WIRES.contract.trip);
+    try {
+      withLevelEnv(() => {
+        checkLevel(dir);
+        assert.equal(checkLevel(dir).promoted, null);
+        assert.equal(autoRun(dir).trim().split('\n').length, 1);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('reports the diff wires as not checked without origin/main, and still runs the spec wires', () => {
+    const dir = gitFixture({ spec: manyFrs });
+    try {
+      spawnSync('git', ['update-ref', '-d', 'refs/remotes/origin/main'], { cwd: dir });
+      withLevelEnv(() => {
+        const result = checkLevel(dir);
+        assert.equal(result.wires.find((w) => w.name === 'contract').state, 'not checked');
+        assert.equal(result.wires.find((w) => w.name === 'projects').state, 'not checked');
+        assert.deepEqual(result.promoted, { from: 1, to: 2 }, 'the FR count still promotes');
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('never promotes on a wire it could not check', () => {
+    const dir = gitFixture();
+    try {
+      spawnSync('git', ['update-ref', '-d', 'refs/remotes/origin/main'], { cwd: dir });
+      withLevelEnv(() => assert.equal(checkLevel(dir, { ready: true }).promoted, null));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('the pre-ready check', () => {
+  it('refuses a promoted level 1 with plan.md missing, naming the owed phases, then passes once it exists', () => {
+    const dir = gitFixture(WIRES.projects.trip);
+    try {
+      withLevelEnv(() => {
+        const refused = capture(() => main(['check', '--ready'], dir));
+        assert.equal(refused.status, 2);
+        assert.match(refused.err, /plan\.md/);
+        assert.match(refused.err, /plan, checklist, analyze/);
+        writeFileSync(join(dir, 'specs/042-small/plan.md'), '# Plan\n');
+        assert.equal(capture(() => main(['check', '--ready'], dir)).status, 0);
+        assert.equal(autoRun(dir).trim().split('\n').length, 1, 'the rerun logs nothing new');
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('passes a level 1 whose diff trips nothing, and records nothing', () => {
+    const dir = gitFixture(WIRES.projects.clear);
+    try {
+      withLevelEnv(() => {
+        assert.equal(capture(() => main(['check', '--ready'], dir)).status, 0);
+        assert.equal(existsSync(join(dir, '.specify/telemetry/pending.json')), false);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('marks a level 2 whose diff is one file outside the contract paths as too heavy, and lets it go ready', () => {
+    const dir = gitFixture({ level: 2, branch: { 'apps/web/src/b.ts': 'x\n', 'specs/042-small/plan.md': '# Plan\n' } });
+    try {
+      withLevelEnv(() => {
+        assert.equal(capture(() => main(['check', '--ready'], dir)).status, 0);
+        const pending = JSON.parse(readFileSync(join(dir, '.specify/telemetry/pending.json'), 'utf8'));
+        assert.deepEqual(
+          pending.too_heavy.map(({ feature, level, file }) => ({ feature, level, file })),
+          [{ feature: 'specs/042-small', level: 2, file: 'apps/web/src/b.ts' }],
+        );
+        capture(() => main(['check', '--ready'], dir));
+        assert.equal(JSON.parse(readFileSync(join(dir, '.specify/telemetry/pending.json'), 'utf8')).too_heavy.length, 1, 'marked once');
+        assert.equal(featureLevel(dir, 'specs/042-small'), 2);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  for (const [why, options] of [
+    ['a one-file contract diff', { level: 2, branch: { 'libs/contracts/src/dto.ts': 'x\n', 'specs/042-small/plan.md': '# Plan\n' } }],
+    ['a level 3', { level: 3, branch: { 'apps/web/src/b.ts': 'x\n', 'specs/042-small/plan.md': '# Plan\n' } }],
+  ]) {
+    it(`writes no too-heavy mark for ${why}`, () => {
+      const dir = gitFixture(options);
+      try {
+        withLevelEnv(() => {
+          assert.equal(capture(() => main(['check', '--ready'], dir)).status, 0);
+          assert.equal(existsSync(join(dir, '.specify/telemetry/pending.json')), false);
+        });
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
+
+  it('a level 0 change that trips a wire is recorded at 2, writes no file, and is sent to /speckit-specify', () => {
+    const dir = gitFixture({ level: 0, feature: false, branch: { 'libs/contracts/src/dto.ts': 'x\n' } });
+    try {
+      withLevelEnv(() => {
+        const refused = capture(() => main(['check', '--ready'], dir));
+        assert.equal(refused.status, 2);
+        assert.match(refused.err, /\/speckit-specify/);
+        assert.equal(JSON.parse(readFileSync(join(dir, '.specify/feature.json'), 'utf8')).level, 2);
+        assert.equal(existsSync(join(dir, 'specs')), false);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('prints the result as JSON with --json', () => {
+    const dir = gitFixture(WIRES.contract.trip);
+    try {
+      withLevelEnv(() => {
+        const run = capture(() => main(['check', '--json'], dir));
+        const parsed = JSON.parse(run.out);
+        assert.deepEqual(parsed.promoted, { from: 1, to: 2 });
+        assert.equal(parsed.wires.length, 4);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 });

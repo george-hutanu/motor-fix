@@ -11,11 +11,14 @@
 //   node .claude/scripts/level.mjs --json
 //   node .claude/scripts/level.mjs suggest "<work>" [--set]   classify; --set records a confident answer
 //   node .claude/scripts/level.mjs point specs/NNN-x            point feature.json at a new feature, keeping its level
+//   node .claude/scripts/level.mjs check [--ready] [--json]    raise a level 0/1 to 2 when a fact contradicts it
 import { execFileSync, execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import {
+  CONTRACT_PATHS,
   DEFAULT_LEVEL,
+  FR_THRESHOLD,
   LEVELS,
   activeFeature,
   featureKey,
@@ -126,8 +129,138 @@ export function pointFeature(repo, featureDirectory, { now = Date.now() } = {}) 
   return next;
 }
 
+// The phases a level 2 run has and a level 1 run skips (/speckit-auto's
+// Size table): what a promotion owes from that point on.
+const OWED_BY_PROMOTION = ["context", "clarify", "plan", "checklist", "analyze", "converge", "refresh", "agent-context", "archive"];
+
+/** Files the branch changed against origin/main, committed or not; null when that cannot be computed. */
+export function changedFiles(repo) {
+  try {
+    const git = (...args) => execFileSync("git", args, { cwd: repo, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    const base = git("merge-base", "HEAD", "origin/main").trim();
+    const files = [...git("diff", "--name-only", base).split("\n"), ...git("ls-files", "--others", "--exclude-standard").split("\n")];
+    return [...new Set(files.filter(Boolean))];
+  } catch {
+    return null;
+  }
+}
+
+/** The Nx project a file belongs to: the nearest project.json above it, or none. */
+function nxProject(repo, file) {
+  for (let dir = dirname(file); dir !== "." && dir !== "/" && dir !== ""; dir = dirname(dir)) {
+    const project = join(repo, dir, "project.json");
+    if (!existsSync(project)) continue;
+    try {
+      return JSON.parse(readFileSync(project, "utf8")).name ?? dir;
+    } catch {
+      return dir;
+    }
+  }
+  return null;
+}
+
+/** The four wires, each tripped, clear or not checked, with the fact it read. */
+export function tripwires(repo, featureDir, files) {
+  const specFile = featureDir ? join(featureDir, "spec.md") : null;
+  const spec = specFile && existsSync(specFile) ? readFileSync(specFile, "utf8") : null;
+  const wire = (name, state, fact) => ({ name, state, fact });
+  const wires = [];
+  if (spec === null) {
+    wires.push(wire("fr-count", "not checked", "no spec.md"), wire("clarification", "not checked", "no spec.md"));
+  } else {
+    const frs = new Set(spec.match(/\*\*FR-\d+\*\*/g) ?? []).size;
+    wires.push(wire("fr-count", frs > FR_THRESHOLD ? "tripped" : "clear", `${frs} functional requirements`));
+    // A marker in backticks is the marker being named, not an open question.
+    const marker = spec.match(/(?<!`)\[NEEDS CLARIFICATION[^\]]*\]/)?.[0];
+    wires.push(wire("clarification", marker ? "tripped" : "clear", marker ?? "no marker"));
+  }
+  if (files === null) {
+    wires.push(wire("contract", "not checked", "no diff against origin/main"), wire("projects", "not checked", "no diff against origin/main"));
+  } else {
+    const contract = files.find((f) => CONTRACT_PATHS.some((p) => p.test(f)));
+    wires.push(wire("contract", contract ? "tripped" : "clear", contract ?? "no contract, schema or migration file"));
+    const projects = [...new Set(files.map((f) => nxProject(repo, f)).filter(Boolean))].sort();
+    wires.push(wire("projects", projects.length > 1 ? "tripped" : "clear", projects.join(", ") || "no Nx project"));
+  }
+  return wires;
+}
+
+/**
+ * Check the level in hand against the facts. A tripped wire raises a level 0
+ * or 1 to 2 and logs one line in the feature's auto-run.md; nothing here ever
+ * lowers a level or touches a 2 or 3. With `ready`, also say what a level 2
+ * still owes before the PR may go ready, and mark a level 2 whose diff is one
+ * non-contract file as too heavy (evidence for tuning, no other effect).
+ */
+export function checkLevel(repo, { ready = false, files = changedFiles(repo), now = Date.now() } = {}) {
+  const state = keyedState(repo, readState(repo));
+  const active = activeFeature(repo);
+  const feature = active ? featureKey(repo, active.dir) : null;
+  const level = feature ? featureLevel(repo, feature) : state.level_for === "next" ? (parseLevel(state.level) ?? DEFAULT_LEVEL) : DEFAULT_LEVEL;
+  const wires = tripwires(repo, active?.dir, files);
+  const tripped = wires.filter((w) => w.state === "tripped");
+  const result = { feature, level, promoted: null, wires };
+
+  if (level < 2 && tripped.length) {
+    setLevel(repo, 2, { for: feature ? "current" : "next", now });
+    result.promoted = { from: level, to: 2 };
+    result.level = 2;
+    if (active) {
+      const log = join(active.dir, "auto-run.md");
+      const before = existsSync(log) ? readFileSync(log, "utf8") : "";
+      const line = `- ${new Date(now).toISOString()} · level ${level} → 2 · ${tripped.map((w) => `${w.name}: ${w.fact}`).join("; ")}\n`;
+      writeFileSync(log, `${before}${before && !before.endsWith("\n") ? "\n" : ""}${line}`);
+    }
+  }
+  if (!ready) return result;
+
+  if (!active) {
+    if (result.promoted) Object.assign(result, { owed: ["specify", ...OWED_BY_PROMOTION], missing: ["a feature directory"] });
+  } else if (result.level >= 2) {
+    const missing = LEVELS[result.level].artifacts.filter((a) => !existsSync(join(active.dir, a)));
+    if (missing.length) Object.assign(result, { owed: OWED_BY_PROMOTION, missing });
+  }
+  const counted = (files ?? []).filter((f) => !/^(specs|\.specify)\//.test(f));
+  if (result.level === 2 && !result.promoted && counted.length === 1 && !CONTRACT_PATHS.some((p) => p.test(counted[0]))) {
+    result.too_heavy = { feature, file: counted[0] };
+    const pending = join(repo, ".specify", "telemetry", "pending.json");
+    let marks = [];
+    try {
+      marks = JSON.parse(readFileSync(pending, "utf8")).too_heavy ?? [];
+    } catch {}
+    if (!marks.some((m) => m.feature === feature && m.file === counted[0])) {
+      marks.push({ feature, level: 2, file: counted[0], at: new Date(now).toISOString() });
+      mkdirSync(dirname(pending), { recursive: true });
+      writeFileSync(pending, `${JSON.stringify({ too_heavy: marks }, null, 2)}\n`);
+    }
+  }
+  return result;
+}
+
+function checkCommand(argv, repo) {
+  const result = checkLevel(repo, { ready: argv.includes("--ready") });
+  const refused = (result.missing ?? []).length > 0;
+  if (argv.includes("--json")) {
+    console.log(JSON.stringify(result));
+    return refused ? 2 : 0;
+  }
+  const head = result.promoted ? `level ${result.promoted.from} → 2 (promoted)` : `level ${result.level}, unchanged`;
+  console.log(`${head}${result.feature ? ` for ${result.feature}` : ""}`);
+  for (const w of result.wires) console.log(`  ${w.name}: ${w.state} (${w.fact})`);
+  if (result.too_heavy) console.log(`  too heavy: a level 2 whose diff is one file (${result.too_heavy.file}), recorded in the ledger`);
+  if (refused) {
+    const fix = result.feature
+      ? `run the phases it owes (${result.owed.join(", ")}) until ${result.missing.join(", ")} exist, then rerun`
+      : "run the change through /speckit-specify first, then the phases a level 2 owes";
+    console.error(`level check: not ready — level ${result.level} is missing ${result.missing.join(", ")}: ${fix}`);
+  }
+  return refused ? 2 : 0;
+}
+
 export function main(argv, repo, env = process.env) {
   const [command, value] = argv.filter((a) => !a.startsWith("--"));
+
+  if (command === "check") return checkCommand(argv, repo);
 
   if (command === "set") {
     const target = argv.includes("--next") ? "next" : argv.includes("--current") ? "current" : undefined;
@@ -174,7 +307,7 @@ export function main(argv, repo, env = process.env) {
   }
 
   if (command !== undefined) {
-    console.error(`level: unknown command "${command}" (no argument to show, "set <0-3>" to change, "suggest", "point")`);
+    console.error(`level: unknown command "${command}" (no argument to show, "set <0-3>" to change, "suggest", "point", "check")`);
     return 1;
   }
 
