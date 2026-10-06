@@ -28,7 +28,7 @@ const serviceOn = (client: PrismaClient) => {
     queue,
     publisher,
     testConfig('http://127.0.0.1:9'),
-    async () => undefined,
+    { privateKey: 'private', publicKey: 'public', subject: 'mailto:o@x.test' },
     new AuditService(),
   );
   service.now = () => DAY;
@@ -112,11 +112,32 @@ describe('a message whose kind the person switched off', () => {
 });
 
 describe('a driver’s chosen channel', () => {
-  it('writes no e-mail row for a type that goes by push', async () => {
+  it('writes a push row and no e-mail row for a type that goes by push to a device', async () => {
+    const driver = await account('andrei');
+    await prisma.pushSubscription.create({
+      data: {
+        accountId: driver,
+        auth: 'a',
+        endpoint: 'https://push.example.test/1',
+        p256dh: 'p',
+      },
+    });
+    await prefer(driver, 'QUOTE_RECEIVED', 'push', true);
+    expect(await hand('QUOTE_RECEIVED', driver)).toBe(1);
+    expect(await channelsOf(driver, 'QUOTE_RECEIVED')).toEqual([
+      'in_app',
+      'push',
+    ]);
+  });
+
+  it('sends by e-mail a type set to push when there is no device', async () => {
     const driver = await account('andrei');
     await prefer(driver, 'QUOTE_RECEIVED', 'push', true);
-    expect(await hand('QUOTE_RECEIVED', driver)).toBe(0);
-    expect(await channelsOf(driver, 'QUOTE_RECEIVED')).toEqual(['in_app']);
+    expect(await hand('QUOTE_RECEIVED', driver)).toBe(1);
+    expect(await channelsOf(driver, 'QUOTE_RECEIVED')).toEqual([
+      'in_app',
+      'email',
+    ]);
   });
 
   it('sends by e-mail a type set to WhatsApp when the phone is not verified', async () => {

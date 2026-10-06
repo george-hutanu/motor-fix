@@ -118,6 +118,10 @@ const NOT_CHANGES = new Set([
   'NotificationsService.forget',
   'NotificationsService.phoneRow',
   'NotificationsService.release',
+  // A browser's push address is delivery data, not a change to anyone's data.
+  'PushSubscriptionsService.save',
+  'PushSubscriptionsService.remove',
+  'PushSubscriptionsService.evictOldest',
   // Reading a notification is not recorded (the bell's story).
   'BellService.read',
   'BellService.readAll',

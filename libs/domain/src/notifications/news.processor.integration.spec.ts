@@ -46,7 +46,7 @@ beforeEach(async () => {
     queue,
     publisher,
     config,
-    async () => undefined,
+    null,
     new AuditService(),
   );
   service.now = () => new Date('2026-11-05T10:00:00Z');

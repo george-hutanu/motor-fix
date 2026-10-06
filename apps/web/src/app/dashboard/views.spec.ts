@@ -66,6 +66,7 @@ describe('the dashboard view lists', () => {
         capability: 'driver.settings',
         label: 'shell.frame.nav.driver.settings',
         path: 'settings',
+        push: true,
         tab: 'shell.frame.tab.settings',
       },
     ]);

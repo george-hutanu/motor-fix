@@ -684,6 +684,122 @@
         ]
       }
     },
+    "/api/v1/push-subscriptions/key": {
+      "get": {
+        "operationId": "PushSubscriptionsController_key",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushKeyDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/push-subscriptions": {
+      "post": {
+        "operationId": "PushSubscriptionsController_save",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavePushSubscriptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushSubscriptionDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/push-subscriptions/test": {
+      "post": {
+        "operationId": "PushSubscriptionsController_test",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushTestQueuedDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/push-subscriptions/{id}": {
+      "delete": {
+        "operationId": "PushSubscriptionsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/api/v1/auth/confirm-email": {
       "post": {
         "operationId": "EmailConfirmationController_confirm",
@@ -1772,6 +1888,80 @@
         },
         "required": [
           "recipients"
+        ]
+      },
+      "PushKeyDto": {
+        "type": "object",
+        "properties": {
+          "publicKey": {
+            "type": "string",
+            "description": "The server’s VAPID public key; null when push is off",
+            "nullable": true
+          }
+        },
+        "required": [
+          "publicKey"
+        ]
+      },
+      "PushKeysDto": {
+        "type": "object",
+        "properties": {
+          "p256dh": {
+            "type": "string",
+            "description": "The browser’s public key (base64url)"
+          },
+          "auth": {
+            "type": "string",
+            "description": "The browser’s auth secret (base64url)"
+          }
+        },
+        "required": [
+          "p256dh",
+          "auth"
+        ]
+      },
+      "SavePushSubscriptionDto": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "description": "The push service address of the browser"
+          },
+          "keys": {
+            "$ref": "#/components/schemas/PushKeysDto"
+          },
+          "label": {
+            "type": "string",
+            "description": "The browser’s own description"
+          }
+        },
+        "required": [
+          "endpoint",
+          "keys"
+        ]
+      },
+      "PushSubscriptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "PushTestQueuedDto": {
+        "type": "object",
+        "properties": {
+          "queued": {
+            "type": "number",
+            "description": "How many test pushes were queued"
+          }
+        },
+        "required": [
+          "queued"
         ]
       },
       "ConfirmEmailDto": {

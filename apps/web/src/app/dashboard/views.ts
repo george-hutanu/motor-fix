@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import type { Routes } from '@angular/router';
 
+import { PushView } from './push-view';
 import { Session } from './session';
 import { View } from './view';
 
@@ -13,6 +14,8 @@ export interface DashboardView {
   tab: string;
   // Absent: every role of the area sees it.
   capability?: string;
+  // The view's body carries this device's push panel.
+  push?: boolean;
 }
 
 const HOME: DashboardView = {
@@ -59,6 +62,7 @@ export const DASHBOARDS: Record<
         capability: 'admin.settings',
         label: 'shell.frame.nav.admin.settings',
         path: 'settings',
+        push: true,
         tab: 'shell.frame.tab.settings',
       },
     ],
@@ -96,6 +100,7 @@ export const DASHBOARDS: Record<
         capability: 'driver.settings',
         label: 'shell.frame.nav.driver.settings',
         path: 'settings',
+        push: true,
         tab: 'shell.frame.tab.settings',
       },
     ],
@@ -104,7 +109,8 @@ export const DASHBOARDS: Record<
     name: 'shell.frame.bar.garage',
     tag: 'shell.frame.area.garage',
     views: [
-      HOME,
+      // Every garage role sees the home view; the garage has no Setări yet.
+      { ...HOME, push: true },
       {
         capability: 'garage.requests',
         label: 'shell.frame.nav.garage.requests',
@@ -157,16 +163,20 @@ export const allowedViews = (
 // sub-paths, so its epic can add pages under it; a refused or unknown view
 // falls through to `**`, which sends it to the dashboard view.
 export const dashboardRoutes = (area: Area): Routes => [
-  { component: View, path: '', pathMatch: 'full' },
+  {
+    component: DASHBOARDS[area].views[0].push ? PushView : View,
+    path: '',
+    pathMatch: 'full',
+  },
   ...DASHBOARDS[area].views
     .filter((view) => view.path)
-    .map(({ capability, path }) => ({
+    .map(({ capability, path, push }) => ({
       canMatch: [
         () =>
           !capability ||
           (inject(Session).current()?.capabilities ?? []).includes(capability),
       ],
-      children: [{ component: View, path: '**' }],
+      children: [{ component: push ? PushView : View, path: '**' }],
       path,
     })),
   { path: '**', redirectTo: '' },

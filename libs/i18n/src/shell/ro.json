@@ -170,6 +170,20 @@
       "question": "Renunți la modificări?"
     }
   },
+  "push": {
+    "blocked": "Notificările sunt blocate în browser. Deschide setările site‑ului, permite notificările pentru MotorFix și reîncarcă pagina.",
+    "disable": "Dezactivează",
+    "enable": "Activează notificările",
+    "failed": "Nu a mers. Încearcă din nou.",
+    "iosHint": "Pe iPhone sau iPad, adaugă MotorFix pe ecranul principal: apasă Partajează, apoi Adaugă pe ecranul principal. Deschide aplicația de acolo și activează notificările.",
+    "off": "Primești mesajele importante și când aplicația este închisă.",
+    "on": "Notificările sunt active pe acest dispozitiv.",
+    "test": "Trimite o notificare de test",
+    "testSent": "Am trimis o notificare de test.",
+    "title": "Notificări pe acest dispozitiv",
+    "unavailable": "Notificările nu sunt disponibile încă.",
+    "unsupported": "Acest browser nu poate primi notificări."
+  },
   "signOutEverywhere": {
     "cancel": "Renunță",
     "confirm": "Ieși",
