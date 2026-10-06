@@ -7,25 +7,33 @@ import { Directive, input } from '@angular/core';
 export class HlmTableContainer {}
 
 @Directive({
-  host: { class: 'spartan-table', 'data-slot': 'table' },
+  host: { class: 'spartan-table', 'data-slot': 'table', role: 'table' },
   selector: 'table[hlmTable]',
 })
 export class HlmTable {}
 
 @Directive({
-  host: { class: 'spartan-table-header', 'data-slot': 'table-header' },
+  host: {
+    class: 'spartan-table-header',
+    'data-slot': 'table-header',
+    role: 'rowgroup',
+  },
   selector: 'thead[hlmTHead]',
 })
 export class HlmTHead {}
 
 @Directive({
-  host: { class: 'spartan-table-body', 'data-slot': 'table-body' },
+  host: {
+    class: 'spartan-table-body',
+    'data-slot': 'table-body',
+    role: 'rowgroup',
+  },
   selector: 'tbody[hlmTBody]',
 })
 export class HlmTBody {}
 
 @Directive({
-  host: { class: 'spartan-table-row', 'data-slot': 'table-row' },
+  host: { class: 'spartan-table-row', 'data-slot': 'table-row', role: 'row' },
   selector: 'tr[hlmTr]',
 })
 export class HlmTr {}
@@ -38,6 +46,7 @@ type Column = 'main' | 'key';
     '[attr.data-column]': 'column()',
     class: 'spartan-table-head',
     'data-slot': 'table-head',
+    role: 'columnheader',
   },
   selector: 'th[hlmTh]',
 })
@@ -50,6 +59,7 @@ export class HlmTh {
     '[attr.data-column]': 'column()',
     class: 'spartan-table-cell',
     'data-slot': 'table-cell',
+    role: 'cell',
   },
   selector: 'td[hlmTd]',
 })

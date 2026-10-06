@@ -458,8 +458,14 @@ button.spartan-switch[data-disabled="true"] {
     display: block;
   }
 
+  /* Out of sight but still read: each shown cell keeps its column name. */
   .spartan-table:has([data-column="main"]) .spartan-table-header {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .spartan-table:has([data-column="main"]) .spartan-table-row {
