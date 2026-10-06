@@ -33,6 +33,16 @@
 // too: the PR, head's statuses, the compare, then every other statuses read at
 // once, each sha read once.
 //
+// The PR QA workflow's own check run is left out of the CI rule: its verdict
+// is agent-review, which the workflow sets, and a run a newer lap cancelled is
+// history, not a red check.
+//
+// A cloud session (CLAUDE_CODE_REMOTE=true) has no GraphQL, so `gh pr view`
+// fails there: the gate reads the PR, its commits, head's combined status, its
+// check runs and their workflows over REST instead, shapes them as gh's
+// rollup, and applies the same rule. It needs the PR's number (or URL) in the
+// command; the cloud merge is `gh api -X PUT repos/{owner}/{repo}/pulls/<n>/merge`.
+//
 // SPECKIT_PR_STATE (the PR as JSON) replaces the gh read for the eval cases,
 // with SPECKIT_CARRY_DELAY_MS to slow the carry read down;
 // SPECKIT_MERGE_GATE_DEADLINE_MS can only shorten the deadline. Hook processes
@@ -55,6 +65,8 @@ export function deadlineMs(env = process.env) {
 
 const GREEN = new Set(["SUCCESS", "NEUTRAL", "SKIPPED"]);
 const checkName = (c) => c.context ?? c.name;
+/** The workflow (.github/workflows/pr-qa.yml) whose verdict is agent-review. */
+const QA_WORKFLOW = "PR QA";
 
 /** The PR a command merges ({ pr: null } for the current branch), or null for any other command. */
 // Flags of `gh` and `gh pr merge` that take a value, so the value is not read as the PR.
@@ -135,7 +147,7 @@ function ciRefusal(pr, checks, sha, { dependabot = false } = {}) {
   const latest = new Map();
   for (const c of checks) {
     const k = key(c);
-    if (checkName(c) !== "agent-review" && (!latest.has(k) || when(c) >= when(latest.get(k)))) latest.set(k, c);
+    if (checkName(c) !== "agent-review" && c.workflowName !== QA_WORKFLOW && (!latest.has(k) || when(c) >= when(latest.get(k)))) latest.set(k, c);
   }
   const ci = [...latest.values()];
   const result = (c) => c.conclusion ?? c.state;
@@ -165,9 +177,10 @@ function ghAsync(cwd, signal) {
  * A committer read that fails throws like the PR read, so the merge is refused
  * with a retry rather than sent to a PR tester it may not need.
  */
-export async function readPr(target, gh) {
+export async function readPr(target, gh, { cloud = process.env.CLAUDE_CODE_REMOTE === "true" } = {}) {
   const raw = process.env.SPECKIT_PR_STATE;
   if (raw) return JSON.parse(raw);
+  if (cloud) return readPrRest(target, gh);
   const out = await gh(["pr", "view", ...(target ? [target] : []), "--json", "author,commits,number,state,headRefOid,statusCheckRollup"]);
   if (out.code !== 0) throw new Error(String(out.stderr).trim());
   const pr = JSON.parse(out.stdout);
@@ -175,6 +188,52 @@ export async function readPr(target, gh) {
   const read = await gh(committerArgs(pr.number));
   if (read.code !== 0) throw new Error(`its commits' committers: ${String(read.stderr).trim()}`);
   return withCommitters(pr, () => read.stdout);
+}
+
+/** `gh api` output: JSON, or with --jq one JSON value per line; a failed call throws its stderr. */
+async function api(gh, args) {
+  const out = await gh(["api", ...args]);
+  if (out.code !== 0) throw new Error(String(out.stderr).trim());
+  if (!args.includes("--jq")) return JSON.parse(out.stdout);
+  return String(out.stdout)
+    .split("\n")
+    .filter((line) => line.trim())
+    .map((line) => JSON.parse(line));
+}
+
+const upper = (v) => (v == null ? null : String(v).toUpperCase());
+
+/** The PR over REST, shaped as `gh pr view --json author,commits,number,state,headRefOid,statusCheckRollup`. */
+async function readPrRest(target, gh) {
+  const number = /^(?:https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/)?(\d+)$/.exec(String(target ?? ""))?.[1];
+  if (!number) throw new Error(`a cloud session reads the PR over REST and needs its PR number in the command, got ${target ? `"${target}"` : "none"}`);
+  const p = await api(gh, [`repos/{owner}/{repo}/pulls/${number}`]);
+  const sha = p.head.sha;
+  const [commits, status, checkRuns, runs, workflows] = await Promise.all([
+    api(gh, ["--paginate", `repos/{owner}/{repo}/pulls/${number}/commits?per_page=100`, "--jq", ".[] | {sha, author: .author.login, login: .committer.login, verified: .commit.verification.verified}"]),
+    api(gh, [`repos/{owner}/{repo}/commits/${sha}/status?per_page=100`]),
+    api(gh, ["--paginate", `repos/{owner}/{repo}/commits/${sha}/check-runs?per_page=100&filter=all`, "--jq", ".check_runs[] | {name, status, conclusion, started_at, suite: .check_suite.id, url: .details_url}"]),
+    api(gh, ["--paginate", `repos/{owner}/{repo}/actions/runs?head_sha=${sha}&per_page=100`, "--jq", ".workflow_runs[] | {id, suite: .check_suite_id, workflow: .workflow_id}"]),
+    api(gh, ["--paginate", "repos/{owner}/{repo}/actions/workflows?per_page=100", "--jq", ".workflows[] | {id, name}"]),
+  ]);
+  // A run's REST `name` is its run-name (pr-qa.yml names each lap), so the workflow's name comes from the
+  // workflow; an earlier attempt of a re-run keeps its own suite, which the listing no longer names, so a
+  // check run finds its workflow run by the run id in its details URL first.
+  const nameOf = new Map(workflows.map((w) => [w.id, w.name]));
+  const byRun = new Map(runs.map((r) => [String(r.id), r.workflow]));
+  const bySuite = new Map(runs.map((r) => [r.suite, r.workflow]));
+  const workflowOf = (c) => nameOf.get(byRun.get(/\/actions\/runs\/(\d+)/.exec(String(c.url ?? ""))?.[1]) ?? bySuite.get(c.suite)) ?? "";
+  return {
+    number: p.number,
+    state: upper(p.state),
+    headRefOid: sha,
+    author: { login: p.user?.login ?? "" },
+    commits: commits.map((c) => ({ oid: c.sha, authors: c.author ? [{ login: c.author }] : [], committer: { login: c.login }, verified: c.verified === true })),
+    statusCheckRollup: [
+      ...(status.statuses ?? []).map((s) => ({ __typename: "StatusContext", context: s.context, state: upper(s.state), description: s.description ?? null })),
+      ...checkRuns.map((c) => ({ __typename: "CheckRun", name: c.name, workflowName: workflowOf(c), status: upper(c.status), conclusion: upper(c.conclusion), startedAt: c.started_at })),
+    ],
+  };
 }
 
 /** The carry reads over an async gh, each distinct call made once (head's statuses serve both the description and the state). */

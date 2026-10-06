@@ -497,7 +497,7 @@ describe('a missing report, hostile reasons', () => {
         if (args.join(' ').includes('pr view')) return { code: 0, stdout: JSON.stringify({ body: 'Notion story: x' }), stderr: '' };
         return { code: 0, stdout: '{}', stderr: '' };
       };
-      postVerdict({ pr: r.pr, repo: r.repo, sha: r.sha, verdict: r.verdict, summary: r.summary, body: r.markdown, lap: r.lap, gh });
+      postVerdict({ pr: r.pr, repo: r.repo, sha: r.sha, verdict: r.verdict, summary: r.summary, body: r.markdown, lap: r.lap, gh, cloud: false });
       const status = calls.find((c) => c.args.some((x) => /statuses\/abc1234def$/.test(x)));
       assert.ok(status, 'a status was set');
       const description = status.args.find((x) => x.startsWith('description=')).slice('description='.length);

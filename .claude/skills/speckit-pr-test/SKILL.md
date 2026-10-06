@@ -134,6 +134,7 @@ keeps them in history; `.gitignore` refuses them under `pr-review/`.
 ## Never
 
 - Never post on, push to, or set a status on a PR you were asked to dry-run.
-- Never set `agent-review` by hand; only `post.mjs` sets it, from a report,
+- Never set `agent-review` by hand; only the PR QA workflow sets it, from
+  its run (the only writer in a cloud session), `post.mjs`, from a report,
   and `carry.mjs`, from a verified docs-only carry.
 - Never merge with `agent-review` missing or failing on the head commit.
