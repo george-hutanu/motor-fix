@@ -308,6 +308,45 @@ describe('pr checks', () => {
     assert.equal(gh(['pr', 'checks', '160'], pending).code, 8);
   });
 
+  it('keeps only the latest run of a check in the same workflow, like gh', () => {
+    // A re-triggered workflow cancels its earlier run: both stay on the commit.
+    const at = (c, suite, started_at) => ({ ...c, check_suite: { id: suite }, started_at });
+    const f = fake({
+      ...routes([
+        at(run('body', 'completed', 'success'), 2, '2026-10-06T17:54:52Z'),
+        at(run('body', 'completed', 'cancelled'), 1, '2026-10-06T17:54:47Z'),
+        at(run('body', 'completed', 'failure'), 3, '2026-10-06T17:50:00Z'),
+        at(run('Biome', 'completed', 'success'), 4, '2026-10-06T17:54:00Z'),
+      ]),
+      'GET actions/runs?head_sha=head1&per_page=100': {
+        workflow_runs: [
+          { check_suite_id: 1, name: 'PR template' },
+          { check_suite_id: 2, name: 'PR template' },
+          { check_suite_id: 3, name: 'Other' },
+          { check_suite_id: 4, name: 'CI' },
+        ],
+      },
+    });
+    const r = gh(['pr', 'checks', '160', '--json', 'name,bucket'], f);
+    assert.deepEqual(JSON.parse(r.stdout), [
+      { name: 'body', bucket: 'pass' },
+      { name: 'body', bucket: 'fail' },
+      { name: 'Biome', bucket: 'pass' },
+    ]);
+    assert.equal(r.code, 1);
+  });
+
+  it('keeps every run when the workflows cannot be read, and reads them only for a repeated name', () => {
+    const at = (c, suite, started_at) => ({ ...c, check_suite: { id: suite }, started_at });
+    const f = fake(routes([at(run('body', 'completed', 'success'), 2, '2026-10-06T17:54:52Z'), at(run('body', 'completed', 'cancelled'), 1, '2026-10-06T17:54:47Z')]));
+    const r = gh(['pr', 'checks', '160', '--json', 'name,bucket'], f);
+    assert.deepEqual(JSON.parse(r.stdout).map((c) => c.bucket), ['pass', 'cancel']);
+    assert.equal(r.code, 1);
+    const once = fake(routes([run('Biome', 'completed', 'success')]));
+    gh(['pr', 'checks', '160'], once);
+    assert.equal(once.api().filter((c) => c.includes('actions/runs')).length, 0);
+  });
+
   it('prints name, bucket and link per line without --json', () => {
     const f = fake(routes([run('Biome', 'completed', 'success')]));
     assert.equal(gh(['pr', 'checks', '160'], f).stdout, 'Biome\tpass\thttps://x/Biome\n');

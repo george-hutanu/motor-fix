@@ -96,9 +96,31 @@ const FIELDS = {
   statusCheckRollup: (p, run) => rollup(run, p.head.sha),
 };
 
-/** The head commit's check runs and commit statuses, as REST returns them. */
+/**
+ * The latest run of each check per workflow, as gh keeps it: a re-triggered
+ * workflow leaves its cancelled run on the commit too. Workflow names are read
+ * only when a name repeats; unreadable, every run stays (never a false green).
+ */
+function latestRuns(run, sha, runs) {
+  if (new Set(runs.map((c) => c.name)).size === runs.length) return runs;
+  let workflow = {};
+  try {
+    const wf = pages(run, `actions/runs?head_sha=${sha}&per_page=100`).flatMap((page) => page.workflow_runs ?? []);
+    workflow = Object.fromEntries(wf.map((w) => [w.check_suite_id, w.name]));
+  } catch {}
+  const key = (c) => `${c.name}\0${workflow[c.check_suite?.id] ?? `suite ${c.check_suite?.id}`}`;
+  const latest = new Map();
+  for (const c of runs) {
+    const kept = latest.get(key(c));
+    if (!kept || String(c.started_at ?? "") > String(kept.started_at ?? "")) latest.set(key(c), c);
+  }
+  const keep = new Set(latest.values());
+  return runs.filter((c) => keep.has(c));
+}
+
+/** The head commit's check runs (the latest of each) and commit statuses, as REST returns them. */
 function headChecks(run, sha) {
-  const runs = pages(run, `commits/${sha}/check-runs?per_page=100`).flatMap((page) => page.check_runs ?? []);
+  const runs = latestRuns(run, sha, pages(run, `commits/${sha}/check-runs?per_page=100`).flatMap((page) => page.check_runs ?? []));
   const statuses = rest(run, "GET", `commits/${sha}/status`)?.statuses ?? [];
   return { runs, statuses };
 }
