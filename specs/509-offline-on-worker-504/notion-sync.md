@@ -8,3 +8,5 @@
 - 2026-10-06 · implement · ST-509 · Planning → Implementing (connector; no NOTION_TOKEN in the cloud session)
 - 2026-10-06 · labels · PR #159 · in development (+bug, scope: overlays)
 - 2026-10-06 · debt · ST-509 · filed https://app.notion.com/p/3f1607bff0d281f798d2f03f3fb36200 (To do, Tech debt; connector)
+- 2026-10-06 · qa · ST-509 · Implementing → QA (connector); PR #159 ready
+- 2026-10-06 · labels · PR #159 · QA
