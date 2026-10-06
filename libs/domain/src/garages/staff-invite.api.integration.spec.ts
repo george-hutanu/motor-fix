@@ -666,6 +666,23 @@ describe('resending and revoking', () => {
     expect(await audit('invite_resent')).toHaveLength(1);
   });
 
+  it('keeps the old link working when a resend finds the web address unset', async () => {
+    const { dinamo, id, mihai, token } = await sent();
+    const config = (invites as unknown as { config: { webUrl?: string } })
+      .config;
+    const { webUrl } = config;
+    config.webUrl = undefined;
+    try {
+      const res = await resend(dinamo.id, id, bearer(mihai, 'garage'));
+
+      expect(res.status).toBe(500);
+      expect(brevo.emails()).toHaveLength(1);
+      expect((await check(token)).status).toBe(200);
+    } finally {
+      config.webUrl = webUrl;
+    }
+  });
+
   // @traces 131-FR-005 131-FR-010
   it('stops the link on revoke and records it', async () => {
     const { dinamo, id, mihai, token } = await sent();
