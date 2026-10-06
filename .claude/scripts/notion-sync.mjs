@@ -23,10 +23,19 @@ import { join } from "node:path";
 import { markFiled, parseDeferred, taskFor } from "./debt-tasks.mjs";
 import { isEntryPoint } from "./lib/entry.mjs";
 import { activeFeature } from "./lib/feature.mjs";
-import { clientLimits, NotionError, notionClient, notionToken, readProp, writeProp } from "./lib/notion.mjs";
+import { clientLimits, NotionError, notionClient, notionToken, readProp, richText, writeProp } from "./lib/notion.mjs";
 import { decideReady } from "./notion-ready.mjs";
 import { decide, recordPrior } from "./notion-status.mjs";
 import { readState } from "./run-state.mjs";
+
+/** Comments on a page: as markdown when it fits one rich-text object, else as plain text split at Notion's 2,000. */
+const postComment = (client, pageId, body) => {
+  const parts = richText(body);
+  return client.request("POST", "/comments", {
+    parent: { page_id: pageId },
+    ...(parts.length === 1 ? { markdown: body } : { rich_text: parts }),
+  });
+};
 
 export const STORIES = "326eee3c-abec-41d9-9f96-eb3bd545a802";
 export const PLANS_PAGE = "3ee607bff0d2818493d0dadd2d5a006c";
@@ -267,7 +276,7 @@ async function statusEvent(ctx) {
   recordPrior(ctx.repo, event, decision);
   const comment = event === "blocked" && (decision.write || !blockLogged(ctx, reason));
   if (comment) {
-    await client.request("POST", "/comments", { parent: { page_id: story.id }, markdown: `Blocked: ${reason}` });
+    await postComment(client, story.id, `Blocked: ${reason}`);
     if (ctx.prNumber()) ctx.gh(["pr", "comment", ctx.prNumber(), "--body", `Blocked: ${reason}`]);
   }
   log(event, st, `${decision.note}${comment ? ` — ${reason}` : ""}`);
@@ -323,7 +332,7 @@ async function finishComment(ctx) {
   if (posted) return;
   ctx.step = { name: "comment", item: st };
   const body = readFileSync(flags["body-file"], "utf8");
-  await ctx.client.request("POST", "/comments", { parent: { page_id: ctx.story.id }, markdown: body });
+  await postComment(ctx.client, ctx.story.id, body);
   ctx.log("comment", st, `posted (${body.split("\n").filter((l) => /^\s*[-*] /.test(l)).length} items)`);
 }
 
@@ -389,7 +398,7 @@ async function linkPr(ctx) {
   if (!existing) await patch(client, story, "PR", url, "url");
   else if (existing === url) text += " (unchanged)";
   else {
-    await client.request("POST", "/comments", { parent: { page_id: story.id }, markdown: `Follow-up PR: ${url}` });
+    await postComment(client, story.id, `Follow-up PR: ${url}`);
     text += ` (follow-up; PR keeps ${existing})`;
   }
   const epicId = readProp(story, "Epic")?.[0];

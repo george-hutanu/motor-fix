@@ -1,0 +1,99 @@
+{
+  "pr": 147,
+  "repo": "george-hutanu/motor-fix",
+  "sha": "011143ca5c557662b9a87831d0ad09928b21d49a",
+  "base": "26cf0dcd02cff8ef0979cb788cedcbe059d42a69",
+  "lap": 3,
+  "verdict": "failure",
+  "summary": "2 blocking finding(s); 4 in all. Booted postgres, redis, minio, api, web, worker.",
+  "findings": [
+    {
+      "severity": "high",
+      "kind": "review",
+      "title": "flow not run: Story 1, detect names the missing id, add <id> lists it, check and detect then exit 0, a second add changes nothing",
+      "steps": [
+        "Open .specify/.cache/qa-flows-147.mjs",
+        "It runs only `check` and `add mcp__x__Bash` (refusal); it never runs `detect`, a successful `add <id>` on a copy of the agents, or the repeat `add` no-op from Story 1's acceptance"
+      ],
+      "evidence": ".specify/.cache/qa-flows-147.mjs:13: const check = run('check');"
+    },
+    {
+      "severity": "high",
+      "kind": "review",
+      "title": "flow not run: Story 4, doctor.mjs reports a stale Notion list as a warn",
+      "steps": [
+        "Open .specify/.cache/qa-flows-147.mjs",
+        "No step runs `node .claude/scripts/doctor.mjs` and checks the agents/notion-tools result (ok on the head, warn with an `add <id>` hint when a transcript carries an id the agents lack)"
+      ],
+      "evidence": ".claude/scripts/doctor.mjs:321: return [...checkHooks(repo), ...checkFeatureState(repo), ...checkSkillsAndAgents(repo), ...checkNotionTools(repo), ...checkCommands(repo)];"
+    },
+    {
+      "severity": "medium",
+      "kind": "review",
+      "title": "add writes the agent files before it checks settings.json, so an invalid settings.json leaves the agents and the allowlist out of step",
+      "steps": [
+        "Seed both Notion agents and a settings.json that is not JSON",
+        "Run `node .claude/scripts/notion-agent-tools.mjs add <new id>`: it exits 2, but both agent files already carry the new id and `check` now fails",
+        "Read settings first and throw before any write; the adversary test only asserts the throw, not that the agents are untouched"
+      ],
+      "evidence": ".claude/scripts/notion-agent-tools.mjs:143: const settings = readAllow(repo);\n  if (settings?.error) throw new Error(settings.error);"
+    },
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "detect returns a `seen` list no caller reads (CLI and doctor use only missing and note); only a test asserts it",
+      "steps": [
+        "grep for `.seen` outside the specs: none"
+      ],
+      "evidence": ".claude/scripts/notion-agent-tools.mjs:228: return { seen: ids, missing: ids.filter((id) => !have.has(id)).sort(), note: `${files} transcript(s) read` };"
+    }
+  ],
+  "booted": [
+    "postgres",
+    "redis",
+    "minio",
+    "api",
+    "web",
+    "worker"
+  ],
+  "notes": [
+    "Ran on GitHub Actions (https://github.com/george-hutanu/motor-fix/actions/runs/37452566426): PostgreSQL with PostGIS, Redis and MinIO from the PR's own compose file, started by the PR QA workflow.",
+    "No API operation changed.",
+    "Unit and end-to-end tests left to CI (Unit tests and E2E tests; the merge gate waits for them)."
+  ],
+  "screenshots": [
+    "shots/home-desktop-light-ro.png",
+    "shots/home-desktop-light-en.png",
+    "shots/home-desktop-dark-ro.png",
+    "shots/home-desktop-dark-en.png",
+    "shots/home-tablet-light-ro.png",
+    "shots/home-tablet-light-en.png",
+    "shots/home-tablet-dark-ro.png",
+    "shots/home-tablet-dark-en.png",
+    "shots/home-mobile-light-ro.png",
+    "shots/home-mobile-light-en.png",
+    "shots/home-mobile-dark-ro.png",
+    "shots/home-mobile-dark-en.png",
+    "shots/home-small-phone-light-ro.png",
+    "shots/home-small-phone-light-en.png",
+    "shots/home-small-phone-dark-ro.png",
+    "shots/home-small-phone-dark-en.png",
+    "shots/cockpit-desktop-light-ro.png",
+    "shots/cockpit-desktop-light-en.png",
+    "shots/cockpit-desktop-dark-ro.png",
+    "shots/cockpit-desktop-dark-en.png",
+    "shots/cockpit-tablet-light-ro.png",
+    "shots/cockpit-tablet-light-en.png",
+    "shots/cockpit-tablet-dark-ro.png",
+    "shots/cockpit-tablet-dark-en.png",
+    "shots/cockpit-mobile-light-ro.png",
+    "shots/cockpit-mobile-light-en.png",
+    "shots/cockpit-mobile-dark-ro.png",
+    "shots/cockpit-mobile-dark-en.png",
+    "shots/cockpit-small-phone-light-ro.png",
+    "shots/cockpit-small-phone-light-en.png",
+    "shots/cockpit-small-phone-dark-ro.png",
+    "shots/cockpit-small-phone-dark-en.png"
+  ],
+  "markdown": "**Agent review: failure** — PR #147 at `011143c`, lap 3\n\nBlocking: 2 (blocker 0, high 2) · medium 1 · low 1. Booted: postgres, redis, minio, api, web, worker.\n- Ran on GitHub Actions (https://github.com/george-hutanu/motor-fix/actions/runs/37452566426): PostgreSQL with PostGIS, Redis and MinIO from the PR's own compose file, started by the PR QA workflow.\n- No API operation changed.\n- Unit and end-to-end tests left to CI (Unit tests and E2E tests; the merge gate waits for them).\n\n| # | Severity | Finding | Where | Evidence |\n| --- | --- | --- | --- | --- |\n| 1 | high | flow not run: Story 1, detect names the missing id, add <id> lists it, check and detect then exit 0, a second add changes nothing |  | .specify/.cache/qa-flows-147.mjs:13: const check = run('check'); |\n| 2 | high | flow not run: Story 4, doctor.mjs reports a stale Notion list as a warn |  | .claude/scripts/doctor.mjs:321: return [...checkHooks(repo), ...checkFeatureState(repo), ...checkSkillsAndAgents(repo), ...checkNotionTools(repo), ...checkCommands(repo)]; |\n| 3 | medium | add writes the agent files before it checks settings.json, so an invalid settings.json leaves the agents and the allowlist out of step |  | .claude/scripts/notion-agent-tools.mjs:143: const settings = readAllow(repo);   if (settings?.error) throw new Error(settings.error); |\n| 4 | low | detect returns a `seen` list no caller reads (CLI and doctor use only missing and note); only a test asserts it |  | .claude/scripts/notion-agent-tools.mjs:228: return { seen: ids, missing: ids.filter((id) => !have.has(id)).sort(), note: `${files} transcript(s) read` }; |\n\n### Reproduction\n1. Open .specify/.cache/qa-flows-147.mjs → It runs only `check` and `add mcp__x__Bash` (refusal); it never runs `detect`, a successful `add <id>` on a copy of the agents, or the repeat `add` no-op from Story 1's acceptance\n2. Open .specify/.cache/qa-flows-147.mjs → No step runs `node .claude/scripts/doctor.mjs` and checks the agents/notion-tools result (ok on the head, warn with an `add <id>` hint when a transcript carries an id the agents lack)\n3. Seed both Notion agents and a settings.json that is not JSON → Run `node .claude/scripts/notion-agent-tools.mjs add <new id>`: it exits 2, but both agent files already carry the new id and `check` now fails → Read settings first and throw before any write; the adversary test only asserts the throw, not that the agents are untouched\n4. grep for `.seen` outside the specs: none\n\nScreenshots: 32, one per route × viewport × scheme × language.\n"
+}

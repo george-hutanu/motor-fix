@@ -58,6 +58,12 @@ Pass this script to the Workflow tool as `script`, with
 `args: { range: RANGE, featureDir: FEATURE_DIR, votes: 3 | 1 }`. It is plain
 JavaScript; adjust nothing but `args`.
 
+If the Workflow tool is not available in this session (a cloud session may
+not have it), run the same shape by hand: `spec-reviewer` and `code-reviewer`
+in parallel through the Agent tool, then one refuting agent per CRITICAL or
+HIGH finding, keeping only what survives; note `Workflow unavailable` in the
+report.
+
 ```js
 export const meta = {
   name: 'speckit-review',
