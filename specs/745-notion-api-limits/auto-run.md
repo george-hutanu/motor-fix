@@ -18,3 +18,15 @@
 ## 2. Specify
 - Phase agent (fable): STATUS success — 8 FRs, 3 stories; `level.mjs check` → level 2 unchanged.
 - Autonomous: comments ≤2,000 chars stay markdown, longer → split rich_text; relation >100 refused; timeout/network retried on GET only; append helper chunks by 100; 500 KB = 500×1024 UTF-8 bytes (spec Assumptions).
+
+## 3. Org context
+- org-researcher returned blocked: no Notion tools in its tool list → `[UNAVAILABLE: notion — …]`. Story page and its comments (none) read in the run's own session; context.md written from that; epic/architecture/decisions not read (gap).
+
+## 4. Clarify
+- spec-challenger: 5 findings. Answers (spec Clarifications, Session 2026-10-06):
+  1. `POST /pages` markdown body not split — story names writeProp and comments only; owner said no extras (challenger recommended applying; scope authority overrides).
+  2. Computed backoff clamped to MAX_WAIT_S; server Retry-After above cap raises at once (challenger's recommendation).
+  3. Bucket capacity 3 (recommendation).
+  4. 2,000 counts code points (recommendation).
+  5. `random` and `now` injectable; backoff 500 ms·2^a·(1+random) (recommendation).
+- level.mjs check: level 2 unchanged.

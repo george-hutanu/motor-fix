@@ -22,6 +22,16 @@ vitest spec first, with an injected `fetchImpl` and `sleep` and no real
 network; the harness specs stay green and `node .claude/scripts/doctor.mjs`
 passes (bless only after reading the diff).
 
+## Clarifications
+
+### Session 2026-10-06
+
+- Q: Does the over-2,000 fallback also apply to the `markdown` body of `POST /pages` (the `debt` task)? → A: No; the story names `writeProp` and comments only, so the page body keeps `markdown` and gets only the 500 KB check (owner: scope as the story, no extras).
+- Q: When the client's own computed backoff exceeds `NOTION_SYNC_MAX_WAIT_S`, does it clamp or give up? → A: Clamp the computed backoff to the cap and keep retrying; give up at once only when a server `Retry-After` exceeds the cap. `NOTION_SYNC_MAX_WAIT_S=0` retries without waiting.
+- Q: What is the token bucket's capacity? → A: 3 (one second's allowance): of 10 requests at once, 3 go out without a sleep and the requested sleeps total at least 7/3 s.
+- Q: Which unit does the 2,000-character limit count? → A: Unicode code points (`Array.from(text)`), so a surrogate pair is never cut.
+- Q: How is the jitter made testable? → A: `random` is injectable like `sleep` (default `Math.random`), and so is the clock `now` (default `Date.now`); a backoff wait for attempt *a* is `500 ms · 2^a · (1 + random())`, i.e. within [500·2^a, 1000·2^a] ms, then clamped to the cap.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - A burst of syncs is paced, and transient failures are retried (Priority: P1)
@@ -43,11 +53,11 @@ retry; answer 429 with `Retry-After` and read the wait.
 
 **Acceptance Scenarios**:
 
-1. **Given** a client with a fresh token bucket, **When** 10 requests are issued at once, **Then** the first ones go out immediately (the burst) and the rest are delayed so that the sustained rate is at most 3 per second, with no 429 needed to slow down.
+1. **Given** a client with a fresh token bucket (capacity 3), **When** 10 requests are issued at once, **Then** the first 3 go out immediately (the burst) and the rest are delayed so that the sustained rate is at most 3 per second, with no 429 needed to slow down.
 2. **Given** a request answered 429 with `Retry-After: 2`, **When** retries remain, **Then** the client sleeps 2 s and sends the request again.
-3. **Given** a request answered 503 (or 502, 504, or 409 `conflict_error`) with no `Retry-After`, **When** retries remain, **Then** the client waits an exponentially growing time with jitter and sends it again.
+3. **Given** a request answered 503 (or 502, 504, or 409 `conflict_error`) with no `Retry-After`, **When** retries remain, **Then** the client waits `500 ms · 2^attempt · (1 + random())` (clamped to `NOTION_SYNC_MAX_WAIT_S`) and sends it again.
 4. **Given** `NOTION_SYNC_MAX_RETRIES=1`, **When** a request is answered 503 twice, **Then** the second answer surfaces as a `NotionError` named `503 …`.
-5. **Given** a `Retry-After` (or computed backoff) above `NOTION_SYNC_MAX_WAIT_S`, **When** the answer is retryable, **Then** the client does not wait and raises the `NotionError` at once (today's behaviour, kept).
+5. **Given** a server `Retry-After` above `NOTION_SYNC_MAX_WAIT_S`, **When** the answer is retryable, **Then** the client does not wait and raises the `NotionError` at once (today's behaviour, kept); a computed backoff above the cap is clamped to it instead.
 6. **Given** a `GET` that times out or fails on the network, **When** retries remain, **Then** it is sent again; **Given** a `POST`, `PATCH` or `DELETE` that times out or fails on the network, **Then** it is not sent again and the `NotionError` (`timeout` / `network error`) surfaces.
 7. **Given** a request answered 400, 401, 403, 404 or 500, **When** it fails, **Then** it is not retried (unchanged).
 
@@ -55,7 +65,7 @@ retry; answer 429 with `Retry-After` and read the wait.
 
 ### User Story 2 - A long text or a big relation never breaks a write (Priority: P2)
 
-A finish comment, a deferred-task body or a long property value can exceed
+A finish comment or a long property value can exceed
 Notion's 2,000 characters per rich-text object, and an epic's story list can
 exceed 100 relation ids. Today such a write is sent as one object and refused
 by Notion. The client should split text into objects of at most 2,000
@@ -108,7 +118,7 @@ body of each page request.
 - A 429 without `Retry-After`: backed off like a 503 (exponential with jitter), not a fixed 1 s.
 - `Retry-After` present but not a number: treated as absent.
 - `NOTION_SYNC_MAX_RETRIES=0`: no retry of any kind; the first failing answer surfaces.
-- A multi-byte character at a 2,000-character boundary: the split counts characters as Notion does, never cutting a surrogate pair.
+- A multi-byte character at a 2,000-character boundary: the split counts Unicode code points, never cutting a surrogate pair.
 - An empty text or an empty relation: one empty object / an empty array, as today.
 - The token bucket is per client instance (one process, one integration token); two processes still share Notion's quota and rely on the 429 retry for that.
 - Every retry and every chunk still passes through the pacing, so a retried burst does not exceed the rate.
@@ -118,10 +128,10 @@ body of each page request.
 
 ### Functional Requirements
 
-- **FR-001**: The client MUST pace its outgoing requests with a shared token bucket so that the sustained rate is at most 3 requests per second per client, allowing a burst up to the bucket's capacity, independent of any 429 answer.
-- **FR-002**: The client MUST retry an answer of 429, 502, 503, 504, or 409 with code `conflict_error`, honouring a numeric `Retry-After` when present and otherwise waiting an exponentially growing time with jitter; `NOTION_SYNC_MAX_RETRIES` caps the attempts and `NOTION_SYNC_MAX_WAIT_S` caps any single wait, as today.
+- **FR-001**: The client MUST pace its outgoing requests with a shared token bucket so that the sustained rate is at most 3 requests per second per client, allowing a burst up to the bucket's capacity of 3, independent of any 429 answer; the clock (`now`) is injectable.
+- **FR-002**: The client MUST retry an answer of 429, 502, 503, 504, or 409 with code `conflict_error`, honouring a numeric `Retry-After` when present (raising at once when it exceeds `NOTION_SYNC_MAX_WAIT_S`, as today) and otherwise waiting `500 ms · 2^attempt · (1 + random())` clamped to `NOTION_SYNC_MAX_WAIT_S`, with `random` injectable; `NOTION_SYNC_MAX_RETRIES` caps the attempts.
 - **FR-003**: The client MUST retry a timeout or network error on `GET` under the same caps, and MUST NOT retry one on `POST`, `PATCH` or `DELETE`.
-- **FR-004**: `writeProp` MUST split a `title` or `rich_text` value into objects of at most 2,000 characters, at most 100 objects per array, and MUST raise a `NotionError` for a text that cannot fit; the same splitter is exported for comments.
+- **FR-004**: `writeProp` MUST split a `title` or `rich_text` value into objects of at most 2,000 Unicode code points, at most 100 objects per array, and MUST raise a `NotionError` for a text that cannot fit; the same splitter is exported for comments.
 - **FR-005**: `notion-sync` MUST post a comment body over 2,000 characters as `rich_text` objects produced by the shared splitter, and MAY keep posting a body of at most 2,000 characters as `markdown`.
 - **FR-006**: `writeProp` MUST raise a `NotionError` for a relation of more than 100 ids, never truncating it.
 - **FR-007**: The client MUST expose a block-children append helper that sends at most 100 children per request, in order, and MUST refuse locally, with a `NotionError` and no call, any request whose UTF-8 JSON body exceeds 500 × 1024 bytes.
@@ -137,7 +147,7 @@ body of each page request.
 
 ### Measurable Outcomes
 
-- **SC-001**: 10 requests issued at once by one client complete without a 429 being needed to pace them, and the sleeps the client requests keep its sustained rate at or under 3 per second (verified with injected `sleep`).
+- **SC-001**: 10 requests issued at once by one client complete without a 429 being needed to pace them: 3 go out without a sleep and the requested sleeps total at least 7/3 s (verified with injected `sleep` and `now`).
 - **SC-002**: A sync whose one request is answered 503, 502, 504, 409 `conflict_error` or 429 once and then 200 completes with no error, within the existing retry and wait caps.
 - **SC-003**: A comment of 3,000 characters and a property of 5,000 characters reach Notion as objects of at most 2,000 characters each; no sync fails on text length.
 - **SC-004**: A relation of over 100 ids and a body over 500 KB are refused locally with a named `NotionError` and zero calls sent.
@@ -150,7 +160,7 @@ body of each page request.
 - (autonomous default) A timeout or network error on `POST`, `PATCH` or `DELETE` is not retried (the write may have landed); on `GET` it is retried under the same caps.
 - (autonomous default) The block-children append helper chunks by 100 and is exported from the client for callers; none calls it today, so its test is the only consumer in this feature.
 - (autonomous default) 500 KB means 500 × 1024 bytes of the UTF-8 JSON body; the check runs before pacing and before any call.
-- (autonomous default) Token-bucket capacity and the backoff base and ceiling are implementation choices recorded in the plan; the sustained rate (3/s), the retry set, and the two existing caps are fixed by the story.
+- (autonomous default) Token-bucket capacity 3 and backoff base 500 ms (see Clarifications); the sustained rate (3/s), the retry set, and the two existing caps are fixed by the story.
 - (autonomous default) The page-create call in `notion-sync` (`POST /pages` with a `markdown` body for a deferred task) is unchanged apart from the 500 KB body check; its property writes go through `writeProp` and get the splitter.
 - The 2,000-character, 100-object, 100-id, 100-children and 500 KB figures are Notion's documented request limits; the rate of 3 per second is Notion's documented average.
 
