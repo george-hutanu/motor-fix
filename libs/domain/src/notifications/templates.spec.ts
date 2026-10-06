@@ -478,3 +478,88 @@ describe('the push texts of the test messages', () => {
     );
   });
 });
+
+describe('the links an e-mail carries', () => {
+  const linked = fixture({
+    email: {
+      en: {
+        button: { label: 'Open', link: 'go' },
+        lines: ['Hi'],
+        reason: 'Because.',
+        stop: { label: 'Stop', link: 'stop' },
+        subject: 'Hi',
+      },
+      ro: {
+        button: { label: 'Deschide', link: 'go' },
+        lines: ['Salut'],
+        reason: 'Pentru că.',
+        stop: { label: 'Oprește', link: 'stop' },
+        subject: 'Salut',
+      },
+    },
+    values: { go: 'link', stop: 'link' },
+  });
+  const mail = (go: string, stop: string) =>
+    render('QUOTE_RECEIVED', 'email', 'en', { go, stop }, linked);
+  const safe = `${APP}/x`;
+
+  it.each([
+    'https://motorfix.test/x?t=a&b=<x>',
+    'HTTPS://motorfix.ro',
+    'http://localhost:4200/x',
+    'http://127.0.0.1/x',
+    'http://LOCALHOST/x',
+  ])('accepts %s as the button and the stop link', (href) => {
+    expect(() => mail(href, safe)).not.toThrow();
+    expect(() => mail(safe, href)).not.toThrow();
+  });
+
+  it('still escapes an accepted href in the HTML part', () => {
+    const html = mail('https://motorfix.test/x?t=a&b=<x>', safe).html;
+    expect(html).not.toContain('<x>');
+    expect(html).toContain('&amp;');
+  });
+
+  it.each([
+    'http://motorfix.ro/x',
+    'javascript:alert(1)',
+    'data:text/html,x',
+    '/relative/path',
+    'motorfix.ro/x',
+    'not a url',
+    '',
+    'http://localhost.evil.com/x',
+    'http://127.0.0.1.evil.com/x',
+    'http://[::1]/x',
+  ])('refuses %j as the button and the stop link', (href) => {
+    const button = failure(() => mail(href, safe));
+    expect(button).toBeInstanceOf(TemplateError);
+    expect((button as TemplateError).reason).toMatch(/button link/);
+    const stop = failure(() => mail(safe, href));
+    expect(stop).toBeInstanceOf(TemplateError);
+    expect((stop as TemplateError).reason).toMatch(/stop link/);
+  });
+
+  it('renders an e-mail with no stop link', () => {
+    const plain = fixture({
+      email: {
+        en: {
+          button: { label: 'Open', link: 'go' },
+          lines: ['Hi'],
+          reason: 'Because.',
+          subject: 'Hi',
+        },
+        ro: {
+          button: { label: 'Deschide', link: 'go' },
+          lines: ['Salut'],
+          reason: 'Pentru că.',
+          subject: 'Salut',
+        },
+      },
+      values: { go: 'link' },
+    });
+    expect(
+      render('QUOTE_RECEIVED', 'email', 'en', { go: safe }, plain).html,
+    ).toContain(safe);
+  });
+});

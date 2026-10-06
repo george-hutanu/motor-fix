@@ -14,3 +14,6 @@
 - 5 plan: plan.md written (Technical Context from package.json, tsconfig.base.json, libs/domain/jest.config.cts; constitution gates all pass); no research.md, data-model.md, contracts/ or quickstart.md (nothing unresolved, no entity, no interface; validation steps in plan.md). before_plan design check skipped (design.md current, no screens); after_plan agent-context update skipped (CLAUDE.local.md is private and not committed).
 - 6 checklist: checklists/email-link.md, 19 items, 0 unchecked; 3 gaps fixed in spec.md (empty string and whitespace in FR-001, credentials/host out of scope in Edge Cases), CHK019 struck as N/A.
 - 7 tasks: tasks.md, 4 tasks (T001-T002 specs red first, T003 safeHref in templates.ts, T004 validation), 1 story, no parallel work; after_tasks analyze left to caller.
+- 8 analyze: inline; artifact-lint 0/0; spec/plan/tasks consistent (FR-001..004 each covered by T001-T003); no remediation.
+- 9 tests: link table red (10 refusals failing, accepts green) before T003.
+- 10 implement: safeHref in templates.ts render() email case; notifications unit specs 667 green.
