@@ -2,7 +2,7 @@
 
 **Feature Branch**: `705-auto-skill-split`
 **Created**: 2026-10-05
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 **Level**: 1 (one-session)
 **Notion story**: ST-704 — https://app.notion.com/p/3f0607bff0d281eba2e2cd21f5ea6d63
 **Epic**: EP-1 Foundations

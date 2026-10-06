@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-05
+updated: 2026-10-06
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -18,6 +18,7 @@ features:
   - 704-auto-phase-model-pins
   - 696-lifecycle-script
   - 703-idle-watch-gate
+  - 705-auto-skill-split
 ---
 
 # Capability: Platform
@@ -498,10 +499,6 @@ _From 704-auto-phase-model-pins._
 
 _From 704-auto-phase-model-pins._
 
-### 704-FR-007 — Within `.claude/skills/speckit-auto/SKILL.md` the change MUST be confined to the phase 2–8 dispatch lines and the lines that describe the dispatch; the Hand-off, The wait and The tail sections and the lines listing the open, ready and merge commands MUST be identical to `origin/main`.
-
-_From 704-auto-phase-model-pins._
-
 ### 704-FR-008 — `npm run test:harness`, `node .claude/scripts/harness-eval.mjs --check` and `node .claude/scripts/doctor.mjs` MUST pass on the branch; a harness spec MUST fail if a phase 2–8 dispatch line names a model other than that phase skill's pin.
 
 _From 704-auto-phase-model-pins._
@@ -542,9 +539,10 @@ _From 696-lifecycle-script._
 
 _From 696-lifecycle-script._
 
-### 696-FR-009 — `speckit-auto/SKILL.md` (the lines listing the open, ready and merge commands) and `speckit-git-commit/SKILL.md` (the first-commit recipe) MUST name one `lifecycle.mjs` call per step instead of the recipe.
+### 705-FR-007 — `speckit-auto`'s `hand-off.md` and `tail.md` (the lines listing the ready and merge commands) and `speckit-git-commit/SKILL.md` (the first-commit recipe) name one `lifecycle.mjs` call per step instead of the recipe.
 
-_From 696-lifecycle-script._
+_From 705-auto-skill-split._
+
 ### 703-FR-001 — `watch.mjs --gate` MUST run the same scan as the table, read-only (no fix applied, no claim written), and exit 0 with no output on stdout or stderr when the pass would do nothing: an empty dispatch plan and nothing the no-agent fixes would act on.
 
 _From 703-idle-watch-gate._
@@ -577,6 +575,30 @@ _From 703-idle-watch-gate._
 
 _From 703-idle-watch-gate._
 
+### 705-FR-001 — SKILL.md holds the frontmatter, User Input, Goal, Autonomy Contract, the run-order table with a reference-file column, Size, Run state, Hard Stops, Notifying, the Final Report envelope and the Agent Execution Rules deltas. Nothing else.
+
+_From 705-auto-skill-split._
+
+### 705-FR-002 — Every other section moves, unchanged in substance, to one of these files beside it: `preflight.md`, `phases-plan.md` (1–8), `phases-build.md` (9–12), `phases-close.md` (13–17), `commit-protocol.md`, `hand-off.md`, `tail.md` and `report.md`.
+
+_From 705-auto-skill-split._
+
+### 705-FR-003 — No rule is dropped, loosened or duplicated. `layout.spec.mjs` enforces this.
+
+_From 705-auto-skill-split._
+
+### 705-FR-004 — The harness specs that read speckit-auto keep their meaning and read the file that now holds their phrases: `tail-handoff-wiring`, `task-runner`, `agent-replies`, and `lifecycle-wiring` once #141 merges.
+
+_From 705-auto-skill-split._
+
+### 705-FR-005 — The stale text is corrected:
+
+_From 705-auto-skill-split._
+
+### 705-FR-006 — The report measures bytes with `wc -c`:
+
+_From 705-auto-skill-split._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -587,3 +609,6 @@ _From 703-idle-watch-gate._
 - `421-FR-034` — superseded by `516-FR-004` (2026-10-04)
 
 - `464-FR-011` — superseded by `703-FR-009` (2026-10-05)
+
+- `704-FR-007` — removed by 705-auto-skill-split (2026-10-06): (it fenced ST-697's own edit of SKILL.md to the dispatch lines; that change has merged
+- `696-FR-009` — superseded by `705-FR-007` (2026-10-06)
