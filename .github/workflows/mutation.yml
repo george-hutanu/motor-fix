@@ -11,6 +11,10 @@ on:
         description: Comma-separated Nx projects (empty runs every project)
         required: false
         default: ''
+      full:
+        description: Test every mutant again, ignoring the results of earlier runs
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -18,8 +22,8 @@ permissions:
 jobs:
   mutation:
     runs-on: ubuntu-latest
-    # TODO: set from the first measured durations.
-    timeout-minutes: 180
+    # Full run wall time + 30%, capped at GitHub's 360: measured domain alone over 360 min (run 37360166653, cancelled), web 143 min (37360189195).
+    timeout-minutes: 360
     services:
       postgres:
         image: postgis/postgis:17-3.5
@@ -48,6 +52,7 @@ jobs:
       - name: Migrate the test database
         run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
       - name: Restore the mutation results of earlier runs
+        if: ${{ !inputs.full }}
         uses: actions/cache/restore@v6
         with:
           path: reports/mutation
@@ -59,7 +64,8 @@ jobs:
         id: mutation
         env:
           PROJECTS: ${{ inputs.projects }}
-        run: npx nx run-many -t test:mutation --parallel=1 --output-style=static ${PROJECTS:+--projects=$PROJECTS} -- --incremental
+          INCREMENTAL: ${{ inputs.full && 'false' || 'true' }}
+        run: npx nx run-many -t test:mutation --parallel=1 --output-style=static ${PROJECTS:+--projects=$PROJECTS} -- --incremental=$INCREMENTAL
       # Saved even when the step fails, so the next run resumes instead of starting over.
       - name: Save the mutation results
         if: always() && steps.mutation.outcome != 'skipped'

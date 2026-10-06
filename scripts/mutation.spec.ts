@@ -76,6 +76,14 @@ describe('strykerOptions', () => {
     expect(options.thresholds).toEqual({ break: 70, high: 80, low: 60 });
   });
 
+  // A mutated `{ alias: 'x' }` given to input() is no longer a literal
+  // Angular can analyse (error 1010); Stryker's angular ignorer leaves it be.
+  it("turns on Stryker's angular ignorer", () => {
+    write('libs/x/stryker.config.json', floor(0));
+
+    expect(strykerOptions('x', 'libs/x', false).ignorers).toEqual(['angular']);
+  });
+
   it('uses the app tsconfig when a project has no lib tsconfig', () => {
     write('apps/y/stryker.config.json', floor(0));
     write('apps/y/tsconfig.app.json', '{}');
@@ -197,20 +205,22 @@ describe('mutationScore', () => {
 
 describe('summaryRows', () => {
   it('starts an empty summary with the table header', () => {
-    expect(summaryRows('', 'api', 87.5, 80)).toBe(
-      '| Project | Mutation score | Floor |\n|---|---|---|\n| api | 87.50% | 80 |\n',
+    expect(summaryRows('', 'api', 87.5, 80, 185_000)).toBe(
+      '| Project | Mutation score | Floor | Minutes |\n|---|---|---|---|\n| api | 87.50% | 80 | 3.1 |\n',
     );
   });
 
   it('adds only a row to a summary that already has the table', () => {
     const existing =
-      '| Project | Mutation score | Floor |\n|---|---|---|\n| api | 87.50% | 80 |\n';
-    expect(summaryRows(existing, 'domain', 61, 55)).toBe(
-      '| domain | 61.00% | 55 |\n',
+      '| Project | Mutation score | Floor | Minutes |\n|---|---|---|---|\n| api | 87.50% | 80 | 3.1 |\n';
+    expect(summaryRows(existing, 'domain', 61, 55, 5_710_000)).toBe(
+      '| domain | 61.00% | 55 | 95.2 |\n',
     );
   });
 
   it('writes n/a for an undefined score', () => {
-    expect(summaryRows('x', 'mcp', null, 0)).toBe('| mcp | n/a | 0 |\n');
+    expect(summaryRows('x', 'mcp', null, 0, 0)).toBe(
+      '| mcp | n/a | 0 | 0.0 |\n',
+    );
   });
 });

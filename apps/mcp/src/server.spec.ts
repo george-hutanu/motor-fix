@@ -1,3 +1,4 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { type AddressInfo, connect } from 'node:net';
 
 import { createServer } from './server';
@@ -38,5 +39,25 @@ describe('mcp server', () => {
 
   it('answers 404 elsewhere', async () => {
     expect((await fetch(`${base}/health/ready`)).status).toBe(404);
+  });
+
+  it('answers 404 to a request that carries no path', () => {
+    const handle = createServer().listeners('request')[0] as (
+      req: IncomingMessage,
+      res: ServerResponse,
+    ) => void;
+    const end = jest.fn();
+    const writeHead = jest.fn(() => ({ end }));
+
+    handle(
+      { method: 'GET' } as IncomingMessage,
+      {
+        end,
+        writeHead,
+      } as unknown as ServerResponse,
+    );
+
+    expect(writeHead).toHaveBeenCalledWith(404);
+    expect(end).toHaveBeenCalled();
   });
 });

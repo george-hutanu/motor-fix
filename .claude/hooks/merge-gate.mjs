@@ -3,9 +3,12 @@
 // call while the PR's head commit has no `agent-review` success status.
 //
 // A PR opened by Dependabot (its author, read from gh) whose every commit
-// Dependabot wrote needs no agent-review status, only the same CI rule below:
-// a failing, pending or missing check still refuses it, and so does an
-// agent review that failed.
+// Dependabot wrote, and GitHub or Dependabot committed under a verified
+// signature (read off the REST pulls commits list), needs no agent-review
+// status, only the same CI rule below: a failing, pending or missing check
+// still refuses it, and so does an agent review that failed. A failing check
+// on such a PR is sent back through Dependabot, not to the PR tester: a
+// commit of anyone else's would take the exemption away.
 //
 // The status is per commit, so a push after the tester ran (a fix, a merge of
 // origin/main) leaves the new head without one, and the tester runs again.
@@ -39,7 +42,7 @@ import { execFile } from "node:child_process";
 
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
 import { carriedFrom, fetchCarryState, judgeCarry, latestReview, statusesArgs } from "../scripts/pr-test/carry.mjs";
-import { hasAgentReview, isDependabot } from "./pr-lifecycle-gate.mjs";
+import { committerArgs, hasAgentReview, isDependabot, openedByDependabot, withCommitters } from "./pr-lifecycle-gate.mjs";
 
 /** How long the gate may spend reading GitHub before it refuses: well inside run-hook.mjs's limit for it. */
 export const DEADLINE_MS = 30000;
@@ -89,7 +92,7 @@ export function decideMerge(pr, carry) {
   const sha = String(pr.headRefOid ?? "").slice(0, 7);
   const review = checks.find((c) => (c.context ?? c.name) === "agent-review");
   if (hasAgentReview(checks)) return carryRefusal(pr, review, sha, carry) ?? ciRefusal(pr, checks, sha);
-  if (!review && isDependabot(pr)) return ciRefusal(pr, checks, sha);
+  if (!review && isDependabot(pr)) return ciRefusal(pr, checks, sha, { dependabot: true });
   const said = review ? `agent-review is ${String(review.state ?? review.conclusion).toLowerCase()}` : "there is no agent-review status";
   return `PR #${pr.number} cannot merge: on its head commit ${sha} ${said}. Run the PR tester (/speckit-pr-test ${pr.number}), fix every blocking finding, and merge on an agent-review success.`;
 }
@@ -122,7 +125,7 @@ function carryRefusal(pr, review, sha, carry) {
 }
 
 /** Why CI does not yet allow the merge, or null when every other check is green. */
-function ciRefusal(pr, checks, sha) {
+function ciRefusal(pr, checks, sha, { dependabot = false } = {}) {
   // A check re-run or cancelled by a newer run appears once per run: judge the latest only.
   // gh dates a run that has not started 0001-01-01, so an unfinished run counts as the newest;
   // a run cancelled before it started is finished and keeps that date, the oldest.
@@ -139,6 +142,8 @@ function ciRefusal(pr, checks, sha) {
   const pending = ci.filter((c) => (c.status && c.status !== "COMPLETED") || c.state === "PENDING" || c.state === "EXPECTED" || result(c) == null);
   const red = ci.filter((c) => !pending.includes(c) && !GREEN.has(result(c)));
   const list = (cs) => cs.map((c) => (c.workflowName ? `${c.workflowName} / ${c.name}` : checkName(c))).join(", ");
+  if (red.length && dependabot)
+    return `PR #${pr.number} cannot merge: CI failed on ${sha} (${list(red)}). It is a Dependabot PR, which merges without an agent review only while Dependabot alone commits to it: a commit pushed to its branch takes the exemption away. Read gh pr checks ${pr.number}; for a flaky or outdated run, comment "@dependabot rebase" or "@dependabot recreate"; for a real break, close it and make the bump in a PR of your own.`;
   if (red.length) return `PR #${pr.number} cannot merge: CI failed on ${sha} (${list(red)}). Read gh pr checks ${pr.number}, fix it on the branch, and run the PR tester again on the new head.`;
   if (pending.length) return `PR #${pr.number} cannot merge yet: CI is still running on ${sha} (${list(pending)}). Wait for gh pr checks ${pr.number} --watch, in the background, and merge when it is green.`;
   if (!ci.some((c) => checkName(c) === "CI OK")) return `PR #${pr.number} cannot merge: there is no CI OK check on ${sha}. Wait for CI (gh pr checks ${pr.number}) before merging.`;
@@ -155,12 +160,21 @@ function ghAsync(cwd, signal) {
     );
 }
 
-async function readPr(target, gh) {
+/**
+ * The PR as gh reads it; for one Dependabot opened, with its committers too.
+ * A committer read that fails throws like the PR read, so the merge is refused
+ * with a retry rather than sent to a PR tester it may not need.
+ */
+export async function readPr(target, gh) {
   const raw = process.env.SPECKIT_PR_STATE;
   if (raw) return JSON.parse(raw);
   const out = await gh(["pr", "view", ...(target ? [target] : []), "--json", "author,commits,number,state,headRefOid,statusCheckRollup"]);
   if (out.code !== 0) throw new Error(String(out.stderr).trim());
-  return JSON.parse(out.stdout);
+  const pr = JSON.parse(out.stdout);
+  if (!openedByDependabot(pr)) return pr;
+  const read = await gh(committerArgs(pr.number));
+  if (read.code !== 0) throw new Error(`its commits' committers: ${String(read.stderr).trim()}`);
+  return withCommitters(pr, () => read.stdout);
 }
 
 /** The carry reads over an async gh, each distinct call made once (head's statuses serve both the description and the state). */

@@ -1,6 +1,7 @@
 import {
   type ArgumentsHost,
   HttpException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 
@@ -30,6 +31,8 @@ function send(exception: unknown) {
 }
 
 describe('ProblemFilter', () => {
+  afterEach(() => jest.restoreAllMocks());
+
   it('keeps the code an exception carries', () => {
     const res = send(
       new HttpException(
@@ -63,6 +66,28 @@ describe('ProblemFilter', () => {
     );
 
     expect(res.body).toMatchObject({ code: 'validation_failed', errors });
+  });
+
+  it('keeps the cause of an unknown error in the log only', () => {
+    const log = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    const cause = new Error('connection reset');
+
+    const res = send(cause);
+
+    expect(log).toHaveBeenCalledWith(cause);
+    expect(res.statusCode).toBe(500);
+    expect(res.body).toMatchObject({ code: 'internal_error' });
+    expect(JSON.stringify(res.body)).not.toContain('connection reset');
+  });
+
+  it('joins a list of messages into one detail', () => {
+    const body = { message: ['name is empty', 'email is taken'] };
+
+    expect(send(new HttpException(body, 400)).body).toMatchObject({
+      detail: 'name is empty; email is taken',
+    });
   });
 
   it('sends no detail for an object body without a message', () => {

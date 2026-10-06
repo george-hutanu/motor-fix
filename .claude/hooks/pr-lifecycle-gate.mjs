@@ -26,7 +26,12 @@
 //
 // A PR opened by Dependabot (its author, read from gh, never its title or
 // branch) with only Dependabot's commits needs no agent review: green on every
-// check, it is asked to merge. A commit anyone else pushed takes that back.
+// check, it is asked to merge. A commit anyone else pushed takes that back,
+// and so does one that keeps Dependabot as its author but was committed by
+// anyone but GitHub (`web-flow`) or Dependabot, or carries no verified
+// signature: a cherry-pick, `--author` or local rebase. gh's commits carry no
+// committer, so for a PR Dependabot opened the gate reads them off the REST
+// pulls commits list; a commit that read misses is not Dependabot's.
 //
 // Fail-open on purpose where the gate cannot see: no origin/main ref, or a gh
 // that cannot be reached. A gate that traps a session because GitHub is down
@@ -69,13 +74,66 @@ export function allGreen(checks) {
 const isAgentReview = (c) => (c.context ?? c.name) === "agent-review";
 
 const DEPENDABOT = new Set(["app/dependabot", "dependabot[bot]"]);
+/** Who may commit a Dependabot commit: GitHub itself, or Dependabot. */
+const DEPENDABOT_COMMITTERS = new Set(["web-flow", "dependabot[bot]"]);
 
-/** Dependabot opened the PR and wrote every commit on it: read off gh's authors, never the title or branch. */
+/** Dependabot opened the PR: the only PRs whose committers the gates read. */
+export const openedByDependabot = (pr) => DEPENDABOT.has(pr?.author?.login ?? "");
+
+const dependabotCommit = (c) =>
+  c.authors?.length > 0 &&
+  c.authors.every((a) => DEPENDABOT.has(a.login ?? "")) &&
+  DEPENDABOT_COMMITTERS.has(c.committer?.login ?? "") &&
+  c.verified === true;
+
+/**
+ * Dependabot opened the PR and wrote every commit on it, each committed by
+ * GitHub or Dependabot under a verified signature: read off gh's authors and
+ * the REST committers (attachCommitters), never the title or branch.
+ */
 export const isDependabot = (pr) =>
-  DEPENDABOT.has(pr?.author?.login ?? "") &&
-  Array.isArray(pr.commits) &&
-  pr.commits.length > 0 &&
-  pr.commits.every((c) => c.authors?.length > 0 && c.authors.every((a) => DEPENDABOT.has(a.login ?? "")));
+  openedByDependabot(pr) && Array.isArray(pr.commits) && pr.commits.length > 0 && pr.commits.every(dependabotCommit);
+
+/** The gh call listing a PR's commits with their committer and signature. */
+export const committerArgs = (number) => [
+  "api",
+  "--paginate",
+  `repos/{owner}/{repo}/pulls/${number}/commits?per_page=100`,
+  "--jq",
+  ".[] | {sha, login: .committer.login, verified: .commit.verification.verified}",
+];
+
+/** committerArgs' output, one JSON object per line, as [{ sha, login, verified }]. */
+export const parseCommitters = (stdout) =>
+  String(stdout)
+    .split("\n")
+    .filter((line) => line.trim())
+    .map((line) => JSON.parse(line));
+
+/** A copy of the PR whose commits carry `committer` and `verified` from the REST rows, matched by sha. */
+export function attachCommitters(pr, rows) {
+  if (!Array.isArray(pr.commits)) return pr;
+  const bySha = new Map(rows.map((r) => [r.sha, r]));
+  const commits = pr.commits.map((c) => {
+    const row = bySha.get(c.oid);
+    return row ? { ...c, committer: { login: row.login }, verified: row.verified } : c;
+  });
+  return { ...pr, commits };
+}
+
+/**
+ * The PR with its committers read, when Dependabot opened it; otherwise as
+ * read. `gh(args)` returns stdout or throws; a failed read leaves the commits
+ * without committers, so the PR is not exempt.
+ */
+export function withCommitters(pr, gh) {
+  if (!openedByDependabot(pr) || !Array.isArray(pr.commits)) return pr;
+  try {
+    return attachCommitters(pr, parseCommitters(gh(committerArgs(pr.number))));
+  } catch {
+    return pr;
+  }
+}
 
 /** An `agent-review` success among the head commit's checks. */
 export const hasAgentReview = (checks) =>
@@ -219,7 +277,9 @@ function readState(cwd) {
       ["pr", "view", branch, "--json", "author,commits,number,state,isDraft,labels,mergeable,statusCheckRollup,title"],
       { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 15000 },
     );
-    pr = JSON.parse(out);
+    pr = withCommitters(JSON.parse(out), (args) =>
+      execFileSync("gh", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 15000 }),
+    );
   } catch (error) {
     const said = `${error.stderr ?? ""}`;
     if (!/no pull requests found/i.test(said)) return null;
