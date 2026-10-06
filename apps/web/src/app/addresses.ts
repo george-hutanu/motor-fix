@@ -1,5 +1,6 @@
 import { DOCUMENT, isPlatformServer } from '@angular/common';
 import {
+  ApplicationRef,
   type EnvironmentProviders,
   effect,
   InjectionToken,
@@ -18,7 +19,13 @@ import {
   UrlSegment,
   type UrlTree,
 } from '@angular/router';
-import { I18n, isLanguage, LANGUAGES, LanguageChoice } from '@motor-fix/i18n';
+import {
+  I18n,
+  isLanguage,
+  LANGUAGES,
+  type Language,
+  LanguageChoice,
+} from '@motor-fix/i18n';
 
 // The paths after the language prefix that search engines may list. The public
 // pages of later stories add theirs.
@@ -55,18 +62,59 @@ export const languageRoot: UrlMatcher = (segments) =>
     ? { consumed: segments }
     : null;
 
+// The public frame's own texts, for `/`: the server renders the frame there;
+// in the browser the redirect wins and the load is one /<lang> needs anyway.
+export const publicTexts: CanMatchFn = async () => {
+  await inject(I18n).enter('public');
+  return true;
+};
+
+// The cockpit sample's texts, before its route matches: the server waits for
+// them, and so does the browser before it hydrates the page the server sent,
+// which otherwise showed the keys until its own copy had loaded.
+export const cockpitTexts: CanMatchFn = async () => {
+  await inject(I18n).enter('cockpit');
+  return true;
+};
+
 // The server cannot read the device's memory, so `/` stays Romanian there; the
-// browser goes on to the address of the remembered or current language.
+// browser goes on to the address of the remembered or current language. The
+// first page is the server's `/`: it hydrates where it is, so a tap made before
+// the app loaded is replayed onto it, and moves once the replay has run.
 export const toLanguageAddress: CanMatchFn = () => {
   if (isPlatformServer(inject(PLATFORM_ID))) return true;
   const router = inject(Router);
-  const language = inject(LanguageChoice).saved() ?? inject(I18n).language();
-  const from = router.currentNavigation()?.extractedUrl;
-  return router.createUrlTree([language], {
-    fragment: from?.fragment ?? undefined,
-    queryParams: from?.queryParams,
+  const address = languageTree(router);
+  if (router.navigated)
+    return address(router.currentNavigation()?.extractedUrl);
+  // A replayed tap may still be loading its texts, and with storage blocked
+  // nothing else holds it.
+  let tapped: Language | undefined;
+  const taps = inject(LanguageChoice).taps.subscribe((language) => {
+    tapped = language;
   });
+  void inject(ApplicationRef)
+    .whenStable()
+    // The replay runs in its own whenStable callback; a task later, it is done.
+    .then(() => new Promise((resolve) => setTimeout(resolve)))
+    .then(() => {
+      taps.unsubscribe();
+      const here = router.parseUrl(router.url);
+      if (segmentsOf(here).length === 0)
+        void router.navigateByUrl(address(here, tapped), { replaceUrl: true });
+    });
+  return true;
 };
+
+function languageTree(router: Router) {
+  const choice = inject(LanguageChoice);
+  const i18n = inject(I18n);
+  return (from: UrlTree | undefined, tapped?: Language) =>
+    router.createUrlTree([tapped ?? choice.saved() ?? i18n.language()], {
+      fragment: from?.fragment ?? undefined,
+      queryParams: from?.queryParams,
+    });
+}
 
 export function provideLanguageAddresses(): EnvironmentProviders {
   return makeEnvironmentProviders([

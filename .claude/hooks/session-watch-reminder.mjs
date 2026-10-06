@@ -1,15 +1,17 @@
 // Claude Code SessionStart hook — remind the orchestrating session to keep the
-// agent watch scheduled while parallel work runs.
+// agent watch armed while parallel work runs.
 //
-// `/speckit-watch` is scheduled with CronCreate, a session-only job: a resumed
-// or compacted session has lost it, and a hook can neither see nor create one.
-// So this hook only speaks: when two or more worktrees hold live or in-flight
-// work, it prints one line telling the session to check CronList and schedule
-// the watch (the speckit-watch skill says how). Otherwise it prints nothing.
+// The watch is kept by a background `watch.mjs --wait` that belongs to one
+// session: a resumed or compacted session may have lost it, and a hook cannot
+// start one. So this hook only speaks: when two or more worktrees hold live or
+// in-flight work and no live wait holds the repository's record, it prints one
+// line telling the session to arm the wait (the speckit-watch skill says how).
+// Otherwise it prints nothing.
 //
 // It stays cheap and never blocks a session:
-//   - a session isolated in a worktree never schedules the watch, so the hook
+//   - a session isolated in a worktree never arms the watch, so the hook
 //     returns before running anything there;
+//   - a live wait already watches, so the watcher is not run;
 //   - fewer than three worktrees (the main checkout plus two) cannot be
 //     parallel work, so the watcher is not run;
 //   - the watcher runs read-only (`--json`, never `--fix`) under a timeout,
@@ -17,6 +19,8 @@
 //     or unreadable output prints nothing, and the hook always exits 0.
 import { execFileSync, spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
+import { isEntryPoint } from "../scripts/lib/entry.mjs";
+import { waitHolder } from "../scripts/lib/watch-wait.mjs";
 
 export const DEFAULT_TIMEOUT_MS = 20_000;
 
@@ -35,7 +39,7 @@ export function activeCount(report) {
 }
 
 export function reminder(count) {
-  return count >= 2 ? `${count} worktrees active: if no /speckit-watch is scheduled (CronList), schedule it (see speckit-watch).` : "";
+  return count >= 2 ? `${count} worktrees active: if no watch wait is armed, arm one (see speckit-watch, "Keeping it scheduled").` : "";
 }
 
 /**
@@ -76,15 +80,15 @@ export function readWatch(repo, timeout, env = process.env) {
   }
 }
 
-export function runReminder({ repo, watch }) {
+export function runReminder({ repo, watch, armed = () => waitHolder(repo) }) {
   const paths = git(repo, ["rev-parse", "--path-format=absolute", "--git-dir", "--git-common-dir"])?.split("\n");
   if (paths?.length !== 2 || resolve(paths[0]) !== resolve(paths[1])) return "";
   const worktrees = (git(repo, ["worktree", "list", "--porcelain"]) ?? "").split("\n").filter((l) => l.startsWith("worktree ")).length;
-  if (worktrees < 3) return "";
+  if (worktrees < 3 || armed() !== null) return "";
   return reminder(activeCount(watch()));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url)) {
   try {
     const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
     const timeout = Number(process.env.SPECKIT_WATCH_REMINDER_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;

@@ -76,7 +76,7 @@ jobs:
           [[ "$PR" =~ ^[1-9][0-9]*$ ]] || { echo "::error::pr must be a PR number"; exit 1; }
           [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::sha must be the full 40-character head commit"; exit 1; }
           [[ "$LAP" =~ ^[1-9][0-9]*$ ]] || { echo "::error::lap must be a positive number"; exit 1; }
-          [[ "$ROUTES" =~ ^/[A-Za-z0-9/_.,-]*$ ]] || { echo "::error::routes must be comma-separated paths"; exit 1; }
+          [[ "$ROUTES" =~ ^/[A-Za-z0-9/_.,@:-]*$ ]] || { echo "::error::routes must be comma-separated paths, each path[@role][:status]"; exit 1; }
 
       # The tester comes from the ref this run was dispatched on (main), so a
       # PR branched before a tester change is tested by today's tester.

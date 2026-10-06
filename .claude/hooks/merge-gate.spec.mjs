@@ -1,7 +1,12 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { decideMerge, mergeTarget } from './merge-gate.mjs';
+import { DEADLINE_MS, deadlineMs, decideMerge, ghReader, mergeTarget, prefetchCarry } from './merge-gate.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
 const run = (name, conclusion, status = 'COMPLETED', startedAt = '2026-10-05T07:00:00Z') => ({ __typename: 'CheckRun', name, status, conclusion, startedAt });
@@ -189,5 +194,223 @@ describe('merge gate — Dependabot PRs need no agent review', () => {
     assert.match(decideMerge(coAuthored), /no agent-review status/);
     assert.match(decideMerge({ ...bot(green), commits: undefined }), /no agent-review status/);
     assert.match(decideMerge({ ...bot(green), commits: [] }), /no agent-review status/);
+  });
+});
+
+describe('merge gate — started through a symlinked path', () => {
+  const hooks = fileURLToPath(new URL('.', import.meta.url));
+  const gate = (dir) =>
+    spawnSync(process.execPath, [join(dir, 'merge-gate.mjs')], {
+      input: JSON.stringify({ tool_input: { command: 'gh pr merge 21 --merge' } }),
+      encoding: 'utf8',
+      env: { ...process.env, SPECKIT_PR_STATE: JSON.stringify(pr(green)) },
+    });
+
+  it('refuses a merge with no agent-review, as it does through the real path', () => {
+    const root = mkdtempSync(join(tmpdir(), 'merge-gate-link-'));
+    try {
+      symlinkSync(hooks, join(root, 'hooks'));
+      assert.equal(gate(hooks).status, 2);
+      const linked = gate(join(root, 'hooks'));
+      assert.equal(linked.status, 2);
+      assert.match(linked.stderr, /agent-review/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('merge gate — a verdict carried over a docs-only head is verified, not trusted', () => {
+  const FROM = 'f'.repeat(40);
+  const carried = (description = `carried from ${FROM}: docs-only change`) => ({ ...review('SUCCESS'), description });
+  const state = (over = {}) => ({
+    fromReview: { state: 'success', description: 'No blocking findings' },
+    compare: { status: 'ahead', total_commits: 1, commits: [{ sha: 'abc1234def5678' }], files: [{ filename: 'specs/194-email-sending/deferred.md' }] },
+    between: [],
+    headReviews: [],
+    ...over,
+  });
+  const prc = (rollup) => ({ ...pr(rollup), commits: [{ oid: FROM }, { oid: 'abc1234def5678' }] });
+  const lookup = (s, seen = []) => ({ description: () => null, state: (from, head) => (seen.push([from, head]), s) });
+
+  it('lets a verified carry merge on green CI, checking the commit it names against head', () => {
+    const seen = [];
+    assert.equal(decideMerge(prc([...green, carried()]), lookup(state(), seen)), null);
+    assert.deepEqual(seen, [[FROM, 'abc1234def5678']]);
+  });
+
+  it('reads the description from GitHub when the rollup leaves it out', () => {
+    const reads = { description: () => `carried from ${FROM}: docs-only change`, state: () => state({ fromReview: { state: 'failure' } }) };
+    assert.match(decideMerge(prc([...green, review('SUCCESS')]), reads), /carried from fffffff.*no agent-review success/);
+  });
+
+  it('refuses a carry naming a commit whose agent review failed', () => {
+    const why = decideMerge(prc([...green, carried()]), lookup(state({ fromReview: { state: 'failure', description: 'x' } })));
+    assert.match(why, /no agent-review success/);
+    assert.match(why, /speckit-pr-test 21/);
+  });
+
+  it('refuses a carry naming a commit that is not an ancestor of head', () => {
+    assert.match(decideMerge(prc([...green, carried()]), lookup(state({ compare: { ...state().compare, status: 'diverged' } }))), /not an ancestor/);
+  });
+
+  it('refuses a carry over a diff that is not documentation only', () => {
+    const compare = { ...state().compare, files: [{ filename: 'specs/x/deferred.md' }, { filename: '.claude/hooks/merge-gate.mjs' }] };
+    assert.match(decideMerge(prc([...green, carried()]), lookup(state({ compare }))), /merge-gate\.mjs/);
+  });
+
+  it('refuses a carry naming a commit that is not one of the PR\'s own, such as a tested commit on main', () => {
+    const why = decideMerge({ ...prc([...green, carried()]), commits: [{ oid: 'abc1234def5678' }] }, lookup(state()));
+    assert.match(why, /not one of this PR's commits/);
+    assert.match(decideMerge(pr([...green, carried()]), lookup(state())), /not one of this PR's commits/);
+  });
+
+  it('refuses a carry it cannot verify, rather than trusting it', () => {
+    const broken = { description: () => null, state: () => { throw new Error('HTTP 502'); } };
+    assert.match(decideMerge(prc([...green, carried()]), broken), /could not verify.*HTTP 502/);
+    assert.match(decideMerge(prc([...green, carried()])), /could not verify/);
+    const unreadable = { description: () => { throw new Error('HTTP 502'); }, state: () => state() };
+    assert.match(decideMerge(prc([...green, review('SUCCESS')]), unreadable), /could not read/);
+  });
+
+  it('still needs every CI check after a verified carry', () => {
+    assert.match(decideMerge(prc([run('Unit tests', 'FAILURE'), run('CI OK', 'FAILURE'), carried()]), lookup(state())), /CI failed/);
+    assert.match(decideMerge(prc([carried()]), lookup(state())), /no CI OK check/);
+  });
+});
+
+// A gate Claude Code stops for running long does not block, so the
+// gate stops itself first, and refuses: a merge it could not finish checking
+// has not been approved.
+describe('merge gate — a check it cannot finish refuses the merge', () => {
+  const hooks = fileURLToPath(new URL('.', import.meta.url));
+  const REPO = join(hooks, '..', '..');
+  const FROM = 'f'.repeat(40);
+  const HEAD = 'abc1234def5678';
+  const carriedPr = (description = `carried from ${FROM}: docs-only change`) => ({
+    ...pr([...green, { ...review('SUCCESS'), ...(description ? { description } : {}) }]),
+    commits: [{ oid: FROM }, { oid: HEAD }],
+  });
+  const goodState = {
+    fromReview: { state: 'success', description: 'No blocking findings' },
+    compare: { status: 'ahead', total_commits: 1, commits: [{ sha: HEAD }], files: [{ filename: 'specs/194-email-sending/deferred.md' }] },
+    between: [],
+    headReviews: [],
+  };
+  const gate = (env) =>
+    spawnSync(process.execPath, [join(hooks, 'merge-gate.mjs')], {
+      input: JSON.stringify({ tool_input: { command: 'gh pr merge 21 --merge' } }),
+      encoding: 'utf8',
+      timeout: 20000,
+      env: { ...process.env, SPECKIT_PR_STATE: '', SPECKIT_CARRY_STATE: '', SPECKIT_CARRY_DELAY_MS: '', SPECKIT_MERGE_GATE_DEADLINE_MS: '', ...env },
+    });
+  /** A PATH whose gh runs `body`, for the real read path. */
+  const withGh = (body, f) => {
+    const dir = mkdtempSync(join(tmpdir(), 'merge-gate-gh-'));
+    try {
+      writeFileSync(join(dir, 'gh'), `#!/bin/sh\n${body}\n`, { mode: 0o755 });
+      return f(`${dir}:${process.env.PATH}`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  it('refuses when GitHub does not answer within the deadline, and stops at the deadline', () => {
+    withGh('exec sleep 15', (PATH) => {
+      const started = Date.now();
+      const out = gate({ PATH, SPECKIT_MERGE_GATE_DEADLINE_MS: '500' });
+      assert.equal(out.status, 2);
+      assert.match(out.stderr, /within 0\.5 s/);
+      assert.ok(Date.now() - started < 10000, 'the gate stops itself rather than waiting on gh');
+    });
+  });
+
+  it('refuses when the PR cannot be read, rather than letting a blind merge through', () => {
+    withGh('echo "HTTP 502: Bad Gateway" >&2; exit 1', (PATH) => {
+      const out = gate({ PATH });
+      assert.equal(out.status, 2);
+      assert.match(out.stderr, /could not read.*HTTP 502/);
+    });
+  });
+
+  it('refuses when the PR it read cannot be judged, rather than exiting 1, which does not block', () => {
+    const out = gate({ SPECKIT_PR_STATE: '{"number":21,"state":"OPEN","statusCheckRollup":{}}' });
+    assert.equal(out.status, 2);
+    assert.match(out.stderr, /the gate failed/);
+  });
+
+  it('refuses a carried verdict whose verification outlasts the deadline', () => {
+    const out = gate({
+      SPECKIT_PR_STATE: JSON.stringify(carriedPr()),
+      SPECKIT_CARRY_STATE: JSON.stringify(goodState),
+      SPECKIT_CARRY_DELAY_MS: '15000',
+      SPECKIT_MERGE_GATE_DEADLINE_MS: '500',
+    });
+    assert.equal(out.status, 2);
+    assert.match(out.stderr, /within 0\.5 s/);
+  });
+
+  it('still passes a verified carry that finishes inside the deadline', () => {
+    const out = gate({
+      SPECKIT_PR_STATE: JSON.stringify(carriedPr()),
+      SPECKIT_CARRY_STATE: JSON.stringify(goodState),
+      SPECKIT_CARRY_DELAY_MS: '50',
+      SPECKIT_MERGE_GATE_DEADLINE_MS: '5000',
+    });
+    assert.equal(out.status, 0, out.stderr);
+  });
+
+  it('stops before the wrapper does, and the wrapper before Claude Code', () => {
+    const entry = JSON.parse(readFileSync(join(REPO, '.claude/hooks/registry.json'), 'utf8')).hooks.find((h) => h.id === 'pre:bash:merge-gate');
+    const settings = JSON.parse(readFileSync(join(REPO, '.claude/settings.json'), 'utf8'));
+    const hook = Object.values(settings.hooks)
+      .flat()
+      .flatMap((m) => m.hooks)
+      .find((h) => h.command.endsWith(' pre:bash:merge-gate'));
+    assert.ok(DEADLINE_MS < entry.timeout_ms, 'the gate refuses before run-hook.mjs stops it');
+    assert.ok(entry.timeout_ms < hook.timeout * 1000, 'run-hook.mjs refuses before Claude Code gives up on the hook');
+  });
+
+  it('lets the deadline be shortened, never lengthened', () => {
+    assert.equal(deadlineMs({}), DEADLINE_MS);
+    assert.equal(deadlineMs({ SPECKIT_MERGE_GATE_DEADLINE_MS: '500' }), 500);
+    assert.equal(deadlineMs({ SPECKIT_MERGE_GATE_DEADLINE_MS: String(DEADLINE_MS * 10) }), DEADLINE_MS);
+    assert.equal(deadlineMs({ SPECKIT_MERGE_GATE_DEADLINE_MS: 'soon' }), DEADLINE_MS);
+  });
+
+  it('reads head\'s statuses once and the rest of a carry in one round', async () => {
+    const MID = 'b'.repeat(40);
+    const MID2 = 'd'.repeat(40);
+    const lines = [];
+    let inFlight = 0;
+    let most = 0;
+    const answer = (line) => {
+      if (/compare\//.test(line))
+        return { status: 'ahead', base_commit: { sha: FROM }, total_commits: 3, commits: [{ sha: MID }, { sha: MID2 }, { sha: HEAD }], files: [{ filename: 'specs/x/deferred.md' }] };
+      if (line.includes(`commits/${FROM}/`)) return [{ context: 'agent-review', state: 'success', description: 'No blocking findings' }];
+      if (line.includes(`commits/${HEAD}/`)) return [{ context: 'agent-review', state: 'success', description: `carried from ${FROM}: docs-only change` }];
+      return [];
+    };
+    const gh = async (args) => {
+      const line = args.join(' ');
+      lines.push(line);
+      inFlight++;
+      most = Math.max(most, inFlight);
+      await new Promise((r) => setTimeout(r, 10));
+      inFlight--;
+      return { code: 0, stdout: JSON.stringify(answer(line)), stderr: '' };
+    };
+    const head = carriedPr(null);
+    const carry = await prefetchCarry(head, ghReader(gh));
+    assert.equal(decideMerge(head, carry), null);
+    assert.equal(lines.filter((l) => l.includes(`commits/${HEAD}/statuses`)).length, 1, 'head statuses read once');
+    assert.equal(most, 3, 'the named commit and both commits between are read together');
+  });
+
+  it('replays a failed read as the refusal decideMerge already gives', async () => {
+    const reader = { description: async () => { throw new Error('HTTP 502'); }, state: async () => goodState };
+    assert.match(decideMerge(carriedPr(null), await prefetchCarry(carriedPr(null), reader)), /could not read.*HTTP 502/);
+    const slow = { description: async () => null, state: async () => { throw new Error('HTTP 504'); } };
+    assert.match(decideMerge(carriedPr(), await prefetchCarry(carriedPr(), slow)), /could not verify.*HTTP 504/);
   });
 });

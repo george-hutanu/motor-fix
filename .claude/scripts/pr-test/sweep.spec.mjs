@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { VIEWPORTS, matrix, toFindings } from './sweep.mjs';
+import { VIEWPORTS, contextCookies, dropExpected, loadProblem, matrix, parseRoute, sessionCookie, toFindings } from './sweep.mjs';
 
 describe('the sweep matrix', () => {
   it('visits every route at four viewports, two schemes and two languages', () => {
@@ -62,5 +62,74 @@ describe('observations to findings', () => {
     const findings = toFindings(obs, { web: true, origins });
     assert.equal(findings.length, 1);
     assert.equal(findings[0].severity, 'high');
+  });
+});
+
+describe('route syntax: path[@role][:status]', () => {
+  it('reads a plain path, a role, an expected status, or both', () => {
+    assert.deepEqual(parseRoute('/cockpit'), { path: '/cockpit', role: null, expect: null });
+    assert.deepEqual(parseRoute('/de:404'), { path: '/de', role: null, expect: 404 });
+    assert.deepEqual(parseRoute('/app/driver@driver'), { path: '/app/driver', role: 'driver', expect: null });
+    assert.deepEqual(parseRoute('/app/admin@driver:403'), { path: '/app/admin', role: 'driver', expect: 403 });
+  });
+
+  it('keeps the role and status in the matrix and in the screenshot name', () => {
+    const runs = matrix({ routes: ['/app/driver@driver', '/de:404'], langs: ['ro'], schemes: ['light'] });
+    const signedIn = runs.find((r) => r.route === '/app/driver@driver');
+    assert.equal(signedIn.path, '/app/driver');
+    assert.equal(signedIn.role, 'driver');
+    assert.equal(signedIn.shot, 'app-driver-as-driver-desktop-light-ro.png');
+    const missing = runs.find((r) => r.route === '/de:404');
+    assert.equal(missing.expect, 404);
+    assert.equal(missing.shot, 'de-404-desktop-light-ro.png');
+  });
+
+  it('flags a page load only when it differs from what the route expects', () => {
+    assert.equal(loadProblem(200, null), null);
+    assert.match(loadProblem(404, null), /HTTP 404/);
+    assert.equal(loadProblem(404, 404), null);
+    assert.match(loadProblem(200, 404), /HTTP 200, expected 404/);
+    assert.match(loadProblem(null, null), /no response/);
+  });
+
+  it('drops the error response and console line an expected status causes, and nothing else', () => {
+    const at = { route: '/de:404', path: '/de', expect: 404, viewport: 'desktop', scheme: 'light', lang: 'ro' };
+    const obs = [
+      { ...at, kind: 'http', url: 'http://127.0.0.1:4100/de', status: 404 },
+      { ...at, kind: 'console', text: 'Failed to load resource: the server responded with a status of 404 (Not Found)' },
+      { ...at, kind: 'http', url: 'http://127.0.0.1:4100/api/v1/x', status: 500 },
+      { ...at, kind: 'console', text: 'NG0100' },
+      { route: '/', path: '/', expect: null, viewport: 'desktop', scheme: 'light', lang: 'ro', kind: 'http', url: 'http://127.0.0.1:4100/', status: 404 },
+    ];
+    const kept = dropExpected(obs);
+    assert.equal(kept.length, 3);
+    assert.ok(kept.some((o) => o.status === 500));
+    assert.ok(kept.some((o) => o.text === 'NG0100'));
+    assert.ok(kept.some((o) => o.route === '/'));
+  });
+
+  it('opens a signed-in route with the refresh cookie on the web origin, sent only to the auth calls', () => {
+    const c = sessionCookie({ refresh: 'r-1', baseURL: 'http://127.0.0.1:4100' });
+    assert.equal(c.name, 'mf_refresh');
+    assert.equal(c.value, 'r-1');
+    assert.equal(c.domain, '127.0.0.1');
+    assert.equal(c.path, '/api/v1/auth');
+    assert.equal(c.httpOnly, true);
+  });
+
+  it('signs in afresh for every browser context of a role route, and not at all for the others', async () => {
+    const asked = [];
+    const session = async (role) => {
+      asked.push(role);
+      return `r-${asked.length}`;
+    };
+    const baseURL = 'http://127.0.0.1:4100';
+    const [first] = await contextCookies({ role: 'driver' }, { session, baseURL });
+    const [second] = await contextCookies({ role: 'driver' }, { session, baseURL });
+    assert.deepEqual(asked, ['driver', 'driver']);
+    assert.deepEqual([first.value, second.value], ['r-1', 'r-2']);
+    assert.deepEqual(await contextCookies({ role: null }, { session, baseURL }), []);
+    assert.equal(asked.length, 2);
+    await assert.rejects(contextCookies({ role: 'admin' }, { baseURL }), /no session for @admin/);
   });
 });

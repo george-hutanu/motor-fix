@@ -20,6 +20,8 @@ The first number is the PR. `--dry-run` posts nothing to GitHub or Notion: use
 it for a PR another session owns. `--local` boots the PR on this machine
 instead of GitHub Actions: only when Actions is unavailable, or for a PR whose
 tester change cannot yet run there. It waits for a `scripts/heavy.sh` slot.
+`--run <id>` reviews a PR QA run already dispatched for the head and
+finished (the hand-off note's `QA run:` line) instead of dispatching one.
 
 ## Why
 
@@ -39,11 +41,32 @@ without a status, so the test runs again.
    both to QA (there is no In review stage), so this normally reports
    `unchanged` and only catches a PR that skipped that step. The story and its
    timeline row stay QA for the whole loop.
-2. **Lap**: `node .claude/scripts/run-state.mjs show --json` — the lap is
+2. **Carry** (skip on `--dry-run`, or pass it on): when the head differs from
+   the last commit with an `agent-review` success by documentation only, the
+   verdict carries and no lap runs:
+
+   ```bash
+   node .claude/scripts/pr-test/carry.mjs <n>   # 0 carried, 1 needs a real lap (reason on stderr), 2 gh failed
+   ```
+
+   Exit 0 set `agent-review` success on the head (`carried from <sha>:
+   docs-only change`) and noted it in the PR's Agent review section: go to
+   step 5. "Documentation only" is `scripts/docs-only.ts`, the definition CI's
+   docs-only skip uses (Markdown outside `.claude/`, `.specify/` and
+   `.github/`, or `docs/`). It never carries past a failing verdict, onto a
+   head that already has a status, or over any other file, and the merge gate
+   re-checks every carry against GitHub before it merges. Exit 1 or 2: go on.
+3. **Lap**: `node .claude/scripts/run-state.mjs show --json` — the lap is
    `repair_iterations + 1`.
-3. **Test**: invoke the `pr-tester` subagent (Agent tool,
-   `subagent_type: pr-tester`) with `PR`, `LAP`, `DRY_RUN` when asked and
-   `LOCAL` for `--local`. By default it dispatches `.github/workflows/pr-qa.yml`
+4. **Test**: invoke the `pr-tester` subagent (Agent tool,
+   `subagent_type: pr-tester`) with `PR`, `LAP`, `DRY_RUN` when asked,
+   `LOCAL` for `--local` and `RUN` for `--run <id>`. Within the lifecycle the
+   run is always given: the agent that marks the PR ready, or pushes a fix,
+   dispatches it with `dispatch.mjs <n> --no-wait` and ends, and the tail
+   brings `RUN` once CI and the run have finished (speckit-auto "The wait"),
+   so no agent sleeps on a run. With `RUN` the tester downloads that run
+   (`dispatch.mjs <n> --run <id>`) and checks that the flows sent with it
+   cover the spec's. Without it, by hand, it dispatches `.github/workflows/pr-qa.yml`
    through `.claude/scripts/pr-test/dispatch.mjs` (`gh workflow run`, the
    run found by the nonce in its title, then `gh run watch`): a GitHub runner boots the PR head with PostgreSQL, Redis
    and MinIO from the PR's own compose file, sweeps the screens, runs its flows
@@ -51,7 +74,13 @@ without a status, so the test runs again.
    report and screenshots as an artifact. The
    agent downloads it into its `--out` (through a fresh folder of its own, so
    re-running a lap into the same `--out` is never refused), reviews the diff against the spec and the constitution
-   here, and posts with `post.mjs`; no secret or LLM step runs in CI. With
+   here from the packet `.claude/scripts/pr-test/packet.mjs` writes into
+   `--out` as `packet.md` (changed files, requirements touched, the run's
+   findings and readiness, the previous lap's marked new, persisting or
+   resolved, and only the screenshots that differ from the baseline run),
+   which replaces its own reading of the report and the spec: it reads the
+   code diff once beside it, in a handful of batched calls, and posts with
+   `post.mjs`; no secret or LLM step runs in CI. With
    `LOCAL` it runs `.claude/scripts/pr-test/run.mjs` on this machine instead
    (`--local`: one heavy slot, teardown always). QA in CI holds no heavy slot,
    so ready PRs are not queued behind the laptop. Read its report; check the
@@ -61,12 +90,12 @@ without a status, so the test runs again.
    gh api repos/{owner}/{repo}/commits/<sha>/status --jq '.statuses[] | select(.context=="agent-review") | .state'
    ```
 
-4. **Success**: return to the caller, which merges on green CI
+5. **Success**: return to the caller, which merges on green CI
    (`gh pr checks <n> --watch` with `run_in_background`, printing only the
    checks that did not pass as AGENTS.md "Agent replies" shows, then
    `gh pr merge <n> --merge`, then `speckit-notion-sync finish`). The merge
    gate refuses while any check is failing, running or missing.
-5. **Failure**: the implementing agent fixes every blocking finding — a failing
+6. **Failure**: the implementing agent fixes every blocking finding — a failing
    test first that reproduces it (`/speckit-tests` rules), then the fix — commits,
    pushes, and counts the lap:
 
@@ -74,13 +103,16 @@ without a status, so the test runs again.
    node .claude/scripts/run-state.mjs repair   # exits 1 past SPECKIT_MAX_REPAIR_ITERATIONS (5)
    ```
 
-   Then go back to step 3 on the new head. Medium and low findings go to
+   Then dispatch the new head's run with `dispatch.mjs <n> --no-wait` and
+   end (speckit-auto "The tail"); the next tail comes back to step 2 with its
+   `RUN`. Medium and low findings go to
    `specs/<feature>/deferred.md` unless they are one-line fixes, and every
    deferred bullet is filed as a Notion task (`speckit-notion-sync debt`).
    On success, file the lap's deferred findings the same way before merging,
    in the order `/speckit-auto`'s "The tail" step 4 gives (commit the task URLs,
-   one more lap; the last lap's new findings go to Notion directly).
-6. **Cap reached** (`repair` exits 1): the run is blocked with
+   which step 2 carries without a lap; the new head's own findings, if a lap
+   ran, go to Notion directly).
+7. **Cap reached** (`repair` exits 1): the run is blocked with
    `repair-loop-exceeded`. Run `speckit-notion-sync blocked` with the reason
    (open findings, laps used), comment the same on the PR
    (`gh pr comment <n> --body …`), leave `agent-review` at failure, and stop.
@@ -102,5 +134,6 @@ keeps them in history; `.gitignore` refuses them under `pr-review/`.
 ## Never
 
 - Never post on, push to, or set a status on a PR you were asked to dry-run.
-- Never set `agent-review` by hand; only `post.mjs` sets it, from a report.
+- Never set `agent-review` by hand; only `post.mjs` sets it, from a report,
+  and `carry.mjs`, from a verified docs-only carry.
 - Never merge with `agent-review` missing or failing on the head commit.

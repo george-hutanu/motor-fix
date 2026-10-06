@@ -59,34 +59,52 @@ epic or a plan, whether run through spec-kit or by hand.
      branch before it goes ready; the `qa` line is committed and pushed
      right after, before CI is waited for and QA starts.
 
-     Then the story's agent hands off and ends. It writes
+     Then the story's agent starts QA and hands off. It dispatches the PR QA
+     run for the head without waiting for it
+     (`.claude/scripts/pr-test/dispatch.mjs <n> --no-wait`), writes
      `specs/<feature>/handoff.md` (PR, branch, worktree, head sha, the Notion
-     page ids, open decisions, deferred items; git ignores it) and returns
-     `NEXT: tail #<n>`. A fresh **tail agent**, given only the PR number, the
-     worktree and that path, runs steps 5–7 and the finish. The orchestrating
-     session dispatches it on that NEXT (a story run in the owner's own
-     session dispatches its own); `/speckit-watch` dispatches one (its
-     `tail` fix) for a handed-off ready PR with no live holder. It implements
+     page ids, the `QA run:` line, open decisions, deferred items; git
+     ignores it) and returns `NEXT: tail #<n> after QA run <id>`, its last
+     action. No agent is alive while CI and the run work: a context that
+     sleeps past the 5-minute prompt cache is written again in full. The
+     session holds one background wait until both have finished, then
+     dispatches a fresh **tail agent**, given only the PR number, the
+     worktree and that path, which runs steps 5–7 and the finish. The
+     orchestrating session does this on that NEXT (a story run in the owner's
+     own session does its own); `/speckit-watch` shows such a PR `waiting`,
+     with no fix, until both have finished, and then dispatches one (its
+     `tail` fix) when nobody holds it. It implements
      QA fixes, so it keeps the default model (Opus). It deletes the note
-     when the task is Done.
+     when the task is Done. The story's agent, the tail agent and every
+     `/speckit-watch` fix run as `task-runner` (`.claude/agents/`), never
+     `general-purpose`: it denies the heavy tools those runs never use, and
+     its prompt names no re-read of this file or CLAUDE.local.md, which are
+     already in its context.
   5. Get CI green: merge `origin/main` into the branch if it is behind and
-     push, then wait for the checks (`gh pr checks <n> --watch`) in the
-     background (`run_in_background`), never in a foreground `sleep` loop; a
-     failing check is fixed on the branch and waited for again.
+     push; the checks are waited for in the background (`run_in_background`),
+     by the session before the tail starts, never in a foreground `sleep`
+     loop and never by an agent that would sleep through it. A failing check
+     is fixed on the branch like a failing QA lap (step 6).
   6. QA, started as soon as the PR is ready, beside step 5 rather than after
-     it: run the PR tester (`/speckit-pr-test <n>`, the `pr-tester` subagent);
+     it: its run is dispatched at ready, and the PR tester
+     (`/speckit-pr-test <n>`, the `pr-tester` subagent) reviews it once it
+     has finished (`--run <id>`);
      the task and the PR's stage label stay QA. It leaves the unit and
-     end-to-end suites to CI, which runs them on the merge result. It
-     dispatches the PR QA workflow (`.github/workflows/pr-qa.yml`), where a
+     end-to-end suites to CI, which runs them on the merge result. The run is
+     the PR QA workflow (`.github/workflows/pr-qa.yml`), where a
      GitHub runner boots the PR head, tests it in a browser and against the
-     API and uploads the report and screenshots; then, locally, it reviews the
+     API and uploads the report and screenshots; then, locally, the tester reviews the
      diff, posts a review, fills the template's "Agent review" section and sets
      the `agent-review` status on the head commit (`--local` boots on the
      laptop instead, behind the heavy lock, when Actions is unavailable). Fix
      every blocking finding
-     (tests first), push, and run it again; each lap counts toward
+     (tests first), push, dispatch the new head's run with `--no-wait` and
+     end, as at ready; each lap counts toward
      `SPECKIT_MAX_REPAIR_ITERATIONS` (5), and at the cap the task goes to
-     Blocked and the PR stays unmerged.
+     Blocked and the PR stays unmerged. A head that differs from the last
+     tested commit by documentation only (`scripts/docs-only.ts`, e.g. the
+     `deferred.md` task URLs) carries that verdict instead of a new lap
+     (`.claude/scripts/pr-test/carry.mjs`); the merge gate verifies the carry.
   7. Merge on `agent-review` success with every other check green
      (`gh pr merge <n> --merge`); a PR with a failing, pending or missing check
      is never merged. Then set the task to Done (`speckit-notion-sync finish`).
@@ -147,8 +165,8 @@ epic or a plan, whether run through spec-kit or by hand.
 
 Every reply is re-read by its caller on each later turn, so it is short and
 the same shape everywhere. Every subagent in `.claude/agents/` and every
-dispatched task agent (speckit-watch's fixes, a story's `/speckit-auto`, a
-skill's `general-purpose` helper) opens its final reply with these four lines,
+dispatched task agent (a `task-runner` for a story, its tail or a
+speckit-watch fix, a skill's `general-purpose` helper) opens its final reply with these four lines,
 nothing before them:
 
 ```
@@ -230,12 +248,13 @@ decisions are the source for anything the constitution does not fix.
   safe fixes and dispatches an agent per stale item (QA re-runs up to
   `SPECKIT_QA_CAP`, by default Actions' 20 concurrent jobs; at most 2 other
   agents at once). The orchestrating session (the main
-  checkout, the one that dispatches tasks) schedules it as soon as two or more
-  tasks or worktrees are active: `CronList` first so it never doubles up, then
-  `/speckit-watch` every 15 minutes off the round minutes
-  (`4,19,34,49 * * * *`), and one pass right away. A worktree session never
-  schedules it. The SessionStart reminder `session:start:watch-reminder`
-  catches a resumed session whose schedule was lost.
+  checkout, the one that dispatches tasks) keeps it armed as soon as two or
+  more tasks or worktrees are active: one background
+  `node .claude/scripts/watch.mjs --wait` (never a second), which runs the
+  model-free `--gate` every 15 minutes and wakes the session only when a pass
+  has something to do, or after 110 idle minutes to be re-armed; and one pass
+  right away. A worktree session never arms it. The SessionStart reminder
+  `session:start:watch-reminder` catches a resumed session whose wait was lost.
 - Every API route needs a session: `ActorGuard` runs app-wide (`APP_GUARD`
   in `AuthModule`). A route open to visitors carries `@Public()` and joins
   the list in `apps/api/src/public-routes.integration.spec.ts`. The web
@@ -258,16 +277,19 @@ decisions are the source for anything the constitution does not fix.
   worktree's own PostgreSQL and Redis (`scripts/test-services.ts`, compose
   project `mf-test-<worktree>-<hash>`, left running between commits; Docker
   required), and it refuses a commit with `JEST_SUITE` set.
-- PR CI: `.github/workflows/ci.yml`, one job per check, in parallel: PR
-  title (Conventional Commit), Biome, Typecheck, Unit tests, Integration
+- PR CI: `.github/workflows/ci.yml`, one job per check, in parallel:
+  Biome, Typecheck, Unit tests, Integration
   tests (PostgreSQL+PostGIS and Redis services), E2E tests (Playwright
   `web-e2e`, servers started in the job), Build, Harness, Contract check,
   Dependency audit, Docker build (`web`, `node-app`), Compose stack
   (`docker-compose.yml` boots and creates the bucket), then `CI OK`, which
   fails when any of them did. A PR that changes documentation only
   (`scripts/docs-only.ts`: Markdown outside `.claude/`, `.specify/` and
-  `.github/`, or `docs/`) runs only the PR title, Changes and `CI OK` jobs;
-  the others are skipped. PRs run `nx affected`; `release.yml` calls the
+  `.github/`, or `docs/`) runs only the Changes and `CI OK` jobs; the
+  others are skipped. The PR title (Conventional Commit) is checked by its
+  own workflow, `.github/workflows/pr-title.yml`, which also runs when the
+  PR is edited, so a corrected title re-checks without re-running CI. PRs
+  run `nx affected`; `release.yml` calls the
   same workflow, which then runs every project. Mutation testing never runs
   in PR CI: `.github/workflows/mutation.yml` runs it nightly on `main` and on
   `workflow_dispatch`.

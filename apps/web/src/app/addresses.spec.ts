@@ -9,7 +9,11 @@ import {
 } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { HealthService } from '@motor-fix/data-access';
-import { I18n, provideRememberedLanguage } from '@motor-fix/i18n';
+import {
+  I18n,
+  LanguageChoice,
+  provideRememberedLanguage,
+} from '@motor-fix/i18n';
 
 import {
   alternates,
@@ -28,6 +32,21 @@ function setUp() {
       provideRouter(routes),
       provideLanguageAddresses(),
       { provide: SITE_ORIGIN, useValue: ORIGIN },
+    ],
+  });
+}
+
+function serverSetUp() {
+  TestBed.configureTestingModule({
+    providers: [
+      provideRouter(routes),
+      provideLanguageAddresses(),
+      { provide: SITE_ORIGIN, useValue: ORIGIN },
+      { provide: PLATFORM_ID, useValue: 'server' },
+      {
+        provide: HealthService,
+        useValue: { healthControllerReady: () => Promise.reject() },
+      },
     ],
   });
 }
@@ -58,6 +77,33 @@ const robots = () =>
     m.getAttribute('content'),
   );
 
+const LANDMARKS = 'header, main, nav, footer, aside, section[aria-label]';
+
+// One main, at the top level, holding Home; every other part of the frame in a
+// landmark of its own.
+function expectLandmarks(harness: RouterTestingHarness, signIn: string) {
+  const root = harness.fixture.nativeElement as HTMLElement;
+  const mains = root.querySelectorAll('main');
+  expect(mains).toHaveLength(1);
+  const main = mains[0];
+  expect(main.parentElement?.closest(LANDMARKS)).toBeNull();
+  expect(main.querySelector('h1')?.textContent).toContain('MotorFix');
+  expect(main.querySelector('[role="group"]')).not.toBeNull();
+  expect(main.textContent).toContain('PostgreSQL');
+
+  const frame = root.querySelector('mf-public-frame');
+  expect(frame).not.toBeNull();
+  for (const part of Array.from(frame?.children ?? [])) {
+    const landmark = part.matches(LANDMARKS)
+      ? part
+      : part.querySelector(LANDMARKS);
+    expect(landmark).not.toBeNull();
+  }
+  const banners = frame?.querySelectorAll(':scope > header') ?? [];
+  expect(banners).toHaveLength(1);
+  expect(banners[0].querySelector('button')?.textContent).toContain(signIn);
+}
+
 beforeEach(() => {
   localStorage.clear();
   document.head
@@ -78,6 +124,23 @@ describe('language addresses', () => {
     expect(lang()).toBe('en');
     expect(text(harness)).toContain('version unknown');
     expect(localStorage.getItem('mf.lang')).toBe('en');
+  });
+
+  it('gives /ro one top-level main around Home, and the sign-in bar a header', async () => {
+    const harness = await open('/ro');
+
+    expectLandmarks(harness, 'Autentificare');
+  });
+
+  it.each([
+    ['another public page', '/ro/garages'],
+    ['a not-found page', '/ro/no-such-page'],
+  ])('keeps one main, never nested, on %s', async (_page, address) => {
+    const harness = await open(address);
+    const root = harness.fixture.nativeElement as HTMLElement;
+
+    expect(root.querySelectorAll('main')).toHaveLength(1);
+    expect(root.querySelectorAll('main main')).toHaveLength(0);
   });
 
   it('opens /ro in Romanian', async () => {
@@ -171,6 +234,19 @@ describe('language addresses', () => {
     expect(url()).toBe('/ro');
   });
 
+  it('keeps the first page at / until the app is stable, and a language picked meanwhile wins', async () => {
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/');
+
+    expect(url()).toBe('/');
+
+    await TestBed.inject(LanguageChoice).pick('en');
+    await settle(harness);
+
+    expect(url()).toBe('/en');
+    expect(lang()).toBe('en');
+  });
+
   it('gives a public page its canonical and hreflang links', async () => {
     await open('/en');
 
@@ -245,19 +321,19 @@ describe('/ on the server', () => {
     expect(TestBed.inject(I18n).language()).toBe('ro');
   });
 
+  it('renders / in the public frame, with one main around Home and no tab bar', async () => {
+    serverSetUp();
+
+    const harness = await open('/');
+
+    expect(url()).toBe('/');
+    expectLandmarks(harness, 'Autentificare');
+    const root = harness.fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('mf-public-tab-bar')).toBeNull();
+  });
+
   it('gives / the canonical and hreflang links of /ro/', async () => {
-    TestBed.configureTestingModule({
-      providers: [
-        provideRouter(routes),
-        provideLanguageAddresses(),
-        { provide: SITE_ORIGIN, useValue: ORIGIN },
-        { provide: PLATFORM_ID, useValue: 'server' },
-        {
-          provide: HealthService,
-          useValue: { healthControllerReady: () => Promise.reject() },
-        },
-      ],
-    });
+    serverSetUp();
 
     await open('/');
 

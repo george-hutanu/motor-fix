@@ -6,7 +6,8 @@
 // moment it matters, with the facts a resumed run needs and cannot recall:
 // where HEAD is, what is uncommitted, how many tasks are still open.
 //
-// Silent no-op when no feature is active or it has no run log yet.
+// Silent no-op when no feature is active, it has no run log yet, or its spec
+// says Archived (a closed run log takes no more blocks).
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
@@ -15,7 +16,7 @@ import { activeFeature } from "../scripts/lib/feature.mjs";
 const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
 const git = (args) => {
   try {
-    return execFileSync("git", args, { cwd: repo, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    return execFileSync("git", args, { cwd: repo, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trimEnd();
   } catch {
     return "";
   }
@@ -35,6 +36,10 @@ process.stdin.on("end", () => {
   if (!feature) process.exit(0);
   const log = join(feature.dir, "auto-run.md");
   if (!existsSync(log)) process.exit(0);
+
+  const specFile = join(feature.dir, "spec.md");
+  const spec = existsSync(specFile) ? readFileSync(specFile, "utf8") : "";
+  if (/^\*\*Status\*\*:\s*Archived/m.test(spec)) process.exit(0);
 
   const tasks = existsSync(join(feature.dir, "tasks.md")) ? readFileSync(join(feature.dir, "tasks.md"), "utf8") : "";
   const open = (tasks.match(/^\s*- \[ \]/gm) ?? []).length;

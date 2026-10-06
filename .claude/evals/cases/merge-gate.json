@@ -246,5 +246,113 @@
       "exit": 2,
       "stderr": "no CI OK check"
     }
+  },
+  {
+    "id": "merge-gate-passes-a-verified-carried-review",
+    "hook": "pre:bash:merge-gate",
+    "why": "a head that only adds documentation after a tested commit keeps that verdict; one more full tester lap would judge nothing new (docs/speed-and-cost-plan.md)",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\"}],\"files\":[{\"filename\":\"specs/194-email-sending/deferred.md\"}]},\"between\":[],\"headReviews\":[]}"
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-carry-from-a-non-ancestor",
+    "hook": "pre:bash:merge-gate",
+    "why": "a verdict on a commit that is not in the head history says nothing about the head",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings\"},\"compare\":{\"status\":\"diverged\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\"}],\"files\":[{\"filename\":\"specs/194-email-sending/deferred.md\"}]},\"between\":[],\"headReviews\":[]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "not an ancestor"
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-carry-from-a-failing-commit",
+    "hook": "pre:bash:merge-gate",
+    "why": "only a success can be carried; a carry naming a failed lap would launder the failure",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"failure\",\"description\":\"2 blocking findings\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\"}],\"files\":[{\"filename\":\"specs/194-email-sending/deferred.md\"}]},\"between\":[],\"headReviews\":[]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "no agent-review success"
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-carry-over-a-code-change",
+    "hook": "pre:bash:merge-gate",
+    "why": "a code change after the tested commit needs a real lap, whatever the status says",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\"}],\"files\":[{\"filename\":\"specs/x/deferred.md\"},{\"filename\":\"apps/api/src/main.ts\"}]},\"between\":[],\"headReviews\":[]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "not documentation only"
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-carry-it-cannot-verify",
+    "hook": "pre:bash:merge-gate",
+    "why": "a carried status whose evidence cannot be read is a claim, not a verdict; the gate refuses rather than trusting it",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "could not verify"
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-carry-it-cannot-verify-in-time",
+    "hook": "pre:bash:merge-gate",
+    "why": "a gate Claude Code stops for running long does not block, so the gate stops itself at its deadline and refuses: verifying a carried verdict that outlasts it has not approved the merge",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\"}],\"files\":[{\"filename\":\"specs/194-email-sending/deferred.md\"}]},\"between\":[],\"headReviews\":[]}",
+      "SPECKIT_CARRY_DELAY_MS": "15000",
+      "SPECKIT_MERGE_GATE_DEADLINE_MS": "500"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "within 0.5 s"
+    }
   }
 ]

@@ -1,6 +1,7 @@
 import {
   type DynamicModule,
   Inject,
+  Logger,
   Module,
   type OnApplicationShutdown,
   Optional,
@@ -15,6 +16,12 @@ import { Brevo } from './brevo';
 import { BrevoWebhookController } from './brevo-webhook.controller';
 import type { EmailConfig } from './email-config';
 import { NewsController } from './news.controller';
+import {
+  NEWS_QUEUE,
+  NEWS_TOKEN_SECRET,
+  type NewsEvent,
+  NewsFanOut,
+} from './news.fan-out';
 import { NewsService } from './news.service';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsProcessor, retryDelay } from './notifications.processor';
@@ -43,6 +50,7 @@ interface NotificationsOptions {
 }
 
 const WORKER = Symbol('NOTIFICATIONS_WORKER');
+const NEWS_WORKER = Symbol('NEWS_WORKER');
 
 // No channel takes over from a failed e-mail yet.
 const noFallback: EmailFallback = async () => undefined;
@@ -72,6 +80,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Inject(NOTIFICATIONS_JOBS) private readonly jobs: Queue,
     @Inject(LIVE_PUBLISHER) private readonly publisher: Redis,
     @Optional() @Inject(WORKER) private readonly worker?: Worker | null,
+    @Optional()
+    @Inject(NEWS_WORKER)
+    private readonly newsWorker?: Worker | null,
   ) {}
 
   // The API: the entry point, each person's bell, the admin test message,
@@ -106,10 +117,14 @@ export class NotificationsModule implements OnApplicationShutdown {
   }
 
   // The worker: the same entry point plus the queue's consumer, which also
-  // sends SMS and WhatsApp. The reminders send through its service and
-  // share its PostgreSQL pool.
+  // sends SMS and WhatsApp, and the monthly news run. The reminders send
+  // through its service and share its PostgreSQL pool. News needs the API's
+  // token secret and the web address for its links; without them the runs wait.
   static registerWorker(
-    options: NotificationsOptions & { phone: PhoneConfig },
+    options: NotificationsOptions & {
+      phone: PhoneConfig;
+      tokenSecret?: string;
+    },
   ): DynamicModule {
     return {
       exports: [NotificationsService, NOTIFICATIONS_PRISMA],
@@ -151,11 +166,41 @@ export class NotificationsModule implements OnApplicationShutdown {
                 )
               : null,
         },
+        NewsFanOut,
+        { provide: NEWS_TOKEN_SECRET, useValue: options.tokenSecret ?? '' },
+        {
+          inject: [NewsFanOut],
+          provide: NEWS_WORKER,
+          useFactory: (fanOut: NewsFanOut) => {
+            const missing = [
+              !options.tokenSecret && 'AUTH_TOKEN_SECRET',
+              !options.email.webUrl && 'PUBLIC_WEB_URL',
+            ].filter(Boolean);
+            if (missing.length > 0) {
+              new Logger('News').error(
+                `${missing.join(' and ')} missing; news runs wait in their queue`,
+              );
+              return null;
+            }
+            const worker = new Worker<NewsEvent>(
+              NEWS_QUEUE,
+              (job) => fanOut.handle(job),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+              },
+            );
+            return worker;
+          },
+        },
       ],
     };
   }
 
   async onApplicationShutdown() {
+    await this.newsWorker?.close();
     await this.worker?.close();
     await this.jobs.close();
     this.publisher.disconnect();

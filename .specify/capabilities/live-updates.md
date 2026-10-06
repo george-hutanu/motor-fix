@@ -6,6 +6,8 @@ features:
   - 254-live-audience
   - 257-live-events
   - 256-live-in-place
+  - 255-live-resync
+  - 582-live-toast-axe
 ---
 
 # Capability: Live updates
@@ -197,6 +199,70 @@ _From 256-live-in-place._
 ### 256-FR-010 — A changed visible value is announced politely (`aria-live="polite"`), without moving focus.
 
 _From 256-live-in-place._
+
+### 255-FR-001 — The web app's live connection MUST expose its state: `closed` (not wanted: signed out, closed or evicted), `reconnecting` (wanted, no stream open yet or after a drop), `polling` (3 or more tries in a row have failed) and `open` (a stream answered 200).
+
+_From 255-live-resync._
+
+### 255-FR-002 — When the stream fails to open or ends for a reason other than `close()`, sign-out or `bye` `evicted`, the client MUST try again after 1, 2, 5, 10 and then every 30 seconds, each delay multiplied by a random factor between 0.9 and 1.1. A stream that opens resets the sequence. `bye` with reason `expired` or `shutdown` renews and reconnects at once, as before. A 401 renews the token before the next try and is not counted as a failure; a refused renewal sets the state `closed`.
+
+_From 255-live-resync._
+
+### 255-FR-003 — After 3 failed tries in a row, the state MUST be `polling`, and every open live view and the signed-in account MUST re-read at once and then every 60 seconds until a stream opens. Tries go on, on the backoff, meanwhile.
+
+_From 255-live-resync._
+
+### 255-FR-004 — When a stream opens after the tab already had one (any reconnect), every open live view and the signed-in account MUST re-read their data through the API as soon as the state becomes `open`, never waiting for missed events to be replayed.
+
+_From 255-live-resync._
+
+### 255-FR-005 — When a hidden tab becomes visible after being hidden for 60 seconds or more, the client MUST drop its stream, reset the backoff and open a fresh one at once, which re-reads every open view (FR-004). A stream that receives no bytes for 60 seconds MUST be treated as dropped. When the browser fires `online`, a try waiting on its backoff MUST start at once.
+
+_From 255-live-resync._
+
+### 255-FR-006 — Every dashboard MUST show a thin bar under its header, "Fără conexiune. Ce vezi poate fi vechi." / "No connection. What you see may be out of date.", as a polite status, once its live connection has not been `open` for more than 10 seconds while it is wanted (first load included), and MUST hide it as soon as a stream opens. It never covers content, moves focus or scrolls the page sideways at 320 px.
+
+_From 255-live-resync._
+
+### 255-FR-007 — The web app MUST offer a queue for small workshop actions: tick a job step, change a job's stage, change a job's estimated finish time. These kinds always go through the queue, online or not. An action is a request to its normal endpoint, carrying a fresh `Idempotency-Key` that stays the same on every resend. It is `waiting` until sent, `sent` while its answer is awaited, and leaves the queue once `accepted` (2xx) or `refused`.
+
+_From 255-live-resync._
+
+### 255-FR-008 — Waiting actions MUST be kept in the browser's IndexedDB, per account, so they survive a reload and are sent after it. Sign-out MUST drop the account's waiting actions.
+
+_From 255-live-resync._
+
+### 255-FR-009 — The queue MUST send actions in the order they were made, one at a time. It sends when an action is added, when the browser fires `online`, when a live stream opens, when the page loads, and 60 seconds after a send that kept an action. A send with no answer, or a 408, 429 or 5xx answer, keeps the action first in line, as `waiting`, and stops sending until the next of those moments. A 401 goes through the app's normal renewal and is sent once more; the answer after it counts. A 401 that survives that renewal keeps the action: the session is ending, and the sign-out drops it (FR-011's sign-out rule).
+
+_From 255-live-resync._
+
+### 255-FR-010 — A send answered 423, 409, 404 or any other 4xx not kept by FR-009 MUST drop the action and show a notice: the API's `detail` when it gives one, else "S-a schimbat între timp. Vezi starea de acum." for 409, "Nu mai este disponibil." for 404, and "Acțiunea nu a fost primită." for any other status. Every open live view then re-reads.
+
+_From 255-live-resync._
+
+### 255-FR-011 — A waiting action made more than 24 hours ago MUST be dropped without being sent, with the notice "O acțiune făcută fără semnal a expirat și nu a fost trimisă." / "An action made without signal expired and was not sent.".
+
+_From 255-live-resync._
+
+### 255-FR-012 — While the device is offline (the browser says so, or the offline bar shows), an action of a kind that may not wait MUST NOT be kept or sent, and the message "Ai nevoie de conexiune pentru asta" / "You need a connection for this" MUST show.
+
+_From 255-live-resync._
+
+### 582-FR-001 — The toast stack MUST pass axe with no violation (`list` and `aria-allowed-role` included) whenever at least one toast is shown, on every screen that mounts `hlm-toaster`.
+
+_From 582-live-toast-axe._
+
+### 582-FR-002 — Each shown toast MUST stay a live region: `aria-live="polite"` (`"assertive"` for an important toast) and `aria-atomic="true"` on the element that holds its text.
+
+_From 582-live-toast-axe._
+
+### 582-FR-003 — The toast stack MUST keep list semantics: the stack is a list and each toast one item of it.
+
+_From 582-live-toast-axe._
+
+### 582-FR-004 — FR-001–FR-003 MUST hold for every toast, including toasts added while others are shown.
+
+_From 582-live-toast-axe._
 
 ## Retired
 

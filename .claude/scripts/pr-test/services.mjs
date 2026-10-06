@@ -1,9 +1,12 @@
 // Private services for one PR tester run: free ports, the compose project (or,
-// on a machine without Docker, a private PostgreSQL cluster and Redis), the
-// environment the apps get, and the health wait. Nothing here touches the
+// on a machine without Docker, a private PostgreSQL cluster, Redis and, when
+// its binary is installed, MinIO), the environment the apps get, the health
+// wait, and the cleanup of what a killed run left. Nothing here touches the
 // shared default ports other sessions use.
+import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { createRequire } from "node:module";
 import { createServer } from "node:net";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 /** `n` distinct ports the OS reports free right now. */
 export async function freePorts(n) {
@@ -68,11 +71,13 @@ export function composePlan({ project, file, ports }) {
 
 /**
  * Without Docker: a throwaway PostgreSQL cluster and Redis inside the run's
- * directory, on the run's ports. There is no object store, so the apps'
- * readiness check reports storage down; the caller reports that as an
- * environment limit, not a fault of the change.
+ * directory, on the run's ports, and MinIO beside them when `minio` (its
+ * binary is on the PATH). MinIO does not daemonize: the caller spawns
+ * `minio.cmd` detached, writes its pid to `minio.pidFile`, waits for
+ * `minio.health` and creates the bucket. Without it there is no object store
+ * and the caller reports storage down as a note.
  */
-export function localPlan({ dir, ports }) {
+export function localPlan({ dir, ports, minio = false }) {
   const pg = join(dir, "pg");
   return {
     kind: "local",
@@ -86,8 +91,114 @@ export function localPlan({ dir, ports }) {
       ["pg_ctl", "-D", pg, "-m", "immediate", "-w", "stop"],
       ["redis-cli", "-p", String(ports.redis), "shutdown", "nosave"],
     ],
-    storage: false,
+    ...(minio && {
+      minio: {
+        cmd: ["minio", "server", join(dir, "minio"), "--address", `127.0.0.1:${ports.minio}`, "--console-address", `127.0.0.1:${ports.minioConsole}`],
+        env: { MINIO_ROOT_USER: STORAGE_KEYS.id, MINIO_ROOT_PASSWORD: STORAGE_KEYS.secret },
+        health: `http://127.0.0.1:${ports.minio}/minio/health/live`,
+        pidFile: join(dir, "minio.pid"),
+      },
+    }),
+    storage: minio,
   };
+}
+
+/** Create the apps' bucket on the run's object store; one that is already there is fine. */
+export async function createBucket({ repoRoot, env }) {
+  const { CreateBucketCommand, S3Client } = createRequire(join(repoRoot, "package.json"))("@aws-sdk/client-s3");
+  const client = new S3Client({
+    endpoint: env.STORAGE_ENDPOINT,
+    region: env.STORAGE_REGION,
+    forcePathStyle: true,
+    maxAttempts: 1,
+    credentials: { accessKeyId: env.STORAGE_ACCESS_KEY_ID, secretAccessKey: env.STORAGE_SECRET_ACCESS_KEY },
+  });
+  try {
+    await client.send(new CreateBucketCommand({ Bucket: env.STORAGE_BUCKET }));
+  } catch (error) {
+    if (error.name !== "BucketAlreadyOwnedByYou") throw error;
+  } finally {
+    client.destroy();
+  }
+}
+
+/** The start of a local run's directory name: the PR and the process that owns it. */
+export const runDirPrefix = (pr, pid = process.pid) => `mf-prtest-${pr}-${pid}-`;
+
+const pidIn = (pattern, name) => Number(pattern.exec(name)?.[1] ?? 0) || null;
+/** The process that owns a run directory, `mf-prtest-<pr>-<pid>-XXXXXX`. */
+const runOwner = (name) => pidIn(/^mf-prtest-\d+-(\d+)-[A-Za-z0-9]{6}$/, name);
+/** The process that owns a test worktree, `mf-prtest-<pr>-<sha7>-<pid>` (worktree.mjs). */
+const worktreeOwner = (name) => pidIn(/^mf-prtest-\d+-[0-9a-f]{7}-(\d+)$/, name);
+
+/** The built entry point of each app a lap boots; a pid file `<app>.pid` beside them names its process. */
+export const APP_SCRIPTS = { api: "dist/apps/api/main.js", web: "dist/apps/web/server/server.mjs", worker: "dist/apps/worker/main.js" };
+
+/** What a run's pid files name: a program (its command's first word) or a script it runs. */
+const PID_FILES = [["redis.pid", "redis-server"], ["minio.pid", "minio"], ...Object.entries(APP_SCRIPTS).map(([app, script]) => [`${app}.pid`, script])];
+
+/** The pid on a file's first line, when it is one a process can have and is not init. */
+function pidFrom(file) {
+  const first = readFileSync(file, "utf8").split("\n")[0].trim();
+  return /^\d+$/.test(first) && Number(first) > 1 ? first : null;
+}
+
+/** Whether a process's command line is still `want`: the program, or a command running that script. */
+function runs(command, want) {
+  const words = command.trim().split(/\s+/);
+  return want.includes("/") ? words.slice(1).includes(want) : basename(words[0] ?? "") === want;
+}
+
+function isAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error.code === "EPERM";
+  }
+}
+
+/**
+ * Remove what killed local runs left in `tmp`: for each run directory whose
+ * owning process is gone, stop its PostgreSQL, Redis, MinIO and apps (by pid
+ * file, only while that pid is still the service), delete the directory with
+ * its worktree; take down compose projects of dead runs; then prune the
+ * repository's worktree list. `run(cmd, args)` returns { code, stdout } and
+ * never throws. Returns a line per thing removed.
+ */
+export function cleanStale({ tmp, repo, isAlive: alive = isAlive, run }) {
+  const cleaned = [];
+  for (const name of existsSync(tmp) ? readdirSync(tmp) : []) {
+    if (!name.startsWith("mf-prtest-")) continue;
+    const dir = join(tmp, name);
+    let pid = runOwner(name);
+    // A run directory from before its name carried the pid: its worktree's name does.
+    if (!pid) {
+      try {
+        pid = readdirSync(dir).map(worktreeOwner).find(Boolean) ?? null;
+      } catch {}
+    }
+    if (!pid || alive(pid)) continue;
+    const still = (file, want) => {
+      const servicePid = existsSync(file) ? pidFrom(file) : null;
+      return servicePid && runs(run("ps", ["-p", servicePid, "-o", "command="]).stdout, want) ? servicePid : null;
+    };
+    if (still(join(dir, "pg", "postmaster.pid"), "postgres")) run("pg_ctl", ["-D", join(dir, "pg"), "-m", "immediate", "-w", "stop"]);
+    for (const [file, want] of PID_FILES) {
+      const servicePid = still(join(dir, file), want);
+      if (servicePid) run("kill", [servicePid]);
+    }
+    rmSync(dir, { recursive: true, force: true });
+    cleaned.push(`removed ${dir} (pid ${pid} gone)`);
+  }
+  for (const project of run("docker", ["compose", "ls", "-a", "-q"]).stdout.split("\n")) {
+    const pid = pidIn(/^mf-prtest-\d+-(\d+)$/, project.trim());
+    if (!pid || alive(pid)) continue;
+    run("docker", ["compose", "-p", project.trim(), "down", "-v", "--remove-orphans"]);
+    cleaned.push(`removed compose project ${project.trim()}`);
+  }
+  if (cleaned.length) run("git", ["-C", repo, "worktree", "prune"]);
+  return cleaned;
 }
 
 /** Where the PR QA workflow's containers listen (.github/workflows/pr-qa.yml). */
@@ -102,6 +213,8 @@ export function externalPlan() {
   return { kind: "external", storage: true };
 }
 
+const STORAGE_KEYS = { id: "motorfix", secret: "motorfix-secret" };
+
 /** What every app gets: the run's services, never the shared defaults. */
 export function appEnv({ ports }) {
   return {
@@ -114,7 +227,7 @@ export function appEnv({ ports }) {
     STORAGE_ENDPOINT: `http://127.0.0.1:${ports.minio}`,
     STORAGE_REGION: "eu-central-1",
     STORAGE_BUCKET: "motorfix",
-    STORAGE_ACCESS_KEY_ID: "motorfix",
-    STORAGE_SECRET_ACCESS_KEY: "motorfix-secret",
+    STORAGE_ACCESS_KEY_ID: STORAGE_KEYS.id,
+    STORAGE_SECRET_ACCESS_KEY: STORAGE_KEYS.secret,
   };
 }

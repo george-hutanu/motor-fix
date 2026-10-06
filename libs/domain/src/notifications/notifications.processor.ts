@@ -31,6 +31,10 @@ interface NotificationJob {
 export const retryDelay = (failedBefore: number) =>
   RETRY_MINUTES[Math.min(failedBefore, RETRY_MINUTES.length - 1)] * 60_000;
 
+// A send job's hold on its row lapses by the time the first retry runs, so a
+// worker that dies holding one cannot keep the row from being sent.
+const CLAIM_MS = retryDelay(0);
+
 @Injectable()
 export class NotificationsProcessor {
   private readonly logger = new Logger('Notifications');
@@ -73,20 +77,49 @@ export class NotificationsProcessor {
     throw new Error(`unknown notifications job ${job.name}`);
   }
 
+  // Only the job holding the row's claim sends it. Another job's live claim
+  // fails this one, so the queue retries it after the claim has lapsed.
   private async send(id: string, attemptsMade: number) {
-    const row = await this.prisma.notification.findUnique({
-      include: { account: true },
-      where: { id },
+    const at = this.now();
+    const { count } = await this.prisma.notification.updateMany({
+      data: { claimedAt: at },
+      where: {
+        id,
+        OR: [
+          { claimedAt: null },
+          { claimedAt: { lt: new Date(at.getTime() - CLAIM_MS) } },
+        ],
+        status: { in: ['queued', 'held'] },
+      },
     });
-    if (!row || !(await this.due(row))) return;
-    if (row.channel === 'email') await this.sendEmail(row, attemptsMade);
-    else await this.sendPhone(row, attemptsMade);
+    if (count === 0) {
+      const row = await this.prisma.notification.findUnique({
+        select: { status: true },
+        where: { id },
+      });
+      if (row?.status === 'queued' || row?.status === 'held')
+        throw new Error(`notification ${id} is being sent by another job`);
+      return;
+    }
+    try {
+      const row = await this.prisma.notification.findUniqueOrThrow({
+        include: { account: true },
+        where: { id },
+      });
+      if (!(await this.due(row))) return;
+      if (row.channel === 'email') await this.sendEmail(row, attemptsMade);
+      else await this.sendPhone(row, attemptsMade);
+    } finally {
+      await this.prisma.notification.updateMany({
+        data: { claimedAt: null },
+        where: { claimedAt: at, id },
+      });
+    }
   }
 
-  // Whether the row goes now: a deleted account fails it, a held one is
-  // released through the grouping rule.
+  // Whether the claimed row goes now: a deleted account fails it, a held one
+  // is released through the grouping rule.
   private async due(row: Notification & { account: Account }) {
-    if (row.status !== 'queued' && row.status !== 'held') return false;
     if (row.account.status === 'deleted') {
       await this.service.fail([row], 'account_deleted', false);
       return false;
@@ -332,14 +365,18 @@ export class NotificationsProcessor {
   }
 
   private async sent(rows: Notification[], messageId: string) {
-    await this.prisma.notification.updateMany({
-      data: {
-        providerMessageId: messageId,
-        sentAt: this.now(),
-        status: 'sent',
-      },
-      where: { id: { in: rows.map((r) => r.id) } },
-    });
+    const ids = rows.map((r) => r.id);
+    await this.prisma.$transaction([
+      this.prisma.notification.updateMany({
+        data: {
+          providerMessageId: messageId,
+          sentAt: this.now(),
+          status: 'sent',
+        },
+        where: { id: { in: ids } },
+      }),
+      this.service.forget(ids),
+    ]);
   }
 }
 

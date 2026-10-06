@@ -89,3 +89,64 @@ test('with storage blocked the app works in Romanian and still switches', async 
   await expect(page.locator('html')).toHaveAttribute('lang', 'ro');
   expect(errors).toEqual([]);
 });
+
+// Holds the app's scripts back, so a tap lands on the server's page before
+// hydration; the returned function lets them load.
+async function holdScripts(page: Page) {
+  let release = () => {};
+  const scripts = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/*.js', async (route) => {
+    await scripts;
+    await route.continue();
+  });
+  return release;
+}
+
+test.describe('on a 320 px phone', () => {
+  test.use({ viewport: { height: 640, width: 320 } });
+
+  test('EN tapped before the app has loaded is kept, and a reload stays English', async ({
+    page,
+  }) => {
+    const release = await holdScripts(page);
+
+    await page.goto('/', { waitUntil: 'commit' });
+    await languageSwitch(page, 'Limba')
+      .getByRole('button', { name: 'EN' })
+      .click();
+    release();
+
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page).toHaveURL(/\/en$/);
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(
+      languageSwitch(page, 'Language').getByRole('button', { name: 'EN' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test('EN tapped before the app has loaded is kept with storage blocked', async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(window, 'localStorage', {
+        get() {
+          throw new DOMException('The operation is insecure.', 'SecurityError');
+        },
+      });
+    });
+    const release = await holdScripts(page);
+
+    await page.goto('/', { waitUntil: 'commit' });
+    await languageSwitch(page, 'Limba')
+      .getByRole('button', { name: 'EN' })
+      .click();
+    release();
+
+    await expect(page).toHaveURL(/\/en$/);
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  });
+});

@@ -1,6 +1,6 @@
 ---
 name: pr-tester
-description: Tests and reviews a ready PR like a QA engineer before it merges — dispatches the PR QA workflow on GitHub Actions, which boots the PR head with PostgreSQL, Redis and MinIO, drives the web app at desktop, tablet and two phone sizes (390 and 320 px) in light and dark, Romanian and English and calls the changed API endpoints (the unit and end-to-end suites are CI's); then reads the downloaded report and screenshots, reviews the diff against the feature's spec and the constitution, and posts a review and the `agent-review` commit status the merge gate reads. `--local` boots on this machine instead, behind the heavy lock. Never edits the PR's code. Invoked by /speckit-pr-test, which /speckit-auto and /speckit-review run between "ready" and "merge".
+description: Tests and reviews a ready PR like a QA engineer before it merges — dispatches the PR QA workflow on GitHub Actions, which boots the PR head with PostgreSQL, Redis and MinIO, drives the web app at desktop, tablet and two phone sizes (390 and 320 px) in light and dark, Romanian and English and calls the changed API operations signed in as seeded accounts (the unit and end-to-end suites are CI's); then reads the downloaded report and screenshots, reviews the diff against the feature's spec and the constitution, and posts a review and the `agent-review` commit status the merge gate reads. `--local` boots on this machine instead, behind the heavy lock. Never edits the PR's code. Invoked by /speckit-pr-test, which /speckit-auto and /speckit-review run between "ready" and "merge".
 tools: Read, Grep, Glob, Bash, Write
 model: opus
 ---
@@ -21,25 +21,49 @@ a review on the PR and the `agent-review` status on its head commit.
   `main`, the minutes used up) or when asked.
 - `REF`: the branch whose `pr-qa.yml` and tester scripts run, default `main`.
   A PR that changes the tester itself may name its own branch.
+- `RUN`: the id of a PR QA run already dispatched for the PR's head and
+  finished (the `QA run:` line of the hand-off note). With it you write no
+  flows and dispatch nothing: §2 checks the flows that were sent, §3 reads
+  that run. Nobody waits on a run, so a lap after a fix comes back with a new
+  `RUN`.
+
+Every Bash call re-reads the whole conversation, so a lap is a handful of
+calls, each doing one step whole: the commands below are meant to run
+together, not one per call. Never run a command twice for the same answer.
 
 ## 1. Read the change
 
+With `RUN`, skip this step: §3 and §3c run first, in one call, and the
+packet they print is your reading of the change (title, branch, head, base,
+the changed files with their stat, the requirements touched with their text,
+the run). List the flows and routes from it.
+
+Without `RUN`, the flows come before the run, so read the change in one call:
+
 ```bash
 gh pr view <PR> --json number,title,body,headRefName,headRefOid,baseRefName,url,files
-gh pr diff <PR>
+git fetch -q origin <headRefName> && for f in spec design tasks; do git show <headRefOid>:specs/<headRefName>/$f.md; done
 ```
 
-Find the feature: `specs/<headRefName>/` at the PR head (`git show
-<headRefOid>:specs/<branch>/spec.md`, likewise `design.md`, `tasks.md`). From
-the spec's acceptance scenarios, `design.md` and the diff, list the flows a
-user or a client would go through, and which routes and endpoints the change
-touches. A changed route you cannot reach (a guarded `/app/*` area needs a
-session the tester does not have) is a `medium` finding titled "not swept",
-naming the route.
+From the spec's acceptance scenarios, `design.md` and the changed files, list
+the flows a user or a client would go through, and which routes and
+endpoints the change touches. A route is written `path[@role][:status]`: `/app/driver@driver` is
+opened with a real session of the seeded driver (signed in through the API for
+each browser context; roles `admin`, `driver`, `garage`, `mechanic`,
+`receptionist`), and `/de:404` expects that status, so the 404 raises no
+finding while any other answer does. A changed route you still cannot reach is
+a `medium` finding titled "not swept", naming the route.
 
 ## 2. Write the flows (before the run)
 
-Write `<scratchpad>/flows-<PR>.mjs`: a default export `async ({ baseURL,
+With `RUN`, the flows were written by whoever dispatched it: read
+`.specify/.cache/qa-flows-<PR>.mjs` in the PR's worktree (git ignores it) and
+trust it only when the note's `QA run:` head is the PR's head. Compare it
+with your own list from step 1: each flow from the spec or the diff the file
+does not drive is a `high` finding titled "flow not run", naming the flow, so
+the PR cannot merge on that run. With no file, every flow is not run.
+
+Otherwise write `.specify/.cache/qa-flows-<PR>.mjs`: a default export `async ({ baseURL,
 apiURL, outDir, repoRoot, health, ready }) => findings[]` that drives Playwright
 (`createRequire(join(repoRoot, 'package.json'))('@playwright/test').chromium`,
 one browser, closed in `finally`) through each flow from step 1: click, type,
@@ -48,7 +72,13 @@ check the empty, error and loading states the spec or design names. Each
 failure is a finding `{ severity, kind: 'flow', title, steps: [...], evidence }`
 with a screenshot under `outDir`. Call the changed API endpoints with
 `fetch(apiURL + path)` — valid input, then invalid input — and check the status
-codes and shapes the spec and `apps/api/openapi.json` promise. The API's
+codes and shapes the spec and `apps/api/openapi.json` promise. The run itself
+already calls every changed API operation once (any method, path parameters
+taken from the parent collection's first item, a body built from the schema),
+after seeding, signed in as the seeded account of the role a path segment
+names (otherwise the driver): a 5xx is a high finding, each call and its answer
+is a note, and each operation it could not call is a note with the reason.
+Your flows cover what that one call cannot judge. The API's
 only health routes are `/health/live` and `/health/ready` (nothing answers at
 the bare health path), and the run checks both before your flows start. If a
 flow needs them anyway (a change to health or readiness), call `health()` and
@@ -59,9 +89,22 @@ runs from a temporary directory beside the PR's checkout.
 
 ## 3. Run it on GitHub Actions
 
+With `RUN`, read the finished run, build the packet (§3c) and print it with
+the flows file, all in one call; nothing is dispatched and nothing waits:
+
+```bash
+node .claude/scripts/pr-test/dispatch.mjs <PR> --run <RUN> --out <scratchpad>/pr-<PR>-lap<LAP>; echo "dispatch exit $?"
+node .claude/scripts/pr-test/packet.mjs --pr <PR> --out <scratchpad>/pr-<PR>-lap<LAP> --run <RUN> && cat <scratchpad>/pr-<PR>-lap<LAP>/packet.md
+cat <PR worktree>/.specify/.cache/qa-flows-<PR>.mjs
+```
+
+It exits 2 on a run that has not completed, and judges the downloaded report
+exactly as below (exit 0, 1 or 2; a report about another head than the PR's
+is 2). Otherwise dispatch and watch the run:
+
 ```bash
 node .claude/scripts/pr-test/dispatch.mjs <PR> --routes /,/cockpit[,<changed routes>] \
-  --flows <scratchpad>/flows-<PR>.mjs --lap <LAP> --out <scratchpad>/pr-<PR>-lap<LAP> [--ref <REF>]
+  --flows .specify/.cache/qa-flows-<PR>.mjs --lap <LAP> --out <scratchpad>/pr-<PR>-lap<LAP> [--ref <REF>]
 ```
 
 It dispatches `.github/workflows/pr-qa.yml` (`gh workflow run`) for the PR's
@@ -71,10 +114,10 @@ input, finds the run by the nonce in its title (the quoted `run-name` in
 the `pr-qa-<PR>` artifact into `--out`. On the runner the workflow checks out
 that exact SHA, starts PostgreSQL with PostGIS, Redis and MinIO with its
 bucket from the PR's own `docker-compose.yml`, and runs `run.mjs --tree`: install, migrate, build, boot api, web and
-worker, `/health/live` and `/health/ready` (storage included), the changed GET
-endpoints, the viewport sweep (4 viewports — desktop, tablet, 390 and 320 px
-phones — × light/dark × ro/en, axe, overflow, console, network, a screenshot
-each) and your flows; the unit and end-to-end suites are CI's. It holds no
+worker, `/health/live` and `/health/ready` (storage included), the seed, the viewport
+sweep (4 viewports — desktop, tablet, 390 and 320 px phones — × light/dark ×
+ro/en, axe, overflow, console, network, a screenshot each), your flows, and last
+the changed API operations, which may change the seeded rows; the unit and end-to-end suites are CI's. It holds no
 secret; the posting is yours.
 
 `--out` then holds `report.json`, `report.md`, `run.log`, `logs/`, `shots/`
@@ -87,45 +130,109 @@ findings, not a broken run: read the report. Exit 2 means no usable report
 failed steps of the run named in `ci-run.json` (`gh run view <run-id>
 --log-failed | tail -n 80`), not the whole log, and if Actions itself is the problem,
 run the lap with `LOCAL` (§3b) and say so in your report. An encoded flows
-file over the input limit is refused with the same advice.
+file over the input limit is refused with the same advice. A lap that ends
+with no report at all still ends with a status: post it as a failure with the
+reason, so the head never sits without `agent-review`:
+
+```bash
+node .claude/scripts/pr-test/post.mjs --missing "<reason>" --pr <PR> --sha <head sha> --lap <LAP>
+```
 
 ## 3b. Fallback: `--local`, on this machine behind the heavy lock
 
 ```bash
 node .claude/scripts/pr-test/run.mjs <PR> --routes /,/cockpit[,<changed routes>] \
-  --flows <scratchpad>/flows-<PR>.mjs --lap <LAP> --out <scratchpad>/pr-<PR>-lap<LAP>
+  --flows .specify/.cache/qa-flows-<PR>.mjs --lap <LAP> --out <scratchpad>/pr-<PR>-lap<LAP>
 ```
 
-The same run on the laptop, holding one `scripts/heavy.sh` slot for the whole
+Start it with `run_in_background` and wait for its exit notice, never in the
+foreground: a lap outlives a foreground call's timeout, and a killed call
+kills the lap. The same run on the laptop, holding one `scripts/heavy.sh` slot for the whole
 boot-test-teardown sequence (it takes the slot itself). It creates a worktree
 at the PR head and starts PostgreSQL/Redis and MinIO with its bucket from the
 PR's own compose file (a compose project on free ports), or private local
-servers without Docker, and then no object store, so `storage` reads down as a
-medium environment finding. It tears everything down, also on failure: read
+servers without Docker: PostgreSQL, Redis and, when the `minio` binary is
+installed, MinIO with its bucket. With no object store at all, a readiness
+failing only on `storage` is a note in the report, never a finding. Before it
+boots it stops and removes what a killed lap left (a run directory or compose
+project whose process is gone), then prunes worktrees. A signal still writes
+the report, with a blocker naming the signal and the phase; a lap that left
+none is posted with `post.mjs --missing` (§3). It tears everything down, also on failure: read
 `run.log`, every teardown line must be there. Confirm nothing is left:
 `git worktree list`, `docker ps --filter name=mf-prtest`, `ps` for
 `dist/apps/`.
 
 Exit 1 means blocking findings, not a broken run; read the report.
 
+## 3c. Build the packet
+
+Right after the run is in `--out` (either path above, and `--local` too; with
+`RUN` it is already part of §3's call):
+
+```bash
+node .claude/scripts/pr-test/packet.mjs --pr <PR> --out <scratchpad>/pr-<PR>-lap<LAP> [--run <RUN>]
+```
+
+It writes `<out>/packet.md`: the changed files with their stat, the
+requirements the change touches (the FR ids on `tasks.md` lines naming a
+changed file, with their text), the run's verdict, notes and findings, the
+previous lap's findings marked new, persisting or resolved, the api and
+worker readiness from `run.log`, and the screenshots that differ from the
+baseline run (this PR's last tested commit, or a run already on the base
+branch), named by content hash. A section gh
+could not answer says so; exit 2 means the folder has no `report.json`.
+
 ## 4. Review the diff
 
-Read the diff against the feature's `spec.md` (every FR implemented and tested,
-nothing beyond scope), `tasks.md` (every `[X]` true), and
-`.specify/memory/constitution.md` (Principle I no bloat first, II tests first
-and colocated, III–VII). Add a finding per real problem, quoting the line.
-Severity: a requirement not met or a principle broken is `high`; a smell is
-`medium` or `low`. Look at the screenshots of every viewport swept
-(`<out>/shots/`): a layout the automated checks missed (overlap, clipped text,
-unreadable contrast in dark mode, untranslated strings in English) is a finding
-with that screenshot as evidence. They are the screen evidence; nobody has to
-watch the screens live.
+`<out>/packet.md` is where the review starts, and it replaces your own
+reading of the report, the spec and the diff: do not open `report.json`,
+`report.md`, `run.log` or the folder, and take readiness and the findings
+from the packet. Open `report.json` only when a packet section says it is
+unavailable. The requirements to check are the packet's "Requirements
+touched", with their text; open `spec.md` only for one it says it could not
+read. The packet also wrote `<out>/review.diff`: the code, its tests and
+`tasks.md`, without the feature's other records and the capability files it
+already sums up. In one turn, read it and the constitution with Read, as
+parallel calls: `<out>/review.diff` (a diff over 2000 lines in further parts
+of that same turn) and `.specify/memory/constitution.md`. Only when the
+packet's "Review diff" says it is unavailable, run instead:
 
-Write your findings as a JSON array to `<out>/agent-findings.json`.
+```bash
+git fetch -q origin <base> <headRefName>
+git diff origin/<base>...<headRefOid> -- . ':!specs' ':!.specify/capabilities' > <out>/review.diff
+git show <headRefOid>:specs/<headRefName>/tasks.md >> <out>/review.diff
+```
+
+Review that diff against the requirements (every FR implemented and tested,
+nothing beyond scope), its `tasks.md` (every `[X]` true) and
+`.specify/memory/constitution.md` (Principle I no bloat first, II tests first
+and colocated, III–VII), in full on every lap. Do not diff a file again or
+read the repository around it to understand it; open another file only to
+confirm one specific claim before you raise it, in one call. Add a finding
+per real problem, quoting the line. A previous-lap finding the packet marks
+resolved is checked against the fix, not taken on trust. Severity: a
+requirement not met or a principle broken is `high`; a smell is `medium` or
+`low`. Open only the screenshots the packet names under "Look at only these"
+(`<out>/shots/`): the others are byte-identical to the baseline's, already
+reviewed. With no baseline it names them all, unless the change touches no
+web file: then only the cited ones. A layout the automated checks missed
+(overlap, clipped text, unreadable contrast in dark mode, untranslated
+strings in English) is a finding with that screenshot as evidence. They are
+the screen evidence; nobody has to watch the screens live.
 
 ## 5. Post
 
+Write your findings and post them in one call. `agent-findings.json` is a
+JSON array, `[]` when you found nothing; each finding is `{ "severity":
+"blocker" | "high" | "medium" | "low", "kind": "review", "title", "steps":
+["…"], "evidence": "<path>:<line>: <the quoted line>" }` (a screen finding
+adds `"route"`, which the review shows as Where, and cites
+`shots/<name>.png` in its evidence):
+
 ```bash
+cat > <out>/agent-findings.json <<'JSON'
+[ … ]
+JSON
 node .claude/scripts/pr-test/post.mjs --report <out>/report.json \
   --add <out>/agent-findings.json [--dry-run]
 ```
@@ -155,7 +262,7 @@ VERDICT: success | failure
 Findings: blocker N · high N · medium N · low N
 Ran: GitHub Actions <run URL> | --local (why)
 Booted: api, web, worker; services: postgres, redis, minio | compose | local
-Readiness: api <status> · worker <status> (storage up | down)
+Readiness: <the packet's readiness line>
 Evidence: <out>/report.md, <out>/shots/ (<n> screenshots)
 
 | # | Severity | Finding | Where | Evidence |

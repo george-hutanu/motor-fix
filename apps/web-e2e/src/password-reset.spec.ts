@@ -1,5 +1,4 @@
 import { expect, type Page, test } from '@playwright/test';
-import pg from 'pg';
 
 import { ready, signIn } from './accounts.js';
 
@@ -7,37 +6,32 @@ import { ready, signIn } from './accounts.js';
 const OLD = 'parola-veche-de-test';
 const NEW = 'parola-noua-de-test';
 
-// The test mailbox: the reset e-mail's link as the API queued it. It needs the
-// API's own database, so a deployed address (no DATABASE_URL here) skips it.
-// The API answers before it issues the link, so this waits for it to land.
-const databaseUrl = process.env['DATABASE_URL'];
+// The reset e-mail as the worker sent it, read from the test mailbox the
+// local run starts (mailbox.mjs); a deployed address has none, so the config
+// leaves out flows tagged @mailbox there. The API answers before it issues the
+// link, so this waits for it to land.
+const MAILBOX = 'http://127.0.0.1:3025';
+const RESET_LINK = /https?:\/\/[^\s"<>]+\/reset-password\/[A-Za-z0-9_-]{43}/;
 
-async function lastResetLink(email: string): Promise<string> {
-  const client = new pg.Client({ connectionString: databaseUrl });
-  await client.connect();
-  try {
-    let link: string | undefined;
-    await expect
-      .poll(
-        async () => {
-          const { rows } = await client.query<{ link: string }>(
-            `SELECT n.params->>'link' AS link
-               FROM notification n JOIN account a ON a.id = n.account_id
-              WHERE a.email = $1 AND n.kind = 'ACCOUNT_EMAIL'
-                AND n.params->>'purpose' = 'password_reset'
-              ORDER BY n.created_at DESC LIMIT 1`,
-            [email],
-          );
-          link = rows[0]?.link;
-          return link;
-        },
-        { message: 'no reset e-mail queued' },
-      )
-      .toBeDefined();
-    return new URL(String(link)).pathname;
-  } finally {
-    await client.end();
-  }
+async function lastResetLink(page: Page, email: string): Promise<string> {
+  let link: string | undefined;
+  await expect
+    .poll(
+      async () => {
+        const res = await page.request.get(
+          `${MAILBOX}/messages?to=${encodeURIComponent(email)}`,
+        );
+        const sent: { textContent: string }[] = await res.json();
+        link = sent
+          .map((m) => RESET_LINK.exec(m.textContent)?.[0])
+          .filter(Boolean)
+          .at(-1);
+        return link;
+      },
+      { message: 'no reset e-mail sent', timeout: 20_000 },
+    )
+    .toBeDefined();
+  return new URL(String(link)).pathname;
 }
 
 // A token of the right shape that was never issued.
@@ -54,9 +48,7 @@ const noSideScroll = (page: Page) =>
 const openSignIn = (page: Page) =>
   page.getByRole('button', { exact: true, name: 'Autentificare' }).click();
 
-test.describe('resetting a forgotten password @seeded', () => {
-  test.skip(!databaseUrl, 'reads the queued e-mail from the API database');
-
+test.describe('resetting a forgotten password @seeded @mailbox', () => {
   test('from the sign-in dialog through the e-mail: the new password works and the old one does not', async ({
     browser,
     page,
@@ -86,7 +78,7 @@ test.describe('resetting a forgotten password @seeded', () => {
       ),
     ).toBeVisible();
 
-    const link = await lastResetLink(email);
+    const link = await lastResetLink(page, email);
     expect(link).toMatch(/^\/ro\/reset-password\/[A-Za-z0-9_-]{43}$/);
     const fresh = await browser.newContext();
     const visitor = await fresh.newPage();

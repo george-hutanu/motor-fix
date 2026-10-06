@@ -114,19 +114,35 @@ export function testFinding({ name, command, code, tail }) {
 /** A finding for a step that could not run: boot, health, install, build. */
 export const stepFinding = (title, detail, severity = "blocker") => ({ severity, kind: "step", title, steps: [detail] });
 
-/** GET endpoints without path parameters that the change adds or alters. */
-export function changedGetEndpoints(baseDoc, headDoc) {
-  const before = baseDoc?.paths ?? {};
-  return Object.entries(headDoc?.paths ?? {})
-    .filter(([path, ops]) => ops.get && !path.includes("{"))
-    .filter(([path, ops]) => JSON.stringify(before[path]?.get) !== JSON.stringify(ops.get))
-    .map(([path]) => path);
+/** A lap stopped by a signal: whatever it found so far is no verdict. */
+export const cutOffFinding = (signal, phase) =>
+  stepFinding(`Lap cut off by ${signal} during ${phase}`, "The run was stopped before it finished; its findings so far are in this report. Run the lap again.");
+
+/**
+ * What a readiness answer means for the review: nothing on 200; a note when
+ * only storage is down and the lap started no object store (a limit of this
+ * machine, not the change); a blocking finding otherwise.
+ */
+export function readinessOutcome({ name, status, body, storage, url }) {
+  if (status === 200) return {};
+  let failed = [];
+  try {
+    failed = Object.entries(JSON.parse(body).checks ?? {})
+      .filter(([, v]) => v !== "ok")
+      .map(([k]) => k);
+  } catch {}
+  if (!storage && failed.length === 1 && failed[0] === "storage")
+    return { note: `${name} readiness: storage down, every other check ok. This lap had no object store (no Docker and no minio binary): a limit of this machine, not the change.` };
+  return { finding: stepFinding(`${name} readiness failed: ${failed.join(", ") || status}`, `GET ${url} answered ${status}: ${String(body).slice(0, 300)}`) };
 }
+
+/** What makes two findings the same one, across sources and laps. */
+export const findingKey = (f) => f.key ?? `${f.kind}|${f.title}|${f.route ?? ""}`;
 
 export function mergeFindings(list) {
   const out = new Map();
   for (const f of list) {
-    const key = f.key ?? `${f.kind}|${f.title}|${f.route ?? ""}`;
+    const key = findingKey(f);
     const seen = out.get(key);
     if (!seen) out.set(key, { ...f });
     else seen.severity = worst(seen.severity, f.severity);

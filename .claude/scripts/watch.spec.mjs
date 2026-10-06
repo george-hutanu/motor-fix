@@ -1,4 +1,4 @@
-import { describe, it } from 'vitest';
+import { afterEach, describe, it, vi } from 'vitest';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
@@ -10,6 +10,7 @@ import {
   applyFixes,
   collect,
   dispatchPlan,
+  dueFixes,
   fixOf,
   holderOf,
   isClaudeCommand,
@@ -23,6 +24,7 @@ import {
   summarizePr,
   writeClaim,
 } from './watch.mjs';
+import { waitHolder } from './lib/watch-wait.mjs';
 
 const MIN = 60_000;
 const NOW = Date.parse('2026-10-04T12:00:00Z');
@@ -639,7 +641,11 @@ describe('the command, started from a path with a space or through a symlink', (
       mkdirSync(dir, { recursive: true });
       for (const name of ['watch.mjs', 'run-state.mjs']) writeFileSync(join(dir, name), readFileSync(join(import.meta.dirname, name)));
       mkdirSync(join(f.root, 'with space', '.claude', 'scripts', 'lib'), { recursive: true });
-      for (const name of ['feature.mjs']) writeFileSync(join(dir, 'lib', name), readFileSync(join(import.meta.dirname, 'lib', name)));
+      for (const name of ['feature.mjs', 'watch-wait.mjs']) writeFileSync(join(dir, 'lib', name), readFileSync(join(import.meta.dirname, 'lib', name)));
+      mkdirSync(join(dir, 'pr-test'));
+      for (const name of ['carry.mjs', 'post.mjs', 'findings.mjs', 'qa-run.mjs']) writeFileSync(join(dir, 'pr-test', name), readFileSync(join(import.meta.dirname, 'pr-test', name)));
+      mkdirSync(join(f.root, 'with space', 'scripts'));
+      writeFileSync(join(f.root, 'with space', 'scripts', 'docs-only.ts'), readFileSync(join(import.meta.dirname, '..', '..', 'scripts', 'docs-only.ts')));
       symlinkSync(join(f.root, 'with space'), join(f.root, 'linked'));
       for (const script of [join(dir, 'watch.mjs'), join(f.root, 'linked', '.claude', 'scripts', 'watch.mjs')]) {
         const out = execFileSync('node', [script, '--json'], { cwd: f.repo, encoding: 'utf8', env: { ...process.env, GH_TOKEN: '' } });
@@ -728,5 +734,572 @@ describe('the QA cap', () => {
     }
     assert.match(out[0], /QA runs 0\/3 /);
     assert.equal(JSON.parse(out.at(-1)).qaCap, 3);
+  });
+});
+
+describe('a ready PR whose head is docs-only since its last verdict', () => {
+  const quiet = { phase: 'qa', activity: { at: NOW - 120 * MIN, source: 'commit' } };
+  const ready = summarizePr(pr({ statusCheckRollup: [check('SUCCESS')] }));
+  const opts = { now: NOW, thresholds: DEFAULT_THRESHOLDS };
+  const FROM = 'f'.repeat(40);
+
+  it('carries the verdict instead of re-running QA', () => {
+    const r = fixOf(row({ ...quiet, pr: ready, carry: { from: FROM, head: 'abc' } }), opts);
+    assert.equal(r.fix, 'carry-review');
+    assert.equal(r.verdict, 'stale');
+    assert.match(r.reason, /docs-only since fffffff/);
+    assert.equal(fixOf(row({ ...quiet, pr: ready, carry: { from: FROM, head: 'abc', reason: 'apps/x changed' } }), opts).fix, 'rerun-qa');
+  });
+
+  it('never dispatches an agent for a carry: --fix applies it', () => {
+    const r = { path: 'a', verdict: 'stale', fix: 'carry-review', activity: { at: NOW - 90 * MIN }, claim: null };
+    assert.deepEqual(dispatchPlan([r], { qaLive: 0, now: NOW }), []);
+  });
+
+  it('looks for a carry only on a row that would re-run QA, and posts it on --fix', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-fixture-urls');
+      const b = f.add('agent-b', '902-draft');
+      quietCommit(a, 120);
+      quietCommit(b, 120);
+      const head = git(a, 'rev-parse', 'HEAD');
+      const asked = [];
+      const report = collect(f.repo, env({
+        gh: () => [pr({ headRefOid: head }), pr({ number: 22, headRefName: '902-draft', isDraft: true })],
+        carry: (n) => (asked.push(n), { from: FROM, head }),
+      }));
+      assert.deepEqual(asked, [21]);
+      const row = report.rows.find((x) => x.path === a);
+      assert.equal(row.fix, 'carry-review');
+      assert.ok(!report.plan.some((p) => p.path === a), 'a carry is not dispatched to an agent');
+      const posted = [];
+      const actions = applyFixes(f.repo, report, { postCarry: (c) => (posted.push(c), {}) });
+      assert.deepEqual(posted, [{ pr: 21, from: FROM, head }]);
+      assert.ok(actions.some((x) => x.ok && /carry #21/.test(x.what)), JSON.stringify(actions));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('re-runs QA when the carry lookup fails or finds none', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-fixture-urls');
+      quietCommit(a, 120);
+      const head = git(a, 'rev-parse', 'HEAD');
+      const gh = () => [pr({ headRefOid: head })];
+      const thrown = collect(f.repo, env({ gh, carry: () => { throw new Error('gh down'); } }));
+      assert.equal(thrown.rows.find((x) => x.path === a).fix, 'rerun-qa');
+      const none = collect(f.repo, env({ gh, carry: () => ({ reason: 'no earlier commit has an agent-review success' }) }));
+      assert.equal(none.rows.find((x) => x.path === a).fix, 'rerun-qa');
+      assert.equal(collect(f.repo, env({ gh })).rows.find((x) => x.path === a).fix, 'rerun-qa');
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('reports a carry that could not be posted as a failed action', () => {
+    const r = { path: '/x', fix: 'carry-review', holder: 'none', pr: { number: 21 }, carry: { from: FROM, head: 'abc' } };
+    const actions = applyFixes('/nonexistent', { rows: [r], prunable: [], orphanLocks: [] }, { postCarry: () => { throw new Error('HTTP 403'); } });
+    assert.deepEqual(actions, [{ what: 'carry #21 from fffffff', ok: false, error: 'HTTP 403' }]);
+  });
+});
+
+describe('a handed-off ready PR waits for CI and its QA run with no agent alive', () => {
+  const opts = { now: NOW, thresholds: DEFAULT_THRESHOLDS };
+  const HEAD = 'd'.repeat(40);
+  const ready = (entries) => summarizePr(pr({ headRefOid: HEAD, statusCheckRollup: entries }));
+  const handed = (over = {}) =>
+    row({ phase: 'qa', head: HEAD, handoff: true, qaRun: { id: '77', head: HEAD, lap: 1 }, activity: { at: NOW - 5 * MIN, source: 'commit' }, ...over });
+
+  it('waits, with no fix, while CI is pending, even long past the quiet threshold', () => {
+    for (const at of [NOW - 5 * MIN, NOW - 300 * MIN]) {
+      const r = fixOf(handed({ activity: { at, source: 'commit' }, pr: ready([check(null, 'IN_PROGRESS')]), qaRunState: { status: 'completed', conclusion: 'success' } }), opts);
+      assert.equal(r.verdict, 'waiting');
+      assert.equal(r.fix, null);
+      assert.match(r.reason, /CI/);
+    }
+  });
+
+  it('waits while the QA run is queued or in progress, even long past the quiet threshold', () => {
+    for (const state of [{ status: 'queued' }, { status: 'in_progress' }]) {
+      const r = fixOf(handed({ activity: { at: NOW - 300 * MIN, source: 'commit' }, pr: ready([check('SUCCESS')]), qaRunState: state }), opts);
+      assert.equal(r.verdict, 'waiting', JSON.stringify(state));
+      assert.equal(r.fix, null);
+      assert.match(r.reason, /QA run 77/);
+    }
+  });
+
+  it('waits on a run that cannot be read only until the quiet threshold, then falls back to the tail', () => {
+    for (const state of [null, undefined]) {
+      const recent = fixOf(handed({ pr: ready([check('SUCCESS')]), qaRunState: state }), opts);
+      assert.equal(recent.verdict, 'waiting', JSON.stringify(state));
+      assert.match(recent.reason, /QA run 77 \(state unreadable\)/);
+      const quiet = fixOf(handed({ activity: { at: NOW - 300 * MIN, source: 'commit' }, pr: ready([check('SUCCESS')]), qaRunState: state }), opts);
+      assert.equal(quiet.fix, 'tail', JSON.stringify(state));
+    }
+  });
+
+  it('offers the merge, not the tail, once the head already has agent-review success', () => {
+    const passed = summarizePr(pr({ headRefOid: HEAD, statusCheckRollup: [check('SUCCESS'), review('SUCCESS')] }));
+    assert.equal(passed.agentReview, 'success');
+    const r = fixOf(handed({ activity: { at: NOW - 300 * MIN, source: 'commit' }, clean: true, pr: passed, qaRunState: { status: 'completed' } }), opts);
+    assert.equal(r.fix, 'merge');
+  });
+
+  it('offers the tail at once when CI has finished, passing or failing, and the run has completed', () => {
+    for (const ci of [check('SUCCESS'), check('FAILURE')]) {
+      const r = fixOf(handed({ pr: ready([ci]), qaRunState: { status: 'completed', conclusion: 'failure' } }), opts);
+      assert.equal(r.verdict, 'stale');
+      assert.equal(r.fix, 'tail');
+    }
+  });
+
+  it('leaves a held worktree alone even when both have finished', () => {
+    const r = fixOf(handed({ holder: 'live', pr: ready([check('SUCCESS')]), qaRunState: { status: 'completed' } }), opts);
+    assert.equal(r.fix, null);
+  });
+
+  it('waits on a PR with no checks only until the quiet threshold, then falls back to the tail', () => {
+    const none = summarizePr(pr({ headRefOid: HEAD, statusCheckRollup: [] }));
+    assert.equal(fixOf(handed({ pr: none, qaRunState: { status: 'completed' } }), opts).verdict, 'waiting');
+    assert.equal(fixOf(handed({ activity: { at: NOW - 120 * MIN, source: 'commit' }, pr: none, qaRunState: { status: 'completed' } }), opts).fix, 'tail');
+  });
+
+  it('keeps today\'s rule with no run recorded, or a run about an older head', () => {
+    for (const qaRun of [null, { id: '77', head: 'e'.repeat(40), lap: 1 }]) {
+      const recent = fixOf(handed({ qaRun, pr: ready([check(null, 'IN_PROGRESS')]) }), opts);
+      assert.equal(recent.verdict, 'ok');
+      const quiet = fixOf(handed({ qaRun, activity: { at: NOW - 120 * MIN, source: 'commit' }, pr: ready([check(null, 'IN_PROGRESS')]) }), opts);
+      assert.equal(quiet.fix, 'tail');
+    }
+  });
+
+  it('dispatches nothing for a waiting row', () => {
+    const waiting = { ...handed(), verdict: 'waiting', fix: null };
+    assert.deepEqual(dispatchPlan([waiting], { qaLive: 0 }), []);
+  });
+
+  it('reads the run line from the note and asks for the run only for a ready PR at the recorded head', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-fixture-urls');
+      quietCommit(a, 5);
+      const head = git(a, 'rev-parse', 'HEAD');
+      mkdirSync(join(a, 'specs', '901-fixture-urls'), { recursive: true });
+      writeFileSync(join(a, '.specify', 'feature.json'), JSON.stringify({ feature_directory: 'specs/901-fixture-urls' }));
+      writeFileSync(join(a, 'specs', '901-fixture-urls', 'handoff.md'), `# hand-off\n- QA run: 77 · head ${head} · lap 1 · https://x/runs/77\n`);
+      const asked = [];
+      const runOf = (id) => {
+        asked.push(id);
+        return { status: 'in_progress', conclusion: '' };
+      };
+      let r = collect(f.repo, env({ gh: () => [pr({ headRefOid: head, statusCheckRollup: [check('SUCCESS')] })], runOf })).rows.find((x) => x.path === a);
+      assert.deepEqual(r.qaRun, { id: '77', head, lap: 1 });
+      assert.deepEqual(asked, ['77']);
+      assert.equal(r.verdict, 'waiting');
+      r = collect(f.repo, env({ gh: () => [pr({ headRefOid: head, statusCheckRollup: [check('SUCCESS')] })], runOf: () => ({ status: 'completed', conclusion: 'success' }) })).rows.find((x) => x.path === a);
+      assert.equal(r.fix, 'tail');
+      asked.length = 0;
+      collect(f.repo, env({ gh: () => [pr({ headRefOid: 'f'.repeat(40) })], runOf }));
+      collect(f.repo, env({ gh: () => [pr({ headRefOid: head, isDraft: true })], runOf }));
+      assert.deepEqual(asked, []);
+      r = collect(f.repo, env({ gh: () => [pr({ headRefOid: head })], runOf: () => { throw new Error('gh: 404'); } })).rows.find((x) => x.path === a);
+      assert.equal(r.verdict, 'waiting');
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('counts waiting rows in the board header', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-fixture-urls');
+      quietCommit(a, 5);
+      const head = git(a, 'rev-parse', 'HEAD');
+      mkdirSync(join(a, 'specs', '901-fixture-urls'), { recursive: true });
+      writeFileSync(join(a, '.specify', 'feature.json'), JSON.stringify({ feature_directory: 'specs/901-fixture-urls' }));
+      writeFileSync(join(a, 'specs', '901-fixture-urls', 'handoff.md'), `- QA run: 77 · head ${head} · lap 1 · u\n`);
+      const lines = [];
+      const log = console.log;
+      console.log = (s) => lines.push(s);
+      try {
+        main([], { cwd: f.repo, now: NOW, gh: () => [pr({ headRefOid: head })], alive: () => false, pidAlive: () => false, runOf: () => ({ status: 'queued' }) });
+      } finally {
+        console.log = log;
+      }
+      assert.match(lines.join('\n'), /waiting 1/);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+});
+
+// The gate answers the one question a scheduled pass asks first, with no model:
+// would this pass do anything? Its verdict is the full pass's, never looser.
+const captured = () => {
+  const out = [];
+  const err = [];
+  vi.spyOn(console, 'log').mockImplementation((...a) => out.push(a.join(' ')));
+  vi.spyOn(console, 'error').mockImplementation((...a) => err.push(a.join(' ')));
+  return { out, err };
+};
+
+const deadLock = (f, path) => git(f.repo, 'worktree', 'lock', '--reason', 'claude agent x (pid 999999 start Sun Oct  4 08:07:18 2026)', path);
+
+describe('--gate', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('exits 0 and prints nothing when a pass would do nothing', () => {
+    const f = fixture();
+    try {
+      f.add('agent-a', '901-a');
+      const io = captured();
+      assert.equal(main(['--gate'], { cwd: f.repo, ...env() }), 0);
+      assert.deepEqual(io.out, []);
+      assert.deepEqual(io.err, []);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('fires with the agent fix a stale worktree needs', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      quietCommit(a, 120);
+      const io = captured();
+      assert.equal(main(['--gate'], { cwd: f.repo, ...env() }), 2);
+      assert.equal(io.out.length, 1);
+      assert.match(io.out[0], /^resume /);
+      assert.ok(io.out[0].includes(a));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('fires on a dead holder, and leaves its lock in place', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      deadLock(f, a);
+      const io = captured();
+      assert.equal(main(['--gate'], { cwd: f.repo, ...env() }), 2);
+      assert.ok(io.out.some((l) => l.startsWith('unlock ') && l.includes(a)), io.out.join('\n'));
+      assert.ok(git(f.repo, 'worktree', 'list', '--porcelain').includes('locked'));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('fires on a finished clean worktree to remove, and keeps it', () => {
+    const f = fixture();
+    try {
+      const done = f.add('agent-done', '902-b');
+      const sha = git(done, 'rev-parse', 'HEAD');
+      const io = captured();
+      const code = main(['--gate'], { cwd: f.repo, ...env({ gh: () => [pr({ number: 22, headRefName: '902-b', state: 'MERGED', headRefOid: sha })] }) });
+      assert.equal(code, 2);
+      assert.ok(io.out.some((l) => l.startsWith('remove-worktree ') && l.includes(done)), io.out.join('\n'));
+      assert.ok(existsSync(done));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('fires on a deleted worktree to prune and its orphan lock', () => {
+    const f = fixture();
+    try {
+      const gone = f.add('agent-gone', '904-d');
+      deadLock(f, gone);
+      rmSync(gone, { recursive: true, force: true });
+      const io = captured();
+      assert.equal(main(['--gate'], { cwd: f.repo, ...env() }), 2);
+      assert.ok(io.out.some((l) => l.startsWith('unlock ') && l.includes(gone)), io.out.join('\n'));
+      assert.ok(io.out.some((l) => l.startsWith('prune ') && l.includes(gone)), io.out.join('\n'));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('stays silent for an item a live agent has already claimed', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      quietCommit(a, 120);
+      writeClaim(a, 'resume', NOW - 5 * MIN);
+      const io = captured();
+      assert.equal(main(['--gate'], { cwd: f.repo, ...env() }), 0);
+      assert.deepEqual(io.out, []);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('fires exactly when the full pass would dispatch or apply something', () => {
+    const states = {
+      idle: () => {},
+      stale: (f) => quietCommit(f.add('agent-a', '901-a'), 120),
+      claimed: (f) => {
+        const a = f.add('agent-a', '901-a');
+        quietCommit(a, 120);
+        writeClaim(a, 'resume', NOW - 5 * MIN);
+      },
+      dead: (f) => deadLock(f, f.add('agent-a', '901-a')),
+      dirtyDone: (f) => writeFileSync(join(f.add('agent-a', '901-a'), 'wip.txt'), 'x\n'),
+      gone: (f) => rmSync(f.add('agent-gone', '904-d'), { recursive: true, force: true }),
+    };
+    for (const [name, arrange] of Object.entries(states)) {
+      const f = fixture();
+      try {
+        arrange(f);
+        const merged = (branch) => ({ number: 30, headRefName: branch, state: 'MERGED', headRefOid: 'zzz' });
+        const deps = { cwd: f.repo, ...env({ gh: () => (name === 'dirtyDone' ? [pr(merged('901-a'))] : []) }) };
+        const io = captured();
+        const gate = main(['--gate'], deps);
+        io.out.length = 0;
+        assert.equal(main(['--fix', '--json'], deps), 0);
+        const full = JSON.parse(io.out.join('\n'));
+        vi.restoreAllMocks();
+        assert.equal(gate === 2, full.plan.length > 0 || full.actions.length > 0, name);
+        assert.ok(gate === 0 || gate === 2, name);
+      } finally {
+        rmSync(f.root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it('is an error outside a repository and with --fix, --json or --wait', () => {
+    const f = fixture();
+    try {
+      captured();
+      const plain = join(f.root, 'plain');
+      mkdirSync(plain);
+      assert.equal(main(['--gate'], { cwd: plain, ...env() }), 1);
+      for (const other of ['--fix', '--json', '--wait']) assert.equal(main(['--gate', other], { cwd: f.repo, ...env() }), 1, other);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('dueFixes', () => {
+  it('lists every action the no-agent fixer would take, in its order', () => {
+    const report = {
+      rows: [
+        row({ path: '/w/dead', holder: 'dead' }),
+        row({ path: '/w/done', fix: 'remove-worktree', clean: true }),
+        row({ path: '/w/dirty', fix: 'remove-worktree', clean: false }),
+        row({ path: '/w/main', main: true, fix: 'remove-worktree', clean: true }),
+        row({ path: '/w/carry', fix: 'carry-review', pr: { number: 5 }, carry: { from: 'abcdef1234', head: 'def' } }),
+        row({ path: '/w/nocarry', fix: 'carry-review', pr: { number: 6 }, carry: null }),
+      ],
+      orphanLocks: ['/w/orphan'],
+      prunable: ['/w/orphan', '/w/gone'],
+      plan: [],
+    };
+    assert.deepEqual(
+      dueFixes(report).map((d) => `${d.fix} ${d.path}`),
+      ['unlock /w/dead', 'remove-worktree /w/done', 'carry-review /w/carry', 'unlock /w/orphan', 'prune /w/orphan, /w/gone'],
+    );
+  });
+
+  it('is empty for an empty board', () => {
+    assert.deepEqual(dueFixes({ rows: [], orphanLocks: [], prunable: [], plan: [] }), []);
+  });
+});
+
+// The wait is the schedule: it polls the gate outside the model and returns only
+// when the gate fires, an error happens, or its time is up.
+const commonDir = (f) => git(f.repo, 'rev-parse', '--path-format=absolute', '--git-common-dir');
+const record = (f) => join(commonDir(f), 'speckit-watch-wait.pid');
+const waitCommand = 'node /repo/.claude/scripts/watch.mjs --wait';
+
+describe('--wait', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('polls while an interval fits in its limit, then says to re-arm', () => {
+    const f = fixture();
+    try {
+      f.add('agent-a', '901-a');
+      const io = captured();
+      const sleeps = [];
+      const code = main(['--wait', '--every', '15', '--for', '110'], { cwd: f.repo, ...env({ sleep: (ms) => sleeps.push(ms) }) });
+      assert.equal(code, 0);
+      assert.deepEqual(sleeps, Array(7).fill(15 * MIN));
+      assert.deepEqual(io.out, ['watch: idle for 105 min; re-arm the wait']);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('waits 15 minutes for 110 by default', () => {
+    const f = fixture();
+    try {
+      captured();
+      const sleeps = [];
+      assert.equal(main(['--wait'], { cwd: f.repo, ...env({ sleep: (ms) => sleeps.push(ms) }) }), 0);
+      assert.deepEqual(sleeps, Array(7).fill(15 * MIN));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('never sleeps past its limit', () => {
+    const f = fixture();
+    try {
+      captured();
+      const sleeps = [];
+      assert.equal(main(['--wait', '--every', '15', '--for', '20'], { cwd: f.repo, ...env({ sleep: (ms) => sleeps.push(ms) }) }), 0);
+      assert.deepEqual(sleeps, [15 * MIN]);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('ends with the gate lines as soon as a poll fires', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      const io = captured();
+      let sleeps = 0;
+      const sleep = () => {
+        sleeps++;
+        if (sleeps === 2) deadLock(f, a);
+      };
+      assert.equal(main(['--wait'], { cwd: f.repo, ...env({ sleep }) }), 2);
+      assert.equal(sleeps, 2);
+      assert.ok(io.out.some((l) => l.startsWith('unlock ') && l.includes(a)), io.out.join('\n'));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('holds the record while it waits and removes it however it ends', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      captured();
+      const seen = [];
+      const sleep = () => {
+        seen.push(readFileSync(record(f), 'utf8').trim());
+        deadLock(f, a);
+      };
+      assert.equal(main(['--wait'], { cwd: f.repo, ...env({ sleep }) }), 2);
+      assert.deepEqual(seen, [String(process.pid)]);
+      assert.ok(!existsSync(record(f)));
+      git(f.repo, 'worktree', 'unlock', a);
+      assert.equal(main(['--wait', '--every', '1', '--for', '1'], { cwd: f.repo, ...env({ sleep: () => {} }) }), 0);
+      assert.ok(!existsSync(record(f)));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('ends with the error as soon as a poll fails, and removes its record', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      git(f.repo, 'worktree', 'lock', '--reason', 'claude agent x (pid 4242 start Sun Oct  4 08:07:18 2026)', a);
+      const io = captured();
+      let polls = 0;
+      const alive = () => {
+        if (polls === 2) throw new Error('ps went away');
+        return true;
+      };
+      assert.equal(main(['--wait'], { cwd: f.repo, ...env({ alive, sleep: () => polls++ }) }), 1);
+      assert.equal(polls, 2);
+      assert.ok(io.err.some((l) => l.includes('ps went away')), io.err.join('\n'));
+      assert.ok(!existsSync(record(f)));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses to run beside a live wait, without polling or touching its record', () => {
+    const f = fixture();
+    try {
+      writeFileSync(record(f), '4242\n');
+      const io = captured();
+      let slept = false;
+      const deps = env({ sleep: () => (slept = true), commandOf: (pid) => (pid === 4242 ? waitCommand : null) });
+      assert.equal(main(['--wait'], { cwd: f.repo, ...deps }), 0);
+      assert.deepEqual(io.out, ['watch: a wait is already armed (pid 4242)']);
+      assert.equal(slept, false);
+      assert.equal(readFileSync(record(f), 'utf8').trim(), '4242');
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('takes over a record whose process is gone or is something else', () => {
+    for (const command of [null, 'vim notes.txt']) {
+      const f = fixture();
+      try {
+        writeFileSync(record(f), '4242\n');
+        captured();
+        const seen = [];
+        const deps = env({ sleep: () => seen.push(readFileSync(record(f), 'utf8').trim()), commandOf: () => command });
+        assert.equal(main(['--wait', '--every', '15', '--for', '15'], { cwd: f.repo, ...deps }), 0, String(command));
+        assert.deepEqual(seen, [String(process.pid)]);
+        vi.restoreAllMocks();
+      } finally {
+        rmSync(f.root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it('is an error, without polling, when the record cannot be taken', () => {
+    const f = fixture();
+    try {
+      mkdirSync(record(f));
+      const io = captured();
+      let slept = false;
+      assert.equal(main(['--wait'], { cwd: f.repo, ...env({ sleep: () => (slept = true), commandOf: () => null }) }), 1);
+      assert.equal(slept, false);
+      assert.ok(io.err.some((l) => l.includes('speckit-watch-wait.pid')), io.err.join('\n'));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a limit shorter than its interval, a non-positive number and other flags', () => {
+    const f = fixture();
+    try {
+      captured();
+      let slept = false;
+      const deps = { cwd: f.repo, ...env({ sleep: () => (slept = true) }) };
+      for (const argv of [
+        ['--wait', '--every', '15', '--for', '10'],
+        ['--wait', '--every', '0'],
+        ['--wait', '--for', '-5'],
+        ['--wait', '--every', 'x'],
+        ['--wait', '--json'],
+        ['--wait', '--fix'],
+        ['--every', '15'],
+      ]) assert.equal(main(argv, deps), 1, argv.join(' '));
+      assert.equal(slept, false);
+      assert.ok(!existsSync(record(f)));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('waitHolder', () => {
+  it('names the pid of a live wait, and nothing for a missing, dead or foreign record', () => {
+    const f = fixture();
+    try {
+      assert.equal(waitHolder(f.repo, { commandOf: () => waitCommand }), null);
+      writeFileSync(record(f), '4242\n');
+      assert.equal(waitHolder(f.repo, { commandOf: (pid) => (pid === 4242 ? waitCommand : null) }), 4242);
+      assert.equal(waitHolder(f.repo, { commandOf: () => null }), null);
+      assert.equal(waitHolder(f.repo, { commandOf: () => 'node .claude/scripts/watch.mjs --json' }), null);
+      writeFileSync(record(f), 'garbage\n');
+      assert.equal(waitHolder(f.repo, { commandOf: () => waitCommand }), null);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
   });
 });
