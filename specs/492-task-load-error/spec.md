@@ -10,6 +10,16 @@
 
 **Notion task**: https://app.notion.com/p/3ef607bff0d28133a3efcea722e5d92b (ST-492, Task, Priority Low, Role System) · Epic https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707 · Feature https://app.notion.com/p/3ee607bff0d2815b88a7c6c67a7ede4d · From story ST-157 (https://app.notion.com/p/3ee607bff0d2811db730c1017d198dd2), PR #40. The task page carries no comments (read 2026-10-06); its Finding is the description above, word for word.
 
+## Clarifications
+
+### Session 2026-10-06
+
+- Q: Does the error state take the focus from the X, and does the first-field rule change? → A: The retry button is focused on a computer only when the focus sits on the panel itself; the first-field rule for loaded tasks is unchanged (spec-challenger 1).
+- Q: In the catalogue, does the sample fail once per page or once per press? → A: Once per press, so every open of the sample shows the error at every size, scheme and language (spec-challenger 2).
+- Q: Reuse the form's error component or mirror its markup? → A: Mirror the markup in the panel, one alert inserted with its text (spec-challenger 3).
+- Q: Keep the `console.error` line beside the visible state? → A: Remove it; the visible state is the record (spec-challenger 4).
+- Q: What makes a resolved value "not a component"? → A: `reflectComponentType` returns null, the check the panel already uses (spec-challenger 5).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - A task that fails to load says so and offers to try again (Priority: P1)
@@ -62,7 +72,7 @@ The component catalogue's overlay section gets a way to open a task whose loader
 ### Edge Cases
 
 - The loader fails before the panel has finished opening: the message shows in the open panel; nothing is shown on a panel that was already closed.
-- The loader returns something that is not a component (a module without a default export): it is a failure like any other and shows the message.
+- The loader resolves with something that is not a component (`reflectComponentType` gives null, the check the panel already uses for a direct source): it is a failure like any other and shows the message.
 - The loader fails synchronously (throws instead of rejecting): treated as a failure like any other.
 - Reduced motion: the message and button do not animate in; the skeleton's own motion rule is unchanged.
 - A 320 px phone, as a bottom sheet: the message wraps and the button keeps its 44 px tap target with no sideways scroll.
@@ -73,14 +83,14 @@ The component catalogue's overlay section gets a way to open a task whose loader
 ### Functional Requirements
 
 - **FR-001**: When a task given as a loader fails to load, the overlay body MUST replace the skeleton with an error message and a retry button, and MUST drop its busy mark (`aria-busy`) while the error shows.
-- **FR-002**: The message MUST be the shared general problem message of the saving-and-errors story, "Ceva nu a mers. Încearcă din nou." / "Something went wrong. Try again.", in the person's language, shown in the same error pattern as the shared save error (`role="alert"`, the shared error text style).
+- **FR-002**: The message MUST be the shared general problem message of the saving-and-errors story, "Ceva nu a mers. Încearcă din nou." / "Something went wrong. Try again.", in the person's language, shown in the same error pattern as the shared save error: one `role="alert"` element in the shared error text style, inserted together with its text, rendered by the panel itself (no dependency on the form parts).
 - **FR-003**: The retry button MUST read "Reîncearcă" / "Try again", keep a 44 px tap target and 12 px minimum text, and fit a 320 px window without sideways scroll (as 159-FR-012 asks of the shared error line and buttons).
 - **FR-004**: Pressing the retry button MUST call the loader again exactly once per press that finds no load in flight, show the busy skeleton (body `aria-busy="true"`) while it runs, and on success show the task as a first-time load does (157-FR-012: it replaces the skeleton in the same panel, first field focused on a computer).
 - **FR-005**: A retry that fails MUST show the message and the retry button again; there is no cap on attempts.
 - **FR-006**: While the error shows, the panel MUST close by X, Escape and a tap outside with `cancelled` and no discard question, and a panel closed while a load or retry is in flight MUST ignore the late answer, as it does today.
-- **FR-007**: On a computer, the retry button MUST receive the focus when the error shows, so the panel never shows without a focused control and Enter retries.
-- **FR-008**: The failure MUST NOT be reported only to the console: the visible state replaces today's console line as the record of it.
-- **FR-009**: The catalogue (`/cockpit`) MUST offer a sample task whose loader fails the first time and resolves on retry, so every state of this feature can be reached without a server.
+- **FR-007**: On a computer, the retry button MUST receive the focus when the error shows, unless the person has moved the focus to another control of the panel (the X); the first-field rule for loaded tasks is unchanged.
+- **FR-008**: The failure MUST be shown, not logged: today's `console.error` line is removed and the visible state is its record.
+- **FR-009**: The catalogue (`/cockpit`) MUST offer a sample task whose loader fails the first time and resolves on retry, counted per press of its button (every open shows the error first), so every state of this feature can be reached without a server.
 - **FR-010**: The message and the button label MUST come from i18n keys in Romanian and English; Romanian text uses U+2011 non-breaking hyphens inside words.
 
 ### Key Entities

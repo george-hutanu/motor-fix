@@ -31,3 +31,11 @@ Clarification table, answered autonomously (each is an `(autonomous default)` in
 Spec: `specs/492-task-load-error/spec.md` (3 stories, FR-001 to FR-010, SC-001 to SC-004, Spec Delta modifying 157-FR-012). Checklist `checklists/requirements.md`: all items pass, one iteration.
 
 Hooks after specify: `notion-sync start` (ST-492 To do → Planning, EP-1 unchanged, ready review list pre-existing, nothing ticked), design check (mock not shared with this session: `[UNAVAILABLE]` in design.md, filled from ST-157/ST-159 design notes), commit 9909a30f pushed, draft PR #170 opened (`planning`, `bug`, `scope: overlays`, `EP-1`), `notion-sync pr 170`. `level.mjs check`: level 2 unchanged (fr-count tripped at 10, nothing else).
+
+## 3. Org context
+
+- org-researcher (background): partial — context.md written; Notion holds no wording for a code-load failure (the general text comes from the repo, `shell.form.problem.error`); ST-159 says error states are not designed. ST-157 brief's PrimeNG mention is stale (repo wins).
+
+## 4. Clarify
+
+- spec-challenger: 5 findings, all answered with its recommendation (focus only when on the panel; per-press catalogue failure; mirror alert markup; remove console.error; reflectComponentType check). Spec Clarifications section added; FR-002/007/008/009 and one edge case edited.
