@@ -29,11 +29,13 @@ import { decide, recordPrior } from "./notion-status.mjs";
 import { readState } from "./run-state.mjs";
 
 /** Comments on a page: as markdown when it fits one rich-text object, else as plain text split at Notion's 2,000. */
-const postComment = (client, pageId, body) =>
-  client.request("POST", "/comments", {
+const postComment = (client, pageId, body) => {
+  const parts = richText(body);
+  return client.request("POST", "/comments", {
     parent: { page_id: pageId },
-    ...(Array.from(body).length <= 2000 ? { markdown: body } : { rich_text: richText(body) }),
+    ...(parts.length === 1 ? { markdown: body } : { rich_text: parts }),
   });
+};
 
 export const STORIES = "326eee3c-abec-41d9-9f96-eb3bd545a802";
 export const PLANS_PAGE = "3ee607bff0d2818493d0dadd2d5a006c";

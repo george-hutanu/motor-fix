@@ -127,8 +127,9 @@ export function notionClient({
 
   async function request(method, path, body) {
     const payload = body === undefined ? undefined : JSON.stringify(body);
-    if (payload !== undefined && Buffer.byteLength(payload) > MAX_BODY_BYTES) {
-      throw new NotionError("body too large", `${method} ${path}: a ${Buffer.byteLength(payload)}-byte body is over Notion's 500 KB limit`);
+    const bytes = payload === undefined ? 0 : Buffer.byteLength(payload);
+    if (bytes > MAX_BODY_BYTES) {
+      throw new NotionError("body too large", `${method} ${path}: a ${bytes}-byte body is over Notion's 500 KB limit`);
     }
     for (let attempt = 0; ; attempt++) {
       await pace();
