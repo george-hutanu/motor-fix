@@ -2,7 +2,7 @@
 
 **Feature Branch**: `693-notion-agent-tools`
 **Created**: 2026-10-06
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 **Level**: 1 (one-session)
 **Notion story**: ST-693 — https://app.notion.com/p/3f0607bff0d281b3b181cde072bd7f9c
 **Epic**: EP-1 Foundations
