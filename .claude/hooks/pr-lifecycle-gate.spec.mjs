@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { allGreen, decide, handedOff, hasAgentReview, isDependabot, typeLabel } from './pr-lifecycle-gate.mjs';
+import { allGreen, decide, featureDir, handedOff, hasAgentReview, isDependabot, prLinked, typeLabel } from './pr-lifecycle-gate.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
 const green = [{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }, review('SUCCESS')];
@@ -93,10 +93,70 @@ describe('PR lifecycle gate — what it refuses', () => {
     }
   });
 
+  it('reads the hand-off note from a zero-padded feature folder when nothing points at it', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gate-'));
+    try {
+      mkdirSync(join(dir, 'specs', '083-sign-in'), { recursive: true });
+      writeFileSync(join(dir, 'specs', '083-sign-in', 'handoff.md'), '# hand-off\n');
+      assert.equal(handedOff(dir, '83-sign-in'), true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('lets a session end while the agent review says failure: the fix loop owns that PR', () => {
     const rollup = [{ conclusion: 'SUCCESS' }, review('FAILURE')];
     assert.equal(decide(task({ pr: ready({ statusCheckRollup: rollup }) })), null);
   });
+});
+
+describe('PR lifecycle gate — the feature folder', () => {
+  const withRepo = (fn) => {
+    const dir = mkdtempSync(join(tmpdir(), 'gate-'));
+    try {
+      fn(dir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+  const folder = (dir, name, files = {}) => {
+    mkdirSync(join(dir, 'specs', name), { recursive: true });
+    for (const [file, text] of Object.entries(files)) writeFileSync(join(dir, 'specs', name, file), text);
+  };
+  const point = (dir, featureDirectory) => {
+    mkdirSync(join(dir, '.specify'), { recursive: true });
+    writeFileSync(join(dir, '.specify', 'feature.json'), JSON.stringify({ feature_directory: featureDirectory }));
+  };
+  const linked = '- 2026-10-05 · pr · ST-83 · PR #136 https://github.com/o/r/pull/136\n';
+
+  it('takes the feature.json pointer first, then specs/<branch>', () =>
+    withRepo((dir) => {
+      folder(dir, '050-cockpit-theme');
+      assert.equal(featureDir(dir, '050-cockpit-theme'), join('specs', '050-cockpit-theme'));
+      point(dir, 'specs/051-other');
+      assert.equal(featureDir(dir, '050-cockpit-theme'), 'specs/051-other');
+    }));
+
+  it('finds a zero-padded folder with the same number and slug', () =>
+    withRepo((dir) => {
+      folder(dir, '083-sign-in-apple-google');
+      assert.equal(featureDir(dir, '83-sign-in-apple-google'), join('specs', '083-sign-in-apple-google'));
+    }));
+
+  it('never takes a folder with the same number but another slug', () =>
+    withRepo((dir) => {
+      folder(dir, '083-other-work');
+      assert.equal(featureDir(dir, '83-sign-in-apple-google'), join('specs', '83-sign-in-apple-google'));
+    }));
+
+  it('sees the PR link in a zero-padded folder, with and without feature.json', () =>
+    withRepo((dir) => {
+      folder(dir, '083-sign-in-apple-google', { 'notion-sync.md': linked });
+      assert.equal(prLinked(dir, '83-sign-in-apple-google', 136), true);
+      assert.equal(prLinked(dir, '83-sign-in-apple-google', 137), false);
+      point(dir, 'specs/083-sign-in-apple-google');
+      assert.equal(prLinked(dir, '83-sign-in-apple-google', 136), true);
+    }));
 });
 
 describe('PR lifecycle gate — the PR link on the story', () => {
