@@ -97,13 +97,13 @@ const STAGING_PREFIX = ".download-";
 /** Remove the last lap's evidence and any download folder an interrupted lap left, so a run that uploads nothing leaves no report to misread. */
 export function clearPrevious(out) {
   const leftovers = readdirSync(out).filter((name) => name.startsWith(STAGING_PREFIX));
-  for (const f of ["report.json", "report.md", "ci-run.json", "shots", "logs", ...leftovers]) rmSync(join(out, f), { recursive: true, force: true });
+  for (const f of ["report.json", "report.md", "run.log", "observations.json", "ci-run.json", "shots", "logs", ...leftovers]) rmSync(join(out, f), { recursive: true, force: true });
 }
 
 /** A fresh, empty folder inside --out for one download: `gh run download` refuses to overwrite files an earlier run left. */
 export const stagingDir = (out) => mkdtempSync(join(out, STAGING_PREFIX));
 
-/** Move the downloaded artifact into --out, replacing only the entries it carries, then remove the download folder. */
+/** Move the downloaded artifact into --out, replacing only the entries it carries; the caller removes the emptied download folder. */
 export function placeDownload(staging, out) {
   if (resolve(dirname(staging)) !== resolve(out) || !basename(staging).startsWith(STAGING_PREFIX))
     throw new Error(`${staging} is not a download folder of ${out}`);
@@ -111,7 +111,6 @@ export function placeDownload(staging, out) {
     rmSync(join(out, name), { recursive: true, force: true });
     renameSync(join(staging, name), join(out, name));
   }
-  rmSync(staging, { recursive: true, force: true });
 }
 
 export const artifactName = (pr) => `${ARTIFACT_PREFIX}${pr}`;
