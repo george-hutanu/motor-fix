@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsIn,
@@ -7,8 +7,11 @@ import {
   IsString,
   Length,
   Matches,
+  MaxLength,
+  ValidateNested,
 } from 'class-validator';
 
+import { PRIVACY_VERSION, TERMS_VERSION } from './consent';
 import { ROLE } from './me.dto';
 
 export class SignInDto {
@@ -38,6 +41,22 @@ export class SignInDto {
 
 const trimmed = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
+
+// The versions of the terms of use and the privacy notice the person ticked.
+// Any version but the current one is refused as consent_required.
+export class ConsentDto {
+  @ApiProperty({ example: TERMS_VERSION, maxLength: 32 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  termsVersion?: string;
+
+  @ApiProperty({ example: PRIVACY_VERSION, maxLength: 32 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  privacyVersion?: string;
+}
 
 export class SignUpDto {
   @ApiProperty({ description: 'Trimmed', maxLength: 80, minLength: 2 })
@@ -71,6 +90,16 @@ export class SignUpDto {
   @ApiProperty({ description: 'The interface language', enum: ['ro', 'en'] })
   @IsIn(['ro', 'en'])
   language!: 'ro' | 'en';
+
+  @ApiPropertyOptional({
+    description:
+      'The current terms and privacy versions; without them the answer is 400 consent_required',
+    type: ConsentDto,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ConsentDto)
+  consent?: ConsentDto;
 }
 
 export class SessionDto {

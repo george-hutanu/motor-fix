@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import type { Role } from './capabilities';
+import { type Consent, consentRequired, isCurrentConsent } from './consent';
 import type { Actor } from './policy';
 import { PRISMA } from './prisma';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
@@ -22,6 +23,8 @@ export interface NewAccount {
     subject: string;
     passwordHash?: string;
   };
+  // Checked here, so no method can create an account without it.
+  consent: Consent;
 }
 
 @Injectable()
@@ -36,16 +39,31 @@ export class AccountsService {
     const roles = [...new Set(input.roles)];
     const [first] = roles;
     if (!first) throw new Error('an account needs at least one role');
+    if (!isCurrentConsent(input.consent)) throw consentRequired();
+    const { privacyVersion, termsVersion } = input.consent;
+    const language = input.language ?? 'ro';
+    const { method } = input.identity;
     return this.prisma.$transaction(async (tx) => {
       const { id } = await tx.account.create({
         data: {
+          consents: {
+            create: [
+              { kind: 'terms', language, method, textVersion: termsVersion },
+              {
+                kind: 'privacy_notice',
+                language,
+                method,
+                textVersion: privacyVersion,
+              },
+            ],
+          },
           email: input.email?.trim().toLowerCase(),
           emailVerifiedAt:
             input.email && VOUCHED.has(input.identity.method)
               ? new Date()
               : undefined,
           identities: { create: input.identity },
-          language: input.language,
+          language,
           lastRole: first,
           name: input.name,
           phone: input.phone,
@@ -64,12 +82,21 @@ export class AccountsService {
           subjectType: 'account',
         });
       }
+      await this.audit.record(tx, {
+        action: 'create',
+        actorId: id,
+        actorRole: first,
+        field: 'consent',
+        newValue: { privacyVersion, termsVersion },
+        subjectId: id,
+        subjectType: 'account',
+      });
       await this.events.record(tx, {
         audience: { accountId: id, type: 'account' },
         kind: 'account.created',
         payload: {
           accountId: id,
-          method: input.identity.method,
+          method,
           roles,
         },
         subjectId: id,

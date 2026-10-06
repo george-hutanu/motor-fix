@@ -1,3 +1,4 @@
+import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
 import { expect, type Page, test } from '@playwright/test';
 
 import { ready, signIn } from './accounts.js';
@@ -55,7 +56,13 @@ test.describe('resetting a forgotten password @seeded @mailbox', () => {
   }) => {
     const email = `resetare-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
     const created = await page.request.post('/api/v1/auth/sign-up', {
-      data: { email, language: 'ro', name: 'Andrei Resetare', password: OLD },
+      data: {
+        consent: CURRENT_CONSENT,
+        email,
+        language: 'ro',
+        name: 'Andrei Resetare',
+        password: OLD,
+      },
       headers: { 'x-forwarded-for': `203.0.113.${Date.now() % 250}` },
     });
     expect(created.status()).toBe(201);

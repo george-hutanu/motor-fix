@@ -1,3 +1,4 @@
+import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
@@ -79,6 +80,7 @@ let addresses = 0;
 const address = () => `198.51.100.${++addresses % 250}`;
 
 const body = (overrides: Record<string, unknown> = {}) => ({
+  consent: CURRENT_CONSENT,
   email: 'andrei@example.test',
   language: 'ro',
   name: 'Andrei Marin',
@@ -146,14 +148,14 @@ describe('creating a driver account', () => {
     );
   });
 
-  it('records the audit entry, with the new account as its actor', async () => {
+  it('records the role entry, with the new account as its actor', async () => {
     await signUp();
 
     const { id } = await prisma.account.findUniqueOrThrow({
       where: { email: 'andrei@example.test' },
     });
     const entries = await prisma.activityLog.findMany({
-      where: { subjectId: id },
+      where: { field: 'role', subjectId: id },
     });
     expect(entries).toHaveLength(1);
     expect(entries[0]).toMatchObject({
@@ -280,6 +282,7 @@ describe('an e-mail that already has an account', () => {
       ['google@example.test', ['driver'], 'google'],
     ] as const) {
       await accounts.createAccount({
+        consent: CURRENT_CONSENT,
         email,
         identity: { method, subject: email },
         name: 'x',
@@ -287,6 +290,7 @@ describe('an e-mail that already has an account', () => {
       });
     }
     await accounts.createAccount({
+      consent: CURRENT_CONSENT,
       email: 'suspendat@example.test',
       identity: { method: 'password', subject: 'suspendat@example.test' },
       name: 'x',

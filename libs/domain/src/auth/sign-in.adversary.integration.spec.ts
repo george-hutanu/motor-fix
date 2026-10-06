@@ -1,3 +1,4 @@
+import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
@@ -73,6 +74,7 @@ async function person(
   { lastRole, pass = hash }: { lastRole?: Role; pass?: string } = {},
 ) {
   const { id } = await accounts.createAccount({
+    consent: CURRENT_CONSENT,
     email,
     identity: { method: 'password', passwordHash: pass, subject: email },
     name: 'Test',

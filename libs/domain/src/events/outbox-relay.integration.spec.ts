@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
 
@@ -120,6 +121,7 @@ describe('recording an event in the change’s transaction', () => {
     const accounts = new AccountsService(prisma, new AuditService(), outbox);
 
     const { id } = await accounts.createAccount({
+      consent: CURRENT_CONSENT,
       identity: { method: 'google', subject: 'andrei-subject' },
       name: 'Andrei',
       roles: ['driver'],

@@ -50,6 +50,10 @@ describe('search engine rules under hostile input', () => {
       expect(locs(xml)).toEqual([
         'https://motorfix.ro:8443/ro/',
         'https://motorfix.ro:8443/en/',
+        'https://motorfix.ro:8443/ro/terms',
+        'https://motorfix.ro:8443/en/terms',
+        'https://motorfix.ro:8443/ro/privacy',
+        'https://motorfix.ro:8443/en/privacy',
       ]);
     });
 
@@ -78,14 +82,14 @@ describe('search engine rules under hostile input', () => {
 
       expect(xml).not.toContain('/app');
       expect(xml).not.toContain('cockpit');
-      expect(locs(xml)).toHaveLength(2);
+      expect(locs(xml)).toHaveLength(6);
     });
 
     it('answers the sitemap with a query string', async () => {
       const answer = await fetch(`${base}/sitemap.xml?cache=1`);
 
       expect(answer.status).toBe(200);
-      expect(locs(await answer.text())).toHaveLength(2);
+      expect(locs(await answer.text())).toHaveLength(6);
     });
 
     it('answers a HEAD request for the sitemap without a body', async () => {
@@ -177,7 +181,16 @@ describe('search engine rules under hostile input', () => {
     it('falls back to the request origin', async () => {
       const xml = await (await fetch(`${base}/sitemap.xml`)).text();
 
-      expect(locs(xml)).toEqual([`${base}/ro/`, `${base}/en/`]);
+      expect(locs(xml)).toEqual(
+        [
+          '/ro/',
+          '/en/',
+          '/ro/terms',
+          '/en/terms',
+          '/ro/privacy',
+          '/en/privacy',
+        ].map((path) => `${base}${path}`),
+      );
     });
   });
 });

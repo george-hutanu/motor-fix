@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -50,6 +51,7 @@ beforeEach(async () => {
 
 async function account(name: string, roles: Role[]) {
   const { id } = await accounts.createAccount({
+    consent: CURRENT_CONSENT,
     identity: { method: 'google', subject: `${name}-${randomUUID()}` },
     name,
     roles,
