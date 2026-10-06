@@ -5,3 +5,6 @@
 - 2026-10-06 · epic · EP-1 already In progress, unchanged
 - 2026-10-06 · ready · ST-563 Ready to work unticked (it started)
 - [NOTION-SYNC PENDING: ready EP-1 tick review — the connector's Query Data Source usage limit was reached, so the tick candidates could not be listed] retry: `node .claude/scripts/notion-sync.mjs ready` or `notion-ready EP-1` on the next event
+- 2026-10-06 · pr · ST-563 · PR #146 https://github.com/george-hutanu/motor-fix/pull/146
+- 2026-10-06 · labels · PR #146 · planning (+tests, scope: api, EP-1)
+- 2026-10-06 · pr · timeline row 3f0607bf-f0d2-810d-98b9-fc8b596ff6c6 has no PR property; the link lives on the story only
