@@ -236,19 +236,19 @@ describe('merge gate — reading a Dependabot PR\'s committers', () => {
   // @traces 610-FR-002
   it('reads the REST committers for a PR Dependabot opened, and only for it', async () => {
     const bot = ghOf('app/dependabot', { code: 0, stdout: rows, stderr: '' });
-    const pr = await readPr('82', bot.gh);
+    const pr = await readPr('82', bot.gh, { cloud: false });
     assert.deepEqual(pr.commits[0].committer, { login: 'web-flow' });
     assert.equal(pr.commits[0].verified, true);
     assert.match(bot.calls[1].join(' '), /pulls\/82\/commits/);
     const human = ghOf('george-hutanu', { code: 0, stdout: rows, stderr: '' });
-    assert.equal((await readPr('82', human.gh)).commits[0].committer, undefined);
+    assert.equal((await readPr('82', human.gh, { cloud: false })).commits[0].committer, undefined);
     assert.equal(human.calls.length, 1, 'no extra GitHub call for anyone else\'s PR');
   });
 
   // @traces 610-FR-002
   it('throws on a failed committer read, so the gate refuses with a retry; garbled rows leave the PR not exempt', async () => {
-    await assert.rejects(readPr('82', ghOf('app/dependabot', { code: 1, stdout: '', stderr: 'HTTP 502' }).gh), /committers: HTTP 502/);
-    const garbled = await readPr('82', ghOf('app/dependabot', { code: 0, stdout: 'not json', stderr: '' }).gh);
+    await assert.rejects(readPr('82', ghOf('app/dependabot', { code: 1, stdout: '', stderr: 'HTTP 502' }).gh, { cloud: false }), /committers: HTTP 502/);
+    const garbled = await readPr('82', ghOf('app/dependabot', { code: 0, stdout: 'not json', stderr: '' }).gh, { cloud: false });
     assert.equal(garbled.commits[0].committer, undefined);
   });
 });
@@ -493,14 +493,20 @@ describe('merge gate — a cloud session reads the PR over REST', () => {
     'repos/{owner}/{repo}/pulls/21': { number: 21, state: 'open', head: { sha: HEAD }, user: { login: 'george-hutanu' } },
     'repos/{owner}/{repo}/pulls/21/commits?per_page=100': [{ sha: HEAD, author: 'george-hutanu', login: 'web-flow', verified: true }],
     [`repos/{owner}/{repo}/commits/${HEAD}/status?per_page=100`]: { statuses: [{ context: 'agent-review', state: 'success', description: 'PR QA lap 1 passed' }] },
-    [`repos/{owner}/{repo}/commits/${HEAD}/check-runs?per_page=100`]: [
+    [`repos/{owner}/{repo}/commits/${HEAD}/check-runs?per_page=100&filter=all`]: [
       { name: 'Unit tests', status: 'completed', conclusion: 'success', started_at: '2026-10-05T07:00:00Z', suite: 11 },
       { name: 'CI OK', status: 'completed', conclusion: 'success', started_at: '2026-10-05T07:01:00Z', suite: 11 },
       { name: 'PR QA', status: 'completed', conclusion: 'cancelled', started_at: '2026-10-05T07:02:00Z', suite: 12 },
     ],
+    // REST's run `name` is the run-name a workflow gives itself (pr-qa.yml: "PR QA #<n> at <sha> lap <k>"), not the workflow's.
     [`repos/{owner}/{repo}/actions/runs?head_sha=${HEAD}&per_page=100`]: [
-      { suite: 11, name: 'CI' },
-      { suite: 12, name: 'PR QA' },
+      { id: 101, suite: 11, workflow: 1, name: 'CI' },
+      { id: 102, suite: 12, workflow: 2, name: `PR QA #21 at ${HEAD} lap 1` },
+    ],
+    'repos/{owner}/{repo}/actions/workflows?per_page=100': [
+      { id: 1, name: 'CI' },
+      { id: 2, name: 'PR QA' },
+      { id: 3, name: 'PR title' },
     ],
   };
   const restGh = (override = {}) => {
@@ -534,7 +540,7 @@ describe('merge gate — a cloud session reads the PR over REST', () => {
 
   it('refuses on the REST read exactly as on the GraphQL one: a red check, a pending review', async () => {
     const red = restGh({
-      [`repos/{owner}/{repo}/commits/${HEAD}/check-runs?per_page=100`]: { code: 0, stdout: JSON.stringify({ name: 'CI OK', status: 'completed', conclusion: 'failure', started_at: '2026-10-05T07:01:00Z', suite: 11 }), stderr: '' },
+      [`repos/{owner}/{repo}/commits/${HEAD}/check-runs?per_page=100&filter=all`]: { code: 0, stdout: JSON.stringify({ name: 'CI OK', status: 'completed', conclusion: 'failure', started_at: '2026-10-05T07:01:00Z', suite: 11 }), stderr: '' },
     });
     assert.match(decideMerge(await readPr('21', red.gh, { cloud: true })), /CI failed on abc1234 \(CI \/ CI OK\)/);
     const pending = restGh({
@@ -551,6 +557,60 @@ describe('merge gate — a cloud session reads the PR over REST', () => {
   it('needs the PR number: the branch cannot be resolved to a PR without GraphQL', async () => {
     await assert.rejects(readPr(null, restGh().gh, { cloud: true }), /PR number/);
     await assert.rejects(readPr('feature-branch', restGh().gh, { cloud: true }), /PR number/);
+  });
+
+  it('names a check by its workflow, not by the run-name its run gave itself, so a cancelled PR QA lap does not block', async () => {
+    const got = await readPr('21', restGh().gh, { cloud: true });
+    assert.equal(got.statusCheckRollup.find((c) => c.name === 'PR QA').workflowName, 'PR QA');
+    assert.equal(decideMerge(got), null);
+  });
+
+  const withRuns = (checkRuns, runs) =>
+    restGh({
+      [`repos/{owner}/{repo}/commits/${HEAD}/check-runs?per_page=100&filter=all`]: { code: 0, stdout: [...answers[`repos/{owner}/{repo}/commits/${HEAD}/check-runs?per_page=100&filter=all`], ...checkRuns].map((x) => JSON.stringify(x)).join('\n'), stderr: '' },
+      [`repos/{owner}/{repo}/actions/runs?head_sha=${HEAD}&per_page=100`]: { code: 0, stdout: [...answers[`repos/{owner}/{repo}/actions/runs?head_sha=${HEAD}&per_page=100`], ...runs].map((x) => JSON.stringify(x)).join('\n'), stderr: '' },
+    });
+
+  it('judges a workflow re-triggered on the same head by its newest run: the cancelled earlier one does not make a green PR red', async () => {
+    const { gh } = withRuns(
+      [
+        { name: 'PR title', status: 'completed', conclusion: 'cancelled', started_at: '2026-10-05T06:50:00Z', suite: 13 },
+        { name: 'PR title', status: 'completed', conclusion: 'success', started_at: '2026-10-05T06:55:00Z', suite: 14 },
+      ],
+      [
+        { id: 103, suite: 13, workflow: 3, name: 'PR title' },
+        { id: 104, suite: 14, workflow: 3, name: 'PR title' },
+      ],
+    );
+    assert.equal(decideMerge(await readPr('21', gh, { cloud: true })), null);
+  });
+
+  it('still refuses when the newest run of a re-triggered workflow is the failing one', async () => {
+    const { gh } = withRuns(
+      [
+        { name: 'PR title', status: 'completed', conclusion: 'success', started_at: '2026-10-05T06:50:00Z', suite: 13 },
+        { name: 'PR title', status: 'completed', conclusion: 'failure', started_at: '2026-10-05T06:55:00Z', suite: 14 },
+      ],
+      [
+        { id: 103, suite: 13, workflow: 3, name: 'PR title' },
+        { id: 104, suite: 14, workflow: 3, name: 'PR title' },
+      ],
+    );
+    assert.match(decideMerge(await readPr('21', gh, { cloud: true })), /CI failed on abc1234 \(PR title \/ PR title\)/);
+  });
+
+  it('finds the workflow of an earlier attempt of a re-run through its run, whose listing names only the newest attempt\'s suite', async () => {
+    const run = 'https://github.com/george-hutanu/motor-fix/actions/runs/105/job';
+    const { gh } = withRuns(
+      [
+        { name: 'PR title', status: 'completed', conclusion: 'cancelled', started_at: '2026-10-05T06:50:00Z', suite: 15, url: `${run}/1` },
+        { name: 'PR title', status: 'completed', conclusion: 'success', started_at: '2026-10-05T06:55:00Z', suite: 16, url: `${run}/2` },
+      ],
+      [{ id: 105, suite: 16, workflow: 3, name: 'PR title' }],
+    );
+    const got = await readPr('21', gh, { cloud: true });
+    assert.deepEqual(got.statusCheckRollup.filter((c) => c.name === 'PR title').map((c) => c.workflowName), ['PR title', 'PR title']);
+    assert.equal(decideMerge(got), null);
   });
 
   it('reads a PR URL as its number', async () => {

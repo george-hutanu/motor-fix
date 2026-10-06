@@ -209,13 +209,20 @@ async function readPrRest(target, gh) {
   if (!number) throw new Error(`a cloud session reads the PR over REST and needs its PR number in the command, got ${target ? `"${target}"` : "none"}`);
   const p = await api(gh, [`repos/{owner}/{repo}/pulls/${number}`]);
   const sha = p.head.sha;
-  const [commits, status, checkRuns, runs] = await Promise.all([
+  const [commits, status, checkRuns, runs, workflows] = await Promise.all([
     api(gh, ["--paginate", `repos/{owner}/{repo}/pulls/${number}/commits?per_page=100`, "--jq", ".[] | {sha, author: .author.login, login: .committer.login, verified: .commit.verification.verified}"]),
     api(gh, [`repos/{owner}/{repo}/commits/${sha}/status?per_page=100`]),
-    api(gh, ["--paginate", `repos/{owner}/{repo}/commits/${sha}/check-runs?per_page=100`, "--jq", ".check_runs[] | {name, status, conclusion, started_at, suite: .check_suite.id}"]),
-    api(gh, ["--paginate", `repos/{owner}/{repo}/actions/runs?head_sha=${sha}&per_page=100`, "--jq", ".workflow_runs[] | {suite: .check_suite_id, name}"]),
+    api(gh, ["--paginate", `repos/{owner}/{repo}/commits/${sha}/check-runs?per_page=100&filter=all`, "--jq", ".check_runs[] | {name, status, conclusion, started_at, suite: .check_suite.id, url: .details_url}"]),
+    api(gh, ["--paginate", `repos/{owner}/{repo}/actions/runs?head_sha=${sha}&per_page=100`, "--jq", ".workflow_runs[] | {id, suite: .check_suite_id, workflow: .workflow_id}"]),
+    api(gh, ["--paginate", "repos/{owner}/{repo}/actions/workflows?per_page=100", "--jq", ".workflows[] | {id, name}"]),
   ]);
-  const workflowOf = new Map(runs.map((r) => [r.suite, r.name]));
+  // A run's REST `name` is its run-name (pr-qa.yml names each lap), so the workflow's name comes from the
+  // workflow; an earlier attempt of a re-run keeps its own suite, which the listing no longer names, so a
+  // check run finds its workflow run by the run id in its details URL first.
+  const nameOf = new Map(workflows.map((w) => [w.id, w.name]));
+  const byRun = new Map(runs.map((r) => [String(r.id), r.workflow]));
+  const bySuite = new Map(runs.map((r) => [r.suite, r.workflow]));
+  const workflowOf = (c) => nameOf.get(byRun.get(/\/actions\/runs\/(\d+)/.exec(String(c.url ?? ""))?.[1]) ?? bySuite.get(c.suite)) ?? "";
   return {
     number: p.number,
     state: upper(p.state),
@@ -224,7 +231,7 @@ async function readPrRest(target, gh) {
     commits: commits.map((c) => ({ oid: c.sha, authors: c.author ? [{ login: c.author }] : [], committer: { login: c.login }, verified: c.verified === true })),
     statusCheckRollup: [
       ...(status.statuses ?? []).map((s) => ({ __typename: "StatusContext", context: s.context, state: upper(s.state), description: s.description ?? null })),
-      ...checkRuns.map((c) => ({ __typename: "CheckRun", name: c.name, workflowName: workflowOf.get(c.suite) ?? "", status: upper(c.status), conclusion: upper(c.conclusion), startedAt: c.started_at })),
+      ...checkRuns.map((c) => ({ __typename: "CheckRun", name: c.name, workflowName: workflowOf(c), status: upper(c.status), conclusion: upper(c.conclusion), startedAt: c.started_at })),
     ],
   };
 }
