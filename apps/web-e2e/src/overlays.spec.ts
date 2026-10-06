@@ -216,6 +216,33 @@ test.describe('a task over the page', () => {
       t('ro', 'cockpit.overlay.results.saved'),
     );
   });
+
+  test('says a task did not load and loads it on Retry', async ({ page }) => {
+    await openCockpit(page);
+    await opener(page, 'cockpit.overlay.openFailing').click();
+    const failing = page.getByRole('dialog', {
+      name: t('ro', 'cockpit.overlay.failing'),
+    });
+
+    await expect(failing.getByRole('alert')).toHaveText(
+      t('ro', 'shell.form.problem.error'),
+    );
+    await failing
+      .getByRole('button', {
+        exact: true,
+        name: t('ro', 'shell.overlay.retry'),
+      })
+      .click();
+
+    await expect(failing.getByRole('alert')).toHaveCount(0);
+    await expect(
+      failing.getByLabel(t('ro', 'cockpit.overlay.field')),
+    ).toBeVisible();
+    await failing
+      .getByRole('button', { name: t('ro', 'shell.overlay.close') })
+      .click();
+    await expect(failing).toHaveCount(0);
+  });
 });
 
 test.describe('the drawer', () => {

@@ -234,7 +234,8 @@
       "discard": "Renunță",
       "keep": "Continuă editarea",
       "question": "Renunți la modificări?"
-    }
+    },
+    "retry": "Reîncearcă"
   },
   "push": {
     "blocked": "Notificările sunt blocate în browser. Deschide setările site‑ului, permite notificările pentru MotorFix și reîncarcă pagina.",

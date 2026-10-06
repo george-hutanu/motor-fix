@@ -12,6 +12,8 @@ features:
   - 393-whatsapp-phone-sign-in
   - 198-staff-notification-preferences
   - 540-email-link-scheme
+  - 522-email-sent-once
+  - 539-public-web-url-boot
 ---
 
 # Capability: Notifications
@@ -391,6 +393,26 @@ _From 540-email-link-scheme._
 ### 540-FR-004 — Push, SMS, WhatsApp and bell rendering, the e-mail HTML for accepted links, the contracts and the web app MUST be unchanged; the allowed set is fixed in code, with no configuration.
 
 _From 540-email-link-scheme._
+
+### 522-FR-001 — Once the provider has accepted a message (e-mail, SMS, WhatsApp or push), a failure writing that it was sent MUST NOT fail the send job; the processor MUST retry the write in-process up to 3 times in all.
+
+_From 522-email-sent-once._
+
+### 522-FR-002 — When every write of FR-001 fails, the processor MUST log an error naming the rows and the provider's message id, and the job MUST resolve, so the message is not sent again.
+
+_From 522-email-sent-once._
+
+### 522-FR-003 — A failure releasing the send claim after a send MUST NOT fail the job; it is logged and the claim lapses after its window.
+
+_From 522-email-sent-once._
+
+### 539-FR-001 — The notifications worker MUST NOT process its queue while e-mail sending is on and `PUBLIC_WEB_URL` is missing or not an absolute URL, and MUST log an error naming `PUBLIC_WEB_URL`.
+
+_From 539-public-web-url-boot._
+
+### 539-FR-002 — With e-mail sending off, the worker's start MUST NOT depend on `PUBLIC_WEB_URL`.
+
+_From 539-public-web-url-boot._
 
 ## Retired
 

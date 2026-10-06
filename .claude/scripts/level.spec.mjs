@@ -571,6 +571,21 @@ describe('a level reaches only the feature it was sized for', () => {
     }
   });
 
+  it('points at a feature whose hand-edited level is not one of 0-3 and prints the default', () => {
+    for (const [level, shown] of [['abc', /level 2 \(default\)/], [true, /level 2 \(default\)/], ['', /level 2 \(default\)/], [7, /level 2 \(default\)/], ['1', /level 1 \(one-session\)/]]) {
+      const dir = fixture({ '.specify/feature.json': JSON.stringify({ feature_directory: 'specs/001-old', level, level_for: 'specs/002-new' }) });
+      try {
+        withEnv(undefined, () => {
+          const pointed = capture(() => main(['point', 'specs/002-new'], dir, {}));
+          assert.equal(pointed.status, 0, String(level));
+          assert.match(pointed.out, shown, String(level));
+        });
+      } finally {
+        cleanup(dir);
+      }
+    }
+  });
+
   it('keeps the pointer and the level in step in the Python helper too', () => {
     const probe = spawnSync('python3', ['--version']);
     if (probe.status !== 0) return;
@@ -664,10 +679,19 @@ describe('classifyLevel', () => {
       'bump angular to the next major',
       'fix a typo and change the booking flow',
       'fix the typos everywhere',
+      // A page, a folder, a workflow or a script is read outside the code.
+      'remove the documentation page from the app',
+      'delete the changelog page',
+      'rename the web app folder',
+      'rename the assets folder',
+      'rename the ci workflow file',
+      'rename the deploy script',
+      'drop the readme from the docs directory',
+      'disable the changelog screen',
     ]) {
       assert.notEqual(classifyLevel(d).level, 0, d);
     }
-    for (const d of ['fix a typo in the footer', 'remove dead code from the garage card', 'reword the code comment in the helper', 'tweak the button copy']) {
+    for (const d of ['fix a typo in the footer', 'remove dead code from the garage card', 'reword the code comment in the helper', 'tweak the button copy', 'fix the typo in the dropdown', 'fix the typo in the deployment banner']) {
       assert.equal(classifyLevel(d).level, 0, d);
     }
   });

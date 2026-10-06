@@ -7,6 +7,7 @@ features:
   - 158-small-action-sheet
   - 509-offline-on-worker-504
   - 491-back-closes-task
+  - 492-task-load-error
 ---
 
 # Capability: overlays
@@ -194,6 +195,46 @@ _From 491-back-closes-task._
 ### 491-FR-008 — Where the service runs without a browser (server rendering), nothing changes: it adds and removes no history entry and opens the task as today.
 
 _From 491-back-closes-task._
+
+### 492-FR-001 — When a task given as a loader fails to load, the overlay body MUST replace the skeleton with an error message and a retry button, and MUST drop its busy mark (`aria-busy`) while the error shows.
+
+_From 492-task-load-error._
+
+### 492-FR-002 — The message MUST be the shared general problem message of the saving-and-errors story, "Ceva nu a mers. Încearcă din nou." / "Something went wrong. Try again.", in the person's language, shown in the same error pattern as the shared save error: one `role="alert"` element in the shared error text style, inserted together with its text, rendered by the panel itself (no dependency on the form parts).
+
+_From 492-task-load-error._
+
+### 492-FR-003 — The retry button MUST read "Reîncearcă" / "Try again", keep a 44 px tap target and 12 px minimum text, and fit a 320 px window without sideways scroll (as 159-FR-012 asks of the shared error line and buttons).
+
+_From 492-task-load-error._
+
+### 492-FR-004 — Pressing the retry button MUST call the loader again exactly once per press that finds no load in flight, show the busy skeleton (body `aria-busy="true"`) while it runs, and on success show the task as a first-time load does (157-FR-012: it replaces the skeleton in the same panel, first field focused on a computer). The retry button leaves the page when pressed, so the focus MUST NOT be lost to the page: it falls back to the panel itself (the state `focusStart()` already leaves it in), and a person who had moved it to the X keeps it there.
+
+_From 492-task-load-error._
+
+### 492-FR-005 — A retry that fails MUST show the message and the retry button again; there is no cap on attempts.
+
+_From 492-task-load-error._
+
+### 492-FR-006 — While the error shows, the panel MUST close by X, Escape and a tap outside with `cancelled` and no discard question, and a panel closed while a load or retry is in flight MUST ignore the late answer, as it does today.
+
+_From 492-task-load-error._
+
+### 492-FR-007 — On a computer, the retry button MUST receive the focus when the error shows, unless the person has moved the focus to another control of the panel (the X); the first-field rule for loaded tasks is unchanged.
+
+_From 492-task-load-error._
+
+### 492-FR-008 — The failure MUST be shown, not logged: today's `console.error` line is removed and the visible state is its record.
+
+_From 492-task-load-error._
+
+### 492-FR-009 — The catalogue (`/cockpit`) MUST offer a sample task whose loader fails the first time and resolves on retry, counted per press of its button (every open shows the error first), so every state of this feature can be reached without a server.
+
+_From 492-task-load-error._
+
+### 492-FR-010 — The message and the button label MUST come from i18n keys in Romanian and English; Romanian text uses U+2011 non-breaking hyphens inside words.
+
+_From 492-task-load-error._
 
 ## Retired
 

@@ -31,6 +31,9 @@ features:
   - 602-watcher-counts-qa-runs
   - 677-zoneless-level-at
   - 628-tester-dispatch-cleanup
+  - 675-size-not-trivial
+  - 676-level-point-nonnumeric
+  - 539-public-web-url-boot
 ---
 
 # Capability: Platform
@@ -926,6 +929,30 @@ _From 628-tester-dispatch-cleanup._
 ### 628-FR-002 — After a lap, whether its download succeeded or failed, no download folder MUST remain in `--out`, and the folder MUST be removed by exactly one cleanup step in the code.
 
 _From 628-tester-dispatch-cleanup._
+
+### 675-FR-001 — `NOT_TRIVIAL` in `.claude/scripts/level.mjs` MUST include remove, delete, drop, disable, page, screen, folder, directory, workflow and deploy, so a description with a trivial word and one of them is `unsure`.
+
+_From 675-size-not-trivial._
+
+### 675-FR-002 — The rename rule's `CODE_NAME` MUST name only what the code alone reads: helper, variable, function, method, constant (`const`), class.
+
+_From 675-size-not-trivial._
+
+### 675-FR-003 — The six descriptions from the story MUST classify as `unsure`; every existing `classifyLevel` expectation MUST hold.
+
+_From 675-size-not-trivial._
+
+### 676-FR-001 — `point` MUST print the level line only when `parseLevel(state.level)` is not null, and MUST print the default-level line otherwise, exiting 0. This is how `resolveLevel` already reads the level.
+
+_From 676-level-point-nonnumeric._
+
+### 676-FR-002 — A valid level written as a numeric string (`"1"`) MUST print as that level, the same way `resolveLevel` reads it.
+
+_From 676-level-point-nonnumeric._
+
+### 539-FR-003 — Reading `PUBLIC_WEB_URL` for the web server MUST throw an error naming the variable, without its value, when it is set but not an absolute URL, and return nothing when it is unset.
+
+_From 539-public-web-url-boot._
 
 ## Retired
 

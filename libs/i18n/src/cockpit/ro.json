@@ -60,10 +60,12 @@
   "overlay": {
     "again": "Deschide încă una",
     "done": "Gata",
+    "failing": "Sarcină care nu se încarcă",
     "field": "Numărul de înmatriculare",
     "intro": "Scrie ceva, apoi închide: vei fi întrebat dacă renunți la modificări.",
     "openDialog": "Deschide sarcina ca dialog",
     "openDrawer": "Deschide sarcina ca sertar",
+    "openFailing": "Deschide o sarcină care nu se încarcă",
     "openWide": "Deschide sertarul lat",
     "result": "Ultimul rezultat: {result}",
     "results": {

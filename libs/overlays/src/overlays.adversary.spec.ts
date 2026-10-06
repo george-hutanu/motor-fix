@@ -317,15 +317,16 @@ describe('Overlays adversary: the same task twice', () => {
 });
 
 describe('Overlays adversary: a loader that fails', () => {
-  it('keeps the panel, title and busy skeleton, and the X closes with cancelled', async () => {
+  it('keeps the panel and title, drops the busy skeleton for an alert, and the X closes with cancelled', async () => {
     const { host } = await openTask((h) => {
       h.task = () => Promise.reject(new Error('chunk failed'));
     });
 
+    const body = top().querySelector('.mf-overlay-body');
     expect(closeButton()).not.toBeNull();
-    expect(
-      top().querySelector('.mf-overlay-body')?.getAttribute('aria-busy'),
-    ).toBe('true');
+    expect(body?.getAttribute('aria-busy')).toBeNull();
+    expect(body?.querySelector('.mf-overlay-skeleton')).toBeNull();
+    expect(body?.querySelector('[role="alert"]')).not.toBeNull();
 
     closeButton()?.click();
     await settle();
