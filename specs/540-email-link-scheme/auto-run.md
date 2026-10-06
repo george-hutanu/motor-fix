@@ -17,3 +17,4 @@
 - 8 analyze: inline; artifact-lint 0/0; spec/plan/tasks consistent (FR-001..004 each covered by T001-T003); no remediation.
 - 9 tests: link table red (10 refusals failing, accepts green) before T003.
 - 10 implement: safeHref in templates.ts render() email case; notifications unit specs 667 green.
+- 14 review: spec-reviewer APPROVE, code-reviewer APPROVE; shared LOW (no padded-href row) fixed.

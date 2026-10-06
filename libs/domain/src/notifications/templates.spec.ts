@@ -509,6 +509,7 @@ describe('the links an e-mail carries', () => {
     'http://localhost:4200/x',
     'http://127.0.0.1/x',
     'http://LOCALHOST/x',
+    ' https://motorfix.test/x ',
   ])('accepts %s as the button and the stop link', (href) => {
     expect(() => mail(href, safe)).not.toThrow();
     expect(() => mail(safe, href)).not.toThrow();
