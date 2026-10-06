@@ -74,6 +74,7 @@ A person has typed in a field inside the task and presses Back. Instead of losin
 - A task opened and closed many times on one page: the history grows by nothing; each close removes the entry its open added.
 - The person presses Back on the discard question of a stacked task: only the top task is concerned; the one under it is untouched.
 - A task that closes itself with a result while the browser is still processing a Back: the task closes once, with one result; what is checked is the invariant of SC-002 (afterwards one Back leaves the page), not the interleaving, which no test can drive deterministically.
+- Back pressed while a task is already closing (its close animation running, or its own step back in flight): the task is already going, so the press closes nothing more and moves nothing the close has not already moved; asserted only through SC-002's invariant (afterwards one Back leaves the page).
 - A page reloaded (or left for an external page and returned to) while a task was open: the task is gone and its entry stays behind at the same address, so one Back press does nothing visible. Accepted (see Assumptions).
 - A task opened through a route of its own (ST-22's `?review=:jobId`, *(proposed)*, not built): out of scope; that story decides whether its route's entry stands in for this one.
 - Server rendering: the service runs where there is no browser history; it opens the task as today and adds or removes nothing.
