@@ -1,6 +1,7 @@
 import { isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject, PLATFORM_ID, signal } from '@angular/core';
+import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
 import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
 import { type Language, LanguageChoice } from '@motor-fix/i18n';
 import { Subject } from 'rxjs';
@@ -94,7 +95,8 @@ export class Session {
     return this.load();
   }
 
-  // A new driver account, signed in as a sign-in would be.
+  // A new driver account, signed in as a sign-in would be. The form calls it
+  // only once the consent tick is set, so it sends the current versions.
   async signUp(
     name: string,
     email: string,
@@ -103,7 +105,7 @@ export class Session {
   ) {
     await this.sendPending();
     const { accessToken } = await this.auth.authControllerSignUp({
-      body: { email, language, name, password },
+      body: { consent: CURRENT_CONSENT, email, language, name, password },
     });
     this.started(accessToken);
     this.current.set(null);

@@ -42,7 +42,7 @@ test('/en/ arrives in English with every text filled in', async ({
   expect(html).not.toMatch(/shell\.[a-z]/);
 });
 
-test('the sitemap lists both language addresses, and robots.txt names it', async ({
+test('the sitemap lists both language addresses and the legal pages, and robots.txt names it', async ({
   request,
   baseURL,
 }) => {
@@ -54,6 +54,10 @@ test('the sitemap lists both language addresses, and robots.txt names it', async
   expect([...xml.matchAll(/<loc>([^<]*)<\/loc>/g)].map((m) => m[1])).toEqual([
     `${origin}/ro/`,
     `${origin}/en/`,
+    `${origin}/ro/terms`,
+    `${origin}/en/terms`,
+    `${origin}/ro/privacy`,
+    `${origin}/en/privacy`,
   ]);
   expect(await (await request.get('/robots.txt')).text()).toContain(
     `Sitemap: ${origin}/sitemap.xml`,

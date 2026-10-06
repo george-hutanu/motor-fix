@@ -13,6 +13,14 @@
     "sent": "We sent a new link by e-mail.",
     "tooMany": "You already asked for a link. Try again a little later."
   },
+  "consent": {
+    "after": ".",
+    "before": "I accept the ",
+    "between": " and have read the ",
+    "privacy": "Privacy notice",
+    "required": "Tick to continue.",
+    "terms": "Terms of use"
+  },
   "newPassword": {
     "askAgain": "Ask for a new link",
     "checking": "Checking the link…",
@@ -74,6 +82,7 @@
     "password": "Password",
     "passwordPlaceholder": "At least 8 characters",
     "problem": {
+      "consent_required": "Tick the agreement to create the account.",
       "email_taken": "An account with this e-mail already exists.",
       "too_many_attempts": "Too many attempts. Try again in an hour.",
       "weak_password": "Check the marked fields."

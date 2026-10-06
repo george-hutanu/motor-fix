@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { Controller, Get, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -79,6 +80,7 @@ const get = (path: string, authorization?: string) => {
 
 async function driver(status?: 'suspended') {
   const { id } = await accounts.createAccount({
+    consent: CURRENT_CONSENT,
     identity: { method: 'google', subject: `driver-${randomUUID()}` },
     name: 'Andrei',
     roles: ['driver'],

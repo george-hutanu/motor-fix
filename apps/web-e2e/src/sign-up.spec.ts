@@ -69,6 +69,7 @@ test.describe('creating an account for real @seeded', () => {
     await form.getByLabel('Nume').fill('Andrei Marin');
     await form.getByLabel('E‑mail').fill(fresh());
     await form.getByLabel('Parolă', { exact: true }).fill(NEW_PASSWORD);
+    await form.getByRole('checkbox').check();
     await form.getByRole('button', { name: 'Creează contul' }).click();
 
     await expect(page).toHaveURL('/app/driver');
@@ -93,6 +94,7 @@ test.describe('creating an account for real @seeded', () => {
     await form.getByLabel('Nume').fill('Andrei Marin');
     await form.getByLabel('E‑mail').fill(ACCOUNTS.driver.toUpperCase());
     await form.getByLabel('Parolă', { exact: true }).fill(NEW_PASSWORD);
+    await form.getByRole('checkbox').check();
     await form.getByRole('button', { name: 'Creează contul' }).click();
 
     await expect(form.getByRole('alert')).toHaveText(
@@ -115,6 +117,7 @@ test.describe('creating an account for real @seeded', () => {
     await form.getByLabel('Nume').fill('Andrei Marin');
     await form.getByLabel('E‑mail').fill(fresh());
     await form.getByLabel('Parolă', { exact: true }).fill('password1');
+    await form.getByRole('checkbox').check();
     await form.getByRole('button', { name: 'Creează contul' }).click();
 
     await expect(
@@ -137,6 +140,7 @@ test.describe('creating an account for real @seeded', () => {
     await form.getByLabel('Nume').fill('Andrei Marin');
     await form.getByLabel('E‑mail').fill(fresh());
     await form.getByLabel('Parolă', { exact: true }).fill(NEW_PASSWORD);
+    await form.getByRole('checkbox').check();
     const create = form.getByRole('button', { name: 'Creează contul' });
     await create.dblclick();
 
@@ -154,6 +158,7 @@ test.describe('creating an account for real @seeded', () => {
     await form.getByLabel('Name').fill('Andrei Marin');
     await form.getByLabel('E-mail').fill(fresh());
     await form.getByLabel('Password', { exact: true }).fill(NEW_PASSWORD);
+    await form.getByRole('checkbox').check();
     await form.getByRole('button', { name: 'Create account' }).click();
 
     await expect(page).toHaveURL('/app/driver');
@@ -256,6 +261,18 @@ test.describe('the sign-up form', () => {
     await page.keyboard.press('Tab');
     await expect(
       form.getByRole('button', { name: 'Arată parola' }),
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(form.getByRole('checkbox')).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(
+      form.getByRole('link', { name: 'Termenii de utilizare' }),
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(
+      form.getByRole('link', {
+        name: 'Nota de informare privind datele personale',
+      }),
     ).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(

@@ -49,6 +49,9 @@ async function open(language: 'ro' | 'en' = 'ro', email?: string) {
     title: 'public.signUp.title',
   });
   await settle();
+  // These cases are about the other fields: the terms are accepted up front.
+  panel().querySelector<HTMLInputElement>('input[type="checkbox"]')?.click();
+  await settle();
 }
 
 const panel = () =>
@@ -442,5 +445,58 @@ describe('lengths counted the way the server counts them', () => {
     expect(describedBy(field('E‑mail'))).toContain(
       'Adresa de e‑mail nu pare corectă.',
     );
+  });
+});
+
+describe('the sign-up form and the consent tick', () => {
+  const tick = () =>
+    panel().querySelector<HTMLInputElement>(
+      'input[type="checkbox"]',
+    ) as HTMLInputElement;
+
+  it('sends nothing when the tick is cleared again before sending', async () => {
+    await open();
+    tick().click();
+    await settle();
+
+    await submit('Andrei Marin', 'andrei@example.ro', 'o-parola-lunga');
+
+    expect(signUp).not.toHaveBeenCalled();
+    expect(panel().textContent).toContain('Bifează pentru a continua.');
+  });
+
+  it('sends nothing for a valid English form when the tick is cleared', async () => {
+    await open('en');
+    tick().click();
+    await settle();
+    type(field('Name'), 'Andrei Marin');
+    type(field('E-mail'), 'andrei@example.ro');
+    type(field('Password'), 'o-parola-lunga');
+    button('Create account').click();
+    await settle();
+
+    expect(signUp).not.toHaveBeenCalled();
+    expect(panel().textContent).toContain('Tick to continue.');
+  });
+
+  it('keeps what was typed when the tick blocks the send', async () => {
+    await open();
+    tick().click();
+    await settle();
+
+    await submit('Andrei Marin', 'andrei@example.ro', 'o-parola-lunga');
+
+    expect(field('Nume').value).toBe('Andrei Marin');
+    expect(field('E‑mail').value).toBe('andrei@example.ro');
+  });
+
+  it('moves the focus to the tick when it blocks the send', async () => {
+    await open();
+    tick().click();
+    await settle();
+
+    await submit('Andrei Marin', 'andrei@example.ro', 'o-parola-lunga');
+
+    expect(document.activeElement).toBe(tick());
   });
 });
