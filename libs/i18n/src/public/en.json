@@ -86,7 +86,7 @@
     "remember": "Keep me signed in",
     "returned": {
       "email_taken": "An account already uses this e-mail. Sign in with e-mail and password.",
-      "failed": "We could not reach {provider}. Try again, or sign in with e-mail or phone.",
+      "failed": "We could not reach {provider}. Try again, or use e-mail or phone.",
       "maintenance": "MotorFix is down for maintenance. Try again in a few minutes.",
       "suspended": "Your account is suspended."
     },

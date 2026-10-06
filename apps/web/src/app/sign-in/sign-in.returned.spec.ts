@@ -65,6 +65,14 @@ describe('sign-in after a provider gave no session', () => {
     },
   );
 
+  it('says in English that the provider could not be reached', async () => {
+    await open({ code: 'failed', provider: 'google' }, 'en');
+
+    expect(alertText()).toBe(
+      'We could not reach Google. Try again, or use e-mail or phone.',
+    );
+  });
+
   it('says in English that the e-mail already has an account', async () => {
     await open({ code: 'email_taken', provider: 'google' }, 'en');
 
