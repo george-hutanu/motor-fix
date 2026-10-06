@@ -13,6 +13,7 @@ export { OutboxRelayModule } from './events/outbox-relay.module';
 export * from './health/health.module';
 export * from './logging';
 export { emailConfig } from './notifications/email-config';
+export { NEWS_CONSUMER } from './notifications/news.fan-out';
 export { NotificationsModule } from './notifications/notifications.module';
 export { NotificationsService } from './notifications/notifications.service';
 export { phoneConfig } from './notifications/phone-config';

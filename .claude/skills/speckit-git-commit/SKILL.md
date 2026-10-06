@@ -85,33 +85,17 @@ auto_commit:
   CI (AGENTS.md lifecycle step 5) — never mid-task.
 - **The first commit on a branch with no PR yet** opens it, in this order (the
   task lifecycle in AGENTS.md). Under spec-kit this happens at the task's
-  start (`after_specify`), before planning commits anything: the first commit
-  is then an empty `git commit --allow-empty -m "chore(<scope>): ST-<n> start
-  <story title>"`, so the draft — and its `planning` label — exist from the
-  beginning:
-  1. `speckit-notion-sync start`, so the story is Planning before the PR
-     exists (idempotent; a no-op when it already is).
-  2. Push with the upstream set, then open the PR as a **draft**, its body
-     made from `.github/pull_request_template.md` (every PR MUST use it):
+  start (`after_specify`), before planning commits anything, in one call:
 
-     ```bash
-     git push -u origin <branch>
-     cp .github/pull_request_template.md "${TMPDIR:-/tmp}/<branch>-pr-body.md"
-     # fill in what is known now: Why, Notion story, Spec folder; keep every heading
-     GH_TOKEN=$(gh auth token -u george-hutanu) gh pr create --draft --base main \
-       --head <branch> --title "<type>(<scope>): ST-<n> <story title>" \
-       --label planning --label "<type label>" --label "scope: <scope>" \
-       --body-file "${TMPDIR:-/tmp}/<branch>-pr-body.md"
-     ```
+  ```bash
+  node .claude/scripts/lifecycle.mjs open --title "<type>(<scope>): ST-<n> <story title>"
+  ```
 
-     The title is a Conventional Commit carrying the story's ST number. Never
-     `--body` or `--fill`: the `PR template` check fails a PR whose body drops
-     a section. A draft only needs the headings; the rest is filled in before
-     it is marked ready. The label is `planning` before `/speckit-implement`
-     starts and `in development` from then on; the type and scope labels
-     come from the title (`speckit-notion-sync`, §2b, lists every label).
-  3. `speckit-notion-sync pr <n>`: the PR's link goes onto the story's `PR`
-     property. Every story links its own PR (Constitution VII).
+  It makes the empty `chore(<scope>): ST-<n> start …` commit, pushes, opens
+  the draft from the PR template (labels `planning`, type, scope), then runs
+  Notion `start` and `pr <n>`, and prints one JSON line. On a stop, do its
+  `fix`; on `left`, run those events through `speckit-notion-sync`, then its
+  `then`.
 - Every later commit: `git push`. Marking the PR ready is not this skill's
   job; it is the last step of the work (`speckit-auto` hand-off, or
   `speckit-review` when it finds nothing blocking).

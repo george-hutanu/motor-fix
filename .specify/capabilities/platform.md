@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-05
+updated: 2026-10-06
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -10,6 +10,15 @@ features:
   - 516-production-release-queue
   - 450-pr-tester-env-gaps
   - 600-merge-gate-symlink
+  - 623-precompact-flush
+  - 659-merge-gate-carry-deadline
+  - 673-story-tail-agents
+  - 688-qa-wait-handoff
+  - 698-tester-packet
+  - 704-auto-phase-model-pins
+  - 696-lifecycle-script
+  - 703-idle-watch-gate
+  - 705-auto-skill-split
 ---
 
 # Capability: Platform
@@ -242,9 +251,9 @@ _From 464-agent-watch._
 
 _From 464-agent-watch._
 
-### 464-FR-011 — The `/speckit-watch` skill MUST run the command with `--fix`, claim each item in the dispatch plan, and start one subagent per item that works in that worktree with that fix's instructions, dispatching only from a session on the main checkout (a worktree-isolated session reports the plan instead); a pass with nothing to fix MUST write and dispatch nothing; the skill MUST say how the orchestrating session keeps it scheduled (CronList first, never a second job; every 15 minutes once two or more tasks or worktrees are active; never from a worktree session).
+### 703-FR-009 — The `/speckit-watch` skill MUST run the command with `--fix`, claim each item in the dispatch plan, and start one subagent per item that works in that worktree with that fix's instructions, dispatching only from a session on the main checkout (a worktree-isolated session reports the plan instead); a pass with nothing to fix MUST write and dispatch nothing; the skill MUST say how the orchestrating session keeps it scheduled (one background `watch.mjs --wait`, never a second; armed once two or more tasks or worktrees are active; never from a worktree session).
 
-_From 464-agent-watch._
+_From 703-idle-watch-gate._
 
 ### 464-FR-012 — `scripts/heavy.sh` MUST default to 4 slots, and AGENTS.md MUST state that up to 4 PR-tester (QA) runs may run at the same time and name the watcher and how to repeat it.
 
@@ -326,6 +335,270 @@ _From 600-merge-gate-symlink._
 
 _From 600-merge-gate-symlink._
 
+### 623-FR-001 — The hook MUST NOT write to `auto-run.md` when the active feature's `spec.md` has a `**Status**:` line whose value begins with `Archived`, and MUST exit 0.
+
+_From 623-precompact-flush._
+
+### 623-FR-002 — The hook MUST still append its Compaction block for a feature whose status is not Archived.
+
+_From 623-precompact-flush._
+
+### 623-FR-003 — Each uncommitted entry in the block MUST keep the full porcelain line, both status columns included, for the first entry as for every other.
+
+_From 623-precompact-flush._
+
+### 659-FR-001 — The merge gate MUST refuse the merge (exit 2) when its GitHub reads do not finish within an overall deadline, and the refusal MUST say so.
+
+_From 659-merge-gate-carry-deadline._
+
+### 659-FR-002 — The merge gate MUST refuse the merge (exit 2) when reading the PR fails.
+
+_From 659-merge-gate-carry-deadline._
+
+### 659-FR-003 — The overall deadline MUST be shorter than `run-hook.mjs`'s limit for the gate, which MUST be shorter than the hook timeout declared for it in `.claude/settings.json`.
+
+_From 659-merge-gate-carry-deadline._
+
+### 659-FR-004 — `run-hook.mjs` MUST stop a fail-closed gate that outlives the gate's registered limit and refuse (exit 2); a fail-closed gate killed by a signal MUST refuse, not pass.
+
+_From 659-merge-gate-carry-deadline._
+
+### 659-FR-005 — Verifying a carry MUST read the statuses of the named commit, the commits between and head concurrently once the compare is known, and MUST read head's statuses at most once per gate run.
+
+_From 659-merge-gate-carry-deadline._
+
+### 673-FR-001 — `.claude/agents/task-runner.md` MUST pin `model: opus`, MUST NOT carry a `tools:` allowlist, and its `disallowedTools` MUST deny the artifact comment and data, browser, Chrome, simulator, visualize and session-management tools while denying none of Bash, Read, Edit, Write, Grep, Glob, Skill, Agent, ToolSearch, Monitor, TaskStop, EnterWorktree, PushNotification, Artifact (the design check's mock read), the WebStorm inspections (harden) or any Notion tool.
+
+_From 673-story-tail-agents._
+
+### 673-FR-002 — The story dispatch and the tail dispatch in `speckit-auto`, and step 4 of `speckit-watch` (resume, tail, rerun-qa, fix-ci, merge), MUST name `subagent_type: task-runner` and no story, tail or watch dispatch MUST name `general-purpose`; `merge` MUST keep `model: "sonnet"`; AGENTS.md MUST name the definition for the story and tail agents.
+
+_From 673-story-tail-agents._
+
+### 673-FR-003 — No dispatch template in `speckit-auto` or `speckit-watch`, and no agent definition, MUST tell an agent to follow or read AGENTS.md or CLAUDE.local.md, or list either among the files to read; `task-runner.md` MUST say they are in context and give the delta command.
+
+_From 673-story-tail-agents._
+
+### 673-FR-004 — `.specify/memory/constitution-card.md` MUST name every principle of `constitution.md` (numeral and title, in order) and its version, in at most 3,000 bytes; a harness spec MUST fail when they drift.
+
+_From 673-story-tail-agents._
+
+### 673-FR-005 — `speckit-auto`'s Preflight and phase 1 MUST read the card instead of the full constitution; `spec-reviewer`, `code-reviewer` and `pr-tester` MUST keep reading `constitution.md`.
+
+_From 673-story-tail-agents._
+
+### 673-FR-006 — The definition MUST carry the AGENTS.md reply envelope verbatim and a cap of at most 10 lines.
+
+_From 673-story-tail-agents._
+
+### 688-FR-001 — `dispatch.mjs <pr> --no-wait` MUST dispatch the PR QA workflow for the PR's head, find the run by its nonce, print one hand-off line (`- QA run: <id> · head <sha> · lap <n> · <url>`) and exit 0 without watching the run or downloading anything; exit 2 when no run appears.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-002 — `dispatch.mjs <pr> --run <id>` MUST dispatch nothing, read that run's conclusion, download its artifact into `--out` and judge the report exactly as a dispatched lap does (exit 0 success, 1 failure, 2 unusable, including a report about another head than the PR's).
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-003 — The hand-off line MUST have one parser, shared by the watcher, that reads the run id and the head, and nothing from a note without the line.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-004 — `watch.mjs` MUST give a handed-off ready PR whose recorded QA run is about its current head the verdict `waiting` and no fix while CI is pending or has no checks, or the run is not completed, and its head has no `agent-review` success; the reason names what it waits for. A PR with no checks, or a run whose state cannot be read, waits only until the qa quiet threshold, then FR-006 applies.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-005 — `watch.mjs` MUST offer `tail` for such a PR once CI has finished and the run has completed, when no agent holds the worktree, without the phase's quiet threshold.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-006 — A handed-off ready PR with no run recorded, or one about an older head, MUST keep today's rule: `tail` once quiet past the threshold.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-007 — The hand-off (speckit-auto) MUST write the QA flows, dispatch the run with `--no-wait`, record its line in `handoff.md`, and end with `NEXT: tail #<n> after QA run <id>`; it starts no wait.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-008 — The session that receives that NEXT (or the owner-run story itself) MUST wait with one background command until CI and the QA run have finished, printing only what did not pass, then claim the worktree and dispatch the tail.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-009 — The tail MUST start the pr-tester on the finished run (`RUN`), never dispatch and wait itself; with no run for the PR's head it dispatches one with `--no-wait` and ends; an unusable run is dispatched again once per head without counting a lap, and a second one is posted `--missing` and blocks the run; after a fix it MUST push, count the lap with `run-state.mjs repair`, dispatch a run for the new head with `--no-wait`, rewrite the note's `QA run:` line and end with the same NEXT.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-010 — The pr-tester given `RUN` MUST skip writing flows and dispatching, download that run with `--run`, read the flows file that was sent, and raise a `high` "flow not run" finding for each flow from its own list (the spec's scenarios and the diff) that file does not drive.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-011 — `merge-gate.mjs`, `pr-lifecycle-gate.mjs`, `carry.mjs`, the repair cap and their eval cases MUST stay unchanged.
+
+_From 688-qa-wait-handoff._
+
+### 688-FR-012 — AGENTS.md lifecycle steps 4–6, speckit-pr-test and the speckit-watch `tail` row MUST describe the dispatch, end, resume loop.
+
+_From 688-qa-wait-handoff._
+
+### 698-FR-001 — A packet script under `.claude/scripts/pr-test/` MUST write `packet.md` into a given artifact folder holding `report.json`, containing: the PR number, title, branch, head and base; one line per changed file with additions and deletions (from `gh pr view --json files`), capped at 100 files with the rest counted, and exact totals; the report's verdict, summary and notes; and every blocker and high finding with severity, title, where and evidence, plus the medium and low findings by title.
+
+_From 698-tester-packet._
+
+### 698-FR-002 — The packet MUST list the FR ids touched by the change: the FR ids on the `tasks.md` lines that name a changed file's path, each with its text from `spec.md`, both read at the PR's head through the GitHub contents API; a line names a file when it contains the file's repo-relative path, and an id range `FR-a–FR-b` counts as every id in it; when the feature directory or either file is missing, or no task names a changed file, the section says which.
+
+_From 698-tester-packet._
+
+### 698-FR-003 — The packet MUST include the previous lap's findings, each marked new, persisting or resolved against the current report by the key `mergeFindings` already uses (`kind|title|route`). The source is the newest `specs/<feature>/pr-review/lap<n>/report.json` at the PR's head (a failing lap's report, committed with its fix, holding the tester's findings `post.mjs` folded in); when there is none, the baseline run's own `report.json` (the workflow's findings only, which the packet says) if that run tested this same PR; another PR's run never gives the previous lap.
+
+_From 698-tester-packet._
+
+### 698-FR-004 — The script MUST choose the baseline run as: an explicit baseline (a run id or a folder) when given; otherwise the newest finished PR QA run of the same PR at a different head than the one under review; otherwise the newest finished PR QA run whose tested commit is an ancestor of the PR's base branch; otherwise none. A finished run is one with conclusion `success` or `failure`, created before the run under review, whose artifact downloads with a `report.json`; any other candidate is skipped. It MUST name the chosen run (id, PR, commit, lap) or the reason there is none.
+
+_From 698-tester-packet._
+
+### 698-FR-005 — The packet MUST compare the screenshots of the run with the baseline's by content hash and list, per file name, the changed, new and removed screenshots, with the unchanged ones counted; it MUST name, as the screenshots to look at, the changed and new ones plus every screenshot a current finding cites, and every screenshot when there is no baseline; when none of the PR's changed files is a web file (the prefixes `findings.mjs`'s `touchesWeb` uses), it MUST name only the cited ones. Only image files count as screenshots.
+
+_From 698-tester-packet._
+
+### 698-FR-006 — The script MUST exit 2, writing nothing, when the folder has no `report.json`; a failing `gh` call or baseline download MUST NOT fail it: the affected section is marked unavailable with the reason and the script exits 0.
+
+_From 698-tester-packet._
+
+### 698-FR-007 — `.claude/agents/pr-tester.md` MUST tell the tester to build the packet right after the run's artifact is in its folder and, in the review, to read it before the report, the screenshots, the spec or the diff (the spec's first read, to list the flows, comes before the run); to open only the screenshots the packet names; and MUST keep `model: opus`, the full constitution review, the verdict rules and `post.mjs` posting unchanged.
+
+_From 698-tester-packet._
+
+### 698-FR-008 — `.claude/skills/speckit-pr-test/SKILL.md` MUST describe the packet step in its Test step.
+
+_From 698-tester-packet._
+
+### 698-FR-009 — The merge gate, its eval cases and `carry.mjs` MUST keep their behaviour: `merge-gate.mjs`, `.claude/evals/cases/merge-gate.json` and `carry.mjs` are not changed by this feature.
+
+_From 698-tester-packet._
+
+### 704-FR-001 — Under `/speckit-auto`, each of phases 2 (specify), 5 (plan), 6 (checklist) and 7 (tasks) MUST run as its own dispatched agent with its `model` set to the pin in that phase's skill frontmatter (a fixed list: those are the phase 2–8 skills whose pin differs from Opus).
+
+_From 704-auto-phase-model-pins._
+
+### 704-FR-002 — A phase whose skill pin equals the run's model (clarify and analyze on an Opus run) MUST stay inline; phases 9–14, the review fixes and the PR tester MUST stay on Opus regardless of any pin.
+
+_From 704-auto-phase-model-pins._
+
+### 704-FR-003 — A dispatched phase agent MUST produce the same artifacts, run the same spec-kit hooks and answer the same gates as the inline phase does today (the "Gate override" rules of `/speckit-auto` phases 2–8), and MUST open its reply with the four `STATUS:/PR:/NEXT:/FILES:` lines of AGENTS.md "Agent replies"; the run MUST treat a `failure` or `blocked` status as the inline phase's failure, never as a pass, and a `partial` one as a pass only when FILES names the phase's artifact and what failed is a Notion or mock write. A failed phase agent is not retried.
+
+_From 704-auto-phase-model-pins._
+
+### 704-FR-004 — The dispatch MUST be proven by one measured trial: a story run through `/speckit-auto` whose transcript shows every assistant turn of the dispatched phases served by the pinned model, recorded in the feature's run log with the transcript's path and the per-phase model list.
+
+_From 704-auto-phase-model-pins._
+
+### 704-FR-005 — The feature MUST record, in the run log, the cost of one story run before the change and one after, read from transcripts: per model, the count of assistant turns and the input, output, cache-creation and cache-read token totals; every measure that was not measurable MUST be named with its reason, and no estimate MAY stand in for a measurement.
+
+_From 704-auto-phase-model-pins._
+
+### 704-FR-006 — The `model:` line of every `speckit-*` skill MUST be unchanged, and the ST-467 mapping spec MUST stay green.
+
+_From 704-auto-phase-model-pins._
+
+### 704-FR-008 — `npm run test:harness`, `node .claude/scripts/harness-eval.mjs --check` and `node .claude/scripts/doctor.mjs` MUST pass on the branch; a harness spec MUST fail if a phase 2–8 dispatch line names a model other than that phase skill's pin.
+
+_From 704-auto-phase-model-pins._
+
+### 704-FR-009 — A phase agent the Agent tool cannot start on its pinned model (a tool error) MUST NOT stop the run: the phase runs inline on the run's model and the run log records the pin miss.
+
+_From 704-auto-phase-model-pins._
+
+### 696-FR-001 — `lifecycle.mjs open --title <t>` MUST, in this order: make the empty start commit when the branch has no commit ahead of `origin/main`; push with upstream to the feature branch; when the branch has no open PR, open a draft from the PR template with `planning`, the title's type label (`breaking` when the title has `!`) and `scope: <scope>`; then run the Notion `start` and `pr <n>` events.
+
+_From 696-lifecycle-script._
+
+### 696-FR-002 — `lifecycle.mjs ready --body-file <f>` MUST, in this order: file the unfiled `deferred.md` bullets with the Notion `debt` event; commit and push the feature records when they changed; run `pr-body-check.ts` and stop on failure; `gh pr edit --body-file`; `gh pr ready`; the Notion `qa` event; commit and push the `qa` line; write `handoff.md`.
+
+_From 696-lifecycle-script._
+
+### 696-FR-003 — `lifecycle.mjs merge` MUST run the merge gate on `gh pr merge <n> --merge` and refuse exactly when it refuses; otherwise merge, then run the Notion `finish` event, post one finish comment on the merged PR, restore `notion-sync.md` and delete `handoff.md`.
+
+_From 696-lifecycle-script._
+
+### 696-FR-004 — Every step MUST print exactly one JSON line on stdout: `ok`, the step, what it did, and on a stop `stopped` (the command or check) and `fix`.
+
+_From 696-lifecycle-script._
+
+### 696-FR-005 — When the Notion CLI exits 3, the step MUST stop and list the connector events left and the `--notion-done` rerun that completes the step.
+
+_From 696-lifecycle-script._
+
+### 696-FR-006 — Every git and gh command MUST first pass the Bash gates registered in `.claude/settings.json`, judged on that command's text, with the merge gate's test-only state variables removed from their environment.
+
+_From 696-lifecycle-script._
+
+### 696-FR-007 — No step MAY push from `main`, push to `main`, or force-push.
+
+_From 696-lifecycle-script._
+
+### 696-FR-008 — gh MUST run as george-hutanu: the caller's `GH_TOKEN`, else `gh auth token -u george-hutanu`; when that fails or prints nothing, the step MUST stop before any git or gh call.
+
+_From 696-lifecycle-script._
+
+### 705-FR-007 — `speckit-auto`'s `hand-off.md` and `tail.md` (the lines listing the ready and merge commands) and `speckit-git-commit/SKILL.md` (the first-commit recipe) name one `lifecycle.mjs` call per step instead of the recipe.
+
+_From 705-auto-skill-split._
+
+### 703-FR-001 — `watch.mjs --gate` MUST run the same scan as the table, read-only (no fix applied, no claim written), and exit 0 with no output on stdout or stderr when the pass would do nothing: an empty dispatch plan and nothing the no-agent fixes would act on.
+
+_From 703-idle-watch-gate._
+
+### 703-FR-002 — When the pass would do something, `--gate` MUST exit 2 and print one line per item: each dispatch-plan entry and each no-agent action (dead holder, worktree removal, review carry, orphan lock, prune), naming the fix and the worktree or path.
+
+_From 703-idle-watch-gate._
+
+### 703-FR-003 — The gate MUST fire exactly when `--fix --json` on the same state would produce a non-empty plan or a non-empty action list; its verdict uses the table's detection unchanged and accepts the same `--stale` thresholds.
+
+_From 703-idle-watch-gate._
+
+### 703-FR-004 — An error MUST exit 1: a usage error, no git repository (no rows), or a scan that throws; `--gate` combined with `--fix`, `--json` or `--wait` MUST be a usage error. An unreachable `gh` is not an error: it leaves PRs unknown, the full pass dispatches nothing for them, and the gate is silent for them too.
+
+_From 703-idle-watch-gate._
+
+### 703-FR-005 — `watch.mjs --wait` MUST sleep its interval (default 15 minutes, `--every <minutes>`), then run the gate, and repeat while another full interval fits in its limit (default 110 minutes, `--for <minutes>`); it ends when the gate fires (exit 2 with the gate's lines), errors (exit 1), or no further interval fits, when it MUST exit 0 printing `watch: idle for <n> min; re-arm the wait`. It never sleeps past its limit. `--wait` accepts only `--every`, `--for` and `--stale`; a limit shorter than the interval, a non-positive number, or any other flag is a usage error.
+
+_From 703-idle-watch-gate._
+
+### 703-FR-006 — Only one wait MUST hold the repository at a time: a wait records its process in the git common directory, a second wait while that process lives MUST exit 0 at once printing `watch: a wait is already armed (pid <pid>)`, and a record whose process is gone (no such process, or its command line is not a `watch.mjs --wait`) MUST be taken over; the wait MUST remove its own record when it ends.
+
+_From 703-idle-watch-gate._
+
+### 703-FR-007 — `speckit-watch/SKILL.md` MUST describe arming the wait as a background command within the background limit, what each ending means keyed on the printed line, not the exit code alone (exit 2: run a full pass, then re-arm; `re-arm the wait`: re-arm; `already armed`: nothing; exit 1: report the error), that an existing `/speckit-watch` cron job is deleted once the wait is armed, and that a pass with nothing to do ends in one line; it MUST NOT instruct `CronCreate` for the watch.
+
+_From 703-idle-watch-gate._
+
+### 703-FR-008 — The AGENTS.md watch bullet MUST describe the wait instead of the cron string, and the session-start reminder MUST tell the session to arm the watch wait, naming neither `CronList` nor a cron string, and MUST print nothing when a live wait already holds the record.
+
+_From 703-idle-watch-gate._
+
+### 705-FR-001 — SKILL.md holds the frontmatter, User Input, Goal, Autonomy Contract, the run-order table with a reference-file column, Size, Run state, Hard Stops, Notifying, the Final Report envelope and the Agent Execution Rules deltas. Nothing else.
+
+_From 705-auto-skill-split._
+
+### 705-FR-002 — Every other section moves, unchanged in substance, to one of these files beside it: `preflight.md`, `phases-plan.md` (1–8), `phases-build.md` (9–12), `phases-close.md` (13–17), `commit-protocol.md`, `hand-off.md`, `tail.md` and `report.md`.
+
+_From 705-auto-skill-split._
+
+### 705-FR-003 — No rule is dropped, loosened or duplicated. `layout.spec.mjs` enforces this.
+
+_From 705-auto-skill-split._
+
+### 705-FR-004 — The harness specs that read speckit-auto keep their meaning and read the file that now holds their phrases: `tail-handoff-wiring`, `task-runner`, `agent-replies`, and `lifecycle-wiring` once #141 merges.
+
+_From 705-auto-skill-split._
+
+### 705-FR-005 — The stale text is corrected:
+
+_From 705-auto-skill-split._
+
+### 705-FR-006 — The report measures bytes with `wc -c`:
+
+_From 705-auto-skill-split._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -334,3 +607,8 @@ _From 600-merge-gate-symlink._
 - `421-FR-029` — superseded by `516-FR-002` (2026-10-04)
 - `421-FR-030` — superseded by `516-FR-003` (2026-10-04)
 - `421-FR-034` — superseded by `516-FR-004` (2026-10-04)
+
+- `464-FR-011` — superseded by `703-FR-009` (2026-10-05)
+
+- `704-FR-007` — removed by 705-auto-skill-split (2026-10-06): (it fenced ST-697's own edit of SKILL.md to the dispatch lines; that change has merged
+- `696-FR-009` — superseded by `705-FR-007` (2026-10-06)

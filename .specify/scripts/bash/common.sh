@@ -152,7 +152,13 @@ _persist_feature_json() {
     # Ensure .specify/ directory exists
     mkdir -p "$repo_root/.specify"
 
-    # Write feature.json — prefer jq for safe JSON, fall back to printf
+    # Write feature.json — prefer jq for safe JSON, fall back to printf.
+    # This writes the pointer alone, so a level /speckit-size recorded is
+    # dropped and the default (the full chain) applies: the safe direction.
+    # The Python helper (init-options "script": "py") and
+    # `node .claude/scripts/level.mjs point` carry the level across; use
+    # `level.mjs point` after this script if the Bash variant is ever the one
+    # in use.
     if command -v jq >/dev/null 2>&1; then
         jq -cn --arg fd "$feature_dir_value" '{feature_directory:$fd}' > "$fj"
     else

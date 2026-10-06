@@ -40,7 +40,7 @@ const outputOf = (text) => {
   return start < 0 ? '' : text.slice(start);
 };
 
-// Skills whose text dispatches a general-purpose agent, or runs as one.
+// Skills whose text dispatches a task-runner or general-purpose agent, or runs as one.
 const DISPATCHERS = ['speckit-watch', 'speckit-auto', 'speckit-plan', 'notion-ready'];
 
 describe('the agent reply envelope', () => {

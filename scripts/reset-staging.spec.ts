@@ -151,6 +151,26 @@ describe('reset-staging.sh', () => {
     expect(calls).toEqual([]);
   });
 
+  // The release seeds staging after each deploy, so a seed account added
+  // since the last reset exists before the end-to-end run signs in as it.
+  it('with SEED_ONLY=1, only seeds: nothing is emptied', () => {
+    const { calls, dir, result } = run({ ...staging, SEED_ONLY: '1' });
+
+    expect(result.status).toBe(0);
+    expect(calls).toEqual([`${dir} prisma db seed SEED_PASSWORD=set`]);
+  });
+
+  it('with SEED_ONLY=1, still refuses outside staging', () => {
+    const { calls, result } = run({
+      ...staging,
+      APP_ENV: 'production',
+      SEED_ONLY: '1',
+    });
+
+    expect(result.status).not.toBe(0);
+    expect(calls).toEqual([]);
+  });
+
   it('stops before seeding when the reset fails', () => {
     const { calls, result } = run(staging, 3);
 

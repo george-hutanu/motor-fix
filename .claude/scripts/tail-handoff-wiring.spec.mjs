@@ -18,23 +18,25 @@ const section = (text, heading) => {
   return text.slice(start, next === -1 ? undefined : next);
 };
 
+// speckit-auto keeps the hand-off and the tail beside SKILL.md, read when the run reaches them.
+const auto = ['hand-off.md', 'tail.md'].map((f) => read(`.claude/skills/speckit-auto/${f}`)).join('\n');
+
 describe('the hand-off', () => {
-  const auto = read('.claude/skills/speckit-auto/SKILL.md');
 
   it('ends the story agent at ready with a hand-off note and NEXT: tail', () => {
     const handoff = section(auto, '## Hand-off');
-    assert.match(handoff, /gh pr ready/);
-    assert.match(handoff, /speckit-notion-sync qa/);
+    assert.match(handoff, /lifecycle\.mjs ready --body-file/);
+    assert.match(handoff, /Notion\s+`qa`/);
     assert.match(handoff, /handoff\.md/);
     assert.match(handoff, /NEXT: tail #<n>/);
     // Run in the owner's session, nobody reads that NEXT: the run sends its own tail.
     assert.match(handoff, /dispatch the tail yourself/);
-    assert.doesNotMatch(handoff, /gh pr merge/);
+    assert.doesNotMatch(handoff, /gh pr merge|lifecycle\.mjs merge/);
   });
 
   it('gives the tail lifecycle steps 5-7, on the default model', () => {
     const tail = section(auto, '## The tail');
-    for (const step of [/run_in_background/, /\/speckit-pr-test <n>/, /run-state\.mjs repair/, /gh pr merge <n> --merge/, /speckit-notion-sync finish/, /notion-ready|archive check/])
+    for (const step of [/run_in_background/, /\/speckit-pr-test <n>/, /run-state\.mjs repair/, /lifecycle\.mjs merge --pr <n>/, /Notion `finish`/, /notion-ready|archive check/])
       assert.match(tail, step);
     assert.match(tail, /stays on Opus/);
     assert.doesNotMatch(tail, /model: "sonnet"/);
@@ -72,5 +74,37 @@ describe('the finish log rides in the story PR', () => {
   it('commits a retrospective on the open PR, and only a failing QA lap report', () => {
     assert.match(read('.claude/skills/speckit-retro/SKILL.md'), /rides in that PR/);
     assert.match(section(read('.claude/skills/speckit-pr-test/SKILL.md'), '## Evidence'), /passing lap's is not\s+committed/);
+  });
+});
+
+describe('no agent holds its context across the CI and QA wait', () => {
+  const steps = (text) => text.split(/\n(?=\d+\. )/);
+
+  it('starts the QA run at hand-off without waiting, records it in the note and ends', () => {
+    const handoff = section(auto, '## Hand-off');
+    assert.match(handoff, /dispatch\.mjs <n> --no-wait/);
+    assert.match(handoff, /- QA run: <id> · head <sha> · lap <n> · <url>/);
+    assert.match(handoff, /NEXT: tail #<n> after QA run <id>/);
+    assert.match(handoff, /\.specify\/\.cache\/qa-flows-<n>\.mjs/);
+    assert.doesNotMatch(handoff, /--watch|gh run watch/);
+  });
+
+  it('lets the session, not an agent, hold the one background wait before the tail', () => {
+    const wait = section(auto, '## The wait');
+    assert.match(wait, /run_in_background/);
+    assert.match(wait, /gh pr checks <n> --watch/);
+    assert.match(wait, /gh run watch <id>/);
+    assert.match(wait, /watch\.mjs claim <worktree> tail/);
+  });
+
+  it('runs the tester on the finished run, and ends a fix lap with a new run instead of waiting', () => {
+    const tail = section(auto, '## The tail');
+    assert.match(tail, /RUN/);
+    assert.match(tail, /--no-wait/);
+    assert.match(tail, /run-state\.mjs repair/);
+    assert.match(tail, /NEXT: tail #<n> after QA run <id>/);
+    assert.match(tail, /--missing/);
+    // The only wait a tail holds is CI on a docs-only head, which runs two short jobs.
+    for (const step of steps(tail).filter((s) => /--watch|gh run watch/.test(s))) assert.match(step, /docs-only/);
   });
 });

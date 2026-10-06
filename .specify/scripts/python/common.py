@@ -5,8 +5,11 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
 import sys
+import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -91,32 +94,135 @@ def read_feature_json_feature_directory(repo_root: Path) -> str:
     return value if isinstance(value, str) else ""
 
 
-def _json_dump(data: dict[str, str]) -> str:
+def _json_dump(data: dict) -> str:
     return json.dumps(data, ensure_ascii=False, separators=(",", ":")) + "\n"
 
 
-def persist_feature_json(repo_root: Path, feature_dir_value: str) -> None:
+# The level /speckit-size chose rides in feature.json beside the pointer, with
+# `level_for` saying whose it is. The rules below are pointTo(), featureKey()
+# and pendingLevel() in .claude/scripts/lib/feature.mjs, line for line;
+# .claude/scripts/level.spec.mjs runs both and compares the files they write.
+PENDING_TTL_MINUTES = 30
+
+
+def _feature_key(repo_root: Path, value: object) -> str | None:
     # Strip the repo root prefix lexically (no resolve()) to mirror the
     # Bash/PowerShell helpers: with a symlinked <repo>/specs, resolve() would
     # escape the repo and persist a machine-specific absolute path instead of
     # the relative "specs/NNN-name" the other variants store.
-    value = feature_dir_value
-    relative = Path(value)
-    if relative.is_absolute():
+    if not isinstance(value, str) or not value:
+        return None
+    key = value
+    path = Path(key)
+    if path.is_absolute():
         try:
-            value = relative.relative_to(repo_root).as_posix()
+            key = path.relative_to(repo_root).as_posix()
         except ValueError:
-            value = str(relative)
+            key = str(path)
+    key = key.replace("\\", "/")
+    while key.startswith("./"):
+        key = key[2:]
+    key = key.rstrip("/")
+    return key or None
 
-    current = read_feature_json_feature_directory(repo_root)
-    if current == value:
+
+def _parse_level(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, str):
+        try:
+            value = float(value.strip())
+        except ValueError:
+            return None
+    if isinstance(value, float):
+        if not value.is_integer():
+            return None
+        value = int(value)
+    return value if isinstance(value, int) and 0 <= value <= 3 else None
+
+
+def _pending_ttl_minutes() -> float:
+    try:
+        minutes = float(os.environ.get("SPECKIT_LEVEL_TTL_MINUTES", ""))
+    except ValueError:
+        return PENDING_TTL_MINUTES
+    return minutes if 0 < minutes < float("inf") else PENDING_TTL_MINUTES
+
+
+def _pending_level(data: dict, now: float) -> int | None:
+    """The level waiting for the next feature, while it is still fresh."""
+    if data.get("level_for") != "next":
+        return None
+    level = _parse_level(data.get("level"))
+    stamp = data.get("level_at")
+    if level is None or not isinstance(stamp, str):
+        return None
+    try:
+        at = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if at.tzinfo is None:
+        at = at.replace(tzinfo=timezone.utc)
+    age = now - at.timestamp()
+    if age >= _pending_ttl_minutes() * 60 or age < -60:
+        return None
+    return level
+
+
+def _in_head(repo_root: Path, key: str) -> bool:
+    """Whether HEAD already holds this feature's spec, so it cannot be "the next one"."""
+    try:
+        result = subprocess.run(
+            ["git", "cat-file", "-e", f"HEAD:./{key}/spec.md"],
+            cwd=repo_root,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except OSError:
+        return False
+    return result.returncode == 0
+
+
+def persist_feature_json(repo_root: Path, feature_dir_value: str) -> None:
+    value = _feature_key(repo_root, feature_dir_value) or feature_dir_value
+
+    data: dict = {}
+    feature_json = repo_root / ".specify" / "feature.json"
+    if feature_json.is_file():
+        try:
+            loaded = json.loads(feature_json.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                data = loaded
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            data = {}
+
+    # The same directory again: nothing changes. A waiting level is for a new
+    # feature, and re-writing the pointer creates none.
+    if _feature_key(repo_root, data.get("feature_directory")) == value:
         return
+
+    pending = _pending_level(data, time.time())
+    data["feature_directory"] = value
+    if pending is not None and _in_head(repo_root, value):
+        # A feature HEAD already holds is not the next one: keep waiting.
+        pass
+    else:
+        data.pop("level_at", None)
+        if pending:
+            # Fresh and above 0: this feature's, once. Level 0 is never
+            # carried: a trivial change creates no feature.
+            data["level"] = pending
+            data["level_for"] = value
+        elif "level" in data and _feature_key(repo_root, data.get("level_for")) == value:
+            data["level_for"] = value
+        else:
+            data.pop("level", None)
+            data.pop("level_for", None)
 
     specify_dir = repo_root / ".specify"
     specify_dir.mkdir(parents=True, exist_ok=True)
-    (specify_dir / "feature.json").write_bytes(
-        _json_dump({"feature_directory": value}).encode("utf-8")
-    )
+    (specify_dir / "feature.json").write_bytes(_json_dump(data).encode("utf-8"))
 
 
 @dataclass(frozen=True)
