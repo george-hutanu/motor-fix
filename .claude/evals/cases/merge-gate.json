@@ -51,6 +51,76 @@
     }
   },
   {
+    "id": "merge-gate-refuses-the-cloud-merge-without-agent-review",
+    "hook": "pre:bash:merge-gate",
+    "why": "a cloud session merges over REST because it has no GraphQL; that merge waits for the PR QA run's agent-review success exactly as the gh pr form does (Constitution VII)",
+    "payload": {
+      "tool_input": {
+        "command": "gh api -X PUT repos/george-hutanu/motor-fix/pulls/21/merge -f merge_method=merge"
+      }
+    },
+    "env": {
+      "CLAUDE_CODE_REMOTE": "true",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "no agent-review status"
+    }
+  },
+  {
+    "id": "merge-gate-refuses-the-cloud-merge-while-qa-runs",
+    "hook": "pre:bash:merge-gate",
+    "why": "the PR QA workflow sets agent-review pending while it tests the head; a pending verdict is no verdict",
+    "payload": {
+      "tool_input": {
+        "command": "gh api -X PUT repos/george-hutanu/motor-fix/pulls/21/merge -f merge_method=merge"
+      }
+    },
+    "env": {
+      "CLAUDE_CODE_REMOTE": "true",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"PENDING\"}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "agent-review is pending"
+    }
+  },
+  {
+    "id": "merge-gate-passes-the-cloud-merge-with-agent-review-success",
+    "hook": "pre:bash:merge-gate",
+    "why": "with the workflow's agent-review success and CI OK green on head, the cloud merge is the next lifecycle step and the gate must not stand in its way",
+    "payload": {
+      "tool_input": {
+        "command": "gh api -X PUT repos/george-hutanu/motor-fix/pulls/21/merge -f merge_method=merge"
+      }
+    },
+    "env": {
+      "CLAUDE_CODE_REMOTE": "true",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}"
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "merge-gate-passes-past-a-cancelled-pr-qa-run",
+    "hook": "pre:bash:merge-gate",
+    "why": "a newer lap cancels the PR QA run in progress for the same PR; agent-review is that workflow's verdict, so its cancelled check run is history, not a red check",
+    "payload": {
+      "tool_input": {
+        "command": "gh api -X PUT repos/george-hutanu/motor-fix/pulls/21/merge -f merge_method=merge"
+      }
+    },
+    "env": {
+      "CLAUDE_CODE_REMOTE": "true",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR QA\",\"workflowName\":\"PR QA\",\"status\":\"COMPLETED\",\"conclusion\":\"CANCELLED\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}"
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
     "id": "merge-gate-refuses-a-merge-with-the-repo-flag",
     "hook": "pre:bash:merge-gate",
     "why": "gh -R owner/repo is the spelling AGENTS.md teaches; a gate that only reads gh pr merge first fails open on it",

@@ -18,7 +18,7 @@ function fakeGh(rules = []) {
   return { calls, gh };
 }
 
-const base = { pr: 21, repo: 'george-hutanu/motor-fix', sha: 'abc1234def', summary: '2 blocking findings', body: 'details' };
+const base = { pr: 21, repo: 'george-hutanu/motor-fix', sha: 'abc1234def', summary: '2 blocking findings', body: 'details', cloud: false };
 const reviewCalls = (calls) => calls.filter((c) => c.args.some((a) => /\/reviews$/.test(a)));
 const events = (calls) => reviewCalls(calls).map((c) => JSON.parse(c.input).event);
 
@@ -85,6 +85,44 @@ describe('posting the review', () => {
     assert.equal(out.dryRun, true);
     assert.equal(out.status.state, 'failure');
     assert.match(out.reviewBody, /verdict: failure/i);
+  });
+});
+
+describe('posting from a cloud session, where the workflow owns the status and GraphQL is refused', () => {
+  const cloudBody = '## Summary\nx\n\n## Agent review\n<!-- filled by the PR tester -->\n\n## Checklist\n- [x] a\n';
+  const restPr = [/^api repos\/george-hutanu\/motor-fix\/pulls\/21$/, { code: 0, stdout: JSON.stringify({ body: cloudBody }), stderr: '' }];
+
+  it('posts the review and writes no agent-review status', () => {
+    const { calls, gh } = fakeGh([restPr]);
+    const out = postVerdict({ ...base, verdict: 'failure', gh, cloud: true });
+    assert.deepEqual(events(calls), ['REQUEST_CHANGES']);
+    assert.equal(calls.filter((c) => c.args.some((a) => /statuses/.test(a))).length, 0);
+    assert.equal(out.status, null);
+  });
+
+  it('reads and fills the Agent review section over REST, never through gh pr', () => {
+    const { calls, gh } = fakeGh([restPr]);
+    const out = postVerdict({ ...base, verdict: 'success', gh, cloud: true });
+    assert.equal(calls.filter((c) => c.args[0] === 'pr').length, 0);
+    const patch = calls.find((c) => c.args.join(' ') === 'api -X PATCH repos/george-hutanu/motor-fix/pulls/21 --input -');
+    assert.ok(patch, 'description not patched over REST');
+    assert.match(JSON.parse(patch.input).body, /## Agent review\n[\s\S]*2 blocking findings[\s\S]*## Checklist/);
+    assert.equal(out.section, 'description');
+  });
+
+  it('comments over REST when the description has no Agent review section', () => {
+    const { calls, gh } = fakeGh([[/^api repos\/george-hutanu\/motor-fix\/pulls\/21$/, { code: 0, stdout: JSON.stringify({ body: 'no section' }), stderr: '' }]]);
+    const out = postVerdict({ ...base, verdict: 'success', gh, cloud: true });
+    const comment = calls.find((c) => c.args.join(' ') === 'api -X POST repos/george-hutanu/motor-fix/issues/21/comments --input -');
+    assert.ok(comment, 'no REST comment');
+    assert.match(JSON.parse(comment.input).body, /Verdict: success/);
+    assert.equal(out.section, 'comment');
+  });
+
+  it('defaults to the laptop path when CLAUDE_CODE_REMOTE is not true', () => {
+    const { calls, gh } = fakeGh();
+    postVerdict({ ...base, verdict: 'success', gh, cloud: false });
+    assert.equal(calls.filter((c) => c.args.some((a) => /statuses/.test(a))).length, 1);
   });
 });
 
