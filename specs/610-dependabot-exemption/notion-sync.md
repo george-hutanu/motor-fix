@@ -7,3 +7,6 @@
 - 2026-10-06 · pr · ST-610 · PR #150 https://github.com/george-hutanu/motor-fix/pull/150
 - 2026-10-06 · labels · PR #150 · planning
 - 2026-10-06 · labels · PR #150 · EP-1 added
+- 2026-10-06 · implement · ST-610 · Planning → Implementing
+- 2026-10-06 · implement · Foundations timeline row ST-610 · Planning → Implementing
+- 2026-10-06 · labels · PR #150 · planning → in development

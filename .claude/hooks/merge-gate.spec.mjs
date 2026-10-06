@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { DEADLINE_MS, deadlineMs, decideMerge, ghReader, mergeTarget, prefetchCarry } from './merge-gate.mjs';
+import { DEADLINE_MS, deadlineMs, decideMerge, ghReader, mergeTarget, prefetchCarry, readCommitters } from './merge-gate.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
 const run = (name, conclusion, status = 'COMPLETED', startedAt = '2026-10-05T07:00:00Z') => ({ __typename: 'CheckRun', name, status, conclusion, startedAt });
@@ -221,6 +221,32 @@ describe('merge gate — Dependabot PRs need no agent review', () => {
     const why = decideMerge(pr([run('Unit tests', 'FAILURE'), run('CI OK', 'FAILURE'), review('SUCCESS')]));
     assert.match(why, /fix it on the branch, and run the PR tester again/);
     assert.doesNotMatch(why, /@dependabot/);
+  });
+});
+
+describe('merge gate — reading a Dependabot PR\'s committers', () => {
+  const read = { number: 82, author: { login: 'app/dependabot' }, commits: [{ oid: 'aaa111', authors: [{ login: 'dependabot[bot]' }] }] };
+  const rows = '{"sha":"aaa111","login":"web-flow","verified":true}\n';
+
+  // @traces 610-FR-002
+  it('reads the REST committers for a PR Dependabot opened, and only for it', async () => {
+    const calls = [];
+    const gh = async (args) => (calls.push(args), { code: 0, stdout: rows, stderr: '' });
+    const pr = await readCommitters(read, gh);
+    assert.deepEqual(pr.commits[0].committer, { login: 'web-flow' });
+    assert.equal(pr.commits[0].verified, true);
+    assert.match(calls[0].join(' '), /pulls\/82\/commits/);
+    const human = { ...read, author: { login: 'george-hutanu' } };
+    assert.equal(await readCommitters(human, gh), human);
+    assert.equal(calls.length, 1, 'no extra GitHub call for anyone else\'s PR');
+  });
+
+  // @traces 610-FR-002
+  it('leaves the committers out when the read fails or cannot be parsed, so the PR is not exempt', async () => {
+    const failed = await readCommitters(read, async () => ({ code: 1, stdout: '', stderr: 'HTTP 502' }));
+    assert.equal(failed.commits[0].committer, undefined);
+    const garbled = await readCommitters(read, async () => ({ code: 0, stdout: 'not json', stderr: '' }));
+    assert.equal(garbled.commits[0].committer, undefined);
   });
 });
 

@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { allGreen, attachCommitters, committerArgs, decide, featureDir, handedOff, hasAgentReview, isDependabot, parseCommitters, prLinked, typeLabel } from './pr-lifecycle-gate.mjs';
+import { allGreen, attachCommitters, committerArgs, decide, withCommitters, featureDir, handedOff, hasAgentReview, isDependabot, parseCommitters, prLinked, typeLabel } from './pr-lifecycle-gate.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
 const green = [{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }, review('SUCCESS')];
@@ -383,6 +383,19 @@ describe('PR lifecycle gate — Dependabot PRs need no agent review', () => {
   it('asks for the tester, not the merge, on a green Dependabot PR someone else committed to', () => {
     const why = decide(task({ pr: bot({ commits: [botCommit({ committer: { login: 'george-hutanu' }, verified: false })] }) }));
     assert.match(why, /speckit-pr-test 6/);
+  });
+
+  // @traces 610-FR-002
+  it('reads the committers through gh for a Dependabot PR only, and keeps none when the read throws', () => {
+    const read = { number: 6, author: { login: 'app/dependabot' }, commits: [{ oid: 'aaa111', authors: [{ login: 'dependabot[bot]' }] }] };
+    let calls = 0;
+    const gh = () => (calls++, '{"sha":"aaa111","login":"web-flow","verified":true}\n');
+    assert.equal(isDependabot(withCommitters(read, gh)), true);
+    const human = { ...read, author: { login: 'george-hutanu' } };
+    assert.equal(withCommitters(human, gh), human);
+    assert.equal(calls, 1);
+    const failed = withCommitters(read, () => { throw new Error('gh: HTTP 502'); });
+    assert.equal(isDependabot(failed), false);
   });
 
   it('asks for the merge, not the tester, on a green Dependabot PR', () => {
