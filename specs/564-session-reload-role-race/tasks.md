@@ -4,7 +4,7 @@
 
 ## Phase 1: Tests first
 
-- [X] T001 [US1] Test: `apps/web/src/app/dashboard/session.reload.spec.ts` — a reload sent with the driver token is in flight, `switchRole` to mechanic completes (token swapped, mechanic account loaded), then the reload answers with the driver account; the account on screen stays the mechanic's (FR-001, SC-001)
+- [X] T001 [US1] Test: `apps/web/src/app/dashboard/session.reload.spec.ts` — a reload sent with the driver token is in flight, `switchRole` to garage completes (token swapped, garage account loaded), then the reload answers with the driver account; the account on screen stays the garage's (FR-001, SC-001)
 - [X] T002 [US1] Test: `session.reload.spec.ts` — a reload in flight when a sign-in replaces the access token; the late answer is dropped and the sign-in's account stays (FR-001)
 
 - [X] T005 [US1] Test: `session.reload.spec.ts` — a reload in flight while `renew()` replaces the token for the same session keeps its answer (FR-001; code review, repair lap 1)
