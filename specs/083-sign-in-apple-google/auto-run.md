@@ -35,3 +35,7 @@
 - Domain: `oauth/providers.spec.ts`, `oauth/openid.spec.ts`, `oauth/oauth.api.integration.spec.ts` against an in-process stub issuer (`oauth/openid-stub.testing.ts`); never the real providers.
 - Web: `sign-in/providers.spec.ts`, `sign-in/provider-sign-up.spec.ts`, `sign-in/sign-in.returned.spec.ts`, `sign-in/sign-in-dialog.returned.spec.ts`, `public/sign-in-return.spec.ts`, `dashboard/session.providers.spec.ts`; e2e `sign-in-providers.spec.ts` (`@openid`).
 - Red: 8 of 8 unit suites failed, 12 of 12 tests (modules missing); the integration suite needs the same modules.
+
+## 10. Implement
+- T001–T010 committed in 4425ea6 (auth) and 1efe3c3 (web) by the first run, which then died on a usage limit during T011.
+- Resumed run: T011 (stand-in OpenID issuer `apps/web-e2e/openid.mjs`, `web-e2e:openid`, Playwright web server, CI E2E env pointing `GOOGLE_ISSUER` at it) committed as found, after Biome; the stray reformat of `project.json` dropped.

@@ -151,6 +151,11 @@ jobs:
       EMAIL_FROM: 'MotorFix <noreply@example.test>'
       BREVO_API_KEY: e2e-mailbox-key
       BREVO_API_URL: http://127.0.0.1:3025/v3
+      # Sign-in with Google goes to the stand-in issuer (apps/web-e2e/openid.mjs,
+      # web-e2e:openid), never the real Google; these are not real keys.
+      GOOGLE_CLIENT_ID: e2e-client
+      GOOGLE_CLIENT_SECRET: e2e-only-not-a-secret
+      GOOGLE_ISSUER: http://127.0.0.1:3026
       # The e2e suite does not upload files; the api only needs the settings.
       STORAGE_ENDPOINT: http://localhost:9000
       STORAGE_REGION: eu-central-1

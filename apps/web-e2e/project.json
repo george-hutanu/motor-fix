@@ -10,6 +10,10 @@
       "command": "node apps/web-e2e/mailbox.mjs",
       "continuous": true
     },
+    "openid": {
+      "command": "node apps/web-e2e/openid.mjs",
+      "continuous": true
+    },
     "typecheck": {
       "cache": true,
       "command": "tsc --noEmit -p apps/web-e2e/tsconfig.json"
