@@ -46,7 +46,7 @@ A person opens a task and closes it with the X, Escape, a click outside, the pho
 1. **Given** page B reached from page A and a task open on B, **When** the task is closed by X, Escape, outside click, the sheet's drag (158-FR-004) or Discard, **Then** one Back press leaves B for A.
 2. **Given** a task open on B, **When** the task closes itself with a result, **Then** the opener receives that result only once the task's history entry is gone, so an opener that navigates on the result (sign-in going to the account page) lands there and a Back from there returns to B, not to a dead entry.
 3. **Given** two stacked tasks, **When** both are closed by X, **Then** one Back press leaves B for A.
-4. **Given** a task open on B, **When** the page navigates elsewhere while the task is open (a link in the page, a sign-in redirect, a route change by the app), **Then** the task closes as today, with `cancelled`, and the close does not move the history again: the person stays on the page they navigated to.
+4. **Given** a task open on B, **When** the app navigates elsewhere while the task is open and the task is closed afterwards (the bell's list closing after a sign-out navigated to `/`), **Then** that close does not move the history: the person stays on the page the app navigated to.
 
 ---
 
@@ -73,21 +73,33 @@ A person has typed in a field inside the task and presses Back. Instead of losin
 - A task opened while the page itself is still loading or during an in-progress navigation: the entry is added when the task actually opens; if the page then navigates, Story 2 scenario 4 applies.
 - A task opened and closed many times on one page: the history grows by nothing; each close removes the entry its open added.
 - The person presses Back on the discard question of a stacked task: only the top task is concerned; the one under it is untouched.
-- A task that closes itself with a result while the browser is still processing a Back (the question's Discard pressed as the person also presses Back): the task closes once, with one result, and at most one entry is removed.
+- A task that closes itself with a result while the browser is still processing a Back: the task closes once, with one result; what is checked is the invariant of SC-002 (afterwards one Back leaves the page), not the interleaving, which no test can drive deterministically.
+- A page reloaded (or left for an external page and returned to) while a task was open: the task is gone and its entry stays behind at the same address, so one Back press does nothing visible. Accepted (see Assumptions).
+- A task opened through a route of its own (ST-22's `?review=:jobId`, *(proposed)*, not built): out of scope; that story decides whether its route's entry stands in for this one.
 - Server rendering: the service runs where there is no browser history; it opens the task as today and adds or removes nothing.
 - The catalogue's sample tasks (157-FR-015) follow the same rules; no new catalogue control is added.
+
+## Clarifications
+
+### Session 2026-10-07
+
+- Q: FR-007 said the task "closes as today" when the app navigates; today only a popstate closes it (the CDK's `closeOnNavigation`, which also closes every open task at once). Keep, add or drop close-on-app-navigation? → A: Drop it: FR-007 keeps only "a close while the entry is not current moves nothing"; the service handles the step back itself instead of the CDK, so stacking holds. (spec-challenger 1, recommended; Constitution I)
+- Q: How does the service know an entry is its own, and is "the router ignores it" a requirement? → A: A marker in the entry's history state, checked on each step back and before the service steps back itself; the router performing no navigation is part of FR-001 and is tested. (spec-challenger 2, recommended)
+- Q: After Forward onto a closed task's entry, leave a dead entry or step back at once? → A: Leave it. Stepping back automatically onto any marked entry with no open task would also fire when a Back from a page the app navigated to (FR-007) lands on a stale entry, and would skip the person's page: FR-007's "never navigated away by a close" wins over one dead press after a Forward. (spec-challenger 3; recommendation not taken, FR-007 evidence)
+- Q: The race edge case ("at most one entry is removed") cannot be tested — what is asserted? → A: The invariant only: after any sequence, one Back from the page reaches the previous page (SC-002). (spec-challenger 5, recommended)
+- Q: FR-005 "only after the entry has been removed" — wait for the browser, with what fallback? → A: Wait for the step back whose state no longer carries the task's marker; a close that removes nothing hands the result at once; no timer. (spec-challenger 6, recommended)
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: Opening a task MUST add exactly one entry to the browser's history at the page's current address, without changing the address, without the app navigating, and without the page re-rendering, losing its scroll or its state. (Modifies 157-FR-001: the service still opens a task without changing the page address, but now with one same-address history entry per open task.)
+- **FR-001**: Opening a task MUST add exactly one entry to the browser's history at the page's current address, marked in the entry's history state as that task's own, without changing the address, without the app's router navigating (no navigation start, on the open nor on the entry's removal) and without the page re-rendering, losing its scroll or its state. (Modifies 157-FR-001: the service still opens a task without changing the page address, but now with one same-address history entry per open task.)
 - **FR-002**: While a task is open, a press of the browser's Back button (or the equivalent back gesture) MUST close only the top open task and MUST hand its opener `cancelled`; the page MUST stay shown at the same address, with its scroll position and focus returned as for an X close (157-FR-004, 157-FR-008). With stacked tasks, each Back closes one task, top first. (Modifies 157-FR-005 and 157-FR-011: Back joins X, Escape and outside click as a close that hands `cancelled` and closes only the top task.)
 - **FR-003**: A Back press on a task whose field has changed MUST behave as an X press does under 157-FR-010: the discard question shows instead of a close, the task keeps its history entry so that a further Back shows the question again, "Keep editing" (or Escape) returns to the task, and "Discard" closes it with `cancelled`. A task that 157-FR-010 exempts from the question closes at once.
 - **FR-004**: Every close that is not a Back press (X, Escape, outside click, the sheet's drag release of 158-FR-004, "Discard", the task closing itself with a result, the service closing it) MUST remove the entry FR-001 added, so that afterwards a single Back press leaves the page as it would have before the task was opened. After any sequence of opens and closes on one page, the history MUST hold no entry for a closed task.
-- **FR-005**: The opener MUST receive the task's result (or `cancelled`) only after the task's history entry has been removed, so that an opener that navigates on the result keeps that navigation and a Back from the new page returns to the page the task was opened from.
-- **FR-006**: A Forward press after a Back close MUST NOT reopen the task; the page stays shown as it is.
-- **FR-007**: When the page has navigated elsewhere while a task was open (so the task's entry is no longer the current one), the task MUST close with `cancelled` as today, and that close MUST NOT move the history: the person is never navigated away from the page they are on by a close.
+- **FR-005**: The opener MUST receive the task's result (or `cancelled`) only after the task's history entry has been removed (the browser has reported the step back), so that an opener that navigates on the result keeps that navigation and a Back from the new page returns to the page the task was opened from. A close that removes no entry (FR-007, FR-008) hands the result at once. No timer stands in for the browser's report.
+- **FR-006**: A Forward press after a Back close MUST NOT reopen the task; the page stays shown as it is, and nothing moves the history in answer to it.
+- **FR-007**: A close while the task's entry is no longer the current one (the app navigated or replaced the entry while the task was open) MUST NOT move the history: the person is never navigated away from the page they are on by a close. This feature adds no close on app navigation.
 - **FR-008**: Where the service runs without a browser (server rendering), nothing changes: it adds and removes no history entry and opens the task as today.
 
 Unchanged (not a requirement of this feature): everything else in the `overlays` capability — shapes and the phone sheet, the mask and scroll lock, focus, the modal exposure and names, the loader skeleton, motion, i18n, sizes, the form-saving helper and the catalogue. This feature adds no text, no option and no new control.
@@ -119,6 +131,8 @@ Each criterion is measured by the browser end-to-end suite (`apps/web-e2e`, besi
 - Back closes the top task only; with stacked tasks each Back closes one. The Notion finding says "one history entry per open task", which implies one Back per task. (autonomous default)
 - Forward after a Back close does not reopen the task: a task is a transient action, not a place, and reopening it with its state lost would surprise more than it helps. (autonomous default)
 - A close while the task's entry is no longer current (the page navigated while the task was open) removes nothing from the history: a close must never move the person off the page they are on; a stale same-address entry that may remain behind an app navigation is accepted over that risk. (autonomous default)
+- A reload (or an external redirect and return) with a task open leaves its entry behind, one dead Back press. Removing it on load would need a start-up hook in the app (the service is only built when first used) and an automatic step back at load: more surface than the rare case earns (Constitution I). (autonomous default; spec-challenger 4)
+- A task opened through a route of its own (ST-22's `?review=:jobId`, *(proposed)*, To do) is that story's call; this feature covers tasks opened through the service. (autonomous default; context.md, ST-22)
 - The discard question keeps the task's entry rather than re-adding it: the person sees the same outcome either way (a second Back asks again), and it is the smaller change (Constitution I). (autonomous default)
 - The opener receives the result only after the entry is removed (FR-005) so that openers that navigate on a result (sign-in) need no change of their own. (autonomous default)
 - Server rendering is out of the change: tasks open at the request of a person, in the browser; the service keeps working where there is no history. (autonomous default)
