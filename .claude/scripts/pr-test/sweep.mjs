@@ -111,6 +111,15 @@ export function toFindings(observations, { web, origins }) {
  * screenshot paths. `session(role)` signs a seeded account of that role in
  * and returns its refresh token, for routes marked `@role`.
  */
+// A signed-in screen holds its live stream open, so the network never idles:
+// the page must load, then gets a bounded wait for its first calls to settle.
+const SETTLE_MS = 5000;
+export async function openPage(page, url) {
+  const res = await page.goto(url, { waitUntil: "load", timeout: 30000 });
+  await page.waitForLoadState("networkidle", { timeout: SETTLE_MS }).catch(() => {});
+  return res;
+}
+
 export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRoot, session }) {
   const require = createRequire(join(repoRoot, "package.json"));
   const { chromium } = require("@playwright/test");
@@ -149,7 +158,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
       page.on("response", (r) => r.status() >= 400 && seen({ kind: "http", url: r.url(), status: r.status() }));
       try {
         await context.addCookies(await contextCookies(run, { session, baseURL }));
-        const res = await page.goto(new URL(run.path, baseURL).href, { waitUntil: "networkidle", timeout: 30000 });
+        const res = await openPage(page, new URL(run.path, baseURL).href);
         const problem = loadProblem(res?.status(), run.expect);
         if (problem) seen({ kind: "load", text: problem });
         await page.waitForTimeout(300);

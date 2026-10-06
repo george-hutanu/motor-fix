@@ -1,10 +1,11 @@
 ---
 capability: overlays
-updated: 2026-10-04
+updated: 2026-10-06
 features:
   - 157-dialog-drawer
   - 159-form-saving
   - 158-small-action-sheet
+  - 509-offline-on-worker-504
 ---
 
 # Capability: overlays
@@ -105,9 +106,9 @@ _From 159-form-saving._
 
 _From 159-form-saving._
 
-### 159-FR-008 — A failure with no server answer MUST show "Nu ești conectat. Încearcă din nou când revine conexiunea." / "You are offline. Try again when you are back online." when the browser reports itself offline, and the network message otherwise; an answer that is not a problem MUST take the code for its status from the shared table (400 `validation_failed`, 404 `not_found`, 409 `conflict`, 503 `service_unavailable`, other 5xx `internal_error`, else `error`), the same table the API's filter uses.
+### 509-FR-002 — A failure with no server answer (status 0), or a 504 with no problem body while the browser reports itself offline (509-FR-001), MUST show "Nu ești conectat. Încearcă din nou când revine conexiunea." / "You are offline. Try again when you are back online."; a failure with no server answer while the browser does not report itself offline MUST show the network message; any other answer that is not a problem MUST take the code for its status from the shared table (400 `validation_failed`, 404 `not_found`, 409 `conflict`, 503 `service_unavailable`, other 5xx `internal_error`, else `error`), the same table the API's filter uses. (Replaces 159-FR-008; the status-0 reading is unchanged.)
 
-_From 159-form-saving._
+_From 509-offline-on-worker-504._
 
 ### 159-FR-009 — Pressing the main button after a failure MUST send again, reusing the idempotency key when the serialised values equal the failed attempt's and using a new key otherwise; a successful save ends the key. A field still carrying a server error blocks the press until it changes, as any invalid field does.
 
@@ -165,7 +166,16 @@ _From 158-small-action-sheet._
 
 _From 158-small-action-sheet._
 
+### 509-FR-001 — A failed save answered with status 504 and no problem body (no string `code`, after the text-body parse the mapping already does) MUST read as code `offline`, status 504, while the browser reports itself offline (`navigator.onLine === false`, read once when the failure is mapped, as the status-0 rule already does).
+
+_From 509-offline-on-worker-504._
+
+### 509-FR-003 — A failed save answered with status 504 and no problem body while the browser does not report itself offline (online, or no `navigator`) MUST read as `internal_error`, status 504; a 504 answer that carries a problem body with a string `code` MUST keep that code, whether offline or not; and a failed save with any other status while offline MUST read as the code for its status, as today.
+
+_From 509-offline-on-worker-504._
+
 ## Retired
 
 - `157-FR-002` — superseded by `158-FR-010` (2026-10-04)
 - `157-FR-003` — superseded by `158-FR-011` (2026-10-04)
+- `159-FR-008` — superseded by `509-FR-002` (2026-10-06)
