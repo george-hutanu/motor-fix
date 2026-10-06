@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-07
 
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 
 **Input**: User description: "ST-491 Tech debt (ST-157): The browser's Back button while a task is open should close the task and keep the page — Notion https://app.notion.com/3ef607bff0d281368c38d78fcc7b10ff"
 
