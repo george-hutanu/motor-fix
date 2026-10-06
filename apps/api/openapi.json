@@ -843,6 +843,76 @@
         ]
       }
     },
+    "/api/v1/auth/phone-code": {
+      "post": {
+        "operationId": "PhoneSignInController_phoneCode",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhoneCodeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The same answer whether or not an account holds the number"
+          },
+          "429": {
+            "description": "too_many_attempts"
+          },
+          "502": {
+            "description": "whatsapp_failed"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/phone-sign-in": {
+      "post": {
+        "operationId": "PhoneSignInController_phoneSignIn",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhoneSignInDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhoneSessionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "code_invalid"
+          },
+          "410": {
+            "description": "code_expired"
+          },
+          "429": {
+            "description": "too_many_attempts"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/live": {
       "get": {
         "operationId": "LiveController_live",
@@ -1846,6 +1916,95 @@
           "token",
           "password"
         ]
+      },
+      "PhoneCodeDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "description": "As typed: spaces, dots, dashes and brackets dropped, 00 and a national 0 read as +40; must then be E.164",
+            "example": "0722 123 456",
+            "maxLength": 32,
+            "minLength": 1
+          },
+          "language": {
+            "type": "string",
+            "default": "ro",
+            "description": "The language of the WhatsApp message",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          }
+        },
+        "required": [
+          "phone"
+        ]
+      },
+      "PhoneSignInDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "description": "As typed: spaces, dots, dashes and brackets dropped, 00 and a national 0 read as +40; must then be E.164",
+            "example": "0722 123 456",
+            "maxLength": 32,
+            "minLength": 1
+          },
+          "code": {
+            "type": "string",
+            "description": "The six digits sent by WhatsApp",
+            "pattern": "^\\d{6}$"
+          },
+          "remember": {
+            "type": "boolean",
+            "default": true,
+            "description": "Keep the session after the browser closes"
+          },
+          "name": {
+            "type": "string",
+            "description": "Trimmed; with consent, creates an account for a new number",
+            "maxLength": 80,
+            "minLength": 2
+          },
+          "consent": {
+            "description": "The current terms and privacy versions; required with the name",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConsentDto"
+              }
+            ]
+          },
+          "language": {
+            "type": "string",
+            "default": "ro",
+            "description": "A new account's language",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          }
+        },
+        "required": [
+          "phone",
+          "code"
+        ]
+      },
+      "PhoneSessionDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Bearer token, valid 15 minutes; keep it in memory"
+          },
+          "next": {
+            "type": "string",
+            "description": "No account holds the number: send the name and consent",
+            "enum": [
+              "profile"
+            ]
+          }
+        }
       },
       "LiveTestDto": {
         "type": "object",

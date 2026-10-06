@@ -7,6 +7,8 @@ import {
   HealthModule,
   NotificationsModule,
   PasswordResetModule,
+  PhoneSignInModule,
+  phoneConfig,
   StorageModule,
 } from '@motor-fix/domain';
 import { DynamicModule, Module } from '@nestjs/common';
@@ -42,6 +44,10 @@ export class AppModule {
           notifications,
         ),
         PasswordResetModule.register({ webUrl: email.webUrl }, notifications),
+        PhoneSignInModule.register({
+          brevo: { apiKey: email.apiKey ?? '', apiUrl: email.apiUrl },
+          phone: phoneConfig(env.APP_ENV, process.env),
+        }),
         EventsModule.register({ redisUrl: env.REDIS_URL }),
       ],
       module: AppModule,

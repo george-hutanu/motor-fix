@@ -1,6 +1,6 @@
 # Contract: phone code, phone sign-in
 
-Both live under `/api/v1/auth`, are `@Public()` (listed in `apps/api/src/public-routes.integration.spec.ts`), take JSON only (`JsonOnly`: 415 otherwise, 400 on prototype keys), answer problem details (RFC 9457, `code`) on error and are described in `apps/api/openapi.json`, from which `libs/data-access` generates `AuthService.authControllerPhoneCode` and `authControllerPhoneSignIn`. The cookie is the one in `specs/082-sign-in/contracts/auth.md`.
+Both live under `/api/v1/auth`, are `@Public()` (listed in `apps/api/src/public-routes.integration.spec.ts`), take JSON only (`JsonOnly`: 415 otherwise, 400 on prototype keys), answer problem details (RFC 9457, `code`) on error and are described in `apps/api/openapi.json`, from which `libs/data-access` generates `AuthService.phoneSignInControllerPhoneCode` and `phoneSignInControllerPhoneSignIn`. The cookie is the one in `specs/082-sign-in/contracts/auth.md`.
 
 Phone numbers in both bodies are normalised with `normalisePhone` (`libs/contracts/src/phone.ts`): spaces, dots, dashes and parentheses dropped, `00` → `+`, a national `0…` → `+40…`; the result must be E.164 or the field fails validation.
 

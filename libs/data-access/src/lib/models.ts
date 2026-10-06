@@ -24,6 +24,9 @@ export type { NotificationPreferencesDto } from './models/notification-preferenc
 export type { PasswordResetCheckDto } from './models/password-reset-check-dto';
 export type { PasswordResetCompleteDto } from './models/password-reset-complete-dto';
 export type { PasswordResetDto } from './models/password-reset-dto';
+export type { PhoneCodeDto } from './models/phone-code-dto';
+export type { PhoneSessionDto } from './models/phone-session-dto';
+export type { PhoneSignInDto } from './models/phone-sign-in-dto';
 export type { RefreshDto } from './models/refresh-dto';
 export type { SendNewsDto } from './models/send-news-dto';
 export type { SessionDto } from './models/session-dto';

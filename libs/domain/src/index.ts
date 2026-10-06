@@ -4,6 +4,7 @@ export { CurrentActor, Public, Requires } from './auth/actor.guard';
 export { AuthModule } from './auth/auth.module';
 export { EmailConfirmationModule } from './auth/email-confirmation.module';
 export { PasswordResetModule } from './auth/password-reset.module';
+export { PhoneSignInModule } from './auth/phone-sign-in.module';
 export { type Actor, assertGarage, assertOwner } from './auth/policy';
 export { RemindersModule } from './cars/reminders.module';
 export { reminderDayMs } from './cars/reminders-config';

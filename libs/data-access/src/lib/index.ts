@@ -30,6 +30,9 @@ export type { NotificationPreferencesDto } from './models/notification-preferenc
 export type { PasswordResetCheckDto } from './models/password-reset-check-dto';
 export type { PasswordResetCompleteDto } from './models/password-reset-complete-dto';
 export type { PasswordResetDto } from './models/password-reset-dto';
+export type { PhoneCodeDto } from './models/phone-code-dto';
+export type { PhoneSessionDto } from './models/phone-session-dto';
+export type { PhoneSignInDto } from './models/phone-sign-in-dto';
 export type { RefreshDto } from './models/refresh-dto';
 export type { SendNewsDto } from './models/send-news-dto';
 export type { SessionDto } from './models/session-dto';
@@ -77,6 +80,10 @@ export type { PasswordResetControllerCheck$Params as PasswordResetControllerChec
 export { passwordResetControllerCheck as passwordResetControllerCheck } from './fn/auth/password-reset-controller-check';
 export type { PasswordResetControllerComplete$Params as PasswordResetControllerComplete$Params } from './fn/auth/password-reset-controller-complete';
 export { passwordResetControllerComplete as passwordResetControllerComplete } from './fn/auth/password-reset-controller-complete';
+export type { PhoneSignInControllerPhoneCode$Params as PhoneSignInControllerPhoneCode$Params } from './fn/auth/phone-sign-in-controller-phone-code';
+export { phoneSignInControllerPhoneCode as phoneSignInControllerPhoneCode } from './fn/auth/phone-sign-in-controller-phone-code';
+export type { PhoneSignInControllerPhoneSignIn$Params as PhoneSignInControllerPhoneSignIn$Params } from './fn/auth/phone-sign-in-controller-phone-sign-in';
+export { phoneSignInControllerPhoneSignIn as phoneSignInControllerPhoneSignIn } from './fn/auth/phone-sign-in-controller-phone-sign-in';
 export type { MeControllerMe$Params as MeControllerMe$Params } from './fn/me/me-controller-me';
 export { meControllerMe as meControllerMe } from './fn/me/me-controller-me';
 export type { MeControllerUpdate$Params as MeControllerUpdate$Params } from './fn/me/me-controller-update';
