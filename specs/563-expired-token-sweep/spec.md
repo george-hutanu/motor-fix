@@ -197,8 +197,12 @@ can be left out by omission.
 
 ## Spec Delta
 
-- **Adds**: the route sweep proves every gated route refuses an expired but
-  otherwise genuine access token with the same `sign_in_required` refusal as
-  a missing session.
-- **Modifies**: none.
-- **Removes**: none.
+### Capability: `accounts`
+
+- **Adds**: FR-001–FR-005
+- **Modifies**: none
+- **Removes**: none
+
+FR-001–FR-005 sit beside 130-FR-002's no-token sweep. FR-006 constrains this
+task (test-only) and describes no behaviour of the system, so it is not
+merged.

@@ -40,11 +40,19 @@ Checklist requirements.md: 0 unchecked before and after.
 
 ## 5. Plan
 
+Phase agent task-runner, model fable. `STATUS: success`: plan.md, research.md, quickstart.md; CLAUDE.local.md Active plan repointed (no growth). Commits 5d2a0f9, 4a5b7c8.
+
 ## 6. Checklist
+
+Phase agent task-runner, model sonnet. `STATUS: success`: checklists/sweep.md, 20 items, 0 unchecked; 2 spec fixes, CHK020 struck as out of scope. Commit 7531b83.
 
 ## 7. Tasks
 
+Phase agent task-runner, model sonnet. `STATUS: success`: tasks.md T001, T002 (US1). Commit bd01ea2.
+
 ## 8. Analyze
+
+Inline. artifact-lint: 0 errors, 1 WARN (delta-missing: Spec Delta had no `### Capability:` header or FR ids) → MEDIUM, fixed: Capability `accounts`, Adds FR-001–FR-005. Remaining WARN delta-unassigned FR-006 is intended (a test-only constraint, not system behaviour; noted under the delta). Coverage 5/5 behavioural FRs → T001/T002; FR-006, SC-003, SC-004 → tasks.md checkpoint. 0 CRITICAL, 0 HIGH; no re-run needed beyond the lint re-check. `capabilities.mjs validate` 0 errors.
 
 ## 9. Tests
 
