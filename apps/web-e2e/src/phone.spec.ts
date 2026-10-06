@@ -114,9 +114,17 @@ test.describe('the shared table', () => {
     await page.setViewportSize({ height: 812, width: 375 });
     await open(page, '/cockpit');
 
-    await expect(
-      page.getByRole('columnheader', { name: 'Service' }),
-    ).toBeHidden();
+    // The header row is clipped out of sight but stays in the accessibility
+    // tree, so each shown cell keeps its column name (461-FR-002).
+    const header = page.getByRole('columnheader', { name: 'Service' });
+    await expect(header).toHaveCount(1);
+    const headerRow = await page
+      .getByRole('rowgroup')
+      .filter({ has: header })
+      .boundingBox();
+    expect(headerRow).toBeTruthy();
+    expect(headerRow!.width).toBeLessThanOrEqual(1);
+    expect(headerRow!.height).toBeLessThanOrEqual(1);
     await expect(cells(page).filter({ hasText: 'Militari' })).toBeHidden();
     const name = await cells(page)
       .filter({ hasText: 'Atelier Dinamo' })
