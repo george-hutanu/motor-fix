@@ -46,9 +46,10 @@ which uses the same scan, so a pass started by it always has something to do.
    instead of a `rerun-qa` agent. A failed action is reported,
    never retried with force.
 
-3. Report the board in a few lines: counts (`stale`, `waiting`, `done`, `blocked`, live
-   `--local` QA runs; QA itself runs on GitHub Actions, capped at
-   `SPECKIT_QA_CAP`, by default its 20 concurrent jobs), then one line per row whose verdict is not `ok` — worktree, branch,
+3. Report the board in a few lines: counts (`stale`, `waiting`, `done`, `blocked`, QA
+   runs in flight: `--local` ones and the `pr-qa.yml` runs on GitHub Actions
+   not yet completed, capped at `SPECKIT_QA_CAP`, by default its 20 concurrent
+   jobs; a PR with an Actions run in flight is held, so it is never re-dispatched), then one line per row whose verdict is not `ok` — worktree, branch,
    phase, PR, fix, `reason`. Rows that are `ok` are summed, not listed.
    A `waiting` row is a handed-off ready PR whose recorded QA run (the
    note's `QA run:` line) tests its head while CI or that run is still

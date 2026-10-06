@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import {
   DEFAULT_THRESHOLDS,
   QA_CAP,
+  actionsQaRuns,
   applyFixes,
   collect,
   dispatchPlan,
@@ -1298,6 +1299,96 @@ describe('waitHolder', () => {
       assert.equal(waitHolder(f.repo, { commandOf: () => 'node .claude/scripts/watch.mjs --json' }), null);
       writeFileSync(record(f), 'garbage\n');
       assert.equal(waitHolder(f.repo, { commandOf: () => waitCommand }), null);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('QA runs on GitHub Actions', () => {
+  const run = (pr, status, id = pr * 10) => ({ databaseId: id, displayTitle: `PR QA #${pr} at ${'a'.repeat(40)} lap 1 n0nce`, status });
+
+  it('keeps the pr-qa runs not completed, with the PR from the run name', () => {
+    const runs = [run(21, 'in_progress'), run(22, 'queued'), run(23, 'completed'), run(24, 'waiting'), { databaseId: 9, displayTitle: 'Something else', status: 'queued' }];
+    assert.deepEqual(actionsQaRuns(runs), [
+      { pr: 21, run: 210, status: 'in_progress' },
+      { pr: 22, run: 220, status: 'queued' },
+      { pr: 24, run: 240, status: 'waiting' },
+    ]);
+    assert.deepEqual(actionsQaRuns(null), []);
+    assert.deepEqual(actionsQaRuns([null, 3, {}]), []);
+  });
+
+  const readyQuiet = (f) => {
+    const a = f.add('agent-a', '901-fixture-urls');
+    quietCommit(a, 120);
+    return { a, head: git(a, 'rev-parse', 'HEAD') };
+  };
+
+  it('holds a quiet ready PR whose QA run is in flight on Actions and keeps it out of the plan', () => {
+    const f = fixture();
+    try {
+      const { a, head } = readyQuiet(f);
+      const gh = () => [pr({ headRefOid: head })];
+      let report = collect(f.repo, env({ gh, actionsRuns: () => [run(21, 'queued')] }));
+      let r = report.rows.find((x) => x.path === a);
+      assert.equal(r.holder, 'live');
+      assert.equal(r.verdict, 'ok');
+      assert.deepEqual(report.plan, []);
+      assert.deepEqual(report.qaRuns, [{ pr: 21, run: 210, status: 'queued' }]);
+      report = collect(f.repo, env({ gh, actionsRuns: () => [run(21, 'completed')] }));
+      r = report.rows.find((x) => x.path === a);
+      assert.equal(r.fix, 'rerun-qa');
+      assert.deepEqual(report.qaRuns, []);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps a handed-off PR waiting while its recorded run is in flight on Actions', () => {
+    const f = fixture();
+    try {
+      const { a, head } = readyQuiet(f);
+      mkdirSync(join(a, 'specs', '901-fixture-urls'), { recursive: true });
+      writeFileSync(join(a, '.specify', 'feature.json'), JSON.stringify({ feature_directory: 'specs/901-fixture-urls' }));
+      writeFileSync(join(a, 'specs', '901-fixture-urls', 'handoff.md'), `- QA run: 210 · head ${head} · lap 1 · u\n`);
+      const r = collect(f.repo, env({ gh: () => [pr({ headRefOid: head, statusCheckRollup: [check(null, 'IN_PROGRESS')] })], runOf: () => ({ status: 'in_progress' }), actionsRuns: () => [run(21, 'in_progress')] })).rows.find((x) => x.path === a);
+      assert.equal(r.holder, 'none');
+      assert.equal(r.verdict, 'waiting');
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('counts Actions runs toward the QA cap and in the board header', () => {
+    const f = fixture();
+    try {
+      const { head } = readyQuiet(f);
+      const busy = [run(30, 'in_progress'), run(31, 'queued')];
+      const report = collect(f.repo, env({ gh: () => [pr({ headRefOid: head })], qaCap: 2, actionsRuns: () => busy }));
+      assert.equal(report.qaRuns.length, 2);
+      assert.deepEqual(report.plan, []);
+      const lines = [];
+      const log = console.log;
+      console.log = (s) => lines.push(s);
+      try {
+        main([], { cwd: f.repo, now: NOW, gh: () => [pr({ headRefOid: head })], alive: () => false, pidAlive: () => false, actionsRuns: () => busy });
+      } finally {
+        console.log = log;
+      }
+      assert.match(lines.join('\n'), /QA runs 2\//);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('counts no Actions runs when the run list cannot be read', () => {
+    const f = fixture();
+    try {
+      const { a, head } = readyQuiet(f);
+      const report = collect(f.repo, env({ gh: () => [pr({ headRefOid: head })], actionsRuns: () => { throw new Error('gh down'); } }));
+      assert.deepEqual(report.qaRuns, []);
+      assert.equal(report.rows.find((x) => x.path === a).fix, 'rerun-qa');
     } finally {
       rmSync(f.root, { recursive: true, force: true });
     }

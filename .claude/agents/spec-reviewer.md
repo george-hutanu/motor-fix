@@ -52,7 +52,7 @@ range (or "working tree"). Gather your own evidence:
      front-end dependency that needs a paid licence or a licence key.
    - **IV. One Repository, One Toolchain**: a new app beyond web, api, worker
      and mcp without an amendment; a stray per-project lint, format or test
-     config (eslint, prettier, a second biome.json) instead of a root override.
+     config (eslint, prettier, a second Biome config) instead of a root override.
    - **V. Rules Live in One Place**: a request or response type written by hand
      on the client instead of generated from the API's OpenAPI document; a rule
      the screen, the worker and the MCP server do not all reach through the

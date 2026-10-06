@@ -38,4 +38,27 @@ describe('helm table columns', () => {
     expect(columns('th')).toEqual(['main', null, 'key']);
     expect(columns('td')).toEqual(['main', null, 'key']);
   });
+
+  // @traces 461-FR-001
+  // The phone stylesheet turns the table, body and rows into block and flex
+  // boxes; explicit roles keep them a table for WebKit's accessibility tree.
+  it('gives every table element its explicit role', async () => {
+    const fixture = TestBed.createComponent(Host);
+    await fixture.whenStable();
+    const role = (selector: string) =>
+      [...fixture.nativeElement.querySelectorAll(selector)].map((el) =>
+        (el as HTMLElement).getAttribute('role'),
+      );
+
+    expect(role('table')).toEqual(['table']);
+    expect(role('thead')).toEqual(['rowgroup']);
+    expect(role('tbody')).toEqual(['rowgroup']);
+    expect(role('tr')).toEqual(['row', 'row']);
+    expect(role('th')).toEqual([
+      'columnheader',
+      'columnheader',
+      'columnheader',
+    ]);
+    expect(role('td')).toEqual(['cell', 'cell', 'cell']);
+  });
 });

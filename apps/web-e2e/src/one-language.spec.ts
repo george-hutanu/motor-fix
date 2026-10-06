@@ -132,6 +132,17 @@ for (const screen of screens) {
             (el) =>
               el.getClientRects().length > 0 &&
               getComputedStyle(el).visibility !== 'hidden' &&
+              // Text kept for screen readers only, clipped to 1 px, is never seen.
+              !(function readOnly(node: Element | null): boolean {
+                if (!node) return false;
+                const box = node.getBoundingClientRect();
+                return (
+                  (box.width <= 1 &&
+                    box.height <= 1 &&
+                    getComputedStyle(node).overflow === 'hidden') ||
+                  readOnly(node.parentElement)
+                );
+              })(el) &&
               [...el.childNodes].some(
                 (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim(),
               ),
