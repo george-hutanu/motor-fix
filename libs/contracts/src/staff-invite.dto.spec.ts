@@ -11,6 +11,7 @@ const problems = (dto: object) =>
 const invite = (body: Record<string, unknown>) =>
   plainToInstance(StaffInviteDto, body);
 
+// @traces 131-FR-001 131-FR-014
 describe('StaffInviteDto', () => {
   it('trims the name and the e-mail and leaves the permissions off', () => {
     const dto = invite({

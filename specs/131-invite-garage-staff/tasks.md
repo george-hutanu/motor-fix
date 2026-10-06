@@ -54,7 +54,7 @@
 
 ## Phase 7: Cross-cutting
 
-- [ ] T022 Run `npm run typecheck`, `npm run lint`, the affected unit and integration suites, `node .claude/scripts/trace-matrix.mjs` and `npx nx run api:openapi` drift check; fix what is red (FR-014; SC-007)
+- [X] T022 Run `npm run typecheck`, `npm run lint`, the affected unit and integration suites, `node .claude/scripts/trace-matrix.mjs` and `npx nx run api:openapi` drift check; fix what is red (FR-014; SC-007)
 
 ## Dependencies
 

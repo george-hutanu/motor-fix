@@ -113,6 +113,7 @@ afterEach(() => {
 });
 
 describe('the invite dialog', () => {
+  // @traces 131-FR-011
   it('asks for a name, an e-mail and a kind, mechanic chosen, with three unticked permissions', async () => {
     await open();
 
@@ -138,6 +139,7 @@ describe('the invite dialog', () => {
     for (const label of TICKS) expect(has(label)).toBe(true);
   });
 
+  // @traces 131-FR-011
   it('shows the field problems and sends nothing until they are fixed', async () => {
     await open();
     type(field('Nume'), 'E');
@@ -151,6 +153,7 @@ describe('the invite dialog', () => {
     expect(field('Nume').getAttribute('aria-invalid')).toBe('true');
   });
 
+  // @traces 131-FR-011 131-FR-014
   it('sends a mechanic invite with the trimmed values and the ticks chosen', async () => {
     await open();
     await fill('  Elena Stan ', ' elena@example.ro ');
@@ -196,6 +199,7 @@ describe('the invite dialog', () => {
     });
   });
 
+  // @traces 131-FR-011
   it('offers the link to copy when the e-mail could not be sent', async () => {
     const writeText = jest.fn(async () => undefined);
     Object.defineProperty(navigator, 'clipboard', {
@@ -261,6 +265,7 @@ describe('the invite dialog', () => {
     expect(button('Trimite din nou')).toBeUndefined();
   });
 
+  // @traces 131-FR-013
   it('shows a typed name as text, never as markup', async () => {
     await open();
     send.mockResolvedValueOnce({
@@ -276,6 +281,7 @@ describe('the invite dialog', () => {
     expect(panel().querySelector('b')).toBeNull();
   });
 
+  // @traces 131-FR-013
   it('reads English', async () => {
     await open('en');
 

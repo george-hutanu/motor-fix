@@ -89,6 +89,7 @@ describe('the frame\'s "Invită în echipă"', () => {
     });
   });
 
+  // @traces 131-FR-011
   it('is not offered to a receptionist or a mechanic', async () => {
     const receptionist = await render('receptionist', [
       'garage.requests',

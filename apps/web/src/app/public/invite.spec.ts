@@ -111,6 +111,7 @@ const INVALID = 'Invitația nu mai este valabilă. Cere service‑ului una nouă
 afterEach(() => jest.restoreAllMocks());
 
 describe('the invite link page', () => {
+  // @traces 131-FR-012
   it('checks the link and says who invites whom, as what', async () => {
     const { check, fixture } = setup();
     await flush(fixture);
@@ -145,6 +146,7 @@ describe('the invite link page', () => {
     expect(accept(fixture)).toBeUndefined();
   });
 
+  // @traces 131-FR-012
   it('accepts for a signed-in person only on "Acceptă", then opens the garage dashboard in the invited role', async () => {
     const { acceptInvite, fixture, join, navigate, switchRole } = setup({
       signedIn: DRIVER,
@@ -161,6 +163,7 @@ describe('the invite link page', () => {
     expect(navigate).toHaveBeenCalledWith('/app/garage');
   });
 
+  // @traces 131-FR-012
   it('accepts at once once a signed-out invitee creates the account from the link', async () => {
     const { acceptInvite, fixture, join, navigate } = setup({
       joined: 'signed-up',
@@ -218,6 +221,7 @@ describe('the invite link page', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  // @traces 131-FR-013
   it('shows a typed garage name as text, never as markup', async () => {
     const { fixture } = setup({
       answer: view('mechanic', '<b>Dinamo</b>'),
@@ -228,6 +232,7 @@ describe('the invite link page', () => {
     expect(text(fixture)).toContain('<b>Dinamo</b>');
   });
 
+  // @traces 131-FR-013
   it('reads English', async () => {
     const { fixture } = setup();
     await TestBed.inject(I18n).use('en');

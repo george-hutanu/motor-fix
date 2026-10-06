@@ -31,6 +31,7 @@ describe('staff templates', () => {
     expect(mail.text).toContain(link);
   });
 
+  // @traces 131-FR-004 131-FR-013
   it('invites a receptionist in English', () => {
     const mail = render('STAFF_INVITE.receptionist', 'email', 'en', {
       app,
@@ -42,6 +43,7 @@ describe('staff templates', () => {
     expect(mail.text).toContain(link);
   });
 
+  // @traces 131-FR-013
   it('never shows a typed garage name back as markup', () => {
     const mail = render('STAFF_INVITE.mechanic', 'email', 'en', {
       app,
@@ -53,6 +55,7 @@ describe('staff templates', () => {
     expect(mail.html).toContain('&lt;b&gt;Dinamo&lt;/b&gt;');
   });
 
+  // @traces 131-FR-009
   it('tells the owner who joined, in the bell and the e-mail', () => {
     const params = { app, garage: 'Atelier Dinamo', name: 'Elena Stan' };
 

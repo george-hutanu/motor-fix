@@ -164,6 +164,7 @@ async function features(garageId: string, enabled: boolean) {
 }
 
 describe('sending an invite', () => {
+  // @traces 131-FR-001 131-FR-004
   it('stores the invite and e-mails the link in the owner language', async () => {
     const { dinamo, mihai } = await world();
 
@@ -198,6 +199,7 @@ describe('sending an invite', () => {
     expect(row.tokenHash).not.toContain(tokenOf().token);
   });
 
+  // @traces 131-FR-001
   it('stores a receptionist invite with every permission off', async () => {
     const { dinamo, mihai } = await world();
 
@@ -215,6 +217,7 @@ describe('sending an invite', () => {
     expect(row.canMoveBookings).toBe(false);
   });
 
+  // @traces 131-FR-010
   it('audits the send without the address and records invite.sent', async () => {
     const { dinamo, mihai } = await world();
 
@@ -242,6 +245,7 @@ describe('sending an invite', () => {
     });
   });
 
+  // @traces 131-FR-004
   it('keeps the invite and answers the link when the e-mail is refused', async () => {
     const { dinamo, mihai } = await world();
     brevo.answer({ body: { code: 'invalid_parameter' }, status: 400 });
@@ -273,6 +277,7 @@ describe('sending an invite', () => {
     expect(await prisma.staffInvite.count()).toBe(0);
   });
 
+  // @traces 131-FR-002
   it("answers 404 to another garage's owner and to a driver", async () => {
     const { dinamo, radu } = await world();
     const driver = await account('dan', ['driver']);
@@ -290,6 +295,7 @@ describe('sending an invite', () => {
     expect(res.status).toBe(401);
   });
 
+  // @traces 131-FR-003
   it('refuses a second open invite to the same address with its id', async () => {
     const { dinamo, mihai } = await world();
     const first = await send(dinamo.id, bearer(mihai, 'garage'));
@@ -317,6 +323,7 @@ describe('sending an invite', () => {
     expect(res.status).toBe(201);
   });
 
+  // @traces 131-FR-003
   it('refuses a person who already holds that kind at the garage, and the owner himself', async () => {
     const { dinamo, mihai } = await world();
 
@@ -353,6 +360,7 @@ describe('sending an invite', () => {
     expect(res.status).toBe(201);
   });
 
+  // @traces 131-FR-014
   it('answers 400 to a body that breaks the rules', async () => {
     const { dinamo, mihai } = await world();
 
@@ -376,6 +384,7 @@ describe('opening and accepting a link', () => {
     return { ...w, id: res.body.id as string, token: tokenOf().token };
   }
 
+  // @traces 131-FR-006
   it('names the garage, the kind and the invitee without a session', async () => {
     const { token } = await invited();
 
@@ -390,6 +399,7 @@ describe('opening and accepting a link', () => {
     });
   });
 
+  // @traces 131-FR-006
   it('answers the same for an unknown, a malformed and a revoked link', async () => {
     const { dinamo, id, mihai, token } = await invited();
     await revoke(dinamo.id, id, bearer(mihai, 'garage'));
@@ -404,6 +414,7 @@ describe('opening and accepting a link', () => {
     }
   });
 
+  // @traces 131-FR-006 131-FR-007
   it('answers invite_expired after 7 days', async () => {
     const { token } = await invited();
     invites.now = () => new Date(Date.now() + 7 * DAY + 1000);
@@ -423,6 +434,7 @@ describe('opening and accepting a link', () => {
     expect((await accept(token)).status).toBe(401);
   });
 
+  // @traces 131-FR-007 131-FR-009 131-FR-010
   it('makes a driver a mechanic of the garage, keeping the driver role', async () => {
     const { dinamo, id, mihai, token } = await invited();
     const ana = await account('ana', ['driver']);
@@ -489,6 +501,7 @@ describe('opening and accepting a link', () => {
     expect(roles.map((r) => r.role)).toEqual(['driver']);
   });
 
+  // @traces 131-FR-007
   it('makes a receptionist a member of the garage, with no mechanic row', async () => {
     const { dinamo, token } = await invited('receptionist');
     const ana = await account('ana', ['driver']);
@@ -503,6 +516,7 @@ describe('opening and accepting a link', () => {
     expect(await prisma.mechanic.count({ where: { accountId: ana } })).toBe(0);
   });
 
+  // @traces 131-FR-007 131-FR-009
   it('moves a mechanic of another garage at once, with the new permissions', async () => {
     const { dinamo, nord, sorin, sorinRow, token } = await invited();
 
@@ -525,6 +539,7 @@ describe('opening and accepting a link', () => {
     ]);
   });
 
+  // @traces 131-FR-007
   it('accepts once when one link is accepted twice at the same time', async () => {
     const { token } = await invited();
     const ana = await account('ana', ['driver']);
@@ -551,6 +566,7 @@ describe('opening and accepting a link', () => {
     expect(again.body.code).toBe('invite_invalid');
   });
 
+  // @traces 131-FR-008
   it("refuses the garage's own owner", async () => {
     const { id, mihai, token } = await invited();
 
@@ -564,6 +580,7 @@ describe('opening and accepting a link', () => {
     expect(invite.status).toBe('sent');
   });
 
+  // @traces 131-FR-008
   it("refuses another garage's receptionist a receptionist invite", async () => {
     const { nord, token } = await invited('receptionist');
     const tudor = await account('tudor', ['receptionist']);
@@ -577,6 +594,7 @@ describe('opening and accepting a link', () => {
     expect(res.body.code).toBe('invite_invalid');
   });
 
+  // @traces 131-FR-008
   it('completes with no other change for someone already in that role there', async () => {
     const { id, ioana, token } = await invited('receptionist');
 
@@ -597,6 +615,7 @@ describe('resending and revoking', () => {
     return { ...w, id: res.body.id as string, token: tokenOf().token };
   }
 
+  // @traces 131-FR-005
   it('sends a new link, voids the old one and restarts the 7 days', async () => {
     const { dinamo, id, mihai, token } = await sent();
     invites.now = () => new Date(Date.now() + 8 * DAY);
@@ -612,6 +631,7 @@ describe('resending and revoking', () => {
     expect(await audit('invite_resent')).toHaveLength(1);
   });
 
+  // @traces 131-FR-005 131-FR-010
   it('stops the link on revoke and records it', async () => {
     const { dinamo, id, mihai, token } = await sent();
 
@@ -624,6 +644,7 @@ describe('resending and revoking', () => {
     expect(event.subjectId).toBe(id);
   });
 
+  // @traces 131-FR-005
   it('answers 409 invite_invalid for a revoked or accepted invite', async () => {
     const { dinamo, id, mihai } = await sent();
     await revoke(dinamo.id, id, bearer(mihai, 'garage'));
@@ -636,6 +657,7 @@ describe('resending and revoking', () => {
     expect(resent.status).toBe(409);
   });
 
+  // @traces 131-FR-002
   it('answers 403 to the staff and 404 to another owner and to another garage id', async () => {
     const { dinamo, id, ioana, nord, radu } = await sent();
 
@@ -652,6 +674,7 @@ describe('resending and revoking', () => {
 });
 
 describe('a garage with its team switched off', () => {
+  // @traces 131-FR-003
   it('refuses a mechanic invite with feature_off and still sends a receptionist one', async () => {
     const { dinamo, mihai } = await world();
     await features(dinamo.id, false);
@@ -667,6 +690,7 @@ describe('a garage with its team switched off', () => {
     expect(receptionist.status).toBe(201);
   });
 
+  // @traces 131-FR-006 131-FR-008
   it('answers feature_off to opening and accepting a mechanic link sent before', async () => {
     const { dinamo, mihai } = await world();
     const sentRes = await send(dinamo.id, bearer(mihai, 'garage'));
