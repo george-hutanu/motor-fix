@@ -20,9 +20,9 @@ Depth: standard. Audience: PR reviewer. Focus: API contract and send-time rules,
 - [x] CHK006 Is the audit and transaction behaviour of a staff save stated? [Completeness, Spec §FR-007]
 - [x] CHK007 Are accessibility requirements for the switches stated (name, label)? [Gap, Spec §FR-012] (fixed: FR-012 now names a visible label and an accessible name)
 - [x] CHK008 Is the result of a rapid second toggle while a save is pending defined? [Gap, Edge Case] (fixed: plan Web §3 states that the last answer replaces the state)
-- [ ] ~~CHK009 Are requirements stated for a person who is both GarageMember and Mechanic of one garage? [Gap, Edge Case]~~ Struck: not in the brief; FR-001 already gives one entry per membership and per mechanic row, and Principle I forbids new scope.
-- [ ] ~~CHK010 Is a latency target stated for `GET`? [Gap, Non-Functional]~~ Struck: no target in the story or ST-197; the plan's Performance Goals bound the reads and nothing else is asked.
-- [ ] ~~CHK011 Are authentication requirements stated for the routes? [Gap, Security]~~ Struck: the app-wide `ActorGuard` (AGENTS.md) covers every route and ST-197 owns them; FR-008 covers authorization.
+- [x] ~~CHK009 Are requirements stated for a person who is both GarageMember and Mechanic of one garage? [Gap, Edge Case]~~ Struck: not in the brief; FR-001 already gives one entry per membership and per mechanic row, and Principle I forbids new scope.
+- [x] ~~CHK010 Is a latency target stated for `GET`? [Gap, Non-Functional]~~ Struck: no target in the story or ST-197; the plan's Performance Goals bound the reads and nothing else is asked.
+- [x] ~~CHK011 Are authentication requirements stated for the routes? [Gap, Security]~~ Struck: the app-wide `ActorGuard` (AGENTS.md) covers every route and ST-197 owns them; FR-008 covers authorization.
 
 ## Requirement Clarity
 
