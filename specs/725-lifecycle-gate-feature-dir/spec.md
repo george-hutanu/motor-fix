@@ -29,6 +29,7 @@ Notion: ST-725 https://app.notion.com/p/3f1607bff0d28185977bc201f6135d4a (Bug, M
 ### Edge Cases
 
 - A pointer to another feature wins over the branch (unchanged: `handedOff` already does this).
+- A pointer to a folder that is gone (or a value that is not a path) is passed over, never trusted: a stale pointer must not make the gate refuse a linked PR.
 - Two `specs/` folders with the same numeric prefix: the exact `specs/<branch>` wins; otherwise the first folder whose slug also matches the branch's, else none (never a guess between two).
 - A branch with no numeric prefix (`chore-*`): only the pointer and `specs/<branch>` are tried.
 - A folder with the same number but another slug (`specs/083-other`) is not this branch's feature.
@@ -37,7 +38,7 @@ Notion: ST-725 https://app.notion.com/p/3f1607bff0d28185977bc201f6135d4a (Bug, M
 
 ### Functional Requirements
 
-- **FR-001**: The gate MUST resolve a branch's feature folder in one place: `.specify/feature.json`'s `feature_directory`, then `specs/<branch>` when it exists, then the `specs/` folder whose numeric prefix equals the branch's, compared as numbers, and whose slug equals the branch's slug.
+- **FR-001**: The gate MUST resolve a branch's feature folder in one place: `.specify/feature.json`'s `feature_directory` when it is a path to a folder that exists, then `specs/<branch>` when it exists, then the `specs/` folder whose numeric prefix equals the branch's, compared as numbers, and whose slug equals the branch's slug.
 - **FR-002**: `prLinked` MUST read `notion-sync.md` from the resolved folder.
 - **FR-003**: `handedOff` MUST read `handoff.md` from the resolved folder.
 

@@ -152,14 +152,14 @@ function runBlocked(cwd) {
 
 /**
  * The branch's feature folder, relative to cwd: the `.specify/feature.json`
- * pointer, else `specs/<branch>` when it exists, else the `specs/` folder with
+ * pointer when its folder exists, else `specs/<branch>` when it exists, else the `specs/` folder with
  * the branch's number (leading zeros ignored) and slug, so branch `83-x`
  * finds `specs/083-x`. Nothing found: `specs/<branch>`.
  */
 export function featureDir(cwd, branch) {
   try {
     const pointer = JSON.parse(readFileSync(join(cwd, ".specify", "feature.json"), "utf8")).feature_directory;
-    if (pointer) return pointer;
+    if (typeof pointer === "string" && pointer && existsSync(join(cwd, pointer))) return pointer;
   } catch {
     // no pointer: the branch names the feature
   }
