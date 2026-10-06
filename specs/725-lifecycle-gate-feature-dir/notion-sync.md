@@ -7,3 +7,6 @@
 - 2026-10-06 · pr · ST-725 · PR #148 https://github.com/george-hutanu/motor-fix/pull/148
 - 2026-10-06 · labels · PR #148 · planning
 - 2026-10-06 · labels · PR #148 · EP-1 added
+- 2026-10-06 · implement · ST-725 · Planning → Implementing
+- 2026-10-06 · implement · Foundations timeline row ST-725 · Planning → Implementing
+- 2026-10-06 · labels · PR #148 · planning → in development

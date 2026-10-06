@@ -4,7 +4,7 @@
 // passed must have been tested by the PR tester (an `agent-review` success on
 // its head commit), and then merged, not left for the user. On a story branch
 // (`NNN-slug`) the open PR must also be linked from its Notion story, which
-// `speckit-notion-sync pr` records in specs/<branch>/notion-sync.md. A PR
+// `speckit-notion-sync pr` records in the feature's notion-sync.md. A PR
 // carries exactly one stage label, and one that fits its draft state:
 // `planning` until /speckit-implement, then `in development` while a draft,
 // `QA` from the moment it is marked ready (there is no `in review` stage: the
@@ -32,7 +32,7 @@
 // that cannot be reached. A gate that traps a session because GitHub is down
 // helps nobody. Blocks once per turn: `stop_hook_active` means it already did.
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
 
@@ -150,21 +150,45 @@ function runBlocked(cwd) {
   }
 }
 
-/** The story agent left a hand-off note for the tail agent (speckit-auto "Hand-off"). */
-export function handedOff(cwd, branch) {
-  let feature = `specs/${branch}`;
+/**
+ * The branch's feature folder, relative to cwd: the `.specify/feature.json`
+ * pointer, else `specs/<branch>` when it exists, else the `specs/` folder with
+ * the branch's number (leading zeros ignored) and slug, so branch `83-x`
+ * finds `specs/083-x`. Nothing found: `specs/<branch>`.
+ */
+export function featureDir(cwd, branch) {
   try {
-    feature = JSON.parse(readFileSync(join(cwd, ".specify", "feature.json"), "utf8")).feature_directory || feature;
+    const pointer = JSON.parse(readFileSync(join(cwd, ".specify", "feature.json"), "utf8")).feature_directory;
+    if (pointer) return pointer;
   } catch {
     // no pointer: the branch names the feature
   }
-  return existsSync(join(cwd, feature, "handoff.md"));
+  const exact = join("specs", branch);
+  if (existsSync(join(cwd, exact))) return exact;
+  const [, number, slug] = /^(\d+)-(.+)$/.exec(branch) ?? [];
+  if (number === undefined) return exact;
+  let names = [];
+  try {
+    names = readdirSync(join(cwd, "specs"));
+  } catch {
+    return exact;
+  }
+  const padded = names.find((name) => {
+    const [, n, s] = /^(\d+)-(.+)$/.exec(name) ?? [];
+    return n !== undefined && Number(n) === Number(number) && s === slug;
+  });
+  return padded ? join("specs", padded) : exact;
+}
+
+/** The story agent left a hand-off note for the tail agent (speckit-auto "Hand-off"). */
+export function handedOff(cwd, branch) {
+  return existsSync(join(cwd, featureDir(cwd, branch), "handoff.md"));
 }
 
 /** `speckit-notion-sync pr` logged this PR for the branch's story. */
-function prLinked(cwd, branch, number) {
+export function prLinked(cwd, branch, number) {
   try {
-    const log = readFileSync(join(cwd, "specs", branch, "notion-sync.md"), "utf8");
+    const log = readFileSync(join(cwd, featureDir(cwd, branch), "notion-sync.md"), "utf8");
     return new RegExp(`· pr · .*#${number}\\b`).test(log);
   } catch {
     return false;
