@@ -275,7 +275,13 @@ function ready(ctx, flags) {
     ].join("\n"),
   );
   ctx.did.push("handoff.md");
-  postHandoff(ctx, pr.number);
+  // Everything else is done: a failed post needs only the post again, not a rerun of ready.
+  try {
+    postHandoff(ctx, pr.number);
+  } catch (e) {
+    if (!(e instanceof Stop)) throw e;
+    throw new Stop(e.stopped, `the PR is ready and handoff.md written; post the note with ${SELF} handoff --pr ${pr.number} (${e.fix})`);
+  }
   return { pr: pr.number, head: head.slice(0, 7) };
 }
 

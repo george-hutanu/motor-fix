@@ -292,6 +292,17 @@ describe('handoff: the note survives a fresh VM as a marked PR comment', () => {
     assert.equal(posted, `${MARK}\n# Hand-off\n- QA run: 9 · head abc · lap 2 · url\n`);
   });
 
+  it('a ready whose comment fails keeps the note and names only the re-post as the fix', () => {
+    const h = harness({ answers: [['git diff --cached --quiet', { code: 0 }], ['gh pr comment', { code: 1, stderr: 'HTTP 502' }]] });
+    writeFileSync(join(repo, 'body.md'), '## Why\n\nfilled\n');
+    const result = step(['ready', '--body-file', join(repo, 'body.md')], h.io);
+    assert.equal(result.ok, false);
+    assert.ok(h.calls.includes('gh pr ready 141'));
+    assert.ok(existsSync(note()));
+    assert.match(result.fix, /lifecycle\.mjs handoff --pr 141/);
+    assert.match(result.fix, /HTTP 502/);
+  });
+
   it('finds the PR from the branch when --pr is not given', () => {
     writeFileSync(note(), '# Hand-off\n');
     const h = harness({ answers: [[`gh pr view ${BRANCH} --json number`, { stdout: '{"number":141}' }]] });

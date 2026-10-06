@@ -40,19 +40,20 @@ function setup({ node = '22', docker = false, nvm = false, n = true } = {}) {
   stub(bin, 'npm', `echo "npm $*" >> ${log}; mkdir -p node_modules; touch node_modules/.package-lock.json`);
   stub(bin, 'docker', `case "$1" in info) test -e ${state}/docker-up;; *) echo "docker $*" >> ${log};; esac`);
   stub(bin, 'service', `echo "service $*" >> ${log}; touch ${state}/docker-up`);
-  stub(bin, 'sudo', 'exec "$@"');
+  stub(bin, 'sudo', `echo "sudo $1" >> ${state}/sudo; [ "$1" = -n ] && shift; exec "$@"`);
   if (n) stub(bin, 'n', `echo "n $*" >> ${log}; echo "$1" > ${state}/node`);
   if (nvm) {
     mkdirSync(join(home, '.nvm'));
     writeFileSync(join(home, '.nvm', 'nvm.sh'), `nvm() { echo "nvm $*" >> ${log}; [ "$1" = install ] && echo "$2" > ${state}/node; return 0; }\n`);
   }
-  const run = () => spawnSync('/bin/bash', [join(repo, 'scripts', 'cloud-setup.sh')], {
+  const run = (extra = {}) => spawnSync('/bin/bash', [join(repo, 'scripts', 'cloud-setup.sh')], {
     cwd: root,
     encoding: 'utf8',
-    env: { PATH: `${bin}:/usr/bin:/bin`, HOME: home, CLAUDE_CODE_REMOTE: 'true' },
+    env: { PATH: `${bin}:/usr/bin:/bin`, HOME: home, CLAUDE_CODE_REMOTE: 'true', ...extra },
   });
+  const sudo = () => (existsSync(join(state, 'sudo')) ? readFileSync(join(state, 'sudo'), 'utf8').trim().split('\n') : []);
   const calls = () => readFileSync(log, 'utf8').trim().split('\n').filter(Boolean);
-  return { repo, run, calls };
+  return { repo, home, bin, run, calls, sudo };
 }
 
 // @traces 749-FR-005
@@ -71,6 +72,32 @@ describe('cloud-setup.sh', () => {
     assert.equal(out.status, 0, out.stderr + out.stdout);
     assert.deepEqual(calls().slice(0, 2), ['nvm install 24', 'nvm alias default 24']);
     assert.ok(!calls().some((c) => c.startsWith('n ')));
+  });
+
+  it('sources a real nvm.sh, which reads unset variables and runs failing commands, without tripping set -eu', () => {
+    const { run, calls, home } = setup({ nvm: true });
+    writeFileSync(join(home, '.nvm', 'nvm.sh'), `[ -n "$NVM_UNSET_PROBE" ] && :\nfalse\n` + readFileSync(join(home, '.nvm', 'nvm.sh'), 'utf8'));
+    const out = run();
+    assert.equal(out.status, 0, out.stderr + out.stdout);
+    assert.equal(calls()[0], 'nvm install 24');
+  });
+
+  it('never lets sudo ask for a password', () => {
+    const { run, sudo } = setup();
+    run();
+    assert.ok(sudo().length > 0);
+    assert.ok(sudo().every((l) => l === 'sudo -n'), sudo().join('\n'));
+  });
+
+  it('gives up on the Docker daemon after CLOUD_SETUP_DOCKER_WAIT seconds, naming it', () => {
+    const { run, bin } = setup({ node: '24' });
+    stub(bin, 'service', 'exit 1');
+    stub(bin, 'dockerd', 'exit 1');
+    const started = Date.now();
+    const out = run({ CLOUD_SETUP_DOCKER_WAIT: '1' });
+    assert.equal(out.status, 1);
+    assert.match(out.stderr, /Docker daemon did not start/);
+    assert.ok(Date.now() - started < 10_000);
   });
 
   it('a second run installs nothing it already has', () => {
