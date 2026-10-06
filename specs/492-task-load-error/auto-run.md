@@ -99,3 +99,12 @@ Hooks after specify: `notion-sync start` (ST-492 To do → Planning, EP-1 unchan
 ## 17. Archive
 
 - Spec Delta merged into `.specify/capabilities/overlays.md` (Adds 492-FR-001..010); spec status Archived (2026-10-07). No retro (phase 16: evidence only).
+
+## Final Report
+
+- Branch `492-task-load-error`, specs/492-task-load-error, 12fe0e0c..HEAD. Level 2: every phase ran (15 skipped, CLAUDE.local.md ratchet).
+- Autonomous answers: spec Assumptions (wording reuses `shell.form.problem.error`, unbounded retry, retry focus on a computer only), and the 5 clarifications from spec-challenger, all on its recommendation.
+- Verification: jest overlays + ui-cockpit sample-page + i18n `718 passed` (red first: `9 failed, 60 passed`); typecheck green; e2e overlays `17 passed`, and cockpit/sheet/phone/one-language/task-form `93 passed`.
+- FR → test: FR-001/002/008 'shows the error and a focused retry button…' and 'treats a loader that throws…' (overlays.spec); FR-003 the e2e Retry test and the QA flows at 320 px; FR-004 'tries again on Retry…'; FR-005 'shows the error again each time…'; FR-006 'closes from the error…' and 'ignores a retry that answers after…'; FR-007 'leaves the focus on the X…'; FR-009 sample-page.spec 'opens a task that fails to load…' and the e2e test; FR-010 i18n check plus the same tests.
+- Reviews: spec-reviewer APPROVE (2 LOW fixed), code-reviewer APPROVE (1 MEDIUM and 1 LOW fixed, 1 LOW deferred to deferred.md and filed by `ready`'s debt step).
+- Hand-off: PR #170 ready, ST-492 in QA, QA run 37539032944 on lap 1.
