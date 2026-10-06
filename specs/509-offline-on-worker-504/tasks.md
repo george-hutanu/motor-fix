@@ -6,13 +6,13 @@
 
 ## Phase 1: Tests first (red)
 
-- [ ] T001 [US1] Test: `libs/overlays/src/form.spec.ts`, `describe('toProblem')` — offline (`onLine` spy false), status 504, body `null`, `''`, `'<html></html>'`, `{ code: '' }` → `{ code: 'offline', status: 504 }` (`it.each`) (FR-001)
-- [ ] T002 [P] [US2] Test: `libs/overlays/src/form.spec.ts` — online, 504, no body → `internal_error`, status 504; offline, 504, `{ code: 'token_expired' }` → that code, status 504; offline, 500, no body → `internal_error`, status 500 (FR-003)
-- [ ] T003 [US2] `libs/overlays/src/form.adversary.spec.ts` — rename the 500-while-offline case's title (the status-zero wording the new rule makes false); its `expect` unchanged (SC-002)
+- [X] T001 [US1] Test: `libs/overlays/src/form.spec.ts`, `describe('toProblem')` — offline (`onLine` spy false), status 504, body `null`, `''`, `'<html></html>'`, `{ code: '' }` → `{ code: 'offline', status: 504 }` (`it.each`) (FR-001)
+- [X] T002 [P] [US2] Test: `libs/overlays/src/form.spec.ts` — online, 504, no body → `internal_error`, status 504; offline, 504, `{ code: 'token_expired' }` → that code, status 504; offline, 500, no body → `internal_error`, status 500 (FR-003)
+- [X] T003 [US2] `libs/overlays/src/form.adversary.spec.ts` — rename the 500-while-offline case's title (the status-zero wording the new rule makes false); its `expect` unchanged (SC-002)
 
 ## Phase 2: Implementation
 
-- [ ] T004 [US1] `libs/overlays/src/form.ts` `toProblem`: beside the status-0 rule, a 504 whose parsed body has no non-empty string `code` returns `{ code: 'offline', status }` while `globalThis.navigator?.onLine === false`; every other path falls through to `fromBody` unchanged; no new export (FR-001, FR-003, FR-004, SC-003)
+- [X] T004 [US1] `libs/overlays/src/form.ts` `toProblem`: beside the status-0 rule, a 504 whose parsed body has no non-empty string `code` returns `{ code: 'offline', status }` while `globalThis.navigator?.onLine === false`; every other path falls through to `fromBody` unchanged; no new export (FR-001, FR-003, FR-004, SC-003)
 
 ## Phase 3: Proof
 

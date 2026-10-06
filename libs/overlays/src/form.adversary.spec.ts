@@ -477,7 +477,7 @@ describe('toProblem with hostile input', () => {
     expect(toProblem(problem(500, { code: '' })).code).toBe('internal_error');
   });
 
-  it('prefers offline over network only when status is zero', () => {
+  it('keeps a 500 while offline as a server error', () => {
     const online = jest
       .spyOn(navigator, 'onLine', 'get')
       .mockReturnValue(false);

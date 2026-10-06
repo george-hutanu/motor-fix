@@ -214,12 +214,13 @@ export function toProblem(error: unknown): Problem {
   if (!(error instanceof HttpErrorResponse))
     return { code: 'error', status: 0 };
   const { status } = error;
-  if (status === 0)
-    return {
-      code: globalThis.navigator?.onLine === false ? 'offline' : 'network',
-      status,
-    };
-  return fromBody(parsed(error.error), status);
+  const offline = globalThis.navigator?.onLine === false;
+  if (status === 0) return { code: offline ? 'offline' : 'network', status };
+  const answer = parsed(error.error);
+  // The service worker answers a fetch it could not make with a bare 504.
+  if (status === 504 && offline && !codeOf(answer))
+    return { code: 'offline', status };
+  return fromBody(answer, status);
 }
 
 // A call that answers nothing on success reads its failure as text.
@@ -232,16 +233,22 @@ function parsed(answer: unknown): unknown {
   }
 }
 
+// A problem's code: a non-empty string, else none.
+function codeOf(answer: unknown): string | null {
+  const code = (answer as { code?: unknown } | null | undefined)?.code;
+  return typeof code === 'string' && code !== '' ? code : null;
+}
+
 function fromBody(answer: unknown, status: number): Problem {
   const body = (
     typeof answer === 'object' && answer !== null ? answer : {}
   ) as Record<string, unknown>;
-  if (typeof body['code'] !== 'string' || body['code'] === '')
-    return { code: codeForStatus(status), status };
+  const code = codeOf(body);
+  if (!code) return { code: codeForStatus(status), status };
   const errors = fieldProblems(body['errors']);
   const detail = typeof body['detail'] === 'string' ? body['detail'] : null;
   return {
-    code: body['code'],
+    code,
     status,
     ...(detail && { detail }),
     ...(errors && { errors }),
