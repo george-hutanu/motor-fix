@@ -24,7 +24,24 @@ serialDatabase(databaseUrl);
 const mock = new BrevoMock();
 const queue = new Queue('notifications', { connection: { url: redisUrl } });
 const publisher = new Redis(redisUrl);
-const fallback = jest.fn(async () => undefined);
+const pushConfig = {
+  privateKey: 'private',
+  publicKey: 'public',
+  subject: 'mailto:ops@example.test',
+};
+const pushFallbacks = () =>
+  prisma.notification.count({
+    where: { channel: 'push', fallbackOf: { not: null } },
+  });
+const withDevice = (accountId: string) =>
+  prisma.pushSubscription.create({
+    data: {
+      accountId,
+      auth: 'a',
+      endpoint: `https://push.example.test/${accountId}`,
+      p256dh: 'p',
+    },
+  });
 
 let service: NotificationsService;
 let processor: NotificationsProcessor;
@@ -39,7 +56,7 @@ function build(overrides: Record<string, string> = {}) {
     queue,
     publisher,
     config,
-    fallback,
+    pushConfig,
     new AuditService(),
   );
   service.now = at(DAY);
@@ -65,7 +82,6 @@ beforeEach(async () => {
   await reset();
   await queue.obliterate({ force: true });
   mock.reset();
-  fallback.mockClear();
   build();
 });
 
@@ -145,7 +161,7 @@ describe('sending one e-mail', () => {
     });
     await sendJob((await emailRows(ana))[0].id);
     expect(mock.emails()).toHaveLength(0);
-    expect(fallback).not.toHaveBeenCalled();
+    expect(await pushFallbacks()).toBe(0);
     const [row] = await emailRows(ana);
     expect([row.status, row.failure]).toEqual(['failed', 'template_failed']);
     expect(error).toHaveBeenCalledWith(
@@ -350,7 +366,7 @@ describe('switching sending off after a message was queued', () => {
       failure: 'sending_off',
       status: 'failed',
     });
-    expect(fallback).not.toHaveBeenCalled();
+    expect(await pushFallbacks()).toBe(0);
   });
 
   it('fails a queued row whose account no longer has an address', async () => {
@@ -402,19 +418,18 @@ describe('when Brevo fails', () => {
     mock.answer({ status: 503 });
     await expect(sendJob(row.id, 0)).rejects.toThrow();
     expect((await emailRows(andrei))[0].status).toBe('queued');
-    expect(fallback).not.toHaveBeenCalled();
+    expect(await pushFallbacks()).toBe(0);
   });
 
-  it('fails the row and calls the fallback after the last retry', async () => {
+  it('fails the row and falls back to push after the last retry', async () => {
     const andrei = await account('andrei');
+    await withDevice(andrei);
     const row = await quote(andrei, 'evt-1');
     mock.answer({ status: 503 });
     await sendJob(row.id, 5);
     const [failed] = await emailRows(andrei);
     expect(failed).toMatchObject({ failure: 'provider_503', status: 'failed' });
-    expect(fallback).toHaveBeenCalledWith(
-      expect.objectContaining({ id: row.id }),
-    );
+    expect(await pushFallbacks()).toBe(1);
     const bell = await prisma.notification.findFirst({
       where: { accountId: andrei, channel: 'in_app' },
     });
@@ -423,6 +438,7 @@ describe('when Brevo fails', () => {
 
   it('fails the row at once on a refusal that a retry cannot fix', async () => {
     const andrei = await account('andrei');
+    await withDevice(andrei);
     const row = await quote(andrei, 'evt-1');
     mock.answer({ status: 400 });
     await expect(sendJob(row.id, 0)).resolves.toBeUndefined();
@@ -430,7 +446,7 @@ describe('when Brevo fails', () => {
       failure: 'provider_400',
       status: 'failed',
     });
-    expect(fallback).toHaveBeenCalledTimes(1);
+    expect(await pushFallbacks()).toBe(1);
   });
 
   it('names the type and channel when it logs a retry', async () => {
@@ -530,8 +546,9 @@ describe('a grouping window', () => {
     );
   });
 
-  it('fails every held row and calls the fallback for each when the grouped e-mail fails for good', async () => {
+  it('fails every held row and falls back to push for each when the grouped e-mail fails for good', async () => {
     const andrei = await account('andrei');
+    await withDevice(andrei);
     const leader = await quote(andrei, 'evt-a');
     service.now = at('2026-10-05T11:01:00Z');
     await quote(andrei, 'evt-b');
@@ -544,7 +561,7 @@ describe('a grouping window', () => {
     });
     const rows = await emailRows(andrei);
     expect(rows.slice(1).map((r) => r.status)).toEqual(['failed', 'failed']);
-    expect(fallback).toHaveBeenCalledTimes(2);
+    expect(await pushFallbacks()).toBe(2);
   });
 });
 

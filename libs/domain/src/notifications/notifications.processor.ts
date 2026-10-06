@@ -1,6 +1,7 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 
 import { Brevo, BrevoError } from './brevo';
+import { notificationType } from './catalogue';
 import { blockedReason, type EmailConfig } from './email-config';
 import {
   NOTIFICATIONS_CONFIG,
@@ -13,6 +14,13 @@ import {
   type PhoneConfig,
   phoneBlockedReason,
 } from './phone-config';
+import {
+  PUSH_SENDER,
+  type PushResult,
+  type PushSender,
+  pushPayload,
+} from './push';
+import { MAX_DEVICES } from './push-subscriptions.service';
 import { giveSmsBack, smsMonth, takeSms } from './sms-counter';
 import { render, TemplateError, templateName } from './templates';
 import type {
@@ -46,6 +54,9 @@ export class NotificationsProcessor {
     private readonly brevo: Brevo,
     @Inject(NOTIFICATIONS_CONFIG) private readonly config: EmailConfig,
     @Inject(PHONE_CONFIG) private readonly phone: PhoneConfig,
+    @Optional()
+    @Inject(PUSH_SENDER)
+    private readonly pushSender: PushSender | null = null,
   ) {}
 
   async ready(): Promise<boolean> {
@@ -108,6 +119,7 @@ export class NotificationsProcessor {
       });
       if (!(await this.due(row))) return;
       if (row.channel === 'email') await this.sendEmail(row, attemptsMade);
+      else if (row.channel === 'push') await this.sendPush(row, attemptsMade);
       else await this.sendPhone(row, attemptsMade);
     } finally {
       await this.prisma.notification.updateMany({
@@ -238,6 +250,88 @@ export class NotificationsProcessor {
     await this.sent(rows, messageId);
   }
 
+  // One push row goes to every device the person saved. It is sent when any
+  // device took it; retried only when none did and a refusal may pass; a
+  // device the push service no longer knows is deleted.
+  private async sendPush(
+    row: Notification & { account: Account },
+    attemptsMade: number,
+  ) {
+    if (!this.pushSender) {
+      await this.service.fail([row], 'push_off', true);
+      return;
+    }
+    const devices = await this.prisma.pushSubscription.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: MAX_DEVICES,
+      where: { accountId: row.accountId },
+    });
+    if (devices.length === 0) {
+      await this.service.fail([row], 'no_device', true);
+      return;
+    }
+    const payload = await this.pushText(row);
+    if (payload === null) return;
+    const urgent = notificationType(row.kind).alwaysSent;
+    const sender = this.pushSender;
+    const results = await Promise.all(
+      devices.map((d) => sender.send(d, payload, urgent)),
+    );
+    const ids = (wanted: PushResult) =>
+      devices.filter((_, i) => results[i] === wanted).map((d) => d.id);
+    const gone = ids('gone');
+    if (gone.length > 0) {
+      await this.prisma.pushSubscription.deleteMany({
+        where: { id: { in: gone } },
+      });
+    }
+    const sent = ids('sent');
+    if (sent.length > 0) {
+      await this.prisma.pushSubscription.updateMany({
+        data: { lastSuccessAt: this.now() },
+        where: { id: { in: sent } },
+      });
+      await this.sent([row], null);
+      return;
+    }
+    if (results.includes('retry') && attemptsMade < RETRY_MINUTES.length) {
+      this.logger.warn(
+        `notification ${row.id} ${row.kind} push will be retried`,
+      );
+      throw new Error('push service unavailable');
+    }
+    await this.service.fail(
+      [row],
+      results.every((r) => r === 'gone')
+        ? 'no_device'
+        : results.includes('retry')
+          ? 'push_unavailable'
+          : 'push_refused',
+      true,
+    );
+  }
+
+  // The rendered push, or null when the row failed over to e-mail.
+  private async pushText(row: Notification & { account: Account }) {
+    const values = params(row);
+    try {
+      const text = render(
+        templateName(row.kind, values),
+        'push',
+        row.account.language,
+        { ...values, app: this.config.webUrl },
+      );
+      return pushPayload(text, `${this.config.webUrl}/icons/icon-192.png`);
+    } catch (error) {
+      if (!(error instanceof TemplateError)) throw error;
+      this.logger.error(
+        `notification ${row.id} ${row.kind} push not written: ${error.message}`,
+      );
+      await this.service.fail([row], 'template_failed', true);
+      return null;
+    }
+  }
+
   // A phone that is missing, unverified, switched off or not allowlisted
   // skips WhatsApp too: e-mail reaches the person instead.
   private async sendPhone(
@@ -364,12 +458,12 @@ export class NotificationsProcessor {
     await this.service.fail(rows, error.reason, true);
   }
 
-  private async sent(rows: Notification[], messageId: string) {
+  private async sent(rows: Notification[], messageId: string | null) {
     const ids = rows.map((r) => r.id);
     await this.prisma.$transaction([
       this.prisma.notification.updateMany({
         data: {
-          providerMessageId: messageId,
+          providerMessageId: messageId ?? undefined,
           sentAt: this.now(),
           status: 'sent',
         },

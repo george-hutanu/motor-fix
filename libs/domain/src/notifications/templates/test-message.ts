@@ -26,5 +26,17 @@ export const TEST_MESSAGE: Template = {
     },
   },
   example: {},
+  push: {
+    en: {
+      body: 'Notifications reach this device.',
+      link: 'app',
+      title: 'MotorFix test message',
+    },
+    ro: {
+      body: 'Notificările ajung pe acest dispozitiv.',
+      link: 'app',
+      title: 'Mesaj de test MotorFix',
+    },
+  },
   values: {},
 };

@@ -22,7 +22,6 @@ serialDatabase(databaseUrl);
 const mock = new BrevoMock();
 const queue = new Queue('notifications', { connection: { url: redisUrl } });
 const publisher = new Redis(redisUrl);
-const fallback = jest.fn(async () => undefined);
 
 let service: NotificationsService;
 let processor: NotificationsProcessor;
@@ -34,7 +33,7 @@ function build(overrides: Record<string, string> = {}) {
     queue,
     publisher,
     config,
-    fallback,
+    null,
     new AuditService(),
   );
   service.now = () => new Date('2026-10-05T11:00:00Z');
@@ -60,7 +59,6 @@ beforeEach(async () => {
   await reset();
   await queue.obliterate({ force: true });
   mock.reset();
-  fallback.mockClear();
   build();
 });
 

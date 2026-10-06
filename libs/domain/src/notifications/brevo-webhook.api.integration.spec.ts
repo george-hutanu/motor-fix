@@ -84,7 +84,7 @@ async function sentEmail(name: string) {
     queue,
     publisher,
     testConfig(mock.url),
-    async () => undefined,
+    null,
     new AuditService(),
   );
   await service.notify({

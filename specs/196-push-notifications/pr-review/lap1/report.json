@@ -1,0 +1,343 @@
+{
+  "pr": 119,
+  "repo": "george-hutanu/motor-fix",
+  "sha": "4ba7c79626c6eb68f0342a64c88de128490bb345",
+  "base": "6587c80833272f051c606d7315dcda6701a59f91",
+  "lap": 1,
+  "verdict": "failure",
+  "summary": "16 blocking finding(s); 19 in all. Booted postgres, redis, minio, api, web, worker.",
+  "findings": [
+    {
+      "severity": "blocker",
+      "kind": "load",
+      "title": "Page did not load: page.goto: Timeout 30000ms exceeded.",
+      "route": "/app/driver/settings@driver",
+      "viewport": "desktop",
+      "scheme": "light",
+      "lang": "ro",
+      "steps": [
+        "Open /app/driver/settings@driver at the desktop viewport (1440×900), light colour scheme, language ro.",
+        "Wait for the network to go idle.",
+        "Observe: Page did not load: page.goto: Timeout 30000ms exceeded.."
+      ],
+      "evidence": "shots/app-driver-settings-as-driver-desktop-light-ro.png",
+      "seenIn": [
+        "desktop light ro",
+        "desktop light en",
+        "desktop dark ro",
+        "desktop dark en",
+        "tablet light ro",
+        "tablet light en",
+        "tablet dark ro",
+        "tablet dark en",
+        "mobile light ro",
+        "mobile light en",
+        "mobile dark ro",
+        "mobile dark en",
+        "small-phone light ro",
+        "small-phone light en",
+        "small-phone dark ro",
+        "small-phone dark en"
+      ]
+    },
+    {
+      "severity": "blocker",
+      "kind": "load",
+      "title": "Page did not load: page.goto: Timeout 30000ms exceeded.",
+      "route": "/app/admin/settings@admin",
+      "viewport": "desktop",
+      "scheme": "light",
+      "lang": "ro",
+      "steps": [
+        "Open /app/admin/settings@admin at the desktop viewport (1440×900), light colour scheme, language ro.",
+        "Wait for the network to go idle.",
+        "Observe: Page did not load: page.goto: Timeout 30000ms exceeded.."
+      ],
+      "evidence": "shots/app-admin-settings-as-admin-desktop-light-ro.png",
+      "seenIn": [
+        "desktop light ro",
+        "desktop light en",
+        "desktop dark ro",
+        "desktop dark en",
+        "tablet light ro",
+        "tablet light en",
+        "tablet dark ro",
+        "tablet dark en",
+        "mobile light ro",
+        "mobile light en",
+        "mobile dark ro",
+        "mobile dark en",
+        "small-phone light ro",
+        "small-phone light en",
+        "small-phone dark ro",
+        "small-phone dark en"
+      ]
+    },
+    {
+      "severity": "blocker",
+      "kind": "load",
+      "title": "Page did not load: page.goto: Timeout 30000ms exceeded.",
+      "route": "/app/garage@garage",
+      "viewport": "desktop",
+      "scheme": "light",
+      "lang": "ro",
+      "steps": [
+        "Open /app/garage@garage at the desktop viewport (1440×900), light colour scheme, language ro.",
+        "Wait for the network to go idle.",
+        "Observe: Page did not load: page.goto: Timeout 30000ms exceeded.."
+      ],
+      "evidence": "shots/app-garage-as-garage-desktop-light-ro.png",
+      "seenIn": [
+        "desktop light ro",
+        "desktop light en",
+        "desktop dark ro",
+        "desktop dark en",
+        "tablet light ro",
+        "tablet light en",
+        "tablet dark ro",
+        "tablet dark en",
+        "mobile light ro",
+        "mobile light en",
+        "mobile dark ro",
+        "mobile dark en",
+        "small-phone light ro",
+        "small-phone light en",
+        "small-phone dark ro",
+        "small-phone dark en"
+      ]
+    },
+    {
+      "evidence": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+      "kind": "flow",
+      "severity": "high",
+      "steps": [
+        "sign in as driver",
+        "language ro",
+        "server has no VAPID key",
+        "open /app/driver/settings at 320 px"
+      ],
+      "title": "push panel flow failed on /app/driver/settings (ro)"
+    },
+    {
+      "evidence": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+      "kind": "flow",
+      "severity": "high",
+      "steps": [
+        "sign in as driver",
+        "language ro",
+        "server offers a VAPID key",
+        "open /app/driver/settings at 320 px"
+      ],
+      "title": "push panel flow failed on /app/driver/settings (ro)"
+    },
+    {
+      "evidence": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+      "kind": "flow",
+      "severity": "high",
+      "steps": [
+        "sign in as driver",
+        "language en",
+        "server has no VAPID key",
+        "open /app/driver/settings at 320 px"
+      ],
+      "title": "push panel flow failed on /app/driver/settings (en)"
+    },
+    {
+      "evidence": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+      "kind": "flow",
+      "severity": "high",
+      "steps": [
+        "sign in as driver",
+        "language en",
+        "server offers a VAPID key",
+        "open /app/driver/settings at 320 px"
+      ],
+      "title": "push panel flow failed on /app/driver/settings (en)"
+    },
+    {
+      "evidence": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+      "kind": "flow",
+      "severity": "high",
+      "steps": [
+        "sign in as admin",
+        "language ro",
+        "server has no VAPID key",
+        "open /app/admin/settings at 320 px"
+      ],
+      "title": "push panel flow failed on /app/admin/settings (ro)"
+    },
+    {
+      "evidence": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+      "kind": "flow",
+      "severity": "high",
+      "steps": [
+        "sign in as admin",
+        "language ro",
+        "server offers a VAPID key",
+        "open /app/admin/settings at 320 px"
+      ],
+      "title": "push panel flow failed on /app/admin/settings (ro)"
+    },
+    {
+      "evidence": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+      "kind": "flow",
+      "severity": "high",
+      "steps": [
+        "sign in as admin",
+        "language en",
+        "server has no VAPID key",
+        "open /app/admin/settings at 320 px"
+      ],
+      "title": "push panel flow failed on /app/admin/settings (en)"
+    },
+    {
+      "evidence": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+      "kind": "flow",
+      "severity": "high",
+      "steps": [
+        "sign in as admin",
+        "language en",
+        "server offers a VAPID key",
+        "open /app/admin/settings at 320 px"
+      ],
+      "title": "push panel flow failed on /app/admin/settings (en)"
+    },
+    {
+      "evidence": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+      "kind": "flow",
+      "severity": "high",
+      "steps": [
+        "sign in as garage",
+        "language ro",
+        "server has no VAPID key",
+        "open /app/garage at 320 px"
+      ],
+      "title": "push panel flow failed on /app/garage (ro)"
+    },
+    {
+      "evidence": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+      "kind": "flow",
+      "severity": "high",
+      "steps": [
+        "sign in as garage",
+        "language ro",
+        "server offers a VAPID key",
+        "open /app/garage at 320 px"
+      ],
+      "title": "push panel flow failed on /app/garage (ro)"
+    },
+    {
+      "evidence": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+      "kind": "flow",
+      "severity": "high",
+      "steps": [
+        "sign in as garage",
+        "language en",
+        "server has no VAPID key",
+        "open /app/garage at 320 px"
+      ],
+      "title": "push panel flow failed on /app/garage (en)"
+    },
+    {
+      "evidence": "TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded.",
+      "kind": "flow",
+      "severity": "high",
+      "steps": [
+        "sign in as garage",
+        "language en",
+        "server offers a VAPID key",
+        "open /app/garage at 320 px"
+      ],
+      "title": "push panel flow failed on /app/garage (en)"
+    },
+    {
+      "severity": "medium",
+      "kind": "review",
+      "title": "not swept: /app/driver/settings@driver, /app/admin/settings@admin, /app/garage@garage (the push panel was never seen in a browser)",
+      "steps": [
+        "Open any dashboard route with a real session in the sweep or the flows (page.goto waitUntil networkidle, or waitForLoadState('networkidle')).",
+        "The frame keeps the /api/v1/live event stream open, so the network never goes idle and every load times out after 30 s.",
+        "Next lap: in the flows wait for the panel heading (goto with waitUntil 'domcontentloaded', then expect the heading) instead of networkidle; the sweep's networkidle on signed-in dashboards is a tester issue on main. web-e2e passes only because signInAs stubs the token, so /live fails at once."
+      ],
+      "evidence": "apps/web/src/app/dashboard/live.ts:212: const res = await fetch('/api/v1/live', {"
+    },
+    {
+      "severity": "high",
+      "kind": "review",
+      "title": "flow not run: turn on notifications, send a test, turn off, sign out forgets the device",
+      "steps": [
+        "The flows file only checks the heading and the count of turn-on buttons; it never taps Turn on, Send a test notification, Turn off, or signs out with push on.",
+        "Drive it next lap: context.grantPermissions(['notifications']), stub /api/v1/push-subscriptions/key with a real VAPID key, tap Turn on and expect POST /push-subscriptions, the on state and the two buttons; tap the test (toast), Turn off (DELETE, back to off); sign out with push on and expect the DELETE before the sign-out."
+      ],
+      "evidence": ".specify/.cache/qa-flows-119.mjs: const buttons = await page.getByRole('button', { name: enable[lang] }).count();"
+    },
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "Sign-out waits on an unbounded API call although forget() says it never holds the sign-out back",
+      "steps": [
+        "frame.ts awaits this.push.forget() before closing the live stream and signing out; forget awaits DELETE /push-subscriptions/:id with no timeout.",
+        "A slow or hanging API holds the sign-out button for as long as the request lasts. Bound it (race with a short timeout) or do not await it."
+      ],
+      "evidence": "apps/web/src/app/dashboard/push-device.ts:723: // messages. Never throws, never holds the sign-out back."
+    },
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "Push failure classified by matching the error message text",
+      "steps": [
+        "A non-WebPushError is 'refused' (final, no retry) when its message matches /subscription|key|auth|vapid/; a network error whose text happens to contain 'key' or 'auth' would not be retried (FR-010)."
+      ],
+      "evidence": "libs/domain/src/notifications/push.ts:3913: return /subscription|key|auth|vapid/i.test(message) ? 'refused' : 'retry';"
+    }
+  ],
+  "booted": [
+    "postgres",
+    "redis",
+    "minio",
+    "api",
+    "web",
+    "worker"
+  ],
+  "notes": [
+    "Ran on GitHub Actions (https://github.com/george-hutanu/motor-fix/actions/runs/37416836901): PostgreSQL with PostGIS, Redis and MinIO from the PR's own compose file, started by the PR QA workflow.",
+    "Called the changed operations: GET /api/v1/push-subscriptions/key → 200; POST /api/v1/push-subscriptions → 400; POST /api/v1/push-subscriptions/test → 202.",
+    "Not called: DELETE /api/v1/push-subscriptions/{id}: GET /api/v1/push-subscriptions answered 404, so there is no {id} to call it with.",
+    "Unit and end-to-end tests left to CI (Unit tests and E2E tests; the merge gate waits for them)."
+  ],
+  "screenshots": [
+    "shots/home-desktop-light-ro.png",
+    "shots/home-desktop-light-en.png",
+    "shots/home-desktop-dark-ro.png",
+    "shots/home-desktop-dark-en.png",
+    "shots/home-tablet-light-ro.png",
+    "shots/home-tablet-light-en.png",
+    "shots/home-tablet-dark-ro.png",
+    "shots/home-tablet-dark-en.png",
+    "shots/home-mobile-light-ro.png",
+    "shots/home-mobile-light-en.png",
+    "shots/home-mobile-dark-ro.png",
+    "shots/home-mobile-dark-en.png",
+    "shots/home-small-phone-light-ro.png",
+    "shots/home-small-phone-light-en.png",
+    "shots/home-small-phone-dark-ro.png",
+    "shots/home-small-phone-dark-en.png",
+    "shots/cockpit-desktop-light-ro.png",
+    "shots/cockpit-desktop-light-en.png",
+    "shots/cockpit-desktop-dark-ro.png",
+    "shots/cockpit-desktop-dark-en.png",
+    "shots/cockpit-tablet-light-ro.png",
+    "shots/cockpit-tablet-light-en.png",
+    "shots/cockpit-tablet-dark-ro.png",
+    "shots/cockpit-tablet-dark-en.png",
+    "shots/cockpit-mobile-light-ro.png",
+    "shots/cockpit-mobile-light-en.png",
+    "shots/cockpit-mobile-dark-ro.png",
+    "shots/cockpit-mobile-dark-en.png",
+    "shots/cockpit-small-phone-light-ro.png",
+    "shots/cockpit-small-phone-light-en.png",
+    "shots/cockpit-small-phone-dark-ro.png",
+    "shots/cockpit-small-phone-dark-en.png"
+  ],
+  "markdown": "**Agent review: failure** — PR #119 at `4ba7c79`, lap 1\n\nBlocking: 16 (blocker 3, high 13) · medium 1 · low 2. Booted: postgres, redis, minio, api, web, worker.\n- Ran on GitHub Actions (https://github.com/george-hutanu/motor-fix/actions/runs/37416836901): PostgreSQL with PostGIS, Redis and MinIO from the PR's own compose file, started by the PR QA workflow.\n- Called the changed operations: GET /api/v1/push-subscriptions/key → 200; POST /api/v1/push-subscriptions → 400; POST /api/v1/push-subscriptions/test → 202.\n- Not called: DELETE /api/v1/push-subscriptions/{id}: GET /api/v1/push-subscriptions answered 404, so there is no {id} to call it with.\n- Unit and end-to-end tests left to CI (Unit tests and E2E tests; the merge gate waits for them).\n\n| # | Severity | Finding | Where | Evidence |\n| --- | --- | --- | --- | --- |\n| 1 | blocker | Page did not load: page.goto: Timeout 30000ms exceeded. | /app/driver/settings@driver · desktop · light · ro (+15 more) | shots/app-driver-settings-as-driver-desktop-light-ro.png |\n| 2 | blocker | Page did not load: page.goto: Timeout 30000ms exceeded. | /app/admin/settings@admin · desktop · light · ro (+15 more) | shots/app-admin-settings-as-admin-desktop-light-ro.png |\n| 3 | blocker | Page did not load: page.goto: Timeout 30000ms exceeded. | /app/garage@garage · desktop · light · ro (+15 more) | shots/app-garage-as-garage-desktop-light-ro.png |\n| 4 | high | push panel flow failed on /app/driver/settings (ro) |  | TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded. |\n| 5 | high | push panel flow failed on /app/driver/settings (ro) |  | TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded. |\n| 6 | high | push panel flow failed on /app/driver/settings (en) |  | TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded. |\n| 7 | high | push panel flow failed on /app/driver/settings (en) |  | TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded. |\n| 8 | high | push panel flow failed on /app/admin/settings (ro) |  | TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded. |\n| 9 | high | push panel flow failed on /app/admin/settings (ro) |  | TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded. |\n| 10 | high | push panel flow failed on /app/admin/settings (en) |  | TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded. |\n| 11 | high | push panel flow failed on /app/admin/settings (en) |  | TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded. |\n| 12 | high | push panel flow failed on /app/garage (ro) |  | TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded. |\n| 13 | high | push panel flow failed on /app/garage (ro) |  | TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded. |\n| 14 | high | push panel flow failed on /app/garage (en) |  | TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded. |\n| 15 | high | push panel flow failed on /app/garage (en) |  | TimeoutError: page.waitForLoadState: Timeout 30000ms exceeded. |\n| 16 | high | flow not run: turn on notifications, send a test, turn off, sign out forgets the device |  | .specify/.cache/qa-flows-119.mjs: const buttons = await page.getByRole('button', { name: enable[lang] }).count(); |\n| 17 | medium | not swept: /app/driver/settings@driver, /app/admin/settings@admin, /app/garage@garage (the push panel was never seen in a browser) |  | apps/web/src/app/dashboard/live.ts:212: const res = await fetch('/api/v1/live', { |\n| 18 | low | Sign-out waits on an unbounded API call although forget() says it never holds the sign-out back |  | apps/web/src/app/dashboard/push-device.ts:723: // messages. Never throws, never holds the sign-out back. |\n| 19 | low | Push failure classified by matching the error message text |  | libs/domain/src/notifications/push.ts:3913: return /subscription\\|key\\|auth\\|vapid/i.test(message) ? 'refused' : 'retry'; |\n\n### Reproduction\n1. Open /app/driver/settings@driver at the desktop viewport (1440×900), light colour scheme, language ro. → Wait for the network to go idle. → Observe: Page did not load: page.goto: Timeout 30000ms exceeded..\n2. Open /app/admin/settings@admin at the desktop viewport (1440×900), light colour scheme, language ro. → Wait for the network to go idle. → Observe: Page did not load: page.goto: Timeout 30000ms exceeded..\n3. Open /app/garage@garage at the desktop viewport (1440×900), light colour scheme, language ro. → Wait for the network to go idle. → Observe: Page did not load: page.goto: Timeout 30000ms exceeded..\n4. sign in as driver → language ro → server has no VAPID key → open /app/driver/settings at 320 px\n5. sign in as driver → language ro → server offers a VAPID key → open /app/driver/settings at 320 px\n6. sign in as driver → language en → server has no VAPID key → open /app/driver/settings at 320 px\n7. sign in as driver → language en → server offers a VAPID key → open /app/driver/settings at 320 px\n8. sign in as admin → language ro → server has no VAPID key → open /app/admin/settings at 320 px\n9. sign in as admin → language ro → server offers a VAPID key → open /app/admin/settings at 320 px\n10. sign in as admin → language en → server has no VAPID key → open /app/admin/settings at 320 px\n11. sign in as admin → language en → server offers a VAPID key → open /app/admin/settings at 320 px\n12. sign in as garage → language ro → server has no VAPID key → open /app/garage at 320 px\n13. sign in as garage → language ro → server offers a VAPID key → open /app/garage at 320 px\n14. sign in as garage → language en → server has no VAPID key → open /app/garage at 320 px\n15. sign in as garage → language en → server offers a VAPID key → open /app/garage at 320 px\n16. The flows file only checks the heading and the count of turn-on buttons; it never taps Turn on, Send a test notification, Turn off, or signs out with push on. → Drive it next lap: context.grantPermissions(['notifications']), stub /api/v1/push-subscriptions/key with a real VAPID key, tap Turn on and expect POST /push-subscriptions, the on state and the two buttons; tap the test (toast), Turn off (DELETE, back to off); sign out with push on and expect the DELETE before the sign-out.\n17. Open any dashboard route with a real session in the sweep or the flows (page.goto waitUntil networkidle, or waitForLoadState('networkidle')). → The frame keeps the /api/v1/live event stream open, so the network never goes idle and every load times out after 30 s. → Next lap: in the flows wait for the panel heading (goto with waitUntil 'domcontentloaded', then expect the heading) instead of networkidle; the sweep's networkidle on signed-in dashboards is a tester issue on main. web-e2e passes only because signInAs stubs the token, so /live fails at once.\n18. frame.ts awaits this.push.forget() before closing the live stream and signing out; forget awaits DELETE /push-subscriptions/:id with no timeout. → A slow or hanging API holds the sign-out button for as long as the request lasts. Bound it (race with a short timeout) or do not await it.\n19. A non-WebPushError is 'refused' (final, no retry) when its message matches /subscription\\|key\\|auth\\|vapid/; a network error whose text happens to contain 'key' or 'auth' would not be retried (FR-010).\n\nScreenshots: 32, one per route × viewport × scheme × language.\n"
+}

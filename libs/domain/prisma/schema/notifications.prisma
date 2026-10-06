@@ -102,3 +102,21 @@ model NewsSend {
 
   @@map("news_send")
 }
+
+// One browser that allowed push for one account. The endpoint is unique: a
+// browser belongs to the account that saved it last.
+model PushSubscription {
+  id            String    @id @default(uuid()) @db.Uuid
+  accountId     String    @map("account_id") @db.Uuid
+  endpoint      String    @unique
+  p256dh        String
+  auth          String
+  label         String    @default("")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  lastSuccessAt DateTime? @map("last_success_at") @db.Timestamptz(3)
+  account       Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@map("push_subscription")
+}

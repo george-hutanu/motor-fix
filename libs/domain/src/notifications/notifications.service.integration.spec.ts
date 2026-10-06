@@ -20,7 +20,24 @@ const mock = new BrevoMock();
 const queue = new Queue('notifications', { connection: { url: redisUrl } });
 const publisher = new Redis(redisUrl);
 const subscriber = new Redis(redisUrl);
-const fallback = jest.fn(async () => undefined);
+const pushConfig = {
+  privateKey: 'private',
+  publicKey: 'public',
+  subject: 'mailto:ops@example.test',
+};
+const pushFallbacks = () =>
+  prisma.notification.count({
+    where: { channel: 'push', fallbackOf: { not: null } },
+  });
+const withDevice = (accountId: string) =>
+  prisma.pushSubscription.create({
+    data: {
+      accountId,
+      auth: 'a',
+      endpoint: `https://push.example.test/${accountId}`,
+      p256dh: 'p',
+    },
+  });
 const published: string[] = [];
 
 let config: ReturnType<typeof testConfig>;
@@ -49,13 +66,12 @@ beforeEach(async () => {
   await reset();
   await queue.obliterate({ force: true });
   published.length = 0;
-  fallback.mockClear();
   service = new NotificationsService(
     prisma,
     queue,
     publisher,
     config,
-    fallback,
+    pushConfig,
     new AuditService(),
   );
   service.now = at(DAY);
@@ -192,7 +208,7 @@ describe('handing an event to the notifications service', () => {
       queue,
       { publish: async () => Promise.reject(new Error('redis down')) },
       config,
-      fallback,
+      pushConfig,
       new AuditService(),
     );
     broken.now = at(DAY);
@@ -213,8 +229,9 @@ describe('handing an event to the notifications service', () => {
 });
 
 describe('a hard bounce', () => {
-  it('fails the e-mail row, marks the address and calls the fallback', async () => {
+  it('fails the e-mail row, marks the address and falls back to push', async () => {
     const andrei = await account('andrei');
+    await withDevice(andrei);
     await quote(andrei, 'evt-b');
     const email = (await rows(andrei)).find((r) => r.channel === 'email');
     await prisma.notification.update({
@@ -240,13 +257,17 @@ describe('a hard bounce', () => {
     ).toEqual([
       { actorRole: 'system', field: 'emailBouncedAt', subjectType: 'account' },
     ]);
-    expect(fallback).toHaveBeenCalledWith(
-      expect.objectContaining({ id: email?.id }),
-    );
+    expect(
+      await prisma.notification.findMany({
+        select: { fallbackOf: true },
+        where: { accountId: andrei, channel: 'push' },
+      }),
+    ).toEqual([{ fallbackOf: email?.id }]);
   });
 
   it('records a bounce Brevo reports twice only once', async () => {
     const andrei = await account('andrei');
+    await withDevice(andrei);
     await quote(andrei, 'evt-b');
     const email = (await rows(andrei)).find((r) => r.channel === 'email');
     await prisma.notification.update({
@@ -260,11 +281,12 @@ describe('a hard bounce', () => {
         where: { field: 'emailBouncedAt', subjectId: andrei },
       }),
     ).toBe(1);
-    expect(fallback).toHaveBeenCalledTimes(1);
+    expect(await pushFallbacks()).toBe(1);
   });
 
   it('fails every row of a grouped e-mail that bounced', async () => {
     const andrei = await account('andrei');
+    await withDevice(andrei);
     await quote(andrei, 'evt-1');
     await quote(andrei, 'evt-2');
     await prisma.notification.updateMany({
@@ -275,7 +297,7 @@ describe('a hard bounce', () => {
     const emails = (await rows(andrei)).filter((r) => r.channel === 'email');
     expect(emails).toHaveLength(2);
     expect(emails.every((r) => r.status === 'failed')).toBe(true);
-    expect(fallback).toHaveBeenCalledTimes(2);
+    expect(await pushFallbacks()).toBe(2);
   });
 });
 
@@ -287,7 +309,7 @@ describe('guarding who gets e-mail', () => {
       queue,
       publisher,
       testConfig(mock.url, { EMAIL_SENDING: 'off' }),
-      fallback,
+      pushConfig,
       new AuditService(),
     );
     service.now = at(DAY);
@@ -299,7 +321,7 @@ describe('guarding who gets e-mail', () => {
       status: 'failed',
     });
     expect(await jobs()).toEqual([]);
-    expect(fallback).not.toHaveBeenCalled();
+    expect(await pushFallbacks()).toBe(0);
   });
 
   it('fails the e-mail row of an address off the allow-list', async () => {
@@ -314,7 +336,7 @@ describe('guarding who gets e-mail', () => {
       },
     );
     expect(await jobs()).toEqual([]);
-    expect(fallback).not.toHaveBeenCalled();
+    expect(await pushFallbacks()).toBe(0);
   });
 });
 
