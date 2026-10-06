@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   # Merges in quick succession queue their checks instead of each holding
-  # seven runners of the free plan's 20 at once. A waiting run is replaced by
+  # five runners of the free plan's 20 at once. A waiting run is replaced by
   # a newer one (its own images and staging then skip); a running one finishes.
   checks:
     concurrency:

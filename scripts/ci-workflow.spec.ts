@@ -81,7 +81,7 @@ describe('ci workflow', () => {
 
   // A failing step must not hide the others: each runs unless the job was cancelled.
   it.each([
-    ['checks', 'Biome', 'biome ci'],
+    ['checks', 'Biome', 'npx biome ci'],
     ['checks', 'Typecheck', 'npx nx $NX_SCOPE -t typecheck'],
     ['checks', 'Build', 'npx nx $NX_SCOPE -t build'],
     ['checks', 'Contract check', 'sh scripts/contract-check.sh'],
@@ -107,6 +107,26 @@ describe('ci workflow', () => {
       expect(block).toContain(command);
     },
   );
+
+  // An unguarded step after a check is skipped once that check fails (the
+  // install, say, after Biome), and every check after it then fails for it.
+  it('runs every unguarded checks step before the first check', () => {
+    const steps = job('checks')
+      .split(/\n {6}- /)
+      .slice(1);
+    const guarded = steps.map((s) =>
+      /^\s*if: .*(!cancelled|always)\(\)/m.test(s),
+    );
+    const firstCheck = guarded.indexOf(true);
+
+    expect(firstCheck).toBeGreaterThan(0);
+    expect(guarded.slice(firstCheck).every(Boolean)).toBe(true);
+  });
+
+  it('runs Biome from the install, not a separate download', () => {
+    expect(job('checks')).not.toContain('setup-biome');
+    expect(step(job('checks'), 'Biome')).toContain('npx biome ci');
+  });
 
   it('keeps the compose stack a PR check, not a release one', () => {
     expect(setting(step(job('checks'), 'Compose stack'), 'if')).toBe(

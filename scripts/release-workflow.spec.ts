@@ -37,7 +37,7 @@ describe('release workflow', () => {
   );
 
   // Merges in quick succession queue their checks instead of each holding
-  // seven runners at once; a queued run is replaced by the newest, a running
+  // five runners at once; a queued run is replaced by the newest, a running
   // one finishes.
   it('runs one release check at a time, never cancelling one in progress', () => {
     const block = job('checks');
