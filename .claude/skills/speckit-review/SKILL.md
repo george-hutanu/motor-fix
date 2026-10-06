@@ -174,7 +174,9 @@ Run standalone (not from `/speckit-auto`, which hands off after its own phase
 tests are green, fill in the PR body from `.github/pull_request_template.md`
 and mark the PR ready exactly as `/speckit-auto`'s hand-off steps 1–3 do
 (records committed, `pr-body-check.ts`, `gh pr edit --body-file`, `gh pr ready`,
-`speckit-notion-sync qa` and its line pushed; ready is QA), then run the QA step
+`speckit-notion-sync qa` and its line pushed; ready is QA). `lifecycle.mjs
+ready` may refuse a level 2 or 3 feature whose owed artifacts are missing
+(`level.mjs check --ready`): run the phases it names, then run it again. Then run the QA step
 and merge exactly as `/speckit-auto`'s "The tail" steps 1–6 do: green CI, `/speckit-pr-test <n>`
 (story → QA) until `agent-review` is success on the head commit, then merge.
 Findings routed to defer go to `specs/<feature>/deferred.md` and are filed as

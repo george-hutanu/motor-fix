@@ -47,12 +47,12 @@
 
 ## Phase 6: Skill text and verification
 
-- [ ] T014 [P] Update `.claude/skills/speckit-size/SKILL.md` (suggest with a story id: facts, three rules, fallback line) (FR-014)
-- [ ] T015 [P] Update `.claude/skills/speckit-auto/SKILL.md` and `.claude/skills/speckit-auto/phases-plan.md` (check after phases 2, 4, 7; on promotion run the owed phases in run order) and `.claude/skills/speckit-auto/hand-off.md` (ready may refuse with owed phases) (FR-007, FR-014)
-- [ ] T016 [P] Update `.claude/skills/speckit-review/SKILL.md` (ready may refuse: run the owed phases, then rerun) (FR-014)
-- [ ] T017 Run `npm run test:harness` and fix failures (FR-015)
-- [ ] T018 Run `node .claude/scripts/harness-eval.mjs --check` (FR-015)
-- [ ] T019 Run `node .claude/scripts/doctor.mjs` (after T006 it must pass) and confirm `git diff --name-only origin/main` shows nothing under `apps/` or `libs/`, and that no gate (red-first, spec-drift, lifecycle) reads the level (FR-010, FR-015, FR-016)
+- [x] T014 [P] Update `.claude/skills/speckit-size/SKILL.md` (suggest with a story id: facts, three rules, fallback line) (FR-014)
+- [x] T015 [P] Update `.claude/skills/speckit-auto/SKILL.md` and `.claude/skills/speckit-auto/phases-plan.md` (check after phases 2, 4, 7; on promotion run the owed phases in run order) and `.claude/skills/speckit-auto/hand-off.md` (ready may refuse with owed phases) (FR-007, FR-014)
+- [x] T016 [P] Update `.claude/skills/speckit-review/SKILL.md` (ready may refuse: run the owed phases, then rerun) (FR-014)
+- [x] T017 Run `npm run test:harness` and fix failures (FR-015)
+- [x] T018 Run `node .claude/scripts/harness-eval.mjs --check` (FR-015)
+- [x] T019 Run `node .claude/scripts/doctor.mjs` (after T006 it must pass) and confirm `git diff --name-only origin/main` shows nothing under `apps/` or `libs/`, and that no gate (red-first, spec-drift, lifecycle) reads the level (FR-010, FR-015, FR-016)
 
 ## Dependencies
 
