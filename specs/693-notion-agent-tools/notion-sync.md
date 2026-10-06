@@ -6,3 +6,5 @@
 - 2026-10-06 · ready · EP-1 · −ST-693 (unticked at start; a start unblocks nothing)
 - 2026-10-06 · start · EP-1 · In progress, unchanged
 - 2026-10-06 · implement · ST-693 · Planning → Implementing; PR label in development
+- 2026-10-06 · qa · ST-693 · Implementing → QA; PR label QA
+- [NOTION-SYNC PENDING: qa timeline ST-693 — Query Data Source usage limit; row not found, Build status → QA]
