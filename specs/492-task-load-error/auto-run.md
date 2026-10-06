@@ -29,3 +29,5 @@ Clarification table, answered autonomously (each is an `(autonomous default)` in
 | 7 | The console line | Removed; the visible state is the record |
 
 Spec: `specs/492-task-load-error/spec.md` (3 stories, FR-001 to FR-010, SC-001 to SC-004, Spec Delta modifying 157-FR-012). Checklist `checklists/requirements.md`: all items pass, one iteration.
+
+Hooks after specify: `notion-sync start` (ST-492 To do → Planning, EP-1 unchanged, ready review list pre-existing, nothing ticked), design check (mock not shared with this session: `[UNAVAILABLE]` in design.md, filled from ST-157/ST-159 design notes), commit 9909a30f pushed, draft PR #170 opened (`planning`, `bug`, `scope: overlays`, `EP-1`), `notion-sync pr 170`. `level.mjs check`: level 2 unchanged (fr-count tripped at 10, nothing else).
