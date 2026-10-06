@@ -25,31 +25,31 @@
 - [X] T008 [US1] Implement `send` in `libs/domain/src/garages/staff-invite.service.ts` (new) and `POST /api/v1/garages/:garageId/invites` in `libs/domain/src/garages/staff-invite.controller.ts` (new); owner decided in the service; transaction for row, audit and outbox, then Brevo send outside it (FR-001..004, FR-010)
 - [X] T009 [P] [US1] Regenerate `apps/api/openapi.json` (`npx nx run api:openapi`) and `libs/data-access/src/lib` (`npx nx run data-access:generate`) (FR-014)
 - [X] T010 [P] [US1] Write failing `apps/web/src/app/dashboard/invite-staff.spec.ts` (new) and `apps/web/src/app/dashboard/frame.invite.spec.ts` (new): button for owner only, permission ticks only for mechanic, field problems before send, "Nu am putut trimite invitația" with "Copiază linkul" (FR-011, FR-013)
-- [X] T011 [US1] Implement the dialog task `apps/web/src/app/dashboard/invite-staff.ts` (new), the owner-only "Invită în echipă" button in `apps/web/src/app/dashboard/frame.ts`, texts in `libs/i18n/src/garage/{ro,en}.json` and `libs/i18n/src/shell/{ro,en}.json`; 320 px safe per design.md (FR-011, FR-013; SC-007)
+- [X] T011 [US1] Implement the dialog task `apps/web/src/app/dashboard/invite-staff.ts` (new), the owner-only "Invită în echipă" button in `apps/web/src/app/dashboard/frame.ts`, texts in `libs/i18n/src/garage/ro.json` and `libs/i18n/src/garage/en.json` and `libs/i18n/src/shell/ro.json` and `libs/i18n/src/shell/en.json`; 320 px safe per design.md (FR-011, FR-013; SC-007)
 
 ## Phase 4: User Story 2 - Invitee accepts (P1)
 
 **Independent test**: open a valid link signed out and signed in, accept; role, mechanic row, status, owner notification.
 
-- [X] T012 [US2] Write failing `libs/domain/src/garages/staff-invite.accept.integration.spec.ts` (new): check answers view/`invite_expired`/`invite_invalid`; accept grants role keeping others, creates or moves the mechanic row, creates receptionist membership, 401 signed out, 410 for the owner or another garage's receptionist, concurrent accepts one wins, session in the invited role, STAFF_JOINED to the owner, audit `invite_accepted`, outbox `invite.accepted` and `mechanic.updated` on a move, role never taken from the body (FR-006..010; SC-003, SC-005, SC-006)
+- [X] T012 [US2] Write failing `libs/domain/src/garages/staff-invite.api.integration.spec.ts` (the one spec file): check answers view/`invite_expired`/`invite_invalid`; accept grants role keeping others, creates or moves the mechanic row, creates receptionist membership, 401 signed out, 410 for the owner or another garage's receptionist, concurrent accepts one wins, session in the invited role, STAFF_JOINED to the owner, audit `invite_accepted`, outbox `invite.accepted` and `mechanic.updated` on a move, role never taken from the body (FR-006..010; SC-003, SC-005, SC-006)
 - [X] T013 [US2] Implement `check` and `accept` in `libs/domain/src/garages/staff-invite.service.ts` (`AccountsService.grantRole`, `SignInService.switchRole`, `NotificationsService.notify`) and `InvitesController` (`POST /api/v1/invites/check` public, `/accept`) in `libs/domain/src/garages/staff-invite.controller.ts` (FR-006..010)
 - [X] T014 [P] [US2] Add `POST /api/v1/invites/check` to `apps/api/src/public-routes.integration.spec.ts`; regenerate `apps/api/openapi.json` and `libs/data-access/src/lib` (FR-006, FR-014)
 - [X] T015 [P] [US2] Write failing web specs `apps/web/src/app/public/invite.spec.ts` (new), `apps/web/src/app/sign-in/sign-in-dialog.spec.ts` and `apps/web/src/app/dashboard/session.spec.ts`: page texts, signed out offers sign-in/sign-up with name and e-mail filled, sign-up accepts in the same flow, signed in accepts only on "Acceptă", invalid/expired message, markup-safe names (FR-012, FR-013)
-- [X] T016 [US2] Implement `apps/web/src/app/public/invite.ts` (new), route `:lang/invite/:token` in `apps/web/src/app/app.routes.ts`, accept through `InvitesService.invitesControllerAccept` then `Session.switchRole(kind)` (no Session method needed), `AuthData.name` and `'signed-up'` in `apps/web/src/app/sign-in/sign-in.ts`, `sign-up.ts` and `sign-in-dialog.ts` (`join({ name, email })`), texts in `libs/i18n/src/public/{ro,en}.json` (FR-012, FR-013; SC-007)
+- [X] T016 [US2] Implement `apps/web/src/app/public/invite.ts` (new), route `:lang/invite/:token` in `apps/web/src/app/app.routes.ts`, accept through `InvitesService.invitesControllerAccept` then `Session.switchRole(kind)` (no Session method needed), `AuthData.name` and `'signed-up'` in `apps/web/src/app/sign-in/sign-in.ts`, `sign-up.ts` and `sign-in-dialog.ts` (`join({ name, email })`), texts in `libs/i18n/src/public/ro.json` and `libs/i18n/src/public/en.json` (FR-012, FR-013; SC-007)
 - [X] T017 [US2] Write and pass the e2e flow `apps/web-e2e/src/staff-invite.spec.ts` (new): owner sends, mailbox link, new account accepts, lands on the garage dashboard as mechanic, the used link then reads invalid; the owner's live update is covered by the API integration spec (FR-011, FR-012, FR-009; SC-001, SC-002)
 
 ## Phase 5: User Story 3 - Resend and revoke (P2)
 
 **Independent test**: resend and revoke through the API, then open each old link.
 
-- [X] T018 [US3] Write failing `libs/domain/src/garages/staff-invite.resend-revoke.integration.spec.ts` (new): resend voids the old token, restarts the 7-day expiry (also when expired), revoke stops the link, 409 `invite_invalid` for accepted/revoked, 403/404 as send, audit `invite_resent`/`invite_revoked`, outbox `invite.revoked` (FR-002, FR-005, FR-010; SC-004, SC-006)
+- [X] T018 [US3] Write failing `libs/domain/src/garages/staff-invite.api.integration.spec.ts` (the one spec file): resend voids the old token, restarts the 7-day expiry (also when expired), revoke stops the link, 409 `invite_invalid` for accepted/revoked, 403/404 as send, audit `invite_resent`/`invite_revoked`, outbox `invite.revoked` (FR-002, FR-005, FR-010; SC-004, SC-006)
 - [X] T019 [US3] Implement `resend` and `revoke` in `libs/domain/src/garages/staff-invite.service.ts` and the two routes in `libs/domain/src/garages/staff-invite.controller.ts`; regenerate `apps/api/openapi.json` and `libs/data-access/src/lib` (FR-005, FR-010)
 
 ## Phase 6: User Story 4 - Feature off (P2)
 
 **Independent test**: `team_mechanics` off; send and open with each kind.
 
-- [X] T020 [US4] Write failing `libs/domain/src/garages/staff-invite.feature.integration.spec.ts` (new): mechanic send 404 `feature_off`, receptionist still sent, check and accept of a mechanic invite 404 `feature_off`, missing row is on (FR-003, FR-006, FR-008; SC-003)
+- [X] T020 [US4] Write failing `libs/domain/src/garages/staff-invite.api.integration.spec.ts` (the one spec file): mechanic send 404 `feature_off`, receptionist still sent, check and accept of a mechanic invite 404 `feature_off`, missing row is on (FR-003, FR-006, FR-008; SC-003)
 - [X] T021 [US4] Implement the `team_mechanics` check in `libs/domain/src/garages/staff-invite.service.ts` (send, check, accept) (FR-003, FR-006, FR-008)
 
 ## Phase 7: Cross-cutting

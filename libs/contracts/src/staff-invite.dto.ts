@@ -3,14 +3,17 @@ import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsIn,
-  IsOptional,
   IsString,
   Length,
   Matches,
+  ValidateIf,
 } from 'class-validator';
 
-export const STAFF_INVITE_KINDS = ['mechanic', 'receptionist'] as const;
+const STAFF_INVITE_KINDS = ['mechanic', 'receptionist'] as const;
 export type StaffInviteKind = (typeof STAFF_INVITE_KINDS)[number];
+
+// Left out takes the default; null is not a permission.
+const given = (_: object, value: unknown) => value !== undefined;
 
 const trimmed = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -42,17 +45,17 @@ export class StaffInviteDto {
   kind!: StaffInviteKind;
 
   @ApiPropertyOptional({ default: false })
-  @IsOptional()
+  @ValidateIf(given)
   @IsBoolean()
   canMoveBookings = false;
 
   @ApiPropertyOptional({ default: false })
-  @IsOptional()
+  @ValidateIf(given)
   @IsBoolean()
   canAnswerQuotes = false;
 
   @ApiPropertyOptional({ default: false })
-  @IsOptional()
+  @ValidateIf(given)
   @IsBoolean()
   canRecordFinalPrice = false;
 }

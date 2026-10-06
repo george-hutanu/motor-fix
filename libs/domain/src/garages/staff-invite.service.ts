@@ -237,7 +237,8 @@ export class StaffInviteService {
           ],
           skipDuplicates: true,
         });
-      } else {
+      } else if (account.mechanic?.garageId !== garageId) {
+        // A mechanic already here keeps the permissions the owner gave him.
         const before = account.mechanic;
         const row = await tx.mechanic.upsert({
           create: {
@@ -248,7 +249,7 @@ export class StaffInviteService {
           update: { garageId, ...permissionsOf(invite) },
           where: { accountId: actor.accountId },
         });
-        if (before && before.garageId !== garageId) {
+        if (before) {
           await this.events.record(tx, {
             audience: {
               garageIds: [garageId, before.garageId],
@@ -260,6 +261,7 @@ export class StaffInviteService {
           });
         }
       }
+
       await this.audit.record(tx, {
         action: 'update',
         actorId: actor.accountId,

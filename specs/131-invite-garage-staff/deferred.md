@@ -1,0 +1,5 @@
+# Deferred findings — 131-invite-garage-staff
+
+- [ ] Two concurrent sends to one address can both pass the open-invite check and store two open invites; only the sequential case answers `invite_open`. A partial unique index on (garage, e-mail) where status is `sent` would close it, with expiry handled by the send. Source: code-reviewer, LOW. `libs/domain/src/garages/staff-invite.service.ts` (`send`, the `findFirst` before the transaction).
+- [ ] Accepting reads the account's mechanic row before the transaction, so a move that runs at the same time leaves the `from` of `mechanic.updated` stale. Read the account inside the transaction instead. Source: code-reviewer, LOW. `libs/domain/src/garages/staff-invite.service.ts` (`accept`).
+- [ ] The invite dialog offers "Mecanic" before it knows whether the garage has mechanics switched off: the web has no read of a garage's features, so the choice is withdrawn only after the server answers `feature_off`. Offer it only when the feature is on once a features read exists. Source: converge, MEDIUM. `apps/web/src/app/dashboard/invite-staff.ts`.

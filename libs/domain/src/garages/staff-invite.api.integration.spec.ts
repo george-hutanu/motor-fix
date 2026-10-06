@@ -606,6 +606,24 @@ describe('opening and accepting a link', () => {
     });
     expect(invite.status).toBe('accepted');
   });
+
+  // @traces 131-FR-008
+  it("keeps a mechanic's own permissions when he accepts a link to his own garage", async () => {
+    const { id, token, vlad } = await invited('mechanic');
+
+    const res = await accept(token, bearer(vlad, 'mechanic'));
+
+    expect(res.status).toBe(204);
+    const row = await prisma.mechanic.findUniqueOrThrow({
+      where: { accountId: vlad },
+    });
+    expect(row.canRecordFinalPrice).toBe(false);
+    expect(await outbox('mechanic.updated')).toHaveLength(0);
+    const invite = await prisma.staffInvite.findUniqueOrThrow({
+      where: { id },
+    });
+    expect(invite.status).toBe('accepted');
+  });
 });
 
 describe('resending and revoking', () => {
