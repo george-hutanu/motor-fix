@@ -291,8 +291,10 @@ export function main(argv, repo, env = process.env) {
     const before = keyedState(repo, readState(repo));
     const state = pointFeature(repo, value);
     const waited = before.level_for === "next" ? parseLevel(before.level) : null;
-    if (levelApplies(state)) {
-      console.log(`feature ${state.feature_directory}, level ${state.level} (${LEVELS[state.level].name})`);
+    // A hand-edited level that is not 0-3 reads as no level, as resolveLevel reads it.
+    const level = levelApplies(state) ? parseLevel(state.level) : null;
+    if (level !== null) {
+      console.log(`feature ${state.feature_directory}, level ${level} (${LEVELS[level].name})`);
       return 0;
     }
     // Say why a level that was waiting did not land: silence here reads as

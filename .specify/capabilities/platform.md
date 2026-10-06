@@ -32,6 +32,7 @@ features:
   - 677-zoneless-level-at
   - 628-tester-dispatch-cleanup
   - 675-size-not-trivial
+  - 676-level-point-nonnumeric
 ---
 
 # Capability: Platform
@@ -939,6 +940,14 @@ _From 675-size-not-trivial._
 ### 675-FR-003 — The six descriptions from the story MUST classify as `unsure`; every existing `classifyLevel` expectation MUST hold.
 
 _From 675-size-not-trivial._
+
+### 676-FR-001 — `point` MUST print the level line only when `parseLevel(state.level)` is not null, and MUST print the default-level line otherwise, exiting 0. This is how `resolveLevel` already reads the level.
+
+_From 676-level-point-nonnumeric._
+
+### 676-FR-002 — A valid level written as a numeric string (`"1"`) MUST print as that level, the same way `resolveLevel` reads it.
+
+_From 676-level-point-nonnumeric._
 
 ## Retired
 
