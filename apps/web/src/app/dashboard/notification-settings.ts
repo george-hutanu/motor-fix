@@ -90,6 +90,7 @@ let panels = 0;
                       @for (c of item.channels; track c.channel) {
                         <label>
                           <hlm-switch
+                            [inputId]="rowId(e, section.key, r) + '-' + c.channel"
                             [checked]="isOn(entry, c)"
                             [disabled]="isFixed(entry, c)"
                             [aria-label]="switchName(item.type, c.channel)"
@@ -225,6 +226,8 @@ export class NotificationSettings implements OnInit {
     });
   }
 
+  // Also each switch's own id: without one, every wrapping label shares the
+  // same id and names every switch after the first.
   protected rowId(entry: number, section: string, row: number) {
     return `${this.id}-${entry}-${section}-${row}`;
   }

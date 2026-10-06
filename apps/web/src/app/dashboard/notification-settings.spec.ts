@@ -179,6 +179,22 @@ describe('NotificationSettings', () => {
   });
 
   // @traces 198-FR-012
+  it('labels each switch by its own label, never by another switch’s', async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    const labels = switches(element).map((s) =>
+      s.getAttribute('aria-labelledby'),
+    );
+    expect(new Set(labels).size).toBe(labels.length);
+    for (const control of switches(element)) {
+      const id = control.getAttribute('aria-labelledby');
+      const label = id ? element.querySelector(`[id="${id}"]`) : null;
+      expect(label?.contains(control)).toBe(true);
+    }
+  });
+
+  // @traces 198-FR-012
   it('says a type with no outside channel is shown in the app only', async () => {
     const { element, settle } = await render();
     await settle();

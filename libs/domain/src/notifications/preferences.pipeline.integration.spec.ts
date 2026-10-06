@@ -202,6 +202,7 @@ describe('garage staff choices', () => {
   });
 });
 
+// @traces 198-FR-009
 describe('a garage’s own staff choices', () => {
   const staffOf = async () => {
     const garage = await prisma.garage.create({
@@ -290,6 +291,7 @@ describe('a garage’s own staff choices', () => {
     ]);
   });
 
+  // @traces 198-FR-010
   it('send a document reminder by the channels left on, skipping a muted e-mail', async () => {
     const { garageId, owner } = await staffOf();
     await prefer(owner, 'DOCUMENT_DUE', 'email', false, garageId);

@@ -55,7 +55,7 @@ No new dependency, lib or migration (plan Technical Context). Nothing to do.
 
 ### Slice F: browser check (US5)
 
-- [ ] T021 [US5] `apps/web-e2e/src/notification-settings.spec.ts` (new, imports carry `.js`): sign in as the seeded owner, open `/app/garage/settings`, switch REQUEST_RECEIVED E-mail and Push off, reload, both read off; the WhatsApp switch is disabled with "Adaugă un număr de telefon verificat"; at 320 px `scrollWidth <= innerWidth` (SC-005)
+- [X] T021 [US5] `apps/web-e2e/src/notification-settings.spec.ts` (new, imports carry `.js`): sign in as the seeded owner, open `/app/garage/settings`, switch REQUEST_RECEIVED E-mail and Push off, reload, both read off; the WhatsApp switch is disabled with "Adaugă un număr de telefon verificat"; at 320 px `scrollWidth <= innerWidth` (SC-005)
 
 ## Phase 7: Polish
 

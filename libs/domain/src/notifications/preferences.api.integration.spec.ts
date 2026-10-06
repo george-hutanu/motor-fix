@@ -620,6 +620,7 @@ const typesIn = (entry: StaffEntry) =>
 const channelsIn = (entry: StaffEntry, type: string) =>
   entry.sections.flatMap((s) => s.types).find((t) => t.type === type)?.channels;
 
+// @traces 198-FR-001 198-FR-002 198-FR-004
 describe('the staff lists a person reads', () => {
   it('give a driver none', async () => {
     const driver = await account('andrei');
@@ -707,6 +708,7 @@ describe('the staff lists a person reads', () => {
     expect(await staffOf(owner, 'garage')).toEqual([]);
   });
 
+  // @traces 198-FR-002
   it('say why WhatsApp cannot be chosen, the garage first', async () => {
     const { id: garageId } = await garage('Dinamo');
     const owner = await staff('ion', garageId, 'owner');
@@ -730,6 +732,7 @@ describe('the staff lists a person reads', () => {
     });
   });
 
+  // @traces 198-FR-004
   it('list the day sheet types only while day sheets are not off', async () => {
     const { id: garageId } = await garage('Dinamo');
     const owner = await staff('ion', garageId, 'owner');
@@ -744,6 +747,7 @@ describe('the staff lists a person reads', () => {
   });
 });
 
+// @traces 198-FR-007
 describe('a staff save', () => {
   const choice = (
     garageId: string | null,
@@ -819,6 +823,7 @@ describe('a staff save', () => {
     expect(await stored(owner)).toEqual([]);
   });
 
+  // @traces 198-FR-008
   describe('refused', () => {
     const refusedFor = async (
       accountId: string,

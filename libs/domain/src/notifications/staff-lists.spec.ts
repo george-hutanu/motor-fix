@@ -99,6 +99,7 @@ const typesOf = (entry: Entry) =>
 const channelsOf = (entry: Entry, type: string) =>
   entry.sections.flatMap((s) => s.types).find((t) => t.type === type)?.channels;
 
+// @traces 198-FR-004
 describe('the types each role chooses for', () => {
   it('gives the owner the whole garage list in its order', () => {
     expect(staffTypes('owner', { daySheets: true })).toEqual(OWNER);
@@ -140,6 +141,7 @@ describe('the types each role chooses for', () => {
     }
   });
 
+  // @traces 198-FR-004 198-FR-005
   it('drops exactly the two day sheet types while day sheets are off', () => {
     for (const role of ['owner', 'receptionist'] as const) {
       const on = staffTypes(role, { daySheets: true });
@@ -152,6 +154,7 @@ describe('the types each role chooses for', () => {
   });
 });
 
+// @traces 198-FR-006
 describe('a locked channel', () => {
   it('is the e-mail of an always-sent type', () => {
     expect(locked('VERIFICATION_RESULT', 'email')).toBe(true);
@@ -179,6 +182,7 @@ describe('the staff entries a person reads', () => {
     expect(staffEntries(input({ memberships: [] }))).toEqual([]);
   });
 
+  // @traces 198-FR-001 198-FR-002
   it('give one entry per garage and one with no garage for an admin', () => {
     const entries = staffEntries(
       input({
@@ -198,6 +202,7 @@ describe('the staff entries a person reads', () => {
     expect(typesOf(entries[2])).toEqual(ADMIN);
   });
 
+  // @traces 198-FR-005
   it('list a mechanic’s garage with only the sections it has types in', () => {
     const [entry] = staffEntries(
       input({
@@ -210,6 +215,7 @@ describe('the staff entries a person reads', () => {
     expect(typesOf(entry)).toEqual(['BOOKING_MOVED']);
   });
 
+  // @traces 198-FR-005
   it('group the owner’s types into the four garage sections', () => {
     const [entry] = staffEntries(input());
     expect(entry.sections.map((s) => s.key)).toEqual([
@@ -231,6 +237,7 @@ describe('the staff entries a person reads', () => {
     expect(typesOf(entry)).not.toContain('DAY_SHEET_NOT_SENT');
   });
 
+  // @traces 198-FR-003
   it('give e-mail, push and WhatsApp where the catalogue does, never SMS', () => {
     const [entry] = staffEntries(input());
     expect(
@@ -242,6 +249,7 @@ describe('the staff entries a person reads', () => {
     ).toEqual(['email']);
   });
 
+  // @traces 198-FR-003
   it('read on by default and WhatsApp off until turned on', () => {
     const [entry] = staffEntries(input());
     expect(channelsOf(entry, 'REQUEST_RECEIVED')).toEqual([
@@ -275,6 +283,7 @@ describe('the staff entries a person reads', () => {
     ).toEqual([true, true, false]);
   });
 
+  // @traces 198-FR-003 198-FR-006
   it('read a locked channel as on whatever a row says', () => {
     const [entry] = staffEntries(
       input({ rows: [row('VERIFICATION_RESULT', 'email', false)] }),
@@ -297,6 +306,7 @@ describe('the staff entries a person reads', () => {
     ]);
   });
 
+  // @traces 198-FR-002
   describe('say whether WhatsApp can be chosen', () => {
     it('can when the garage has it and the phone is verified', () => {
       const [entry] = staffEntries(input());
@@ -343,6 +353,7 @@ describe('the staff entries a person reads', () => {
   });
 });
 
+// @traces 198-FR-008
 describe('the checks on a staff save', () => {
   const entries = (over: Partial<StaffInput> = {}) => staffEntries(input(over));
   const choice = (

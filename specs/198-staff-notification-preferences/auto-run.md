@@ -38,3 +38,11 @@ Start: origin/main bdd5b87, worktree .worktrees/198-staff-notification-preferenc
 ## 8. Analyze
 - artifact-lint: 0 errors, 0 warnings (Jev lane unavailable: no key).
 - Analysis: 16/16 FRs and 5/5 SCs mapped to tasks; 0 CRITICAL, 0 HIGH. Ordering note (T010 before T008/T009) already explicit in tasks.md Dependencies. SC-004 "6 codes, the 404 included" matches T013's cases. No remediation needed; 0 rounds.
+
+## 9. Implement
+- Slices A to D (laptop session): catalogue keep_one for document reminders, per-garage row rule and send-time check, staff lists and GET, contracts and regenerated client, PUT validation; one commit c94f1da.
+- Cloud resume (this session replaces the laptop one): merged origin/main (b26061b, CLAUDE.local.md conflict kept the active plan line); NOTION_TOKEN unset, Notion steps log PENDING.
+- Slice E (f02c8b0): panel redone test-first — failing specs for views, frame and the new panel, then the garage Setări view, `mf-notification-settings`, i18n for 37 staff types. Re-reads through `Live.events` (the preferences event is published straight to Redis, no outbox kind). Web suite green (1146 tests).
+- Slice F: e2e `notification-settings.spec.ts` (real sign-in as the seeded owner; restores the rows before and after so reruns stay clean); push.spec garage panel moved to `/app/garage/settings`; tab bar expects Setări in the three garage bars (8 owner tabs).
+- Traces: `@traces 198-FR-001..010` added to the domain specs; trace matrix 16/16.
+

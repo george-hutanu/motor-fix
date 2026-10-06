@@ -208,6 +208,7 @@ describe('the channels muted for a message', () => {
   });
 });
 
+// @traces 198-FR-009
 describe('a row that is a driver choice', () => {
   it('has no garage and a type of a driver group', () => {
     expect(isDriverChoice('BOOKING_CANCELLED', null)).toBe(true);
@@ -218,6 +219,7 @@ describe('a row that is a driver choice', () => {
   });
 });
 
+// @traces 198-FR-009
 describe('the channels muted for a staff message about a garage', () => {
   it('read one row per channel for a type that also has a driver group', () => {
     expect(
@@ -262,6 +264,7 @@ describe('the channels muted for a staff message about a garage', () => {
     ).toEqual(new Set(['email', 'push', 'whatsapp']));
   });
 
+  // @traces 198-FR-010
   it('skip a garage document reminder’s muted e-mail', () => {
     const muted = mutedChannels(
       'DOCUMENT_DUE',

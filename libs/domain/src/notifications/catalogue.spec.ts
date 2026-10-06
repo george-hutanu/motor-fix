@@ -114,6 +114,7 @@ describe('the notification catalogue', () => {
     expect(NOTIFICATION_TYPES['QUOTE_RECEIVED'].alwaysSent).toBe(false);
   });
 
+  // @traces 198-FR-006 198-FR-010
   it('sends a garage document reminder by the channels left on, at least one', () => {
     for (const name of ['DOCUMENT_DUE', 'DOCUMENT_OVERDUE']) {
       const type = NOTIFICATION_TYPES[name];
