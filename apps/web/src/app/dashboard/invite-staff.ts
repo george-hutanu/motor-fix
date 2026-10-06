@@ -17,6 +17,7 @@ import {
   TaskError,
   TaskSubmit,
   taskSave,
+  toProblem,
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
 
@@ -25,11 +26,11 @@ import { characters } from '../sign-in/sign-up';
 
 type Kind = 'mechanic' | 'receptionist';
 
-// The code of a refused send, and the open invite it names, if any.
-function refusal(error: unknown): { code?: unknown; inviteId?: unknown } {
-  return error instanceof HttpErrorResponse && error.error
-    ? (error.error as { code?: unknown; inviteId?: unknown })
-    : {};
+// The open invite a refused send names: the problem's one extension.
+function openInvite(error: unknown): string | null {
+  const body = error instanceof HttpErrorResponse ? error.error : null;
+  const id = typeof body === 'object' ? body?.inviteId : undefined;
+  return typeof id === 'string' ? id : null;
 }
 
 // "Invită în echipă": the owner invites a mechanic or a receptionist by
@@ -179,12 +180,8 @@ export class InviteStaff {
           garageId: this.task.data.garageId,
         });
       } catch (error) {
-        const { code, inviteId } = refusal(error);
-        this.inviteId.set(
-          code === 'invite_open' && typeof inviteId === 'string'
-            ? inviteId
-            : null,
-        );
+        const { code } = toProblem(error);
+        this.inviteId.set(code === 'invite_open' ? openInvite(error) : null);
         // The garage has mechanics switched off: only a receptionist is left.
         if (code === 'feature_off') {
           this.mechanics.set(false);

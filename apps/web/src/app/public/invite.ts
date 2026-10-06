@@ -1,5 +1,4 @@
 import { isPlatformBrowser } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -11,6 +10,7 @@ import {
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { InvitesService, type InviteViewDto } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
+import { toProblem } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { Session } from '../dashboard/session';
@@ -21,9 +21,7 @@ type State = 'checking' | 'ready' | 'accepting' | 'invalid' | 'error';
 // Every way the server says the link can no longer be used.
 const GONE = new Set(['invite_invalid', 'invite_expired', 'feature_off']);
 
-const gone = (error: unknown) =>
-  error instanceof HttpErrorResponse &&
-  GONE.has((error.error as { code?: string } | null)?.code ?? '');
+const gone = (error: unknown) => GONE.has(toProblem(error).code);
 
 // The invite e-mail's link: who invites whom, as what, and "Acceptă". A
 // signed-in person accepts on the press; anyone else gets account creation
