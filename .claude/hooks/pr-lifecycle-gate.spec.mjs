@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { allGreen, decide, featureDir, handedOff, hasAgentReview, isDependabot, prLinked, typeLabel } from './pr-lifecycle-gate.mjs';
+import { allGreen, attachCommitters, committerArgs, decide, withCommitters, featureDir, handedOff, hasAgentReview, isDependabot, parseCommitters, prLinked, typeLabel } from './pr-lifecycle-gate.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
 const green = [{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }, review('SUCCESS')];
@@ -338,17 +338,64 @@ describe('PR lifecycle gate — green means every check', () => {
 
 describe('PR lifecycle gate — Dependabot PRs need no agent review', () => {
   const checks = [{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }];
+  const botCommit = (over = {}) => ({ oid: 'aaa111', authors: [{ login: 'dependabot[bot]' }], committer: { login: 'web-flow' }, verified: true, ...over });
   const bot = (over = {}) =>
-    ready({ author: { login: 'app/dependabot', is_bot: true }, commits: [{ authors: [{ login: 'dependabot[bot]' }] }], labels: [{ name: 'QA' }, { name: 'tooling' }], title: 'chore(deps): bump actions/cache from 4 to 6', statusCheckRollup: checks, ...over });
+    ready({ author: { login: 'app/dependabot', is_bot: true }, commits: [botCommit()], labels: [{ name: 'QA' }, { name: 'tooling' }], title: 'chore(deps): bump actions/cache from 4 to 6', statusCheckRollup: checks, ...over });
 
   it('knows Dependabot by the PR author and every commit author, never the title or branch', () => {
-    assert.equal(isDependabot({ author: { login: 'app/dependabot' }, commits: [{ authors: [{ login: 'dependabot[bot]' }] }] }), true);
-    assert.equal(isDependabot({ author: { login: 'dependabot[bot]' }, commits: [{ authors: [{ login: 'dependabot[bot]' }] }] }), true);
-    assert.equal(isDependabot({ author: { login: 'app/dependabot' }, commits: [{ authors: [{ login: 'dependabot[bot]' }] }, { authors: [{ login: 'george-hutanu' }] }] }), false);
+    assert.equal(isDependabot({ author: { login: 'app/dependabot' }, commits: [botCommit()] }), true);
+    assert.equal(isDependabot({ author: { login: 'dependabot[bot]' }, commits: [botCommit()] }), true);
+    assert.equal(isDependabot({ author: { login: 'app/dependabot' }, commits: [botCommit(), botCommit({ authors: [{ login: 'george-hutanu' }] })] }), false);
     assert.equal(isDependabot({ author: { login: 'app/dependabot' } }), false);
     assert.equal(isDependabot({ author: { login: 'app/dependabot' }, commits: [] }), false);
     assert.equal(isDependabot({ author: { login: 'george-hutanu' }, title: 'chore(deps): bump x', headRefName: 'dependabot/npm_and_yarn/x' }), false);
     assert.equal(isDependabot({}), false);
+  });
+
+  // @traces 610-FR-001
+  it('also reads who committed: web-flow or Dependabot, signature verified, on every commit', () => {
+    const pr = (...commits) => ({ author: { login: 'app/dependabot' }, commits });
+    assert.equal(isDependabot(pr(botCommit({ committer: { login: 'dependabot[bot]' } }))), true);
+    assert.equal(isDependabot(pr(botCommit(), botCommit({ committer: { login: 'george-hutanu' } }))), false, 'a cherry-pick or local rebase keeps the author, not the committer');
+    assert.equal(isDependabot(pr(botCommit({ verified: false }))), false, 'web-flow without a verified signature is not GitHub');
+    assert.equal(isDependabot(pr(botCommit({ verified: 'true' }))), false);
+    assert.equal(isDependabot(pr(botCommit({ committer: undefined }))), false, 'no committer data is not Dependabot');
+    assert.equal(isDependabot(pr(botCommit({ committer: null, verified: undefined }))), false);
+    assert.equal(isDependabot(pr({ oid: 'aaa111', authors: [{ login: 'dependabot[bot]' }] })), false);
+  });
+
+  // @traces 610-FR-002
+  it('reads the committers off the REST pulls commits list, matched by sha', () => {
+    assert.deepEqual(committerArgs(82), ['api', '--paginate', 'repos/{owner}/{repo}/pulls/82/commits?per_page=100', '--jq', '.[] | {sha, login: .committer.login, verified: .commit.verification.verified}']);
+    const rows = parseCommitters('{"sha":"aaa111","login":"web-flow","verified":true}\n{"sha":"bbb222","login":null,"verified":false}\n\n');
+    assert.deepEqual(rows, [{ sha: 'aaa111', login: 'web-flow', verified: true }, { sha: 'bbb222', login: null, verified: false }]);
+    const pr = { author: { login: 'app/dependabot' }, commits: [{ oid: 'aaa111', authors: [{ login: 'dependabot[bot]' }] }, { oid: 'ccc333', authors: [{ login: 'dependabot[bot]' }] }] };
+    const out = attachCommitters(pr, rows);
+    assert.deepEqual(out.commits[0], { oid: 'aaa111', authors: [{ login: 'dependabot[bot]' }], committer: { login: 'web-flow' }, verified: true });
+    assert.equal(out.commits[1].committer, undefined, 'a commit the REST list missed carries no committer');
+    assert.equal(isDependabot(out), false);
+    assert.equal(isDependabot(attachCommitters({ ...pr, commits: [pr.commits[0]] }, rows)), true);
+    assert.equal(pr.commits[0].committer, undefined, 'the PR read is not mutated');
+    assert.equal(attachCommitters({ number: 1 }, rows).commits, undefined);
+  });
+
+  // @traces 610-FR-001
+  it('asks for the tester, not the merge, on a green Dependabot PR someone else committed to', () => {
+    const why = decide(task({ pr: bot({ commits: [botCommit({ committer: { login: 'george-hutanu' }, verified: false })] }) }));
+    assert.match(why, /speckit-pr-test 6/);
+  });
+
+  // @traces 610-FR-002
+  it('reads the committers through gh for a Dependabot PR only, and keeps none when the read throws', () => {
+    const read = { number: 6, author: { login: 'app/dependabot' }, commits: [{ oid: 'aaa111', authors: [{ login: 'dependabot[bot]' }] }] };
+    let calls = 0;
+    const gh = () => (calls++, '{"sha":"aaa111","login":"web-flow","verified":true}\n');
+    assert.equal(isDependabot(withCommitters(read, gh)), true);
+    const human = { ...read, author: { login: 'george-hutanu' } };
+    assert.equal(withCommitters(human, gh), human);
+    assert.equal(calls, 1);
+    const failed = withCommitters(read, () => { throw new Error('gh: HTTP 502'); });
+    assert.equal(isDependabot(failed), false);
   });
 
   it('asks for the merge, not the tester, on a green Dependabot PR', () => {

@@ -21,6 +21,7 @@ features:
   - 705-auto-skill-split
   - 432-mutation-floors
   - 725-lifecycle-gate-feature-dir
+  - 610-dependabot-exemption
 ---
 
 # Capability: Platform
@@ -660,6 +661,18 @@ _From 725-lifecycle-gate-feature-dir._
 ### 725-FR-003 — `handedOff` MUST read `handoff.md` from the resolved folder.
 
 _From 725-lifecycle-gate-feature-dir._
+
+### 610-FR-001 — `isDependabot` MUST also require every commit's committer login to be `web-flow` or `dependabot[bot]` and its signature to be verified; a commit with no committer data is not Dependabot's.
+
+_From 610-dependabot-exemption._
+
+### 610-FR-002 — Both gates MUST read the committers from the REST pulls commits API for a PR whose author is Dependabot, matched to the PR's commits by sha. In the merge gate a failed read refuses the merge with a retry; in the Stop gate (fail open) it leaves the commits without committer data, so the PR is not exempt.
+
+_From 610-dependabot-exemption._
+
+### 610-FR-003 — The merge gate MUST give an exempt Dependabot PR with a failing check its own refusal: it names the failing checks, never asks for the PR tester, says a pushed commit takes the exemption away, and points at `@dependabot rebase` / `@dependabot recreate` or closing it for a PR of one's own.
+
+_From 610-dependabot-exemption._
 
 ## Retired
 
