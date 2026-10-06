@@ -455,7 +455,7 @@ export class OverlayPanel {
     follow();
     visible.addEventListener('resize', resize);
     visible.addEventListener('scroll', follow);
-    inject(DestroyRef).onDestroy(() => {
+    this.destroyed.onDestroy(() => {
       visible.removeEventListener('resize', resize);
       visible.removeEventListener('scroll', follow);
     });

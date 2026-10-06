@@ -69,3 +69,29 @@ Hooks after specify: `notion-sync start` (ST-492 To do → Planning, EP-1 unchan
 - `panel.ts`: `failed` signal, `load()` shared by the constructor and `retry()` (sync throw and non-component answer fail too), `focusRetry()` (computer only, not when on the X), retry hands the focus to the panel, `console.error` removed, `.mf-overlay-error` styles. `sample-page.ts`: `openFailing()` fails the first try of each press. i18n: `shell.overlay.retry`, `cockpit.overlay.openFailing`/`failing`.
 - overlays + ui-cockpit sample-page + i18n jest: `Tests: 718 passed, 718 total`. Typecheck overlays, ui-cockpit, web, web-e2e: green.
 - e2e against `nx serve web` :4492: overlays.spec `17 passed` (incl. the new Retry test); cockpit, sheet, phone, one-language, task-form `93 passed`.
+
+## 11. Converge
+
+- Every task of tasks.md is [X] and each FR has its test; nothing unbuilt to append. 0 cycles.
+
+## 12. Harden
+
+- artifact-lint --check: clean. diff-audit --no-jev: 8 errors, all in `libs/ui-cockpit/src/lib/helm/table*` — the audit diffs against the stale local `main` (b27b5e6), so it reports other merged work; none in this change's files. No local mutation run (CI only).
+
+## 13. Ticket refresh
+
+- ST-492 comments re-read 2026-10-07: none. No new evidence.
+
+## 15. Agent context
+
+- Skipped: the managed block would grow CLAUDE.local.md past its ratchet; nothing tracked changed.
+
+## 16. Retrospective evidence (unjudged)
+
+- `retro-evidence.mjs --since 12fe0e0c --jev`: 8 commits (7 docs(specs), 1 feat); Jev lane unavailable (no key), so no suggested verdict. `instincts.mjs triggered`: none proposed.
+
+## 14. Review
+
+- spec-reviewer: APPROVE, 2 LOW (T004's record amended: panel.adversary.spec.ts needed no rewrite; notion-sync.md lines committed) → fixed.
+- code-reviewer: APPROVE, 1 MEDIUM (test-adversary's 'retrying a loader that failed' block duplicated overlays.spec.ts → deleted), 1 LOW (`this.destroyed.onDestroy` in followVisibleArea → applied), 1 LOW defer (pre-existing helm/table.ts audit findings → deferred.md).
+- test-adversary: its added block removed per the MEDIUM above; the rewritten failed-loader adversary test stays.
