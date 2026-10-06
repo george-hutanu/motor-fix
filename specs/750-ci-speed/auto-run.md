@@ -70,3 +70,11 @@ Start: main checkout dirty (.env.bak) → own worktree `.worktrees/750-ci-speed`
 
 ## 17. Archive
 - Spec Delta merged into `.specify/capabilities/platform.md` (+10); spec.md Archived (2026-10-06). Retro left to the owner (phase 16 evidence only).
+
+## Final Report
+
+- Owner pushed the held workflow commit from the laptop (1e785f8, identical to 4b15dab).
+- PR #157 body filled (pr-body-check passes), marked ready through the REST ready_for_review route; stage label QA.
+- Notion: ST-750 Implementing → QA through the connector (no NOTION_TOKEN); logged in notion-sync.md.
+- QA run: not dispatched. The cloud session's GitHub App gets 403 on workflow dispatch (pr-qa.yml), as on workflow pushes. The tail dispatches it from the laptop: `node .claude/scripts/pr-test/dispatch.mjs 157 --no-wait`.
+- Hand-off posted on the PR as a `<!-- speckit-handoff -->` comment; repair laps 1 of 5.
