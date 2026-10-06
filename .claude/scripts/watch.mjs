@@ -10,17 +10,28 @@
 // feature artifacts, its lock, one `gh pr list`. The only thing written by the
 // watcher itself is a claim, so a later pass does not dispatch onto work an
 // earlier one already handed out. Two passes running at the same moment are not
-// guarded against: schedule one /speckit-watch per machine (`--json` alone is read-only).
+// guarded against: keep one wait per machine (`--json` and `--gate` are read-only).
+//
+// `--gate` asks whether a full pass would do anything: exit 0 and silence when
+// not, exit 2 and one line per dispatch or fix when it would, 1 on an error.
+// `--wait` is the schedule: it sleeps `--every` minutes (15), runs the gate, and
+// repeats while another interval fits in `--for` (110), so the model wakes only
+// when the gate fires or the wait must be re-armed. One wait per repository,
+// recorded in the git common directory.
 //
 // Usage:
 //   node .claude/scripts/watch.mjs [--json] [--fix] [--stale qa=10,planning=20]
+//   node .claude/scripts/watch.mjs --gate [--stale …]
+//   node .claude/scripts/watch.mjs --wait [--every 15] [--for 110] [--stale …]
 //   node .claude/scripts/watch.mjs claim <worktree> <fix>
 import { execFileSync } from "node:child_process";
-import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { findCarry, postCarry } from "./pr-test/carry.mjs";
+import { parseQaRun } from "./pr-test/qa-run.mjs";
 import { readState } from "./run-state.mjs";
+import { WAIT_RECORD, commonDir, defaultCommandOf, waitHolder } from "./lib/watch-wait.mjs";
 
 export const DEFAULT_THRESHOLDS = { planning: 30, tests: 45, development: 45, review: 30, qa: 30, merging: 30 };
 // QA boots on GitHub Actions (.github/workflows/pr-qa.yml), not on the laptop,
@@ -178,6 +189,21 @@ export function fixOf(row, { now, thresholds }) {
   if (row.holder === "live" || row.holder === "owner") return { verdict: "ok", fix: null, reason: `held (${row.holder})` };
   const quiet = (now - row.activity.at) / MIN;
   const limit = thresholds[row.phase];
+  // A handed-off PR whose QA run tests its head needs nobody until CI and that
+  // run have both finished: an agent started sooner would only wait, and pay
+  // for its whole context again when the cache goes cold. A PR with no checks,
+  // or a run GitHub cannot report (deleted, gh down), waits only until the quiet
+  // threshold, then gets a tail like any other. A head already passed merges.
+  const unknown = pr?.checks === "none" || row.qaRunState == null;
+  if (pr?.state === "ready" && pr.agentReview !== "success" && row.handoff && row.qaRun && row.qaRun.head === pr.head && !(unknown && quiet > limit)) {
+    const ciDone = pr.checks === "pass" || pr.checks === "fail";
+    const status = row.qaRunState?.status;
+    if (ciDone && status === "completed") return { verdict: "stale", fix: "tail", reason: `CI ${pr.checks} and QA run ${row.qaRun.id} completed` };
+    const waits = [];
+    if (!ciDone) waits.push(pr.checks === "none" ? "CI (no checks yet)" : "CI");
+    if (status !== "completed") waits.push(`QA run ${row.qaRun.id} (${status ?? "state unreadable"})`);
+    return { verdict: "waiting", fix: null, reason: `waiting for ${waits.join(" and ")}` };
+  }
   if (quiet <= limit) return { verdict: "ok", fix: null, reason: `quiet ${Math.round(quiet)} of ${limit} min` };
   const reason = `no live agent, quiet ${Math.round(quiet)} min (> ${limit} in ${row.phase})`;
   const open = pr && (pr.state === "ready" || pr.state === "draft");
@@ -306,9 +332,20 @@ function prFor(prs, branch) {
 
 const defaultCarry = (pr) => findCarry({ pr });
 
+const defaultRunOf = (id) =>
+  JSON.parse(execFileSync("gh", ["run", "view", String(id), "--json", "status,conclusion"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 30_000 }));
+
+function qaRunOf(path, feature) {
+  try {
+    return parseQaRun(readFileSync(join(path, feature, "handoff.md"), "utf8"));
+  } catch {
+    return null;
+  }
+}
+
 // The carry lookup reads the same GitHub the PR list came from: a PR list
 // given by a caller (a test) gets no lookup unless it gives one too.
-export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claudeAlive, pidAlive = processAlive, thresholds = DEFAULT_THRESHOLDS, qaCap = QA_CAP, carry = gh === defaultGh ? defaultCarry : null } = {}) {
+export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claudeAlive, pidAlive = processAlive, thresholds = DEFAULT_THRESHOLDS, qaCap = QA_CAP, carry = gh === defaultGh ? defaultCarry : null, runOf = gh === defaultGh ? defaultRunOf : null } = {}) {
   const worktrees = parseWorktrees(git(repo, ["worktree", "list", "--porcelain"]) ?? "");
   const real = (p) => {
     try {
@@ -348,8 +385,18 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
       head: w.head,
       main: w.main,
       handoff: Boolean(feature) && existsSync(join(w.path, feature, "handoff.md")),
+      qaRun: feature ? qaRunOf(w.path, feature) : null,
       claim: claim ? { ...claim, live: claimLive(claim, threshold, now) } : null,
     };
+    // The run's state is asked of GitHub only when it decides the row: a ready
+    // handed-off PR still at the head the run tests. Unreadable reads as unfinished.
+    if (row.handoff && row.qaRun && pr?.state === "ready" && row.qaRun.head === pr.head && runOf) {
+      try {
+        row.qaRunState = runOf(row.qaRun.id);
+      } catch {
+        row.qaRunState = null;
+      }
+    }
     let fixed = fixOf(row, { now, thresholds });
     // Only a row about to re-run QA is worth the few gh calls a carry lookup costs.
     if (fixed.fix === "rerun-qa" && carry) {
@@ -377,6 +424,21 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
   };
 }
 
+/** What the no-agent fixer would act on, in the order it acts: the gate reads this too, so the two cannot disagree. */
+export function dueFixes(report) {
+  const due = [];
+  for (const r of report.rows.filter((x) => x.holder === "dead")) due.push({ fix: "unlock", path: r.path });
+  // A merged worktree whose subagent went quiet still carries its session's
+  // lock, which git will not remove past: release it on this path only.
+  for (const r of report.rows.filter((x) => x.fix === "remove-worktree" && !x.main && x.clean)) {
+    due.push({ fix: "remove-worktree", path: r.path, unlock: Boolean(r.locked) && r.holder === "none" });
+  }
+  for (const r of report.rows.filter((x) => x.fix === "carry-review" && x.carry?.from)) due.push({ fix: "carry-review", path: r.path, pr: r.pr.number, carry: r.carry });
+  for (const path of report.orphanLocks ?? []) due.push({ fix: "unlock", path });
+  if (report.prunable.length > 0) due.push({ fix: "prune", path: report.prunable.join(", ") });
+  return due;
+}
+
 /** The fixes that need no agent. Never forced, never a branch, never the main worktree; a carry writes only a commit status and the PR's Agent review section. */
 export function applyFixes(repo, report, { postCarry: post = postCarry } = {}) {
   const actions = [];
@@ -388,27 +450,31 @@ export function applyFixes(repo, report, { postCarry: post = postCarry } = {}) {
       actions.push({ what, ok: false, error: String(e.stderr ?? e.message).trim() });
     }
   };
-  for (const r of report.rows.filter((x) => x.holder === "dead")) run(`unlock ${r.path}`, ["worktree", "unlock", r.path]);
-  // A merged worktree whose subagent went quiet still carries its session's
-  // lock, which git will not remove past: release it on this path only.
-  for (const r of report.rows.filter((x) => x.fix === "remove-worktree" && !x.main && x.clean)) {
-    if (r.locked && r.holder === "none") run(`unlock ${r.path}`, ["worktree", "unlock", r.path]);
-    run(`remove ${r.path}`, ["worktree", "remove", r.path]);
-  }
-  // A carry sets the agent-review status on the PR head; the merge gate re-checks it.
-  for (const r of report.rows.filter((x) => x.fix === "carry-review" && x.carry?.from)) {
-    const what = `carry #${r.pr.number} from ${r.carry.from.slice(0, 7)}`;
-    try {
-      post({ pr: r.pr.number, from: r.carry.from, head: r.carry.head });
-      actions.push({ what, ok: true });
-    } catch (e) {
-      actions.push({ what, ok: false, error: e.message });
+  for (const d of dueFixes(report)) {
+    if (d.fix === "unlock") run(`unlock ${d.path}`, ["worktree", "unlock", d.path]);
+    else if (d.fix === "prune") run(`prune ${d.path}`, ["worktree", "prune"]);
+    else if (d.fix === "remove-worktree") {
+      if (d.unlock) run(`unlock ${d.path}`, ["worktree", "unlock", d.path]);
+      run(`remove ${d.path}`, ["worktree", "remove", d.path]);
+    } else {
+      // A carry sets the agent-review status on the PR head; the merge gate re-checks it.
+      const what = `carry #${d.pr} from ${d.carry.from.slice(0, 7)}`;
+      try {
+        post({ pr: d.pr, from: d.carry.from, head: d.carry.head });
+        actions.push({ what, ok: true });
+      } catch (e) {
+        actions.push({ what, ok: false, error: e.message });
+      }
     }
   }
-  for (const path of report.orphanLocks ?? []) run(`unlock ${path}`, ["worktree", "unlock", path]);
-  if (report.prunable.length > 0) run(`prune ${report.prunable.join(", ")}`, ["worktree", "prune"]);
   return actions;
 }
+
+/** One line per thing a full pass would do: each dispatch and each no-agent fix. Empty means the pass would do nothing. */
+const gateLines = (report) =>
+  [...report.plan, ...dueFixes(report)].map((d) => `${d.fix} ${d.path}${d.pr ? ` #${d.pr}` : ""}`);
+
+const blockingSleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
 export function writeClaim(path, fix, now = Date.now()) {
   mkdirSync(join(path, ".specify", ".cache"), { recursive: true });
@@ -424,7 +490,7 @@ function render(report, now) {
   const prText = (pr) => (pr === "unknown" ? "unknown" : pr ? `#${pr.number} ${pr.state}${pr.state === "ready" || pr.state === "draft" ? ` ci:${pr.checks}${pr.agentReview ? ` qa:${pr.agentReview}` : ""}` : ""}` : "-");
   const count = (v) => report.rows.filter((r) => r.verdict === v).length;
   const lines = [
-    `watch — ${report.rows.length} worktrees · QA runs ${report.qaRuns.length}/${report.qaCap} · stale ${count("stale")} · done ${count("done")} · blocked ${count("blocked")}`,
+    `watch — ${report.rows.length} worktrees · QA runs ${report.qaRuns.length}/${report.qaCap} · stale ${count("stale")} · waiting ${count("waiting")} · done ${count("done")} · blocked ${count("blocked")}`,
   ];
   const cols = report.rows.map((r) => [
     r.phase,
@@ -445,28 +511,42 @@ function render(report, now) {
   return lines.join("\n");
 }
 
-export function main(argv, { cwd = process.cwd(), now = Date.now(), ...deps } = {}) {
+const USAGE = "usage: watch.mjs [--json] [--fix] [--stale <phase>=<minutes>,…] | --gate [--stale …] | --wait [--every <minutes>] [--for <minutes>] [--stale …] | claim <worktree> <fix>";
+
+export function main(argv, { cwd = process.cwd(), now, sleep = blockingSleep, commandOf = defaultCommandOf, ...deps } = {}) {
+  const at = () => now ?? Date.now();
   if (argv[0] === "claim") {
     const [, path, fix] = argv;
     if (!path || !FIXES.includes(fix) || !existsSync(join(path, ".git"))) {
       console.error(`usage: watch.mjs claim <worktree> <${FIXES.join("|")}>`);
       return 1;
     }
-    writeClaim(path, fix, now);
+    writeClaim(path, fix, at());
     return 0;
   }
   const stale = [];
-  let json = false;
-  let fix = false;
+  const flags = new Set();
+  const minutes = {};
+  const usage = (why) => {
+    console.error(`${why}; ${USAGE}`);
+    return 1;
+  };
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--json") json = true;
-    else if (argv[i] === "--fix") fix = true;
-    else if (argv[i] === "--stale" && argv[i + 1]) stale.push(argv[++i]);
-    else {
-      console.error(`unknown argument ${argv[i]}; usage: watch.mjs [--json] [--fix] [--stale <phase>=<minutes>,…] | claim <worktree> <fix>`);
-      return 1;
-    }
+    const a = argv[i];
+    if (["--json", "--fix", "--gate", "--wait"].includes(a)) flags.add(a);
+    else if (a === "--stale" && argv[i + 1]) stale.push(argv[++i]);
+    else if ((a === "--every" || a === "--for") && argv[i + 1]) {
+      if (!/^\d+$/.test(argv[i + 1]) || Number(argv[i + 1]) <= 0) return usage(`${a} expects a positive number of minutes`);
+      minutes[a] = Number(argv[++i]);
+    } else return usage(`unknown argument ${a}`);
   }
+  const gate = flags.has("--gate");
+  const wait = flags.has("--wait");
+  if ((gate || wait) && (flags.has("--json") || flags.has("--fix") || (gate && wait))) return usage("--gate and --wait take only --stale (and --wait --every, --for)");
+  if (!wait && Object.keys(minutes).length > 0) return usage("--every and --for go with --wait");
+  const every = minutes["--every"] ?? 15;
+  const limit = minutes["--for"] ?? 110;
+  if (wait && limit < every) return usage("--for must be at least --every");
   let thresholds;
   try {
     thresholds = parseStale(stale, DEFAULT_THRESHOLDS);
@@ -474,18 +554,89 @@ export function main(argv, { cwd = process.cwd(), now = Date.now(), ...deps } = 
     console.error(e.message);
     return 1;
   }
-  const report = collect(cwd, { now, thresholds, qaCap: qaCapFrom(), ...deps });
-  if (report.rows.length === 0) {
-    console.error("watch.mjs: not inside a git repository");
+  const scan = () => {
+    const report = collect(cwd, { now: at(), thresholds, qaCap: qaCapFrom(), ...deps });
+    if (report.rows.length === 0) throw new Error("watch.mjs: not inside a git repository");
+    return report;
+  };
+  // Silent and 0 when a full pass would do nothing; 2 and one line per item when it would; 1 on any error.
+  const runGate = () => {
+    let lines;
+    try {
+      lines = gateLines(scan());
+    } catch (e) {
+      console.error(e.message);
+      return 1;
+    }
+    for (const line of lines) console.log(line);
+    return lines.length > 0 ? 2 : 0;
+  };
+  if (gate) return runGate();
+  if (wait) return waitLoop({ cwd, every, limit, sleep, commandOf, runGate });
+  let report;
+  try {
+    report = scan();
+  } catch (e) {
+    console.error(e.message);
     return 1;
   }
-  const actions = fix ? applyFixes(cwd, report) : [];
-  if (json) console.log(JSON.stringify({ ...report, actions }, null, 2));
+  const actions = flags.has("--fix") ? applyFixes(cwd, report) : [];
+  if (flags.has("--json")) console.log(JSON.stringify({ ...report, actions }, null, 2));
   else {
-    console.log(render(report, now));
+    console.log(render(report, at()));
     for (const a of actions) console.log(`${a.ok ? "fixed" : "failed"}: ${a.what}${a.ok ? "" : ` — ${a.error}`}`);
   }
   return 0;
+}
+
+/** Polls the gate outside the model, one repository at a time, and returns only when it fires, fails or runs out of time. */
+function waitLoop({ cwd, every, limit, sleep, commandOf, runGate }) {
+  const dir = commonDir(cwd);
+  if (!dir) {
+    console.error("watch.mjs: not inside a git repository");
+    return 1;
+  }
+  const record = join(dir, WAIT_RECORD);
+  // Exclusive create, so two waits started at the same moment cannot both hold
+  // it; a record left by a gone process is removed only once that is known.
+  const take = () => {
+    try {
+      writeFileSync(record, `${process.pid}\n`, { flag: "wx" });
+      return true;
+    } catch (e) {
+      if (e.code === "EEXIST") return false;
+      throw e;
+    }
+  };
+  try {
+    let taken = take();
+    if (!taken && waitHolder(cwd, { commandOf }) === null) {
+      rmSync(record, { force: true });
+      taken = take();
+    }
+    if (!taken) {
+      console.log(`watch: a wait is already armed (pid ${waitHolder(cwd, { commandOf }) ?? "unknown"})`);
+      return 0;
+    }
+  } catch (e) {
+    console.error(`watch.mjs: cannot take the wait record ${record}: ${e.message}`);
+    return 1;
+  }
+  try {
+    let elapsed = 0;
+    while (elapsed + every <= limit) {
+      sleep(every * MIN);
+      elapsed += every;
+      const code = runGate();
+      if (code !== 0) return code;
+    }
+    console.log(`watch: idle for ${elapsed} min; re-arm the wait`);
+    return 0;
+  } finally {
+    try {
+      if (readFileSync(record, "utf8").trim() === String(process.pid)) rmSync(record);
+    } catch {}
+  }
 }
 
 const invoked = (() => {

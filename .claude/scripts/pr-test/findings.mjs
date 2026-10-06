@@ -136,10 +136,13 @@ export function readinessOutcome({ name, status, body, storage, url }) {
   return { finding: stepFinding(`${name} readiness failed: ${failed.join(", ") || status}`, `GET ${url} answered ${status}: ${String(body).slice(0, 300)}`) };
 }
 
+/** What makes two findings the same one, across sources and laps. */
+export const findingKey = (f) => f.key ?? `${f.kind}|${f.title}|${f.route ?? ""}`;
+
 export function mergeFindings(list) {
   const out = new Map();
   for (const f of list) {
-    const key = f.key ?? `${f.kind}|${f.title}|${f.route ?? ""}`;
+    const key = findingKey(f);
     const seen = out.get(key);
     if (!seen) out.set(key, { ...f });
     else seen.severity = worst(seen.severity, f.severity);

@@ -30,6 +30,10 @@ const REREAD = /\b(follow|read)\s+(the current\s+|both\s+)?(AGENTS\.md|CLAUDE\.l
 const prose = (text) => text.replace(/^[ \t]*>[ \t]?/gm, '').replaceAll('`', '');
 const rereads = (text) => REREAD.test(prose(text));
 
+// speckit-auto is SKILL.md plus the reference files beside it.
+const AUTO = ['SKILL.md', 'preflight.md', 'phases-plan.md', 'phases-build.md', 'phases-close.md', 'commit-protocol.md', 'hand-off.md', 'tail.md', 'report.md'];
+const readAuto = () => AUTO.map((f) => read(`.claude/skills/speckit-auto/${f}`)).join('\n');
+
 const denies = (denied, tool) => denied.some((d) => tool === d || tool.startsWith(`${d}__`));
 
 describe('the task-runner definition', () => {
@@ -60,7 +64,7 @@ describe('the task-runner definition', () => {
 });
 
 describe('the dispatches', () => {
-  const auto = read('.claude/skills/speckit-auto/SKILL.md');
+  const auto = readAuto();
   const watch = read('.claude/skills/speckit-watch/SKILL.md');
 
   it('send the story agent as task-runner', () => {
@@ -95,7 +99,7 @@ describe('the dispatches', () => {
 });
 
 describe('the constitution', () => {
-  const auto = read('.claude/skills/speckit-auto/SKILL.md');
+  const auto = readAuto();
 
   it('reaches the authors as the card', () => {
     const preflight = sectionFrom(auto, '## Preflight');
