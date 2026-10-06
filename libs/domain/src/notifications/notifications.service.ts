@@ -112,10 +112,11 @@ export class NotificationsService {
   async notify(input: NotifyInput): Promise<number> {
     const type = notificationType(input.kind);
     // One read of the garage's switch, whichever staff it reaches.
-    let allowed: Promise<boolean> | undefined;
+    const allowed = new Map<string, Promise<boolean>>();
     const allowsWhatsApp = (garageId: string) => {
-      allowed ??= this.garageAllowsWhatsApp(garageId);
-      return allowed;
+      const read = allowed.get(garageId) ?? this.garageAllowsWhatsApp(garageId);
+      allowed.set(garageId, read);
+      return read;
     };
     let queued = 0;
     for (const accountId of new Set(input.recipients)) {

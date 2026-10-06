@@ -303,6 +303,24 @@ describe('a garage’s own staff choices', () => {
       'email',
     ]);
   });
+
+  // @traces 198-FR-010
+  it('goes by the garage’s rows when the garage staff cannot be read', async () => {
+    const { garageId, owner } = await staffOf();
+    await prefer(owner, 'DOCUMENT_DUE', 'email', false, garageId);
+    const failing = new Proxy(prisma, {
+      get(target, key, receiver) {
+        if (key === 'garageMember') {
+          return { count: () => Promise.reject(new Error('store down')) };
+        }
+        const value = Reflect.get(target, key, receiver);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+    service = serviceOn(failing);
+    expect(await hand('DOCUMENT_DUE', owner, garageId)).toBe(0);
+    expect(await channelsOf(owner, 'DOCUMENT_DUE')).toEqual(['in_app']);
+  });
 });
 
 describe('when the preferences cannot be read', () => {

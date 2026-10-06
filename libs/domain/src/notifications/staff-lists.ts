@@ -1,9 +1,10 @@
 import {
+  type OutsideChannel,
   STAFF_CHANNELS,
-  type StaffChannel,
   type StaffNotificationsDto,
   type StaffRole,
   type StaffSectionKey,
+  type UpdateNotificationPreferenceDto,
 } from '@motor-fix/contracts';
 
 import { notificationType } from './catalogue';
@@ -98,7 +99,7 @@ const DAY_SHEETS = new Set(['DAY_SHEET_OUTDATED', 'DAY_SHEET_NOT_SENT']);
 const QUOTING = new Set(['REQUEST_RECEIVED', 'MESSAGE_RECEIVED']);
 
 // Besides the e-mail of every always-sent type.
-const ALSO_LOCKED: Readonly<Record<string, readonly StaffChannel[]>> = {
+const ALSO_LOCKED: Readonly<Record<string, readonly OutsideChannel[]>> = {
   ADMIN_OUTAGE_ALERT: ['email', 'push'],
 };
 
@@ -140,7 +141,7 @@ export const STAFF_TYPES: ReadonlySet<string> = new Set(
 export const staffTypes = (role: StaffRole, options: ListOptions = {}) =>
   sectionsFor(role, options).flatMap((section) => section.types);
 
-export const locked = (type: string, channel: StaffChannel) =>
+export const locked = (type: string, channel: OutsideChannel) =>
   (notificationType(type).alwaysSent && channel === 'email') ||
   (ALSO_LOCKED[type]?.includes(channel) ?? false);
 
@@ -233,14 +234,9 @@ export function staffEntries(input: StaffInput): StaffNotificationsDto[] {
   return entries;
 }
 
-export interface StaffChoice {
-  garageId: string | null;
-  type: string;
-  channel: string;
-  enabled: boolean;
-}
+type StaffChoice = UpdateNotificationPreferenceDto;
 
-export interface Refusal {
+interface Refusal {
   code:
     | 'type_not_in_list'
     | 'channel_locked'
@@ -269,7 +265,7 @@ function refusal(
   const { channel, enabled, type } = choice;
   const hit = listed(entries, choice);
   if (!hit) return 'type_not_in_list';
-  if (!enabled && locked(type, channel as StaffChannel)) {
+  if (!enabled && locked(type, channel)) {
     return 'channel_locked';
   }
   if (enabled && channel === 'whatsapp' && !hit.entry.whatsapp.available) {
