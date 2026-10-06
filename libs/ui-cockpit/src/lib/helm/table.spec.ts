@@ -39,6 +39,7 @@ describe('helm table columns', () => {
     expect(columns('td')).toEqual(['main', null, 'key']);
   });
 
+  // @traces 461-FR-001
   // The phone stylesheet turns the table, body and rows into block and flex
   // boxes; explicit roles keep them a table for WebKit's accessibility tree.
   it('gives every table element its explicit role', async () => {

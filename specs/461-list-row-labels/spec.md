@@ -35,7 +35,7 @@ Notion: ST-461 https://app.notion.com/p/3ef607bff0d281bf8f19f86a7a0ca7ee (Task, 
 ### Functional Requirements
 
 - **FR-001**: Every element of the shared table (`libs/ui-cockpit` helm table) MUST carry its explicit ARIA role: the table `table`, its header and body `rowgroup`, each row `row`, each header cell `columnheader`, each data cell `cell`, so assistive technology keeps the table semantics whatever display the phone stylesheet gives them.
-- **FR-002**: Below 768 px, a table that names a main column MUST keep its header row in the accessibility tree, visually hidden (clipped to 1 px, out of the layout) rather than `display: none`; the header cells of columns other than main and key stay hidden like their cells, so each shown cell's column header is the header of its own column. The visual layout stays as before and nothing adds horizontal scroll at 320 px.
+- **FR-002**: The shared table MUST let each column be named main or key; below 768 px a table that names a main column MUST show each row as the main text, then the key value on the same line (main at the start, key at the end), with every other column hidden, its header cells as well as its cells, and the header row visually hidden (clipped to 1 px, out of the layout) rather than `display: none`, so it stays in the accessibility tree and each shown cell's column header is the header of its own column; from 768 px every column and the header row show. A table that names only a key column is unnamed. Nothing adds horizontal scroll at 320 px.
 
 ### Key Entities
 
@@ -56,6 +56,6 @@ None.
 
 ### Capability: `phone-layout`
 
-- **Adds**: FR-001, FR-002
-- **Modifies**: 286-FR-007 — "with every other column and the header row hidden" becomes "with every other column hidden and the header row visually hidden but kept for assistive technology (461-FR-002)".
+- **Adds**: FR-001
+- **Modifies**: `286-FR-007` → `FR-002`
 - **Removes**: none

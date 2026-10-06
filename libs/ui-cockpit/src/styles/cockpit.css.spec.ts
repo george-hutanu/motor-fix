@@ -473,6 +473,7 @@ describe('cockpit.css phone rules', () => {
     );
   });
 
+  // @traces 461-FR-002
   it('hides the header row from sight only, so a screen reader still has each column name', () => {
     const header = phoneRule(`${collapsing} .spartan-table-header`);
     expect(header).not.toMatch(/display:\s*none|visibility:\s*hidden/);
