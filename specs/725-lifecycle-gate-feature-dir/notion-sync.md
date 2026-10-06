@@ -10,3 +10,4 @@
 - 2026-10-06 · implement · ST-725 · Planning → Implementing
 - 2026-10-06 · implement · Foundations timeline row ST-725 · Planning → Implementing
 - 2026-10-06 · labels · PR #148 · planning → in development
+- 2026-10-06 · debt · ST-725 · filed 1: https://app.notion.com/p/3f1607bff0d28185a894ca95efedcf21
