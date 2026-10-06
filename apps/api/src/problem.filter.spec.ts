@@ -59,6 +59,34 @@ describe('ProblemFilter', () => {
     });
   });
 
+  it('keeps the named extension members a refusal carries, and only those', () => {
+    const res = send(
+      new HttpException(
+        {
+          code: 'invite_open',
+          internal: 'secret',
+          inviteId: 'invite-9',
+          message: 'open',
+        },
+        409,
+      ),
+    );
+
+    expect(res.body).toMatchObject({
+      code: 'invite_open',
+      inviteId: 'invite-9',
+    });
+    expect(res.body).not.toHaveProperty('internal');
+  });
+
+  it('drops an extension member that is not a string', () => {
+    const res = send(
+      new HttpException({ code: 'invite_open', inviteId: { id: 1 } }, 409),
+    );
+
+    expect(res.body).not.toHaveProperty('inviteId');
+  });
+
   it('keeps the field errors an exception carries', () => {
     const errors = [{ code: 'email_taken', field: 'email' }];
     const res = send(

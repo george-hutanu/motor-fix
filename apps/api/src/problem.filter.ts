@@ -20,11 +20,13 @@ export function sendProblem(
   code: string,
   detail?: string,
   errors?: FieldProblem[],
+  extensions: Record<string, string> = {},
 ) {
   res
     .status(status)
     .type('application/problem+json')
     .json({
+      ...extensions,
       code,
       ...(detail && { detail }),
       ...(errors && { errors }),
@@ -60,6 +62,9 @@ export class ProblemFilter implements ExceptionFilter {
       typeof own.code === 'string' ? own.code : codeForStatus(status),
       detail(typeof body === 'string' ? body : own.message),
       fieldProblems(own.errors),
+      // The one member beyond the problem shape a refusal carries: the open
+      // invite a refused send names. Nothing else an exception holds leaves.
+      typeof own.inviteId === 'string' ? { inviteId: own.inviteId } : {},
     );
   }
 }

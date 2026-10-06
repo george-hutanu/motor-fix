@@ -5,6 +5,13 @@ const garage = 'g1';
 const mechanic = 'm1';
 
 describe('audienceOf', () => {
+  it('sends a garage change to each garage it touches', () => {
+    expect(audienceOf({ garageIds: ['g1', 'g2'], type: 'garage' })).toEqual([
+      'garage:g1',
+      'garage:g2',
+    ]);
+  });
+
   it('sends a request to its driver and to each garage it was sent to', () => {
     expect(
       audienceOf({

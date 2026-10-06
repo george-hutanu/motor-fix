@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { VIEWPORTS, contextCookies, dropExpected, loadProblem, matrix, parseRoute, sessionCookie, toFindings } from './sweep.mjs';
+import { VIEWPORTS, contextCookies, dropExpected, loadProblem, matrix, openPage, parseRoute, sessionCookie, toFindings } from './sweep.mjs';
 
 describe('the sweep matrix', () => {
   it('visits every route at four viewports, two schemes and two languages', () => {
@@ -131,5 +131,36 @@ describe('route syntax: path[@role][:status]', () => {
     assert.deepEqual(await contextCookies({ role: null }, { session, baseURL }), []);
     assert.equal(asked.length, 2);
     await assert.rejects(contextCookies({ role: 'admin' }, { baseURL }), /no session for @admin/);
+  });
+});
+
+describe('opening a page', () => {
+  it('waits for the load, then gives a page that never idles (a live stream) a bounded settle instead of failing', async () => {
+    const calls = [];
+    const page = {
+      goto: async (url, opts) => {
+        calls.push(['goto', url, opts.waitUntil]);
+        return { status: () => 200 };
+      },
+      waitForLoadState: async (state, opts) => {
+        calls.push(['settle', state, opts.timeout]);
+        throw new Error(`page.waitForLoadState: Timeout ${opts.timeout}ms exceeded.`);
+      },
+    };
+    const res = await openPage(page, 'http://127.0.0.1:4100/app/driver');
+    assert.equal(res.status(), 200);
+    assert.deepEqual(calls[0], ['goto', 'http://127.0.0.1:4100/app/driver', 'load']);
+    assert.equal(calls[1][1], 'networkidle');
+    assert.ok(calls[1][2] <= 10000);
+  });
+
+  it('still fails a page that never loads', async () => {
+    const page = {
+      goto: async () => {
+        throw new Error('page.goto: Timeout 30000ms exceeded.');
+      },
+      waitForLoadState: async () => {},
+    };
+    await assert.rejects(openPage(page, 'http://127.0.0.1:4100/'), /Timeout 30000ms/);
   });
 });

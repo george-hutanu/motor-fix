@@ -1,0 +1,146 @@
+{
+  "pr": 152,
+  "repo": "",
+  "sha": "9129c1923a044722f80b74872536173d97baae89",
+  "base": "c03230915eb7b8c780a526891da63a8ec6104c1a",
+  "lap": 1,
+  "verdict": "failure",
+  "summary": "3 blocking finding(s); 8 in all. Booted postgres, redis, minio, api, web, worker.",
+  "findings": [
+    {
+      "severity": "high",
+      "kind": "review",
+      "title": "flow not run: the invitee accepts a valid link (US2, FR-006/FR-007/FR-012)",
+      "route": "/ro/invite/:token",
+      "steps": [
+        "Owner sends an invite and reads the link from the 201 answer (no mail provider in QA: emailSent false carries link)",
+        "Open /ro/invite/<token> signed out: check the heading names the garage and the role, and the profile line for a mechanic (not screenshotted at any size)",
+        "Press Accepta: the sign-up dialog opens with the invited name and e-mail filled in; create the account; it accepts in the same flow and lands on /app/garage in the mechanic role",
+        "Repeat signed in as an existing driver: nothing happens until Accepta; then the driver keeps the driver role and gains mechanic",
+        "Open the used link again: the invalid message; POST /invites/accept with that token answers 410"
+      ],
+      "evidence": ".specify/.cache/qa-flows-152.mjs:86: await page.goto(`${baseURL}/${lang}/invite/${\"x\".repeat(43)}`, { waitUntil: \"load\" }); -- the only invite page the flows open is a fake token; no flow accepts a real link (CI's web-e2e covers the sign-up path once, but the QA run did not)"
+    },
+    {
+      "severity": "high",
+      "kind": "review",
+      "title": "flow not run: resend and revoke (US3, FR-005)",
+      "steps": [
+        "Send an invite, send it again to the same address: the dialog shows invite_open and 'Trimite din nou'; press it: a new outcome, the old link now answers 410 invite_invalid",
+        "POST /api/v1/garages/{garageId}/invites/{id}/resend and /revoke as the owner (200, 204), then again on the revoked invite (409 invite_invalid), as a driver (404)",
+        "The run's own operation calls skipped both: 'GET /api/v1/garages answered 404, so there is no {garageId} to call it with'"
+      ],
+      "evidence": "report.json notes: 'Not called: POST /api/v1/garages/{garageId}/invites/{id}/resend ... POST /api/v1/garages/{garageId}/invites/{id}/revoke'; .specify/.cache/qa-flows-152.mjs has no resend or revoke call"
+    },
+    {
+      "severity": "high",
+      "kind": "review",
+      "title": "flow not run: mechanics switched off (US4, FR-003/FR-006/FR-011)",
+      "steps": [
+        "Switch team_mechanics off for the seeded garage (garage_feature row enabled=false)",
+        "Send a mechanic invite in the dialog: 404 feature_off, the Mecanic choice disappears and Receptioner is selected; a receptionist invite still sends",
+        "Open and accept a mechanic link sent before: the invalid message, 404 feature_off from /invites/check"
+      ],
+      "evidence": "apps/web/src/app/dashboard/invite-staff.ts:186: if (code === 'feature_off') { -- no flow in .specify/.cache/qa-flows-152.mjs drives this branch"
+    },
+    {
+      "severity": "medium",
+      "kind": "review",
+      "title": "not swept: /app/garage@garage and /ro/invite/:token",
+      "route": "/app/garage@garage",
+      "steps": [
+        "Both routes were dropped from the viewport sweep (networkidle never comes on /api/v1/live; the fake token answers 410)",
+        "The flows screenshot them at 320 px (dialog, outcome) and 320/390 px (invalid page) in light only: no tablet, desktop or dark mode, and the dialog only in Romanian",
+        "Give the sweep a load condition that does not wait for the live stream, or shoot these screens at all four sizes, both schemes and both languages in the flows"
+      ],
+      "evidence": "shots/flow-invite-dialog-320.png, shots/flow-invite-sent-320.png, shots/flow-invite-invalid-320-ro.png, shots/flow-invite-invalid-390-en.png are the only screens of the changed routes"
+    },
+    {
+      "severity": "medium",
+      "kind": "review",
+      "title": "Accept answers 204 instead of the session FR-007 and the plan promise; a failed switch leaves a joined user on 'no longer valid'",
+      "steps": [
+        "FR-007: 'The answer MUST switch the session to the invited role (a new access token, as the role switch does)'; plan.md:87 still says 'The accept answer is the role switch's'",
+        "The web makes a second call (switchRole) after a 204; if that call fails, invite.ts shows acceptFailed, and pressing Accepta again gets invite_invalid (the invite is already accepted), so the page says the invitation is no longer valid although the person joined",
+        "Either answer the SessionDto from accept as planned, or record the deviation in spec/plan and, on a switch failure after a 204, navigate or retry the switch instead of re-accepting"
+      ],
+      "evidence": "libs/domain/src/garages/staff-invite.controller.ts:106: @HttpCode(HttpStatus.NO_CONTENT); apps/web/src/app/public/invite.ts:135: const me = await this.session.switchRole(invite.kind);"
+    },
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "Resend audit entry records no permissions (FR-010: 'with the actor and the permissions chosen')",
+      "steps": [
+        "Resend an invite; the invite_resent audit row has no newValue; the accept entry gap is already deferred, the resend one is not"
+      ],
+      "evidence": "libs/domain/src/garages/staff-invite.service.ts:158: kind: 'invite_resent',"
+    },
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "The invite e-mail is sent inside the request, against the constitution's 'Slow work - e-mail ... runs in the worker, never in a request'",
+      "steps": [
+        "Justified in plan.md Complexity Tracking (the notifications queue addresses accounts only) and required by FR-004; recorded here so the exception is visible, no change asked"
+      ],
+      "evidence": "libs/domain/src/garages/staff-invite.service.ts:400: await this.brevo.send({"
+    },
+    {
+      "severity": "low",
+      "kind": "review",
+      "title": "The report's 'Ran on GitHub Actions' note is wrong: this lap ran locally (--local fallback, tree mode)",
+      "steps": [
+        "Actions refused workflow_dispatch from the cloud session (403); run.mjs 152 --tree . ran on the session's machine with PUBLIC_WEB_URL=http://localhost:4200. The tree-mode note in run.mjs should not claim Actions"
+      ],
+      "evidence": "report.md:4: - Ran on GitHub Actions: PostgreSQL with PostGIS, Redis and MinIO from the PR's own compose file, started by the PR QA workflow."
+    }
+  ],
+  "booted": [
+    "postgres",
+    "redis",
+    "minio",
+    "api",
+    "web",
+    "worker"
+  ],
+  "notes": [
+    "Ran on GitHub Actions: PostgreSQL with PostGIS, Redis and MinIO from the PR's own compose file, started by the PR QA workflow.",
+    "Called the changed operations: POST /api/v1/invites/check → 410; POST /api/v1/invites/accept → 410.",
+    "Not called: POST /api/v1/garages/{garageId}/invites: GET /api/v1/garages answered 404, so there is no {garageId} to call it with; POST /api/v1/garages/{garageId}/invites/{id}/resend: GET /api/v1/garages answered 404, so there is no {garageId} to call it with; POST /api/v1/garages/{garageId}/invites/{id}/revoke: GET /api/v1/garages answered 404, so there is no {garageId} to call it with.",
+    "Unit and end-to-end tests left to CI (Unit tests and E2E tests; the merge gate waits for them)."
+  ],
+  "screenshots": [
+    "shots/home-desktop-light-ro.png",
+    "shots/home-desktop-light-en.png",
+    "shots/home-desktop-dark-ro.png",
+    "shots/home-desktop-dark-en.png",
+    "shots/home-tablet-light-ro.png",
+    "shots/home-tablet-light-en.png",
+    "shots/home-tablet-dark-ro.png",
+    "shots/home-tablet-dark-en.png",
+    "shots/home-mobile-light-ro.png",
+    "shots/home-mobile-light-en.png",
+    "shots/home-mobile-dark-ro.png",
+    "shots/home-mobile-dark-en.png",
+    "shots/home-small-phone-light-ro.png",
+    "shots/home-small-phone-light-en.png",
+    "shots/home-small-phone-dark-ro.png",
+    "shots/home-small-phone-dark-en.png",
+    "shots/cockpit-desktop-light-ro.png",
+    "shots/cockpit-desktop-light-en.png",
+    "shots/cockpit-desktop-dark-ro.png",
+    "shots/cockpit-desktop-dark-en.png",
+    "shots/cockpit-tablet-light-ro.png",
+    "shots/cockpit-tablet-light-en.png",
+    "shots/cockpit-tablet-dark-ro.png",
+    "shots/cockpit-tablet-dark-en.png",
+    "shots/cockpit-mobile-light-ro.png",
+    "shots/cockpit-mobile-light-en.png",
+    "shots/cockpit-mobile-dark-ro.png",
+    "shots/cockpit-mobile-dark-en.png",
+    "shots/cockpit-small-phone-light-ro.png",
+    "shots/cockpit-small-phone-light-en.png",
+    "shots/cockpit-small-phone-dark-ro.png",
+    "shots/cockpit-small-phone-dark-en.png"
+  ],
+  "markdown": "**Agent review: failure** — PR #152 at `9129c19`, lap 1\n\nBlocking: 3 (blocker 0, high 3) · medium 2 · low 3. Booted: postgres, redis, minio, api, web, worker.\n- Ran on GitHub Actions: PostgreSQL with PostGIS, Redis and MinIO from the PR's own compose file, started by the PR QA workflow.\n- Called the changed operations: POST /api/v1/invites/check → 410; POST /api/v1/invites/accept → 410.\n- Not called: POST /api/v1/garages/{garageId}/invites: GET /api/v1/garages answered 404, so there is no {garageId} to call it with; POST /api/v1/garages/{garageId}/invites/{id}/resend: GET /api/v1/garages answered 404, so there is no {garageId} to call it with; POST /api/v1/garages/{garageId}/invites/{id}/revoke: GET /api/v1/garages answered 404, so there is no {garageId} to call it with.\n- Unit and end-to-end tests left to CI (Unit tests and E2E tests; the merge gate waits for them).\n\n| # | Severity | Finding | Where | Evidence |\n| --- | --- | --- | --- | --- |\n| 1 | high | flow not run: the invitee accepts a valid link (US2, FR-006/FR-007/FR-012) | /ro/invite/:token | .specify/.cache/qa-flows-152.mjs:86: await page.goto(`${baseURL}/${lang}/invite/${\"x\".repeat(43)}`, { waitUntil: \"load\" }); -- the only invite page the flows open is a fake token; no flow accepts a real link (CI's web-e2e covers the sign-up path once, but the QA run did not) |\n| 2 | high | flow not run: resend and revoke (US3, FR-005) |  | report.json notes: 'Not called: POST /api/v1/garages/{garageId}/invites/{id}/resend ... POST /api/v1/garages/{garageId}/invites/{id}/revoke'; .specify/.cache/qa-flows-152.mjs has no resend or revoke call |\n| 3 | high | flow not run: mechanics switched off (US4, FR-003/FR-006/FR-011) |  | apps/web/src/app/dashboard/invite-staff.ts:186: if (code === 'feature_off') { -- no flow in .specify/.cache/qa-flows-152.mjs drives this branch |\n| 4 | medium | not swept: /app/garage@garage and /ro/invite/:token | /app/garage@garage | shots/flow-invite-dialog-320.png, shots/flow-invite-sent-320.png, shots/flow-invite-invalid-320-ro.png, shots/flow-invite-invalid-390-en.png are the only screens of the changed routes |\n| 5 | medium | Accept answers 204 instead of the session FR-007 and the plan promise; a failed switch leaves a joined user on 'no longer valid' |  | libs/domain/src/garages/staff-invite.controller.ts:106: @HttpCode(HttpStatus.NO_CONTENT); apps/web/src/app/public/invite.ts:135: const me = await this.session.switchRole(invite.kind); |\n| 6 | low | Resend audit entry records no permissions (FR-010: 'with the actor and the permissions chosen') |  | libs/domain/src/garages/staff-invite.service.ts:158: kind: 'invite_resent', |\n| 7 | low | The invite e-mail is sent inside the request, against the constitution's 'Slow work - e-mail ... runs in the worker, never in a request' |  | libs/domain/src/garages/staff-invite.service.ts:400: await this.brevo.send({ |\n| 8 | low | The report's 'Ran on GitHub Actions' note is wrong: this lap ran locally (--local fallback, tree mode) |  | report.md:4: - Ran on GitHub Actions: PostgreSQL with PostGIS, Redis and MinIO from the PR's own compose file, started by the PR QA workflow. |\n\n### Reproduction\n1. Owner sends an invite and reads the link from the 201 answer (no mail provider in QA: emailSent false carries link) → Open /ro/invite/<token> signed out: check the heading names the garage and the role, and the profile line for a mechanic (not screenshotted at any size) → Press Accepta: the sign-up dialog opens with the invited name and e-mail filled in; create the account; it accepts in the same flow and lands on /app/garage in the mechanic role → Repeat signed in as an existing driver: nothing happens until Accepta; then the driver keeps the driver role and gains mechanic → Open the used link again: the invalid message; POST /invites/accept with that token answers 410\n2. Send an invite, send it again to the same address: the dialog shows invite_open and 'Trimite din nou'; press it: a new outcome, the old link now answers 410 invite_invalid → POST /api/v1/garages/{garageId}/invites/{id}/resend and /revoke as the owner (200, 204), then again on the revoked invite (409 invite_invalid), as a driver (404) → The run's own operation calls skipped both: 'GET /api/v1/garages answered 404, so there is no {garageId} to call it with'\n3. Switch team_mechanics off for the seeded garage (garage_feature row enabled=false) → Send a mechanic invite in the dialog: 404 feature_off, the Mecanic choice disappears and Receptioner is selected; a receptionist invite still sends → Open and accept a mechanic link sent before: the invalid message, 404 feature_off from /invites/check\n4. Both routes were dropped from the viewport sweep (networkidle never comes on /api/v1/live; the fake token answers 410) → The flows screenshot them at 320 px (dialog, outcome) and 320/390 px (invalid page) in light only: no tablet, desktop or dark mode, and the dialog only in Romanian → Give the sweep a load condition that does not wait for the live stream, or shoot these screens at all four sizes, both schemes and both languages in the flows\n5. FR-007: 'The answer MUST switch the session to the invited role (a new access token, as the role switch does)'; plan.md:87 still says 'The accept answer is the role switch's' → The web makes a second call (switchRole) after a 204; if that call fails, invite.ts shows acceptFailed, and pressing Accepta again gets invite_invalid (the invite is already accepted), so the page says the invitation is no longer valid although the person joined → Either answer the SessionDto from accept as planned, or record the deviation in spec/plan and, on a switch failure after a 204, navigate or retry the switch instead of re-accepting\n6. Resend an invite; the invite_resent audit row has no newValue; the accept entry gap is already deferred, the resend one is not\n7. Justified in plan.md Complexity Tracking (the notifications queue addresses accounts only) and required by FR-004; recorded here so the exception is visible, no change asked\n8. Actions refused workflow_dispatch from the cloud session (403); run.mjs 152 --tree . ran on the session's machine with PUBLIC_WEB_URL=http://localhost:4200. The tree-mode note in run.mjs should not claim Actions\n\nScreenshots: 32, one per route × viewport × scheme × language.\n"
+}
