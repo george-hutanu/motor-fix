@@ -57,6 +57,11 @@ export const routes: Routes = [
           import('./public/reset-password').then((m) => m.ResetPassword),
         path: 'reset-password/:token',
       },
+      {
+        loadComponent: () =>
+          import('./public/sign-in-return').then((m) => m.SignInReturn),
+        path: 'sign-in/return',
+      },
       placeholder('garages', 'public.placeholder.garages'),
       placeholder('garages/:garage', 'public.placeholder.garages'),
       placeholder('mechanics/:mechanic', 'public.placeholder.mechanics'),

@@ -12,6 +12,7 @@ import {
   type ValidationErrors,
   Validators,
 } from '@angular/forms';
+import { Router } from '@angular/router';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import {
   FieldError,
@@ -23,6 +24,7 @@ import {
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
 import { Consent, consentControl } from './consent';
+import { ProviderButtons } from './providers';
 import { ADDRESS, type AuthData, type AuthSwitch } from './sign-in';
 import { Session } from '../dashboard/session';
 
@@ -52,6 +54,7 @@ export const characters =
     FieldError,
     HlmButton,
     HlmInput,
+    ProviderButtons,
     ReactiveFormsModule,
     TaskError,
     TaskSubmit,
@@ -143,6 +146,7 @@ export const characters =
       <button hlmBtn type="submit" [mfTaskSubmit]="save">
         {{ 'public.signUp.submit' | t }}
       </button>
+      <mf-provider-buttons [returnTo]="returnTo" />
       <p class="switch">
         <span>{{ 'public.signUp.haveAccount' | t }}</span>
         <button type="button" [disabled]="save.state() === 'sending'" (click)="switchToSignIn()">
@@ -161,6 +165,8 @@ export class SignUp {
   >();
 
   protected readonly shown = signal(false);
+  protected readonly returnTo =
+    this.task.data?.reason === true ? inject(Router).url : null;
 
   protected readonly form = new FormGroup({
     consent: consentControl(),

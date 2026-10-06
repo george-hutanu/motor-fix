@@ -23,10 +23,17 @@ const store = new S3TestStore();
 const turn = databaseTurn(env.DATABASE_URL);
 
 const PUBLIC = [
+  'GET /api/v1/auth/oauth/apple',
+  'GET /api/v1/auth/oauth/google',
+  'GET /api/v1/auth/oauth/google/callback',
+  'GET /api/v1/auth/oauth/pending',
+  'GET /api/v1/auth/providers',
   'GET /health/live',
   'GET /health/ready',
   'POST /api/v1/auth/confirm-email',
   'POST /api/v1/auth/confirm-email/resend',
+  'POST /api/v1/auth/oauth/apple/callback',
+  'POST /api/v1/auth/oauth/complete',
   'POST /api/v1/auth/password-reset',
   'POST /api/v1/auth/password-reset/check',
   'POST /api/v1/auth/password-reset/complete',

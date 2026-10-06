@@ -38,3 +38,15 @@ export const STORAGE_ENV = [
 ] as const;
 
 export type StorageEnv = Record<(typeof STORAGE_ENV)[number], string>;
+
+// Sign-in with a provider: optional, a provider is offered only when all its
+// keys are set. The issuer overrides point at a stand-in in development and
+// tests only.
+export const GOOGLE_ENV = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'] as const;
+
+export const APPLE_ENV = [
+  'APPLE_SERVICES_ID',
+  'APPLE_TEAM_ID',
+  'APPLE_KEY_ID',
+  'APPLE_PRIVATE_KEY',
+] as const;

@@ -46,13 +46,15 @@ const FLAGS: CookieOptions = {
   secure: true,
 };
 
-function presented(req: Request): string | undefined {
+export function cookieOf(req: Request, name: string): string | undefined {
   for (const pair of (req.header('cookie') ?? '').split(';')) {
-    const [name, ...value] = pair.trim().split('=');
-    if (name === COOKIE) return value.join('=');
+    const [key, ...value] = pair.trim().split('=');
+    if (key === name) return value.join('=');
   }
   return undefined;
 }
+
+const presented = (req: Request) => cookieOf(req, COOKIE);
 
 export function keep(res: Response, issued: Issued) {
   if (!issued.refreshToken) return;
