@@ -30,3 +30,17 @@ v1.8.1, no placeholders. Card read.
 Phase agent task-runner, model fable. STATUS: success — 16 FRs, 4 stories,
 Spec Delta against `platform`; open numbers recorded as autonomous-default
 assumptions (FR threshold >5, story points >5, promotion target 2).
+
+## 3. Org context
+
+org-researcher dispatched without Notion tools (STATUS blocked). Story read by
+the run through the connector; context.md written from it. Differences: the
+ST-662 debt tasks stay out of scope; part 3 sits in the ready step.
+
+## 4. Clarify
+
+spec-challenger: 8 findings. Answered 5 as Clarifications (owed phases = level 2
+minus level 1, proof `plan.md`; classifier runs before the Bug rule; a missing
+property is a fact; level 0 promotion on stderr only; no per-slice check).
+Applied silently: no env override for the FR threshold, Stop-granularity
+attribution, absolute subagent tokens, Labels/Design facts only.
