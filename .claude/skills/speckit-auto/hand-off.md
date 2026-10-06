@@ -20,6 +20,9 @@ and QA lap is where most of a story's cost went.
    `qa` (story and PR label → QA), commits and pushes the `qa` line, and
    writes the note below. On a stop, do its `fix` and run it again; on
    `left`, run those events through `speckit-notion-sync`, then its `then`.
+   Its first check is `level.mjs check --ready`: a level 2 or 3 feature
+   missing an owed artifact stops with the phases that write it. Run them,
+   commit, and run `ready` again.
 3. Start the QA run, beside CI, and do not wait for it. Write the flows the
    way `.claude/agents/pr-tester.md` §2 says, to
    `.specify/.cache/qa-flows-<n>.mjs` (git ignores it), then

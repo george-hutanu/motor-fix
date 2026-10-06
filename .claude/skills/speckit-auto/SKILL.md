@@ -161,6 +161,12 @@ red-first hook reads the spec and the tasks, not the level, and a run that skips
 tests because it called itself small is the failure this whole harness exists to
 prevent.
 
+A level is checked, not trusted: `node .claude/scripts/level.mjs check` runs
+after phases 2, 4 and 7 (`phases-plan.md`) and promotes a 0 or 1 to 2 on a fact.
+On a promotion, run the phases level 2 owes that were skipped, in run order,
+before going on. Ready refuses a level 2 or 3 feature that lacks its owed
+artifacts (`hand-off.md`).
+
 ### Run state — write it, do not narrate it
 
 At every phase boundary:
