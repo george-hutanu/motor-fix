@@ -36,3 +36,8 @@
 ## Phase 3 — Context
 
 _pending_
+
+## Phase 7 — Tasks
+
+- Model sonnet. `tasks.md` written (9 tasks, tests first, every FR mapped); analyze skipped (level 1).
+- STATUS: success — tasks.md committed and pushed.
