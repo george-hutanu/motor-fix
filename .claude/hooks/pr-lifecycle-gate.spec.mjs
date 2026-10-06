@@ -86,6 +86,7 @@ describe('PR lifecycle gate — what it refuses', () => {
       writeFileSync(join(dir, 'specs', '050-cockpit-theme', 'handoff.md'), '# hand-off\n');
       assert.equal(handedOff(dir, '050-cockpit-theme'), true);
       mkdirSync(join(dir, '.specify'), { recursive: true });
+      mkdirSync(join(dir, 'specs', '051-other'), { recursive: true });
       writeFileSync(join(dir, '.specify', 'feature.json'), JSON.stringify({ feature_directory: 'specs/051-other' }));
       assert.equal(handedOff(dir, '050-cockpit-theme'), false);
     } finally {
@@ -135,16 +136,29 @@ describe('PR lifecycle gate — the feature folder', () => {
     withRepo((dir) => {
       folder(dir, '050-cockpit-theme');
       assert.equal(featureDir(dir, '050-cockpit-theme'), join('specs', '050-cockpit-theme'));
+      folder(dir, '051-other');
       point(dir, 'specs/051-other');
       assert.equal(featureDir(dir, '050-cockpit-theme'), 'specs/051-other');
     }));
 
+  // @traces 725-FR-001
+  it('passes over a pointer to a folder that is gone, or that is not a path', () =>
+    withRepo((dir) => {
+      folder(dir, '083-sign-in-apple-google');
+      point(dir, 'specs/051-removed');
+      assert.equal(featureDir(dir, '83-sign-in-apple-google'), join('specs', '083-sign-in-apple-google'));
+      point(dir, 51);
+      assert.equal(featureDir(dir, '83-sign-in-apple-google'), join('specs', '083-sign-in-apple-google'));
+    }));
+
+  // @traces 725-FR-001
   it('finds a zero-padded folder with the same number and slug', () =>
     withRepo((dir) => {
       folder(dir, '083-sign-in-apple-google');
       assert.equal(featureDir(dir, '83-sign-in-apple-google'), join('specs', '083-sign-in-apple-google'));
     }));
 
+  // @traces 725-FR-001
   it('never takes a folder with the same number but another slug', () =>
     withRepo((dir) => {
       folder(dir, '083-other-work');
