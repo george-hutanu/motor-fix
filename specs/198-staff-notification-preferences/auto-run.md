@@ -46,6 +46,16 @@ Start: origin/main bdd5b87, worktree .worktrees/198-staff-notification-preferenc
 - Slice F: e2e `notification-settings.spec.ts` (real sign-in as the seeded owner; restores the rows before and after so reruns stay clean); push.spec garage panel moved to `/app/garage/settings`; tab bar expects Setări in the three garage bars (8 owner tabs).
 - Traces: `@traces 198-FR-001..010` added to the domain specs; trace matrix 16/16.
 
+- Review fix: e2e found every switch named after the first (brain `inputId` null); unique `inputId` per switch, test-first.
+
+## 10. Review and harden
+- code-reviewer pass 1 BLOCK: HIGH last_channel race (checks before the lock) fixed test-first in 71d865c; HIGH staff-read fallback pinned by a pipeline test (b968116); MEDIUM stale save answer fixed test-first (37b93e0); MEDIUM staff-lists types tightened; LOW WhatsApp cache keyed by garage; LOW round trips deferred; LOW views `push` kept (the settings view carries the push panel).
+- spec-reviewer APPROVE; its LOW (400 vs 422 for a garage on a driver type) deferred.
+- code-reviewer pass 2 APPROVE; its LOW (double failed toggle) deferred. Three bullets in deferred.md, Notion PENDING (no NOTION_TOKEN).
+- Gates: lint green, affected typecheck green, notifications Jest (unit and integration) 342/342, web panel 17/17, trace matrix 16/16.
+
+## 11. Archive
+- Spec Delta merged into `.specify/capabilities/notifications.md` (+16); spec status Archived.
 
 ## Compaction 2026-10-06T16:40:36.408Z (auto)
 

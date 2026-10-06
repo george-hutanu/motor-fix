@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 
 **Input**: User description: "ST-198 "Choose which messages I get as a garage, mechanic or admin" (Notion story https://app.notion.com/p/3ee607bff0d28165bbebde1ebfad3a78, epic EP-1 Foundations https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707, feature page https://app.notion.com/p/3ee607bff0d28162b9b2cc67189317d1)"
 

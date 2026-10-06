@@ -59,7 +59,7 @@ No new dependency, lib or migration (plan Technical Context). Nothing to do.
 
 ## Phase 7: Polish
 
-- [ ] T022 Mark tasks done, update `specs/198-staff-notification-preferences/auto-run.md`; typecheck, Biome and the touched Jest projects green (all FR)
+- [X] T022 Mark tasks done, update `specs/198-staff-notification-preferences/auto-run.md`; typecheck, Biome and the touched Jest projects green (all FR)
 
 ## Dependencies
 
