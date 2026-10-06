@@ -71,3 +71,7 @@ session's connector, read-only:
 - **New contradictions with spec.md**: none.
 - Architecture pages and open decisions on token lifetime stay unread (gap
   above kept); the spec does not depend on the lifetime beyond "clearly past".
+
+## Refresh 2026-10-06 (phase 13)
+
+ST-563 re-read: content unchanged, no comments; Status Implementing and PR #146 are this run's own writes. No new evidence.

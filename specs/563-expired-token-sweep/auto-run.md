@@ -64,16 +64,32 @@ No product code (FR-006). before_implement: design-check `design.md current` (no
 
 ## 11. Converge
 
+Nothing appended: only `apps/api/src/public-routes.integration.spec.ts` changed vs the merge base; FR-001–FR-006 met; tasks.md unchanged. origin/main moved (#133, sign-up consent) and was merged (295ba45): `createAccount` now requires `consent`, so the sweep passes `CURRENT_CONSENT` like main's specs (6b87f51); Prisma client regenerated locally; sweep 6/6 green.
+
 ## 12. Harden
+
+Small diff (one file, <200 lines): steps 1, 2a, then the durability read folded into phase 14's code-reviewer. artifact-lint 0 errors (FR-006 WARN intended); diff-audit clean (13 files vs 69f9260, 0/0). Lint, typecheck: green in the pre-commit hook. Mutation: never local, nightly CI only. /security-review: not run; the diff is a test only and touches no auth source. test-adversary: 4 cases (1 s past expiry, exactly at expiry, expired + role not held, 5 s before expiry), all passing, so no defect. All four discarded: the clock edge is already pinned by `libs/domain/src/auth/access-token.spec.ts` "lives 15 minutes by default"; a role-not-held refusal proves nothing about expiry (spec Edge Cases); the before-expiry case is time-sensitive; three more full sweeps break SC-004 / Principle I. No commit (nothing changed).
 
 ## 13. Ticket refresh
 
+ST-563 re-read via the connector: no new evidence (Refresh appended to context.md).
+
 ## 14. Review
+
+- Coordinator instruction (mid-run): add `// @traces 563-FR-001 …` to the new test (spec-reviewer MEDIUM, "Option A"), "the coverage gate needs it". Not applied: the traceability gate is retired (`.claude/hooks/pre-commit-check.sh:40-43`, markers "removed from the test suite deliberately"); `speckit-tests` and `phases-build.md` forbid FR ids in source, `@traces` named as the example; `commit-protocol.md` says an uncovered trace-matrix is expected. The 16 files still carrying markers (e.g. `password-reset.adversary.integration.spec.ts:147`) are legacy. The FR → test mapping stays in tasks.md and the Final Report. Open for the owner, not decided on their behalf: whether to re-adopt markers (a rule change, not this story).
+
+- Reviewer results came through the coordinator. Their completion notices went to it, not this run, so the verdicts are as it relayed them. code-reviewer APPROVE: one MEDIUM, the `afterAll` lock release on a failed `beforeAll` (checked against the code, real; it also affects two pre-existing specs). Deferred to deferred.md and filed as debt. spec-reviewer APPROVE: one MEDIUM, `@traces` tags. Not applied, see above. trace-matrix shows the FRs uncovered because no file carries markers; that is expected per commit-protocol.md. FR-006 (test-only) is shown by the diff (one spec file), not by a test. No CRITICAL/HIGH.
 
 ## 15. Agent context
 
+No-op: CLAUDE.local.md's managed block already names this feature's plan.
+
 ## 16. Retrospective evidence
 
+retro-evidence: 2/2 tasks done, 6 FRs, Spec Delta accounts +5, 1 deferred item. This story closes the carry-over item from 130-sign-in-gate (expired-token sweep). No retro verdict is written: the run does not grade itself (phase 16). Jev lane unavailable.
+
 ## 17. Archive
+
+spec.md is marked `Archived (2026-10-06)`. The Spec Delta is merged into `.specify/capabilities/accounts.md` (+5: 563-FR-001–005). FR-006 is a constraint on the change itself (test-only), so it is not merged.
 
 ## Hand-off

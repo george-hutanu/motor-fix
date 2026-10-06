@@ -2,7 +2,7 @@
 
 **Feature Branch**: `563-expired-token-sweep`
 **Created**: 2026-10-06
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 **Level**: 2 (feature)
 **Notion task**: ST-563 — https://app.notion.com/3f0607bff0d2811b8c7bc0729cbd6d73
 **Epic**: EP-1 Foundations — https://app.notion.com/3ee607bff0d281188cb4c6724bd45707
