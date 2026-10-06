@@ -33,12 +33,14 @@ A maintainer changing the audit history (`GET /audit-history`) runs its three in
 ### Session 2026-10-07
 
 - Q: The two `get` helpers differ (the API spec's takes a query object; the adversary's also takes a raw query string for malformed input). Which does the shared one keep? → A: The union: a query object or a raw string, so the adversary's malformed-input cases keep their calls unchanged. (autonomous default)
-- Q: Does the shared module own the app and database lifecycle (`beforeAll`/`afterAll`/`beforeEach` truncate) or only the functions? → A: It owns the lifecycle too, as the two copies are identical; each HTTP spec registers it with one call, as `serial-db.testing.ts` already does for the database. (autonomous default)
+- Q: Does the shared module own the app and database lifecycle (`beforeAll`/`afterAll`/`beforeEach` truncate) or only the functions? → A: It owns the lifecycle too, as the two copies are identical; each HTTP spec registers it with one call (no hooks on import), as `serialDatabase` already does, and the returned `get` closes over the app that call booted. The `*.testing.ts` name keeps it out of Jest's test match and inside Biome and typecheck. (autonomous default)
+- Q: How is "drops by exactly six" counted when assertions move? → A: By `it`/`it.each` titles: adversary titles drop by six, service and API titles are identical before and after; moved assertions join existing cases, never new ones. (autonomous default)
+- Q: ST-472 (PR #177) also edits the audit history API spec; what order? → A: Whichever merges second merges `origin/main` and keeps both changes; this PR merges `origin/main` before ready if #177 has landed (context.md). (autonomous default)
 - Q: What if one of the six named cases asserts something the service spec does not (e.g. the admin also writing no entry, masking inside nested arrays)? → A: The case is still removed from the adversary spec, and that one assertion joins the matching service case (FR-004); coverage of distinct behaviours does not shrink. (autonomous default)
 
 ## Assumptions
 
-- Restatement is judged by behaviour asserted, not by wording: the six named cases map to the service spec's `reads the last 7 days when no start is given`, `writes no entry`, `refuses a cursor outside the caller's scope`, `masks a key inside an object even when the field is not sensitive`, `gives empty optional fields as null` and `pages newest first, 20 at a time, with the total`. (autonomous default)
+- Restatement is judged by behaviour asserted, not by wording. The six adversary cases and their service counterparts: `leaves out an entry older than 7 days when no start is given` → `reads the last 7 days when no start is given`; `writes no entry when it is read, also by the admin` → `writes no entry`; `keeps a cursor from another garage refused whatever the filters` → `refuses a cursor outside the caller's scope` (its platform-entry cursor moves there); `masks keys inside arrays nested in arrays and objects` → `are masked for the %s` (its arrays-in-arrays value and array `oldValue` move into that case's sensitive fixture); `shows a system entry without an actor id` → `gives empty optional fields as null`; `gives the cursor of the 20th entry on a full first page` → `pages newest first, 20 at a time, with the total`. The admin's `answers 400 invalid_cursor to the admin for an entry that does not exist` is not a restatement and stays. (autonomous default, spec-challenger 2026-10-07)
 - The adversary spec's own fixtures (`garage`, `owner`, `admin`, `entry`, `minutesAgo`, `ids`) stay in it: the ticket shares only the four HTTP helpers the API spec also declares, and the API spec builds its world differently. (autonomous default)
 - `audit.adversary.integration.spec.ts` (the write-side audit) is out of scope; the ticket names the history specs only. (autonomous default)
 
@@ -58,5 +60,5 @@ A maintainer changing the audit history (`GET /audit-history`) runs its three in
 
 - **SC-001**: The adversary spec holds zero of the six named cases; the service spec still holds each of their behaviours.
 - **SC-002**: `account`, `bearer`, `get` and the app bootstrap each appear once under `libs/domain/src/audit/`, in `audit-history.testing.ts`, and both HTTP specs import from it.
-- **SC-003**: The count of adversary cases drops by exactly six; no other case name disappears from any of the three suites.
+- **SC-003**: The adversary spec's case titles drop by exactly six; the service and API specs' case titles are unchanged, and no other title disappears.
 - **SC-004**: The three audit history integration suites pass, and the diff touches no product file.
