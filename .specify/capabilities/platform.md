@@ -21,6 +21,7 @@ features:
   - 705-auto-skill-split
   - 432-mutation-floors
   - 725-lifecycle-gate-feature-dir
+  - 693-notion-agent-tools
   - 610-dependabot-exemption
   - 678-measurable-sizing
 ---
@@ -662,6 +663,30 @@ _From 725-lifecycle-gate-feature-dir._
 ### 725-FR-003 — `handedOff` MUST read `handoff.md` from the resolved folder.
 
 _From 725-lifecycle-gate-feature-dir._
+
+### 693-FR-001 — Both agents carry the current server's read tools: `org-researcher` lists `notion-search`, `notion-fetch`, `notion-get-comments`, `notion-query-data-sources` and `notion-get-tool-access`; `spec-reviewer` lists `notion-search`, `notion-fetch` and `notion-get-comments`. Today's id, `fd62790a-b7ca-480e-9cf5-9073c1192ba8`, is on both lists when this merges.
+
+_From 693-notion-agent-tools._
+
+### 693-FR-002 — No Notion write tool (a name starting `notion-create`, `notion-update`, `notion-move`, `notion-duplicate`, `notion-delete` or `notion-upload`, which covers `notion-create-comment`; the read tool `notion-get-comments` stays allowed), nor a whole-server grant (`mcp__<id>` or `mcp__<id>__*`), ever appears in either agent's tools or, for a Notion server, in `permissions.allow`.
+
+_From 693-notion-agent-tools._
+
+### 693-FR-003 — `.claude/scripts/notion-agent-tools.mjs` owns the list, with three commands: `check` (exit 1, one line per finding, when a Notion agent lists a server another lacks, a read tool outside its set, lacks one of its set for a listed server, or lists a write tool or whole-server grant, and when `.claude/settings.json` `permissions.allow` lacks a server the agents list or allows a Notion write tool or grant; exit 0 otherwise); `add <server-id or mcp__<id>__notion-* name>` (adds each agent its own read set and the union to `permissions.allow`; idempotent; refuses any other name); `detect` (reads the newest 20 transcripts under `~/.claude/projects/<project slug>/`, main checkout's slug first, collects `mcp__<id>__notion-*` names from their deferred tool lists only, exits 1 naming each id the agents lack, 0 when none is or with a note when no transcript exists).
+
+_From 693-notion-agent-tools._
+
+### 693-FR-004 — `doctor.mjs` runs `detect` and reports a missing id as a `warn` result, never a failure; a `check` finding (lists out of step, a write tool) is a `fail`.
+
+_From 693-notion-agent-tools._
+
+### 693-FR-005 — `org-researcher` and `spec-reviewer` check for a Notion tool first and, when none is present, report `[UNAVAILABLE: notion — no Notion tool in this agent; run node .claude/scripts/notion-agent-tools.mjs detect, then add <id>]`; the researcher writes it to `context.md` and its reply, the reviewer to its report and continues without Notion. `/speckit-context` and speckit-auto phase 3 tell the caller to run `detect` then `add` on that line.
+
+_From 693-notion-agent-tools._
+
+### 693-FR-006 — Harness specs cover the script (`check`, `add`, `detect` on fixture agent files and fixture transcripts) under vitest; the existing `.claude/agents/agent-replies.spec.mjs` and `npm run test:harness` stay green.
+
+_From 693-notion-agent-tools._
 
 ### 610-FR-001 — `isDependabot` MUST also require every commit's committer login to be `web-flow` or `dependabot[bot]` and its signature to be verified; a commit with no committer data is not Dependabot's.
 

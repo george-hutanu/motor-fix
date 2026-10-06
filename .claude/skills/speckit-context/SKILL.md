@@ -180,7 +180,10 @@ plan this workspace does not have, and so does querying several data sources
 at once — query one data source per call. A Notion connector that is not
 connected or errors twice is `[UNAVAILABLE: notion — <shortest error line>]`
 in `context.md`, and the run stops there: with one source, an unreachable
-source means no digest, never "nothing found".
+source means no digest, never "nothing found". An agent whose tool list holds
+no Notion tool at all (the connector came back under a new id) writes
+`[UNAVAILABLE: notion — no Notion tool in this agent; run node .claude/scripts/notion-agent-tools.mjs detect, then add <id>]`
+instead; `detect` names the new id and `add` lists it on both agents.
 
 ### 3. Read the space
 
