@@ -28,3 +28,13 @@ Start: origin/main bdd5b87, worktree .worktrees/198-staff-notification-preferenc
 
 ## 5. Plan
 - Phase agent, model fable: STATUS success — plan.md, research.md, data-model.md, contracts/, quickstart.md; commits b9bf379, c08e6eb. Panel subscribes with Live.on/resync directly; the seeded owner has no phone, so the e2e toggles E-mail and Push and asserts WhatsApp disabled.
+
+## 6. Checklist
+- Phase agent, model sonnet: STATUS success — checklists/requirements.md and checklists/staff-notifications.md driven to 0 unchecked; commits 800e559, 3ec1e3e.
+
+## 7. Tasks
+- Phase agent, model sonnet: STATUS success — 22 tasks in 6 slices (A catalogue/row rule, B staff lists + GET, C contracts + regen, D PUT validation, E web panel, F e2e); commit 7e0f448. Level check: stays 2.
+
+## 8. Analyze
+- artifact-lint: 0 errors, 0 warnings (Jev lane unavailable: no key).
+- Analysis: 16/16 FRs and 5/5 SCs mapped to tasks; 0 CRITICAL, 0 HIGH. Ordering note (T010 before T008/T009) already explicit in tasks.md Dependencies. SC-004 "6 codes, the 404 included" matches T013's cases. No remediation needed; 0 rounds.
