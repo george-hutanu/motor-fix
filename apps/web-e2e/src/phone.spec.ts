@@ -115,7 +115,7 @@ test.describe('the shared table', () => {
     await open(page, '/cockpit');
 
     // The header row is clipped out of sight but stays in the accessibility
-    // tree, so each shown cell keeps its column name (461-FR-002).
+    // tree, so each shown cell keeps its column name.
     const header = page.getByRole('columnheader', { name: 'Service' });
     await expect(header).toHaveCount(1);
     const headerRow = await page
