@@ -9,3 +9,6 @@
 - 2026-10-06 · implement · ST-677 · Planning → Implementing
 - 2026-10-06 · implement · timeline · no row for ST-677
 - 2026-10-06 · labels · PR #167 · in development
+- 2026-10-06 · qa · ST-677 · Implementing → QA
+- 2026-10-06 · qa · timeline · no row for ST-677
+- 2026-10-06 · labels · PR #167 · QA
