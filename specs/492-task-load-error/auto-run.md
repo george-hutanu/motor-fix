@@ -51,3 +51,7 @@ Hooks after specify: `notion-sync start` (ST-492 To do → Planning, EP-1 unchan
 ## 6. Checklist
 
 - `checklists/ux.md` (18 items): all checked; one gap fixed in spec.md (FR-004: focus fallback to the panel when the retry button is pressed), CHK017 struck (a retry announcement is beyond the skeleton's own rule).
+
+## 7. Tasks
+
+- `tasks.md`: 10 tasks (7 failing-test/i18n tasks first, 2 implementation in `panel.ts` and `sample-page.ts`, 1 proof run); includes rewriting the two adversary tests. level check: 2 unchanged; artifact-lint: 0 errors (1 warning `delta-missing`, though spec.md carries a Spec Delta; left as is).
