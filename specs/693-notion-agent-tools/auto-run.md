@@ -41,3 +41,12 @@ _pending_
 
 - Model sonnet. `tasks.md` written (9 tasks, tests first, every FR mapped); analyze skipped (level 1).
 - STATUS: success — tasks.md committed and pushed.
+
+## Resume after a stale run (2026-10-06)
+
+- Spec review pass 1 BLOCKED (HIGH wildcard grant, MEDIUM detect crash and `add` accepting any `mcp__*` name, LOWs). Adversary spec (7 red) committed in 77d517f with 3 more red cases; fixes in f056174 (wildcards on tools and allowlist, non-Notion names refused, transcripts read per file with try, BOM stripped, typed `addedNames`, settings.json parse error reported). FR-002 reworded to the verb-prefix list. Code review patch items applied (no `.spec.md` filter, `projectSlug` imported in doctor.spec.mjs); `seen` kept because an adversary case asserts it; RECENT env skipped (optional).
+- Spec review pass 2 BLOCKED on a bare `mcp__<id>` grant on a tools line: red case, fix 35c6031; confirmation pass APPROVE. Repairs 2 of 5.
+- Verification: `npm run test:harness` 68 files / 1551 tests green; `check`/`detect` exit 0; doctor 17 ok; artifact-lint clean. trace-matrix shows 693 0/6 (harness specs are not scanned; the gate already fails on main for other harness features).
+- Retro evidence (unjudged): 6 commits, platform +6, 0 deferred; Jev lane unavailable.
+- Archive: spec Archived (2026-10-06), Spec Delta merged into platform.md with FR-003/FR-005 text made standalone (ef9b78e).
+- Hand-off: PR body filled, ready, Notion story Implementing → QA (connector), labels QA; timeline row still PENDING (usage limit). QA run 37423687356 at dc9a099, dispatched --no-wait.
