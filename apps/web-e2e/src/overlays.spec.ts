@@ -290,41 +290,46 @@ test.describe('stacked tasks', () => {
 });
 
 test.describe('the browser’s Back button', () => {
-  test('closes the task and keeps the page, its address, scroll and focus', async ({
-    page,
-  }) => {
-    await openCockpit(page);
-    const button = opener(page, 'cockpit.overlay.openDialog');
-    await button.scrollIntoViewIfNeeded();
-    await page.evaluate(() => window.scrollBy(0, 120));
-    const address = page.url();
-    const before = await scrollY(page);
-    const result = page.locator('.mf-overlay-result');
-    await result.evaluate((node) => {
-      (globalThis as { pageNode?: Element }).pageNode = node;
+  for (const key of [
+    'cockpit.overlay.openDialog',
+    'cockpit.overlay.openDrawer',
+  ]) {
+    test(`closes the task opened by ${key} and keeps the page, its address, scroll and focus`, async ({
+      page,
+    }) => {
+      await openCockpit(page);
+      const button = opener(page, key);
+      await button.scrollIntoViewIfNeeded();
+      await page.evaluate(() => window.scrollBy(0, 120));
+      const address = page.url();
+      const before = await scrollY(page);
+      const result = page.locator('.mf-overlay-result');
+      await result.evaluate((node) => {
+        (globalThis as { pageNode?: Element }).pageNode = node;
+      });
+      await button.click();
+      await shown(page);
+
+      await page.goBack();
+
+      await expect(task(page)).toHaveCount(0);
+      expect(page.url()).toBe(address);
+      expect(await scrollY(page)).toBe(before);
+      await expect(button).toBeFocused();
+      await expect(result).toContainText(
+        t('ro', 'cockpit.overlay.results.cancelled'),
+      );
+      expect(
+        await result.evaluate(
+          (node) => (globalThis as { pageNode?: Element }).pageNode === node,
+        ),
+      ).toBe(true);
+
+      await page.goForward();
+      await expect(task(page)).toHaveCount(0);
+      expect(page.url()).toBe(address);
     });
-    await button.click();
-    await shown(page);
-
-    await page.goBack();
-
-    await expect(task(page)).toHaveCount(0);
-    expect(page.url()).toBe(address);
-    expect(await scrollY(page)).toBe(before);
-    await expect(button).toBeFocused();
-    await expect(result).toContainText(
-      t('ro', 'cockpit.overlay.results.cancelled'),
-    );
-    expect(
-      await result.evaluate(
-        (node) => (globalThis as { pageNode?: Element }).pageNode === node,
-      ),
-    ).toBe(true);
-
-    await page.goForward();
-    await expect(task(page)).toHaveCount(0);
-    expect(page.url()).toBe(address);
-  });
+  }
 
   test('closes stacked tasks one at a time, the top one first', async ({
     page,

@@ -66,3 +66,13 @@
 - ST-22 Write and publish a review in the drawer — https://app.notion.com/p/3ee607bff0d28157b6c5f46d9172876c
 - Architecture decisions — https://app.notion.com/p/3ee607bff0d28111907edddc4bdd066a
 - Foundations (epic, search snippet only) — https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707
+
+## Refresh 2026-10-07
+
+Baseline: Gathered 2026-10-07. Re-read ST-491 (with discussions), ST-157, and comments on ST-491, ST-157 and EP-1.
+
+- **No new evidence on scope.** ST-491's content is unchanged: the same Finding, severity low, `libs/overlays/src/overlays.ts` and `panel.ts`. Last edited 2026-10-06T21:25Z, before the baseline. ST-157 was last edited 2026-10-04 and still says scenario 8 is *(proposed)*.
+- **Comments:** 0 on ST-491 (page-level and child blocks), 0 on ST-157, 0 on EP-1. Suggested edits are not enabled.
+- **Property drift, not scope:** ST-491 Status reads Implementing (the digest recorded Planning), the PR link is still #173. This is the lifecycle's own `implement` step, not a finding.
+- **Not re-read:** the EP-1 page body (60k characters) was not opened, so the Gaps entry about it stands.
+- superseded: 0 older statements replaced.
