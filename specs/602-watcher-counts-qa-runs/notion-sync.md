@@ -10,3 +10,6 @@
 - 2026-10-06 · implement · ST-602 · Planning → Implementing
 - 2026-10-06 · implement · timeline · no row for ST-602
 - 2026-10-06 · labels · PR #169 · in development
+- 2026-10-06 · qa · ST-602 · Implementing → QA
+- 2026-10-06 · qa · timeline · no row for ST-602
+- 2026-10-06 · labels · PR #169 · QA
