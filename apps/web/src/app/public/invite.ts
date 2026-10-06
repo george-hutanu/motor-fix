@@ -88,6 +88,9 @@ export class InvitePage implements OnInit {
   protected readonly state = signal<State>('checking');
   protected readonly invite = signal<InviteViewDto | null>(null);
   protected readonly failed = signal(false);
+  // Set once the server has taken the acceptance: a retry then only switches
+  // the role, since accepting again would answer that the link is used.
+  private joined = false;
 
   constructor() {
     void this.i18n.enter('public');
@@ -129,9 +132,12 @@ export class InvitePage implements OnInit {
           return;
         }
       }
-      await this.invites.invitesControllerAccept({
-        body: { token: this.token },
-      });
+      if (!this.joined) {
+        await this.invites.invitesControllerAccept({
+          body: { token: this.token },
+        });
+        this.joined = true;
+      }
       const me = await this.session.switchRole(invite.kind);
       await this.router.navigateByUrl(me?.landing ?? '/app/garage');
     } catch (error) {

@@ -206,6 +206,30 @@ describe('the invite link page', () => {
     expect(accept(fixture)).toBeDefined();
   });
 
+  it('after joining, retries only the role switch when it failed, never "no longer valid"', async () => {
+    const { acceptInvite, fixture, navigate, switchRole } = setup({
+      signedIn: DRIVER,
+    });
+    switchRole.mockRejectedValueOnce(new HttpErrorResponse({ status: 503 }));
+    acceptInvite
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValue(gone('invite_invalid'));
+    await flush(fixture);
+
+    accept(fixture)?.click();
+    await flush(fixture);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(text(fixture)).not.toContain(INVALID);
+
+    accept(fixture)?.click();
+    await flush(fixture);
+
+    expect(acceptInvite).toHaveBeenCalledTimes(1);
+    expect(switchRole).toHaveBeenCalledTimes(2);
+    expect(text(fixture)).not.toContain(INVALID);
+    expect(navigate).toHaveBeenCalledWith('/app/garage');
+  });
+
   it('says the link is no longer valid when accepting finds it used', async () => {
     const { acceptInvite, fixture, navigate, switchRole } = setup({
       signedIn: DRIVER,
