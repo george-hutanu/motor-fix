@@ -13,7 +13,8 @@ import { join } from 'node:path';
 const DETECTED = ['Killed', 'Timeout'];
 const UNDETECTED = ['Survived', 'NoCoverage'];
 const STRYKER = '@stryker-mutator/core';
-const HEADER = '| Project | Mutation score | Floor |\n|---|---|---|\n';
+const HEADER =
+  '| Project | Mutation score | Floor | Minutes |\n|---|---|---|---|\n';
 
 type StrykerCore = {
   Stryker: new (
@@ -53,6 +54,9 @@ export function strykerOptions(
       'apps/web-e2e/test-output',
       '.specify/**/.cache',
     ],
+    // Leaves the option objects of input(), output() and the signal queries
+    // unmutated: Angular's compiler refuses one that is not a literal (1010).
+    ignorers: ['angular'],
     // A static mutant reloads its module and reruns every test; on libs/domain
     // they were 14% of mutants and two thirds of the run time.
     ignoreStatic: true,
@@ -111,8 +115,9 @@ export function summaryRows(
   project: string,
   score: number | null,
   floor: number,
+  ms: number,
 ): string {
-  const row = `| ${project} | ${score === null ? 'n/a' : `${score.toFixed(2)}%`} | ${floor} |\n`;
+  const row = `| ${project} | ${score === null ? 'n/a' : `${score.toFixed(2)}%`} | ${floor} | ${(ms / 60_000).toFixed(1)} |\n`;
   return summary ? row : HEADER + row;
 }
 
@@ -132,6 +137,7 @@ async function main() {
   // A specifier the compiler cannot follow: the spec build resolves with node10,
   // which cannot see this ESM-only package.
   const { Stryker }: StrykerCore = await import(STRYKER);
+  const started = Date.now();
   const results = await new Stryker(options).runMutationTest();
   const summary = process.env['GITHUB_STEP_SUMMARY'];
   if (summary) {
@@ -144,6 +150,7 @@ async function main() {
         project,
         score,
         thresholds.break,
+        Date.now() - started,
       ),
     );
   }
