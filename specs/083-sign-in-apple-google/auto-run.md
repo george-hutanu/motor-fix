@@ -74,3 +74,18 @@ Gathered with `retro-evidence.mjs` (attached unjudged in the Final Report). The 
 
 ## 17. Archive
 spec.md `Archived (2026-10-06)`; Spec Delta merged: accounts +11 ~0 -0. `/speckit-retro` not run (auto mode does not grade itself).
+
+## Final Report
+- Branch `83-sign-in-apple-google`, PR #136 ready at 7a982b4 (14 commits ahead of main, including main merges). Phases 1–17 run; repair laps 2 of 5.
+- Notion: ST-83 Implementing → QA, Foundations timeline row → QA, PR label `QA`. QA run lap 1 dispatched `--no-wait` (handoff.md).
+- Verification: pre-commit (affected typecheck, test, lint) green on every commit; oauth integration suites 351/351, 5 consecutive runs; web unit 1089/1089 (one pre-commit run flaked, green on rerun). Mutation: not run locally (CI nightly only).
+- FR → test: FR-001–FR-011 each covered (`trace-matrix.mjs`); oauth.api / oauth.adversary integration specs, web provider and return-page specs, web-e2e stub flows.
+- Reviewers: code-reviewer APPROVE (3 LOW fixed in 0fe142a); spec-reviewer APPROVE (LOW: FR-005 owner decision).
+- artifact-lint after the archive reports `delta-adds-existing` for 083's own FRs: expected once the Spec Delta has merged into accounts.md.
+- Google env: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`. Apple env (unset, button hidden): `APPLE_SERVICES_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` (PEM of the .p8 key).
+- OAuth redirect URIs to register:
+  - staging: `https://web-staging-dd20.up.railway.app/api/v1/auth/oauth/google/callback`, `https://web-staging-dd20.up.railway.app/api/v1/auth/oauth/apple/callback`
+  - production: `https://web-production-8be52.up.railway.app/api/v1/auth/oauth/google/callback`, `https://web-production-8be52.up.railway.app/api/v1/auth/oauth/apple/callback`
+- Local real-Google check: start redirect correct (PKCE S256, state, nonce); Google refused with `redirect_uri_mismatch` for the local URIs, so the login round trip was not reached. No secret printed or committed.
+- Open decision (owner): FR-005, a provider never links to an account whose own e-mail is unconfirmed; a listing-form garage account must confirm its e-mail first.
+- Retro evidence: 12 tasks done, 11 FRs, 0 deferred; commit and diff counts inflated by main merges; Jev lane unavailable.
