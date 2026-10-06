@@ -46,3 +46,7 @@
 ## 7. Tasks
 - Phase agent: model sonnet. `tasks.md`: 48 tasks in 8 phases (Setup 1, Foundational 11, US1 14, US2 6, US3 5, US4 5, US5 4, Polish 2); tests first in every phase, every task cites its FRs and exact paths. The `after_tasks` analyze hook was not run (phase 8).
 - `level.mjs check`: level 2 unchanged. `artifact-lint --check`: 0 errors, 0 warnings (first pass had 15 fr-untasked errors, fixed by citing FRs on each task).
+
+## 8. Analyze
+- Inline (opus). artifact-lint 0 errors, 0 warnings; 17 FRs, 48 tasks, 100% FR coverage; no constitution conflict.
+- Remediated in tasks.md: HIGH, FR-011's non-JSON body, prototype-chain key and "number and code never logged" had no API test (added to T014); MEDIUM, FR-016's "typed text never shown as markup" had no test (added to T028); LOW, T047's duplicated FR tag. Re-run: clean.
