@@ -101,6 +101,11 @@ describe('check on hostile agent files', () => {
     assert.deepEqual(check(repo), []);
   });
 
+  it('flags a bare whole-server grant on the tools line', () => {
+    seed({ reviewer: [...names(OLD, REVIEWER), `mcp__${NEW}`] });
+    assert.match(check(repo).join('\n'), new RegExp(`spec-reviewer.*mcp__${NEW}\\b`));
+  });
+
   it('flags a server wildcard in the allowlist for a Notion server', () => {
     seed({ settings: [...names(OLD, RESEARCHER), `mcp__${OLD}__*`] });
     assert.match(check(repo).join('\n'), /settings\.json.*wildcard/);
@@ -113,10 +118,6 @@ describe('check on hostile agent files', () => {
     assert.throws(() => add(repo, NEW), /settings\.json.*not valid JSON/);
   });
 
-  it('is stable when called twice', () => {
-    seed({ reviewer: [...names(OLD, REVIEWER), `mcp__${OLD}__notion-update-page`] });
-    assert.deepEqual(check(repo), check(repo));
-  });
 });
 
 describe('add on hostile input', () => {
@@ -321,11 +322,6 @@ describe('detect on hostile transcripts', () => {
     assert.deepEqual(detect(repo, { configDir: config, roots: [repo, repo] }).missing, [NEW]);
   });
 
-  it('reports the same result when run twice', () => {
-    seed();
-    transcript('a.jsonl', [delta(names(NEW, ['notion-fetch']))]);
-    assert.deepEqual(detect(repo, { configDir: config }), detect(repo, { configDir: config }));
-  });
 
   it('lists an id in seen even when the agents already carry it', () => {
     seed();

@@ -80,7 +80,9 @@ export function check(repo) {
     const reads = READS[name];
     if (!reads) out.push(`${agentFile(name)}: holds Notion tools but has no read set in notion-agent-tools.mjs`);
     const own = notionOf(tools);
-    for (const t of tools) if (t.startsWith("mcp__") && t.includes("*")) out.push(`${agentFile(name)}: wildcard ${t} grants every tool of a server, write tools included`);
+    for (const t of tools)
+      if (t.startsWith("mcp__") && (t.includes("*") || !t.slice(5).includes("__")))
+        out.push(`${agentFile(name)}: whole-server grant ${t} reaches every tool of a server, write tools included`);
     for (const n of own) {
       if (WRITE.test(n.name)) out.push(`${agentFile(name)}: write tool ${n.tool} — the Notion agents are read-only`);
       else if (reads && !reads.includes(n.name)) out.push(`${agentFile(name)}: ${n.tool} is not one of its read tools`);
