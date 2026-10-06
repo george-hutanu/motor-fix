@@ -374,8 +374,8 @@ const NOT_TRIVIAL = [
   /\bdependenc(y|ies)\b/, /\bupgrade/, /\bversions?\b/, /\bmajor\b/,
   // Taking something away, or a page, folder, workflow or script, which
   // something outside the code reads: only dead or unused code goes quietly.
-  /\b(remov|delet|drop|disabl)\w*\b(?! (the )?(dead|unused) )/, /\bpages?\b/, /\bscreens?\b/, /\bfolders?\b/,
-  /\bdirector(y|ies)\b/, /\bworkflows?\b/, /\bdeploy/,
+  /\b(remov(e|es|ed|ing)|delet(e|es|ed|ing)|drop(s|ped|ping)?|disabl(e|es|ed|ing))\b(?! (the )?(dead|unused) )/, /\bpages?\b/, /\bscreens?\b/, /\bfolders?\b/,
+  /\bdirector(y|ies)\b/, /\bworkflows?\b/, /\bdeploy(s|ed|ing)?\b/,
   // More than one change, or one change in many places: the trivial word
   // describes only part of it.
   /\band\b/, /\balso\b/, /\bthen\b/, /\bplus\b/, /[,;&+]/, /\beverywhere\b/, /\bacross\b/, /\b(all|every|entire|whole)\b/, /\bglobal/,
