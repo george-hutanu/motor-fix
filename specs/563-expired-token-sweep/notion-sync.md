@@ -13,3 +13,4 @@
 - 2026-10-06 · labels · PR #146 · in development
 - 2026-10-06 · debt · ST-563 · filed 1 deferred item as To do task 3f1607bf-f0d2-81ab-8a7e-e9682de18606 (connector)
 - 2026-10-06 · qa · ST-563 · Implementing → QA (story + timeline row 3f0607bf-f0d2-810d-98b9-fc8b596ff6c6, connector)
+- 2026-10-06 · debt · ST-563 · filed 2 pr-tester lap 1 deferred items as To do tasks 3f1607bf-f0d2-8147-ac43-ca5c3cdd2da2, 3f1607bf-f0d2-8121-bf3c-ef3363aea1fa (connector)
