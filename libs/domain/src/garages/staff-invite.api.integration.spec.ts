@@ -662,7 +662,16 @@ describe('resending and revoking', () => {
     expect(fresh).not.toBe(token);
     expect((await check(token)).body.code).toBe('invite_invalid');
     expect((await check(fresh)).status).toBe(200);
-    expect(await audit('invite_resent')).toHaveLength(1);
+    const [entry] = await audit('invite_resent');
+    expect(entry?.newValue).toEqual({
+      kind: 'mechanic',
+      name: 'Elena Stan',
+      permissions: {
+        canAnswerQuotes: false,
+        canMoveBookings: false,
+        canRecordFinalPrice: false,
+      },
+    });
   });
 
   it('keeps the old link working when a resend finds the web address unset', async () => {

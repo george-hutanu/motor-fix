@@ -156,6 +156,11 @@ export class StaffInviteService {
         actorRole: actor.role,
         garageId,
         kind: 'invite_resent',
+        newValue: {
+          kind: found.kind,
+          name: found.name,
+          permissions: permissionsOf(found),
+        },
         subjectId: id,
         subjectType: 'staff_invite',
       });
