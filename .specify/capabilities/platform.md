@@ -19,6 +19,7 @@ features:
   - 696-lifecycle-script
   - 703-idle-watch-gate
   - 705-auto-skill-split
+  - 725-lifecycle-gate-feature-dir
 ---
 
 # Capability: Platform
@@ -598,6 +599,18 @@ _From 705-auto-skill-split._
 ### 705-FR-006 — The report measures bytes with `wc -c`:
 
 _From 705-auto-skill-split._
+
+### 725-FR-001 — The gate MUST resolve a branch's feature folder in one place: `.specify/feature.json`'s `feature_directory` when it is a path to a folder that exists, then `specs/<branch>` when it exists, then the `specs/` folder whose numeric prefix equals the branch's, compared as numbers, and whose slug equals the branch's slug.
+
+_From 725-lifecycle-gate-feature-dir._
+
+### 725-FR-002 — `prLinked` MUST read `notion-sync.md` from the resolved folder.
+
+_From 725-lifecycle-gate-feature-dir._
+
+### 725-FR-003 — `handedOff` MUST read `handoff.md` from the resolved folder.
+
+_From 725-lifecycle-gate-feature-dir._
 
 ## Retired
 
