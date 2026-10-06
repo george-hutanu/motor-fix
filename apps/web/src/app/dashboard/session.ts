@@ -253,8 +253,11 @@ export class Session {
   async reload(): Promise<void> {
     if (!this.current()) return;
     const generation = this.generation;
+    // A role switch or a sign-in meanwhile: this answer is for the old token.
+    const sent = this.accessToken;
     const answer = await this.me.meControllerMe().catch(() => null);
-    if (answer && generation === this.generation) this.current.set(answer);
+    if (!answer || generation !== this.generation) return;
+    if (this.accessToken === sent) this.current.set(answer);
   }
 
   // The tab's session in another of the account's roles. A failure leaves the
