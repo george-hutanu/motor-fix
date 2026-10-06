@@ -172,11 +172,13 @@ describe('ready', () => {
     return ['git diff --cached --quiet', () => ({ code: codes[i++] ?? 0 })];
   };
 
-  it('commits the records, checks and publishes the body, marks ready, runs qa, commits the qa line, writes handoff.md', () => {
-    const h = harness({ answers: [staged([1, 1])] });
+  it('commits the records, checks and publishes the body, marks ready, runs qa, commits the qa line, writes handoff.md and posts it', () => {
+    let posted = '';
+    const h = harness({ answers: [staged([1, 1]), ['gh pr comment', (cmd) => { posted = readFileSync(cmd.match(/--body-file (\S+)/)[1], 'utf8'); return {}; }]] });
     const result = step(['ready', '--body-file', body, '--decisions', 'none'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     const calls = ofTool(h.calls).filter((c) => !c.startsWith('git rev-parse'));
+    assert.match(calls.pop(), /^gh pr comment 141 --body-file \S+$/);
     assert.deepEqual(calls, [
       `gh pr view ${BRANCH} --json number,title,isDraft,url`,
       'node .claude/scripts/level.mjs check --ready --json',
@@ -197,6 +199,7 @@ describe('ready', () => {
     assert.match(note, /PR: #141 https:\/\/github.com\/george-hutanu\/motor-fix\/pull\/141 · branch 696-lifecycle-script · worktree \S+ · head abcdef1234567890/);
     assert.match(note, /story 3f0607bff0d2812e96e9c2882339f2bd/);
     assert.match(note, /Open decisions: none/);
+    assert.equal(posted, `<!-- speckit-handoff -->\n${note}`);
   });
 
   it('includes .specify/capabilities in the records when it exists, and makes no commit when nothing changed', () => {
@@ -269,6 +272,80 @@ describe('ready', () => {
     const result = step(['ready', '--body-file', body], h.io);
     assert.equal(result.ok, false);
     assert.match(result.fix, /lifecycle\.mjs open/);
+  });
+});
+
+describe('handoff: the note survives a fresh VM as a marked PR comment', () => {
+  const MARK = '<!-- speckit-handoff -->';
+  const note = () => join(featureDir, 'handoff.md');
+  const comments = (...bodies) => ['gh pr view 141 --json comments', { stdout: JSON.stringify({ comments: bodies.map((body, i) => ({ body, createdAt: `2026-10-06T10:0${i}:00Z` })) }) }];
+  beforeEach(() => fixture());
+
+  it('posts the current note, marker first, on the PR', () => {
+    writeFileSync(note(), '# Hand-off\n- QA run: 9 · head abc · lap 2 · url\n');
+    let posted = '';
+    const h = harness({ answers: [['gh pr comment', (cmd) => { posted = readFileSync(cmd.match(/--body-file (\S+)/)[1], 'utf8'); return {}; }]] });
+    const result = step(['handoff', '--pr', '141'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(h.calls.some((c) => /^gh pr comment 141 --body-file \S+$/.test(c)));
+    assert.equal(posted, `${MARK}\n# Hand-off\n- QA run: 9 · head abc · lap 2 · url\n`);
+  });
+
+  it('finds the PR from the branch when --pr is not given', () => {
+    writeFileSync(note(), '# Hand-off\n');
+    const h = harness({ answers: [[`gh pr view ${BRANCH} --json number`, { stdout: '{"number":141}' }]] });
+    const result = step(['handoff'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(h.calls.some((c) => c.startsWith('gh pr comment 141 ')));
+  });
+
+  it('refuses to post when there is no note, and posts nothing', () => {
+    const h = harness();
+    const result = step(['handoff', '--pr', '141'], h.io);
+    assert.equal(result.ok, false);
+    assert.match(result.fix, /handoff\.md/);
+    assert.ok(!h.calls.some((c) => c.startsWith('gh pr comment')));
+  });
+
+  it('--restore writes a missing note from the newest marked comment', () => {
+    const h = harness({ answers: [comments(`${MARK}\n# Hand-off\n- QA run: 1\n`, 'looks good', `${MARK}\r\n# Hand-off\n- QA run: 2\n`, 'later chatter')] });
+    const result = step(['handoff', '--restore', '--pr', '141'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(readFileSync(note(), 'utf8'), '# Hand-off\n- QA run: 2\n');
+  });
+
+  it('--restore orders by creation time, not by list position', () => {
+    const h = harness({
+      answers: [['gh pr view 141 --json comments', { stdout: JSON.stringify({ comments: [
+        { body: `${MARK}\nnewer\n`, createdAt: '2026-10-06T12:00:00Z' },
+        { body: `${MARK}\nolder\n`, createdAt: '2026-10-06T09:00:00Z' },
+      ] }) }]],
+    });
+    step(['handoff', '--restore', '--pr', '141'], h.io);
+    assert.equal(readFileSync(note(), 'utf8'), 'newer\n');
+  });
+
+  it('--restore ignores a comment that only quotes the marker mid-text', () => {
+    const h = harness({ answers: [comments(`${MARK}\nreal\n`, `see the ${MARK} above\nfake\n`)] });
+    step(['handoff', '--restore', '--pr', '141'], h.io);
+    assert.equal(readFileSync(note(), 'utf8'), 'real\n');
+  });
+
+  it('--restore keeps an existing note and fetches nothing', () => {
+    writeFileSync(note(), 'local\n');
+    const h = harness({ answers: [comments(`${MARK}\nremote\n`)] });
+    const result = step(['handoff', '--restore', '--pr', '141'], h.io);
+    assert.equal(result.ok, true);
+    assert.equal(readFileSync(note(), 'utf8'), 'local\n');
+    assert.ok(!h.calls.some((c) => c.includes('--json comments')));
+  });
+
+  it('--restore with no marked comment stops, names the fix and writes nothing', () => {
+    const h = harness({ answers: [comments('just a comment')] });
+    const result = step(['handoff', '--restore', '--pr', '141'], h.io);
+    assert.equal(result.ok, false);
+    assert.match(result.fix, /no recorded QA run/);
+    assert.equal(existsSync(note()), false);
   });
 });
 
@@ -411,7 +488,7 @@ describe('gates, main and identity', () => {
     const h = harness();
     const result = step(['deploy'], h.io);
     assert.equal(result.ok, false);
-    assert.match(result.fix, /open \| ready \| merge/);
+    assert.match(result.fix, /open \| ready \| merge \| handoff/);
   });
 });
 

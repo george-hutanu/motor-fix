@@ -10,3 +10,6 @@ Description: run the speckit workflow in Claude Code cloud sessions without chan
 
 ## Specify / Tasks
 - spec.md, tasks.md and design.md written inline in this run (pin miss: no phase agent for 2 and 7; a level 1 harness task with its FRs given by the caller).
+
+## Tests (red)
+- 6 spec files, 24 new cases red before any change: cloud-setup (5), lifecycle handoff/ready (10), github-identity (1), identity (2), heavy (1), tail-handoff-wiring (5). Local twins pass on today's code.
