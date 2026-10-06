@@ -58,7 +58,9 @@ Gate overrides:
 - A Notion connector that is not connected or errors twice is logged
   `[UNAVAILABLE: notion — …]` and the run continues without a digest. A dead
   connector is a gap in the report, never a Hard Stop, and never evidence that
-  nothing exists.
+  nothing exists. The researcher's
+  `[UNAVAILABLE: notion — no Notion tool in this agent; run node .claude/scripts/notion-agent-tools.mjs detect, then add <id>]`
+  is logged the same way, with that fix as the report's follow-up.
 - If the feature has no Notion anchor and no usable search terms, the skill stops.
   In this command that is a complete phase with an empty digest, not a Hard
   Stop — log it and continue to phase 4.

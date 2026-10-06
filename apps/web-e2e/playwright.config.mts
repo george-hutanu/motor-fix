@@ -16,16 +16,21 @@ const SERVER_START = 180_000;
 // WHATSAPP_TEMPLATES) come from the environment, set by CI's E2E job and by
 // .env locally.
 const MAILBOX = 'http://127.0.0.1:3025';
+// The api reads the stand-in OpenID issuer (openid.mjs, web-e2e:openid) as
+// Google when GOOGLE_ISSUER points at it, with any GOOGLE_CLIENT_ID and
+// GOOGLE_CLIENT_SECRET: CI's E2E job and .env locally set them.
+const OPENID = 'http://127.0.0.1:3026';
 
 export default defineConfig({
   ...nxE2EPreset(import.meta.dirname, { testDir: './src' }),
   // Flows tagged @seeded sign in with the seeded accounts; a deployed address
   // runs them only when it is given their password. Flows tagged @mailbox read
-  // the local test mailbox, which a deployed address does not have.
+  // the local test mailbox, and flows tagged @openid the local stand-in
+  // issuer, which a deployed address does not have.
   grepInvert: deployed
     ? process.env['E2E_PASSWORD']
-      ? /@mailbox/
-      : /@seeded|@mailbox/
+      ? /@mailbox|@openid/
+      : /@seeded|@mailbox|@openid/
     : undefined,
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   use: {
@@ -41,6 +46,11 @@ export default defineConfig({
           command: 'npx nx run web-e2e:mailbox',
           reuseExistingServer: true,
           url: `${MAILBOX}/v3/account`,
+        },
+        {
+          command: 'npx nx run web-e2e:openid',
+          reuseExistingServer: true,
+          url: `${OPENID}/jwks`,
         },
         {
           command: 'npx nx run api:serve',

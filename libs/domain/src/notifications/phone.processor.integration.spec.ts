@@ -41,7 +41,7 @@ function build(phone: Record<string, string> = {}, now = NOVEMBER) {
     queue,
     publisher,
     config,
-    async () => undefined,
+    null,
     new AuditService(),
   );
   processor = new NotificationsProcessor(

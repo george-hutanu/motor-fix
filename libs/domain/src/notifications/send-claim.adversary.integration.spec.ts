@@ -26,7 +26,15 @@ const publisher = new Redis(redisUrl);
 
 let service: NotificationsService;
 let processor: NotificationsProcessor;
-let fallback: jest.Mock<Promise<undefined>, []>;
+const pushConfig = {
+  privateKey: 'private',
+  publicKey: 'public',
+  subject: 'mailto:ops@example.test',
+};
+const pushFallbacks = () =>
+  prisma.notification.count({
+    where: { channel: 'push', fallbackOf: { not: null } },
+  });
 
 const at = (iso: string) => () => new Date(iso);
 const DAY = '2026-10-05T11:00:00Z';
@@ -41,7 +49,7 @@ function build(phone: Record<string, string> = {}) {
     queue,
     publisher,
     config,
-    fallback as never,
+    pushConfig,
     new AuditService(),
   );
   service.now = at(DAY);
@@ -68,7 +76,6 @@ beforeEach(async () => {
   await reset();
   await queue.obliterate({ force: true });
   mock.reset();
-  fallback = jest.fn(async () => undefined);
   build();
 });
 
@@ -167,10 +174,18 @@ describe('many send jobs for one row', () => {
 
   it('fails the row once and calls the fallback once when ten jobs run on the last attempt', async () => {
     const { row: queued } = await queuedEmail();
+    await prisma.pushSubscription.create({
+      data: {
+        accountId: queued.accountId,
+        auth: 'a',
+        endpoint: 'https://push.example.test/one',
+        p256dh: 'p',
+      },
+    });
     mock.answer({ status: 503 });
     await many(queued.id, 10, 5);
     expect(mock.emails()).toHaveLength(1);
-    expect(fallback).toHaveBeenCalledTimes(1);
+    expect(await pushFallbacks()).toBe(1);
     expect(await row(queued.id)).toMatchObject({
       claimedAt: null,
       status: 'failed',
@@ -419,7 +434,12 @@ describe('a claim held by another job', () => {
 describe('releasing a claim', () => {
   it('releases the claim when the fallback itself throws after the last attempt', async () => {
     const { row: queued } = await queuedEmail();
-    fallback.mockRejectedValue(new Error('fallback down'));
+    jest
+      .spyOn(
+        service as unknown as { fallBack: () => Promise<void> },
+        'fallBack',
+      )
+      .mockRejectedValue(new Error('fallback down'));
     mock.answer({ status: 503 });
     await Promise.allSettled([sendJob(queued.id, 5)]);
     expect((await row(queued.id)).claimedAt).toBeNull();

@@ -30,8 +30,10 @@ import { filter, map } from 'rxjs';
 
 import { Bell } from './bell';
 import { EmailBanner } from './email-banner';
+import { InviteStaff } from './invite-staff';
 import { Live } from './live';
 import { LiveChange } from './live-in-place';
+import { PushDevice } from './push-device';
 import { Session } from './session';
 import { SignOutEverywhere } from './sign-out-everywhere';
 import { DashboardTabBar } from './tab-bar';
@@ -126,6 +128,9 @@ const ROLES: readonly { role: Role; label: string }[] = [
           </div>
         }
         <mf-as-written [text]="session.current()?.name ?? ''" />
+        @if (inviteGarage(); as garageId) {
+          <button type="button" (click)="invite(garageId)">{{ 'shell.frame.invite' | t }}</button>
+        }
         <button type="button" (click)="signOut()">{{ 'shell.frame.signOut' | t }}</button>
         <button type="button" (click)="signOutEverywhere()">{{ 'shell.frame.signOutEverywhere' | t }}</button>
       </div>
@@ -149,6 +154,7 @@ export class Frame implements OnInit {
   private readonly live = inject(Live);
   protected readonly offline = this.live.offline;
   private readonly overlays = inject(Overlays);
+  private readonly push = inject(PushDevice);
   private readonly i18n = inject(I18n);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly base = computed(
@@ -164,6 +170,13 @@ export class Frame implements OnInit {
     return ROLES.filter(({ role }) => held.includes(role));
   });
   protected readonly switching = signal(false);
+  // The owner's garage, while the garage role with the team right is on.
+  protected readonly inviteGarage = computed(() => {
+    const me = this.session.current();
+    return me?.role === 'garage' && me.capabilities.includes('garage.team')
+      ? me.garageId
+      : null;
+  });
   // When the epic's test update last arrived: it changes this line in place.
   protected readonly lastTest = signal<string | null>(null);
   protected readonly entries = computed(() =>
@@ -227,6 +240,8 @@ export class Frame implements OnInit {
         this.live.close();
         void this.router.navigateByUrl('/');
       });
+    // A browser with push on saves its device again.
+    void this.push.refresh();
     this.live.open();
     this.destroyRef.onDestroy(() => this.live.close());
   }
@@ -248,7 +263,16 @@ export class Frame implements OnInit {
     }
   }
 
+  protected invite(garageId: string) {
+    void this.overlays.open<'sent', { garageId: string }>(InviteStaff, {
+      data: { garageId },
+      shape: 'dialog',
+      title: 'garage.invite.title',
+    });
+  }
+
   protected async signOut() {
+    await this.push.forget();
     this.live.close();
     await this.session.signOut();
     await this.router.navigateByUrl('/');
@@ -266,6 +290,7 @@ export class Frame implements OnInit {
       title: 'shell.signOutEverywhere.title',
     });
     if (answer !== true) return;
+    await this.push.forget();
     this.live.close();
     await this.session.signOutEverywhere();
     await this.router.navigateByUrl('/');

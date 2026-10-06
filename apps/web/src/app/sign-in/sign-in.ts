@@ -14,6 +14,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { Router } from '@angular/router';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import {
   FieldError,
@@ -24,7 +25,8 @@ import {
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
-import { Session } from '../dashboard/session';
+import { PROVIDER_NAME, ProviderButtons } from './providers';
+import { type Provider, Session } from '../dashboard/session';
 
 // Text, "@", and a domain with a dot, spaces around it allowed; the server
 // decides the rest.
@@ -37,10 +39,31 @@ export interface AuthSwitch {
   phone?: string;
 }
 
-// The e-mail and the number typed in the other tasks, if any, and whether an
-// action that needs an account opened the dialog.
+// Why a provider's sign-in gave no session, shown when the dialog reopens.
+export type ProviderProblem =
+  | 'failed'
+  | 'maintenance'
+  | 'suspended'
+  | 'email_taken';
+
+const RETURNED: Record<ProviderProblem, string> = {
+  email_taken: 'public.signIn.returned.email_taken',
+  failed: 'public.signIn.returned.failed',
+  maintenance: 'public.signIn.returned.maintenance',
+  suspended: 'public.signIn.returned.suspended',
+};
+
+// The e-mail and the number typed in the other tasks, if any, the name an
+// invite link brings to sign-up, whether an action that needs an account
+// opened the dialog, and what went wrong with a provider.
 export type AuthData =
-  | { email?: string; phone?: string; reason?: boolean }
+  | {
+      email?: string;
+      name?: string;
+      phone?: string;
+      reason?: boolean;
+      problem?: { code: ProviderProblem; provider: Provider };
+    }
   | undefined;
 
 // The sign-in task shown in the shared dialog. It closes with "signed-in", or
@@ -53,6 +76,7 @@ export type AuthData =
     FieldError,
     HlmButton,
     HlmInput,
+    ProviderButtons,
     ReactiveFormsModule,
     TaskError,
     TaskSubmit,
@@ -62,6 +86,7 @@ export type AuthData =
   styles: `
     form { display: grid; gap: var(--mf-space-4); }
     .brand { margin: 0; color: var(--mf-text-secondary); }
+    .problem { margin: 0; color: var(--mf-red-ink); }
     .field { display: grid; gap: var(--mf-space-2); }
     label { font-weight: 700; }
     .remember-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--mf-space-3); }
@@ -70,6 +95,8 @@ export type AuthData =
     button[type='submit'], .phone { width: 100%; min-height: 54px; white-space: normal; }
     .or { display: flex; align-items: center; gap: var(--mf-space-3); margin: 0; color: var(--mf-text-secondary); }
     .or::before, .or::after { content: ''; flex: 1; border-top: 1px solid var(--mf-line); }
+    /* The phone button joins Apple and Google under their "or" when they show. */
+    mf-provider-buttons:not(:empty) + .or { display: none; }
     .switch { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--mf-space-2); margin: 0; color: var(--mf-text-secondary); }
     .switch button, .forgot { min-height: var(--mf-tap); padding: 0; border: 0; background: transparent; color: var(--mf-amber-ink); font: inherit; font-weight: 700; cursor: pointer; }
     .switch button:focus-visible, .forgot:focus-visible { outline: 2px solid var(--mf-amber-ink); outline-offset: 2px; }
@@ -79,6 +106,9 @@ export type AuthData =
       <p class="brand">{{ 'public.signIn.brand' | t }}</p>
       @if (reason) {
         <p class="brand">{{ 'public.signIn.reason' | t }}</p>
+      }
+      @if (problem; as problem) {
+        <p class="problem" role="alert">{{ problem.key | t: { provider: problem.provider } }}</p>
       }
       <div class="field">
         <label for="mf-sign-in-email">{{ 'public.signIn.email' | t }}</label>
@@ -122,6 +152,7 @@ export type AuthData =
       <button hlmBtn type="submit" [mfTaskSubmit]="save">
         {{ 'public.signIn.submit' | t }}
       </button>
+      <mf-provider-buttons [remember]="form.controls.remember.value" [returnTo]="returnTo" />
       <p class="or" aria-hidden="true">{{ 'public.signIn.or' | t }}</p>
       <button hlmBtn variant="secondary" type="button" class="phone" [disabled]="save.state() === 'sending'" (click)="switchTo('phone')">
         {{ 'public.signIn.withPhone' | t }}
@@ -145,6 +176,10 @@ export class SignIn {
     viewChild.required<ElementRef<HTMLInputElement>>('passwordInput');
 
   protected readonly reason = this.task.data?.reason === true;
+  // The screen whose action asked for the sign-in, to come back to after a
+  // provider.
+  protected readonly returnTo = this.reason ? inject(Router).url : null;
+  protected readonly problem = this.shownProblem();
 
   protected readonly form = new FormGroup({
     email: new FormControl(this.task.data?.email ?? '', {
@@ -168,6 +203,16 @@ export class SignIn {
       return me;
     },
   });
+
+  private shownProblem() {
+    const problem = this.task.data?.problem;
+    return problem
+      ? {
+          key: RETURNED[problem.code] ?? RETURNED.failed,
+          provider: PROVIDER_NAME[problem.provider],
+        }
+      : null;
+  }
 
   protected switchTo(task: 'sign-up' | 'reset' | 'phone') {
     const phone = this.task.data?.phone;

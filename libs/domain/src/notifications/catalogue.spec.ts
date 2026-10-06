@@ -43,6 +43,7 @@ const TRANSACTIONAL = [
   'ASSISTANT_APPROVAL_NEEDED',
   'SUPPORT_ACKNOWLEDGEMENT',
   'TEST_MESSAGE',
+  'PUSH_TEST',
 ];
 
 const names = Object.keys(NOTIFICATION_TYPES);
@@ -140,8 +141,11 @@ describe('the notification catalogue', () => {
     expect(NOTIFICATION_TYPES['NEWS'].group).toBe('news');
   });
 
-  it('sends the test message and account e-mails by e-mail only', () => {
-    expect(NOTIFICATION_TYPES['TEST_MESSAGE'].channels).toEqual(['email']);
+  it('sends the test message by e-mail and push and account e-mails by e-mail only', () => {
+    expect(NOTIFICATION_TYPES['TEST_MESSAGE'].channels).toEqual([
+      'email',
+      'push',
+    ]);
     expect(NOTIFICATION_TYPES['ACCOUNT_EMAIL'].channels).toEqual(['email']);
     expect(NOTIFICATION_TYPES['SIGN_IN_CODE'].channels).toEqual(['whatsapp']);
     expect(NOTIFICATION_TYPES['REVIEW_INVITE'].channels).not.toContain('sms');

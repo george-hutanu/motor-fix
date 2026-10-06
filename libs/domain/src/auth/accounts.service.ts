@@ -23,6 +23,9 @@ export interface NewAccount {
     subject: string;
     passwordHash?: string;
   };
+  // Whether the e-mail counts as confirmed; by default, when a provider that
+  // checks e-mails vouches for it.
+  emailVerified?: boolean;
   // Checked here, so no method can create an account without it.
   consent: Consent;
 }
@@ -65,7 +68,8 @@ export class AccountsService {
           },
           email: input.email?.trim().toLowerCase(),
           emailVerifiedAt:
-            input.email && VOUCHED.has(input.identity.method)
+            input.email &&
+            (input.emailVerified ?? VOUCHED.has(input.identity.method))
               ? new Date()
               : undefined,
           identities: { create: input.identity },

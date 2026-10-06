@@ -29,7 +29,7 @@ afterEach(async () => {
 });
 
 const env = (dir, extra = {}) => {
-  const { HEAVY_HELD, HEAVY_WAIT, HEAVY_SLOTS, HEAVY_MIN_FREE, ...inherited } = process.env;
+  const { HEAVY_HELD, HEAVY_WAIT, HEAVY_SLOTS, HEAVY_MIN_FREE, CLAUDE_CODE_REMOTE, ...inherited } = process.env;
   return { ...inherited, HEAVY_LOCK: join(dir, 'heavy.lock'), HEAVY_MIN_FREE: '0', HEAVY_POLL: '1', ...extra };
 };
 const run = (dir, args, extra) => spawnSync('sh', [heavy, ...args], { encoding: 'utf8', env: env(dir, extra) });
@@ -84,6 +84,27 @@ describe('heavy.sh', () => {
     assert.equal(out.status, 124);
     assert.equal(existsSync(fifth), false);
   }, 30000);
+
+  // @traces 749-FR-004
+  it('has two slots by default in a cloud session, so a third command waits', async () => {
+    const dir = scratch();
+    const cloud = { CLAUDE_CODE_REMOTE: 'true' };
+    await hold(dir, 'one', cloud);
+    await hold(dir, 'two', cloud);
+    const third = join(dir, 'third');
+    const out = run(dir, ['sh', '-c', `touch ${third}`], { ...cloud, HEAVY_WAIT: '1' });
+    assert.equal(out.status, 124);
+    assert.equal(existsSync(third), false);
+    assert.match(out.stderr, /all 2 slots busy/);
+  }, 20000);
+
+  it('lets HEAVY_SLOTS override the cloud default', async () => {
+    const dir = scratch();
+    const cloud = { CLAUDE_CODE_REMOTE: 'true', HEAVY_SLOTS: '3' };
+    await hold(dir, 'one', cloud);
+    await hold(dir, 'two', cloud);
+    assert.equal(run(dir, ['true'], { ...cloud, HEAVY_WAIT: '1' }).status, 0);
+  }, 20000);
 
   it('keeps one slot to one command: slot 1 is the configured lock file', async () => {
     const dir = scratch();

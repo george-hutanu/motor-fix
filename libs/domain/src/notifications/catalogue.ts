@@ -93,6 +93,7 @@ const ENTRIES: Record<string, Entry> = {
   NEWS: ['timer', ['email'], 'news'],
   NO_SHOW_RECORDED: ['event', EPW, 'bookings'],
   PHONE_CHANGE_CODE: ['direct', ['whatsapp'], null, 'transactional'],
+  PUSH_TEST: ['direct', ['push'], null, 'transactional'],
   QUOTE_ACCEPTED: ['event', EPW, null],
   QUOTE_CHANGED: ['event', EPW, 'offers'],
   QUOTE_DECLINED_BY_DRIVER: ['event', EPW, null],
@@ -117,7 +118,7 @@ const ENTRIES: Record<string, Entry> = {
   STAFF_INVITE: ['event', ['email', 'whatsapp'], null, 'transactional'],
   STAFF_JOINED: ['event', EPW, null],
   SUPPORT_ACKNOWLEDGEMENT: ['event', ['email'], null, 'transactional'],
-  TEST_MESSAGE: ['direct', ['email'], null, 'transactional'],
+  TEST_MESSAGE: ['direct', ['email', 'push'], null, 'transactional'],
   TYRES_SEASON: ['timer', EPSW, 'due_dates'],
   VERIFICATION_RESULT: ['event', EPW, null, 'always'],
 };

@@ -21,6 +21,19 @@
     "required": "Bifează pentru a continua.",
     "terms": "Termenii de utilizare"
   },
+  "invite": {
+    "accept": "Acceptă",
+    "acceptFailed": "Nu am putut accepta invitația. Încearcă din nou.",
+    "error": "Nu am putut verifica invitația. Încearcă din nou.",
+    "home": "Mergi la MotorFix",
+    "invalid": "Invitația nu mai este valabilă. Cere service‑ului una nouă.",
+    "loading": "Verificăm invitația…",
+    "mechanic": "{garage} te invită să te alături echipei ca mecanic.",
+    "profile": "Dacă accepți, numele tău apare pe profilul public al service‑ului. Îl poți ascunde mai târziu.",
+    "receptionist": "{garage} te invită să te alături echipei ca recepționer.",
+    "retry": "Încearcă din nou",
+    "title": "Invitație în echipă"
+  },
   "newPassword": {
     "askAgain": "Cere un link nou",
     "checking": "Verificăm linkul…",
@@ -44,6 +57,26 @@
     "garages": "Service‑uri",
     "later": "Pagina vine în curând.",
     "mechanics": "Mecanic"
+  },
+  "providerSignUp": {
+    "cancel": "Anulează",
+    "email": "E‑mail: {email}",
+    "expired": "Pasul a expirat. Intră din nou în cont.",
+    "intro": "Intri prima dată pe MotorFix prin {provider}. Spune‑ne cum te numești și acceptă termenii.",
+    "name": "Nume",
+    "problem": {
+      "consent_required": "Bifează acordul pentru a crea contul.",
+      "email_taken": "Există deja un cont cu acest e‑mail. Intră cu e‑mail și parolă.",
+      "provider_failed": "Pasul a expirat. Intră din nou în cont."
+    },
+    "signIn": "Intră în cont",
+    "submit": "Creează contul",
+    "title": "Cont nou"
+  },
+  "providers": {
+    "apple": "Continuă cu Apple",
+    "google": "Continuă cu Google",
+    "or": "sau"
   },
   "signIn": {
     "brand": "MotorFix",
@@ -100,6 +133,12 @@
     },
     "reason": "Intră în cont ca să continui.",
     "remember": "Ține‑mă autentificat",
+    "returned": {
+      "email_taken": "Există deja un cont cu acest e‑mail. Intră cu e‑mail și parolă.",
+      "failed": "Nu am putut contacta {provider}. Încearcă din nou sau intră cu e‑mail sau telefon.",
+      "maintenance": "MotorFix este în mentenanță. Încearcă din nou în câteva minute.",
+      "suspended": "Contul tău este suspendat."
+    },
     "submit": "Intră în cont",
     "title": "Autentificare",
     "withPhone": "Continuă cu telefonul"

@@ -415,3 +415,57 @@ describe('SignInDialog', () => {
     });
   });
 });
+
+describe('SignInDialog, from an invite link', () => {
+  const INVITED = { email: 'elena@example.ro', name: 'Elena Stan' };
+
+  it('opens account creation with the invited name and e-mail filled in', async () => {
+    const { dialog, open } = setup(null, 'cancelled');
+
+    await dialog.join(INVITED);
+
+    expect(open).toHaveBeenCalledWith(expect.any(Function), {
+      data: INVITED,
+      shape: 'dialog',
+      title: 'public.signUp.title',
+    });
+  });
+
+  it('says an account was created, and opens no dashboard', async () => {
+    const { dialog, navigate } = setup(null, 'signed-in');
+
+    await expect(dialog.join(INVITED)).resolves.toBe('signed-up');
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('says the person signed in to an existing account instead', async () => {
+    const { dialog, open } = setup(
+      null,
+      { email: 'elena@example.ro', switchTo: 'sign-in' },
+      'signed-in',
+    );
+
+    await expect(dialog.join(INVITED)).resolves.toBe('signed-in');
+    expect(open.mock.calls[1]?.[1]).toEqual({
+      data: { email: 'elena@example.ro' },
+      shape: 'dialog',
+      title: 'public.signIn.title',
+    });
+  });
+
+  it('keeps the invited name when the person goes back to account creation', async () => {
+    const { dialog, open } = setup(
+      null,
+      { email: 'elena@example.ro', switchTo: 'sign-in' },
+      { email: 'elena@example.com', switchTo: 'sign-up' },
+      'cancelled',
+    );
+
+    await expect(dialog.join(INVITED)).resolves.toBeNull();
+    expect(open.mock.calls[2]?.[1]).toEqual({
+      data: { email: 'elena@example.com', name: 'Elena Stan' },
+      shape: 'dialog',
+      title: 'public.signUp.title',
+    });
+  });
+});

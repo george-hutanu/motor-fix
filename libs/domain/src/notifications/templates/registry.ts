@@ -2,8 +2,14 @@ import { EMAIL_CHECK, PASSWORD_CHANGED, PASSWORD_RESET } from './account-email';
 import { DUE_ITP } from './due-itp';
 import { GENERIC, GENERIC_GROUPED } from './generic';
 import { NEWS } from './news';
+import { PUSH_TEST } from './push-test';
 import { QUOTE_RECEIVED_GROUPED } from './quote-received';
 import { SIGN_IN_CODE } from './sign-in-code';
+import {
+  STAFF_INVITE_MECHANIC,
+  STAFF_INVITE_RECEPTIONIST,
+  STAFF_JOINED,
+} from './staff';
 import { TEST_MESSAGE } from './test-message';
 import type { Registry } from '../templates';
 
@@ -17,7 +23,11 @@ export const TEMPLATES: Registry = {
   GENERIC,
   'GENERIC.grouped': GENERIC_GROUPED,
   NEWS,
+  PUSH_TEST,
   'QUOTE_RECEIVED.grouped': QUOTE_RECEIVED_GROUPED,
   SIGN_IN_CODE,
+  'STAFF_INVITE.mechanic': STAFF_INVITE_MECHANIC,
+  'STAFF_INVITE.receptionist': STAFF_INVITE_RECEPTIONIST,
+  STAFF_JOINED,
   TEST_MESSAGE,
 };

@@ -2,8 +2,11 @@ import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 
-import type { AuthData, AuthSwitch } from './sign-in';
-import { Session } from '../dashboard/session';
+import type { AuthData, AuthSwitch, ProviderProblem } from './sign-in';
+import { type Provider, Session } from '../dashboard/session';
+
+// What the server says on the way back from a provider, besides a session.
+export type ProviderResult = 'consent' | 'cancelled' | ProviderProblem;
 
 type Answer = OverlayResult<'signed-in' | AuthSwitch>;
 
@@ -59,6 +62,47 @@ export class SignInDialog {
     return signedIn;
   }
 
+  // Back from a provider without a session: a new person's terms step, or
+  // sign-in again, with the reason it did not work. True once signed in.
+  async returned(result: ProviderResult, provider: Provider): Promise<boolean> {
+    let first: Answer;
+    if (result === 'consent') {
+      first = await this.overlays.open<'signed-in' | AuthSwitch>(
+        () => import('./provider-sign-up').then((m) => m.ProviderSignUp),
+        { shape: 'dialog', title: 'public.providerSignUp.title' },
+      );
+    } else {
+      first = await this.signIn(
+        result === 'cancelled'
+          ? undefined
+          : { problem: { code: result, provider } },
+      );
+    }
+    return this.laps(first, false);
+  }
+
+  // From an invite link: account creation with the invited name and e-mail
+  // filled in, with sign-in one switch away. Says which way the person got a
+  // session, or null when they closed it; no dashboard opens.
+  async join(invited: {
+    email: string;
+    name: string;
+  }): Promise<'signed-in' | 'signed-up' | null> {
+    let from: 'sign-in' | 'sign-up' = 'sign-up';
+    let result = await this.signUp(invited);
+    while (isSwitch(result)) {
+      if (result.switchTo === 'sign-up') {
+        from = 'sign-up';
+        result = await this.signUp({ email: result.email, name: invited.name });
+      } else {
+        if (result.switchTo !== 'reset') from = 'sign-in';
+        result = await this.lap(result, false);
+      }
+    }
+    if (result !== 'signed-in' || this.session.current() === null) return null;
+    return from === 'sign-up' ? 'signed-up' : 'signed-in';
+  }
+
   private dialog(reason: boolean): Promise<boolean> {
     if (this.open) return this.open;
     const open = this.ask(reason).finally(() => {
@@ -90,19 +134,9 @@ export class SignInDialog {
     };
     switch (to.switchTo) {
       case 'sign-up':
-        return this.overlays.open<'signed-in' | AuthSwitch, typeof data>(
-          () => import('./sign-up').then((m) => m.SignUp),
-          { data, shape: 'dialog', title: 'public.signUp.title' },
-        );
+        return this.signUp(data);
       case 'reset':
-        return this.overlays.open<AuthSwitch, { email: string }>(
-          () => import('./password-reset').then((m) => m.PasswordReset),
-          {
-            data: { email: to.email },
-            shape: 'dialog',
-            title: 'public.passwordReset.title',
-          },
-        );
+        return this.reset(to.email);
       case 'phone':
         return this.overlays.open<'signed-in' | AuthSwitch, AuthData>(
           () => import('./phone-sign-in').then((m) => m.PhoneSignIn),
@@ -111,6 +145,20 @@ export class SignInDialog {
       default:
         return this.signIn(data);
     }
+  }
+
+  private signUp(data: AuthData): Promise<Answer> {
+    return this.overlays.open<'signed-in' | AuthSwitch, AuthData>(
+      () => import('./sign-up').then((m) => m.SignUp),
+      { data, shape: 'dialog', title: 'public.signUp.title' },
+    );
+  }
+
+  private reset(email: string): Promise<Answer> {
+    return this.overlays.open<AuthSwitch, { email: string }>(
+      () => import('./password-reset').then((m) => m.PasswordReset),
+      { data: { email }, shape: 'dialog', title: 'public.passwordReset.title' },
+    );
   }
 
   private signIn(data?: AuthData): Promise<Answer> {

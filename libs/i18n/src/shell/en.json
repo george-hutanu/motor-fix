@@ -70,6 +70,7 @@
     },
     "empty": "Nothing here yet.",
     "home": "MotorFix, home page",
+    "invite": "Invite to the team",
     "logo": "MOTORFIX",
     "menu": "Menu",
     "nav": {
@@ -167,6 +168,20 @@
       "keep": "Keep editing",
       "question": "Discard your changes?"
     }
+  },
+  "push": {
+    "blocked": "Notifications are blocked in the browser. Open the site settings, allow notifications for MotorFix and reload the page.",
+    "disable": "Turn off",
+    "enable": "Turn on notifications",
+    "failed": "That did not work. Try again.",
+    "iosHint": "On an iPhone or iPad, add MotorFix to the Home Screen: tap Share, then Add to Home Screen. Open the app from there and turn notifications on.",
+    "off": "Get the important messages even when the app is closed.",
+    "on": "Notifications are on for this device.",
+    "test": "Send a test notification",
+    "testSent": "A test notification is on its way.",
+    "title": "Notifications on this device",
+    "unavailable": "Notifications are not available yet.",
+    "unsupported": "This browser cannot receive notifications."
   },
   "signOutEverywhere": {
     "cancel": "Cancel",

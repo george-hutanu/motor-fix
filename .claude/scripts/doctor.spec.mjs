@@ -8,8 +8,10 @@ import {
   checkCommands,
   checkFeatureState,
   checkHooks,
+  checkNotionTools,
   checkSkillsAndAgents,
 } from './doctor.mjs';
+import { projectSlug } from './notion-agent-tools.mjs';
 
 // Doctor is the check that catches a gate which stopped firing. These build a
 // throwaway repo skeleton and break one thing at a time — the real repo is
@@ -148,6 +150,44 @@ describe('doctor — skills and agents', () => {
     const results = checkSkillsAndAgents(repo);
     assert.equal(status(results, 'skills/frontmatter'), 'ok');
     assert.equal(status(results, 'agents/frontmatter'), 'ok');
+  });
+});
+
+// @traces 693-FR-004
+describe('doctor — Notion agent tools', () => {
+  const ID = 'fd62790a-b7ca-480e-9cf5-9073c1192ba8';
+  const reads = ['notion-search', 'notion-fetch', 'notion-get-comments'];
+  const reviewer = (id) =>
+    `---\nname: spec-reviewer\ndescription: reviews\ntools: Read, ${reads.map((r) => `mcp__${id}__${r}`).join(', ')}\n---\n`;
+  let config;
+  beforeEach(() => {
+    config = mkdtempSync(join(tmpdir(), 'doctor-config-'));
+  });
+  afterEach(() => rmSync(config, { recursive: true, force: true }));
+  const seen = (id) => {
+    const slug = projectSlug(repo);
+    mkdirSync(join(config, 'projects', slug), { recursive: true });
+    const line = { type: 'attachment', attachment: { type: 'deferred_tools_delta', addedNames: [`mcp__${id}__notion-fetch`] } };
+    writeFileSync(join(config, 'projects', slug, 's.jsonl'), `${JSON.stringify(line)}\n`);
+  };
+
+  it('warns, never fails, when a recent session carried a Notion server the agents lack', () => {
+    write('.claude/agents/spec-reviewer.md', reviewer('aaaa1111-old'));
+    seen(ID);
+    const results = checkNotionTools(repo, { configDir: config });
+    assert.equal(status(results, 'agents/notion-tools'), 'warn');
+    assert.match(detail(results, 'agents/notion-tools'), new RegExp(`add ${ID}`));
+  });
+
+  it('passes once the agents carry it', () => {
+    write('.claude/agents/spec-reviewer.md', reviewer(ID));
+    seen(ID);
+    assert.equal(status(checkNotionTools(repo, { configDir: config }), 'agents/notion-tools'), 'ok');
+  });
+
+  it('fails an agent holding a Notion write tool', () => {
+    write('.claude/agents/spec-reviewer.md', `${reviewer(ID).replace('Read,', `Read, mcp__${ID}__notion-update-page,`)}`);
+    assert.equal(status(checkNotionTools(repo, { configDir: config }), 'agents/notion-tools'), 'fail');
   });
 });
 

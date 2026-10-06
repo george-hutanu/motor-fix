@@ -31,6 +31,17 @@ import { NotificationPreferencesControllerSave$Params } from '../fn/notification
 import { NotificationPreferencesDto } from '../models/notification-preferences-dto';
 import { notificationsControllerTest } from '../fn/notifications/notifications-controller-test';
 import { NotificationsControllerTest$Params } from '../fn/notifications/notifications-controller-test';
+import { PushKeyDto } from '../models/push-key-dto';
+import { PushSubscriptionDto } from '../models/push-subscription-dto';
+import { pushSubscriptionsControllerKey } from '../fn/notifications/push-subscriptions-controller-key';
+import { PushSubscriptionsControllerKey$Params } from '../fn/notifications/push-subscriptions-controller-key';
+import { pushSubscriptionsControllerRemove } from '../fn/notifications/push-subscriptions-controller-remove';
+import { PushSubscriptionsControllerRemove$Params } from '../fn/notifications/push-subscriptions-controller-remove';
+import { pushSubscriptionsControllerSave } from '../fn/notifications/push-subscriptions-controller-save';
+import { PushSubscriptionsControllerSave$Params } from '../fn/notifications/push-subscriptions-controller-save';
+import { pushSubscriptionsControllerTest } from '../fn/notifications/push-subscriptions-controller-test';
+import { PushSubscriptionsControllerTest$Params } from '../fn/notifications/push-subscriptions-controller-test';
+import { PushTestQueuedDto } from '../models/push-test-queued-dto';
 import { TestMessageQueuedDto } from '../models/test-message-queued-dto';
 import { UnreadCountDto } from '../models/unread-count-dto';
 
@@ -263,6 +274,106 @@ export class NotificationsService extends BaseService {
   newsControllerSend(params: NewsControllerSend$Params, context?: HttpContext): Promise<NewsSentDto> {
     const resp = this.newsControllerSend$Response(params, context);
     return resp.then((r: StrictHttpResponse<NewsSentDto>): NewsSentDto => r.body);
+  }
+
+  /** Path part for operation `pushSubscriptionsControllerKey()` */
+  static readonly PushSubscriptionsControllerKeyPath = '/api/v1/push-subscriptions/key';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `pushSubscriptionsControllerKey()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  pushSubscriptionsControllerKey$Response(params?: PushSubscriptionsControllerKey$Params, context?: HttpContext): Promise<StrictHttpResponse<PushKeyDto>> {
+    const obs = pushSubscriptionsControllerKey(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `pushSubscriptionsControllerKey$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  pushSubscriptionsControllerKey(params?: PushSubscriptionsControllerKey$Params, context?: HttpContext): Promise<PushKeyDto> {
+    const resp = this.pushSubscriptionsControllerKey$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PushKeyDto>): PushKeyDto => r.body);
+  }
+
+  /** Path part for operation `pushSubscriptionsControllerSave()` */
+  static readonly PushSubscriptionsControllerSavePath = '/api/v1/push-subscriptions';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `pushSubscriptionsControllerSave()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  pushSubscriptionsControllerSave$Response(params: PushSubscriptionsControllerSave$Params, context?: HttpContext): Promise<StrictHttpResponse<PushSubscriptionDto>> {
+    const obs = pushSubscriptionsControllerSave(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `pushSubscriptionsControllerSave$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  pushSubscriptionsControllerSave(params: PushSubscriptionsControllerSave$Params, context?: HttpContext): Promise<PushSubscriptionDto> {
+    const resp = this.pushSubscriptionsControllerSave$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PushSubscriptionDto>): PushSubscriptionDto => r.body);
+  }
+
+  /** Path part for operation `pushSubscriptionsControllerTest()` */
+  static readonly PushSubscriptionsControllerTestPath = '/api/v1/push-subscriptions/test';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `pushSubscriptionsControllerTest()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  pushSubscriptionsControllerTest$Response(params?: PushSubscriptionsControllerTest$Params, context?: HttpContext): Promise<StrictHttpResponse<PushTestQueuedDto>> {
+    const obs = pushSubscriptionsControllerTest(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `pushSubscriptionsControllerTest$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  pushSubscriptionsControllerTest(params?: PushSubscriptionsControllerTest$Params, context?: HttpContext): Promise<PushTestQueuedDto> {
+    const resp = this.pushSubscriptionsControllerTest$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PushTestQueuedDto>): PushTestQueuedDto => r.body);
+  }
+
+  /** Path part for operation `pushSubscriptionsControllerRemove()` */
+  static readonly PushSubscriptionsControllerRemovePath = '/api/v1/push-subscriptions/{id}';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `pushSubscriptionsControllerRemove()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  pushSubscriptionsControllerRemove$Response(params: PushSubscriptionsControllerRemove$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = pushSubscriptionsControllerRemove(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `pushSubscriptionsControllerRemove$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  pushSubscriptionsControllerRemove(params: PushSubscriptionsControllerRemove$Params, context?: HttpContext): Promise<void> {
+    const resp = this.pushSubscriptionsControllerRemove$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
 }

@@ -57,6 +57,11 @@ export const routes: Routes = [
           import('./public/reset-password').then((m) => m.ResetPassword),
         path: 'reset-password/:token',
       },
+      {
+        loadComponent: () =>
+          import('./public/sign-in-return').then((m) => m.SignInReturn),
+        path: 'sign-in/return',
+      },
       placeholder('garages', 'public.placeholder.garages'),
       placeholder('garages/:garage', 'public.placeholder.garages'),
       placeholder('mechanics/:mechanic', 'public.placeholder.mechanics'),
@@ -69,6 +74,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./public/unsubscribe').then((m) => m.Unsubscribe),
         path: 'unsubscribe/:token',
+      },
+      {
+        loadComponent: () =>
+          import('./public/invite').then((m) => m.InvitePage),
+        path: 'invite/:token',
       },
       ...(['terms', 'privacy'] as const).map((text) => ({
         data: { text },

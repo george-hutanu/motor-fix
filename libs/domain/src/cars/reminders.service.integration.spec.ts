@@ -53,7 +53,7 @@ beforeEach(async () => {
     queue,
     publisher,
     testConfig('http://127.0.0.1:9'),
-    async () => undefined,
+    null,
     new AuditService(),
   );
   reminders = new RemindersService(prisma, notifications);

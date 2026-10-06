@@ -26,6 +26,21 @@ import { emailConfirmationControllerConfirm } from '../fn/auth/email-confirmatio
 import { EmailConfirmationControllerConfirm$Params } from '../fn/auth/email-confirmation-controller-confirm';
 import { emailConfirmationControllerResend } from '../fn/auth/email-confirmation-controller-resend';
 import { EmailConfirmationControllerResend$Params } from '../fn/auth/email-confirmation-controller-resend';
+import { oauthControllerApple } from '../fn/auth/oauth-controller-apple';
+import { OauthControllerApple$Params } from '../fn/auth/oauth-controller-apple';
+import { oauthControllerComplete } from '../fn/auth/oauth-controller-complete';
+import { OauthControllerComplete$Params } from '../fn/auth/oauth-controller-complete';
+import { oauthControllerGoogle } from '../fn/auth/oauth-controller-google';
+import { OauthControllerGoogle$Params } from '../fn/auth/oauth-controller-google';
+import { oauthControllerPending } from '../fn/auth/oauth-controller-pending';
+import { OauthControllerPending$Params } from '../fn/auth/oauth-controller-pending';
+import { oauthControllerProviders } from '../fn/auth/oauth-controller-providers';
+import { OauthControllerProviders$Params } from '../fn/auth/oauth-controller-providers';
+import { oauthControllerStartApple } from '../fn/auth/oauth-controller-start-apple';
+import { OauthControllerStartApple$Params } from '../fn/auth/oauth-controller-start-apple';
+import { oauthControllerStartGoogle } from '../fn/auth/oauth-controller-start-google';
+import { OauthControllerStartGoogle$Params } from '../fn/auth/oauth-controller-start-google';
+import { OAuthPendingDto } from '../models/o-auth-pending-dto';
 import { passwordResetControllerAsk } from '../fn/auth/password-reset-controller-ask';
 import { PasswordResetControllerAsk$Params } from '../fn/auth/password-reset-controller-ask';
 import { passwordResetControllerCheck } from '../fn/auth/password-reset-controller-check';
@@ -37,6 +52,7 @@ import { phoneSignInControllerPhoneCode } from '../fn/auth/phone-sign-in-control
 import { PhoneSignInControllerPhoneCode$Params } from '../fn/auth/phone-sign-in-controller-phone-code';
 import { phoneSignInControllerPhoneSignIn } from '../fn/auth/phone-sign-in-controller-phone-sign-in';
 import { PhoneSignInControllerPhoneSignIn$Params } from '../fn/auth/phone-sign-in-controller-phone-sign-in';
+import { ProvidersDto } from '../models/providers-dto';
 import { SessionDto } from '../models/session-dto';
 
 @Injectable({ providedIn: 'root' })
@@ -192,6 +208,181 @@ export class AuthService extends BaseService {
    */
   authControllerSignOut(params?: AuthControllerSignOut$Params, context?: HttpContext): Promise<void> {
     const resp = this.authControllerSignOut$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `oauthControllerProviders()` */
+  static readonly OauthControllerProvidersPath = '/api/v1/auth/providers';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `oauthControllerProviders()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  oauthControllerProviders$Response(params?: OauthControllerProviders$Params, context?: HttpContext): Promise<StrictHttpResponse<ProvidersDto>> {
+    const obs = oauthControllerProviders(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `oauthControllerProviders$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  oauthControllerProviders(params?: OauthControllerProviders$Params, context?: HttpContext): Promise<ProvidersDto> {
+    const resp = this.oauthControllerProviders$Response(params, context);
+    return resp.then((r: StrictHttpResponse<ProvidersDto>): ProvidersDto => r.body);
+  }
+
+  /** Path part for operation `oauthControllerPending()` */
+  static readonly OauthControllerPendingPath = '/api/v1/auth/oauth/pending';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `oauthControllerPending()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  oauthControllerPending$Response(params?: OauthControllerPending$Params, context?: HttpContext): Promise<StrictHttpResponse<OAuthPendingDto>> {
+    const obs = oauthControllerPending(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `oauthControllerPending$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  oauthControllerPending(params?: OauthControllerPending$Params, context?: HttpContext): Promise<OAuthPendingDto> {
+    const resp = this.oauthControllerPending$Response(params, context);
+    return resp.then((r: StrictHttpResponse<OAuthPendingDto>): OAuthPendingDto => r.body);
+  }
+
+  /** Path part for operation `oauthControllerComplete()` */
+  static readonly OauthControllerCompletePath = '/api/v1/auth/oauth/complete';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `oauthControllerComplete()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  oauthControllerComplete$Response(params: OauthControllerComplete$Params, context?: HttpContext): Promise<StrictHttpResponse<SessionDto>> {
+    const obs = oauthControllerComplete(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `oauthControllerComplete$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  oauthControllerComplete(params: OauthControllerComplete$Params, context?: HttpContext): Promise<SessionDto> {
+    const resp = this.oauthControllerComplete$Response(params, context);
+    return resp.then((r: StrictHttpResponse<SessionDto>): SessionDto => r.body);
+  }
+
+  /** Path part for operation `oauthControllerStartGoogle()` */
+  static readonly OauthControllerStartGooglePath = '/api/v1/auth/oauth/google';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `oauthControllerStartGoogle()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  oauthControllerStartGoogle$Response(params?: OauthControllerStartGoogle$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = oauthControllerStartGoogle(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `oauthControllerStartGoogle$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  oauthControllerStartGoogle(params?: OauthControllerStartGoogle$Params, context?: HttpContext): Promise<void> {
+    const resp = this.oauthControllerStartGoogle$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `oauthControllerStartApple()` */
+  static readonly OauthControllerStartApplePath = '/api/v1/auth/oauth/apple';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `oauthControllerStartApple()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  oauthControllerStartApple$Response(params?: OauthControllerStartApple$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = oauthControllerStartApple(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `oauthControllerStartApple$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  oauthControllerStartApple(params?: OauthControllerStartApple$Params, context?: HttpContext): Promise<void> {
+    const resp = this.oauthControllerStartApple$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `oauthControllerGoogle()` */
+  static readonly OauthControllerGooglePath = '/api/v1/auth/oauth/google/callback';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `oauthControllerGoogle()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  oauthControllerGoogle$Response(params?: OauthControllerGoogle$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = oauthControllerGoogle(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `oauthControllerGoogle$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  oauthControllerGoogle(params?: OauthControllerGoogle$Params, context?: HttpContext): Promise<void> {
+    const resp = this.oauthControllerGoogle$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `oauthControllerApple()` */
+  static readonly OauthControllerApplePath = '/api/v1/auth/oauth/apple/callback';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `oauthControllerApple()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  oauthControllerApple$Response(params?: OauthControllerApple$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = oauthControllerApple(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `oauthControllerApple$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  oauthControllerApple(params?: OauthControllerApple$Params, context?: HttpContext): Promise<void> {
+    const resp = this.oauthControllerApple$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 

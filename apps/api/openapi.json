@@ -223,6 +223,198 @@
         ]
       }
     },
+    "/api/v1/auth/providers": {
+      "get": {
+        "operationId": "OauthController_providers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProvidersDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/pending": {
+      "get": {
+        "operationId": "OauthController_pending",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthPendingDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No pending sign-up in this browser"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/complete": {
+      "post": {
+        "operationId": "OauthController_complete",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthCompleteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "consent_required, or provider_failed: no pending sign-up"
+          },
+          "409": {
+            "description": "email_taken"
+          },
+          "415": {
+            "description": "The body is not JSON"
+          },
+          "503": {
+            "description": "maintenance"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/google": {
+      "get": {
+        "operationId": "OauthController_startGoogle",
+        "parameters": [
+          {
+            "name": "remember",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "language",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "ro",
+                "en"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "To Google's authorisation"
+          },
+          "404": {
+            "description": "Google is not configured"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/apple": {
+      "get": {
+        "operationId": "OauthController_startApple",
+        "parameters": [
+          {
+            "name": "remember",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "language",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "ro",
+                "en"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "To Apple's authorisation"
+          },
+          "404": {
+            "description": "Apple is not configured"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/google/callback": {
+      "get": {
+        "operationId": "OauthController_google",
+        "parameters": [],
+        "responses": {
+          "302": {
+            "description": "To the web's return page, with the result"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/apple/callback": {
+      "post": {
+        "operationId": "OauthController_apple",
+        "parameters": [],
+        "responses": {
+          "302": {
+            "description": "To the web's return page, with the result"
+          }
+        },
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/me": {
       "get": {
         "operationId": "MeController_me",
@@ -684,6 +876,122 @@
         ]
       }
     },
+    "/api/v1/push-subscriptions/key": {
+      "get": {
+        "operationId": "PushSubscriptionsController_key",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushKeyDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/push-subscriptions": {
+      "post": {
+        "operationId": "PushSubscriptionsController_save",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavePushSubscriptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushSubscriptionDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/push-subscriptions/test": {
+      "post": {
+        "operationId": "PushSubscriptionsController_test",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushTestQueuedDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/api/v1/push-subscriptions/{id}": {
+      "delete": {
+        "operationId": "PushSubscriptionsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/api/v1/auth/confirm-email": {
       "post": {
         "operationId": "EmailConfirmationController_confirm",
@@ -916,6 +1224,229 @@
         },
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/invites": {
+      "post": {
+        "operationId": "GarageInvitesController_send",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffInviteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffInviteSentDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found; feature_off"
+          },
+          "409": {
+            "description": "invite_open (with inviteId); already_in_team"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/invites/{id}/resend": {
+      "post": {
+        "operationId": "GarageInvitesController_resend",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffInviteSentDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden"
+          },
+          "404": {
+            "description": "not_found; feature_off"
+          },
+          "409": {
+            "description": "invite_invalid: accepted or revoked"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/invites/{id}/revoke": {
+      "post": {
+        "operationId": "GarageInvitesController_revoke",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Revoked"
+          },
+          "403": {
+            "description": "forbidden"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "invite_invalid: accepted or revoked"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/invites/check": {
+      "post": {
+        "operationId": "InvitesController_check",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteViewDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "feature_off"
+          },
+          "410": {
+            "description": "invite_expired; invite_invalid"
+          }
+        },
+        "tags": [
+          "invites"
+        ]
+      }
+    },
+    "/api/v1/invites/accept": {
+      "post": {
+        "operationId": "InvitesController_accept",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Joined; switch the session to the invited role next"
+          },
+          "404": {
+            "description": "feature_off"
+          },
+          "410": {
+            "description": "invite_expired; invite_invalid"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "invites"
         ]
       }
     },
@@ -1186,6 +1717,78 @@
         },
         "required": [
           "role"
+        ]
+      },
+      "ProvidersDto": {
+        "type": "object",
+        "properties": {
+          "apple": {
+            "type": "boolean",
+            "description": "Sign-in with Apple is configured"
+          },
+          "google": {
+            "type": "boolean",
+            "description": "Sign-in with Google is configured"
+          }
+        },
+        "required": [
+          "apple",
+          "google"
+        ]
+      },
+      "OAuthPendingDto": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "google",
+              "apple"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "The name the provider gave; may be empty"
+          },
+          "email": {
+            "type": "string",
+            "description": "The e-mail the provider gave"
+          }
+        },
+        "required": [
+          "provider",
+          "name"
+        ]
+      },
+      "OAuthCompleteDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 80,
+            "minLength": 2
+          },
+          "language": {
+            "type": "string",
+            "description": "The interface language",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          },
+          "consent": {
+            "description": "The current terms and privacy versions; without them the answer is 400 consent_required",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConsentDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "language"
         ]
       },
       "MeDto": {
@@ -1850,6 +2453,80 @@
           "recipients"
         ]
       },
+      "PushKeyDto": {
+        "type": "object",
+        "properties": {
+          "publicKey": {
+            "type": "string",
+            "description": "The server’s VAPID public key; null when push is off",
+            "nullable": true
+          }
+        },
+        "required": [
+          "publicKey"
+        ]
+      },
+      "PushKeysDto": {
+        "type": "object",
+        "properties": {
+          "p256dh": {
+            "type": "string",
+            "description": "The browser’s public key (base64url)"
+          },
+          "auth": {
+            "type": "string",
+            "description": "The browser’s auth secret (base64url)"
+          }
+        },
+        "required": [
+          "p256dh",
+          "auth"
+        ]
+      },
+      "SavePushSubscriptionDto": {
+        "type": "object",
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "description": "The push service address of the browser"
+          },
+          "keys": {
+            "$ref": "#/components/schemas/PushKeysDto"
+          },
+          "label": {
+            "type": "string",
+            "description": "The browser’s own description"
+          }
+        },
+        "required": [
+          "endpoint",
+          "keys"
+        ]
+      },
+      "PushSubscriptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "PushTestQueuedDto": {
+        "type": "object",
+        "properties": {
+          "queued": {
+            "type": "number",
+            "description": "How many test pushes were queued"
+          }
+        },
+        "required": [
+          "queued"
+        ]
+      },
       "ConfirmEmailDto": {
         "type": "object",
         "properties": {
@@ -2011,6 +2688,110 @@
             ]
           }
         }
+      },
+      "StaffInviteDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 80,
+            "minLength": 2
+          },
+          "email": {
+            "type": "string",
+            "description": "Trimmed; stored and compared in lower case",
+            "maxLength": 254
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "mechanic",
+              "receptionist"
+            ]
+          },
+          "canMoveBookings": {
+            "type": "object",
+            "default": false
+          },
+          "canAnswerQuotes": {
+            "type": "object",
+            "default": false
+          },
+          "canRecordFinalPrice": {
+            "type": "object",
+            "default": false
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "kind"
+        ]
+      },
+      "StaffInviteSentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "emailSent": {
+            "type": "boolean",
+            "description": "False when the e-mail could not be sent"
+          },
+          "link": {
+            "type": "string",
+            "description": "The invite link, only when the e-mail could not be sent, for the owner to pass on"
+          }
+        },
+        "required": [
+          "id",
+          "emailSent"
+        ]
+      },
+      "InviteTokenDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The invite link's token",
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "InviteViewDto": {
+        "type": "object",
+        "properties": {
+          "garage": {
+            "type": "string",
+            "description": "The garage name, as typed by its owner"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "mechanic",
+              "receptionist"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "The invitee's name, as the owner typed it"
+          },
+          "email": {
+            "type": "string",
+            "description": "The invited address"
+          }
+        },
+        "required": [
+          "garage",
+          "kind",
+          "name",
+          "email"
+        ]
       },
       "LiveTestDto": {
         "type": "object",

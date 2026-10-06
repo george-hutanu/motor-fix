@@ -1,12 +1,32 @@
 import { isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, inject, PLATFORM_ID, signal } from '@angular/core';
+import {
+  Injectable,
+  InjectionToken,
+  inject,
+  PLATFORM_ID,
+  signal,
+} from '@angular/core';
 import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
-import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
+import {
+  AuthService,
+  type MeDto,
+  MeService,
+  type OAuthPendingDto,
+} from '@motor-fix/data-access';
 import { type Language, LanguageChoice } from '@motor-fix/i18n';
 import { Subject } from 'rxjs';
 
 type SignOut = 'device' | 'everywhere';
+export type Provider = 'google' | 'apple';
+
+// How the page leaves for a provider's sign-in; tests stand in for it.
+export const LEAVE = new InjectionToken<(url: string) => void>('LEAVE', {
+  factory: () => (url) => location.assign(url),
+});
+
+// The screen to come back to after a provider's sign-in, kept in the tab.
+const RETURN_TO = 'mf-return-to';
 
 // A sign-out the server has not answered yet, sent again when it can be.
 const PENDING = 'mf-sign-out-pending';
@@ -43,6 +63,7 @@ export class Session {
   private readonly me = inject(MeService);
   private readonly auth = inject(AuthService);
   private readonly language = inject(LanguageChoice);
+  private readonly leave = inject(LEAVE);
   readonly current = signal<MeDto | null>(null);
   // The session ended in another tab of this browser.
   readonly ended = new Subject<void>();
@@ -56,6 +77,8 @@ export class Session {
   private switchingTo: MeDto['role'] | null = null;
   // Bumped when the cookie starts a new session.
   private starts = 0;
+  // Bumped when a role switch has put its account on screen.
+  private switches = 0;
 
   // The language last tapped, and the save sending it, one at a time.
   private wanted: Language | null = null;
@@ -145,6 +168,56 @@ export class Session {
     return this.load();
   }
 
+  // The page leaves for the provider; the server brings it back to
+  // /{lang}/sign-in/return with the result.
+  async leaveFor(
+    provider: Provider,
+    choice: {
+      language: 'ro' | 'en';
+      remember: boolean;
+      returnTo?: string | null;
+    },
+  ) {
+    await this.sendPending();
+    try {
+      if (choice.returnTo) sessionStorage.setItem(RETURN_TO, choice.returnTo);
+      else sessionStorage.removeItem(RETURN_TO);
+    } catch {
+      // No storage: the person lands on their role's home instead.
+    }
+    const query = new URLSearchParams({
+      language: choice.language,
+      remember: String(choice.remember),
+    });
+    this.leave(`/api/v1/auth/oauth/${provider}?${query}`);
+  }
+
+  // The kept screen, once, and only an address of this site.
+  takeReturnTo(): string | null {
+    try {
+      const kept = sessionStorage.getItem(RETURN_TO);
+      sessionStorage.removeItem(RETURN_TO);
+      return kept && /^\/(?![/\\])/.test(kept) ? kept : null;
+    } catch {
+      return null;
+    }
+  }
+
+  // What the provider gave for a new person, or null when nothing waits.
+  providerPending(): Promise<OAuthPendingDto | null> {
+    return this.auth.oauthControllerPending().catch(() => null);
+  }
+
+  // The new person's account, once the consent tick is set.
+  async completeProviderSignUp(name: string, language: 'ro' | 'en') {
+    const { accessToken } = await this.auth.oauthControllerComplete({
+      body: { consent: CURRENT_CONSENT, language, name },
+    });
+    this.started(accessToken);
+    this.current.set(null);
+    return this.load();
+  }
+
   // A new password from a reset link: the answer is a session, as sign-in's.
   async resetPassword(token: string, password: string) {
     await this.sendPending();
@@ -215,8 +288,14 @@ export class Session {
   async reload(): Promise<void> {
     if (!this.current()) return;
     const generation = this.generation;
+    // A sign-in or a role switch meanwhile: this answer is for the old one.
+    // A renewal is not: the retry after a 401 answers for the same account.
+    const { starts, switches } = this;
     const answer = await this.me.meControllerMe().catch(() => null);
-    if (answer && generation === this.generation) this.current.set(answer);
+    if (!answer || generation !== this.generation) return;
+    if (starts === this.starts && switches === this.switches) {
+      this.current.set(answer);
+    }
   }
 
   // The tab's session in another of the account's roles. A failure leaves the
@@ -236,6 +315,7 @@ export class Session {
     try {
       const answer = await this.me.meControllerMe();
       if (generation !== this.generation) return null;
+      this.switches++;
       this.current.set(answer);
       return answer;
     } catch (error) {

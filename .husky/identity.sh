@@ -9,12 +9,17 @@
 #   sh .husky/identity.sh check   exit 1 naming what drifted (.husky/pre-commit runs this)
 #
 # Both also cover core.hooksPath: a checkout runs the hooks in its own .husky/_.
+# In a Claude Code cloud session (CLAUDE_CODE_REMOTE=true) a proxy injects the
+# GitHub credentials: apply writes the author only, and check skips credential
+# pinning, since a gh-keyring helper would hand the proxy nothing.
 set -eu
 
 name=george-hutanu
 email=hutanugeorge40@gmail.com
 account=george-hutanu
 key=credential.https://github.com.helper
+cloud=false
+[ "${CLAUDE_CODE_REMOTE:-}" = true ] && cloud=true
 top="$(git rev-parse --show-toplevel)"
 
 # True when the hooks git runs resolve outside this checkout's .husky/_. The
@@ -29,17 +34,21 @@ hooks_elsewhere() {
 
 case "${1:-}" in
   apply)
-    gh_bin="$(command -v gh || echo "$HOME/.local/bin/gh")"
     git config user.name "$name"
     git config user.email "$email"
-    # The empty helper drops the global gh helper, which hands out the active
-    # (work) account's token. This one asks gh for george-hutanu's token by
-    # name and gives git nothing when that account is not logged in.
-    git config --unset-all "$key" 2>/dev/null || true
-    git config --add "$key" ""
-    git config --add "$key" "!f() { test \"\$1\" = get || exit 0; t=\$($gh_bin auth token --hostname github.com --user $account 2>/dev/null) || exit 0; echo username=$account; echo \"password=\$t\"; }; f"
-    git config credential.https://github.com.username "$account"
-    echo "motor-fix: git identity pinned to $name <$email>, GitHub account $account"
+    if [ "$cloud" = true ]; then
+      echo "motor-fix: git identity pinned to $name <$email>; GitHub credentials left to the cloud proxy"
+    else
+      gh_bin="$(command -v gh || echo "$HOME/.local/bin/gh")"
+      # The empty helper drops the global gh helper, which hands out the active
+      # (work) account's token. This one asks gh for george-hutanu's token by
+      # name and gives git nothing when that account is not logged in.
+      git config --unset-all "$key" 2>/dev/null || true
+      git config --add "$key" ""
+      git config --add "$key" "!f() { test \"\$1\" = get || exit 0; t=\$($gh_bin auth token --hostname github.com --user $account 2>/dev/null) || exit 0; echo username=$account; echo \"password=\$t\"; }; f"
+      git config credential.https://github.com.username "$account"
+      echo "motor-fix: git identity pinned to $name <$email>, GitHub account $account"
+    fi
     # Only once this checkout has hooks of its own, so it is never left with none.
     if [ "$(git config --bool extensions.worktreeConfig 2>/dev/null)" = true ] &&
       git config --worktree --get core.hooksPath >/dev/null 2>&1 && hooks_elsewhere && [ -f "$top/.husky/_/h" ]; then
@@ -61,8 +70,8 @@ case "${1:-}" in
       *) problems="$problems
   - committer is '${committer%>*}>', not '$name <$email>'" ;;
     esac
-    case "$(git config --get-all "$key" 2>/dev/null)" in
-      *"--user $account"*) ;;
+    case "$cloud:$(git config --get-all "$key" 2>/dev/null)" in
+      true:* | *"--user $account"*) ;;
       *) problems="$problems
   - GitHub credentials are not pinned to $account (pushes would use gh's active, work, account)" ;;
     esac
