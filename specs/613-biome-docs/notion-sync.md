@@ -9,3 +9,6 @@
 - 2026-10-06 · implement · ST-613 · Planning → Implementing
 - 2026-10-06 · implement · timeline · no row for ST-613
 - 2026-10-06 · labels · PR #166 · in development
+- 2026-10-06 · qa · ST-613 · Implementing → QA
+- 2026-10-06 · qa · timeline · no row for ST-613
+- 2026-10-06 · labels · PR #166 · QA
