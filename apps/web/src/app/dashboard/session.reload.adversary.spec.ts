@@ -47,15 +47,13 @@ function setup() {
 }
 
 function held(meControllerMe: jest.Mock) {
-  const pending: {
-    resolve: (me: MeDto) => void;
-    reject: (e: Error) => void;
-  } = { reject: () => undefined, resolve: () => undefined };
+  const pending: { resolve: (me: MeDto) => void } = {
+    resolve: () => undefined,
+  };
   meControllerMe.mockImplementationOnce(
     () =>
-      new Promise<MeDto>((resolve, reject) => {
+      new Promise<MeDto>((resolve) => {
         pending.resolve = resolve;
-        pending.reject = reject;
       }),
   );
   return pending;
@@ -84,7 +82,7 @@ describe('reading the account again, under overlapping changes', () => {
     expect(session.current()).toEqual(fresh);
   });
 
-  it('drops a reload that answers while the switched account is still loading', async () => {
+  it('lets a reload that answers mid-switch land, then the switch replaces it', async () => {
     const { meControllerMe, session } = await signedIn();
     const reloadAnswer = held(meControllerMe);
     const reading = session.reload();
@@ -93,8 +91,10 @@ describe('reading the account again, under overlapping changes', () => {
     const switching = session.switchRole('garage');
     await Promise.resolve();
     await Promise.resolve();
-    reloadAnswer.resolve({ ...DRIVER, emailConfirmed: true });
+    const confirmed = { ...DRIVER, emailConfirmed: true };
+    reloadAnswer.resolve(confirmed);
     await reading;
+    expect(session.current()).toEqual(confirmed);
     switchedLoad.resolve(GARAGE);
     await switching;
 
