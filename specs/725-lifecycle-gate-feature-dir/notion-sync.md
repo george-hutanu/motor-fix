@@ -14,3 +14,4 @@
 - 2026-10-06 · qa · ST-725 · Implementing → QA
 - 2026-10-06 · qa · Foundations timeline row ST-725 · Implementing → QA
 - 2026-10-06 · labels · PR #148 · in development → QA
+- 2026-10-06 · debt · ST-725 · pr-tester lap 2 LOW filed as To do https://app.notion.com/p/3f1607bff0d28143ad36d63adf8fa87e (connector)
