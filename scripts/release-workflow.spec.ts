@@ -36,6 +36,45 @@ describe('release workflow', () => {
     },
   );
 
+  // Merges in quick succession queue their checks instead of each holding
+  // seven runners at once; a queued run is replaced by the newest, a running
+  // one finishes.
+  it('runs one release check at a time, never cancelling one in progress', () => {
+    const block = job('checks');
+
+    expect(setting(block, 'group')).toBe('release-checks');
+    expect(setting(block, 'cancel-in-progress')).toBe('false');
+  });
+
+  // Only main's builds can write a cache PRs can read, so the images job
+  // writes the scopes the PR's Docker build job reads.
+  function image(id: string): string {
+    const block = job('images');
+    const at = block.indexOf(`- id: ${id}\n`);
+    const next = block.indexOf('- id: ', at + 1);
+    return block.slice(at, next < 0 ? undefined : next);
+  }
+
+  it.each(['web', 'api'])(
+    'the %s image reads and writes its own layer cache',
+    (app) => {
+      const step = image(app);
+
+      expect(setting(step, 'cache-from')).toBe(`type=gha,scope=${app}`);
+      expect(setting(step, 'cache-to')).toBe(`type=gha,mode=max,scope=${app}`);
+    },
+  );
+
+  it.each(['worker', 'mcp'])(
+    'the %s image reads the api cache, the same node-app stage, and writes none',
+    (app) => {
+      const step = image(app);
+
+      expect(setting(step, 'cache-from')).toBe('type=gha,scope=api');
+      expect(setting(step, 'cache-to')).toBeUndefined();
+    },
+  );
+
   it('promotes to production only after images and staging pass', () => {
     const block = job('production');
 

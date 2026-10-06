@@ -8,7 +8,7 @@
 
 - [X] T001 [P] [US2] Write `scripts/ci-workflow.spec.ts` (new): `ci.yml` job ids are exactly `changes, checks, tests, e2e, docker, ci-ok`; only `checks, tests, e2e` use `./.github/actions/setup`; each check step (Biome, Typecheck, Build, Contract check, Harness, Dependency audit, Compose stack, Unit tests, Integration tests) is named with `if: ${{ !cancelled() }}` and the unit and integration steps set `JEST_SUITE`; every job but `changes` and `ci-ok` has `needs: changes` and the docs-only `if`; `ci-ok` is `if: always()`, needs every other job and fails on anything but `success|skipped`. Run it and see it fail. (FR-002, FR-003, FR-004, FR-007, FR-009)
 - [X] T002 [P] [US1] In the same file, add the Playwright config case: spawn `node` importing `apps/web-e2e/playwright.config.mts` with `CI=1` expecting `workers: 4, failOnFlakyTests: true`, and with `BASE_URL` set expecting `workers: 1, failOnFlakyTests: undefined`; worker count is one constant. See it fail. (FR-001, FR-010)
-- [ ] T003 [P] [US3] [US4] Extend `scripts/release-workflow.spec.ts`: `checks` has `group: release-checks` and `cancel-in-progress: false`; `images` web and api steps have `cache-from` and `cache-to: type=gha,mode=max` on their own scope; worker and mcp have `cache-from: type=gha,scope=api` and no `cache-to`; staging and production groups unchanged. See it fail. (FR-005, FR-006)
+- [X] T003 [P] [US3] [US4] Extend `scripts/release-workflow.spec.ts`: `checks` has `group: release-checks` and `cancel-in-progress: false`; `images` web and api steps have `cache-from` and `cache-to: type=gha,mode=max` on their own scope; worker and mcp have `cache-from: type=gha,scope=api` and no `cache-to`; staging and production groups unchanged. See it fail. (FR-005, FR-006)
 
 ## Phase 2: Playwright config (US1, P1)
 
@@ -21,8 +21,8 @@
 
 ## Phase 4: release.yml (US3, US4)
 
-- [ ] T007 [US4] Edit `.github/workflows/release.yml`: job-level `concurrency: { group: release-checks, cancel-in-progress: false }` on `checks`. (FR-006)
-- [ ] T008 [US3] Edit `.github/workflows/release.yml` `images`: Actions layer cache per plan D3 (web and api read and write; worker and mcp read `scope=api`). T003 passes. (FR-005)
+- [X] T007 [US4] Edit `.github/workflows/release.yml`: job-level `concurrency: { group: release-checks, cancel-in-progress: false }` on `checks`. (FR-006)
+- [X] T008 [US3] Edit `.github/workflows/release.yml` `images`: Actions layer cache per plan D3 (web and api read and write; worker and mcp read `scope=api`). T003 passes. (FR-005)
 
 ## Phase 5: Documentation (US5, P3)
 

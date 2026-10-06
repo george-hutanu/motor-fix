@@ -9,7 +9,13 @@ permissions:
   packages: write
 
 jobs:
+  # Merges in quick succession queue their checks instead of each holding
+  # seven runners of the free plan's 20 at once. A waiting run is replaced by
+  # a newer one (its own images and staging then skip); a running one finishes.
   checks:
+    concurrency:
+      group: release-checks
+      cancel-in-progress: false
     uses: ./.github/workflows/ci.yml
 
   images:
@@ -20,6 +26,9 @@ jobs:
       api: ${{ steps.api.outputs.digest }}
       worker: ${{ steps.worker.outputs.digest }}
       mcp: ${{ steps.mcp.outputs.digest }}
+    # web and api write the layer cache PRs read (a PR can only read caches
+    # written on main); worker and mcp build the api's node-app stage, so they
+    # read its scope and write none.
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
@@ -37,6 +46,8 @@ jobs:
           target: web
           push: true
           tags: ghcr.io/${{ github.repository }}-web:${{ github.sha }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
       - id: api
         uses: docker/build-push-action@v7
         with:
@@ -46,6 +57,8 @@ jobs:
           target: node-app
           push: true
           tags: ghcr.io/${{ github.repository }}-api:${{ github.sha }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
       - id: worker
         uses: docker/build-push-action@v7
         with:
@@ -55,6 +68,7 @@ jobs:
           target: node-app
           push: true
           tags: ghcr.io/${{ github.repository }}-worker:${{ github.sha }}
+          cache-from: type=gha,scope=api
       - id: mcp
         uses: docker/build-push-action@v7
         with:
@@ -64,6 +78,7 @@ jobs:
           target: node-app
           push: true
           tags: ghcr.io/${{ github.repository }}-mcp:${{ github.sha }}
+          cache-from: type=gha,scope=api
 
   staging:
     needs: images
