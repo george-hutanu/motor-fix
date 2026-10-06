@@ -10,3 +10,6 @@
 - 2026-10-06 · implement · timeline · no row for ST-750
 - 2026-10-06 · labels · PR #157 · in development
 - 2026-10-06 · debt · ST-750 · 1 task (medium, live.spec sign-up limit) https://app.notion.com/p/3f1607bff0d281f39a46f8f68927a1e9 (connector)
+- 2026-10-06 · qa · ST-750 · Implementing → QA (connector)
+- 2026-10-06 · qa · timeline · no row for ST-750
+- 2026-10-06 · labels · PR #157 · QA
