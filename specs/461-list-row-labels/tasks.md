@@ -4,7 +4,7 @@
 
 ## Phase 1: Tests first
 
-- [X] T001 [US1] Test: `libs/ui-cockpit/src/lib/helm/table.spec.ts` — every table element carries its explicit role, and each cell of a row maps to its column's header by role (FR-001)
+- [X] T001 [US1] Test: `libs/ui-cockpit/src/lib/helm/table.spec.ts` — every table element carries its explicit role (FR-001)
 - [X] T002 [US1] Test: `libs/ui-cockpit/src/styles/cockpit.css.spec.ts` — on a phone the header row is visually hidden (clipped, absolute) and never `display: none`; the other phone rules unchanged (FR-002)
 
 ## Phase 2: Implementation
@@ -20,5 +20,5 @@
 
 | FR | Proof |
 |---|---|
-| FR-001 | table.spec.ts |
-| FR-002 | cockpit.css.spec.ts, phone.adversary.spec.ts |
+| FR-001 | table.spec.ts, table.adversary.spec.ts |
+| FR-002 | cockpit.css.spec.ts, table.adversary.spec.ts |

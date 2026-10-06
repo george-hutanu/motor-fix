@@ -1,11 +1,12 @@
 ---
 capability: phone-layout
-updated: 2026-10-04
+updated: 2026-10-06
 features:
   - 286-phone-layout
   - 287-public-tab-bar
   - 082-sign-in
   - 288-dashboard-tab-bar
+  - 461-list-row-labels
 ---
 
 # Capability: Phone layout and installable web app
@@ -38,9 +39,9 @@ _From 286-phone-layout._
 
 _From 286-phone-layout._
 
-### 286-FR-007 — The shared table MUST let each column be named main or key; below 768 px a table that names a main column MUST show each row as the main text, then the key value on the same line (main at the start, key at the end, as the mock's results list), with every other column and the header row hidden; from 768 px every column shows. A table that names only a key column is unnamed.
+### 461-FR-002 — The shared table MUST let each column be named main or key; below 768 px a table that names a main column MUST show each row as the main text, then the key value on the same line (main at the start, key at the end), with every other column hidden, its header cells as well as its cells, and the header row visually hidden (clipped to 1 px, out of the layout) rather than `display: none`, so it stays in the accessibility tree and each shown cell's column header is the header of its own column; from 768 px every column and the header row show. A table that names only a key column is unnamed. Nothing adds horizontal scroll at 320 px.
 
-_From 286-phone-layout._
+_From 461-list-row-labels._
 
 ### 286-FR-008 — One shared layout signal MUST say `phone` below 768 px, `tablet` from 768 to 1023 px and `desktop` from 1024 px, follow the width live, and say `phone` where there is no width (the server). It is driven by the same media queries as the CSS breakpoints, so the two never disagree.
 
@@ -158,6 +159,12 @@ _From 288-dashboard-tab-bar._
 
 _From 288-dashboard-tab-bar._
 
+### 461-FR-001 — Every element of the shared table (`libs/ui-cockpit` helm table) MUST carry its explicit ARIA role: the table `table`, its header and body `rowgroup`, each row `row`, each header cell `columnheader`, each data cell `cell`, so assistive technology keeps the table semantics whatever display the phone stylesheet gives them.
+
+_From 461-list-row-labels._
+
 ## Retired
 
 - `287-FR-006` — superseded by `082-FR-012` (2026-10-04)
+
+- `286-FR-007` — superseded by `461-FR-002` (2026-10-06)

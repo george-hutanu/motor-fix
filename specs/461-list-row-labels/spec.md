@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 
 **Input**: "On a phone the list rows hide the header row and set the table, body and rows to block/flex, so screen readers lose the column names (the rating is read as a bare "4,9") and WebKit may drop the table semantics. Give each list row its column names on phones (restore table semantics with explicit `role` attributes and/or visually hidden per-cell labels), keep the visual phone layout unchanged, no horizontal scroll at 320 px."
 
