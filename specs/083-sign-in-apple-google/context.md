@@ -24,3 +24,7 @@ Gathered: 2026-10-05 · Anchor: https://app.notion.com/p/3ee607bff0d281ae87e5f2f
 ## Proposed Clarifications
 - Pop-up vs redirect (the brief marks it proposed).
 - How the web learns which providers are configured.
+
+## Refresh
+
+Refreshed: 2026-10-06 · since 2026-10-05. No new evidence: the story was last edited 2026-10-05 14:34 UTC (the run's own Planning → Implementing write); no comments or discussions on the page or its blocks; Build brief unchanged ("Current as of 2026-10-03").

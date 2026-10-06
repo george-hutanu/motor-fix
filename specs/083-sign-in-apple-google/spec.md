@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-05
 
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 
 **Input**: User description: "ST-83 Sign in with Apple or Google — https://app.notion.com/p/3ee607bff0d281ae87e5f2ff6afae615 (stacked on #133, branch from origin/132-sign-up-consent)", epic EP-1 Foundations https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707.
 
