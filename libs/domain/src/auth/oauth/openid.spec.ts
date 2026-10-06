@@ -94,6 +94,16 @@ describe('verifyIdToken', () => {
     expect(() => verifyIdToken(idToken, CHECK)).toThrow(OpenIdError);
   });
 
+  it('refuses a token naming no key, even when a published key names none', () => {
+    const { kid: _kid, ...unnamed } = KEYS[0];
+    expect(() =>
+      verifyIdToken(token(CLAIMS, { alg: 'RS256' }), {
+        ...CHECK,
+        keys: [unnamed],
+      }),
+    ).toThrow(new OpenIdError('unknown signing key'));
+  });
+
   it('allows a minute of clock skew on the expiry', () => {
     expect(
       verifyIdToken(token({ ...CLAIMS, exp: NOW / 1000 - 30 }), CHECK).subject,

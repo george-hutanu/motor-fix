@@ -133,13 +133,26 @@ export class OAuthService {
     };
   }
 
-  // The provider's authorisation address, and the state the browser keeps.
+  // The provider's authorisation address, and the state the browser keeps;
+  // null when the provider cannot be reached.
   async start(
     provider: OAuthProvider,
     choice: { language: 'ro' | 'en'; remember: boolean },
-  ): Promise<{ state: string; url: string }> {
+  ): Promise<{ state: string; url: string } | null> {
     const settings = this.settingsOf(provider);
     if (!settings) throw new NotFoundException();
+    try {
+      return await this.begin(settings, choice);
+    } catch (failure) {
+      this.logger.warn(`${provider} start failed: ${reasonOf(failure)}`);
+      return null;
+    }
+  }
+
+  private async begin(
+    settings: ProviderSettings,
+    choice: { language: 'ro' | 'en'; remember: boolean },
+  ): Promise<{ state: string; url: string }> {
     const { authorizationEndpoint } = await this.openId.discover(
       settings.issuer,
     );
@@ -179,15 +192,16 @@ export class OAuthService {
   ): Promise<Outcome> {
     const field = (name: string) =>
       typeof fields[name] === 'string' ? (fields[name] as string) : undefined;
-    const flow = await this.takeFlow(provider, flowCookie, field('state'));
-    if (!flow) {
-      this.logger.warn(`${provider} return refused: no matching flow`);
-      return { language: 'ro', result: 'failed' };
-    }
-    const { language } = flow;
-    const error = field('error');
-    if (error) return { language, result: this.refused(provider, error) };
+    let language: Outcome['language'] = 'ro';
     try {
+      const flow = await this.takeFlow(provider, flowCookie, field('state'));
+      if (!flow) {
+        this.logger.warn(`${provider} return refused: no matching flow`);
+        return { language, result: 'failed' };
+      }
+      language = flow.language;
+      const error = field('error');
+      if (error) return { language, result: this.refused(provider, error) };
       const person = await this.person(provider, flow, field('code'));
       return {
         language,
@@ -331,7 +345,7 @@ export class OAuthService {
     const match = await this.match(provider, person);
     if (match === 'email_taken') {
       this.logger.warn(
-        `${provider} return refused: e-mail unverified and taken`,
+        `${provider} return refused: e-mail taken and not confirmed on both sides`,
       );
       return { result: 'email_taken' };
     }
@@ -357,7 +371,8 @@ export class OAuthService {
   }
 
   // The account of the provider identity, else the one holding the e-mail the
-  // provider vouches for, to be linked.
+  // provider vouches for, to be linked: only when that account confirmed the
+  // e-mail too, so nobody can register someone else's address and wait.
   private async match(provider: OAuthProvider, person: Person) {
     const include = { roles: true } as const;
     const byIdentity = await this.prisma.accountIdentity.findUnique({
@@ -370,10 +385,12 @@ export class OAuthService {
       ? await this.prisma.account.findUnique({ include, where: { email } })
       : null;
     if (!account) return null;
-    return person.emailVerified ? { account, link: true } : 'email_taken';
+    return person.emailVerified && account.emailVerifiedAt
+      ? { account, link: true }
+      : 'email_taken';
   }
 
-  // One transaction: the identity, the e-mail now confirmed, the audit entry.
+  // One transaction: the identity and the audit entry.
   private async link(
     accountId: string,
     role: Role,
@@ -382,10 +399,6 @@ export class OAuthService {
   ) {
     await this.prisma.$transaction(async (tx) => {
       await tx.accountIdentity.create({ data: { accountId, method, subject } });
-      await tx.account.updateMany({
-        data: { emailVerifiedAt: new Date() },
-        where: { emailVerifiedAt: null, id: accountId },
-      });
       await this.audit.record(tx, {
         action: 'create',
         actorId: accountId,

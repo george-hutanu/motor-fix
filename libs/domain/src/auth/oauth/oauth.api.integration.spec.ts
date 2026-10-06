@@ -177,10 +177,12 @@ async function existing(
     method: 'password',
     subject: email,
   },
+  emailVerified = true,
 ) {
   const { id } = await accounts.createAccount({
     consent: CURRENT_CONSENT,
     email,
+    emailVerified,
     identity: {
       ...identity,
       passwordHash: identity.method === 'password' ? 'x' : undefined,
@@ -235,6 +237,32 @@ describe('which providers are configured', () => {
       expect(started.status).toBe(404);
     } finally {
       await bare.close();
+    }
+  });
+
+  it('returns failed, not an error page, when the provider cannot be reached to start', async () => {
+    const dead = await boot(
+      oauthSettings('test', {
+        GOOGLE_CLIENT_ID: 'google-client',
+        GOOGLE_CLIENT_SECRET: 'google-secret',
+        // Nothing listens on the discard port.
+        GOOGLE_ISSUER: 'http://127.0.0.1:9',
+        PUBLIC_WEB_URL: WEB,
+      }),
+    );
+    try {
+      const res = await request(dead.getHttpServer()).get(
+        '/auth/oauth/google?language=en',
+      );
+
+      expect(outcome(res)).toEqual({
+        path: '/en/sign-in/return',
+        provider: 'google',
+        result: 'failed',
+      });
+      expect(cookie(res, 'mf_oauth')).toBeUndefined();
+    } finally {
+      await dead.close();
     }
   });
 
@@ -382,6 +410,30 @@ describe('a person with an account', () => {
     expect(
       await prisma.accountIdentity.count({ where: { method: 'google' } }),
     ).toBe(0);
+    expect(cookie(res, 'mf_refresh')).toBeUndefined();
+    expect(cookie(res, 'mf_oauth_pending')).toBeUndefined();
+  });
+
+  it('does not link to an account whose own e-mail was never confirmed', async () => {
+    const id = await existing(
+      'andrei@gmail.com',
+      ['driver'],
+      { method: 'password', subject: 'andrei@gmail.com' },
+      false,
+    );
+
+    const res = await continueWith('google', {
+      email: 'andrei@gmail.com',
+      email_verified: true,
+      sub: 'google-andrei',
+    });
+
+    expect(outcome(res).result).toBe('email_taken');
+    expect(
+      await prisma.accountIdentity.count({ where: { method: 'google' } }),
+    ).toBe(0);
+    const account = await prisma.account.findUniqueOrThrow({ where: { id } });
+    expect(account.emailVerifiedAt).toBeNull();
     expect(cookie(res, 'mf_refresh')).toBeUndefined();
     expect(cookie(res, 'mf_oauth_pending')).toBeUndefined();
   });
@@ -746,6 +798,17 @@ describe('cancel and failure', () => {
     expect(cookie(res, 'mf_refresh')).toBeUndefined();
     expect(cookie(res, 'mf_oauth_pending')).toBeUndefined();
     expect(await prisma.account.count()).toBe(0);
+  });
+
+  it('reads the published keys again when the token names a new one', async () => {
+    await continueWith('google', ELENA);
+    stub.fault = 'rotated';
+    stub.keyReads = 0;
+
+    const res = await continueWith('google', { ...ELENA, sub: 'google-other' });
+
+    expect(outcome(res).result).toBe('consent');
+    expect(stub.keyReads).toBe(1);
   });
 
   it("returns failed without the browser's flow cookie", async () => {

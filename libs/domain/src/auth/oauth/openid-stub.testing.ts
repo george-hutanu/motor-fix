@@ -22,8 +22,18 @@ export interface OpenIdStub {
   issuer: string;
   next: StubPerson;
   // What the next token call does instead of answering a good ID token.
-  fault: null | 'down' | 'other-key' | 'wrong-nonce' | 'wrong-audience';
+  // `rotated`: the token is signed with a new key, which `/jwks` now
+  // publishes beside the old one.
+  fault:
+    | null
+    | 'down'
+    | 'other-key'
+    | 'rotated'
+    | 'wrong-nonce'
+    | 'wrong-audience';
   lastTokenRequest: URLSearchParams | null;
+  // How many times `/jwks` was read.
+  keyReads: number;
   close(): Promise<void>;
 }
 
@@ -32,12 +42,18 @@ const { privateKey, publicKey } = generateKeyPairSync('rsa', {
 });
 const other = generateKeyPairSync('rsa', { modulusLength: 2048 });
 const KID = 'stub-key';
+const ROTATED_KID = 'stub-key-2';
 
 const encode = (value: unknown) =>
   Buffer.from(JSON.stringify(value)).toString('base64url');
 
-function idToken(claims: Record<string, unknown>, foreign: boolean): string {
-  const data = `${encode({ alg: 'RS256', kid: KID, typ: 'JWT' })}.${encode(claims)}`;
+function idToken(
+  claims: Record<string, unknown>,
+  fault: OpenIdStub['fault'],
+): string {
+  const kid = fault === 'rotated' ? ROTATED_KID : KID;
+  const data = `${encode({ alg: 'RS256', kid, typ: 'JWT' })}.${encode(claims)}`;
+  const foreign = fault === 'other-key' || fault === 'rotated';
   const signature = createSign('sha256')
     .update(data)
     .sign(foreign ? other.privateKey : privateKey)
@@ -98,7 +114,7 @@ function token(
     200,
     {
       access_token: 'unused',
-      id_token: idToken(claims, stub.fault === 'other-key'),
+      id_token: idToken(claims, stub.fault),
       token_type: 'Bearer',
     },
   ];
@@ -117,8 +133,18 @@ function published(stub: OpenIdStub, path: string): Answer | null {
     ];
   }
   if (path === '/jwks') {
-    const jwk = publicKey.export({ format: 'jwk' });
-    return [200, { keys: [{ ...jwk, alg: 'RS256', kid: KID, use: 'sig' }] }];
+    stub.keyReads += 1;
+    const keys = [{ ...publicKey.export({ format: 'jwk' }), kid: KID }];
+    if (stub.fault === 'rotated') {
+      keys.push({
+        ...other.publicKey.export({ format: 'jwk' }),
+        kid: ROTATED_KID,
+      });
+    }
+    return [
+      200,
+      { keys: keys.map((key) => ({ ...key, alg: 'RS256', use: 'sig' })) },
+    ];
   }
   return null;
 }
@@ -134,6 +160,7 @@ export async function startOpenIdStub(): Promise<OpenIdStub> {
       }),
     fault: null,
     issuer: '',
+    keyReads: 0,
     lastTokenRequest: null,
     next: { email: 'elena@example.test', email_verified: true, sub: 'sub-1' },
   };

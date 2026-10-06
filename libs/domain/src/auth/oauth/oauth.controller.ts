@@ -32,7 +32,7 @@ import type { CookieOptions, Request, Response } from 'express';
 
 import { FLOW_TTL_S, OAuthService, type Outcome } from './oauth.service';
 import { Public } from '../actor.guard';
-import { JsonOnly, keep } from '../auth.controller';
+import { cookieOf, JsonOnly, keep } from '../auth.controller';
 
 const FLOW = 'mf_oauth';
 const PENDING = 'mf_oauth_pending';
@@ -46,14 +46,6 @@ const SCOPE: CookieOptions = {
 // on a cross-site post; the state it carries is what makes that safe.
 const FLOW_FLAGS: CookieOptions = { ...SCOPE, sameSite: 'none' };
 const PENDING_FLAGS: CookieOptions = { ...SCOPE, sameSite: 'lax' };
-
-function cookieOf(req: Request, name: string): string | undefined {
-  for (const pair of (req.header('cookie') ?? '').split(';')) {
-    const [key, ...value] = pair.trim().split('=');
-    if (key === name) return value.join('=');
-  }
-  return undefined;
-}
 
 @ApiTags('auth')
 @Controller('auth')
@@ -132,12 +124,21 @@ export class OauthController {
   }
 
   private async start(provider: OAuthProvider, req: Request, res: Response) {
-    const { state, url } = await this.oauth.start(provider, {
-      language: req.query['language'] === 'en' ? 'en' : 'ro',
+    const language = req.query['language'] === 'en' ? 'en' : 'ro';
+    const started = await this.oauth.start(provider, {
+      language,
       remember: req.query['remember'] !== 'false',
     });
-    res.cookie(FLOW, state, { ...FLOW_FLAGS, maxAge: FLOW_TTL_S * 1000 });
-    res.redirect(HttpStatus.FOUND, url);
+    if (!started) {
+      const query = new URLSearchParams({ provider, result: 'failed' });
+      res.redirect(HttpStatus.FOUND, `/${language}/sign-in/return?${query}`);
+      return;
+    }
+    res.cookie(FLOW, started.state, {
+      ...FLOW_FLAGS,
+      maxAge: FLOW_TTL_S * 1000,
+    });
+    res.redirect(HttpStatus.FOUND, started.url);
   }
 
   private async back(

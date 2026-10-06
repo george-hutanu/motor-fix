@@ -125,7 +125,9 @@ function signedClaims(idToken: string, keys: readonly Key[]) {
   const [head, body, signature] = segments;
   const header = part(head, 'header');
   if (header['alg'] !== 'RS256') throw new OpenIdError('unexpected algorithm');
-  const jwk = keys.find((key) => key.kid === header['kid']);
+  const kid = header['kid'];
+  const jwk =
+    typeof kid === 'string' ? keys.find((key) => key.kid === kid) : undefined;
   if (!jwk) throw new OpenIdError('unknown signing key');
   let valid: boolean;
   try {
@@ -169,11 +171,14 @@ export function verifyIdToken(idToken: string, check: Check): Person {
   if (typeof subject !== 'string' || !subject) {
     throw new OpenIdError('no subject');
   }
+  const email = filled(claims['email']);
   return {
-    email: filled(claims['email']),
-    // Apple writes it as a string.
+    email,
+    // Apple writes it as a string; with no e-mail there is nothing verified.
     emailVerified:
-      claims['email_verified'] === true || claims['email_verified'] === 'true',
+      email !== undefined &&
+      (claims['email_verified'] === true ||
+        claims['email_verified'] === 'true'),
     name: filled(claims['name']),
     subject,
   };
@@ -187,7 +192,10 @@ interface Discovered {
   at: number;
 }
 
-async function getJson(url: string, init?: RequestInit): Promise<unknown> {
+async function getJson(
+  url: string,
+  init?: RequestInit,
+): Promise<Record<string, unknown>> {
   let answer: Response;
   try {
     answer = await fetch(url, {
@@ -201,11 +209,16 @@ async function getJson(url: string, init?: RequestInit): Promise<unknown> {
   if (!answer.ok) {
     throw new OpenIdError(`provider answered ${answer.status}`);
   }
+  let body: unknown;
   try {
-    return await answer.json();
+    body = await answer.json();
   } catch {
     throw new OpenIdError('provider answered no JSON');
   }
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    throw new OpenIdError('provider answered no JSON object');
+  }
+  return body as Record<string, unknown>;
 }
 
 const text = (value: unknown, what: string) => {
@@ -222,9 +235,7 @@ export class OpenIdClient {
   async discover(issuer: string): Promise<Discovered> {
     const cached = this.cache.get(issuer);
     if (cached && Date.now() - cached.at < DISCOVERY_MS) return cached;
-    const config = (await getJson(
-      `${issuer}/.well-known/openid-configuration`,
-    )) as Record<string, unknown>;
+    const config = await getJson(`${issuer}/.well-known/openid-configuration`);
     const found: Discovered = {
       at: Date.now(),
       authorizationEndpoint: text(
@@ -242,9 +253,9 @@ export class OpenIdClient {
   async keys(issuer: string, fresh = false): Promise<Key[]> {
     const found = await this.discover(issuer);
     if (!found.keys || fresh) {
-      const set = (await getJson(found.jwksUri)) as { keys?: unknown };
-      if (!Array.isArray(set.keys)) throw new OpenIdError('no key set');
-      found.keys = set.keys as Key[];
+      const set = await getJson(found.jwksUri);
+      if (!Array.isArray(set['keys'])) throw new OpenIdError('no key set');
+      found.keys = set['keys'] as Key[];
     }
     return found.keys;
   }
@@ -255,11 +266,11 @@ export class OpenIdClient {
     form: Record<string, string>,
   ): Promise<string> {
     const { tokenEndpoint } = await this.discover(issuer);
-    const answer = (await getJson(tokenEndpoint, {
+    const answer = await getJson(tokenEndpoint, {
       body: new URLSearchParams(form),
       headers: { accept: 'application/json' },
       method: 'POST',
-    })) as { id_token?: unknown };
-    return text(answer.id_token, 'id_token');
+    });
+    return text(answer['id_token'], 'id_token');
   }
 }

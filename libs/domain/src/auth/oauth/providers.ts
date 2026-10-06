@@ -48,7 +48,7 @@ export function oauthSettings(
     const override = STAND_IN_ALLOWED.includes(appEnv)
       ? read(OVERRIDE[provider])
       : undefined;
-    return override ? [withoutSlash(override.trim())] : ISSUERS[provider];
+    return override ? [withoutSlash(override.trim())] : [...ISSUERS[provider]];
   };
   const base = (provider: OAuthProvider) => {
     const issuers = issuersOf(provider);
