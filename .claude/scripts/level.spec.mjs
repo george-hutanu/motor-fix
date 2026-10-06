@@ -571,6 +571,21 @@ describe('a level reaches only the feature it was sized for', () => {
     }
   });
 
+  it('points at a feature whose hand-edited level is not one of 0-3 and prints the default', () => {
+    for (const [level, shown] of [['abc', /level 2 \(default\)/], [true, /level 2 \(default\)/], ['', /level 2 \(default\)/], [7, /level 2 \(default\)/], ['1', /level 1 \(one-session\)/]]) {
+      const dir = fixture({ '.specify/feature.json': JSON.stringify({ feature_directory: 'specs/001-old', level, level_for: 'specs/002-new' }) });
+      try {
+        withEnv(undefined, () => {
+          const pointed = capture(() => main(['point', 'specs/002-new'], dir, {}));
+          assert.equal(pointed.status, 0, String(level));
+          assert.match(pointed.out, shown, String(level));
+        });
+      } finally {
+        cleanup(dir);
+      }
+    }
+  });
+
   it('keeps the pointer and the level in step in the Python helper too', () => {
     const probe = spawnSync('python3', ['--version']);
     if (probe.status !== 0) return;
