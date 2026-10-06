@@ -1,7 +1,7 @@
 ---
 name: org-researcher
 description: Reads the owner's Notion space "MotorFix — Product documentation" — the feature's story, feature page, epic and sibling stories, the architecture pages and the open decisions — and writes the cited digest to specs/<feature>/context.md. Notion is its only source. Read-only outward by construction — no Notion write tool is available to it. Invoked by /speckit-context (first run and --since refresh).
-tools: Read, Write, ToolSearch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-get-comments, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-get-tool-access, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-search, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-fetch, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-get-comments, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-query-data-sources, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-get-tool-access, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-search, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-fetch, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-get-comments, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-query-data-sources, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-get-tool-access
+tools: Read, Write, ToolSearch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-get-comments, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-get-tool-access, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-search, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-fetch, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-get-comments, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-query-data-sources, mcp__f3041bc4-d91f-4aa7-a3e8-b9172efcd78f__notion-get-tool-access, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-search, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-fetch, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-get-comments, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-query-data-sources, mcp__828510aa-7547-4d43-8807-be1f9e5d3a0f__notion-get-tool-access, mcp__fd62790a-b7ca-480e-9cf5-9073c1192ba8__notion-search, mcp__fd62790a-b7ca-480e-9cf5-9073c1192ba8__notion-fetch, mcp__fd62790a-b7ca-480e-9cf5-9073c1192ba8__notion-get-comments, mcp__fd62790a-b7ca-480e-9cf5-9073c1192ba8__notion-query-data-sources, mcp__fd62790a-b7ca-480e-9cf5-9073c1192ba8__notion-get-tool-access
 model: sonnet
 ---
 
@@ -23,6 +23,12 @@ changes when the work runs in a subagent.
 
 ## What is different in here
 
+- **Check for a Notion tool first.** If the `ToolSearch` below finds no
+  `notion-search` or `notion-fetch` you may call, your tool list names only
+  connector ids that are gone. Write
+  `[UNAVAILABLE: notion — no Notion tool in this agent; run node .claude/scripts/notion-agent-tools.mjs detect, then add <id>]`
+  as the whole of `context.md`'s Sources section, put the same line in your
+  reply, and stop: no digest, never "nothing found".
 - **Notion is your only source.** Your tools reach nothing else. A link on a
   page that points outside Notion — the design mock included — is recorded,
   never opened.

@@ -79,17 +79,21 @@ a stale list shows up in the health check and not in a story run.
   three commands:
   - `check`: exit 1 with one line per finding when a Notion agent lists a
     server id another lacks, lists a read tool outside its set, lacks one of
-    its set for a listed server, or lists a write tool; exit 0 otherwise.
+    its set for a listed server, or lists a write tool, and when
+    `.claude/settings.json` `permissions.allow` (if it has one) lacks a
+    server the agents list or allows a Notion write tool; exit 0 otherwise.
   - `add <server-id or mcp tool name>`: add that server's read tools to every
-    Notion agent, each agent its own set; idempotent (a second run is a no-op
+    Notion agent, each agent its own set, and the union of those sets to
+    `permissions.allow`; idempotent (a second run is a no-op
     and exits 0); accepts a bare id or any `mcp__<id>__notion-*` name.
   - `detect`: read this project's recent Claude Code transcripts
     (`~/.claude/projects/<project slug>/*.jsonl`), collect every
-    `mcp__<id>__notion-*` name they record, and report the ids the agents
+    `mcp__<id>__notion-*` name in their deferred tool lists (never prose), and report the ids the agents
     lack; exit 1 when one is missing, 0 when none is, and 0 with a note when
     no transcript is found.
 - **FR-004**: `doctor.mjs` runs `detect` and reports a missing id as a `warn`
-  result, never a failure.
+  result, never a failure; a `check` finding (lists out of step, a write
+  tool) is a `fail`.
 - **FR-005**: `org-researcher` and `spec-reviewer` check for a Notion tool
   first and, when none is present, report the line in Story 3; the researcher
   writes it to `context.md` and its reply, the reviewer to its report and
