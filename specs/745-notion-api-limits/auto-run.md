@@ -48,3 +48,4 @@
 - Existing cases adjusted, not weakened: the query body now carries `page_size: 100` (FR-008); the four-request 429 test uses a clock that advances on sleep (research R2); the two GET-timeout tests inject a no-op `sleep` since a GET timeout is now retried (FR-003).
 
 - Phase 10 implement: notion.mjs pacer/retries/limits/children/appendChildren, notion-sync comment split, level.mjs uses client.children; harness 68 files / 1683 tests green, doctor 16 ok.
+- Phase 13 refresh: story re-read inline, no new evidence (priority Highest, status/PR from this run). Phase 12/14: test-adversary, code-reviewer, spec-reviewer dispatched in parallel.
