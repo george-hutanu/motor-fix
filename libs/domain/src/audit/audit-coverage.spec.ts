@@ -110,7 +110,7 @@ const NOT_CHANGES = new Set([
   // A sign-in code, and spending it on a session.
   'PhoneSignInService.issue',
   'PhoneSignInService.claim',
-  'PhoneSignInService.signIn',
+  'PhoneSignInService.rightCode',
   // The role in use is a view preference.
   'SignInService.switchRole',
   // A notification's delivery records, not a change to anyone's data.

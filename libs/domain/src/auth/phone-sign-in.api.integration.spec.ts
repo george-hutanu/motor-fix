@@ -7,8 +7,10 @@ import request from 'supertest';
 
 import { verifyAccessToken } from './access-token';
 import { AccountsService } from './accounts.service';
+import { AUTH_REDIS } from './attempts';
 import { AuthModule } from './auth.module';
 import type { Role } from './capabilities';
+import { MAINTENANCE } from './maintenance';
 import { PhoneSignInModule } from './phone-sign-in.module';
 import { serialDatabase } from './serial-db.testing';
 import { AuditService } from '../audit/audit.service';
@@ -20,6 +22,7 @@ import {
   redisUrlFor,
   testPhoneConfig,
 } from '../notifications/notifications.testing';
+import { PHONE_CONFIG, type PhoneConfig } from '../notifications/phone-config';
 
 const redisUrl = redisUrlFor(1);
 const tokenSecret = 'test-secret';
@@ -31,6 +34,9 @@ serialDatabase(databaseUrl);
 const brevo = new BrevoMock();
 const redis = new Redis(redisUrl);
 let app: NestExpressApplication;
+let maintenanceOn = false;
+let phoneConfig: PhoneConfig;
+let configAsBuilt: PhoneConfig;
 
 beforeAll(async () => {
   await brevo.start();
@@ -46,7 +52,10 @@ beforeAll(async () => {
         }),
       }),
     ],
-  }).compile();
+  })
+    .overrideProvider(MAINTENANCE)
+    .useValue({ on: async () => maintenanceOn })
+    .compile();
   app = moduleRef.createNestApplication<NestExpressApplication>();
   app.set('trust proxy', 'loopback');
   app.useGlobalPipes(
@@ -57,6 +66,8 @@ beforeAll(async () => {
     }),
   );
   await app.init();
+  phoneConfig = app.get(PHONE_CONFIG, { strict: false });
+  configAsBuilt = { ...phoneConfig };
 });
 
 afterAll(async () => {
@@ -72,6 +83,8 @@ beforeEach(async () => {
   await redis.flushdb();
   brevo.reset();
   jest.restoreAllMocks();
+  maintenanceOn = false;
+  Object.assign(phoneConfig, configAsBuilt);
 });
 
 let addresses = 0;
@@ -565,5 +578,351 @@ describe('both routes', () => {
     expect(logged).not.toContain('722123456');
     expect(logged).not.toContain('722 123 456');
     expect(logged).not.toContain(code);
+  });
+});
+
+// The number's one-minute window, closed so the next code may be asked for.
+async function nextMinute() {
+  const keys = await redis.keys('auth:code:minute:*');
+  if (keys.length) await redis.del(...keys);
+}
+
+const askFrom = (from: string, body: Record<string, unknown>) =>
+  http().post('/auth/phone-code').set('X-Forwarded-For', from).send(body);
+
+const wrongFor = (code: string) => (code === '000000' ? '000001' : '000000');
+
+function redisDown() {
+  const auth = app.get<Redis>(AUTH_REDIS, { strict: false });
+  for (const method of ['multi', 'mget', 'del'] as const) {
+    jest.spyOn(auth, method).mockImplementation(() => {
+      throw new Error('Redis down');
+    });
+  }
+}
+
+function logged() {
+  const lines: string[] = [];
+  for (const level of ['log', 'warn', 'error'] as const) {
+    jest.spyOn(Logger.prototype, level).mockImplementation((...args) => {
+      lines.push(JSON.stringify(args));
+    });
+  }
+  return lines;
+}
+
+describe('a code is spent, expires and takes five wrong tries', () => {
+  // @traces 393-FR-006
+  it('refuses a code already used with 401 code_invalid', async () => {
+    await holder(['garage']);
+    const code = await codeFor(PHONE);
+    await signIn({ code, phone: PHONE }).expect(200);
+
+    const again = await signIn({ code, phone: PHONE });
+
+    expect(again.status).toBe(401);
+    expect(again.body.code).toBe('code_invalid');
+    expect(again.body.attemptsLeft).toBeUndefined();
+  });
+
+  // @traces 393-FR-006
+  it('answers 410 code_expired at five minutes, whatever was typed', async () => {
+    await holder(['garage']);
+    const code = await codeFor(PHONE);
+    await prisma.signInCode.update({
+      data: { expiresAt: new Date() },
+      where: { phone: PHONE },
+    });
+
+    const right = await signIn({ code, phone: PHONE });
+    const wrong = await signIn({ code: wrongFor(code), phone: PHONE });
+
+    expect([right.status, right.body.code]).toEqual([410, 'code_expired']);
+    expect([wrong.status, wrong.body.code]).toEqual([410, 'code_expired']);
+  });
+
+  // @traces 393-FR-006, 393-FR-014
+  it('counts down the attempts left on each wrong code, then refuses even the right one until a new code', async () => {
+    await holder(['garage']);
+    const code = await codeFor(PHONE);
+
+    const left: unknown[] = [];
+    for (let i = 0; i < 5; i++) {
+      const res = await signIn({ code: wrongFor(code), phone: PHONE });
+      expect([res.status, res.body.code]).toEqual([401, 'code_invalid']);
+      left.push(res.body.attemptsLeft);
+    }
+    const right = await signIn({ code, phone: PHONE });
+    const still = await signIn({ code, phone: PHONE });
+
+    expect(left).toEqual([4, 3, 2, 1, 0]);
+    expect([right.status, right.body.code]).toEqual([429, 'too_many_attempts']);
+    expect(still.status).toBe(429);
+    await nextMinute();
+    const fresh = await codeFor(PHONE);
+    await signIn({ code: fresh, phone: PHONE }).expect(200);
+  });
+
+  // @traces 393-FR-003
+  it('voids the first code when a second is sent', async () => {
+    await holder(['garage']);
+    let first = await codeFor(PHONE);
+    let second = first;
+    while (second === first) {
+      await nextMinute();
+      first = second;
+      second = await codeFor(PHONE);
+    }
+
+    const old = await signIn({ code: first, phone: PHONE });
+
+    expect([old.status, old.body.code]).toEqual([401, 'code_invalid']);
+    await signIn({ code: second, phone: PHONE }).expect(200);
+  });
+
+  // @traces 393-FR-009
+  it('opens exactly one session for two concurrent uses of one right code', async () => {
+    await holder(['garage']);
+    const code = await codeFor(PHONE);
+
+    const answers = await Promise.all([
+      signIn({ code, phone: PHONE }),
+      signIn({ code, phone: PHONE }),
+    ]);
+
+    expect(answers.map((res) => res.status).sort()).toEqual([200, 401]);
+    expect(await prisma.refreshToken.count()).toBe(1);
+  });
+});
+
+describe('how often a code may be asked for', () => {
+  // @traces 393-FR-004
+  it('refuses a second code within the minute with 429 and sends nothing', async () => {
+    await askCode({ phone: PHONE }).expect(202);
+
+    const again = await askCode({ phone: PHONE });
+
+    expect([again.status, again.body.code]).toEqual([429, 'too_many_attempts']);
+    expect(brevo.whatsapp()).toHaveLength(1);
+  });
+
+  // @traces 393-FR-004
+  it('refuses the sixth code for a number within the hour', async () => {
+    for (let i = 0; i < 5; i++) {
+      await askCode({ phone: PHONE }).expect(202);
+      await nextMinute();
+    }
+
+    const sixth = await askCode({ phone: PHONE });
+
+    expect([sixth.status, sixth.body.code]).toEqual([429, 'too_many_attempts']);
+    expect(brevo.whatsapp()).toHaveLength(5);
+  });
+
+  // @traces 393-FR-004
+  it('refuses the 21st request from one address within the hour', async () => {
+    const from = '203.0.113.7';
+    for (let i = 0; i < 20; i++) {
+      await askFrom(from, {
+        phone: `+4072200${String(i).padStart(4, '0')}`,
+      }).expect(202);
+    }
+
+    const last = await askFrom(from, { phone: '+40722009999' });
+
+    expect([last.status, last.body.code]).toEqual([429, 'too_many_attempts']);
+    expect(brevo.whatsapp()).toHaveLength(20);
+  });
+
+  // @traces 393-FR-003
+  it('leaves exactly one live code after two concurrent requests', async () => {
+    await holder(['garage']);
+    redisDown();
+
+    await Promise.all([askCode({ phone: PHONE }), askCode({ phone: PHONE })]);
+
+    expect(await prisma.signInCode.count({ where: { phone: PHONE } })).toBe(1);
+    const codes = brevo
+      .whatsapp()
+      .map((call) => String((call.body as { params: string[] }).params[0]));
+    const answers = [];
+    for (const code of new Set(codes)) {
+      answers.push((await signIn({ code, phone: PHONE })).status);
+    }
+    expect(answers.filter((status) => status === 200)).toHaveLength(1);
+  });
+
+  // @traces 393-FR-004, 393-FR-006
+  it('skips the three limits and logs when Redis is down, while expiry, single use and the five tries still hold', async () => {
+    await holder(['garage']);
+    const lines = logged();
+    redisDown();
+
+    await askCode({ phone: PHONE }).expect(202);
+    const code = await codeFor(PHONE);
+    for (let i = 0; i < 5; i++) {
+      await signIn({ code: wrongFor(code), phone: PHONE }).expect(401);
+    }
+    const tired = await signIn({ code, phone: PHONE });
+    const fresh = await codeFor(PHONE);
+    await signIn({ code: fresh, phone: PHONE }).expect(200);
+    const spent = await signIn({ code: fresh, phone: PHONE });
+    const late = await codeFor(PHONE);
+    await prisma.signInCode.update({
+      data: { expiresAt: new Date() },
+      where: { phone: PHONE },
+    });
+    const expired = await signIn({ code: late, phone: PHONE });
+
+    expect(tired.status).toBe(429);
+    expect(spent.status).toBe(401);
+    expect(expired.status).toBe(410);
+    expect(lines.join('\n')).toContain('Redis unavailable');
+  });
+});
+
+describe('a code WhatsApp does not take', () => {
+  const failing: [string, () => void][] = [
+    ['Brevo refuses it', () => brevo.answer({ status: 400 })],
+    [
+      'Brevo does not answer within 5 seconds',
+      () => brevo.answer({ hang: true, status: 201 }),
+    ],
+    [
+      'WhatsApp sending is off',
+      () => Object.assign(phoneConfig, { sending: false }),
+    ],
+    [
+      'the number is outside the allow-list',
+      () => Object.assign(phoneConfig, { allowlist: ['+40799*'] }),
+    ],
+    [
+      'the template has no id',
+      () => Object.assign(phoneConfig, { whatsappTemplates: {} }),
+    ],
+  ];
+
+  // @traces 393-FR-005
+  it.each(failing)(
+    'answers 502 whatsapp_failed and stores no code when %s',
+    async (_, fail) => {
+      fail();
+
+      const res = await askCode({ phone: PHONE });
+
+      expect([res.status, res.body.code]).toEqual([502, 'whatsapp_failed']);
+      expect(await prisma.signInCode.count()).toBe(0);
+    },
+    10_000,
+  );
+
+  // @traces 393-FR-004
+  it('does not count a code that was not sent toward the hourly five', async () => {
+    brevo.answer({ status: 400 });
+    await askCode({ phone: PHONE }).expect(502);
+
+    for (let i = 0; i < 5; i++) {
+      await nextMinute();
+      await askCode({ phone: PHONE }).expect(202);
+    }
+  });
+
+  // @traces 393-FR-005, 393-FR-011
+  it.each([
+    ['provider_400', () => brevo.answer({ status: 400 })],
+    ['sending_off', () => Object.assign(phoneConfig, { sending: false })],
+    [
+      'not_allowed',
+      () => Object.assign(phoneConfig, { allowlist: ['+40799*'] }),
+    ],
+    [
+      'template_missing',
+      () => Object.assign(phoneConfig, { whatsappTemplates: {} }),
+    ],
+  ])('logs the kind of failure, %s, without the number', async (kind, fail) => {
+    const lines = logged();
+    fail();
+
+    await askCode({ phone: PHONE }).expect(502);
+
+    const text = lines.join('\n');
+    expect(text).toContain(kind);
+    expect(text).not.toContain('722123456');
+  });
+});
+
+describe('maintenance and suspended accounts', () => {
+  // @traces 393-FR-010
+  it('answers 503 maintenance to a non-admin and an unknown number, sending and storing nothing', async () => {
+    await holder(['garage']);
+    maintenanceOn = true;
+
+    const known = await askCode({ phone: PHONE });
+    const unknown = await askCode({ phone: '+40733000000' });
+
+    expect([known.status, known.body.code]).toEqual([503, 'maintenance']);
+    expect([unknown.status, unknown.body.code]).toEqual([503, 'maintenance']);
+    expect(brevo.whatsapp()).toHaveLength(0);
+    expect(await prisma.signInCode.count()).toBe(0);
+  });
+
+  // @traces 393-FR-010
+  it("gives an admin's number its code and signs the admin in", async () => {
+    const id = await holder(['admin']);
+    maintenanceOn = true;
+
+    const code = await codeFor(PHONE);
+    const res = await signIn({ code, phone: PHONE });
+
+    expect(res.status).toBe(200);
+    expect(claims(res)?.accountId).toBe(id);
+  });
+
+  // @traces 393-FR-010
+  it("spends a non-admin's right code on 503 when maintenance came on after sending", async () => {
+    await holder(['garage']);
+    const code = await codeFor(PHONE);
+    maintenanceOn = true;
+
+    const res = await signIn({ code, phone: PHONE });
+    maintenanceOn = false;
+    const after = await signIn({ code, phone: PHONE });
+
+    expect([res.status, res.body.code]).toEqual([503, 'maintenance']);
+    expect(after.status).toBe(401);
+    expect(await prisma.refreshToken.count()).toBe(0);
+  });
+
+  // @traces 393-FR-010
+  it('answers 503 to a new number with the right code under maintenance, spending it', async () => {
+    const NEW = '+40733000000';
+    const code = await codeFor(NEW);
+    maintenanceOn = true;
+
+    const res = await signIn({
+      code,
+      consent: CURRENT_CONSENT,
+      name: 'Ion Popescu',
+      phone: NEW,
+    });
+    maintenanceOn = false;
+    const after = await signIn({ code, phone: NEW });
+
+    expect([res.status, res.body.code]).toEqual([503, 'maintenance']);
+    expect(after.status).toBe(401);
+    expect(await prisma.account.count({ where: { phone: NEW } })).toBe(0);
+  });
+
+  // @traces 393-FR-007
+  it("answers 403 account_suspended to a suspended account's right code, spending it", async () => {
+    await holder(['garage'], { status: 'suspended' });
+    const code = await codeFor(PHONE);
+
+    const res = await signIn({ code, phone: PHONE });
+    const after = await signIn({ code, phone: PHONE });
+
+    expect([res.status, res.body.code]).toEqual([403, 'account_suspended']);
+    expect(after.status).toBe(401);
+    expect(await prisma.refreshToken.count()).toBe(0);
   });
 });

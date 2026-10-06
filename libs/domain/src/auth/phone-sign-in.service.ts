@@ -1,10 +1,17 @@
 import type { PhoneSignInDto } from '@motor-fix/contracts';
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 
 import { AccountsService } from './accounts.service';
 import { AUTH_OPTIONS, type AuthOptions } from './actor.guard';
 import { Attempts } from './attempts';
 import { consentRequired, isCurrentConsent } from './consent';
+import { MAINTENANCE, type Maintenance } from './maintenance';
 import {
   CODE_ATTEMPTS,
   CODE_TTL_MS,
@@ -18,7 +25,7 @@ import { PRISMA } from './prisma';
 import { type Issued, SignInService } from './sign-in.service';
 import { refusal, taken } from './sign-up.service';
 import type { Prisma, PrismaClient } from '../generated/prisma/client';
-import type { Brevo } from '../notifications/brevo';
+import { type Brevo, BrevoError } from '../notifications/brevo';
 import {
   PHONE_CONFIG,
   type PhoneConfig,
@@ -42,6 +49,18 @@ const REFUSALS: Record<
   wrong: [HttpStatus.UNAUTHORIZED, 'code_invalid', 'Wrong code'],
 };
 
+const maintenance = () =>
+  refusal(
+    HttpStatus.SERVICE_UNAVAILABLE,
+    'maintenance',
+    'MotorFix is down for maintenance',
+  );
+
+// Why a code was not sent, for the log: never the number.
+function failureKind(error: unknown): string {
+  return error instanceof BrevoError ? error.reason : 'provider_error';
+}
+
 // Sign-in with a code sent by WhatsApp. Neither the number nor the code is
 // ever logged.
 @Injectable()
@@ -53,12 +72,17 @@ export class PhoneSignInService {
     @Inject(AUTH_OPTIONS) private readonly options: AuthOptions,
     @Inject(PHONE_BREVO) private readonly brevo: Brevo,
     @Inject(PHONE_CONFIG) private readonly phone: PhoneConfig,
+    @Inject(MAINTENANCE) private readonly maintenance: Maintenance,
     private readonly accounts: AccountsService,
     private readonly attempts: Attempts,
     private readonly sessions: SignInService,
   ) {}
 
   async issue(phone: string, language: 'ro' | 'en', address: string) {
+    if ((await this.maintenance.on()) && !(await this.holder(phone))?.admin) {
+      this.logger.warn('phone code refused: maintenance');
+      throw maintenance();
+    }
     if (!(await this.attempts.admitPhoneCode(phone, address))) {
       this.logger.warn('phone code refused: too_many_attempts');
       throw refusal(
@@ -68,7 +92,13 @@ export class PhoneSignInService {
       );
     }
     const code = newCode();
-    await this.send(phone, language, code);
+    try {
+      await this.send(phone, language, code);
+    } catch (error) {
+      // A code that never left does not use up the number's hourly share.
+      await this.attempts.uncountPhoneCode(phone);
+      throw error;
+    }
     const createdAt = new Date();
     const live = {
       attempts: 0,
@@ -87,33 +117,59 @@ export class PhoneSignInService {
   // A session, or 'profile' when the right code meets a number no account
   // holds and the body carries no name and consent to create one.
   async signIn(body: PhoneSignInDto): Promise<Issued | 'profile'> {
-    const { phone, code } = body;
-    const row = await this.prisma.signInCode.findUnique({ where: { phone } });
-    const check = checkCode(row, code, this.options.tokenSecret, new Date());
-    if (check === 'wrong') {
-      await this.prisma.signInCode.updateMany({
-        data: { attempts: { increment: 1 } },
-        where: { codeHash: row?.codeHash, phone, usedAt: null },
-      });
-    }
-    if (check !== 'right') throw this.refused(check);
-    if (!row) throw this.refused('code_invalid');
+    const { phone } = body;
+    const row = await this.rightCode(phone, body.code);
     const spend = (db: Prisma.TransactionClient) =>
       this.claim(db, phone, row.codeHash);
     const found = await this.holder(phone);
     if (!found) {
+      if (await this.maintenance.on()) {
+        await spend(this.prisma);
+        throw this.underMaintenance();
+      }
       if (body.name === undefined || body.consent === undefined) {
         return 'profile';
       }
       return this.create(body, spend);
     }
     await spend(this.prisma);
+    return this.open(found, body.remember ?? true);
+  }
+
+  // A session for the account holding the number, its code already spent.
+  private async open(
+    found: NonNullable<Awaited<ReturnType<PhoneSignInService['holder']>>>,
+    remember: boolean,
+  ) {
     if (!found.role) throw this.phoneTaken();
-    return this.sessions.openSession(
-      found.id,
-      found.role,
-      body.remember ?? true,
-    );
+    if (found.suspended) {
+      this.logger.warn('phone sign-in refused: account_suspended');
+      throw refusal(
+        HttpStatus.FORBIDDEN,
+        'account_suspended',
+        'This account is suspended',
+      );
+    }
+    if (!found.admin && (await this.maintenance.on())) {
+      throw this.underMaintenance();
+    }
+    return this.sessions.openSession(found.id, found.role, remember);
+  }
+
+  // The number's current code when `code` is it; otherwise the refusal, a
+  // wrong code counting one attempt and saying how many are left.
+  private async rightCode(phone: string, code: string) {
+    const row = await this.prisma.signInCode.findUnique({ where: { phone } });
+    const check = checkCode(row, code, this.options.tokenSecret, new Date());
+    if (check === 'right' && row) return row;
+    if (check !== 'wrong' || !row) {
+      throw this.refused(check === 'right' ? 'code_invalid' : check);
+    }
+    await this.prisma.signInCode.updateMany({
+      data: { attempts: { increment: 1 } },
+      where: { codeHash: row.codeHash, phone, usedAt: null },
+    });
+    throw this.refused(check, Math.max(0, CODE_ATTEMPTS - row.attempts - 1));
   }
 
   private async create(
@@ -172,23 +228,25 @@ export class PhoneSignInService {
     const templateId = Object.hasOwn(this.phone.whatsappTemplates, message.name)
       ? this.phone.whatsappTemplates[message.name]
       : undefined;
-    const blocked = phoneBlockedReason(this.phone, phone);
-    try {
-      if (blocked || templateId === undefined) throw new Error('not sendable');
-      await this.brevo.sendWhatsApp({
-        params: message.params,
-        sender: this.phone.whatsappSender,
-        templateId,
-        to: phone,
-      });
-    } catch {
-      this.logger.error('phone code not sent: whatsapp_failed');
-      throw refusal(
-        HttpStatus.BAD_GATEWAY,
-        'whatsapp_failed',
-        'The code could not be sent by WhatsApp',
-      );
-    }
+    const kind =
+      phoneBlockedReason(this.phone, phone) ??
+      (templateId === undefined
+        ? 'template_missing'
+        : await this.brevo
+            .sendWhatsApp({
+              params: message.params,
+              sender: this.phone.whatsappSender,
+              templateId,
+              to: phone,
+            })
+            .then(() => null, failureKind));
+    if (kind === null) return;
+    this.logger.error(`phone code not sent: whatsapp_failed (${kind})`);
+    throw refusal(
+      HttpStatus.BAD_GATEWAY,
+      'whatsapp_failed',
+      'The code could not be sent by WhatsApp',
+    );
   }
 
   // The account holding the number: by its WhatsApp sign-in identity, else
@@ -214,7 +272,13 @@ export class PhoneSignInService {
           account.roles.map((r) => r.role),
         )
       : null;
-    return { id: account.id, role };
+    const roles = account.roles.map((r) => r.role);
+    return {
+      admin: role !== null && roles.includes('admin'),
+      id: account.id,
+      role,
+      suspended: account.status === 'suspended',
+    };
   }
 
   private phoneTaken() {
@@ -226,9 +290,17 @@ export class PhoneSignInService {
     );
   }
 
-  private refused(check: Exclude<CodeCheck, 'right'>) {
+  private underMaintenance() {
+    this.logger.warn('phone sign-in refused: maintenance');
+    return maintenance();
+  }
+
+  // A wrong code also says how many tries the code has left.
+  private refused(check: Exclude<CodeCheck, 'right'>, attemptsLeft?: number) {
     const [status, code, message] = REFUSALS[check];
     this.logger.warn(`phone sign-in refused: ${code}`);
-    return refusal(status, code, message);
+    return attemptsLeft === undefined
+      ? refusal(status, code, message)
+      : new HttpException({ attemptsLeft, code, message }, status);
   }
 }
