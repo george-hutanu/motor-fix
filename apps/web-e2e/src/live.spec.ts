@@ -1,3 +1,4 @@
+import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
 import {
   type APIRequestContext,
   expect,
@@ -7,9 +8,13 @@ import {
 
 import { ACCOUNTS, PASSWORD, ready, signIn } from './accounts.js';
 
-async function accessToken(request: APIRequestContext, email: string) {
+async function accessToken(
+  request: APIRequestContext,
+  email: string,
+  password = PASSWORD,
+) {
   const res = await request.post('/api/v1/auth/sign-in', {
-    data: { email, password: PASSWORD, remember: false },
+    data: { email, password, remember: false },
   });
   expect(res.ok()).toBe(true);
   return ((await res.json()) as { accessToken: string }).accessToken;
@@ -22,13 +27,18 @@ async function accountId(request: APIRequestContext, email: string) {
   return ((await res.json()) as { id: string }).id;
 }
 
-async function openDashboard(page: Page, email: string, landing: string) {
+async function openDashboard(
+  page: Page,
+  email: string,
+  landing: string,
+  password = PASSWORD,
+) {
   await ready(page, '/ro');
   await page
     .getByRole('button', { exact: true, name: 'Autentificare' })
     .click();
   const live = page.waitForResponse((r) => r.url().endsWith('/api/v1/live'));
-  await signIn(page, email);
+  await signIn(page, email, { password });
   await expect(page).toHaveURL(landing);
   expect((await live).status()).toBe(200);
 }
@@ -150,10 +160,26 @@ test.describe('the live connection @seeded', () => {
     request,
   }) => {
     test.setTimeout(120_000);
+    // The test changes the account's language for most of a minute, and the
+    // account's language wins at sign-in: on a seeded account, a flow signing
+    // in beside it in another worker would land in English.
+    const email = `offline-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
+    const password = 'fara-retea-un-minut-2026';
+    const signUp = await request.post('/api/v1/auth/sign-up', {
+      data: {
+        consent: CURRENT_CONSENT,
+        email,
+        language: 'ro',
+        name: 'Ioana Offline',
+        password,
+      },
+      headers: { 'x-forwarded-for': `203.0.113.${Date.now() % 250}` },
+    });
+    expect(signUp.status()).toBe(201);
     const context = await browser.newContext();
     const page = await context.newPage();
-    await openDashboard(page, ACCOUNTS.driver, '/app/driver');
-    const token = await accessToken(request, ACCOUNTS.driver);
+    await openDashboard(page, email, '/app/driver', password);
+    const token = await accessToken(request, email, password);
     const setLanguage = (language: 'ro' | 'en') =>
       request.patch('/api/v1/me', {
         data: { language },
@@ -189,7 +215,6 @@ test.describe('the live connection @seeded', () => {
       await expect(bar).toHaveText('');
     } finally {
       await context.setOffline(false);
-      await setLanguage('ro');
       await context.close();
     }
   });

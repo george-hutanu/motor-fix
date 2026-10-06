@@ -1,0 +1,3 @@
+# Deferred findings: 750-ci-speed
+
+- [ ] `apps/web-e2e/src/live.spec.ts:168` — **medium** — pre-existing pattern this change tips over: the end-to-end suite signs up about six real accounts per run against `SIGN_UP_LIMIT = 10` per address per hour (`libs/domain/src/auth/attempts.ts`), so a second local run within the hour (`reuseExistingServer`) gets a 429 and this test fails first; CI starts a fresh Redis each run and is unaffected. Exempt or raise the sign-up limit when `APP_ENV=test`, or clear the key in a global setup. (code-reviewer, 2026-10-06) — Notion: https://app.notion.com/p/3f1607bff0d281f39a46f8f68927a1e9
