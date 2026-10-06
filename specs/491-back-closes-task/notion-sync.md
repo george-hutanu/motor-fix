@@ -16,3 +16,6 @@
 - 2026-10-07 · labels · PR #173 · in development
 - 2026-10-07 · debt · ST-491 · deferred.md line 2 → https://app.notion.com/p/Tech-debt-ST-491-A-task-opened-before-the-visitor-has-touched-the-page-the-sign-in-dialog-a-401--3f1607bff0d281678a25efaab4872722
 - 2026-10-07 · debt · ST-491 · deferred.md line 3 → https://app.notion.com/p/Tech-debt-ST-491-Every-popstate-whose-state-lacks-the-task-s-marker-reads-as-Back-so-a-fragment--3f1607bff0d281208140d2748d76e406
+- 2026-10-07 · qa · ST-491 · Implementing → QA
+- 2026-10-07 · qa · timeline · no row for ST-491
+- 2026-10-07 · labels · PR #173 · QA
