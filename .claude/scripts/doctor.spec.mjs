@@ -11,6 +11,7 @@ import {
   checkNotionTools,
   checkSkillsAndAgents,
 } from './doctor.mjs';
+import { projectSlug } from './notion-agent-tools.mjs';
 
 // Doctor is the check that catches a gate which stopped firing. These build a
 // throwaway repo skeleton and break one thing at a time — the real repo is
@@ -164,7 +165,7 @@ describe('doctor — Notion agent tools', () => {
   });
   afterEach(() => rmSync(config, { recursive: true, force: true }));
   const seen = (id) => {
-    const slug = repo.replace(/[^A-Za-z0-9-]/g, '-');
+    const slug = projectSlug(repo);
     mkdirSync(join(config, 'projects', slug), { recursive: true });
     const line = { type: 'attachment', attachment: { type: 'deferred_tools_delta', addedNames: [`mcp__${id}__notion-fetch`] } };
     writeFileSync(join(config, 'projects', slug, 's.jsonl'), `${JSON.stringify(line)}\n`);

@@ -23,7 +23,10 @@ const SETTINGS = ".claude/settings.json";
 const RECENT = 20;
 
 const NOTION = /^mcp__(.+?)__(notion-[a-z-]+)$/;
+// Write verbs; `create` covers notion-create-comment.
 const WRITE = /^notion-(create|update|move|duplicate|delete|upload)/;
+// A whole-server grant (mcp__<id> or mcp__<id>__*) reaches every write tool.
+const WILDCARD = /^mcp__([^*]+?)(?:__\*)?$/;
 const ID = /^[A-Za-z0-9_-]+$/;
 
 const agentFile = (name) => `.claude/agents/${name}.md`;
@@ -46,7 +49,12 @@ function readAgent(repo, name) {
 function readAllow(repo) {
   const file = join(repo, SETTINGS);
   if (!existsSync(file)) return null;
-  const json = JSON.parse(readFileSync(file, "utf8"));
+  let json;
+  try {
+    json = JSON.parse(readFileSync(file, "utf8"));
+  } catch (error) {
+    return { file, error: `${SETTINGS}: not valid JSON (${error.message})` };
+  }
   // A settings file with no allowlist (hooks only) has nothing to keep in step.
   if (!Array.isArray(json.permissions?.allow)) return null;
   return { file, json, allow: json.permissions.allow };
@@ -57,7 +65,7 @@ function notionAgents(repo) {
   const dir = join(repo, ".claude/agents");
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
-    .filter((f) => f.endsWith(".md") && !f.endsWith(".spec.md"))
+    .filter((f) => f.endsWith(".md"))
     .map((f) => f.slice(0, -3))
     .filter((name) => notionOf(readAgent(repo, name).tools).length);
 }
@@ -72,6 +80,7 @@ export function check(repo) {
     const reads = READS[name];
     if (!reads) out.push(`${agentFile(name)}: holds Notion tools but has no read set in notion-agent-tools.mjs`);
     const own = notionOf(tools);
+    for (const t of tools) if (t.startsWith("mcp__") && t.includes("*")) out.push(`${agentFile(name)}: wildcard ${t} grants every tool of a server, write tools included`);
     for (const n of own) {
       if (WRITE.test(n.name)) out.push(`${agentFile(name)}: write tool ${n.tool} — the Notion agents are read-only`);
       else if (reads && !reads.includes(n.name)) out.push(`${agentFile(name)}: ${n.tool} is not one of its read tools`);
@@ -83,7 +92,13 @@ export function check(repo) {
     }
   }
   const settings = readAllow(repo);
-  if (settings && agents.length) {
+  if (settings?.error) out.push(settings.error);
+  else if (settings && agents.length) {
+    const notion = new Set([...all, ...servers(settings.allow)]);
+    for (const t of settings.allow) {
+      const server = String(t).match(WILDCARD)?.[1];
+      if (server && notion.has(server)) out.push(`${SETTINGS}: wildcard ${t} in permissions.allow grants every Notion write tool`);
+    }
     const allowed = new Set(servers(settings.allow));
     for (const server of all) if (!allowed.has(server)) out.push(`${SETTINGS}: permissions.allow lacks server ${server}`);
     for (const n of notionOf(settings.allow)) if (WRITE.test(n.name)) out.push(`${SETTINGS}: write tool ${n.tool} in permissions.allow`);
@@ -93,7 +108,8 @@ export function check(repo) {
 
 /** Normalises a bare id or any mcp__<id>__notion-* name to the id. */
 function serverId(input) {
-  const id = String(input ?? "").match(NOTION)?.[1] ?? String(input ?? "");
+  const text = typeof input === "string" ? input : "";
+  const id = text.startsWith("mcp__") ? text.match(NOTION)?.[1] : text;
   if (!id || !ID.test(id)) throw new Error(`not a Notion server id: "${input}"`);
   return id;
 }
@@ -122,6 +138,7 @@ export function add(repo, input) {
     changed.push(agentFile(name));
   }
   const settings = readAllow(repo);
+  if (settings?.error) throw new Error(settings.error);
   if (settings) {
     const missing = ALLOWED.map((r) => `mcp__${id}__${r}`).filter((t) => !settings.allow.includes(t));
     if (missing.length) {
@@ -150,17 +167,35 @@ function checkoutRoots(repo) {
   }
 }
 
+/** A transcript's mtime, or null for anything that is not a readable regular file. */
+function mtime(file) {
+  try {
+    const stat = statSync(file);
+    return stat.isFile() ? stat.mtimeMs : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Server ids in the deferred tool lists of the newest transcripts. */
 function seenServers(dirs) {
   const files = dirs
     .filter((d) => existsSync(d))
     .flatMap((d) => readdirSync(d).filter((f) => f.endsWith(".jsonl")).map((f) => join(d, f)))
-    .map((f) => ({ f, t: statSync(f).mtimeMs }))
+    .map((f) => ({ f, t: mtime(f) }))
+    .filter(({ t }) => t !== null)
     .sort((a, b) => b.t - a.t)
     .slice(0, RECENT);
   const ids = new Set();
-  for (const { f } of files)
-    for (const line of readFileSync(f, "utf8").split("\n")) {
+  for (const { f } of files) {
+    let text;
+    try {
+      text = readFileSync(f, "utf8");
+    } catch {
+      continue;
+    }
+    for (const raw of text.split("\n")) {
+      const line = raw.replace(/^\uFEFF/, "");
       if (!line.includes('"deferred_tools_delta"')) continue;
       let entry;
       try {
@@ -168,12 +203,17 @@ function seenServers(dirs) {
       } catch {
         continue;
       }
-      const a = entry.attachment ?? {};
-      for (const name of [...(a.addedNames ?? []), ...(a.readdedNames ?? [])]) {
-        const m = String(name).match(NOTION);
-        if (m) ids.add(m[1]);
+      const a = entry?.attachment;
+      if (a?.type !== "deferred_tools_delta") continue;
+      for (const list of [a.addedNames, a.readdedNames]) {
+        if (!Array.isArray(list)) continue;
+        for (const name of list) {
+          const m = typeof name === "string" ? name.match(NOTION) : null;
+          if (m) ids.add(m[1]);
+        }
       }
     }
+  }
   return { files: files.length, ids: [...ids] };
 }
 

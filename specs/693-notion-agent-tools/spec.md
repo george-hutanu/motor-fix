@@ -73,8 +73,12 @@ a stale list shows up in the health check and not in a story run.
   `notion-query-data-sources` and `notion-get-tool-access`; `spec-reviewer`
   lists `notion-search`, `notion-fetch` and `notion-get-comments`. Today's id,
   `fd62790a-b7ca-480e-9cf5-9073c1192ba8`, is on both lists when this merges.
-- **FR-002**: No Notion write tool (`create`, `update`, `move`, `duplicate`,
-  `delete`, `comment` in the tool name) ever appears in either agent's tools.
+- **FR-002**: No Notion write tool (a name starting `notion-create`,
+  `notion-update`, `notion-move`, `notion-duplicate`, `notion-delete` or
+  `notion-upload`, which covers `notion-create-comment`; the read tool
+  `notion-get-comments` stays allowed), nor a whole-server grant
+  (`mcp__<id>` or `mcp__<id>__*`), ever appears in either agent's tools or,
+  for a Notion server, in `permissions.allow`.
 - **FR-003**: `.claude/scripts/notion-agent-tools.mjs` owns the list, with
   three commands:
   - `check`: exit 1 with one line per finding when a Notion agent lists a
