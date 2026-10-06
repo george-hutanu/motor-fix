@@ -19,6 +19,7 @@ features:
   - 696-lifecycle-script
   - 703-idle-watch-gate
   - 705-auto-skill-split
+  - 432-mutation-floors
   - 725-lifecycle-gate-feature-dir
 ---
 
@@ -599,6 +600,54 @@ _From 705-auto-skill-split._
 ### 705-FR-006 — The report measures bytes with `wc -c`:
 
 _From 705-auto-skill-split._
+
+### 432-FR-001 — Each Angular project (`web`, `ui-cockpit`, `i18n`, `overlays`, `media`) MUST pass its unmutated test run under the mutation tool and report a score from the Mutation workflow.
+
+_From 432-mutation-floors._
+
+### 432-FR-002 — A spec that runs in the Node environment inside a browser-environment project MUST report its coverage to the mutation tool, so its project is not stopped for missing coverage.
+
+_From 432-mutation-floors._
+
+### 432-FR-003 — The test run MUST no longer fail with Angular's "Argument needs to be an object literal that is statically analyzable" (error 1010) when a module-level constant read by a component decorator is mutated. Only a constant whose sole use is compile-time component metadata (for example `styles`) is silenced, on its line, with the mutator and the reason.
+
+_From 432-mutation-floors._
+
+### 432-FR-004 — The mutation script MUST skip a project with no specs (`worker`) with a line saying so, without failing the run.
+
+_From 432-mutation-floors._
+
+### 432-FR-005 — Every surviving and uncovered mutant in `contracts`, `mcp` and `api` MUST be killed by a test or silenced on its line with `// Stryker disable next-line <mutator>: <reason>`.
+
+_From 432-mutation-floors._
+
+### 432-FR-006 — `contracts` MUST score at least its existing floor of 95.
+
+_From 432-mutation-floors._
+
+### 432-FR-007 — Each project's `thresholds.break` MUST be set to its measured score minus five, rounded down, never below 0 and never lower than its current value.
+
+_From 432-mutation-floors._
+
+### 432-FR-008 — `api` and `domain` MUST keep one test runner at a time (`concurrency: 1` in `apps/api/stryker.config.json` and `libs/domain/stryker.config.json`, already set by ST-431; unchanged here).
+
+_From 432-mutation-floors._
+
+### 432-FR-009 — The Mutation workflow's `timeout-minutes` MUST be set from the measured durations, with the derivation stated next to it.
+
+_From 432-mutation-floors._
+
+### 432-FR-010 — Every score and duration used for a floor or the limit MUST come from a Mutation workflow run on GitHub, never a local run; the run is linked in the PR.
+
+_From 432-mutation-floors._
+
+### 432-FR-011 — The survivors left in `domain`, `scripts` and the five Angular projects MUST each be filed as a tracked follow-up with its measured survivor count.
+
+_From 432-mutation-floors._
+
+### 432-FR-012 — The Mutation workflow MUST accept a dispatch input that runs without the incremental results of earlier runs, so a full measurement can be taken on demand; the nightly run stays incremental.
+
+_From 432-mutation-floors._
 
 ### 725-FR-001 — The gate MUST resolve a branch's feature folder in one place: `.specify/feature.json`'s `feature_directory` when it is a path to a folder that exists, then `specs/<branch>` when it exists, then the `specs/` folder whose numeric prefix equals the branch's, compared as numbers, and whose slug equals the branch's slug.
 
