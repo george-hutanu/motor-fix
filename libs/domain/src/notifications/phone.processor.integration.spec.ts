@@ -10,6 +10,7 @@ import { NotificationsProcessor } from './notifications.processor';
 import { NotificationsService, RETRY_MINUTES } from './notifications.service';
 import {
   databaseUrl,
+  failWritesAfter,
   fixtures,
   redisUrlFor,
   testConfig,
@@ -507,32 +508,31 @@ describe('the garage’s WhatsApp switch', () => {
   });
 });
 
-describe('a database error after Brevo accepted an SMS', () => {
-  it('records the send on a later write and does not send again', async () => {
-    const ana = await person('ana', 1);
-    await choose(ana, 'DUE_ITP', 'sms');
-    await remind(ana, 'itp-1');
-    const [sms] = (await rows(ana)).filter((r) => r.channel === 'sms');
-    const real = prisma.$transaction.bind(prisma);
-    let times = 1;
-    const failing = jest.spyOn(prisma, '$transaction').mockImplementation(((
-      arg: never,
-    ) => {
-      if (times > 0 && mock.sms().length > 0) {
-        times -= 1;
-        return Promise.reject(new Error('connection lost'));
+describe('a database error after Brevo accepted a phone message', () => {
+  it.each([
+    ['sms', () => mock.sms()],
+    ['whatsapp', () => mock.whatsapp()],
+  ] as const)(
+    'records the %s on a later write and does not send it again',
+    async (channel, calls) => {
+      const ana = await person('ana', 1);
+      await choose(ana, 'DUE_ITP', channel);
+      await remind(ana, 'itp-1');
+      const [sent] = (await rows(ana)).filter((r) => r.channel === channel);
+      const undo = failWritesAfter(prisma, () => calls().length > 0, 1);
+      try {
+        await expect(sendJob(sent.id)).resolves.toBeUndefined();
+      } finally {
+        undo();
       }
-      return real(arg);
-    }) as never);
-    try {
-      await expect(sendJob(sms.id)).resolves.toBeUndefined();
-    } finally {
-      failing.mockRestore();
-    }
-    expect(mock.sms()).toHaveLength(1);
-    expect(
-      (await prisma.notification.findUniqueOrThrow({ where: { id: sms.id } }))
-        .status,
-    ).toBe('sent');
-  });
+      expect(calls()).toHaveLength(1);
+      expect(
+        (
+          await prisma.notification.findUniqueOrThrow({
+            where: { id: sent.id },
+          })
+        ).status,
+      ).toBe('sent');
+    },
+  );
 });

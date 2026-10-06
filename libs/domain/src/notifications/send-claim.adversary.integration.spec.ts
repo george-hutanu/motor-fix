@@ -9,6 +9,7 @@ import { NotificationsProcessor } from './notifications.processor';
 import { NotificationsService } from './notifications.service';
 import {
   databaseUrl,
+  failWritesAfter,
   fixtures,
   redisUrlFor,
   testConfig,
@@ -506,20 +507,8 @@ describe('releasing a claim', () => {
   }, 40_000);
 });
 
-// The next `times` transactions that start once Brevo has had a call fail,
-// as a dropped connection would.
-function failWritesAfterSend(times: number) {
-  const real = prisma.$transaction.bind(prisma);
-  return jest.spyOn(prisma, '$transaction').mockImplementation(((
-    arg: never,
-  ) => {
-    if (times > 0 && mock.emails().length > 0) {
-      times -= 1;
-      return Promise.reject(new Error('connection lost'));
-    }
-    return real(arg);
-  }) as never);
-}
+const failWritesAfterSend = (times: number) =>
+  failWritesAfter(prisma, () => mock.emails().length > 0, times);
 
 describe('a database error after Brevo accepted an e-mail', () => {
   it('records the send on a later write and does not send again', async () => {
@@ -528,7 +517,7 @@ describe('a database error after Brevo accepted an e-mail', () => {
     try {
       await expect(sendJob(queued.id)).resolves.toBeUndefined();
     } finally {
-      failing.mockRestore();
+      failing();
     }
     expect(mock.emails()).toHaveLength(1);
     expect(await row(queued.id)).toMatchObject({
@@ -547,7 +536,7 @@ describe('a database error after Brevo accepted an e-mail', () => {
     try {
       await expect(sendJob(queued.id)).resolves.toBeUndefined();
     } finally {
-      failing.mockRestore();
+      failing();
     }
     const lines = logged.mock.calls.map(([line]) => String(line));
     logged.mockRestore();
