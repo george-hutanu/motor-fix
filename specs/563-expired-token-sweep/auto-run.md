@@ -93,3 +93,12 @@ retro-evidence: 2/2 tasks done, 6 FRs, Spec Delta accounts +5, 1 deferred item. 
 spec.md is marked `Archived (2026-10-06)`. The Spec Delta is merged into `.specify/capabilities/accounts.md` (+5: 563-FR-001–005). FR-006 is a constraint on the change itself (test-only), so it is not merged.
 
 ## Hand-off
+
+Debt: 1 deferred item filed as To do task 3f1607bf-f0d2-81ab-8a7e-e9682de18606 (connector). qa via connector: story and timeline row (Build status) set to QA, label QA. `lifecycle.mjs ready --notion-done` committed the records (913a3c5), published the body and marked #146 ready. QA run 37419644999 dispatched `--no-wait` for 913a3c5, lap 1. Flows: API probes of the guard's refusal on `/api/v1/me`; the web app is unchanged.
+
+## Final Report
+
+- PR #146, ready, head 913a3c5. Commits: c5fb9db, c6cf3fa, 295ba45 (merge of main), 6b87f51, f8bbb8c (archive), 913a3c5 (records).
+- FR → test: FR-001–FR-005 → T001/T002 → `public-routes.integration.spec.ts` "refuses an expired token for a real account on every gated route". FR-006 (test-only) → shown by the diff.
+- Open for the owner: `@traces` markers were not applied (the gate is retired and the rules forbid FR ids in source).
+- Pending: retry of the notion-ready EP-1 tick review (connector query limit).
