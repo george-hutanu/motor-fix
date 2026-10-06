@@ -457,9 +457,6 @@ describe('cockpit.css phone rules', () => {
   });
 
   it('turns a table that names a main column into list rows on a phone', () => {
-    expect(phoneRule(`${collapsing} .spartan-table-header`)).toMatch(
-      /display:\s*none/,
-    );
     expect(
       phoneRule(
         `${collapsing} .spartan-table-cell:not([data-column="main"], [data-column="key"]), ${collapsing} .spartan-table-head:not([data-column="main"], [data-column="key"])`,
@@ -474,6 +471,17 @@ describe('cockpit.css phone rules', () => {
     expect(phoneRule(`${collapsing} [data-column="key"]`)).toMatch(
       /order:\s*1/,
     );
+  });
+
+  it('hides the header row from sight only, so a screen reader still has each column name', () => {
+    const header = phoneRule(`${collapsing} .spartan-table-header`);
+    expect(header).not.toMatch(/display:\s*none|visibility:\s*hidden/);
+    expect(header).toMatch(/position:\s*absolute/);
+    expect(header).toMatch(/width:\s*1px/);
+    expect(header).toMatch(/height:\s*1px/);
+    expect(header).toMatch(/overflow:\s*hidden/);
+    expect(header).toMatch(/clip-path:\s*inset\(50%\)/);
+    expect(header).toMatch(/white-space:\s*nowrap/);
   });
 
   it('collapses only below the tablet breakpoint', () => {

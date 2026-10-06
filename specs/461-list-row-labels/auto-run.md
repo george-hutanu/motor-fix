@@ -21,3 +21,11 @@ Start: branch 461-list-row-labels from origin/main 0cf285c; worktree .worktrees/
 
 ## 7. Tasks
 - Written inline (pin miss as above): T001–T005.
+
+## 9. Tests
+- table.spec.ts (roles; each cell named by its column header), cockpit.css.spec.ts (phone header visually hidden, never display:none). Red: 3 failed, 53 passed (Node 24; the image's Node 22 cannot load Angular's ESM in Jest, so every Jest run here prefixes the cloud-setup Node 24 PATH).
+
+## 10. Implement
+- Notion ST-461 Planning → Implementing; PR label in development.
+- table.ts: explicit role on table, thead, tbody, tr, th, td. cockpit.css: phone header clipped to 1 px (position absolute, overflow hidden, clip-path inset(50%)) instead of display none.
+- Green: ui-cockpit Jest 398/398.
