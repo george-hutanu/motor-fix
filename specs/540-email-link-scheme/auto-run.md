@@ -18,3 +18,5 @@
 - 9 tests: link table red (10 refusals failing, accepts green) before T003.
 - 10 implement: safeHref in templates.ts render() email case; notifications unit specs 667 green.
 - 14 review: spec-reviewer APPROVE, code-reviewer APPROVE; shared LOW (no padded-href row) fixed.
+- 16 retro evidence: not run separately (verdict stays the owner's).
+- 17 archive: notifications +4 (540-FR-001..004); spec Archived (2026-10-06).

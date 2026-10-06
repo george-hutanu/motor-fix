@@ -11,6 +11,7 @@ features:
   - 571-news-fan-out-worker
   - 393-whatsapp-phone-sign-in
   - 198-staff-notification-preferences
+  - 540-email-link-scheme
 ---
 
 # Capability: Notifications
@@ -374,6 +375,22 @@ _From 198-staff-notification-preferences._
 ### 198-FR-016 — Every text of the panel, the type names and the section names included, MUST exist in Romanian and English.
 
 _From 198-staff-notification-preferences._
+
+### 540-FR-001 — The e-mail render MUST accept a button or stop link only when its scheme is `https`, or `http` with the host `localhost` or `127.0.0.1` (any port); it MUST refuse every other value, including `http` on any other host, `javascript:`, `data:`, a relative path, a host without a scheme, an empty string, and text that is not a URL. Leading and trailing whitespace is ignored as URL parsing ignores it; the href written into the HTML is the parsed value's source text, escaped as today.
+
+_From 540-email-link-scheme._
+
+### 540-FR-002 — A refused link MUST fail the whole e-mail render through the existing template failure (`TemplateError`) with a reason naming the link (button or stop), so the worker marks the rows `template_failed` and sends nothing, and the template self-check reports it, with no change to either.
+
+_From 540-email-link-scheme._
+
+### 540-FR-003 — The check MUST apply to the stop link exactly as to the button link.
+
+_From 540-email-link-scheme._
+
+### 540-FR-004 — Push, SMS, WhatsApp and bell rendering, the e-mail HTML for accepted links, the contracts and the web app MUST be unchanged; the allowed set is fixed in code, with no configuration.
+
+_From 540-email-link-scheme._
 
 ## Retired
 

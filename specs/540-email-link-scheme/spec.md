@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 
 **Input**: User description: "ST-540 (Notion https://app.notion.com/p/3ef607bff0d281199d95ca3170698652, tech debt from ST-195, PR #67): the e-mail button's href (and the stop link's href) is HTML-escaped but its URL scheme is not checked. Refuse to render an e-mail whose button or stop link is anything but https:, or http: on a local host (localhost / 127.0.0.1, as CI's PUBLIC_WEB_URL http://localhost:4200 uses). Code: libs/domain/src/notifications/email-layout.ts:36 (emailHtml) and templates.ts render() email case, which already fails with TemplateError for bad values; the processor and template-check already handle TemplateError. Out of scope: push/SMS/WhatsApp links, a configurable allowlist, no UI or contract change."
 
