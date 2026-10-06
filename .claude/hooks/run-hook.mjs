@@ -28,6 +28,12 @@
 //   SPECKIT_DISABLED_HOOKS=id,id               silence individual gates
 //   SPECKIT_HOOKS_DRY_RUN=1                    report blocks instead of blocking
 //   SPECKIT_HOOK_INPUT_MAX_BYTES=N             cap the payload a gate will read
+//   SPECKIT_HOOK_TIMEOUT_MS=N                  shorten an entry's timeout_ms
+//
+// A gate that runs too long is the same case again. Claude Code does not
+// block on a hook it stopped for its timeout, so an entry with `timeout_ms`
+// is stopped here first, inside the hook timeout settings.json gives it, and a
+// fail-closed gate stopped that way (or by any signal) is refused, not passed.
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { hookById, isDryRun, isEnabled, scriptPath } from "../scripts/lib/hooks.mjs";
@@ -95,12 +101,29 @@ process.stdin.on("end", () => {
   }
 
   const interpreter = entry.script.endsWith(".sh") ? "bash" : process.execPath;
+  const own = Number(entry.timeout_ms) > 0 ? Number(entry.timeout_ms) : undefined;
+  const asked = Number(process.env.SPECKIT_HOOK_TIMEOUT_MS);
+  const timeout = own && asked > 0 && asked < own ? asked : own;
   const run = spawnSync(interpreter, [script], {
     cwd: repo,
     input: raw,
     encoding: "utf8",
     env: { ...process.env, SPECKIT_HOOK_ID: entry.id },
+    timeout,
   });
+
+  const timedOut = run.error?.code === "ETIMEDOUT";
+  if (entry.fail_closed && (timedOut || run.signal)) {
+    const how = timedOut ? `did not finish within ${timeout / 1000} s` : `was stopped by ${run.signal}`;
+    const refusal = `${entry.id} refused: the gate ${how}, so it has not approved the request. Try again; if it keeps running long, find out why before disabling it by id.`;
+    process.stderr.write(run.stderr ?? "");
+    if (isDryRun()) {
+      note(`DRY RUN — ${refusal}`);
+      process.exit(0);
+    }
+    process.stderr.write(`[run-hook] ${refusal}\n`);
+    process.exit(2);
+  }
 
   if (run.error) {
     note(`${entry.id}: could not run ${entry.script} (${run.error.message}) — gate not enforced`);

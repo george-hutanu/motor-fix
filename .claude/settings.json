@@ -36,7 +36,8 @@
           },
           {
             "type": "command",
-            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs pre:bash:merge-gate"
+            "command": "node $CLAUDE_PROJECT_DIR/.claude/hooks/run-hook.mjs pre:bash:merge-gate",
+            "timeout": 60
           }
         ]
       },

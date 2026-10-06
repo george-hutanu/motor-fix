@@ -33,3 +33,4 @@ specs/**/pr-review/**/*.webp
 
 # A story agent's note to the tail agent that takes its ready PR; local only.
 specs/**/handoff.md
+specs/**/finish-comment.md
