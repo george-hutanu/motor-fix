@@ -278,6 +278,7 @@ describe('blocked and unblock', () => {
     assert.equal(unblocked.lines.at(-3), '- 2026-10-05 · unblock · ST-687 · Blocked → Implementing');
   });
 
+  // @traces 745-FR-005
   it('splits a blocked reason too long for one comment object', async () => {
     const reason = 'r'.repeat(2100);
     const ws = workspace({ stories: [story(687, 'Implementing')] });
@@ -354,6 +355,7 @@ describe('finish', () => {
     assert.ok(r.lines.includes('- 2026-10-05 · comment · ST-687 · nothing to record'));
   });
 
+  // @traces 745-FR-005
   it('posts a comment over 2,000 characters as rich text objects of at most 2,000, in order', async () => {
     const body = `- ${'a'.repeat(2500)}\n- ${'b'.repeat(495)}\n`;
     const repo = repoWith({ body });
@@ -366,6 +368,7 @@ describe('finish', () => {
     assert.equal(sent.rich_text.map((t) => t.text.content).join(''), body);
   });
 
+  // @traces 745-FR-005
   it('keeps a comment of exactly 2,000 characters as markdown', async () => {
     const body = 'c'.repeat(2000);
     const repo = repoWith({ body });

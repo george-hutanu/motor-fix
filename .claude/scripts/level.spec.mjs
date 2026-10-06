@@ -963,6 +963,7 @@ describe('suggest from a Notion story', () => {
     }
   });
 
+  // @traces 745-FR-008
   it('reads a story\'s blocks 100 at a time', async () => {
     fresh();
     try {

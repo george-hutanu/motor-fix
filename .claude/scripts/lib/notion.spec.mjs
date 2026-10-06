@@ -200,6 +200,7 @@ describe('limits', () => {
   });
 });
 
+// @traces 745-FR-001
 describe('pacing', () => {
   it('sends a burst of 3 at once, then paces the rest to 3 a second without waiting for a 429', async () => {
     const c = clock();
@@ -244,6 +245,7 @@ describe('pacing', () => {
   });
 });
 
+// @traces 745-FR-002
 describe('retries', () => {
   const flaky = (first, { method = 'GET', ...options } = {}) => {
     const c = clock();
@@ -366,12 +368,14 @@ describe('retries', () => {
     assert.equal(f.calls(), 1);
   });
 
+  // @traces 745-FR-003
   it('retries a read that timed out', async () => {
     const f = flaky(() => new Promise(() => {}), { timeoutMs: 10 });
     assert.equal((await f.send()).id, 'ok');
     assert.equal(f.calls(), 2);
   });
 
+  // @traces 745-FR-003
   it('retries a read that failed on the network', async () => {
     const f = flaky(() => Promise.reject(new TypeError('fetch failed')));
     assert.equal((await f.send()).id, 'ok');
@@ -379,6 +383,7 @@ describe('retries', () => {
   });
 
   for (const method of ['POST', 'PATCH', 'DELETE']) {
+    // @traces 745-FR-003
     it(`never replays a ${method} that timed out or failed on the network: it may have landed`, async () => {
       const slow = flaky(() => new Promise(() => {}), { method, timeoutMs: 10 });
       await assert.rejects(slow.send(), isError('timeout'));
@@ -393,6 +398,7 @@ describe('retries', () => {
 describe('size limits', () => {
   const chunks = (parts) => parts.map((p) => p.text.content);
 
+  // @traces 745-FR-004
   it('splits a long text into objects of at most 2,000 characters, in order', () => {
     const value = 'abcde'.repeat(1000);
     const parts = richText(value);
@@ -425,6 +431,7 @@ describe('size limits', () => {
     }
   });
 
+  // @traces 745-FR-006
   it('sends a relation of 100 ids and refuses 101 rather than cutting it', () => {
     const ids = Array.from({ length: 101 }, (_, i) => `p${i}`);
     assert.equal(writeProp('relation', ids.slice(0, 100)).relation.length, 100);
@@ -432,6 +439,7 @@ describe('size limits', () => {
     assert.throws(() => writeProp('relation', ids), isError('relation too long'));
   });
 
+  // @traces 745-FR-007
   it('refuses a body over 500 KB before sending it or waiting for a slot', async () => {
     const c = clock();
     let calls = 0;
@@ -449,6 +457,7 @@ describe('size limits', () => {
     assert.equal(calls, 4);
   });
 
+  // @traces 745-FR-007
   it('appends block children 100 per request, in order', async () => {
     const sent = [];
     const client = notionClient({
@@ -467,6 +476,7 @@ describe('size limits', () => {
   });
 });
 
+// @traces 745-FR-008
 describe('paging', () => {
   it("lets a caller's own page_size win", async () => {
     const bodies = [];
