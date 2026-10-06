@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
+import { CURRENT_CONSENT, readEnv, STORAGE_ENV } from '@motor-fix/contracts';
 import { AccountsService, signAccessToken } from '@motor-fix/domain';
 import { databaseTurn, S3TestStore } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
@@ -66,6 +66,7 @@ beforeAll(async () => {
     })),
   );
   ({ id: accountId } = await app.get(AccountsService).createAccount({
+    consent: CURRENT_CONSENT,
     identity: { method: 'google', subject: `driver-${randomUUID()}` },
     name: 'Andrei',
     roles: ['driver'],
