@@ -11,3 +11,6 @@
 - 2026-10-06 · implement · Foundations timeline row ST-610 · Planning → Implementing
 - 2026-10-06 · labels · PR #150 · planning → in development
 - 2026-10-06 · debt · trace-matrix .claude roots · To do task https://app.notion.com/p/3f1607bff0d281169cc9d997b6da280e (Tech debt, Low, EP-1)
+- 2026-10-06 · qa · ST-610 · Implementing → QA
+- 2026-10-06 · qa · Foundations timeline row ST-610 · Implementing → QA
+- 2026-10-06 · labels · PR #150 · in development → QA
