@@ -61,3 +61,13 @@
   - LOW: postComment now decides markdown vs rich_text from the shared `richText` split (no second 2,000 constant); request body measured once.
   - Commit 0bad8b6 refactor(harness); harness 69 files / 1685 tests green.
 - Phase 17: capabilities validate --check clean; merge platform +8 ~0 -0 applied; spec status Archived (2026-10-06). `/speckit-retro` not run: phases-close.md §16 bars a self-graded verdict; left to the owner.
+
+## Final Report
+- Branch 745-notion-api-limits, specs/745-notion-api-limits, range 968e682..5d08d1e, 14 commits; PR #154 ready, story QA, label QA.
+- Phases: 0–13 by the first run (log above); resumed at 14: reviewers re-run (both APPROVE, no CRITICAL/HIGH), 15 no change, 16 evidence gathered, 17 archived (platform +8).
+- Verification: `npm run test:harness` → 69 files / 1685 tests passed; artifact-lint 0/0; diff-audit 0/0; doctor 16 ok; capabilities validate clean. Red-first: 33 failing before implementation.
+- FR → test (tasks.md map): FR-001–003, 006–008 → lib/notion.spec.mjs (+ notion.adversary.spec.mjs for 001/007); FR-004 → lib/notion.spec.mjs; FR-005 → notion-sync.spec.mjs; FR-008 children read → level.spec.mjs.
+- Unfixed MEDIUM: appendChildren has no caller (kept; FR-007), open decision for the owner.
+- Retrospective evidence (unjudged): 16/16 tasks, 8 FRs, 0 deferred, 10 carryover items from earlier retros; Jev unavailable, so no suggested verdict; instincts triggered: none listed.
+- Gaps: org-researcher and spec-reviewer had no Notion tools (epic/architecture pages not read); EnterWorktree refused this worktree (not under .claude/worktrees), so work ran by absolute path.
+- QA run 37488953393 dispatched for 5d08d1e (flows: health live/ready; no UI or API change). Hand-off note: specs/745-notion-api-limits/handoff.md.
