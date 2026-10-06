@@ -12,10 +12,11 @@ import type { JobsOptions } from 'bullmq';
 
 import { type NotificationType, notificationType } from './catalogue';
 import { blockedReason, type EmailConfig } from './email-config';
-import { isDriverType, mutedChannels } from './preferences';
+import { mutedChannels, rowsType } from './preferences';
 import { PUSH_CONFIG, type PushConfig } from './push-config';
 import { isQuiet, nextMorning } from './quiet-hours';
 import { outsideChannels, type SentChannel } from './routing';
+import { STAFF_TYPES } from './staff-lists';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { LIVE_CHANNEL } from '../events/live.hub';
 import type {
@@ -110,13 +111,25 @@ export class NotificationsService {
   // Answers how many outside messages it queued.
   async notify(input: NotifyInput): Promise<number> {
     const type = notificationType(input.kind);
-    const whatsapp = await this.garageAllowsWhatsApp(input);
+    // One read of the garage's switch, whichever staff it reaches.
+    const allowed = new Map<string, Promise<boolean>>();
+    const allowsWhatsApp = (garageId: string) => {
+      const read = allowed.get(garageId) ?? this.garageAllowsWhatsApp(garageId);
+      allowed.set(garageId, read);
+      return read;
+    };
     let queued = 0;
     for (const accountId of new Set(input.recipients)) {
-      const muted = await this.muted(input, accountId);
+      const garageId = await this.staffGarage(input, accountId);
+      const muted = await this.muted(input.kind, accountId, garageId);
+      const whatsapp = garageId ? await allowsWhatsApp(garageId) : true;
       const at = this.now();
       const written = await this.prisma.$transaction((tx) =>
-        this.build(tx, type, input, accountId, at, { muted, whatsapp }),
+        this.build(tx, type, input, accountId, at, {
+          garageId,
+          muted,
+          whatsapp,
+        }),
       );
       if (!written) continue;
       await this.announce(written.bell);
@@ -313,13 +326,34 @@ export class NotificationsService {
     await this.fail(rows, 'bounced', true);
   }
 
-  // A garage's staff get no WhatsApp once it switched it off; a driver's
-  // message is never stopped by it.
-  private async garageAllowsWhatsApp(input: NotifyInput): Promise<boolean> {
-    if (!input.garageId || isDriverType(input.kind)) return true;
+  // The garage whose choices a recipient's message goes by: the message's,
+  // when it is of a garage list and the recipient is that garage's staff.
+  // Anyone else, a driver the garage writes to, goes by their own choice.
+  private async staffGarage(
+    input: NotifyInput,
+    accountId: string,
+  ): Promise<string | null> {
+    const { garageId, kind } = input;
+    if (!garageId || !STAFF_TYPES.has(rowsType(kind))) return null;
+    try {
+      const [member, mechanic] = await Promise.all([
+        this.prisma.garageMember.count({ where: { accountId, garageId } }),
+        this.prisma.mechanic.count({ where: { accountId, garageId } }),
+      ]);
+      return member + mechanic > 0 ? garageId : null;
+    } catch (error) {
+      this.logger.warn(
+        `garage staff not read, taking ${kind} as staff's: ${String(error)}`,
+      );
+      return garageId;
+    }
+  }
+
+  // A garage's staff get no WhatsApp once it switched it off.
+  private async garageAllowsWhatsApp(garageId: string): Promise<boolean> {
     try {
       const feature = await this.prisma.garageFeature.findUnique({
-        where: { garageId_key: { garageId: input.garageId, key: 'whatsapp' } },
+        where: { garageId_key: { garageId, key: 'whatsapp' } },
       });
       return feature?.enabled ?? true;
     } catch (error) {
@@ -333,27 +367,25 @@ export class NotificationsService {
   // Read outside the send's transaction, so a store that fails cannot abort
   // it: the message then goes as if nothing were saved.
   private async muted(
-    input: NotifyInput,
+    kind: string,
     accountId: string,
+    garageId: string | null,
   ): Promise<Set<OutsideChannel>> {
     try {
       const rows = await this.prisma.notificationPreference.findMany({
         select: { channel: true, enabled: true, garageId: true, type: true },
-        where: {
-          accountId,
-          garageId: isDriverType(input.kind) ? null : (input.garageId ?? null),
-          type: input.kind,
-        },
+        where: { accountId, garageId, type: rowsType(kind) },
       });
       return mutedChannels(
-        input.kind,
+        kind,
         rows.map((r) => ({ ...r, channel: r.channel as OutsideChannel })),
+        garageId,
       );
     } catch (error) {
       this.logger.warn(
-        `preferences for ${input.kind} not read, sending on the default channel: ${String(error)}`,
+        `preferences for ${kind} not read, sending on the default channel: ${String(error)}`,
       );
-      return mutedChannels(input.kind, []);
+      return mutedChannels(kind, [], garageId);
     }
   }
 
@@ -365,7 +397,11 @@ export class NotificationsService {
     input: NotifyInput,
     accountId: string,
     at: Date,
-    choice: { muted: ReadonlySet<OutsideChannel>; whatsapp: boolean },
+    choice: {
+      garageId: string | null;
+      muted: ReadonlySet<OutsideChannel>;
+      whatsapp: boolean;
+    },
   ): Promise<{ bell: Notification; next: NextJob[] } | null> {
     // One builder at a time per kind and person, so a burst opens one window.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${input.kind}:${accountId}`}))`;
@@ -402,12 +438,17 @@ export class NotificationsService {
         status: 'sent',
       },
     });
-    const channels = outsideChannels(input.kind, choice.muted, {
-      email: Boolean(account.email),
-      phone: Boolean(account.phone && account.phoneVerifiedAt),
-      push: await this.hasDevice(tx, accountId),
-      whatsapp: choice.whatsapp,
-    });
+    const channels = outsideChannels(
+      input.kind,
+      choice.muted,
+      {
+        email: Boolean(account.email),
+        phone: Boolean(account.phone && account.phoneVerifiedAt),
+        push: await this.hasDevice(tx, accountId),
+        whatsapp: choice.whatsapp,
+      },
+      choice.garageId,
+    );
     const next: NextJob[] = [];
     for (const channel of channels) {
       const job = await this.outsideRow(tx, type, base, channel, account, at);

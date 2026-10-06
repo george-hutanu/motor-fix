@@ -2,8 +2,10 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router, RouterOutlet } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import type { MeDto } from '@motor-fix/data-access';
+import { type MeDto, NotificationsService } from '@motor-fix/data-access';
+import { Subject } from 'rxjs';
 
+import { Live } from './live';
 import { Session } from './session';
 import { allowedViews, DASHBOARDS, dashboardRoutes } from './views';
 
@@ -81,6 +83,7 @@ describe('the dashboard view lists', () => {
       'prices',
       'reviews',
       'profile',
+      'settings',
     ]);
     expect(DASHBOARDS.admin.views.map((view) => view.path)).toEqual([
       '',
@@ -108,17 +111,23 @@ describe('the dashboard view lists', () => {
       'prices',
       'reviews',
       'profile',
+      'settings',
     ]);
   });
 
   it('keeps the team, the prices and the garage profile from a receptionist', () => {
-    expect(paths('garage', RECEPTIONIST)).toEqual(['', 'requests', 'schedule']);
+    expect(paths('garage', RECEPTIONIST)).toEqual([
+      '',
+      'requests',
+      'schedule',
+      'settings',
+    ]);
   });
 
-  it('gives a mechanic the dashboard view plus what their permissions allow', () => {
+  it('gives a mechanic the dashboard view, the settings and what their permissions allow', () => {
     expect(
       paths('garage', ['garage.own_jobs', 'garage.audit_history']),
-    ).toEqual(['']);
+    ).toEqual(['', 'settings']);
     expect(
       paths('garage', [
         'garage.own_jobs',
@@ -126,7 +135,29 @@ describe('the dashboard view lists', () => {
         'garage.requests',
         'garage.schedule',
       ]),
-    ).toEqual(['', 'requests', 'schedule']);
+    ).toEqual(['', 'requests', 'schedule', 'settings']);
+  });
+
+  // @traces 198-FR-011
+  it('gives the garage a settings view with no capability, carrying the push and staff panels', () => {
+    expect(DASHBOARDS.garage.views.at(-1)).toEqual({
+      label: 'shell.frame.nav.garage.settings',
+      path: 'settings',
+      push: true,
+      staff: true,
+      tab: 'shell.frame.tab.settings',
+    });
+    expect(DASHBOARDS.garage.views[0].push).toBeUndefined();
+  });
+
+  // @traces 198-FR-011
+  it('puts the staff panel in the admin settings and leaves the driver settings as they were', () => {
+    const settings = (area: 'driver' | 'admin') =>
+      DASHBOARDS[area].views.find((view) => view.path === 'settings');
+    expect(settings('admin')?.staff).toBe(true);
+    expect(settings('admin')?.push).toBe(true);
+    expect(settings('driver')?.staff).toBeUndefined();
+    expect(settings('driver')?.push).toBe(true);
   });
 
   it('gives an admin every admin view', () => {
@@ -158,6 +189,16 @@ async function open(url: string, capabilities: string[]) {
         },
       ]),
       { provide: Session, useValue: { current } },
+      {
+        provide: NotificationsService,
+        useValue: {
+          notificationPreferencesControllerRead: async () => ({ staff: [] }),
+        },
+      },
+      {
+        provide: Live,
+        useValue: { events: new Subject(), resync: new Subject() },
+      },
     ],
   });
   const harness = await RouterTestingHarness.create();
@@ -183,6 +224,22 @@ describe('the dashboard view routes', () => {
     await open('/app/garage/team', RECEPTIONIST);
 
     expect(TestBed.inject(Router).url).toBe('/app/garage');
+  });
+
+  // @traces 198-FR-011
+  it('opens the garage settings for every garage role, with the push panel and the notification settings', async () => {
+    const { element } = await open('/app/garage/settings', ['garage.own_jobs']);
+
+    expect(TestBed.inject(Router).url).toBe('/app/garage/settings');
+    expect(element.querySelector('mf-push-panel')).not.toBeNull();
+    expect(element.querySelector('mf-notification-settings')).not.toBeNull();
+  });
+
+  // @traces 198-FR-011
+  it('no longer carries the push panel on the garage home view', async () => {
+    const { element } = await open('/app/garage', OWNER);
+
+    expect(element.querySelector('mf-push-panel')).toBeNull();
   });
 
   it('sends an unknown view address to the dashboard', async () => {

@@ -144,3 +144,28 @@ describe('the tester reads a finished run instead of waiting on one', () => {
     assert.match(agents, /`waiting`/);
   });
 });
+
+describe('a cloud session tests and merges with no laptop', () => {
+  const cloud = sections(agents).find((s) => s.heading === 'Cloud sessions')?.body ?? '';
+
+  it('AGENTS.md says QA starts by itself on ready or a push and sets agent-review', () => {
+    assert.match(cloud, /QA starts by itself/);
+    assert.match(cloud, /pull_request/);
+    assert.match(cloud, /`agent-review`/);
+    assert.match(cloud, /dispatch\.mjs <n> --no-wait/);
+  });
+
+  it('AGENTS.md says the merge goes over REST, through the same gate', () => {
+    assert.match(cloud, /gh api -X PUT repos\/\{owner\}\/\{repo\}\/pulls\/<n>\/merge -f merge_method=merge/);
+    assert.match(cloud, /lifecycle\.mjs merge --pr <n>/);
+    assert.match(cloud, /merge gate/);
+  });
+
+  it('the pr-tester agent knows the workflow, not post.mjs, sets the status in the cloud', () => {
+    assert.match(agent, /CLAUDE_CODE_REMOTE=true[\s\S]{0,400}no `agent-review` status/);
+  });
+
+  it('the skill names the workflow as a writer of agent-review', () => {
+    assert.match(skill, /Never set `agent-review` by hand; only the PR QA workflow/);
+  });
+});

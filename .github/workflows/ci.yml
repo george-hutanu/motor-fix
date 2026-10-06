@@ -43,51 +43,67 @@ jobs:
         if: github.event_name == 'pull_request'
         run: node scripts/docs-only.ts origin/${{ github.base_ref }}
 
-  biome:
-    name: Biome
+  # The checks that need no database share one runner and one install: on the
+  # free plan every job holds one of the account's 20 concurrent runners, so
+  # fewer jobs queue less. Each step runs even when an earlier one failed, so
+  # one red run names every failing check.
+  checks:
+    name: Checks
     needs: changes
     if: needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v7
-      - uses: biomejs/setup-biome@v2
-      - run: biome ci
-
-  typecheck:
-    name: Typecheck
-    needs: changes
-    if: needs.changes.outputs.docs-only != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
-      - run: npx nx $NX_SCOPE -t typecheck
+      - name: Biome
+        if: ${{ !cancelled() }}
+        run: npx biome ci
+      - name: Dependency audit
+        if: ${{ !cancelled() }}
+        # npm ci installs the lockfile as is; the dry run re-resolves
+        # package.json, so a peer conflict the lockfile hides (ERESOLVE) fails here.
+        run: |
+          npm audit --omit=dev --audit-level=high
+          npm install --dry-run --ignore-scripts --no-audit --no-fund
+      - name: Typecheck
+        if: ${{ !cancelled() }}
+        run: npx nx $NX_SCOPE -t typecheck
+      - name: Build
+        if: ${{ !cancelled() }}
+        run: npx nx $NX_SCOPE -t build
+      - name: Contract check
+        if: ${{ !cancelled() }}
+        run: sh scripts/contract-check.sh
+      - name: Harness
+        if: ${{ !cancelled() }}
+        run: |
+          npm run lint:harness
+          npm run test:harness
+      # The local stack (docker-compose.yml) the PR tester boots: every image
+      # still pulls, the services come up healthy and the one-shot setup creates
+      # the bucket. The setup stays out of --wait, which fails when it exits
+      # before compose sees it running; run returns its exit code. On main,
+      # release.yml calls this workflow and the stack is not checked.
+      - name: Compose stack
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        run: |
+          docker compose up -d --wait postgres redis minio
+          docker compose run --rm minio-setup
+          docker compose run --rm --entrypoint sh minio-setup -c \
+            "mc alias set local http://minio:9000 motorfix motorfix-secret && mc ls local/motorfix"
+      - name: Stop the compose stack
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        run: docker compose down -v --remove-orphans
 
-  unit:
-    name: Unit tests
+  tests:
+    name: Unit and integration tests
     needs: changes
     if: needs.changes.outputs.docs-only != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      JEST_SUITE: unit
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - uses: ./.github/actions/setup
-      - run: npx nx $NX_SCOPE -t test --passWithNoTests
-
-  integration:
-    name: Integration tests
-    needs: changes
-    if: needs.changes.outputs.docs-only != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     services: &services
       postgres:
         image: postgis/postgis:17-3.5
@@ -102,7 +118,6 @@ jobs:
         options: >-
           --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      JEST_SUITE: integration
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
       REDIS_URL: redis://localhost:6379
       AUTH_TOKEN_SECRET: ci-only-test-secret-not-used-in-any-deploy
@@ -111,9 +126,21 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
+      # JEST_SUITE is an input of the test target (nx.json), so the two runs
+      # never answer each other from the Nx cache.
+      - name: Unit tests
+        if: ${{ !cancelled() }}
+        env:
+          JEST_SUITE: unit
+        run: npx nx $NX_SCOPE -t test --passWithNoTests
       - name: Migrate the test database
+        if: ${{ !cancelled() }}
         run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
-      - run: npx nx $NX_SCOPE -t test --passWithNoTests
+      - name: Integration tests
+        if: ${{ !cancelled() }}
+        env:
+          JEST_SUITE: integration
+        run: npx nx $NX_SCOPE -t test --passWithNoTests
 
   e2e:
     name: E2E tests
@@ -187,59 +214,6 @@ jobs:
           # The report sits under dist/.playwright, a dot directory upload-artifact skips by default.
           include-hidden-files: true
 
-  build:
-    name: Build
-    needs: changes
-    if: needs.changes.outputs.docs-only != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - uses: ./.github/actions/setup
-      - run: npx nx $NX_SCOPE -t build
-
-  harness:
-    name: Harness
-    needs: changes
-    if: needs.changes.outputs.docs-only != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      - run: npm run lint:harness
-      - run: npm run test:harness
-
-  contract:
-    name: Contract check
-    needs: changes
-    if: needs.changes.outputs.docs-only != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      - run: sh scripts/contract-check.sh
-
-  audit:
-    name: Dependency audit
-    needs: changes
-    if: needs.changes.outputs.docs-only != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-      - run: npm audit --omit=dev --audit-level=high
-      # npm ci installs the lockfile as is; this re-resolves package.json,
-      # so a peer conflict the lockfile hides (ERESOLVE) fails here.
-      - name: npm install resolves
-        run: npm install --dry-run --ignore-scripts --no-audit --no-fund
-
   # On main, release.yml's images job is the real build.
   docker:
     name: Docker build (${{ matrix.app }})
@@ -268,32 +242,10 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
 
-  # The local stack (docker-compose.yml) the PR tester boots: every image still
-  # pulls, the services come up healthy and the one-shot setup creates the bucket.
-  compose:
-    name: Compose stack
-    needs: changes
-    if: github.event_name == 'pull_request' && needs.changes.outputs.docs-only != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-      # The PR tester's boot: the one-shot setup stays out of --wait, which fails
-      # when it exits before compose sees it running; run returns its exit code.
-      - run: docker compose up -d --wait postgres redis minio
-      - run: docker compose run --rm minio-setup
-      - name: The bucket exists
-        run: >-
-          docker compose run --rm --entrypoint sh minio-setup -c
-          "mc alias set local http://minio:9000 motorfix motorfix-secret && mc ls local/motorfix"
-      - if: always()
-        run: docker compose down -v --remove-orphans
-
   ci-ok:
     name: CI OK
     if: always()
-    needs:
-      [changes, biome, typecheck, unit, integration, e2e, build, harness, contract, audit, docker, compose]
+    needs: [changes, checks, tests, e2e, docker]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:

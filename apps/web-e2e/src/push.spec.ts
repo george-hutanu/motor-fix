@@ -21,7 +21,7 @@ const PANELS = [
   {
     capabilities: ['garage.requests'],
     landing: '/app/garage',
-    path: '/app/garage',
+    path: '/app/garage/settings',
     role: 'garage',
   },
 ];

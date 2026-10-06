@@ -237,8 +237,32 @@ that variable, so the laptop behaves as before.
   in `.github/workflows/ci.yml` lists the end-to-end set). Network level
   Trusted, or a custom list that allows `api.notion.com` and
   `api.typesafe.ai`.
+- **Node and Playwright.** The image puts Node 22 first on PATH;
+  `cloud-setup.sh` puts an installed Node 24 first instead (one marked line
+  at the top of `~/.bashrc`, and in `CLAUDE_ENV_FILE` when set) and installs
+  the chromium revision the installed `playwright-core` pins.
 - **GitHub.** `GH_TOKEN` and `GITHUB_TOKEN` hold the proxy's placeholder
   `proxy-injected`; nothing overwrites them, and no gh login is needed.
+  The proxy refuses `workflow_dispatch`, commit statuses and GraphQL (so
+  every `gh pr …` fails); REST pushes, reviews, comments, labels, ready and
+  merge go through. `lifecycle.mjs`, the `stop:pr-lifecycle` gate and
+  `notion-sync.mjs` fall back to REST on their own
+  (`.claude/scripts/lib/gh-rest.mjs`); by hand, run
+  `node .claude/scripts/gh.mjs` in place of `gh` for `pr
+  list|view|create|edit|ready|comment|checks` (`--watch` too) and `label
+  create`.
+- **QA and merge.** QA starts by itself: the PR QA workflow also runs on
+  `pull_request` (ready, a push, reopened) for a non-draft PR of this
+  repository, one run per PR (a newer one cancels the older), and sets
+  `agent-review` on the head it tested with its own token: pending, then
+  success only when the run passed with no blocking findings, else failure.
+  `dispatch.mjs <n> --no-wait` dispatches nothing there and finds that run
+  for the head over REST; `post.mjs` posts the review and writes no status.
+  A blocking finding of the tester's own is fixed and pushed, which runs QA
+  again. The merge goes over REST, `lifecycle.mjs merge --pr <n>`, which
+  runs `gh api -X PUT repos/{owner}/{repo}/pulls/<n>/merge -f merge_method=merge`;
+  the merge gate reads the PR over REST and judges that call as it judges
+  `gh pr merge`.
 - **Single-repo sessions only:** a multi-repo session loads no hooks, so no
   gate would run.
 - **One story per cloud session.** Never arm `watch.mjs` there; the
@@ -311,12 +335,15 @@ decisions are the source for anything the constitution does not fix.
   worktree's own PostgreSQL and Redis (`scripts/test-services.ts`, compose
   project `mf-test-<worktree>-<hash>`, left running between commits; Docker
   required), and it refuses a commit with `JEST_SUITE` set.
-- PR CI: `.github/workflows/ci.yml`, one job per check, in parallel:
-  Biome, Typecheck, Unit tests, Integration
-  tests (PostgreSQL+PostGIS and Redis services), E2E tests (Playwright
-  `web-e2e`, servers started in the job), Build, Harness, Contract check,
-  Dependency audit, Docker build (`web`, `node-app`), Compose stack
-  (`docker-compose.yml` boots and creates the bucket), then `CI OK`, which
+- PR CI: `.github/workflows/ci.yml`, six jobs, so a PR holds at most seven
+  of the free plan's 20 concurrent runners: Checks (one runner and one
+  install: Biome, Dependency audit, Typecheck, Build, Contract check, Harness,
+  and Compose stack, where `docker-compose.yml` boots and creates the bucket;
+  each step runs even after an earlier one failed), Unit and integration tests
+  (PostgreSQL+PostGIS and Redis services), E2E tests (Playwright `web-e2e`,
+  four workers, servers started in the job; a test that passes only on a
+  retry fails), Docker build (`web`, `node-app`, reading the layer cache that
+  `release.yml` writes on `main`), then `CI OK`, which
   fails when any of them did. A PR that changes documentation only
   (`scripts/docs-only.ts`: Markdown outside `.claude/`, `.specify/` and
   `.github/`, or `docs/`) runs only the Changes and `CI OK` jobs; the
@@ -331,4 +358,5 @@ decisions are the source for anything the constitution does not fix.
   `Dockerfile`), deploys staging through `scripts/railway-deploy.ts`, runs the
   end-to-end suite there, and promotes the same digests to production with
   no manual approval: a merge reaches production only when CI and staging
-  both passed.
+  both passed. Release checks run one at a time (`release-checks`); a waiting
+  one is replaced by the newest merge, which carries it.

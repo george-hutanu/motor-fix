@@ -21,8 +21,14 @@ const stub = (bin, name, body) => {
   chmodSync(join(bin, name), 0o755);
 };
 
-/** A checkout with a lock file, stub tools on PATH, Node `node` major and the Docker daemon `docker` up or down. */
-function setup({ node = '22', docker = false, nvm = false, n = true } = {}) {
+/**
+ * A checkout with a lock file, stub tools on PATH, Node `node` major and the
+ * Docker daemon `docker` up or down. `id` answers a non-root uid, so the spec
+ * reads the same as root on a cloud VM. `chromium` writes the revision a
+ * playwright-core install pins. Installed Nodes are looked for only under the
+ * test's own `opt/nvm`.
+ */
+function setup({ node = '22', docker = false, nvm = false, n = true, chromium = null } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'cloud-setup-'));
   dirs.push(root);
   const repo = join(root, 'repo');
@@ -41,6 +47,13 @@ function setup({ node = '22', docker = false, nvm = false, n = true } = {}) {
   stub(bin, 'docker', `case "$1" in info) test -e ${state}/docker-up;; *) echo "docker $*" >> ${log};; esac`);
   stub(bin, 'service', `echo "service $*" >> ${log}; touch ${state}/docker-up`);
   stub(bin, 'sudo', `echo "sudo $1" >> ${state}/sudo; [ "$1" = -n ] && shift; exec "$@"`);
+  stub(bin, 'id', 'echo 1000');
+  stub(bin, 'npx', `echo "npx $* skip=[\${PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD-unset}]" >> ${log}`);
+  if (chromium) {
+    mkdirSync(join(repo, 'node_modules', 'playwright-core'), { recursive: true });
+    const browsers = [{ name: 'chromium', revision: chromium }, { name: 'chromium-headless-shell', revision: chromium }, { name: 'firefox', revision: '1543' }];
+    writeFileSync(join(repo, 'node_modules', 'playwright-core', 'browsers.json'), JSON.stringify({ comment: 'x', browsers }, null, 2));
+  }
   if (n) stub(bin, 'n', `echo "n $*" >> ${log}; echo "$1" > ${state}/node`);
   if (nvm) {
     mkdirSync(join(home, '.nvm'));
@@ -49,21 +62,22 @@ function setup({ node = '22', docker = false, nvm = false, n = true } = {}) {
   const run = (extra = {}) => spawnSync('/bin/bash', [join(repo, 'scripts', 'cloud-setup.sh')], {
     cwd: root,
     encoding: 'utf8',
-    env: { PATH: `${bin}:/usr/bin:/bin`, HOME: home, CLAUDE_CODE_REMOTE: 'true', ...extra },
+    env: { PATH: `${bin}:/usr/bin:/bin`, HOME: home, CLAUDE_CODE_REMOTE: 'true', CLOUD_SETUP_NODE_SEARCH: `${root}/opt/nvm/versions/node/v24*/bin`, PLAYWRIGHT_BROWSERS_PATH: join(root, 'pw'), ...extra },
   });
   const sudo = () => (existsSync(join(state, 'sudo')) ? readFileSync(join(state, 'sudo'), 'utf8').trim().split('\n') : []);
   const calls = () => readFileSync(log, 'utf8').trim().split('\n').filter(Boolean);
-  return { repo, home, bin, run, calls, sudo };
+  return { root, repo, home, bin, state, run, calls, sudo };
 }
 
 // @traces 749-FR-005
 describe('cloud-setup.sh', () => {
-  it('on a fresh VM installs Node 24 with n, runs npm ci, starts Docker and pulls postgres and redis', () => {
-    const { run, calls } = setup();
+  it('on a fresh VM installs Node 24 with n, keeps it first on PATH, runs npm ci, starts Docker and pulls postgres and redis', () => {
+    const { run, calls, home, bin } = setup();
     const out = run();
     assert.equal(out.status, 0, out.stderr + out.stdout);
     assert.deepEqual(calls(), ['n 24', 'npm ci', 'service docker start', 'docker compose pull postgres redis']);
     assert.match(out.stdout, /node v24/);
+    assert.equal(readFileSync(join(home, '.bashrc'), 'utf8'), `export PATH="${bin}:$PATH" # cloud-setup: node 24\n`);
   });
 
   it('prefers nvm when it is installed, and makes 24 its default', () => {
@@ -130,5 +144,50 @@ describe('cloud-setup.sh', () => {
     assert.match(out.stderr, /Node 24/);
     assert.ok(!calls().includes('npm ci'));
     assert.equal(existsSync(join(repo, 'node_modules')), false);
+  });
+
+  it('puts an installed Node 24 first on PATH instead of installing one, and keeps it there for the session', () => {
+    const { root, home, run, calls } = setup();
+    const dir = join(root, 'opt', 'nvm', 'versions', 'node', 'v24.21.0', 'bin');
+    mkdirSync(dir, { recursive: true });
+    stub(dir, 'node', 'case "$1" in -p) echo 24;; --version) echo v24.21.0;; esac');
+    const envFile = join(root, 'env.sh');
+    writeFileSync(join(home, '.bashrc'), '[ -z "$PS1" ] && return\nalias ll=ls\n');
+    const out = run({ CLAUDE_ENV_FILE: envFile });
+    assert.equal(out.status, 0, out.stderr + out.stdout);
+    assert.ok(!calls().some((c) => c.startsWith('n ')), calls().join('\n'));
+    assert.match(out.stdout, /node v24\.21\.0/);
+    const line = `export PATH="${dir}:$PATH" # cloud-setup: node 24`;
+    assert.equal(readFileSync(join(home, '.bashrc'), 'utf8').split('\n')[0], line);
+    assert.ok(readFileSync(envFile, 'utf8').includes(line));
+    run({ CLAUDE_ENV_FILE: envFile });
+    const bashrc = readFileSync(join(home, '.bashrc'), 'utf8');
+    assert.equal(bashrc.split('\n').filter((l) => l.includes('# cloud-setup: node 24')).length, 1);
+    assert.ok(bashrc.includes('alias ll=ls'));
+  });
+
+  it('finds the Node 24 an installer left behind another Node on PATH', () => {
+    const { root, bin, state, run, calls } = setup();
+    const dir = join(root, 'opt', 'nvm', 'versions', 'node', 'v24.1.0', 'bin');
+    stub(bin, 'n', `echo "n $*" >> ${state}/log; mkdir -p ${dir}; printf '#!/bin/sh\\ncase "$1" in -p) echo 24;; --version) echo v24.1.0;; esac\\n' > ${dir}/node; chmod +x ${dir}/node`);
+    const out = run();
+    assert.equal(out.status, 0, out.stderr + out.stdout);
+    assert.equal(calls()[0], 'n 24');
+    assert.match(out.stdout, /node v24\.1\.0/);
+  });
+
+  it('installs the chromium playwright-core pins when the browsers path lacks it, with downloads allowed', () => {
+    const { run, calls } = setup({ node: '24', docker: true, chromium: '1243' });
+    const out = run({ PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1' });
+    assert.equal(out.status, 0, out.stderr + out.stdout);
+    assert.ok(calls().includes('npx playwright install chromium skip=[]'), calls().join('\n'));
+  });
+
+  it('installs no chromium when the pinned revision is already there', () => {
+    const { root, run, calls } = setup({ node: '24', docker: true, chromium: '1243' });
+    for (const d of ['chromium-1243', 'chromium_headless_shell-1243']) mkdirSync(join(root, 'pw', d), { recursive: true });
+    const out = run();
+    assert.equal(out.status, 0, out.stderr + out.stdout);
+    assert.ok(!calls().some((c) => c.startsWith('npx')), calls().join('\n'));
   });
 });

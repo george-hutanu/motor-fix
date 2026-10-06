@@ -10,6 +10,7 @@ features:
   - 646-notification-send-claim
   - 571-news-fan-out-worker
   - 393-whatsapp-phone-sign-in
+  - 198-staff-notification-preferences
 ---
 
 # Capability: Notifications
@@ -309,6 +310,70 @@ _From 571-news-fan-out-worker._
 ### 393-FR-002 — The code message MUST hold only the code and how long it is valid, in the interface language, through one SIGN_IN_CODE WhatsApp template in Romanian and English registered like ST-392's templates; it MUST be sent from the request itself (not through the notifications outbox and without a NOTIFICATION record), so the request can answer whether it was sent; it MUST NOT count as an SMS against anyone's monthly SMS share.
 
 _From 393-whatsapp-phone-sign-in._
+
+### 198-FR-001 — `GET /api/v1/notification-preferences` MUST add a `staff` field to the answer of ST-197: one entry per garage the caller is staff of (an owner or receptionist by GarageMember, a mechanic by Mechanic) and one entry with no garage when the account's role is admin; a person who is none has an empty `staff`. The driver groups and types of ST-197 are unchanged.
+
+_From 198-staff-notification-preferences._
+
+### 198-FR-002 — Each staff entry MUST carry: the garage's id and name (both null for the admin entry), the caller's role (`owner`, `receptionist`, `mechanic` or `admin`), whether WhatsApp can be chosen and, when it cannot, why (`garage_whatsapp_off` when the garage's `whatsapp` feature is off, else `phone_not_verified` when the account has no verified phone; the admin entry has no garage and depends on the phone alone), and its sections, each with its types in catalogue order.
+
+_From 198-staff-notification-preferences._
+
+### 198-FR-003 — Each listed type MUST carry its channels, one per outside channel the catalogue allows it among e-mail, push and WhatsApp (never SMS; a type with no such channel has none), and for each: whether it is enabled as the send-time check reads it (the saved row; else on, except WhatsApp, which ST-197 keeps off until the person turns it on when the type goes by another channel) and whether it is locked (a locked channel always reads enabled, whatever a saved row says). When WhatsApp cannot be chosen, `enabled` still reports the saved choice; the entry's availability says it is not used.
+
+_From 198-staff-notification-preferences._
+
+### 198-FR-004 — The types of a garage entry MUST be, by role: the owner, every type FR-005 names (FR-005's enumeration is the authoritative Garage list: the code's catalogue has no list of its own) and the three always-sent owner types (VERIFICATION_RESULT, GARAGE_SUSPENDED, GARAGE_RESTORED); the receptionist, the same without the owner-only types (REVIEW_POSTED, REVIEW_EDITED, STAFF_JOINED, VERIFICATION_RESULT, GARAGE_SUSPENDED, GARAGE_RESTORED, DOCUMENT_DUE, DOCUMENT_OVERDUE, CATALOGUE_JOB_DECIDED, FACILITY_REMOVED, FACILITY_RE_ADD_DECIDED); the mechanic, BOOKING_MOVED, plus REQUEST_RECEIVED and MESSAGE_RECEIVED only while `can_answer_quotes` is set. REQUEST_REMINDER, DAY_SHEET, DIRECT_REQUEST and ADMIN_STATUS_ALERT MUST NOT be listed for anyone. DAY_SHEET_OUTDATED and DAY_SHEET_NOT_SENT MUST be listed for the owner and the receptionist only while the garage's `day_sheets` feature is not off.
+
+_From 198-staff-notification-preferences._
+
+### 198-FR-005 — The sections of a garage entry MUST be `requests_quotes` (REQUEST_RECEIVED, REQUEST_CANCELLED, REQUEST_EXPIRED, QUOTE_ACCEPTED, QUOTE_LOST, QUOTE_DECLINED_BY_DRIVER, QUOTE_EXPIRED, MESSAGE_RECEIVED), `bookings` (BOOKING_MOVE_REQUESTED, BOOKING_CONFIRM_REMINDER, BOOKING_MOVED, BOOKING_CANCELLED, BOOKING_LAPSED, BOOKING_MOVE_LAPSED, DAY_SHEET_OUTDATED, DAY_SHEET_NOT_SENT), `reviews` (REVIEW_POSTED, REVIEW_EDITED, REVIEW_DECIDED, REVIEW_APPEAL_DECIDED) and `account` (VERIFICATION_RESULT, GARAGE_SUSPENDED, GARAGE_RESTORED, DOCUMENT_DUE, DOCUMENT_OVERDUE, STAFF_JOINED, CATALOGUE_JOB_DECIDED, FACILITY_REMOVED, FACILITY_RE_ADD_DECIDED), each holding only the types the role gets; an empty section is left out. The admin entry MUST have one section, `admin`, with ADMIN_VERIFICATION_QUEUED, ADMIN_REVIEW_REPORTED, ADMIN_APPEAL_RECEIVED, ADMIN_OUTAGE_ALERT, ADMIN_RULE_APPROVAL_NEEDED, ADMIN_CATALOGUE_JOB_PENDING, ADMIN_FACILITY_REQUEST and ADMIN_RECHECK_DUE.
+
+_From 198-staff-notification-preferences._
+
+### 198-FR-006 — A channel MUST be locked (always on, cannot be saved off) when: the type is always sent and the channel is e-mail (VERIFICATION_RESULT, GARAGE_SUSPENDED, GARAGE_RESTORED, BOOKING_MOVE_LAPSED, BOOKING_CANCELLED, BOOKING_LAPSED, BOOKING_CONFIRM_REMINDER, FACILITY_REMOVED), their push and WhatsApp staying free; or the type is ADMIN_OUTAGE_ALERT, whose e-mail and push are both locked. DOCUMENT_DUE and DOCUMENT_OVERDUE MUST no longer be always sent: no channel of theirs is locked, but at least one MUST stay on (FR-008).
+
+_From 198-staff-notification-preferences._
+
+### 198-FR-007 — `PUT /api/v1/notification-preferences` MUST accept staff choices as per-type choices of ST-197 that carry the garage (none for an admin type), the type, the channel and `enabled`, and MUST answer the preferences as FR-001 reads them after the save; a save MUST stay one transaction with one audit history entry per changed row (who, garage, type, channel, old and new value) and MUST publish `notification_preferences.updated` on `account:{accountId}` as ST-197 does.
+
+_From 198-staff-notification-preferences._
+
+### 198-FR-008 — A staff choice MUST be refused with 422, nothing changed, when: the type is not in the caller's list for that garage (or, with no garage, not in the admin list or the account is not an admin), code `type_not_in_list`; the channel is SMS, code `channel_not_allowed`; the channel is locked for the type and `enabled` is false, code `channel_locked`; the channel is WhatsApp, `enabled` is true, and WhatsApp cannot be chosen for that entry (FR-002), code `whatsapp_unavailable`; the type is DOCUMENT_DUE or DOCUMENT_OVERDUE and the save would leave every one of its channels off, code `last_channel`, judged on the state the whole save leaves (push on and e-mail off in one save is accepted). A channel the catalogue does not give the type stays 400 `channel_not_allowed`, as in ST-197. A garage the caller is not staff of MUST answer 404 as ST-197 does. The routes stay the caller's own: no call names another account, so another person's preferences cannot be changed (the brief's 403 case cannot arise).
+
+_From 198-staff-notification-preferences._
+
+### 198-FR-009 — The send-time check of ST-197 MUST read a staff type's rows per account and garage, so one person's mute never changes another's channels for the same garage. A message with a garage reads the recipient's rows for that garage, one per channel, even for a type that also has a driver group (BOOKING_CANCELLED, MESSAGE_RECEIVED, …): a row is a driver choice only when it has no garage and its type has a driver group; a staff row (with a garage, or an admin type) is one per channel. A REQUEST_REMINDER MUST be checked against the recipient's REQUEST_RECEIVED rows for the message's garage, having no rows of its own. The garage's rows apply only when the recipient is staff of that garage (a member or its mechanic) and the type is on a staff list; any other recipient of a message about a garage, such as the driver it writes to, goes by their own driver choice, and a staff choice never sends a driver's push fallback e-mail.
+
+_From 198-staff-notification-preferences._
+
+### 198-FR-010 — A DOCUMENT_DUE or DOCUMENT_OVERDUE MUST go by the channels the owner left on, never by none; a muted channel of theirs is skipped like any other staff type's.
+
+_From 198-staff-notification-preferences._
+
+### 198-FR-011 — The garage dashboard MUST gain a Setări (settings) view with no capability of its own (a view with none is shown to every role of its area), reachable by every garage role (owner, receptionist, mechanic), holding this device's push panel (which leaves the home view) and, beneath it, the Notificări panel; the admin dashboard's Setări view MUST show the Notificări panel under its push panel. The driver dashboard is unchanged.
+
+_From 198-staff-notification-preferences._
+
+### 198-FR-012 — The Notificări panel MUST show each of the caller's staff entries (its garage name as the heading when there is more than one, or the admin heading) with its sections and one row per type: the type's name in the person's language and the switches E-mail, Push and WhatsApp for the channels the type has; a type with no outside channel shows "Doar în aplicație" / "In the app only" instead. Each switch MUST carry a visible label and an accessible name made of the type and the channel. On a phone (320 and 390 px) the switches MUST stack under the type name and nothing MUST scroll sideways.
+
+_From 198-staff-notification-preferences._
+
+### 198-FR-013 — A locked switch MUST be on and disabled with "Se trimite mereu" / "Always sent". When WhatsApp cannot be chosen, the entry's WhatsApp switches MUST be off and disabled with "WhatsApp este oprit pentru acest service" / "WhatsApp is off for this garage" or "Adaugă un număr de telefon verificat" / "Add a verified phone number", by the reason.
+
+_From 198-staff-notification-preferences._
+
+### 198-FR-014 — A switch MUST save on toggle, optimistically; a refused or failed save MUST revert the switch and show a toast "Setarea nu a putut fi salvată" / "The setting could not be saved". While loading, the panel MUST show skeleton rows; when the read fails, it MUST show "Nu am putut încărca setările" / "Could not load the settings" with "Reîncearcă" / "Try again".
+
+_From 198-staff-notification-preferences._
+
+### 198-FR-015 — The panel MUST read the lists again, without a reload, on `notification_preferences.updated` for the caller's account and on `garage.features_changed` for any garage it shows.
+
+_From 198-staff-notification-preferences._
+
+### 198-FR-016 — Every text of the panel, the type names and the section names included, MUST exist in Romanian and English.
+
+_From 198-staff-notification-preferences._
 
 ## Retired
 

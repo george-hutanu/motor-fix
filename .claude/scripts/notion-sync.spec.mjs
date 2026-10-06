@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { parseDeferred, taskFor } from './debt-tasks.mjs';
-import { logLine, main, PLANS_PAGE, STORIES } from './notion-sync.mjs';
+import { defaultGh, logLine, main, PLANS_PAGE, STORIES } from './notion-sync.mjs';
 import { readProp } from './lib/notion.mjs';
 import { readState } from './run-state.mjs';
 
@@ -667,5 +667,17 @@ describe('check', () => {
 describe('usage', () => {
   it('answers an unknown event with 64', async () => {
     assert.equal((await run(['launch'])).code, 64);
+  });
+});
+
+describe('gh outside the injected tests', () => {
+  it('reads the PR through REST in a cloud session, and answers "" when gh fails', () => {
+    const run = (file, args) =>
+      args[1] === 'repos/{owner}/{repo}/pulls/139'
+        ? { code: 0, stdout: JSON.stringify({ number: 139, html_url: 'https://github.com/o/r/pull/139' }), stderr: '' }
+        : { code: 1, stdout: '', stderr: 'HTTP 403' };
+    const env = { CLAUDE_CODE_REMOTE: 'true' };
+    assert.equal(defaultGh(['pr', 'view', '139', '--json', 'url', '-q', '.url'], { env, run }), 'https://github.com/o/r/pull/139\n');
+    assert.equal(defaultGh(['pr', 'view', '140', '--json', 'url', '-q', '.url'], { env, run }), '');
   });
 });

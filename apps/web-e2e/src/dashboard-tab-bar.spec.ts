@@ -49,6 +49,7 @@ const DASHBOARDS = [
       ['Prețuri', '/prices'],
       ['Recenzii', '/reviews'],
       ['Profil', '/profile'],
+      ['Setări', '/settings'],
     ],
   },
   {
@@ -65,6 +66,7 @@ const DASHBOARDS = [
       ['Panou', ''],
       ['Cereri', '/requests'],
       ['Program', '/schedule'],
+      ['Setări', '/settings'],
     ],
   },
   {
@@ -75,6 +77,7 @@ const DASHBOARDS = [
     tabs: [
       ['Panou', ''],
       ['Cereri', '/requests'],
+      ['Setări', '/settings'],
     ],
   },
   {
@@ -220,7 +223,7 @@ test.describe('the bar on the smallest phones', () => {
           };
         }),
       );
-      expect(tabs).toHaveLength(7);
+      expect(tabs).toHaveLength(8);
       expect(tabs.filter((t) => t.cut)).toEqual([]);
       expect(tabs.filter((t) => t.height < 44)).toEqual([]);
       expect(tabs.filter((t) => t.size < 12)).toEqual([]);

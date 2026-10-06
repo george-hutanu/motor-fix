@@ -20,10 +20,12 @@ const NAMES = Object.keys(NOTIFICATION_TYPES);
 const groupTypes = (group: DriverGroup) =>
   NAMES.filter((name) => NOTIFICATION_TYPES[name].group === group);
 
-// A driver type has one row, its chosen channel; any other type has one row
-// per channel.
-export const isDriverType = (name: string) =>
-  notificationType(name).group !== null;
+const isDriverType = (name: string) => notificationType(name).group !== null;
+
+// A driver choice is one row, its chosen channel: no garage and a type of a
+// driver group. Any other row (a garage's, or an admin type) is per channel.
+export const isDriverChoice = (name: string, garageId: string | null) =>
+  garageId === null && isDriverType(name);
 
 export const canMute = (name: string) => {
   const type = notificationType(name);
@@ -64,7 +66,7 @@ export function preferencesView(rows: readonly PreferenceRow[]) {
     type,
   }));
   const staff = rows
-    .filter((r) => !isDriverType(r.type))
+    .filter((r) => !isDriverChoice(r.type, r.garageId))
     .map((r) => ({
       alwaysSent: !canMute(r.type),
       channel: r.channel,
@@ -75,27 +77,39 @@ export function preferencesView(rows: readonly PreferenceRow[]) {
   return { groups, preferences: [...driver, ...staff] };
 }
 
+// A request's reminders follow the request's own rows.
+export const rowsType = (name: string) =>
+  name === 'REQUEST_REMINDER' ? 'REQUEST_RECEIVED' : name;
+
+// Staff WhatsApp is off until the person turns it on, unless the type goes by
+// nothing else.
+function staffEnabled(
+  name: string,
+  channel: OutsideChannel,
+  rows: readonly PreferenceRow[],
+): boolean {
+  const { channels } = notificationType(name);
+  const saved = rows.find(
+    (r) => r.type === rowsType(name) && r.channel === channel,
+  );
+  const optIn =
+    channel === 'whatsapp' && channels.some((other) => other !== 'whatsapp');
+  return optIn ? saved?.enabled === true : saved?.enabled !== false;
+}
+
 // The outside channels a message of this type must not go by, from the
 // person's rows for it (already narrowed to the message's garage).
 export function mutedChannels(
   name: string,
   rows: readonly PreferenceRow[],
+  garageId: string | null = null,
 ): Set<OutsideChannel> {
   const { channels } = notificationType(name);
-  if (isDriverType(name)) {
+  if (isDriverChoice(name, garageId)) {
     const { channel, enabled } = driverChoice(name, rows);
     return new Set(channels.filter((c) => !enabled || c !== channel));
   }
-  // Staff WhatsApp is off until the person turns it on, unless the type goes
-  // by nothing else.
-  const optIn = (c: OutsideChannel) =>
-    c === 'whatsapp' && channels.some((other) => other !== 'whatsapp');
-  return new Set(
-    channels.filter((c) => {
-      const saved = rows.find((r) => r.type === name && r.channel === c);
-      return optIn(c) ? saved?.enabled !== true : saved?.enabled === false;
-    }),
-  );
+  return new Set(channels.filter((c) => !staffEnabled(name, c, rows)));
 }
 
 // One audit entry: the group or the type (with its channel), old and new.
@@ -115,7 +129,7 @@ interface Plan {
 const sameRow = (a: PreferenceRow, b: PreferenceRow) =>
   a.type === b.type &&
   a.garageId === b.garageId &&
-  (isDriverType(a.type) || a.channel === b.channel);
+  (isDriverChoice(a.type, a.garageId) || a.channel === b.channel);
 
 function put(plan: Plan, next: PreferenceRow) {
   plan.rows = [...plan.rows.filter((r) => !sameRow(r, next)), next];
@@ -143,7 +157,7 @@ function switchGroup(plan: Plan, key: DriverGroup, enabled: boolean) {
 
 function choose(plan: Plan, choice: PreferenceRow) {
   const { channel, enabled, garageId, type } = choice;
-  if (isDriverType(type)) {
+  if (isDriverChoice(type, garageId)) {
     const was = driverChoice(type, plan.rows);
     if (was.channel === channel && was.enabled === enabled) return;
     put(plan, choice);
@@ -154,7 +168,11 @@ function choose(plan: Plan, choice: PreferenceRow) {
     });
     return;
   }
-  const was = plan.rows.find((r) => sameRow(r, choice))?.enabled ?? true;
+  const was = staffEnabled(
+    type,
+    channel,
+    plan.rows.filter((r) => r.garageId === garageId),
+  );
   if (was === enabled) return;
   put(plan, choice);
   plan.changes.push({

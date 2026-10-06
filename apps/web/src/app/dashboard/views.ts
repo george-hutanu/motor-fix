@@ -3,6 +3,7 @@ import type { Routes } from '@angular/router';
 
 import { PushView } from './push-view';
 import { Session } from './session';
+import { SettingsView } from './settings-view';
 import { View } from './view';
 
 export type Area = 'driver' | 'garage' | 'admin';
@@ -16,6 +17,8 @@ export interface DashboardView {
   capability?: string;
   // The view's body carries this device's push panel.
   push?: boolean;
+  // ...and, under it, the person's staff notification choices.
+  staff?: boolean;
 }
 
 const HOME: DashboardView = {
@@ -63,6 +66,7 @@ export const DASHBOARDS: Record<
         label: 'shell.frame.nav.admin.settings',
         path: 'settings',
         push: true,
+        staff: true,
         tab: 'shell.frame.tab.settings',
       },
     ],
@@ -109,8 +113,7 @@ export const DASHBOARDS: Record<
     name: 'shell.frame.bar.garage',
     tag: 'shell.frame.area.garage',
     views: [
-      // Every garage role sees the home view; the garage has no Setări yet.
-      { ...HOME, push: true },
+      HOME,
       {
         capability: 'garage.requests',
         label: 'shell.frame.nav.garage.requests',
@@ -147,6 +150,14 @@ export const DASHBOARDS: Record<
         path: 'profile',
         tab: 'shell.frame.tab.profile',
       },
+      // No capability: every garage role, the mechanic included, has Setări.
+      {
+        label: 'shell.frame.nav.garage.settings',
+        path: 'settings',
+        push: true,
+        staff: true,
+        tab: 'shell.frame.tab.settings',
+      },
     ],
   },
 };
@@ -162,22 +173,27 @@ export const allowedViews = (
 // The area guard has loaded the session before these match. A view owns its
 // sub-paths, so its epic can add pages under it; a refused or unknown view
 // falls through to `**`, which sends it to the dashboard view.
+const body = ({ push, staff }: DashboardView) =>
+  staff ? SettingsView : push ? PushView : View;
+
 export const dashboardRoutes = (area: Area): Routes => [
   {
-    component: DASHBOARDS[area].views[0].push ? PushView : View,
+    component: body(DASHBOARDS[area].views[0]),
     path: '',
     pathMatch: 'full',
   },
   ...DASHBOARDS[area].views
     .filter((view) => view.path)
-    .map(({ capability, path, push }) => ({
+    .map((view) => ({
       canMatch: [
         () =>
-          !capability ||
-          (inject(Session).current()?.capabilities ?? []).includes(capability),
+          !view.capability ||
+          (inject(Session).current()?.capabilities ?? []).includes(
+            view.capability,
+          ),
       ],
-      children: [{ component: push ? PushView : View, path: '**' }],
-      path,
+      children: [{ component: body(view), path: '**' }],
+      path: view.path,
     })),
   { path: '**', redirectTo: '' },
 ];
