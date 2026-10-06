@@ -33,17 +33,17 @@ Mutation runs happen only in the Mutation workflow on GitHub
 
 - [X] T016 [US3] `scripts/mutation.ts`: duration column; `apps/api/src/main.spec.ts`, `apps/mcp/src/main.spec.ts` cover the entry points
 - [X] T017 [US3] `.github/workflows/mutation.yml`: `full` input
-- [ ] T018 [US3] Commit, push, dispatch a full run of every project; record scores, survivors and durations (FR-010)
+- [X] T018 [US3] Commit, push, dispatch a full run of every project; record scores, survivors and durations (FR-010)
 
 ## Phase 5: User Story 2 — survivors of contracts, mcp, api
 
-- [ ] T019 [US2] Kill or silence every survivor the full run lists for `contracts`, `mcp`, `api`; re-run those three in full until none is left (FR-005, FR-006)
+- [X] T019 [US2] Kill or silence every survivor the full run lists for `contracts`, `mcp`, `api`; re-run those three in full until none is left (FR-005, FR-006)
 
 ## Phase 6: User Story 3 — floors and limit
 
-- [ ] T020 [US3] Set each `thresholds.break` to `max(current, floor(score) - 5)` from the full run (FR-007)
-- [ ] T021 [US3] Set `timeout-minutes` from the full run's job wall time (FR-009)
-- [ ] T022 [US2] File one follow-up per project left with survivors in `deferred.md` (FR-011)
+- [X] T020 [US3] Set each `thresholds.break` to `max(current, floor(score) - 5)` from the full run (FR-007)
+- [X] T021 [US3] Set `timeout-minutes` from the full run's job wall time (FR-009)
+- [X] T022 [US2] File one follow-up per project left with survivors in `deferred.md` (FR-011)
 
 ## FR → task map
 

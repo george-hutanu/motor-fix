@@ -76,3 +76,12 @@
 - Technology stack — https://app.notion.com/p/3ee607bff0d2819ab8e3ee6926a249f2 (edited 2026-10-04)
 - Architecture decisions — https://app.notion.com/p/3ee607bff0d28111907edddc4bdd066a (edited 2026-10-04)
 - Decisions and ideas — https://app.notion.com/p/3ee607bff0d281df9485ce97dfa3332d (edited 2026-10-03)
+
+## Refresh 2026-10-06
+
+Read by the run itself: the org-researcher subagent had no Notion tools ([UNAVAILABLE: notion — no tool in the subagent], logged in notion-sync.md). ST-432 fetched at its current revision (last edited 2026-10-05T13:30Z, the run's own Status/PR writes) and its comments (none, page and blocks).
+
+- New decisions: none.
+- New constraints: none. The acceptance criterion already allows a per-runner test database keyed on `STRYKER_MUTATOR_WORKER` if one runner is too slow — [ST-432, Acceptance criteria] (2026-10-05). `domain`'s full run now exceeds the 360-minute job (run 37360166653), so that route is the follow-up, not built here (spec Session 2026-10-06).
+- New contradictions with spec.md: none.
+- Story changes: Status Implementing, Priority High, PR #116 — unchanged.

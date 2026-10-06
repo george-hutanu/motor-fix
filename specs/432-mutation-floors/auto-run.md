@@ -58,3 +58,9 @@
 - Cause of 1010: Stryker mutated the option objects of `input()` (`alias`), which Angular must read as literals; its `angular` ignorer is off unless named. Fix: `ignorers: ['angular']` in the shared options (test first: scripts/mutation.spec.ts).
 - Cause of scripts: `git ls-files` lists nothing in Stryker's git-ignored sandbox; test-services.spec.ts now sets `GIT_DIR`/`GIT_WORK_TREE`. Reproduced red and then green in a copy under `.stryker-tmp/` (plain Jest, no mutation), scripts suite 234/234 there and in the tree.
 - domain: no full score fits one job; keeps floor 0, follow-up in deferred.md (spec Session 2026-10-06).
+- Full runs on d4fb40a: scripts 51.39 (37417183265, job 4 min), overlays 81.85 (37417177305, job 7 min), ui-cockpit 71.38 (37417179970, job 23 min). Every project with specs but domain now scores (T018).
+- T019: contracts, api, mcp at 100 (Resume 2) — no survivors left.
+- T020 floors = max(current, floor(score) - 5): contracts 95, api 95, mcp 95, web 79, i18n 85, media 85, overlays 76, ui-cockpit 66, scripts 46; domain 0 and worker 0 (no score).
+- T021: limit stays 360, the cap: domain alone overflows it; the derivation comment names runs 37360166653 and 37360189195.
+- T022: one follow-up per project in deferred.md (domain's carries the per-runner database).
+- Phase 13 (refresh): the org-researcher subagent had no Notion tools; the run re-read ST-432 itself: no changes (context.md Refresh 2026-10-06).

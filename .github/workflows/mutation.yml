@@ -22,7 +22,7 @@ permissions:
 jobs:
   mutation:
     runs-on: ubuntu-latest
-    # Job ceiling until a full run is measured: 104 min measured in run 37215034382 scored five of ten projects.
+    # Full run wall time + 30%, capped at GitHub's 360: measured domain alone over 360 min (run 37360166653, cancelled), web 143 min (37360189195).
     timeout-minutes: 360
     services:
       postgres:

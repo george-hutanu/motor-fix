@@ -9,3 +9,4 @@
 - 2026-10-05 · implement · ST-432 story Status · Planning → Implementing
 - 2026-10-05 · implement · Foundations timeline · no row for ST-432 (nothing to write)
 - 2026-10-05 · labels · PR #116 · in development
+- 2026-10-06 refresh: org-researcher subagent had no Notion tools ([UNAVAILABLE: notion]); the run re-read ST-432 itself: no changes.
