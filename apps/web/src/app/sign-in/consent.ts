@@ -25,7 +25,7 @@ export const consentControl = () =>
     :host { display: grid; gap: var(--mf-space-2); }
     label { display: flex; align-items: flex-start; gap: var(--mf-space-3); min-height: var(--mf-tap); font-weight: 400; cursor: pointer; overflow-wrap: anywhere; }
     input { flex: none; width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--mf-amber); }
-    a { color: var(--mf-amber-ink); font-weight: 700; }
+    a { display: inline; min-height: 0; color: var(--mf-amber-ink); font-weight: 700; }
     a:focus-visible, input:focus-visible { outline: 2px solid var(--mf-amber-ink); outline-offset: 2px; }
     .error { margin: 0; color: var(--mf-red-ink); font-size: var(--mf-size-small); }
     .error:empty { display: none; }

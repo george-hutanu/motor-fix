@@ -94,8 +94,14 @@ test.describe('consent to the terms and the privacy notice @seeded', () => {
         ],
         [t.privacy, 'privacy', t.privacy],
       ] as const) {
+        const link = form.getByRole('link', { name });
+        // A link inside the sentence keeps the line's height, so the
+        // sentence wraps as text and the tick stays beside its first line.
+        expect(await link.evaluate((a) => getComputedStyle(a).display)).toBe(
+          'inline',
+        );
         const opened = context.waitForEvent('page');
-        await form.getByRole('link', { name }).click();
+        await link.click();
         const tab = await opened;
         await tab.waitForLoadState();
         await expect(tab).toHaveURL(new RegExp(`/${language}/${path}$`));
