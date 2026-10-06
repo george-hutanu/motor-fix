@@ -6,7 +6,7 @@ import { flags, summaryRows } from './mutation.ts';
 const root = join(__dirname, '..');
 const read = (path: string) => readFileSync(join(root, path), 'utf8');
 
-// The floors the full runs set; a floor may only rise (FR-007).
+// The floors the full runs set; a floor may only rise.
 const floors: Record<string, [string, number]> = {
   api: ['apps/api', 95],
   contracts: ['libs/contracts', 95],
