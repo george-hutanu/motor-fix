@@ -24,7 +24,7 @@ import {
 import {
   canMute,
   consentChange,
-  isDriverType,
+  isDriverChoice,
   type NewsConsent,
   newsConsentView,
   type PreferenceChange,
@@ -32,6 +32,7 @@ import {
   planSave,
   preferencesView,
 } from './preferences';
+import { STAFF_TYPES, staffChecks, staffEntries } from './staff-lists';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import type { Actor } from '../auth/policy';
 import { LIVE_CHANNEL } from '../events/live.hub';
@@ -50,14 +51,15 @@ export class NotificationPreferencesService {
     @Inject(LIVE_PUBLISHER) private readonly publisher: Publisher,
   ) {}
 
-  async read(accountId: string): Promise<NotificationPreferencesDto> {
+  async read(actor: Actor): Promise<NotificationPreferencesDto> {
     const [rows, consent] = await Promise.all([
-      this.rows(this.prisma, accountId),
-      this.newsConsent(this.prisma, accountId),
+      this.rows(this.prisma, actor.accountId),
+      this.newsConsent(this.prisma, actor.accountId),
     ]);
     return {
       ...preferencesView(rows),
       newsConsent: newsConsentView(consent),
+      staff: await this.staff(actor, rows),
     };
   }
 
@@ -68,6 +70,17 @@ export class NotificationPreferencesService {
     const choices = body.preferences ?? [];
     for (const choice of choices) this.check(actor, choice);
     await this.checkGarages(actor.accountId, choices);
+    const refused = staffChecks(
+      await this.staff(actor, await this.rows(this.prisma, actor.accountId)),
+      choices,
+    );
+    if (refused) {
+      throw refuse(
+        HttpStatus.UNPROCESSABLE_ENTITY,
+        refused.code,
+        `${refused.type} cannot be saved that way (${refused.code})`,
+      );
+    }
     const who = {
       actorId: actor.accountId,
       actorRole: actor.role,
@@ -94,8 +107,10 @@ export class NotificationPreferencesService {
             accountId: actor.accountId,
             garageId: row.garageId,
             type: row.type,
-            // A driver type keeps one row, any other type one per channel.
-            ...(isDriverType(row.type) ? {} : { channel: row.channel }),
+            // A driver choice keeps one row, any other one per channel.
+            ...(isDriverChoice(row.type, row.garageId)
+              ? {}
+              : { channel: row.channel }),
           },
         });
         await tx.notificationPreference.create({
@@ -107,7 +122,7 @@ export class NotificationPreferencesService {
       }
     });
     await this.announce(actor.accountId);
-    return this.read(actor.accountId);
+    return this.read(actor);
   }
 
   private check(
@@ -136,14 +151,17 @@ export class NotificationPreferencesService {
         `${type} is not sent by ${channel}`,
       );
     }
-    if (garageId !== null && isDriverType(type)) {
+    // A garage only goes with a type some garage list holds.
+    if (garageId !== null && !STAFF_TYPES.has(type)) {
       throw refuse(
         HttpStatus.BAD_REQUEST,
         'garage_not_allowed',
         `${type} is a personal choice and takes no garage`,
       );
     }
-    if (!enabled && !canMute(type)) {
+    // A listed type's locked channels are the staff checks' to refuse.
+    const staffType = !isDriverChoice(type, garageId) && STAFF_TYPES.has(type);
+    if (!enabled && !canMute(type) && !staffType) {
       throw refuse(
         HttpStatus.UNPROCESSABLE_ENTITY,
         'notification_type_always_sent',
@@ -169,6 +187,51 @@ export class NotificationPreferencesService {
     if ([...named].some((id) => !mine.has(id))) {
       throw refuse(HttpStatus.NOT_FOUND, 'not_found', 'Not found');
     }
+  }
+
+  // What the person may choose as a garage's staff or as an admin.
+  private async staff(actor: Actor, rows: readonly PreferenceRow[]) {
+    const { accountId } = actor;
+    const [memberships, mechanic, account] = await Promise.all([
+      this.prisma.garageMember.findMany({
+        include: { garage: { select: { name: true } } },
+        orderBy: { joinedAt: 'asc' },
+        where: { accountId },
+      }),
+      this.prisma.mechanic.findUnique({
+        include: { garage: { select: { name: true } } },
+        where: { accountId },
+      }),
+      this.prisma.account.findUnique({
+        select: { phoneVerifiedAt: true },
+        where: { id: accountId },
+      }),
+    ]);
+    const garageIds = [
+      ...memberships.map((m) => m.garageId),
+      ...(mechanic ? [mechanic.garageId] : []),
+    ];
+    const features = garageIds.length
+      ? await this.prisma.garageFeature.findMany({
+          where: { garageId: { in: garageIds } },
+        })
+      : [];
+    return staffEntries({
+      admin: actor.roles.includes('admin'),
+      features,
+      mechanic: mechanic && {
+        canAnswerQuotes: mechanic.canAnswerQuotes,
+        garageId: mechanic.garageId,
+        garageName: mechanic.garage.name,
+      },
+      memberships: memberships.map((m) => ({
+        garageId: m.garageId,
+        garageName: m.garage.name,
+        role: m.role,
+      })),
+      phoneVerified: account?.phoneVerifiedAt != null,
+      rows,
+    });
   }
 
   private async rows(

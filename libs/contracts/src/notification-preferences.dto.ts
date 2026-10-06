@@ -103,6 +103,91 @@ export class NewsConsentDto {
   currentTextVersion!: string;
 }
 
+// What a garage's staff or an admin choose for the messages of their work.
+export const STAFF_CHANNELS = ['email', 'push', 'whatsapp'] as const;
+export const STAFF_ROLES = [
+  'owner',
+  'receptionist',
+  'mechanic',
+  'admin',
+] as const;
+export const STAFF_SECTIONS = [
+  'requests_quotes',
+  'bookings',
+  'reviews',
+  'account',
+  'admin',
+] as const;
+export const WHATSAPP_UNAVAILABLE = [
+  'garage_whatsapp_off',
+  'phone_not_verified',
+] as const;
+
+export type StaffChannel = (typeof STAFF_CHANNELS)[number];
+export type StaffRole = (typeof STAFF_ROLES)[number];
+export type StaffSectionKey = (typeof STAFF_SECTIONS)[number];
+
+export class StaffChannelDto {
+  @ApiProperty({ enum: STAFF_CHANNELS })
+  channel!: StaffChannel;
+
+  @ApiProperty({ description: 'Whether the message goes by this channel' })
+  enabled!: boolean;
+
+  @ApiProperty({ description: 'Always on: it cannot be switched off' })
+  locked!: boolean;
+}
+
+export class StaffNotificationTypeDto {
+  @ApiProperty({ description: 'A notification type, e.g. REQUEST_RECEIVED' })
+  type!: string;
+
+  @ApiProperty({
+    description: 'Empty for a type that is shown in the app only',
+    isArray: true,
+    type: StaffChannelDto,
+  })
+  channels!: StaffChannelDto[];
+}
+
+export class StaffSectionDto {
+  @ApiProperty({ enum: STAFF_SECTIONS })
+  key!: StaffSectionKey;
+
+  @ApiProperty({ isArray: true, type: StaffNotificationTypeDto })
+  types!: StaffNotificationTypeDto[];
+}
+
+export class StaffWhatsAppDto {
+  @ApiProperty()
+  available!: boolean;
+
+  @ApiProperty({ enum: WHATSAPP_UNAVAILABLE, nullable: true, type: String })
+  reason!: (typeof WHATSAPP_UNAVAILABLE)[number] | null;
+}
+
+export class StaffNotificationsDto {
+  @ApiProperty({
+    description: 'Null for the admin list',
+    format: 'uuid',
+    nullable: true,
+    type: String,
+  })
+  garageId!: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  garageName!: string | null;
+
+  @ApiProperty({ enum: STAFF_ROLES })
+  role!: StaffRole;
+
+  @ApiProperty({ type: StaffWhatsAppDto })
+  whatsapp!: StaffWhatsAppDto;
+
+  @ApiProperty({ isArray: true, type: StaffSectionDto })
+  sections!: StaffSectionDto[];
+}
+
 export class NotificationPreferencesDto {
   @ApiProperty({ isArray: true, type: NotificationGroupDto })
   groups!: NotificationGroupDto[];
@@ -112,6 +197,14 @@ export class NotificationPreferencesDto {
 
   @ApiProperty({ type: NewsConsentDto })
   newsConsent!: NewsConsentDto;
+
+  @ApiProperty({
+    description:
+      'One list per garage the person is staff of, and one for an admin',
+    isArray: true,
+    type: StaffNotificationsDto,
+  })
+  staff!: StaffNotificationsDto[];
 }
 
 export class UpdateNotificationPreferencesDto {

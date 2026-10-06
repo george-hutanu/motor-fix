@@ -556,3 +556,398 @@ describe('the person’s other tabs', () => {
     expect(told[0].audience).toEqual([`account:${driver}`]);
   });
 });
+
+async function garage(name: string) {
+  return prisma.garage.create({ data: { name, slug: name.toLowerCase() } });
+}
+
+async function staff(
+  name: string,
+  garageId: string,
+  role: 'owner' | 'receptionist',
+  roles: Role[] = [role === 'owner' ? 'garage' : 'receptionist'],
+) {
+  const id = await account(name, roles);
+  await prisma.garageMember.create({ data: { accountId: id, garageId, role } });
+  return id;
+}
+
+async function mechanic(
+  name: string,
+  garageId: string,
+  canAnswerQuotes: boolean,
+) {
+  const id = await account(name, ['mechanic']);
+  await prisma.mechanic.create({
+    data: { accountId: id, canAnswerQuotes, garageId },
+  });
+  return id;
+}
+
+const verifyPhone = (accountId: string, n: number) =>
+  prisma.account.update({
+    data: { phone: `+4071000000${n}`, phoneVerifiedAt: new Date() },
+    where: { id: accountId },
+  });
+
+const feature = (garageId: string, key: string, enabled: boolean) =>
+  prisma.garageFeature.upsert({
+    create: { enabled, garageId, key },
+    update: { enabled },
+    where: { garageId_key: { garageId, key } },
+  });
+
+interface StaffEntry {
+  garageId: string | null;
+  garageName: string | null;
+  role: string;
+  whatsapp: { available: boolean; reason: string | null };
+  sections: {
+    key: string;
+    types: {
+      type: string;
+      channels: { channel: string; enabled: boolean; locked: boolean }[];
+    }[];
+  }[];
+}
+
+const staffOf = async (accountId: string, role: Role) =>
+  (await read(bearer(accountId, role))).body.staff as StaffEntry[];
+
+const typesIn = (entry: StaffEntry) =>
+  entry.sections.flatMap((s) => s.types.map((t) => t.type));
+
+const channelsIn = (entry: StaffEntry, type: string) =>
+  entry.sections.flatMap((s) => s.types).find((t) => t.type === type)?.channels;
+
+describe('the staff lists a person reads', () => {
+  it('give a driver none', async () => {
+    const driver = await account('andrei');
+    expect(await staffOf(driver, 'driver')).toEqual([]);
+  });
+
+  it('give the owner the whole garage list, the receptionist less', async () => {
+    const { id: garageId } = await garage('Dinamo');
+    const owner = await staff('ion', garageId, 'owner');
+    const receptionist = await staff('ana', garageId, 'receptionist');
+    const [mine] = await staffOf(owner, 'garage');
+    const [theirs] = await staffOf(receptionist, 'receptionist');
+    expect(mine).toMatchObject({
+      garageId,
+      garageName: 'Dinamo',
+      role: 'owner',
+    });
+    expect(typesIn(mine)).toHaveLength(29);
+    expect(theirs.role).toBe('receptionist');
+    expect(typesIn(theirs)).not.toContain('REVIEW_POSTED');
+    expect(typesIn(theirs)).not.toContain('DOCUMENT_DUE');
+    expect(typesIn(theirs)).toContain('REQUEST_RECEIVED');
+  });
+
+  it('give a mechanic requests and messages only when they answer quotes', async () => {
+    const { id: garageId } = await garage('Dinamo');
+    const quoting = await mechanic('mihai', garageId, true);
+    const plain = await mechanic('dan', garageId, false);
+    expect(typesIn((await staffOf(quoting, 'mechanic'))[0])).toEqual([
+      'REQUEST_RECEIVED',
+      'MESSAGE_RECEIVED',
+      'BOOKING_MOVED',
+    ]);
+    expect(typesIn((await staffOf(plain, 'mechanic'))[0])).toEqual([
+      'BOOKING_MOVED',
+    ]);
+  });
+
+  it('give an admin one entry with no garage and the eight admin types', async () => {
+    const admin = await account('alina', ['admin']);
+    const [entry] = await staffOf(admin, 'admin');
+    expect(entry).toMatchObject({
+      garageId: null,
+      garageName: null,
+      role: 'admin',
+    });
+    expect(typesIn(entry)).toHaveLength(8);
+    expect(channelsIn(entry, 'ADMIN_OUTAGE_ALERT')).toEqual([
+      { channel: 'email', enabled: true, locked: true },
+      { channel: 'push', enabled: true, locked: true },
+    ]);
+  });
+
+  it('give one list per garage, and keep a mechanic’s and an admin’s apart', async () => {
+    const { id: first } = await garage('Dinamo');
+    const { id: second } = await garage('Vulcan');
+    const person = await staff('ion', first, 'owner', [
+      'garage',
+      'mechanic',
+      'admin',
+    ]);
+    await prisma.mechanic.create({
+      data: { accountId: person, canAnswerQuotes: false, garageId: second },
+    });
+    const entries = await staffOf(person, 'garage');
+    expect(entries.map((e) => [e.garageName, e.role])).toEqual([
+      ['Dinamo', 'owner'],
+      ['Vulcan', 'mechanic'],
+      [null, 'admin'],
+    ]);
+  });
+
+  it('leave a driver’s groups as they are for a person who is also staff', async () => {
+    const { id: garageId } = await garage('Dinamo');
+    const both = await staff('maria', garageId, 'owner', ['driver', 'garage']);
+    const res = await read(bearer(both, 'driver'));
+    expect(groupsOf(res.body).offers).toBe(true);
+    expect(res.body.staff).toHaveLength(1);
+  });
+
+  it('drop a garage once the membership ends', async () => {
+    const { id: garageId } = await garage('Dinamo');
+    const owner = await staff('ion', garageId, 'owner');
+    await prisma.garageMember.deleteMany({ where: { accountId: owner } });
+    expect(await staffOf(owner, 'garage')).toEqual([]);
+  });
+
+  it('say why WhatsApp cannot be chosen, the garage first', async () => {
+    const { id: garageId } = await garage('Dinamo');
+    const owner = await staff('ion', garageId, 'owner');
+    expect((await staffOf(owner, 'garage'))[0].whatsapp).toEqual({
+      available: false,
+      reason: 'phone_not_verified',
+    });
+    await feature(garageId, 'whatsapp', false);
+    expect((await staffOf(owner, 'garage'))[0].whatsapp).toEqual({
+      available: false,
+      reason: 'garage_whatsapp_off',
+    });
+    await verifyPhone(owner, 1);
+    expect((await staffOf(owner, 'garage'))[0].whatsapp.reason).toBe(
+      'garage_whatsapp_off',
+    );
+    await feature(garageId, 'whatsapp', true);
+    expect((await staffOf(owner, 'garage'))[0].whatsapp).toEqual({
+      available: true,
+      reason: null,
+    });
+  });
+
+  it('list the day sheet types only while day sheets are not off', async () => {
+    const { id: garageId } = await garage('Dinamo');
+    const owner = await staff('ion', garageId, 'owner');
+    await feature(garageId, 'day_sheets', false);
+    expect(typesIn((await staffOf(owner, 'garage'))[0])).not.toContain(
+      'DAY_SHEET_OUTDATED',
+    );
+    await feature(garageId, 'day_sheets', true);
+    expect(typesIn((await staffOf(owner, 'garage'))[0])).toContain(
+      'DAY_SHEET_OUTDATED',
+    );
+  });
+});
+
+describe('a staff save', () => {
+  const choice = (
+    garageId: string | null,
+    type: string,
+    channel: string,
+    enabled: boolean,
+  ) => ({ channel, enabled, garageId, type });
+
+  it('saves per channel, reads back, records and announces each change', async () => {
+    const { id: garageId } = await garage('Dinamo');
+    const owner = await staff('ion', garageId, 'owner');
+    const res = await save(
+      {
+        preferences: [
+          choice(garageId, 'REQUEST_RECEIVED', 'email', false),
+          choice(garageId, 'BOOKING_CANCELLED', 'push', false),
+        ],
+      },
+      bearer(owner, 'garage'),
+    );
+    expect(res.status).toBe(200);
+    const entry = (res.body.staff as StaffEntry[])[0];
+    expect(channelsIn(entry, 'REQUEST_RECEIVED')?.[0].enabled).toBe(false);
+    expect(channelsIn(entry, 'BOOKING_CANCELLED')).toEqual([
+      { channel: 'email', enabled: true, locked: true },
+      { channel: 'push', enabled: false, locked: false },
+      { channel: 'whatsapp', enabled: false, locked: false },
+    ]);
+    expect(
+      channelsIn((await staffOf(owner, 'garage'))[0], 'REQUEST_RECEIVED')?.[0]
+        .enabled,
+    ).toBe(false);
+    expect(await entries(owner)).toHaveLength(2);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(
+      published
+        .map((m) => JSON.parse(m))
+        .filter((m) => m.event.kind === 'notification_preferences.updated'),
+    ).toHaveLength(1);
+  });
+
+  it('accepts a document reminder moved from e-mail to push in one save', async () => {
+    const { id: garageId } = await garage('Dinamo');
+    const owner = await staff('ion', garageId, 'owner');
+    await save(
+      { preferences: [choice(garageId, 'DOCUMENT_DUE', 'push', false)] },
+      bearer(owner, 'garage'),
+    );
+    const res = await save(
+      {
+        preferences: [
+          choice(garageId, 'DOCUMENT_DUE', 'push', true),
+          choice(garageId, 'DOCUMENT_DUE', 'email', false),
+        ],
+      },
+      bearer(owner, 'garage'),
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it('lets a receptionist mute only their own channels', async () => {
+    const { id: garageId } = await garage('Dinamo');
+    const owner = await staff('ion', garageId, 'owner');
+    const receptionist = await staff('ana', garageId, 'receptionist');
+    await save(
+      { preferences: [choice(garageId, 'REQUEST_RECEIVED', 'email', false)] },
+      bearer(receptionist, 'receptionist'),
+    );
+    expect(
+      channelsIn((await staffOf(owner, 'garage'))[0], 'REQUEST_RECEIVED')?.[0]
+        .enabled,
+    ).toBe(true);
+    expect(await stored(owner)).toEqual([]);
+  });
+
+  describe('refused', () => {
+    const refusedFor = async (
+      accountId: string,
+      role: Role,
+      preferences: unknown[],
+      status: number,
+      code: string,
+    ) => {
+      const before = await stored(accountId);
+      const res = await save({ preferences }, bearer(accountId, role));
+      expect(res.status).toBe(status);
+      expect(res.body).toMatchObject({ code });
+      expect(await stored(accountId)).toEqual(before);
+      expect(await entries(accountId)).toEqual([]);
+    };
+
+    it('for SMS', async () => {
+      const { id: garageId } = await garage('Dinamo');
+      const owner = await staff('ion', garageId, 'owner');
+      await refusedFor(
+        owner,
+        'garage',
+        [choice(garageId, 'REQUEST_RECEIVED', 'sms', true)],
+        422,
+        'channel_not_allowed',
+      );
+    });
+
+    it('for a type outside the caller’s list', async () => {
+      const { id: garageId } = await garage('Dinamo');
+      const receptionist = await staff('ana', garageId, 'receptionist');
+      const mech = await mechanic('mihai', garageId, true);
+      await refusedFor(
+        receptionist,
+        'receptionist',
+        [choice(garageId, 'REVIEW_POSTED', 'email', false)],
+        422,
+        'type_not_in_list',
+      );
+      await refusedFor(
+        mech,
+        'mechanic',
+        [choice(garageId, 'QUOTE_ACCEPTED', 'email', false)],
+        422,
+        'type_not_in_list',
+      );
+    });
+
+    it('for an admin type saved by someone who is not an admin', async () => {
+      const { id: garageId } = await garage('Dinamo');
+      const owner = await staff('ion', garageId, 'owner');
+      await refusedFor(
+        owner,
+        'garage',
+        [choice(null, 'ADMIN_RECHECK_DUE', 'email', false)],
+        422,
+        'type_not_in_list',
+      );
+    });
+
+    it('for a locked channel switched off', async () => {
+      const { id: garageId } = await garage('Dinamo');
+      const owner = await staff('ion', garageId, 'owner');
+      await refusedFor(
+        owner,
+        'garage',
+        [choice(garageId, 'VERIFICATION_RESULT', 'email', false)],
+        422,
+        'channel_locked',
+      );
+      const admin = await account('alina', ['admin']);
+      for (const channel of ['email', 'push']) {
+        await refusedFor(
+          admin,
+          'admin',
+          [choice(null, 'ADMIN_OUTAGE_ALERT', channel, false)],
+          422,
+          'channel_locked',
+        );
+      }
+    });
+
+    it('for WhatsApp the garage turned off or with no verified phone', async () => {
+      const { id: garageId } = await garage('Dinamo');
+      const owner = await staff('ion', garageId, 'owner');
+      await refusedFor(
+        owner,
+        'garage',
+        [choice(garageId, 'REQUEST_RECEIVED', 'whatsapp', true)],
+        422,
+        'whatsapp_unavailable',
+      );
+      await verifyPhone(owner, 2);
+      await feature(garageId, 'whatsapp', false);
+      await refusedFor(
+        owner,
+        'garage',
+        [choice(garageId, 'REQUEST_RECEIVED', 'whatsapp', true)],
+        422,
+        'whatsapp_unavailable',
+      );
+    });
+
+    it('for a document reminder left with no channel', async () => {
+      const { id: garageId } = await garage('Dinamo');
+      const owner = await staff('ion', garageId, 'owner');
+      await refusedFor(
+        owner,
+        'garage',
+        [
+          choice(garageId, 'DOCUMENT_DUE', 'email', false),
+          choice(garageId, 'DOCUMENT_DUE', 'push', false),
+        ],
+        422,
+        'last_channel',
+      );
+    });
+
+    it('with 404 for a garage the caller is not staff of', async () => {
+      const { id: mine } = await garage('Dinamo');
+      const { id: theirs } = await garage('Vulcan');
+      const owner = await staff('ion', mine, 'owner');
+      await refusedFor(
+        owner,
+        'garage',
+        [choice(theirs, 'REQUEST_RECEIVED', 'email', false)],
+        404,
+        'not_found',
+      );
+    });
+  });
+});

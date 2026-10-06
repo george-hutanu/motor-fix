@@ -167,8 +167,18 @@ describe('a driver’s chosen channel', () => {
 });
 
 describe('garage staff choices', () => {
-  const garage = () =>
-    prisma.garage.create({ data: { name: 'Dinamo', slug: 'dinamo' } });
+  const garage = async () => {
+    const created = await prisma.garage.create({
+      data: { name: 'Dinamo', slug: 'dinamo' },
+    });
+    const owner = await prisma.account.findFirstOrThrow({
+      where: { name: 'ion' },
+    });
+    await prisma.garageMember.create({
+      data: { accountId: owner.id, garageId: created.id, role: 'owner' },
+    });
+    return created;
+  };
 
   it('mute push only, so e-mail still goes for that garage', async () => {
     const owner = await account('ion', ['garage']);
@@ -189,6 +199,107 @@ describe('garage staff choices', () => {
     expect(await hand('REQUEST_RECEIVED', owner, undefined, 'no-garage')).toBe(
       1,
     );
+  });
+});
+
+describe('a garage’s own staff choices', () => {
+  const staffOf = async () => {
+    const garage = await prisma.garage.create({
+      data: { name: 'Dinamo', slug: 'dinamo' },
+    });
+    const owner = await account('ion', ['garage']);
+    const receptionist = await account('ana', ['receptionist']);
+    await prisma.garageMember.createMany({
+      data: [
+        { accountId: owner, garageId: garage.id, role: 'owner' },
+        { accountId: receptionist, garageId: garage.id, role: 'receptionist' },
+      ],
+    });
+    return { garageId: garage.id, owner, receptionist };
+  };
+
+  it('leave only the bell for a request and its reminders the owner muted', async () => {
+    const { garageId, owner } = await staffOf();
+    await prefer(owner, 'REQUEST_RECEIVED', 'email', false, garageId);
+    await prefer(owner, 'REQUEST_RECEIVED', 'push', false, garageId);
+    await hand('REQUEST_RECEIVED', owner, garageId);
+    await hand('REQUEST_REMINDER', owner, garageId, 'reminder-1');
+    await hand('REQUEST_REMINDER', owner, garageId, 'reminder-2');
+    expect(await channelsOf(owner, 'REQUEST_RECEIVED')).toEqual(['in_app']);
+    expect(await channelsOf(owner, 'REQUEST_REMINDER')).toEqual([
+      'in_app',
+      'in_app',
+    ]);
+  });
+
+  it('keep e-mail when only push and WhatsApp are off', async () => {
+    const { garageId, owner } = await staffOf();
+    await prefer(owner, 'REQUEST_RECEIVED', 'push', false, garageId);
+    await prefer(owner, 'REQUEST_RECEIVED', 'whatsapp', false, garageId);
+    await hand('REQUEST_RECEIVED', owner, garageId);
+    await hand('REQUEST_REMINDER', owner, garageId, 'reminder-1');
+    expect(await channelsOf(owner, 'REQUEST_RECEIVED')).toEqual([
+      'in_app',
+      'email',
+    ]);
+    expect(await channelsOf(owner, 'REQUEST_REMINDER')).toEqual([
+      'in_app',
+      'email',
+    ]);
+  });
+
+  it('change only the receptionist’s own channels', async () => {
+    const { garageId, owner, receptionist } = await staffOf();
+    await prefer(receptionist, 'REQUEST_RECEIVED', 'email', false, garageId);
+    await service.notify({
+      eventId: 'both',
+      garageId,
+      kind: 'REQUEST_RECEIVED',
+      recipients: [owner, receptionist],
+    });
+    expect(await channelsOf(owner, 'REQUEST_RECEIVED')).toEqual([
+      'in_app',
+      'email',
+    ]);
+    expect(await channelsOf(receptionist, 'REQUEST_RECEIVED')).toEqual([
+      'in_app',
+    ]);
+  });
+
+  it('go by a driver’s own choice for a message about a garage they are not staff of', async () => {
+    const { garageId } = await staffOf();
+    const driver = await account('andrei');
+    await prefer(driver, 'MESSAGE_RECEIVED', 'email', false, garageId);
+    await hand('MESSAGE_RECEIVED', driver, garageId);
+    expect(await channelsOf(driver, 'MESSAGE_RECEIVED')).toEqual([
+      'in_app',
+      'email',
+    ]);
+  });
+
+  it('read a garage row of a type that is also a driver’s, apart from the driver choice', async () => {
+    const { garageId, owner } = await staffOf();
+    await prefer(owner, 'MESSAGE_RECEIVED', 'email', false, garageId);
+    await hand('MESSAGE_RECEIVED', owner, garageId, 'about-garage');
+    expect(await channelsOf(owner, 'MESSAGE_RECEIVED')).toEqual(['in_app']);
+    await hand('MESSAGE_RECEIVED', owner, undefined, 'as-driver');
+    expect(await channelsOf(owner, 'MESSAGE_RECEIVED')).toEqual([
+      'in_app',
+      'in_app',
+      'email',
+    ]);
+  });
+
+  it('send a document reminder by the channels left on, skipping a muted e-mail', async () => {
+    const { garageId, owner } = await staffOf();
+    await prefer(owner, 'DOCUMENT_DUE', 'email', false, garageId);
+    await hand('DOCUMENT_DUE', owner, garageId);
+    expect(await channelsOf(owner, 'DOCUMENT_DUE')).toEqual(['in_app']);
+    await hand('DOCUMENT_OVERDUE', owner, garageId);
+    expect(await channelsOf(owner, 'DOCUMENT_OVERDUE')).toEqual([
+      'in_app',
+      'email',
+    ]);
   });
 });
 

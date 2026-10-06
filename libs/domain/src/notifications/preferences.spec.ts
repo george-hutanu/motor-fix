@@ -1,5 +1,6 @@
 import { NOTIFICATION_TYPES, notificationType, sendsEmail } from './catalogue';
 import {
+  isDriverChoice,
   mutedChannels,
   type PreferenceRow,
   planSave,
@@ -207,6 +208,71 @@ describe('the channels muted for a message', () => {
   });
 });
 
+describe('a row that is a driver choice', () => {
+  it('has no garage and a type of a driver group', () => {
+    expect(isDriverChoice('BOOKING_CANCELLED', null)).toBe(true);
+    expect(isDriverChoice('BOOKING_CANCELLED', GARAGE)).toBe(false);
+    expect(isDriverChoice('MESSAGE_RECEIVED', GARAGE)).toBe(false);
+    expect(isDriverChoice('REQUEST_RECEIVED', null)).toBe(false);
+    expect(isDriverChoice('ADMIN_RECHECK_DUE', null)).toBe(false);
+  });
+});
+
+describe('the channels muted for a staff message about a garage', () => {
+  it('read one row per channel for a type that also has a driver group', () => {
+    expect(
+      mutedChannels(
+        'BOOKING_CANCELLED',
+        [row('BOOKING_CANCELLED', 'push', false, GARAGE)],
+        GARAGE,
+      ),
+    ).toEqual(new Set(['push', 'whatsapp']));
+    expect(
+      mutedChannels(
+        'MESSAGE_RECEIVED',
+        [
+          row('MESSAGE_RECEIVED', 'email', false, GARAGE),
+          row('MESSAGE_RECEIVED', 'whatsapp', true, GARAGE),
+        ],
+        GARAGE,
+      ),
+    ).toEqual(new Set(['email']));
+  });
+
+  it('keep the garage’s defaults when only another channel is saved', () => {
+    expect(
+      mutedChannels(
+        'MESSAGE_RECEIVED',
+        [row('MESSAGE_RECEIVED', 'push', false, GARAGE)],
+        GARAGE,
+      ),
+    ).toEqual(new Set(['push', 'whatsapp']));
+  });
+
+  it('check a request reminder against the request’s own rows', () => {
+    expect(
+      mutedChannels(
+        'REQUEST_REMINDER',
+        [
+          row('REQUEST_RECEIVED', 'email', false, GARAGE),
+          row('REQUEST_RECEIVED', 'push', false, GARAGE),
+        ],
+        GARAGE,
+      ),
+    ).toEqual(new Set(['email', 'push', 'whatsapp']));
+  });
+
+  it('skip a garage document reminder’s muted e-mail', () => {
+    const muted = mutedChannels(
+      'DOCUMENT_DUE',
+      [row('DOCUMENT_DUE', 'email', false, GARAGE)],
+      GARAGE,
+    );
+    expect(muted).toEqual(new Set(['email', 'whatsapp']));
+    expect(sendsEmail(notificationType('DOCUMENT_DUE'), muted)).toBe(false);
+  });
+});
+
 describe('what a save writes and records', () => {
   it('records a group switch that mutes the rest of a partly muted group', () => {
     const { changes, writes } = planSave(
@@ -239,5 +305,34 @@ describe('what a save writes and records', () => {
       [row('QUOTE_RECEIVED', 'push', true)],
     );
     expect(writes.at(-1)).toEqual(row('QUOTE_RECEIVED', 'push', true));
+  });
+
+  it('keeps a staff row per channel for a type that also has a driver group', () => {
+    const { changes, writes } = planSave(
+      [row('BOOKING_CANCELLED', 'email', true)],
+      [],
+      [
+        row('BOOKING_CANCELLED', 'push', false, GARAGE),
+        row('BOOKING_CANCELLED', 'whatsapp', true, GARAGE),
+      ],
+    );
+    expect(writes).toEqual([
+      row('BOOKING_CANCELLED', 'push', false, GARAGE),
+      row('BOOKING_CANCELLED', 'whatsapp', true, GARAGE),
+    ]);
+    expect(changes).toEqual([
+      {
+        field: 'BOOKING_CANCELLED.push',
+        garageId: GARAGE,
+        newValue: false,
+        oldValue: true,
+      },
+      {
+        field: 'BOOKING_CANCELLED.whatsapp',
+        garageId: GARAGE,
+        newValue: true,
+        oldValue: false,
+      },
+    ]);
   });
 });
