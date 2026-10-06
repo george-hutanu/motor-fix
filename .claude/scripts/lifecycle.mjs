@@ -312,14 +312,31 @@ function handoff(ctx, flags) {
   return { pr: Number(n), note: "restored" };
 }
 
+// A cloud session (CLAUDE_CODE_REMOTE=true) has no GraphQL, so gh pr view,
+// merge and comment fail there: the same steps go over REST, the merge as
+// `gh api -X PUT repos/{owner}/{repo}/pulls/<n>/merge`, which the merge gate
+// judges as it judges gh pr merge.
+const PR_JQ = "{number, state: (if .merged then \"MERGED\" else (.state | ascii_upcase) end), merge_commit_sha}";
+
+/** A PR comment over REST: the body from a file. */
+const restComment = (n, file) => ["api", "-X", "POST", `repos/{owner}/{repo}/issues/${n}/comments`, "-F", `body=@${file}`];
+
 function merge(ctx, flags) {
-  const view = JSON.parse(ctx.gh("pr", "view", ...(flags.pr ? [flags.pr] : []), "--json", "number,state,url").stdout);
+  const cloud = ctx.env.CLAUDE_CODE_REMOTE === "true";
+  if (cloud && !/^\d+$/.test(String(flags.pr ?? "")))
+    throw new Stop("no --pr", "a cloud session has no GraphQL to find the branch's PR: run merge --pr <n>");
+  const viewPr = () =>
+    cloud
+      ? JSON.parse(ctx.gh("api", `repos/{owner}/{repo}/pulls/${flags.pr}`, "--jq", PR_JQ).stdout)
+      : JSON.parse(ctx.gh("pr", "view", ...(flags.pr ? [flags.pr] : []), "--json", "number,state,url").stdout);
+  const view = viewPr();
   const n = String(view.number);
   if (view.state !== "MERGED") {
-    ctx.gh("pr", "merge", n, "--merge");
+    if (cloud) ctx.gh("api", "-X", "PUT", `repos/{owner}/{repo}/pulls/${n}/merge`, "-f", "merge_method=merge");
+    else ctx.gh("pr", "merge", n, "--merge");
     ctx.did.push("merged");
   }
-  const sha = ctx.gh("pr", "view", n, "--json", "mergeCommit", "--jq", ".mergeCommit.oid").stdout.trim();
+  const sha = cloud ? String(viewPr().merge_commit_sha ?? "") : ctx.gh("pr", "view", n, "--json", "mergeCommit", "--jq", ".mergeCommit.oid").stdout.trim();
   const commentFile = join(ctx.feature.dir, "finish-comment.md");
   const hasComment = existsSync(commentFile);
   const [finish] = ctx.notion([["finish", "--pr", n, ...(hasComment ? ["--body-file", commentFile] : ["--no-comment"])]], `${SELF} merge --pr ${n} --notion-done`);
@@ -332,12 +349,13 @@ function merge(ctx, flags) {
   // file and `then` posts exactly that, so nothing is lost and nothing repeats.
   ctx.git("checkout", "--", log);
   try {
-    withTemp("finish.md", body, (file) => ctx.gh("pr", "comment", n, "--body-file", file));
+    withTemp("finish.md", body, (file) => (cloud ? ctx.gh(...restComment(n, file)) : ctx.gh("pr", "comment", n, "--body-file", file)));
   } catch (err) {
     if (!(err instanceof Stop)) throw err;
     const kept = join(mkdtempSync(join(tmpdir(), "lifecycle-")), "finish.md");
     writeFileSync(kept, body);
-    err.extra = { ...err.extra, comment: kept, then: `gh pr comment ${n} --body-file ${quote(kept)} && rm -f ${quote(join(ctx.feature.dir, "handoff.md"))} && rm -rf ${quote(dirname(kept))}` };
+    const post = cloud ? ["gh", ...restComment(n, kept)].map(quote).join(" ") : `gh pr comment ${n} --body-file ${quote(kept)}`;
+    err.extra = { ...err.extra, comment: kept, then: `${post} && rm -f ${quote(join(ctx.feature.dir, "handoff.md"))} && rm -rf ${quote(dirname(kept))}` };
     throw err;
   }
   ctx.did.push("finish comment");
