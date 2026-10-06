@@ -4,8 +4,14 @@
 import { NewsConsentDto } from '../models/news-consent-dto';
 import { NotificationGroupDto } from '../models/notification-group-dto';
 import { NotificationPreferenceDto } from '../models/notification-preference-dto';
+import { StaffNotificationsDto } from '../models/staff-notifications-dto';
 export interface NotificationPreferencesDto {
   groups: Array<NotificationGroupDto>;
   newsConsent: NewsConsentDto;
   preferences: Array<NotificationPreferenceDto>;
+
+  /**
+   * One list per garage the person is staff of, and one for an admin
+   */
+  staff: Array<StaffNotificationsDto>;
 }

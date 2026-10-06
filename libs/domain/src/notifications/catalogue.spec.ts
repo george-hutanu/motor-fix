@@ -26,8 +26,6 @@ const ALWAYS_SENT = [
   'GARAGE_SUSPENDED_NOTICE',
   'BOOKING_MOVE_REFUSED',
   'BOOKING_MOVE_LAPSED',
-  'DOCUMENT_DUE',
-  'DOCUMENT_OVERDUE',
 ];
 
 const TRANSACTIONAL = [
@@ -114,6 +112,18 @@ describe('the notification catalogue', () => {
       expect(NOTIFICATION_TYPES[name].transactional).toBe(true);
     }
     expect(NOTIFICATION_TYPES['QUOTE_RECEIVED'].alwaysSent).toBe(false);
+  });
+
+  // @traces 198-FR-006 198-FR-010
+  it('sends a garage document reminder by the channels left on, at least one', () => {
+    for (const name of ['DOCUMENT_DUE', 'DOCUMENT_OVERDUE']) {
+      const type = NOTIFICATION_TYPES[name];
+      expect(type.alwaysSent).toBe(false);
+      expect(type.groupable).toBe(false);
+      expect(type.keepOne).toBe(true);
+      expect(sendsEmail(type, new Set(['email']))).toBe(false);
+    }
+    expect(NOTIFICATION_TYPES['REQUEST_RECEIVED'].keepOne).toBe(false);
   });
 
   it('holds only the listed types in quiet hours', () => {

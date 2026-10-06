@@ -144,6 +144,7 @@ describe('Frame', () => {
       'Prețuri',
       'Recenzii',
       'Profilul service‑ului',
+      'Setări',
     ]);
   });
 
@@ -155,16 +156,25 @@ describe('Frame', () => {
       'garage.own_jobs',
     ]);
 
-    expect(menu(element)).toEqual(['Panou', 'Cereri de ofertă', 'Programări']);
+    expect(menu(element)).toEqual([
+      'Panou',
+      'Cereri de ofertă',
+      'Programări',
+      'Setări',
+    ]);
   });
 
-  it('shows a mechanic only their own jobs', async () => {
+  // @traces 198-FR-011
+  it('shows a mechanic their own jobs and the settings', async () => {
     const { element } = await render('mechanic', '/app/garage', [
       'garage.own_jobs',
     ]);
 
-    expect(menu(element)).toEqual(['Panou']);
-    expect(bar(element).map((a) => a.textContent?.trim())).toEqual(['Panou']);
+    expect(menu(element)).toEqual(['Panou', 'Setări']);
+    expect(bar(element).map((a) => a.textContent?.trim())).toEqual([
+      'Panou',
+      'Setări',
+    ]);
   });
 
   it('shows the driver and admin menus', async () => {
@@ -225,6 +235,7 @@ describe('Frame', () => {
       'Prețuri',
       'Recenzii',
       'Profil',
+      'Setări',
     ]);
     expect(
       element
@@ -397,6 +408,7 @@ describe('Frame', () => {
       'Prices',
       'Reviews',
       'Garage profile',
+      'Settings',
     ]);
 
     TestBed.resetTestingModule();
