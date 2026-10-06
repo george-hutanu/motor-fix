@@ -17,3 +17,16 @@
 - Clarification (autonomous default): the Build brief's [NEEDS CLARIFICATION] "how long does a pending move wait" — no time limit, as the brief proposes; applies when the pending move is built.
 - Lifecycle open: draft PR #152, Notion start + pr through the connector (no NOTION_TOKEN), Ready to work unticked on ST-131.
 - Design check: no boards; design.md records the Build brief's proposed minimal dialog and acceptance screen.
+
+## 3. Org context
+- org-researcher (background): STATUS failure — its Notion tool ids belong to another session; logged UNAVAILABLE. Read the story and feature page MF-6 in the run's own session instead and wrote a lean context.md (decisions, constraints, one contradiction: resend as revoke+new vs new token on the same row → same row, old token void).
+
+## 4. Clarify (inline, spec-challenger first: 7 findings)
+- Q1 expired written? → derived from expiry, resend allowed for an expired `sent` invite, not blocking a new one (challenger recommendation).
+- Q2 send sync? → within the request; `emailSent`, link returned only on failure; SC-001 "sent".
+- Q3 accept switches role? → yes, new access token like the role switch.
+- Q4 auto-accept after sign-in? → only after sign-up from the link; explicit "Acceptă" after sign-in.
+- Q5 already-in-team 409 → same kind only; owner's own e-mail refused at send.
+- Q6 invite_expired kept; SC-003 narrowed to unknown/malformed ≡ revoked/used.
+- Q7 open answers feature_off too.
+- Plus the Build brief's [NEEDS CLARIFICATION] (pending move wait): no time limit, autonomous default (phase 2).
