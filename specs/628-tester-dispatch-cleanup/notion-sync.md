@@ -10,3 +10,6 @@
 - 2026-10-06 · implement · ST-628 · Planning → Implementing
 - 2026-10-06 · implement · timeline · no row for ST-628
 - 2026-10-06 · labels · PR #172 · in development
+- 2026-10-06 · qa · ST-628 · Implementing → QA
+- 2026-10-06 · qa · timeline · no row for ST-628
+- 2026-10-06 · labels · PR #172 · QA
