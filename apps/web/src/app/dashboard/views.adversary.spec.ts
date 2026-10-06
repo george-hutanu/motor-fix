@@ -91,10 +91,13 @@ describe('dashboard view lists under hostile input', () => {
     }
   });
 
-  it('keeps only the dashboard view for an empty capability list', () => {
-    for (const area of AREAS) {
-      expect(allowedViews(area, []).map((v) => v.path)).toEqual(['']);
-    }
+  it('keeps only the capability-free views for an empty capability list', () => {
+    expect(allowedViews('driver', []).map((v) => v.path)).toEqual(['']);
+    expect(allowedViews('admin', []).map((v) => v.path)).toEqual(['']);
+    expect(allowedViews('garage', []).map((v) => v.path)).toEqual([
+      '',
+      'settings',
+    ]);
   });
 
   it('ignores capabilities of other dashboards', () => {
@@ -121,7 +124,7 @@ describe('dashboard view lists under hostile input', () => {
         'garage.team.x',
         'garage',
       ]).map((v) => v.path),
-    ).toEqual(['']);
+    ).toEqual(['', 'settings']);
   });
 
   it('does not mutate the capabilities it is given nor the shared list', () => {
@@ -132,6 +135,7 @@ describe('dashboard view lists under hostile input', () => {
     expect(allowedViews('garage', caps).map((v) => v.path)).toEqual([
       '',
       'team',
+      'settings',
     ]);
     expect(DASHBOARDS.garage.views.length).toBe(before);
   });
@@ -141,7 +145,7 @@ describe('dashboard view lists under hostile input', () => {
       allowedViews('garage', ['garage.profile', 'garage.requests']).map(
         (v) => v.path,
       ),
-    ).toEqual(['', 'requests', 'profile']);
+    ).toEqual(['', 'requests', 'profile', 'settings']);
   });
 
   it('gives every view a distinct short and long label key', () => {
@@ -264,6 +268,6 @@ describe('dashboard routing under hostile addresses', () => {
       [...element.querySelectorAll('mf-dashboard-tab-bar nav a')].map((a) =>
         a.textContent?.trim(),
       ),
-    ).toEqual(['Panou', 'Prețuri']);
+    ).toEqual(['Panou', 'Prețuri', 'Setări']);
   });
 });
