@@ -53,3 +53,12 @@
 | Loaded every turn: saving against 43867 | 30170 (69%) |
 | Typical level-2 story run, each file read once (SKILL + preflight + phases-plan/build/close + commit-protocol + hand-off + report) | 39174 |
 | Tail agent (SKILL.md + tail.md) | 20565 |
+
+## Review (phase 14)
+- **spec-reviewer**: APPROVE, with 2 MEDIUM and 3 LOW findings. Patched: "three subagents" → two (phases-build.md); Spec Delta now `Modifies 696-FR-009 → FR-007`, `Removes 704-FR-007`; speckit-watch and task-runner send the tail to SKILL.md, then tail.md; report.md checklist says "Phases 1–17". Deferred: the harden/mutation-runner local-mutation wording, phase 14 design.md vs the exhaustive Hard Stops list, and the vitest.config.ts comment.
+- **code-reviewer**: APPROVE, with 1 MEDIUM and 2 LOW findings. MEDIUM, GATES/FORBIDDEN duplicating other specs: kept, because the spec (FR-003/FR-004, Story 2) asks for one inventory of gate phrases (autonomous default, evidence: spec.md). LOW: phase-dispatch slice regex reverted to `/^##+ /m`. LOW: tail-handoff `section()` running across files is deferred.
+- **After the fixes**: harness 66 files and 1480 tests passed; `capabilities.mjs validate`: 0 errors.
+
+## Retrospective evidence (unjudged)
+- `retro-evidence.mjs --since aa54ebf~1 --jev`: the commit list includes the merged origin/main history. Jev lane unavailable (no TYPESAFE_API_KEY), so there is no suggested verdict.
+- `instincts.mjs triggered --since aa54ebf~1`: none; Jev lane unavailable.

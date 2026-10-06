@@ -26,7 +26,7 @@ const phase = (n) => {
   assert.notEqual(start, -1, `no "### ${n}." subsection`);
   const body = phases.indexOf('\n', start) + 1;
   const rest = phases.slice(body);
-  const next = rest.search(/^#+ /m);
+  const next = rest.search(/^##+ /m);
   return phases.slice(start, next === -1 ? undefined : body + next);
 };
 

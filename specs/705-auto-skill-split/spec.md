@@ -62,6 +62,10 @@ for resolves where that spec reads it.
   - SKILL.md before and after.
   - The bytes a typical level-2 story run loads.
   - The bytes a tail agent loads.
+- **FR-007**: `speckit-auto`'s `hand-off.md` and `tail.md` (the lines listing
+  the ready and merge commands) and `speckit-git-commit/SKILL.md` (the
+  first-commit recipe) name one `lifecycle.mjs` call per step instead of the
+  recipe.
 
 ## Assumptions
 
@@ -79,5 +83,8 @@ for resolves where that spec reads it.
 
 ## Spec Delta
 
-- **Modifies**: the speckit-auto harness skill. It gets the same rules, a new
-  layout and corrected facts.
+### Capability: `platform`
+
+- **Adds**: FR-001–FR-006
+- **Modifies**: `696-FR-009` → `FR-007`
+- **Removes**: `704-FR-007` (it fenced ST-697's own edit of SKILL.md to the dispatch lines; that change has merged, and this split moves those sections by design)

@@ -21,7 +21,7 @@ The report's sections:
 ## Completion Checklist
 
 - [ ] Preflight passed (clean tree, green typecheck/lint/tests, constitution card read)
-- [ ] Phases 1–16 executed in order, no phase skipped silently
+- [ ] Phases 1–17 executed in order, no phase skipped silently
 - [ ] Org context gathered, or the unavailable connector named in the report
 - [ ] Every interactive gate answered autonomously and logged
 - [ ] Red-first proven before implementation (failing count quoted)

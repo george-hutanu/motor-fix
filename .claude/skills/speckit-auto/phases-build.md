@@ -50,7 +50,7 @@ the report, and list what remains — do not spin.
 ### 12. Harden
 
 Invoke `speckit-harden`. It runs the mechanical audits (`artifact-lint.mjs`,
-`diff-audit.mjs`), then three subagents: `test-adversary` (tests from outside
+`diff-audit.mjs`), then two subagents: `test-adversary` (tests from outside
 the author's model) and `code-reviewer` (the durability read) — then fixes
 what they find. Mutation testing is not part of this phase: it never runs on
 this machine or in PR CI, only in `.github/workflows/mutation.yml` (nightly on

@@ -7,3 +7,4 @@
 - 2026-10-05 · ready · no change
 - 2026-10-05 · pr · ST-704 · PR #145
 - 2026-10-05 · labels · PR #145 · planning (+tech debt, scope: harness, EP-1)
+- 2026-10-06 · implement · ST-704 · Planning → Implementing; PR #145 label planning → in development
