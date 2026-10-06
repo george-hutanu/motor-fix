@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-07
 
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 
 **Input**: ST-676. With `{level: "abc", level_for: <target>}` in `.specify/feature.json`, `level.mjs point <target>` writes the file and then throws a TypeError (exit 1) while printing its one line.
 
