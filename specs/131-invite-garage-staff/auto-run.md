@@ -86,3 +86,21 @@
 
 ## 17. Archive
 - capabilities validate --check clean; merge applied: garage-team +14 ~0 -0; spec.md status Archived (2026-10-06). /speckit-retro not run (phase 16: the verdict stays the owner's).
+
+## Final Report
+
+```
+STATUS: success — ST-131 reviewed, archived and handed off; PR #152 ready, story in QA
+PR: #152 ready 9906f4a
+NEXT: tail #152 after QA run local (lap 1)
+FILES: specs/131-invite-garage-staff/auto-run.md, specs/131-invite-garage-staff/notion-sync.md, specs/131-invite-garage-staff/deferred.md, .specify/capabilities/garage-team.md
+```
+
+- Branch 131-invite-garage-staff, feature dir specs/131-invite-garage-staff, range 26cf0dc..9906f4a.
+- Phases 1–17 run in order (sections 1–17 above); /speckit-retro left to the owner.
+- Autonomous decisions: no design boards, so the Build brief's minimal dialog was used; a pending move has no time limit; T003's exports were not needed (tasks.md:15).
+- Verification: the pre-commit typecheck + test (integration specs on the worktree's services) and lint passed on every commit. CI on 9906f4a: Biome, Typecheck, Build, Harness, Contract check, Dependency audit, Docker build and Compose stack passed; Unit, Integration and E2E were still running at the hand-off.
+- FR → test: FR-001..005, 010 → staff-invite.api.integration.spec.ts plus staff-invite.dto.spec.ts; FR-006..009 → staff-invite.api.integration.spec.ts plus web-e2e staff-invite.spec.ts; FR-011 → invite-staff.spec.ts, frame.invite.spec.ts; FR-012 → invite.spec.ts, sign-in-dialog.spec.ts; FR-013 → staff.spec.ts plus the web specs; FR-014 → public-routes.integration.spec.ts plus the openapi drift check.
+- Review: no CRITICAL/HIGH open; the last MEDIUM + LOW were fixed in ddf91ad; 5 LOW/MEDIUM deferred, each filed as a Notion To do task (deferred.md).
+- Retro evidence (unjudged): section 16. Jev lane unavailable (no key).
+- QA: dispatching pr-qa.yml from the cloud session was refused (403 Resource not accessible by integration), so lap 1 runs locally through run.mjs --tree with the compose services.
