@@ -9,3 +9,6 @@
 - 2026-10-05 · implement · ST-83 · Planning → Implementing
 - 2026-10-05 · implement · Foundations timeline ST-83 · Planning → Implementing
 - 2026-10-05 · labels · PR #136 · planning → in development
+- 2026-10-06 · qa · ST-83 · Implementing → QA
+- 2026-10-06 · qa · Foundations timeline · ST-83 Implementing → QA
+- 2026-10-06 · labels · PR #136 · in development → QA
