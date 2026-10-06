@@ -8,3 +8,6 @@
 - 2026-10-06 · implement · timeline · no row for ST-749
 - 2026-10-06 · labels · PR #158 · in development
 - 2026-10-06 · debt · ST-749 · 3 tasks filed through the connector (the script sends Epic [undefined] for a story with no epic: 400) · https://app.notion.com/p/3f1607bff0d281e997a8c16621e7650b, https://app.notion.com/p/3f1607bff0d28183a78ef804758207af, https://app.notion.com/p/3f1607bff0d28110ace8f93720a06c49
+- 2026-10-06 · qa · ST-749 · Implementing → QA
+- 2026-10-06 · qa · timeline · no row for ST-749
+- 2026-10-06 · labels · PR #158 · QA
