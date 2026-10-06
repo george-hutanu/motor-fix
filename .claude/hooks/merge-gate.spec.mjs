@@ -150,7 +150,8 @@ describe('merge gate — the decision', () => {
 });
 
 describe('merge gate — Dependabot PRs need no agent review', () => {
-  const bot = (rollup, login = 'app/dependabot') => ({ ...pr(rollup), author: { login, is_bot: true }, commits: [{ authors: [{ login: 'dependabot[bot]' }] }] });
+  const botCommit = (over = {}) => ({ oid: 'abc1234def5678', authors: [{ login: 'dependabot[bot]' }], committer: { login: 'web-flow' }, verified: true, ...over });
+  const bot = (rollup, login = 'app/dependabot') => ({ ...pr(rollup), author: { login, is_bot: true }, commits: [botCommit()] });
 
   it('lets a Dependabot PR merge on green CI with no agent-review status', () => {
     assert.equal(decideMerge(bot(green)), null);
@@ -188,12 +189,38 @@ describe('merge gate — Dependabot PRs need no agent review', () => {
   });
 
   it('takes back the exemption once anyone else pushed a commit to the branch', () => {
-    const pushed = { ...bot(green), commits: [{ authors: [{ login: 'dependabot[bot]' }] }, { authors: [{ login: 'george-hutanu' }] }] };
+    const pushed = { ...bot(green), commits: [botCommit(), botCommit({ authors: [{ login: 'george-hutanu' }] })] };
     assert.match(decideMerge(pushed), /no agent-review status/);
-    const coAuthored = { ...bot(green), commits: [{ authors: [{ login: 'dependabot[bot]' }, { login: 'george-hutanu' }] }] };
+    const coAuthored = { ...bot(green), commits: [botCommit({ authors: [{ login: 'dependabot[bot]' }, { login: 'george-hutanu' }] })] };
     assert.match(decideMerge(coAuthored), /no agent-review status/);
     assert.match(decideMerge({ ...bot(green), commits: undefined }), /no agent-review status/);
     assert.match(decideMerge({ ...bot(green), commits: [] }), /no agent-review status/);
+  });
+
+  // @traces 610-FR-001
+  it('takes back the exemption from a Dependabot commit someone else committed, or GitHub did not sign', () => {
+    assert.match(decideMerge({ ...bot(green), commits: [botCommit({ committer: { login: 'george-hutanu' }, verified: false })] }), /no agent-review status/);
+    assert.match(decideMerge({ ...bot(green), commits: [botCommit({ verified: false })] }), /no agent-review status/);
+    assert.match(decideMerge({ ...bot(green), commits: [botCommit({ committer: undefined, verified: undefined })] }), /no agent-review status/);
+    assert.equal(decideMerge({ ...bot(green), commits: [botCommit({ committer: { login: 'dependabot[bot]' } })] }), null);
+  });
+
+  // @traces 610-FR-003
+  it('tells a red Dependabot PR to go through Dependabot, never to the PR tester', () => {
+    const why = decideMerge(bot([run('Unit tests', 'FAILURE'), run('CI OK', 'FAILURE')]));
+    assert.match(why, /CI failed on abc1234 \(Unit tests, CI OK\)/);
+    assert.doesNotMatch(why, /PR tester|speckit-pr-test/);
+    assert.doesNotMatch(why, /fix it on the branch/);
+    assert.match(why, /@dependabot rebase/);
+    assert.match(why, /@dependabot recreate/);
+    assert.match(why, /takes the exemption away/);
+  });
+
+  // @traces 610-FR-003
+  it('keeps the fix-and-retest wording for a red PR the tester passed', () => {
+    const why = decideMerge(pr([run('Unit tests', 'FAILURE'), run('CI OK', 'FAILURE'), review('SUCCESS')]));
+    assert.match(why, /fix it on the branch, and run the PR tester again/);
+    assert.doesNotMatch(why, /@dependabot/);
   });
 });
 
