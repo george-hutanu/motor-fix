@@ -20,11 +20,13 @@ export function sendProblem(
   code: string,
   detail?: string,
   errors?: FieldProblem[],
+  extensions: Record<string, string> = {},
 ) {
   res
     .status(status)
     .type('application/problem+json')
     .json({
+      ...extensions,
       code,
       ...(detail && { detail }),
       ...(errors && { errors }),
@@ -60,8 +62,22 @@ export class ProblemFilter implements ExceptionFilter {
       typeof own.code === 'string' ? own.code : codeForStatus(status),
       detail(typeof body === 'string' ? body : own.message),
       fieldProblems(own.errors),
+      extensionsOf(own),
     );
   }
+}
+
+// Members beyond the problem shape a refusal may carry for the front end to
+// act on, named here so nothing else an exception holds leaves the API.
+const EXTENSIONS = ['inviteId'] as const;
+
+function extensionsOf(own: Record<string, unknown>): Record<string, string> {
+  const kept: Record<string, string> = {};
+  for (const name of EXTENSIONS) {
+    const value = own[name];
+    if (typeof value === 'string') kept[name] = value;
+  }
+  return kept;
 }
 
 function detail(message: unknown): string | undefined {
