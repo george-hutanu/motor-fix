@@ -1,11 +1,11 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, cpSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, cpSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { LEVELS, DEFAULT_LEVEL, PENDING_TTL_MINUTES, activeFeature, featureLevel, levelApplies, pendingLevel, pointTo } from './lib/feature.mjs';
-import { classifyLevel, levelTarget, main, pointFeature, resolveLevel, setLevel } from './level.mjs';
+import { checkLevel, classifyLevel, levelTarget, main, pointFeature, resolveLevel, setLevel, suggestCommand, suggestText } from './level.mjs';
 import { checkFeatureState } from './doctor.mjs';
 
 const root = join(import.meta.dirname, '..', '..');
@@ -655,5 +655,497 @@ describe('classifyLevel', () => {
     for (const d of ['fix a typo in the footer', 'remove dead code from the garage card', 'reword the code comment in the helper', 'tweak the button copy']) {
       assert.equal(classifyLevel(d).level, 0, d);
     }
+  });
+});
+
+// A git repository with an origin/main to diff against: `base` is committed and
+// becomes origin/main, `branch` is committed on top of it.
+function gitFixture({ level = 1, spec = '# Spec\n\n- **FR-001**: one\n', base = {}, branch = {}, feature = true } = {}) {
+  const dir = mkdtempSync(join(tmpdir(), 'taskr-wire-'));
+  const write = (files) => {
+    for (const [rel, body] of Object.entries(files)) {
+      mkdirSync(dirname(join(dir, rel)), { recursive: true });
+      writeFileSync(join(dir, rel), body);
+    }
+  };
+  const git = (...a) => spawnSync('git', a, { cwd: dir, encoding: 'utf8' });
+  git('init', '-q', '-b', 'main');
+  git('config', 'user.email', 't@example.com');
+  git('config', 'user.name', 't');
+  write({
+    'apps/api/project.json': '{"name":"api"}',
+    'apps/web/project.json': '{"name":"web"}',
+    'libs/contracts/project.json': '{"name":"contracts"}',
+    'README.md': 'x\n',
+    ...base,
+  });
+  git('add', '-A');
+  git('commit', '-qm', 'base');
+  git('update-ref', 'refs/remotes/origin/main', 'HEAD');
+  git('checkout', '-qb', '042-small');
+  if (feature) write({ 'specs/042-small/spec.md': spec, 'specs/042-small/tasks.md': '# Tasks\n' });
+  write(branch);
+  git('add', '-A');
+  git('commit', '-qm', 'work');
+  mkdirSync(join(dir, '.specify'), { recursive: true });
+  writeFileSync(
+    join(dir, '.specify/feature.json'),
+    JSON.stringify(feature ? { feature_directory: 'specs/042-small', level, level_for: 'specs/042-small' } : { level, level_for: 'next', level_at: new Date().toISOString() }),
+  );
+  return dir;
+}
+
+const manyFrs = `# Spec\n\n${Array.from({ length: 6 }, (_, i) => `- **FR-00${i + 1}**: r${i}\n`).join('')}`;
+const WIRES = {
+  'fr-count': { trip: { spec: manyFrs }, clear: {} },
+  clarification: { trip: { spec: '# Spec\n\n- **FR-001**: [NEEDS CLARIFICATION: which cap?]\n' }, clear: { spec: '# Spec\n\nthe `[NEEDS CLARIFICATION]` marker is named, not used\n' } },
+  contract: { trip: { branch: { 'libs/contracts/src/dto.ts': 'x\n' } }, clear: { branch: { 'apps/api/src/a.ts': 'x\n' } } },
+  projects: { trip: { branch: { 'apps/api/src/a.ts': 'x\n', 'apps/web/src/b.ts': 'x\n' } }, clear: { branch: { 'apps/api/src/a.ts': 'x\n', 'apps/api/src/c.ts': 'x\n' } } },
+};
+
+const withLevelEnv = (fn) => withEnv(undefined, fn);
+const autoRun = (dir) => {
+  try {
+    return readFileSync(join(dir, 'specs/042-small/auto-run.md'), 'utf8');
+  } catch {
+    return '';
+  }
+};
+
+describe('tripwires promote a level, never lower it', () => {
+  for (const [wire, cases] of Object.entries(WIRES)) {
+    it(`${wire}: promotes a level 1 feature to 2 and logs the fact`, () => {
+      const dir = gitFixture(cases.trip);
+      try {
+        withLevelEnv(() => {
+          const result = checkLevel(dir);
+          assert.deepEqual(result.promoted, { from: 1, to: 2 });
+          assert.equal(result.wires.find((w) => w.name === wire).state, 'tripped');
+          assert.equal(featureLevel(dir, 'specs/042-small'), 2);
+          const lines = autoRun(dir).trim().split('\n');
+          assert.equal(lines.length, 1);
+          assert.match(lines[0], new RegExp(`level 1 → 2 · .*${wire}`));
+        });
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    it(`${wire}: leaves a level 1 feature at 1 when the fact is absent`, () => {
+      const dir = gitFixture(cases.clear);
+      try {
+        withLevelEnv(() => {
+          const result = checkLevel(dir);
+          assert.equal(result.promoted, null);
+          assert.equal(result.wires.find((w) => w.name === wire).state, 'clear');
+          assert.equal(featureLevel(dir, 'specs/042-small'), 1);
+          assert.equal(autoRun(dir), '');
+        });
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
+
+  it('leaves a level 3 at 3 with every wire tripped', () => {
+    const dir = gitFixture({
+      level: 3,
+      spec: `${manyFrs}\n[NEEDS CLARIFICATION: x]\n`,
+      branch: { 'libs/contracts/src/dto.ts': 'x\n', 'apps/web/src/b.ts': 'x\n' },
+    });
+    try {
+      withLevelEnv(() => {
+        const result = checkLevel(dir);
+        assert.equal(result.wires.filter((w) => w.state === 'tripped').length, 4);
+        assert.equal(result.promoted, null);
+        assert.equal(featureLevel(dir, 'specs/042-small'), 3);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('logs a promotion once: a second check finds level 2 and writes nothing', () => {
+    const dir = gitFixture(WIRES.contract.trip);
+    try {
+      withLevelEnv(() => {
+        checkLevel(dir);
+        assert.equal(checkLevel(dir).promoted, null);
+        assert.equal(autoRun(dir).trim().split('\n').length, 1);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('reports the diff wires as not checked without origin/main, and still runs the spec wires', () => {
+    const dir = gitFixture({ spec: manyFrs });
+    try {
+      spawnSync('git', ['update-ref', '-d', 'refs/remotes/origin/main'], { cwd: dir });
+      withLevelEnv(() => {
+        const result = checkLevel(dir);
+        assert.equal(result.wires.find((w) => w.name === 'contract').state, 'not checked');
+        assert.equal(result.wires.find((w) => w.name === 'projects').state, 'not checked');
+        assert.deepEqual(result.promoted, { from: 1, to: 2 }, 'the FR count still promotes');
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('never promotes on a wire it could not check', () => {
+    const dir = gitFixture();
+    try {
+      spawnSync('git', ['update-ref', '-d', 'refs/remotes/origin/main'], { cwd: dir });
+      withLevelEnv(() => assert.equal(checkLevel(dir, { ready: true }).promoted, null));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('the pre-ready check', () => {
+  it('refuses a promoted level 1 with plan.md missing, naming the owed phases, then passes once it exists', () => {
+    const dir = gitFixture(WIRES.projects.trip);
+    try {
+      withLevelEnv(() => {
+        const refused = capture(() => main(['check', '--ready'], dir));
+        assert.equal(refused.status, 2);
+        assert.match(refused.err, /plan\.md/);
+        assert.match(refused.err, /plan, checklist, analyze/);
+        writeFileSync(join(dir, 'specs/042-small/plan.md'), '# Plan\n');
+        assert.equal(capture(() => main(['check', '--ready'], dir)).status, 0);
+        assert.equal(autoRun(dir).trim().split('\n').length, 1, 'the rerun logs nothing new');
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('passes a level 1 whose diff trips nothing, and records nothing', () => {
+    const dir = gitFixture(WIRES.projects.clear);
+    try {
+      withLevelEnv(() => {
+        assert.equal(capture(() => main(['check', '--ready'], dir)).status, 0);
+        assert.equal(existsSync(join(dir, '.specify/telemetry/pending.json')), false);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('marks a level 2 whose diff is one file outside the contract paths as too heavy, and lets it go ready', () => {
+    const dir = gitFixture({ level: 2, branch: { 'apps/web/src/b.ts': 'x\n', 'specs/042-small/plan.md': '# Plan\n' } });
+    try {
+      withLevelEnv(() => {
+        assert.equal(capture(() => main(['check', '--ready'], dir)).status, 0);
+        const pending = JSON.parse(readFileSync(join(dir, '.specify/telemetry/pending.json'), 'utf8'));
+        assert.deepEqual(
+          pending.too_heavy.map(({ feature, level, file }) => ({ feature, level, file })),
+          [{ feature: 'specs/042-small', level: 2, file: 'apps/web/src/b.ts' }],
+        );
+        capture(() => main(['check', '--ready'], dir));
+        assert.equal(JSON.parse(readFileSync(join(dir, '.specify/telemetry/pending.json'), 'utf8')).too_heavy.length, 1, 'marked once');
+        assert.equal(featureLevel(dir, 'specs/042-small'), 2);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  for (const [why, options] of [
+    ['a one-file contract diff', { level: 2, branch: { 'libs/contracts/src/dto.ts': 'x\n', 'specs/042-small/plan.md': '# Plan\n' } }],
+    ['a level 3', { level: 3, branch: { 'apps/web/src/b.ts': 'x\n', 'specs/042-small/plan.md': '# Plan\n' } }],
+  ]) {
+    it(`writes no too-heavy mark for ${why}`, () => {
+      const dir = gitFixture(options);
+      try {
+        withLevelEnv(() => {
+          assert.equal(capture(() => main(['check', '--ready'], dir)).status, 0);
+          assert.equal(existsSync(join(dir, '.specify/telemetry/pending.json')), false);
+        });
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
+
+  it('a level 0 change that trips a wire is recorded at 2, writes no file, and is sent to /speckit-specify', () => {
+    const dir = gitFixture({ level: 0, feature: false, branch: { 'libs/contracts/src/dto.ts': 'x\n' } });
+    try {
+      withLevelEnv(() => {
+        const refused = capture(() => main(['check', '--ready'], dir));
+        assert.equal(refused.status, 2);
+        assert.match(refused.err, /\/speckit-specify/);
+        assert.equal(JSON.parse(readFileSync(join(dir, '.specify/feature.json'), 'utf8')).level, 2);
+        assert.equal(existsSync(join(dir, 'specs')), false);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('prints the result as JSON with --json', () => {
+    const dir = gitFixture(WIRES.contract.trip);
+    try {
+      withLevelEnv(() => {
+        const run = capture(() => main(['check', '--json'], dir));
+        const parsed = JSON.parse(run.out);
+        assert.deepEqual(parsed.promoted, { from: 1, to: 2 });
+        assert.equal(parsed.wires.length, 4);
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+// A Notion stand-in: the stories query answers `page`, the page's children
+// answer `blocks`. Every URL asked for is recorded.
+function notionFake({ page, blocks = [], fail, endless } = {}) {
+  const urls = [];
+  const fetchImpl = async (url, init) => {
+    urls.push(url);
+    const reply = (status, data) => ({ ok: status < 300, status, json: async () => data, headers: { get: () => null } });
+    if (fail === 'network') throw new Error('ECONNREFUSED');
+    if (url.includes('/data_sources/') && init.method === 'POST') return reply(200, { results: page ? [page] : [], has_more: false });
+    if (url.includes('/blocks/')) return reply(200, { results: blocks, has_more: Boolean(endless), next_cursor: endless ? 'c' : null });
+    if (url.includes('/pages/')) return page ? reply(200, page) : reply(404, { code: 'object_not_found', message: 'not found' });
+    return reply(500, { code: 'unexpected', message: url });
+  };
+  return { fetchImpl, urls };
+}
+
+const rich = (text) => [{ plain_text: text }];
+const storyPage = ({ type = 'Story', boards = 0, points = null, labels = [], title = 'Fix the garage list sort order' } = {}) => ({
+  id: 'page-1',
+  properties: {
+    Story: { type: 'title', title: rich(title) },
+    'Issue type': { type: 'select', select: { name: type } },
+    Labels: { type: 'multi_select', multi_select: labels.map((name) => ({ name })) },
+    Design: { type: 'rollup', rollup: { type: 'array', array: [] } },
+    'Design boards': { type: 'rollup', rollup: { type: 'array', array: Array.from({ length: boards }, () => ({ type: 'url', url: 'https://x' })) } },
+    ...(points === null ? {} : { 'Story points': { type: 'number', number: points } }),
+  },
+});
+const h = (n, text) => ({ type: `heading_${n}`, [`heading_${n}`]: { rich_text: rich(text) }, has_children: false });
+const p = (text) => ({ type: 'paragraph', paragraph: { rich_text: rich(text) }, has_children: false });
+const brief = (filled = true) => [h(2, 'Build brief'), h(3, 'Screens'), p('the list'), h(3, 'States and errors'), ...(filled ? [p('empty list')] : []), h(2, 'Notes'), p('x')];
+
+async function suggestRun(argv, { fake, env = { NOTION_TOKEN: 'secret_t' }, dir } = {}) {
+  const out = [];
+  const previous = process.env.SPECKIT_JEV;
+  process.env.SPECKIT_JEV = '0';
+  try {
+    const status = await suggestCommand(argv, { repo: dir, env, fetchImpl: fake?.fetchImpl, out: (line) => out.push(line) });
+    return { status, out: out.join('\n'), lines: out };
+  } finally {
+    if (previous === undefined) delete process.env.SPECKIT_JEV;
+    else process.env.SPECKIT_JEV = previous;
+  }
+}
+
+describe('suggest from a Notion story', () => {
+  let dir;
+  const fresh = () => (dir = fixture());
+  const done = () => rmSync(dir, { recursive: true, force: true });
+
+  it('stops paging a story whose blocks never stop saying has_more', async () => {
+    fresh();
+    try {
+      const fake = notionFake({ page: storyPage(), blocks: brief(), endless: true });
+      const run = await suggestRun(['ST-9'], { fake, dir, env: { NOTION_TOKEN: 'secret_t', NOTION_SYNC_MAX_PAGES: '3' } });
+      assert.equal(run.status, 0);
+      assert.match(run.lines[0], /^notion not read \(too many pages\)/);
+      assert.ok(fake.urls.filter((u) => u.includes('/blocks/')).length <= 3, fake.urls.join('\n'));
+    } finally {
+      done();
+    }
+  });
+
+  it('sizes a bug with no boards and a complete brief at 1, with no Jev or model call', async () => {
+    fresh();
+    try {
+      const fake = notionFake({ page: storyPage({ type: 'Bug' }), blocks: brief() });
+      const run = await suggestRun(['ST-9'], { fake, dir });
+      assert.equal(run.status, 0);
+      assert.match(run.out, /facts: type Bug/);
+      assert.match(run.out, /level 1 \(one-session\) suggested by notion/);
+      assert.ok(fake.urls.every((u) => u.startsWith('https://api.notion.com/')), fake.urls.join('\n'));
+    } finally {
+      done();
+    }
+  });
+
+  it('keeps the classifier answer of 2 or more over the bug rule', async () => {
+    fresh();
+    try {
+      const fake = notionFake({ page: storyPage({ type: 'Bug', title: 'Fix the payments webhook' }), blocks: brief() });
+      const run = await suggestRun(['ST-9'], { fake, dir });
+      assert.match(run.out, /level 2 \(feature\) suggested by classifier/);
+    } finally {
+      done();
+    }
+  });
+
+  it('never sizes a story with boards below 2, and names the boards', async () => {
+    fresh();
+    try {
+      const run = await suggestRun(['ST-9'], { fake: notionFake({ page: storyPage({ type: 'Bug', boards: 2 }), blocks: brief() }), dir });
+      assert.match(run.out, /level 2 .* by notion/);
+      assert.match(run.out, /boards: 2/);
+    } finally {
+      done();
+    }
+  });
+
+  it('never sizes a story with an empty brief section below 2, and names the section', async () => {
+    fresh();
+    try {
+      const run = await suggestRun(['ST-9'], { fake: notionFake({ page: storyPage({ type: 'Bug' }), blocks: brief(false) }), dir });
+      assert.match(run.out, /level 2 .* by notion/);
+      assert.match(run.out, /States and errors/);
+    } finally {
+      done();
+    }
+  });
+
+  it('reads a page with no Build brief as an empty brief: at least 2, "brief: not found"', async () => {
+    fresh();
+    try {
+      const run = await suggestRun(['ST-9'], { fake: notionFake({ page: storyPage({ type: 'Bug' }), blocks: [p('just prose')] }), dir });
+      assert.match(run.out, /brief: not found/);
+      assert.match(run.out, /level 2 .* by notion/);
+    } finally {
+      done();
+    }
+  });
+
+  it('raises a story with more than 5 points to at least 2; no points changes nothing', async () => {
+    fresh();
+    try {
+      const many = await suggestRun(['ST-9'], { fake: notionFake({ page: storyPage({ type: 'Bug', points: 8 }), blocks: brief() }), dir });
+      assert.match(many.out, /level 2 .* by notion/);
+      assert.match(many.out, /points: 8/);
+      const few = await suggestRun(['ST-9'], { fake: notionFake({ page: storyPage({ type: 'Bug', points: 3 }), blocks: brief() }), dir });
+      assert.match(few.out, /level 1 .* by notion/);
+    } finally {
+      done();
+    }
+  });
+
+  it('says unsure with the reason when no fact decides, then continues on the story text', async () => {
+    fresh();
+    try {
+      const run = await suggestRun(['ST-9'], { fake: notionFake({ page: storyPage({ type: 'Decision', labels: ['ui'] }), blocks: brief() }), dir });
+      assert.match(run.out, /facts: type Decision · labels ui/);
+      assert.match(run.out, /unsure \(notion: no decisive facts/);
+      assert.match(run.lines.at(-1), /unsure|level \d/);
+    } finally {
+      done();
+    }
+  });
+
+  for (const [why, setup, reason] of [
+    ['no token', { env: {} }, /no NOTION_TOKEN/],
+    ['a network failure', { fake: notionFake({ fail: 'network' }) }, /network error/],
+    ['a story that is not there', { fake: notionFake({}) }, /ST-9 not found/],
+  ]) {
+    it(`falls back to the text path on ${why}: one line, then exactly what suggest "<text>" prints`, async () => {
+      fresh();
+      try {
+        const run = await suggestRun(['ST-9'], { dir, ...setup });
+        assert.equal(run.status, 0);
+        assert.match(run.lines[0], /^notion not read/);
+        assert.match(run.lines[0], reason);
+        const plain = [];
+        const previous = process.env.SPECKIT_JEV;
+        process.env.SPECKIT_JEV = '0';
+        try {
+          await suggestText('ST-9', { repo: dir, argv: [], out: (l) => plain.push(l) });
+        } finally {
+          if (previous === undefined) delete process.env.SPECKIT_JEV;
+          else process.env.SPECKIT_JEV = previous;
+        }
+        assert.deepEqual(run.lines.slice(1), plain);
+      } finally {
+        done();
+      }
+    });
+  }
+
+  it('--set records only a confident answer', async () => {
+    fresh();
+    try {
+      await suggestRun(['ST-9', '--set'], { fake: notionFake({ page: storyPage({ type: 'Bug' }), blocks: brief() }), dir });
+      assert.equal(JSON.parse(readFileSync(join(dir, '.specify/feature.json'), 'utf8')).level, 1);
+      rmSync(join(dir, '.specify/feature.json'));
+      await suggestRun(['ST-9', '--set'], { fake: notionFake({ page: storyPage({ type: 'Decision' }), blocks: brief() }), dir });
+      assert.equal(existsSync(join(dir, '.specify/feature.json')), false, 'an unsure answer writes nothing');
+    } finally {
+      done();
+    }
+  });
+
+  it('accepts a Notion story URL', async () => {
+    fresh();
+    try {
+      const fake = notionFake({ page: storyPage({ type: 'Bug' }), blocks: brief() });
+      const run = await suggestRun(['https://app.notion.com/p/3f0607bff0d2817d8a94d9a31fa161b4'], { fake, dir });
+      assert.match(run.out, /level 1 .* by notion/);
+      assert.ok(fake.urls.some((u) => u.includes('/pages/3f0607bff0d2817d8a94d9a31fa161b4')));
+    } finally {
+      done();
+    }
+  });
+
+  // A Notion fact only raises the text path's answer. When the
+  // classifier is unsure the text path is Jev, so a floor of 2 must not cap a
+  // Jev answer of 3.
+  const notionThenJev = (notion, answers) => {
+    const jev = jevReply(answers);
+    return { fetchImpl: (url, init) => (String(url).startsWith('https://api.notion.com/') ? notion.fetchImpl(url, init) : jev(url, init)), urls: notion.urls };
+  };
+  const suggestWithJev = async (argv, fake) => {
+    const out = [];
+    const previous = process.env.SPECKIT_JEV;
+    delete process.env.SPECKIT_JEV;
+    try {
+      const status = await withKey(() => suggestCommand(argv, { repo: dir, env: { NOTION_TOKEN: 'secret_t' }, fetchImpl: fake.fetchImpl, out: (line) => out.push(line) }));
+      return { status, out: out.join('\n') };
+    } finally {
+      if (previous !== undefined) process.env.SPECKIT_JEV = previous;
+    }
+  };
+
+  it('lets the text path raise a story with boards above the floor of 2', async () => {
+    fresh();
+    try {
+      const fake = notionThenJev(notionFake({ page: storyPage({ boards: 2 }), blocks: brief() }), { level: { choice: '3', confidence: 0.9 } });
+      const run = await suggestWithJev(['ST-9'], fake);
+      assert.equal(run.status, 0);
+      assert.match(run.out, /level 3 \(project\) suggested by jev/);
+      assert.match(run.out, /boards: 2/);
+    } finally {
+      done();
+    }
+  });
+
+  it('keeps the floor of 2 when the text path answers lower', async () => {
+    fresh();
+    try {
+      const fake = notionThenJev(notionFake({ page: storyPage({ boards: 2 }), blocks: brief() }), { level: { choice: '1', confidence: 0.9 } });
+      const run = await suggestWithJev(['ST-9'], fake);
+      assert.match(run.out, /level 2 \(feature\) suggested by notion/);
+    } finally {
+      done();
+    }
+  });
+});
+
+describe('level.mjs public surface', () => {
+  it('exports only what another module or spec imports', async () => {
+    const exported = Object.keys(await import('./level.mjs')).sort();
+    assert.deepEqual(exported, ['checkLevel', 'classifyLevel', 'levelTarget', 'main', 'pointFeature', 'resolveLevel', 'setLevel', 'suggestCommand', 'suggestLevel', 'suggestText']);
   });
 });

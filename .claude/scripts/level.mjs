@@ -10,13 +10,18 @@
 //   node .claude/scripts/level.mjs set 1           write it to .specify/feature.json
 //   node .claude/scripts/level.mjs --json
 //   node .claude/scripts/level.mjs suggest "<work>" [--set]   classify; --set records a confident answer
+//   node .claude/scripts/level.mjs suggest ST-<n>|<url> [--set] size from the Notion story first
 //   node .claude/scripts/level.mjs point specs/NNN-x            point feature.json at a new feature, keeping its level
+//   node .claude/scripts/level.mjs check [--ready] [--json]    raise a level 0/1 to 2 when a fact contradicts it
 import { execFileSync, execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import {
+  CONTRACT_PATHS,
   DEFAULT_LEVEL,
+  FR_THRESHOLD,
   LEVELS,
+  STORY_POINTS_THRESHOLD,
   activeFeature,
   featureKey,
   featureLevel,
@@ -126,8 +131,140 @@ export function pointFeature(repo, featureDirectory, { now = Date.now() } = {}) 
   return next;
 }
 
+// The phases a level 2 run has and a level 1 run skips (/speckit-auto's
+// Size table): what a promotion owes from that point on.
+const OWED_BY_PROMOTION = ["context", "clarify", "plan", "checklist", "analyze", "converge", "refresh", "agent-context", "archive"];
+
+/** Files the branch changed against origin/main, committed or not; null when that cannot be computed. */
+function changedFiles(repo) {
+  try {
+    // -z: git quotes a path with non-ASCII bytes otherwise, and a quoted path
+    // matches no project.
+    const git = (...args) => execFileSync("git", args, { cwd: repo, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    const base = git("merge-base", "HEAD", "origin/main").trim();
+    const files = [...git("diff", "-z", "--name-only", base).split("\0"), ...git("ls-files", "-z", "--others", "--exclude-standard").split("\0")];
+    return [...new Set(files.filter(Boolean))];
+  } catch {
+    return null;
+  }
+}
+
+/** The Nx project a file belongs to: the nearest project.json above it, or none. */
+function nxProject(repo, file) {
+  for (let dir = dirname(file); dir !== "." && dir !== "/" && dir !== ""; dir = dirname(dir)) {
+    const project = join(repo, dir, "project.json");
+    if (!existsSync(project)) continue;
+    try {
+      return JSON.parse(readFileSync(project, "utf8")).name ?? dir;
+    } catch {
+      return dir;
+    }
+  }
+  return null;
+}
+
+/** The four wires, each tripped, clear or not checked, with the fact it read. */
+function tripwires(repo, featureDir, files) {
+  const specFile = featureDir ? join(featureDir, "spec.md") : null;
+  const spec = specFile && existsSync(specFile) ? readFileSync(specFile, "utf8") : null;
+  const wire = (name, state, fact) => ({ name, state, fact });
+  const wires = [];
+  if (spec === null) {
+    wires.push(wire("fr-count", "not checked", "no spec.md"), wire("clarification", "not checked", "no spec.md"));
+  } else {
+    const frs = new Set(spec.match(/\*\*FR-\d+\*\*/g) ?? []).size;
+    wires.push(wire("fr-count", frs > FR_THRESHOLD ? "tripped" : "clear", `${frs} functional requirements`));
+    // A marker in backticks is the marker being named, not an open question.
+    const marker = spec.match(/(?<!`)\[NEEDS CLARIFICATION[^\]]*\]/)?.[0];
+    wires.push(wire("clarification", marker ? "tripped" : "clear", marker ?? "no marker"));
+  }
+  if (files === null) {
+    wires.push(wire("contract", "not checked", "no diff against origin/main"), wire("projects", "not checked", "no diff against origin/main"));
+  } else {
+    const contract = files.find((f) => CONTRACT_PATHS.some((p) => p.test(f)));
+    wires.push(wire("contract", contract ? "tripped" : "clear", contract ?? "no contract, schema or migration file"));
+    const projects = [...new Set(files.map((f) => nxProject(repo, f)).filter(Boolean))].sort();
+    wires.push(wire("projects", projects.length > 1 ? "tripped" : "clear", projects.join(", ") || "no Nx project"));
+  }
+  return wires;
+}
+
+/**
+ * Check the level in hand against the facts. A tripped wire raises a level 0
+ * or 1 to 2 and logs one line in the feature's auto-run.md; nothing here ever
+ * lowers a level or touches a 2 or 3. With `ready`, also say what a level 2
+ * still owes before the PR may go ready, and mark a level 2 whose diff is one
+ * non-contract file as too heavy (evidence for tuning, no other effect).
+ */
+export function checkLevel(repo, { ready = false, files = changedFiles(repo), now = Date.now() } = {}) {
+  const state = keyedState(repo, readState(repo));
+  const active = activeFeature(repo);
+  const feature = active ? featureKey(repo, active.dir) : null;
+  const level = feature ? featureLevel(repo, feature) : state.level_for === "next" ? (parseLevel(state.level) ?? DEFAULT_LEVEL) : DEFAULT_LEVEL;
+  const wires = tripwires(repo, active?.dir, files);
+  const tripped = wires.filter((w) => w.state === "tripped");
+  const result = { feature, level, promoted: null, wires };
+
+  if (level < 2 && tripped.length) {
+    setLevel(repo, 2, { for: feature ? "current" : "next", now });
+    result.promoted = { from: level, to: 2 };
+    result.level = 2;
+    if (active) {
+      const log = join(active.dir, "auto-run.md");
+      const before = existsSync(log) ? readFileSync(log, "utf8") : "";
+      const line = `- ${new Date(now).toISOString()} · level ${level} → 2 · ${tripped.map((w) => `${w.name}: ${w.fact}`).join("; ")}\n`;
+      writeFileSync(log, `${before}${before && !before.endsWith("\n") ? "\n" : ""}${line}`);
+    }
+  }
+  if (!ready) return result;
+
+  if (!active) {
+    if (result.promoted) Object.assign(result, { owed: ["specify", ...OWED_BY_PROMOTION], missing: ["a feature directory"] });
+  } else if (result.level >= 2) {
+    const missing = LEVELS[result.level].artifacts.filter((a) => !existsSync(join(active.dir, a)));
+    if (missing.length) Object.assign(result, { owed: OWED_BY_PROMOTION, missing });
+  }
+  const counted = (files ?? []).filter((f) => !/^(specs|\.specify)\//.test(f));
+  if (result.level === 2 && !result.promoted && counted.length === 1 && !CONTRACT_PATHS.some((p) => p.test(counted[0]))) {
+    result.too_heavy = { feature, file: counted[0] };
+    const pending = join(repo, ".specify", "telemetry", "pending.json");
+    let marks = [];
+    try {
+      marks = JSON.parse(readFileSync(pending, "utf8")).too_heavy ?? [];
+    } catch {}
+    if (!marks.some((m) => m.feature === feature && m.file === counted[0])) {
+      marks.push({ feature, level: 2, file: counted[0], at: new Date(now).toISOString() });
+      mkdirSync(dirname(pending), { recursive: true });
+      writeFileSync(pending, `${JSON.stringify({ too_heavy: marks }, null, 2)}\n`);
+    }
+  }
+  return result;
+}
+
+function checkCommand(argv, repo) {
+  const result = checkLevel(repo, { ready: argv.includes("--ready") });
+  const refused = (result.missing ?? []).length > 0;
+  if (argv.includes("--json")) {
+    console.log(JSON.stringify(result));
+    return refused ? 2 : 0;
+  }
+  const head = result.promoted ? `level ${result.promoted.from} → 2 (promoted)` : `level ${result.level}, unchanged`;
+  console.log(`${head}${result.feature ? ` for ${result.feature}` : ""}`);
+  for (const w of result.wires) console.log(`  ${w.name}: ${w.state} (${w.fact})`);
+  if (result.too_heavy) console.log(`  too heavy: a level 2 whose diff is one file (${result.too_heavy.file}), recorded in the ledger`);
+  if (refused) {
+    const fix = result.feature
+      ? `run the phases it owes (${result.owed.join(", ")}) until ${result.missing.join(", ")} exist, then rerun`
+      : "run the change through /speckit-specify first, then the phases a level 2 owes";
+    console.error(`level check: not ready — level ${result.level} is missing ${result.missing.join(", ")}: ${fix}`);
+  }
+  return refused ? 2 : 0;
+}
+
 export function main(argv, repo, env = process.env) {
   const [command, value] = argv.filter((a) => !a.startsWith("--"));
+
+  if (command === "check") return checkCommand(argv, repo);
 
   if (command === "set") {
     const target = argv.includes("--next") ? "next" : argv.includes("--current") ? "current" : undefined;
@@ -174,7 +311,7 @@ export function main(argv, repo, env = process.env) {
   }
 
   if (command !== undefined) {
-    console.error(`level: unknown command "${command}" (no argument to show, "set <0-3>" to change, "suggest", "point")`);
+    console.error(`level: unknown command "${command}" (no argument to show, "set <0-3>" to change, "suggest", "point", "check")`);
     return 1;
   }
 
@@ -293,44 +430,197 @@ export async function suggestLevel(description, { repo, fetchImpl } = {}) {
   return { level: Number(picked.choice), confidence: picked.confidence, unavailable: false };
 }
 
+/** Print a level answer the way every suggest path does; --set records it only when confident. */
+function printLevel(result, { repo, argv, out }) {
+  const meta = LEVELS[result.level];
+  // Below 0.6 the model is guessing between two levels, and guessing wrong
+  // either buries a small change in paperwork or ships a project with none.
+  const confident = result.confidence >= 0.6;
+  const hedge = confident ? "" : " — low confidence, ask rather than set it";
+  out(`level ${result.level} (${meta.name}) suggested by ${result.by} at ${result.confidence.toFixed(2)} confidence${result.reason ? ` (${result.reason})` : ""}${hedge}`);
+  out(`  owes: ${meta.artifacts.join(", ") || "no artifacts"}`);
+  if (argv.includes("--set") && confident) {
+    const set = setLevel(repo, result.level);
+    out(`  recorded for ${set.level_for}`);
+  } else {
+    out(`  nothing was written — run: node .claude/scripts/level.mjs set ${result.level}`);
+  }
+}
+
+/**
+ * Size from a description: the local classifier first, since a clear case
+ * costs nothing; only an unsure one goes to Jev, and only if Jev is also
+ * unavailable does the caller have to reason it out.
+ */
+export async function suggestText(description, { repo, argv = [], out = console.log, fetchImpl } = {}) {
+  const local = classifyLevel(description);
+  let result = local.unsure ? null : { ...local, by: "classifier" };
+  if (!result) {
+    const jev = await suggestLevel(description, { repo, fetchImpl });
+    if (jev.unavailable) {
+      out(`unsure (${local.reason}) — answer the size question yourself, then: node .claude/scripts/level.mjs set <0-3>`);
+      return 0;
+    }
+    result = { ...jev, by: "jev" };
+  }
+  printLevel(result, { repo, argv, out });
+  return 0;
+}
+
+const STORY_REF = /^ST-(\d+)$/i;
+const PAGE_REF = /^https?:\/\/[^/]*notion\.(?:so|site|com)\/.*?([0-9a-f]{32})(?:[?#].*)?$/i;
+
+const plain = (block) => (block?.[block.type]?.rich_text ?? []).map((t) => t.plain_text ?? t.text?.content ?? "").join("");
+const headingLevel = (block) => (/^heading_[123]$/.test(block?.type) ? Number(block.type.at(-1)) : 0);
+const rollupCount = (prop) => {
+  const r = prop?.rollup;
+  if (!r) return 0;
+  if (r.type === "array") return r.array?.length ?? 0;
+  if (r.type === "number") return r.number ?? 0;
+  return 0;
+};
+
+async function childrenOf(client, id, { maxPages, NotionError }) {
+  const blocks = [];
+  let cursor;
+  let pages = 0;
+  do {
+    if (++pages > maxPages) throw new NotionError("too many pages", `${id} children passed ${maxPages} pages`);
+    const page = await client.request("GET", `/blocks/${id}/children?page_size=100${cursor ? `&start_cursor=${cursor}` : ""}`);
+    blocks.push(...(page.results ?? []));
+    cursor = page.has_more ? page.next_cursor : undefined;
+  } while (cursor);
+  return blocks;
+}
+
+/** The Build brief's sections and whether each has content, or "not found". */
+async function briefOf(client, blocks, paging) {
+  const at = blocks.findIndex((b) => headingLevel(b) && /build brief/i.test(plain(b)));
+  if (at === -1) return { brief: "not found", text: "" };
+  const head = blocks[at];
+  let body = [];
+  if (head.has_children) body = await childrenOf(client, head.id, paging);
+  else for (const b of blocks.slice(at + 1)) {
+    if (headingLevel(b) && headingLevel(b) <= headingLevel(head)) break;
+    body.push(b);
+  }
+  const sections = [];
+  const text = [];
+  for (const b of body) {
+    const t = plain(b);
+    text.push(t);
+    if (headingLevel(b)) sections.push({ name: t, filled: Boolean(b.has_children) });
+    else if ((t.trim() || b.has_children || !b[b.type]?.rich_text) && sections.length) sections.at(-1).filled = true;
+  }
+  if (!sections.length) sections.push({ name: "Build brief", filled: text.some((t) => t.trim()) });
+  return { brief: sections, text: text.join(" ") };
+}
+
+/** Read a story's sizing facts from Notion, or say why it could not be read. */
+async function readStory(ref, { repo, env, fetchImpl }) {
+  const { NotionError, clientLimits, notionClient, notionToken, readProp } = await import("./lib/notion.mjs");
+  const token = notionToken(repo, env);
+  if (!token) return { error: "no NOTION_TOKEN" };
+  const limits = clientLimits(env);
+  const client = notionClient({ token, fetchImpl, ...limits });
+  const paging = { maxPages: limits.maxPages, NotionError };
+  try {
+    let page;
+    const story = ref.match(STORY_REF);
+    if (story) {
+      const { STORIES } = await import("./notion-sync.mjs");
+      page = (await client.query(STORIES, { filter: { property: "ID", unique_id: { equals: Number(story[1]) } } }))[0];
+    } else page = await client.request("GET", `/pages/${ref.match(PAGE_REF)[1]}`);
+    if (!page) return { error: `${ref} not found` };
+    const { brief, text } = await briefOf(client, await childrenOf(client, page.id, paging), paging);
+    const title = Object.values(page.properties ?? {}).find((p) => p?.type === "title");
+    const points = readProp(page, "Story points");
+    return {
+      facts: {
+        type: readProp(page, "Issue type"),
+        labels: (page.properties?.Labels?.multi_select ?? []).map((l) => l.name),
+        design: rollupCount(page.properties?.Design),
+        boards: rollupCount(page.properties?.["Design boards"]),
+        points: typeof points === "number" ? points : null,
+        brief,
+      },
+      text: `${(title?.title ?? []).map((t) => t.plain_text ?? "").join("")} ${text}`.trim(),
+    };
+  } catch (error) {
+    if (error instanceof NotionError) return { error: error.short };
+    return { error: error?.message ?? String(error) };
+  }
+}
+
+/**
+ * The Notion rules, applied over the free classifier's answer: a classifier 2
+ * or more stands; boards, an empty or missing brief section, or more than
+ * STORY_POINTS_THRESHOLD points mean at least 2; a bug with no boards and a
+ * complete brief is 1. Labels and Design are facts only. Never lowers.
+ */
+function sizeFromFacts(facts, classified) {
+  const floors = [];
+  if (facts.boards) floors.push(`boards: ${facts.boards}`);
+  if (facts.brief === "not found") floors.push("brief: not found");
+  else {
+    const empty = facts.brief.filter((s) => !s.filled).map((s) => s.name);
+    if (empty.length) floors.push(`brief empty: ${empty.join(", ")}`);
+  }
+  if (facts.points !== null && facts.points > STORY_POINTS_THRESHOLD) floors.push(`points: ${facts.points}`);
+  if (!classified.unsure && classified.level >= 2)
+    return { ...classified, by: "classifier", reason: [classified.reason, ...floors].join("; ") };
+  if (floors.length) return { level: 2, confidence: 0.8, by: "notion", reason: floors.join("; "), askText: Boolean(classified.unsure) };
+  if (facts.type === "Bug" && facts.brief.length && facts.brief.every((s) => s.filled))
+    return { level: 1, confidence: 0.8, by: "notion", reason: "a bug with no boards and a complete brief" };
+  return { unsure: true, reason: `no decisive facts: type ${facts.type ?? "none"}, no boards, brief complete` };
+}
+
+const describeFacts = (f) =>
+  [
+    `type ${f.type ?? "none"}`,
+    `labels ${f.labels.join(", ") || "none"}`,
+    `design ${f.design || "none"}`,
+    `boards ${f.boards || "none"}`,
+    `points ${f.points ?? "none"}`,
+    f.brief === "not found" ? "brief: not found" : `brief ${f.brief.map((s) => `${s.name} ${s.filled ? "filled" : "empty"}`).join(", ")}`,
+  ].join(" · ");
+
+/** `suggest <text>` or `suggest ST-<n>|<story URL>`: the story's Notion facts first, then today's path. */
+export async function suggestCommand(argv, { repo, env = process.env, fetchImpl, out = console.log } = {}) {
+  const description = argv.filter((a) => !a.startsWith("--")).join(" ");
+  if (!description) {
+    console.error('level: suggest needs a description or a story, e.g. level suggest "add a --json flag to the rule check" or level suggest ST-123');
+    return 1;
+  }
+  if (!STORY_REF.test(description) && !PAGE_REF.test(description)) return suggestText(description, { repo, argv, out, fetchImpl });
+
+  const story = await readStory(description, { repo, env, fetchImpl });
+  if (story.error) {
+    out(`notion not read (${story.error}) — sizing from the text as given`);
+    return suggestText(description, { repo, argv, out, fetchImpl });
+  }
+  out(`facts: ${describeFacts(story.facts)}`);
+  const verdict = sizeFromFacts(story.facts, classifyLevel(story.text));
+  if (verdict.unsure) {
+    out(`unsure (notion: ${verdict.reason}) — sizing from the story's text`);
+    return suggestText(story.text, { repo, argv, out, fetchImpl });
+  }
+  // A floor only raises: with the classifier unsure, the text path is
+  // Jev, and a Jev answer above the floor stands.
+  if (verdict.askText) {
+    const jev = await suggestLevel(story.text, { repo, fetchImpl });
+    if (!jev.unavailable && jev.level > verdict.level) {
+      printLevel({ ...jev, by: "jev", reason: verdict.reason }, { repo, argv, out });
+      return 0;
+    }
+  }
+  printLevel(verdict, { repo, argv, out });
+  return 0;
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const argv = process.argv.slice(2);
   const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
-
-  if (argv[0] === "suggest") {
-    const description = argv.slice(1).filter((a) => !a.startsWith("--")).join(" ");
-    if (!description) {
-      console.error('level: suggest needs a description, e.g. level suggest "add a --json flag to the rule check"');
-      process.exit(1);
-    }
-    // The local classifier first: a clear case costs nothing. Only an unsure
-    // one goes to Jev, and only if Jev is also unavailable does the caller
-    // have to reason it out.
-    const local = classifyLevel(description);
-    let result = local.unsure ? null : { ...local, by: "classifier" };
-    if (!result) {
-      const jev = await suggestLevel(description, { repo });
-      if (!jev.unavailable) result = { ...jev, by: "jev" };
-      else {
-        console.log(`unsure (${local.reason}) — answer the size question yourself, then: node .claude/scripts/level.mjs set <0-3>`);
-        process.exit(0);
-      }
-    }
-    const meta = LEVELS[result.level];
-    // Below 0.6 the model is guessing between two levels, and guessing wrong
-    // either buries a small change in paperwork or ships a project with none.
-    const confident = result.confidence >= 0.6;
-    const hedge = confident ? "" : " — low confidence, ask rather than set it";
-    console.log(`level ${result.level} (${meta.name}) suggested by ${result.by} at ${result.confidence.toFixed(2)} confidence${result.reason ? ` (${result.reason})` : ""}${hedge}`);
-    console.log(`  owes: ${meta.artifacts.join(", ") || "no artifacts"}`);
-    if (argv.includes("--set") && confident) {
-      const set = setLevel(repo, result.level);
-      console.log(`  recorded for ${set.level_for}`);
-    } else {
-      console.log(`  nothing was written — run: node .claude/scripts/level.mjs set ${result.level}`);
-    }
-    process.exit(0);
-  }
-
+  if (argv[0] === "suggest") process.exit(await suggestCommand(argv.slice(1), { repo }));
   process.exit(main(argv, repo));
 }

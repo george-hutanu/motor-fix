@@ -9,6 +9,17 @@
 // user typed. Counts and token totals only — the file is a usage ledger, not a
 // transcript copy. Token counts come from the model's own usage blocks; no
 // pricing table lives here, because a stale price is worse than no price.
+const zero = () => ({ input: 0, output: 0, cache_read: 0, cache_creation: 0 });
+const TOKEN_FIELDS = [
+  ["input", "input_tokens"],
+  ["output", "output_tokens"],
+  ["cache_read", "cache_read_input_tokens"],
+  ["cache_creation", "cache_creation_input_tokens"],
+];
+const add = (into, delta) => {
+  for (const [k] of TOKEN_FIELDS) into[k] = (into[k] ?? 0) + delta[k];
+};
+
 export const emptyRecord = (sessionId) => ({
   session_id: sessionId,
   started: null,
@@ -19,8 +30,21 @@ export const emptyRecord = (sessionId) => ({
   tools: {},
   skills: {},
   agents: {},
-  tokens: { input: 0, output: 0, cache_read: 0, cache_creation: 0 },
+  tokens: zero(),
   bytes_read: 0,
+  // The level and phase of the last write; `buckets` holds the tokens folded
+  // in while each "<level>/<phase>" pair was current, so a promotion splits a
+  // run's cost instead of rewriting it.
+  level: null,
+  phase: null,
+  buckets: {},
+  // Per subagent transcript file: its agent type, read offset and the message
+  // it last counted. `subagent_tokens` totals them per agent type.
+  subagents: {},
+  subagent_tokens: {},
+  last_message_id: null,
+  last_usage: null,
+  too_heavy: [],
 });
 
 const bump = (map, key) => {
@@ -29,14 +53,24 @@ const bump = (map, key) => {
 
 /**
  * Fold new transcript lines into a record. `text` is whatever was appended to
- * the transcript since `record.bytes_read`; a partial trailing line is dropped
- * (the next Stop re-reads it, because bytes_read only advances past newlines).
+ * the transcript since its offset; a partial trailing line is dropped (the next
+ * Stop re-reads it, because the offset only advances past newlines).
+ *
+ * A streamed message repeats one `message.id` over several lines, and its
+ * output count grows from line to line, so a message is counted once at its
+ * last usage: a repeat adds only the difference. `cursor` holds the id last
+ * counted (the record itself for the session transcript, the subagent's entry
+ * for a subagent transcript). `bucket` names the "<level>/<phase>" pair the
+ * new tokens belong to; `agentType` marks a subagent transcript, whose tokens
+ * are counted but whose tool calls are not the session's.
  *
  * Returns { record, consumed } — consumed is the byte length actually folded in.
  */
-export function mergeTranscript(record, text) {
+export function mergeTranscript(record, text, { bucket, agentType, cursor = record } = {}) {
   const lastNewline = text.lastIndexOf("\n");
   const usable = lastNewline === -1 ? "" : text.slice(0, lastNewline + 1);
+  record.buckets ??= {};
+  record.subagent_tokens ??= {};
 
   for (const line of usable.split("\n")) {
     if (!line.trim()) continue;
@@ -48,19 +82,34 @@ export function mergeTranscript(record, text) {
     }
 
     const stamp = entry.timestamp ?? null;
-    if (stamp) {
+    if (stamp && !agentType) {
       record.started ??= stamp;
       record.updated = stamp;
     }
     if (entry.type !== "assistant") continue;
-    record.turns += 1;
 
     const usage = entry.message?.usage ?? {};
-    record.tokens.input += usage.input_tokens ?? 0;
-    record.tokens.output += usage.output_tokens ?? 0;
-    record.tokens.cache_read += usage.cache_read_input_tokens ?? 0;
-    record.tokens.cache_creation += usage.cache_creation_input_tokens ?? 0;
+    const now = Object.fromEntries(TOKEN_FIELDS.map(([k, field]) => [k, usage[field] ?? 0]));
+    const id = entry.message?.id ?? null;
+    const repeat = id !== null && id === cursor.last_message_id;
+    const before = repeat ? (cursor.last_usage ?? zero()) : zero();
+    const delta = Object.fromEntries(TOKEN_FIELDS.map(([k]) => [k, Math.max(0, now[k] - before[k])]));
+    cursor.last_message_id = id;
+    cursor.last_usage = Object.fromEntries(TOKEN_FIELDS.map(([k]) => [k, Math.max(now[k], before[k])]));
 
+    add(record.tokens, delta);
+    if (bucket) {
+      record.buckets[bucket] ??= { tokens: zero(), subagent_tokens: zero() };
+      add(record.buckets[bucket].tokens, delta);
+      if (agentType) add(record.buckets[bucket].subagent_tokens, delta);
+    }
+    if (agentType) {
+      record.subagent_tokens[agentType] ??= zero();
+      add(record.subagent_tokens[agentType], delta);
+      continue;
+    }
+
+    if (!repeat) record.turns += 1;
     for (const block of entry.message?.content ?? []) {
       if (block?.type !== "tool_use") continue;
       bump(record.tools, block.name);
@@ -77,7 +126,7 @@ export function summarize(records) {
   const total = {
     sessions: records.length,
     turns: 0,
-    tokens: { input: 0, output: 0, cache_read: 0, cache_creation: 0 },
+    tokens: zero(),
     tools: {},
     skills: {},
     agents: {},
@@ -93,3 +142,6 @@ export function summarize(records) {
 
 /** Descending [name, count] pairs — what a report actually prints. */
 export const ranked = (counts) => Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+/** The four token counts as one number, for a report line. */
+export const tokenTotal = (t) => TOKEN_FIELDS.reduce((sum, [k]) => sum + (t?.[k] ?? 0), 0);

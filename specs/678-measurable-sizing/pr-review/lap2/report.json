@@ -1,0 +1,70 @@
+{
+  "pr": 149,
+  "repo": "george-hutanu/motor-fix",
+  "sha": "0ba09850b45d55179435cf303b97dd10cbdfe3bc",
+  "base": "26cf0dcd02cff8ef0979cb788cedcbe059d42a69",
+  "lap": 2,
+  "verdict": "failure",
+  "summary": "1 blocking finding(s); 1 in all. Booted postgres, redis, minio, api, web, worker.",
+  "findings": [
+    {
+      "severity": "high",
+      "kind": "review",
+      "title": "Requirement id in source and test comments (Principle II: source carries no FR id)",
+      "steps": [
+        "The lap-1 fix for the Notion floor added two comments that name FR-012.",
+        "Constitution II: 'Source carries no internal identifiers — no FR id, feature number, task id, or ticket key in code, comments, or test titles.' No .claude script or hook on main carries one.",
+        "Drop the id from both comments; the FR to test mapping belongs in tasks.md."
+      ],
+      "evidence": ".claude/scripts/level.mjs (suggestCommand): \"// A floor only raises (FR-012): with the classifier unsure, the text path is\"; .claude/scripts/level.spec.mjs (suggest from a Notion story): \"// FR-012: a Notion fact only raises the text path's answer. When the\""
+    }
+  ],
+  "booted": [
+    "postgres",
+    "redis",
+    "minio",
+    "api",
+    "web",
+    "worker"
+  ],
+  "notes": [
+    "Ran on GitHub Actions (https://github.com/george-hutanu/motor-fix/actions/runs/37452297797): PostgreSQL with PostGIS, Redis and MinIO from the PR's own compose file, started by the PR QA workflow.",
+    "No API operation changed.",
+    "Unit and end-to-end tests left to CI (Unit tests and E2E tests; the merge gate waits for them)."
+  ],
+  "screenshots": [
+    "shots/home-desktop-light-ro.png",
+    "shots/home-desktop-light-en.png",
+    "shots/home-desktop-dark-ro.png",
+    "shots/home-desktop-dark-en.png",
+    "shots/home-tablet-light-ro.png",
+    "shots/home-tablet-light-en.png",
+    "shots/home-tablet-dark-ro.png",
+    "shots/home-tablet-dark-en.png",
+    "shots/home-mobile-light-ro.png",
+    "shots/home-mobile-light-en.png",
+    "shots/home-mobile-dark-ro.png",
+    "shots/home-mobile-dark-en.png",
+    "shots/home-small-phone-light-ro.png",
+    "shots/home-small-phone-light-en.png",
+    "shots/home-small-phone-dark-ro.png",
+    "shots/home-small-phone-dark-en.png",
+    "shots/cockpit-desktop-light-ro.png",
+    "shots/cockpit-desktop-light-en.png",
+    "shots/cockpit-desktop-dark-ro.png",
+    "shots/cockpit-desktop-dark-en.png",
+    "shots/cockpit-tablet-light-ro.png",
+    "shots/cockpit-tablet-light-en.png",
+    "shots/cockpit-tablet-dark-ro.png",
+    "shots/cockpit-tablet-dark-en.png",
+    "shots/cockpit-mobile-light-ro.png",
+    "shots/cockpit-mobile-light-en.png",
+    "shots/cockpit-mobile-dark-ro.png",
+    "shots/cockpit-mobile-dark-en.png",
+    "shots/cockpit-small-phone-light-ro.png",
+    "shots/cockpit-small-phone-light-en.png",
+    "shots/cockpit-small-phone-dark-ro.png",
+    "shots/cockpit-small-phone-dark-en.png"
+  ],
+  "markdown": "**Agent review: failure** — PR #149 at `0ba0985`, lap 2\n\nBlocking: 1 (blocker 0, high 1) · medium 0 · low 0. Booted: postgres, redis, minio, api, web, worker.\n- Ran on GitHub Actions (https://github.com/george-hutanu/motor-fix/actions/runs/37452297797): PostgreSQL with PostGIS, Redis and MinIO from the PR's own compose file, started by the PR QA workflow.\n- No API operation changed.\n- Unit and end-to-end tests left to CI (Unit tests and E2E tests; the merge gate waits for them).\n\n| # | Severity | Finding | Where | Evidence |\n| --- | --- | --- | --- | --- |\n| 1 | high | Requirement id in source and test comments (Principle II: source carries no FR id) |  | .claude/scripts/level.mjs (suggestCommand): \"// A floor only raises (FR-012): with the classifier unsure, the text path is\"; .claude/scripts/level.spec.mjs (suggest from a Notion story): \"// FR-012: a Notion fact only raises the text path's answer. When the\" |\n\n### Reproduction\n1. The lap-1 fix for the Notion floor added two comments that name FR-012. → Constitution II: 'Source carries no internal identifiers — no FR id, feature number, task id, or ticket key in code, comments, or test titles.' No .claude script or hook on main carries one. → Drop the id from both comments; the FR to test mapping belongs in tasks.md.\n\nScreenshots: 32, one per route × viewport × scheme × language.\n"
+}
