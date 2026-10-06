@@ -35,7 +35,7 @@
 
 - [x] T009 [US3] Write failing specs: in `.claude/scripts/level.spec.mjs` the `--ready` owed phases and missing artifacts with exit 2 (level 0: "run /speckit-specify first"), the `pending.json` mark for a one-file level 2 diff outside `specs/` and `.specify/` and contract paths, none for a contract file or level 3, and a pass once `plan.md` exists; in `.claude/scripts/lifecycle.spec.mjs` exit 2 stops `ready` before the records commit (`ok: false`, PR stays a draft) and exit 0 passes through (FR-009, FR-015)
 - [x] T010 [US3] Add the `--ready` behaviour (owed phases, refusal, `pending.json` write) to `.claude/scripts/level.mjs` (FR-009)
-- [ ] T011 [US3] In `.claude/scripts/lifecycle.mjs` `ready()`, run `level.mjs check --ready --json` after `gh pr view` and throw `Stop("level check", …)` on code 2 (FR-009)
+- [x] T011 [US3] In `.claude/scripts/lifecycle.mjs` `ready()`, run `level.mjs check --ready --json` after `gh pr view` and throw `Stop("level check", …)` on code 2 (FR-009)
 
 ## Phase 5: User Story 4 - Size from Notion (P4)
 
