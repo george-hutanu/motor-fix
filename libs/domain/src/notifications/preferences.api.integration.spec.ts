@@ -808,6 +808,22 @@ describe('a staff save', () => {
     expect(res.status).toBe(200);
   });
 
+  it('refuses the second of two saves at once that would leave a document reminder with no channel', async () => {
+    const { id: garageId } = await garage('Dinamo');
+    const owner = await staff('ion', garageId, 'owner');
+    const statuses = (
+      await Promise.all(
+        (['email', 'push'] as const).map((channel) =>
+          save(
+            { preferences: [choice(garageId, 'DOCUMENT_DUE', channel, false)] },
+            bearer(owner, 'garage'),
+          ),
+        ),
+      )
+    ).map((res) => res.status);
+    expect(statuses.sort()).toEqual([200, 422]);
+  });
+
   it('lets a receptionist mute only their own channels', async () => {
     const { id: garageId } = await garage('Dinamo');
     const owner = await staff('ion', garageId, 'owner');

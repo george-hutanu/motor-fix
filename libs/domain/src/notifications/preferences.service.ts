@@ -70,17 +70,6 @@ export class NotificationPreferencesService {
     const choices = body.preferences ?? [];
     for (const choice of choices) this.check(actor, choice);
     await this.checkGarages(actor.accountId, choices);
-    const refused = staffChecks(
-      await this.staff(actor, await this.rows(this.prisma, actor.accountId)),
-      choices,
-    );
-    if (refused) {
-      throw refuse(
-        HttpStatus.UNPROCESSABLE_ENTITY,
-        refused.code,
-        `${refused.type} cannot be saved that way (${refused.code})`,
-      );
-    }
     const who = {
       actorId: actor.accountId,
       actorRole: actor.role,
@@ -90,11 +79,18 @@ export class NotificationPreferencesService {
     // One save at a time per person, so the last one wins per row.
     await this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`preferences:${actor.accountId}`}))`;
-      const { changes, writes } = planSave(
-        await this.rows(tx, actor.accountId),
-        body.groups ?? [],
-        choices,
-      );
+      const rows = await this.rows(tx, actor.accountId);
+      // Judged after the lock, so two saves at once never both pass the
+      // last-channel check on the same rows.
+      const refused = staffChecks(await this.staff(actor, rows, tx), choices);
+      if (refused) {
+        throw refuse(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          refused.code,
+          `${refused.type} cannot be saved that way (${refused.code})`,
+        );
+      }
+      const { changes, writes } = planSave(rows, body.groups ?? [], choices);
       const { consented, consent } = await this.newsWrite(
         tx,
         actor.accountId,
@@ -190,19 +186,23 @@ export class NotificationPreferencesService {
   }
 
   // What the person may choose as a garage's staff or as an admin.
-  private async staff(actor: Actor, rows: readonly PreferenceRow[]) {
+  private async staff(
+    actor: Actor,
+    rows: readonly PreferenceRow[],
+    db: PrismaClient | Prisma.TransactionClient = this.prisma,
+  ) {
     const { accountId } = actor;
     const [memberships, mechanic, account] = await Promise.all([
-      this.prisma.garageMember.findMany({
+      db.garageMember.findMany({
         include: { garage: { select: { name: true } } },
         orderBy: { joinedAt: 'asc' },
         where: { accountId },
       }),
-      this.prisma.mechanic.findUnique({
+      db.mechanic.findUnique({
         include: { garage: { select: { name: true } } },
         where: { accountId },
       }),
-      this.prisma.account.findUnique({
+      db.account.findUnique({
         select: { phoneVerifiedAt: true },
         where: { id: accountId },
       }),
@@ -212,7 +212,7 @@ export class NotificationPreferencesService {
       ...(mechanic ? [mechanic.garageId] : []),
     ];
     const features = garageIds.length
-      ? await this.prisma.garageFeature.findMany({
+      ? await db.garageFeature.findMany({
           where: { garageId: { in: garageIds } },
         })
       : [];
