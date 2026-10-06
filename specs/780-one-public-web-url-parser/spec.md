@@ -2,7 +2,7 @@
 
 **Feature Branch**: `780-one-public-web-url-parser`
 **Created**: 2026-10-07
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 **Input**: ST-780 (tech debt from ST-539, code-reviewer): "duplication: two parsers of PUBLIC_WEB_URL, `publicWebUrl()` in `libs/contracts/src/env.ts` throws on a malformed value while email-config's `webUrl()` silently returns undefined; have `webUrl()` use `publicWebUrl()` and decide whether a malformed value should stop the worker's config load" — https://app.notion.com/3f1607bff0d2817781dae9576b51b8bd
 
 ## User Scenarios & Testing *(mandatory)*
