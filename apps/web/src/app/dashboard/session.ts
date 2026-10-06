@@ -103,11 +103,25 @@ export class Session {
     });
   }
 
-  async signInWithPhone(phone: string, code: string, remember: boolean) {
+  // 'profile' when no account holds the number: the same code with a name
+  // creates one, sending the current consent the form's tick stands for.
+  async signInWithPhone(
+    phone: string,
+    code: string,
+    remember: boolean,
+    profile?: { name: string; language: 'ro' | 'en' },
+  ) {
     await this.sendPending();
-    const { accessToken } = await this.auth.phoneSignInControllerPhoneSignIn({
-      body: { code, phone, remember },
+    const answer = await this.auth.phoneSignInControllerPhoneSignIn({
+      body: {
+        code,
+        phone,
+        remember,
+        ...(profile && { consent: CURRENT_CONSENT, ...profile }),
+      },
     });
+    if (answer.next === 'profile') return 'profile';
+    const { accessToken } = answer;
     if (!accessToken) throw new Error('no session opened');
     this.started(accessToken);
     this.current.set(null);

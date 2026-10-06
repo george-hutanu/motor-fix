@@ -26,6 +26,11 @@ async function lastCode(page: Page, phone: string): Promise<string> {
   return String(code);
 }
 
+// A number no account holds, under the allow-listed +4070000 prefix and
+// outside the seeded ones, new on every run.
+const freshPhone = () =>
+  `+4070000${String(1000 + Math.floor(Math.random() * 9000))}`;
+
 test.describe('signing in with a phone number @seeded @mailbox', () => {
   test('a garage owner asks for a code, types it and lands on the garage', async ({
     page,
@@ -46,5 +51,30 @@ test.describe('signing in with a phone number @seeded @mailbox', () => {
     await dialog.getByRole('button', { name: 'Intră în cont' }).click();
 
     await expect(page).toHaveURL('/app/garage');
+  });
+
+  test('a new number gets a code, a name and the tick, and lands on the driver dashboard', async ({
+    page,
+  }) => {
+    const phone = freshPhone();
+    await ready(page, '/ro/garages');
+    await page
+      .getByRole('button', { exact: true, name: 'Autentificare' })
+      .click();
+    const dialog = page.getByRole('dialog', { name: 'Autentificare' });
+    await expect(dialog.locator('mf-overlay-panel')).toBeVisible();
+
+    await dialog.getByRole('button', { name: 'Continuă cu telefonul' }).click();
+    await dialog.getByLabel('Număr de telefon').fill(phone);
+    await dialog.getByRole('button', { name: 'Trimite codul' }).click();
+    await dialog.getByLabel('Cod').fill(await lastCode(page, phone));
+    await dialog.getByRole('button', { name: 'Intră în cont' }).click();
+
+    await expect(dialog.getByLabel('Nume')).toBeFocused();
+    await dialog.getByLabel('Nume').fill('Ion Popescu');
+    await dialog.getByRole('checkbox').check();
+    await dialog.getByRole('button', { name: 'Creează contul' }).click();
+
+    await expect(page).toHaveURL('/app/driver');
   });
 });

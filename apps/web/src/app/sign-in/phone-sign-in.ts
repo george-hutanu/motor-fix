@@ -25,10 +25,13 @@ import {
   TaskError,
   TaskSubmit,
   taskSave,
+  toProblem,
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
+import { Consent, consentControl } from './consent';
 import type { AuthData, AuthSwitch } from './sign-in';
+import { characters } from './sign-up';
 import { Session } from '../dashboard/session';
 
 const CODE_SECONDS = 5 * 60;
@@ -41,11 +44,13 @@ const clock = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 
 // Sign-in with a code sent by WhatsApp, in the sign-in dialog: the number,
-// then the code. It closes with "signed-in", or with a switch back to the
+// then the code, then, for a number no account holds, the name and the
+// consent that create a driver account. It closes with "signed-in", or with a switch back to the
 // e-mail and password carrying what was typed.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    Consent,
     FieldError,
     HlmButton,
     HlmInput,
@@ -100,7 +105,7 @@ const clock = (seconds: number) =>
           </button>
         </p>
       </form>
-    } @else {
+    } @else if (step() === 'code') {
       <form [formGroup]="codeForm" (ngSubmit)="codeSave.submit()" novalidate>
         <p role="status">{{ 'public.signIn.code.sent' | t: { phone: number() } }}</p>
         <div class="field">
@@ -120,7 +125,11 @@ const clock = (seconds: number) =>
           <mf-field-error id="mf-phone-code-error" [save]="codeSave" [control]="codeForm.controls.code" />
           <p id="mf-phone-code-expires">{{ 'public.signIn.code.expires' | t: { time: expiresIn() } }}</p>
         </div>
-        <mf-task-error [save]="codeSave" />
+        @if (expired()) {
+          <p role="alert" class="expired">{{ 'public.signIn.code.problem.code_expired' | t }}</p>
+        } @else {
+          <mf-task-error [save]="codeSave" />
+        }
         <mf-task-error [save]="phoneSave" />
         <button hlmBtn type="submit" [mfTaskSubmit]="codeSave">
           {{ 'public.signIn.code.submit' | t }}
@@ -133,6 +142,28 @@ const clock = (seconds: number) =>
             {{ 'public.signIn.code.change' | t }}
           </button>
         </p>
+      </form>
+    } @else {
+      <form [formGroup]="profileForm" (ngSubmit)="profileSave.submit()" novalidate>
+        <p>{{ 'public.signIn.profile.intro' | t }}</p>
+        <div class="field">
+          <label for="mf-phone-name">{{ 'public.signIn.profile.name' | t }}</label>
+          <input
+            #nameInput
+            hlmInput
+            id="mf-phone-name"
+            type="text"
+            autocomplete="name"
+            formControlName="name"
+            aria-describedby="mf-phone-name-error"
+          />
+          <mf-field-error id="mf-phone-name-error" [save]="profileSave" [control]="profileForm.controls.name" />
+        </div>
+        <mf-consent [control]="profileForm.controls.consent" [save]="profileSave" />
+        <mf-task-error [save]="profileSave" />
+        <button hlmBtn type="submit" [mfTaskSubmit]="profileSave">
+          {{ 'public.signIn.profile.submit' | t }}
+        </button>
       </form>
     }
   `,
@@ -149,13 +180,16 @@ export class PhoneSignIn {
     viewChild<ElementRef<HTMLInputElement>>('phoneInput');
   private readonly codeInput =
     viewChild<ElementRef<HTMLInputElement>>('codeInput');
+  private readonly nameInput =
+    viewChild<ElementRef<HTMLInputElement>>('nameInput');
 
-  protected readonly step = signal<'phone' | 'code'>('phone');
+  protected readonly step = signal<'phone' | 'code' | 'profile'>('phone');
   // The number the code went to, in E.164.
   protected readonly number = signal('');
   private readonly sentAt = signal(0);
   private readonly now = signal(Date.now());
 
+  protected readonly expired = computed(() => this.elapsed() >= CODE_SECONDS);
   protected readonly expiresIn = computed(() =>
     clock(Math.max(0, CODE_SECONDS - this.elapsed())),
   );
@@ -179,6 +213,14 @@ export class PhoneSignIn {
     }),
   });
 
+  protected readonly profileForm = new FormGroup({
+    consent: consentControl(),
+    name: new FormControl('', {
+      nonNullable: true,
+      validators: [characters(2, 80, true)],
+    }),
+  });
+
   protected readonly phoneSave = taskSave({
     done: (phone: string) => this.toCode(phone),
     form: this.phoneForm,
@@ -187,19 +229,19 @@ export class PhoneSignIn {
   });
 
   protected readonly codeSave = taskSave({
-    done: () => this.task.close('signed-in'),
+    done: (answer) =>
+      answer === 'profile' ? this.toProfile() : this.task.close('signed-in'),
     form: this.codeForm,
     messages: 'public.signIn.code',
-    send: async ({ code = '' }) => {
-      const { remember } = this.phoneForm.getRawValue();
-      const me = await this.session.signInWithPhone(
-        this.number(),
-        code,
-        remember,
-      );
-      if (!me) throw new Error('signed in without an account');
-      return me;
-    },
+    send: () => this.signIn(),
+  });
+
+  protected readonly profileSave = taskSave({
+    done: () => this.task.close('signed-in'),
+    form: this.profileForm,
+    messages: 'public.signIn.code',
+    send: ({ name = '' }) =>
+      this.signIn({ language: this.i18n.language(), name: name.trim() }),
   });
 
   constructor() {
@@ -226,6 +268,34 @@ export class PhoneSignIn {
     this.codeForm.reset();
     this.step.set('phone');
     this.focus(this.phoneInput);
+  }
+
+  private async signIn(profile?: { name: string; language: 'ro' | 'en' }) {
+    const { remember } = this.phoneForm.getRawValue();
+    try {
+      const answer = await this.session.signInWithPhone(
+        this.number(),
+        this.codeForm.getRawValue().code,
+        remember,
+        profile,
+      );
+      if (!answer) throw new Error('signed in without an account');
+      return answer;
+    } catch (error) {
+      if (toProblem(error).code === 'code_expired') this.expire();
+      throw error;
+    }
+  }
+
+  // Back to the code step, where only a new code helps.
+  private expire() {
+    this.sentAt.set(this.now() - CODE_SECONDS * 1000);
+    this.step.set('code');
+  }
+
+  private toProfile() {
+    this.step.set('profile');
+    this.focus(this.nameInput);
   }
 
   private elapsed() {

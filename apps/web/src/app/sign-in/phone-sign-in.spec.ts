@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
@@ -77,6 +78,17 @@ const describedBy = (input: HTMLInputElement) =>
 async function sendCode(phone = '0722 123 456') {
   type(field('Număr de telefon'), phone);
   button('Trimite codul').click();
+  await settle();
+}
+
+const refusal = (status: number, body: Record<string, unknown>) =>
+  new HttpErrorResponse({ error: { status, ...body }, status });
+
+async function toProfile() {
+  signInWithPhone.mockResolvedValueOnce('profile');
+  await sendCode();
+  type(field('Cod'), '012345');
+  button('Intră în cont').click();
   await settle();
 }
 
@@ -216,6 +228,7 @@ describe('the code step', () => {
       '+40722123456',
       '012345',
       false,
+      undefined,
     );
     await expect(result).resolves.toBe('signed-in');
   });
@@ -241,5 +254,124 @@ describe('the code step', () => {
 
     expect(field('Număr de telefon').value).toBe('0722 123 456');
     expect(document.activeElement).toBe(field('Număr de telefon'));
+  });
+});
+
+describe('the profile step, for a number no account holds', () => {
+  it('asks for the name and the consent, with "Creează contul", and moves the focus to the name', async () => {
+    await open();
+
+    await toProfile();
+
+    const name = field('Nume');
+    expect(name.autocomplete).toBe('name');
+    expect(document.activeElement).toBe(name);
+    const tick = panel().querySelector<HTMLInputElement>(
+      'mf-consent input[type=checkbox]',
+    );
+    expect(tick?.checked).toBe(false);
+    expect(button('Creează contul').type).toBe('submit');
+    expect(panel().textContent).not.toContain('Intră în cont');
+  });
+
+  it('reads English', async () => {
+    await open('en');
+    signInWithPhone.mockResolvedValueOnce('profile');
+    type(field('Phone number'), '0722 123 456');
+    button('Send the code').click();
+    await settle();
+    type(field('Code'), '012345');
+    button('Sign in').click();
+    await settle();
+
+    expect(field('Name')).toBeDefined();
+    expect(button('Create the account')).toBeDefined();
+  });
+
+  it('creates the account with the same code, the trimmed name and the language, and closes with "signed-in"', async () => {
+    await open();
+    field('Ține‑mă autentificat').click();
+    await toProfile();
+
+    type(field('Nume'), '  Ion Popescu  ');
+    panel().querySelector<HTMLInputElement>('mf-consent input')?.click();
+    button('Creează contul').click();
+    await settle();
+
+    expect(signInWithPhone).toHaveBeenLastCalledWith(
+      '+40722123456',
+      '012345',
+      false,
+      { language: 'ro', name: 'Ion Popescu' },
+    );
+    await expect(result).resolves.toBe('signed-in');
+  });
+
+  it.each([
+    ['no name', '', 'Câmpul este obligatoriu.'],
+    ['a name of one letter', 'I', 'Scrie cel puțin 2 caractere.'],
+    [
+      'a name over 80 characters',
+      'I'.repeat(81),
+      'Scrie cel mult 80 caractere.',
+    ],
+  ])('shows %s under the field and sends nothing', async (_, name, shown) => {
+    await open();
+    await toProfile();
+
+    type(field('Nume'), name);
+    panel().querySelector<HTMLInputElement>('mf-consent input')?.click();
+    button('Creează contul').click();
+    await settle();
+
+    expect(signInWithPhone).toHaveBeenCalledTimes(1);
+    expect(describedBy(field('Nume'))).toContain(shown);
+  });
+
+  it('asks for the tick before sending', async () => {
+    await open();
+    await toProfile();
+
+    type(field('Nume'), 'Ion Popescu');
+    button('Creează contul').click();
+    await settle();
+
+    expect(signInWithPhone).toHaveBeenCalledTimes(1);
+    expect(panel().querySelector('mf-consent')?.textContent).toContain(
+      'Bifează pentru a continua.',
+    );
+  });
+
+  it('goes back to the code step with "Trimite din nou" when the code expired meanwhile', async () => {
+    await open();
+    await toProfile();
+    signInWithPhone.mockRejectedValueOnce(
+      refusal(410, { code: 'code_expired' }),
+    );
+
+    type(field('Nume'), 'Ion Popescu');
+    panel().querySelector<HTMLInputElement>('mf-consent input')?.click();
+    button('Creează contul').click();
+    await settle();
+
+    expect(panel().textContent).toContain('Codul a expirat. Cere un cod nou.');
+    expect(button('Trimite din nou').disabled).toBe(false);
+    expect(panel().textContent).not.toContain('Creează contul');
+  });
+
+  it('shows a typed name as text, never as markup', async () => {
+    await open();
+    await toProfile();
+    signInWithPhone.mockRejectedValueOnce(
+      refusal(409, { code: 'phone_taken' }),
+    );
+
+    type(field('Nume'), '<img src=x onerror=alert(1)>');
+    panel().querySelector<HTMLInputElement>('mf-consent input')?.click();
+    button('Creează contul').click();
+    await settle();
+
+    expect(field('Nume').value).toBe('<img src=x onerror=alert(1)>');
+    expect(panel().querySelector('img')).toBeNull();
   });
 });

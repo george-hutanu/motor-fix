@@ -56,8 +56,9 @@
       },
       "label": "Cod",
       "problem": {
-        "code_expired": "Codul a expirat. Cere unul nou.",
+        "code_expired": "Codul a expirat. Cere un cod nou.",
         "code_invalid": "Codul nu este corect.",
+        "consent_required": "Bifează acordul pentru a crea contul.",
         "too_many_attempts": "Prea multe coduri greșite. Cere unul nou.",
         "whatsapp_failed": "Nu am putut trimite codul pe WhatsApp. Încearcă din nou."
       },
@@ -91,6 +92,11 @@
       "account_suspended": "Contul tău este suspendat.",
       "invalid_credentials": "E‑mailul sau parola nu sunt corecte.",
       "too_many_attempts": "Prea multe încercări. Încearcă din nou în 15 minute."
+    },
+    "profile": {
+      "intro": "Numărul nu are încă un cont. Creează unul de șofer.",
+      "name": "Nume",
+      "submit": "Creează contul"
     },
     "reason": "Intră în cont ca să continui.",
     "remember": "Ține‑mă autentificat",

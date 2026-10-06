@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
 import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
 
 import { Session } from './session';
@@ -56,6 +57,43 @@ describe('signing in with a phone number', () => {
       body: { code: '012345', phone: '+40722123456', remember: false },
     });
     expect(session.token()).toBe('by-phone');
+    expect(me).toBe(OWNER);
+  });
+
+  it('answers "profile" for a number no account holds, holding no token', async () => {
+    const { api, session } = setup();
+    api.phoneSignInControllerPhoneSignIn.mockResolvedValueOnce({
+      next: 'profile',
+    } as never);
+
+    const answer = await session.signInWithPhone(
+      '+40733000000',
+      '012345',
+      true,
+    );
+
+    expect(answer).toBe('profile');
+    expect(session.token()).toBeNull();
+  });
+
+  it('creates the account with the name, the current consent and the language', async () => {
+    const { api, session } = setup();
+
+    const me = await session.signInWithPhone('+40733000000', '012345', true, {
+      language: 'en',
+      name: 'Ion Popescu',
+    });
+
+    expect(api.phoneSignInControllerPhoneSignIn).toHaveBeenCalledWith({
+      body: {
+        code: '012345',
+        consent: CURRENT_CONSENT,
+        language: 'en',
+        name: 'Ion Popescu',
+        phone: '+40733000000',
+        remember: true,
+      },
+    });
     expect(me).toBe(OWNER);
   });
 

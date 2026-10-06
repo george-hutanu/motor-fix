@@ -58,6 +58,7 @@
       "problem": {
         "code_expired": "The code has expired. Ask for a new one.",
         "code_invalid": "The code is not correct.",
+        "consent_required": "Tick the agreement to create the account.",
         "too_many_attempts": "Too many wrong codes. Ask for a new one.",
         "whatsapp_failed": "We could not send the code by WhatsApp. Try again."
       },
@@ -91,6 +92,11 @@
       "account_suspended": "Your account is suspended.",
       "invalid_credentials": "The e-mail or password is not correct.",
       "too_many_attempts": "Too many attempts. Try again in 15 minutes."
+    },
+    "profile": {
+      "intro": "No account holds this number yet. Create a driver account.",
+      "name": "Name",
+      "submit": "Create the account"
     },
     "reason": "Sign in to continue.",
     "remember": "Keep me signed in",
