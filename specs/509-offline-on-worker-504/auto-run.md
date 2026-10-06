@@ -63,3 +63,14 @@ CLAUDE.local.md already points at this plan (7053f1e); nothing to change.
 
 ## 17. Archive
 capabilities merge: overlays +2 ~1 −0 (159-FR-008 retired → 509-FR-002); in-context "(FR-001)" fixed to 509-FR-001. spec.md status Archived (2026-10-06).
+
+## Hand-off
+PR body filled (pr-body-check passes), published via REST; PR #159 ready (ccr/ready_for_review); Notion story → QA (connector); label QA; qa line committed 77a7281. QA dispatch refused: this session's GitHub token cannot dispatch workflows (403 on actions/workflows/pr-qa.yml/dispatches, REST and GitHub MCP) and dispatch.mjs needs GraphQL. Hand-off note posted as a `<!-- speckit-handoff -->` comment with the flows file inlined; no QA run recorded, so the tail dispatches lap 1.
+
+## Final Report
+- Branch 509-offline-on-worker-504, specs/509-offline-on-worker-504, range 52534bb..HEAD; this resume: 647d2b9 (merge main), 75475ab, 00cfccd, 32f8a9a, ebcaab6, 77a7281, plus this log.
+- Phases 6–17 run (6/7/14 inline: no Agent tool in the session). Red 4 failed / 73 passed → green; overlays test+typecheck exit 0; pre-commit affected typecheck+test+lint green.
+- FR → test: FR-001 form.spec.ts "the service worker's 504" it.each + adversary odd bodies; FR-002 form.spec.ts status-0 cases (unchanged); FR-003 form.spec.ts online/problem/500 cases + adversary text problem and no-navigator; FR-004 diff limited to libs/overlays/src/form*.
+- Review: inline, no CRITICAL/HIGH/MEDIUM. Deferred: 1 (domain send-claim flake), filed in Notion.
+- Retrospective evidence: gathered unjudged; jev lane unavailable.
+- Follow-ups: cloud-setup.sh PATH (Node 22 shadows 24); org-researcher connector id; QA dispatch impossible from cloud sessions without actions:write.
