@@ -23,7 +23,7 @@ A maintainer changing the audit history (`GET /audit-history`) runs its three in
 ### Functional Requirements
 
 - **FR-001**: The adversary spec MUST NOT restate a case the service spec already asserts: the six cases the ticket names are removed from it.
-- **FR-002**: The HTTP test helpers (Nest app bootstrap with the API's `ValidationPipe` options, `account`, `bearer`, `get`) MUST be declared once, in `libs/domain/src/audit/audit-history.testing.ts`.
+- **FR-002**: The HTTP test helpers (Nest app bootstrap with the API's `ValidationPipe` options, `account`, `bearer`, `get`, and the app and database lifecycle the clarifications place beside them) MUST be declared once, in `libs/domain/src/audit/audit-history.testing.ts`.
 - **FR-003**: Both HTTP specs (`audit-history.api.integration.spec.ts` and `audit-history.adversary.integration.spec.ts`) MUST take those helpers from that module and declare none of them themselves.
 - **FR-004**: Every assertion that is not a restatement MUST remain: the non-restated cases of the adversary spec keep their names and assertions, and a distinct assertion inside one of the six (one the service spec does not make) is kept by moving it into the service case rather than deleted.
 - **FR-005**: The change MUST be test-only: no file under `libs/domain/src/audit/` other than `*.spec.ts` and the new `*.testing.ts` changes, and the three audit history suites pass after it.
