@@ -2,7 +2,7 @@
 
 **Feature Branch**: `522-email-sent-once`
 **Created**: 2026-10-07
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 **Input**: ST-522 (from ST-194): "a database error after Brevo accepted an e-mail makes the job retry and send a second e-mail" — https://app.notion.com/3ef607bff0d2810fb629cec5134fa890
 
 ## User Scenarios & Testing *(mandatory)*

@@ -8,3 +8,4 @@
 - analyze: FR-001..003 each covered by T001 and T002/T003; no findings
 - tests: 4 red (job rejected), then implement: 1014 notifications tests green
 - review: code-reviewer APPROVE (took: 200/400 ms pause between writes, shared failWritesAfter helper; kept SENT_WRITES=3 as spec-fixed); spec-reviewer HIGH (no WhatsApp test) fixed: 1015 green
+- archive: Spec Delta merged into notifications
