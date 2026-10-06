@@ -4,15 +4,15 @@
 
 ## Phase 1: Tests first
 
-- [ ] T001 [US1] Test: `.claude/scripts/level.spec.mjs` `classifyLevel` — the six story descriptions are `unsure`, not level 0 (FR-001, FR-002, FR-003)
+- [X] T001 [US1] Test: `.claude/scripts/level.spec.mjs` `classifyLevel` — the six story descriptions are `unsure`, not level 0 (FR-001, FR-002, FR-003)
 
 ## Phase 2: Implementation
 
-- [ ] T002 [US1] `.claude/scripts/level.mjs`: add remove, delete, drop, disable, page, screen, folder, directory, workflow, deploy to `NOT_TRIVIAL`; narrow `CODE_NAME` to helper, variable, function, method, constant, const, class (FR-001, FR-002)
+- [X] T002 [US1] `.claude/scripts/level.mjs`: add remove, delete, drop, disable, page, screen, folder, directory, workflow, deploy to `NOT_TRIVIAL`; narrow `CODE_NAME` to helper, variable, function, method, constant, const, class (FR-001, FR-002)
 
 ## Phase 3: Proof
 
-- [ ] T003 `npm run test:harness` green; `node .claude/scripts/harness-eval.mjs --check` (SC-002)
+- [X] T003 `npm run test:harness` green; `node .claude/scripts/harness-eval.mjs --check` (SC-002)
 
 ## FR → test
 

@@ -649,6 +649,15 @@ describe('classifyLevel', () => {
       'bump angular to the next major',
       'fix a typo and change the booking flow',
       'fix the typos everywhere',
+      // ST-675: a page, a folder, a workflow or a script is read outside the code.
+      'remove the documentation page from the app',
+      'delete the changelog page',
+      'rename the web app folder',
+      'rename the assets folder',
+      'rename the ci workflow file',
+      'rename the deploy script',
+      'drop the readme from the docs directory',
+      'disable the changelog screen',
     ]) {
       assert.notEqual(classifyLevel(d).level, 0, d);
     }

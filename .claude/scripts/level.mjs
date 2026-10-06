@@ -353,7 +353,7 @@ const PROJECT = [/\bepics?\b/, /\bseveral features\b/, /\bmultiple features\b/, 
 // "Trivial" is read off an edit to text, or to a name only the code reads —
 // phrases, not single words: "comments", "copy", "docs" and "rename" are as
 // often a feature ("a comments section", "copy the records") as a tidy-up.
-const CODE_NAME = "helper|variable|function|method|constant|const|class|file|folder|directory|test|spec|import|alias|component|mixin|util|utility|hook|script";
+const CODE_NAME = "helper|variable|function|method|constant|const|class";
 const TRIVIAL = [
   /\btypos?\b/, /\bmisspell\w*\b/, /\bspelling\b/, /\bwording\b/, /\breword\b/,
   new RegExp(`\\brename (the |a |an |this |that )?(\\w+ ){0,2}(${CODE_NAME})\\b`),
@@ -372,6 +372,10 @@ const NOT_TRIVIAL = [
   /\bparam/, /\bquery\b/, /\bcookies?\b/, /\bevents?\b/, /\bstatus(es)?\b/, /\brecords?\b/, /\bdata\b/, /\barchive/, /\bstorage\b/,
   /\bbuckets?\b/, /\bupload/, /\bdownload/, /\bexport/, /\bsections?\b/, /\busers?\b/, /\bdrivers?\b/, /\bmechanics?\b/, /\bcustomers?\b/,
   /\bdependenc(y|ies)\b/, /\bupgrade/, /\bversions?\b/, /\bmajor\b/,
+  // Taking something away, or a page, folder, workflow or script, which
+  // something outside the code reads: only dead or unused code goes quietly.
+  /\b(remov|delet|drop|disabl)\w*\b(?! (the )?(dead|unused) )/, /\bpages?\b/, /\bscreens?\b/, /\bfolders?\b/,
+  /\bdirector(y|ies)\b/, /\bworkflows?\b/, /\bdeploy/,
   // More than one change, or one change in many places: the trivial word
   // describes only part of it.
   /\band\b/, /\balso\b/, /\bthen\b/, /\bplus\b/, /[,;&+]/, /\beverywhere\b/, /\bacross\b/, /\b(all|every|entire|whole)\b/, /\bglobal/,
