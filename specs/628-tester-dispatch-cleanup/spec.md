@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 
 **Input**: User description: "ST-628 "PR tester dispatch: clear run.log and observations.json, drop the double staging cleanup" (Notion https://app.notion.com/3f0607bff0d2816a9b9afc229fd64ae9)"
 
