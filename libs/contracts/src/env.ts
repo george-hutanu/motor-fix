@@ -50,3 +50,15 @@ export const APPLE_ENV = [
   'APPLE_KEY_ID',
   'APPLE_PRIVATE_KEY',
 ] as const;
+
+// The web app's public address: unset in development and at build time.
+export function publicWebUrl(
+  source: Record<string, string | undefined> = process.env,
+): URL | undefined {
+  const value = source['PUBLIC_WEB_URL'];
+  if (!value) return undefined;
+  if (!URL.canParse(value)) {
+    throw new Error('PUBLIC_WEB_URL must be an absolute URL');
+  }
+  return new URL(value);
+}

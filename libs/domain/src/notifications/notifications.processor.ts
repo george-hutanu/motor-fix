@@ -70,6 +70,13 @@ export class NotificationsProcessor {
       );
       return false;
     }
+    // Every e-mail's button needs it; without it they would all fail for good.
+    if (this.config.sending && !this.config.webUrl) {
+      this.logger.error(
+        'e-mail sending is on but PUBLIC_WEB_URL is missing or not a URL; the notifications queue is not processed',
+      );
+      return false;
+    }
     if (!(await this.brevo.checkKey().catch(() => false))) {
       this.logger.error(
         'Brevo refused the API key; the notifications queue is not processed',

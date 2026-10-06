@@ -7,7 +7,7 @@ import {
   isMainModule,
   writeResponseToNodeResponse,
 } from '@angular/ssr/node';
-import { readEnv } from '@motor-fix/contracts/env';
+import { publicWebUrl, readEnv } from '@motor-fix/contracts/env';
 import express from 'express';
 
 import { apiInternalUrl } from './api-url';
@@ -20,9 +20,7 @@ const browserDistFolder = resolve(
 );
 
 const app = express();
-const publicUrl = process.env['PUBLIC_WEB_URL']
-  ? new URL(process.env['PUBLIC_WEB_URL'])
-  : undefined;
+const publicUrl = publicWebUrl();
 const angularApp = new AngularNodeAppEngine({
   allowedHosts: publicUrl ? [publicUrl.hostname] : undefined,
 });

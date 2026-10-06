@@ -33,6 +33,7 @@ features:
   - 628-tester-dispatch-cleanup
   - 675-size-not-trivial
   - 676-level-point-nonnumeric
+  - 539-public-web-url-boot
 ---
 
 # Capability: Platform
@@ -948,6 +949,10 @@ _From 676-level-point-nonnumeric._
 ### 676-FR-002 — A valid level written as a numeric string (`"1"`) MUST print as that level, the same way `resolveLevel` reads it.
 
 _From 676-level-point-nonnumeric._
+
+### 539-FR-003 — Reading `PUBLIC_WEB_URL` for the web server MUST throw an error naming the variable, without its value, when it is set but not an absolute URL, and return nothing when it is unset.
+
+_From 539-public-web-url-boot._
 
 ## Retired
 

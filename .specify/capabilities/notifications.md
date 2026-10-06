@@ -13,6 +13,7 @@ features:
   - 198-staff-notification-preferences
   - 540-email-link-scheme
   - 522-email-sent-once
+  - 539-public-web-url-boot
 ---
 
 # Capability: Notifications
@@ -404,6 +405,14 @@ _From 522-email-sent-once._
 ### 522-FR-003 — A failure releasing the send claim after a send MUST NOT fail the job; it is logged and the claim lapses after its window.
 
 _From 522-email-sent-once._
+
+### 539-FR-001 — The notifications worker MUST NOT process its queue while e-mail sending is on and `PUBLIC_WEB_URL` is missing or not an absolute URL, and MUST log an error naming `PUBLIC_WEB_URL`.
+
+_From 539-public-web-url-boot._
+
+### 539-FR-002 — With e-mail sending off, the worker's start MUST NOT depend on `PUBLIC_WEB_URL`.
+
+_From 539-public-web-url-boot._
 
 ## Retired
 

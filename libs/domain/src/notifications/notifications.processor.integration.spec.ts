@@ -1,4 +1,4 @@
-// @traces 195-FR-002 195-FR-005 195-FR-010 195-FR-011
+// @traces 195-FR-002 195-FR-005 195-FR-010 195-FR-011 539-FR-001 539-FR-002
 import { Logger } from '@nestjs/common';
 import { Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
@@ -668,6 +668,30 @@ describe('starting the worker', () => {
     await expect(processor.ready()).resolves.toBe(false);
     expect(error).toHaveBeenCalled();
     error.mockRestore();
+  });
+
+  it.each([
+    ['unset', ''],
+    ['not a URL', 'not a url'],
+  ])(
+    'refuses to send e-mail with PUBLIC_WEB_URL %s, and logs it',
+    async (_, value) => {
+      const error = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => undefined);
+      build({ PUBLIC_WEB_URL: value });
+      await expect(processor.ready()).resolves.toBe(false);
+      expect(mock.calls).toEqual([]);
+      expect(error).toHaveBeenCalledWith(
+        expect.stringContaining('PUBLIC_WEB_URL'),
+      );
+      error.mockRestore();
+    },
+  );
+
+  it('starts without PUBLIC_WEB_URL when e-mail sending is off', async () => {
+    build({ EMAIL_SENDING: 'off', PUBLIC_WEB_URL: '' });
+    await expect(processor.ready()).resolves.toBe(true);
   });
 
   it('refuses to send with no key', async () => {

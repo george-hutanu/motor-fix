@@ -1,4 +1,5 @@
-import { readEnv, STORAGE_ENV } from './env';
+// @traces 539-FR-003
+import { publicWebUrl, readEnv, STORAGE_ENV } from './env';
 
 describe('readEnv', () => {
   it('returns the required variables and defaults the release to dev', () => {
@@ -81,6 +82,25 @@ describe('readEnv', () => {
     expect(() => readEnv([], {})).toThrow('APP_ENV');
     expect(() => readEnv([], { APP_ENV: 'prod' })).toThrow(
       'APP_ENV must be one of development, test, staging, production',
+    );
+  });
+});
+
+describe('publicWebUrl', () => {
+  it('parses an absolute URL', () => {
+    expect(
+      publicWebUrl({ PUBLIC_WEB_URL: 'https://motorfix.ro/' })?.origin,
+    ).toBe('https://motorfix.ro');
+  });
+
+  it('returns nothing when unset or empty', () => {
+    expect(publicWebUrl({})).toBeUndefined();
+    expect(publicWebUrl({ PUBLIC_WEB_URL: '' })).toBeUndefined();
+  });
+
+  it('names the variable, never the value, when it is not a URL', () => {
+    expect(() => publicWebUrl({ PUBLIC_WEB_URL: 'secret-host' })).toThrow(
+      new Error('PUBLIC_WEB_URL must be an absolute URL'),
     );
   });
 });
