@@ -10,3 +10,4 @@ Survivors left outside `contracts`, `mcp` and `api` (FR-011), one task per proje
 - `libs/i18n`: 90.96 (run 37360174934), floor 85; 15 survived, 2 uncovered mutants to kill.
 - `libs/media`: 90.63 (run 37360193873), floor 85; 3 survived mutants to kill.
 - Harness: `.claude/scripts/diff-audit.mjs` flags `libs/contracts` specs' extensionless relative imports as nodenext errors, but the project resolves with `moduleResolution: bundler` and typechecks clean; teach the import-extension rule to read each project's tsconfig.
+- Spec wording: FR-005 names two routes for a survivor (killed by a test, or silenced on its line); `apps/mcp/src/server.ts`'s `req.url ?? '/'` survivor went a third way, a behaviour-preserving rewrite (`req.url?.split`). Name that route in the capability spec or the constitution's Principle VI text.

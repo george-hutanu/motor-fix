@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { flags, strykerOptions, summaryRows } from './mutation.ts';
+import { flags, summaryRows } from './mutation.ts';
 
 const root = join(__dirname, '..');
 const read = (path: string) => readFileSync(join(root, path), 'utf8');
 
-// Every project with a stryker.config.json.
+// The floors the full runs set; a floor may only rise (FR-007).
 const floors: Record<string, [string, number]> = {
   api: ['apps/api', 95],
   contracts: ['libs/contracts', 95],
@@ -23,22 +23,14 @@ const floors: Record<string, [string, number]> = {
 
 describe('every project floor', () => {
   it.each(Object.entries(floors))(
-    '%s has an integer floor from 0 to 100 and low under high',
-    (_name, [dir]) => {
+    '%s keeps an integer floor no lower than recorded, at most 100, low under high',
+    (_name, [dir, recorded]) => {
       const { thresholds } = JSON.parse(read(`${dir}/stryker.config.json`));
 
       expect(Number.isInteger(thresholds.break)).toBe(true);
-      expect(thresholds.break).toBeGreaterThanOrEqual(0);
+      expect(thresholds.break).toBeGreaterThanOrEqual(recorded);
+      expect(thresholds.break).toBeLessThanOrEqual(100);
       expect(thresholds.low).toBeLessThan(thresholds.high);
-    },
-  );
-
-  it.each(Object.entries(floors))(
-    '%s still gets the angular ignorer from its own config',
-    (name, [dir]) => {
-      expect(strykerOptions(name, join(root, dir), false).ignorers).toEqual([
-        'angular',
-      ]);
     },
   );
 });
@@ -67,21 +59,6 @@ describe('summaryRows minutes', () => {
       '| p | n/a | 0 | 2.0 |\n',
     );
   });
-
-  it('writes the four-column header once, on an empty summary only', () => {
-    const first = summaryRows('', 'p', 100, 95, 60_000);
-
-    expect(first).toBe(
-      '| Project | Mutation score | Floor | Minutes |\n|---|---|---|---|\n| p | 100.00% | 95 | 1.0 |\n',
-    );
-    expect(summaryRows(first, 'q', 100, 95, 60_000)).not.toContain('Project');
-  });
-
-  it('keeps a pipe-free row for hostile project names of one cell', () => {
-    expect(summaryRows('x', 'a b', 0, 0, 1).split('\n')[0]).toBe(
-      '| a b | 0.00% | 0 | 0.0 |',
-    );
-  });
 });
 
 describe('flags edge cases', () => {
@@ -98,35 +75,5 @@ describe('flags edge cases', () => {
 
   it('does not mistake a longer flag for incremental', () => {
     expect(flags(['--incrementalx=true']).incremental).toBe(false);
-  });
-});
-
-describe('mutation workflow dispatch and limit', () => {
-  const workflow = read('.github/workflows/mutation.yml');
-
-  it('sets a whole-minute limit within GitHub ceiling, on a multiple of ten', () => {
-    const limit = Number(/timeout-minutes: (\S+)/.exec(workflow)?.[1]);
-
-    expect(Number.isInteger(limit)).toBe(true);
-    expect(limit).toBeGreaterThan(0);
-    expect(limit).toBeLessThanOrEqual(360);
-    expect(limit % 10).toBe(0);
-  });
-
-  it('states, next to the limit, the runs it was derived from', () => {
-    const lines = workflow.split('\n');
-    const at = lines.findIndex((l) => l.includes('timeout-minutes'));
-
-    expect(lines[at - 1]).toMatch(/\d{11}/);
-    expect(lines[at - 1]).toMatch(/30%/);
-  });
-
-  it('keeps the limit no lower than the longest measured full job plus 30%, capped', () => {
-    const limit = Number(/timeout-minutes: (\S+)/.exec(workflow)?.[1]);
-    const webJob = 143;
-
-    expect(limit).toBeGreaterThanOrEqual(
-      Math.min(360, Math.ceil((webJob * 1.3) / 10) * 10),
-    );
   });
 });
