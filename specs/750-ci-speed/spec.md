@@ -115,6 +115,7 @@ Someone reading AGENTS.md's PR CI bullet or `docs/speed-and-cost-plan.md` sees t
 - A cache written on `main` with a different base image or lockfile must not produce a stale image: cache keys follow the Dockerfile's inputs.
 - Collapsing releases must never skip a commit's production deploy that staging already passed, and must never cancel a running Railway deploy.
 - `release.yml` calls `ci.yml` with `run-many`; a change to `ci.yml`'s job layout applies to releases too and must keep the full run on `main`.
+- The Actions cache is empty, evicted or unavailable (the free plan evicts after 7 days idle or 10 GB): the Docker build runs cold and still succeeds; a cache problem never fails a build.
 - A docs-only PR keeps its two-job run.
 
 ## Requirements *(mandatory)*
