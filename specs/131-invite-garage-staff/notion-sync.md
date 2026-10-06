@@ -10,3 +10,4 @@
 - 2026-10-06 · implement · ST-131 · Planning → Implementing
 - 2026-10-06 · implement · timeline · Planning → Implementing
 - 2026-10-06 · labels · PR #152 · in development
+- 2026-10-06 · debt · ST-131 · 5 To do tech-debt tasks filed from deferred.md (connector)
