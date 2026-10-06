@@ -10,6 +10,16 @@
 
 **Input**: User description: "Show the offline message when the service worker answers a failed fetch with 504. In the production build the Angular service worker turns a failed fetch into a 504 with no body, and the shared `toProblem()` in `libs/overlays/src/form.ts` maps only status 0 to offline, so a form sent offline says 'Ceva nu a mers la noi' instead of 'Nu ești conectat'. Fix: when the browser reports offline and the answer is a 504 that carries no problem body, read it as `offline` (status kept as 504). Out of scope: `apps/web/src/app/dashboard/session.ts`, any UI/copy change, the service worker config."
 
+## Clarifications
+
+### Session 2026-10-06 (autonomous, from spec-challenger)
+
+- Q: May the adversary test title "prefers offline over network only when status is zero" be renamed while its assertion stays? → A: Yes; SC-002 binds expectations, not titles.
+- Q: When is the browser's offline state read? → A: Once, when `toProblem` maps the failure, as the status-0 rule does.
+- Q: Is `new-password.ts`'s link check in scope? → A: No; it branches on 410 only, so FR-001 cannot change it.
+- Q: Is a form-level test with a bodiless 504 owed? → A: No; forms branch on `code`, already covered at status 0; one mapping spec per FR-001/FR-003 scenario.
+- Q: Does SC-003's "one function" forbid a helper? → A: Read as one file, no new export; the branch sits in `toProblem` beside the status-0 rule.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - A form sent offline says so (Priority: P1)
@@ -92,7 +102,7 @@ for a 504 with a problem body while offline.
 - **FR-001**: A failed save answered with status 504 and no problem body (no
   string `code`, after the text-body parse the mapping already does) MUST
   read as code `offline`, status 504, while the browser reports itself
-  offline (`navigator.onLine === false`).
+  offline (`navigator.onLine === false`, read once when the failure is mapped, as the status-0 rule already does).
 - **FR-002**: A failed save answered with status 0 MUST keep today's reading:
   `offline` while the browser reports itself offline, `network` otherwise.
 - **FR-003**: A failed save answered with status 504 and no problem body
@@ -128,9 +138,11 @@ for a 504 with a problem body while offline.
   online do (Jest, the shared mapping's specs).
 - **SC-002**: Every existing `toProblem` spec in `libs/overlays/src/form.spec.ts`
   and `form.adversary.spec.ts` passes unchanged (0 edits to their
-  expectations), including the 500-while-offline adversary case.
-- **SC-003**: The fix changes one function in one file of the overlays
-  library and adds tests only; no other app or library source file changes
+  expectations; a test title the new rule makes false may be renamed),
+  including the 500-while-offline adversary case.
+- **SC-003**: The fix changes one file of the overlays library, with no new
+  export, the branch sitting in `toProblem` beside the status-0 rule, and
+  adds tests only; no other app or library source file changes
   (Principle I).
 
 ## Assumptions
@@ -145,7 +157,9 @@ for a 504 with a problem body while offline.
 - The status stays 504 on the `offline` problem (the description says so),
   so callers that read `status` see what the browser received; no caller
   branches on `status === 0` for offline today (autonomous default, checked:
-  only the auth interceptor and `taskSave` read `toProblem`'s result).
+  the auth interceptor, `taskSave` and `apps/web/src/app/sign-in/new-password.ts`
+  read `toProblem`'s result; the last branches on 410 only, so it is
+  unaffected and stays out of scope).
 - The browser's own offline report is the only signal used; the web app's
   offline bar (live-updates) is not consulted, to keep the mapping free of
   injection and ~5 lines (autonomous default, Principle I).
