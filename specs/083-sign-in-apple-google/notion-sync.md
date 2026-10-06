@@ -12,3 +12,6 @@
 - 2026-10-06 · qa · ST-83 · Implementing → QA
 - 2026-10-06 · qa · Foundations timeline · ST-83 Implementing → QA
 - 2026-10-06 · labels · PR #136 · in development → QA
+- 2026-10-06 · blocked · ST-83 · QA → Blocked (repair-loop-exceeded)
+- 2026-10-06 · blocked · Foundations timeline · ST-83 QA → Blocked
+- 2026-10-06 · labels · PR #136 · QA + blocked
