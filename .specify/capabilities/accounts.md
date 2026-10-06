@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-05
+updated: 2026-10-06
 features:
   - 079-account-model
   - 082-sign-in
@@ -10,6 +10,7 @@ features:
   - 128-sign-out
   - 394-role-switch
   - 132-sign-up-consent
+  - 563-expired-token-sweep
 ---
 
 # Capability: Accounts
@@ -393,6 +394,26 @@ _From 132-sign-up-consent._
 ### 132-FR-008 — `/{lang}/terms` and `/{lang}/privacy` MUST show the terms of use and the privacy notice in the address's language to anyone without an account, rendered on the server, with the text version and a notice that the text is a draft pending legal review; both MUST be listed in the sitemap for both languages, and MUST NOT scroll sideways on a 320 px phone.
 
 _From 132-sign-up-consent._
+
+### 563-FR-001 — The route sweep MUST call every route outside the public list with an access token that is genuine in every respect (signed with the application's secret, for an existing active account, with a valid role) except that its expiry is in the past; its role is `driver`, a role the account holds.
+
+_From 563-expired-token-sweep._
+
+### 563-FR-002 — For every such route the sweep MUST require the same refusal as for a missing session: status 401, code `sign_in_required`, no cookie set.
+
+_From 563-expired-token-sweep._
+
+### 563-FR-003 — The expired-token case MUST iterate the same route list as the existing cases (derived from the API description at test time), so a new gated route is covered without editing the sweep.
+
+_From 563-expired-token-sweep._
+
+### 563-FR-004 — The sweep MUST show that the account and signing used for the expired token are otherwise accepted: an unexpired token for the same account gets 200 from `GET /api/v1/me`, so a refusal cannot be mistaken for a refusal of an unknown account or a bad signature (scenario 2 of story 1).
+
+_From 563-expired-token-sweep._
+
+### 563-FR-005 — The account the sweep creates for this purpose MUST be created by the test itself and MUST NOT depend on seed data or on another test's state; the file takes `databaseTurn` (`@motor-fix/domain/testing`) like the other account-writing API tests, so a suite emptying the account tables cannot run meanwhile.
+
+_From 563-expired-token-sweep._
 
 ## Retired
 
