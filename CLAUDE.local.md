@@ -160,5 +160,5 @@ ranked, read-only UI audit with `scan.mjs` and `contrast.mjs` helpers; fixes
 only the findings you name).
 
 <!-- SPECKIT START -->
-Active plan (stack, structure, commands): specs/745-notion-api-limits/plan.md
+Active plan (stack, structure, commands): specs/509-offline-on-worker-504/plan.md
 <!-- SPECKIT END -->

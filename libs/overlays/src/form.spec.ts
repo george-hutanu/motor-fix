@@ -365,6 +365,58 @@ describe('toProblem', () => {
     }
   });
 
+  describe("the service worker's 504", () => {
+    const offline = () =>
+      jest.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+
+    it.each([
+      ['no body', null],
+      ['an empty body', ''],
+      ['a gateway page', '<html></html>'],
+      ['an empty code', { code: '' }],
+    ])('reads a 504 with %s while offline as offline', (_, body) => {
+      const online = offline();
+      try {
+        expect(toProblem(problem(504, body))).toEqual({
+          code: 'offline',
+          status: 504,
+        });
+      } finally {
+        online.mockRestore();
+      }
+    });
+
+    it('keeps a 504 with no body while online as a server error', () => {
+      expect(toProblem(problem(504, null))).toEqual({
+        code: 'internal_error',
+        status: 504,
+      });
+    });
+
+    it('keeps the code of a 504 problem while offline', () => {
+      const online = offline();
+      try {
+        expect(
+          toProblem(problem(504, { code: 'token_expired', detail: 'late' })),
+        ).toEqual({ code: 'token_expired', detail: 'late', status: 504 });
+      } finally {
+        online.mockRestore();
+      }
+    });
+
+    it('keeps a 500 with no body while offline as a server error', () => {
+      const online = offline();
+      try {
+        expect(toProblem(problem(500, null))).toEqual({
+          code: 'internal_error',
+          status: 500,
+        });
+      } finally {
+        online.mockRestore();
+      }
+    });
+  });
+
   it.each([
     [502, '<html>Bad gateway</html>', 'internal_error'],
     [409, { message: 'taken' }, 'conflict'],
