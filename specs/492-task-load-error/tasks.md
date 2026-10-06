@@ -29,4 +29,4 @@ description: "Tasks for ST-492: a task that fails to load shows an error and a r
 
 ## Dependencies
 
-T001 to T007 are independent files (T001 and T002 share `panel.spec.ts`, so write them in order); T008 needs T001 to T005; T009 needs T006, T007 and T005's pattern; T010 last. MVP is US1 plus US2 (T001 to T005, T008); US3 (T006, T007, T009) follows.
+T001 to T007 are independent files (T001 and T002 share `overlays.spec.ts`, so write them in order); T008 needs T001 to T005; T009 needs T006, T007 and T005's pattern; T010 last. MVP is US1 plus US2 (T001 to T005, T008); US3 (T006, T007, T009) follows.

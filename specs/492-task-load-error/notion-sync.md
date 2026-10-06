@@ -13,3 +13,4 @@
 - 2026-10-07 · qa · ST-492 · Implementing → QA
 - 2026-10-07 · qa · timeline · no row for ST-492
 - 2026-10-07 · labels · PR #170 · QA
+- 2026-10-07 · ready · Foundations · +ST-781, +ST-780, +ST-776
