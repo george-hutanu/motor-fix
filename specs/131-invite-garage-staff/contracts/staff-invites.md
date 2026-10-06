@@ -56,10 +56,10 @@ paths:
       tags: [invites]
       operationId: InvitesController_accept
       security: [{ bearer: [] }]
-      description: Needs the session's refresh cookie too (as roles/switch); answers the session in the invited role.
+      description: Joins the garage; the web then switches the session to the invited role through roles/switch (the refresh cookie is scoped to /api/v1/auth).
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/InviteTokenDto' } } } }
       responses:
-        '200': { description: Accepted, content: { application/json: { schema: { $ref: '#/components/schemas/SessionDto' } } } }
+        '204': { description: Accepted }
         '401': { description: sign_in_required }
         '404': { description: feature_off }
         '410': { description: invite_expired; invite_invalid (also the garage's owner, or a receptionist of another garage accepting a receptionist invite) }
@@ -90,9 +90,10 @@ components:
         token: { type: string, minLength: 1, maxLength: 256, description: "The link's last part" }
     InviteViewDto:
       type: object
-      required: [garage, kind, name]
+      required: [garage, kind, name, email]
       properties:
         garage: { type: string, description: The garage's name }
+        email: { type: string, description: The invited address, filled into the sign-up dialog }
         kind: { type: string, enum: [mechanic, receptionist] }
         name: { type: string, description: The invitee's name as the owner typed it }
 ```

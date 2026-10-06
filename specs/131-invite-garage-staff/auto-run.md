@@ -46,3 +46,17 @@
 - F1 HIGH (fixed): spec.md US2 #2/#6, FR-007, Key Entities required `on_profile true`; plan/research drop the column. Spec aligned; Clarification added (autonomous default, Principle I, research.md).
 - Status codes: spec 409/404 match contract; 410 on check/accept is contract detail. No other findings. Re-lint clean.
 - Ready sweep (EP-1, API, not PENDING): hold review of 73 candidates → 24 ticked, 49 held with reasons; covers the PENDING sweeps of ST-610 (#150) and ST-637 (#151).
+
+## 9. Tests (red first)
+- Written: contracts DTO spec, audience case, staff templates spec, one API integration spec (send, check/accept, resend/revoke, feature off), web specs invite-staff, frame.invite, public/invite, sign-in-dialog join, sign-up name prefill, e2e staff-invite.
+- Red: web 5/5 suites failing (7 failing cases + 2 missing modules); contracts 1/1 (missing module); domain 3/3 (5 failing, missing modules).
+- Decision: the invite page accepts through the generated client and then `Session.switchRole(kind)`, instead of a Session method (keeps Session's dependencies unchanged; refresh cookie path is /api/v1/auth so accept cannot renew the session itself).
+
+## Resume (2026-10-06, after the API session limit)
+- Rules delta vs origin/main: the plan pointer only. Merged origin/main (71 behind; conflict in the CLAUDE.local.md plan pointer, kept this feature's), pushed 2810cc5; npm ci for main's new web-push.
+- The earlier agent's red tests and first edits kept and built on (set aside in a tagged stash across the merge, re-applied).
+
+## 10. Implement
+- API slice: GaragesModule (own Brevo client from the API's EmailConfig), GarageInvitesController + InvitesController, service finished (invite_open answers its inviteId), public check route listed, OpenAPI and client regenerated. Domain invite spec 34/34 green against the worktree's PostgreSQL/Redis.
+- Test fix: the audit history is append-only and the outbox is not emptied by reset, so the spec reads only rows written since the test began (database clock).
+- T003 dropped as unneeded (token looked up by hash; accept answers 204 and the web switches role). Contract doc aligned (accept 204, InviteViewDto.email).
