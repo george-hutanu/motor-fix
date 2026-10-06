@@ -99,8 +99,7 @@
         "code_invalid": "Codul nu este corect.",
         "consent_required": "Bifează acordul pentru a crea contul.",
         "phone_taken": "Numărul acesta nu poate intra în cont. Intră cu e‑mail și parolă.",
-        "too_many_attempts": "Prea multe încercări. Așteaptă puțin sau cere un cod nou.",
-        "whatsapp_failed": "Nu am putut trimite codul pe WhatsApp."
+        "too_many_attempts": "Prea multe încercări. Așteaptă puțin sau cere un cod nou."
       },
       "sent": "Am trimis un cod pe WhatsApp la {phone}.",
       "submit": "Intră în cont"

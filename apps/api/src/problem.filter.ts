@@ -4,6 +4,7 @@ import {
   codeForStatus,
   type FieldProblem,
   fieldProblems,
+  type Problem,
 } from '@motor-fix/contracts';
 import {
   ArgumentsHost,
@@ -20,7 +21,7 @@ export function sendProblem(
   code: string,
   detail?: string,
   errors?: FieldProblem[],
-  extensions: Record<string, unknown> = {},
+  extensions: Pick<Problem, 'attemptsLeft'> & { inviteId?: string } = {},
 ) {
   res
     .status(status)
@@ -74,8 +75,8 @@ export class ProblemFilter implements ExceptionFilter {
 }
 
 // How many tries a sign-in code has left, when the refusal says so.
-function attemptsLeft(value: unknown) {
-  return Number.isInteger(value) && (value as number) >= 0
+function attemptsLeft(value: unknown): Pick<Problem, 'attemptsLeft'> {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0
     ? { attemptsLeft: value }
     : {};
 }

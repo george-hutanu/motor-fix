@@ -160,11 +160,10 @@ export class PhoneSignInService {
   // wrong code counting one attempt and saying how many are left.
   private async rightCode(phone: string, code: string) {
     const row = await this.prisma.signInCode.findUnique({ where: { phone } });
+    if (!row) throw this.refused('code_invalid');
     const check = checkCode(row, code, this.options.tokenSecret, new Date());
-    if (check === 'right' && row) return row;
-    if (check !== 'wrong' || !row) {
-      throw this.refused(check === 'right' ? 'code_invalid' : check);
-    }
+    if (check === 'right') return row;
+    if (check !== 'wrong') throw this.refused(check);
     await this.prisma.signInCode.updateMany({
       data: { attempts: { increment: 1 } },
       where: { codeHash: row.codeHash, phone, usedAt: null },

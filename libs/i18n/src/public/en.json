@@ -98,8 +98,7 @@
         "code_invalid": "The code is not correct.",
         "consent_required": "Tick the agreement to create the account.",
         "phone_taken": "This number cannot sign in. Sign in with e-mail and password.",
-        "too_many_attempts": "Too many attempts. Wait a little or ask for a new code.",
-        "whatsapp_failed": "We could not send the code by WhatsApp."
+        "too_many_attempts": "Too many attempts. Wait a little or ask for a new code."
       },
       "sent": "We sent a code by WhatsApp to {phone}.",
       "submit": "Sign in"

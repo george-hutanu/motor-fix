@@ -45,7 +45,6 @@ describe('ProblemFilter', () => {
     expect(res.body).toMatchObject({ code: 'sign_in_required', status: 401 });
   });
 
-  // @traces 393-FR-006
   it('forwards the tries a sign-in code has left', () => {
     const res = send(
       new HttpException(

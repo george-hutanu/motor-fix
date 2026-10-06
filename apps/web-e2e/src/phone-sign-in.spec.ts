@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 
 import { ready } from './accounts.js';
 
@@ -27,9 +27,9 @@ async function lastCode(page: Page, phone: string): Promise<string> {
 }
 
 // A number no account holds, under the allow-listed +4070000 prefix and
-// outside the seeded ones, new on every run.
+// outside the seeded ones and the refused +40700009999, new on every run.
 const freshPhone = () =>
-  `+4070000${String(1000 + Math.floor(Math.random() * 9000))}`;
+  `+4070000${String(1000 + Math.floor(Math.random() * 8999))}`;
 
 test.describe('signing in with a phone number @seeded @mailbox', () => {
   test('a garage owner asks for a code, types it and lands on the garage', async ({
@@ -84,6 +84,7 @@ const REFUSED_PHONE = '+40700009999';
 
 const TEXTS = {
   en: {
+    account: 'Account',
     again: 'Send again',
     code: 'Code',
     create: 'Create the account',
@@ -95,6 +96,7 @@ const TEXTS = {
     withPhone: 'Continue with phone',
   },
   ro: {
+    account: 'Cont',
     again: 'Trimite din nou',
     code: 'Cod',
     create: 'Creează contul',
@@ -107,20 +109,33 @@ const TEXTS = {
   },
 } as const;
 
+// Wider screens put the focus on the step's field; phones only show it, so
+// no on-screen keyboard pops up (libs/overlays/src/panel.ts).
+async function atField(page: Page, field: Locator) {
+  if ((page.viewportSize()?.width ?? 0) < 768) {
+    await expect(field).toBeVisible();
+  } else {
+    await expect(field).toBeFocused();
+  }
+}
+
 async function phoneStep(page: Page, lang: keyof typeof TEXTS) {
   const t = TEXTS[lang];
   await ready(page, `/${lang}/garages`);
-  await page.getByRole('button', { exact: true, name: t.title }).click();
+  // Phones open it from the tab bar, wider screens from the top bar.
+  if ((page.viewportSize()?.width ?? 0) < 768) {
+    await page.getByRole('link', { name: t.account }).click();
+  } else {
+    await page.getByRole('button', { exact: true, name: t.title }).click();
+  }
   const dialog = page.getByRole('dialog', { name: t.title });
   await expect(dialog.locator('mf-overlay-panel')).toBeVisible();
   await dialog.getByRole('button', { name: t.withPhone }).click();
-  await expect(dialog.getByLabel(t.number)).toBeFocused();
+  await atField(page, dialog.getByLabel(t.number));
   return dialog;
 }
 
 test.describe('when WhatsApp does not take the code @mailbox', () => {
-  // @traces 393-FR-005
-  // @traces 393-FR-017
   test('a number the stub refuses shows the fallback message and the e-mail link', async ({
     page,
   }) => {
@@ -161,7 +176,6 @@ async function holds(page: Page, step: string) {
 test.describe('the three steps on every screen @mailbox', () => {
   for (const size of SIZES) {
     for (const lang of ['ro', 'en'] as const) {
-      // @traces 393-FR-016
       test(`at ${size.width} px in ${lang}, the number, code and profile steps scroll nothing sideways`, async ({
         page,
       }) => {
@@ -173,14 +187,14 @@ test.describe('the three steps on every screen @mailbox', () => {
 
         await dialog.getByLabel(t.number).fill(phone);
         await dialog.getByRole('button', { name: t.send }).click();
-        await expect(dialog.getByLabel(t.code)).toBeFocused();
+        await atField(page, dialog.getByLabel(t.code));
         await holds(page, 'code');
 
         await dialog.getByLabel(t.code).fill(await lastCode(page, phone));
         await dialog
           .getByRole('button', { exact: true, name: t.submit })
           .click();
-        await expect(dialog.getByLabel(t.name)).toBeFocused();
+        await atField(page, dialog.getByLabel(t.name));
         await holds(page, 'profile');
         await expect(
           dialog.getByRole('button', { name: t.create }),

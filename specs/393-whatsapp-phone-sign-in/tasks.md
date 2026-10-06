@@ -31,7 +31,7 @@
 
 - [X] T007 [P] Create `normalisePhone(input): string | null` in `libs/contracts/src/phone.ts` (new) and export it from `libs/contracts/src/index.ts` (T002 green) (FR-001)
 - [X] T008 Add `PhoneCodeDto`, `PhoneSignInDto`, `PhoneSessionDto` to `libs/contracts/src/auth.dto.ts`, reusing `normalisePhone` and `ConsentDto` (T003 green; depends on T007) (FR-001, FR-006, FR-011)
-- [X] T009 [P] Add `model SignInCode` (`phone String @id`, `codeHash String`, `expiresAt DateTime`, `attempts Int @default(0)`, `usedAt DateTime?`, `createdAt DateTime @default(now())`, `@@map("sign_in_code")`, snake_case field maps) to `libs/domain/prisma/schema/auth.prisma` and write `libs/domain/prisma/migrations/<YYYYMMDDHHMMSS>_sign_in_code/migration.sql` (new), stamp after `20261005170000_notification_claim`; regenerate the Prisma client (FR-003)
+- [X] T009 [P] Add `model SignInCode` (`phone String @id`, `codeHash String`, `expiresAt DateTime`, `attempts Int @default(0)`, `usedAt DateTime?`, `createdAt DateTime @default(now())`, `@@map("sign_in_code")`, snake_case field maps) to `libs/domain/prisma/schema/auth.prisma` and write `libs/domain/prisma/migrations/20261006090000_sign_in_code/migration.sql` (new), stamp after `20261005170000_notification_claim`; regenerate the Prisma client (FR-003)
 - [X] T010 [P] Make an allow-list entry ending in `*` match by prefix in `libs/domain/src/notifications/phone-config.ts` (T004 green) (FR-017)
 - [X] T011 [P] Add `admitPhoneCode` and `uncountPhoneCode` to `libs/domain/src/auth/attempts.ts` (T005 green) (FR-004)
 - [X] T012 [P] Create `libs/domain/src/notifications/templates/sign-in-code.ts` (new) with the ro/en WhatsApp texts (`motorfix_sign_in_code_ro`, `motorfix_sign_in_code_en`, slots `{code}`, `{minutes}`) and register `SIGN_IN_CODE` in `libs/domain/src/notifications/templates/registry.ts` (T006 green) (FR-002)
@@ -151,7 +151,7 @@
 ## Phase 8: Polish
 
 - [x] T047 [P] Add a 320 px, 390 px, tablet and desktop, light and dark, ro and en walk of the three steps to `apps/web-e2e/src/phone-sign-in.spec.ts` asserting no sideways scroll (SC-004, FR-016)
-- [ ] T048 Run `quickstart.md` end to end and note the result in `specs/393-whatsapp-phone-sign-in/auto-run.md` (FR-017)
+- [x] T048 Run `quickstart.md` end to end and note the result in `specs/393-whatsapp-phone-sign-in/auto-run.md` (FR-017)
 
 ---
 

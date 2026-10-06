@@ -612,7 +612,6 @@ function logged() {
 }
 
 describe('a code is spent, expires and takes five wrong tries', () => {
-  // @traces 393-FR-006
   it('refuses a code already used with 401 code_invalid', async () => {
     await holder(['garage']);
     const code = await codeFor(PHONE);
@@ -625,7 +624,6 @@ describe('a code is spent, expires and takes five wrong tries', () => {
     expect(again.body.attemptsLeft).toBeUndefined();
   });
 
-  // @traces 393-FR-006
   it('answers 410 code_expired at five minutes, whatever was typed', async () => {
     await holder(['garage']);
     const code = await codeFor(PHONE);
@@ -641,7 +639,6 @@ describe('a code is spent, expires and takes five wrong tries', () => {
     expect([wrong.status, wrong.body.code]).toEqual([410, 'code_expired']);
   });
 
-  // @traces 393-FR-006, 393-FR-014
   it('counts down the attempts left on each wrong code, then refuses even the right one until a new code', async () => {
     await holder(['garage']);
     const code = await codeFor(PHONE);
@@ -663,7 +660,6 @@ describe('a code is spent, expires and takes five wrong tries', () => {
     await signIn({ code: fresh, phone: PHONE }).expect(200);
   });
 
-  // @traces 393-FR-003
   it('voids the first code when a second is sent', async () => {
     await holder(['garage']);
     let first = await codeFor(PHONE);
@@ -680,7 +676,6 @@ describe('a code is spent, expires and takes five wrong tries', () => {
     await signIn({ code: second, phone: PHONE }).expect(200);
   });
 
-  // @traces 393-FR-009
   it('opens exactly one session for two concurrent uses of one right code', async () => {
     await holder(['garage']);
     const code = await codeFor(PHONE);
@@ -696,7 +691,6 @@ describe('a code is spent, expires and takes five wrong tries', () => {
 });
 
 describe('how often a code may be asked for', () => {
-  // @traces 393-FR-004
   it('refuses a second code within the minute with 429 and sends nothing', async () => {
     await askCode({ phone: PHONE }).expect(202);
 
@@ -706,7 +700,6 @@ describe('how often a code may be asked for', () => {
     expect(brevo.whatsapp()).toHaveLength(1);
   });
 
-  // @traces 393-FR-004
   it('refuses the sixth code for a number within the hour', async () => {
     for (let i = 0; i < 5; i++) {
       await askCode({ phone: PHONE }).expect(202);
@@ -719,7 +712,6 @@ describe('how often a code may be asked for', () => {
     expect(brevo.whatsapp()).toHaveLength(5);
   });
 
-  // @traces 393-FR-004
   it('refuses the 21st request from one address within the hour', async () => {
     const from = '203.0.113.7';
     for (let i = 0; i < 20; i++) {
@@ -734,7 +726,6 @@ describe('how often a code may be asked for', () => {
     expect(brevo.whatsapp()).toHaveLength(20);
   });
 
-  // @traces 393-FR-003
   it('leaves exactly one live code after two concurrent requests', async () => {
     await holder(['garage']);
     redisDown();
@@ -752,7 +743,6 @@ describe('how often a code may be asked for', () => {
     expect(answers.filter((status) => status === 200)).toHaveLength(1);
   });
 
-  // @traces 393-FR-004, 393-FR-006
   it('skips the three limits and logs when Redis is down, while expiry, single use and the five tries still hold', async () => {
     await holder(['garage']);
     const lines = logged();
@@ -802,7 +792,6 @@ describe('a code WhatsApp does not take', () => {
     ],
   ];
 
-  // @traces 393-FR-005
   it.each(failing)(
     'answers 502 whatsapp_failed and stores no code when %s',
     async (_, fail) => {
@@ -816,7 +805,6 @@ describe('a code WhatsApp does not take', () => {
     10_000,
   );
 
-  // @traces 393-FR-004
   it('does not count a code that was not sent toward the hourly five', async () => {
     brevo.answer({ status: 400 });
     await askCode({ phone: PHONE }).expect(502);
@@ -827,7 +815,6 @@ describe('a code WhatsApp does not take', () => {
     }
   });
 
-  // @traces 393-FR-005, 393-FR-011
   it.each([
     ['provider_400', () => brevo.answer({ status: 400 })],
     ['sending_off', () => Object.assign(phoneConfig, { sending: false })],
@@ -852,7 +839,6 @@ describe('a code WhatsApp does not take', () => {
 });
 
 describe('maintenance and suspended accounts', () => {
-  // @traces 393-FR-010
   it('answers 503 maintenance to a non-admin and an unknown number, sending and storing nothing', async () => {
     await holder(['garage']);
     maintenanceOn = true;
@@ -866,7 +852,6 @@ describe('maintenance and suspended accounts', () => {
     expect(await prisma.signInCode.count()).toBe(0);
   });
 
-  // @traces 393-FR-010
   it("gives an admin's number its code and signs the admin in", async () => {
     const id = await holder(['admin']);
     maintenanceOn = true;
@@ -878,7 +863,6 @@ describe('maintenance and suspended accounts', () => {
     expect(claims(res)?.accountId).toBe(id);
   });
 
-  // @traces 393-FR-010
   it("spends a non-admin's right code on 503 when maintenance came on after sending", async () => {
     await holder(['garage']);
     const code = await codeFor(PHONE);
@@ -893,7 +877,6 @@ describe('maintenance and suspended accounts', () => {
     expect(await prisma.refreshToken.count()).toBe(0);
   });
 
-  // @traces 393-FR-010
   it('answers 503 to a new number with the right code under maintenance, spending it', async () => {
     const NEW = '+40733000000';
     const code = await codeFor(NEW);
@@ -913,7 +896,6 @@ describe('maintenance and suspended accounts', () => {
     expect(await prisma.account.count({ where: { phone: NEW } })).toBe(0);
   });
 
-  // @traces 393-FR-007
   it("answers 403 account_suspended to a suspended account's right code, spending it", async () => {
     await holder(['garage'], { status: 'suspended' });
     const code = await codeFor(PHONE);

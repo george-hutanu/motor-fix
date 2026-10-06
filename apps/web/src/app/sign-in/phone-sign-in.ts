@@ -1,5 +1,4 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -44,13 +43,6 @@ const RESEND_SECONDS = 60;
 
 const possiblePhone = (control: AbstractControl<string>) =>
   normalisePhone(control.value) ? null : { pattern: true };
-
-// The tries a refused code has left, when the answer says so.
-function attemptsLeftOf(error: unknown): number | null {
-  const left =
-    error instanceof HttpErrorResponse ? error.error?.attemptsLeft : undefined;
-  return Number.isInteger(left) && left >= 0 ? left : null;
-}
 
 const clock = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
@@ -159,14 +151,16 @@ const clock = (seconds: number) =>
           <button type="button" class="link" [disabled]="resendLocked()" (click)="sendAgain()">
             {{ 'public.signIn.code.again' | t }}
           </button>
-          <button type="button" class="link" [disabled]="codeSave.state() === 'sending'" (click)="changeNumber()">
-            {{ 'public.signIn.code.change' | t }}
-          </button>
+          @if (!expired()) {
+            <button type="button" class="link" [disabled]="codeSave.state() === 'sending'" (click)="changeNumber()">
+              {{ 'public.signIn.code.change' | t }}
+            </button>
+          }
         </p>
       </form>
     } @else {
       <form [formGroup]="profileForm" (ngSubmit)="profileSave.submit()" novalidate>
-        <p>{{ 'public.signIn.profile.intro' | t }}</p>
+        <p role="status">{{ 'public.signIn.profile.intro' | t }}</p>
         <div class="field">
           <label for="mf-phone-name">{{ 'public.signIn.profile.name' | t }}</label>
           <input
@@ -329,13 +323,28 @@ export class PhoneSignIn {
       if (!answer) throw new Error('signed in without an account');
       return answer;
     } catch (error) {
-      const { code } = toProblem(error);
-      if (code === 'code_expired') this.expire();
-      const left = code === 'code_invalid' ? attemptsLeftOf(error) : null;
-      this.attemptsLeft.set(left === null ? null : { count: left });
-      if (code === 'code_invalid') this.codeForm.controls.code.reset();
+      this.refused(error);
       throw error;
     }
+  }
+
+  // What a refused code leaves on screen.
+  private refused(error: unknown) {
+    const { attemptsLeft, code } = toProblem(error);
+    // A code refused at the profile step cannot open the account any more,
+    // and that step has no field to type another in: only a new code helps.
+    if (
+      code === 'code_expired' ||
+      (code === 'code_invalid' && this.step() === 'profile')
+    ) {
+      this.expire();
+    }
+    this.attemptsLeft.set(
+      code === 'code_invalid' && attemptsLeft !== undefined
+        ? { count: attemptsLeft }
+        : null,
+    );
+    if (code === 'code_invalid') this.codeForm.controls.code.reset();
   }
 
   // Back to the code step, where only a new code helps.

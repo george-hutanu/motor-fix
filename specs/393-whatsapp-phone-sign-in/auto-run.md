@@ -73,3 +73,20 @@
 - Merged `origin/main` (93 commits, #158 cloud sessions) as `a38ed2e`: conflicts in `ci.yml` (kept both E2E env blocks), `app.module.ts`, `sign-in.ts` (phone button joins the provider buttons' "or"); data-access regenerated. Pre-commit hook green. The push was refused: the cloud GitHub App lacks the `workflows` permission and the merge carries main's `ci.yml` lines, so every commit stays local until it is granted or the laptop pushes.
 - Red: integration 10 of 69 failed (attemptsLeft countdown, uncount, 4 failure kinds in the log, 3 maintenance cases, suspended); web 10 of 35 failed. Green: integration 69/69; domain auth + api 45 suites, 1476 tests; web sign-in + overlays 21 suites, 430 tests; i18n 506; contract check clean.
 - Deviations: `attemptsLeft` rides on the refusal body and `ProblemFilter` forwards it only as a whole count ≥ 0; the web reads it from the error body rather than widening the shared `toProblem`. `<mf-task-error>` projects content so the attempts-left line shares its announced region. `too_many_attempts` is one text for the phone and code steps. The Brevo stub answers 400 to +40700009999 for the e2e fallback case. T047's walk sends one code per size and language (8, under the 20-per-address hour) and checks light and dark on each step by switching the scheme in place.
+
+## Compaction 2026-10-06T16:46:34.717Z (auto)
+
+- branch `393-whatsapp-phone-sign-in` at `9eab58e`
+- tasks: 47 done, 1 open
+- uncommitted (5):
+  -  M .claude/.spec-drift-state.json
+  -  M apps/web/src/app/sign-in/phone-sign-in.spec.ts
+  -  M libs/domain/src/auth/phone-sign-in.api.integration.spec.ts
+  -  M specs/393-whatsapp-phone-sign-in/tasks.md
+  - ?? apps/web-e2e/playwright.local.mts
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Quickstart and review 2026-10-06 (T048)
+- T048: quickstart run on a local stack (api, web, Brevo stub mailbox, PostgreSQL+Redis, Playwright against the pre-installed Chromium): the phone e2e spec passes 11/11 (garage owner signs in, a new number creates a driver, the refused number shows the fallback, the three steps at 320/390/768/1440 in ro and en, light and dark, with no sideways scroll). The wider `--grep phone` sweep passed 81 of 85; the 4 failures were the walk opening the dialog from the header at phone widths, fixed to use the tab bar's "Cont" link. On phones the panel does not focus fields, by design, so the walk expects focus only from 768 px.
+- code-reviewer APPROVE, 3 MEDIUM fixed: `attemptsLeft` now rides on the shared `toProblem` (the local parser is gone); a code refused at the profile step goes back to the code step as expired instead of resending an empty code; fresh e2e numbers stay off the refused +40700009999. LOWs fixed: the dead `code.problem.whatsapp_failed` key, the unreachable ternary in `rightCode`, the filter's extra fields typed `Pick<Problem, 'attemptsLeft'>`. LOW 4 (two concurrent wrong codes answer the same count) accepted: the database still enforces the cap.
+- spec-reviewer BLOCK, fixed: every `// @traces 393-FR-…` marker removed from source (Constitution II; the FR → test table lives in this log and tasks.md); "Schimbă numărul" hidden at 0:00 so "Trimite din nou" is the only action (FR-013); the profile step announces its intro (`role="status"`, FR-013). Harness contradiction deferred to deferred.md.
