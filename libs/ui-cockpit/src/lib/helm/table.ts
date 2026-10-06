@@ -38,9 +38,7 @@ export class HlmTBody {}
 })
 export class HlmTr {}
 
-// On a phone a table that names a main column shows only main and key, and
-// the stylesheet changes its display; the explicit roles keep it a table for
-// assistive technology.
+// On a phone a table that names a main column shows only main and key.
 type Column = 'main' | 'key';
 
 @Directive({

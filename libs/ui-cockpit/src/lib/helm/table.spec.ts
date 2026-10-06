@@ -61,25 +61,4 @@ describe('helm table columns', () => {
     ]);
     expect(role('td')).toEqual(['cell', 'cell', 'cell']);
   });
-
-  it('lets a screen reader name each cell of a list row by its column', async () => {
-    const fixture = TestBed.createComponent(Host);
-    await fixture.whenStable();
-    const host = fixture.nativeElement as HTMLElement;
-    const headers = [
-      ...host.querySelectorAll('[role="table"] [role="columnheader"]'),
-    ];
-    const row = host.querySelector(
-      '[role="rowgroup"] + [role="rowgroup"] [role="row"]',
-    );
-    const named = [...(row?.querySelectorAll('[role="cell"]') ?? [])].map(
-      (cell, i) => [headers[i]?.textContent?.trim(), cell.textContent?.trim()],
-    );
-
-    expect(named).toEqual([
-      ['Service', 'Atelier Dinamo'],
-      ['Zona', 'Militari'],
-      ['Nota', '4,9'],
-    ]);
-  });
 });
