@@ -176,11 +176,11 @@ _From 509-offline-on-worker-504._
 
 _From 491-back-closes-task._
 
-### 491-FR-004 — Every close that is not a Back press (X, Escape, outside click, the sheet's drag release of 158-FR-004, "Discard", the task closing itself with a result, the service closing it) MUST remove the entry FR-001 added, so that afterwards a single Back press leaves the page as it would have before the task was opened. After any sequence of opens and closes on one page, the history MUST hold no entry for a closed task.
+### 491-FR-004 — Every close that is not a Back press (X, Escape, outside click, the sheet's drag release of 158-FR-004, "Discard", the task closing itself with a result, the service closing it) MUST remove the entry FR-001 added, so that afterwards a single Back press leaves the page as it would have before the task was opened. After any sequence of opens and closes on one page in which tasks close top first, the history MUST hold no entry for a closed task; a task that closes under a newer one leaves its entry behind (FR-007; one dead Back press, see Assumptions).
 
 _From 491-back-closes-task._
 
-### 491-FR-005 — The opener MUST receive the task's result (or `cancelled`) only after the task's history entry has been removed (the browser has reported the step back), so that an opener that navigates on the result keeps that navigation and a Back from the new page returns to the page the task was opened from. A close that removes no entry (FR-007, FR-008) hands the result at once. No timer stands in for the browser's report.
+### 491-FR-005 — The opener MUST receive the task's result (or `cancelled`) only after the task's history entry has been removed (the browser has reported the step back), so that an opener that navigates on the result keeps that navigation and a Back from the new page returns to the page the task was opened from. The hand-off is one macrotask after that report (a zero-delay `setTimeout`), because the Angular router replays the address of a step back one task after the popstate and a navigation started on the result must come after that replay; a close that removes no entry (FR-007, FR-008) hands the result one macrotask after the close. No timer with a delay stands in for the browser's report.
 
 _From 491-back-closes-task._
 
