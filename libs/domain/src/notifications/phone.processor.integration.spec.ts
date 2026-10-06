@@ -1,4 +1,4 @@
-// @traces 392-FR-001 392-FR-002 392-FR-003 392-FR-004 392-FR-005 392-FR-006 392-FR-007 392-FR-008 392-FR-010
+// @traces 392-FR-001 392-FR-002 392-FR-003 392-FR-004 392-FR-005 392-FR-006 392-FR-007 392-FR-008 392-FR-010 522-FR-001
 import type { OutsideChannel } from '@motor-fix/contracts';
 import { Logger } from '@nestjs/common';
 import { Queue } from 'bullmq';
@@ -504,5 +504,35 @@ describe('the garage’s WhatsApp switch', () => {
       recipients: [ana],
     });
     expect(await summary(ana)).toEqual([['whatsapp', 'queued', null]]);
+  });
+});
+
+describe('a database error after Brevo accepted an SMS', () => {
+  it('records the send on a later write and does not send again', async () => {
+    const ana = await person('ana', 1);
+    await choose(ana, 'DUE_ITP', 'sms');
+    await remind(ana, 'itp-1');
+    const [sms] = (await rows(ana)).filter((r) => r.channel === 'sms');
+    const real = prisma.$transaction.bind(prisma);
+    let times = 1;
+    const failing = jest.spyOn(prisma, '$transaction').mockImplementation(((
+      arg: never,
+    ) => {
+      if (times > 0 && mock.sms().length > 0) {
+        times -= 1;
+        return Promise.reject(new Error('connection lost'));
+      }
+      return real(arg);
+    }) as never);
+    try {
+      await expect(sendJob(sms.id)).resolves.toBeUndefined();
+    } finally {
+      failing.mockRestore();
+    }
+    expect(mock.sms()).toHaveLength(1);
+    expect(
+      (await prisma.notification.findUniqueOrThrow({ where: { id: sms.id } }))
+        .status,
+    ).toBe('sent');
   });
 });

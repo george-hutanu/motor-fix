@@ -1,3 +1,5 @@
+// @traces 522-FR-001 522-FR-002 522-FR-003
+import { Logger } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 
@@ -502,4 +504,77 @@ describe('releasing a claim', () => {
     await takeover;
     expect((await row(queued.id)).claimedAt).toBeNull();
   }, 40_000);
+});
+
+// The next `times` transactions that start once Brevo has had a call fail,
+// as a dropped connection would.
+function failWritesAfterSend(times: number) {
+  const real = prisma.$transaction.bind(prisma);
+  return jest.spyOn(prisma, '$transaction').mockImplementation(((
+    arg: never,
+  ) => {
+    if (times > 0 && mock.emails().length > 0) {
+      times -= 1;
+      return Promise.reject(new Error('connection lost'));
+    }
+    return real(arg);
+  }) as never);
+}
+
+describe('a database error after Brevo accepted an e-mail', () => {
+  it('records the send on a later write and does not send again', async () => {
+    const { row: queued } = await queuedEmail();
+    const failing = failWritesAfterSend(1);
+    try {
+      await expect(sendJob(queued.id)).resolves.toBeUndefined();
+    } finally {
+      failing.mockRestore();
+    }
+    expect(mock.emails()).toHaveLength(1);
+    expect(await row(queued.id)).toMatchObject({
+      claimedAt: null,
+      status: 'sent',
+    });
+    expect((await row(queued.id)).providerMessageId).toBeTruthy();
+  });
+
+  it('finishes the job and logs the message id when no write succeeds', async () => {
+    const { row: queued } = await queuedEmail();
+    const failing = failWritesAfterSend(10);
+    const logged = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    try {
+      await expect(sendJob(queued.id)).resolves.toBeUndefined();
+    } finally {
+      failing.mockRestore();
+    }
+    const lines = logged.mock.calls.map(([line]) => String(line));
+    logged.mockRestore();
+    expect(mock.emails()).toHaveLength(1);
+    expect(lines).toContainEqual(expect.stringContaining(queued.id));
+    expect(lines).toContainEqual(expect.stringContaining('@smtp-relay'));
+  });
+
+  it('finishes the job when releasing the claim fails', async () => {
+    const { row: queued } = await queuedEmail();
+    const real = prisma.notification.updateMany.bind(prisma.notification);
+    const failing = jest
+      .spyOn(prisma.notification, 'updateMany')
+      .mockImplementation(((args: { data: { claimedAt?: unknown } }) =>
+        args.data.claimedAt === null
+          ? Promise.reject(new Error('connection lost'))
+          : real(args as never)) as never);
+    const logged = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    try {
+      await expect(sendJob(queued.id)).resolves.toBeUndefined();
+    } finally {
+      failing.mockRestore();
+      logged.mockRestore();
+    }
+    expect(mock.emails()).toHaveLength(1);
+    expect((await row(queued.id)).status).toBe('sent');
+  });
 });

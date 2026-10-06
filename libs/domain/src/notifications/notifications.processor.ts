@@ -122,10 +122,17 @@ export class NotificationsProcessor {
       else if (row.channel === 'push') await this.sendPush(row, attemptsMade);
       else await this.sendPhone(row, attemptsMade);
     } finally {
-      await this.prisma.notification.updateMany({
-        data: { claimedAt: null },
-        where: { claimedAt: at, id },
-      });
+      // A failed release must not retry a message that went: the claim lapses.
+      await this.prisma.notification
+        .updateMany({
+          data: { claimedAt: null },
+          where: { claimedAt: at, id },
+        })
+        .catch((error) =>
+          this.logger.error(
+            `notification ${id} claim not released: ${String(error)}`,
+          ),
+        );
     }
   }
 
@@ -458,21 +465,36 @@ export class NotificationsProcessor {
     await this.service.fail(rows, error.reason, true);
   }
 
+  // The provider has the message, so a failed write never fails the job:
+  // the queue's retry would send it again.
   private async sent(rows: Notification[], messageId: string | null) {
     const ids = rows.map((r) => r.id);
-    await this.prisma.$transaction([
-      this.prisma.notification.updateMany({
-        data: {
-          providerMessageId: messageId ?? undefined,
-          sentAt: this.now(),
-          status: 'sent',
-        },
-        where: { id: { in: ids } },
-      }),
-      this.service.forget(ids),
-    ]);
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await this.prisma.$transaction([
+          this.prisma.notification.updateMany({
+            data: {
+              providerMessageId: messageId ?? undefined,
+              sentAt: this.now(),
+              status: 'sent',
+            },
+            where: { id: { in: ids } },
+          }),
+          this.service.forget(ids),
+        ]);
+        return;
+      } catch (error) {
+        if (attempt < SENT_WRITES) continue;
+        this.logger.error(
+          `notification ${ids.join(', ')} sent as ${messageId ?? 'push'} but not recorded: ${String(error)}`,
+        );
+        return;
+      }
+    }
   }
 }
+
+const SENT_WRITES = 3;
 
 const params = (row: Notification) =>
   (row.params ?? {}) as Record<string, unknown>;

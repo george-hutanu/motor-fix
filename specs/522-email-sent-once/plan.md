@@ -17,4 +17,4 @@ Principle I (simplest change): one loop in `sent()`, one try/catch in `send()`. 
 ## Project Structure
 
 - `libs/domain/src/notifications/notifications.processor.ts` — the fix
-- `libs/domain/src/notifications/sent-once.integration.spec.ts` — new tests
+- `send-claim.adversary.integration.spec.ts`, `phone.processor.integration.spec.ts` — new tests
