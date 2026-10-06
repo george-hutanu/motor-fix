@@ -29,3 +29,9 @@
 - Red-first: a test-only refactor has no new behaviour to prove red; the moved assertions characterise existing behaviour and pass.
 - New audit-history.testing.ts (auditHistoryApp: lifecycle, account, bearer, get, http); API and adversary specs use it; six restated adversary cases removed (48 -> 42 titles; service 39, API 11 unchanged); platform cursor, deep-array and array oldValue masking moved into the service cases.
 - nx test domain: 103 suites, 3342 tests passed.
+
+## 11–17. Converge, harden, review, archive
+- converge: nothing unbuilt. harden: diff-audit warnings only (test-only-export false positive, as notifications.testing.ts).
+- review: spec-reviewer APPROVE (0 findings); code-reviewer APPROVE, 1 LOW (unguarded app.close) fixed.
+- agent-context: no tracked change. retro: evidence only, verdict left to the owner.
+- archive: status line Archived; Spec Delta empty (no capability change).

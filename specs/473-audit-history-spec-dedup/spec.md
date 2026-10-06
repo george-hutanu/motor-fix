@@ -2,7 +2,7 @@
 
 **Feature Branch**: `473-audit-history-spec-dedup`
 **Created**: 2026-10-07
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 **Input**: ST-473 (tech debt from ST-391, PR #32): "The adversary spec `libs/domain/src/audit/audit-history.adversary.integration.spec.ts` restates several cases already in `audit-history.service.integration.spec.ts` (7-day default start, no entry written by reading, foreign cursor refused, nested key masking, system actor, cursor of the 20th entry) and re-declares the HTTP helpers of `audit-history.api.integration.spec.ts` (Nest app bootstrap with the API's ValidationPipe, account, bearer, get). Delete the restated cases from the adversary spec and share the helpers in one `libs/domain/src/audit/audit-history.testing.ts` used by both HTTP specs. Test-only refactor: no product behaviour, contract or route changes; every case that is not a restatement stays; the suites stay green." — https://app.notion.com/p/3ef607bff0d2811689dcd361b0febfc8
 
 ## User Scenarios & Testing *(mandatory)*
