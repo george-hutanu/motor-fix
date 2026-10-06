@@ -12,3 +12,5 @@
 - 2026-10-07 · qa · ST-522 · Implementing → QA
 - 2026-10-07 · qa · timeline · no row for ST-522
 - 2026-10-07 · labels · PR #175 · QA
+- 2026-10-07 · debt · ST-522 · deferred.md line 2 → https://app.notion.com/p/Tech-debt-ST-522-spec-drift-the-retry-of-the-mark-sent-write-waits-200-attempt-ms-between-at-3f1607bff0d2813a87c1edadb743768a
+- 2026-10-07 · debt · ST-522 · deferred.md line 3 → https://app.notion.com/p/Tech-debt-ST-522-test-gap-push-sends-are-not-tested-for-a-failed-mark-sent-write-though-FR-00-3f1607bff0d281db8706fdb7f05689fb
