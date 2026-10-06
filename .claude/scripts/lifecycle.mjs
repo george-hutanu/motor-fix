@@ -27,6 +27,7 @@ import { readyLogged } from "./notion-ready.mjs";
 const USAGE = "usage: lifecycle.mjs open | ready | merge (open --title <t>; ready --body-file <f>; merge [--pr <n>]; each takes --notion-done)";
 const NOTION = ".claude/scripts/notion-sync.mjs";
 const SELF = "node .claude/scripts/lifecycle.mjs";
+const LEVEL = ".claude/scripts/level.mjs";
 const TEST_ONLY = ["SPECKIT_PR_STATE", "SPECKIT_CARRY_STATE"];
 
 class Stop extends Error {
@@ -230,6 +231,10 @@ function ready(ctx, flags) {
   const pr = JSON.parse(view.stdout);
   ctx.story = /: (ST-\d+) /.exec(pr.title)?.[1] ?? ctx.story;
   const rerun = [SELF, "ready", "--body-file", quote(bodyFile), ...(flags.decisions ? ["--decisions", quote(flags.decisions)] : []), "--notion-done"].join(" ");
+  // The level against what was built: a promoted level 0/1 that still owes
+  // phases stays a draft. A check that crashes (exit 1) is not a refusal.
+  const level = ctx.node([LEVEL, "check", "--ready", "--json"], [0, 1, 2]);
+  if (level.code === 2) throw new Stop("level check", `${level.stderr}`.trim() || "the level owes phases that have not run");
   const deferredFile = join(ctx.feature.dir, "deferred.md");
   const unfiled = existsSync(deferredFile) ? parseDeferred(readFileSync(deferredFile, "utf8")).filter((e) => e.pending) : [];
   const qa = ["qa", "--pr", String(pr.number)];

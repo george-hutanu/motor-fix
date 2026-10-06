@@ -179,6 +179,7 @@ describe('ready', () => {
     const calls = ofTool(h.calls).filter((c) => !c.startsWith('git rev-parse'));
     assert.deepEqual(calls, [
       `gh pr view ${BRANCH} --json number,title,isDraft,url`,
+      'node .claude/scripts/level.mjs check --ready --json',
       `git add -- specs/${FEATURE}`,
       'git diff --cached --quiet',
       'git commit -m chore(specs): ST-696 feature records',
@@ -241,6 +242,26 @@ describe('ready', () => {
     assert.equal(result.then, `node .claude/scripts/lifecycle.mjs ready --body-file ${body} --notion-done`);
     assert.equal(h.calls.at(-1), 'node .claude/scripts/notion-sync.mjs qa --pr 141');
     assert.equal(existsSync(join(featureDir, 'handoff.md')), false);
+  });
+
+  it('runs the level check before the records commit and stops on its refusal, the PR still a draft', () => {
+    const h = harness({
+      answers: [staged([1, 1]), ['node .claude/scripts/level.mjs check', { code: 2, stdout: '{"missing":["plan.md"]}\n', stderr: 'level check: not ready — level 2 is missing plan.md\n' }]],
+    });
+    const result = step(['ready', '--body-file', body], h.io);
+    assert.equal(result.ok, false);
+    assert.equal(result.stopped, 'level check');
+    assert.match(result.fix, /plan\.md/);
+    assert.ok(!h.calls.some((c) => c.startsWith('git add') || c.startsWith('gh pr edit') || c.startsWith('gh pr ready')), h.calls.join('\n'));
+  });
+
+  it('passes through a level check that answers 0', () => {
+    const h = harness({ answers: [staged([1, 1])] });
+    const result = step(['ready', '--body-file', body], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    const check = h.calls.indexOf('node .claude/scripts/level.mjs check --ready --json');
+    assert.ok(check > -1, h.calls.join('\n'));
+    assert.ok(check < h.calls.indexOf(`git add -- specs/${FEATURE}`));
   });
 
   it('stops when the branch has no PR', () => {

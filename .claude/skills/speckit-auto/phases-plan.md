@@ -34,6 +34,12 @@ and the repo. Each answer becomes a line under the spec's **Assumptions**
 marked `(autonomous default)`. A number in Success Criteria that no source
 supports is an assumption, not a metric — write it as one.
 
+Then `node .claude/scripts/level.mjs check` (it does the same after phases 4
+and 7). A 0 or 1 that trips a wire (more FRs than the threshold, an open
+clarification, a contract path, a second Nx project) becomes 2, logged in
+`auto-run.md` with the wire; run the phases it skipped (3, 4, 5, 6, 8) in run
+order before the next one. It never lowers a level.
+
 ### 3. Notion context
 
 Invoke `speckit-context`. It anchors on the Notion story, feature or epic the
@@ -76,7 +82,7 @@ to the spec as a targeted edit (never regenerate the spec), and log all five
 question/answer pairs together in the run log.
 
 If the skill reports there is nothing material left to clarify, that is a
-complete phase, not a failure.
+complete phase, not a failure. Then `node .claude/scripts/level.mjs check`.
 
 ### 5. Plan
 
@@ -109,7 +115,8 @@ checklist gate on the merits instead of overriding it.
 Phase agent: `model: sonnet`. Its prompt says not to run `speckit.analyze` from `after_tasks`.
 
 Invoke `speckit-tasks`. Its `after_tasks` hook dispatches `speckit.analyze`
-(non-optional) — that is phase 8; run it there rather than twice.
+(non-optional) — that is phase 8; run it there rather than twice. Then
+`node .claude/scripts/level.mjs check`.
 
 ### 8. Analyze
 

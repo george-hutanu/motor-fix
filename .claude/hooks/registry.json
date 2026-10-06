@@ -169,7 +169,7 @@
         "strict"
       ],
       "description": "Record per-session skill, subagent, tool and token usage under .specify/telemetry/ (counts only, never content)",
-      "fingerprint": "b61dd47a277d"
+      "fingerprint": "2153858662c8"
     },
     {
       "id": "pre:compact:flush",
