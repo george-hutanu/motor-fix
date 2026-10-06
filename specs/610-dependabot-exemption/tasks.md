@@ -25,5 +25,5 @@
 | FR | Proof |
 |---|---|
 | FR-001 | `pr-lifecycle-gate.spec.mjs` (isDependabot committer cases), `merge-gate.spec.mjs`, eval `merge-gate-refuses-a-dependabot-pr-committed-by-someone-else` |
-| FR-002 | `pr-lifecycle-gate.spec.mjs` (committerArgs, parseCommitters, attachCommitters) |
+| FR-002 | `pr-lifecycle-gate.spec.mjs` (committerArgs, parseCommitters, attachCommitters, withCommitters), `merge-gate.spec.mjs` (readPr) |
 | FR-003 | `merge-gate.spec.mjs` (red Dependabot wording), eval `merge-gate-refuses-a-red-dependabot-pr` |

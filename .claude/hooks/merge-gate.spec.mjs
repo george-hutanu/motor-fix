@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { DEADLINE_MS, deadlineMs, decideMerge, ghReader, mergeTarget, prefetchCarry, readCommitters } from './merge-gate.mjs';
+import { DEADLINE_MS, deadlineMs, decideMerge, ghReader, mergeTarget, prefetchCarry, readPr } from './merge-gate.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
 const run = (name, conclusion, status = 'COMPLETED', startedAt = '2026-10-05T07:00:00Z') => ({ __typename: 'CheckRun', name, status, conclusion, startedAt });
@@ -225,27 +225,30 @@ describe('merge gate — Dependabot PRs need no agent review', () => {
 });
 
 describe('merge gate — reading a Dependabot PR\'s committers', () => {
-  const read = { number: 82, author: { login: 'app/dependabot' }, commits: [{ oid: 'aaa111', authors: [{ login: 'dependabot[bot]' }] }] };
+  const view = (author) => JSON.stringify({ number: 82, author: { login: author }, commits: [{ oid: 'aaa111', authors: [{ login: 'dependabot[bot]' }] }] });
   const rows = '{"sha":"aaa111","login":"web-flow","verified":true}\n';
+  const ghOf = (author, committers) => {
+    const calls = [];
+    const gh = async (args) => (calls.push(args), args[0] === 'pr' ? { code: 0, stdout: view(author), stderr: '' } : committers);
+    return { gh, calls };
+  };
 
   // @traces 610-FR-002
   it('reads the REST committers for a PR Dependabot opened, and only for it', async () => {
-    const calls = [];
-    const gh = async (args) => (calls.push(args), { code: 0, stdout: rows, stderr: '' });
-    const pr = await readCommitters(read, gh);
+    const bot = ghOf('app/dependabot', { code: 0, stdout: rows, stderr: '' });
+    const pr = await readPr('82', bot.gh);
     assert.deepEqual(pr.commits[0].committer, { login: 'web-flow' });
     assert.equal(pr.commits[0].verified, true);
-    assert.match(calls[0].join(' '), /pulls\/82\/commits/);
-    const human = { ...read, author: { login: 'george-hutanu' } };
-    assert.equal(await readCommitters(human, gh), human);
-    assert.equal(calls.length, 1, 'no extra GitHub call for anyone else\'s PR');
+    assert.match(bot.calls[1].join(' '), /pulls\/82\/commits/);
+    const human = ghOf('george-hutanu', { code: 0, stdout: rows, stderr: '' });
+    assert.equal((await readPr('82', human.gh)).commits[0].committer, undefined);
+    assert.equal(human.calls.length, 1, 'no extra GitHub call for anyone else\'s PR');
   });
 
   // @traces 610-FR-002
-  it('leaves the committers out when the read fails or cannot be parsed, so the PR is not exempt', async () => {
-    const failed = await readCommitters(read, async () => ({ code: 1, stdout: '', stderr: 'HTTP 502' }));
-    assert.equal(failed.commits[0].committer, undefined);
-    const garbled = await readCommitters(read, async () => ({ code: 0, stdout: 'not json', stderr: '' }));
+  it('throws on a failed committer read, so the gate refuses with a retry; garbled rows leave the PR not exempt', async () => {
+    await assert.rejects(readPr('82', ghOf('app/dependabot', { code: 1, stdout: '', stderr: 'HTTP 502' }).gh), /committers: HTTP 502/);
+    const garbled = await readPr('82', ghOf('app/dependabot', { code: 0, stdout: 'not json', stderr: '' }).gh);
     assert.equal(garbled.commits[0].committer, undefined);
   });
 });

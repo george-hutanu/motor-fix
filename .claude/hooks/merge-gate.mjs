@@ -42,7 +42,7 @@ import { execFile } from "node:child_process";
 
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
 import { carriedFrom, fetchCarryState, judgeCarry, latestReview, statusesArgs } from "../scripts/pr-test/carry.mjs";
-import { attachCommitters, committerArgs, hasAgentReview, isDependabot, openedByDependabot, parseCommitters } from "./pr-lifecycle-gate.mjs";
+import { committerArgs, hasAgentReview, isDependabot, openedByDependabot, withCommitters } from "./pr-lifecycle-gate.mjs";
 
 /** How long the gate may spend reading GitHub before it refuses: well inside run-hook.mjs's limit for it. */
 export const DEADLINE_MS = 30000;
@@ -160,24 +160,21 @@ function ghAsync(cwd, signal) {
     );
 }
 
-async function readPr(target, gh) {
+/**
+ * The PR as gh reads it; for one Dependabot opened, with its committers too.
+ * A committer read that fails throws like the PR read, so the merge is refused
+ * with a retry rather than sent to a PR tester it may not need.
+ */
+export async function readPr(target, gh) {
   const raw = process.env.SPECKIT_PR_STATE;
   if (raw) return JSON.parse(raw);
   const out = await gh(["pr", "view", ...(target ? [target] : []), "--json", "author,commits,number,state,headRefOid,statusCheckRollup"]);
   if (out.code !== 0) throw new Error(String(out.stderr).trim());
-  return readCommitters(JSON.parse(out.stdout), gh);
-}
-
-/** A Dependabot PR with its committers read; a failed read leaves them out, so it is not exempt. */
-export async function readCommitters(pr, gh) {
-  if (!openedByDependabot(pr) || !Array.isArray(pr.commits)) return pr;
-  const out = await gh(committerArgs(pr.number));
-  if (out.code !== 0) return pr;
-  try {
-    return attachCommitters(pr, parseCommitters(out.stdout));
-  } catch {
-    return pr;
-  }
+  const pr = JSON.parse(out.stdout);
+  if (!openedByDependabot(pr)) return pr;
+  const read = await gh(committerArgs(pr.number));
+  if (read.code !== 0) throw new Error(`its commits' committers: ${String(read.stderr).trim()}`);
+  return withCommitters(pr, () => read.stdout);
 }
 
 /** The carry reads over an async gh, each distinct call made once (head's statuses serve both the description and the state). */

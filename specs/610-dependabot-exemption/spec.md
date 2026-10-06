@@ -26,7 +26,7 @@ Notion: ST-610 https://app.notion.com/p/3f0607bff0d281d6ab62d7fd978b5e01 (Task, 
 1. **Given** a PR opened by Dependabot whose every commit is authored by dependabot[bot], committed by `web-flow` or `dependabot[bot]` and signature-verified, green on every check, **When** it is merged, **Then** the merge gate lets it through with no agent-review status.
 2. **Given** the same PR where one commit's committer is `george-hutanu` (a cherry-pick or a local rebase), **When** it is merged, **Then** the merge gate refuses it for want of an agent-review status.
 3. **Given** the same PR where one commit is committed by `web-flow` but its signature is not verified, **When** it is merged, **Then** the merge gate refuses it the same way.
-4. **Given** a Dependabot PR whose committers the gate could not read, **When** it is merged, **Then** the merge gate refuses it the same way (fail closed).
+4. **Given** a Dependabot PR whose committers the gate could not read, **When** it is merged, **Then** the merge gate refuses it as it refuses a PR it could not read, telling the agent to try again (fail closed; review lap 1, code-reviewer LOW #2).
 5. **Given** the same ready, green PR at session end, **When** the Stop gate judges it, **Then** a fully Dependabot PR is asked to merge, and one with a foreign committer is asked for the PR tester.
 
 ### User Story 2 - A red Dependabot PR is told what actually helps (Priority: P2)
@@ -48,7 +48,7 @@ Notion: ST-610 https://app.notion.com/p/3f0607bff0d281d6ab62d7fd978b5e01 (Task, 
 ### Functional Requirements
 
 - **FR-001**: `isDependabot` MUST also require every commit's committer login to be `web-flow` or `dependabot[bot]` and its signature to be verified; a commit with no committer data is not Dependabot's.
-- **FR-002**: Both gates MUST read the committers from the REST pulls commits API for a PR whose author is Dependabot, matched to the PR's commits by sha; a failed read leaves the commits without committer data.
+- **FR-002**: Both gates MUST read the committers from the REST pulls commits API for a PR whose author is Dependabot, matched to the PR's commits by sha. In the merge gate a failed read refuses the merge with a retry; in the Stop gate (fail open) it leaves the commits without committer data, so the PR is not exempt.
 - **FR-003**: The merge gate MUST give an exempt Dependabot PR with a failing check its own refusal: it names the failing checks, never asks for the PR tester, says a pushed commit takes the exemption away, and points at `@dependabot rebase` / `@dependabot recreate` or closing it for a PR of one's own.
 
 ### Key Entities
