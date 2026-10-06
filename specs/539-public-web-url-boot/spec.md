@@ -2,7 +2,7 @@
 
 **Feature Branch**: `539-public-web-url-boot`
 **Created**: 2026-10-07
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 **Input**: ST-539 (from ST-195): "a worker started without a valid PUBLIC_WEB_URL boots and then fails every e-mail with a button as template_failed" — https://app.notion.com/3ef607bff0d2811da140f6088b263b10. ST-465 (from ST-21): "new URL(PUBLIC_WEB_URL) at import throws an unnamed TypeError on a malformed value" — https://app.notion.com/3ef607bff0d2811fb566df383fbdc442
 
 ## User Scenarios & Testing *(mandatory)*

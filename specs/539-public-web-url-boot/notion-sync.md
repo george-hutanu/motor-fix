@@ -9,3 +9,4 @@
 - 2026-10-07 · implement · ST-539 · Planning → Implementing
 - 2026-10-07 · implement · timeline · no row for ST-539
 - 2026-10-07 · labels · PR #176 · in development
+- 2026-10-07 · debt · ST-539 · deferred.md line 2 → https://app.notion.com/p/Tech-debt-ST-539-duplication-two-parsers-of-PUBLIC_WEB_URL-publicWebUrl-in-libs-contracts-src-3f1607bff0d2817781dae9576b51b8bd
