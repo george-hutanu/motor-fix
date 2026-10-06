@@ -26,6 +26,16 @@ run out. A route that honoured an expired session would let a signed-out or
 timed-out user keep acting, and nothing today would notice. This task closes
 that gap in the proof, with no change to the product itself.
 
+## Clarifications
+
+### Session 2026-10-06
+
+- Q: Which call proves the expired token's account and signing are otherwise good, and what status counts? → A: One `GET /api/v1/me` with an unexpired token for the same account, expecting 200 (`libs/domain/src/auth/me.controller.ts:14,21`); no per-route expectations (Constitution I).
+- Q: Is the expired case a row in the existing credential table or its own test? → A: Its own test, using the same guard-refusal check as the no-credential case (401, `sign_in_required`, no `set-cookie`); the existing table rows stay as they are.
+- Q: How does the sweep avoid a parallel suite emptying its account? → A: It takes `databaseTurn` from `@motor-fix/domain/testing` for the file, as `apps/api/src/sign-up-confirmation.integration.spec.ts:23` does; no new mechanism.
+- Q: Must the token's role be one the account holds? → A: Yes: `driver`, on an account created with `roles: ['driver']` (the guard refuses a role the account lacks, `actor.guard.ts` `roleInUse`).
+- Q: Does the expired case cover all N routes or N minus the public list? → A: The same route list skipping the public list, as the malformed-token cases do; no count comparison.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Every gated route refuses an expired session (Priority: P1)
@@ -52,7 +62,7 @@ sign-in-required refusal.
    called with that token, **Then** each one answers 401 with the code
    `sign_in_required`, and none sets a cookie.
 2. **Given** the same account and a token for it that has not expired,
-   **When** it is presented to the API, **Then** it is accepted as a session
+   **When** it is presented to `GET /api/v1/me`, **Then** it answers 200
    (the sweep proves the expired token was refused for its expiry, not because
    the account or the signature were wrong).
 3. **Given** a route on the public list, **When** it is called with the
@@ -78,8 +88,8 @@ can be left out by omission.
 **Acceptance Scenarios**:
 
 1. **Given** the API description lists N routes, **When** the sweep runs,
-   **Then** the expired-token case has exercised every one of the N routes
-   that is not on the public list.
+   **Then** the expired-token case has exercised every one of those routes
+   that is not on the public list (the same list, skipping the public ones).
 
 ---
 
@@ -105,19 +115,22 @@ can be left out by omission.
 - **FR-001**: The route sweep MUST call every route outside the public list
   with an access token that is genuine in every respect (signed with the
   application's secret, for an existing active account, with a valid role)
-  except that its expiry is in the past.
+  except that its expiry is in the past; its role is `driver`, a role the
+  account holds.
 - **FR-002**: For every such route the sweep MUST require the same refusal as
   for a missing session: status 401, code `sign_in_required`, no cookie set.
 - **FR-003**: The expired-token case MUST iterate the same route list as the
   existing cases (derived from the API description at test time), so a new
   gated route is covered without editing the sweep.
 - **FR-004**: The sweep MUST show that the account and signing used for the
-  expired token are otherwise accepted, so a refusal cannot be mistaken for a
-  refusal of an unknown account or a bad signature (scenario 2 of story 1).
+  expired token are otherwise accepted: an unexpired token for the same
+  account gets 200 from `GET /api/v1/me`, so a refusal cannot be mistaken for
+  a refusal of an unknown account or a bad signature (scenario 2 of story 1).
 - **FR-005**: The account the sweep creates for this purpose MUST be created
   by the test itself and MUST NOT depend on seed data or on another test's
-  state; the test coordinates with the other account-writing API tests on the
-  shared database.
+  state; the file takes `databaseTurn` (`@motor-fix/domain/testing`) like
+  the other account-writing API tests, so a suite emptying the account tables
+  cannot run meanwhile.
 - **FR-006**: No product code changes: the task adds to the test suite only.
   A gated route found to honour an expired token is a product defect reported
   by the failing test and fixed as its own bug, not silently patched here.
@@ -138,15 +151,15 @@ can be left out by omission.
 - **SC-001**: 100% of the routes outside the public list refuse an expired
   but otherwise genuine token with 401 `sign_in_required` and no cookie, and
   the suite fails if any one does not.
-- **SC-002**: The expired-token case covers the same number of routes as the
-  existing no-credential case on every run (the count comes from the API
-  description, not a hand-kept list).
+- **SC-002**: The expired-token case iterates the same route list as the
+  existing cases, skipping the public list, on every run (the list comes from
+  the API description, not a hand-kept list).
 - **SC-003**: The API test suite stays green on CI after the change, and the
   product's behaviour and its API description are unchanged (zero product
   files changed in the diff).
 - **SC-004**: The whole sweep file, including the new case, stays as short as
-  the smallest change allows: one new table row or case next to the existing
-  credential cases, plus the account set-up it needs (Constitution I).
+  the smallest change allows: one new test next to the existing credential
+  cases, plus the account set-up and database turn it needs (Constitution I).
 
 ## Assumptions
 
@@ -172,7 +185,7 @@ can be left out by omission.
   Clarifications *(autonomous default)*.
 - The one-route expired-token test in the guard's adversary spec stays as it
   is; this task does not move or remove it *(autonomous default)*.
-- SC-004's "one new case" is a target drawn from the shape of the existing
+- SC-004's "one new test" is a target drawn from the shape of the existing
   sweep, not a number from a source *(autonomous default)*.
 
 ## Spec Delta
