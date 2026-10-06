@@ -19,7 +19,7 @@ export class NotificationPreferencesController {
   @Get()
   @ApiOkResponse({ type: NotificationPreferencesDto })
   read(@CurrentActor() actor: Actor): Promise<NotificationPreferencesDto> {
-    return this.preferences.read(actor.accountId);
+    return this.preferences.read(actor);
   }
 
   @Put()

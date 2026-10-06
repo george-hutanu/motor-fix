@@ -160,5 +160,5 @@ ranked, read-only UI audit with `scan.mjs` and `contrast.mjs` helpers; fixes
 only the findings you name).
 
 <!-- SPECKIT START -->
-Active plan (stack, structure, commands): specs/750-ci-speed/plan.md
+Active plan (stack, structure, commands): specs/198-staff-notification-preferences/plan.md
 <!-- SPECKIT END -->
