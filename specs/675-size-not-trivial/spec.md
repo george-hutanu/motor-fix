@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 
 **Input**: ST-675 — `level.mjs suggest` answers level 0 at 0.85 for "remove the documentation page from the app", "delete the changelog page", "rename the web app folder", "rename the assets folder", "rename the ci workflow file", "rename the deploy script".
 
@@ -45,3 +45,13 @@ None.
 
 - Level 1: the story states the whole change (autonomous default; the Notion "boards" fact is the epic's rollup).
 - `const` stays beside `constant` in `CODE_NAME` as its abbreviation (autonomous default).
+
+## Spec Delta
+
+### Capability: `platform`
+
+- **Adds**: FR-001, FR-002, FR-003
+- **Modifies**: none
+- **Removes**: none
+
+The platform capability says how `level.mjs suggest` reads a story (678-FR-011, 678-FR-012) but not which words keep the free classifier from answering level 0.

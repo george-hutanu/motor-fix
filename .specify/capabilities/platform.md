@@ -29,6 +29,7 @@ features:
   - 766-cloud-rest-fallback
   - 767-cloud-qa-merge
   - 602-watcher-counts-qa-runs
+  - 675-size-not-trivial
 ---
 
 # Capability: Platform
@@ -900,6 +901,18 @@ _From 602-watcher-counts-qa-runs._
 ### 602-FR-004 — When the run list cannot be read, the watcher MUST count no Actions runs and otherwise behave as before.
 
 _From 602-watcher-counts-qa-runs._
+
+### 675-FR-001 — `NOT_TRIVIAL` in `.claude/scripts/level.mjs` MUST include remove, delete, drop, disable, page, screen, folder, directory, workflow and deploy, so a description with a trivial word and one of them is `unsure`.
+
+_From 675-size-not-trivial._
+
+### 675-FR-002 — The rename rule's `CODE_NAME` MUST name only what the code alone reads: helper, variable, function, method, constant (`const`), class.
+
+_From 675-size-not-trivial._
+
+### 675-FR-003 — The six descriptions from the story MUST classify as `unsure`; every existing `classifyLevel` expectation MUST hold.
+
+_From 675-size-not-trivial._
 
 ## Retired
 
