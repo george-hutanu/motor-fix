@@ -285,7 +285,8 @@ export function ghRun(args, { run = spawnRun(), env = process.env, sleep = sleep
     const out = translated(run, sleep);
     return { code: out.code ?? 0, stdout: out.stdout ?? "", stderr: "" };
   } catch (err) {
-    if (!(err instanceof GhError)) throw err;
+    // gh exits 1 on any failure; a garbled answer or an unreadable --body-file too.
+    if (!(err instanceof GhError)) return { code: 1, stdout: "", stderr: `${err.message}\n` };
     return { code: err.code, stdout: err.stdout, stderr: `${err.message}\n` };
   }
 }

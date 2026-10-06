@@ -208,6 +208,17 @@ describe('pr view', () => {
     assert.equal(r.code, 1);
     assert.match(r.stderr, /HTTP 502/);
   });
+
+  it('exits 1 instead of throwing on an answer it cannot parse or a body file it cannot read', () => {
+    const f = fake();
+    const garbled = (file, args) => (file === 'gh' ? { code: 0, stdout: '<html>proxy error</html>', stderr: '' } : f.run(file, args));
+    const r = ghRun(['pr', 'view', '160', '--json', 'number'], { run: garbled, env: CLOUD });
+    assert.equal(r.code, 1);
+    assert.match(r.stderr, /JSON/);
+    const missing = gh(['pr', 'edit', '160', '--body-file', '/nonexistent/body.md'], f);
+    assert.equal(missing.code, 1);
+    assert.match(missing.stderr, /ENOENT/);
+  });
 });
 
 describe('pr create, edit, ready, comment', () => {
