@@ -109,8 +109,12 @@ describe('dispatch: a lap never reads the last lap\'s evidence', () => {
     writeFileSync(join(out, 'report.md'), 'old');
     mkdirSync(join(out, 'shots'));
     writeFileSync(join(out, 'shots', 'a.png'), 'x');
+    writeFileSync(join(out, 'run.log'), 'old lap');
+    writeFileSync(join(out, 'observations.json'), '[]');
+    writeFileSync(join(out, 'notes.txt'), 'mine');
     clearPrevious(out);
-    for (const f of ['report.json', 'report.md', 'shots']) assert.equal(existsSync(join(out, f)), false, f);
+    for (const f of ['report.json', 'report.md', 'shots', 'run.log', 'observations.json']) assert.equal(existsSync(join(out, f)), false, f);
+    assert.equal(existsSync(join(out, 'notes.txt')), true);
     assert.match(checkReport(null, SHA, 'failure'), /no report/);
   });
 });
@@ -127,7 +131,7 @@ describe('dispatch: a lap downloads into a fresh folder, so files from an earlie
     }
   });
 
-  it('replaces what the new artifact carries, keeps everything else in --out, and removes its own folder', () => {
+  it('replaces what the new artifact carries, keeps everything else in --out, and leaves the emptied folder to its caller', () => {
     const out = mkdtempSync(join(tmpdir(), 'dispatch-spec-'));
     writeFileSync(join(out, 'observations.json'), 'old');
     mkdirSync(join(out, 'shots'));
@@ -143,7 +147,7 @@ describe('dispatch: a lap downloads into a fresh folder, so files from an earlie
     assert.equal(existsSync(join(out, 'report.json')), true);
     assert.deepEqual(readdirSync(join(out, 'shots')), ['new.png']);
     assert.equal(readFileSync(join(out, 'notes.txt'), 'utf8'), 'mine');
-    assert.equal(existsSync(staging), false);
+    assert.deepEqual(readdirSync(staging), []);
   });
 
   it('refuses a folder that is not directly inside --out, so it never deletes outside the run\'s folder', () => {
@@ -196,6 +200,7 @@ else if (a === 'run' && b === 'list') {
   const q = args.indexOf('-q');
   say(q === -1 ? run : String(run[args[q + 1].slice(1)]));
 } else if (a === 'run' && b === 'download') {
+  if (process.env.FAKE_DOWNLOAD_FAIL) process.exit(1);
   const out = args[args.indexOf('-D') + 1];
   mkdirSync(out, { recursive: true });
   if (process.env.FAKE_REPORT_SHA) writeFileSync(join(out, 'report.json'), JSON.stringify({ sha: process.env.FAKE_REPORT_SHA, verdict: process.env.FAKE_VERDICT || 'success', summary: 'ok.' }));
@@ -256,6 +261,14 @@ describe('dispatch --run <id>: read a finished run, start nothing', () => {
     assert.equal(called(r.calls, 'run download 77').length, 1);
     assert.equal(JSON.parse(readFileSync(join(r.out, 'report.json'), 'utf8')).sha, SHA);
     assert.equal(JSON.parse(readFileSync(join(r.out, 'ci-run.json'), 'utf8')).id, 77);
+    assert.deepEqual(readdirSync(r.out).filter((f) => f.startsWith('.download-')), []);
+  });
+
+  it('leaves no download folder in --out when the download fails', () => {
+    const r = fakeGh({ FAKE_DOWNLOAD_FAIL: '1' })('--run', '77');
+    assert.equal(r.code, 2);
+    assert.match(r.stderr, /could not download/);
+    assert.deepEqual(readdirSync(r.out).filter((f) => f.startsWith('.download-')), []);
   });
 
   it('exits 1 on a failing report, as a dispatched lap does', () => {
