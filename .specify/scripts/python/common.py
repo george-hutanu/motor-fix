@@ -9,7 +9,7 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 
@@ -162,7 +162,8 @@ def _pending_level(data: dict, now: float) -> int | None:
     except ValueError:
         return None
     if at.tzinfo is None:
-        at = at.replace(tzinfo=timezone.utc)
+        # No zone: JS would read it as local time, so neither side trusts it.
+        return None
     age = now - at.timestamp()
     if age >= _pending_ttl_minutes() * 60 or age < -60:
         return None

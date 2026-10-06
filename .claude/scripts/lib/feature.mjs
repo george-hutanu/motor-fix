@@ -149,7 +149,9 @@ export function levelApplies(state, target = state?.feature_directory) {
 export function pendingLevel(state, now = Date.now(), env = process.env) {
   if (!state || typeof state !== "object" || state.level_for !== "next") return null;
   const level = parseLevel(state.level);
-  const at = typeof state.level_at === "string" ? Date.parse(state.level_at) : Number.NaN;
+  // A stamp with no zone is local time to Date.parse and UTC to the Python helper: read it as none.
+  const zoned = typeof state.level_at === "string" && /(?:Z|[+-]\d\d:\d\d)$/.test(state.level_at);
+  const at = zoned ? Date.parse(state.level_at) : Number.NaN;
   if (level === null || Number.isNaN(at)) return null;
   const left = pendingTtlMinutes(env) * 60_000 - (now - at);
   // One minute of slack for two clocks; a level from further ahead is not trusted.
