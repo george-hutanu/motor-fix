@@ -8,3 +8,4 @@ Start: origin/main b27b5e6b (worktree `.worktrees/780-one-public-web-url-parser`
 - context: story read directly from Notion (ST-780); finding from PR #176
 - plan, checklist (0 open), tasks (2)
 - analyze: each FR covered by T001 (test) and T002 (code); no findings
+- tests: email-config padded value red (" https://motorfix.test/ " received); implement: 38 green

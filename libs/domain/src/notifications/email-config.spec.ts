@@ -43,6 +43,26 @@ describe('e-mail configuration', () => {
     ).toBeUndefined();
   });
 
+  it('reads the address as the web server does, so stray spaces never reach a button', () => {
+    expect(
+      emailConfig('staging', { PUBLIC_WEB_URL: ' https://motorfix.test/ ' })
+        .webUrl,
+    ).toBe('https://motorfix.test');
+    expect(
+      emailConfig('staging', { PUBLIC_WEB_URL: 'https://motorfix.test/app/' })
+        .webUrl,
+    ).toBe('https://motorfix.test/app');
+  });
+
+  it('loads without an address when it is empty or not a URL, rather than stopping', () => {
+    expect(
+      emailConfig('staging', { PUBLIC_WEB_URL: '' }).webUrl,
+    ).toBeUndefined();
+    expect(() =>
+      emailConfig('staging', { PUBLIC_WEB_URL: 'secret-host' }),
+    ).not.toThrow();
+  });
+
   it('talks to Brevo by default', () => {
     expect(emailConfig('production', {}).apiUrl).toBe(
       'https://api.brevo.com/v3',
