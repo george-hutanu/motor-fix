@@ -25,6 +25,7 @@ features:
   - 610-dependabot-exemption
   - 678-measurable-sizing
   - 745-notion-api-limits
+  - 766-cloud-rest-fallback
 ---
 
 # Capability: Platform
@@ -796,6 +797,26 @@ _From 745-notion-api-limits._
 ### 745-FR-008 — `query()` MUST send `page_size: 100` on every page request unless the caller supplies its own `page_size`; the block-children read in `level.mjs` MUST keep sending `page_size=100`.
 
 _From 745-notion-api-limits._
+
+### 766-FR-001 — With `CLAUDE_CODE_REMOTE=true`, `gh pr list|view|create|edit|ready|comment|checks` and `gh label create`, as the lifecycle scripts call them, MUST be answered through `gh api` REST calls with gh's output shape (`--json` fields, `--jq`/`-q`, the URL that `pr create` prints, gh's exit codes); any other gh command MUST run unchanged. Without it, gh MUST be called exactly as before.
+
+_From 766-cloud-rest-fallback._
+
+### 766-FR-002 — `lifecycle.mjs` MUST route its gh calls through FR-001 while still putting the original `gh …` command to the Bash gates first.
+
+_From 766-cloud-rest-fallback._
+
+### 766-FR-003 — `pr-lifecycle-gate.mjs` and `notion-sync.mjs` MUST read and write the PR through FR-001.
+
+_From 766-cloud-rest-fallback._
+
+### 766-FR-004 — `node .claude/scripts/gh.mjs <gh args>` MUST run one gh command through FR-001 (stdout, stderr and exit code passed through), and `pr checks --watch` MUST poll until no check is pending.
+
+_From 766-cloud-rest-fallback._
+
+### 766-FR-005 — `scripts/cloud-setup.sh` MUST put a Node 24 first on PATH and persist it for the session (one marked line in `~/.bashrc`, and in `CLAUDE_ENV_FILE` when set), reusing an installed Node 24 before installing one, and MUST install the chromium revision the installed `playwright-core` pins when it is missing; AGENTS.md "Cloud sessions" MUST say so and name `gh.mjs`.
+
+_From 766-cloud-rest-fallback._
 
 ## Retired
 

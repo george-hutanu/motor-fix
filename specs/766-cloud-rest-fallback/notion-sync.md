@@ -8,3 +8,4 @@
 - 2026-10-06 · ready · Foundations · no change (task created for this run, not in a timeline)
 - 2026-10-06 · implement · ST-766 · Planning → Implementing (connector)
 - 2026-10-06 · labels · PR #160 · in development
+- 2026-10-06 · debt · ST-766 · 2 tasks filed (connector)

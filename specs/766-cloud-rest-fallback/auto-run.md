@@ -31,3 +31,15 @@
 - `stop:pr-lifecycle` diff read, blessed 44f123d493e2 → 890d75b3486d. harness-eval --check 82/82; doctor 16 ok, 1 warn (agents/notion-tools lack the `Notion` server prefix; ST-749 territory, left).
 - SC-003 live: `gh.mjs pr view 766-cloud-rest-fallback --json number,isDraft,state,labels,mergeable` → 160 OPEN MERGEABLE; `pr checks 160` exit 0; `pr list` → 160.
 - Real `scripts/cloud-setup.sh` run 1: picked /usr/bin node (last match); search reordered so nvm wins. Run 2: node v24.21.0 first, `~/.bashrc` line first, chromium 1243 present; exit 1 on Docker Hub 429 during `docker compose pull` with the images present — deferred.
+
+## 12. Harden
+- artifact-lint clean; diff-audit: 1 warning outside this feature (`apps/web/.../session.ts`). Pin miss: test-adversary and code-reviewer inline.
+- Finding fixed (test first): a garbled REST answer or unreadable `--body-file` threw out of `ghRun`; now exit 1 like gh.
+- deferred.md: 2 items (Docker Hub 429 on pull; the gate's `gh pr edit` hint in the cloud), filed as Notion To do tasks.
+
+## 13–16. Context, review, retro
+- Review inline (pin miss): no CRITICAL/HIGH. Harness 1839/1839, harness-eval 82/82, doctor 0 failures.
+- retrospective.md: accepted-with-open-items. Jev lane unavailable (no key).
+
+## 17. Archive
+- Spec Delta merged into `.specify/capabilities/platform.md` (+5); spec status Archived.

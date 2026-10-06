@@ -35,7 +35,7 @@ description: "Tasks for ST-766 Make the cloud session setup and lifecycle script
 
 ## Phase 3: Polish
 
-- [ ] T011 `npm run test:harness`, `node .claude/scripts/doctor.mjs`, `node .claude/scripts/harness-eval.mjs --check`, `npx biome check` on the touched files; SC-003 live: `node .claude/scripts/gh.mjs pr view 766-cloud-rest-fallback --json number,isDraft`.
+- [x] T011 `npm run test:harness`, `node .claude/scripts/doctor.mjs`, `node .claude/scripts/harness-eval.mjs --check`, `npx biome check` on the touched files; SC-003 live: `node .claude/scripts/gh.mjs pr view 766-cloud-rest-fallback --json number,isDraft`.
 
 ## Dependencies
 

@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 
 **Input**: "Make the cloud session setup and lifecycle scripts work without GraphQL. Measured in a cloud session: GitHub GraphQL → 403, so `gh pr view/checks/edit/ready/create` fail; REST works (`gh api repos/george-hutanu/motor-fix/...`; ready via `POST /pulls/<n>/ccr/ready_for_review`). `scripts/cloud-setup.sh` installs Node 24 but `/opt/node22` is first on PATH so it exits 1; Playwright needed a chromium other than `/opt/pw-browsers`'. Out of scope: how PR QA is started, how or by whom `agent-review` is set, merge-gate.mjs, any CI workflow."
 
