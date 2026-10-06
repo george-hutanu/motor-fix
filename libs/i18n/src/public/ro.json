@@ -82,6 +82,11 @@
     "brand": "MotorFix",
     "code": {
       "again": "Trimite din nou",
+      "attemptsLeft": {
+        "few": "Mai ai {count} încercări.",
+        "one": "Mai ai o încercare.",
+        "other": "Mai ai {count} de încercări."
+      },
       "change": "Schimbă numărul",
       "expires": "Codul expiră în {time}",
       "field": {
@@ -89,11 +94,13 @@
       },
       "label": "Cod",
       "problem": {
+        "account_suspended": "Contul tău este suspendat.",
         "code_expired": "Codul a expirat. Cere un cod nou.",
         "code_invalid": "Codul nu este corect.",
         "consent_required": "Bifează acordul pentru a crea contul.",
-        "too_many_attempts": "Prea multe coduri greșite. Cere unul nou.",
-        "whatsapp_failed": "Nu am putut trimite codul pe WhatsApp. Încearcă din nou."
+        "phone_taken": "Numărul acesta nu poate intra în cont. Intră cu e‑mail și parolă.",
+        "too_many_attempts": "Prea multe încercări. Așteaptă puțin sau cere un cod nou.",
+        "whatsapp_failed": "Nu am putut trimite codul pe WhatsApp."
       },
       "sent": "Am trimis un cod pe WhatsApp la {phone}.",
       "submit": "Intră în cont"
@@ -115,8 +122,8 @@
       },
       "number": "Număr de telefon",
       "problem": {
-        "too_many_attempts": "Ai cerut prea multe coduri. Încearcă din nou mai târziu.",
-        "whatsapp_failed": "Nu am putut trimite codul pe WhatsApp. Încearcă din nou."
+        "too_many_attempts": "Prea multe încercări. Așteaptă puțin sau cere un cod nou.",
+        "whatsapp_failed": "Nu am putut trimite codul pe WhatsApp."
       },
       "send": "Trimite codul",
       "withEmail": "Intră cu e‑mail și parolă"

@@ -7,11 +7,15 @@
 //   POST /v3/whatsapp/sendMessage   keeps the WhatsApp message, likewise
 //   GET  /whatsapp?to=n   the WhatsApp messages kept for number n (digits,
 //                         as Brevo takes them), oldest first
+//
+// WhatsApp to REFUSED is answered 400, as Brevo answers a number it cannot
+// reach, so a test sees the sign-in's fallback.
 import { createServer } from 'node:http';
 
 const port = 3025;
 const messages = [];
 const whatsapp = [];
+const REFUSED = '40700009999';
 
 const answer = (res, status, body) => {
   res.writeHead(status, { 'content-type': 'application/json' });
@@ -28,9 +32,14 @@ const keep = (into, id) => (res, raw) => {
   return answer(res, 201, { messageId: id(into.length) });
 };
 
+const keepWhatsapp = keep(whatsapp, (n) => `e2e-wa-${n}`);
+
 const POSTS = {
   '/v3/smtp/email': keep(messages, (n) => `<e2e-${n}@mailbox>`),
-  '/v3/whatsapp/sendMessage': keep(whatsapp, (n) => `e2e-wa-${n}`),
+  '/v3/whatsapp/sendMessage': (res, raw) =>
+    raw.includes(`"${REFUSED}"`)
+      ? answer(res, 400, { code: 'invalid_parameter' })
+      : keepWhatsapp(res, raw),
 };
 
 const GETS = {

@@ -78,3 +78,114 @@ test.describe('signing in with a phone number @seeded @mailbox', () => {
     await expect(page).toHaveURL('/app/driver');
   });
 });
+
+// The number the test mailbox answers 400, as Brevo answers one it cannot reach.
+const REFUSED_PHONE = '+40700009999';
+
+const TEXTS = {
+  en: {
+    again: 'Send again',
+    code: 'Code',
+    create: 'Create the account',
+    name: 'Name',
+    number: 'Phone number',
+    send: 'Send the code',
+    submit: 'Sign in',
+    title: 'Sign in',
+    withPhone: 'Continue with phone',
+  },
+  ro: {
+    again: 'Trimite din nou',
+    code: 'Cod',
+    create: 'Creează contul',
+    name: 'Nume',
+    number: 'Număr de telefon',
+    send: 'Trimite codul',
+    submit: 'Intră în cont',
+    title: 'Autentificare',
+    withPhone: 'Continuă cu telefonul',
+  },
+} as const;
+
+async function phoneStep(page: Page, lang: keyof typeof TEXTS) {
+  const t = TEXTS[lang];
+  await ready(page, `/${lang}/garages`);
+  await page.getByRole('button', { exact: true, name: t.title }).click();
+  const dialog = page.getByRole('dialog', { name: t.title });
+  await expect(dialog.locator('mf-overlay-panel')).toBeVisible();
+  await dialog.getByRole('button', { name: t.withPhone }).click();
+  await expect(dialog.getByLabel(t.number)).toBeFocused();
+  return dialog;
+}
+
+test.describe('when WhatsApp does not take the code @mailbox', () => {
+  // @traces 393-FR-005
+  // @traces 393-FR-017
+  test('a number the stub refuses shows the fallback message and the e-mail link', async ({
+    page,
+  }) => {
+    const dialog = await phoneStep(page, 'ro');
+    await dialog.getByLabel('Număr de telefon').fill(REFUSED_PHONE);
+    await dialog.getByRole('button', { name: 'Trimite codul' }).click();
+
+    const fallback = dialog.getByRole('alert');
+    await expect(fallback).toContainText(
+      'Nu am putut trimite codul pe WhatsApp.',
+    );
+    await fallback
+      .getByRole('button', { name: 'Intră cu e‑mail și parolă' })
+      .click();
+    await expect(dialog.getByLabel('E‑mail')).toBeVisible();
+  });
+});
+
+// Each step at each size, in light and dark, scrolls nothing sideways.
+const SIZES = [
+  { height: 640, width: 320 },
+  { height: 844, width: 390 },
+  { height: 1024, width: 768 },
+  { height: 900, width: 1440 },
+];
+
+async function holds(page: Page, step: string) {
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme });
+    const width = await page.evaluate(
+      () => document.documentElement.scrollWidth,
+    );
+    const viewport = page.viewportSize()?.width ?? 0;
+    expect(width, `${step} in ${colorScheme}`).toBeLessThanOrEqual(viewport);
+  }
+}
+
+test.describe('the three steps on every screen @mailbox', () => {
+  for (const size of SIZES) {
+    for (const lang of ['ro', 'en'] as const) {
+      // @traces 393-FR-016
+      test(`at ${size.width} px in ${lang}, the number, code and profile steps scroll nothing sideways`, async ({
+        page,
+      }) => {
+        const t = TEXTS[lang];
+        const phone = freshPhone();
+        await page.setViewportSize(size);
+        const dialog = await phoneStep(page, lang);
+        await holds(page, 'number');
+
+        await dialog.getByLabel(t.number).fill(phone);
+        await dialog.getByRole('button', { name: t.send }).click();
+        await expect(dialog.getByLabel(t.code)).toBeFocused();
+        await holds(page, 'code');
+
+        await dialog.getByLabel(t.code).fill(await lastCode(page, phone));
+        await dialog
+          .getByRole('button', { exact: true, name: t.submit })
+          .click();
+        await expect(dialog.getByLabel(t.name)).toBeFocused();
+        await holds(page, 'profile');
+        await expect(
+          dialog.getByRole('button', { name: t.create }),
+        ).toBeVisible();
+      });
+    }
+  }
+});

@@ -1,3 +1,5 @@
+import { NgTemplateOutlet } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -5,6 +7,7 @@ import {
   computed,
   DestroyRef,
   type ElementRef,
+  effect,
   Injector,
   inject,
   signal,
@@ -17,6 +20,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { Router } from '@angular/router';
 import { normalisePhone } from '@motor-fix/contracts/phone';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import {
@@ -30,6 +34,7 @@ import {
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
 import { Consent, consentControl } from './consent';
+import { ProviderButtons } from './providers';
 import type { AuthData, AuthSwitch } from './sign-in';
 import { characters } from './sign-up';
 import { Session } from '../dashboard/session';
@@ -39,6 +44,13 @@ const RESEND_SECONDS = 60;
 
 const possiblePhone = (control: AbstractControl<string>) =>
   normalisePhone(control.value) ? null : { pattern: true };
+
+// The tries a refused code has left, when the answer says so.
+function attemptsLeftOf(error: unknown): number | null {
+  const left =
+    error instanceof HttpErrorResponse ? error.error?.attemptsLeft : undefined;
+  return Number.isInteger(left) && left >= 0 ? left : null;
+}
 
 const clock = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
@@ -54,6 +66,8 @@ const clock = (seconds: number) =>
     FieldError,
     HlmButton,
     HlmInput,
+    NgTemplateOutlet,
+    ProviderButtons,
     ReactiveFormsModule,
     TaskError,
     TaskSubmit,
@@ -73,6 +87,9 @@ const clock = (seconds: number) =>
     .link { min-height: var(--mf-tap); padding: 0; border: 0; background: transparent; color: var(--mf-amber-ink); font: inherit; font-weight: 700; cursor: pointer; }
     .link:disabled { color: var(--mf-text-secondary); cursor: default; }
     .link:focus-visible { outline: 2px solid var(--mf-amber-ink); outline-offset: 2px; }
+    .fallback { display: grid; gap: var(--mf-space-3); }
+    .fallback .problem { color: var(--mf-red-ink); font-size: var(--mf-size-small); }
+    .left { margin: 0; color: inherit; }
   `,
   template: `
     @if (step() === 'phone') {
@@ -95,7 +112,7 @@ const clock = (seconds: number) =>
           <input type="checkbox" formControlName="remember" />
           <span>{{ 'public.signIn.remember' | t }}</span>
         </label>
-        <mf-task-error [save]="phoneSave" />
+        <ng-container [ngTemplateOutlet]="sendProblem" />
         <button hlmBtn type="submit" [mfTaskSubmit]="phoneSave">
           {{ 'public.signIn.phone.send' | t }}
         </button>
@@ -128,10 +145,14 @@ const clock = (seconds: number) =>
         @if (expired()) {
           <p role="alert" class="expired">{{ 'public.signIn.code.problem.code_expired' | t }}</p>
         } @else {
-          <mf-task-error [save]="codeSave" />
+          <mf-task-error [save]="codeSave">
+            @if (codeSave.problem()?.code === 'code_invalid' && attemptsLeft(); as left) {
+              <p class="left">{{ 'public.signIn.code.attemptsLeft' | t: { count: left.count } }}</p>
+            }
+          </mf-task-error>
         }
-        <mf-task-error [save]="phoneSave" />
-        <button hlmBtn type="submit" [mfTaskSubmit]="codeSave">
+        <ng-container [ngTemplateOutlet]="sendProblem" />
+        <button hlmBtn type="submit" [mfTaskSubmit]="codeSave" [disabled]="expired()">
           {{ 'public.signIn.code.submit' | t }}
         </button>
         <p class="links">
@@ -166,6 +187,20 @@ const clock = (seconds: number) =>
         </button>
       </form>
     }
+    <!-- Why the code was not sent; when WhatsApp did not take it, the other ways in. -->
+    <ng-template #sendProblem>
+      @if (phoneSave.problem()?.code === 'whatsapp_failed') {
+        <div class="fallback" role="alert">
+          <p class="problem">{{ 'public.signIn.phone.problem.whatsapp_failed' | t }}</p>
+          <button type="button" class="link" (click)="toEmail()">
+            {{ 'public.signIn.phone.withEmail' | t }}
+          </button>
+          <mf-provider-buttons [remember]="phoneForm.controls.remember.value" [returnTo]="returnTo" />
+        </div>
+      } @else {
+        <mf-task-error [save]="phoneSave" />
+      }
+    </ng-template>
   `,
 })
 export class PhoneSignIn {
@@ -183,7 +218,13 @@ export class PhoneSignIn {
   private readonly nameInput =
     viewChild<ElementRef<HTMLInputElement>>('nameInput');
 
+  // The screen whose action asked for the sign-in, to come back to after a
+  // provider.
+  protected readonly returnTo =
+    this.task.data?.reason === true ? inject(Router).url : null;
   protected readonly step = signal<'phone' | 'code' | 'profile'>('phone');
+  // The tries the last wrong code left, wrapped so 0 still shows.
+  protected readonly attemptsLeft = signal<{ count: number } | null>(null);
   // The number the code went to, in E.164.
   protected readonly number = signal('');
   private readonly sentAt = signal(0);
@@ -248,6 +289,12 @@ export class PhoneSignIn {
     void this.i18n.enter('public');
     const tick = setInterval(() => this.now.set(Date.now()), 1000);
     inject(DestroyRef).onDestroy(() => clearInterval(tick));
+    // At 0:00 only a new code helps: the field and the main button rest.
+    effect(() => {
+      const code = this.codeForm.controls.code;
+      if (this.expired()) code.disable();
+      else code.enable();
+    });
   }
 
   protected toEmail() {
@@ -282,7 +329,11 @@ export class PhoneSignIn {
       if (!answer) throw new Error('signed in without an account');
       return answer;
     } catch (error) {
-      if (toProblem(error).code === 'code_expired') this.expire();
+      const { code } = toProblem(error);
+      if (code === 'code_expired') this.expire();
+      const left = code === 'code_invalid' ? attemptsLeftOf(error) : null;
+      this.attemptsLeft.set(left === null ? null : { count: left });
+      if (code === 'code_invalid') this.codeForm.controls.code.reset();
       throw error;
     }
   }
@@ -309,6 +360,7 @@ export class PhoneSignIn {
   }
 
   private toCode(phone: string) {
+    this.attemptsLeft.set(null);
     this.number.set(phone);
     this.now.set(Date.now());
     this.sentAt.set(this.now());

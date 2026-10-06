@@ -59,3 +59,17 @@
 - Left to later stories as planned: an unknown number answers 401 `code_invalid` without spending the code (US2 replaces it with the profile step and `phone_taken`); `attemptsLeft` (US3); uncounting and failure logging (US4); maintenance and suspended accounts (US5).
 - FR -> tests: FR-001/002/003/006 `libs/domain/src/auth/phone-sign-in.spec.ts`, `libs/domain/src/auth/phone-sign-in.api.integration.spec.ts`; FR-007/011/017 the integration spec, `apps/api/src/public-routes.integration.spec.ts`, `apps/web-e2e/src/phone-sign-in.spec.ts`; FR-012/013 `apps/web/src/app/sign-in/phone-sign-in.spec.ts`, `sign-in.spec.ts`, `sign-in-dialog.spec.ts`, `apps/web/src/app/dashboard/session.phone.spec.ts`; FR-016 `libs/i18n/src/public/{ro,en}.json` via the web specs.
 - Follow-ups: none found.
+
+## Compaction 2026-10-06T16:22:31.445Z (auto)
+
+- branch `393-whatsapp-phone-sign-in` at `a38ed2e`
+- tasks: 32 done, 16 open
+- uncommitted (2):
+  -  M apps/web/src/app/sign-in/phone-sign-in.spec.ts
+  -  M libs/domain/src/auth/phone-sign-in.api.integration.spec.ts
+- resume from here: re-read this log, tasks.md and plan.md before the next edit
+
+## Cloud resume 2026-10-06 (US3-US5, T033-T047)
+- Merged `origin/main` (93 commits, #158 cloud sessions) as `a38ed2e`: conflicts in `ci.yml` (kept both E2E env blocks), `app.module.ts`, `sign-in.ts` (phone button joins the provider buttons' "or"); data-access regenerated. Pre-commit hook green. The push was refused: the cloud GitHub App lacks the `workflows` permission and the merge carries main's `ci.yml` lines, so every commit stays local until it is granted or the laptop pushes.
+- Red: integration 10 of 69 failed (attemptsLeft countdown, uncount, 4 failure kinds in the log, 3 maintenance cases, suspended); web 10 of 35 failed. Green: integration 69/69; domain auth + api 45 suites, 1476 tests; web sign-in + overlays 21 suites, 430 tests; i18n 506; contract check clean.
+- Deviations: `attemptsLeft` rides on the refusal body and `ProblemFilter` forwards it only as a whole count ≥ 0; the web reads it from the error body rather than widening the shared `toProblem`. `<mf-task-error>` projects content so the attempts-left line shares its announced region. `too_many_attempts` is one text for the phone and code steps. The Brevo stub answers 400 to +40700009999 for the e2e fallback case. T047's walk sends one code per size and language (8, under the 20-per-address hour) and checks light and dark on each step by switching the scheme in place.

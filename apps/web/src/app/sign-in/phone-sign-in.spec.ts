@@ -5,6 +5,7 @@ import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 
 import { PhoneSignIn } from './phone-sign-in';
+import { Providers } from './providers';
 import type { AuthData, AuthSwitch } from './sign-in';
 import { Session } from '../dashboard/session';
 
@@ -28,7 +29,13 @@ async function open(language: 'ro' | 'en' = 'ro', data?: AuthData) {
   phoneCode = jest.fn(async () => undefined);
   signInWithPhone = jest.fn(async () => ({ landing: '/app/garage' }));
   TestBed.configureTestingModule({
-    providers: [{ provide: Session, useValue: { phoneCode, signInWithPhone } }],
+    providers: [
+      { provide: Session, useValue: { phoneCode, signInWithPhone } },
+      {
+        provide: Providers,
+        useValue: { load: async () => ({ apple: false, google: true }) },
+      },
+    ],
   });
   if (language === 'en') await TestBed.inject(I18n).use('en');
   const host = TestBed.createComponent(Host);
@@ -373,5 +380,201 @@ describe('the profile step, for a number no account holds', () => {
 
     expect(field('Nume').value).toBe('<img src=x onerror=alert(1)>');
     expect(panel().querySelector('img')).toBeNull();
+  });
+});
+
+async function enterCode(code = '012345') {
+  type(field('Cod'), code);
+  button('Intră în cont').click();
+  await settle();
+}
+
+describe('what the dialog says to each answer', () => {
+  // @traces 393-FR-014
+  it('says the code is not correct with the attempts left, and clears the code field', async () => {
+    await open();
+    await sendCode();
+    signInWithPhone.mockRejectedValueOnce(
+      refusal(401, { attemptsLeft: 4, code: 'code_invalid' }),
+    );
+
+    await enterCode();
+
+    const alert = panel().querySelector('[role="alert"]')?.textContent ?? '';
+    expect(alert).toContain('Codul nu este corect.');
+    expect(alert).toContain('Mai ai 4 încercări.');
+    expect(field('Cod').value).toBe('');
+  });
+
+  // @traces 393-FR-014
+  it('says "1 încercare" for the last one, and "attempts left" in English', async () => {
+    await open();
+    await sendCode();
+    signInWithPhone.mockRejectedValueOnce(
+      refusal(401, { attemptsLeft: 1, code: 'code_invalid' }),
+    );
+    await enterCode();
+    expect(panel().textContent).toContain('Mai ai o încercare.');
+  });
+
+  it('reads the attempts left in English', async () => {
+    await open('en');
+    type(field('Phone number'), '0722 123 456');
+    button('Send the code').click();
+    await settle();
+    signInWithPhone.mockRejectedValueOnce(
+      refusal(401, { attemptsLeft: 3, code: 'code_invalid' }),
+    );
+    type(field('Code'), '012345');
+    button('Sign in').click();
+    await settle();
+
+    expect(panel().textContent).toContain('3 attempts left.');
+  });
+
+  // @traces 393-FR-014
+  it('says the code expired, keeping the number', async () => {
+    await open();
+    await sendCode();
+    signInWithPhone.mockRejectedValueOnce(
+      refusal(410, { code: 'code_expired' }),
+    );
+
+    await enterCode();
+
+    expect(panel().textContent).toContain('Codul a expirat. Cere un cod nou.');
+    expect(panel().textContent).toContain('+40722123456');
+  });
+
+  // @traces 393-FR-014
+  it('gives one text for too many codes and for too many wrong codes', async () => {
+    await open();
+    phoneCode.mockRejectedValueOnce(
+      refusal(429, { code: 'too_many_attempts' }),
+    );
+    await sendCode();
+    const asked =
+      panel().querySelector('[role="alert"]')?.textContent?.trim() ?? '';
+    await sendCode();
+    signInWithPhone.mockRejectedValueOnce(
+      refusal(429, { code: 'too_many_attempts' }),
+    );
+    await enterCode();
+    const tried =
+      panel().querySelector('[role="alert"]')?.textContent?.trim() ?? '';
+
+    expect(asked).toBe(
+      'Prea multe încercări. Așteaptă puțin sau cere un cod nou.',
+    );
+    expect(tried).toBe(asked);
+  });
+
+  // @traces 393-FR-013
+  it('at 0:00 disables the code field and offers only "Trimite din nou"', async () => {
+    const start = Date.now();
+    await open();
+    await sendCode();
+    jest.spyOn(Date, 'now').mockReturnValue(start + 301_000);
+
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    await settle();
+
+    expect(panel().textContent).toContain('Codul expiră în 0:00');
+    expect(field('Cod').disabled).toBe(true);
+    expect(button('Intră în cont').disabled).toBe(true);
+    expect(button('Trimite din nou').disabled).toBe(false);
+  });
+
+  // @traces 393-FR-013
+  it('holds the main button while the code is on its way, and a second tap sends nothing', async () => {
+    await open();
+    await sendCode();
+    signInWithPhone.mockReturnValueOnce(new Promise(() => undefined));
+
+    await enterCode();
+    const submit = panel().querySelector<HTMLButtonElement>(
+      'button[type="submit"]',
+    );
+    submit?.click();
+    await settle();
+
+    expect(signInWithPhone).toHaveBeenCalledTimes(1);
+    expect(submit?.getAttribute('aria-disabled')).toBe('true');
+  });
+
+  // @traces 393-FR-014
+  it('says WhatsApp did not take the code, with a way back to e-mail and password and to the providers', async () => {
+    await open();
+    phoneCode.mockRejectedValueOnce(refusal(502, { code: 'whatsapp_failed' }));
+
+    await sendCode();
+
+    const fallback = panel().querySelector('.fallback');
+    expect(fallback?.getAttribute('role')).toBe('alert');
+    expect(fallback?.textContent).toContain(
+      'Nu am putut trimite codul pe WhatsApp.',
+    );
+    expect(fallback?.textContent).toContain('Intră cu e‑mail și parolă');
+    expect(fallback?.querySelector('mf-provider-buttons')).not.toBeNull();
+    expect(field('Număr de telefon').value).toBe('0722 123 456');
+  });
+
+  // @traces 393-FR-014
+  it('offers the same way back when sending the code again fails', async () => {
+    const start = Date.now();
+    await open();
+    await sendCode();
+    jest.spyOn(Date, 'now').mockReturnValue(start + 61_000);
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    await settle();
+    phoneCode.mockRejectedValueOnce(refusal(502, { code: 'whatsapp_failed' }));
+
+    button('Trimite din nou').click();
+    await settle();
+
+    const fallback = panel().querySelector('.fallback');
+    expect(fallback?.textContent).toContain(
+      'Nu am putut trimite codul pe WhatsApp.',
+    );
+    [...(fallback?.querySelectorAll('button') ?? [])]
+      .find((b) => b.textContent?.includes('Intră cu e‑mail și parolă'))
+      ?.click();
+    await expect(result).resolves.toMatchObject({
+      phone: '0722 123 456',
+      switchTo: 'sign-in',
+    });
+  });
+
+  // @traces 393-FR-014
+  it('shows the shared offline message when the code is asked for and when it is entered', async () => {
+    jest.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    const offline = new HttpErrorResponse({ status: 0 });
+    await open();
+    phoneCode.mockRejectedValueOnce(offline);
+    await sendCode();
+    const asked = panel().textContent ?? '';
+    await sendCode();
+    signInWithPhone.mockRejectedValueOnce(offline);
+    await enterCode();
+
+    expect(asked).toContain('Nu ești conectat.');
+    expect(panel().textContent).toContain('Nu ești conectat.');
+  });
+
+  // @traces 393-FR-014
+  it.each([
+    [503, 'maintenance', 'MotorFix este în mentenanță.'],
+    [403, 'account_suspended', 'Contul tău este suspendat.'],
+    [409, 'phone_taken', 'Intră cu e‑mail și parolă'],
+  ])('shows the message for %s %s', async (status, code, text) => {
+    await open();
+    await sendCode();
+    signInWithPhone.mockRejectedValueOnce(refusal(status, { code }));
+
+    await enterCode();
+
+    expect(panel().querySelector('mf-task-error')?.textContent ?? '').toContain(
+      text,
+    );
   });
 });

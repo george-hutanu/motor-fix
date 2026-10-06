@@ -100,14 +100,14 @@
 
 ### Tests first
 
-- [ ] T033 [P] [US3] Add failing cases to `libs/domain/src/auth/phone-sign-in.api.integration.spec.ts`: a used code is 401 `code_invalid`; a code at 5 minutes is 410 `code_expired`; a wrong code is 401 `code_invalid` with `attemptsLeft` 4, 3, 2, 1; after 5 wrong attempts the right code is 429 `too_many_attempts` and stays so until a new code; a second code within 60 s and a 6th within the hour are 429 and send nothing; the 21st request from one address in the hour is 429; a second code makes the first 401; two concurrent uses of one right code open exactly one session (the other 401); two concurrent requests leave exactly one live code; Redis unreachable skips the three counters and logs, while expiry, single use and the 5 attempts still hold (FR-003, FR-004, FR-006, FR-009)
-- [ ] T034 [P] [US3] Add failing cases to `apps/web/src/app/sign-in/phone-sign-in.spec.ts`: "Codul nu este corect." with attempts left; "Codul a expirat. Cere un cod nou."; the too-many text; the countdown at 0:00 disables the code field and offers only "Trimite din nou"; a pending request disables the main button and a second tap sends nothing (FR-013, FR-014)
+- [x] T033 [P] [US3] Add failing cases to `libs/domain/src/auth/phone-sign-in.api.integration.spec.ts`: a used code is 401 `code_invalid`; a code at 5 minutes is 410 `code_expired`; a wrong code is 401 `code_invalid` with `attemptsLeft` 4, 3, 2, 1; after 5 wrong attempts the right code is 429 `too_many_attempts` and stays so until a new code; a second code within 60 s and a 6th within the hour are 429 and send nothing; the 21st request from one address in the hour is 429; a second code makes the first 401; two concurrent uses of one right code open exactly one session (the other 401); two concurrent requests leave exactly one live code; Redis unreachable skips the three counters and logs, while expiry, single use and the 5 attempts still hold (FR-003, FR-004, FR-006, FR-009)
+- [x] T034 [P] [US3] Add failing cases to `apps/web/src/app/sign-in/phone-sign-in.spec.ts`: "Codul nu este corect." with attempts left; "Codul a expirat. Cere un cod nou."; the too-many text; the countdown at 0:00 disables the code field and offers only "Trimite din nou"; a pending request disables the main button and a second tap sends nothing (FR-013, FR-014)
 
 ### Implementation
 
-- [ ] T035 [US3] Complete the check order, `attemptsLeft`, concurrent-claim handling and the three counters (with fail-open) in `libs/domain/src/auth/phone-sign-in.service.ts` and map the problem codes in `libs/domain/src/auth/phone-sign-in.controller.ts` (T033 green) (FR-004, FR-006, FR-009)
-- [ ] T036 [P] [US3] Add `attemptsLeft` to the `code_invalid` problem in `libs/contracts/src/problem.ts` (FR-006, FR-014)
-- [ ] T037 [US3] Show each refusal in the live region and the countdown behaviour in `apps/web/src/app/sign-in/phone-sign-in.ts`; add the matching `signIn.problem.code*` texts to `libs/i18n/src/public/ro.json` and `libs/i18n/src/public/en.json` (T034 green) (FR-013, FR-014)
+- [x] T035 [US3] Complete the check order, `attemptsLeft`, concurrent-claim handling and the three counters (with fail-open) in `libs/domain/src/auth/phone-sign-in.service.ts` and map the problem codes in `libs/domain/src/auth/phone-sign-in.controller.ts` (T033 green) (FR-004, FR-006, FR-009)
+- [x] T036 [P] [US3] Add `attemptsLeft` to the `code_invalid` problem in `libs/contracts/src/problem.ts` (FR-006, FR-014)
+- [x] T037 [US3] Show each refusal in the live region and the countdown behaviour in `apps/web/src/app/sign-in/phone-sign-in.ts`; add the matching `signIn.problem.code*` texts to `libs/i18n/src/public/ro.json` and `libs/i18n/src/public/en.json` (T034 green) (FR-013, FR-014)
 
 ---
 
@@ -119,14 +119,14 @@
 
 ### Tests first
 
-- [ ] T038 [P] [US4] Add failing cases to `libs/domain/src/auth/phone-sign-in.api.integration.spec.ts`: Brevo refusal and a 5 s timeout, `PHONE_SENDING` off, a number outside the non-production allow-list and a template without an id each answer 502 `whatsapp_failed`, store no `sign_in_code` row, do not count toward the hourly five, and log the failure kind without the number or code (FR-004, FR-005)
-- [ ] T039 [P] [US4] Add failing cases to `apps/web/src/app/sign-in/phone-sign-in.spec.ts`: "Nu am putut trimite codul pe WhatsApp." with a link back to e-mail and password; offline shows the shared offline message on request and on entry (FR-014)
-- [ ] T040 [P] [US4] Add the refusing stub case to `apps/web-e2e/src/phone-sign-in.spec.ts`: a number the stub refuses shows the fallback message and the e-mail link (FR-005, FR-017)
+- [x] T038 [P] [US4] Add failing cases to `libs/domain/src/auth/phone-sign-in.api.integration.spec.ts`: Brevo refusal and a 5 s timeout, `PHONE_SENDING` off, a number outside the non-production allow-list and a template without an id each answer 502 `whatsapp_failed`, store no `sign_in_code` row, do not count toward the hourly five, and log the failure kind without the number or code (FR-004, FR-005)
+- [x] T039 [P] [US4] Add failing cases to `apps/web/src/app/sign-in/phone-sign-in.spec.ts`: "Nu am putut trimite codul pe WhatsApp." with a link back to e-mail and password; offline shows the shared offline message on request and on entry (FR-014)
+- [x] T040 [P] [US4] Add the refusing stub case to `apps/web-e2e/src/phone-sign-in.spec.ts`: a number the stub refuses shows the fallback message and the e-mail link (FR-005, FR-017)
 
 ### Implementation
 
-- [ ] T041 [US4] Make `issue` in `libs/domain/src/auth/phone-sign-in.service.ts` send before storing, answer `whatsapp_failed` on every failure above, and call `uncountPhoneCode` (T038 green) (FR-004, FR-005)
-- [ ] T042 [US4] Add the fallback block and offline handling to `apps/web/src/app/sign-in/phone-sign-in.ts` and its `signIn.problem.whatsapp*` texts to `libs/i18n/src/public/ro.json` and `libs/i18n/src/public/en.json` (T039, T040 green) (FR-014)
+- [x] T041 [US4] Make `issue` in `libs/domain/src/auth/phone-sign-in.service.ts` send before storing, answer `whatsapp_failed` on every failure above, and call `uncountPhoneCode` (T038 green) (FR-004, FR-005)
+- [x] T042 [US4] Add the fallback block and offline handling to `apps/web/src/app/sign-in/phone-sign-in.ts` and its `signIn.problem.whatsapp*` texts to `libs/i18n/src/public/ro.json` and `libs/i18n/src/public/en.json` (T039, T040 green) (FR-014)
 
 ---
 
@@ -138,19 +138,19 @@
 
 ### Tests first
 
-- [ ] T043 [P] [US5] Add failing cases to `libs/domain/src/auth/phone-sign-in.api.integration.spec.ts`: under maintenance `phone-code` is 503 for a non-admin and an unknown number, sends nothing and stores nothing, and gives an admin's number its code; a non-admin's right code turns 503 `maintenance` with the code spent when maintenance came on after sending; an admin signs in; a suspended account's right code is 403 `account_suspended` with the code spent (FR-010, FR-011)
-- [ ] T044 [P] [US5] Add a failing case to `apps/web/src/app/sign-in/phone-sign-in.spec.ts`: 503 `maintenance`, 403 `account_suspended` and 409 `phone_taken` show their shared messages (FR-014)
+- [x] T043 [P] [US5] Add failing cases to `libs/domain/src/auth/phone-sign-in.api.integration.spec.ts`: under maintenance `phone-code` is 503 for a non-admin and an unknown number, sends nothing and stores nothing, and gives an admin's number its code; a non-admin's right code turns 503 `maintenance` with the code spent when maintenance came on after sending; an admin signs in; a suspended account's right code is 403 `account_suspended` with the code spent (FR-010, FR-011)
+- [x] T044 [P] [US5] Add a failing case to `apps/web/src/app/sign-in/phone-sign-in.spec.ts`: 503 `maintenance`, 403 `account_suspended` and 409 `phone_taken` show their shared messages (FR-014)
 
 ### Implementation
 
-- [ ] T045 [US5] Add the maintenance and suspension checks to `issue` and `signIn` in `libs/domain/src/auth/phone-sign-in.service.ts` using the same maintenance reading as the e-mail sign-in (T043 green) (FR-007, FR-010)
-- [ ] T046 [US5] Map the three answers to their messages in `apps/web/src/app/sign-in/phone-sign-in.ts` (T044 green) (FR-014)
+- [x] T045 [US5] Add the maintenance and suspension checks to `issue` and `signIn` in `libs/domain/src/auth/phone-sign-in.service.ts` using the same maintenance reading as the e-mail sign-in (T043 green) (FR-007, FR-010)
+- [x] T046 [US5] Map the three answers to their messages in `apps/web/src/app/sign-in/phone-sign-in.ts` (T044 green) (FR-014)
 
 ---
 
 ## Phase 8: Polish
 
-- [ ] T047 [P] Add a 320 px, 390 px, tablet and desktop, light and dark, ro and en walk of the three steps to `apps/web-e2e/src/phone-sign-in.spec.ts` asserting no sideways scroll (SC-004, FR-016)
+- [x] T047 [P] Add a 320 px, 390 px, tablet and desktop, light and dark, ro and en walk of the three steps to `apps/web-e2e/src/phone-sign-in.spec.ts` asserting no sideways scroll (SC-004, FR-016)
 - [ ] T048 Run `quickstart.md` end to end and note the result in `specs/393-whatsapp-phone-sign-in/auto-run.md` (FR-017)
 
 ---
