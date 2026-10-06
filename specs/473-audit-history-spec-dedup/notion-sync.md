@@ -9,3 +9,6 @@
 - 2026-10-07 · implement · ST-473 · Planning → Implementing
 - 2026-10-07 · implement · timeline · no row for ST-473
 - 2026-10-07 · labels · PR #179 · in development
+- 2026-10-07 · qa · ST-473 · Implementing → QA
+- 2026-10-07 · qa · timeline · no row for ST-473
+- 2026-10-07 · labels · PR #179 · QA
