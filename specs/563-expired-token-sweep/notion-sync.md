@@ -11,3 +11,5 @@
 - 2026-10-06 · implement · ST-563 · Planning → Implementing (via the connector)
 - 2026-10-06 · timeline · ST-563 · Planning → Implementing (row 3f0607bf-f0d2-810d-98b9-fc8b596ff6c6)
 - 2026-10-06 · labels · PR #146 · in development
+- 2026-10-06 · debt · ST-563 · filed 1 deferred item as To do task 3f1607bf-f0d2-81ab-8a7e-e9682de18606 (connector)
+- 2026-10-06 · qa · ST-563 · Implementing → QA (story + timeline row 3f0607bf-f0d2-810d-98b9-fc8b596ff6c6, connector)
