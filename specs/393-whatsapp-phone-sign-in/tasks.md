@@ -11,7 +11,7 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 [P] Make `PHONE_SENDING`, `PHONE_ALLOWLIST`, `WHATSAPP_SENDER`, `WHATSAPP_TEMPLATES` readable by the api: update the comment in `.env.example` and add them to the e2e job env in `.github/workflows/ci.yml` (allow-list `+4070000*`, plan "Complexity Tracking") (FR-005, FR-017)
+- [X] T001 [P] Make `PHONE_SENDING`, `PHONE_ALLOWLIST`, `WHATSAPP_SENDER`, `WHATSAPP_TEMPLATES` readable by the api: update the comment in `.env.example` and add them to the e2e job env in `.github/workflows/ci.yml` (allow-list `+4070000*`, plan "Complexity Tracking") (FR-005, FR-017)
 
 ---
 
@@ -21,20 +21,20 @@
 
 ### Tests first
 
-- [ ] T002 [P] Write failing `libs/contracts/src/phone.spec.ts` (new): `+40 722 123 456`, `0722-123-456`, `0040722123456` all give `+40722123456`; `+` then 7 to 15 digits, first not 0; letters, too short, too long give `null` (FR-001)
-- [ ] T003 [P] Add failing cases for `PhoneCodeDto` and `PhoneSignInDto` to `libs/contracts/src/auth.dto.spec.ts`: `phone` 1-32 characters normalising to E.164; `code` exactly `^\d{6}$`; `language` `ro|en`; `name` 2-80 trimmed, no control characters; only one of `name`/`consent` is a 400; unknown field refused (FR-001, FR-006, FR-011)
-- [ ] T004 [P] Add failing cases to `libs/domain/src/notifications/phone-config.spec.ts`: an allow-list entry ending in `*` matches a number by prefix, an entry without `*` still matches exactly (FR-017)
-- [ ] T005 [P] Add failing cases to `libs/domain/src/auth/attempts.spec.ts`: `admitPhoneCode` counts 60 s (limit 1), hourly (limit 5) and per-address (limit 20) windows with `INCR` + `EXPIRE NX` in one `MULTI`, keyed by `sha256(phone)`, fixed from the first request; `uncountPhoneCode` decrements the hourly count; a Redis error admits and logs (FR-004)
-- [ ] T006 [P] Add a failing case for `SIGN_IN_CODE` to `libs/domain/src/notifications/catalogue.spec.ts`: the registry renders the WhatsApp text in `ro` and `en` with `{code}` and `{minutes}`, and nothing else (no link, no name) (FR-002)
+- [X] T002 [P] Write failing `libs/contracts/src/phone.spec.ts` (new): `+40 722 123 456`, `0722-123-456`, `0040722123456` all give `+40722123456`; `+` then 7 to 15 digits, first not 0; letters, too short, too long give `null` (FR-001)
+- [X] T003 [P] Add failing cases for `PhoneCodeDto` and `PhoneSignInDto` to `libs/contracts/src/auth.dto.spec.ts`: `phone` 1-32 characters normalising to E.164; `code` exactly `^\d{6}$`; `language` `ro|en`; `name` 2-80 trimmed, no control characters; only one of `name`/`consent` is a 400; unknown field refused (FR-001, FR-006, FR-011)
+- [X] T004 [P] Add failing cases to `libs/domain/src/notifications/phone-config.spec.ts`: an allow-list entry ending in `*` matches a number by prefix, an entry without `*` still matches exactly (FR-017)
+- [X] T005 [P] Add failing cases to `libs/domain/src/auth/attempts.spec.ts`: `admitPhoneCode` counts 60 s (limit 1), hourly (limit 5) and per-address (limit 20) windows with `INCR` + `EXPIRE NX` in one `MULTI`, keyed by `sha256(phone)`, fixed from the first request; `uncountPhoneCode` decrements the hourly count; a Redis error admits and logs (FR-004)
+- [X] T006 [P] Add a failing case for `SIGN_IN_CODE` to `libs/domain/src/notifications/catalogue.spec.ts`: the registry renders the WhatsApp text in `ro` and `en` with `{code}` and `{minutes}`, and nothing else (no link, no name) (FR-002)
 
 ### Implementation
 
-- [ ] T007 [P] Create `normalisePhone(input): string | null` in `libs/contracts/src/phone.ts` (new) and export it from `libs/contracts/src/index.ts` (T002 green) (FR-001)
-- [ ] T008 Add `PhoneCodeDto`, `PhoneSignInDto`, `PhoneSessionDto` to `libs/contracts/src/auth.dto.ts`, reusing `normalisePhone` and `ConsentDto` (T003 green; depends on T007) (FR-001, FR-006, FR-011)
-- [ ] T009 [P] Add `model SignInCode` (`phone String @id`, `codeHash String`, `expiresAt DateTime`, `attempts Int @default(0)`, `usedAt DateTime?`, `createdAt DateTime @default(now())`, `@@map("sign_in_code")`, snake_case field maps) to `libs/domain/prisma/schema/auth.prisma` and write `libs/domain/prisma/migrations/<YYYYMMDDHHMMSS>_sign_in_code/migration.sql` (new), stamp after `20261005170000_notification_claim`; regenerate the Prisma client (FR-003)
-- [ ] T010 [P] Make an allow-list entry ending in `*` match by prefix in `libs/domain/src/notifications/phone-config.ts` (T004 green) (FR-017)
-- [ ] T011 [P] Add `admitPhoneCode` and `uncountPhoneCode` to `libs/domain/src/auth/attempts.ts` (T005 green) (FR-004)
-- [ ] T012 [P] Create `libs/domain/src/notifications/templates/sign-in-code.ts` (new) with the ro/en WhatsApp texts (`motorfix_sign_in_code_ro`, `motorfix_sign_in_code_en`, slots `{code}`, `{minutes}`) and register `SIGN_IN_CODE` in `libs/domain/src/notifications/templates/registry.ts` (T006 green) (FR-002)
+- [X] T007 [P] Create `normalisePhone(input): string | null` in `libs/contracts/src/phone.ts` (new) and export it from `libs/contracts/src/index.ts` (T002 green) (FR-001)
+- [X] T008 Add `PhoneCodeDto`, `PhoneSignInDto`, `PhoneSessionDto` to `libs/contracts/src/auth.dto.ts`, reusing `normalisePhone` and `ConsentDto` (T003 green; depends on T007) (FR-001, FR-006, FR-011)
+- [X] T009 [P] Add `model SignInCode` (`phone String @id`, `codeHash String`, `expiresAt DateTime`, `attempts Int @default(0)`, `usedAt DateTime?`, `createdAt DateTime @default(now())`, `@@map("sign_in_code")`, snake_case field maps) to `libs/domain/prisma/schema/auth.prisma` and write `libs/domain/prisma/migrations/<YYYYMMDDHHMMSS>_sign_in_code/migration.sql` (new), stamp after `20261005170000_notification_claim`; regenerate the Prisma client (FR-003)
+- [X] T010 [P] Make an allow-list entry ending in `*` match by prefix in `libs/domain/src/notifications/phone-config.ts` (T004 green) (FR-017)
+- [X] T011 [P] Add `admitPhoneCode` and `uncountPhoneCode` to `libs/domain/src/auth/attempts.ts` (T005 green) (FR-004)
+- [X] T012 [P] Create `libs/domain/src/notifications/templates/sign-in-code.ts` (new) with the ro/en WhatsApp texts (`motorfix_sign_in_code_ro`, `motorfix_sign_in_code_en`, slots `{code}`, `{minutes}`) and register `SIGN_IN_CODE` in `libs/domain/src/notifications/templates/registry.ts` (T006 green) (FR-002)
 
 **Checkpoint**: contracts, table, template and counters exist; no route yet.
 

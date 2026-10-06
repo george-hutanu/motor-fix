@@ -136,6 +136,12 @@ jobs:
       EMAIL_FROM: 'MotorFix <noreply@example.test>'
       BREVO_API_KEY: e2e-mailbox-key
       BREVO_API_URL: http://127.0.0.1:3025/v3
+      # The api sends sign-in codes by WhatsApp to the same mailbox, which
+      # keeps them for the phone sign-in flow to read.
+      PHONE_SENDING: 'on'
+      PHONE_ALLOWLIST: '+4070000*'
+      WHATSAPP_SENDER: '+40700000000'
+      WHATSAPP_TEMPLATES: 'motorfix_sign_in_code_ro=1,motorfix_sign_in_code_en=2'
       # The e2e suite does not upload files; the api only needs the settings.
       STORAGE_ENDPOINT: http://localhost:9000
       STORAGE_REGION: eu-central-1

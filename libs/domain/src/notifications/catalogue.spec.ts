@@ -1,4 +1,6 @@
 import { NOTIFICATION_TYPES, notificationType, sendsEmail } from './catalogue';
+import { render } from './templates';
+import { TEMPLATES } from './templates/registry';
 
 const NOT_URGENT = [
   'DUE_ITP',
@@ -175,5 +177,35 @@ describe('choosing e-mail', () => {
 
   it('ignores mutes for a transactional type', () => {
     expect(sendsEmail(notificationType('ACCOUNT_EMAIL'), muted)).toBe(true);
+  });
+});
+
+describe('the sign-in code message', () => {
+  it.each([
+    ['ro', 'motorfix_sign_in_code_ro'],
+    ['en', 'motorfix_sign_in_code_en'],
+  ])(
+    'fills the %s WhatsApp template with the code and its minutes',
+    (language, name) => {
+      expect(
+        render('SIGN_IN_CODE', 'whatsapp', language, {
+          code: '012345',
+          minutes: 5,
+        }),
+      ).toEqual({ name, params: ['012345', '5'] });
+    },
+  );
+
+  it('holds the code and the minutes and nothing else: no link, no name', () => {
+    expect(TEMPLATES['SIGN_IN_CODE']?.values).toEqual({
+      code: 'text',
+      minutes: 'num',
+    });
+    expect(Object.keys(TEMPLATES['SIGN_IN_CODE'] ?? {}).sort()).toEqual([
+      'audience',
+      'example',
+      'values',
+      'whatsapp',
+    ]);
   });
 });

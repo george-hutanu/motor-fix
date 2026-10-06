@@ -3,6 +3,7 @@ import { DUE_ITP } from './due-itp';
 import { GENERIC, GENERIC_GROUPED } from './generic';
 import { NEWS } from './news';
 import { QUOTE_RECEIVED_GROUPED } from './quote-received';
+import { SIGN_IN_CODE } from './sign-in-code';
 import { TEST_MESSAGE } from './test-message';
 import type { Registry } from '../templates';
 
@@ -17,5 +18,6 @@ export const TEMPLATES: Registry = {
   'GENERIC.grouped': GENERIC_GROUPED,
   NEWS,
   'QUOTE_RECEIVED.grouped': QUOTE_RECEIVED_GROUPED,
+  SIGN_IN_CODE,
   TEST_MESSAGE,
 };

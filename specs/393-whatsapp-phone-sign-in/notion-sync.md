@@ -8,3 +8,6 @@
 - [NOTION-SYNC RETRIED 2026-10-06: ready Foundations — epic-wide refresh not run: no NOTION_TOKEN in the phase agent]
 - 2026-10-06 · start · EP-1 Foundations · In progress (unchanged)
 - 2026-10-06 · ready · Foundations · no change
+- 2026-10-06 · implement · ST-393 · Planning → Implementing
+- 2026-10-06 · implement · timeline · Planning → Implementing
+- 2026-10-06 · labels · PR #153 · in development

@@ -10,4 +10,5 @@ export * from './me.dto';
 export * from './notification-preferences.dto';
 export * from './notifications.dto';
 export * from './password-reset.dto';
+export * from './phone';
 export * from './problem';
