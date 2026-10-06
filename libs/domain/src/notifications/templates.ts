@@ -154,6 +154,25 @@ export function render<C extends Channel>(
   return renderText(channel, text, fill, value, language, fail) as Rendered[C];
 }
 
+// An e-mail link is only ever https, or http on the developer's own machine;
+// anything else (javascript:, data:, a relative path) fails the render.
+function safeHref(
+  href: string,
+  which: 'button' | 'stop',
+  fail: (reason: string) => never,
+): string {
+  let url: URL;
+  try {
+    url = new URL(href);
+  } catch {
+    return fail(`${which} link is not a URL`);
+  }
+  const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+  if (url.protocol === 'https:' || (url.protocol === 'http:' && local))
+    return href;
+  return fail(`${which} link must be https (http only on localhost)`);
+}
+
 function renderText(
   channel: Channel,
   text: unknown,
@@ -168,12 +187,12 @@ function renderText(
       const subject = fill(mail.subject);
       const lines = mail.lines.map(fill);
       const button = {
-        href: value(mail.button.link),
+        href: safeHref(value(mail.button.link), 'button', fail),
         label: fill(mail.button.label),
       };
       const reason = fill(mail.reason);
       const stop = mail.stop && {
-        href: value(mail.stop.link),
+        href: safeHref(value(mail.stop.link), 'stop', fail),
         label: fill(mail.stop.label),
       };
       return {
