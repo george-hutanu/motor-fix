@@ -45,7 +45,7 @@ export function auditHistoryApp() {
   });
 
   afterAll(async () => {
-    await app.close();
+    await app?.close();
     await prisma.$disconnect();
   });
 
