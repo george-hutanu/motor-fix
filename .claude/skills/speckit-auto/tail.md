@@ -37,7 +37,11 @@ holding only the PR number, the worktree and the note's path:
 > beside it.
 
 The tail reads the note, `deferred.md` and the PR, not the story's transcript,
-and runs lifecycle steps 5–7. It starts on a finished CI and QA run, and it
+and runs lifecycle steps 5–7. It first runs
+`node .claude/scripts/lifecycle.mjs handoff --restore --pr <n>`: a note that
+is missing (a cloud session resumed on a fresh VM) is written from the PR's
+newest `<!-- speckit-handoff -->` comment, and one that exists is left as it
+is. With neither, the PR has no recorded QA run (step 3). It starts on a finished CI and QA run, and it
 never waits on either: a lap that needs a new run dispatches it and ends.
 
 1. If the branch is behind `origin/main`, `git merge --no-edit origin/main`,
@@ -57,7 +61,8 @@ never waits on either: a lap that needs a new run dispatches it and ends.
    - **No run for the head** (none recorded, or one about an older head):
      write the flows to `.specify/.cache/qa-flows-<n>.mjs`, run
      `node .claude/scripts/pr-test/dispatch.mjs <n> --no-wait --lap <repair_iterations + 1> --routes /,/cockpit[,<changed routes>] --flows .specify/.cache/qa-flows-<n>.mjs`,
-     replace the note's `QA run:` line with the one it prints, and end with
+     replace the note's `QA run:` line with the one it prints, post the note
+     with `node .claude/scripts/lifecycle.mjs handoff --pr <n>`, and end with
      `NEXT: tail #<n> after QA run <id>`.
    - **An unusable run** (the tester's dispatch exits 2: cancelled, no
      report): dispatch again once for that head, the same way, at the same
@@ -71,8 +76,9 @@ never waits on either: a lap that needs a new run dispatches it and ends.
      the run is blocked (`repair-loop-exceeded`): `speckit-notion-sync
      blocked` with the open findings, the same as a PR comment, and stop: the
      PR is never merged at the cap. Otherwise dispatch the new head's run
-     with `--no-wait` as above, rewrite the note's `QA run:` line, and end
-     with `NEXT: tail #<n> after QA run <id>`.
+     with `--no-wait` as above, rewrite the note's `QA run:` line, post it
+     (`lifecycle.mjs handoff --pr <n>`), and end with
+     `NEXT: tail #<n> after QA run <id>`.
 4. After a passing lap, `speckit-notion-sync debt` files every deferred bullet
    not yet filed (reviewers' and the tester's) as a To do task in Notion. Its
    URLs change `deferred.md`, so commit and push that and run
