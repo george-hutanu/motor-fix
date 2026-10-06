@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 
 **Input**: User description: "ST-131 Invite a mechanic or receptionist to an account in my garage — Notion https://app.notion.com/p/3ee607bff0d281f3aa26ca1f287f6138"
 

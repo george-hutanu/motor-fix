@@ -60,3 +60,29 @@
 - API slice: GaragesModule (own Brevo client from the API's EmailConfig), GarageInvitesController + InvitesController, service finished (invite_open answers its inviteId), public check route listed, OpenAPI and client regenerated. Domain invite spec 34/34 green against the worktree's PostgreSQL/Redis.
 - Test fix: the audit history is append-only and the outbox is not emptied by reset, so the spec reads only rows written since the test began (database clock).
 - T003 dropped as unneeded (token looked up by hash; accept answers 204 and the web switches role). Contract doc aligned (accept 204, InviteViewDto.email).
+- Web slice b101cef (invite dialog, invite link page), traces f567ff1.
+
+## 11. Converge
+- One gap: the dialog offered "Mecanic" with mechanics off → f2878f3 withdraws it once the server answers `feature_off`; a features read before the dialog is deferred (MEDIUM, deferred.md).
+
+## 12. Harden
+- code-reviewer + test-adversary passes: 0543c41 (a mechanic's permissions kept on a link to his own garage), 198a3e1 (refusals through the shared problem parser), 11824b7 + 8d7753b (refuse an invite while PUBLIC_WEB_URL is unset; resend keeps the old link). LOW/MEDIUM leftovers in deferred.md.
+
+## Resume 2 (2026-10-06, cloud session)
+- Merged origin/main (43 behind; CLAUDE.local.md plan pointer conflict, kept this feature's) → 16ff6bc; pre-commit typecheck + test (11 projects, integration specs on the worktree's services) and lint green.
+- Cloud setup: Node 24 installed but /opt/node22 shadowed it on PATH; ran with /usr/bin first.
+
+## 13. Ticket refresh
+- Refresh 2026-10-06 in context.md; re-checked the story's comments through the connector: none. No new evidence.
+
+## 14. Review
+- spec-reviewer + code-reviewer: no CRITICAL/HIGH surviving. Re-review of 11824b7^..8d7753b (code-reviewer): APPROVE, 1 MEDIUM + 1 LOW patch rows, both applied in ddf91ad (test unsets the web address through its own config; mail() reads it once). 5 LOW/MEDIUM deferred.
+
+## 15. Agent context
+- Plan pointer in CLAUDE.local.md already names this feature; no tracked file changed.
+
+## 16. Retrospective evidence (unjudged)
+- `retro-evidence.mjs --since 26cf0dc --jev`: 23 tasks done, 0 open; 14 FRs, 0 retired; Spec Delta garage-team +14; 5 deferred open; the range also counts main's merged commits. Jev lane unavailable (no key). `instincts.mjs triggered`: none.
+
+## 17. Archive
+- capabilities validate --check clean; merge applied: garage-team +14 ~0 -0; spec.md status Archived (2026-10-06). /speckit-retro not run (phase 16: the verdict stays the owner's).
