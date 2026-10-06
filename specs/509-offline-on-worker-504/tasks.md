@@ -16,7 +16,7 @@
 
 ## Phase 3: Proof
 
-- [ ] T005 `nx test overlays` green with every existing `toProblem` expectation unchanged (FR-002, SC-001, SC-002); `nx typecheck overlays`, Biome clean; `git diff --stat origin/main -- apps libs` shows only `libs/overlays/src/form*.ts` (FR-004, SC-003)
+- [X] T005 `nx test overlays` green with every existing `toProblem` expectation unchanged (FR-002, SC-001, SC-002); `nx typecheck overlays`, Biome clean; `git diff --stat origin/main -- apps libs` shows only `libs/overlays/src/form.ts` and its two spec files (FR-004, SC-003)
 
 ## Dependencies
 

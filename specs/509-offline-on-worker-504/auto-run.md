@@ -36,3 +36,30 @@ inline (pin miss): tasks.md, 5 tasks (3 tests first, 1 implementation, 1 proof) 
 
 ## 8. Analyze
 artifact-lint: 2 ERRORs (Spec Delta `Modifies` had no `→ FR-XXX` replacement). Remediation applied: FR-002 rewritten as the full replacement of 159-FR-008 (offline reading gains the 504 rule, the status table restated unchanged); delta now Adds FR-001, FR-003, Modifies 159-FR-008 → FR-002. Re-run: 0 errors, 1 warning (FR-004 unassigned: a scope rule, by design). capabilities validate clean. Coverage: every FR has a task; no CRITICAL left.
+
+## 9. Tests
+form.spec.ts: 7 new cases (FR-001 ×4 `it.each`, FR-003 ×3); adversary title renamed, expect kept. Red: `npx jest -c libs/overlays/jest.config.cts libs/overlays/src/form` → `Tests: 4 failed, 73 passed, 77 total` (the four FR-001 cases). Cloud VM note: the image's PATH puts /opt/node22 before /usr/bin, so cloud-setup's Node 24 was not picked up ("Node 24 is not on PATH after installing it"); ran with PATH=/usr/bin first. Follow-up on cloud-setup.sh.
+
+## 10. Implement
+`toProblem`: `offline` read once; a 504 with no problem code while offline → `{ code: 'offline', status: 504 }`; local `codeOf` shared with `fromBody` (no export). `nx run-many -t test typecheck -p overlays` exit 0. Commit 00cfccd. Pre-commit's first full run failed one unrelated domain integration spec (send-claim retry race, 2 Brevo calls vs 1); passed 3/3 alone and in the next full run → deferred.md, filed as a Notion task. Notion: Implementing (connector); PR label in development, +bug, +scope: overlays.
+
+## 11. Converge
+Every FR built and tested; diff limited to libs/overlays/src/form.ts + its two specs (SC-003). Nothing appended.
+
+## 12. Harden
+diff-audit: 0 errors 0 warnings (jev lane off: no key). artifact-lint: 0 errors pre-archive. Inline adversary pass (no Agent tool): added 5 cases — a problem sent as text keeps its code, JSON string / number / array bodies read offline, no `navigator` keeps internal_error. Commit 32f8a9a. Repairs: 0.
+
+## 13. Refresh
+Story page and comments re-read via the connector: no new evidence (context.md ## Refresh).
+
+## 14. Review
+Inline (no Agent tool, so no spec-reviewer/code-reviewer subagents; the PR tester's review in the tail is the independent read). Spec conformance: FR-001..FR-004, SC-001..SC-003 met; no internal ids in source. Code: no CRITICAL/HIGH/MEDIUM. LOW: none. Verdict APPROVE (self, recorded as such).
+
+## 15. Agent context
+CLAUDE.local.md already points at this plan (7053f1e); nothing to change.
+
+## 16. Retrospective evidence (unjudged)
+`retro-evidence.mjs --since c032309`: 8 commits listed, carried open items from earlier features only; jev lane unavailable (no TYPESAFE_API_KEY). `instincts.mjs triggered`: none. No verdict written.
+
+## 17. Archive
+capabilities merge: overlays +2 ~1 −0 (159-FR-008 retired → 509-FR-002); in-context "(FR-001)" fixed to 509-FR-001. spec.md status Archived (2026-10-06).

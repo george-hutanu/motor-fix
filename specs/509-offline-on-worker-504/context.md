@@ -49,3 +49,7 @@ This is not "nothing found". Nothing in the Notion space was read, so there are 
 
 - ST-509 — https://app.notion.com/p/3ef607bff0d281c497dadbe0862dbc54 (not read)
 - ST-82 — https://app.notion.com/p/3ee607bff0d2810e8ab4ed9099e3e908 (not read)
+
+## Refresh (2026-10-06)
+
+Story page ST-509 re-read through the Notion connector (edited 2026-10-06T15:55Z): the finding text matches the spec (bare 504 from the service worker while offline → offline; every task form and the sign-in dialog share it; typed text kept). No comments on the page. No new evidence; nothing narrows or widens scope.

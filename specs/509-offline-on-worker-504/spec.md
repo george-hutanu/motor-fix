@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 
 **Story**: ST-509 (Tech debt from ST-82, Foundations EP-1) — https://app.notion.com/p/3ef607bff0d281c497dadbe0862dbc54
 
