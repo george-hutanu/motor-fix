@@ -21,3 +21,6 @@ typecheck + lint + test green (exit 0, nx cache 10/11). spec-drift baseline: non
 
 ## 4. Clarify
 spec-challenger: 5 findings, none blocking. Answers (its recommendations): title rename allowed, assertions fixed (SC-002); onLine read once at mapping time (FR-001); new-password.ts reads toProblem but branches on 410 only, out of scope; mapping-level tests suffice; SC-003 = one file, no new export. level check: 2 stands.
+
+## 5. Plan
+task-runner (fable): success — plan.md (one branch in `toProblem`, ~6 lines, no new export), research.md (R1 worker 504 from `ngsw-worker.js:935`, R2 branch placement, R3 `navigator.onLine`), data-model.md (N/A), quickstart.md. Design check: design.md current (no boards). No research agents: nothing NEEDS CLARIFICATION. Constitution check clean, Complexity Tracking empty.
