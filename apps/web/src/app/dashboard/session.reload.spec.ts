@@ -65,13 +65,7 @@ describe('reading the account again', () => {
   it('replaces the account with what the server now says, keeping it on screen meanwhile', async () => {
     const { meControllerMe, session } = setup();
     await session.load();
-    let answer: (me: MeDto) => void = () => undefined;
-    meControllerMe.mockImplementationOnce(
-      () =>
-        new Promise<MeDto>((resolve) => {
-          answer = resolve;
-        }),
-    );
+    const answer = held(meControllerMe);
 
     const reading = session.reload();
     expect(session.current()).toBe(DRIVER);
@@ -95,13 +89,7 @@ describe('reading the account again', () => {
   it('restores nothing after a sign-out', async () => {
     const { meControllerMe, session } = setup();
     await session.load();
-    let answer: (me: MeDto) => void = () => undefined;
-    meControllerMe.mockImplementationOnce(
-      () =>
-        new Promise<MeDto>((resolve) => {
-          answer = resolve;
-        }),
-    );
+    const answer = held(meControllerMe);
 
     const reading = session.reload();
     await session.signOut();
@@ -139,6 +127,21 @@ describe('reading the account again', () => {
     await reading;
 
     expect(session.current()).toBe(other);
+  });
+
+  it('keeps the answer when the token was only renewed meanwhile', async () => {
+    const { meControllerMe, session } = setup();
+    await session.signIn('andrei@example.ro', 'parola-lunga', false);
+    const answer = held(meControllerMe);
+
+    const reading = session.reload();
+    await session.renew();
+    const confirmed = { ...DRIVER, emailConfirmed: true };
+    answer(confirmed);
+    await reading;
+
+    expect(session.token()).toBe('renewed');
+    expect(session.current()).toEqual(confirmed);
   });
 
   it('does nothing signed out', async () => {

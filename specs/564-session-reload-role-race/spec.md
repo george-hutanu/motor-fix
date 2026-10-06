@@ -41,7 +41,7 @@ let the reload answer: the account on screen is the switched role's.
 ### Edge Cases
 
 - The reload answers before the switch: the driver account is updated, then the switch loads the mechanic's; unchanged.
-- The token is renewed for the same role while the reload is in flight: that one answer is dropped and the previous account stays (see Assumptions).
+- The token is renewed for the same session while the reload is in flight (a 401 the interceptor renews, then retries): the answer lands, as today (see Assumptions).
 - A sign-in or password reset that replaces the token while a reload is in flight: the answer is dropped; the sign-in's own load sets the account.
 - The reload fails: the account on screen stays, as today.
 
@@ -49,7 +49,7 @@ let the reload answer: the account on screen is the switched role's.
 
 ### Functional Requirements
 
-- **FR-001**: An answer to a re-read of the signed-in account MUST be dropped when the tab's access token changed while the read was in flight (a role switch, a sign-in, a renewal); the account on screen stays what it was.
+- **FR-001**: An answer to a re-read of the signed-in account MUST be dropped when a role switch or a new session (sign-in, sign-up, password reset, provider sign-up) completed while the read was in flight; the account on screen stays what it was. A token renewal for the same session MUST NOT drop it.
 - **FR-002**: A re-read whose token was not replaced MUST keep its contract: the answer replaces the account, a failed read keeps it, and an answer after a sign-out restores nothing.
 
 ## Spec Delta
@@ -67,6 +67,6 @@ let the reload answer: the account on screen is the switched role's.
 
 ## Assumptions
 
-- (autonomous default) The rule is "drop the answer when the access token changed meanwhile", the one the finding names and the one `renew()` already applies with `replaced()` (session.ts:204-205), rather than comparing the answer's role with the tab's. Evidence: Principle I, one rule for both races; a role comparison would still accept a stale answer for the same role.
-- (autonomous default) A token renewed mid-reload for the same role also drops that one answer. Harmless: the screen keeps the previous account, which is reload's own "the old answer stays" contract; the next trigger reads again. Chosen over an exception for renewals, which would need the role comparison above.
+- (autonomous default) The rule is "drop the answer when a role switch or a new session completed meanwhile", counted with the session's existing `starts` and one new `switches` counter, rather than "drop it when the access token changed" (the finding's wording, `renew()`'s `replaced()`). Evidence: the code review (repair lap 1) showed a token comparison drops the interceptor's retry after a 401 (`auth.interceptor.ts:72`), and `email-banner.ts:56` relies on that answer landing to hide the banner; a role comparison was not chosen because it would still accept a stale answer for the same role after a new sign-in.
+- (autonomous default) A switch counts once its account is on screen, so a switch that fails and puts the old token back drops nothing: the old role is still the tab's.
 - (autonomous default) Only the web session's reload changes; the e-mail banner, the frame's live handlers and the API are untouched. The existing specs `session.reload.spec.ts` and `session.role-switch.spec.ts` are the test seams, so no screen and no design board is involved.

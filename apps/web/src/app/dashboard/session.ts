@@ -77,6 +77,8 @@ export class Session {
   private switchingTo: MeDto['role'] | null = null;
   // Bumped when the cookie starts a new session.
   private starts = 0;
+  // Bumped when a role switch has put its account on screen.
+  private switches = 0;
 
   // The language last tapped, and the save sending it, one at a time.
   private wanted: Language | null = null;
@@ -253,11 +255,14 @@ export class Session {
   async reload(): Promise<void> {
     if (!this.current()) return;
     const generation = this.generation;
-    // A role switch or a sign-in meanwhile: this answer is for the old token.
-    const sent = this.accessToken;
+    // A sign-in or a role switch meanwhile: this answer is for the old one.
+    // A renewal is not: the retry after a 401 answers for the same account.
+    const { starts, switches } = this;
     const answer = await this.me.meControllerMe().catch(() => null);
     if (!answer || generation !== this.generation) return;
-    if (this.accessToken === sent) this.current.set(answer);
+    if (starts === this.starts && switches === this.switches) {
+      this.current.set(answer);
+    }
   }
 
   // The tab's session in another of the account's roles. A failure leaves the
@@ -277,6 +282,7 @@ export class Session {
     try {
       const answer = await this.me.meControllerMe();
       if (generation !== this.generation) return null;
+      this.switches++;
       this.current.set(answer);
       return answer;
     } catch (error) {
