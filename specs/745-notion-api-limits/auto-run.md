@@ -49,3 +49,15 @@
 
 - Phase 10 implement: notion.mjs pacer/retries/limits/children/appendChildren, notion-sync comment split, level.mjs uses client.children; harness 68 files / 1683 tests green, doctor 16 ok.
 - Phase 13 refresh: story re-read inline, no new evidence (priority Highest, status/PR from this run). Phase 12/14: test-adversary, code-reviewer, spec-reviewer dispatched in parallel.
+
+## Resume (2026-10-06, after the previous agent and its reviewers died on an API session limit)
+- Resumed at phase `review` from run-state; tasks.md 16/16 [X]; HEAD c83d52c (test-adversary tests committed).
+- Phase 12 (rest): artifact-lint 0/0, diff-audit 0/0 (report form; Jev unavailable, no key); doctor 16 ok; `npm run test:harness` 69 files / 1691 tests green.
+- Phase 15: CLAUDE.local.md "Active plan" line already points at this feature's plan.md (committed with the plan); nothing to change.
+- Phase 16: retro-evidence --since 968e682 --jev and instincts triggered gathered (Jev unavailable; no suggested verdict).
+- Phase 14 (re-run): spec-reviewer STATUS success, VERDICT APPROVE (1 MEDIUM); code-reviewer STATUS success, VERDICT APPROVE (2 MEDIUM, 2 LOW). No CRITICAL/HIGH, so no re-review lap (repairs 0).
+  - Both MEDIUM "adversary spec restates notion.spec.mjs": kept the two cases neither suite had (ten concurrent requests paced; body exactly at 500 KB sent), dropped the six restated ones (reviewers' recommendation; Constitution II, no padding suites).
+  - MEDIUM "appendChildren has no caller": kept. FR-007 requires the helper (spec.md FR-007, story scope); deleting it is a scope change the owner did not ask for. Open decision: name its first caller, or retire the clause in a later story.
+  - LOW: postComment now decides markdown vs rich_text from the shared `richText` split (no second 2,000 constant); request body measured once.
+  - Commit 0bad8b6 refactor(harness); harness 69 files / 1685 tests green.
+- Phase 17: capabilities validate --check clean; merge platform +8 ~0 -0 applied; spec status Archived (2026-10-06). `/speckit-retro` not run: phases-close.md §16 bars a self-graded verdict; left to the owner.

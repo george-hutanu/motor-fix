@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 
 **Input**: User description: "ST-745 "Make the Notion client keep to Notion's API limits" https://app.notion.com/p/3f1607bff0d2813ca3a7ded4339646b6"
 
