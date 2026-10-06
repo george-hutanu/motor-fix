@@ -6,6 +6,12 @@
 //   node .claude/scripts/lifecycle.mjs open --title "<type>(<scope>): ST-<n> <subject>" [--body-file <f>] [--notion-done]
 //   node .claude/scripts/lifecycle.mjs ready --body-file <f> [--decisions "<text>"] [--notion-done]
 //   node .claude/scripts/lifecycle.mjs merge [--pr <n>] [--notion-done]
+//   node .claude/scripts/lifecycle.mjs handoff [--pr <n>]            post handoff.md as a marked PR comment
+//   node .claude/scripts/lifecycle.mjs handoff --restore [--pr <n>]  write a missing handoff.md from the newest one
+//
+// git ignores handoff.md, so a cloud session resumed on a fresh VM has none:
+// the PR keeps every version of the note as a comment whose first line is
+// HANDOFF_MARK, and the newest one wins.
 //
 // A hook only sees `node lifecycle.mjs …`, so every git and gh command is first
 // fed to the Bash gates settings.json registers (run-hook.mjs <id>), exactly as
@@ -24,7 +30,8 @@ import { isEntryPoint } from "./lib/entry.mjs";
 import { activeFeature } from "./lib/feature.mjs";
 import { readyLogged } from "./notion-ready.mjs";
 
-const USAGE = "usage: lifecycle.mjs open | ready | merge (open --title <t>; ready --body-file <f>; merge [--pr <n>]; each takes --notion-done)";
+const USAGE = "usage: lifecycle.mjs open | ready | merge | handoff (open --title <t>; ready --body-file <f>; merge [--pr <n>]; each takes --notion-done; handoff [--restore] [--pr <n>])";
+const HANDOFF_MARK = "<!-- speckit-handoff -->";
 const NOTION = ".claude/scripts/notion-sync.mjs";
 const SELF = "node .claude/scripts/lifecycle.mjs";
 const LEVEL = ".claude/scripts/level.mjs";
@@ -80,10 +87,10 @@ function realIo() {
 
 function parse(argv) {
   const [name, ...rest] = argv;
-  const flags = { "notion-done": false };
+  const flags = { "notion-done": false, restore: false };
   for (let i = 0; i < rest.length; i++) {
     const key = rest[i].replace(/^--/, "");
-    if (key === "notion-done") flags[key] = true;
+    if (key === "notion-done" || key === "restore") flags[key] = true;
     else flags[key] = rest[++i];
   }
   return { name, flags };
@@ -94,9 +101,9 @@ export function step(argv, io) {
   const did = [];
   const result = { step: name, ok: true, did };
   try {
-    if (!["open", "ready", "merge"].includes(name)) throw new Stop("usage", USAGE);
+    if (!["open", "ready", "merge", "handoff"].includes(name)) throw new Stop("usage", USAGE);
     const ctx = context(io, flags, did);
-    Object.assign(result, { open, ready, merge }[name](ctx, flags));
+    Object.assign(result, { open, ready, merge, handoff }[name](ctx, flags));
   } catch (err) {
     if (!(err instanceof Stop)) throw err;
     Object.assign(result, { ok: false, stopped: err.stopped, fix: err.fix, ...err.extra });
@@ -268,7 +275,35 @@ function ready(ctx, flags) {
     ].join("\n"),
   );
   ctx.did.push("handoff.md");
+  postHandoff(ctx, pr.number);
   return { pr: pr.number, head: head.slice(0, 7) };
+}
+
+/** Post the note as a PR comment, the marker on its first line. */
+function postHandoff(ctx, n) {
+  const text = readFileSync(join(ctx.feature.dir, "handoff.md"), "utf8");
+  withTemp("handoff.md", `${HANDOFF_MARK}\n${text}`, (file) => ctx.gh("pr", "comment", String(n), "--body-file", file));
+  ctx.did.push("handoff comment");
+}
+
+function handoff(ctx, flags) {
+  const file = join(ctx.feature.dir, "handoff.md");
+  const n = flags.pr ?? JSON.parse(ctx.gh("pr", "view", ctx.branch, "--json", "number").stdout).number;
+  if (!flags.restore) {
+    if (!existsSync(file)) throw new Stop("no handoff.md", `${ctx.rel}/handoff.md is missing: write the note first (or ${SELF} handoff --restore --pr ${n})`);
+    postHandoff(ctx, n);
+    return { pr: Number(n) };
+  }
+  if (existsSync(file)) return { pr: Number(n), note: "kept" };
+  const { comments = [] } = JSON.parse(ctx.gh("pr", "view", String(n), "--json", "comments").stdout);
+  const newest = comments
+    .filter((c) => String(c.body ?? "").split(/\r?\n/, 1)[0].trim() === HANDOFF_MARK)
+    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+    .at(-1);
+  if (!newest) throw new Stop("no hand-off", `${ctx.rel}/handoff.md is missing and PR #${n} has no comment starting ${HANDOFF_MARK}: treat the PR as having no recorded QA run (tail.md step 3)`);
+  writeFileSync(file, newest.body.replace(/^[^\n]*\n/, ""));
+  ctx.did.push("handoff.md restored");
+  return { pr: Number(n), note: "restored" };
 }
 
 function merge(ctx, flags) {
