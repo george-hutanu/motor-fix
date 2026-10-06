@@ -12,3 +12,6 @@
 - 2026-10-06 · implement · timeline · Planning → Implementing
 - 2026-10-06 · labels · PR #155 · in development
 - 2026-10-06 · debt · ST-198 · 3 tasks filed (To do, Tech debt)
+- 2026-10-06 · qa · ST-198 · Implementing → QA
+- 2026-10-06 · qa · timeline · Implementing → QA
+- 2026-10-06 · labels · PR #155 · QA
