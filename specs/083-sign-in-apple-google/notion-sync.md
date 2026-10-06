@@ -18,3 +18,7 @@
 - 2026-10-06 · unblock · ST-83 · Blocked → QA (owner decision 2026-10-06: as many QA laps as needed, repair cap 10 for PR #136 only)
 - 2026-10-06 · unblock · Foundations timeline · ST-83 Blocked → QA
 - 2026-10-06 · labels · PR #136 · QA, blocked removed
+- 2026-10-06 · debt · ST-83 deferred FR-006 wording · To do https://app.notion.com/p/3f1607bff0d281a59e0ee55bcfc3b399
+- 2026-10-06 · debt · ST-83 deferred sign-in/return no-query text · To do https://app.notion.com/p/3f1607bff0d28194937afa6c93646019
+- 2026-10-06 · debt · ST-83 deferred signIn.returned copies · To do https://app.notion.com/p/3f1607bff0d28121afb4ff96d3b587e1
+- 2026-10-06 · debt · ST-83 deferred OAuth raw process.env · To do https://app.notion.com/p/3f1607bff0d281be9256e61f1dd32cba
