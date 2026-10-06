@@ -7,4 +7,4 @@ Mode: implement — traced failing tests exist and tasks are open.
 - `/speckit-converge` diffs the code against spec/plan/tasks and appends what is
   still unbuilt — use it instead of hand-auditing.
 - One root toolchain (constitution IV): no per-project eslint, prettier or second
-  Biome config; the root `biome.json` governs, with scoped `overrides` only.
+  Biome config; the root `biome.jsonc` governs, with scoped `overrides` only.

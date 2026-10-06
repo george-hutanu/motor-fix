@@ -1,4 +1,15 @@
 <!--
+Sync Impact Report (v1.8.2)
+- Version change: 1.8.1 → 1.8.2 (PATCH: IV names the root Biome config by
+  its real name, `biome.jsonc`, since PR #99 (ST-609) renamed it so a disabled
+  rule can carry its reason as a comment. No rule changed)
+- Source: ST-613, deferred from the PR tester's review of PR #99.
+- Templates:
+  - ✅ .specify/contexts/implement.md, .claude/agents/spec-reviewer.md,
+    .claude/hooks/post-edit-check.sh (comment) name `biome.jsonc`
+  - ✅ .specify/memory/constitution-card.md and CLAUDE.local.md name v1.8.2
+-->
+<!--
 Sync Impact Report (v1.8.1)
 - Version change: 1.8.0 → 1.8.1 (PATCH: VII step 5 clarified — the PR tester
   boots the change on a GitHub Actions runner (the PR QA workflow,
@@ -243,7 +254,7 @@ it; a quiet substitute invalidates the documentation the build follows.
   and stay separable; nothing is split early.
 - No GraphQL, no global front-end store library, no separate search engine,
   no message broker besides Redis.
-- Biome is the only linter and formatter, from the root `biome.json`. No
+- Biome is the only linter and formatter, from the root `biome.jsonc`. No
   eslint, no prettier, no per-project Biome config; a genuinely
   project-specific need is a scoped `overrides` entry in the root file.
 - Jest runs from the root config across every project.
@@ -449,4 +460,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.8.1 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-05
+**Version**: 1.8.2 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-06
