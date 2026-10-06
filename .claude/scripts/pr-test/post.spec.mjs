@@ -174,7 +174,7 @@ describe('a lap that left no report', () => {
   it('sets agent-review to failure on the head when posted', () => {
     const r = missingReport(missing);
     const a = fakeGh();
-    postVerdict({ pr: r.pr, repo: r.repo, sha: r.sha, verdict: r.verdict, summary: r.summary, body: r.markdown, lap: r.lap, gh: a.gh });
+    postVerdict({ pr: r.pr, repo: r.repo, sha: r.sha, verdict: r.verdict, summary: r.summary, body: r.markdown, lap: r.lap, gh: a.gh, cloud: false });
     const status = a.calls.find((c) => c.args.some((x) => /statuses\/abc1234def$/.test(x)));
     assert.ok(status, 'a status was set on the head');
     assert.ok(status.args.includes('state=failure'));
