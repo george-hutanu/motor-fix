@@ -170,6 +170,9 @@ import { SAMPLE_GARAGES } from './sample-text';
         <button hlmBtn variant="secondary" (click)="openTask('drawer-wide')">
           {{ 'cockpit.overlay.openWide' | t }}
         </button>
+        <button hlmBtn variant="secondary" (click)="openFailing()">
+          {{ 'cockpit.overlay.openFailing' | t }}
+        </button>
       </div>
       <p class="mf-overlay-result" aria-live="polite">
         {{
@@ -222,6 +225,20 @@ export class CockpitSamplePage {
         shape,
         title: 'cockpit.overlay.title',
       }),
+    );
+  }
+
+  // Fails on the first try of each press, so the error and Retry show.
+  protected async openFailing() {
+    let tries = 0;
+    this.lastResult.set(
+      await this.overlays.open<'saved'>(
+        () =>
+          ++tries === 1
+            ? Promise.reject(new Error('sample load failure'))
+            : Promise.resolve(CockpitSampleTask),
+        { shape: 'dialog', title: 'cockpit.overlay.failing' },
+      ),
     );
   }
 

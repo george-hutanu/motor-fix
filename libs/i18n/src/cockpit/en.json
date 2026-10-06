@@ -60,10 +60,12 @@
   "overlay": {
     "again": "Open another",
     "done": "Done",
+    "failing": "Task that fails to load",
     "field": "Registration number",
     "intro": "Type something, then close: you will be asked whether to discard your changes.",
     "openDialog": "Open the task as a dialog",
     "openDrawer": "Open the task as a drawer",
+    "openFailing": "Open a task that fails to load",
     "openWide": "Open the wide drawer",
     "result": "Last result: {result}",
     "results": {

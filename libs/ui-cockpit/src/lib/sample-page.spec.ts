@@ -139,6 +139,30 @@ describe('CockpitSamplePage', () => {
     );
   });
 
+  it('opens a task that fails to load on every press, and Retry shows the sample task', async () => {
+    const page = await render();
+    const shellText = (key: string) => TestBed.inject(I18n).t(`shell.${key}`);
+    for (let press = 0; press < 2; press++) {
+      buttonNamed(page, text('overlay.openFailing'))?.click();
+      await settle();
+
+      const task = openTask() as HTMLElement;
+      expect(task.querySelector('[role="alert"]')?.textContent?.trim()).toBe(
+        shellText('form.problem.error'),
+      );
+      expect(task.querySelector('input')).toBeNull();
+
+      buttonNamed(task, shellText('overlay.retry'))?.click();
+      await settle();
+
+      expect(task.querySelector('[role="alert"]')).toBeNull();
+      expect(buttonNamed(task, text('overlay.done'))).toBeDefined();
+      buttonNamed(task, text('overlay.done'))?.click();
+      await settle();
+      expect(openTask()).toBeNull();
+    }
+  });
+
   // The whole kit renders on this page, which is slow in jsdom under load.
   it('opens a sample form task whose server answer and ending can be chosen', async () => {
     const page = await render();
