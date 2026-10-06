@@ -400,6 +400,15 @@ describe('a level reaches only the feature it was sized for', () => {
         assert.deepEqual(pendingLevel(state(dir), T + minutes(1)), { level: 1, minutesLeft: PENDING_TTL_MINUTES - 1 });
         assert.equal(pendingLevel(state(dir), T + minutes(PENDING_TTL_MINUTES) + 1), null);
         assert.equal(pendingLevel(state(dir), T - minutes(5)), null, 'a level from the future is not trusted');
+        const zoneless = { ...state(dir), level_at: at(T).replace(/Z$/, '') };
+        // `now` is one minute after the stamp as Date.parse reads it, so only the zone check can drop it.
+        assert.equal(pendingLevel(zoneless, Date.parse(zoneless.level_at) + minutes(1)), null, 'a stamp with no zone is read as none');
+        const dateOnly = { ...zoneless, level_at: at(T).slice(0, 10) };
+        assert.equal(pendingLevel(dateOnly, Date.parse(dateOnly.level_at) + minutes(1)), null);
+        const shortFraction = { ...zoneless, level_at: at(T).replace(/\.\d+Z$/, '.5Z') };
+        assert.equal(pendingLevel(shortFraction, T + minutes(1)), null, 'a shape Python cannot parse is none on both sides');
+        const offset = { ...state(dir), level_at: at(T + minutes(120)).replace(/Z$/, '+02:00') };
+        assert.deepEqual(pendingLevel(offset, T + minutes(1)), { level: 1, minutesLeft: PENDING_TTL_MINUTES - 1 });
 
         pointFeature(dir, 'specs/002-late', { now: T + minutes(PENDING_TTL_MINUTES + 1) });
         assert.deepEqual(state(dir), { feature_directory: 'specs/002-late' });
@@ -581,6 +590,8 @@ describe('a level reaches only the feature it was sized for', () => {
     };
     const fresh = at(Date.now() - minutes(1));
     const stale = at(Date.now() - minutes(PENDING_TTL_MINUTES + 5));
+    const zoneless = fresh.replace(/Z$/, '');
+    const offset = at(Date.now() - minutes(1) + minutes(120)).replace(/Z$/, '+02:00');
     const cases = [
       [{ feature_directory: 'specs/001-old', level: 1, level_for: 'next', level_at: fresh }, 'specs/002-new'],
       [{ feature_directory: 'specs/001-old', level: 1, level_for: 'next', level_at: stale }, 'specs/002-new'],
@@ -592,6 +603,8 @@ describe('a level reaches only the feature it was sized for', () => {
       [{ feature_directory: 'specs/002-new', level: 1, level_for: 'next', level_at: fresh }, 'specs/002-new'],
       [{ feature_directory: 'specs/002-new', level: 1, level_for: 'specs/002-new' }, 'specs/002-new'],
       [{ feature_directory: 'specs/001-old', level: 1, level_for: 'next', level_at: fresh }, '@/specs/002-new'],
+      [{ feature_directory: 'specs/001-old', level: 1, level_for: 'next', level_at: zoneless }, 'specs/002-new'],
+      [{ feature_directory: 'specs/001-old', level: 1, level_for: 'next', level_at: offset }, 'specs/002-new'],
     ];
     for (const [before, value] of cases) {
       assert.deepEqual(run(before, value), pointTo(before, 'specs/002-new'), JSON.stringify(before));
@@ -599,6 +612,8 @@ describe('a level reaches only the feature it was sized for', () => {
     assert.deepEqual(pointTo(cases[0][0], 'specs/002-new'), { feature_directory: 'specs/002-new', level: 1, level_for: 'specs/002-new' });
     assert.deepEqual(pointTo(cases[1][0], 'specs/002-new'), { feature_directory: 'specs/002-new' });
     assert.deepEqual(pointTo(cases[7][0], 'specs/002-new'), cases[7][0]);
+    assert.deepEqual(pointTo(cases[10][0], 'specs/002-new'), { feature_directory: 'specs/002-new' });
+    assert.deepEqual(pointTo(cases[11][0], 'specs/002-new'), { feature_directory: 'specs/002-new', level: 1, level_for: 'specs/002-new' });
   });
 });
 
