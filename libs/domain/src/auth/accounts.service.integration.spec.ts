@@ -1,3 +1,5 @@
+import { CURRENT_CONSENT } from '@motor-fix/contracts';
+
 import { AccountsService } from './accounts.service';
 import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';
@@ -31,6 +33,7 @@ function ports() {
 }
 
 const andrei = {
+  consent: CURRENT_CONSENT,
   identity: {
     method: 'password',
     passwordHash: '$argon2id$stub',
@@ -109,6 +112,7 @@ describe('createAccount', () => {
       const { service } = ports();
 
       const { id } = await service.createAccount({
+        consent: CURRENT_CONSENT,
         email: 'andrei@example.ro',
         identity: { method, subject: 'provider-subject' },
         name: 'Andrei',
@@ -122,7 +126,7 @@ describe('createAccount', () => {
     },
   );
 
-  it('hands account.created and one audit entry per role to the ports, inside the transaction', async () => {
+  it('hands account.created, one audit entry per role and one for the consent to the ports, inside the transaction', async () => {
     const { audit, events, service } = ports();
 
     const { id } = await service.createAccount({
@@ -142,20 +146,28 @@ describe('createAccount', () => {
       },
       subjectId: id,
     });
-    expect(audit.record).toHaveBeenCalledTimes(2);
+    expect(audit.record).toHaveBeenCalledTimes(3);
     for (const [auditTx, entry] of audit.record.mock.calls) {
       expect(auditTx).toBe(eventTx);
       expect(entry).toMatchObject({
         action: 'create',
         actorId: id,
-        field: 'role',
         subjectId: id,
         subjectType: 'account',
       });
     }
-    expect(audit.record.mock.calls.map(([, entry]) => entry.newValue)).toEqual([
-      'driver',
-      'admin',
+    expect(
+      audit.record.mock.calls.map(([, entry]) => [entry.field, entry.newValue]),
+    ).toEqual([
+      ['role', 'driver'],
+      ['role', 'admin'],
+      [
+        'consent',
+        {
+          privacyVersion: CURRENT_CONSENT.privacyVersion,
+          termsVersion: CURRENT_CONSENT.termsVersion,
+        },
+      ],
     ]);
     expect(eventTx).not.toBe(prisma);
   });
@@ -250,7 +262,7 @@ describe('with the audit history writer', () => {
 
     const entries = await prisma.activityLog.findMany({
       orderBy: { at: 'asc' },
-      where: { subjectId: id },
+      where: { field: 'role', subjectId: id },
     });
     expect(entries).toEqual([
       expect.objectContaining({

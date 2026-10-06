@@ -59,8 +59,32 @@ model Account {
   smsCounters             SmsCounter[]
   tokens                  AccountToken[]
   reminders               Reminder[]
+  consents                AccountConsent[]
 
   @@map("account")
+}
+
+enum ConsentKind {
+  terms
+  privacy_notice
+
+  @@map("consent_kind")
+}
+
+// One row per text accepted: which version, in which language, through which
+// sign-in method, and when. Kept for as long as the account.
+model AccountConsent {
+  id          String       @id @default(uuid()) @db.Uuid
+  accountId   String       @map("account_id") @db.Uuid
+  kind        ConsentKind
+  textVersion String       @map("text_version")
+  language    Language
+  method      SignInMethod
+  acceptedAt  DateTime     @default(now()) @map("accepted_at") @db.Timestamptz(3)
+  account     Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@map("account_consent")
 }
 
 enum AccountTokenPurpose {

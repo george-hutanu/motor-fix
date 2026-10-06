@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { createServer, type Server } from 'node:net';
 
+import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
@@ -92,6 +93,7 @@ async function person(
   }: { lastRole?: Role; withPassword?: boolean } = {},
 ) {
   const { id } = await accounts.createAccount({
+    consent: CURRENT_CONSENT,
     email,
     identity: withPassword
       ? { method: 'password', passwordHash: hash, subject: email }

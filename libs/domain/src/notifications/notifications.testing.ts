@@ -1,3 +1,5 @@
+import { CURRENT_CONSENT } from '@motor-fix/contracts';
+
 import { emailConfig } from './email-config';
 import { phoneConfig } from './phone-config';
 import { AuditService } from '../audit/audit.service';
@@ -58,6 +60,7 @@ export function fixtures(prisma: PrismaClient = createPrisma(databaseUrl)) {
           ? undefined
           : (options.email ?? `${name}@example.test`);
       const { id } = await accounts.createAccount({
+        consent: CURRENT_CONSENT,
         email,
         identity: { method: 'google', subject: `${name}-subject` },
         language: options.language,

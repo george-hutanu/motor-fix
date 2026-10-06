@@ -1,3 +1,4 @@
+import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
@@ -74,6 +75,7 @@ const address = () => `198.51.100.${++addresses % 250}`;
 
 async function person(email: string, roles: Role[] = ['driver']) {
   const { id } = await accounts.createAccount({
+    consent: CURRENT_CONSENT,
     email,
     identity: { method: 'password', passwordHash: hash, subject: email },
     name: email.split('@')[0] ?? 'x',

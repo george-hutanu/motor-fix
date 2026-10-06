@@ -11,6 +11,7 @@ import {
 import { AccountsService } from './accounts.service';
 import { Attempts } from './attempts';
 import { isCommonPassword } from './common-passwords';
+import { consentRequired, isCurrentConsent } from './consent';
 import { EmailConfirmationService } from './email-confirmation.service';
 import { MAINTENANCE, type Maintenance } from './maintenance';
 import { hashPassword } from './password';
@@ -72,6 +73,7 @@ export class SignUpService {
         ),
       );
     }
+    if (!isCurrentConsent(input.consent)) throw this.refused(consentRequired());
     if (weakPassword(input.password)) {
       throw this.refused(
         refusal(
@@ -87,6 +89,7 @@ export class SignUpService {
     let id: string;
     try {
       ({ id } = await this.accounts.createAccount({
+        consent: input.consent,
         email,
         identity: { method: 'password', passwordHash, subject: email },
         language: input.language,

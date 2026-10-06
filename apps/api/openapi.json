@@ -1130,6 +1130,25 @@
           "accessToken"
         ]
       },
+      "ConsentDto": {
+        "type": "object",
+        "properties": {
+          "termsVersion": {
+            "type": "string",
+            "example": "2026-10-05",
+            "maxLength": 32
+          },
+          "privacyVersion": {
+            "type": "string",
+            "example": "2026-10-05",
+            "maxLength": 32
+          }
+        },
+        "required": [
+          "termsVersion",
+          "privacyVersion"
+        ]
+      },
       "SignUpDto": {
         "type": "object",
         "properties": {
@@ -1156,6 +1175,14 @@
             "enum": [
               "ro",
               "en"
+            ]
+          },
+          "consent": {
+            "description": "The current terms and privacy versions; without them the answer is 400 consent_required",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConsentDto"
+              }
             ]
           }
         },

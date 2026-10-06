@@ -22,6 +22,7 @@ import {
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
+import { Consent, consentControl } from './consent';
 import { ADDRESS, type AuthData, type AuthSwitch } from './sign-in';
 import { Session } from '../dashboard/session';
 
@@ -47,6 +48,7 @@ export const characters =
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    Consent,
     FieldError,
     HlmButton,
     HlmInput,
@@ -136,6 +138,7 @@ export const characters =
         </div>
         <mf-field-error id="mf-sign-up-password-error" [save]="save" [control]="form.controls.password" />
       </div>
+      <mf-consent [control]="form.controls.consent" [save]="save" />
       <mf-task-error [save]="save" />
       <button hlmBtn type="submit" [mfTaskSubmit]="save">
         {{ 'public.signUp.submit' | t }}
@@ -160,6 +163,7 @@ export class SignUp {
   protected readonly shown = signal(false);
 
   protected readonly form = new FormGroup({
+    consent: consentControl(),
     email: new FormControl(this.task.data?.email ?? '', {
       nonNullable: true,
       validators: [Validators.required, Validators.pattern(ADDRESS)],
