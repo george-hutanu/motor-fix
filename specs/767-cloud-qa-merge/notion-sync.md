@@ -9,3 +9,5 @@
 - 2026-10-06 · implement · ST-767 · Planning → Implementing
 - 2026-10-06 · implement · timeline · no row for ST-767
 - 2026-10-06 · labels · PR #161 · in development
+- 2026-10-06 · blocked · ST-767 · Implementing → Blocked (merge-gate fix needs the owner's --bless-hooks)
+- 2026-10-06 · labels · PR #161 · in development, blocked
