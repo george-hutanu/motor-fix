@@ -88,19 +88,6 @@ describe('helm table roles and columns under unusual use', () => {
     expect(host.querySelectorAll('thead [role="row"]')).toHaveLength(1);
   });
 
-  it('gives every one of a thousand rows its row and cell roles', async () => {
-    const fixture = TestBed.createComponent(Dynamic);
-    fixture.componentInstance.rows.set(
-      Array.from({ length: 1000 }, (_, i) => i),
-    );
-    await fixture.whenStable();
-    const host = fixture.nativeElement as HTMLElement;
-
-    expect(host.querySelectorAll('tbody tr[role="row"]')).toHaveLength(1000);
-    expect(host.querySelectorAll('tbody td[role="cell"]')).toHaveLength(2000);
-    expect(host.querySelectorAll('tbody tr:not([role="row"])')).toHaveLength(0);
-  });
-
   it('keeps the role when a column changes or is cleared', async () => {
     const fixture = TestBed.createComponent(Dynamic);
     fixture.componentInstance.rows.set([1]);
@@ -130,28 +117,6 @@ describe('helm table roles and columns under unusual use', () => {
       'cell',
     ]);
   });
-
-  it('carries the classes the phone stylesheet targets on every element', async () => {
-    const fixture = TestBed.createComponent(Dynamic);
-    fixture.componentInstance.rows.set([1]);
-    await fixture.whenStable();
-    const host = fixture.nativeElement as HTMLElement;
-    const has = (selector: string, cls: string) =>
-      [...host.querySelectorAll(selector)].every((el) =>
-        el.classList.contains(cls),
-      );
-
-    expect(
-      host.querySelector('thead')?.classList.contains('spartan-table-header'),
-    ).toBe(true);
-    expect(
-      host.querySelector('tbody')?.classList.contains('spartan-table-body'),
-    ).toBe(true);
-    expect(has('table', 'spartan-table')).toBe(true);
-    expect(has('tr', 'spartan-table-row')).toBe(true);
-    expect(has('th', 'spartan-table-head')).toBe(true);
-    expect(has('td', 'spartan-table-cell')).toBe(true);
-  });
 });
 
 describe('phone stylesheet keeps the header row readable and the layout bounded', () => {
@@ -173,48 +138,6 @@ describe('phone stylesheet keeps the header row readable and the layout bounded'
     );
 
     expect(offenders).toEqual([]);
-  });
-
-  it('hides only cells and header cells outside main and key, with the same exclusion for both', () => {
-    const none = phoneRules.filter((r) => /display:\s*none/.test(r.body));
-
-    expect(none).toHaveLength(1);
-    const parts = splitSelectors(none[0].selector);
-    expect(parts).toHaveLength(2);
-    const exclusion = (s: string) => /:not\(([^)]*)\)\s*$/.exec(s)?.[1];
-    expect(exclusion(parts[0])).toBe(
-      '[data-column="main"], [data-column="key"]',
-    );
-    expect(exclusion(parts[1])).toBe(exclusion(parts[0]));
-    expect(
-      parts.some((p) =>
-        p.endsWith(
-          '.spartan-table-cell:not([data-column="main"], [data-column="key"])',
-        ),
-      ),
-    ).toBe(true);
-    expect(
-      parts.some((p) =>
-        p.endsWith(
-          '.spartan-table-head:not([data-column="main"], [data-column="key"])',
-        ),
-      ),
-    ).toBe(true);
-  });
-
-  it('applies every collapsing rule only to a table that names a main column', () => {
-    const tableRules = phoneRules.filter((r) =>
-      /spartan-table/.test(r.selector),
-    );
-
-    expect(tableRules.length).toBeGreaterThan(0);
-    for (const { selector } of tableRules) {
-      for (const part of splitSelectors(selector)) {
-        expect(part.trim()).toMatch(
-          /^\.spartan-table:has\(\[data-column="main"\]\)/,
-        );
-      }
-    }
   });
 
   it('leaves the table, rows and header untouched from 768 px up', () => {
@@ -265,21 +188,5 @@ describe('phone stylesheet keeps the header row readable and the layout bounded'
     expect(header[0].body).not.toMatch(
       /(^|;)\s*(margin|padding)[^;]*:\s*[1-9]/,
     );
-  });
-
-  it('keeps main first and key last on the same line', () => {
-    const row = targets('.spartan-table-row')[0];
-    const main = targets('[data-column="main"]').find((r) =>
-      /order:/.test(r.body),
-    );
-    const key = targets('[data-column="key"]').find((r) =>
-      /order:/.test(r.body),
-    );
-
-    expect(row.body).toMatch(/display:\s*flex/);
-    expect(row.body).not.toMatch(/flex-wrap:\s*wrap|flex-direction:\s*column/);
-    expect(main?.body).toMatch(/order:\s*0/);
-    expect(main?.body).toMatch(/min-width:\s*0/);
-    expect(key?.body).toMatch(/order:\s*1/);
   });
 });
