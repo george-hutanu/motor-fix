@@ -185,6 +185,13 @@ can be left out by omission.
   Clarifications *(autonomous default)*.
 - The one-route expired-token test in the guard's adversary spec stays as it
   is; this task does not move or remove it *(autonomous default)*.
+- Each route is called the way the existing cases call it (path parameters
+  filled with the sweep's placeholder id, an empty JSON body, the method the
+  API description lists), since the guard refuses before any parameter or body
+  is read *(autonomous default)*.
+- The test leaves its account row in place: the tests that empty the account
+  tables do so under `databaseTurn`, and the account's subject is unique per
+  run, so no cleanup is required of this task *(autonomous default)*.
 - SC-004's "one new test" is a target drawn from the shape of the existing
   sweep, not a number from a source *(autonomous default)*.
 
