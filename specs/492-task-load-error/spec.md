@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 
 **Input**: User description: "ST-492 (Notion https://app.notion.com/p/3ef607bff0d28133a3efcea722e5d92b, tech debt from ST-157, PR #40): in libs/overlays/src/panel.ts a task whose lazy loader fails keeps showing the busy skeleton (aria-busy) with only the X working; it should instead show an error message and a retry button, using the wording/pattern of the shared saving-and-errors story. Retry calls the loader again; success shows the task as usual; closing still works."
 

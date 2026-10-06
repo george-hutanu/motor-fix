@@ -95,3 +95,7 @@ Hooks after specify: `notion-sync start` (ST-492 To do → Planning, EP-1 unchan
 - spec-reviewer: APPROVE, 2 LOW (T004's record amended: panel.adversary.spec.ts needed no rewrite; notion-sync.md lines committed) → fixed.
 - code-reviewer: APPROVE, 1 MEDIUM (test-adversary's 'retrying a loader that failed' block duplicated overlays.spec.ts → deleted), 1 LOW (`this.destroyed.onDestroy` in followVisibleArea → applied), 1 LOW defer (pre-existing helm/table.ts audit findings → deferred.md).
 - test-adversary: its added block removed per the MEDIUM above; the rewritten failed-loader adversary test stays.
+
+## 17. Archive
+
+- Spec Delta merged into `.specify/capabilities/overlays.md` (Adds 492-FR-001..010); spec status Archived (2026-10-07). No retro (phase 16: evidence only).
