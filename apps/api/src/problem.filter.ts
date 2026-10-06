@@ -4,6 +4,7 @@ import {
   codeForStatus,
   type FieldProblem,
   fieldProblems,
+  type Problem,
 } from '@motor-fix/contracts';
 import {
   ArgumentsHost,
@@ -20,7 +21,7 @@ export function sendProblem(
   code: string,
   detail?: string,
   errors?: FieldProblem[],
-  extensions: Record<string, string> = {},
+  extensions: Pick<Problem, 'attemptsLeft'> & { inviteId?: string } = {},
 ) {
   res
     .status(status)
@@ -62,11 +63,22 @@ export class ProblemFilter implements ExceptionFilter {
       typeof own.code === 'string' ? own.code : codeForStatus(status),
       detail(typeof body === 'string' ? body : own.message),
       fieldProblems(own.errors),
-      // The one member beyond the problem shape a refusal carries: the open
-      // invite a refused send names. Nothing else an exception holds leaves.
-      typeof own.inviteId === 'string' ? { inviteId: own.inviteId } : {},
+      // The members beyond the problem shape a refusal carries: the open
+      // invite a refused send names, and the tries a wrong code has left.
+      // Nothing else an exception holds leaves.
+      {
+        ...(typeof own.inviteId === 'string' && { inviteId: own.inviteId }),
+        ...attemptsLeft(own.attemptsLeft),
+      },
     );
   }
+}
+
+// How many tries a sign-in code has left, when the refusal says so.
+function attemptsLeft(value: unknown): Pick<Problem, 'attemptsLeft'> {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0
+    ? { attemptsLeft: value }
+    : {};
 }
 
 function detail(message: unknown): string | undefined {

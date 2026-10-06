@@ -80,6 +80,29 @@
   },
   "signIn": {
     "brand": "MotorFix",
+    "code": {
+      "again": "Send again",
+      "attemptsLeft": {
+        "one": "1 attempt left.",
+        "other": "{count} attempts left."
+      },
+      "change": "Change the number",
+      "expires": "The code expires in {time}",
+      "field": {
+        "pattern": "The code has 6 digits."
+      },
+      "label": "Code",
+      "problem": {
+        "account_suspended": "Your account is suspended.",
+        "code_expired": "The code has expired. Ask for a new one.",
+        "code_invalid": "The code is not correct.",
+        "consent_required": "Tick the agreement to create the account.",
+        "phone_taken": "This number cannot sign in. Sign in with e-mail and password.",
+        "too_many_attempts": "Too many attempts. Wait a little or ask for a new code."
+      },
+      "sent": "We sent a code by WhatsApp to {phone}.",
+      "submit": "Sign in"
+    },
     "createAccount": "Create an account",
     "email": "E-mail",
     "emailPlaceholder": "you@example.com",
@@ -88,12 +111,30 @@
     },
     "forgot": "Forgot your password?",
     "newHere": "New to MotorFix?",
+    "or": "or",
     "password": "Password",
     "passwordPlaceholder": "Your password",
+    "phone": {
+      "field": {
+        "pattern": "Type a valid phone number, for example 0722 123 456."
+      },
+      "number": "Phone number",
+      "problem": {
+        "too_many_attempts": "Too many attempts. Wait a little or ask for a new code.",
+        "whatsapp_failed": "We could not send the code by WhatsApp."
+      },
+      "send": "Send the code",
+      "withEmail": "Sign in with e-mail and password"
+    },
     "problem": {
       "account_suspended": "Your account is suspended.",
       "invalid_credentials": "The e-mail or password is not correct.",
       "too_many_attempts": "Too many attempts. Try again in 15 minutes."
+    },
+    "profile": {
+      "intro": "No account holds this number yet. Create a driver account.",
+      "name": "Name",
+      "submit": "Create the account"
     },
     "reason": "Sign in to continue.",
     "remember": "Keep me signed in",
@@ -104,7 +145,8 @@
       "suspended": "Your account is suspended."
     },
     "submit": "Sign in",
-    "title": "Sign in"
+    "title": "Sign in",
+    "withPhone": "Continue with phone"
   },
   "signInButton": "Sign in",
   "signUp": {

@@ -106,9 +106,9 @@ describe('check on hostile agent files', () => {
     assert.match(check(repo).join('\n'), new RegExp(`spec-reviewer.*mcp__${NEW}\\b`));
   });
 
-  it('flags a server wildcard in the allowlist for a Notion server', () => {
-    seed({ settings: [...names(OLD, RESEARCHER), `mcp__${OLD}__*`] });
-    assert.match(check(repo).join('\n'), /settings\.json.*wildcard/);
+  it('accepts a whole-server grant in the allowlist: the owner runs Notion without a prompt', () => {
+    seed({ settings: [...names(OLD, RESEARCHER), `mcp__${OLD}`, `mcp__${OLD}__*`] });
+    assert.deepEqual(check(repo), []);
   });
 
   it('reports a settings.json that is not JSON instead of throwing', () => {

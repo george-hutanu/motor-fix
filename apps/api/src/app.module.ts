@@ -9,6 +9,8 @@ import {
   NotificationsModule,
   oauthSettings,
   PasswordResetModule,
+  PhoneSignInModule,
+  phoneConfig,
   pushConfig,
   StorageModule,
 } from '@motor-fix/domain';
@@ -51,6 +53,10 @@ export class AppModule {
           notifications,
         ),
         PasswordResetModule.register({ webUrl: email.webUrl }, notifications),
+        PhoneSignInModule.register({
+          brevo: { apiKey: email.apiKey ?? '', apiUrl: email.apiUrl },
+          phone: phoneConfig(env.APP_ENV, process.env),
+        }),
         GaragesModule.register(email, notifications),
         EventsModule.register({ redisUrl: env.REDIS_URL }),
       ],

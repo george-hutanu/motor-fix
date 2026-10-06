@@ -44,13 +44,13 @@ export class FieldError {
 }
 
 // The messages next to the main button after a failed save, announced as
-// they appear.
+// they appear, followed by what the task projects into it.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { role: 'alert' },
   selector: 'mf-task-error',
   styles: ERROR_TEXT,
-  template: `@for (message of save().errors(); track $index) {<p>{{ message }}</p>}`,
+  template: `@for (message of save().errors(); track $index) {<p>{{ message }}</p>}<ng-content />`,
 })
 export class TaskError {
   readonly save = input.required<TaskSave<unknown>>();

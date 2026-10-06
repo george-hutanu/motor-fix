@@ -36,7 +36,7 @@ export const weakPassword = (password: string) => {
   );
 };
 
-const taken = (error: unknown) =>
+export const taken = (error: unknown) =>
   error instanceof Prisma.PrismaClientKnownRequestError &&
   error.code === 'P2002';
 

@@ -80,6 +80,22 @@ describe('API calls and tests', () => {
     assert.equal(endpointFinding({ method: 'GET', path: '/garages', status: 401 }), null);
   });
 
+  it('makes a 5xx the contract documents with that problem code low, and any other 5xx high', () => {
+    const responses = { 202: { description: 'sent' }, 502: { description: 'whatsapp_failed' } };
+    const body = JSON.stringify({ type: 'about:blank', status: 502, code: 'whatsapp_failed' });
+    const documented = endpointFinding({ method: 'POST', path: '/api/v1/auth/phone-code', status: 502, body, responses });
+    assert.equal(documented.severity, 'low');
+    assert.equal(documented.documented, true);
+    assert.match(documented.title, /whatsapp_failed/);
+    // Another code under the documented status, another status, an undocumented
+    // description, a body that is not JSON: each is the server failing.
+    const other = JSON.stringify({ status: 502, code: 'internal_error' });
+    assert.equal(endpointFinding({ method: 'POST', path: '/x', status: 502, body: other, responses }).severity, 'high');
+    assert.equal(endpointFinding({ method: 'POST', path: '/x', status: 500, body, responses }).severity, 'high');
+    assert.equal(endpointFinding({ method: 'GET', path: '/health/ready', status: 503, body: '{"code":"service_unavailable"}', responses: { 503: { description: '' } } }).severity, 'high');
+    assert.equal(endpointFinding({ method: 'POST', path: '/x', status: 502, body: 'Bad Gateway', responses }).severity, 'high');
+  });
+
   it('makes a failing test run a blocker', () => {
     const f = testFinding({ name: 'affected unit tests', command: 'npx nx affected -t test', code: 1, tail: '1 failed' });
     assert.equal(f.severity, 'blocker');

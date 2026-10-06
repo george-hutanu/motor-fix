@@ -34,8 +34,9 @@ export const ADDRESS = /^\s*[^\s@]+@[^\s@]+\.[^\s@]+\s*$/;
 
 // What a sign-in or sign-up task closes with to hand over to the other one.
 export interface AuthSwitch {
-  switchTo: 'sign-in' | 'sign-up' | 'reset';
+  switchTo: 'sign-in' | 'sign-up' | 'reset' | 'phone';
   email: string;
+  phone?: string;
 }
 
 // Why a provider's sign-in gave no session, shown when the dialog reopens.
@@ -52,13 +53,14 @@ const RETURNED: Record<ProviderProblem, string> = {
   suspended: 'public.signIn.returned.suspended',
 };
 
-// The e-mail typed in the other task, if any, the name an invite link brings
-// to sign-up, whether an action that needs an account opened the dialog, and
-// what went wrong with a provider.
+// The e-mail and the number typed in the other tasks, if any, the name an
+// invite link brings to sign-up, whether an action that needs an account
+// opened the dialog, and what went wrong with a provider.
 export type AuthData =
   | {
       email?: string;
       name?: string;
+      phone?: string;
       reason?: boolean;
       problem?: { code: ProviderProblem; provider: Provider };
     }
@@ -90,7 +92,11 @@ export type AuthData =
     .remember-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--mf-space-3); }
     .remember { display: flex; align-items: center; gap: var(--mf-space-3); min-height: var(--mf-tap); font-weight: 400; cursor: pointer; }
     .remember input { width: 20px; height: 20px; margin: 0; accent-color: var(--mf-amber); }
-    button[type='submit'] { width: 100%; min-height: 54px; white-space: normal; }
+    button[type='submit'], .phone { width: 100%; min-height: 54px; white-space: normal; }
+    .or { display: flex; align-items: center; gap: var(--mf-space-3); margin: 0; color: var(--mf-text-secondary); }
+    .or::before, .or::after { content: ''; flex: 1; border-top: 1px solid var(--mf-line); }
+    /* The phone button joins Apple and Google under their "or" when they show. */
+    mf-provider-buttons:not(:empty) + .or { display: none; }
     .switch { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--mf-space-2); margin: 0; color: var(--mf-text-secondary); }
     .switch button, .forgot { min-height: var(--mf-tap); padding: 0; border: 0; background: transparent; color: var(--mf-amber-ink); font: inherit; font-weight: 700; cursor: pointer; }
     .switch button:focus-visible, .forgot:focus-visible { outline: 2px solid var(--mf-amber-ink); outline-offset: 2px; }
@@ -147,6 +153,10 @@ export type AuthData =
         {{ 'public.signIn.submit' | t }}
       </button>
       <mf-provider-buttons [remember]="form.controls.remember.value" [returnTo]="returnTo" />
+      <p class="or" aria-hidden="true">{{ 'public.signIn.or' | t }}</p>
+      <button hlmBtn variant="secondary" type="button" class="phone" [disabled]="save.state() === 'sending'" (click)="switchTo('phone')">
+        {{ 'public.signIn.withPhone' | t }}
+      </button>
       <p class="switch">
         <span>{{ 'public.signIn.newHere' | t }}</span>
         <button type="button" [disabled]="save.state() === 'sending'" (click)="switchTo('sign-up')">
@@ -204,9 +214,11 @@ export class SignIn {
       : null;
   }
 
-  protected switchTo(task: 'sign-up' | 'reset') {
+  protected switchTo(task: 'sign-up' | 'reset' | 'phone') {
+    const phone = this.task.data?.phone;
     this.task.close({
       email: this.form.controls.email.value.trim(),
+      ...(phone && { phone }),
       switchTo: task,
     });
   }

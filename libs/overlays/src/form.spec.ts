@@ -344,6 +344,21 @@ describe('toProblem', () => {
     ).toEqual({ code: 'validation_failed', status: 400 });
   });
 
+  it('keeps the tries a refused code has left', () => {
+    expect(
+      toProblem(problem(401, { attemptsLeft: 2, code: 'code_invalid' })),
+    ).toEqual({ attemptsLeft: 2, code: 'code_invalid', status: 401 });
+  });
+
+  it.each([-1, 1.5, '2', null])(
+    'drops tries left that are not a whole number from 0 (%p)',
+    (attemptsLeft) => {
+      expect(
+        toProblem(problem(401, { attemptsLeft, code: 'code_invalid' })),
+      ).toEqual({ code: 'code_invalid', status: 401 });
+    },
+  );
+
   it('calls no answer at all a network failure', () => {
     expect(toProblem(problem(0, null))).toEqual({
       code: 'network',

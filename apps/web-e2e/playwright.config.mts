@@ -6,13 +6,15 @@ import { defineConfig, devices } from '@playwright/test';
 const deployed = process.env['BASE_URL'];
 // A cold build on a CI runner takes longer than Playwright's 60-second default.
 const SERVER_START = 180_000;
-// The api and the worker send e-mail to the test mailbox (mailbox.mjs,
+// The api and the worker send e-mail and WhatsApp to the test mailbox (mailbox.mjs,
 // web-e2e:mailbox), which the tests read. Nx starts every webServer below as a
 // continuous task before Playwright runs, so a webServer `env` never reaches
 // them, and a command that is not `nx run` breaks that inference: the sending
 // settings (EMAIL_SENDING=on, BREVO_API_URL=<mailbox>/v3, EMAIL_ALLOWLIST=
-// @example.test, EMAIL_FROM, BREVO_API_KEY) come from the environment, set by
-// CI's E2E job and by .env locally.
+// @example.test, EMAIL_FROM, BREVO_API_KEY, and for the sign-in codes
+// PHONE_SENDING=on, PHONE_ALLOWLIST=+4070000*, WHATSAPP_SENDER and
+// WHATSAPP_TEMPLATES) come from the environment, set by CI's E2E job and by
+// .env locally.
 const MAILBOX = 'http://127.0.0.1:3025';
 // The api reads the stand-in OpenID issuer (openid.mjs, web-e2e:openid) as
 // Google when GOOGLE_ISSUER points at it, with any GOOGLE_CLIENT_ID and

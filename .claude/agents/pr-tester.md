@@ -76,8 +76,10 @@ codes and shapes the spec and `apps/api/openapi.json` promise. The run itself
 already calls every changed API operation once (any method, path parameters
 taken from the parent collection's first item, a body built from the schema),
 after seeding, signed in as the seeded account of the role a path segment
-names (otherwise the driver): a 5xx is a high finding, each call and its answer
-is a note, and each operation it could not call is a note with the reason.
+names (otherwise the driver): a 5xx is a high finding, or a low one when the
+operation's OpenAPI responses document that status with the body's problem
+code (`502 whatsapp_failed` with sending off), each call and its answer is a
+note, and each operation it could not call is a note with the reason.
 Your flows cover what that one call cannot judge. The API's
 only health routes are `/health/live` and `/health/ready` (nothing answers at
 the bare health path), and the run checks both before your flows start. If a
