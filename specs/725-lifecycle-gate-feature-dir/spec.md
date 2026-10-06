@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 
 **Input**: "`.claude/hooks/pr-lifecycle-gate.mjs` `prLinked(cwd, branch, number)` reads `specs/<branch>/notion-sync.md` only. For branch `83-sign-in-apple-google` the feature folder is `specs/083-sign-in-apple-google`, so the Stop gate falsely refused with 'PR #136 is not linked from its Notion story'. `handedOff()` already resolves the folder through `.specify/feature.json` and falls back to `specs/<branch>`. Fix: one shared resolver for both (feature.json pointer, then `specs/<branch>`, then a `specs/` folder whose numeric prefix equals the branch's ignoring leading zeros)."
 
