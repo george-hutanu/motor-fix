@@ -9,3 +9,5 @@
 - 2026-10-06 · implement · ST-766 · Planning → Implementing (connector)
 - 2026-10-06 · labels · PR #160 · in development
 - 2026-10-06 · debt · ST-766 · 2 tasks filed (connector)
+- 2026-10-06 · qa · ST-766 · Implementing → QA (connector); no build-timeline row exists
+- 2026-10-06 · labels · PR #160 · QA
