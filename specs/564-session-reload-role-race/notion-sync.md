@@ -8,3 +8,6 @@
 - 2026-10-06 · implement · ST-564 · Planning → Implementing
 - 2026-10-06 · implement · timeline · no row for ST-564
 - 2026-10-06 · labels · PR #156 · in development
+- 2026-10-06 · qa · ST-564 · Implementing → QA
+- 2026-10-06 · qa · timeline · no row for ST-564
+- 2026-10-06 · labels · PR #156 · QA
