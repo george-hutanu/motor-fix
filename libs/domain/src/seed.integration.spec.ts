@@ -136,13 +136,13 @@ describe('seed', () => {
     });
   });
 
-  it('gives the garage owner a verified number for the sign-in by phone', async () => {
+  it('gives a garage owner a verified number for the sign-in by phone', async () => {
     expect(seed('test').status).toBe(0);
 
     const phones = (await seeded()).filter((a) => a.phone);
     expect(
       phones.map((a) => [a.email, a.phone, a.phoneVerifiedAt !== null]),
-    ).toEqual([['service@example.test', '+40700000101', true]]);
+    ).toEqual([['doua-roluri@example.test', '+40700000101', true]]);
   });
 
   it('links the garage staff to one seeded garage', async () => {

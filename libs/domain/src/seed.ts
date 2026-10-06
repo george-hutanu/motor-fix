@@ -59,7 +59,6 @@ const PEOPLE: Person[] = [
     email: 'service@example.test',
     lastRole: 'garage',
     name: 'Mihai Ionescu',
-    phone: '+40700000101',
     roles: ['garage'],
   },
   {
@@ -87,6 +86,8 @@ const PEOPLE: Person[] = [
     email: 'doua-roluri@example.test',
     lastRole: 'garage',
     name: 'Elena Dobre',
+    // Not the first owner: their WhatsApp switch shows the missing number.
+    phone: '+40700000101',
     roles: ['driver', 'garage'],
   },
   // Switches roles in the end-to-end tests; nothing else may rely on its
