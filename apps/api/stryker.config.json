@@ -1,7 +1,7 @@
 {
   "concurrency": 1,
   "thresholds": {
-    "break": 0,
+    "break": 95,
     "high": 80,
     "low": 60
   }

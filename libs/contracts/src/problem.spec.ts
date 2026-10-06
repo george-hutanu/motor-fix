@@ -25,6 +25,10 @@ describe('fieldProblems', () => {
     ['an entry with a number code', [{ code: 4, field: 'email' }]],
     ['null in the list', [null]],
     [
+      'a function that carries a field and a code',
+      [Object.assign(() => undefined, { code: 'email_taken', field: 'email' })],
+    ],
+    [
       'one bad entry among good ones',
       [{ code: 'email_taken', field: 'email' }, { field: 'name' }],
     ],

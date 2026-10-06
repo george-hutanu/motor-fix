@@ -15,6 +15,7 @@ import { TranslatePipe } from '@motor-fix/i18n';
 import type { TaskSave } from './form';
 import { OVERLAY_TASK } from './task';
 
+// Stryker disable next-line StringLiteral: component styles are compile-time metadata; a mutated string is no literal Angular can compile, and no test reads CSS.
 const ERROR_TEXT = `
   :host {
     display: block;

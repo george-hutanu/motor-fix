@@ -1,7 +1,7 @@
 {
   "mutate": ["scripts/*.ts", "!scripts/*.spec.ts"],
   "thresholds": {
-    "break": 0,
+    "break": 46,
     "high": 80,
     "low": 60
   },
