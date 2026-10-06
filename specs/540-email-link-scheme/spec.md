@@ -47,6 +47,7 @@ A person who receives a MotorFix e-mail can trust that its button and its stop l
 
 ### Edge Cases
 
+- Credentials in an accepted URL (`https://user@host/`) and the destination host of an `https:` link are not judged: only the scheme and the local-host exception are in scope.
 - Scheme case: `HTTPS://motorfix.ro` is accepted (schemes are read case-insensitively, as a browser reads them).
 - A local host is exactly `localhost` or `127.0.0.1` as the parsed URL's hostname, with any port; `localhost.evil.com`, `127.0.0.1.evil.com` or `[::1]` are not local and are refused over http.
 - Push, SMS and WhatsApp links, and the plain-text part's own text, are unchanged: only the e-mail render refuses, and when it refuses neither the HTML nor the text part is produced.
@@ -56,7 +57,7 @@ A person who receives a MotorFix e-mail can trust that its button and its stop l
 
 ### Functional Requirements
 
-- **FR-001**: The e-mail render MUST accept a button or stop link only when its scheme is `https`, or `http` with the host `localhost` or `127.0.0.1` (any port); it MUST refuse every other value, including `http` on any other host, `javascript:`, `data:`, a relative path, a host without a scheme, and text that is not a URL.
+- **FR-001**: The e-mail render MUST accept a button or stop link only when its scheme is `https`, or `http` with the host `localhost` or `127.0.0.1` (any port); it MUST refuse every other value, including `http` on any other host, `javascript:`, `data:`, a relative path, a host without a scheme, an empty string, and text that is not a URL. Leading and trailing whitespace is ignored as URL parsing ignores it; the href written into the HTML is the parsed value's source text, escaped as today.
 - **FR-002**: A refused link MUST fail the whole e-mail render through the existing template failure (`TemplateError`) with a reason naming the link (button or stop), so the worker marks the rows `template_failed` and sends nothing, and the template self-check reports it, with no change to either.
 - **FR-003**: The check MUST apply to the stop link exactly as to the button link.
 - **FR-004**: Push, SMS, WhatsApp and bell rendering, the e-mail HTML for accepted links, the contracts and the web app MUST be unchanged; the allowed set is fixed in code, with no configuration.
