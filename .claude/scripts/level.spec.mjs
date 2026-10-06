@@ -902,14 +902,14 @@ describe('the pre-ready check', () => {
 
 // A Notion stand-in: the stories query answers `page`, the page's children
 // answer `blocks`. Every URL asked for is recorded.
-function notionFake({ page, blocks = [], fail } = {}) {
+function notionFake({ page, blocks = [], fail, endless } = {}) {
   const urls = [];
   const fetchImpl = async (url, init) => {
     urls.push(url);
     const reply = (status, data) => ({ ok: status < 300, status, json: async () => data, headers: { get: () => null } });
     if (fail === 'network') throw new Error('ECONNREFUSED');
     if (url.includes('/data_sources/') && init.method === 'POST') return reply(200, { results: page ? [page] : [], has_more: false });
-    if (url.includes('/blocks/')) return reply(200, { results: blocks, has_more: false });
+    if (url.includes('/blocks/')) return reply(200, { results: blocks, has_more: Boolean(endless), next_cursor: endless ? 'c' : null });
     if (url.includes('/pages/')) return page ? reply(200, page) : reply(404, { code: 'object_not_found', message: 'not found' });
     return reply(500, { code: 'unexpected', message: url });
   };
@@ -949,6 +949,19 @@ describe('suggest from a Notion story', () => {
   let dir;
   const fresh = () => (dir = fixture());
   const done = () => rmSync(dir, { recursive: true, force: true });
+
+  it('stops paging a story whose blocks never stop saying has_more', async () => {
+    fresh();
+    try {
+      const fake = notionFake({ page: storyPage(), blocks: brief(), endless: true });
+      const run = await suggestRun(['ST-9'], { fake, dir, env: { NOTION_TOKEN: 'secret_t', NOTION_SYNC_MAX_PAGES: '3' } });
+      assert.equal(run.status, 0);
+      assert.match(run.lines[0], /^notion not read \(too many pages\)/);
+      assert.ok(fake.urls.filter((u) => u.includes('/blocks/')).length <= 3, fake.urls.join('\n'));
+    } finally {
+      done();
+    }
+  });
 
   it('sizes a bug with no boards and a complete brief at 1, with no Jev or model call', async () => {
     fresh();

@@ -179,6 +179,7 @@ describe('ready', () => {
     const calls = ofTool(h.calls).filter((c) => !c.startsWith('git rev-parse'));
     assert.deepEqual(calls, [
       `gh pr view ${BRANCH} --json number,title,isDraft,url`,
+      'node .claude/scripts/level.mjs check --ready --json',
       `git add -- specs/${FEATURE}`,
       'git diff --cached --quiet',
       'git commit -m chore(specs): ST-696 feature records',
@@ -244,7 +245,6 @@ describe('ready', () => {
   });
 
   it('runs the level check before the records commit and stops on its refusal, the PR still a draft', () => {
-    writeFileSync(join(repo, '.claude', 'scripts', 'level.mjs'), '// stub\n');
     const h = harness({
       answers: [staged([1, 1]), ['node .claude/scripts/level.mjs check', { code: 2, stdout: '{"missing":["plan.md"]}\n', stderr: 'level check: not ready — level 2 is missing plan.md\n' }]],
     });
@@ -256,7 +256,6 @@ describe('ready', () => {
   });
 
   it('passes through a level check that answers 0', () => {
-    writeFileSync(join(repo, '.claude', 'scripts', 'level.mjs'), '// stub\n');
     const h = harness({ answers: [staged([1, 1])] });
     const result = step(['ready', '--body-file', body], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));

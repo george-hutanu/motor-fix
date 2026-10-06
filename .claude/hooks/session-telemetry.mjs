@@ -45,12 +45,22 @@ const readJson = (file) => {
 /** Fold every subagent transcript the session dispatched, each from its own offset. */
 function foldSubagents(record, transcript, bucket) {
   const dir = join(transcript.replace(/\.jsonl$/, ""), "subagents");
-  if (!existsSync(dir)) return;
-  for (const name of readdirSync(dir).filter((f) => /^agent-.+\.jsonl$/.test(f)).sort()) {
-    const entry = (record.subagents[name] ??= { agent_type: "unknown", bytes_read: 0, last_message_id: null, last_usage: null });
-    if (entry.agent_type === "unknown") entry.agent_type = readJson(join(dir, name.replace(/\.jsonl$/, ".meta.json")))?.agentType ?? "unknown";
-    const { consumed } = mergeTranscript(record, readFrom(join(dir, name), entry.bytes_read), { bucket, agentType: entry.agent_type, cursor: entry });
-    entry.bytes_read += consumed;
+  let names;
+  try {
+    names = readdirSync(dir).filter((f) => /^agent-.+\.jsonl$/.test(f)).sort();
+  } catch {
+    return; // no folder, or not a folder: the session's own tokens still count
+  }
+  for (const name of names) {
+    try {
+      const text = readFrom(join(dir, name), record.subagents[name]?.bytes_read ?? 0);
+      const entry = (record.subagents[name] ??= { agent_type: "unknown", bytes_read: 0, last_message_id: null, last_usage: null });
+      if (entry.agent_type === "unknown") entry.agent_type = readJson(join(dir, name.replace(/\.jsonl$/, ".meta.json")))?.agentType ?? "unknown";
+      const { consumed } = mergeTranscript(record, text, { bucket, agentType: entry.agent_type, cursor: entry });
+      entry.bytes_read += consumed;
+    } catch {
+      // one unreadable transcript costs only its own tokens
+    }
   }
 }
 
@@ -84,7 +94,10 @@ process.stdin.on("end", () => {
 
     const active = activeFeature(repo);
     record.level = active ? featureLevel(repo, featureKey(repo, active.dir)) : null;
-    record.phase = readJson(join(repo, ".specify", "run-state.json"))?.phase || "none";
+    // The run's phase only while that run is live and is this feature's.
+    const run = readJson(join(repo, ".specify", "run-state.json"));
+    const live = run && run.status !== "done" && (!run.feature || run.feature.replace(/\/+$/, "").split("/").pop() === active?.name);
+    record.phase = (live && run.phase) || "none";
     const bucket = `${record.level ?? "none"}/${record.phase}`;
 
     const { record: merged, consumed } = mergeTranscript(record, readFrom(transcript, record.bytes_read ?? 0), { bucket });
@@ -103,7 +116,7 @@ process.stdin.on("end", () => {
     } catch {
       merged.branch = null;
     }
-    merged.feature = activeFeature(repo)?.name ?? null;
+    merged.feature = active?.name ?? null;
 
     writeFileSync(file, `${JSON.stringify(merged, null, 2)}\n`);
     if (existsSync(pending)) rmSync(pending, { force: true });

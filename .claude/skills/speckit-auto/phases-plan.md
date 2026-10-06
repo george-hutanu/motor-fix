@@ -37,7 +37,7 @@ supports is an assumption, not a metric — write it as one.
 Then `node .claude/scripts/level.mjs check` (it does the same after phases 4
 and 7). A 0 or 1 that trips a wire (more FRs than the threshold, an open
 clarification, a contract path, a second Nx project) becomes 2, logged in
-`auto-run.md` with the wire; run the phases it skipped (3, 5, 6, 8) in run
+`auto-run.md` with the wire; run the phases it skipped (3, 4, 5, 6, 8) in run
 order before the next one. It never lowers a level.
 
 ### 3. Notion context

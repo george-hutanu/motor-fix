@@ -138,9 +138,11 @@ const OWED_BY_PROMOTION = ["context", "clarify", "plan", "checklist", "analyze",
 /** Files the branch changed against origin/main, committed or not; null when that cannot be computed. */
 export function changedFiles(repo) {
   try {
+    // -z: git quotes a path with non-ASCII bytes otherwise, and a quoted path
+    // matches no project.
     const git = (...args) => execFileSync("git", args, { cwd: repo, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
     const base = git("merge-base", "HEAD", "origin/main").trim();
-    const files = [...git("diff", "--name-only", base).split("\n"), ...git("ls-files", "--others", "--exclude-standard").split("\n")];
+    const files = [...git("diff", "-z", "--name-only", base).split("\0"), ...git("ls-files", "-z", "--others", "--exclude-standard").split("\0")];
     return [...new Set(files.filter(Boolean))];
   } catch {
     return null;
@@ -478,10 +480,13 @@ const rollupCount = (prop) => {
   return 0;
 };
 
-async function childrenOf(client, id) {
+async function childrenOf(client, id, maxPages) {
+  const { NotionError } = await import("./lib/notion.mjs");
   const blocks = [];
   let cursor;
+  let pages = 0;
   do {
+    if (++pages > maxPages) throw new NotionError("too many pages", `${id} children passed ${maxPages} pages`);
     const page = await client.request("GET", `/blocks/${id}/children?page_size=100${cursor ? `&start_cursor=${cursor}` : ""}`);
     blocks.push(...(page.results ?? []));
     cursor = page.has_more ? page.next_cursor : undefined;
@@ -490,12 +495,12 @@ async function childrenOf(client, id) {
 }
 
 /** The Build brief's sections and whether each has content, or "not found". */
-async function briefOf(client, blocks) {
+async function briefOf(client, blocks, maxPages) {
   const at = blocks.findIndex((b) => headingLevel(b) && /build brief/i.test(plain(b)));
   if (at === -1) return { brief: "not found", text: "" };
   const head = blocks[at];
   let body = [];
-  if (head.has_children) body = await childrenOf(client, head.id);
+  if (head.has_children) body = await childrenOf(client, head.id, maxPages);
   else for (const b of blocks.slice(at + 1)) {
     if (headingLevel(b) && headingLevel(b) <= headingLevel(head)) break;
     body.push(b);
@@ -517,7 +522,8 @@ async function readStory(ref, { repo, env, fetchImpl }) {
   const { NotionError, clientLimits, notionClient, notionToken, readProp } = await import("./lib/notion.mjs");
   const token = notionToken(repo, env);
   if (!token) return { error: "no NOTION_TOKEN" };
-  const client = notionClient({ token, fetchImpl, ...clientLimits(env) });
+  const limits = clientLimits(env);
+  const client = notionClient({ token, fetchImpl, ...limits });
   try {
     let page;
     const story = ref.match(STORY_REF);
@@ -526,7 +532,7 @@ async function readStory(ref, { repo, env, fetchImpl }) {
       page = (await client.query(STORIES, { filter: { property: "ID", unique_id: { equals: Number(story[1]) } } }))[0];
     } else page = await client.request("GET", `/pages/${ref.match(PAGE_REF)[1]}`);
     if (!page) return { error: `${ref} not found` };
-    const { brief, text } = await briefOf(client, await childrenOf(client, page.id));
+    const { brief, text } = await briefOf(client, await childrenOf(client, page.id, limits.maxPages), limits.maxPages);
     const title = Object.values(page.properties ?? {}).find((p) => p?.type === "title");
     const points = readProp(page, "Story points");
     return {

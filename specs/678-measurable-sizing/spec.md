@@ -185,6 +185,7 @@ The capability holds no sizing requirement today: the levels of ST-662 were buil
 
 - The FR-count threshold is more than 5 functional requirements; a level 1 feature owes only `spec.md` and `tasks.md`, and six or more requirements is more than one coherent unit. It is a constant beside the levels in `lib/feature.mjs`, with no environment override (clarify; Principle I: tune it by editing it once the ledger shows a number).
 - A tripped wire promotes to level 2, never to 3: level 3 is a decision about several features and no diff fact proves it (autonomous default).
+- The ready check also refuses a level 3 feature missing `plan.md` or another level 2 artifact: it is neither promoted nor marked (FR-009), but a level 3 owes everything level 2 owes, and refusing errs toward more process (spec review; autonomous default).
 - "Owed phases have run" is read from the artifacts the level owes being present in the feature directory (`plan.md` for level 2), the same list `LEVELS[n].artifacts` already holds, rather than from a new record of phases run (autonomous default; Principle I).
 - The Nx project of a changed file is read from the nearest `project.json` above it; a file outside every project (the harness, docs) belongs to no project and counts toward no wire (autonomous default).
 - The contract, schema and migration paths are `libs/contracts/`, `apps/api/openapi.json`, `libs/data-access/`, any `schema.prisma` and any `migrations/` folder (autonomous default, from the repository layout).

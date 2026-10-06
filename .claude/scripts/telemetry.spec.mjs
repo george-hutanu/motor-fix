@@ -274,6 +274,33 @@ describe('telemetry — the hook and the subagents folder', () => {
     assert.deepEqual(r.subagent_tokens['code-reviewer'], tokens(2, 30), 'a subagent transcript is not read twice');
   });
 
+  it('skips an unreadable subagent transcript and still writes the session', () => {
+    const transcript = join(projects, 'sess-9.jsonl');
+    writeFileSync(transcript, assistant([], used(5, 5), undefined, 'm1'));
+    const sub = join(projects, 'sess-9', 'subagents');
+    mkdirSync(join(sub, 'agent-bad.jsonl'), { recursive: true });
+    writeFileSync(join(sub, 'agent-ok.jsonl'), assistant([], used(1, 2), undefined, 's1'));
+    assert.equal(runHook(transcript).status, 0);
+    assert.deepEqual(ledger().tokens, tokens(6, 7));
+  });
+
+  it('buckets under phase none once the run is done, or when it is another feature\'s run', () => {
+    const transcript = join(projects, 'sess-9.jsonl');
+    writeFileSync(transcript, assistant([], used(1, 1), undefined, 'm1'));
+    writeFileSync(join(repo, '.specify/run-state.json'), JSON.stringify({ status: 'done', phase: 'archive', feature: 'specs/042-small' }));
+    runHook(transcript);
+    assert.equal(ledger().phase, 'none');
+    writeFileSync(join(repo, '.specify/run-state.json'), JSON.stringify({ status: 'in-progress', phase: 'plan', feature: 'specs/007-other' }));
+    writeFileSync(transcript, readFileSync(transcript, 'utf8') + assistant([], used(1, 1), undefined, 'm2'));
+    runHook(transcript);
+    assert.equal(ledger().phase, 'none');
+    assert.deepEqual(Object.keys(ledger().buckets), ['1/none']);
+    writeFileSync(join(repo, '.specify/run-state.json'), JSON.stringify({ status: 'in-progress', phase: 'plan', feature: 'specs/042-small' }));
+    writeFileSync(transcript, readFileSync(transcript, 'utf8') + assistant([], used(1, 1), undefined, 'm3'));
+    runHook(transcript);
+    assert.equal(ledger().phase, 'plan', 'this feature\'s live run');
+  });
+
   it('leaves a partial trailing subagent line for the next Stop', () => {
     const transcript = join(projects, 'sess-9.jsonl');
     writeFileSync(transcript, '');
@@ -336,6 +363,15 @@ describe('telemetry — by level', () => {
   it('puts ledgers written before levels under unknown level', () => {
     const report = byLevel([{ feature: null, tokens: tokens(3, 4) }]);
     assert.equal(report.levels.unknown.total, 7);
+  });
+
+  it('lists a feature and file marked too heavy once, however many sessions marked it', () => {
+    const mark = (at) => ({ feature: 'specs/002-b', level: 2, file: 'x.mjs', at });
+    const report = byLevel([
+      { tokens: tokens(0, 0), buckets: {}, too_heavy: [mark('t1')] },
+      { tokens: tokens(0, 0), buckets: {}, too_heavy: [mark('t2'), { ...mark('t3'), file: 'y.mjs' }] },
+    ]);
+    assert.deepEqual(report.too_heavy.map((m) => m.file), ['x.mjs', 'y.mjs']);
   });
 
   it('lists the too-heavy marks', () => {

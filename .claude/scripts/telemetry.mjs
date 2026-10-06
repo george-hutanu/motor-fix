@@ -59,7 +59,8 @@ export function byLevel(records) {
       f.total += tokenTotal(r.tokens);
       if (typeof r.level === "number" && (f.level === null || r.level > f.level)) f.level = r.level;
     }
-    too_heavy.push(...(r.too_heavy ?? []));
+    for (const m of r.too_heavy ?? [])
+      if (!too_heavy.some((t) => t.feature === m.feature && t.file === m.file)) too_heavy.push(m);
   }
   return { levels, features, too_heavy };
 }
@@ -82,6 +83,8 @@ export function unused(repo, records = loadRecords(repo)) {
   };
 }
 
+const k = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
   const records = loadRecords(repo);
@@ -97,7 +100,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       console.log("No telemetry yet — the Stop hook writes a ledger per session under .specify/telemetry/.");
       process.exit(0);
     }
-    const k = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
     const name = (level) => (level === "unknown" ? "unknown level" : level === "none" ? "no feature" : `level ${level}`);
     for (const [level, row] of Object.entries(report.levels).sort()) {
       console.log(`${name(level)}: ${k(row.total)} tokens, ${k(row.subagents)} by subagents`);
@@ -133,7 +135,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(0);
   }
 
-  const k = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
   console.log(`${total.sessions} session(s), ${total.turns} model turns`);
   console.log(
     `tokens: ${k(total.tokens.input)} in, ${k(total.tokens.output)} out, ` +
