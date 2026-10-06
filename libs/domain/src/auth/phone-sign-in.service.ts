@@ -1,8 +1,10 @@
 import type { PhoneSignInDto } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 
+import { AccountsService } from './accounts.service';
 import { AUTH_OPTIONS, type AuthOptions } from './actor.guard';
 import { Attempts } from './attempts';
+import { consentRequired, isCurrentConsent } from './consent';
 import {
   CODE_ATTEMPTS,
   CODE_TTL_MS,
@@ -14,8 +16,8 @@ import {
 import { roleInUse } from './policy';
 import { PRISMA } from './prisma';
 import { type Issued, SignInService } from './sign-in.service';
-import { refusal } from './sign-up.service';
-import type { PrismaClient } from '../generated/prisma/client';
+import { refusal, taken } from './sign-up.service';
+import type { Prisma, PrismaClient } from '../generated/prisma/client';
 import type { Brevo } from '../notifications/brevo';
 import {
   PHONE_CONFIG,
@@ -51,6 +53,7 @@ export class PhoneSignInService {
     @Inject(AUTH_OPTIONS) private readonly options: AuthOptions,
     @Inject(PHONE_BREVO) private readonly brevo: Brevo,
     @Inject(PHONE_CONFIG) private readonly phone: PhoneConfig,
+    private readonly accounts: AccountsService,
     private readonly attempts: Attempts,
     private readonly sessions: SignInService,
   ) {}
@@ -81,35 +84,84 @@ export class PhoneSignInService {
     });
   }
 
-  async signIn(body: PhoneSignInDto): Promise<Issued> {
+  // A session, or 'profile' when the right code meets a number no account
+  // holds and the body carries no name and consent to create one.
+  async signIn(body: PhoneSignInDto): Promise<Issued | 'profile'> {
     const { phone, code } = body;
     const row = await this.prisma.signInCode.findUnique({ where: { phone } });
     const check = checkCode(row, code, this.options.tokenSecret, new Date());
     if (check === 'wrong') {
       await this.prisma.signInCode.updateMany({
         data: { attempts: { increment: 1 } },
-        where: { phone, usedAt: null },
+        where: { codeHash: row?.codeHash, phone, usedAt: null },
       });
     }
     if (check !== 'right') throw this.refused(check);
     if (!row) throw this.refused('code_invalid');
-    const holder = await this.holder(phone);
-    if (!holder) throw this.refused('code_invalid');
-    const claimed = await this.prisma.signInCode.updateMany({
+    const spend = (db: Prisma.TransactionClient) =>
+      this.claim(db, phone, row.codeHash);
+    const found = await this.holder(phone);
+    if (!found) {
+      if (body.name === undefined || body.consent === undefined) {
+        return 'profile';
+      }
+      return this.create(body, spend);
+    }
+    await spend(this.prisma);
+    if (!found.role) throw this.phoneTaken();
+    return this.sessions.openSession(
+      found.id,
+      found.role,
+      body.remember ?? true,
+    );
+  }
+
+  private async create(
+    body: PhoneSignInDto,
+    spend: (db: Prisma.TransactionClient) => Promise<void>,
+  ): Promise<Issued> {
+    if (!isCurrentConsent(body.consent)) {
+      this.logger.warn('phone sign-in refused: consent_required');
+      throw consentRequired();
+    }
+    let id: string;
+    try {
+      ({ id } = await this.accounts.createAccount(
+        {
+          consent: body.consent,
+          identity: { method: 'whatsapp_phone', subject: body.phone },
+          language: body.language ?? 'ro',
+          name: body.name ?? '',
+          phone: body.phone,
+          roles: ['driver'],
+        },
+        spend,
+      ));
+    } catch (error) {
+      if (taken(error)) throw this.phoneTaken();
+      throw error;
+    }
+    this.logger.log('account created: driver, whatsapp_phone');
+    return this.sessions.openSession(id, 'driver', body.remember ?? true);
+  }
+
+  // Only one request spends a code: the others find it used.
+  private async claim(
+    db: Prisma.TransactionClient,
+    phone: string,
+    codeHash: string,
+  ) {
+    const { count } = await db.signInCode.updateMany({
       data: { usedAt: new Date() },
       where: {
         attempts: { lt: CODE_ATTEMPTS },
-        codeHash: row.codeHash,
+        codeHash,
+        expiresAt: { gt: new Date() },
         phone,
         usedAt: null,
       },
     });
-    if (claimed.count === 0) throw this.refused('code_invalid');
-    return this.sessions.openSession(
-      holder.id,
-      holder.role,
-      body.remember ?? true,
-    );
+    if (count === 0) throw this.refused('code_invalid');
   }
 
   private async send(phone: string, language: 'ro' | 'en', code: string) {
@@ -139,8 +191,9 @@ export class PhoneSignInService {
     }
   }
 
-  // The account the number signs in: its WhatsApp sign-in identity first,
-  // then an account that verified it.
+  // The account holding the number: by its WhatsApp sign-in identity, else
+  // by its phone. Its role is null when it cannot sign in with it: deleted,
+  // or a phone it never verified.
   private async holder(phone: string) {
     const include = { roles: true } as const;
     const identity = await this.prisma.accountIdentity.findFirst({
@@ -149,17 +202,28 @@ export class PhoneSignInService {
     });
     const account =
       identity?.account ??
-      (await this.prisma.account.findFirst({
-        include,
-        where: { phone, phoneVerifiedAt: { not: null } },
-      }));
-    if (!account || account.status === 'deleted') return null;
-    const role = roleInUse(
-      null,
-      account.lastRole,
-      account.roles.map((r) => r.role),
+      (await this.prisma.account.findUnique({ include, where: { phone } }));
+    if (!account) return null;
+    const usable =
+      account.status !== 'deleted' &&
+      (identity !== null || account.phoneVerifiedAt !== null);
+    const role = usable
+      ? roleInUse(
+          null,
+          account.lastRole,
+          account.roles.map((r) => r.role),
+        )
+      : null;
+    return { id: account.id, role };
+  }
+
+  private phoneTaken() {
+    this.logger.warn('phone sign-in refused: phone_taken');
+    return refusal(
+      HttpStatus.CONFLICT,
+      'phone_taken',
+      'This number belongs to an account that cannot sign in with it',
     );
-    return role ? { id: account.id, role } : null;
   }
 
   private refused(check: Exclude<CodeCheck, 'right'>) {

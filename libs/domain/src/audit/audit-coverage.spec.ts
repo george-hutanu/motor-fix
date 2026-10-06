@@ -109,6 +109,7 @@ const NOT_CHANGES = new Set([
   'PasswordResetService.issue',
   // A sign-in code, and spending it on a session.
   'PhoneSignInService.issue',
+  'PhoneSignInService.claim',
   'PhoneSignInService.signIn',
   // The role in use is a view preference.
   'SignInService.switchRole',

@@ -111,10 +111,14 @@ async function holder(
     lastRole,
     phone = PHONE,
     identity = 'google',
+    verified = true,
+    status,
   }: {
     lastRole?: Role;
     phone?: string;
     identity?: 'google' | 'whatsapp_phone';
+    verified?: boolean;
+    status?: 'suspended' | 'deleted';
   } = {},
 ) {
   const email = `${roles.join('-')}@example.test`;
@@ -130,7 +134,11 @@ async function holder(
     roles,
   });
   await prisma.account.update({
-    data: { phoneVerifiedAt: new Date(), ...(lastRole && { lastRole }) },
+    data: {
+      phoneVerifiedAt: verified ? new Date() : null,
+      ...(lastRole && { lastRole }),
+      ...(status && { status }),
+    },
     where: { id },
   });
   return id;
@@ -307,6 +315,177 @@ describe('signing in with the code', () => {
 
     expect(res.status).toBe(400);
   });
+});
+
+describe('a number no account holds', () => {
+  const NEW = '+40733000000';
+  const profile = { consent: CURRENT_CONSENT, name: 'Ion Popescu' };
+
+  const created = () =>
+    prisma.account.findUniqueOrThrow({
+      include: { consents: true, identities: true, roles: true },
+      where: { phone: NEW },
+    });
+
+  it('answers that a profile is needed, opens no session and keeps the code live', async () => {
+    const code = await codeFor(NEW);
+
+    const res = await signIn({ code, phone: NEW });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ next: 'profile' });
+    expect(cookieOf(res)).toBeUndefined();
+    expect(await prisma.account.count()).toBe(0);
+    const row = await prisma.signInCode.findUnique({ where: { phone: NEW } });
+    expect(row).toMatchObject({ attempts: 0, usedAt: null });
+  });
+
+  it('creates a driver account with the verified number, the name and the language, and signs it in', async () => {
+    const code = await codeFor(NEW);
+    await signIn({ code, phone: NEW }).expect(200);
+
+    const res = await signIn({
+      code,
+      consent: CURRENT_CONSENT,
+      language: 'en',
+      name: '  Ion Popescu  ',
+      phone: '0733 000 000',
+      remember: false,
+    });
+
+    expect(res.status).toBe(200);
+    expect(Object.keys(res.body)).toEqual(['accessToken']);
+    expect(cookieOf(res)).toBeDefined();
+    expect(cookieOf(res)).not.toMatch(/Max-Age|Expires/);
+    const account = await created();
+    expect(claims(res)).toMatchObject({
+      accountId: account.id,
+      role: 'driver',
+    });
+    expect(account).toMatchObject({
+      email: null,
+      language: 'en',
+      name: 'Ion Popescu',
+      phone: NEW,
+      status: 'active',
+    });
+    expect(account.phoneVerifiedAt).toBeInstanceOf(Date);
+    expect(account.roles.map((r) => r.role)).toEqual(['driver']);
+    expect(account.identities).toEqual([
+      expect.objectContaining({ method: 'whatsapp_phone', subject: NEW }),
+    ]);
+    expect(
+      account.consents.map((c) => [c.kind, c.method, c.textVersion]).sort(),
+    ).toEqual(
+      [
+        ['privacy_notice', 'whatsapp_phone', CURRENT_CONSENT.privacyVersion],
+        ['terms', 'whatsapp_phone', CURRENT_CONSENT.termsVersion],
+      ].sort(),
+    );
+  });
+
+  it('records the account once in the history and once as account.created by WhatsApp', async () => {
+    const code = await codeFor(NEW);
+
+    await signIn({ code, phone: NEW, ...profile }).expect(200);
+
+    const { id } = await created();
+    const roles = await prisma.activityLog.findMany({
+      where: { field: 'role', subjectId: id },
+    });
+    expect(roles).toEqual([
+      expect.objectContaining({
+        action: 'create',
+        actorId: id,
+        newValue: 'driver',
+      }),
+    ]);
+    const events = await prisma.outboxEvent.findMany({
+      where: { kind: 'account.created', subjectId: id },
+    });
+    expect(events).toHaveLength(1);
+    expect(events[0].payload).toMatchObject({
+      method: 'whatsapp_phone',
+      roles: ['driver'],
+    });
+  });
+
+  it('spends the code on the account it created', async () => {
+    const code = await codeFor(NEW);
+    await signIn({ code, phone: NEW, ...profile }).expect(200);
+
+    const again = await signIn({ code, phone: NEW, ...profile });
+
+    expect(again.status).toBe(401);
+    expect(again.body.code).toBe('code_invalid');
+    expect(await prisma.account.count()).toBe(1);
+  });
+
+  it.each([
+    ['a stale consent', { privacyVersion: 'old', termsVersion: 'old' }],
+    ['an unticked consent', {}],
+  ])(
+    'refuses %s with consent_required, creates nothing and keeps the code live',
+    async (_, consent) => {
+      const code = await codeFor(NEW);
+
+      const res = await signIn({
+        code,
+        consent,
+        name: 'Ion Popescu',
+        phone: NEW,
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('consent_required');
+      expect(await prisma.account.count()).toBe(0);
+      await signIn({ code, phone: NEW, ...profile }).expect(200);
+    },
+  );
+
+  it('ignores a name, a consent and a language sent for a number an account holds', async () => {
+    const id = await holder(['garage']);
+    const code = await codeFor(PHONE);
+
+    const res = await signIn({
+      code,
+      consent: CURRENT_CONSENT,
+      language: 'en',
+      name: 'Someone Else',
+      phone: PHONE,
+    });
+
+    expect(res.status).toBe(200);
+    expect(claims(res)).toMatchObject({ accountId: id, role: 'garage' });
+    expect(await prisma.account.count()).toBe(1);
+    expect(
+      await prisma.account.findUniqueOrThrow({ where: { id } }),
+    ).toMatchObject({ language: 'ro', name: 'Ana Pop' });
+  });
+
+  it.each([
+    ['never verified it', { verified: false }],
+    ['was deleted', { status: 'deleted' as const }],
+    [
+      'was deleted after signing in by WhatsApp',
+      { identity: 'whatsapp_phone' as const, status: 'deleted' as const },
+    ],
+  ])(
+    'answers phone_taken for the number of an account that %s, and spends the code',
+    async (_, options) => {
+      await holder(['driver'], options);
+      const code = await codeFor(PHONE);
+
+      const res = await signIn({ code, phone: PHONE, ...profile });
+
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe('phone_taken');
+      expect(cookieOf(res)).toBeUndefined();
+      expect(await prisma.account.count()).toBe(1);
+      const again = await signIn({ code, phone: PHONE, ...profile });
+      expect(again.status).toBe(401);
+    },
+  );
 });
 
 describe('both routes', () => {

@@ -898,8 +898,14 @@
               }
             }
           },
+          "400": {
+            "description": "validation_failed, consent_required"
+          },
           "401": {
             "description": "code_invalid"
+          },
+          "409": {
+            "description": "phone_taken"
           },
           "410": {
             "description": "code_expired"

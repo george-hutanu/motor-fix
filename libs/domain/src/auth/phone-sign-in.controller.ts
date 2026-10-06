@@ -16,6 +16,8 @@ import {
 import {
   ApiAcceptedResponse,
   ApiBadGatewayResponse,
+  ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiGoneResponse,
   ApiOkResponse,
   ApiTags,
@@ -49,7 +51,9 @@ export class PhoneSignInController {
   @Post('phone-sign-in')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: PhoneSessionDto })
+  @ApiBadRequestResponse({ description: 'validation_failed, consent_required' })
   @ApiUnauthorizedResponse({ description: 'code_invalid' })
+  @ApiConflictResponse({ description: 'phone_taken' })
   @ApiGoneResponse({ description: 'code_expired' })
   @ApiTooManyRequestsResponse({ description: 'too_many_attempts' })
   async phoneSignIn(
@@ -57,6 +61,7 @@ export class PhoneSignInController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<PhoneSessionDto> {
     const issued = await this.phones.signIn(body);
+    if (issued === 'profile') return { next: 'profile' };
     keep(res, issued);
     return { accessToken: issued.accessToken };
   }
