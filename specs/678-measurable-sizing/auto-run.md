@@ -61,3 +61,22 @@ artifact-lint: 15 FRs had no task reference. Fixed by tagging each task with
 its FRs; T019 now also checks that no gate reads the level (FR-010). Lint is
 clean. The plan's `pending.json` route matches the spec's assumption: the mark
 ends up in the session ledger.
+
+## 9–10. Tests and implement
+
+- Red first per story: US1 ledger (telemetry.spec), US2 tripwires and US3 pre-ready (level.spec, lifecycle.spec), US4 Notion sizing (12 specs red, then green). Slices: ledger, tripwires, pre-ready check, `e35c3f6` Notion sizing, `603224c` skill docs.
+- Hook edit blessed after reading the diff (`stop:telemetry` 2637c9772f28).
+
+## 11. Converge
+
+- One cycle: every FR-001..FR-016 has ticked tasks; nothing appended.
+
+## 12. Harden
+
+- artifact-lint 0/0, diff-audit 0/0 on 27 files.
+- `npm run test:harness` 1525/1526: the one failure is `notion-ready.adversary` "decision larger than a pipe buffer", a child `decide` that never saw EOF under the full suite (file unchanged from main; 53/53 when run alone). Not this change.
+- `harness-eval --check` 81/81 once tasks were all ticked (`red-first-leaves-main-alone` reads the worktree's open tasks, as ST-725 noted). `doctor` 16 ok. No file under apps/ or libs/; no gate reads the level.
+
+## 13. Ticket refresh
+
+- Empty: story last edited 10:05 (our Implementing write), brief unchanged, no comments.

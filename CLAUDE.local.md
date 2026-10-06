@@ -160,5 +160,5 @@ ranked, read-only UI audit with `scan.mjs` and `contrast.mjs` helpers; fixes
 only the findings you name).
 
 <!-- SPECKIT START -->
-Active plan (stack, structure, commands): specs/563-expired-token-sweep/plan.md
+Active plan (stack, structure, commands): specs/678-measurable-sizing/plan.md
 <!-- SPECKIT END -->
