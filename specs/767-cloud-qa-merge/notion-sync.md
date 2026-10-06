@@ -11,3 +11,8 @@
 - 2026-10-06 · labels · PR #161 · in development
 - 2026-10-06 · blocked · ST-767 · Implementing → Blocked (merge-gate fix needs the owner's --bless-hooks)
 - 2026-10-06 · labels · PR #161 · in development, blocked
+- 2026-10-06 · unblock · ST-767 · Blocked → Implementing (owner blessed the merge gate at 60ef970)
+- 2026-10-06 · labels · PR #161 · in development
+- 2026-10-06 · qa · ST-767 · Implementing → QA
+- 2026-10-06 · qa · timeline · no row for ST-767
+- 2026-10-06 · labels · PR #161 · QA

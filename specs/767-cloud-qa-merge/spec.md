@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft
+**Status**: Archived (2026-10-06)
 
 **Input**: "Claude Code cloud sessions (CLAUDE_CODE_REMOTE=true) must run the whole task lifecycle with no laptop and no owner commands. Measured in a cloud session: workflow_dispatch 403; writing commit statuses refused by the proxy; GraphQL 403, so gh pr view/checks/edit/ready/create fail; pushing, PR reviews and comments, labels, POST ready_for_review and PUT /pulls/<n>/merge work."
 
@@ -66,5 +66,10 @@ None.
 
 ## Spec Delta
 
-Adds:
-- FR-001–FR-006 above, to the PR tester's and the lifecycle's capability.
+### Capability: `platform`
+
+- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006
+- **Modifies**: none
+- **Removes**: none
+
+The capability had no requirement for a cloud session's QA run and merge: QA started only by `workflow_dispatch`, and the merge gate read the PR over GraphQL.
