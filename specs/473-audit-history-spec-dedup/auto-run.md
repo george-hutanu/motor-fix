@@ -17,3 +17,6 @@
 
 ## 4. Clarify
 - spec-challenger: 5 findings. Answers applied to spec.md: (1) nested masking maps to `are masked for the %s`, deep arrays move there; (2) the restated cursor case is `keeps a cursor from another garage…`, the platform cursor moves to the service case, the admin non-existent cursor case stays; (3) SC-003 counts titles; (4) helpers registered by one call, no hooks on import; (5) the other mappings verified; plus ST-472 merge order.
+
+## 5. Plan
+- design check: no screens (test-only task, no Build brief); plan.md: Technical Context cited from package.json / jest.preset.cjs / libs/domain/jest.config.cts / apps/api/src/bootstrap.ts; research.md, data-model.md, contracts and quickstart N/A; helper `auditHistoryApp()` after serial-db.testing.ts; six-removal mapping table.
