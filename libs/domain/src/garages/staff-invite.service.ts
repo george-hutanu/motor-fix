@@ -387,12 +387,13 @@ export class StaffInviteService {
       this.prisma.garage.findUniqueOrThrow({ where: { id: invite.garageId } }),
     ]);
     const language = owner.language === 'en' ? 'en' : 'ro';
-    const link = `${this.webUrl()}/${language}/invite/${token}`;
+    const webUrl = this.webUrl();
+    const link = `${webUrl}/${language}/invite/${token}`;
     const reason = blockedReason(this.config, invite.email);
     try {
       if (reason) throw new Error(reason);
       const mail = render(`STAFF_INVITE.${invite.kind}`, 'email', language, {
-        app: this.config.webUrl,
+        app: webUrl,
         garage: garage.name,
         link,
       });

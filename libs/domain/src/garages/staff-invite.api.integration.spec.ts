@@ -29,12 +29,13 @@ serialDatabase(databaseUrl);
 const brevo = new BrevoMock();
 let app: NestExpressApplication;
 let invites: StaffInviteService;
+let email: ReturnType<typeof testConfig>;
 // The history and the outbox are never emptied: each test reads its own.
 let since: Date;
 
 beforeAll(async () => {
   await brevo.start();
-  const email = testConfig(brevo.url);
+  email = testConfig(brevo.url);
   const auth = AuthModule.register({ databaseUrl, redisUrl, tokenSecret });
   const notifications = NotificationsModule.register(
     { databaseUrl, email, redisUrl },
@@ -267,10 +268,8 @@ describe('sending an invite', () => {
 
   it('stores nothing and sends nothing while the web address is not set', async () => {
     const { dinamo, mihai } = await world();
-    const config = (invites as unknown as { config: { webUrl?: string } })
-      .config;
-    const { webUrl } = config;
-    config.webUrl = undefined;
+    const { webUrl } = email;
+    email.webUrl = undefined;
     try {
       const res = await send(dinamo.id, bearer(mihai, 'garage'));
 
@@ -278,7 +277,7 @@ describe('sending an invite', () => {
       expect(await prisma.staffInvite.count()).toBe(0);
       expect(brevo.emails()).toHaveLength(0);
     } finally {
-      config.webUrl = webUrl;
+      email.webUrl = webUrl;
     }
   });
 
@@ -668,10 +667,8 @@ describe('resending and revoking', () => {
 
   it('keeps the old link working when a resend finds the web address unset', async () => {
     const { dinamo, id, mihai, token } = await sent();
-    const config = (invites as unknown as { config: { webUrl?: string } })
-      .config;
-    const { webUrl } = config;
-    config.webUrl = undefined;
+    const { webUrl } = email;
+    email.webUrl = undefined;
     try {
       const res = await resend(dinamo.id, id, bearer(mihai, 'garage'));
 
@@ -679,7 +676,7 @@ describe('resending and revoking', () => {
       expect(brevo.emails()).toHaveLength(1);
       expect((await check(token)).status).toBe(200);
     } finally {
-      config.webUrl = webUrl;
+      email.webUrl = webUrl;
     }
   });
 
