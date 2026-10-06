@@ -323,12 +323,10 @@ describe('detect on hostile transcripts', () => {
   });
 
 
-  it('lists an id in seen even when the agents already carry it', () => {
+  it('reports nothing missing when the agents already carry the id', () => {
     seed();
     transcript('a.jsonl', [delta(names(OLD, ['notion-fetch']))]);
-    const found = detect(repo, { configDir: config });
-    assert.deepEqual(found.missing, []);
-    assert.ok(found.seen.includes(OLD));
+    assert.deepEqual(detect(repo, { configDir: config }).missing, []);
   });
 });
 

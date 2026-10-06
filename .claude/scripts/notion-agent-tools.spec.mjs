@@ -151,6 +151,14 @@ describe('add', () => {
     assert.equal(read('.claude/agents/code-reviewer.md'), before);
   });
 
+  it('refuses an invalid settings.json before it writes any agent', () => {
+    seed();
+    write('.claude/settings.json', '{ not json');
+    const before = [read('.claude/agents/org-researcher.md'), read('.claude/agents/spec-reviewer.md')];
+    assert.throws(() => add(repo, NEW), /not valid JSON/);
+    assert.deepEqual([read('.claude/agents/org-researcher.md'), read('.claude/agents/spec-reviewer.md')], before);
+  });
+
   it('refuses something that is not a server id', () => {
     seed();
     assert.throws(() => add(repo, 'not an id!'), /server id/);
@@ -164,7 +172,6 @@ describe('detect', () => {
     transcript(projectSlug(repo), 'a.jsonl', [NEW]);
     const found = detect(repo, { configDir: config });
     assert.deepEqual(found.missing, [NEW]);
-    assert.ok(found.seen.includes(OLD) === false);
   });
 
   it('reads only the deferred tool lists, not prose', () => {

@@ -130,6 +130,9 @@ function insertAfterNotion(list, added) {
 /** Adds one server's read tools to every Notion agent and to the allowlist; returns the files changed. */
 export function add(repo, input) {
   const id = serverId(input);
+  // Read the allowlist first: a broken settings.json must leave every agent untouched.
+  const settings = readAllow(repo);
+  if (settings?.error) throw new Error(settings.error);
   const changed = [];
   for (const name of notionAgents(repo)) {
     const agent = readAgent(repo, name);
@@ -139,8 +142,6 @@ export function add(repo, input) {
     writeFileSync(agent.file, agent.text.replace(agent.line, () => line));
     changed.push(agentFile(name));
   }
-  const settings = readAllow(repo);
-  if (settings?.error) throw new Error(settings.error);
   if (settings) {
     const missing = ALLOWED.map((r) => `mcp__${id}__${r}`).filter((t) => !settings.allow.includes(t));
     if (missing.length) {
@@ -222,9 +223,9 @@ function seenServers(dirs) {
 /** Ids this project's recent sessions carried that the Notion agents lack. */
 export function detect(repo, { configDir = process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude"), roots = checkoutRoots(repo) } = {}) {
   const { files, ids } = seenServers(roots.map((r) => join(configDir, "projects", projectSlug(r))));
-  if (!files) return { seen: [], missing: [], note: `no transcript under ${join(configDir, "projects")} for this project` };
+  if (!files) return { missing: [], note: `no transcript under ${join(configDir, "projects")} for this project` };
   const have = new Set(notionAgents(repo).flatMap((name) => servers(readAgent(repo, name).tools)));
-  return { seen: ids, missing: ids.filter((id) => !have.has(id)).sort(), note: `${files} transcript(s) read` };
+  return { missing: ids.filter((id) => !have.has(id)).sort(), note: `${files} transcript(s) read` };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

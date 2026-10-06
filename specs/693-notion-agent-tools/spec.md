@@ -148,6 +148,6 @@ a stale list shows up in the health check and not in a story run.
 
 ### Capability: `platform`
 
-- **Adds**: FR-001–FR-006
+- **Adds**: none (FR-001–FR-006 are archived in `platform.md` as 693-FR-001–693-FR-006)
 - **Modifies**: none
 - **Removes**: none
