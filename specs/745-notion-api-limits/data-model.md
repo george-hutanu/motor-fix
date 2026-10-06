@@ -16,7 +16,7 @@ inside `.claude/scripts/lib/notion.mjs`.
 ## Retry policy
 
 - Fields: `maxRetries` (`NOTION_SYNC_MAX_RETRIES`, default 3), `maxWaitS`
-  (`NOTION_SYNC_MAX_WAIT_S`, default 60), `random` (injected), `attempt`.
+  (`NOTION_SYNC_MAX_WAIT_S`, default 60), `random` (injected), `attempt` (retries already made; 0 before the first retry).
 - Retryable answer: status 429, 502, 503, 504, or 409 with code
   `conflict_error`; a `timeout` or `network error` only on `GET`.
 - Wait: numeric `Retry-After` seconds (above `maxWaitS` → raise at once);

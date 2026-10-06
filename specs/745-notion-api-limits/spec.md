@@ -55,7 +55,7 @@ retry; answer 429 with `Retry-After` and read the wait.
 
 1. **Given** a client with a fresh token bucket (capacity 3), **When** 10 requests are issued at once, **Then** the first 3 go out immediately (the burst) and the rest are delayed so that the sustained rate is at most 3 per second, with no 429 needed to slow down.
 2. **Given** a request answered 429 with `Retry-After: 2`, **When** retries remain, **Then** the client sleeps 2 s and sends the request again.
-3. **Given** a request answered 503 (or 502, 504, or 409 `conflict_error`) with no `Retry-After`, **When** retries remain, **Then** the client waits `500 ms · 2^attempt · (1 + random())` (clamped to `NOTION_SYNC_MAX_WAIT_S`) and sends it again.
+3. **Given** a request answered 503 (or 502, 504, or 409 `conflict_error`) with no `Retry-After`, **When** retries remain, **Then** the client waits `500 ms · 2^attempt · (1 + random())` (clamped to `NOTION_SYNC_MAX_WAIT_S`; `attempt` counts retries already made, so it is 0 before the first retry) and sends it again.
 4. **Given** `NOTION_SYNC_MAX_RETRIES=1`, **When** a request is answered 503 twice, **Then** the second answer surfaces as a `NotionError` named `503 …`.
 5. **Given** a server `Retry-After` above `NOTION_SYNC_MAX_WAIT_S`, **When** the answer is retryable, **Then** the client does not wait and raises the `NotionError` at once (today's behaviour, kept); a computed backoff above the cap is clamped to it instead.
 6. **Given** a `GET` that times out or fails on the network, **When** retries remain, **Then** it is sent again; **Given** a `POST`, `PATCH` or `DELETE` that times out or fails on the network, **Then** it is not sent again and the `NotionError` (`timeout` / `network error`) surfaces.
@@ -86,7 +86,7 @@ the objects and their lengths; post a comment of 3,000 characters through
 
 1. **Given** a `title` or `rich_text` value of 5,000 characters, **When** `writeProp` shapes it, **Then** the array holds 3 objects of 2,000, 2,000 and 1,000 characters, in order, whose concatenation is the original text.
 2. **Given** a text that would need more than 100 objects (over 200,000 characters), **When** `writeProp` shapes it, **Then** it raises a `NotionError` naming the limit rather than sending a truncated array.
-3. **Given** a comment body of 3,000 characters, **When** `notion-sync` posts it, **Then** the request carries `rich_text` objects of at most 2,000 characters each, in order; **Given** a body of at most 2,000 characters, **Then** it is posted as `markdown` as today.
+3. **Given** a comment body of 3,000 characters, **When** `notion-sync` posts it, **Then** the request carries `rich_text` objects of at most 2,000 code points each, in order; **Given** a body of at most 2,000 code points, **Then** it is posted as `markdown` as today.
 4. **Given** a relation value of 101 ids, **When** `writeProp` shapes it, **Then** it raises a `NotionError` naming the 100-id limit; **Given** 100 ids, **Then** all 100 are sent.
 5. **Given** 250 block children handed to the client's append helper, **When** it runs, **Then** it sends three requests of 100, 100 and 50 children, in order, to the same block.
 6. **Given** a request whose JSON body is over 500 KB (500 × 1024 bytes, UTF-8), **When** it is issued, **Then** no call reaches `fetchImpl` and a `NotionError` names the size limit.
@@ -116,7 +116,7 @@ body of each page request.
 ### Edge Cases
 
 - A 429 without `Retry-After`: backed off like a 503 (exponential with jitter), not a fixed 1 s.
-- `Retry-After` present but not a number: treated as absent.
+- `Retry-After` present but not a number (an HTTP date included) or negative: treated as absent; `Retry-After: 0` retries at once, still through the pacing.
 - `NOTION_SYNC_MAX_RETRIES=0`: no retry of any kind; the first failing answer surfaces.
 - A multi-byte character at a 2,000-character boundary: the split counts Unicode code points, never cutting a surrogate pair.
 - An empty text or an empty relation: one empty object / an empty array, as today.
@@ -132,7 +132,7 @@ body of each page request.
 - **FR-002**: The client MUST retry an answer of 429, 502, 503, 504, or 409 with code `conflict_error`, honouring a numeric `Retry-After` when present (raising at once when it exceeds `NOTION_SYNC_MAX_WAIT_S`, as today) and otherwise waiting `500 ms · 2^attempt · (1 + random())` clamped to `NOTION_SYNC_MAX_WAIT_S`, with `random` injectable; `NOTION_SYNC_MAX_RETRIES` caps the attempts.
 - **FR-003**: The client MUST retry a timeout or network error on `GET` under the same caps, and MUST NOT retry one on `POST`, `PATCH` or `DELETE`.
 - **FR-004**: `writeProp` MUST split a `title` or `rich_text` value into objects of at most 2,000 Unicode code points, at most 100 objects per array, and MUST raise a `NotionError` for a text that cannot fit; the same splitter is exported for comments.
-- **FR-005**: `notion-sync` MUST post a comment body over 2,000 characters as `rich_text` objects produced by the shared splitter, and MAY keep posting a body of at most 2,000 characters as `markdown`.
+- **FR-005**: `notion-sync` MUST post a comment body over 2,000 code points as `rich_text` objects produced by the shared splitter, and MAY keep posting a body of at most 2,000 code points as `markdown`.
 - **FR-006**: `writeProp` MUST raise a `NotionError` for a relation of more than 100 ids, never truncating it.
 - **FR-007**: The client MUST expose a block-children append helper that sends at most 100 children per request, in order, and MUST refuse locally, with a `NotionError` and no call, any request whose UTF-8 JSON body exceeds 500 × 1024 bytes.
 - **FR-008**: `query()` MUST send `page_size: 100` on every page request unless the caller supplies its own `page_size`; the block-children read in `level.mjs` MUST keep sending `page_size=100`.
