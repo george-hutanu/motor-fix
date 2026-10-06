@@ -33,6 +33,9 @@
 // committer, so for a PR Dependabot opened the gate reads them off the REST
 // pulls commits list; a commit that read misses is not Dependabot's.
 //
+// In a cloud session gh's GraphQL answers 403, so the PR is read through REST
+// (lib/gh-rest.mjs) in the same shape.
+//
 // Fail-open on purpose where the gate cannot see: no origin/main ref, or a gh
 // that cannot be reached. A gate that traps a session because GitHub is down
 // helps nobody. Blocks once per turn: `stop_hook_active` means it already did.
@@ -40,6 +43,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
+import { ghSync } from "../scripts/lib/gh-rest.mjs";
 
 const IN_DEVELOPMENT = "in development";
 const DRAFT_LABELS = new Set(["planning", IN_DEVELOPMENT]);
@@ -253,6 +257,21 @@ export function prLinked(cwd, branch, number) {
   }
 }
 
+/**
+ * The branch's PR as { pr }, { pr: null } when it has none, or null when gh
+ * could not be read. Through REST in a cloud session (lib/gh-rest.mjs), where
+ * gh's GraphQL answers 403; `opts` (env, run) reach ghSync.
+ */
+export function readPr(branch, cwd, opts = {}) {
+  const gh = (args) => ghSync(args, { cwd, timeout: 15000, ...opts });
+  try {
+    const pr = JSON.parse(gh(["pr", "view", branch, "--json", "author,commits,number,state,isDraft,labels,mergeable,statusCheckRollup,title"]));
+    return { pr: withCommitters(pr, gh) };
+  } catch (error) {
+    return /no pull requests found/i.test(`${error.stderr ?? ""}`) ? { pr: null } : null;
+  }
+}
+
 /** The branch's state, or null when the gate cannot see enough to judge. */
 function readState(cwd) {
   let branch;
@@ -270,20 +289,9 @@ function readState(cwd) {
   } catch {
     // no upstream: nothing of this branch has been pushed
   }
-  let pr = null;
-  try {
-    const out = execFileSync(
-      "gh",
-      ["pr", "view", branch, "--json", "author,commits,number,state,isDraft,labels,mergeable,statusCheckRollup,title"],
-      { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 15000 },
-    );
-    pr = withCommitters(JSON.parse(out), (args) =>
-      execFileSync("gh", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 15000 }),
-    );
-  } catch (error) {
-    const said = `${error.stderr ?? ""}`;
-    if (!/no pull requests found/i.test(said)) return null;
-  }
+  const read = readPr(branch, cwd);
+  if (read === null) return null;
+  const { pr } = read;
   const linked = pr === null || prLinked(cwd, branch, pr.number);
   return { ahead, blocked: runBlocked(cwd), branch, handedOff: handedOff(cwd, branch), pr, prLinked: linked, unpushed };
 }

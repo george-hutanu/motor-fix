@@ -15,7 +15,9 @@
 //
 // A hook only sees `node lifecycle.mjs …`, so every git and gh command is first
 // fed to the Bash gates settings.json registers (run-hook.mjs <id>), exactly as
-// Claude Code would: a refusal is the gate's own. Notion goes through
+// Claude Code would: a refusal is the gate's own. In a cloud session gh's pr
+// commands then run through REST (lib/gh-rest.mjs), the gates still judging
+// the gh command as written. Notion goes through
 // notion-sync.mjs; its exit 3 (no NOTION_TOKEN) stops the step with the
 // connector events left and the `--notion-done` rerun that finishes it.
 // Exit 0 done, 1 stopped, 64 usage.
@@ -27,6 +29,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { typeLabel } from "../hooks/pr-lifecycle-gate.mjs";
 import { parseDeferred } from "./debt-tasks.mjs";
 import { isEntryPoint } from "./lib/entry.mjs";
+import { ghRun } from "./lib/gh-rest.mjs";
 import { activeFeature } from "./lib/feature.mjs";
 import { readyLogged } from "./notion-ready.mjs";
 
@@ -120,7 +123,7 @@ function context(io, flags, did) {
       const verdict = io.gate(command, env);
       if (verdict.code === 2) throw new Stop(`gate: ${[file, ...args].join(" ")}`, verdict.stderr);
     }
-    const r = io.run(file, args, { env });
+    const r = file === "gh" ? ghRun(args, { run: (f, a, opts) => io.run(f, a, { ...opts, env }), env }) : io.run(file, args, { env });
     if (!ok.includes(r.code)) throw new Stop([file, ...args].join(" "), (r.stderr || r.stdout).trim().slice(-400));
     return r;
   };
