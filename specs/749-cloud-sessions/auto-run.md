@@ -27,3 +27,8 @@ Description: run the speckit workflow in Claude Code cloud sessions without chan
 - spec-reviewer APPROVE (2 LOW, both patched tests first: a failed comment after `ready` names only `handoff --pr <n>`; nvm sourced without set -eu).
 - code-reviewer APPROVE (1 MEDIUM, 4 LOW): patched the named Docker wait (CLOUD_SETUP_DOCKER_WAIT), `sudo -n`, nvm under set +eu; row 1 (script not gated) decided: kept ungated and said so in its header (whether a setup script sees CLAUDE_CODE_REMOTE is unverified); row 5 (100-comment page) deferred.
 - deferred.md: 3 items filed as To do in Notion through the connector; `notion-sync.mjs debt` 400s for a story with no epic (sends Epic [undefined]).
+
+## Final Report
+- PR #158 ready at 0c3609b; ST-749 in QA. QA run 37490077229 (lap 1) dispatched with --no-wait; handoff.md written and posted as a `<!-- speckit-handoff -->` comment.
+- Harness 1742/1742, harness-eval 82/82, doctor 17 ok; both reviews APPROVE, every finding patched or deferred (3 To do tasks in Notion).
+- Next: tail #158 after QA run 37490077229.
