@@ -3,6 +3,7 @@ module.exports = {
   displayName: 'media',
   preset: '../../jest.preset.cjs',
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
+  testEnvironment: 'jsdom',
   transform: {
     '^.+\\.(ts|mjs|js)$': [
       'jest-preset-angular',

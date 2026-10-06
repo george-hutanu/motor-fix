@@ -156,12 +156,21 @@ describe('the script, without Docker', () => {
         },
       ).split('\n')[0];
       // Nx runs this project's tests from scripts/; the hook runs the script
-      // from the repository root.
+      // from the repository root. Stryker runs them from a copy in an ignored
+      // folder, where git lists no files unless it is told the copy is the
+      // work tree.
+      const cwd = join(__dirname, '..');
+      const gitDir = execFileSync('git', ['rev-parse', '--absolute-git-dir'], {
+        cwd,
+        encoding: 'utf8',
+      }).trim();
       const run = spawnSync('node', ['scripts/test-services.ts', root], {
-        cwd: join(__dirname, '..'),
+        cwd,
         encoding: 'utf8',
         env: {
           ...process.env,
+          GIT_DIR: gitDir,
+          GIT_WORK_TREE: cwd,
           NX_DAEMON: 'false',
           PATH: `${bin}:${process.env.PATH}`,
         },

@@ -137,6 +137,15 @@ describe('api conventions', () => {
     expect(res.body).toMatchObject({ code: 'sign_in_required', status: 401 });
   });
 
+  it('names the API and its version in the OpenAPI document', async () => {
+    app = await start();
+
+    expect(openApiDocument(app).info).toMatchObject({
+      title: 'MotorFix API',
+      version: '1',
+    });
+  });
+
   it('describes the language change in the OpenAPI document', async () => {
     app = await start();
 
