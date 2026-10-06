@@ -35,3 +35,14 @@
 - review: spec-reviewer APPROVE (0 findings); code-reviewer APPROVE, 1 LOW (unguarded app.close) fixed.
 - agent-context: no tracked change. retro: evidence only, verdict left to the owner.
 - archive: status line Archived; Spec Delta empty (no capability change).
+
+## Final Report
+
+- Branch `473-audit-history-spec-dedup`, PR #179, commits 39233185 (test slice), e7ded38a (`app?.close`), 0d2eac48 (archive), e6773204 (qa line).
+- Level 2; phases 0–17 run. No screens (design.md), no FR changes (Spec Delta: none).
+- Shared helpers in `libs/domain/src/audit/audit-history.testing.ts` (`auditHistoryApp()`); the API and adversary HTTP specs use it.
+- Six restated adversary cases removed (48 → 42 titles); the two behaviours they alone held (nested-array masking, platform cursor outside scope) moved into the service spec's existing cases (titles unchanged: service 39, API 11).
+- Verification: `nx test domain` 103 suites / 3342 tests passed; typecheck and lint green in the pre-commit hook.
+- Reviews: spec-challenger corrected the case map; spec-reviewer APPROVE (0 findings); code-reviewer APPROVE, 1 LOW fixed (`app?.close()`).
+- diff-audit: test-only-export warnings on the `.testing.ts` helper are expected (test support module).
+- Follow-ups: none deferred.

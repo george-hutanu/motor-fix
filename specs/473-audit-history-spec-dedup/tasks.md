@@ -7,7 +7,7 @@
 
 **Independent test**: the three suites pass; adversary `it(` count is 6 lower, service and API unchanged (SC-003).
 
-- [X] T001 [US1] Create `libs/domain/src/audit/audit-history.testing.ts` (new): export `auditHistoryApp()` per plan.md (registers `serialDatabase`, `beforeAll` app boot with the API's `ValidationPipe` options, `afterAll`, `beforeEach` truncate; returns `{ prisma, accounts, account, bearer, get }`). Covers FR-002.
+- [X] T001 [US1] Create `libs/domain/src/audit/audit-history.testing.ts` (new): export `auditHistoryApp()` per plan.md (registers `serialDatabase`, `beforeAll` app boot with the API's `ValidationPipe` options, `afterAll`, `beforeEach` truncate; returns `{ account, bearer, get, http, prisma }`). Covers FR-002.
 - [X] T002 [US1] Switch `libs/domain/src/audit/audit-history.api.integration.spec.ts` to `auditHistoryApp()` and delete its own bootstrap, lifecycle, `account`, `bearer`, `get`. Covers FR-003. Needs T001.
 - [X] T003 [US1] Switch `libs/domain/src/audit/audit-history.adversary.integration.spec.ts` to `auditHistoryApp()` and delete the same declarations (keep its `garage`, `owner`, `admin`, `entry`, `minutesAgo`, `ids`, `MASK`). Covers FR-003. Needs T001, T002.
 - [X] T004 [US1] In `libs/domain/src/audit/audit-history.service.integration.spec.ts`, add the distinct assertions from the six adversary cases to the existing service cases per plan.md table (platform-entry cursor refusal; arrays-in-arrays and array `oldValue` masking; admin read writes no entry if not asserted). Covers FR-004.

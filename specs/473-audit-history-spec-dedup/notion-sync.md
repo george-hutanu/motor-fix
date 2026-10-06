@@ -12,3 +12,4 @@
 - 2026-10-07 · qa · ST-473 · Implementing → QA
 - 2026-10-07 · qa · timeline · no row for ST-473
 - 2026-10-07 · labels · PR #179 · QA
+- 2026-10-07 · debt · ST-473 · deferred.md line 2 → https://app.notion.com/p/Tech-debt-ST-473-coverage-the-removed-adversary-case-also-refused-a-cursor-from-another-garage-w-3f1607bff0d2816ebdd7f541fad9fdd6
