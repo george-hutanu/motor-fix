@@ -605,7 +605,7 @@ export async function suggestCommand(argv, { repo, env = process.env, fetchImpl,
     out(`unsure (notion: ${verdict.reason}) — sizing from the story's text`);
     return suggestText(story.text, { repo, argv, out, fetchImpl });
   }
-  // A floor only raises (FR-012): with the classifier unsure, the text path is
+  // A floor only raises: with the classifier unsure, the text path is
   // Jev, and a Jev answer above the floor stands.
   if (verdict.askText) {
     const jev = await suggestLevel(story.text, { repo, fetchImpl });

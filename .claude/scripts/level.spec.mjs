@@ -1099,7 +1099,7 @@ describe('suggest from a Notion story', () => {
     }
   });
 
-  // FR-012: a Notion fact only raises the text path's answer. When the
+  // A Notion fact only raises the text path's answer. When the
   // classifier is unsure the text path is Jev, so a floor of 2 must not cap a
   // Jev answer of 3.
   const notionThenJev = (notion, answers) => {
