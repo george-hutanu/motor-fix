@@ -44,3 +44,20 @@ minus level 1, proof `plan.md`; classifier runs before the Bug rule; a missing
 property is a fact; level 0 promotion on stderr only; no per-slice check).
 Applied silently: no env override for the FR threshold, Stop-granularity
 attribution, absolute subagent tokens, Labels/Design facts only.
+
+## 5–7. Plan, checklist, tasks
+
+- Plan (fable): `level.mjs check [--ready] [--json]`; constants beside LEVELS;
+  one transcript fold for session and subagents; `too heavy` through
+  `.specify/telemetry/pending.json`, folded in by the Stop hook (the one ledger
+  writer); `lifecycle.mjs ready` calls the check and stops on exit 2.
+- The run paused on a usage limit during phase 6 and resumed at 13:00 from head 45dd282.
+- Checklist (sonnet): 30 items, 0 unchecked (2 N/A). FR-005 and FR-009 were tightened.
+- Tasks (sonnet): 19 tasks.
+
+## 8. Analyze
+
+artifact-lint: 15 FRs had no task reference. Fixed by tagging each task with
+its FRs; T019 now also checks that no gate reads the level (FR-010). Lint is
+clean. The plan's `pending.json` route matches the spec's assumption: the mark
+ends up in the session ledger.
