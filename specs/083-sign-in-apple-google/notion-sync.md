@@ -15,3 +15,6 @@
 - 2026-10-06 · blocked · ST-83 · QA → Blocked (repair-loop-exceeded)
 - 2026-10-06 · blocked · Foundations timeline · ST-83 QA → Blocked
 - 2026-10-06 · labels · PR #136 · QA + blocked
+- 2026-10-06 · unblock · ST-83 · Blocked → QA (owner decision 2026-10-06: as many QA laps as needed, repair cap 10 for PR #136 only)
+- 2026-10-06 · unblock · Foundations timeline · ST-83 Blocked → QA
+- 2026-10-06 · labels · PR #136 · QA, blocked removed
