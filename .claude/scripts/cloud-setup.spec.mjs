@@ -55,6 +55,7 @@ function setup({ node = '22', docker = false, nvm = false, n = true } = {}) {
   return { repo, run, calls };
 }
 
+// @traces 749-FR-005
 describe('cloud-setup.sh', () => {
   it('on a fresh VM installs Node 24 with n, runs npm ci, starts Docker and pulls postgres and redis', () => {
     const { run, calls } = setup();

@@ -40,6 +40,7 @@ function setup() {
   return { run, envFile, git };
 }
 
+// @traces 749-FR-001
 describe('github-identity.sh', () => {
   it('in a cloud session writes nothing to CLAUDE_ENV_FILE and does not warn about a gh login', () => {
     const { run, envFile } = setup();

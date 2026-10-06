@@ -85,6 +85,7 @@ describe('heavy.sh', () => {
     assert.equal(existsSync(fifth), false);
   }, 30000);
 
+  // @traces 749-FR-004
   it('has two slots by default in a cloud session, so a third command waits', async () => {
     const dir = scratch();
     const cloud = { CLAUDE_CODE_REMOTE: 'true' };

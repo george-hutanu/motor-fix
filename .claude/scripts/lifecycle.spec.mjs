@@ -275,6 +275,7 @@ describe('ready', () => {
   });
 });
 
+// @traces 749-FR-002 749-FR-003
 describe('handoff: the note survives a fresh VM as a marked PR comment', () => {
   const MARK = '<!-- speckit-handoff -->';
   const note = () => join(featureDir, 'handoff.md');

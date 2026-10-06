@@ -102,6 +102,7 @@ describe('identity.sh and the hooks a worktree runs', () => {
   });
 });
 
+// @traces 749-FR-001
 describe('identity.sh in a cloud session (CLAUDE_CODE_REMOTE=true), where a proxy holds the GitHub credentials', () => {
   it('apply writes the author and no credential helper or username', () => {
     const { main } = checkouts();

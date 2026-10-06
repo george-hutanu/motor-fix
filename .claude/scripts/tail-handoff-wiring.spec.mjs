@@ -109,6 +109,7 @@ describe('no agent holds its context across the CI and QA wait', () => {
   });
 });
 
+// @traces 749-FR-002 749-FR-003
 describe('the hand-off survives a cloud session resumed on a fresh VM', () => {
   it('posts the note as a marked PR comment whenever its QA run line is written', () => {
     assert.match(section(auto, '## Hand-off'), /lifecycle\.mjs handoff --pr <n>/);
@@ -123,6 +124,7 @@ describe('the hand-off survives a cloud session resumed on a fresh VM', () => {
   });
 });
 
+// @traces 749-FR-005
 describe('AGENTS.md says how to run in a cloud session', () => {
   const cloudSection = () => section(read('AGENTS.md'), '## Cloud sessions');
 
