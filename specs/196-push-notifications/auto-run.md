@@ -42,3 +42,18 @@ Notes folded: SC-001 measured in the integration test; shared-laptop save re-cre
 
 ## 15-16. Archive
 - Spec Delta merged into `.specify/capabilities/notifications.md` (+18 ~3). Status line set to Archived.
+
+## Tail, lap 1 (2026-10-06)
+
+- PR tester on run 37416836901 (head 4ba7c79): failure, 3 blocker, 13 high, 1 medium, 2 low. The blocker and high findings were the sweep and flows waiting for network idle on signed-in dashboards, where `/api/v1/live` stays open. That is a tester problem: the tester runs from `main`, so it is deferred in `deferred.md` and not fixed in this PR.
+- Fixed with tests first: `forget()` waits at most 3 s before sign-out; `pushResult` retries any error that has a Node network code before it checks the message text.
+- Flows rewritten (`.specify/.cache/qa-flows-119.mjs`): pages load on `domcontentloaded` and are judged by the panel heading. The flows now drive turn on, test, turn off and sign out (removing the device before sign-out) with a fake PushManager. The sweep is limited to `/,/cockpit`.
+- Merged `origin/main` (16 commits, overlapping files, no conflicts) and regenerated the Prisma client. Typecheck and unit tests are green. Pushed e690580, which is repair iteration 1 of 5.
+- Lap 2 dispatched: run 37421231007.
+
+## Tail, lap 2 (2026-10-06)
+
+- PR tester on run 37421231007 (head e690580): failure, 8 high, 3 medium, 4 low. The high and medium findings came from the flows, not the product: the account's language overrides `mf.lang`, and headless Chromium reports `Notification.permission` as `denied` even after it is granted. The code review found nothing high, and FR-007 to FR-020 are covered.
+- Flows fixed (`.specify/.cache/qa-flows-119.mjs`): they now tap the header's RO/EN switch and wait for `aria-pressed`, and they set `Notification.permission` to `granted` in the init script.
+- Low findings fixed, tests first: concurrent `refresh()` calls share one read, so the device is saved once (`push-device.ts`); `web-push` is pinned to 3.6.7. Deferred: classifying push errors by message text (`deferred.md`).
+- Merged `origin/main` (15 files, no conflicts). Typecheck, lint and unit tests are green.

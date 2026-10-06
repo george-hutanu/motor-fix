@@ -135,6 +135,17 @@ describe('PushDevice', () => {
     });
   });
 
+  it('shares one refresh between two callers, so the device is saved once', async () => {
+    const d = device();
+    permission = 'granted';
+    current.next(subscription);
+    await Promise.all([d.refresh(), d.refresh()]);
+    expect(d.state()).toBe('on');
+    expect(api.pushSubscriptionsControllerSave).toHaveBeenCalledTimes(1);
+    await d.refresh();
+    expect(api.pushSubscriptionsControllerSave).toHaveBeenCalledTimes(2);
+  });
+
   it('reads off when the save on refresh fails, to try again next start', async () => {
     const d = device();
     permission = 'granted';

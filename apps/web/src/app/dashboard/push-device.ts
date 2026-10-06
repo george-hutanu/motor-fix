@@ -29,6 +29,7 @@ export class PushDevice {
   readonly busy = signal(false);
   private key: string | null = null;
   private id: string | null = null;
+  private reading: Promise<void> | null = null;
 
   private get api() {
     return this.injector.get(NotificationsService);
@@ -37,7 +38,15 @@ export class PushDevice {
   // On app start and when the panel opens: read the state from the browser.
   // A browser that already has push on saves its device again, so an address
   // the service worker changed is not lost.
-  async refresh(): Promise<void> {
+  // Two callers at once (the frame and the panel) share one read.
+  refresh(): Promise<void> {
+    this.reading ??= this.readState().finally(() => {
+      this.reading = null;
+    });
+    return this.reading;
+  }
+
+  private async readState(): Promise<void> {
     if (this.busy()) return;
     const support = pushSupport(this.env);
     if (support !== 'supported' || !this.sw?.isEnabled) {
