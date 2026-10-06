@@ -20,3 +20,12 @@
 
 ## 5. Plan
 - design check: no screens (test-only task, no Build brief); plan.md: Technical Context cited from package.json / jest.preset.cjs / libs/domain/jest.config.cts / apps/api/src/bootstrap.ts; research.md, data-model.md, contracts and quickstart N/A; helper `auditHistoryApp()` after serial-db.testing.ts; six-removal mapping table.
+
+## 5–8. Plan, checklist, tasks, analyze
+- plan (fable): success; checklist (sonnet): success, 9 ticked, 1 struck N/A; tasks (sonnet): success, 6 tasks.
+- analyze: artifact-lint 0 errors, 5 warnings (delta-unassigned: test-only FRs merge into no capability, by design).
+
+## 9–10. Tests, implement
+- Red-first: a test-only refactor has no new behaviour to prove red; the moved assertions characterise existing behaviour and pass.
+- New audit-history.testing.ts (auditHistoryApp: lifecycle, account, bearer, get, http); API and adversary specs use it; six restated adversary cases removed (48 -> 42 titles; service 39, API 11 unchanged); platform cursor, deep-array and array oldValue masking moved into the service cases.
+- nx test domain: 103 suites, 3342 tests passed.

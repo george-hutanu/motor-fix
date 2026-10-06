@@ -1,75 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
-import { CURRENT_CONSENT } from '@motor-fix/contracts';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
-import request from 'supertest';
-
-import { AuditService } from './audit.service';
+import { auditHistoryApp } from './audit-history.testing';
 import { signAccessToken } from '../auth/access-token';
-import { AccountsService } from '../auth/accounts.service';
-import { AuthModule } from '../auth/auth.module';
-import type { Role } from '../auth/capabilities';
-import { createPrisma } from '../auth/prisma';
-import { serialDatabase } from '../auth/serial-db.testing';
-import { noEvents } from '../events/event.port';
 import { Prisma } from '../generated/prisma/client';
 
-const databaseUrl =
-  process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
-const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
-const tokenSecret = 'test-secret';
-const prisma = createPrisma(databaseUrl);
-const accounts = new AccountsService(prisma, new AuditService(), noEvents);
-serialDatabase(databaseUrl);
+const { account, bearer, get, prisma } = auditHistoryApp();
 
 const MASK = '•••';
-let app: INestApplication;
-
-beforeAll(async () => {
-  const moduleRef = await Test.createTestingModule({
-    imports: [AuthModule.register({ databaseUrl, redisUrl, tokenSecret })],
-  }).compile();
-  app = moduleRef.createNestApplication();
-  app.useGlobalPipes(
-    new ValidationPipe({
-      forbidNonWhitelisted: true,
-      transform: true,
-      whitelist: true,
-    }),
-  );
-  await app.init();
-});
-
-afterAll(async () => {
-  await app.close();
-  await prisma.$disconnect();
-});
-
-beforeEach(async () => {
-  await prisma.$executeRawUnsafe('TRUNCATE account, garage CASCADE');
-});
-
-async function account(name: string, roles: Role[]) {
-  const { id } = await accounts.createAccount({
-    consent: CURRENT_CONSENT,
-    identity: { method: 'google', subject: `${name}-${randomUUID()}` },
-    name,
-    roles,
-  });
-  return id;
-}
-
-const bearer = (accountId: string, role: Role) =>
-  `Bearer ${signAccessToken({ accountId, role }, tokenSecret)}`;
-
-const get = (query: string | Record<string, string> = {}, auth?: string) => {
-  const call = request(app.getHttpServer()).get(
-    typeof query === 'string' ? `/audit-history?${query}` : '/audit-history',
-  );
-  if (typeof query !== 'string') call.query(query);
-  return auth ? call.set('Authorization', auth) : call;
-};
 
 async function garage(name = 'Garage') {
   return prisma.garage.create({
@@ -209,23 +146,6 @@ describe('scope across garages', () => {
     expect(res.body.total).toBe(1);
   });
 
-  it('keeps a cursor from another garage refused whatever the filters', async () => {
-    const mine = await garage();
-    const theirs = await garage();
-    const foreign = await entry({ garageId: theirs.id });
-    const platform = await entry({ garageId: null });
-    const ion = await owner(mine.id);
-
-    for (const cursor of [foreign.id, platform.id, randomUUID()]) {
-      const res = await get(
-        { area: 'quotes', cursor, garageId: mine.id },
-        ion.auth,
-      );
-      expect(res.status).toBe(400);
-      expect(res.body.code).toBe('invalid_cursor');
-    }
-  });
-
   it('answers 404 to an owner without a garage whatever they pass', async () => {
     const theirs = await garage();
     await entry({ garageId: theirs.id });
@@ -347,21 +267,6 @@ describe('masking', () => {
     });
 
     expect(staff.newValue).toEqual({ name: 'Ana', PHONE: MASK, Plate: MASK });
-  });
-
-  it('masks keys inside arrays nested in arrays and objects', async () => {
-    const { staff } = await seeded({
-      field: 'contacts',
-      newValue: {
-        groups: [[{ phone: '1' }, [{ deep: { plate: 'B 2' } }]], 'x'],
-      },
-      oldValue: [[[{ phone: '2' }]]],
-    });
-
-    expect(staff.newValue).toEqual({
-      groups: [[{ phone: MASK }, [{ deep: { plate: MASK } }]], 'x'],
-    });
-    expect(staff.oldValue).toEqual([[[{ phone: MASK }]]]);
   });
 
   it('masks a whole object stored under a field named phone', async () => {
@@ -544,14 +449,6 @@ describe('paging', () => {
     ]);
   });
 
-  it('gives the cursor of the 20th entry on a full first page', async () => {
-    const { from, ion } = await many(21);
-
-    const res = await get({ from }, ion.auth);
-
-    expect(res.body.nextCursor).toBe(res.body.items[19].id);
-  });
-
   it('continues after the last entry with an empty page and the same total', async () => {
     const { from, ion, rows } = await many(2);
     const oldest = [...rows].sort(
@@ -629,20 +526,6 @@ describe('dates', () => {
     const res = await get({ to: old }, ion.auth);
 
     expect(res.body).toEqual({ items: [], nextCursor: null, total: 0 });
-  });
-
-  it('leaves out an entry older than 7 days when no start is given', async () => {
-    const mine = await garage();
-    await entry({
-      at: new Date(Date.now() - 8 * 86_400_000),
-      garageId: mine.id,
-    });
-    const recent = await entry({ at: minutesAgo(5), garageId: mine.id });
-    const ion = await owner(mine.id);
-
-    const res = await get({}, ion.auth);
-
-    expect(ids(res)).toEqual([recent.id]);
   });
 
   it('answers 200 with an empty page for a start in the far future', async () => {
@@ -764,25 +647,6 @@ describe('entries', () => {
     });
   });
 
-  it('shows a system entry without an actor id', async () => {
-    const mine = await garage();
-    await entry({
-      actorId: null,
-      actorName: 'MotorFix',
-      actorRole: 'system',
-      garageId: mine.id,
-    });
-    const ion = await owner(mine.id);
-
-    const res = await get({}, ion.auth);
-
-    expect(res.body.items[0].actor).toEqual({
-      id: null,
-      name: 'MotorFix',
-      role: 'system',
-    });
-  });
-
   it('returns unicode names and text as stored', async () => {
     const mine = await garage();
     await entry({
@@ -798,20 +662,5 @@ describe('entries', () => {
       actor: { name: 'Ștefan Țurcanu 🚗' },
       text: 'Schimb ulei – „Dacia” 日本語',
     });
-  });
-
-  it('writes no entry when it is read, also by the admin', async () => {
-    const mine = await garage();
-    await entry({ garageId: mine.id });
-    const ion = await owner(mine.id);
-    const boss = await admin();
-    const count = () =>
-      prisma.activityLog.count({ where: { garageId: mine.id } });
-    const before = await count();
-
-    await get({}, ion.auth);
-    await get({ garageId: mine.id }, boss.auth);
-
-    expect(await count()).toBe(before);
   });
 });
