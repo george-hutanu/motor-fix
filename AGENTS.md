@@ -277,12 +277,15 @@ decisions are the source for anything the constitution does not fix.
   worktree's own PostgreSQL and Redis (`scripts/test-services.ts`, compose
   project `mf-test-<worktree>-<hash>`, left running between commits; Docker
   required), and it refuses a commit with `JEST_SUITE` set.
-- PR CI: `.github/workflows/ci.yml`, one job per check, in parallel:
-  Biome, Typecheck, Unit tests, Integration
-  tests (PostgreSQL+PostGIS and Redis services), E2E tests (Playwright
-  `web-e2e`, servers started in the job), Build, Harness, Contract check,
-  Dependency audit, Docker build (`web`, `node-app`), Compose stack
-  (`docker-compose.yml` boots and creates the bucket), then `CI OK`, which
+- PR CI: `.github/workflows/ci.yml`, six jobs, so a PR holds at most seven
+  of the free plan's 20 concurrent runners: Checks (one runner and one
+  install: Biome, Dependency audit, Typecheck, Build, Contract check, Harness,
+  and Compose stack, where `docker-compose.yml` boots and creates the bucket;
+  each step runs even after an earlier one failed), Unit and integration tests
+  (PostgreSQL+PostGIS and Redis services), E2E tests (Playwright `web-e2e`,
+  four workers, servers started in the job; a test that passes only on a
+  retry fails), Docker build (`web`, `node-app`, reading the layer cache that
+  `release.yml` writes on `main`), then `CI OK`, which
   fails when any of them did. A PR that changes documentation only
   (`scripts/docs-only.ts`: Markdown outside `.claude/`, `.specify/` and
   `.github/`, or `docs/`) runs only the Changes and `CI OK` jobs; the
@@ -297,4 +300,5 @@ decisions are the source for anything the constitution does not fix.
   `Dockerfile`), deploys staging through `scripts/railway-deploy.ts`, runs the
   end-to-end suite there, and promotes the same digests to production with
   no manual approval: a merge reaches production only when CI and staging
-  both passed.
+  both passed. Release checks run one at a time (`release-checks`); a waiting
+  one is replaced by the newest merge, which carries it.

@@ -26,9 +26,9 @@
 
 ## Phase 5: Documentation (US5, P3)
 
-- [ ] T009 [P] [US5] Update AGENTS.md "PR CI" bullet to the jobs of the new `ci.yml` (Changes, Checks and its steps, Unit and integration tests, E2E tests, Docker build web and api, CI OK). (FR-008)
-- [ ] T010 [P] [US5] Add the row to `docs/speed-and-cost-plan.md` with the baseline (14 jobs, 7 setups, 675 s total, 629 s E2E); the result column is filled in T012. (FR-008)
-- [ ] T011 [P] [US5] Update the old job names ("Unit tests and E2E tests") in `.claude/scripts/pr-test/run.mjs` (comment near line 17 and the note near line 376). (FR-008)
+- [X] T009 [P] [US5] Update AGENTS.md "PR CI" bullet to the jobs of the new `ci.yml` (Changes, Checks and its steps, Unit and integration tests, E2E tests, Docker build web and api, CI OK). (FR-008)
+- [X] T010 [P] [US5] Add the row to `docs/speed-and-cost-plan.md` with the baseline (14 jobs, 7 setups, 675 s total, 629 s E2E); the result column is filled in T012. (FR-008)
+- [X] T011 [P] [US5] Update the old job names ("Unit tests and E2E tests") in `.claude/scripts/pr-test/run.mjs` (comment near line 17 and the note near line 376). (FR-008)
 
 ## Phase 6: Measurement (before ready)
 
