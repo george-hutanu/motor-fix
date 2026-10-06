@@ -8,3 +8,4 @@
 - 2026-10-05 · qa · ST-196 story Status: Planning → QA
 - 2026-10-05 · labels · PR #119 · QA
 [NOTION-SYNC PENDING: qa ST-196 timeline row Build status → QA — Query Data Source usage limit reached]
+- 2026-10-06 · debt · ST-196 · 5 deferred bullets filed as To do tasks
