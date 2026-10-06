@@ -1,118 +1,29 @@
-import { generateKeyPairSync } from 'node:crypto';
-
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
-import { ValidationPipe } from '@nestjs/common';
-import type { NestExpressApplication } from '@nestjs/platform-express';
-import { Test } from '@nestjs/testing';
-import { Redis } from 'ioredis';
 import request from 'supertest';
 
 import {
-  type OpenIdStub,
+  approve,
+  cookie,
+  cookieLine,
+  ELENA,
+  oauthHarness,
+  type Provider,
   type StubPerson,
-  startOpenIdStub,
+  WEB,
 } from './openid-stub.testing';
 import { oauthSettings } from './providers';
-import { AuditService } from '../../audit/audit.service';
-import { noEvents } from '../../events/event.port';
-import { AccountsService } from '../accounts.service';
-import { AuthModule } from '../auth.module';
 import type { Role } from '../capabilities';
-import { MAINTENANCE } from '../maintenance';
-import { createPrisma } from '../prisma';
-import { serialDatabase } from '../serial-db.testing';
 
-const databaseUrl =
-  process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
-const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
-const prisma = createPrisma(databaseUrl);
-const redis = new Redis(redisUrl);
-const accounts = new AccountsService(prisma, new AuditService(), noEvents);
-serialDatabase(databaseUrl);
-
-const WEB = 'https://web.example.test';
-const appleKey = generateKeyPairSync('ec', { namedCurve: 'P-256' })
-  .privateKey.export({ format: 'pem', type: 'pkcs8' })
-  .toString();
-
-let stub: OpenIdStub;
-let app: NestExpressApplication;
 let maintenance = false;
-
-async function boot(oauth: ReturnType<typeof oauthSettings>) {
-  const moduleRef = await Test.createTestingModule({
-    imports: [
-      AuthModule.register({
-        databaseUrl,
-        oauth,
-        redisUrl,
-        tokenSecret: 'test',
-      }),
-    ],
-  })
-    .overrideProvider(MAINTENANCE)
-    .useValue({ on: async () => maintenance })
-    .compile();
-  const nest = moduleRef.createNestApplication<NestExpressApplication>();
-  nest.set('trust proxy', 'loopback');
-  nest.useGlobalPipes(
-    new ValidationPipe({
-      forbidNonWhitelisted: true,
-      transform: true,
-      whitelist: true,
-    }),
-  );
-  await nest.init();
-  return nest;
-}
-
-beforeAll(async () => {
-  stub = await startOpenIdStub();
-  app = await boot(
-    oauthSettings('test', {
-      APPLE_ISSUER: stub.issuer,
-      APPLE_KEY_ID: 'KEY123',
-      APPLE_PRIVATE_KEY: appleKey,
-      APPLE_SERVICES_ID: 'ro.motorfix.web',
-      APPLE_TEAM_ID: 'TEAM123',
-      GOOGLE_CLIENT_ID: 'google-client',
-      GOOGLE_CLIENT_SECRET: 'google-secret',
-      GOOGLE_ISSUER: stub.issuer,
-      PUBLIC_WEB_URL: WEB,
-    }),
-  );
-});
-
-afterAll(async () => {
-  await app.close();
-  await stub.close();
-  await prisma.$disconnect();
-  redis.disconnect();
-});
+const h = oauthHarness(() => maintenance);
+const { boot, callback, continueWith, existing, http, prisma, start } = h;
 
 let auditEntries = 0;
 
 beforeEach(async () => {
   maintenance = false;
-  stub.fault = null;
-  await prisma.$executeRawUnsafe('TRUNCATE account, garage CASCADE');
   auditEntries = await prisma.activityLog.count();
-  const keys = await redis.keys('auth:*');
-  if (keys.length) await redis.del(...keys);
 });
-
-const http = () => request(app.getHttpServer());
-
-function cookie(res: request.Response, name: string): string | undefined {
-  const all = (res.headers['set-cookie'] ?? []) as unknown as string[];
-  const line = all.find((c) => c.startsWith(`${name}=`));
-  return line?.split(';')[0].slice(name.length + 1);
-}
-
-function cookieLine(res: request.Response, name: string): string {
-  const all = (res.headers['set-cookie'] ?? []) as unknown as string[];
-  return all.find((c) => c.startsWith(`${name}=`)) ?? '';
-}
 
 const outcome = (res: request.Response) => {
   expect(res.status).toBe(302);
@@ -123,75 +34,6 @@ const outcome = (res: request.Response) => {
     result: url.searchParams.get('result'),
   };
 };
-
-type Provider = 'google' | 'apple';
-
-async function start(provider: Provider, query = 'language=ro&remember=true') {
-  const res = await http().get(`/auth/oauth/${provider}?${query}`);
-  expect(res.status).toBe(302);
-  return {
-    flow: cookie(res, 'mf_oauth') ?? '',
-    location: new URL(res.headers['location']),
-    res,
-  };
-}
-
-// The person approves at the stub provider, which answers with a code.
-async function approve(location: URL) {
-  const answer = await fetch(location, { redirect: 'manual' });
-  const back = new URL(answer.headers.get('location') ?? '');
-  return {
-    code: back.searchParams.get('code') ?? '',
-    state: back.searchParams.get('state') ?? '',
-  };
-}
-
-function callback(
-  provider: Provider,
-  fields: Record<string, string>,
-  flow: string | undefined,
-) {
-  const req =
-    provider === 'apple'
-      ? http().post('/auth/oauth/apple/callback').type('form').send(fields)
-      : http().get('/auth/oauth/google/callback').query(fields);
-  return flow === undefined ? req : req.set('Cookie', `mf_oauth=${flow}`);
-}
-
-async function continueWith(
-  provider: Provider,
-  person: StubPerson,
-  extra: Record<string, string> = {},
-  query?: string,
-) {
-  stub.next = person;
-  const { flow, location } = await start(provider, query);
-  const { code, state } = await approve(location);
-  return callback(provider, { code, state, ...extra }, flow);
-}
-
-async function existing(
-  email: string,
-  roles: Role[] = ['driver'],
-  identity: { method: 'password' | 'google' | 'apple'; subject: string } = {
-    method: 'password',
-    subject: email,
-  },
-  emailVerified = true,
-) {
-  const { id } = await accounts.createAccount({
-    consent: CURRENT_CONSENT,
-    email,
-    emailVerified,
-    identity: {
-      ...identity,
-      passwordHash: identity.method === 'password' ? 'x' : undefined,
-    },
-    name: 'Andrei Ionescu',
-    roles,
-  });
-  return id;
-}
 
 const roleOf = (accessToken: string) =>
   JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64url').toString())
@@ -207,13 +49,6 @@ async function renewedRole(res: request.Response) {
   expect(renewed.status).toBe(200);
   return roleOf(renewed.body.accessToken);
 }
-
-const ELENA: StubPerson = {
-  email: 'elena@example.test',
-  email_verified: true,
-  name: 'Elena Pop',
-  sub: 'google-elena',
-};
 
 describe('which providers are configured', () => {
   it('answers both when their keys are set', async () => {
@@ -277,7 +112,7 @@ describe('starting the flow', () => {
   it('sends Google to its authorisation with a code, PKCE, state and nonce', async () => {
     const { flow, location, res } = await start('google');
 
-    expect(location.origin).toBe(stub.issuer);
+    expect(location.origin).toBe(h.stub.issuer);
     expect(location.pathname).toBe('/authorize');
     const params = Object.fromEntries(location.searchParams);
     expect(params).toMatchObject({
@@ -734,18 +569,18 @@ describe('a new person', () => {
       sub: 'apple-a',
     });
 
-    const secret = stub.lastTokenRequest?.get('client_secret') ?? '';
+    const secret = h.stub.lastTokenRequest?.get('client_secret') ?? '';
     const [header, claims] = secret
       .split('.')
       .slice(0, 2)
       .map((part) => JSON.parse(Buffer.from(part, 'base64url').toString()));
     expect(header).toEqual({ alg: 'ES256', kid: 'KEY123' });
     expect(claims).toMatchObject({
-      aud: stub.issuer,
+      aud: h.stub.issuer,
       iss: 'TEAM123',
       sub: 'ro.motorfix.web',
     });
-    expect(stub.lastTokenRequest?.get('code_verifier')).toBeTruthy();
+    expect(h.stub.lastTokenRequest?.get('code_verifier')).toBeTruthy();
   });
 });
 
@@ -790,7 +625,7 @@ describe('cancel and failure', () => {
     ["the nonce is not the flow's", 'wrong-nonce'],
     ['the token is for another client', 'wrong-audience'],
   ] as const)('returns failed when %s', async (_, fault) => {
-    stub.fault = fault;
+    h.stub.fault = fault;
 
     const res = await continueWith('google', ELENA);
 
@@ -802,17 +637,17 @@ describe('cancel and failure', () => {
 
   it('reads the published keys again when the token names a new one', async () => {
     await continueWith('google', ELENA);
-    stub.fault = 'rotated';
-    stub.keyReads = 0;
+    h.stub.fault = 'rotated';
+    h.stub.keyReads = 0;
 
     const res = await continueWith('google', { ...ELENA, sub: 'google-other' });
 
     expect(outcome(res).result).toBe('consent');
-    expect(stub.keyReads).toBe(1);
+    expect(h.stub.keyReads).toBe(1);
   });
 
   it("returns failed without the browser's flow cookie", async () => {
-    stub.next = ELENA;
+    h.stub.next = ELENA;
     const { location } = await start('google');
     const { code, state } = await approve(location);
 
@@ -836,7 +671,7 @@ describe('cancel and failure', () => {
   });
 
   it('returns failed for a flow used a second time', async () => {
-    stub.next = ELENA;
+    h.stub.next = ELENA;
     const { flow, location } = await start('google');
     const { code, state } = await approve(location);
     await callback('google', { code, state }, flow);
@@ -847,7 +682,7 @@ describe('cancel and failure', () => {
   });
 
   it('returns failed for a Google flow brought back to the Apple address', async () => {
-    stub.next = ELENA;
+    h.stub.next = ELENA;
     const { flow, location } = await start('google');
     const { code, state } = await approve(location);
 

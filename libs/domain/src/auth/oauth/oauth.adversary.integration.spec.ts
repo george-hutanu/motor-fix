@@ -1,113 +1,21 @@
-import { generateKeyPairSync } from 'node:crypto';
-
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
-import { ValidationPipe } from '@nestjs/common';
-import type { NestExpressApplication } from '@nestjs/platform-express';
-import { Test } from '@nestjs/testing';
-import { Redis } from 'ioredis';
 import request from 'supertest';
 
 import {
-  type OpenIdStub,
+  approve,
+  cookie,
+  cookieLine,
+  ELENA,
+  oauthHarness,
+  type Provider,
   type StubPerson,
-  startOpenIdStub,
+  WEB,
 } from './openid-stub.testing';
 import { oauthSettings } from './providers';
-import { AuditService } from '../../audit/audit.service';
-import { noEvents } from '../../events/event.port';
-import { AccountsService } from '../accounts.service';
-import { AuthModule } from '../auth.module';
-import type { Role } from '../capabilities';
-import { MAINTENANCE } from '../maintenance';
-import { createPrisma } from '../prisma';
-import { serialDatabase } from '../serial-db.testing';
 
-const databaseUrl =
-  process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
-const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
-const prisma = createPrisma(databaseUrl);
-const redis = new Redis(redisUrl);
-const accounts = new AccountsService(prisma, new AuditService(), noEvents);
-serialDatabase(databaseUrl);
-
-const WEB = 'https://web.example.test';
-const appleKey = generateKeyPairSync('ec', { namedCurve: 'P-256' })
-  .privateKey.export({ format: 'pem', type: 'pkcs8' })
-  .toString();
-
-let stub: OpenIdStub;
-let app: NestExpressApplication;
-
-async function boot(oauth: ReturnType<typeof oauthSettings>) {
-  const moduleRef = await Test.createTestingModule({
-    imports: [
-      AuthModule.register({
-        databaseUrl,
-        oauth,
-        redisUrl,
-        tokenSecret: 'test',
-      }),
-    ],
-  })
-    .overrideProvider(MAINTENANCE)
-    .useValue({ on: async () => false })
-    .compile();
-  const nest = moduleRef.createNestApplication<NestExpressApplication>();
-  nest.set('trust proxy', 'loopback');
-  nest.useGlobalPipes(
-    new ValidationPipe({
-      forbidNonWhitelisted: true,
-      transform: true,
-      whitelist: true,
-    }),
-  );
-  await nest.init();
-  return nest;
-}
-
-beforeAll(async () => {
-  stub = await startOpenIdStub();
-  app = await boot(
-    oauthSettings('test', {
-      APPLE_ISSUER: stub.issuer,
-      APPLE_KEY_ID: 'KEY123',
-      APPLE_PRIVATE_KEY: appleKey,
-      APPLE_SERVICES_ID: 'ro.motorfix.web',
-      APPLE_TEAM_ID: 'TEAM123',
-      GOOGLE_CLIENT_ID: 'google-client',
-      GOOGLE_CLIENT_SECRET: 'google-secret',
-      GOOGLE_ISSUER: stub.issuer,
-      PUBLIC_WEB_URL: WEB,
-    }),
-  );
-});
-
-afterAll(async () => {
-  await app.close();
-  await stub.close();
-  await prisma.$disconnect();
-  redis.disconnect();
-});
-
-beforeEach(async () => {
-  stub.fault = null;
-  await prisma.$executeRawUnsafe('TRUNCATE account, garage CASCADE');
-  const keys = await redis.keys('auth:*');
-  if (keys.length) await redis.del(...keys);
-});
-
-const http = () => request(app.getHttpServer());
-
-function cookie(res: request.Response, name: string): string | undefined {
-  const all = (res.headers['set-cookie'] ?? []) as unknown as string[];
-  const line = all.find((c) => c.startsWith(`${name}=`));
-  return line?.split(';')[0].slice(name.length + 1);
-}
-
-function cookieLine(res: request.Response, name: string): string {
-  const all = (res.headers['set-cookie'] ?? []) as unknown as string[];
-  return all.find((c) => c.startsWith(`${name}=`)) ?? '';
-}
+const h = oauthHarness();
+const { boot, callback, continueWith, existing, http, prisma, redis, start } =
+  h;
 
 const back = (res: request.Response) => {
   expect(res.status).toBe(302);
@@ -115,80 +23,6 @@ const back = (res: request.Response) => {
 };
 const resultOf = (res: request.Response) =>
   back(res).searchParams.get('result');
-
-type Provider = 'google' | 'apple';
-
-async function start(provider: Provider, query = 'language=ro&remember=true') {
-  const res = await http().get(`/auth/oauth/${provider}?${query}`);
-  expect(res.status).toBe(302);
-  return {
-    flow: cookie(res, 'mf_oauth') ?? '',
-    location: new URL(res.headers['location']),
-  };
-}
-
-async function approve(location: URL) {
-  const answer = await fetch(location, { redirect: 'manual' });
-  const to = new URL(answer.headers.get('location') ?? '');
-  return {
-    code: to.searchParams.get('code') ?? '',
-    state: to.searchParams.get('state') ?? '',
-  };
-}
-
-function callback(
-  provider: Provider,
-  fields: Record<string, string>,
-  flow: string | undefined,
-) {
-  const req =
-    provider === 'apple'
-      ? http().post('/auth/oauth/apple/callback').type('form').send(fields)
-      : http().get('/auth/oauth/google/callback').query(fields);
-  return flow === undefined ? req : req.set('Cookie', `mf_oauth=${flow}`);
-}
-
-async function continueWith(
-  provider: Provider,
-  person: StubPerson,
-  extra: Record<string, string> = {},
-  query?: string,
-) {
-  stub.next = person;
-  const { flow, location } = await start(provider, query);
-  const { code, state } = await approve(location);
-  return callback(provider, { code, state, ...extra }, flow);
-}
-
-async function existing(
-  email: string,
-  identity: { method: 'password' | 'google' | 'apple'; subject: string } = {
-    method: 'password',
-    subject: email,
-  },
-  roles: Role[] = ['driver'],
-) {
-  const { id } = await accounts.createAccount({
-    consent: CURRENT_CONSENT,
-    email,
-    // A provider links only to an account that confirmed its e-mail.
-    emailVerified: true,
-    identity: {
-      ...identity,
-      passwordHash: identity.method === 'password' ? 'x' : undefined,
-    },
-    name: 'Andrei Ionescu',
-    roles,
-  });
-  return id;
-}
-
-const ELENA: StubPerson = {
-  email: 'elena@example.test',
-  email_verified: true,
-  name: 'Elena Pop',
-  sub: 'google-elena',
-};
 
 async function pendingFor(
   person: StubPerson = ELENA,
@@ -255,7 +89,7 @@ describe('the providers answer', () => {
       oauthSettings('test', {
         GOOGLE_CLIENT_ID: 'g',
         GOOGLE_CLIENT_SECRET: 's',
-        GOOGLE_ISSUER: stub.issuer,
+        GOOGLE_ISSUER: h.stub.issuer,
         PUBLIC_WEB_URL: WEB,
       }),
     );
@@ -298,10 +132,8 @@ describe('starting a flow with hostile query values', () => {
   ])(
     'never redirects the person anywhere but the sign-in return for %s',
     async (_, query) => {
-      stub.next = ELENA;
+      h.stub.next = ELENA;
       const res = await http().get(`/auth/oauth/google?${query}`);
-      if (res.status === 400)
-        return expect(res.body.code ?? res.body).toBeDefined();
       expect(res.status).toBe(302);
       const flow = cookie(res, 'mf_oauth') ?? '';
       const { code, state } = await approve(new URL(res.headers['location']));
@@ -361,7 +193,7 @@ describe('starting a flow with hostile query values', () => {
 
 describe('forged and mismatched returns', () => {
   it("refuses a return whose state is a valid flow other than the cookie's", async () => {
-    stub.next = ELENA;
+    h.stub.next = ELENA;
     const mine = await start('google');
     const theirs = await start('google');
     const theirApproval = await approve(theirs.location);
@@ -374,7 +206,7 @@ describe('forged and mismatched returns', () => {
   });
 
   it('refuses a return whose query state was tampered with', async () => {
-    stub.next = ELENA;
+    h.stub.next = ELENA;
     const { flow, location } = await start('google');
     const { code, state } = await approve(location);
 
@@ -384,7 +216,7 @@ describe('forged and mismatched returns', () => {
   });
 
   it('refuses a return with no state at all', async () => {
-    stub.next = ELENA;
+    h.stub.next = ELENA;
     const { flow, location } = await start('google');
     const { code } = await approve(location);
 
@@ -394,7 +226,7 @@ describe('forged and mismatched returns', () => {
   });
 
   it('refuses a return with no code', async () => {
-    stub.next = ELENA;
+    h.stub.next = ELENA;
     const { flow, location } = await start('google');
     const { state } = await approve(location);
 
@@ -405,7 +237,7 @@ describe('forged and mismatched returns', () => {
   });
 
   it('refuses a return with repeated state parameters', async () => {
-    stub.next = ELENA;
+    h.stub.next = ELENA;
     const { flow, location } = await start('google');
     const { code, state } = await approve(location);
 
@@ -434,14 +266,14 @@ describe('forged and mismatched returns', () => {
   });
 
   it('consumes the flow even when the exchange fails, so a retry cannot reuse it', async () => {
-    stub.next = ELENA;
+    h.stub.next = ELENA;
     const { flow, location } = await start('google');
     const { code, state } = await approve(location);
-    stub.fault = 'down';
+    h.stub.fault = 'down';
     expect(resultOf(await callback('google', { code, state }, flow))).toBe(
       'failed',
     );
-    stub.fault = null;
+    h.stub.fault = null;
 
     const retry = await callback('google', { code, state }, flow);
 
@@ -450,7 +282,7 @@ describe('forged and mismatched returns', () => {
   });
 
   it('refuses a return after the stored flow expired', async () => {
-    stub.next = ELENA;
+    h.stub.next = ELENA;
     const { flow, location } = await start('google');
     const { code, state } = await approve(location);
     await redis.del(...(await redis.keys('auth:*')));
@@ -461,7 +293,7 @@ describe('forged and mismatched returns', () => {
   });
 
   it('lets exactly one of two simultaneous returns for one flow through', async () => {
-    stub.next = ELENA;
+    h.stub.next = ELENA;
     const { flow, location } = await start('google');
     const { code, state } = await approve(location);
 
@@ -474,7 +306,7 @@ describe('forged and mismatched returns', () => {
   });
 
   it('answers a refusal with a repeated error parameter without signing anyone in', async () => {
-    stub.next = ELENA;
+    h.stub.next = ELENA;
     const { flow, location } = await start('google');
     const { code, state } = await approve(location);
 
@@ -582,7 +414,7 @@ describe('the identity match', () => {
   });
 
   it('does not sign Apple in to an account that only holds the same subject string at Google', async () => {
-    const id = await existing('andrei@gmail.com', {
+    const id = await existing('andrei@gmail.com', ['driver'], {
       method: 'google',
       subject: 'shared-sub',
     });
@@ -601,7 +433,7 @@ describe('the identity match', () => {
   });
 
   it('matches a unicode subject on the second sign-in', async () => {
-    const id = await existing('andrei@gmail.com', {
+    const id = await existing('andrei@gmail.com', ['driver'], {
       method: 'google',
       subject: 'ünï-😀-sub',
     });
@@ -640,7 +472,10 @@ describe('the identity match', () => {
   });
 
   it('refreshes the session of a signed-in return with an HttpOnly Secure cookie', async () => {
-    await existing('andrei@gmail.com', { method: 'google', subject: 'g-1' });
+    await existing('andrei@gmail.com', ['driver'], {
+      method: 'google',
+      subject: 'g-1',
+    });
 
     const res = await continueWith('google', {
       email: 'andrei@gmail.com',
@@ -660,7 +495,7 @@ describe('the identity match', () => {
       email_verified: true,
       sub: 'g-race',
     };
-    stub.next = person;
+    h.stub.next = person;
     const one = await start('google');
     const two = await start('google');
     const a = await approve(one.location);
@@ -1056,7 +891,7 @@ describe('completing the sign-up with hostile bodies', () => {
   });
 
   it('signs a new person in for exactly the session their sign-up asked for', async () => {
-    stub.next = ELENA;
+    h.stub.next = ELENA;
     const started = await start('google', 'language=en&remember=false');
     const { code, state } = await approve(started.location);
     const res = await callback('google', { code, state }, started.flow);

@@ -7,6 +7,23 @@ import {
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
+import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import { ValidationPipe } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import { Test } from '@nestjs/testing';
+import { Redis } from 'ioredis';
+import request from 'supertest';
+
+import { oauthSettings } from './providers';
+import { AuditService } from '../../audit/audit.service';
+import { noEvents } from '../../events/event.port';
+import { AccountsService } from '../accounts.service';
+import { AuthModule } from '../auth.module';
+import type { Role } from '../capabilities';
+import { MAINTENANCE } from '../maintenance';
+import { createPrisma } from '../prisma';
+import { serialDatabase } from '../serial-db.testing';
+
 // A stand-in OpenID issuer for the tests: never the real Google or Apple.
 // `/authorize` approves at once, for `next`, and redirects back with a code;
 // `/token` checks the PKCE verifier and answers an ID token signed with the
@@ -190,4 +207,187 @@ export async function startOpenIdStub(): Promise<OpenIdStub> {
   await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
   stub.issuer = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   return stub;
+}
+
+export const WEB = 'https://web.example.test';
+
+export const ELENA: StubPerson = {
+  email: 'elena@example.test',
+  email_verified: true,
+  name: 'Elena Pop',
+  sub: 'google-elena',
+};
+
+export type Provider = 'google' | 'apple';
+
+export function cookieLine(res: request.Response, name: string): string {
+  const all = (res.headers['set-cookie'] ?? []) as unknown as string[];
+  return all.find((c) => c.startsWith(`${name}=`)) ?? '';
+}
+
+export function cookie(
+  res: request.Response,
+  name: string,
+): string | undefined {
+  const line = cookieLine(res, name);
+  return line ? line.split(';')[0].slice(name.length + 1) : undefined;
+}
+
+// The person approves at the stub provider, which answers with a code.
+export async function approve(location: URL) {
+  const answer = await fetch(location, { redirect: 'manual' });
+  const back = new URL(answer.headers.get('location') ?? '');
+  return {
+    code: back.searchParams.get('code') ?? '',
+    state: back.searchParams.get('state') ?? '',
+  };
+}
+
+// One spec file's API with both providers pointed at a stub issuer, its
+// database and Redis cleared before each test. `maintenance` is read on
+// every call.
+export function oauthHarness(maintenance: () => boolean = () => false) {
+  const databaseUrl =
+    process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
+  const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
+  const prisma = createPrisma(databaseUrl);
+  const redis = new Redis(redisUrl);
+  const accounts = new AccountsService(prisma, new AuditService(), noEvents);
+  serialDatabase(databaseUrl);
+  const appleKey = generateKeyPairSync('ec', { namedCurve: 'P-256' })
+    .privateKey.export({ format: 'pem', type: 'pkcs8' })
+    .toString();
+
+  async function boot(oauth: ReturnType<typeof oauthSettings>) {
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        AuthModule.register({
+          databaseUrl,
+          oauth,
+          redisUrl,
+          tokenSecret: 'test',
+        }),
+      ],
+    })
+      .overrideProvider(MAINTENANCE)
+      .useValue({ on: async () => maintenance() })
+      .compile();
+    const nest = moduleRef.createNestApplication<NestExpressApplication>();
+    nest.set('trust proxy', 'loopback');
+    nest.useGlobalPipes(
+      new ValidationPipe({
+        forbidNonWhitelisted: true,
+        transform: true,
+        whitelist: true,
+      }),
+    );
+    await nest.init();
+    return nest;
+  }
+
+  const h = {
+    accounts,
+    app: undefined as unknown as NestExpressApplication,
+    boot,
+
+    callback(
+      provider: Provider,
+      fields: Record<string, string>,
+      flow: string | undefined,
+    ) {
+      const req =
+        provider === 'apple'
+          ? h
+              .http()
+              .post('/auth/oauth/apple/callback')
+              .type('form')
+              .send(fields)
+          : h.http().get('/auth/oauth/google/callback').query(fields);
+      return flow === undefined ? req : req.set('Cookie', `mf_oauth=${flow}`);
+    },
+
+    async continueWith(
+      provider: Provider,
+      person: StubPerson,
+      extra: Record<string, string> = {},
+      query?: string,
+    ) {
+      h.stub.next = person;
+      const { flow, location } = await h.start(provider, query);
+      const { code, state } = await approve(location);
+      return h.callback(provider, { code, state, ...extra }, flow);
+    },
+
+    // An account holding `email`; a provider links only to one that
+    // confirmed it.
+    async existing(
+      email: string,
+      roles: Role[] = ['driver'],
+      identity: { method: 'password' | 'google' | 'apple'; subject: string } = {
+        method: 'password',
+        subject: email,
+      },
+      emailVerified = true,
+    ) {
+      const { id } = await accounts.createAccount({
+        consent: CURRENT_CONSENT,
+        email,
+        emailVerified,
+        identity: {
+          ...identity,
+          passwordHash: identity.method === 'password' ? 'x' : undefined,
+        },
+        name: 'Andrei Ionescu',
+        roles,
+      });
+      return id;
+    },
+    http: () => request(h.app.getHttpServer()),
+    prisma,
+    redis,
+
+    async start(provider: Provider, query = 'language=ro&remember=true') {
+      const res = await h.http().get(`/auth/oauth/${provider}?${query}`);
+      expect(res.status).toBe(302);
+      return {
+        flow: cookie(res, 'mf_oauth') ?? '',
+        location: new URL(res.headers['location']),
+        res,
+      };
+    },
+    stub: undefined as unknown as OpenIdStub,
+  };
+
+  beforeAll(async () => {
+    h.stub = await startOpenIdStub();
+    h.app = await boot(
+      oauthSettings('test', {
+        APPLE_ISSUER: h.stub.issuer,
+        APPLE_KEY_ID: 'KEY123',
+        APPLE_PRIVATE_KEY: appleKey,
+        APPLE_SERVICES_ID: 'ro.motorfix.web',
+        APPLE_TEAM_ID: 'TEAM123',
+        GOOGLE_CLIENT_ID: 'google-client',
+        GOOGLE_CLIENT_SECRET: 'google-secret',
+        GOOGLE_ISSUER: h.stub.issuer,
+        PUBLIC_WEB_URL: WEB,
+      }),
+    );
+  });
+
+  afterAll(async () => {
+    await h.app.close();
+    await h.stub.close();
+    await prisma.$disconnect();
+    redis.disconnect();
+  });
+
+  beforeEach(async () => {
+    h.stub.fault = null;
+    await prisma.$executeRawUnsafe('TRUNCATE account, garage CASCADE');
+    const keys = await redis.keys('auth:*');
+    if (keys.length) await redis.del(...keys);
+  });
+
+  return h;
 }

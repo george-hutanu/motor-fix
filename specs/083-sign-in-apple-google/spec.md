@@ -68,6 +68,7 @@ A person the provider vouches for, with no MotorFix account, comes back to a sho
 - The state returned by the provider does not match the browser's flow cookie, or the flow is unknown, expired (10 minutes) or already used: `provider_failed`, nothing signed in.
 - The ID token's signature, issuer, audience, expiry or nonce does not verify: `provider_failed`.
 - A subject matched to a suspended account: back to the dialog with the existing `account_suspended` message; to a deleted account: `provider_failed`, nothing linked or created.
+- Two returns for the same person at once (two tabs, a double click): the identity is linked once, one audit entry, and both are signed in.
 - A provider e-mail, not marked verified, that another account already uses: the return is `email_taken` and the dialog tells the person to sign in with e-mail; if it is taken only after the step opened, the step answers 409 `email_taken` with the same text.
 - A provider answer with no e-mail at all: the step still creates the account, without an e-mail.
 - The new-person step's pending sign-up expired (10 minutes) or missing: 400 `provider_failed`, nothing created.

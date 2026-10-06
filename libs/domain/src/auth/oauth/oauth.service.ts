@@ -390,25 +390,33 @@ export class OAuthService {
       : 'email_taken';
   }
 
-  // One transaction: the identity and the audit entry.
+  // One transaction: the identity and the audit entry. A return racing this
+  // one may have linked the same identity first: then there is nothing to do.
   private async link(
     accountId: string,
     role: Role,
     method: OAuthProvider,
     subject: string,
   ) {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.accountIdentity.create({ data: { accountId, method, subject } });
-      await this.audit.record(tx, {
-        action: 'create',
-        actorId: accountId,
-        actorRole: role,
-        field: 'identity',
-        newValue: method,
-        subjectId: accountId,
-        subjectType: 'account',
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.accountIdentity.create({
+          data: { accountId, method, subject },
+        });
+        await this.audit.record(tx, {
+          action: 'create',
+          actorId: accountId,
+          actorRole: role,
+          field: 'identity',
+          newValue: method,
+          subjectId: accountId,
+          subjectType: 'account',
+        });
       });
-    });
+    } catch (error) {
+      if (!taken(error)) throw error;
+      return;
+    }
     this.logger.log(`${method} linked to an account`);
   }
 
@@ -419,7 +427,10 @@ export class OAuthService {
     appleUser: string | undefined,
   ): Promise<Omit<Outcome, 'language'>> {
     if (await this.maintenance.on()) return { result: 'maintenance' };
-    const name = (appleName(appleUser) ?? person.name ?? '').slice(0, NAME_MAX);
+    // Cut by characters, never inside an emoji's surrogate pair.
+    const name = Array.from(appleName(appleUser) ?? person.name ?? '')
+      .slice(0, NAME_MAX)
+      .join('');
     const pending: Pending = {
       ...person,
       email: person.email?.trim().toLowerCase(),
