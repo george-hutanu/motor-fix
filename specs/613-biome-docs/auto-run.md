@@ -13,3 +13,6 @@ Description: ST-613 "Point the constitution and harness docs at biome.jsonc". St
 
 ## Implement
 - constitution 1.8.2 PATCH + card; implement.md, spec-reviewer.md, post-edit-check.sh comment; hook re-blessed. Harness 1880 green after fix, doctor 0 failures.
+
+## Review
+- spec-reviewer (sonnet): APPROVE; 1 MEDIUM (CLAUDE.local.md is tracked, still v1.8.1) fixed.
