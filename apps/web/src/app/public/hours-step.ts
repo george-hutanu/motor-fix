@@ -194,16 +194,16 @@ type Calendar =
     </div>
     <label hlmLabel class="field">
       {{ 'public.listing.hours.closedDay' | t }}
-      <input hlmInput type="date" name="closedDay" [min]="today()" [value]="closedDay()" (input)="closedDay.set(field($event).value)" (change)="closedDay.set(field($event).value)" />
+      <input hlmInput type="date" name="closedDay" [min]="today()" [value]="closedDay()" [attr.aria-describedby]="closedError() ? 'hours-closed-error' : null" (input)="closedDay.set(field($event).value)" (change)="closedDay.set(field($event).value)" />
     </label>
     <label hlmLabel class="field">
       {{ 'public.listing.hours.closedNote' | t }}
-      <input hlmInput name="closedNote" autocomplete="off" [value]="closedNote()" (input)="note(field($event))" />
+      <input hlmInput name="closedNote" autocomplete="off" [value]="closedNote()" [attr.aria-describedby]="closedError() ? 'hours-closed-error' : null" (input)="note(field($event))" />
     </label>
     <div class="row">
       <button type="button" class="add-closed" (click)="addClosed()">{{ 'public.listing.hours.add' | t }}</button>
       @if (closedError(); as error) {
-        <p class="closed-error error" role="status">{{ key(error) | t }}</p>
+        <p id="hours-closed-error" class="closed-error error" role="status">{{ key(error) | t }}</p>
       }
     </div>
     @if (value().closedDays?.length) {

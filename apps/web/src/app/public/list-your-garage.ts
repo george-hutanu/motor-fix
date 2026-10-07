@@ -254,8 +254,9 @@ export class ListYourGarage {
   protected readonly keeper = inject(DraftKeeper);
   protected readonly signIn = inject(SignInDialog);
   protected readonly steps = STEPS;
-  // The draft's steps['2'], kept and restored with the rest of the form.
+  // The draft's steps['5'], kept and restored with the rest of the form.
   protected readonly hours = computed(() => hoursOf(this.keeper.draft().data));
+  // The draft's steps['2'], kept and restored with the rest of the form.
   protected readonly brands = computed(() =>
     brandsOf(this.keeper.draft().data),
   );

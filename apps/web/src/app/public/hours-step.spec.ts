@@ -402,7 +402,15 @@ describe('step 5, the closed days', () => {
 
     await add(fixture, step, day);
 
-    expect(text(step.querySelector('.closed-error'))).toBe(reason);
+    const error = step.querySelector('.closed-error');
+    expect(text(error)).toBe(reason);
+    expect(error?.id).toBeTruthy();
+    for (const name of ['closedDay', 'closedNote'])
+      expect(
+        step
+          .querySelector(`input[name="${name}"]`)
+          ?.getAttribute('aria-describedby'),
+      ).toBe(error?.id);
     expect(fixture.componentInstance.value().closedDays).toBeUndefined();
     expect(closedDays(step)).toEqual([]);
   });

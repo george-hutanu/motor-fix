@@ -4,6 +4,7 @@ import {
   type ClosedDayError,
   closedDayError,
   closedDaysError,
+  DEFAULT_HOURS,
   FACILITIES,
   type Facility,
   type HoursSection,
@@ -58,7 +59,7 @@ const WORKDAYS: readonly Weekday[] = ['mon', 'tue', 'wed', 'thu', 'fri'];
 
 const same = (a: Interval, b: Interval) => a[0] === b[0] && a[1] === b[1];
 
-export type Row = Interval | 'differs';
+type Row = Interval | 'differs';
 
 // What the two simple rows can show: one interval for Monday to Friday and
 // Saturday's, or 'differs' when the days cannot be told in one row.
@@ -98,10 +99,8 @@ export const setDay = (
   intervals: Interval[],
 ): WeeklyHours => ({ ...hours, [day]: intervals });
 
-const OPEN_DAY: Interval = ['08:00', '17:00'];
-
 export const toggleClosed = (hours: WeeklyHours, day: Weekday) =>
-  setDay(hours, day, hours[day].length ? [] : [OPEN_DAY]);
+  setDay(hours, day, hours[day].length ? [] : [DEFAULT_HOURS.mon[0]]);
 
 // The day split around a break that sits strictly inside it.
 export function addBreak(
