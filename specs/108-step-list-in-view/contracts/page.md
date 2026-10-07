@@ -53,3 +53,12 @@ hyphen, as the existing texts do (`"service‑ul"` in `ro.json`).
   ellipsis, a 44 px target; the open list is a disclosure (no focus trap);
   Escape closes it and focuses the bar; an outside tap closes it.
 - No completion tick, no sign-in prompt, no network call of the page's own.
+- The `nav` comes first in the DOM, before the sections, so keyboard and
+  screen-reader users reach the step list first; the desktop grid places it
+  beside the sections (a grid area, not a second copy).
+- The bar text is not an `aria-live` region; the open list scrolls inside
+  itself (max height under the bar) when it does not fit.
+- Fragments naming no section, or the other language's ids, open the page at
+  the top with step 1 current.
+- Current step: a non-colour cue (weight or marker) besides the highlight;
+  highlight and focus ring 3:1, text 4.5:1 in light and dark.

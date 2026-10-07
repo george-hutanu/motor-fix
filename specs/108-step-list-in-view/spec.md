@@ -85,6 +85,11 @@ The owner switches RO / EN from the header; every label of the page and the list
 - The device asks for reduced motion: the jump is immediate, not animated.
 - The server renders the page (public pages are server-rendered): the list is present and step 1 is highlighted before any script runs; the highlight then follows the scroll.
 - A step label too long for the bar at 320 px (English "Photos and place") wraps or is cut with an ellipsis; the bar never scrolls sideways.
+- The page is opened with a fragment that names no section (`#pasul-9`, or the other language's `#step-4` on `/ro`): it opens at the top with step 1 current; only the current language's ids are sections.
+- The open phone list is taller than the space under the bar (a landscape phone): the list scrolls inside itself; the page behind does not move to make room.
+- The owner scrolls the page while the phone list is open: it stays open and the bar's text follows the current step.
+- The bar's text is not a live region: a screen reader is not interrupted as the owner scrolls.
+- Before the page's script has run, an entry does nothing; there is no no-script fallback (Constitution I).
 - Keyboard focus moved to a section heading is visible and does not leave the heading in the tab order permanently (focusable programmatically only).
 
 ## Requirements *(mandatory)*
@@ -96,12 +101,12 @@ The owner switches RO / EN from the header; every label of the page and the list
 - **FR-003**: The page MUST hold six sections on one long page, in order, each with a numbered heading: 1 Service-ul / The garage, 2 Mărci / Brands, 3 Prețuri / Prices, 4 Mecanici / Mechanics marked "opțional" / "optional", 5 Fotografii și adresă / Photos and place, 6 Verificare / Verification marked "obligatoriu" / "required". Each section's body is empty in this story and offers a place for its story's content.
 - **FR-004**: The page MUST show a step list titled "Pași" / "Steps", one `nav` landmark named by that title, listing the six steps with their number, label and optional/required mark. There is one list in the page, laid out beside the sections or under the phone bar by the 768 px breakpoint, never two copies.
 - **FR-005**: Exactly one entry of the list MUST be the current step at any time, carrying `aria-current="step"` and a visible highlight: the last step whose heading has reached the bottom edge of the header (or the phone bar), step 1 before any has, and step 6 once the page is scrolled to its end.
-- **FR-006**: Tapping or activating an entry with the keyboard MUST bring that step's section into view below the header (or the phone bar), move keyboard focus to the section's heading, and make that entry the current one. With the device set to reduced motion the jump MUST be immediate.
+- **FR-006**: Tapping or activating an entry with the keyboard MUST bring that step's section into view below the header (or the phone bar), move keyboard focus to the section's heading, and make that entry the current one, which it stays until the owner next scrolls (the jump's own scrolling never moves the highlight off it). With the device set to reduced motion the jump MUST be immediate.
 - **FR-007**: At 768 px and wider the list MUST stay in view beside the sections while the page scrolls.
-- **FR-008**: Narrower than 768 px the list MUST be a bar pinned under the header showing the current step as "<n> / 6 · <label>"; the bar is a button with `aria-expanded` that opens the six steps under it (a disclosure: no focus trap); tapping a step jumps to it (FR-006) and closes the list; tapping outside or Escape closes it without a jump, Escape returning focus to the bar.
+- **FR-008**: Narrower than 768 px the list MUST be a bar pinned under the header showing the current step as "<n> / 6 · <label>"; the page's header scrolls away, so the bar sticks to the top of the viewport once it is out of sight; the bar is a button with `aria-expanded` that opens the six steps under it (a disclosure: no focus trap); tapping a step jumps to it (FR-006) and closes the list; tapping outside or Escape closes it without a jump, Escape returning focus to the bar.
 - **FR-009**: Switching the language MUST change every text of the page and the list, keep the same step current and keep any input in the sections: the page is not reloaded or rebuilt by the switch.
 - **FR-010**: The list MUST show no completion tick in this story: what makes a step complete, and its tick, belong to the validation story.
-- **FR-011**: The page MUST obey the phone layout rules: no sideways scroll at 320 px, 44 px targets for the bar and the entries, no text under 12 px, light and dark theme following the device.
+- **FR-011**: The page MUST obey the phone layout rules: no sideways scroll at 320 px, 44 px targets for the bar and the entries, no text under 12 px, light and dark theme following the device. In both themes the current step differs from the others by more than colour (weight or a marker) and its highlight and the keyboard focus ring reach a 3:1 contrast against their background, text 4.5:1 (Cockpit tokens).
 - **FR-012**: The page MUST read nothing, write nothing, emit no event and notify nobody.
 
 ### Key Entities
