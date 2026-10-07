@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-07
 
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 
 **Input**: User description: "ST-43 "List garages that take my brand before those that refuse" (EP-2). Feature dir specs/043-brand-first-garage-list on the existing branch 043-brand-first-garage-list."
 

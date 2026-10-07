@@ -103,3 +103,23 @@ Hook outcomes:
 - test-adversary: 36 tests in `libs/domain/src/search/garage-search.adversary.integration.spec.ts`, all passing, no defect.
 - code-reviewer: BLOCK. HIGH fixed: the cursor carried the garage name, unbounded, so long names overflowed the 200-character cursor cap; red test first (API spec, 21 garages with 114-character names, second page 400), then the cursor carries `{b,g,i}` and the service reads the name back by id with the public scope (`invalid_cursor` if the garage left the list). Spec FR-006, Clarifications Q4, data-model and research R6 updated. MEDIUM fixed: the paging loop in the service spec is capped at 10 pages. LOW deferred: `garage(name)` index → deferred.md (with ST-328).
 - Search specs + scope spec: 60/60 passed.
+- Notion debt: the `garage(name)` index filed as a To do tech-debt task; its URL is on the deferred.md bullet.
+
+## Phase 13 — Notion refresh
+
+- `/speckit-context --since`: only ST-43's Status moved (Planning to Implementing); no new decision, constraint or contradiction; no comments on ST-43 or MF-9. Refresh appended to context.md.
+
+## Phase 14 — Review
+
+- code-reviewer re-run (a58d74e): BLOCK. HIGH: the `invalid_cursor` path for a cursor naming no garage had no test. Fixed: a service-spec case (a random uuid) added. MEDIUM: the adversary test accepting 400 or 404 now asserts 404 `not_found` only. LOW: the key-guessing cursor cases were dropped as duplicates; the cast went with a dropped test. LOW decision: `PAGE = 20` stays a contract constant, with no env knob.
+- spec-reviewer (a58d74e): APPROVE, 72/72. MEDIUM: seven adversary cases duplicated the service and API specs; dropped (Principle I). MEDIUM: same 400-or-404 test; fixed. LOW: T012 still said `{b,g,n,i}`; fixed. LOW: the `\u0000` dead construct; removed.
+- MEDIUM decision, taken on the owner's behalf: a garage suspended between two pages turned "load more" into 400 `invalid_cursor`, which spec.md's edge case (missing or repeated is acceptable, a refusal is not) does not allow. Chosen (b): `after()` reads the boundary name by id without the public scope (it returns only the name, never lists the garage), and is exempt in `public-garages.scope.spec.ts`. Red-first: "goes on to the next page when the last garage listed was suspended meanwhile" failed, then passed. FR-006 and data-model updated. Commits 3613549c (fix) and 19e7f296 (test). Search, scope and public-route specs: 58/58.
+- Both reviewers re-run once on 19e7f296.
+
+## Phase 15 — Agent context
+
+- Skipped: the update would only rewrite the untracked CLAUDE.local.md, which this run never commits.
+
+## Phase 16 — Retro evidence
+
+- `retro-evidence.mjs --since 2a8f9b75 --jev` collected (Jev unavailable); `/speckit-retro` not run (speckit-auto bars it). Unjudged evidence in the Final Report.

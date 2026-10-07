@@ -76,3 +76,25 @@
 - Architecture decisions — https://app.notion.com/p/3ee607bff0d28111907edddc4bdd066a
 - Decisions and ideas — https://app.notion.com/p/3ee607bff0d281df9485ce97dfa3332d
 - Design mock (recorded, not opened) — https://claude.ai/artifact/EoPWH9MHmuY5Jfw7vTWTHr
+
+## Refresh 2026-10-07
+
+Baseline 2026-10-07 (same-day; the digest's story edit time was 10:03Z).
+
+### New decisions
+
+none found.
+
+### New constraints
+
+none found.
+
+### New contradictions with spec.md
+
+none found. The story's Build brief, Rules, Data, Tests and Live updates read as the digest recorded them; the four recorded contradictions stand.
+
+### Story changes
+
+- ST-43 page edited 2026-10-07T10:24Z (digest: 10:03Z). Status moved Planning to Implementing; PR #198 still linked; priority High, 3 points, Ready to work unticked. No scope text changed.
+- Comments: none on ST-43 or on MF-9 (resolved included); no comment created after the baseline.
+- MF-9 (last edited 2026-10-03T18:45Z) and Architecture decisions (2026-10-04T05:56Z) unchanged since the digest.
