@@ -7,6 +7,7 @@ export const EVENT_KINDS = [
   'account.access_reset',
   'account.created',
   'account.deleted',
+  'account.password_reset',
   'account.restored',
   'account.signed_out_everywhere',
   'account.suspended',

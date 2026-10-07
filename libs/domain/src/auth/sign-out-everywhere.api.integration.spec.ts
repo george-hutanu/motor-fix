@@ -11,6 +11,7 @@ import type { Role } from './capabilities';
 import * as password from './password';
 import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';
+import { SignInService } from './sign-in.service';
 import { AuditService } from '../audit/audit.service';
 import { EVENT_PORT, type EventPort, noEvents } from '../events/event.port';
 
@@ -259,9 +260,13 @@ describe('signing out on all devices', () => {
       if (message.includes(id)) heard.push(JSON.parse(message));
     });
     await listener.subscribe('live:events');
+    const revoke = jest.spyOn(app.get(SignInService), 'revokeSessionsLive');
     try {
       await everywhere(phone);
       await new Promise((resolve) => setTimeout(resolve, 200));
+
+      expect(revoke).toHaveBeenCalledTimes(1);
+      expect(revoke).toHaveBeenCalledWith(id, expect.any(Date));
 
       expect(heard).toEqual([
         {
@@ -279,6 +284,7 @@ describe('signing out on all devices', () => {
       expect(Number.isNaN(Date.parse(event.at))).toBe(false);
     } finally {
       listener.disconnect();
+      revoke.mockRestore();
     }
   });
 

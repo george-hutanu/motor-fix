@@ -13,7 +13,7 @@ description: "Task list for ST-569 auth events through the event port"
 
 ## Phase 1: Foundational (blocks both stories)
 
-- [ ] T001 Add `'account.password_reset'` to `EVENT_KINDS` in `libs/contracts/src/events.ts` (FR-001; `EventKind` is a closed union, so `events.record` does not compile without it)
+- [X] T001 Add `'account.password_reset'` to `EVENT_KINDS` in `libs/contracts/src/events.ts` (FR-001; `EventKind` is a closed union, so `events.record` does not compile without it)
 
 ---
 
@@ -25,12 +25,12 @@ description: "Task list for ST-569 auth events through the event port"
 
 ### Tests first (red)
 
-- [ ] T002 [P] [US1] Add `account.password_reset` to the `it.each` kinds list in `libs/contracts/src/events.spec.ts` (lines 23-33)
-- [ ] T003 [US1] In `libs/domain/src/auth/password-reset.api.integration.spec.ts`, override `EVENT_PORT` (as `sign-out-everywhere.api.integration.spec.ts` does, `let events: EventPort = noEvents` reset in `beforeEach`) and add: one recorded `{ audience: { accountId, type: 'account' }, kind: 'account.password_reset', payload: { accountId }, subjectId: accountId }` after a 200; none for a used, expired or unknown link, a weak password and maintenance for a non-admin; two concurrent `complete` calls record one; a throwing port gives 500, `usedAt` null, old password still signs in, refresh tokens kept, no new audit entry, no `session.revoked` published
+- [X] T002 [P] [US1] Add `account.password_reset` to the `it.each` kinds list in `libs/contracts/src/events.spec.ts` (lines 23-33)
+- [X] T003 [US1] In `libs/domain/src/auth/password-reset.api.integration.spec.ts`, override `EVENT_PORT` (as `sign-out-everywhere.api.integration.spec.ts` does, `let events: EventPort = noEvents` reset in `beforeEach`) and add: one recorded `{ audience: { accountId, type: 'account' }, kind: 'account.password_reset', payload: { accountId }, subjectId: accountId }` after a 200; none for a used, expired or unknown link, a weak password and maintenance for a non-admin; two concurrent `complete` calls record one; a throwing port gives 500, `usedAt` null, old password still signs in, refresh tokens kept, no new audit entry, no `session.revoked` published
 
 ### Implementation
 
-- [ ] T004 [US1] In `libs/domain/src/auth/password-reset.service.ts` inject `@Inject(EVENT_PORT) private readonly events: EventPort` and call `this.events.record(tx, { audience: { accountId: account.id, type: 'account' }, kind: 'account.password_reset', payload: { accountId: account.id }, subjectId: account.id })` after `audit.record(tx, …)` inside the `prisma.$transaction` of `complete()` (T001 and T003 green)
+- [X] T004 [US1] In `libs/domain/src/auth/password-reset.service.ts` inject `@Inject(EVENT_PORT) private readonly events: EventPort` and call `this.events.record(tx, { audience: { accountId: account.id, type: 'account' }, kind: 'account.password_reset', payload: { accountId: account.id }, subjectId: account.id })` after `audit.record(tx, …)` inside the `prisma.$transaction` of `complete()` (T001 and T003 green)
 
 **Checkpoint**: US1 green on its own.
 
@@ -44,12 +44,12 @@ description: "Task list for ST-569 auth events through the event port"
 
 ### Tests first (red)
 
-- [ ] T005 [US2] In `libs/domain/src/auth/sign-out-everywhere.api.integration.spec.ts` add one assertion that `SignInService.revokeSessionsLive` is called once with the account's id and `at` after a sign-out on all devices (spy on `app.get(SignInService)`); change nothing already asserted
+- [X] T005 [US2] In `libs/domain/src/auth/sign-out-everywhere.api.integration.spec.ts` add one assertion that `SignInService.revokeSessionsLive` is called once with the account's id and `at` after a sign-out on all devices (spy on `app.get(SignInService)`); change nothing already asserted
 
 ### Implementation
 
-- [ ] T006 [US2] In `libs/domain/src/auth/sign-in.service.ts` add `revokeSessionsLive(accountId: string, at: Date): void` holding the current `publishLive(this.sessionEvents, …)` block with its catch and `session.revoked not sent` warning (not awaited); make `signOutEverywhere` call it. Keep `SESSION_EVENTS` exported
-- [ ] T007 [US2] In `libs/domain/src/auth/password-reset.service.ts` make `announce()` call `this.signIns.revokeSessionsLive(accountId, at)` and drop its own `publishLive` block, the `SESSION_EVENTS` injection and the `publishLive`, `audienceOf`, `randomUUID` imports (the reset's existing `session.revoked` tests stay green)
+- [X] T006 [US2] In `libs/domain/src/auth/sign-in.service.ts` add `revokeSessionsLive(accountId: string, at: Date): void` holding the current `publishLive(this.sessionEvents, …)` block with its catch and `session.revoked not sent` warning (not awaited); make `signOutEverywhere` call it. Keep `SESSION_EVENTS` exported
+- [X] T007 [US2] In `libs/domain/src/auth/password-reset.service.ts` make `announce()` call `this.signIns.revokeSessionsLive(accountId, at)` and drop its own `publishLive` block, the `SESSION_EVENTS` injection and the `publishLive`, `audienceOf`, `randomUUID` imports (the reset's existing `session.revoked` tests stay green)
 
 **Checkpoint**: both flows publish through one method.
 
@@ -57,9 +57,9 @@ description: "Task list for ST-569 auth events through the event port"
 
 ## Phase 4: Close the deferred item
 
-- [ ] T008 [US1] Tick the second bullet (line 6, the missing `EVENT_PORT` event) of `specs/127-password-reset/deferred.md`, appending "done in ST-569"
+- [X] T008 [US1] Tick the second bullet (line 6, the missing `EVENT_PORT` event) of `specs/127-password-reset/deferred.md`, appending "done in ST-569"
 
-- [ ] T009 Verify FR-004: the existing password-reset, sign-out-everywhere and e-mail assertions pass unchanged, and `git diff --exit-code origin/main -- apps/api/openapi.json apps/web` is empty
+- [X] T009 Verify FR-004: the existing password-reset, sign-out-everywhere and e-mail assertions pass unchanged, and `git diff --exit-code origin/main -- apps/api/openapi.json apps/web` is empty
 
 ---
 

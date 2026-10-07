@@ -52,3 +52,9 @@ model sonnet. STATUS: success — tasks.md written, 8 tasks (T001 contracts kind
 
 ## Phase 8 — Analyze
 artifact-lint: 9 errors before remediation (Spec Delta Modifies malformed; FR-004 untasked), fixed: accounts Adds FR-001/002/004, Modifies `128-FR-004` → `FR-003` (FR-001 needs no live-updates modification); T009 verifies FR-004. Re-run: 0 errors, 0 warnings. Analyze: 0 CRITICAL, 0 HIGH; 1 LOW applied (FR-003 names `account:{accountId}` as 128-FR-004 did). Coverage 4/4 FRs.
+
+## Phase 9 — Tests
+Red, proven twice: (1) before any code, both domain suites failed to compile on the missing `SignInService.revokeSessionsLive` and contracts' kind test failed (1 failed); (2) with the kind and the shared method in but no event recorded, password-reset suite 3 failed / 56 passed (the recorded event, the rollback when the port throws, one event of two concurrent saves). Env: the shared node_modules predates `fake-indexeddb`/`web-push`, so the worktree got its own `npm ci`.
+
+## Phase 10 — Implement
+T001-T009 done. Contracts kind `account.password_reset`; `SignInService.revokeSessionsLive` used by both flows; the reset records its event in its transaction and drops `SESSION_EVENTS`. Auth suites: 6 suites, 241 tests green. openapi.json and apps/web unchanged (FR-004).
