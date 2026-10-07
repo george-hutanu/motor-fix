@@ -104,7 +104,7 @@ describe('the night job', () => {
       pattern: '0 1 * * *',
       tz: 'Europe/Bucharest',
     });
-    expect(schedulers[0].template?.opts?.attempts ?? 1).toBe(1);
+    expect(schedulers[0].template?.opts?.attempts).toBe(1);
   });
 
   it('writes the day when the job runs', async () => {
@@ -132,7 +132,13 @@ describe('the night job', () => {
     });
     await events.waitUntilReady();
 
-    const job = await queue.add('platform-daily', {}, { attempts: 1 });
+    // Queued with the schedule's own options, as the night would queue it.
+    const scheduled = await queue.getJobScheduler('platform-daily');
+    const job = await queue.add(
+      'platform-daily',
+      {},
+      scheduled?.template?.opts,
+    );
     await expect(job.waitUntilFinished(events, 10_000)).rejects.toThrow();
     await events.close();
     await app.close();

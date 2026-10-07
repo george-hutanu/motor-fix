@@ -1,5 +1,8 @@
 import { countPlatformFigures, monthStartSnapshot } from './platform-figures';
+import { AuditService } from '../audit/audit.service';
 import { serialDatabase } from '../auth/serial-db.testing';
+import { outbox } from '../events/event.port';
+import { VerificationService } from '../garages/verification.service';
 import { databaseUrl, fixtures } from '../notifications/notifications.testing';
 
 const { account, prisma, reset } = fixtures();
@@ -83,6 +86,39 @@ describe('the platform figures', () => {
     await expect(countPlatformFigures(prisma, now)).resolves.toMatchObject({
       garagesApprovedThisMonth: 1,
       garagesListed: 2,
+    });
+  });
+
+  it('knows a garage the verification flow approved, reopened and approved again by its first approval', async () => {
+    const verification = new VerificationService(new AuditService(), outbox, {
+      skipManualApproval: false,
+    });
+    const system = { accountId: null, role: 'system' } as const;
+    const { id } = await garage('draft');
+    const decided = await prisma.$transaction(async (tx) => {
+      const file = await verification.submit(tx, system, id);
+      await verification.open(tx, system, file.id);
+      return verification.decide(tx, system, file.id, { outcome: 'approved' });
+    });
+    await prisma.$transaction(async (tx) => {
+      await verification.reopen(tx, system, decided.id);
+      await verification.decide(tx, system, decided.id, {
+        outcome: 'approved',
+      });
+    });
+    const first = decided.decidedAt as Date;
+
+    await expect(countPlatformFigures(prisma, first)).resolves.toMatchObject({
+      garagesApprovedThisMonth: 1,
+      garagesListed: 1,
+    });
+
+    // The approval again lands in a later month than the first one.
+    const later = new Date(first.getTime() + 40 * DAY);
+    await prisma.garage.update({ data: { approvedAt: later }, where: { id } });
+    await expect(countPlatformFigures(prisma, later)).resolves.toMatchObject({
+      garagesApprovedThisMonth: 0,
+      garagesListed: 1,
     });
   });
 

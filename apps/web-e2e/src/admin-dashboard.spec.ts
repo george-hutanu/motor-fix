@@ -162,6 +162,50 @@ test.describe('the admin dashboard @seeded', () => {
     });
   }
 
+  test('shows the seeded admin the platform figures in English', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 844, width: 390 });
+    await signInAsAdmin(page);
+    // The seeded admin reads Romanian; only the language is changed, the
+    // figures still come from the seeded API.
+    await page.route('**/api/v1/me', async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({
+        json: { ...(await response.json()), language: 'en' },
+        response,
+      });
+    });
+    await page.goto('/app/admin');
+
+    await expect(tiles(page)).toHaveCount(6);
+    await expect(
+      panel(page).getByRole('group', {
+        exact: true,
+        name: 'Garages listed, 0, +0 this month',
+      }),
+    ).toBeVisible();
+    await expect(
+      panel(page).getByRole('group', {
+        name: /^Active drivers, \d{1,3}(,\d{3})*(, [+\u2212]\d{1,3}(,\d{3})* this month)?$/,
+      }),
+    ).toBeVisible();
+    for (const label of [
+      'Quote requests today',
+      'Answer rate',
+      'Bookings',
+      'Reported reviews',
+    ]) {
+      await expect(
+        panel(page).getByRole('group', {
+          exact: true,
+          name: `${label}, coming soon`,
+        }),
+      ).toBeVisible();
+    }
+    expect(await sideways(page)).toBeLessThanOrEqual(0);
+  });
+
   test('keeps the header line on screen without sideways scroll at 320 px', async ({
     page,
   }) => {
