@@ -6,7 +6,13 @@
 # managed by this extension (e.g. CLAUDE.md, AGENTS.md,
 # .github/copilot-instructions.md). Set automatically from the active
 # integration and regenerated during `specify init` or integration switches.
-context_file: "CLAUDE.local.md"
+# motor-fix: a git-ignored file, never a tracked one. The managed block named
+# the active plan, and with several feature branches open every /speckit-plan
+# rewrite of a tracked file made the other PRs conflict (ST-803). The session
+# start prints the pointer from .specify/feature.json instead
+# (.claude/hooks/session-context.mjs). Do not leave this empty: the extension
+# then self-seeds CLAUDE.md.
+context_file: ".specify/agent-context.local.md"
 
 # Optional list of project-relative coding agent context files managed by this
 # extension. When non-empty, this list takes precedence over `context_file`.

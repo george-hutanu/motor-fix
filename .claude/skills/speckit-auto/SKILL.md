@@ -140,7 +140,7 @@ Two groups need no output from each other, so run them at once:
 | 12 | Harden | `speckit-harden` | Fix every ERROR; never suppress one | `phases-build.md` |
 | 13 | Ticket refresh | `speckit-context --since` | An empty refresh is a pass | `phases-close.md` |
 | 14 | Review | `spec-reviewer` subagent | CRITICAL/HIGH block completion | `phases-close.md` |
-| 15 | Agent context | `speckit-agent-context-update` | The file may shrink, never grow | `phases-close.md` |
+| 15 | Agent context | `context-audit.mjs` (the plan pointer is derived, not written) | The file may shrink, never grow | `phases-close.md` |
 | 16 | Retrospective evidence | *(scripts, read-only)* | Gather it; the verdict stays the user's | `phases-close.md` |
 | 17 | Archive | `speckit-archive` | Phase 4 steps 1–3 on the branch, before the hand-off; the tail closes it after the merge | `phases-close.md` |
 

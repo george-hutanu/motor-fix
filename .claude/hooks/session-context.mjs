@@ -14,7 +14,7 @@
 // SPECKIT_CONTEXT_MAX_CHARS (default 3000).
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { activeFeature } from "../scripts/lib/feature.mjs";
 import { readHarnessSettings } from "../scripts/lib/harness-settings.mjs";
 import { loadInstincts, selectByRelevance, selectForInjection } from "../scripts/instincts.mjs";
@@ -53,9 +53,15 @@ export function readState(repoRoot = repo) {
       .filter((f) => f.endsWith(".js"))
       .some((f) => readFileSync(join(testsDir, f), "utf8").includes(token));
 
+  // The plan pointer is derived per checkout rather than committed: a line in
+  // the tracked CLAUDE.local.md that /speckit-plan rewrote made every open
+  // feature branch conflict with each merge to main (ST-803).
+  const planFile = join(feature.dir, "plan.md");
+
   return {
     branch: git("rev-parse", "--abbrev-ref", "HEAD") || "?",
     feature: feature.name,
+    plan: existsSync(planFile) ? relative(repoRoot, planFile).replaceAll("\\", "/") : "",
     hasTasks: tasks.length > 0,
     openTasks: (tasks.match(/^\s*- \[ \]/gm) ?? []).length,
     doneTasks: (tasks.match(/^\s*- \[[Xx]\]/gm) ?? []).length,
@@ -120,9 +126,14 @@ if (isEntryPoint(import.meta.url)) {
   const mode = pickMode(state);
   const contextFile = join(repo, ".specify", "contexts", `${mode}.md`);
 
-  const head = state.feature
-    ? `spec-kit session — branch ${state.branch}, feature ${state.feature} (${state.openTasks} open / ${state.doneTasks} done tasks), mode: ${mode}`
-    : `spec-kit session — branch ${state.branch}, no active feature, mode: ${mode}`;
+  const head = [
+    state.feature
+      ? `spec-kit session — branch ${state.branch}, feature ${state.feature} (${state.openTasks} open / ${state.doneTasks} done tasks), mode: ${mode}`
+      : `spec-kit session — branch ${state.branch}, no active feature, mode: ${mode}`,
+    state.plan ? `Active plan (stack, structure, commands): ${state.plan}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   // Relevance beats confidence when only three fit: `selectByRelevance`
   // re-orders the same shortlist for the feature and phase actually starting,
