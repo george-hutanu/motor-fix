@@ -187,25 +187,25 @@ could not answer says so; exit 2 means the folder has no `report.json`.
 ## 4. Review the diff
 
 `<out>/packet.md` is where the review starts, and it replaces your own
-reading of the report, the spec and the diff: do not open `report.json`,
+reading of the report and the spec: do not open `report.json`,
 `report.md`, `run.log` or the folder, and take readiness and the findings
 from the packet. Open `report.json` only when a packet section says it is
 unavailable. The requirements to check are the packet's "Requirements
 touched", with their text; open `spec.md` only for one it says it could not
-read. The packet also wrote `<out>/review.diff`: the code, its tests and
-`tasks.md`, without the feature's other records and the capability files it
-already sums up. In one turn, read it and the constitution with Read, as
-parallel calls: `<out>/review.diff` (a diff over 2000 lines in further parts
-of that same turn) and `.specify/memory/constitution.md`. Only when the
-packet's "Review diff" says it is unavailable, run instead:
+read. Read the diff per changed file (or a group of related ones), with the
+paths drawn from the packet's "Changed files", never as one whole-PR diff
+file: leave out `specs/` and `.specify/capabilities/`, which the packet
+already sums up. Fetch once, then in one turn run the batched `git diff`
+calls as parallel Bash calls, alongside the constitution Read
+(`.specify/memory/constitution.md`) and `tasks.md`:
 
 ```bash
 git fetch -q origin <base> <headRefName>
-git diff origin/<base>...<headRefOid> -- . ':!specs' ':!.specify/capabilities' > <out>/review.diff
-cat specs/<headRefName>/tasks.md >> <out>/review.diff   # after specs-repo.mjs ensure
+git diff origin/<base>...<headRefOid> -- <paths>   # one call per changed file or group, all in the same turn
+cat specs/<headRefName>/tasks.md                   # after specs-repo.mjs ensure
 ```
 
-Review that diff against the requirements (every FR implemented and tested,
+Review those diffs against the requirements (every FR implemented and tested,
 nothing beyond scope), its `tasks.md` (every `[X]` true) and
 `.specify/memory/constitution.md` (Principle I no bloat first, II tests first
 and colocated, III–VII), in full on every lap. Do not diff a file again or

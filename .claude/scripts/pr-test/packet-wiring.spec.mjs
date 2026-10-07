@@ -40,10 +40,13 @@ describe('the tester starts from the packet', () => {
     assert.doesNotMatch(review, /screenshots of every viewport/);
   });
 
-  it('reads the review diff the packet wrote instead of its own diff, report and spec', () => {
+  it('reads the diff per changed file with a targeted git diff, never one whole-PR diff file', () => {
     const review = section(agent, /Review/);
-    assert.match(review, /<out>\/review\.diff/);
-    assert.match(review, /replaces your own\s+reading of the report, the spec and the diff/);
+    assert.doesNotMatch(review, /review\.diff/);
+    assert.match(review, /git diff origin\/<base>\.\.\.<headRefOid> -- <paths>/);
+    assert.match(review, /per changed file/);
+    assert.match(review, /"Changed files"/);
+    assert.match(review, /replaces your own\s+reading of the report and the spec/);
   });
 
   it('gives the findings file its shape, so the tester never reads post.mjs for it', () => {
