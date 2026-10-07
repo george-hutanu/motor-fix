@@ -8,8 +8,9 @@
 //
 //   1. $SPECIFY_FEATURE_DIRECTORY  — explicit override, wins over everything
 //   2. .specify/feature.json       — written by /speckit-specify; the norm
-//   3. branch name                 — only when it looks like NNN-slug and
-//                                    specs/<branch>/ exists (ticketless work)
+//   3. branch name                 — only when it looks like N-slug and
+//                                    specs/<branch>/, or the same number
+//                                    zero-padded, exists (branchFeatureDir)
 //
 // The feature NUMBER always comes from the directory basename's NNN- prefix,
 // never from the branch, because that is what the `NNN-FR-XXX` test tokens are
@@ -17,7 +18,7 @@
 //
 // Usage as a module:  import { activeFeature } from "./lib/feature.mjs"
 // Usage from shell:   node .claude/scripts/lib/feature.mjs   # prints "dir\tnum\tlevel"
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { join, basename, isAbsolute } from "node:path";
 
@@ -235,11 +236,36 @@ export function activeFeature(repo) {
     })
       .toString()
       .trim();
-    if (/^\d{3}-/.test(branch)) return fromDir(join(repo, "specs", branch));
+    const dir = branchFeatureDir(repo, branch);
+    return dir ? fromDir(dir) : null;
   } catch {
     // Not a git repo / detached weirdness — no feature, no gate.
+    return null;
   }
-  return null;
+}
+
+/**
+ * The specs/ folder a NNN-slug branch names, relative to the repo:
+ * `specs/<branch>` when it exists, else the folder with the same number
+ * (leading zeros ignored) and the same slug, so branch `83-x` finds
+ * `specs/083-x`. null when there is none.
+ */
+export function branchFeatureDir(repo, branch) {
+  const exact = join("specs", branch);
+  if (existsSync(join(repo, exact))) return exact;
+  const [, number, slug] = /^(\d+)-(.+)$/.exec(branch) ?? [];
+  if (number === undefined) return null;
+  let names;
+  try {
+    names = readdirSync(join(repo, "specs"));
+  } catch {
+    return null;
+  }
+  const padded = names.find((name) => {
+    const [, n, s] = /^(\d+)-(.+)$/.exec(name) ?? [];
+    return n !== undefined && Number(n) === Number(number) && s === slug;
+  });
+  return padded ? join("specs", padded) : null;
 }
 
 /** Feature dirs exempted from the traceability gate (.specify/trace-baseline.json). */

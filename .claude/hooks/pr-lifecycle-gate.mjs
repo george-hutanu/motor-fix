@@ -44,9 +44,10 @@
 // that cannot be reached. A gate that traps a session because GitHub is down
 // helps nobody. Blocks once per turn: `stop_hook_active` means it already did.
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
+import { branchFeatureDir } from "../scripts/lib/feature.mjs";
 import { ghSync } from "../scripts/lib/gh-rest.mjs";
 
 const IN_DEVELOPMENT = "in development";
@@ -220,9 +221,10 @@ function runBlocked(cwd) {
 
 /**
  * The branch's feature folder, relative to cwd: the `.specify/feature.json`
- * pointer when its folder exists, else `specs/<branch>` when it exists, else the `specs/` folder with
- * the branch's number (leading zeros ignored) and slug, so branch `83-x`
- * finds `specs/083-x`. Nothing found: `specs/<branch>`.
+ * pointer when its folder exists, else the folder the branch names
+ * (lib/feature.mjs `branchFeatureDir`, which activeFeature shares, so branch
+ * `83-x` finds `specs/083-x` here and in every other gate). Nothing found:
+ * `specs/<branch>`.
  */
 export function featureDir(cwd, branch) {
   try {
@@ -231,21 +233,7 @@ export function featureDir(cwd, branch) {
   } catch {
     // no pointer: the branch names the feature
   }
-  const exact = join("specs", branch);
-  if (existsSync(join(cwd, exact))) return exact;
-  const [, number, slug] = /^(\d+)-(.+)$/.exec(branch) ?? [];
-  if (number === undefined) return exact;
-  let names = [];
-  try {
-    names = readdirSync(join(cwd, "specs"));
-  } catch {
-    return exact;
-  }
-  const padded = names.find((name) => {
-    const [, n, s] = /^(\d+)-(.+)$/.exec(name) ?? [];
-    return n !== undefined && Number(n) === Number(number) && s === slug;
-  });
-  return padded ? join("specs", padded) : exact;
+  return branchFeatureDir(cwd, branch) ?? join("specs", branch);
 }
 
 /** The story agent left a hand-off note for the tail agent (speckit-auto "Hand-off"). */
