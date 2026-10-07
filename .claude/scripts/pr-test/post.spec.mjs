@@ -155,6 +155,18 @@ describe('adding the agent\'s own findings', () => {
     assert.match(next.markdown, /A required behaviour is not implemented/);
     assert.equal(next.findings.length, 2);
   });
+
+  it('adds a finding the report already holds once, so a retry or a post after --dry-run lists it once', async () => {
+    const { addFindings } = await import('./post.mjs');
+    const report = { pr: 21, sha: 'abc1234', lap: 1, verdict: 'success', summary: '', findings: [{ severity: 'low', kind: 'axe', title: 'x', steps: ['a'] }], booted: ['api'], notes: [], screenshots: [] };
+    const extra = [{ severity: 'high', kind: 'review', title: 'Missing behaviour', steps: ['Read spec.md'], evidence: 'a.mjs:1: x' }];
+    const once = addFindings(report, extra);
+    const again = addFindings(JSON.parse(JSON.stringify(once)), JSON.parse(JSON.stringify(extra)));
+    assert.deepEqual(again, once);
+    assert.match(again.summary, /2 in all/);
+    const other = addFindings(once, [{ ...extra[0], steps: ['Read plan.md'] }]);
+    assert.equal(other.findings.length, 3);
+  });
 });
 
 describe('a lap that left no report', () => {
