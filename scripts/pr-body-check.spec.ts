@@ -12,7 +12,7 @@ const answers: Record<string, string> = {
   'command and result, or N/A and why': '`npx jest <spec>` — all passed',
   'desktop and mobile screenshots of each changed screen, or N/A: no UI change':
     'N/A: no screen changed',
-  'specs/NNN-slug, or N/A and why': '`specs/001-example`',
+  'specs/NNN-slug in motor-fix-specs, or N/A and why': '`specs/001-example`',
   'the main changes, one bullet each': '- Adds the template\n- Adds the check',
   'the story link, e.g. https://app.notion.com/p/… (ST-n)':
     'https://app.notion.com/p/0000000000000000000000000000000a (ST-1)',
