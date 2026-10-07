@@ -5,7 +5,7 @@ speckit-demo harness. Repo-wide rules — identity first — are in AGENTS.md.
 
 ## Spec-kit workflow
 
-Specs live under `specs/<NNN-feature-slug>/`. Spec Kit is at **1.0.5**
+Specs: `specs/<NNN-slug>/`, a motor-fix-specs clone. Spec Kit is at **1.0.5**
 (`.specify/init-options.json`), claude integration, Python helper scripts
 (`.specify/scripts/python/`). Standard order:
 
@@ -158,7 +158,3 @@ draft PR, a push per commit, ready when done, merged on green CI, then Done.
 `apple-design-skill` (a local mirror of Apple's HIG) and `/design-audit` (a
 ranked, read-only UI audit with `scan.mjs` and `contrast.mjs` helpers; fixes
 only the findings you name).
-
-<!-- SPECKIT START -->
-Active plan (stack, structure, commands): specs/108-step-list-in-view/plan.md
-<!-- SPECKIT END -->

@@ -14,7 +14,9 @@
 //
 // In a cloud session (CLAUDE_CODE_REMOTE=true) the proxy refuses commit
 // statuses and GraphQL: the PR QA workflow sets agent-review itself, so this
-// writes no status, and reads and fills the description over REST.
+// writes no status, and reads and fills the description over REST. The
+// review's "Verdict:" headline is then the only place a failing verdict
+// lands, and the merge gate reads it (provenance.mjs).
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 

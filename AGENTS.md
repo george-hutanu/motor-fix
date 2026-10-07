@@ -56,11 +56,12 @@ epic or a plan, whether run through spec-kit or by hand.
      review (`gh pr ready`) and set the task to QA
      (`speckit-notion-sync qa`, which also sets the PR's one stage label
      to `QA`). There is no In review stage: ready is QA. A feature's own
-     records ride in its own PR, never in a later `docs(specs)` one: the
-     archive's status line and Spec Delta merge, a retrospective if one was
-     written, and `specs/<feature>/notion-sync.md` are committed on the
-     branch before it goes ready; the `qa` line is committed and pushed
-     right after, before CI is waited for and QA starts.
+     records go out before it is ready: the Spec Delta merge
+     (`.specify/capabilities/`) is committed on the branch, and the
+     archive's status line, a retrospective if one was written and
+     `specs/<feature>/notion-sync.md` are pushed to the specs repo (see
+     "Specs live in their own repo"); the `qa` line follows right after,
+     before CI is waited for and QA starts.
 
      Then the story's agent starts QA and hands off. It dispatches the PR QA
      run for the head without waiting for it
@@ -220,8 +221,21 @@ Read only what decides the next step; every check still runs:
   result.
 - **No images in the repo.** Screenshots are evidence for a chat, a review
   or a PR comment, never a commit: QA copies only `report.md` and
-  `report.json` into `pr-review/`, and `.gitignore` refuses images there. Real
+  `report.json` into `pr-review/`, and `specs/.gitignore` refuses images there. Real
   app assets, such as the web app's icons, are the only images git holds.
+
+## Specs live in their own repo
+
+motor-fix is public and does not track `specs/` (`.gitignore`: `/specs/`).
+Every checkout, the main one and each worktree, holds its own clone of the
+private `george-hutanu/motor-fix-specs` at `specs/`, on `trunk`; never a
+submodule. `node .claude/scripts/specs-repo.mjs ensure` clones, adopts a
+plain folder or fast-forwards it (npm `prepare` and SessionStart run it
+`--soft`); `commit "<message>" -- <feature>` commits and pushes to `trunk`,
+rebasing and retrying when another session pushed first. `lifecycle.mjs`
+ready and merge use it, and `stop:pr-lifecycle` refuses unpushed specs
+commits. Workflows do not read specs; `SPECS_DEPLOY_KEY` (read-only) is
+there for one that will.
 
 ## Cloud sessions
 
@@ -313,6 +327,8 @@ decisions are the source for anything the constitution does not fix.
   has something to do, or after 110 idle minutes to be re-armed; and one pass
   right away. A worktree session never arms it. The SessionStart reminder
   `session:start:watch-reminder` catches a resumed session whose wait was lost.
+- Fable usage limit hit: `node .claude/scripts/fable.mjs off` remaps `fable`
+  to Opus for sessions started afterwards (`on` restores, `status` tells).
 - Every API route needs a session: `ActorGuard` runs app-wide (`APP_GUARD`
   in `AuthModule`). A route open to visitors carries `@Public()` and joins
   the list in `apps/api/src/public-routes.integration.spec.ts`. The web

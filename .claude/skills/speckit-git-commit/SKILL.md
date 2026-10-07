@@ -96,6 +96,11 @@ auto_commit:
   Notion `start` and `pr <n>`, and prints one JSON line. On a stop, do its
   `fix`; on `left`, run those events through `speckit-notion-sync`, then its
   `then`.
+- `specs/` is not tracked by motor-fix: it is each checkout's clone of the
+  private `motor-fix-specs` repo (branch `trunk`). Spec files are committed and
+  pushed with `node .claude/scripts/specs-repo.mjs commit "<message>" -- <feature>`
+  (it rebases on a newer trunk and retries), never with this script's
+  `git add .`; `specs-repo.mjs ensure` clones or updates it.
 - Every later commit: `git push`. Marking the PR ready is not this skill's
   job; it is the last step of the work (`speckit-auto` hand-off, or
   `speckit-review` when it finds nothing blocking).

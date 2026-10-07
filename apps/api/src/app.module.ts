@@ -13,6 +13,7 @@ import {
   PhoneSignInModule,
   phoneConfig,
   pushConfig,
+  SearchModule,
   StorageModule,
   verificationConfig,
 } from '@motor-fix/domain';
@@ -60,6 +61,7 @@ export class AppModule {
           phone: phoneConfig(env.APP_ENV, process.env),
         }),
         CatalogueModule,
+        SearchModule,
         GaragesModule.register(
           email,
           notifications,

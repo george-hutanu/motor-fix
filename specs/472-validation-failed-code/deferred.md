@@ -1,3 +1,0 @@
-# Deferred findings: 472-validation-failed-code
-
-- [ ] `apps/api/src/validation-problem.integration.spec.ts:16` — **medium** — duplication: a third copy of the apps/api boot block (env, S3TestStore, databaseTurn, readEnv, createTestingModule, configureApp, app.init) beside `public-routes.integration.spec.ts` and `sign-up-confirmation.integration.spec.ts`, whose teardowns also skip `turn.release()` when the boot failed; share one apps/api boot helper with a safe teardown (code-reviewer, 2026-10-07) — Notion: https://app.notion.com/p/Tech-debt-ST-472-duplication-a-third-copy-of-the-apps-api-boot-block-env-S3TestStore-database-3f2607bff0d28158ac9ddb95d2672efa

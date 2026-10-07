@@ -18,7 +18,7 @@
         "strict"
       ],
       "description": "Re-anchor a new session: branch and feature state, the mode context for where the feature stands, earned instincts, and the check commands — inside a character budget",
-      "fingerprint": "efbe2a68fb12"
+      "fingerprint": "2c3230fb133c"
     },
     {
       "id": "session:start:watch-reminder",
@@ -42,7 +42,7 @@
         "strict"
       ],
       "description": "Pin gh to the george-hutanu account for the session (GH_TOKEN via CLAUDE_ENV_FILE, resolved per command, never written out) and report when git author, committer or credential pinning has drifted from george-hutanu <hutanugeorge40@gmail.com>",
-      "fingerprint": "138c04c3b6e6"
+      "fingerprint": "748e89020d6e"
     },
     {
       "id": "pre:bash:guard",
@@ -82,7 +82,7 @@
       "description": "Constitution VII: refuse `gh pr merge` (and the REST merge call) while the PR's head commit has no `agent-review` success from the PR tester",
       "fail_closed": true,
       "timeout_ms": 45000,
-      "fingerprint": "bf0a9957e6c1"
+      "fingerprint": "2bec5ba33edd"
     },
     {
       "id": "pre:tool:agent-model",
@@ -94,7 +94,7 @@
         "strict"
       ],
       "description": "Route a reviewer subagent to sonnet or fable from the size of the diff it is about to read — mechanical at both extremes, jev in the middle band. Advisory: it rewrites the model or does nothing, and can never refuse a call",
-      "fingerprint": "be55fdf8dfa1"
+      "fingerprint": "3ab47ffc2996"
     },
     {
       "id": "pre:edit:config-protection",
@@ -157,7 +157,7 @@
         "strict"
       ],
       "description": "Constitution VII: refuse to end a session on a task branch with unpushed commits, with no PR, with a green ready PR the PR tester has not passed (no `agent-review` on its head, unless it was handed off to a tail agent), or with a ready PR whose checks and agent review passed but that is not merged",
-      "fingerprint": "890d75b3486d"
+      "fingerprint": "cb6ae38bfb55"
     },
     {
       "id": "stop:telemetry",

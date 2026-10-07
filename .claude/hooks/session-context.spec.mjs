@@ -100,6 +100,34 @@ describe('session context — as a hook', () => {
     assert.equal(run({ SPECKIT_CONTEXT_OFF: '1' }).stdout, '');
   });
 
+  // The plan pointer used to be a line /speckit-plan rewrote in the
+  // tracked CLAUDE.local.md, so every merge made the other open branches
+  // conflict on it. It is derived here, per checkout, from feature.json.
+  const feature = (withPlan) => {
+    const dir = join(repo, 'specs/007-pointer');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'spec.md'), '# spec\n');
+    if (withPlan) writeFileSync(join(dir, 'plan.md'), '# plan\n');
+    writeFileSync(join(repo, '.specify/feature.json'), JSON.stringify({ feature_directory: 'specs/007-pointer' }));
+  };
+
+  it('names the active plan from feature.json', () => {
+    feature(true);
+    assert.equal(readState(repo).plan, 'specs/007-pointer/plan.md');
+    assert.match(run().stdout, /^Active plan \(stack, structure, commands\): specs\/007-pointer\/plan\.md$/m);
+  });
+
+  it('names no plan before the feature has one', () => {
+    feature(false);
+    assert.equal(readState(repo).plan, '');
+    assert.doesNotMatch(run().stdout, /Active plan/);
+  });
+
+  it('keeps the plan pointer when the budget trims everything else', () => {
+    feature(true);
+    assert.match(run({ SPECKIT_CONTEXT_MAX_CHARS: '10' }).stdout, /Active plan .*specs\/007-pointer\/plan\.md/);
+  });
+
   it('reads a repo with no feature without failing', () => {
     const state = readState(repo);
     assert.equal(state.feature, null);

@@ -21,6 +21,9 @@
 // the gh command as written. Notion goes through
 // notion-sync.mjs; its exit 3 (no NOTION_TOKEN) stops the step with the
 // connector events left and the `--notion-done` rerun that finishes it.
+// specs/ is its own repository (specs-repo.mjs): the feature records, the qa
+// line and the finish lines are committed and pushed there, never on the
+// motor-fix branch; only .specify/capabilities rides in the PR.
 // Exit 0 done or --help, 1 stopped, 64 usage (an unknown flag included).
 
 import { spawnSync } from "node:child_process";
@@ -39,6 +42,7 @@ const HANDOFF_MARK = "<!-- speckit-handoff -->";
 const NOTION = ".claude/scripts/notion-sync.mjs";
 const SELF = "node .claude/scripts/lifecycle.mjs";
 const LEVEL = ".claude/scripts/level.mjs";
+const SPECS = ".claude/scripts/specs-repo.mjs";
 const TEST_ONLY = ["SPECKIT_PR_STATE", "SPECKIT_CARRY_STATE"];
 
 class Stop extends Error {
@@ -166,6 +170,8 @@ function context(io, flags, did) {
   ctx.feature = activeFeature(io.repo);
   if (!ctx.feature) throw new Stop("no feature", "no active feature: .specify/feature.json or specs/<branch>/spec.md");
   ctx.rel = relative(io.repo, ctx.feature.dir);
+  // The feature folder as the specs repository names it.
+  ctx.specsRel = relative(join(io.repo, "specs"), ctx.feature.dir);
   const titled = /: (ST-\d+) /.exec(flags.title ?? "")?.[1];
   ctx.story = titled ?? `ST-${Number(ctx.feature.num)}`;
   ctx.push = () => {
@@ -188,6 +194,12 @@ function context(io, flags, did) {
       outputs.push(lastJson(r.stdout));
     }
     return outputs;
+  };
+  ctx.commitSpecs = (paths, message) => {
+    if (ctx.specsRel.startsWith("..")) throw new Stop("specs repo", `${ctx.rel} is not under specs/, the motor-fix-specs clone`);
+    const r = ctx.node([SPECS, "commit", message, "--", ...paths], [0, 1]);
+    if (r.code !== 0) throw new Stop(`specs-repo commit ${message}`, (r.stdout || r.stderr).trim().slice(-400));
+    did.push(`specs: ${message}`);
   };
   ctx.commitStaged = (paths, message) => {
     ctx.git("add", "--", ...paths);
@@ -271,8 +283,8 @@ function ready(ctx, flags) {
   const qa = ["qa", "--pr", String(pr.number)];
   if (unfiled.length) ctx.notion([["debt", "--pr", String(pr.number)]], rerun, [qa]);
 
-  const records = [ctx.rel, ...(existsSync(join(ctx.repo, ".specify", "capabilities")) ? [".specify/capabilities"] : [])];
-  if (ctx.commitStaged(records, `chore(specs): ${ctx.story} feature records`)) ctx.push();
+  ctx.commitSpecs([ctx.specsRel], `chore(specs): ${ctx.story} feature records`);
+  if (existsSync(join(ctx.repo, ".specify", "capabilities")) && ctx.commitStaged([".specify/capabilities"], `chore(specs): ${ctx.story} capability records`)) ctx.push();
 
   const check = ctx.node(["scripts/pr-body-check.ts", "--body-file", bodyFile, "--title", pr.title], [0, 1, 2]);
   if (check.code !== 0) throw new Stop("pr-body-check", `${check.stderr}${check.stdout}`.trim().slice(-600));
@@ -283,7 +295,7 @@ function ready(ctx, flags) {
     ctx.did.push("ready");
   }
   ctx.notion([qa], rerun);
-  if (ctx.commitStaged([`${ctx.rel}/notion-sync.md`], `chore(specs): ${ctx.story} qa`)) ctx.push();
+  ctx.commitSpecs([`${ctx.specsRel}/notion-sync.md`], `chore(specs): ${ctx.story} qa`);
 
   const head = ctx.git("rev-parse", "HEAD").stdout.trim();
   const deferred = !existsSync(deferredFile) ? "none" : unfiled.length && flags["notion-done"] ? unfiled.map((e) => e.title).join("; ") : "all filed";
@@ -369,13 +381,13 @@ function merge(ctx, flags) {
   const hasComment = existsSync(commentFile);
   const [finish] = ctx.notion([["finish", "--pr", n, ...(hasComment ? ["--body-file", commentFile] : ["--no-comment"])]], `${SELF} merge --pr ${n} --notion-done`);
 
-  const log = `${ctx.rel}/notion-sync.md`;
-  const lines = ctx.git("diff", "-U0", "--", log).stdout.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++")).map((l) => l.slice(1));
+  const log = `${ctx.specsRel}/notion-sync.md`;
+  const lines = ctx.git("-C", "specs", "diff", "-U0", "--", log).stdout.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++")).map((l) => l.slice(1));
   const body = ["## Finish log", "", `Merged as ${sha}.`, ...(hasComment ? ["", readFileSync(commentFile, "utf8").trim()] : []), "", ...lines, ""].join("\n");
-  // Restore the log first: a rerun after a failed restore must not post twice.
-  // If the comment then fails, its body (with the restored lines) is kept in a
-  // file and `then` posts exactly that, so nothing is lost and nothing repeats.
-  ctx.git("checkout", "--", log);
+  // Commit the log to the specs repository first: a rerun after a failed
+  // comment finds no new lines, so it never posts twice. If the comment fails,
+  // its body is kept in a file and `then` posts exactly that.
+  ctx.commitSpecs([log], `chore(specs): ${ctx.story} finish`);
   try {
     withTemp("finish.md", body, (file) => (cloud ? ctx.gh(...restComment(n, file)) : ctx.gh("pr", "comment", n, "--body-file", file)));
   } catch (err) {

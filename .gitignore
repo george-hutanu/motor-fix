@@ -10,6 +10,8 @@ node_modules/
 # spec-kit machine-local state (catalog caches, per-run bookkeeping, telemetry)
 .specify/**/.cache/
 .specify/run-state.json
+# the agent-context extension's managed block (the active plan): per checkout, never committed
+.specify/agent-context.local.md
 .specify/telemetry/*.json
 .stryker-tmp/
 reports/
@@ -25,12 +27,7 @@ apps/web-e2e/test-output/
 coverage/
 .claude/worktrees/
 
-# QA screenshots stay in the PR tester's --out directory; only the report is evidence in git.
-specs/**/pr-review/**/*.png
-specs/**/pr-review/**/*.jpg
-specs/**/pr-review/**/*.jpeg
-specs/**/pr-review/**/*.webp
-
-# A story agent's note to the tail agent that takes its ready PR; local only.
-specs/**/handoff.md
-specs/**/finish-comment.md
+# Specs live in the private george-hutanu/motor-fix-specs: specs/ is its clone
+# (.claude/scripts/specs-repo.mjs), never tracked here. Its own .gitignore keeps
+# QA screenshots and the local hand-off notes out of it.
+/specs/

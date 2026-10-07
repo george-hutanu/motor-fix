@@ -1,4 +1,0 @@
-# Deferred findings: 766-cloud-rest-fallback
-
-- [ ] `scripts/cloud-setup.sh:125` — **medium** — seen on the real cloud VM: `docker compose pull postgres redis` failed with Docker Hub `429 Too Many Requests` and the script exited 1, although both images were already present. Skip the pull when the images exist, or treat a failed pull as a warning when they do. (speckit-auto, 2026-10-06) — Notion: https://app.notion.com/p/3f1607bff0d2812caab3c741b90c902b
-- [ ] `.claude/hooks/pr-lifecycle-gate.mjs:67` — **low** — the gate's fix hint names `gh pr edit <n> …`, which answers 403 in a cloud session; there it should name `node .claude/scripts/gh.mjs pr edit <n> …`. The gate itself reads through REST already. (speckit-auto, 2026-10-06) — Notion: https://app.notion.com/p/3f1607bff0d281799364df417f6891cf

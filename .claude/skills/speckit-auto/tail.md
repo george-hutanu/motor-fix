@@ -69,8 +69,9 @@ never waits on either: a lap that needs a new run dispatches it and ends.
      lap. A second unusable run for the head is posted with
      `post.mjs --missing` and blocks the run (`verification-failed`).
    - **A failing lap** (blocking findings, or a failing check): fix every
-     one, tests first, commit (the lap's report and any new `notion-sync.md`
-     lines go in the same commit), push, then
+     one, tests first, commit and push the fix, then the lap's report and any new
+     `notion-sync.md` lines through the specs repo
+     (`node .claude/scripts/specs-repo.mjs commit "<message>" -- <feature>`), then
      `node .claude/scripts/run-state.mjs repair`, which counts the lap in
      `.specify/run-state.json` so the cap holds across tails. When it exits 1
      the run is blocked (`repair-loop-exceeded`): `speckit-notion-sync
@@ -81,16 +82,9 @@ never waits on either: a lap that needs a new run dispatches it and ends.
      `NEXT: tail #<n> after QA run <id>`.
 4. After a passing lap, `speckit-notion-sync debt` files every deferred bullet
    not yet filed (reviewers' and the tester's) as a To do task in Notion. Its
-   URLs change `deferred.md`, so commit and push that and run
-   `/speckit-pr-test` on the new head: a docs-only head carries the passing
-   verdict (`pr-test/carry.mjs`) with no new lap. Only the Changes and `CI OK`
-   jobs run on a docs-only head, so this is the one wait a tail holds, in the
-   background (`run_in_background`):
-   `gh pr checks <n> --watch >/dev/null 2>&1; gh pr checks <n> --json name,bucket --jq '.[] | select(.bucket != "pass" and .bucket != "skipping") | "\(.name): \(.bucket)"'`. If the commit touched
-   anything else, a lap runs (it re-raises nothing already deferred);
-   non-blocking findings new in it are filed in Notion directly and named in
-   the PR's Agent review section, and their bullets, with the task URLs, ride
-   on the next PR, so the loop ends.
+   URLs change `deferred.md`, which lives in the specs repo: commit and push
+   it there (`node .claude/scripts/specs-repo.mjs commit "<message>" --
+   <feature>`). The PR head does not change, so no new lap or carry is needed.
 5. On `agent-review` success with every other check green: merge `origin/main`
    in again if it moved (a new head needs a new tester run), write
    `specs/<feature>/finish-comment.md` (`speckit-notion-sync` §2e) when there

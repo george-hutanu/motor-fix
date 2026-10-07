@@ -1,5 +1,0 @@
-# Deferred — 693-notion-agent-tools
-
-- [ ] `.claude/scripts/capabilities.mjs:264` — **medium** — `validate` warns `delta-unassigned` for every FR of an archived feature whose Spec Delta Adds is `none` because the FRs already merged (693 reports 6 false warnings): it should treat an FR already archived as `<feature>-FR-<n>` in the capability as assigned (tail lap 4, 2026-10-06) — Notion: https://app.notion.com/p/Tech-debt-ST-693-validate-warns-delta-unassigned-for-every-FR-of-an-archived-feature-whose-Spec-D-3f1607bff0d281d0a0ded92df0bdcd5b
-- [ ] `.claude/scripts/notion-agent-tools.mjs:211` — **low** — `detect` reads `readdedNames`, but no spec tests it (pr-tester lap 4 #1, 2026-10-06) — Notion: https://app.notion.com/p/Tech-debt-ST-693-detect-reads-readdedNames-but-no-spec-tests-it-3f1607bff0d2815e8905f0a0261cbdf5
-- [ ] `.claude/scripts/notion-agent-tools.mjs:196` — **low** — `doctor` reads up to 20 whole transcripts synchronously on every run (pr-tester lap 4 #2, 2026-10-06) — Notion: https://app.notion.com/p/Tech-debt-ST-693-doctor-reads-up-to-20-whole-transcripts-synchronously-on-every-run-3f1607bff0d28184a966d17510b902ef

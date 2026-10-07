@@ -71,7 +71,7 @@
   {
     "id": "allows-a-runtime-dependency-install",
     "hook": "pre:bash:guard",
-    "why": "this is the rule speckit-demo has and this repo deliberately dropped \u2014 every workspace here ships runtime dependencies, and blocking that would fight normal work",
+    "why": "this is the rule speckit-demo has and this repo deliberately dropped — every workspace here ships runtime dependencies, and blocking that would fight normal work",
     "payload": {
       "tool_input": {
         "command": "npm install fastify -w apps/server"
@@ -179,6 +179,33 @@
     "expect": {
       "exit": 0,
       "stderr": "DRY RUN"
+    }
+  },
+  {
+    "id": "allows-specs-trunk-push",
+    "hook": "pre:bash:guard",
+    "why": "815-FR-007: specs/ is the private motor-fix-specs clone, whose records branch is trunk; pushing it is how a feature's records are saved",
+    "payload": {
+      "tool_input": {
+        "command": "git -C specs push -q origin HEAD:trunk"
+      }
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "blocks-main-push-beside-specs",
+    "hook": "pre:bash:guard",
+    "why": "815-FR-007: the specs repository's trunk is allowed, motor-fix's main still is not",
+    "payload": {
+      "tool_input": {
+        "command": "git -C specs push origin HEAD:trunk && git push origin HEAD:main"
+      }
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "pushing to main"
     }
   }
 ]
