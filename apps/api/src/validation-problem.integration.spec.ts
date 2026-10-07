@@ -11,8 +11,8 @@ import request from 'supertest';
 import { AppModule } from './app.module';
 import { configureApp } from './bootstrap';
 
-// The domain specs run these routes without ProblemFilter, so they can check
-// only the status; here the app is set up as in production.
+// Signed-in 400s through the app as production sets it up, ProblemFilter
+// included, so the answer's code is checked and not only its status.
 const env = {
   APP_ENV: 'test',
   AUTH_TOKEN_SECRET: 'test-secret',
@@ -50,10 +50,14 @@ beforeAll(async () => {
   bearer = `Bearer ${signAccessToken({ accountId: id, role: 'garage' }, env.AUTH_TOKEN_SECRET, Date.now())}`;
 }, 120_000);
 
+// A failed boot must still give the database turn back to the other files.
 afterAll(async () => {
-  await app.close();
-  await store.stop();
-  await turn.release();
+  try {
+    await app?.close();
+    await store.stop();
+  } finally {
+    await turn.release();
+  }
 });
 
 describe('a signed-in request that fails validation', () => {

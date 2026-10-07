@@ -18,3 +18,4 @@
 - 2026-10-07 · implement · ST-548 · Planning → Implementing
 - 2026-10-07 · implement · timeline · no row for ST-548
 - 2026-10-07 · labels · PR #177 · in development
+- 2026-10-07 · debt · ST-472 · deferred.md line 2 → https://app.notion.com/p/Tech-debt-ST-472-duplication-a-third-copy-of-the-apps-api-boot-block-env-S3TestStore-database-3f2607bff0d28158ac9ddb95d2672efa
