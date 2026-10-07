@@ -15,7 +15,7 @@ import { PasswordResetService } from './password-reset.service';
 import { serialDatabase } from './serial-db.testing';
 import { SESSION_EVENTS, SignInService } from './sign-in.service';
 import { AuditService } from '../audit/audit.service';
-import { noEvents } from '../events/event.port';
+import { EVENT_PORT, type EventPort, noEvents } from '../events/event.port';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { NotificationsService } from '../notifications/notifications.service';
 import {
@@ -150,6 +150,9 @@ async function lastLink(accountId: string): Promise<string> {
 }
 
 const tokenOf = (link: string) => link.split('/').at(-1) ?? '';
+
+const eventsOf = (accountId: string) =>
+  prisma.outboxEvent.findMany({ where: { subjectId: accountId } });
 
 async function linkFor(accountId: string, email = 'andrei@example.test') {
   await ask(email).expect(202);
@@ -638,9 +641,68 @@ describe('completing a reset', () => {
     expect(await resetEmails(id, 'password_changed')).toHaveLength(1);
   });
 
+  it('records account.password_reset with the change, holding only the account id', async () => {
+    const id = await person();
+    const token = await linkFor(id);
+    await complete(token).expect(200);
+    const events = await eventsOf(id);
+    expect(events).toEqual([
+      expect.objectContaining({
+        audience: [`account:${id}`],
+        kind: 'account.password_reset',
+        payload: { accountId: id },
+        subjectId: id,
+      }),
+    ]);
+    const text = JSON.stringify(events, (_key, value) =>
+      typeof value === 'bigint' ? String(value) : value,
+    );
+    expect(text).not.toContain(NEW);
+    expect(text).not.toContain(token);
+  });
+
+  it('records no event for a reset it refuses', async () => {
+    const id = await person();
+    const token = await linkFor(id);
+    await complete(token, 'a'.repeat(7)).expect(400);
+    maintenance = true;
+    await complete(token).expect(503);
+    maintenance = false;
+    await complete('C'.repeat(43)).expect(410);
+    later(61 * MINUTE);
+    await complete(token).expect(410);
+    expect(await eventsOf(id)).toEqual([]);
+  });
+
+  it('changes nothing and tells nobody when the event cannot be recorded', async () => {
+    const id = await person();
+    const before = await signIn('andrei@example.test', OLD).expect(200);
+    const token = await linkFor(id);
+    jest
+      .spyOn(app.get<EventPort>(EVENT_PORT), 'record')
+      .mockRejectedValue(new Error('outbox down'));
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    await complete(token).expect(500);
+    jest.restoreAllMocks();
+    await signIn('andrei@example.test', OLD).expect(200);
+    await check(token).expect(204);
+    await refreshWith(before).expect(200);
+    expect(
+      await prisma.activityLog.count({
+        where: { kind: 'password_reset', subjectId: id },
+      }),
+    ).toBe(0);
+    expect(await eventsOf(id)).toEqual([]);
+    expect(await resetEmails(id, 'password_changed')).toEqual([]);
+    expect(published.join()).not.toContain('session.revoked');
+  });
+
   it('tells the account open dashboards to sign out', async () => {
     const id = await person();
+    const revoke = jest.spyOn(app.get(SignInService), 'revokeSessionsLive');
     await complete(await linkFor(id)).expect(200);
+    expect(revoke).toHaveBeenCalledTimes(1);
+    expect(revoke).toHaveBeenCalledWith(id, expect.any(Date));
     const events = () =>
       published.map((m) => JSON.parse(m) as Record<string, unknown>);
     await settled(() => events().length > 0);
@@ -777,6 +839,7 @@ describe('completing a reset', () => {
         where: { kind: 'password_reset', subjectId: id },
       }),
     ).toBe(1);
+    expect(await eventsOf(id)).toHaveLength(1);
   });
 
   it('refuses a form post that is not JSON', async () => {

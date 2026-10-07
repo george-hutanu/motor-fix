@@ -207,16 +207,17 @@ export class SignInService {
         subjectId: account.id,
       });
     });
-    // The live nudge only tells open dashboards; the event above is the record.
-    // Not awaited: a tab that misses it is signed out at its next renewal.
+    this.revokeSessionsLive(account.id, new Date(now));
+  }
+
+  // Tells the account's open dashboards that their sessions ended, once the
+  // change is saved. Only a nudge, the recorded event is the record: not
+  // awaited, and a tab that misses it is signed out at its next renewal.
+  revokeSessionsLive(accountId: string, at: Date): void {
     publishLive(
       this.sessionEvents,
-      {
-        at: new Date(now).toISOString(),
-        id: randomUUID(),
-        kind: 'session.revoked',
-      },
-      audienceOf({ accountId: account.id, type: 'account' }),
+      { at: at.toISOString(), id: randomUUID(), kind: 'session.revoked' },
+      audienceOf({ accountId, type: 'account' }),
     ).catch((error: Error) =>
       this.logger.warn(`session.revoked not sent: ${error.message}`),
     );
