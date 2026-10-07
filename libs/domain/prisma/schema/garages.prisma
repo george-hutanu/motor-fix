@@ -34,6 +34,9 @@ model Garage {
   brandNote               String?                  @map("brand_note")
   refusalPhrase           String?                  @map("refusal_phrase")
   brands                  GarageBrand[]
+  // rar_activity codes the RAR authorisation covers; the activities check
+  // writes them.
+  rarActivities           String[]                 @default([]) @map("rar_activities")
 
   @@map("garage")
 }
@@ -185,6 +188,7 @@ model VerificationFile {
   garage         Garage                 @relation(fields: [garageId], references: [id], onDelete: Cascade)
   previousFile   VerificationFile?      @relation("follows", fields: [previousFileId], references: [id], onDelete: SetNull)
   nextFile       VerificationFile?      @relation("follows")
+  checks         VerificationCheck[]
 
   @@index([garageId, createdAt])
   @@map("verification_file")
@@ -237,4 +241,54 @@ model ListingDraftToken {
 
   @@index([draftId, sentAt])
   @@map("listing_draft_token")
+}
+
+// Declared in the order the summary line and the screens list them.
+enum VerificationCheckKind {
+  company
+  caen
+  rar
+  activities
+  representative
+  address
+  photos
+  documents
+
+  @@map("verification_check_kind")
+}
+
+enum VerificationCheckResult {
+  not_run
+  ok
+  warning
+  failed
+
+  @@map("verification_check_result")
+}
+
+// One per file and kind, created with the file. `automatic` stays false until
+// the registers are looked up by machine. The migration caps `detail` at 200
+// characters.
+model VerificationCheck {
+  id         String                  @id @default(uuid()) @db.Uuid
+  fileId     String                  @map("file_id") @db.Uuid
+  kind       VerificationCheckKind
+  automatic  Boolean                 @default(false)
+  result     VerificationCheckResult @default(not_run)
+  detail     String?
+  recordedBy String?                 @map("recorded_by") @db.Uuid
+  recordedAt DateTime?               @map("recorded_at") @db.Timestamptz(3)
+  file       VerificationFile        @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, kind])
+  @@map("verification_check")
+}
+
+// The activities a RAR authorisation can list; the migration seeds them.
+model RarActivity {
+  code   String @id
+  nameRo String @map("name_ro")
+  nameEn String @map("name_en")
+
+  @@map("rar_activity")
 }

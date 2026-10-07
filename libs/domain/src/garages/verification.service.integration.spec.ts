@@ -746,3 +746,86 @@ describe('counting the files waiting for an admin', () => {
     expect(await service().countWaiting(prisma)).toBe(0);
   });
 });
+
+describe('the checks of a file', () => {
+  const KINDS = [
+    'company',
+    'caen',
+    'rar',
+    'activities',
+    'representative',
+    'address',
+    'photos',
+    'documents',
+  ];
+  const checksOf = (fileId: string) =>
+    prisma.verificationCheck.findMany({
+      orderBy: { kind: 'asc' },
+      where: { fileId },
+    });
+
+  it('are created with the submission, one per kind, none run, none automatic', async () => {
+    const file = await inTx((tx) => service().submit(tx, mihai, garageId));
+
+    const checks = await checksOf(file.id);
+    expect(checks.map((c) => c.kind)).toEqual(KINDS);
+    for (const check of checks) {
+      expect(check).toMatchObject({
+        automatic: false,
+        detail: null,
+        recordedAt: null,
+        recordedBy: null,
+        result: 'not_run',
+      });
+    }
+    expect(
+      await prisma.activityLog.count({
+        where: { garageId, subjectType: 'verification_check' },
+      }),
+    ).toBe(0);
+  });
+
+  it('keep their results, undoubled, when the file is sent again', async () => {
+    const file = await inTx((tx) => service().submit(tx, mihai, garageId));
+    await prisma.verificationCheck.update({
+      data: { detail: 'găsită', recordedBy: ioana.accountId, result: 'ok' },
+      where: { fileId_kind: { fileId: file.id, kind: 'rar' } },
+    });
+    await inTx((tx) => service().open(tx, ioana, file.id));
+    await inTx((tx) =>
+      service().decide(tx, ioana, file.id, {
+        outcome: 'more_requested',
+        reason: REASON,
+      }),
+    );
+
+    await inTx((tx) => service().resend(tx, mihai, file.id));
+
+    const checks = await checksOf(file.id);
+    expect(checks.map((c) => c.kind)).toEqual(KINDS);
+    expect(checks.find((c) => c.kind === 'rar')).toMatchObject({
+      detail: 'găsită',
+      result: 'ok',
+    });
+  });
+
+  it('are created for a file that follows a rejected one, which keeps its own', async () => {
+    const rejected = await fileIn('rejected');
+    const file = await inTx((tx) => service().submit(tx, mihai, garageId));
+
+    expect(await checksOf(file.id)).toHaveLength(8);
+    expect(await checksOf(rejected.id)).toHaveLength(0);
+  });
+
+  it('are not left behind by a submission that fails', async () => {
+    const failing: EventPort = {
+      record: async () => {
+        throw new Error('outbox down');
+      },
+    };
+    await expect(
+      inTx((tx) => service(false, failing).submit(tx, mihai, garageId)),
+    ).rejects.toThrow('outbox down');
+    expect(await prisma.verificationCheck.count()).toBe(0);
+  });
+});

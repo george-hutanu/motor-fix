@@ -41,6 +41,8 @@ features:
   - 784-impossible-level-date
   - 815-specs-private-repo
   - 813-fable-to-opus
+  - 457-diff-audit-tsconfig-imports
+  - 728-active-feature-padded-fallback
 ---
 
 # Capability: Platform
@@ -1048,6 +1050,22 @@ _From 813-fable-to-opus._
 ### 813-FR-004 — The model router MUST return `opus` wherever it would return `fable` when `ANTHROPIC_DEFAULT_FABLE_MODEL` is set or the main checkout's settings hold it, on both the mechanical large band and the Jev path.
 
 _From 813-fable-to-opus._
+
+### 457-FR-001 — The `import-extension` rule MUST take a changed `.ts`/`.tsx` file's resolution from the nearest `tsconfig.json` in its directory or an ancestor up to the repo root, merging `compilerOptions` along its relative `extends` chain (the child's value wins; JSONC comments and trailing commas allowed): `nodenext`/`node16` in `moduleResolution`, or in `module` when `moduleResolution` is unset, requires a literal extension on relative imports (`.js`, `.mjs` or `.cjs`, and also `.ts`, `.mts`, `.cts` or `.tsx` when `allowImportingTsExtensions` or `rewriteRelativeImportExtensions` is true); `bundler` forbids `.js`; anything else, or no tsconfig, is not judged.
+
+_From 457-diff-audit-tsconfig-imports._
+
+### 457-FR-002 — The rule MUST NOT depend on the file's path beyond locating that tsconfig.
+
+_From 457-diff-audit-tsconfig-imports._
+
+### 728-FR-001 — `activeFeature`'s branch step MUST take `specs/<branch>` when it exists, else the one `specs/` folder whose number equals the branch's number (leading zeros ignored) and whose slug equals the branch's slug.
+
+_From 728-active-feature-padded-fallback._
+
+### 728-FR-002 — The PR lifecycle gate's `featureDir` MUST use that same lookup from `.claude/scripts/lib/feature.mjs`, with its own branch, not a copy of it.
+
+_From 728-active-feature-padded-fallback._
 
 ## Retired
 

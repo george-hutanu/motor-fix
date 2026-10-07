@@ -60,7 +60,40 @@ const row = (data: Partial<Prisma.NotificationUncheckedCreateInput> = {}) =>
 
 const jobFor = (id: string) => queue.getJob(`send-${id}`);
 
-beforeAll(() => mock.start());
+// The page the sweep reads at a time, as its first read asks for it: a fixed
+// value in code, which no test or setting can change.
+let REQUEUE_PAGE: number;
+const pageSize = async () => {
+  const read = jest.spyOn(prisma.notification, 'findMany');
+  await service.requeueStranded();
+  const take = read.mock.calls[0][0]?.take;
+  read.mockRestore();
+  return take as number;
+};
+
+// Stale queued rows, their ids in the order the sweep walks them.
+const backlog = async (n: number) => {
+  const rows = await prisma.notification.createManyAndReturn({
+    data: Array.from({ length: n }, () => ({
+      accountId: owner,
+      channel: 'email' as const,
+      createdAt: minutesAgo(10),
+      eventId: randomUUID(),
+      kind: 'QUOTE_RECEIVED',
+      status: 'queued' as const,
+    })),
+    select: { id: true },
+  });
+  return rows.map((r) => r.id).sort();
+};
+
+beforeAll(async () => {
+  await mock.start();
+  await reset();
+  build();
+  REQUEUE_PAGE = await pageSize();
+  expect(REQUEUE_PAGE).toBeGreaterThan(0);
+});
 
 afterAll(async () => {
   await queue.close();
@@ -197,7 +230,7 @@ describe('the sweep of queued rows with no job', () => {
     const warn = jest
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
-    build({ add: () => Promise.reject(new Error('Redis down')) });
+    build({ addBulk: () => Promise.reject(new Error('Redis down')) });
     const stranded = await row();
     await expect(service.requeueStranded()).resolves.toBe(0);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('Redis down'));
@@ -223,6 +256,73 @@ describe('the sweep of queued rows with no job', () => {
       expect.stringContaining('connection lost'),
     );
     expect(await queue.getJobs()).toEqual([]);
+  });
+
+  it('re-queues a backlog larger than one page, one bounded read and one bulk add per page', async () => {
+    const ids = await backlog(REQUEUE_PAGE * 2 + 1);
+    const read = jest.spyOn(prisma.notification, 'findMany');
+    const bulk = jest.spyOn(queue, 'addBulk');
+    await expect(service.requeueStranded()).resolves.toBe(ids.length);
+    expect(await queue.getJobCounts('waiting')).toEqual({
+      waiting: ids.length,
+    });
+    for (const id of [ids[0], ids[REQUEUE_PAGE], ids.at(-1) as string])
+      expect(await jobFor(id)).toBeDefined();
+    expect(read).toHaveBeenCalledTimes(3);
+    for (const [args] of read.mock.calls)
+      expect(args).toMatchObject({
+        orderBy: { id: 'asc' },
+        take: REQUEUE_PAGE,
+      });
+    expect(read.mock.calls[1][0]).toMatchObject({
+      where: { id: { gt: ids[REQUEUE_PAGE - 1] } },
+    });
+    expect(bulk.mock.calls.map(([jobs]) => jobs.length)).toEqual([
+      REQUEUE_PAGE,
+      REQUEUE_PAGE,
+      1,
+    ]);
+    const [first] = bulk.mock.calls[0][0];
+    expect(first).toMatchObject({
+      name: 'send',
+      opts: {
+        attempts: 6,
+        delay: 0,
+        removeOnComplete: true,
+        removeOnFail: 1000,
+      },
+    });
+  });
+
+  it('stops at the empty page after a backlog that fills its pages exactly', async () => {
+    const ids = await backlog(REQUEUE_PAGE);
+    const read = jest.spyOn(prisma.notification, 'findMany');
+    const bulk = jest.spyOn(queue, 'addBulk');
+    await expect(service.requeueStranded()).resolves.toBe(REQUEUE_PAGE);
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(bulk).toHaveBeenCalledTimes(1);
+    expect(await jobFor(ids[REQUEUE_PAGE - 1])).toBeDefined();
+  });
+
+  it('counts and names the pages handed over before an add failed', async () => {
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const ids = await backlog(REQUEUE_PAGE + 1);
+    jest
+      .spyOn(queue, 'addBulk')
+      .mockImplementationOnce((jobs) =>
+        Queue.prototype.addBulk.call(queue, jobs),
+      )
+      .mockRejectedValueOnce(new Error('Redis down'));
+    await expect(service.requeueStranded()).resolves.toBe(REQUEUE_PAGE);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Redis down'));
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining(`re-queued ${REQUEUE_PAGE} `),
+    );
+    expect(await jobFor(ids[REQUEUE_PAGE])).toBeUndefined();
+    await expect(service.requeueStranded()).resolves.toBe(REQUEUE_PAGE + 1);
+    expect(await jobFor(ids[REQUEUE_PAGE])).toBeDefined();
   });
 
   it('schedules itself on the queue every five minutes', async () => {

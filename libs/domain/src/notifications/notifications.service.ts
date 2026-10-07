@@ -37,6 +37,9 @@ const WINDOW_MS = 5 * 60_000;
 // A queued row this old with no claim has lost its send job, or the add is a
 // no-op because the job is still there.
 const STRANDED_MS = 5 * 60_000;
+// How many stranded rows the sweep reads and hands over at a time: a stand-in
+// until a backlog after a Redis loss is measured.
+const REQUEUE_PAGE = 500;
 
 const JOB: JobsOptions = {
   attempts: RETRY_MINUTES.length + 1,
@@ -58,6 +61,9 @@ const NEXT: Partial<Record<Notification['channel'], SentChannel>> = {
 
 interface Jobs {
   add(name: string, data: unknown, options: JobsOptions): Promise<unknown>;
+  addBulk(
+    jobs: { name: string; data: unknown; opts: JobsOptions }[],
+  ): Promise<unknown>;
   upsertJobScheduler(
     id: string,
     repeat: { every: number },
@@ -298,26 +304,33 @@ export class NotificationsService {
   // A row whose send job the queue refused stays queued: it is handed to the
   // queue again under the same job id, which the queue ignores while the job
   // exists. A claimed row, or an SMS marked as being sent, may have gone.
+  // Every such row is read, a page at a time in id order, so a backlog never
+  // makes one large read and no row waits behind the ones before it.
   // Answers how many rows it handed over.
   async requeueStranded(now = this.now()): Promise<number> {
     const added: string[] = [];
     try {
-      const rows = await this.prisma.notification.findMany({
-        select: { id: true },
-        where: {
-          claimedAt: null,
-          createdAt: { lt: new Date(now.getTime() - STRANDED_MS) },
-          // A draft's link went only in its lost job: a new job would send
-          // the e-mail without it.
-          listingDraftId: null,
-          sendingAt: null,
-          status: 'queued',
-        },
-      });
-      for (const { id } of rows) {
-        await this.queue(send(id));
-        added.push(id);
-      }
+      let page: { id: string }[];
+      do {
+        page = await this.prisma.notification.findMany({
+          orderBy: { id: 'asc' },
+          select: { id: true },
+          take: REQUEUE_PAGE,
+          where: {
+            claimedAt: null,
+            createdAt: { lt: new Date(now.getTime() - STRANDED_MS) },
+            id: { gt: added.at(-1) },
+            // A draft's link went only in its lost job: a new job would send
+            // the e-mail without it.
+            listingDraftId: null,
+            sendingAt: null,
+            status: 'queued',
+          },
+        });
+        if (page.length === 0) break;
+        await this.jobs.addBulk(page.map(({ id }) => this.job(send(id))));
+        added.push(...page.map(({ id }) => id));
+      } while (page.length === REQUEUE_PAGE);
     } catch (error) {
       this.logger.warn(`queued notifications not re-queued: ${String(error)}`);
     }
@@ -675,11 +688,16 @@ export class NotificationsService {
   }
 
   private queue(next: NextJob) {
-    return this.jobs.add(next.name, next.data, {
-      ...JOB,
-      delay: next.delay,
-      jobId: next.jobId,
-    });
+    const { data, name, opts } = this.job(next);
+    return this.jobs.add(name, data, opts);
+  }
+
+  private job(next: NextJob) {
+    return {
+      data: next.data,
+      name: next.name,
+      opts: { ...JOB, delay: next.delay, jobId: next.jobId },
+    };
   }
 
   private async announce(bell: Notification) {

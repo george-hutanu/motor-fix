@@ -14,6 +14,8 @@ import {
 } from './staff-invite.controller';
 import { INVITE_EMAIL, StaffInviteService } from './staff-invite.service';
 import { VerificationService } from './verification.service';
+import { VerificationChecksController } from './verification-checks.controller';
+import { VerificationChecksService } from './verification-checks.service';
 import {
   VERIFICATION_CONFIG,
   type VerificationConfig,
@@ -43,6 +45,7 @@ export class GaragesModule {
         InvitesController,
         ListingDraftsController,
         PublicGaragesController,
+        VerificationChecksController,
       ],
       exports: [VerificationService],
       imports: [notifications],
@@ -58,6 +61,7 @@ export class GaragesModule {
         StaffInviteService,
         PublicGaragesService,
         VerificationService,
+        VerificationChecksService,
         { provide: VERIFICATION_CONFIG, useValue: verification },
         { provide: INVITE_EMAIL, useValue: email },
         {
