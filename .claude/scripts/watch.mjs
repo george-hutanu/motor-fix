@@ -33,7 +33,7 @@ import { parseQaRun } from "./pr-test/qa-run.mjs";
 import { readState } from "./run-state.mjs";
 import { WAIT_RECORD, commonDir, defaultCommandOf, waitHolder } from "./lib/watch-wait.mjs";
 
-// done is the grace period before a merged worktree is removed (ST-481): its
+// done is the grace period before a merged worktree is removed: its
 // tail agent may still be finishing there, and holds it while within it.
 export const DEFAULT_THRESHOLDS = { planning: 30, tests: 45, development: 45, review: 30, qa: 30, merging: 30, done: 30 };
 // QA boots on GitHub Actions (.github/workflows/pr-qa.yml), not on the laptop,
