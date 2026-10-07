@@ -13,7 +13,7 @@ and QA lap is where most of a story's cost went.
 1. Fill in every section of the PR body from the template: what changed, the
    exact test commands and results, UI evidence or `N/A` and why, risk and
    rollback, every box ticked; Agent review stays `Pending.`.
-2. `node .claude/scripts/lifecycle.mjs ready --body-file <body> --decisions "<open decisions | none>"`
+2. `node .claude/scripts/lifecycle.mjs ready --body-file <body> --decisions "<open decisions | none>" [--story ST-<n>]`
    commits and pushes the feature records (phase 17's status line and Spec
    Delta merge, `notion-sync.md`), files unfiled deferred bullets, runs
    `pr-body-check.ts`, publishes the body, marks the PR ready, runs Notion

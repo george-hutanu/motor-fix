@@ -879,12 +879,12 @@ describe('in a cloud session, where GitHub answers GraphQL with 403', () => {
   });
 });
 
-// #244: ST-660 built on branch 854-precompact-pr-signal finished ST-854 in Notion.
+// A branch whose folder number is not its story's: the title must win over the folder.
 describe('the story: --story, the PR title, feature.json, then the folder number', () => {
   const OTHER = '854-precompact-pr-signal';
   const T660 = 'fix(harness): ST-660 precompact PR signal';
   const state = () => JSON.parse(readFileSync(join(repo, '.specify', 'feature.json'), 'utf8'));
-  const view = (title, state = 'OPEN') => ['gh pr view --json number,state,url,title', { stdout: JSON.stringify({ number: 244, state, url: PR_URL, title }) }];
+  const view = (title, prState = 'OPEN') => ['gh pr view --json number,state,url,title', { stdout: JSON.stringify({ number: 244, state: prState, url: PR_URL, title }) }];
   const readyView = (title) => [`gh pr view ${OTHER} --json number,title,isDraft,url`, { stdout: JSON.stringify({ number: 244, title, isDraft: true, url: PR_URL }) }];
   const diff = ['git -C specs diff -U0 --', { stdout: '' }];
   const sideEffects = (calls) => calls.filter((c) => /^(git push|git commit|gh pr merge|gh pr ready|gh pr edit|gh pr create|node \.claude\/scripts\/(notion-sync|specs-repo)\.mjs)/.test(c));

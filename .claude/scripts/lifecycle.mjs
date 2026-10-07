@@ -27,7 +27,7 @@
 // The story is `--story`, then the title's `: ST-<n> ` (open's --title, the
 // PR's for ready and merge), then the `story` feature.json records for this
 // feature, then the folder number, which a branch need not share with its
-// story (#244). Two of the first three that differ stop the step before it
+// story. Two of the first three that differ stop the step before it
 // does anything; `--story` is recorded in feature.json for the later steps.
 // Exit 0 done or --help, 1 stopped, 64 usage (an unknown flag included).
 
