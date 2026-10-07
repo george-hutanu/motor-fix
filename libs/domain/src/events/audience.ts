@@ -10,25 +10,34 @@ export type LiveSubject =
       garageId: string;
       mechanicId: string | null;
     }
-  | { type: 'review'; garageId: string; authorAccountId: string }
+  | {
+      type: 'review';
+      garageId: string;
+      authorAccountId: string;
+      mechanicId: string | null;
+    }
   | { type: 'car'; ownerAccountId: string }
   | { type: 'repair'; ownerAccountId: string; sharedGarageId: string | null }
   | {
       type: 'verification';
       garageId: string;
-      // An approval: the garage's public page and its brands' searches.
-      published?: { brandIds: readonly string[] };
+      // An approval: the garage's public page and the results of every brand.
+      published?: true;
     }
   // The garages' staff only: an invite, a mechanic row.
   | { type: 'garage'; garageIds: readonly string[] }
   // A change to the brands a garage takes: its staff, its public page and the
   // search of each brand whose stance changed.
   | { type: 'garage_brands'; garageId: string; brandIds: readonly string[] }
+  // A change a visitor sees on the garage's public page; `results` when it can
+  // also move the garage in search results.
+  | { type: 'public_garage'; garageId: string; results: boolean }
   // A rule only the admins act on stays off the system channel.
   | { type: 'platform'; adminOnly?: boolean };
 
 const account = (id: string) => `account:${id}`;
 const garage = (id: string) => `garage:${id}`;
+const when = (condition: unknown, ...keys: string[]) => (condition ? keys : []);
 
 // The channel keys of everyone who may read the subject through the API.
 export function audienceOf(subject: LiveSubject): string[] {
@@ -54,8 +63,8 @@ export function audienceOf(subject: LiveSubject): string[] {
       return [
         garage(subject.garageId),
         account(subject.authorAccountId),
-        'public:garage',
-        'public:mechanic',
+        `public:garage:${subject.garageId}`,
+        ...when(subject.mechanicId, `public:mechanic:${subject.mechanicId}`),
       ];
     case 'car':
       return [account(subject.ownerAccountId)];
@@ -76,12 +85,17 @@ export function audienceOf(subject: LiveSubject): string[] {
       return [
         'admin',
         garage(subject.garageId),
-        ...(subject.published
-          ? [
-              `public:garage:${subject.garageId}`,
-              ...subject.published.brandIds.map((id) => `public:search:${id}`),
-            ]
-          : []),
+        ...when(
+          subject.published,
+          `public:garage:${subject.garageId}`,
+          'public:search',
+        ),
+      ];
+    case 'public_garage':
+      return [
+        garage(subject.garageId),
+        `public:garage:${subject.garageId}`,
+        ...when(subject.results, 'public:search'),
       ];
     case 'platform':
       return subject.adminOnly ? ['admin'] : ['admin', 'system'];

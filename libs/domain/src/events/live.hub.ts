@@ -15,6 +15,7 @@ export const LIVE_CHANNEL = 'live:events';
 
 const HEARTBEAT_MS = 25_000;
 const STREAMS_PER_ACCOUNT = 10;
+const PUBLIC_STREAMS_PER_ADDRESS = 20;
 const ACCESS_MS = 60_000;
 
 // Kinds about a request, job or car: never sent through a public key.
@@ -39,6 +40,57 @@ const REREAD_ACCESS = new Set([
   'garage.features_changed',
 ]);
 const ENDS_ACCOUNT = new Set(['account.suspended', 'account.deleted']);
+
+const REVIEW_KINDS = [
+  'review.posted',
+  'review.edited',
+  'review.deleted',
+  'review.replied',
+  'review.reply_edited',
+  'review.reported',
+  'review.decided',
+  'review.appeal_decided',
+];
+// What a visitor's stream may hear through each key it joined; anything else
+// stays with the signed-in streams.
+const PUBLIC_KINDS: [RegExp, Set<string>][] = [
+  [
+    /^public:garage:/,
+    new Set([
+      'garage.updated',
+      'price_list.updated',
+      'mechanic.updated',
+      'facility.removed',
+      'facility.re_add_decided',
+      ...REVIEW_KINDS,
+      'garage.suspended',
+      'garage.restored',
+      'garage.slots_changed',
+    ]),
+  ],
+  [/^public:mechanic:/, new Set(['mechanic.updated', ...REVIEW_KINDS])],
+  [
+    /^public:search$/,
+    new Set([
+      'verification.decided',
+      'garage.suspended',
+      'garage.restored',
+      'garage.updated',
+    ]),
+  ],
+  [/^public:search:/, new Set(['garage.updated'])],
+  [
+    /^system$/,
+    new Set([
+      'platform_rule.changed',
+      'platform_rule.change_requested',
+      'platform_rule.change_decided',
+    ]),
+  ],
+];
+
+const publicAllows = (key: string, kind: string) =>
+  PUBLIC_KINDS.find(([keys]) => keys.test(key))?.[1].has(kind) ?? false;
 
 const isStaffKey = (key: string) =>
   key.startsWith('garage:') || key.startsWith('mechanic:');
@@ -96,13 +148,16 @@ interface LiveSink {
   on(event: 'close', listener: () => void): unknown;
 }
 
-interface LiveTarget {
-  accountId: string;
-  channels: string[];
-  expiresAt: number;
-  role: Role;
-  garageId: string | null;
-}
+type LiveTarget =
+  | {
+      accountId: string;
+      channels: string[];
+      expiresAt: number;
+      role: Role;
+      garageId: string | null;
+    }
+  // A visitor's stream: no account, no expiry, counted against its address.
+  | { public: true; address: string | null; channels: string[] };
 
 interface Connection {
   id: string;
@@ -111,9 +166,13 @@ interface Connection {
   garageId: string | null;
   channels: Set<string>;
   sink: LiveSink;
+  // Set on a visitor's stream only; null when the address could not be read.
+  address?: string | null;
   heartbeat?: NodeJS.Timeout;
   expiry?: NodeJS.Timeout;
 }
+
+const isPublic = (connection: Connection) => connection.address !== undefined;
 
 // The kind becomes the SSE `event:` line, so it may hold no line break.
 const KIND = /^[\w.-]{1,64}$/;
@@ -157,9 +216,37 @@ export class LiveHub {
 
   constructor(private readonly loadAccess: LoadGarageAccess) {}
 
+  // Whether one more visitor stream may open from this address on this copy.
+  publicPlace(address: string | null) {
+    if (address === null) {
+      this.logger.warn('opened a public stream without a client address');
+      return true;
+    }
+    let open = 0;
+    for (const connection of this.connections.values()) {
+      if (connection.address === address) open++;
+    }
+    return open < PUBLIC_STREAMS_PER_ADDRESS;
+  }
+
   open(sink: LiveSink, target: LiveTarget): string | null {
     // A client that left before the stream opened has already emitted close.
     if (sink.destroyed) return null;
+    if ('public' in target) {
+      const connection: Connection = {
+        accountId: '',
+        address: target.address,
+        channels: new Set(target.channels),
+        garageId: null,
+        id: randomUUID(),
+        role: 'driver',
+        sink,
+      };
+      this.connections.set(connection.id, connection);
+      sink.on('close', () => this.release(connection));
+      this.send(connection, this.control('hello', connection));
+      return connection.id;
+    }
     const connection: Connection = {
       accountId: target.accountId,
       channels: new Set(target.channels),
@@ -176,7 +263,7 @@ export class LiveHub {
       Math.max(0, target.expiresAt - Date.now()),
     );
     const own = [...this.connections.values()].filter(
-      (c) => c.accountId === target.accountId,
+      (c) => !isPublic(c) && c.accountId === target.accountId,
     );
     const oldest = own[0];
     if (own.length > STREAMS_PER_ACCOUNT && oldest) this.bye(oldest, 'evicted');
@@ -197,7 +284,9 @@ export class LiveHub {
     for (const connection of this.connections.values()) {
       const met = open.filter((key) => connection.channels.has(key));
       if (met.length === 0) continue;
-      if (met.some((key) => !isStaffKey(key))) {
+      if (isPublic(connection)) {
+        this.sendToPublic(connection, { at, id, kind }, met);
+      } else if (met.some((key) => !isStaffKey(key))) {
         this.send(connection, { at, id, kind });
       } else {
         staff.push(this.sendToStaff(connection, { at, id, kind }, met));
@@ -244,7 +333,7 @@ export class LiveHub {
       for (const garageId of garages) this.access.delete(garageId);
     }
     const own = [...this.connections.values()].filter(
-      (c) => c.accountId === id,
+      (c) => !isPublic(c) && c.accountId === id,
     );
     if (ENDS_ACCOUNT.has(kind)) {
       for (const connection of own) this.bye(connection, 'evicted');
@@ -254,6 +343,15 @@ export class LiveHub {
         .filter((c) => garages.includes(c.garageId ?? ''))
         .forEach(leaveGarage);
     }
+  }
+
+  private sendToPublic(
+    connection: Connection,
+    message: LiveMessage,
+    keys: string[],
+  ) {
+    if (keys.some((key) => publicAllows(key, message.kind)))
+      this.send(connection, message);
   }
 
   private async sendToStaff(
