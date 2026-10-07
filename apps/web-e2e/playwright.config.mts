@@ -30,7 +30,15 @@ export default defineConfig({
   // Locally started servers: run in parallel, and a test that passed only on
   // a retry fails the run instead of hiding a race. Against a deployed
   // address the preset's one worker and retries stay.
-  ...(deployed ? {} : { failOnFlakyTests: true, workers: WORKERS }),
+  // They also start with the api's sign-up counts cleared, so a second local
+  // run within the hour is not refused (src/sign-up-counts.ts).
+  ...(deployed
+    ? {}
+    : {
+        failOnFlakyTests: true,
+        globalSetup: './src/global-setup.ts',
+        workers: WORKERS,
+      }),
   // Flows tagged @seeded sign in with the seeded accounts; a deployed address
   // runs them only when it is given their password. Flows tagged @mailbox read
   // the local test mailbox, and flows tagged @openid the local stand-in

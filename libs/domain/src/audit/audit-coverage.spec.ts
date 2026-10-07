@@ -137,6 +137,11 @@ const NOT_CHANGES = new Set([
   'RemindersService.setBooking',
   'RemindersService.setCarDue',
   'RemindersService.setTyres',
+  // A visitor's draft has no account to audit against; the history starts
+  // when the listing is sent.
+  'ListingDraftsService.create',
+  'ListingDraftsService.issueLink',
+  'ListingDraftsService.save',
 ]);
 
 const uncovered = (source: string) =>

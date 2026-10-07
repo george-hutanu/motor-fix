@@ -360,6 +360,29 @@ describe('toProblem', () => {
     },
   );
 
+  it('keeps how long a refused send must wait', () => {
+    expect(
+      toProblem(
+        problem(429, { code: 'link_already_sent', retryAfterSeconds: 1200 }),
+      ),
+    ).toEqual({
+      code: 'link_already_sent',
+      retryAfterSeconds: 1200,
+      status: 429,
+    });
+  });
+
+  it.each([0, -5, 2.5, '60', null])(
+    'drops a wait that is not a whole number of seconds above 0 (%p)',
+    (retryAfterSeconds) => {
+      expect(
+        toProblem(
+          problem(429, { code: 'link_already_sent', retryAfterSeconds }),
+        ),
+      ).toEqual({ code: 'link_already_sent', status: 429 });
+    },
+  );
+
   it('calls no answer at all a network failure', () => {
     expect(toProblem(problem(0, null))).toEqual({
       code: 'network',

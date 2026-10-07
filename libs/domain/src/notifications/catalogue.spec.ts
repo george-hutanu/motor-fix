@@ -128,6 +128,19 @@ describe('the notification catalogue', () => {
     expect(NOTIFICATION_TYPES['REQUEST_RECEIVED'].keepOne).toBe(false);
   });
 
+  it('sends each reminder to finish a garage listing as its own e-mail', () => {
+    expect(NOTIFICATION_TYPES['LISTING_REMINDER']).toMatchObject({
+      channels: ['email'],
+      groupable: false,
+      urgent: false,
+    });
+    expect(NOTIFICATION_TYPES['LISTING_CONTINUE_LINK']).toMatchObject({
+      channels: ['email'],
+      transactional: true,
+      urgent: true,
+    });
+  });
+
   it('holds only the listed types in quiet hours', () => {
     for (const name of names) {
       expect(NOTIFICATION_TYPES[name].urgent).toBe(!NOT_URGENT.includes(name));

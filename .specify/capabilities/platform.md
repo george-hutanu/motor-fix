@@ -42,6 +42,10 @@ features:
   - 815-specs-private-repo
   - 813-fable-to-opus
   - 457-diff-audit-tsconfig-imports
+  - 728-active-feature-padded-fallback
+  - 746-validate-archived-fr-assigned
+  - 760-e2e-sign-up-limit
+  - 437-diff-audit-origin-main
 ---
 
 # Capability: Platform
@@ -1057,6 +1061,38 @@ _From 457-diff-audit-tsconfig-imports._
 ### 457-FR-002 — The rule MUST NOT depend on the file's path beyond locating that tsconfig.
 
 _From 457-diff-audit-tsconfig-imports._
+
+### 728-FR-001 — `activeFeature`'s branch step MUST take `specs/<branch>` when it exists, else the one `specs/` folder whose number equals the branch's number (leading zeros ignored) and whose slug equals the branch's slug.
+
+_From 728-active-feature-padded-fallback._
+
+### 728-FR-002 — The PR lifecycle gate's `featureDir` MUST use that same lookup from `.claude/scripts/lib/feature.mjs`, with its own branch, not a copy of it.
+
+_From 728-active-feature-padded-fallback._
+
+### 746-FR-001 — `validateFeature` MUST count a declared requirement as assigned when any capability holds `<feature number>-<id>` among its requirements or its retired ones.
+
+_From 746-validate-archived-fr-assigned._
+
+### 746-FR-002 — `validateFeature` MUST still warn `delta-unassigned` for a declared requirement that no Adds or Modifies names and no capability holds under the feature's number.
+
+_From 746-validate-archived-fr-assigned._
+
+### 760-FR-001 — Before a run that starts its servers locally, the end-to-end suite MUST delete every sign-up count key (`auth:signup:address:*`) in the Redis at `REDIS_URL`, and nothing else.
+
+_From 760-e2e-sign-up-limit._
+
+### 760-FR-002 — A run against `BASE_URL`, or without `REDIS_URL`, MUST clear nothing.
+
+_From 760-e2e-sign-up-limit._
+
+### 760-FR-003 — The sign-up count keys MUST keep the prefix the suite clears, `auth:signup:address:`.
+
+_From 760-e2e-sign-up-limit._
+
+### 437-FR-001 — diff-audit MUST take its base as `git merge-base HEAD origin/main`, and only when that ref is absent fall back to `git merge-base HEAD main`.
+
+_From 437-diff-audit-origin-main._
 
 ## Retired
 

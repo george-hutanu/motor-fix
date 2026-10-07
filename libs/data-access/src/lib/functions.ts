@@ -91,6 +91,8 @@ export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$
 export { platformRulesControllerList as platformRulesControllerList } from './fn/admin/platform-rules-controller-list';
 export type { PlatformRulesControllerChange$Params as PlatformRulesControllerChange$Params } from './fn/admin/platform-rules-controller-change';
 export { platformRulesControllerChange as platformRulesControllerChange } from './fn/admin/platform-rules-controller-change';
+export type { GarageBrandsControllerReplace$Params as GarageBrandsControllerReplace$Params } from './fn/garages/garage-brands-controller-replace';
+export { garageBrandsControllerReplace as garageBrandsControllerReplace } from './fn/garages/garage-brands-controller-replace';
 export type { GarageInvitesControllerSend$Params as GarageInvitesControllerSend$Params } from './fn/garages/garage-invites-controller-send';
 export { garageInvitesControllerSend as garageInvitesControllerSend } from './fn/garages/garage-invites-controller-send';
 export type { GarageInvitesControllerResend$Params as GarageInvitesControllerResend$Params } from './fn/garages/garage-invites-controller-resend';
@@ -103,6 +105,14 @@ export type { InvitesControllerCheck$Params as InvitesControllerCheck$Params } f
 export { invitesControllerCheck as invitesControllerCheck } from './fn/invites/invites-controller-check';
 export type { InvitesControllerAccept$Params as InvitesControllerAccept$Params } from './fn/invites/invites-controller-accept';
 export { invitesControllerAccept as invitesControllerAccept } from './fn/invites/invites-controller-accept';
+export type { ListingDraftsControllerCreate$Params as ListingDraftsControllerCreate$Params } from './fn/listing-drafts/listing-drafts-controller-create';
+export { listingDraftsControllerCreate as listingDraftsControllerCreate } from './fn/listing-drafts/listing-drafts-controller-create';
+export type { ListingDraftsControllerCurrent$Params as ListingDraftsControllerCurrent$Params } from './fn/listing-drafts/listing-drafts-controller-current';
+export { listingDraftsControllerCurrent as listingDraftsControllerCurrent } from './fn/listing-drafts/listing-drafts-controller-current';
+export type { ListingDraftsControllerSave$Params as ListingDraftsControllerSave$Params } from './fn/listing-drafts/listing-drafts-controller-save';
+export { listingDraftsControllerSave as listingDraftsControllerSave } from './fn/listing-drafts/listing-drafts-controller-save';
+export type { ListingDraftsControllerSendLink$Params as ListingDraftsControllerSendLink$Params } from './fn/listing-drafts/listing-drafts-controller-send-link';
+export { listingDraftsControllerSendLink as listingDraftsControllerSendLink } from './fn/listing-drafts/listing-drafts-controller-send-link';
 export type { LiveControllerLive$Params as LiveControllerLive$Params } from './fn/live/live-controller-live';
 export { liveControllerLive as liveControllerLive } from './fn/live/live-controller-live';
 export type { LiveControllerTest$Params as LiveControllerTest$Params } from './fn/live/live-controller-test';

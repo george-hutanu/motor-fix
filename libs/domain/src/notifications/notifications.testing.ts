@@ -76,7 +76,10 @@ export function fixtures(prisma: PrismaClient = createPrisma(databaseUrl)) {
       return id;
     },
     prisma,
-    reset: () => prisma.$executeRawUnsafe('TRUNCATE account, garage CASCADE'),
+    reset: () =>
+      prisma.$executeRawUnsafe(
+        'TRUNCATE account, garage, listing_draft CASCADE',
+      ),
   };
 }
 

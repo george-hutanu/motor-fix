@@ -184,6 +184,25 @@ describe('the sweep of queued rows with no job', () => {
     expect(await jobFor(marked.id)).toBeUndefined();
   });
 
+  it('leaves a listing draft e-mail, whose link only its own job carried', async () => {
+    const draft = await prisma.listingDraft.create({
+      data: {
+        data: {},
+        email: 'owner@example.test',
+        language: 'ro',
+        step: 1,
+        updatedAt: NOW,
+      },
+    });
+    const stranded = await row({
+      accountId: null,
+      kind: 'LISTING_CONTINUE_LINK',
+      listingDraftId: draft.id,
+    });
+    await expect(service.requeueStranded()).resolves.toBe(0);
+    expect(await jobFor(stranded.id)).toBeUndefined();
+  });
+
   it('leaves held, sent and failed rows alone', async () => {
     const others = await Promise.all([
       row({ sendAfter: minutesAgo(9), status: 'held' }),

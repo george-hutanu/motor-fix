@@ -21,8 +21,13 @@ export function sendProblem(
   code: string,
   detail?: string,
   errors?: FieldProblem[],
-  extensions: Pick<Problem, 'attemptsLeft'> & { inviteId?: string } = {},
+  extensions: Pick<Problem, 'attemptsLeft' | 'retryAfterSeconds'> & {
+    inviteId?: string;
+  } = {},
 ) {
+  if (extensions.retryAfterSeconds !== undefined) {
+    res.set('Retry-After', String(extensions.retryAfterSeconds));
+  }
   res
     .status(status)
     .type('application/problem+json')
@@ -46,6 +51,12 @@ export class ProblemFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost) {
     const res = host.switchToHttp().getResponse<Response>();
+    // The JSON parser refuses an oversized body before any route runs, with
+    // an error of its own rather than an HttpException.
+    if (tooLarge(exception)) {
+      sendProblem(res, 413, 'payload_too_large');
+      return;
+    }
     if (!(exception instanceof HttpException)) {
       this.logger.error(exception);
       sendProblem(res, 500, 'internal_error');
@@ -64,20 +75,33 @@ export class ProblemFilter implements ExceptionFilter {
       detail(typeof body === 'string' ? body : own.message),
       fieldProblems(own.errors),
       // The members beyond the problem shape a refusal carries: the open
-      // invite a refused send names, and the tries a wrong code has left.
-      // Nothing else an exception holds leaves.
+      // invite a refused send names, the tries a wrong code has left, and
+      // the wait before a limit lifts. Nothing else an exception holds leaves.
       {
         ...(typeof own.inviteId === 'string' && { inviteId: own.inviteId }),
         ...attemptsLeft(own.attemptsLeft),
+        ...retryAfter(own.retryAfterSeconds),
       },
     );
   }
 }
 
+const tooLarge = (exception: unknown) =>
+  typeof exception === 'object' &&
+  exception !== null &&
+  (exception as { type?: unknown }).type === 'entity.too.large';
+
 // How many tries a sign-in code has left, when the refusal says so.
 function attemptsLeft(value: unknown): Pick<Problem, 'attemptsLeft'> {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0
     ? { attemptsLeft: value }
+    : {};
+}
+
+// The seconds until a limit lifts, when the refusal says so.
+function retryAfter(value: unknown): Pick<Problem, 'retryAfterSeconds'> {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0
+    ? { retryAfterSeconds: value }
     : {};
 }
 

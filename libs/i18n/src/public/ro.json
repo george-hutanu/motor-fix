@@ -36,18 +36,65 @@
   },
   "listing": {
     "bar": "{n} / 6 · {label}",
+    "brands": {
+      "chips": "Mărcile tale",
+      "counter": "{taken} · {refused}",
+      "hint": "O apăsare: led verde, lucrezi pe ea. Încă una: led roșu, nu o primești. A treia o stinge.",
+      "left": {
+        "few": "{count} caractere rămase",
+        "one": "{count} caracter rămas",
+        "other": "{count} de caractere rămase"
+      },
+      "noMatch": "Nicio marcă găsită.",
+      "note": "Notă despre mărci, cel mult 140 de caractere",
+      "off": "nu o primești",
+      "on": "lucrezi pe ea",
+      "phrase": "Ce nu primești, pe scurt, cel mult 60 de caractere",
+      "refused": {
+        "few": "{count} refuzate",
+        "one": "{count} refuzată",
+        "other": "{count} de refuzate"
+      },
+      "results": "Mărci găsite",
+      "search": "Caută o marcă",
+      "searchDown": "Căutarea nu merge acum.",
+      "taken": {
+        "few": "{count} primite",
+        "one": "{count} primită",
+        "other": "{count} de primite"
+      }
+    },
+    "email": "E‑mail",
+    "emailHint": "Îți trimitem un link ca să continui de pe orice dispozitiv.",
+    "emailInvalid": "Scrie o adresă de e‑mail validă.",
+    "emailNeeded": "Adaugă un e‑mail ca să continui de pe alt dispozitiv",
     "heading": "Pune‑ți service‑ul pe hartă",
     "intro": "Spune ce primești și ce refuzi. Cine îți cere o ofertă știe deja că lucrezi pe mașina lui.",
+    "invalidLine": "Linkul e greșit, vechi sau ciorna a fost ștearsă.",
+    "invalidTitle": "Linkul nu mai e valid",
     "label": "PENTRU SERVICE‑URI",
+    "linkAlready": "Linkul a fost deja trimis. Îl poți trimite din nou în {minutes} min.",
+    "linkSent": "Ți‑am trimis un link pe e‑mail ca să continui de pe orice dispozitiv",
+    "loading": "Se încarcă ciorna…",
+    "notSaved": "Ciorna nu a putut fi salvată pe server. Încearcă din nou.",
+    "offline": "Neconectat · salvăm când revii online",
     "optional": "opțional",
     "required": "obligatoriu",
+    "save": "Salvează ciorna",
+    "saved": "Ciorna e salvată",
+    "sentLine": "Intră în cont ca să vezi service‑ul.",
+    "sentTitle": "Înscrierea a fost trimisă",
+    "signIn": "Intră în cont",
+    "startAgain": "Începe din nou",
     "step1": "Service‑ul",
     "step2": "Mărci",
     "step3": "Prețuri",
     "step4": "Mecanici",
     "step5": "Fotografii și adresă",
     "step6": "Verificare",
-    "steps": "Pași"
+    "steps": "Pași",
+    "storageBlocked": "Browserul nu poate păstra ciorna. O păstrăm pe server după ce adaugi un e‑mail.",
+    "tooLarge": "Ciorna e prea mare ca să fie salvată pe server."
   },
   "newPassword": {
     "askAgain": "Cere un link nou",

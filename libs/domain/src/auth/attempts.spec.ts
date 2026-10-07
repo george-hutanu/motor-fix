@@ -201,3 +201,16 @@ describe('the limits on sending a sign-in code', () => {
     warn.mockRestore();
   });
 });
+
+// The end-to-end suite clears these keys by their prefix before a local run
+// (apps/web-e2e/src/sign-up-counts.ts): the prefix is part of that contract.
+describe('the sign-up limit', () => {
+  it('counts an address under auth:signup:address:<digest>', async () => {
+    const { redis, sent } = countingRedis();
+    const key = `auth:signup:address:${sha256('198.51.100.7')}`;
+
+    expect(await new Attempts(redis).admitSignUp('198.51.100.7')).toBe(true);
+
+    expect(sent).toContainEqual(['incr', key]);
+  });
+});

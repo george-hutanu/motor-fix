@@ -260,8 +260,12 @@ export function validateFeature(repo, feature) {
     }
   }
 
+  // An archived feature's requirements already live in a capability under its
+  // own number; they are assigned even when its delta no longer names them.
+  const archived = (id) =>
+    [...caps.values()].some((cap) => cap.requirements.has(`${feature.num}-${id}`) || cap.retired.has(`${feature.num}-${id}`));
   for (const id of declared.keys()) {
-    if (!assigned.has(id)) add("WARN", "delta-unassigned", `${id} is declared in spec.md but named in no Adds or Modifies — it will merge into no capability`);
+    if (!assigned.has(id) && !archived(id)) add("WARN", "delta-unassigned", `${id} is declared in spec.md but named in no Adds or Modifies — it will merge into no capability`);
   }
   return findings;
 }

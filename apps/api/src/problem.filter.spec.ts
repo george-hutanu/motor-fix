@@ -10,8 +10,13 @@ import { ProblemFilter } from './problem.filter';
 function send(exception: unknown) {
   const res = {
     body: undefined as unknown,
+    headers: {} as Record<string, string>,
     json(body: unknown) {
       this.body = body;
+      return this;
+    },
+    set(name: string, value: string) {
+      this.headers[name] = value;
       return this;
     },
     status(code: number) {
@@ -54,6 +59,36 @@ describe('ProblemFilter', () => {
     );
 
     expect(res.body).toMatchObject({ attemptsLeft: 3, code: 'code_invalid' });
+  });
+
+  it('forwards the wait a refusal names, as the body member and Retry-After', () => {
+    const res = send(
+      new HttpException(
+        {
+          code: 'link_already_sent',
+          message: 'Wait',
+          retryAfterSeconds: 1200,
+        },
+        429,
+      ),
+    );
+
+    expect(res.body).toMatchObject({
+      code: 'link_already_sent',
+      retryAfterSeconds: 1200,
+    });
+    expect(res.headers['Retry-After']).toBe('1200');
+  });
+
+  it('drops a wait that is not a positive whole count, and sends no header', () => {
+    for (const retryAfterSeconds of [0, -5, 2.5, '60', null]) {
+      const res = send(
+        new HttpException({ code: 'x', retryAfterSeconds }, 429),
+      );
+
+      expect(res.body).not.toHaveProperty('retryAfterSeconds');
+      expect(res.headers).toEqual({});
+    }
   });
 
   it('drops an attemptsLeft that is not a whole count', () => {
