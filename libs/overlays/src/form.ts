@@ -250,18 +250,23 @@ function fromBody(answer: unknown, status: number): Problem {
   if (!code) return { code: codeForStatus(status), status };
   const errors = fieldProblems(body['errors']);
   const detail = typeof body['detail'] === 'string' ? body['detail'] : null;
-  const left = body['attemptsLeft'];
-  const attemptsLeft =
-    typeof left === 'number' && Number.isInteger(left) && left >= 0
-      ? left
-      : null;
+  const attemptsLeft = wholeFrom(body['attemptsLeft'], 0);
+  const retryAfterSeconds = wholeFrom(body['retryAfterSeconds'], 1);
   return {
     code,
     status,
     ...(attemptsLeft !== null && { attemptsLeft }),
+    ...(retryAfterSeconds !== null && { retryAfterSeconds }),
     ...(detail && { detail }),
     ...(errors && { errors }),
   };
+}
+
+// A whole number at or above the floor, else none.
+function wholeFrom(value: unknown, floor: number): number | null {
+  return typeof value === 'number' && Number.isInteger(value) && value >= floor
+    ? value
+    : null;
 }
 
 // The send's answer as a promise; a send that throws fails the same way.

@@ -16,6 +16,7 @@ features:
   - 539-public-web-url-boot
   - 780-one-public-web-url-parser
   - 778-mark-sent-retry-no-delay
+  - 114-save-draft
   - 561-sms-sent-once
   - 560-requeue-stranded-notifications
   - 802-sms-count-throw-clears-mark
@@ -435,6 +436,10 @@ _From 778-mark-sent-retry-no-delay._
 ### 778-FR-002 — A push the push service accepted MUST follow 522-FR-001: a failed first mark-sent write does not fail the job, the message is not sent again, and the row ends `sent`.
 
 _From 778-mark-sent-retry-no-delay._
+
+### 114-FR-010 — The link e-mails MUST go through the one notifications service to an address that has no account, as a direct send: never grouped, never held, in the given language, each send with a fresh event id, and a sending failure retried by the `notifications` queue with no wait on the form's request. The notifications capability gains this one direct path for LISTING_CONTINUE_LINK and LISTING_REMINDER; no other type uses it. Each send writes a notification row with no account, tied to the draft and deleted with it, holding neither the address nor the token: the address is read from the draft when the e-mail is sent and the link travels only in the queue job.
+
+_From 114-save-draft._
 
 ### 561-FR-001 — Before calling the provider for an SMS, the processor MUST record on the row that the SMS is being sent.
 

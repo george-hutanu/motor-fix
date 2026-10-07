@@ -587,3 +587,95 @@ describe('account e-mails', () => {
     expect(new Set(emails.map((r) => r.eventId)).size).toBe(2);
   });
 });
+
+describe('e-mails to a listing draft', () => {
+  const draft = (email = 'owner@example.test') =>
+    prisma.listingDraft
+      .create({
+        data: { email, language: 'en', step: 2, updatedAt: new Date(DAY) },
+      })
+      .then((d) => d.id);
+  const draftRows = (listingDraftId: string) =>
+    prisma.notification.findMany({ where: { listingDraftId } });
+  const link = 'https://motorfix.test/en/list-your-garage?draft=secret';
+
+  it('writes one e-mail row with no account, no params and a fresh event, and queues the link with it', async () => {
+    const id = await draft();
+
+    await service.sendToDraft('LISTING_CONTINUE_LINK', id, link);
+    await service.sendToDraft('LISTING_CONTINUE_LINK', id, link);
+
+    const written = await draftRows(id);
+    expect(written).toHaveLength(2);
+    expect(written[0]).toMatchObject({
+      accountId: null,
+      channel: 'email',
+      kind: 'LISTING_CONTINUE_LINK',
+      listingDraftId: id,
+      params: {},
+      status: 'queued',
+      subjectId: id,
+    });
+    expect(new Set(written.map((r) => r.eventId)).size).toBe(2);
+    const queued = await jobs();
+    expect(queued.map((j) => j.data)).toEqual(
+      written
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        .map((r) => ({ id: r.id, link })),
+    );
+    expect(JSON.stringify(written)).not.toContain('secret');
+  });
+
+  it('holds a reminder until 08:00 at night but never the link asked for', async () => {
+    const id = await draft();
+    service.now = at('2026-10-04T20:10:00Z');
+
+    await service.sendToDraft('LISTING_REMINDER', id, link);
+    await service.sendToDraft('LISTING_CONTINUE_LINK', id, link);
+
+    const written = await draftRows(id);
+    expect(written.find((r) => r.kind === 'LISTING_REMINDER')).toMatchObject({
+      sendAfter: new Date('2026-10-05T05:00:00Z'),
+      status: 'held',
+    });
+    expect(
+      written.find((r) => r.kind === 'LISTING_CONTINUE_LINK'),
+    ).toMatchObject({ sendAfter: null, status: 'queued' });
+  });
+
+  it('writes the row failed and queues nothing for an address off the allow-list', async () => {
+    const id = await draft('owner@elsewhere.test');
+
+    await service.sendToDraft('LISTING_CONTINUE_LINK', id, link);
+
+    expect(await draftRows(id)).toEqual([
+      expect.objectContaining({ params: {}, status: 'failed' }),
+    ]);
+    expect(await jobs()).toEqual([]);
+  });
+
+  it('fails a bounced draft e-mail without touching any account', async () => {
+    const id = await draft();
+    await service.sendToDraft('LISTING_CONTINUE_LINK', id, link);
+    const [row] = await draftRows(id);
+    await prisma.notification.update({
+      data: { providerMessageId: '<draft@mock>', status: 'sent' },
+      where: { id: row.id },
+    });
+
+    await service.recordBounce('<draft@mock>');
+
+    expect(await draftRows(id)).toEqual([
+      expect.objectContaining({ failure: 'bounced', status: 'failed' }),
+    ]);
+  });
+
+  it('refuses any other kind of message', async () => {
+    const id = await draft();
+
+    await expect(
+      service.sendToDraft('QUOTE_RECEIVED' as never, id, link),
+    ).rejects.toThrow(/QUOTE_RECEIVED/);
+    expect(await draftRows(id)).toEqual([]);
+  });
+});

@@ -87,7 +87,7 @@ const ENTRIES: Record<string, Entry> = {
   JOB_READY: ['event', EPW, 'bookings', 'always'],
   JOB_STARTED: ['event', EPW, 'bookings'],
   LISTING_CONTINUE_LINK: ['direct', ['email'], null, 'transactional'],
-  LISTING_REMINDER: ['timer', ['email'], null],
+  LISTING_REMINDER: ['timer', ['email'], null, 'single'],
   LIVE_STARTED: ['event', EPW, 'bookings'],
   MEDIA_ADDED: ['event', EPW, 'bookings'],
   MEDIA_REMOVED: ['event', EPW, 'bookings'],
