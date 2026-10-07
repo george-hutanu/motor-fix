@@ -22,3 +22,7 @@ Start commit: cab78f49 (origin/main), branch 560-requeue-stranded-notifications,
 ## 4. Clarify
 - spec-challenger: 6 findings. Answers applied to spec.md (## Clarifications): held follower out (edge case rewritten); kept-failed job = no-op until evicted, no removal (no poison loop); same JOB options; lapsed claim never swept; sent() answers recorded, send() keeps claim when not; FR-004..006 in scope (no regression of ST-522/561). SC-004 rephrased to path exclusions. Window/interval noted as not in Notion. Held-row gap → deferred.md at review.
 - level.mjs check: stays 2.
+
+## 5. Plan
+- before_plan: design.md current (no screens), tree clean. plan.md written: requeueStranded() in the service (findMany queued/claimedAt null/sendingAt null/createdAt < now-5 min, then queue(send(id)); failed add warns and ends; ids logged when > 0), processor routes `requeue`, sent() answers recorded, send() keeps the claim when unrecorded (per-id Set), module upserts the `requeue` scheduler in the WORKER factory (failure logged, not fatal). Technical Context cited from package-lock, tsconfig.base, jest preset, bullmq types; context.md Constraints carried in. No research/data-model/contracts/quickstart (nothing beyond plan.md, as 778).
+- after_plan: commit 48f703f5 `docs(specs): ST-560 plan the stranded notification sweep`, pushed. agent-context left to phase 15 (the pointer lives in the private CLAUDE.local.md).
