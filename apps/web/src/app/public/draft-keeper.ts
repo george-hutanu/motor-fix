@@ -213,7 +213,6 @@ export class DraftKeeper {
           queryParams: { draft: null },
           queryParamsHandling: 'merge',
           replaceUrl: true,
-          scroll: 'manual',
         });
     }
   }

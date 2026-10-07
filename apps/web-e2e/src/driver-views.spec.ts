@@ -105,8 +105,9 @@ test.describe('driver views @seeded', () => {
   test('the bar opens every released view on a phone, at the top', async ({
     page,
   }) => {
-    await page.setViewportSize({ height: 844, width: 390 });
+    // Signed in at desktop width, where the header carries the button.
     await signedInDriver(page);
+    await page.setViewportSize({ height: 844, width: 390 });
     await mark(page);
     const bar = page.getByRole('navigation', { name: 'Panou șofer' });
 
