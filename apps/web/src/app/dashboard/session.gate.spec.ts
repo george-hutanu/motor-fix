@@ -149,6 +149,21 @@ describe('the account on screen behind the gate dialog', () => {
     await waiting;
   });
 
+  it('keeps nothing the next time the gate opens once it was closed without a sign-in', async () => {
+    const { session } = await lapsed();
+    const first = gate();
+    const closing = session.keepShownWhile(first.open);
+    first.close(false);
+    await closing;
+
+    const second = gate();
+    const waiting = session.keepShownWhile(second.open);
+
+    expect(session.shown()).toBeNull();
+    second.close(false);
+    await waiting;
+  });
+
   it('lets the kept account go when the gate fails to open', async () => {
     const { session } = await lapsed();
 

@@ -335,12 +335,14 @@ export class Session {
     }
   }
 
-  // The forgotten account stays on screen until the gate's dialog closes.
+  // The forgotten account stays on screen until the gate's dialog closes,
+  // and is gone for good once it has.
   async keepShownWhile<T>(open: Promise<T>): Promise<T> {
     if (!this.current() && this.lapsed) this.kept.set(this.lapsed);
     try {
       return await open;
     } finally {
+      this.lapsed = null;
       this.kept.set(null);
     }
   }
