@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-07
 
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 
 **Input**: User description: "ST-775 (Tech debt, harness): an hour-24 level_at gets different answers from the JS and Python readers. Notion: https://app.notion.com/3f1607bff0d281fb915bc842545c4624 . Filed from specs/677-zoneless-level-at/deferred.md. pendingLevel in .claude/scripts/lib/feature.mjs (LEVEL_AT regex + Date.parse) and _pending_level in .specify/scripts/python/common.py (_LEVEL_AT fullmatch + datetime.fromisoformat) must give the same answer for every stamp. Verified on main: `2026-10-06T24:00Z` (also :00 and :00.000) — Date.parse gives next-day midnight, fromisoformat raises, so JS sees a waiting level and Python does not. Same class: a day past the month's end (`2026-02-30T00:00Z`) — Date.parse rolls over to 2 March, fromisoformat raises. Other out-of-range fields (minute 60, second 60, offset +24:00 / +23:60) are already refused by both. Fix: a stamp only one reader would accept counts as no waiting level in both (limit the hour to 00-23 in both regexes; JS also refuses a day the month does not have). Specs that hold the two together: .claude/scripts/level.spec.mjs and level.adversary.spec.mjs."
 
@@ -48,7 +48,7 @@ A harness user sizes the next piece of work with `/speckit-size`, and the waitin
 ### Functional Requirements
 
 - **FR-001**: Both readers of the waiting level MUST treat a stamp whose hour is outside `00`–`23` as no waiting level, in every stamp shape they accept (with or without seconds and a fraction, with `Z` or an offset).
-- **FR-002**: For every stamp in acceptance scenarios 1–3, the two readers MUST give the same answer (the waiting level, or none, at the same `now`), and the harness specs that hold the two readers together MUST assert each of them so a later divergence fails the suite.
+- **FR-002**: The two readers MUST give the same answer (the waiting level, or none, at the same `now`) for an hour-24 stamp, for every valid shape (`Z` or an offset, with or without seconds and a 3- or 6-digit fraction) and for every stamp both already refuse (no zone, minute 60, second 60, offset `+24:00` or `+23:60`, a trailing newline), and the harness specs that hold the two readers together MUST assert each of them so a later divergence fails the suite.
 
 ### Key Entities
 

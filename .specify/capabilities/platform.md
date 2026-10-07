@@ -35,6 +35,7 @@ features:
   - 676-level-point-nonnumeric
   - 539-public-web-url-boot
   - 472-validation-failed-code
+  - 775-level-at-parity
 ---
 
 # Capability: Platform
@@ -962,6 +963,14 @@ _From 472-validation-failed-code._
 ### 472-FR-002 — A class-validator failure on `POST /api/v1/auth/roles/switch` from a signed-in caller MUST answer 400 with `code: validation_failed` through the production app setup.
 
 _From 472-validation-failed-code._
+
+### 775-FR-001 — Both readers of the waiting level MUST treat a stamp whose hour is outside `00`–`23` as no waiting level, in every stamp shape they accept (with or without seconds and a fraction, with `Z` or an offset).
+
+_From 775-level-at-parity._
+
+### 775-FR-002 — The two readers MUST give the same answer (the waiting level, or none, at the same `now`) for an hour-24 stamp, for every valid shape (`Z` or an offset, with or without seconds and a 3- or 6-digit fraction) and for every stamp both already refuse (no zone, minute 60, second 60, offset `+24:00` or `+23:60`, a trailing newline), and the harness specs that hold the two readers together MUST assert each of them so a later divergence fails the suite.
+
+_From 775-level-at-parity._
 
 ## Retired
 

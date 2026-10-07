@@ -13,12 +13,10 @@ the JavaScript reader sees a waiting level and the Python reader does not
 `LEVEL_AT` (`.claude/scripts/lib/feature.mjs:146`) and `_LEVEL_AT`
 (`.specify/scripts/python/common.py:154`) becomes `([01]\d|2[0-3])` /
 `([01][0-9]|2[0-3])`, so hour 24 is no waiting level in both before either
-parser runs, whatever a parser version accepts. The two harness specs that
-already run both readers on the same stamps (`level.adversary.spec.mjs`,
-"a level_at without a zone is no waiting level, in both readers";
-`level.spec.mjs`, "keeps the pointer and the level in step in the Python
-helper too") gain the spec's nine refused stamps and the accepted shapes
-(FR-002). No research, data model or contract: the task has no unknowns, one
+parser runs, whatever a parser version accepts. The harness spec that
+already runs both readers on the same stamps (`level.adversary.spec.mjs`,
+its parity block) gains the spec's nine refused stamps and the accepted shapes
+at a fixed `now` (FR-002). No research, data model or contract: the task has no unknowns, one
 entity already described in the spec, and no interface.
 
 ## Technical Context
@@ -72,9 +70,9 @@ the waiting level, is fully described in spec.md "Key Entities") and no
 
 ```text
 .claude/scripts/
-├── lib/feature.mjs                 # LEVEL_AT (line 146): hour group → ([01]\d|2[0-3])
-├── level.spec.mjs                  # "keeps the pointer and the level in step in the Python helper too": new cases
-└── level.adversary.spec.mjs        # "a level_at without a zone is no waiting level, in both readers": new stamps
+├── lib/feature.mjs                 # LEVEL_AT (line 146): hour group → (?:[01]\d|2[0-3])
+└── level.adversary.spec.mjs        # parity block, renamed "a level_at only one reader would accept…": new stamps at a fixed now
+                                    # (level.spec.mjs is untouched: its Python table stamps from Date.now(), so hour 24 cannot be fresh there)
 .specify/scripts/python/
 └── common.py                       # _LEVEL_AT (line 154): hour group → ([01][0-9]|2[0-3])
 ```
@@ -98,9 +96,9 @@ divergence fails the suite where the existing parity cases do.
 - **Specs**: `level.adversary.spec.mjs` gets the nine refused stamps asserted
   on both sides (`jsPoint` drops the level, `pyPoint` drops the level) and
   the accepted shapes of scenario 2 asserted equal across readers, in the
-  shape its `zoneless` / `zoned` loops already use; `level.spec.mjs` gets
-  hour-24 and hour-23 rows in `cases`, compared against `pointTo` as the
-  existing rows are. The `\n`-terminated stamp is one of the refused nine.
+  shape its `zoneless` / `zoned` loops already use, at a fixed `now` five
+  minutes after midnight; `level.spec.mjs` is untouched, since its Python
+  table stamps from `Date.now()` (tasks.md T002). The `\n`-terminated stamp is one of the refused nine.
 - **Unchanged**: `pendingLevel`'s and `_pending_level`'s bodies, what
   `setLevel` writes, the TTL and the one-minute slack.
 
