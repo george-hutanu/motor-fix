@@ -1,5 +1,7 @@
+import { readdirSync, readFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 
 import type { Browser, BrowserContext, Page } from '@playwright/test';
@@ -171,4 +173,21 @@ test('the suite caches nothing outside the deployed address it was given', async
   await tab.goto(page('/outside-FFFF6666.js'));
 
   expect(hits.get('/outside-FFFF6666.js')).toBe(2);
+});
+
+// FR-004 holds only for specs that take `test` from the fixtures: one that
+// imports it from @playwright/test downloads every asset again on staging.
+test('every end-to-end spec takes its test from the fixtures', () => {
+  const src = join(import.meta.dirname, '..');
+  const specs = readdirSync(src, { recursive: true })
+    .map(String)
+    .filter((file) => file.endsWith('.spec.ts'));
+  const bare = specs.filter(
+    (file) =>
+      !/import \{[^}]*\btest\b[^}]*\} from '(\.\.?\/)+fixtures\.js'/.test(
+        readFileSync(join(src, file), 'utf8'),
+      ),
+  );
+  expect(specs.length).toBeGreaterThan(0);
+  expect(bare).toEqual([]);
 });
