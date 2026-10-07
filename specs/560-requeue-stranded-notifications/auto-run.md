@@ -29,3 +29,6 @@ Start commit: cab78f49 (origin/main), branch 560-requeue-stranded-notifications,
 
 ## 6. Checklist
 - checklists/reliability.md: 15 items checked, 1 struck (N/A). Spec fixed: edge case for a job finishing between read and add; FR-008 covers a failed read as well as a failed add. Unchecked: 0.
+
+## 7. Tasks
+- tasks.md: 7 tasks (3 red integration specs, 3 source files, 1 verify run); after_tasks analyze left to phase 8. Committed and pushed.
