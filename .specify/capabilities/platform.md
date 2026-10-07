@@ -45,6 +45,7 @@ features:
   - 728-active-feature-padded-fallback
   - 746-validate-archived-fr-assigned
   - 760-e2e-sign-up-limit
+  - 691-author-skills-card
 ---
 
 # Capability: Platform
@@ -409,9 +410,9 @@ _From 673-story-tail-agents._
 
 _From 673-story-tail-agents._
 
-### 673-FR-005 — `speckit-auto`'s Preflight and phase 1 MUST read the card instead of the full constitution; `spec-reviewer`, `code-reviewer` and `pr-tester` MUST keep reading `constitution.md`.
+### 691-FR-005 — `.claude/agents/task-runner.md` (:21-24) MUST say that `/speckit-auto`'s Preflight and phase 1 and the author skills read the card, and that the reviewers (`spec-reviewer`, `code-reviewer`) and the PR tester read the full `.specify/memory/constitution.md` themselves.
 
-_From 673-story-tail-agents._
+_From 691-author-skills-card._
 
 ### 673-FR-006 — The definition MUST carry the AGENTS.md reply envelope verbatim and a cap of at most 10 lines.
 
@@ -1089,6 +1090,34 @@ _From 760-e2e-sign-up-limit._
 
 _From 760-e2e-sign-up-limit._
 
+### 691-FR-001 — The load step of each of the eight author skills — `speckit-specify` (SKILL.md:153), `speckit-clarify` (:74), `speckit-plan` (:63), `speckit-checklist` (:95), `speckit-tasks` (:72), `speckit-analyze` (:128), `speckit-implement` (:103), and `speckit-converge` (:105, the same defect in another `/speckit-auto` phase) — MUST name `.specify/memory/constitution-card.md` and MUST NOT name `.specify/memory/constitution.md` as the file to load.
+
+_From 691-author-skills-card._
+
+### 691-FR-002 — A load line MAY add one fallback, in exactly these words: "Open a principle's section in `.specify/memory/constitution.md` only when a decision turns on its exact wording." It may share the load line. No other line in an author skill MAY name the full file except the forms FR-003 lists.
+
+_From 691-author-skills-card._
+
+### 691-FR-003 — The existing pointer lines `Full text: \`.specify/memory/constitution.md\`.` in `speckit-plan`, `speckit-tasks`, `speckit-implement` (and `speckit-tests`) and the "Constitution Authority" paragraphs of `speckit-analyze` (:67) and `speckit-converge` (:91) MUST stay as they are; they are references, not loads.
+
+_From 691-author-skills-card._
+
+### 691-FR-004 — `speckit-specify`'s batch-read rule (:399, "Read the template, the constitution, and any repo files you need in one batch before writing") MUST name the card in place of the constitution.
+
+_From 691-author-skills-card._
+
+### 691-FR-006 — `.claude/agents/spec-reviewer.md`, `.claude/agents/code-reviewer.md` and `.claude/agents/pr-tester.md` MUST keep every line that reads `.specify/memory/constitution.md`; this feature changes none of them.
+
+_From 691-author-skills-card._
+
+### 691-FR-007 — `.claude/scripts/constitution-card.spec.mjs` MUST gain a test over the eight author skills' `SKILL.md` files that fails, naming the skill and the line, when a skill does not name `.specify/memory/constitution-card.md`, or when any line naming `.specify/memory/constitution.md` is not one of the allowed forms: the pointer line `Full text: \`.specify/memory/constitution.md\`.`, a line opening `**Constitution Authority**`, or a line holding the FR-002 fallback sentence verbatim **and** naming `.specify/memory/constitution-card.md` (so the fallback cannot ride on a line that loads the full file). Its existing tests (principles, version, size) MUST stay unchanged. It runs with `npx vitest run -c .claude/vitest.config.ts constitution-card`.
+
+_From 691-author-skills-card._
+
+### 691-FR-008 — The change MUST be the smallest that satisfies FR-001 to FR-007: no new script, helper, configuration or wording beyond the load lines, the batch-read rule, the runner's line and the one test (Principle I).
+
+_From 691-author-skills-card._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -1107,3 +1136,5 @@ _From 760-e2e-sign-up-limit._
 - `464-FR-006` — superseded by `481-FR-002` (2026-10-07)
 
 - `677-FR-003` — superseded by `784-FR-003` (2026-10-07)
+
+- `673-FR-005` — superseded by `691-FR-005` (2026-10-07)
