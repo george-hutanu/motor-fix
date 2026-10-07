@@ -66,7 +66,6 @@ export const dropExpected = (observations) =>
       !((o.kind === "http" && o.status === o.expect && pathOf(o.url) === o.path) || (o.kind === "console" && String(o.text).includes(`status of ${o.expect}`))),
   );
 
-/** The refresh cookie the API sets at sign-in, for the web origin, which forwards /api/ to the API. */
 /** The cookies a context opens a run with: a fresh session of its role (refresh tokens rotate, so never shared), else none. */
 export async function contextCookies(run, { session, baseURL }) {
   if (!run.role) return [];
@@ -83,6 +82,7 @@ export const flowSignIn =
     await context.addCookies(await contextCookies({ role }, { session, baseURL }));
   };
 
+/** The refresh cookie the API sets at sign-in, for the web origin, which forwards /api/ to the API. */
 export const sessionCookie = ({ refresh, baseURL }) => ({
   name: "mf_refresh",
   value: refresh,
