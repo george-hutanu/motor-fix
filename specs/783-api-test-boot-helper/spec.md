@@ -19,7 +19,7 @@ A developer writing or reading an API integration spec finds one helper that boo
 
 1. **Given** the three API integration suites, **When** they run after the change, **Then** every test passes and no assertion, request, seeded account or expected answer in them differs from before.
 2. **Given** `apps/api`, **When** its test code is searched for the boot sequence (configuration read, testing module compiled, production app setup applied, app started), **Then** it appears in the shared helper only, not in any of the three suites.
-3. **Given** a spec that needs a variation the suites use today (an environment override, an extra test-only controller, a spy placed before the app starts), **When** it boots through the helper, **Then** the variation is possible without copying the boot block back.
+3. **Given** the sign-up suite, which sets `PUBLIC_WEB_URL` and spies on the account e-mail before the app starts, **When** it does both before calling the helper's start, **Then** the boot sees them, with no option or hook on the helper.
 
 ---
 
@@ -45,17 +45,17 @@ When a boot throws partway (the store fails to start, the module fails to compil
 - A boot that throws before the turn was taken: the teardown releases the turn's connection anyway (releasing an untaken turn is harmless today: it disconnects a client that never locked) and does not fail on it.
 - Two suites in the same run both reach the helper: each boots its own app and takes its own turn in sequence, as today; the helper owns nothing shared across files.
 - A spec that restores process environment it changed for the boot (the sign-up suite sets `PUBLIC_WEB_URL`) keeps doing so itself; the helper neither reads nor restores process variables beyond what the existing block reads.
-- The conventions suite (`bootstrap.integration.spec.ts`) boots several apps per file, each with a different `APP_ENV` and a probe controller, with one turn and one store for the file. It is checked: where the helper fits without changing that per-test lifecycle it uses the helper; otherwise it keeps its own `start` and is left as is (see Clarifications).
+- The conventions suite (`bootstrap.integration.spec.ts`) boots several apps per file, each with a different `APP_ENV` and a probe controller, with one turn and one store for the file. It keeps its own per-test `start`; only its file-level teardown changes, to release the turn in a `finally` (see Clarifications).
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: `apps/api` MUST have one test-only boot helper that boots the API for an integration spec as production configures it: the test environment values the suites use today, the in-process file store started, the shared database turn taken, the configuration read and checked from those values, the application module compiled, the production app setup applied and the app started; it MUST return the started app and what the spec needs to tear it down.
-- **FR-002**: The helper's teardown MUST always release the database turn and MUST close what the boot opened and nothing else (the app if it started, the store if it started), whatever stage the boot reached, including when the boot threw; an error while closing MUST NOT prevent the release and MUST still be reported.
-- **FR-003**: `validation-problem.integration.spec.ts`, `public-routes.integration.spec.ts` and `sign-up-confirmation.integration.spec.ts` MUST boot and tear down through the helper and MUST NOT carry a boot block or a teardown of their own; every request, seeded record and assertion in them MUST stay as it is.
-- **FR-004**: The helper MUST let a suite vary the boot where the suites do so today: an `APP_ENV` other than `test`, extra test-only controllers, and a spy or mock put in place before the app starts; `bootstrap.integration.spec.ts` MUST use the helper where that fits its per-test boots without changing any of its tests, and otherwise MUST stay unchanged.
-- **FR-005**: The helper MUST be covered by its own spec that proves FR-002 for a boot that throws at each stage and for a teardown whose close throws.
+- **FR-001**: `apps/api` MUST have one test-only boot helper: a handle created at module scope whose `start()` boots the API for an integration spec as production configures it (the test environment values the suites use today, the shared database turn taken, the in-process file store started, the configuration read and checked from those values, the application module compiled, the production app setup applied, the app started) and returns the started app, and whose `stop()` tears down whatever `start()` reached.
+- **FR-002**: `stop()` MUST be safe to call whatever stage `start()` reached, including when it threw or never ran: it MUST attempt every close of what was opened (the app if it was created, the store if it started), in the order app, store, and MUST release the database turn in a `finally`; when a close throws, the remaining closes and the release still run and the first error is rethrown.
+- **FR-003**: `validation-problem.integration.spec.ts`, `public-routes.integration.spec.ts` and `sign-up-confirmation.integration.spec.ts` MUST boot and tear down through the helper and MUST NOT close an app, a store or a turn of their own; they keep their own seeding and restores (the sign-up suite's `PUBLIC_WEB_URL` and spy), and every request, seeded record and assertion in them MUST stay as it is.
+- **FR-004**: The helper MUST take no option that no suite in this change uses (no `APP_ENV` override, no extra controllers, no failure-injection parameter). `bootstrap.integration.spec.ts` keeps its own per-test boots; its file-level teardown MUST release the turn in a `finally`, so a failed store stop or start never keeps the turn; none of its tests change.
+- **FR-005**: The helper MUST be covered by its own spec that proves FR-002 for a boot that throws at each stage and for a teardown whose close throws, making those stages fail with `jest.spyOn` in the spec, not through parameters of the helper.
 - **FR-006**: The API's behaviour MUST NOT change: no production source, route, answer, contract or configuration moves; the change is test infrastructure only.
 
 ### Key Entities
@@ -78,18 +78,21 @@ When a boot throws partway (the store fails to start, the module fails to compil
 
 ### Measurable Outcomes
 
-- **SC-001**: The boot sequence (configuration read, testing module compiled, production app setup applied, app started) exists once in `apps/api` test code, in the helper; the three suites named in FR-003 contain none of it, and none of the three keeps its own `afterAll`.
-- **SC-002**: A spec of the helper shows that after a boot that throws at any stage, a fresh take of the database turn succeeds without waiting, and that a close error does not keep the turn.
+- **SC-001**: The boot sequence (configuration read, testing module compiled, production app setup applied, app started) exists once in `apps/api` test code, in the helper; the three suites named in FR-003 contain none of it, and none of them calls `app.close()`, `store.stop()` or `turn.release()` itself.
+- **SC-002**: A spec of the helper shows that after a boot that throws at any stage, and after a close that throws, a fresh take of the database turn resolves within 1 s.
 - **SC-003**: The four existing API integration suites pass with no changed assertion; `npm run typecheck`, `npm run lint` and the API's tests are green on CI.
-- **SC-004**: The three suites each lose their boot block and teardown (each is shorter than before by at least the lines of that block).
+- **SC-004**: No `readEnv`, `Test.createTestingModule`, `configureApp`, `S3TestStore` or `databaseTurn` call remains in the three suites named in FR-003.
 
 ## Clarifications
 
 ### Session 2026-10-07
 
 - Q: Where does the helper live? → A: In `apps/api` test code, beside the suites, as a non-spec test-only file; not in the domain's testing exports, because it needs the app's own module and production setup, and libs never import apps (`421-FR-005`). (autonomous default; evidence: the block imports `./app.module` and `./bootstrap`; `libs/domain/src/auth/database-turn.testing.ts` is the repo's precedent for a `*.testing.ts` helper)
-- Q: What does the teardown do when closing fails? → A: It still releases the turn and reports the close error (the first error thrown wins) rather than swallowing it; the turn is released in a `finally`. (autonomous default; evidence: the ST-472 teardown already does this in `validation-problem.integration.spec.ts:55-62`, and the finding asks for it everywhere)
-- Q: Is `bootstrap.integration.spec.ts` in scope? → A: Checked, and in scope only where the helper fits its per-test boots with different `APP_ENV` and a probe controller without changing a test: the helper takes those as options (FR-004); if that still does not fit its lifecycle (one turn and store per file, one app per test), the suite stays unchanged and the plan says why. (autonomous default; evidence: the task says "check bootstrap.integration.spec.ts too"; Constitution I, the smallest change that fully solves the finding)
+- Q: Is `bootstrap.integration.spec.ts` in scope? → A: Its boots stay its own (one turn and store per file, one app per test, varying `APP_ENV` and controllers do not fit a one-app handle without options nobody else uses); only its file-level teardown gets the turn release in a `finally`, the same defect ST-715 names at `bootstrap.integration.spec.ts:92`. (autonomous default; evidence: the task says "check bootstrap.integration.spec.ts too"; `context.md` Contradictions, ST-715 page 2026-10-06; Constitution I)
+- Q: Does the teardown exist independently of a successful boot? → A: Yes: a module-scope handle whose `stop()` is safe at every stage, including when `start()` threw or never ran. (autonomous default; evidence: spec-challenger finding 1; US2 scenarios 1-2 describe a teardown after a failed boot)
+- Q: Does the helper grow options for variations only `bootstrap.integration.spec.ts` uses? → A: No: no option without a caller in this change; the sign-up suite sets its environment and spy before `start()`. (autonomous default; evidence: spec-challenger finding 2; Constitution I)
+- Q: May a suite keep its own `beforeAll`/`afterAll` for seeding and restores? → A: Yes; it only must not close the app, store or turn itself (FR-003, SC-001). (autonomous default; evidence: spec-challenger finding 3; `sign-up-confirmation.integration.spec.ts:48-55`)
+- Q: Does a teardown whose first close throws still attempt the rest? → A: Yes: every close is attempted, the turn is released in a `finally`, the first error is rethrown; the helper's own spec fails stages with `jest.spyOn`, not parameters. (autonomous default; evidence: spec-challenger findings 4-5; US2 scenario 4)
 - Q: Any API, contract, screen or web change? → A: None (FR-006). Existing behaviour does not change; the task's Role is System and its Design and Design boards are epic rollups with nothing for this work. (autonomous default; evidence: the Notion task page, `Issue type` Tech debt, `Role` System)
 
 ## Assumptions

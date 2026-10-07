@@ -18,3 +18,14 @@ Start: origin/main 0ea7890a (worktree `.worktrees/783-api-test-boot-helper`, bra
 - Checklist `checklists/requirements.md`: every item passes.
 - `level.mjs check`: level 2 unchanged (fr-count tripped at 6; clarification, contract, projects clear). `capabilities.mjs validate`: 0 errors, 3 warnings (FR-003, FR-004, FR-006 are scope rules, named in no Adds by design).
 - after_specify hooks: notion-sync `start` (ST-783 To do → Planning, EP-1 In progress unchanged, PR #190 label planning), ready review: 13 candidates (ST-682 … ST-5), the same list the ST-569 run reviewed earlier today and held; none clearly free of an outside wait, left as is. `pr 190` linked. Design check: no screens, `design.md` written.
+
+## Phase 3 — Context
+- org-researcher (background): context.md written; 7 findings; ST-715 overlaps on bootstrap teardown.
+
+## Phase 4 — Clarify (inline, spec-challenger 5 findings)
+- Q1 bootstrap in scope? → own boots stay; file-level teardown releases the turn in a finally (ST-715 overlap). (autonomous default)
+- Q2 teardown independent of a successful boot? → yes, module-scope handle, stop() safe at every stage.
+- Q3 options for bootstrap-only variations? → none; sign-up sets env and spy before start().
+- Q4 suites keep their own seed/restores? → yes; they never close app/store/turn themselves.
+- Q5 first close throws? → every close attempted, turn released in finally, first error rethrown; spec fails stages with jest.spyOn.
+- level check: 2 unchanged.
