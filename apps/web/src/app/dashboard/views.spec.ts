@@ -5,6 +5,8 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { type MeDto, NotificationsService } from '@motor-fix/data-access';
 import { Subject } from 'rxjs';
 
+import { AdminOverview } from './admin-overview';
+import { AdminPanel } from './admin-panel';
 import { Live } from './live';
 import { Session } from './session';
 import { allowedViews, DASHBOARDS, dashboardRoutes } from './views';
@@ -99,6 +101,7 @@ describe('the dashboard view lists', () => {
   it('lists the admin views with their labels, capabilities, release marks and counter', () => {
     expect(DASHBOARDS.admin.views).toEqual([
       {
+        body: AdminPanel,
         label: 'shell.frame.nav.dashboard',
         path: '',
         tab: 'shell.frame.tab.overview',
@@ -278,6 +281,14 @@ async function open(
         provide: Live,
         useValue: { events: new Subject(), resync: new Subject() },
       },
+      {
+        provide: AdminOverview,
+        useValue: {
+          failed: signal(false),
+          figures: signal(undefined),
+          loading: signal(true),
+        },
+      },
     ],
   });
   const harness = await RouterTestingHarness.create();
@@ -335,6 +346,20 @@ describe('the dashboard view routes', () => {
       expect(TestBed.inject(Router).url).toBe('/app/admin');
     },
   );
+
+  it('opens the platform figures on the admin dashboard address', async () => {
+    const { element } = await open('/app/admin', ADMIN, 'admin');
+
+    expect(TestBed.inject(Router).url).toBe('/app/admin');
+    expect(element.querySelector('mf-admin-panel')).not.toBeNull();
+  });
+
+  it('keeps the placeholder on the garage dashboard address', async () => {
+    const { element } = await open('/app/garage', OWNER);
+
+    expect(element.querySelector('mf-admin-panel')).toBeNull();
+    expect(element.textContent).toContain('Nimic aici încă.');
+  });
 
   it('opens the released garages view for an admin', async () => {
     await open('/app/admin/garages', ADMIN, 'admin');
