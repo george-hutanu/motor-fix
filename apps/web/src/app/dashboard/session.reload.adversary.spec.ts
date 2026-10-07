@@ -47,13 +47,18 @@ function setup() {
 }
 
 function held(meControllerMe: jest.Mock) {
-  const pending: { resolve: (me: MeDto) => void } = {
+  const pending: {
+    resolve: (me: MeDto) => void;
+    reject: (error: Error) => void;
+  } = {
+    reject: () => undefined,
     resolve: () => undefined,
   };
   meControllerMe.mockImplementationOnce(
     () =>
-      new Promise<MeDto>((resolve) => {
+      new Promise<MeDto>((resolve, reject) => {
         pending.resolve = resolve;
+        pending.reject = reject;
       }),
   );
   return pending;
@@ -133,5 +138,25 @@ describe('reading the account again, under overlapping changes', () => {
 
     expect(session.token()).toBe(before);
     expect(session.current()).toEqual(confirmed);
+  });
+
+  it('drops a reload sent under the switched token once the switch fails and puts the old one back', async () => {
+    const { meControllerMe, session } = await signedIn();
+    const before = session.token();
+    const switchedLoad = held(meControllerMe);
+    const switching = session.switchRole('garage');
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(session.token()).toBe('as-garage');
+    const reloadAnswer = held(meControllerMe);
+    const reading = session.reload();
+
+    switchedLoad.reject(new Error('offline'));
+    await expect(switching).rejects.toThrow('offline');
+    reloadAnswer.resolve(GARAGE);
+    await reading;
+
+    expect(session.token()).toBe(before);
+    expect(session.current()).toBe(DRIVER);
   });
 });
