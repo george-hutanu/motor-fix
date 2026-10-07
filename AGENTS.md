@@ -327,6 +327,8 @@ decisions are the source for anything the constitution does not fix.
   has something to do, or after 110 idle minutes to be re-armed; and one pass
   right away. A worktree session never arms it. The SessionStart reminder
   `session:start:watch-reminder` catches a resumed session whose wait was lost.
+- Fable usage limit hit: `node .claude/scripts/fable.mjs off` remaps `fable`
+  to Opus for sessions started afterwards (`on` restores, `status` tells).
 - Every API route needs a session: `ActorGuard` runs app-wide (`APP_GUARD`
   in `AuthModule`). A route open to visitors carries `@Public()` and joins
   the list in `apps/api/src/public-routes.integration.spec.ts`. The web
