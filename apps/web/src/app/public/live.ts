@@ -25,6 +25,8 @@ export interface PublicView {
 
 export type PublicLiveState = 'closed' | 'reconnecting' | 'open';
 
+const ASLEEP_FOR = 60_000;
+
 const PARAMS = [
   ['garages', 'garage'],
   ['mechanics', 'mechanic'],
@@ -49,9 +51,29 @@ export class PublicLive implements OnDestroy {
   private pending = false;
   private query = '';
   private wanted: AbortController | null = null;
+  private hiddenAt: number | null = null;
+
+  // A tab that slept may hold a stream that died without a word; open anew.
+  private readonly onVisibility = () => {
+    if (document.visibilityState === 'hidden') {
+      this.hiddenAt ??= Date.now();
+      return;
+    }
+    const slept =
+      this.hiddenAt !== null && Date.now() - this.hiddenAt >= ASLEEP_FOR;
+    this.hiddenAt = null;
+    if (slept && this.query) this.connect();
+  };
+
+  constructor() {
+    if (this.browser)
+      document.addEventListener('visibilitychange', this.onVisibility);
+  }
 
   ngOnDestroy() {
     this.wanted?.abort();
+    if (this.browser)
+      document.removeEventListener('visibilitychange', this.onVisibility);
   }
 
   // Answers the call that takes the view away again.
@@ -98,15 +120,21 @@ export class PublicLive implements OnDestroy {
     const query = params.toString();
     if (query === this.query) return;
     this.query = query;
-    this.wanted?.abort();
-    this.wanted = null;
-    if (!query) {
-      this.status.set('closed');
+    if (query) {
+      this.connect();
       return;
     }
+    this.wanted?.abort();
+    this.wanted = null;
+    this.status.set('closed');
+  }
+
+  // Drops the stream there is, if any, and opens one for the current query.
+  private connect() {
+    this.wanted?.abort();
     const wanted = new AbortController();
     this.wanted = wanted;
-    void this.run(`/api/v1/live/public?${query}`, wanted.signal);
+    void this.run(`/api/v1/live/public?${this.query}`, wanted.signal);
   }
 
   // Tries and waits until the views change or go away.

@@ -218,6 +218,36 @@ describe('PublicLive', () => {
     expect(live.state()).toBe('open');
   });
 
+  it.each([
+    [60_000, 2],
+    [50_000, 1],
+  ])(
+    'after a tab hidden for %i ms wakes, has opened %i streams',
+    async (hiddenFor, streams) => {
+      const live = setUp();
+      let visibility: DocumentVisibilityState = 'visible';
+      jest
+        .spyOn(document, 'visibilityState', 'get')
+        .mockImplementation(() => visibility);
+      live.register({ garage: 'g-1' });
+      await settle();
+
+      visibility = 'hidden';
+      document.dispatchEvent(new Event('visibilitychange'));
+      for (let slept = 0; slept < hiddenFor; slept += 10_000) {
+        await elapse(10_000);
+        bodies[0]?.send(': heartbeat\n\n');
+      }
+      visibility = 'visible';
+      document.dispatchEvent(new Event('visibilitychange'));
+      await settle();
+
+      expect(fetchMock).toHaveBeenCalledTimes(streams);
+      expect(signalOf(0).aborted).toBe(streams === 2);
+      expect(live.state()).toBe('open');
+    },
+  );
+
   it('passes on the events of its stream, filtered by kind and id', async () => {
     const live = setUp();
     const seen: string[] = [];
