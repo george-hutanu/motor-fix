@@ -2,7 +2,7 @@
 
 **Feature Branch**: `778-mark-sent-retry-no-delay`
 **Created**: 2026-10-07
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 **Input**: ST-778 (tech debt from ST-522, pr-tester): "spec drift: the retry of the \"mark sent\" write waits `200 * attempt` ms between attempts, but the spec's clarification says \"3 in all, no delay\"; drop the delay or amend the spec" — https://app.notion.com/3f1607bff0d2813a87c1edadb743768a. Also ST-779 (same review): "push sends are not tested for a failed \"mark sent\" write, though FR-001 and the spec's edge case name push" — https://app.notion.com/p/3f1607bff0d281db8706fdb7f05689fb
 
 ## User Scenarios & Testing *(mandatory)*
