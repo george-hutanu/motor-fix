@@ -10,6 +10,13 @@ import { ACCOUNTS, PASSWORD, ready, signIn } from './accounts.js';
 
 const MAINTENANCE = 'Mod mentenanță';
 
+// A signed-in dashboard holds the live stream open, so the network never goes
+// idle there: wait for the rules block instead.
+async function settled(page: Page) {
+  await page.goto('/app/admin/settings');
+  await expect(maintenance(page)).toBeVisible();
+}
+
 async function accessToken(request: APIRequestContext) {
   const res = await request.post('/api/v1/auth/sign-in', {
     data: { email: ACCOUNTS.admin, password: PASSWORD, remember: false },
@@ -41,7 +48,7 @@ async function openSettings(page: Page) {
     .click();
   await signIn(page, ACCOUNTS.admin);
   await expect(page).toHaveURL('/app/admin');
-  await ready(page, '/app/admin/settings');
+  await settled(page);
 }
 
 async function secondAdmin(browser: Browser) {
@@ -76,9 +83,14 @@ test.describe('the platform rules in Setări @seeded', () => {
   test('keep a switched rule over a reload', async ({ page }) => {
     await openSettings(page);
 
+    const saved = page.waitForResponse(
+      (res) =>
+        res.request().method() === 'PATCH' &&
+        res.url().includes('/admin/platform-rules/maintenance_mode'),
+    );
     await maintenance(page).click();
     await expect(maintenance(page)).toHaveAttribute('aria-checked', 'true');
-    await page.waitForLoadState('networkidle');
+    expect((await saved).ok()).toBe(true);
     await page.reload();
 
     await expect(maintenance(page)).toHaveAttribute('aria-checked', 'true');
@@ -110,9 +122,8 @@ test.describe('the platform rules in Setări @seeded', () => {
       .click();
     await signIn(page, ACCOUNTS.admin);
     await expect(page).toHaveURL('/app/admin');
-    await ready(page, '/app/admin/settings');
+    await settled(page);
 
-    await expect(maintenance(page)).toBeVisible();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth - window.innerWidth,
