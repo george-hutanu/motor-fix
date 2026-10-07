@@ -199,20 +199,24 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
       - if: steps.browsers.outputs.cache-hit != 'true'
         timeout-minutes: 10
-        # apt hangs at random (ST-890): 180 s an attempt, three attempts.
+        # apt hangs at random: 180 s an attempt, three attempts. apt runs under sudo, out of
+        # timeout's reach, so a failed attempt kills it as root and repairs dpkg before the next.
         run: |
           for attempt in 1 2 3; do
             timeout -k 10 180 npx playwright install --with-deps chromium && exit 0
             echo "::warning::playwright install --with-deps chromium: attempt $attempt of 3 failed or timed out"
+            sudo sh -c 'pkill -9 -x apt-get; pkill -9 -x dpkg; dpkg --configure -a' || true
           done
           exit 1
       - if: steps.browsers.outputs.cache-hit == 'true'
         timeout-minutes: 10
-        # apt hangs at random (ST-890): 180 s an attempt, three attempts.
+        # apt hangs at random: 180 s an attempt, three attempts. apt runs under sudo, out of
+        # timeout's reach, so a failed attempt kills it as root and repairs dpkg before the next.
         run: |
           for attempt in 1 2 3; do
             timeout -k 10 180 npx playwright install-deps chromium && exit 0
             echo "::warning::playwright install-deps chromium: attempt $attempt of 3 failed or timed out"
+            sudo sh -c 'pkill -9 -x apt-get; pkill -9 -x dpkg; dpkg --configure -a' || true
           done
           exit 1
       # Playwright starts the api, the worker and the web dev server itself (playwright.config.mts).
