@@ -91,3 +91,60 @@ artifact-lint: 0 errors, 0 warnings (Jev lane unavailable). 17/17 FRs tasked, 20
 
 ## Phase 17 — Archive (steps 1–3)
 - `capabilities.mjs merge --apply`: catalogue +12, garage-brands +5; spec status `Archived (2026-10-07)`. /speckit-retro not run (phase 16 forbids self-grading). Steps 4–5 run in the tail after the merge.
+
+## Final Report
+
+- Branch 039-brand-catalogue, specs/039-brand-catalogue, range ec74ab06..2e1b0d1, 20 commits. PR #193 ready, labels QA, feature, EP-2, scope: catalogue.
+- Phases 0–17 run in order (0–12 earlier, see above). 13: no new evidence. 14: spec and code BLOCK on round 1, every HIGH fixed (repair lap 2), both APPROVE on round 2. 15: pointer already current, no tracked change. 16: evidence gathered, unjudged. 17: catalogue +12, garage-brands +5, spec Archived.
+- Autonomous decisions: logged per phase above. Chief decided both open items (see "Chief decisions"): no DB trigger (service check, tested, Low debt filed); name swaps stay refused with an operator hint (T021), no follow-up.
+- Verification: feature specs `jest libs/domain/src/catalogue libs/domain/src/garages/garage-brands apps/api/src/main.spec.ts` → "Tests: 136 passed, 136 total"; spec reviewer: domain 3489/3489, contracts 96/96, api 250/250; pre-commit typecheck/test/lint green on every commit; `pr-body-check.ts` → "The PR follows the template."
+- FR → test: FR-001..003, 010 brands.spec.ts / brand-loader.integration.spec.ts (T005, T006); FR-004..009 brand-loader.integration.spec.ts + adversary (T006, T021); FR-010..012 brands.api.integration.spec.ts + adversary, brands.dto.spec.ts, public-routes (T012, T013, T022); FR-013..017 garage-brands.service.integration.spec.ts + adversary (T018).
+- Review findings unaddressed (deferred, all filed as Notion To do): concurrent first stance write (MEDIUM), Redis-down delete test (MEDIUM), DB trigger (LOW, decided by Chief), refusal helper layout (LOW), cache/commit race (LOW), load timeout env var (LOW).
+- Follow-ups: GarageBrandsService joins the lib index with its first outside caller (ST-397). QA run 37600346308 dispatched at 2e1b0d1; the tail merges after CI and QA.
+
+### Retrospective evidence (unjudged)
+
+Suggested verdict: none (Jev lane unavailable).
+
+```
+Retrospective evidence — 039-brand-catalogue (level 2, feature)
+
+Artifacts     spec.md, plan.md, tasks.md, research.md, data-model.md, quickstart.md, deferred.md
+Tasks         21 done, 0 open
+Requirements  17 declared, 0 retired
+Commits       15 (2026-10-07 → 2026-10-07)
+Diff          50 files, +3664 −0 over ec74ab0654afa31c0e6bb27e0b56bd7a2c5ea933..HEAD
+
+Spec Delta
+  catalogue: +12 ~0 -0
+  garage-brands: +5 ~0 -0
+
+Deferred      3 open of 4
+  [medium] libs/domain/src/garages/garage-brands.service.ts:53 — `libs/domain/src/garages/garage-brands.service.ts:53` — **medium** — concurrency: two first writes of one garage's stanc
+  [low] libs/domain/prisma/schema/garages.prisma:134 — `libs/domain/prisma/schema/garages.prisma:134` — **low** — decided by Chief (2026-10-07): the database does not itself r
+  [low] libs/domain/src/catalogue/brands.service.ts:9 — `libs/domain/src/catalogue/brands.service.ts:9` — **low** — layout: `refusal` lives in `auth/sign-up.service.ts` and is 
+
+Carryover     0 open item(s) from earlier retrospectives
+
+Commits
+  902309fc 2026-10-07 chore(catalogue): ST-39 start set up the brand catalogue and its upkeep
+  4f4119c2 2026-10-07 docs(specs): ST-39 specify the brand catalogue and check the design
+  0b780c39 2026-10-07 docs(specs): ST-39 log the specify phase
+  dab93883 2026-10-07 docs(specs): ST-39 org context from Notion
+  844c9211 2026-10-07 docs(specs): ST-39 clarify the brand catalogue spec
+  80615f5f 2026-10-07 docs(specs): ST-39 plan the brand catalogue
+  23ac405c 2026-10-07 docs(specs): ST-39 check the brand catalogue requirements
+  391d1cd3 2026-10-07 docs(specs): ST-39 strike the checklist item that does not apply
+  d9485e9a 2026-10-07 docs(specs): ST-39 break the brand catalogue into tasks
+  ac6287fa 2026-10-07 docs(specs): ST-39 log the analysis
+  81c82ed6 2026-10-07 feat(garages): ST-39 store a garage's answer, fuels and jobs for each brand
+  307b38b6 2026-10-07 feat(catalogue): ST-39 load the brand list at boot and let visitors search it
+  865a092a 2026-10-07 feat(catalogue): ST-39 log how many brands each boot load changed
+  e2f427cd 2026-10-07 test(catalogue): ST-39 harden the brand list and garage brand writes against hostile input
+  a2899bef 2026-10-07 feat(catalogue): ST-39 tell the operator to rename through a temporary name when a file swaps two brand names
+
+· jev lane unavailable (no TYPESAFE_API_KEY (or JEV) in env or .env) — mechanical findings only
+
+$ node .claude/scripts/instincts.mjs triggered --since ec74ab06
+  · jev lane unavailable (no TYPESAFE_API_KEY (or JEV) in env or .env) — mechanical findings only
+```
