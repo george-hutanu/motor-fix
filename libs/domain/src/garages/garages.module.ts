@@ -4,6 +4,7 @@ import type { Redis } from 'ioredis';
 import { AdminOverviewController } from './admin-overview.controller';
 import { GarageBrandsController } from './garage-brands.controller';
 import { GarageBrandsService } from './garage-brands.service';
+import { GaragePricesService } from './garage-prices.service';
 import { ListingDraftsController } from './listing-drafts.controller';
 import { ListingDraftsService } from './listing-drafts.service';
 import { ListingDraftThrottle } from './listing-drafts.throttle';
@@ -49,11 +50,12 @@ export class GaragesModule {
         PublicGaragesController,
         VerificationChecksController,
       ],
-      exports: [VerificationService],
+      exports: [GaragePricesService, VerificationService],
       imports: [notifications],
       module: GaragesModule,
       providers: [
         GarageBrandsService,
+        GaragePricesService,
         ListingDraftsService,
         {
           inject: [AUTH_REDIS],
