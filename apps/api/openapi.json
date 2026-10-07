@@ -1346,6 +1346,64 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/brands": {
+      "put": {
+        "operationId": "GarageBrandsController_replace",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceGarageBrandsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageBrandAnswerDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad or unknown brand, a text too long"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Replace the garage's brand answer: taken, refused, the texts",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}/invites": {
       "post": {
         "operationId": "GarageInvitesController_send",
@@ -3128,6 +3186,104 @@
           "garagesWaiting"
         ]
       },
+      "GarageBrandStanceDto": {
+        "type": "object",
+        "properties": {
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "stance": {
+            "type": "string",
+            "enum": [
+              "works_on",
+              "does_not_take"
+            ]
+          }
+        },
+        "required": [
+          "brandId",
+          "stance"
+        ]
+      },
+      "ReplaceGarageBrandsDto": {
+        "type": "object",
+        "properties": {
+          "brands": {
+            "description": "Every marked brand once; a brand left out is switched off",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageBrandStanceDto"
+            }
+          },
+          "brandNote": {
+            "type": "string",
+            "description": "Trimmed; blank or left out is no note",
+            "maxLength": 140
+          },
+          "refusalPhrase": {
+            "type": "string",
+            "description": "Trimmed; blank or left out is no phrase",
+            "maxLength": 60
+          }
+        },
+        "required": [
+          "brands"
+        ]
+      },
+      "BrandRefDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "BMW"
+          },
+          "slug": {
+            "type": "string",
+            "example": "bmw"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ]
+      },
+      "GarageBrandAnswerDto": {
+        "type": "object",
+        "properties": {
+          "worksOn": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandRefDto"
+            }
+          },
+          "doesNotTake": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandRefDto"
+            }
+          },
+          "brandNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "refusalPhrase": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "worksOn",
+          "doesNotTake",
+          "brandNote",
+          "refusalPhrase"
+        ]
+      },
       "StaffInviteDto": {
         "type": "object",
         "properties": {
@@ -3235,6 +3391,26 @@
       "PublicGarageDto": {
         "type": "object",
         "properties": {
+          "worksOn": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandRefDto"
+            }
+          },
+          "doesNotTake": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandRefDto"
+            }
+          },
+          "brandNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "refusalPhrase": {
+            "type": "string",
+            "nullable": true
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -3247,6 +3423,10 @@
           }
         },
         "required": [
+          "worksOn",
+          "doesNotTake",
+          "brandNote",
+          "refusalPhrase",
           "id",
           "name",
           "slug"

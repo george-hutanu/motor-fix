@@ -72,7 +72,7 @@ describe('reading a garage by slug, hostilely', () => {
     },
   );
 
-  it('exposes only id, name and slug of an approved garage', async () => {
+  it('exposes only id, name, slug and the brand answer of an approved garage', async () => {
     const created = await prisma.garage.create({
       data: {
         name: 'Atelier Ștefan',
@@ -84,7 +84,15 @@ describe('reading a garage by slug, hostilely', () => {
     const res = await read(created.slug);
 
     expect(res.status).toBe(200);
-    expect(Object.keys(res.body).sort()).toEqual(['id', 'name', 'slug']);
+    expect(Object.keys(res.body).sort()).toEqual([
+      'brandNote',
+      'doesNotTake',
+      'id',
+      'name',
+      'refusalPhrase',
+      'slug',
+      'worksOn',
+    ]);
   });
 
   it('serves a garage suspended after approval as 410, not from a cache', async () => {

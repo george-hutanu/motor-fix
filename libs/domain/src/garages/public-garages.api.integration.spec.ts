@@ -16,7 +16,7 @@ import {
   testConfig,
 } from '../notifications/notifications.testing';
 
-// @traces 207-FR-005 207-FR-011
+// @traces 207-FR-005 207-FR-011 040-FR-012
 
 const redisUrl = redisUrlFor(2);
 const { account, prisma, reset } = fixtures();
@@ -55,7 +55,10 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-beforeEach(() => reset());
+beforeEach(async () => {
+  await reset();
+  await prisma.$executeRawUnsafe('TRUNCATE brand CASCADE');
+});
 
 const read = (slug: string) =>
   request(app.getHttpServer()).get(`/garages/${slug}`);
@@ -88,9 +91,69 @@ describe('reading a garage by its public slug', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
+      brandNote: null,
+      doesNotTake: [],
       id: approved.id,
       name: 'Atelier Dinamo',
+      refusalPhrase: null,
       slug: approved.slug,
+      worksOn: [],
+    });
+  });
+
+  it("carries the garage's brand answer, in catalogue order, retired brands kept", async () => {
+    const approved = await prisma.garage.update({
+      data: {
+        brandNote: 'Fără mașini electrice',
+        refusalPhrase: 'orice nu e BMW',
+      },
+      where: { id: (await garage('approved')).id },
+    });
+    const brand = (name: string, popularity: number | null, active = true) => {
+      const key = `${name.toLowerCase()}-${randomUUID()}`;
+      return prisma.brand.create({
+        data: { active, key, name, popularity, slug: key },
+      });
+    };
+    const bmw = await brand('BMW', 2);
+    const audi = await brand('Audi', null);
+    const mini = await brand('Mini', 1);
+    const lada = await brand('Lada', null, false);
+    const tesla = await brand('Tesla', 3);
+    for (const [b, stance] of [
+      [bmw, 'works_on'],
+      [audi, 'works_on'],
+      [mini, 'works_on'],
+      [lada, 'works_on'],
+      [tesla, 'does_not_take'],
+    ] as const) {
+      const fuels = stance === 'works_on';
+      await prisma.garageBrand.create({
+        data: {
+          brandId: b.id,
+          diesel: fuels,
+          electric: fuels,
+          garageId: approved.id,
+          hybrid: fuels,
+          petrol: fuels,
+          stance,
+        },
+      });
+    }
+
+    const res = await read(approved.slug);
+
+    const ref = (b: { id: string; name: string; slug: string }) => ({
+      id: b.id,
+      name: b.name,
+      slug: b.slug,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      brandNote: 'Fără mașini electrice',
+      doesNotTake: [ref(tesla)],
+      refusalPhrase: 'orice nu e BMW',
+      worksOn: [ref(mini), ref(bmw), ref(audi), ref(lada)],
     });
   });
 
