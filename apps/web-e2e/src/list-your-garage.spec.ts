@@ -153,19 +153,27 @@ test.describe('on a desktop', () => {
     await fill(page);
     await entry(page, 'Mecanici').click();
     await expect(current(page)).toContainText('Mecanici');
+    await expect(sections(page).nth(3)).toBeInViewport();
+    await page.waitForTimeout(300);
+    const y = await page.evaluate(() => scrollY);
     await page.evaluate(() => {
       (window as { kept?: boolean }).kept = true;
     });
 
+    // A click that does not scroll: a real click would first bring the switch,
+    // at the top of the page, into view and so make step 1 current.
     await page
       .getByRole('group', { name: 'Limba' })
       .getByRole('button', { name: 'EN' })
-      .click();
+      .dispatchEvent('click');
 
     await expect(page).toHaveURL(/\/en\/list-your-garage/);
     await expect(page.locator('h1')).toHaveText('Put your garage on the map');
     await expect(steps(page, 'Steps')).toBeVisible();
     await expect(current(page)).toContainText('Mechanics');
+    await page.waitForTimeout(300);
+    await expect(current(page)).toContainText('Mechanics');
+    expect(await page.evaluate(() => scrollY)).toBe(y);
     expect(await page.evaluate(() => (window as { kept?: boolean }).kept)).toBe(
       true,
     );
