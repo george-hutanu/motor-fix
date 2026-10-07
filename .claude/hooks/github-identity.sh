@@ -10,6 +10,9 @@
 #     back to the active (work) account.
 #   - git drift (author, committer, credential pinning) and a missing gh login
 #     are reported into context. Advisory: .husky/pre-commit is the gate.
+#   - a checkout whose specs/ is not yet a clone of the private motor-fix-specs
+#     gets one (.claude/scripts/specs-repo.mjs ensure --soft, which never
+#     fails); one that already has it is left alone, so no network here.
 # In a Claude Code cloud session (CLAUDE_CODE_REMOTE=true) a proxy injects the
 # GitHub credentials and GH_TOKEN holds its placeholder: neither the export nor
 # the gh login check applies, and identity.sh check skips credential pinning.
@@ -37,5 +40,8 @@ if ! drift="$(sh .husky/identity.sh check 2>&1)"; then
 fi
 if [ "$cloud" = false ] && ! "$gh_bin" auth token --hostname github.com --user "$account" >/dev/null 2>&1; then
   echo "gh has no login for $account: gh commands and pushes here will fail until the user runs \`gh auth login --hostname github.com\` as $account, then \`gh auth switch --hostname github.com --user <work account>\` so ~/code keeps the work account. Do not push or call gh until then."
+fi
+if [ ! -e specs/.git ] && [ -f .claude/scripts/specs-repo.mjs ]; then
+  echo "specs/ (the private motor-fix-specs clone): $(node .claude/scripts/specs-repo.mjs ensure --soft 2>&1 | tail -n 1)"
 fi
 exit 0

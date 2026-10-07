@@ -22,13 +22,12 @@ describe('QA evidence keeps screenshots out of the repo', () => {
       assert.equal(git('check-ignore', '--no-index', path).trim(), path, `${path} is not ignored`);
   });
 
-  it('still tracks the report', () => {
-    assert.throws(() => git('check-ignore', '--no-index', 'specs/051-cockpit-gauges/pr-review/lap1/report.md'));
-  });
-
-  it('tracks no screenshot under specs/', () => {
-    const tracked = git('ls-files', 'specs').split('\n').filter((f) => /\.(png|jpe?g|webp)$/i.test(f));
-    assert.deepEqual(tracked, []);
+  // the report is kept in the private motor-fix-specs repo, whose own
+  // .gitignore refuses the images; the public repo tracks nothing under specs/.
+  // @traces 815-FR-001
+  it('tracks nothing under specs/ in the public repo', () => {
+    assert.match(readFileSync(join(root, '.gitignore'), 'utf8'), /^\/specs\/$/m);
+    assert.equal(git('ls-files', 'specs').trim(), '');
   });
 
   it('tells the QA step to copy the report and not the screenshots', () => {

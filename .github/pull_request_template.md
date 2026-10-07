@@ -15,7 +15,7 @@ _(fill in: the story link, e.g. https://app.notion.com/p/… (ST-n))_
 
 ## Spec folder
 
-_(fill in: specs/NNN-slug, or N/A and why)_
+_(fill in: specs/NNN-slug in motor-fix-specs, or N/A and why)_
 
 ## What changed
 

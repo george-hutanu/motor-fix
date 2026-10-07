@@ -121,15 +121,13 @@ without a status, so the test runs again.
 ## Evidence
 
 Copy `report.md` and `report.json` from the tester's `--out` directory into
-`specs/<feature>/pr-review/lap<n>/`. A failing lap's copy is committed with
-that lap's fix, so it rides in the PR it tested. A passing lap's is not
-committed: a commit would make a new head for another lap, and its verdict is
-already the PR review, the Agent review section and the run's artifact, never
-a later `docs(specs)` PR. Never commit the screenshots: they stay in
+`specs/<feature>/pr-review/lap<n>/` and commit them to the private specs
+repository (`node .claude/scripts/specs-repo.mjs commit "chore(specs): ST-<n> QA lap <n>" -- <feature>/pr-review`),
+failing and passing laps alike: it is not the PR's branch, so the commit makes
+no new head and no new lap. Never commit the screenshots: they stay in
 `--out`, outside the repo, and in the run's `pr-qa-<n>` artifact (kept 7
-days); the report names them and gives the run's URL. A lap's images would
-otherwise add hundreds of kilobytes to every clone for good, since a merge
-keeps them in history; `.gitignore` refuses them under `pr-review/`.
+days); the report names them and gives the run's URL. The specs repository's
+`.gitignore` refuses them under `pr-review/`.
 
 ## Never
 
