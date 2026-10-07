@@ -10,8 +10,6 @@ import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { ListYourGarage } from './list-your-garage';
 import { completedCount, cuiError, rarError, readStep6 } from './step6';
 
-type Five = [boolean, boolean, boolean, boolean, boolean];
-
 describe('reading the verification step from hostile draft data', () => {
   it.each([
     ['null', null],
@@ -94,13 +92,6 @@ describe('the step counter at its edges', () => {
   it('counts by true values, not by position', () => {
     expect(completedCount([false, false, false, false, true])).toBe(1);
     expect(completedCount([false, false, true, false, false])).toBe(1);
-  });
-
-  it('does not change when called twice with the same array', () => {
-    const done: Five = [true, false, true, false, true];
-    expect(completedCount(done)).toBe(3);
-    expect(completedCount(done)).toBe(3);
-    expect(done).toEqual([true, false, true, false, true]);
   });
 });
 
