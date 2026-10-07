@@ -80,6 +80,10 @@ const SETTLE_MS = 150;
       position: sticky; bottom: 0; z-index: 1; padding-block: var(--mf-space-2);
       background: var(--mf-bg); border-top: 1px solid var(--mf-line);
     }
+    /* Below 768 px the public tab bar is pinned at the bottom too (1 px line, 6 px, 52 px links, max(14 px, safe area)): sit above it. */
+    @media (max-width: 767.98px) {
+      .actions { bottom: calc(59px + max(14px, var(--mf-safe-bottom))); }
+    }
     .actions button, .ended button { min-height: var(--mf-tap); }
     .ended { display: grid; gap: var(--mf-space-3); justify-items: start; margin-top: var(--mf-space-4); }
     ol button {

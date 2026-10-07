@@ -225,6 +225,37 @@ test.describe('on a phone', () => {
     await expect(bar(page)).toHaveText('5 / 6 · Fotografii și adresă');
   });
 
+  test('keeps "Salvează ciorna" pinned above the tab bar, so saving never scrolls', async ({
+    page,
+  }) => {
+    await open(page, '/ro/list-your-garage');
+    await fill(page);
+    await bar(page).click();
+    await entry(page, 'Fotografii și adresă').click();
+    const y = await still(page);
+
+    const save = page.getByRole('button', { name: 'Salvează ciorna' });
+    const tabs = page.locator('mf-public-tab-bar');
+    await expect(tabs).toBeVisible();
+    const saveBox = (await save.boundingBox())!;
+    const tabsBox = (await tabs.boundingBox())!;
+    expect(saveBox.y + saveBox.height).toBeLessThanOrEqual(tabsBox.y + 1);
+    expect(
+      await save.evaluate((b) => {
+        const r = b.getBoundingClientRect();
+        const hit = document.elementFromPoint(
+          r.left + r.width / 2,
+          r.top + r.height / 2,
+        );
+        return hit !== null && b.contains(hit);
+      }),
+    ).toBe(true);
+
+    await save.click();
+    expect(await page.evaluate(() => scrollY)).toBe(y);
+    await expect(bar(page)).toHaveText('5 / 6 · Fotografii și adresă');
+  });
+
   test('opens and closes the list over the page, which stays where it was', async ({
     page,
   }) => {
