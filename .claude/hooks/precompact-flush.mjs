@@ -6,12 +6,15 @@
 // moment it matters, with the facts a resumed run needs and cannot recall:
 // where HEAD is, what is uncommitted, how many tasks are still open.
 //
-// Silent no-op when no feature is active, it has no run log yet, or its spec
-// says Archived (a closed run log takes no more blocks).
+// Silent no-op when no feature is active, it has no run log yet, HEAD is not
+// on the feature's branch, or that branch's PR is merged: a closed run log
+// takes no more blocks. The spec's Status is no signal, since the archive's
+// status line is committed before the QA fix laps that still need the log.
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
-import { activeFeature } from "../scripts/lib/feature.mjs";
+import { activeFeature, branchFeatureDir } from "../scripts/lib/feature.mjs";
+import { ghSync } from "../scripts/lib/gh-rest.mjs";
 
 const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
 const git = (args) => {
@@ -37,9 +40,15 @@ process.stdin.on("end", () => {
   const log = join(feature.dir, "auto-run.md");
   if (!existsSync(log)) process.exit(0);
 
-  const specFile = join(feature.dir, "spec.md");
-  const spec = existsSync(specFile) ? readFileSync(specFile, "utf8") : "";
-  if (/^\*\*Status\*\*:\s*Archived/m.test(spec)) process.exit(0);
+  const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
+  const rel = branchFeatureDir(repo, branch);
+  if (!rel || join(repo, rel) !== feature.dir) process.exit(0);
+  // Only a definite MERGED closes the log; no gh, no PR, a stall or odd output
+  // all keep writing, since a lost block costs more than a spare one.
+  try {
+    const pr = JSON.parse(ghSync(["pr", "view", branch, "--json", "state"], { cwd: repo, timeout: 3000 }));
+    if (pr.state === "MERGED") process.exit(0);
+  } catch {}
 
   const tasks = existsSync(join(feature.dir, "tasks.md")) ? readFileSync(join(feature.dir, "tasks.md"), "utf8") : "";
   const open = (tasks.match(/^\s*- \[ \]/gm) ?? []).length;
@@ -53,7 +62,7 @@ process.stdin.on("end", () => {
       "",
       `## Compaction ${stamp} (${trigger})`,
       "",
-      `- branch \`${git(["rev-parse", "--abbrev-ref", "HEAD"])}\` at \`${git(["rev-parse", "--short", "HEAD"])}\``,
+      `- branch \`${branch}\` at \`${git(["rev-parse", "--short", "HEAD"])}\``,
       `- tasks: ${done} done, ${open} open`,
       dirty.length ? `- uncommitted (${dirty.length}):` : "- working tree clean",
       ...dirty.slice(0, 20).map((l) => `  - ${l}`),
