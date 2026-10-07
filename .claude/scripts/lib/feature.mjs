@@ -145,7 +145,7 @@ export function levelApplies(state, target = state?.feature_directory) {
 // a zone-less stamp as local time and Python as UTC, and the hour stops at 23,
 // since Date.parse reads 24:00 as the next midnight and Python refuses it. The
 // day must be one its month has: Date.parse rolls 30 February into March, and
-// Python refuses it.
+// Python refuses it, as it refuses year 0.
 const LEVEL_AT = /^(\d{4})-(\d\d)-(\d\d)T(?:[01]\d|2[0-3]):\d\d(?::\d\d(?:\.\d{3}|\.\d{6})?)?(?:Z|[+-]\d\d:\d\d)$/;
 
 function parseLevelAt(stamp) {
@@ -153,7 +153,7 @@ function parseLevelAt(stamp) {
   if (!fields) return Number.NaN;
   const [year, month, day] = fields.slice(1, 4).map(Number);
   const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  return month >= 1 && month <= 12 && day >= 1 && day <= lastDay ? Date.parse(stamp) : Number.NaN;
+  return year >= 1 && month >= 1 && month <= 12 && day >= 1 && day <= lastDay ? Date.parse(stamp) : Number.NaN;
 }
 
 /**

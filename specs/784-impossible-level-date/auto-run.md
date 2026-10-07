@@ -37,3 +37,8 @@ specs/784-impossible-level-date/tasks.md: 4 tasks, one story (tests first, red p
 
 ## Phase 10 — implement
 - LEVEL_AT captures y/m/d; `parseLevelAt` refuses a month outside 1–12 or a day past the month's last (Date.UTC(y, m, 0)). Python unchanged. Harness 2065/2065 green, biome clean, doctor 0 failures.
+
+## Phases 11–14 — converge, harden, review
+- Converge: all 4 tasks done, nothing unbuilt. diff-audit and artifact-lint clean.
+- test-adversary (opus): 47/48 new cases passed; year `0000` diverged (JS kept, Python refuses year 0) → `parseLevelAt` also requires year ≥ 1; its cases folded into the existing parity block (spec-reviewer flagged the separate file as duplicate helpers), file not committed.
+- code-reviewer: APPROVE, 1 MEDIUM (CLAUDE.local.md lost its SPECKIT markers) → markers restored. spec-reviewer: APPROVE, same MEDIUM + the duplicate file → both fixed. No CRITICAL/HIGH; no re-review needed. Repair laps: 1.

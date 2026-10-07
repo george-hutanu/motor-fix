@@ -679,6 +679,14 @@ describe('a level_at only one reader would accept is no waiting level, in both r
     '2025-02-29T00:00Z',
     '2026-02-31T00:00:00.000Z',
     '2026-02-30T00:00+02:00',
+    '1900-02-29T12:00Z',
+    '2100-02-29T12:00Z',
+    '2026-06-31T12:00Z',
+    '2026-09-31T12:00Z',
+    '2026-11-31T12:00Z',
+    '2026-02-30T23:59:59.999999-05:00',
+    '2026-02-29T12:00:00+14:00',
+    '2027-02-29T12:00Z',
   ];
   for (const stamp of impossible) {
     const now = Date.parse(stamp) + 60_000;
@@ -692,7 +700,9 @@ describe('a level_at only one reader would accept is no waiting level, in both r
 
   const lastDays = ['2024-02-29', '2026-02-28', '2026-04-30', '2026-01-31'];
   const shapes = ['T12:00', 'T12:00:00', 'T12:00:00.000', 'T12:00:00.000000'].flatMap((time) => [`${time}Z`, `${time}+02:00`]);
-  for (const stamp of lastDays.flatMap((day) => shapes.map((shape) => day + shape))) {
+  // Offsets that move the instant into another month or year, and century leap years.
+  const crossings = ['2000-02-29T12:00Z', '2026-03-01T01:00+02:00', '2026-12-31T23:30-05:00', '2026-01-01T00:30+02:00', '2026-12-31T23:59Z'];
+  for (const stamp of [...lastDays.flatMap((day) => shapes.map((shape) => day + shape)), ...crossings]) {
     const now = Date.parse(stamp) + 60_000;
     it(`keeps the level for ${JSON.stringify(stamp)}, the last day of its month, in JS`, () => {
       assert.deepEqual(jsPoint(stamp, now), kept);
@@ -710,6 +720,8 @@ describe('a level_at only one reader would accept is no waiting level, in both r
     ['2026-02-28T24:00Z', '2026-03-01T00:01Z'],
     ['2026-02-28T23:59', '2026-02-28T23:59:30Z'],
     ['2026-02-28T23:59Z\n', '2026-03-01T00:00Z'],
+    ['0000-01-01T00:00Z', '0000-01-01T00:01Z'],
+    ['0000-02-29T00:00Z', '0000-02-29T00:01Z'],
   ];
   for (const [stamp, at] of outOfRange) {
     const now = Date.parse(at);

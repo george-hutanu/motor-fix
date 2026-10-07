@@ -32,6 +32,7 @@ A harness user sizes the next piece of work with `/speckit-size`, and the waitin
 
 - 29 February is valid in a leap year (`2024`, `2028`) and refused in a common year (`2025`, `2026`); day 31 is valid only in the seven 31-day months.
 - An offset never moves the written day: `2026-02-30T00:00+02:00` is refused on its written fields, and `2026-03-01T01:00+02:00`, whose UTC instant is 28 February, stays valid; the written calendar fields decide, never the instant they parse to.
+- Year `0000` is refused by both: Python's calendar starts at year 1 (found by the outside-in adversary specs, `level-calendar.adversary.spec.mjs`).
 - Month and day values outside `01`–`12` / `01`–`31` are already refused by both readers (JavaScript parses them to no instant, Python refuses them); they stay regressions, not new scope.
 - The fix never changes what is written: `/speckit-size` stamps the current time, which is always a real day, so no stamp written today is refused after the change.
 
