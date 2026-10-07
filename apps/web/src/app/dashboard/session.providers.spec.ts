@@ -57,6 +57,28 @@ describe('leaving for a provider', () => {
     expect(sessionStorage.getItem('mf-return-to')).toBeNull();
   });
 
+  it('leaves a dashboard address kept before it in place when no action asked', async () => {
+    const { session } = setup();
+    session.keepReturnTo('/app/driver/cars');
+
+    await session.leaveFor('google', { language: 'ro', remember: true });
+
+    expect(sessionStorage.getItem('mf-return-to')).toBe('/app/driver/cars');
+  });
+
+  it('replaces a kept address with the screen of the action that asked', async () => {
+    const { session } = setup();
+    session.keepReturnTo('/app/driver/cars');
+
+    await session.leaveFor('google', {
+      language: 'ro',
+      remember: true,
+      returnTo: '/ro/garages/g-1',
+    });
+
+    expect(sessionStorage.getItem('mf-return-to')).toBe('/ro/garages/g-1');
+  });
+
   it('keeps the screen to come back to when an action asked for the sign-in', async () => {
     const { leave, session } = setup();
 
@@ -82,6 +104,39 @@ describe('leaving for a provider', () => {
     expect(api.authControllerSignOut.mock.invocationCallOrder[0]).toBeLessThan(
       leave.mock.invocationCallOrder[0],
     );
+  });
+
+  it('keeps an address with its query and fragment, once', () => {
+    const { session } = setup();
+
+    session.keepReturnTo('/app/driver/cars?x=1#y');
+
+    expect(session.takeReturnTo()).toBe('/app/driver/cars?x=1#y');
+    expect(session.takeReturnTo()).toBeNull();
+  });
+
+  it.each(['//evil.example/x', '/\\evil.example/x', 'https://evil.example'])(
+    'never hands back %p',
+    (address) => {
+      const { session } = setup();
+
+      session.keepReturnTo(address);
+
+      expect(session.takeReturnTo()).toBeNull();
+    },
+  );
+
+  it('keeps nothing, and throws nothing, without session storage', () => {
+    const { session } = setup();
+    const write = jest
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementation(() => {
+        throw new Error('blocked');
+      });
+
+    expect(() => session.keepReturnTo('/app/driver/cars')).not.toThrow();
+    write.mockRestore();
+    expect(session.takeReturnTo()).toBeNull();
   });
 
   it('takes back only an address of this site', () => {

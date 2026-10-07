@@ -33,10 +33,11 @@ export class SignInDialog {
       await this.router.navigateByUrl(me.landing);
       return;
     }
-    const landing = (await this.dialog(false))
-      ? this.session.current()?.landing
-      : undefined;
-    if (landing) await this.router.navigateByUrl(landing);
+    const signedIn = await this.dialog(false);
+    // Read either way, so a closed dialog drops the address the area guard kept.
+    const kept = this.session.takeReturnTo();
+    const next = signedIn ? (kept ?? this.session.current()?.landing) : null;
+    if (next) await this.router.navigateByUrl(next);
   }
 
   // Resolves true once the person has signed in or created an account; the

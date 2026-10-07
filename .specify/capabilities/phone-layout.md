@@ -1,12 +1,13 @@
 ---
 capability: phone-layout
-updated: 2026-10-06
+updated: 2026-10-07
 features:
   - 286-phone-layout
   - 287-public-tab-bar
   - 082-sign-in
   - 288-dashboard-tab-bar
   - 461-list-row-labels
+  - 028-driver-dashboard-views
 ---
 
 # Capability: Phone layout and installable web app
@@ -155,16 +156,30 @@ _From 288-dashboard-tab-bar._
 
 _From 288-dashboard-tab-bar._
 
-### 288-FR-013 — Each view MUST show its title and a placeholder body until the epic that owns the view builds it.
+### 028-FR-002 — Each driver view MUST have a header title of its own, shown as the page's `h1` in the interface language: "Panoul tău" / "Your dashboard", "Cererile mele" / "My requests", "Mașinile mele" / "My cars", "Recenziile mele" / "My reviews", "Service‑uri salvate" / "Saved garages", "Asistentul tău AI" / "Your AI assistant", "Setări" / "Settings". Setări MUST show the subtitle "Datele contului și notificările" / "Account details and notifications" under its title. A view with no title of its own keeps its menu label as the title (the garage and admin views, unchanged); subtitles that count things belong to each view's own story. Modifies 288‑FR‑013 (the title was the menu label).
 
-_From 288-dashboard-tab-bar._
+_From 028-driver-dashboard-views._
 
 ### 461-FR-001 — Every element of the shared table (`libs/ui-cockpit` helm table) MUST carry its explicit ARIA role: the table `table`, its header and body `rowgroup`, each row `row`, each header cell `columnheader`, each data cell `cell`, so assistive technology keeps the table semantics whatever display the phone stylesheet gives them.
 
 _From 461-list-row-labels._
+
+### 028-FR-001 — The driver dashboard's view list MUST hold seven views in this order: Panou (`''`), Cererile mele (`requests`), Mașinile mele (`cars`), Recenziile mele (`reviews`), Service‑uri salvate (`saved`), Asistent AI (`assistant`), Setări (`settings`), each under `/app/driver/<path>`; Asistent AI MUST carry the release mark (160‑FR‑007), so it is absent from the menu and the bar and its address opens Panou, with a test for the hidden entry. Its labels exist in both languages for the day it is released: menu "Asistent AI" / "AI assistant", tab "AI" / "AI". Adds the view to 288‑FR‑001's list; the six others and their labels are unchanged.
+
+_From 028-driver-dashboard-views._
+
+### 028-FR-003 — Changing view MUST never reload the page, and a forward navigation to another view MUST start it at the top of the window; the browser's back button MUST return to the previous view. The window is what scrolls (the frame has no inner scrolling container). One router‑wide setting does this (forward: top; back and forward buttons: the earlier position), so every dashboard and the public screens behave alike; a navigation that changes only the query or the fragment keeps the position.
+
+_From 028-driver-dashboard-views._
+
+### 028-FR-004 — The driver dashboard's account block MUST read "CONT ȘOFER" / "DRIVER ACCOUNT" as its account‑type line (the garage and admin lines stay as they are), and the account block of every dashboard (one shared frame, so no extra code per area) MUST show the person's initials beside the name: the first character (one Unicode code point, so an emoji or accented letter is never split) of the first and of the last whitespace‑separated word, upper‑cased for Romanian ("Ana-Maria Pop" → "AP", "ștefan" → "Ș"), at most two, one for a one‑word name, none for an empty name; the initials are hidden from assistive technology and the name stays the accessible text. "Ieși din cont" stays: it signs out on this device and opens Home.
+
+_From 028-driver-dashboard-views._
 
 ## Retired
 
 - `287-FR-006` — superseded by `082-FR-012` (2026-10-04)
 
 - `286-FR-007` — superseded by `461-FR-002` (2026-10-06)
+
+- `288-FR-013` — superseded by `028-FR-002` (2026-10-07)

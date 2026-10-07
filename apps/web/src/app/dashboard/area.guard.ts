@@ -9,9 +9,13 @@ export const areaGuard =
   async () => {
     const router = inject(Router);
     const i18n = inject(I18n);
-    const me = await inject(Session).load();
-    // Nobody signed in: Home, with the sign-in dialog open over it.
+    const session = inject(Session);
+    const me = await session.load();
+    // Nobody signed in: Home, with the sign-in dialog open over it, keeping
+    // the address asked for to open once they sign in.
     if (!me) {
+      const asked = router.currentNavigation()?.extractedUrl;
+      if (asked) session.keepReturnTo(router.serializeUrl(asked));
       return new RedirectCommand(router.parseUrl(`/${i18n.language()}`), {
         state: { signIn: true },
       });
