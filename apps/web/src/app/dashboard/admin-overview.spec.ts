@@ -12,7 +12,19 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let reads: number;
-let answer: () => Promise<{ garagesWaiting: number }>;
+let answer: () => Promise<{
+  garagesWaiting: number;
+  garagesListed?: number;
+  garagesApprovedThisMonth?: number;
+  activeDrivers?: number;
+  activeDriversMonthStart?: number;
+}>;
+
+const FIGURES = {
+  activeDrivers: 12480,
+  garagesApprovedThisMonth: 9,
+  garagesListed: 214,
+};
 
 function setUp() {
   events = new Subject();
@@ -159,5 +171,80 @@ describe('AdminOverview', () => {
     await wait(0);
 
     expect(reads).toBe(2);
+  });
+
+  it('gives the platform figures and the month-start value from the same read', async () => {
+    answer = async () => ({
+      ...FIGURES,
+      activeDriversMonthStart: 12168,
+      garagesWaiting: 2,
+    });
+    const overview = setUp();
+    await wait(0);
+
+    expect(reads).toBe(1);
+    expect(overview.waiting()).toBe(2);
+    expect(overview.figures()).toEqual({
+      ...FIGURES,
+      activeDriversMonthStart: 12168,
+    });
+  });
+
+  it('gives the figures without a month-start value when the answer has none', async () => {
+    answer = async () => ({ ...FIGURES, garagesWaiting: 0 });
+    const overview = setUp();
+    await wait(0);
+
+    expect(overview.figures()).toEqual(FIGURES);
+    expect(overview.figures()?.activeDriversMonthStart).toBeUndefined();
+  });
+
+  it('gives no figures while the first read is on its way, nor after a failed re-read, and the next ones that come', async () => {
+    let finish: (() => void) | undefined;
+    answer = () =>
+      new Promise((resolve) => {
+        finish = () => resolve({ ...FIGURES, garagesWaiting: 1 });
+      });
+    const overview = setUp();
+    await wait(0);
+    expect(overview.figures()).toBeUndefined();
+
+    finish?.();
+    await wait(0);
+    expect(overview.figures()?.garagesListed).toBe(214);
+
+    answer = async () => {
+      throw new HttpErrorResponse({ status: 503 });
+    };
+    resync.next();
+    await wait(0);
+    expect(overview.figures()).toBeUndefined();
+
+    answer = async () => ({
+      ...FIGURES,
+      garagesListed: 215,
+      garagesWaiting: 1,
+    });
+    resync.next();
+    await wait(0);
+    expect(overview.figures()?.garagesListed).toBe(215);
+  });
+
+  it('reads the figures again on a verification decision, in the same one call', async () => {
+    let listed = 214;
+    answer = async () => ({
+      ...FIGURES,
+      garagesListed: listed,
+      garagesWaiting: 1,
+    });
+    const overview = setUp();
+    await wait(0);
+
+    listed = 215;
+    events.next(message('verification.decided'));
+    await wait(400);
+
+    expect(reads).toBe(2);
+    expect(overview.figures()?.garagesListed).toBe(215);
   });
 });

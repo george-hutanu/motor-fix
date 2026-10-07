@@ -3465,10 +3465,33 @@
             "type": "integer",
             "description": "Verification files submitted or in review",
             "minimum": 0
+          },
+          "garagesListed": {
+            "type": "integer",
+            "description": "Garages approved and listed now",
+            "minimum": 0
+          },
+          "garagesApprovedThisMonth": {
+            "type": "integer",
+            "description": "Listed garages first approved in the current Europe/Bucharest month",
+            "minimum": 0
+          },
+          "activeDrivers": {
+            "type": "integer",
+            "description": "Active driver accounts used in the last 30 days",
+            "minimum": 0
+          },
+          "activeDriversMonthStart": {
+            "type": "integer",
+            "description": "Active drivers on the 1st of the current month, absent when that night was not recorded",
+            "minimum": 0
           }
         },
         "required": [
-          "garagesWaiting"
+          "garagesWaiting",
+          "garagesListed",
+          "garagesApprovedThisMonth",
+          "activeDrivers"
         ]
       },
       "GarageBrandStanceDto": {

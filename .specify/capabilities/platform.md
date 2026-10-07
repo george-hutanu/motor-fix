@@ -44,7 +44,13 @@ features:
   - 457-diff-audit-tsconfig-imports
   - 728-active-feature-padded-fallback
   - 746-validate-archived-fr-assigned
+  - 846-conflict-detect
   - 760-e2e-sign-up-limit
+  - 691-author-skills-card
+  - 437-diff-audit-origin-main
+  - 849-work-timeline-row
+  - 768-cloud-compose-pull
+  - 845-archived-delta-adds
 ---
 
 # Capability: Platform
@@ -409,9 +415,9 @@ _From 673-story-tail-agents._
 
 _From 673-story-tail-agents._
 
-### 673-FR-005 — `speckit-auto`'s Preflight and phase 1 MUST read the card instead of the full constitution; `spec-reviewer`, `code-reviewer` and `pr-tester` MUST keep reading `constitution.md`.
+### 691-FR-005 — `.claude/agents/task-runner.md` (:21-24) MUST say that `/speckit-auto`'s Preflight and phase 1 and the author skills read the card, and that the reviewers (`spec-reviewer`, `code-reviewer`) and the PR tester read the full `.specify/memory/constitution.md` themselves.
 
-_From 673-story-tail-agents._
+_From 691-author-skills-card._
 
 ### 673-FR-006 — The definition MUST carry the AGENTS.md reply envelope verbatim and a cap of at most 10 lines.
 
@@ -1077,6 +1083,46 @@ _From 746-validate-archived-fr-assigned._
 
 _From 746-validate-archived-fr-assigned._
 
+### 846-FR-001 — The CI wait MUST read the PR's mergeable state before its first checks poll and on every later poll of the checks or the run, and MUST end at once with a distinct exit code (3, see Assumptions), documented in the script's header beside 0, 1 and 2, printing exactly `conflict: merge origin/main` and nothing else, when that state is CONFLICTING.
+
+_From 846-conflict-detect._
+
+### 846-FR-002 — The CI wait MUST treat UNKNOWN as "not yet known": it keeps polling under the existing limits (`SPECKIT_CI_NO_CHECKS_MIN`, `SPECKIT_CI_WAIT_MIN`) and never maps UNKNOWN to a conflict or to mergeable.
+
+_From 846-conflict-detect._
+
+### 846-FR-003 — The CI wait MUST keep its current behaviour for MERGEABLE PRs: exit 0 with only what did not pass and the run's conclusion, exit 1 at a limit, exit 2 on a gh failure, and a failure to read the mergeable state is a gh failure.
+
+_From 846-conflict-detect._
+
+### 846-FR-004 — In a cloud session the CI wait MUST read the mergeable state through the REST fallback, which MUST keep mapping REST `true`/`false`/`null` to MERGEABLE/CONFLICTING/UNKNOWN.
+
+_From 846-conflict-detect._
+
+### 846-FR-005 — The watcher MUST show a `conflict` verdict with the fix `merge-main` for every open, ready PR whose mergeable state is CONFLICTING and whose worktree no live agent or owner holds, before the `waiting`, `merge`, `tail`, `fix-ci`, `rerun-qa` and `resume` rules and without a quiet threshold; held rows stay `ok`, and draft, merged and closed PRs are judged as today.
+
+_From 846-conflict-detect._
+
+### 846-FR-006 — `merge-main` MUST be dispatched like `tail`: the dispatch plan admits `conflict` rows beside `stale` ones and the board's header counts them; it takes a QA place in the dispatch plan, counts toward the agent cap, is claimed on the worktree before dispatch, runs as `task-runner` on the default model (it may resolve code conflicts), and its instructions in `speckit-watch` tell it to merge `origin/main` into the branch (never a rebase, never a forced push), run the affected tests, push, dispatch the new head's QA run with `--no-wait`, and end; a merge it cannot finish, or tests that stay red, set the task to Blocked with the reason, never leaving the merge in progress.
+
+_From 846-conflict-detect._
+
+### 846-FR-007 — `watch.mjs --gate` MUST exit 2 and print one line per unclaimed `conflict` row in the dispatch plan (stateless: it fires on every pass until the row is claimed, within the QA cap), so a ready PR that turns CONFLICTING between passes wakes the orchestrator; with no conflict row the gate's answer MUST be unchanged.
+
+_From 846-conflict-detect._
+
+### 846-FR-008 — The watcher MUST read each PR's mergeable state from the one `gh pr list` it already runs per pass, on the laptop, never one request per PR; in a cloud session the list may carry none, and the state then reads UNKNOWN (see Assumptions).
+
+_From 846-conflict-detect._
+
+### 846-FR-009 — `speckit-auto/tail.md` MUST say what the session does when the wait ends on the conflict exit code (merge `origin/main` on the branch or dispatch `merge-main`, then a new QA run and a new wait; it is not a Hard Stop), and `speckit-watch/SKILL.md` MUST list `merge-main` in its fix table and `conflict` among the board's verdicts.
+
+_From 846-conflict-detect._
+
+### 846-FR-010 — Every behaviour above MUST be covered by harness specs written before the code (`ci-wait.spec.mjs`, `watch.spec.mjs`, `watch.adversary.spec.mjs`, `gh-rest` mapping, and `watch-schedule-wiring.spec.mjs` where the wait's documented endings change), run by `npm run test:harness`.
+
+_From 846-conflict-detect._
+
 ### 760-FR-001 — Before a run that starts its servers locally, the end-to-end suite MUST delete every sign-up count key (`auth:signup:address:*`) in the Redis at `REDIS_URL`, and nothing else.
 
 _From 760-e2e-sign-up-limit._
@@ -1088,6 +1134,74 @@ _From 760-e2e-sign-up-limit._
 ### 760-FR-003 — The sign-up count keys MUST keep the prefix the suite clears, `auth:signup:address:`.
 
 _From 760-e2e-sign-up-limit._
+
+### 691-FR-001 — The load step of each of the eight author skills — `speckit-specify` (SKILL.md:153), `speckit-clarify` (:74), `speckit-plan` (:63), `speckit-checklist` (:95), `speckit-tasks` (:72), `speckit-analyze` (:128), `speckit-implement` (:103), and `speckit-converge` (:105, the same defect in another `/speckit-auto` phase) — MUST name `.specify/memory/constitution-card.md` and MUST NOT name `.specify/memory/constitution.md` as the file to load.
+
+_From 691-author-skills-card._
+
+### 691-FR-002 — A load line MAY add one fallback, in exactly these words: "Open a principle's section in `.specify/memory/constitution.md` only when a decision turns on its exact wording." It may share the load line. No other line in an author skill MAY name the full file except the forms FR-003 lists.
+
+_From 691-author-skills-card._
+
+### 691-FR-003 — The existing pointer lines `Full text: \`.specify/memory/constitution.md\`.` in `speckit-plan`, `speckit-tasks`, `speckit-implement` (and `speckit-tests`) and the "Constitution Authority" paragraphs of `speckit-analyze` (:67) and `speckit-converge` (:91) MUST stay as they are; they are references, not loads.
+
+_From 691-author-skills-card._
+
+### 691-FR-004 — `speckit-specify`'s batch-read rule (:399, "Read the template, the constitution, and any repo files you need in one batch before writing") MUST name the card in place of the constitution.
+
+_From 691-author-skills-card._
+
+### 691-FR-006 — `.claude/agents/spec-reviewer.md`, `.claude/agents/code-reviewer.md` and `.claude/agents/pr-tester.md` MUST keep every line that reads `.specify/memory/constitution.md`; this feature changes none of them.
+
+_From 691-author-skills-card._
+
+### 691-FR-007 — `.claude/scripts/constitution-card.spec.mjs` MUST gain a test over the eight author skills' `SKILL.md` files that fails, naming the skill and the line, when a skill does not name `.specify/memory/constitution-card.md`, or when any line naming `.specify/memory/constitution.md` is not one of the allowed forms: the pointer line `Full text: \`.specify/memory/constitution.md\`.`, a line opening `**Constitution Authority**`, or a line holding the FR-002 fallback sentence verbatim **and** naming `.specify/memory/constitution-card.md` (so the fallback cannot ride on a line that loads the full file). Its existing tests (principles, version, size) MUST stay unchanged. It runs with `npx vitest run -c .claude/vitest.config.ts constitution-card`.
+
+_From 691-author-skills-card._
+
+### 691-FR-008 — The change MUST be the smallest that satisfies FR-001 to FR-007: no new script, helper, configuration or wording beyond the load lines, the batch-read rule, the runner's line and the one test (Principle I).
+
+_From 691-author-skills-card._
+
+### 437-FR-001 — diff-audit MUST take its base as `git merge-base HEAD origin/main`, and only when that ref is absent fall back to `git merge-base HEAD main`.
+
+_From 437-diff-audit-origin-main._
+
+### 849-FR-001 — Each status event `start`, `implement`, `qa`, `finish`, `blocked` and `unblock` that notion-sync runs for a story MUST upsert that story's Work timeline row: query the data source by `Key` = `ST-<n>`, update the first match, else create a row with Task (title) and Key both `ST-<n>`. `review` and every non-status event (`pr`, `debt`, `ready`, `log`, `check`) MUST NOT touch the Work timeline.
+
+_From 849-work-timeline-row._
+
+### 849-FR-002 — The step MUST write State and dates as mapped: `start` → In progress, Started = now only when empty; `implement` → In progress (Started as `start`); `qa` → QA, QA from = now only when empty; `finish` → Merged, Merged at = now; `blocked` → Blocked; `unblock` → QA when the row has QA from, else In progress. No other state (in particular `Queued`) is ever written.
+
+_From 849-work-timeline-row._
+
+### 849-FR-003 — With every write the step MUST set the row's page icon to the state's emoji (🔨 In progress, 🧪 QA, ✅ Merged, ⛔ Blocked; ⏳ Queued is never written), its `When` to the range Started (now when empty) → Merged at for a Merged row, else now + 2h, and `Took` to `"<total> total · build <b> · QA <q>"` once Merged, `"build <b> · in QA <q>"` in QA, `"<d> so far"` otherwise, with durations as `0m`, `<m>m` under an hour, else `<h>h<mm>`; `Took` is omitted when there is no Started. The same step MUST also write the timing onto the story page it already updates (stories data source): `Work` (the same range as `When`), `Started`, `QA from`, `Merged at` (each when set) and `Took`, so the story and the row agree. A date is read from the story first, else from the row.
+
+_From 849-work-timeline-row._
+
+### 849-FR-004 — The step MUST set `PR` to the story's PR URL when the event knows it (the story's `PR` property, else `--pr <n>` as the repository's PR URL) and omit it otherwise, and MUST set the `Ticket` relation (to the stories data source `326eee3c-abec-41d9-9f96-eb3bd545a802`) to the story's own page; it MUST never send the `Session` property (to the row or the story), nor any property the mapping does not name, so what the owner set by hand is kept.
+
+_From 849-work-timeline-row._
+
+### 849-FR-005 — The Work timeline write MUST fail open: any error (request, HTTP status, body) is caught inside `.claude/scripts/lib/work-timeline.mjs` (which holds the data source id `3706e923-2faa-42bc-aab2-8a2d5ab5d9d3` and the Notion version `2025-09-03` as constants and is called from notion-sync's status event after the story's own writes), logged as one line in `specs/<feature>/notion-sync.md` through the event's existing log, and never thrown, never changes the event's output or exit code, and never queues a PENDING replay line. A successful write logs one line with the row's change.
+
+_From 849-work-timeline-row._
+
+### 768-FR-001 — `scripts/cloud-setup.sh` MUST skip `docker compose pull postgres redis` when every image `docker compose config --images postgres redis` names is present locally (`docker image inspect`), and say so.
+
+_From 768-cloud-compose-pull._
+
+### 768-FR-002 — When an image is missing, or the compose file's images cannot be read, it MUST pull postgres and redis, and a failed pull MUST fail the script.
+
+_From 768-cloud-compose-pull._
+
+### 845-FR-001 — `validateFeature` MUST NOT report `delta-adds-existing` for a feature whose `spec.md` status line (`**Status**: Archived`, optionally followed by a date) marks it archived.
+
+_From 845-archived-delta-adds._
+
+### 845-FR-002 — For any other feature, `delta-adds-existing` MUST stay an ERROR, and every other rule MUST fire for archived and unarchived features alike.
+
+_From 845-archived-delta-adds._
 
 ## Retired
 
@@ -1107,3 +1221,5 @@ _From 760-e2e-sign-up-limit._
 - `464-FR-006` — superseded by `481-FR-002` (2026-10-07)
 
 - `677-FR-003` — superseded by `784-FR-003` (2026-10-07)
+
+- `673-FR-005` — superseded by `691-FR-005` (2026-10-07)

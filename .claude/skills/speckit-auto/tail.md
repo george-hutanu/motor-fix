@@ -18,6 +18,11 @@ It keeps waiting while the head has no checks yet, as it has for a few
 seconds after every push (`gh pr checks --watch` would end there at once);
 exit 1, no checks after 10 minutes or CI still pending after 120, is the
 Hard Stop below.
+Exit 3, printing `conflict: merge origin/main`, means the PR conflicts with
+`main` (GitHub runs no CI on it), and is not a Hard Stop: claim the worktree
+for `merge-main` and dispatch it (speckit-watch's fix table), which merges
+`origin/main` in, pushes, dispatches the new head's run with `--no-wait` and
+returns a new `NEXT: tail`, whose wait starts again.
 
 When it reports, `node .claude/scripts/watch.mjs claim <worktree> tail` and
 dispatch the tail (below). Should the session end first, the watcher holds

@@ -71,7 +71,7 @@ function workspace({ stories, epicStatus = 'In progress', rows = [], fail = () =
   const fetchImpl = async (url, init) => {
     const path = url.slice(API.length);
     const body = init.body ? JSON.parse(init.body) : undefined;
-    calls.push({ method: init.method, path, body, auth: init.headers.Authorization });
+    calls.push({ method: init.method, path, body, auth: init.headers.Authorization, version: init.headers['Notion-Version'] });
     const failed = fail(init.method, path, body);
     if (failed) return failed;
     if (init.method === 'POST' && path === `/data_sources/${STORIES}/query`) {
@@ -120,7 +120,7 @@ function repoWith({ deferred, body } = {}) {
   return repo;
 }
 
-async function run(argv, { repo = repoWith(), ws, env = { NOTION_TOKEN: TOKEN }, ghOut = {}, ghImpl } = {}) {
+async function run(argv, { repo = repoWith(), ws, env = { NOTION_TOKEN: TOKEN }, ghOut = {}, ghImpl, workTimeline = async () => null } = {}) {
   const out = [];
   const sleeps = [];
   const err = [];
@@ -136,6 +136,7 @@ async function run(argv, { repo = repoWith(), ws, env = { NOTION_TOKEN: TOKEN },
       return ghOut[args.slice(0, 2).join(' ')] ?? '';
     },
     now: () => new Date(2026, 9, 5, 12),
+    ...(workTimeline === 'real' ? {} : { workTimeline }),
     sleep: async (ms) => sleeps.push(ms),
     stdout: (s) => out.push(s),
     stderr: (s) => err.push(s),
@@ -679,5 +680,88 @@ describe('gh outside the injected tests', () => {
     const env = { CLAUDE_CODE_REMOTE: 'true' };
     assert.equal(defaultGh(['pr', 'view', '139', '--json', 'url', '-q', '.url'], { env, run }), 'https://github.com/o/r/pull/139\n');
     assert.equal(defaultGh(['pr', 'view', '140', '--json', 'url', '-q', '.url'], { env, run }), '');
+  });
+});
+
+describe('the Work timeline', () => {
+  const recorder = (answer = 'In progress → QA') => {
+    const seen = [];
+    const fn = async (args) => {
+      seen.push(args);
+      return answer;
+    };
+    return { seen, fn };
+  };
+
+  for (const event of ['start', 'implement', 'qa', 'finish', 'unblock']) {
+    it(`${event} hands the story, its key, its PR and both clients to the Work timeline once, after the story's own writes`, async () => {
+      const ws = workspace({ stories: [story(687, 'Implementing', { pr: PR_URL })], rows: [row('r687', 'ST-687', 'story687', 'Implementing')] });
+      const tl = recorder();
+      const argv = event === 'finish' ? [event, '--no-comment'] : [event];
+      const r = await run(argv, { ws, workTimeline: tl.fn });
+      assert.equal(r.code, 0);
+      assert.equal(tl.seen.length, 1);
+      const [args] = tl.seen;
+      assert.equal(args.event, event);
+      assert.equal(args.key, 'ST-687');
+      assert.equal(args.story.id, 'story687');
+      assert.equal(args.pr, PR_URL);
+      assert.deepEqual(args.now, new Date(2026, 9, 5, 12));
+      assert.ok(r.lines.includes(`- 2026-10-05 · ${event} · timeline-db · In progress → QA`));
+    });
+  }
+
+  it('blocked reaches it too', async () => {
+    const ws = workspace({ stories: [story(687, 'Implementing')], rows: [] });
+    const tl = recorder();
+    await run(['blocked', 'CI red'], { ws, workTimeline: tl.fn });
+    assert.equal(tl.seen[0].event, 'blocked');
+  });
+
+  it('takes the PR from --pr when the story has none', async () => {
+    const ws = workspace({ stories: [story(687, 'To do')] });
+    const tl = recorder();
+    await run(['start', '--pr', '233'], { ws, workTimeline: tl.fn });
+    assert.equal(tl.seen[0].pr, 'https://github.com/george-hutanu/motor-fix/pull/233');
+  });
+
+  for (const argv of [['pr', '139'], ['debt'], ['ready'], ['log', 'start', 'ST-687', 'x'], ['check']]) {
+    it(`${argv[0]} never reaches it`, async () => {
+      const ws = workspace({ stories: [story(687, 'Implementing')] });
+      const tl = recorder();
+      await run(argv, { ws, workTimeline: tl.fn });
+      assert.equal(tl.seen.length, 0);
+    });
+  }
+
+  it('one that rejects is logged and the event still exits 0', async () => {
+    const ws = workspace({ stories: [story(687, 'Planning')], rows: [row('r687', 'ST-687', 'story687', 'Planning')] });
+    const r = await run(['implement'], {
+      ws,
+      workTimeline: async () => {
+        throw new Error('boom');
+      },
+    });
+    assert.equal(r.code, 0);
+    assert.equal(r.json.status, 'Implementing');
+    assert.ok(r.lines.includes('- 2026-10-05 · implement · timeline-db · failed — boom'));
+    assert.ok(!r.log.includes('PENDING'));
+  });
+
+  it('logs nothing when it wrote nothing', async () => {
+    const ws = workspace({ stories: [story(687, 'Implementing')] });
+    const r = await run(['review'], { ws, workTimeline: async () => null });
+    assert.ok(!r.lines.some((l) => l.includes('timeline-db')));
+  });
+
+  it('a failure keeps the event exit 0, logs one line and queues no replay', async () => {
+    const ws = workspace({ stories: [story(687, 'Planning')], rows: [row('r687', 'ST-687', 'story687', 'Planning')] });
+    const r = await run(['implement'], { ws, workTimeline: 'real' });
+    assert.equal(r.code, 0);
+    assert.equal(r.json.status, 'Implementing');
+    assert.deepEqual(r.lines.filter((l) => l.includes('timeline-db')), ['- 2026-10-05 · implement · timeline-db · failed — 400 invalid_request_url']);
+    assert.ok(!r.log.includes('PENDING'));
+    const timeline = ws.calls.filter((c) => c.path === '/data_sources/3706e923-2faa-42bc-aab2-8a2d5ab5d9d3/query');
+    assert.deepEqual(timeline.map((c) => c.version), ['2025-09-03']);
   });
 });

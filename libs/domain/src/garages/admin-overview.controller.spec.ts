@@ -1,8 +1,19 @@
 import { AdminOverviewController } from './admin-overview.controller';
 import type { VerificationService } from './verification.service';
 import type { PrismaClient } from '../generated/prisma/client';
+import {
+  countPlatformFigures,
+  monthStartSnapshot,
+} from '../insights/platform-figures';
+
+jest.mock('../insights/platform-figures', () => ({
+  countPlatformFigures: jest.fn(),
+  monthStartSnapshot: jest.fn(),
+}));
 
 const prisma = {} as PrismaClient;
+const figures = jest.mocked(countPlatformFigures);
+const monthStart = jest.mocked(monthStartSnapshot);
 
 const controller = (waiting: number) => {
   const countWaiting = jest.fn(async () => waiting);
@@ -13,12 +24,64 @@ const controller = (waiting: number) => {
   };
 };
 
+beforeEach(() => {
+  jest.clearAllMocks();
+  figures.mockResolvedValue({
+    activeDrivers: 12480,
+    garagesApprovedThisMonth: 9,
+    garagesListed: 214,
+  });
+  monthStart.mockResolvedValue(undefined);
+});
+
 describe('the admin overview route', () => {
   it('answers the number of garages waiting, counted on the database', async () => {
     const { countWaiting, overview } = controller(4);
 
-    await expect(overview.overview()).resolves.toEqual({ garagesWaiting: 4 });
+    await expect(overview.overview()).resolves.toMatchObject({
+      garagesWaiting: 4,
+    });
     expect(countWaiting).toHaveBeenCalledWith(prisma);
+  });
+
+  it('answers the platform figures beside the garages waiting, with no month-start value when there is no row', async () => {
+    const { overview } = controller(2);
+
+    const answer = await overview.overview();
+
+    expect(answer).toEqual({
+      activeDrivers: 12480,
+      garagesApprovedThisMonth: 9,
+      garagesListed: 214,
+      garagesWaiting: 2,
+    });
+    expect(Object.keys(answer)).not.toContain('activeDriversMonthStart');
+  });
+
+  it('carries the active drivers of the first of the month when its row exists', async () => {
+    monthStart.mockResolvedValue(12168);
+    const { overview } = controller(2);
+
+    await expect(overview.overview()).resolves.toEqual({
+      activeDrivers: 12480,
+      activeDriversMonthStart: 12168,
+      garagesApprovedThisMonth: 9,
+      garagesListed: 214,
+      garagesWaiting: 2,
+    });
+  });
+
+  it('counts the figures on the database at the moment of the call', async () => {
+    const { overview } = controller(0);
+    const before = Date.now();
+
+    await overview.overview();
+
+    const [db, at] = figures.mock.calls[0];
+    expect(db).toBe(prisma);
+    expect(at.getTime()).toBeGreaterThanOrEqual(before);
+    expect(at.getTime()).toBeLessThanOrEqual(Date.now());
+    expect(monthStart).toHaveBeenCalledWith(prisma, at);
   });
 
   it('counts again at every call', async () => {
@@ -28,6 +91,7 @@ describe('the admin overview route', () => {
     await overview.overview();
 
     expect(countWaiting).toHaveBeenCalledTimes(2);
+    expect(figures).toHaveBeenCalledTimes(2);
   });
 
   it('is open only to a session that may review garages', () => {
