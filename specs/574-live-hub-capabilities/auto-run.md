@@ -27,3 +27,6 @@ ST-574 (tech debt from ST-254): derive the live hub's garage-channel kind rules 
 
 ## Phase 6 — checklist
 - sonnet: success. checklists/authorization.md, 10 items, all checked; 3 spec edits (unmapped garage kinds listed, owner = `garage` role, no family on own_jobs/audit_history).
+
+## Phase 7 — tasks
+- sonnet: tasks.md, 6 tasks (T001-T003 tests first, T004 red proof, T005 live.hub.ts, T006 green verification); FR-001..003 and SC-001..003 mapped.
