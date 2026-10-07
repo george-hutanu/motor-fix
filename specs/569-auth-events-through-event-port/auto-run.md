@@ -21,3 +21,15 @@ Start: origin/main bd60afa6 (worktree `.worktrees/569-auth-events-through-event-
   4. No screen, API contract or web change; existing behaviour unchanged.
 - Requirements are testable by Jest integration specs on real PostgreSQL (outbox row present after a reset, absent after a refused one).
 - after_specify hooks: notion-sync start + pr 187, design check (no screens), level check, commit.
+
+## Phase 0 — Size
+level 2 (classifier 0.80: touches session; boards 1; brief not found).
+
+## Phase 1 — Constitution
+v1.8.2, no placeholders. Principles I and VI carried.
+
+## Phase 3 — Org context
+org-researcher: partial (Foundations epic and Backend architecture pages too large; seen through highlights). context.md written; no contradictions with the spec's decisions. Follow-ups for the finish comment: add `account.password_reset` to the Backend architecture events list, and ST-127's "Emits: none" now reads one event.
+
+## Phase 4 — Clarify
+spec-challenger: 7 findings; 5 answered in spec Clarifications (shared method on SignInService; FR-003 modifies 128-FR-004; e-mail/nudge order unspecified; event-port failure is a 500; SC-002 covers the two flows touched), 2 applied as edits (SC-003 allows added assertions; US2 test asserts the stub after the call resolves).

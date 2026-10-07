@@ -20,7 +20,7 @@ When a driver or garage member finishes "Ai uitat parola?" with a new password, 
 1. **Given** an active account with a valid, unused reset link, **When** the new password is saved, **Then** the answer is the same as today (a new session is issued), and exactly one domain event `account.password_reset` exists for that account, with the account as its subject and audience and a payload holding only the account id, saved in the same transaction as the password, the taken link, the deleted refresh tokens and the audit entry.
 2. **Given** the same link saved twice at once, **When** both saves run, **Then** the one that takes the link records one event and the other records none and is refused as expired (as today).
 3. **Given** a reset refused before its transaction (a weak password, an unknown or expired link, maintenance for a non-admin account), **When** it is attempted, **Then** no domain event, no audit entry and no password change exist for the account.
-4. **Given** the event cannot be recorded (the event port fails inside the transaction), **When** the new password is saved, **Then** the whole reset rolls back: the link stays unused, the password is unchanged, the refresh tokens remain, no audit entry is written, and the request fails — as sign-out everywhere already behaves.
+4. **Given** the event cannot be recorded (the event port fails inside the transaction), **When** the new password is saved, **Then** the whole reset rolls back: the link stays unused, the password is unchanged, the refresh tokens remain, no audit entry is written, and the request fails with an unhandled server error (500) — as sign-out everywhere already behaves.
 
 ---
 
@@ -30,7 +30,7 @@ A password reset and a sign-out on all devices both end every other session of t
 
 **Why this priority**: the task says "decide once for the auth flows". It changes no visible behaviour; it is the one place the decision lives.
 
-**Independent Test**: complete a reset and a sign-out everywhere against a real database with the live publisher stubbed: each publishes one `session.revoked` message to the account's audience after its transaction committed; a publisher failure is logged and changes neither answer.
+**Independent Test**: complete a reset and a sign-out everywhere against a real database with the live publisher stubbed: once each call has resolved, the stub was called once with a `session.revoked` message for the audience `account:<id>`; when the reset's transaction throws, it was not called; a publisher failure is logged and changes neither answer.
 
 **Acceptance Scenarios**:
 
@@ -53,7 +53,7 @@ A password reset and a sign-out on all devices both end every other session of t
 
 - **FR-001**: A completed password reset MUST record one domain event of the new kind `account.password_reset` (added to the typed event catalogue, `257-FR-006`) through the event port, inside the same transaction that takes the link, replaces the password, deletes the account's refresh tokens and writes the audit entry; its subject and audience are the account, and its payload is exactly `{ accountId }`.
 - **FR-002**: A password reset that is refused (link unknown, used, expired or taken by a concurrent save; weak password; maintenance for a non-admin), or whose transaction fails for any reason (the event port included), MUST record no `account.password_reset` event, and the transaction's other writes MUST roll back with it; the answer to the client stays what it is today.
-- **FR-003**: After the transaction of a completed password reset or a sign-out on all devices commits, the API MUST publish one `session.revoked` live message to the account's audience through one shared mechanism used by both flows; a failed publish MUST be logged and MUST NOT change the answer (restates `128-FR-004` for both flows).
+- **FR-003**: After the transaction of a completed password reset or a sign-out on all devices commits, the API MUST publish one `session.revoked` live message to the account's audience through one method of the sign-in service that both flows call (today each calls `publishLive` itself); a failed publish MUST be logged and MUST NOT change the answer (extends `128-FR-004` to the reset). The order of this message and the password_changed e-mail is not specified.
 - **FR-004**: The password_changed e-mail, the audit entry, the sessions revoked and the reset's answer MUST stay as ST-127 specified them; the API contract (openapi.json) and the web app MUST NOT change.
 
 ### Key Entities
@@ -70,6 +70,12 @@ A password reset and a sign-out on all devices both end every other session of t
 - Q: Does the password_changed e-mail move to an outbox consumer? → A: No. It stays sent straight to the notifications queue after the commit, its failure logged, as today. (autonomous default; evidence: the ST-127 Build brief, "Events and notifications": "Emits: none; both e-mails go straight to the notifications queue" — the event now recorded supersedes only "Emits: none". Moving it to a worker consumer is out of scope.)
 - Q: Any screen, API or web change? → A: None. Existing behaviour (the reset answer, sessions revoked, e-mails, audit entry) does not change. (autonomous default; evidence: the task names only `password-reset.service.ts` and `sign-in.service.ts`; the Notion task has no Design boards)
 
+- Q: Is the shared mechanism today's `publishLive`, or a new method? → A: A method on `SignInService` (publish, catch, warn) that both flows call; the reset drops its own `SESSION_EVENTS` injection. (spec-challenger #1; two real callers, Constitution I)
+- Q: Does FR-003 add a requirement or modify `128-FR-004`? → A: It modifies `128-FR-004`; the Spec Delta says so. (spec-challenger #2)
+- Q: Must the e-mail still go before the nudge? → A: No; no test or requirement fixes the order, only "after the commit" and "once". (spec-challenger #3)
+- Q: What does the client get when the event port throws? → A: A 500, as sign-out everywhere; tested with a throwing `EventPort` stub, the link's `usedAt` still null. (spec-challenger #4)
+- Q: Does SC-002 cover sign-up? → A: No, only the two flows touched; sign-up's event is `257-FR-011`'s, already tested. (spec-challenger #5)
+
 ## Assumptions
 
 - The event kind name follows the catalogue's `area.verb_past` form (`libs/contracts/src/events.ts`); `account.password_reset` is the only new kind.
@@ -80,8 +86,8 @@ A password reset and a sign-out on all devices both end every other session of t
 
 ### Capability: `accounts`
 
-- **Adds**: FR-001, FR-002, FR-003, FR-004
-- **Modifies**: none (`128-FR-004` stands; FR-003 extends it to the reset)
+- **Adds**: FR-001, FR-002, FR-004
+- **Modifies**: `128-FR-004` — extended by FR-003: a completed password reset publishes `session.revoked` too, through the same method as sign-out everywhere
 - **Removes**: none
 
 ### Capability: `live-updates`
@@ -95,5 +101,5 @@ A password reset and a sign-out on all devices both end every other session of t
 ### Measurable Outcomes
 
 - **SC-001**: After a completed password reset, exactly one `account.password_reset` outbox row exists for the account; after a refused one, zero.
-- **SC-002**: Three auth flows (sign-up, sign-out everywhere, password reset) record their account event in the same transaction as the change; one place in the code publishes `session.revoked`.
-- **SC-003**: The existing password-reset and sign-out-everywhere integration suites pass with no change to any asserted answer, e-mail, audit entry or live message.
+- **SC-002**: Both flows this task touches (sign-out everywhere, password reset) record their account event in the same transaction as the change; one place in the code publishes `session.revoked`.
+- **SC-003**: The existing password-reset and sign-out-everywhere integration suites pass with no change to any asserted answer, e-mail, audit entry or live message; they may gain assertions for the new event and the publish.
