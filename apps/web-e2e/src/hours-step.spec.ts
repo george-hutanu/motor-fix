@@ -18,8 +18,11 @@ async function open(page: Page, path = '/ro/list-your-garage') {
   await expect(select(page, 'weekdays-open')).toBeVisible();
 }
 
+// The days open by themselves when the weekdays differ.
 async function byDay(page: Page) {
-  await step(page).locator('details summary').click();
+  const days = step(page).locator('details');
+  if (!(await days.evaluate((d) => (d as HTMLDetailsElement).open)))
+    await step(page).locator('details summary').click();
   await expect(step(page).locator('[data-day="sun"]')).toBeVisible();
 }
 

@@ -245,7 +245,11 @@ export class HoursStep {
   protected readonly days = WEEKDAYS;
   protected readonly facilities = FACILITIES;
 
-  protected readonly open = signal(false);
+  private readonly opened = signal(false);
+  // The days show by themselves when the simple rows cannot tell the week.
+  protected readonly open = computed(
+    () => this.opened() || this.simple().weekdays === 'differs',
+  );
   protected readonly errors = signal<Partial<Record<RowKey, RowError>>>({});
   protected readonly closedDay = signal('');
   protected readonly closedNote = signal('');
@@ -319,7 +323,7 @@ export class HoursStep {
   }
 
   protected toggled(event: Event) {
-    this.open.set((event.target as HTMLDetailsElement).open);
+    this.opened.set((event.target as HTMLDetailsElement).open);
   }
 
   protected weekdays(side: 0 | 1, event: Event) {

@@ -318,6 +318,27 @@ describe('step 5, the opening hours', () => {
     expect(select(step, 'sat-open')?.value).toBe('09:00');
   });
 
+  it('opens the days of a restored week whose weekdays differ', async () => {
+    const { fixture, step } = await open();
+
+    fixture.componentInstance.value.set({
+      hours: {
+        fri: [['08:00', '15:00']],
+        mon: [['08:00', '17:00']],
+        sat: [],
+        sun: [],
+        thu: [['08:00', '17:00']],
+        tue: [['08:00', '17:00']],
+        wed: [['08:00', '17:00']],
+      },
+    });
+    await settle(fixture);
+
+    expect(text(row(step, 'weekdays'))).toContain('Program diferit pe zile');
+    expect(step.querySelector('details')?.open).toBe(true);
+    expect(select(step, 'fri-0-close')?.value).toBe('15:00');
+  });
+
   it('changes every text and keeps every time when the language changes', async () => {
     const { fixture, i18n, step } = await open();
     await choose(fixture, select(step, 'weekdays-close'), '18:00');
