@@ -164,14 +164,16 @@ describe('BrandVerdict', () => {
     expect(text(host)).not.toContain('nimic ales încă');
   });
 
-  it('says nothing is picked yet when both lists are empty and there is no phrase', async () => {
+  it('says nothing is picked yet on both lines when both lists are empty and there is no phrase', async () => {
     const { host } = await render(
       { answer: answer(), brand: null, mode: 'profile' },
       'en',
     );
-    expect(text(host)).toContain('nothing picked yet');
-    expect(text(host)).not.toContain('Works on:');
-    expect(text(host)).not.toContain('Does not take:');
+    const lines = [...host.querySelectorAll('.line')].map(text);
+    expect(lines).toEqual([
+      'Works on: nothing picked yet',
+      'Does not take: nothing picked yet',
+    ]);
   });
 
   it('puts the refusal phrase in place of the refused names', async () => {

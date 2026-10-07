@@ -67,20 +67,25 @@ const written = (value: string | null | undefined) =>
       <mf-lamp [state]="lamp.state" [label]="lamp.label" />
     }
     @if (answer(); as answer) {
-      @if (worksOn(); as list) {
+      @if (worksOn() || nothing()) {
         <p class="line">
-          <span class="label">{{ 'public.verdict.worksOnList' | t }}</span
-          ><mf-as-written [text]="list" />
+          <span class="label">{{ 'public.verdict.worksOnList' | t }}</span>
+          @if (worksOn(); as list) {
+            <mf-as-written [text]="list" />
+          } @else {
+            {{ 'public.verdict.none' | t }}
+          }
         </p>
       }
-      @if (refused(); as list) {
+      @if (refused() || nothing()) {
         <p class="line">
-          <span class="label">{{ 'public.verdict.refusedList' | t }}</span
-          ><mf-as-written [text]="list" />
+          <span class="label">{{ 'public.verdict.refusedList' | t }}</span>
+          @if (refused(); as list) {
+            <mf-as-written [text]="list" />
+          } @else {
+            {{ 'public.verdict.none' | t }}
+          }
         </p>
-      }
-      @if (!worksOn() && !refused()) {
-        <p class="line">{{ 'public.verdict.none' | t }}</p>
       }
       @if (note(); as note) {
         <p class="note" [class.card]="mode() === 'card'" [attr.title]="mode() === 'card' ? note : null">
@@ -135,6 +140,11 @@ export class BrandVerdict {
       (answer.doesNotTake.length ? names(answer.doesNotTake) : null)
     );
   });
+
+  // Nothing marked at all: both lines stay, each saying so.
+  protected readonly nothing = computed(
+    () => !!this.answer() && !this.worksOn() && !this.refused(),
+  );
 
   protected readonly note = computed(() => written(this.answer()?.brandNote));
 }
