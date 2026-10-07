@@ -11,3 +11,4 @@
 - 2026-10-07 · qa · ST-784 · Implementing → QA
 - 2026-10-07 · qa · timeline · no row for ST-784
 - 2026-10-07 · labels · PR #191 · QA
+- 2026-10-07 · debt · ST-784 · deferred.md line 2 → https://app.notion.com/p/Tech-debt-ST-784-low-pr-tester-test-titles-in-claude-scripts-level-adversary-spec-mjs-42-call-e-3f2607bff0d2818198bce25971d980be
