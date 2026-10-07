@@ -8,6 +8,7 @@ import {
   NEWS_QUEUE,
   type NewsEvent,
   type NewsRun,
+  requeueStrandedNews,
 } from './news.fan-out';
 import { NotificationsModule } from './notifications.module';
 import { NotificationsService } from './notifications.service';
@@ -37,6 +38,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await reset();
   await prisma.outboxEvent.deleteMany();
+  await prisma.newsSend.deleteMany();
   await newsJobs.obliterate({ force: true });
 });
 
@@ -102,6 +104,23 @@ async function queueRun(admin: string, attempts = NEWS_CONSUMER.jobs.attempts) {
       jobId: 'news-2026-11',
     },
   );
+}
+
+// A month claimed with its run's event, relayed `minutes` ago, whose job is
+// nowhere in Redis: what an emptied Redis leaves behind.
+async function relayedRun(admin: string, minutes: number, ranAt?: Date) {
+  await prisma.newsSend.create({
+    data: { month: '2026-11', ranAt, recipients: 1, sentById: admin },
+  });
+  return prisma.outboxEvent.create({
+    data: {
+      audience: ['admin', 'system'],
+      kind: 'news.sent',
+      payload: JSON.parse(JSON.stringify(run(admin))),
+      relayedAt: new Date(Date.now() - minutes * 60_000),
+      subjectId: '2026-11',
+    },
+  });
 }
 
 const newsEmails = () =>
@@ -237,4 +256,48 @@ describe('the news worker', () => {
     expect(await prisma.newsSend.count()).toBe(0);
     expect(await newsJobs.getJobState('news-2026-11')).toBe('unknown');
   }, 20_000);
+
+  it('queues a claimed month’s run again when Redis lost it, and marks it ran', async () => {
+    const admin = await account('admin', ['admin']);
+    const andrei = await consenting('andrei');
+    await relayedRun(admin, 10);
+    const app = await worker('test-secret', undefined, true);
+    await app.init();
+    try {
+      const deadline = Date.now() + 10_000;
+      while (
+        !(await prisma.newsSend.findFirst())?.ranAt &&
+        Date.now() < deadline
+      ) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+    } finally {
+      await app.close();
+    }
+    expect((await newsEmails()).map((r) => r.accountId)).toEqual([andrei]);
+    expect((await prisma.newsSend.findFirst())?.ranAt).toBeInstanceOf(Date);
+  }, 20_000);
+
+  it('leaves a run that completed, or was relayed moments ago, where it is', async () => {
+    const admin = await account('admin', ['admin']);
+    const done = await relayedRun(admin, 10, new Date());
+    expect(await requeueStrandedNews(prisma)).toBe(0);
+    expect(
+      (await prisma.outboxEvent.findUnique({ where: { id: done.id } }))
+        ?.relayedAt,
+    ).toBeInstanceOf(Date);
+    await prisma.newsSend.deleteMany();
+    await prisma.outboxEvent.deleteMany();
+    await relayedRun(admin, 1);
+    expect(await requeueStrandedNews(prisma)).toBe(0);
+  });
+
+  it('puts a stranded run’s event back in line for the relay', async () => {
+    const admin = await account('admin', ['admin']);
+    const { id } = await relayedRun(admin, 10);
+    expect(await requeueStrandedNews(prisma)).toBe(1);
+    expect(
+      (await prisma.outboxEvent.findUnique({ where: { id } }))?.relayedAt,
+    ).toBeNull();
+  });
 });
