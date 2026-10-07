@@ -7,6 +7,8 @@ export { RequestBuilder } from './request-builder';
 export type { StrictHttpResponse } from './strict-http-response';
 export { Api } from './api';
 
+export type { AdminGrowthDto } from './models/admin-growth-dto';
+export type { AdminGrowthMonthDto } from './models/admin-growth-month-dto';
 export type { AdminOverviewDto } from './models/admin-overview-dto';
 export type { AuditActorDto } from './models/audit-actor-dto';
 export type { AuditEntryDto } from './models/audit-entry-dto';
@@ -189,6 +191,8 @@ export type { GarageSearchControllerForBrand$Params as GarageSearchControllerFor
 export { garageSearchControllerForBrand as garageSearchControllerForBrand } from './fn/search/garage-search-controller-for-brand';
 export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';
 export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
+export type { AdminOverviewControllerGrowth$Params as AdminOverviewControllerGrowth$Params } from './fn/admin/admin-overview-controller-growth';
+export { adminOverviewControllerGrowth as adminOverviewControllerGrowth } from './fn/admin/admin-overview-controller-growth';
 export type { VerificationChecksControllerRecord$Params as VerificationChecksControllerRecord$Params } from './fn/admin/verification-checks-controller-record';
 export { verificationChecksControllerRecord as verificationChecksControllerRecord } from './fn/admin/verification-checks-controller-record';
 export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$Params } from './fn/admin/platform-rules-controller-list';
