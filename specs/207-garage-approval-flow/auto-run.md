@@ -20,3 +20,16 @@ Start commit: 664610a3 (worktree .worktrees/207-garage-approval-flow, branch 207
 - Design check: the mock (artifact EoPWH9MHmuY5Jfw7vTWTHr) is not shared with this account ("artifact not found"); design.md opens with the UNAVAILABLE marker and is filled from the epic's Design table and the Build brief; no screens of its own. Re-run before plan and implement once the mock is shared.
 - agent-context update pointed CLAUDE.local.md at another feature's plan (780, no plan.md for 207 yet) and grew it past its baseline: reverted, not committed; re-runs at `/speckit-plan`.
 - `level.mjs check`: level 2, unchanged (fr-count tripped at 11 FRs; clarification, contract and projects clear).
+
+## 3. Context
+- org-researcher: success, 20 findings (story, MF-30, EP-2, Architecture decisions, decisions index); 4 contradictions with spec.md, 4 proposed clarifications; context.md written.
+
+## 4. Clarify
+- spec-challenger: 5 findings (A34 410, second open, concurrency/SC-002 self-pairs, 409 wording, bypass test); folded in. Latest Notion source wins.
+- Q1 suspended slug 404 or 410? → 410 `gone` for `suspended` (A34, 2026-10-04); 404 for never-approved and unknown. US1 sc.2, FR-005, SC-001, Edge Cases.
+- Q2 second admin opens an `in_review` file: 409? → No: succeeds unchanged, answers the first `opened_by`/`opened_at` so the caller warns (MF-30 rule 15); 409 only for a second decision. US3 sc.1, FR-002, SC-002, Edge Cases.
+- Q3 where may `skip_manual_approval` act? → `APP_ENV=test` only (A33); development, staging, production ignore it. US4, FR-009, SC-005.
+- Q4 story references? → ST-116 submits; ST-206 uploads/declaration; ST-208 re-send after more requested; ST-209 e-mail per status; re-approval changes are the change-flow stories. FR-007, FR-010, Assumptions.
+- Q5 reopened approved file then rejected/more requested: still public? → Yes, stays `approved`; told the result (X18); hiding is MF-59 suspension. Flagged for the owner. Assumptions.
+- Checklist requirements.md 16/16 → 16/16. Deferred to plan: the concurrency mechanism (compare-and-set update) and the 409 detail sentence per status.
+- level.mjs check: level 2, unchanged.
