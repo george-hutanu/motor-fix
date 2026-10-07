@@ -22,3 +22,6 @@
 - 2026-10-07 · qa · ST-548 · Implementing → QA
 - 2026-10-07 · qa · timeline · no row for ST-548
 - 2026-10-07 · labels · PR #177 · QA
+- 2026-10-07 · qa · ST-472 · Implementing → QA
+- 2026-10-07 · qa · timeline · no row for ST-472
+- 2026-10-07 · labels · PR #177 · QA
