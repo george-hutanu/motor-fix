@@ -232,5 +232,31 @@ describe('seed', () => {
     expect(seed('test').status).toBe(0);
 
     expect(await prisma.verificationFile.count()).toBe(2);
+    expect(await prisma.verificationCheck.count()).toBe(16);
+  });
+
+  it('gives each waiting file its 8 checks, none run yet', async () => {
+    expect(seed('test').status).toBe(0);
+
+    const files = await prisma.verificationFile.findMany({
+      include: { checks: { orderBy: { kind: 'asc' } } },
+    });
+    expect(files).toHaveLength(2);
+    for (const file of files) {
+      expect(
+        file.checks.map((c) => [c.kind, c.result, c.automatic, c.detail]),
+      ).toEqual(
+        [
+          'company',
+          'caen',
+          'rar',
+          'activities',
+          'representative',
+          'address',
+          'photos',
+          'documents',
+        ].map((kind) => [kind, 'not_run', false, null]),
+      );
+    }
   });
 });
