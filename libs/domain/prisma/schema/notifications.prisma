@@ -102,6 +102,9 @@ model NewsSend {
   sentById   String   @map("sent_by_id") @db.Uuid
   recipients Int      @default(0)
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  // Set when the month's run has reached every driver; until then the
+  // worker's relay queues the run again if Redis lost its job.
+  ranAt      DateTime? @map("ran_at") @db.Timestamptz(3)
 
   @@map("news_send")
 }

@@ -1,4 +1,3 @@
-import type { EventKind } from '@motor-fix/contracts';
 import {
   type DynamicModule,
   Inject,
@@ -9,7 +8,7 @@ import {
 import { type JobsOptions, Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 
-import { OutboxRelay } from './outbox-relay';
+import { type EventConsumer, OutboxRelay } from './outbox-relay';
 import { createPrisma } from '../auth/prisma';
 import type { PrismaClient } from '../generated/prisma/client';
 
@@ -17,11 +16,10 @@ const RELAY_PRISMA = Symbol('RELAY_PRISMA');
 const RELAY_REDIS = Symbol('RELAY_REDIS');
 const RELAY_QUEUES = Symbol('RELAY_QUEUES');
 
-type Consumers = { kinds: readonly EventKind[]; queue: Queue }[];
+type Consumers = (Omit<EventConsumer, 'queue'> & { queue: Queue })[];
 
 // A queue the relay hands each event of its kinds to, with its jobs' options.
-interface RelayConsumer {
-  kinds: readonly EventKind[];
+interface RelayConsumer extends Pick<EventConsumer, 'kinds' | 'requeue'> {
   queue: string;
   jobs: JobsOptions;
 }
@@ -69,18 +67,21 @@ export class OutboxRelayModule implements OnModuleInit, OnApplicationShutdown {
           provide: RELAY_QUEUES,
           // Fails fast like the publisher: the add runs inside the batch.
           useFactory: (): Consumers =>
-            (options.consumers ?? []).map(({ jobs, kinds, queue }) => ({
-              kinds,
-              queue: new Queue(queue, {
-                connection: {
-                  commandTimeout: 2000,
-                  enableOfflineQueue: false,
-                  maxRetriesPerRequest: 1,
-                  url: options.redisUrl,
-                },
-                defaultJobOptions: jobs,
+            (options.consumers ?? []).map(
+              ({ jobs, kinds, queue, requeue }) => ({
+                kinds,
+                queue: new Queue(queue, {
+                  connection: {
+                    commandTimeout: 2000,
+                    enableOfflineQueue: false,
+                    maxRetriesPerRequest: 1,
+                    url: options.redisUrl,
+                  },
+                  defaultJobOptions: jobs,
+                }),
+                requeue,
               }),
-            })),
+            ),
         },
         {
           inject: [RELAY_PRISMA, RELAY_REDIS, RELAY_QUEUES],
