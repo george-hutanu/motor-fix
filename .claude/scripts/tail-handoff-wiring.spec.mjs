@@ -56,9 +56,9 @@ describe('the hand-off', () => {
   });
 });
 
-// 815: the feature folder lives in the private motor-fix-specs repo, so each
+// the feature folder lives in the private motor-fix-specs repo, so each
 // record is pushed there through specs-repo.mjs instead of riding on the branch.
-describe('the feature records go to the specs repo (815-FR-003)', () => {
+describe('the feature records go to the specs repo', () => {
   const viaSpecsRepo = /specs-repo\.mjs commit/;
 
   it('pushes the log through the specs repo and comments it on the PR after the merge', () => {

@@ -226,7 +226,7 @@ describe('requirements touched', () => {
     assert.match(md, /FR-001.*MUST write a packet/);
     assert.match(md, /FR-002.*MUST list ids/);
     assert.doesNotMatch(md, /FR-009/);
-    assert.ok(calls.some((c) => c.includes('repos/george-hutanu/motor-fix-specs/contents/001-thing/tasks.md?ref=trunk')), 'tasks.md is read from the private specs repository (815-FR-006)');
+    assert.ok(calls.some((c) => c.includes('repos/george-hutanu/motor-fix-specs/contents/001-thing/tasks.md?ref=trunk')), 'tasks.md is read from the private specs repository');
   });
 
   it('says so when the feature has no tasks file', () => {

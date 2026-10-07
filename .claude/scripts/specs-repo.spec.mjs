@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { commit, ensure, status, TRUNK } from './specs-repo.mjs';
 
 // Real git against a local bare "motor-fix-specs", so clone, adopt, rebase and
-// push are the ones the laptop runs. 815-FR-001..003.
+// push are the ones the laptop runs.
 const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 const ID = ['-c', 'user.name=t', '-c', 'user.email=t@example.com'];
 
@@ -39,15 +39,23 @@ function checkout(name = 'wt') {
   return dir;
 }
 
+// CI sets GITHUB_ACTIONS=true, which makes ensure --soft skip on purpose.
+let actions;
 beforeEach(() => {
+  actions = process.env.GITHUB_ACTIONS;
+  delete process.env.GITHUB_ACTIONS;
   tmp = mkdtempSync(join(tmpdir(), 'specs-repo-'));
   seedRemote();
   root = checkout();
 });
-afterEach(() => rmSync(tmp, { recursive: true, force: true }));
+afterEach(() => {
+  if (actions === undefined) delete process.env.GITHUB_ACTIONS;
+  else process.env.GITHUB_ACTIONS = actions;
+  rmSync(tmp, { recursive: true, force: true });
+});
 
 // @traces 815-FR-002
-describe('ensure (815-FR-002)', () => {
+describe('ensure', () => {
   it('clones trunk into a missing specs/ and carries the checkout identity into it', () => {
     const r = ensure({ root, url: remote });
     assert.equal(r.ok, true, JSON.stringify(r));
@@ -102,6 +110,13 @@ describe('ensure (815-FR-002)', () => {
     assert.match(r.warning, /clone/);
   });
 
+  it('soft in GitHub Actions does nothing, leaving specs/ to a workflow checkout', () => {
+    process.env.GITHUB_ACTIONS = 'true';
+    const r = ensure({ root, url: remote, soft: true });
+    assert.deepEqual([r.ok, r.action], [true, 'skipped']);
+    assert.equal(existsSync(join(root, 'specs')), false);
+  });
+
   it('without soft, an unreachable remote fails with the reason', () => {
     const r = ensure({ root, url: join(tmp, 'nowhere.git') });
     assert.equal(r.ok, false);
@@ -110,7 +125,7 @@ describe('ensure (815-FR-002)', () => {
 });
 
 // @traces 815-FR-003
-describe('commit (815-FR-003)', () => {
+describe('commit', () => {
   beforeEach(() => ensure({ root, url: remote }));
 
   it('commits the named paths only and pushes them to trunk', () => {

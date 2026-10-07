@@ -46,7 +46,7 @@ describe('PR lifecycle gate — what it leaves alone', () => {
 
 describe('PR lifecycle gate — what it refuses', () => {
   // @traces 815-FR-005
-  it('refuses specs commits not pushed to motor-fix-specs, naming the command that pushes them (815-FR-005)', () => {
+  it('refuses specs commits not pushed to motor-fix-specs, naming the command that pushes them', () => {
     assert.match(decide(task({ specsUnpushed: 1 })), /1 commit\(s\) in specs\/.*not pushed.*specs-repo\.mjs commit/);
     assert.equal(decide(task({ specsUnpushed: 0, pr: { ...ready(), isDraft: true, labels: [{ name: 'planning' }, { name: 'feature' }] } })), null);
   });

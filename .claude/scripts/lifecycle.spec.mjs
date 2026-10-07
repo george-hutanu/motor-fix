@@ -173,7 +173,7 @@ describe('ready', () => {
   };
 
   // @traces 815-FR-004
-  it('commits the records and the qa line to the specs repository (815-FR-004), checks and publishes the body, marks ready, runs qa, writes handoff.md and, off the cloud, posts nothing', () => {
+  it('commits the records and the qa line to the specs repository, checks and publishes the body, marks ready, runs qa, writes handoff.md and, off the cloud, posts nothing', () => {
     const h = harness({ answers: [staged([1, 1])] });
     const result = step(['ready', '--body-file', body, '--decisions', 'none'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
@@ -205,7 +205,7 @@ describe('ready', () => {
     assert.ok(!h.calls.some((c) => c.startsWith('git commit')));
   });
 
-  it('commits a changed .specify/capabilities on the branch and pushes it (815-FR-004)', () => {
+  it('commits a changed .specify/capabilities on the branch and pushes it', () => {
     mkdirSync(join(repo, '.specify', 'capabilities'));
     const h = harness({ answers: [staged([1])] });
     assert.equal(step(['ready', '--body-file', body], h.io).ok, true);
