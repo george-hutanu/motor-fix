@@ -51,6 +51,7 @@ export type { PlatformRuleDto } from './models/platform-rule-dto';
 export type { PlatformRulesDto } from './models/platform-rules-dto';
 export type { ProvidersDto } from './models/providers-dto';
 export type { PublicGarageDto } from './models/public-garage-dto';
+export type { PublicHolidayDto } from './models/public-holiday-dto';
 export type { PushKeyDto } from './models/push-key-dto';
 export type { PushKeysDto } from './models/push-keys-dto';
 export type { PushSubscriptionDto } from './models/push-subscription-dto';

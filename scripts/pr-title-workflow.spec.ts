@@ -1,47 +1,4 @@
-import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-
-// The workflows read as indented text: the repository has no YAML parser as a
-// direct dependency, and these few keys are enough.
-const workflows = join(__dirname, '..', '.github', 'workflows');
-const read = (name: string) => readFileSync(join(workflows, name), 'utf8');
-
-/** The lines nested under the first `key:` line at `indent` spaces. */
-function block(text: string, key: string, indent: number): string {
-  const lines = text.split('\n');
-  const pad = ' '.repeat(indent);
-  const start = lines.findIndex(
-    (l) => l === `${pad}${key}:` || l.startsWith(`${pad}${key}: `),
-  );
-  if (start < 0) throw new Error(`no ${key}: at indent ${indent}`);
-  const end = lines.findIndex(
-    (l, i) => i > start && l.trim() !== '' && !l.startsWith(`${pad} `),
-  );
-  return lines.slice(start, end < 0 ? undefined : end).join('\n');
-}
-
-/** The title check's own shell script, as the runner sees it. */
-function script(): string {
-  const lines = read('pr-title.yml').split('\n');
-  const start = lines.findIndex((l) => /^ +run: \|$/.test(l));
-  if (start < 0) throw new Error('pr-title.yml has no run: | step');
-  const indent = (lines[start + 1] ?? '').search(/\S/);
-  const body: string[] = [];
-  for (const l of lines.slice(start + 1)) {
-    if (l.trim() && l.search(/\S/) < indent) break;
-    body.push(l.slice(indent));
-  }
-  return body.join('\n');
-}
-
-function check(title: string) {
-  const run = spawnSync('bash', ['-c', script()], {
-    encoding: 'utf8',
-    env: { PATH: process.env['PATH'], TITLE: title },
-  });
-  return { code: run.status, out: `${run.stdout}${run.stderr}` };
-}
+import { block, check, read } from './workflow-text.ts';
 
 describe('PR title workflow', () => {
   const workflow = read('pr-title.yml');
