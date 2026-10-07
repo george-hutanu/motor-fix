@@ -112,7 +112,7 @@ Start commit: b76badd3 (worktree .worktrees/160-admin-dashboard-menu, branch 160
 - FR → test: see tasks.md T001–T029.
 - Decisions on the owner's behalf: admin-only "Dashboard" tab key in English; zero and failed-read header states follow the spec (not drawn in the mock); e2e live rise deferred to ST-116 (deferred.md, filed in Notion).
 - Open: granting `admin` stays an operations command; the mock artifact was not shared with this run, the design check read the Build brief.
-- T027 left open in tasks.md: its end-to-end part is CI's E2E job, read at the merge.
+- T027 done: lint, typecheck, unit and integration locally; the Playwright spec green in CI's E2E job on 1fbdd31.
 - Retrospective evidence (unjudged): Carryover 6 open items from earlier retrospectives; Deferred 0 open of 0 at gathering time; Jev lane unavailable.
 
 ## QA lap 1 (run 37604307317, head adc6d55)
@@ -123,3 +123,7 @@ Start commit: b76badd3 (worktree .worktrees/160-admin-dashboard-menu, branch 160
 ## QA lap 2 (run 37606034095, head 836e7cd)
 
 - Lap 1's findings all resolved; CI green on the merged head. 4 high "flow not run" (visitor redirect, failed read, loading skeletons, zero line): added to the flows. Low (the ADMINISTRATOR label touched the top edge on tablet and desktop): `.title` gets 12 px top padding. Medium (an admin during maintenance in the browser): kept to the API integration test; the QA stack cannot toggle maintenance from a flow. Repair lap 4.
+
+## QA laps 3–4 (runs 37607433651, 37608569272, head 1fbdd31)
+
+- Lap 3: 3 high, all in the flows file (the app's service worker served the overview, so `page.route` set after sign-in never reached it). Lap 4: flows run with the service worker blocked and the stub set before the first navigation; verdict success, 1 low (T027 unticked, now ticked). Repair laps used: 5 of 10.

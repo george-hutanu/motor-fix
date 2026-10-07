@@ -58,7 +58,7 @@ No new dependency, lib, module or migration (plan, Constitution I). Nothing to s
 
 ## Phase 6: Polish
 
-- [ ] T027 Run `npm run lint`, typecheck, the affected unit and integration specs and the Playwright spec through `scripts/heavy.sh`; record the deferred end-to-end live rise for ST-116 in `specs/160-admin-dashboard-menu/deferred.md` (new) (FR-015)
+- [X] T027 Run `npm run lint`, typecheck, the affected unit and integration specs and the Playwright spec through `scripts/heavy.sh`; record the deferred end-to-end live rise for ST-116 in `specs/160-admin-dashboard-menu/deferred.md` (new) (FR-015)
 
 ## Dependencies
 
