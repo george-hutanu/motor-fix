@@ -46,6 +46,7 @@ beforeEach(() => {
 });
 afterEach(() => rmSync(tmp, { recursive: true, force: true }));
 
+// @traces 815-FR-002
 describe('ensure (815-FR-002)', () => {
   it('clones trunk into a missing specs/ and carries the checkout identity into it', () => {
     const r = ensure({ root, url: remote });
@@ -108,6 +109,7 @@ describe('ensure (815-FR-002)', () => {
   });
 });
 
+// @traces 815-FR-003
 describe('commit (815-FR-003)', () => {
   beforeEach(() => ensure({ root, url: remote }));
 

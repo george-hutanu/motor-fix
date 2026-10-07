@@ -24,6 +24,7 @@ describe('QA evidence keeps screenshots out of the repo', () => {
 
   // 815: the report is kept in the private motor-fix-specs repo, whose own
   // .gitignore refuses the images; the public repo tracks nothing under specs/.
+  // @traces 815-FR-001
   it('tracks nothing under specs/ in the public repo (815-FR-001)', () => {
     assert.match(readFileSync(join(root, '.gitignore'), 'utf8'), /^\/specs\/$/m);
     assert.equal(git('ls-files', 'specs').trim(), '');

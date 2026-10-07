@@ -211,6 +211,7 @@ describe('requirements touched', () => {
     assert.deepEqual(frIds('no ids here'), []);
   });
 
+  // @traces 815-FR-006
   it('lists the ids on task lines naming a changed file, with their text from the spec', () => {
     const out = artifact(report());
     const { gh, calls } = fakeGh({

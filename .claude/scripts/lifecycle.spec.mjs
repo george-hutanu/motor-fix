@@ -172,6 +172,7 @@ describe('ready', () => {
     return ['git diff --cached --quiet', () => ({ code: codes[i++] ?? 0 })];
   };
 
+  // @traces 815-FR-004
   it('commits the records and the qa line to the specs repository (815-FR-004), checks and publishes the body, marks ready, runs qa, writes handoff.md and, off the cloud, posts nothing', () => {
     const h = harness({ answers: [staged([1, 1])] });
     const result = step(['ready', '--body-file', body, '--decisions', 'none'], h.io);
