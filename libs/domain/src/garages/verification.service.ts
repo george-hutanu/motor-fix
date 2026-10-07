@@ -115,20 +115,21 @@ export class VerificationService {
     const before = await this.file(tx, fileId);
     if (before.status === 'in_review') return openedFirst(actor, before);
     const openedAt = new Date();
+    let file: VerificationFile;
     try {
-      const file = await this.move(tx, actor, before, 'open', {
+      file = await this.move(tx, actor, before, 'open', {
         openedAt,
         openedBy: actor.accountId,
         status: 'in_review',
       });
-      await this.announce(tx, file, 'verification.opened');
-      return { byAnother: false, openedAt, openedBy: actor.accountId };
     } catch (error) {
       // A racing open committed first: answer with it, unchanged.
       const after = await this.file(tx, fileId);
       if (after.status === 'in_review') return openedFirst(actor, after);
       throw error;
     }
+    await this.announce(tx, file, 'verification.opened');
+    return { byAnother: false, openedAt, openedBy: actor.accountId };
   }
 
   // An approval publishes the garage, a reopened file's included; any other
