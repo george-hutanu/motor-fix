@@ -6,6 +6,7 @@ import { HttpException } from '@nestjs/common';
 import { GaragePricesService } from './garage-prices.service';
 import { AuditService } from '../../audit/audit.service';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { outbox } from '../../events/event.port';
 import {
   databaseUrl,
   fixtures,
@@ -14,7 +15,7 @@ import {
 // One spec file's garage, owner and catalogue, emptied before every test.
 export function pricesWorld() {
   const { account, prisma } = fixtures();
-  const prices = new GaragePricesService(new AuditService());
+  const prices = new GaragePricesService(new AuditService(), outbox);
   serialDatabase(databaseUrl);
   let since = new Date(0);
 
@@ -43,18 +44,28 @@ export function pricesWorld() {
       .then((row) => row.id);
 
   // Service Auto Nord and its owner Mihai; three approved jobs, one pending;
-  // Dacia and Ford in the catalogue and Lada retired from it.
+  // Dacia and Ford in the catalogue and Lada retired from it. The garage
+  // works on Dacia and Lada; Ford it has not taken.
   async function world() {
     const garage = await prisma.garage.create({
       data: { name: 'Service Auto Nord', slug: `nord-${randomUUID()}` },
     });
+    const dacia = await brand('dacia', 'Dacia');
+    const lada = await brand('lada', 'Lada', false);
+    await prisma.garageBrand.createMany({
+      data: [dacia, lada].map((brandId) => ({
+        brandId,
+        garageId: garage.id,
+        stance: 'works_on' as const,
+      })),
+    });
     return {
       brakes: await job('front-brakes'),
-      dacia: await brand('dacia', 'Dacia'),
+      dacia,
       diagnosis: await job('diagnosis'),
       ford: await brand('ford', 'Ford'),
       garage: garage.id,
-      lada: await brand('lada', 'Lada', false),
+      lada,
       mihai: await account('Mihai Ionescu', ['garage']),
       oil: await job('oil-service'),
       tyres: await job('tyre-change', 'pending'),
@@ -80,7 +91,7 @@ export function pricesWorld() {
       where: {
         at: { gte: since },
         garageId: w.garage,
-        subjectType: { in: ['garage', 'garage_price'] },
+        subjectType: { in: ['garage', 'garage_price', 'job_type'] },
       },
     });
 
@@ -103,6 +114,17 @@ export function pricesWorld() {
       await prisma.garage.findUniqueOrThrow({ where: { id: w.garage } }),
     ).toMatchObject({ labourFromBani: null, labourToBani: null });
     expect(await history(w)).toEqual([]);
+    expect(
+      await prisma.jobType.count({ where: { proposedByGarageId: w.garage } }),
+    ).toBe(0);
+    expect(
+      await prisma.outboxEvent.count({
+        where: {
+          kind: 'catalogue_job.proposed',
+          payload: { equals: w.garage, path: ['garageId'] },
+        },
+      }),
+    ).toBe(0);
   }
 
   return {

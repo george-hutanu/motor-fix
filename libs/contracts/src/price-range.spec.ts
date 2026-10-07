@@ -4,6 +4,7 @@ import {
   leiToBani,
   PRICE_MAX_BANI,
   PRICE_MIN_BANI,
+  type StartingPricesInput,
 } from './price-range';
 
 const lei = leiToBani;
@@ -145,6 +146,22 @@ describe('the price range check', () => {
       { code: 'min', field: 'from' },
       { code: 'integer', field: 'to' },
       { code: 'min', field: 'duration' },
+    ]);
+  });
+});
+
+describe('the starting prices input', () => {
+  it('takes a catalogue job or a proposed name, with no duration', () => {
+    const input: StartingPricesInput = {
+      jobs: [
+        { fromBani: lei(100), jobTypeId: 'job' },
+        { fromBani: lei(200), name: 'Schimb ambreiaj', toBani: lei(400) },
+      ],
+      labour: { fromBani: lei(150), toBani: lei(250) },
+    };
+    expect(input.jobs.map((job) => 'durationMinutes' in job)).toEqual([
+      false,
+      false,
     ]);
   });
 });

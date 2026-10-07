@@ -80,7 +80,14 @@ export function checkPriceRange(range: PriceRangeInput): PriceRangeCheck {
 export interface StartingPricesInput {
   // The hourly labour range; its top is required.
   labour: { fromBani: number; toBani?: number | null };
-  jobs: Array<{ jobTypeId: string; brandId?: string | null } & PriceRangeInput>;
+  // A catalogue job by id, or a name the garage proposes; exactly one.
+  jobs: Array<{
+    jobTypeId?: string;
+    name?: string;
+    brandId?: string | null;
+    fromBani: number;
+    toBani?: number | null;
+  }>;
 }
 
 export interface StartingPricesResult {
