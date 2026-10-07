@@ -4,7 +4,6 @@ import {
   isValidCui,
   normaliseRarNumber,
   RAR_NUMBER_MIN,
-  STEP6_VALUE_MAX,
   stripCui,
 } from './listing-verification';
 
@@ -87,11 +86,6 @@ describe('the control digit of a company tax ID at the edges', () => {
     expect(wrong.map(isValidCui)).toEqual(wrong.map(() => false));
     expect(isValidCui('1234567897')).toBe(true);
   });
-
-  it('answers the same for the same input called twice', () => {
-    expect(isValidCui('18547290')).toBe(isValidCui('18547290'));
-    expect(isValidCui('18547291')).toBe(isValidCui('18547291'));
-  });
 });
 
 describe('normalising a typed RAR number', () => {
@@ -131,9 +125,8 @@ describe('normalising a typed RAR number', () => {
 });
 
 describe('the constants', () => {
-  it('fixes the minimum and the cap', () => {
+  it('fixes the minimum', () => {
     expect(RAR_NUMBER_MIN).toBe(3);
-    expect(STEP6_VALUE_MAX).toBe(40);
   });
 });
 

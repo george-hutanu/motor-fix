@@ -2,7 +2,7 @@
 // two values by the same rules.
 
 export const RAR_NUMBER_MIN = 3;
-export const STEP6_VALUE_MAX = 40;
+const STEP6_VALUE_MAX = 40;
 
 export interface Step6Section {
   cui?: string;

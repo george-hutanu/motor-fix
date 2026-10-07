@@ -3,7 +3,6 @@ import {
   isValidCui,
   normaliseRarNumber,
   RAR_NUMBER_MIN,
-  STEP6_VALUE_MAX,
   stripCui,
 } from './listing-verification';
 
@@ -65,9 +64,8 @@ describe('a RAR authorisation number as the owner types it', () => {
     expect(normaliseRarNumber('b'.repeat(41))).toBe('B'.repeat(40));
   });
 
-  it('counts as done from 3 characters, and caps at 40', () => {
+  it('counts as done from 3 characters', () => {
     expect(RAR_NUMBER_MIN).toBe(3);
-    expect(STEP6_VALUE_MAX).toBe(40);
     expect(normaliseRarNumber(' ab ').length).toBeLessThan(RAR_NUMBER_MIN);
     expect(normaliseRarNumber(' abc ').length).toBe(RAR_NUMBER_MIN);
   });
