@@ -709,12 +709,12 @@ describe('a level_at only one reader would accept is no waiting level, in both r
     ['2026-12-31T23:59Z', 'the last day of its year'],
   ];
   const lastDayStamps = lastDays.flatMap((day) => shapes.map((shape) => [day + shape, 'the last day of its month']));
-  for (const [stamp, day] of [...lastDayStamps, ...crossings]) {
+  for (const [stamp, label] of [...lastDayStamps, ...crossings]) {
     const now = Date.parse(stamp) + 60_000;
-    it(`keeps the level for ${JSON.stringify(stamp)}, ${day}, in JS`, () => {
+    it(`keeps the level for ${JSON.stringify(stamp)}, ${label}, in JS`, () => {
       assert.deepEqual(jsPoint(stamp, now), kept);
     });
-    pyIt(`keeps the level for ${JSON.stringify(stamp)}, ${day}, in Python`, () => {
+    pyIt(`keeps the level for ${JSON.stringify(stamp)}, ${label}, in Python`, () => {
       assert.deepEqual(pyPoint(stamp, now), kept);
     });
   }
