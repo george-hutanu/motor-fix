@@ -9,6 +9,7 @@ features:
   - 255-live-resync
   - 582-live-toast-axe
   - 574-live-hub-capabilities
+  - 586-live-e2e-typed-text
 ---
 
 # Capability: Live updates
@@ -272,6 +273,22 @@ _From 574-live-hub-capabilities._
 ### 574-FR-003 — For a mechanic, a kind MUST reach the stream through the garage channel only when it is in a mapped family whose capability the mechanic holds through their permissions (`can_answer_quotes` → `request.*`, `message.*`; `can_move_bookings` → every kind starting `booking.move`, `booking.moved` included), and a kind in no family MUST NOT; a kind met on the mechanic's own `mechanic:{mechanicId}` channel, the staff-membership check and the feature switches (254 live audience: membership and feature-switch rules) are unchanged.
 
 _From 574-live-hub-capabilities._
+
+### 586-FR-001 — The live end-to-end suite MUST include a check in which a signed-in garage owner has the "Invită în echipă" dialog open with text typed into a text field and that field focused, and an admin sends the live test update to that account from another context; the check MUST assert that the update's line "Actualizare de test în direct" is visible on the dashboard within 2 seconds.
+
+_From 586-live-e2e-typed-text._
+
+### 586-FR-002 — After the update arrives, the check MUST assert, in the running application, that the dialog is still open, that the text field holds exactly the typed text, that the same field is still focused, and that no document load happened since the dashboard opened.
+
+_From 586-live-e2e-typed-text._
+
+### 586-FR-003 — The check MUST never submit the dialog and MUST assert that no invite request (`POST …/garages/:garageId/invites`) left the page; it changes no seeded data and needs no mailbox.
+
+_From 586-live-e2e-typed-text._
+
+### 586-FR-004 — The change MUST be test-only: no product code, no new dialog, and the existing live checks (two dashboards, confirm dialog, isolation between drivers) stay as they are.
+
+_From 586-live-e2e-typed-text._
 
 ## Retired
 

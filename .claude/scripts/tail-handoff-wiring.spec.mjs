@@ -99,9 +99,16 @@ describe('no agent holds its context across the CI and QA wait', () => {
   it('lets the session, not an agent, hold the one background wait before the tail', () => {
     const wait = section(auto, '## The wait');
     assert.match(wait, /run_in_background/);
-    assert.match(wait, /gh pr checks <n> --watch/);
-    assert.match(wait, /gh run watch <id>/);
+    // gh pr checks --watch ends at once on a head whose checks have not started.
+    assert.match(wait, /ci-wait\.mjs <n> --run <id>/);
+    assert.doesNotMatch(wait, /gh pr checks <n> --watch/);
     assert.match(wait, /watch\.mjs claim <worktree> tail/);
+  });
+
+  it('hands a pending check back to the session wait instead of reading it as done', () => {
+    const read = steps(section(auto, '## The tail')).find((s) => s.includes('Read CI'));
+    assert.match(read, /pending/);
+    assert.match(read, /NEXT: tail #<n> after QA run <id>/);
   });
 
   it('runs the tester on the finished run, and ends a fix lap with a new run instead of waiting', () => {

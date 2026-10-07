@@ -40,6 +40,7 @@ features:
   - 783-api-test-boot-helper
   - 784-impossible-level-date
   - 815-specs-private-repo
+  - 813-fable-to-opus
 ---
 
 # Capability: Platform
@@ -1031,6 +1032,22 @@ _From 815-specs-private-repo._
 ### 815-FR-007 — The bash guard MUST keep refusing a push to `main` and MUST allow a push to the specs repository's `trunk`.
 
 _From 815-specs-private-repo._
+
+### 813-FR-001 — `.claude/scripts/fable.mjs off` MUST write `env.ANTHROPIC_DEFAULT_FABLE_MODEL = "claude-opus-5-5"` into the main checkout's `.claude/settings.local.json` (resolved through `git rev-parse --git-common-dir`) and create or update `.claude/settings.local.json` in every desktop-app worktree under `.claude/worktrees/`, preserving every other key; `.worktrees/*` is not touched. A file it cannot parse stops it before any write; a file it cannot write stops it, naming the files already written.
+
+_From 813-fable-to-opus._
+
+### 813-FR-002 — `fable.mjs on` MUST remove that key from the same files, preserving every other key, and drop an `env` object it leaves empty.
+
+_From 813-fable-to-opus._
+
+### 813-FR-003 — `fable.mjs status` MUST print whether Fable or Opus is in force.
+
+_From 813-fable-to-opus._
+
+### 813-FR-004 — The model router MUST return `opus` wherever it would return `fable` when `ANTHROPIC_DEFAULT_FABLE_MODEL` is set or the main checkout's settings hold it, on both the mechanical large band and the Jev path.
+
+_From 813-fable-to-opus._
 
 ## Retired
 

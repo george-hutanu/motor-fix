@@ -191,8 +191,9 @@ the block verbatim; `.claude/agents/agent-replies.spec.mjs` keeps them equal.
 Read only what decides the next step; every check still runs:
 
 - CI: the background wait prints only what did not pass —
-  `gh pr checks <n> --watch >/dev/null 2>&1; gh pr checks <n> --json name,bucket --jq '.[] | select(.bucket != "pass" and .bucket != "skipping") | "\(.name): \(.bucket)"'`
-  (empty means green). A failing job: `gh run view <run-id> --log-failed | tail -n 80`.
+  `node .claude/scripts/pr-test/ci-wait.mjs <n>` (`--run <id>` to wait for a
+  QA run too), which also waits while a fresh head has no checks yet
+  (empty output means green). A failing job: `gh run view <run-id> --log-failed | tail -n 80`.
 - Jest, Playwright, Nx: run into a log file, then read the exit code, the
   summary and the failures — `<command> > <log> 2>&1; echo "exit $?"; tail -n 40 <log>`,
   and `grep -nE '✕|●|FAIL|Error' <log> | head -n 40` when it failed.
@@ -327,6 +328,8 @@ decisions are the source for anything the constitution does not fix.
   has something to do, or after 110 idle minutes to be re-armed; and one pass
   right away. A worktree session never arms it. The SessionStart reminder
   `session:start:watch-reminder` catches a resumed session whose wait was lost.
+- Fable usage limit hit: `node .claude/scripts/fable.mjs off` remaps `fable`
+  to Opus for sessions started afterwards (`on` restores, `status` tells).
 - Every API route needs a session: `ActorGuard` runs app-wide (`APP_GUARD`
   in `AuthModule`). A route open to visitors carries `@Public()` and joins
   the list in `apps/api/src/public-routes.integration.spec.ts`. The web
