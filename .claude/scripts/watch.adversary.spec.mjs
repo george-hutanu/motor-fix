@@ -359,7 +359,7 @@ describe('stale and the fix, edges', () => {
     assert.deepEqual(DEFAULT_THRESHOLDS, { planning: 30, tests: 45, development: 45, review: 30, qa: 30, merging: 30, done: 30 });
   });
 
-  it('removes a merged worktree only past the done threshold: quiet for it is kept, one millisecond more is removed (ST-481)', () => {
+  it('removes a merged worktree only past the done threshold: quiet for it is kept, one millisecond more is removed', () => {
     const merged = summarizePr(pr({ state: 'MERGED', headRefOid: 'abc' }));
     const at = (ms) => fixOf(row({ phase: 'done', pr: merged, head: 'abc', clean: true, activity: { at: NOW - ms, source: 'commit' } }), opts).fix;
     assert.equal(at(DEFAULT_THRESHOLDS.done * MIN), null);

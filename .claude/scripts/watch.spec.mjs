@@ -303,7 +303,7 @@ describe('stale and the fix', () => {
     assert.equal(fixOf(row({ ...done, main: true, holder: 'owner' }), opts).fix, null);
   });
 
-  it('gives a merged worktree a grace period of the done threshold before removing it (ST-481)', () => {
+  it('gives a merged worktree a grace period of the done threshold before removing it', () => {
     assert.equal(DEFAULT_THRESHOLDS.done, 30);
     assert.equal(parseStale(['done=5'], DEFAULT_THRESHOLDS).done, 5);
     const merged = summarizePr(pr({ state: 'MERGED', headRefOid: 'abc' }));
@@ -576,7 +576,7 @@ describe('--fix and claim', () => {
     }
   });
 
-  it('keeps a merged worktree whose subagent is still finishing: a live-session lock holds it within the done threshold (ST-481)', () => {
+  it('keeps a merged worktree whose subagent is still finishing: a live-session lock holds it within the done threshold', () => {
     const f = fixture();
     try {
       const done = f.add('agent-done', '908-done');
@@ -1026,7 +1026,7 @@ describe('--gate', () => {
     }
   });
 
-  it('stays silent for a just-merged clean worktree inside its grace period (ST-481)', () => {
+  it('stays silent for a just-merged clean worktree inside its grace period', () => {
     const f = fixture();
     try {
       const done = f.add('agent-done', '903-b');
