@@ -53,6 +53,7 @@ features:
   - 845-archived-delta-adds
   - 706-packet-web-relap
   - 854-precompact-pr-signal
+  - 850-dispatch-test-timeouts
 ---
 
 # Capability: Platform
@@ -1220,6 +1221,9 @@ _From 854-precompact-pr-signal._
 ### 854-FR-005 — The hook MUST NOT read the PR state when 854-FR-002 already decided to skip.
 
 _From 854-precompact-pr-signal._
+### 850-FR-001 — `dispatch.mjs` MUST read how many times it looks for the run from `PR_QA_POLL_TRIES` (a positive integer), defaulting to 36 when unset or invalid, in both the dispatched (laptop) and the pull_request (cloud) wait, and its "appeared within N s" message MUST use that count.
+
+_From 850-dispatch-test-timeouts._
 
 ## Retired
 
