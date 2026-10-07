@@ -17,7 +17,7 @@ description: "Task list for ST-207 Keep garages hidden until approved, with a st
 
 - [ ] T003 [P] Export `firstName` (one word) from `libs/domain/src/audit/audit.service.ts` for the 409 detail (FR-002); no copy
 - [ ] T004 [P] Write the failing `published` case (`public:garage:{id}`, `public:search:{brandId}` per brand) in `libs/domain/src/events/audience.spec.ts`, then add `published?: { brandIds }` to the verification subject in `libs/domain/src/events/audience.ts` (FR-008)
-- [ ] T005 [P] Write the failing specs `libs/contracts/src/garage-status.spec.ts` (new): every (garage status, newest file) pair maps to exactly one key, seven labels in `ro` and `en`, the ` · nepublicat` / ` · not published` suffix on every key but `approved`, `rejected` carries the reason; then implement `GARAGE_STATUSES`, `VERIFICATION_FILE_STATUSES`, `garageStatusKey()`, `GARAGE_STATUS_LABELS`, `statusLabel()` and `REAPPROVAL_FIELDS` (`cui`, `address`, `seat_address`, `business_kind`, `work_kinds`) in `libs/contracts/src/garage-status.ts` (new), and `PublicGarageDto { id, name, slug }` in `libs/contracts/src/garages.dto.ts` (new); export both from `libs/contracts/src/index.ts` (FR-006, FR-007, FR-011, SC-006)
+- [X] T005 [P] Write the failing specs `libs/contracts/src/garage-status.spec.ts` (new): every (garage status, newest file) pair maps to exactly one key, seven labels in `ro` and `en`, the ` · nepublicat` / ` · not published` suffix on every key but `approved`, `rejected` carries the reason; then implement `GARAGE_STATUSES`, `VERIFICATION_FILE_STATUSES`, `garageStatusKey()`, `GARAGE_STATUS_LABELS`, `statusLabel()` and `REAPPROVAL_FIELDS` (`cui`, `address`, `seat_address`, `business_kind`, `work_kinds`) in `libs/contracts/src/garage-status.ts` (new), and `PublicGarageDto { id, name, slug }` in `libs/contracts/src/garages.dto.ts` (new); export both from `libs/contracts/src/index.ts` (FR-006, FR-007, FR-011, SC-006)
 
 ## Phase 3: User Story 1 - A driver never meets an unapproved garage (P1)
 
@@ -44,7 +44,7 @@ description: "Task list for ST-207 Keep garages hidden until approved, with a st
 **Goal**: one derived label per state in both languages, never stored.
 **Independent test**: the unit spec of T005 over every state pair (SC-006); nothing further than T005's contracts code is owed here.
 
-- [ ] T014 [US2] Confirm `libs/contracts/src/garage-status.spec.ts` passes against the T005 implementation and that no status column or label is stored in `libs/domain/prisma/schema/garages.prisma` (FR-006)
+- [X] T014 [US2] Confirm `libs/contracts/src/garage-status.spec.ts` passes against the T005 implementation and that no status column or label is stored in `libs/domain/prisma/schema/garages.prisma` (FR-006)
 
 ## Phase 6: User Story 4 - A test environment approves at once (P3)
 
