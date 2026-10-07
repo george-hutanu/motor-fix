@@ -2,7 +2,19 @@
   {
     "id": "red-first-leaves-main-alone",
     "hook": "pre:edit:red-first",
-    "why": "maintenance on a non-feature branch must not need a spec edit, or every fix becomes a spec exercise",
+    "why": "maintenance on a non-feature branch must not need a spec edit, or every fix becomes a spec exercise; the fixture holds an open feature with FR ids and no test file, so the case holds whichever branch the live checkout is on",
+    "fixture": {
+      "commits": [
+        {
+          "message": "init",
+          "files": {
+            "apps/server/src/app.service.ts": "export const app = 1;\n",
+            "specs/001-open-feature/spec.md": "# Spec\n\n- **FR-001**: The server MUST answer.\n",
+            "specs/001-open-feature/tasks.md": "# Tasks\n\n- [ ] T001 Answer (FR-001)\n"
+          }
+        }
+      ]
+    },
     "payload": {
       "tool_input": {
         "file_path": "apps/server/src/app.service.ts"
@@ -10,6 +22,33 @@
     },
     "expect": {
       "exit": 0
+    }
+  },
+  {
+    "id": "red-first-blocks-the-same-fixture-once-a-feature-is-active",
+    "hook": "pre:edit:red-first",
+    "why": "the case above passes because no feature is active on the default branch, not because its fixture is one the gate would let through",
+    "fixture": {
+      "commits": [
+        {
+          "message": "init",
+          "files": {
+            "apps/server/src/app.service.ts": "export const app = 1;\n",
+            "specs/001-open-feature/spec.md": "# Spec\n\n- **FR-001**: The server MUST answer.\n",
+            "specs/001-open-feature/tasks.md": "# Tasks\n\n- [ ] T001 Answer (FR-001)\n",
+            ".specify/feature.json": "{\"feature_directory\":\"specs/001-open-feature\"}\n"
+          }
+        }
+      ]
+    },
+    "payload": {
+      "tool_input": {
+        "file_path": "apps/server/src/app.service.ts"
+      }
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "Red-first gate"
     }
   },
   {
