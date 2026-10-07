@@ -44,3 +44,7 @@ Start: origin/main 0ea7890a (worktree `.worktrees/783-api-test-boot-helper`, bra
 ## Phase 7 — Tasks
 - before_tasks hook (git auto-commit): nothing outstanding. after_tasks `speckit.analyze` left to the caller (phase 8).
 - `tasks.md`: 8 tasks (T001 tsconfig, T002 red helper spec, T003 helper, T004 bootstrap try/finally, T005-T007 three suites, T008 verification); US2 4 tasks, US1 3; T004-T007 parallelizable.
+
+## Phase 8 — Analyze
+- artifact-lint: 1 ERROR (FR-006 had no task) remediated: FR-006 reworded to allow the apps/api tsconfig lines, T008 gained the FR-006 check (`git diff origin/main --name-only -- apps libs` lists only spec, testing and tsconfig files). Re-run: 0 errors, 3 delta-unassigned warnings (FR-003, FR-004, FR-006 are suite edits, not platform capabilities; by design).
+- No CRITICAL/HIGH findings; context.md's ST-715 contradiction resolved by the clarify answer (bootstrap gets the try/finally).

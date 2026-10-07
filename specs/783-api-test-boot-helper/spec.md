@@ -56,7 +56,7 @@ When a boot throws partway (the store fails to start, the module fails to compil
 - **FR-003**: `validation-problem.integration.spec.ts`, `public-routes.integration.spec.ts` and `sign-up-confirmation.integration.spec.ts` MUST boot and tear down through the helper and MUST NOT close an app, a store or a turn of their own; they keep their own seeding and restores (the sign-up suite's `PUBLIC_WEB_URL` and spy), and every request, seeded record and assertion in them MUST stay as it is.
 - **FR-004**: The helper MUST take no option that no suite in this change uses (no `APP_ENV` override, no extra controllers, no failure-injection parameter). `bootstrap.integration.spec.ts` keeps its own per-test boots; its file-level teardown MUST release the turn in a `finally`, so a failed store stop or start never keeps the turn; none of its tests change.
 - **FR-005**: The helper MUST be covered by its own spec that proves FR-002 for a boot that throws at each stage and for a teardown whose close throws, making those stages fail with `jest.spyOn` in the spec, not through parameters of the helper.
-- **FR-006**: The API's behaviour MUST NOT change: no production source, route, answer, contract or configuration moves; the change is test infrastructure only.
+- **FR-006**: The API's behaviour MUST NOT change: no production source, route, answer, contract or runtime configuration moves; the change is test infrastructure only (the only non-test edits are `apps/api` tsconfig lines that keep the test-only helper out of the app build).
 
 ### Key Entities
 

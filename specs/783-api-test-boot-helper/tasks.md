@@ -29,7 +29,7 @@
 
 ## Phase 5: Verification
 
-- [ ] T008 Run the four API integration suites and the helper spec (`JEST_SUITE=integration`, through `scripts/heavy.sh`), `npm run typecheck`, `npm run lint`; confirm SC-001/SC-004 by grepping the three suites for `readEnv|createTestingModule|configureApp|S3TestStore|databaseTurn|app.close|store.stop|turn.release` (quickstart.md)
+- [ ] T008 Run the four API integration suites and the helper spec (`JEST_SUITE=integration`, through `scripts/heavy.sh`), `npm run typecheck`, `npm run lint`; confirm SC-001/SC-004 by grepping the three suites for `readEnv|createTestingModule|configureApp|S3TestStore|databaseTurn|app.close|store.stop|turn.release` (quickstart.md); confirm FR-006 with `git diff origin/main --name-only -- apps libs` listing only `*.spec.ts`, `*.testing.ts` and `apps/api/tsconfig.app.json`/`tsconfig.spec.json` (FR-006)
 
 ## Dependencies
 
