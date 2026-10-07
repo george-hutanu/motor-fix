@@ -1,5 +1,5 @@
-// @traces 539-FR-003
-import { publicWebUrl, readEnv, STORAGE_ENV } from './env';
+// @traces 539-FR-003 875-FR-001 875-FR-002 875-FR-003
+import { publicWebUrl, readEnv, STORAGE_ENV, telemetry } from './env';
 
 describe('readEnv', () => {
   it('returns the required variables and defaults the release to dev', () => {
@@ -102,5 +102,91 @@ describe('publicWebUrl', () => {
     expect(() => publicWebUrl({ PUBLIC_WEB_URL: 'secret-host' })).toThrow(
       new Error('PUBLIC_WEB_URL must be an absolute URL'),
     );
+  });
+});
+
+describe('telemetry', () => {
+  const endpoint = 'https://otlp.example/otlp';
+  const header = 'Authorization=Basic c2VjcmV0LXRva2Vu';
+
+  it('is off when no endpoint is set, whatever else is', () => {
+    expect(telemetry({ APP_ENV: 'production' })).toBeUndefined();
+    expect(
+      telemetry({
+        APP_ENV: 'production',
+        OTEL_EXPORTER_OTLP_ENDPOINT: '',
+        OTEL_EXPORTER_OTLP_HEADERS: header,
+        OTEL_EXPORTER_OTLP_PROTOCOL: 'grpc',
+      }),
+    ).toBeUndefined();
+  });
+
+  it('samples a fifth of traces in production, labelled with the environment', () => {
+    expect(
+      telemetry({
+        APP_ENV: 'production',
+        OTEL_EXPORTER_OTLP_ENDPOINT: endpoint,
+        OTEL_EXPORTER_OTLP_HEADERS: header,
+        OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf',
+      }),
+    ).toEqual({
+      endpoint: new URL(endpoint),
+      env: 'production',
+      headers: header,
+      protocol: 'http/protobuf',
+      traceSampleRatio: 0.2,
+    });
+  });
+
+  it.each(['development', 'test', 'staging'])(
+    'samples every trace in %s and defaults the protocol to http/protobuf',
+    (appEnv) => {
+      expect(
+        telemetry({
+          APP_ENV: appEnv,
+          OTEL_EXPORTER_OTLP_ENDPOINT: 'http://localhost:4318',
+        }),
+      ).toEqual({
+        endpoint: new URL('http://localhost:4318'),
+        env: appEnv,
+        protocol: 'http/protobuf',
+        traceSampleRatio: 1,
+      });
+    },
+  );
+
+  it.each(['secret-host', 'ftp://secret-host/otlp'])(
+    'names the endpoint, never its value, when %s is not an http(s) URL',
+    (value) => {
+      expect(() =>
+        telemetry({ APP_ENV: 'staging', OTEL_EXPORTER_OTLP_ENDPOINT: value }),
+      ).toThrow(
+        new Error(
+          'OTEL_EXPORTER_OTLP_ENDPOINT must be an absolute http(s) URL',
+        ),
+      );
+    },
+  );
+
+  it.each(['grpc', 'http/json'])('refuses the %s protocol', (protocol) => {
+    expect(() =>
+      telemetry({
+        APP_ENV: 'staging',
+        OTEL_EXPORTER_OTLP_ENDPOINT: endpoint,
+        OTEL_EXPORTER_OTLP_PROTOCOL: protocol,
+      }),
+    ).toThrow(new Error('OTEL_EXPORTER_OTLP_PROTOCOL must be http/protobuf'));
+  });
+
+  it('never puts the headers in an error', () => {
+    const run = () =>
+      telemetry({
+        APP_ENV: 'nowhere',
+        OTEL_EXPORTER_OTLP_ENDPOINT: endpoint,
+        OTEL_EXPORTER_OTLP_HEADERS: header,
+      });
+
+    expect(run).toThrow('APP_ENV');
+    expect(run).not.toThrow(/c2VjcmV0/);
   });
 });

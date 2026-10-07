@@ -1269,6 +1269,42 @@
         ]
       }
     },
+    "/api/v1/public-holidays": {
+      "get": {
+        "operationId": "PublicHolidaysController_list",
+        "parameters": [
+          {
+            "name": "year",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 2000,
+              "maximum": 2100,
+              "example": 2026,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicHolidayDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "public-holidays"
+        ]
+      }
+    },
     "/api/v1/search/garages": {
       "get": {
         "operationId": "GarageSearchController_forBrand",
@@ -1328,6 +1364,35 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AdminOverviewDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/growth": {
+      "get": {
+        "operationId": "AdminOverviewController_growth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminGrowthDto"
                 }
               }
             }
@@ -3465,6 +3530,29 @@
           "total"
         ]
       },
+      "PublicHolidayDto": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "example": "2026-12-01",
+            "format": "date"
+          },
+          "nameRo": {
+            "type": "string",
+            "example": "Ziua Națională"
+          },
+          "nameEn": {
+            "type": "string",
+            "example": "National Day"
+          }
+        },
+        "required": [
+          "day",
+          "nameRo",
+          "nameEn"
+        ]
+      },
       "BrandRefDto": {
         "type": "object",
         "properties": {
@@ -3623,6 +3711,45 @@
           "garagesListed",
           "garagesApprovedThisMonth",
           "activeDrivers"
+        ]
+      },
+      "AdminGrowthMonthDto": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string",
+            "description": "The Europe/Bucharest month",
+            "example": "2026-03",
+            "pattern": "^\\d{4}-\\d{2}$"
+          },
+          "activeDrivers": {
+            "type": "integer",
+            "description": "Active drivers at the month’s close, live for the current month; absent when the close was not recorded",
+            "minimum": 0
+          },
+          "garagesListed": {
+            "type": "integer",
+            "description": "Garages listed at the month’s close, live for the current month; absent when the close was not recorded",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "month"
+        ]
+      },
+      "AdminGrowthDto": {
+        "type": "object",
+        "properties": {
+          "months": {
+            "description": "The last twelve months, oldest first, ending with the current one",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminGrowthMonthDto"
+            }
+          }
+        },
+        "required": [
+          "months"
         ]
       },
       "GarageBrandStanceDto": {

@@ -1,0 +1,41 @@
+:host {
+  display: block;
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+section {
+  display: grid;
+  gap: var(--mf-space-3);
+}
+h2 {
+  margin: 0;
+  font-size: var(--mf-size-label);
+  color: var(--mf-text-secondary);
+}
+.charts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--mf-space-3);
+}
+@media (min-width: 768px) {
+  .charts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.chart {
+  display: grid;
+  align-content: start;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+.latest {
+  margin: 0;
+  font-family: var(--mf-font-label);
+  font-size: clamp(18px, 5vw, 24px);
+  color: var(--mf-text);
+}
+.range {
+  margin: 0;
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+}

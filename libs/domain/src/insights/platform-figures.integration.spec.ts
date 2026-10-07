@@ -1,4 +1,9 @@
-import { countPlatformFigures, monthStartSnapshot } from './platform-figures';
+import {
+  countPlatformFigures,
+  monthStartSnapshot,
+  readGrowth,
+  writeSnapshot,
+} from './platform-figures';
 import { AuditService } from '../audit/audit.service';
 import { serialDatabase } from '../auth/serial-db.testing';
 import { outbox } from '../events/event.port';
@@ -231,5 +236,205 @@ describe('the month-start snapshot', () => {
     await expect(
       monthStartSnapshot(prisma, new Date('2026-11-30T22:30:00Z')),
     ).resolves.toBe(7);
+  });
+});
+
+const closing = (day: string, activeDrivers: number, garagesListed: number) =>
+  prisma.platformDaily.create({
+    data: {
+      activeDrivers,
+      day: new Date(day),
+      garagesApprovedThisMonth: 0,
+      garagesListed,
+      writtenAt: new Date(`${day}T00:00:00Z`),
+    },
+  });
+
+const monthOf = async (at: Date, month: string) =>
+  (await readGrowth(prisma, at)).months.find((m) => m.month === month);
+
+describe('the growth', () => {
+  it('answers the twelve Bucharest months ending with the current one, oldest first', async () => {
+    const { months } = await readGrowth(prisma, now);
+
+    expect(months.map((m) => m.month)).toEqual([
+      '2025-12',
+      '2026-01',
+      '2026-02',
+      '2026-03',
+      '2026-04',
+      '2026-05',
+      '2026-06',
+      '2026-07',
+      '2026-08',
+      '2026-09',
+      '2026-10',
+      '2026-11',
+    ]);
+  });
+
+  it("closes a month with the next month's first-day row rather than its own last day", async () => {
+    await closing('2026-03-31', 9000, 140);
+    await closing('2026-04-01', 9870, 150);
+
+    await expect(monthOf(now, '2026-03')).resolves.toStrictEqual({
+      activeDrivers: 9870,
+      garagesListed: 150,
+      month: '2026-03',
+    });
+  });
+
+  it("closes a month with its last day's row when the first of the next is missing", async () => {
+    await closing('2026-05-31', 10100, 170);
+
+    await expect(monthOf(now, '2026-05')).resolves.toStrictEqual({
+      activeDrivers: 10100,
+      garagesListed: 170,
+      month: '2026-05',
+    });
+  });
+
+  it('leaves a month without figures when neither closing row exists, never zero', async () => {
+    await closing('2026-07-15', 10500, 180);
+
+    await expect(monthOf(now, '2026-06')).resolves.toStrictEqual({
+      month: '2026-06',
+    });
+    await expect(monthOf(now, '2026-07')).resolves.toStrictEqual({
+      month: '2026-07',
+    });
+  });
+
+  it('keeps a recorded zero as a figure', async () => {
+    await closing('2026-09-01', 0, 0);
+
+    await expect(monthOf(now, '2026-08')).resolves.toStrictEqual({
+      activeDrivers: 0,
+      garagesListed: 0,
+      month: '2026-08',
+    });
+  });
+
+  it('counts the current month live, not from a snapshot row', async () => {
+    await closing('2026-11-01', 500, 50);
+    await closing('2026-11-10', 600, 60);
+    await garage('approved', new Date('2026-10-02T08:00:00Z'));
+    await driver(new Date(now.getTime() - DAY));
+
+    const { months } = await readGrowth(prisma, now);
+
+    expect(months.at(-1)).toStrictEqual({
+      activeDrivers: 1,
+      garagesListed: 1,
+      month: '2026-11',
+    });
+    expect(months.at(-2)).toStrictEqual({
+      activeDrivers: 500,
+      garagesListed: 50,
+      month: '2026-10',
+    });
+  });
+
+  it('leaves every month before the first snapshot empty', async () => {
+    for (const day of [
+      '2026-06-01',
+      '2026-07-01',
+      '2026-08-01',
+      '2026-09-01',
+      '2026-10-01',
+      '2026-11-01',
+    ]) {
+      await closing(day, 100, 10);
+    }
+
+    const { months } = await readGrowth(prisma, now);
+
+    expect(months.slice(0, 5)).toStrictEqual([
+      { month: '2025-12' },
+      { month: '2026-01' },
+      { month: '2026-02' },
+      { month: '2026-03' },
+      { month: '2026-04' },
+    ]);
+    expect(months.filter((m) => m.activeDrivers !== undefined).length).toBe(7);
+  });
+
+  it('answers only the live current month on a database with no snapshot', async () => {
+    const { months } = await readGrowth(prisma, now);
+
+    expect(months.slice(0, 11).every((m) => Object.keys(m).length === 1)).toBe(
+      true,
+    );
+    expect(months.at(-1)).toStrictEqual({
+      activeDrivers: 0,
+      garagesListed: 0,
+      month: '2026-11',
+    });
+  });
+
+  it('counts a garage approved in May and suspended in August only while it was listed', async () => {
+    await writeSnapshot(prisma, new Date('2026-05-01T00:00:00Z'));
+    const { id } = await garage('approved', new Date('2026-05-12T08:00:00Z'));
+    for (const at of ['2026-06-01', '2026-07-01', '2026-08-01']) {
+      await writeSnapshot(prisma, new Date(`${at}T00:00:00Z`));
+    }
+    await prisma.garage.update({
+      data: { status: 'suspended' },
+      where: { id },
+    });
+    await writeSnapshot(prisma, new Date('2026-09-01T00:00:00Z'));
+
+    const listed = (await readGrowth(prisma, now)).months.map(
+      (m) => m.garagesListed,
+    );
+
+    expect(listed).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      0,
+      1,
+      1,
+      1,
+      0,
+      undefined,
+      undefined,
+      0,
+    ]);
+  });
+
+  it('turns to the next month at midnight in Bucharest, before midnight in UTC', async () => {
+    await closing('2026-10-01', 300, 30);
+
+    const october = await readGrowth(prisma, new Date('2026-10-31T21:30:00Z'));
+    const november = await readGrowth(prisma, new Date('2026-10-31T22:30:00Z'));
+
+    expect(october.months.at(-1)?.month).toBe('2026-10');
+    expect(october.months.at(-2)).toStrictEqual({
+      activeDrivers: 300,
+      garagesListed: 30,
+      month: '2026-09',
+    });
+    expect(november.months.at(-1)?.month).toBe('2026-11');
+    expect(november.months[0].month).toBe('2025-12');
+  });
+
+  it("falls back to the last day before the first's snapshot is written", async () => {
+    await closing('2026-10-31', 400, 40);
+
+    const early = new Date('2026-10-31T22:30:00Z');
+
+    await expect(monthOf(early, '2026-10')).resolves.toStrictEqual({
+      activeDrivers: 400,
+      garagesListed: 40,
+      month: '2026-10',
+    });
+  });
+
+  it('writes nothing', async () => {
+    await readGrowth(prisma, now);
+
+    await expect(prisma.platformDaily.count()).resolves.toBe(0);
   });
 });

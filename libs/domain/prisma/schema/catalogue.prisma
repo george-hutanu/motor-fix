@@ -12,7 +12,43 @@ model Brand {
   createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   garageBrands GarageBrand[]
+  prices       GaragePrice[]
 
   @@index([active, popularity, name])
   @@map("brand")
+}
+
+enum JobTypeStatus {
+  approved
+  pending
+  rejected
+
+  @@map("job_type_status")
+}
+
+// A job a garage can price. The shipped jobs load approved at start; a row
+// added later is a proposal an admin decides. Rows are never deleted.
+model JobType {
+  id          String        @id @default(uuid()) @db.Uuid
+  key         String        @unique
+  nameRo      String        @map("name_ro")
+  nameEn      String        @map("name_en")
+  status      JobTypeStatus @default(pending)
+  carSystem   String?       @map("car_system")
+  rarActivity String?       @map("rar_activity")
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  prices      GaragePrice[]
+
+  @@map("job_type")
+}
+
+// Romania's legal holidays, one row per day; two holidays on one day share
+// the row, their names joined with " / ". Each year is added by a migration.
+model PublicHoliday {
+  day    DateTime @id @db.Date
+  nameRo String   @map("name_ro")
+  nameEn String   @map("name_en")
+
+  @@map("public_holiday")
 }

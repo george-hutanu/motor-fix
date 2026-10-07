@@ -1,4 +1,7 @@
 {
+  "growth": {
+    "title": "Growth, last 12 months"
+  },
   "panel": {
     "activeDrivers": "Active drivers",
     "answerRate": "Answer rate",

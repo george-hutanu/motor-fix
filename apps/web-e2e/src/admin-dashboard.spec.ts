@@ -409,3 +409,181 @@ test.describe('the platform figures', () => {
     });
   }
 });
+
+const GROWTH = {
+  months: [
+    ['2025-11', 6120, 96],
+    ['2025-12', 6700, 104],
+    ['2026-01', 7300, 118],
+    ['2026-02', 8400, 130],
+    ['2026-03', 9870, 141],
+    ['2026-04', 10200, 152],
+    ['2026-05', 10650, 163],
+    ['2026-06', 11000, 170],
+    ['2026-07', 11400, 181],
+    ['2026-08', 11800, 190],
+    ['2026-09', 12168, 205],
+    ['2026-10', 12480, 214],
+  ].map(([month, activeDrivers, garagesListed]) => ({
+    activeDrivers,
+    garagesListed,
+    month,
+  })),
+};
+
+const growth = (page: Page) => page.locator('mf-admin-growth');
+const growthCharts = (page: Page) => growth(page).locator('mf-line-chart');
+
+const stubGrowth = (page: Page) =>
+  page.route('**/api/v1/admin/growth', (route) =>
+    route.fulfill({ json: GROWTH }),
+  );
+
+// The two charts' top edges: equal when side by side.
+const chartTops = (page: Page) =>
+  growthCharts(page).evaluateAll((all) =>
+    all.map((c) => Math.round(c.getBoundingClientRect().top)),
+  );
+
+test.describe('the growth panel @seeded', () => {
+  for (const [device, width, height] of [
+    ['a 390 px phone', 390, 844],
+    ['a desktop', 1280, 800],
+  ] as const) {
+    test(`shows the seeded admin twelve months of growth on ${device}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ height, width });
+      await stubGrowth(page);
+      await signInAsAdmin(page);
+
+      const section = growth(page).getByRole('region', {
+        exact: true,
+        name: 'Creștere, ultimele 12 luni',
+      });
+      await expect(section).toBeVisible();
+      await expect(
+        section.getByRole('region', { exact: true, name: 'Șoferi activi' }),
+      ).toBeVisible();
+      await expect(
+        section.getByRole('region', {
+          exact: true,
+          name: 'Service‑uri listate',
+        }),
+      ).toBeVisible();
+      await expect(growth(page).locator('.latest')).toHaveText([
+        '12.480',
+        '214',
+      ]);
+      await expect(growth(page).locator('.range')).toHaveText([
+        'nov. 2025 – oct. 2026',
+        'nov. 2025 – oct. 2026',
+      ]);
+
+      const drivers = growthCharts(page).first();
+      await drivers.getByRole('button', { name: 'Vezi ca tabel' }).click();
+      await expect(
+        drivers.getByRole('row', { name: 'martie 2026 9.870' }),
+      ).toBeVisible();
+      expect(await sideways(page)).toBeLessThanOrEqual(0);
+    });
+  }
+});
+
+test.describe('the growth panel', () => {
+  for (const [device, width, height] of [
+    ['a 390 px phone', 390, 844],
+    ['a desktop', 1280, 800],
+  ] as const) {
+    test(`reads in English on ${device}`, async ({ page }) => {
+      await page.setViewportSize({ height, width });
+      await stubAdmin(page, 'en');
+      await stubGrowth(page);
+
+      await page.goto('/app/admin');
+
+      await expect(
+        growth(page).getByRole('region', {
+          exact: true,
+          name: 'Growth, last 12 months',
+        }),
+      ).toBeVisible();
+      await expect(growth(page).locator('.latest')).toHaveText([
+        '12,480',
+        '214',
+      ]);
+      await expect(growth(page).locator('.range').first()).toHaveText(
+        'Nov 2025 – Oct 2026',
+      );
+      const garages = growthCharts(page).nth(1);
+      await garages.getByRole('button', { name: 'View as table' }).click();
+      await expect(
+        garages.getByRole('row', { name: 'March 2026 141' }),
+      ).toBeVisible();
+    });
+  }
+
+  test('shows retry when the read fails, and the charts once it answers', async ({
+    page,
+  }) => {
+    await stubAdmin(page, 'ro');
+    let calls = 0;
+    await page.route('**/api/v1/admin/growth', (route) => {
+      calls += 1;
+      return calls === 1
+        ? route.fulfill({
+            json: { code: 'internal', message: 'x' },
+            status: 500,
+          })
+        : route.fulfill({ json: GROWTH });
+    });
+
+    await page.goto('/app/admin');
+
+    const retries = growth(page).getByRole('button', { name: 'Reîncearcă' });
+    await expect(retries).toHaveCount(2);
+    await expect(
+      panel(page).getByRole('group', {
+        exact: true,
+        name: 'Șoferi activi, 12.480, +312 luna asta',
+      }),
+    ).toBeVisible();
+
+    await retries.first().click();
+
+    await expect(growth(page).locator('canvas')).toHaveCount(2);
+    await expect(retries).toHaveCount(0);
+    expect(calls).toBe(2);
+  });
+
+  for (const [device, width, height, side] of [
+    ['a 320 px phone', 320, 640, false],
+    ['a 390 px phone', 390, 844, false],
+    ['a 768 px tablet', 768, 1024, true],
+    ['a desktop', 1280, 800, true],
+  ] as const) {
+    test(`${side ? 'sets the charts side by side' : 'stacks the charts'} on ${device}, with no sideways scroll`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ height, width });
+      await stubAdmin(page, 'ro');
+      await stubGrowth(page);
+
+      await page.goto('/app/admin');
+      await expect(growth(page).locator('canvas')).toHaveCount(2);
+
+      const [first, second] = await chartTops(page);
+      if (side) expect(second).toBe(first);
+      else expect(second).toBeGreaterThan(first);
+      const smallest = await growth(page)
+        .locator('.latest, .range')
+        .evaluateAll((all) =>
+          Math.min(
+            ...all.map((e) => Number.parseFloat(getComputedStyle(e).fontSize)),
+          ),
+        );
+      expect(smallest).toBeGreaterThanOrEqual(12);
+      expect(await sideways(page)).toBeLessThanOrEqual(0);
+    });
+  }
+});

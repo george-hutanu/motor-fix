@@ -1,3 +1,4 @@
+// @traces 875-FR-005 875-FR-006
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -132,6 +133,28 @@ describe('ci workflow', () => {
     expect(setting(step(job('checks'), 'Compose stack'), 'if')).toBe(
       gh("!cancelled() && github.event_name == 'pull_request'"),
     );
+  });
+
+  it('boots the local observability profile and proves Grafana and OTLP answer', () => {
+    const block = step(job('checks'), 'Compose stack');
+
+    expect(block).toContain(
+      'docker compose --profile observability up -d otel-lgtm',
+    );
+    expect(block).toMatch(/curl -fsS[^\n]*localhost:3300\/api\/health/);
+    expect(block).toMatch(/curl -fsS -X POST[^\n]*localhost:4318\/v1\/logs/);
+    expect(step(job('checks'), 'Stop the compose stack')).toContain(
+      'docker compose --profile observability down -v --remove-orphans',
+    );
+  });
+
+  it('keeps otel-lgtm behind its profile at an exact version', () => {
+    const compose = readFileSync(join(root, 'docker-compose.yml'), 'utf8');
+    const service = compose.match(/^ {2}otel-lgtm:\n((?: {4}.*\n|\n)+)/m)?.[1];
+
+    expect(service).toMatch(/image: grafana\/otel-lgtm:\d+\.\d+\.\d+\n/);
+    expect(service).toMatch(/profiles: \[observability\]/);
+    expect(compose.match(/profiles:/g)).toHaveLength(1);
   });
 
   it.each([
