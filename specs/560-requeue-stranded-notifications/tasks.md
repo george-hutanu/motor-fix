@@ -12,9 +12,9 @@
 
 ## Phase 2: Implementation
 
-- [X] T004 [US1] [US2] [US3] In `notifications.service.ts` add exported `STALE_MS` (5 minutes) and public `requeueStranded(now)`: select queued rows with `claimedAt` null, `sendingAt` null, `createdAt` older than `STALE_MS`, add each through `queue(send(id))`, warn and end on a failed read or add, warn with the ids when the count is above zero, return the count.
+- [X] T004 [US1] [US2] [US3] In `notifications.service.ts` add a private `STRANDED_MS` (5 minutes), public `requeueStranded(now)` and `scheduleRequeue()` (`upsertJobScheduler('requeue', { every: STRANDED_MS })`, completed jobs removed): select queued rows with `claimedAt` null, `sendingAt` null, `createdAt` older than `STRANDED_MS`, add each through `queue(send(id))`, warn and end on a failed read or add, warn with the ids when the count is above zero, return the count.
 - [X] T005 [US2] In `notifications.processor.ts` route the `requeue` job in `handle` to the service; make `sent()` answer whether it recorded, track unrecorded row ids, and skip the claim release in `send()`'s `finally` for such a row.
-- [X] T006 [US1] In `notifications.module.ts` inject `NOTIFICATIONS_JOBS` into the `WORKER` factory and `upsertJobScheduler('requeue', { every: STALE_MS }, { name: 'requeue' })` after the worker is built, inside try/catch that logs and still returns the worker.
+- [X] T006 [US1] In `notifications.module.ts` inject `NotificationsService` into the `WORKER` factory and call `scheduleRequeue()` before the worker is built, logging a failure and still returning the worker.
 
 ## Phase 3: Verify
 
@@ -22,5 +22,5 @@
 
 ## Dependencies
 
-T001-T003 (parallel, red) -> T004 -> T005 -> T006 -> T007. T004..T006 touch different files but T005/T006 import what T004 exports, so they run in order.
+T001-T003 (parallel, red) -> T004 -> T005 -> T006 -> T007. T004..T006 touch different files but T005/T006 use what T004 adds, so they run in order.
 MVP: all of it; one story set, three source files.
