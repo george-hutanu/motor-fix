@@ -21,7 +21,7 @@
 // the gh command as written. Notion goes through
 // notion-sync.mjs; its exit 3 (no NOTION_TOKEN) stops the step with the
 // connector events left and the `--notion-done` rerun that finishes it.
-// Exit 0 done, 1 stopped, 64 usage.
+// Exit 0 done or --help, 1 stopped, 64 usage (an unknown flag included).
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -89,23 +89,43 @@ function realIo() {
   };
 }
 
+// The flags each step reads: a switch is true when present, any other flag takes the next argument.
+const SWITCHES = new Set(["notion-done", "restore"]);
+const FLAGS = {
+  open: ["title", "body-file", "notion-done"],
+  ready: ["body-file", "decisions", "notion-done"],
+  merge: ["pr", "notion-done"],
+  handoff: ["pr", "restore", "notion-done"],
+};
+
+// A flag the step does not read stops the call before it runs anything, and
+// --help/-h anywhere returns the usage: `merge --help` once merged a PR.
 function parse(argv) {
   const [name, ...rest] = argv;
   const flags = { "notion-done": false, restore: false };
+  if (!Object.hasOwn(FLAGS, name)) throw new Stop("usage", USAGE);
+  if (rest.some((arg) => arg === "--help" || arg === "-h")) return { name, flags, help: true };
   for (let i = 0; i < rest.length; i++) {
-    const key = rest[i].replace(/^--/, "");
-    if (key === "notion-done" || key === "restore") flags[key] = true;
-    else flags[key] = rest[++i];
+    if (!rest[i].startsWith("--")) throw new Stop("usage", `unexpected argument ${rest[i]}: ${USAGE}`);
+    const key = rest[i].slice(2);
+    if (!FLAGS[name].includes(key)) throw new Stop("usage", `unknown flag --${key} for ${name}: ${USAGE}`);
+    if (SWITCHES.has(key)) {
+      flags[key] = true;
+      continue;
+    }
+    const value = rest[++i];
+    if (value === undefined || value.startsWith("--")) throw new Stop("usage", `--${key} needs a value: ${USAGE}`);
+    flags[key] = value;
   }
   return { name, flags };
 }
 
 export function step(argv, io) {
-  const { name, flags } = parse(argv);
   const did = [];
-  const result = { step: name, ok: true, did };
+  const result = { step: argv[0], ok: true, did };
   try {
-    if (!["open", "ready", "merge", "handoff"].includes(name)) throw new Stop("usage", USAGE);
+    const { name, flags, help } = parse(argv);
+    if (help) return Object.assign(result, { help: true, usage: USAGE });
     const ctx = context(io, flags, did);
     Object.assign(result, { open, ready, merge, handoff }[name](ctx, flags));
   } catch (err) {
