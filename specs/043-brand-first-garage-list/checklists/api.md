@@ -38,7 +38,7 @@
 - [x] CHK017 Is it stated that the route is open to visitors and how that is made checkable (the public-routes list)? [Measurability, Spec §FR-003, §SC-004]
 - [x] CHK018 Is what a visitor sees limited to named fields so no private garage data is exposed? [Completeness, Spec §FR-004, §FR-008]
 - [x] CHK019 Are suspended and never-approved garages excluded from the list and both counts in one rule? [Consistency, Spec §FR-002]
-- [x] ~~CHK020 Are abuse limits (rate limiting) for an unauthenticated read addressed or explicitly out of scope? [Gap]~~ Struck: rate limiting is not in the story or its Build brief and would be scope (Principle I); the app-wide edge limits apply.
+- [x] ~~CHK020 Are abuse limits (rate limiting) for an unauthenticated read addressed or explicitly out of scope? [Gap]~~ Struck: rate limiting is not in the story or its Build brief and would be scope (Principle I).
 
 ## Errors
 
