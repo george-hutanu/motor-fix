@@ -3,10 +3,14 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
-import { type MeDto, NotificationsService } from '@motor-fix/data-access';
+import {
+  AdminService,
+  type MeDto,
+  NotificationsService,
+} from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
-import { Subject } from 'rxjs';
+import { NEVER, Subject } from 'rxjs';
 
 import { Frame } from './frame';
 import { Live } from './live';
@@ -52,6 +56,7 @@ async function render(
     close: jest.fn(),
     events: new Subject<LiveMessage>(),
     offline: signal(false),
+    on: () => NEVER,
     open: jest.fn(),
     resync: new Subject<void>(),
   };
@@ -77,6 +82,12 @@ async function render(
       ),
       { provide: Session, useValue: session },
       { provide: Live, useValue: live },
+      {
+        provide: AdminService,
+        useValue: {
+          adminOverviewControllerOverview: async () => ({ garagesWaiting: 0 }),
+        },
+      },
       {
         provide: NotificationsService,
         useValue: { bellControllerUnreadCount: async () => ({ count: 0 }) },

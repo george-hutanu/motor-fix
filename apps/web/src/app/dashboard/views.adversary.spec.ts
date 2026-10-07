@@ -2,8 +2,8 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import type { MeDto } from '@motor-fix/data-access';
-import { Subject } from 'rxjs';
+import { AdminService, type MeDto } from '@motor-fix/data-access';
+import { NEVER, Subject } from 'rxjs';
 
 import { Frame } from './frame';
 import { Live } from './live';
@@ -49,11 +49,18 @@ async function open(capabilities: string[] | null, area: Area, url: string) {
         },
       },
       {
+        provide: AdminService,
+        useValue: {
+          adminOverviewControllerOverview: async () => ({ garagesWaiting: 0 }),
+        },
+      },
+      {
         provide: Live,
         useValue: {
           close: jest.fn(),
           events: new Subject(),
           offline: signal(false),
+          on: () => NEVER,
           open: jest.fn(),
           resync: new Subject(),
         },
@@ -78,10 +85,11 @@ const ALL = AREAS.flatMap((a) =>
 );
 
 describe('dashboard view lists under hostile input', () => {
-  it('has unique paths and unique capabilities in every dashboard', () => {
+  it('has unique paths, and unique capabilities among the released views, in every dashboard', () => {
     for (const area of AREAS) {
       const paths = DASHBOARDS[area].views.map((v) => v.path);
       const caps = DASHBOARDS[area].views
+        .filter((v) => !v.unreleased)
         .map((v) => v.capability)
         .filter(Boolean);
       expect(new Set(paths).size).toBe(paths.length);
@@ -161,10 +169,12 @@ describe('dashboard view lists under hostile input', () => {
     }
   });
 
-  it('builds one route per view plus a catch-all redirect that is last', () => {
+  it('builds one route per released view plus a catch-all redirect that is last', () => {
     for (const area of AREAS) {
       const routes = dashboardRoutes(area);
-      expect(routes).toHaveLength(DASHBOARDS[area].views.length + 1);
+      expect(routes).toHaveLength(
+        DASHBOARDS[area].views.filter((v) => !v.unreleased).length + 1,
+      );
       expect(routes[routes.length - 1]).toEqual({
         path: '**',
         redirectTo: '',

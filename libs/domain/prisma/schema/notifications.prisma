@@ -41,6 +41,9 @@ model Notification {
   providerMessageId String?             @map("provider_message_id")
   // Set by the send job that holds the row; lapses after a lease.
   claimedAt         DateTime?           @map("claimed_at") @db.Timestamptz(3)
+  // Set just before an SMS goes to the provider: a row carrying it may
+  // already have gone, so it is never sent again.
+  sendingAt         DateTime?           @map("sending_at") @db.Timestamptz(3)
   createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
   account           Account?            @relation(fields: [accountId], references: [id], onDelete: Cascade)
   listingDraft      ListingDraft?       @relation(fields: [listingDraftId], references: [id], onDelete: Cascade)

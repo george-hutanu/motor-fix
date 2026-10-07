@@ -60,7 +60,7 @@ Hooks in `.specify/extensions.yml`, every phase:
 | `speckit.git.feature`, `speckit.git.initialize` | skip: the routine owns branching (disabled in the worktree copy) |
 | `speckit.git.remote` | skip: never inspect or use remotes |
 | `speckit.git.commit` | commit now per §7; the script itself is a no-op here because `auto_commit` is off in `.specify/extensions/git/git-config.yml` |
-| `speckit.agent-context.update` | skip: it rewrites the tracked `CLAUDE.md` |
+| `speckit.agent-context.update` | skip: the plan pointer is printed at session start |
 | `speckit.analyze` (after_tasks, mandatory) | run (§3.4) |
 
 ### 3.1 specify — `.claude/skills/speckit-specify/SKILL.md`

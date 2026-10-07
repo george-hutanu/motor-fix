@@ -347,24 +347,28 @@ interface LiveResource<T> {
   readonly gone: Signal<boolean>;
   // True only for the first read; a background re-read keeps the data shown.
   readonly isLoading: Signal<boolean>;
+  // The last read failed, the first one or a re-read with data shown.
+  readonly failed: Signal<boolean>;
   reload(): void;
 }
 
 const RETRY_AFTER = 60_000;
 
 // A view's data, read through the API and read again when an event of these
-// kinds arrives about the object it shows; a burst of 300 ms is one re-read.
+// kinds arrives about the object it shows (without `id`, about any object); a
+// burst of 300 ms is one re-read.
 // A background re-read that fails keeps the data and shows nothing; it reads
 // again on the next event or after 60 s. Call it in an injection context.
 export function liveResource<T>(
   load: () => Promise<T>,
   kinds: readonly EventKind[],
-  id: () => string,
+  id?: () => string,
 ): LiveResource<T> {
   const value = signal<T | undefined>(undefined);
   const error = signal<unknown>(undefined);
   const gone = signal(false);
   const isLoading = signal(false);
+  const lastFailed = signal(false);
   const firstRead = computed(() => isLoading() && value() === undefined);
   const destroyRef = inject(DestroyRef);
   let again = false;
@@ -372,6 +376,7 @@ export function liveResource<T>(
 
   const failed = (failure: unknown) => {
     if (destroyRef.destroyed) return;
+    lastFailed.set(true);
     if (failure instanceof HttpErrorResponse && failure.status === 404) {
       gone.set(true);
       return;
@@ -386,6 +391,7 @@ export function liveResource<T>(
       value.set(reuse(value(), await load()));
       error.set(undefined);
       gone.set(false);
+      lastFailed.set(false);
     } catch (failure) {
       failed(failure);
     } finally {
@@ -408,7 +414,7 @@ export function liveResource<T>(
   inject(Live)
     .on(kinds)
     .pipe(
-      filter((m) => m.id === id()),
+      filter((m) => !id || m.id === id()),
       debounceTime(300),
       takeUntilDestroyed(destroyRef),
     )
@@ -420,6 +426,7 @@ export function liveResource<T>(
   void read();
   return {
     error: error.asReadonly(),
+    failed: lastFailed.asReadonly(),
     gone: gone.asReadonly(),
     isLoading: firstRead,
     reload: () => void read(),

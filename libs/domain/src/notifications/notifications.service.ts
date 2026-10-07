@@ -33,6 +33,9 @@ export const LIVE_PUBLISHER = Symbol('LIVE_PUBLISHER');
 
 export const RETRY_MINUTES = [1, 5, 15, 60, 240];
 const WINDOW_MS = 5 * 60_000;
+// A queued row this old with no claim has lost its send job, or the add is a
+// no-op because the job is still there.
+const STRANDED_MS = 5 * 60_000;
 
 const JOB: JobsOptions = {
   attempts: RETRY_MINUTES.length + 1,
@@ -54,6 +57,11 @@ const NEXT: Partial<Record<Notification['channel'], SentChannel>> = {
 
 interface Jobs {
   add(name: string, data: unknown, options: JobsOptions): Promise<unknown>;
+  upsertJobScheduler(
+    id: string,
+    repeat: { every: number },
+    template: { name: string; opts: JobsOptions },
+  ): Promise<unknown>;
 }
 
 export interface Publisher {
@@ -268,6 +276,48 @@ export class NotificationsService {
         row.fallbackOf !== null;
       if (next && !stops) await this.fallBack(row, next);
     }
+  }
+
+  // A row whose send job the queue refused stays queued: it is handed to the
+  // queue again under the same job id, which the queue ignores while the job
+  // exists. A claimed row, or an SMS marked as being sent, may have gone.
+  // Answers how many rows it handed over.
+  async requeueStranded(now = this.now()): Promise<number> {
+    const added: string[] = [];
+    try {
+      const rows = await this.prisma.notification.findMany({
+        select: { id: true },
+        where: {
+          claimedAt: null,
+          createdAt: { lt: new Date(now.getTime() - STRANDED_MS) },
+          // A draft's link went only in its lost job: a new job would send
+          // the e-mail without it.
+          listingDraftId: null,
+          sendingAt: null,
+          status: 'queued',
+        },
+      });
+      for (const { id } of rows) {
+        await this.queue(send(id));
+        added.push(id);
+      }
+    } catch (error) {
+      this.logger.warn(`queued notifications not re-queued: ${String(error)}`);
+    }
+    if (added.length > 0) {
+      this.logger.warn(
+        `re-queued ${added.length} queued notifications: ${added.join(', ')}`,
+      );
+    }
+    return added.length;
+  }
+
+  scheduleRequeue() {
+    return this.jobs.upsertJobScheduler(
+      'requeue',
+      { every: STRANDED_MS },
+      { name: 'requeue', opts: { removeOnComplete: true, removeOnFail: 10 } },
+    );
   }
 
   // Run in the transaction that marks the rows sent or failed: they no longer

@@ -1,0 +1,3 @@
+# Deferred findings — 561-sms-sent-once
+
+- [ ] If the monthly SMS count (`takeSms`) throws after the "being sent" mark is written, the retry finds `sendingAt` set and fails the SMS as `sms_unconfirmed` although it was never sent; clear the mark when the count throws (as a capped row already does) and cover it with a test. Source: pr-tester lap 2, LOW. `libs/domain/src/notifications/notifications.processor.ts` (the `if (!(await takeSms(this.prisma, row.accountId, month)))` line). — Notion: https://app.notion.com/p/Tech-debt-ST-561-If-the-monthly-SMS-count-takeSms-throws-after-the-being-sent-mark-is-written-3f2607bff0d281c3927ff32ecbb20ebd

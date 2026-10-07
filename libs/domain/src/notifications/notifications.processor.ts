@@ -100,6 +100,8 @@ export class NotificationsProcessor {
     }
     if (job.name === 'send' && job.data.id)
       return this.send(job.data.id, job.attemptsMade, job.data.link);
+    if (job.name === 'requeue')
+      return this.service.requeueStranded().then(() => undefined);
     throw new Error(`unknown notifications job ${job.name}`);
   }
 
@@ -127,37 +129,43 @@ export class NotificationsProcessor {
         throw new Error(`notification ${id} is being sent by another job`);
       return;
     }
+    let recorded: boolean | undefined;
     try {
-      await this.sendClaimed(id, attemptsMade, link);
+      recorded = await this.sendClaimed(id, attemptsMade, link);
     } finally {
-      // A failed release must not retry a message that went: the claim lapses.
-      await this.prisma.notification
-        .updateMany({
-          data: { claimedAt: null },
-          where: { claimedAt: at, id },
-        })
-        .catch((error) =>
-          this.logger.error(
-            `notification ${id} claim not released: ${String(error)}`,
-          ),
-        );
+      // A send that went unrecorded keeps its claim, so the sweep never hands
+      // it to the queue again. A failed release must not retry a message that
+      // went: the claim lapses.
+      if (recorded !== false)
+        await this.prisma.notification
+          .updateMany({
+            data: { claimedAt: null },
+            where: { claimedAt: at, id },
+          })
+          .catch((error) =>
+            this.logger.error(
+              `notification ${id} claim not released: ${String(error)}`,
+            ),
+          );
     }
   }
 
-  private async sendClaimed(id: string, attemptsMade: number, link?: string) {
+  private async sendClaimed(
+    id: string,
+    attemptsMade: number,
+    link?: string,
+  ): Promise<boolean | undefined> {
     const { listingDraft, ...row } =
       await this.prisma.notification.findUniqueOrThrow({
         include: { account: true, listingDraft: true },
         where: { id },
       });
-    if (listingDraft) {
-      await this.sendToDraft(row, listingDraft, link, attemptsMade);
-      return;
-    }
+    if (listingDraft)
+      return this.sendToDraft(row, listingDraft, link, attemptsMade);
     if (!hasAccount(row) || !(await this.due(row))) return;
-    if (row.channel === 'email') await this.sendEmail(row, attemptsMade);
-    else if (row.channel === 'push') await this.sendPush(row, attemptsMade);
-    else await this.sendPhone(row, attemptsMade);
+    if (row.channel === 'email') return this.sendEmail(row, attemptsMade);
+    if (row.channel === 'push') return this.sendPush(row, attemptsMade);
+    return this.sendPhone(row, attemptsMade);
   }
 
   // Whether the claimed row goes now: a deleted account fails it, a held one
@@ -171,11 +179,14 @@ export class NotificationsProcessor {
     return !row.groupLeaderId && (await this.service.release(row));
   }
 
-  private async sendEmail(row: AccountRow, attemptsMade: number) {
+  private async sendEmail(
+    row: AccountRow,
+    attemptsMade: number,
+  ): Promise<boolean | undefined> {
     const to = await this.allowed([row], row.account);
     if (!to) return;
     const values = params(row);
-    await this.write(
+    return this.write(
       [row],
       to,
       templateName(row.kind, values),
@@ -191,14 +202,14 @@ export class NotificationsProcessor {
     draft: ListingDraft,
     link: string | undefined,
     attemptsMade: number,
-  ) {
+  ): Promise<boolean | undefined> {
     if (row.status === 'held' && !(await this.service.release(row))) return;
     const reason = blockedReason(this.config, draft.email);
     if (reason) {
       await this.service.fail([row], reason, false);
       return;
     }
-    await this.write(
+    return this.write(
       [row],
       { email: draft.email },
       row.kind,
@@ -253,7 +264,7 @@ export class NotificationsProcessor {
       values,
     }: { language: Language; values: Record<string, unknown> },
     attemptsMade: number,
-  ) {
+  ): Promise<boolean | undefined> {
     let mail: { subject: string; text: string; html: string };
     try {
       mail = render(name, 'email', language, {
@@ -268,7 +279,7 @@ export class NotificationsProcessor {
       await this.service.fail(rows, 'template_failed', false);
       return;
     }
-    await this.deliver(rows, to, mail, attemptsMade);
+    return this.deliver(rows, to, mail, attemptsMade);
   }
 
   // Sending may have been switched off, or the address changed, since the
@@ -288,7 +299,7 @@ export class NotificationsProcessor {
     to: { email: string; name?: string },
     mail: { subject: string; text: string; html: string },
     attemptsMade: number,
-  ) {
+  ): Promise<boolean | undefined> {
     let messageId: string;
     try {
       messageId = await this.brevo.send({
@@ -303,13 +314,16 @@ export class NotificationsProcessor {
       await this.refused(rows, error, attemptsMade);
       return;
     }
-    await this.sent(rows, messageId);
+    return this.sent(rows, messageId);
   }
 
   // One push row goes to every device the person saved. It is sent when any
   // device took it; retried only when none did and a refusal may pass; a
   // device the push service no longer knows is deleted.
-  private async sendPush(row: AccountRow, attemptsMade: number) {
+  private async sendPush(
+    row: AccountRow,
+    attemptsMade: number,
+  ): Promise<boolean | undefined> {
     if (!this.pushSender) {
       await this.service.fail([row], 'push_off', true);
       return;
@@ -344,8 +358,7 @@ export class NotificationsProcessor {
         data: { lastSuccessAt: this.now() },
         where: { id: { in: sent } },
       });
-      await this.sent([row], null);
-      return;
+      return this.sent([row], null);
     }
     if (results.includes('retry') && attemptsMade < RETRY_MINUTES.length) {
       this.logger.warn(
@@ -362,6 +375,7 @@ export class NotificationsProcessor {
           : 'push_refused',
       true,
     );
+    return undefined;
   }
 
   // The rendered push, or null when the row failed over to e-mail.
@@ -387,7 +401,10 @@ export class NotificationsProcessor {
 
   // A phone that is missing, unverified, switched off or not allowlisted
   // skips WhatsApp too: e-mail reaches the person instead.
-  private async sendPhone(row: AccountRow, attemptsMade: number) {
+  private async sendPhone(
+    row: AccountRow,
+    attemptsMade: number,
+  ): Promise<boolean | undefined> {
     const { phone, phoneVerifiedAt } = row.account;
     const reason = phone
       ? phoneVerifiedAt
@@ -398,13 +415,30 @@ export class NotificationsProcessor {
       await this.service.fail([row], reason ?? 'no_phone', 'email');
       return;
     }
-    if (row.channel === 'sms') await this.sendSms(row, phone, attemptsMade);
-    else await this.sendWhatsApp(row, phone, attemptsMade);
+    if (row.channel === 'sms') return this.sendSms(row, phone, attemptsMade);
+    return this.sendWhatsApp(row, phone, attemptsMade);
   }
 
-  private async sendSms(row: AccountRow, phone: string, attemptsMade: number) {
+  private async sendSms(
+    row: AccountRow,
+    phone: string,
+    attemptsMade: number,
+  ): Promise<boolean | undefined> {
+    // An earlier attempt reached Brevo and never recorded its answer: the SMS
+    // may have gone, so it is neither sent nor counted again.
+    if (row.sendingAt) {
+      await this.service.fail([row], 'sms_unconfirmed', true);
+      return;
+    }
     const content = await this.text(row, 'sms');
     if (content === null) return;
+    // Marked before the count is taken: a failed mark costs nothing.
+    const mark = (sendingAt: Date | null) =>
+      this.prisma.notification.update({
+        data: { sendingAt },
+        where: { id: row.id },
+      });
+    await mark(this.now());
     const month = smsMonth(this.now());
     if (!(await takeSms(this.prisma, row.account.id, month))) {
       await this.service.fail([row], 'sms_cap_reached', true);
@@ -418,23 +452,34 @@ export class NotificationsProcessor {
         sender: this.phone.smsSender,
       });
     } catch (error) {
-      // The Brevo error still decides between a retry and the fallback.
+      // No answer: Brevo may have it, so it keeps its count and is not retried.
+      if (
+        error instanceof BrevoError &&
+        error.reason === 'provider_unreachable'
+      ) {
+        await this.service.fail([row], 'sms_unconfirmed', true);
+        return;
+      }
+      // Brevo said no: the SMS did not go. The count goes back before the
+      // mark is cleared, so a failed clear only settles the row on its retry.
+      // The error still decides between a retry and the fallback.
       await giveSmsBack(this.prisma, row.account.id, month).catch((failed) =>
         this.logger.error(
           `notification ${row.id} ${row.kind} sms count not given back: ${String(failed)}`,
         ),
       );
+      await mark(null);
       await this.refused([row], error, attemptsMade);
       return;
     }
-    await this.sent([row], messageId);
+    return this.sent([row], messageId);
   }
 
   private async sendWhatsApp(
     row: AccountRow,
     phone: string,
     attemptsMade: number,
-  ) {
+  ): Promise<boolean | undefined> {
     const message = await this.text(row, 'whatsapp');
     if (message === null) return;
     const templateId = Object.hasOwn(this.phone.whatsappTemplates, message.name)
@@ -459,7 +504,7 @@ export class NotificationsProcessor {
       await this.refused([row], error, attemptsMade);
       return;
     }
-    await this.sent([row], messageId);
+    return this.sent([row], messageId);
   }
 
   // The rendered text, or null when the row failed over to the next channel.
@@ -521,13 +566,13 @@ export class NotificationsProcessor {
           }),
           this.service.forget(ids),
         ]);
-        return;
+        return true;
       } catch (error) {
         if (attempt < SENT_WRITES) continue;
         this.logger.error(
           `notification ${ids.join(', ')} sent as ${messageId ?? 'push'} but not recorded: ${String(error)}`,
         );
-        return;
+        return false;
       }
     }
   }
