@@ -74,3 +74,25 @@
 - Architecture decisions — https://app.notion.com/p/3ee607bff0d28111907edddc4bdd066a
 - Decisions and ideas — https://app.notion.com/p/3ee607bff0d281df9485ce97dfa3332d
 - MotorFix stories data source (sibling statuses) — collection://326eee3c-abec-41d9-9f96-eb3bd545a802
+
+## Refresh 2026-10-07
+
+Baseline: 2026-10-07 (Gathered). Re-read the story (with comments, resolved included), MF-30 and Architecture decisions.
+
+### New decisions
+
+none. MF-30 (last edited 2026-10-03T18:47Z) and Architecture decisions (2026-10-04T05:56Z) predate the baseline and are unchanged.
+
+### New constraints
+
+none.
+
+### New contradictions with spec.md
+
+none. The four recorded above still stand (A34 410 vs 404, second-open 409, A33 staging, story references); no newer source answers them.
+
+### Story changes
+
+- ST-207 Status moved Planning → Implementing; page last edited 2026-10-07T07:23:57Z; PR #188 still linked; Priority Highest, points 5, labels backend + data, Ready to work unticked — [ST-207] (2026-10-07)
+- Acceptance criteria and Build brief read the same as in the digest above (brief current as of 2026-10-03). Comments: none, resolved included; `suggested_edits_status: not_enabled`.
+- Sibling stories and the epic were not re-queried in this refresh; their statuses above are as of the first gather.

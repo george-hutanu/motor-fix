@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 
 import {
   VERIFICATION_CONFIG,
@@ -223,6 +224,8 @@ export class VerificationService {
   }
 
   private async file(tx: Prisma.TransactionClient, id: string) {
+    // PostgreSQL refuses a malformed uuid outright; it is an unknown id.
+    if (!isUUID(id)) throw new NotFoundException();
     const file = await tx.verificationFile.findUnique({
       include: { garage: { select: { status: true } } },
       where: { id },

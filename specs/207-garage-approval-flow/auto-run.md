@@ -56,3 +56,15 @@ Start commit: 664610a3 (worktree .worktrees/207-garage-approval-flow, branch 207
 - Round 1: artifact-lint 9 ERROR → CRITICAL (FR-001..004, 007..010 untasked; delta capability `garage-verification` has no file). HIGH: SC-002/T011/quickstart counted 9 allowed transitions (there are 11; 14 other ordered pairs, 13 refused + the idempotent second open); FR-004 silent on submit while newest file is `approved`/`more_requested` (data-model and contracts refuse it); FR-010 omitted `open` from the admin-only use cases (contracts, T011 include it). MEDIUM: approval's own garage audit entry vs "one audit entry" (US3 AS7, SC-003); T012 omitted it.
 - Remediation applied: FR tags on every task; `.specify/capabilities/garage-verification.md` stub (precedent: garage-team at ST-131 specify); Modifies of 079-FR-005 dropped (it lives in `accounts` and names no status values; recorded in Assumptions); SC-002, T011, quickstart counts; FR-004, edge case, FR-010, US3 AS7, SC-003, T012 aligned.
 - Round 2: artifact-lint 0 errors; no CRITICAL/HIGH left. Context contradictions all closed by Clarifications 1-4; both checklists fully checked.
+
+## 9. Tests (resumed 2026-10-07)
+- Kept the red specs written earlier and checked them against spec.md: contracts garage-status (FR-006/007/011, SC-006), verification-config (FR-009, SC-005), audience `published` (FR-008), public-garages API (FR-005, SC-001/004), scope scan (FR-005), verification service integration (FR-001..004, 008..010, SC-002/003), public-routes entry (FR-005/010). Red before code: modules missing.
+- Spec fixes (typing, Biome complexity) without changing what they assert; the scope scan names `staff-invite.service.ts#check` as its one exemption (invite holder, not a listing), recorded in spec.md Assumptions.
+
+## 10. Implement
+- T001-T018 done. Migration matches the schema (`prisma migrate diff`: empty); partial unique index by hand. Compare-and-set on the status read (exact prior status, so the history's oldValue is exact) rather than `status: { in }`; FROM still decides what is allowed.
+- 6 suites, 110 tests green on the worktree's PostgreSQL and Redis; openapi.json and data-access regenerated.
+- Commits 7151702f `feat(contracts)`, 8e78ae02 `feat(domain)`, pushed. Notion: Implementing.
+
+## 11. Converge
+- Every task [X]; plan's file list all present; nothing appended.
