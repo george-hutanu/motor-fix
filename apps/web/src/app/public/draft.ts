@@ -25,12 +25,19 @@ export type LoadPlan =
   | { kind: 'push'; draft: BrowserDraft }
   | { kind: 'fetch'; token: string; keep: BrowserDraft | null };
 
+const optionalText = (value: unknown) =>
+  value === undefined || typeof value === 'string';
+
 const isEntry = (value: unknown): value is BrowserDraft => {
   if (typeof value !== 'object' || value === null) return false;
   const entry = value as Partial<BrowserDraft>;
   return (
     typeof entry.data === 'object' &&
     entry.data !== null &&
+    !Array.isArray(entry.data) &&
+    optionalText(entry.token) &&
+    optionalText(entry.draftId) &&
+    optionalText(entry.email) &&
     Number.isInteger(entry.step) &&
     (entry.step ?? 0) >= 1 &&
     (entry.step ?? 0) <= 6 &&

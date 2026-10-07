@@ -759,6 +759,23 @@ describe('the server copy', () => {
     expect(stored()?.dirty).toBe(true);
   });
 
+  it('says the draft was not saved when the server fails', async () => {
+    const { harness, page } = await withServerCopy();
+
+    saveButton(page).click();
+    await answered(
+      harness,
+      await request(),
+      { code: 'internal_error', status: 500 },
+      500,
+    );
+
+    expect(note(page)).toBe(
+      'Ciorna nu a putut fi salvată pe server. Încearcă din nou.',
+    );
+    expect(stored()?.dirty).toBe(true);
+  });
+
   it('sends a changed address and takes the new key it answers with', async () => {
     const { harness, page } = await withServerCopy();
 

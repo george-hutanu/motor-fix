@@ -48,6 +48,7 @@
     "linkAlready": "Linkul a fost deja trimis. Îl poți trimite din nou în {minutes} min.",
     "linkSent": "Ți‑am trimis un link pe e‑mail ca să continui de pe orice dispozitiv",
     "loading": "Se încarcă ciorna…",
+    "notSaved": "Ciorna nu a putut fi salvată pe server. Încearcă din nou.",
     "offline": "Neconectat · salvăm când revii online",
     "optional": "opțional",
     "required": "obligatoriu",

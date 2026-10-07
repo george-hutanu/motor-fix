@@ -48,6 +48,7 @@
     "linkAlready": "The link was already sent. You can send it again in {minutes} min.",
     "linkSent": "We e-mailed you a link to continue on any device",
     "loading": "Loading the draft…",
+    "notSaved": "The draft could not be saved on the server. Try again.",
     "offline": "Offline · we save when you are back",
     "optional": "optional",
     "required": "required",

@@ -315,7 +315,7 @@ export class DraftKeeper {
     const { status } = toProblem(error);
     const view = VIEW_FOR[status];
     if (view) this.view.set(view);
-    else if (NOTE_FOR[status]) this.note.set({ key: NOTE_FOR[status] });
+    else this.note.set({ key: NOTE_FOR[status] ?? 'notSaved' });
   }
 
   private next() {
