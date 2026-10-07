@@ -49,6 +49,7 @@ features:
   - 691-author-skills-card
   - 437-diff-audit-origin-main
   - 849-work-timeline-row
+  - 768-cloud-compose-pull
 ---
 
 # Capability: Platform
@@ -1184,6 +1185,14 @@ _From 849-work-timeline-row._
 ### 849-FR-005 — The Work timeline write MUST fail open: any error (request, HTTP status, body) is caught inside `.claude/scripts/lib/work-timeline.mjs` (which holds the data source id `3706e923-2faa-42bc-aab2-8a2d5ab5d9d3` and the Notion version `2025-09-03` as constants and is called from notion-sync's status event after the story's own writes), logged as one line in `specs/<feature>/notion-sync.md` through the event's existing log, and never thrown, never changes the event's output or exit code, and never queues a PENDING replay line. A successful write logs one line with the row's change.
 
 _From 849-work-timeline-row._
+
+### 768-FR-001 — `scripts/cloud-setup.sh` MUST skip `docker compose pull postgres redis` when every image `docker compose config --images postgres redis` names is present locally (`docker image inspect`), and say so.
+
+_From 768-cloud-compose-pull._
+
+### 768-FR-002 — When an image is missing, or the compose file's images cannot be read, it MUST pull postgres and redis, and a failed pull MUST fail the script.
+
+_From 768-cloud-compose-pull._
 
 ## Retired
 
