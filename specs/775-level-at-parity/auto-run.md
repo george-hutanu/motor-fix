@@ -11,3 +11,7 @@ Start commit: origin/main (worktree .worktrees/775-level-at-parity). Preflight: 
 - lifecycle open: draft PR #184, Notion start + pr.
 - 3 context: org-researcher, partial (epic page not read in full); 1 contradiction: day-of-month check beyond the anchor.
 - 4 clarify (inline, spec-challenger 5 findings): Q1 day-of-month in scope? → no, deferred (context.md Scope Authority); Q2 asserted stamps → listed once, scenarios 1–3; Q3 remaining time in parity? → no, level-or-none (common.py `_pending_level` returns int|None); Q4 trailing newline → both refuse, regression; Q5 contradictory Notion assumption → dropped. level check: 2 unchanged.
+- 5 plan: phase agent (fable) success, plan.md + quickstart.md. 6 checklist: phase agent (sonnet) success, checklists/parity.md 10/10. 7 tasks: phase agent (sonnet) success, 5 tasks; level 2 unchanged.
+- 8 analyze: artifact-lint 0 errors; T004 groups made non-capturing; no CRITICAL.
+- 9 tests: 18 cases in level.adversary.spec.mjs (9 refused, 7 accepted, both readers at a fixed now 5 min after midnight); red: exactly the 3 hour-24 JS cases failed (Python 3.9 already refuses). T002 folded into T001 (level.spec's table stamps from Date.now()).
+- 10 implement: Notion → Implementing; hour group `(?:[01]\d|2[0-3])` in LEVEL_AT and _LEVEL_AT; test:harness 1939/1939 green. Biome ignores .claude/ paths.

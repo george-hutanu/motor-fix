@@ -142,8 +142,9 @@ export function levelApplies(state, target = state?.feature_directory) {
 
 // The one stamp shape both this and `_pending_level` in common.py read alike on
 // every machine and Python version: a zone is required, since Date.parse reads
-// a zone-less stamp as local time and Python as UTC.
-const LEVEL_AT = /^\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d(?:\.\d{3}|\.\d{6})?)?(?:Z|[+-]\d\d:\d\d)$/;
+// a zone-less stamp as local time and Python as UTC, and the hour stops at 23,
+// since Date.parse reads 24:00 as the next midnight and Python refuses it.
+const LEVEL_AT = /^\d{4}-\d\d-\d\dT(?:[01]\d|2[0-3]):\d\d(?::\d\d(?:\.\d{3}|\.\d{6})?)?(?:Z|[+-]\d\d:\d\d)$/;
 
 /**
  * The level waiting for the next feature, while it is still fresh. It was
