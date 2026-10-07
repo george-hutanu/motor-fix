@@ -1,3 +1,0 @@
-# Deferred — 509-offline-on-worker-504
-
-- LOW `libs/domain/src/notifications/send-claim.adversary.integration.spec.ts`: Make the send-claim retry test stable under load — "calls Brevo once and leaves the row queued and unclaimed when the one call is refused for a retry" saw 2 Brevo calls instead of 1 in one full pre-commit `domain:test` run on the 2-slot cloud VM, then passed 3/3 alone and in the next full run. A race in the send claim or its test, unrelated to this change (only `libs/overlays` changed). Found by pre-commit, 2026-10-06. — Notion: https://app.notion.com/p/3f1607bff0d281f798d2f03f3fb36200

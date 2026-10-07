@@ -172,7 +172,7 @@ describe('ready', () => {
     return ['git diff --cached --quiet', () => ({ code: codes[i++] ?? 0 })];
   };
 
-  it('commits the records, checks and publishes the body, marks ready, runs qa, commits the qa line, writes handoff.md and, off the cloud, posts nothing', () => {
+  it('commits the records and the qa line to the specs repository (815-FR-004), checks and publishes the body, marks ready, runs qa, writes handoff.md and, off the cloud, posts nothing', () => {
     const h = harness({ answers: [staged([1, 1])] });
     const result = step(['ready', '--body-file', body, '--decisions', 'none'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
@@ -180,18 +180,12 @@ describe('ready', () => {
     assert.deepEqual(calls, [
       `gh pr view ${BRANCH} --json number,title,isDraft,url`,
       'node .claude/scripts/level.mjs check --ready --json',
-      `git add -- specs/${FEATURE}`,
-      'git diff --cached --quiet',
-      'git commit -m chore(specs): ST-696 feature records',
-      `git push -u origin ${BRANCH}`,
+      `node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 feature records -- ${FEATURE}`,
       `node scripts/pr-body-check.ts --body-file ${body} --title ${TITLE}`,
       `gh pr edit 141 --body-file ${body}`,
       'gh pr ready 141',
       'node .claude/scripts/notion-sync.mjs qa --pr 141',
-      `git add -- specs/${FEATURE}/notion-sync.md`,
-      'git diff --cached --quiet',
-      'git commit -m chore(specs): ST-696 qa',
-      `git push -u origin ${BRANCH}`,
+      `node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 qa -- ${FEATURE}/notion-sync.md`,
     ]);
     const note = readFileSync(join(featureDir, 'handoff.md'), 'utf8');
     assert.match(note, /PR: #141 https:\/\/github.com\/george-hutanu\/motor-fix\/pull\/141 · branch 696-lifecycle-script · worktree \S+ · head abcdef1234567890/);
@@ -200,13 +194,30 @@ describe('ready', () => {
     assert.ok(result.did.includes('handoff comment skipped (not a cloud session)'), JSON.stringify(result.did));
   });
 
-  it('includes .specify/capabilities in the records when it exists, and makes no commit when nothing changed', () => {
+  it('commits .specify/capabilities on the branch when it exists, and makes no commit when nothing changed', () => {
     mkdirSync(join(repo, '.specify', 'capabilities'));
     const h = harness({ answers: [staged([0, 0])] });
     const result = step(['ready', '--body-file', body], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
-    assert.ok(h.calls.includes(`git add -- specs/${FEATURE} .specify/capabilities`));
+    assert.ok(h.calls.includes('git add -- .specify/capabilities'));
+    assert.ok(!h.calls.some((c) => c.startsWith('git add') && c.includes('specs/')), h.calls.join('\n'));
     assert.ok(!h.calls.some((c) => c.startsWith('git commit')));
+  });
+
+  it('commits a changed .specify/capabilities on the branch and pushes it (815-FR-004)', () => {
+    mkdirSync(join(repo, '.specify', 'capabilities'));
+    const h = harness({ answers: [staged([1])] });
+    assert.equal(step(['ready', '--body-file', body], h.io).ok, true);
+    assert.ok(h.calls.includes('git commit -m chore(specs): ST-696 capability records'), h.calls.join('\n'));
+    assert.ok(h.calls.includes(`git push -u origin ${BRANCH}`));
+  });
+
+  it('stops when the specs repository refuses the records commit, naming its error, before the PR goes ready', () => {
+    const h = harness({ answers: [['node .claude/scripts/specs-repo.mjs commit', { code: 1, stdout: '{"ok":false,"error":"specs/ is not a clone of motor-fix-specs: run node .claude/scripts/specs-repo.mjs ensure"}\n' }]] });
+    const result = step(['ready', '--body-file', body], h.io);
+    assert.equal(result.ok, false);
+    assert.match(result.fix, /specs-repo\.mjs ensure/);
+    assert.ok(!h.calls.some((c) => c.startsWith('gh pr ready')));
   });
 
   it('files unfiled deferred bullets through Notion debt before the records commit', () => {
@@ -215,7 +226,7 @@ describe('ready', () => {
     step(['ready', '--body-file', body], h.io);
     const debt = h.calls.indexOf('node .claude/scripts/notion-sync.mjs debt --pr 141');
     assert.ok(debt > -1, h.calls.join('\n'));
-    assert.ok(debt < h.calls.indexOf(`git add -- specs/${FEATURE}`));
+    assert.ok(debt < h.calls.indexOf(`${'node .claude/scripts/specs-repo.mjs commit'} chore(specs): ST-696 feature records -- ${FEATURE}`));
   });
 
   it('stops when the body check fails: no edit, no ready, the checker says why', () => {
@@ -253,7 +264,7 @@ describe('ready', () => {
     assert.equal(result.ok, false);
     assert.equal(result.stopped, 'level check');
     assert.match(result.fix, /plan\.md/);
-    assert.ok(!h.calls.some((c) => c.startsWith('git add') || c.startsWith('gh pr edit') || c.startsWith('gh pr ready')), h.calls.join('\n'));
+    assert.ok(!h.calls.some((c) => c.includes('specs-repo.mjs commit') || c.startsWith('gh pr edit') || c.startsWith('gh pr ready')), h.calls.join('\n'));
   });
 
   it('passes through a level check that answers 0', () => {
@@ -262,7 +273,7 @@ describe('ready', () => {
     assert.equal(result.ok, true, JSON.stringify(result));
     const check = h.calls.indexOf('node .claude/scripts/level.mjs check --ready --json');
     assert.ok(check > -1, h.calls.join('\n'));
-    assert.ok(check < h.calls.indexOf(`git add -- specs/${FEATURE}`));
+    assert.ok(check < h.calls.findIndex((c) => c.includes('specs-repo.mjs commit')));
   });
 
   it('stops when the branch has no PR', () => {
@@ -392,9 +403,9 @@ describe('merge', () => {
     writeFileSync(join(featureDir, 'handoff.md'), '# Hand-off\n');
   });
 
-  const diff = ['git diff -U0 --', { stdout: '+++ b/x\n+- 2026-10-05 · finish · ST-696 · QA → Done\n+- 2026-10-05 · ready · Foundations · no change\n' }];
+  const diff = ['git -C specs diff -U0 --', { stdout: '+++ b/x\n+- 2026-10-05 · finish · ST-696 · QA → Done\n+- 2026-10-05 · ready · Foundations · no change\n' }];
 
-  it('merges, runs finish with the absolute finish-comment path, comments once, restores the log, deletes handoff.md', () => {
+  it('merges, runs finish with the absolute finish-comment path, commits the log to the specs repository, comments once, deletes handoff.md', () => {
     writeFileSync(join(featureDir, 'finish-comment.md'), '**Decisions**\n- one\n');
     let comment = '';
     const h = harness({ answers: [diff, ['gh pr comment', (cmd) => { comment = readFileSync(cmd.match(/--body-file (\S+)/)[1], 'utf8'); return {}; }]] });
@@ -405,8 +416,8 @@ describe('merge', () => {
     assert.equal(calls[1], 'gh pr merge 141 --merge');
     assert.equal(calls[2], 'gh pr view 141 --json mergeCommit --jq .mergeCommit.oid');
     assert.equal(calls[3], `node .claude/scripts/notion-sync.mjs finish --pr 141 --body-file ${join(featureDir, 'finish-comment.md')}`);
-    assert.equal(calls[4], `git diff -U0 -- specs/${FEATURE}/notion-sync.md`);
-    assert.equal(calls[5], `git checkout -- specs/${FEATURE}/notion-sync.md`);
+    assert.equal(calls[4], `git -C specs diff -U0 -- ${FEATURE}/notion-sync.md`);
+    assert.equal(calls[5], `node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/notion-sync.md`);
     assert.match(calls[6], /^gh pr comment 141 --body-file \S+$/);
     assert.equal(calls.length, 7);
     assert.match(comment, /^## Finish log/);
@@ -462,7 +473,7 @@ describe('merge in a cloud session: REST only', () => {
   });
 
   const cloud = { GH_TOKEN: 'proxy-injected', CLAUDE_CODE_REMOTE: 'true' };
-  const diff = ['git diff -U0 --', { stdout: '+++ b/x\n+- 2026-10-05 · finish · ST-696 · QA → Done\n' }];
+  const diff = ['git -C specs diff -U0 --', { stdout: '+++ b/x\n+- 2026-10-05 · finish · ST-696 · QA → Done\n' }];
   // What gh prints after lifecycle's --jq: the state MERGED once merged, else upper-cased.
   const restView = (pr) => ['gh api repos/{owner}/{repo}/pulls/141 --jq', { stdout: `${JSON.stringify(pr)}\n` }];
   const open = restView({ number: 141, state: 'OPEN', merge_commit_sha: null });
@@ -653,7 +664,7 @@ describe('temp files, the token stop, reruns and the finish order', () => {
 
   it('keeps the finish comment and names the command that posts it when the comment fails', () => {
     writeFileSync(join(featureDir, 'handoff.md'), 'note\n');
-    const h = harness({ answers: [['git diff -U0', { stdout: '+- 2026-10-05 · finish · ST-696 · QA → Done\n' }], ['gh pr comment', { code: 1, stderr: 'HTTP 502' }]] });
+    const h = harness({ answers: [['git -C specs diff -U0', { stdout: '+- 2026-10-05 · finish · ST-696 · QA → Done\n' }], ['gh pr comment', { code: 1, stderr: 'HTTP 502' }]] });
     const result = step(['merge', '--pr', '141'], h.io);
     assert.equal(result.ok, false);
     assert.match(readFileSync(result.comment, 'utf8'), /finish · ST-696 · QA → Done/);
@@ -673,7 +684,7 @@ describe('temp files, the token stop, reruns and the finish order', () => {
       ],
     });
     step(['ready', '--body-file', body], h.io);
-    assert.ok(h.calls.includes('git commit -m chore(specs): ST-702 feature records'), h.calls.join('\n'));
+    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-702 feature records -- ${FEATURE}`), h.calls.join('\n'));
   });
 
   it('removes the draft body temp file after gh pr create', () => {
@@ -734,10 +745,10 @@ describe('temp files, the token stop, reruns and the finish order', () => {
     assert.ok(!h.calls.some((c) => c.includes('notion-sync')));
   });
 
-  it('restores the log before posting the finish comment', () => {
+  it('commits the log to the specs repository before posting the finish comment', () => {
     const h = harness();
     step(['merge', '--pr', '141'], h.io);
-    const restore = h.calls.findIndex((c) => c.startsWith('git checkout --'));
+    const restore = h.calls.findIndex((c) => c.includes('specs-repo.mjs commit') && c.includes('finish'));
     const comment = h.calls.findIndex((c) => c.startsWith('gh pr comment'));
     assert.ok(restore > -1 && restore < comment, h.calls.join('\n'));
   });

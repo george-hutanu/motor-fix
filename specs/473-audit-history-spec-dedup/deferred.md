@@ -1,3 +1,0 @@
-# Deferred findings: 473-audit-history-spec-dedup
-
-- [ ] `libs/domain/src/audit/audit-history.service.integration.spec.ts:660` — **low** — coverage: the removed adversary case also refused a cursor from another garage with filters set; the service case "refuses a cursor outside the caller's scope" now checks only the platform cursor with filters; add the foreign-garage cursor with `{ area, garageId }` to the same assertion (pr-tester, 2026-10-07) — Notion: https://app.notion.com/p/Tech-debt-ST-473-coverage-the-removed-adversary-case-also-refused-a-cursor-from-another-garage-w-3f1607bff0d2816ebdd7f541fad9fdd6

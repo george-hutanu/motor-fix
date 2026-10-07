@@ -213,11 +213,11 @@ describe('requirements touched', () => {
 
   it('lists the ids on task lines naming a changed file, with their text from the spec', () => {
     const out = artifact(report());
-    const { gh } = fakeGh({
+    const { gh, calls } = fakeGh({
       prView: ok(pr(files(['.claude/scripts/pr-test/packet.mjs']))),
       contents: {
-        'specs/001-thing/tasks.md': '- [x] T001 Green: `.claude/scripts/pr-test/packet.mjs` (FR-001–FR-002)\n- [x] T002 other.mjs (FR-009)\n',
-        'specs/001-thing/spec.md': '- **FR-001**: The script MUST write a packet.\n- **FR-002**: The packet MUST list ids.\n- **FR-009**: Nothing else changes.\n',
+        '001-thing/tasks.md': '- [x] T001 Green: `.claude/scripts/pr-test/packet.mjs` (FR-001–FR-002)\n- [x] T002 other.mjs (FR-009)\n',
+        '001-thing/spec.md': '- **FR-001**: The script MUST write a packet.\n- **FR-002**: The packet MUST list ids.\n- **FR-009**: Nothing else changes.\n',
       },
     });
     buildPacket({ out, pr: 137, repo: REPO, gh });
@@ -225,6 +225,7 @@ describe('requirements touched', () => {
     assert.match(md, /FR-001.*MUST write a packet/);
     assert.match(md, /FR-002.*MUST list ids/);
     assert.doesNotMatch(md, /FR-009/);
+    assert.ok(calls.some((c) => c.includes('repos/george-hutanu/motor-fix-specs/contents/001-thing/tasks.md?ref=trunk')), 'tasks.md is read from the private specs repository (815-FR-006)');
   });
 
   it('says so when the feature has no tasks file', () => {
@@ -362,8 +363,8 @@ describe('the previous lap', () => {
     const { gh } = fakeGh({
       prView: ok(pr([])),
       contents: {
-        'specs/001-thing/pr-review': [{ name: 'lap1', type: 'dir' }],
-        'specs/001-thing/pr-review/lap1/report.json': prev,
+        '001-thing/pr-review': [{ name: 'lap1', type: 'dir' }],
+        '001-thing/pr-review/lap1/report.json': prev,
       },
     });
     buildPacket({ out, pr: 137, repo: REPO, gh });

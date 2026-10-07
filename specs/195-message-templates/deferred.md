@@ -1,4 +1,0 @@
-# Deferred findings: 195-message-templates
-
-- [ ] `libs/domain/src/notifications/notifications.processor.ts:127` — **medium** — config: a worker started without a valid `PUBLIC_WEB_URL` boots and then fails every e-mail with a button as `template_failed`, for good; decide whether `ready()` should refuse to start while sending is on and the address is missing (the owner sets it on the Railway worker before `EMAIL_SENDING=on`) (code-reviewer and pr-tester, 2026-10-05) — Notion: https://app.notion.com/p/3ef607bff0d2811da140f6088b263b10
-- [ ] `libs/domain/src/notifications/email-layout.ts:36` — **low** — safety: the button's `href` is escaped but its scheme is not checked; refuse anything but `https:` (and `http:` locally) once a template takes a link from outside the app (pr-tester, 2026-10-05) — Notion: https://app.notion.com/p/3ef607bff0d281199d95ca3170698652
