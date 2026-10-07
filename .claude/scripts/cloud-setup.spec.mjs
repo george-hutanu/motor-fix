@@ -16,6 +16,8 @@ afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
+const IMAGES = ['imresamu/postgis:17-3.5', 'redis:7'];
+
 const stub = (bin, name, body) => {
   writeFileSync(join(bin, name), `#!/bin/sh\n${body}\n`);
   chmodSync(join(bin, name), 0o755);
@@ -44,7 +46,18 @@ function setup({ node = '22', docker = false, nvm = false, n = true, chromium = 
   writeFileSync(log, '');
   stub(bin, 'node', `v=$(cat ${state}/node); case "$1" in -p) echo "$v";; --version) echo "v$v.0.0";; esac`);
   stub(bin, 'npm', `echo "npm $*" >> ${log}; mkdir -p node_modules; touch node_modules/.package-lock.json`);
-  stub(bin, 'docker', `case "$1" in info) test -e ${state}/docker-up;; *) echo "docker $*" >> ${log};; esac`);
+  // `compose config --images` names the compose file's images (none when
+  // state/no-config exists); `image inspect` answers from state/images, which
+  // a pull fills unless state/pull-fails exists.
+  stub(bin, 'docker', [
+    'case "$1 $2" in',
+    `  "info ") test -e ${state}/docker-up;;`,
+    `  "compose config") [ ! -e ${state}/no-config ] && printf '%s\\n' ${IMAGES.join(' ')};;`,
+    `  "image inspect") shift 2; [ $# -gt 0 ] || exit 1; for i; do grep -qxF "$i" ${state}/images 2>/dev/null || exit 1; done;;`,
+    `  "compose pull") echo "docker $*" >> ${log}; [ ! -e ${state}/pull-fails ] || { echo 'toomanyrequests: 429 Too Many Requests' >&2; exit 1; }; printf '%s\\n' ${IMAGES.join(' ')} >> ${state}/images;;`,
+    `  *) echo "docker $*" >> ${log};;`,
+    'esac',
+  ].join('\n'));
   stub(bin, 'service', `echo "service $*" >> ${log}; touch ${state}/docker-up`);
   stub(bin, 'sudo', `echo "sudo $1" >> ${state}/sudo; [ "$1" = -n ] && shift; exec "$@"`);
   stub(bin, 'id', 'echo 1000');
@@ -120,7 +133,7 @@ describe('cloud-setup.sh', () => {
     const first = calls().length;
     const out = run();
     assert.equal(out.status, 0, out.stderr + out.stdout);
-    assert.deepEqual(calls().slice(first), ['docker compose pull postgres redis']);
+    assert.deepEqual(calls().slice(first), []);
   });
 
   it('runs npm ci again when package-lock.json is newer than node_modules', () => {
@@ -189,5 +202,47 @@ describe('cloud-setup.sh', () => {
     const out = run();
     assert.equal(out.status, 0, out.stderr + out.stdout);
     assert.ok(!calls().some((c) => c.startsWith('npx')), calls().join('\n'));
+  });
+
+  // @traces 768-FR-001
+  it('pulls nothing when the postgres and redis images are already present, and says so', () => {
+    const { run, calls, state } = setup({ node: '24', docker: true });
+    writeFileSync(join(state, 'images'), `${IMAGES.join('\n')}\n`);
+    writeFileSync(join(state, 'pull-fails'), '');
+    const out = run();
+    assert.equal(out.status, 0, out.stderr + out.stdout);
+    assert.ok(!calls().some((c) => c.startsWith('docker compose pull')), calls().join('\n'));
+    assert.match(out.stdout, /images present/);
+    assert.match(out.stdout, /ready/);
+  });
+
+  // @traces 768-FR-002
+  it('pulls postgres and redis when one of their images is missing', () => {
+    const { run, calls, state } = setup({ node: '24', docker: true });
+    writeFileSync(join(state, 'images'), 'redis:7\n');
+    const out = run();
+    assert.equal(out.status, 0, out.stderr + out.stdout);
+    assert.ok(calls().includes('docker compose pull postgres redis'), calls().join('\n'));
+  });
+
+  // @traces 768-FR-002
+  it('fails when an image is missing and the pull is refused', () => {
+    const { run, calls, state } = setup({ node: '24', docker: true });
+    writeFileSync(join(state, 'pull-fails'), '');
+    const out = run();
+    assert.notEqual(out.status, 0);
+    assert.ok(calls().includes('docker compose pull postgres redis'), calls().join('\n'));
+    assert.match(out.stderr, /429/);
+    assert.doesNotMatch(out.stdout, /ready/);
+  });
+
+  // @traces 768-FR-002
+  it('pulls when the compose file names no images it can read', () => {
+    const { run, calls, state } = setup({ node: '24', docker: true });
+    writeFileSync(join(state, 'images'), `${IMAGES.join('\n')}\n`);
+    writeFileSync(join(state, 'no-config'), '');
+    const out = run();
+    assert.equal(out.status, 0, out.stderr + out.stdout);
+    assert.ok(calls().includes('docker compose pull postgres redis'), calls().join('\n'));
   });
 });

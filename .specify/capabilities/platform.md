@@ -48,6 +48,7 @@ features:
   - 760-e2e-sign-up-limit
   - 691-author-skills-card
   - 437-diff-audit-origin-main
+  - 768-cloud-compose-pull
 ---
 
 # Capability: Platform
@@ -1163,6 +1164,14 @@ _From 691-author-skills-card._
 ### 437-FR-001 — diff-audit MUST take its base as `git merge-base HEAD origin/main`, and only when that ref is absent fall back to `git merge-base HEAD main`.
 
 _From 437-diff-audit-origin-main._
+
+### 768-FR-001 — `scripts/cloud-setup.sh` MUST skip `docker compose pull postgres redis` when every image `docker compose config --images postgres redis` names is present locally (`docker image inspect`), and say so.
+
+_From 768-cloud-compose-pull._
+
+### 768-FR-002 — When an image is missing, or the compose file's images cannot be read, it MUST pull postgres and redis, and a failed pull MUST fail the script.
+
+_From 768-cloud-compose-pull._
 
 ## Retired
 
