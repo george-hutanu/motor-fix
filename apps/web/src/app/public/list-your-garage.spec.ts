@@ -8,6 +8,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { BrandsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
@@ -20,6 +21,15 @@ import { SignInDialog } from '../sign-in/sign-in-dialog';
 let tops = [1000, 2000, 3000, 4000, 5000, 6000];
 const scrolls: ScrollIntoViewOptions[] = [];
 const signIn = { start: jest.fn() };
+// The catalogue behind step 2's chips, read through its own client.
+const DACIA = { id: 'b-dacia', name: 'Dacia', popularity: 1, slug: 'dacia' };
+const catalogue = {
+  brandsControllerSearch: jest.fn(async () => ({
+    items: [DACIA],
+    nextCursor: null,
+    total: 1,
+  })),
+};
 
 beforeEach(() => {
   localStorage.clear();
@@ -55,6 +65,7 @@ async function open(path: string, reduced = false) {
       provideHttpClientTesting(),
       { provide: REDUCED_MOTION, useValue: signal(reduced) },
       { provide: SignInDialog, useValue: signIn },
+      { provide: BrandsService, useValue: catalogue },
     ],
   });
   const i18n = TestBed.inject(I18n);
@@ -135,13 +146,17 @@ describe('the list your garage page', () => {
     },
   );
 
-  it('holds the e-mail field in step 1, the verification fields in step 6, and leaves the sections between empty but for their heading', async () => {
+  it('holds the e-mail field in step 1, the brands in step 2, the verification fields in step 6, and leaves the sections between empty but for their heading', async () => {
     const { page } = await open('/ro/list-your-garage');
 
-    const [first, ...rest] = page.querySelectorAll('section');
+    const [first, second, ...rest] = page.querySelectorAll('section');
     const last = rest.pop() as HTMLElement;
     expect(first.querySelector('#listing-email')).not.toBeNull();
     expect(last.querySelector('#listing-cui')).not.toBeNull();
+    expect([...second.children].map((c) => c.tagName)).toEqual([
+      'H2',
+      'MF-BRANDS-STEP',
+    ]);
     for (const section of rest)
       expect([...section.children].map((c) => c.tagName)).toEqual(['H2']);
   });
@@ -1147,5 +1162,85 @@ describe('the verification step', () => {
     expect(cuiInput(page).value).toBe('18547291');
     expect(rarInput(page).value).toBe('abc');
     expect(text(step6(page))).toContain('We only publish garages');
+  });
+});
+
+// @traces 040-FR-006
+describe('the brands step in the draft', () => {
+  const daciaChip = (page: HTMLElement) =>
+    [...page.querySelectorAll<HTMLButtonElement>('.chips button')].find((c) =>
+      text(c).startsWith('Dacia'),
+    ) as HTMLButtonElement;
+
+  it("keeps the marked brands and the texts as the draft's step 2 in the browser copy", async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    try {
+      daciaChip(page).click();
+      harness.detectChanges();
+      await jest.advanceTimersByTimeAsync(1_100);
+
+      expect(stored()?.data).toEqual({
+        steps: {
+          '2': {
+            brands: [{ brandId: 'b-dacia', name: 'Dacia', stance: 'works_on' }],
+          },
+        },
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('restores the marked brands from a kept copy', async () => {
+    seed({
+      data: {
+        steps: {
+          '2': {
+            brandNote: 'Doar diesel',
+            brands: [
+              { brandId: 'b-dacia', name: 'Dacia', stance: 'does_not_take' },
+            ],
+          },
+        },
+      },
+    });
+
+    const { page } = await open('/ro/list-your-garage');
+
+    expect(daciaChip(page).getAttribute('aria-pressed')).toBe('true');
+    expect(text(daciaChip(page))).toContain('nu o primești');
+    expect(
+      page.querySelector<HTMLInputElement>('input[name="brandNote"]')?.value,
+    ).toBe('Doar diesel');
+  });
+
+  it('opens with no marked brand when the kept step 2 is not in its shape', async () => {
+    seed({ data: { steps: { '2': { brands: 'Dacia' } } } });
+
+    const { page } = await open('/ro/list-your-garage');
+
+    expect(daciaChip(page).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('sends the marked brands with the whole draft to the server copy', async () => {
+    const { harness, page } = await withServerCopy();
+
+    daciaChip(page).click();
+    harness.detectChanges();
+    saveButton(page).click();
+    harness.detectChanges();
+    const save = await request();
+
+    expect(save.request.method).toBe('PATCH');
+    expect(save.request.body).toMatchObject({
+      data: {
+        steps: {
+          '2': {
+            brands: [{ brandId: 'b-dacia', name: 'Dacia', stance: 'works_on' }],
+          },
+        },
+      },
+    });
   });
 });

@@ -33,7 +33,9 @@ const git = (args) => {
   }
 };
 
-const base = git(["merge-base", "HEAD", "main"]).trim();
+// origin/main first: a worktree made from it leaves the local main wherever the
+// main checkout last had it, and every file merged since would read as ours.
+const base = (git(["merge-base", "HEAD", "origin/main"]) || git(["merge-base", "HEAD", "main"])).trim();
 const changed = [
   ...new Set(
     [

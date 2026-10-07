@@ -6,6 +6,7 @@ export * from './consent';
 export * from './env';
 export * from './events';
 export * from './files';
+export * from './garage-brands.dto';
 export * from './garage-search.dto';
 export * from './garage-status';
 export * from './garages.dto';

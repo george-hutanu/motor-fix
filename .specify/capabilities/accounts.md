@@ -17,6 +17,7 @@ features:
   - 536-gate-dialog-dashboard
   - 569-auth-events-through-event-port
   - 160-admin-dashboard-menu
+  - 765-reload-after-failed-switch
 ---
 
 # Capability: Accounts
@@ -548,6 +549,14 @@ _From 569-auth-events-through-event-port._
 ### 569-FR-004 — The password_changed e-mail, the audit entry, the sessions revoked and the reset's answer MUST stay as ST-127 specified them; the API contract (openapi.json) and the web app MUST NOT change.
 
 _From 569-auth-events-through-event-port._
+
+### 765-FR-001 — An answer to a reload sent while a role switch's token is in place MUST be dropped, whether it arrives before or after the switch ends; the switch's own account load decides what shows.
+
+_From 765-reload-after-failed-switch._
+
+### 765-FR-002 — A reload sent before a switch put its token in MUST still land when the switch fails.
+
+_From 765-reload-after-failed-switch._
 
 ## Retired
 

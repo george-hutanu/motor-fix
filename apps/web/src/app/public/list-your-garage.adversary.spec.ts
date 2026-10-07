@@ -105,11 +105,12 @@ describe('the list your garage page under hostile use', () => {
     entries(page)[2].click();
     await settle(harness);
 
-    const live = [
-      ...page.querySelectorAll('[aria-live], [role="status"], [role="alert"]'),
-    ].filter((element) => !element.closest('section'));
-    expect(live.map((element) => element.className)).toEqual(['note']);
-    expect(live[0].textContent).toBe('');
+    expect(
+      page
+        .querySelector('nav')
+        ?.querySelector('[aria-live], [role="status"], [role="alert"]'),
+    ).toBeNull();
+    expect(page.querySelector('.sections > p.note')?.textContent).toBe('');
     expect(bar(page)?.closest('[aria-live]')).toBeNull();
   });
 

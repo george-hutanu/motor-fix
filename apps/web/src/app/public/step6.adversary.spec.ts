@@ -318,7 +318,7 @@ describe('step 6 of the page under hostile typing', () => {
     const { harness, page } = await open('/ro/list-your-garage');
     await type(harness, cui(page), '18547290');
     const http = TestBed.inject(HttpTestingController);
-    http.expectNone(() => true);
+    http.expectNone((req) => req.url.includes('listing-drafts'));
     expect(cui(page).value).toBe('18547290');
   });
 });

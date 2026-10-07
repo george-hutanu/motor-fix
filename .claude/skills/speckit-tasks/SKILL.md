@@ -69,7 +69,7 @@ You **MUST** consider the user input before proceeding (if not empty).
      its **Proposed Clarifications** are candidate questions already researched.
      Skipping it is how a decision the organisation made last month gets
      rediscovered the expensive way.
-   - **IF EXISTS**: Load `.specify/memory/constitution.md` for project principles and governance constraints
+   - Load `.specify/memory/constitution-card.md` for project principles and the gate behind each. Open a principle's section in `.specify/memory/constitution.md` only when a decision turns on its exact wording.
    - Note: Not all projects have all documents. Generate tasks based on what's available.
 
 3. **Execute task generation workflow**:

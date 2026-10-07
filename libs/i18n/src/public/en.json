@@ -36,6 +36,31 @@
   },
   "listing": {
     "bar": "{n} / 6 · {label}",
+    "brands": {
+      "chips": "Your brands",
+      "counter": "{taken} · {refused}",
+      "hint": "Tap once: green lamp, you work on it. Again: red lamp, you do not take it. A third tap switches it off.",
+      "left": {
+        "one": "{count} character left",
+        "other": "{count} characters left"
+      },
+      "noMatch": "No brand found.",
+      "note": "Note on brands, up to 140 characters",
+      "off": "you do not take it",
+      "on": "you work on it",
+      "phrase": "What you do not take, in short, up to 60 characters",
+      "refused": {
+        "one": "{count} refused",
+        "other": "{count} refused"
+      },
+      "results": "Brands found",
+      "search": "Search for a brand",
+      "searchDown": "Search is not working right now.",
+      "taken": {
+        "one": "{count} taken",
+        "other": "{count} taken"
+      }
+    },
     "cui": "Company tax ID",
     "cuiInvalid": "Invalid tax ID",
     "email": "E-mail",

@@ -9,6 +9,9 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { GarageBrandAnswerDto } from '../models/garage-brand-answer-dto';
+import { garageBrandsControllerReplace } from '../fn/garages/garage-brands-controller-replace';
+import { GarageBrandsControllerReplace$Params } from '../fn/garages/garage-brands-controller-replace';
 import { garageInvitesControllerResend } from '../fn/garages/garage-invites-controller-resend';
 import { GarageInvitesControllerResend$Params } from '../fn/garages/garage-invites-controller-resend';
 import { garageInvitesControllerRevoke } from '../fn/garages/garage-invites-controller-revoke';
@@ -24,6 +27,39 @@ import { StaffInviteSentDto } from '../models/staff-invite-sent-dto';
 export class GaragesService extends BaseService {
   constructor(config: ApiConfiguration, http: HttpClient) {
     super(config, http);
+  }
+
+  /** Path part for operation `garageBrandsControllerReplace()` */
+  static readonly GarageBrandsControllerReplacePath = '/api/v1/garages/{garageId}/brands';
+
+  /**
+   * Replace the garage's brand answer: taken, refused, the texts.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageBrandsControllerReplace()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  garageBrandsControllerReplace$Response(params: GarageBrandsControllerReplace$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageBrandAnswerDto>> {
+    const obs = garageBrandsControllerReplace(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Replace the garage's brand answer: taken, refused, the texts.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageBrandsControllerReplace$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  garageBrandsControllerReplace(params: GarageBrandsControllerReplace$Params, context?: HttpContext): Promise<GarageBrandAnswerDto> {
+    const resp = this.garageBrandsControllerReplace$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GarageBrandAnswerDto>): GarageBrandAnswerDto => r.body);
   }
 
   /** Path part for operation `garageInvitesControllerSend()` */

@@ -22,6 +22,7 @@ import {
 
 export type DraftView = 'form' | 'loading' | 'invalid' | 'sent';
 export type EmailError = 'emailInvalid' | 'emailNeeded';
+export type StepKey = keyof NonNullable<ListingDraftData['steps']>;
 export interface DraftNote {
   key: string;
   params?: Record<string, number>;
@@ -116,23 +117,15 @@ export class DraftKeeper {
   type(email: string) {
     this.emailError.set(null);
     this.change({ email });
-    this.saveSoon();
+    this.later();
   }
 
-  // One value of a step's section; undefined takes the key out.
-  fill(step: '6', key: 'cui' | 'rarNumber', value: string | undefined) {
-    const data: ListingDraftData = this.draft().data;
-    const { [key]: _, ...section } = data.steps?.[step] ?? {};
-    this.change({
-      data: {
-        ...data,
-        steps: {
-          ...data.steps,
-          [step]: value === undefined ? section : { ...section, [key]: value },
-        },
-      },
-    });
-    this.saveSoon();
+  // One step's section, shaped by that step's story; every save carries the
+  // whole data, so the section rides with the rest of the form.
+  section(step: StepKey, value: object) {
+    const data = this.draft().data as ListingDraftData;
+    this.change({ data: { ...data, steps: { ...data.steps, [step]: value } } });
+    this.later();
   }
 
   leaveEmail() {
@@ -346,7 +339,8 @@ export class DraftKeeper {
     this.serverEmail = draft.draftId ? draft.email : undefined;
   }
 
-  private saveSoon() {
+  // The server copy at most every five seconds of changes.
+  private later() {
     if (this.draft().draftId && !this.serverTimer)
       this.serverTimer = setTimeout(() => {
         this.serverTimer = undefined;
