@@ -4,6 +4,7 @@ import { NotFoundException } from '@nestjs/common';
 
 import { GarageBrandsService } from './garage-brands.service';
 import { AuditService } from '../audit/audit.service';
+import { foreignEntries } from '../audit/audit.testing';
 import type { Actor } from '../auth/policy';
 import { serialDatabase } from '../auth/serial-db.testing';
 import { noEvents } from '../events/event.port';
@@ -21,6 +22,7 @@ beforeEach(async () => {
     { now: Date }[]
   >`SELECT clock_timestamp() AS now`;
   since = now;
+  await foreignEntries(prisma, [{ subjectType: 'garage_brand' }]);
 });
 
 afterAll(async () => {
@@ -170,7 +172,11 @@ describe('GarageBrandsService under hostile calls', () => {
     expect(await prisma.garageBrand.count()).toBe(0);
     expect(
       await prisma.activityLog.count({
-        where: { at: { gte: since }, subjectType: 'garage_brand' },
+        where: {
+          at: { gte: since },
+          garageId: w.garage,
+          subjectType: 'garage_brand',
+        },
       }),
     ).toBe(0);
   });

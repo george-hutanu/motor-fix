@@ -4,6 +4,7 @@ import { ConflictException } from '@nestjs/common';
 
 import { GarageBrandsService } from './garage-brands.service';
 import { AuditService } from '../audit/audit.service';
+import { foreignEntries } from '../audit/audit.testing';
 import type { Actor } from '../auth/policy';
 import { serialDatabase } from '../auth/serial-db.testing';
 import { noEvents } from '../events/event.port';
@@ -21,6 +22,10 @@ beforeEach(async () => {
     { now: Date }[]
   >`SELECT clock_timestamp() AS now`;
   since = now;
+  await foreignEntries(prisma, [
+    { subjectType: 'garage_brand' },
+    { subjectType: 'garage_brand_job' },
+  ]);
 });
 
 afterAll(async () => {
@@ -77,11 +82,12 @@ const row = (w: World, brandId: string) =>
     where: { garageId_brandId: { brandId, garageId: w.garage } },
   });
 
-const history = () =>
+const history = (w: World) =>
   prisma.activityLog.findMany({
     orderBy: { at: 'asc' },
     where: {
       at: { gte: since },
+      garageId: w.garage,
       subjectType: { in: ['garage_brand', 'garage_brand_job'] },
     },
   });
@@ -224,12 +230,12 @@ describe('GarageBrandsService', () => {
     const w = await world();
     await setStance(w, w.dacia, 'works_on');
     const before = await row(w, w.dacia);
-    const entries = (await history()).length;
+    const entries = (await history(w)).length;
 
     await setStance(w, w.dacia, 'works_on');
 
     expect(await row(w, w.dacia)).toEqual(before);
-    expect(await history()).toHaveLength(entries);
+    expect(await history(w)).toHaveLength(entries);
   });
 
   // Two tabs of the brand screen: the second first write starts while the
@@ -269,7 +275,7 @@ describe('GarageBrandsService', () => {
 
     await expect(Promise.all([first, second])).resolves.toBeDefined();
     expect(await row(w, w.dacia)).toMatchObject({ stance: 'does_not_take' });
-    expect((await history()).map((entry) => entry.action)).toEqual([
+    expect((await history(w)).map((entry) => entry.action)).toEqual([
       'create',
       ...Array(5).fill('update'),
     ]);
@@ -283,7 +289,7 @@ describe('GarageBrandsService', () => {
     await addJob(w, w.dacia, jobType);
     await setStance(w, w.dacia, 'does_not_take');
 
-    const entries = await history();
+    const entries = await history(w);
     expect(entries).toEqual([
       expect.objectContaining({
         action: 'create',
