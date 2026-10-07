@@ -21,3 +21,6 @@ Start commit: ec74ab0654afa31c0e6bb27e0b56bd7a2c5ea933 (worktree .worktrees/784-
 
 ## Phase 5 — plan
 - plan.md and quickstart.md written (model: 775); fix is in pendingLevel: LEVEL_AT captures y/m/d, refused unless `new Date(Date.UTC(y, m-1, d)).getUTCDate() === d` (probed: 2026-02-30, 2026-04-31, 2025-02-29 false; 2024-02-29, 2026-01-31 true); Python unchanged; cases go to level.adversary.spec.mjs parity block at a fixed now. No research/data-model/contracts. before_plan design check already done (design.md kept); agent-context hook run.
+
+## Phase 6 — checklist
+- checklists/parity.md: 10 items, all checked against spec.md and plan.md, no gap found, no spec or plan edit needed.
