@@ -21,7 +21,10 @@ enum NotificationStatus {
 
 model Notification {
   id                String              @id @default(uuid()) @db.Uuid
-  accountId         String              @map("account_id") @db.Uuid
+  // Exactly one of the two is set (a CHECK in the migration): an account, or
+  // a listing draft, whose e-mail has no account yet.
+  accountId         String?             @map("account_id") @db.Uuid
+  listingDraftId    String?             @map("listing_draft_id") @db.Uuid
   // A catalogue type; the catalogue lives in code, so this is not an enum.
   kind              String
   subjectId         String?             @map("subject_id") @db.Uuid
@@ -39,18 +42,21 @@ model Notification {
   // Set by the send job that holds the row; lapses after a lease.
   claimedAt         DateTime?           @map("claimed_at") @db.Timestamptz(3)
   createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
-  account           Account             @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account           Account?            @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  listingDraft      ListingDraft?       @relation(fields: [listingDraftId], references: [id], onDelete: Cascade)
   groupLeader       Notification?       @relation("NotificationGroup", fields: [groupLeaderId], references: [id], onDelete: SetNull)
   grouped           Notification[]      @relation("NotificationGroup")
   fallbackFrom      Notification?       @relation("NotificationFallback", fields: [fallbackOf], references: [id], onDelete: SetNull)
   fallbacks         Notification[]      @relation("NotificationFallback")
 
   @@unique([kind, accountId, channel, eventId])
+  @@unique([kind, listingDraftId, channel, eventId])
   @@index([accountId, createdAt])
   @@index([kind, accountId, channel, createdAt])
   @@index([providerMessageId])
   @@index([groupLeaderId])
   @@index([fallbackOf])
+  @@index([listingDraftId])
   @@map("notification")
 }
 

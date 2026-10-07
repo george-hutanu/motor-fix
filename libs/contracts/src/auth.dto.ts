@@ -17,6 +17,9 @@ import { PRIVACY_VERSION, TERMS_VERSION } from './consent';
 import { ROLE } from './me.dto';
 import { E164, normalisePhone } from './phone';
 
+// Text, an "@", a domain with a dot; no spaces or control characters.
+export const EMAIL_PATTERN = /^[^\s@\p{Cc}]+@[^\s@\p{Cc}]+\.[^\s@\p{Cc}]+$/u;
+
 export class SignInDto {
   @ApiProperty({
     description: 'Trimmed; compared without letter case',
@@ -76,7 +79,7 @@ export class SignUpDto {
   @Transform(trimmed)
   @IsString()
   @Length(3, 254)
-  @Matches(/^[^\s@\p{Cc}]+@[^\s@\p{Cc}]+\.[^\s@\p{Cc}]+$/u, {
+  @Matches(EMAIL_PATTERN, {
     message: 'email must look like an address',
   })
   email!: string;

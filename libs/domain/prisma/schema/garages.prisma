@@ -189,3 +189,43 @@ model VerificationFile {
   @@index([garageId, createdAt])
   @@map("verification_file")
 }
+
+enum ListingDraftStatus {
+  open
+  submitted
+
+  @@map("listing_draft_status")
+}
+
+// A garage listing a visitor began and left an e-mail on. Nothing looks a
+// draft up by its address. The step's range is a CHECK in the migration.
+model ListingDraft {
+  id            String              @id @default(uuid()) @db.Uuid
+  email         String
+  data          Json                @default("{}")
+  step          Int
+  language      Language
+  status        ListingDraftStatus  @default(open)
+  remindedAt    DateTime?           @map("reminded_at") @db.Timestamptz(3)
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  // Set by every save, never by Prisma on its own.
+  updatedAt     DateTime            @map("updated_at") @db.Timestamptz(3)
+  tokens        ListingDraftToken[]
+  notifications Notification[]
+
+  @@index([status, updatedAt])
+  @@map("listing_draft")
+}
+
+// A key to a draft: the SHA-256 of a token, never the token.
+model ListingDraftToken {
+  hash     String       @id
+  draftId  String       @map("draft_id") @db.Uuid
+  sentAt   DateTime     @map("sent_at") @db.Timestamptz(3)
+  // The reminder's token, which the hourly link cap does not count.
+  reminder Boolean      @default(false)
+  draft    ListingDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
+
+  @@index([draftId, sentAt])
+  @@map("listing_draft_token")
+}

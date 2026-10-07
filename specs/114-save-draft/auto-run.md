@@ -24,3 +24,6 @@
 - MEDIUM fixed: FR-015/SC-004/T033 "draft without an e-mail" contradicted `email not null` (data-model) → removed.
 - MEDIUM fixed: FR-020's reload of the first context missing from T026; FR-018's no audit/outbox missing from T017 → added.
 - Coverage 21/21 FRs, 37 tasks, 0 CRITICAL. One round; re-run clean.
+
+## Phase 9 — Tests (foundation slice)
+- Red proven: 5 suites failed (3 at compile: no `listingDraft` model, no `sendToDraft`; listing templates missing; catalogue LISTING_REMINDER not single), 9 failed / 17 pre-existing passed.

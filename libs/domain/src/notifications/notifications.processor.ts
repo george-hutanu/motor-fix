@@ -25,15 +25,23 @@ import { giveSmsBack, smsMonth, takeSms } from './sms-counter';
 import { render, TemplateError, templateName } from './templates';
 import type {
   Account,
+  Language,
+  ListingDraft,
   Notification,
   PrismaClient,
 } from '../generated/prisma/client';
 
 interface NotificationJob {
   name: string;
-  data: { id?: string; leaderId?: string };
+  data: { id?: string; leaderId?: string; link?: string };
   attemptsMade: number;
 }
+
+type AccountRow = Notification & { account: Account };
+
+const hasAccount = <T extends Notification & { account: Account | null }>(
+  row: T,
+): row is T & { account: Account } => row.account !== null;
 
 // BullMQ asks after the n-th failed attempt (counted from 1).
 export const retryDelay = (failedBefore: number) =>
@@ -91,13 +99,13 @@ export class NotificationsProcessor {
       return this.flush(job.data.leaderId, job.attemptsMade);
     }
     if (job.name === 'send' && job.data.id)
-      return this.send(job.data.id, job.attemptsMade);
+      return this.send(job.data.id, job.attemptsMade, job.data.link);
     throw new Error(`unknown notifications job ${job.name}`);
   }
 
   // Only the job holding the row's claim sends it. Another job's live claim
   // fails this one, so the queue retries it after the claim has lapsed.
-  private async send(id: string, attemptsMade: number) {
+  private async send(id: string, attemptsMade: number, link?: string) {
     const at = this.now();
     const { count } = await this.prisma.notification.updateMany({
       data: { claimedAt: at },
@@ -120,14 +128,7 @@ export class NotificationsProcessor {
       return;
     }
     try {
-      const row = await this.prisma.notification.findUniqueOrThrow({
-        include: { account: true },
-        where: { id },
-      });
-      if (!(await this.due(row))) return;
-      if (row.channel === 'email') await this.sendEmail(row, attemptsMade);
-      else if (row.channel === 'push') await this.sendPush(row, attemptsMade);
-      else await this.sendPhone(row, attemptsMade);
+      await this.sendClaimed(id, attemptsMade, link);
     } finally {
       // A failed release must not retry a message that went: the claim lapses.
       await this.prisma.notification
@@ -143,9 +144,25 @@ export class NotificationsProcessor {
     }
   }
 
+  private async sendClaimed(id: string, attemptsMade: number, link?: string) {
+    const { listingDraft, ...row } =
+      await this.prisma.notification.findUniqueOrThrow({
+        include: { account: true, listingDraft: true },
+        where: { id },
+      });
+    if (listingDraft) {
+      await this.sendToDraft(row, listingDraft, link, attemptsMade);
+      return;
+    }
+    if (!hasAccount(row) || !(await this.due(row))) return;
+    if (row.channel === 'email') await this.sendEmail(row, attemptsMade);
+    else if (row.channel === 'push') await this.sendPush(row, attemptsMade);
+    else await this.sendPhone(row, attemptsMade);
+  }
+
   // Whether the claimed row goes now: a deleted account fails it, a held one
   // is released through the grouping rule.
-  private async due(row: Notification & { account: Account }) {
+  private async due(row: AccountRow) {
     if (row.account.status === 'deleted') {
       await this.service.fail([row], 'account_deleted', false);
       return false;
@@ -154,10 +171,7 @@ export class NotificationsProcessor {
     return !row.groupLeaderId && (await this.service.release(row));
   }
 
-  private async sendEmail(
-    row: Notification & { account: Account },
-    attemptsMade: number,
-  ) {
+  private async sendEmail(row: AccountRow, attemptsMade: number) {
     const to = await this.allowed([row], row.account);
     if (!to) return;
     const values = params(row);
@@ -165,17 +179,42 @@ export class NotificationsProcessor {
       [row],
       to,
       templateName(row.kind, values),
-      values,
+      { language: row.account.language, values },
+      attemptsMade,
+    );
+  }
+
+  // A draft's e-mail goes to the address the draft holds now, in its
+  // language, with the link its job carries; the row never held either.
+  private async sendToDraft(
+    row: Notification,
+    draft: ListingDraft,
+    link: string | undefined,
+    attemptsMade: number,
+  ) {
+    if (row.status === 'held' && !(await this.service.release(row))) return;
+    const reason = blockedReason(this.config, draft.email);
+    if (reason) {
+      await this.service.fail([row], reason, false);
+      return;
+    }
+    await this.write(
+      [row],
+      { email: draft.email },
+      row.kind,
+      { language: draft.language, values: link ? { link } : {} },
       attemptsMade,
     );
   }
 
   private async flush(leaderId: string, attemptsMade: number) {
-    const rows = await this.prisma.notification.findMany({
-      include: { account: true },
-      orderBy: { createdAt: 'asc' },
-      where: { groupLeaderId: leaderId, status: 'held' },
-    });
+    const rows = (
+      await this.prisma.notification.findMany({
+        include: { account: true },
+        orderBy: { createdAt: 'asc' },
+        where: { groupLeaderId: leaderId, status: 'held' },
+      })
+    ).filter(hasAccount);
     const [first] = rows;
     if (!first) return;
     if (first.account.status === 'deleted') {
@@ -190,7 +229,7 @@ export class NotificationsProcessor {
         rows,
         to,
         templateName(first.kind, values),
-        values,
+        { language: first.account.language, values },
         attemptsMade,
       );
       return;
@@ -199,22 +238,25 @@ export class NotificationsProcessor {
       rows,
       to,
       `${first.kind}.grouped`,
-      { count: rows.length },
+      { language: first.account.language, values: { count: rows.length } },
       attemptsMade,
     );
   }
 
   // A message that cannot be written in full is not sent at all.
   private async write(
-    rows: (Notification & { account: Account })[],
-    to: { email: string; name: string },
+    rows: Notification[],
+    to: { email: string; name?: string },
     name: string,
-    values: Record<string, unknown>,
+    {
+      language,
+      values,
+    }: { language: Language; values: Record<string, unknown> },
     attemptsMade: number,
   ) {
     let mail: { subject: string; text: string; html: string };
     try {
-      mail = render(name, 'email', rows[0].account.language, {
+      mail = render(name, 'email', language, {
         ...values,
         app: this.config.webUrl,
       });
@@ -243,7 +285,7 @@ export class NotificationsProcessor {
 
   private async deliver(
     rows: Notification[],
-    to: { email: string; name: string },
+    to: { email: string; name?: string },
     mail: { subject: string; text: string; html: string },
     attemptsMade: number,
   ) {
@@ -267,10 +309,7 @@ export class NotificationsProcessor {
   // One push row goes to every device the person saved. It is sent when any
   // device took it; retried only when none did and a refusal may pass; a
   // device the push service no longer knows is deleted.
-  private async sendPush(
-    row: Notification & { account: Account },
-    attemptsMade: number,
-  ) {
+  private async sendPush(row: AccountRow, attemptsMade: number) {
     if (!this.pushSender) {
       await this.service.fail([row], 'push_off', true);
       return;
@@ -278,7 +317,7 @@ export class NotificationsProcessor {
     const devices = await this.prisma.pushSubscription.findMany({
       orderBy: { createdAt: 'desc' },
       take: MAX_DEVICES,
-      where: { accountId: row.accountId },
+      where: { accountId: row.account.id },
     });
     if (devices.length === 0) {
       await this.service.fail([row], 'no_device', true);
@@ -348,10 +387,7 @@ export class NotificationsProcessor {
 
   // A phone that is missing, unverified, switched off or not allowlisted
   // skips WhatsApp too: e-mail reaches the person instead.
-  private async sendPhone(
-    row: Notification & { account: Account },
-    attemptsMade: number,
-  ) {
+  private async sendPhone(row: AccountRow, attemptsMade: number) {
     const { phone, phoneVerifiedAt } = row.account;
     const reason = phone
       ? phoneVerifiedAt
@@ -366,15 +402,11 @@ export class NotificationsProcessor {
     else await this.sendWhatsApp(row, phone, attemptsMade);
   }
 
-  private async sendSms(
-    row: Notification & { account: Account },
-    phone: string,
-    attemptsMade: number,
-  ) {
+  private async sendSms(row: AccountRow, phone: string, attemptsMade: number) {
     const content = await this.text(row, 'sms');
     if (content === null) return;
     const month = smsMonth(this.now());
-    if (!(await takeSms(this.prisma, row.accountId, month))) {
+    if (!(await takeSms(this.prisma, row.account.id, month))) {
       await this.service.fail([row], 'sms_cap_reached', true);
       return;
     }
@@ -387,7 +419,7 @@ export class NotificationsProcessor {
       });
     } catch (error) {
       // The Brevo error still decides between a retry and the fallback.
-      await giveSmsBack(this.prisma, row.accountId, month).catch((failed) =>
+      await giveSmsBack(this.prisma, row.account.id, month).catch((failed) =>
         this.logger.error(
           `notification ${row.id} ${row.kind} sms count not given back: ${String(failed)}`,
         ),
@@ -399,7 +431,7 @@ export class NotificationsProcessor {
   }
 
   private async sendWhatsApp(
-    row: Notification & { account: Account },
+    row: AccountRow,
     phone: string,
     attemptsMade: number,
   ) {
@@ -432,7 +464,7 @@ export class NotificationsProcessor {
 
   // The rendered text, or null when the row failed over to the next channel.
   private async text<C extends 'sms' | 'whatsapp'>(
-    row: Notification & { account: Account },
+    row: AccountRow,
     channel: C,
   ) {
     const values = params(row);
