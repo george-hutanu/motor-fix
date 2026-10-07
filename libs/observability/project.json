@@ -1,0 +1,15 @@
+{
+  "// targets": "to see all targets run: nx show project observability --web",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "observability",
+  "projectType": "library",
+  "sourceRoot": "libs/observability/src",
+  "tags": [],
+  "targets": {
+    "test:mutation": {},
+    "typecheck": {
+      "cache": true,
+      "command": "tsc --noEmit -p libs/observability/tsconfig.lib.json && tsc --noEmit -p libs/observability/tsconfig.spec.json"
+    }
+  }
+}
