@@ -65,3 +65,6 @@ Constitution v1.8.2 read through its card; no principle blocks the story.
 
 ## Phase 6 — Checklist
 - model sonnet. checklists/audit.md: 18 items, 0 unchecked (18 checked, 0 struck); 1 gap fixed (FR-004: guard calls one at a time so the per-admin before/after count is the call's own). checklists/requirements.md: 0 unchecked.
+
+## Phase 7 — Tasks
+- model sonnet. tasks.md: 11 tasks (US1 7, US2 2, US3 1, polish 1); red specs first (T001-T005), then code (T006-T009). Level check: level 2, unchanged (fr-count tripped, 7 FRs).
