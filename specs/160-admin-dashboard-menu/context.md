@@ -88,3 +88,9 @@
 - ST-253 Set up the real-time connection — https://app.notion.com/p/3ee607bff0d281739e3df7b8fc484d49
 - Architecture decisions — https://app.notion.com/p/3ee607bff0d28111907edddc4bdd066a
 - Decisions and ideas (index) — https://app.notion.com/p/3ee607bff0d281df9485ce97dfa3332d
+
+## Refresh 2026-10-07
+
+- Story ST-160 re-read at 2026-10-07T09:26Z: only the sync property changed, Status Planning to Implementing (page last edited 09:26Z). Title, acceptance criteria and Build brief (current as of 2026-10-03) are unchanged; the PR link is still #196. Comments: none (all blocks, resolved included).
+- MF-43 feature page last edited 2026-10-03T18:47Z: unchanged since the first gather.
+- No scope change. Nothing above is superseded.

@@ -88,3 +88,12 @@ Start commit: b76badd3 (worktree .worktrees/160-admin-dashboard-menu, branch 160
 - test-adversary: 43 tests in 4 files, all green, no defect.
 - code-reviewer: BLOCK, 1 HIGH, 1 MEDIUM. HIGH (the maintenance test asserted its own mock): the self-check line is removed; the test stays as the guard that keeps the admin routes open during maintenance, which the requirement asks a test for. MEDIUM (the `MAINTENANCE` barrel export serves only that test): kept with it. Repair lap 1.
 - Kept: 27 import-extension errors (domain and data-access use extensionless imports throughout; typecheck and build pass under their resolution) and 3 `eslint-disable` lines in generated data-access files (never edited by hand).
+
+## 13. Ticket refresh
+
+- org-researcher (refresh): ST-160 moved Planning to Implementing; no comments, Build brief unchanged since 2026-10-03. No new evidence.
+
+## 14. Review
+
+- spec-reviewer: BLOCK, 1 HIGH (the admin bar's English Panou tab read "Home"; FR-006 says "Dashboard"), 1 LOW (a comment above the wrong declaration). code-reviewer: APPROVE, the same LOW.
+- Fixed: an admin-only tab key `frame.tab.overview` (RO "Panou", EN "Dashboard"); driver and garage keep "Home". This reverses the section 9 decision to keep the shared key. LOW fixed (comment moved). Repair lap 2.

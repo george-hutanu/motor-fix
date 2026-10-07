@@ -101,7 +101,7 @@ describe('the dashboard view lists', () => {
       {
         label: 'shell.frame.nav.dashboard',
         path: '',
-        tab: 'shell.frame.tab.dashboard',
+        tab: 'shell.frame.tab.overview',
       },
       {
         capability: 'admin.garages',

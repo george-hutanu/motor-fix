@@ -8,10 +8,10 @@ import { View } from './view';
 
 export type Area = 'driver' | 'garage' | 'admin';
 
-// `label` (the menu's) and `tab` (the bar's, shorter) are shell translation keys.
 // The numbers a dashboard's menu entries carry, while known.
 export type Counts = Partial<Record<'garagesWaiting', number>>;
 
+// `label` (the menu's) and `tab` (the bar's, shorter) are shell translation keys.
 export interface DashboardView {
   path: string;
   label: string;
@@ -44,7 +44,8 @@ export const DASHBOARDS: Record<
     name: 'shell.frame.bar.admin',
     tag: 'shell.frame.area.admin',
     views: [
-      HOME,
+      // The admin bar says Dashboard in English, where the others say Home.
+      { ...HOME, tab: 'shell.frame.tab.overview' },
       {
         capability: 'admin.garages',
         counter: 'garagesWaiting',

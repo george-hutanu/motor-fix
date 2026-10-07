@@ -471,7 +471,7 @@ describe('Frame', () => {
     );
     expect(menu(admin.element)).toEqual(['Dashboard', 'Garages', 'Settings']);
     expect(bar(admin.element).map((a) => a.textContent?.trim())).toEqual([
-      'Home',
+      'Dashboard',
       'Garages',
       'Settings',
     ]);
