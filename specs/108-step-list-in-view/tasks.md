@@ -65,7 +65,7 @@ Behaviour is delivered by the one component instance and the key-based texts (T0
 
 ## Phase 7: Verify
 
-- [ ] T019 Run `quickstart.md`: Biome, typecheck, `nx test web`, `nx e2e web-e2e` (list-your-garage and phone specs) green
+- [X] T019 Run `quickstart.md`: Biome, typecheck, `nx test web`, `nx e2e web-e2e` (list-your-garage and phone specs) green
 
 ## Dependencies
 

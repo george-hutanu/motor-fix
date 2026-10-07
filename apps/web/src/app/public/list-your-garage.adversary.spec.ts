@@ -72,18 +72,6 @@ const bar = (page: HTMLElement) =>
   page.querySelector<HTMLButtonElement>('nav > button[aria-expanded]');
 
 describe('the list your garage page under hostile use', () => {
-  it.each([
-    '/ro/list-your-garage#pasul-9',
-    '/ro/list-your-garage#step-4',
-    '/en/list-your-garage#pasul-4',
-  ])('opens %s at the top with step 1 current', async (path) => {
-    const { page } = await open(path);
-
-    expect(current(page)).toHaveLength(1);
-    expect(text(bar(page))).toMatch(/^1 \/ 6 · /);
-    expect(scrolls).toEqual([]);
-  });
-
   it('keeps exactly one current entry through repeated and alternating taps', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
 

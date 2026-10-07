@@ -199,6 +199,11 @@ test.describe('on a phone', () => {
     await expect(bar(page)).toHaveText('5 / 6 · Fotografii și adresă');
     await expect(sections(page).nth(4)).toBeFocused();
     await expect(sections(page).nth(4)).toBeInViewport();
+
+    await page.waitForTimeout(300);
+    await page.mouse.wheel(0, 2);
+    await page.waitForTimeout(100);
+    await expect(bar(page)).toHaveText('5 / 6 · Fotografii și adresă');
   });
 
   test('closes the open list on Escape and gives the focus back to the bar', async ({

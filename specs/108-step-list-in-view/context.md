@@ -69,3 +69,9 @@
 - ST-114 Save a draft and come back to it later — https://app.notion.com/p/3ee607bff0d28182bfafc99b0021fc1f
 - Architecture decisions — https://app.notion.com/p/3ee607bff0d28111907edddc4bdd066a
 - Decisions and ideas — https://app.notion.com/p/3ee607bff0d281df9485ce97dfa3332d
+
+## Refresh 2026-10-07
+
+- **No new evidence for scope.** Re-read ST-108 (fetched 2026-10-07T08:29Z), its comments (all blocks, resolved included: none), MF-29 comments (none), EP-2 (last edited 2026-10-07T06:52Z, before the digest), ST-114 (last edited 2026-10-03T17:37Z, status To do) and Decisions and ideas (last edited 2026-10-03T16:50Z). Acceptance criteria, Build brief, Scope, Rules, Tests and "Open: None" are word for word what the digest recorded.
+- **Only change:** ST-108's Notion Status is now Implementing (the digest said Planning); the PR property still links #192. This is the lifecycle step, not a scope change. Explains the page edit time moving from 08:03Z to 08:29Z.
+- Scope narrowed by a comment: no. Superseded statements since the digest: 0. Sources: same six pages as above; the mock link was recorded, not opened.

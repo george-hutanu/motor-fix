@@ -33,7 +33,8 @@ const SETTLE_MS = 150;
     .intro { margin-top: var(--mf-space-2); color: var(--mf-text-secondary); }
     .page { display: grid; gap: var(--mf-space-4); margin-top: var(--mf-space-4); }
     .sections { display: grid; gap: var(--mf-space-4); min-width: 0; }
-    section { scroll-margin-top: calc(var(--mf-tap) + var(--mf-space-2)); }
+    /* A jump rests the heading on the line the scroll spy reads: the bottom of the phone bar. */
+    section { scroll-margin-top: var(--mf-tap); }
     h2:focus-visible, nav button:focus-visible { outline: 2px solid var(--mf-focus); outline-offset: 2px; }
     .mark { font-weight: normal; color: var(--mf-text-secondary); }
     ol { margin: 0; padding: 0; list-style: none; }

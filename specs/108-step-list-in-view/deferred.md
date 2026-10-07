@@ -1,3 +1,3 @@
-# Deferred — 108-step-list-in-view
+# Deferred findings: 108-step-list-in-view
 
-- The scroll spy reads `getComputedStyle` on the bar and queries the six headings on every scroll and resize event, without coalescing. Harmless with six empty sections; revisit when the sections fill (a `matchMedia('(min-width: 768px)')` read would replace the style read). `apps/web/src/app/public/list-your-garage.ts` `follow()`.
+- [ ] `apps/web/src/app/public/list-your-garage.ts:173` — **low** — new code, not urgent: `follow()` reads `getComputedStyle` on the bar and queries the six headings on every scroll and resize event, without coalescing; harmless with six empty sections, worth a `matchMedia('(min-width: 768px)')` read once the sections fill (code-reviewer, 2026-10-07)
