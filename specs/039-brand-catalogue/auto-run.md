@@ -40,3 +40,7 @@ level.mjs check: 2, unchanged. Checklist: all items pass.
 ## Phase 8 — Analyze (inline, opus)
 
 artifact-lint: 0 errors, 0 warnings (Jev lane unavailable). 17/17 FRs tasked, 20 tasks, SC-001..005 covered by T005/T006/T012/T013/T018/T020. Context contradictions both settled in clarify; proposed clarifications all answered (A30 shape, job_type_id, flip, stable key, error codes via `invalid_cursor`/`brand_not_worked_on`). Findings: 0 CRITICAL, 0 HIGH, 0 MEDIUM; 1 LOW (fuel columns `petrol…` vs the brief's proposed `fuel_petrol…` — the brief marks names proposed; kept). No remediation needed; no re-run.
+
+## Phase 9 — Tests (red-first)
+- Foundational first (T001–T004): `catalogue.prisma`, garages.prisma additions, migration `20261007090000_brand_catalogue` (drafted with `prisma migrate diff` against the worktree DB, CHECKs added by hand), applied to the worktree's own services (`scripts/test-services.ts`) and the client regenerated, so the specs fail on behaviour rather than on schema.
+- 7 spec files, 63 new tests: brands.spec.ts (13), brand-loader.integration.spec.ts (12), brands.dto.spec.ts (5), brands.api.integration.spec.ts (14), garage-brands.service.integration.spec.ts (18), main.spec.ts (+1), public-routes.integration.spec.ts (+`GET /api/v1/brands`). Red proven: `npx jest` on the six runnable files → 6/6 suites failed (5 on the missing modules, main.spec 1 failed / 6 pre-existing passed). Not committed at red.

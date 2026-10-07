@@ -22,10 +22,10 @@ None. No new dependency, project or tool; `libs/domain`, `libs/contracts` and `a
 
 **Purpose**: the Prisma schema and migration all three stories read and write.
 
-- [ ] T001 [P] Add `model Brand` in `libs/domain/prisma/schema/catalogue.prisma` (new): `id` UUID PK `@default(uuid())`, `key` unique, `name` unique, `slug` unique, `popularity` Int?, `active` Boolean default true, `createdAt`, `updatedAt`; index `(active, popularity, name)`; relation `garageBrands GarageBrand[]` (FR-002)
-- [ ] T002 [P] In `libs/domain/prisma/schema/garages.prisma` add `enum GarageBrandStance { works_on does_not_take }`, `model GarageBrand` (PK `(garageId, brandId)`, `stance`, `petrol`/`diesel`/`hybrid`/`electric` Boolean default true), `model GarageBrandJob` (PK `(garageId, brandId, jobTypeId)`, FK `(garageId, brandId)` → `GarageBrand` cascade, `jobTypeId` UUID with no relation), and `Garage.brandNote String?`, `Garage.refusalPhrase String?` (FR-013, FR-014, FR-015, FR-016)
-- [ ] T003 Write `libs/domain/prisma/migrations/20261007090000_brand_catalogue/migration.sql` (new): the three tables, the enum, the two `garage` columns, `garage_brand_fuel_check` (`"stance" = 'works_on' OR NOT ("petrol" OR "diesel" OR "hybrid" OR "electric")`), `brand_note` CHECK (`char_length <= 140 AND btrim <> ''`) and `refusal_phrase` CHECK (`char_length <= 60 AND btrim <> ''`) (FR-013, FR-014, FR-015, FR-016; depends on T001, T002)
-- [ ] T004 Apply the migration to the worktree database and regenerate the Prisma client into `libs/domain/src/generated/prisma` (`npx prisma migrate deploy`, `npx prisma generate` in `libs/domain`, through `scripts/heavy.sh`) (depends on T003)
+- [X] T001 [P] Add `model Brand` in `libs/domain/prisma/schema/catalogue.prisma` (new): `id` UUID PK `@default(uuid())`, `key` unique, `name` unique, `slug` unique, `popularity` Int?, `active` Boolean default true, `createdAt`, `updatedAt`; index `(active, popularity, name)`; relation `garageBrands GarageBrand[]` (FR-002)
+- [X] T002 [P] In `libs/domain/prisma/schema/garages.prisma` add `enum GarageBrandStance { works_on does_not_take }`, `model GarageBrand` (PK `(garageId, brandId)`, `stance`, `petrol`/`diesel`/`hybrid`/`electric` Boolean default true), `model GarageBrandJob` (PK `(garageId, brandId, jobTypeId)`, FK `(garageId, brandId)` → `GarageBrand` cascade, `jobTypeId` UUID with no relation), and `Garage.brandNote String?`, `Garage.refusalPhrase String?` (FR-013, FR-014, FR-015, FR-016)
+- [X] T003 Write `libs/domain/prisma/migrations/20261007090000_brand_catalogue/migration.sql` (new): the three tables, the enum, the two `garage` columns, `garage_brand_fuel_check` (`"stance" = 'works_on' OR NOT ("petrol" OR "diesel" OR "hybrid" OR "electric")`), `brand_note` CHECK (`char_length <= 140 AND btrim <> ''`) and `refusal_phrase` CHECK (`char_length <= 60 AND btrim <> ''`) (FR-013, FR-014, FR-015, FR-016; depends on T001, T002)
+- [X] T004 Apply the migration to the worktree database and regenerate the Prisma client into `libs/domain/src/generated/prisma` (`npx prisma migrate deploy`, `npx prisma generate` in `libs/domain`, through `scripts/heavy.sh`) (depends on T003)
 
 **Checkpoint**: schema in place; stories can start.
 
@@ -84,11 +84,11 @@ None. No new dependency, project or tool; `libs/domain`, `libs/contracts` and `a
 
 ### Tests (write first, must fail)
 
-- [ ] T018 [US3] `libs/domain/src/garages/garage-brands.service.integration.spec.ts` (new): `stanceFor` answers `works_on`, `does_not_take`, `unstated`; a new `works_on` row has four ticks true; a tick on a `does_not_take` row is refused by the database; `addJob` stores a job for `works_on` and refuses `brand_not_worked_on` (409) otherwise; `works_on` → `does_not_take` clears ticks and deletes the brand's jobs; same stance writes nothing; `brandNote` 140 and `refusalPhrase` 60 characters kept, 141 and 61 and blank refused; writes are audited (FR-013, FR-014, FR-015, FR-016, FR-017; SC-004)
+- [X] T018 [US3] `libs/domain/src/garages/garage-brands.service.integration.spec.ts` (new): `stanceFor` answers `works_on`, `does_not_take`, `unstated`; a new `works_on` row has four ticks true; a tick on a `does_not_take` row is refused by the database; `addJob` stores a job for `works_on` and refuses `brand_not_worked_on` (409) otherwise; `works_on` → `does_not_take` clears ticks and deletes the brand's jobs; same stance writes nothing; `brandNote` 140 and `refusalPhrase` 60 characters kept, 141 and 61 and blank refused; writes are audited (FR-013, FR-014, FR-015, FR-016, FR-017; SC-004)
 
 ### Implementation
 
-- [ ] T019 [US3] `libs/domain/src/garages/garage-brands.service.ts` (new): `stanceFor`, `setStance(tx, actor, garageId, brandId, stance)` with the transitions in data-model.md, `addJob(tx, actor, garageId, brandId, jobTypeId)` throwing `ConflictException({ code: 'brand_not_worked_on' })`, both audited (`garage_brand`, `garage_brand_job`); provide it in `libs/domain/src/garages/garages.module.ts` and export `GarageBrandsService` from `libs/domain/src/index.ts` (FR-013, FR-014, FR-015, FR-016, FR-017; depends on T004, T018)
+- [X] T019 [US3] `libs/domain/src/garages/garage-brands.service.ts` (new): `stanceFor`, `setStance(tx, actor, garageId, brandId, stance)` with the transitions in data-model.md, `addJob(tx, actor, garageId, brandId, jobTypeId)` throwing `ConflictException({ code: 'brand_not_worked_on' })`, both audited (`garage_brand`, `garage_brand_job`); provide it in `libs/domain/src/garages/garages.module.ts` and export `GarageBrandsService` from `libs/domain/src/index.ts` (FR-013, FR-014, FR-015, FR-016, FR-017; depends on T004, T018)
 
 **Checkpoint**: all three stories work independently.
 

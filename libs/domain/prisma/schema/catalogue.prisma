@@ -1,0 +1,18 @@
+// catalogue module models — the brand list MotorFix keeps; garages only point
+// at it.
+
+// Rows are never deleted: a brand missing from the data file is inactive.
+model Brand {
+  id           String        @id @default(uuid()) @db.Uuid
+  key          String        @unique
+  name         String        @unique
+  slug         String        @unique
+  popularity   Int?
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  garageBrands GarageBrand[]
+
+  @@index([active, popularity, name])
+  @@map("brand")
+}

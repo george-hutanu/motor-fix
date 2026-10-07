@@ -11,6 +11,7 @@ export { RemindersModule } from './cars/reminders.module';
 export { reminderDayMs } from './cars/reminders-config';
 export { EventsModule } from './events/events.module';
 export { OutboxRelayModule } from './events/outbox-relay.module';
+export { GarageBrandsService } from './garages/garage-brands.service';
 export { GaragesModule } from './garages/garages.module';
 export * from './health/health.module';
 export * from './logging';

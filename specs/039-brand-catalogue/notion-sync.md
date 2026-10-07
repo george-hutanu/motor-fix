@@ -7,3 +7,6 @@
 - 2026-10-07 · ready · Garage onboarding and verification · −ST-39, review: ST-245, ST-202
 - 2026-10-07 · pr · ST-39 · PR #193 https://github.com/george-hutanu/motor-fix/pull/193
 - 2026-10-07 · ready · Garage onboarding and verification · no change
+- 2026-10-07 · implement · ST-39 · Planning → Implementing
+- 2026-10-07 · implement · timeline · Planning → Implementing
+- 2026-10-07 · labels · PR #193 · in development
