@@ -18,9 +18,10 @@ and QA lap is where most of a story's cost went.
    Delta merge, `notion-sync.md`), files unfiled deferred bullets, runs
    `pr-body-check.ts`, publishes the body, marks the PR ready, runs Notion
    `qa` (story and PR label → QA), commits and pushes the `qa` line, and
-   writes the note below and posts it on the PR as a comment whose first
-   line is `<!-- speckit-handoff -->` (git ignores the note, and a cloud
-   session resumes on a fresh VM without it). On a stop, do its `fix` and run it again; on
+   writes the note below; in a cloud session it also posts it on the PR as
+   a comment whose first line is `<!-- speckit-handoff -->` (git ignores the
+   note, and a cloud session resumes on a fresh VM without it). Elsewhere
+   the worktree keeps the note and nothing is posted. On a stop, do its `fix` and run it again; on
    `left`, run those events through `speckit-notion-sync`, then its `then`.
    Its first check is `level.mjs check --ready`: a level 2 or 3 feature
    missing an owed artifact stops with the phases that write it. Run them,
@@ -34,8 +35,9 @@ and QA lap is where most of a story's cost went.
    run appeared) the note records no run and the tail dispatches one.
 4. Add that line, as printed, to `specs/<feature>/handoff.md` (step 2 wrote
    the rest; git ignores it; the tail deletes it), then post the note again
-   with `node .claude/scripts/lifecycle.mjs handoff --pr <n>` (the newest
-   marked comment is the one a fresh VM restores):
+   with `node .claude/scripts/lifecycle.mjs handoff --pr <n>` (a cloud
+   session only; elsewhere it posts nothing. The newest marked comment is
+   the one a fresh VM restores):
 
    ```markdown
    # Hand-off — <feature>
