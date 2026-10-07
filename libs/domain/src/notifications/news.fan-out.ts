@@ -31,25 +31,22 @@ export interface NewsRun extends Pick<SendNewsDto, 'text' | 'title'> {
   sentBy: Pick<Actor, 'accountId' | 'role'>;
 }
 
-// A run relayed this long ago whose month has not run is taken as lost.
-const STRANDED_MS = 5 * 60_000;
-
-// A claimed month whose run has not completed has its event relayed again,
-// so a job an emptied Redis lost is queued again from the outbox. While the
-// job is still in Redis (waiting, delayed or running) the relay's add of the
-// same job id changes nothing; a run that reaches a driver twice sends once,
-// as the pipeline keeps one message per event and person.
-export function requeueStrandedNews(
-  prisma: PrismaClient,
-  now = new Date(),
-): Promise<number> {
-  return prisma.$executeRaw`
+// A claimed month whose run has not completed five minutes after its event
+// was relayed has that event relayed again, so a job an emptied Redis lost is
+// queued again from the outbox. While the job is still in Redis (waiting,
+// delayed or running) the relay's add of the same job id changes nothing; a
+// run that reaches a driver twice sends once, as the pipeline keeps one
+// message per event and person. Only the claim's own event counts: the send
+// writes both in one transaction, so an older event is that of a month given
+// back and sent anew.
+const requeueStrandedNews = (prisma: PrismaClient): Promise<number> =>
+  prisma.$executeRaw`
     UPDATE outbox_event e SET relayed_at = NULL
     FROM news_send s
     WHERE e.kind = 'news.sent' AND e.subject_id = s.month
+      AND e.created_at >= s.created_at
       AND s.ran_at IS NULL
-      AND e.relayed_at < ${new Date(now.getTime() - STRANDED_MS)}`;
-}
+      AND e.relayed_at < now() - interval '5 minutes'`;
 
 // The send saves its run as a `news.sent` outbox event with the month's
 // claim; the worker's relay queues it, and queues it again while the month
