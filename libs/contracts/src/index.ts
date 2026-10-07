@@ -1,5 +1,6 @@
 export * from './audit-history.dto';
 export * from './auth.dto';
+export * from './brands.dto';
 export * from './consent';
 export * from './env';
 export * from './events';

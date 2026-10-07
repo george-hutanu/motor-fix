@@ -1,5 +1,6 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 
+import { GarageBrandsService } from './garage-brands.service';
 import { PublicGaragesService } from './public-garages';
 import { PublicGaragesController } from './public-garages.controller';
 import {
@@ -39,6 +40,7 @@ export class GaragesModule {
       imports: [notifications],
       module: GaragesModule,
       providers: [
+        GarageBrandsService,
         StaffInviteService,
         PublicGaragesService,
         VerificationService,
