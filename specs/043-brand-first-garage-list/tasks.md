@@ -37,7 +37,7 @@
 **Independent test**: SC-002 (paging), SC-003, SC-006 (cursor).
 
 - [X] T011 [US3] Extend `libs/domain/src/search/garage-search.service.integration.spec.ts` and `garage-search.api.integration.spec.ts` (red): 48 garages read in pages of 20 give the 30 takers at positions 1 to 30, no repeat or skip (FR-001, FR-006, SC-002); Alfa, Beta, Delta by name, equal names by id, no refuser before a taker (FR-007, SC-003); `nextCursor` is null on the last page; an undecodable cursor, another brand's, one naming no group or with a non-uuid id, and one over 200 characters answer 400 `invalid_cursor` or `validation_failed` (FR-009, SC-006)
-- [X] T012 [US3] In `libs/domain/src/search/garage-search.service.ts` add the keyset (`OR [{name gt}, {name, id gt}]`, `take: 21`, a page that exhausts group A filled from group B) and the base64url JSON cursor `{b,g,n,i}` codec with `invalid_cursor` on any mismatch (R3, R6)
+- [X] T012 [US3] In `libs/domain/src/search/garage-search.service.ts` add the keyset (`OR [{name gt}, {name, id gt}]`, `take: 21`, a page that exhausts group A filled from group B) and the base64url JSON cursor `{b,g,i}` codec (the boundary name read by id) with `invalid_cursor` on any mismatch (R3, R6)
 
 ## Phase 5: Polish
 

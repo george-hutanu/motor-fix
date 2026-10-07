@@ -86,7 +86,9 @@ Decoding refuses with 400 `invalid_cursor` ("cursor is not a page of this search
 - the text is not base64url-decodable JSON, or not an object;
 - `b !== brandId` (a cursor from another brand's search);
 - `g` is neither `works_on` nor `other`;
-- `i` is not a uuid string, or names no garage in the public list (one suspended or deleted since the last page).
+- `i` is not a uuid string, or names no garage at all.
+
+The boundary's name is read by id without the public scope, so a garage suspended since the last page still marks where the next page starts (it is never listed again); the read returns only the name and is exempt in `public-garages.scope.spec.ts`.
 
 A cursor whose garage still exists but changed group, or was renamed, is honoured as a position (the keyset is by value, not by row), which is the accepted drift of the spec's edge case.
 

@@ -229,6 +229,26 @@ describe('GarageSearchService.forBrand', () => {
     expect(items.map((item) => item.id)).toEqual([...ids].sort());
   });
 
+  it('goes on to the next page when the last garage listed was suspended meanwhile', async () => {
+    for (let n = 0; n < 22; n += 1) {
+      await garage(`Garage ${String(n).padStart(2, '0')}`, {
+        stance: 'works_on',
+      });
+    }
+    const first = await search.forBrand(dacia);
+    await prisma.garage.update({
+      data: { status: 'suspended' },
+      where: { id: first.items.at(-1)?.id },
+    });
+
+    const next = await search.forBrand(dacia, first.nextCursor ?? undefined);
+
+    expect(next.items.map((item) => item.name)).toEqual([
+      'Garage 20',
+      'Garage 21',
+    ]);
+  });
+
   describe('refuses a cursor that is not a page of this search', () => {
     let cursor: string;
 
@@ -248,6 +268,10 @@ describe('GarageSearchService.forBrand', () => {
       [
         'with an id that is not a uuid',
         () => tamper(cursor, { i: 'garage-1' }),
+      ],
+      [
+        'for a garage that does not exist',
+        () => tamper(cursor, { i: randomUUID() }),
       ],
     ])('%s', async (_, cursorOf) => {
       expect(await refusal(search.forBrand(dacia, cursorOf()))).toMatchObject({

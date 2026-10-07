@@ -19,8 +19,13 @@ const SCOPED = /\.\.\.publicGarages\(\)/;
 const STATUS_ONLY = /select:\s*\{\s*status:\s*true\s*,?\s*\}/;
 
 // Public handlers that read one garage for a person holding its secret, not
-// a listing: an invite names the garage that sent it, approved or not.
-const NOT_LISTINGS = new Set(['garages/staff-invite.service.ts#check']);
+// a listing: an invite names the garage that sent it, approved or not. The
+// brand-first list reads only the name of its last garage, by the id in the
+// cursor, to find where the next page starts; it never returns it.
+const NOT_LISTINGS = new Set([
+  'garages/staff-invite.service.ts#check',
+  'search/garage-search.service.ts#after',
+]);
 
 type Sources = Map<string, string>;
 

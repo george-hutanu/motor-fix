@@ -108,11 +108,12 @@ export class GarageSearchService {
     };
   }
 
-  // A garage gone from the public list since the last page ends the paging.
+  // The boundary's name only, by id: a garage suspended since the last page
+  // still marks where the next one starts, and is never listed again.
   private async after(cursor: Cursor): Promise<After> {
-    const last = await this.prisma.garage.findFirst({
+    const last = await this.prisma.garage.findUnique({
       select: { name: true },
-      where: { id: cursor.i, ...publicGarages() },
+      where: { id: cursor.i },
     });
     if (!last) throw invalidCursor();
     return { ...cursor, name: last.name };
