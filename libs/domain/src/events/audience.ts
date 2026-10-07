@@ -24,7 +24,8 @@ export type LiveSubject =
   // A change to the brands a garage takes: its staff, its public page and the
   // search of each brand whose stance changed.
   | { type: 'garage_brands'; garageId: string; brandIds: readonly string[] }
-  | { type: 'platform' };
+  // A rule only the admins act on stays off the system channel.
+  | { type: 'platform'; adminOnly?: boolean };
 
 const account = (id: string) => `account:${id}`;
 const garage = (id: string) => `garage:${id}`;
@@ -83,6 +84,6 @@ export function audienceOf(subject: LiveSubject): string[] {
           : []),
       ];
     case 'platform':
-      return ['admin', 'system'];
+      return subject.adminOnly ? ['admin'] : ['admin', 'system'];
   }
 }

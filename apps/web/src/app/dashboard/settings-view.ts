@@ -1,13 +1,28 @@
-import { Component } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 
 import { NotificationSettings } from './notification-settings';
+import { PlatformRules } from './platform-rules';
 import { PushPanel } from './push-panel';
+import { Session } from './session';
 
-// Setări of the garage and admin dashboards: this device's push panel, then
-// the person's staff notification choices.
+// Setări of the garage and admin dashboards: for an admin the platform rules
+// first, then this device's push panel and the person's staff notification
+// choices.
 @Component({
-  imports: [NotificationSettings, PushPanel],
+  imports: [NotificationSettings, PlatformRules, PushPanel],
   selector: 'mf-dashboard-settings-view',
-  template: `<mf-push-panel /><mf-notification-settings />`,
+  template: `
+    @if (admin()) {
+      <mf-platform-rules />
+    }
+    <mf-push-panel /><mf-notification-settings />
+  `,
 })
-export class SettingsView {}
+export class SettingsView {
+  private readonly session = inject(Session);
+
+  protected readonly admin = computed(
+    () =>
+      this.session.current()?.capabilities.includes('admin.settings') ?? false,
+  );
+}

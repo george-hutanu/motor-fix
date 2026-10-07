@@ -1,0 +1,16 @@
+// admin module models
+
+// One row per rule the whole platform follows. The value is JSON of the
+// default's type, so a rule with a number or a list needs no new column.
+model PlatformRule {
+  id                String    @id @default(uuid()) @db.Uuid
+  key               String    @unique
+  value             Json
+  defaultValue      Json      @map("default_value")
+  requiresTwoAdmins Boolean   @default(false) @map("requires_two_admins")
+  // No foreign key: the last change outlives the account, as the audit does.
+  updatedBy         String?   @map("updated_by") @db.Uuid
+  updatedAt         DateTime? @map("updated_at") @db.Timestamptz(3)
+
+  @@map("platform_rule")
+}

@@ -4,6 +4,7 @@ updated: 2026-10-07
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
+  - 258-platform-rules-switches
 ---
 
 # Capability: Admin dashboard
@@ -95,6 +96,54 @@ _From 161-headline-numbers._
 ### 161-FR-014 — Tests MUST cover, against seeded data on a real database: each figure's count, a suspended garage excluded from listed and from the month's approvals, the month boundary in Europe/Bucharest, the 30-day edge for an active driver, an account without the `driver` role excluded, a `deleted` account excluded, the snapshot's one-row-per-day rule, the month-start delta with and without a snapshot row, and 404 for each non-admin role; an end-to-end check opens "Panou" as the seeded admin and reads the six tiles, their lines and the "în curând" tiles, on a phone and a desktop, in both languages.
 
 _From 161-headline-numbers._
+
+### 258-FR-001 — The system MUST keep the platform rules on the server, one row per rule key, the same for every admin, each with its current value, its default value, whether changing it needs two admins, who changed it last and when.
+
+_From 258-platform-rules-switches._
+
+### 258-FR-002 — A fresh database MUST hold the rules for the environment the server runs in: `reviews_only_after_confirmed_job` (true, needs two admins) and `maintenance_mode` (false) everywhere, created by the schema migration; `skip_manual_approval` (false) and `skip_rar_check` (false: the checks are required) only when the environment is not `production`, created by the seed. Running the seed again MUST NOT overwrite a value an admin changed; in production it neither creates nor deletes the test-only rules.
+
+_From 258-platform-rules-switches._
+
+### 258-FR-003 — An admin MUST be able to list the rules: key, value, default, whether it needs two admins, when and by whom it was last changed, and, from the server, whether the environment is production. The two test-only keys MUST never appear in production, whatever the database holds.
+
+_From 258-platform-rules-switches._
+
+### 258-FR-004 — An admin MUST be able to change one rule by key, sending the new value and the value they saw. The checks run in this order: 404 when the key is unknown or test-only in production; 400 when the value is not of the rule's shape; 409 `stale_value` when the value they saw is no longer the current one; 200 with the unchanged rule and nothing written when the new value equals the current one; 409 `two_admins_required` when the rule needs two admins and the new value is false.
+
+_From 258-platform-rules-switches._
+
+### 258-FR-005 — A change MUST write the new value, its audit entry (actor, role `admin`, rule key, old value, new value) and the `platform_rule.changed` event (rule key, old, new) in one transaction, so that none of the three exists without the others. A change to the current value MUST write nothing.
+
+_From 258-platform-rules-switches._
+
+### 258-FR-007 — The rules list and the rule change MUST be admin-only: 404 for every other role, 401 without a session, as every `admin/*` route; the existing admin-route guard test MUST cover both routes with its guard loop unchanged; only its list of known routes gains the two routes.
+
+_From 258-platform-rules-switches._
+
+### 258-FR-008 — The admin's Setări view MUST open with the heading "Setări platformă" / "Platform settings" and the line "Regulile care se aplică tuturor service-urilor" / "The rules that apply to every garage", followed by one line per rule with its name, one sentence saying what it means, and its control, in the admin's language; the existing push panel and notification choices MUST follow, unchanged.
+
+_From 258-platform-rules-switches._
+
+### 258-FR-009 — The rule lines MUST be, in this order: "Autorizație RAR obligatorie" / "RAR licence required", "Recenzii doar după o lucrare confirmată" / "Reviews only after a confirmed job", "Aprobare manuală pentru service-uri noi" / "Manual approval for new garages", "Mod mentenanță" / "Maintenance mode". In production the first and third MUST be locked lines (no control) marked "Mereu active în producție" / "Always on in production"; elsewhere they MUST be switches marked "Doar în testare" / "Test only", shown on when their `skip_*` value is false. The view holds these four lines itself; the list supplies their values and whether the environment is production, and list keys it does not know are ignored.
+
+_From 258-platform-rules-switches._
+
+### 258-FR-010 — A switch MUST move at once when the admin changes it and send the change with the value the admin saw; on any refusal or failure it MUST go back and show an error line (for 409 `two_admins_required`: that a second admin is needed; for a stale 409: re-read the rules and show the saved state).
+
+_From 258-platform-rules-switches._
+
+### 258-FR-011 — When the rules cannot be read, the block MUST show an error line with a way to try again; the rest of the view still shows.
+
+_From 258-platform-rules-switches._
+
+### 258-FR-012 — The view MUST read at 320 px, 390 px, tablet and desktop, in light and dark, Romanian and English, with no sideways scroll.
+
+_From 258-platform-rules-switches._
+
+### 258-FR-013 — Each switch MUST be operable by keyboard and carry its rule's name as its accessible name; while its change is in flight the switch MUST ignore a second change of the same rule. While the rules are first being read, the block MUST show its heading and line with the four rule lines as placeholders, and no control is operable.
+
+_From 258-platform-rules-switches._
 
 ## Retired
 

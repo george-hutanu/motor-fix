@@ -19,6 +19,7 @@ export * from './notification-preferences.dto';
 export * from './notifications.dto';
 export * from './password-reset.dto';
 export * from './phone';
+export * from './platform-rules.dto';
 export * from './problem';
 export * from './push-subscriptions.dto';
 export * from './staff-invite.dto';

@@ -12,6 +12,12 @@ import { StrictHttpResponse } from '../strict-http-response';
 import { adminOverviewControllerOverview } from '../fn/admin/admin-overview-controller-overview';
 import { AdminOverviewControllerOverview$Params } from '../fn/admin/admin-overview-controller-overview';
 import { AdminOverviewDto } from '../models/admin-overview-dto';
+import { PlatformRuleDto } from '../models/platform-rule-dto';
+import { platformRulesControllerChange } from '../fn/admin/platform-rules-controller-change';
+import { PlatformRulesControllerChange$Params } from '../fn/admin/platform-rules-controller-change';
+import { platformRulesControllerList } from '../fn/admin/platform-rules-controller-list';
+import { PlatformRulesControllerList$Params } from '../fn/admin/platform-rules-controller-list';
+import { PlatformRulesDto } from '../models/platform-rules-dto';
 import { VerificationCheckRecordedDto } from '../models/verification-check-recorded-dto';
 import { verificationChecksControllerRecord } from '../fn/admin/verification-checks-controller-record';
 import { VerificationChecksControllerRecord$Params } from '../fn/admin/verification-checks-controller-record';
@@ -70,6 +76,56 @@ export class AdminService extends BaseService {
   verificationChecksControllerRecord(params: VerificationChecksControllerRecord$Params, context?: HttpContext): Promise<VerificationCheckRecordedDto> {
     const resp = this.verificationChecksControllerRecord$Response(params, context);
     return resp.then((r: StrictHttpResponse<VerificationCheckRecordedDto>): VerificationCheckRecordedDto => r.body);
+  }
+
+  /** Path part for operation `platformRulesControllerList()` */
+  static readonly PlatformRulesControllerListPath = '/api/v1/admin/platform-rules';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `platformRulesControllerList()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  platformRulesControllerList$Response(params?: PlatformRulesControllerList$Params, context?: HttpContext): Promise<StrictHttpResponse<PlatformRulesDto>> {
+    const obs = platformRulesControllerList(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `platformRulesControllerList$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  platformRulesControllerList(params?: PlatformRulesControllerList$Params, context?: HttpContext): Promise<PlatformRulesDto> {
+    const resp = this.platformRulesControllerList$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PlatformRulesDto>): PlatformRulesDto => r.body);
+  }
+
+  /** Path part for operation `platformRulesControllerChange()` */
+  static readonly PlatformRulesControllerChangePath = '/api/v1/admin/platform-rules/{key}';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `platformRulesControllerChange()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  platformRulesControllerChange$Response(params: PlatformRulesControllerChange$Params, context?: HttpContext): Promise<StrictHttpResponse<PlatformRuleDto>> {
+    const obs = platformRulesControllerChange(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `platformRulesControllerChange$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  platformRulesControllerChange(params: PlatformRulesControllerChange$Params, context?: HttpContext): Promise<PlatformRuleDto> {
+    const resp = this.platformRulesControllerChange$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PlatformRuleDto>): PlatformRuleDto => r.body);
   }
 
 }
