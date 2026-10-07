@@ -45,7 +45,7 @@ import { Public } from '../auth/actor.guard';
 import { JsonOnly } from '../auth/auth.controller';
 
 const TOKEN = 'x-listing-token';
-const tokenHeader = ApiHeader({ name: 'X-Listing-Token', required: true });
+const tokenHeader = ApiHeader({ name: TOKEN, required: true });
 
 // No browser or proxy keeps a draft or its key.
 @Injectable()

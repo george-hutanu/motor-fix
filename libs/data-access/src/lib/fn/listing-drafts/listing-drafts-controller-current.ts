@@ -11,14 +11,12 @@ import { ListingDraftDto } from '../../models/listing-draft-dto';
 
 export interface ListingDraftsControllerCurrent$Params {
   'x-listing-token': string;
-  'X-Listing-Token': string;
 }
 
 export function listingDraftsControllerCurrent(http: HttpClient, rootUrl: string, params: ListingDraftsControllerCurrent$Params, context?: HttpContext): Observable<StrictHttpResponse<ListingDraftDto>> {
   const rb = new RequestBuilder(rootUrl, listingDraftsControllerCurrent.PATH, 'get');
   if (params) {
     rb.header('x-listing-token', params['x-listing-token'], {});
-    rb.header('X-Listing-Token', params['X-Listing-Token'], {});
   }
 
   return http.request(

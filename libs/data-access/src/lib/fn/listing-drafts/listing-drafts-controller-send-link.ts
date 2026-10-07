@@ -12,7 +12,6 @@ import { ContinueLinkSentDto } from '../../models/continue-link-sent-dto';
 export interface ListingDraftsControllerSendLink$Params {
   id: string;
   'x-listing-token': string;
-  'X-Listing-Token': string;
 }
 
 export function listingDraftsControllerSendLink(http: HttpClient, rootUrl: string, params: ListingDraftsControllerSendLink$Params, context?: HttpContext): Observable<StrictHttpResponse<ContinueLinkSentDto>> {
@@ -20,7 +19,6 @@ export function listingDraftsControllerSendLink(http: HttpClient, rootUrl: strin
   if (params) {
     rb.path('id', params.id, {});
     rb.header('x-listing-token', params['x-listing-token'], {});
-    rb.header('X-Listing-Token', params['X-Listing-Token'], {});
   }
 
   return http.request(

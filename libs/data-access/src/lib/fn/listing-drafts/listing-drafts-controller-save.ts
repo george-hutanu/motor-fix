@@ -13,7 +13,6 @@ import { SaveListingDraftDto } from '../../models/save-listing-draft-dto';
 export interface ListingDraftsControllerSave$Params {
   id: string;
   'x-listing-token': string;
-  'X-Listing-Token': string;
       body: SaveListingDraftDto
 }
 
@@ -22,7 +21,6 @@ export function listingDraftsControllerSave(http: HttpClient, rootUrl: string, p
   if (params) {
     rb.path('id', params.id, {});
     rb.header('x-listing-token', params['x-listing-token'], {});
-    rb.header('X-Listing-Token', params['X-Listing-Token'], {});
     rb.body(params.body, 'application/json');
   }
 

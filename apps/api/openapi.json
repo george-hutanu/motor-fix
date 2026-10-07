@@ -1540,14 +1540,6 @@
             "schema": {
               "type": "string"
             }
-          },
-          {
-            "name": "X-Listing-Token",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -1586,14 +1578,6 @@
             "name": "x-listing-token",
             "required": true,
             "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "X-Listing-Token",
-            "in": "header",
-            "required": true,
             "schema": {
               "type": "string"
             }
@@ -1651,14 +1635,6 @@
             "name": "x-listing-token",
             "required": true,
             "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "X-Listing-Token",
-            "in": "header",
-            "required": true,
             "schema": {
               "type": "string"
             }
