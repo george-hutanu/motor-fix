@@ -1,3 +1,4 @@
+import { isPlatformServer } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -5,6 +6,7 @@ import {
   DestroyRef,
   inject,
   model,
+  PLATFORM_ID,
   signal,
 } from '@angular/core';
 import { type BrandDto, BrandsService } from '@motor-fix/data-access';
@@ -142,6 +144,8 @@ export class BrandsStep {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.timer));
+    // The chips come with the client: a server render would drop the answer.
+    if (isPlatformServer(inject(PLATFORM_ID))) return;
     this.catalogue.brandsControllerSearch({}).then(
       (page) => this.popular.set(page.items.slice(0, POPULAR)),
       () => this.notice.set('public.listing.brands.searchDown'),
@@ -160,11 +164,11 @@ export class BrandsStep {
     this.set(brand, next(this.stanceOf(brand.id)));
   }
 
-  // A brand found by search is taken; one already marked keeps its stance.
+  // A brand found by search is taken, as a new chip or in place.
   protected pick(brand: Brand) {
     if (!this.chips().some((c) => c.id === brand.id))
       this.added.update((added) => [...added, brand]);
-    if (!this.stanceOf(brand.id)) this.set(brand, 'works_on');
+    this.set(brand, 'works_on');
     this.clear();
   }
 
@@ -181,7 +185,8 @@ export class BrandsStep {
 
   protected write(text: Text, field: HTMLInputElement) {
     const max = this.limits[text];
-    if (letters(field.value) > max) field.value = cut(field.value, max);
+    const trimmed = field.value.trim();
+    if (letters(trimmed) > max) field.value = cut(trimmed, max);
     const { [text]: _, ...rest } = this.value();
     const cleaned = clean(field.value, max);
     this.value.set(cleaned ? { ...rest, [text]: cleaned } : rest);
