@@ -242,6 +242,9 @@ export class GarageBrandsService {
     stance: GarageBrandStance,
   ) {
     assertGarage(actor, garageId);
+    // One stance write per garage at a time: two first writes would both miss
+    // the row, and the second create would fail on the primary key.
+    await tx.$executeRaw`SELECT 1 FROM garage WHERE id = ${garageId}::uuid FOR UPDATE`;
     const where = { garageId_brandId: { brandId, garageId } };
     const row = await tx.garageBrand.findUnique({ where });
     if (row?.stance === stance) return;
