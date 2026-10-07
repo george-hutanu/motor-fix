@@ -35,3 +35,9 @@ Start commit: cab78f49 (origin/main), branch 560-requeue-stranded-notifications,
 
 ## 8. Analyze
 - artifact-lint --check: 10 fr-untasked + 2 delta errors fixed (FR ids in tasks, Adds listed, Modifies none with note). Re-run clean. No CRITICAL left.
+
+## 9. Tests
+- requeue.integration.spec.ts (13 cases), send-claim adversary +1 (claim kept after unrecorded send), processor spec +1 (requeue job). Red: 3 suites fail to compile (requeueStranded/scheduleRequeue missing), 0 tests pass.
+
+## 10. Implement
+- Service: requeueStranded() + scheduleRequeue(); processor: requeue job, claim kept after unrecorded send; module: scheduler upsert in WORKER factory (failure logged). Notion: Implementing. domain notifications/ suites: 120 passed, 3709 tests.

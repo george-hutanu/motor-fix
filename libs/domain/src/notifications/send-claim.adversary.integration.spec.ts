@@ -545,6 +545,29 @@ describe('a database error after Brevo accepted an e-mail', () => {
     expect(lines).toContainEqual(expect.stringContaining('@smtp-relay'));
   });
 
+  it('keeps the claim when no write succeeds, so the sweep never sends it again', async () => {
+    const { row: queued } = await queuedEmail();
+    const failing = failWritesAfterSend(10);
+    const logged = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    try {
+      await expect(sendJob(queued.id)).resolves.toBeUndefined();
+    } finally {
+      failing();
+      logged.mockRestore();
+    }
+    expect(await row(queued.id)).toMatchObject({
+      claimedAt: new Date(DAY),
+      status: 'queued',
+    });
+    await queue.obliterate({ force: true });
+    service.now = at('2026-10-05T12:00:00Z');
+    await expect(service.requeueStranded()).resolves.toBe(0);
+    expect(await queue.getJob(`send-${queued.id}`)).toBeUndefined();
+    expect(mock.emails()).toHaveLength(1);
+  });
+
   it('tries the write 3 times in all, back to back', async () => {
     const { row: queued } = await queuedEmail();
     const tries: number[] = [];

@@ -46,6 +46,9 @@ const CLAIM_MS = retryDelay(0);
 @Injectable()
 export class NotificationsProcessor {
   private readonly logger = new Logger('Notifications');
+  // Rows the provider took whose send could not be recorded: their claim is
+  // kept, so the sweep never hands them to the queue again.
+  private readonly unrecorded = new Set<string>();
   now = () => new Date();
 
   constructor(
@@ -92,6 +95,8 @@ export class NotificationsProcessor {
     }
     if (job.name === 'send' && job.data.id)
       return this.send(job.data.id, job.attemptsMade);
+    if (job.name === 'requeue')
+      return this.service.requeueStranded().then(() => undefined);
     throw new Error(`unknown notifications job ${job.name}`);
   }
 
@@ -129,17 +134,19 @@ export class NotificationsProcessor {
       else if (row.channel === 'push') await this.sendPush(row, attemptsMade);
       else await this.sendPhone(row, attemptsMade);
     } finally {
-      // A failed release must not retry a message that went: the claim lapses.
-      await this.prisma.notification
-        .updateMany({
-          data: { claimedAt: null },
-          where: { claimedAt: at, id },
-        })
-        .catch((error) =>
-          this.logger.error(
-            `notification ${id} claim not released: ${String(error)}`,
-          ),
-        );
+      // A send that went unrecorded keeps its claim. A failed release must
+      // not retry a message that went: the claim lapses.
+      if (!this.unrecorded.delete(id))
+        await this.prisma.notification
+          .updateMany({
+            data: { claimedAt: null },
+            where: { claimedAt: at, id },
+          })
+          .catch((error) =>
+            this.logger.error(
+              `notification ${id} claim not released: ${String(error)}`,
+            ),
+          );
     }
   }
 
@@ -516,6 +523,9 @@ export class NotificationsProcessor {
         return;
       } catch (error) {
         if (attempt < SENT_WRITES) continue;
+        ids.forEach((id) => {
+          this.unrecorded.add(id);
+        });
         this.logger.error(
           `notification ${ids.join(', ')} sent as ${messageId ?? 'push'} but not recorded: ${String(error)}`,
         );
