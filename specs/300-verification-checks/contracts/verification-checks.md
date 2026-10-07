@@ -42,7 +42,7 @@ Response, `VerificationCheckRecordedDto`:
 
 ## Use case
 
-`VerificationChecksService.record(tx, actor, fileId, kind, body): Promise<VerificationCheckRecordedDto>` (`libs/domain/src/garages/verification-checks.service.ts`), called by the controller inside `prisma.$transaction`, and by the three form stories' server code. Order: admin check → file read (404) → status check (409) → kind check (422) → body rules (400) → activities codes against `rar_activity` (400) → `update` the check (`result`, `detail`, `recordedBy`, `recordedAt`) → garage `update` for `activities` with a list → one `AuditPort.record` → one `EventPort.record` → read the 8 checks and build the summary.
+`VerificationChecksService.record(tx, actor, fileId, kind, body): Promise<VerificationCheckRecordedDto>` (`libs/domain/src/garages/verification-checks.service.ts`), called by the controller inside `prisma.$transaction`, and by the three form stories' server code. Order: admin check → file read (404) → status check (409) → kind check (422) → body rules (400) → activities codes against `rar_activity` (400) → read the check `FOR UPDATE` (so the audit's old values are the last committed save's) → `update` the check (`result`, `detail`, `recordedBy`, `recordedAt`) → garage `update` for `activities` with a list → one `AuditPort.record` → one `EventPort.record` → read the 8 checks and build the summary.
 
 `VerificationService.submit()` / `resend()`: unchanged signatures; after the file row, `createMany` of the 8 `not_run` rows with `skipDuplicates`, before the event.
 
