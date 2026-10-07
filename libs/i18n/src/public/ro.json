@@ -251,5 +251,13 @@
     "stopped": "Nu vei mai primi noutăți MotorFix",
     "stoppedLine": "Mesajele despre mașinile și lucrările tale vin în continuare.",
     "stopping": "Oprim noutățile…"
+  },
+  "verdict": {
+    "loading": "Se încarcă…",
+    "none": "nimic ales încă",
+    "refused": "Nu primește {brand}",
+    "refusedList": "Nu primește: ",
+    "worksOn": "Lucrează pe {brand}",
+    "worksOnList": "Lucrează pe: "
   }
 }

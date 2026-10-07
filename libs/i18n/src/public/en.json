@@ -247,5 +247,13 @@
     "stopped": "You will no longer get MotorFix news",
     "stoppedLine": "Messages about your cars and jobs still come.",
     "stopping": "Stopping the news…"
+  },
+  "verdict": {
+    "loading": "Loading…",
+    "none": "nothing picked yet",
+    "refused": "Does not take {brand}",
+    "refusedList": "Does not take: ",
+    "worksOn": "Works on {brand}",
+    "worksOnList": "Works on: "
   }
 }
