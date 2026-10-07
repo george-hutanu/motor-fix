@@ -16,3 +16,11 @@
 - plan (fable): design check ran (mock unreadable, [UNAVAILABLE] logged in design.md, boards from Notion text); research R1–R16 with the deferred `updated_at` answer (owner saves only, set explicitly, no @updatedAt); decisions taken: token table + hash lookup, Notification.accountId nullable + listingDraftId with link only in the job, LISTING_REMINDER made single, sweep as a DailyTask on the existing 09:00 job, JSON body limit raised for 256 KB, EMAIL_PATTERN lifted from auth.dto.ts; plan.md, data-model.md, contracts/{listing-drafts,page}.md, quickstart.md written; after_plan optional hooks skipped (commit done by the phase itself).
 - checklist (sonnet): checklists/requirements-quality.md, 26 items, 26 checked, 0 open; 2 gaps fixed in spec.md as FR-021 (create throttle against mailing third parties, no-store and no-referrer for token leakage), Spec Delta and FR-020 updated; requirements.md unchanged.
 - tasks (sonnet): tasks.md 37 tasks (US1 5, US2 12, US3 6, US4 4, setup/foundation/polish 10), tests-first, FR-001..FR-021 mapped; plan.md and contracts/ updated for FR-021 (Redis per-IP counter 10/h, no-store, Referrer-Policy in apps/web/src/server/search.ts); artifact-lint: 4 spec.md Spec Delta errors (108-FR-003/012 Modifies malformed) left for analyze.
+
+## Phase 8 — Analyze (inline, opus)
+
+- artifact-lint: 0 errors, 0 warnings (Spec Delta repaired first: Modifies `108-FR-012 → FR-018` only).
+- HIGH fixed: FR-021 said "the API's existing throttle"; no throttle exists in apps/libs, plan uses a new Redis counter → spec reworded.
+- MEDIUM fixed: FR-015/SC-004/T033 "draft without an e-mail" contradicted `email not null` (data-model) → removed.
+- MEDIUM fixed: FR-020's reload of the first context missing from T026; FR-018's no audit/outbox missing from T017 → added.
+- Coverage 21/21 FRs, 37 tasks, 0 CRITICAL. One round; re-run clean.
