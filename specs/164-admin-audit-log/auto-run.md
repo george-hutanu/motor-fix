@@ -68,3 +68,6 @@ Constitution v1.8.2 read through its card; no principle blocks the story.
 
 ## Phase 7 — Tasks
 - model sonnet. tasks.md: 11 tasks (US1 7, US2 2, US3 1, polish 1); red specs first (T001-T005), then code (T006-T009). Level check: level 2, unchanged (fr-count tripped, 7 FRs).
+
+## Phase 8 — Analyze
+- inline (opus). artifact-lint: 6 ERROR fr-untasked → tasks now cite FRs (FR-005 → T011 runs ST-207/audit specs unchanged; FR-006 → T003). T008 moved after the recipient check so a 400 writes no entry (notifications.service.ts:166-178). Re-run: 0 errors, 3 delta-unassigned warnings (FR-005..007 restate existing capabilities, as the Spec Delta states). No CRITICAL left.
