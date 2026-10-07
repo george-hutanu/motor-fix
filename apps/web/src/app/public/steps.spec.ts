@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 
-import { currentStep, STEPS } from './steps';
+import { currentStep, keepsTapped, STEPS } from './steps';
 
 describe('the six steps', () => {
   it('are numbered 1 to 6, the mechanics optional and the verification required', () => {
@@ -70,5 +70,24 @@ describe('the current step', () => {
 
   it('reads headings that moved above the line as reached', () => {
     expect(currentStep([-900, -300, 40, 640, 1240, 1840], 64, false)).toBe(3);
+  });
+});
+
+describe('a tapped step', () => {
+  const bottom = 720;
+
+  it('stays current while its heading is on screen below the line, as the short sections at the end of the page leave it', () => {
+    expect(keepsTapped(2, 3, 170, bottom)).toBe(true);
+    expect(keepsTapped(1, 3, 719, bottom)).toBe(true);
+  });
+
+  it('gives way once its heading has left the screen below', () => {
+    expect(keepsTapped(2, 3, 720, bottom)).toBe(false);
+    expect(keepsTapped(2, 3, 900, bottom)).toBe(false);
+  });
+
+  it('gives way to the scroll once the scroll reaches it or a later step', () => {
+    expect(keepsTapped(3, 3, -10, bottom)).toBe(false);
+    expect(keepsTapped(6, 3, 170, bottom)).toBe(false);
   });
 });

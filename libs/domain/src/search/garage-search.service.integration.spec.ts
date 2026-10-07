@@ -129,7 +129,106 @@ describe('GarageSearchService.forBrand', () => {
     const page = await search.forBrand(dacia);
 
     expect(page.items).toEqual([
-      { id, name: 'Alfa Service', slug, stance: 'works_on' },
+      {
+        brandNote: null,
+        doesNotTake: [],
+        id,
+        name: 'Alfa Service',
+        refusalPhrase: null,
+        slug,
+        stance: 'works_on',
+        worksOn: [{ id: dacia, name: 'Dacia', slug: 'dacia' }],
+      },
+    ]);
+    expect(Object.keys(page.items[0]).sort()).toEqual([
+      'brandNote',
+      'doesNotTake',
+      'id',
+      'name',
+      'refusalPhrase',
+      'slug',
+      'stance',
+      'worksOn',
+    ]);
+  });
+
+  it("carries each garage's two brand lists, its note and its phrase", async () => {
+    const bmw = (
+      await prisma.brand.create({
+        data: { key: 'bmw', name: 'BMW', popularity: 1, slug: 'bmw' },
+      })
+    ).id;
+    await prisma.brand.update({
+      data: { popularity: 2 },
+      where: { id: dacia },
+    });
+    const first = await garage('Alfa Service', { stance: 'works_on' });
+    await prisma.garageBrand.create({
+      data: { brandId: bmw, garageId: first, stance: 'works_on' },
+    });
+    await prisma.garageBrand.create({
+      data: {
+        brandId: tesla,
+        diesel: false,
+        electric: false,
+        garageId: first,
+        hybrid: false,
+        petrol: false,
+        stance: 'does_not_take',
+      },
+    });
+    await prisma.garage.update({
+      data: {
+        brandNote: 'Specializați pe cutii automate.',
+        refusalPhrase: 'Nu lucrăm pe electrice',
+      },
+      where: { id: first },
+    });
+    await garage('Beta Auto', { stance: 'does_not_take' });
+    await garage('Delta Motors');
+    await garage('Aaron Suspended', {
+      stance: 'works_on',
+      status: 'suspended',
+    });
+
+    const page = await search.forBrand(dacia);
+
+    expect(
+      page.items.map(
+        ({ brandNote, doesNotTake, name, refusalPhrase, stance, worksOn }) => ({
+          brandNote,
+          doesNotTake: doesNotTake.map((brand) => brand.name),
+          name,
+          refusalPhrase,
+          stance,
+          worksOn: worksOn.map((brand) => brand.name),
+        }),
+      ),
+    ).toEqual([
+      {
+        brandNote: 'Specializați pe cutii automate.',
+        doesNotTake: ['Tesla'],
+        name: 'Alfa Service',
+        refusalPhrase: 'Nu lucrăm pe electrice',
+        stance: 'works_on',
+        worksOn: ['BMW', 'Dacia'],
+      },
+      {
+        brandNote: null,
+        doesNotTake: ['Dacia'],
+        name: 'Beta Auto',
+        refusalPhrase: null,
+        stance: 'does_not_take',
+        worksOn: [],
+      },
+      {
+        brandNote: null,
+        doesNotTake: [],
+        name: 'Delta Motors',
+        refusalPhrase: null,
+        stance: 'unstated',
+        worksOn: [],
+      },
     ]);
   });
 
