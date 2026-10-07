@@ -5,6 +5,7 @@ features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
   - 258-platform-rules-switches
+  - 162-growth-12-months
 ---
 
 # Capability: Admin dashboard
@@ -144,6 +145,54 @@ _From 258-platform-rules-switches._
 ### 258-FR-013 — Each switch MUST be operable by keyboard and carry its rule's name as its accessible name; while its change is in flight the switch MUST ignore a second change of the same rule. While the rules are first being read, the block MUST show its heading and line with the four rule lines as placeholders, and no control is operable.
 
 _From 258-platform-rules-switches._
+
+### 162-FR-001 — An admin MUST be able to read the platform's growth (`GET /api/v1/admin/growth`): twelve entries, one per Europe/Bucharest calendar month ending with the current month, oldest first, each with its month (`"YYYY-MM"`) and, when known, its active drivers and its listed garages as optional fields; a month with no figure omits the field, never 0. Nothing in the answer is personal data; every value is a count. The DTO lives in the contracts library and the generated client is regenerated.
+
+_From 162-growth-12-months._
+
+### 162-FR-002 — A past month's figures MUST be the daily snapshot's closing values for that month: the row dated the first day of the following month, or, when that row does not exist, the row dated the month's last day; with neither, the month has no value. The current month's figures MUST be computed live at the read, with the same definitions as the overview's `activeDrivers` and `garagesListed` (161-FR-001). The read reconstructs nothing before the first snapshot and writes nothing.
+
+_From 162-growth-12-months._
+
+### 162-FR-003 — The growth read MUST follow the `admin/*` access policy (161-FR-003): an admin reads it, any other role answers 404 `not_found`, a missing token 401 `sign_in_required`, a suspended account 403 `account_suspended`; the route joins the admin-route guard test's list of known routes. A failure inside the read answers the API's standard error body (no partial answer, no figures), which the panel treats as a failed read (FR-008).
+
+_From 162-growth-12-months._
+
+### 162-FR-004 — "Panou" of the admin dashboard MUST show, under the six tiles, one panel titled "Creștere, ultimele 12 luni" / "Growth, last 12 months" holding two line charts in this order: "Șoferi activi" / "Active drivers" and "Service‑uri listate" / "Garages listed", drawn in the shared Cockpit chart style (cockpit-charts) with the count unit. The panel is a labelled section whose heading is that title, and each chart carries its own title as its accessible name beside the shared chart's summary and table.
+
+_From 162-growth-12-months._
+
+### 162-FR-005 — Above each chart the panel MUST write the chart's latest value (always the current month's live count), in the language's plain-number format ("12.480" / "12,480") and the Cockpit digits face the tiles use; under each chart it MUST write the first and the last month of the twelve, as the language's short month and year ("nov. 2025" – "oct. 2026" / "Nov 2025" – "Oct 2026").
+
+_From 162-growth-12-months._
+
+### 162-FR-006 — Each point's label MUST be the language's full month name and year ("martie 2026" / "March 2026"), so the shared chart's tooltip, summary and table name the month and its grouped value ("martie 2026" and "9.870"; "March 2026" and "9,870"); the labels re-write when the language changes, without a reload.
+
+_From 162-growth-12-months._
+
+### 162-FR-007 — A month without a value MUST show no point: the line starts at the first month with data, breaks at a gap between two months with data rather than bridging it, and does not pass through zero; the chart's table writes the shared dash for that month; the twelve months stay on the axis so the period under the chart is still twelve months.
+
+_From 162-growth-12-months._
+
+### 162-FR-008 — While the growth read is on its way the charts MUST show the shared chart skeleton; when the read fails they MUST show the shared retry button, and pressing it MUST read again; the tiles and the rest of "Panou" are not affected by the panel's loading or failure. When no past month has a snapshot value (only the live current month), each chart MUST show "Încă nu sunt date" / "No data yet", with the latest value above it still written.
+
+_From 162-growth-12-months._
+
+### 162-FR-009 — The panel MUST read the growth once when "Panou" opens and again on retry; it adds no event, no polling and no cache. One read feeds both charts, so a failure shows the retry button on both and pressing either one re-reads once and redraws both.
+
+_From 162-growth-12-months._
+
+### 162-FR-010 — Every text of the panel MUST exist in Romanian and English in the shared i18n files, with U+2011 in Romanian hyphenated words ("Service‑uri"); the latest value and the month labels MUST be 12 px or larger on a phone.
+
+_From 162-growth-12-months._
+
+### 162-FR-011 — Below 768 px the two charts MUST stack one under the other; from 768 px they MUST sit side by side; at 320 px the page MUST NOT scroll sideways, and each chart MUST fit its panel with the shared chart's label skipping.
+
+_From 162-growth-12-months._
+
+### 162-FR-012 — Tests MUST cover, against seeded snapshot rows on a real database: the month-end selection (the following month's first-day row, the last-day fallback, neither); the live current month; months before the first snapshot empty; a garage approved mid-range and suspended later counted only while listed (the snapshot write run at simulated month ends, the garage's status changed between runs); the Europe/Bucharest month boundary; and 404 for each non-admin role. An end-to-end check answers the growth read with twelve months of figures (stubbed in the browser, since the end-to-end suite also runs against a deployed address and writes no database rows; the real-database path is the integration tests above), opens "Panou" as the seeded admin and reads the first and last labels, the latest values (the seeded live counts) and one tooltip, on a phone and a desktop, in both languages.
+
+_From 162-growth-12-months._
 
 ## Retired
 

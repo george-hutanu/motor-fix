@@ -17,6 +17,7 @@ import { openApiDocument } from './bootstrap';
 const api = apiBoot();
 
 const KNOWN = [
+  'GET /api/v1/admin/growth',
   'GET /api/v1/admin/overview',
   'GET /api/v1/admin/platform-rules',
   'PATCH /api/v1/admin/platform-rules/{key}',
@@ -166,5 +167,32 @@ describe('the admin overview', () => {
     } finally {
       on.mockRestore();
     }
+  });
+});
+
+describe('the admin growth', () => {
+  it('answers an admin twelve months, each a month and its counts only', async () => {
+    const res = await call(
+      'get',
+      '/api/v1/admin/growth',
+      bearer(await account('admin'), 'admin'),
+    );
+
+    expect(res.status).toBe(200);
+    expect(Object.keys(res.body)).toEqual(['months']);
+    expect(res.body.months).toHaveLength(12);
+    for (const entry of res.body.months) {
+      const { month, ...counts } = entry;
+      expect(month).toMatch(/^\d{4}-\d{2}$/);
+      for (const [field, value] of Object.entries(counts)) {
+        expect(['activeDrivers', 'garagesListed']).toContain(field);
+        expect(Number.isInteger(value) && (value as number) >= 0).toBe(true);
+      }
+    }
+    expect(Object.keys(res.body.months.at(-1)).sort()).toEqual([
+      'activeDrivers',
+      'garagesListed',
+      'month',
+    ]);
   });
 });

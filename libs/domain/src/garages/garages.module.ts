@@ -7,6 +7,7 @@ import { GarageBrandsService } from './garage-brands.service';
 import { ListingDraftsController } from './listing-drafts.controller';
 import { ListingDraftsService } from './listing-drafts.service';
 import { ListingDraftThrottle } from './listing-drafts.throttle';
+import { GaragePricesService } from './prices/garage-prices.service';
 import { PublicGaragesService } from './public-garages';
 import { PublicGaragesController } from './public-garages.controller';
 import {
@@ -54,6 +55,7 @@ export class GaragesModule {
       module: GaragesModule,
       providers: [
         GarageBrandsService,
+        GaragePricesService,
         ListingDraftsService,
         {
           inject: [AUTH_REDIS],

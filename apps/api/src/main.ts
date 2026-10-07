@@ -1,7 +1,12 @@
 import { writeFileSync } from 'node:fs';
 
 import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
-import { BRANDS, BrandLoader } from '@motor-fix/domain';
+import {
+  BRANDS,
+  BrandLoader,
+  JOB_TYPES,
+  JobTypeLoader,
+} from '@motor-fix/domain';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 
@@ -28,11 +33,12 @@ async function bootstrap() {
     return;
   }
   await app.get(BrandLoader).load(BRANDS);
+  await app.get(JobTypeLoader).load(JOB_TYPES);
   app.enableShutdownHooks();
   await app.listen(Number(process.env['PORT'] ?? 3000));
 }
 
-// A brand file that cannot load stops the process before it serves.
+// A brand or job file that cannot load stops the process before it serves.
 bootstrap().catch((error: unknown) => {
   console.error(error);
   process.exit(1);
