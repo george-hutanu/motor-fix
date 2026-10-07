@@ -12,6 +12,7 @@ export * from './garage-status';
 export * from './garages.dto';
 export * from './health.dto';
 export * from './listing-drafts.dto';
+export * from './listing-verification';
 export * from './live.dto';
 export * from './me.dto';
 export * from './notification-preferences.dto';

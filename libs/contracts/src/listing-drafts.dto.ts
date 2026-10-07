@@ -11,6 +11,8 @@ import {
   Min,
 } from 'class-validator';
 
+import { isStep6Section, type Step6Section } from './listing-verification';
+
 const LANGUAGES = ['ro', 'en'] as const;
 const DRAFT_STATUSES = ['open', 'submitted'] as const;
 export type ListingDraftStatus = (typeof DRAFT_STATUSES)[number];
@@ -19,7 +21,9 @@ export type ListingDraftStatus = (typeof DRAFT_STATUSES)[number];
 // of the files the draft holds. Each step's story checks its own section.
 export interface ListingDraftData {
   steps?: Partial<
-    Record<'1' | '2' | '3' | '4' | '5' | '6', Record<string, unknown>>
+    Record<'1' | '2' | '3' | '4' | '5', Record<string, unknown>> & {
+      '6': Step6Section;
+    }
   >;
   survey?: Record<string, unknown>;
   files?: string[];
@@ -48,7 +52,9 @@ export function isListingDraftData(value: unknown): value is ListingDraftData {
   return (
     isRecord(steps) &&
     Object.entries(steps).every(
-      ([key, section]) => STEP_KEYS.has(key) && isRecord(section),
+      ([key, section]) =>
+        STEP_KEYS.has(key) &&
+        (key === '6' ? isStep6Section(section) : isRecord(section)),
     )
   );
 }

@@ -126,7 +126,7 @@ describe('the admin routes', () => {
 });
 
 describe('the admin overview', () => {
-  it('answers the number of garages waiting to an admin', async () => {
+  it('answers an admin the garages waiting and the platform figures, every one a count', async () => {
     const res = await call(
       'get',
       '/api/v1/admin/overview',
@@ -134,8 +134,22 @@ describe('the admin overview', () => {
     );
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ garagesWaiting: expect.any(Number) });
-    expect(Number.isInteger(res.body.garagesWaiting)).toBe(true);
+    const required = [
+      'activeDrivers',
+      'garagesApprovedThisMonth',
+      'garagesListed',
+      'garagesWaiting',
+    ];
+    const fields = Object.keys(res.body);
+    expect(fields).toEqual(expect.arrayContaining(required));
+    expect(
+      fields.filter(
+        (f) => !required.includes(f) && f !== 'activeDriversMonthStart',
+      ),
+    ).toEqual([]);
+    for (const value of Object.values(res.body)) {
+      expect(Number.isInteger(value) && (value as number) >= 0).toBe(true);
+    }
   });
 
   it('stays open to an admin while the platform is in maintenance', async () => {

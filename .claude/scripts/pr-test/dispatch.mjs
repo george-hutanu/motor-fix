@@ -126,8 +126,15 @@ export function checkReport(report, sha, conclusion) {
 
 const gh = (args, opts = {}) => execFileSync("gh", args, { cwd: repoRoot, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], ...opts }).trim();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-// How often the run is looked for after the dispatch; the specs set PR_QA_POLL_MS to poll at once.
+// How often and how many times the run is looked for after the dispatch; the specs set
+// PR_QA_POLL_MS to poll at once and PR_QA_POLL_TRIES to give up after a few lookups.
 const POLL_MS = Number(process.env.PR_QA_POLL_MS) || 5000;
+
+/** The number of lookups PR_QA_POLL_TRIES asks for: a positive integer, else 36 (three minutes at 5 s). */
+export function pollTries(value) {
+  return /^[1-9]\d*$/.test(value ?? "") ? Number(value) : 36;
+}
+const POLL_TRIES = pollTries(process.env.PR_QA_POLL_TRIES);
 
 /** Download a finished run's artifact into `out` and judge its report: 0 success, 1 failure, 2 unusable. */
 function readRun({ pr, sha, out, run, conclusion, nonce = null }) {
@@ -165,12 +172,12 @@ async function awaitPrRun(opt, sha) {
   if (opt.flows) console.error(`dispatch: the flows in ${opt.flows} are not sent: a cloud session cannot dispatch, and the pull_request run takes no flows`);
   const path = `repos/{owner}/{repo}/actions/workflows/${WORKFLOW}/runs?head_sha=${sha}&event=pull_request&per_page=30`;
   let run = null;
-  for (let i = 0; i < 36 && !run; i++) {
+  for (let i = 0; i < POLL_TRIES && !run; i++) {
     run = findPrRun(JSON.parse(gh(["api", path])).workflow_runs ?? []);
     if (!run) await sleep(POLL_MS);
   }
   if (!run) {
-    console.error(`dispatch: no ${WORKFLOW} run for #${opt.pr} at ${sha.slice(0, 7)} appeared within ${Math.round((36 * POLL_MS) / 1000)} s (is the PR ready, not a draft?)`);
+    console.error(`dispatch: no ${WORKFLOW} run for #${opt.pr} at ${sha.slice(0, 7)} appeared within ${Math.round((POLL_TRIES * POLL_MS) / 1000)} s (is the PR ready, not a draft?)`);
     return 2;
   }
   console.error(`dispatch: run ${run.url}`);
@@ -224,14 +231,14 @@ async function main(argv) {
   console.error(`dispatch: ${WORKFLOW} on ${opt.ref} for #${opt.pr} at ${sha.slice(0, 7)} (nonce ${nonce})`);
 
   let run = null;
-  for (let i = 0; i < 36; i++) {
+  for (let i = 0; i < POLL_TRIES; i++) {
     const runs = JSON.parse(gh(["run", "list", "--workflow", WORKFLOW, "--event", "workflow_dispatch", "--limit", "30", "--json", "databaseId,displayTitle,url"]));
     run = findRun(runs, nonce);
     if (run) break;
     await sleep(POLL_MS);
   }
   if (!run) {
-    console.error(`dispatch: no ${WORKFLOW} run named after ${nonce} appeared within ${Math.round((36 * POLL_MS) / 1000)} s`);
+    console.error(`dispatch: no ${WORKFLOW} run named after ${nonce} appeared within ${Math.round((POLL_TRIES * POLL_MS) / 1000)} s`);
     return 2;
   }
   console.error(`dispatch: run ${run.url}`);

@@ -1,4 +1,15 @@
 {
+  "panel": {
+    "activeDrivers": "Active drivers",
+    "answerRate": "Answer rate",
+    "bookings": "Bookings",
+    "garagesListed": "Garages listed",
+    "reportedReviews": "Reported reviews",
+    "requestsToday": "Quote requests today",
+    "soon": "coming soon",
+    "thisMonth": "{sign}{n} this month",
+    "unavailable": "The figures could not be read"
+  },
   "platformRules": {
     "alwaysOn": "Always on in production",
     "line": "The rules that apply to every garage",

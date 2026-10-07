@@ -245,8 +245,9 @@ A story can run in a Claude Code cloud session (claude.ai/code), where
 that variable, so the laptop behaves as before.
 
 - **Environment.** Setup script: `bash scripts/cloud-setup.sh` (Node 24,
-  `npm ci`, the Docker daemon, `docker compose pull postgres redis`; it is
-  idempotent and unverified until the first real cloud run). Variables, by
+  `npm ci`, the Docker daemon, `docker compose pull postgres redis` unless
+  both images are there; it is idempotent and unverified until the first
+  real cloud run). Variables, by
   name only: `NOTION_TOKEN`, `JEV`, and from `.env.example` the ones the
   tests read (`DATABASE_URL`, `REDIS_URL`, `AUTH_TOKEN_SECRET`; CI's job env
   in `.github/workflows/ci.yml` lists the end-to-end set). Network level

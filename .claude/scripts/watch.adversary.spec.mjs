@@ -1521,3 +1521,36 @@ describe('boundaries of the repository itself', () => {
     assert.ok(Date.now() - started < 30_000);
   }, 180_000);
 });
+
+describe('a conflicting PR, edges', () => {
+  const opts = { now: NOW, thresholds: DEFAULT_THRESHOLDS };
+  const conflicting = (over = {}) => ({ number: 21, state: 'ready', head: 'abc', checks: 'pass', agentReview: null, mergeable: 'CONFLICTING', ...over });
+
+  it('never outranks a worktree git cannot read or a blocked run', () => {
+    assert.equal(fixOf(row({ phase: 'qa', gitFailed: true, pr: conflicting() }), opts).verdict, 'blocked');
+    assert.equal(fixOf(row({ phase: 'blocked', pr: conflicting() }), opts).verdict, 'blocked');
+  });
+
+  it('is a conflict even when the old head passed CI and QA, since that head cannot merge', () => {
+    const out = fixOf(row({ phase: 'merging', pr: conflicting({ agentReview: 'success' }) }), opts);
+    assert.deepEqual([out.verdict, out.fix], ['conflict', 'merge-main']);
+  });
+
+  it('reads only CONFLICTING as a conflict, not a missing, null or unfamiliar state', () => {
+    for (const mergeable of [undefined, null, 'DIRTY', 'conflicting', 'MERGEABLE']) {
+      const summary = summarizePr(pr({ mergeable }));
+      assert.notEqual(fixOf(row({ phase: 'qa', pr: summary }), opts).verdict, 'conflict', String(mergeable));
+    }
+  });
+
+  it('counts a live merge-main claim against the QA cap', () => {
+    const claimed = { path: 'z', verdict: 'ok', fix: null, claim: { fix: 'merge-main', live: true } };
+    const due = { path: 'y', verdict: 'stale', fix: 'rerun-qa', activity: { at: NOW - MIN }, claim: null };
+    assert.deepEqual(dispatchPlan([claimed, due], { qaLive: 0, qaCap: 1, now: NOW }), []);
+  });
+
+  it('plans no conflict row without a fix', () => {
+    const bare = { path: 'x', verdict: 'conflict', fix: null, activity: { at: NOW - MIN }, claim: null };
+    assert.deepEqual(dispatchPlan([bare], { qaLive: 0, now: NOW }), []);
+  });
+});

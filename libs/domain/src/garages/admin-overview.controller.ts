@@ -11,6 +11,10 @@ import { VerificationService } from './verification.service';
 import { Requires } from '../auth/actor.guard';
 import { PRISMA } from '../auth/prisma';
 import type { PrismaClient } from '../generated/prisma/client';
+import {
+  countPlatformFigures,
+  monthStartSnapshot,
+} from '../insights/platform-figures';
 
 @ApiTags('admin')
 @ApiBearerAuth()
@@ -26,8 +30,19 @@ export class AdminOverviewController {
   @ApiOkResponse({ type: AdminOverviewDto })
   @ApiNotFoundResponse({ description: 'not_found: not an admin' })
   async overview(): Promise<AdminOverviewDto> {
+    const now = new Date();
+    const [garagesWaiting, figures, activeDriversMonthStart] =
+      await Promise.all([
+        this.verification.countWaiting(this.prisma),
+        countPlatformFigures(this.prisma, now),
+        monthStartSnapshot(this.prisma, now),
+      ]);
     return {
-      garagesWaiting: await this.verification.countWaiting(this.prisma),
+      garagesWaiting,
+      ...figures,
+      ...(activeDriversMonthStart === undefined
+        ? {}
+        : { activeDriversMonthStart }),
     };
   }
 }
