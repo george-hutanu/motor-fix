@@ -230,6 +230,13 @@ test.describe('on a phone', () => {
   }) => {
     await open(page, '/ro/list-your-garage');
     await fill(page);
+    // With no e-mail, Save focuses the E-mail field at the top by design.
+    await page
+      .getByLabel('E‑mail')
+      .fill(
+        `pinned-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`,
+      );
+    await page.getByLabel('E‑mail').blur();
     await bar(page).click();
     await entry(page, 'Fotografii și adresă').click();
     const y = await still(page);
@@ -252,6 +259,7 @@ test.describe('on a phone', () => {
     ).toBe(true);
 
     await save.click();
+    await expect(page.getByText('Ciorna e salvată')).toBeVisible();
     expect(await page.evaluate(() => scrollY)).toBe(y);
     await expect(bar(page)).toHaveText('5 / 6 · Fotografii și adresă');
   });
