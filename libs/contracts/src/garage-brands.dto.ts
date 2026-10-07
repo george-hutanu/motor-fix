@@ -12,7 +12,7 @@ import {
 } from 'class-validator';
 
 const STANCES = ['works_on', 'does_not_take'] as const;
-export type GarageBrandStance = (typeof STANCES)[number];
+type GarageBrandStance = (typeof STANCES)[number];
 
 // Trimmed; a blank text is no text.
 const text = ({ value }: { value: unknown }) =>
