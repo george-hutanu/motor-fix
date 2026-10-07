@@ -1,6 +1,7 @@
 interface Mailbox {
   email: string;
-  name: string;
+  // A listing draft's address comes with no name.
+  name?: string;
 }
 
 interface OutgoingEmail {

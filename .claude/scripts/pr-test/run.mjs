@@ -296,7 +296,8 @@ async function main(argv) {
       });
       booted.push(name);
     };
-    launch("api", { PORT: String(apiPort) });
+    // The API writes links to the web app into its e-mails.
+    launch("api", { PORT: String(apiPort), PUBLIC_WEB_URL: webURL });
     launch("web", { PORT: String(webPort), API_INTERNAL_URL: apiURL, PUBLIC_WEB_URL: webURL });
     if (apps.worker) launch("worker", { PORT: String(workerPort) });
 

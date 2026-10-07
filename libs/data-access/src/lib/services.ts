@@ -11,4 +11,5 @@ export { SearchService } from './services/search.service';
 export { AdminService } from './services/admin.service';
 export { GaragesService } from './services/garages.service';
 export { InvitesService } from './services/invites.service';
+export { ListingDraftsService } from './services/listing-drafts.service';
 export { LiveService } from './services/live.service';

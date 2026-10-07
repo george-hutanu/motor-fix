@@ -6,13 +6,16 @@ import {
   Module,
   type OnApplicationBootstrap,
   type OnApplicationShutdown,
+  type Provider,
 } from '@nestjs/common';
 import { type Job, type JobsOptions, Queue, Worker } from 'bullmq';
 
 import { RemindersService } from './reminders.service';
 import {
   bucharestDaily,
+  DAILY_TASKS,
   type DailyClock,
+  type DailyTask,
   nextRun,
   runDue,
   shortenedDaily,
@@ -52,6 +55,8 @@ export class RemindersScheduler {
     @Inject(REMINDERS_JOBS) private readonly jobs: Queue,
     @Inject(REMINDERS_CLOCK) private readonly clock: DailyClock,
     private readonly reminders: RemindersService,
+    @Inject(DAILY_TASKS)
+    private readonly tasks: DailyTask[] = [],
   ) {}
 
   // A worker that was down at 09:00 runs that day's run when it starts.
@@ -64,6 +69,7 @@ export class RemindersScheduler {
   async handle(job: Job<Daily>): Promise<void> {
     await this.queueNext(this.now());
     await this.reminders.run(job.data.day);
+    for (const task of this.tasks) await task.run(this.now());
   }
 
   failed(job: Job<Daily>, error: Error): void {
@@ -93,6 +99,8 @@ interface RemindersOptions {
   dayMs?: number;
   // The worker's NotificationsModule, whose service sends the reminders.
   notifications: DynamicModule;
+  // Provides DAILY_TASKS: the work the daily job runs after the reminders.
+  daily?: Provider;
 }
 
 @Module({})
@@ -112,6 +120,7 @@ export class RemindersModule
       providers: [
         RemindersService,
         RemindersScheduler,
+        options.daily ?? { provide: DAILY_TASKS, useValue: [] },
         {
           provide: REMINDERS_CLOCK,
           useFactory: () =>
