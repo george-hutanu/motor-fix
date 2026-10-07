@@ -6,21 +6,17 @@ import {
   type StartingPricesInput,
 } from '@motor-fix/contracts';
 
-import { type PricesWorld, pricesWorld } from './garage-prices.testing';
+import {
+  afterRace,
+  type PricesWorld,
+  pricesWorld,
+  refused,
+} from './garage-prices.testing';
 import { audienceOf } from '../../events/audience';
 import { Prisma } from '../../generated/prisma/client';
 
-const {
-  history,
-  job,
-  nothingStored,
-  prices,
-  prisma,
-  refused,
-  rows,
-  save,
-  world,
-} = pricesWorld();
+const { history, job, nothingStored, prices, prisma, rows, save, world } =
+  pricesWorld();
 
 const lei = leiToBani;
 const labour = { fromBani: lei(180), toBani: lei(240) };
@@ -554,24 +550,11 @@ describe('a range stored by a concurrent save', () => {
       jobs: [{ fromBani: lei(150), jobTypeId: w.diagnosis }],
       labour,
     };
-    let release = () => {};
-    const held = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    // The first save writes its row and holds its transaction open, so the
-    // second one finds no stored range and meets the unique index instead.
-    const first = prisma.$transaction(
-      async (tx) => {
-        await prices.saveStarting(tx, w.garage, w.mihai, input);
-        await held;
-      },
-      { timeout: 20_000 },
+    const second = afterRace(
+      prisma,
+      (tx) => prices.saveStarting(tx, w.garage, w.mihai, input),
+      () => refused(save(w, input)),
     );
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    const second = refused(save(w, input));
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    release();
-    await first;
 
     expect(await second).toEqual([
       { code: 'duplicate', field: 'jobs[0].jobTypeId' },

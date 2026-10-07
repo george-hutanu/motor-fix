@@ -7,10 +7,54 @@ import { GaragePricesService } from './garage-prices.service';
 import { AuditService } from '../../audit/audit.service';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { outbox } from '../../events/event.port';
+import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import {
   databaseUrl,
   fixtures,
 } from '../../notifications/notifications.testing';
+
+// The refusal's field errors, or a failure when the call did not refuse.
+export async function refused(run: Promise<unknown>) {
+  const error = await run.then(
+    () => undefined,
+    (e: unknown) => e,
+  );
+  expect(error).toBeInstanceOf(HttpException);
+  const http = error as HttpException;
+  expect(http.getStatus()).toBe(422);
+  expect(http.getResponse()).toMatchObject({ code: 'validation_failed' });
+  return (http.getResponse() as { errors: FieldProblem[] }).errors;
+}
+
+const pause = () => new Promise((resolve) => setTimeout(resolve, 300));
+
+// Runs `first` in a transaction held open until `second` has started and
+// met its uncommitted row, then commits it; answers how `second` ended. The
+// second write finds the value free when it reads, so it meets the unique
+// index instead: the race two concurrent sendings run.
+export async function afterRace<T>(
+  prisma: PrismaClient,
+  first: (tx: Prisma.TransactionClient) => Promise<unknown>,
+  second: () => Promise<T>,
+): Promise<T> {
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const winner = prisma.$transaction(
+    async (tx) => {
+      await first(tx);
+      await held;
+    },
+    { timeout: 20_000 },
+  );
+  await pause();
+  const loser = second();
+  await pause();
+  release();
+  await winner;
+  return loser;
+}
 
 // One spec file's garage, owner and catalogue, emptied before every test.
 export function pricesWorld() {
@@ -95,19 +139,6 @@ export function pricesWorld() {
       },
     });
 
-  // The refusal's field errors, or a failure when the call did not refuse.
-  async function refused(run: Promise<unknown>) {
-    const error = await run.then(
-      () => undefined,
-      (e: unknown) => e,
-    );
-    expect(error).toBeInstanceOf(HttpException);
-    const http = error as HttpException;
-    expect(http.getStatus()).toBe(422);
-    expect(http.getResponse()).toMatchObject({ code: 'validation_failed' });
-    return (http.getResponse() as { errors: FieldProblem[] }).errors;
-  }
-
   async function nothingStored(w: World) {
     expect(await rows(w)).toEqual([]);
     expect(
@@ -133,7 +164,7 @@ export function pricesWorld() {
     nothingStored,
     prices,
     prisma,
-    refused,
+
     rows,
     save,
     since: () => since,

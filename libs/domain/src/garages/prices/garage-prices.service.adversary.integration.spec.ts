@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 
 import { leiToBani, type StartingPricesInput } from '@motor-fix/contracts';
 
-import { type PricesWorld, pricesWorld } from './garage-prices.testing';
+import {
+  type PricesWorld,
+  pricesWorld,
+  refused,
+} from './garage-prices.testing';
 
 const {
   history,
@@ -10,7 +14,6 @@ const {
   nothingStored,
   prices,
   prisma,
-  refused,
   rows,
   save,
   since,
