@@ -195,6 +195,9 @@ export class VerificationCheckDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
 
+  @ApiProperty({ format: 'uuid' })
+  fileId!: string;
+
   @ApiProperty({ enum: VERIFICATION_CHECK_KINDS })
   kind!: VerificationCheckKind;
 

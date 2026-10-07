@@ -44,3 +44,24 @@
 ## 10 Implement
 - T006 contracts summary/lamp/DTOs; T007 createMany skipDuplicates in submit and resend; T008 VerificationChecksService (FOR UPDATE reads of the check and the garage list); T009 controller + module; T010 openapi and data-access regenerated.
 - Green: contracts 16/16, domain garages/verification 122/122, api verification-checks + admin-routes 28/28.
+
+## 11 Converge
+- Every task [X]; the spec's FRs all map to code and tests; nothing new appended.
+
+## 12 Harden
+- contract-check green after commit; artifact-lint 0 errors.
+- diff-audit: `import-extension` ERRORs on the service are the known false positive (domain is commonjs/bundler, no lib uses `.js`; same verdict as 016-052); `suppression` ERRORs are in generated data-access files (never edited by hand); `untested-new-file` on the service is the extension-matching false positive (its spec imports it); `test-only-export` VERIFICATION_CHECK_RESULTS kept as the queue story's public API.
+
+## 13 Refresh
+- org-researcher: STATUS success; ST-300 now Implementing, no comments, EP-2 unchanged; no new evidence or contradictions.
+
+## 15 Agent context
+- CLAUDE.local.md is untracked and local; its managed block is not written from a worktree (AGENTS.md is shared). Nothing to commit.
+
+## 16 Retrospective evidence (unjudged)
+- retro-evidence --since bbc171f8: deferred 0 open at the time; 10 carry-over items from earlier retros (none on garage verification); 9 commits. Jev lane unavailable (no key). instincts triggered: none listed.
+
+## 12/14 Harden and review
+- test-adversary: 57 tests in libs/contracts/src/verification-checks.adversary.spec.ts; 3 genuine defects (blank, empty and control-character detail accepted by the DTO) fixed with @Length(1,200) and a no-control-character rule.
+- code-reviewer (BLOCK): HIGH #1 record could land on a file decided concurrently -> file row read FOR SHARE, race test added (red without the lock, green with it); MEDIUM #2 CheckRecord duplicated the DTO -> removed; LOW #3 lamp kept (FR-008, the queue story's API); LOW #4 TODO on the seeded codes.
+- spec-reviewer (APPROVE): MEDIUM #1 fileId missing from VerificationCheckDto -> added, client regenerated; LOW #2 activities audit now always carries the list for the activities kind; LOW #3 deferred.md written (documents summary, lawyer's activity list).

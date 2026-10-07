@@ -8,6 +8,7 @@ export interface VerificationCheckDto {
    */
   automatic: boolean;
   detail: string | null;
+  fileId: string;
   id: string;
   kind: 'company' | 'caen' | 'rar' | 'activities' | 'representative' | 'address' | 'photos' | 'documents';
   recordedAt: string | null;

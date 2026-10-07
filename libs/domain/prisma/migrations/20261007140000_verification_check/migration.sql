@@ -37,7 +37,8 @@ CREATE UNIQUE INDEX "verification_check_file_id_kind_key" ON "verification_check
 -- AddForeignKey
 ALTER TABLE "verification_check" ADD CONSTRAINT "verification_check_file_id_fkey" FOREIGN KEY ("file_id") REFERENCES "verification_file"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- The activities named on the feature page, until the lawyer confirms the list.
+-- TODO: replace these seeded codes with the lawyer's list once it is confirmed;
+-- until then, the activities named on the feature page.
 INSERT INTO "rar_activity" ("code", "name_ro", "name_en") VALUES
     ('mechanics', 'Mecanică', 'Mechanics'),
     ('brakes', 'Frâne', 'Brakes'),

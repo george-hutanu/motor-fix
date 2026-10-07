@@ -201,6 +201,11 @@ describe('recording a check', () => {
     });
     expect(garage.rarActivities).toEqual(['brakes']);
     expect(await check('activities')).toMatchObject({ result: 'warning' });
+    const [, kept] = await entries();
+    expect(kept).toMatchObject({
+      newValue: { activities: ['brakes'], result: 'warning' },
+      oldValue: { activities: ['brakes'], result: 'ok' },
+    });
   });
 
   it('lets the last save win and keeps both in the history', async () => {
@@ -298,6 +303,32 @@ describe('a record that is refused', () => {
       expect(await entries()).toHaveLength(0);
     },
   );
+
+  it('refuses a record that waited on a decision of the same file', async () => {
+    await inTx((tx) => files().open(tx, ioana, fileId));
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let decided = () => {};
+    const isDecided = new Promise<void>((resolve) => {
+      decided = resolve;
+    });
+    const deciding = prisma.$transaction(async (tx) => {
+      await files().decide(tx, dan, fileId, { outcome: 'approved' });
+      decided();
+      await held;
+    });
+    await isDecided;
+
+    const recording = refusal(record('rar', { result: 'ok' }));
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    release();
+    await deciding;
+
+    expect(await recording).toMatchObject({ status: 409 });
+    expect(await check('rar')).toMatchObject({ result: 'not_run' });
+  });
 
   it('is accepted again once a decided file is reopened', async () => {
     await decide('rejected');

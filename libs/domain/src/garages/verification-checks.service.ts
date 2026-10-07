@@ -2,6 +2,7 @@ import {
   CHECK_DETAIL_MAX,
   checkSummary,
   RECORDED_RESULTS,
+  type RecordVerificationCheckDto,
   VERIFICATION_CHECK_KINDS,
   type VerificationCheckKind,
 } from '@motor-fix/contracts';
@@ -23,12 +24,6 @@ import type {
   VerificationFileStatus,
 } from '../generated/prisma/client';
 
-export interface CheckRecord {
-  result: string;
-  detail?: string;
-  activities?: string[];
-}
-
 // A decision waits for the garage or closes the file; reopening it into review
 // lets the admin record again.
 const DECIDED: VerificationFileStatus[] = [
@@ -44,7 +39,7 @@ const isKind = (kind: string): kind is VerificationCheckKind =>
   (VERIFICATION_CHECK_KINDS as readonly string[]).includes(kind);
 
 // The detail as stored: trimmed, at most 200 characters, required for a problem.
-function detailOf(body: CheckRecord) {
+function detailOf(body: RecordVerificationCheckDto) {
   const detail = body.detail?.trim() || null;
   if (detail && detail.length > CHECK_DETAIL_MAX) {
     throw invalid(`detail must be at most ${CHECK_DETAIL_MAX} characters`);
@@ -57,7 +52,10 @@ function detailOf(body: CheckRecord) {
 
 // The body's own rules, beyond its shape: a problem says what it is, and a
 // list belongs to the activities check alone.
-function validated(kind: VerificationCheckKind, body: CheckRecord) {
+function validated(
+  kind: VerificationCheckKind,
+  body: RecordVerificationCheckDto,
+) {
   if (!(RECORDED_RESULTS as readonly string[]).includes(body.result)) {
     throw invalid('result must be ok, warning or failed');
   }
@@ -71,7 +69,7 @@ function validated(kind: VerificationCheckKind, body: CheckRecord) {
   return {
     activities: body.activities && [...new Set(body.activities)],
     detail,
-    result: body.result as (typeof RECORDED_RESULTS)[number],
+    result: body.result,
   };
 }
 
@@ -89,7 +87,7 @@ export class VerificationChecksService {
     actor: Actor,
     fileId: string,
     kind: string,
-    body: CheckRecord,
+    body: RecordVerificationCheckDto,
   ) {
     requireCapability(actor, 'admin.garages');
     const file = await this.file(tx, fileId);
@@ -125,13 +123,15 @@ export class VerificationChecksService {
       },
       where: { id: before.id },
     });
-    const activities = next.activities && {
-      after: next.activities,
-      before: await this.lockedActivities(tx, file.garageId),
-    };
-    if (activities) {
+    // The activities check's entry always carries the list, sent or kept.
+    const held =
+      kind === 'activities'
+        ? await this.lockedActivities(tx, file.garageId)
+        : undefined;
+    const activities = held && { after: next.activities ?? held, before: held };
+    if (next.activities) {
       await tx.garage.update({
-        data: { rarActivities: activities.after },
+        data: { rarActivities: next.activities },
         where: { id: file.garageId },
       });
     }
@@ -184,10 +184,12 @@ export class VerificationChecksService {
   private async file(tx: Prisma.TransactionClient, id: string) {
     // PostgreSQL refuses a malformed uuid outright; it is an unknown id.
     if (!isUUID(id)) throw new NotFoundException();
-    const file = await tx.verificationFile.findUnique({
-      select: { garageId: true, status: true },
-      where: { id },
-    });
+    // Held until the save commits, so a decision racing it waits and the
+    // record cannot land on a file decided meanwhile.
+    const [file] = await tx.$queryRaw<
+      { garageId: string; status: VerificationFileStatus }[]
+    >`SELECT garage_id AS "garageId", status::text AS status
+      FROM verification_file WHERE id = ${id}::uuid FOR SHARE`;
     if (!file) throw new NotFoundException();
     return file;
   }

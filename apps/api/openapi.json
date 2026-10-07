@@ -3226,6 +3226,10 @@
             "type": "string",
             "format": "uuid"
           },
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "kind": {
             "type": "string",
             "enum": [
@@ -3269,6 +3273,7 @@
         },
         "required": [
           "id",
+          "fileId",
           "kind",
           "automatic",
           "result",

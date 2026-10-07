@@ -67,3 +67,17 @@
 - Verification queue and decision file (MF-58) — https://app.notion.com/p/3ee607bff0d28190a8b3c8cdde366dfb
 - Garage onboarding and verification (EP-2) — https://app.notion.com/p/3ee607bff0d281f8ba8ae20d1af741cf
 - Architecture decisions — https://app.notion.com/p/3ee607bff0d28111907edddc4bdd066a
+
+## Refresh 2026-10-07
+
+Baseline: Gathered 2026-10-07 (same day, so only time-of-day changes count).
+
+**Story changes**
+- ST-300 Status is now `Implementing` (was `Planning`); page last edited 2026-10-07T11:11:04Z (was 11:00Z); PR property still #201. [ST-300 page properties] (2026-10-07)
+- Body unchanged against the digest: acceptance criteria, 2026-10-03 Build brief, scenarios 1-7, rules, errors, events and "Open: None" all read as already recorded. Comments: none (`notion-get-comments` returned no discussions, resolved included).
+
+**New decisions / constraints / contradictions with spec.md**: no new evidence.
+
+**Epic EP-2**
+- Page last edited 2026-10-07T06:52Z, status In progress. Build plan slice 5-6 still places ST-300 after ST-207/ST-116, before the queue story and ST-301/302; "Superseded and changed items" repeats that ST-300 is a by-hand record store and ST-203/ST-204 are 3-point record forms. No sibling story takes part of ST-300's scope. [EP-2, Build plan] (2026-10-07)
+- Sibling statuses (ST-207, ST-116, ST-390, ST-203, ST-204, ST-301, ST-302) were not confirmed: the stories query by ID text returned no rows.
