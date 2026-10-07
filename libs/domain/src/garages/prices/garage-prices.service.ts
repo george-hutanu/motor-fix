@@ -21,6 +21,17 @@ const pairOf = (jobTypeId: string, brandId?: string | null) =>
 const prefixed = (prefix: string, problems: FieldProblem[]) =>
   problems.map(({ code, field }) => ({ code, field: `${prefix}.${field}` }));
 
+// PostgreSQL reads a uuid in either case; lower case lets the payload's own
+// checks see the same id written two ways as one.
+const sameCase = (input: StartingPricesInput): StartingPricesInput => ({
+  ...input,
+  jobs: input.jobs.map((job) => ({
+    ...job,
+    brandId: job.brandId?.toLowerCase() ?? job.brandId,
+    jobTypeId: job.jobTypeId.toLowerCase(),
+  })),
+});
+
 // The field errors a payload carries on its own, before any lookup.
 function payloadErrors({ jobs, labour }: StartingPricesInput) {
   const errors: FieldProblem[] = [];
@@ -57,8 +68,9 @@ export class GaragePricesService {
     tx: Prisma.TransactionClient,
     garageId: string,
     actorId: string,
-    input: StartingPricesInput,
+    given: StartingPricesInput,
   ): Promise<StartingPricesResult> {
+    const input = sameCase(given);
     const garage = await tx.garage.findUniqueOrThrow({
       select: { labourFromBani: true, labourToBani: true },
       where: { id: garageId },

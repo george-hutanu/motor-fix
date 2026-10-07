@@ -11,21 +11,22 @@ export const DURATION_STEP_MINUTES = 15;
 export const PRICE_RANGE_WARN_RATIO = 3;
 
 export function leiToBani(lei: number): number {
-  if (!Number.isInteger(lei)) {
+  const bani = lei * BANI_PER_LEU;
+  if (!Number.isInteger(lei) || !Number.isSafeInteger(bani)) {
     throw new RangeError(`${lei} is not a whole number of lei`);
   }
-  return lei * BANI_PER_LEU;
+  return bani;
 }
 
 export const baniToLei = (bani: number): number => bani / BANI_PER_LEU;
 
-export interface PriceRangeInput {
+interface PriceRangeInput {
   fromBani: number;
   toBani?: number | null;
   durationMinutes?: number | null;
 }
 
-export interface PriceRangeCheck {
+interface PriceRangeCheck {
   errors: FieldProblem[];
   warnings: FieldProblem[];
 }
