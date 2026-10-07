@@ -49,6 +49,12 @@ describe('the tester starts from the packet', () => {
     assert.match(review, /replaces your own\s+reading of the report and the spec/);
   });
 
+  it('takes the paths from git when the changed-file list is unavailable or cut short', () => {
+    const review = section(agent, /Review/);
+    assert.match(review, /unavailable or ends in "… N more files"/);
+    assert.match(review, /git diff --name-only origin\/<base>\.\.\.<headRefOid>/);
+  });
+
   it('gives the findings file its shape, so the tester never reads post.mjs for it', () => {
     const post = section(agent, /Post/);
     assert.match(post, /"kind": "review"/);

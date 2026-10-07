@@ -205,6 +205,10 @@ git diff origin/<base>...<headRefOid> -- <paths>   # one call per changed file o
 cat specs/<headRefName>/tasks.md                   # after specs-repo.mjs ensure
 ```
 
+When "Changed files" is unavailable or ends in "… N more files", take the
+paths from `git diff --name-only origin/<base>...<headRefOid> -- . ':!specs' ':!.specify/capabilities'`
+instead, so no file goes unread.
+
 Review those diffs against the requirements (every FR implemented and tested,
 nothing beyond scope), its `tasks.md` (every `[X]` true) and
 `.specify/memory/constitution.md` (Principle I no bloat first, II tests first
