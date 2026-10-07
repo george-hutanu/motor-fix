@@ -94,9 +94,6 @@ const DASHBOARDS = [
     tabs: [
       ['Panou', ''],
       ['Service‑uri', '/garages'],
-      ['Utilizatori', '/users'],
-      ['Raportate', '/reviews'],
-      ['Mărci', '/catalogue'],
       ['Setări', '/settings'],
     ],
   },

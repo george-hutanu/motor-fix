@@ -58,6 +58,15 @@
     "sending": "Sending…"
   },
   "frame": {
+    "admin": {
+      "label": "ADMINISTRATOR",
+      "none": "no garage is waiting for verification",
+      "place": "MotorFix · Bucharest",
+      "waiting": {
+        "one": "1 garage is waiting for verification",
+        "other": "{count} garages are waiting for verification"
+      }
+    },
     "area": {
       "admin": "Admin",
       "driver": "Driver",
@@ -68,6 +77,7 @@
       "driver": "Driver dashboard",
       "garage": "Garage dashboard"
     },
+    "counter": "{label}, {waiting} waiting",
     "empty": "Nothing here yet.",
     "home": "MotorFix, home page",
     "invite": "Invite to the team",
@@ -75,6 +85,7 @@
     "menu": "Menu",
     "nav": {
       "admin": {
+        "assistant": "AI assistant",
         "catalogue": "Brands and jobs",
         "garages": "Garages",
         "reviews": "Reported reviews",
@@ -111,6 +122,7 @@
     "signOut": "Sign out",
     "signOutEverywhere": "Sign out on all devices",
     "tab": {
+      "assistant": "Assistant",
       "brands": "Brands",
       "cars": "Cars",
       "dashboard": "Home",

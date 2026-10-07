@@ -91,7 +91,61 @@ describe('the dashboard view lists', () => {
       'users',
       'reviews',
       'catalogue',
+      'assistant',
       'settings',
+    ]);
+  });
+
+  it('lists the admin views with their labels, capabilities, release marks and counter', () => {
+    expect(DASHBOARDS.admin.views).toEqual([
+      {
+        label: 'shell.frame.nav.dashboard',
+        path: '',
+        tab: 'shell.frame.tab.dashboard',
+      },
+      {
+        capability: 'admin.garages',
+        counter: 'garagesWaiting',
+        label: 'shell.frame.nav.admin.garages',
+        path: 'garages',
+        tab: 'shell.frame.tab.garages',
+      },
+      {
+        capability: 'admin.users',
+        label: 'shell.frame.nav.admin.users',
+        path: 'users',
+        tab: 'shell.frame.tab.users',
+        unreleased: true,
+      },
+      {
+        capability: 'admin.reviews',
+        label: 'shell.frame.nav.admin.reviews',
+        path: 'reviews',
+        tab: 'shell.frame.tab.reported',
+        unreleased: true,
+      },
+      {
+        capability: 'admin.catalogue',
+        label: 'shell.frame.nav.admin.catalogue',
+        path: 'catalogue',
+        tab: 'shell.frame.tab.brands',
+        unreleased: true,
+      },
+      {
+        capability: 'admin.settings',
+        label: 'shell.frame.nav.admin.assistant',
+        path: 'assistant',
+        tab: 'shell.frame.tab.assistant',
+        unreleased: true,
+      },
+      {
+        capability: 'admin.settings',
+        label: 'shell.frame.nav.admin.settings',
+        path: 'settings',
+        push: true,
+        staff: true,
+        tab: 'shell.frame.tab.settings',
+      },
     ]);
   });
 
@@ -160,7 +214,7 @@ describe('the dashboard view lists', () => {
     expect(settings('driver')?.push).toBe(true);
   });
 
-  it('gives an admin every admin view', () => {
+  it('gives an admin the released admin views only', () => {
     expect(
       paths('admin', [
         'admin.garages',
@@ -170,22 +224,47 @@ describe('the dashboard view lists', () => {
         'admin.settings',
         'admin.audit_history',
       ]),
-    ).toEqual(['', 'garages', 'users', 'reviews', 'catalogue', 'settings']);
+    ).toEqual(['', 'garages', 'settings']);
+  });
+
+  it('hides an unreleased view even from a role that may open it', () => {
+    expect(paths('admin', ['admin.users'])).toEqual(['']);
+  });
+
+  it('marks no driver or garage view unreleased', () => {
+    const marked = [...DASHBOARDS.driver.views, ...DASHBOARDS.garage.views]
+      .filter((view) => view.unreleased)
+      .map((view) => view.path);
+
+    expect(marked).toEqual([]);
   });
 });
 
 @Component({ imports: [RouterOutlet], template: '<router-outlet />' })
 class Shell {}
 
-async function open(url: string, capabilities: string[]) {
+const ADMIN = [
+  'admin.garages',
+  'admin.users',
+  'admin.reviews',
+  'admin.catalogue',
+  'admin.settings',
+  'admin.audit_history',
+];
+
+async function open(
+  url: string,
+  capabilities: string[],
+  area: 'garage' | 'admin' = 'garage',
+) {
   const current = signal({ capabilities } as unknown as MeDto);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
         {
-          children: dashboardRoutes('garage'),
+          children: dashboardRoutes(area),
           component: Shell,
-          path: 'app/garage',
+          path: `app/${area}`,
         },
       ]),
       { provide: Session, useValue: { current } },
@@ -246,5 +325,20 @@ describe('the dashboard view routes', () => {
     await open('/app/garage/nope', OWNER);
 
     expect(TestBed.inject(Router).url).toBe('/app/garage');
+  });
+
+  it.each(['users', 'reviews', 'catalogue', 'assistant'])(
+    'sends an admin who types the unreleased %s address to the dashboard',
+    async (path) => {
+      await open(`/app/admin/${path}`, ADMIN, 'admin');
+
+      expect(TestBed.inject(Router).url).toBe('/app/admin');
+    },
+  );
+
+  it('opens the released garages view for an admin', async () => {
+    await open('/app/admin/garages', ADMIN, 'admin');
+
+    expect(TestBed.inject(Router).url).toBe('/app/admin/garages');
   });
 });

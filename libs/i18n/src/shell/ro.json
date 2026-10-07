@@ -59,6 +59,16 @@
     "sending": "Se trimite…"
   },
   "frame": {
+    "admin": {
+      "label": "ADMINISTRATOR",
+      "none": "niciun service nu așteaptă verificarea",
+      "place": "MotorFix · București",
+      "waiting": {
+        "few": "{count} service‑uri așteaptă verificarea",
+        "one": "1 service așteaptă verificarea",
+        "other": "{count} de service‑uri așteaptă verificarea"
+      }
+    },
     "area": {
       "admin": "Admin",
       "driver": "Șofer",
@@ -69,6 +79,7 @@
       "driver": "Panou șofer",
       "garage": "Panou service"
     },
+    "counter": "{label}, {waiting} în așteptare",
     "empty": "Nimic aici încă.",
     "home": "MotorFix, pagina principală",
     "invite": "Invită în echipă",
@@ -76,6 +87,7 @@
     "menu": "Meniu",
     "nav": {
       "admin": {
+        "assistant": "Asistent AI",
         "catalogue": "Mărci și lucrări",
         "garages": "Service‑uri",
         "reviews": "Recenzii raportate",
@@ -112,6 +124,7 @@
     "signOut": "Ieși din cont",
     "signOutEverywhere": "Ieși de pe toate dispozitivele",
     "tab": {
+      "assistant": "Asistent",
       "brands": "Mărci",
       "cars": "Mașini",
       "dashboard": "Panou",

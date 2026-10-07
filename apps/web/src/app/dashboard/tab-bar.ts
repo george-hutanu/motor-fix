@@ -2,7 +2,7 @@ import { Component, input } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '@motor-fix/i18n';
 
-import type { DashboardView } from './views';
+import type { Counts, DashboardView } from './views';
 
 // The dashboards' menu on a phone; from 768 px the side menu takes over.
 @Component({
@@ -46,12 +46,20 @@ import type { DashboardView } from './views';
       white-space: nowrap;
     }
     .marker { width: 18px; height: 3px; border-radius: 2px; background: var(--mf-line); }
+    .name { display: inline-flex; align-items: center; gap: 4px; }
+    .chip {
+      min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+      background: var(--mf-amber); color: var(--mf-on-amber);
+      font-size: var(--mf-size-label); line-height: 18px; text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
     a[aria-current="page"] { color: var(--mf-amber-ink); }
     a[aria-current="page"] .marker { background: var(--mf-amber-ink); }
   `,
   template: `
     <nav [attr.aria-label]="name() | t">
       @for (view of views(); track view.path) {
+        @let count = view.counter ? counts()[view.counter] : undefined;
         <a
           #tab
           [routerLink]="view.path ? [base(), view.path] : base()"
@@ -59,7 +67,8 @@ import type { DashboardView } from './views';
           ariaCurrentWhenActive="page"
           [routerLinkActiveOptions]="{ exact: !view.path }"
           (isActiveChange)="$event && reveal(tab)"
-        ><span class="marker" aria-hidden="true"></span><span>{{ view.tab | t }}</span></a>
+          [attr.aria-label]="count ? ('shell.frame.counter' | t: { label: (view.tab | t), waiting: count }) : null"
+        ><span class="marker" aria-hidden="true"></span><span class="name"><span class="label">{{ view.tab | t }}</span>@if (count) {<span class="chip" aria-hidden="true">{{ count > 99 ? '99+' : count }}</span>}</span></a>
       }
     </nav>
   `,
@@ -69,6 +78,7 @@ export class DashboardTabBar {
   readonly views = input.required<readonly DashboardView[]>();
   // A translation key: the dashboard's name, for the landmark.
   readonly name = input.required<string>();
+  readonly counts = input<Counts>({});
 
   // Once the tab is marked current; `nearest` keeps the page itself still.
   // `scrollIntoView` is absent on the server and in jsdom.

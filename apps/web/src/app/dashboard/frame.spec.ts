@@ -2,8 +2,9 @@ import { Component, computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import type { LiveMessage } from '@motor-fix/contracts';
+import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
+  AdminService,
   type MeDto,
   MeService,
   NotificationsService,
@@ -11,7 +12,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
-import { Subject } from 'rxjs';
+import { filter, Subject } from 'rxjs';
 
 import { Frame } from './frame';
 import { Live } from './live';
@@ -25,9 +26,14 @@ jest.mock('@motor-fix/ui-cockpit', () => ({
 
 let signOut: jest.Mock;
 let reload: jest.Mock;
+let overview: jest.Mock;
+let waiting = async (): Promise<{ garagesWaiting: number }> => ({
+  garagesWaiting: 0,
+});
 let live: {
   close: jest.Mock;
   events: Subject<LiveMessage>;
+  on: (kinds: readonly EventKind[]) => ReturnType<Subject<LiveMessage>['pipe']>;
   offline: ReturnType<typeof signal<boolean>>;
   open: jest.Mock;
   resync: Subject<void>;
@@ -55,13 +61,17 @@ async function render(
   Element.prototype.scrollIntoView = jest.fn();
   signOut = jest.fn(async () => current.set(null));
   reload = jest.fn(async () => undefined);
+  const events = new Subject<LiveMessage>();
   live = {
     close: jest.fn(),
-    events: new Subject(),
+    events,
     offline: signal(false),
+    on: (kinds) =>
+      events.pipe(filter((m) => (kinds as readonly string[]).includes(m.kind))),
     open: jest.fn(),
     resync: new Subject(),
   };
+  overview = jest.fn(() => waiting());
   const current = signal<MeDto | null>(me(role, landing, capabilities));
   // The account Session keeps on screen behind the gate dialog.
   const kept = signal<MeDto | null>(null);
@@ -91,6 +101,10 @@ async function render(
         useValue: { bellControllerUnreadCount: async () => ({ count: 0 }) },
       },
       { provide: MeService, useValue: {} },
+      {
+        provide: AdminService,
+        useValue: { adminOverviewControllerOverview: overview },
+      },
     ],
   });
   const harness = await RouterTestingHarness.create();
@@ -248,14 +262,7 @@ describe('Frame', () => {
           ])
         ).element,
       ),
-    ).toEqual([
-      'Panou',
-      'Service‑uri',
-      'Utilizatori',
-      'Recenzii raportate',
-      'Mărci și lucrări',
-      'Setări',
-    ]);
+    ).toEqual(['Panou', 'Service‑uri', 'Setări']);
   });
 
   it('gives the bar the same views as the menu, in the same order, with short labels', async () => {
@@ -462,20 +469,10 @@ describe('Frame', () => {
     expect(admin.element.querySelector('aside span')?.textContent?.trim()).toBe(
       'Admin',
     );
-    expect(menu(admin.element)).toEqual([
-      'Dashboard',
-      'Garages',
-      'Users',
-      'Reported reviews',
-      'Brands and jobs',
-      'Settings',
-    ]);
+    expect(menu(admin.element)).toEqual(['Dashboard', 'Garages', 'Settings']);
     expect(bar(admin.element).map((a) => a.textContent?.trim())).toEqual([
       'Home',
       'Garages',
-      'Users',
-      'Reported',
-      'Brands',
       'Settings',
     ]);
   });
@@ -625,5 +622,152 @@ describe('Frame', () => {
       );
       TestBed.resetTestingModule();
     }
+  });
+});
+
+const ADMIN = [
+  'admin.garages',
+  'admin.users',
+  'admin.reviews',
+  'admin.catalogue',
+  'admin.settings',
+];
+const line = (element: HTMLElement) =>
+  element
+    .querySelector('.admin-line')
+    ?.textContent?.replace(/\s+/g, ' ')
+    .trim();
+const garagesEntry = (element: HTMLElement) =>
+  menuLinks(element).find(
+    (a) => a.getAttribute('href') === '/app/admin/garages',
+  );
+const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function admin(count: number | Error) {
+  waiting = async () => {
+    if (count instanceof Error) throw count;
+    return { garagesWaiting: count };
+  };
+  const rendered = await render('admin', '/app/admin', ADMIN);
+  await settle(rendered.harness);
+  return rendered;
+}
+
+describe('the admin header', () => {
+  afterEach(() => {
+    waiting = async () => ({ garagesWaiting: 0 });
+  });
+
+  it.each([
+    [0, 'MotorFix · București · niciun service nu așteaptă verificarea'],
+    [1, 'MotorFix · București · 1 service așteaptă verificarea'],
+    [4, 'MotorFix · București · 4 service‑uri așteaptă verificarea'],
+    [20, 'MotorFix · București · 20 de service‑uri așteaptă verificarea'],
+    [101, 'MotorFix · București · 101 service‑uri așteaptă verificarea'],
+  ])('reads %i waiting in Romanian', async (count, text) => {
+    const { element } = await admin(count);
+
+    expect(line(element)).toBe(text);
+  });
+
+  it.each([
+    [0, 'MotorFix · Bucharest · no garage is waiting for verification'],
+    [1, 'MotorFix · Bucharest · 1 garage is waiting for verification'],
+    [5, 'MotorFix · Bucharest · 5 garages are waiting for verification'],
+  ])('reads %i waiting in English', async (count, text) => {
+    const { element, harness } = await admin(count);
+    await TestBed.inject(I18n).use('en');
+    await settle(harness);
+
+    expect(line(element)).toBe(text);
+  });
+
+  it('carries the ADMINISTRATOR label in both languages', async () => {
+    const { element, harness } = await admin(2);
+    const label = () =>
+      element.querySelector('header .admin-label')?.textContent?.trim();
+
+    expect(label()).toBe('ADMINISTRATOR');
+    await TestBed.inject(I18n).use('en');
+    await settle(harness);
+    expect(label()).toBe('ADMINISTRATOR');
+  });
+
+  it('puts the count on the garages entry, with the count in its name, and on no other', async () => {
+    const { element } = await admin(4);
+
+    expect(
+      garagesEntry(element)?.querySelector('.chip')?.textContent?.trim(),
+    ).toBe('4');
+    expect(garagesEntry(element)?.getAttribute('aria-label')).toBe(
+      'Service‑uri, 4 în așteptare',
+    );
+    expect(element.querySelectorAll('aside nav .chip')).toHaveLength(1);
+    expect(element.querySelectorAll('mf-dashboard-tab-bar .chip')).toHaveLength(
+      1,
+    );
+  });
+
+  it('shows no count on the garages entry when none waits', async () => {
+    const { element } = await admin(0);
+
+    expect(garagesEntry(element)?.querySelector('.chip')).toBeNull();
+    expect(garagesEntry(element)?.getAttribute('aria-label')).toBeNull();
+  });
+
+  it('shows a skeleton in place of the count while the first read runs', async () => {
+    waiting = () => new Promise(() => undefined);
+    const { element, harness } = await render('admin', '/app/admin', ADMIN);
+    await settle(harness);
+
+    expect(element.querySelector('.admin-line .skeleton')).not.toBeNull();
+    expect(line(element)).toBe('MotorFix · București ·');
+    expect(element.querySelectorAll('.chip')).toHaveLength(0);
+  });
+
+  it('hides the count everywhere when the read fails, never showing 0', async () => {
+    const { element } = await admin(new Error('offline'));
+
+    expect(line(element)).toBe('MotorFix · București');
+    expect(element.querySelector('.admin-line .skeleton')).toBeNull();
+    expect(element.querySelectorAll('.chip')).toHaveLength(0);
+  });
+
+  it('moves the line and the count when a garage sends its file, without a reload', async () => {
+    const { element, harness } = await admin(2);
+
+    waiting = async () => ({ garagesWaiting: 3 });
+    live.events.next({
+      at: '2026-10-07T09:00:00.000Z',
+      id: 'file-9',
+      kind: 'verification.submitted',
+    });
+    await pause(400);
+    await settle(harness);
+
+    expect(line(element)).toBe(
+      'MotorFix · București · 3 service‑uri așteaptă verificarea',
+    );
+    expect(
+      garagesEntry(element)?.querySelector('.chip')?.textContent?.trim(),
+    ).toBe('3');
+  });
+
+  it('turns the counted entry English with the language', async () => {
+    const { element, harness } = await admin(4);
+    await TestBed.inject(I18n).use('en');
+    await settle(harness);
+
+    expect(garagesEntry(element)?.getAttribute('aria-label')).toBe(
+      'Garages, 4 waiting',
+    );
+  });
+
+  it('shows no admin line on another dashboard and reads no overview there', async () => {
+    const { element } = await render('garage', '/app/garage', OWNER);
+
+    expect(element.querySelector('.admin-line')).toBeNull();
+    expect(element.querySelector('.admin-label')).toBeNull();
+    expect(overview).not.toHaveBeenCalled();
   });
 });

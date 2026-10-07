@@ -9,6 +9,9 @@ import { View } from './view';
 export type Area = 'driver' | 'garage' | 'admin';
 
 // `label` (the menu's) and `tab` (the bar's, shorter) are shell translation keys.
+// The numbers a dashboard's menu entries carry, while known.
+export type Counts = Partial<Record<'garagesWaiting', number>>;
+
 export interface DashboardView {
   path: string;
   label: string;
@@ -19,6 +22,11 @@ export interface DashboardView {
   push?: boolean;
   // ...and, under it, the person's staff notification choices.
   staff?: boolean;
+  // Not built yet: out of the menu, the bar and the routes until its story
+  // ships it.
+  unreleased?: true;
+  // The admin overview number its menu entry and tab carry.
+  counter?: keyof Counts;
 }
 
 const HOME: DashboardView = {
@@ -39,6 +47,7 @@ export const DASHBOARDS: Record<
       HOME,
       {
         capability: 'admin.garages',
+        counter: 'garagesWaiting',
         label: 'shell.frame.nav.admin.garages',
         path: 'garages',
         tab: 'shell.frame.tab.garages',
@@ -48,18 +57,28 @@ export const DASHBOARDS: Record<
         label: 'shell.frame.nav.admin.users',
         path: 'users',
         tab: 'shell.frame.tab.users',
+        unreleased: true,
       },
       {
         capability: 'admin.reviews',
         label: 'shell.frame.nav.admin.reviews',
         path: 'reviews',
         tab: 'shell.frame.tab.reported',
+        unreleased: true,
       },
       {
         capability: 'admin.catalogue',
         label: 'shell.frame.nav.admin.catalogue',
         path: 'catalogue',
         tab: 'shell.frame.tab.brands',
+        unreleased: true,
+      },
+      {
+        capability: 'admin.settings',
+        label: 'shell.frame.nav.admin.assistant',
+        path: 'assistant',
+        tab: 'shell.frame.tab.assistant',
+        unreleased: true,
       },
       {
         capability: 'admin.settings',
@@ -167,7 +186,9 @@ export const allowedViews = (
   capabilities: readonly string[],
 ): DashboardView[] =>
   DASHBOARDS[area].views.filter(
-    (view) => !view.capability || capabilities.includes(view.capability),
+    (view) =>
+      !view.unreleased &&
+      (!view.capability || capabilities.includes(view.capability)),
   );
 
 // The area guard has loaded the session before these match. A view owns its
@@ -183,7 +204,7 @@ export const dashboardRoutes = (area: Area): Routes => [
     pathMatch: 'full',
   },
   ...DASHBOARDS[area].views
-    .filter((view) => view.path)
+    .filter((view) => view.path && !view.unreleased)
     .map((view) => ({
       canMatch: [
         () =>

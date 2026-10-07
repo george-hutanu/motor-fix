@@ -53,3 +53,21 @@ Start commit: b76badd3 (worktree .worktrees/160-admin-dashboard-menu, branch 160
 - Round 1: artifact-lint 3 ERROR → CRITICAL (capability `admin-dashboard` has no file; Modifies malformed; Modifies base not found); 3 WARN → MEDIUM (FR-004, FR-005, FR-015 in no delta). Manual pass: LOW research R6 rejected a `9+` cap while the checklist added `99+` (FR-010) — not a conflict, R6 now says so. Coverage: 15/15 FRs and SC-001..005 have tasks; the e2e live rise is deferred to ST-116 (T027, deferred.md). Context proposals: operations command left open for the owner; e2e deferral recorded; zero form and hidden counter at 0 kept (FR-008/FR-010).
 - Remediation applied: `.specify/capabilities/admin-dashboard.md` stub (precedent: garage-verification at ST-207); Modifies → `079-FR-018 → FR-007`, FR-007 now restates 079-FR-018 whole plus the release mark and left Adds; 082-FR-023 no longer modified (FR-013 adds beside it).
 - Round 2: artifact-lint 0 errors, 3 warnings kept (FR-004/005/015 restate existing rules or name tests; the spec says so); capabilities validate 0 errors. No CRITICAL/HIGH left.
+
+## 9. Tests (inline, opus)
+- Red: web 7 suites run, 32 failed / 100 passed (5 suites red: admin-overview missing module, tab-bar 6, views 7, frame 17, live 3); domain controller spec red (module missing). Integration specs (admin-routes, countWaiting, seed) written; they run with the services at implement.
+- Regression guards that pass before implementation (kept): "assistant" address falls through, no admin line on the garage dashboard, no chip at zero, no driver/garage view unreleased.
+- Existing tests changed by the new behaviour: admin menu/bar now released views only (views, frame, dashboard-tab-bar e2e, sign-in e2e admin landing checks "Setări"); `signInAs` stubs the overview at 0.
+- Decision: the English short tab for Panou stays the shared "Home" key (driver and garage use it); FR-006's "Dashboard" would rename the other dashboards' tab. Decision: the header label is its own key "ADMINISTRATOR"; the aside tag "Admin" is left as it is.
+- Decision: MAINTENANCE is exported from `@motor-fix/domain` so the API spec can turn maintenance on in the booted app (plan R2 overrode it in a domain-only module).
+
+## 10. Implement
+
+- API: `AdminOverviewDto`, `VerificationService.countWaiting`, `GET admin/overview` under `admin.garages`; OpenAPI and client regenerated; seed adds two waiting files (`service-dobre` submitted, `atelier-dinamo` in review), idempotent.
+- Web: release mark and counter key on the view list (the assistant view added, unreleased); `liveResource` takes an optional id and exposes `failed`; `AdminOverview` store; frame header label, line, skeleton and chips; tab bar `counts` input and chip.
+- Decision: the counter text's parameter is `waiting`, not `count`, because `t()` treats a `count` parameter as a plural selector (`libs/i18n/src/i18n.ts:96-101`).
+- Decision: "MotorFix · <city>" is one key, `frame.admin.place`, since the template check refuses typed-in text (`libs/i18n/src/check.spec.ts`).
+- Decision: the views adversary spec's unique-capability and one-route-per-view invariants now apply to released views; FR-006 puts the hidden assistant under `admin.settings`.
+- T010: nothing grants `admin`. The only writes of the role are the seed (`libs/domain/src/seed.ts:88`); `POST auth/roles/switch` switches among roles held; no OpenAPI operation adds a role.
+- Env: Docker's address pools were exhausted by test stacks of removed worktrees; `docker compose -p <project> down -v` on the ten `mf-test-*` projects whose worktree is gone.
+- Verified: web + i18n Jest 98 suites / 1841 tests green; web typecheck green; domain garages, seed, admin-routes and public-routes integration 12 suites / 175 tests green.
