@@ -34,6 +34,21 @@
     "retry": "Încearcă din nou",
     "title": "Invitație în echipă"
   },
+  "listing": {
+    "bar": "{n} / 6 · {label}",
+    "heading": "Pune‑ți service‑ul pe hartă",
+    "intro": "Spune ce primești și ce refuzi. Cine îți cere o ofertă știe deja că lucrezi pe mașina lui.",
+    "label": "PENTRU SERVICE‑URI",
+    "optional": "opțional",
+    "required": "obligatoriu",
+    "step1": "Service‑ul",
+    "step2": "Mărci",
+    "step3": "Prețuri",
+    "step4": "Mecanici",
+    "step5": "Fotografii și adresă",
+    "step6": "Verificare",
+    "steps": "Pași"
+  },
   "newPassword": {
     "askAgain": "Cere un link nou",
     "checking": "Verificăm linkul…",

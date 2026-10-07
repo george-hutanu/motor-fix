@@ -17,6 +17,7 @@ import {
 
 import {
   alternates,
+  PUBLIC_PATHS,
   provideLanguageAddresses,
   SITE_ORIGIN,
   toLanguageAddress,
@@ -254,6 +255,19 @@ describe('language addresses', () => {
     expect(href('link[hreflang="ro"]')).toBe(`${ORIGIN}/ro/`);
     expect(href('link[hreflang="en"]')).toBe(`${ORIGIN}/en/`);
     expect(href('link[hreflang="x-default"]')).toBe(`${ORIGIN}/ro/`);
+    expect(robots()).toEqual([]);
+  });
+
+  it('gives the list your garage page one address per language, with its search engine links', async () => {
+    await open('/ro/list-your-garage');
+
+    expect(url()).toBe('/ro/list-your-garage');
+    expect(PUBLIC_PATHS).toContain('list-your-garage');
+    expect(href('link[rel="canonical"]')).toBe(`${ORIGIN}/ro/list-your-garage`);
+    expect(href('link[hreflang="en"]')).toBe(`${ORIGIN}/en/list-your-garage`);
+    expect(href('link[hreflang="x-default"]')).toBe(
+      `${ORIGIN}/ro/list-your-garage`,
+    );
     expect(robots()).toEqual([]);
   });
 
