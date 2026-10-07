@@ -29,13 +29,13 @@ async function firstApprovedSince(db: PrismaClient, since: Date) {
   });
   if (garages.length === 0) return 0;
   const earlier = await db.activityLog.findMany({
-    distinct: ['subjectId'],
-    select: { subjectId: true },
+    distinct: ['garageId'],
+    select: { garageId: true },
     where: {
       at: { lt: since },
       field: 'status',
+      garageId: { in: garages.map(({ id }) => id) },
       newValue: { equals: 'approved' },
-      subjectId: { in: garages.map(({ id }) => id) },
       subjectType: 'garage',
     },
   });

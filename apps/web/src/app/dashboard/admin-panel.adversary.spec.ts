@@ -142,3 +142,65 @@ describe('AdminPanel with awkward figures', () => {
     }
   });
 });
+
+describe('AdminPanel change line around zero and below', () => {
+  const drivers = (activeDrivers: number, activeDriversMonthStart: number) => {
+    answer = async () => ({
+      ...FIGURES,
+      activeDrivers,
+      activeDriversMonthStart,
+    });
+  };
+
+  it.each([
+    [12167, 12168, '−1 luna asta'],
+    [12168, 12168, '+0 luna asta'],
+    [12169, 12168, '+1 luna asta'],
+    [0, 12168, '−12.168 luna asta'],
+    [0, 0, '+0 luna asta'],
+  ])(
+    'reads %i now against %i at the start as "%s"',
+    async (now, start, line) => {
+      drivers(now, start);
+      const element = await open();
+
+      expect(text(tile(element, 'Șoferi activi'), 'line')).toBe(line);
+    },
+  );
+
+  it('writes a fall in English with the true minus sign and English grouping', async () => {
+    drivers(1000, 2500);
+    const element = await open('en');
+
+    const t = tile(element, 'Active drivers');
+    expect(text(t, 'line')).toBe('−1,500 this month');
+    expect(text(t, 'line')).not.toContain('-');
+  });
+
+  it('carries the minus line into the accessible name', async () => {
+    drivers(10, 22);
+    const element = await open();
+
+    expect(tile(element, 'Șoferi activi').getAttribute('aria-label')).toBe(
+      'Șoferi activi, 10, −12 luna asta',
+    );
+  });
+
+  it('names an unchanged count with +0, in English too', async () => {
+    drivers(5, 5);
+    const element = await open('en');
+
+    expect(tile(element, 'Active drivers').getAttribute('aria-label')).toBe(
+      'Active drivers, 5, +0 this month',
+    );
+  });
+
+  it('does not let the active-drivers fall change the garages line', async () => {
+    drivers(1, 500);
+    const element = await open();
+
+    expect(text(tile(element, 'Service‑uri listate'), 'line')).toBe(
+      '+9 luna asta',
+    );
+  });
+});

@@ -66,8 +66,8 @@ describe('the platform figures', () => {
       prisma.activityLog.create({
         data: {
           action: 'update',
-          actorName: 'Admin',
-          actorRole: 'admin',
+          actorName: 'MotorFix',
+          actorRole: 'system',
           at,
           field: 'status',
           garageId: id,

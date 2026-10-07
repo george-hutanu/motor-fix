@@ -81,7 +81,10 @@ export class InsightsModule
     await this.jobs.upsertJobScheduler(
       SNAPSHOT,
       { pattern: '0 1 * * *', tz: 'Europe/Bucharest' },
-      { name: SNAPSHOT, opts: { attempts: 1, removeOnComplete: true } },
+      {
+        name: SNAPSHOT,
+        opts: { attempts: 1, removeOnComplete: true, removeOnFail: 10 },
+      },
     );
   }
 
