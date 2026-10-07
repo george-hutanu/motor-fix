@@ -1,4 +1,5 @@
 import {
+  baniToLei,
   checkPriceRange,
   leiToBani,
   PRICE_MAX_BANI,
@@ -14,6 +15,12 @@ describe('lei and bani', () => {
 
   it('refuses lei with a fraction', () => {
     expect(() => lei(1.5)).toThrow(RangeError);
+  });
+
+  it('turns bani back into whole lei', () => {
+    expect(baniToLei(18_000)).toBe(180);
+    expect(baniToLei(0)).toBe(0);
+    expect(baniToLei(lei(1_200))).toBe(1_200);
   });
 
   it('bounds a price between 1 leu and 100.000 lei', () => {

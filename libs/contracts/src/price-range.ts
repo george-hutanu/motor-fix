@@ -18,6 +18,8 @@ export function leiToBani(lei: number): number {
   return bani;
 }
 
+export const baniToLei = (bani: number): number => bani / BANI_PER_LEU;
+
 interface PriceRangeInput {
   fromBani: number;
   toBani?: number | null;
