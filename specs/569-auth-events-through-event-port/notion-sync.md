@@ -9,3 +9,6 @@
 - 2026-10-07 · implement · ST-569 · Planning → Implementing
 - 2026-10-07 · implement · timeline · no row for ST-569
 - 2026-10-07 · labels · PR #187 · in development
+- 2026-10-07 · qa · ST-569 · Implementing → QA
+- 2026-10-07 · qa · timeline · no row for ST-569
+- 2026-10-07 · labels · PR #187 · QA
