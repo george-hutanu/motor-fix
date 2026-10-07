@@ -6,6 +6,7 @@ import { Redis } from 'ioredis';
 import { BrandLoader } from './brand-loader';
 import { BrandFileError, type BrandRecord } from './brands';
 import { AuditService } from '../audit/audit.service';
+import { foreignEntries } from '../audit/audit.testing';
 import { serialDatabase } from '../auth/serial-db.testing';
 import {
   databaseUrl,
@@ -34,6 +35,7 @@ beforeEach(async () => {
     { now: Date }[]
   >`SELECT clock_timestamp() AS now`;
   since = now;
+  await foreignEntries(prisma, [{ subjectType: 'brand' }]);
 });
 
 afterAll(async () => {
@@ -54,10 +56,19 @@ const stored = () =>
     },
   });
 
-const history = () =>
+// Only the catalogue's own brands: the log keeps other runs' entries.
+const history = async () =>
   prisma.activityLog.findMany({
     orderBy: { at: 'asc' },
-    where: { at: { gte: since }, subjectType: 'brand' },
+    where: {
+      at: { gte: since },
+      subjectId: {
+        in: (await prisma.brand.findMany({ select: { id: true } })).map(
+          (b) => b.id,
+        ),
+      },
+      subjectType: 'brand',
+    },
   });
 
 async function garageWorkingOn(brandId: string) {

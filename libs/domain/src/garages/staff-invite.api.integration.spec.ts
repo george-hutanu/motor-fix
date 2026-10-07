@@ -7,6 +7,7 @@ import request from 'supertest';
 
 import { GaragesModule } from './garages.module';
 import { StaffInviteService } from './staff-invite.service';
+import { foreignEntries } from '../audit/audit.testing';
 import { signAccessToken } from '../auth/access-token';
 import { AuthModule } from '../auth/auth.module';
 import type { Role } from '../auth/capabilities';
@@ -76,6 +77,12 @@ beforeEach(async () => {
   >`SELECT clock_timestamp() AS now`;
   since = now;
   invites.now = () => new Date();
+  await foreignEntries(
+    prisma,
+    ['invite_sent', 'invite_accepted', 'invite_resent', 'invite_revoked'].map(
+      (kind) => ({ kind, subjectType: 'staff_invite' }),
+    ),
+  );
 });
 
 const http = () => request(app.getHttpServer());
@@ -155,9 +162,9 @@ function tokenOf() {
 
 const outbox = (kind: string) =>
   prisma.outboxEvent.findMany({ where: { createdAt: { gte: since }, kind } });
-const audit = (kind: string) =>
+const audit = (kind: string, garageId: string) =>
   prisma.activityLog.findMany({
-    where: { at: { gte: since }, kind, subjectType: 'staff_invite' },
+    where: { at: { gte: since }, garageId, kind, subjectType: 'staff_invite' },
   });
 
 async function features(garageId: string, enabled: boolean) {
@@ -226,7 +233,7 @@ describe('sending an invite', () => {
 
     const res = await send(dinamo.id, bearer(mihai, 'garage'));
 
-    const [entry] = await audit('invite_sent');
+    const [entry] = await audit('invite_sent', dinamo.id);
     expect(entry).toMatchObject({
       actorId: mihai,
       garageId: dinamo.id,
@@ -477,7 +484,7 @@ describe('opening and accepting a link', () => {
       where: { id },
     });
     expect(invite.status).toBe('accepted');
-    const [entry] = await audit('invite_accepted');
+    const [entry] = await audit('invite_accepted', dinamo.id);
     expect(entry).toMatchObject({ actorId: ana, garageId: dinamo.id });
     const [event] = await outbox('invite.accepted');
     expect(event.audience).toEqual([`garage:${dinamo.id}`]);
@@ -664,7 +671,7 @@ describe('resending and revoking', () => {
     expect(fresh).not.toBe(token);
     expect((await check(token)).body.code).toBe('invite_invalid');
     expect((await check(fresh)).status).toBe(200);
-    const [entry] = await audit('invite_resent');
+    const [entry] = await audit('invite_resent', dinamo.id);
     expect(entry?.newValue).toEqual({
       kind: 'mechanic',
       name: 'Elena Stan',
@@ -699,7 +706,7 @@ describe('resending and revoking', () => {
 
     expect(res.status).toBe(204);
     expect((await check(token)).body.code).toBe('invite_invalid');
-    expect(await audit('invite_revoked')).toHaveLength(1);
+    expect(await audit('invite_revoked', dinamo.id)).toHaveLength(1);
     const [event] = await outbox('invite.revoked');
     expect(event.subjectId).toBe(id);
   });
