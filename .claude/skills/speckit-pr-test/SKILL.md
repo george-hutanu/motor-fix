@@ -91,8 +91,8 @@ without a status, so the test runs again.
    ```
 
 5. **Success**: return to the caller, which merges on green CI
-   (`gh pr checks <n> --watch` with `run_in_background`, printing only the
-   checks that did not pass as AGENTS.md "Agent replies" shows, then
+   (`node .claude/scripts/pr-test/ci-wait.mjs <n>` with `run_in_background`,
+   which prints only the checks that did not pass, then
    `gh pr merge <n> --merge`, then `speckit-notion-sync finish`). The merge
    gate refuses while any check is failing, running or missing.
 6. **Failure**: the implementing agent fixes every blocking finding — a failing

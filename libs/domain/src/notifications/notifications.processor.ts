@@ -395,7 +395,19 @@ export class NotificationsProcessor {
       });
     await mark(this.now());
     const month = smsMonth(this.now());
-    if (!(await takeSms(this.prisma, row.accountId, month))) {
+    // A count that fails sent nothing: the mark is cleared so the retry sends
+    // the SMS rather than settling it as unconfirmed.
+    const taken = await takeSms(this.prisma, row.accountId, month).catch(
+      async (error: unknown) => {
+        await mark(null).catch((failed) =>
+          this.logger.error(
+            `notification ${row.id} ${row.kind} sms mark not cleared: ${String(failed)}`,
+          ),
+        );
+        throw error;
+      },
+    );
+    if (!taken) {
       await this.service.fail([row], 'sms_cap_reached', true);
       return;
     }
