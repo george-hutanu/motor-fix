@@ -31,6 +31,7 @@ import { filter, map } from 'rxjs';
 import { AdminOverview } from './admin-overview';
 import { Bell } from './bell';
 import { EmailBanner } from './email-banner';
+import { initials } from './initials';
 import { InviteStaff } from './invite-staff';
 import { Live } from './live';
 import { LiveChange } from './live-in-place';
@@ -90,8 +91,14 @@ const ROLES: readonly { role: Role; label: string }[] = [
     header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mf-space-3); }
     header h1 { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
     .title { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; padding-top: var(--mf-space-3); }
-    .admin-label { color: var(--mf-text-secondary); font-size: var(--mf-size-label); font-weight: 700; letter-spacing: 0.08em; }
-    .admin-line { margin: 0; color: var(--mf-text-secondary); font-size: var(--mf-size-small); overflow-wrap: anywhere; }
+    .admin-label, .eyebrow { color: var(--mf-text-secondary); font-size: var(--mf-size-label); font-weight: 700; letter-spacing: 0.08em; }
+    .admin-line, .line { margin: 0; color: var(--mf-text-secondary); font-size: var(--mf-size-small); overflow-wrap: anywhere; }
+    .who { display: flex; align-items: center; gap: var(--mf-space-2); min-width: 0; overflow-wrap: anywhere; }
+    .avatar {
+      display: inline-flex; flex: none; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 50%; background: var(--mf-line);
+      color: var(--mf-text-secondary); font-size: var(--mf-size-label); font-weight: 700;
+    }
     .skeleton { display: inline-block; width: 12rem; max-width: 50%; height: 0.9em; border-radius: var(--mf-radius-chip); background: var(--mf-line); vertical-align: middle; }
     aside nav a { display: flex; align-items: center; gap: var(--mf-space-2); }
     .chip {
@@ -117,7 +124,7 @@ const ROLES: readonly { role: Role; label: string }[] = [
   template: `
     <aside>
       <a routerLink="/" [attr.aria-label]="'shell.frame.home' | t">{{ 'shell.frame.logo' | t }}</a>
-      <span>{{ dashboard().tag | t }}</span>
+      <span class="eyebrow">{{ dashboard().tag | t }}</span>
       <nav [attr.aria-label]="'shell.frame.menu' | t">
         @for (view of entries(); track view.path) {
           @let count = view.counter ? counts()[view.counter] : undefined;
@@ -143,7 +150,10 @@ const ROLES: readonly { role: Role; label: string }[] = [
             }
           </div>
         }
-        <mf-as-written [text]="session.shown()?.name ?? ''" />
+        <div class="who">
+          @if (letters(); as l) {<span class="avatar" aria-hidden="true">{{ l }}</span>}
+          <mf-as-written [text]="session.shown()?.name ?? ''" />
+        </div>
         @if (inviteGarage(); as garageId) {
           <button type="button" (click)="invite(garageId)">{{ 'shell.frame.invite' | t }}</button>
         }
@@ -169,7 +179,10 @@ const ROLES: readonly { role: Role; label: string }[] = [
             </p>
           </div>
         } @else {
-          <h1>{{ open().label | t }}</h1>
+          <div class="title">
+            <h1>{{ (open().title ?? open().label) | t }}</h1>
+            @if (open().subtitle; as line) {<p class="line">{{ line | t }}</p>}
+          </div>
         }
         <mf-language-switch /><mf-bell />
       </header>
@@ -215,6 +228,9 @@ export class Frame implements OnInit {
     return ROLES.filter(({ role }) => held.includes(role));
   });
   protected readonly switching = signal(false);
+  protected readonly letters = computed(() =>
+    initials(this.session.shown()?.name ?? ''),
+  );
   // The owner's garage, while the garage role with the team right is on.
   protected readonly inviteGarage = computed(() => {
     const me = this.session.shown();

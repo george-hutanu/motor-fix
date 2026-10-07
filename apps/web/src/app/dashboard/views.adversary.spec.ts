@@ -201,7 +201,10 @@ describe('dashboard routing under hostile addresses', () => {
     const { url, element } = await open([], area, address);
     // The query string is kept: only the path is the dashboard's own.
     expect(url().split('?')[0]).toBe(`/app/${area}`);
-    expect(element.querySelector('h1')?.textContent?.trim()).toBe('Panou');
+    // The driver's dashboard view carries its own title (ST-28).
+    expect(element.querySelector('h1')?.textContent?.trim()).toBe(
+      area === 'driver' ? 'Panoul tău' : 'Panou',
+    );
   });
 
   it('keeps an allowed view address and its sub-path', async () => {

@@ -339,7 +339,7 @@ describe('Frame', () => {
       'driver.cars',
     ]);
 
-    expect(title(element)).toBe('Panou');
+    expect(title(element)).toBe('Panoul tău');
     expect(element.querySelector('main')?.textContent).toContain(
       'Nimic aici încă.',
     );
@@ -425,7 +425,7 @@ describe('Frame', () => {
     await settle(harness);
 
     expect(element.querySelector('aside span')?.textContent?.trim()).toBe(
-      'Driver',
+      'DRIVER ACCOUNT',
     );
     expect(menu(element)).toEqual(['Dashboard', 'My requests', 'My cars']);
     expect(bar(element).map((a) => a.textContent?.trim())).toEqual([
@@ -780,5 +780,148 @@ describe('the admin header', () => {
     expect(element.querySelector('.admin-line')).toBeNull();
     expect(element.querySelector('.admin-label')).toBeNull();
     expect(overview).not.toHaveBeenCalled();
+  });
+});
+
+const DRIVER = [
+  'driver.requests',
+  'driver.cars',
+  'driver.reviews',
+  'driver.saved_garages',
+  'driver.settings',
+];
+const subtitle = (element: HTMLElement) =>
+  element.querySelector('header .title .line')?.textContent?.trim();
+
+describe('the driver header', () => {
+  it.each([
+    ['/app/driver', 'Panoul tău'],
+    ['/app/driver/requests', 'Cererile mele'],
+    ['/app/driver/cars', 'Mașinile mele'],
+    ['/app/driver/reviews', 'Recenziile mele'],
+    ['/app/driver/saved', 'Service‑uri salvate'],
+    ['/app/driver/settings', 'Setări'],
+  ])('titles %s "%s"', async (address, text) => {
+    const { element } = await render('driver', '/app/driver', DRIVER, address);
+
+    expect(title(element)).toBe(text);
+    expect(element.querySelectorAll('h1')).toHaveLength(1);
+  });
+
+  it('shows the settings subtitle under the settings title only', async () => {
+    const { element, harness } = await render(
+      'driver',
+      '/app/driver',
+      DRIVER,
+      '/app/driver/settings',
+    );
+
+    expect(subtitle(element)).toBe('Datele contului și notificările');
+    await harness.navigateByUrl('/app/driver/cars');
+    await settle(harness);
+    expect(subtitle(element)).toBeUndefined();
+  });
+
+  it('turns the titles and the subtitle English', async () => {
+    const { element, harness } = await render(
+      'driver',
+      '/app/driver',
+      DRIVER,
+      '/app/driver/settings',
+    );
+
+    await TestBed.inject(I18n).use('en');
+    await settle(harness);
+    expect(title(element)).toBe('Settings');
+    expect(subtitle(element)).toBe('Account details and notifications');
+    await harness.navigateByUrl('/app/driver');
+    await settle(harness);
+    expect(title(element)).toBe('Your dashboard');
+  });
+
+  it('opens the dashboard view, titled, at the unreleased assistant address', async () => {
+    const { element } = await render(
+      'driver',
+      '/app/driver',
+      DRIVER,
+      '/app/driver/assistant',
+    );
+
+    expect(url()).toBe('/app/driver');
+    expect(title(element)).toBe('Panoul tău');
+    expect(menu(element)).not.toContain('Asistent AI');
+    expect(bar(element).map((a) => a.textContent?.trim())).not.toContain('AI');
+  });
+
+  it('keeps the menu label as the title on the garage dashboard', async () => {
+    const { element } = await render(
+      'garage',
+      '/app/garage',
+      OWNER,
+      '/app/garage/team',
+    );
+
+    expect(title(element)).toBe('Mecanici');
+    expect(subtitle(element)).toBeUndefined();
+  });
+});
+
+describe('the account block', () => {
+  const initials = (element: HTMLElement) =>
+    element.querySelector('.account .avatar');
+
+  it('names the driver account in both languages', async () => {
+    const { element, harness } = await render('driver', '/app/driver', []);
+    const tag = () => element.querySelector('aside .eyebrow');
+
+    expect(tag()?.textContent?.trim()).toBe('CONT ȘOFER');
+    await TestBed.inject(I18n).use('en');
+    await settle(harness);
+    expect(tag()?.textContent?.trim()).toBe('DRIVER ACCOUNT');
+  });
+
+  it('leaves the garage and admin account lines as they were', async () => {
+    const garage = await render('garage', '/app/garage', OWNER);
+    expect(
+      garage.element.querySelector('aside .eyebrow')?.textContent?.trim(),
+    ).toBe('Service');
+
+    TestBed.resetTestingModule();
+    const admin = await render('admin', '/app/admin', ['admin.garages']);
+    expect(
+      admin.element.querySelector('aside .eyebrow')?.textContent?.trim(),
+    ).toBe('Admin');
+  });
+
+  it.each([
+    ['driver', '/app/driver', [] as string[]],
+    ['garage', '/app/garage', OWNER],
+    ['admin', '/app/admin', ['admin.garages']],
+  ])(
+    'shows the initials beside the name on the %s dashboard, hidden from assistive technology',
+    async (role, landing, capabilities) => {
+      const { element } = await render(role, landing, capabilities);
+      const letters = initials(element);
+
+      expect(letters?.textContent?.trim()).toBe('IP');
+      expect(letters?.getAttribute('aria-hidden')).toBe('true');
+      const name = element.querySelector('.account [translate="no"]');
+      expect(name?.textContent?.trim()).toBe('Ioana Pop');
+      expect(letters?.compareDocumentPosition(name as Node)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    },
+  );
+
+  it('shows no initials for an empty name', async () => {
+    const { current, element, harness } = await render(
+      'driver',
+      '/app/driver',
+      [],
+    );
+    current.update((me) => (me ? { ...me, name: '   ' } : me));
+    await settle(harness);
+
+    expect(initials(element)).toBeNull();
   });
 });

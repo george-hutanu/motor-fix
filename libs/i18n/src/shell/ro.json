@@ -71,7 +71,7 @@
     },
     "area": {
       "admin": "Admin",
-      "driver": "Șofer",
+      "driver": "CONT ȘOFER",
       "garage": "Service"
     },
     "bar": {
@@ -96,6 +96,7 @@
       },
       "dashboard": "Panou",
       "driver": {
+        "assistant": "Asistent AI",
         "cars": "Mașinile mele",
         "requests": "Cererile mele",
         "reviews": "Recenziile mele",
@@ -123,7 +124,13 @@
     },
     "signOut": "Ieși din cont",
     "signOutEverywhere": "Ieși de pe toate dispozitivele",
+    "subtitle": {
+      "driver": {
+        "settings": "Datele contului și notificările"
+      }
+    },
     "tab": {
+      "ai": "AI",
       "assistant": "Asistent",
       "brands": "Mărci",
       "cars": "Mașini",
@@ -140,6 +147,17 @@
       "settings": "Setări",
       "team": "Mecanici",
       "users": "Utilizatori"
+    },
+    "title": {
+      "driver": {
+        "assistant": "Asistentul tău AI",
+        "cars": "Mașinile mele",
+        "dashboard": "Panoul tău",
+        "requests": "Cererile mele",
+        "reviews": "Recenziile mele",
+        "saved": "Service‑uri salvate",
+        "settings": "Setări"
+      }
     }
   },
   "gauge": {
