@@ -30,7 +30,7 @@ function timing(event, story, row, now) {
   if (event === "qa") qa ??= at;
   if (event === "finish") merged = at;
   const state = event === "unblock" ? (qa ? "QA" : "In progress") : STATE[event];
-  const range = { start: started ?? at, end: state === "Merged" || merged ? merged : new Date(now.getTime() + SPAN_MS).toISOString() };
+  const range = { start: started ?? at, end: state === "Merged" && merged ? merged : new Date(now.getTime() + SPAN_MS).toISOString() };
   let took = null;
   if (started && state === "Merged") took = `${duration(started, merged)} total · build ${duration(started, qa ?? merged)} · QA ${duration(qa ?? merged, merged)}`;
   else if (started && state === "QA") took = `build ${duration(started, qa)} · in QA ${duration(qa, at)}`;
