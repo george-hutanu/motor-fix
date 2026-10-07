@@ -10,6 +10,16 @@
 
 **Story**: ST-300, EP-2 — https://www.notion.so/3ee607bff0d281eb88ffff1135141301 (Build brief of 2026-10-03 wins over the story's earlier text; the only source of scope).
 
+## Clarifications
+
+### Session 2026-10-07
+
+- Q: Does a file with more requested accept a record call? → A: No, 409 "Dosarul e deja decis": `more_requested` is a decision that waits for the garage (MF-58 rules 1 and 4); the admin re-checks after the resend, when the file is `submitted` again.
+- Q: Rows created in the submission's transaction or by a consumer of `verification.submitted`? → A: In the transaction (submit and resend), the same outcome with no queue (Principle VI); files sent before this change get their 8 rows from the migration.
+- Q: Does the summary come back as Romanian text only? → A: One function builds it in Romanian and English from the checks; the record call returns both, and the queue story calls the same function. The detail stays as the admin typed it.
+- Q: Which kinds feed the summary's first part, and what is the exact text? → A: Only `company` ("CUI") and `rar` ("autorizație RAR"): "CUI verificat", "Autorizație RAR verificată", "CUI și autorizație RAR verificate". The second part is `<kind name> <detail>` (e.g. "fotografii neclare"), except `rar = failed`, which reads "Lipsește autorizația RAR". The line starts with a capital. With neither part, it reads "Neverificat". English: "Company ID checked", "RAR licence checked", "Company ID and RAR licence checked", "RAR licence missing", "Not checked".
+- Q: When is the activities list required, and what do evidence and the audit entry carry? → A: The list is required (it may be empty) when `activities` is recorded `ok`; otherwise it is optional and an omitted list leaves `rar_activities` as it is. The `evidence` column is dropped: nothing writes it yet (Principle I); it comes with the first automatic look-up. Each save writes one audit entry whose old and new values carry the result, the detail and, for `activities`, the list.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - The checks exist as soon as a file is sent (Priority: P1)
@@ -78,20 +88,20 @@ The queue line and the file drawer show each check as a green, amber, red or gre
 ### Functional Requirements
 
 - **FR-001**: On a file's submission and on its resend after more was requested, the system MUST ensure the file has exactly one check per kind — company, caen, rar, activities, representative, address, photos, documents — created with result `not_run`, `automatic = false` and no detail, in the same transaction as the submission; a check that already exists is kept with its result.
-- **FR-002**: A check MUST store its file, kind, whether it is automatic, result (`not_run`, `ok`, `warning`, `failed`), detail line, evidence (free-form, optional), who recorded it and when.
+- **FR-002**: A check MUST store its file, kind, whether it is automatic, result (`not_run`, `ok`, `warning`, `failed`), detail line, who recorded it and when; files sent before this change get their 8 checks when it is deployed.
 - **FR-003**: An admin MUST be able to record one check of a file by kind with a result and a detail; the save sets `recorded_by` and `recorded_at`, and the last save wins.
-- **FR-004**: Recording the `activities` kind MUST also take the list of RAR activity codes on the garage's authorisation, validate each against the RAR activity catalogue, and store the list on the garage (`rar_activities`) in the same transaction as the check.
+- **FR-004**: Recording the `activities` kind MUST also take the list of RAR activity codes on the garage's authorisation — required (possibly empty) when the result is `ok`, optional otherwise, an omitted list leaving the garage's list unchanged — validate each against the RAR activity catalogue, and store the list on the garage (`rar_activities`) in the same transaction as the check.
 - **FR-005**: The RAR activity catalogue MUST exist with a code and a Romanian and English name per activity, seeded with mechanics, brakes, steering, suspension and air-con.
-- **FR-006**: Every record MUST write one audit history entry carrying the old and new result and detail, in the same transaction; creating the rows at submission writes no entry of its own.
+- **FR-006**: Every record MUST write one audit history entry carrying the old and new result and detail (and, for `activities`, the old and new list), in the same transaction; creating the rows at submission writes no entry of its own.
 - **FR-007**: Every record MUST emit `verification.check_recorded` with fileId, kind and result through the outbox, in the same transaction, to the admin channel.
 - **FR-008**: The system MUST map a result to a lamp colour: `ok` green, `warning` amber, `failed` red, `not_run` grey.
-- **FR-009**: The system MUST build a summary line of at most two parts joined with " · ": the first names the register checks that are `ok` ("CUI", "autorizație RAR", joined with "și" and followed by "verificat"/"verificate"); the second names the most serious problem — `failed` before `warning`, `rar` before any other kind — as the kind's name and its detail, with `rar = failed` reading "Lipsește autorizația RAR"; with nothing recorded it reads "Neverificat". The record call returns the file's new summary.
+- **FR-009**: The system MUST build a summary line, in Romanian and English, of at most two parts joined with " · ": the first names the register checks that are `ok` — only `company` ("CUI") and `rar` ("autorizație RAR"): "CUI verificat", "Autorizație RAR verificată", "CUI și autorizație RAR verificate"; the second names the most serious problem — `failed` before `warning`, `rar` before any other kind, then the kinds' order — as `<kind name> <detail>`, with `rar = failed` reading "Lipsește autorizația RAR"; the line starts with a capital; with neither part it reads "Neverificat". The record call returns the file's new summary in both languages.
 - **FR-010**: A record MUST be refused with 422 for an unknown kind; 400 `validation_failed` for a missing detail on `warning` or `failed`, a detail over 200 characters, or an unknown activity code; 409 "Dosarul e deja decis" when the file is approved, rejected or has more requested, unless it was reopened into review.
 - **FR-011**: Only a MotorFix admin may record a check; anyone else gets 404, as on the other admin routes.
 
 ### Key Entities
 
-- **Verification check**: one row per (file, kind); result, detail, evidence, automatic flag, recorded_by, recorded_at. Unique on (file, kind).
+- **Verification check**: one row per (file, kind); result, detail, automatic flag, recorded_by, recorded_at. Unique on (file, kind). No evidence column yet.
 - **RAR activity**: catalogue row — code, name_ro, name_en.
 - **Garage.rar_activities**: the list of catalogue codes the garage's RAR authorisation covers, written by the activities check.
 - **Verification file** (existing): owns the checks; "decided" means approved, rejected or more_requested; a reopened file is in review again.
@@ -111,7 +121,7 @@ The queue line and the file drawer show each check as a green, amber, red or gre
 - Idempotency is a unique (file, kind) constraint; a resend keeps existing rows and their results. *(autonomous default)*
 - The documents part of the summary ("Lipsește autorizația RAR" for a missing `rar_authorisation` document) needs a legal-document table that no story has built; only a `failed` rar check yields that text now. Deferred, to be recorded in `deferred.md`. *(autonomous default)*
 - `verification.check_recorded` reaches the admin channel only (the `platform` audience); a per-file live channel `verification-file:{fileId}` belongs to the file story. *(autonomous default)*
-- The summary is returned by the record call and computed by one function the queue story reuses; there is no separate summary endpoint. *(autonomous default)*
+- The summary is returned by the record call (Romanian and English) and computed by one function in the contracts library that the queue story reuses; there is no separate summary endpoint. *(autonomous default)*
 - Errors: detail over 200 characters or missing for `warning`/`failed` → 400 `validation_failed`; unknown kind → 422; decided file → 409 "Dosarul e deja decis"; unknown activity code → 400 `validation_failed`. *(autonomous default)*
 - The RAR activity catalogue is seeded with codes `mechanics`, `brakes`, `steering`, `suspension`, `air_con` with Romanian and English names, until the lawyer confirms the list. *(autonomous default)*
 - Route: `PUT /api/v1/admin/verification-files/:id/checks/:kind`, guarded like the other admin routes (`admin.garages`). *(autonomous default)*

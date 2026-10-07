@@ -11,3 +11,16 @@
 - Level 2 (feature): classifier 0.80, touches an endpoint and tables.
 
 ## 2 Specify
+- Phase agent fable: STATUS success, 11 FRs, autonomous defaults in Assumptions (rows in the submit/resend transaction; documents part of the summary deferred; admin channel only; error codes; RAR activity seed).
+- Draft PR #201 opened (lifecycle open): planning, feature, scope: domain, EP-2; Notion start and pr written.
+
+## 3 Context
+- org-researcher: context.md, 14 findings, decisions page partial. Contradictions carried into clarify (consumer vs transaction, more_requested).
+
+## 4 Clarify (spec-challenger + context)
+- Q1 more_requested accepts a record? → 409 (MF-58 rules 1, 4).
+- Q2 rows by consumer or transaction? → transaction; the migration back-fills files sent earlier.
+- Q3 summary language → RO and EN from one contracts function; record call returns both.
+- Q4 first-part kinds and wording → company and rar only; gender agreement; `<kind name> <detail>`; "Neverificat" with neither part.
+- Q5 activities list / evidence / audit → list required when ok; evidence column dropped (Principle I); one audit entry per save with result, detail (and list).
+- level check: 2, unchanged.
