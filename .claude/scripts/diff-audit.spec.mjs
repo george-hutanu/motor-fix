@@ -104,3 +104,43 @@ describe('diff-audit import-extension', () => {
     assert.match(out[0], /'\.\/c' needs the literal \.js or \.ts extension under nodenext/);
   });
 });
+
+// The base is origin/main's merge-base: a worktree made from origin/main
+// leaves the local main where the main checkout last had it, and diffing
+// against that reports every file merged since as this branch's.
+describe('diff-audit base', () => {
+  const commit = (msg) => {
+    git('add', '-A');
+    git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', msg);
+    return git('rev-parse', 'HEAD').stdout.trim();
+  };
+  const summary = () => {
+    const r = spawnSync(process.execPath, [SCRIPT, '--no-jev'], {
+      cwd: repo,
+      encoding: 'utf8',
+      env: { ...process.env, CLAUDE_PROJECT_DIR: repo },
+    });
+    assert.equal(r.status, 0, r.stderr);
+    return r.stdout.split('\n')[0];
+  };
+
+  it('diffs against origin/main when the local main is stale', () => {
+    commit('tsconfigs');
+    write('libs/domain/src/merged.ts', 'export const merged = 1;\n');
+    const upstream = commit('merged elsewhere');
+    git('update-ref', 'refs/remotes/origin/main', upstream);
+    git('reset', '-q', '--hard', 'HEAD~1');
+    git('checkout', '-q', '-b', 'feature', 'origin/main');
+    write('libs/domain/src/mine.ts', 'export const mine = 1;\n');
+    commit('mine');
+    assert.match(summary(), new RegExp(`^diff-audit: 1 changed file\\(s\\) vs ${upstream.slice(0, 7)} `));
+  });
+
+  it('falls back to main without origin/main', () => {
+    const base = commit('tsconfigs');
+    git('checkout', '-q', '-b', 'feature');
+    write('libs/domain/src/mine.ts', 'export const mine = 1;\n');
+    commit('mine');
+    assert.match(summary(), new RegExp(`^diff-audit: 1 changed file\\(s\\) vs ${base.slice(0, 7)} `));
+  });
+});
