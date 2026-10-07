@@ -56,6 +56,7 @@ features:
   - 850-dispatch-test-timeouts
   - 499-trace-matrix-delta-ids
   - 884-railway-egress
+  - 891-lifecycle-story-override
 ---
 
 # Capability: Platform
@@ -1266,6 +1267,25 @@ _From 884-railway-egress._
 ### 884-FR-009 — The compression behaviour (FR-001 to FR-003) and the asset cache (FR-004 to FR-006) MUST each have failing-first automated tests beside the code they exercise, in line with Constitution II.
 
 _From 884-railway-egress._
+### 891-FR-001 — `lifecycle.mjs` MUST resolve the story for `open`, `ready` and `merge` in this order: `--story ST-<n>`, the `: ST-<n> ` of the title (`open`'s `--title`; the PR's title for `ready` and `merge`), `.specify/feature.json`'s `story` when its `story_for` names the current `feature_directory` (both compared as `featureKey`s, as `level_for` is), then `ST-<folder number>`. The title is read with the existing `: ST-<n> ` pattern.
+
+_From 891-lifecycle-story-override._
+
+### 891-FR-002 — `merge` MUST read the PR title and settle the story before the merge call, so a refusal (FR-003) comes before any irreversible step.
+
+_From 891-lifecycle-story-override._
+
+### 891-FR-003 — When any two explicit sources (flag, title, honoured feature.json) name different stories (compared by number, so `ST-0660` and `ST-660` agree), the step MUST stop with exit 1 before any side effect (no push, no `gh pr ready`, no merge, no Notion event, no feature.json write) with a message naming both sources and their values and the fix (`--story` or fixing the title). The folder number never causes a refusal.
+
+_From 891-lifecycle-story-override._
+
+### 891-FR-004 — `open`, `ready` and `merge` MUST accept `--story ST-<n>`; a value not matching `ST-<digits>` is a usage error (exit 64). A step given `--story` MUST, once the story is settled, record `story` and `story_for` (= `feature_directory`) in `.specify/feature.json` so later steps read it; a recorded `story` whose `story_for` names another feature is ignored, so repointing feature.json never carries it over.
+
+_From 891-lifecycle-story-override._
+
+### 891-FR-005 — A harness spec (`lifecycle.spec.mjs`) MUST cover a branch whose folder number is not the story's: the title wins over the folder, `--story` is recorded and read back, a `story_for` naming another feature is ignored, a disagreement refuses before the merge call (and `ready`), leading zeros agree, and a malformed `--story` exits 64.
+
+_From 891-lifecycle-story-override._
 
 ## Retired
 
