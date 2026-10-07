@@ -220,6 +220,22 @@ describe('changing a platform rule', () => {
     expect((await rule('reviews_only_after_confirmed_job')).value).toBe(true);
   });
 
+  it('lets one admin switch a two-admin rule back on', async () => {
+    await prisma.platformRule.update({
+      data: { value: false },
+      where: { key: 'reviews_only_after_confirmed_job' },
+    });
+
+    const answer = await rules(false).change(
+      ioana,
+      'reviews_only_after_confirmed_job',
+      { seen: false, value: true },
+    );
+
+    expect(answer).toMatchObject({ updatedBy: ioana.accountId, value: true });
+    expect((await rule('reviews_only_after_confirmed_job')).value).toBe(true);
+  });
+
   it('saves one of two simultaneous changes of a rule and refuses the other as stale', async () => {
     const change = () =>
       rules(false).change(ioana, 'maintenance_mode', {

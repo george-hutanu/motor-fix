@@ -77,29 +77,9 @@ export class PlatformRulesService {
       const row = await tx.platformRule.findUniqueOrThrow({
         where: { id: locked.id },
       });
-      if (typeof value !== typeof row.defaultValue) {
-        throw refusal(
-          HttpStatus.BAD_REQUEST,
-          'validation_failed',
-          'The value is not of the rule shape',
-        );
-      }
-      if (!same(seen, row.value)) {
-        throw refusal(
-          HttpStatus.CONFLICT,
-          'stale_value',
-          'The rule changed since it was read',
-        );
-      }
-      if (same(value, row.value)) return dto(row);
-      // A rule that needs two admins is refused until a second admin can confirm it.
-      if (row.requiresTwoAdmins) {
-        throw refusal(
-          HttpStatus.CONFLICT,
-          'two_admins_required',
-          'This rule needs a second admin',
-        );
-      }
+      if (same(value, row.value) && same(seen, row.value)) return dto(row);
+      const refused = refuseChange(row, seen, value);
+      if (refused) throw refused;
       const saved = await tx.platformRule.update({
         data: {
           updatedAt: new Date(),
@@ -132,6 +112,39 @@ export class PlatformRulesService {
   private visible(key: string) {
     return !(this.options.production && TEST_ONLY.has(key));
   }
+}
+
+// The change's checks, in FR-004's order, for a value that differs from the
+// current one or was read stale.
+function refuseChange(
+  row: { defaultValue: unknown; requiresTwoAdmins: boolean; value: unknown },
+  seen: unknown,
+  value: unknown,
+) {
+  if (typeof value !== typeof row.defaultValue) {
+    return refusal(
+      HttpStatus.BAD_REQUEST,
+      'validation_failed',
+      'The value is not of the rule shape',
+    );
+  }
+  if (!same(seen, row.value)) {
+    return refusal(
+      HttpStatus.CONFLICT,
+      'stale_value',
+      'The rule changed since it was read',
+    );
+  }
+  // Switching off a rule that needs two admins waits for a second admin to
+  // confirm it; switching it back on needs no one else.
+  if (row.requiresTwoAdmins && value === false) {
+    return refusal(
+      HttpStatus.CONFLICT,
+      'two_admins_required',
+      'This rule needs a second admin',
+    );
+  }
+  return undefined;
 }
 
 const unknownRule = () =>
