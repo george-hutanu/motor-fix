@@ -41,7 +41,7 @@ let app: INestApplication;
 let admin: string;
 let authorization: string;
 
-const routes = async () => {
+const routes = () => {
   const paths = Object.entries(openApiDocument(app).paths);
   return paths
     .filter(([path]) => path.startsWith('/api/v1/admin/'))
@@ -85,7 +85,7 @@ const check = async (route: string) => {
 // One call at a time, so no other call's entry is counted.
 const callEach = async () => {
   const problems: string[] = [];
-  for (const route of await routes()) {
+  for (const route of routes()) {
     const problem = await check(route);
     if (problem) problems.push(problem);
   }
@@ -119,7 +119,7 @@ describe('every admin route', () => {
   });
 
   it('is listed, so a new one is called without editing the check', async () => {
-    expect(await routes()).toEqual(
+    expect(routes()).toEqual(
       expect.arrayContaining([
         'GET /api/v1/admin/overview',
         ...Object.keys(FIXTURES),
