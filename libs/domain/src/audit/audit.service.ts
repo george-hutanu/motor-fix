@@ -24,7 +24,7 @@ const canonical = (value: unknown): string =>
       : v,
   );
 
-const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? '';
+export const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? '';
 
 // As it was, through JSON: dates become UTC ISO strings; no value is SQL NULL.
 const json = (value: unknown) =>
