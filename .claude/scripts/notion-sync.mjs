@@ -25,6 +25,7 @@ import { isEntryPoint } from "./lib/entry.mjs";
 import { activeFeature } from "./lib/feature.mjs";
 import { ghSync } from "./lib/gh-rest.mjs";
 import { clientLimits, NotionError, notionClient, notionToken, readProp, richText, writeProp } from "./lib/notion.mjs";
+import { syncWorkTimeline, WORK_TIMELINE_VERSION } from "./lib/work-timeline.mjs";
 import { decideReady } from "./notion-ready.mjs";
 import { decide, recordPrior } from "./notion-status.mjs";
 import { readState } from "./run-state.mjs";
@@ -40,6 +41,7 @@ const postComment = (client, pageId, body) => {
 
 export const STORIES = "326eee3c-abec-41d9-9f96-eb3bd545a802";
 export const PLANS_PAGE = "3ee607bff0d2818493d0dadd2d5a006c";
+const PR_BASE = "https://github.com/george-hutanu/motor-fix/pull/";
 export const NO_TOKEN = "notion-sync: no NOTION_TOKEN, use the connector";
 
 const STATUS_EVENTS = new Set(["start", "implement", "qa", "review", "finish", "blocked", "unblock"]);
@@ -144,12 +146,23 @@ export async function main(argv, io = {}) {
     return done({ event, line: lines[0] });
   }
 
-  const client = notionClient({ token, fetchImpl: io.fetchImpl ?? fetch, ...clientLimits(env), ...(io.sleep ? { sleep: io.sleep } : {}) });
+  const clientOptions = { token, fetchImpl: io.fetchImpl ?? fetch, ...clientLimits(env), ...(io.sleep ? { sleep: io.sleep } : {}) };
+  const client = notionClient(clientOptions);
   if (event === "check") return check(client, done);
   if (io.replay !== false) await replayPending(logFile, date, io, stderr);
 
   const storyNum = Number(String(parsed.flags.story ?? feature.num).match(/\d+/)?.[0]);
-  const ctx = { client, gh, repo, feature, flags: parsed.flags, rest, event, storyNum, st: `ST-${storyNum}`, log, append, lines };
+  const ctx = { client, gh, repo, feature, flags: parsed.flags, rest, event, storyNum, st: `ST-${storyNum}`, log, append, lines, now };
+  ctx.timeline = () =>
+    (io.workTimeline ?? syncWorkTimeline)({
+      client,
+      timelineClient: notionClient({ ...clientOptions, version: WORK_TIMELINE_VERSION }),
+      event,
+      key: ctx.st,
+      story: ctx.story,
+      pr: readProp(ctx.story, "PR") || (parsed.flags.pr ? `${PR_BASE}${parsed.flags.pr}` : null),
+      now: now(),
+    });
   ctx.step = { name: event, item: ctx.st };
   let prNumber;
   ctx.prNumber = () => {
@@ -288,6 +301,8 @@ async function statusEvent(ctx) {
     await patch(client, row, "Build status", decision.timeline);
     log(event, "timeline", `${was} → ${decision.timeline}`);
   }
+  const workTimeline = await ctx.timeline();
+  if (workTimeline) log(event, "timeline-db", workTimeline);
 
   if (epic && (event === "start" || event === "finish")) await moveEpic(ctx, epic, event, decision.story);
   if (event === "finish") await finishComment(ctx);
