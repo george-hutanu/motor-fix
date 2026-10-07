@@ -52,3 +52,11 @@ ST-574 (tech debt from ST-254): derive the live hub's garage-channel kind rules 
 - agent-context: CLAUDE.local.md points the active plan at specs/574-live-hub-capabilities/plan.md, with no growth.
 - retro: evidence only, as phases-close requires. No verdict was recorded; that is the owner's call.
 - archive: the Spec Delta merged into .specify/capabilities/live-updates.md (+2 ~1). 254-FR-003 is superseded by 574-FR-001. The status line is set to Archived (2026-10-07).
+
+## Final Report
+- PR #194 is ready at 045bc29, with Notion story ST-574 and the PR label at QA. QA run 37597212969 (lap 1) was dispatched with --no-wait.
+- Commits: 41eb79c0 refactor (KIND_CAPABILITY table in live.hub.ts), 600344e8 adversary tests, c71d825d archive, faa2dd19 trace tags, 045bc29 qa line.
+- Tests: domain events unit, 20 suites and 729 tests green, plus 70 adversary cases. Pre-commit nx affected typecheck and test are green, and so is lint. Trace 3/3 FRs.
+- Reviews: spec-reviewer APPROVE, code-reviewer APPROVE (1 LOW kept), test-adversary found no defects. Repair laps: 0.
+- Decisions on the owner's behalf: a receptionist loses review.*, garage.updated and invite.* through the garage channel (Notion Security "Capabilities by role"), and the mechanic is unchanged. The spec reworded its 254-FR-004/005 references so trace-matrix stops counting them as 574 FRs.
+- Deferred: none. Retro verdict: left to the owner (evidence only).
