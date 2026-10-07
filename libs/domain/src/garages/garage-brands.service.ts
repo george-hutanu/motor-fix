@@ -89,7 +89,10 @@ export class GarageBrandsService {
     assertOwner(actor, garageId);
     return this.prisma.$transaction(async (tx) => {
       const garage = await lockGarage(tx, garageId);
-      const wanted = new Map(dto.brands.map((b) => [b.brandId, b.stance]));
+      // Stored ids are lowercase; a uuid is accepted in either case.
+      const wanted = new Map(
+        dto.brands.map((b) => [b.brandId.toLowerCase(), b.stance]),
+      );
       await assertCatalogued(tx, [...wanted.keys()]);
       const changed = await this.applyStances(tx, actor, garageId, wanted);
       const texts = {

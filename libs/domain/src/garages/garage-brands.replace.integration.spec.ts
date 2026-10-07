@@ -337,6 +337,24 @@ describe("replacing a garage's brand answer", () => {
     expect(await events()).toEqual([]);
   });
 
+  it('takes a stored brand sent with its id in capitals as the same brand', async () => {
+    const w = await world();
+    await set(w, [[w.bmw, 'works_on']]);
+    await prisma.garageBrandJob.create({
+      data: { brandId: w.bmw, garageId: w.garage, jobTypeId: randomUUID() },
+    });
+    await checkpoint();
+
+    await set(w, [[w.bmw.toUpperCase(), 'works_on']]);
+
+    expect(await rows(w)).toEqual({ [w.bmw]: 'works_on' });
+    expect(
+      await prisma.garageBrandJob.count({ where: { garageId: w.garage } }),
+    ).toBe(1);
+    expect(await history()).toEqual([]);
+    expect(await events()).toEqual([]);
+  });
+
   it('accepts a retired brand', async () => {
     const w = await world();
 

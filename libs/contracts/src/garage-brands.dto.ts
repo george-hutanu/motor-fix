@@ -35,7 +35,8 @@ export class ReplaceGarageBrandsDto {
     type: [GarageBrandStanceDto],
   })
   @IsArray()
-  @ArrayUnique((b: GarageBrandStanceDto) => b?.brandId, {
+  // A uuid in capitals is the same brand.
+  @ArrayUnique((b: GarageBrandStanceDto) => String(b?.brandId).toLowerCase(), {
     message: 'brands must name each brand once',
   })
   @ValidateNested({ each: true })
