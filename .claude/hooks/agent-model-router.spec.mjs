@@ -80,23 +80,24 @@ describe('model router — choosing', () => {
     assert.equal(picked.model, 'fable');
   });
 
-  it('takes opus instead of fable on a large diff while the fable switch is off (813-FR-004)', async () => {
+  // @traces 813-FR-004
+  it('takes opus instead of fable on a large diff while the fable switch is off', async () => {
     const picked = await chooseModel({ files: 40, lines: 2000 }, 'spec-reviewer', { repo, fetchImpl: never, fableTo: 'claude-opus-5-5' });
     assert.equal(picked.model, 'opus');
     assert.match(picked.why, /fable switch off/);
   });
 
-  it('takes opus when the lane answers fable while the switch is off (813-FR-004)', async () => {
+  it('takes opus when the lane answers fable while the switch is off', async () => {
     const picked = await chooseModel({ files: 8, lines: 200 }, 'code-reviewer', { repo, fetchImpl: stubJev('fable'), apiKey: KEY, fableTo: 'claude-opus-5-5' });
     assert.equal(picked.model, 'opus');
   });
 
-  it('leaves sonnet alone while the switch is off (813-FR-004)', async () => {
+  it('leaves sonnet alone while the switch is off', async () => {
     const picked = await chooseModel({ files: 1, lines: 12 }, 'code-reviewer', { repo, fetchImpl: never, fableTo: 'claude-opus-5-5' });
     assert.equal(picked.model, 'sonnet');
   });
 
-  it('reads the switch from the environment when the caller does not pass it (813-FR-004)', async () => {
+  it('reads the switch from the environment when the caller does not pass it', async () => {
     const before = process.env.ANTHROPIC_DEFAULT_FABLE_MODEL;
     process.env.ANTHROPIC_DEFAULT_FABLE_MODEL = 'claude-opus-5-5';
     try {

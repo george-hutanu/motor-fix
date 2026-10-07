@@ -11,15 +11,18 @@
 //   node .claude/scripts/fable.mjs status   which one is in force
 //
 // It applies to sessions started AFTER the switch: a running session keeps the
-// env it started with. `off` writes the key into the main checkout's untracked
-// .claude/settings.local.json (created when missing; every worker session runs
-// with its cwd there) and into each worktree that already has its own; `on`
-// removes it from the same files. Every other key is kept. Exit 0 done, 1 a
-// file it cannot parse (left untouched), 64 usage.
+// env it started with. `off` writes the key into the untracked
+// .claude/settings.local.json of the main checkout and of every desktop-app
+// worktree under .claude/worktrees/ (creating the file where missing): those
+// are the cwds sessions start in, and the subagents a session dispatches into
+// .worktrees/* inherit its env, so .worktrees/* is left alone. `on` removes
+// the key from the same files. Every other key is kept. Exit 0 done, 1 a file
+// it cannot parse (nothing written) or cannot write (names the files already
+// written), 64 usage.
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { isEntryPoint } from "./lib/entry.mjs";
 
 export const FABLE_KEY = "ANTHROPIC_DEFAULT_FABLE_MODEL";
@@ -33,19 +36,22 @@ function git(cwd, args) {
 
 /** The main checkout's directory, from any of its worktrees; null outside git. */
 export function mainCheckout(cwd) {
-  const common = git(cwd, ["rev-parse", "--git-common-dir"]);
-  if (!common) return null;
-  return dirname(isAbsolute(common) ? common : resolve(cwd, common));
+  const common = git(cwd, ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+  return common ? dirname(common) : null;
 }
 
-/** Every worktree of the repository other than the main checkout. */
-function worktrees(main) {
+/** The desktop app's worktrees, under <main>/.claude/worktrees/, where sessions start. */
+function desktopWorktrees(main) {
+  const base = join(main, ".claude", "worktrees");
   const out = git(main, ["worktree", "list", "--porcelain"]) ?? "";
   return out
     .split("\n")
     .filter((l) => l.startsWith("worktree "))
-    .map((l) => l.slice("worktree ".length))
-    .filter((p) => resolve(p) !== resolve(main));
+    .map((l) => resolve(l.slice("worktree ".length)))
+    .filter((p) => {
+      const rel = relative(base, p);
+      return rel !== "" && !rel.startsWith("..") && !rel.includes(sep);
+    });
 }
 
 const settingsPath = (dir) => join(dir, ".claude", "settings.local.json");
@@ -66,9 +72,9 @@ export function fableTarget(env = process.env, cwd = process.cwd()) {
   }
 }
 
-/** The files a switch touches: the main checkout's always, a worktree's only when it exists. */
+/** The files a switch touches: the main checkout's and each desktop worktree's. */
 function targets(main) {
-  return [settingsPath(main), ...worktrees(main).map(settingsPath).filter(existsSync)];
+  return [main, ...desktopWorktrees(main)].map(settingsPath);
 }
 
 function apply(file, off) {
@@ -105,6 +111,15 @@ if (isEntryPoint(import.meta.url)) {
       process.exit(1);
     }
   }
-  for (const f of files) apply(f, cmd === "off");
+  const written = [];
+  for (const f of files) {
+    try {
+      apply(f, cmd === "off");
+      written.push(f);
+    } catch (e) {
+      console.error(`${f}: ${e.message}\nalready written: ${written.join(", ") || "none"}`);
+      process.exit(1);
+    }
+  }
   console.log(`${cmd === "off" ? `fable -> ${OPUS_MODEL}` : "fable restored"} in ${files.length} file(s); applies to sessions started from now on`);
 }

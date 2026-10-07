@@ -1,16 +1,16 @@
 import { describe, it, beforeEach, afterEach } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { FABLE_KEY, OPUS_MODEL, fableTarget, mainCheckout } from './fable.mjs';
 
-// ST-813: one switch remaps the `fable` alias to Opus for every session
-// started afterwards, through the main checkout's untracked settings.local.json
-// and every worktree that keeps its own.
+// One switch remaps the `fable` alias to Opus for every session started
+// afterwards: the main checkout's untracked settings.local.json, and each
+// desktop-app worktree under .claude/worktrees/, where a session's cwd sits.
 
 const SCRIPT = fileURLToPath(new URL('./fable.mjs', import.meta.url));
 
@@ -37,6 +37,8 @@ let root;
 let main;
 let wtOwn;
 let wtBare;
+let deskOwn;
+let deskBare;
 
 beforeEach(() => {
   root = realpathSync(mkdtempSync(join(tmpdir(), 'fable-')));
@@ -48,8 +50,13 @@ beforeEach(() => {
   wtBare = join(main, '.worktrees', 'bare');
   git(main, 'worktree', 'add', '-q', '-b', 'own', wtOwn);
   git(main, 'worktree', 'add', '-q', '-b', 'bare', wtBare);
+  deskOwn = join(main, '.claude', 'worktrees', 'desk-own');
+  deskBare = join(main, '.claude', 'worktrees', 'desk-bare');
+  git(main, 'worktree', 'add', '-q', '-b', 'desk-own', deskOwn);
+  git(main, 'worktree', 'add', '-q', '-b', 'desk-bare', deskBare);
   write(main, OTHER);
   write(wtOwn, { permissions: { allow: ['Bash(ls)'] } });
+  write(deskOwn, { permissions: { allow: ['Bash(pwd)'] } });
 });
 
 afterEach(() => rmSync(root, { recursive: true, force: true }));
@@ -61,8 +68,9 @@ describe('fable switch — the main checkout', () => {
   });
 });
 
+// @traces 813-FR-001
 describe('fable switch — off', () => {
-  it('writes the remap into the main checkout and keeps every other key (813-FR-001)', () => {
+  it('writes the remap into the main checkout and keeps every other key', () => {
     const r = run(wtBare, 'off');
     assert.equal(r.status, 0, r.stderr);
     const s = read(main);
@@ -73,18 +81,36 @@ describe('fable switch — off', () => {
     assert.equal(s.$schema, 'x');
   });
 
-  it('writes into a worktree with its own settings, never creates one (813-FR-001)', () => {
-    run(main, 'off');
-    const own = read(wtOwn);
+  it('creates or updates the file in every .claude/worktrees checkout, keeping its keys', () => {
+    run(wtBare, 'off');
+    const own = read(deskOwn);
     assert.equal(own.env[FABLE_KEY], OPUS_MODEL);
-    assert.deepEqual(own.permissions, { allow: ['Bash(ls)'] });
+    assert.deepEqual(own.permissions, { allow: ['Bash(pwd)'] });
+    assert.deepEqual(read(deskBare), { env: { [FABLE_KEY]: OPUS_MODEL } });
+  });
+
+  it('leaves .worktrees checkouts alone, where no session starts', () => {
+    run(main, 'off');
+    assert.deepEqual(read(wtOwn), { permissions: { allow: ['Bash(ls)'] } });
     assert.equal(existsSync(settings(wtBare)), false);
   });
 
-  it('creates the main checkout file when it has none (813-FR-001)', () => {
+  it('creates the main checkout file when it has none', () => {
     rmSync(settings(main));
     assert.equal(run(wtOwn, 'off').status, 0);
     assert.deepEqual(read(main), { env: { [FABLE_KEY]: OPUS_MODEL } });
+  });
+
+  it('stops at a file it cannot write and names the files already written', () => {
+    chmodSync(settings(deskOwn), 0o444);
+    try {
+      const r = run(main, 'off');
+      assert.equal(r.status, 1);
+      assert.match(r.stderr, /desk-own.*settings\.local\.json/);
+      assert.match(r.stderr, new RegExp(`already written: .*${settings(main).replace(/[.]/g, '\\.')}`));
+    } finally {
+      chmodSync(settings(deskOwn), 0o644);
+    }
   });
 
   it('refuses a settings file it cannot parse rather than overwrite it', () => {
@@ -95,18 +121,21 @@ describe('fable switch — off', () => {
   });
 });
 
+// @traces 813-FR-002
 describe('fable switch — on', () => {
-  it('removes the remap everywhere and keeps every other key (813-FR-002)', () => {
+  it('removes the remap everywhere and keeps every other key', () => {
     run(main, 'off');
     const r = run(wtBare, 'on');
     assert.equal(r.status, 0, r.stderr);
     assert.deepEqual(read(main), OTHER);
-    assert.deepEqual(read(wtOwn), { permissions: { allow: ['Bash(ls)'] } });
+    assert.deepEqual(read(deskOwn), { permissions: { allow: ['Bash(pwd)'] } });
+    assert.deepEqual(read(deskBare), {});
   });
 });
 
+// @traces 813-FR-003
 describe('fable switch — status', () => {
-  it('names the model in force (813-FR-003)', () => {
+  it('names the model in force', () => {
     assert.match(run(wtBare, 'status').stdout, /fable/i);
     assert.doesNotMatch(run(wtBare, 'status').stdout, /opus/i);
     run(main, 'off');
@@ -120,7 +149,8 @@ describe('fable switch — status', () => {
   });
 });
 
-describe('fable switch — what the router reads (813-FR-004)', () => {
+// @traces 813-FR-004
+describe('fable switch — what the router reads', () => {
   it('is null while Fable is in force', () => {
     assert.equal(fableTarget({}, wtBare), null);
   });

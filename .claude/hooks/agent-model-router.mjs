@@ -122,10 +122,10 @@ export function diffSize(repo, range) {
  * omitted it is read from the env and the main checkout.
  */
 export async function chooseModel(size, subagent, opts = {}) {
-  const fableTo = "fableTo" in opts ? opts.fableTo : fableTarget(process.env, opts.repo ?? process.cwd());
   const picked = await pick(size, subagent, opts);
-  if (picked?.model === "fable" && fableTo) return { model: "opus", why: `${picked.why}; fable switch off` };
-  return picked;
+  if (picked?.model !== "fable") return picked;
+  const fableTo = "fableTo" in opts ? opts.fableTo : fableTarget(process.env, opts.repo ?? process.cwd());
+  return fableTo ? { model: "opus", why: `${picked.why}; fable switch off` } : picked;
 }
 
 async function pick(size, subagent, opts) {
