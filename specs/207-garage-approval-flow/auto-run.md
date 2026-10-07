@@ -42,3 +42,11 @@ Start commit: 664610a3 (worktree .worktrees/207-garage-approval-flow, branch 207
 - Open for later stories (research.md R6): the reason code list waits on T12; the scope scan covers controllers only until the MCP tools exist.
 - after_plan: committed 16c14840 `docs(specs): ST-207 plan, research, data model, contracts and quickstart`, pushed; agent-context line set to this plan, context-audit: 136 lines, size held, committed.
 - STATUS: success — plan and Phase 0/1 artifacts written, committed and pushed to PR #188.
+
+## 6. Checklist
+- Model: sonnet. checklists/requirements-quality.md, 17 items, 15 checked, 2 struck N/A (no screen; no performance NFR). Two gaps fixed in spec.md: reopen only of the garage's newest file with no other live file (FR-002); reason-code list source (Assumptions). 0 unchecked.
+- STATUS: success — checklist at zero unchecked, committed cd4687fb.
+
+## 7. Tasks
+- Model: sonnet. tasks.md: 18 tasks, 7 phases (US1 6, US3 3, US2 1, US4 3), tests-first, no FR/task ids for source. analyze hook left to the caller. level.mjs check run.
+- STATUS: success — tasks written.
