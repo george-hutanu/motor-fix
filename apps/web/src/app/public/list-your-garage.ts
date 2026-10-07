@@ -1,6 +1,7 @@
 import {
   afterNextRender,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   computed,
   DestroyRef,
@@ -105,6 +106,7 @@ export class ListYourGarage {
   private readonly i18n = inject(I18n);
   private readonly reduced = inject(REDUCED_MOTION);
   private readonly host: HTMLElement = inject(ElementRef).nativeElement;
+  private readonly changes = inject(ChangeDetectorRef);
   private readonly nav = viewChild.required<ElementRef<HTMLElement>>('nav');
   private readonly bar = viewChild.required<ElementRef<HTMLElement>>('bar');
   private settling: ReturnType<typeof setTimeout> | undefined;
@@ -154,6 +156,9 @@ export class ListYourGarage {
   protected jump(n: number) {
     this.current.set(n);
     this.open.set(false);
+    // The open list pushes the sections down on a phone: close it first, or
+    // the scroll aims at where the heading was.
+    this.changes.detectChanges();
     this.settle();
     const heading = this.headings()[n - 1];
     heading.scrollIntoView({
