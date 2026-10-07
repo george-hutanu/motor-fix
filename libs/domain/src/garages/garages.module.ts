@@ -50,7 +50,7 @@ export class GaragesModule {
         PublicGaragesController,
         VerificationChecksController,
       ],
-      exports: [GaragePricesService, VerificationService],
+      exports: [VerificationService],
       imports: [notifications],
       module: GaragesModule,
       providers: [

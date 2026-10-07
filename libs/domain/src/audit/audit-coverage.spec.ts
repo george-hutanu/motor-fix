@@ -51,9 +51,10 @@ const isModelWrite = (node: ts.Node, target: ts.PropertyAccessExpression) => {
   return first !== undefined && ts.isObjectLiteralExpression(first);
 };
 
-// A raw statement that only selects, such as taking an advisory lock, writes nothing.
+// Taking an advisory lock writes nothing.
 const isRawWrite = (node: ts.Node, target: ts.PropertyAccessExpression) =>
-  RAW_WRITES.has(target.name.text) && !/^\s*select\b/i.test(sqlOf(node));
+  RAW_WRITES.has(target.name.text) &&
+  !/^\s*select pg_advisory_xact_lock\(/i.test(sqlOf(node));
 
 const isWrite = (node: ts.Node, target: ts.PropertyAccessExpression) =>
   isRawWrite(node, target) ||

@@ -20,7 +20,6 @@ export { EventsModule } from './events/events.module';
 export { OutboxRelayModule } from './events/outbox-relay.module';
 export { GaragesModule } from './garages/garages.module';
 export { listingDraftDaily } from './garages/listing-draft-sweep';
-export { GaragePricesService } from './garages/prices/garage-prices.service';
 export { publicGarages } from './garages/public-garages';
 export {
   type Decision,
