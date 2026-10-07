@@ -793,6 +793,7 @@ const DRIVER = [
 const subtitle = (element: HTMLElement) =>
   element.querySelector('header .title .line')?.textContent?.trim();
 
+// @traces 028-FR-002
 describe('the driver header', () => {
   it.each([
     ['/app/driver', 'Panoul tău'],
@@ -866,6 +867,7 @@ describe('the driver header', () => {
   });
 });
 
+// @traces 028-FR-004
 describe('the account block', () => {
   const initials = (element: HTMLElement) =>
     element.querySelector('.account .avatar');

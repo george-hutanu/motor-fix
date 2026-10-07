@@ -1,5 +1,6 @@
 import { initials } from './initials';
 
+// @traces 028-FR-004
 describe('initials', () => {
   it.each([
     ['Andrei M.', 'AM'],

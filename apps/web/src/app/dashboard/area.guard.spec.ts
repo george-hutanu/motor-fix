@@ -129,6 +129,7 @@ async function visit(address: string, who: MeDto | null) {
   return { keepReturnTo, router };
 }
 
+// @traces 028-FR-005
 describe('the address a visitor asked for', () => {
   it('is kept whole, with its query and fragment, as the visitor goes home', async () => {
     const { keepReturnTo, router } = await visit(

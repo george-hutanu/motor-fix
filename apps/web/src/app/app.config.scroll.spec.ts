@@ -30,6 +30,7 @@ function boot() {
 // The router scrolls a tick after the navigation ends.
 const scrolled = () => new Promise((resolve) => setTimeout(resolve, 50));
 
+// @traces 028-FR-003
 describe('the router scrolling', () => {
   let scroller: { [key: string]: jest.Mock };
 
@@ -55,7 +56,7 @@ describe('the router scrolling', () => {
     });
   });
 
-  it('restores the position on back and forward, and starts every other navigation at the top', () => {
+  it('turns on position restoration for the whole router', () => {
     expect(SCROLLING).toEqual({ scrollPositionRestoration: 'enabled' });
   });
 

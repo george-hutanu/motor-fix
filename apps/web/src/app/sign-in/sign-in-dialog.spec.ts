@@ -517,6 +517,7 @@ describe('SignInDialog, from an invite link', () => {
 @Component({ template: '' })
 class Page {}
 
+// @traces 028-FR-005
 describe('coming back to the view asked for', () => {
   const DRIVER = { landing: '/app/driver' } as MeDto;
 

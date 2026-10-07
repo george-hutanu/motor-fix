@@ -33,6 +33,7 @@ const paths = (area: 'driver' | 'garage' | 'admin', capabilities: string[]) =>
   allowedViews(area, capabilities).map((view) => view.path);
 
 describe('the dashboard view lists', () => {
+  // @traces 028-FR-001
   it('lists the driver views in menu order, each with its address, labels and capability', () => {
     expect(DASHBOARDS.driver.views).toEqual([
       {
@@ -380,6 +381,7 @@ describe('the dashboard view routes', () => {
     },
   );
 
+  // @traces 028-FR-001
   it('sends a driver who types the unreleased assistant address to the dashboard', async () => {
     await open(
       '/app/driver/assistant',

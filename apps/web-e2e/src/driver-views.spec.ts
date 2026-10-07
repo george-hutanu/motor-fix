@@ -55,6 +55,7 @@ async function arrived(page: Page, address: string, text: string) {
 
 // @seeded: signs in as the seeded driver against the real API.
 test.describe('driver views @seeded', () => {
+  // @traces 028-FR-003 028-FR-006 028-FR-007
   test('the menu opens every released view at the top, without a reload, and back returns', async ({
     page,
   }) => {
@@ -119,6 +120,7 @@ test.describe('driver views @seeded', () => {
     await expect(page.getByText('Asistent AI')).toHaveCount(0);
   });
 
+  // @traces 028-FR-005 028-FR-007
   test('a signed-out visit to a view opens that view after sign-in', async ({
     page,
   }) => {
