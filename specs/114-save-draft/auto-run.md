@@ -34,3 +34,12 @@
 ## Phase 10 — Implement, slice 2 (US2 API)
 - T015–T023 green: service, throttle, controller, module wiring, `Retry-After` from the problem filter, JSON body limit 320 kB, public routes, regenerated openapi.json + data-access client.
 - Decisions: token `kind` enum (browser, link, reminder) so the hourly link cap counts link tokens only; the service spec is `listing-drafts.service.integration.spec.ts` (it needs PostgreSQL); throttle key is a SHA-256 of the client address (contract updated), never the raw IP; the 404 body carries `detail` through the problem filter; the body limit is raised globally (320 kB), the draft's own 256 KB rule answers 413; a JsonOnly 415 is refused by a guard before the no-store interceptor runs, so it carries no `Cache-Control` (no draft or key in it).
+
+## Phase 10 — Implement, slices 3–5 (US1, US3, US4, polish)
+- Page flow (T011, T014, T024, T025, T027, T030): `DraftKeeper` owns the browser copy (1 s) and the server copy (5 s, one save in flight, the latest queued), the link and the states; commit 93bed1bb. The error under the e-mail field uses literal i18n keys (`@if`/`@else if`), as the i18n check requires.
+- Referrer (T028, T031): `Referrer-Policy: no-referrer` on `/<lang>/list-your-garage`; commit 6d350e37.
+- Service guards (T029, T032): concurrent saves keep one whole; earlier links work until the address changes; both green at once (regression guards); commit fe1e6fdf.
+- Sweep (T033–T036): `ListingDraftSweep` as a `DailyTask` run after the reminders by the worker's 09:00 job; commit b11aa81d.
+- Decisions: the reminder's claim and its notification row are not one transaction (`sendToDraft` opens its own); a failed send gives the claim back. The sweep deletes before it reminds. It is wired through `listingDraftDaily(webUrl)`, not exported from the garages module. The API-level "sent draft" case is covered at the service level only.
+- E2E (T026): `apps/web-e2e/src/listing-draft.spec.ts` (`@mailbox`); not run locally (the mailbox ports were held by another worktree's run), CI's E2E job runs it; commit 76fd53d7.
+- T037: quickstart unchanged; `trace-matrix.mjs` reports 0/21 tagged, as every feature in the repo does, since the project rule forbids `@traces` markers in source; coverage lives in tasks.md's FR → task map. `spec-drift --status`: no baseline yet, the next gated commit sets it.

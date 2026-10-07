@@ -68,7 +68,7 @@
 
 ## Phase 7: Polish and records
 
-- [ ] T037 Update `specs/114-save-draft/quickstart.md` only where a command or path changed during the build, and run the harness checks (`node .claude/scripts/trace-matrix.mjs`, `node .claude/scripts/spec-drift.mjs --status`) to confirm FR-001 to FR-021 each map to a test (FR-020).
+- [X] T037 Update `specs/114-save-draft/quickstart.md` only where a command or path changed during the build, and run the harness checks (`node .claude/scripts/trace-matrix.mjs`, `node .claude/scripts/spec-drift.mjs --status`) to confirm FR-001 to FR-021 each map to a test (FR-020).
 
 ## Dependencies and order
 
