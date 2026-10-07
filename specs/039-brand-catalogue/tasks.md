@@ -46,7 +46,7 @@ None. No new dependency, project or tool; `libs/domain`, `libs/contracts` and `a
 
 - [X] T007 [US1] `libs/domain/src/catalogue/brands.ts` (new): `BrandRecord`, `BRANDS` (twelve brands, popularity 1–12 in the mock's order), `fold`, `slugOf`, `validateFile`, `BrandFileError` (FR-002, FR-003, FR-007; depends on T005)
 - [X] T008 [US1] `libs/domain/src/catalogue/brand-loader.ts` (new): `BrandLoader.load(records)` in one `$transaction` under `pg_advisory_xact_lock(hashtext('brand_loader'))`: validate, refuse a name or slug held by another stored key, create/update/retire/reactivate by `key`, audit through `AuditPort` as `{ actorId: null, actorRole: 'system' }`, then `DEL brands:active` after commit when anything changed (Redis error logged, not thrown) (FR-004, FR-005, FR-006, FR-007, FR-008, FR-009; depends on T004, T006, T007)
-- [X] T009 [US1] Create `libs/domain/src/catalogue/catalogue.module.ts` (new, `CatalogueModule.register(auth)` providing `BrandLoader`), export `CatalogueModule`, `BrandLoader`, `BRANDS` from `libs/domain/src/index.ts`, import the module in `apps/api/src/app.module.ts` (FR-001; depends on T008)
+- [X] T009 [US1] Create `libs/domain/src/catalogue/catalogue.module.ts` (new, a plain `@Module` `CatalogueModule` providing `BrandLoader`), export `CatalogueModule`, `BrandLoader`, `BRANDS` from `libs/domain/src/index.ts`, import the module in `apps/api/src/app.module.ts` (FR-001; depends on T008)
 - [X] T010 [US1] Extend `apps/api/src/main.spec.ts` to expect `await app.get(BrandLoader).load(BRANDS)` before `listen` and not on the `openapi` command, then add the call in `apps/api/src/main.ts` (FR-003; depends on T009)
 
 **Checkpoint**: the brand list loads at boot and is testable alone.
