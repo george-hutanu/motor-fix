@@ -1227,6 +1227,48 @@
         ]
       }
     },
+    "/api/v1/brands": {
+      "get": {
+        "operationId": "BrandsController_search",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Part of a brand name; accents and case are ignored",
+            "schema": {
+              "maxLength": 60,
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "The nextCursor of the previous page",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandPageDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "brands"
+        ]
+      }
+    },
     "/api/v1/admin/overview": {
       "get": {
         "operationId": "AdminOverviewController_overview",
@@ -2892,6 +2934,60 @@
             ]
           }
         }
+      },
+      "BrandDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Škoda"
+          },
+          "slug": {
+            "type": "string",
+            "example": "skoda"
+          },
+          "popularity": {
+            "type": "integer",
+            "description": "1 is the most popular; null is unranked",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "popularity"
+        ]
+      },
+      "BrandPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "By popularity, unranked last, then by name; 20 at most",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "total": {
+            "type": "number",
+            "description": "Brands matching the search"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "total"
+        ]
       },
       "AdminOverviewDto": {
         "type": "object",

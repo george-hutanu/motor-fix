@@ -546,10 +546,10 @@ describe('gates, main and identity', () => {
     assert.ok(!h.calls.some((c) => c.startsWith('git push')));
   });
 
-  for (const name of ['open', 'ready', 'merge']) {
-    it(`${name} on main runs nothing and pushes nothing`, () => {
+  for (const argv of [['open', '--title', TITLE], ['ready', '--body-file', 'b.md'], ['merge', '--pr', '141']]) {
+    it(`${argv[0]} on main runs nothing and pushes nothing`, () => {
       const h = harness({ branch: 'main' });
-      const result = step([name, '--title', TITLE, '--body-file', 'b.md'], h.io);
+      const result = step(argv, h.io);
       assert.equal(result.ok, false);
       assert.match(result.stopped, /main/);
       assert.deepEqual(h.calls, ['git rev-parse --abbrev-ref HEAD']);
@@ -598,6 +598,36 @@ describe('gates, main and identity', () => {
     const result = step(['deploy'], h.io);
     assert.equal(result.ok, false);
     assert.match(result.fix, /open \| ready \| merge \| handoff/);
+  });
+
+  it.each([
+    ['merge', '--help', '--pr', '188'],
+    ['merge', '-h'],
+    ['open', '--title', TITLE, '--help'],
+    ['handoff', '--help'],
+  ])('answers %s %s with its usage and touches nothing', (...argv) => {
+    const h = harness();
+    const result = step(argv, h.io);
+    assert.equal(result.ok, true);
+    assert.equal(result.help, true);
+    assert.match(result.usage, /usage: lifecycle\.mjs/);
+    assert.deepEqual(h.calls, []);
+  });
+
+  it.each([
+    [['merge', '--pr', '188', '--yes'], /unknown flag --yes for merge/],
+    [['ready', '--body-file', 'b.md', '--pr', '9'], /unknown flag --pr for ready/],
+    [['merge', '--restore'], /unknown flag --restore for merge/],
+    [['merge', '188'], /unexpected argument 188/],
+    [['merge', '--pr'], /--pr needs a value/],
+    [['merge', '--pr', '--notion-done'], /--pr needs a value/],
+  ])('refuses %j before it runs anything', (argv, why) => {
+    const h = harness();
+    const result = step(argv, h.io);
+    assert.equal(result.ok, false);
+    assert.equal(result.stopped, 'usage');
+    assert.match(result.fix, why);
+    assert.deepEqual(h.calls, []);
   });
 });
 

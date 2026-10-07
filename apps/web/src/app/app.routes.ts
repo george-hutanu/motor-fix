@@ -1,4 +1,6 @@
+import { inject } from '@angular/core';
 import type { Routes } from '@angular/router';
+import { I18n } from '@motor-fix/i18n';
 
 import {
   cockpitTexts,
@@ -79,6 +81,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./public/invite').then((m) => m.InvitePage),
         path: 'invite/:token',
+      },
+      {
+        loadComponent: () =>
+          import('./public/list-your-garage').then((m) => m.ListYourGarage),
+        path: 'list-your-garage',
+        title: () => inject(I18n).t('public.listing.heading'),
       },
       ...(['terms', 'privacy'] as const).map((text) => ({
         data: { text },

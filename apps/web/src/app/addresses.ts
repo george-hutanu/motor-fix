@@ -29,7 +29,12 @@ import {
 
 // The paths after the language prefix that search engines may list. The public
 // pages of later stories add theirs.
-export const PUBLIC_PATHS: readonly string[] = ['', 'terms', 'privacy'];
+export const PUBLIC_PATHS: readonly string[] = [
+  '',
+  'terms',
+  'privacy',
+  'list-your-garage',
+];
 
 // The server provides PUBLIC_WEB_URL's origin: behind the host's proxy the
 // request may arrive as http.

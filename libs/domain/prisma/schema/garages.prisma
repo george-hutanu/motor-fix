@@ -30,6 +30,10 @@ model Garage {
   notificationPreferences NotificationPreference[]
   features                GarageFeature[]
   invites                 StaffInvite[]
+  // CHECKs in the migration: at most 140 and 60 characters, never blank.
+  brandNote               String?                  @map("brand_note")
+  refusalPhrase           String?                  @map("refusal_phrase")
+  brands                  GarageBrand[]
 
   @@map("garage")
 }
@@ -107,6 +111,47 @@ model StaffInvite {
 
   @@index([garageId, email])
   @@map("staff_invite")
+}
+
+enum GarageBrandStance {
+  works_on
+  does_not_take
+
+  @@map("garage_brand_stance")
+}
+
+// A garage's answer for one brand; no row is `unstated`. The migration's
+// `garage_brand_fuel_check` refuses a fuel tick on a `does_not_take` row.
+model GarageBrand {
+  garageId  String            @map("garage_id") @db.Uuid
+  brandId   String            @map("brand_id") @db.Uuid
+  stance    GarageBrandStance
+  petrol    Boolean           @default(true)
+  diesel    Boolean           @default(true)
+  hybrid    Boolean           @default(true)
+  electric  Boolean           @default(true)
+  createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  garage    Garage            @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  brand     Brand             @relation(fields: [brandId], references: [id])
+  jobs      GarageBrandJob[]
+
+  @@id([garageId, brandId])
+  @@index([brandId])
+  @@map("garage_brand")
+}
+
+// A job type the garage does for a brand it works on; the row is the tick.
+// No foreign key on `jobTypeId`: the job_type table does not exist yet.
+model GarageBrandJob {
+  garageId    String      @map("garage_id") @db.Uuid
+  brandId     String      @map("brand_id") @db.Uuid
+  jobTypeId   String      @map("job_type_id") @db.Uuid
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  garageBrand GarageBrand @relation(fields: [garageId, brandId], references: [garageId, brandId], onDelete: Cascade)
+
+  @@id([garageId, brandId, jobTypeId])
+  @@map("garage_brand_job")
 }
 
 enum VerificationFileStatus {
