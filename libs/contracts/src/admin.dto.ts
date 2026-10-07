@@ -65,8 +65,11 @@ export class AdminGrowthMonthDto {
   garagesListed?: number;
 }
 
-// The last twelve months, oldest first, ending with the current one.
 export class AdminGrowthDto {
-  @ApiProperty({ type: [AdminGrowthMonthDto] })
+  @ApiProperty({
+    description:
+      'The last twelve months, oldest first, ending with the current one',
+    type: [AdminGrowthMonthDto],
+  })
   months!: AdminGrowthMonthDto[];
 }

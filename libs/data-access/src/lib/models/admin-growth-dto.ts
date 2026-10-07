@@ -3,5 +3,9 @@
 
 import { AdminGrowthMonthDto } from '../models/admin-growth-month-dto';
 export interface AdminGrowthDto {
+
+  /**
+   * The last twelve months, oldest first, ending with the current one
+   */
   months: Array<AdminGrowthMonthDto>;
 }

@@ -66,7 +66,7 @@ const FIGURES = ['activeDrivers', 'garagesListed'] as const;
               [error]="failed()"
               (retry)="read()"
             />
-            @if (answer()) {
+            @if (range()) {
               <p class="range">{{ range() }}</p>
             }
           </div>
@@ -90,12 +90,13 @@ export class AdminGrowth {
 
   protected readonly range = computed(() => {
     const months = this.answer()?.months ?? [];
+    if (!months.length) return '';
     const { monthsShort } = this.names();
-    const short = (m?: { month: string }) => {
-      const [year, month] = (m?.month ?? '').split('-');
+    const short = ({ month: m }: { month: string }) => {
+      const [year, month] = m.split('-');
       return `${monthsShort[Number(month) - 1]} ${year}`;
     };
-    return `${short(months[0])} – ${short(months.at(-1))}`;
+    return `${short(months[0])} – ${short(months[months.length - 1])}`;
   });
 
   protected readonly charts = computed(() => {

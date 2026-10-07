@@ -3636,6 +3636,7 @@
         "type": "object",
         "properties": {
           "months": {
+            "description": "The last twelve months, oldest first, ending with the current one",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AdminGrowthMonthDto"

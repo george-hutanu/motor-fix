@@ -208,6 +208,14 @@ describe('AdminGrowth', () => {
     expect(texts(el, '.latest')).toEqual(['12.480', '214']);
   });
 
+  it('writes no month range when the answer holds no months', async () => {
+    answer = async () => ({ months: [] });
+    const el = await open();
+
+    expect(el.querySelectorAll('.range')).toHaveLength(0);
+    expect(el.textContent).not.toContain('undefined');
+  });
+
   it('shows the chart skeleton in both charts while the read is on its way', async () => {
     answer = () => new Promise(() => {});
     const el = await open();
