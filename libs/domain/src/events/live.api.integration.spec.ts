@@ -285,7 +285,9 @@ describe('the admin test update', () => {
       { accountId: owner, role: 'owner' },
       { accountId: receptionist, role: 'receptionist' },
     ]);
-    await prisma.mechanic.create({ data: { accountId: mechanic, garageId } });
+    await prisma.mechanic.create({
+      data: { accountId: mechanic, garageId, name: 'Mecanic' },
+    });
     const people: [string, Role][] = [
       [driver, 'driver'],
       [owner, 'garage'],
@@ -322,7 +324,9 @@ describe('the admin test update', () => {
       { accountId: owner, role: 'owner' },
       { accountId: receptionist, role: 'receptionist' },
     ]);
-    await prisma.mechanic.create({ data: { accountId: mechanic, garageId } });
+    await prisma.mechanic.create({
+      data: { accountId: mechanic, garageId, name: 'Mecanic' },
+    });
 
     for (const [id, role] of [
       [driver, 'driver'],
@@ -580,10 +584,20 @@ describe('who gets an event at a garage', () => {
       { accountId: receptionist, role: 'receptionist' },
     ]);
     await prisma.mechanic.create({
-      data: { accountId: elena, canAnswerQuotes: false, garageId },
+      data: {
+        accountId: elena,
+        canAnswerQuotes: false,
+        garageId,
+        name: 'Mecanic',
+      },
     });
     const mechanic = await prisma.mechanic.create({
-      data: { accountId: mihai, canAnswerQuotes: true, garageId },
+      data: {
+        accountId: mihai,
+        canAnswerQuotes: true,
+        garageId,
+        name: 'Mecanic',
+      },
     });
     const people = [
       [owner, 'garage'],

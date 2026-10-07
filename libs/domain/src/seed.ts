@@ -141,7 +141,7 @@ function link(db: Client, id: string, at: NonNullable<Person['at']>) {
   const garage = '(SELECT id FROM garage WHERE slug = $2)';
   return at.as === 'mechanic'
     ? db.query(
-        `INSERT INTO mechanic (id, account_id, garage_id) VALUES (gen_random_uuid(), $1, ${garage})`,
+        `INSERT INTO mechanic (id, account_id, garage_id, name) SELECT gen_random_uuid(), $1, ${garage}, name FROM account WHERE id = $1`,
         [id, at.garage],
       )
     : db.query(
