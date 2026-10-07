@@ -40,6 +40,12 @@ const GARAGES = [
   { name: 'Atelier Dinamo', slug: 'atelier-dinamo' },
 ];
 
+// Two garages waiting for an admin, so the admin dashboard has a known count.
+const WAITING = [
+  { garage: 'service-dobre', status: 'submitted' },
+  { garage: 'atelier-dinamo', status: 'in_review' },
+];
+
 const PEOPLE: Person[] = [
   {
     email: 'sofer@example.test',
@@ -183,6 +189,15 @@ async function seed(db: Client, secret: string) {
     );
   }
   for (const person of PEOPLE) await add(db, person, secret);
+  for (const { garage, status } of WAITING) {
+    await db.query(
+      `INSERT INTO verification_file (id, garage_id, status)
+       SELECT gen_random_uuid(), g.id, $2::verification_file_status FROM garage g
+       WHERE g.slug = $1
+         AND NOT EXISTS (SELECT 1 FROM verification_file f WHERE f.garage_id = g.id)`,
+      [garage, status],
+    );
+  }
 }
 
 async function main(secret: string) {

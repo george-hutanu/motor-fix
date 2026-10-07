@@ -504,4 +504,49 @@ describe('liveResource', () => {
     expect(ref.value()).toEqual({ reads: 3 });
     expect(ref.isLoading()).toBe(false);
   });
+
+  it('re-reads on every event of its kinds when it follows no one object', async () => {
+    const { live } = setUp();
+    let reads = 0;
+    TestBed.runInInjectionContext(() =>
+      liveResource(async () => ++reads, ['quote.sent']),
+    );
+    live.open();
+    await flush();
+    await wait(10);
+
+    bodies[0]?.send(event('quote.sent', { id: 'request-1' }));
+    await wait(400);
+    bodies[0]?.send(event('quote.sent', { id: 'request-2' }));
+    await wait(400);
+    bodies[0]?.send(event('quote.withdrawn', { id: 'request-1' }));
+    await wait(400);
+
+    expect(reads).toBe(3);
+  });
+
+  it('says a read failed, a re-read after data included, until a read succeeds again', async () => {
+    let fail = false;
+    const { ref, send } = await viewOf(async () => {
+      if (fail) throw new HttpErrorResponse({ status: 503 });
+      return { ok: true };
+    });
+    expect(ref.failed()).toBe(false);
+
+    fail = true;
+    await send();
+    expect(ref.failed()).toBe(true);
+
+    fail = false;
+    await send();
+    expect(ref.failed()).toBe(false);
+  });
+
+  it('says the first read failed', async () => {
+    const { ref } = await viewOf(async () => {
+      throw new HttpErrorResponse({ status: 500 });
+    });
+
+    expect(ref.failed()).toBe(true);
+  });
 });

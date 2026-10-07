@@ -70,6 +70,12 @@ export class VerificationService {
     @Inject(VERIFICATION_CONFIG) private readonly config: VerificationConfig,
   ) {}
 
+  countWaiting(db: Prisma.TransactionClient): Promise<number> {
+    return db.verificationFile.count({
+      where: { status: { in: ['submitted', 'in_review'] } },
+    });
+  }
+
   // Who may submit is the submitting story's rule; here only the files count.
   async submit(
     tx: Prisma.TransactionClient,

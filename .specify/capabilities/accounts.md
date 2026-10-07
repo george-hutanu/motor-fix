@@ -16,6 +16,7 @@ features:
   - 393-whatsapp-phone-sign-in
   - 536-gate-dialog-dashboard
   - 569-auth-events-through-event-port
+  - 160-admin-dashboard-menu
 ---
 
 # Capability: Accounts
@@ -92,9 +93,9 @@ _From 079-account-model._
 
 _From 082-sign-in._
 
-### 079-FR-018 — The frame's menu MUST show only the entries the role in use may open according to the capabilities table; there MUST be no "Vezi ca" demo buttons.
+### 160-FR-007 — The frame's menu MUST show only the entries the role in use may open according to the capabilities table and whose view is released; there MUST be no "Vezi ca" demo buttons. Each view MUST carry a release mark; an unreleased view MUST be absent from the menu and the tab bar, and its address MUST open "Panou" (the existing fall-through) for every role the admin area admits (today `admin` only; any other role is sent to its own dashboard by FR-005). At this story's release "Panou", "Service‑uri" and "Setări" are released and "Utilizatori", "Recenzii raportate", "Mărci și lucrări" and "Asistent AI" are not; the story that builds a view flips its mark. The mark is one line per view in the view list, with a test for a hidden entry.
 
-_From 079-account-model._
+_From 160-admin-dashboard-menu._
 
 ### 082-FR-001 — `POST /api/v1/auth/sign-in` MUST take an e-mail (trimmed, compared lower-case), a password and "keep me signed in" (true by default); with the right credentials it MUST answer an access token for the account's role in use (signed as ST-79's guard checks, valid 15 minutes) in the body, set the refresh token cookie, open a new refresh-token family, and set the account's last active time.
 
@@ -560,3 +561,5 @@ _From 569-auth-events-through-event-port._
 - `080-FR-009` — superseded by `393-FR-012` (2026-10-06)
 
 - `128-FR-004` — superseded by `569-FR-003` (2026-10-07)
+
+- `079-FR-018` — superseded by `160-FR-007` (2026-10-07)
