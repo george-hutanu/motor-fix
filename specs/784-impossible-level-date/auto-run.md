@@ -42,3 +42,9 @@ specs/784-impossible-level-date/tasks.md: 4 tasks, one story (tests first, red p
 - Converge: all 4 tasks done, nothing unbuilt. diff-audit and artifact-lint clean.
 - test-adversary (opus): 47/48 new cases passed; year `0000` diverged (JS kept, Python refuses year 0) → `parseLevelAt` also requires year ≥ 1; its cases folded into the existing parity block (spec-reviewer flagged the separate file as duplicate helpers), file not committed.
 - code-reviewer: APPROVE, 1 MEDIUM (CLAUDE.local.md lost its SPECKIT markers) → markers restored. spec-reviewer: APPROVE, same MEDIUM + the duplicate file → both fixed. No CRITICAL/HIGH; no re-review needed. Repair laps: 1.
+
+## Phases 13, 15–17
+- Refresh: ST-784 re-read by spec-reviewer (no comments, scope unchanged) — no new evidence.
+- Agent context: CLAUDE.local.md managed block points at this plan; no growth.
+- Retro evidence: 9 commits since ec74ab06; jev lane unavailable, no suggested verdict; no retrospective written (verdict stays the owner's).
+- Archive: Spec Delta merged into platform (+2, ~677-FR-003); status Archived. Harness 2095/2095 green.

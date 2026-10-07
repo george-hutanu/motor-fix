@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-07
 
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 
 **Input**: User description: "ST-784 (Notion https://app.notion.com/p/3f2607bff0d28171bff8cc31c7d100e8, tech debt from ST-775, Medium): a level_at whose day the month does not have (e.g. 2026-02-30T00:00Z, 2026-04-31T…, 2025-02-29T…) fits the LEVEL_AT regex in .claude/scripts/lib/feature.mjs:147 and Date.parse rolls it forward (2026-02-30 reads as 2 March), while Python's datetime.fromisoformat in .specify/scripts/python/common.py `_pending_level` refuses it, so the two readers disagree. Fix: pendingLevel refuses it (no pending level, default applies), by checking the written year/month/day against the calendar (or the parsed UTC date against the written fields, offset applied), so both readers agree on every stamp. Nothing writes such a stamp today. Tests in .claude/scripts/level.spec.mjs / level.adversary.spec.mjs (vitest harness specs, which already pin parity between the two readers). Model the spec on specs/775-level-at-parity/spec.md (same area, keep it as short)."
 
