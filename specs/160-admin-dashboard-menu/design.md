@@ -12,7 +12,7 @@ Checked: 2026-10-07 · Mock: https://claude.ai/artifact/EoPWH9MHmuY5Jfw7vTWTHr (
 - Menu entries (RO / EN, from the mock as read for ST-079): Panou / Dashboard · Service‑uri / Garages · Utilizatori / Users · Recenzii raportate / Reported reviews · Mărci și lucrări / Brands and jobs · Asistent AI / AI assistant · Setări / Platform settings. Shell texts use U+2011 in "Service‑uri".
 - Header (Build brief scenario 4): "MotorFix · București · 4 service‑uri așteaptă verificarea" / "MotorFix · Bucharest · 4 garages are waiting for verification" as the subtitle line under the title; the label "ADMINISTRATOR" (the frame's area tag, upper-case in the Cockpit eyebrow style); the RO/EN switch (`mf-language-switch`) in the header's right-hand group, bell after it.
 - Counters: a count chip on the Service‑uri entry and on its phone tab (hidden at zero); "Recenzii raportate" gets its chip only when MF-45 is released (not in this story).
-- Phone: tab bar entries for the released views only, label 11 px in the tab bar as ST-288 built it; the smallest other text 12 px; no sideways scroll at 320 px.
+- Phone: tab bar entries for the released views only, label at the 12 px label size (`--mf-size-label`) as ST-288 built it; the smallest other text 12 px; no sideways scroll at 320 px.
 - Components: Cockpit frame, `mf-panel` skeletons while loading (`libs/ui-cockpit`); no new primitive.
 
 ## States
