@@ -133,6 +133,10 @@ function yearsAfter(day: string, years: number): string {
   return later.toISOString().slice(0, 10);
 }
 
+// The last day a closed day may fall on, counted from `today`.
+export const lastClosedDay = (today: string) =>
+  yearsAfter(today, CLOSED_DAY_YEARS);
+
 export type ClosedDayError = 'past' | 'tooFar' | 'duplicate' | 'holiday';
 
 // Whether the owner may add this day; `holidays` is empty when the calendar
@@ -144,7 +148,7 @@ export function closedDayError(
   holidays: readonly string[],
 ): ClosedDayError | null {
   if (day < today) return 'past';
-  if (day > yearsAfter(today, CLOSED_DAY_YEARS)) return 'tooFar';
+  if (day > lastClosedDay(today)) return 'tooFar';
   if (list.some((entry) => entry.day === day)) return 'duplicate';
   if (holidays.includes(day)) return 'holiday';
   return null;

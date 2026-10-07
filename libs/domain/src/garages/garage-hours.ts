@@ -1,4 +1,8 @@
-import { DEFAULT_HOURS, isHoursSection } from '@motor-fix/contracts';
+import {
+  DEFAULT_HOURS,
+  isHoursSection,
+  lastClosedDay,
+} from '@motor-fix/contracts';
 import { HttpStatus } from '@nestjs/common';
 
 import { refusal } from '../auth/sign-up.service';
@@ -7,8 +11,8 @@ import type { Prisma } from '../generated/prisma/client';
 const asDate = (day: string) => new Date(`${day}T00:00:00Z`);
 
 // Writes a garage's hours, closed days and facilities from the listing's
-// step 5 section, inside the caller's transaction. A day before `today` or a
-// legal holiday gets no row: the calendar alone closes a holiday. The
+// step 5 section, inside the caller's transaction. A day before `today`, past
+// the two-year window (an aged draft) or a legal holiday gets no row: the calendar alone closes a holiday. The
 // caller records the event; this writes rows only.
 export async function writeGarageHours(
   tx: Prisma.TransactionClient,
@@ -23,7 +27,10 @@ export async function writeGarageHours(
       'The opening hours, closed days or facilities break a rule',
     );
   }
-  const upcoming = (section.closedDays ?? []).filter((c) => c.day >= today);
+  const last = lastClosedDay(today);
+  const upcoming = (section.closedDays ?? []).filter(
+    (c) => c.day >= today && c.day <= last,
+  );
   const holidays = await tx.publicHoliday.findMany({
     select: { day: true },
     where: { day: { in: upcoming.map((c) => asDate(c.day)) } },

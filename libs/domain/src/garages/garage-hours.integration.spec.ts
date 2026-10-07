@@ -120,6 +120,21 @@ describe("writing a garage's hours, closed days and facilities", () => {
     ]);
   });
 
+  it('writes no row for a day past the two-year window, keeping its last day', async () => {
+    await write({
+      closedDays: [
+        { day: '2028-10-07' },
+        { day: '2028-10-08' },
+        { day: '2030-01-02' },
+      ],
+      hours,
+    });
+
+    expect((await stored()).closedDays).toEqual([
+      { day: '2028-10-07', note: null },
+    ]);
+  });
+
   it("keeps a closed day on the write's own today", async () => {
     await write({ closedDays: [{ day: TODAY }] });
 
