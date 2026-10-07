@@ -1,0 +1,6 @@
+# Notion sync — 574-live-hub-capabilities
+
+- 2026-10-07 · start · ST-574 · To do → Planning
+- 2026-10-07 · start · timeline · no row for ST-574
+- 2026-10-07 · start · EP-1 · In progress (unchanged)
+- 2026-10-07 · ready · Foundations · −ST-574, review: ST-786, ST-682, ST-670, ST-604, ST-601, ST-570, ST-552, ST-547, ST-455, ST-451, ST-445, ST-289, ST-129, ST-5
