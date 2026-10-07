@@ -18,7 +18,8 @@ async function me(request: APIRequestContext, token: string) {
   return (await res.json()) as { id: string; garageId: string | null };
 }
 
-// Adds each `event:` line's kind to `kinds` as the stream delivers it.
+// Adds each `event:` line's kind to `kinds` as the stream delivers it, until
+// close() aborts the fetch.
 async function collect(body: ReadableStream<Uint8Array>, kinds: string[]) {
   const reader = body.getReader();
   const text = new TextDecoder();
@@ -58,10 +59,13 @@ test.describe("a receptionist's live stream @seeded", () => {
     const owner = await me(request, ownerToken);
     expect(receptionist.garageId).toBe(owner.garageId);
     const base = String(baseURL);
-    const receptionistStream = await openStream(base, receptionistToken);
-    const ownerStream = await openStream(base, ownerToken);
+    const streams: { close: () => void }[] = [];
 
     try {
+      const receptionistStream = await openStream(base, receptionistToken);
+      streams.push(receptionistStream);
+      const ownerStream = await openStream(base, ownerToken);
+      streams.push(ownerStream);
       const sent = await request.post('/api/v1/admin/live/test', {
         data: { accountId: receptionist.id },
         headers: { Authorization: `Bearer ${admin}` },
@@ -91,8 +95,7 @@ test.describe("a receptionist's live stream @seeded", () => {
 
       expect(receptionistStream.kinds).not.toContain('invite.sent');
     } finally {
-      receptionistStream.close();
-      ownerStream.close();
+      for (const stream of streams) stream.close();
     }
   });
 });
