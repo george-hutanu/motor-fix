@@ -17,3 +17,9 @@
 - 2026-10-07 · qa · ST-108 · Implementing → QA
 - 2026-10-07 · qa · timeline · Implementing → QA
 - 2026-10-07 · labels · PR #192 · QA
+- 2026-10-07 · finish · ST-108 · QA → Done
+- 2026-10-07 · finish · timeline · QA → Merged
+- 2026-10-07 · finish · EP-2 · In progress (unchanged)
+- 2026-10-07 · comment · ST-108 · posted (4 items)
+- 2026-10-07 · labels · PR #192 · none
+- 2026-10-07 · ready · Garage onboarding and verification · review: ST-800, ST-799, ST-796, ST-795, ST-792, ST-789, ST-788, ST-787, ST-245, ST-202, ST-114
