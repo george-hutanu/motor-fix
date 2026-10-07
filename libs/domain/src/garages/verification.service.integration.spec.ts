@@ -10,6 +10,8 @@ import { type EventPort, outbox } from '../events/event.port';
 import type { Prisma } from '../generated/prisma/client';
 import { databaseUrl, fixtures } from '../notifications/notifications.testing';
 
+// @traces 207-FR-001 207-FR-002 207-FR-003 207-FR-004 207-FR-008 207-FR-010
+
 const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
 

@@ -1,5 +1,7 @@
 import { verificationConfig } from './verification-config';
 
+// @traces 207-FR-009
+
 describe('verificationConfig', () => {
   it.each(['1', 'true'])(
     'turns the switch on for %s in a test environment',

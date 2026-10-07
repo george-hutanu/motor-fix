@@ -7,6 +7,8 @@ import {
   VERIFICATION_FILE_STATUSES,
 } from './garage-status';
 
+// @traces 207-FR-006 207-FR-007 207-FR-011
+
 const KEYS = [
   'draft',
   'sent',

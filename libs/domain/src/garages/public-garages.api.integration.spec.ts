@@ -16,6 +16,8 @@ import {
   testConfig,
 } from '../notifications/notifications.testing';
 
+// @traces 207-FR-005 207-FR-011
+
 const redisUrl = redisUrlFor(2);
 const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);

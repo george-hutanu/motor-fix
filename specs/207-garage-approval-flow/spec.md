@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-07
 
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 
 **Input**: User description: "ST-207 Keep garages hidden until approved, with a status flow — Notion https://app.notion.com/p/3ee607bff0d2818b8b02f41b122c27f6"
 
@@ -159,3 +159,5 @@ In a test environment (`APP_ENV=test`) the switch `skip_manual_approval` is on. 
 - Audience `public:search:{brandId}` is emitted only once a garage serves brands; today the payload carries an empty list (autonomous default).
 - Every timestamp is stored in UTC and shown in Europe/Bucharest by the screens that show it (platform rule; no screen here).
 - The reason codes of a `more_requested` or `rejected` decision come from the admin decision stories (ST-302 to ST-305); this story stores the code as given, required and non-empty, and fixes no list (autonomous default).
+- A refusal on a `submitted` file says "already sent, waiting for review" without an author: the file stores no submitter (FR-001 names none), so the detail names the status only (review default).
+- Approving a file of a `suspended` garage is refused (409) and leaves the garage suspended: lifting a suspension belongs to MF-59 (FR-003; review default).
