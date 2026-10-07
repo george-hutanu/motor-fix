@@ -11,7 +11,7 @@ Checked: 2026-10-07 · Mock: https://claude.ai/artifact/EoPWH9MHmuY5Jfw7vTWTHr (
 
 ## What to build to match it
 
-- Public frame (`apps/web/src/app/public/frame.ts`), one address per language: `/ro/listeaza-service`, `/en/list-your-garage`.
+- Public frame (`apps/web/src/app/public/frame.ts`), one address per language: `/ro/list-your-garage`, `/en/list-your-garage` (one path under both prefixes, spec Clarifications; the brief proposed `/ro/listeaza-service`).
 - Above the form: small uppercase label, the heading, the intro line (Build brief wording, no promise of phone calls).
 - Desktop (≥ 768 px, the frame's existing breakpoint): two columns, the sections on one long page and the list "Pași" sticky beside them; a `nav` landmark named "Pași" / "Steps", numbered 1–6, the current entry highlighted with `aria-current="step"`; "opțional" after Mecanici, "obligatoriu" after Verificare.
 - Phone (< 768 px): a bar pinned under the header reading "<n> / 6 · <label>"; tapping it opens the six steps; tapping one jumps and closes it.

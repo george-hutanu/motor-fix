@@ -13,11 +13,11 @@ A garage owner, signed in or not, opens "List your garage" at its address and se
 
 **Why this priority**: Every later EP-2 story puts its fields into one of these sections; without the shell there is nowhere to build.
 
-**Independent Test**: Open `/ro/listeaza-service` and `/en/list-your-garage` on a desktop and a phone; the label, heading, introduction and six numbered section headings are shown, in that language.
+**Independent Test**: Open `/ro/list-your-garage` and `/en/list-your-garage` on a desktop and a phone; the label, heading, introduction and six numbered section headings are shown, in that language.
 
 **Acceptance Scenarios**:
 
-1. **Given** a visitor who is not signed in, **When** they open `/ro/listeaza-service`, **Then** the page shows the label "PENTRU SERVICE-URI", the heading "Pune-ți service-ul pe hartă" and the introduction "Spune ce primești și ce refuzi. Cine îți cere o ofertă știe deja că lucrezi pe mașina lui.", with no sign-in prompt.
+1. **Given** a visitor who is not signed in, **When** they open `/ro/list-your-garage`, **Then** the page shows the label "PENTRU SERVICE-URI", the heading "Pune-ți service-ul pe hartă" and the introduction "Spune ce primești și ce refuzi. Cine îți cere o ofertă știe deja că lucrezi pe mașina lui.", with no sign-in prompt.
 2. **Given** the page, **Then** six sections follow, headed 1 "Service-ul", 2 "Mărci", 3 "Prețuri", 4 "Mecanici" marked "opțional", 5 "Fotografii și adresă", 6 "Verificare" marked "obligatoriu"; each section's body is empty.
 3. **Given** a signed-in driver, **When** they open the page, **Then** they see the same page; no role or permission is checked.
 4. **Given** `/en/list-your-garage`, **Then** the same page in English: the step labels are "The garage", "Brands", "Prices", "Mechanics" (optional), "Photos and place", "Verification" (required).
@@ -57,7 +57,7 @@ Narrower than 768 px, the list has no room beside the form, so it becomes a bar 
 2. **Given** the owner scrolls to section 3, **Then** the bar reads "3 / 6 · Prețuri".
 3. **Given** the bar, **When** the owner taps it, **Then** the six steps open under it, numbered and labelled as on the desktop, with the current one marked `aria-current="step"`.
 4. **Given** the open list, **When** the owner taps "5 Fotografii și adresă", **Then** the list closes, section 5 is in view under the bar and its heading has focus.
-5. **Given** the open list, **When** the owner taps outside it or presses Escape, **Then** it closes with no jump.
+5. **Given** the open list, **When** the owner taps outside it or presses Escape, **Then** it closes with no jump; after Escape, focus is back on the bar.
 6. **Given** a 320 px phone, **Then** the page does not scroll sideways and the bar's text is at least 12 px.
 
 ---
@@ -77,25 +77,10 @@ The owner switches RO / EN from the header; every label of the page and the list
 
 ---
 
-### User Story 5 - A complete step shows a tick (Priority: P3)
-
-When a step has everything it needs, its number in the list shows a tick. This story provides the mark; what makes a step complete is the validation story.
-
-**Why this priority**: Proposed in the Build brief; it gives the owner a sense of progress. In this story no step can become complete, so the list shows no tick.
-
-**Independent Test**: Mark a step complete through the list's input; its number is replaced by a tick with the accessible text "completat" / "done"; with nothing marked, no tick is shown.
-
-**Acceptance Scenarios**:
-
-1. **Given** the page as this story ships it (no validation), **Then** no entry shows a tick.
-2. **Given** a step marked complete, **Then** its entry shows a tick in place of its number, announced as "completat" / "done", and the highlight still works for it.
-
----
-
 ### Edge Cases
 
 - The page is opened with a fragment for a section (`#pasul-4`): the page lands on that section and the list highlights it.
-- Two sections are both partly on screen: the one whose heading is nearest below the header's bottom edge, or the last one whose heading has passed it, is the current one; exactly one entry is current.
+- Two sections are both partly on screen: the current one is the last whose heading has reached the bottom edge of the header (or the phone bar); exactly one entry is current.
 - The owner resizes from phone to desktop while the list is open: the bar and its open list give way to the fixed list with no step lost.
 - The device asks for reduced motion: the jump is immediate, not animated.
 - The server renders the page (public pages are server-rendered): the list is present and step 1 is highlighted before any script runs; the highlight then follows the scroll.
@@ -106,41 +91,44 @@ When a step has everything it needs, its number in the list shows a tick. This s
 
 ### Functional Requirements
 
-- **FR-001**: The web app MUST serve "List your garage" as a public page at `/ro/listeaza-service` and `/en/list-your-garage` (one address per language, MF-1), in the public frame, to anyone, signed in or not, with no permission or role check and no sign-in prompt.
+- **FR-001**: The web app MUST serve "List your garage" as a public page at `/ro/list-your-garage` and `/en/list-your-garage` (one address per language, the same path after the prefix, as every public page: `apps/web/src/app/app.routes.ts:46`), in the public frame, to anyone, signed in or not, with no permission or role check and no sign-in prompt.
 - **FR-002**: The page MUST show, in the current language, the small label "PENTRU SERVICE-URI" / "FOR GARAGES", the heading "Pune-ți service-ul pe hartă" / "Put your garage on the map" and the introduction "Spune ce primești și ce refuzi. Cine îți cere o ofertă știe deja că lucrezi pe mașina lui." / its English equivalent, never promising phone calls.
 - **FR-003**: The page MUST hold six sections on one long page, in order, each with a numbered heading: 1 Service-ul / The garage, 2 Mărci / Brands, 3 Prețuri / Prices, 4 Mecanici / Mechanics marked "opțional" / "optional", 5 Fotografii și adresă / Photos and place, 6 Verificare / Verification marked "obligatoriu" / "required". Each section's body is empty in this story and offers a place for its story's content.
-- **FR-004**: The page MUST show a step list titled "Pași" / "Steps", a `nav` landmark named by that title, listing the six steps with their number, label and optional/required mark.
-- **FR-005**: Exactly one entry of the list MUST be the current step at any time, carrying `aria-current="step"` and a visible highlight: the step whose section is in view, step 1 before the owner scrolls, and the last step whose section has reached the top of the content area at the bottom of the page.
+- **FR-004**: The page MUST show a step list titled "Pași" / "Steps", one `nav` landmark named by that title, listing the six steps with their number, label and optional/required mark. There is one list in the page, laid out beside the sections or under the phone bar by the 768 px breakpoint, never two copies.
+- **FR-005**: Exactly one entry of the list MUST be the current step at any time, carrying `aria-current="step"` and a visible highlight: the last step whose heading has reached the bottom edge of the header (or the phone bar), step 1 before any has, and step 6 once the page is scrolled to its end.
 - **FR-006**: Tapping or activating an entry with the keyboard MUST bring that step's section into view below the header (or the phone bar), move keyboard focus to the section's heading, and make that entry the current one. With the device set to reduced motion the jump MUST be immediate.
 - **FR-007**: At 768 px and wider the list MUST stay in view beside the sections while the page scrolls.
-- **FR-008**: Narrower than 768 px the list MUST be a bar pinned under the header showing the current step as "<n> / 6 · <label>"; tapping the bar opens the six steps under it; tapping a step jumps to it (FR-006) and closes the list; tapping outside or Escape closes it without a jump.
+- **FR-008**: Narrower than 768 px the list MUST be a bar pinned under the header showing the current step as "<n> / 6 · <label>"; the bar is a button with `aria-expanded` that opens the six steps under it (a disclosure: no focus trap); tapping a step jumps to it (FR-006) and closes the list; tapping outside or Escape closes it without a jump, Escape returning focus to the bar.
 - **FR-009**: Switching the language MUST change every text of the page and the list, keep the same step current and keep any input in the sections: the page is not reloaded or rebuilt by the switch.
-- **FR-010**: An entry of a step marked complete MUST show a tick in place of its number, announced as "completat" / "done"; this story marks no step complete, so no tick is shown. What makes a step complete is defined by the validation story.
+- **FR-010**: The list MUST show no completion tick in this story: what makes a step complete, and its tick, belong to the validation story.
 - **FR-011**: The page MUST obey the phone layout rules: no sideways scroll at 320 px, 44 px targets for the bar and the entries, no text under 12 px, light and dark theme following the device.
 - **FR-012**: The page MUST read nothing, write nothing, emit no event and notify nobody.
 
 ### Key Entities
 
-- **Step**: one of the six fixed steps: number (1–6), label in RO and EN, mark (none, optional, required), complete (yes/no, always no in this story). Not stored; the list is the page's own.
+- **Step**: one of the six fixed steps: number (1–6), label in RO and EN, mark (none, optional, required). Not stored; the list is the page's own.
 
 ## Clarifications
 
 ### Session 2026-10-07
 
 - Q: Is the page linked from the header or Home in this story? → A: No. The brief's scenario 1 says the visitor opens it "from the header or from Home" as the starting point, but its Scope names only the page's shell; the entry links belong to the header's and Home's own stories. The page is reachable by address. *(autonomous default, Constitution I)*
-- Q: Which section is "in view"? → A: The one whose heading is the last to have passed the bottom edge of the header (step 1 before any has); at the end of the page the last step wins even when its section is short. *(autonomous default)*
 - Q: What does the phone bar do on tap? → A: It opens the six steps (the brief's proposed behaviour); choosing one jumps and closes it. *(autonomous default, from the brief's proposal)*
-- Q: How can a tick be tested when nothing marks a step complete? → A: The list takes the set of complete steps as its input; this story's page passes none. Jest covers the mark through that input. *(autonomous default)*
 - Q: Is the page listed for search engines (PUBLIC_PATHS)? → A: Yes: it is public, for anyone, and has one address per language like the legal pages. *(autonomous default)*
+- Q: Does the page get a different path per language, or one path under `/ro` and `/en`? → A: One path, `list-your-garage`, under both prefixes, as every public page; the language switch and hreflang already work that way. *(autonomous default, Principle I, `app.routes.ts:46`)*
+- Q: Which single rule picks the current step? → A: The last step whose heading has reached the bottom edge of the header (or phone bar); step 1 before any; step 6 at the page's end. *(autonomous default)*
+- Q: Is the desktop list and the phone's open list one element or two? → A: One `nav` in the DOM, laid out by CSS at 768 px, so exactly one entry carries `aria-current`. *(autonomous default)*
+- Q: Is the phone bar's open list a disclosure or a dialog, and where does focus go on close? → A: A disclosure (button with `aria-expanded`), no focus trap; Escape returns focus to the bar; a step tap moves focus to the heading. *(autonomous default, Principle I)*
+- Q: Is the completion tick built in this story? → A: No: nothing in this story can complete a step, so the tick goes to the validation story with the rules that define it. *(autonomous default, Principle I; brief scenario 8 is marked proposed and not designed)*
 
 ## Assumptions
 
 - Phone breakpoint 768 px, the brief's proposal and the public frame's existing breakpoint. *(autonomous default)*
-- Addresses `/ro/listeaza-service` and `/en/list-your-garage`, the brief's proposal under MF-1. *(autonomous default)*
+- Addresses `/ro/list-your-garage` and `/en/list-your-garage`: one path under both language prefixes, as the router and the language switch already do for every public page (`app.routes.ts:46`, `addresses.ts` `alternates()`). The brief proposed `/ro/listeaza-service`; a per-language slug needs a mechanism the frame lacks and is left to an SEO story. *(autonomous default, Principle I)*
 - Introduction wording as proposed in the brief; the English texts of the label, heading and introduction are this story's translation of the Romanian. *(autonomous default)*
 - Section fragments `#pasul-<n>` / `#step-<n>` identify the sections, so a later story and the tests can address them. *(autonomous default)*
 - The page title in the tab is the heading in the current language. *(autonomous default)*
-- The survey and the account step come after the six steps and are not listed (brief). The ticks are not designed in the mock; the mark follows the Cockpit theme's existing done icon. *(autonomous default)*
+- The survey and the account step come after the six steps and are not listed (brief). The tick on a complete step (brief scenario 8, proposed, not designed) is left to the validation story, which defines completeness. *(autonomous default, Principle I)*
 - The design check (`design.md`) names the header, heading, step list and six headings from the boards ListGarage.dc.html and MList.dc.html; where the mock and this spec disagree, `design.md` records it and the brief wins.
 - Out of scope: each step's content, saving and restoring the draft, validation, the entry links from the header and Home.
 
