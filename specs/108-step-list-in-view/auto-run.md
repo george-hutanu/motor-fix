@@ -102,3 +102,23 @@ Preflight: typecheck, lint, test green (exit 0).
 ## Phase 17 — Archive (steps 1–3)
 
 - The delta validates and merges cleanly: garage-listing +12 added, ~0 modified, -0 removed. The spec status is Archived (2026-10-07). The finish and archive check run in the tail after the merge.
+
+## Hand-off
+
+- `lifecycle.mjs ready`: notion debt filed; records committed and pushed; body published; PR ready; Notion qa; qa line committed and pushed (head dac46b9).
+- QA run: 37596871114 · head dac46b9 · lap 1, dispatched with --no-wait (flows in .specify/.cache/qa-flows-192.mjs: desktop scroll and jump, phone bar, 320 px, fragment).
+
+## Final Report
+
+- Branch 108-step-list-in-view, specs/108-step-list-in-view, PR #192 ready, head dac46b9; ~17 commits (docs per phase, feat, test, fix, archive, records, qa).
+- Phases 0–17 ran at level 2. Org context came from Notion. Every gate was answered autonomously; see the sections above.
+- Red first: 4 of 4 suites failed before the code (phase 9). Verification: `nx run-many -t test typecheck -p web web-e2e i18n` green; Biome clean; pre-commit green. The Playwright specs are left to CI's E2E job.
+- FR → test: the table is in tasks.md; FR-001…012 are covered by steps.spec.ts, list-your-garage.spec.ts, addresses.spec.ts, search.spec.ts and web-e2e list-your-garage.spec.ts.
+- Reviews: spec-reviewer APPROVE; code-reviewer APPROVE after the phone scroll-margin fix (HIGH). The LOW findings were either kept (key parity enforced by check.ts) or deleted (redundant tests).
+- Retro evidence: gathered, unjudged, with no verdict (Jev lane unavailable). Deferred: 1 low item, filed in Notion.
+- Deviations for the finish comment:
+  - the completion tick belongs to the validation story;
+  - the same `list-your-garage` slug is used under both language prefixes;
+  - the design mock was unavailable;
+  - e2e runs in CI;
+  - the phone scroll margin was fixed in review.
