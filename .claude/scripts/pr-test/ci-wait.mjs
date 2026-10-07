@@ -7,9 +7,11 @@
 // could hand the tail a CI that had not started. This one polls until the
 // head has checks and none is pending (a PR that has none after
 // SPECKIT_CI_NO_CHECKS_MIN minutes, by default 10, is the tail's Hard Stop),
-// then until the run has completed. It prints only what did not pass, one
+// then until the run has completed. Neither waits past SPECKIT_CI_WAIT_MIN
+// minutes in all, by default 120: a run with no free runner, or a status a
+// cancelled run left pending, ends the wait with exit 1 too. It prints only what did not pass, one
 // "<check>: <bucket>" line each and "QA run: <conclusion>", so empty output
-// means green. Exit 0 finished, 1 no checks, 2 gh failed.
+// means green. Exit 0 finished, 1 a limit reached, 2 gh failed.
 //
 // In a cloud session gh's GraphQL is refused, so `pr checks` goes through
 // .claude/scripts/gh.mjs, which reads it over REST.
@@ -19,26 +21,41 @@ import { isEntryPoint } from "../lib/entry.mjs";
 import { realGh } from "./post.mjs";
 
 const NO_CHECKS = /no checks reported/i;
+const minutes = (ms) => Math.round(ms / 60_000);
 
-/** Polls `gh` until CI (and the run, when given) has finished; never throws. */
-export async function waitForCi({ pr, run, gh, sleep, now, noChecksMs = 10 * 60_000, pollMs = 15_000 }) {
+/** gh's JSON answer, or undefined when there is none to read. */
+function parsed(stdout) {
+  try {
+    return JSON.parse(stdout);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Polls `gh` until CI (and the run, when given) has finished, or a limit is reached; never throws. */
+export async function waitForCi({ pr, run, gh, sleep, now, noChecksMs = 10 * 60_000, waitMs = 120 * 60_000, pollMs = 15_000 }) {
   const start = now();
   let checks;
   for (;;) {
+    // The cloud's gh.mjs keeps gh's plain exit codes under --json (8 pending,
+    // 1 failing), so its answer is read whatever the code; real gh exits 0.
     const out = await gh(["pr", "checks", String(pr), "--json", "name,bucket"]);
-    if (out.code !== 0 && !NO_CHECKS.test(out.stderr)) return { code: 2, lines: [`CI: ${String(out.stderr).trim()}`] };
-    checks = out.code === 0 ? JSON.parse(out.stdout || "[]") : [];
-    if (checks.length === 0 && now() - start >= noChecksMs) return { code: 1, lines: [`CI: no checks on #${pr} after ${Math.round(noChecksMs / 60_000)} min`] };
-    if (checks.length > 0 && !checks.some((c) => c.bucket === "pending")) break;
+    checks = NO_CHECKS.test(out.stderr) ? [] : parsed(out.stdout);
+    if (!Array.isArray(checks)) return { code: 2, lines: [`CI: ${String(out.stderr).trim() || "unreadable gh output"}`] };
+    const pending = checks.filter((c) => c.bucket === "pending").map((c) => c.name);
+    if (checks.length > 0 && pending.length === 0) break;
+    if (checks.length === 0 && now() - start >= noChecksMs) return { code: 1, lines: [`CI: no checks on #${pr} after ${minutes(noChecksMs)} min`] };
+    if (now() - start >= waitMs) return { code: 1, lines: [`CI: still pending on #${pr} after ${minutes(waitMs)} min: ${pending.join(", ")}`] };
     await sleep(pollMs);
   }
   const lines = checks.filter((c) => c.bucket !== "pass" && c.bucket !== "skipping").map((c) => `${c.name}: ${c.bucket}`);
   if (!run) return { code: 0, lines };
   for (;;) {
     const out = await gh(["run", "view", String(run), "--json", "status,conclusion"]);
-    if (out.code !== 0) return { code: 2, lines: [...lines, `QA run: ${String(out.stderr).trim()}`] };
-    const { status, conclusion } = JSON.parse(out.stdout);
-    if (status === "completed") return { code: 0, lines: [...lines, `QA run: ${conclusion}`] };
+    const state = out.code === 0 ? parsed(out.stdout) : undefined;
+    if (!state) return { code: 2, lines: [...lines, `QA run: ${String(out.stderr).trim() || "unreadable gh output"}`] };
+    if (state.status === "completed") return { code: 0, lines: [...lines, `QA run: ${state.conclusion}`] };
+    if (now() - start >= waitMs) return { code: 1, lines: [...lines, `QA run: still ${state.status} after ${minutes(waitMs)} min`] };
     await sleep(pollMs);
   }
 }
@@ -60,8 +77,16 @@ if (isEntryPoint(import.meta.url)) {
       return { code: error.status ?? 1, stdout: `${error.stdout ?? ""}`, stderr: `${error.stderr ?? error.message}` };
     }
   };
-  const minutes = Number(process.env.SPECKIT_CI_NO_CHECKS_MIN) || 10;
-  const out = await waitForCi({ pr, run, gh, sleep: (ms) => new Promise((r) => setTimeout(r, ms)), now: Date.now, noChecksMs: minutes * 60_000 });
+  const limit = (name, fallback) => (Number(process.env[name]) || fallback) * 60_000;
+  const out = await waitForCi({
+    pr,
+    run,
+    gh,
+    sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+    now: Date.now,
+    noChecksMs: limit("SPECKIT_CI_NO_CHECKS_MIN", 10),
+    waitMs: limit("SPECKIT_CI_WAIT_MIN", 120),
+  });
   for (const line of out.lines) console.log(line);
   process.exit(out.code);
 }

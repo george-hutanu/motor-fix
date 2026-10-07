@@ -16,7 +16,8 @@ node .claude/scripts/pr-test/ci-wait.mjs <n> --run <id>
 
 It keeps waiting while the head has no checks yet, as it has for a few
 seconds after every push (`gh pr checks --watch` would end there at once);
-exit 1, no checks after 10 minutes, is the Hard Stop below.
+exit 1, no checks after 10 minutes or CI still pending after 120, is the
+Hard Stop below.
 
 When it reports, `node .claude/scripts/watch.mjs claim <worktree> tail` and
 dispatch the tail (below). Should the session end first, the watcher holds
