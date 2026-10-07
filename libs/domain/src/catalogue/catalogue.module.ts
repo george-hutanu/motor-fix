@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { BrandLoader } from './brand-loader';
 import { BrandsController } from './brands.controller';
 import { BrandsService } from './brands.service';
+import { JobTypeLoader } from './job-type-loader';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 
@@ -12,6 +13,7 @@ import { AuditService } from '../audit/audit.service';
   providers: [
     BrandLoader,
     BrandsService,
+    JobTypeLoader,
     { provide: AUDIT_PORT, useClass: AuditService },
   ],
 })

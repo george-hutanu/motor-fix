@@ -51,8 +51,12 @@ const isModelWrite = (node: ts.Node, target: ts.PropertyAccessExpression) => {
   return first !== undefined && ts.isObjectLiteralExpression(first);
 };
 
+// A raw statement that only selects, such as taking an advisory lock, writes nothing.
+const isRawWrite = (node: ts.Node, target: ts.PropertyAccessExpression) =>
+  RAW_WRITES.has(target.name.text) && !/^\s*select\b/i.test(sqlOf(node));
+
 const isWrite = (node: ts.Node, target: ts.PropertyAccessExpression) =>
-  RAW_WRITES.has(target.name.text) ||
+  isRawWrite(node, target) ||
   (RAW_QUERIES.has(target.name.text) && WRITE_SQL.test(sqlOf(node))) ||
   isModelWrite(node, target);
 
@@ -157,7 +161,11 @@ function serviceFiles(dir: string): string[] {
     if (entry.isDirectory()) {
       return entry.name === 'generated' ? [] : serviceFiles(path);
     }
-    return entry.name.endsWith('.service.ts') ? [path] : [];
+    // A catalogue loader writes at start as the system, audited the same way.
+    return entry.name.endsWith('.service.ts') ||
+      entry.name.endsWith('-loader.ts')
+      ? [path]
+      : [];
   });
 }
 
@@ -176,6 +184,16 @@ describe('every write use case in the domain library calls the audit writer', ()
       expect.arrayContaining([
         'AccountsService.createAccount',
         'AccountsService.grantRole',
+      ]),
+    );
+  });
+
+  it('scans the catalogue loaders and the garage price write', () => {
+    expect(files.map((path) => relative(root, path))).toEqual(
+      expect.arrayContaining([
+        join('catalogue', 'brand-loader.ts'),
+        join('catalogue', 'job-type-loader.ts'),
+        join('garages', 'garage-prices.service.ts'),
       ]),
     );
   });
@@ -234,6 +252,17 @@ describe('the check itself', () => {
           }
         }`),
     ).toEqual(['JobsService.close']);
+  });
+
+  it('ignores a raw statement that only takes a lock', () => {
+    expect(
+      uncovered(`
+        class Loader {
+          async load(tx) {
+            await tx.$executeRaw\`SELECT pg_advisory_xact_lock(hashtext('loader'))\`;
+          }
+        }`),
+    ).toEqual([]);
   });
 
   it('ignores a raw read', () => {
