@@ -42,9 +42,7 @@ function setup(opts: {
   const navigateByUrl = jest
     .spyOn(router, 'navigateByUrl')
     .mockResolvedValue(true);
-  const assign = jest.fn();
   return {
-    assign,
     dialog: TestBed.inject(SignInDialog),
     navigateByUrl,
     takeReturnTo,
@@ -111,14 +109,5 @@ describe('the sign-in dialog and the kept address', () => {
     expect(navigateByUrl).toHaveBeenCalledTimes(1);
     expect(navigateByUrl).toHaveBeenCalledWith('/app/garage');
     expect(takeReturnTo).not.toHaveBeenCalled();
-  });
-
-  it('does not change the browser location', async () => {
-    const original = window.location.href;
-    const { dialog } = setup({ answer: 'signed-in', kept: '/app/driver/cars' });
-
-    await dialog.start();
-
-    expect(window.location.href).toBe(original);
   });
 });

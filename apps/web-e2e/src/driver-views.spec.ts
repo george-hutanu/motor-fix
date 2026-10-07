@@ -101,6 +101,7 @@ test.describe('driver views @seeded', () => {
     await expect(page).toHaveURL(/\/ro\/?$/);
   });
 
+  // @traces 028-FR-003 028-FR-007
   test('the bar opens every released view on a phone, at the top', async ({
     page,
   }) => {

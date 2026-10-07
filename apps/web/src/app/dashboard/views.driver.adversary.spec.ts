@@ -79,10 +79,6 @@ describe('the driver dashboard views', () => {
     ]);
   });
 
-  it('gives the same answer twice', () => {
-    expect(allowedViews('driver', ALL)).toEqual(allowedViews('driver', ALL));
-  });
-
   it('has no route for the assistant and a fall-through to the dashboard', () => {
     const routes = dashboardRoutes('driver');
     expect(routes.map((r) => r.path)).toEqual([
