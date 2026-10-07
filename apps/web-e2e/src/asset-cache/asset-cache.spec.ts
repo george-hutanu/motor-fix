@@ -6,7 +6,7 @@ import type { Browser, BrowserContext, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 import { cacheAssets, isHashedAsset } from './asset-cache.js';
-import { test } from './fixtures.js';
+import { test } from '../fixtures.js';
 
 const hits = new Map<string, number>();
 let server: Server;

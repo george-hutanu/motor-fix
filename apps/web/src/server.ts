@@ -11,7 +11,7 @@ import { publicWebUrl, readEnv } from '@motor-fix/contracts/env';
 import express from 'express';
 
 import { apiInternalUrl } from './api-url';
-import { mountCompression } from './server/compress';
+import { mountCompression } from './server/compress/compress';
 import { mountEdge } from './server/edge';
 import { mountSearch } from './server/search';
 

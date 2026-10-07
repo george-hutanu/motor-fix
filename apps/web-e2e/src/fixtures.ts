@@ -1,6 +1,6 @@
 import { test as base } from '@playwright/test';
 
-import { cacheAssets } from './asset-cache.js';
+import { cacheAssets } from './asset-cache/asset-cache.js';
 
 const deployed = process.env['BASE_URL'];
 

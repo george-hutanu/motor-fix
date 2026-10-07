@@ -16,7 +16,7 @@ import { brotliDecompressSync } from 'node:zlib';
 import express from 'express';
 
 import { mountCompression } from './compress';
-import { mountEdge } from './edge';
+import { mountEdge } from '../edge';
 
 const listen = (server: Server) =>
   new Promise<string>((resolve) =>
