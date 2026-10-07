@@ -2,7 +2,7 @@
 
 **Feature Branch**: `496-task-done-close-name`
 **Created**: 2026-10-07
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 **Input**: ST-496 (tech debt from ST-159, pr-tester): "in the confirmation state of a task two buttons are named "Închide" / "Close" (the overlay X and the mf-task-done button); give one a distinct name or hide the duplicate from assistive technology" — https://app.notion.com/p/3ef607bff0d281299753e9793a050162. Taken with its sibling ST-497 (same story, same lib): "the error line next to the main button is cleared at the next press (problem reset in submit()), so the dialog height jumps while the retry is sending; keep the line until the answer, or reserve its space" — https://app.notion.com/p/3ef607bff0d281de8812e43c26fdc91e
 
 ## User Scenarios & Testing *(mandatory)*
@@ -30,8 +30,8 @@ After a failed save, pressing the main button again keeps the error line in plac
 
 ### Functional Requirements
 
-- **FR-001**: The shared confirmation's button MUST be named "Gata" / "Done" (i18n `shell.form.done`), distinct from the overlay's close button ("Închide" / "Close", 157-FR-009); it keeps its focus on show and closes the task with the result. (Modifies 159-FR-005: the button was "Închide" / "Close".)
-- **FR-002**: A failure's message next to the main button MUST stay shown from the next press until that press is answered: it is replaced by the new failure's message, removed on success, and removed at once when the press finds an invalid field and sends nothing. (Modifies 159-FR-006's lifetime of the message; `problem()` reads "the last failure, until the next answer".)
+- **FR-001**: On success the helper MUST mark the task unchanged (no discard question) and hand the result to the task, which either closes with it or shows the shared confirmation: a short message (`role="status"`) and a "Gata" / "Done" button (i18n `shell.form.done`) that has the focus and closes the task with the result. Its name MUST differ from the overlay's close button ("Închide" / "Close", 157-FR-009). (Replaces 159-FR-005, whose button was "Închide" / "Close".)
+- **FR-002**: On a failure the task MUST stay open with every value kept, and the message for the problem's `code` MUST show next to the main button (`role="alert"`); a code without its own message shows the general message; with field errors the code's message shows too. The message MUST stay shown from the next press until that press is answered: it is replaced by the new failure's message, removed on success, and removed at once when the press finds an invalid field and sends nothing. (Replaces 159-FR-006, adding how long the message stays.)
 
 ## Assumptions
 
@@ -42,8 +42,8 @@ After a failed save, pressing the main button again keeps the error line in plac
 
 ### Capability: `overlays`
 
-- **Adds**: FR-001, FR-002
-- **Modifies**: 159-FR-005 (by FR-001), 159-FR-006 (by FR-002)
+- **Adds**: none
+- **Modifies**: `159-FR-005` → `FR-001`, `159-FR-006` → `FR-002`
 - **Removes**: none
 
 ## Success Criteria *(mandatory)*

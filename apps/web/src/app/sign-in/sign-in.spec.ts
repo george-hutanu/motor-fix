@@ -462,7 +462,7 @@ describe('answers that refuse', () => {
     expect(alertText()).toBe('The e-mail or password is not correct.');
   });
 
-  it('keeps the message while the next try is sending (ST-497)', async () => {
+  it('keeps the message while the next try is sending', async () => {
     await open();
     signIn
       .mockRejectedValueOnce(problem(401, 'invalid_credentials'))
