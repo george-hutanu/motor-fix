@@ -54,7 +54,7 @@ import {
   runDirPrefix,
   waitForHttp,
 } from "./services.mjs";
-import { VIEWPORTS, runSweep, toFindings } from "./sweep.mjs";
+import { VIEWPORTS, flowSignIn, runSweep, toFindings } from "./sweep.mjs";
 import { createWorktree, depsToClone, removeWorktree } from "./worktree.mjs";
 
 const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
@@ -79,6 +79,17 @@ export function parseArgs(argv) {
     sha: flag("sha"),
   };
 }
+
+// What a PR's QA flows are called with: signIn(context, role) opens a guarded screen as a seeded account.
+export const flowArgs = ({ webURL, apiURL, outDir, repoRoot, worktree, session }) => ({
+  baseURL: webURL,
+  apiURL,
+  outDir,
+  repoRoot,
+  worktree,
+  signIn: flowSignIn({ session, baseURL: webURL }),
+  ...apiHealth(apiURL),
+});
 
 /** The affected unit tests between the base and the head, never answered from the Nx cache. */
 export const testsCommand = ({ base, sha }) => ["nx", "affected", "-t", "test", `--base=${base}`, `--head=${sha}`, "--parallel=1", "--skip-nx-cache"];
@@ -341,7 +352,7 @@ async function main(argv) {
       phase = "flows";
       const flow = await import(pathToFileURL(resolve(opt.flows)).href);
       try {
-        const extra = (await flow.default({ baseURL: webURL, apiURL, outDir: shots, repoRoot: root, worktree: wt.dir, ...apiHealth(apiURL) })) ?? [];
+        const extra = (await flow.default(flowArgs({ webURL, apiURL, outDir: shots, repoRoot: root, worktree: wt.dir, session }))) ?? [];
         findings.push(...extra);
         log(`flows: ${extra.length} finding(s)`);
       } catch (error) {
