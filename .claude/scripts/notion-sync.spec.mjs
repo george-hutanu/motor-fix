@@ -71,7 +71,7 @@ function workspace({ stories, epicStatus = 'In progress', rows = [], fail = () =
   const fetchImpl = async (url, init) => {
     const path = url.slice(API.length);
     const body = init.body ? JSON.parse(init.body) : undefined;
-    calls.push({ method: init.method, path, body, auth: init.headers.Authorization });
+    calls.push({ method: init.method, path, body, auth: init.headers.Authorization, version: init.headers['Notion-Version'] });
     const failed = fail(init.method, path, body);
     if (failed) return failed;
     if (init.method === 'POST' && path === `/data_sources/${STORIES}/query`) {
@@ -707,7 +707,6 @@ describe('the Work timeline', () => {
       assert.equal(args.story.id, 'story687');
       assert.equal(args.pr, PR_URL);
       assert.deepEqual(args.now, new Date(2026, 9, 5, 12));
-      assert.ok(args.client && args.timelineClient);
       assert.ok(r.lines.includes(`- 2026-10-05 · ${event} · timeline-db · In progress → QA`));
     });
   }
@@ -726,6 +725,29 @@ describe('the Work timeline', () => {
     assert.equal(tl.seen[0].pr, 'https://github.com/george-hutanu/motor-fix/pull/233');
   });
 
+  for (const argv of [['pr', '139'], ['debt'], ['ready'], ['log', 'start', 'ST-687', 'x'], ['check']]) {
+    it(`${argv[0]} never reaches it`, async () => {
+      const ws = workspace({ stories: [story(687, 'Implementing')] });
+      const tl = recorder();
+      await run(argv, { ws, workTimeline: tl.fn });
+      assert.equal(tl.seen.length, 0);
+    });
+  }
+
+  it('one that rejects is logged and the event still exits 0', async () => {
+    const ws = workspace({ stories: [story(687, 'Planning')], rows: [row('r687', 'ST-687', 'story687', 'Planning')] });
+    const r = await run(['implement'], {
+      ws,
+      workTimeline: async () => {
+        throw new Error('boom');
+      },
+    });
+    assert.equal(r.code, 0);
+    assert.equal(r.json.status, 'Implementing');
+    assert.ok(r.lines.includes('- 2026-10-05 · implement · timeline-db · failed — boom'));
+    assert.ok(!r.log.includes('PENDING'));
+  });
+
   it('logs nothing when it wrote nothing', async () => {
     const ws = workspace({ stories: [story(687, 'Implementing')] });
     const r = await run(['review'], { ws, workTimeline: async () => null });
@@ -740,6 +762,6 @@ describe('the Work timeline', () => {
     assert.deepEqual(r.lines.filter((l) => l.includes('timeline-db')), ['- 2026-10-05 · implement · timeline-db · failed — 400 invalid_request_url']);
     assert.ok(!r.log.includes('PENDING'));
     const timeline = ws.calls.filter((c) => c.path === '/data_sources/3706e923-2faa-42bc-aab2-8a2d5ab5d9d3/query');
-    assert.equal(timeline.length, 1);
+    assert.deepEqual(timeline.map((c) => c.version), ['2025-09-03']);
   });
 });

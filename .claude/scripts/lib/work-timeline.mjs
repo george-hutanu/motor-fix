@@ -13,7 +13,7 @@ const ICON = { "In progress": "🔨", QA: "🧪", Merged: "✅", Blocked: "⛔" 
 const SPAN_MS = 2 * 3600e3;
 
 const duration = (from, to) => {
-  const m = Math.max(0, Math.round((new Date(to) - new Date(from)) / 60000));
+  const m = Math.max(0, Math.floor((new Date(to) - new Date(from)) / 60000));
   return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}`;
 };
 const dateOf = (page, name) => readProp(page, name)?.start ?? null;
@@ -30,7 +30,7 @@ function timing(event, story, row, now) {
   if (event === "qa") qa ??= at;
   if (event === "finish") merged = at;
   const state = event === "unblock" ? (qa ? "QA" : "In progress") : STATE[event];
-  const range = { start: started ?? at, end: state === "Merged" ? merged : new Date(now.getTime() + SPAN_MS).toISOString() };
+  const range = { start: started ?? at, end: state === "Merged" || merged ? merged : new Date(now.getTime() + SPAN_MS).toISOString() };
   let took = null;
   if (started && state === "Merged") took = `${duration(started, merged)} total · build ${duration(started, qa ?? merged)} · QA ${duration(qa ?? merged, merged)}`;
   else if (started && state === "QA") took = `build ${duration(started, qa)} · in QA ${duration(qa, at)}`;
@@ -51,8 +51,16 @@ const failure = (error) => `failed — ${error?.short ?? error?.message ?? error
  * `client` speaks the stories' API version, `timelineClient` the Work timeline's.
  * Returns the log text, or null when the step writes nothing.
  */
-export async function syncWorkTimeline({ client, timelineClient, event, key, story, pr, now }) {
-  if (!STATE[event] && event !== "unblock") return null;
+export async function syncWorkTimeline(args) {
+  if (!STATE[args.event] && args.event !== "unblock") return null;
+  try {
+    return await upsert(args);
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+async function upsert({ client, timelineClient, event, key, story, pr, now }) {
   let row;
   let rowText;
   try {

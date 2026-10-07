@@ -152,7 +152,7 @@ export async function main(argv, io = {}) {
   if (io.replay !== false) await replayPending(logFile, date, io, stderr);
 
   const storyNum = Number(String(parsed.flags.story ?? feature.num).match(/\d+/)?.[0]);
-  const ctx = { client, gh, repo, feature, flags: parsed.flags, rest, event, storyNum, st: `ST-${storyNum}`, log, append, lines, now };
+  const ctx = { client, gh, repo, feature, flags: parsed.flags, rest, event, storyNum, st: `ST-${storyNum}`, log, append, lines };
   ctx.timeline = () =>
     (io.workTimeline ?? syncWorkTimeline)({
       client,
@@ -301,7 +301,7 @@ async function statusEvent(ctx) {
     await patch(client, row, "Build status", decision.timeline);
     log(event, "timeline", `${was} → ${decision.timeline}`);
   }
-  const workTimeline = await ctx.timeline();
+  const workTimeline = await ctx.timeline().catch((error) => `failed — ${error?.message ?? error}`);
   if (workTimeline) log(event, "timeline-db", workTimeline);
 
   if (epic && (event === "start" || event === "finish")) await moveEpic(ctx, epic, event, decision.story);
