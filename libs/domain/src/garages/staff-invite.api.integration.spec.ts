@@ -45,7 +45,9 @@ beforeAll(async () => {
     imports: [
       auth,
       notifications,
-      GaragesModule.register(email, notifications),
+      GaragesModule.register(email, notifications, {
+        skipManualApproval: false,
+      }),
     ],
   }).compile();
   app = moduleRef.createNestApplication<NestExpressApplication>();

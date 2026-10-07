@@ -13,7 +13,12 @@ export type LiveSubject =
   | { type: 'review'; garageId: string; authorAccountId: string }
   | { type: 'car'; ownerAccountId: string }
   | { type: 'repair'; ownerAccountId: string; sharedGarageId: string | null }
-  | { type: 'verification'; garageId: string }
+  | {
+      type: 'verification';
+      garageId: string;
+      // An approval: the garage's public page and its brands' searches.
+      published?: { brandIds: readonly string[] };
+    }
   // The garages' staff only: an invite, a mechanic row.
   | { type: 'garage'; garageIds: readonly string[] }
   | { type: 'platform' };
@@ -58,7 +63,16 @@ export function audienceOf(subject: LiveSubject): string[] {
     case 'garage':
       return subject.garageIds.map(garage);
     case 'verification':
-      return ['admin', garage(subject.garageId)];
+      return [
+        'admin',
+        garage(subject.garageId),
+        ...(subject.published
+          ? [
+              `public:garage:${subject.garageId}`,
+              ...subject.published.brandIds.map((id) => `public:search:${id}`),
+            ]
+          : []),
+      ];
     case 'platform':
       return ['admin', 'system'];
   }

@@ -1,5 +1,7 @@
 import { audienceOf } from './audience';
 
+// @traces 207-FR-008
+
 const driver = 'd1';
 const garage = 'g1';
 const mechanic = 'm1';
@@ -102,6 +104,29 @@ describe('audienceOf', () => {
       'admin',
       'garage:g1',
     ]);
+  });
+
+  it("adds the garage's public page and each brand's search when an approval publishes it", () => {
+    expect(
+      audienceOf({
+        garageId: garage,
+        published: { brandIds: ['b1', 'b2'] },
+        type: 'verification',
+      }),
+    ).toEqual([
+      'admin',
+      'garage:g1',
+      'public:garage:g1',
+      'public:search:b1',
+      'public:search:b2',
+    ]);
+    expect(
+      audienceOf({
+        garageId: garage,
+        published: { brandIds: [] },
+        type: 'verification',
+      }),
+    ).toEqual(['admin', 'garage:g1', 'public:garage:g1']);
   });
 
   it('sends platform rules and copy voices to the admins and the system channel', () => {

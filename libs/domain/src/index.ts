@@ -12,6 +12,13 @@ export { reminderDayMs } from './cars/reminders-config';
 export { EventsModule } from './events/events.module';
 export { OutboxRelayModule } from './events/outbox-relay.module';
 export { GaragesModule } from './garages/garages.module';
+export { publicGarages } from './garages/public-garages';
+export {
+  type Decision,
+  type VerificationActor,
+  VerificationService,
+} from './garages/verification.service';
+export { verificationConfig } from './garages/verification-config';
 export * from './health/health.module';
 export * from './logging';
 export { emailConfig } from './notifications/email-config';

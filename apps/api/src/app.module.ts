@@ -13,6 +13,7 @@ import {
   phoneConfig,
   pushConfig,
   StorageModule,
+  verificationConfig,
 } from '@motor-fix/domain';
 import { DynamicModule, Module } from '@nestjs/common';
 
@@ -57,7 +58,11 @@ export class AppModule {
           brevo: { apiKey: email.apiKey ?? '', apiUrl: email.apiUrl },
           phone: phoneConfig(env.APP_ENV, process.env),
         }),
-        GaragesModule.register(email, notifications),
+        GaragesModule.register(
+          email,
+          notifications,
+          verificationConfig(env.APP_ENV, process.env),
+        ),
         EventsModule.register({ redisUrl: env.REDIS_URL }),
       ],
       module: AppModule,
