@@ -128,21 +128,33 @@ describe('the list your garage page', () => {
     },
   );
 
-  it('leaves every section empty but for its heading', async () => {
+  it('leaves every section empty but for its heading, the brands step aside', async () => {
     const { page } = await open('/ro/list-your-garage');
 
-    for (const section of page.querySelectorAll('section'))
-      expect([...section.children].map((c) => c.tagName)).toEqual(['H2']);
+    expect(
+      [...page.querySelectorAll('section')].map((s) =>
+        [...s.children].map((c) => c.tagName),
+      ),
+    ).toEqual([
+      ['H2'],
+      ['H2', 'MF-BRANDS-STEP'],
+      ['H2'],
+      ['H2'],
+      ['H2'],
+      ['H2'],
+    ]);
   });
 
-  it('shows no completion tick and makes no request', async () => {
+  it('shows no completion tick and makes no request but the brand catalogue read', async () => {
     const { page } = await open('/ro/list-your-garage');
 
     expect(page.textContent).not.toMatch(/[✓✔]/);
     expect(
       page.querySelector('[aria-checked], input[type="checkbox"]'),
     ).toBeNull();
-    TestBed.inject(HttpTestingController).verify();
+    const http = TestBed.inject(HttpTestingController);
+    http.match((r) => r.method === 'GET' && r.url.endsWith('/brands'));
+    http.verify();
   });
 
   it.each([

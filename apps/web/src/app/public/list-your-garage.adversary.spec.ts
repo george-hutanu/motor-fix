@@ -106,7 +106,9 @@ describe('the list your garage page under hostile use', () => {
     await settle(harness);
 
     expect(
-      page.querySelector('[aria-live], [role="status"], [role="alert"]'),
+      page
+        .querySelector('nav')
+        ?.querySelector('[aria-live], [role="status"], [role="alert"]'),
     ).toBeNull();
     expect(bar(page)?.closest('[aria-live]')).toBeNull();
   });

@@ -12,6 +12,8 @@ import {
 import { I18n, LanguageSwitch, TranslatePipe } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
+import type { BrandsSection } from './brands-section';
+import { BrandsStep } from './brands-step';
 import { currentStep, STEPS } from './steps';
 
 // How long the page must be still after a tap before the scroll position
@@ -23,7 +25,7 @@ const SETTLE_MS = 150;
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(document:click)': 'outside($event)' },
-  imports: [LanguageSwitch, TranslatePipe],
+  imports: [BrandsStep, LanguageSwitch, TranslatePipe],
   selector: 'mf-list-your-garage',
   styles: `
     :host { display: block; padding: var(--mf-space-4); }
@@ -100,6 +102,9 @@ const SETTLE_MS = 150;
         @for (step of steps; track step.n) {
           <section [id]="prefix() + step.n">
             <h2 tabindex="-1">{{ step.n }} {{ step.label | t }}@if (step.mark) {<span class="mark"> · {{ step.mark | t }}</span>}</h2>
+            @if (step.n === 2) {
+              <mf-brands-step [(value)]="brands" />
+            }
           </section>
         }
       </div>
@@ -115,6 +120,8 @@ export class ListYourGarage {
   private settling: ReturnType<typeof setTimeout> | undefined;
 
   protected readonly steps = STEPS;
+  // The draft's steps['2'], held with the form until the listing is sent.
+  protected readonly brands = signal<BrandsSection>({ brands: [] });
   protected readonly current = signal(1);
   protected readonly open = signal(false);
   protected readonly prefix = computed(() =>

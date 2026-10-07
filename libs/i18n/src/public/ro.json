@@ -36,6 +36,34 @@
   },
   "listing": {
     "bar": "{n} / 6 · {label}",
+    "brands": {
+      "chips": "Mărcile tale",
+      "counter": "{taken} · {refused}",
+      "hint": "O apăsare: led verde, lucrezi pe ea. Încă una: led roșu, nu o primești. A treia o stinge.",
+      "left": {
+        "few": "{count} caractere rămase",
+        "one": "{count} caracter rămas",
+        "other": "{count} de caractere rămase"
+      },
+      "noMatch": "Nicio marcă găsită.",
+      "note": "Notă despre mărci, cel mult 140 de caractere",
+      "off": "nu o primești",
+      "on": "lucrezi pe ea",
+      "phrase": "Ce nu primești, pe scurt, cel mult 60 de caractere",
+      "refused": {
+        "few": "{count} refuzate",
+        "one": "{count} refuzată",
+        "other": "{count} de refuzate"
+      },
+      "results": "Mărci găsite",
+      "search": "Caută o marcă",
+      "searchDown": "Căutarea nu merge acum.",
+      "taken": {
+        "few": "{count} primite",
+        "one": "{count} primită",
+        "other": "{count} de primite"
+      }
+    },
     "heading": "Pune‑ți service‑ul pe hartă",
     "intro": "Spune ce primești și ce refuzi. Cine îți cere o ofertă știe deja că lucrezi pe mașina lui.",
     "label": "PENTRU SERVICE‑URI",
