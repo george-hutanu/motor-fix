@@ -33,3 +33,6 @@ level.mjs check: 2, unchanged. Checklist: all items pass.
 ## Phase 6 — Checklist
 - checklists/brand-catalogue.md: 26 items (data integrity, loader, search contract, garage-brand rules), all resolved; 1 struck (CHK025, ST-397's). Answers to the skill's questions taken from spec/plan: depth Standard, audience PR reviewer, focus the four named areas.
 - Gaps fixed by targeted edits: audit-kind wording in spec (US1 scenario 6, Key Entities), whitespace-only `q` in contracts/brands.md, refused-file-at-boot outcome in data-model.md. No requirement added beyond the Build brief.
+
+## Phase 7 — Tasks
+- tasks.md: 20 tasks (4 foundational, 6 US1, 7 US2, 2 US3, 1 polish); tests precede implementation in every story; all 17 FRs mapped. No Playwright task (no screen).
