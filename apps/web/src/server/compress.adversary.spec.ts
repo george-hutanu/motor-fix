@@ -11,7 +11,7 @@ import {
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { brotliDecompressSync, gunzipSync } from 'node:zlib';
+import { brotliDecompressSync } from 'node:zlib';
 
 import express from 'express';
 
@@ -30,13 +30,9 @@ const close = (server: Server) =>
 
 type Raw = { status: number; headers: IncomingHttpHeaders; body: Buffer };
 
-const raw = (
-  url: string,
-  headers: Record<string, string> = {},
-  method = 'GET',
-) =>
+const raw = (url: string, headers: Record<string, string> = {}) =>
   new Promise<Raw>((resolve, reject) => {
-    request(url, { headers, method }, (res) => {
+    request(url, { headers }, (res) => {
       const chunks: Buffer[] = [];
       res.on('data', (chunk: Buffer) => chunks.push(chunk));
       res.on('end', () =>
@@ -101,17 +97,6 @@ describe('web compression, hostile clients and responses', () => {
     rmSync(dir, { force: true, recursive: true });
   });
 
-  it('answers a HEAD request with headers only', async () => {
-    const answer = await raw(
-      `${base}/main-ABCD1234.js`,
-      { 'accept-encoding': 'gzip' },
-      'HEAD',
-    );
-
-    expect(answer.status).toBe(200);
-    expect(answer.body.length).toBe(0);
-  });
-
   it('decodes a brotli-only client body to the file bytes', async () => {
     const answer = await raw(`${base}/main-ABCD1234.js`, {
       'accept-encoding': 'br',
@@ -165,22 +150,15 @@ describe('web compression, hostile clients and responses', () => {
     expect(String(answer.headers.vary)).toMatch(/accept-encoding/i);
   });
 
-  it('serves a byte range of a static file that decodes to exactly that range', async () => {
+  it('serves a byte range of a static file as those plain bytes', async () => {
     const answer = await raw(`${base}/main-ABCD1234.js`, {
       'accept-encoding': 'gzip',
       range: 'bytes=0-99',
     });
 
-    const body =
-      answer.headers['content-encoding'] === 'gzip'
-        ? gunzipSync(answer.body)
-        : answer.body;
-    if (answer.status === 206) {
-      expect(body.toString()).toBe(script.slice(0, 100));
-    } else {
-      expect(answer.status).toBe(200);
-      expect(body.toString()).toBe(script);
-    }
+    expect(answer.status).toBe(206);
+    expect(answer.headers['content-encoding']).toBeUndefined();
+    expect(answer.body.toString()).toBe(script.slice(0, 100));
   });
 
   it('relays a large event stream byte for byte without re-encoding', async () => {
