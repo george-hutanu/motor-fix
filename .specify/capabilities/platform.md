@@ -42,6 +42,7 @@ features:
   - 815-specs-private-repo
   - 813-fable-to-opus
   - 457-diff-audit-tsconfig-imports
+  - 728-active-feature-padded-fallback
 ---
 
 # Capability: Platform
@@ -1057,6 +1058,14 @@ _From 457-diff-audit-tsconfig-imports._
 ### 457-FR-002 — The rule MUST NOT depend on the file's path beyond locating that tsconfig.
 
 _From 457-diff-audit-tsconfig-imports._
+
+### 728-FR-001 — `activeFeature`'s branch step MUST take `specs/<branch>` when it exists, else the one `specs/` folder whose number equals the branch's number (leading zeros ignored) and whose slug equals the branch's slug.
+
+_From 728-active-feature-padded-fallback._
+
+### 728-FR-002 — The PR lifecycle gate's `featureDir` MUST use that same lookup from `.claude/scripts/lib/feature.mjs`, with its own branch, not a copy of it.
+
+_From 728-active-feature-padded-fallback._
 
 ## Retired
 
