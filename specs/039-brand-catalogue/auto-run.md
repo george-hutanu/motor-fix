@@ -53,3 +53,20 @@ artifact-lint: 0 errors, 0 warnings (Jev lane unavailable). 17/17 FRs tasked, 20
 - Quickstart run against a booted API (worktree services): `brands loaded: 12 changed`, then `0 changed` on the second boot; `q=sko` and `q=ŠKODA` → Škoda; no q → 12, BMW first; random cursor → 400 `invalid_cursor`. Added the one boot log line quickstart named. `scripts/contract-check.sh`: exit 0.
 - Feature specs: 7 suites, 75 tests green (`jest` on the feature's files, worktree services). Commits 81c82ed6 feat(garages), 307b38b6 feat(catalogue), pushed; pre-commit typecheck/test/lint green on each.
 - Ticket re-read: the skill's Jira step does not apply (Notion is the tracker); phase 13 refreshes the Notion story.
+
+## Phase 11 — Converge (inline, opus)
+- Cycle 1: converged, tasks.md unchanged. Checked 17 FRs, 5 SCs, 7 edge cases, 7 plan decisions against the code (libs/domain/src/catalogue/*, garages/garage-brands.service.ts, migration CHECKs at migration.sql:73-78, main.ts:29). 0 missing, 0 partial, 0 contradicts; 1 unrequested LOW (the boot log line, named by quickstart.md step 1: kept). Whitespace-only note/phrase: refused by the CHECKs; trimming to NULL belongs to the later writer (data-model.md). Ticket lane: Jira step not applicable (Notion tracker); phase 13 refreshes it.
+
+## Phase 12 — Harden (inline, opus)
+
+| Check | Before | After |
+|-------|--------|-------|
+| diff-audit errors (real) | 0 | 0 |
+| artifact-lint errors | 0 | 0 |
+| mutation | skipped: CI only (mutation.yml) | n/a |
+| feature tests | 75 | 142 (10 suites) |
+
+- Kept deliberately: diff-audit's `import-extension` ERRORs. The rule treats every `libs/` path as nodenext, but these libs resolve as `bundler` (tsconfig.base.json; domain and contracts compile commonjs) and no existing file imports with `.js`. The `suppression` and `dead-export` ERRORs on `libs/data-access/src/lib` are ng-openapi-gen output, which is never edited by hand. The `untested-new-file` WARNs on the domain services are wrong: the integration specs import them. The WARNs on data-access are about generated files. `SignedUpload` was there before this feature.
+- Test-adversary: 70 tests, 13 failing. Fixed: a malformed `brands:active` value answered 500 (now parsed inside the cache guard, so the list falls back to PostgreSQL). The loader accepted a blank key, a name with no letters or digits, and a popularity that is not a whole number from 1 (now refused as BrandFileError). Three spec gaps went to deferred.md and their tests were removed: the DB-level job rule, a raw stance flip, and a name swap.
+- Code-reviewer (BLOCK): HIGH 1 (cache parse) fixed. HIGH 2 fixed: `setStance` and `addJob` did not check that the actor belongs to the garage, and now call `assertGarage`. Also fixed: the unused barrel export of GarageBrandsService (deleted), the job-type FK note (now a TODO), and the limits spec's bare `toThrow()` (now names its CHECKs). Deferred: the concurrent first write of one stance (MEDIUM) and moving `refusal` out of sign-up.service. Kept: the 60 s load timeout, whose comment says why.
+- Repair laps: 1. lint and typecheck exit 0.

@@ -309,7 +309,9 @@ describe('garage limits', () => {
   ])('refuses %s', async (_, data) => {
     const w = await world();
 
-    await expect(setLimits(w.garage, data)).rejects.toThrow();
+    await expect(setLimits(w.garage, data)).rejects.toThrow(
+      /garage_brand_note_check|garage_refusal_phrase_check/,
+    );
     expect(
       await prisma.garage.findUniqueOrThrow({ where: { id: w.garage } }),
     ).toMatchObject({ brandNote: null, refusalPhrase: null });

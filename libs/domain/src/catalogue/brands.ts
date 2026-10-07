@@ -40,6 +40,7 @@ export function validateFile(records: readonly BrandRecord[]) {
     slug: new Map<string, string>(),
   };
   for (const record of records) {
+    refuseMalformed(record);
     const values = {
       key: record.key,
       name: record.name,
@@ -54,5 +55,22 @@ export function validateFile(records: readonly BrandRecord[]) {
       }
       seen[kind].set(values[kind], record.key);
     }
+  }
+}
+
+// A key or name that folds to nothing would give an empty key or slug, and a
+// rank that is not a whole number from 1 breaks "1 is the most popular".
+function refuseMalformed(record: BrandRecord) {
+  const { key, name, popularity } = record;
+  if (key.trim() === '' || slugOf(name) === '') {
+    throw new BrandFileError(`brand "${key}" needs a key and a name`);
+  }
+  if (
+    popularity !== undefined &&
+    !(Number.isInteger(popularity) && popularity >= 1)
+  ) {
+    throw new BrandFileError(
+      `brand "${key}" has popularity ${popularity}; it must be a whole number from 1`,
+    );
   }
 }

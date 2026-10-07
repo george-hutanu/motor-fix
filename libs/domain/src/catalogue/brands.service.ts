@@ -49,8 +49,11 @@ export class BrandsService {
   }
 
   private async active(): Promise<BrandDto[]> {
-    const cached = await this.cache(() => this.redis.get(ACTIVE_BRANDS_KEY));
-    if (cached) return JSON.parse(cached) as BrandDto[];
+    const cached = await this.cache(async () => {
+      const text = await this.redis.get(ACTIVE_BRANDS_KEY);
+      return text ? (JSON.parse(text) as BrandDto[]) : null;
+    });
+    if (cached) return cached;
     const brands = await this.prisma.brand.findMany({
       orderBy: [
         { popularity: { nulls: 'last', sort: 'asc' } },
@@ -77,7 +80,9 @@ export class BrandsService {
       return result;
     } catch (error) {
       if (!this.redisDown) {
-        this.logger.warn(`brand cache unavailable: ${String(error)}`);
+        this.logger.warn(
+          `brand cache unavailable or unreadable: ${String(error)}`,
+        );
         this.redisDown = true;
       }
       return null;

@@ -1,7 +1,7 @@
 import { ConflictException, Inject, Injectable } from '@nestjs/common';
 
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
-import type { Actor } from '../auth/policy';
+import { type Actor, assertGarage } from '../auth/policy';
 import { PRISMA } from '../auth/prisma';
 import type {
   GarageBrandStance,
@@ -47,6 +47,7 @@ export class GarageBrandsService {
     brandId: string,
     stance: GarageBrandStance,
   ) {
+    assertGarage(actor, garageId);
     const where = { garageId_brandId: { brandId, garageId } };
     const row = await tx.garageBrand.findUnique({ where });
     if (row?.stance === stance) return;
@@ -92,6 +93,7 @@ export class GarageBrandsService {
     brandId: string,
     jobTypeId: string,
   ) {
+    assertGarage(actor, garageId);
     const row = await tx.garageBrand.findUnique({
       select: { stance: true },
       where: { garageId_brandId: { brandId, garageId } },
