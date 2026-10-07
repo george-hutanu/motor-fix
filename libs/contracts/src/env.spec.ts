@@ -1,4 +1,4 @@
-// @traces 539-FR-003
+// @traces 539-FR-003 875-FR-001 875-FR-002 875-FR-003
 import { publicWebUrl, readEnv, STORAGE_ENV, telemetry } from './env';
 
 describe('readEnv', () => {

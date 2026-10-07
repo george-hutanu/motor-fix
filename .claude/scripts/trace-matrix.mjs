@@ -3,7 +3,7 @@
 // adaptations for this repo:
 //
 //   * Tests are COLOCATED TypeScript (`foo.ts` / `foo.spec.ts`) across
-//     apps/*, libs/*, and e2e/ — not a flat tests/*.js directory. The walker
+//     apps/*, libs/*, e2e/ and scripts/ — not a flat tests/*.js directory. The walker
 //     therefore scans the workspace roots and skips build/output dirs.
 //   * Features shipped before this gate existed have no `NNN-FR-XXX` tokens
 //     at all, and all five of them are fully implemented, so a verbatim
@@ -49,7 +49,7 @@ const specsDir = join(repo, "specs");
 const exempt = grandfathered(repo);
 
 // Workspace roots that can hold tests, and the directories never worth walking.
-const TEST_ROOTS = ["apps", "libs", "e2e"];
+const TEST_ROOTS = ["apps", "libs", "e2e", "scripts"];
 const SKIP_DIRS = new Set([
   "node_modules",
   "dist",
