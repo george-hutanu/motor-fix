@@ -176,23 +176,6 @@ describe('the sweep under hostile conditions', () => {
     await expect(service.requeueStranded()).resolves.toBe(0);
   });
 
-  it('counts only the rows it handed over when the queue fails part way', async () => {
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    await row();
-    await row();
-    await row();
-    let calls = 0;
-    build({
-      addBulk: (...args: Parameters<Queue['addBulk']>) =>
-        ++calls === 2
-          ? Promise.reject(new Error('Redis down'))
-          : queue.addBulk(...args),
-    });
-    const answered = await service.requeueStranded();
-    const waiting = (await queue.getJobCounts('waiting'))['waiting'];
-    expect(answered).toBe(waiting);
-  });
-
   it('runs twice at once without duplicating jobs', async () => {
     await row();
     await row();

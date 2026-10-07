@@ -255,6 +255,9 @@ describe('the sweep of queued rows with no job', () => {
         orderBy: { id: 'asc' },
         take: REQUEUE_PAGE,
       });
+    expect(read.mock.calls[1][0]).toMatchObject({
+      where: { id: { gt: ids[REQUEUE_PAGE - 1] } },
+    });
     expect(bulk.mock.calls.map(([jobs]) => jobs.length)).toEqual([
       REQUEUE_PAGE,
       REQUEUE_PAGE,
