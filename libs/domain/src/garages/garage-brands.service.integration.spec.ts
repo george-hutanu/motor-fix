@@ -231,6 +231,42 @@ describe('GarageBrandsService', () => {
     expect(await history()).toHaveLength(entries);
   });
 
+  // Two tabs of the brand screen: the second first write starts while the
+  // first one's transaction is still open, so both miss the row.
+  it('takes a second first write that lands with the first as a change, not a 500', async () => {
+    const w = await world();
+    let written!: () => void;
+    let commit!: () => void;
+    const firstWritten = new Promise<void>((resolve) => {
+      written = resolve;
+    });
+    const held = new Promise<void>((resolve) => {
+      commit = resolve;
+    });
+    const first = prisma.$transaction(async (tx) => {
+      await brands.setStance(tx, w.actor, w.garage, w.dacia, 'works_on');
+      written();
+      await held;
+    });
+    await firstWritten;
+    const second = setStance(w, w.dacia, 'does_not_take');
+    // Commit the first only once the second waits on it.
+    for (;;) {
+      const [{ waiting }] = await prisma.$queryRaw<{ waiting: number }[]>`
+        SELECT count(*)::int AS waiting FROM pg_locks WHERE NOT granted`;
+      if (waiting > 0) break;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    commit();
+
+    await expect(Promise.all([first, second])).resolves.toBeDefined();
+    expect(await row(w, w.dacia)).toMatchObject({ stance: 'does_not_take' });
+    expect((await history()).map((entry) => entry.action)).toEqual([
+      'create',
+      ...Array(5).fill('update'),
+    ]);
+  });
+
   it('records the stances and jobs in the garage history as their author', async () => {
     const w = await world();
     const jobType = randomUUID();
