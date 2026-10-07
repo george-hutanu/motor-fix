@@ -192,7 +192,7 @@ admin; the number of entries made by that admin does not change.
   entry stays, recording the attempt.
 - **FR-004**: A guard test MUST take every `admin/*` route and method from the
   API's own route list (the OpenAPI document, as the admin routes test does),
-  call each `POST`, `PUT`, `PATCH` or `DELETE` route once as a seeded admin
+  call each `POST`, `PUT`, `PATCH` or `DELETE` route once, one call at a time (so the count is the call's own), as a seeded admin
   with a known-good request from a table keyed by `METHOD /path`, and fail,
   naming every such route, when the call answered anything but 2xx (with
   its status), when the number of entries whose `actor_id` is that admin did

@@ -62,3 +62,6 @@ Constitution v1.8.2 read through its card; no principle blocks the story.
 
 ## Phase 5 — Plan
 - model fable. STATUS: success — plan.md, research.md (R1–R6, path:line evidence), data-model.md, contracts/admin-audit-entries.md, quickstart.md written; before_plan design check: design.md current (Checked 2026-10-07, story edited 2026-10-07T11:59Z); no NEEDS CLARIFICATION left; no OpenAPI, client, migration or dependency change; Principle I: two audit.record calls, one AUDIT_PORT provider line in EventsModule, one new guard spec apps/api/src/admin-audit.integration.spec.ts.
+
+## Phase 6 — Checklist
+- model sonnet. checklists/audit.md: 18 items, 0 unchecked (18 checked, 0 struck); 1 gap fixed (FR-004: guard calls one at a time so the per-admin before/after count is the call's own). checklists/requirements.md: 0 unchecked.
