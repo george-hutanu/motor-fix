@@ -150,7 +150,7 @@ Given that feature description, do this:
 
 4. Load the resolved active `spec-template` file to understand required sections.
 
-5. **IF EXISTS**: Load `.specify/memory/constitution.md` for project principles and governance constraints.
+5. Load `.specify/memory/constitution-card.md` for project principles and the gate behind each. Open a principle's section in `.specify/memory/constitution.md` only when a decision turns on its exact wording.
 
 6. Follow this execution flow:
     1. Parse user description from arguments
@@ -396,7 +396,7 @@ The constitution's Agent Execution Rules apply in full. Specific to this command
   Criteria traces to the description or to something measured in the repo
   (existing tests, limits, benchmarks), otherwise it is an assumption, not
   a metric.
-- Read the template, the constitution, and any repo files you need in one
+- Read the template, the constitution card, and any repo files you need in one
   batch before writing.
 - Settle structure and open decisions in reasoning, then write the spec
   once — don't draft it in full twice.

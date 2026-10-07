@@ -71,7 +71,7 @@ Execution steps:
    - If JSON parsing fails, abort and instruct user to re-run `/speckit-specify` or verify feature branch environment.
    - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
-2. **IF EXISTS**: Load `.specify/memory/constitution.md` for project principles and governance constraints.
+2. Load `.specify/memory/constitution-card.md` for project principles and the gate behind each. Open a principle's section in `.specify/memory/constitution.md` only when a decision turns on its exact wording.
 
 2a. **IF EXISTS**: Load `FEATURE_DIR/context.md`, the Notion evidence
    gathered by `/speckit-context`, and mine it before generating a single
