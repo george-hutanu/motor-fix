@@ -5,3 +5,4 @@
 - tasks: 2
 - tests: 2 pass through AppModule+configureApp; with ProblemFilter commented out both fail (bootstrap.ts restored)
 - review: spec APPROVE (LOW comment reworded), code BLOCK HIGH (teardown skipped turn.release on a failed boot) fixed; MEDIUM boot-block duplication deferred
+- archive: Spec Delta merged into platform

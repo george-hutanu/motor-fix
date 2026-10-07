@@ -2,7 +2,7 @@
 
 **Feature Branch**: `472-validation-failed-code`
 **Created**: 2026-10-07
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 **Input**: ST-472 (from ST-391): "the 400 cases assert only the status in a test app without ProblemFilter, so code: validation_failed is untested" — https://app.notion.com/3ef607bff0d281468c87db57d36586a4. ST-548 (from ST-394): the same gap in `role-switch.api.integration.spec.ts` — https://app.notion.com/3ef607bff0d2819e9392c582f5aa9205
 
 ## User Scenarios & Testing *(mandatory)*
