@@ -12,6 +12,7 @@ import { Redis } from 'ioredis';
 import { loadGarageAccess } from './garage-access';
 import { LiveController } from './live.controller';
 import { LIVE_CHANNEL, LiveHub } from './live.hub';
+import { PublicLiveController } from './public-live.controller';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { PRISMA } from '../auth/prisma';
@@ -53,7 +54,7 @@ export class EventsModule
 
   static register(options: EventsOptions): DynamicModule {
     return {
-      controllers: [LiveController],
+      controllers: [LiveController, PublicLiveController],
       exports: [LiveHub],
       module: EventsModule,
       providers: [

@@ -321,8 +321,7 @@ export class VerificationService {
     return this.events.record(tx, {
       audience: {
         garageId: file.garageId,
-        // TODO: the brands story fills brandIds; no garage has brands yet.
-        ...(published && { published: { brandIds: [] } }),
+        ...(published && { published: true as const }),
         type: 'verification',
       },
       kind,

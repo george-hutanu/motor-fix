@@ -258,6 +258,22 @@ describe('the current step', () => {
     expect(current(page)).toEqual(['3 Prețuri']);
   });
 
+  it('stays the tapped step after the jump while its heading is on screen, when the page cannot bring it up to the line', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+
+    entries(page)[2].click();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    tops = [-450, -300, 170, 220, 270, 320];
+    window.dispatchEvent(new Event('scroll'));
+    await settle(harness);
+    expect(current(page)).toEqual(['3 Prețuri']);
+
+    tops = [-300, -100, 900, 950, 1000, 1050];
+    window.dispatchEvent(new Event('scroll'));
+    await settle(harness);
+    expect(current(page)).toEqual(['2 Mărci']);
+  });
+
   it('jumps without a smooth scroll when the device asks for reduced motion', async () => {
     const { harness, page } = await open('/ro/list-your-garage', true);
 
@@ -537,6 +553,25 @@ describe('the e-mail field and the save button', () => {
     expect(field(page).value).toBe('ion@');
     expect(current(page)).toEqual(['3 Prețuri']);
     TestBed.inject(HttpTestingController).verify();
+  });
+
+  it('keeps a kept copy at its step when a scroll leaves that heading on screen below the line', async () => {
+    seed({ email: 'ion@', step: 3 });
+    const { harness, page } = await open('/ro/list-your-garage');
+    // The jump back to the kept step settles on a real timer.
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    try {
+      tops = [-450, -300, 170, 220, 270, 320];
+      window.dispatchEvent(new Event('scroll'));
+      await settle(harness);
+      await jest.advanceTimersByTimeAsync(1100);
+
+      expect(current(page)).toEqual(['3 Prețuri']);
+      expect(stored()).toMatchObject({ step: 3 });
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('goes on in memory when the browser keeps nothing, and says so', async () => {

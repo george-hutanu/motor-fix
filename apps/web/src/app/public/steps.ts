@@ -29,3 +29,15 @@ export function currentStep(
   });
   return step;
 }
+
+// A tapped step whose heading the page cannot bring up to the line (the short
+// sections at its end) stays current while that heading is on screen; once
+// the scroll reaches it or a later step, or takes it off screen, it follows.
+export function keepsTapped(
+  spied: number,
+  tapped: number,
+  top: number,
+  bottom: number,
+): boolean {
+  return spied < tapped && top < bottom;
+}
