@@ -86,3 +86,6 @@ Start: origin/main 0ea7890a (worktree `.worktrees/783-api-test-boot-helper`, bra
   - LOW (patch): on a leaked turn the probe no longer awaits its own disconnect (`void probe.release()`).
   - The probe now lives once in `apps/api/src/turn-probe.testing.ts`, shared by both helper specs (it had been copied).
 - After the fixes: api typecheck (app+spec) and Biome clean; 7 api integration suites, 67 tests green. No re-review (coordinator).
+
+## Phase 17 — Archive (steps 1-3)
+- Spec Delta merged: platform +3 (783-FR-001, -002, -005); FR-002 text (spec and capability) now states the stop-during-start rule the code review added. spec.md status `Archived (2026-10-07)`. No retrospective (phase 16: the verdict stays the owner's).

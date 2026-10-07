@@ -37,6 +37,7 @@ features:
   - 472-validation-failed-code
   - 481-watch-done-threshold
   - 775-level-at-parity
+  - 783-api-test-boot-helper
 ---
 
 # Capability: Platform
@@ -980,6 +981,18 @@ _From 775-level-at-parity._
 ### 775-FR-002 — The two readers MUST give the same answer (the waiting level, or none, at the same `now`) for an hour-24 stamp, for every valid shape (`Z` or an offset, with or without seconds and a 3- or 6-digit fraction) and for every stamp both already refuse (no zone, minute 60, second 60, offset `+24:00` or `+23:60`, a trailing newline), and the harness specs that hold the two readers together MUST assert each of them so a later divergence fails the suite.
 
 _From 775-level-at-parity._
+
+### 783-FR-001 — `apps/api` MUST have one test-only boot helper: a handle created at module scope whose `start()` boots the API for an integration spec as production configures it (the test environment values the suites use today, the shared database turn taken, the in-process file store started, the configuration read and checked from those values, the application module compiled, the production app setup applied, the app started) and returns the started app, and whose `stop()` tears down whatever `start()` reached.
+
+_From 783-api-test-boot-helper._
+
+### 783-FR-002 — `stop()` MUST be safe to call whatever stage `start()` reached, including when it threw or never ran: it MUST attempt every close of what was opened (the app if it was created, the store if it started), in the order app, store, and MUST release the database turn in a `finally`; when a close throws, the remaining closes and the release still run and the first error is rethrown. A second `stop()` after the first is harmless, and a `stop()` that runs while `start()` is still in progress makes `start()` give back whatever it reaches and reject.
+
+_From 783-api-test-boot-helper._
+
+### 783-FR-005 — The helper MUST be covered by its own spec that proves FR-002 for a boot that throws at each stage and for a teardown whose close throws, making those stages fail with `jest.spyOn` in the spec, not through parameters of the helper.
+
+_From 783-api-test-boot-helper._
 
 ## Retired
 
