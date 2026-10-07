@@ -1950,6 +1950,54 @@
         ]
       }
     },
+    "/api/v1/live/public": {
+      "get": {
+        "operationId": "PublicLiveController_live",
+        "parameters": [
+          {
+            "name": "garages",
+            "required": false,
+            "in": "query",
+            "description": "The garage a profile shows",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "mechanics",
+            "required": false,
+            "in": "query",
+            "description": "The mechanic a profile shows",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "description": "The brand whose search results are shown",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A server-sent events stream"
+          },
+          "429": {
+            "description": "This address already holds its streams on this copy"
+          }
+        },
+        "tags": [
+          "live"
+        ]
+      }
+    },
     "/api/v1/admin/platform-rules": {
       "get": {
         "operationId": "PlatformRulesController_list",

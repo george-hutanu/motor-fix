@@ -13,6 +13,8 @@ import { liveControllerLive } from '../fn/live/live-controller-live';
 import { LiveControllerLive$Params } from '../fn/live/live-controller-live';
 import { liveControllerTest } from '../fn/live/live-controller-test';
 import { LiveControllerTest$Params } from '../fn/live/live-controller-test';
+import { publicLiveControllerLive } from '../fn/live/public-live-controller-live';
+import { PublicLiveControllerLive$Params } from '../fn/live/public-live-controller-live';
 
 @Injectable({ providedIn: 'root' })
 export class LiveService extends BaseService {
@@ -67,6 +69,31 @@ export class LiveService extends BaseService {
    */
   liveControllerTest(params: LiveControllerTest$Params, context?: HttpContext): Promise<void> {
     const resp = this.liveControllerTest$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `publicLiveControllerLive()` */
+  static readonly PublicLiveControllerLivePath = '/api/v1/live/public';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `publicLiveControllerLive()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  publicLiveControllerLive$Response(params?: PublicLiveControllerLive$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = publicLiveControllerLive(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `publicLiveControllerLive$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  publicLiveControllerLive(params?: PublicLiveControllerLive$Params, context?: HttpContext): Promise<void> {
+    const resp = this.publicLiveControllerLive$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 

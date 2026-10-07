@@ -35,43 +35,58 @@ const paths = (area: 'driver' | 'garage' | 'admin', capabilities: string[]) =>
   allowedViews(area, capabilities).map((view) => view.path);
 
 describe('the dashboard view lists', () => {
+  // @traces 028-FR-001
   it('lists the driver views in menu order, each with its address, labels and capability', () => {
     expect(DASHBOARDS.driver.views).toEqual([
       {
         label: 'shell.frame.nav.dashboard',
         path: '',
         tab: 'shell.frame.tab.dashboard',
+        title: 'shell.frame.title.driver.dashboard',
       },
       {
         capability: 'driver.requests',
         label: 'shell.frame.nav.driver.requests',
         path: 'requests',
         tab: 'shell.frame.tab.requests',
+        title: 'shell.frame.title.driver.requests',
       },
       {
         capability: 'driver.cars',
         label: 'shell.frame.nav.driver.cars',
         path: 'cars',
         tab: 'shell.frame.tab.cars',
+        title: 'shell.frame.title.driver.cars',
       },
       {
         capability: 'driver.reviews',
         label: 'shell.frame.nav.driver.reviews',
         path: 'reviews',
         tab: 'shell.frame.tab.reviews',
+        title: 'shell.frame.title.driver.reviews',
       },
       {
         capability: 'driver.saved_garages',
         label: 'shell.frame.nav.driver.savedGarages',
         path: 'saved',
         tab: 'shell.frame.tab.saved',
+        title: 'shell.frame.title.driver.saved',
+      },
+      {
+        label: 'shell.frame.nav.driver.assistant',
+        path: 'assistant',
+        tab: 'shell.frame.tab.ai',
+        title: 'shell.frame.title.driver.assistant',
+        unreleased: true,
       },
       {
         capability: 'driver.settings',
         label: 'shell.frame.nav.driver.settings',
         path: 'settings',
         push: true,
+        subtitle: 'shell.frame.subtitle.driver.settings',
         tab: 'shell.frame.tab.settings',
+        title: 'shell.frame.title.driver.settings',
       },
     ]);
   });
@@ -234,12 +249,42 @@ describe('the dashboard view lists', () => {
     expect(paths('admin', ['admin.users'])).toEqual(['']);
   });
 
-  it('marks no driver or garage view unreleased', () => {
-    const marked = [...DASHBOARDS.driver.views, ...DASHBOARDS.garage.views]
-      .filter((view) => view.unreleased)
+  it('marks only the driver assistant unreleased, and no garage view', () => {
+    const marked = (area: 'driver' | 'garage') =>
+      DASHBOARDS[area].views
+        .filter((view) => view.unreleased)
+        .map((view) => view.path);
+
+    expect(marked('driver')).toEqual(['assistant']);
+    expect(marked('garage')).toEqual([]);
+  });
+
+  it('gives a driver the six released views, never the assistant', () => {
+    expect(
+      paths('driver', [
+        'driver.requests',
+        'driver.cars',
+        'driver.reviews',
+        'driver.saved_garages',
+        'driver.settings',
+      ]),
+    ).toEqual(['', 'requests', 'cars', 'reviews', 'saved', 'settings']);
+    expect(paths('driver', [])).toEqual(['']);
+  });
+
+  it('routes no unreleased driver view', () => {
+    const routed = dashboardRoutes('driver').map((route) => route.path);
+
+    expect(routed).not.toContain('assistant');
+    expect(routed).toContain('settings');
+  });
+
+  it('gives the garage and admin views no title of their own', () => {
+    const titled = [...DASHBOARDS.garage.views, ...DASHBOARDS.admin.views]
+      .filter((view) => view.title || view.subtitle)
       .map((view) => view.path);
 
-    expect(marked).toEqual([]);
+    expect(titled).toEqual([]);
   });
 });
 
@@ -258,7 +303,7 @@ const ADMIN = [
 async function open(
   url: string,
   capabilities: string[],
-  area: 'garage' | 'admin' = 'garage',
+  area: 'driver' | 'garage' | 'admin' = 'garage',
 ) {
   const current = signal({ capabilities } as unknown as MeDto);
   TestBed.configureTestingModule({
@@ -346,6 +391,17 @@ describe('the dashboard view routes', () => {
       expect(TestBed.inject(Router).url).toBe('/app/admin');
     },
   );
+
+  // @traces 028-FR-001
+  it('sends a driver who types the unreleased assistant address to the dashboard', async () => {
+    await open(
+      '/app/driver/assistant',
+      ['driver.requests', 'driver.settings'],
+      'driver',
+    );
+
+    expect(TestBed.inject(Router).url).toBe('/app/driver');
+  });
 
   it('opens the platform figures on the admin dashboard address', async () => {
     const { element } = await open('/app/admin', ADMIN, 'admin');

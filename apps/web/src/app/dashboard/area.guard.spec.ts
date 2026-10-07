@@ -1,6 +1,8 @@
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
   type PartialMatchRouteSnapshot,
+  provideRouter,
   RedirectCommand,
   type Route,
   Router,
@@ -30,7 +32,12 @@ function me(landing: string): MeDto {
 
 function run(area: 'driver' | 'garage' | 'admin', who: MeDto | null) {
   TestBed.configureTestingModule({
-    providers: [{ provide: Session, useValue: { load: async () => who } }],
+    providers: [
+      {
+        provide: Session,
+        useValue: { keepReturnTo: jest.fn(), load: async () => who },
+      },
+    ],
   });
   return TestBed.runInInjectionContext(() =>
     areaGuard(area)(
@@ -78,7 +85,12 @@ describe('areaGuard', () => {
 
   it('sends them to Home in the language in use', async () => {
     TestBed.configureTestingModule({
-      providers: [{ provide: Session, useValue: { load: async () => null } }],
+      providers: [
+        {
+          provide: Session,
+          useValue: { keepReturnTo: jest.fn(), load: async () => null },
+        },
+      ],
     });
     await TestBed.inject(I18n).use('en');
 
@@ -91,6 +103,53 @@ describe('areaGuard', () => {
     );
 
     expect(path(result as RedirectCommand)).toBe('/en');
+  });
+});
+
+@Component({ template: '' })
+class Page {}
+
+async function visit(address: string, who: MeDto | null) {
+  const keepReturnTo = jest.fn();
+  TestBed.configureTestingModule({
+    providers: [
+      provideRouter([
+        {
+          canMatch: [areaGuard('driver')],
+          children: [{ component: Page, path: '**' }],
+          path: 'app/driver',
+        },
+        { component: Page, path: '**' },
+      ]),
+      { provide: Session, useValue: { keepReturnTo, load: async () => who } },
+    ],
+  });
+  const router = TestBed.inject(Router);
+  await router.navigateByUrl(address);
+  return { keepReturnTo, router };
+}
+
+// @traces 028-FR-005
+describe('the address a visitor asked for', () => {
+  it('is kept whole, with its query and fragment, as the visitor goes home', async () => {
+    const { keepReturnTo, router } = await visit(
+      '/app/driver/cars?x=1#y',
+      null,
+    );
+
+    expect(keepReturnTo).toHaveBeenCalledTimes(1);
+    expect(keepReturnTo).toHaveBeenCalledWith('/app/driver/cars?x=1#y');
+    expect(router.url).toBe('/ro');
+  });
+
+  it('is not kept for someone signed in', async () => {
+    const { keepReturnTo, router } = await visit(
+      '/app/driver/cars',
+      me('/app/driver'),
+    );
+
+    expect(keepReturnTo).not.toHaveBeenCalled();
+    expect(router.url).toBe('/app/driver/cars');
   });
 });
 

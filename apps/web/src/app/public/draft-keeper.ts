@@ -20,10 +20,10 @@ import {
   writeDraft,
 } from './draft';
 
-export type DraftView = 'form' | 'loading' | 'invalid' | 'sent';
-export type EmailError = 'emailInvalid' | 'emailNeeded';
-export type StepKey = keyof NonNullable<ListingDraftData['steps']>;
-export interface DraftNote {
+type DraftView = 'form' | 'loading' | 'invalid' | 'sent';
+type EmailError = 'emailInvalid' | 'emailNeeded';
+type StepKey = keyof NonNullable<ListingDraftData['steps']>;
+interface DraftNote {
   key: string;
   params?: Record<string, number>;
 }
