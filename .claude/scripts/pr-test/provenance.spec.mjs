@@ -72,11 +72,17 @@ describe('agent-review provenance — who may write the verdict the merge gate r
 });
 
 describe('agent-review provenance — the tester verdict in the PR reviews', () => {
-  const review = (commit_id, body, type = 'User', submitted_at = '2026-10-07T10:00:00Z') => ({ commit_id, body, type, submitted_at });
+  const review = (commit_id, body, type = 'User', submitted_at = '2026-10-07T10:00:00Z', association = 'OWNER') => ({ commit_id, body, type, submitted_at, association });
 
   it("reads the newest of a person's Verdict reviews on the commit", () => {
     const reviews = [review(SHA, 'Verdict: success (agent-review on aaaaaaa, lap 1)', 'User', '2026-10-07T09:00:00Z'), review(SHA, 'Verdict: failure (agent-review on aaaaaaa, lap 2)')];
     assert.equal(testerVerdict(reviews, SHA), 'failure');
+  });
+
+  it('ignores a Verdict review by anyone but the owner, so nobody else can clear or fake one', () => {
+    const reviews = [review(SHA, 'Verdict: failure (x)', 'User', '2026-10-07T09:00:00Z'), review(SHA, 'Verdict: success (x)', 'User', '2026-10-07T10:00:00Z', 'NONE')];
+    assert.equal(testerVerdict(reviews, SHA), 'failure');
+    assert.equal(testerVerdict([review(SHA, 'Verdict: failure (x)', 'User', undefined, 'CONTRIBUTOR')], SHA), null);
   });
 
   it('ignores reviews of other commits, other comments, and any written by a bot', () => {
@@ -89,7 +95,7 @@ describe('agent-review provenance — reading it from GitHub', () => {
     [`commits/${SHA}/statuses`]: JSON.stringify([bot(), owner({ state: 'failure' })]),
     'actions/runs/123': JSON.stringify(prRun()),
     'pulls/21/files': `${JSON.stringify({ filename: 'a.ts', previous_filename: null })}\n${JSON.stringify({ filename: QA_WORKFLOW_PATH, previous_filename: null })}`,
-    'pulls/21/reviews': JSON.stringify({ commit_id: SHA, body: 'Verdict: success (x)', type: 'User', submitted_at: '2026-10-07T10:00:00Z' }),
+    'pulls/21/reviews': JSON.stringify({ commit_id: SHA, body: 'Verdict: success (x)', type: 'User', submitted_at: '2026-10-07T10:00:00Z', association: 'OWNER' }),
     'repos/{owner}/{repo} ': JSON.stringify({ branch: 'main' }),
     ...over,
   });

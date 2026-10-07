@@ -15,8 +15,9 @@
 //   (dispatch.mjs), which a cloud session cannot start.
 // - anyone else: refused.
 //
-// Whoever wrote the status, the newest "Verdict:" review a person posted on
-// the commit must not be a failure: in a cloud session post.mjs can post the
+// Whoever wrote the status, the newest "Verdict:" review the repository's
+// owner posted on the commit must not be a failure (anyone can review a PR, so
+// only the owner's verdict counts): in a cloud session post.mjs can post the
 // tester's review but not a status, so a blocking verdict lives only there.
 import { STATUS_CONTEXT } from "./post.mjs";
 
@@ -52,9 +53,9 @@ export function judgeProvenance({ sha, pr, status, run, testerReview, qaWorkflow
   return null;
 }
 
-/** The newest verdict ("success" | "failure" | …) a person's tester review gave `sha`, or null. */
+/** The newest verdict ("success" | "failure" | …) the owner's tester review gave `sha`, or null. */
 export function testerVerdict(reviews, sha) {
-  const mine = (reviews ?? []).filter((r) => r.commit_id === sha && r.type === "User" && /^Verdict: \w+/.test(r.body ?? ""));
+  const mine = (reviews ?? []).filter((r) => r.commit_id === sha && r.type === "User" && r.association === "OWNER" && /^Verdict: \w+/.test(r.body ?? ""));
   mine.sort((a, b) => Date.parse(a.submitted_at ?? "") - Date.parse(b.submitted_at ?? ""));
   return mine.length ? /^Verdict: (\w+)/.exec(mine.at(-1).body)[1] : null;
 }
@@ -78,7 +79,7 @@ async function api(gh, args) {
 export async function readProvenance({ pr, shas, gh }) {
   const [files, reviews, [repo]] = await Promise.all([
     api(gh, ["--paginate", `repos/${REPO}/pulls/${pr}/files?per_page=100`, "--jq", ".[] | {filename, previous_filename}"]),
-    api(gh, ["--paginate", `repos/${REPO}/pulls/${pr}/reviews?per_page=100`, "--jq", ".[] | {commit_id, body, type: .user.type, submitted_at}"]),
+    api(gh, ["--paginate", `repos/${REPO}/pulls/${pr}/reviews?per_page=100`, "--jq", ".[] | {commit_id, body, type: .user.type, association: .author_association, submitted_at}"]),
     api(gh, [`repos/${REPO}`, "--jq", "{branch: .default_branch}"]),
   ]);
   const one = async (sha) => {
