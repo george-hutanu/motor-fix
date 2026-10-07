@@ -12,6 +12,9 @@ import { StrictHttpResponse } from '../strict-http-response';
 import { adminOverviewControllerOverview } from '../fn/admin/admin-overview-controller-overview';
 import { AdminOverviewControllerOverview$Params } from '../fn/admin/admin-overview-controller-overview';
 import { AdminOverviewDto } from '../models/admin-overview-dto';
+import { VerificationCheckRecordedDto } from '../models/verification-check-recorded-dto';
+import { verificationChecksControllerRecord } from '../fn/admin/verification-checks-controller-record';
+import { VerificationChecksControllerRecord$Params } from '../fn/admin/verification-checks-controller-record';
 
 @Injectable({ providedIn: 'root' })
 export class AdminService extends BaseService {
@@ -42,6 +45,31 @@ export class AdminService extends BaseService {
   adminOverviewControllerOverview(params?: AdminOverviewControllerOverview$Params, context?: HttpContext): Promise<AdminOverviewDto> {
     const resp = this.adminOverviewControllerOverview$Response(params, context);
     return resp.then((r: StrictHttpResponse<AdminOverviewDto>): AdminOverviewDto => r.body);
+  }
+
+  /** Path part for operation `verificationChecksControllerRecord()` */
+  static readonly VerificationChecksControllerRecordPath = '/api/v1/admin/verification-files/{id}/checks/{kind}';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `verificationChecksControllerRecord()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  verificationChecksControllerRecord$Response(params: VerificationChecksControllerRecord$Params, context?: HttpContext): Promise<StrictHttpResponse<VerificationCheckRecordedDto>> {
+    const obs = verificationChecksControllerRecord(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `verificationChecksControllerRecord$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  verificationChecksControllerRecord(params: VerificationChecksControllerRecord$Params, context?: HttpContext): Promise<VerificationCheckRecordedDto> {
+    const resp = this.verificationChecksControllerRecord$Response(params, context);
+    return resp.then((r: StrictHttpResponse<VerificationCheckRecordedDto>): VerificationCheckRecordedDto => r.body);
   }
 
 }

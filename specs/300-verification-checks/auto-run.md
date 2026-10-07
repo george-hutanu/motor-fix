@@ -36,3 +36,11 @@
 
 ## 8 Analyze
 - artifact-lint --check: 0 errors after adding the Spec Delta (garage-verification, Adds FR-001..FR-011); capabilities validate clean. FR coverage: every FR mapped to T002–T005. No CRITICAL.
+
+## 9 Tests
+- Red proved: contracts spec failed to compile (module missing); domain 3 failed + 1 suite failed to run (VerificationChecksService missing); API route absent from openapi.
+- Fixed in the tests: activity_log is not truncated between tests, so history queries are scoped to the test's garage.
+
+## 10 Implement
+- T006 contracts summary/lamp/DTOs; T007 createMany skipDuplicates in submit and resend; T008 VerificationChecksService (FOR UPDATE reads of the check and the garage list); T009 controller + module; T010 openapi and data-access regenerated.
+- Green: contracts 16/16, domain garages/verification 122/122, api verification-checks + admin-routes 28/28.

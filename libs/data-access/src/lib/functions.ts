@@ -83,6 +83,8 @@ export type { BrandsControllerSearch$Params as BrandsControllerSearch$Params } f
 export { brandsControllerSearch as brandsControllerSearch } from './fn/brands/brands-controller-search';
 export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';
 export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
+export type { VerificationChecksControllerRecord$Params as VerificationChecksControllerRecord$Params } from './fn/admin/verification-checks-controller-record';
+export { verificationChecksControllerRecord as verificationChecksControllerRecord } from './fn/admin/verification-checks-controller-record';
 export type { GarageInvitesControllerSend$Params as GarageInvitesControllerSend$Params } from './fn/garages/garage-invites-controller-send';
 export { garageInvitesControllerSend as garageInvitesControllerSend } from './fn/garages/garage-invites-controller-send';
 export type { GarageInvitesControllerResend$Params as GarageInvitesControllerResend$Params } from './fn/garages/garage-invites-controller-resend';
