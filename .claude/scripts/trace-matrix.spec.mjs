@@ -43,6 +43,7 @@ describe('trace-matrix requirements', () => {
         '## Spec Delta',
         '',
         `- **Modifies**: ${T('288', '013')} → FR-002, \`${T('082', '021')}\` → FR-001`,
+        `- From ST-81: ${T('81', '003')} is reworded.`,
         '',
       ].join('\n'),
     );
