@@ -2,7 +2,7 @@
 
 **Feature Branch**: `574-live-hub-capabilities`
 **Created**: 2026-10-07
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 **Input**: ST-574 "Tech debt (ST-254): the live hub restates who may read which event kinds" — https://app.notion.com/p/3f0607bff0d281698e70e92df00231f6 (Tech debt, Role System, no screens). Read from the caller's established facts (`/speckit-auto` preflight); the task page was not re-fetched in this phase and its comments are an unread source. "The live hub (`libs/domain/src/events/live.hub.ts`) restates who may read which event kinds through a garage channel apart from `libs/domain/src/auth/capabilities.ts`. Derive the owner/receptionist/mechanic garage-channel kind rules from `capabilitiesOf()` via one table mapping kind families to the capability needed to read them. Consequence: a receptionist (no `garage.reviews`, `garage.profile` or `garage.team` capability) stops receiving `review.*`, `garage.updated` (the profile kind) and `invite.*` through `garage:{id}`."
 
 ## User Scenarios & Testing *(mandatory)*

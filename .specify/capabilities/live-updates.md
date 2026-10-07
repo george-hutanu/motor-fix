@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-05
+updated: 2026-10-07
 features:
   - 253-live-connection
   - 254-live-audience
@@ -8,6 +8,7 @@ features:
   - 256-live-in-place
   - 255-live-resync
   - 582-live-toast-axe
+  - 574-live-hub-capabilities
 ---
 
 # Capability: Live updates
@@ -84,9 +85,9 @@ _From 254-live-audience._
 
 _From 254-live-audience._
 
-### 254-FR-003 — Through `garage:{garageId}`, an owner MUST get every kind; a receptionist MUST NOT get price-list, settings, feature-switch or team kinds (`price_list.*`, `garage.settings_changed`, `garage.features_changed`, `member.*`, `mechanic.*`); a mechanic MUST get only `request.*` and `message.*` kinds with *can_answer_quotes* and `booking.move*` kinds with *can_move_bookings*, and nothing else.
+### 574-FR-001 — Whether an event kind reaches a garage-staff stream that met it only on `garage:{garageId}` MUST be derived from the connection role's capabilities (`capabilitiesOf(role, permissions)`, the one capability table) through one table mapping kind families to the capability needed to read them: `price_list.*` → `garage.prices`; `member.*`, `mechanic.*`, `invite.*` → `garage.team`; `garage.settings_changed`, `garage.features_changed` → `garage.feature_switches`; `garage.updated` → `garage.profile`; `review.*` → `garage.reviews`; `request.*`, `message.*` → `garage.requests`; `booking.move*` → `garage.schedule`. The hub MUST hold no other per-role list of kinds. (Modifies 254-FR-003.)
 
-_From 254-live-audience._
+_From 574-live-hub-capabilities._
 
 ### 254-FR-004 — A garage-staff connection MUST receive through `garage:{garageId}` or `mechanic:{mechanicId}` only while its account is still that garage's staff in the role of the connection (owner or receptionist membership, or the mechanic record).
 
@@ -264,6 +265,14 @@ _From 582-live-toast-axe._
 
 _From 582-live-toast-axe._
 
+### 574-FR-002 — For an owner or a receptionist who is still that garage's staff in that role (254-FR-004, checked before the table), a kind in a mapped family MUST reach the stream only when the role holds that family's capability, and a kind in no family MUST reach it. In consequence the owner still receives every kind, and a receptionist no longer receives `review.*`, `garage.updated` or `invite.*`, on top of the `price_list.*`, `member.*`, `mechanic.*`, `garage.settings_changed` and `garage.features_changed` kinds already withheld.
+
+_From 574-live-hub-capabilities._
+
+### 574-FR-003 — For a mechanic, a kind MUST reach the stream through the garage channel only when it is in a mapped family whose capability the mechanic holds through their permissions (`can_answer_quotes` → `request.*`, `message.*`; `can_move_bookings` → every kind starting `booking.move`, `booking.moved` included), and a kind in no family MUST NOT; a kind met on the mechanic's own `mechanic:{mechanicId}` channel, the staff-membership check and the feature switches (254-FR-004, 254-FR-005) are unchanged.
+
+_From 574-live-hub-capabilities._
+
 ## Retired
 
 - `253-FR-006` — superseded by `254-FR-013` (2026-10-05)
@@ -273,3 +282,5 @@ _From 582-live-toast-axe._
 - `253-FR-015` — superseded by `256-FR-011` (2026-10-05)
 - `257-FR-009` — superseded by `256-FR-002` (2026-10-05)
 - `257-FR-010` — superseded by `256-FR-012` (2026-10-05)
+
+- `254-FR-003` — superseded by `574-FR-001` (2026-10-07)

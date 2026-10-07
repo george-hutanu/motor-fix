@@ -47,3 +47,8 @@ ST-574 (tech debt from ST-254): derive the live hub's garage-channel kind rules 
 - code-reviewer: APPROVE. One LOW: KIND_CAPABILITY is exported only for its spec. Kept, because the disjointness test guards find()'s first-match order.
 - spec-reviewer: APPROVE, no findings. The Notion refresh (phase 13) found nothing new.
 - No repair laps used.
+
+## Phase 15–17
+- agent-context: CLAUDE.local.md points the active plan at specs/574-live-hub-capabilities/plan.md, with no growth.
+- retro: evidence only, as phases-close requires. No verdict was recorded; that is the owner's call.
+- archive: the Spec Delta merged into .specify/capabilities/live-updates.md (+2 ~1). 254-FR-003 is superseded by 574-FR-001. The status line is set to Archived (2026-10-07).
