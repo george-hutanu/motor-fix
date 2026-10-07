@@ -160,5 +160,5 @@ ranked, read-only UI audit with `scan.mjs` and `contrast.mjs` helpers; fixes
 only the findings you name).
 
 <!-- SPECKIT START -->
-Active plan (stack, structure, commands): specs/783-api-test-boot-helper/plan.md
+Active plan (stack, structure, commands): specs/574-live-hub-capabilities/plan.md
 <!-- SPECKIT END -->

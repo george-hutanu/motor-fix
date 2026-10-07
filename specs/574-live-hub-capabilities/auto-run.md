@@ -41,3 +41,9 @@ ST-574 (tech debt from ST-254): derive the live hub's garage-channel kind rules 
 - live.hub.ts: HIDDEN_FROM_RECEPTIONIST and MECHANIC_RIGHTS replaced by exported KIND_CAPABILITY; allows() = switches → staffRights (membership) → mechanic own key → unmapped open for owner/receptionist, closed for mechanic → capabilitiesOf(role, rights).includes(needs).
 - live.audience.adversary.spec.ts pinned "gives a receptionist garage.updated": moved garage.updated to the withheld list with review.posted and invite.sent (the FR-002 change, SC-001 allowed).
 - Unit suites libs/domain/src/events + auth: 20 suites, 729 passed.
+
+## Phase 12–14 — harden and review
+- test-adversary: 70 cases in libs/domain/src/events/live.hub.capabilities.adversary.spec.ts, all green, no defect found.
+- code-reviewer: APPROVE. One LOW: KIND_CAPABILITY is exported only for its spec. Kept, because the disjointness test guards find()'s first-match order.
+- spec-reviewer: APPROVE, no findings. The Notion refresh (phase 13) found nothing new.
+- No repair laps used.
