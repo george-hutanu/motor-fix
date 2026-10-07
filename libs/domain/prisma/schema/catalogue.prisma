@@ -12,6 +12,7 @@ model Brand {
   createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   garageBrands GarageBrand[]
+  cars         Car[]
 
   @@index([active, popularity, name])
   @@map("brand")

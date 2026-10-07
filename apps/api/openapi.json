@@ -1227,6 +1227,96 @@
         ]
       }
     },
+    "/api/v1/cars": {
+      "post": {
+        "operationId": "CarsController_create",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One per save the person means; a repeat answers the first car",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCarDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad field, unknown_brand, too_far_ahead or a missing key"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: this account adds no car"
+          },
+          "409": {
+            "description": "car_limit: 20 cars already"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add a car to the caller's account",
+        "tags": [
+          "cars"
+        ]
+      },
+      "get": {
+        "operationId": "CarsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not a driver"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The caller's cars, newest first",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
     "/api/v1/brands": {
       "get": {
         "operationId": "BrandsController_search",
@@ -3362,6 +3452,166 @@
             ]
           }
         }
+      },
+      "CreateCarDto": {
+        "type": "object",
+        "properties": {
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "model": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 40,
+            "minLength": 1
+          },
+          "year": {
+            "type": "integer",
+            "description": "From 1950 to next year",
+            "minimum": 1950
+          },
+          "odometerKm": {
+            "type": "integer",
+            "maximum": 2000000,
+            "minimum": 0
+          },
+          "fuel": {
+            "type": "string",
+            "enum": [
+              "petrol",
+              "diesel",
+              "hybrid",
+              "electric"
+            ]
+          },
+          "engine": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 30
+          },
+          "plate": {
+            "type": "string",
+            "description": "Stored in upper case without spaces or hyphens",
+            "example": "B123ABC"
+          },
+          "itpUntil": {
+            "type": "string",
+            "description": "At most five years ahead",
+            "format": "date"
+          },
+          "rcaUntil": {
+            "type": "string",
+            "description": "At most five years ahead",
+            "format": "date"
+          },
+          "rovinietaUntil": {
+            "type": "string",
+            "description": "At most five years ahead",
+            "format": "date"
+          }
+        },
+        "required": [
+          "brandId",
+          "model",
+          "year",
+          "odometerKm",
+          "fuel"
+        ]
+      },
+      "CarDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "brandName": {
+            "type": "string",
+            "example": "BMW"
+          },
+          "model": {
+            "type": "string",
+            "example": "320d"
+          },
+          "year": {
+            "type": "integer"
+          },
+          "fuel": {
+            "type": "string",
+            "enum": [
+              "petrol",
+              "diesel",
+              "hybrid",
+              "electric"
+            ]
+          },
+          "engine": {
+            "type": "string",
+            "nullable": true
+          },
+          "odometerKm": {
+            "type": "integer"
+          },
+          "plate": {
+            "type": "string",
+            "example": "B123ABC",
+            "nullable": true
+          },
+          "itpUntil": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "rcaUntil": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "rovinietaUntil": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "brandId",
+          "brandName",
+          "model",
+          "year",
+          "fuel",
+          "engine",
+          "odometerKm",
+          "plate",
+          "itpUntil",
+          "rcaUntil",
+          "rovinietaUntil",
+          "createdAt"
+        ]
+      },
+      "CarListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Newest first",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CarDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
       },
       "BrandDto": {
         "type": "object",

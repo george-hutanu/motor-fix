@@ -25,6 +25,27 @@ import { bucharestDaily, type DailyClock } from '../scheduler/daily';
 
 const redisUrl = redisUrlFor(4);
 const { account, prisma, reset } = fixtures();
+
+// A reminder's car must exist (the foreign key); any car of the account will do.
+const car = async (ownerId: string) => {
+  const brand = await prisma.brand.upsert({
+    create: { key: 'test-dacia', name: 'Dacia', slug: 'test-dacia' },
+    update: {},
+    where: { name: 'Dacia' },
+  });
+  const { id } = await prisma.car.create({
+    data: {
+      brandId: brand.id,
+      fuel: 'petrol',
+      idempotencyKey: randomUUID(),
+      model: 'Logan',
+      odometerKm: 90000,
+      ownerId,
+      year: 2018,
+    },
+  });
+  return id;
+};
 serialDatabase(databaseUrl);
 
 const queue = new Queue(REMINDERS_QUEUE, { connection: { url: redisUrl } });
@@ -170,7 +191,7 @@ describe('the reminders worker with shortened days', () => {
 
     const driver = await account('florin', ['driver'], { email: null });
     const clock = app.get<DailyClock>(REMINDERS_CLOCK);
-    const carId = randomUUID();
+    const carId = await car(driver);
     await app.get(RemindersService).setCarDue({
       accountId: driver,
       carId,
