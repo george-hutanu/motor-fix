@@ -1,4 +1,4 @@
-import { AdminOverviewDto } from '@motor-fix/contracts';
+import { AdminGrowthDto, AdminOverviewDto } from '@motor-fix/contracts';
 import { Controller, Get, Inject } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -14,6 +14,7 @@ import type { PrismaClient } from '../generated/prisma/client';
 import {
   countPlatformFigures,
   monthStartSnapshot,
+  readGrowth,
 } from '../insights/platform-figures';
 
 @ApiTags('admin')
@@ -44,5 +45,13 @@ export class AdminOverviewController {
         ? {}
         : { activeDriversMonthStart }),
     };
+  }
+
+  @Get('growth')
+  @Requires('admin.garages')
+  @ApiOkResponse({ type: AdminGrowthDto })
+  @ApiNotFoundResponse({ description: 'not_found: not an admin' })
+  growth(): Promise<AdminGrowthDto> {
+    return readGrowth(this.prisma, new Date());
   }
 }

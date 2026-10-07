@@ -39,3 +39,34 @@ export class AdminOverviewDto {
   })
   activeDriversMonthStart?: number;
 }
+
+export class AdminGrowthMonthDto {
+  @ApiProperty({
+    description: 'The Europe/Bucharest month',
+    example: '2026-03',
+    pattern: '^\\d{4}-\\d{2}$',
+  })
+  month!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Active drivers at the month’s close, live for the current month; absent when the close was not recorded',
+    minimum: 0,
+    type: 'integer',
+  })
+  activeDrivers?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Garages listed at the month’s close, live for the current month; absent when the close was not recorded',
+    minimum: 0,
+    type: 'integer',
+  })
+  garagesListed?: number;
+}
+
+// The last twelve months, oldest first, ending with the current one.
+export class AdminGrowthDto {
+  @ApiProperty({ type: [AdminGrowthMonthDto] })
+  months!: AdminGrowthMonthDto[];
+}

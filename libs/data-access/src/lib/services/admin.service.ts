@@ -9,6 +9,9 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { AdminGrowthDto } from '../models/admin-growth-dto';
+import { adminOverviewControllerGrowth } from '../fn/admin/admin-overview-controller-growth';
+import { AdminOverviewControllerGrowth$Params } from '../fn/admin/admin-overview-controller-growth';
 import { adminOverviewControllerOverview } from '../fn/admin/admin-overview-controller-overview';
 import { AdminOverviewControllerOverview$Params } from '../fn/admin/admin-overview-controller-overview';
 import { AdminOverviewDto } from '../models/admin-overview-dto';
@@ -51,6 +54,31 @@ export class AdminService extends BaseService {
   adminOverviewControllerOverview(params?: AdminOverviewControllerOverview$Params, context?: HttpContext): Promise<AdminOverviewDto> {
     const resp = this.adminOverviewControllerOverview$Response(params, context);
     return resp.then((r: StrictHttpResponse<AdminOverviewDto>): AdminOverviewDto => r.body);
+  }
+
+  /** Path part for operation `adminOverviewControllerGrowth()` */
+  static readonly AdminOverviewControllerGrowthPath = '/api/v1/admin/growth';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `adminOverviewControllerGrowth()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminOverviewControllerGrowth$Response(params?: AdminOverviewControllerGrowth$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminGrowthDto>> {
+    const obs = adminOverviewControllerGrowth(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `adminOverviewControllerGrowth$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminOverviewControllerGrowth(params?: AdminOverviewControllerGrowth$Params, context?: HttpContext): Promise<AdminGrowthDto> {
+    const resp = this.adminOverviewControllerGrowth$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminGrowthDto>): AdminGrowthDto => r.body);
   }
 
   /** Path part for operation `verificationChecksControllerRecord()` */

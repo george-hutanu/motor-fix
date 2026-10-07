@@ -1346,6 +1346,35 @@
         ]
       }
     },
+    "/api/v1/admin/growth": {
+      "get": {
+        "operationId": "AdminOverviewController_growth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminGrowthDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}/brands": {
       "put": {
         "operationId": "GarageBrandsController_replace",
@@ -3577,6 +3606,44 @@
           "garagesListed",
           "garagesApprovedThisMonth",
           "activeDrivers"
+        ]
+      },
+      "AdminGrowthMonthDto": {
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string",
+            "description": "The Europe/Bucharest month",
+            "example": "2026-03",
+            "pattern": "^\\d{4}-\\d{2}$"
+          },
+          "activeDrivers": {
+            "type": "integer",
+            "description": "Active drivers at the month’s close, live for the current month; absent when the close was not recorded",
+            "minimum": 0
+          },
+          "garagesListed": {
+            "type": "integer",
+            "description": "Garages listed at the month’s close, live for the current month; absent when the close was not recorded",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "month"
+        ]
+      },
+      "AdminGrowthDto": {
+        "type": "object",
+        "properties": {
+          "months": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminGrowthMonthDto"
+            }
+          }
+        },
+        "required": [
+          "months"
         ]
       },
       "GarageBrandStanceDto": {
