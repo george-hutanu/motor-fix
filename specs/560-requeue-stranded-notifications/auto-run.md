@@ -32,3 +32,6 @@ Start commit: cab78f49 (origin/main), branch 560-requeue-stranded-notifications,
 
 ## 7. Tasks
 - tasks.md: 7 tasks (3 red integration specs, 3 source files, 1 verify run); after_tasks analyze left to phase 8. Committed and pushed.
+
+## 8. Analyze
+- artifact-lint --check: 10 fr-untasked + 2 delta errors fixed (FR ids in tasks, Adds listed, Modifies none with note). Re-run clean. No CRITICAL left.

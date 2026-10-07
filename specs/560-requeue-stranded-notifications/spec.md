@@ -100,8 +100,10 @@ A `held` row (quiet hours, a grouping window) has its own delayed job and its ow
 
 ### Capability: `notifications`
 
-- **Adds**: FR-001 .. FR-010
-- **Modifies**: none (FR-006 narrows when the claim of 522-FR-003 is released: not after a send that could not be recorded)
+- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010
+- **Modifies**: none
+
+FR-006 narrows when the claim of 522-FR-003 is released: not after a send that could not be recorded; 522-FR-003 itself stands.
 - **Removes**: none
 
 ## Success Criteria *(mandatory)*

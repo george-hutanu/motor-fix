@@ -6,8 +6,8 @@
 
 ## Phase 1: Tests first (red)
 
-- [ ] T001 [P] [US1] [US2] [US3] Write `requeue.integration.spec.ts` (new, own Redis db via `redisUrlFor`): `requeueStranded()` adds `send-<id>` for a stale `queued` row and returns the count; leaves a row whose job exists, a young row, a row with `claimedAt` (live and lapsed), an SMS row with `sendingAt`, and `held`, `sent`, `failed` rows; re-queues one row per channel (email, push, SMS, WhatsApp); a failing queue add or read logs and returns without touching rows; the log names the ids; `getJobSchedulers()` shows the `requeue` scheduler after the module's upsert.
-- [ ] T002 [P] [US2] Extend `send-claim.adversary.integration.spec.ts`: the provider accepts and every mark-sent write fails (`failWritesAfter`) -> the job resolves, the row keeps `claimedAt`, and `requeueStranded()` adds nothing for it.
+- [ ] T001 [P] [US1] [US2] [US3] Write `requeue.integration.spec.ts` (new, own Redis db via `redisUrlFor`): `requeueStranded()` adds `send-<id>` for a stale `queued` row and returns the count; (FR-001, FR-002) leaves a row whose job exists (FR-003), a young row, a row with `claimedAt` (live and lapsed) (FR-004), an SMS row with `sendingAt` (FR-005), and `held`, `sent`, `failed` rows (FR-007); re-queues one row per channel (email, push, SMS, WhatsApp); a failing queue add or read logs and returns without touching rows (FR-008); the log names the ids (FR-009); `getJobSchedulers()` shows the `requeue` scheduler after the module's upsert.
+- [ ] T002 [P] [US2] Extend `send-claim.adversary.integration.spec.ts`: the provider accepts and every mark-sent write fails (`failWritesAfter`) -> the job resolves, the row keeps `claimedAt` (FR-006), and `requeueStranded()` adds nothing for it.
 - [ ] T003 [P] [US1] Extend `notifications.processor.integration.spec.ts`: `handle` of a `requeue` job reaches `requeueStranded()`; adjust any existing expectation of a released claim after an unrecorded send.
 
 ## Phase 2: Implementation
@@ -18,7 +18,7 @@
 
 ## Phase 3: Verify
 
-- [ ] T007 Run `npx nx test domain --testPathPattern 'notifications/(requeue|notifications.processor|send-claim|phone|push)'` under `scripts/heavy.sh` (`docker compose up -d`), then typecheck and Biome for `domain`; every spec green (SC-001..SC-003).
+- [ ] T007 Run `npx nx test domain --testPathPattern 'notifications/(requeue|notifications.processor|send-claim|phone|push)'` under `scripts/heavy.sh` (`docker compose up -d`), then typecheck and Biome for `domain`; every spec green (SC-001..SC-003); `git diff --stat origin/main` shows nothing under `libs/contracts`, `libs/domain/prisma`, `apps/api` or `apps/web` (FR-010, SC-004).
 
 ## Dependencies
 
