@@ -1,11 +1,12 @@
 import { Redis } from 'ioredis';
 
-import { clearSignUpCounts, redisToClear } from './sign-up-counts.js';
+import { clearSignUpCounts } from './sign-up-counts.js';
 
-// Runs once before a suite that starts its own servers (playwright.config.mts).
-// Without a reachable Redis the run goes on: the api skips its limits then too.
+// Runs once before a suite that starts its own servers (playwright.config.mts
+// wires it only then, so a deployed environment is never touched). Without
+// REDIS_URL or a reachable Redis the run goes on: the api skips its limits then too.
 export default async function globalSetup(): Promise<void> {
-  const url = redisToClear(process.env);
+  const url = process.env['REDIS_URL'];
   if (!url) {
     console.log('global-setup: REDIS_URL unset, sign-up counts not cleared');
     return;

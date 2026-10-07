@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
-import { clearSignUpCounts, redisToClear } from './sign-up-counts.js';
+import globalSetup from './global-setup.js';
+import { clearSignUpCounts } from './sign-up-counts.js';
 
 // A Redis that holds plain keys and answers SCAN one key per page, so the
 // cursor has to be followed to the end.
@@ -41,23 +42,38 @@ test.describe('the sign-up counts a local run clears', () => {
     ]);
   });
 
-  test('clears the Redis at REDIS_URL when the run starts its own servers', () => {
-    expect(redisToClear({ REDIS_URL: 'redis://localhost:6379' })).toBe(
-      'redis://localhost:6379',
-    );
+  test('stops scanning after its page cap when the cursor never ends', async () => {
+    let pages = 0;
+    const endless = {
+      del: async () => 0,
+      scan: async () => {
+        pages++;
+        return ['1', []] as [string, string[]];
+      },
+    };
+
+    expect(await clearSignUpCounts(endless)).toBe(0);
+    expect(pages).toBeGreaterThan(0);
+    expect(pages).toBeLessThanOrEqual(1000);
+  });
+});
+
+test.describe('the global setup', () => {
+  const before = process.env['REDIS_URL'];
+  test.afterEach(() => {
+    if (before === undefined) delete process.env['REDIS_URL'];
+    else process.env['REDIS_URL'] = before;
   });
 
-  test('never clears a deployed environment', () => {
-    expect(
-      redisToClear({
-        BASE_URL: 'https://staging.example.test',
-        REDIS_URL: 'redis://localhost:6379',
-      }),
-    ).toBeNull();
+  test('lets the run go on when Redis does not answer', async () => {
+    process.env['REDIS_URL'] = 'redis://127.0.0.1:1';
+
+    await expect(globalSetup()).resolves.toBeUndefined();
   });
 
-  test('clears nothing without REDIS_URL', () => {
-    expect(redisToClear({})).toBeNull();
-    expect(redisToClear({ REDIS_URL: '' })).toBeNull();
+  test('lets the run go on without REDIS_URL', async () => {
+    delete process.env['REDIS_URL'];
+
+    await expect(globalSetup()).resolves.toBeUndefined();
   });
 });
