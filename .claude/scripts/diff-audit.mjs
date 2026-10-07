@@ -16,6 +16,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join, basename, dirname, relative } from "node:path";
+import { importStyle } from "./lib/tsconfig.mjs";
 
 const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
 const check = process.argv.includes("--check");
@@ -96,14 +97,14 @@ for (const file of sources) {
   }
 }
 
-// 2. Relative import extensions (AGENTS.md). nodenext packages need the literal
-//    `.js`; bundler packages must not have it. tsc accepts both; the build does
-//    not, so this surfaces as a broken build long after review.
-const NODENEXT = /^(apps\/(server|scanner)|libs\/)/;
-const BUNDLER = /^apps\/(client|docs)\//;
+// 2. Relative import extensions. nodenext projects need the literal `.js`;
+//    bundler projects must not have it. The file's own tsconfig decides
+//    (lib/tsconfig.mjs), never its path: here the base resolves `bundler` and
+//    only apps/web-e2e is nodenext.
 for (const file of changed.filter((f) => /\.tsx?$/.test(f))) {
-  const wantsJs = NODENEXT.test(file);
-  const forbidsJs = BUNDLER.test(file);
+  const style = importStyle(repo, file);
+  const wantsJs = style === "nodenext";
+  const forbidsJs = style === "bundler";
   if (!wantsJs && !forbidsJs) continue;
   for (const line of addedLines(file)) {
     const m = line.match(/(?:from|import)\s+['"](\.[^'"]*)['"]/);
