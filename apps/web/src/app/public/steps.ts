@@ -1,4 +1,4 @@
-export type Step = {
+type Step = {
   n: number;
   label: string;
   mark: 'public.listing.optional' | 'public.listing.required' | null;

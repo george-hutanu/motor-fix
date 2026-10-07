@@ -241,7 +241,7 @@ describe('the current step', () => {
     expect(scrolls).toEqual([{ behavior: 'auto', block: 'start' }]);
   });
 
-  it('activates an entry from the keyboard', async () => {
+  it('makes each entry a button, so Enter and Space activate it', async () => {
     const { page } = await open('/ro/list-your-garage');
 
     for (const entry of entries(page)) {

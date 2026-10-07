@@ -68,6 +68,7 @@ test.describe('the list your garage page', () => {
     await page.waitForLoadState('networkidle');
 
     await expect(sections(page).nth(3)).toBeInViewport();
+    await expect(current(page)).toContainText('Mecanici');
   });
 });
 
