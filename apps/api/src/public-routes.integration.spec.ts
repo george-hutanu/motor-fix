@@ -19,6 +19,7 @@ const PUBLIC = [
   'GET /api/v1/brands',
   'GET /api/v1/garages/00000000-0000-4000-8000-000000000000',
   'GET /api/v1/listing-drafts/current',
+  'GET /api/v1/live/public',
   'GET /api/v1/search/garages',
   'GET /health/live',
   'GET /health/ready',
@@ -81,7 +82,9 @@ const call = (
   path: string,
   authorization?: string,
 ) => {
-  const req = request(app.getHttpServer())[method](path).send({});
+  // An open public stream never ends; a malformed query answers at once.
+  const target = path.endsWith('/live/public') ? `${path}?garages=x` : path;
+  const req = request(app.getHttpServer())[method](target).send({});
   return authorization ? req.set('Authorization', authorization) : req;
 };
 

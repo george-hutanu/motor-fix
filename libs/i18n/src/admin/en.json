@@ -9,5 +9,33 @@
     "soon": "coming soon",
     "thisMonth": "{sign}{n} this month",
     "unavailable": "The figures could not be read"
+  },
+  "platformRules": {
+    "alwaysOn": "Always on in production",
+    "line": "The rules that apply to every garage",
+    "loadFailed": "We could not load the rules",
+    "retry": "Try again",
+    "rule": {
+      "maintenance_mode": {
+        "meaning": "The site shows a downtime message.",
+        "name": "Maintenance mode"
+      },
+      "reviews_only_after_confirmed_job": {
+        "meaning": "The garage confirms the car was there.",
+        "name": "Reviews only after a confirmed job"
+      },
+      "skip_manual_approval": {
+        "meaning": "Every new profile goes past an admin.",
+        "name": "Manual approval for new garages"
+      },
+      "skip_rar_check": {
+        "meaning": "Garages without the document stay off the map.",
+        "name": "RAR licence required"
+      }
+    },
+    "saveFailed": "The rule could not be saved. Try again.",
+    "testOnly": "Test only",
+    "title": "Platform settings",
+    "twoAdmins": "A second admin is needed."
   }
 }

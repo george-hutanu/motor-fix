@@ -87,6 +87,10 @@ export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerO
 export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
 export type { VerificationChecksControllerRecord$Params as VerificationChecksControllerRecord$Params } from './fn/admin/verification-checks-controller-record';
 export { verificationChecksControllerRecord as verificationChecksControllerRecord } from './fn/admin/verification-checks-controller-record';
+export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$Params } from './fn/admin/platform-rules-controller-list';
+export { platformRulesControllerList as platformRulesControllerList } from './fn/admin/platform-rules-controller-list';
+export type { PlatformRulesControllerChange$Params as PlatformRulesControllerChange$Params } from './fn/admin/platform-rules-controller-change';
+export { platformRulesControllerChange as platformRulesControllerChange } from './fn/admin/platform-rules-controller-change';
 export type { GarageBrandsControllerReplace$Params as GarageBrandsControllerReplace$Params } from './fn/garages/garage-brands-controller-replace';
 export { garageBrandsControllerReplace as garageBrandsControllerReplace } from './fn/garages/garage-brands-controller-replace';
 export type { GarageInvitesControllerSend$Params as GarageInvitesControllerSend$Params } from './fn/garages/garage-invites-controller-send';
@@ -113,3 +117,5 @@ export type { LiveControllerLive$Params as LiveControllerLive$Params } from './f
 export { liveControllerLive as liveControllerLive } from './fn/live/live-controller-live';
 export type { LiveControllerTest$Params as LiveControllerTest$Params } from './fn/live/live-controller-test';
 export { liveControllerTest as liveControllerTest } from './fn/live/live-controller-test';
+export type { PublicLiveControllerLive$Params as PublicLiveControllerLive$Params } from './fn/live/public-live-controller-live';
+export { publicLiveControllerLive as publicLiveControllerLive } from './fn/live/public-live-controller-live';

@@ -19,6 +19,9 @@ export interface DashboardView {
   body?: Type<unknown>;
   label: string;
   tab: string;
+  // The header's own title and the line under it; absent, the label is the title.
+  title?: string;
+  subtitle?: string;
   // Absent: every role of the area sees it.
   capability?: string;
   // The view's body carries this device's push panel.
@@ -98,37 +101,50 @@ export const DASHBOARDS: Record<
     name: 'shell.frame.bar.driver',
     tag: 'shell.frame.area.driver',
     views: [
-      HOME,
+      { ...HOME, title: 'shell.frame.title.driver.dashboard' },
       {
         capability: 'driver.requests',
         label: 'shell.frame.nav.driver.requests',
         path: 'requests',
         tab: 'shell.frame.tab.requests',
+        title: 'shell.frame.title.driver.requests',
       },
       {
         capability: 'driver.cars',
         label: 'shell.frame.nav.driver.cars',
         path: 'cars',
         tab: 'shell.frame.tab.cars',
+        title: 'shell.frame.title.driver.cars',
       },
       {
         capability: 'driver.reviews',
         label: 'shell.frame.nav.driver.reviews',
         path: 'reviews',
         tab: 'shell.frame.tab.reviews',
+        title: 'shell.frame.title.driver.reviews',
       },
       {
         capability: 'driver.saved_garages',
         label: 'shell.frame.nav.driver.savedGarages',
         path: 'saved',
         tab: 'shell.frame.tab.saved',
+        title: 'shell.frame.title.driver.saved',
+      },
+      {
+        label: 'shell.frame.nav.driver.assistant',
+        path: 'assistant',
+        tab: 'shell.frame.tab.ai',
+        title: 'shell.frame.title.driver.assistant',
+        unreleased: true,
       },
       {
         capability: 'driver.settings',
         label: 'shell.frame.nav.driver.settings',
         path: 'settings',
         push: true,
+        subtitle: 'shell.frame.subtitle.driver.settings',
         tab: 'shell.frame.tab.settings',
+        title: 'shell.frame.title.driver.settings',
       },
     ],
   },

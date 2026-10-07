@@ -1,10 +1,11 @@
-import { signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import type { MeDto } from '@motor-fix/data-access';
 import { Overlays } from '@motor-fix/overlays';
 
 import { SignInDialog } from './sign-in-dialog';
+import { areaGuard } from '../dashboard/area.guard';
 import { Session } from '../dashboard/session';
 
 const GARAGE = { landing: '/app/garage' } as MeDto;
@@ -24,6 +25,7 @@ function setup(signedIn: MeDto | null, ...answers: Answer[]) {
     current,
     keepShownWhile: jest.fn(<T>(open: Promise<T>) => open),
     load: jest.fn(async () => current()),
+    takeReturnTo: jest.fn((): string | null => null),
   };
   const open = jest.fn(async (..._: unknown[]) => {
     const answer = answers.shift() ?? 'cancelled';
@@ -66,6 +68,35 @@ describe('SignInDialog', () => {
 
   it("opens the person's dashboard after they sign in", async () => {
     const { dialog, navigate } = setup(null, 'signed-in');
+
+    await dialog.start();
+
+    expect(navigate).toHaveBeenCalledWith('/app/garage');
+  });
+
+  it('opens the address kept for the visit once they sign in', async () => {
+    const { dialog, navigate, session } = setup(null, 'signed-in');
+    session.takeReturnTo.mockReturnValue('/app/driver/cars');
+
+    await dialog.start();
+
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith('/app/driver/cars');
+  });
+
+  it('drops the kept address when the dialog is closed, opening nothing', async () => {
+    const { dialog, navigate, session } = setup(null, 'cancelled');
+    session.takeReturnTo.mockReturnValue('/app/driver/cars');
+
+    await dialog.start();
+
+    expect(session.takeReturnTo).toHaveBeenCalledTimes(1);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('opens the landing when no address of this site is kept', async () => {
+    const { dialog, navigate, session } = setup(null, 'signed-in');
+    session.takeReturnTo.mockReturnValue(null);
 
     await dialog.start();
 
@@ -480,5 +511,59 @@ describe('SignInDialog, from an invite link', () => {
       shape: 'dialog',
       title: 'public.signUp.title',
     });
+  });
+});
+
+@Component({ template: '' })
+class Page {}
+
+// @traces 028-FR-005
+describe('coming back to the view asked for', () => {
+  const DRIVER = { landing: '/app/driver' } as MeDto;
+
+  async function signInFrom(kept: string, as: MeDto) {
+    const current = signal<MeDto | null>(null);
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(
+          (['driver', 'garage'] as const).map((area) => ({
+            canMatch: [areaGuard(area)],
+            children: [{ component: Page, path: '**' }],
+            path: `app/${area}`,
+          })),
+        ),
+        {
+          provide: Session,
+          useValue: {
+            current,
+            keepReturnTo: jest.fn(),
+            keepShownWhile: <T>(open: Promise<T>) => open,
+            load: async () => current(),
+            takeReturnTo: () => kept,
+          },
+        },
+        {
+          provide: Overlays,
+          useValue: {
+            open: async () => {
+              current.set(as);
+              return 'signed-in';
+            },
+          },
+        },
+      ],
+    });
+    await TestBed.inject(SignInDialog).start();
+    return TestBed.inject(Router).url;
+  }
+
+  it('opens the driver view a driver asked for', async () => {
+    expect(await signInFrom('/app/driver/cars', DRIVER)).toBe(
+      '/app/driver/cars',
+    );
+  });
+
+  it('sends a garage-only account to its own dashboard instead', async () => {
+    expect(await signInFrom('/app/driver/cars', GARAGE)).toBe('/app/garage');
   });
 });

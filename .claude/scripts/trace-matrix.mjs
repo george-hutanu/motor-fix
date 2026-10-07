@@ -67,7 +67,10 @@ for (const dir of existsSync(specsDir) ? readdirSync(specsDir).sort() : []) {
   const m = dir.match(/^(\d{3})-/);
   const specFile = join(specsDir, dir, "spec.md");
   if (!m || !existsSync(specFile)) continue;
-  const frs = [...new Set(readFileSync(specFile, "utf8").match(/\bFR-\d{3}\b/g) ?? [])].sort();
+  // `(?<!\d-)`: a Spec Delta names other features' requirements as
+  // `NNN-FR-XXX` (an ST id may be shorter), and `\b` alone matches after that
+  // hyphen.
+  const frs = [...new Set(readFileSync(specFile, "utf8").match(/(?<!\d-)\bFR-\d{3}\b/g) ?? [])].sort();
   const tasksFile = join(specsDir, dir, "tasks.md");
   const tasks = existsSync(tasksFile) ? readFileSync(tasksFile, "utf8") : "";
   const implemented = tasks !== "" && !/- \[ \]/.test(tasks);

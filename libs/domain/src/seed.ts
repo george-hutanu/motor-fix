@@ -207,6 +207,13 @@ async function seed(db: Client, secret: string) {
      CROSS JOIN unnest(enum_range(NULL::verification_check_kind)) AS k
      ON CONFLICT (file_id, kind) DO NOTHING`,
   );
+  // The checks a test run may switch off; production refused the seed above.
+  await db.query(
+    `INSERT INTO platform_rule (id, key, value, default_value)
+     VALUES (gen_random_uuid(), 'skip_manual_approval', 'false', 'false'),
+            (gen_random_uuid(), 'skip_rar_check', 'false', 'false')
+     ON CONFLICT (key) DO NOTHING`,
+  );
 }
 
 async function main(secret: string) {

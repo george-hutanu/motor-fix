@@ -26,6 +26,16 @@ const FIXTURES: Record<
     path?: () => Promise<string>;
   }
 > = {
+  'PATCH /api/v1/admin/platform-rules/{key}': {
+    body: () => ({ seen: false, value: true }),
+    path: async () => {
+      await db.query(
+        `UPDATE platform_rule SET value = 'false'::jsonb
+         WHERE key = 'maintenance_mode'`,
+      );
+      return '/api/v1/admin/platform-rules/maintenance_mode';
+    },
+  },
   'POST /api/v1/admin/live/test': { body: (admin) => ({ accountId: admin }) },
   'POST /api/v1/admin/news': {
     body: () => ({
@@ -136,6 +146,11 @@ beforeAll(async () => {
 }, 120_000);
 
 afterAll(async () => {
+  // The platform rule fixture switched maintenance on; other suites share the database.
+  await db.query(
+    `UPDATE platform_rule SET value = 'false'::jsonb
+     WHERE key = 'maintenance_mode'`,
+  );
   await db.end();
   await api.stop();
 });

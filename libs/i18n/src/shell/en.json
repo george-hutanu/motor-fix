@@ -69,7 +69,7 @@
     },
     "area": {
       "admin": "Admin",
-      "driver": "Driver",
+      "driver": "DRIVER ACCOUNT",
       "garage": "Garage"
     },
     "bar": {
@@ -94,6 +94,7 @@
       },
       "dashboard": "Dashboard",
       "driver": {
+        "assistant": "AI assistant",
         "cars": "My cars",
         "requests": "My requests",
         "reviews": "My reviews",
@@ -121,7 +122,13 @@
     },
     "signOut": "Sign out",
     "signOutEverywhere": "Sign out on all devices",
+    "subtitle": {
+      "driver": {
+        "settings": "Account details and notifications"
+      }
+    },
     "tab": {
+      "ai": "AI",
       "assistant": "Assistant",
       "brands": "Brands",
       "cars": "Cars",
@@ -138,6 +145,17 @@
       "settings": "Settings",
       "team": "Team",
       "users": "Users"
+    },
+    "title": {
+      "driver": {
+        "assistant": "Your AI assistant",
+        "cars": "My cars",
+        "dashboard": "Your dashboard",
+        "requests": "My requests",
+        "reviews": "My reviews",
+        "saved": "Saved garages",
+        "settings": "Settings"
+      }
     }
   },
   "gauge": {

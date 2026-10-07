@@ -188,8 +188,8 @@ export class Session {
   ) {
     await this.sendPending();
     try {
+      // Without one, an address kept by the area guard stays for the return.
       if (choice.returnTo) sessionStorage.setItem(RETURN_TO, choice.returnTo);
-      else sessionStorage.removeItem(RETURN_TO);
     } catch {
       // No storage: the person lands on their role's home instead.
     }
@@ -198,6 +198,15 @@ export class Session {
       remember: String(choice.remember),
     });
     this.leave(`/api/v1/auth/oauth/${provider}?${query}`);
+  }
+
+  // The dashboard address a visitor asked for, opened once they sign in.
+  keepReturnTo(url: string) {
+    try {
+      sessionStorage.setItem(RETURN_TO, url);
+    } catch {
+      // No storage: the person lands on their role's home instead.
+    }
   }
 
   // The kept screen, once, and only an address of this site.
