@@ -11,3 +11,5 @@ Start: c769bcff (origin/main). Preflight: typecheck, lint, test green.
 - plan, tasks (3); checklist and analyze folded: each FR maps to T001 and T002/T003
 - tests: 3 red (mark null, marked row resent, hang rejected), then implement: 1026 notifications tests green
 - review: code-reviewer BLOCK (2 HIGH: mark after takeSms; unbounded poll) fixed — mark before the count, count back before clearing, 2 tests for failed mark writes, loop bounded: 1028 green; spec-reviewer APPROVE (its LOW is the same ordering, fixed)
+- re-review: code-reviewer APPROVE (LOW spec line on capped rows fixed)
+- retro: not run (verdict is the owner's); archive: Spec Delta merged into notifications

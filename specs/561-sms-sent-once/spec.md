@@ -2,7 +2,7 @@
 
 **Feature Branch**: `561-sms-sent-once`
 **Created**: 2026-10-07
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 **Input**: ST-561 (from ST-392, code-reviewer MEDIUM on PR #73): "sendSms is at-least-once: if Brevo accepts the SMS and then the worker dies or the job fails before the sent write, the retry sends and counts a second SMS; a timeout after Brevo accepted gives back the count of an SMS that went" — https://app.notion.com/p/3f0607bff0d28100bcb4d12439ca1fc4
 
 ## Scope
@@ -28,7 +28,7 @@ The worker marks the SMS row as being sent just before it calls Brevo. If that a
 
 - The mark is written before the month's count is taken: a failed mark fails the job with nothing sent or counted, and its retry starts afresh.
 - After a refusal the count goes back before the mark is cleared: a failed clear fails the job, and the retry sees the mark and settles the row as unconfirmed (no second SMS, no count).
-- A row that reaches the monthly cap, or has no text, never gets the mark: nothing was sent.
+- A row with no text never gets the mark. A row that reaches the monthly cap carries the mark but is settled at once (`sms_cap_reached`, with fallback): nothing was sent and it is never retried.
 - E-mail, WhatsApp and push are unchanged.
 
 ## Requirements *(mandatory)*
