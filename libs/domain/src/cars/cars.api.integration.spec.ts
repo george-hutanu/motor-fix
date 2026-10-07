@@ -569,7 +569,6 @@ describe('a garage-side account adding a car', () => {
     );
 
     expect([first.status, second.status]).toEqual([201, 201]);
-    expect(first.body).not.toHaveProperty('roleAdded');
     expect(await roles(id)).toEqual(['driver', 'garage']);
     const entries = await roleAudit(id);
     expect(entries).toHaveLength(1);

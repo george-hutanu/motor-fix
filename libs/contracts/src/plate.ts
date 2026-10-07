@@ -1,3 +1,9 @@
+// The car's shape both the API and the dialog check, kept here because the
+// browser imports this file and not the validators.
+export const FUELS = ['petrol', 'diesel', 'hybrid', 'electric'] as const;
+export const MAX_KM = 2_000_000;
+export const STORED_PLATE = /^[A-Z0-9]{2,12}$/;
+
 const ROMANIAN = /^([A-Z]{1,2})(\d{2,3})([A-Z]{3})$/;
 
 // A plate as stored: upper case, without the spaces and hyphens people type.

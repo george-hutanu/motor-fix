@@ -15,7 +15,13 @@ import {
   type ValidationErrors,
   Validators,
 } from '@angular/forms';
-import { isRomanianPlate, normalisePlate } from '@motor-fix/contracts/plate';
+import {
+  FUELS,
+  isRomanianPlate,
+  MAX_KM,
+  normalisePlate,
+  STORED_PLATE,
+} from '@motor-fix/contracts/plate';
 import {
   type BrandDto,
   BrandsService,
@@ -36,8 +42,6 @@ import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 import { characters } from '../sign-in/sign-up';
 
 const SEARCH_PAUSE_MS = 250;
-const MAX_KM = 2_000_000;
-const FUELS = ['petrol', 'diesel', 'hybrid', 'electric'] as const;
 const DATES = [
   { control: 'itpUntil', label: 'driver.cars.add.itp' },
   { control: 'rcaUntil', label: 'driver.cars.add.rca' },
@@ -73,9 +77,7 @@ const km = (c: AbstractControl): ValidationErrors | null => {
 
 const plate = (c: AbstractControl): ValidationErrors | null => {
   const stored = normalisePlate(c.value);
-  return stored === '' || /^[A-Z0-9]{2,12}$/.test(stored)
-    ? null
-    : { pattern: true };
+  return stored === '' || STORED_PLATE.test(stored) ? null : { pattern: true };
 };
 
 // The next option down or up the list, wrapping; from none, the first or last.

@@ -14,12 +14,9 @@ import {
   ValidateBy,
 } from 'class-validator';
 
-import { normalisePlate } from './plate';
+import { FUELS, MAX_KM, normalisePlate, STORED_PLATE } from './plate';
 
-const FUELS = ['petrol', 'diesel', 'hybrid', 'electric'] as const;
-export type Fuel = (typeof FUELS)[number];
-
-const MAX_KM = 2_000_000;
+type Fuel = (typeof FUELS)[number];
 
 const trimmed = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -102,7 +99,7 @@ export class CreateCarDto {
   @Transform(({ value }) =>
     typeof value === 'string' ? normalisePlate(value) : value,
   )
-  @Matches(/^[A-Z0-9]{2,12}$/)
+  @Matches(STORED_PLATE)
   plate?: string;
 
   @ApiPropertyOptional({
