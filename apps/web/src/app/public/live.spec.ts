@@ -248,12 +248,10 @@ describe('PublicLive', () => {
     },
   );
 
-  it('passes on the events of its stream, filtered by kind and id', async () => {
+  it('passes on the events of its stream, filtered by kind', async () => {
     const live = setUp();
     const seen: string[] = [];
-    live
-      .on(['review.posted'], { id: 'g-1' })
-      .subscribe((m) => seen.push(`${m.kind} ${m.id}`));
+    live.on(['review.posted']).subscribe((m) => seen.push(`${m.kind} ${m.id}`));
     live.register({ garage: 'g-1' });
     await settle();
 
@@ -263,7 +261,7 @@ describe('PublicLive', () => {
     bodies[0]?.send(event('garage.updated', 'g-1'));
     await settle();
 
-    expect(seen).toEqual(['review.posted g-1']);
+    expect(seen).toEqual(['review.posted g-1', 'review.posted g-2']);
   });
 });
 

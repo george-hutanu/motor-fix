@@ -90,15 +90,10 @@ export class PublicLive implements OnDestroy {
     };
   }
 
-  // The events of these kinds, about one object when an id is given.
-  on(
-    kinds: readonly EventKind[],
-    { id }: { id?: string } = {},
-  ): Observable<LiveMessage> {
+  // The events of these kinds.
+  on(kinds: readonly EventKind[]): Observable<LiveMessage> {
     const wanted: ReadonlySet<string> = new Set(kinds);
-    return this.events.pipe(
-      filter((m) => wanted.has(m.kind) && (id === undefined || m.id === id)),
-    );
+    return this.events.pipe(filter((m) => wanted.has(m.kind)));
   }
 
   // Views opened and closed in the same tick make one change of stream.
