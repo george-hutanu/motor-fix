@@ -1,4 +1,4 @@
-// @traces 522-FR-001 522-FR-002 522-FR-003
+// @traces 522-FR-001 522-FR-002 522-FR-003 778-FR-001
 import { Logger } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
@@ -543,6 +543,27 @@ describe('a database error after Brevo accepted an e-mail', () => {
     expect(mock.emails()).toHaveLength(1);
     expect(lines).toContainEqual(expect.stringContaining(queued.id));
     expect(lines).toContainEqual(expect.stringContaining('@smtp-relay'));
+  });
+
+  it('tries the write 3 times in all, back to back', async () => {
+    const { row: queued } = await queuedEmail();
+    const tries: number[] = [];
+    const failing = failWritesAfter(
+      prisma,
+      () => mock.emails().length > 0 && tries.push(Date.now()) > 0,
+      10,
+    );
+    const logged = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    try {
+      await expect(sendJob(queued.id)).resolves.toBeUndefined();
+    } finally {
+      failing();
+      logged.mockRestore();
+    }
+    expect(tries).toHaveLength(3);
+    expect(tries[2] - tries[0]).toBeLessThan(150);
   });
 
   it('finishes the job when releasing the claim fails', async () => {

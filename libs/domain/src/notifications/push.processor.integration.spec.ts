@@ -1,4 +1,4 @@
-// @traces 196-FR-007 196-FR-008 196-FR-009 196-FR-010 196-FR-011 196-FR-012 196-FR-013 196-FR-014 196-FR-018 196-FR-019 196-FR-020
+// @traces 196-FR-007 196-FR-008 196-FR-009 196-FR-010 196-FR-011 196-FR-012 196-FR-013 196-FR-014 196-FR-018 196-FR-019 196-FR-020 522-FR-001 778-FR-002
 import { createECDH, randomBytes } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -14,6 +14,7 @@ import { NotificationsProcessor } from './notifications.processor';
 import { NotificationsService, RETRY_MINUTES } from './notifications.service';
 import {
   databaseUrl,
+  failWritesAfter,
   fixtures,
   redisUrlFor,
   testConfig,
@@ -324,6 +325,25 @@ describe('a device the push service no longer knows', () => {
     await prisma.pushSubscription.deleteMany();
     await test(ana);
     expect((await rows(ana)).map((r) => r.channel)).toEqual(['email']);
+  });
+});
+
+describe('a database error after the push service took a message', () => {
+  it('records the push on a later write and does not send it again', async () => {
+    const ana = await person('ana', { devices: ['laptop'] });
+    await test(ana);
+    const push = (await rows(ana)).find((r) => r.channel === 'push');
+    const undo = failWritesAfter(prisma, () => hits.length > 0, 1);
+    try {
+      await expect(sendJob(push?.id ?? '')).resolves.toBeUndefined();
+    } finally {
+      undo();
+    }
+    expect(hits).toHaveLength(1);
+    expect(
+      (await prisma.notification.findUniqueOrThrow({ where: { id: push?.id } }))
+        .status,
+    ).toBe('sent');
   });
 });
 
