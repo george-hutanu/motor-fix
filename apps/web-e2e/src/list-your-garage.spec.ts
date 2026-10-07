@@ -22,6 +22,19 @@ async function fill(page: Page) {
   await page.addStyleTag({ content: 'section { min-height: 900px; }' });
 }
 
+// The smooth jump has ended once the page stops moving.
+async function still(page: Page) {
+  let y = -1;
+  await expect
+    .poll(async () => {
+      const before = y;
+      y = await page.evaluate(() => scrollY);
+      return y === before;
+    })
+    .toBe(true);
+  return y;
+}
+
 async function scrollTo(page: Page, n: number) {
   await sections(page)
     .nth(n - 1)
@@ -153,9 +166,7 @@ test.describe('on a desktop', () => {
     await fill(page);
     await entry(page, 'Mecanici').click();
     await expect(current(page)).toContainText('Mecanici');
-    await expect(sections(page).nth(3)).toBeInViewport();
-    await page.waitForTimeout(300);
-    const y = await page.evaluate(() => scrollY);
+    const y = await still(page);
     await page.evaluate(() => {
       (window as { kept?: boolean }).kept = true;
     });
