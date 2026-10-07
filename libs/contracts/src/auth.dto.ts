@@ -14,11 +14,11 @@ import {
 } from 'class-validator';
 
 import { PRIVACY_VERSION, TERMS_VERSION } from './consent';
+import { EMAIL_PATTERN } from './email';
 import { ROLE } from './me.dto';
 import { E164, normalisePhone } from './phone';
 
-// Text, an "@", a domain with a dot; no spaces or control characters.
-export const EMAIL_PATTERN = /^[^\s@\p{Cc}]+@[^\s@\p{Cc}]+\.[^\s@\p{Cc}]+$/u;
+export { EMAIL_PATTERN } from './email';
 
 export class SignInDto {
   @ApiProperty({

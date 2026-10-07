@@ -1,6 +1,6 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { EMAIL_PATTERN } from '@motor-fix/contracts';
+import { EMAIL_PATTERN } from '@motor-fix/contracts/email';
 import { ListingDraftsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { toProblem } from '@motor-fix/overlays';
