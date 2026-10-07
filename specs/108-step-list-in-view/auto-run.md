@@ -89,3 +89,16 @@ Preflight: typecheck, lint, test green (exit 0).
 - code-reviewer: BLOCK on one HIGH. On a phone the jump landed headings 8 px below the spy's line (scroll margin 52 px vs. bar bottom 44 px). Fixed with a phone margin of `var(--mf-tap)` and a Playwright check (jump to 5, scroll 2 px, the bar stays on 5). Two LOW redundant adversary tests were deleted.
 - Re-review: APPROVE. Two LOW items remain, kept: i18n key parity is enforced by `libs/i18n/src/check.ts`, and the e2e fixed waits bracket a single wheel event.
 - Repair laps: 2.
+
+## Phase 15 — Agent context
+
+- The managed block in `CLAUDE.local.md` now points at this feature's plan.md. AGENTS.md was not touched.
+
+## Phase 16 — Retrospective evidence (unjudged)
+
+- `retro-evidence.mjs --since ec74ab06 --jev`: 31 lines, Jev lane unavailable (no key), no suggested verdict. `instincts.mjs triggered`: nothing proposed. No retrospective or instinct was written; the verdict stays the owner's.
+- trace-matrix lists 0/12 FRs traced: the repo's rule bars `@traces` ids in source, so the FR → test mapping lives in tasks.md (the same holds for the other features).
+
+## Phase 17 — Archive (steps 1–3)
+
+- The delta validates and merges cleanly: garage-listing +12 added, ~0 modified, -0 removed. The spec status is Archived (2026-10-07). The finish and archive check run in the tail after the merge.

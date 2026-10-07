@@ -2,7 +2,7 @@
 
 **Feature Branch**: `108-step-list-in-view`
 **Created**: 2026-10-07
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 **Input**: ST-108 "Move through the six steps with the step list in view" (EP-2, Highest, 3 points, Role: Garage) — https://app.notion.com/p/3ee607bff0d281de8506f7904b959b0a. Feature: https://app.notion.com/p/3ee607bff0d28117a3fffe7230aef5cb. Build brief current as of 2026-10-03; it wins over the acceptance criteria above it. Story page read in full on 2026-10-07, no comments on it.
 
 ## User Scenarios & Testing *(mandatory)*
