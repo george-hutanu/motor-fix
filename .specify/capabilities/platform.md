@@ -1050,7 +1050,7 @@ _From 813-fable-to-opus._
 
 _From 813-fable-to-opus._
 
-### 457-FR-001 — The `import-extension` rule MUST take a changed `.ts`/`.tsx` file's resolution from the nearest `tsconfig.json` in its directory or an ancestor up to the repo root, merging `compilerOptions` along its relative `extends` chain (the child's value wins; JSONC comments and trailing commas allowed): `nodenext`/`node16` in `moduleResolution`, or in `module` when `moduleResolution` is unset, requires `.js` on relative imports; `bundler` forbids it; anything else, or no tsconfig, is not judged.
+### 457-FR-001 — The `import-extension` rule MUST take a changed `.ts`/`.tsx` file's resolution from the nearest `tsconfig.json` in its directory or an ancestor up to the repo root, merging `compilerOptions` along its relative `extends` chain (the child's value wins; JSONC comments and trailing commas allowed): `nodenext`/`node16` in `moduleResolution`, or in `module` when `moduleResolution` is unset, requires a literal extension on relative imports (`.js`, `.mjs` or `.cjs`, and also `.ts`, `.mts`, `.cts` or `.tsx` when `allowImportingTsExtensions` or `rewriteRelativeImportExtensions` is true); `bundler` forbids `.js`; anything else, or no tsconfig, is not judged.
 
 _From 457-diff-audit-tsconfig-imports._
 

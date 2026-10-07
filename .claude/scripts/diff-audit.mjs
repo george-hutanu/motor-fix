@@ -97,21 +97,24 @@ for (const file of sources) {
   }
 }
 
-// 2. Relative import extensions. nodenext projects need the literal `.js`;
-//    bundler projects must not have it. The file's own tsconfig decides
+// 2. Relative import extensions. nodenext projects need a literal extension
+//    (`.js`, or `.ts` where the tsconfig allows importing it); bundler
+//    projects must not have `.js`. The file's own tsconfig decides
 //    (lib/tsconfig.mjs), never its path.
 for (const file of changed.filter((f) => /\.tsx?$/.test(f))) {
-  const style = importStyle(repo, file);
-  const wantsJs = style === "nodenext";
-  const forbidsJs = style === "bundler";
+  const resolution = importStyle(repo, file);
+  const wantsJs = resolution?.style === "nodenext";
+  const forbidsJs = resolution?.style === "bundler";
+  const accepted = resolution?.tsExtensions ? /\.([mc]?js|[mc]?ts|tsx)$/ : /\.[mc]?js$/;
   if (!wantsJs && !forbidsJs) continue;
   for (const line of addedLines(file)) {
     const m = line.match(/(?:from|import)\s+['"](\.[^'"]*)['"]/);
     if (!m) continue;
     const spec = m[1];
     if (/\.(json|css|svg|png|jpg|txt|md)$/.test(spec)) continue;
-    if (wantsJs && !spec.endsWith(".js")) {
-      add("ERROR", "import-extension", file, `relative import '${spec}' needs the literal .js extension under nodenext`);
+    if (wantsJs && !accepted.test(spec)) {
+      const literal = resolution.tsExtensions ? ".js or .ts" : ".js";
+      add("ERROR", "import-extension", file, `relative import '${spec}' needs the literal ${literal} extension under nodenext`);
     }
     if (forbidsJs && spec.endsWith(".js")) {
       add("ERROR", "import-extension", file, `relative import '${spec}' must drop .js under bundler resolution`);

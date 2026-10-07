@@ -6,7 +6,9 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { importStyle } from './lib/tsconfig.mjs';
+import { importStyle as resolveImports } from './lib/tsconfig.mjs';
+
+const importStyle = (...args) => resolveImports(...args)?.style ?? null;
 
 // The import-extension rule follows the compiler, not the path: a file's
 // nearest tsconfig.json (through `extends`) says whether its relative imports
@@ -62,6 +64,12 @@ describe('importStyle — nearest tsconfig decides', () => {
     assert.equal(importStyle(repo, 'scripts/a.ts'), null);
   });
 
+  it('says whether .ts specifiers are allowed', () => {
+    write('scripts/tsconfig.json', { extends: '../tsconfig.base.json', compilerOptions: { module: 'nodenext', moduleResolution: 'nodenext', allowImportingTsExtensions: true } });
+    assert.deepEqual(resolveImports(repo, 'scripts/a.ts'), { style: 'nodenext', tsExtensions: true });
+    assert.deepEqual(resolveImports(repo, 'apps/web-e2e/src/a.ts'), { style: 'nodenext', tsExtensions: false });
+  });
+
   it('judges nothing when the tsconfig does not parse', () => {
     write('tools/z/tsconfig.json', '{ "compilerOptions": { "module": "nodenext" ');
     assert.equal(importStyle(repo, 'tools/z/a.ts'), null);
@@ -86,5 +94,13 @@ describe('diff-audit import-extension', () => {
     const out = audit();
     assert.equal(out.length, 1);
     assert.match(out[0], /'\.\/b' needs the literal \.js extension under nodenext/);
+  });
+
+  it('accepts .ts specifiers in a nodenext project that allows importing them', () => {
+    write('scripts/tsconfig.json', { extends: '../tsconfig.base.json', compilerOptions: { module: 'nodenext', moduleResolution: 'nodenext', allowImportingTsExtensions: true } });
+    write('scripts/a.ts', "import { b } from './b.ts';\nimport { c } from './c';\n");
+    const out = audit();
+    assert.equal(out.length, 1);
+    assert.match(out[0], /'\.\/c' needs the literal \.js or \.ts extension under nodenext/);
   });
 });

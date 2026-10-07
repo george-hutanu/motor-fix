@@ -58,16 +58,27 @@ function nearestTsconfig(repo, file) {
 }
 
 /**
- * "nodenext" when relative imports need the literal `.js`, "bundler" when they
- * must not have it, null when the governing tsconfig says neither (or none).
+ * How relative imports must be written under the governing tsconfig:
+ * `style` "nodenext" needs a literal extension, "bundler" must not have `.js`;
+ * `tsExtensions` is true when `.ts` specifiers are allowed
+ * (allowImportingTsExtensions or rewriteRelativeImportExtensions). null when
+ * the tsconfig says neither style, or there is none.
  */
 export function importStyle(repo, file) {
   const tsconfig = nearestTsconfig(repo, file);
   if (!tsconfig) return null;
-  const { module, moduleResolution } = compilerOptions(tsconfig);
-  if (typeof moduleResolution === "string") {
-    if (NODE.test(moduleResolution)) return "nodenext";
-    return /^bundler$/i.test(moduleResolution) ? "bundler" : null;
-  }
-  return typeof module === "string" && NODE.test(module) ? "nodenext" : null;
+  const options = compilerOptions(tsconfig);
+  const { module, moduleResolution } = options;
+  const style =
+    typeof moduleResolution === "string"
+      ? NODE.test(moduleResolution)
+        ? "nodenext"
+        : /^bundler$/i.test(moduleResolution)
+          ? "bundler"
+          : null
+      : typeof module === "string" && NODE.test(module)
+        ? "nodenext"
+        : null;
+  if (!style) return null;
+  return { style, tsExtensions: options.allowImportingTsExtensions === true || options.rewriteRelativeImportExtensions === true };
 }
