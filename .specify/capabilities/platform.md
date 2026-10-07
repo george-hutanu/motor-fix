@@ -45,6 +45,7 @@ features:
   - 728-active-feature-padded-fallback
   - 746-validate-archived-fr-assigned
   - 846-conflict-detect
+  - 760-e2e-sign-up-limit
 ---
 
 # Capability: Platform
@@ -1116,6 +1117,18 @@ _From 846-conflict-detect._
 ### 846-FR-010 — Every behaviour above MUST be covered by harness specs written before the code (`ci-wait.spec.mjs`, `watch.spec.mjs`, `watch.adversary.spec.mjs`, `gh-rest` mapping, and `watch-schedule-wiring.spec.mjs` where the wait's documented endings change), run by `npm run test:harness`.
 
 _From 846-conflict-detect._
+
+### 760-FR-001 — Before a run that starts its servers locally, the end-to-end suite MUST delete every sign-up count key (`auth:signup:address:*`) in the Redis at `REDIS_URL`, and nothing else.
+
+_From 760-e2e-sign-up-limit._
+
+### 760-FR-002 — A run against `BASE_URL`, or without `REDIS_URL`, MUST clear nothing.
+
+_From 760-e2e-sign-up-limit._
+
+### 760-FR-003 — The sign-up count keys MUST keep the prefix the suite clears, `auth:signup:address:`.
+
+_From 760-e2e-sign-up-limit._
 
 ## Retired
 

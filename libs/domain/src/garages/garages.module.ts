@@ -2,6 +2,7 @@ import { type DynamicModule, Module } from '@nestjs/common';
 import type { Redis } from 'ioredis';
 
 import { AdminOverviewController } from './admin-overview.controller';
+import { GarageBrandsController } from './garage-brands.controller';
 import { GarageBrandsService } from './garage-brands.service';
 import { ListingDraftsController } from './listing-drafts.controller';
 import { ListingDraftsService } from './listing-drafts.service';
@@ -41,6 +42,7 @@ export class GaragesModule {
     return {
       controllers: [
         AdminOverviewController,
+        GarageBrandsController,
         GarageInvitesController,
         InvitesController,
         ListingDraftsController,
