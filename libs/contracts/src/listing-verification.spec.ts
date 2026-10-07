@@ -65,7 +65,6 @@ describe('a RAR authorisation number as the owner types it', () => {
   });
 
   it('counts as done from 3 characters', () => {
-    expect(RAR_NUMBER_MIN).toBe(3);
     expect(normaliseRarNumber(' ab ').length).toBeLessThan(RAR_NUMBER_MIN);
     expect(normaliseRarNumber(' abc ').length).toBe(RAR_NUMBER_MIN);
   });

@@ -172,6 +172,7 @@ const SETTLE_MS = 150;
                 } @else if (step.n === 6) {
                   <p class="note">{{ 'public.listing.verifyIntro' | t }}</p>
                   <div class="field">
+                    <!-- maxlength 40 mirrors the draft section's cap in listing-verification -->
                     <label for="listing-cui">{{ 'public.listing.cui' | t }}</label>
                     <input
                       #cui

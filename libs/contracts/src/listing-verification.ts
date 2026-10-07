@@ -33,7 +33,8 @@ export const normaliseRarNumber = (input: string): string =>
 
 const STEP6_KEYS = new Set(['cui', 'rarNumber']);
 
-// The section as stored: only the two keys, each a string of at most 40.
+// The section as stored: only the two keys, each a string of at most 40 UTF-16
+// code units (what `length` and the input's `maxlength` count).
 // Whether a value is valid is the form's to say; the draft keeps it as typed.
 export function isStep6Section(value: unknown): value is Step6Section {
   if (typeof value !== 'object' || value === null || Array.isArray(value))

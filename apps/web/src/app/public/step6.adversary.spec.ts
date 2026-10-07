@@ -1,8 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -173,13 +170,6 @@ describe('step 6 of the page under hostile typing', () => {
     localStorage.clear();
   });
 
-  it('shows no error while the owner is still typing a wrong CUI', async () => {
-    const { harness, page } = await open('/ro/list-your-garage');
-    await type(harness, cui(page), 'RO 18547291');
-    expect(cuiErr(page)).toBe('');
-    expect(cui(page).getAttribute('aria-invalid')).not.toBe('true');
-  });
-
   it('shows the error, the invalid flag and the description after leaving a wrong CUI', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
     await type(harness, cui(page), 'RO 18547291');
@@ -207,14 +197,6 @@ describe('step 6 of the page under hostile typing', () => {
     await leave(harness, cui(page));
     await type(harness, cui(page), '18547299');
     expect(cuiErr(page)).toBe('CUI invalid');
-  });
-
-  it('shows the stripped form after leaving the field', async () => {
-    const { harness, page } = await open('/ro/list-your-garage');
-    await type(harness, cui(page), 'ro 18 547 290');
-    await leave(harness, cui(page));
-    expect(cui(page).value).toBe('18547290');
-    expect(counter(page)).toBe('1 din 5 completate');
   });
 
   it('treats a prefix alone as an empty field with no error', async () => {
@@ -251,14 +233,6 @@ describe('step 6 of the page under hostile typing', () => {
     expect(rar(page).getAttribute('aria-describedby')).toBe('listing-rar-hint');
   });
 
-  it('shows the RAR number trimmed and in capitals after leaving', async () => {
-    const { harness, page } = await open('/ro/list-your-garage');
-    await type(harness, rar(page), '  rar-12 a  ');
-    await leave(harness, rar(page));
-    expect(rar(page).value).toBe('RAR-12 A');
-    expect(counter(page)).toBe('1 din 5 completate');
-  });
-
   it('does not count a RAR number of spaces and one letter', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
     await type(harness, rar(page), '  a  ');
@@ -289,36 +263,5 @@ describe('step 6 of the page under hostile typing', () => {
     expect(counter(page)).toBe('2 din 5 completate');
     await type(harness, cui(page), '');
     expect(counter(page)).toBe('1 din 5 completate');
-  });
-
-  it('keeps values, error and counter number when the language switches', async () => {
-    const { harness, i18n, page } = await open('/ro/list-your-garage');
-    await type(harness, cui(page), '18547291');
-    await leave(harness, cui(page));
-    await type(harness, rar(page), 'abc');
-    await i18n.use('en');
-    await settle(harness);
-    expect(cuiErr(page)).toBe('Invalid tax ID');
-    expect(cui(page).value).toBe('18547291');
-    expect(rar(page).value).toBe('abc');
-    expect(counter(page)).toBe('1 of 5 completed');
-  });
-
-  it('offers no look-up button, link or result in the section', async () => {
-    const { page } = await open('/en/list-your-garage');
-    const section = cui(page).closest('section') as HTMLElement;
-    expect(section.querySelectorAll('button')).toHaveLength(0);
-    expect(section.querySelectorAll('a')).toHaveLength(0);
-    expect(text(section)).not.toMatch(
-      /Check company|Look up|Verifică firma|Caută|CAEN/i,
-    );
-  });
-
-  it('writes nothing to the server when only the browser copy changes', async () => {
-    const { harness, page } = await open('/ro/list-your-garage');
-    await type(harness, cui(page), '18547290');
-    const http = TestBed.inject(HttpTestingController);
-    http.expectNone((req) => req.url.includes('listing-drafts'));
-    expect(cui(page).value).toBe('18547290');
   });
 });

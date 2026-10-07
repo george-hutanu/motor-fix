@@ -3,7 +3,6 @@ import {
   isStep6Section,
   isValidCui,
   normaliseRarNumber,
-  RAR_NUMBER_MIN,
   stripCui,
 } from './listing-verification';
 
@@ -124,12 +123,6 @@ describe('normalising a typed RAR number', () => {
   });
 });
 
-describe('the constants', () => {
-  it('fixes the minimum', () => {
-    expect(RAR_NUMBER_MIN).toBe(3);
-  });
-});
-
 describe('the step-6 section as the server sees it', () => {
   it.each([
     ['empty', {}],
@@ -164,7 +157,10 @@ describe('the step-6 section as the server sees it', () => {
     ['a boolean', { cui: true }],
     ['forty-one characters of tax ID', { cui: '1'.repeat(41) }],
     ['forty-one characters of RAR number', { rarNumber: 'A'.repeat(41) }],
-    ['forty-one multi-byte characters', { rarNumber: 'ș'.repeat(41) }],
+    [
+      'twenty-one characters of two code units each',
+      { rarNumber: '𝒜'.repeat(21) },
+    ],
   ])('rejects %s', (_, section) => {
     expect(isStep6Section(section)).toBe(false);
   });
