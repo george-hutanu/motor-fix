@@ -20,9 +20,11 @@
 // tester's review but not a status, so a blocking verdict lives only there.
 import { STATUS_CONTEXT } from "./post.mjs";
 
-export const QA_WORKFLOW_PATH = ".github/workflows/pr-qa.yml";
+const QA_WORKFLOW_PATH = ".github/workflows/pr-qa.yml";
 const ACTIONS = "github-actions[bot]";
 const REPO = "{owner}/{repo}";
+// GitHub lists at most this many of a PR's files; past it the edit may be hidden.
+const FILES_CAP = 3000;
 const short = (sha) => String(sha ?? "").slice(0, 7);
 const runId = (url) => /\/actions\/runs\/(\d+)/.exec(String(url ?? ""))?.[1] ?? null;
 
@@ -80,13 +82,14 @@ export async function readProvenance({ pr, shas, gh }) {
     api(gh, [`repos/${REPO}`, "--jq", "{branch: .default_branch}"]),
   ]);
   const one = async (sha) => {
+    // Statuses come newest first, so the first agent-review entry is the one in force.
     const status = (await api(gh, [`repos/${REPO}/commits/${sha}/statuses?per_page=100`])).find((s) => s?.context === STATUS_CONTEXT) ?? null;
     const id = status?.creator?.type === "User" ? null : runId(status?.target_url);
     const run = id ? (await api(gh, [`repos/${REPO}/actions/runs/${id}`, "--jq", "{path, event, head_branch, head_sha, display_title, status, conclusion}"]))[0] : null;
     return [sha, { status, run, testerReview: testerVerdict(reviews, sha) }];
   };
   return {
-    qaWorkflowChanged: files.some((f) => f.filename === QA_WORKFLOW_PATH || f.previous_filename === QA_WORKFLOW_PATH),
+    qaWorkflowChanged: files.length >= FILES_CAP || files.some((f) => f.filename === QA_WORKFLOW_PATH || f.previous_filename === QA_WORKFLOW_PATH),
     defaultBranch: repo.branch,
     bySha: Object.fromEntries(await Promise.all(shas.map(one))),
   };

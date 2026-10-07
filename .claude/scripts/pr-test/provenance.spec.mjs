@@ -1,7 +1,9 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { QA_WORKFLOW_PATH, judgeProvenance, readProvenance, testerVerdict } from './provenance.mjs';
+import { judgeProvenance, readProvenance, testerVerdict } from './provenance.mjs';
+
+const QA_WORKFLOW_PATH = '.github/workflows/pr-qa.yml';
 
 const SHA = 'a'.repeat(40);
 const RUN = 'https://github.com/george-hutanu/motor-fix/actions/runs/123';
@@ -111,6 +113,12 @@ describe('agent-review provenance — reading it from GitHub', () => {
 
   it('counts a rename away from pr-qa.yml as changing it', async () => {
     const state = await readProvenance({ pr: 21, shas: [SHA], gh: fake(routes({ 'pulls/21/files': JSON.stringify({ filename: 'x.yml', previous_filename: QA_WORKFLOW_PATH }) })) });
+    assert.equal(state.qaWorkflowChanged, true);
+  });
+
+  it("counts a file list at GitHub's cap as changing pr-qa.yml, since the edit may be past it", async () => {
+    const many = Array.from({ length: 3000 }, (_, i) => JSON.stringify({ filename: `f${i}.ts`, previous_filename: null })).join('\n');
+    const state = await readProvenance({ pr: 21, shas: [SHA], gh: fake(routes({ 'pulls/21/files': many })) });
     assert.equal(state.qaWorkflowChanged, true);
   });
 

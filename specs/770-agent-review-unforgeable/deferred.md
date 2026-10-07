@@ -1,0 +1,3 @@
+# Deferred findings: 770-agent-review-unforgeable
+
+- [ ] `.claude/scripts/pr-test/provenance.mjs` (`testerVerdict`) — **medium** — the merge gate counts only a "Verdict:" review written by an account of type User. That is the only way a cloud tester's failing verdict reaches the gate, but no cloud lap has yet shown which account the proxy posts reviews as. On the first cloud lap, check the review's `user.type`. If it is a Bot, accept that login by name. (code-reviewer, 2026-10-07) — Notion: https://app.notion.com/p/Tech-debt-ST-770-claude-scripts-pr-test-provenance-mjs-testerVerdict-the-merge-gate-counts-o-3f2607bff0d28188947ddd65820c7e14
