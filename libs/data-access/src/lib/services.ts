@@ -7,6 +7,7 @@ export { MeService } from './services/me.service';
 export { AuditHistoryService } from './services/audit-history.service';
 export { NotificationsService } from './services/notifications.service';
 export { BrandsService } from './services/brands.service';
+export { CatalogueService } from './services/catalogue.service';
 export { PublicHolidaysService } from './services/public-holidays.service';
 export { SearchService } from './services/search.service';
 export { AdminService } from './services/admin.service';
