@@ -172,13 +172,11 @@ describe('ready', () => {
     return ['git diff --cached --quiet', () => ({ code: codes[i++] ?? 0 })];
   };
 
-  it('commits the records, checks and publishes the body, marks ready, runs qa, commits the qa line, writes handoff.md and posts it', () => {
-    let posted = '';
-    const h = harness({ answers: [staged([1, 1]), ['gh pr comment', (cmd) => { posted = readFileSync(cmd.match(/--body-file (\S+)/)[1], 'utf8'); return {}; }]] });
+  it('commits the records, checks and publishes the body, marks ready, runs qa, commits the qa line, writes handoff.md and, off the cloud, posts nothing', () => {
+    const h = harness({ answers: [staged([1, 1])] });
     const result = step(['ready', '--body-file', body, '--decisions', 'none'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     const calls = ofTool(h.calls).filter((c) => !c.startsWith('git rev-parse'));
-    assert.match(calls.pop(), /^gh pr comment 141 --body-file \S+$/);
     assert.deepEqual(calls, [
       `gh pr view ${BRANCH} --json number,title,isDraft,url`,
       'node .claude/scripts/level.mjs check --ready --json',
@@ -199,7 +197,7 @@ describe('ready', () => {
     assert.match(note, /PR: #141 https:\/\/github.com\/george-hutanu\/motor-fix\/pull\/141 · branch 696-lifecycle-script · worktree \S+ · head abcdef1234567890/);
     assert.match(note, /story 3f0607bff0d2812e96e9c2882339f2bd/);
     assert.match(note, /Open decisions: none/);
-    assert.equal(posted, `<!-- speckit-handoff -->\n${note}`);
+    assert.ok(result.did.includes('handoff comment skipped (not a cloud session)'), JSON.stringify(result.did));
   });
 
   it('includes .specify/capabilities in the records when it exists, and makes no commit when nothing changed', () => {
@@ -282,22 +280,49 @@ describe('handoff: the note survives a fresh VM as a marked PR comment', () => {
   const comments = (...bodies) => ['gh pr view 141 --json comments', { stdout: JSON.stringify({ comments: bodies.map((body, i) => ({ body, createdAt: `2026-10-06T10:0${i}:00Z` })) }) }];
   beforeEach(() => fixture());
 
-  it('posts the current note, marker first, on the PR', () => {
+  const CLOUD = { GH_TOKEN: 'proxy-injected', CLAUDE_CODE_REMOTE: 'true' };
+  // A cloud session's gh goes over REST: answer the pull lookups, and send each
+  // POST to issues/141/comments (its JSON body on stdin) to `post`.
+  const cloudGh = (h, post) => {
+    const run = h.io.run;
+    h.io.run = (file, args, opts = {}) => {
+      const cmd = [file, ...args].join(' ');
+      if (cmd.includes('issues/141/comments -X POST')) {
+        h.calls.push(cmd);
+        return { code: 0, stdout: '{}', stderr: '', ...post(JSON.parse(opts.input).body) };
+      }
+      if (cmd.includes('pulls?head=')) return { code: 0, stdout: JSON.stringify([[{ number: 141, state: 'open' }]]), stderr: '' };
+      if (/pulls\/141 -X GET/.test(cmd)) return { code: 0, stdout: JSON.stringify({ number: 141, title: TITLE, draft: true, state: 'open', html_url: PR_URL, node_id: 'PR_1' }), stderr: '' };
+      return run(file, args, opts);
+    };
+    return h;
+  };
+
+  it('posts the current note, marker first, on the PR in a cloud session', () => {
     writeFileSync(note(), '# Hand-off\n- QA run: 9 · head abc · lap 2 · url\n');
-    let posted = '';
-    const h = harness({ answers: [['gh pr comment', (cmd) => { posted = readFileSync(cmd.match(/--body-file (\S+)/)[1], 'utf8'); return {}; }]] });
+    const posted = [];
+    const h = cloudGh(harness({ env: CLOUD }), (b) => (posted.push(b), {}));
     const result = step(['handoff', '--pr', '141'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
-    assert.ok(h.calls.some((c) => /^gh pr comment 141 --body-file \S+$/.test(c)));
-    assert.equal(posted, `${MARK}\n# Hand-off\n- QA run: 9 · head abc · lap 2 · url\n`);
+    assert.deepEqual(posted, [`${MARK}\n# Hand-off\n- QA run: 9 · head abc · lap 2 · url\n`]);
+  });
+
+  it('posts nothing off the cloud: the worktree keeps the note', () => {
+    writeFileSync(note(), '# Hand-off\n');
+    const h = harness();
+    const result = step(['handoff', '--pr', '141'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(!h.calls.some((c) => c.includes('comment')), JSON.stringify(h.calls));
+    assert.ok(result.did.includes('handoff comment skipped (not a cloud session)'));
   });
 
   it('a ready whose comment fails keeps the note and names only the re-post as the fix', () => {
-    const h = harness({ answers: [['git diff --cached --quiet', { code: 0 }], ['gh pr comment', { code: 1, stderr: 'HTTP 502' }]] });
+    const posted = [];
+    const h = cloudGh(harness({ env: CLOUD, answers: [['git diff --cached --quiet', { code: 0 }]] }), (b) => (posted.push(b), { code: 1, stderr: 'HTTP 502' }));
     writeFileSync(join(repo, 'body.md'), '## Why\n\nfilled\n');
     const result = step(['ready', '--body-file', join(repo, 'body.md')], h.io);
     assert.equal(result.ok, false);
-    assert.ok(h.calls.includes('gh pr ready 141'));
+    assert.deepEqual(posted, [`${MARK}\n${readFileSync(note(), 'utf8')}`]);
     assert.ok(existsSync(note()));
     assert.match(result.fix, /lifecycle\.mjs handoff --pr 141/);
     assert.match(result.fix, /HTTP 502/);
@@ -308,7 +333,7 @@ describe('handoff: the note survives a fresh VM as a marked PR comment', () => {
     const h = harness({ answers: [[`gh pr view ${BRANCH} --json number`, { stdout: '{"number":141}' }]] });
     const result = step(['handoff'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
-    assert.ok(h.calls.some((c) => c.startsWith('gh pr comment 141 ')));
+    assert.equal(result.pr, 141);
   });
 
   it('refuses to post when there is no note, and posts nothing', () => {

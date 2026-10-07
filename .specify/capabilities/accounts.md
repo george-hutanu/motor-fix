@@ -15,6 +15,7 @@ features:
   - 564-session-reload-role-race
   - 393-whatsapp-phone-sign-in
   - 536-gate-dialog-dashboard
+  - 569-auth-events-through-event-port
 ---
 
 # Capability: Accounts
@@ -303,9 +304,9 @@ _From 128-sign-out._
 
 _From 128-sign-out._
 
-### 128-FR-004 — After the revocation is saved, the API MUST publish a `session.revoked` live event to `account:{accountId}`; a failed publish MUST be logged and MUST NOT change the answer.
+### 569-FR-003 — After the transaction of a completed password reset or a sign-out on all devices commits, the API MUST publish one `session.revoked` live message to `account:{accountId}` through one method of the sign-in service that both flows call; a failed publish MUST be logged and MUST NOT change the answer (extends `128-FR-004` to the reset). The order of this message and the password_changed e-mail is not specified.
 
-_From 128-sign-out._
+_From 569-auth-events-through-event-port._
 
 ### 128-FR-005 — When "Ieși din cont" signs this tab out, the web app MUST tell the other tabs of the same browser, and each of them MUST forget its session, close its live connection and open Home.
 
@@ -535,6 +536,18 @@ _From 393-whatsapp-phone-sign-in._
 
 _From 536-gate-dialog-dashboard._
 
+### 569-FR-001 — A completed password reset MUST record one domain event of the new kind `account.password_reset` (added to the typed event catalogue, `257-FR-006`) through the event port, inside the same transaction that takes the link, replaces the password, deletes the account's refresh tokens and writes the audit entry; its subject and audience are the account, and its payload is exactly `{ accountId }`.
+
+_From 569-auth-events-through-event-port._
+
+### 569-FR-002 — A password reset that is refused (link unknown, used, expired or taken by a concurrent save; weak password; maintenance for a non-admin), or whose transaction fails for any reason (the event port included), MUST record no `account.password_reset` event, and the transaction's other writes MUST roll back with it; the answer to the client stays what it is today.
+
+_From 569-auth-events-through-event-port._
+
+### 569-FR-004 — The password_changed e-mail, the audit entry, the sessions revoked and the reset's answer MUST stay as ST-127 specified them; the API contract (openapi.json) and the web app MUST NOT change.
+
+_From 569-auth-events-through-event-port._
+
 ## Retired
 
 - `079-FR-017` — superseded by `082-FR-021` (2026-10-04)
@@ -545,3 +558,5 @@ _From 536-gate-dialog-dashboard._
 - `082-FR-018` — superseded by `130-FR-004` (2026-10-05)
 
 - `080-FR-009` — superseded by `393-FR-012` (2026-10-06)
+
+- `128-FR-004` — superseded by `569-FR-003` (2026-10-07)

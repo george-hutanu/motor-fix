@@ -6,12 +6,13 @@
 //   node .claude/scripts/lifecycle.mjs open --title "<type>(<scope>): ST-<n> <subject>" [--body-file <f>] [--notion-done]
 //   node .claude/scripts/lifecycle.mjs ready --body-file <f> [--decisions "<text>"] [--notion-done]
 //   node .claude/scripts/lifecycle.mjs merge [--pr <n>] [--notion-done]
-//   node .claude/scripts/lifecycle.mjs handoff [--pr <n>]            post handoff.md as a marked PR comment
+//   node .claude/scripts/lifecycle.mjs handoff [--pr <n>]            post handoff.md as a marked PR comment (cloud only)
 //   node .claude/scripts/lifecycle.mjs handoff --restore [--pr <n>]  write a missing handoff.md from the newest one
 //
 // git ignores handoff.md, so a cloud session resumed on a fresh VM has none:
-// the PR keeps every version of the note as a comment whose first line is
-// HANDOFF_MARK, and the newest one wins.
+// there the PR keeps every version of the note as a comment whose first line
+// is HANDOFF_MARK, and the newest one wins. Off the cloud the worktree keeps
+// the note, so nothing is posted.
 //
 // A hook only sees `node lifecycle.mjs …`, so every git and gh command is first
 // fed to the Bash gates settings.json registers (run-hook.mjs <id>), exactly as
@@ -288,8 +289,12 @@ function ready(ctx, flags) {
   return { pr: pr.number, head: head.slice(0, 7) };
 }
 
-/** Post the note as a PR comment, the marker on its first line. */
+/** Post the note as a PR comment, the marker on its first line: in a cloud session only, the one that needs it back. */
 function postHandoff(ctx, n) {
+  if (ctx.env.CLAUDE_CODE_REMOTE !== "true") {
+    ctx.did.push("handoff comment skipped (not a cloud session)");
+    return;
+  }
   const text = readFileSync(join(ctx.feature.dir, "handoff.md"), "utf8");
   withTemp("handoff.md", `${HANDOFF_MARK}\n${text}`, (file) => ctx.gh("pr", "comment", String(n), "--body-file", file));
   ctx.did.push("handoff comment");

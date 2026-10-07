@@ -209,7 +209,7 @@ describe('saving a task', () => {
     expect($('[role="alertdialog"]')).toBeNull();
   });
 
-  it('shows the confirmation with Close when the task does not close itself', async () => {
+  it('shows the confirmation with Done when the task does not close itself', async () => {
     closeOnDone = false;
     await openTask();
     await type('name', 'Ana Pop');
@@ -219,7 +219,8 @@ describe('saving a task', () => {
     const status = $('mf-task-done [role="status"]');
     expect(status?.textContent?.trim()).toBe(ro('shell.brand'));
     const close = $<HTMLButtonElement>('mf-task-done button');
-    expect(close?.textContent?.trim()).toBe(ro('shell.form.close'));
+    expect(close?.textContent?.trim()).toBe(ro('shell.form.done'));
+    expect(close?.textContent?.trim()).not.toBe(ro('shell.overlay.close'));
     expect(document.activeElement).toBe(close);
 
     close?.click();
@@ -577,6 +578,52 @@ describe('retrying', () => {
 
     expect(current.sent).toHaveLength(2);
     expect(current.sent[1].key).not.toBe(current.sent[0].key);
+  });
+
+  it('keeps the error line while the retry is sending and drops it on success', async () => {
+    const retry = deferred<string>();
+    answer = () => Promise.reject(problem(500, { code: 'internal_error' }));
+    await openTask();
+    await type('name', 'Ana Pop');
+    await press();
+    answer = () => retry.promise;
+    await press();
+
+    expect(current.save.state()).toBe('sending');
+    expect(text('mf-task-error')).toBe(ro('shell.form.problem.internal_error'));
+
+    retry.resolve('saved');
+    await settle();
+    expect(current.save.problem()).toBeNull();
+    expect(current.save.errors()).toEqual([]);
+  });
+
+  it('puts the new failure in place of the old one on the answer', async () => {
+    const retry = deferred<string>();
+    answer = () => Promise.reject(problem(500, { code: 'internal_error' }));
+    await openTask();
+    await type('name', 'Ana Pop');
+    await press();
+    answer = () => retry.promise;
+    await press();
+    retry.reject(problem(409, { code: 'conflict' }));
+    await settle();
+
+    expect(text('mf-task-error')).toBe(ro('shell.form.problem.conflict'));
+  });
+
+  it('drops the error line when the press finds an invalid field', async () => {
+    answer = () => Promise.reject(problem(500, { code: 'internal_error' }));
+    await openTask();
+    await type('name', 'Ana Pop');
+    await press();
+    await type('name', '');
+    await press();
+
+    expect(current.save.state()).toBe('invalid');
+    expect(current.save.problem()).toBeNull();
+    expect(text('mf-task-error')).toBe('');
+    expect(current.sent).toHaveLength(1);
   });
 
   it('uses a new key after a success', async () => {

@@ -115,7 +115,7 @@ test.describe('a small task saves once', () => {
       .locator('mf-task-done')
       .getByRole('button', {
         exact: true,
-        name: t('ro', 'shell.form.close'),
+        name: t('ro', 'shell.form.done'),
       });
     await expect(close).toBeFocused();
     await expect(page.locator('.mf-form-result')).toContainText('B 123 ABC');

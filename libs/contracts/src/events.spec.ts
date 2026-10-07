@@ -2,6 +2,7 @@ import { EVENT_KINDS, type EventKind } from './events';
 
 describe('the event kinds', () => {
   it.each([
+    'account.password_reset',
     'request.created',
     'quote.sent',
     'quote.accepted',
