@@ -40,6 +40,7 @@ export type { PhoneCodeDto } from './models/phone-code-dto';
 export type { PhoneSessionDto } from './models/phone-session-dto';
 export type { PhoneSignInDto } from './models/phone-sign-in-dto';
 export type { ProvidersDto } from './models/providers-dto';
+export type { PublicGarageDto } from './models/public-garage-dto';
 export type { PushKeyDto } from './models/push-key-dto';
 export type { PushKeysDto } from './models/push-keys-dto';
 export type { PushSubscriptionDto } from './models/push-subscription-dto';
@@ -162,6 +163,8 @@ export type { GarageInvitesControllerResend$Params as GarageInvitesControllerRes
 export { garageInvitesControllerResend as garageInvitesControllerResend } from './fn/garages/garage-invites-controller-resend';
 export type { GarageInvitesControllerRevoke$Params as GarageInvitesControllerRevoke$Params } from './fn/garages/garage-invites-controller-revoke';
 export { garageInvitesControllerRevoke as garageInvitesControllerRevoke } from './fn/garages/garage-invites-controller-revoke';
+export type { PublicGaragesControllerBySlug$Params as PublicGaragesControllerBySlug$Params } from './fn/garages/public-garages-controller-by-slug';
+export { publicGaragesControllerBySlug as publicGaragesControllerBySlug } from './fn/garages/public-garages-controller-by-slug';
 export type { InvitesControllerCheck$Params as InvitesControllerCheck$Params } from './fn/invites/invites-controller-check';
 export { invitesControllerCheck as invitesControllerCheck } from './fn/invites/invites-controller-check';
 export type { InvitesControllerAccept$Params as InvitesControllerAccept$Params } from './fn/invites/invites-controller-accept';

@@ -90,8 +90,11 @@ describe('api conventions', () => {
     await store.start();
   }, 120_000);
   afterAll(async () => {
-    await store.stop();
-    await turn.release();
+    try {
+      await store.stop();
+    } finally {
+      await turn.release();
+    }
   });
   afterEach(() => app.close());
 

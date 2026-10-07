@@ -1492,6 +1492,42 @@
         ]
       }
     },
+    "/api/v1/garages/{slug}": {
+      "get": {
+        "operationId": "PublicGaragesController_bySlug",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicGarageDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: never approved, or unknown"
+          },
+          "410": {
+            "description": "gone: suspended"
+          }
+        },
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/live": {
       "get": {
         "operationId": "LiveController_live",
@@ -3026,6 +3062,26 @@
           "kind",
           "name",
           "email"
+        ]
+      },
+      "PublicGarageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
         ]
       },
       "LiveTestDto": {

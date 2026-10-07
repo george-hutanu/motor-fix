@@ -1,11 +1,18 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 
 import { GarageBrandsService } from './garage-brands.service';
+import { PublicGaragesService } from './public-garages';
+import { PublicGaragesController } from './public-garages.controller';
 import {
   GarageInvitesController,
   InvitesController,
 } from './staff-invite.controller';
 import { INVITE_EMAIL, StaffInviteService } from './staff-invite.service';
+import { VerificationService } from './verification.service';
+import {
+  VERIFICATION_CONFIG,
+  type VerificationConfig,
+} from './verification-config';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { Brevo } from '../notifications/brevo';
@@ -21,14 +28,23 @@ export class GaragesModule {
   static register(
     email: EmailConfig,
     notifications: DynamicModule,
+    verification: VerificationConfig,
   ): DynamicModule {
     return {
-      controllers: [GarageInvitesController, InvitesController],
+      controllers: [
+        GarageInvitesController,
+        InvitesController,
+        PublicGaragesController,
+      ],
+      exports: [VerificationService],
       imports: [notifications],
       module: GaragesModule,
       providers: [
         GarageBrandsService,
         StaffInviteService,
+        PublicGaragesService,
+        VerificationService,
+        { provide: VERIFICATION_CONFIG, useValue: verification },
         { provide: INVITE_EMAIL, useValue: email },
         {
           provide: Brevo,

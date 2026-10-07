@@ -8,12 +8,23 @@ enum GarageMemberRole {
   @@map("garage_member_role")
 }
 
+// Public when, and only when, `approved`.
+enum GarageStatus {
+  draft
+  approved
+  suspended
+
+  @@map("garage_status")
+}
+
 model Garage {
   id                      String                   @id @default(uuid()) @db.Uuid
   name                    String
   slug                    String                   @unique
-  status                  String                   @default("draft")
+  status                  GarageStatus             @default(draft)
+  approvedAt              DateTime?                @map("approved_at") @db.Timestamptz(3)
   createdAt               DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  verificationFiles       VerificationFile[]
   members                 GarageMember[]
   mechanics               Mechanic[]
   notificationPreferences NotificationPreference[]
@@ -141,4 +152,40 @@ model GarageBrandJob {
 
   @@id([garageId, brandId, jobTypeId])
   @@map("garage_brand_job")
+}
+
+enum VerificationFileStatus {
+  submitted
+  in_review
+  approved
+  more_requested
+  rejected
+
+  @@map("verification_file_status")
+}
+
+// A garage's request to be approved. At most one file per garage is live
+// (submitted, in review or approved): a partial unique index the migration
+// writes by hand. The actors are kept without foreign keys, as the history
+// keeps them; a null `decidedBy` is the system.
+model VerificationFile {
+  id             String                 @id @default(uuid()) @db.Uuid
+  garageId       String                 @map("garage_id") @db.Uuid
+  status         VerificationFileStatus @default(submitted)
+  openedBy       String?                @map("opened_by") @db.Uuid
+  openedAt       DateTime?              @map("opened_at") @db.Timestamptz(3)
+  decidedBy      String?                @map("decided_by") @db.Uuid
+  decidedAt      DateTime?              @map("decided_at") @db.Timestamptz(3)
+  reopenedBy     String?                @map("reopened_by") @db.Uuid
+  reopenedAt     DateTime?              @map("reopened_at") @db.Timestamptz(3)
+  previousFileId String?                @unique @map("previous_file_id") @db.Uuid
+  reasonCode     String?                @map("reason_code")
+  reasonNote     String?                @map("reason_note")
+  createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  garage         Garage                 @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  previousFile   VerificationFile?      @relation("follows", fields: [previousFileId], references: [id], onDelete: SetNull)
+  nextFile       VerificationFile?      @relation("follows")
+
+  @@index([garageId, createdAt])
+  @@map("verification_file")
 }

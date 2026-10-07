@@ -1,9 +1,10 @@
 import { EventEmitter } from 'node:events';
 
+import { EVENT_KINDS } from '@motor-fix/contracts';
 import { Logger } from '@nestjs/common';
 
 import type { GarageAccess } from './garage-access';
-import { LiveHub } from './live.hub';
+import { KIND_CAPABILITY, LiveHub } from './live.hub';
 import type { Role } from '../auth/capabilities';
 
 class Sink extends EventEmitter {
@@ -157,7 +158,8 @@ describe('who a live event reaches', () => {
     expect(mover.kinds()).toEqual(['booking.move_refused']);
   });
 
-  it('keeps prices, settings, feature switches and the team from a receptionist, and gives the owner everything', async () => {
+  // @traces 574-FR-002
+  it('keeps prices, settings, feature switches, the team, reviews, the profile and invites from a receptionist, and gives the owner everything', async () => {
     const receptionist = staff('maria', 'receptionist');
     const owner = staff('ion', 'garage');
     const hidden = [
@@ -166,21 +168,24 @@ describe('who a live event reaches', () => {
       'garage.features_changed',
       'member.joined',
       'mechanic.updated',
+      'review.posted',
+      'garage.updated',
+      'invite.sent',
+    ];
+    const shown = [
+      'request.created',
+      'message.sent',
+      'booking.move_proposed',
+      'quote.sent',
+      'booking.confirmed',
     ];
 
-    for (const kind of [...hidden, 'request.created', 'booking.created']) {
+    for (const kind of [...hidden, ...shown]) {
       await fanOut(['garage:g1'], kind);
     }
 
-    expect(receptionist.kinds()).toEqual([
-      'request.created',
-      'booking.created',
-    ]);
-    expect(owner.kinds()).toEqual([
-      ...hidden,
-      'request.created',
-      'booking.created',
-    ]);
+    expect(receptionist.kinds()).toEqual(shown);
+    expect(owner.kinds()).toEqual([...hidden, ...shown]);
   });
 
   it("forwards no media event to the staff of a garage that switched live media off, and still to the job's driver", async () => {
@@ -331,4 +336,123 @@ describe('streams that follow the account', () => {
       expect(other.ended).toBe(false);
     },
   );
+});
+
+// @traces 574-FR-001 574-FR-002 574-FR-003
+describe('what each garage role hears through the garage channel', () => {
+  // One kind per family of the capability table, and one no family claims.
+  const FAMILIES = [
+    ['price_list.updated', 'garage.prices'],
+    ['member.removed', 'garage.team'],
+    ['mechanic.added', 'garage.team'],
+    ['invite.sent', 'garage.team'],
+    ['garage.features_changed', 'garage.feature_switches'],
+    ['garage.updated', 'garage.profile'],
+    ['review.posted', 'garage.reviews'],
+    ['request.created', 'garage.requests'],
+    ['message.sent', 'garage.requests'],
+    ['booking.move_proposed', 'garage.schedule'],
+    ['booking.moved', 'garage.schedule'],
+    ['quote.sent', null],
+  ] as const;
+
+  // Who hears each family: the owner, a receptionist, a mechanic with no
+  // rights, one who may answer quotes, and one who may move bookings.
+  const HEARS: Record<string, [boolean, boolean, boolean, boolean, boolean]> = {
+    'garage.feature_switches': [true, false, false, false, false],
+    'garage.prices': [true, false, false, false, false],
+    'garage.profile': [true, false, false, false, false],
+    'garage.requests': [true, true, false, true, false],
+    'garage.reviews': [true, false, false, false, false],
+    'garage.schedule': [true, true, false, false, true],
+    'garage.team': [true, false, false, false, false],
+    none: [true, true, false, false, false],
+  };
+
+  it.each(FAMILIES)(
+    "delivers %s by the role's %s capability",
+    async (kind, capability) => {
+      const streams = [
+        staff('ion', 'garage'),
+        staff('maria', 'receptionist'),
+        staff('elena', 'mechanic', 'm1'),
+        staff('quoter', 'mechanic', 'm3'),
+        staff('mover', 'mechanic', 'm4'),
+      ];
+
+      await fanOut(['garage:g1'], kind);
+
+      expect(streams.map((s) => s.kinds().length === 1)).toEqual(
+        HEARS[capability ?? 'none'],
+      );
+    },
+  );
+
+  it('gives a mechanic with every right nothing beyond requests, messages and booking moves', async () => {
+    load.mockResolvedValue(
+      access({
+        mechanics: new Map([
+          [
+            'all',
+            {
+              canAnswerQuotes: true,
+              canMoveBookings: true,
+              canRecordFinalPrice: true,
+            },
+          ],
+        ]),
+      }),
+    );
+    const mechanic = staff('all', 'mechanic', 'm5');
+
+    for (const kind of [
+      'quote.sent',
+      'booking.confirmed',
+      'review.posted',
+      'price_list.updated',
+      'job.started',
+      'request.created',
+      'booking.moved',
+    ]) {
+      await fanOut(['garage:g1'], kind);
+    }
+
+    expect(mechanic.kinds()).toEqual(['request.created', 'booking.moved']);
+  });
+
+  it('checks a receptionist is still staff before the capability table', async () => {
+    load.mockResolvedValue(access({ receptionists: new Set() }));
+    const former = staff('maria', 'receptionist');
+
+    await fanOut(['garage:g1'], 'request.created');
+    await fanOut(['garage:g1'], 'quote.sent');
+
+    expect(former.kinds()).toEqual([]);
+  });
+
+  it("keeps a mechanic's own jobs and bookings on their mechanic channel whatever the rights", async () => {
+    const mechanic = staff('elena', 'mechanic', 'm1');
+
+    await fanOut(['garage:g1', 'mechanic:m1'], 'job.started');
+    await fanOut(['garage:g1', 'mechanic:m1'], 'booking.confirmed');
+
+    expect(mechanic.kinds()).toEqual(['job.started', 'booking.confirmed']);
+  });
+});
+
+// @traces 574-FR-001
+describe('the kind-to-capability table', () => {
+  it('gives every kind at most one capability', () => {
+    for (const kind of [...EVENT_KINDS, 'garage.settings_changed']) {
+      const matches = KIND_CAPABILITY.filter(([kinds]) => kinds.test(kind));
+      expect([kind, matches.length <= 1]).toEqual([kind, true]);
+    }
+  });
+
+  it('grants nothing through the garage by a right every mechanic holds', () => {
+    const capabilities = KIND_CAPABILITY.map(([, capability]) => capability);
+
+    expect(capabilities).not.toContain('garage.own_jobs');
+    expect(capabilities).not.toContain('garage.audit_history');
+  });
 });

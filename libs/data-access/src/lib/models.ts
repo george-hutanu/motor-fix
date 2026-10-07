@@ -34,6 +34,7 @@ export type { PhoneCodeDto } from './models/phone-code-dto';
 export type { PhoneSessionDto } from './models/phone-session-dto';
 export type { PhoneSignInDto } from './models/phone-sign-in-dto';
 export type { ProvidersDto } from './models/providers-dto';
+export type { PublicGarageDto } from './models/public-garage-dto';
 export type { PushKeyDto } from './models/push-key-dto';
 export type { PushKeysDto } from './models/push-keys-dto';
 export type { PushSubscriptionDto } from './models/push-subscription-dto';

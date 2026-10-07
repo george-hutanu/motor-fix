@@ -5,6 +5,8 @@ export * from './consent';
 export * from './env';
 export * from './events';
 export * from './files';
+export * from './garage-status';
+export * from './garages.dto';
 export * from './health.dto';
 export * from './live.dto';
 export * from './me.dto';
