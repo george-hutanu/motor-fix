@@ -5,6 +5,17 @@
 **Status**: Draft
 **Input**: ST-560 (tech debt from ST-392, code-reviewer, PR #73): "`libs/domain/src/notifications/notifications.service.ts` `fallBack` (and `notify`, pre-existing) writes a `queued` row and then adds its job; if Redis refuses the add, the row stays `queued` with no job and nothing re-queues it. A sweeper that re-adds `send-<id>` for stale `queued` rows (idempotent by job id) would close it for every channel." — https://app.notion.com/p/3f0607bff0d281c1b564c357379131d1. Sources: the Notion task (no comments on it), `notifications.service.ts`, `notifications.processor.ts`, `scheduler/timers.ts`, the `notifications` capability (522-FR-001..003, 561-FR-001..004).
 
+## Clarifications
+
+### Session 2026-10-07
+
+- Q: Is a `held` follower whose flush add failed after `release` in scope? → A: No; it is `held` (FR-007). The edge case is rewritten: `release` never strands a `queued` row.
+- Q: A `queued` row whose job sits in the queue's kept-failed set (attempts exhausted on a non-provider error)? → A: The add is a no-op while the failed job is kept (FR-003); once the queue evicts it (`removeOnFail: 1000`), the next sweep re-queues the row like any stranded one. No removal of failed jobs: a poison row is not retried in a loop.
+- Q: Same options as a first add? → A: Yes, through the service's existing add (`JOB`: attempts, backoff, cleanup) (FR-001).
+- Q: A lapsed claim with no job is never swept? → A: Yes; a duplicate is worse than a loss; the lapse only serves the row's own job retry (FR-004).
+- Q: How does the processor know a send went unrecorded (FR-006)? → A: The record step answers whether it recorded; the send job skips its claim release when it did not, on every channel the send job serves. Group flushes hold no claim and stay as today.
+- Q: Are FR-004..006 within ST-560 although the story names only the sweeper? → A: Yes: without them the sweeper re-sends a message the provider took, undoing ST-522/ST-561 (Constitution Agent Execution Rules: scope is the deliverable, including not regressing it).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - A message whose job was lost still reaches the person (Priority: P1)
@@ -59,7 +70,7 @@ A `held` row (quiet hours, a grouping window) has its own delayed job and its ow
 
 - The queue is still down when the sweep runs: the add fails, the sweep logs it and ends; the next sweep tries again. A failed add never fails or marks the row.
 - Two worker instances sweep at once: both add the same job id; one add is ignored, and the processor's claim (ST-522) guards the send anyway.
-- A row stranded by `release` (a `held` row that became `queued` at 08:00 and whose flush or send add failed): it is a `queued` row like any other and is re-queued; its age is counted from when it was created, so it is picked up on the first sweep after release.
+- A `held` follower whose group's flush job was lost (`release` → `dispatch` re-holds it before the add): it is `held`, so the sweep leaves it (FR-007, Assumptions). `release` never strands a `queued` row: when it answers "send now", the job that called it sends the row under its claim.
 - The sweep's own job cannot be scheduled (Redis down at worker start): the worker still starts and serves its queue; the schedule is upserted on every start, so the next start restores it.
 - A row for a deleted account is re-queued like any other; the processor fails it (`account_deleted`) when it claims it, as it does today.
 
@@ -67,10 +78,10 @@ A `held` row (quiet hours, a grouping window) has its own delayed job and its ow
 
 ### Functional Requirements
 
-- **FR-001**: The worker MUST run a periodic sweep that, for every stale `queued` notification row, adds its send job under the row's usual job id (`send-<id>`, no delay), on every channel.
+- **FR-001**: The worker MUST run a periodic sweep that, for every stale `queued` notification row, adds its send job under the row's usual job id and options (`send-<id>`, no delay, the same attempts, backoff and cleanup as a first add), on every channel.
 - **FR-002**: A row is stale when it has been `queued` for longer than the stale window (5 minutes, see Assumptions), measured from its creation time.
 - **FR-003**: The sweep MUST be idempotent: adding a job whose id already exists in the queue (waiting, delayed, active or kept failed) MUST change nothing, so a row whose job is alive is never sent twice.
-- **FR-004**: The sweep MUST NOT add a job for a `queued` row that carries a send claim, whether the claim is live or lapsed: such a row was handed to a send job and the system cannot know whether the provider took the message.
+- **FR-004**: The sweep MUST NOT add a job for a `queued` row that carries a send claim, whether the claim is live or lapsed: such a row was handed to a send job and the system cannot know whether the provider took the message. A lapsed claim still lets the row's own job retry it (522-FR-003); it only keeps the sweep away.
 - **FR-005**: The sweep MUST NOT add a job for a `queued` SMS row that carries the "being sent" mark (561-FR-001).
 - **FR-006**: When the provider has accepted a message and every write recording the send has failed (522-FR-002), the processor MUST keep the row's send claim rather than release it, so FR-004 shields the row from the sweep. A release that fails for other reasons keeps 522-FR-003 as it is.
 - **FR-007**: The sweep MUST touch only `queued` rows: `held`, `sent` and `failed` rows and group flush jobs are outside it.
@@ -99,11 +110,11 @@ A `held` row (quiet hours, a grouping window) has its own delayed job and its ow
 - **SC-001**: A `queued` row with no job is sent within one sweep interval plus the window (10 minutes at the defaults) instead of never.
 - **SC-002**: Across the integration tests for the sweep, a row whose job exists, a row with a claim, an SMS row with the sending mark, a `held` row and a `sent` row receive zero added jobs.
 - **SC-003**: The existing notifications, phone and push processor suites pass unchanged apart from the claim kept after an unrecorded send (FR-006).
-- **SC-004**: No new table, column, route, contract or screen (`git diff --stat` touches `libs/domain/src/notifications/**` and the worker wiring only).
+- **SC-004**: No new table, column, route, contract or screen: the diff changes nothing under `libs/contracts`, `libs/domain/prisma`, `apps/api` or `apps/web`.
 
 ## Assumptions
 
-- Stale window: 5 minutes, measured from `createdAt`; sweep every 5 minutes, as the scheduler's timer sweep (`scheduler/timers.ts`, `SWEEP_EVERY`) already does, on the notifications queue through a BullMQ job scheduler in the worker only. A row's first job is added with no delay, so any `queued` row older than that with no claim either has a job (the add is a no-op) or lost it. *(autonomous default)*
+- Stale window: 5 minutes, measured from `createdAt`; sweep every 5 minutes, as the scheduler's timer sweep (`scheduler/timers.ts`, `SWEEP_EVERY`) already does, on the notifications queue through a BullMQ job scheduler in the worker only. A row's first job is added with no delay, so any `queued` row older than that with no claim either has a job (the add is a no-op) or lost it. Neither number is in Notion (A9 says only "schedules built in"); SC-001's 10 minutes is the recovery path, distinct from the feature page's "within a minute" for the normal path. *(autonomous default)*
 - A row with a claim, live or lapsed, is never re-queued, even when its claim came from a worker that died before calling the provider: that case still has its job (the queue retries a stalled job), and when it has none, not sending beats sending twice; the operator finds it by the processor's "sent but not recorded" log line or by the row's claim. *(autonomous default)*
 - An SMS row with the sending mark is not re-queued either, though the processor would only fail it (`sms_unconfirmed`) and fall back: the fallback is a second message with the same content, and the finding asks that nothing sent goes twice. *(autonomous default)*
 - `held` rows are out of scope by the task's text; their delayed job can be lost the same way, and that gap, if wanted, is its own task. *(autonomous default)*
