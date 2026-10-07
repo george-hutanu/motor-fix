@@ -299,8 +299,11 @@ export class Session {
     // A sign-in or a role switch meanwhile: this answer is for the old one.
     // A renewal is not: the retry after a 401 answers for the same account.
     const { starts, switches } = this;
+    // Sent under a switch's token: the switch's own load decides the account,
+    // and a failed switch takes that role back.
+    const underSwitch = this.switchingTo !== null;
     const answer = await this.me.meControllerMe().catch(() => null);
-    if (!answer || generation !== this.generation) return;
+    if (!answer || underSwitch || generation !== this.generation) return;
     if (starts === this.starts && switches === this.switches) {
       this.current.set(answer);
     }
