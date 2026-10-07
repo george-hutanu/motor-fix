@@ -50,18 +50,18 @@ Above the list the driver reads how many garages work on the brand and how many 
 
 ### User Story 3 - Pages never mix the groups, and ties are settled (Priority: P3)
 
-A long list is read 20 garages a page. Whatever page the driver is on, no taker ever appears after a refuser: the paging carries the group, so a later page continues the group where the earlier one stopped. Inside each group the better-rated garage comes first; at equal rating the one with more reviews; then by name; a garage without a rating comes last in its group. The sort choices of ST-328 come later and apply inside the groups.
+A long list is read 20 garages a page. Whatever page the driver is on, no taker ever appears after a refuser: the paging carries the group, so a later page continues the group where the earlier one stopped. Inside each group the garages come by name, A to Z, and two garages with the same name by their id, so every page has one answer. No garage carries a rating yet (the reviews epic writes it); the rating-first default and the sort choices of ST-328 come with it and apply inside the same groups.
 
 **Why this priority**: It makes the order hold across pages and makes the order inside a group deterministic, so the results screen and its tests see one answer.
 
-**Independent Test**: Seed 25 takers and 25 refusers with ratings and review counts; read all three pages and check that the 25 takers fill the first page and the first five of the second, in rating-then-reviews-then-name order, and the refusers follow.
+**Independent Test**: Seed 25 takers and 25 refusers; read all three pages and check that the 25 takers fill the first page and the first five of the second, in name order, and the refusers follow, in name order.
 
 **Acceptance Scenarios**:
 
 1. **Given** 48 garages, 30 taking BMW, **When** the pages are read one after the other, **Then** pages one and two hold the 30 takers and the first page of refusers starts only after the last taker; no page holds a refuser before a taker.
-2. **Given** two takers with the same rating, **Then** the one with more reviews comes first.
-3. **Given** two takers with the same rating and review count, **Then** they come in name order.
-4. **Given** a taker without a rating, **Then** it comes after every rated taker, still in the first group.
+2. **Given** takers named "Auto Delta", "Auto Alfa" and "Auto Beta", **Then** they come Alfa, Beta, Delta.
+3. **Given** two takers with the same name, **Then** they come by id, and the page boundary between them neither repeats nor skips either.
+4. **Given** a refuser whose name sorts before every taker's, **Then** it still comes after the last taker.
 5. **Given** a page is read with the cursor of the previous page, **Then** no garage is repeated or skipped between the two pages.
 
 ---
@@ -73,13 +73,21 @@ A long list is read 20 garages a page. Whatever page the driver is on, no taker 
 - A garage whose stance changes between two pages of one read: the cursor names the group and the position, so the garage may be missing or repeated across the two pages, which is accepted; the counts are read once per page and may differ between pages after such a change.
 - A mobile mechanic is an approved garage like any other: counted and grouped the same way. The driver's area and service radii are MF-10's; this story lists every approved garage.
 - A cursor that does not belong to this brand or was not issued by this search is refused as a bad request, not answered with a wrong page.
-- A rating or review count is never written by this story; a garage with neither sorts last in its group, by name.
+- No rating or review count exists on a garage yet and this story adds none; the order inside a group is name, then id.
 
 ## Clarifications
 
 ### Session 2026-10-07 (autonomous run)
 
 The spec-kit clarification gate was answered from the Build brief, the constitution card and this repo. Each answer is an Assumptions line marked *(autonomous default)*; none was asked of the owner.
+
+### Session 2026-10-07 (clarify, autonomous)
+
+- Q: Should this story add rating and review-count columns that nothing writes, so the order inside a group can be rating first? → A: No. Inside a group the order is name, then id; the rating-first order comes with the reviews epic and ST-328 (Principle I; `Garage` has no rating, `libs/domain/prisma/schema/garages.prisma`). Open decision for the owner.
+- Q: Does the list test the driver's area or a mobile mechanic's service radius? → A: No; every approved garage is listed and counted until MF-10 (search distance and service areas) lands (Build brief "Out of scope"; context.md contradiction 1).
+- Q: Is the brand named by its id or its slug, and when is it "not found"? → A: By the brand's uuid (the garage brand rows reference it); not found only when no brand row has that id; a retired (inactive) brand still answers; a value that is not a uuid is a bad request.
+- Q: What does the cursor hold, and is it signed? → A: A keyset: the brand id, the group, and the last garage's name and id, base64url-encoded JSON, unsigned; a cursor that does not decode, names another brand or names no group is a bad request (as `invalid_cursor` in the brand search, `libs/domain/src/catalogue/brands.service.ts`).
+- Q: What breaks a tie between two garages with the same name, and which collation is "name order"? → A: The garage id breaks it; names compare under the database's default collation, and the tests use names that differ in their first ASCII letter.
 
 ## Requirements *(mandatory)*
 
@@ -90,10 +98,10 @@ The spec-kit clarification gate was answered from the Build brief, the constitut
 - **FR-003**: The request MUST be open to visitors without a session and listed with the public routes.
 - **FR-004**: Each listed garage MUST carry its id, name, slug, and its answer for the brand, one of `works_on`, `does_not_take` and `unstated`, so the screen can show the red lamp on every garage of the second group.
 - **FR-005**: The answer MUST carry two counts worked out once over every garage found, not over the page: how many work on the brand and how many do not take it (refusers and unmarked together); with no approved garage both are zero and the list is empty, with no error.
-- **FR-006**: The list MUST come 20 garages a page as `{ items, nextCursor, total, counts }`, with an opaque cursor for the next page that carries the group and the position, so the next page continues the same group where the previous one stopped and no garage is repeated or skipped between two consecutive pages of an unchanged list; `total` is the sum of the two counts.
-- **FR-007**: Inside each group the garages MUST come by rating, the better first; at equal rating by review count, more reviews first; then by name; a garage without a rating comes after every rated one in its group.
-- **FR-008**: A garage's rating and review count MUST be two figures stored on the garage, read by this search and written by no part of this story; absent until the reviews epic writes them.
-- **FR-009**: A brand id nobody holds MUST answer "not found"; a malformed brand id, or a cursor not issued by this search for this brand, MUST be refused as a bad request.
+- **FR-006**: The list MUST come 20 garages a page as `{ items, nextCursor, total, counts }`, with an opaque cursor for the next page that carries the brand, the group and the last garage's name and id (a keyset), so the next page continues the same group where the previous one stopped and no garage is repeated or skipped between two consecutive pages of an unchanged list; `total` is the sum of the two counts.
+- **FR-007**: Inside each group the garages MUST come by name under the database's default collation, then by id, so two garages of the same name have one order and a page boundary between them repeats or skips neither.
+- **FR-008**: A listed garage MUST carry only the fields FR-004 names: no rating, review count, brand note or refusal phrase is added to the garage or the answer by this story.
+- **FR-009**: The brand MUST be named by its uuid; a uuid no brand row holds MUST answer "not found", while a retired (inactive) brand still answers; a value that is not a uuid, or a cursor that does not decode, names another brand or names no group, MUST be refused as a bad request.
 - **FR-010**: The search MUST read a garage's answer for a brand from the garage brand rows ST-39 created (one row per garage and brand, no row is `unstated`), never from a second copy.
 - **FR-011**: The search MUST write nothing: no audit entry, no event, no search log (MF-10 owns the search log).
 
@@ -102,7 +110,6 @@ The spec-kit clarification gate was answered from the Build brief, the constitut
 - **Brand garage list**: the answer for one brand: the garages found, in two groups, 20 a page with a cursor, and the two counts over everything found.
 - **Listed garage**: an approved garage as the driver sees it in the list: id, name, slug, and its answer for the brand (`works_on`, `does_not_take`, `unstated`).
 - **Brand counts**: two numbers for one brand over every approved garage: those that work on it and those that do not take it (refusing and unmarked together).
-- **Garage rating figures**: a garage's rating and review count, read for the order inside a group; written by the reviews epic, absent until then.
 
 ## Spec Delta
 
@@ -118,15 +125,14 @@ The spec-kit clarification gate was answered from the Build brief, the constitut
 
 - **SC-001**: With six approved garages (three taking BMW, two refusing, one unmarked) and one suspended garage taking BMW, the BMW list holds exactly the six, the three takers first, the other three after them each with a refusing answer, and the counts read 3 and 3.
 - **SC-002**: With 48 approved garages (30 taking BMW) read 20 a page, every page is read, the 30 takers occupy positions 1 to 30 across the pages, no garage is repeated or skipped, and every page's counts read 30 and 18.
-- **SC-003**: Inside a group, a garage with rating 4.8 and 12 reviews comes before one with 4.8 and 7, which comes before one with 4.6, which comes before one with no rating; two equal garages come in name order.
+- **SC-003**: Inside a group, garages named Alfa, Beta and Delta come in that order whatever order they were created in, two garages of the same name come by id, and no refuser comes before a taker whatever its name.
 - **SC-004**: A visitor without a session gets the list; the route is in the public-routes list and every other new route is refused without a session, as the existing public-routes check enforces.
 - **SC-005**: With no garage taking Tesla and five approved, the Tesla list holds the five in the second group and the counts read 0 and 5; with no approved garage, the counts read 0 and 0.
 
 ## Assumptions
 
 - Search is by brand only, as the Build brief rules: no model, year or fuel filter, and no distance or area filter, which the brief leaves to MF-10 (search distance and service areas, not built yet); this story lists every approved garage, and when MF-10 lands the grouping applies within the area. A mobile mechanic is therefore counted and grouped like any other approved garage without a service-area test. *(autonomous default, Build brief "Rules and validation" and "Out of scope")*
-- The garage carries no rating or review count today (`Garage` in `libs/domain/prisma/schema/garages.prisma`); this story adds the two figures as read-only data, written by no code of its own (the reviews epic writes them), so the in-group order of the brief's scenario 5 and its test ("equal rating: more reviews first") are real and testable. The owner may instead leave both to ST-328, in which case FR-007 and FR-008 shrink to name order. *(autonomous default, Build brief "Data: Reads GARAGE (rating, review_count)")*
-- The order inside a group is the default of ST-328: rating high to low, more reviews first on equal ratings, then name A to Z, unrated garages last in their group; ST-328 adds the driver's choice later, inside the same two groups. *(autonomous default, ST-328 Build brief scenario 1, marked proposed there)*
+- The garage carries no rating or review count today (`Garage` in `libs/domain/prisma/schema/garages.prisma`) and nothing writes one; this story adds neither, so the order inside a group is name, then id. The brief's scenario 5 ("equal rating: more reviews first") and ST-328's rating-first default wait for the reviews epic, which adds the figures with their writer. **Open decision for the owner**: add unwritten rating columns now instead. *(autonomous default, Principle I; clarify Q1)*
 - The paging cursor carries the group and the position, as the brief proposes, with 20 garages a page and the `{ items, nextCursor, total }` shape the brand search already uses, plus the two counts. *(autonomous default, Build brief "The paging cursor includes the group", proposed)*
 - `total` in the page is the number of garages found, the sum of the two counts; the counts are read with each page request, so a later page may read different counts if a garage changed in between, which is accepted. *(autonomous default)*
 - Refused and unmarked garages are one group and one count, but each listed garage still carries its own answer (`does_not_take` or `unstated`); nothing in this story shows them differently. *(autonomous default, Decided 2026-10-03: "not marked counts as a refusal")*
@@ -135,4 +141,4 @@ The spec-kit clarification gate was answered from the Build brief, the constitut
 - No SEARCH_LOG row is written: the brief marks it proposed and possibly MF-10's, and MF-10 is not built; reads are not audited. *(autonomous default, Build brief "Data: Writes", proposed)*
 - A retired brand that is still stored answers like any other brand; an unknown brand id is "not found" and a malformed one a bad request, as the brand and garage routes already behave. *(autonomous default, ST-39 edge cases)*
 - No end-to-end (Playwright) test in this story: the results screen that would be driven is another story's (See garages for my brand, those that take it first), so the brief's end-to-end scenario waits for it; Jest unit and API tests on real PostgreSQL cover the order, the counts, the paging, the ties and the exclusions. *(autonomous default, Build brief "Out of scope: the results screen"; Constitution II)*
-- The success criteria's numbers (six garages, 48 found and 20 a page, 3 and 3, 0 and 5) come from the Build brief; the ratings in SC-003 are test values, not a metric.
+- The success criteria's numbers (six garages, 48 found and 20 a page, 3 and 3, 0 and 5) come from the Build brief; the names in SC-003 are test values, not a metric.
