@@ -21,3 +21,6 @@ ST-574 (tech debt from ST-254): derive the live hub's garage-channel kind rules 
 
 ## Phase 4 — clarify
 - spec-challenger: 5 findings, each answered with its recommendation (membership check first; role-keyed default allowed; one capability per kind tested over EVENT_KINDS + garage.settings_changed; booking.move prefix incl. booking.moved; source-reading check moved to review). Context clarifications folded in. level check: 2 kept; capabilities validate clean.
+
+## Phase 5 — plan
+- fable: success. plan.md only (no research/data-model/contracts/quickstart: no unknowns, no entity, no API change). KIND_CAPABILITY table replaces HIDDEN_FROM_RECEPTIONIST + MECHANIC_RIGHTS; mechanic uses plain membership in capabilitiesOf (no family maps to own_jobs/audit_history; the disjointness test guards it). Hooks: git commit done; agent-context update skipped (nothing managed to refresh). Constitution check all pass.
