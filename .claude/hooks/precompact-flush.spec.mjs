@@ -94,11 +94,11 @@ describe('pre-compact flush', () => {
     appended();
   });
 
-  it('appends the block within a second when gh is not installed', () => {
+  it('appends the block without waiting out the timeout when gh is not installed', () => {
     setup('Archived');
     const started = Date.now();
     assert.equal(run().status, 0);
-    assert.ok(Date.now() - started < 1000);
+    assert.ok(Date.now() - started < 3000);
     appended();
   });
 

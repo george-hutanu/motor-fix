@@ -43,8 +43,8 @@ process.stdin.on("end", () => {
   const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
   const rel = branchFeatureDir(repo, branch);
   if (!rel || join(repo, rel) !== feature.dir) process.exit(0);
-  // Only a definite MERGED closes the log; no gh, no PR, a stall or odd output
-  // all keep writing, since a lost block costs more than a spare one.
+  // Only a definite MERGED closes the log; no gh, no PR, a stall past 3 s or
+  // odd output all keep writing, since a lost block costs more than a spare one.
   try {
     const pr = JSON.parse(ghSync(["pr", "view", branch, "--json", "state"], { cwd: repo, timeout: 3000 }));
     if (pr.state === "MERGED") process.exit(0);

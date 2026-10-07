@@ -83,4 +83,38 @@ describe('pre-compact flush, hostile inputs', () => {
     assert.equal(run().status, 0);
     assert.equal(log(), LOG_SEED);
   });
+
+  for (const [name, out] of [
+    ['empty output', 'true'],
+    ['a lower-case state', `echo '{"state":"merged"}'`],
+  ]) {
+    it(`appends the block when gh prints ${name}`, () => {
+      setup({ gh: out });
+      assert.equal(run().status, 0);
+      assert.match(log(), /## Compaction .*\(auto\)/);
+    });
+  }
+
+  it('leaves the log unchanged for a merged PR even when the spec says Draft', () => {
+    setup({ gh: `echo '{"state":"MERGED"}'` });
+    writeFileSync(join(repo, FEATURE, 'spec.md'), '# Spec\n\n**Status**: Draft\n');
+    assert.equal(run().status, 0);
+    assert.equal(log(), LOG_SEED);
+  });
+
+  it('exits 0 and creates no run log when the feature has none', () => {
+    setup({ gh: `echo '{"state":"OPEN"}'` });
+    rmSync(join(repo, FEATURE, 'auto-run.md'));
+    assert.equal(run().status, 0);
+    assert.throws(() => readFileSync(join(repo, FEATURE, 'auto-run.md')), { code: 'ENOENT' });
+  });
+
+  it('exits 0 and writes the block when stdin is not JSON', () => {
+    setup({ gh: `echo '{"state":"OPEN"}'` });
+    const env = { ...process.env, CLAUDE_PROJECT_DIR: repo, PATH: bin };
+    delete env.CLAUDE_CODE_REMOTE;
+    const r = spawnSync(process.execPath, [HOOK], { cwd: repo, input: 'not json {', encoding: 'utf8', env });
+    assert.equal(r.status, 0);
+    assert.match(log(), /## Compaction /);
+  });
 });
