@@ -68,7 +68,10 @@ async function open(language: 'ro' | 'en' = 'ro') {
       },
       {
         provide: AdminService,
-        useValue: { adminOverviewControllerOverview: () => answer() },
+        useValue: {
+          adminOverviewControllerGrowth: async () => ({ months: [] }),
+          adminOverviewControllerOverview: () => answer(),
+        },
       },
     ],
   });
@@ -91,6 +94,22 @@ const text = (t: HTMLElement, part: 'number' | 'line') =>
 afterEach(() => TestBed.resetTestingModule());
 
 describe('AdminPanel', () => {
+  it('places the growth panel under the six tiles, leaving the tiles as they were', async () => {
+    answer = async () => FIGURES;
+    const element = await open();
+
+    const panel = element.querySelector('mf-admin-panel') as HTMLElement;
+    const growth = panel.querySelector('mf-admin-growth');
+    expect(growth).not.toBeNull();
+    expect(tiles(element)).toHaveLength(6);
+    expect(growth?.querySelector('[role="group"]')).toBeNull();
+    const last = tiles(element).at(-1) as HTMLElement;
+    expect(
+      last.compareDocumentPosition(growth as Node) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it('shows the six tiles in the launch order', async () => {
     answer = async () => FIGURES;
     const element = await open();
