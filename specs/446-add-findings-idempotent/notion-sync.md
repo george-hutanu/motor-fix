@@ -15,3 +15,6 @@
 - 2026-10-07 · labels · PR #182 · in development
 - 2026-10-07 · pr · ST-484 · PR #182 https://github.com/george-hutanu/motor-fix/pull/182
 - 2026-10-07 · ready · Foundations · −ST-484 (carried by PR #182)
+- 2026-10-07 · qa · ST-446 · Implementing → QA
+- 2026-10-07 · qa · timeline · no row for ST-446
+- 2026-10-07 · labels · PR #182 · QA
