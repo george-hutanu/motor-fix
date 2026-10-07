@@ -40,3 +40,7 @@ Start: origin/main 0ea7890a (worktree `.worktrees/783-api-test-boot-helper`, bra
 ## Phase 6 — Checklist
 - `checklists/boot-handle.md`: 20 requirements-quality items (completeness, clarity, consistency, coverage, assumptions); all resolved. One gap fixed in spec.md FR-002 (second `stop()` harmless); CHK016 resolved by the existing pre-turn stage edge case; none struck.
 - Commit `docs(specs): ST-783 checklist the boot handle requirements`, pushed.
+
+## Phase 7 — Tasks
+- before_tasks hook (git auto-commit): nothing outstanding. after_tasks `speckit.analyze` left to the caller (phase 8).
+- `tasks.md`: 8 tasks (T001 tsconfig, T002 red helper spec, T003 helper, T004 bootstrap try/finally, T005-T007 three suites, T008 verification); US2 4 tasks, US1 3; T004-T007 parallelizable.
