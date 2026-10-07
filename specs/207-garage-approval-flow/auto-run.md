@@ -33,3 +33,12 @@ Start commit: 664610a3 (worktree .worktrees/207-garage-approval-flow, branch 207
 - Q5 reopened approved file then rejected/more requested: still public? → Yes, stays `approved`; told the result (X18); hiding is MF-59 suspension. Flagged for the owner. Assumptions.
 - Checklist requirements.md 16/16 → 16/16. Deferred to plan: the concurrency mechanism (compare-and-set update) and the 409 detail sentence per status.
 - level.mjs check: level 2, unchanged.
+
+## 5. Plan
+- Model: fable. before_plan design check: design.md is current (checked 2026-10-07, UNAVAILABLE marker kept; the mock is still not shared), not re-run.
+- plan.md, research.md (R1–R10, each with Evidence), data-model.md, contracts/garage-verification.md, quickstart.md. Constitution Check passes before and after design; no Complexity Tracking violation (one hand-written partial unique index, precedent the audit triggers).
+- Technical Context from the lockfile and configs: TS 6.0.3, NestJS 12.1.2, swagger 12.0.2, Prisma 7.10.0 + adapter-pg, Jest 30.5.2, Nx 23.2.1; no new dependency.
+- Design: garage status → enum `draft|approved|suspended` + `approved_at` (in-place `USING` cast); `verification_file` table with the partial unique index "one live file per garage"; `VerificationService` with submit/open/decide/resend/reopen, each taking the caller's `tx` (ST-116 joins) and a compare-and-set `updateMany` (R1 resolves the concurrency item: row lock under READ COMMITTED, as staff-invite does); 409 `verification_transition_refused` detail per status (R2); second open of an `in_review` file returns the first opener unchanged; `publicGarages()` where fragment + `GET /api/v1/garages/{slug}` (404/410) + an AST scan of `@Public()` handlers that names `File#method`; derived status, 7 labels ro/en and `REAPPROVAL_FIELDS` in contracts; `verificationConfig` reads `SKIP_MANUAL_APPROVAL` only under `APP_ENV=test`; audience `verification` gains `published` for `public:garage:{id}` / `public:search:{brandId}`.
+- Open for later stories (research.md R6): the reason code list waits on T12; the scope scan covers controllers only until the MCP tools exist.
+- after_plan: committed 16c14840 `docs(specs): ST-207 plan, research, data model, contracts and quickstart`, pushed; agent-context line set to this plan, context-audit: 136 lines, size held, committed.
+- STATUS: success — plan and Phase 0/1 artifacts written, committed and pushed to PR #188.
