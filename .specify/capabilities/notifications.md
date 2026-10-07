@@ -16,6 +16,7 @@ features:
   - 539-public-web-url-boot
   - 780-one-public-web-url-parser
   - 778-mark-sent-retry-no-delay
+  - 561-sms-sent-once
 ---
 
 # Capability: Notifications
@@ -431,6 +432,22 @@ _From 778-mark-sent-retry-no-delay._
 ### 778-FR-002 — A push the push service accepted MUST follow 522-FR-001: a failed first mark-sent write does not fail the job, the message is not sent again, and the row ends `sent`.
 
 _From 778-mark-sent-retry-no-delay._
+
+### 561-FR-001 — Before calling the provider for an SMS, the processor MUST record on the row that the SMS is being sent.
+
+_From 561-sms-sent-once._
+
+### 561-FR-002 — A send job for an SMS row that already carries that record MUST NOT call the provider and MUST NOT count another SMS; it MUST fail the row with `sms_unconfirmed` and fall back to the next channel.
+
+_From 561-sms-sent-once._
+
+### 561-FR-003 — When the provider call for an SMS ends with no answer (`provider_unreachable`: a timeout or a lost connection), the SMS MUST stay counted and MUST NOT be retried; the row MUST fail with `sms_unconfirmed` and fall back to the next channel.
+
+_From 561-sms-sent-once._
+
+### 561-FR-004 — When the provider answers an SMS with a refusal, the processor MUST clear the record and give the count back, so the retry and fallback rules apply as before.
+
+_From 561-sms-sent-once._
 
 ## Retired
 
