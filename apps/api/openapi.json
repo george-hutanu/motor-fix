@@ -1269,6 +1269,42 @@
         ]
       }
     },
+    "/api/v1/public-holidays": {
+      "get": {
+        "operationId": "PublicHolidaysController_list",
+        "parameters": [
+          {
+            "name": "year",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 2000,
+              "maximum": 2100,
+              "example": 2026,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicHolidayDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "public-holidays"
+        ]
+      }
+    },
     "/api/v1/search/garages": {
       "get": {
         "operationId": "GarageSearchController_forBrand",
@@ -3463,6 +3499,29 @@
           "items",
           "nextCursor",
           "total"
+        ]
+      },
+      "PublicHolidayDto": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "example": "2026-12-01",
+            "format": "date"
+          },
+          "nameRo": {
+            "type": "string",
+            "example": "Ziua Națională"
+          },
+          "nameEn": {
+            "type": "string",
+            "example": "National Day"
+          }
+        },
+        "required": [
+          "day",
+          "nameRo",
+          "nameEn"
         ]
       },
       "BrandRefDto": {

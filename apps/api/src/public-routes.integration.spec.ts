@@ -20,6 +20,7 @@ const PUBLIC = [
   'GET /api/v1/garages/00000000-0000-4000-8000-000000000000',
   'GET /api/v1/listing-drafts/current',
   'GET /api/v1/live/public',
+  'GET /api/v1/public-holidays',
   'GET /api/v1/search/garages',
   'GET /health/live',
   'GET /health/ready',

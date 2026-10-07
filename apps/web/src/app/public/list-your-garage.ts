@@ -11,6 +11,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import type { ListingDraftData } from '@motor-fix/contracts';
+import type { HoursSection } from '@motor-fix/contracts/garage-hours';
 import {
   isValidCui,
   normaliseRarNumber,
@@ -23,6 +25,8 @@ import { HlmButton, HlmInput, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { brandsOf } from './brands-section';
 import { BrandsStep } from './brands-step';
 import { DraftKeeper } from './draft-keeper';
+import { hoursOf, mergeHours } from './hours-section';
+import { HoursStep } from './hours-step';
 import {
   completedCount,
   cuiError,
@@ -42,7 +46,14 @@ const SETTLE_MS = 150;
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(document:click)': 'outside($event)' },
-  imports: [BrandsStep, HlmButton, HlmInput, LanguageSwitch, TranslatePipe],
+  imports: [
+    BrandsStep,
+    HlmButton,
+    HlmInput,
+    HoursStep,
+    LanguageSwitch,
+    TranslatePipe,
+  ],
   providers: [DraftKeeper],
   selector: 'mf-list-your-garage',
   styles: `
@@ -63,7 +74,16 @@ const SETTLE_MS = 150;
     .error { font-size: var(--mf-size-small); color: var(--mf-red-ink); }
     .error:empty { display: none; }
     section > .note { margin-top: var(--mf-space-3); }
-    .actions { display: flex; flex-wrap: wrap; gap: var(--mf-space-2); }
+    /* Pinned to the bottom of the screen while the sections pass: reaching Save never scrolls the owner off the step a draft is saved at. */
+    .actions {
+      display: flex; flex-wrap: wrap; gap: var(--mf-space-2);
+      position: sticky; bottom: 0; z-index: 1; padding-block: var(--mf-space-2);
+      background: var(--mf-bg); border-top: 1px solid var(--mf-line);
+    }
+    /* Below 768 px the public tab bar is pinned at the bottom too (1 px line, 6 px, 52 px links, max(14 px, safe area)): sit above it. */
+    @media (max-width: 767.98px) {
+      .actions { bottom: calc(59px + max(14px, var(--mf-safe-bottom))); }
+    }
     .actions button, .ended button { min-height: var(--mf-tap); }
     .ended { display: grid; gap: var(--mf-space-3); justify-items: start; margin-top: var(--mf-space-4); }
     ol button {
@@ -214,6 +234,9 @@ const SETTLE_MS = 150;
                 @if (step.n === 2) {
                   <mf-brands-step [value]="brands()" (valueChange)="keeper.section('2', $event)" />
                 }
+                @if (step.n === 5) {
+                  <mf-hours-step [value]="hours()" (valueChange)="keepHours($event)" />
+                }
               </section>
             }
             <div class="actions">
@@ -242,6 +265,8 @@ export class ListYourGarage {
   protected readonly keeper = inject(DraftKeeper);
   protected readonly signIn = inject(SignInDialog);
   protected readonly steps = STEPS;
+  // The draft's steps['5'], kept and restored with the rest of the form.
+  protected readonly hours = computed(() => hoursOf(this.keeper.draft().data));
   // The draft's steps['2'], kept and restored with the rest of the form.
   protected readonly brands = computed(() =>
     brandsOf(this.keeper.draft().data),
@@ -327,6 +352,12 @@ export class ListYourGarage {
     const note = this.keeper.note();
     return note ? this.i18n.t(`public.listing.${note.key}`, note.params) : '';
   });
+
+  // Step 5 shares its section with other stories' keys, which stay.
+  protected keepHours(value: HoursSection) {
+    const data = this.keeper.draft().data as ListingDraftData;
+    this.keeper.section('5', mergeHours(data.steps?.['5'], value));
+  }
 
   protected save() {
     if (this.keeper.pressSave()) this.field()?.nativeElement.focus();

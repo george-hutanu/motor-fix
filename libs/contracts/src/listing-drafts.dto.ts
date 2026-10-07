@@ -11,6 +11,7 @@ import {
   Min,
 } from 'class-validator';
 
+import { type HoursSection, isHoursSection } from './garage-hours';
 import { isStep6Section, type Step6Section } from './listing-verification';
 
 const LANGUAGES = ['ro', 'en'] as const;
@@ -21,7 +22,8 @@ export type ListingDraftStatus = (typeof DRAFT_STATUSES)[number];
 // of the files the draft holds. Each step's story checks its own section.
 export interface ListingDraftData {
   steps?: Partial<
-    Record<'1' | '2' | '3' | '4' | '5', Record<string, unknown>> & {
+    Record<'1' | '2' | '3' | '4', Record<string, unknown>> & {
+      '5': Record<string, unknown> & HoursSection;
       '6': Step6Section;
     }
   >;
@@ -54,7 +56,11 @@ export function isListingDraftData(value: unknown): value is ListingDraftData {
     Object.entries(steps).every(
       ([key, section]) =>
         STEP_KEYS.has(key) &&
-        (key === '6' ? isStep6Section(section) : isRecord(section)),
+        (key === '6'
+          ? isStep6Section(section)
+          : key === '5'
+            ? isHoursSection(section)
+            : isRecord(section)),
     )
   );
 }
