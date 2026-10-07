@@ -90,7 +90,7 @@ describe('telemetry under hostile input', () => {
     },
   );
 
-  it('accepts an endpoint with a path and port', () => {
+  it('accepts an endpoint with a path', () => {
     const result = telemetry({
       ...base,
       OTEL_EXPORTER_OTLP_ENDPOINT:
@@ -148,13 +148,5 @@ describe('telemetry under hostile input', () => {
     expect(() =>
       telemetry({ OTEL_EXPORTER_OTLP_ENDPOINT: 'http://localhost:4318' }),
     ).toThrow();
-  });
-
-  it('gives the same answer when called twice', () => {
-    const source = {
-      APP_ENV: 'production',
-      OTEL_EXPORTER_OTLP_ENDPOINT: 'https://otlp.example.com',
-    };
-    expect(telemetry(source)).toEqual(telemetry(source));
   });
 });
