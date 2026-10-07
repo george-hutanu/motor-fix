@@ -53,8 +53,7 @@ test.describe('the sign-up counts a local run clears', () => {
     };
 
     expect(await clearSignUpCounts(endless)).toBe(0);
-    expect(pages).toBeGreaterThan(0);
-    expect(pages).toBeLessThanOrEqual(1000);
+    expect(pages).toBe(1000);
   });
 });
 
