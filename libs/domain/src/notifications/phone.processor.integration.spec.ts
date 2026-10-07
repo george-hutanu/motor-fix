@@ -1,4 +1,4 @@
-// @traces 392-FR-001 392-FR-002 392-FR-003 392-FR-004 392-FR-005 392-FR-006 392-FR-007 392-FR-008 392-FR-010 522-FR-001
+// @traces 392-FR-001 392-FR-002 392-FR-003 392-FR-004 392-FR-005 392-FR-006 392-FR-007 392-FR-008 392-FR-010 522-FR-001 561-FR-001 561-FR-002 561-FR-003 561-FR-004
 import type { OutsideChannel } from '@motor-fix/contracts';
 import { Logger } from '@nestjs/common';
 import { Queue } from 'bullmq';
@@ -348,6 +348,97 @@ describe('an SMS that does not go', () => {
       ['email', 'sent', null],
       ['sms', 'failed', 'not_allowed'],
     ]);
+  });
+});
+
+describe('an SMS that may have gone', () => {
+  // A Brevo that gives up on a hanging call within the test's time.
+  function impatient() {
+    const config = testConfig(mock.url);
+    const quick = new NotificationsProcessor(
+      prisma,
+      service,
+      new Brevo({
+        apiKey: config.apiKey ?? '',
+        apiUrl: config.apiUrl,
+        timeoutMs: 300,
+      }),
+      config,
+      testPhoneConfig(),
+    );
+    quick.now = processor.now;
+    return quick;
+  }
+
+  async function queuedSms() {
+    const ana = await person('ana', 1);
+    await choose(ana, 'DUE_ITP', 'sms');
+    await remind(ana, 'itp-1');
+    const [sms] = await rows(ana);
+    return { ana, sms };
+  }
+
+  const sendingAt = async (id: string) =>
+    (await prisma.notification.findUniqueOrThrow({ where: { id } })).sendingAt;
+
+  it('is marked as being sent before Brevo answers', async () => {
+    const { sms } = await queuedSms();
+    mock.answer({ hang: true, status: 200 });
+    const job = impatient().handle({
+      attemptsMade: 0,
+      data: { id: sms.id },
+      name: 'send',
+    });
+    while (mock.sms().length === 0) await new Promise((r) => setTimeout(r, 20));
+    expect(await sendingAt(sms.id)).toEqual(new Date(NOVEMBER));
+    await job;
+  });
+
+  it('is not sent or counted again after a worker died with it in flight', async () => {
+    const { ana, sms } = await queuedSms();
+    await prisma.notification.update({
+      data: { sendingAt: new Date(NOVEMBER) },
+      where: { id: sms.id },
+    });
+    await drain(ana);
+    expect(mock.sms()).toHaveLength(0);
+    expect(await counter(ana, '2026-11')).toBeNull();
+    expect(await summary(ana)).toEqual([
+      ['sms', 'failed', 'sms_unconfirmed'],
+      ['whatsapp', 'sent', null],
+    ]);
+  });
+
+  it('keeps its count and is not retried when Brevo gives no answer', async () => {
+    const { ana, sms } = await queuedSms();
+    mock.answer({ hang: true, status: 200 });
+    await expect(
+      impatient().handle({
+        attemptsMade: 0,
+        data: { id: sms.id },
+        name: 'send',
+      }),
+    ).resolves.toBeUndefined();
+    await drain(ana);
+    expect(mock.sms()).toHaveLength(1);
+    expect((await counter(ana, '2026-11'))?.sentCount).toBe(1);
+    expect(await summary(ana)).toEqual([
+      ['sms', 'failed', 'sms_unconfirmed'],
+      ['whatsapp', 'sent', null],
+    ]);
+  });
+
+  it('is sent on its retry after Brevo refused it', async () => {
+    const { ana, sms } = await queuedSms();
+    mock.answer({ status: 503 });
+    await expect(sendJob(sms.id)).rejects.toMatchObject({
+      reason: 'provider_503',
+    });
+    expect(await sendingAt(sms.id)).toBeNull();
+    await sendJob(sms.id, 1);
+    expect(mock.sms()).toHaveLength(2);
+    expect((await counter(ana, '2026-11'))?.sentCount).toBe(1);
+    expect(await summary(ana)).toEqual([['sms', 'sent', null]]);
   });
 });
 

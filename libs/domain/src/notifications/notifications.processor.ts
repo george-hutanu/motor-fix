@@ -371,6 +371,12 @@ export class NotificationsProcessor {
     phone: string,
     attemptsMade: number,
   ) {
+    // An earlier attempt reached Brevo and never recorded its answer: the SMS
+    // may have gone, so it is neither sent nor counted again.
+    if (row.sendingAt) {
+      await this.service.fail([row], 'sms_unconfirmed', true);
+      return;
+    }
     const content = await this.text(row, 'sms');
     if (content === null) return;
     const month = smsMonth(this.now());
@@ -378,6 +384,12 @@ export class NotificationsProcessor {
       await this.service.fail([row], 'sms_cap_reached', true);
       return;
     }
+    const mark = (sendingAt: Date | null) =>
+      this.prisma.notification.update({
+        data: { sendingAt },
+        where: { id: row.id },
+      });
+    await mark(this.now());
     let messageId: string;
     try {
       messageId = await this.brevo.sendSms({
@@ -386,7 +398,17 @@ export class NotificationsProcessor {
         sender: this.phone.smsSender,
       });
     } catch (error) {
-      // The Brevo error still decides between a retry and the fallback.
+      // No answer: Brevo may have it, so it keeps its count and is not retried.
+      if (
+        error instanceof BrevoError &&
+        error.reason === 'provider_unreachable'
+      ) {
+        await this.service.fail([row], 'sms_unconfirmed', true);
+        return;
+      }
+      // Brevo said no: the SMS did not go. The error still decides between a
+      // retry and the fallback.
+      await mark(null);
       await giveSmsBack(this.prisma, row.accountId, month).catch((failed) =>
         this.logger.error(
           `notification ${row.id} ${row.kind} sms count not given back: ${String(failed)}`,

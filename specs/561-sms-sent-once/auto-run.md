@@ -9,3 +9,4 @@ Start: c769bcff (origin/main). Preflight: typecheck, lint, test green.
 - context: skipped org-researcher to minimise tokens; the story and finding were given in the dispatch
 - open: draft PR #197, labels planning, bug, tech debt, EP-1, scope
 - plan, tasks (3); checklist and analyze folded: each FR maps to T001 and T002/T003
+- tests: 3 red (mark null, marked row resent, hang rejected), then implement: 1026 notifications tests green
