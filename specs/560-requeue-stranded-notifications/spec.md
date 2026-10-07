@@ -68,6 +68,7 @@ A `held` row (quiet hours, a grouping window) has its own delayed job and its ow
 
 ### Edge Cases
 
+- A send job finishes between the sweep's read and its add: the row is no longer `queued`, and the processor claims only `queued` or `held` rows, so the late job does nothing and nothing is sent twice.
 - The queue is still down when the sweep runs: the add fails, the sweep logs it and ends; the next sweep tries again. A failed add never fails or marks the row.
 - Two worker instances sweep at once: both add the same job id; one add is ignored, and the processor's claim (ST-522) guards the send anyway.
 - A `held` follower whose group's flush job was lost (`release` → `dispatch` re-holds it before the add): it is `held`, so the sweep leaves it (FR-007, Assumptions). `release` never strands a `queued` row: when it answers "send now", the job that called it sends the row under its claim.
@@ -85,7 +86,7 @@ A `held` row (quiet hours, a grouping window) has its own delayed job and its ow
 - **FR-005**: The sweep MUST NOT add a job for a `queued` SMS row that carries the "being sent" mark (561-FR-001).
 - **FR-006**: When the provider has accepted a message and every write recording the send has failed (522-FR-002), the processor MUST keep the row's send claim rather than release it, so FR-004 shields the row from the sweep. A release that fails for other reasons keeps 522-FR-003 as it is.
 - **FR-007**: The sweep MUST touch only `queued` rows: `held`, `sent` and `failed` rows and group flush jobs are outside it.
-- **FR-008**: A sweep whose add fails MUST log the failure and end without changing the row; the next sweep tries again.
+- **FR-008**: A sweep whose read or add fails MUST log the failure and end without changing the row; the next sweep tries again.
 - **FR-009**: The sweep MUST log how many rows it re-queued whenever that number is not zero, naming the rows, so an operator sees that a hand-off failed.
 - **FR-010**: The change MUST add no API route, contract, schema migration or UI.
 

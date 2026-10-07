@@ -26,3 +26,6 @@ Start commit: cab78f49 (origin/main), branch 560-requeue-stranded-notifications,
 ## 5. Plan
 - before_plan: design.md current (no screens), tree clean. plan.md written: requeueStranded() in the service (findMany queued/claimedAt null/sendingAt null/createdAt < now-5 min, then queue(send(id)); failed add warns and ends; ids logged when > 0), processor routes `requeue`, sent() answers recorded, send() keeps the claim when unrecorded (per-id Set), module upserts the `requeue` scheduler in the WORKER factory (failure logged, not fatal). Technical Context cited from package-lock, tsconfig.base, jest preset, bullmq types; context.md Constraints carried in. No research/data-model/contracts/quickstart (nothing beyond plan.md, as 778).
 - after_plan: commit 48f703f5 `docs(specs): ST-560 plan the stranded notification sweep`, pushed. agent-context left to phase 15 (the pointer lives in the private CLAUDE.local.md).
+
+## 6. Checklist
+- checklists/reliability.md: 15 items checked, 1 struck (N/A). Spec fixed: edge case for a job finishing between read and add; FR-008 covers a failed read as well as a failed add. Unchecked: 0.
