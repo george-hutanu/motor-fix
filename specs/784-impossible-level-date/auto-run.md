@@ -6,3 +6,15 @@ Start commit: ec74ab0654afa31c0e6bb27e0b56bd7a2c5ea933 (worktree .worktrees/784-
 ## Phases
 - 2 specify: phase agent (fable); before_specify branch hook skipped (branch exists); Notion task fetched, no comments; probed both readers (Python refuses 02-30/04-31/2025-02-29, accepts 2024-02-29; JS parses all four; month 00/13 and day 00/32 refused by both); spec.md + checklists/requirements.md (all pass); 2 FRs; feature.json pointed; level check: see below.
 - 2 specify: level check: level 2 unchanged (fr-count 2, clarification clear, contract clear, projects clear). after_specify hooks (notion sync start, design check, git commit) left to the caller: no commit, no PR in this phase.
+
+## Preflight
+- Start ec74ab06 (= origin/main). origin/main does not fix it: `LEVEL_AT` in .claude/scripts/lib/feature.mjs:147 checks shape only, Date.parse rolls 2026-02-30 forward.
+- Full-suite preflight not rerun: worktree fresh from green main, npm ci done; pre-commit affected run was green (no product project touched).
+- Size: level 2 (notion facts: boards rollup, brief not found).
+- Notion start: ST-784 → Planning. Draft PR #191 (labels planning, bug, scope: harness); `pr 191` linked.
+
+## Phase 3 — context
+- org-researcher: success, 0 contradictions, 0 open decisions.
+
+## Phase 4 — clarify
+- spec-challenger: 4 findings, each answered with its recommendation: (1) Spec Delta modifies 677-FR-003 → FR-003; (2) scenario 1 `now` = rolled instant + 1 min, scenario 2 = stamp + 1 min; (3) scenario 2 is a 4×8 generated table; (4) JS reader asserted alone as well as in parity. level check: 2 kept; capabilities validate clean.

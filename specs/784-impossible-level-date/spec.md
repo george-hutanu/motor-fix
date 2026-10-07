@@ -22,8 +22,8 @@ A harness user sizes the next piece of work with `/speckit-size`, and the waitin
 
 **Acceptance Scenarios**:
 
-1. **Given** a fresh level for the next feature stamped on a day the month does not have — `2026-02-30T00:00Z` (February, 28 days), `2026-04-31T00:00Z` (a 30-day month), `2025-02-29T00:00Z` (a common year), `2026-02-31T00:00:00.000Z` (with seconds and a fraction) and `2026-02-30T00:00+02:00` (with an offset) — **When** either reader asks for the waiting level, **Then** both answer that there is none.
-2. **Given** a fresh level for the next feature stamped on the last day the month does have — `2024-02-29T…` (a leap year), `2026-02-28T…`, `2026-04-30T…`, `2026-01-31T…` — in every shape both readers accept today (`Z` or an `±hh:mm` offset, with or without seconds, with a 3- or 6-digit fraction), **When** either reader asks for the waiting level, **Then** both still return it.
+1. **Given** a fresh level for the next feature stamped on a day the month does not have — `2026-02-30T00:00Z` (February, 28 days), `2026-04-31T00:00Z` (a 30-day month), `2025-02-29T00:00Z` (a common year), `2026-02-31T00:00:00.000Z` (with seconds and a fraction) and `2026-02-30T00:00+02:00` (with an offset) — **When** either reader asks for the waiting level, **Then** both answer that there is none, at a `now` one minute after the instant the JavaScript reader rolls the stamp to (e.g. `2026-03-02T00:01Z` for `2026-02-30T00:00Z`), where a reader that rolls the day forward would still see a fresh level.
+2. **Given** a fresh level for the next feature stamped on the last day the month does have — `2024-02-29T…` (a leap year), `2026-02-28T…`, `2026-04-30T…`, `2026-01-31T…` — in every shape both readers accept today (`Z` or an `±hh:mm` offset, with or without seconds, with a 3- or 6-digit fraction), **When** either reader asks for the waiting level, **Then** both still return it, at a `now` one minute after the stamp; every date is asserted in every one of the eight shapes (4 dates × 8 shapes).
 3. **Given** a stamp both readers already refuse today (month `00` or `13`, day `00` or `32`, hour `24`, no zone, a trailing newline), **When** either reader asks, **Then** both still answer that there is none.
 
 ---
@@ -41,14 +41,18 @@ A harness user sizes the next piece of work with `/speckit-size`, and the waitin
 
 - Q: Are month or day values outside `01`–`12` / `01`–`31` part of ST-784? → A: No; both readers refuse them today (probed on this machine), so they join scenario 3 as regressions.
 - Q: Does the fix also change the Python reader? → A: No; it already refuses every impossible day. The change is in the JavaScript reader alone, and the parity specs hold both.
-- Q: Which stamps must the harness specs assert? → A: The five refused stamps of scenario 1, the four accepted last-of-month stamps of scenario 2 and scenario 3's regressions, listed once in the spec.
+- Q: Which stamps must the harness specs assert? → A: The five refused stamps of scenario 1, the four last-of-month dates of scenario 2 in each of the eight accepted shapes (a generated table of 32 cases) and scenario 3's regressions.
+- Q: Does FR-001 change platform's 677-FR-003, which keeps the freshness of every stamp of the one shape? → A: Yes: `2026-02-30T00:00Z` is that shape, so FR-003 restates 677-FR-003 with "on a day its month has" and the Spec Delta modifies it.
+- Q: At what `now` does each scenario run? → A: Scenario 1 one minute after the instant JavaScript rolls the stamp to (the only `now` where the unfixed reader returns a level); scenario 2 one minute after the stamp.
+- Q: Must the JavaScript reader's refusal be asserted without Python? → A: Yes: `pendingLevel` is asserted alone on every scenario 1 and 2 stamp, so a machine without `python3` (where the parity half is skipped) still fails on a regression; the parity test is the second lock.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
 - **FR-001**: Both readers of the waiting level MUST treat a stamp whose written day the written month does not have (29 February in a common year, 30 February, 31 in a 30-day month) as no waiting level, in every stamp shape they accept (with or without seconds and a fraction, with `Z` or an offset); the written year, month and day decide, not the instant the stamp parses to.
-- **FR-002**: The two readers MUST give the same answer (the waiting level, or none, at the same `now`) for every stamp in acceptance scenarios 1–3, and the harness specs that hold the two readers together MUST assert each of them so a later divergence fails the suite.
+- **FR-002**: The two readers MUST give the same answer (the waiting level, or none, at the same `now`) for every stamp in acceptance scenarios 1–3, and the harness specs that hold the two readers together MUST assert each of them so a later divergence fails the suite; the JavaScript reader's answers MUST also be asserted on their own, without Python.
+- **FR-003**: A `level_at` of the one shape both readers parse alike (`YYYY-MM-DDTHH:MM`, optional seconds with an optional 3- or 6-digit fraction, then `Z` or `±hh:mm`) on a day its written month has MUST keep its current freshness behaviour in both readers; any other shape, or a day the month does not have, is no waiting level in both.
 
 ### Key Entities
 
@@ -59,7 +63,7 @@ A harness user sizes the next piece of work with `/speckit-size`, and the waitin
 ### Capability: `platform`
 
 - **Adds**: FR-001, FR-002
-- **Modifies**: none
+- **Modifies**: 677-FR-003 → FR-003
 - **Removes**: none
 
 ## Success Criteria *(mandatory)*
