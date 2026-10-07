@@ -1,6 +1,6 @@
 ---
 capability: overlays
-updated: 2026-10-06
+updated: 2026-10-07
 features:
   - 157-dialog-drawer
   - 159-form-saving
@@ -8,6 +8,7 @@ features:
   - 509-offline-on-worker-504
   - 491-back-closes-task
   - 492-task-load-error
+  - 496-task-done-close-name
 ---
 
 # Capability: overlays
@@ -92,13 +93,13 @@ _From 159-form-saving._
 
 _From 159-form-saving._
 
-### 159-FR-005 — On success the helper MUST mark the task unchanged (no discard question) and hand the result to the task, which either closes with it or shows the shared confirmation: a short message (`role="status"`) and a "Închide" / "Close" button that closes the task with the result.
+### 496-FR-001 — On success the helper MUST mark the task unchanged (no discard question) and hand the result to the task, which either closes with it or shows the shared confirmation: a short message (`role="status"`) and a "Gata" / "Done" button (i18n `shell.form.done`) that has the focus and closes the task with the result. Its name MUST differ from the overlay's close button ("Închide" / "Close", 157-FR-009). (Replaces 159-FR-005, whose button was "Închide" / "Close".)
 
-_From 159-form-saving._
+_From 496-task-done-close-name._
 
-### 159-FR-006 — On a failure the task MUST stay open with every value kept, and the message for the problem's `code` MUST show next to the main button (`role="alert"`); a code without its own message shows the general message; with field errors the code's message shows too.
+### 496-FR-002 — On a failure the task MUST stay open with every value kept, and the message for the problem's `code` MUST show next to the main button (`role="alert"`); a code without its own message shows the general message; with field errors the code's message shows too. The message MUST stay shown from the next press until that press is answered: it is replaced by the new failure's message, removed on success, and removed at once when the press finds an invalid field and sends nothing. (Replaces 159-FR-006, adding how long the message stays.)
 
-_From 159-form-saving._
+_From 496-task-done-close-name._
 
 ### 159-FR-007 — Field errors on the problem MUST show under their fields (marked invalid, focus to the first); one naming an unknown field MUST show its message next to the button; a server field error MUST clear when its field changes.
 
@@ -244,3 +245,6 @@ _From 492-task-load-error._
 - `157-FR-001` — superseded by `491-FR-001` (2026-10-07)
 - `157-FR-005` — superseded by `491-FR-002` (2026-10-07)
 - `157-FR-011` — superseded by `491-FR-002` (2026-10-07)
+
+- `159-FR-005` — superseded by `496-FR-001` (2026-10-07)
+- `159-FR-006` — superseded by `496-FR-002` (2026-10-07)
