@@ -2,7 +2,7 @@
 
 **Feature Branch**: `536-gate-dialog-dashboard`
 **Created**: 2026-10-07
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 **Input**: ST-536 (tech debt from ST-130, PR tester lap 1, LOW): "Behind the gate dialog the dashboard drops the person's name and keeps one menu item, because a failed renewal clears the session; keep the last account shown until the gate closes (`apps/web/src/app/dashboard/session.ts`, `frame.ts`)" — https://app.notion.com/p/3ef607bff0d281398a90fbf7dcf6999f
 
 ## User Scenarios & Testing *(mandatory)*

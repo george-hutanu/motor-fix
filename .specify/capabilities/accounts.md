@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-06
+updated: 2026-10-07
 features:
   - 079-account-model
   - 082-sign-in
@@ -14,6 +14,7 @@ features:
   - 083-sign-in-apple-google
   - 564-session-reload-role-race
   - 393-whatsapp-phone-sign-in
+  - 536-gate-dialog-dashboard
 ---
 
 # Capability: Accounts
@@ -529,6 +530,10 @@ _From 393-whatsapp-phone-sign-in._
 ### 393-FR-017 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the 5-minute expiry; single use, also under two concurrent uses; the 5-attempt cap; the 60-second, 5-per-hour and per-address limits and their fail-open when Redis is down; a new number creating `driver` only, with its identity, consent, audit entry and event; a garage owner's number signing in to the garage account; a suspended and a deleted account's number; Brevo failure answering `whatsapp_failed` and storing nothing; maintenance; the number normalisation. A Playwright end-to-end test with a Brevo stub MUST sign in with a new number: tap the phone option, send the code, read it from the stub, enter it, fill in the name and the tick, and land on the driver dashboard.
 
 _From 393-whatsapp-phone-sign-in._
+
+### 536-FR-001 — While a sign-in dialog opened by 130-FR-004 is open, the dashboard frame MUST keep showing the account that was on screen when the refused call failed (name, role chips, dashboard, menu items, invite button), even though the failed renewal has forgotten the session; the kept account MUST be let go when that dialog closes, and at sign-out, so only the account the session holds is shown afterwards. Access decisions (the area guard, the views' guard, the token) MUST keep reading the session's own account, never the kept one.
+
+_From 536-gate-dialog-dashboard._
 
 ## Retired
 
