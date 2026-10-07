@@ -16,10 +16,15 @@ type Method = (typeof METHODS)[number];
 
 // The story that adds an admin route that changes data adds its row here: a
 // body a signed-in admin can send and get a 2xx for. A logged read sets
-// `entries: 1`; every other GET must leave the admin's history unchanged.
+// `entries: 1`; every other GET must leave the admin's history unchanged. A
+// route with path parameters gives `path`, which makes what it acts on.
 const FIXTURES: Record<
   string,
-  { body?: (admin: string) => object; entries?: number }
+  {
+    body?: (admin: string) => object;
+    entries?: number;
+    path?: () => Promise<string>;
+  }
 > = {
   'POST /api/v1/admin/live/test': { body: (admin) => ({ accountId: admin }) },
   'POST /api/v1/admin/news': {
@@ -30,6 +35,27 @@ const FIXTURES: Record<
   },
   'POST /api/v1/admin/notifications/test': {
     body: (admin) => ({ accountIds: [admin] }),
+  },
+  'PUT /api/v1/admin/verification-files/{id}/checks/{kind}': {
+    body: () => ({ detail: 'CUI activ', result: 'ok' }),
+    path: async () => {
+      const slug = `audit-${randomUUID()}`;
+      const file = (
+        await db.query(
+          `WITH g AS (INSERT INTO garage (id, name, slug)
+             VALUES (gen_random_uuid(), 'Audit', $1) RETURNING id)
+           INSERT INTO verification_file (id, garage_id)
+           SELECT gen_random_uuid(), id FROM g RETURNING id`,
+          [slug],
+        )
+      ).rows[0].id as string;
+      await db.query(
+        `INSERT INTO verification_check (id, file_id, kind)
+         VALUES (gen_random_uuid(), $1, 'company')`,
+        [file],
+      );
+      return `/api/v1/admin/verification-files/${file}/checks/company`;
+    },
   },
 };
 
@@ -65,10 +91,11 @@ const entries = async () =>
 // What is wrong with one route's call, if anything: its answer, or how many
 // entries the admin gained by it.
 const check = async (route: string) => {
-  const [method, path] = route.split(' ') as [string, string];
+  const [method, template] = route.split(' ') as [string, string];
   const fixture = FIXTURES[route];
   const changes = method !== 'GET';
   if (changes && !fixture?.body) return `${route}: no fixture`;
+  const path = (await fixture?.path?.()) ?? template;
   const before = await entries();
   const res = await request(app.getHttpServer())
     [method.toLowerCase() as Method](path)
