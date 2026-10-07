@@ -94,7 +94,7 @@
         "strict"
       ],
       "description": "Route a reviewer subagent to sonnet or fable from the size of the diff it is about to read — mechanical at both extremes, jev in the middle band. Advisory: it rewrites the model or does nothing, and can never refuse a call",
-      "fingerprint": "be55fdf8dfa1"
+      "fingerprint": "1864f288c512"
     },
     {
       "id": "pre:edit:config-protection",

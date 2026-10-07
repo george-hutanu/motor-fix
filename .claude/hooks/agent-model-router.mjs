@@ -32,7 +32,12 @@
 //
 //   SPECKIT_MODEL_ROUTER=0   turn the routing off, leaving the frontmatter
 //   SPECKIT_JEV=0            turn the middle band off (extremes still apply)
+//
+// When the Fable usage limit is hit, `node .claude/scripts/fable.mjs off` sets
+// ANTHROPIC_DEFAULT_FABLE_MODEL; while it is set (in the env or the main
+// checkout's settings.local.json) every `fable` this hook would pick is `opus`.
 import { execFileSync } from "node:child_process";
+import { fableTarget } from "../scripts/fable.mjs";
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
 
 /** Only the agents whose difficulty varies per invocation. Everything else is
@@ -112,9 +117,18 @@ export function diffSize(repo, range) {
  *
  * Returns `{ model, why }`, or null for "leave it alone" — which covers the
  * unavailable lane, a low-confidence answer, and an answer naming something
- * that is not one of the two options.
+ * that is not one of the two options. `opts.fableTo` is the fable switch
+ * (fable.mjs): a model id while it is off, null while Fable is in force; when
+ * omitted it is read from the env and the main checkout.
  */
 export async function chooseModel(size, subagent, opts = {}) {
+  const fableTo = "fableTo" in opts ? opts.fableTo : fableTarget(process.env, opts.repo ?? process.cwd());
+  const picked = await pick(size, subagent, opts);
+  if (picked?.model === "fable" && fableTo) return { model: "opus", why: `${picked.why}; fable switch off` };
+  return picked;
+}
+
+async function pick(size, subagent, opts) {
   const where = band(size);
   if (where === null) return null;
   const shape = `${size.files} files, ${size.lines} lines`;
