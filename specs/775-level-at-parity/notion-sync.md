@@ -14,3 +14,6 @@
 - 2026-10-07 · implement · timeline · no row for ST-775
 - 2026-10-07 · labels · PR #184 · in development
 - 2026-10-07 · debt · ST-775 · deferred.md line 2 → https://app.notion.com/p/Tech-debt-ST-775-a-day-the-month-does-not-have-fits-LEVEL_AT-and-Date-parse-rolls-it-forward-202-3f2607bff0d28171bff8cc31c7d100e8
+- 2026-10-07 · qa · ST-775 · Implementing → QA
+- 2026-10-07 · qa · timeline · no row for ST-775
+- 2026-10-07 · labels · PR #184 · QA
