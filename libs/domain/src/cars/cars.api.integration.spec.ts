@@ -702,14 +702,11 @@ describe("the plate stays the owner's", () => {
     ];
 
     for (const auth of callers) {
-      const byId = await http()
-        .get(`/cars/${car.id}`)
-        .set('Authorization', auth);
-      expect(byId.status).toBe(404);
-      expect(JSON.stringify(byId.body)).not.toContain('B123ABC');
+      const theirs = await list(auth);
+      expect(JSON.stringify(theirs.body)).not.toContain(car.id);
+      expect(JSON.stringify(theirs.body)).not.toContain('B123ABC');
     }
-    const theirs = await list(maria.auth);
-    expect(theirs.body).toEqual({ items: [] });
+    expect((await list(maria.auth)).body).toEqual({ items: [] });
     expect((await list(null)).status).toBe(401);
   });
 

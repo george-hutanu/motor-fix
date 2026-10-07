@@ -160,11 +160,8 @@ test.describe('a garage account can add a car @seeded', () => {
   }) => {
     await signInFromHome(page, ACCOUNTS.garageOnly);
     await expect(page).toHaveURL(/\/app\/(garage|driver)$/);
-    // A database kept between runs holds the account already made a driver.
-    test.skip(
-      (await page.getByRole('group', { name: 'Rolul tău' }).count()) > 0,
-      'the seeded account is already a driver',
-    );
+    // A local run resets the account to garage only first (global-setup.ts).
+    await expect(page.getByRole('group', { name: 'Rolul tău' })).toHaveCount(0);
 
     await page
       .getByRole('button', { exact: true, name: 'Adaugă o mașină' })

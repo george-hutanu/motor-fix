@@ -16,10 +16,10 @@ import {
 
 import { normalisePlate } from './plate';
 
-export const FUELS = ['petrol', 'diesel', 'hybrid', 'electric'] as const;
+const FUELS = ['petrol', 'diesel', 'hybrid', 'electric'] as const;
 export type Fuel = (typeof FUELS)[number];
 
-export const MAX_KM = 2_000_000;
+const MAX_KM = 2_000_000;
 
 const trimmed = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -41,10 +41,16 @@ const calendarDay = () =>
     name: 'calendarDay',
     validator: {
       defaultMessage: (args) => `${args?.property} must be a YYYY-MM-DD day`,
-      validate: (value) =>
-        typeof value === 'string' &&
-        /^\d{4}-\d{2}-\d{2}$/.test(value) &&
-        new Date(`${value}T00:00:00Z`).toISOString().startsWith(value),
+      // Month 13 or day 00 make no Date at all; 30 February makes 2 March.
+      validate: (value) => {
+        if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+          return false;
+        }
+        const day = new Date(`${value}T00:00:00Z`);
+        return (
+          !Number.isNaN(day.getTime()) && day.toISOString().startsWith(value)
+        );
+      },
     },
   });
 
