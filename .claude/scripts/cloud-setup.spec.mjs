@@ -4,8 +4,7 @@ import { existsSync, mkdirSync, readFileSync, utimesSync, writeFileSync } from '
 import { join } from 'node:path';
 import { cleanup, IMAGES, setup, stub } from './cloud-setup.fixture.mjs';
 
-// scripts/cloud-setup.sh is the setup script of a Claude Code cloud
-// environment; its stub VM is built in cloud-setup.fixture.mjs.
+// scripts/cloud-setup.sh is the setup script of a Claude Code cloud environment.
 
 afterEach(cleanup);
 
