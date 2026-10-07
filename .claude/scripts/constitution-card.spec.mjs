@@ -44,7 +44,9 @@ describe('the author skills', () => {
   const allowed = (line) =>
     line.trim() === 'Full text: `.specify/memory/constitution.md`.' ||
     line.trimStart().startsWith('**Constitution Authority**') ||
-    (line.includes(FALLBACK) && line.includes('constitution-card.md'));
+    (line.includes(FALLBACK) &&
+      line.includes('constitution-card.md') &&
+      line.split('.specify/memory/constitution.md').length === 2);
 
   it.each(AUTHORS)('speckit-%s loads the card, not the full constitution', (name) => {
     const text = readFileSync(join(skills, `speckit-${name}`, 'SKILL.md'), 'utf8');

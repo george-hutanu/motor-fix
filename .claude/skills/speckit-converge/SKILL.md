@@ -102,7 +102,7 @@ Run `python3 .specify/scripts/python/check_prerequisites.py --json --require-spe
 - SPEC = FEATURE_DIR/spec.md
 - PLAN = FEATURE_DIR/plan.md
 - TASKS = FEATURE_DIR/tasks.md
-- CONSTITUTION = `.specify/memory/constitution-card.md` (if present). Open a principle's section in `.specify/memory/constitution.md` only when a decision turns on its exact wording.
+- CONSTITUTION = `.specify/memory/constitution-card.md`. Open a principle's section in `.specify/memory/constitution.md` only when a decision turns on its exact wording.
 If `spec.md`, `plan.md`, or `tasks.md` is missing, STOP with a clear, actionable message naming the
 prerequisite command to run (`/speckit-specify` for a missing spec, `/speckit-plan` for a missing plan,
 `/speckit-tasks` for missing tasks). Do not produce partial output.
