@@ -46,6 +46,16 @@ story adds:
 
 It builds no table, writer, screen or log of its own.
 
+## Clarifications
+
+### Session 2026-10-07
+
+- Q: Do `admin/live/test` and `admin/notifications/test` get audit entries, given the brief's "test-only switches" are the A33 rule switches? → A: Yes; they are admin routes that change data, FR-001 covers them, and no exemption list is built (autonomous default; the A33 switches have no endpoint yet).
+- Q: When is the test-message route's entry written, given its change is queued messages written one account at a time? → A: First, in its own transaction, before any message; a failed entry queues nothing, a failed send answers 5xx and leaves the entry (autonomous default; spec-challenger's recommendation, `notifications.service.ts:121-139`).
+- Q: Does a fixtured call that answers non-2xx fail the guard test, and is "left an entry" counted per call? → A: Both; non-2xx fails naming the route and status, and the check is the admin's entry count after minus before each call (autonomous default).
+- Q: Must every admin `GET` leave no entry, given two reads are logged by the audit capability? → A: Yes today; a later logged-read `GET` is marked in the fixture table by its own story and must add exactly one entry (autonomous default; no such route exists, so nothing more is built).
+- Q: Are the kinds `live.test` and `notification.test` decided, and what is the new value? → A: Decided; the new value is the validated request body as stored JSON, one entry per call, the test-message entry's subject the calling admin (autonomous default; Principle I).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Every admin change leaves a trace (Priority: P1)
@@ -169,18 +179,28 @@ admin; the number of entries made by that admin does not change.
 - **FR-002**: `POST /api/v1/admin/live/test` MUST write one entry per
   successful call: action `create`, subject the target account
   (`subject_type` `account`, `subject_id` the account), kind `live.test`
-  (proposed), no old value, and the new value naming what was sent.
+  (decided), no old value, and as new value the validated request body
+  as stored JSON (`{ "accountId": … }`).
 - **FR-003**: `POST /api/v1/admin/notifications/test` MUST write one entry
   per successful call: action `create`, subject the calling admin's account,
-  kind `notification.test` (proposed), and the new value listing the account
-  ids the test message went to.
+  kind `notification.test` (decided), and as new value the validated request
+  body as stored JSON (`{ "accountIds": [...] }`, the accounts the test
+  message was queued for). The route's change is a set of queued messages
+  written one account at a time, so the entry commits first, in its own
+  transaction, before any message is written: when the entry fails nothing
+  is queued; when a send fails afterwards the request answers 5xx and the
+  entry stays, recording the attempt.
 - **FR-004**: A guard test MUST take every `admin/*` route and method from the
   API's own route list (the OpenAPI document, as the admin routes test does),
   call each `POST`, `PUT`, `PATCH` or `DELETE` route once as a seeded admin
   with a known-good request from a table keyed by `METHOD /path`, and fail,
-  naming every such route, when the successful call left no entry whose
-  `actor_id` is that admin, or when the table holds no request for the route.
-  Each `GET` route is called the same way and MUST leave no entry. After this
+  naming every such route, when the call answered anything but 2xx (with
+  its status), when the number of entries whose `actor_id` is that admin did
+  not grow across that one call (counted before and after each call), or
+  when the table holds no request for the route. Each `GET` route is called
+  the same way and MUST leave the count unchanged; a later `GET` that is one
+  of the audit capability's two logged reads is marked as such in the table
+  by the story that adds it, and must then add exactly one entry. After this
   story the test names no route; a route added later joins the test without
   the test being edited beyond its fixture table.
 - **FR-005**: The verification entries ST-207 writes for an admin's open,
@@ -228,9 +248,15 @@ admin; the number of entries made by that admin does not change.
 - The actor's name is the admin's first name, as 390-FR-006 stores it; the
   story's "Ana P." is a display form and the living capability wins
   *(autonomous default)*.
-- The admin tools that exist for testing (`admin/live/test`,
-  `admin/notifications/test`) are admin actions and get entries: the Build
-  brief counts the test-only switches among the covered actions
+- The admin tools `admin/live/test` and `admin/notifications/test` are admin
+  actions that change data (an event row, queued messages), so FR-001 covers
+  them and they get entries; an exemption list would weaken the guard. The
+  Build brief's "test-only switches" are a different thing: the A33 rule
+  switches (manual approval, the RAR check) that exist only in test
+  environments; no endpoint for them exists yet, and when one does the
+  guard test holds it to FR-001 *(autonomous default; see Clarifications)*.
+- A Playwright test of the audit view (the story's Tests list it once the
+  view exists) belongs to the view's story: the view is not built
   *(autonomous default)*.
 - Opening a legal document (the story's scenario 3) has no endpoint yet; the
   download address is issued by the file story (ST-206 / ST-302). Its `open`

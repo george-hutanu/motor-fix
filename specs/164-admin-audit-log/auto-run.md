@@ -47,3 +47,15 @@ Constitution v1.8.2 read through its card; no principle blocks the story.
   Delta; plan.md and tasks.md not yet written).
 - `level.mjs check`: level 2, unchanged for specs/164-admin-audit-log;
   fr-count tripped (7 FRs); clarification, contract, projects clear.
+
+## Phase 3 — Org context
+- org-researcher (background): context.md written, 17 findings, 3 contradictions (test-only switches reading, Playwright, legal-document `open`); all carried into phase 4.
+
+## Phase 4 — Clarify
+- spec-challenger: 5 findings. Five questions self-answered (spec ## Clarifications, Session 2026-10-07):
+  1. live/notifications test routes get entries; "test-only switches" = A33 switches, assumption corrected.
+  2. notification.test entry commits first in its own transaction; failed send → 5xx, entry stays.
+  3. guard: non-2xx fails naming route+status; per-call before/after count.
+  4. admin GETs leave no entry; a later logged read is marked by its own story.
+  5. kinds decided; new value = validated request body as JSON.
+- Playwright stays out (view not built); legal-document `open` stays with ST-206/ST-302.
