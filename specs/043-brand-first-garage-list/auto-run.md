@@ -69,3 +69,10 @@ Hook outcomes:
 - `speckit-tasks`: tasks.md written, 13 tasks in 5 phases (Foundational T001-T002, US1 T003-T008, US2 T009-T010, US3 T011-T012, Polish T013). Tests first in every story; no Playwright task (deferred); FR to test map in tasks.md.
 - `speckit.analyze` (after_tasks) left to phase 8, as instructed.
 - `level.mjs check`: level 2, unchanged for specs/043-brand-first-garage-list. `artifact-lint --check`: 0 errors, 0 warnings.
+
+## Phase 8 — Analyze
+
+- `artifact-lint.mjs` (report form): 0 errors, 0 warnings; Jev lane unavailable (no key).
+- Findings: 1 LOW — I1 Inconsistency, spec.md SC-006 `(FR-009, FR-010, FR-011)` cites FR-010 (stance source) for the no-write rule → applied: `(FR-009, FR-011)`. No CRITICAL/HIGH.
+- Coverage: 11/11 FRs and 6/6 SCs have a test task (tasks.md "FR to test map"); 13 tasks, none unmapped. Constitution: no conflict (no web flow in this story, so no Playwright test owed; Principle I: three source files + one DTO file).
+- Context: all four contradictions settled by clarify Q2 and the Assumptions (SEARCH_LOG, live channel, Playwright kept as open decisions for the owner). Re-run after remediation: lint 0/0, no findings.

@@ -128,7 +128,7 @@ The spec-kit clarification gate was answered from the Build brief, the constitut
 - **SC-003**: Inside a group, garages named Alfa, Beta and Delta come in that order whatever order they were created in, two garages of the same name come by id, and no refuser comes before a taker whatever its name.
 - **SC-004**: A visitor without a session gets the list; the route is in the public-routes list and every other new route is refused without a session, as the existing public-routes check enforces.
 - **SC-005**: With no garage taking Tesla and five approved, the Tesla list holds the five in the second group and the counts read 0 and 5; with no approved garage, the counts read 0 and 0.
-- **SC-006**: A request with no brand, a non-uuid brand, an unknown query field or a bad cursor (undecodable, another brand's, no group, over 200 characters) answers a bad request with the stable code of FR-009; an unknown brand uuid answers not found; a retired brand answers a list; and after any of these requests no audit, event or search-log row exists (FR-009, FR-010, FR-011).
+- **SC-006**: A request with no brand, a non-uuid brand, an unknown query field or a bad cursor (undecodable, another brand's, no group, over 200 characters) answers a bad request with the stable code of FR-009; an unknown brand uuid answers not found; a retired brand answers a list; and after any of these requests no audit, event or search-log row exists (FR-009, FR-011).
 
 ## Assumptions
 
