@@ -76,3 +76,30 @@ Hook outcomes:
 - Findings: 1 LOW — I1 Inconsistency, spec.md SC-006 `(FR-009, FR-010, FR-011)` cites FR-010 (stance source) for the no-write rule → applied: `(FR-009, FR-011)`. No CRITICAL/HIGH.
 - Coverage: 11/11 FRs and 6/6 SCs have a test task (tasks.md "FR to test map"); 13 tasks, none unmapped. Constitution: no conflict (no web flow in this story, so no Playwright test owed; Principle I: three source files + one DTO file).
 - Context: all four contradictions settled by clarify Q2 and the Assumptions (SEARCH_LOG, live channel, Playwright kept as open decisions for the owner). Re-run after remediation: lint 0/0, no findings.
+
+## Phase 9 — Tests
+
+- `speckit-tests`: 3 new spec files, 25 tests, plus one public-routes entry. `libs/contracts/src/garage-search.dto.spec.ts` (6: FR-009), `libs/domain/src/search/garage-search.service.integration.spec.ts` (12: FR-001, FR-002, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011; SC-001, SC-002, SC-003, SC-005, SC-006), `libs/domain/src/search/garage-search.api.integration.spec.ts` (7: FR-003, FR-009; SC-004), `apps/api/src/public-routes.integration.spec.ts` (`GET /api/v1/search/garages`, SC-004).
+- Red: `npx jest` on the three files, exit 1, 3 suites failed, 0 of 25 tests could run (the DTO, service and module do not exist yet). Not committed at red (commit-protocol).
+- The 400 body code `validation_failed` comes from the API's problem filter, not the module; the domain API spec asserts the 400 and the public-routes/API boot covers the code.
+- test-adversary deferred to phase 12 (harden runs it).
+
+## Phase 10 — Implement
+
+- before_implement: `speckit.design.check` skipped (design.md checked 2026-10-07, no screen in this story); `notion-sync implement` → ST-43 Implementing, PR label in development. Checklists 0 unchecked (api.md, requirements.md).
+- T001–T013 done. Commits: c395acf6 `feat(contracts)` (DTOs), 0f3980f7 `feat(search)` (service, controller, module, app wiring, public route, generated openapi.json and data-access). Pushed.
+- Verified: `npx jest` on the 3 new specs + public-routes + scope spec, 32/32 and 23/23 passed; pre-commit `typecheck, test for 10 projects` green; `scripts/contract-check.sh` exit 0; openapi path and schemas match contracts/garage-search.openapi.json.
+- Fixes on the way: test fixture now clears the fuel ticks on a `does_not_take` row (`garage_brand_fuel_check`); every garage read spreads `...publicGarages()` inline so `public-garages.scope.spec.ts` sees the scope (it reads the call text).
+- Jira re-read step: not applicable (Notion is the tracker); phase 13 refreshes Notion.
+- after_implement: optional commit, nothing left to commit but the run log.
+
+## Phase 11 — Converge
+
+- Converged, cycle 1: 11 FRs, 6 SCs, plan R1–R8 and Principles I, II, VII checked against `libs/domain/src/search/garage-search.service.ts`, the controller, the module and the DTOs; 0 findings, tasks.md unchanged. Ticket lane: Notion, refreshed in phase 13.
+
+## Phase 12 — Harden
+
+- Audits: artifact-lint 0 errors 0 warnings; diff-audit 0 errors (WARNs kept: generated data-access files and ST-39 files; the search service is covered by its integration spec, which the matcher does not count); lint and typecheck exit 0. Mutation: not run locally (AGENTS.md; nightly in CI).
+- test-adversary: 36 tests in `libs/domain/src/search/garage-search.adversary.integration.spec.ts`, all passing, no defect.
+- code-reviewer: BLOCK. HIGH fixed: the cursor carried the garage name, unbounded, so long names overflowed the 200-character cursor cap; red test first (API spec, 21 garages with 114-character names, second page 400), then the cursor carries `{b,g,i}` and the service reads the name back by id with the public scope (`invalid_cursor` if the garage left the list). Spec FR-006, Clarifications Q4, data-model and research R6 updated. MEDIUM fixed: the paging loop in the service spec is capped at 10 pages. LOW deferred: `garage(name)` index → deferred.md (with ST-328).
+- Search specs + scope spec: 60/60 passed.

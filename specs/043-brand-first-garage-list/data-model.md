@@ -80,15 +80,15 @@ Reads 3–4 and 6 are independent and may run in one `Promise.all`. A page never
 
 ## Cursor
 
-`base64url(JSON.stringify({ b: brandId, g: 'works_on' | 'other', n: lastName, i: lastId }))`, unsigned.
+`base64url(JSON.stringify({ b: brandId, g: 'works_on' | 'other', i: lastId }))`, unsigned. The search reads the last garage's name back by its id (scoped to public garages) to build the keyset: a name has no length limit, and the cursor is capped at 200 characters.
 
 Decoding refuses with 400 `invalid_cursor` ("cursor is not a page of this search") when:
 - the text is not base64url-decodable JSON, or not an object;
 - `b !== brandId` (a cursor from another brand's search);
 - `g` is neither `works_on` nor `other`;
-- `n` is not a string, or `i` is not a uuid string.
+- `i` is not a uuid string, or names no garage in the public list (one suspended or deleted since the last page).
 
-A cursor that decodes but names a garage that no longer exists or changed group is honoured as a position (the keyset is by value, not by row), which is the accepted drift of the spec's edge case.
+A cursor whose garage still exists but changed group, or was renamed, is honoured as a position (the keyset is by value, not by row), which is the accepted drift of the spec's edge case.
 
 ## Refusals
 

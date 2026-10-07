@@ -95,6 +95,27 @@ describe('GET /search/garages', () => {
     expect((await search(query)).status).toBe(400);
   });
 
+  it('gives a next page for garages with long names', async () => {
+    for (let n = 0; n < 21; n += 1) {
+      await prisma.garage.create({
+        data: {
+          name: `${'Service Auto Bucuresti Nord '.repeat(4)}${n}`,
+          slug: `long-${n}`,
+          status: 'approved',
+        },
+      });
+    }
+
+    const first = await search({ brandId: dacia });
+    const second = await search({
+      brandId: dacia,
+      cursor: first.body.nextCursor,
+    });
+
+    expect(second.status).toBe(200);
+    expect(second.body.items).toHaveLength(1);
+  });
+
   it('answers 400 invalid_cursor to a cursor it did not give', async () => {
     const res = await search({ brandId: dacia, cursor: 'not-a-cursor' });
 

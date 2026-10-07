@@ -15,11 +15,16 @@ const GROUPS = ['works_on', 'other'] as const;
 
 // Unsigned on purpose: it only says where the next page starts, and a
 // tampered one is refused or reads a page the visitor could read anyway.
+// It carries the last garage's id, not its name: a name has no length limit
+// and the query caps the cursor at 200 characters.
 interface Cursor {
   b: string;
   g: (typeof GROUPS)[number];
-  n: string;
   i: string;
+}
+
+interface After extends Cursor {
+  name: string;
 }
 
 const invalidCursor = () =>
@@ -36,13 +41,8 @@ function decode(cursor: string, brandId: string): Cursor {
   } catch {
     throw invalidCursor();
   }
-  const { b, g, i, n } = parsed ?? {};
-  if (
-    b !== brandId ||
-    !GROUPS.includes(g as Cursor['g']) ||
-    typeof n !== 'string' ||
-    !isUUID(i)
-  ) {
+  const { b, g, i } = parsed ?? {};
+  if (b !== brandId || !GROUPS.includes(g as Cursor['g']) || !isUUID(i)) {
     throw invalidCursor();
   }
   return parsed as Cursor;
@@ -64,7 +64,10 @@ export class GarageSearchService {
       where: { id: brandId },
     });
     if (!brand) throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'Not found');
-    const after = cursor === undefined ? undefined : decode(cursor, brandId);
+    const after =
+      cursor === undefined
+        ? undefined
+        : await this.after(decode(cursor, brandId));
     const takers = { brandId, stance: 'works_on' as const };
     const groups: Record<Cursor['g'], Prisma.GarageWhereInput> = {
       other: { brands: { none: takers } },
@@ -99,17 +102,26 @@ export class GarageSearchService {
               b: brandId,
               g: last.stance === 'works_on' ? 'works_on' : 'other',
               i: last.id,
-              n: last.name,
             })
           : null,
       total: worksOn + doesNotTake,
     };
   }
 
+  // A garage gone from the public list since the last page ends the paging.
+  private async after(cursor: Cursor): Promise<After> {
+    const last = await this.prisma.garage.findFirst({
+      select: { name: true },
+      where: { id: cursor.i, ...publicGarages() },
+    });
+    if (!last) throw invalidCursor();
+    return { ...cursor, name: last.name };
+  }
+
   private async read(
     brandId: string,
     group: Prisma.GarageWhereInput,
-    after: Cursor | undefined,
+    after: After | undefined,
     already = 0,
   ): Promise<ListedGarageDto[]> {
     const garages = await this.prisma.garage.findMany({
@@ -126,8 +138,8 @@ export class GarageSearchService {
         ...group,
         ...(after && {
           OR: [
-            { name: { gt: after.n } },
-            { id: { gt: after.i }, name: after.n },
+            { name: { gt: after.name } },
+            { id: { gt: after.i }, name: after.name },
           ],
         }),
       },

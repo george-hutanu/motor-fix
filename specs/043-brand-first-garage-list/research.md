@@ -39,9 +39,9 @@ Phase 0 of `/speckit-plan`, 2026-10-07. Every unknown was resolved from this rep
 
 ## R6 — The cursor
 
-- **Decision**: `base64url(JSON.stringify({ b: brandId, g: 'works_on' | 'other', n: lastName, i: lastId }))`, unsigned. Decoding refuses with 400 `invalid_cursor` ("cursor is not a page of this search") when the text is not base64url JSON of an object, `b !== brandId`, `g` is not one of the two groups, `n` is not a string, or `i` is not a uuid.
+- **Decision**: `base64url(JSON.stringify({ b: brandId, g: 'works_on' | 'other', i: lastId }))`, unsigned. Decoding refuses with 400 `invalid_cursor` ("cursor is not a page of this search") when the text is not base64url JSON of an object, `b !== brandId`, `g` is not one of the two groups, or `i` is not a uuid or names no public garage. The name of the keyset is read back by id (changed in harden: a name in the cursor overflowed the 200-character cap for long names).
 - **Rationale**: the spec (clarify Q4) fixes the shape; a signature would need a key and a rotation story for a public, idempotent read whose worst forgery is a wrong page of public data (the owner can add one later without changing the client, the cursor being opaque). `invalid_cursor` mirrors `BrandsService.search` (`libs/domain/src/catalogue/brands.service.ts:34-40`) so the web interceptor and the screen meet one code. Node's `Buffer.from(text, 'base64url')` is built in; no dependency.
-- **Alternatives considered**: the last garage's id alone (the brand search's cursor) — needs an extra read to recover the name and the group; a signed token — bloat for now.
+- **Alternatives considered**: the name in the cursor (first choice) — overflows the 200-character cap, garage names being unbounded; a signed token — bloat for now.
 - **Evidence**: `spec.md` Clarifications Q4, FR-006, FR-009; `libs/domain/src/catalogue/brands.service.ts:28-41`; `libs/contracts/src/brands.dto.ts:14-21` (the brand cursor is a uuid, so the DTO there uses `@IsUUID`; this one is opaque text, so `@IsString()` with a length cap).
 
 ## R7 — Brand existence and retired brands
