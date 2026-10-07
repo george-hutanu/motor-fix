@@ -146,11 +146,13 @@ describe('the list your garage page', () => {
     },
   );
 
-  it('holds the e-mail field in step 1, the brands in step 2, and leaves the other sections empty but for their heading', async () => {
+  it('holds the e-mail field in step 1, the brands in step 2, the verification fields in step 6, and leaves the sections between empty but for their heading', async () => {
     const { page } = await open('/ro/list-your-garage');
 
     const [first, second, ...rest] = page.querySelectorAll('section');
+    const last = rest.pop() as HTMLElement;
     expect(first.querySelector('#listing-email')).not.toBeNull();
+    expect(last.querySelector('#listing-cui')).not.toBeNull();
     expect([...second.children].map((c) => c.tagName)).toEqual([
       'H2',
       'MF-BRANDS-STEP',
@@ -364,7 +366,8 @@ describe('switching the language', () => {
 const API = '/api/v1/listing-drafts';
 const field = (page: HTMLElement) =>
   page.querySelector<HTMLInputElement>('#listing-email') as HTMLInputElement;
-const note = (page: HTMLElement) => text(page.querySelector('p.note'));
+const note = (page: HTMLElement) =>
+  text(page.querySelector('.sections > p.note'));
 const saveButton = (page: HTMLElement) =>
   page.querySelector<HTMLButtonElement>('.actions button') as HTMLButtonElement;
 const stored = (): BrowserDraft | null =>
@@ -492,7 +495,7 @@ describe('the e-mail field and the save button', () => {
       (sections.at(-1) as HTMLElement).compareDocumentPosition(button) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    const notes = page.querySelectorAll('[role="status"]');
+    const notes = page.querySelectorAll('.sections > [role="status"]');
     expect(notes).toHaveLength(1);
     expect(notes[0].getAttribute('aria-live')).toBe('polite');
   });
@@ -927,6 +930,239 @@ describe('opening the link from the e-mail', () => {
       expect(text(page.querySelector('h1'))).toBe(title);
     },
   );
+});
+
+const cuiInput = (page: HTMLElement) =>
+  page.querySelector<HTMLInputElement>('#listing-cui') as HTMLInputElement;
+const rarInput = (page: HTMLElement) =>
+  page.querySelector<HTMLInputElement>('#listing-rar') as HTMLInputElement;
+const step6 = (page: HTMLElement) =>
+  page.querySelectorAll('section')[5] as HTMLElement;
+const counter = (page: HTMLElement) =>
+  text(step6(page).querySelector('.count'));
+const errorOf = (page: HTMLElement, input: HTMLInputElement) =>
+  text(page.querySelector(`#${input.id}-error`));
+
+function fillIn(
+  harness: RouterTestingHarness,
+  input: HTMLInputElement,
+  value: string,
+) {
+  input.value = value;
+  input.dispatchEvent(new Event('input'));
+  harness.detectChanges();
+}
+
+function leaveField(harness: RouterTestingHarness, input: HTMLInputElement) {
+  input.dispatchEvent(new Event('blur'));
+  harness.detectChanges();
+}
+
+describe('the verification step', () => {
+  it.each([
+    [
+      '/ro/list-your-garage',
+      'Publicăm doar service-uri care funcționează legal în România. Verificăm firma și autorizația RAR înainte ca profilul să apară pe hartă.',
+      'CUI-ul firmei',
+      'Numărul autorizației tehnice RAR',
+      'de pe autorizația afișată în atelier',
+      '0 din 5 completate',
+      'Comparăm datele firmei cu registrele publice (ANAF, ONRC, RAR). Documentele le vede doar echipa MotorFix.',
+    ],
+    [
+      '/en/list-your-garage',
+      'We only publish garages that operate legally in Romania. We check the company and the RAR authorisation before the profile appears on the map.',
+      'Company tax ID',
+      'RAR technical authorisation number',
+      'from the authorisation displayed in the workshop',
+      '0 of 5 completed',
+      'We compare the company details with the public registers (ANAF, ONRC, RAR). Only the MotorFix team sees the documents.',
+    ],
+  ])(
+    '%s shows the intro, the two fields, the counter and the note, in that order',
+    async (path, intro, cui, rar, hint, count, note) => {
+      const { page } = await open(path);
+
+      const section = step6(page);
+      const texts = [...section.querySelectorAll('p:not(.error), label')].map(
+        text,
+      );
+      expect(texts).toEqual([intro, cui, rar, hint, count, note]);
+      expect(text(section.querySelector('label[for="listing-cui"]'))).toBe(cui);
+      expect(text(section.querySelector('label[for="listing-rar"]'))).toBe(rar);
+      expect(cuiInput(page).maxLength).toBe(40);
+      expect(rarInput(page).maxLength).toBe(40);
+      expect(rarInput(page).getAttribute('aria-describedby')).toBe(
+        'listing-rar-hint',
+      );
+      expect(section.querySelector('.count')?.getAttribute('aria-live')).toBe(
+        'polite',
+      );
+    },
+  );
+
+  it('offers no look-up: no button, no company name, no register result', async () => {
+    const { page } = await open('/ro/list-your-garage');
+
+    const section = step6(page);
+    expect(section.querySelectorAll('button, a')).toHaveLength(0);
+    expect(text(section)).not.toMatch(
+      /Verifică firma|Caută în registrul RAR|CAEN/,
+    );
+    TestBed.inject(HttpTestingController).verify();
+  });
+
+  it('names a wrong tax ID only once the field is left, and clears it when the value is right', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    const input = cuiInput(page);
+
+    fillIn(harness, input, 'RO 18547291');
+    expect(errorOf(page, input)).toBe('');
+    expect(input.getAttribute('aria-invalid')).toBeNull();
+    leaveField(harness, input);
+
+    expect(errorOf(page, input)).toBe('CUI invalid');
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.getAttribute('aria-describedby')).toBe('listing-cui-error');
+    expect(
+      page.querySelector('#listing-cui-error')?.closest('[aria-live="polite"]'),
+    ).not.toBeNull();
+    expect(counter(page)).toBe('0 din 5 completate');
+
+    fillIn(harness, input, 'RO18547290');
+    expect(errorOf(page, input)).toBe('');
+    expect(input.getAttribute('aria-invalid')).toBeNull();
+    expect(counter(page)).toBe('1 din 5 completate');
+    leaveField(harness, input);
+    expect(input.value).toBe('18547290');
+  });
+
+  it('shows what was typed until the field is left', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    const input = cuiInput(page);
+
+    fillIn(harness, input, 'ro 18 547 290');
+    expect(input.value).toBe('ro 18 547 290');
+    expect(counter(page)).toBe('1 din 5 completate');
+    leaveField(harness, input);
+    expect(input.value).toBe('18547290');
+  });
+
+  it('counts a RAR number of 3 characters, asks for more under 3, and shows it in capitals once left', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    const input = rarInput(page);
+
+    fillIn(harness, input, ' ab ');
+    leaveField(harness, input);
+    expect(input.value).toBe('AB');
+    expect(errorOf(page, input)).toBe('Cel puțin 3 caractere');
+    expect(input.getAttribute('aria-describedby')).toBe('listing-rar-error');
+    expect(counter(page)).toBe('0 din 5 completate');
+
+    fillIn(harness, input, 'abc');
+    expect(errorOf(page, input)).toBe('');
+    expect(counter(page)).toBe('1 din 5 completate');
+    fillIn(harness, cuiInput(page), '18547290');
+    expect(counter(page)).toBe('2 din 5 completate');
+  });
+
+  it('keeps both values in the browser copy, stripped and in capitals, and drops an emptied one', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    try {
+      fillIn(harness, cuiInput(page), 'RO 18547290');
+      fillIn(harness, rarInput(page), ' ab123 ');
+      await jest.advanceTimersByTimeAsync(1_100);
+      expect(stored()?.data).toEqual({
+        steps: { '6': { cui: '18547290', rarNumber: 'AB123' } },
+      });
+
+      fillIn(harness, rarInput(page), '');
+      await jest.advanceTimersByTimeAsync(1_100);
+      expect(stored()?.data).toEqual({ steps: { '6': { cui: '18547290' } } });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('sends both values to the server copy with the rest of the draft', async () => {
+    const { harness, page } = await withServerCopy();
+    const http = TestBed.inject(HttpTestingController);
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    try {
+      fillIn(harness, cuiInput(page), '18547290');
+      fillIn(harness, rarInput(page), 'ab123');
+      await jest.advanceTimersByTimeAsync(5_100);
+      const saves = http.match(() => true);
+      expect(saves).toHaveLength(1);
+      expect(saves[0].request.body).toMatchObject({
+        data: { steps: { '6': { cui: '18547290', rarNumber: 'AB123' } } },
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('opens a kept copy with its values, the stored form and the counter', async () => {
+    seed({ data: { steps: { '6': { cui: '18547290', rarNumber: 'AB123' } } } });
+
+    const { page } = await open('/ro/list-your-garage');
+
+    expect(cuiInput(page).value).toBe('18547290');
+    expect(rarInput(page).value).toBe('AB123');
+    expect(counter(page)).toBe('2 din 5 completate');
+  });
+
+  it('names a kept tax ID that fails at once', async () => {
+    seed({ data: { steps: { '6': { cui: '18547291' } } } });
+
+    const { page } = await open('/ro/list-your-garage');
+
+    expect(errorOf(page, cuiInput(page))).toBe('CUI invalid');
+    expect(counter(page)).toBe('0 din 5 completate');
+  });
+
+  it('shows the values of the server copy opened from the link', async () => {
+    const { harness, page } = await open('/ro/list-your-garage?draft=link-key');
+    await answered(harness, await request(), {
+      data: { steps: { '6': { cui: '18547290', rarNumber: 'AB123' } } },
+      email: 'ion@service.test',
+      id: 'd9',
+      language: 'ro',
+      status: 'open',
+      step: 6,
+      updatedAt: '2026-10-07T11:00:00.000Z',
+    });
+    await settle(harness);
+
+    expect(cuiInput(page).value).toBe('18547290');
+    expect(rarInput(page).value).toBe('AB123');
+    expect(counter(page)).toBe('2 din 5 completate');
+  });
+
+  it('opens a server copy without the section with empty fields', async () => {
+    const { page } = await withServerCopy();
+
+    expect(cuiInput(page).value).toBe('');
+    expect(rarInput(page).value).toBe('');
+    expect(counter(page)).toBe('0 din 5 completate');
+  });
+
+  it('changes every text with the language and keeps the values and the count', async () => {
+    const { harness, i18n, page } = await open('/ro/list-your-garage');
+    fillIn(harness, cuiInput(page), 'RO 18547291');
+    leaveField(harness, cuiInput(page));
+    fillIn(harness, rarInput(page), 'abc');
+
+    await i18n.use('en');
+    await settle(harness);
+
+    expect(errorOf(page, cuiInput(page))).toBe('Invalid tax ID');
+    expect(counter(page)).toBe('1 of 5 completed');
+    expect(cuiInput(page).value).toBe('18547291');
+    expect(rarInput(page).value).toBe('abc');
+    expect(text(step6(page))).toContain('We only publish garages');
+  });
 });
 
 // @traces 040-FR-006

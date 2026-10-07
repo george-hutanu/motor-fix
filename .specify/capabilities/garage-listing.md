@@ -5,6 +5,7 @@ features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
   - 114-save-draft
+  - 205-company-rar-check
 ---
 
 # Capability: Garage listing
@@ -168,6 +169,62 @@ _From 040-garage-brand-stance._
 ### 040-FR-013 — The step and every text it shows MUST obey the phone layout rules: no sideways scroll at 320 px, 44 px tap targets for the chips, no text under 12 px, light and dark theme following the device, chip states told by more than colour with a 3:1 contrast of the lamp and the focus ring and 4.5:1 for text.
 
 _From 040-garage-brand-stance._
+
+### 205-FR-001 — Step 6 of List your garage (the section headed "6 Verificare · obligatoriu" / "6 Verification · required", 108-FR-003) MUST open with the intro "Publicăm doar service-uri care funcționează legal în România. Verificăm firma și autorizația RAR înainte ca profilul să apară pe hartă." / "We only publish garages that operate legally in Romania. We check the company and the RAR authorisation before the profile appears on the map."
+
+_From 205-company-rar-check._
+
+### 205-FR-002 — The step MUST hold a field labelled "CUI-ul firmei" / "Company tax ID" that accepts an optional "RO" prefix in any letter case, spaces anywhere, and 2 to 10 digits whose last digit is the control digit (key 753217532: each of the first digits, right-aligned to nine places, times the key's digit in that place, summed, times 10, modulo 11, with 10 read as 0). When the owner leaves the field holding a value that fails the rule, the error "CUI invalid" / "Invalid tax ID" MUST show under the field and the CUI MUST NOT count as done; a value that passes counts as done. Whatever the control digit says, the draft keeps the stripped form (digits and any other characters typed, without the "RO" prefix and without spaces); an empty field removes the key. The field shows what was typed until the owner leaves it, then shows the stripped form, so the field after leaving equals the field after a restore. An empty field shows no error and is not done. The field takes no more than 40 characters as typed, spaces included; "RO" alone strips to empty and is treated as an empty field.
+
+_From 205-company-rar-check._
+
+### 205-FR-003 — The CUI rule MUST be one function in the contracts library, used by the form and available unchanged to the submission (ST-116) and the admin's company check (ST-203); no second copy of the rule may exist. It MUST answer the brief's examples: "RO18547290" and "18547290" valid, "RO 18547291" invalid.
+
+_From 205-company-rar-check._
+
+### 205-FR-004 — The step MUST hold a field labelled "Numărul autorizației tehnice RAR" / "RAR technical authorisation number" with the hint "de pe autorizația afișată în atelier" / "from the authorisation displayed in the workshop". Its value is trimmed first, then put in capitals and cut to 40 characters (the field takes no more); inner characters are kept as typed; the 3-character rule counts the trimmed value; the field shows the stored form once the owner leaves it; an empty value removes the key; 3 characters or more count as done; 1 or 2 show "Cel puțin 3 caractere" / "At least 3 characters" under the field and are not done; empty shows nothing and is not done. The format is checked no further: the admin checks the number in the register by hand (ST-204).
+
+_From 205-company-rar-check._
+
+### 205-FR-005 — The step MUST show a counter "{n} din 5 completate" / "{n} of 5 completed" over five items: the CUI, the RAR number, the ONRC certificate, the RAR authorisation and the declaration. This story counts the first two; the other three count 0 until the uploads-and-declaration story (ST-206) supplies them, so the counter reads 0, 1 or 2 here. The counter is one function of five yes/no values, and its change MUST be announced to assistive technology (a polite live region).
+
+_From 205-company-rar-check._
+
+### 205-FR-006 — Under the fields the step MUST show the note "Comparăm datele firmei cu registrele publice (ANAF, ONRC, RAR). Documentele le vede doar echipa MotorFix." / "We compare the company details with the public registers (ANAF, ONRC, RAR). Only the MotorFix team sees the documents."
+
+_From 205-company-rar-check._
+
+### 205-FR-007 — The step MUST show no look-up: no "Verifică firma" / "Check company" or "Caută în registrul RAR" / "Look up in the RAR register" button, no company name, CAEN code, activity list or "not covered" warning, and no call to any register. No release flag is built for them: the automatic look-ups are a later story with no page yet, which adds the buttons when it exists.
+
+_From 205-company-rar-check._
+
+### 205-FR-008 — The two values MUST live in the draft's step-6 section (the one-section-per-step envelope the draft already has, `data.steps["6"]`) under the keys `cui` (the stored digits) and `rarNumber` (the trimmed capitals), in the browser copy and the server copy exactly as the draft saves every other value (114-FR-002, 114-FR-005: one second after the last change in the browser, at most every 5 seconds on the server, whole every time). Opening the page again in the same browser, and opening the continue link on another device, MUST show both values and recompute done and the counter from them (114-FR-011). A server copy without a step-6 section MUST open with empty fields.
+
+_From 205-company-rar-check._
+
+### 205-FR-009 — The server MUST check the draft's step-6 section on every create and save: it may hold only `cui` and `rarNumber`, each a string of at most 40 characters or absent; any other key, type or length MUST be refused with 400 and the draft's stable validation code, as the envelope is refused today. The server MUST NOT refuse a CUI that fails the control-digit rule or a RAR number under 3 characters: a draft keeps what the owner typed, and the sending story re-checks both when the listing is sent.
+
+_From 205-company-rar-check._
+
+### 205-FR-010 — Field errors MUST show under their field, in the person's language, once the owner has left the field (not while first typing in it) and on a restored value that fails; after that the error follows the value as it changes. The done state and the counter follow the value on every change, typed or not left yet. The error text sits in a polite live region so its appearance is announced; the field MUST carry `aria-invalid` and be described by its error or, when there is none, by its hint. Leaving the field clear removes the error.
+
+_From 205-company-rar-check._
+
+### 205-FR-011 — The step MUST write nothing to the garage tables, the audit history or the outbox, and MUST notify nobody (114-FR-018): the CUI and the RAR number reach `GARAGE.cui` and `VERIFICATION_FILE.rar_number` only when the listing is sent, by the sending story (ST-116), which adds those fields; this story adds no column.
+
+_From 205-company-rar-check._
+
+### 205-FR-012 — Every text of the step MUST exist in Romanian and English in the public interface texts and follow the interface language; switching the language MUST change the texts and keep the values, the done state and the counter's number (108-FR-009).
+
+_From 205-company-rar-check._
+
+### 205-FR-013 — The step MUST obey the page's phone layout rules (108-FR-011): no sideways scroll at 320 px, 44 px targets, no text under 12 px, light and dark theme following the device; the error text MUST reach a 4.5:1 contrast against its background in both themes.
+
+_From 205-company-rar-check._
+
+### 205-FR-014 — Tests MUST cover, in Jest: the CUI rule (valid with and without "RO", with spaces and a lower-case prefix, a wrong control digit, too short, too long, a letter in the digits); the RAR number rule (trim, capitals, 2 and 3 characters, 40 and 41); the counter for 0 to 5 done items; on real PostgreSQL, a draft saved with both step-6 values and read back unchanged, a section with an unknown key, a non-string or a 41-character string refused with 400 while a save without the section is accepted. A Playwright end-to-end test MUST, at a phone width, open step 6, type an invalid CUI and see the error, type a valid one and a RAR number and see the counter reach "2 din 5 completate", and check that no look-up button exists.
+
+_From 205-company-rar-check._
 
 ## Retired
 
