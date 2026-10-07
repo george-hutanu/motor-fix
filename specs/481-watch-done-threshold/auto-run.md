@@ -16,3 +16,4 @@
 - converge: nothing unbuilt (FR-001..FR-004 each covered).
 - harden: one comparison and one key; no dead code, no new export.
 - review: spec-reviewer APPROVE, code-reviewer APPROVE; 1 MEDIUM (task id in a comment and 4 test titles) fixed in one lap.
+- archive: spec status Archived (2026-10-07); Spec Delta merged into platform (+2 added, ~2 modified: 464-FR-005 → 481-FR-001, 464-FR-006 → 481-FR-002, restated in full). Retro not run: the verdict stays the owner's (phase 16). Agent context: no change (the active-plan line lives in the untracked CLAUDE.local.md).
