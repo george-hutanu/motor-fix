@@ -7,6 +7,7 @@ features:
   - 114-save-draft
   - 205-company-rar-check
   - 112-opening-hours
+  - 354-job-catalogue-prices
 ---
 
 # Capability: Garage listing
@@ -274,6 +275,46 @@ _From 112-opening-hours._
 ### 112-FR-013 — Tests MUST cover, in Jest: the interval rules (order, overlap, touching accepted, at most two, 15-minute grid, closing after opening, a break inside the day), the closed-day rules (today to two years, duplicate, legal holiday, 80-character note), the simple-rows view over per-day values; on real PostgreSQL: a draft saved with the three keys and read back unchanged, a bad time, a third interval, an unknown facility and an 81-character note refused with 400 while a section without the keys is accepted; the write creating the hours, the closed-day rows and facility rows with status `listed` and refusing a bad section whole; a legal holiday and a past date in the section written as no closed-day row, and a section without `hours` written as the starting point; the calendar holding 16 days for 2026 and 17 for 2027, each once. A Playwright end-to-end test MUST, at a phone width, set Monday with a lunch break, open Sunday, add a closed day with a note, tick two facilities, reload and check everything is back.
 
 _From 112-opening-hours._
+
+### 354-FR-003 — Each garage MUST be able to carry an hourly labour range, `labour_from_bani` and `labour_to_bani`, both empty until the listing is sent and both set afterwards.
+
+_From 354-job-catalogue-prices._
+
+### 354-FR-004 — Each garage MUST be able to carry price rows, one per garage, job and brand, where an absent brand is the default range and counts as one brand (`(garage_id, job_type_id, brand_id)` unique with empty brands equal, PostgreSQL `NULLS NOT DISTINCT`); a row holds `from_bani`, optional `to_bani`, optional `duration_minutes`, `visible` (true unless the garage hides it), `position` (the order the garage entered the jobs, 0-based, used by the public list), `updated_at` and `updated_by` (the account that last saved it). The job MUST be a catalogue job and the brand, when given, a catalogue brand, both enforced by the database.
+
+_From 354-job-catalogue-prices._
+
+### 354-FR-005 — Money MUST be stored and carried by the API as integer bani; the screens take and show whole lei. One conversion (lei ↔ bani) MUST exist where the API and the web app both read it; it refuses a lei value that is not a whole number. The API itself accepts any integer number of bani (A29).
+
+_From 354-job-catalogue-prices._
+
+### 354-FR-006 — One range check MUST exist where the API and the web app both read it, and every route that saves a range (the listing submit, the draft's step 3, the later editor) MUST use it; no second copy of the rule may exist. It takes a range (from, optional to, optional duration) and returns field errors with stable codes (the code table is in `data-model.md`, "Shared rules") and warnings: `from` and `to` integer bani; `from` at least 1 leu (100 bani); `to`, when set, at least `from` and at most 100.000 lei (10.000.000 bani); `from` at most 100.000 lei; `duration`, when set, from 15 to 4.800 minutes in steps of 15; the warning `wide_range` when `to` is set and more than 3 × `from` (exactly 3 × is not wide). The ratio 3 MUST live in one named place. A warning never refuses a save.
+
+_From 354-job-catalogue-prices._
+
+### 354-FR-007 — A range refused by the check MUST be answered 422 by the API with the field errors (field path and code), and nothing of that save stored; a saved range with warnings MUST return them to the caller so the response can carry them.
+
+_From 354-job-catalogue-prices._
+
+### 354-FR-008 — The `garages` module MUST provide one write that saves a garage's starting prices inside a transaction the caller owns, taking the garage, the actor (the owner account created in that transaction) and the step-3 payload: the labour range (both ends required: a missing end is refused with code `required` before the range check runs; the range check, `wide_range` included, applies to it) and a list of jobs, each with a catalogue job id, an optional brand id, from, optional to and optional duration. It MUST write the labour range on the garage and one price row per job in payload order with `visible = true`, `position` 0, 1, 2…, `updated_at` now and `updated_by` the actor; a job with no top is stored with `to_bani` empty and `visible = true` (the public rule, ST-357, hides it on read; this story stores no "hidden" mark for it).
+
+_From 354-job-catalogue-prices._
+
+### 354-FR-009 — The write MUST check every range with FR-006 and refuse the whole payload on any error, the duplicate `(job, brand)` pair within the payload, a brand range whose job has no default range in the payload, an unknown job, a job that is not `approved`, or an unknown brand, each as a field error naming the row; it MUST write nothing when it refuses, and because it runs in the caller's transaction, a caller that fails afterwards MUST leave no price row, labour range or audit entry behind, the listing draft untouched.
+
+_From 354-job-catalogue-prices._
+
+### 354-FR-010 — In the same transaction the write MUST record the starting values once in the audit history through the existing audit writer: one `create` entry per price row (subject type `garage_price`, the row's values as the new value, the garage id as scope) and one `update` entry per labour field on the garage from null to the value (subject type `garage`, fields `labour_from_bani`, `labour_to_bani`, through `recordChanges`), actor the owner. The write MUST emit no event and notify nobody: the garage is not public yet.
+
+_From 354-job-catalogue-prices._
+
+### 354-FR-011 — The write MUST return the saved rows and the warnings per row and for the labour range, so the sending story's response can carry `wide_range` where it applies.
+
+_From 354-job-catalogue-prices._
+
+### 354-FR-012 — Tests MUST cover, in Jest on real PostgreSQL: the load is idempotent and atomic; lei ↔ bani; the range check's table (top below bottom refused, empty top allowed, the 1 leu and 100.000 lei bounds, the duration steps, the 3 × warning and the exactly-3 × non-warning); the unique rule with an empty brand at the database; the write creating the garage's labour range, the rows and the audit entries in one transaction; a refused payload storing nothing; a failed caller transaction leaving nothing. The end-to-end check of step 3 through submit to the price API belongs to the stories that build those (ST-109, the sending story, ST-357) and is recorded here as deferred.
+
+_From 354-job-catalogue-prices._
 
 ## Retired
 

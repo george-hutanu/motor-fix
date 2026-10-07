@@ -37,6 +37,10 @@ model Garage {
   // rar_activity codes the RAR authorisation covers; the activities check
   // writes them.
   rarActivities           String[]                 @default([]) @map("rar_activities")
+  // The hourly labour range, in bani; both set when the listing is sent.
+  labourFromBani          Int?                     @map("labour_from_bani")
+  labourToBani            Int?                     @map("labour_to_bani")
+  prices                  GaragePrice[]
   // WeeklyHours from contracts' garage-hours; {} until the listing is sent.
   hours                   Json                     @default("{}")
   closedDays              GarageClosedDay[]
@@ -197,6 +201,32 @@ model GarageBrandJob {
 
   @@id([garageId, brandId, jobTypeId])
   @@map("garage_brand_job")
+}
+
+// A garage's price range for one job, in bani; no brand is the default range.
+// One row per garage, job and brand, an empty brand included: the migration's
+// `garage_price_one_range` index is NULLS NOT DISTINCT, which Prisma cannot
+// express, so the schema carries no @@unique for it.
+model GaragePrice {
+  id              String   @id @default(uuid()) @db.Uuid
+  garageId        String   @map("garage_id") @db.Uuid
+  jobTypeId       String   @map("job_type_id") @db.Uuid
+  brandId         String?  @map("brand_id") @db.Uuid
+  fromBani        Int      @map("from_bani")
+  toBani          Int?     @map("to_bani")
+  durationMinutes Int?     @map("duration_minutes")
+  visible         Boolean  @default(true)
+  position        Int
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  // The account that last saved the row; no foreign key, the history keeps actors.
+  updatedBy       String   @map("updated_by") @db.Uuid
+  garage          Garage   @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  jobType         JobType  @relation(fields: [jobTypeId], references: [id])
+  brand           Brand?   @relation(fields: [brandId], references: [id], onDelete: Restrict)
+
+  @@index([jobTypeId])
+  @@index([brandId])
+  @@map("garage_price")
 }
 
 enum VerificationFileStatus {
