@@ -75,10 +75,31 @@ describe('audienceOf', () => {
     ).toEqual(['account:d1', 'garage:g1', 'mechanic:m1']);
   });
 
-  it('sends a review to the garage, its author and the public garage and mechanic pages', () => {
+  it("sends a review to the garage, its author, the garage's public page and its mechanic's public page", () => {
     expect(
-      audienceOf({ authorAccountId: driver, garageId: garage, type: 'review' }),
-    ).toEqual(['garage:g1', 'account:d1', 'public:garage', 'public:mechanic']);
+      audienceOf({
+        authorAccountId: driver,
+        garageId: garage,
+        mechanicId: mechanic,
+        type: 'review',
+      }),
+    ).toEqual([
+      'garage:g1',
+      'account:d1',
+      'public:garage:g1',
+      'public:mechanic:m1',
+    ]);
+  });
+
+  it('sends a review that names no mechanic to no mechanic page', () => {
+    expect(
+      audienceOf({
+        authorAccountId: driver,
+        garageId: garage,
+        mechanicId: null,
+        type: 'review',
+      }),
+    ).toEqual(['garage:g1', 'account:d1', 'public:garage:g1']);
   });
 
   it('sends a message to the driver and the garage', () => {
@@ -121,27 +142,22 @@ describe('audienceOf', () => {
     ]);
   });
 
-  it("adds the garage's public page and each brand's search when an approval publishes it", () => {
+  it("adds the garage's public page and the results channel when an approval publishes it", () => {
     expect(
-      audienceOf({
-        garageId: garage,
-        published: { brandIds: ['b1', 'b2'] },
-        type: 'verification',
-      }),
-    ).toEqual([
-      'admin',
-      'garage:g1',
-      'public:garage:g1',
-      'public:search:b1',
-      'public:search:b2',
-    ]);
+      audienceOf({ garageId: garage, published: true, type: 'verification' }),
+    ).toEqual(['admin', 'garage:g1', 'public:garage:g1', 'public:search']);
+  });
+
+  it("sends a garage's public change to its staff and its public page", () => {
     expect(
-      audienceOf({
-        garageId: garage,
-        published: { brandIds: [] },
-        type: 'verification',
-      }),
-    ).toEqual(['admin', 'garage:g1', 'public:garage:g1']);
+      audienceOf({ garageId: garage, results: false, type: 'public_garage' }),
+    ).toEqual(['garage:g1', 'public:garage:g1']);
+  });
+
+  it('also sends a public change that can move the garage in results to the results channel', () => {
+    expect(
+      audienceOf({ garageId: garage, results: true, type: 'public_garage' }),
+    ).toEqual(['garage:g1', 'public:garage:g1', 'public:search']);
   });
 
   it('sends platform rules and copy voices to the admins and the system channel', () => {
