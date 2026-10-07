@@ -100,6 +100,37 @@ describe('the admin test message', () => {
     });
   });
 
+  it('leaves an entry an admin can read in the admin actions history', async () => {
+    const admin = await account('ana', ['admin']);
+    const driver = await account('driver', ['driver']);
+
+    const res = await sendTest(
+      { accountIds: [driver] },
+      bearer(admin, 'admin'),
+    );
+
+    expect(res.status).toBe(202);
+    const history = await request(app.getHttpServer())
+      .get('/audit-history')
+      .query({ actorId: admin, area: 'admin_actions' })
+      .set('Authorization', bearer(admin, 'admin'));
+    expect(history.status).toBe(200);
+    expect(
+      history.body.items.filter(
+        (item: { kind: string | null }) => item.kind === 'notification.test',
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        action: 'create',
+        actor: expect.objectContaining({ id: admin, role: 'admin' }),
+        kind: 'notification.test',
+        newValue: { accountIds: [driver] },
+        subjectId: admin,
+        subjectType: 'account',
+      }),
+    ]);
+  });
+
   it('sends again when the admin asks again', async () => {
     const admin = await account('admin', ['admin']);
     await sendTest({ accountIds: [admin] }, bearer(admin, 'admin'));
@@ -143,6 +174,11 @@ describe('the admin test message', () => {
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('unknown_recipient');
     expect(await prisma.notification.count()).toBe(0);
+    expect(
+      await prisma.activityLog.count({
+        where: { actorId: admin, kind: 'notification.test' },
+      }),
+    ).toBe(0);
   });
 
   it.each([

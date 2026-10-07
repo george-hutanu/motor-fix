@@ -24,6 +24,7 @@ import type { Request, Response } from 'express';
 
 import { EVENT_PORT, type EventPort } from './event.port';
 import { LiveHub } from './live.hub';
+import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { verifyAccessToken } from '../auth/access-token';
 import {
   AUTH_OPTIONS,
@@ -44,6 +45,7 @@ export class LiveController {
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(AUTH_OPTIONS) private readonly auth: AuthOptions,
     @Inject(EVENT_PORT) private readonly events: EventPort,
+    @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
   @Get('live')
@@ -81,7 +83,7 @@ export class LiveController {
   @ApiAcceptedResponse({
     description: 'The test update was recorded; the relay sends it',
   })
-  async test(@Body() body: LiveTestDto) {
+  async test(@CurrentActor() actor: Actor, @Body() body: LiveTestDto) {
     await this.prisma.$transaction(async (tx) => {
       const target = await tx.account.findUnique({
         select: { id: true },
@@ -94,6 +96,15 @@ export class LiveController {
         kind: 'live.test',
         payload: {},
         subjectId: randomUUID(),
+      });
+      await this.audit.record(tx, {
+        action: 'create',
+        actorId: actor.accountId,
+        actorRole: actor.role,
+        kind: 'live.test',
+        newValue: { accountId: target.id },
+        subjectId: target.id,
+        subjectType: 'account',
       });
     });
   }

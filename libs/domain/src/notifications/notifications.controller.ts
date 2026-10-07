@@ -3,7 +3,8 @@ import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiAcceptedResponse, ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { NotificationsService } from './notifications.service';
-import { Requires } from '../auth/actor.guard';
+import { CurrentActor, Requires } from '../auth/actor.guard';
+import type { Actor } from '../auth/policy';
 
 @ApiTags('notifications')
 @ApiBearerAuth()
@@ -15,9 +16,12 @@ export class NotificationsController {
   @HttpCode(HttpStatus.ACCEPTED)
   @Requires('admin.settings')
   @ApiAcceptedResponse({ type: TestMessageQueuedDto })
-  async test(@Body() body: TestMessageDto): Promise<TestMessageQueuedDto> {
+  async test(
+    @CurrentActor() actor: Actor,
+    @Body() body: TestMessageDto,
+  ): Promise<TestMessageQueuedDto> {
     return {
-      queued: await this.notifications.sendTestMessage(body.accountIds),
+      queued: await this.notifications.sendTestMessage(actor, body.accountIds),
     };
   }
 }

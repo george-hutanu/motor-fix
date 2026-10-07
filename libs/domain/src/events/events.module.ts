@@ -12,6 +12,8 @@ import { Redis } from 'ioredis';
 import { loadGarageAccess } from './garage-access';
 import { LiveController } from './live.controller';
 import { LIVE_CHANNEL, LiveHub } from './live.hub';
+import { AUDIT_PORT } from '../audit/audit.port';
+import { AuditService } from '../audit/audit.service';
 import { PRISMA } from '../auth/prisma';
 import type { PrismaClient } from '../generated/prisma/client';
 
@@ -55,6 +57,7 @@ export class EventsModule
       exports: [LiveHub],
       module: EventsModule,
       providers: [
+        { provide: AUDIT_PORT, useClass: AuditService },
         {
           provide: SUBSCRIBER,
           useFactory: () => subscriber(options.redisUrl),
