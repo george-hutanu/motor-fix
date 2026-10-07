@@ -1,114 +1,24 @@
 import { randomUUID } from 'node:crypto';
 
-import {
-  type FieldProblem,
-  leiToBani,
-  type StartingPricesInput,
-} from '@motor-fix/contracts';
-import { HttpException } from '@nestjs/common';
+import { leiToBani, type StartingPricesInput } from '@motor-fix/contracts';
 
-import { GaragePricesService } from './garage-prices.service';
-import { AuditService } from '../../audit/audit.service';
-import { serialDatabase } from '../../auth/serial-db.testing';
-import {
-  databaseUrl,
-  fixtures,
-} from '../../notifications/notifications.testing';
+import { type PricesWorld, pricesWorld } from './garage-prices.testing';
 
-const { account, prisma } = fixtures();
-const prices = new GaragePricesService(new AuditService());
-serialDatabase(databaseUrl);
+const {
+  history,
+  job,
+  nothingStored,
+  prices,
+  prisma,
+  refused,
+  rows,
+  save,
+  since,
+  world,
+} = pricesWorld();
 
 const lei = leiToBani;
 const labour = { fromBani: lei(180), toBani: lei(240) };
-let since: Date;
-
-beforeEach(async () => {
-  await prisma.$executeRawUnsafe(
-    'TRUNCATE account, brand, garage, job_type CASCADE',
-  );
-  const [{ now }] = await prisma.$queryRaw<
-    { now: Date }[]
-  >`SELECT clock_timestamp() AS now`;
-  since = now;
-});
-
-afterAll(async () => {
-  await prisma.$disconnect();
-});
-
-async function newJob(
-  key: string,
-  status: 'approved' | 'pending' = 'approved',
-) {
-  const row = await prisma.jobType.create({
-    data: { key, nameEn: key, nameRo: key, status },
-  });
-  return row.id;
-}
-
-async function world() {
-  const garage = await prisma.garage.create({
-    data: { name: 'Service Auto Nord', slug: `nord-${randomUUID()}` },
-  });
-  const mihai = await account('Mihai Ionescu', ['garage']);
-  const dacia = await prisma.brand.create({
-    data: { key: 'dacia', name: 'Dacia', slug: 'dacia' },
-  });
-  const ford = await prisma.brand.create({
-    data: { key: 'ford', name: 'Ford', slug: 'ford' },
-  });
-  return {
-    brakes: await newJob('front-brakes'),
-    dacia: dacia.id,
-    diagnosis: await newJob('diagnosis'),
-    ford: ford.id,
-    garage: garage.id,
-    mihai,
-    oil: await newJob('oil-service'),
-  };
-}
-type World = Awaited<ReturnType<typeof world>>;
-
-const save = (w: World, input: StartingPricesInput) =>
-  prisma.$transaction((tx) =>
-    prices.saveStarting(tx, w.garage, w.mihai, input),
-  );
-
-const rows = (w: World) =>
-  prisma.garagePrice.findMany({
-    orderBy: { position: 'asc' },
-    where: { garageId: w.garage },
-  });
-
-const history = (w: World) =>
-  prisma.activityLog.findMany({
-    orderBy: { at: 'asc' },
-    where: {
-      at: { gte: since },
-      garageId: w.garage,
-      subjectType: { in: ['garage', 'garage_price'] },
-    },
-  });
-
-async function refused(run: Promise<unknown>) {
-  const error = await run.then(
-    () => undefined,
-    (e: unknown) => e,
-  );
-  expect(error).toBeInstanceOf(HttpException);
-  const http = error as HttpException;
-  expect(http.getStatus()).toBe(422);
-  return (http.getResponse() as { errors: FieldProblem[] }).errors;
-}
-
-async function nothingStored(w: World) {
-  expect(await rows(w)).toEqual([]);
-  expect(
-    await prisma.garage.findUniqueOrThrow({ where: { id: w.garage } }),
-  ).toMatchObject({ labourFromBani: null, labourToBani: null });
-  expect(await history(w)).toEqual([]);
-}
 
 describe('GaragePricesService.saveStarting under hostile payloads', () => {
   it('refuses a job id that is not a uuid with a field error, not a database error', async () => {
@@ -253,7 +163,7 @@ describe('GaragePricesService.saveStarting under hostile payloads', () => {
 
   it('stores nothing when only the last of five rows is bad', async () => {
     const w = await world();
-    const extra = [await newJob('a'), await newJob('b')];
+    const extra = [await job('a'), await job('b')];
 
     const errors = await refused(
       save(w, {
@@ -447,7 +357,7 @@ describe('GaragePricesService.saveStarting under hostile payloads', () => {
   it('saves three hundred jobs in order with one audit entry each plus the labour', async () => {
     const w = await world();
     const ids = await Promise.all(
-      Array.from({ length: 300 }, (_, i) => newJob(`bulk-${i}`)),
+      Array.from({ length: 300 }, (_, i) => job(`bulk-${i}`)),
     );
 
     const result = await save(w, {
@@ -533,12 +443,12 @@ describe('GaragePricesService.saveStarting under hostile payloads', () => {
           labour,
         }),
       ),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({ code: 'P2025' });
 
     expect(await prisma.garagePrice.count()).toBe(0);
     expect(
       await prisma.activityLog.count({
-        where: { at: { gte: since }, subjectType: 'garage_price' },
+        where: { at: { gte: since() }, subjectType: 'garage_price' },
       }),
     ).toBe(0);
   });
@@ -561,7 +471,7 @@ describe('GaragePricesService.saveStarting under hostile payloads', () => {
 });
 
 describe('the price table at the database', () => {
-  const base = (w: World) => ({
+  const base = (w: PricesWorld) => ({
     fromBani: 10_000,
     garageId: w.garage,
     jobTypeId: w.oil,

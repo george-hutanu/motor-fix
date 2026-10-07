@@ -1,14 +1,14 @@
 import type { FieldProblem } from './problem';
 
 // Money is held in whole bani; the screens show whole lei.
-export const BANI_PER_LEU = 100;
+const BANI_PER_LEU = 100;
 export const PRICE_MIN_BANI = 100;
 export const PRICE_MAX_BANI = 10_000_000;
-export const DURATION_MIN_MINUTES = 15;
-export const DURATION_MAX_MINUTES = 4_800;
-export const DURATION_STEP_MINUTES = 15;
+const DURATION_MIN_MINUTES = 15;
+const DURATION_MAX_MINUTES = 4_800;
+const DURATION_STEP_MINUTES = 15;
 // A top more than this many times the starting price is shown as a warning.
-export const PRICE_RANGE_WARN_RATIO = 3;
+const PRICE_RANGE_WARN_RATIO = 3;
 
 export function leiToBani(lei: number): number {
   const bani = lei * BANI_PER_LEU;
@@ -17,8 +17,6 @@ export function leiToBani(lei: number): number {
   }
   return bani;
 }
-
-export const baniToLei = (bani: number): number => bani / BANI_PER_LEU;
 
 interface PriceRangeInput {
   fromBani: number;

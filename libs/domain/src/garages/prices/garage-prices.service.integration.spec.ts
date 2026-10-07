@@ -5,113 +5,15 @@ import {
   leiToBani,
   type StartingPricesInput,
 } from '@motor-fix/contracts';
-import { HttpException } from '@nestjs/common';
 
-import { GaragePricesService } from './garage-prices.service';
-import { AuditService } from '../../audit/audit.service';
-import { serialDatabase } from '../../auth/serial-db.testing';
+import { type PricesWorld, pricesWorld } from './garage-prices.testing';
 import { Prisma } from '../../generated/prisma/client';
-import {
-  databaseUrl,
-  fixtures,
-} from '../../notifications/notifications.testing';
 
-const { account, prisma } = fixtures();
-const prices = new GaragePricesService(new AuditService());
-serialDatabase(databaseUrl);
+const { history, nothingStored, prices, prisma, refused, rows, save, world } =
+  pricesWorld();
 
 const lei = leiToBani;
-let since: Date;
-
-beforeEach(async () => {
-  await prisma.$executeRawUnsafe(
-    'TRUNCATE account, brand, garage, job_type CASCADE',
-  );
-  const [{ now }] = await prisma.$queryRaw<
-    { now: Date }[]
-  >`SELECT clock_timestamp() AS now`;
-  since = now;
-});
-
-afterAll(async () => {
-  await prisma.$disconnect();
-});
-
-// Service Auto Nord and its owner Mihai; three approved jobs, one pending;
-// Dacia in the catalogue and Lada retired from it.
-async function world() {
-  const garage = await prisma.garage.create({
-    data: { name: 'Service Auto Nord', slug: `nord-${randomUUID()}` },
-  });
-  const mihai = await account('Mihai Ionescu', ['garage']);
-  const job = (key: string, status: 'approved' | 'pending' = 'approved') =>
-    prisma.jobType
-      .create({ data: { key, nameEn: key, nameRo: key, status } })
-      .then((row) => row.id);
-  const dacia = await prisma.brand.create({
-    data: { key: 'dacia', name: 'Dacia', slug: 'dacia' },
-  });
-  const lada = await prisma.brand.create({
-    data: { active: false, key: 'lada', name: 'Lada', slug: 'lada' },
-  });
-  return {
-    brakes: await job('front-brakes'),
-    dacia: dacia.id,
-    diagnosis: await job('diagnosis'),
-    garage: garage.id,
-    lada: lada.id,
-    mihai,
-    oil: await job('oil-service'),
-    tyres: await job('tyre-change', 'pending'),
-  };
-}
-
-type World = Awaited<ReturnType<typeof world>>;
-
-const save = (w: World, input: StartingPricesInput) =>
-  prisma.$transaction((tx) =>
-    prices.saveStarting(tx, w.garage, w.mihai, input),
-  );
-
 const labour = { fromBani: lei(180), toBani: lei(240) };
-
-const rows = (w: World) =>
-  prisma.garagePrice.findMany({
-    orderBy: { position: 'asc' },
-    where: { garageId: w.garage },
-  });
-
-// Scoped to the garage: other specs' entries share the append-only table.
-const history = (w: World) =>
-  prisma.activityLog.findMany({
-    orderBy: { at: 'asc' },
-    where: {
-      at: { gte: since },
-      garageId: w.garage,
-      subjectType: { in: ['garage', 'garage_price'] },
-    },
-  });
-
-// The refusal's field errors, or a failure when the call did not refuse.
-async function refused(run: Promise<unknown>) {
-  const error = await run.then(
-    () => undefined,
-    (e: unknown) => e,
-  );
-  expect(error).toBeInstanceOf(HttpException);
-  const http = error as HttpException;
-  expect(http.getStatus()).toBe(422);
-  expect(http.getResponse()).toMatchObject({ code: 'validation_failed' });
-  return (http.getResponse() as { errors: FieldProblem[] }).errors;
-}
-
-async function nothingStored(w: World) {
-  expect(await rows(w)).toEqual([]);
-  expect(
-    await prisma.garage.findUniqueOrThrow({ where: { id: w.garage } }),
-  ).toMatchObject({ labourFromBani: null, labourToBani: null });
-  expect(await history(w)).toEqual([]);
-}
 
 describe('GaragePricesService.saveStarting', () => {
   it('stores the labour range and one row per job, in order, visible, stamped by the owner', async () => {
@@ -355,7 +257,7 @@ describe('GaragePricesService.saveStarting', () => {
     expect((error as Prisma.PrismaClientKnownRequestError).code).toBe('P2002');
   });
 
-  it.each<[string, (w: World) => StartingPricesInput, FieldProblem[]]>([
+  it.each<[string, (w: PricesWorld) => StartingPricesInput, FieldProblem[]]>([
     [
       'an unknown job',
       () => ({

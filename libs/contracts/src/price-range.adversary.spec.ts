@@ -1,5 +1,4 @@
 import {
-  baniToLei,
   checkPriceRange,
   leiToBani,
   PRICE_MAX_BANI,
@@ -34,9 +33,7 @@ describe('leiToBani on hostile input', () => {
     expect(() => leiToBani(Number.MAX_SAFE_INTEGER)).toThrow(RangeError);
   });
 
-  it('round-trips every whole lei at the price bounds', () => {
-    expect(baniToLei(leiToBani(1))).toBe(1);
-    expect(baniToLei(leiToBani(100_000))).toBe(100_000);
+  it('turns the whole lei at the price bounds into the bounds', () => {
     expect(leiToBani(1)).toBe(PRICE_MIN_BANI);
     expect(leiToBani(100_000)).toBe(PRICE_MAX_BANI);
   });

@@ -1,22 +1,15 @@
 import {
-  BANI_PER_LEU,
-  baniToLei,
   checkPriceRange,
-  DURATION_MAX_MINUTES,
-  DURATION_MIN_MINUTES,
-  DURATION_STEP_MINUTES,
   leiToBani,
   PRICE_MAX_BANI,
   PRICE_MIN_BANI,
-  PRICE_RANGE_WARN_RATIO,
 } from './price-range';
 
 const lei = leiToBani;
 
 describe('lei and bani', () => {
-  it('turns whole lei into bani and back', () => {
+  it('turns whole lei into bani', () => {
     expect(lei(180)).toBe(18_000);
-    expect(baniToLei(18_000)).toBe(180);
   });
 
   it('refuses lei with a fraction', () => {
@@ -26,20 +19,6 @@ describe('lei and bani', () => {
   it('bounds a price between 1 leu and 100.000 lei', () => {
     expect(PRICE_MIN_BANI).toBe(lei(1));
     expect(PRICE_MAX_BANI).toBe(lei(100_000));
-  });
-
-  it('counts a hundred bani to the leu', () => {
-    expect(BANI_PER_LEU).toBe(100);
-  });
-
-  it('takes durations from a quarter hour to 80 hours, in quarter hours', () => {
-    expect(DURATION_MIN_MINUTES).toBe(15);
-    expect(DURATION_STEP_MINUTES).toBe(15);
-    expect(DURATION_MAX_MINUTES).toBe(80 * 60);
-  });
-
-  it('calls a range wide past three times its start', () => {
-    expect(PRICE_RANGE_WARN_RATIO).toBe(3);
   });
 });
 
