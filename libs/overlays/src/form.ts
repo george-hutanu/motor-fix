@@ -43,7 +43,7 @@ export interface TaskSaveOptions<F extends AbstractControl, R> {
 
 export interface TaskSave<R = unknown> {
   readonly state: Signal<TaskSaveState>;
-  // The last failure, until the next press.
+  // The last failure, until the next press is answered.
   readonly problem: Signal<Problem | null>;
   readonly result: Signal<R | undefined>;
   // The main button: validate, then send once.
@@ -134,6 +134,7 @@ export function taskSave<F extends AbstractControl, R>(
     if (destroyed) return;
     key = null;
     revealed.clear();
+    problem.set(null);
     result.set(value);
     phase.set('done');
     task?.markUnchanged();
@@ -188,9 +189,11 @@ export function taskSave<F extends AbstractControl, R>(
     state,
     submit() {
       if (phase() === 'sending') return;
-      problem.set(null);
+      // The last failure's line stays until this press is answered, so the
+      // task does not change height while the retry is on its way.
       const invalid = leaves(form).filter((c) => c.invalid);
       if (invalid.length) {
+        problem.set(null);
         phase.set('invalid');
         reveal(invalid);
         focusFirstInvalid();

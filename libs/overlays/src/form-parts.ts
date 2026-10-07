@@ -104,7 +104,8 @@ export class TaskSubmit {
   protected readonly busy = computed(() => this.save().state() === 'sending');
 }
 
-// The confirmation shown in place of the form after a success, with Close.
+// The confirmation shown in place of the form after a success, with Done (named
+// apart from the overlay's Close).
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe],
@@ -159,7 +160,7 @@ export class TaskSubmit {
       class="spartan-button spartan-button-variant-secondary"
       (click)="finish()"
     >
-      {{ 'shell.form.close' | t }}
+      {{ 'shell.form.done' | t }}
     </button>
   `,
 })

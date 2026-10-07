@@ -34,7 +34,7 @@
     "tooMany": "You already asked for a link. Try again a little later."
   },
   "form": {
-    "close": "Close",
+    "done": "Done",
     "field": {
       "email": "Enter a valid e-mail address.",
       "invalid": "This value is not valid.",
