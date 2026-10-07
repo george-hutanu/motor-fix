@@ -33,6 +33,7 @@ async function render(role: string, landing: string, answer: unknown = true) {
     current,
     ended: new Subject<void>(),
     revoked: jest.fn(() => current.set(null)),
+    shown: current,
     signOut: jest.fn(async () => current.set(null)),
     signOutEverywhere: jest.fn(async () => current.set(null)),
   };

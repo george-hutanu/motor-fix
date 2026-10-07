@@ -29,6 +29,7 @@ const me = (role: string, capabilities: string[]) =>
 async function render(role: string, capabilities: string[]) {
   Element.prototype.scrollIntoView = jest.fn();
   const overlays = { open: jest.fn(async () => 'cancelled') };
+  const account = signal<MeDto | null>(me(role, capabilities));
   TestBed.configureTestingModule({
     providers: [
       provideRouter(
@@ -41,8 +42,9 @@ async function render(role: string, capabilities: string[]) {
       {
         provide: Session,
         useValue: {
-          current: signal<MeDto | null>(me(role, capabilities)),
+          current: account,
           ended: new Subject<void>(),
+          shown: account,
         },
       },
       {

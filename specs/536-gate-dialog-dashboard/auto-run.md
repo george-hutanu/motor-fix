@@ -7,3 +7,4 @@ Start: origin/main 6c8ed5ab (worktree `.worktrees/536-gate-dialog-dashboard`), d
 - constitution: card read, unchanged
 - specify: 1 FR; Spec Delta adds to accounts; assumptions self-answered (autonomous defaults in spec.md)
 - design: no boards; design.md written
+- tests: 9 red (7 session.gate, 1 frame, 1 sign-in-dialog); frame/views spec mocks gain `shown`

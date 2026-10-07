@@ -6,3 +6,6 @@
 - 2026-10-07 · labels · PR #186 · planning
 - 2026-10-07 · ready · Foundations · −ST-536, review: ST-784, ST-682, ST-670, ST-604, ST-601, ST-570, ST-552, ST-547, ST-455, ST-451, ST-445, ST-289, ST-129, ST-5
 - 2026-10-07 · pr · ST-536 · PR #186 https://github.com/george-hutanu/motor-fix/pull/186
+- 2026-10-07 · implement · ST-536 · Planning → Implementing
+- 2026-10-07 · implement · timeline · no row for ST-536
+- 2026-10-07 · labels · PR #186 · in development
