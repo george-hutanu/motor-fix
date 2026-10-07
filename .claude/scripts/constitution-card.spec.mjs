@@ -35,3 +35,27 @@ describe('the constitution card', () => {
     assert.ok(bytes <= MAX_BYTES, `${bytes} bytes, above ${MAX_BYTES}`);
   });
 });
+
+describe('the author skills', () => {
+  const skills = join(import.meta.dirname, '..', 'skills');
+  const AUTHORS = ['specify', 'clarify', 'plan', 'checklist', 'tasks', 'analyze', 'implement', 'converge'];
+  const FALLBACK =
+    "Open a principle's section in `.specify/memory/constitution.md` only when a decision turns on its exact wording.";
+  const allowed = (line) =>
+    line.trim() === 'Full text: `.specify/memory/constitution.md`.' ||
+    line.trimStart().startsWith('**Constitution Authority**') ||
+    (line.includes(FALLBACK) &&
+      line.includes('constitution-card.md') &&
+      line.split('.specify/memory/constitution.md').length === 2);
+
+  it.each(AUTHORS)('speckit-%s loads the card, not the full constitution', (name) => {
+    const text = readFileSync(join(skills, `speckit-${name}`, 'SKILL.md'), 'utf8');
+    assert.ok(text.includes('.specify/memory/constitution-card.md'), `speckit-${name} never names the card`);
+    const loads = text
+      .split('\n')
+      .map((line, i) => ({ line, at: i + 1 }))
+      .filter(({ line }) => line.includes('.specify/memory/constitution.md') && !allowed(line))
+      .map(({ line, at }) => `speckit-${name}/SKILL.md:${at}: ${line.trim()}`);
+    assert.deepEqual(loads, []);
+  });
+});
