@@ -30,7 +30,7 @@ import {
   readStep6,
   type Step6Values,
 } from './step6';
-import { currentStep, STEPS } from './steps';
+import { currentStep, keepsTapped, STEPS } from './steps';
 import { SignInDialog } from '../sign-in/sign-in-dialog';
 
 // How long the page must be still after a tap before the scroll position
@@ -236,6 +236,8 @@ export class ListYourGarage {
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   private readonly field = viewChild<ElementRef<HTMLElement>>('email');
   private settling: ReturnType<typeof setTimeout> | undefined;
+  // The step last jumped to, held while the page cannot bring it to the line.
+  private tapped: number | null = null;
 
   protected readonly keeper = inject(DraftKeeper);
   protected readonly signIn = inject(SignInDialog);
@@ -364,6 +366,7 @@ export class ListYourGarage {
   }
 
   private show(n: number) {
+    this.tapped = n;
     this.current.set(n);
     this.keeper.stepTo(n);
     this.settle();
@@ -397,11 +400,12 @@ export class ListYourGarage {
     const atEnd =
       window.scrollY > 0 &&
       window.innerHeight + window.scrollY >= root.scrollHeight - 1;
-    const step = currentStep(
-      this.headings().map((h) => h.getBoundingClientRect().top),
-      line + 1,
-      atEnd,
-    );
+    const tops = this.headings().map((h) => h.getBoundingClientRect().top);
+    let step = currentStep(tops, line + 1, atEnd);
+    const tapped = this.tapped;
+    if (tapped && keepsTapped(step, tapped, tops[tapped - 1], innerHeight))
+      step = tapped;
+    else this.tapped = null;
     this.current.set(step);
     this.keeper.stepTo(step);
   }

@@ -23,6 +23,7 @@ export * from './phone';
 export * from './plate';
 export * from './platform-rules.dto';
 export * from './problem';
+export * from './public-live.dto';
 export * from './push-subscriptions.dto';
 export * from './staff-invite.dto';
 export * from './verification-checks';

@@ -121,3 +121,5 @@ export type { LiveControllerLive$Params as LiveControllerLive$Params } from './f
 export { liveControllerLive as liveControllerLive } from './fn/live/live-controller-live';
 export type { LiveControllerTest$Params as LiveControllerTest$Params } from './fn/live/live-controller-test';
 export { liveControllerTest as liveControllerTest } from './fn/live/live-controller-test';
+export type { PublicLiveControllerLive$Params as PublicLiveControllerLive$Params } from './fn/live/public-live-controller-live';
+export { publicLiveControllerLive as publicLiveControllerLive } from './fn/live/public-live-controller-live';
