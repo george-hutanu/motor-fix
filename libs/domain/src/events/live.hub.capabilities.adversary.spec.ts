@@ -92,17 +92,8 @@ describe('kind families', () => {
   const familiesOf = (kind: string) =>
     KIND_CAPABILITY.filter(([re]) => re.test(kind));
 
-  it('matches every contract kind and the settings kind to at most one family', () => {
-    for (const kind of [...EVENT_KINDS, 'garage.settings_changed']) {
-      expect([kind, familiesOf(kind).length <= 1]).toEqual([kind, true]);
-    }
-  });
-
-  it('never opens the garage channel to the areas every mechanic holds', () => {
-    const caps = KIND_CAPABILITY.map(([, c]) => c);
-    expect(caps).not.toContain('garage.own_jobs');
-    expect(caps).not.toContain('garage.audit_history');
-  });
+  // "At most one family per kind" and "no family needs own_jobs or
+  // audit_history" live in live.hub.audience.spec.ts (the kind-to-capability table).
 
   it.each([
     ['reviewer.x'],
