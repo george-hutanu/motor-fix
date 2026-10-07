@@ -14,6 +14,8 @@ import {
   type WeeklyHours,
 } from '@motor-fix/contracts/garage-hours';
 
+import { letters } from './brands-section';
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -96,7 +98,7 @@ export const setDay = (
   intervals: Interval[],
 ): WeeklyHours => ({ ...hours, [day]: intervals });
 
-export const OPEN_DAY: Interval = ['08:00', '17:00'];
+const OPEN_DAY: Interval = ['08:00', '17:00'];
 
 export const toggleClosed = (hours: WeeklyHours, day: Weekday) =>
   setDay(hours, day, hours[day].length ? [] : [OPEN_DAY]);
@@ -117,11 +119,6 @@ export function addBreak(
 export const removeBreak = (intervals: Interval[]): Interval[] => [
   [intervals[0][0], intervals[intervals.length - 1][1]],
 ];
-
-export const letters = (text: string) => [...text].length;
-
-export const cut = (text: string, max: number) =>
-  [...text].slice(0, max).join('');
 
 // The list with the day added in day order, or why it cannot be.
 export function addClosedDay(

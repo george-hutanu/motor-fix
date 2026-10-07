@@ -29,11 +29,10 @@ import {
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmInput, HlmLabel, Lamp } from '@motor-fix/ui-cockpit';
 
+import { cut, letters } from './brands-section';
 import {
   addBreak,
   addClosedDay,
-  cut,
-  letters,
   removeBreak,
   removeClosedDay,
   setDay,
@@ -257,6 +256,15 @@ export class HoursStep {
   protected readonly calendar = signal<Calendar>({ state: 'loading' });
   protected readonly today = signal(todayInBucharest());
   protected readonly language = this.i18n.language;
+  private readonly dates = computed(
+    () =>
+      new Intl.DateTimeFormat(this.language() === 'en' ? 'en-GB' : 'ro-RO', {
+        day: 'numeric',
+        month: 'long',
+        timeZone: 'UTC',
+        year: 'numeric',
+      }),
+  );
 
   protected readonly hours = computed(
     () => this.value().hours ?? DEFAULT_HOURS,
@@ -313,13 +321,7 @@ export class HoursStep {
 
   // A calendar day in the page's language, read as a date with no time zone.
   protected date(day: string) {
-    const locale = this.language() === 'en' ? 'en-GB' : 'ro-RO';
-    return new Intl.DateTimeFormat(locale, {
-      day: 'numeric',
-      month: 'long',
-      timeZone: 'UTC',
-      year: 'numeric',
-    }).format(new Date(`${day}T00:00:00Z`));
+    return this.dates().format(new Date(`${day}T00:00:00Z`));
   }
 
   protected toggled(event: Event) {
