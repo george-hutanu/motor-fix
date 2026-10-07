@@ -24,3 +24,7 @@ Start commit: ec74ab0654afa31c0e6bb27e0b56bd7a2c5ea933 (worktree .worktrees/784-
 
 ## Phase 6 — checklist
 - checklists/parity.md: 10 items, all checked against spec.md and plan.md, no gap found, no spec or plan edit needed.
+
+## Phase 7 — tasks
+
+specs/784-impossible-level-date/tasks.md: 4 tasks, one story (tests first, red proof, pendingLevel day check, green run); analyze left to phase 8.
