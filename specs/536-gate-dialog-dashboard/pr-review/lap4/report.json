@@ -1,0 +1,159 @@
+{
+  "pr": 186,
+  "repo": "george-hutanu/motor-fix",
+  "sha": "8a4e12f008157934c9527414cdcffe64d2dd5492",
+  "base": "bd60afa6cfdf09171562dd332631b5c0a86bd52c",
+  "lap": 4,
+  "verdict": "failure",
+  "summary": "5 blocking finding(s); 5 in all. Booted postgres, redis, minio, api, web, worker.",
+  "findings": [
+    {
+      "severity": "high",
+      "kind": "flow",
+      "title": "gate dialog (close) at 390 px",
+      "steps": [
+        "open http://127.0.0.1:42459/ro at 390 px, sign in as doua-roluri@example.test",
+        "clear the session cookie and refuse the next page call with sign_in_required"
+      ],
+      "evidence": "locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n  - waiting for getByRole('dialog', { name: 'Autentificare' }) to be visible\n (/home/runner/work/_temp/pr-qa/shots/flow-gate-close-390-failed.png)"
+    },
+    {
+      "severity": "high",
+      "kind": "flow",
+      "title": "gate dialog (sign-in) at 390 px",
+      "steps": [
+        "open http://127.0.0.1:42459/ro at 390 px, sign in as doua-roluri@example.test",
+        "clear the session cookie and refuse the next page call with sign_in_required"
+      ],
+      "evidence": "locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n  - waiting for getByRole('dialog', { name: 'Autentificare' }) to be visible\n (/home/runner/work/_temp/pr-qa/shots/flow-gate-sign-in-390-failed.png)"
+    },
+    {
+      "severity": "high",
+      "kind": "flow",
+      "title": "gate dialog (close) at 1280 px",
+      "steps": [
+        "open http://127.0.0.1:42459/ro at 1280 px, sign in as doua-roluri@example.test",
+        "clear the session cookie and refuse the next page call with sign_in_required"
+      ],
+      "evidence": "locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n  - waiting for getByRole('dialog', { name: 'Autentificare' }) to be visible\n (/home/runner/work/_temp/pr-qa/shots/flow-gate-close-1280-failed.png)"
+    },
+    {
+      "severity": "high",
+      "kind": "flow",
+      "title": "gate dialog (sign-in) at 1280 px",
+      "steps": [
+        "open http://127.0.0.1:42459/ro at 1280 px, sign in as doua-roluri@example.test",
+        "clear the session cookie and refuse the next page call with sign_in_required"
+      ],
+      "evidence": "locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n  - waiting for getByRole('dialog', { name: 'Autentificare' }) to be visible\n (/home/runner/work/_temp/pr-qa/shots/flow-gate-sign-in-1280-failed.png)"
+    },
+    {
+      "severity": "high",
+      "kind": "review",
+      "title": "flow not run: FR-001 gate dialog never verified in a browser; the flow script is at fault (its page.route never sees the app's API calls, which go through the Angular service worker)",
+      "steps": [
+        "the flow opens a context without serviceWorkers: 'block'; the production build registers ngsw-worker.js",
+        "page.route('**/api/v1/**') does not intercept requests a service worker makes, so neither the notification-preferences refusal nor the refresh refusal fires",
+        "the access token is still in memory, so GET /api/v1/notification-preferences answers 200 and Setări renders: no 401, no gate, waitFor times out",
+        "fix the script: browser.newContext({ serviceWorkers: 'block', viewport }) and re-run"
+      ],
+      "evidence": "apps/web/src/app/app.config.ts:31: provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode() }), and shots/flow-gate-sign-in-1280-failed.png shows Setări fully loaded with its preference toggles and no dialog"
+    }
+  ],
+  "booted": [
+    "postgres",
+    "redis",
+    "minio",
+    "api",
+    "web",
+    "worker"
+  ],
+  "notes": [
+    "Ran on GitHub Actions (https://github.com/george-hutanu/motor-fix/actions/runs/37584179520): PostgreSQL with PostGIS, Redis and MinIO from the PR's own compose file, started by the PR QA workflow.",
+    "No API operation changed.",
+    "Unit and end-to-end tests left to CI (Unit and integration tests, E2E tests; the merge gate waits for them)."
+  ],
+  "screenshots": [
+    "shots/home-desktop-light-ro.png",
+    "shots/home-desktop-light-en.png",
+    "shots/home-desktop-dark-ro.png",
+    "shots/home-desktop-dark-en.png",
+    "shots/home-tablet-light-ro.png",
+    "shots/home-tablet-light-en.png",
+    "shots/home-tablet-dark-ro.png",
+    "shots/home-tablet-dark-en.png",
+    "shots/home-mobile-light-ro.png",
+    "shots/home-mobile-light-en.png",
+    "shots/home-mobile-dark-ro.png",
+    "shots/home-mobile-dark-en.png",
+    "shots/home-small-phone-light-ro.png",
+    "shots/home-small-phone-light-en.png",
+    "shots/home-small-phone-dark-ro.png",
+    "shots/home-small-phone-dark-en.png",
+    "shots/cockpit-desktop-light-ro.png",
+    "shots/cockpit-desktop-light-en.png",
+    "shots/cockpit-desktop-dark-ro.png",
+    "shots/cockpit-desktop-dark-en.png",
+    "shots/cockpit-tablet-light-ro.png",
+    "shots/cockpit-tablet-light-en.png",
+    "shots/cockpit-tablet-dark-ro.png",
+    "shots/cockpit-tablet-dark-en.png",
+    "shots/cockpit-mobile-light-ro.png",
+    "shots/cockpit-mobile-light-en.png",
+    "shots/cockpit-mobile-dark-ro.png",
+    "shots/cockpit-mobile-dark-en.png",
+    "shots/cockpit-small-phone-light-ro.png",
+    "shots/cockpit-small-phone-light-en.png",
+    "shots/cockpit-small-phone-dark-ro.png",
+    "shots/cockpit-small-phone-dark-en.png",
+    "shots/app-garage-as-garage-desktop-light-ro.png",
+    "shots/app-garage-as-garage-desktop-light-en.png",
+    "shots/app-garage-as-garage-desktop-dark-ro.png",
+    "shots/app-garage-as-garage-desktop-dark-en.png",
+    "shots/app-garage-as-garage-tablet-light-ro.png",
+    "shots/app-garage-as-garage-tablet-light-en.png",
+    "shots/app-garage-as-garage-tablet-dark-ro.png",
+    "shots/app-garage-as-garage-tablet-dark-en.png",
+    "shots/app-garage-as-garage-mobile-light-ro.png",
+    "shots/app-garage-as-garage-mobile-light-en.png",
+    "shots/app-garage-as-garage-mobile-dark-ro.png",
+    "shots/app-garage-as-garage-mobile-dark-en.png",
+    "shots/app-garage-as-garage-small-phone-light-ro.png",
+    "shots/app-garage-as-garage-small-phone-light-en.png",
+    "shots/app-garage-as-garage-small-phone-dark-ro.png",
+    "shots/app-garage-as-garage-small-phone-dark-en.png",
+    "shots/app-garage-team-as-garage-desktop-light-ro.png",
+    "shots/app-garage-team-as-garage-desktop-light-en.png",
+    "shots/app-garage-team-as-garage-desktop-dark-ro.png",
+    "shots/app-garage-team-as-garage-desktop-dark-en.png",
+    "shots/app-garage-team-as-garage-tablet-light-ro.png",
+    "shots/app-garage-team-as-garage-tablet-light-en.png",
+    "shots/app-garage-team-as-garage-tablet-dark-ro.png",
+    "shots/app-garage-team-as-garage-tablet-dark-en.png",
+    "shots/app-garage-team-as-garage-mobile-light-ro.png",
+    "shots/app-garage-team-as-garage-mobile-light-en.png",
+    "shots/app-garage-team-as-garage-mobile-dark-ro.png",
+    "shots/app-garage-team-as-garage-mobile-dark-en.png",
+    "shots/app-garage-team-as-garage-small-phone-light-ro.png",
+    "shots/app-garage-team-as-garage-small-phone-light-en.png",
+    "shots/app-garage-team-as-garage-small-phone-dark-ro.png",
+    "shots/app-garage-team-as-garage-small-phone-dark-en.png",
+    "shots/app-garage-settings-as-garage-desktop-light-ro.png",
+    "shots/app-garage-settings-as-garage-desktop-light-en.png",
+    "shots/app-garage-settings-as-garage-desktop-dark-ro.png",
+    "shots/app-garage-settings-as-garage-desktop-dark-en.png",
+    "shots/app-garage-settings-as-garage-tablet-light-ro.png",
+    "shots/app-garage-settings-as-garage-tablet-light-en.png",
+    "shots/app-garage-settings-as-garage-tablet-dark-ro.png",
+    "shots/app-garage-settings-as-garage-tablet-dark-en.png",
+    "shots/app-garage-settings-as-garage-mobile-light-ro.png",
+    "shots/app-garage-settings-as-garage-mobile-light-en.png",
+    "shots/app-garage-settings-as-garage-mobile-dark-ro.png",
+    "shots/app-garage-settings-as-garage-mobile-dark-en.png",
+    "shots/app-garage-settings-as-garage-small-phone-light-ro.png",
+    "shots/app-garage-settings-as-garage-small-phone-light-en.png",
+    "shots/app-garage-settings-as-garage-small-phone-dark-ro.png",
+    "shots/app-garage-settings-as-garage-small-phone-dark-en.png"
+  ],
+  "markdown": "**Agent review: failure** — PR #186 at `8a4e12f`, lap 4\n\nBlocking: 5 (blocker 0, high 5) · medium 0 · low 0. Booted: postgres, redis, minio, api, web, worker.\n- Ran on GitHub Actions (https://github.com/george-hutanu/motor-fix/actions/runs/37584179520): PostgreSQL with PostGIS, Redis and MinIO from the PR's own compose file, started by the PR QA workflow.\n- No API operation changed.\n- Unit and end-to-end tests left to CI (Unit and integration tests, E2E tests; the merge gate waits for them).\n\n| # | Severity | Finding | Where | Evidence |\n| --- | --- | --- | --- | --- |\n| 1 | high | gate dialog (close) at 390 px |  | locator.waitFor: Timeout 15000ms exceeded. Call log:   - waiting for getByRole('dialog', { name: 'Autentificare' }) to be visible  (/home/runner/work/_temp/pr-qa/shots/flow-gate-close-390-failed.png) |\n| 2 | high | gate dialog (sign-in) at 390 px |  | locator.waitFor: Timeout 15000ms exceeded. Call log:   - waiting for getByRole('dialog', { name: 'Autentificare' }) to be visible  (/home/runner/work/_temp/pr-qa/shots/flow-gate-sign-in-390-failed.png) |\n| 3 | high | gate dialog (close) at 1280 px |  | locator.waitFor: Timeout 15000ms exceeded. Call log:   - waiting for getByRole('dialog', { name: 'Autentificare' }) to be visible  (/home/runner/work/_temp/pr-qa/shots/flow-gate-close-1280-failed.png) |\n| 4 | high | gate dialog (sign-in) at 1280 px |  | locator.waitFor: Timeout 15000ms exceeded. Call log:   - waiting for getByRole('dialog', { name: 'Autentificare' }) to be visible  (/home/runner/work/_temp/pr-qa/shots/flow-gate-sign-in-1280-failed.png) |\n| 5 | high | flow not run: FR-001 gate dialog never verified in a browser; the flow script is at fault (its page.route never sees the app's API calls, which go through the Angular service worker) |  | apps/web/src/app/app.config.ts:31: provideServiceWorker('ngsw-worker.js', { enabled: !isDevMode() }), and shots/flow-gate-sign-in-1280-failed.png shows Setări fully loaded with its preference toggles and no dialog |\n\n### Reproduction\n1. open http://127.0.0.1:42459/ro at 390 px, sign in as doua-roluri@example.test → clear the session cookie and refuse the next page call with sign_in_required\n2. open http://127.0.0.1:42459/ro at 390 px, sign in as doua-roluri@example.test → clear the session cookie and refuse the next page call with sign_in_required\n3. open http://127.0.0.1:42459/ro at 1280 px, sign in as doua-roluri@example.test → clear the session cookie and refuse the next page call with sign_in_required\n4. open http://127.0.0.1:42459/ro at 1280 px, sign in as doua-roluri@example.test → clear the session cookie and refuse the next page call with sign_in_required\n5. the flow opens a context without serviceWorkers: 'block'; the production build registers ngsw-worker.js → page.route('**/api/v1/**') does not intercept requests a service worker makes, so neither the notification-preferences refusal nor the refresh refusal fires → the access token is still in memory, so GET /api/v1/notification-preferences answers 200 and Setări renders: no 401, no gate, waitFor times out → fix the script: browser.newContext({ serviceWorkers: 'block', viewport }) and re-run\n\nScreenshots: 80, one per route × viewport × scheme × language.\n"
+}

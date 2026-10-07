@@ -41,7 +41,12 @@ async function open(capabilities: string[] | null, area: Area, url: string) {
       ),
       {
         provide: Session,
-        useValue: { current, ended: new Subject<void>(), signOut: jest.fn() },
+        useValue: {
+          current,
+          ended: new Subject<void>(),
+          shown: current,
+          signOut: jest.fn(),
+        },
       },
       {
         provide: Live,

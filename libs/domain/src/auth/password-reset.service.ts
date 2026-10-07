@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import {
   type BeforeApplicationShutdown,
   HttpStatus,
@@ -14,11 +12,10 @@ import { MAINTENANCE, type Maintenance } from './maintenance';
 import { hashPassword } from './password';
 import { roleInUse } from './policy';
 import { PRISMA } from './prisma';
-import { type Issued, SESSION_EVENTS, SignInService } from './sign-in.service';
+import { type Issued, SignInService } from './sign-in.service';
 import { refusal, weakPassword } from './sign-up.service';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
-import { audienceOf } from '../events/audience';
-import { type LivePublisher, publishLive } from '../events/live.hub';
+import { EVENT_PORT, type EventPort } from '../events/event.port';
 import type { PrismaClient } from '../generated/prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -64,11 +61,11 @@ export class PasswordResetService implements BeforeApplicationShutdown {
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Inject(EVENT_PORT) private readonly events: EventPort,
     private readonly notifications: NotificationsService,
     private readonly attempts: Attempts,
     private readonly signIns: SignInService,
     @Inject(MAINTENANCE) private readonly maintenance: Maintenance,
-    @Inject(SESSION_EVENTS) private readonly sessionEvents: LivePublisher,
     @Inject(RESET_OPTIONS) private readonly options: ResetOptions,
   ) {}
 
@@ -157,6 +154,12 @@ export class PasswordResetService implements BeforeApplicationShutdown {
         subjectId: account.id,
         subjectType: 'account',
       });
+      await this.events.record(tx, {
+        audience: { accountId: account.id, type: 'account' },
+        kind: 'account.password_reset',
+        payload: { accountId: account.id },
+        subjectId: account.id,
+      });
     });
     this.logger.log('password reset');
     // Before the session: the password changed even if no session opens.
@@ -239,12 +242,6 @@ export class PasswordResetService implements BeforeApplicationShutdown {
     } catch (error) {
       this.logger.error(`password changed e-mail not sent: ${reason(error)}`);
     }
-    publishLive(
-      this.sessionEvents,
-      { at: at.toISOString(), id: randomUUID(), kind: 'session.revoked' },
-      audienceOf({ accountId, type: 'account' }),
-    ).catch((error: Error) =>
-      this.logger.warn(`session.revoked not sent: ${error.message}`),
-    );
+    this.signIns.revokeSessionsLive(accountId, at);
   }
 }

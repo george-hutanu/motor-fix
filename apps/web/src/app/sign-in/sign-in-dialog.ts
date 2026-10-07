@@ -40,9 +40,9 @@ export class SignInDialog {
   }
 
   // Resolves true once the person has signed in or created an account; the
-  // screen behind stays where it was.
+  // screen behind stays where it was, showing the account it showed.
   gate(): Promise<boolean> {
-    return this.dialog(true);
+    return this.session.keepShownWhile(this.dialog(true));
   }
 
   // From the reset e-mail's link: true once the new password signed the

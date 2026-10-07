@@ -268,8 +268,8 @@ that variable, so the laptop behaves as before.
 - **One story per cloud session.** Never arm `watch.mjs` there; the
   orchestrating session and `/speckit-watch` stay on the laptop.
 - **A resumed session is a fresh VM** with none of the gitignored files.
-  The hand-off note is also posted on the PR as a `<!-- speckit-handoff -->`
-  comment, and the tail runs `lifecycle.mjs handoff --restore --pr <n>`
+  In a cloud session only, the hand-off note is also posted on the PR as a
+  `<!-- speckit-handoff -->` comment, and the tail runs `lifecycle.mjs handoff --restore --pr <n>`
   before reading it.
 - **Tools.** The Workflow and Artifact tools are unverified in the cloud:
   `/speckit-review` falls back to Agent-tool reviewers, and
