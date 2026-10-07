@@ -439,7 +439,12 @@ describe('deciding', () => {
     });
     const [event] = await events(file.id);
     expect(event).toMatchObject({
-      audience: ['admin', `garage:${garageId}`, `public:garage:${garageId}`],
+      audience: [
+        'admin',
+        `garage:${garageId}`,
+        `public:garage:${garageId}`,
+        'public:search',
+      ],
       kind: 'verification.decided',
       payload: { decision: 'approved', fileId: file.id, garageId },
     });

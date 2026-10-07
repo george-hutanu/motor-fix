@@ -183,8 +183,18 @@ describe('audienceOf', () => {
 
   it('puts a review to the garage, the author and both public feeds', () => {
     expect(
-      sorted({ authorAccountId: 'a1', garageId: 'g1', type: 'review' }),
-    ).toEqual(['account:a1', 'garage:g1', 'public:garage', 'public:mechanic']);
+      sorted({
+        authorAccountId: 'a1',
+        garageId: 'g1',
+        mechanicId: 'm1',
+        type: 'review',
+      }),
+    ).toEqual([
+      'account:a1',
+      'garage:g1',
+      'public:garage:g1',
+      'public:mechanic:m1',
+    ]);
   });
 
   it('puts a car only to its owner', () => {
