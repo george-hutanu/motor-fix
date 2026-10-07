@@ -20,7 +20,9 @@ const daysBefore = (now: Date, days: number) =>
 
 const filesOf = (data: unknown): string[] => {
   const files = (data as { files?: unknown } | null)?.files;
-  return Array.isArray(files) ? files : [];
+  return Array.isArray(files)
+    ? files.filter((key): key is string => typeof key === 'string')
+    : [];
 };
 
 // Once a day: drafts untouched for 90 days go, photos included, and the
@@ -60,7 +62,7 @@ export class ListingDraftSweep implements DailyTask {
   async cleanUp(now: Date): Promise<void> {
     const cutoff = daysBefore(now, DELETE_AFTER_DAYS);
     const expired = await this.prisma.listingDraft.findMany({
-      select: { data: true, id: true },
+      select: { id: true },
       where: { status: 'open', updatedAt: { lte: cutoff } },
     });
     for (const draft of expired) {
@@ -114,8 +116,12 @@ export class ListingDraftSweep implements DailyTask {
   }
 
   // The files first: a draft whose files stay is kept for the next run.
-  private async deleteOne(draft: { id: string; data: unknown }, cutoff: Date) {
-    for (const key of filesOf(draft.data)) {
+  private async deleteOne(draft: { id: string }, cutoff: Date) {
+    const row = await this.prisma.listingDraft.findUnique({
+      select: { data: true },
+      where: { id: draft.id },
+    });
+    for (const key of filesOf(row?.data)) {
       await this.storage.deleteObject(key);
     }
     await this.prisma.listingDraft.deleteMany({

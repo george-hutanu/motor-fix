@@ -6,7 +6,13 @@ import {
   type ListingDraftDto,
   type ListingDraftSavedDto,
 } from '@motor-fix/contracts';
-import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 
 import {
   continueLink,
@@ -101,6 +107,7 @@ const linkResult = (send: LinkSend) => ({
 @Injectable()
 export class ListingDraftsService {
   now = () => new Date();
+  private readonly logger = new Logger('ListingDraftsService');
 
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
@@ -128,7 +135,7 @@ export class ListingDraftsService {
         updatedAt: at,
       },
     });
-    const send = await this.issueLink(draft, webUrl);
+    const send = await this.issueSaved(draft, webUrl);
     return { ...saved(draft), token: browser.token, ...linkResult(send) };
   }
 
@@ -179,7 +186,7 @@ export class ListingDraftsService {
       });
     });
     if (!moved) return saved(next);
-    const send = await this.issueLink(next, webUrl);
+    const send = await this.issueSaved(next, webUrl);
     return { ...saved(next), token: browser.token, ...linkResult(send) };
   }
 
@@ -237,6 +244,21 @@ export class ListingDraftsService {
       continueLink(webUrl, draft.language === 'en' ? 'en' : 'ro', issued.token),
     );
     return { sentAt: at };
+  }
+
+  // The draft is kept even when its link e-mail cannot be queued: the
+  // answer says no link went, and the button can ask for one again.
+  private async issueSaved(
+    draft: ListingDraft,
+    webUrl: string,
+  ): Promise<LinkSend> {
+    try {
+      return await this.issueLink(draft, webUrl);
+    } catch (error) {
+      const reason = error instanceof Error ? error.name : 'unknown';
+      this.logger.error(`listing draft link failed for ${draft.id}: ${reason}`);
+      return {};
+    }
   }
 
   // The draft a key opens, which must be the one named and still open.

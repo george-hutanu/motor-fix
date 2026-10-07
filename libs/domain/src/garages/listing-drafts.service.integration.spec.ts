@@ -1,4 +1,4 @@
-import { HttpException } from '@nestjs/common';
+import { HttpException, Logger } from '@nestjs/common';
 
 import { DRAFT_MAX_BYTES } from './listing-drafts';
 import { ListingDraftsService } from './listing-drafts.service';
@@ -11,8 +11,10 @@ const { prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
 
 const sent: { kind: string; draftId: string; link: string }[] = [];
+let queueDown = false;
 const notifications = {
   sendToDraft: async (kind: string, draftId: string, link: string) => {
+    if (queueDown) throw new Error('queue down');
     sent.push({ draftId, kind, link });
   },
 } as unknown as NotificationsService;
@@ -42,6 +44,7 @@ const refusalOf = async (promise: Promise<unknown>) => {
 
 beforeEach(async () => {
   sent.length = 0;
+  queueDown = false;
   await reset();
 });
 afterAll(() => prisma.$disconnect());
@@ -77,6 +80,19 @@ describe('creating a draft', () => {
         ),
       },
     ]);
+  });
+
+  it('keeps the draft and says no link went when the e-mail cannot be queued', async () => {
+    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    queueDown = true;
+
+    const created = await service.create(body());
+
+    expect(created.linkSent).toBe(false);
+    expect(created.token).toHaveLength(43);
+    expect(await prisma.listingDraft.count()).toBe(1);
+    expect(String(error.mock.calls[0]?.[0])).toContain(created.id);
+    error.mockRestore();
   });
 
   it('answers the saved draft with the time it was saved', async () => {
@@ -127,6 +143,57 @@ describe('creating a draft', () => {
     expect(refused.status).toBe(413);
     expect(refused.body).toMatchObject({ code: 'draft_too_large' });
     expect(await prisma.listingDraft.count()).toBe(0);
+  });
+});
+
+describe('what a draft leaves behind', () => {
+  it('stores no received key, writes no history or outbox event and logs no address or key', async () => {
+    const logged: string[] = [];
+    const spies = (['log', 'warn', 'error', 'debug', 'verbose'] as const).map(
+      (level) =>
+        jest
+          .spyOn(Logger.prototype, level)
+          .mockImplementation((...args: unknown[]) => {
+            logged.push(args.map(String).join(' '));
+          }),
+    );
+    const history = await prisma.activityLog.count();
+    const events = await prisma.outboxEvent.count();
+
+    const created = await service.create(body());
+    const moved = await service.save(
+      created.id,
+      created.token,
+      body({ email: 'maria@example.test', step: 2 }),
+    );
+    queueDown = true;
+    await service.save(
+      created.id,
+      moved.token,
+      body({ email: 'ion@example.test', step: 3 }),
+    );
+
+    const received = [
+      created.token,
+      moved.token,
+      ...sent.map((s) => tokenOf(s.link)),
+    ].filter((t): t is string => Boolean(t));
+    const hashes = (await prisma.listingDraftToken.findMany()).map(
+      (row) => row.hash,
+    );
+    for (const token of received) expect(hashes).not.toContain(token);
+    expect(await prisma.activityLog.count()).toBe(history);
+    expect(await prisma.outboxEvent.count()).toBe(events);
+    const log = logged.join('\n');
+    expect(log).toContain(created.id);
+    for (const secret of [
+      'owner@example.test',
+      'maria@example.test',
+      'ion@example.test',
+      ...received,
+    ])
+      expect(log).not.toContain(secret);
+    for (const spy of spies) spy.mockRestore();
   });
 });
 
