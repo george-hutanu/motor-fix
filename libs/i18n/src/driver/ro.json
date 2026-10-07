@@ -1,1 +1,34 @@
-{}
+{
+  "notifications": {
+    "alwaysSent": "Mereu trimise: programarea confirmată, ora nouă propusă de service, programarea anulată sau expirată, mașina e gata.",
+    "consent": {
+      "cancel": "Renunță",
+      "confirm": "Sunt de acord",
+      "text": "Vreau să primesc pe e‑mail noutăți MotorFix, cel mult o dată pe lună. Pot renunța oricând, cu un clic.",
+      "title": "Primești noutăți MotorFix?"
+    },
+    "group": {
+      "bookings": {
+        "hint": "Cu o zi înainte și cât e mașina în service",
+        "title": "Programare"
+      },
+      "due_dates": {
+        "hint": "ITP, RCA, rovinietă, anvelope și revizii",
+        "title": "Scadențe"
+      },
+      "news": {
+        "hint": "Cel mult un e‑mail pe lună",
+        "title": "Noutăți MotorFix"
+      },
+      "offers": {
+        "hint": "Când un service răspunde la cererea ta",
+        "title": "Ofertă nouă"
+      },
+      "reviews_history": {
+        "hint": "Recenzii, istoricul reparațiilor și transferul mașinii",
+        "title": "Recenzii și istoric"
+      }
+    },
+    "title": "Notificări"
+  }
+}

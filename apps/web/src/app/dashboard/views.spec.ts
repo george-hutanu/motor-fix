@@ -7,6 +7,7 @@ import { Subject } from 'rxjs';
 
 import { AdminOverview } from './admin-overview';
 import { AdminPanel } from './admin-panel';
+import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
 import { Live } from './live';
 import { Session } from './session';
 import { allowedViews, DASHBOARDS, dashboardRoutes } from './views';
@@ -80,6 +81,7 @@ describe('the dashboard view lists', () => {
         unreleased: true,
       },
       {
+        body: DriverSettingsView,
         capability: 'driver.settings',
         label: 'shell.frame.nav.driver.settings',
         path: 'settings',
