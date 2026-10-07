@@ -3,6 +3,7 @@ capability: catalogue
 updated: 2026-10-07
 features:
   - 039-brand-catalogue
+  - 354-job-catalogue-prices
 ---
 
 # Capability: Catalogue
@@ -58,3 +59,11 @@ _From 039-brand-catalogue._
 ### 039-FR-012 — Brand search MUST be open to visitors without a session, return `{ items, nextCursor, total }` with at most 20 brands a page and an opaque cursor for the next page, and be served from a cache kept for one hour.
 
 _From 039-brand-catalogue._
+
+### 354-FR-001 — The system MUST keep one job catalogue for the whole product, maintained by MotorFix, with one row per job holding an id, a stable key, a Romanian name, an English name, a status among `approved`, `pending` and `rejected`, an optional car system and an optional RAR activity code (both empty for the first six, filled by the stories that own them), created and updated times.
+
+_From 354-job-catalogue-prices._
+
+### 354-FR-002 — The product MUST ship the six jobs of the mock as approved catalogue data, keyed stably, and load them in every environment, production included, when the product starts or its data load runs; the load MUST mirror the brand load: the file wins on names, each created or changed row is audited once by `system`, rows outside the file are left alone; it MUST be idempotent (a second run with an unchanged file creates, renames and re-ids nothing and writes no audit entry) and atomic (a failed load leaves the catalogue as it was), and two loads at once MUST still leave exactly one row per key.
+
+_From 354-job-catalogue-prices._
