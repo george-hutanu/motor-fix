@@ -1595,7 +1595,7 @@
             }
           },
           "413": {
-            "description": "draft_too_large"
+            "description": "draft_too_large, or payload_too_large past 320 KB"
           },
           "429": {
             "description": "draft_rate_limited"
@@ -1688,7 +1688,7 @@
             "description": "draft_submitted"
           },
           "413": {
-            "description": "draft_too_large"
+            "description": "draft_too_large, or payload_too_large past 320 KB"
           }
         },
         "tags": [

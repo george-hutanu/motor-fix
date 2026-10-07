@@ -141,6 +141,14 @@ describe('the listing draft routes', () => {
     expect(res.body).toMatchObject({ code: 'draft_too_large' });
   });
 
+  it('refuses a body past what the API reads with 413, not a server error', async () => {
+    const note = 'x'.repeat(340_000);
+
+    const res = await create(body({ data: { survey: { note } } })).expect(413);
+
+    expect(res.body).toMatchObject({ code: 'payload_too_large', status: 413 });
+  });
+
   it('refuses a body that is not JSON', async () => {
     await request(app.getHttpServer())
       .post('/api/v1/listing-drafts')

@@ -51,6 +51,12 @@ export class ProblemFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost) {
     const res = host.switchToHttp().getResponse<Response>();
+    // The JSON parser refuses an oversized body before any route runs, with
+    // an error of its own rather than an HttpException.
+    if (tooLarge(exception)) {
+      sendProblem(res, 413, 'payload_too_large');
+      return;
+    }
     if (!(exception instanceof HttpException)) {
       this.logger.error(exception);
       sendProblem(res, 500, 'internal_error');
@@ -79,6 +85,11 @@ export class ProblemFilter implements ExceptionFilter {
     );
   }
 }
+
+const tooLarge = (exception: unknown) =>
+  typeof exception === 'object' &&
+  exception !== null &&
+  (exception as { type?: unknown }).type === 'entity.too.large';
 
 // How many tries a sign-in code has left, when the refusal says so.
 function attemptsLeft(value: unknown): Pick<Problem, 'attemptsLeft'> {

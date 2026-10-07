@@ -74,7 +74,9 @@ export class ListingDraftsController {
   @UseGuards(JsonOnly)
   @HttpCode(HttpStatus.CREATED)
   @ApiCreatedResponse({ type: ListingDraftCreatedDto })
-  @ApiPayloadTooLargeResponse({ description: 'draft_too_large' })
+  @ApiPayloadTooLargeResponse({
+    description: 'draft_too_large, or payload_too_large past 320 KB',
+  })
   @ApiTooManyRequestsResponse({ description: 'draft_rate_limited' })
   async create(
     @Req() req: Request,
@@ -110,7 +112,9 @@ export class ListingDraftsController {
   @ApiOkResponse({ type: ListingDraftSavedDto })
   @ApiNotFoundResponse({ description: 'not_found' })
   @ApiConflictResponse({ description: 'draft_submitted' })
-  @ApiPayloadTooLargeResponse({ description: 'draft_too_large' })
+  @ApiPayloadTooLargeResponse({
+    description: 'draft_too_large, or payload_too_large past 320 KB',
+  })
   save(
     @Param('id') id: string,
     @Body() body: SaveListingDraftDto,
