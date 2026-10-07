@@ -35,7 +35,7 @@
 - [x] CHK019 Is the U+2011 rule stated for hyphenated Romanian words? [Clarity, Spec §FR-014]
 - [x] CHK020 Is the language switch's effect on every shell text specified, including accessible names? [Coverage, Spec §FR-009, FR-010, US2-6]
 - [x] CHK021 Where the story and the Build brief disagree ("ADMIN" vs "ADMINISTRATOR"), is the winner stated? [Conflict, Spec §Assumptions, design.md]
-- [x] CHK022 Are the tab-bar short labels given in both languages? [Gap -> fixed: FR-006 gives RO short labels; EN follows the shell catalogue keys in plan, EN menu names in US2-1] [Completeness, Spec §FR-006]
+- [x] CHK022 Are the tab-bar short labels given in both languages? [Gap -> fixed: FR-006 now gives the English short labels] [Completeness, Spec §FR-006]
 - [x] CHK023 Is the fixed city text and its replacement story named? [Assumption, Spec §FR-008]
 
 ## Phone layout

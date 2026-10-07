@@ -43,3 +43,8 @@ Start commit: b76badd3 (worktree .worktrees/160-admin-dashboard-menu, branch 160
 - Model: sonnet. before_checklist git commit: yes. `checklists/requirements-quality.md`: 29 items (security 9, live 8, i18n 6, phone 6), 0 unchecked at the end.
 - Gaps fixed in the spec/design: counter above 99 reads "99+" (FR-010); English tab short labels (FR-006); tab labels and 48 px touch targets named in FR-014; design.md's 11 px tab label corrected to the 12 px label size (conflict with FR-014).
 - STATUS: success — checklist driven to 0 unchecked.
+
+## 7. Tasks
+- Model: sonnet. `tasks.md`: 27 tasks (Foundational 6, US1 4, US2 12, US3 4, Polish 1); tests precede implementation in each phase; every task names its FR ids. MVP: Foundational + US1. after_tasks analyze hook not run (caller runs it).
+- level.mjs check: see run.
+- STATUS: success - tasks.md written.
