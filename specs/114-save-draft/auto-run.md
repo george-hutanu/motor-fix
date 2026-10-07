@@ -52,3 +52,4 @@
 - Spec review: BLOCK, 1 HIGH fixed: a service test now proves no received key is stored, no activity-log or outbox row is written and no address or key is logged (FR-018); the database checks sit in the service spec, where the client is, not the API spec T017 named. MEDIUM FR-015 (claim and notification row not one transaction) deferred with the item above; LOW: retention comment now says the lawyer is still to confirm; tasks.md path rename committed; Notion stage re-checked (Implementing).
 - Agent context: CLAUDE.local.md's active plan line points at this plan, one line, no growth.
 - Retro evidence: 18 commits, 0 → 1 deferred; carryover 050-cockpit-theme open item. Verdict left to the owner.
+- Reviews second pass: code APPROVE (its MEDIUM, the not-saved note outliving a good save, fixed in 09b6af44), spec APPROVE (LOW: T017 note added).

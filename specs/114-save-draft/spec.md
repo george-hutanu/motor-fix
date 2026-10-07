@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-07
 
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 
 **Input**: User description: "ST-114 Save a draft and come back to it later (EP-2 Garage onboarding and verification). Notion story: https://app.notion.com/p/3ee607bff0d28182bfafc99b0021fc1f"
 
