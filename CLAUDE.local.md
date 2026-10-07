@@ -160,5 +160,7 @@ ranked, read-only UI audit with `scan.mjs` and `contrast.mjs` helpers; fixes
 only the findings you name).
 
 <!-- SPECKIT START -->
-Active plan (stack, structure, commands): specs/569-auth-events-through-event-port/plan.md
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+at specs/784-impossible-level-date/plan.md
 <!-- SPECKIT END -->

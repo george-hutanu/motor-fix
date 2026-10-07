@@ -18,3 +18,6 @@ Start commit: ec74ab0654afa31c0e6bb27e0b56bd7a2c5ea933 (worktree .worktrees/784-
 
 ## Phase 4 — clarify
 - spec-challenger: 4 findings, each answered with its recommendation: (1) Spec Delta modifies 677-FR-003 → FR-003; (2) scenario 1 `now` = rolled instant + 1 min, scenario 2 = stamp + 1 min; (3) scenario 2 is a 4×8 generated table; (4) JS reader asserted alone as well as in parity. level check: 2 kept; capabilities validate clean.
+
+## Phase 5 — plan
+- plan.md and quickstart.md written (model: 775); fix is in pendingLevel: LEVEL_AT captures y/m/d, refused unless `new Date(Date.UTC(y, m-1, d)).getUTCDate() === d` (probed: 2026-02-30, 2026-04-31, 2025-02-29 false; 2024-02-29, 2026-01-31 true); Python unchanged; cases go to level.adversary.spec.mjs parity block at a fixed now. No research/data-model/contracts. before_plan design check already done (design.md kept); agent-context hook run.
