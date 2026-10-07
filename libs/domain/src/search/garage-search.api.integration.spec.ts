@@ -72,10 +72,14 @@ describe('GET /search/garages', () => {
       counts: { doesNotTake: 0, worksOn: 1 },
       items: [
         {
+          brandNote: null,
+          doesNotTake: [],
           id: garage.id,
           name: 'Alfa Service',
+          refusalPhrase: null,
           slug: 'alfa-service',
           stance: 'works_on',
+          worksOn: [{ id: dacia, name: 'Dacia', slug: 'dacia' }],
         },
       ],
       nextCursor: null,

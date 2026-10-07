@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
+import { GarageBrandAnswerDto } from './garage-brands.dto';
+
 export const GARAGE_BRAND_ANSWERS = [
   'works_on',
   'does_not_take',
@@ -26,7 +28,7 @@ export class GarageSearchQueryDto {
   cursor?: string;
 }
 
-export class ListedGarageDto {
+export class ListedGarageDto extends GarageBrandAnswerDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
 

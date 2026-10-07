@@ -188,7 +188,7 @@ describe('GET /search/garages under attack', () => {
     ]);
   });
 
-  it('carries only id, name, slug and stance on a listed garage', async () => {
+  it('carries only the garage, its stance and its public brand answer on a listed garage', async () => {
     await prisma.garage.create({
       data: {
         brandNote: 'a note',
@@ -202,11 +202,19 @@ describe('GET /search/garages under attack', () => {
     const res = await search({ brandId: bmw });
 
     expect(Object.keys(res.body.items[0]).sort()).toEqual([
+      'brandNote',
+      'doesNotTake',
       'id',
       'name',
+      'refusalPhrase',
       'slug',
       'stance',
+      'worksOn',
     ]);
+    expect(res.body.items[0]).toMatchObject({
+      brandNote: 'a note',
+      refusalPhrase: 'sorry',
+    });
     expect(Object.keys(res.body).sort()).toEqual([
       'counts',
       'items',
