@@ -53,7 +53,7 @@ describe('workflow text helpers', () => {
     );
   });
 
-  it('runs the title check, in the given working directory', () => {
+  it('accepts a conventional title and refuses a plain one, with or without a working directory', () => {
     expect(check('feat(api): subject').code).toBe(0);
     expect(check('not a title', dir).code).toBe(1);
   });
