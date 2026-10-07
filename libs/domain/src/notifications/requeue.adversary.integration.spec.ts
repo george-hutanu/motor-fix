@@ -162,7 +162,7 @@ describe('the sweep under hostile conditions', () => {
     const warn = jest
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
-    build({ add: () => Promise.reject('boom') });
+    build({ addBulk: () => Promise.reject('boom') });
     const stranded = await row();
     await expect(service.requeueStranded()).resolves.toBe(0);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('boom'));
@@ -171,7 +171,7 @@ describe('the sweep under hostile conditions', () => {
 
   it('survives a queue that rejects with null', async () => {
     jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    build({ add: () => Promise.reject(null) });
+    build({ addBulk: () => Promise.reject(null) });
     await row();
     await expect(service.requeueStranded()).resolves.toBe(0);
   });
@@ -183,10 +183,10 @@ describe('the sweep under hostile conditions', () => {
     await row();
     let calls = 0;
     build({
-      add: (...args: Parameters<Queue['add']>) =>
+      addBulk: (...args: Parameters<Queue['addBulk']>) =>
         ++calls === 2
           ? Promise.reject(new Error('Redis down'))
-          : queue.add(...args),
+          : queue.addBulk(...args),
     });
     const answered = await service.requeueStranded();
     const waiting = (await queue.getJobCounts('waiting'))['waiting'];
@@ -253,7 +253,7 @@ describe('the requeue job through the processor', () => {
 
   it('resolves when the queue refuses every add', async () => {
     jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    build({ add: () => Promise.reject(new Error('Redis down')) });
+    build({ addBulk: () => Promise.reject(new Error('Redis down')) });
     await row();
     await expect(
       processor.handle({ attemptsMade: 0, data: {}, name: 'requeue' }),
