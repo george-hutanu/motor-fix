@@ -48,7 +48,21 @@ export default defineConfig({
       ? /@mailbox|@openid/
       : /@seeded|@mailbox|@openid/
     : undefined,
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // The platform rules flows switch maintenance on, which refuses every
+  // non-admin sign-in platform-wide: they run alone, after everything else.
+  projects: [
+    {
+      name: 'chromium',
+      testIgnore: /platform-rules\.spec\.ts$/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      dependencies: ['chromium'],
+      name: 'platform-rules',
+      testMatch: /platform-rules\.spec\.ts$/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
   use: {
     baseURL: deployed ?? 'http://localhost:4200',
     // A service worker's requests bypass page.route stubs; pwa.spec allows it.
