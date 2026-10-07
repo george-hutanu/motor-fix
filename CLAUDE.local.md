@@ -160,5 +160,5 @@ ranked, read-only UI audit with `scan.mjs` and `contrast.mjs` helpers; fixes
 only the findings you name).
 
 <!-- SPECKIT START -->
-Active plan (stack, structure, commands): specs/207-garage-approval-flow/plan.md
+Active plan (stack, structure, commands): specs/160-admin-dashboard-menu/plan.md
 <!-- SPECKIT END -->
