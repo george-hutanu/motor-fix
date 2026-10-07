@@ -5,7 +5,7 @@ speckit-demo harness. Repo-wide rules — identity first — are in AGENTS.md.
 
 ## Spec-kit workflow
 
-Specs live under `specs/<NNN-feature-slug>/`. Spec Kit is at **1.0.5**
+Specs: `specs/<NNN-slug>/`, a motor-fix-specs clone. Spec Kit is at **1.0.5**
 (`.specify/init-options.json`), claude integration, Python helper scripts
 (`.specify/scripts/python/`). Standard order:
 

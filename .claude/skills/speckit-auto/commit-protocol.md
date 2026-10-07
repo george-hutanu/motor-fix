@@ -10,22 +10,25 @@ commit, to the feature's own branch only (`git push`, upstream set when the
 branch was created, so the draft PR follows the work). Never `--force`, never
 `main`. Never merge mid-run: the tail agent merges, on green CI only.
 
-`specs/`, `.specify/` and `.claude/` are tracked: the artifact phases commit
-what they wrote as `docs(specs): ST-<n> …` (or `chore(specs): …` for logs), so
-the draft PR shows the spec as it forms. `.specify/feature.json`,
-`.specify/run-state.json` and `specs/<feature>/handoff.md` are git-ignored and
-are never forced in.
+`.specify/` and `.claude/` are tracked here; `specs/` is not. It is a clone
+of the private george-hutanu/motor-fix-specs (branch `trunk`), so the artifact
+phases commit what they wrote there, as `docs(specs): ST-<n> …` (or
+`chore(specs): …` for logs), with
+`node .claude/scripts/specs-repo.mjs commit "<message>" -- <feature>` (it
+rebases on a newer `trunk` and pushes); never `git add specs/` on the branch.
+`.specify/feature.json`, `.specify/run-state.json` and
+`specs/<feature>/handoff.md` are git-ignored and are never forced in.
 
 | Phase | Commit |
 |-------|--------|
-| 2–8 | `docs(specs): ST-<n> …` per phase that wrote an artifact |
+| 2–8 | `docs(specs): ST-<n> …` per phase that wrote an artifact, in the specs repository |
 | 9 | none — see below |
 | 10 | `feat(<scope>): <slice>` per implementation slice, staging the code and its tests together |
 | 11 | further `feat(<scope>):` slices for the converged work |
 | 12 | `refactor(<scope>): …` / `test(<scope>): …` for the hardening pass — never `feat` |
 | 15 | `docs: …` only if a *tracked* file genuinely changed |
 | 16 | no commit — the phase is read-only; it writes no artifact at all |
-| 17 | `docs(specs): ST-<n> …` for the archive status line and the merged Spec Delta in `.specify/capabilities/` |
+| 17 | `docs(specs): ST-<n> …`: the archive status line in the specs repository, the merged Spec Delta in `.specify/capabilities/` on the branch |
 
 Three gates shape this and are not negotiable:
 

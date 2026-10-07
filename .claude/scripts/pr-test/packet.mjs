@@ -10,7 +10,9 @@
 //
 //   node .claude/scripts/pr-test/packet.mjs --pr <n> --out <dir> [--repo o/r] [--run <id>] [--baseline <run-id|dir>]
 // exits 0 with packet.md written (a section gh could not answer says so), 2
-// when the folder has no report.json.
+// when the folder has no report.json. The feature's tasks.md, spec.md and lap
+// reports are read from the private specs repository's trunk (specs-repo.mjs),
+// where its folder sits at the root: motor-fix does not track specs/.
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -20,6 +22,7 @@ import { fileURLToPath } from "node:url";
 import { artifactName, WORKFLOW } from "./dispatch.mjs";
 import { findingKey as keyOf, isBlocking, touchesWeb } from "./findings.mjs";
 import { realGh } from "./post.mjs";
+import { SPECS_SLUG, TRUNK } from "../specs-repo.mjs";
 
 /** Changed files listed one per line before the rest are only counted. */
 const FILE_CAP = 100;
@@ -172,9 +175,12 @@ function chooseBaseline({ gh, repo, pr, head, base, run, explicit }) {
 }
 
 /** The FR ids on tasks.md lines naming a changed file, with their text from spec.md; { lines } or { note }. */
-function requirements(gh, repo, feature, head, paths) {
-  const tasks = contents(gh, repo, `${feature}/tasks.md`, head);
-  if (tasks.error) return { note: `${feature}/tasks.md not found at the head (${tasks.error})` };
+/** A file of the feature's folder in the specs repository: `feature` is `specs/<branch>`. */
+const specsFile = (gh, feature, path, raw = true) => contents(gh, SPECS_SLUG, `${feature.replace(/^specs\//, "")}${path}`, TRUNK, raw);
+
+function requirements(gh, feature, paths) {
+  const tasks = specsFile(gh, feature, "/tasks.md");
+  if (tasks.error) return { note: `${feature}/tasks.md not found on ${SPECS_SLUG} ${TRUNK} (${tasks.error})` };
   const ids = [
     ...new Set(
       tasks.text
@@ -184,23 +190,23 @@ function requirements(gh, repo, feature, head, paths) {
     ),
   ];
   if (ids.length === 0) return { note: `no line of ${feature}/tasks.md names a changed file` };
-  const spec = contents(gh, repo, `${feature}/spec.md`, head);
+  const spec = specsFile(gh, feature, "/spec.md");
   const text = new Map();
   for (const m of (spec.text ?? "").matchAll(/\*\*(FR-\d+)\*\*:?\s*(.*)/g)) text.set(m[1], m[2].trim());
   const lines = ids.map((id) => `- ${id}: ${text.get(id) ?? (spec.error ? `(spec.md unavailable: ${spec.error})` : "(not in spec.md)")}`);
   return { lines };
 }
 
-/** The newest committed lap report at the head; { label, findings } or null. */
-function committedLap(gh, repo, feature, head) {
-  const dir = contents(gh, repo, `${feature}/pr-review`, head, false);
+/** The newest committed lap report in the specs repository; { label, findings } or null. */
+function committedLap(gh, feature) {
+  const dir = specsFile(gh, feature, "/pr-review", false);
   const laps = (parseJson(dir.text ?? "") ?? [])
     .map((e) => Number(String(e.name).match(/^lap(\d+)$/)?.[1]))
     .filter(Number.isFinite)
     .sort((a, b) => b - a);
   for (const n of laps) {
     const path = `${feature}/pr-review/lap${n}/report.json`;
-    const report = parseJson(contents(gh, repo, path, head).text ?? "");
+    const report = parseJson(specsFile(gh, feature, `/pr-review/lap${n}/report.json`).text ?? "");
     if (report) return { label: path, findings: report.findings ?? [] };
   }
   return null;
@@ -320,10 +326,10 @@ export function buildPacket({ out, pr, repo, run, baseline: explicit, gh = realG
   const viewError = view ? null : `gh pr view failed: ${reason(res)}`;
   const head = view?.headRefOid ?? report.sha ?? "";
   const feature = view ? `specs/${view.headRefName}` : null;
-  const reqs = feature ? requirements(gh, repo, feature, head, (view.files ?? []).map((f) => f.path)) : { note: `Unavailable: ${viewError}` };
+  const reqs = feature ? requirements(gh, feature, (view.files ?? []).map((f) => f.path)) : { note: `Unavailable: ${viewError}` };
   const baseline = chooseBaseline({ gh, repo, pr: Number(pr), head, base: view?.baseRefName, run, explicit });
   try {
-    const committed = feature ? committedLap(gh, repo, feature, head) : null;
+    const committed = feature ? committedLap(gh, feature) : null;
     const prev =
       committed ??
       (baseline.report?.pr === Number(pr) ? { label: `${baseline.label} (the workflow's findings only)`, findings: baseline.report.findings ?? [] } : null);

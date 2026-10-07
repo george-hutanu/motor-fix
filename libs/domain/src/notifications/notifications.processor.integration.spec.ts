@@ -405,6 +405,17 @@ describe('a job the worker does not know', () => {
   });
 });
 
+describe('the sweep job', () => {
+  it('re-queues the stranded rows', async () => {
+    const sweep = jest.spyOn(service, 'requeueStranded').mockResolvedValue(2);
+    await expect(
+      processor.handle({ attemptsMade: 0, data: {}, name: 'requeue' }),
+    ).resolves.toBeUndefined();
+    expect(sweep).toHaveBeenCalledTimes(1);
+    sweep.mockRestore();
+  });
+});
+
 describe('when Brevo fails', () => {
   it('retries after 1, 5, 15, 60 and 240 minutes', () => {
     expect([0, 1, 2, 3, 4].map(retryDelay)).toEqual(

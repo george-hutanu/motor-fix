@@ -17,6 +17,7 @@ features:
   - 780-one-public-web-url-parser
   - 778-mark-sent-retry-no-delay
   - 561-sms-sent-once
+  - 560-requeue-stranded-notifications
 ---
 
 # Capability: Notifications
@@ -448,6 +449,46 @@ _From 561-sms-sent-once._
 ### 561-FR-004 — When the provider answers an SMS with a refusal, the processor MUST clear the record and give the count back, so the retry and fallback rules apply as before.
 
 _From 561-sms-sent-once._
+
+### 560-FR-001 — The worker MUST run a periodic sweep that, for every stale `queued` notification row, adds its send job under the row's usual job id and options (`send-<id>`, no delay, the same attempts, backoff and cleanup as a first add), on every channel.
+
+_From 560-requeue-stranded-notifications._
+
+### 560-FR-002 — A row is stale when it has been `queued` for longer than the stale window (5 minutes, see Assumptions), measured from its creation time.
+
+_From 560-requeue-stranded-notifications._
+
+### 560-FR-003 — The sweep MUST be idempotent: adding a job whose id already exists in the queue (waiting, delayed, active or kept failed) MUST change nothing, so a row whose job is alive is never sent twice.
+
+_From 560-requeue-stranded-notifications._
+
+### 560-FR-004 — The sweep MUST NOT add a job for a `queued` row that carries a send claim, whether the claim is live or lapsed: such a row was handed to a send job and the system cannot know whether the provider took the message. A lapsed claim still lets the row's own job retry it (522-FR-003); it only keeps the sweep away.
+
+_From 560-requeue-stranded-notifications._
+
+### 560-FR-005 — The sweep MUST NOT add a job for a `queued` SMS row that carries the "being sent" mark (561-FR-001).
+
+_From 560-requeue-stranded-notifications._
+
+### 560-FR-006 — When the provider has accepted a message and every write recording the send has failed (522-FR-002), the processor MUST keep the row's send claim rather than release it, so FR-004 shields the row from the sweep. A release that fails for other reasons keeps 522-FR-003 as it is.
+
+_From 560-requeue-stranded-notifications._
+
+### 560-FR-007 — The sweep MUST touch only `queued` rows: `held`, `sent` and `failed` rows and group flush jobs are outside it.
+
+_From 560-requeue-stranded-notifications._
+
+### 560-FR-008 — A sweep whose read or add fails MUST log the failure and end without changing the row; the next sweep tries again.
+
+_From 560-requeue-stranded-notifications._
+
+### 560-FR-009 — The sweep MUST log how many rows it re-queued whenever that number is not zero, naming the rows, so an operator sees that a hand-off failed.
+
+_From 560-requeue-stranded-notifications._
+
+### 560-FR-010 — The change MUST add no API route, contract, schema migration or UI.
+
+_From 560-requeue-stranded-notifications._
 
 ## Retired
 

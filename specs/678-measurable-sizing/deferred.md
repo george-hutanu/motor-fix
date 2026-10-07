@@ -1,3 +1,0 @@
-# Deferred findings — 678-measurable-sizing
-
-- [ ] The ready check refuses any feature that reads as level 2 and lacks `plan.md`, including one whose level was never recorded (`DEFAULT_LEVEL = 2` in `lib/feature.mjs`); more than 10 existing feature folders have no `plan.md` (e.g. `specs/433-pr-template`). Decide whether an unrecorded level should be refused at ready or only warned, and size those folders or leave them as history. Source: pr-tester lap 1, MEDIUM. `.claude/scripts/level.mjs` (`} else if (result.level >= 2) {` in `checkLevel`), `.claude/scripts/lib/feature.mjs:47`. — Notion: https://app.notion.com/p/3f1607bff0d281318376dfeb5d691485
