@@ -59,6 +59,33 @@ describe('the platform figures', () => {
     });
   });
 
+  it('counts a garage approved again this month in the month of its first approval', async () => {
+    const before = await garage('approved', new Date('2026-11-05T08:00:00Z'));
+    const fresh = await garage('approved', new Date('2026-11-06T08:00:00Z'));
+    const published = (id: string, at: Date) =>
+      prisma.activityLog.create({
+        data: {
+          action: 'update',
+          actorName: 'Admin',
+          actorRole: 'admin',
+          at,
+          field: 'status',
+          garageId: id,
+          newValue: 'approved',
+          oldValue: 'draft',
+          subjectId: id,
+          subjectType: 'garage',
+        },
+      });
+    await published(before.id, new Date('2026-08-20T08:00:00Z'));
+    await published(fresh.id, new Date('2026-11-06T08:00:00Z'));
+
+    await expect(countPlatformFigures(prisma, now)).resolves.toMatchObject({
+      garagesApprovedThisMonth: 1,
+      garagesListed: 2,
+    });
+  });
+
   it('leaves a suspended garage out of the listed ones and out of the month', async () => {
     await garage('suspended', new Date('2026-11-03T08:00:00Z'));
     await garage('approved', new Date('2026-11-04T08:00:00Z'));
