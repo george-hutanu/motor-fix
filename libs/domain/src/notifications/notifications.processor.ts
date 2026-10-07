@@ -379,17 +379,18 @@ export class NotificationsProcessor {
     }
     const content = await this.text(row, 'sms');
     if (content === null) return;
-    const month = smsMonth(this.now());
-    if (!(await takeSms(this.prisma, row.accountId, month))) {
-      await this.service.fail([row], 'sms_cap_reached', true);
-      return;
-    }
+    // Marked before the count is taken: a failed mark costs nothing.
     const mark = (sendingAt: Date | null) =>
       this.prisma.notification.update({
         data: { sendingAt },
         where: { id: row.id },
       });
     await mark(this.now());
+    const month = smsMonth(this.now());
+    if (!(await takeSms(this.prisma, row.accountId, month))) {
+      await this.service.fail([row], 'sms_cap_reached', true);
+      return;
+    }
     let messageId: string;
     try {
       messageId = await this.brevo.sendSms({
@@ -406,14 +407,15 @@ export class NotificationsProcessor {
         await this.service.fail([row], 'sms_unconfirmed', true);
         return;
       }
-      // Brevo said no: the SMS did not go. The error still decides between a
-      // retry and the fallback.
-      await mark(null);
+      // Brevo said no: the SMS did not go. The count goes back before the
+      // mark is cleared, so a failed clear only settles the row on its retry.
+      // The error still decides between a retry and the fallback.
       await giveSmsBack(this.prisma, row.accountId, month).catch((failed) =>
         this.logger.error(
           `notification ${row.id} ${row.kind} sms count not given back: ${String(failed)}`,
         ),
       );
+      await mark(null);
       await this.refused([row], error, attemptsMade);
       return;
     }

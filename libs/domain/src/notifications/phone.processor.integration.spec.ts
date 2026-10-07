@@ -389,7 +389,9 @@ describe('an SMS that may have gone', () => {
       data: { id: sms.id },
       name: 'send',
     });
-    while (mock.sms().length === 0) await new Promise((r) => setTimeout(r, 20));
+    for (let i = 0; i < 100 && mock.sms().length === 0; i++)
+      await new Promise((r) => setTimeout(r, 20));
+    expect(mock.sms()).toHaveLength(1);
     expect(await sendingAt(sms.id)).toEqual(new Date(NOVEMBER));
     await job;
   });
@@ -439,6 +441,46 @@ describe('an SMS that may have gone', () => {
     expect(mock.sms()).toHaveLength(2);
     expect((await counter(ana, '2026-11'))?.sentCount).toBe(1);
     expect(await summary(ana)).toEqual([['sms', 'sent', null]]);
+  });
+
+  it('is neither sent nor counted when its mark cannot be written', async () => {
+    const { ana, sms } = await queuedSms();
+    const update = jest
+      .spyOn(prisma.notification, 'update')
+      .mockRejectedValueOnce(new Error('connection lost'));
+    try {
+      await expect(sendJob(sms.id)).rejects.toThrow('connection lost');
+    } finally {
+      update.mockRestore();
+    }
+    expect(mock.sms()).toHaveLength(0);
+    expect(await counter(ana, '2026-11')).toBeNull();
+    expect(await sendingAt(sms.id)).toBeNull();
+  });
+
+  it('gives its count back and is not sent again when a refusal’s mark cannot be cleared', async () => {
+    const { ana, sms } = await queuedSms();
+    mock.answer({ status: 503 });
+    const real = prisma.notification.update.bind(prisma.notification);
+    let calls = 0;
+    const update = jest
+      .spyOn(prisma.notification, 'update')
+      .mockImplementation(((args: never) =>
+        ++calls === 2
+          ? Promise.reject(new Error('connection lost'))
+          : real(args)) as never);
+    try {
+      await expect(sendJob(sms.id)).rejects.toThrow('connection lost');
+    } finally {
+      update.mockRestore();
+    }
+    expect((await counter(ana, '2026-11'))?.sentCount).toBe(0);
+    await drain(ana);
+    expect(mock.sms()).toHaveLength(1);
+    expect(await summary(ana)).toEqual([
+      ['sms', 'failed', 'sms_unconfirmed'],
+      ['whatsapp', 'sent', null],
+    ]);
   });
 });
 

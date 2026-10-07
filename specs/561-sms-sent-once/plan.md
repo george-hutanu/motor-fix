@@ -4,7 +4,7 @@
 
 ## Summary
 
-A nullable `sending_at` column on `notification` (one migration). `NotificationsProcessor.sendSms()` sets it after taking the count and before `brevo.sendSms` (FR-001); a row found already carrying it is failed `sms_unconfirmed` with fallback before any count or call (FR-002); a `provider_unreachable` error keeps the count and settles the row the same way (FR-003); any other refusal clears the column, then gives the count back and goes through `refused()` as today (FR-004).
+A nullable `sending_at` column on `notification` (one migration). `NotificationsProcessor.sendSms()` sets it before taking the count and calling `brevo.sendSms` (FR-001); a row found already carrying it is failed `sms_unconfirmed` with fallback before any count or call (FR-002); a `provider_unreachable` error keeps the count and settles the row the same way (FR-003); any other refusal gives the count back, then clears the column and goes through `refused()` as today (FR-004).
 
 ## Technical Context
 

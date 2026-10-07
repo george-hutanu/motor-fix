@@ -26,7 +26,8 @@ The worker marks the SMS row as being sent just before it calls Brevo. If that a
 
 ### Edge Cases
 
-- A refusal whose clearing write fails fails the job; the retry sees the mark and settles the row as unconfirmed (no second SMS).
+- The mark is written before the month's count is taken: a failed mark fails the job with nothing sent or counted, and its retry starts afresh.
+- After a refusal the count goes back before the mark is cleared: a failed clear fails the job, and the retry sees the mark and settles the row as unconfirmed (no second SMS, no count).
 - A row that reaches the monthly cap, or has no text, never gets the mark: nothing was sent.
 - E-mail, WhatsApp and push are unchanged.
 
