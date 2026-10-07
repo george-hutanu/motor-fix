@@ -88,7 +88,7 @@ const written = (value: string | null | undefined) =>
         </p>
       }
       @if (note(); as note) {
-        <p class="note" [class.card]="mode() === 'card'" [attr.title]="mode() === 'card' ? note : null">
+        <p class="note" [class.card]="mode() === 'card'">
           <mf-as-written [text]="note" />
         </p>
       }
@@ -98,7 +98,7 @@ const written = (value: string | null | undefined) =>
 export class BrandVerdict {
   readonly answer = input<GarageBrandAnswerDto | null>(null);
   readonly brand = input<{ id: string; name: string } | null>(null);
-  readonly mode = input<'card' | 'profile'>('profile');
+  readonly mode = input<'card' | 'profile'>('card');
 
   private readonly i18n = inject(I18n);
 
@@ -141,7 +141,6 @@ export class BrandVerdict {
     );
   });
 
-  // Nothing marked at all: both lines stay, each saying so.
   protected readonly nothing = computed(
     () => !!this.answer() && !this.worksOn() && !this.refused(),
   );
