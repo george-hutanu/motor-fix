@@ -48,3 +48,10 @@ specs/784-impossible-level-date/tasks.md: 4 tasks, one story (tests first, red p
 - Agent context: CLAUDE.local.md managed block points at this plan; no growth.
 - Retro evidence: 9 commits since ec74ab06; jev lane unavailable, no suggested verdict; no retrospective written (verdict stays the owner's).
 - Archive: Spec Delta merged into platform (+2, ~677-FR-003); status Archived. Harness 2095/2095 green.
+
+## Final Report
+- PR #191 ready at 07105ed; labels QA, bug, scope: harness, EP-1. Notion ST-784 → QA.
+- Commits: fix (pendingLevel calendar check + year ≥ 1), specs/archive/qa records. Tests: harness 2095/2095; red-first 5 failing JS cases before the fix.
+- Review: spec-reviewer APPROVE, code-reviewer APPROVE; 2 MEDIUM fixed (SPECKIT markers, duplicate adversary file folded in). No deferred items.
+- Decisions on the owner's behalf: Spec Delta modifies 677-FR-003; year 0000 refused (Python parity), beyond the story's wording.
+- QA run 37592025683 dispatched (lap 1), not awaited. NEXT: tail #191 after QA run 37592025683.
