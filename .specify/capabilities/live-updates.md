@@ -11,6 +11,7 @@ features:
   - 574-live-hub-capabilities
   - 586-live-e2e-typed-text
   - 419-live-garage-updates
+  - 258-platform-rules-switches
 ---
 
 # Capability: Live updates
@@ -78,6 +79,10 @@ _From 253-live-connection._
 ### 256-FR-011 — Every dashboard (driver; garage, serving owner, receptionist and mechanic; admin) MUST show the epic's test update on the status line under its header, "Actualizare de test în direct · <time>" / "Live test update · <time>", changed in place in the person's language, and MUST raise no toast for it.
 
 _From 256-live-in-place._
+
+### 254-FR-001 — The audience of an event MUST be worked out from its subject: request → the driver's `account:` and each recipient `garage:`; quote → the driver and the quoting garage; booking → the driver, the garage and the booking's `mechanic:` when it has one; job (with its media and live kinds) → the driver, the garage and the job's mechanic when it has one; review → the garage, the author and the public channels of 419-FR-006; message → the driver and the garage; car and repair → the owner's account, plus the named garage for a shared repair; verification and documents → `admin` and the garage; platform rules → `admin`, and `system` too only for `maintenance_mode` (258-FR-006); copy voices → `admin` and `system`; account → that `account:`.
+
+_From 254-live-audience._
 
 ### 419-FR-006 — The audience resolver MUST name the public channels with their ids: a review's audience is the garage, the author, `public:garage:{garageId}` and `public:mechanic:{mechanicId}` when the review names a mechanic (today it names bare `public:garage` and `public:mechanic`); an approval's published audience is `public:garage:{garageId}` and `public:search` (today it carries an empty brand list); a garage's public change (`garage.updated`, `garage.suspended`, `garage.restored`, `price_list.updated`, `facility.removed`, `facility.re_add_decided`, `mechanic.updated`, `garage.slots_changed`) is the garage's staff channel, `public:garage:{garageId}` and, for `garage.updated`, `garage.suspended` and `garage.restored`, `public:search`; a brand-stance change keeps `public:search:{brandId}` for each changed brand (254-FR-001 modified; the `garage_brands` subject unchanged).
 
@@ -334,6 +339,10 @@ _From 419-live-garage-updates._
 ### 419-FR-012 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the stream opening with no sign-in and its headers, `hello` and heartbeat; the parameter limits (400); a draft, suspended and unknown id ignored alike; each public kind reaching the channel FR-004 names; every private family and every non-public kind blocked from every public key; the results channel receiving approval, suspension, restoration and `garage.updated` for any garage and a brand's stance change for that brand only; the 21st stream answering 429 and a freed place reopening; the public route listed in `public-routes.integration.spec.ts`. Web unit tests MUST cover the connection's open-and-close with views, the parameters it sends, no stream on the server, no polling and no error on failure, and the helper's re-read rules (FR-009, FR-010). The Playwright scenarios of the brief (a review posted in one context updating an open profile in another; a suspension showing the "no longer available" state) run when the garage profile page and the review use case exist, in those stories (Assumptions).
 
 _From 419-live-garage-updates._
+
+### 258-FR-006 — The `platform_rule.changed` event MUST reach every open admin Setări view on the `admin` channel, and the view MUST re-read the rules and show the new state without a reload; only a change of `maintenance_mode` MUST also go out on the `system` channel to every connection.
+
+_From 258-platform-rules-switches._
 
 ## Retired
 

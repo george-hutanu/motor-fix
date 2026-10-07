@@ -260,3 +260,51 @@ describe('seed', () => {
     }
   });
 });
+
+describe('seed of the platform rules', () => {
+  const rules = () =>
+    prisma.platformRule.findMany({
+      orderBy: { key: 'asc' },
+      select: { defaultValue: true, key: true, value: true },
+    });
+  const testOnly = { key: { in: ['skip_manual_approval', 'skip_rar_check'] } };
+
+  beforeEach(() => prisma.platformRule.deleteMany({ where: testOnly }));
+
+  it('adds the two test-only rules, checks required, beside the migrated ones', async () => {
+    expect(seed('test').status).toBe(0);
+
+    // The migrated rows' values belong to other suites sharing the database.
+    expect(await rules()).toEqual([
+      expect.objectContaining({ defaultValue: false, key: 'maintenance_mode' }),
+      expect.objectContaining({
+        defaultValue: true,
+        key: 'reviews_only_after_confirmed_job',
+      }),
+      { defaultValue: false, key: 'skip_manual_approval', value: false },
+      { defaultValue: false, key: 'skip_rar_check', value: false },
+    ]);
+  });
+
+  it('adds no test-only rule in production', async () => {
+    expect(seed('production').status).toBe(1);
+
+    expect(await prisma.platformRule.count({ where: testOnly })).toBe(0);
+  });
+
+  it('keeps a value an admin changed when run again', async () => {
+    expect(seed('test').status).toBe(0);
+    await prisma.platformRule.update({
+      data: { value: true },
+      where: { key: 'skip_rar_check' },
+    });
+
+    expect(seed('test').status).toBe(0);
+
+    expect(
+      await prisma.platformRule.findUniqueOrThrow({
+        where: { key: 'skip_rar_check' },
+      }),
+    ).toMatchObject({ defaultValue: false, value: true });
+  });
+});

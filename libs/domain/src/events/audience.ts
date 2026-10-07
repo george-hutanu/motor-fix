@@ -32,7 +32,8 @@ export type LiveSubject =
   // A change a visitor sees on the garage's public page; `results` when it can
   // also move the garage in search results.
   | { type: 'public_garage'; garageId: string; results: boolean }
-  | { type: 'platform' };
+  // A rule only the admins act on stays off the system channel.
+  | { type: 'platform'; adminOnly?: boolean };
 
 const account = (id: string) => `account:${id}`;
 const garage = (id: string) => `garage:${id}`;
@@ -97,6 +98,6 @@ export function audienceOf(subject: LiveSubject): string[] {
         ...when(subject.results, 'public:search'),
       ];
     case 'platform':
-      return ['admin', 'system'];
+      return subject.adminOnly ? ['admin'] : ['admin', 'system'];
   }
 }

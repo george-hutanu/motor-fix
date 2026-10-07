@@ -9,9 +9,11 @@ import { databaseUrl, fixtures } from '../notifications/notifications.testing';
 const { prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
 
-const now = new Date('2026-11-10T10:00:00Z');
-const MONTH_START = new Date('2026-10-31T22:00:00.000Z');
+const now = new Date('2025-11-10T10:00:00Z');
+const MONTH_START = new Date('2025-10-31T22:00:00.000Z');
 let slug = 0;
+// The log is append-only, so every entry written here stays for good.
+const written: string[] = [];
 
 const garage = (
   status: 'draft' | 'approved' | 'suspended',
@@ -29,8 +31,9 @@ const entry = (
     field?: string | null;
     newValue?: string;
   } = {},
-) =>
-  prisma.activityLog.create({
+) => {
+  written.push(subjectId);
+  return prisma.activityLog.create({
     data: {
       action: 'update',
       actorName: 'MotorFix',
@@ -43,6 +46,7 @@ const entry = (
       subjectType: over.subjectType ?? 'garage',
     },
   });
+};
 
 const approvedThisMonth = async (at = now) =>
   (await countPlatformFigures(prisma, at)).garagesApprovedThisMonth;
@@ -56,9 +60,9 @@ beforeEach(async () => {
 
 describe('a garage approved again does not join the month a second time', () => {
   it('leaves out a garage approved this month that an earlier approval already listed', async () => {
-    const g = await garage('approved', new Date('2026-11-04T08:00:00Z'));
-    await entry(g.id, new Date('2026-08-20T08:00:00Z'));
-    await entry(g.id, new Date('2026-11-04T08:00:00Z'));
+    const g = await garage('approved', new Date('2025-11-04T08:00:00Z'));
+    await entry(g.id, new Date('2025-08-20T08:00:00Z'));
+    await entry(g.id, new Date('2025-11-04T08:00:00Z'));
 
     await expect(countPlatformFigures(prisma, now)).resolves.toMatchObject({
       garagesApprovedThisMonth: 0,
@@ -67,12 +71,12 @@ describe('a garage approved again does not join the month a second time', () => 
   });
 
   it('leaves out a garage suspended and approved again this month, yet lists it', async () => {
-    const g = await garage('approved', new Date('2026-11-06T08:00:00Z'));
-    await entry(g.id, new Date('2026-09-02T08:00:00Z'));
-    await entry(g.id, new Date('2026-10-02T08:00:00Z'), {
+    const g = await garage('approved', new Date('2025-11-06T08:00:00Z'));
+    await entry(g.id, new Date('2025-09-02T08:00:00Z'));
+    await entry(g.id, new Date('2025-10-02T08:00:00Z'), {
       newValue: 'suspended',
     });
-    await entry(g.id, new Date('2026-11-06T08:00:00Z'));
+    await entry(g.id, new Date('2025-11-06T08:00:00Z'));
 
     await expect(countPlatformFigures(prisma, now)).resolves.toMatchObject({
       garagesApprovedThisMonth: 0,
@@ -81,16 +85,16 @@ describe('a garage approved again does not join the month a second time', () => 
   });
 
   it('counts a garage once when its first approval and a re-approval both fall in the month', async () => {
-    const g = await garage('approved', new Date('2026-11-02T08:00:00Z'));
-    await entry(g.id, new Date('2026-11-02T08:00:00Z'));
-    await entry(g.id, new Date('2026-11-08T08:00:00Z'));
+    const g = await garage('approved', new Date('2025-11-02T08:00:00Z'));
+    await entry(g.id, new Date('2025-11-02T08:00:00Z'));
+    await entry(g.id, new Date('2025-11-08T08:00:00Z'));
 
     expect(await approvedThisMonth()).toBe(1);
   });
 
   it('counts a garage whose only approval entry is in this month', async () => {
-    const g = await garage('approved', new Date('2026-11-02T08:00:00Z'));
-    await entry(g.id, new Date('2026-11-02T08:00:00Z'));
+    const g = await garage('approved', new Date('2025-11-02T08:00:00Z'));
+    await entry(g.id, new Date('2025-11-02T08:00:00Z'));
 
     expect(await approvedThisMonth()).toBe(1);
   });
@@ -103,18 +107,18 @@ describe('a garage approved again does not join the month a second time', () => 
   });
 
   it('leaves out an approval entry one millisecond before the month began', async () => {
-    const g = await garage('approved', new Date('2026-11-03T08:00:00Z'));
+    const g = await garage('approved', new Date('2025-11-03T08:00:00Z'));
     await entry(g.id, new Date(MONTH_START.getTime() - 1));
 
     expect(await approvedThisMonth()).toBe(0);
   });
 
   it('counts an approval at 23:59 Bucharest on the last day in the month it ended, not the next', async () => {
-    const g = await garage('approved', new Date('2026-10-31T21:59:00Z'));
-    await entry(g.id, new Date('2026-10-31T21:59:00Z'));
+    const g = await garage('approved', new Date('2025-10-31T21:59:00Z'));
+    await entry(g.id, new Date('2025-10-31T21:59:00Z'));
 
     expect(await approvedThisMonth()).toBe(0);
-    expect(await approvedThisMonth(new Date('2026-10-31T21:59:30Z'))).toBe(1);
+    expect(await approvedThisMonth(new Date('2025-10-31T21:59:30Z'))).toBe(1);
   });
 
   it.each([
@@ -123,32 +127,32 @@ describe('a garage approved again does not join the month a second time', () => 
     ['no field', { field: null }],
     ['another value', { newValue: 'suspended' }],
   ])('still counts a garage whose earlier entry is for %s', async (_, over) => {
-    const g = await garage('approved', new Date('2026-11-04T08:00:00Z'));
-    await entry(g.id, new Date('2026-08-20T08:00:00Z'), over);
-    await entry(g.id, new Date('2026-11-04T08:00:00Z'));
+    const g = await garage('approved', new Date('2025-11-04T08:00:00Z'));
+    await entry(g.id, new Date('2025-08-20T08:00:00Z'), over);
+    await entry(g.id, new Date('2025-11-04T08:00:00Z'));
 
     expect(await approvedThisMonth()).toBe(1);
   });
 
   it('still counts a garage when the earlier approval belongs to another garage', async () => {
-    const mine = await garage('approved', new Date('2026-11-04T08:00:00Z'));
+    const mine = await garage('approved', new Date('2025-11-04T08:00:00Z'));
     const other = await garage('draft', null);
-    await entry(other.id, new Date('2026-08-20T08:00:00Z'));
-    await entry(mine.id, new Date('2026-11-04T08:00:00Z'));
+    await entry(other.id, new Date('2025-08-20T08:00:00Z'));
+    await entry(mine.id, new Date('2025-11-04T08:00:00Z'));
 
     expect(await approvedThisMonth()).toBe(1);
   });
 
   it('counts a garage with no entries at all when its date is in the month', async () => {
-    await garage('approved', new Date('2026-11-04T08:00:00Z'));
+    await garage('approved', new Date('2025-11-04T08:00:00Z'));
 
     expect(await approvedThisMonth()).toBe(1);
   });
 
   it('leaves a re-approved garage out of the snapshot row too', async () => {
-    const g = await garage('approved', new Date('2026-11-04T08:00:00Z'));
-    await entry(g.id, new Date('2026-08-20T08:00:00Z'));
-    await garage('approved', new Date('2026-11-05T08:00:00Z'));
+    const g = await garage('approved', new Date('2025-11-04T08:00:00Z'));
+    await entry(g.id, new Date('2025-08-20T08:00:00Z'));
+    await garage('approved', new Date('2025-11-05T08:00:00Z'));
 
     await writeSnapshot(prisma, now);
 
@@ -234,6 +238,19 @@ describe('snapshot day keys at the clock changes and month ends', () => {
       },
     });
 
-    expect(await monthStartSnapshot(prisma, now)).toBeUndefined();
+    expect(
+      await monthStartSnapshot(prisma, new Date('2026-11-10T10:00:00Z')),
+    ).toBeUndefined();
+  });
+});
+
+describe('the entries these cases leave behind', () => {
+  it('dates none of them after the real clock, so later readers of "since now" never see them', async () => {
+    const ahead = await prisma.activityLog.count({
+      where: { at: { gt: new Date() }, subjectId: { in: written } },
+    });
+
+    expect(written.length).toBeGreaterThan(0);
+    expect(ahead).toBe(0);
   });
 });

@@ -1997,6 +1997,89 @@
           "live"
         ]
       }
+    },
+    "/api/v1/admin/platform-rules": {
+      "get": {
+        "operationId": "PlatformRulesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformRulesDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/platform-rules/{key}": {
+      "patch": {
+        "operationId": "PlatformRulesController_change",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePlatformRuleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformRuleDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no rule"
+          },
+          "409": {
+            "description": "stale_value, two_admins_required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
     }
   },
   "info": {
@@ -4107,6 +4190,131 @@
         },
         "required": [
           "accountId"
+        ]
+      },
+      "PlatformRuleDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "maintenance_mode"
+          },
+          "value": {
+            "oneOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              }
+            ]
+          },
+          "defaultValue": {
+            "oneOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              }
+            ]
+          },
+          "requiresTwoAdmins": {
+            "type": "boolean",
+            "description": "Switching it off needs a second admin"
+          },
+          "updatedBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "defaultValue",
+          "requiresTwoAdmins",
+          "updatedBy",
+          "updatedAt"
+        ]
+      },
+      "PlatformRulesDto": {
+        "type": "object",
+        "properties": {
+          "production": {
+            "type": "boolean",
+            "description": "The server runs in production"
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlatformRuleDto"
+            }
+          }
+        },
+        "required": [
+          "production",
+          "rules"
+        ]
+      },
+      "ChangePlatformRuleDto": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "oneOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              }
+            ],
+            "description": "The new value"
+          },
+          "seen": {
+            "oneOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              }
+            ],
+            "description": "The value the admin's screen showed"
+          }
+        },
+        "required": [
+          "value",
+          "seen"
         ]
       }
     }

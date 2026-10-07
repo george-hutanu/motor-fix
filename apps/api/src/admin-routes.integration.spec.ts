@@ -18,6 +18,8 @@ const api = apiBoot();
 
 const KNOWN = [
   'GET /api/v1/admin/overview',
+  'GET /api/v1/admin/platform-rules',
+  'PATCH /api/v1/admin/platform-rules/{key}',
   'POST /api/v1/admin/live/test',
   'POST /api/v1/admin/news',
   'POST /api/v1/admin/notifications/test',

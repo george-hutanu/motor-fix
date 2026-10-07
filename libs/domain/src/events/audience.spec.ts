@@ -164,6 +164,12 @@ describe('audienceOf', () => {
     expect(audienceOf({ type: 'platform' })).toEqual(['admin', 'system']);
   });
 
+  it('keeps an admin-only platform change on the admin channel', () => {
+    expect(audienceOf({ adminOnly: true, type: 'platform' })).toEqual([
+      'admin',
+    ]);
+  });
+
   it('sends an account event to that account only', () => {
     expect(audienceOf({ accountId: driver, type: 'account' })).toEqual([
       'account:d1',

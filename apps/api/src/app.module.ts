@@ -11,6 +11,7 @@ import {
   oauthSettings,
   PasswordResetModule,
   PhoneSignInModule,
+  PlatformRulesModule,
   phoneConfig,
   pushConfig,
   SearchModule,
@@ -68,6 +69,9 @@ export class AppModule {
           verificationConfig(env.APP_ENV, process.env),
         ),
         EventsModule.register({ redisUrl: env.REDIS_URL }),
+        PlatformRulesModule.register({
+          production: env.APP_ENV === 'production',
+        }),
       ],
       module: AppModule,
     };
