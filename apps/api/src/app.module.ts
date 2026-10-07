@@ -1,6 +1,7 @@
 import type { Env, StorageEnv } from '@motor-fix/contracts';
 import {
   AuthModule,
+  CatalogueModule,
   EmailConfirmationModule,
   EventsModule,
   emailConfig,
@@ -57,6 +58,7 @@ export class AppModule {
           brevo: { apiKey: email.apiKey ?? '', apiUrl: email.apiUrl },
           phone: phoneConfig(env.APP_ENV, process.env),
         }),
+        CatalogueModule,
         GaragesModule.register(email, notifications),
         EventsModule.register({ redisUrl: env.REDIS_URL }),
       ],

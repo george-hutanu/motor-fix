@@ -4,6 +4,8 @@
 export type { AuditActorDto } from './models/audit-actor-dto';
 export type { AuditEntryDto } from './models/audit-entry-dto';
 export type { AuditHistoryPageDto } from './models/audit-history-page-dto';
+export type { BrandDto } from './models/brand-dto';
+export type { BrandPageDto } from './models/brand-page-dto';
 export type { ConfirmEmailAnswerDto } from './models/confirm-email-answer-dto';
 export type { ConfirmEmailDto } from './models/confirm-email-dto';
 export type { ConsentDto } from './models/consent-dto';

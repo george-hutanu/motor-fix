@@ -1,6 +1,8 @@
+const mockLoad = jest.fn(async (..._args: unknown[]) => ({ changed: 0 }));
 const mockApp = {
   close: jest.fn(async () => undefined),
   enableShutdownHooks: jest.fn(),
+  get: jest.fn((..._args: unknown[]) => ({ load: mockLoad })),
   listen: jest.fn(async () => undefined),
 };
 const mockCreate = jest.fn(async (..._args: unknown[]) => mockApp);
@@ -16,6 +18,10 @@ jest.mock('node:fs', () => ({
 jest.mock('@motor-fix/contracts', () => ({
   readEnv: (...args: unknown[]) => mockReadEnv(...args),
   STORAGE_ENV: ['S3_BUCKET'],
+}));
+jest.mock('@motor-fix/domain', () => ({
+  BRANDS: ['the brand file'],
+  BrandLoader: class BrandLoader {},
 }));
 jest.mock('@nestjs/core', () => ({
   NestFactory: { create: (...args: unknown[]) => mockCreate(...args) },
@@ -93,6 +99,18 @@ describe('api entry point', () => {
     );
     expect(mockApp.close).toHaveBeenCalled();
     expect(mockApp.listen).not.toHaveBeenCalled();
+    expect(mockLoad).not.toHaveBeenCalled();
+  });
+
+  it('loads the brand file before it serves', async () => {
+    await run([]);
+
+    const [[loader]] = mockApp.get.mock.calls as [[{ name: string }]];
+    expect(loader.name).toBe('BrandLoader');
+    expect(mockLoad).toHaveBeenCalledWith(['the brand file']);
+    expect(mockLoad.mock.invocationCallOrder[0]).toBeLessThan(
+      mockApp.listen.mock.invocationCallOrder[0] ?? 0,
+    );
   });
 
   it.each([

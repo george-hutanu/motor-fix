@@ -39,15 +39,15 @@ None. No new dependency, project or tool; `libs/domain`, `libs/contracts` and `a
 
 ### Tests (write first, must fail)
 
-- [ ] T005 [P] [US1] `libs/domain/src/catalogue/brands.spec.ts` (new): fold and slug (`Škoda` → `skoda`, `Mercedes-Benz` → `mercedes-benz`), `validateFile` refuses a duplicate key, name or slug naming both brands, and the shipped `BRANDS` holds the twelve mock brands once each (FR-002, FR-003, FR-007; SC-001)
-- [ ] T006 [P] [US1] `libs/domain/src/catalogue/brand-loader.integration.spec.ts` (new): stores every brand once; a second run changes nothing and writes no audit entry; a rename keeps id and the garage's `garage_brand` row; a retired brand stays with its garage rows and inactive, and returns as the same row; a duplicate in the file and a name or slug held by a stored retired brand leave the stored list unchanged; every change is audited with actor `system`; a change drops `brands:active` and a no-change run does not (FR-004, FR-005, FR-006, FR-007, FR-008, FR-009; SC-002)
+- [X] T005 [P] [US1] `libs/domain/src/catalogue/brands.spec.ts` (new): fold and slug (`Škoda` → `skoda`, `Mercedes-Benz` → `mercedes-benz`), `validateFile` refuses a duplicate key, name or slug naming both brands, and the shipped `BRANDS` holds the twelve mock brands once each (FR-002, FR-003, FR-007; SC-001)
+- [X] T006 [P] [US1] `libs/domain/src/catalogue/brand-loader.integration.spec.ts` (new): stores every brand once; a second run changes nothing and writes no audit entry; a rename keeps id and the garage's `garage_brand` row; a retired brand stays with its garage rows and inactive, and returns as the same row; a duplicate in the file and a name or slug held by a stored retired brand leave the stored list unchanged; every change is audited with actor `system`; a change drops `brands:active` and a no-change run does not (FR-004, FR-005, FR-006, FR-007, FR-008, FR-009; SC-002)
 
 ### Implementation
 
-- [ ] T007 [US1] `libs/domain/src/catalogue/brands.ts` (new): `BrandRecord`, `BRANDS` (twelve brands, popularity 1–12 in the mock's order), `fold`, `slugOf`, `validateFile`, `BrandFileError` (FR-002, FR-003, FR-007; depends on T005)
-- [ ] T008 [US1] `libs/domain/src/catalogue/brand-loader.ts` (new): `BrandLoader.load(records)` in one `$transaction` under `pg_advisory_xact_lock(hashtext('brand_loader'))`: validate, refuse a name or slug held by another stored key, create/update/retire/reactivate by `key`, audit through `AuditPort` as `{ actorId: null, actorRole: 'system' }`, then `DEL brands:active` after commit when anything changed (Redis error logged, not thrown) (FR-004, FR-005, FR-006, FR-007, FR-008, FR-009; depends on T004, T006, T007)
-- [ ] T009 [US1] Create `libs/domain/src/catalogue/catalogue.module.ts` (new, `CatalogueModule.register(auth)` providing `BrandLoader`), export `CatalogueModule`, `BrandLoader`, `BRANDS` from `libs/domain/src/index.ts`, import the module in `apps/api/src/app.module.ts` (FR-001; depends on T008)
-- [ ] T010 [US1] Extend `apps/api/src/main.spec.ts` to expect `await app.get(BrandLoader).load(BRANDS)` before `listen` and not on the `openapi` command, then add the call in `apps/api/src/main.ts` (FR-003; depends on T009)
+- [X] T007 [US1] `libs/domain/src/catalogue/brands.ts` (new): `BrandRecord`, `BRANDS` (twelve brands, popularity 1–12 in the mock's order), `fold`, `slugOf`, `validateFile`, `BrandFileError` (FR-002, FR-003, FR-007; depends on T005)
+- [X] T008 [US1] `libs/domain/src/catalogue/brand-loader.ts` (new): `BrandLoader.load(records)` in one `$transaction` under `pg_advisory_xact_lock(hashtext('brand_loader'))`: validate, refuse a name or slug held by another stored key, create/update/retire/reactivate by `key`, audit through `AuditPort` as `{ actorId: null, actorRole: 'system' }`, then `DEL brands:active` after commit when anything changed (Redis error logged, not thrown) (FR-004, FR-005, FR-006, FR-007, FR-008, FR-009; depends on T004, T006, T007)
+- [X] T009 [US1] Create `libs/domain/src/catalogue/catalogue.module.ts` (new, `CatalogueModule.register(auth)` providing `BrandLoader`), export `CatalogueModule`, `BrandLoader`, `BRANDS` from `libs/domain/src/index.ts`, import the module in `apps/api/src/app.module.ts` (FR-001; depends on T008)
+- [X] T010 [US1] Extend `apps/api/src/main.spec.ts` to expect `await app.get(BrandLoader).load(BRANDS)` before `listen` and not on the `openapi` command, then add the call in `apps/api/src/main.ts` (FR-003; depends on T009)
 
 **Checkpoint**: the brand list loads at boot and is testable alone.
 
@@ -61,16 +61,16 @@ None. No new dependency, project or tool; `libs/domain`, `libs/contracts` and `a
 
 ### Tests (write first, must fail)
 
-- [ ] T011 [P] [US2] `libs/contracts/src/brands.dto.spec.ts` (new): `BrandsQueryDto` accepts no `q`, `q` of 60 characters and a UUID `cursor`; refuses `q` of 61, a non-UUID `cursor` and an unknown parameter (FR-012)
-- [ ] T012 [P] [US2] `libs/domain/src/catalogue/brands.api.integration.spec.ts` (new, supertest, real Redis): visitor gets `sko`/`Skoda`/`ŠKODA` → Škoda; empty search by popularity then name, unranked last; 20 a page with `nextCursor` and `total`; `q=zzz` → empty page; `invalid_cursor` 400; a retired brand is not returned; second identical call is served from `brands:active` and a loader change shows in the next call (FR-010, FR-011, FR-012, FR-009; SC-003)
-- [ ] T013 [P] [US2] Add `'GET /api/v1/brands'` to the `PUBLIC` list in `apps/api/src/public-routes.integration.spec.ts` (FR-012; SC-005)
+- [X] T011 [P] [US2] `libs/contracts/src/brands.dto.spec.ts` (new): `BrandsQueryDto` accepts no `q`, `q` of 60 characters and a UUID `cursor`; refuses `q` of 61, a non-UUID `cursor` and an unknown parameter (FR-012)
+- [X] T012 [P] [US2] `libs/domain/src/catalogue/brands.api.integration.spec.ts` (new, supertest, real Redis): visitor gets `sko`/`Skoda`/`ŠKODA` → Škoda; empty search by popularity then name, unranked last; 20 a page with `nextCursor` and `total`; `q=zzz` → empty page; `invalid_cursor` 400; a retired brand is not returned; second identical call is served from `brands:active` and a loader change shows in the next call (FR-010, FR-011, FR-012, FR-009; SC-003)
+- [X] T013 [P] [US2] Add `'GET /api/v1/brands'` to the `PUBLIC` list in `apps/api/src/public-routes.integration.spec.ts` (FR-012; SC-005)
 
 ### Implementation
 
-- [ ] T014 [P] [US2] `libs/contracts/src/brands.dto.ts` (new): `BrandsQueryDto`, `BrandDto`, `BrandPageDto` per `contracts/brands.md`, and `export * from './brands.dto'` in `libs/contracts/src/index.ts` (FR-012; depends on T011)
-- [ ] T015 [US2] `libs/domain/src/catalogue/brands.service.ts` (new): `active()` reads `brands:active` from `AUTH_REDIS`, on a miss reads PostgreSQL `popularity asc nulls last, name asc` and `SETEX` 3600; `search(q, cursor)` folds, filters, pages 20, `invalid_cursor` 400, Redis failure falls back to PostgreSQL (FR-010, FR-011, FR-012; depends on T007, T012, T014)
-- [ ] T016 [US2] `libs/domain/src/catalogue/brands.controller.ts` (new): `GET /brands`, `@Public()`, tag `brands`; register controller and `BrandsService` in `CatalogueModule` (FR-012; depends on T015, T009)
-- [ ] T017 [US2] Regenerate `apps/api/openapi.json` and the client in `libs/data-access/src/lib` (`npx nx run api:openapi`, `npx nx run data-access:generate`) (depends on T016)
+- [X] T014 [P] [US2] `libs/contracts/src/brands.dto.ts` (new): `BrandsQueryDto`, `BrandDto`, `BrandPageDto` per `contracts/brands.md`, and `export * from './brands.dto'` in `libs/contracts/src/index.ts` (FR-012; depends on T011)
+- [X] T015 [US2] `libs/domain/src/catalogue/brands.service.ts` (new): `active()` reads `brands:active` from `AUTH_REDIS`, on a miss reads PostgreSQL `popularity asc nulls last, name asc` and `SETEX` 3600; `search(q, cursor)` folds, filters, pages 20, `invalid_cursor` 400, Redis failure falls back to PostgreSQL (FR-010, FR-011, FR-012; depends on T007, T012, T014)
+- [X] T016 [US2] `libs/domain/src/catalogue/brands.controller.ts` (new): `GET /brands`, `@Public()`, tag `brands`; register controller and `BrandsService` in `CatalogueModule` (FR-012; depends on T015, T009)
+- [X] T017 [US2] Regenerate `apps/api/openapi.json` and the client in `libs/data-access/src/lib` (`npx nx run api:openapi`, `npx nx run data-access:generate`) (depends on T016)
 
 **Checkpoint**: visitors can search brands.
 

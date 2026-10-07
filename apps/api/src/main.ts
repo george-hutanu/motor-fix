@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs';
 
 import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
+import { BRANDS, BrandLoader } from '@motor-fix/domain';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 
@@ -26,6 +27,7 @@ async function bootstrap() {
     await app.close();
     return;
   }
+  await app.get(BrandLoader).load(BRANDS);
   app.enableShutdownHooks();
   await app.listen(Number(process.env['PORT'] ?? 3000));
 }

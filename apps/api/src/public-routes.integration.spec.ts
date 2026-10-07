@@ -28,6 +28,7 @@ const PUBLIC = [
   'GET /api/v1/auth/oauth/google/callback',
   'GET /api/v1/auth/oauth/pending',
   'GET /api/v1/auth/providers',
+  'GET /api/v1/brands',
   'GET /health/live',
   'GET /health/ready',
   'POST /api/v1/auth/confirm-email',
