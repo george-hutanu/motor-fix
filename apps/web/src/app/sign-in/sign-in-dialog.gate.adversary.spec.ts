@@ -20,6 +20,7 @@ function setup(open: jest.Mock) {
           current,
           keepShownWhile: <T>(open: Promise<T>) => open,
           load: jest.fn(),
+          takeReturnTo: jest.fn((): string | null => null),
         },
       },
       { provide: Overlays, useValue: { open } },
