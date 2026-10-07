@@ -59,3 +59,30 @@ Start: origin/main 0ea7890a (worktree `.worktrees/783-api-test-boot-helper`, bra
 - T003 `apps/api/src/api-boot.testing.ts`: `apiBoot()` and `TEST_TOKEN_SECRET` (the two suites that sign tokens read it; decided here, evidence `validation-problem.integration.spec.ts:50`, `public-routes.integration.spec.ts:143`). `stop()` attempts app close then store stop (each only if reached), releases the turn, rethrows the first failure; idempotent.
 - T004 bootstrap afterAll try/finally; T005-T007 three suites on `apiBoot()`; sign-up keeps its spy and PUBLIC_WEB_URL restores in a `finally` after `api.stop()`.
 - Verification: api typecheck (app+spec) green; 6 api integration suites, 60 tests green; SC-004 grep empty; FR-006 diff lists only spec, testing and tsconfig files.
+
+## Phase 11 — Converge
+- All 8 tasks [X]; every FR maps to a changed file or check (FR-001/002/005 helper and its spec, FR-003 three suites, FR-004 bootstrap afterAll, FR-006 diff check). No new work appended.
+
+## Phase 12 — Harden
+- artifact-lint --check: 0 errors (3 delta-unassigned warnings by design). diff-audit (after fast-forwarding the stale local `main` ref it diffs against): 0 errors; warnings `test-only-export` and `untested-new-file` on `api-boot.testing.ts` are by design (a testing module imported by specs).
+- Merged origin/main into the branch (37369620), pushed.
+- test-adversary and code-reviewer dispatched in parallel with phase 14's spec-reviewer.
+
+## Phase 15 — Agent context
+- CLAUDE.local.md already points at specs/783-api-test-boot-helper/plan.md; nothing to change.
+
+## Phase 16 — Retrospective evidence
+- `retro-evidence.mjs --since bdbca2ed --jev`: 49 lines, Jev lane unavailable (no key), no suggested verdict. `instincts.mjs triggered`: nothing proposed beyond the lane note. No verdict recorded.
+- test-adversary: `api-boot.testing.adversary.integration.spec.ts`, 7 tests all green, no contract break; the one that only pinned the `TEST_TOKEN_SECRET` literal was dropped (change detector). Both helper specs: 11 tests green.
+
+## Phase 13 — Ticket refresh
+- org-researcher refresh appended to context.md: only ST-783's status moved (Implementing, PR #190 linked); ST-715 unchanged (To do, no comments). No new evidence.
+
+## Phase 14 — Review
+- spec-reviewer: VERDICT APPROVE at 3736962 (36/36 tests, typecheck and Biome clean). One LOW, fixed here: a synchronous throw inside a close escaped `.catch()` and skipped the release; `stop()` now wraps the closes in async lambdas and the loop in `try … finally { await turn.release() }` (FR-002). Helper specs 11/11 green after the fix.
+- code-reviewer: VERDICT APPROVE at 3736962. Applied, per the coordinator's calls:
+  - MEDIUM (decision, Option B): the turn probe waits 120 s, matching the other takers' budget; the helper specs' test cap is 240 s. SC-002, plan, research, quickstart and tasks amended to 120 s.
+  - MEDIUM (patch): `stop()` during a `start()` still waiting for the turn left the store and app open. New test first (red: start resolved "started" and the leaked turn hung the next test), then `start()` checks a `stopped` flag after each await and gives back whatever it reached.
+  - LOW (patch): on a leaked turn the probe no longer awaits its own disconnect (`void probe.release()`).
+  - The probe now lives once in `apps/api/src/turn-probe.testing.ts`, shared by both helper specs (it had been copied).
+- After the fixes: api typecheck (app+spec) and Biome clean; 7 api integration suites, 67 tests green. No re-review (coordinator).

@@ -10,7 +10,7 @@
 
 ## Phase 2: Tests first (red)
 
-- [X] T002 [US2] Write `apps/api/src/api-boot.testing.integration.spec.ts` (new), importing `apiBoot` from `./api-boot.testing` (does not exist yet, so red): one test per stage with `jest.spyOn` (store `start` rejects via `S3TestStore.prototype`; `Test.createTestingModule` throws; `NestApplication.prototype.init` rejects and the app is still closed; `NestApplication.prototype.close` rejects, the store is still stopped and the error is rethrown; a successful boot closes app, store, turn in that order, and a second `stop()` is harmless). Each test calls `stop()`, then proves the turn free with a fresh `databaseTurn(url).take()` resolving within 60 s and releases it (FR-002, FR-005, SC-002)
+- [X] T002 [US2] Write `apps/api/src/api-boot.testing.integration.spec.ts` (new), importing `apiBoot` from `./api-boot.testing` (does not exist yet, so red): one test per stage with `jest.spyOn` (store `start` rejects via `S3TestStore.prototype`; `Test.createTestingModule` throws; `NestApplication.prototype.init` rejects and the app is still closed; `NestApplication.prototype.close` rejects, the store is still stopped and the error is rethrown; a successful boot closes app, store, turn in that order, and a second `stop()` is harmless). Each test calls `stop()`, then proves the turn free with a fresh `databaseTurn(url).take()` resolving within 120 s and releases it (FR-002, FR-005, SC-002)
 
 ## Phase 3: User Story 2 - the helper with a safe teardown (P1)
 

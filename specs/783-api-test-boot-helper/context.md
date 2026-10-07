@@ -56,3 +56,23 @@
 - ST-599 Pre-commit brings up its own integration database — https://app.notion.com/p/3f0607bff0d281f4aa2ef26f367af174
 - Architecture decisions — https://app.notion.com/p/3ee607bff0d28111907edddc4bdd066a
 - Foundations epic — https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707
+
+## Refresh 2026-10-07
+
+Baseline: Gathered 2026-10-07 (date only, no time). Re-read ST-783 and ST-715 and their comments.
+
+### New decisions
+
+none found.
+
+### New constraints
+
+none found.
+
+### New contradictions with spec.md
+
+none found. The existing ST-715 / bootstrap overlap above is unchanged: ST-715 page last edited 2026-10-06T06:08Z, still To do, Ready to work, no PR, no comments.
+
+### Story changes
+
+- ST-783: Status moved Planning -> Implementing; PR property is https://github.com/george-hutanu/motor-fix/pull/190; Ready to work unticked; page last edited 2026-10-07T07:55Z; still no comments, so no comment moved scope. Finding text unchanged. [ST-783 page]
