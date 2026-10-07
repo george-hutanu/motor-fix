@@ -21,6 +21,9 @@ export type LiveSubject =
     }
   // The garages' staff only: an invite, a mechanic row.
   | { type: 'garage'; garageIds: readonly string[] }
+  // A change to the brands a garage takes: its staff, its public page and the
+  // search of each brand whose stance changed.
+  | { type: 'garage_brands'; garageId: string; brandIds: readonly string[] }
   | { type: 'platform' };
 
 const account = (id: string) => `account:${id}`;
@@ -62,6 +65,12 @@ export function audienceOf(subject: LiveSubject): string[] {
       ];
     case 'garage':
       return subject.garageIds.map(garage);
+    case 'garage_brands':
+      return [
+        garage(subject.garageId),
+        `public:garage:${subject.garageId}`,
+        ...subject.brandIds.map((id) => `public:search:${id}`),
+      ];
     case 'verification':
       return [
         'admin',

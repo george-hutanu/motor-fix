@@ -46,6 +46,7 @@ features:
   - 746-validate-archived-fr-assigned
   - 760-e2e-sign-up-limit
   - 691-author-skills-card
+  - 437-diff-audit-origin-main
 ---
 
 # Capability: Platform
@@ -1117,6 +1118,10 @@ _From 691-author-skills-card._
 ### 691-FR-008 — The change MUST be the smallest that satisfies FR-001 to FR-007: no new script, helper, configuration or wording beyond the load lines, the batch-read rule, the runner's line and the one test (Principle I).
 
 _From 691-author-skills-card._
+
+### 437-FR-001 — diff-audit MUST take its base as `git merge-base HEAD origin/main`, and only when that ref is absent fall back to `git merge-base HEAD main`.
+
+_From 437-diff-audit-origin-main._
 
 ## Retired
 

@@ -3,6 +3,7 @@ capability: garage-listing
 updated: 2026-10-07
 features:
   - 108-step-list-in-view
+  - 040-garage-brand-stance
   - 114-save-draft
 ---
 
@@ -135,6 +136,38 @@ _From 114-save-draft._
 ### 114-FR-021 — Abuse and leakage limits. Creating a server copy (`POST /api/v1/listing-drafts`) MUST be limited per source address by a Redis counter (the API has no throttle to reuse; 10 per hour; past it 429 with a stable code, nothing created and no e-mail sent), because the 5-per-draft cap (FR-009) alone lets one caller mail any address through many drafts. Every response that carries a draft or a token MUST send `Cache-Control: no-store`, and the page opened with `?draft=` MUST send `Referrer-Policy: no-referrer` so the token reaches no third party. Token lookup is by hash equality in PostgreSQL, never a comparison of clear tokens.
 
 _From 114-save-draft._
+
+### 040-FR-001 — Step 2 "Mărci" of "List your garage" MUST show, in the page's language, the hint on the three taps ("O apăsare: led verde, lucrezi pe ea. Încă una: led roșu, nu o primești. A treia o stinge." / "Tap once: green lamp, you work on it. Again: red lamp, you do not take it. A third tap switches it off."), a brand search field, one chip per popular brand (the twelve highest-ranked active brands of the catalogue) and the counter, in that order, in both languages.
+
+_From 040-garage-brand-stance._
+
+### 040-FR-002 — Each brand chip MUST be a button with `aria-pressed` that cycles off → taken (green, "lucrezi pe ea" / "you work on it") → refused (red, "nu o primești" / "you do not take it") → off on each tap, the state told by text as well as colour, and the button's accessible name carrying the brand and its current state text (`aria-pressed` is `true` for taken and refused alike, the text telling them apart).
+
+_From 040-garage-brand-stance._
+
+### 040-FR-003 — The counter MUST read the number of taken and the number of refused brands as "<n> primite · <m> refuzate" (singular "primită" / "refuzată"; "taken" / "refused" in English), counting only marked brands, and MUST update on every tap, announced politely to assistive technology (a live region).
+
+_From 040-garage-brand-stance._
+
+### 040-FR-004 — The search field MUST offer active brands from the catalogue matching the typed text (ignoring accents and case, through the catalogue's public search), and choosing one MUST mark it taken, as a chip if it was not one; a brand already a chip is marked in place, never added twice. Results are buttons reachable by keyboard; text with no match shows a line saying no brand was found, and an empty field shows no results. When the search fails the chips MUST keep working and a line MUST say that search is not working right now.
+
+_From 040-garage-brand-stance._
+
+### 040-FR-005 — The step MUST offer two optional texts: a brand note of at most 140 characters and a refusal phrase of at most 60 characters (counted as code points, after trimming surrounding whitespace, in the step and on the write alike), each with a label and its limit shown, refusing text over the limit; a blank text is no text.
+
+_From 040-garage-brand-stance._
+
+### 040-FR-006 — The step's values MUST be the `brands` section of the listing draft (stored as the draft's step 2, `steps['2']` in ST-114's shape): the marked brands by id with their stance, the note and the phrase; a brand switched off is absent. They are kept with the rest of the form and restored with it; nothing is written to the garage's tables from the form until the listing is sent (the sending story writes the rows through the same function as FR-008).
+
+_From 040-garage-brand-stance._
+
+### 040-FR-007 — Switching the language MUST change every text of the step and keep every chip's state and both texts.
+
+_From 040-garage-brand-stance._
+
+### 040-FR-013 — The step and every text it shows MUST obey the phone layout rules: no sideways scroll at 320 px, 44 px tap targets for the chips, no text under 12 px, light and dark theme following the device, chip states told by more than colour with a 3:1 contrast of the lamp and the focus ring and 4.5:1 for text.
+
+_From 040-garage-brand-stance._
 
 ## Retired
 
