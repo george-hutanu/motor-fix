@@ -250,10 +250,14 @@ describe('GarageBrandsService', () => {
     });
     await firstWritten;
     const second = setStance(w, w.dacia, 'does_not_take');
-    // Commit the first only once the second waits on it.
-    for (;;) {
+    // Commit the first only once the second waits on its transaction (a row
+    // lock or key wait; the spec files' turn is an advisory lock, never this).
+    for (let poll = 0; ; poll++) {
+      if (poll === 100)
+        throw new Error('the second write never waited on the first');
       const [{ waiting }] = await prisma.$queryRaw<{ waiting: number }[]>`
-        SELECT count(*)::int AS waiting FROM pg_locks WHERE NOT granted`;
+        SELECT count(*)::int AS waiting FROM pg_locks
+        WHERE NOT granted AND locktype = 'transactionid'`;
       if (waiting > 0) break;
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
