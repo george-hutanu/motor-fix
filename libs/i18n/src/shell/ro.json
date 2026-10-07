@@ -35,7 +35,7 @@
     "tooMany": "Ai cerut deja un link. Încearcă din nou puțin mai târziu."
   },
   "form": {
-    "close": "Închide",
+    "done": "Gata",
     "field": {
       "email": "Scrie o adresă de e‑mail validă.",
       "invalid": "Valoarea nu este validă.",
