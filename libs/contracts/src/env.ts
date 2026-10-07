@@ -66,23 +66,17 @@ export function publicWebUrl(
 // Telemetry: optional; unset endpoint means off. Grafana Cloud's OTLP gateway
 // in staging and production, the local otel-lgtm profile in development. The
 // headers carry the Grafana Cloud token and never reach an error.
-export const TELEMETRY_ENV = [
-  'OTEL_EXPORTER_OTLP_ENDPOINT',
-  'OTEL_EXPORTER_OTLP_HEADERS',
-  'OTEL_EXPORTER_OTLP_PROTOCOL',
-] as const;
-
-export interface Telemetry {
-  endpoint: URL;
-  headers?: string;
-  protocol: 'http/protobuf';
-  env: AppEnv;
-  traceSampleRatio: number;
-}
-
 export function telemetry(
   source: Record<string, string | undefined> = process.env,
-): Telemetry | undefined {
+):
+  | {
+      endpoint: URL;
+      headers?: string;
+      protocol: 'http/protobuf';
+      env: AppEnv;
+      traceSampleRatio: number;
+    }
+  | undefined {
   const value = source['OTEL_EXPORTER_OTLP_ENDPOINT'];
   if (!value) return undefined;
   const endpoint = URL.parse(value);
