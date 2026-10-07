@@ -12,3 +12,4 @@ Start commit: ec74ab06 (origin/main; worktree .worktrees/039-brand-catalogue, br
 - lifecycle open: empty start commit 902309fc, draft PR #193 (labels planning, feature, scope: catalogue, EP-2), Notion start (ST-39 To do → Planning, timeline row Planning, EP-2 In progress unchanged) + pr. Ready review: ST-245 held (waits on ST-39 and ST-241, owner's list review), ST-202 held (lawyer); no change.
 - commit 4f4119c2 docs(specs): spec, checklist, design.md, notion-sync.md, two capability stubs; pushed. after_specify optional hook agent-context.update skipped (runs at the plan phase).
 - level check: 2 unchanged (fr-count tripped at 17 FRs; clarification, contract, projects clear).
+- Phase 3 (Org context): context.md written from Notion (14 findings, 2 contradictions, 5 proposed clarifications); Data model page too large, Decisions and ideas index only — partial.
