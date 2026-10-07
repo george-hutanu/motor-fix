@@ -155,7 +155,7 @@ export class DraftKeeper {
     return false;
   }
 
-  // The same data, no longer tied to the server copy the link lost.
+  // An empty form, no longer tied to the server copy the link lost.
   startAgain(): number {
     this.adopt(startAgain(this.draft()));
     this.write();

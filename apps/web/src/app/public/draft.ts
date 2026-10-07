@@ -121,11 +121,18 @@ export const fromServer = (
   token,
 });
 
-// The same data, no longer tied to a server copy the link lost.
-export function startAgain(draft: BrowserDraft): BrowserDraft {
-  const { draftId: _id, token: _token, ...rest } = draft;
-  return { ...rest, dirty: false };
-}
+// An empty form in the same language, no longer tied to the server copy
+// the link lost.
+export const startAgain = (
+  draft: BrowserDraft,
+  now = new Date(),
+): BrowserDraft => ({
+  data: {},
+  dirty: false,
+  language: draft.language,
+  savedAt: now.toISOString(),
+  step: 1,
+});
 
 // A link always takes the server copy. Without one, unconfirmed changes win
 // and are sent; a clean entry with a key reads the server's, which another

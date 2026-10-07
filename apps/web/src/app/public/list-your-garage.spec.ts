@@ -854,7 +854,7 @@ describe('opening the link from the e-mail', () => {
     expect(TestBed.inject(Router).url).toBe('/ro/list-your-garage');
   });
 
-  it('says a dead link is no longer valid, and starts again from the kept data without the old key', async () => {
+  it('says a dead link is no longer valid, and starts again from an empty form without the old key', async () => {
     seed({ draftId: 'd1', email: 'mine@service.test', step: 2, token: 't1' });
 
     const { harness, page } = await open('/ro/list-your-garage?draft=dead');
@@ -874,7 +874,9 @@ describe('opening the link from the e-mail', () => {
     again?.click();
     await settle(harness);
 
-    expect(field(page).value).toBe('mine@service.test');
+    expect(field(page).value).toBe('');
+    expect(stored()).toMatchObject({ data: {}, step: 1 });
+    expect(stored()).not.toHaveProperty('email');
     expect(stored()).not.toHaveProperty('token');
     expect(stored()).not.toHaveProperty('draftId');
   });

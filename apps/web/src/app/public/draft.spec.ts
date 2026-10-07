@@ -146,14 +146,19 @@ describe('the browser copy of a listing draft', () => {
     });
   });
 
-  it('starts again from the same data with no server copy', () => {
+  it('starts again from an empty form with no server copy', () => {
     const again = startAgain(
       entry({ dirty: true, draftId: 'd1', email: 'a@b.test', token: 't1' }),
+      NOW,
     );
 
-    expect(again).toEqual({ ...entry(), email: 'a@b.test' });
-    expect(again).not.toHaveProperty('draftId');
-    expect(again).not.toHaveProperty('token');
+    expect(again).toEqual({
+      data: {},
+      dirty: false,
+      language: entry().language,
+      savedAt: NOW.toISOString(),
+      step: 1,
+    });
   });
 });
 
