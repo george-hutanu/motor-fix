@@ -33,7 +33,9 @@ import { parseQaRun } from "./pr-test/qa-run.mjs";
 import { readState } from "./run-state.mjs";
 import { WAIT_RECORD, commonDir, defaultCommandOf, waitHolder } from "./lib/watch-wait.mjs";
 
-export const DEFAULT_THRESHOLDS = { planning: 30, tests: 45, development: 45, review: 30, qa: 30, merging: 30 };
+// done is the grace period before a merged worktree is removed: its
+// tail agent may still be finishing there, and holds it while within it.
+export const DEFAULT_THRESHOLDS = { planning: 30, tests: 45, development: 45, review: 30, qa: 30, merging: 30, done: 30 };
 // QA boots on GitHub Actions (.github/workflows/pr-qa.yml), not on the laptop,
 // so the default is Actions' 20 concurrent jobs on a free plan, the ceiling a
 // dispatch can reach. SPECKIT_QA_CAP lowers it, e.g. to leave jobs for PR CI.
@@ -184,6 +186,8 @@ export function fixOf(row, { now, thresholds }) {
     if (row.main || row.holder === "live") return { verdict: "done", fix: null, reason: "merged, still held" };
     if (!row.clean) return { verdict: "done", fix: null, reason: "merged, but has uncommitted changes" };
     if (!row.head || row.head !== pr.head) return { verdict: "done", fix: null, reason: "merged, but has commits after the merged head" };
+    const quiet = (now - row.activity.at) / MIN;
+    if (quiet <= thresholds.done) return { verdict: "done", fix: null, reason: `merged, quiet ${Math.round(quiet)} of ${thresholds.done} min` };
     return { verdict: "done", fix: "remove-worktree", reason: "merged and clean" };
   }
   if (row.holder === "live" || row.holder === "owner") return { verdict: "ok", fix: null, reason: `held (${row.holder})` };

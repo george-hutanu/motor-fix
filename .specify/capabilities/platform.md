@@ -35,6 +35,7 @@ features:
   - 676-level-point-nonnumeric
   - 539-public-web-url-boot
   - 472-validation-failed-code
+  - 481-watch-done-threshold
 ---
 
 # Capability: Platform
@@ -243,13 +244,13 @@ _From 464-agent-watch._
 
 _From 464-agent-watch._
 
-### 464-FR-005 — A worktree MUST be stale when its phase is neither done nor blocked, its holder is neither `live` nor `owner`, and its last activity is older than its phase's threshold: planning 30, tests 45, development 45, review 30, qa 30, merging 30 minutes by default, each overridable with `--stale <phase>=<minutes>`.
+### 481-FR-001 — A worktree MUST be stale when its phase is neither done nor blocked, its holder is neither `live` nor `owner`, and its last activity is older than its phase's threshold: planning 30, tests 45, development 45, review 30, qa 30, merging 30 minutes by default; the done phase MUST have a threshold too, 30 minutes by default, its grace period (FR-002); each is overridable with `--stale <phase>=<minutes>`, `done` included.
 
-_From 464-agent-watch._
+_From 481-watch-done-threshold._
 
-### 464-FR-006 — Each stale worktree MUST get exactly one fix, the first that applies of `merge` (PR ready, checks passed, `agent-review` success on the head, the tree clean and at the PR head), `fix-ci` (a check on its open PR failed), `rerun-qa` (PR ready, checks passed, no `agent-review` result on the head), `resume` (anything else, an `agent-review` failure included); a done worktree whose PR is merged, whose tree is clean, whose `HEAD` is the PR's merged head and whose holder is not live MUST get `remove-worktree`; every other worktree gets none.
+### 481-FR-002 — Each stale worktree MUST get exactly one fix, the first that applies of `merge` (PR ready, checks passed, `agent-review` success on the head, the tree clean and at the PR head), `fix-ci` (a check on its open PR failed), `rerun-qa` (PR ready, checks passed, no `agent-review` result on the head), `resume` (anything else, an `agent-review` failure included); a done worktree whose PR is merged, whose tree is clean, whose `HEAD` is the PR's merged head, whose holder is not live and whose last activity is older than the done threshold MUST get `remove-worktree`; inside the threshold its verdict MUST be done with no fix and a reason naming its quiet minutes and the threshold; every other worktree gets none.
 
-_From 464-agent-watch._
+_From 481-watch-done-threshold._
 
 ### 464-FR-007 — `--fix` MUST release the lock of every worktree whose holder is `dead` (and, just before removing it, the quiet subagent lock of a `remove-worktree` row), remove every worktree whose fix is `remove-worktree` without forcing, and prune records whose directory is gone; it MUST NOT delete a branch, force anything, or touch the main worktree or a tree with uncommitted changes, and MUST print each action taken.
 
@@ -963,6 +964,14 @@ _From 472-validation-failed-code._
 
 _From 472-validation-failed-code._
 
+### 481-FR-003 — Within the done threshold, a `claude agent` lock whose session runs, and a claim, MUST count as a live holder of a done worktree, as they do for every other phase (464-FR-003).
+
+_From 481-watch-done-threshold._
+
+### 481-FR-004 — `--gate` and `--fix` MUST follow FR-002: neither fires for nor removes a done worktree inside its grace period.
+
+_From 481-watch-done-threshold._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -976,3 +985,6 @@ _From 472-validation-failed-code._
 
 - `704-FR-007` — removed by 705-auto-skill-split (2026-10-06): (it fenced ST-697's own edit of SKILL.md to the dispatch lines; that change has merged
 - `696-FR-009` — superseded by `705-FR-007` (2026-10-06)
+
+- `464-FR-005` — superseded by `481-FR-001` (2026-10-07)
+- `464-FR-006` — superseded by `481-FR-002` (2026-10-07)
