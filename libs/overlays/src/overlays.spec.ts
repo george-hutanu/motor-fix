@@ -1,5 +1,7 @@
+import { DOCUMENT, Location } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { NavigationStart, provideRouter, Router } from '@angular/router';
 import { I18n } from '@motor-fix/i18n';
 
 import {
@@ -108,6 +110,13 @@ const closeButton = () =>
 const body = () => top().querySelector<HTMLElement>('.mf-overlay-body');
 const question = () => top().querySelector<HTMLElement>('[role="alertdialog"]');
 const text = (key: string) => TestBed.inject(I18n).t(key);
+const marker = () =>
+  (history.state as { mfOverlay?: number } | null)?.mfOverlay;
+
+async function back() {
+  history.back();
+  await settle();
+}
 
 function pressEscape() {
   (document.activeElement ?? document.body).dispatchEvent(
@@ -189,16 +198,202 @@ describe('Overlays: open and close', () => {
     expect(top().querySelector('#data')?.textContent).toBe('Bună');
   });
 
-  it('changes neither the address nor the history', async () => {
-    const href = location.href;
-    const length = history.length;
+  it.each([
+    ['the X', () => closeButton()?.click()],
+    ['Escape', pressEscape],
+    ['a click outside', clickOutside],
+    [
+      'its own result',
+      () => top().querySelector<HTMLButtonElement>('#done')?.click(),
+    ],
+  ])(
+    'keeps the address and leaves no entry behind when closed with %s',
+    async (_, close) => {
+      history.pushState({ page: 'earlier' }, '');
+      history.pushState({ page: 'here' }, '');
+      const href = location.href;
+      await openTask();
+      expect(marker()).toEqual(expect.any(Number));
+
+      close();
+      await settle();
+
+      expect(dialogs()).toHaveLength(0);
+      expect(location.href).toBe(href);
+      expect(history.state).toEqual({ page: 'here' });
+      await back();
+      expect(history.state).toEqual({ page: 'earlier' });
+    },
+  );
+
+  it('leaves no entry behind when two stacked tasks close by the X', async () => {
+    history.pushState({ page: 'earlier' }, '');
+    history.pushState({ page: 'here' }, '');
     await openTask();
-    expect(dialogs()).toHaveLength(1);
-    pressEscape();
+    top().querySelector<HTMLButtonElement>('#again')?.click();
+    await settle();
+    expect(marker()).toEqual(expect.any(Number));
+
+    closeButton()?.click();
+    await settle();
+    closeButton()?.click();
     await settle();
 
+    expect(dialogs()).toHaveLength(0);
+    expect(history.state).toEqual({ page: 'here' });
+    await back();
+    expect(history.state).toEqual({ page: 'earlier' });
+  });
+
+  it('hands the opener its result only once the browser has stepped back', async () => {
+    const { host } = await openTask();
+    const seen: string[] = [];
+    const stepped = () => seen.push('step back');
+    window.addEventListener('popstate', stepped);
+    void host.result?.then((result) => seen.push(result));
+
+    top().querySelector<HTMLButtonElement>('#done')?.click();
+    await settle();
+    await settle();
+    window.removeEventListener('popstate', stepped);
+
+    expect(seen).toEqual(['step back', 'saved']);
+  });
+
+  it('moves no history when it closes after the page moved on', async () => {
+    const { host } = await openTask();
+    history.pushState({ page: 'elsewhere' }, '');
+    const stepped = jest.fn();
+    window.addEventListener('popstate', stepped);
+
+    closeButton()?.click();
+    await settle();
+    window.removeEventListener('popstate', stepped);
+
+    expect(dialogs()).toHaveLength(0);
+    await expect(host.result).resolves.toBe('cancelled');
+    expect(history.state).toEqual({ page: 'elsewhere' });
+    expect(stepped).not.toHaveBeenCalled();
+  });
+});
+
+describe('Overlays: the browser’s Back button', () => {
+  it('adds one entry at the same address, marked as the task’s own, on open', async () => {
+    history.pushState({ page: 'here' }, '');
+    const href = location.href;
+    const length = history.length;
+
+    await openTask();
+
     expect(location.href).toBe(href);
+    expect(history.length).toBe(length + 1);
+    expect(history.state).toEqual({
+      mfOverlay: expect.any(Number),
+      page: 'here',
+    });
+  });
+
+  it('closes only the top task on each Back, hands "cancelled" and keeps the page', async () => {
+    history.pushState({ page: 'here' }, '');
+    const href = location.href;
+    const { host, opener } = await openTask();
+    const again = top().querySelector<HTMLButtonElement>('#again');
+    again?.focus();
+    again?.click();
+    await settle();
+
+    await back();
+    expect(dialogs()).toHaveLength(1);
+    expect(document.activeElement).toBe(again);
+    expect(location.href).toBe(href);
+
+    await back();
+    expect(dialogs()).toHaveLength(0);
+    await expect(host.result).resolves.toBe('cancelled');
+    expect(document.activeElement).toBe(opener);
+    expect(history.state).toEqual({ page: 'here' });
+  });
+
+  it('reopens nothing on Forward after a Back, and moves nothing in answer', async () => {
+    await openTask();
+    await back();
+    expect(dialogs()).toHaveLength(0);
+
+    history.forward();
+    await settle();
+
+    expect(dialogs()).toHaveLength(0);
+    expect(marker()).toEqual(expect.any(Number));
+  });
+
+  it('keeps the router still on the open, on Back and on a close', async () => {
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    const router = TestBed.inject(Router);
+    router.initialNavigation();
+    await settle();
+    const starts: string[] = [];
+    const watching = router.events.subscribe(
+      (event) => event instanceof NavigationStart && starts.push(event.url),
+    );
+
+    await openTask();
+    await back();
+    expect(dialogs()).toHaveLength(0);
+    const opener = document.querySelector<HTMLButtonElement>('#opener');
+    opener?.click();
+    await settle();
+    closeButton()?.click();
+    await settle();
+    watching.unsubscribe();
+
+    expect(dialogs()).toHaveLength(0);
+    expect(starts).toEqual([]);
+  });
+
+  it('lets an opener that navigates on the result stay where it went', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideRouter([{ component: ReadTask, path: '**' }])],
+    });
+    const router = TestBed.inject(Router);
+    router.initialNavigation();
+    await settle();
+    const { host } = await openTask();
+    void host.result?.then(
+      (result) => result === 'saved' && router.navigateByUrl('/elsewhere'),
+    );
+
+    top().querySelector<HTMLButtonElement>('#done')?.click();
+    await settle();
+    await settle();
+
+    expect(dialogs()).toHaveLength(0);
+    expect(router.url).toBe('/elsewhere');
+    expect(TestBed.inject(Location).path()).toBe('/elsewhere');
+  });
+
+  it('adds no entry and closes at once where there is no window', async () => {
+    const page = new Proxy(document, {
+      get(target, key) {
+        if (key === 'defaultView') return null;
+        const value = Reflect.get(target, key, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+    TestBed.configureTestingModule({
+      providers: [{ provide: DOCUMENT, useValue: page }],
+    });
+    history.pushState({ page: 'here' }, '');
+    const length = history.length;
+    const { host } = await openTask();
+    expect(dialogs()).toHaveLength(1);
     expect(history.length).toBe(length);
+
+    closeButton()?.click();
+    await settle();
+
+    expect(dialogs()).toHaveLength(0);
+    await expect(host.result).resolves.toBe('cancelled');
+    expect(history.state).toEqual({ page: 'here' });
   });
 });
 

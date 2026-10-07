@@ -1,6 +1,17 @@
+import {
+  DEFAULT_DIALOG_CONFIG,
+  Dialog,
+  DialogConfig,
+} from '@angular/cdk/dialog';
 import { OverlayPositionBuilder } from '@angular/cdk/overlay';
 import { DOCUMENT } from '@angular/common';
-import { Injectable, inject } from '@angular/core';
+import {
+  createEnvironmentInjector,
+  DestroyRef,
+  EnvironmentInjector,
+  Injectable,
+  inject,
+} from '@angular/core';
 import { BrnDialogService } from '@spartan-ng/brain/dialog';
 import { firstValueFrom } from 'rxjs';
 
@@ -16,13 +27,31 @@ let titles = 0;
 
 // Opens a task on top of the current screen. The address never changes; the
 // promise settles with the task's result, or "cancelled" when the person
-// closed it (X, Escape, outside, a drag down, or the page navigating away).
+// closed it (X, Escape, outside, a drag down, or the browser's Back button).
 // On a phone every shape opens as a bottom sheet.
 @Injectable({ providedIn: 'root' })
 export class Overlays {
-  private readonly dialogs = inject(BrnDialogService);
+  // The CDK's default closes every open dialog on any popstate, the panel's
+  // own history entry included; the panel handles Back itself, one task at a
+  // time. Only these dialogs opt out: the kit's other dialogs keep the default.
+  private readonly scope = createEnvironmentInjector(
+    [
+      {
+        provide: DEFAULT_DIALOG_CONFIG,
+        useValue: { ...new DialogConfig(), closeOnNavigation: false },
+      },
+      Dialog,
+      BrnDialogService,
+    ],
+    inject(EnvironmentInjector),
+  );
+  private readonly dialogs = this.scope.get(BrnDialogService);
   private readonly positions = inject(OverlayPositionBuilder);
   private readonly window = inject(DOCUMENT).defaultView;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.scope.destroy());
+  }
 
   open<R = never, D = undefined>(
     source: OverlaySource,
@@ -52,8 +81,15 @@ export class Overlays {
         role: 'dialog',
       },
     );
+    // Handed a task after the close: the router replays the address of a
+    // step back over a task's entry a task after the popstate, and a
+    // navigation the opener starts on the result (sign-in going to a landing)
+    // must come after that replay, or the replay undoes it.
     return firstValueFrom(ref.closed$, { defaultValue: undefined }).then(
-      (result) => result ?? 'cancelled',
+      (result) =>
+        new Promise<OverlayResult<R>>((resolve) =>
+          setTimeout(() => resolve(result ?? 'cancelled')),
+        ),
     );
   }
 }

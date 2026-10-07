@@ -6,6 +6,7 @@ features:
   - 159-form-saving
   - 158-small-action-sheet
   - 509-offline-on-worker-504
+  - 491-back-closes-task
   - 492-task-load-error
 ---
 
@@ -15,9 +16,9 @@ The shared way a short task opens on top of the current screen, in `libs/overlay
 
 ## Requirements
 
-### 157-FR-001 — The front end MUST offer one overlay service that opens any task component on top of the current screen in one of three shapes, `dialog`, `drawer` or `drawer-wide`, with a title (an i18n key), without changing the page address or adding a history entry.
+### 491-FR-001 — Opening a task MUST add exactly one entry to the browser's history at the page's current address, marked in the entry's history state as that task's own, without changing the address, without the app's router navigating (no navigation start, on the open nor on the entry's removal) and without the page re-rendering, losing its scroll or its state. (Modifies 157-FR-001: the service still opens a task without changing the page address, but now with one same-address history entry per open task.)
 
-_From 157-dialog-drawer._
+_From 491-back-closes-task._
 
 ### 158-FR-010 — On a window at least 768 px wide when the task opens, the `dialog` shape MUST be centred, `min(480px, 100% − 32px)` wide and at most `100% − 48px` tall, on the kit's dialog surface; its body MUST scroll inside the panel when the content is taller. Below 768 px it is the sheet of 158-FR-001. (Replaces 157-FR-002, which applied at every width.)
 
@@ -31,9 +32,9 @@ _From 158-small-action-sheet._
 
 _From 157-dialog-drawer._
 
-### 157-FR-005 — A task MUST close with its X button, with Escape, and with a click or tap outside it; each such close MUST hand the opener `cancelled`.
+### 491-FR-002 — While a task is open, a press of the browser's Back button (or the equivalent back gesture) MUST close only the top open task and MUST hand its opener `cancelled`; the page MUST stay shown at the same address, with its scroll position and focus returned as for an X close (157-FR-004, 157-FR-008). With stacked tasks, each Back closes one task, top first. (Modifies 157-FR-005 and 157-FR-011: Back joins X, Escape and outside click as a close that hands `cancelled` and closes only the top task.)
 
-_From 157-dialog-drawer._
+_From 491-back-closes-task._
 
 ### 157-FR-006 — A task MUST be able to close itself with a typed result, which the opener receives; the opener's result is `cancelled` or one of the task's own result values.
 
@@ -52,10 +53,6 @@ _From 157-dialog-drawer._
 _From 157-dialog-drawer._
 
 ### 157-FR-010 — When a field inside a task has changed, closing it by X, Escape or outside MUST first ask "Renunți la modificări?" / "Discard your changes?" with "Renunță" / "Discard" and "Continuă editarea" / "Keep editing" *(proposed)*; the question replaces the task's body inside the same panel; keeping (or Escape) returns to the task with its text, discarding closes it with `cancelled`; a click outside while it asks does nothing; a task that closes itself with a result, was not changed, was marked unchanged again by the task, or was opened with the question switched off MUST NOT ask.
-
-_From 157-dialog-drawer._
-
-### 157-FR-011 — A task opened from an open task MUST stack on top; Escape and a click outside MUST close only the top one *(proposed)*.
 
 _From 157-dialog-drawer._
 
@@ -175,6 +172,30 @@ _From 509-offline-on-worker-504._
 
 _From 509-offline-on-worker-504._
 
+### 491-FR-003 — A Back press on a task whose field has changed MUST behave as an X press does under 157-FR-010: the discard question shows instead of a close, the task's history entry (which the Back press removed) is added again so that a further Back shows the question again, "Keep editing" (or Escape) returns to the task, and "Discard" closes it with `cancelled`. A task that 157-FR-010 exempts from the question closes at once.
+
+_From 491-back-closes-task._
+
+### 491-FR-004 — Every close that is not a Back press (X, Escape, outside click, the sheet's drag release of 158-FR-004, "Discard", the task closing itself with a result, the service closing it) MUST remove the entry FR-001 added, so that afterwards a single Back press leaves the page as it would have before the task was opened. After any sequence of opens and closes on one page in which tasks close top first, the history MUST hold no entry for a closed task; a task that closes under a newer one leaves its entry behind (FR-007; one dead Back press, see Assumptions).
+
+_From 491-back-closes-task._
+
+### 491-FR-005 — The opener MUST receive the task's result (or `cancelled`) only after the task's history entry has been removed (the browser has reported the step back), so that an opener that navigates on the result keeps that navigation and a Back from the new page returns to the page the task was opened from. The hand-off is one macrotask after that report (a zero-delay `setTimeout`), because the Angular router replays the address of a step back one task after the popstate and a navigation started on the result must come after that replay; a close that removes no entry (FR-007, FR-008) hands the result one macrotask after the close. No timer with a delay stands in for the browser's report.
+
+_From 491-back-closes-task._
+
+### 491-FR-006 — A Forward press after a Back close MUST NOT reopen the task; the page stays shown as it is, and nothing moves the history in answer to it.
+
+_From 491-back-closes-task._
+
+### 491-FR-007 — A close while the task's entry is no longer the current one (the app navigated or replaced the entry while the task was open) MUST NOT move the history: the person is never navigated away from the page they are on by a close. This feature adds no close on app navigation.
+
+_From 491-back-closes-task._
+
+### 491-FR-008 — Where the service runs without a browser (server rendering), nothing changes: it adds and removes no history entry and opens the task as today.
+
+_From 491-back-closes-task._
+
 ### 492-FR-001 — When a task given as a loader fails to load, the overlay body MUST replace the skeleton with an error message and a retry button, and MUST drop its busy mark (`aria-busy`) while the error shows.
 
 _From 492-task-load-error._
@@ -220,3 +241,6 @@ _From 492-task-load-error._
 - `157-FR-002` — superseded by `158-FR-010` (2026-10-04)
 - `157-FR-003` — superseded by `158-FR-011` (2026-10-04)
 - `159-FR-008` — superseded by `509-FR-002` (2026-10-06)
+- `157-FR-001` — superseded by `491-FR-001` (2026-10-07)
+- `157-FR-005` — superseded by `491-FR-002` (2026-10-07)
+- `157-FR-011` — superseded by `491-FR-002` (2026-10-07)

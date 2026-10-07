@@ -131,6 +131,8 @@ describe('CockpitSamplePage', () => {
 
     buttonNamed(openTask() as HTMLElement, text('overlay.done'))?.click();
     await settle();
+    // The opener hears the result a task after the close.
+    await settle();
     TestBed.tick();
 
     expect(openTask()).toBeNull();

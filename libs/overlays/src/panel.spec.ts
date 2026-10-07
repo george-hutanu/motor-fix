@@ -292,6 +292,74 @@ describe('dragging the grip', () => {
   });
 });
 
+describe('the browser’s Back button on a sheet', () => {
+  const question = () => panel()?.querySelector('[role="alertdialog"]');
+  const answer = (index: number) =>
+    question()?.querySelectorAll<HTMLButtonElement>('button')[index]?.click();
+
+  async function back() {
+    history.back();
+    await settle();
+  }
+
+  it('closes the sheet and hands "cancelled"', async () => {
+    history.pushState({ page: 'here' }, '');
+    const host = await openTask();
+
+    await back();
+
+    expect(open()).toBe(0);
+    await expect(host.result).resolves.toBe('cancelled');
+    expect(history.state).toEqual({ page: 'here' });
+  });
+
+  it('leaves the page with one Back after a drag closed the sheet', async () => {
+    history.pushState({ page: 'earlier' }, '');
+    history.pushState({ page: 'here' }, '');
+    const length = history.length;
+    await openTask();
+    expect(history.length).toBe(length + 1);
+
+    await drag(101);
+    expect(open()).toBe(0);
+    expect(history.state).toEqual({ page: 'here' });
+
+    await back();
+    expect(history.state).toEqual({ page: 'earlier' });
+  });
+
+  it('asks before Back closes a changed task, again on each Back, and keeping or discarding answers it', async () => {
+    history.pushState({ page: 'here' }, '');
+    const host = await openTask();
+    const field = panel().querySelector<HTMLInputElement>('#plate');
+    if (!field) throw new Error('no field');
+    field.value = 'B 123 ABC';
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+
+    await back();
+    expect(open()).toBe(1);
+    expect(question()).not.toBeNull();
+
+    await back();
+    expect(open()).toBe(1);
+    expect(question()).not.toBeNull();
+
+    answer(0);
+    await settle();
+    expect(question()).toBeNull();
+    expect(field.value).toBe('B 123 ABC');
+
+    await back();
+    expect(question()).not.toBeNull();
+    answer(1);
+    await settle();
+
+    expect(open()).toBe(0);
+    await expect(host.result).resolves.toBe('cancelled');
+    expect(history.state).toEqual({ page: 'here' });
+  });
+});
+
 describe('the on-screen keyboard', () => {
   it('fits what is already visible when it opens', async () => {
     fakeViewport(500);

@@ -218,6 +218,8 @@ test.describe('closing a sheet', () => {
     test(`with ${how}: cancelled, the page where it was, the focus back on the opener`, async ({
       page,
     }) => {
+      await page.goto('/ro');
+      const home = page.url();
       await openCockpit(page, 390, 844);
       const button = opener(page, SHAPES[0]);
       await button.scrollIntoViewIfNeeded();
@@ -242,6 +244,9 @@ test.describe('closing a sheet', () => {
       await expect(result(page)).toContainText(
         t('ro', 'cockpit.overlay.results.cancelled'),
       );
+
+      await page.goBack();
+      await expect(page).toHaveURL(home);
     });
   }
 
@@ -301,6 +306,44 @@ test.describe('closing a sheet', () => {
     ).toBeVisible();
     await expect(task(page)).toHaveCount(1);
   });
+});
+
+test.describe('the browser’s Back button on a phone', () => {
+  for (const [width, height] of [
+    [390, 844],
+    [320, 640],
+  ] as const) {
+    test(`at ${width} × ${height} Back closes the sheet and keeps the page`, async ({
+      page,
+    }) => {
+      await openCockpit(page, width, height);
+      const address = page.url();
+      await open(page, SHAPES[0]);
+
+      await page.goBack();
+
+      await expect(task(page)).toHaveCount(0);
+      expect(page.url()).toBe(address);
+      await expect(result(page)).toContainText(
+        t('ro', 'cockpit.overlay.results.cancelled'),
+      );
+    });
+
+    test(`at ${width} × ${height} one Back after a drag closed the sheet leaves the page`, async ({
+      page,
+    }) => {
+      await page.goto('/ro');
+      const home = page.url();
+      await openCockpit(page, width, height);
+      await open(page, SHAPES[0]);
+
+      await dragGrip(page, (await box(page)).height * 0.5);
+      await expect(task(page)).toHaveCount(0);
+
+      await page.goBack();
+      await expect(page).toHaveURL(home);
+    });
+  }
 });
 
 test.describe('focus in a sheet', () => {
