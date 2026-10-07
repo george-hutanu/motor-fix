@@ -47,9 +47,10 @@ export function qaCapFrom(env = process.env) {
 }
 const AGENT_CAP = 2;
 const MIN = 60_000;
-const FIXES = ["merge", "tail", "fix-ci", "rerun-qa", "resume"];
-// A tail agent runs QA laps like a re-run does, so both take a QA place.
-const usesQa = (fix) => fix === "rerun-qa" || fix === "tail";
+const FIXES = ["merge", "tail", "merge-main", "fix-ci", "rerun-qa", "resume"];
+// A tail agent runs QA laps like a re-run does, and a merge of main ends by
+// dispatching a new run, so all three take a QA place.
+const usesQa = (fix) => fix === "rerun-qa" || fix === "tail" || fix === "merge-main";
 const claimPath = (path) => join(path, ".specify", ".cache", "watch-claim.json");
 
 const STAGES = {
@@ -137,7 +138,7 @@ export function summarizePr(pr) {
     else if (checks === "none") checks = "pass";
   }
   const state = pr.state === "MERGED" ? "merged" : pr.state === "CLOSED" ? "closed" : pr.isDraft ? "draft" : "ready";
-  return { number: pr.number, state, head: pr.headRefOid, checks, agentReview };
+  return { number: pr.number, state, head: pr.headRefOid, checks, agentReview, mergeable: pr.mergeable ?? "UNKNOWN" };
 }
 
 export function phaseOf({ pr, runState, artifacts }) {
@@ -191,6 +192,9 @@ export function fixOf(row, { now, thresholds }) {
     return { verdict: "done", fix: "remove-worktree", reason: "merged and clean" };
   }
   if (row.holder === "live" || row.holder === "owner") return { verdict: "ok", fix: null, reason: `held (${row.holder})` };
+  // GitHub runs no CI on a PR that conflicts with main: nothing else moves it
+  // until main is merged in, so no quiet threshold applies.
+  if (pr?.state === "ready" && pr.mergeable === "CONFLICTING") return { verdict: "conflict", fix: "merge-main", reason: "conflicts with main: no CI runs until origin/main is merged in" };
   const quiet = (now - row.activity.at) / MIN;
   const limit = thresholds[row.phase];
   // A handed-off PR whose QA run tests its head needs nobody until CI and that
@@ -233,7 +237,7 @@ export function dispatchPlan(rows, { qaLive, qaCap = QA_CAP, prsKnown = true }) 
   let qa = qaLive + live.filter((r) => usesQa(r.claim.fix) && !r.qaLive).length;
   let other = live.filter((r) => !usesQa(r.claim.fix)).length;
   const plan = [];
-  const due = rows.filter((r) => r.verdict === "stale" && FIXES.includes(r.fix)).sort((a, b) => a.activity.at - b.activity.at);
+  const due = rows.filter((r) => (r.verdict === "stale" || r.verdict === "conflict") && FIXES.includes(r.fix)).sort((a, b) => a.activity.at - b.activity.at);
   for (const r of due) {
     if (usesQa(r.fix) ? qa >= qaCap : other >= AGENT_CAP) continue;
     if (usesQa(r.fix)) qa++;
@@ -321,7 +325,7 @@ function fetchPrs(gh) {
 // drop out, and their worktrees read as having no PR (shown, never removed).
 const defaultGh = () =>
   JSON.parse(
-    execFileSync("gh", ["pr", "list", "--state", "all", "--limit", "1000", "--json", "number,headRefName,state,isDraft,headRefOid,statusCheckRollup"], {
+    execFileSync("gh", ["pr", "list", "--state", "all", "--limit", "1000", "--json", "number,headRefName,state,isDraft,headRefOid,statusCheckRollup,mergeable"], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
       // A gh that hangs reads as unknown PR state, which dispatches nothing.
@@ -529,10 +533,10 @@ const ago = (now, at) => {
 };
 
 function render(report, now) {
-  const prText = (pr) => (pr === "unknown" ? "unknown" : pr ? `#${pr.number} ${pr.state}${pr.state === "ready" || pr.state === "draft" ? ` ci:${pr.checks}${pr.agentReview ? ` qa:${pr.agentReview}` : ""}` : ""}` : "-");
+  const prText = (pr) => (pr === "unknown" ? "unknown" : pr ? `#${pr.number} ${pr.state}${pr.state === "ready" || pr.state === "draft" ? ` ci:${pr.checks}${pr.agentReview ? ` qa:${pr.agentReview}` : ""}${pr.mergeable === "CONFLICTING" ? " conflict" : ""}` : ""}` : "-");
   const count = (v) => report.rows.filter((r) => r.verdict === v).length;
   const lines = [
-    `watch — ${report.rows.length} worktrees · QA runs ${report.qaRuns.length}/${report.qaCap} · stale ${count("stale")} · waiting ${count("waiting")} · done ${count("done")} · blocked ${count("blocked")}`,
+    `watch — ${report.rows.length} worktrees · QA runs ${report.qaRuns.length}/${report.qaCap} · stale ${count("stale")} · conflict ${count("conflict")} · waiting ${count("waiting")} · done ${count("done")} · blocked ${count("blocked")}`,
   ];
   const cols = report.rows.map((r) => [
     r.phase,

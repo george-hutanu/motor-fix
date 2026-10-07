@@ -46,7 +46,7 @@ which uses the same scan, so a pass started by it always has something to do.
    instead of a `rerun-qa` agent. A failed action is reported,
    never retried with force.
 
-3. Report the board in a few lines: counts (`stale`, `waiting`, `done`, `blocked`, QA
+3. Report the board in a few lines: counts (`stale`, `conflict`, `waiting`, `done`, `blocked`, QA
    runs in flight: `--local` ones and the `pr-qa.yml` runs on GitHub Actions
    not yet completed, capped at `SPECKIT_QA_CAP`, by default its 20 concurrent
    jobs; a PR with an Actions run in flight is held, so it is never re-dispatched), then one line per row whose verdict is not `ok` — worktree, branch,
@@ -57,6 +57,10 @@ which uses the same scan, so a pass started by it always has something to do.
    started now would only wait. Once both have finished it turns `stale` with
    the `tail` fix, without the quiet threshold. A run GitHub cannot report
    waits only until the quiet threshold, then gets the `tail` as well.
+   A `conflict` row is a ready PR nobody holds that conflicts with `main`
+   (often after another merge): GitHub runs no CI on it, so it gets the
+   `merge-main` fix at once, before any other rule and without the quiet
+   threshold, and the gate wakes the session for it until it is claimed.
 
    Dispatch only from a session that is not itself isolated in a worktree
    (one opened on the main checkout). An agent started from a worktree
@@ -77,7 +81,7 @@ which uses the same scan, so a pass started by it always has something to do.
    moves state (labels, Notion, a finish log, a merge) and writes or judges no
    code also gets `model: "sonnet"`; today that is `merge`: it merges
    `origin/main`, merges the PR and syncs Notion (a new head goes back to the
-   PR tester, which is pinned to Opus). `resume`, `tail`, `rerun-qa` and
+   PR tester, which is pinned to Opus). `resume`, `merge-main`, `tail`, `rerun-qa` and
    `fix-ci` write or judge code and keep the default model (Opus). The
    definition already has AGENTS.md and CLAUDE.local.md in context and the
    command for what `main` changed since, so the prompt does not send it back
@@ -93,6 +97,7 @@ which uses the same scan, so a pass started by it always has something to do.
    | --- | --- |
    | `resume` | Read `specs/<feature>/auto-run.md`, `tasks.md` and `node .claude/scripts/run-state.mjs show`, then continue `/speckit-auto` from the phase run-state names (its section "After a context compaction" applies), through the hand-off. With an `agent-review` failure on the PR head, that is the QA fix loop: fix the blocking findings tests first, push, `run-state.mjs repair`, run `/speckit-pr-test <pr>` again. Without a feature, read the branch's commits and PR and finish the lifecycle the same way. |
    | `tail` | The story's agent handed this ready PR off. Run `node .claude/scripts/lifecycle.mjs handoff --restore --pr <n>` (a missing note comes back from the PR's newest `<!-- speckit-handoff -->` comment), read `specs/<feature>/handoff.md`, then `.claude/skills/speckit-auto/SKILL.md`, and run "The tail" in `tail.md` beside it: the tester on the finished QA run (`RUN`), its fixes (tests first), each followed by a new run dispatched with `--no-wait` and an end, never a wait, the merge, `speckit-notion-sync finish` with its finish comment on the PR, the archive check, then delete `handoff.md`. |
+   | `merge-main` | The ready PR conflicts with `main`, so no CI runs on it. Merge `origin/main` into the branch (never a rebase, never a forced push; a merge already in progress in the worktree is finished, not restarted), resolving the conflicts, run the affected tests, commit and push; then `.claude/scripts/pr-test/dispatch.mjs <pr> --no-wait` and end with `NEXT: tail #<pr> after QA run <id>`. A merge it cannot finish, or tests that stay red, is `git merge --abort` and `speckit-notion-sync blocked <reason>`; no repair lap is counted. |
    | `rerun-qa` | Run `/speckit-pr-test <pr>` on the current head, then follow lifecycle steps 6–7. |
    | `fix-ci` | List what did not pass and read the failing job's log tail, both with the summary-only reads in AGENTS.md "Agent replies" (never the whole log); fix it on the branch tests first, push, wait for the checks again; each lap is `run-state.mjs repair`. Then continue the lifecycle. |
    | `merge` | Lifecycle step 7: merge `origin/main` in if behind (a new head needs a new `/speckit-pr-test`), then `gh pr merge <pr> --merge` and `speckit-notion-sync finish`. |
