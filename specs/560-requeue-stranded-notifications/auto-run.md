@@ -65,3 +65,12 @@ Start commit: cab78f49 (origin/main), branch 560-requeue-stranded-notifications,
 
 ## Phase 17 — Archive
 - Spec Delta merged into `.specify/capabilities/notifications.md` (+10); spec status Archived (2026-10-07).
+
+## Final Report
+- Branch 560-requeue-stranded-notifications, specs/560-requeue-stranded-notifications, commits 66b0e0bd..087b841 (13).
+- Tests: notifications suites 121/121, 3728 passed; pre-commit typecheck, test and lint green.
+- Review: spec-reviewer APPROVE (3 LOW, fixed), code-reviewer APPROVE (4 MEDIUM, 1 LOW; 2 MEDIUM and LOWs fixed, unbounded read and timers.ts cleanup deferred), re-review APPROVE with no findings. Repair laps 1 of 10.
+- Decisions taken on the owner's behalf: stale window 5 min and sweep every 5 min; no per-pass cap and no new setting (Principle I); rows with any claim or sendingAt are never re-queued; an unrecorded send keeps its claim.
+- Deferred (filed in Notion): unbounded sweep read, timers.ts startSweep job cleanup, held rows whose delayed job is lost.
+- Hand-off: PR #200 ready, story QA, QA run 37614227575 at 087b841 (lap 1); this report is a docs-only commit after it, carried by the tail.
+- Retrospective evidence: not judged by this run.
