@@ -2,7 +2,7 @@
 
 **Feature Branch**: `446-add-findings-idempotent`
 **Created**: 2026-10-07
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 **Input**: ST-446 (tech debt from ST-434, PR #21): "`.claude/scripts/pr-test/post.mjs:125` — `--add` writes the merged findings back into report.json, so a retry after a failed status call adds the agent's findings twice." — https://app.notion.com/p/3ef607bff0d2810c9563e3aa508caadf. Also covers ST-484 (tech debt from ST-464, PR #29): "`--add --dry-run` writes the added findings into report.json, so the real post that follows adds them a second time and the review lists them twice." — https://app.notion.com/p/3ef607bff0d28100b521e47601cd967e
 
 ## User Scenarios & Testing *(mandatory)*

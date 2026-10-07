@@ -166,6 +166,7 @@ describe('adding the agent\'s own findings', () => {
     assert.match(again.summary, /2 in all/);
     const other = addFindings(once, [{ ...extra[0], steps: ['Read plan.md'] }]);
     assert.equal(other.findings.length, 3);
+    assert.equal(addFindings(report, [extra[0], { ...extra[0] }]).findings.length, 2);
   });
 });
 

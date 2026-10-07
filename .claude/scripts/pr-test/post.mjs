@@ -127,6 +127,8 @@ function flag(argv, name) {
  * Fold the agent's own findings into run.mjs's report and recompute the verdict, summary and Markdown.
  * A finding the report already holds is not added again: `--add` writes the result back to report.json,
  * so a retry after a failed status call, or the post after a `--dry-run`, folds the same file in twice.
+ * Two findings are the same when their JSON.stringify forms are equal: a re-read of the same file keeps
+ * its key order, and report.json round-trips it. A duplicate inside one --add file is also taken once.
  */
 export function addFindings(report, extra) {
   const held = new Set(report.findings.map((f) => JSON.stringify(f)));
