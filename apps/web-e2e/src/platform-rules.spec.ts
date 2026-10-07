@@ -62,6 +62,8 @@ const maintenance = (page: Page) =>
   page.getByRole('switch', { exact: true, name: MAINTENANCE });
 
 test.describe('the platform rules in Setări @seeded', () => {
+  // Every test reads and resets the same maintenance_mode row.
+  test.describe.configure({ mode: 'serial' });
   test.beforeEach(({ request }) => restore(request));
   test.afterEach(({ request }) => restore(request));
 

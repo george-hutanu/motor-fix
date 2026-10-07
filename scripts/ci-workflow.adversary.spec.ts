@@ -306,7 +306,7 @@ describe('workflow shape', () => {
 
   it('tears the compose stack down even when a check failed', () => {
     expect(jobBlock(ci, 'checks')).toMatch(
-      /if: \$\{\{ always\(\) && github\.event_name == 'pull_request' \}\}\n\s+run: docker compose down/,
+      /if: \$\{\{ always\(\) && github\.event_name == 'pull_request' \}\}\n\s+run: docker compose (?:--profile observability )?down/,
     );
   });
 
