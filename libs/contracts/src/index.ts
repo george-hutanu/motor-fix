@@ -19,3 +19,4 @@ export * from './phone';
 export * from './problem';
 export * from './push-subscriptions.dto';
 export * from './staff-invite.dto';
+export * from './verification-checks';
