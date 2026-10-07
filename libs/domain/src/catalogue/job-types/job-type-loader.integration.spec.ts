@@ -1,8 +1,11 @@
 import { JobTypeLoader } from './job-type-loader';
 import { JOB_TYPES, JobTypeFileError, type JobTypeRecord } from './job-types';
-import { AuditService } from '../audit/audit.service';
-import { serialDatabase } from '../auth/serial-db.testing';
-import { databaseUrl, fixtures } from '../notifications/notifications.testing';
+import { AuditService } from '../../audit/audit.service';
+import { serialDatabase } from '../../auth/serial-db.testing';
+import {
+  databaseUrl,
+  fixtures,
+} from '../../notifications/notifications.testing';
 
 const { prisma } = fixtures();
 const loader = new JobTypeLoader(prisma, new AuditService());

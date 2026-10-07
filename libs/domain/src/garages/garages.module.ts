@@ -4,10 +4,10 @@ import type { Redis } from 'ioredis';
 import { AdminOverviewController } from './admin-overview.controller';
 import { GarageBrandsController } from './garage-brands.controller';
 import { GarageBrandsService } from './garage-brands.service';
-import { GaragePricesService } from './garage-prices.service';
 import { ListingDraftsController } from './listing-drafts.controller';
 import { ListingDraftsService } from './listing-drafts.service';
 import { ListingDraftThrottle } from './listing-drafts.throttle';
+import { GaragePricesService } from './prices/garage-prices.service';
 import { PublicGaragesService } from './public-garages';
 import { PublicGaragesController } from './public-garages.controller';
 import {

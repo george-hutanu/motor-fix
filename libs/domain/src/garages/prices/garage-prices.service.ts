@@ -6,9 +6,9 @@ import {
 } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
-import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
-import { refusal } from '../auth/sign-up.service';
-import type { Prisma } from '../generated/prisma/client';
+import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
+import { refusal } from '../../auth/sign-up.service';
+import type { Prisma } from '../../generated/prisma/client';
 
 type Job = StartingPricesInput['jobs'][number];
 

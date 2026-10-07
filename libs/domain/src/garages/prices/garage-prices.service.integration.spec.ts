@@ -8,10 +8,13 @@ import {
 import { HttpException } from '@nestjs/common';
 
 import { GaragePricesService } from './garage-prices.service';
-import { AuditService } from '../audit/audit.service';
-import { serialDatabase } from '../auth/serial-db.testing';
-import { Prisma } from '../generated/prisma/client';
-import { databaseUrl, fixtures } from '../notifications/notifications.testing';
+import { AuditService } from '../../audit/audit.service';
+import { serialDatabase } from '../../auth/serial-db.testing';
+import { Prisma } from '../../generated/prisma/client';
+import {
+  databaseUrl,
+  fixtures,
+} from '../../notifications/notifications.testing';
 
 const { account, prisma } = fixtures();
 const prices = new GaragePricesService(new AuditService());
@@ -78,11 +81,13 @@ const rows = (w: World) =>
     where: { garageId: w.garage },
   });
 
-const history = () =>
+// Scoped to the garage: other specs' entries share the append-only table.
+const history = (w: World) =>
   prisma.activityLog.findMany({
     orderBy: { at: 'asc' },
     where: {
       at: { gte: since },
+      garageId: w.garage,
       subjectType: { in: ['garage', 'garage_price'] },
     },
   });
@@ -105,7 +110,7 @@ async function nothingStored(w: World) {
   expect(
     await prisma.garage.findUniqueOrThrow({ where: { id: w.garage } }),
   ).toMatchObject({ labourFromBani: null, labourToBani: null });
-  expect(await history()).toEqual([]);
+  expect(await history(w)).toEqual([]);
 }
 
 describe('GaragePricesService.saveStarting', () => {
@@ -176,7 +181,7 @@ describe('GaragePricesService.saveStarting', () => {
       labour,
     });
 
-    const entries = await history();
+    const entries = await history(w);
     expect(entries).toHaveLength(5);
     for (const entry of entries) {
       expect(entry).toMatchObject({
@@ -314,7 +319,7 @@ describe('GaragePricesService.saveStarting', () => {
       labour,
     });
     const before = await rows(w);
-    const entries = (await history()).length;
+    const entries = (await history(w)).length;
 
     const errors = await refused(
       save(w, {
@@ -325,7 +330,7 @@ describe('GaragePricesService.saveStarting', () => {
 
     expect(errors).toEqual([{ code: 'duplicate', field: 'jobs[0].jobTypeId' }]);
     expect(await rows(w)).toEqual(before);
-    expect(await history()).toHaveLength(entries);
+    expect(await history(w)).toHaveLength(entries);
   });
 
   it('holds one default range per job at the database, brands left empty', async () => {

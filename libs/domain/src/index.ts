@@ -14,13 +14,13 @@ export { reminderDayMs } from './cars/reminders-config';
 export { BrandLoader } from './catalogue/brand-loader';
 export { BRANDS } from './catalogue/brands';
 export { CatalogueModule } from './catalogue/catalogue.module';
-export { JobTypeLoader } from './catalogue/job-type-loader';
-export { JOB_TYPES } from './catalogue/job-types';
+export { JobTypeLoader } from './catalogue/job-types/job-type-loader';
+export { JOB_TYPES } from './catalogue/job-types/job-types';
 export { EventsModule } from './events/events.module';
 export { OutboxRelayModule } from './events/outbox-relay.module';
-export { GaragePricesService } from './garages/garage-prices.service';
 export { GaragesModule } from './garages/garages.module';
 export { listingDraftDaily } from './garages/listing-draft-sweep';
+export { GaragePricesService } from './garages/prices/garage-prices.service';
 export { publicGarages } from './garages/public-garages';
 export {
   type Decision,

@@ -192,8 +192,8 @@ describe('every write use case in the domain library calls the audit writer', ()
     expect(files.map((path) => relative(root, path))).toEqual(
       expect.arrayContaining([
         join('catalogue', 'brand-loader.ts'),
-        join('catalogue', 'job-type-loader.ts'),
-        join('garages', 'garage-prices.service.ts'),
+        join('catalogue', 'job-types', 'job-type-loader.ts'),
+        join('garages', 'prices', 'garage-prices.service.ts'),
       ]),
     );
   });

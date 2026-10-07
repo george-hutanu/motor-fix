@@ -1,9 +1,13 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { type JobTypeRecord, validateJobTypes } from './job-types';
-import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
-import { PRISMA } from '../auth/prisma';
-import type { JobType, Prisma, PrismaClient } from '../generated/prisma/client';
+import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
+import { PRISMA } from '../../auth/prisma';
+import type {
+  JobType,
+  Prisma,
+  PrismaClient,
+} from '../../generated/prisma/client';
 
 const SYSTEM = { actorId: null, actorRole: 'system' } as const;
 
