@@ -28,3 +28,12 @@ Start commit: ec74ab0654afa31c0e6bb27e0b56bd7a2c5ea933 (worktree .worktrees/784-
 ## Phase 7 — tasks
 
 specs/784-impossible-level-date/tasks.md: 4 tasks, one story (tests first, red proof, pendingLevel day check, green run); analyze left to phase 8.
+
+## Phase 8 — analyze
+- artifact-lint --check: 0 errors, 0 warnings; tasks cover FR-001..003; no remediation.
+
+## Phase 9 — tests
+- 38 JS + 38 Python cases added to the parity block of level.adversary.spec.mjs; red on main: 5 failed (scenario 1, JS alone) | 221 passed.
+
+## Phase 10 — implement
+- LEVEL_AT captures y/m/d; `parseLevelAt` refuses a month outside 1–12 or a day past the month's last (Date.UTC(y, m, 0)). Python unchanged. Harness 2065/2065 green, biome clean, doctor 0 failures.

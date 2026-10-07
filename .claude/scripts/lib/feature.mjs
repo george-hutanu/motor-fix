@@ -143,8 +143,18 @@ export function levelApplies(state, target = state?.feature_directory) {
 // The one stamp shape both this and `_pending_level` in common.py read alike on
 // every machine and Python version: a zone is required, since Date.parse reads
 // a zone-less stamp as local time and Python as UTC, and the hour stops at 23,
-// since Date.parse reads 24:00 as the next midnight and Python refuses it.
-const LEVEL_AT = /^\d{4}-\d\d-\d\dT(?:[01]\d|2[0-3]):\d\d(?::\d\d(?:\.\d{3}|\.\d{6})?)?(?:Z|[+-]\d\d:\d\d)$/;
+// since Date.parse reads 24:00 as the next midnight and Python refuses it. The
+// day must be one its month has: Date.parse rolls 30 February into March, and
+// Python refuses it.
+const LEVEL_AT = /^(\d{4})-(\d\d)-(\d\d)T(?:[01]\d|2[0-3]):\d\d(?::\d\d(?:\.\d{3}|\.\d{6})?)?(?:Z|[+-]\d\d:\d\d)$/;
+
+function parseLevelAt(stamp) {
+  const fields = typeof stamp === "string" ? LEVEL_AT.exec(stamp) : null;
+  if (!fields) return Number.NaN;
+  const [year, month, day] = fields.slice(1, 4).map(Number);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return month >= 1 && month <= 12 && day >= 1 && day <= lastDay ? Date.parse(stamp) : Number.NaN;
+}
 
 /**
  * The level waiting for the next feature, while it is still fresh. It was
@@ -155,7 +165,7 @@ const LEVEL_AT = /^\d{4}-\d\d-\d\dT(?:[01]\d|2[0-3]):\d\d(?::\d\d(?:\.\d{3}|\.\d
 export function pendingLevel(state, now = Date.now(), env = process.env) {
   if (!state || typeof state !== "object" || state.level_for !== "next") return null;
   const level = parseLevel(state.level);
-  const at = typeof state.level_at === "string" && LEVEL_AT.test(state.level_at) ? Date.parse(state.level_at) : Number.NaN;
+  const at = parseLevelAt(state.level_at);
   if (level === null || Number.isNaN(at)) return null;
   const left = pendingTtlMinutes(env) * 60_000 - (now - at);
   // One minute of slack for two clocks; a level from further ahead is not trusted.
