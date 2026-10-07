@@ -225,6 +225,32 @@ test.describe('on a phone', () => {
     await expect(bar(page)).toHaveText('5 / 6 · Fotografii și adresă');
   });
 
+  test('opens and closes the list over the page, which stays where it was', async ({
+    page,
+  }) => {
+    await open(page, '/ro/list-your-garage');
+    await fill(page);
+    await bar(page).click();
+    await entry(page, 'Fotografii și adresă').click();
+    await expect(sections(page).nth(4)).toBeFocused();
+    const y = await still(page);
+    const below = async () =>
+      (await sections(page).nth(4).boundingBox())!.y >=
+      (await bar(page).boundingBox())!.y +
+        (await bar(page).boundingBox())!.height -
+        1;
+    expect(await below()).toBe(true);
+
+    await bar(page).click();
+    await expect(bar(page)).toHaveAttribute('aria-expanded', 'true');
+    expect(await page.evaluate(() => scrollY)).toBe(y);
+    await page.keyboard.press('Escape');
+
+    await expect(bar(page)).toHaveAttribute('aria-expanded', 'false');
+    expect(await page.evaluate(() => scrollY)).toBe(y);
+    expect(await below()).toBe(true);
+  });
+
   test('closes the open list on Escape and gives the focus back to the bar', async ({
     page,
   }) => {
