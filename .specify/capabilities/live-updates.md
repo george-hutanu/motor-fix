@@ -10,6 +10,7 @@ features:
   - 582-live-toast-axe
   - 574-live-hub-capabilities
   - 586-live-e2e-typed-text
+  - 419-live-garage-updates
 ---
 
 # Capability: Live updates
@@ -78,9 +79,9 @@ _From 253-live-connection._
 
 _From 256-live-in-place._
 
-### 254-FR-001 — The audience of an event MUST be worked out from its subject: request → the driver's `account:` and each recipient `garage:`; quote → the driver and the quoting garage; booking → the driver, the garage and the booking's `mechanic:` when it has one; job (with its media and live kinds) → the driver, the garage and the job's mechanic when it has one; review → the garage, the author, `public:garage` and `public:mechanic`; message → the driver and the garage; car and repair → the owner's account, plus the named garage for a shared repair; verification and documents → `admin` and the garage; platform rules and copy voices → `admin` and `system`; account → that `account:`.
+### 419-FR-006 — The audience resolver MUST name the public channels with their ids: a review's audience is the garage, the author, `public:garage:{garageId}` and `public:mechanic:{mechanicId}` when the review names a mechanic (today it names bare `public:garage` and `public:mechanic`); an approval's published audience is `public:garage:{garageId}` and `public:search` (today it carries an empty brand list); a garage's public change (`garage.updated`, `garage.suspended`, `garage.restored`, `price_list.updated`, `facility.removed`, `facility.re_add_decided`, `mechanic.updated`, `garage.slots_changed`) is the garage's staff channel, `public:garage:{garageId}` and, for `garage.updated`, `garage.suspended` and `garage.restored`, `public:search`; a brand-stance change keeps `public:search:{brandId}` for each changed brand (254-FR-001 modified; the `garage_brands` subject unchanged).
 
-_From 254-live-audience._
+_From 419-live-garage-updates._
 
 ### 254-FR-002 — An API copy MUST drop and log an event whose audience is empty, and MUST NOT forward it to any connection.
 
@@ -290,6 +291,50 @@ _From 586-live-e2e-typed-text._
 
 _From 586-live-e2e-typed-text._
 
+### 419-FR-001 — The API MUST serve a public server-sent events stream at `GET /api/v1/live/public`, open to anyone with no session (`@Public()`, listed with the public routes), with `Content-Type: text/event-stream`, `Cache-Control: no-cache` and `X-Accel-Buffering: no`; `hello` with a connection id first, a comment line after 25 seconds without an event, and `bye` with reason `shutdown` before the API copy ends it. It never reads an access token, never expires with one and never evicts for an account.
+
+_From 419-live-garage-updates._
+
+### 419-FR-002 — The stream MUST take `garages` (at most 1 uuid), `mechanics` (at most 1 uuid) and `brand` (1 uuid), all optional; more ids than allowed, a value that is not a uuid or an unknown query field MUST be refused with 400 and code `validation_failed` in the API's one error shape, before any stream data.
+
+_From 419-live-garage-updates._
+
+### 419-FR-003 — A public stream MUST join `system`, plus `public:garage:{garageId}` when the id names an approved garage, `public:mechanic:{mechanicId}` when the id names a mechanic of an approved garage (no hidden state exists yet; the mechanic-page story adds that check), and `public:search:{brandId}` together with the all-brands results channel `public:search` when the id names a brand of the catalogue (retired brands included); an id that names nothing, or a garage that is not approved, MUST be ignored silently: the stream opens, joins nothing for it and answers exactly as for an unknown id.
+
+_From 419-live-garage-updates._
+
+### 419-FR-004 — A public stream MUST receive only the public kinds: through `public:garage:{garageId}` — `garage.updated`, `price_list.updated`, `mechanic.updated`, `facility.removed`, `facility.re_add_decided`, `review.posted`, `review.edited`, `review.deleted`, `review.replied`, `review.reply_edited`, `review.reported`, `review.decided`, `review.appeal_decided`, `garage.suspended`, `garage.restored` and `garage.slots_changed`; through `public:mechanic:{mechanicId}` — `mechanic.updated` and the same review kinds; through `public:search` — `verification.decided`, `garage.suspended`, `garage.restored` and `garage.updated`; through `public:search:{brandId}` — `garage.updated`; through `system` — the platform kinds every connection gets. Any other kind MUST NOT reach a public connection, whatever audience the publisher named (an allow-list on the public keys, keeping 254-FR-009's rule as a consequence).
+
+_From 419-live-garage-updates._
+
+### 419-FR-005 — Every message of a public stream MUST be `{ kind, id, at }` and nothing else, the `id` being the garage, mechanic, review, verification file or garage the kind is about; no personal data, no account id and no payload travels on it (253-FR-005 holds for the public stream).
+
+_From 419-live-garage-updates._
+
+### 419-FR-007 — One address MUST hold at most 20 public streams on one API copy; the 21st MUST be refused with 429 and code `too_many_streams`, and a closed stream frees its place; when the address cannot be read the limit MUST be skipped and logged, never refusing a visitor for it. A request refused with 400 is judged before the limit and never holds a place; a refused 429 holds none either.
+
+_From 419-live-garage-updates._
+
+### 419-FR-008 — The web app MUST offer a public live connection: one stream per browser tab, opened only in the browser (never during server rendering) and only while at least one public live view is open, its `garages`, `mechanics` and `brand` taken from the open views, and closed when the last of them is destroyed. Its named garage, mechanic and brand are those of the most recently opened view naming each; when that set changes it MUST re-open the stream once (changes in one tick coalesced), and the re-open counts as a stream opening again. It MUST expose the signed-in connection's states except `polling` (`closed`, `reconnecting`, `open`; it stays `reconnecting` where the signed-in connection would poll), try again on the same backoff after a failure or a drop (255-FR-002), treat 60 silent seconds as a drop and re-open after a long-hidden tab wakes (255-FR-005), and MUST NOT renew a token, poll the API, show an offline bar or raise an error: a public page that cannot reach the stream stays as loaded.
+
+_From 419-live-garage-updates._
+
+### 419-FR-009 — The web app MUST offer a public live view helper, built on the in-place helper of 256-FR-001 to 256-FR-004: it loads its data through the API, re-reads once when the stream first opens (to cover a page served from a cache) and whenever a stream opens again after a drop, re-reads when an event of its kinds about its object arrives, coalesces events within 300 ms into one re-read, runs one read at a time, merges by structural sharing, keeps its last value and shows no error on a failed re-read and arms no retry timer (256-FR-003 without its 60-second retry: the next event or reopen re-reads), and marks the view `gone` on 404 or 410.
+
+_From 419-live-garage-updates._
+
+### 419-FR-010 — A results view MUST re-read when `garage.updated`, `verification.decided`, `garage.suspended` or `garage.restored` arrives for any garage (a garage that newly takes the brand arrives as `garage.updated` for a garage not yet loaded). A profile view re-reads on any of FR-004's garage kinds about its garage; a mechanic view on `mechanic.updated` and the review kinds about its mechanic.
+
+_From 419-live-garage-updates._
+
+### 419-FR-011 — The stream, the connection and the helper MUST write nothing: no row, no audit entry, no event, no search log; the only reads are the public garage, mechanic and search APIs on re-read and, at open, the garage's, mechanic's and brand's existence.
+
+_From 419-live-garage-updates._
+
+### 419-FR-012 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the stream opening with no sign-in and its headers, `hello` and heartbeat; the parameter limits (400); a draft, suspended and unknown id ignored alike; each public kind reaching the channel FR-004 names; every private family and every non-public kind blocked from every public key; the results channel receiving approval, suspension, restoration and `garage.updated` for any garage and a brand's stance change for that brand only; the 21st stream answering 429 and a freed place reopening; the public route listed in `public-routes.integration.spec.ts`. Web unit tests MUST cover the connection's open-and-close with views, the parameters it sends, no stream on the server, no polling and no error on failure, and the helper's re-read rules (FR-009, FR-010). The Playwright scenarios of the brief (a review posted in one context updating an open profile in another; a suspension showing the "no longer available" state) run when the garage profile page and the review use case exist, in those stories (Assumptions).
+
+_From 419-live-garage-updates._
+
 ## Retired
 
 - `253-FR-006` — superseded by `254-FR-013` (2026-10-05)
@@ -301,3 +346,5 @@ _From 586-live-e2e-typed-text._
 - `257-FR-010` — superseded by `256-FR-012` (2026-10-05)
 
 - `254-FR-003` — superseded by `574-FR-001` (2026-10-07)
+
+- `254-FR-001` — superseded by `419-FR-006` (2026-10-07)
