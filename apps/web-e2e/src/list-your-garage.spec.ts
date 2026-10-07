@@ -277,3 +277,39 @@ test.describe('on a phone', () => {
     ).toBeLessThanOrEqual(320);
   });
 });
+
+test.describe('the verification step on a phone', () => {
+  test('checks the tax ID, counts the two values and offers no look-up', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 640, width: 320 });
+    await open(page, '/ro/list-your-garage');
+    await bar(page).click();
+    await entry(page, 'Verificare').click();
+    const cui = page.getByLabel(/CUI.ul firmei/);
+    const rar = page.getByLabel('Numărul autorizației tehnice RAR');
+    const count = page.locator('section .count');
+
+    await expect(count).toHaveText(/0 din 5 completate/);
+    await cui.fill('RO 18547291');
+    await cui.blur();
+    await expect(page.locator('#listing-cui-error')).toHaveText('CUI invalid');
+    await expect(cui).toHaveAttribute('aria-invalid', 'true');
+
+    await cui.fill('RO18547290');
+    await cui.blur();
+    await expect(page.locator('#listing-cui-error')).toHaveText('');
+    await expect(cui).toHaveValue('18547290');
+    await rar.fill('abc');
+    await expect(count).toHaveText(/2 din 5 completate/);
+
+    await expect(
+      page.getByRole('button', {
+        name: /Verifică firma|Caută în registrul RAR/,
+      }),
+    ).toHaveCount(0);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(320);
+  });
+});
