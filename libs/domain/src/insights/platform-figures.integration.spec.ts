@@ -63,8 +63,11 @@ describe('the platform figures', () => {
   });
 
   it('counts a garage approved again this month in the month of its first approval', async () => {
-    const before = await garage('approved', new Date('2026-11-05T08:00:00Z'));
-    const fresh = await garage('approved', new Date('2026-11-06T08:00:00Z'));
+    // A month in the past: the log is append-only, so its entries stay for
+    // good and must never sit ahead of a later reader's "since now".
+    const then = new Date('2025-11-10T10:00:00Z');
+    const before = await garage('approved', new Date('2025-11-05T08:00:00Z'));
+    const fresh = await garage('approved', new Date('2025-11-06T08:00:00Z'));
     const published = (id: string, at: Date) =>
       prisma.activityLog.create({
         data: {
@@ -80,10 +83,10 @@ describe('the platform figures', () => {
           subjectType: 'garage',
         },
       });
-    await published(before.id, new Date('2026-08-20T08:00:00Z'));
-    await published(fresh.id, new Date('2026-11-06T08:00:00Z'));
+    await published(before.id, new Date('2025-08-20T08:00:00Z'));
+    await published(fresh.id, new Date('2025-11-06T08:00:00Z'));
 
-    await expect(countPlatformFigures(prisma, now)).resolves.toMatchObject({
+    await expect(countPlatformFigures(prisma, then)).resolves.toMatchObject({
       garagesApprovedThisMonth: 1,
       garagesListed: 2,
     });
