@@ -20,6 +20,7 @@ export * from './notifications.dto';
 export * from './password-reset.dto';
 export * from './phone';
 export * from './platform-rules.dto';
+export * from './price-range';
 export * from './problem';
 export * from './public-live.dto';
 export * from './push-subscriptions.dto';
