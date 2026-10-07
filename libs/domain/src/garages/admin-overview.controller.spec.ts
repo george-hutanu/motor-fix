@@ -4,16 +4,19 @@ import type { PrismaClient } from '../generated/prisma/client';
 import {
   countPlatformFigures,
   monthStartSnapshot,
+  readGrowth,
 } from '../insights/platform-figures';
 
 jest.mock('../insights/platform-figures', () => ({
   countPlatformFigures: jest.fn(),
   monthStartSnapshot: jest.fn(),
+  readGrowth: jest.fn(),
 }));
 
 const prisma = {} as PrismaClient;
 const figures = jest.mocked(countPlatformFigures);
 const monthStart = jest.mocked(monthStartSnapshot);
+const growth = jest.mocked(readGrowth);
 
 const controller = (waiting: number) => {
   const countWaiting = jest.fn(async () => waiting);
@@ -98,6 +101,34 @@ describe('the admin overview route', () => {
     const required = Reflect.getMetadata(
       'auth:requires',
       AdminOverviewController.prototype.overview,
+    );
+
+    expect(required).toBe('admin.garages');
+  });
+});
+
+describe('the admin growth route', () => {
+  it('answers the months read on the database at the moment of the call', async () => {
+    const months = [
+      { activeDrivers: 9870, garagesListed: 150, month: '2026-03' },
+      { month: '2026-04' },
+    ];
+    growth.mockResolvedValue({ months });
+    const { overview } = controller(0);
+    const before = Date.now();
+
+    await expect(overview.growth()).resolves.toEqual({ months });
+
+    const [db, at] = growth.mock.calls[0];
+    expect(db).toBe(prisma);
+    expect(at.getTime()).toBeGreaterThanOrEqual(before);
+    expect(at.getTime()).toBeLessThanOrEqual(Date.now());
+  });
+
+  it('is open only to a session that may review garages', () => {
+    const required = Reflect.getMetadata(
+      'auth:requires',
+      AdminOverviewController.prototype.growth,
     );
 
     expect(required).toBe('admin.garages');

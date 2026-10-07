@@ -85,10 +85,14 @@ export type { CarsControllerCreate$Params as CarsControllerCreate$Params } from 
 export { carsControllerCreate as carsControllerCreate } from './fn/cars/cars-controller-create';
 export type { BrandsControllerSearch$Params as BrandsControllerSearch$Params } from './fn/brands/brands-controller-search';
 export { brandsControllerSearch as brandsControllerSearch } from './fn/brands/brands-controller-search';
+export type { PublicHolidaysControllerList$Params as PublicHolidaysControllerList$Params } from './fn/public-holidays/public-holidays-controller-list';
+export { publicHolidaysControllerList as publicHolidaysControllerList } from './fn/public-holidays/public-holidays-controller-list';
 export type { GarageSearchControllerForBrand$Params as GarageSearchControllerForBrand$Params } from './fn/search/garage-search-controller-for-brand';
 export { garageSearchControllerForBrand as garageSearchControllerForBrand } from './fn/search/garage-search-controller-for-brand';
 export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';
 export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
+export type { AdminOverviewControllerGrowth$Params as AdminOverviewControllerGrowth$Params } from './fn/admin/admin-overview-controller-growth';
+export { adminOverviewControllerGrowth as adminOverviewControllerGrowth } from './fn/admin/admin-overview-controller-growth';
 export type { VerificationChecksControllerRecord$Params as VerificationChecksControllerRecord$Params } from './fn/admin/verification-checks-controller-record';
 export { verificationChecksControllerRecord as verificationChecksControllerRecord } from './fn/admin/verification-checks-controller-record';
 export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$Params } from './fn/admin/platform-rules-controller-list';

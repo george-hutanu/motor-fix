@@ -1,0 +1,23 @@
+<section [attr.aria-labelledby]="headingId">
+  <h2 [id]="headingId">{{ title() }}</h2>
+  <div class="charts">
+    @for (chart of charts(); track chart.key) {
+      <div class="chart">
+        @if (answer()) {
+          <p class="latest">{{ chart.latest }}</p>
+        }
+        <mf-line-chart
+          unit="count"
+          [title]="chart.title"
+          [points]="chart.points"
+          [loading]="loading()"
+          [error]="failed()"
+          (retry)="read()"
+        />
+        @if (range()) {
+          <p class="range">{{ range() }}</p>
+        }
+      </div>
+    }
+  </div>
+</section>
