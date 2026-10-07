@@ -33,6 +33,15 @@
 // too: the PR, head's statuses, the compare, then every other statuses read at
 // once, each sha read once.
 //
+// A success counts only when the PR under test could not have written it
+// (.claude/scripts/pr-test/provenance.mjs): written by the owner's tester, or
+// by a passing run of pr-qa.yml for this head that ran the default branch's
+// copy of the workflow; and never against a failing tester review of the head,
+// the only place a cloud tester's verdict lands. A carry's named commit is
+// traced the same way. A success the gate cannot trace is refused.
+// SPECKIT_PROVENANCE_STATE (one judgeProvenance input, used for every commit)
+// replaces those reads for the eval cases.
+//
 // The PR QA workflow's own check run is left out of the CI rule: its verdict
 // is agent-review, which the workflow sets, and a run a newer lap cancelled is
 // history, not a red check.
@@ -52,6 +61,7 @@ import { execFile } from "node:child_process";
 
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
 import { carriedFrom, fetchCarryState, judgeCarry, latestReview, statusesArgs } from "../scripts/pr-test/carry.mjs";
+import { judgeProvenance, readProvenance } from "../scripts/pr-test/provenance.mjs";
 import { committerArgs, hasAgentReview, isDependabot, openedByDependabot, withCommitters } from "./pr-lifecycle-gate.mjs";
 
 /** How long the gate may spend reading GitHub before it refuses: well inside run-hook.mjs's limit for it. */
@@ -96,14 +106,16 @@ export function mergeTarget(command) {
 /**
  * The refusal for this PR, or null when it may merge. `carry` reads what a
  * carried verdict needs: `description(head)`, since gh's rollup never carries
- * a status description, and `state(from, head)` for judgeCarry.
+ * a status description, and `state(from, head)` for judgeCarry. `provenance`
+ * (from prefetchProvenance) judges who wrote each success; the entry point
+ * always passes it, and leaving it out skips that check.
  */
-export function decideMerge(pr, carry) {
+export function decideMerge(pr, carry, provenance) {
   if (pr.state && pr.state !== "OPEN") return null;
   const checks = pr.statusCheckRollup ?? [];
   const sha = String(pr.headRefOid ?? "").slice(0, 7);
   const review = checks.find((c) => (c.context ?? c.name) === "agent-review");
-  if (hasAgentReview(checks)) return carryRefusal(pr, review, sha, carry) ?? ciRefusal(pr, checks, sha);
+  if (hasAgentReview(checks)) return carryRefusal(pr, review, sha, carry) ?? ciRefusal(pr, checks, sha) ?? provenanceRefusal(pr, sha, provenance);
   if (!review && isDependabot(pr)) return ciRefusal(pr, checks, sha, { dependabot: true });
   const said = review ? `agent-review is ${String(review.state ?? review.conclusion).toLowerCase()}` : "there is no agent-review status";
   return `PR #${pr.number} cannot merge: on its head commit ${sha} ${said}. Run the PR tester (/speckit-pr-test ${pr.number}), fix every blocking finding, and merge on an agent-review success.`;
@@ -134,6 +146,19 @@ function carryRefusal(pr, review, sha, carry) {
   }
   const why = judgeCarry({ from, head: pr.headRefOid, ...state });
   return why ? `PR #${pr.number} cannot merge: agent-review on ${sha} is carried from ${from.slice(0, 7)}, but ${why}. ${rerun}` : null;
+}
+
+/** Why a success on head (or the commit a carry names) may be the PR's own doing, or null. */
+function provenanceRefusal(pr, sha, provenance) {
+  if (provenance === undefined) return null;
+  let why;
+  try {
+    if (!provenance) throw new Error("nothing was read");
+    why = provenance.judge();
+  } catch (e) {
+    return `PR #${pr.number} cannot merge: could not verify who wrote agent-review on ${sha} (${e.message}). Try the merge again.`;
+  }
+  return why ? `PR #${pr.number} cannot merge: ${why}. Run the PR tester (/speckit-pr-test ${pr.number}) for a lap the PR cannot write itself.` : null;
 }
 
 /** Why CI does not yet allow the merge, or null when every other check is green. */
@@ -236,14 +261,19 @@ async function readPrRest(target, gh) {
   };
 }
 
-/** The carry reads over an async gh, each distinct call made once (head's statuses serve both the description and the state). */
-export function ghReader(gh) {
+/** gh with each distinct call made once, so the carry and the provenance share head's statuses. */
+function memoized(gh) {
   const calls = new Map();
-  const once = (args) => {
+  return (args) => {
     const key = args.join("\u0000");
     if (!calls.has(key)) calls.set(key, gh(args));
     return calls.get(key);
   };
+}
+
+/** The carry reads over an async gh, each distinct call made once (head's statuses serve both the description and the state). */
+export function ghReader(gh) {
+  const once = memoized(gh);
   return {
     async description(head) {
       const out = await once(statusesArgs(head));
@@ -289,6 +319,47 @@ export async function prefetchCarry(pr, reader) {
   return { description: replay(description), state: replay(state) };
 }
 
+/**
+ * Reads, ahead of decideMerge, who wrote the success on head and on the
+ * commit `from` a carry names, and returns a synchronous judge over the
+ * answer: the first refusal, or null; a failed read throws again there.
+ * Null when the PR has no agent-review success. `reader.read(shas)` returns
+ * readProvenance's shape.
+ */
+export async function prefetchProvenance(pr, reader, from) {
+  if ((pr.state && pr.state !== "OPEN") || !hasAgentReview(pr.statusCheckRollup ?? [])) return null;
+  const shas = [pr.headRefOid, ...(from ? [from] : [])];
+  let state;
+  let error;
+  try {
+    state = await reader.read(shas);
+  } catch (e) {
+    error = e;
+  }
+  return {
+    judge() {
+      if (error) throw error;
+      for (const sha of shas) {
+        const why = judgeProvenance({ sha, pr: pr.number, qaWorkflowChanged: state.qaWorkflowChanged, defaultBranch: state.defaultBranch, ...state.bySha[sha] });
+        if (why) return why;
+      }
+      return null;
+    },
+  };
+}
+
+function provenanceReader(gh, pr) {
+  if (!process.env.SPECKIT_PR_STATE) return { read: (shas) => readProvenance({ pr: pr.number, shas, gh }) };
+  const raw = process.env.SPECKIT_PROVENANCE_STATE;
+  return {
+    read: async (shas) => {
+      if (!raw) throw new Error("SPECKIT_PROVENANCE_STATE is not set");
+      const { qaWorkflowChanged = false, defaultBranch = "main", ...one } = JSON.parse(raw);
+      return { qaWorkflowChanged, defaultBranch, bySha: Object.fromEntries(shas.map((sha) => [sha, one])) };
+    },
+  };
+}
+
 if (isEntryPoint(import.meta.url)) {
   const refuse = (why) => {
     console.error(`Merge gate (Constitution VII): ${why}`);
@@ -316,14 +387,21 @@ if (isEntryPoint(import.meta.url)) {
         stop.abort();
         refuse(`could not finish checking ${which} on GitHub within ${limit / 1000} s, so the merge is not approved. Try the merge again; if GitHub stays this slow, wait and retry rather than merging unchecked.`);
       }, limit);
-      const gh = ghAsync(payload.cwd ?? process.env.CLAUDE_PROJECT_DIR ?? process.cwd(), stop.signal);
+      const gh = memoized(ghAsync(payload.cwd ?? process.env.CLAUDE_PROJECT_DIR ?? process.cwd(), stop.signal));
       let pr;
       try {
         pr = await readPr(target.pr, gh);
       } catch (e) {
         refuse(`could not read ${which} from GitHub (${e.message}), so the merge is not approved. Check gh auth status and the PR, then try again.`);
       }
-      const why = decideMerge(pr, await prefetchCarry(pr, carryReader(gh)));
+      const carry = await prefetchCarry(pr, carryReader(gh));
+      let from = null;
+      try {
+        from = carry ? carriedFrom(carry.description()) : null;
+      } catch {
+        // decideMerge refuses the unread description itself.
+      }
+      const why = decideMerge(pr, carry, await prefetchProvenance(pr, provenanceReader(gh, pr), from));
       if (!why) process.exit(0);
       refuse(why);
     } catch (e) {
