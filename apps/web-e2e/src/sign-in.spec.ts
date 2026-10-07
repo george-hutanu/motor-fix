@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, ready, signIn } from './accounts.js';
+import { test } from './fixtures.js';
 
 type Axe = {
   run: (context: unknown) => Promise<{

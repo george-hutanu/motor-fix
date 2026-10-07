@@ -1,11 +1,7 @@
-import {
-  type APIRequestContext,
-  expect,
-  type Page,
-  test,
-} from '@playwright/test';
+import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, PASSWORD, ready, signIn } from './accounts.js';
+import { test } from './fixtures.js';
 
 const SETTINGS = '/app/garage/settings';
 const OUTSIDE = ['email', 'push'] as const;

@@ -1,11 +1,7 @@
-import {
-  type APIRequestContext,
-  expect,
-  type Page,
-  test,
-} from '@playwright/test';
+import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, PASSWORD, ready } from './accounts.js';
+import { test } from './fixtures.js';
 
 // A link of the right shape whose signature MotorFix never made.
 const FORGED =

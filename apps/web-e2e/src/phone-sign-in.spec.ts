@@ -1,6 +1,7 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 import { ready } from './accounts.js';
+import { test } from './fixtures.js';
 
 // The WhatsApp messages as the api sent them, read from the test mailbox the
 // local run starts (mailbox.mjs); a deployed address has none.

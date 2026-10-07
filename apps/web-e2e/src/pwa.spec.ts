@@ -1,4 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+
+import { test } from './fixtures.js';
 
 // Every other spec blocks service workers so their API stubs reach the page.
 test.use({ serviceWorkers: 'allow' });

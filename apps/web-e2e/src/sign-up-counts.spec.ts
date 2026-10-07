@@ -1,5 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
 
+import { test } from './fixtures.js';
 import globalSetup from './global-setup.js';
 import { clearSignUpCounts } from './sign-up-counts.js';
 
