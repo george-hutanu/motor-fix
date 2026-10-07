@@ -2,7 +2,7 @@
 
 **Feature Branch**: `569-auth-events-through-event-port`
 **Created**: 2026-10-07
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 **Input**: ST-569 "Record password-reset and session events through the event port" — https://app.notion.com/p/3f0607bff0d28111a434e75fcd9c94d3 (Task, Foundations epic, Low priority, labels backend and real-time; tech debt deferred by the reviews of ST-127, PR #72, `specs/127-password-reset/deferred.md:6`). The task page has no comments. "A completed password reset records no domain event through `EVENT_PORT` inside its transaction (as `signOutEverywhere` does), and its `password_changed` e-mail and `session.revoked` live message go out after the commit rather than through an outbox row (Constitution VI). Sign-in's own `session.revoked` publish follows the same pattern, so decide once for the auth flows."
 
 ## User Scenarios & Testing *(mandatory)*
