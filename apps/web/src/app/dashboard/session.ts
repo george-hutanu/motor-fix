@@ -87,8 +87,6 @@ export class Session {
   private starts = 0;
   // Bumped when a role switch has put its account on screen.
   private switches = 0;
-  // Bumped when a failed role switch has put the old token back.
-  private restores = 0;
 
   // The language last tapped, and the save sending it, one at a time.
   private wanted: Language | null = null;
@@ -300,12 +298,12 @@ export class Session {
     const generation = this.generation;
     // A sign-in or a role switch meanwhile: this answer is for the old one.
     // A renewal is not: the retry after a 401 answers for the same account.
-    const { starts, switches, restores } = this;
-    // Sent under a switch's token: a failed switch takes that role back.
+    const { starts, switches } = this;
+    // Sent under a switch's token: the switch's own load decides the account,
+    // and a failed switch takes that role back.
     const underSwitch = this.switchingTo !== null;
     const answer = await this.me.meControllerMe().catch(() => null);
-    if (!answer || generation !== this.generation) return;
-    if (underSwitch && restores !== this.restores) return;
+    if (!answer || underSwitch || generation !== this.generation) return;
     if (starts === this.starts && switches === this.switches) {
       this.current.set(answer);
     }
@@ -333,10 +331,7 @@ export class Session {
       return answer;
     } catch (error) {
       // The old token still holds the old role for its last minutes.
-      if (generation === this.generation) {
-        this.accessToken = before;
-        this.restores++;
-      }
+      if (generation === this.generation) this.accessToken = before;
       throw error;
     } finally {
       this.switchingTo = null;
