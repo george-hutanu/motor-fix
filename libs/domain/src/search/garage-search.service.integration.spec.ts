@@ -66,7 +66,7 @@ async function garage(
 
 async function everyPage(brandId: string) {
   const pages: Page[] = [await search.forBrand(brandId)];
-  while (pages.at(-1)?.nextCursor) {
+  while (pages.at(-1)?.nextCursor && pages.length < 10) {
     pages.push(
       await search.forBrand(brandId, pages.at(-1)?.nextCursor ?? undefined),
     );
