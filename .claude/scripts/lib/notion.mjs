@@ -81,6 +81,7 @@ export function notionClient({
   maxRetries = MAX_RETRIES,
   maxPages = MAX_PAGES,
   maxWaitS = MAX_WAIT_S,
+  version = NOTION_VERSION,
 }) {
   const scrub = (text) => String(text).replaceAll(token, "[token]");
   const interval = 1000 / PER_SECOND;
@@ -110,7 +111,7 @@ export function notionClient({
     try {
       const call = fetchImpl(`${NOTION_API}${path}`, {
         method,
-        headers: { Authorization: `Bearer ${token}`, "Notion-Version": NOTION_VERSION, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${token}`, "Notion-Version": version, "Content-Type": "application/json" },
         body: payload,
         signal: controller.signal,
       });

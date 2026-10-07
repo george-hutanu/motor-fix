@@ -110,7 +110,7 @@ describe('the list your garage page under hostile use', () => {
         .querySelector('nav')
         ?.querySelector('[aria-live], [role="status"], [role="alert"]'),
     ).toBeNull();
-    expect(page.querySelector('p.note')?.textContent).toBe('');
+    expect(page.querySelector('.sections > p.note')?.textContent).toBe('');
     expect(bar(page)?.closest('[aria-live]')).toBeNull();
   });
 

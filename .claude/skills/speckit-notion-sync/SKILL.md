@@ -53,6 +53,10 @@ labels (§2b) and the `notion-sync.md` lines (§3), and prints one JSON line.
   Each call times out after `NOTION_SYNC_TIMEOUT_MS` (30 s) and a 429 is retried
   `NOTION_SYNC_MAX_RETRIES` times (3); a Retry-After above `NOTION_SYNC_MAX_WAIT_S`
   (60) logs PENDING, and a query stops at `NOTION_SYNC_MAX_PAGES` (100).
+- `start`, `implement`, `qa`, `finish`, `blocked` and `unblock` also write the
+  story's timing (`Work`, `Started`, `QA from`, `Merged at`, `Took`) and upsert
+  its row, by `Key`, in the owner's Work timeline (`lib/work-timeline.mjs`),
+  never `Session`. That write fails open: one `timeline-db` line, never PENDING.
 - `start` and `finish` print `ready.review`: run the hold review (§2d).
 - `node .claude/scripts/notion-sync.mjs check` is read-only: does the token
   reach the stories data source, the Plans page and one story.
@@ -66,6 +70,7 @@ labels (§2b) and the `notion-sync.md` lines (§3), and prints one JSON line.
 | Stories and tasks | data source `collection://326eee3c-abec-41d9-9f96-eb3bd545a802` (MotorFix stories) | `Status`: To do · Planning · Implementing · Blocked · QA · Done; `PR`: the story's own PR (URL) |
 | Epics | data source `collection://ca8cf981-a8f2-4cb6-9c9a-ac1a3df0edac` | `Status`: To do · In progress · Done |
 | Plans | page `3ee607bff0d2818493d0dadd2d5a006c` (Delivery › Plans) | per epic: `<Epic> — execution plan` and `<Epic> (EP-<n>) — build timeline` |
+| Work timeline | data source `collection://3706e923-2faa-42bc-aab2-8a2d5ab5d9d3` (Plans › Live work timeline), API version 2025-09-03 | `Key` ST-<n>; `State`: In progress · QA · Merged · Blocked (Queued is the Chief's); `Ticket` → the story |
 | Timeline rows | each build timeline, e.g. `collection://2437de64-5c28-4136-b8b6-2d60693d45d7` (Foundations) | `Build status`: Not started · Planning · Implementing · Blocked · QA · Merged |
 
 ## 2. What each event does

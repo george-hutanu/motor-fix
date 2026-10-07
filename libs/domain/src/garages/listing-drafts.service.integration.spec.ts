@@ -463,3 +463,79 @@ describe('sending the link again', () => {
     expect(sent).toHaveLength(5);
   });
 });
+
+describe('the verification step of a draft', () => {
+  const step6 = (section: unknown) =>
+    body({ data: { steps: { '6': section } }, step: 6 });
+
+  it('keeps the company tax ID and the RAR number and reads them back unchanged', async () => {
+    const created = await service.create(body());
+    const section = { cui: '18547290', rarNumber: 'AB 123/2020' };
+
+    await service.save(created.id, created.token, step6(section));
+
+    const draft = await service.current(tokenOf(sent[0]?.link ?? ''));
+    expect(draft.data).toEqual({ steps: { '6': section } });
+  });
+
+  it('keeps what the owner typed even when it would not pass on sending', async () => {
+    const created = await service.create(
+      step6({ cui: '18547291', rarNumber: 'AB' }),
+    );
+
+    const row = await prisma.listingDraft.findUniqueOrThrow({
+      where: { id: created.id },
+    });
+    expect(row.data).toEqual({
+      steps: { '6': { cui: '18547291', rarNumber: 'AB' } },
+    });
+  });
+
+  it.each([
+    ['an unknown key', { companyName: 'SRL', cui: '18547290' }],
+    ['a value that is not text', { cui: 18547290 }],
+    ['a value of 41 characters', { rarNumber: 'X'.repeat(41) }],
+    ['a section that is not an object', ['18547290']],
+  ])('refuses %s with validation_failed', async (_, section) => {
+    const created = await service.create(body());
+
+    const refused = await refusalOf(
+      service.save(created.id, created.token, step6(section)),
+    );
+
+    expect(refused.status).toBe(400);
+    expect(refused.body).toMatchObject({ code: 'validation_failed' });
+    const row = await prisma.listingDraft.findUniqueOrThrow({
+      where: { id: created.id },
+    });
+    expect(row.data).toEqual(body().data);
+  });
+
+  it('accepts a save without the section', async () => {
+    const created = await service.create(step6({ cui: '18547290' }));
+
+    await service.save(created.id, created.token, body());
+
+    const row = await prisma.listingDraft.findUniqueOrThrow({
+      where: { id: created.id },
+    });
+    expect(row.data).toEqual(body().data);
+  });
+
+  it('writes nothing to the garages, the history or the outbox', async () => {
+    const garages = await prisma.garage.count();
+    const history = await prisma.activityLog.count();
+    const events = await prisma.outboxEvent.count();
+
+    const created = await service.create(step6({ cui: '18547290' }));
+    await service.save(
+      created.id,
+      created.token,
+      step6({ cui: '18547290', rarNumber: 'AB123' }),
+    );
+
+    expect(await prisma.garage.count()).toBe(garages);
+    expect(await prisma.activityLog.count()).toBe(history);
+    expect(await prisma.outboxEvent.count()).toBe(events);
+  });
+});
