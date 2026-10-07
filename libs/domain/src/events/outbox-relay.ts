@@ -9,6 +9,7 @@ const POLL_MS = 200;
 const LAG_MS = 30_000;
 const KEEP_MS = 7 * 24 * 60 * 60_000;
 const SWEEP_MS = 60 * 60_000;
+const REQUEUE_MS = 5 * 60_000;
 
 interface Jobs {
   add(
@@ -21,9 +22,12 @@ interface Jobs {
 // A queue that gets one job for each relayed event of its kinds. Its add()
 // runs inside the batch's transaction, so its client must fail fast when its
 // Redis is down (no offline queue) rather than hold the batch's row locks.
+// Its requeue, when it has one, puts back in line the relayed events whose
+// jobs have not done their work, for a Redis that lost them.
 export interface EventConsumer {
   kinds: readonly EventKind[];
   queue: Jobs;
+  requeue?: (prisma: PrismaClient) => Promise<number>;
 }
 
 interface Row {
@@ -76,6 +80,15 @@ export class OutboxRelay {
     );
   }
 
+  async requeue(): Promise<number> {
+    let count = 0;
+    for (const { requeue } of this.consumers) {
+      if (requeue) count += await requeue(this.prisma);
+    }
+    if (count > 0) this.logger.warn(`${count} relayed events queued again`);
+    return count;
+  }
+
   async sweep(now = new Date()): Promise<number> {
     const { count } = await this.prisma.outboxEvent.deleteMany({
       where: { relayedAt: { lt: new Date(now.getTime() - KEEP_MS) } },
@@ -96,10 +109,17 @@ export class OutboxRelay {
 
   private async loop() {
     let sweptAt = 0;
+    let requeuedAt = 0;
     while (!this.stopping) {
       const due = Date.now() - sweptAt >= SWEEP_MS;
       if (due && (await this.attempt(() => this.sweep())) !== null) {
         sweptAt = Date.now();
+      }
+      if (
+        Date.now() - requeuedAt >= REQUEUE_MS &&
+        (await this.attempt(() => this.requeue())) !== null
+      ) {
+        requeuedAt = Date.now();
       }
       const relayed = await this.attempt(() => this.relay());
       // A full batch means more are waiting: take them at once.

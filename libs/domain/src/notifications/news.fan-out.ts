@@ -31,12 +31,31 @@ export interface NewsRun extends Pick<SendNewsDto, 'text' | 'title'> {
   sentBy: Pick<Actor, 'accountId' | 'role'>;
 }
 
+// A claimed month whose run has not completed five minutes after its event
+// was relayed has that event relayed again, so a job an emptied Redis lost is
+// queued again from the outbox. While the job is still in Redis (waiting,
+// delayed or running) the relay's add of the same job id changes nothing; a
+// run that reaches a driver twice sends once, as the pipeline keeps one
+// message per event and person. Only the claim's own event counts: the send
+// writes both in one transaction, so an older event is that of a month given
+// back and sent anew.
+const requeueStrandedNews = (prisma: PrismaClient): Promise<number> =>
+  prisma.$executeRaw`
+    UPDATE outbox_event e SET relayed_at = NULL
+    FROM news_send s
+    WHERE e.kind = 'news.sent' AND e.subject_id = s.month
+      AND e.created_at >= s.created_at
+      AND s.ran_at IS NULL
+      AND e.relayed_at < now() - interval '5 minutes'`;
+
 // The send saves its run as a `news.sent` outbox event with the month's
-// claim; the worker's relay queues it, so emptying Redis loses no run.
+// claim; the worker's relay queues it, and queues it again while the month
+// has not run, so emptying Redis loses no run.
 export const NEWS_CONSUMER = {
   jobs: NEWS_RUN,
   kinds: ['news.sent'] as readonly EventKind[],
   queue: NEWS_QUEUE,
+  requeue: requeueStrandedNews,
 };
 
 // A job as the relay queues it: the event, its payload the run.
@@ -140,6 +159,10 @@ export class NewsFanOut {
         subjectId: account.id,
       });
     }
+    await this.prisma.newsSend.updateMany({
+      data: { ranAt: new Date() },
+      where: { month: data.month },
+    });
     this.logger.log(`news for ${data.month} sent to ${rows.length} drivers`);
   }
 }
