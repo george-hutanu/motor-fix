@@ -22,3 +22,18 @@ Start commit: origin/main (worktree .worktrees/775-level-at-parity). Preflight: 
 - 16 retro evidence: gathered (jev lane unavailable, no suggested verdict); no instincts triggered.
 - 14 review: spec-reviewer APPROVE (2 LOW: offset stamps could not discriminate at the fixed now → moved a day ahead; plan.md still named level.spec.mjs → aligned). code-reviewer APPROVE (1 LOW patched). No CRITICAL/HIGH; no repair lap.
 - 17 archive: status Archived (2026-10-07); Spec Delta merged into platform (+2), 775-FR-002 reworded to read on its own (same text in spec.md). Retro not run (speckit-auto phase 16: the verdict stays the owner's).
+
+## Final Report
+
+STATUS: success — hour-24 level_at refused by both readers; PR #184 ready, QA run 37581013611 on da931cc
+PR: #184 ready da931cc
+NEXT: none — tail run by this agent: QA lap 1 success (no findings), merge on green CI
+FILES: specs/775-level-at-parity/*, .claude/scripts/lib/feature.mjs, .specify/scripts/python/common.py, .claude/scripts/level.adversary.spec.mjs, .specify/capabilities/platform.md, CLAUDE.local.md
+
+- Branch 775-level-at-parity, feature specs/775-level-at-parity, range e7c39969..da931cc (one merge of origin/main, platform.md conflict resolved keeping both 481 and 775).
+- Phases 0–17 run as logged above; level 2 (Notion facts). Org context partial (epic page not read in full).
+- Decisions on the owner's behalf: day-of-month rollover out of scope and filed as its own tech-debt task (deferred.md, Notion link in it); parity = level-or-none at the same `now` (no remaining time on the Python side); test-adversary's duplicate describe folded into the existing one; `level.spec.mjs` left untouched (T002 folded).
+- Verification: red — 3 failed (the hour-24 JS cases) / 101 passed; green — `npm run test:harness` 1976/1976 after the merge; artifact-lint 0/0 (Jev lane unavailable: no key); diff-audit — no finding on this diff's files (its errors are libs/* against the stale local `main` base).
+- FR → test: FR-001 → level.adversary.spec.mjs "drops the level for … in JS/Python" (hour 24–99 stamps); FR-002 → the same block's refused/accepted/odd loops (JS and Python at AFTER_MIDNIGHT).
+- Reviews: spec-reviewer APPROVE (2 LOW fixed), code-reviewer APPROVE (1 LOW fixed). Retro evidence: gathered, Jev lane unavailable so no suggested verdict; no instincts triggered.
+- artifact-lint after the archive (report form): 2 `delta-adds-existing` ERRORs, which are the archive itself (775-FR-001/002 now in platform.md); `capabilities.mjs` validate does not skip a merged feature. Before the archive: 0/0. Harness follow-up, not this task's scope.
