@@ -217,14 +217,23 @@ model ListingDraft {
   @@map("listing_draft")
 }
 
+// Who a draft's key went to: the browser that saved it, a link e-mail (the
+// only kind the hourly cap counts), or the reminder.
+enum ListingDraftTokenKind {
+  browser
+  link
+  reminder
+
+  @@map("listing_draft_token_kind")
+}
+
 // A key to a draft: the SHA-256 of a token, never the token.
 model ListingDraftToken {
-  hash     String       @id
-  draftId  String       @map("draft_id") @db.Uuid
-  sentAt   DateTime     @map("sent_at") @db.Timestamptz(3)
-  // The reminder's token, which the hourly link cap does not count.
-  reminder Boolean      @default(false)
-  draft    ListingDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  hash    String                @id
+  draftId String                @map("draft_id") @db.Uuid
+  sentAt  DateTime              @map("sent_at") @db.Timestamptz(3)
+  kind    ListingDraftTokenKind
+  draft   ListingDraft          @relation(fields: [draftId], references: [id], onDelete: Cascade)
 
   @@index([draftId, sentAt])
   @@map("listing_draft_token")

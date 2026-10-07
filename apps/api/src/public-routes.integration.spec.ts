@@ -18,8 +18,10 @@ const PUBLIC = [
   'GET /api/v1/auth/providers',
   'GET /api/v1/brands',
   'GET /api/v1/garages/00000000-0000-4000-8000-000000000000',
+  'GET /api/v1/listing-drafts/current',
   'GET /health/live',
   'GET /health/ready',
+  'PATCH /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000',
   'POST /api/v1/auth/confirm-email',
   'POST /api/v1/auth/confirm-email/resend',
   'POST /api/v1/auth/oauth/apple/callback',
@@ -36,6 +38,8 @@ const PUBLIC = [
   'POST /api/v1/auth/sign-out-everywhere',
   'POST /api/v1/auth/sign-up',
   'POST /api/v1/invites/check',
+  'POST /api/v1/listing-drafts',
+  'POST /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/continue-link',
   'POST /api/v1/notification-preferences/unsubscribe',
 ];
 

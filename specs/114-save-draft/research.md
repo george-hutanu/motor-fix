@@ -11,7 +11,7 @@ Every decision names its evidence (a `path:line` in this checkout or the spec). 
 
 ## R2 — Token making, hashing and storage
 
-- **Decision**: reuse `newToken()` and `hashToken()` from `libs/domain/src/auth/email-confirmation.ts:9-14` (32 random bytes as base64url, SHA-256 hex). Hashes live in their own table `listing_draft_token` (hash unique, `draft_id`, `sent_at`, `reminder` flag) rather than a JSON array on the draft, so `GET /listing-drafts/current` resolves a token with one unique-index lookup, the FR-009 cap is a `COUNT(*)` in PostgreSQL over `sent_at > now() - 1 h` where `reminder = false`, and an e-mail change revokes by `deleteMany({ draftId })`.
+- **Decision**: reuse `newToken()` and `hashToken()` from `libs/domain/src/auth/email-confirmation.ts:9-14` (32 random bytes as base64url, SHA-256 hex). Hashes live in their own table `listing_draft_token` (hash unique, `draft_id`, `sent_at`, `kind`: browser, link or reminder) rather than a JSON array on the draft, so `GET /listing-drafts/current` resolves a token with one unique-index lookup, the FR-009 cap is a `COUNT(*)` in PostgreSQL over `sent_at > now() - 1 h` where `kind = link`, and an e-mail change revokes by `deleteMany({ draftId })`.
 - **Rationale**: FR-007 (resolve by hash alone), FR-009 (count in PostgreSQL, never Redis), FR-008 (older tokens stay valid), Clarifications (e-mail change revokes all). The staff invite already stores tokens this way (`libs/domain/src/garages/staff-invite.service.ts:16`).
 - **Alternatives**: a `String[]` of hashes on the draft (rejected: no unique index, no sent time per token); Redis counter for the cap (rejected by FR-009 and Principle VI).
 - **Evidence**: `libs/domain/src/auth/email-confirmation.ts:9-14`; spec FR-007, FR-008, FR-009.
@@ -65,7 +65,7 @@ Every decision names its evidence (a `path:line` in this checkout or the spec). 
 
 ## R11 — The link cap (FR-009)
 
-- **Decision**: before each send, `count` the draft's tokens with `reminder = false` and `sentAt > now - 1 h`; at 5 or more, answer 429 with the code `link_already_sent` and `retryAfterSeconds` = seconds until the oldest of those five is an hour old. The sending routes (`POST /continue-link`) answer it as the status; `POST /listing-drafts` and an e-mail-changing `PATCH` save first and report `linkSent: false, retryAfterSeconds` in their 2xx body (the save never fails for the cap). The reminder's token has `reminder = true` and is outside the count.
+- **Decision**: before each send, `count` the draft's tokens with `reminder = false` and `sentAt > now - 1 h`; at 5 or more, answer 429 with the code `link_already_sent` and `retryAfterSeconds` = seconds until the oldest of those five is an hour old. The sending routes (`POST /continue-link`) answer it as the status; `POST /listing-drafts` and an e-mail-changing `PATCH` save first and report `linkSent: false, retryAfterSeconds` in their 2xx body (the save never fails for the cap). The reminder's token (`kind = reminder`) and the browser's key (`kind = browser`, issued with no e-mail) are outside the count. The count runs in the transaction that locks the draft row (`SELECT … FOR UPDATE`) and inserts the new link token, so two sends at once cannot both pass the fifth.
 - **Evidence**: spec FR-009, US3 scenario 6, Clarifications.
 
 ## R12 — The link, the page and the token in the address bar

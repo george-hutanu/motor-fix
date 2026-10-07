@@ -1,6 +1,9 @@
 -- CreateEnum
 CREATE TYPE "listing_draft_status" AS ENUM ('open', 'submitted');
 
+-- CreateEnum
+CREATE TYPE "listing_draft_token_kind" AS ENUM ('browser', 'link', 'reminder');
+
 -- CreateTable
 CREATE TABLE "listing_draft" (
     "id" UUID NOT NULL,
@@ -22,7 +25,7 @@ CREATE TABLE "listing_draft_token" (
     "hash" TEXT NOT NULL,
     "draft_id" UUID NOT NULL,
     "sent_at" TIMESTAMPTZ(3) NOT NULL,
-    "reminder" BOOLEAN NOT NULL DEFAULT false,
+    "kind" "listing_draft_token_kind" NOT NULL,
 
     CONSTRAINT "listing_draft_token_pkey" PRIMARY KEY ("hash")
 );

@@ -21,8 +21,13 @@ export function sendProblem(
   code: string,
   detail?: string,
   errors?: FieldProblem[],
-  extensions: Pick<Problem, 'attemptsLeft'> & { inviteId?: string } = {},
+  extensions: Pick<Problem, 'attemptsLeft' | 'retryAfterSeconds'> & {
+    inviteId?: string;
+  } = {},
 ) {
+  if (extensions.retryAfterSeconds !== undefined) {
+    res.set('Retry-After', String(extensions.retryAfterSeconds));
+  }
   res
     .status(status)
     .type('application/problem+json')
@@ -64,11 +69,12 @@ export class ProblemFilter implements ExceptionFilter {
       detail(typeof body === 'string' ? body : own.message),
       fieldProblems(own.errors),
       // The members beyond the problem shape a refusal carries: the open
-      // invite a refused send names, and the tries a wrong code has left.
-      // Nothing else an exception holds leaves.
+      // invite a refused send names, the tries a wrong code has left, and
+      // the wait before a limit lifts. Nothing else an exception holds leaves.
       {
         ...(typeof own.inviteId === 'string' && { inviteId: own.inviteId }),
         ...attemptsLeft(own.attemptsLeft),
+        ...retryAfter(own.retryAfterSeconds),
       },
     );
   }
@@ -78,6 +84,13 @@ export class ProblemFilter implements ExceptionFilter {
 function attemptsLeft(value: unknown): Pick<Problem, 'attemptsLeft'> {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0
     ? { attemptsLeft: value }
+    : {};
+}
+
+// The seconds until a limit lifts, when the refusal says so.
+function retryAfter(value: unknown): Pick<Problem, 'retryAfterSeconds'> {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0
+    ? { retryAfterSeconds: value }
     : {};
 }
 

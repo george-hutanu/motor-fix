@@ -39,11 +39,11 @@ The server validates only the envelope (an object with those optional keys; `fil
 | `hash` | text PK | SHA-256 hex of the 32-byte token (`hashToken`); the token itself is never stored |
 | `draft_id` | uuid FK → `listing_draft.id`, cascade | |
 | `sent_at` | timestamptz, not null | when the token was issued (the link e-mail's send time, or the browser's key's issue time) |
-| `reminder` | boolean, not null, default false | true for the reminder's token: outside the 5-per-hour count |
+| `kind` | `listing_draft_token_kind` enum: `browser`, `link`, `reminder`, not null | who the key went to; only `link` tokens count toward the 5-per-hour cap (a browser key is no e-mail, the reminder is outside the cap) |
 
 Index: `(draft_id, sent_at)` for the cap count and the revoke.
 
-Lifecycle: issued by `POST /listing-drafts` (two: the browser's key in the response, the link's in the e-mail), by `POST …/continue-link` (one), by an e-mail-changing `PATCH` (browser key + link) and by the reminder sweep (one, `reminder = true`). All of a draft's tokens stay valid until the draft is `submitted` (reads still answer the sent state; writes 409) or its e-mail changes (`deleteMany({ draftId })`), or the draft is deleted (cascade).
+Lifecycle: issued by `POST /listing-drafts` (two: the browser's key in the response, the link's in the e-mail), by `POST …/continue-link` (one), by an e-mail-changing `PATCH` (browser key + link) and by the reminder sweep (one, `kind = reminder`). All of a draft's tokens stay valid until the draft is `submitted` (reads still answer the sent state; writes 409) or its e-mail changes (`deleteMany({ draftId })`), or the draft is deleted (cascade).
 
 ## Notification (`notification`, change)
 

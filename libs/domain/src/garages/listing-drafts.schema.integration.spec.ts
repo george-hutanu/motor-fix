@@ -58,9 +58,14 @@ describe('a saved listing draft', () => {
   it('keeps a token by its hash and loses it with the draft', async () => {
     const saved = await draft();
     const token = await prisma.listingDraftToken.create({
-      data: { draftId: saved.id, hash: 'a'.repeat(64), sentAt: new Date() },
+      data: {
+        draftId: saved.id,
+        hash: 'a'.repeat(64),
+        kind: 'link',
+        sentAt: new Date(),
+      },
     });
-    expect(token.reminder).toBe(false);
+    expect(token.kind).toBe('link');
 
     await prisma.listingDraft.delete({ where: { id: saved.id } });
 

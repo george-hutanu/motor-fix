@@ -27,3 +27,10 @@
 
 ## Phase 9 — Tests (foundation slice)
 - Red proven: 5 suites failed (3 at compile: no `listingDraft` model, no `sendToDraft`; listing templates missing; catalogue LISTING_REMINDER not single), 9 failed / 17 pre-existing passed.
+
+## Phase 10 — Implement, slice 1 (foundation)
+- T001–T009 green: contracts DTOs, constants, schema + migration, listing templates, draft recipient in notifications. 50 suites / 1225 tests in domain notifications+garages; typecheck and biome clean. Commit 7f331020.
+
+## Phase 10 — Implement, slice 2 (US2 API)
+- T015–T023 green: service, throttle, controller, module wiring, `Retry-After` from the problem filter, JSON body limit 320 kB, public routes, regenerated openapi.json + data-access client.
+- Decisions: token `kind` enum (browser, link, reminder) so the hourly link cap counts link tokens only; the service spec is `listing-drafts.service.integration.spec.ts` (it needs PostgreSQL); throttle key is a SHA-256 of the client address (contract updated), never the raw IP; the 404 body carries `detail` through the problem filter; the body limit is raised globally (320 kB), the draft's own 256 KB rule answers 413; a JsonOnly 415 is refused by a guard before the no-store interceptor runs, so it carries no `Cache-Control` (no draft or key in it).
