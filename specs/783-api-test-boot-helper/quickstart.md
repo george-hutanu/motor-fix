@@ -13,7 +13,7 @@ How to prove the change end to end. Paths are repository-relative; run from the 
 scripts/heavy.sh npx jest -c apps/api/jest.config.cts apps/api/src/api-boot.testing.integration.spec.ts > /tmp/api-boot.log 2>&1; echo "exit $?"; tail -n 40 /tmp/api-boot.log
 ```
 
-Expected: one test per stage in `data-model.md` (store start, module compile, app `init()`, a close that throws, a successful boot), all green; each shows a fresh `databaseTurn(url).take()` resolving within 1 s after `stop()`.
+Expected: one test per stage in `data-model.md` (store start, module compile, app `init()`, a close that throws, a successful boot), all green; each shows a fresh `databaseTurn(url).take()` resolving within 60 s after `stop()`.
 
 ## 2. The four API integration suites, unchanged in what they assert (FR-003, FR-004, SC-003)
 

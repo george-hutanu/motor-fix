@@ -33,7 +33,7 @@ Phase 0 of `/speckit-plan` for ST-783. Every decision cites the file read in thi
   - store start: `jest.spyOn(S3TestStore.prototype, 'start')` (`libs/domain/src/storage/s3-test-store.ts:76`);
   - module compile: `jest.spyOn(Test, 'createTestingModule')` (`@nestjs/testing`);
   - app start: `jest.spyOn(NestApplication.prototype, 'init')`; app close: `jest.spyOn(NestApplication.prototype, 'close')`. `NestApplication` is exported from `@nestjs/core` (`node_modules/@nestjs/core/index.d.ts:12`; `init(): Promise<this>` at `nest-application.d.ts:38`) and is what `TestingModule.createNestApplication` returns (`node_modules/@nestjs/testing/testing-module.d.ts:21`);
-  - the turn: proven free by a fresh `databaseTurn(url).take()` resolving within 1 s (SC-002), released again by the spec.
+  - the turn: proven free by a fresh `databaseTurn(url).take()` resolving within 60 s (SC-002), released again by the spec.
 - `post-edit-check.sh` maps `api-boot.testing.ts` to `api-boot.testing.spec.ts` (`.claude/hooks/post-edit-check.sh:59`), which will not exist, so the edit hook runs nothing for the helper, as for `bootstrap.ts` today; the pre-commit hook and CI run the integration spec with the services up.
 
 ## R6. Teardown semantics that satisfy FR-002 ("first error rethrown")

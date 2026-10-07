@@ -92,7 +92,7 @@ apps/api/
 
 ### The helper's spec
 
-`api-boot.testing.integration.spec.ts`, one test per row of `data-model.md` that can fail from outside, plus the success order (research R5 names the spy points): store `start` rejected; `Test.createTestingModule` throws; `NestApplication.prototype.init` rejected (app still closed); `NestApplication.prototype.close` rejected (store still stopped, error rethrown); successful boot closed in order app, store, turn. Each test calls `stop()`, then proves the turn free with a fresh `databaseTurn(url).take()` resolving within 1 s, and releases it.
+`api-boot.testing.integration.spec.ts`, one test per row of `data-model.md` that can fail from outside, plus the success order (research R5 names the spy points): store `start` rejected; `Test.createTestingModule` throws; `NestApplication.prototype.init` rejected (app still closed); `NestApplication.prototype.close` rejected (store still stopped, error rethrown); successful boot closed in order app, store, turn. Each test calls `stop()`, then proves the turn free with a fresh `databaseTurn(url).take()` resolving within 60 s, and releases it.
 
 ## Complexity Tracking
 

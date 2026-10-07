@@ -1,57 +1,34 @@
 import { randomUUID } from 'node:crypto';
 
-import { CURRENT_CONSENT, readEnv, STORAGE_ENV } from '@motor-fix/contracts';
+import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { NotificationsService } from '@motor-fix/domain';
-import { databaseTurn, S3TestStore } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
-import { AppModule } from './app.module';
-import { configureApp } from './bootstrap';
+import { apiBoot } from './api-boot.testing';
 
-const env = {
-  APP_ENV: 'test',
-  AUTH_TOKEN_SECRET: 'test-secret',
-  DATABASE_URL:
-    process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres',
-  REDIS_URL: process.env['REDIS_URL'] ?? 'redis://localhost:6379',
-  RELEASE_SHA: 'abc123',
-} as const;
-const store = new S3TestStore();
-// The domain specs empty the account tables meanwhile: wait for our turn.
-const turn = databaseTurn(env.DATABASE_URL);
+const api = apiBoot();
 const webUrl = process.env['PUBLIC_WEB_URL'];
 
 let app: INestApplication;
 let sent: jest.SpyInstance;
 
 beforeAll(async () => {
-  await turn.take();
   process.env['PUBLIC_WEB_URL'] = 'https://motorfix.test';
-  await store.start();
-  const config = readEnv(
-    ['DATABASE_URL', 'REDIS_URL', 'AUTH_TOKEN_SECRET', ...STORAGE_ENV],
-    { ...env, ...store.env() },
-  );
   sent = jest
     .spyOn(NotificationsService.prototype, 'sendAccountEmail')
     .mockResolvedValue(undefined);
-  const moduleRef = await Test.createTestingModule({
-    imports: [AppModule.register(config)],
-  }).compile();
-  app = moduleRef.createNestApplication({ bufferLogs: true });
-  configureApp(app, config);
-  await app.init();
+  app = await api.start();
 }, 120_000);
 
 afterAll(async () => {
-  await app.close();
-  await store.stop();
-  sent.mockRestore();
-  await turn.release();
-  if (webUrl === undefined) delete process.env['PUBLIC_WEB_URL'];
-  else process.env['PUBLIC_WEB_URL'] = webUrl;
+  try {
+    await api.stop();
+  } finally {
+    sent.mockRestore();
+    if (webUrl === undefined) delete process.env['PUBLIC_WEB_URL'];
+    else process.env['PUBLIC_WEB_URL'] = webUrl;
+  }
 });
 
 describe('signing up through the api', () => {

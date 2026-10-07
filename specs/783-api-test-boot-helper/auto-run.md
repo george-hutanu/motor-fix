@@ -48,3 +48,14 @@ Start: origin/main 0ea7890a (worktree `.worktrees/783-api-test-boot-helper`, bra
 ## Phase 8 — Analyze
 - artifact-lint: 1 ERROR (FR-006 had no task) remediated: FR-006 reworded to allow the apps/api tsconfig lines, T008 gained the FR-006 check (`git diff origin/main --name-only -- apps libs` lists only spec, testing and tsconfig files). Re-run: 0 errors, 3 delta-unassigned warnings (FR-003, FR-004, FR-006 are suite edits, not platform capabilities; by design).
 - No CRITICAL/HIGH findings; context.md's ST-715 contradiction resolved by the clarify answer (bootstrap gets the try/finally).
+
+## Phase 9 — Tests
+- T001 tsconfig lines, then `apps/api/src/api-boot.testing.integration.spec.ts` (5 tests: store start fails, module compile throws, init fails, close fails, clean boot + second stop). Red: suite failed to run, `Cannot find module './api-boot.testing'` (0 of 5 could run).
+- Decision: the turn probe waits up to 60 s, not 1 s (spec SC-002 and plan/research/quickstart/tasks updated): other api integration files take the same advisory lock in parallel workers, so 1 s would be flaky; a leaked turn never resolves, so the probe still fails on a leak.
+- Environment: the shared node_modules lacked `web-push` (stale against package.json); `npm install` in the main checkout fixed it. Prisma client generated in the worktree.
+
+## Phase 10 — Implement
+- `notion-sync implement`: ST-783 Implementing.
+- T003 `apps/api/src/api-boot.testing.ts`: `apiBoot()` and `TEST_TOKEN_SECRET` (the two suites that sign tokens read it; decided here, evidence `validation-problem.integration.spec.ts:50`, `public-routes.integration.spec.ts:143`). `stop()` attempts app close then store stop (each only if reached), releases the turn, rethrows the first failure; idempotent.
+- T004 bootstrap afterAll try/finally; T005-T007 three suites on `apiBoot()`; sign-up keeps its spy and PUBLIC_WEB_URL restores in a `finally` after `api.stop()`.
+- Verification: api typecheck (app+spec) green; 6 api integration suites, 60 tests green; SC-004 grep empty; FR-006 diff lists only spec, testing and tsconfig files.

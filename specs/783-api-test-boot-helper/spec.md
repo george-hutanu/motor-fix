@@ -79,7 +79,7 @@ When a boot throws partway (the store fails to start, the module fails to compil
 ### Measurable Outcomes
 
 - **SC-001**: The boot sequence (configuration read, testing module compiled, production app setup applied, app started) exists once in `apps/api` test code, in the helper; the three suites named in FR-003 contain none of it, and none of them calls `app.close()`, `store.stop()` or `turn.release()` itself.
-- **SC-002**: A spec of the helper shows that after a boot that throws at any stage, and after a close that throws, a fresh take of the database turn resolves within 1 s.
+- **SC-002**: A spec of the helper shows that after a boot that throws at any stage, and after a close that throws, a fresh take of the database turn resolves within 60 s (a leaked turn never resolves; another suite holding the turn gives it back sooner).
 - **SC-003**: The four existing API integration suites pass with no changed assertion; `npm run typecheck`, `npm run lint` and the API's tests are green on CI.
 - **SC-004**: No `readEnv`, `Test.createTestingModule`, `configureApp`, `S3TestStore` or `databaseTurn` call remains in the three suites named in FR-003.
 
