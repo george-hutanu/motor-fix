@@ -15,3 +15,7 @@
 - 2026-10-07 · qa · ST-574 · Implementing → QA
 - 2026-10-07 · qa · timeline · no row for ST-574
 - 2026-10-07 · labels · PR #194 · QA
+- 2026-10-07 · qa · ST-574 · QA unchanged
+- 2026-10-07 · labels · PR #194 · QA
+- 2026-10-07 · debt · ST-574 · deferred.md line 2 → https://app.notion.com/p/Tech-debt-ST-574-The-live-hub-capability-adversary-spec-repeats-the-audience-spec-s-checks-of-the-3f2607bff0d2815aab28d84312c57a18
+- 2026-10-07 · debt · ST-574 · deferred.md line 3 → https://app.notion.com/p/Tech-debt-ST-574-No-end-to-end-check-of-a-receptionist-s-live-stream-US2-a-receptionist-sees-on-3f2607bff0d281ffa0eec8d86cc1b6b4
