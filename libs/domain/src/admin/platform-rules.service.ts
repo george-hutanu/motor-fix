@@ -10,7 +10,11 @@ import { type Actor, requireCapability } from '../auth/policy';
 import { PRISMA } from '../auth/prisma';
 import { refusal } from '../auth/sign-up.service';
 import { EVENT_PORT, type EventPort } from '../events/event.port';
-import type { Prisma, PrismaClient } from '../generated/prisma/client';
+import type {
+  PlatformRule,
+  Prisma,
+  PrismaClient,
+} from '../generated/prisma/client';
 
 export interface PlatformRulesOptions {
   production: boolean;
@@ -24,20 +28,10 @@ const TEST_ONLY = new Set(['skip_manual_approval', 'skip_rar_check']);
 
 const MAINTENANCE = 'maintenance_mode';
 
-type Row = {
-  id: string;
-  key: string;
-  value: Prisma.JsonValue;
-  defaultValue: Prisma.JsonValue;
-  requiresTwoAdmins: boolean;
-  updatedBy: string | null;
-  updatedAt: Date | null;
-};
-
 const same = (a: unknown, b: unknown) =>
   JSON.stringify(a) === JSON.stringify(b);
 
-const dto = (row: Row): PlatformRuleDto => ({
+const dto = (row: PlatformRule): PlatformRuleDto => ({
   defaultValue: row.defaultValue,
   key: row.key,
   requiresTwoAdmins: row.requiresTwoAdmins,
@@ -98,6 +92,7 @@ export class PlatformRulesService {
         );
       }
       if (same(value, row.value)) return dto(row);
+      // TODO: the two-admin flow replaces this refusal
       if (row.requiresTwoAdmins) {
         throw refusal(
           HttpStatus.CONFLICT,

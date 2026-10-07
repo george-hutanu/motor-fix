@@ -30,10 +30,6 @@ const LINES = [
 
 type Line = (typeof LINES)[number];
 
-const ERROR: Record<string, string> = {
-  two_admins_required: 'admin.platformRules.twoAdmins',
-};
-
 // The admin's Setări: the platform rules, each saved as it is switched.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -168,19 +164,27 @@ export class PlatformRules implements OnInit {
         key,
       });
     } catch (failure) {
-      const code =
-        failure instanceof HttpErrorResponse ? failure.error?.code : undefined;
-      if (code === 'stale_value') {
-        await this.load();
-      } else {
-        this.set(key, seen);
-        this.error.set(
-          (code && ERROR[code]) || 'admin.platformRules.saveFailed',
-        );
-      }
+      await this.refused(key, seen, failure);
     } finally {
       this.mark(key, false);
     }
+  }
+
+  // A stale value re-reads the list; any other refusal puts the switch back.
+  private async refused(
+    key: string,
+    seen: PlatformRuleDto['value'],
+    failure: unknown,
+  ) {
+    const code =
+      failure instanceof HttpErrorResponse ? failure.error?.code : undefined;
+    if (code === 'stale_value') return this.load();
+    this.set(key, seen);
+    this.error.set(
+      code === 'two_admins_required'
+        ? 'admin.platformRules.twoAdmins'
+        : 'admin.platformRules.saveFailed',
+    );
   }
 
   private mark(key: string, busy: boolean) {

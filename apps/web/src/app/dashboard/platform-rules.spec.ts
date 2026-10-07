@@ -297,7 +297,7 @@ describe('PlatformRules', () => {
       'true',
     );
     expect(element.querySelector('[role="alert"]')?.textContent).toContain(
-      'E nevoie de încă un administrator',
+      'Este nevoie de un al doilea administrator',
     );
   });
 

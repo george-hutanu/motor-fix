@@ -25,6 +25,6 @@
     "saveFailed": "The rule could not be saved. Try again.",
     "testOnly": "Test only",
     "title": "Platform settings",
-    "twoAdmins": "A second admin is needed for this change."
+    "twoAdmins": "A second admin is needed."
   }
 }
