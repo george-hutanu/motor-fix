@@ -70,3 +70,18 @@
 - Decisions and ideas (index) — https://app.notion.com/p/3ee607bff0d281df9485ce97dfa3332d
 - Seed the brand catalogue and the job catalogue (ST-245) — https://app.notion.com/p/3ee607bff0d281a88645ff204accf788
 - Design mock (recorded, not opened) — https://claude.ai/artifact/EoPWH9MHmuY5Jfw7vTWTHr
+
+## Refresh 2026-10-07
+
+Baseline 2026-10-07T00:00:00Z. Re-read ST-39 (with all comments, resolved included), MF-9 and ST-245.
+
+**New decisions**: none. ST-39's body is unchanged in substance: the Build brief is still "current as of 2026-10-03" and its Open section still says "None".
+
+**New constraints**: none.
+
+**New contradictions with spec.md**: none. The two earlier ones stand (FR-014/FR-015 dormant ticks; GARAGE_BRAND_JOB columns), and MF-9 still carries the "kept hidden (proposed)" line.
+
+**Story changes**:
+- ST-39 Status moved Planning to Implementing, page last edited 2026-10-07T08:31:23Z (previous read: 08:04Z). PR property still #193. [ST-39 properties]
+- Comments: none, `notion-get-comments` returned no discussions, resolved ones included. Scope moved by a comment: no.
+- Not changed since baseline: MF-9 (edited 2026-10-03T18:45Z) and ST-245 (2026-10-03T18:32Z), both older than the baseline. ST-245 is still To do.

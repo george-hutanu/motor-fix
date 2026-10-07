@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-07
 
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 
 **Input**: User description: "ST-39 "Set up the brand catalogue and its upkeep" — Notion story https://app.notion.com/p/3ee607bff0d2817494b2f51c09ad7cf7 (epic https://app.notion.com/p/3ee607bff0d281f8ba8ae20d1af741cf, feature https://app.notion.com/p/3ee607bff0d281a88c5edf39beb72c04)"
 

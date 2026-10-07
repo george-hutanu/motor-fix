@@ -70,3 +70,24 @@ artifact-lint: 0 errors, 0 warnings (Jev lane unavailable). 17/17 FRs tasked, 20
 - Test-adversary: 70 tests, 13 failing. Fixed: a malformed `brands:active` value answered 500 (now parsed inside the cache guard, so the list falls back to PostgreSQL). The loader accepted a blank key, a name with no letters or digits, and a popularity that is not a whole number from 1 (now refused as BrandFileError). Three spec gaps went to deferred.md and their tests were removed: the DB-level job rule, a raw stance flip, and a name swap.
 - Code-reviewer (BLOCK): HIGH 1 (cache parse) fixed. HIGH 2 fixed: `setStance` and `addJob` did not check that the actor belongs to the garage, and now call `assertGarage`. Also fixed: the unused barrel export of GarageBrandsService (deleted), the job-type FK note (now a TODO), and the limits spec's bare `toThrow()` (now names its CHECKs). Deferred: the concurrent first write of one stance (MEDIUM) and moving `refusal` out of sign-up.service. Kept: the 60 s load timeout, whose comment says why.
 - Repair laps: 1. lint and typecheck exit 0.
+
+## Chief decisions (mid-run, 2026-10-07)
+- (a) No DB-level refusal of job rows on a `does_not_take` brand: decided by Chief; the service keeps the check, covered by `garage-brands.service.integration.spec.ts` ("refuses a job for a brand the garage does not take"); kept as a Low tech-debt bullet in deferred.md for `debt` filing.
+- (b) A name-swapping file need not load in one run: decided by Chief; the loader's held-name error now tells the operator to rename one brand to a temporary name first, load, then load again. Red proven (1 failed / 12 passed), then green 13/13. Commit a2899bef (T021, spec edge case, data-model step 2). No follow-up task.
+
+## Phase 13 — Ticket refresh
+- org-researcher refresh (baseline 2026-10-07): no new evidence. ST-39 moved Planning → Implementing; no comments; MF-9 and ST-245 unchanged. `## Refresh 2026-10-07` appended to context.md.
+
+## Phase 14 — Review (spec-reviewer + code-reviewer, parallel)
+- Round 1: spec BLOCK (HIGH T019 export of GarageBrandsService; MEDIUM hedged retired-cursor test; LOW TODO in garages.prisma). code BLOCK (HIGH cache JSON not a list → 500; HIGH boot-load rejection unhandled and untested; HIGH hedged retired-cursor test; MEDIUM bare toThrow in cross-garage tests; MEDIUM Redis-down del untested; LOW cache/commit race; LOW literal 60 s timeout).
+- Repair lap 2 (run-state repair). Fixes, tests first (4 red, then 136/136 green): cache refuses non-array JSON; `main.ts` exits 1 when the brand file cannot load; exact 400/invalid_cursor and NotFoundException assertions; TODO replaced by a present-tense note; T019 export dropped (Principle I: no consumer yet) in tasks.md and contracts/brands.md. Commit 74c167cb. Deferred: Redis-down delete test (MEDIUM), cache race (LOW), timeout env var (LOW).
+- Round 2: spec APPROVE, code APPROVE (one LOW: mock restore outside finally, fixed in the next commit, `test(api)`).
+
+## Phase 15 — Agent context
+- CLAUDE.local.md's managed block already points at specs/039-brand-catalogue/plan.md (set at phase 5); no tracked file changed, no commit. CLAUDE.local.md stays uncommitted.
+
+## Phase 16 — Retrospective evidence
+- `retro-evidence.mjs --since ec74ab06 --jev` and `instincts.mjs triggered --since ec74ab06` run; outputs in the Final Report. Jev lane unavailable, so no suggested verdict.
+
+## Phase 17 — Archive (steps 1–3)
+- `capabilities.mjs merge --apply`: catalogue +12, garage-brands +5; spec status `Archived (2026-10-07)`. /speckit-retro not run (phase 16 forbids self-grading). Steps 4–5 run in the tail after the merge.
