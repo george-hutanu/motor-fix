@@ -42,7 +42,7 @@ Without `RUN`, the flows come before the run, so read the change in one call:
 
 ```bash
 gh pr view <PR> --json number,title,body,headRefName,headRefOid,baseRefName,url,files
-git fetch -q origin <headRefName> && for f in spec design tasks; do git show <headRefOid>:specs/<headRefName>/$f.md; done
+node .claude/scripts/specs-repo.mjs ensure >/dev/null; for f in spec design tasks; do cat specs/<headRefName>/$f.md; done   # specs/: the private motor-fix-specs clone, on trunk
 ```
 
 From the spec's acceptance scenarios, `design.md` and the changed files, list
@@ -202,7 +202,7 @@ packet's "Review diff" says it is unavailable, run instead:
 ```bash
 git fetch -q origin <base> <headRefName>
 git diff origin/<base>...<headRefOid> -- . ':!specs' ':!.specify/capabilities' > <out>/review.diff
-git show <headRefOid>:specs/<headRefName>/tasks.md >> <out>/review.diff
+cat specs/<headRefName>/tasks.md >> <out>/review.diff   # after specs-repo.mjs ensure
 ```
 
 Review that diff against the requirements (every FR implemented and tested,

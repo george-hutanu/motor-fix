@@ -81,6 +81,8 @@ export type { PushSubscriptionsControllerRemove$Params as PushSubscriptionsContr
 export { pushSubscriptionsControllerRemove as pushSubscriptionsControllerRemove } from './fn/notifications/push-subscriptions-controller-remove';
 export type { BrandsControllerSearch$Params as BrandsControllerSearch$Params } from './fn/brands/brands-controller-search';
 export { brandsControllerSearch as brandsControllerSearch } from './fn/brands/brands-controller-search';
+export type { GarageSearchControllerForBrand$Params as GarageSearchControllerForBrand$Params } from './fn/search/garage-search-controller-for-brand';
+export { garageSearchControllerForBrand as garageSearchControllerForBrand } from './fn/search/garage-search-controller-for-brand';
 export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';
 export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
 export type { GarageInvitesControllerSend$Params as GarageInvitesControllerSend$Params } from './fn/garages/garage-invites-controller-send';

@@ -56,24 +56,31 @@ describe('the hand-off', () => {
   });
 });
 
-describe('the finish log rides in the story PR', () => {
-  it('commits the log before ready and comments it on the PR after the merge', () => {
+// the feature folder lives in the private motor-fix-specs repo, so each
+// record is pushed there through specs-repo.mjs instead of riding on the branch.
+describe('the feature records go to the specs repo', () => {
+  const viaSpecsRepo = /specs-repo\.mjs commit/;
+
+  it('pushes the log through the specs repo and comments it on the PR after the merge', () => {
     const step = section(read('.claude/skills/speckit-notion-sync/SKILL.md'), '## 3. Record it');
+    assert.match(step, viaSpecsRepo);
     assert.match(step, /gh pr comment/);
-    assert.match(step, /Before the merge/);
     assert.match(step, /After the merge/);
   });
 
-  it('archives on the branch and checks the PR comments after the merge', () => {
+  it('archives before ready and checks the PR comments after the merge', () => {
     const phase = section(read('.claude/skills/speckit-archive/SKILL.md'), '## Phase 4');
-    assert.match(phase, /before its PR goes ready/);
+    assert.match(phase, /before the feature's PR goes ready/);
+    assert.match(phase, viaSpecsRepo);
     assert.match(phase, /gh pr view <n> --json comments/);
     assert.match(phase, /notion-ready\.mjs check -/);
   });
 
-  it('commits a retrospective on the open PR, and only a failing QA lap report', () => {
-    assert.match(read('.claude/skills/speckit-retro/SKILL.md'), /rides in that PR/);
-    assert.match(section(read('.claude/skills/speckit-pr-test/SKILL.md'), '## Evidence'), /passing lap's is not\s+committed/);
+  it('commits a retrospective and every QA lap report to the specs repo, never the branch', () => {
+    assert.match(read('.claude/skills/speckit-retro/SKILL.md'), viaSpecsRepo);
+    const evidence = section(read('.claude/skills/speckit-pr-test/SKILL.md'), '## Evidence');
+    assert.match(evidence, viaSpecsRepo);
+    assert.match(evidence, /no new head/);
   });
 });
 

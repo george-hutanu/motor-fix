@@ -96,7 +96,7 @@
     "lint": "biome check && npm run lint:harness",
     "lint:harness": "find .claude/hooks .claude/scripts .claude/skills -type f \\( -name '*.js' -o -name '*.mjs' \\) -print0 | xargs -0 -n1 node --check",
     "postinstall": "prisma generate --config libs/domain/prisma.config.ts",
-    "prepare": "husky && sh .husky/identity.sh apply",
+    "prepare": "husky && sh .husky/identity.sh apply && node .claude/scripts/specs-repo.mjs ensure --soft",
     "test": "TZ=UTC nx run-many -t test",
     "test:harness": "vitest run --config .claude/vitest.config.ts",
     "test:integration": "JEST_SUITE=integration TZ=UTC nx run-many -t test --passWithNoTests",

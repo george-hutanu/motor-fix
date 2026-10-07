@@ -1269,6 +1269,54 @@
         ]
       }
     },
+    "/api/v1/search/garages": {
+      "get": {
+        "operationId": "GarageSearchController_forBrand",
+        "parameters": [
+          {
+            "name": "brandId",
+            "required": true,
+            "in": "query",
+            "description": "The brand, by its catalogue id",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "The nextCursor of the previous page; opaque",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageSearchPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: brandId missing or not a uuid; invalid_cursor: not a page of this search"
+          },
+          "404": {
+            "description": "not_found: no brand with that id"
+          }
+        },
+        "tags": [
+          "search"
+        ]
+      }
+    },
     "/api/v1/admin/overview": {
       "get": {
         "operationId": "AdminOverviewController_overview",
@@ -3161,6 +3209,84 @@
           "items",
           "nextCursor",
           "total"
+        ]
+      },
+      "ListedGarageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Service Auto Nord"
+          },
+          "slug": {
+            "type": "string",
+            "example": "service-auto-nord"
+          },
+          "stance": {
+            "type": "string",
+            "description": "The garage's answer for the brand; unstated when it has not marked it",
+            "enum": [
+              "works_on",
+              "does_not_take",
+              "unstated"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "stance"
+        ]
+      },
+      "BrandCountsDto": {
+        "type": "object",
+        "properties": {
+          "worksOn": {
+            "type": "integer",
+            "description": "Approved garages that work on the brand, over everything found"
+          },
+          "doesNotTake": {
+            "type": "integer",
+            "description": "Approved garages that refuse the brand or have not marked it, over everything found"
+          }
+        },
+        "required": [
+          "worksOn",
+          "doesNotTake"
+        ]
+      },
+      "GarageSearchPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Garages that work on the brand first, then the rest; inside a group by name, then id; 20 at most",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ListedGarageDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "total": {
+            "type": "integer",
+            "description": "Every approved garage: worksOn + doesNotTake"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/BrandCountsDto"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "total",
+          "counts"
         ]
       },
       "AdminOverviewDto": {
