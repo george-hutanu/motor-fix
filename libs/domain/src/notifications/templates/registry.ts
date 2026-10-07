@@ -1,6 +1,7 @@
 import { EMAIL_CHECK, PASSWORD_CHANGED, PASSWORD_RESET } from './account-email';
 import { DUE_ITP } from './due-itp';
 import { GENERIC, GENERIC_GROUPED } from './generic';
+import { LISTING_CONTINUE_LINK, LISTING_REMINDER } from './listing';
 import { NEWS } from './news';
 import { PUSH_TEST } from './push-test';
 import { QUOTE_RECEIVED_GROUPED } from './quote-received';
@@ -22,6 +23,8 @@ export const TEMPLATES: Registry = {
   DUE_ITP,
   GENERIC,
   'GENERIC.grouped': GENERIC_GROUPED,
+  LISTING_CONTINUE_LINK,
+  LISTING_REMINDER,
   NEWS,
   PUSH_TEST,
   'QUOTE_RECEIVED.grouped': QUOTE_RECEIVED_GROUPED,

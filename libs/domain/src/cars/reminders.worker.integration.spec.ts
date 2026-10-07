@@ -88,6 +88,33 @@ describe('the reminders schedule at start-up', () => {
     expect(await queue.getJob('daily-2026-11-11')).toBeDefined();
   });
 
+  it('runs every daily task after the reminders, in order, at the time it runs', async () => {
+    const order: string[] = [];
+    run.mockImplementationOnce(async () => {
+      order.push('reminders');
+      return 0;
+    });
+    const task = (name: string) => ({
+      run: jest.fn(async () => {
+        order.push(name);
+      }),
+    });
+    const first = task('first');
+    const second = task('second');
+    const s = new RemindersScheduler(
+      queue,
+      bucharestDaily(9),
+      { run } as unknown as RemindersService,
+      [first, second],
+    );
+    s.now = () => new Date('2026-11-10T07:00:01Z');
+
+    await s.handle({ data: { day: '2026-11-10' } } as Job);
+
+    expect(order).toEqual(['reminders', 'first', 'second']);
+    expect(first.run).toHaveBeenCalledWith(new Date('2026-11-10T07:00:01Z'));
+  });
+
   it('still queues the next day when the run fails', async () => {
     run.mockRejectedValueOnce(new Error('database down'));
     const s = scheduler('2026-11-10T07:00:01Z');

@@ -95,6 +95,22 @@ describe('search engine rules', () => {
 
       expect(answer.headers.get('x-robots-tag')).toBeNull();
     });
+
+    it.each(['ro', 'en'])(
+      'keeps the draft key in the %s listing address out of any referrer',
+      async (lang) => {
+        const answer = await fetch(`${base}/${lang}/list-your-garage?draft=k1`);
+
+        expect(answer.headers.get('referrer-policy')).toBe('no-referrer');
+        expect(await answer.text()).toBe('page');
+      },
+    );
+
+    it('leaves the referrer of the other pages alone', async () => {
+      const answer = await fetch(`${base}/ro/`);
+
+      expect(answer.headers.get('referrer-policy')).toBeNull();
+    });
   });
 
   describe('without PUBLIC_WEB_URL', () => {
