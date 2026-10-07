@@ -232,7 +232,8 @@
       "discard": "Discard",
       "keep": "Keep editing",
       "question": "Discard your changes?"
-    }
+    },
+    "retry": "Try again"
   },
   "push": {
     "blocked": "Notifications are blocked in the browser. Open the site settings, allow notifications for MotorFix and reload the page.",

@@ -333,11 +333,12 @@ describe('phone and plate values', () => {
       garageId,
       newValue: {
         car: { model: 'Logan', plate: 'CJ 01 XYZ' },
+        groups: [[{ phone: '1' }, [{ deep: { plate: 'B 2' } }]], 'x'],
         name: 'Andrei',
         phone: '0733 333 333',
         visits: [{ phone: '0744 444 444' }],
       },
-      oldValue: undefined,
+      oldValue: [[[{ phone: '2' }]]],
       subjectType: 'quote_request',
     });
   }
@@ -356,10 +357,12 @@ describe('phone and plate values', () => {
       expect(plate).toMatchObject({ newValue: '•••', oldValue: null });
       expect(whole?.newValue).toEqual({
         car: { model: 'Logan', plate: '•••' },
+        groups: [[{ phone: '•••' }, [{ deep: { plate: '•••' } }]], 'x'],
         name: 'Andrei',
         phone: '•••',
         visits: [{ phone: '•••' }],
       });
+      expect(whole?.oldValue).toEqual([[[{ phone: '•••' }]]]);
     },
   );
 
@@ -652,6 +655,14 @@ describe('paging', () => {
     );
     await rejects400(
       history.list(actor('garage', g.nord), { cursor: randomUUID() }),
+      'invalid_cursor',
+    );
+    await rejects400(
+      history.list(actor('garage', g.nord), {
+        area: 'quotes',
+        cursor: g.platform.id,
+        garageId: g.nord,
+      }),
       'invalid_cursor',
     );
   });

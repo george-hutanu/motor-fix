@@ -1,4 +1,5 @@
 import type { AppEnv } from '@motor-fix/contracts';
+import { publicWebUrl } from '@motor-fix/contracts/env';
 
 export interface EmailConfig {
   sending: boolean;
@@ -28,11 +29,17 @@ function sender(value = '', sending = false): EmailConfig['from'] {
   return from;
 }
 
-// A value that is not a URL would put a broken link in every e-mail;
-// without one, the messages that need it fail instead.
-function webUrl(value = ''): string | undefined {
-  if (!URL.canParse(value)) return undefined;
-  return value.replace(/\/+$/, '');
+// Read as the web server reads it. A value that is not a URL would put a
+// broken link in every e-mail, so it leaves no address and the worker
+// refuses its queue instead of stopping the process.
+function webUrl(
+  source: Record<string, string | undefined>,
+): string | undefined {
+  try {
+    return publicWebUrl(source)?.href.replace(/\/+$/, '');
+  } catch {
+    return undefined;
+  }
 }
 
 export function emailConfig(
@@ -55,7 +62,7 @@ export function emailConfig(
     production: appEnv === 'production',
     sending: switchValue === 'on',
     webhookSecret: source['BREVO_WEBHOOK_SECRET'] || undefined,
-    webUrl: webUrl(source['PUBLIC_WEB_URL']),
+    webUrl: webUrl(source),
   };
 }
 

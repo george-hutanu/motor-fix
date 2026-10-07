@@ -14,6 +14,7 @@ features:
   - 540-email-link-scheme
   - 522-email-sent-once
   - 539-public-web-url-boot
+  - 780-one-public-web-url-parser
 ---
 
 # Capability: Notifications
@@ -413,6 +414,14 @@ _From 539-public-web-url-boot._
 ### 539-FR-002 — With e-mail sending off, the worker's start MUST NOT depend on `PUBLIC_WEB_URL`.
 
 _From 539-public-web-url-boot._
+
+### 780-FR-001 — The e-mail settings MUST take the web app address from the shared `PUBLIC_WEB_URL` reader (539-FR-003): an absolute URL as that reader normalises it, without a trailing slash.
+
+_From 780-one-public-web-url-parser._
+
+### 780-FR-002 — A `PUBLIC_WEB_URL` that is unset, empty or not an absolute URL MUST leave the e-mail settings without an address and MUST NOT stop the api or the worker from loading their configuration.
+
+_From 780-one-public-web-url-parser._
 
 ## Retired
 

@@ -159,6 +159,19 @@ let questions = 0;
     .mf-overlay-actions button {
       white-space: normal;
     }
+    .mf-overlay-error {
+      display: grid;
+      justify-items: start;
+      gap: var(--mf-space-4);
+    }
+    .mf-overlay-error p {
+      margin: 0;
+      color: var(--mf-red-ink);
+      font-size: var(--mf-size-small);
+    }
+    :host.mf-overlay-sheet .mf-overlay-error button {
+      width: 100%;
+    }
     .mf-overlay-skeleton {
       display: grid;
       gap: var(--mf-space-3);
@@ -212,11 +225,23 @@ let questions = 0;
       #body
       class="mf-overlay-body"
       [hidden]="asking()"
-      [attr.aria-busy]="task() ? null : 'true'"
+      [attr.aria-busy]="task() || failed() ? null : 'true'"
       (input)="changed = true"
     >
       @if (task(); as component) {
         <ng-container *ngComponentOutlet="component; injector: taskInjector" />
+      } @else if (failed()) {
+        <div class="mf-overlay-error">
+          <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
+          <button
+            #retryButton
+            type="button"
+            class="spartan-button spartan-button-variant-secondary"
+            (click)="retry()"
+          >
+            {{ 'shell.overlay.retry' | t }}
+          </button>
+        </div>
       } @else {
         <div class="mf-overlay-skeleton" aria-hidden="true">
           <span></span><span></span><span></span>
@@ -260,6 +285,9 @@ export class OverlayPanel {
   private readonly body = viewChild.required<ElementRef<HTMLElement>>('body');
   private readonly keepButton =
     viewChild<ElementRef<HTMLButtonElement>>('keepButton');
+  private readonly retryButton =
+    viewChild<ElementRef<HTMLButtonElement>>('retryButton');
+  private readonly destroyed = inject(DestroyRef);
 
   protected readonly shape = this.context.sheet ? 'sheet' : this.context.shape;
   protected readonly side = this.context.sheet
@@ -270,6 +298,7 @@ export class OverlayPanel {
   protected readonly questionId = `mf-overlay-question-${++questions}`;
   protected readonly asking = signal(false);
   protected readonly task = signal<Type<unknown> | null>(null);
+  protected readonly failed = signal(false);
   protected changed = false;
   private focusedBeforeAsking: HTMLElement | null = null;
   // How far the grip is pulled down, and where the pull started.
@@ -312,20 +341,58 @@ export class OverlayPanel {
     if (reflectComponentType(source as Type<unknown>)) {
       this.task.set(source as Type<unknown>);
     } else {
-      const destroyed = inject(DestroyRef);
-      (source as () => Promise<Type<unknown>>)().then(
-        (component) => {
-          // Closed while it was loading: nothing left to show it in.
-          if (destroyed.destroyed) return;
-          this.task.set(component);
-          this.afterRender(() => this.focusStart());
-        },
-        (error) =>
-          console.error('mf-overlay-panel: the task did not load.', error),
-      );
+      this.load(source as () => Promise<Type<unknown>>);
     }
     this.afterRender(() => this.focusStart());
     if (this.context.sheet) this.followVisibleArea();
+  }
+
+  private load(loader: () => Promise<Type<unknown>>) {
+    Promise.resolve()
+      .then(loader)
+      .then((component) => {
+        if (!reflectComponentType(component)) throw new Error('not a task');
+        return component;
+      })
+      .then(
+        (component) => {
+          // Closed while it was loading: nothing left to show it in.
+          if (this.destroyed.destroyed) return;
+          this.task.set(component);
+          this.afterRender(() => this.focusStart());
+        },
+        () => {
+          if (this.destroyed.destroyed) return;
+          this.failed.set(true);
+          this.afterRender(() => this.focusRetry());
+        },
+      );
+  }
+
+  // The button leaves with the error, so the focus it held goes to the panel.
+  protected retry() {
+    if (!this.failed()) return;
+    if (
+      this.window?.document.activeElement === this.retryButton()?.nativeElement
+    )
+      this.focusStart();
+    this.failed.set(false);
+    this.load(this.context.source as () => Promise<Type<unknown>>);
+  }
+
+  // As a loaded task's first field: on a computer, unless the person has
+  // already moved to the X.
+  private focusRetry() {
+    const active = this.window?.document.activeElement;
+    const button = this.retryButton()?.nativeElement;
+    if (
+      button &&
+      this.window?.matchMedia?.(COMPUTER).matches &&
+      !this.host.nativeElement
+        .querySelector('.mf-overlay-close')
+        ?.contains(active ?? null)
+    )
+      button.focus();
   }
 
   // One pointer drags at a time; a second finger is ignored.
@@ -388,7 +455,7 @@ export class OverlayPanel {
     follow();
     visible.addEventListener('resize', resize);
     visible.addEventListener('scroll', follow);
-    inject(DestroyRef).onDestroy(() => {
+    this.destroyed.onDestroy(() => {
       visible.removeEventListener('resize', resize);
       visible.removeEventListener('scroll', follow);
     });

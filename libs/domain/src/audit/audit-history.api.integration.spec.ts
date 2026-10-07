@@ -1,71 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
-import { CURRENT_CONSENT } from '@motor-fix/contracts';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
-import request from 'supertest';
+import { auditHistoryApp } from './audit-history.testing';
 
-import { AuditService } from './audit.service';
-import { signAccessToken } from '../auth/access-token';
-import { AccountsService } from '../auth/accounts.service';
-import { AuthModule } from '../auth/auth.module';
-import type { Role } from '../auth/capabilities';
-import { createPrisma } from '../auth/prisma';
-import { serialDatabase } from '../auth/serial-db.testing';
-import { noEvents } from '../events/event.port';
-
-const databaseUrl =
-  process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
-const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
-const tokenSecret = 'test-secret';
-const prisma = createPrisma(databaseUrl);
-const accounts = new AccountsService(prisma, new AuditService(), noEvents);
-serialDatabase(databaseUrl);
-
-let app: INestApplication;
-
-beforeAll(async () => {
-  const moduleRef = await Test.createTestingModule({
-    imports: [AuthModule.register({ databaseUrl, redisUrl, tokenSecret })],
-  }).compile();
-  app = moduleRef.createNestApplication();
-  // The API's own pipe options (apps/api bootstrap).
-  app.useGlobalPipes(
-    new ValidationPipe({
-      forbidNonWhitelisted: true,
-      transform: true,
-      whitelist: true,
-    }),
-  );
-  await app.init();
-});
-
-afterAll(async () => {
-  await app.close();
-  await prisma.$disconnect();
-});
-
-beforeEach(async () => {
-  await prisma.$executeRawUnsafe('TRUNCATE account, garage CASCADE');
-});
-
-async function account(name: string, roles: Role[]) {
-  const { id } = await accounts.createAccount({
-    consent: CURRENT_CONSENT,
-    identity: { method: 'google', subject: `${name}-${randomUUID()}` },
-    name,
-    roles,
-  });
-  return id;
-}
-
-const bearer = (accountId: string, role: Role) =>
-  `Bearer ${signAccessToken({ accountId, role }, tokenSecret)}`;
-
-const get = (query: Record<string, string> = {}, auth?: string) => {
-  const call = request(app.getHttpServer()).get('/audit-history').query(query);
-  return auth ? call.set('Authorization', auth) : call;
-};
+const { account, bearer, get, http, prisma } = auditHistoryApp();
 
 // Service Auto Nord with an owner, a receptionist and a mechanic, and a second
 // garage with its owner; one price change in each garage.
@@ -249,13 +186,12 @@ describe('GET /audit-history', () => {
 
   it('offers no way to change an entry', async () => {
     const w = await world();
-    const http = request(app.getHttpServer());
     const entry = `/audit-history/${w.nordPrice.id}`;
 
     for (const call of [
-      () => http.post('/audit-history'),
-      () => http.patch(entry),
-      () => http.delete(entry),
+      () => http().post('/audit-history'),
+      () => http().patch(entry),
+      () => http().delete(entry),
     ]) {
       const res = await call().set('Authorization', bearer(w.ion, 'garage'));
       expect(res.status).toBe(404);
