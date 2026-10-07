@@ -132,7 +132,9 @@ const history = () =>
   prisma.activityLog.findMany({
     orderBy: { at: 'asc' },
     where: {
-      at: { gte: since },
+      // The log is append-only and shared: another spec's future-dated rows
+      // stay in it, so only what was written up to now is this test's.
+      at: { gte: since, lte: new Date() },
       subjectType: { in: ['garage', 'garage_brand', 'garage_brand_job'] },
     },
   });
