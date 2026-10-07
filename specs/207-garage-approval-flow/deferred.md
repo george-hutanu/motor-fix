@@ -1,0 +1,5 @@
+# Deferred findings: 207-garage-approval-flow
+
+- [ ] `libs/domain/src/garages/public-garages.scope.spec.ts` — **medium** — the scope test follows garage reads only from `@Public()` controller handlers (`if (!path.endsWith('.controller.ts')) continue;`); signed-in reads that FR-005 also names (request routing, the assistant's tools) go unchecked; extend it to every service that reads `garage` for a non-staff actor when those reads land (pr-tester lap 2 #2, 2026-10-07)
+- [ ] `libs/domain/src/index.ts:15` — **low** — `publicGarages`, `VerificationService`, `Decision` and `VerificationActor` are exported but nothing outside the lib imports them yet (Principle I); drop the exports or let the back-office story that first calls them keep them (pr-tester lap 2 #3, 2026-10-07)
+- [ ] `libs/domain/src/garages/verification.service.ts:159` — **low** — approving a reopened file sets `reasonCode`/`reasonNote` to null, so the file row no longer shows the reason of its last negative decision; the history stays in the audit events, but FR-001's reviewer view may want the last reason kept (pr-tester lap 2 #4, 2026-10-07)
