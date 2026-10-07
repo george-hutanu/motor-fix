@@ -376,8 +376,25 @@ describe('sending the link again', () => {
       body({ email: 'next@example.test' }),
     );
 
-    // The new address revoked the earlier links, and with them the count.
-    expect(saved.linkSent).toBe(true);
+    expect(saved.linkSent).toBe(false);
+    expect(saved.token).toEqual(expect.any(String));
+  });
+
+  it('keeps counting the links of the hour across changes of address', async () => {
+    const { id, token } = await service.create(body());
+    let key = token;
+    const sent: (boolean | undefined)[] = [];
+    for (let i = 0; i < 6; i++) {
+      const saved = await service.save(
+        id,
+        key,
+        body({ email: `next${i}@example.test` }),
+      );
+      sent.push(saved.linkSent);
+      key = saved.token ?? key;
+    }
+
+    expect(sent).toEqual([true, true, true, true, false, false]);
   });
 
   it('counts only the links of the past hour, not the reminder or the browser key', async () => {

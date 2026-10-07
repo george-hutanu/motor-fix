@@ -164,7 +164,23 @@ export class ListingDraftsService {
     const at = this.now();
     const next = await this.prisma.$transaction(async (tx) => {
       if (moved) {
-        await tx.listingDraftToken.deleteMany({ where: { draftId: id } });
+        // The hour's links stay counted, under hashes no key matches, so a
+        // new address never buys more e-mails.
+        const counted = {
+          draftId: id,
+          kind: 'link' as const,
+          sentAt: { gt: new Date(at.getTime() - HOUR_MS) },
+        };
+        await tx.listingDraftToken.deleteMany({
+          where: { draftId: id, NOT: counted },
+        });
+        const links = await tx.listingDraftToken.findMany({ where: counted });
+        for (const link of links) {
+          await tx.listingDraftToken.update({
+            data: { hash: newToken().hash },
+            where: { hash: link.hash },
+          });
+        }
         await tx.listingDraftToken.create({
           data: {
             draftId: id,
