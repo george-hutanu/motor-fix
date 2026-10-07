@@ -27,6 +27,7 @@ const audit = () => {
     encoding: 'utf8',
     env: { ...process.env, CLAUDE_PROJECT_DIR: repo },
   });
+  assert.equal(r.status, 0, r.stderr);
   return r.stdout.split('\n').filter((l) => l.includes('[import-extension]'));
 };
 
@@ -58,25 +59,29 @@ describe('importStyle — nearest tsconfig decides', () => {
   });
 
   it('judges nothing without a tsconfig', () => {
-    rmSync(join(repo, 'tsconfig.base.json'));
     assert.equal(importStyle(repo, 'scripts/a.ts'), null);
+  });
+
+  it('judges nothing when the tsconfig does not parse', () => {
+    write('tools/z/tsconfig.json', '{ "compilerOptions": { "module": "nodenext" ');
+    assert.equal(importStyle(repo, 'tools/z/a.ts'), null);
   });
 });
 
 describe('diff-audit import-extension', () => {
-  it('passes extensionless relative imports in a bundler lib (FR-001, FR-002)', () => {
+  it('passes extensionless relative imports in a bundler lib', () => {
     write('libs/domain/src/a.ts', "import { b } from './b';\nexport const a = b;\n");
     assert.deepEqual(audit(), []);
   });
 
-  it('flags .js in a bundler lib (FR-001)', () => {
+  it('flags .js in a bundler lib', () => {
     write('libs/domain/src/a.ts', "import { b } from './b.js';\nexport const a = b;\n");
     const out = audit();
     assert.equal(out.length, 1);
     assert.match(out[0], /must drop \.js under bundler resolution/);
   });
 
-  it('requires .js in a nodenext project and passes it when present (FR-001, FR-002)', () => {
+  it('requires .js in a nodenext project and passes it when present', () => {
     write('apps/web-e2e/src/a.spec.ts', "import { b } from './b';\nimport { c } from './c.js';\n");
     const out = audit();
     assert.equal(out.length, 1);

@@ -8,7 +8,7 @@ import { dirname, join, resolve } from "node:path";
 const NODE = /^node(next|16)$/i;
 
 /** tsconfig is JSONC: drop comments outside strings, then trailing commas. */
-export function parseJsonc(text) {
+function parseJsonc(text) {
   let out = "";
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
@@ -48,7 +48,7 @@ function compilerOptions(file, seen = new Set()) {
 }
 
 /** The nearest tsconfig.json to a repo-relative file, or null at the repo root without one. */
-export function nearestTsconfig(repo, file) {
+function nearestTsconfig(repo, file) {
   const root = resolve(repo);
   for (let dir = dirname(resolve(root, file)); ; dir = dirname(dir)) {
     const candidate = join(dir, "tsconfig.json");

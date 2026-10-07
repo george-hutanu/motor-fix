@@ -99,8 +99,7 @@ for (const file of sources) {
 
 // 2. Relative import extensions. nodenext projects need the literal `.js`;
 //    bundler projects must not have it. The file's own tsconfig decides
-//    (lib/tsconfig.mjs), never its path: here the base resolves `bundler` and
-//    only apps/web-e2e is nodenext.
+//    (lib/tsconfig.mjs), never its path.
 for (const file of changed.filter((f) => /\.tsx?$/.test(f))) {
   const style = importStyle(repo, file);
   const wantsJs = style === "nodenext";
