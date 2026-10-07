@@ -21,7 +21,8 @@ export type LiveSubject =
     }
   // The garages' staff only: an invite, a mechanic row.
   | { type: 'garage'; garageIds: readonly string[] }
-  | { type: 'platform' };
+  // A rule only the admins act on stays off the system channel.
+  | { type: 'platform'; adminOnly?: boolean };
 
 const account = (id: string) => `account:${id}`;
 const garage = (id: string) => `garage:${id}`;
@@ -74,6 +75,6 @@ export function audienceOf(subject: LiveSubject): string[] {
           : []),
       ];
     case 'platform':
-      return ['admin', 'system'];
+      return subject.adminOnly ? ['admin'] : ['admin', 'system'];
   }
 }
