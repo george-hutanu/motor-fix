@@ -68,3 +68,17 @@ Start commit: 664610a3 (worktree .worktrees/207-garage-approval-flow, branch 207
 
 ## 11. Converge
 - Every task [X]; plan's file list all present; nothing appended.
+
+## 12. Harden
+- test-adversary: 4 specs; 2 defects found and fixed (non-uuid file id gave a raw Prisma error, now 404; a `%00` slug gave 500, now 404). 63d67bb2.
+- Mutation: CI only (nightly), not run locally.
+
+## 13. Review
+- Lap 1: code-reviewer HIGH (approving a reopened file of a suspended garage un-suspended it), spec-reviewer HIGH (two racing opens: the loser got 409). Fixed with tests first, plus re-approval audit of approved_at (SC-003), blank reason 400, `.env.example` line, 'someone' fallback. 1e8f6829.
+- Re-review: both APPROVE; code-reviewer MEDIUM (try wrapped announce) fixed in the next commit. Not taken: barrel export of publicGarages and test-only contract helpers (FR-005/006/007 ask for them; consumers arrive with later stories).
+
+## 14-17. Retro, archive
+- No retrospective written (level 2, one review lap). Spec Delta merged into `.specify/capabilities/garage-verification.md` (+11); spec status Archived; trace 11/11 tagged. Pre-commit `nx affected` typecheck+test green across 10 projects.
+
+## Final report
+- PR #188 ready, Notion QA; QA run dispatched at hand-off (see handoff.md). Open decision for the owner: a negative decision on a reopened file leaves an approved garage public (spec Assumptions).
