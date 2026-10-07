@@ -85,8 +85,8 @@ describe('open', () => {
     assert.match(calls[3], new RegExp(`^gh pr list --head ${BRANCH} --state open`));
     assert.equal(calls[4], 'gh label create scope: harness --force');
     assert.match(calls[5], /^gh pr create --draft --base main --head 696-lifecycle-script --title chore\(harness\): ST-696 lifecycle steps as one script call each --body-file \S+ --label planning --label tooling --label scope: harness$/);
-    assert.equal(calls[6], 'node .claude/scripts/notion-sync.mjs start --pr 141');
-    assert.equal(calls[7], 'node .claude/scripts/notion-sync.mjs pr 141');
+    assert.equal(calls[6], 'node .claude/scripts/notion-sync.mjs start --pr 141 --story ST-696');
+    assert.equal(calls[7], 'node .claude/scripts/notion-sync.mjs pr 141 --story ST-696');
     assert.deepEqual(result.review, ['ST-30']);
   });
 
@@ -119,7 +119,7 @@ describe('open', () => {
     assert.ok(!h.calls.some((c) => c.startsWith('git commit')));
     assert.ok(!h.calls.some((c) => c.startsWith('gh pr create')));
     assert.ok(h.calls.includes(`git push -u origin ${BRANCH}`));
-    assert.ok(h.calls.includes('node .claude/scripts/notion-sync.mjs pr 141'));
+    assert.ok(h.calls.includes('node .claude/scripts/notion-sync.mjs pr 141 --story ST-696'));
   });
 
   it('stops at Notion exit 3 and lists the connector events left and the rerun', () => {
@@ -130,7 +130,7 @@ describe('open', () => {
     assert.equal(result.ok, false);
     assert.deepEqual(result.left, ['speckit-notion-sync start', 'speckit-notion-sync pr 141']);
     assert.equal(result.then, `node .claude/scripts/lifecycle.mjs open --title "${TITLE}" --notion-done`);
-    assert.equal(h.calls.at(-1), 'node .claude/scripts/notion-sync.mjs start --pr 141');
+    assert.equal(h.calls.at(-1), 'node .claude/scripts/notion-sync.mjs start --pr 141 --story ST-696');
   });
 
   it('treats a missing notion-sync.mjs like no token', () => {
@@ -147,6 +147,38 @@ describe('open', () => {
     const result = step(['open', '--title', TITLE, '--notion-done'], h.io);
     assert.equal(result.ok, true);
     assert.ok(!h.calls.some((c) => c.includes('notion-sync')));
+  });
+
+  it('names the story from the title on every Notion event', () => {
+    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }]] });
+    step(['open', '--title', TITLE], h.io);
+    const notion = h.calls.filter((c) => c.includes('notion-sync.mjs'));
+    assert.deepEqual(notion, [
+      'node .claude/scripts/notion-sync.mjs start --pr 141 --story ST-696',
+      'node .claude/scripts/notion-sync.mjs pr 141 --story ST-696',
+    ]);
+  });
+
+  it("points a feature.json left on the last feature at this branch's spec folder before anything runs", () => {
+    mkdirSync(join(repo, 'specs', '685-news-relay'), { recursive: true });
+    writeFileSync(join(repo, 'specs', '685-news-relay', 'spec.md'), '# Spec\n');
+    writeFileSync(join(repo, '.specify', 'feature.json'), JSON.stringify({ level: 2, feature_directory: 'specs/685-news-relay' }));
+    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }]] });
+    const result = step(['open', '--title', TITLE], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(JSON.parse(readFileSync(join(repo, '.specify', 'feature.json'), 'utf8')).feature_directory, `specs/${FEATURE}`);
+    assert.equal(result.did[0], `feature.json → specs/${FEATURE}`);
+    assert.ok(h.calls.includes('node .claude/scripts/notion-sync.mjs start --pr 141 --story ST-696'), h.calls.join('\n'));
+  });
+
+  it('stops before any push when the branch has no spec folder of its own', () => {
+    const h = harness({ branch: '700-no-spec' });
+    const result = step(['open', '--title', 'chore(harness): ST-700 something'], h.io);
+    assert.equal(result.ok, false);
+    assert.equal(result.stopped, 'feature');
+    assert.match(result.fix, /specs\/696-lifecycle-script/);
+    assert.match(result.fix, /specs\/700-no-spec/);
+    assert.ok(!h.calls.some((c) => c.startsWith('git push') || c.startsWith('gh pr')), h.calls.join('\n'));
   });
 
   it('stops at a failed push and runs nothing after it', () => {
@@ -185,7 +217,7 @@ describe('ready', () => {
       `node scripts/pr-body-check.ts --body-file ${body} --title ${TITLE}`,
       `gh pr edit 141 --body-file ${body}`,
       'gh pr ready 141',
-      'node .claude/scripts/notion-sync.mjs qa --pr 141',
+      'node .claude/scripts/notion-sync.mjs qa --pr 141 --story ST-696',
       `node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 qa -- ${FEATURE}/notion-sync.md`,
     ]);
     const note = readFileSync(join(featureDir, 'handoff.md'), 'utf8');
@@ -225,7 +257,7 @@ describe('ready', () => {
     writeFileSync(join(featureDir, 'deferred.md'), '# Deferred\n\n- MEDIUM: tidy `x.mjs` (code-reviewer)\n');
     const h = harness({ answers: [staged([1, 1])] });
     step(['ready', '--body-file', body], h.io);
-    const debt = h.calls.indexOf('node .claude/scripts/notion-sync.mjs debt --pr 141');
+    const debt = h.calls.indexOf('node .claude/scripts/notion-sync.mjs debt --pr 141 --story ST-696');
     assert.ok(debt > -1, h.calls.join('\n'));
     assert.ok(debt < h.calls.indexOf(`${'node .claude/scripts/specs-repo.mjs commit'} chore(specs): ST-696 feature records -- ${FEATURE}`));
   });
@@ -253,7 +285,7 @@ describe('ready', () => {
     assert.equal(result.ok, false);
     assert.deepEqual(result.left, ['speckit-notion-sync qa']);
     assert.equal(result.then, `node .claude/scripts/lifecycle.mjs ready --body-file ${body} --notion-done`);
-    assert.equal(h.calls.at(-1), 'node .claude/scripts/notion-sync.mjs qa --pr 141');
+    assert.equal(h.calls.at(-1), 'node .claude/scripts/notion-sync.mjs qa --pr 141 --story ST-696');
     assert.equal(existsSync(join(featureDir, 'handoff.md')), false);
   });
 
@@ -416,7 +448,7 @@ describe('merge', () => {
     assert.equal(calls[0], 'gh pr view --json number,state,url');
     assert.equal(calls[1], 'gh pr merge 141 --merge');
     assert.equal(calls[2], 'gh pr view 141 --json mergeCommit --jq .mergeCommit.oid');
-    assert.equal(calls[3], `node .claude/scripts/notion-sync.mjs finish --pr 141 --body-file ${join(featureDir, 'finish-comment.md')}`);
+    assert.equal(calls[3], `node .claude/scripts/notion-sync.mjs finish --pr 141 --body-file ${join(featureDir, 'finish-comment.md')} --story ST-696`);
     assert.equal(calls[4], `git -C specs diff -U0 -- ${FEATURE}/notion-sync.md`);
     assert.equal(calls[5], `node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/notion-sync.md`);
     assert.match(calls[6], /^gh pr comment 141 --body-file \S+$/);
@@ -432,7 +464,7 @@ describe('merge', () => {
   it('passes --no-comment when there is no finish-comment.md', () => {
     const h = harness({ answers: [diff] });
     step(['merge'], h.io);
-    assert.ok(h.calls.includes('node .claude/scripts/notion-sync.mjs finish --pr 141 --no-comment'));
+    assert.ok(h.calls.includes('node .claude/scripts/notion-sync.mjs finish --pr 141 --no-comment --story ST-696'));
   });
 
   it('refuses exactly when the merge gate does, prints its refusal, and runs nothing after it', () => {

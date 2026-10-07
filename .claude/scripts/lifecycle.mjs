@@ -169,6 +169,20 @@ function context(io, flags, did) {
     throw new Stop(`on ${ctx.branch}`, "run the step on the feature branch: work reaches main only through a merged PR");
   ctx.feature = activeFeature(io.repo);
   if (!ctx.feature) throw new Stop("no feature", "no active feature: .specify/feature.json or specs/<branch>/spec.md");
+  // A feature.json still on the last feature would send this branch's Notion
+  // events and log lines to that feature's story: point it at the branch's own.
+  const own = /^(\d{3})-/.exec(ctx.branch)?.[1];
+  if (own && own !== ctx.feature.num) {
+    const dir = `specs/${ctx.branch}`;
+    if (!existsSync(join(io.repo, dir, "spec.md")))
+      throw new Stop("feature", `.specify/feature.json points at ${relative(io.repo, ctx.feature.dir)}, and this branch has no ${dir}/spec.md: write it, or set feature_directory to this branch's feature`);
+    const file = join(io.repo, ".specify", "feature.json");
+    const state = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : {};
+    writeFileSync(file, `${JSON.stringify({ ...state, feature_directory: dir })}\n`);
+    did.push(`feature.json → ${dir}`);
+    ctx.feature = activeFeature(io.repo);
+    if (ctx.feature?.num !== own) throw new Stop("feature", `SPECIFY_FEATURE_DIRECTORY overrides .specify/feature.json: unset it or point it at ${dir}`);
+  }
   ctx.rel = relative(io.repo, ctx.feature.dir);
   // The feature folder as the specs repository names it.
   ctx.specsRel = relative(join(io.repo, "specs"), ctx.feature.dir);
@@ -187,7 +201,7 @@ function context(io, flags, did) {
       const label = ([event, arg]) => `speckit-notion-sync ${event === "pr" ? `pr ${arg}` : event}`;
       const left = () => ({ left: [...events.slice(i), ...later].map(label), then: rerun });
       if (!existsSync(join(io.repo, NOTION))) throw new Stop("notion-sync", "notion-sync.mjs is not on this branch: run the events through the connector, then the rerun", left());
-      const r = ctx.node([NOTION, ...args], [0, 1, 3, 64]);
+      const r = ctx.node([NOTION, ...args, "--story", ctx.story], [0, 1, 3, 64]);
       if (r.code === 3) throw new Stop(`notion-sync ${args[0]}`, "no NOTION_TOKEN: run the events through the connector (speckit-notion-sync §4), then the rerun", left());
       if (r.code !== 0) throw new Stop(`notion-sync ${args[0]}`, (r.stderr || r.stdout).trim().slice(-400));
       did.push(`notion ${args[0]}`);
