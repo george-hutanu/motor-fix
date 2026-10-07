@@ -9,7 +9,7 @@ import type { GarageBrandAnswerDto } from '@motor-fix/data-access';
 import { AsWritten, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Lamp, type LampState } from '@motor-fix/ui-cockpit';
 
-export type Verdict = 'works_on' | 'refused';
+type Verdict = 'works_on' | 'refused';
 
 // A garage works on a brand only when it said so; a refusal, or no answer at
 // all for that brand, reads as "does not take". Works-on wins a tie.

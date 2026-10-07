@@ -121,6 +121,17 @@ describe('BrandVerdict', () => {
     expect(text(lamp)).toBe('Nu primește Tesla');
   });
 
+  it('shows the green lamp when the brand sits in both lists', async () => {
+    const { host } = await render({
+      answer: answer({ doesNotTake: [BMW], worksOn: [BMW] }),
+      brand: BMW,
+      mode: 'card',
+    });
+    expect(host.querySelector('mf-lamp')?.getAttribute('data-state')).toBe(
+      'green',
+    );
+  });
+
   it('shows no lamp when no brand is chosen, only the lists', async () => {
     const { host } = await render({
       answer: answer({ worksOn: [BMW, AUDI] }),
