@@ -1,4 +1,4 @@
-import { atLocal, localDay, monthStart } from '../bucharest';
+import { addDays, atLocal, localDay, monthStart } from '../bucharest';
 import type { PrismaClient } from '../generated/prisma/client';
 
 const ACTIVE_WINDOW = 30 * 86_400_000;
@@ -58,4 +58,50 @@ export async function writeSnapshot(db: PrismaClient, now: Date) {
     update: figures,
     where: { day },
   });
+}
+
+type Figures = { activeDrivers: number; garagesListed: number };
+
+// A month closes on the next month's first-day row, written at 01:00 from the
+// figures as the month ended; its own last day stands in when that night was
+// missed, and with neither the month has no figures rather than zero.
+export async function readGrowth(db: PrismaClient, now: Date) {
+  const current = monthStart(localDay(now));
+  const [year, month] = current.split('-').map(Number);
+  const starts = [...Array(12).keys()].map((i) =>
+    new Date(Date.UTC(year, month - 12 + i, 1)).toISOString().slice(0, 10),
+  );
+  const closing = starts.slice(1);
+  const rows = await db.platformDaily.findMany({
+    select: { activeDrivers: true, day: true, garagesListed: true },
+    where: {
+      day: {
+        in: closing
+          .flatMap((first) => [first, addDays(first, -1)])
+          .map((day) => new Date(day)),
+      },
+    },
+  });
+  const byDay = new Map<string, Figures>(
+    rows.map(({ day, ...figures }) => [
+      day.toISOString().slice(0, 10),
+      figures,
+    ]),
+  );
+  const live = await countPlatformFigures(db, now);
+  return {
+    months: starts.map((start, i) => {
+      const figures =
+        i === 11
+          ? live
+          : (byDay.get(closing[i]) ?? byDay.get(addDays(closing[i], -1)));
+      return {
+        month: start.slice(0, 7),
+        ...(figures && {
+          activeDrivers: figures.activeDrivers,
+          garagesListed: figures.garagesListed,
+        }),
+      };
+    }),
+  };
 }
