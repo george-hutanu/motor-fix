@@ -776,6 +776,26 @@ describe('the server copy', () => {
     expect(stored()?.dirty).toBe(true);
   });
 
+  it('drops the not-saved note once a later save goes through', async () => {
+    const { harness, page } = await withServerCopy();
+
+    entries(page)[2].click();
+    await answered(
+      harness,
+      await request(),
+      { code: 'internal_error', status: 500 },
+      500,
+    );
+    entries(page)[3].click();
+    await answered(
+      harness,
+      await request(),
+      created({ linkSent: undefined, step: 4 }),
+    );
+
+    expect(note(page)).toBe('');
+  });
+
   it('sends a changed address and takes the new key it answers with', async () => {
     const { harness, page } = await withServerCopy();
 

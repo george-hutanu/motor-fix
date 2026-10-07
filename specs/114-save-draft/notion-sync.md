@@ -11,3 +11,4 @@
 - 2026-10-07 · labels · PR #199 · in development
 - 2026-10-07 · implement · ST-114 · Implementing unchanged
 - 2026-10-07 · labels · PR #199 · in development
+- 2026-10-07 · debt · ST-114 · deferred.md line 2 → https://app.notion.com/p/Tech-debt-ST-114-A-draft-e-mail-s-row-and-its-queue-job-are-two-steps-NotificationsService-sendT-3f2607bff0d2814ea284d8588447b85d

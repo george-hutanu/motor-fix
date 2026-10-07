@@ -30,6 +30,8 @@ const TOKEN = 'x-listing-token';
 // A refused call either ends the draft on this page or leaves a note.
 const VIEW_FOR: Record<number, DraftView> = { 404: 'invalid', 409: 'sent' };
 const NOTE_FOR: Record<number, string> = { 0: 'offline', 413: 'tooLarge' };
+// The notes a save that went through makes untrue.
+const CLEARED_ON_SAVE = new Set(['offline', 'notSaved']);
 
 // The server's rule: trimmed, compared without letter case, 3 to 254 long.
 const normal = (email: string) => email.trim().toLowerCase();
@@ -302,7 +304,7 @@ export class DraftKeeper {
     if (saved.linkSent) this.note.set({ key: 'linkSent' });
     else if (saved.retryAfterSeconds)
       this.note.set(waitNote(saved.retryAfterSeconds));
-    else if (this.note()?.key === 'offline') this.note.set(null);
+    else if (CLEARED_ON_SAVE.has(this.note()?.key ?? '')) this.note.set(null);
   }
 
   private fail(error: unknown) {
