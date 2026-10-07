@@ -4,6 +4,10 @@
 
 Additions to ST-108's page; everything else there stays.
 
+### Response header (FR-021)
+
+The SSR response for `/<lang>/list-your-garage` sends `Referrer-Policy: no-referrer` (set in `apps/web/src/server/search.ts`, beside the `X-Robots-Tag` precedent in `search.ts`, for the route whose query holds `?draft=`), so the token reaches no third party; the page also replaces the URL without the query once the draft is loaded.
+
 ### Step 1's section
 
 - `<label for="listing-email">E-mail</label>` + `<input id="listing-email" type="email" autocomplete="email" hlmInput>`; `aria-describedby` points at the field's error `<p id="listing-email-error">` when shown and at the hint `<p id="listing-email-hint">` otherwise.

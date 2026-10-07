@@ -20,6 +20,12 @@ Body `CreateListingDraftDto`:
 Response: `{ id, token, status: 'open', step, language, email, updatedAt, linkSent: boolean, retryAfterSeconds?: number }`.
 `token` is this browser's key (kept with the browser copy). The link e-mail carries a second, different token. `linkSent: false` with `retryAfterSeconds` when the FR-009 cap was reached (the draft is still created).
 
+**Throttle (FR-021).** No throttler exists in `apps/api`, so the create route counts per source address (`req.ip`, behind the trusted proxy) with a Redis counter (`INCR` + `EXPIRE 3600`, key `listing-drafts:create:<ip>`, `CREATE_PER_HOUR = 10` in `listing-drafts.ts`) on the Redis connection the API already holds. The 11th call in the hour answers **429** `{ "code": "draft_rate_limited", "status": 429, "detail": "...", "retryAfterSeconds": n }` with a `Retry-After` header; nothing is created and no e-mail queued. Redis down fails open (logged), never blocks a visitor.
+
+## Response headers (FR-021)
+
+Every route of this controller (201, 200, 4xx) sends `Cache-Control: no-store`, set once at controller level, so no draft or token is cached by a browser or proxy.
+
 ## `GET /listing-drafts/current` → 200 `ListingDraftDto`
 
 Resolves the draft from the header alone. Response: `{ id, email, data, step, language, status: 'open' | 'submitted', updatedAt }`. A `submitted` draft answers 200 with its status (the page shows "the listing was sent"). 404 as above.

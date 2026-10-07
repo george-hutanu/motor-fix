@@ -78,7 +78,9 @@ libs/domain/src/garages/
 ├── listing-drafts.ts                   (new) DRAFT_MAX_BYTES, LINKS_PER_HOUR, REMIND_AFTER_DAYS, DELETE_AFTER_DAYS, link()
 ├── listing-drafts.service.ts           (new) create, current, save, sendLink; tokens, cap, 404/409/413
 ├── listing-drafts.service.spec.ts      (new)
-├── listing-drafts.controller.ts        (new) @Public() routes, X-Listing-Token header
+├── listing-drafts.controller.ts        (new) @Public() routes, X-Listing-Token header, Cache-Control: no-store (FR-021)
+├── listing-drafts.throttle.ts          (new) Redis per-IP counter, 10 creates/hour, 429 draft_rate_limited (FR-021)
+├── listing-drafts.throttle.spec.ts     (new)
 ├── listing-draft-sweep.ts              (new) DailyTask: remind(now), cleanUp(now)
 └── listing-draft-sweep.integration.spec.ts (new)
 
@@ -101,6 +103,8 @@ apps/api/src/
 apps/api/openapi.json                   # regenerated
 libs/data-access/src/lib/               # regenerated client (ListingDraftsService)
 
+apps/web/src/server/search.ts            # + Referrer-Policy: no-referrer on /<lang>/list-your-garage (FR-021)
+apps/web/src/server/search.spec.ts       # + the header assertion
 apps/web/src/app/public/
 ├── list-your-garage.ts                 # e-mail field, button, notes, link load, states
 ├── list-your-garage.spec.ts            # + the new behaviour
