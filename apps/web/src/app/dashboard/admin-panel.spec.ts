@@ -267,6 +267,27 @@ describe('AdminPanel', () => {
     expect(tip.getAttribute('aria-expanded')).toBe('true');
   });
 
+  it('ties each failed tile’s reason to its button for assistive tech', async () => {
+    answer = async () => {
+      throw new HttpErrorResponse({ status: 503 });
+    };
+    const element = await open();
+
+    const buttons = Array.from(
+      element.querySelectorAll<HTMLButtonElement>('[role="group"] button'),
+    );
+    expect(buttons).toHaveLength(2);
+    const ids = buttons.map((b) => b.getAttribute('aria-describedby'));
+    expect(new Set(ids).size).toBe(2);
+    for (const [i, id] of ids.entries()) {
+      const described = element.querySelector(`#${id}`);
+      expect(described?.getAttribute('role')).toBe('tooltip');
+      expect(described?.closest('[role="group"]')).toBe(
+        buttons[i]?.closest('[role="group"]'),
+      );
+    }
+  });
+
   it('switches labels, lines and grouping to English without a reload', async () => {
     answer = async () => FIGURES;
     const element = await open();

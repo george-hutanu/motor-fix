@@ -110,7 +110,7 @@ const MISSING = '—';
     }
   `,
   template: `
-    @for (tile of tiles(); track tile.label) {
+    @for (tile of tiles(); track tile.label; let i = $index) {
       <div
         role="group"
         [attr.aria-label]="tile.name"
@@ -129,6 +129,7 @@ const MISSING = '—';
                 type="button"
                 [attr.aria-label]="tile.line"
                 [attr.aria-expanded]="tip() === tile.label"
+                [attr.aria-describedby]="'mf-admin-tip-' + i"
                 (click)="tip.set(tile.label)"
                 (focus)="tip.set(tile.label)"
                 (blur)="tip.set(null)"
@@ -140,7 +141,7 @@ const MISSING = '—';
                 </svg>
               </button>
             </span>
-            <span class="tip" role="tooltip" [hidden]="tip() !== tile.label">{{ tile.line }}</span>
+            <span class="tip" role="tooltip" [id]="'mf-admin-tip-' + i" [hidden]="tip() !== tile.label">{{ tile.line }}</span>
           }
           @default {
             <span class="number">{{ tile.number }}</span>
