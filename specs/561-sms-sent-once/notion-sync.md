@@ -12,3 +12,4 @@
 - 2026-10-07 · qa · ST-561 · Implementing → QA
 - 2026-10-07 · qa · timeline · no row for ST-561
 - 2026-10-07 · labels · PR #197 · QA
+- 2026-10-07 · debt · ST-561 · deferred.md line 2 → https://app.notion.com/p/Tech-debt-ST-561-If-the-monthly-SMS-count-takeSms-throws-after-the-being-sent-mark-is-written-3f2607bff0d281c3927ff32ecbb20ebd
