@@ -13,6 +13,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { writeResponseToNodeResponse } from '@angular/ssr/node';
 import express from 'express';
 
 import { mountCompression } from './compress';
@@ -84,7 +85,10 @@ describe('web compression', () => {
       express.static(dir, { index: false, maxAge: '1y', redirect: false }),
     );
     app.get('/en', (_req, res) => {
-      res.type('html').send(page);
+      void writeResponseToNodeResponse(
+        new Response(page, { headers: { 'content-type': 'text/html' } }),
+        res,
+      );
     });
     web = createServer(app);
     base = await listen(web);
