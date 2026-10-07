@@ -58,3 +58,12 @@
 - ST-677 "A zone-less level_at is read as local time in JS and UTC in Python" (with its one comment) — https://app.notion.com/p/3f0607bff0d281fe8d32e51335e46153
 - Epic Foundations (relation only; page not fully read) — https://app.notion.com/p/3ee607bff0d281188cb4c6724bd45707
 - Search "spec-kit harness feature.json level stamp" — result pages listed under Prior Art
+
+## Refresh 2026-10-07
+
+Baseline: Gathered 2026-10-07 (anchor last edited 06:10Z). Re-read ST-775 and its comments only.
+
+- No new evidence on scope. The story's text (Finding, User story, hour limit `([01]\d|2[0-3])` in both regexes) is unchanged; still no day-of-month rule in Notion, so the FR-002 contradiction above stands. — [ST-775] (2026-10-07)
+- Comments: none, resolved and block-level included. No comment moved scope.
+- Property change only: Status moved from Planning to Implementing, PR #184 still linked; page last edited 2026-10-07T06:15Z. — [ST-775] (2026-10-07)
+- Superseded: the Story section's "status Planning" is now stale (Implementing).

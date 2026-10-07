@@ -600,6 +600,17 @@ describe('a level_at only one reader would accept is no waiting level, in both r
     '2026-10-07T00:04+24:00',
     '2026-10-07T00:04+23:60',
     '2026-10-07T00:04Z\n',
+    '2026-10-06T24:00:00+02:00',
+    '2026-10-06T24:30:00.5-05:00',
+    '2026-10-06T25:00Z',
+    '2026-10-06T29:59:59Z',
+    '2026-10-06T30:00Z',
+    '2026-10-06T99:00Z',
+    '2026-10-06T24:00:00.999999Z',
+    '2026-10-06T24:59Z',
+    '2026-10-06T00:04-24:00',
+    '2026-10-06T\u0662\u0664:00Z',
+    '2026-10-06T24\u0660:00Z',
   ];
   for (const stamp of refused) {
     it(`drops the level for ${JSON.stringify(stamp)} in JS`, () => {
@@ -625,6 +636,27 @@ describe('a level_at only one reader would accept is no waiting level, in both r
     });
     pyIt(`keeps the level for ${JSON.stringify(stamp)} in Python`, () => {
       assert.deepEqual(pyPoint(stamp, AFTER_MIDNIGHT), kept);
+    });
+  }
+
+  // Shapes neither reader is asked to accept: only that they agree.
+  const odd = [
+    '2026-10-06T24:00:00z',
+    '2026-10-06T24:00:00,5Z',
+    '2026-10-06 24:00:00Z',
+    ' 2026-10-06T24:00Z',
+    '2026-10-06T4:00Z',
+    '2026-10-06T23:59:59z',
+    '2026-10-07T00:04:30,5Z',
+    '2026-10-07T00:04:30 Z',
+    '2026-10-07 00:04:30Z',
+    '\u0662026-10-07T00:04Z',
+    '2026-10-07T00:04:30.Z',
+    '2026-10-07T00:04:30.1234567890Z',
+  ];
+  for (const stamp of odd) {
+    pyIt(`JS and Python agree on ${JSON.stringify(stamp)}`, () => {
+      assert.deepEqual(pyPoint(stamp, AFTER_MIDNIGHT), jsPoint(stamp, AFTER_MIDNIGHT));
     });
   }
 
