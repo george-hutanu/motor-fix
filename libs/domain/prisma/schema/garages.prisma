@@ -37,8 +37,50 @@ model Garage {
   // rar_activity codes the RAR authorisation covers; the activities check
   // writes them.
   rarActivities           String[]                 @default([]) @map("rar_activities")
+  // WeeklyHours from contracts' garage-hours; {} until the listing is sent.
+  hours                   Json                     @default("{}")
+  closedDays              GarageClosedDay[]
+  facilities              GarageFacility[]
 
   @@map("garage")
+}
+
+// The garage's own closed days; a legal holiday is closed through the
+// calendar alone and never has a row. CHECK in the migration: a note of at
+// most 80 characters.
+model GarageClosedDay {
+  garageId String   @map("garage_id") @db.Uuid
+  day      DateTime @db.Date
+  note     String?
+  garage   Garage   @relation(fields: [garageId], references: [id], onDelete: Cascade)
+
+  @@id([garageId, day])
+  @@map("garage_closed_day")
+}
+
+enum GarageFacilityKind {
+  courtesy_car
+  pickup_dropoff
+  waiting_area
+
+  @@map("garage_facility_kind")
+}
+
+enum GarageFacilityStatus {
+  listed
+
+  @@map("garage_facility_status")
+}
+
+model GarageFacility {
+  garageId  String               @map("garage_id") @db.Uuid
+  facility  GarageFacilityKind
+  status    GarageFacilityStatus @default(listed)
+  createdAt DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  garage    Garage               @relation(fields: [garageId], references: [id], onDelete: Cascade)
+
+  @@id([garageId, facility])
+  @@map("garage_facility")
 }
 
 model GarageMember {

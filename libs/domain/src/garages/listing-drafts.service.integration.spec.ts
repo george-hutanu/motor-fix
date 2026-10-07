@@ -539,3 +539,87 @@ describe('the verification step of a draft', () => {
     expect(await prisma.outboxEvent.count()).toBe(events);
   });
 });
+
+describe('the hours step of a draft', () => {
+  const step5 = (section: unknown) =>
+    body({ data: { steps: { '5': section } }, step: 5 });
+  const hours = {
+    fri: [['08:00', '17:00']],
+    mon: [
+      ['08:00', '12:00'],
+      ['13:00', '17:00'],
+    ],
+    sat: [['09:00', '13:00']],
+    sun: [],
+    thu: [['08:00', '17:00']],
+    tue: [['08:00', '17:00']],
+    wed: [['08:00', '17:00']],
+  };
+
+  it('keeps the hours, the closed days and the facilities and reads them back unchanged', async () => {
+    const created = await service.create(body());
+    const section = {
+      closedDays: [{ day: '2026-12-27', note: 'Inventar' }],
+      facilities: ['waiting_area', 'courtesy_car'],
+      hours,
+    };
+
+    await service.save(created.id, created.token, step5(section));
+
+    const draft = await service.current(tokenOf(sent[0]?.link ?? ''));
+    expect(draft.data).toEqual({ steps: { '5': section } });
+  });
+
+  it.each([
+    [
+      'a time off the quarter-hour grid',
+      { hours: { ...hours, tue: [['08:10', '17:00']] } },
+    ],
+    [
+      'a third interval',
+      {
+        hours: {
+          ...hours,
+          mon: [
+            ['08:00', '10:00'],
+            ['11:00', '12:00'],
+            ['13:00', '17:00'],
+          ],
+        },
+      },
+    ],
+    ['an unknown facility', { facilities: ['car_wash'] }],
+    [
+      'a note of 81 characters',
+      { closedDays: [{ day: '2026-12-27', note: 'x'.repeat(81) }] },
+    ],
+  ])('refuses %s with validation_failed', async (_, section) => {
+    const created = await service.create(body());
+
+    const refused = await refusalOf(
+      service.save(created.id, created.token, step5(section)),
+    );
+
+    expect(refused.status).toBe(400);
+    expect(refused.body).toMatchObject({ code: 'validation_failed' });
+    const row = await prisma.listingDraft.findUniqueOrThrow({
+      where: { id: created.id },
+    });
+    expect(row.data).toEqual(body().data);
+  });
+
+  it.each([
+    ['a section without the hours keys', {}],
+    ["a section holding only other steps' keys", { photos: ['front.jpg'] }],
+    ['a closed day already past', { closedDays: [{ day: '2020-01-01' }] }],
+  ])('accepts %s', async (_, section) => {
+    const created = await service.create(body());
+
+    await service.save(created.id, created.token, step5(section));
+
+    const row = await prisma.listingDraft.findUniqueOrThrow({
+      where: { id: created.id },
+    });
+    expect(row.data).toEqual({ steps: { '5': section } });
+  });
+});

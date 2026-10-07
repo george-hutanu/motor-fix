@@ -15,6 +15,7 @@ export { BRANDS } from './catalogue/brands';
 export { CatalogueModule } from './catalogue/catalogue.module';
 export { EventsModule } from './events/events.module';
 export { OutboxRelayModule } from './events/outbox-relay.module';
+export { writeGarageHours } from './garages/garage-hours';
 export { GaragesModule } from './garages/garages.module';
 export { listingDraftDaily } from './garages/listing-draft-sweep';
 export { publicGarages } from './garages/public-garages';
