@@ -12,9 +12,9 @@ import { BrandsService, PublicHolidaysService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
-import { type BrowserDraft, STORAGE_KEY } from './draft';
 import { ListYourGarage } from './list-your-garage';
-import { SignInDialog } from '../sign-in/sign-in-dialog';
+import { SignInDialog } from '../../sign-in/sign-in-dialog';
+import { type BrowserDraft, STORAGE_KEY } from '../draft';
 
 // jsdom lays nothing out: each heading is placed by hand, the page is tall
 // enough not to sit at its end, and scrolling is recorded, not done.
