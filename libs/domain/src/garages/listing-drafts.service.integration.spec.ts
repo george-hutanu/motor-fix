@@ -242,6 +242,19 @@ describe('saving a draft', () => {
     });
   });
 
+  it('takes two saves at once, keeping one of them whole', async () => {
+    const created = await service.create(body());
+
+    const results = await Promise.allSettled([
+      service.save(created.id, created.token, body({ step: 2 })),
+      service.save(created.id, created.token, body({ step: 4 })),
+    ]);
+
+    expect(results.map((r) => r.status)).toEqual(['fulfilled', 'fulfilled']);
+    const { step } = await service.current(created.token);
+    expect([2, 4]).toContain(step);
+  });
+
   it('refuses a sent draft with draft_submitted but still reads it', async () => {
     const created = await service.create(body());
     await prisma.listingDraft.update({
@@ -321,6 +334,25 @@ describe('sending the link again', () => {
     }
 
     expect(sent).toHaveLength(6);
+  });
+
+  it('leaves the earlier links working until the address changes', async () => {
+    const created = await service.create(body());
+    await service.sendLink(created.id, created.token);
+    const [first, second] = sent.map((s) => tokenOf(s.link));
+
+    await expect(service.current(first ?? '')).resolves.toBeDefined();
+    await expect(service.current(second ?? '')).resolves.toBeDefined();
+
+    await service.save(
+      created.id,
+      created.token,
+      body({ email: 'next@example.test' }),
+    );
+
+    await expect(
+      refusalOf(service.current(first ?? '')),
+    ).resolves.toMatchObject({ status: 404 });
   });
 
   it('answers the time of the send', async () => {

@@ -52,10 +52,10 @@
 
 - [X] T027 [P] [US3] Extend `apps/web/src/app/public/list-your-garage.spec.ts` and `apps/web/src/app/public/list-your-garage.adversary.spec.ts`, red first: `?draft=` is read in the browser only (`afterNextRender`), server copy replaces the browser copy (dirty included), form jumps to the saved step, the query is removed with `replaceUrl`, 404 shows the invalid page and "Începe din nou" clears `draftId`/`token` but keeps the data, `submitted` shows the sent page with the sign-in dialog button, a save answered 404 or 409 shows the matching state, the `loading` status shows before the answer (FR-011, FR-012, FR-013).
 - [X] T028 [P] [US3] Extend `apps/web/src/server/search.spec.ts`, red first: the response for `/ro/list-your-garage` and `/en/list-your-garage` carries `Referrer-Policy: no-referrer`, other paths do not (FR-021).
-- [ ] T029 [P] [US3] Extend `libs/domain/src/garages/listing-drafts.service.spec.ts` (T015) and `apps/api/src/listing-drafts.api.integration.spec.ts` (T017), red first: two saves in turn, the later `updated_at` wins and nothing merges; a `submitted` draft answers reads 200 with its status, saves and link sends 409 `draft_submitted`; older link tokens stay valid until sent or e-mail change; two simultaneous saves both succeed (FR-007, FR-012, FR-013).
+- [X] T029 [P] [US3] Extend `libs/domain/src/garages/listing-drafts.service.spec.ts` (T015) and `apps/api/src/listing-drafts.api.integration.spec.ts` (T017), red first: two saves in turn, the later `updated_at` wins and nothing merges; a `submitted` draft answers reads 200 with its status, saves and link sends 409 `draft_submitted`; older link tokens stay valid until sent or e-mail change; two simultaneous saves both succeed (FR-007, FR-012, FR-013).
 - [X] T030 [US3] Implement the link-open flow, the invalid and sent whole-page states and the `Start again` action in `apps/web/src/app/public/list-your-garage.ts` (FR-011, FR-012, FR-013).
 - [X] T031 [US3] Send `Referrer-Policy: no-referrer` for `/<lang>/list-your-garage` in `apps/web/src/server/search.ts` (`mountSearch`, beside the `X-Robots-Tag` middleware) (FR-021).
-- [ ] T032 [US3] Make T029's cases pass in `libs/domain/src/garages/listing-drafts.service.ts` if any is still red (FR-012, FR-013).
+- [X] T032 [US3] Make T029's cases pass in `libs/domain/src/garages/listing-drafts.service.ts` if any is still red (FR-012, FR-013).
 
 ## Phase 6: User Story 4 - The unfinished draft is remembered, then forgotten (P3)
 
