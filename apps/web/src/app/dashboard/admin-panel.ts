@@ -1,7 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { formatNum, I18n } from '@motor-fix/i18n';
 
-import { AdminGrowth } from './admin-growth';
+import { AdminGrowth } from './admin-growth/admin-growth';
 import { AdminOverview } from './admin-overview';
 
 type Figures = NonNullable<ReturnType<AdminOverview['figures']>>;

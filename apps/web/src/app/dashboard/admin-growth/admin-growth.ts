@@ -9,71 +9,8 @@ const FIGURES = ['activeDrivers', 'garagesListed'] as const;
 @Component({
   imports: [LineChart],
   selector: 'mf-admin-growth',
-  styles: `
-    :host {
-      display: block;
-      grid-column: 1 / -1;
-      min-width: 0;
-    }
-    section {
-      display: grid;
-      gap: var(--mf-space-3);
-    }
-    h2 {
-      margin: 0;
-      font-size: var(--mf-size-label);
-      color: var(--mf-text-secondary);
-    }
-    .charts {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      gap: var(--mf-space-3);
-    }
-    @media (min-width: 768px) {
-      .charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-    .chart {
-      display: grid;
-      gap: var(--mf-space-2);
-      min-width: 0;
-    }
-    .latest {
-      margin: 0;
-      font-family: var(--mf-font-label);
-      font-size: clamp(18px, 5vw, 24px);
-      color: var(--mf-text);
-    }
-    .range {
-      margin: 0;
-      font-size: var(--mf-size-small);
-      color: var(--mf-text-secondary);
-    }
-  `,
-  template: `
-    <section [attr.aria-labelledby]="headingId">
-      <h2 [id]="headingId">{{ title() }}</h2>
-      <div class="charts">
-        @for (chart of charts(); track chart.key) {
-          <div class="chart">
-            @if (answer()) {
-              <p class="latest">{{ chart.latest }}</p>
-            }
-            <mf-line-chart
-              unit="count"
-              [title]="chart.title"
-              [points]="chart.points"
-              [loading]="loading()"
-              [error]="failed()"
-              (retry)="read()"
-            />
-            @if (range()) {
-              <p class="range">{{ range() }}</p>
-            }
-          </div>
-        }
-      </div>
-    </section>
-  `,
+  styleUrl: './admin-growth.css',
+  templateUrl: './admin-growth.html',
 })
 export class AdminGrowth {
   private readonly api = inject(AdminService);
