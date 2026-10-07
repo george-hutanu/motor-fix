@@ -206,8 +206,7 @@ export function pointTo(state, featureDirectory, { now = Date.now(), existing = 
   return next;
 }
 
-/** `branch` stands in for the checked-out one, for a caller that already knows it. */
-export function activeFeature(repo, { branch } = {}) {
+export function activeFeature(repo) {
   const fromDir = (dir) => {
     if (!dir) return null;
     const abs = isAbsolute(dir) ? dir : join(repo, dir);
@@ -230,22 +229,19 @@ export function activeFeature(repo, { branch } = {}) {
     }
   }
 
-  let name = branch;
-  if (name === undefined) {
-    try {
-      name = execSync("git rev-parse --abbrev-ref HEAD", {
-        cwd: repo,
-        stdio: ["ignore", "pipe", "ignore"],
-      })
-        .toString()
-        .trim();
-    } catch {
-      // Not a git repo / detached weirdness — no feature, no gate.
-      return null;
-    }
+  try {
+    const branch = execSync("git rev-parse --abbrev-ref HEAD", {
+      cwd: repo,
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .toString()
+      .trim();
+    const dir = branchFeatureDir(repo, branch);
+    return dir ? fromDir(dir) : null;
+  } catch {
+    // Not a git repo / detached weirdness — no feature, no gate.
+    return null;
   }
-  const dir = branchFeatureDir(repo, name);
-  return dir ? fromDir(dir) : null;
 }
 
 /**

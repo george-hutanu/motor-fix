@@ -58,11 +58,6 @@ describe('activeFeature on the branch', () => {
     assert.equal(feature?.num, '083');
   });
 
-  it('takes the branch it is given over the checked-out one', () => {
-    spec('083-sign-in');
-    assert.equal(activeFeature(repo, { branch: '83-sign-in' })?.name, '083-sign-in');
-  });
-
   it('finds nothing when only another slug carries the number', () => {
     spec('083-other');
     checkout('83-sign-in');
