@@ -141,7 +141,7 @@ The owner switches RO / EN from the header; every label of the page and the list
 
 ### Capability: `garage-listing` (new)
 
-- **Adds**: FR-001 … FR-012
+- **Adds**: FR-001–FR-012
 - **Modifies**: none
 - **Removes**: none
 

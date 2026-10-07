@@ -31,3 +31,19 @@ Preflight: typecheck, lint, test green (exit 0).
 - structure: lazy public child `list-your-garage` under `:lang` + PUBLIC_PATHS; `public/steps.ts` (STEPS, currentStep) and `public/list-your-garage.ts`; texts group `listing` in libs/i18n public ro/en; one `nav` laid out by CSS at 768 px; Playwright `list-your-garage.spec.ts`, routes added to phone.spec.ts, sitemap spec gains the addresses
 - decision beyond the spec's literal rule: the tapped step is held current while the jump's scroll settles (R5), since empty shells cannot always bring a heading to the line
 - after_plan: commit b4a43469 pushed; agent-context update grew CLAUDE.local.md 136→138 lines, ratchet refused, reverted; the existing `Active plan` line now points at specs/108-step-list-in-view/plan.md (size held)
+
+## 5 Plan
+- agent fable: success — steps.ts + list-your-garage.ts in apps/web public, route + PUBLIC_PATHS, i18n listing group, e2e spec; agent-context block refused by the ratchet (+2 lines), Active plan line repointed
+
+## 6 Checklist
+- agent sonnet: success — ux.md 33 items, 8 fixed by edit, 3 struck, 0 unchecked
+
+## 7 Tasks
+- agent sonnet: success — 19 tasks, tests first, FR→test table; level 2 unchanged
+
+## 8. Analyze (inline, opus)
+
+- artifact-lint: 0 errors, 0 warnings, after the remediation of this phase: `.specify/capabilities/garage-listing.md` stub created (delta-unknown-capability) and Spec Delta Adds written as `FR-001–FR-012`.
+- Coverage: 12/12 FRs and 6/6 SCs have at least one task (tasks.md:80). US4 (FR-009) has no task of its own by design (tasks.md:64): T005, T013, T014 test it on the one component instance.
+- Consistency: the 150 ms hold on the tapped step (plan.md:102, research R5) matches FR-006 "stays current until the next scroll". No placeholders. No constitution conflict.
+- Findings: 0 CRITICAL, 0 HIGH, 0 MEDIUM. One round, no re-run needed.
