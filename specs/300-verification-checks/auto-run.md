@@ -24,3 +24,15 @@
 - Q4 first-part kinds and wording → company and rar only; gender agreement; `<kind name> <detail>`; "Neverificat" with neither part.
 - Q5 activities list / evidence / audit → list required when ok; evidence column dropped (Principle I); one audit entry per save with result, detail (and list).
 - level check: 2, unchanged.
+
+## 5 Plan
+- Phase agent fable: STATUS success; design.md (no screens of its own; mock not openable, logged), plan, research, data-model, contracts, quickstart. Migration 20261007140000_verification_check.
+
+## 6 Checklist
+- Phase agent sonnet: STATUS success; file-checks.md 25 items all checked; fixed: detail replaced on each save, row read FOR UPDATE, 400 for activities on another kind.
+
+## 7 Tasks
+- Phase agent sonnet: STATUS success; 10 tasks (T001 schema, T002–T005 tests, T006–T010 build). level 2 unchanged.
+
+## 8 Analyze
+- artifact-lint --check: 0 errors after adding the Spec Delta (garage-verification, Adds FR-001..FR-011); capabilities validate clean. FR coverage: every FR mapped to T002–T005. No CRITICAL.

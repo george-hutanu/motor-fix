@@ -106,6 +106,14 @@ The queue line and the file drawer show each check as a green, amber, red or gre
 - **Garage.rar_activities**: the list of catalogue codes the garage's RAR authorisation covers, written by the activities check.
 - **Verification file** (existing): owns the checks; "decided" means approved, rejected or more_requested; a reopened file is in review again.
 
+## Spec Delta
+
+### Capability: `garage-verification`
+
+- **Adds**: FR-001, FR-002, FR-003, FR-004, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011
+- **Modifies**: none
+- **Removes**: none
+
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
