@@ -13,3 +13,13 @@ Start commit: ec74ab06 (origin/main; worktree .worktrees/039-brand-catalogue, br
 - commit 4f4119c2 docs(specs): spec, checklist, design.md, notion-sync.md, two capability stubs; pushed. after_specify optional hook agent-context.update skipped (runs at the plan phase).
 - level check: 2 unchanged (fr-count tripped at 17 FRs; clarification, contract, projects clear).
 - Phase 3 (Org context): context.md written from Notion (14 findings, 2 contradictions, 5 proposed clarifications); Data model page too large, Decisions and ideas index only — partial.
+
+## Phase 4 — Clarify (inline, opus)
+
+spec-challenger: 5 findings; context.md: 2 contradictions, 5 proposals. Five questions answered autonomously (recommended values), recorded in spec Clarifications:
+- Job identity → `job_type_id` UUID, no FK until ST-354, presence = tick (context.md Constraints; Principle I).
+- works_on → does_not_take → ticks cleared, job rows deleted in the same write; MF-9's "kept hidden" (proposed) not built (Build brief wins).
+- Active = present in file; popularity change applied and audited (spec-challenger #3).
+- Duplicates checked against the file and stored brands incl. retired; brand id UUID (audit.prisma).
+- Search shape `{items,nextCursor,total}` 20/page; one Redis key for the active list, dropped on change (audit-history.dto.ts:163; A30).
+level.mjs check: 2, unchanged. Checklist: all items pass.

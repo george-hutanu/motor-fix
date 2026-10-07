@@ -86,25 +86,31 @@ For each garage and brand the product stores one of two stances, works on it or 
 
 The spec-kit clarification gate was answered from the Build brief, the constitution card (Principle I) and this repo. Each answer is an Assumptions line marked *(autonomous default)*; none was asked of the owner.
 
+- Q: What identifies a job on a garage-brand-job row? → A: a `job_type_id` (UUID) column, unique per garage, brand and job type, with no foreign key until ST-354 creates JOB_TYPE; the row's presence is the tick (no `ticked` column). [context.md Constraints, MF-9 Data; Principle I]
+- Q: When a garage's stance on a brand turns from `works_on` to `does_not_take`, what happens to its fuel ticks and job rows? → A: they are cleared in the same write: the fuel ticks become absent and the job rows are deleted; keeping them hidden to restore later (MF-9, marked proposed) is not built. [ST-39 Build brief "only on a `works_on` row", which wins over the feature page]
+- Q: Does the data file carry an `active` column, and is a popularity change applied and audited? → A: no column, a brand is active exactly when it is in the file; a popularity change is applied and audited like a rename. [spec-challenger; FR-004 needs "change" defined]
+- Q: Does the duplicate rule also cover stable keys and retired brands already stored, and what is a brand id? → A: yes, a duplicate stable key in the file, or a slug or name already held by another stored brand (retired ones included), fails the whole load naming both; the brand id is a UUID like every other id in the schema. [libs/domain/prisma/schema/audit.prisma subject ids are UUIDs]
+- Q: What shape does brand search return, and what does the cache hold? → A: `{ items, nextCursor, total }` with 20 items a page and an opaque cursor, as the audit history and notifications lists already do (libs/contracts/src/audit-history.dto.ts:163); the cache is one Redis key holding the whole active list for an hour, filtered and paged in the API, and a list change drops that one key. [A30; Principle I]
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
 - **FR-001**: The system MUST keep one brand list for the whole product, maintained by MotorFix: garages cannot add, rename or remove a brand, and every part of the product that names a brand uses the same brand ids.
-- **FR-002**: Each brand MUST carry a name written one way, a slug unique across brands, a popularity rank and an active flag.
+- **FR-002**: Each brand MUST carry a UUID id, a stable key from the data file, a name written one way, a slug unique across brands, a popularity rank and an active flag; a brand is active exactly when it is in the current data file.
 - **FR-003**: The brand list MUST be loaded from a versioned data file kept in the repository by a loader that stores every brand of the file exactly once, and the repository MUST ship a development file holding at least the twelve brands of the mock (BMW, Mini, Mercedes-Benz, Audi, Volkswagen, Škoda, Dacia, Renault, Ford, Toyota, Hyundai, Tesla).
-- **FR-004**: The loader MUST be idempotent: a second run with the same file changes no brand and writes no audit entry.
+- **FR-004**: The loader MUST be idempotent: a second run with the same file changes no brand and writes no audit entry. A change is a brand created, retired or brought back, or a change to its name, slug or popularity.
 - **FR-005**: When a brand's name or slug is corrected in the file, the loader MUST keep the brand's id and every garage row that names it, and readers MUST see the new name.
 - **FR-006**: When a brand is absent from the file, the loader MUST keep it with its garage rows and mark it inactive; inactive brands are not returned by brand search or pickers.
-- **FR-007**: A file holding two brands with the same name or the same slug MUST fail the whole load, naming the duplicate, and the stored list MUST be exactly what it was before.
-- **FR-008**: Every brand the loader creates, renames or retires MUST be recorded in the audit history with the actor `system`.
-- **FR-009**: A change to the brand list MUST drop the cached brand list so the next search reflects it.
+- **FR-007**: A file holding two brands with the same stable key, name or slug, or a brand whose name or slug is already held by another stored brand (a retired one included), MUST fail the whole load, naming the duplicate, and the stored list MUST be exactly what it was before.
+- **FR-008**: Every brand the loader creates, changes, retires or brings back MUST be recorded in the audit history with the actor `system`.
+- **FR-009**: A change to the brand list MUST drop the cached brand list (one cache entry holding the whole active list) so the next search reflects it.
 - **FR-010**: Brand search MUST match the typed text against brand names ignoring accents and case ("sko", "Skoda" and "ŠKODA" all find "Škoda"), and return only active brands.
 - **FR-011**: An empty search MUST return the active brands by popularity, most popular first, then by name.
-- **FR-012**: Brand search MUST be open to visitors without a session, return at most 20 brands a page with a way to ask for the next page, and be served from a cache kept for one hour.
+- **FR-012**: Brand search MUST be open to visitors without a session, return `{ items, nextCursor, total }` with at most 20 brands a page and an opaque cursor for the next page, and be served from a cache kept for one hour.
 - **FR-013**: For each garage and brand the system MUST store at most one row, whose stance is one of `works_on` and `does_not_take`; a garage with no row for a brand has the answer `unstated`.
-- **FR-014**: A `works_on` row MUST carry four fuel ticks (petrol, diesel, hybrid, electric), all true when the row is created; a `does_not_take` row MUST carry no fuel ticks, and ticking one on it MUST be refused.
-- **FR-015**: A garage MUST be able to hold one row per job it does for a brand, only for a brand with a `works_on` row; a job row for any other brand MUST be refused.
+- **FR-014**: A `works_on` row MUST carry four fuel ticks (petrol, diesel, hybrid, electric), all true when the row is created; a `does_not_take` row MUST carry no fuel ticks, and ticking one on it MUST be refused; turning a `works_on` row into `does_not_take` clears its fuel ticks and deletes its job rows in the same write.
+- **FR-015**: A garage MUST be able to hold one row per job type (a `job_type_id`, no foreign key until the job catalogue exists) it does for a brand, only for a brand with a `works_on` row; a job row for any other brand MUST be refused.
 - **FR-016**: A garage MUST be able to hold an optional brand note of up to 140 characters and an optional refusal phrase of up to 60 characters; longer text MUST be refused.
 - **FR-017**: One read function MUST give a garage's answer for a brand: `works_on`, `does_not_take` or `unstated`.
 
@@ -112,7 +118,7 @@ The spec-kit clarification gate was answered from the Build brief, the constitut
 
 - **Brand**: a car brand sold in Romania; id, name written one way, slug, popularity rank, active flag. Owned by MotorFix; the same id is used across the product.
 - **Garage brand**: a garage's stance on one brand (`works_on` or `does_not_take`) with the four fuel ticks on a `works_on` row; at most one per garage and brand.
-- **Garage brand job**: one job a garage does for a brand it works on; one row per garage, brand and job.
+- **Garage brand job**: one job type a garage does for a brand it works on (`job_type_id`, no foreign key yet); one row per garage, brand and job type; its presence is the tick.
 - **Garage limits**: two optional texts on the garage, a brand note (≤140 characters) and a refusal phrase (≤60 characters).
 - **Brand list change**: an audit entry per brand created, renamed or retired by the loader, actor `system`.
 
