@@ -1,7 +1,7 @@
 import { afterEach, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -479,5 +479,84 @@ describe('the command line', () => {
     const res = cli(['--pr', 'abc; echo hi', '--out', out, '--repo', REPO]);
     assert.notEqual(res.status, 0);
     assert.equal(existsSync(join(out, 'packet.md')), false);
+  });
+});
+
+describe('the packet carries no whole-PR diff', () => {
+  const DIFF = 'diff --git a/src/x.mjs b/src/x.mjs\n@@ -1 +1 @@\n-UNIQUE_OLD_LINE\n+UNIQUE_NEW_LINE\n';
+  const ONLY = ['packet.md', 'report.json'];
+  const withDiff = (view) => {
+    const inner = fakeGh({ prView: view }).gh;
+    return (args) => (/^pr diff/.test(args.join(' ')) ? ok(DIFF) : inner(args));
+  };
+  const walk = (dir) =>
+    readdirSync(dir).flatMap((n) => {
+      const p = join(dir, n);
+      return statSync(p).isDirectory() ? walk(p) : [p];
+    });
+
+  it('writes only the packet beside the artifact when gh could serve a diff', () => {
+    const out = artifact(report());
+    const res = buildPacket({ out, pr: 137, repo: REPO, gh: withDiff(ok(pr(files(['src/x.mjs'])))) });
+    assert.equal(res.code, 0);
+    assert.deepEqual(readdirSync(out).sort(), ONLY);
+  });
+
+  it('has no Review diff heading and no diff text in packet.md or any other file', () => {
+    const out = artifact(report());
+    buildPacket({ out, pr: 137, repo: REPO, gh: withDiff(ok(pr(files(['src/x.mjs', 'y.mjs'])))) });
+    const all = walk(out).map((p) => readFileSync(p, 'latin1')).join('\n');
+    assert.doesNotMatch(packetOf(out), /review diff/i);
+    assert.doesNotMatch(all, /UNIQUE_(OLD|NEW)_LINE/);
+    assert.deepEqual(walk(out).filter((p) => /\.(diff|patch)$/.test(p)), []);
+  });
+
+  it('keeps the Changed files section with per-file lines and totals', () => {
+    const out = artifact(report());
+    buildPacket({ out, pr: 137, repo: REPO, gh: withDiff(ok(pr(files(['src/x.mjs', 'y.mjs'])))) });
+    assert.match(packetOf(out), /^#+ .*Changed files/m);
+    assert.match(packetOf(out), /src\/x\.mjs \+1 −1/);
+    assert.match(packetOf(out), /2 files, \+2 −2/);
+  });
+
+  it('writes no diff when the PR has no changed files', () => {
+    const out = artifact(report());
+    buildPacket({ out, pr: 137, repo: REPO, gh: withDiff(ok(pr([]))) });
+    assert.deepEqual(readdirSync(out).sort(), ONLY);
+    assert.doesNotMatch(packetOf(out), /review diff/i);
+  });
+
+  it('writes no diff for a ten-thousand-file PR and still caps the list', () => {
+    const out = artifact(report());
+    const many = files(Array.from({ length: 10000 }, (_, i) => `d/f${i}.mjs`));
+    buildPacket({ out, pr: 137, repo: REPO, gh: withDiff(ok(pr(many))) });
+    assert.deepEqual(readdirSync(out).sort(), ONLY);
+    assert.match(packetOf(out), /10000 files/);
+    assert.doesNotMatch(packetOf(out), /f9999\.mjs/);
+  });
+
+  it('writes no diff when gh fails to read the PR', () => {
+    const out = artifact(report());
+    buildPacket({ out, pr: 137, repo: REPO, gh: withDiff(fail('HTTP 502')) });
+    assert.deepEqual(readdirSync(out).sort(), ONLY);
+    assert.doesNotMatch(packetOf(out), /^#+ .*review diff/im);
+  });
+
+  it('writes the same files and packet when run twice into one folder', () => {
+    const out = artifact(report());
+    const gh = withDiff(ok(pr(files(['a.mjs']))));
+    buildPacket({ out, pr: 137, repo: REPO, gh });
+    const first = packetOf(out);
+    buildPacket({ out, pr: 137, repo: REPO, gh });
+    assert.deepEqual(readdirSync(out).sort(), ONLY);
+    assert.equal(packetOf(out), first);
+  });
+
+  it('lists a file named like a diff as a plain entry, not a section', () => {
+    const out = artifact(report());
+    buildPacket({ out, pr: 137, repo: REPO, gh: withDiff(ok(pr(files(['docs/review.diff', 'a b/ü.mjs'])))) });
+    assert.match(packetOf(out), /docs\/review\.diff \+1 −1/);
+    assert.doesNotMatch(packetOf(out), /^#+ .*review diff/im);
+    assert.deepEqual(readdirSync(out).sort(), ONLY);
   });
 });

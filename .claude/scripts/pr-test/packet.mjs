@@ -219,30 +219,6 @@ const fullFinding = (f) =>
     .join("\n");
 const brief = (f) => `- ${f.severity} ${f.kind}: ${flat(f.title)}${f.route ? ` (${flat(f.route)})` : ""}`;
 
-/**
- * Writes `<out>/review.diff`: the PR's diff without the feature's own records and the
- * capability files, which the packet already sums up, but with its `tasks.md`.
- * { files, lines } or { error }.
- */
-function reviewDiff(gh, repo, pr, feature, out) {
-  const res = gh(["pr", "diff", String(pr), "--repo", repo]);
-  if (res.code !== 0) {
-    rmSync(join(out, "review.diff"), { force: true });
-    return { error: `gh pr diff failed: ${reason(res)}` };
-  }
-  const tasks = feature ? `${feature}/tasks.md` : null;
-  const kept = res.stdout
-    .split(/^(?=diff --git )/m)
-    .filter((c) => c.startsWith("diff --git "))
-    .filter((c) => {
-      const path = c.match(/^diff --git a\/\S+ b\/(\S+)/)?.[1] ?? "";
-      return path === tasks || !(path.startsWith("specs/") || path.startsWith(".specify/capabilities/"));
-    });
-  const text = kept.join("");
-  writeFileSync(join(out, "review.diff"), text);
-  return { files: kept.length, lines: text.split("\n").length - 1 };
-}
-
 /** run.log's last `ready <service>: <status> <json>` line per service, as one line. */
 function readiness(dir) {
   const log = join(dir, "run.log");
@@ -257,7 +233,7 @@ function readiness(dir) {
 }
 
 /** packet.md's text from its parts. */
-function packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, delta, web = true, ready, diff }) {
+function packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, delta, web = true, ready }) {
   const out = [`# Packet: PR #${pr} at ${short(view?.headRefOid ?? report.sha)}, lap ${report.lap ?? "?"}`, ""];
   if (view) out.push(`${flat(view.title)} · branch ${view.headRefName} · head ${view.headRefOid} · base ${view.baseRefName}`, "");
   out.push("## Changed files", "");
@@ -270,12 +246,6 @@ function packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, del
     if (files.length > FILE_CAP) out.push(`- … ${files.length - FILE_CAP} more files`);
   }
   out.push("", "## Requirements touched", "", ...(reqs.lines ?? [reqs.note]));
-  out.push("", "## Review diff", "");
-  out.push(
-    diff.error
-      ? `Unavailable: ${flat(diff.error)}`
-      : `review.diff: ${diff.files} files, ${diff.lines} lines (the code, its tests and tasks.md; not the feature's other records or the capability files)`,
-  );
   const findings = report.findings ?? [];
   out.push("", "## Run", "", `Verdict: ${report.verdict} — ${flat(report.summary)}`.trim());
   for (const n of report.notes ?? []) out.push(`- note: ${flat(n)}`);
@@ -336,9 +306,8 @@ export function buildPacket({ out, pr, repo, run, baseline: explicit, gh = realG
     const cited = (report.findings ?? []).flatMap((f) => String(f.evidence ?? "").match(/shots\/\S+?\.png/g) ?? []);
     const web = view?.files?.length ? touchesWeb(view.files.map((f) => f.path)) : true;
     const delta = shotDelta({ current: shotHashes(out), baseline: baseline.dir ? shotHashes(baseline.dir) : null, cited, web });
-    const diff = view ? reviewDiff(gh, repo, pr, feature, out) : { error: viewError };
     const path = join(out, "packet.md");
-    writeFileSync(path, packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, delta, web, ready: readiness(out), diff }));
+    writeFileSync(path, packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, delta, web, ready: readiness(out) }));
     return { code: 0, path };
   } finally {
     if (baseline.temp) rmSync(baseline.dir, { recursive: true, force: true });

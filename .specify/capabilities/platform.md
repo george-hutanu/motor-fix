@@ -51,6 +51,7 @@ features:
   - 849-work-timeline-row
   - 768-cloud-compose-pull
   - 845-archived-delta-adds
+  - 706-packet-web-relap
   - 499-trace-matrix-delta-ids
 ---
 
@@ -496,9 +497,9 @@ _From 698-tester-packet._
 
 _From 698-tester-packet._
 
-### 698-FR-007 — `.claude/agents/pr-tester.md` MUST tell the tester to build the packet right after the run's artifact is in its folder and, in the review, to read it before the report, the screenshots, the spec or the diff (the spec's first read, to list the flows, comes before the run); to open only the screenshots the packet names; and MUST keep `model: opus`, the full constitution review, the verdict rules and `post.mjs` posting unchanged.
+### 706-FR-008 — `.claude/agents/pr-tester.md` MUST tell the tester to build the packet right after the run's artifact is in its folder and, in the review, to read it before the report, the screenshots, the spec or the diff (the spec's first read, to list the flows, comes before the run); to read the diff per changed file (or group of related files) with a targeted `git diff origin/<base>...<headRefOid> -- <paths>` drawn from the packet's "Changed files", never as one whole-PR diff file; to open only the screenshots the packet names; and MUST keep `model: opus`, the full constitution review, the verdict rules and `post.mjs` posting unchanged. The packet MUST write no whole-PR diff file and no "Review diff" section. (Replaces 698-FR-007 on "cut".)
 
-_From 698-tester-packet._
+_From 706-packet-web-relap._
 
 ### 698-FR-008 — `.claude/skills/speckit-pr-test/SKILL.md` MUST describe the packet step in its Test step.
 
@@ -1228,3 +1229,5 @@ _From 499-trace-matrix-delta-ids._
 - `677-FR-003` — superseded by `784-FR-003` (2026-10-07)
 
 - `673-FR-005` — superseded by `691-FR-005` (2026-10-07)
+
+- `698-FR-007` — superseded by `706-FR-008` (2026-10-07)

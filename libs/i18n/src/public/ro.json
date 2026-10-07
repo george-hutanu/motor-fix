@@ -64,6 +64,8 @@
         "other": "{count} de primite"
       }
     },
+    "cui": "CUI‑ul firmei",
+    "cuiInvalid": "CUI invalid",
     "email": "E‑mail",
     "emailHint": "Îți trimitem un link ca să continui de pe orice dispozitiv.",
     "emailInvalid": "Scrie o adresă de e‑mail validă.",
@@ -79,6 +81,9 @@
     "notSaved": "Ciorna nu a putut fi salvată pe server. Încearcă din nou.",
     "offline": "Neconectat · salvăm când revii online",
     "optional": "opțional",
+    "rarHint": "de pe autorizația afișată în atelier",
+    "rarNumber": "Numărul autorizației tehnice RAR",
+    "rarShort": "Cel puțin 3 caractere",
     "required": "obligatoriu",
     "save": "Salvează ciorna",
     "saved": "Ciorna e salvată",
@@ -94,7 +99,10 @@
     "step6": "Verificare",
     "steps": "Pași",
     "storageBlocked": "Browserul nu poate păstra ciorna. O păstrăm pe server după ce adaugi un e‑mail.",
-    "tooLarge": "Ciorna e prea mare ca să fie salvată pe server."
+    "tooLarge": "Ciorna e prea mare ca să fie salvată pe server.",
+    "verifyCount": "{n} din 5 completate",
+    "verifyIntro": "Publicăm doar service‑uri care funcționează legal în România. Verificăm firma și autorizația RAR înainte ca profilul să apară pe hartă.",
+    "verifyNote": "Comparăm datele firmei cu registrele publice (ANAF, ONRC, RAR). Documentele le vede doar echipa MotorFix."
   },
   "newPassword": {
     "askAgain": "Cere un link nou",
