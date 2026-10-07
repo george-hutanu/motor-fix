@@ -59,3 +59,6 @@ Constitution v1.8.2 read through its card; no principle blocks the story.
   4. admin GETs leave no entry; a later logged read is marked by its own story.
   5. kinds decided; new value = validated request body as JSON.
 - Playwright stays out (view not built); legal-document `open` stays with ST-206/ST-302.
+
+## Phase 5 — Plan
+- model fable. STATUS: success — plan.md, research.md (R1–R6, path:line evidence), data-model.md, contracts/admin-audit-entries.md, quickstart.md written; before_plan design check: design.md current (Checked 2026-10-07, story edited 2026-10-07T11:59Z); no NEEDS CLARIFICATION left; no OpenAPI, client, migration or dependency change; Principle I: two audit.record calls, one AUDIT_PORT provider line in EventsModule, one new guard spec apps/api/src/admin-audit.integration.spec.ts.
