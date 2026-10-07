@@ -1663,6 +1663,71 @@
         ]
       }
     },
+    "/api/v1/admin/verification-files/{id}/checks/{kind}": {
+      "put": {
+        "operationId": "VerificationChecksController_record",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordVerificationCheckDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationCheckRecordedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no file"
+          },
+          "409": {
+            "description": "verification_file_decided"
+          },
+          "422": {
+            "description": "verification_check_kind_unknown"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/live": {
       "get": {
         "operationId": "LiveController_live",
@@ -3430,6 +3495,135 @@
           "id",
           "name",
           "slug"
+        ]
+      },
+      "RecordVerificationCheckDto": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "warning",
+              "failed"
+            ]
+          },
+          "detail": {
+            "type": "string",
+            "description": "Trimmed; required for warning and failed; replaces the stored detail",
+            "maxLength": 200
+          },
+          "activities": {
+            "description": "RAR activity codes the authorisation covers; activities kind only, required when ok",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "result"
+        ]
+      },
+      "VerificationCheckDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "company",
+              "caen",
+              "rar",
+              "activities",
+              "representative",
+              "address",
+              "photos",
+              "documents"
+            ]
+          },
+          "automatic": {
+            "type": "boolean",
+            "description": "False until automatic look-ups exist"
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "not_run",
+              "ok",
+              "warning",
+              "failed"
+            ]
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "recordedBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "fileId",
+          "kind",
+          "automatic",
+          "result",
+          "detail",
+          "recordedBy",
+          "recordedAt"
+        ]
+      },
+      "CheckSummaryDto": {
+        "type": "object",
+        "properties": {
+          "ro": {
+            "type": "string"
+          },
+          "en": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ro",
+          "en"
+        ]
+      },
+      "VerificationCheckRecordedDto": {
+        "type": "object",
+        "properties": {
+          "check": {
+            "$ref": "#/components/schemas/VerificationCheckDto"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/CheckSummaryDto"
+          },
+          "rarActivities": {
+            "description": "The garage's RAR activity codes after the save",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "check",
+          "summary",
+          "rarActivities"
         ]
       },
       "LiveTestDto": {

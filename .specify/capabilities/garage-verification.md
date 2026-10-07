@@ -3,6 +3,7 @@ capability: garage-verification
 updated: 2026-10-07
 features:
   - 207-garage-approval-flow
+  - 300-verification-checks
 ---
 
 # Capability: Garage verification
@@ -54,3 +55,47 @@ _From 207-garage-approval-flow._
 ### 207-FR-011 — The DTOs of the public read and the shared status labels MUST live in the contracts library, the endpoint MUST be REST with OpenAPI, and the generated client MUST be regenerated.
 
 _From 207-garage-approval-flow._
+
+### 300-FR-001 — On a file's submission and on its resend after more was requested, the system MUST ensure the file has exactly one check per kind — company, caen, rar, activities, representative, address, photos, documents — created with result `not_run`, `automatic = false` and no detail, in the same transaction as the submission; a check that already exists is kept with its result.
+
+_From 300-verification-checks._
+
+### 300-FR-002 — A check MUST store its file, kind, whether it is automatic, result (`not_run`, `ok`, `warning`, `failed`), detail line, who recorded it and when; files sent before this change get their 8 checks when it is deployed.
+
+_From 300-verification-checks._
+
+### 300-FR-003 — An admin MUST be able to record one check of a file by kind with a result and a detail; the save sets `recorded_by` and `recorded_at`, replaces the stored detail with the one sent (none sent leaves it empty), and the last save wins; the audit entry's old values are those the save replaced, read under a row lock so two concurrent saves each record the other's value as old.
+
+_From 300-verification-checks._
+
+### 300-FR-004 — Recording the `activities` kind MUST also take the list of RAR activity codes on the garage's authorisation — required (possibly empty) when the result is `ok`, optional otherwise, an omitted list leaving the garage's list unchanged — validate each against the RAR activity catalogue, and store the list on the garage (`rar_activities`) in the same transaction as the check.
+
+_From 300-verification-checks._
+
+### 300-FR-005 — The RAR activity catalogue MUST exist with a code and a Romanian and English name per activity, seeded with mechanics, brakes, steering, suspension and air-con.
+
+_From 300-verification-checks._
+
+### 300-FR-006 — Every record MUST write one audit history entry carrying the old and new result and detail (and, for `activities`, the old and new list), in the same transaction; creating the rows at submission writes no entry of its own.
+
+_From 300-verification-checks._
+
+### 300-FR-007 — Every record MUST emit `verification.check_recorded` with fileId, kind and result through the outbox, in the same transaction, to the admin channel.
+
+_From 300-verification-checks._
+
+### 300-FR-008 — The system MUST map a result to a lamp colour: `ok` green, `warning` amber, `failed` red, `not_run` grey.
+
+_From 300-verification-checks._
+
+### 300-FR-009 — The system MUST build a summary line, in Romanian and English, of at most two parts joined with " · ": the first names the register checks that are `ok` — only `company` ("CUI") and `rar` ("autorizație RAR"): "CUI verificat", "Autorizație RAR verificată", "CUI și autorizație RAR verificate"; the second names the most serious problem — `failed` before `warning`, `rar` before any other kind, then the kinds' order — as `<kind name> <detail>`, with `rar = failed` reading "Lipsește autorizația RAR"; the line starts with a capital; with neither part it reads "Neverificat". The record call returns the file's new summary in both languages.
+
+_From 300-verification-checks._
+
+### 300-FR-010 — A record MUST be refused with 422 for an unknown kind; 400 `validation_failed` for a missing detail on `warning` or `failed`, a detail over 200 characters, an unknown activity code, or an activities list on any kind but `activities`; 409 "Dosarul e deja decis" when the file is approved, rejected or has more requested, unless it was reopened into review.
+
+_From 300-verification-checks._
+
+### 300-FR-011 — Only a MotorFix admin may record a check; anyone else gets 404, as on the other admin routes.
+
+_From 300-verification-checks._

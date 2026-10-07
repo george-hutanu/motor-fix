@@ -19,6 +19,9 @@
 // owner posted on the commit must not be a failure (anyone can review a PR, so
 // only the owner's verdict counts): in a cloud session post.mjs can post the
 // tester's review but not a status, so a blocking verdict lives only there.
+// The cloud's proxy may post it as an app (a Bot), so a bot's failing verdict
+// counts too, and only a newer one of the owner's clears it: a bot can hold a
+// merge back, never let one through.
 import { STATUS_CONTEXT } from "./post.mjs";
 
 const QA_WORKFLOW_PATH = ".github/workflows/pr-qa.yml";
@@ -53,9 +56,12 @@ export function judgeProvenance({ sha, pr, status, run, testerReview, qaWorkflow
   return null;
 }
 
-/** The newest verdict ("success" | "failure" | …) the owner's tester review gave `sha`, or null. */
+const OWNER = (r) => r.type === "User" && r.association === "OWNER";
+const BOT_FAILURE = (r) => r.type === "Bot" && /^Verdict: failure\b/.test(r.body ?? "");
+
+/** The newest verdict ("success" | "failure" | …) the owner's tester review, or a bot's failing one, gave `sha`, or null. */
 export function testerVerdict(reviews, sha) {
-  const mine = (reviews ?? []).filter((r) => r.commit_id === sha && r.type === "User" && r.association === "OWNER" && /^Verdict: \w+/.test(r.body ?? ""));
+  const mine = (reviews ?? []).filter((r) => r.commit_id === sha && /^Verdict: \w+/.test(r.body ?? "") && (OWNER(r) || BOT_FAILURE(r)));
   mine.sort((a, b) => Date.parse(a.submitted_at ?? "") - Date.parse(b.submitted_at ?? ""));
   return mine.length ? /^Verdict: (\w+)/.exec(mine.at(-1).body)[1] : null;
 }

@@ -37,6 +37,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await reset();
   await prisma.outboxEvent.deleteMany();
+  await prisma.newsSend.deleteMany();
   await newsJobs.obliterate({ force: true });
 });
 
@@ -103,6 +104,36 @@ async function queueRun(admin: string, attempts = NEWS_CONSUMER.jobs.attempts) {
     },
   );
 }
+
+// A month claimed with its run's event, relayed `minutes` ago, whose job is
+// nowhere in Redis: what an emptied Redis leaves behind.
+async function relayedRun(admin: string, minutes: number, ranAt?: Date) {
+  const at = new Date(Date.now() - (minutes + 1) * 60_000);
+  await prisma.newsSend.create({
+    data: {
+      createdAt: at,
+      month: '2026-11',
+      ranAt,
+      recipients: 1,
+      sentById: admin,
+    },
+  });
+  return prisma.outboxEvent.create({
+    data: {
+      audience: ['admin', 'system'],
+      createdAt: at,
+      kind: 'news.sent',
+      payload: JSON.parse(JSON.stringify(run(admin))),
+      relayedAt: new Date(Date.now() - minutes * 60_000),
+      subjectId: '2026-11',
+    },
+  });
+}
+
+const relayedAgain = async (id: bigint) => {
+  const row = await prisma.outboxEvent.findUnique({ where: { id } });
+  return (row?.relayedAt?.getTime() ?? 0) > Date.now() - 60_000;
+};
 
 const newsEmails = () =>
   prisma.notification.findMany({ where: { channel: 'email', kind: 'NEWS' } });
@@ -236,5 +267,95 @@ describe('the news worker', () => {
     }
     expect(await prisma.newsSend.count()).toBe(0);
     expect(await newsJobs.getJobState('news-2026-11')).toBe('unknown');
+  }, 20_000);
+
+  it('queues a claimed month’s run again when Redis lost it, and marks it ran', async () => {
+    const admin = await account('admin', ['admin']);
+    const andrei = await consenting('andrei');
+    await relayedRun(admin, 10);
+    const app = await worker('test-secret', undefined, true);
+    await app.init();
+    try {
+      const deadline = Date.now() + 10_000;
+      while (
+        !(await prisma.newsSend.findFirst())?.ranAt &&
+        Date.now() < deadline
+      ) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+    } finally {
+      await app.close();
+    }
+    expect((await newsEmails()).map((r) => r.accountId)).toEqual([andrei]);
+    expect((await prisma.newsSend.findFirst())?.ranAt).toBeInstanceOf(Date);
+  }, 20_000);
+
+  it('leaves a run that completed, or was relayed moments ago, where it is', async () => {
+    const admin = await account('admin', ['admin']);
+    const done = await relayedRun(admin, 10, new Date());
+    expect(await NEWS_CONSUMER.requeue(prisma)).toBe(0);
+    expect(
+      (await prisma.outboxEvent.findUnique({ where: { id: done.id } }))
+        ?.relayedAt,
+    ).toBeInstanceOf(Date);
+    await prisma.newsSend.deleteMany();
+    await prisma.outboxEvent.deleteMany();
+    await relayedRun(admin, 1);
+    expect(await NEWS_CONSUMER.requeue(prisma)).toBe(0);
+  });
+
+  it('puts a stranded run’s event back in line for the relay', async () => {
+    const admin = await account('admin', ['admin']);
+    const { id } = await relayedRun(admin, 10);
+    expect(await NEWS_CONSUMER.requeue(prisma)).toBe(1);
+    expect(
+      (await prisma.outboxEvent.findUnique({ where: { id } }))?.relayedAt,
+    ).toBeNull();
+  });
+
+  it('never queues again the run of a month given back and sent anew', async () => {
+    const admin = await account('admin', ['admin']);
+    const old = await relayedRun(admin, 10);
+    // The month was given back, then the admin sent it again: a new claim,
+    // with its own event still waiting for the relay.
+    await prisma.newsSend.deleteMany();
+    await prisma.newsSend.create({
+      data: { month: '2026-11', recipients: 1, sentById: admin },
+    });
+    expect(await NEWS_CONSUMER.requeue(prisma)).toBe(0);
+    expect(
+      (await prisma.outboxEvent.findUnique({ where: { id: old.id } }))
+        ?.relayedAt,
+    ).toBeInstanceOf(Date);
+  });
+
+  it('adds nothing for a run whose job is still in Redis', async () => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const admin = await account('admin', ['admin']);
+    const { id } = await relayedRun(admin, 10);
+    await newsJobs.add(
+      'event',
+      { payload: run(admin) },
+      { ...NEWS_CONSUMER.jobs, jobId: `event-${id}` },
+    );
+    // No token secret: the job waits in the queue while the relay requeues.
+    const app = await worker(undefined, undefined, true);
+    await app.init();
+    try {
+      // Requeued, then relayed again: its relayed_at is fresh.
+      const deadline = Date.now() + 10_000;
+      while (!(await relayedAgain(id)) && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+    } finally {
+      await app.close();
+      jest.restoreAllMocks();
+    }
+    expect(await relayedAgain(id)).toBe(true);
+    expect(await newsJobs.getJobCounts('waiting', 'delayed', 'active')).toEqual(
+      { active: 0, delayed: 0, waiting: 1 },
+    );
+    expect(await newsJobs.getJobState(`event-${id}`)).toBe('waiting');
+    expect((await prisma.newsSend.findFirst())?.ranAt).toBeNull();
   }, 20_000);
 });
