@@ -341,9 +341,72 @@ describe('opening', () => {
     expect(await history(file.id)).toHaveLength(1);
     expect(await events(file.id)).toHaveLength(1);
   });
+
+  it('lets two racing opens both succeed, the second answering with the first', async () => {
+    const file = await fileIn('submitted');
+
+    const results = await Promise.all([
+      inTx((tx) => service().open(tx, ioana, file.id)),
+      inTx((tx) => service().open(tx, dan, file.id)),
+    ]);
+
+    const after = await prisma.verificationFile.findUniqueOrThrow({
+      where: { id: file.id },
+    });
+    for (const result of results) {
+      expect(result.openedBy).toBe(after.openedBy);
+      expect(result.openedAt).toEqual(after.openedAt);
+    }
+    expect(results.filter((r) => r.byAnother)).toHaveLength(1);
+    expect(await history(file.id)).toHaveLength(1);
+    expect(await events(file.id)).toHaveLength(1);
+  });
 });
 
 describe('deciding', () => {
+  it('refuses to approve a file of a suspended garage and leaves it suspended', async () => {
+    const file = await fileIn('in_review');
+    await prisma.garage.update({
+      data: { status: 'suspended' },
+      where: { id: garageId },
+    });
+
+    const refused = await refusal(
+      inTx((tx) =>
+        service().decide(tx, ioana, file.id, { outcome: 'approved' }),
+      ),
+    );
+
+    expect(refused.status).toBe(409);
+    const garage = await prisma.garage.findUniqueOrThrow({
+      where: { id: garageId },
+    });
+    expect(garage.status).toBe('suspended');
+    expect(await history(file.id)).toHaveLength(0);
+  });
+
+  it.each([
+    ['an empty code', { code: '', note: 'The CUI is blurred' }],
+    ['a blank note', { code: 'documents_unreadable', note: '   ' }],
+  ])(
+    'refuses a decision with %s as 400 validation_failed',
+    async (_n, reason) => {
+      const file = await fileIn('in_review');
+
+      const refused = await refusal(
+        inTx((tx) =>
+          service().decide(tx, ioana, file.id, { outcome: 'rejected', reason }),
+        ),
+      );
+
+      expect(refused).toMatchObject({
+        body: { code: 'validation_failed' },
+        status: 400,
+      });
+      expect(await history(file.id)).toHaveLength(0);
+    },
+  );
+
   it('approves the garage with the file, in the same transaction', async () => {
     const file = await fileIn('in_review');
 
@@ -499,6 +562,8 @@ describe('reopening', () => {
     });
     expect(garage.status).toBe('approved');
     expect(garage.approvedAt).toEqual(after.decidedAt);
+    const garageHistory = await history(garageId);
+    expect(garageHistory.map((entry) => entry.field)).toEqual(['approvedAt']);
   });
 
   it('overwrites the reopener each time and keeps every reopening in the history', async () => {

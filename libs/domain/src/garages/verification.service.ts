@@ -113,8 +113,9 @@ export class VerificationService {
   ) {
     trust(actor);
     const before = await this.file(tx, fileId);
-    if (before.status !== 'in_review') {
-      const openedAt = new Date();
+    if (before.status === 'in_review') return openedFirst(actor, before);
+    const openedAt = new Date();
+    try {
       const file = await this.move(tx, actor, before, 'open', {
         openedAt,
         openedBy: actor.accountId,
@@ -122,12 +123,12 @@ export class VerificationService {
       });
       await this.announce(tx, file, 'verification.opened');
       return { byAnother: false, openedAt, openedBy: actor.accountId };
+    } catch (error) {
+      // A racing open committed first: answer with it, unchanged.
+      const after = await this.file(tx, fileId);
+      if (after.status === 'in_review') return openedFirst(actor, after);
+      throw error;
     }
-    return {
-      byAnother: before.openedBy !== actor.accountId,
-      openedAt: before.openedAt,
-      openedBy: before.openedBy,
-    };
   }
 
   // An approval publishes the garage, a reopened file's included; any other
@@ -139,9 +140,13 @@ export class VerificationService {
     decision: Decision,
   ): Promise<VerificationFile> {
     trust(actor);
+    const reason = reasonOf(decision);
     const before = await this.file(tx, fileId);
+    // Suspension and its lifting belong to the suspension story alone.
+    if (!reason && before.garageStatus === 'suspended') {
+      throw refused('the garage is suspended');
+    }
     const decidedAt = new Date();
-    const reason = decision.outcome === 'approved' ? null : decision.reason;
     const file = await this.move(
       tx,
       actor,
@@ -156,31 +161,44 @@ export class VerificationService {
       },
       reason ? `${reason.code}: ${reason.note}` : undefined,
     );
-    if (decision.outcome === 'approved') {
-      const garage = await tx.garage.update({
-        data: { approvedAt: decidedAt, status: 'approved' },
-        select: { status: true },
-        where: { id: file.garageId },
-      });
-      await this.audit.recordChanges(
-        tx,
-        {
-          actorId: actor.accountId,
-          actorRole: actor.role,
-          garageId: file.garageId,
-          subjectId: file.garageId,
-          subjectType: 'garage',
-        },
-        { status: before.garageStatus },
-        { status: garage.status },
-      );
-    }
+    if (!reason) await this.publish(tx, actor, before, decidedAt);
     await this.announce(tx, file, 'verification.decided', {
       decision: decision.outcome,
     });
     return file;
   }
 
+  // One garage entry: the status, or approved_at when a reopened file of a
+  // published garage is approved again.
+  private async publish(
+    tx: Prisma.TransactionClient,
+    actor: VerificationActor,
+    before: Awaited<ReturnType<VerificationService['file']>>,
+    decidedAt: Date,
+  ) {
+    const garage = await tx.garage.update({
+      data: { approvedAt: decidedAt, status: 'approved' },
+      select: { approvedAt: true, status: true },
+      where: { id: before.garageId },
+    });
+    const again = before.garageStatus === garage.status;
+    await this.audit.recordChanges(
+      tx,
+      {
+        actorId: actor.accountId,
+        actorRole: actor.role,
+        garageId: before.garageId,
+        subjectId: before.garageId,
+        subjectType: 'garage',
+      },
+      again
+        ? { approvedAt: before.garageApprovedAt }
+        : { status: before.garageStatus },
+      again ? { approvedAt: garage.approvedAt } : { status: garage.status },
+    );
+  }
+
+  // Who may resend is the submitting story's rule; here only the file counts.
   async resend(
     tx: Prisma.TransactionClient,
     actor: VerificationActor,
@@ -227,12 +245,16 @@ export class VerificationService {
     // PostgreSQL refuses a malformed uuid outright; it is an unknown id.
     if (!isUUID(id)) throw new NotFoundException();
     const file = await tx.verificationFile.findUnique({
-      include: { garage: { select: { status: true } } },
+      include: { garage: { select: { approvedAt: true, status: true } } },
       where: { id },
     });
     if (!file) throw new NotFoundException();
     const { garage, ...row } = file;
-    return { ...row, garageStatus: garage.status };
+    return {
+      ...row,
+      garageApprovedAt: garage.approvedAt,
+      garageStatus: garage.status,
+    };
   }
 
   // Compare and set on the status read: a concurrent move commits first and
@@ -289,7 +311,7 @@ export class VerificationService {
     return this.events.record(tx, {
       audience: {
         garageId: file.garageId,
-        // No garage has brands yet, so an approval reaches no search.
+        // TODO: the brands story fills brandIds; no garage has brands yet.
         ...(published && { published: { brandIds: [] } }),
         type: 'verification',
       },
@@ -330,5 +352,27 @@ async function name(tx: Prisma.TransactionClient, accountId: string | null) {
     select: { name: true },
     where: { id: accountId },
   });
-  return firstName(account?.name ?? '');
+  return account ? firstName(account.name) : 'someone';
+}
+
+// A negative outcome's reason, required with a code and a note.
+function reasonOf(decision: Decision) {
+  if (decision.outcome === 'approved') return null;
+  const { code, note } = decision.reason;
+  if (!code.trim() || !note.trim()) {
+    throw refusal(
+      HttpStatus.BAD_REQUEST,
+      'validation_failed',
+      'A reason needs a code and a note',
+    );
+  }
+  return decision.reason;
+}
+
+function openedFirst(actor: VerificationActor, file: VerificationFile) {
+  return {
+    byAnother: file.openedBy !== actor.accountId,
+    openedAt: file.openedAt,
+    openedBy: file.openedBy,
+  };
 }
