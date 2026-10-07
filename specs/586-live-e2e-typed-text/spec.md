@@ -27,7 +27,7 @@ A garage owner signed in on the garage dashboard opens "Invită în echipă" and
 **Acceptance Scenarios**:
 
 1. **Given** the garage owner is signed in on the garage dashboard with "Invită în echipă" open and a name typed into "Nume", that field focused, **When** an admin sends the live test update to the owner's account from another context, **Then** the line "Actualizare de test în direct" is visible on the dashboard within 2 seconds, the dialog is still open, "Nume" still holds exactly the typed text, "Nume" is still the focused element, and the page recorded no document load.
-2. **Given** the same state, **When** the check finishes, **Then** no invitation was sent: the dialog was never submitted, so the seeded garage's team and the mailbox are as they were before the check.
+2. **Given** the same state, **When** the check finishes, **Then** no invitation was sent: no `POST …/garages/:garageId/invites` request left the page, because the dialog was never submitted.
 
 ---
 
@@ -44,7 +44,7 @@ A garage owner signed in on the garage dashboard opens "Invită în echipă" and
 
 - **FR-001**: The live end-to-end suite MUST include a check in which a signed-in garage owner has the "Invită în echipă" dialog open with text typed into a text field and that field focused, and an admin sends the live test update to that account from another context; the check MUST assert that the update's line "Actualizare de test în direct" is visible on the dashboard within 2 seconds.
 - **FR-002**: After the update arrives, the check MUST assert, in the running application, that the dialog is still open, that the text field holds exactly the typed text, that the same field is still focused, and that no document load happened since the dashboard opened.
-- **FR-003**: The check MUST never submit the dialog: it sends no invitation, changes no seeded data and needs no mailbox.
+- **FR-003**: The check MUST never submit the dialog and MUST assert that no invite request (`POST …/garages/:garageId/invites`) left the page; it changes no seeded data and needs no mailbox.
 - **FR-004**: The change MUST be test-only: no product code, no new dialog, and the existing live checks (two dashboards, confirm dialog, isolation between drivers) stay as they are.
 
 ### Key Entities
@@ -64,9 +64,19 @@ A garage owner signed in on the garage dashboard opens "Invită în echipă" and
 ## Assumptions
 
 - (autonomous default) The check is a new test next to the existing dialog test in the live suite, against the garage account, rather than a rewrite of the driver's confirm-dialog test: the driver dashboard has no form dialog, and the confirm-dialog case still earns its place.
-- (autonomous default) The text is typed into "Nume" and that field keeps the focus; "E‑mail" stays empty. One text field is enough to prove the promise; the dialog is cancelled or the context closed at the end, never submitted.
+- (autonomous default) The text is typed into "Nume" and that field keeps the focus; "E‑mail" stays empty. One text field is enough to prove the promise; the context is closed at the end, never the dialog cancelled or submitted.
 - (autonomous default) The admin test update is sent exactly as the sibling checks send it (admin session over the API, the garage account's id), and the "no reload" assertion counts document loads as the existing dialog check does.
 - The seeded garage account is an owner of its garage and can open "Invită în echipă" (as `staff-invite.spec.ts` already relies on).
+
+## Clarifications
+
+### Session 2026-10-07
+
+- Q: Is "no invitation sent" asserted against the mailbox or the team? → A: Neither; the page records requests and the check asserts no invite POST left it (tag `@seeded` only). (spec-challenger 1)
+- Q: Cancel the dialog or close the context at the end? → A: Close the context; "Renunță" on a dirty form may raise a discard confirm. (spec-challenger 2)
+- Q: Fill or key-by-key, and is the caret asserted? → A: Key-by-key (`pressSequentially`) after a click into "Nume", since the brief says "type text"; value and focus asserted, caret not (the component test asserts none). (spec-challenger 3)
+- Q: Which reload counter? → A: `page.on('load')` attached right after the dashboard opens, as the sibling dialog check does. (spec-challenger 4)
+- Q: How is SC-003 verified? → A: By review: four separate expectations on dialog, value, focus and reloads; no mutation run for web-e2e. (spec-challenger 5)
 
 ## Spec Delta
 
