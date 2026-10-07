@@ -65,3 +65,4 @@
 - test-adversary: 57 tests in libs/contracts/src/verification-checks.adversary.spec.ts; 3 genuine defects (blank, empty and control-character detail accepted by the DTO) fixed with @Length(1,200) and a no-control-character rule.
 - code-reviewer (BLOCK): HIGH #1 record could land on a file decided concurrently -> file row read FOR SHARE, race test added (red without the lock, green with it); MEDIUM #2 CheckRecord duplicated the DTO -> removed; LOW #3 lamp kept (FR-008, the queue story's API); LOW #4 TODO on the seeded codes.
 - spec-reviewer (APPROVE): MEDIUM #1 fileId missing from VerificationCheckDto -> added, client regenerated; LOW #2 activities audit now always carries the list for the activities kind; LOW #3 deferred.md written (documents summary, lawyer's activity list).
+- code-reviewer re-review (APPROVE): both findings closed; LOW race test now asserts the record is still waiting before the decision commits.

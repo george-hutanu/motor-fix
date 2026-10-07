@@ -323,6 +323,11 @@ describe('a record that is refused', () => {
 
     const recording = refusal(record('rar', { result: 'ok' }));
     await new Promise((resolve) => setTimeout(resolve, 200));
+    const waiting = await Promise.race([
+      recording.then(() => 'settled'),
+      Promise.resolve('waiting'),
+    ]);
+    expect(waiting).toBe('waiting');
     release();
     await deciding;
 
