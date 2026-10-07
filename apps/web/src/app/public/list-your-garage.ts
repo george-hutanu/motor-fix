@@ -11,10 +11,23 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import {
+  isValidCui,
+  normaliseRarNumber,
+  RAR_NUMBER_MIN,
+  stripCui,
+} from '@motor-fix/contracts/listing-verification';
 import { I18n, LanguageSwitch, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton, HlmInput, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { DraftKeeper } from './draft-keeper';
+import {
+  completedCount,
+  cuiError,
+  rarError,
+  readStep6,
+  type Step6Values,
+} from './step6';
 import { currentStep, STEPS } from './steps';
 import { SignInDialog } from '../sign-in/sign-in-dialog';
 
@@ -46,6 +59,8 @@ const SETTLE_MS = 150;
     .field { display: grid; gap: var(--mf-space-1); margin-top: var(--mf-space-3); max-width: 28rem; }
     .hint, .note { font-size: var(--mf-size-small); color: var(--mf-text-secondary); }
     .error { font-size: var(--mf-size-small); color: var(--mf-red-ink); }
+    .error:empty { display: none; }
+    section > .note { margin-top: var(--mf-space-3); }
     .actions { display: flex; flex-wrap: wrap; gap: var(--mf-space-2); }
     .actions button, .ended button { min-height: var(--mf-tap); }
     .ended { display: grid; gap: var(--mf-space-3); justify-items: start; margin-top: var(--mf-space-4); }
@@ -152,6 +167,46 @@ const SETTLE_MS = 150;
                       <p id="listing-email-error" class="error">{{ 'public.listing.emailInvalid' | t }}</p>
                     }
                   </div>
+                } @else if (step.n === 6) {
+                  <p class="note">{{ 'public.listing.verifyIntro' | t }}</p>
+                  <div class="field">
+                    <label for="listing-cui">{{ 'public.listing.cui' | t }}</label>
+                    <input
+                      #cui
+                      hlmInput
+                      id="listing-cui"
+                      type="text"
+                      inputmode="numeric"
+                      autocomplete="off"
+                      maxlength="40"
+                      [value]="shown().cui"
+                      [aria-describedby]="cuiError() ? 'listing-cui-error' : null"
+                      [attr.aria-invalid]="cuiError() ? 'true' : null"
+                      (input)="fillCui(cui.value)"
+                      (blur)="leave(cui, 'cui')"
+                    />
+                    <p id="listing-cui-error" class="error" role="status" aria-live="polite">{{ cuiError() ? ('public.listing.cuiInvalid' | t) : '' }}</p>
+                  </div>
+                  <div class="field">
+                    <label for="listing-rar">{{ 'public.listing.rarNumber' | t }}</label>
+                    <input
+                      #rar
+                      hlmInput
+                      id="listing-rar"
+                      type="text"
+                      autocomplete="off"
+                      maxlength="40"
+                      [value]="shown().rarNumber"
+                      [aria-describedby]="rarError() ? 'listing-rar-error' : 'listing-rar-hint'"
+                      [attr.aria-invalid]="rarError() ? 'true' : null"
+                      (input)="fillRar(rar.value)"
+                      (blur)="leave(rar, 'rarNumber')"
+                    />
+                    <p id="listing-rar-hint" class="hint">{{ 'public.listing.rarHint' | t }}</p>
+                    <p id="listing-rar-error" class="error" role="status" aria-live="polite">{{ rarError() ? ('public.listing.rarShort' | t) : '' }}</p>
+                  </div>
+                  <p class="note count" role="status" aria-live="polite">{{ 'public.listing.verifyCount' | t: { n: verified() } }}</p>
+                  <p class="note">{{ 'public.listing.verifyNote' | t }}</p>
                 }
               </section>
             }
@@ -211,6 +266,43 @@ export class ListYourGarage {
     });
   }
 
+  // The fields show what was typed until they are left; the values below
+  // are the stored ones.
+  protected readonly shown = signal<Step6Values>({ cui: '', rarNumber: '' });
+  private readonly left = signal({ cui: false, rarNumber: false });
+  private readonly stored = computed(() => readStep6(this.keeper.draft().data));
+  protected readonly cuiError = computed(() =>
+    cuiError(this.stored().cui, this.left().cui),
+  );
+  protected readonly rarError = computed(() =>
+    rarError(this.stored().rarNumber, this.left().rarNumber),
+  );
+  protected readonly verified = computed(() => {
+    const { cui, rarNumber } = this.stored();
+    return completedCount([
+      isValidCui(cui),
+      rarNumber.length >= RAR_NUMBER_MIN,
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  protected fillCui(value: string) {
+    this.keeper.fill('6', 'cui', stripCui(value) || undefined);
+  }
+
+  protected fillRar(value: string) {
+    this.keeper.fill('6', 'rarNumber', normaliseRarNumber(value) || undefined);
+  }
+
+  protected leave(input: HTMLInputElement, key: keyof Step6Values) {
+    const value = this.stored()[key];
+    input.value = value;
+    this.shown.update((shown) => ({ ...shown, [key]: value }));
+    this.left.update((left) => ({ ...left, [key]: true }));
+  }
+
   protected readonly noteText = computed(() => {
     const note = this.keeper.note();
     return note ? this.i18n.t(`public.listing.${note.key}`, note.params) : '';
@@ -243,6 +335,12 @@ export class ListYourGarage {
 
   // Back at the step the draft was left on, once the form is on the page.
   private restore(step: number | null) {
+    const stored = this.stored();
+    this.shown.set(stored);
+    this.left.set({
+      cui: stored.cui !== '',
+      rarNumber: stored.rarNumber !== '',
+    });
     if (step && step > 1)
       afterNextRender(() => this.show(step), { injector: this.injector });
   }
