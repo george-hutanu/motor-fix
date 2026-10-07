@@ -9,6 +9,8 @@ import { serialDatabase } from '../auth/serial-db.testing';
 import { outbox } from '../events/event.port';
 import { databaseUrl, fixtures } from '../notifications/notifications.testing';
 
+// @traces 040-FR-008 040-FR-010 040-FR-011
+
 type Stance = 'works_on' | 'does_not_take';
 
 const { account, prisma } = fixtures();
