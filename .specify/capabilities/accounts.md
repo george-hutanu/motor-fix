@@ -17,6 +17,7 @@ features:
   - 536-gate-dialog-dashboard
   - 569-auth-events-through-event-port
   - 160-admin-dashboard-menu
+  - 028-driver-dashboard-views
 ---
 
 # Capability: Accounts
@@ -89,9 +90,9 @@ _From 079-account-model._
 
 _From 079-account-model._
 
-### 082-FR-021 — A signed-out visit to `/app/driver`, `/app/garage` or `/app/admin` MUST end on Home with the sign-in dialog open; after signing in, the person's own landing opens (modifies 079-FR-017).
+### 028-FR-005 — A signed‑out visit to a dashboard view address MUST end on Home with the sign‑in dialog open and keep that address; after signing in, that address MUST open when the area guard admits it (it is under the landing of the role the account signs in with), otherwise the landing opens as today; the kept address never changes the role used last. Closing the dialog without signing in MUST drop the kept address; the router URL (path, query and fragment) is kept only when it starts with `/` and not `//` or `/\`; it is opened only through the router (an address of this site, never a browser location change); it uses the one return key the provider sign‑in already uses (083‑FR‑003), the last writer winning. Modifies 082‑FR‑021 (after signing in, the landing opened). A session that expires mid‑visit is not this rule: a view change reads the session in memory, and a refused call is answered by the dialog over the screen (ST-130, unchanged).
 
-_From 082-sign-in._
+_From 028-driver-dashboard-views._
 
 ### 160-FR-007 — The frame's menu MUST show only the entries the role in use may open according to the capabilities table and whose view is released; there MUST be no "Vezi ca" demo buttons. Each view MUST carry a release mark; an unreleased view MUST be absent from the menu and the tab bar, and its address MUST open "Panou" (the existing fall-through) for every role the admin area admits (today `admin` only; any other role is sent to its own dashboard by FR-005). At this story's release "Panou", "Service‑uri" and "Setări" are released and "Utilizatori", "Recenzii raportate", "Mărci și lucrări" and "Asistent AI" are not; the story that builds a view flips its mark. The mark is one line per view in the view list, with a test for a hidden entry.
 
@@ -563,3 +564,5 @@ _From 569-auth-events-through-event-port._
 - `128-FR-004` — superseded by `569-FR-003` (2026-10-07)
 
 - `079-FR-018` — superseded by `160-FR-007` (2026-10-07)
+
+- `082-FR-021` — superseded by `028-FR-005` (2026-10-07)
