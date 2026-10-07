@@ -45,6 +45,7 @@ features:
   - 728-active-feature-padded-fallback
   - 746-validate-archived-fr-assigned
   - 760-e2e-sign-up-limit
+  - 437-diff-audit-origin-main
 ---
 
 # Capability: Platform
@@ -1088,6 +1089,10 @@ _From 760-e2e-sign-up-limit._
 ### 760-FR-003 — The sign-up count keys MUST keep the prefix the suite clears, `auth:signup:address:`.
 
 _From 760-e2e-sign-up-limit._
+
+### 437-FR-001 — diff-audit MUST take its base as `git merge-base HEAD origin/main`, and only when that ref is absent fall back to `git merge-base HEAD main`.
+
+_From 437-diff-audit-origin-main._
 
 ## Retired
 
