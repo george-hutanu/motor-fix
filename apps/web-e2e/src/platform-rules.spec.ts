@@ -62,6 +62,9 @@ const maintenance = (page: Page) =>
   page.getByRole('switch', { exact: true, name: MAINTENANCE });
 
 test.describe('the platform rules in Setări @seeded', () => {
+  // The rules are platform-wide: run in parallel, one test's restore flips
+  // the switch another test just set.
+  test.describe.configure({ mode: 'serial' });
   test.beforeEach(({ request }) => restore(request));
   test.afterEach(({ request }) => restore(request));
 
