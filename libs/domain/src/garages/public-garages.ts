@@ -1,6 +1,7 @@
 import type { PublicGarageDto } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
+import { brandAnswer } from './brand-answer';
 import { PRISMA } from '../auth/prisma';
 import { refusal } from '../auth/sign-up.service';
 import type { PrismaClient } from '../generated/prisma/client';
@@ -20,10 +21,27 @@ export class PublicGaragesService {
     // PostgreSQL refuses a NUL byte in text; no slug holds a control character.
     if (/\p{Cc}/u.test(slug)) throw notFound();
     const garage = await this.prisma.garage.findFirst({
-      select: { id: true, name: true, slug: true },
+      select: {
+        brandNote: true,
+        brands: {
+          select: {
+            brand: {
+              select: { id: true, name: true, popularity: true, slug: true },
+            },
+            stance: true,
+          },
+        },
+        id: true,
+        name: true,
+        refusalPhrase: true,
+        slug: true,
+      },
       where: { slug, ...publicGarages() },
     });
-    if (garage) return garage;
+    if (garage) {
+      const { brands, id, name, slug: held, ...texts } = garage;
+      return { id, name, slug: held, ...brandAnswer(brands, texts) };
+    }
     const hidden = await this.prisma.garage.findUnique({
       select: { status: true },
       where: { slug },

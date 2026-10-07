@@ -14,6 +14,8 @@ import { ActivatedRoute } from '@angular/router';
 import { I18n, LanguageSwitch, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton, HlmInput, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
+import { brandsOf } from './brands-section';
+import { BrandsStep } from './brands-step';
 import { DraftKeeper } from './draft-keeper';
 import { currentStep, STEPS } from './steps';
 import { SignInDialog } from '../sign-in/sign-in-dialog';
@@ -27,7 +29,7 @@ const SETTLE_MS = 150;
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(document:click)': 'outside($event)' },
-  imports: [HlmButton, HlmInput, LanguageSwitch, TranslatePipe],
+  imports: [BrandsStep, HlmButton, HlmInput, LanguageSwitch, TranslatePipe],
   providers: [DraftKeeper],
   selector: 'mf-list-your-garage',
   styles: `
@@ -153,6 +155,9 @@ const SETTLE_MS = 150;
                     }
                   </div>
                 }
+                @if (step.n === 2) {
+                  <mf-brands-step [value]="brands()" (valueChange)="keeper.section('2', $event)" />
+                }
               </section>
             }
             <div class="actions">
@@ -179,6 +184,10 @@ export class ListYourGarage {
   protected readonly keeper = inject(DraftKeeper);
   protected readonly signIn = inject(SignInDialog);
   protected readonly steps = STEPS;
+  // The draft's steps['2'], kept and restored with the rest of the form.
+  protected readonly brands = computed(() =>
+    brandsOf(this.keeper.draft().data),
+  );
   protected readonly current = signal(1);
   protected readonly open = signal(false);
   protected readonly prefix = computed(() =>
