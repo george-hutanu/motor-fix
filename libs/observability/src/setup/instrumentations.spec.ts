@@ -6,7 +6,7 @@ import express from 'express';
 
 import { routeLabel } from './route-label';
 import { startTelemetry } from './start';
-import { inMemory, patchForJest } from '../testing';
+import { inMemory, patchForJest } from '../testing/in-memory';
 
 const memory = inMemory();
 const started = startTelemetry(
@@ -53,6 +53,11 @@ function serverSpans(all: Awaited<ReturnType<typeof spans>>) {
   return all.filter((span) => span.kind === SpanKind.SERVER);
 }
 
+// @traces 876-FR-003
+// @traces 876-FR-004
+// @traces 876-FR-008
+// @traces 876-FR-010
+// @traces 876-FR-011
 describe('the HTTP instrumentation', () => {
   it('names a request span by its route template, not its path', async () => {
     await fetch(`${base}/api/v1/garages/42?email=ana@example.com`);

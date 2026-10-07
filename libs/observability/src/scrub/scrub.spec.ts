@@ -1,5 +1,6 @@
 import { scrub, scrubDeep } from './scrub';
 
+// @traces 876-FR-012
 describe('scrub', () => {
   it.each([
     ['contact ana.pop+cars@example.co.uk now', 'contact *** now'],

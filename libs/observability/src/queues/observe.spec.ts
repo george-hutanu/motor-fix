@@ -6,7 +6,7 @@ import type { Queue, Worker } from 'bullmq';
 
 import { observeQueue, observeWorker } from './observe';
 import { startTelemetry } from '../setup/start';
-import { inMemory } from '../testing';
+import { inMemory } from '../testing/in-memory';
 
 const memory = inMemory();
 const started = startTelemetry(
@@ -69,6 +69,8 @@ async function points(name: string) {
     .flatMap((metric) => metric.dataPoints as DataPoint<unknown>[]);
 }
 
+// @traces 876-FR-007
+// @traces 876-FR-009
 describe('observeWorker', () => {
   it('counts a completed job and records its duration in seconds by queue and job name', async () => {
     const worker = fakeWorker();

@@ -25,6 +25,7 @@ function decide(ratio: number, context: Context, kind: SpanKind) {
     .decision;
 }
 
+// @traces 876-FR-013
 describe('sampler', () => {
   it.each([SpanKind.SERVER, SpanKind.CONSUMER, SpanKind.PRODUCER])(
     'samples a root span of kind %s by the ratio',

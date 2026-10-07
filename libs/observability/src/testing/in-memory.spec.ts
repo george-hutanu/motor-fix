@@ -1,4 +1,4 @@
-import { inMemory, patchForJest } from '.';
+import { inMemory, patchForJest } from './in-memory';
 
 describe('the testing helpers', () => {
   it('give in-memory exporters and a reader that collects on demand', async () => {

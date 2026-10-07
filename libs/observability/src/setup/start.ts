@@ -4,6 +4,7 @@ import {
   DiagLogLevel,
   diag,
   metrics,
+  trace,
 } from '@opentelemetry/api';
 import { logs } from '@opentelemetry/api-logs';
 import type { Instrumentation } from '@opentelemetry/instrumentation';
@@ -85,15 +86,27 @@ export function startTelemetry(
   exporters: Exporters = {},
 ): Telemetry | undefined {
   if (started) return started.telemetry;
-  let settings: ReturnType<typeof telemetry>;
   try {
-    settings = telemetry(source);
+    return boot(service, source, exporters);
   } catch (error) {
+    // Whatever registered before the failure is taken back, so the
+    // process runs as it does with telemetry off.
+    trace.disable();
+    metrics.disable();
+    logs.disable();
     console.error(
       JSON.stringify({ level: 'error', message: (error as Error).message }),
     );
     return undefined;
   }
+}
+
+function boot(
+  service: Service,
+  source: Record<string, string | undefined>,
+  exporters: Exporters,
+): Telemetry | undefined {
+  const settings = telemetry(source);
   if (!settings) return undefined;
   const { endpoint, env, traceSampleRatio } = settings;
   diag.setLogger(diagLogger, DiagLogLevel.ERROR);

@@ -21,6 +21,7 @@ function exported() {
 
 afterEach(() => exporter.reset());
 
+// @traces 876-FR-012
 describe('ScrubSpanProcessor', () => {
   it('drops statement texts and query strings and cuts the full URL at the query', () => {
     const span = tracer.startSpan('GET', {

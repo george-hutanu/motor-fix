@@ -16,6 +16,7 @@ function delegate() {
   return (trace.getTracerProvider() as ProxyTracerProvider).getDelegate();
 }
 
+// @traces 876-FR-014
 describe('startTelemetry while telemetry is off', () => {
   it('starts nothing, loads no SDK and adds no signal handler when the endpoint is unset', () => {
     const handlers = process.listenerCount('SIGTERM');

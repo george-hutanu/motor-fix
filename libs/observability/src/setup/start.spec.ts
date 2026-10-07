@@ -2,7 +2,7 @@ import { metrics, SpanKind, trace } from '@opentelemetry/api';
 import { logs } from '@opentelemetry/api-logs';
 
 import { resourceFor, startTelemetry } from './start';
-import { inMemory } from '../testing';
+import { inMemory } from '../testing/in-memory';
 
 const memory = inMemory();
 const source = {
@@ -22,6 +22,8 @@ const resource = {
 
 afterAll(() => started?.shutdown());
 
+// @traces 876-FR-001
+// @traces 876-FR-002
 describe('startTelemetry with an endpoint', () => {
   it('returns the endpoint settings and the sample ratio of the environment', () => {
     expect(started).toMatchObject({ env: 'staging', traceSampleRatio: 1 });

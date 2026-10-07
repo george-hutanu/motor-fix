@@ -36,6 +36,8 @@ function written(log: () => void): Record<string, unknown> {
 
 beforeEach(() => records.reset());
 
+// @traces 876-FR-006
+// @traces 876-FR-012
 describe('JsonLogger', () => {
   const logger = new JsonLogger();
 

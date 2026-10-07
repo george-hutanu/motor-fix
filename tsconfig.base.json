@@ -35,7 +35,7 @@
       "@motor-fix/media": ["./libs/media/src/index.ts"],
       "@motor-fix/observability": ["./libs/observability/src/index.ts"],
       "@motor-fix/observability/testing": [
-        "./libs/observability/src/testing/index.ts"
+        "./libs/observability/src/testing/in-memory.ts"
       ],
       "@motor-fix/overlays": ["./libs/overlays/src/index.ts"],
       "@motor-fix/ui-cockpit": ["./libs/ui-cockpit/src/index.ts"],

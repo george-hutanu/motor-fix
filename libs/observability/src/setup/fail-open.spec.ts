@@ -5,7 +5,7 @@ import express from 'express';
 
 import { routeLabel } from './route-label';
 import { startTelemetry } from './start';
-import { patchForJest } from '../testing';
+import { patchForJest } from '../testing/in-memory';
 
 function listen(server: Server) {
   return new Promise<string>((resolve) => {
@@ -35,6 +35,7 @@ afterAll(async () => {
   await new Promise((resolve) => collector.close(resolve));
 });
 
+// @traces 876-FR-013
 describe('telemetry with an endpoint that fails', () => {
   it('leaves every response unchanged and flushes and shuts down without throwing', async () => {
     const endpoint = await listen(collector);

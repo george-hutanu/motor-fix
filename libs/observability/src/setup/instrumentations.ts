@@ -21,7 +21,6 @@ export function instrumentations(): Instrumentation[] {
     }),
     new UndiciInstrumentation(),
     new IORedisInstrumentation({
-      dbStatementSerializer: (command) => command,
       requireParentSpan: true,
     }),
     new PrismaInstrumentation({

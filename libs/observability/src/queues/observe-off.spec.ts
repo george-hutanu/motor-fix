@@ -5,6 +5,7 @@ import type { Queue, Worker } from 'bullmq';
 import { observeQueue, observeWorker } from './observe';
 import { queueTelemetry } from './telemetry-option';
 
+// @traces 876-FR-014
 describe('queue telemetry while telemetry is off', () => {
   it('subscribes to nothing and polls nothing', () => {
     const worker = new EventEmitter() as unknown as Worker & EventEmitter;

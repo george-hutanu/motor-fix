@@ -9,9 +9,18 @@ let instance: Telemetry | undefined;
 // Undefined while telemetry is off, which leaves bullmq as it was.
 export function queueTelemetry(): Telemetry | undefined {
   if (!telemetryStarted()) return undefined;
-  const { BullMQOtel } = require('bullmq-otel') as typeof import('bullmq-otel');
-  instance ??= new BullMQOtel({
-    tracerName: 'motorfix',
-  }) as unknown as Telemetry;
+  if (instance) return instance;
+  try {
+    const { BullMQOtel } =
+      require('bullmq-otel') as typeof import('bullmq-otel');
+    instance = new BullMQOtel({
+      tracerName: 'motorfix',
+    }) as unknown as Telemetry;
+  } catch (error) {
+    // Jobs still run, only without their trace context.
+    console.error(
+      JSON.stringify({ level: 'error', message: (error as Error).message }),
+    );
+  }
   return instance;
 }

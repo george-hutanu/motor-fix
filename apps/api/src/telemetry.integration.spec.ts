@@ -126,6 +126,10 @@ beforeEach(() => {
   handled.length = 0;
 });
 
+// @traces 876-FR-003
+// @traces 876-FR-004
+// @traces 876-FR-005
+// @traces 876-FR-007
 describe('telemetry in the API', () => {
   it('holds the request, its query, its Redis call and the job it queued in one trace', async () => {
     await request(app.getHttpServer()).get('/api/v1/probe/trace/7').expect(200);

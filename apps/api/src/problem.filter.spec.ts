@@ -48,6 +48,7 @@ function send(exception: unknown) {
   return res;
 }
 
+// @traces 876-FR-007
 describe('ProblemFilter', () => {
   afterEach(() => jest.restoreAllMocks());
 
