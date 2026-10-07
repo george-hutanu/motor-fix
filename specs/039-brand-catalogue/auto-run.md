@@ -36,3 +36,7 @@ level.mjs check: 2, unchanged. Checklist: all items pass.
 
 ## Phase 7 — Tasks
 - tasks.md: 20 tasks (4 foundational, 6 US1, 7 US2, 2 US3, 1 polish); tests precede implementation in every story; all 17 FRs mapped. No Playwright task (no screen).
+
+## Phase 8 — Analyze (inline, opus)
+
+artifact-lint: 0 errors, 0 warnings (Jev lane unavailable). 17/17 FRs tasked, 20 tasks, SC-001..005 covered by T005/T006/T012/T013/T018/T020. Context contradictions both settled in clarify; proposed clarifications all answered (A30 shape, job_type_id, flip, stable key, error codes via `invalid_cursor`/`brand_not_worked_on`). Findings: 0 CRITICAL, 0 HIGH, 0 MEDIUM; 1 LOW (fuel columns `petrol…` vs the brief's proposed `fuel_petrol…` — the brief marks names proposed; kept). No remediation needed; no re-run.
