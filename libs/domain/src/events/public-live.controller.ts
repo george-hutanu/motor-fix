@@ -47,6 +47,9 @@ export class PublicLiveController {
     @Req() req: Request,
     @Res() res: Response,
   ) {
+    const channels = await this.channels(query);
+    // Counted after the read, with no await before open: a burst of requests
+    // from one address cannot all pass the count while the reads run.
     const address = clientOf(req.ip ?? '');
     if (!this.hub.publicPlace(address)) {
       throw refusal(
@@ -55,7 +58,6 @@ export class PublicLiveController {
         'Too many live streams from this address',
       );
     }
-    const channels = await this.channels(query);
     res.writeHead(200, {
       'Cache-Control': 'no-cache',
       'Content-Type': 'text/event-stream; charset=utf-8',

@@ -499,6 +499,17 @@ describe('the public live stream', () => {
       expect(reopened?.res.statusCode).toBe(200);
       await reopened?.next('hello');
     });
+
+    it('holds the limit when one address opens its streams all at once', async () => {
+      const burst = await Promise.all(
+        Array.from({ length: 25 }, () =>
+          stream(limited, { garages: randomUUID() }),
+        ),
+      );
+      const statuses = burst.map((live) => live.res.statusCode);
+      expect(statuses.filter((s) => s === 200)).toHaveLength(20);
+      expect(statuses.filter((s) => s === 429)).toHaveLength(5);
+    });
   });
 
   describe('a copy whose Redis does not answer', () => {
