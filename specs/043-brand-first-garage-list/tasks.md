@@ -8,8 +8,8 @@
 
 ## Phase 1: Foundational (blocks every story)
 
-- [ ] T001 [P] Write the failing `libs/contracts/src/garage-search.dto.spec.ts` (new): `GarageSearchQueryDto` refuses a missing or non-uuid `brandId`, a `cursor` over 200 characters and an unknown field; accepts a uuid with and without a cursor
-- [ ] T002 Create `libs/contracts/src/garage-search.dto.ts` (new) per data-model.md: `GarageSearchQueryDto` (`@IsUUID() brandId`, optional `cursor` string, max 200), `ListedGarageDto` (id, name, slug, `stance`; nothing else), `BrandCountsDto` (`worksOn`, `doesNotTake`), `GarageSearchPageDto` (`items`, `nextCursor`, `total`, `counts`), `GARAGE_BRAND_ANSWERS`; add `export * from './garage-search.dto'` to `libs/contracts/src/index.ts`
+- [X] T001 [P] Write the failing `libs/contracts/src/garage-search.dto.spec.ts` (new): `GarageSearchQueryDto` refuses a missing or non-uuid `brandId`, a `cursor` over 200 characters and an unknown field; accepts a uuid with and without a cursor
+- [X] T002 Create `libs/contracts/src/garage-search.dto.ts` (new) per data-model.md: `GarageSearchQueryDto` (`@IsUUID() brandId`, optional `cursor` string, max 200), `ListedGarageDto` (id, name, slug, `stance`; nothing else), `BrandCountsDto` (`worksOn`, `doesNotTake`), `GarageSearchPageDto` (`items`, `nextCursor`, `total`, `counts`), `GARAGE_BRAND_ANSWERS`; add `export * from './garage-search.dto'` to `libs/contracts/src/index.ts`
 
 ## Phase 2: User Story 1 - Garages that take my brand come first (P1)
 
