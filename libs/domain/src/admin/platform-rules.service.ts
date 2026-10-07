@@ -114,8 +114,8 @@ export class PlatformRulesService {
   }
 }
 
-// The change's checks, in FR-004's order, for a value that differs from the
-// current one or was read stale.
+// A change is checked in this order: the value's shape, a stale read, then the
+// second admin a rule may need. It runs for a new value or one read stale.
 function refuseChange(
   row: { defaultValue: unknown; requiresTwoAdmins: boolean; value: unknown },
   seen: unknown,
