@@ -15,6 +15,9 @@ import { garageInvitesControllerRevoke } from '../fn/garages/garage-invites-cont
 import { GarageInvitesControllerRevoke$Params } from '../fn/garages/garage-invites-controller-revoke';
 import { garageInvitesControllerSend } from '../fn/garages/garage-invites-controller-send';
 import { GarageInvitesControllerSend$Params } from '../fn/garages/garage-invites-controller-send';
+import { PublicGarageDto } from '../models/public-garage-dto';
+import { publicGaragesControllerBySlug } from '../fn/garages/public-garages-controller-by-slug';
+import { PublicGaragesControllerBySlug$Params } from '../fn/garages/public-garages-controller-by-slug';
 import { StaffInviteSentDto } from '../models/staff-invite-sent-dto';
 
 @Injectable({ providedIn: 'root' })
@@ -96,6 +99,31 @@ export class GaragesService extends BaseService {
   garageInvitesControllerRevoke(params: GarageInvitesControllerRevoke$Params, context?: HttpContext): Promise<void> {
     const resp = this.garageInvitesControllerRevoke$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `publicGaragesControllerBySlug()` */
+  static readonly PublicGaragesControllerBySlugPath = '/api/v1/garages/{slug}';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `publicGaragesControllerBySlug()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  publicGaragesControllerBySlug$Response(params: PublicGaragesControllerBySlug$Params, context?: HttpContext): Promise<StrictHttpResponse<PublicGarageDto>> {
+    const obs = publicGaragesControllerBySlug(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `publicGaragesControllerBySlug$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  publicGaragesControllerBySlug(params: PublicGaragesControllerBySlug$Params, context?: HttpContext): Promise<PublicGarageDto> {
+    const resp = this.publicGaragesControllerBySlug$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PublicGarageDto>): PublicGarageDto => r.body);
   }
 
 }

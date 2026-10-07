@@ -1,26 +1,14 @@
 import { randomUUID } from 'node:crypto';
 
-import { CURRENT_CONSENT, readEnv, STORAGE_ENV } from '@motor-fix/contracts';
+import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { AccountsService, signAccessToken } from '@motor-fix/domain';
-import { databaseTurn, S3TestStore } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
-import { AppModule } from './app.module';
-import { configureApp, openApiDocument } from './bootstrap';
+import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { openApiDocument } from './bootstrap';
 
-const env = {
-  APP_ENV: 'test',
-  AUTH_TOKEN_SECRET: 'test-secret',
-  DATABASE_URL:
-    process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres',
-  REDIS_URL: process.env['REDIS_URL'] ?? 'redis://localhost:6379',
-  RELEASE_SHA: 'abc123',
-} as const;
-const store = new S3TestStore();
-// The domain specs empty the account tables meanwhile: wait for our turn.
-const turn = databaseTurn(env.DATABASE_URL);
+const api = apiBoot();
 
 const PUBLIC = [
   'GET /api/v1/auth/oauth/apple',
@@ -28,6 +16,7 @@ const PUBLIC = [
   'GET /api/v1/auth/oauth/google/callback',
   'GET /api/v1/auth/oauth/pending',
   'GET /api/v1/auth/providers',
+  'GET /api/v1/garages/00000000-0000-4000-8000-000000000000',
   'GET /health/live',
   'GET /health/ready',
   'POST /api/v1/auth/confirm-email',
@@ -57,18 +46,7 @@ let routes: { method: (typeof METHODS)[number]; path: string }[];
 let accountId: string;
 
 beforeAll(async () => {
-  await turn.take();
-  await store.start();
-  const config = readEnv(
-    ['DATABASE_URL', 'REDIS_URL', 'AUTH_TOKEN_SECRET', ...STORAGE_ENV],
-    { ...env, ...store.env() },
-  );
-  const moduleRef = await Test.createTestingModule({
-    imports: [AppModule.register(config)],
-  }).compile();
-  app = moduleRef.createNestApplication({ bufferLogs: true });
-  configureApp(app, config);
-  await app.init();
+  app = await api.start();
   routes = Object.entries(openApiDocument(app).paths).flatMap(([path, item]) =>
     METHODS.filter((method) => method in item).map((method) => ({
       method,
@@ -83,11 +61,7 @@ beforeAll(async () => {
   }));
 }, 120_000);
 
-afterAll(async () => {
-  await app.close();
-  await store.stop();
-  await turn.release();
-});
+afterAll(() => api.stop());
 
 // The renewal refuses a missing cookie with the same code, but it is its own
 // answer: it clears the cookie, which the guard never does.
@@ -140,7 +114,7 @@ describe('routes without a session', () => {
 
   it('refuses an expired token for a real account on every gated route', async () => {
     const sign = (now: number) =>
-      `Bearer ${signAccessToken({ accountId, role: 'driver' }, env.AUTH_TOKEN_SECRET, now)}`;
+      `Bearer ${signAccessToken({ accountId, role: 'driver' }, TEST_TOKEN_SECRET, now)}`;
     expect((await call('get', '/api/v1/me', sign(Date.now()))).status).toBe(
       200,
     );

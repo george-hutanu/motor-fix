@@ -37,6 +37,8 @@ features:
   - 472-validation-failed-code
   - 481-watch-done-threshold
   - 775-level-at-parity
+  - 783-api-test-boot-helper
+  - 784-impossible-level-date
 ---
 
 # Capability: Platform
@@ -917,9 +919,9 @@ _From 677-zoneless-level-at._
 
 _From 677-zoneless-level-at._
 
-### 677-FR-003 — A `level_at` of the one shape both readers parse alike (`YYYY-MM-DDTHH:MM`, optional seconds with an optional 3- or 6-digit fraction, then `Z` or `±hh:mm`) MUST keep its current freshness behaviour in both readers; any other shape is no waiting level in both.
+### 784-FR-003 — A `level_at` of the one shape both readers parse alike (`YYYY-MM-DDTHH:MM`, optional seconds with an optional 3- or 6-digit fraction, then `Z` or `±hh:mm`) on a day its written month has MUST keep its current freshness behaviour in both readers; any other shape, or a day the month does not have, is no waiting level in both.
 
-_From 677-zoneless-level-at._
+_From 784-impossible-level-date._
 
 ### 677-FR-004 — The Python-vs-JS parity test MUST include a fresh, zone-less `level_at` among its compared states, and both helpers MUST produce the same `feature.json` for it (the pointer alone, no level).
 
@@ -981,6 +983,26 @@ _From 775-level-at-parity._
 
 _From 775-level-at-parity._
 
+### 783-FR-001 — `apps/api` MUST have one test-only boot helper: a handle created at module scope whose `start()` boots the API for an integration spec as production configures it (the test environment values the suites use today, the shared database turn taken, the in-process file store started, the configuration read and checked from those values, the application module compiled, the production app setup applied, the app started) and returns the started app, and whose `stop()` tears down whatever `start()` reached.
+
+_From 783-api-test-boot-helper._
+
+### 783-FR-002 — `stop()` MUST be safe to call whatever stage `start()` reached, including when it threw or never ran: it MUST attempt every close of what was opened (the app if it was created, the store if it started), in the order app, store, and MUST release the database turn in a `finally`; when a close throws, the remaining closes and the release still run and the first error is rethrown. A second `stop()` after the first is harmless, and a `stop()` that runs while `start()` is still in progress makes `start()` give back whatever it reaches and reject.
+
+_From 783-api-test-boot-helper._
+
+### 783-FR-005 — The helper MUST be covered by its own spec that proves FR-002 for a boot that throws at each stage and for a teardown whose close throws, making those stages fail with `jest.spyOn` in the spec, not through parameters of the helper.
+
+_From 783-api-test-boot-helper._
+
+### 784-FR-001 — Both readers of the waiting level MUST treat a stamp whose written day the written month does not have (29 February in a common year, 30 February, 31 in a 30-day month) as no waiting level, in every stamp shape they accept (with or without seconds and a fraction, with `Z` or an offset); the written year, month and day decide, not the instant the stamp parses to.
+
+_From 784-impossible-level-date._
+
+### 784-FR-002 — The two readers MUST give the same answer (the waiting level, or none, at the same `now`) for every stamp in acceptance scenarios 1–3, and the harness specs that hold the two readers together MUST assert each of them so a later divergence fails the suite; the JavaScript reader's answers MUST also be asserted on their own, without Python.
+
+_From 784-impossible-level-date._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -997,3 +1019,5 @@ _From 775-level-at-parity._
 
 - `464-FR-005` — superseded by `481-FR-001` (2026-10-07)
 - `464-FR-006` — superseded by `481-FR-002` (2026-10-07)
+
+- `677-FR-003` — superseded by `784-FR-003` (2026-10-07)

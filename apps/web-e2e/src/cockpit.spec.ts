@@ -153,8 +153,11 @@ test('changes theme with the device at once, keeping what was typed', async ({
   page,
 }) => {
   await open(page, 'dark');
+  // Typed before hydration, the value is wiped when the client takes over the server's input.
+  await page.waitForLoadState('networkidle');
   const input = page.locator('input.spartan-input').first();
   await input.fill('Dacia Logan 2015');
+  await expect(input).toHaveValue('Dacia Logan 2015');
   const url = page.url();
 
   await page.emulateMedia({ colorScheme: 'light' });
