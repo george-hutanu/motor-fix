@@ -23,3 +23,9 @@ spec-challenger: 5 findings; context.md: 2 contradictions, 5 proposals. Five que
 - Duplicates checked against the file and stored brands incl. retired; brand id UUID (audit.prisma).
 - Search shape `{items,nextCursor,total}` 20/page; one Redis key for the active list, dropped on change (audit-history.dto.ts:163; A30).
 level.mjs check: 2, unchanged. Checklist: all items pass.
+
+## Phase 5 — Plan
+- before_plan: design check skipped (design.md current, Checked 2026-10-07, no boards); git commit had nothing to commit. Agent context pointer refreshed (CLAUDE.local.md, one line, no growth).
+- plan.md, research.md (9 decisions, each with Evidence), data-model.md, contracts/brands.md, quickstart.md. Technical Context read from package.json, tsconfig*, nx.json, jest.preset.cjs, prisma.config.ts, Dockerfile, ci.yml, railway-deploy.ts.
+- Decisions: data file is a typed `libs/domain/src/catalogue/brands.ts` (slug derived from the name); the loader runs from one awaited line in `apps/api/src/main.ts` before `listen` (after every `prisma migrate deploy`, not for the `openapi` command, seed unchanged); audit through the existing AUDIT_PORT as `system`; cache = one Redis key `brands:active` on the exported AUTH_REDIS client, TTL 3600, DEL on change; accent fold in process; `{items,nextCursor,total}` with the audit-history cursor rule; fuel-tick and note/phrase rules as PostgreSQL CHECKs, the two cross-table rules (job only on works_on; does_not_take clears ticks and deletes jobs) in `GarageBrandsService.setStance`/`addJob`; `GET /api/v1/brands` @Public() joins public-routes; migration `20261007090000_brand_catalogue`.
+- Constitution Check: pass before and after design; Complexity Tracking empty. artifact-lint --check: 0 errors (tasks-missing warning only). level check: 2 unchanged.
