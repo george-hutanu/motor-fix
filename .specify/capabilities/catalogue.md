@@ -3,6 +3,7 @@ capability: catalogue
 updated: 2026-10-07
 features:
   - 039-brand-catalogue
+  - 112-opening-hours
 ---
 
 # Capability: Catalogue
@@ -58,3 +59,7 @@ _From 039-brand-catalogue._
 ### 039-FR-012 — Brand search MUST be open to visitors without a session, return `{ items, nextCursor, total }` with at most 20 brands a page and an opaque cursor for the next page, and be served from a cache kept for one hour.
 
 _From 039-brand-catalogue._
+
+### 112-FR-008 — The system MUST hold a public-holiday calendar in the catalogue: one row per legal holiday day with its date and its Romanian and English name, created and filled for 2026 and 2027 by a migration under Romania's Labour Code (1 and 2 January, 6 and 7 January, 24 January, Orthodox Good Friday, Orthodox Easter Sunday and Monday, 1 May, 1 June, Orthodox Pentecost Sunday and Monday, 15 August, 30 November, 1 December, 25 and 26 December), a day held once: 16 days in 2026, where 1 June is both Children's Day and Pentecost Monday and its row carries both names, and 17 in 2027. The insert skips a day already held, so a later year is added by another migration's data with no code change.
+
+_From 112-opening-hours._
