@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
 
 import { BrandLoader } from './brand-loader';
@@ -305,5 +306,34 @@ describe('BrandLoader', () => {
     await loader.load(FILE);
 
     expect(await redis.get('brands:active')).toBe('[]');
+  });
+
+  // The old list then stays cached for the rest of its hour; the load itself
+  // must not fail on it.
+  it('stores a changed list and warns when Redis is down at load', async () => {
+    // A client whose every call fails as an unreachable server's does; a real
+    // one pointed at a closed port keeps Jest from exiting.
+    const down = {
+      del: () => Promise.reject(new Error('connect ECONNREFUSED 127.0.0.1:1')),
+    } as unknown as Redis;
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+
+    try {
+      await expect(
+        new BrandLoader(prisma, new AuditService(), down).load(FILE),
+      ).resolves.toEqual({ changed: 3 });
+      expect((await stored()).map((brand) => brand.key)).toEqual([
+        'bmw',
+        'dacia',
+        'skoda',
+      ]);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringMatching(/^brand cache not dropped: /),
+      );
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
