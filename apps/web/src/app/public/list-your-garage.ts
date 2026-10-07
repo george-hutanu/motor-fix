@@ -11,6 +11,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import type { ListingDraftData } from '@motor-fix/contracts';
+import type { HoursSection } from '@motor-fix/contracts/garage-hours';
 import {
   isValidCui,
   normaliseRarNumber,
@@ -23,6 +25,8 @@ import { HlmButton, HlmInput, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { brandsOf } from './brands-section';
 import { BrandsStep } from './brands-step';
 import { DraftKeeper } from './draft-keeper';
+import { hoursOf, mergeHours } from './hours-section';
+import { HoursStep } from './hours-step';
 import {
   completedCount,
   cuiError,
@@ -42,7 +46,14 @@ const SETTLE_MS = 150;
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(document:click)': 'outside($event)' },
-  imports: [BrandsStep, HlmButton, HlmInput, LanguageSwitch, TranslatePipe],
+  imports: [
+    BrandsStep,
+    HlmButton,
+    HlmInput,
+    HoursStep,
+    LanguageSwitch,
+    TranslatePipe,
+  ],
   providers: [DraftKeeper],
   selector: 'mf-list-your-garage',
   styles: `
@@ -214,6 +225,9 @@ const SETTLE_MS = 150;
                 @if (step.n === 2) {
                   <mf-brands-step [value]="brands()" (valueChange)="keeper.section('2', $event)" />
                 }
+                @if (step.n === 5) {
+                  <mf-hours-step [value]="hours()" (valueChange)="keepHours($event)" />
+                }
               </section>
             }
             <div class="actions">
@@ -241,6 +255,7 @@ export class ListYourGarage {
   protected readonly signIn = inject(SignInDialog);
   protected readonly steps = STEPS;
   // The draft's steps['2'], kept and restored with the rest of the form.
+  protected readonly hours = computed(() => hoursOf(this.keeper.draft().data));
   protected readonly brands = computed(() =>
     brandsOf(this.keeper.draft().data),
   );
@@ -325,6 +340,12 @@ export class ListYourGarage {
     const note = this.keeper.note();
     return note ? this.i18n.t(`public.listing.${note.key}`, note.params) : '';
   });
+
+  // Step 5 shares its section with other stories' keys, which stay.
+  protected keepHours(value: HoursSection) {
+    const data = this.keeper.draft().data as ListingDraftData;
+    this.keeper.section('5', mergeHours(data.steps?.['5'], value));
+  }
 
   protected save() {
     if (this.keeper.pressSave()) this.field()?.nativeElement.focus();

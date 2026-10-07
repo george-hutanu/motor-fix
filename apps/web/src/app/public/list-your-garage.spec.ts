@@ -8,7 +8,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { BrandsService } from '@motor-fix/data-access';
+import { BrandsService, PublicHolidaysService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
@@ -30,6 +30,8 @@ const catalogue = {
     total: 1,
   })),
 };
+// The legal holidays step 5 lists, read through their own client.
+const holidays = { publicHolidaysControllerList: jest.fn(async () => []) };
 
 beforeEach(() => {
   localStorage.clear();
@@ -66,6 +68,7 @@ async function open(path: string, reduced = false) {
       { provide: REDUCED_MOTION, useValue: signal(reduced) },
       { provide: SignInDialog, useValue: signIn },
       { provide: BrandsService, useValue: catalogue },
+      { provide: PublicHolidaysService, useValue: holidays },
     ],
   });
   const i18n = TestBed.inject(I18n);
@@ -146,16 +149,21 @@ describe('the list your garage page', () => {
     },
   );
 
-  it('holds the e-mail field in step 1, the brands in step 2, the verification fields in step 6, and leaves the sections between empty but for their heading', async () => {
+  it('holds the e-mail field in step 1, the brands in step 2, the hours in step 5, the verification fields in step 6, and leaves the sections between empty but for their heading', async () => {
     const { page } = await open('/ro/list-your-garage');
 
     const [first, second, ...rest] = page.querySelectorAll('section');
     const last = rest.pop() as HTMLElement;
+    const fifth = rest.pop() as HTMLElement;
     expect(first.querySelector('#listing-email')).not.toBeNull();
     expect(last.querySelector('#listing-cui')).not.toBeNull();
     expect([...second.children].map((c) => c.tagName)).toEqual([
       'H2',
       'MF-BRANDS-STEP',
+    ]);
+    expect([...fifth.children].map((c) => c.tagName)).toEqual([
+      'H2',
+      'MF-HOURS-STEP',
     ]);
     for (const section of rest)
       expect([...section.children].map((c) => c.tagName)).toEqual(['H2']);
@@ -165,9 +173,11 @@ describe('the list your garage page', () => {
     const { page } = await open('/ro/list-your-garage');
 
     expect(page.textContent).not.toMatch(/[✓✔]/);
-    expect(
-      page.querySelector('[aria-checked], input[type="checkbox"]'),
-    ).toBeNull();
+    // Step 5's closed-day ticks are fields, not completion marks.
+    const ticks = [
+      ...page.querySelectorAll('[aria-checked], input[type="checkbox"]'),
+    ].filter((t) => !t.closest('mf-hours-step'));
+    expect(ticks).toEqual([]);
     TestBed.inject(HttpTestingController).verify();
   });
 
