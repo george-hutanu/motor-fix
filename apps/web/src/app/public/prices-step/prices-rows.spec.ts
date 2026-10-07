@@ -78,6 +78,8 @@ describe('adding rows', () => {
     const once = addProposal({ jobs: [] }, '  Reglaj faruri ');
     expect(once).toEqual({ jobs: [{ name: 'Reglaj faruri' }] });
     expect(addProposal(once, 'REGLAJ FARURI')).toBe(once);
+    const door = addProposal({ jobs: [] }, 'Vopsire ușă');
+    expect(addProposal(door, 'vopsire usa')).toBe(door);
     expect(addProposal(once, '   ')).toBe(once);
   });
 

@@ -7,6 +7,7 @@ import {
   isRomanianPhone,
   type MechanicsSection,
   mechanicsComplete,
+  PHONE_MAX,
   type PricesSection,
   pricesComplete,
 } from './listing-sections';
@@ -50,6 +51,10 @@ describe('the details section', () => {
     expect(
       isDetailsSection({ businessKind: 'mobile', mobileLegalForm: 'pfa' }),
     ).toBe(true);
+  });
+
+  it('accepts the longest phone the form lets anyone type', () => {
+    expect(isDetailsSection({ phone: '1'.repeat(PHONE_MAX) })).toBe(true);
   });
 
   it.each([

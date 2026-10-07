@@ -123,6 +123,47 @@ describe('GET /job-types', () => {
     expect(res.body.items).toHaveLength(20);
   });
 
+  it('answers the approved jobs named by key or id, past the first 20 and in any order', async () => {
+    await prisma.jobType.createMany({
+      data: Array.from({ length: 25 }, (_, n) => ({
+        key: `job-${n}`,
+        nameEn: `Job ${n}`,
+        nameRo: `A ${String(n).padStart(2, '0')}`,
+        status: 'approved' as const,
+      })),
+    });
+    const brakes = await prisma.jobType.findUniqueOrThrow({
+      where: { key: 'front-brakes' },
+    });
+    await prisma.jobType.create({
+      data: {
+        key: 'clutch',
+        nameEn: 'Clutch',
+        nameRo: 'Ambreiaj',
+        status: 'pending',
+      },
+    });
+
+    const byKey = await search({ keys: 'oil-service,diagnosis,clutch,nope' });
+    const byId = await search({ ids: brakes.id });
+
+    expect(keys(byKey.body)).toEqual(['diagnosis', 'oil-service']);
+    expect(keys(byId.body)).toEqual(['front-brakes']);
+  });
+
+  it.each([
+    ['a key that is not one', { keys: 'Front Brakes' }],
+    ['an id that is not one', { ids: 'x' }],
+    [
+      'more than 50 ids',
+      { ids: Array(51).fill('00000000-0000-4000-8000-000000000000').join(',') },
+    ],
+  ])('refuses %s', async (_, query) => {
+    const res = await search(query);
+
+    expect(res.status).toBe(400);
+  });
+
   it('answers an empty list when nothing matches', async () => {
     const res = await search({ q: 'zzz' });
 

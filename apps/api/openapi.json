@@ -1282,6 +1282,25 @@
               "maxLength": 80,
               "type": "string"
             }
+          },
+          {
+            "name": "keys",
+            "required": false,
+            "in": "query",
+            "description": "Comma-separated job keys; answers those jobs only, past the first 20",
+            "schema": {
+              "example": "diagnosis,oil-service",
+              "type": "string"
+            }
+          },
+          {
+            "name": "ids",
+            "required": false,
+            "in": "query",
+            "description": "Comma-separated job ids, 50 at most; answers those jobs only, past the first 20",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3593,7 +3612,7 @@
         "type": "object",
         "properties": {
           "items": {
-            "description": "Approved jobs by Romanian name; 20 at most",
+            "description": "Approved jobs by Romanian name; 20 at most for a search, every one named by keys or ids",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/JobTypeDto"

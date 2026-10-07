@@ -332,9 +332,14 @@ describe('GaragePricesService.saveStarting', () => {
       'a labour range with no start',
       () => ({
         jobs: [],
-        labour: { toBani: lei(240) } as StartingPricesInput['labour'],
+        labour: { toBani: lei(240) },
       }),
       [{ code: 'required', field: 'labour.from' }],
+    ],
+    [
+      'a job range with no start',
+      (w) => ({ jobs: [{ jobTypeId: w.oil, toBani: lei(400) }], labour }),
+      [{ code: 'required', field: 'jobs[0].from' }],
     ],
     [
       'an entry with neither a job nor a name',
@@ -558,6 +563,28 @@ describe('a range stored by a concurrent save', () => {
 
     expect(await second).toEqual([
       { code: 'duplicate', field: 'jobs[0].jobTypeId' },
+    ]);
+  });
+});
+
+describe('a job proposed by a concurrent save of another garage', () => {
+  it('is refused as a duplicate, not a server error', async () => {
+    const w = await world();
+    const other = await prisma.garage.create({
+      data: { name: 'Service Auto Sud', slug: `sud-${randomUUID()}` },
+    });
+    const input: StartingPricesInput = {
+      jobs: [{ fromBani: lei(150), name: 'Reglaj faruri' }],
+      labour,
+    };
+    const second = afterRace(
+      prisma,
+      (tx) => prices.saveStarting(tx, other.id, w.mihai, input),
+      () => refused(save(w, input)),
+    );
+
+    expect(await second).toEqual([
+      { code: 'duplicate', field: 'jobs[0].name' },
     ]);
   });
 });

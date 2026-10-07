@@ -1,22 +1,9 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
-import { LeiInput, leiDigits } from './lei-input';
+import { LeiInput } from './lei-input';
 
 // @traces 109-FR-005
-
-describe('leiDigits', () => {
-  it.each([
-    ['1200', '1200'],
-    ['1.200 lei', '1200'],
-    [' 12 345 ', '12345'],
-    ['abc', ''],
-    ['', ''],
-    ['007', '7'],
-  ])('keeps the digits of %j as %j', (typed, digits) => {
-    expect(leiDigits(typed)).toBe(digits);
-  });
-});
 
 @Component({
   imports: [LeiInput],
@@ -41,6 +28,22 @@ function open() {
 }
 
 describe('the lei input', () => {
+  it.each([
+    ['1200', '1200'],
+    ['1.200 lei', '1200'],
+    [' 12 345 ', '12345'],
+    ['abc', ''],
+    ['', ''],
+    ['007', '7'],
+    ['1'.repeat(20), '1'.repeat(9)],
+  ])('keeps the digits of %j as %j', (typed, digits) => {
+    const { input, type } = open();
+
+    type(typed);
+
+    expect(input.value).toBe(digits);
+  });
+
   it('holds bani for the lei typed, digits only', () => {
     const { fixture, input, type } = open();
 
@@ -48,6 +51,15 @@ describe('the lei input', () => {
 
     expect(input.value).toBe('1200');
     expect(fixture.componentInstance.bani()).toBe(120_000);
+  });
+
+  it('keeps a pasted run of digits to nine, past any price, without failing', () => {
+    const { fixture, input, type } = open();
+
+    type('12345678901234567890');
+
+    expect(input.value).toBe('123456789');
+    expect(fixture.componentInstance.bani()).toBe(12_345_678_900);
   });
 
   it('strips letters and spaces as they are typed or pasted', () => {

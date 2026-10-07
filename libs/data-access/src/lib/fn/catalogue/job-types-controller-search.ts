@@ -15,12 +15,24 @@ export interface JobTypesControllerSearch$Params {
  * Part of a job name; accents and case are ignored
  */
   q?: string;
+
+/**
+ * Comma-separated job keys; answers those jobs only, past the first 20
+ */
+  keys?: string;
+
+/**
+ * Comma-separated job ids, 50 at most; answers those jobs only, past the first 20
+ */
+  ids?: string;
 }
 
 export function jobTypesControllerSearch(http: HttpClient, rootUrl: string, params?: JobTypesControllerSearch$Params, context?: HttpContext): Observable<StrictHttpResponse<JobTypeListDto>> {
   const rb = new RequestBuilder(rootUrl, jobTypesControllerSearch.PATH, 'get');
   if (params) {
     rb.query('q', params.q, {});
+    rb.query('keys', params.keys, {});
+    rb.query('ids', params.ids, {});
   }
 
   return http.request(

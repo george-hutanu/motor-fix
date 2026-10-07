@@ -14,6 +14,7 @@ import {
   NAME_MAX,
   NAME_MIN,
   normalisePhone,
+  PHONE_MAX,
 } from '@motor-fix/contracts';
 import { TranslatePipe } from '@motor-fix/i18n';
 import { HlmInput, HlmLabel } from '@motor-fix/ui-cockpit';
@@ -66,6 +67,7 @@ export class DetailsStep {
   protected readonly legalForms = LEGAL_FORMS;
   protected readonly nameMax = NAME_MAX;
   protected readonly knownForMax = KNOWN_FOR_MAX;
+  protected readonly phoneMax = PHONE_MAX;
 
   private readonly left = signal<ReadonlySet<Text>>(new Set());
 

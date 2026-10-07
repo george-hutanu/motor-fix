@@ -1,3 +1,5 @@
+import { fold } from '@motor-fix/contracts';
+
 // The brand list MotorFix keeps. A brand is matched by its `key` across
 // loads, so a key never changes once shipped; renaming a brand changes only
 // its name. A brand removed from this list is retired, never deleted.
@@ -25,8 +27,7 @@ export const BRANDS: readonly BrandRecord[] = [
 
 export class BrandFileError extends Error {}
 
-export const fold = (text: string) =>
-  text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+export { fold };
 
 export const slugOf = (name: string) =>
   fold(name)

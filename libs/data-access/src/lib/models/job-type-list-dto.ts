@@ -5,7 +5,7 @@ import { JobTypeDto } from '../models/job-type-dto';
 export interface JobTypeListDto {
 
   /**
-   * Approved jobs by Romanian name; 20 at most
+   * Approved jobs by Romanian name; 20 at most for a search, every one named by keys or ids
    */
   items: Array<JobTypeDto>;
 }

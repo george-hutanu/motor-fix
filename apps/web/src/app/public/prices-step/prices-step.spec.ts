@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import type { PricesSection } from '@motor-fix/contracts';
+import { fold, type PricesSection } from '@motor-fix/contracts';
 import { CatalogueService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
@@ -30,20 +30,31 @@ const TAKEN: MarkedBrand[] = [
 let search: jest.Mock;
 
 beforeEach(() => {
-  search = jest.fn(async (params?: { q?: string }) => {
-    const q = (params?.q ?? '').toLowerCase();
-    return {
-      items: CATALOGUE.filter((j) => j.nameRo.toLowerCase().includes(q)),
-    };
-  });
+  search = jest.fn(
+    async ({ ids, keys, q = '' }: Record<string, string | undefined> = {}) => {
+      if (ids !== undefined || keys !== undefined) {
+        const wanted = new Set([
+          ...(ids?.split(',') ?? []),
+          ...(keys?.split(',') ?? []),
+        ]);
+        return {
+          items: CATALOGUE.filter((j) => wanted.has(j.id) || wanted.has(j.key)),
+        };
+      }
+      return {
+        items: CATALOGUE.filter((j) => fold(j.nameRo).includes(fold(q))),
+      };
+    },
+  );
 });
 
 async function open(
   value?: PricesSection,
   {
+    current = false,
     language = 'ro',
     taken = TAKEN,
-  }: { language?: string; taken?: MarkedBrand[] } = {},
+  }: { current?: boolean; language?: string; taken?: MarkedBrand[] } = {},
 ) {
   TestBed.configureTestingModule({
     providers: [
@@ -59,6 +70,7 @@ async function open(
   const fixture = TestBed.createComponent(PricesStep);
   fixture.componentRef.setInput('value', value);
   fixture.componentRef.setInput('takenBrands', taken);
+  fixture.componentRef.setInput('current', current);
   await settle(fixture);
   const step = fixture.nativeElement as HTMLElement;
   const last = () => fixture.componentInstance.value();
@@ -71,6 +83,8 @@ async function settle(fixture: Fixture) {
   for (let i = 0; i < 3; i++) {
     fixture.detectChanges();
     await fixture.whenStable();
+    // The catalogue's answer takes a few turns of the microtask queue.
+    for (let turn = 0; turn < 10; turn++) await Promise.resolve();
   }
 }
 
@@ -134,6 +148,42 @@ describe('step 3, the prices', () => {
     expect(labour(step)).toHaveLength(2);
     expect(names(step)).toEqual(['Diagnoză', 'Schimb de ulei', 'Frâne față']);
     expect(last()).toBeUndefined();
+  });
+
+  it('asks for the listed jobs by key, so a long catalogue never hides them', async () => {
+    const { step } = await open();
+
+    expect(search).toHaveBeenCalledWith({
+      keys: 'diagnosis,oil-service,front-brakes',
+    });
+    expect(names(step)).toEqual(['Diagnoză', 'Schimb de ulei', 'Frâne față']);
+  });
+
+  it('names the kept jobs by their ids, whatever their place in the catalogue', async () => {
+    const { step } = await open({
+      jobs: [{ jobTypeId: id(4) }, { name: 'Reglaj faruri' }],
+    });
+
+    expect(search).toHaveBeenCalledWith({ ids: id(4) });
+    expect(names(step)).toEqual(['Ambreiaj', 'Reglaj faruri']);
+  });
+
+  it('asks again when the step becomes current after the catalogue failed', async () => {
+    search.mockRejectedValueOnce(new Error('down'));
+    const { fixture, step } = await open();
+    expect(jobRows(step)).toEqual([]);
+
+    fixture.componentRef.setInput('current', true);
+    await settle(fixture);
+
+    expect(names(step)).toEqual(['Diagnoză', 'Schimb de ulei', 'Frâne față']);
+    expect(step.querySelector('[role="status"]')).toBeNull();
+  });
+
+  it('lists the jobs of a kept labour range with no job list yet', async () => {
+    const { step } = await open({ labour: { fromBani: 12_000 } });
+
+    expect(names(step)).toEqual(['Diagnoză', 'Schimb de ulei', 'Frâne față']);
   });
 
   it('takes the listed jobs into the draft with the first change', async () => {
@@ -205,6 +255,40 @@ describe('step 3, the prices', () => {
     expect(names(step).at(-1)).toBe('Ambreiaj');
     expect(last()?.jobs?.at(-1)).toEqual({ jobTypeId: id(4) });
     expect(searchField(step).value).toBe('');
+  });
+
+  it('says the search is down when the catalogue does not answer in time', async () => {
+    const { fixture, step } = await open({ jobs: [] });
+    search.mockImplementation(() => new Promise(() => undefined));
+    jest.useFakeTimers();
+    try {
+      const field = searchField(step);
+      field.value = 'fr';
+      field.dispatchEvent(new Event('input'));
+      await jest.advanceTimersByTimeAsync(11_000);
+    } finally {
+      jest.useRealTimers();
+    }
+    await settle(fixture);
+
+    expect(text(step.querySelector('[role="status"]'))).toBe(
+      'Căutarea nu merge acum',
+    );
+  });
+
+  it('offers no new job when a job bears the typed name, accents and case aside', async () => {
+    const { fixture, step } = await open();
+
+    await find(fixture, step, 'AMBREIAJ');
+    expect(results(step)).toEqual(['Ambreiaj']);
+    expect(step.querySelector('.propose')).toBeNull();
+
+    await find(fixture, step, 'diagnoza');
+    expect(results(step)).toEqual([]);
+    expect(step.querySelector('.propose')).toBeNull();
+
+    await find(fixture, step, 'Ambr');
+    expect(step.querySelector('.propose')).not.toBeNull();
   });
 
   it('drops an answer that comes after a newer search', async () => {

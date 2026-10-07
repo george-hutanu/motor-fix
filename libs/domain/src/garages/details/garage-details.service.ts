@@ -1,18 +1,21 @@
 import {
+  BUSINESS_KINDS,
   type DetailsSection,
   type FieldProblem,
   isRomanianPhone,
   KNOWN_FOR_MAX,
+  MOBILE_LEGAL_FORMS,
   NAME_MAX,
   NAME_MIN,
   normalisePhone,
 } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
-import { uniqueSlug } from './garage-slug';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { refusal, taken } from '../../auth/sign-up.service';
 import type { Prisma } from '../../generated/prisma/client';
+import { uniqueSlug } from '../garage-slug';
+import { plainText } from '../plain-text';
 
 const refuse = (errors: FieldProblem[]) =>
   refusal(
@@ -25,8 +28,12 @@ const refuse = (errors: FieldProblem[]) =>
 const within = (text: string, min: number, max: number) =>
   text.length >= min && text.length <= max;
 
-function phoneProblem(phone: string | undefined) {
-  if (!phone?.trim()) return 'required';
+const isOneOf = (values: readonly string[], value: unknown) =>
+  values.includes(value as string);
+
+function phoneProblem(given: unknown) {
+  const phone = plainText(given);
+  if (!phone.trim()) return 'required';
   const normalised = normalisePhone(phone);
   return normalised && isRomanianPhone(normalised) ? undefined : 'romanian';
 }
@@ -34,20 +41,29 @@ function phoneProblem(phone: string | undefined) {
 // The section's field errors, in the form's order.
 function sectionErrors(section: DetailsSection) {
   const errors: FieldProblem[] = [];
-  if (!within((section.name ?? '').trim(), NAME_MIN, NAME_MAX)) {
+  if (!within(plainText(section.name).trim(), NAME_MIN, NAME_MAX)) {
     errors.push({ code: 'length', field: 'name' });
   }
   const phone = phoneProblem(section.phone);
   if (phone) errors.push({ code: phone, field: 'phone' });
-  const knownFor = (section.knownFor ?? '').trim();
-  if (!knownFor) errors.push({ code: 'required', field: 'knownFor' });
-  else if (knownFor.length > KNOWN_FOR_MAX) {
+  // Left out is missing; given but blank or too long is the wrong length.
+  if (section.knownFor === undefined) {
+    errors.push({ code: 'required', field: 'knownFor' });
+  } else if (!within(plainText(section.knownFor).trim(), 1, KNOWN_FOR_MAX)) {
     errors.push({ code: 'length', field: 'knownFor' });
   }
   if (!section.businessKind) {
     errors.push({ code: 'required', field: 'businessKind' });
+  } else if (!isOneOf(BUSINESS_KINDS, section.businessKind)) {
+    errors.push({ code: 'invalid', field: 'businessKind' });
   } else if (section.businessKind === 'mobile' && !section.mobileLegalForm) {
     errors.push({ code: 'required', field: 'mobileLegalForm' });
+  }
+  if (
+    section.mobileLegalForm !== undefined &&
+    !isOneOf(MOBILE_LEGAL_FORMS, section.mobileLegalForm)
+  ) {
+    errors.push({ code: 'invalid', field: 'mobileLegalForm' });
   }
   return errors;
 }
@@ -70,6 +86,15 @@ export class GarageDetailsService {
     const businessKind = section.businessKind as NonNullable<
       DetailsSection['businessKind']
     >;
+    const slug = await uniqueSlug(name, (candidates) =>
+      tx.garage
+        .findMany({
+          select: { slug: true },
+          where: { slug: { in: candidates } },
+        })
+        .then((rows) => rows.map((row) => row.slug)),
+    );
+    if (!slug) throw refuse([{ code: 'duplicate', field: 'name' }]);
     const values = {
       businessKind,
       knownFor: (section.knownFor as string).trim(),
@@ -77,14 +102,7 @@ export class GarageDetailsService {
         businessKind === 'mobile' ? (section.mobileLegalForm ?? null) : null,
       name,
       phone: normalisePhone(section.phone as string) as string,
-      slug: await uniqueSlug(name, (candidates) =>
-        tx.garage
-          .findMany({
-            select: { slug: true },
-            where: { slug: { in: candidates } },
-          })
-          .then((rows) => rows.map((row) => row.slug)),
-      ),
+      slug,
       status: 'draft' as const,
     };
     const garage = await tx.garage

@@ -50,4 +50,15 @@ describe('uniqueSlug', () => {
 
     expect(await uniqueSlug('Service', takenOf(...taken))).toBe('service-32');
   });
+
+  it('gives up, answering nothing, once a thousand numbers are taken', async () => {
+    const asked: string[][] = [];
+    const slug = await uniqueSlug('Service', async (candidates) => {
+      asked.push(candidates);
+      return candidates;
+    });
+
+    expect(slug).toBeUndefined();
+    expect(asked.flat()).toHaveLength(1000);
+  });
 });

@@ -22,6 +22,7 @@
   name="phone"
   type="tel"
   autocomplete="tel"
+  [attr.maxlength]="phoneMax"
   [value]="value().phone ?? ''"
   [attr.aria-invalid]="errors().phone ? true : null"
   [attr.aria-describedby]="errors().phone ? 'listing-phone-hint listing-phone-error' : 'listing-phone-hint'"

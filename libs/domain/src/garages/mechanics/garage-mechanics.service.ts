@@ -11,18 +11,22 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { refusal } from '../../auth/sign-up.service';
 import type { Prisma } from '../../generated/prisma/client';
+import { plainText } from '../plain-text';
 
 function sectionErrors(mechanics: MechanicsSection['mechanics'] = []) {
   if (mechanics.length > MECHANICS_MAX) {
     return [{ code: 'too_many', field: 'mechanics' }];
   }
   return mechanics.flatMap((card, i): FieldProblem[] => {
-    const name = card.name.trim().length;
+    const name = plainText(card.name).trim().length;
     const errors: FieldProblem[] = [];
     if (name < MECHANIC_NAME_MIN || name > MECHANIC_NAME_MAX) {
       errors.push({ code: 'length', field: `mechanics[${i}].name` });
     }
-    if ((card.speciality?.trim().length ?? 0) > SPECIALITY_MAX) {
+    const speciality = card.speciality ?? '';
+    if (plainText(speciality) !== speciality) {
+      errors.push({ code: 'invalid', field: `mechanics[${i}].speciality` });
+    } else if (speciality.trim().length > SPECIALITY_MAX) {
       errors.push({ code: 'length', field: `mechanics[${i}].speciality` });
     }
     return errors;

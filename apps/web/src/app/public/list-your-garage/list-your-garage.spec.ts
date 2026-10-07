@@ -101,6 +101,8 @@ async function settle(harness: RouterTestingHarness) {
   for (let i = 0; i < 2; i++) {
     harness.detectChanges();
     await harness.fixture.whenStable();
+    // The catalogue's answer takes a few turns of the microtask queue.
+    for (let turn = 0; turn < 10; turn++) await Promise.resolve();
   }
 }
 

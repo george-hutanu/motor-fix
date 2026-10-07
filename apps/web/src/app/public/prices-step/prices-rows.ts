@@ -1,4 +1,5 @@
 import {
+  fold,
   JOBS_MAX,
   type PriceEnds,
   type PriceEntry,
@@ -13,7 +14,7 @@ import type { MarkedBrand } from '../brands-section';
 
 export const PRE_LISTED = ['diagnosis', 'oil-service', 'front-brakes'] as const;
 
-export interface CatalogueJob {
+interface CatalogueJob {
   id: string;
   key: string;
 }
@@ -24,7 +25,7 @@ export interface Row {
   brands: { entry: PriceEntry; index: number }[];
 }
 
-const named = (name: string) => name.trim().toLocaleLowerCase('ro');
+const named = (name: string) => fold(name.trim());
 
 const sameJob = (a: PriceEntry, b: PriceEntry) =>
   a.jobTypeId !== undefined

@@ -1,4 +1,4 @@
-import type { JobTypeListDto } from '@motor-fix/contracts';
+import type { JobTypeListDto, JobTypesQueryDto } from '@motor-fix/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 
 import { PRISMA } from '../../auth/prisma';
@@ -13,11 +13,24 @@ const byRomanianName = new Intl.Collator('ro');
 export class JobTypesService {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
-  async search(q = ''): Promise<JobTypeListDto> {
+  async search({
+    ids,
+    keys,
+    q = '',
+  }: JobTypesQueryDto = {}): Promise<JobTypeListDto> {
+    const named = ids !== undefined || keys !== undefined;
     const wanted = fold(q.trim());
     const approved = await this.prisma.jobType.findMany({
       select: { id: true, key: true, nameEn: true, nameRo: true },
-      where: { status: 'approved' },
+      where: {
+        status: 'approved',
+        ...(named && {
+          OR: [
+            { id: { in: ids?.toLowerCase().split(',') ?? [] } },
+            { key: { in: keys?.split(',') ?? [] } },
+          ],
+        }),
+      },
     });
     const items = approved
       .filter(
@@ -25,8 +38,7 @@ export class JobTypesService {
           fold(job.nameRo).includes(wanted) ||
           fold(job.nameEn).includes(wanted),
       )
-      .sort((a, b) => byRomanianName.compare(a.nameRo, b.nameRo))
-      .slice(0, PAGE);
-    return { items };
+      .sort((a, b) => byRomanianName.compare(a.nameRo, b.nameRo));
+    return { items: named ? items : items.slice(0, PAGE) };
   }
 }

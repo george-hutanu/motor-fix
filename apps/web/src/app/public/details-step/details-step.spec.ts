@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import type { DetailsSection } from '@motor-fix/contracts';
+import { type DetailsSection, PHONE_MAX } from '@motor-fix/contracts';
 import { I18n } from '@motor-fix/i18n';
 
 import { DetailsStep } from './details-step';
@@ -80,6 +80,7 @@ describe('step 1, the garage details', () => {
     ]);
     expect(chips(step, 'legal')).toEqual([]);
     expect(field(step, 'phone').type).toBe('tel');
+    expect(field(step, 'phone').maxLength).toBe(PHONE_MAX);
   });
 
   it('keeps each typed text in the section, and drops an emptied one', async () => {

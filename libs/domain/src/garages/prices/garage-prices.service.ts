@@ -15,7 +15,8 @@ import { refusal, taken } from '../../auth/sign-up.service';
 import { fold } from '../../catalogue/brands';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import type { Prisma } from '../../generated/prisma/client';
-import { uniqueSlug } from '../details/garage-slug';
+import { uniqueSlug } from '../garage-slug';
+import { plainText } from '../plain-text';
 
 type Job = StartingPricesInput['jobs'][number];
 
@@ -35,6 +36,12 @@ const jobOf = (job: Job) =>
 const pairOf = (job: string, brandId?: string | null) =>
   `${job}/${brandId ?? ''}`;
 
+// A range whose start the payload checks have already required.
+const started = <T extends { fromBani?: number | null }>(range: T) => ({
+  ...range,
+  fromBani: range.fromBani as number,
+});
+
 const prefixed = (prefix: string, problems: FieldProblem[]) =>
   problems.map(({ code, field }) => ({ code, field: `${prefix}.${field}` }));
 
@@ -48,13 +55,17 @@ const refuse = (errors: FieldProblem[]) =>
 
 // PostgreSQL reads a uuid in either case; lower case lets the payload's own
 // checks see the same id written two ways as one.
+// A labour that is not an object counts as one with no ends.
 const sameCase = (input: StartingPricesInput): StartingPricesInput => ({
-  ...input,
   jobs: input.jobs.map((job) => ({
     ...job,
     brandId: job.brandId?.toLowerCase() ?? job.brandId,
     jobTypeId: job.jobTypeId?.toLowerCase() ?? job.jobTypeId,
   })),
+  labour:
+    typeof input.labour === 'object' && input.labour !== null
+      ? input.labour
+      : {},
 });
 
 function labourErrors(labour: StartingPricesInput['labour']) {
@@ -66,7 +77,7 @@ function labourErrors(labour: StartingPricesInput['labour']) {
     errors.push({ code: 'required', field: 'labour.to' });
   }
   if (isSet(labour.fromBani)) {
-    errors.push(...prefixed('labour', checkPriceRange(labour).errors));
+    errors.push(...prefixed('labour', checkPriceRange(started(labour)).errors));
   }
   return errors;
 }
@@ -77,12 +88,18 @@ function entryErrors(job: Job, i: number) {
   if (isSet(job.jobTypeId) === isSet(job.name)) {
     errors.push({ code: 'required', field: `jobs[${i}].jobTypeId` });
   } else if (isSet(job.name)) {
-    const length = job.name.trim().length;
+    const length = plainText(job.name).trim().length;
     if (length < JOB_NAME_MIN || length > JOB_NAME_MAX) {
       errors.push({ code: 'length', field: `jobs[${i}].name` });
     }
   }
-  errors.push(...prefixed(`jobs[${i}]`, checkPriceRange(job).errors));
+  if (!isSet(job.fromBani)) {
+    errors.push({ code: 'required', field: `jobs[${i}].from` });
+  } else {
+    errors.push(
+      ...prefixed(`jobs[${i}]`, checkPriceRange(started(job)).errors),
+    );
+  }
   return errors;
 }
 
@@ -128,6 +145,9 @@ export class GaragePricesService {
     actorId: string,
     given: StartingPricesInput,
   ): Promise<StartingPricesResult> {
+    if (!Array.isArray(given.jobs)) {
+      throw refuse([{ code: 'invalid', field: 'jobs' }]);
+    }
     const input = sameCase(given);
     const garage = await tx.garage.findUniqueOrThrow({
       select: { labourFromBani: true, labourToBani: true },
@@ -162,7 +182,7 @@ export class GaragePricesService {
       const fields = {
         brandId: job.brandId ?? null,
         durationMinutes: null,
-        fromBani: job.fromBani,
+        fromBani: job.fromBani as number,
         jobTypeId: job.jobTypeId ?? (proposed.get(jobOf(job)) as string),
         position,
         toBani: job.toBani ?? null,
@@ -187,7 +207,7 @@ export class GaragePricesService {
       jobs.push({
         ...fields,
         id: row.id,
-        warnings: checkPriceRange(job).warnings,
+        warnings: checkPriceRange(started(job)).warnings,
       });
     }
     return {
@@ -195,7 +215,7 @@ export class GaragePricesService {
       labour: {
         fromBani,
         toBani,
-        warnings: checkPriceRange(input.labour).warnings,
+        warnings: checkPriceRange(started(input.labour)).warnings,
       },
     };
   }
@@ -208,9 +228,11 @@ export class GaragePricesService {
     jobs: readonly Job[],
   ) {
     const ids = new Map<string, string>();
-    for (const job of jobs) {
+    for (const [i, job] of jobs.entries()) {
       if (!isSet(job.name) || ids.has(jobOf(job))) continue;
       const name = job.name.trim();
+      // Another garage proposing the same name at once took the key first.
+      const clash = refuse([{ code: 'duplicate', field: `jobs[${i}].name` }]);
       const key = await uniqueSlug(name, (candidates) =>
         tx.jobType
           .findMany({
@@ -219,15 +241,21 @@ export class GaragePricesService {
           })
           .then((rows) => rows.map((row) => row.key)),
       );
-      const created = await tx.jobType.create({
-        data: {
-          key,
-          nameEn: name,
-          nameRo: name,
-          proposedByGarageId: scope.garageId,
-          status: 'pending',
-        },
-      });
+      if (!key) throw clash;
+      const created = await tx.jobType
+        .create({
+          data: {
+            key,
+            nameEn: name,
+            nameRo: name,
+            proposedByGarageId: scope.garageId,
+            status: 'pending',
+          },
+        })
+        .catch((error: unknown) => {
+          if (!taken(error)) throw error;
+          throw clash;
+        });
       await this.audit.record(tx, {
         ...scope,
         action: 'create',

@@ -77,15 +77,16 @@ export function checkPriceRange(range: PriceRangeInput): PriceRangeCheck {
   };
 }
 
+// Shaped as the draft's step 3, so a half-typed range reaches the write and
+// is refused there; every start is required, and the labour top too.
 export interface StartingPricesInput {
-  // The hourly labour range; its top is required.
-  labour: { fromBani: number; toBani?: number | null };
+  labour: { fromBani?: number | null; toBani?: number | null };
   // A catalogue job by id, or a name the garage proposes; exactly one.
   jobs: Array<{
     jobTypeId?: string;
     name?: string;
     brandId?: string | null;
-    fromBani: number;
+    fromBani?: number | null;
     toBani?: number | null;
   }>;
 }

@@ -121,7 +121,7 @@
               <mf-brands-step [value]="brands()" (valueChange)="keeper.section('2', $event)" />
             }
             @if (step.n === 3) {
-              <mf-prices-step [value]="prices()" [takenBrands]="takenBrands()" (valueChange)="keeper.section('3', $event ?? {})" />
+              <mf-prices-step [value]="prices()" [takenBrands]="takenBrands()" [current]="current() === 3" (valueChange)="keeper.section('3', $event ?? {})" />
             }
             @if (step.n === 4) {
               <mf-mechanics-step [value]="mechanics()" (valueChange)="keeper.section('4', $event)" />

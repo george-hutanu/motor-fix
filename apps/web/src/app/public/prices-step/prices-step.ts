@@ -5,15 +5,18 @@ import {
   computed,
   DestroyRef,
   ElementRef,
+  effect,
   inject,
   input,
   model,
   PLATFORM_ID,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import {
   checkPriceRange,
+  fold,
   JOB_NAME_MAX,
   JOB_NAME_MIN,
   type PriceEnds,
@@ -30,6 +33,7 @@ import {
   addProposal,
   brandOffer,
   canAdd,
+  PRE_LISTED,
   preList,
   remove,
   rows,
@@ -40,12 +44,23 @@ import { LeiInput } from '../lei-input';
 
 // The search waits for the owner to stop typing.
 const DEBOUNCE_MS = 250;
+// A catalogue answer later than this counts as none.
+const TIMEOUT_MS = 8_000;
 const KEY = 'public.listing.prices';
 
 interface Judged {
   error: string | null;
   field: 'from' | 'to' | null;
   wide: boolean;
+}
+
+// The catalogue's answer, or a failure once it is late.
+function inTime<T>(answer: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('late')), TIMEOUT_MS);
+  });
+  return Promise.race([answer, late]).finally(() => clearTimeout(timer));
 }
 
 // What a range shows: one error once it has been left, else the wide-range
@@ -95,10 +110,13 @@ export class PricesStep {
   private readonly field = viewChild<ElementRef<HTMLInputElement>>('search');
   private timer: ReturnType<typeof setTimeout> | undefined;
   private searches = 0;
+  private asking = false;
 
   // Absent until the draft holds a step 3.
   readonly value = model<PricesSection | undefined>();
   readonly takenBrands = input<readonly MarkedBrand[]>([]);
+  // The step in view: a lookup that failed is tried again.
+  readonly current = input(false);
 
   protected readonly nameMax = JOB_NAME_MAX;
   private readonly known = signal<ReadonlyMap<string, JobTypeDto>>(new Map());
@@ -107,12 +125,27 @@ export class PricesStep {
   private readonly found = signal<JobTypeDto[]>([]);
   protected readonly notice = signal<string | null>(null);
 
-  // The common jobs shown before the owner touches the step; the draft
-  // takes them with the first change, so opening the page writes nothing.
-  private readonly preListed = signal<PricesSection | undefined>(undefined);
-  protected readonly section = computed(
-    () => this.value() ?? this.preListed() ?? {},
+  // The common jobs, asked for by key, shown while the section has no job
+  // list; the draft takes them with the first change, so opening the page
+  // writes nothing.
+  private readonly listed = signal<readonly JobTypeDto[] | undefined>(
+    undefined,
   );
+  protected readonly section = computed(() => {
+    const listed = this.listed();
+    return listed ? preList(this.value(), listed) : (this.value() ?? {});
+  });
+  private readonly wantsListed = computed(
+    () => this.listed() === undefined && this.value()?.jobs === undefined,
+  );
+  // Kept jobs the page has no name for yet.
+  private readonly unnamed = computed(() => {
+    const known = this.known();
+    const ids = (this.value()?.jobs ?? []).flatMap(({ jobTypeId }) =>
+      jobTypeId !== undefined && !known.has(jobTypeId) ? [jobTypeId] : [],
+    );
+    return [...new Set(ids)].join(',');
+  });
   protected readonly rows = computed(() => rows(this.section()));
   protected readonly full = computed(() => !canAdd(this.section()));
   protected readonly labour = computed(() =>
@@ -123,24 +156,60 @@ export class PricesStep {
     const listed = new Set(this.section().jobs?.map((e) => e.jobTypeId));
     return this.found().filter((job) => !listed.has(job.id));
   });
+  // Never a new job for a name an offered or listed job already bears.
   protected readonly proposal = computed(() => {
     const typed = this.query().trim();
-    return typed.length >= JOB_NAME_MIN && typed.length <= JOB_NAME_MAX
-      ? typed
-      : null;
+    if (typed.length < JOB_NAME_MIN || typed.length > JOB_NAME_MAX) return null;
+    const known = this.known();
+    const names = [
+      ...this.found().flatMap((job) => [job.nameRo, job.nameEn]),
+      ...(this.section().jobs ?? []).flatMap(({ jobTypeId, name }) => {
+        const job = known.get(jobTypeId ?? '');
+        return name !== undefined
+          ? [name]
+          : job
+            ? [job.nameRo, job.nameEn]
+            : [];
+      }),
+    ];
+    const folded = fold(typed);
+    return names.some((name) => fold(name) === folded) ? null : typed;
   });
 
   constructor() {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.timer));
     // The catalogue comes with the client: a server render would drop it.
     if (isPlatformServer(inject(PLATFORM_ID))) return;
-    this.catalogue.jobTypesControllerSearch({}).then(
-      ({ items }) => {
-        this.remember(items);
-        this.preListed.set(preList(undefined, items));
-      },
-      () => this.notice.set(`${KEY}.searchDown`),
-    );
+    effect(() => {
+      this.current();
+      const keys = this.wantsListed();
+      const ids = this.unnamed();
+      untracked(() => this.lookup(keys, ids));
+    });
+  }
+
+  // The listed jobs by key and the kept jobs by id, past the search's
+  // first answers.
+  private lookup(keys: boolean, ids: string) {
+    if (this.asking || (!keys && !ids)) return;
+    this.asking = true;
+    inTime(
+      this.catalogue.jobTypesControllerSearch({
+        ...(keys && { keys: PRE_LISTED.join(',') }),
+        ...(ids && { ids }),
+      }),
+    )
+      .then(
+        ({ items }) => {
+          this.remember(items);
+          if (keys) this.listed.set(items);
+          this.notice.set(null);
+        },
+        () => this.notice.set(`${KEY}.searchDown`),
+      )
+      .finally(() => {
+        this.asking = false;
+      });
   }
 
   protected nameOf(entry: PriceEntry) {
@@ -222,7 +291,7 @@ export class PricesStep {
 
   private search(q: string) {
     const turn = ++this.searches;
-    this.catalogue.jobTypesControllerSearch({ q }).then(
+    inTime(this.catalogue.jobTypesControllerSearch({ q })).then(
       ({ items }) => {
         if (turn !== this.searches) return;
         this.remember(items);

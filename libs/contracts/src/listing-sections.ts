@@ -13,6 +13,8 @@ export type MobileLegalForm = (typeof MOBILE_LEGAL_FORMS)[number];
 export const NAME_MIN = 2;
 export const NAME_MAX = 80;
 export const KNOWN_FOR_MAX = 160;
+// Room for a number typed with spaces, dashes or brackets.
+export const PHONE_MAX = 30;
 export const JOB_NAME_MIN = 2;
 export const JOB_NAME_MAX = 80;
 export const JOBS_MAX = 50;

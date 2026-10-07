@@ -157,7 +157,7 @@ describe('GarageDetailsService.create', () => {
     [
       'a blank known-for',
       { ...section, knownFor: '   ' },
-      [{ code: 'required', field: 'knownFor' }],
+      [{ code: 'length', field: 'knownFor' }],
     ],
     [
       'a known-for over 160 characters',

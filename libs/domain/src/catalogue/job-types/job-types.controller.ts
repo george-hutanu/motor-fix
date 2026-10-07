@@ -14,6 +14,6 @@ export class JobTypesController {
   @Public()
   @ApiOkResponse({ type: JobTypeListDto })
   search(@Query() query: JobTypesQueryDto): Promise<JobTypeListDto> {
-    return this.jobTypes.search(query.q);
+    return this.jobTypes.search(query);
   }
 }
