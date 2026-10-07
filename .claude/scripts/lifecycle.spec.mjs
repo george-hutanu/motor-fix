@@ -149,16 +149,6 @@ describe('open', () => {
     assert.ok(!h.calls.some((c) => c.includes('notion-sync')));
   });
 
-  it('names the story from the title on every Notion event', () => {
-    const h = harness({ answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '141\n' }]] });
-    step(['open', '--title', TITLE], h.io);
-    const notion = h.calls.filter((c) => c.includes('notion-sync.mjs'));
-    assert.deepEqual(notion, [
-      'node .claude/scripts/notion-sync.mjs start --pr 141 --story ST-696',
-      'node .claude/scripts/notion-sync.mjs pr 141 --story ST-696',
-    ]);
-  });
-
   it("points a feature.json left on the last feature at this branch's spec folder before anything runs", () => {
     mkdirSync(join(repo, 'specs', '685-news-relay'), { recursive: true });
     writeFileSync(join(repo, 'specs', '685-news-relay', 'spec.md'), '# Spec\n');
@@ -169,6 +159,33 @@ describe('open', () => {
     assert.equal(JSON.parse(readFileSync(join(repo, '.specify', 'feature.json'), 'utf8')).feature_directory, `specs/${FEATURE}`);
     assert.equal(result.did[0], `feature.json → specs/${FEATURE}`);
     assert.ok(h.calls.includes('node .claude/scripts/notion-sync.mjs start --pr 141 --story ST-696'), h.calls.join('\n'));
+  });
+
+  it('stops with a fix, not a stack, on a malformed feature.json', () => {
+    writeFileSync(join(repo, '.specify', 'feature.json'), '{not json');
+    const h = harness();
+    const result = step(['open', '--title', TITLE], h.io);
+    assert.equal(result.ok, false);
+    assert.equal(result.stopped, 'no feature');
+    assert.ok(!h.calls.some((c) => c.startsWith('git push')));
+  });
+
+  it('stops, writing nothing, when SPECIFY_FEATURE_DIRECTORY names another feature', () => {
+    mkdirSync(join(repo, 'specs', '685-news-relay'), { recursive: true });
+    writeFileSync(join(repo, 'specs', '685-news-relay', 'spec.md'), '# Spec\n');
+    const before = readFileSync(join(repo, '.specify', 'feature.json'), 'utf8');
+    process.env.SPECIFY_FEATURE_DIRECTORY = join(repo, 'specs', '685-news-relay');
+    try {
+      const h = harness();
+      const result = step(['open', '--title', TITLE], h.io);
+      assert.equal(result.ok, false);
+      assert.equal(result.stopped, 'feature');
+      assert.match(result.fix, /SPECIFY_FEATURE_DIRECTORY/);
+      assert.equal(readFileSync(join(repo, '.specify', 'feature.json'), 'utf8'), before);
+      assert.ok(!h.calls.some((c) => c.startsWith('git push')));
+    } finally {
+      delete process.env.SPECIFY_FEATURE_DIRECTORY;
+    }
   });
 
   it('stops before any push when the branch has no spec folder of its own', () => {

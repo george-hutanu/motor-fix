@@ -35,6 +35,7 @@ import { parseDeferred } from "./debt-tasks.mjs";
 import { isEntryPoint } from "./lib/entry.mjs";
 import { ghRun } from "./lib/gh-rest.mjs";
 import { activeFeature } from "./lib/feature.mjs";
+import { pointFeature } from "./level.mjs";
 import { readyLogged } from "./notion-ready.mjs";
 
 const USAGE = "usage: lifecycle.mjs open | ready | merge | handoff (open --title <t>; ready --body-file <f>; merge [--pr <n>]; each takes --notion-done; handoff [--restore] [--pr <n>])";
@@ -176,12 +177,11 @@ function context(io, flags, did) {
     const dir = `specs/${ctx.branch}`;
     if (!existsSync(join(io.repo, dir, "spec.md")))
       throw new Stop("feature", `.specify/feature.json points at ${relative(io.repo, ctx.feature.dir)}, and this branch has no ${dir}/spec.md: write it, or set feature_directory to this branch's feature`);
-    const file = join(io.repo, ".specify", "feature.json");
-    const state = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : {};
-    writeFileSync(file, `${JSON.stringify({ ...state, feature_directory: dir })}\n`);
+    if (process.env.SPECIFY_FEATURE_DIRECTORY)
+      throw new Stop("feature", `SPECIFY_FEATURE_DIRECTORY names ${relative(io.repo, ctx.feature.dir)}, not this branch's ${dir}: unset it or point it there`);
+    pointFeature(io.repo, dir);
     did.push(`feature.json → ${dir}`);
     ctx.feature = activeFeature(io.repo);
-    if (ctx.feature?.num !== own) throw new Stop("feature", `SPECIFY_FEATURE_DIRECTORY overrides .specify/feature.json: unset it or point it at ${dir}`);
   }
   ctx.rel = relative(io.repo, ctx.feature.dir);
   // The feature folder as the specs repository names it.
