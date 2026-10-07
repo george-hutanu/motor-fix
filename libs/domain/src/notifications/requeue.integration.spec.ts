@@ -7,7 +7,7 @@ import { Redis } from 'ioredis';
 
 import { BrevoMock } from './brevo-mock.testing';
 import { NotificationsModule } from './notifications.module';
-import { NotificationsService, REQUEUE_PAGE } from './notifications.service';
+import { NotificationsService } from './notifications.service';
 import {
   databaseUrl,
   fixtures,
@@ -60,6 +60,17 @@ const row = (data: Partial<Prisma.NotificationUncheckedCreateInput> = {}) =>
 
 const jobFor = (id: string) => queue.getJob(`send-${id}`);
 
+// The page the sweep reads at a time, as its first read asks for it: a fixed
+// value in code, which no test or setting can change.
+let REQUEUE_PAGE: number;
+const pageSize = async () => {
+  const read = jest.spyOn(prisma.notification, 'findMany');
+  await service.requeueStranded();
+  const take = read.mock.calls[0][0]?.take;
+  read.mockRestore();
+  return take as number;
+};
+
 // Stale queued rows, their ids in the order the sweep walks them.
 const backlog = async (n: number) => {
   const rows = await prisma.notification.createManyAndReturn({
@@ -76,7 +87,13 @@ const backlog = async (n: number) => {
   return rows.map((r) => r.id).sort();
 };
 
-beforeAll(() => mock.start());
+beforeAll(async () => {
+  await mock.start();
+  await reset();
+  build();
+  REQUEUE_PAGE = await pageSize();
+  expect(REQUEUE_PAGE).toBeGreaterThan(0);
+});
 
 afterAll(async () => {
   await queue.close();

@@ -39,7 +39,7 @@ const WINDOW_MS = 5 * 60_000;
 const STRANDED_MS = 5 * 60_000;
 // How many stranded rows the sweep reads and hands over at a time: a stand-in
 // until a backlog after a Redis loss is measured.
-export const REQUEUE_PAGE = 500;
+const REQUEUE_PAGE = 500;
 
 const JOB: JobsOptions = {
   attempts: RETRY_MINUTES.length + 1,
