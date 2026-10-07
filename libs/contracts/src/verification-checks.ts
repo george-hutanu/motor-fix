@@ -6,7 +6,7 @@ import {
   IsIn,
   IsString,
   Length,
-  MaxLength,
+  Matches,
   ValidateIf,
 } from 'class-validator';
 
@@ -172,7 +172,10 @@ export class RecordVerificationCheckDto {
   @Transform(trimmed)
   @ValidateIf(given)
   @IsString()
-  @MaxLength(CHECK_DETAIL_MAX)
+  @Length(1, CHECK_DETAIL_MAX)
+  @Matches(/^\P{Cc}*$/u, {
+    message: 'detail must not hold control characters',
+  })
   detail?: string;
 
   @ApiPropertyOptional({
