@@ -18,6 +18,7 @@ const PUBLIC = [
   'GET /api/v1/auth/providers',
   'GET /api/v1/brands',
   'GET /api/v1/garages/00000000-0000-4000-8000-000000000000',
+  'GET /api/v1/search/garages',
   'GET /health/live',
   'GET /health/ready',
   'POST /api/v1/auth/confirm-email',
