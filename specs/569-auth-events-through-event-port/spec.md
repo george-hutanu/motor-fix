@@ -53,7 +53,7 @@ A password reset and a sign-out on all devices both end every other session of t
 
 - **FR-001**: A completed password reset MUST record one domain event of the new kind `account.password_reset` (added to the typed event catalogue, `257-FR-006`) through the event port, inside the same transaction that takes the link, replaces the password, deletes the account's refresh tokens and writes the audit entry; its subject and audience are the account, and its payload is exactly `{ accountId }`.
 - **FR-002**: A password reset that is refused (link unknown, used, expired or taken by a concurrent save; weak password; maintenance for a non-admin), or whose transaction fails for any reason (the event port included), MUST record no `account.password_reset` event, and the transaction's other writes MUST roll back with it; the answer to the client stays what it is today.
-- **FR-003**: After the transaction of a completed password reset or a sign-out on all devices commits, the API MUST publish one `session.revoked` live message to the account's audience through one method of the sign-in service that both flows call (today each calls `publishLive` itself); a failed publish MUST be logged and MUST NOT change the answer (extends `128-FR-004` to the reset). The order of this message and the password_changed e-mail is not specified.
+- **FR-003**: After the transaction of a completed password reset or a sign-out on all devices commits, the API MUST publish one `session.revoked` live message to `account:{accountId}` through one method of the sign-in service that both flows call (today each calls `publishLive` itself); a failed publish MUST be logged and MUST NOT change the answer (extends `128-FR-004` to the reset). The order of this message and the password_changed e-mail is not specified.
 - **FR-004**: The password_changed e-mail, the audit entry, the sessions revoked and the reset's answer MUST stay as ST-127 specified them; the API contract (openapi.json) and the web app MUST NOT change.
 
 ### Key Entities
@@ -88,13 +88,7 @@ A password reset and a sign-out on all devices both end every other session of t
 ### Capability: `accounts`
 
 - **Adds**: FR-001, FR-002, FR-004
-- **Modifies**: `128-FR-004` — extended by FR-003: a completed password reset publishes `session.revoked` too, through the same method as sign-out everywhere
-- **Removes**: none
-
-### Capability: `live-updates`
-
-- **Adds**: none
-- **Modifies**: `257-FR-011` — a completed password reset (`account.password_reset`) also records its event through the outbox, with the account as its subject
+- **Modifies**: `128-FR-004` → `FR-003`
 - **Removes**: none
 
 ## Success Criteria *(mandatory)*

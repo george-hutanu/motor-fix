@@ -49,3 +49,6 @@ model sonnet. STATUS: success — `checklists/auth-events.md` written, 19 items 
 ## Phase 7 — Tasks
 model sonnet. STATUS: success — tasks.md written, 8 tasks (T001 contracts kind; T002-T003, T005 red specs; T004, T006-T007 implementation; T008 deferred item), tests before implementation; level check: level 2, unchanged.
 - before_tasks / after_tasks commit hooks: this commit; speckit.analyze left to phase 8.
+
+## Phase 8 — Analyze
+artifact-lint: 9 errors before remediation (Spec Delta Modifies malformed; FR-004 untasked), fixed: accounts Adds FR-001/002/004, Modifies `128-FR-004` → `FR-003` (FR-001 needs no live-updates modification); T009 verifies FR-004. Re-run: 0 errors, 0 warnings. Analyze: 0 CRITICAL, 0 HIGH; 1 LOW applied (FR-003 names `account:{accountId}` as 128-FR-004 did). Coverage 4/4 FRs.

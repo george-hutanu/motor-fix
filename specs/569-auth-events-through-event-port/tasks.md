@@ -59,6 +59,8 @@ description: "Task list for ST-569 auth events through the event port"
 
 - [ ] T008 [US1] Tick the second bullet (line 6, the missing `EVENT_PORT` event) of `specs/127-password-reset/deferred.md`, appending "done in ST-569"
 
+- [ ] T009 Verify FR-004: the existing password-reset, sign-out-everywhere and e-mail assertions pass unchanged, and `git diff --exit-code origin/main -- apps/api/openapi.json apps/web` is empty
+
 ---
 
 ## Dependencies and order
