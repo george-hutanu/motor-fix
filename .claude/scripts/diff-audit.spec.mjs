@@ -23,15 +23,16 @@ const write = (rel, body) => {
   writeFileSync(file, typeof body === 'string' ? body : `${JSON.stringify(body, null, 2)}\n`);
 };
 const git = (...args) => spawnSync('git', args, { cwd: repo, encoding: 'utf8' });
-const audit = () => {
+const run = () => {
   const r = spawnSync(process.execPath, [SCRIPT, '--no-jev'], {
     cwd: repo,
     encoding: 'utf8',
     env: { ...process.env, CLAUDE_PROJECT_DIR: repo },
   });
   assert.equal(r.status, 0, r.stderr);
-  return r.stdout.split('\n').filter((l) => l.includes('[import-extension]'));
+  return r.stdout.split('\n');
 };
+const audit = () => run().filter((l) => l.includes('[import-extension]'));
 
 beforeEach(() => {
   repo = mkdtempSync(join(tmpdir(), 'diff-audit-'));
@@ -114,15 +115,7 @@ describe('diff-audit base', () => {
     git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', msg);
     return git('rev-parse', 'HEAD').stdout.trim();
   };
-  const summary = () => {
-    const r = spawnSync(process.execPath, [SCRIPT, '--no-jev'], {
-      cwd: repo,
-      encoding: 'utf8',
-      env: { ...process.env, CLAUDE_PROJECT_DIR: repo },
-    });
-    assert.equal(r.status, 0, r.stderr);
-    return r.stdout.split('\n')[0];
-  };
+  const summary = () => run()[0];
 
   it('diffs against origin/main when the local main is stale', () => {
     commit('tsconfigs');
