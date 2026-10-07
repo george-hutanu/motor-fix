@@ -701,13 +701,20 @@ describe('a level_at only one reader would accept is no waiting level, in both r
   const lastDays = ['2024-02-29', '2026-02-28', '2026-04-30', '2026-01-31'];
   const shapes = ['T12:00', 'T12:00:00', 'T12:00:00.000', 'T12:00:00.000000'].flatMap((time) => [`${time}Z`, `${time}+02:00`]);
   // Offsets that move the instant into another month or year, and century leap years.
-  const crossings = ['2000-02-29T12:00Z', '2026-03-01T01:00+02:00', '2026-12-31T23:30-05:00', '2026-01-01T00:30+02:00', '2026-12-31T23:59Z'];
-  for (const stamp of [...lastDays.flatMap((day) => shapes.map((shape) => day + shape)), ...crossings]) {
+  const crossings = [
+    ['2000-02-29T12:00Z', 'the last day of February in a century leap year'],
+    ['2026-03-01T01:00+02:00', 'the first day of its month, the last day of the previous one in UTC'],
+    ['2026-12-31T23:30-05:00', 'the last day of its year, the first day of the next one in UTC'],
+    ['2026-01-01T00:30+02:00', 'the first day of its year, the last day of the previous one in UTC'],
+    ['2026-12-31T23:59Z', 'the last day of its year'],
+  ];
+  const lastDayStamps = lastDays.flatMap((day) => shapes.map((shape) => [day + shape, 'the last day of its month']));
+  for (const [stamp, day] of [...lastDayStamps, ...crossings]) {
     const now = Date.parse(stamp) + 60_000;
-    it(`keeps the level for ${JSON.stringify(stamp)}, the last day of its month, in JS`, () => {
+    it(`keeps the level for ${JSON.stringify(stamp)}, ${day}, in JS`, () => {
       assert.deepEqual(jsPoint(stamp, now), kept);
     });
-    pyIt(`keeps the level for ${JSON.stringify(stamp)}, the last day of its month, in Python`, () => {
+    pyIt(`keeps the level for ${JSON.stringify(stamp)}, ${day}, in Python`, () => {
       assert.deepEqual(pyPoint(stamp, now), kept);
     });
   }
