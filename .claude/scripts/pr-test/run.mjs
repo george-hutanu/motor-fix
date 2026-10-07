@@ -80,7 +80,6 @@ export function parseArgs(argv) {
   };
 }
 
-/** The affected unit tests between the base and the head, never answered from the Nx cache. */
 // What a PR's QA flows are called with: signIn(context, role) opens a guarded screen as a seeded account.
 export const flowArgs = ({ webURL, apiURL, outDir, repoRoot, worktree, session }) => ({
   baseURL: webURL,
@@ -92,7 +91,8 @@ export const flowArgs = ({ webURL, apiURL, outDir, repoRoot, worktree, session }
   ...apiHealth(apiURL),
 });
 
-export const testsCommand =({ base, sha }) => ["nx", "affected", "-t", "test", `--base=${base}`, `--head=${sha}`, "--parallel=1", "--skip-nx-cache"];
+/** The affected unit tests between the base and the head, never answered from the Nx cache. */
+export const testsCommand = ({ base, sha }) => ["nx", "affected", "-t", "test", `--base=${base}`, `--head=${sha}`, "--parallel=1", "--skip-nx-cache"];
 
 const sh = (cmd, list, opts = {}) => execFileSync(cmd, list, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], ...opts }).trim();
 const has = (cmd, list) => spawnSync(cmd, list, { stdio: "ignore" }).status === 0;

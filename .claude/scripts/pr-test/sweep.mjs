@@ -83,7 +83,7 @@ export const flowSignIn =
     await context.addCookies(await contextCookies({ role }, { session, baseURL }));
   };
 
-export const sessionCookie =({ refresh, baseURL }) => ({
+export const sessionCookie = ({ refresh, baseURL }) => ({
   name: "mf_refresh",
   value: refresh,
   domain: new URL(baseURL).hostname,
