@@ -16,7 +16,7 @@ import {
   RouterLinkActive,
   RouterOutlet,
 } from '@angular/router';
-import type { MeDto } from '@motor-fix/data-access';
+import type { CarDto, MeDto } from '@motor-fix/data-access';
 import {
   AsWritten,
   ClockPipe,
@@ -28,6 +28,7 @@ import { Overlays } from '@motor-fix/overlays';
 import { HlmToaster, toast } from '@motor-fix/ui-cockpit';
 import { filter, map } from 'rxjs';
 
+import { AddCar } from './add-car';
 import { AdminOverview } from './admin-overview';
 import { Bell } from './bell';
 import { EmailBanner } from './email-banner';
@@ -154,6 +155,9 @@ const ROLES: readonly { role: Role; label: string }[] = [
           @if (letters(); as l) {<span class="avatar" aria-hidden="true">{{ l }}</span>}
           <mf-as-written [text]="session.shown()?.name ?? ''" />
         </div>
+        @if (addsCar()) {
+          <button type="button" (click)="addCar()">{{ 'shell.frame.addCar' | t }}</button>
+        }
         @if (inviteGarage(); as garageId) {
           <button type="button" (click)="invite(garageId)">{{ 'shell.frame.invite' | t }}</button>
         }
@@ -231,6 +235,11 @@ export class Frame implements OnInit {
   protected readonly letters = computed(() =>
     initials(this.session.shown()?.name ?? ''),
   );
+  // A garage account that is not a driver adds its first car from here.
+  protected readonly addsCar = computed(() => {
+    const me = this.session.shown();
+    return me?.role === 'garage' && !me.roles.includes('driver');
+  });
   // The owner's garage, while the garage role with the team right is on.
   protected readonly inviteGarage = computed(() => {
     const me = this.session.shown();
@@ -322,6 +331,16 @@ export class Frame implements OnInit {
     } finally {
       this.switching.set(false);
     }
+  }
+
+  // The saved car made the account a driver: the reload shows its new chip.
+  protected async addCar() {
+    const car = await this.overlays.open<CarDto, { plates: string[] }>(AddCar, {
+      data: { plates: [] },
+      shape: 'dialog',
+      title: 'driver.cars.add.title',
+    });
+    if (car !== 'cancelled') await this.session.reload();
   }
 
   protected invite(garageId: string) {

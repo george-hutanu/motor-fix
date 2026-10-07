@@ -1,1 +1,44 @@
-{}
+{
+  "cars": {
+    "add": {
+      "brand": "Marcă",
+      "brandsDown": "Nu am putut încărca mărcile. Reîncearcă.",
+      "engine": "Motor",
+      "field": {
+        "km": "Scrie kilometrii ca număr întreg, cel mult 2.000.000.",
+        "pattern": "Scrie între 2 și 12 litere și cifre.",
+        "too_far_ahead": "Data poate fi cel mult peste cinci ani.",
+        "unknown_brand": "Alege o marcă din listă."
+      },
+      "fuel": {
+        "diesel": "Motorină",
+        "electric": "Electric",
+        "hybrid": "Hibrid",
+        "label": "Combustibil",
+        "petrol": "Benzină"
+      },
+      "itp": "ITP valabil până la",
+      "km": "Kilometri",
+      "lead": "O folosim ca să‑ți arătăm service‑urile potrivite",
+      "model": "Model",
+      "noMatch": "Nicio marcă nu se potrivește.",
+      "optional": "Opțional",
+      "plate": "Număr de înmatriculare",
+      "plateCheck": "Verifică numărul de înmatriculare.",
+      "plateHeld": "Ai deja o mașină cu acest număr.",
+      "problem": {
+        "car_limit": "Poți avea cel mult 20 de mașini."
+      },
+      "rca": "RCA valabilă până la",
+      "retry": "Reîncearcă",
+      "rovinieta": "Rovinietă valabilă până la",
+      "submit": "Adaugă mașina",
+      "title": "Adaugă o mașină",
+      "year": "An",
+      "yearRange": "Anul trebuie să fie între 1950 și {max}."
+    },
+    "itpMissing": "ITP: adaugă data din talon",
+    "itpUntil": "ITP valabil până la {day}",
+    "retry": "Reîncearcă"
+  }
+}

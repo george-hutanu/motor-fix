@@ -1,1 +1,44 @@
-{}
+{
+  "cars": {
+    "add": {
+      "brand": "Brand",
+      "brandsDown": "We could not load the brands. Try again.",
+      "engine": "Engine",
+      "field": {
+        "km": "Write the kilometres as a whole number, at most 2,000,000.",
+        "pattern": "Write 2 to 12 letters and digits.",
+        "too_far_ahead": "The date can be at most five years ahead.",
+        "unknown_brand": "Choose a brand from the list."
+      },
+      "fuel": {
+        "diesel": "Diesel",
+        "electric": "Electric",
+        "hybrid": "Hybrid",
+        "label": "Fuel",
+        "petrol": "Petrol"
+      },
+      "itp": "ITP valid until",
+      "km": "Kilometres",
+      "lead": "We use it to show you the right garages",
+      "model": "Model",
+      "noMatch": "No brand matches.",
+      "optional": "Optional",
+      "plate": "Registration plate",
+      "plateCheck": "Check the registration plate.",
+      "plateHeld": "You already have a car with this plate.",
+      "problem": {
+        "car_limit": "You can have at most 20 cars."
+      },
+      "rca": "RCA valid until",
+      "retry": "Try again",
+      "rovinieta": "Rovinieta valid until",
+      "submit": "Add the car",
+      "title": "Add a car",
+      "year": "Year",
+      "yearRange": "The year must be between 1950 and {max}."
+    },
+    "itpMissing": "ITP: add the date from the registration",
+    "itpUntil": "ITP valid until {day}",
+    "retry": "Try again"
+  }
+}

@@ -8,6 +8,8 @@ export const ACCOUNTS = {
   admin: 'admin@example.test',
   driver: 'sofer@example.test',
   garage: 'service@example.test',
+  // Garage only, with no garage: adding a first car makes it a driver.
+  garageOnly: 'masina-noua@example.test',
   mechanic: 'mecanic@example.test',
   otherDriver: 'sofer2@example.test',
   receptionist: 'receptie@example.test',
