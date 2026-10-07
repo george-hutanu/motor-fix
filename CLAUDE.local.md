@@ -159,8 +159,4 @@ draft PR, a push per commit, ready when done, merged on green CI, then Done.
 ranked, read-only UI audit with `scan.mjs` and `contrast.mjs` helpers; fixes
 only the findings you name).
 
-<!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
-at specs/784-impossible-level-date/plan.md
-<!-- SPECKIT END -->
+Active plan (stack, structure, commands): specs/784-impossible-level-date/plan.md
