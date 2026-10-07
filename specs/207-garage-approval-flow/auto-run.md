@@ -50,3 +50,9 @@ Start commit: 664610a3 (worktree .worktrees/207-garage-approval-flow, branch 207
 ## 7. Tasks
 - Model: sonnet. tasks.md: 18 tasks, 7 phases (US1 6, US3 3, US2 1, US4 3), tests-first, no FR/task ids for source. analyze hook left to the caller. level.mjs check run.
 - STATUS: success — tasks written.
+
+## Phase 8 — Analyze (inline, opus)
+
+- Round 1: artifact-lint 9 ERROR → CRITICAL (FR-001..004, 007..010 untasked; delta capability `garage-verification` has no file). HIGH: SC-002/T011/quickstart counted 9 allowed transitions (there are 11; 14 other ordered pairs, 13 refused + the idempotent second open); FR-004 silent on submit while newest file is `approved`/`more_requested` (data-model and contracts refuse it); FR-010 omitted `open` from the admin-only use cases (contracts, T011 include it). MEDIUM: approval's own garage audit entry vs "one audit entry" (US3 AS7, SC-003); T012 omitted it.
+- Remediation applied: FR tags on every task; `.specify/capabilities/garage-verification.md` stub (precedent: garage-team at ST-131 specify); Modifies of 079-FR-005 dropped (it lives in `accounts` and names no status values; recorded in Assumptions); SC-002, T011, quickstart counts; FR-004, edge case, FR-010, US3 AS7, SC-003, T012 aligned.
+- Round 2: artifact-lint 0 errors; no CRITICAL/HIGH left. Context contradictions all closed by Clarifications 1-4; both checklists fully checked.
