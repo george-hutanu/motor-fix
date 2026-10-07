@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { parseArgs, testsCommand } from './run.mjs';
+import { flowArgs, parseArgs, testsCommand } from './run.mjs';
 import { EXTERNAL_PORTS, appEnv, externalPlan } from './services.mjs';
 
 describe('run: arguments', () => {
@@ -26,6 +26,33 @@ describe('run: arguments', () => {
     const o = parseArgs(['53', '--tree', 'pr', '--sha', 'f'.repeat(40)]);
     assert.equal(o.tree, 'pr');
     assert.equal(o.sha, 'f'.repeat(40));
+  });
+});
+
+describe('run: what the QA flows are given', () => {
+  it('hands the flows a signIn that signs the context in through the run session, on the web origin', async () => {
+    const asked = [];
+    const args = flowArgs({
+      webURL: 'http://127.0.0.1:4100',
+      apiURL: 'http://127.0.0.1:3100',
+      outDir: '/out/shots',
+      repoRoot: '/repo',
+      worktree: '/wt',
+      session: async (role) => (asked.push(role), 'r-1'),
+    });
+    assert.equal(args.baseURL, 'http://127.0.0.1:4100');
+    assert.equal(args.apiURL, 'http://127.0.0.1:3100');
+    assert.equal(args.outDir, '/out/shots');
+    assert.equal(args.repoRoot, '/repo');
+    assert.equal(args.worktree, '/wt');
+    assert.equal(typeof args.health, 'function');
+    assert.equal(typeof args.ready, 'function');
+    const added = [];
+    await args.signIn({ addCookies: async (c) => added.push(...c) }, 'driver');
+    assert.deepEqual(asked, ['driver']);
+    assert.equal(added[0].value, 'r-1');
+    assert.equal(added[0].domain, '127.0.0.1');
+    assert.equal(added[0].path, '/api/v1/auth');
   });
 });
 

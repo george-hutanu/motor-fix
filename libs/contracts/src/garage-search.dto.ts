@@ -1,12 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
-export const GARAGE_BRAND_ANSWERS = [
-  'works_on',
-  'does_not_take',
-  'unstated',
-] as const;
-export type GarageBrandAnswer = (typeof GARAGE_BRAND_ANSWERS)[number];
+import { GarageBrandAnswerDto } from './garage-brands.dto';
+
+const GARAGE_BRAND_ANSWERS = ['works_on', 'does_not_take', 'unstated'] as const;
+type GarageBrandAnswer = (typeof GARAGE_BRAND_ANSWERS)[number];
 
 export class GarageSearchQueryDto {
   @ApiProperty({
@@ -26,7 +24,7 @@ export class GarageSearchQueryDto {
   cursor?: string;
 }
 
-export class ListedGarageDto {
+export class ListedGarageDto extends GarageBrandAnswerDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
 
