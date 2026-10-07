@@ -119,3 +119,7 @@ Start commit: b76badd3 (worktree .worktrees/160-admin-dashboard-menu, branch 160
 
 - 7 high: the admin e2e spec and the QA flows signed in on phones through a header button phones lack; the desktop flow's text match missed a rendered line; the English switch and the driver redirect were not driven; the signed-out sweep 401. The PR also conflicted with main, so CI never ran on the ready heads.
 - Fixed: merged origin/main (OpenAPI and client regenerated); phones sign in from the Cont tab; a stubbed e2e test switches the admin header and counter to English without a reload; the flows read `p.admin-line`, switch to EN and drive the driver redirect; the sweep opens `/app/admin@admin`. T021's text no longer lists `frame.area.admin` (the ADMINISTRATOR label is `frame.admin.label`; the role tag stays "Admin"). Repair lap 3.
+
+## QA lap 2 (run 37606034095, head 836e7cd)
+
+- Lap 1's findings all resolved; CI green on the merged head. 4 high "flow not run" (visitor redirect, failed read, loading skeletons, zero line): added to the flows. Low (the ADMINISTRATOR label touched the top edge on tablet and desktop): `.title` gets 12 px top padding. Medium (an admin during maintenance in the browser): kept to the API integration test; the QA stack cannot toggle maintenance from a flow. Repair lap 4.

@@ -89,7 +89,7 @@ const ROLES: readonly { role: Role; label: string }[] = [
     .view { display: flex; flex-direction: column; min-width: 0; }
     header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mf-space-3); }
     header h1 { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
-    .title { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; }
+    .title { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; padding-top: var(--mf-space-3); }
     .admin-label { color: var(--mf-text-secondary); font-size: var(--mf-size-label); font-weight: 700; letter-spacing: 0.08em; }
     .admin-line { margin: 0; color: var(--mf-text-secondary); font-size: var(--mf-size-small); overflow-wrap: anywhere; }
     .skeleton { display: inline-block; width: 12rem; max-width: 50%; height: 0.9em; border-radius: var(--mf-radius-chip); background: var(--mf-line); vertical-align: middle; }
