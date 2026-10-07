@@ -59,7 +59,7 @@ The answer comes from the `brands:active` Redis key (TTL 3600 s), rebuilt from P
 
 ## Domain functions (no HTTP surface in this task)
 
-Exported from `@motor-fix/domain` for the stories that write garage brands:
+Provided by the domain lib's garages module for the stories that write garage brands; the first caller outside `garages/` (ST-397) adds it to the lib's public index:
 
 - `GarageBrandsService.stanceFor(garageId, brandId): Promise<'works_on' | 'does_not_take' | 'unstated'>`
 - `GarageBrandsService.setStance(tx, actor, garageId, brandId, stance): Promise<void>` — see data-model.md transitions

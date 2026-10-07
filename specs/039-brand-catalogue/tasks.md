@@ -88,7 +88,7 @@ None. No new dependency, project or tool; `libs/domain`, `libs/contracts` and `a
 
 ### Implementation
 
-- [X] T019 [US3] `libs/domain/src/garages/garage-brands.service.ts` (new): `stanceFor`, `setStance(tx, actor, garageId, brandId, stance)` with the transitions in data-model.md, `addJob(tx, actor, garageId, brandId, jobTypeId)` throwing `ConflictException({ code: 'brand_not_worked_on' })`, both audited (`garage_brand`, `garage_brand_job`); provide it in `libs/domain/src/garages/garages.module.ts` and export `GarageBrandsService` from `libs/domain/src/index.ts` (FR-013, FR-014, FR-015, FR-016, FR-017; depends on T004, T018)
+- [X] T019 [US3] `libs/domain/src/garages/garage-brands.service.ts` (new): `stanceFor`, `setStance(tx, actor, garageId, brandId, stance)` with the transitions in data-model.md, `addJob(tx, actor, garageId, brandId, jobTypeId)` throwing `ConflictException({ code: 'brand_not_worked_on' })`, both audited (`garage_brand`, `garage_brand_job`); provide it in `libs/domain/src/garages/garages.module.ts`; it stays off the lib's public index until its first caller outside `garages/` (ST-397) exports it, since an export with no consumer is bloat (Principle I; spec review 2026-10-07) (FR-013, FR-014, FR-015, FR-016, FR-017; depends on T004, T018)
 
 **Checkpoint**: all three stories work independently.
 
@@ -98,6 +98,7 @@ None. No new dependency, project or tool; `libs/domain`, `libs/contracts` and `a
 
 - [X] T020 Run the checks in `specs/039-brand-catalogue/quickstart.md` and `scripts/contract-check.sh` so `apps/api/openapi.json` and `libs/data-access` are current (SC-001..SC-005; depends on T010, T017, T019)
 - [X] T021 `libs/domain/src/catalogue/brand-loader.integration.spec.ts` and `brand-loader.ts`: a file swapping two brands' names is refused and the error tells the operator to rename one brand to a temporary name first, then load again (FR-007; decided by Chief, deferred.md)
+- [X] T022 Review fixes: the brand cache refuses JSON that is not a list (falls back to PostgreSQL); the API stops with exit code 1, never serving, when the brand file cannot load (`apps/api/src/main.ts`); the retired-cursor and cross-garage tests assert the exact outcome (FR-008, FR-012; code and spec review 2026-10-07)
 
 ---
 

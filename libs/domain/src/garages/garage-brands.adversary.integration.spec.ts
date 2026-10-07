@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
+import { NotFoundException } from '@nestjs/common';
+
 import { GarageBrandsService } from './garage-brands.service';
 import { AuditService } from '../audit/audit.service';
 import type { Actor } from '../auth/policy';
@@ -119,7 +121,9 @@ describe('GarageBrandsService under hostile calls', () => {
   it("refuses an actor writing another garage's stance", async () => {
     const w = await world();
 
-    await expect(setStance(w, w.dacia, 'works_on', w.other)).rejects.toThrow();
+    await expect(setStance(w, w.dacia, 'works_on', w.other)).rejects.toThrow(
+      NotFoundException,
+    );
     expect(await prisma.garageBrand.count()).toBe(0);
   });
 
@@ -129,7 +133,9 @@ describe('GarageBrandsService under hostile calls', () => {
       data: { brandId: w.dacia, garageId: w.other, stance: 'works_on' },
     });
 
-    await expect(addJob(w, w.dacia, randomUUID(), w.other)).rejects.toThrow();
+    await expect(addJob(w, w.dacia, randomUUID(), w.other)).rejects.toThrow(
+      NotFoundException,
+    );
     expect(await prisma.garageBrandJob.count()).toBe(0);
   });
 

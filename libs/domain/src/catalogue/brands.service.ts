@@ -51,7 +51,9 @@ export class BrandsService {
   private async active(): Promise<BrandDto[]> {
     const cached = await this.cache(async () => {
       const text = await this.redis.get(ACTIVE_BRANDS_KEY);
-      return text ? (JSON.parse(text) as BrandDto[]) : null;
+      if (!text) return null;
+      const list: unknown = JSON.parse(text);
+      return Array.isArray(list) ? (list as BrandDto[]) : null;
     });
     if (cached) return cached;
     const brands = await this.prisma.brand.findMany({

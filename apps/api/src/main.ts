@@ -32,4 +32,8 @@ async function bootstrap() {
   await app.listen(Number(process.env['PORT'] ?? 3000));
 }
 
-void bootstrap();
+// A brand file that cannot load stops the process before it serves.
+bootstrap().catch((error: unknown) => {
+  console.error(error);
+  process.exit(1);
+});

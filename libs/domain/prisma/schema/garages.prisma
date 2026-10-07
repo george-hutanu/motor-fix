@@ -131,7 +131,7 @@ model GarageBrand {
 }
 
 // A job type the garage does for a brand it works on; the row is the tick.
-// TODO: add the `jobTypeId` foreign key when the job catalogue exists.
+// No foreign key on `jobTypeId`: the job_type table does not exist yet.
 model GarageBrandJob {
   garageId    String      @map("garage_id") @db.Uuid
   brandId     String      @map("brand_id") @db.Uuid

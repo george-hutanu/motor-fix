@@ -239,8 +239,8 @@ describe('GET /brands under hostile queries', () => {
     await loader.load(mixed(30).filter((b) => b.key !== key));
     const res = await get(`?cursor=${cursor}`);
 
-    expect([200, 400]).toContain(res.status);
-    if (res.status === 400) expect(res.body.code).toBe('invalid_cursor');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('invalid_cursor');
   });
 
   it('recovers when the cache holds text that is not a brand list', async () => {
@@ -252,6 +252,23 @@ describe('GET /brands under hostile queries', () => {
     expect(res.status).toBe(200);
     expect(res.body.total).toBe(1);
   });
+
+  it.each([
+    ['an object', '{}'],
+    ['a string', '"x"'],
+    ['a number', '1'],
+  ])(
+    'recovers when the cache holds JSON that is %s, not a list',
+    async (_, text) => {
+      await loader.load([{ key: 'a', name: 'Alfa' }]);
+      await redis.set('brands:active', text);
+
+      const res = await get();
+
+      expect(res.status).toBe(200);
+      expect(res.body.total).toBe(1);
+    },
+  );
 
   it('keeps the cache for about an hour', async () => {
     await loader.load([{ key: 'a', name: 'Alfa' }]);

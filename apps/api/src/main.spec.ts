@@ -113,6 +113,21 @@ describe('api entry point', () => {
     );
   });
 
+  it('stops with exit code 1, never serving, when the brand file cannot load', async () => {
+    const exit = jest
+      .spyOn(process, 'exit')
+      .mockImplementation((() => undefined) as never);
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockLoad.mockRejectedValueOnce(new Error('refused'));
+
+    await run([]);
+
+    expect(mockApp.listen).not.toHaveBeenCalled();
+    expect(exit).toHaveBeenCalledWith(1);
+    exit.mockRestore();
+    error.mockRestore();
+  });
+
   it.each([
     ['openapi without a file', ['openapi']],
     ['another command', ['serve', 'out/openapi.json']],
