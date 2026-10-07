@@ -1,9 +1,10 @@
 ---
 capability: audit
-updated: 2026-10-04
+updated: 2026-10-07
 features:
   - 390-audit-history
   - 391-audit-history-api
+  - 164-admin-audit-log
 ---
 
 # Capability: Audit history
@@ -135,3 +136,19 @@ _From 391-audit-history-api._
 ### 391-FR-016 — The OpenAPI document MUST describe the endpoint, its parameters and its answer, and the generated Angular client MUST include it.
 
 _From 391-audit-history-api._
+
+### 164-FR-001 — Every `admin/*` route whose method is `POST`, `PUT`, `PATCH` or `DELETE` MUST write, inside the same transaction as its change, at least one audit entry whose actor is the calling admin: `actor_id` the admin's account, `actor_role` `admin`, `actor_name` the admin's first name, with the action, the subject, the old and new values, and the time, as the audit capability stores them. When the entry cannot be written the whole request fails and nothing of the change is saved.
+
+_From 164-admin-audit-log._
+
+### 164-FR-002 — `POST /api/v1/admin/live/test` MUST write one entry per successful call: action `create`, subject the target account (`subject_type` `account`, `subject_id` the account), kind `live.test` (decided), no old value, and as new value the validated request body as stored JSON (`{ "accountId": … }`).
+
+_From 164-admin-audit-log._
+
+### 164-FR-003 — `POST /api/v1/admin/notifications/test` MUST write one entry per successful call: action `create`, subject the calling admin's account, kind `notification.test` (decided), and as new value the validated request body as stored JSON (`{ "accountIds": [...] }`, the accounts the test message was queued for). The route's change is a set of queued messages written one account at a time, so the entry commits first, in its own transaction, before any message is written: when the entry fails nothing is queued; when a send fails afterwards the request answers 5xx and the entry stays, recording the attempt.
+
+_From 164-admin-audit-log._
+
+### 164-FR-004 — A guard test MUST take every `admin/*` route and method from the API's own route list (the OpenAPI document, as the admin routes test does), call each `POST`, `PUT`, `PATCH` or `DELETE` route once, one call at a time (so the count is the call's own), as a seeded admin with a known-good request from a table keyed by `METHOD /path`, and fail, naming every such route, when the call answered anything but 2xx (with its status), when the number of entries whose `actor_id` is that admin did not grow across that one call (counted before and after each call), or when the table holds no request for the route. Each `GET` route is called the same way and MUST leave the count unchanged; a later `GET` that is one of the audit capability's two logged reads is marked as such in the table by the story that adds it, and must then add exactly one entry. After this story the test names no route; a route added later joins the test without the test being edited beyond its fixture table.
+
+_From 164-admin-audit-log._
