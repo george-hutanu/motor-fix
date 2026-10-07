@@ -86,7 +86,7 @@ const RULES = [
   ['must exist. The `after_specify` and `before_implement` hooks write it', 'phases-close.md'],
   ['`verified` or `use a workflow`', 'phases-close.md'],
   ['CRITICAL/HIGH findings that survive the re-review block completion', 'phases-close.md'],
-  ['refresh the managed', 'phases-close.md'],
+  ['The active plan is not written into a tracked file', 'phases-close.md'],
   ['retro-evidence.mjs --since <start-commit> --jev', 'phases-close.md'],
   ['instincts.mjs triggered --since <start-commit>', 'phases-close.md'],
   ['`--since` is not optional.', 'phases-close.md'],

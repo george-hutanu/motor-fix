@@ -29,6 +29,16 @@ It then creates, replaces, or appends the managed block so that the section poin
 
 If `context_files` and `context_file` are empty, the command reports nothing to do and exits successfully. Context file paths must stay project-relative; absolute paths, Windows drive paths, backslash separators, and `..` path segments are rejected.
 
+## In motor-fix
+
+The config names `.specify/agent-context.local.md`, a git-ignored file, and the
+`after_specify` and `after_plan` hooks that ran this command are off. The block
+named the active plan, and a tracked copy of it made every open feature branch
+conflict at each merge; `.claude/hooks/session-context.mjs` now prints
+the pointer from `.specify/feature.json` at session start. Never point the
+config at a tracked file, and never leave it empty: the script then self-seeds
+`CLAUDE.md`. `.claude/scripts/active-plan-pointer.spec.mjs` checks both.
+
 ## Execution
 
 - **Bash**: `.specify/extensions/agent-context/scripts/bash/update-agent-context.sh [plan_path]`
@@ -50,8 +60,7 @@ Before finishing, run:
 node .claude/scripts/context-audit.mjs
 ```
 
-The agent context file — `CLAUDE.local.md` here, since `CLAUDE.md` is tracked
-and empty and the spec-kit practice is local — is ratcheted against
+The agent context file, `CLAUDE.local.md`, is ratcheted against
 `.specify/context-baseline.json`, and `pre:edit:config-protection` blocks an
 edit that takes it past that line. The rule is BMAD's, and it is the right one
 for a file loaded into every session: a line earns its place only if **removing

@@ -158,7 +158,3 @@ draft PR, a push per commit, ready when done, merged on green CI, then Done.
 `apple-design-skill` (a local mirror of Apple's HIG) and `/design-audit` (a
 ranked, read-only UI audit with `scan.mjs` and `contrast.mjs` helpers; fixes
 only the findings you name).
-
-<!-- SPECKIT START -->
-Active plan (stack, structure, commands): specs/108-step-list-in-view/plan.md
-<!-- SPECKIT END -->

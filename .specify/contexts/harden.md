@@ -9,4 +9,3 @@ Mode: harden — every task in tasks.md is checked off.
   equivalent, and that earns a `Stryker disable` comment saying why.
 - Then `/speckit-review` (or the `spec-reviewer` and `code-reviewer` subagents on
   the feature diff). CRITICAL/HIGH findings block completion.
-- Finish with `/speckit-agent-context-update` so AGENTS.md matches what shipped.
