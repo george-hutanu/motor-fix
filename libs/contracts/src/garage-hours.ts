@@ -71,7 +71,7 @@ const isInterval = (value: unknown): value is Interval =>
   value.length === 2 &&
   value.every((time) => typeof time === 'string');
 
-export type IntervalsError = 'count' | 'grid' | 'order' | 'overlap';
+type IntervalsError = 'count' | 'grid' | 'order' | 'overlap';
 
 // "HH:MM" strings compare in time order.
 export function intervalsError(list: Interval[]): IntervalsError | null {
@@ -108,7 +108,7 @@ const isDay = (value: unknown): value is string => {
   return date.toISOString().slice(0, 10) === value;
 };
 
-export function isClosedDay(value: unknown): value is ClosedDay {
+function isClosedDay(value: unknown): value is ClosedDay {
   if (!isRecord(value)) return false;
   const { day, note, ...rest } = value;
   return (
