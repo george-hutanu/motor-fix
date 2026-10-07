@@ -24,6 +24,7 @@ h2 {
 }
 .chart {
   display: grid;
+  align-content: start;
   gap: var(--mf-space-2);
   min-width: 0;
 }
