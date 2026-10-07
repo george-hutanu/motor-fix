@@ -53,3 +53,15 @@ Start commit: cab78f49 (origin/main), branch 560-requeue-stranded-notifications,
 
 ## 16. Retrospective evidence (unjudged)
 - retro-evidence --since cab78f49: 10 commits, carried open item from 195 (run whole workspace tests before ready). Jev lane unavailable: no suggested verdict. instincts triggered: none (jev unavailable).
+
+## Phase 14 — Review
+- spec-reviewer APPROVE (3 LOW), code-reviewer APPROVE (4 MEDIUM, 1 LOW). Repair lap 1 of 10.
+- Fixed test-first: per-call `recorded` flag replaces the processor's Set; sweep scheduler template trims its jobs (removeOnComplete, removeOnFail 10); log carries the count; restating comment removed; worker-boot test when scheduling rejects.
+- Deferred and filed in Notion: unbounded sweep read (no new setting, Principle I; a cap risks starving rows), timers.ts startSweep job cleanup, held rows whose delayed job is lost.
+- code-reviewer re-run: APPROVE, no findings. Notifications suites 121/121, 3728 tests.
+
+## Phase 15 — Agent context
+- Nothing tracked to update; the active plan line lives in CLAUDE.local.md.
+
+## Phase 17 — Archive
+- Spec Delta merged into `.specify/capabilities/notifications.md` (+10); spec status Archived (2026-10-07).

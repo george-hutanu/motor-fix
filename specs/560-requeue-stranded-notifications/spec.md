@@ -2,7 +2,7 @@
 
 **Feature Branch**: `560-requeue-stranded-notifications`
 **Created**: 2026-10-07
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 **Input**: ST-560 (tech debt from ST-392, code-reviewer, PR #73): "`libs/domain/src/notifications/notifications.service.ts` `fallBack` (and `notify`, pre-existing) writes a `queued` row and then adds its job; if Redis refuses the add, the row stays `queued` with no job and nothing re-queues it. A sweeper that re-adds `send-<id>` for stale `queued` rows (idempotent by job id) would close it for every channel." — https://app.notion.com/p/3f0607bff0d281c1b564c357379131d1. Sources: the Notion task (no comments on it), `notifications.service.ts`, `notifications.processor.ts`, `scheduler/timers.ts`, the `notifications` capability (522-FR-001..003, 561-FR-001..004).
 
 ## Clarifications
