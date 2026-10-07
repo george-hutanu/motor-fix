@@ -74,6 +74,7 @@ A password reset and a sign-out on all devices both end every other session of t
 - Q: Does FR-003 add a requirement or modify `128-FR-004`? → A: It modifies `128-FR-004`; the Spec Delta says so. (spec-challenger #2)
 - Q: Must the e-mail still go before the nudge? → A: No; no test or requirement fixes the order, only "after the commit" and "once". (spec-challenger #3)
 - Q: What does the client get when the event port throws? → A: A 500, as sign-out everywhere; tested with a throwing `EventPort` stub, the link's `usedAt` still null. (spec-challenger #4)
+- Q: Does the task's "Sign-in's own `session.revoked` publish" name a third flow? → A: No; it is `SignInService.signOutEverywhere`'s publish, one of the two flows this task touches. (checklist CHK006)
 - Q: Does SC-002 cover sign-up? → A: No, only the two flows touched; sign-up's event is `257-FR-011`'s, already tested. (spec-challenger #5)
 
 ## Assumptions
