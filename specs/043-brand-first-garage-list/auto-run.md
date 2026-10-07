@@ -123,3 +123,12 @@ Hook outcomes:
 ## Phase 16 — Retro evidence
 
 - `retro-evidence.mjs --since 2a8f9b75 --jev` collected (Jev unavailable); `/speckit-retro` not run (speckit-auto bars it). Unjudged evidence in the Final Report.
+
+## Phase 14 — Review, final pass
+
+- spec-reviewer (19e7f296): APPROVE, no findings, 52/52.
+- code-reviewer (19e7f296): APPROVE. One MEDIUM (dead `status`/`id` parameters on the adversary `garage()` helper and on `realCursor`, left after the drop) patched, adversary spec 26/26; no further re-run (mechanical deletion, nothing blocking).
+
+## Phase 17 — Archive
+
+- spec.md status `Archived (2026-10-07)`; `capabilities.mjs merge --apply`: garage-search +11 added. `/speckit-retro` not run (speckit-auto bars it). Commit a5a3ce22.

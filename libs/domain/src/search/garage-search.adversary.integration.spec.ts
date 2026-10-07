@@ -63,20 +63,13 @@ const search = (query: Record<string, string | string[]>) =>
 
 type Stance = 'works_on' | 'does_not_take' | 'unstated';
 
-async function garage(
-  name: string,
-  stance: Stance,
-  brandId = bmw,
-  status: 'approved' | 'suspended' | 'draft' = 'approved',
-  id?: string,
-) {
+async function garage(name: string, stance: Stance, brandId = bmw) {
   const created = await prisma.garage.create({
     data: {
-      ...(id ? { id } : {}),
+      approvedAt: new Date(),
       name,
       slug: `g-${randomUUID()}`,
-      status,
-      ...(status === 'approved' ? { approvedAt: new Date() } : {}),
+      status: 'approved',
     },
   });
   if (stance !== 'unstated') {
@@ -245,11 +238,11 @@ describe('GET /search/garages under attack', () => {
     const encode = (value: unknown) =>
       Buffer.from(JSON.stringify(value)).toString('base64url');
 
-    async function realCursor(brandId = bmw) {
+    async function realCursor() {
       for (let i = 0; i < 21; i += 1) {
-        await garage(`G${pad(i)}`, 'works_on', brandId);
+        await garage(`G${pad(i)}`, 'works_on');
       }
-      const res = await search({ brandId });
+      const res = await search({ brandId: bmw });
       return res.body.nextCursor as string;
     }
 
