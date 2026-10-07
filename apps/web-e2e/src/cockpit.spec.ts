@@ -73,9 +73,10 @@ for (const scheme of ['dark', 'light'] as const) {
       expect(await style(page, 'section.mf-panel', 'border-top-color')).toBe(
         rgb(t.line),
       );
-      expect(await style(page, primaryButton, 'background-color')).toBe(
-        rgb(t.amber),
-      );
+      // The button eases into its colour; read it once the transition ends.
+      await expect
+        .poll(() => style(page, primaryButton, 'background-color'))
+        .toBe(rgb(t.amber));
       await expect(page.locator(primaryButton)).toHaveCount(1);
     });
 

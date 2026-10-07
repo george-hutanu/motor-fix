@@ -120,14 +120,14 @@ const ROLES: readonly { role: Role; label: string }[] = [
             @for (chip of roles(); track chip.role) {
               <button
                 type="button"
-                [attr.aria-pressed]="chip.role === session.current()?.role"
+                [attr.aria-pressed]="chip.role === session.shown()?.role"
                 [disabled]="switching()"
                 (click)="switchTo(chip.role)"
               >{{ chip.label | t }}</button>
             }
           </div>
         }
-        <mf-as-written [text]="session.current()?.name ?? ''" />
+        <mf-as-written [text]="session.shown()?.name ?? ''" />
         @if (inviteGarage(); as garageId) {
           <button type="button" (click)="invite(garageId)">{{ 'shell.frame.invite' | t }}</button>
         }
@@ -158,7 +158,7 @@ export class Frame implements OnInit {
   private readonly i18n = inject(I18n);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly base = computed(
-    () => this.session.current()?.landing ?? '/app/driver',
+    () => this.session.shown()?.landing ?? '/app/driver',
   );
   // The area guard admits only a landing of one of the three dashboards.
   private readonly area = computed(
@@ -166,13 +166,13 @@ export class Frame implements OnInit {
   );
   protected readonly dashboard = computed(() => DASHBOARDS[this.area()]);
   protected readonly roles = computed(() => {
-    const held = this.session.current()?.roles ?? [];
+    const held = this.session.shown()?.roles ?? [];
     return ROLES.filter(({ role }) => held.includes(role));
   });
   protected readonly switching = signal(false);
   // The owner's garage, while the garage role with the team right is on.
   protected readonly inviteGarage = computed(() => {
-    const me = this.session.current();
+    const me = this.session.shown();
     return me?.role === 'garage' && me.capabilities.includes('garage.team')
       ? me.garageId
       : null;
@@ -180,7 +180,7 @@ export class Frame implements OnInit {
   // When the epic's test update last arrived: it changes this line in place.
   protected readonly lastTest = signal<string | null>(null);
   protected readonly entries = computed(() =>
-    allowedViews(this.area(), this.session.current()?.capabilities ?? []),
+    allowedViews(this.area(), this.session.shown()?.capabilities ?? []),
   );
   // ['app', <area>, <view>?, …] of the address on screen.
   private readonly segments = toSignal(

@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -63,6 +63,9 @@ async function render(
     resync: new Subject(),
   };
   const current = signal<MeDto | null>(me(role, landing, capabilities));
+  // The account Session keeps on screen behind the gate dialog.
+  const kept = signal<MeDto | null>(null);
+  const shown = computed(() => current() ?? kept());
   TestBed.configureTestingModule({
     providers: [
       provideRouter(
@@ -74,7 +77,13 @@ async function render(
       ),
       {
         provide: Session,
-        useValue: { current, ended: new Subject<void>(), reload, signOut },
+        useValue: {
+          current,
+          ended: new Subject<void>(),
+          reload,
+          shown,
+          signOut,
+        },
       },
       { provide: Live, useValue: live },
       {
@@ -88,7 +97,7 @@ async function render(
   await harness.navigateByUrl(url);
   harness.detectChanges();
   const element = harness.fixture.nativeElement as HTMLElement;
-  return { current, element, fixture: harness.fixture, harness };
+  return { current, element, fixture: harness.fixture, harness, kept };
 }
 
 const menuLinks = (element: HTMLElement) => [
@@ -146,6 +155,34 @@ describe('Frame', () => {
       'Profilul service‑ului',
       'Setări',
     ]);
+  });
+
+  it('keeps the name and the whole menu behind the gate dialog, and stays on the view', async () => {
+    const { current, element, harness, kept } = await render(
+      'garage',
+      '/app/garage',
+      OWNER,
+      '/app/garage/team',
+    );
+    const name = () =>
+      element.querySelector('.account [translate="no"]')?.textContent?.trim();
+    const before = menu(element);
+
+    // A failed renewal forgot the session; the gate keeps the account shown.
+    kept.set(current());
+    current.set(null);
+    await settle(harness);
+
+    expect(name()).toBe('Ioana Pop');
+    expect(menu(element)).toEqual(before);
+    expect(menu(element)).toHaveLength(8);
+    expect(title(element)).toBe('Mecanici');
+    expect(url()).toBe('/app/garage/team');
+
+    // The gate closed without a sign-in: nothing is kept.
+    kept.set(null);
+    await settle(harness);
+    expect(name()).toBe('');
   });
 
   it('hides team, prices and the garage profile from a receptionist', async () => {

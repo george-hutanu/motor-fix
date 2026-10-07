@@ -1,6 +1,7 @@
 import { isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
+  computed,
   Injectable,
   InjectionToken,
   inject,
@@ -65,6 +66,13 @@ export class Session {
   private readonly language = inject(LanguageChoice);
   private readonly leave = inject(LEAVE);
   readonly current = signal<MeDto | null>(null);
+  // What the screen shows: the session's account, or, while the sign-in gate
+  // is open over the screen, the one a failed renewal forgot. Display only:
+  // access is decided on current.
+  private readonly kept = signal<MeDto | null>(null);
+  readonly shown = computed(() => this.current() ?? this.kept());
+  // The account the last failed renewal forgot, until a session or a sign-out.
+  private lapsed: MeDto | null = null;
   // The session ended in another tab of this browser.
   readonly ended = new Subject<void>();
   private readonly tabs: BroadcastChannel | null = null;
@@ -245,7 +253,7 @@ export class Session {
           if (generation !== this.generation) return false;
           if (replaced()) return true;
           if (typeof answer?.accessToken !== 'string' || !answer.accessToken) {
-            this.forget();
+            this.lapse();
             return false;
           }
           this.accessToken = answer.accessToken;
@@ -254,7 +262,7 @@ export class Session {
         () => {
           if (generation !== this.generation) return false;
           if (replaced()) return true;
-          this.forget();
+          this.lapse();
           return false;
         },
       )
@@ -327,6 +335,18 @@ export class Session {
     }
   }
 
+  // The forgotten account stays on screen until the gate's dialog closes,
+  // and is gone for good once it has.
+  async keepShownWhile<T>(open: Promise<T>): Promise<T> {
+    if (!this.current() && this.lapsed) this.kept.set(this.lapsed);
+    try {
+      return await open;
+    } finally {
+      this.lapsed = null;
+      this.kept.set(null);
+    }
+  }
+
   // This device, every tab of this browser.
   signOut(): Promise<void> {
     return this.end('device');
@@ -368,6 +388,7 @@ export class Session {
   // The cookie now holds the new session: an old sign-out must never reach it.
   private started(accessToken: string) {
     this.accessToken = accessToken;
+    this.lapsed = null;
     this.starts++;
     keepPending(null);
   }
@@ -382,6 +403,8 @@ export class Session {
     this.generation++;
     this.loading = null;
     this.renewing = null;
+    this.lapsed = null;
+    this.kept.set(null);
     this.forget();
   }
 
@@ -389,6 +412,11 @@ export class Session {
     await this.sendPending();
     if (!this.accessToken && !(await this.renew())) return null;
     return this.me.meControllerMe().catch(() => null);
+  }
+
+  private lapse() {
+    this.lapsed = this.current() ?? this.lapsed;
+    this.forget();
   }
 
   private forget() {

@@ -14,7 +14,14 @@ function setup(open: jest.Mock) {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
-      { provide: Session, useValue: { current, load: jest.fn() } },
+      {
+        provide: Session,
+        useValue: {
+          current,
+          keepShownWhile: <T>(open: Promise<T>) => open,
+          load: jest.fn(),
+        },
+      },
       { provide: Overlays, useValue: { open } },
     ],
   });
