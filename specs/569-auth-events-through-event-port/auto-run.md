@@ -58,3 +58,22 @@ Red, proven twice: (1) before any code, both domain suites failed to compile on 
 
 ## Phase 10 — Implement
 T001-T009 done. Contracts kind `account.password_reset`; `SignInService.revokeSessionsLive` used by both flows; the reset records its event in its transaction and drops `SESSION_EVENTS`. Auth suites: 6 suites, 241 tests green. openapi.json and apps/web unchanged (FR-004).
+
+## Phase 11 — Converge
+No new work: every FR has its code and tests on the branch; nothing appended to tasks.md.
+
+## Phase 12 — Harden
+diff-audit: no dead exports; its import-extension errors on libs/domain files are false positives (libs use bundler resolution, typecheck green, same pattern in existing files); its other files come from the stale local `main` ref (b27b5e6), not this branch. test-adversary run (results below). Mutation: CI-only (nightly), not run locally.
+test-adversary: 15 tests in `libs/domain/src/auth/password-reset.events.adversary.integration.spec.ts`, all green, no defect found. Whole workspace (`npm run test`, carryover from 195): 104 suites, 3362 tests green (a first run caught the adversary spec mid-edit; re-run green).
+
+## Phase 13 — Ticket refresh
+No new evidence (org-researcher): scope unchanged, no comments; status Implementing.
+
+## Phase 14 — Review
+code-reviewer (sonnet route): APPROVE, no findings. spec-reviewer: APPROVE, 2 LOW patched: T003/plan wording now describes the real-outbox reads and the spy; the used-link refusal is asserted by the adversary spec. Nothing deferred. Repair laps: 0.
+
+## Phase 15 — Agent context
+CLAUDE.local.md "Active plan" line points at this plan; size unchanged (context-audit holds).
+
+## Phase 16 — Retrospective evidence (unjudged)
+retro-evidence --since bd60afa6: 9/9 tasks, 4 FRs, Spec Delta accounts +3 ~1, deferred 0, 10 carryover items from earlier features; Jev lane unavailable (no key), so no suggested verdict. instincts triggered: none (Jev unavailable).

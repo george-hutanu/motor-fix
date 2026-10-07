@@ -71,3 +71,11 @@
 - Tech debt ST-579 — https://app.notion.com/p/3f0607bff0d281c1a09ec67b308f6b4a
 - Architecture decisions — https://app.notion.com/p/3ee607bff0d28111907edddc4bdd066a
 - Backend architecture (partial) — https://app.notion.com/p/3ee607bff0d281dfa162cd4b9983dd2e
+
+## Refresh 2026-10-07
+
+Baseline: Gathered 2026-10-07. Re-read the story page, its comments (including resolved) and a search for the linked stories.
+
+- Story ST-569: scope text unchanged (last edited 2026-10-07T06:49). Status is now Implementing (was Planning in the digest); PR #187 still linked. No discussions or comments.
+- ST-127, ST-128, ST-194, ST-257, ST-579 and Accounts pages: last edited 2026-10-03 to 2026-10-05, all before the digest. Nothing newer found. The Foundations epic and Backend architecture pages stay unread (size limit), so the Gaps above still stand.
+- New evidence: none. Findings, contradictions and clarifications above are unchanged.

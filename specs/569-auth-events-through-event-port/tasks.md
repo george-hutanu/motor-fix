@@ -26,7 +26,7 @@ description: "Task list for ST-569 auth events through the event port"
 ### Tests first (red)
 
 - [X] T002 [P] [US1] Add `account.password_reset` to the `it.each` kinds list in `libs/contracts/src/events.spec.ts` (lines 23-33)
-- [X] T003 [US1] In `libs/domain/src/auth/password-reset.api.integration.spec.ts`, override `EVENT_PORT` (as `sign-out-everywhere.api.integration.spec.ts` does, `let events: EventPort = noEvents` reset in `beforeEach`) and add: one recorded `{ audience: { accountId, type: 'account' }, kind: 'account.password_reset', payload: { accountId }, subjectId: accountId }` after a 200; none for a used, expired or unknown link, a weak password and maintenance for a non-admin; two concurrent `complete` calls record one; a throwing port gives 500, `usedAt` null, old password still signs in, refresh tokens kept, no new audit entry, no `session.revoked` published
+- [X] T003 [US1] In `libs/domain/src/auth/password-reset.api.integration.spec.ts`, read the real `outbox_event` rows for the account (`prisma.outboxEvent.findMany({ where: { subjectId } })`; a throwing port is a `jest.spyOn` on the app's `EVENT_PORT`) and add: one recorded `{ audience: { accountId, type: 'account' }, kind: 'account.password_reset', payload: { accountId }, subjectId: accountId }` after a 200; none for an expired or unknown link (a used link: the adversary spec), a weak password and maintenance for a non-admin; two concurrent `complete` calls record one; a throwing port gives 500, `usedAt` null, old password still signs in, refresh tokens kept, no new audit entry, no `session.revoked` published
 
 ### Implementation
 
