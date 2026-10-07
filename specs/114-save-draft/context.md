@@ -79,3 +79,7 @@
 - Open decisions — https://app.notion.com/p/3ee607bff0d2817d95ebd3b142c1de11
 - Notifications and reminders — https://app.notion.com/p/3ee607bff0d28162b9b2cc67189317d1
 - MotorFix stories (sibling statuses) — collection://326eee3c-abec-41d9-9f96-eb3bd545a802
+
+## Refresh 2026-10-07
+
+No changes since 2026-10-07. The story (ST-114) was re-read: status Planning, priority Highest, PR #199 linked, Build brief and criteria identical to the digest above, still no comments (all blocks, resolved included). The reminder question is still marked [NEEDS CLARIFICATION]. The baseline is a date without a time, so a same-day edit cannot be told apart; the page body shows nothing new. Only the story was re-checked; other pages were not re-read.
