@@ -18,9 +18,9 @@ for a handed-off PR, or one `/speckit-watch` fix.
   only what `main` changed since that copy:
   `git fetch -q origin && git diff -R origin/main -- AGENTS.md CLAUDE.local.md`
   (empty: your copy is current; lines marked `+` are on `main` and not in it).
-- **The constitution:** `/speckit-auto`'s Preflight and phase 1 read the card,
-  `.specify/memory/constitution-card.md` (each principle and the gate that
-  enforces it). The reviewers and the PR tester read the full
+- **The constitution:** `/speckit-auto`'s Preflight, phase 1 and the author
+  skills read the card, `.specify/memory/constitution-card.md` (each principle
+  and the gate that enforces it). The reviewers and the PR tester read the full
   `.specify/memory/constitution.md` themselves.
 - **Notion:** the connector's tools are deferred and their server id changes
   between sessions. Load the ones a skill needs in one `ToolSearch` call

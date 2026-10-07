@@ -125,7 +125,7 @@ Load only the minimal necessary context from each artifact:
 
 **From constitution:**
 
-- Load `.specify/memory/constitution.md` for principle validation
+- Load `.specify/memory/constitution-card.md` for principle validation. Open a principle's section in `.specify/memory/constitution.md` only when a decision turns on its exact wording.
 
 ### 3. Build Semantic Models
 
