@@ -92,6 +92,8 @@ export class NotificationsProcessor {
     }
     if (job.name === 'send' && job.data.id)
       return this.send(job.data.id, job.attemptsMade);
+    if (job.name === 'requeue')
+      return this.service.requeueStranded().then(() => undefined);
     throw new Error(`unknown notifications job ${job.name}`);
   }
 
@@ -119,27 +121,33 @@ export class NotificationsProcessor {
         throw new Error(`notification ${id} is being sent by another job`);
       return;
     }
+    let recorded: boolean | undefined;
     try {
       const row = await this.prisma.notification.findUniqueOrThrow({
         include: { account: true },
         where: { id },
       });
       if (!(await this.due(row))) return;
-      if (row.channel === 'email') await this.sendEmail(row, attemptsMade);
-      else if (row.channel === 'push') await this.sendPush(row, attemptsMade);
-      else await this.sendPhone(row, attemptsMade);
+      if (row.channel === 'email')
+        recorded = await this.sendEmail(row, attemptsMade);
+      else if (row.channel === 'push')
+        recorded = await this.sendPush(row, attemptsMade);
+      else recorded = await this.sendPhone(row, attemptsMade);
     } finally {
-      // A failed release must not retry a message that went: the claim lapses.
-      await this.prisma.notification
-        .updateMany({
-          data: { claimedAt: null },
-          where: { claimedAt: at, id },
-        })
-        .catch((error) =>
-          this.logger.error(
-            `notification ${id} claim not released: ${String(error)}`,
-          ),
-        );
+      // A send that went unrecorded keeps its claim, so the sweep never hands
+      // it to the queue again. A failed release must not retry a message that
+      // went: the claim lapses.
+      if (recorded !== false)
+        await this.prisma.notification
+          .updateMany({
+            data: { claimedAt: null },
+            where: { claimedAt: at, id },
+          })
+          .catch((error) =>
+            this.logger.error(
+              `notification ${id} claim not released: ${String(error)}`,
+            ),
+          );
     }
   }
 
@@ -157,11 +165,11 @@ export class NotificationsProcessor {
   private async sendEmail(
     row: Notification & { account: Account },
     attemptsMade: number,
-  ) {
+  ): Promise<boolean | undefined> {
     const to = await this.allowed([row], row.account);
     if (!to) return;
     const values = params(row);
-    await this.write(
+    return this.write(
       [row],
       to,
       templateName(row.kind, values),
@@ -211,7 +219,7 @@ export class NotificationsProcessor {
     name: string,
     values: Record<string, unknown>,
     attemptsMade: number,
-  ) {
+  ): Promise<boolean | undefined> {
     let mail: { subject: string; text: string; html: string };
     try {
       mail = render(name, 'email', rows[0].account.language, {
@@ -226,7 +234,7 @@ export class NotificationsProcessor {
       await this.service.fail(rows, 'template_failed', false);
       return;
     }
-    await this.deliver(rows, to, mail, attemptsMade);
+    return this.deliver(rows, to, mail, attemptsMade);
   }
 
   // Sending may have been switched off, or the address changed, since the
@@ -246,7 +254,7 @@ export class NotificationsProcessor {
     to: { email: string; name: string },
     mail: { subject: string; text: string; html: string },
     attemptsMade: number,
-  ) {
+  ): Promise<boolean | undefined> {
     let messageId: string;
     try {
       messageId = await this.brevo.send({
@@ -261,7 +269,7 @@ export class NotificationsProcessor {
       await this.refused(rows, error, attemptsMade);
       return;
     }
-    await this.sent(rows, messageId);
+    return this.sent(rows, messageId);
   }
 
   // One push row goes to every device the person saved. It is sent when any
@@ -270,7 +278,7 @@ export class NotificationsProcessor {
   private async sendPush(
     row: Notification & { account: Account },
     attemptsMade: number,
-  ) {
+  ): Promise<boolean | undefined> {
     if (!this.pushSender) {
       await this.service.fail([row], 'push_off', true);
       return;
@@ -305,8 +313,7 @@ export class NotificationsProcessor {
         data: { lastSuccessAt: this.now() },
         where: { id: { in: sent } },
       });
-      await this.sent([row], null);
-      return;
+      return this.sent([row], null);
     }
     if (results.includes('retry') && attemptsMade < RETRY_MINUTES.length) {
       this.logger.warn(
@@ -323,6 +330,7 @@ export class NotificationsProcessor {
           : 'push_refused',
       true,
     );
+    return undefined;
   }
 
   // The rendered push, or null when the row failed over to e-mail.
@@ -351,7 +359,7 @@ export class NotificationsProcessor {
   private async sendPhone(
     row: Notification & { account: Account },
     attemptsMade: number,
-  ) {
+  ): Promise<boolean | undefined> {
     const { phone, phoneVerifiedAt } = row.account;
     const reason = phone
       ? phoneVerifiedAt
@@ -362,15 +370,15 @@ export class NotificationsProcessor {
       await this.service.fail([row], reason ?? 'no_phone', 'email');
       return;
     }
-    if (row.channel === 'sms') await this.sendSms(row, phone, attemptsMade);
-    else await this.sendWhatsApp(row, phone, attemptsMade);
+    if (row.channel === 'sms') return this.sendSms(row, phone, attemptsMade);
+    return this.sendWhatsApp(row, phone, attemptsMade);
   }
 
   private async sendSms(
     row: Notification & { account: Account },
     phone: string,
     attemptsMade: number,
-  ) {
+  ): Promise<boolean | undefined> {
     // An earlier attempt reached Brevo and never recorded its answer: the SMS
     // may have gone, so it is neither sent nor counted again.
     if (row.sendingAt) {
@@ -419,14 +427,14 @@ export class NotificationsProcessor {
       await this.refused([row], error, attemptsMade);
       return;
     }
-    await this.sent([row], messageId);
+    return this.sent([row], messageId);
   }
 
   private async sendWhatsApp(
     row: Notification & { account: Account },
     phone: string,
     attemptsMade: number,
-  ) {
+  ): Promise<boolean | undefined> {
     const message = await this.text(row, 'whatsapp');
     if (message === null) return;
     const templateId = Object.hasOwn(this.phone.whatsappTemplates, message.name)
@@ -451,7 +459,7 @@ export class NotificationsProcessor {
       await this.refused([row], error, attemptsMade);
       return;
     }
-    await this.sent([row], messageId);
+    return this.sent([row], messageId);
   }
 
   // The rendered text, or null when the row failed over to the next channel.
@@ -513,13 +521,13 @@ export class NotificationsProcessor {
           }),
           this.service.forget(ids),
         ]);
-        return;
+        return true;
       } catch (error) {
         if (attempt < SENT_WRITES) continue;
         this.logger.error(
           `notification ${ids.join(', ')} sent as ${messageId ?? 'push'} but not recorded: ${String(error)}`,
         );
-        return;
+        return false;
       }
     }
   }

@@ -152,26 +152,36 @@ export class NotificationsModule implements OnApplicationShutdown {
             }),
         },
         {
-          inject: [NotificationsProcessor],
+          inject: [NotificationsProcessor, NotificationsService],
           provide: WORKER,
-          useFactory: async (processor: NotificationsProcessor) =>
-            (await processor.ready())
-              ? new Worker(
-                  NOTIFICATIONS_QUEUE,
-                  (job) => processor.handle(job),
-                  {
-                    concurrency: 10,
-                    connection: {
-                      maxRetriesPerRequest: null,
-                      url: options.redisUrl,
-                    },
-                    settings: {
-                      backoffStrategy: (attemptsMade) =>
-                        retryDelay(attemptsMade - 1),
-                    },
-                  },
-                )
-              : null,
+          useFactory: async (
+            processor: NotificationsProcessor,
+            service: NotificationsService,
+          ) => {
+            if (!(await processor.ready())) return null;
+            await service
+              .scheduleRequeue()
+              .catch((error) =>
+                new Logger('Notifications').error(
+                  `the re-queue sweep is not scheduled: ${String(error)}`,
+                ),
+              );
+            return new Worker(
+              NOTIFICATIONS_QUEUE,
+              (job) => processor.handle(job),
+              {
+                concurrency: 10,
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                settings: {
+                  backoffStrategy: (attemptsMade) =>
+                    retryDelay(attemptsMade - 1),
+                },
+              },
+            );
+          },
         },
         NewsFanOut,
         { provide: NEWS_TOKEN_SECRET, useValue: options.tokenSecret ?? '' },

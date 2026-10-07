@@ -273,7 +273,7 @@ describe('requirements with missing pieces', () => {
     const out = artifact(report());
     const { gh } = fakeGh({
       prView: ok(pr(files(['src/x.mjs']))),
-      contents: { 'specs/001-thing/tasks.md': '- [ ] T1 src/x.mjs (FR-042)\n', 'specs/001-thing/spec.md': '- **FR-001**: other\n' },
+      contents: { '001-thing/tasks.md': '- [ ] T1 src/x.mjs (FR-042)\n', '001-thing/spec.md': '- **FR-001**: other\n' },
     });
     const res = buildPacket({ out, pr: 137, repo: REPO, gh });
     assert.equal(res.code, 0);
@@ -283,7 +283,7 @@ describe('requirements with missing pieces', () => {
     const out = artifact(report());
     const { gh } = fakeGh({
       prView: ok(pr(files(['src/y.mjs']))),
-      contents: { 'specs/001-thing/tasks.md': '- [ ] T1 src/x.mjs (FR-042)\n', 'specs/001-thing/spec.md': '- **FR-042**: text\n' },
+      contents: { '001-thing/tasks.md': '- [ ] T1 src/x.mjs (FR-042)\n', '001-thing/spec.md': '- **FR-042**: text\n' },
     });
     buildPacket({ out, pr: 137, repo: REPO, gh });
     assert.doesNotMatch(packetOf(out), /FR-042/);
@@ -292,7 +292,7 @@ describe('requirements with missing pieces', () => {
     const out = artifact(report());
     const { gh } = fakeGh({
       prView: ok(pr(files(['src/x.mjs']))),
-      contents: { 'specs/001-thing/tasks.md': '- [ ] T1 src/x.mjs (FR-007)\r\n', 'specs/001-thing/spec.md': '- **FR-007**: seven text\r\n' },
+      contents: { '001-thing/tasks.md': '- [ ] T1 src/x.mjs (FR-007)\r\n', '001-thing/spec.md': '- **FR-007**: seven text\r\n' },
     });
     buildPacket({ out, pr: 137, repo: REPO, gh });
     assert.match(packetOf(out), /FR-007.*seven text/);
@@ -306,10 +306,10 @@ describe('the previous lap source', () => {
     const { gh } = fakeGh({
       prView: ok(pr([])),
       contents: {
-        'specs/001-thing/pr-review': [{ name: 'lap2', type: 'dir' }, { name: 'lap10', type: 'dir' }, { name: 'lap1', type: 'dir' }],
-        'specs/001-thing/pr-review/lap1/report.json': lap(1, 'From one'),
-        'specs/001-thing/pr-review/lap2/report.json': lap(2, 'From two'),
-        'specs/001-thing/pr-review/lap10/report.json': lap(10, 'From ten'),
+        '001-thing/pr-review': [{ name: 'lap2', type: 'dir' }, { name: 'lap10', type: 'dir' }, { name: 'lap1', type: 'dir' }],
+        '001-thing/pr-review/lap1/report.json': lap(1, 'From one'),
+        '001-thing/pr-review/lap2/report.json': lap(2, 'From two'),
+        '001-thing/pr-review/lap10/report.json': lap(10, 'From ten'),
       },
     });
     buildPacket({ out, pr: 137, repo: REPO, gh });

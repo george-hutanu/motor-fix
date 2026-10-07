@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { allGreen, attachCommitters, committerArgs, decide, withCommitters, featureDir, handedOff, hasAgentReview, isDependabot, parseCommitters, prLinked, readPr, typeLabel } from './pr-lifecycle-gate.mjs';
+import { allGreen, attachCommitters, committerArgs, decide, withCommitters, featureDir, handedOff, hasAgentReview, isDependabot, parseCommitters, prLinked, readPr, specsUnpushed, typeLabel } from './pr-lifecycle-gate.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
 const green = [{ conclusion: 'SUCCESS' }, { conclusion: 'SKIPPED' }, review('SUCCESS')];
@@ -45,6 +45,27 @@ describe('PR lifecycle gate — what it leaves alone', () => {
 });
 
 describe('PR lifecycle gate — what it refuses', () => {
+  // @traces 815-FR-005
+  it('refuses specs commits not pushed to motor-fix-specs, naming the command that pushes them', () => {
+    assert.match(decide(task({ specsUnpushed: 1 })), /1 commit\(s\) in specs\/.*not pushed.*specs-repo\.mjs commit/);
+    assert.equal(decide(task({ specsUnpushed: 0, pr: { ...ready(), isDraft: true, labels: [{ name: 'planning' }, { name: 'feature' }] } })), null);
+  });
+
+  it('reads no unpushed specs commits where there is no specs clone', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'gate-specs-'));
+    try {
+      assert.equal(specsUnpushed(dir), 0);
+      mkdirSync(join(dir, 'specs'));
+      assert.equal(specsUnpushed(dir), 0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('leaves unpushed specs commits alone on main, where no task runs', () => {
+    assert.equal(decide({ branch: 'main', ahead: 0, specsUnpushed: 2 }), null);
+  });
+
   it('refuses unpushed commits, before anything else', () => {
     assert.match(decide(task({ pr: null, unpushed: 2 })), /2 commit\(s\).*not pushed.*git push -u origin 050-cockpit-theme/);
   });

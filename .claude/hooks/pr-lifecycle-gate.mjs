@@ -15,6 +15,10 @@
 // title: `feature`, `bug`, `tech debt`, `performance`, `documentation`,
 // `tests` or `tooling`, and `breaking` when the title carries a `!`.
 //
+// specs/ is its own repository (motor-fix-specs, .claude/scripts/specs-repo.mjs):
+// a commit there that is not pushed to trunk is refused like one on the branch,
+// since the feature's records no longer ride in its PR.
+//
 // What it does NOT block: main or a detached HEAD, a branch with nothing ahead
 // of origin/main, a draft PR (the work is not done yet), a PR whose checks are
 // pending, failing or missing (fix or wait, then merge), a merged or closed PR,
@@ -162,11 +166,13 @@ export function typeLabel(title = "") {
 }
 
 /** The refusal for this state, or null when the session may end. */
-export function decide({ branch, ahead, unpushed, pr, prLinked = true, blocked = false, handedOff = false }) {
+export function decide({ branch, ahead, unpushed, specsUnpushed = 0, pr, prLinked = true, blocked = false, handedOff = false }) {
   if (!branch || branch === "HEAD" || branch === "main" || ahead === 0)
     return null;
   if (unpushed > 0)
     return `${unpushed} commit(s) on ${branch} are not pushed. Push them (git push -u origin ${branch}); work on a task is pushed as it goes.`;
+  if (specsUnpushed > 0)
+    return `${specsUnpushed} commit(s) in specs/ (motor-fix-specs) are not pushed to trunk. Push them (node .claude/scripts/specs-repo.mjs commit "<message>", which rebases and pushes); a feature's records live there, not in its PR.`;
   if (pr === null)
     return `${branch} has no PR. Open it as a draft (gh pr create --draft --base main --head ${branch} --body-file <body made from .github/pull_request_template.md>); a task's PR opens at its start.`;
   if (pr.state === "OPEN" && !prLinked && /^\d+-/.test(branch))
@@ -272,6 +278,15 @@ export function readPr(branch, cwd, opts = {}) {
   }
 }
 
+/** Commits in the specs clone that origin/trunk does not have; 0 when there is no clone to read. */
+export function specsUnpushed(cwd) {
+  try {
+    return Number(git(join(cwd, "specs"), ["rev-list", "--count", "origin/trunk..HEAD"])) || 0;
+  } catch {
+    return 0;
+  }
+}
+
 /** The branch's state, or null when the gate cannot see enough to judge. */
 function readState(cwd) {
   let branch;
@@ -293,7 +308,7 @@ function readState(cwd) {
   if (read === null) return null;
   const { pr } = read;
   const linked = pr === null || prLinked(cwd, branch, pr.number);
-  return { ahead, blocked: runBlocked(cwd), branch, handedOff: handedOff(cwd, branch), pr, prLinked: linked, unpushed };
+  return { ahead, blocked: runBlocked(cwd), branch, handedOff: handedOff(cwd, branch), pr, prLinked: linked, unpushed, specsUnpushed: specsUnpushed(cwd) };
 }
 
 /**
