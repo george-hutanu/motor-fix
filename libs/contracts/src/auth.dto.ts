@@ -14,8 +14,11 @@ import {
 } from 'class-validator';
 
 import { PRIVACY_VERSION, TERMS_VERSION } from './consent';
+import { EMAIL_PATTERN } from './email';
 import { ROLE } from './me.dto';
 import { E164, normalisePhone } from './phone';
+
+export { EMAIL_PATTERN } from './email';
 
 export class SignInDto {
   @ApiProperty({
@@ -76,7 +79,7 @@ export class SignUpDto {
   @Transform(trimmed)
   @IsString()
   @Length(3, 254)
-  @Matches(/^[^\s@\p{Cc}]+@[^\s@\p{Cc}]+\.[^\s@\p{Cc}]+$/u, {
+  @Matches(EMAIL_PATTERN, {
     message: 'email must look like an address',
   })
   email!: string;

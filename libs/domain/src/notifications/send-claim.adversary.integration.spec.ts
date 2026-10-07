@@ -176,10 +176,10 @@ describe('many send jobs for one row', () => {
   });
 
   it('fails the row once and calls the fallback once when ten jobs run on the last attempt', async () => {
-    const { row: queued } = await queuedEmail();
+    const { owner, row: queued } = await queuedEmail();
     await prisma.pushSubscription.create({
       data: {
-        accountId: queued.accountId,
+        accountId: owner,
         auth: 'a',
         endpoint: 'https://push.example.test/one',
         p256dh: 'p',

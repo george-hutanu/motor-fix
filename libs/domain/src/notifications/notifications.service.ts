@@ -87,7 +87,8 @@ interface NotifyInput {
 
 interface NextJob {
   name: 'send' | 'flush';
-  data: { id: string } | { leaderId: string };
+  // A draft's link travels in its send job, never in the row.
+  data: { id: string; link?: string } | { leaderId: string };
   jobId: string;
   delay: number;
 }
@@ -101,6 +102,10 @@ const settled = (params: Prisma.InputJsonObject): Prisma.InputJsonObject =>
   Object.fromEntries(
     Object.entries(params).filter(([key]) => !IN_FLIGHT_ONLY.includes(key)),
   );
+
+// The only messages that go to a listing draft rather than an account.
+const DRAFT_KINDS = ['LISTING_CONTINUE_LINK', 'LISTING_REMINDER'] as const;
+export type DraftKind = (typeof DRAFT_KINDS)[number];
 
 const send = (id: string): NextJob => ({
   data: { id },
@@ -168,6 +173,37 @@ export class NotificationsService {
     });
   }
 
+  // A draft has no account: its e-mail goes to the address on the draft,
+  // read again when it is sent, and its link rides in the send job only.
+  async sendToDraft(
+    kind: DraftKind,
+    draftId: string,
+    link: string,
+  ): Promise<void> {
+    if (!DRAFT_KINDS.includes(kind)) {
+      throw new Error(`${kind} is not sent to a listing draft`);
+    }
+    const at = this.now();
+    const next = await this.prisma.$transaction(async (tx) => {
+      const draft = await tx.listingDraft.findUniqueOrThrow({
+        select: { email: true },
+        where: { id: draftId },
+      });
+      const base = {
+        createdAt: at,
+        eventId: randomUUID(),
+        kind,
+        listingDraftId: draftId,
+        params: {},
+        subjectId: draftId,
+      };
+      return this.emailRow(tx, notificationType(kind), base, draft.email, at);
+    });
+    if (next && 'id' in next.data) {
+      await this.queue({ ...next, data: { id: next.data.id, link } });
+    }
+  }
+
   // A push to the person's own devices; it queues nothing without a device.
   sendPushTest(accountId: string): Promise<number> {
     return this.notify({
@@ -225,7 +261,7 @@ export class NotificationsService {
   async release(row: Notification): Promise<boolean> {
     const at = this.now();
     const next = await this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${row.kind}:${row.accountId}`}))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${row.kind}:${row.accountId ?? row.listingDraftId}`}))`;
       const released = await tx.notification.update({
         data: { sendAfter: at, status: 'queued' },
         where: { id: row.id },
@@ -284,6 +320,9 @@ export class NotificationsService {
             claimedAt: null,
             createdAt: { lt: new Date(now.getTime() - STRANDED_MS) },
             id: { gt: added.at(-1) },
+            // A draft's link went only in its lost job: a new job would send
+            // the e-mail without it.
+            listingDraftId: null,
             sendingAt: null,
             status: 'queued',
           },
@@ -323,7 +362,7 @@ export class NotificationsService {
   // At night a type that is not urgent waits until 08:00, as when it was built.
   private async fallBack(row: Notification, channel: SentChannel) {
     const type = notificationType(row.kind);
-    if (!type.channels.includes(channel)) return;
+    if (!row.accountId || !type.channels.includes(channel)) return;
     if (!(await this.canReach(row.accountId, channel))) return;
     const at = this.now();
     const sendAfter = !type.urgent && isQuiet(at) ? nextMorning(at) : null;
@@ -378,22 +417,25 @@ export class NotificationsService {
     });
     const [row] = rows;
     if (!row) return;
+    const { accountId } = row;
+    // A draft's address belongs to no account to mark.
+    if (!accountId) return this.fail(rows, 'bounced', false);
     const at = this.now();
     await this.prisma.$transaction(async (tx) => {
       const before = await tx.account.findUniqueOrThrow({
         select: { emailBouncedAt: true },
-        where: { id: row.accountId },
+        where: { id: accountId },
       });
       await tx.account.update({
         data: { emailBouncedAt: at },
-        where: { id: row.accountId },
+        where: { id: accountId },
       });
       await this.audit.recordChanges(
         tx,
         {
           actorId: null,
           actorRole: 'system',
-          subjectId: row.accountId,
+          subjectId: accountId,
           subjectType: 'account',
         },
         before,

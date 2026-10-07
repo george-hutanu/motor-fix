@@ -824,3 +824,102 @@ describe('two send jobs for one row', () => {
     ]);
   });
 });
+
+describe('an e-mail to a listing draft', () => {
+  const link = 'https://motorfix.test/ro/list-your-garage?draft=secret';
+  const draft = (language: 'ro' | 'en' = 'ro') =>
+    prisma.listingDraft
+      .create({
+        data: {
+          email: 'owner@example.test',
+          language,
+          step: 3,
+          updatedAt: new Date(DAY),
+        },
+      })
+      .then((d) => d.id);
+  const draftRow = async (listingDraftId: string) =>
+    (await prisma.notification.findMany({ where: { listingDraftId } }))[0];
+  const draftJob = (id: string, attemptsMade = 0, withLink = link) =>
+    processor.handle({
+      attemptsMade,
+      data: { id, link: withLink },
+      name: 'send',
+    } as never);
+
+  it('goes to the address the draft holds at send time, in its language, with the link from the job', async () => {
+    const id = await draft('en');
+    await service.sendToDraft('LISTING_CONTINUE_LINK', id, link);
+    await prisma.listingDraft.update({
+      data: { email: 'later@example.test' },
+      where: { id },
+    });
+
+    await draftJob((await draftRow(id)).id);
+
+    const [mail] = mock.emails();
+    const body = mail.body as {
+      subject: string;
+      textContent: string;
+      to: { email: string }[];
+    };
+    expect(body.to[0].email).toBe('later@example.test');
+    expect(body.subject).toBe('Continue listing your garage');
+    expect(body.textContent).toContain(link);
+    expect(await draftRow(id)).toMatchObject({ params: {}, status: 'sent' });
+  });
+
+  it('fails the row without calling Brevo when the job carries no link', async () => {
+    const id = await draft();
+    await service.sendToDraft('LISTING_CONTINUE_LINK', id, link);
+    const row = await draftRow(id);
+
+    await processor.handle({
+      attemptsMade: 0,
+      data: { id: row.id },
+      name: 'send',
+    });
+
+    expect(mock.emails()).toEqual([]);
+    expect(await draftRow(id)).toMatchObject({
+      failure: 'template_failed',
+      status: 'failed',
+    });
+  });
+
+  it('asks for a retry while Brevo may still take it', async () => {
+    const id = await draft();
+    await service.sendToDraft('LISTING_CONTINUE_LINK', id, link);
+    mock.answer({ status: 503 });
+
+    await expect(draftJob((await draftRow(id)).id)).rejects.toThrow();
+
+    expect((await draftRow(id)).status).toBe('queued');
+  });
+
+  it('sends a held reminder at 08:00', async () => {
+    const id = await draft();
+    service.now = at('2026-10-04T20:10:00Z');
+    await service.sendToDraft('LISTING_REMINDER', id, link);
+    service.now = at('2026-10-05T05:00:00Z');
+    processor.now = at('2026-10-05T05:00:00Z');
+
+    await draftJob((await draftRow(id)).id);
+
+    expect((mock.emails()[0].body as { subject: string }).subject).toBe(
+      'Ai început să-ți înscrii service-ul',
+    );
+    expect((await draftRow(id)).status).toBe('sent');
+  });
+
+  it('sends nothing once the draft is gone', async () => {
+    const id = await draft();
+    await service.sendToDraft('LISTING_CONTINUE_LINK', id, link);
+    const row = await draftRow(id);
+    await prisma.listingDraft.delete({ where: { id } });
+
+    await draftJob(row.id);
+
+    expect(mock.emails()).toEqual([]);
+  });
+});

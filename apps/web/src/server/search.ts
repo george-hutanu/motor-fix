@@ -35,6 +35,14 @@ export function mountSearch(app: Express, publicOrigin: string | undefined) {
     res.setHeader('X-Robots-Tag', 'noindex');
     next();
   });
+
+  // A draft's link carries its key in the address; no page it links to may
+  // read it from the referrer.
+  for (const lang of LANGUAGES)
+    app.use(`/${lang}/list-your-garage`, (_req, res, next) => {
+      res.setHeader('Referrer-Policy', 'no-referrer');
+      next();
+    });
 }
 
 function sitemap(origin: string) {

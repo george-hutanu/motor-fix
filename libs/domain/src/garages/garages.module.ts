@@ -1,7 +1,11 @@
 import { type DynamicModule, Module } from '@nestjs/common';
+import type { Redis } from 'ioredis';
 
 import { AdminOverviewController } from './admin-overview.controller';
 import { GarageBrandsService } from './garage-brands.service';
+import { ListingDraftsController } from './listing-drafts.controller';
+import { ListingDraftsService } from './listing-drafts.service';
+import { ListingDraftThrottle } from './listing-drafts.throttle';
 import { PublicGaragesService } from './public-garages';
 import { PublicGaragesController } from './public-garages.controller';
 import {
@@ -18,6 +22,7 @@ import {
 } from './verification-config';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
+import { AUTH_REDIS } from '../auth/attempts';
 import { Brevo } from '../notifications/brevo';
 import type { EmailConfig } from '../notifications/email-config';
 
@@ -38,6 +43,7 @@ export class GaragesModule {
         AdminOverviewController,
         GarageInvitesController,
         InvitesController,
+        ListingDraftsController,
         PublicGaragesController,
         VerificationChecksController,
       ],
@@ -46,6 +52,12 @@ export class GaragesModule {
       module: GaragesModule,
       providers: [
         GarageBrandsService,
+        ListingDraftsService,
+        {
+          inject: [AUTH_REDIS],
+          provide: ListingDraftThrottle,
+          useFactory: (redis: Redis) => new ListingDraftThrottle(redis),
+        },
         StaffInviteService,
         PublicGaragesService,
         VerificationService,

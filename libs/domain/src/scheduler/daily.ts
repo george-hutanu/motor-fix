@@ -1,5 +1,11 @@
 import { addDays, atLocal, daysBetween, localDay } from '../bucharest';
 
+// Work the worker's one daily job runs after the reminders, in list order.
+export interface DailyTask {
+  run(now: Date): Promise<void>;
+}
+export const DAILY_TASKS = Symbol('DAILY_TASKS');
+
 // When a daily run happens: the day it is now, and the instant of a day's run.
 export interface DailyClock {
   today(now: Date): string;

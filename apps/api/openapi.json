@@ -1569,6 +1569,180 @@
         ]
       }
     },
+    "/api/v1/listing-drafts": {
+      "post": {
+        "operationId": "ListingDraftsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateListingDraftDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingDraftCreatedDto"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "draft_too_large, or payload_too_large past 320 KB"
+          },
+          "429": {
+            "description": "draft_rate_limited"
+          }
+        },
+        "tags": [
+          "listing-drafts"
+        ]
+      }
+    },
+    "/api/v1/listing-drafts/current": {
+      "get": {
+        "operationId": "ListingDraftsController_current",
+        "parameters": [
+          {
+            "name": "x-listing-token",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingDraftDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found"
+          }
+        },
+        "tags": [
+          "listing-drafts"
+        ]
+      }
+    },
+    "/api/v1/listing-drafts/{id}": {
+      "patch": {
+        "operationId": "ListingDraftsController_save",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-listing-token",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveListingDraftDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingDraftSavedDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "draft_submitted"
+          },
+          "413": {
+            "description": "draft_too_large, or payload_too_large past 320 KB"
+          }
+        },
+        "tags": [
+          "listing-drafts"
+        ]
+      }
+    },
+    "/api/v1/listing-drafts/{id}/continue-link": {
+      "post": {
+        "operationId": "ListingDraftsController_sendLink",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-listing-token",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContinueLinkSentDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "draft_submitted"
+          },
+          "429": {
+            "description": "link_already_sent"
+          }
+        },
+        "tags": [
+          "listing-drafts"
+        ]
+      }
+    },
     "/api/v1/garages/{slug}": {
       "get": {
         "operationId": "PublicGaragesController_bySlug",
@@ -3295,6 +3469,232 @@
           "kind",
           "name",
           "email"
+        ]
+      },
+      "CreateListingDraftDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "The form data, whole every time"
+          },
+          "step": {
+            "type": "number",
+            "maximum": 6,
+            "minimum": 1
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          },
+          "email": {
+            "type": "string",
+            "description": "Trimmed and lower-cased",
+            "maxLength": 254
+          }
+        },
+        "required": [
+          "data",
+          "step",
+          "language",
+          "email"
+        ]
+      },
+      "ListingDraftCreatedDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "submitted"
+            ]
+          },
+          "step": {
+            "type": "number"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          },
+          "email": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "token": {
+            "type": "string",
+            "description": "This browser's key to the draft"
+          },
+          "linkSent": {
+            "type": "boolean",
+            "description": "Whether a link e-mail was queued"
+          },
+          "retryAfterSeconds": {
+            "type": "number",
+            "description": "When no link was sent: seconds until one can be"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "step",
+          "language",
+          "email",
+          "updatedAt"
+        ]
+      },
+      "ListingDraftDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object"
+          },
+          "step": {
+            "type": "number"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "submitted"
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "data",
+          "step",
+          "language",
+          "status",
+          "updatedAt"
+        ]
+      },
+      "SaveListingDraftDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "The form data, whole every time"
+          },
+          "step": {
+            "type": "number",
+            "maximum": 6,
+            "minimum": 1
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          },
+          "email": {
+            "type": "string",
+            "description": "Trimmed and lower-cased",
+            "maxLength": 254
+          }
+        },
+        "required": [
+          "data",
+          "step",
+          "language"
+        ]
+      },
+      "ListingDraftSavedDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "submitted"
+            ]
+          },
+          "step": {
+            "type": "number"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          },
+          "email": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "token": {
+            "type": "string",
+            "description": "This browser's key, after the e-mail changed"
+          },
+          "linkSent": {
+            "type": "boolean",
+            "description": "Whether a link e-mail was queued"
+          },
+          "retryAfterSeconds": {
+            "type": "number",
+            "description": "When no link was sent: seconds until one can be"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "step",
+          "language",
+          "email",
+          "updatedAt"
+        ]
+      },
+      "ContinueLinkSentDto": {
+        "type": "object",
+        "properties": {
+          "sentAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "sentAt"
         ]
       },
       "PublicGarageDto": {
