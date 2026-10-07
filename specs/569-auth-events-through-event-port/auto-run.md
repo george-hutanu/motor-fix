@@ -45,3 +45,7 @@ model fable. STATUS: success — plan.md, research.md, data-model.md, quickstart
 model sonnet. STATUS: success — `checklists/auth-events.md` written, 19 items (event recording, rollback, live nudge, scope), 19 checked, 0 unchecked, 0 struck.
 - One spec gap fixed: CHK006 (the task's "Sign-in's own publish" is `SignInService.signOutEverywhere`, not a third flow), added as a Clarifications line.
 - CHK010 judged satisfied: FR-002's "answer stays" covers refusals; US1 AS4 states the 500 for a port failure, so the two do not conflict.
+
+## Phase 7 — Tasks
+model sonnet. STATUS: success — tasks.md written, 8 tasks (T001 contracts kind; T002-T003, T005 red specs; T004, T006-T007 implementation; T008 deferred item), tests before implementation; level check: level 2, unchanged.
+- before_tasks / after_tasks commit hooks: this commit; speckit.analyze left to phase 8.
