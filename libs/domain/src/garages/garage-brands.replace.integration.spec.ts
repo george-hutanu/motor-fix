@@ -4,6 +4,7 @@ import { HttpException } from '@nestjs/common';
 
 import { GarageBrandsService } from './garage-brands.service';
 import { AuditService } from '../audit/audit.service';
+import { foreignEntries } from '../audit/audit.testing';
 import type { Actor } from '../auth/policy';
 import { serialDatabase } from '../auth/serial-db.testing';
 import { outbox } from '../events/event.port';
@@ -31,6 +32,11 @@ async function checkpoint() {
   since = await now();
   mark =
     (await prisma.outboxEvent.aggregate({ _max: { id: true } }))._max.id ?? 0n;
+  await foreignEntries(prisma, [
+    { subjectType: 'garage' },
+    { subjectType: 'garage_brand' },
+    { subjectType: 'garage_brand_job' },
+  ]);
 }
 
 async function now() {
@@ -128,13 +134,12 @@ const texts = (w: World) =>
     where: { id: w.garage },
   });
 
-const history = () =>
+const history = (w: World) =>
   prisma.activityLog.findMany({
     orderBy: { at: 'asc' },
     where: {
-      // The log is append-only and shared: another spec's future-dated rows
-      // stay in it, so only what was written up to now is this test's.
-      at: { gte: since, lte: new Date() },
+      at: { gte: since },
+      garageId: w.garage,
       subjectType: { in: ['garage', 'garage_brand', 'garage_brand_job'] },
     },
   });
@@ -232,7 +237,7 @@ describe("replacing a garage's brand answer", () => {
       petrol: true,
       stance: 'works_on',
     });
-    expect((await history()).find((e) => e.field === 'stance')).toMatchObject({
+    expect((await history(w)).find((e) => e.field === 'stance')).toMatchObject({
       action: 'update',
       actorId: w.owner.accountId,
       actorRole: 'owner',
@@ -261,7 +266,7 @@ describe("replacing a garage's brand answer", () => {
     expect(
       await prisma.garageBrandJob.count({ where: { garageId: w.garage } }),
     ).toBe(0);
-    const removal = (await history()).find(
+    const removal = (await history(w)).find(
       (e) => e.subjectType === 'garage_brand' && e.action === 'delete',
     );
     expect(removal).toMatchObject({
@@ -287,7 +292,9 @@ describe("replacing a garage's brand answer", () => {
       brandNote: 'Doar diesel',
       refusalPhrase: null,
     });
-    const changes = (await history()).filter((e) => e.subjectType === 'garage');
+    const changes = (await history(w)).filter(
+      (e) => e.subjectType === 'garage',
+    );
     expect(
       changes.map((e) => [e.field, e.oldValue, e.newValue]).sort(),
     ).toEqual([
@@ -335,7 +342,7 @@ describe("replacing a garage's brand answer", () => {
 
     await set(w, marks, { brandNote: 'Doar benzină' });
 
-    expect(await history()).toEqual([]);
+    expect(await history(w)).toEqual([]);
     expect(await events()).toEqual([]);
   });
 
@@ -353,7 +360,7 @@ describe("replacing a garage's brand answer", () => {
     expect(
       await prisma.garageBrandJob.count({ where: { garageId: w.garage } }),
     ).toBe(1);
-    expect(await history()).toEqual([]);
+    expect(await history(w)).toEqual([]);
     expect(await events()).toEqual([]);
   });
 
@@ -387,7 +394,7 @@ describe("replacing a garage's brand answer", () => {
 
     expect(await rows(w)).toEqual({ [w.bmw]: 'works_on' });
     expect((await texts(w)).brandNote).toBe('Doar benzină');
-    expect(await history()).toEqual([]);
+    expect(await history(w)).toEqual([]);
     expect(await events()).toEqual([]);
   });
 
