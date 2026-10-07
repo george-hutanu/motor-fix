@@ -8,3 +8,6 @@
 - 2026-10-07 · implement · ST-784 · Planning → Implementing
 - 2026-10-07 · implement · timeline · no row for ST-784
 - 2026-10-07 · labels · PR #191 · in development
+- 2026-10-07 · qa · ST-784 · Implementing → QA
+- 2026-10-07 · qa · timeline · no row for ST-784
+- 2026-10-07 · labels · PR #191 · QA
