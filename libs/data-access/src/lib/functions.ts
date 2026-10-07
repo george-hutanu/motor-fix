@@ -79,6 +79,8 @@ export type { PushSubscriptionsControllerTest$Params as PushSubscriptionsControl
 export { pushSubscriptionsControllerTest as pushSubscriptionsControllerTest } from './fn/notifications/push-subscriptions-controller-test';
 export type { PushSubscriptionsControllerRemove$Params as PushSubscriptionsControllerRemove$Params } from './fn/notifications/push-subscriptions-controller-remove';
 export { pushSubscriptionsControllerRemove as pushSubscriptionsControllerRemove } from './fn/notifications/push-subscriptions-controller-remove';
+export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';
+export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
 export type { GarageInvitesControllerSend$Params as GarageInvitesControllerSend$Params } from './fn/garages/garage-invites-controller-send';
 export { garageInvitesControllerSend as garageInvitesControllerSend } from './fn/garages/garage-invites-controller-send';
 export type { GarageInvitesControllerResend$Params as GarageInvitesControllerResend$Params } from './fn/garages/garage-invites-controller-resend';

@@ -720,3 +720,29 @@ describe('the test switch', () => {
     expect(file.status).toBe('submitted');
   });
 });
+
+describe('counting the files waiting for an admin', () => {
+  it('counts the submitted and in-review files and none of the decided ones', async () => {
+    for (const status of STATUSES) {
+      const garage = await prisma.garage.create({
+        data: { name: `Service ${status}`, slug: `${status}-${randomUUID()}` },
+      });
+      await prisma.verificationFile.create({
+        data: { garageId: garage.id, status },
+      });
+    }
+    await prisma.verificationFile.create({
+      data: { garageId, status: 'submitted' },
+    });
+
+    expect(await service().countWaiting(prisma)).toBe(3);
+  });
+
+  it('is zero when no file waits', async () => {
+    await prisma.verificationFile.create({
+      data: { garageId, status: 'approved' },
+    });
+
+    expect(await service().countWaiting(prisma)).toBe(0);
+  });
+});

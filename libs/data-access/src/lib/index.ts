@@ -7,6 +7,7 @@ export { RequestBuilder } from './request-builder';
 export type { StrictHttpResponse } from './strict-http-response';
 export { Api } from './api';
 
+export type { AdminOverviewDto } from './models/admin-overview-dto';
 export type { AuditActorDto } from './models/audit-actor-dto';
 export type { AuditEntryDto } from './models/audit-entry-dto';
 export type { AuditHistoryPageDto } from './models/audit-history-page-dto';
@@ -70,6 +71,7 @@ export { AuthService } from './services/auth.service';
 export { MeService } from './services/me.service';
 export { AuditHistoryService } from './services/audit-history.service';
 export { NotificationsService } from './services/notifications.service';
+export { AdminService } from './services/admin.service';
 export { GaragesService } from './services/garages.service';
 export { InvitesService } from './services/invites.service';
 export { LiveService } from './services/live.service';
@@ -152,6 +154,8 @@ export type { PushSubscriptionsControllerTest$Params as PushSubscriptionsControl
 export { pushSubscriptionsControllerTest as pushSubscriptionsControllerTest } from './fn/notifications/push-subscriptions-controller-test';
 export type { PushSubscriptionsControllerRemove$Params as PushSubscriptionsControllerRemove$Params } from './fn/notifications/push-subscriptions-controller-remove';
 export { pushSubscriptionsControllerRemove as pushSubscriptionsControllerRemove } from './fn/notifications/push-subscriptions-controller-remove';
+export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';
+export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
 export type { GarageInvitesControllerSend$Params as GarageInvitesControllerSend$Params } from './fn/garages/garage-invites-controller-send';
 export { garageInvitesControllerSend as garageInvitesControllerSend } from './fn/garages/garage-invites-controller-send';
 export type { GarageInvitesControllerResend$Params as GarageInvitesControllerResend$Params } from './fn/garages/garage-invites-controller-resend';

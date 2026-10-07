@@ -206,4 +206,31 @@ describe('seed', () => {
 
     expect(await seeded()).toEqual(once);
   });
+
+  it('leaves two draft garages waiting for verification', async () => {
+    expect(seed('test').status).toBe(0);
+
+    const garages = await prisma.garage.findMany({
+      include: { verificationFiles: { select: { status: true } } },
+      orderBy: { slug: 'asc' },
+    });
+    expect(
+      garages.map((g) => [
+        g.slug,
+        g.status,
+        g.verificationFiles.map((f) => f.status),
+      ]),
+    ).toEqual([
+      ['atelier-dinamo', 'draft', ['in_review']],
+      ['atelier-test', 'draft', []],
+      ['service-dobre', 'draft', ['submitted']],
+    ]);
+  });
+
+  it('adds no second waiting file when run twice', async () => {
+    expect(seed('test').status).toBe(0);
+    expect(seed('test').status).toBe(0);
+
+    expect(await prisma.verificationFile.count()).toBe(2);
+  });
 });
