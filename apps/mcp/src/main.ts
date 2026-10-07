@@ -1,3 +1,5 @@
+import './telemetry';
+
 import { readEnv } from '@motor-fix/contracts/env';
 
 import { createServer } from './server';

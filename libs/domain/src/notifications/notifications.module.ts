@@ -1,4 +1,9 @@
 import {
+  observeQueue,
+  observeWorker,
+  queueTelemetry,
+} from '@motor-fix/observability';
+import {
   type DynamicModule,
   Inject,
   Logger,
@@ -44,6 +49,7 @@ import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { createPrisma, PRISMA } from '../auth/prisma';
 import type { PrismaClient } from '../generated/prisma/client';
+import { inJob } from '../logging';
 
 interface NotificationsOptions {
   databaseUrl: string;
@@ -66,6 +72,7 @@ function shared(options: NotificationsOptions, prisma: Provider): Provider[] {
       useFactory: () =>
         new Queue(NOTIFICATIONS_QUEUE, {
           connection: { url: options.redisUrl },
+          telemetry: queueTelemetry(),
         }),
     },
     { provide: LIVE_PUBLISHER, useFactory: () => new Redis(options.redisUrl) },
@@ -152,13 +159,19 @@ export class NotificationsModule implements OnApplicationShutdown {
             }),
         },
         {
-          inject: [NotificationsProcessor, NotificationsService],
+          inject: [
+            NotificationsProcessor,
+            NotificationsService,
+            NOTIFICATIONS_JOBS,
+          ],
           provide: WORKER,
           useFactory: async (
             processor: NotificationsProcessor,
             service: NotificationsService,
+            jobs: Queue,
           ) => {
             if (!(await processor.ready())) return null;
+            observeQueue(jobs);
             await service
               .scheduleRequeue()
               .catch((error) =>
@@ -166,9 +179,9 @@ export class NotificationsModule implements OnApplicationShutdown {
                   `the re-queue sweep is not scheduled: ${String(error)}`,
                 ),
               );
-            return new Worker(
+            const worker = new Worker(
               NOTIFICATIONS_QUEUE,
-              (job) => processor.handle(job),
+              (job) => inJob(job, () => processor.handle(job)),
               {
                 concurrency: 10,
                 connection: {
@@ -179,8 +192,11 @@ export class NotificationsModule implements OnApplicationShutdown {
                   backoffStrategy: (attemptsMade) =>
                     retryDelay(attemptsMade - 1),
                 },
+                telemetry: queueTelemetry(),
               },
             );
+            observeWorker(worker);
+            return worker;
           },
         },
         NewsFanOut,
@@ -201,14 +217,16 @@ export class NotificationsModule implements OnApplicationShutdown {
             }
             const worker = new Worker<NewsEvent>(
               NEWS_QUEUE,
-              (job) => fanOut.handle(job),
+              (job) => inJob(job, () => fanOut.handle(job)),
               {
                 connection: {
                   maxRetriesPerRequest: null,
                   url: options.redisUrl,
                 },
+                telemetry: queueTelemetry(),
               },
             );
+            observeWorker(worker);
             return worker;
           },
         },

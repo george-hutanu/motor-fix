@@ -1,3 +1,4 @@
+import { queueTelemetry } from '@motor-fix/observability';
 import {
   type DynamicModule,
   Inject,
@@ -78,6 +79,7 @@ export class OutboxRelayModule implements OnModuleInit, OnApplicationShutdown {
                     url: options.redisUrl,
                   },
                   defaultJobOptions: jobs,
+                  telemetry: queueTelemetry(),
                 }),
                 requeue,
               }),

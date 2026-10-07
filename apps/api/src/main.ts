@@ -1,3 +1,5 @@
+import './telemetry';
+
 import { writeFileSync } from 'node:fs';
 
 import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
