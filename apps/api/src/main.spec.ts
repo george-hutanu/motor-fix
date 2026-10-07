@@ -120,12 +120,15 @@ describe('api entry point', () => {
     const error = jest.spyOn(console, 'error').mockImplementation(() => {});
     mockLoad.mockRejectedValueOnce(new Error('refused'));
 
-    await run([]);
+    try {
+      await run([]);
 
-    expect(mockApp.listen).not.toHaveBeenCalled();
-    expect(exit).toHaveBeenCalledWith(1);
-    exit.mockRestore();
-    error.mockRestore();
+      expect(mockApp.listen).not.toHaveBeenCalled();
+      expect(exit).toHaveBeenCalledWith(1);
+    } finally {
+      exit.mockRestore();
+      error.mockRestore();
+    }
   });
 
   it.each([
