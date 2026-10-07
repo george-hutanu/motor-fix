@@ -7,6 +7,7 @@ export { RequestBuilder } from './request-builder';
 export type { StrictHttpResponse } from './strict-http-response';
 export { Api } from './api';
 
+export type { AdminOverviewDto } from './models/admin-overview-dto';
 export type { AuditActorDto } from './models/audit-actor-dto';
 export type { AuditEntryDto } from './models/audit-entry-dto';
 export type { AuditHistoryPageDto } from './models/audit-history-page-dto';
@@ -77,6 +78,7 @@ export { AuditHistoryService } from './services/audit-history.service';
 export { NotificationsService } from './services/notifications.service';
 export { BrandsService } from './services/brands.service';
 export { SearchService } from './services/search.service';
+export { AdminService } from './services/admin.service';
 export { GaragesService } from './services/garages.service';
 export { InvitesService } from './services/invites.service';
 export { LiveService } from './services/live.service';
@@ -163,6 +165,8 @@ export type { BrandsControllerSearch$Params as BrandsControllerSearch$Params } f
 export { brandsControllerSearch as brandsControllerSearch } from './fn/brands/brands-controller-search';
 export type { GarageSearchControllerForBrand$Params as GarageSearchControllerForBrand$Params } from './fn/search/garage-search-controller-for-brand';
 export { garageSearchControllerForBrand as garageSearchControllerForBrand } from './fn/search/garage-search-controller-for-brand';
+export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';
+export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
 export type { GarageInvitesControllerSend$Params as GarageInvitesControllerSend$Params } from './fn/garages/garage-invites-controller-send';
 export { garageInvitesControllerSend as garageInvitesControllerSend } from './fn/garages/garage-invites-controller-send';
 export type { GarageInvitesControllerResend$Params as GarageInvitesControllerResend$Params } from './fn/garages/garage-invites-controller-resend';

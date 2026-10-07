@@ -1,5 +1,6 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 
+import { AdminOverviewController } from './admin-overview.controller';
 import { GarageBrandsService } from './garage-brands.service';
 import { PublicGaragesService } from './public-garages';
 import { PublicGaragesController } from './public-garages.controller';
@@ -32,6 +33,7 @@ export class GaragesModule {
   ): DynamicModule {
     return {
       controllers: [
+        AdminOverviewController,
         GarageInvitesController,
         InvitesController,
         PublicGaragesController,

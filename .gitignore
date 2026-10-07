@@ -10,6 +10,8 @@ node_modules/
 # spec-kit machine-local state (catalog caches, per-run bookkeeping, telemetry)
 .specify/**/.cache/
 .specify/run-state.json
+# the agent-context extension's managed block (the active plan): per checkout, never committed
+.specify/agent-context.local.md
 .specify/telemetry/*.json
 .stryker-tmp/
 reports/

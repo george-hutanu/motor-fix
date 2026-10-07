@@ -3,6 +3,7 @@ export { AccountsService } from './auth/accounts.service';
 export { CurrentActor, Public, Requires } from './auth/actor.guard';
 export { AuthModule } from './auth/auth.module';
 export { EmailConfirmationModule } from './auth/email-confirmation.module';
+export { MAINTENANCE, type Maintenance } from './auth/maintenance';
 export { oauthSettings } from './auth/oauth/providers';
 export { PasswordResetModule } from './auth/password-reset.module';
 export { PhoneSignInModule } from './auth/phone-sign-in.module';

@@ -48,11 +48,11 @@ tasks (`speckit-notion-sync debt`).
 
 ### 15. Agent context
 
-Invoke `speckit-agent-context-update` to refresh the managed
-`<!-- SPECKIT START/END -->` block. Note that `AGENTS.md` is a tracked,
-shared file and `CLAUDE.md` only points at it — if the update would write
-spec-kit content into a tracked file, keep it in `CLAUDE.local.md` instead and
-say so in the report.
+The active plan is not written into a tracked file: the session start prints
+it from `.specify/feature.json`, so parallel branches never conflict on it.
+Run `node .claude/scripts/context-audit.mjs` and act on its findings
+in `CLAUDE.local.md`; the file may shrink, never grow. Add no
+`<!-- SPECKIT START/END -->` block to `CLAUDE.local.md`, `CLAUDE.md` or `AGENTS.md`.
 
 ### 16. Retrospective evidence — gather it, do not grade yourself
 

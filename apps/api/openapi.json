@@ -1317,6 +1317,35 @@
         ]
       }
     },
+    "/api/v1/admin/overview": {
+      "get": {
+        "operationId": "AdminOverviewController_overview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOverviewDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}/invites": {
       "post": {
         "operationId": "GarageInvitesController_send",
@@ -3084,6 +3113,19 @@
           "nextCursor",
           "total",
           "counts"
+        ]
+      },
+      "AdminOverviewDto": {
+        "type": "object",
+        "properties": {
+          "garagesWaiting": {
+            "type": "integer",
+            "description": "Verification files submitted or in review",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "garagesWaiting"
         ]
       },
       "StaffInviteDto": {

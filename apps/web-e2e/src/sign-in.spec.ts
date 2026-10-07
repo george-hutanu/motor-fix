@@ -28,7 +28,7 @@ test.describe('signing in for real @seeded', () => {
     ['a garage owner', ACCOUNTS.garage, '/app/garage', 'Mecanici'],
     ['a receptionist', ACCOUNTS.receptionist, '/app/garage', 'Programări'],
     ['a mechanic', ACCOUNTS.mechanic, '/app/garage', 'Panou'],
-    ['an admin', ACCOUNTS.admin, '/app/admin', 'Utilizatori'],
+    ['an admin', ACCOUNTS.admin, '/app/admin', 'Setări'],
     [
       'a driver and garage who used the garage last',
       ACCOUNTS.twoRoles,

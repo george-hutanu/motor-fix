@@ -28,6 +28,7 @@ import { Overlays } from '@motor-fix/overlays';
 import { HlmToaster, toast } from '@motor-fix/ui-cockpit';
 import { filter, map } from 'rxjs';
 
+import { AdminOverview } from './admin-overview';
 import { Bell } from './bell';
 import { EmailBanner } from './email-banner';
 import { InviteStaff } from './invite-staff';
@@ -37,7 +38,7 @@ import { PushDevice } from './push-device';
 import { Session } from './session';
 import { SignOutEverywhere } from './sign-out-everywhere';
 import { DashboardTabBar } from './tab-bar';
-import { type Area, allowedViews, DASHBOARDS } from './views';
+import { type Area, allowedViews, type Counts, DASHBOARDS } from './views';
 import { segmentsOf } from '../addresses';
 
 type Role = MeDto['role'];
@@ -68,6 +69,7 @@ const ROLES: readonly { role: Role; label: string }[] = [
     RouterOutlet,
     TranslatePipe,
   ],
+  providers: [AdminOverview],
   selector: 'mf-frame',
   styles: `
     :host { display: grid; grid-template: auto 1fr / minmax(0, 1fr); min-height: 100dvh; }
@@ -87,7 +89,19 @@ const ROLES: readonly { role: Role; label: string }[] = [
     .view { display: flex; flex-direction: column; min-width: 0; }
     header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mf-space-3); }
     header h1 { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+    .title { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; padding-top: var(--mf-space-3); }
+    .admin-label { color: var(--mf-text-secondary); font-size: var(--mf-size-label); font-weight: 700; letter-spacing: 0.08em; }
+    .admin-line { margin: 0; color: var(--mf-text-secondary); font-size: var(--mf-size-small); overflow-wrap: anywhere; }
+    .skeleton { display: inline-block; width: 12rem; max-width: 50%; height: 0.9em; border-radius: var(--mf-radius-chip); background: var(--mf-line); vertical-align: middle; }
+    aside nav a { display: flex; align-items: center; gap: var(--mf-space-2); }
+    .chip {
+      min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px;
+      background: var(--mf-amber); color: var(--mf-on-amber);
+      font-size: var(--mf-size-label); font-weight: 700; line-height: 20px; text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
     main { flex: 1 0 auto; }
+    .chip-skeleton { width: 20px; height: 20px; border-radius: 10px; background: var(--mf-line); }
     .live-offline:empty { display: none; }
     .live-offline {
       margin: 0 0 var(--mf-space-3); padding: var(--mf-space-2) var(--mf-space-4);
@@ -106,12 +120,14 @@ const ROLES: readonly { role: Role; label: string }[] = [
       <span>{{ dashboard().tag | t }}</span>
       <nav [attr.aria-label]="'shell.frame.menu' | t">
         @for (view of entries(); track view.path) {
+          @let count = view.counter ? counts()[view.counter] : undefined;
           <a
             [routerLink]="view.path ? [base(), view.path] : base()"
             routerLinkActive=""
             ariaCurrentWhenActive="page"
             [routerLinkActiveOptions]="{ exact: !view.path }"
-          >{{ view.label | t }}</a>
+            [attr.aria-label]="count ? ('shell.frame.counter' | t: { label: (view.label | t), waiting: count }) : null"
+          >{{ view.label | t }}@if (count) {<span class="chip" aria-hidden="true">{{ count > 99 ? '99+' : count }}</span>} @else if (view.counter && countsLoading()) {<span class="chip-skeleton" aria-hidden="true"></span>}</a>
         }
       </nav>
       <div class="account">
@@ -136,14 +152,34 @@ const ROLES: readonly { role: Role; label: string }[] = [
       </div>
     </aside>
     <div class="view">
-      <header><h1>{{ open().label | t }}</h1><mf-language-switch /><mf-bell /></header>
+      <header>
+        @if (adminOverview; as overview) {
+          <div class="title">
+            <span class="admin-label">{{ 'shell.frame.admin.label' | t }}</span>
+            <h1>{{ open().label | t }}</h1>
+            <p class="admin-line" [attr.aria-busy]="overview.loading()">
+              {{ 'shell.frame.admin.place' | t }}
+              @if (overview.loading()) {
+                · <span class="skeleton" aria-hidden="true"></span>
+              } @else if (overview.waiting(); as count) {
+                · {{ 'shell.frame.admin.waiting' | t: { count } }}
+              } @else if (overview.waiting() === 0) {
+                · {{ 'shell.frame.admin.none' | t }}
+              }
+            </p>
+          </div>
+        } @else {
+          <h1>{{ open().label | t }}</h1>
+        }
+        <mf-language-switch /><mf-bell />
+      </header>
       <p class="live-offline" role="status">@if (offline()) { {{ 'shell.live.offline' | t }} }</p>
       <mf-email-banner />
       <p class="live-status" role="status" [mfLiveChange]="lastTest()">
         @if (lastTest(); as at) { {{ 'shell.live.test' | t }} · {{ at | clock }} }
       </p>
       <main><router-outlet /></main>
-      <mf-dashboard-tab-bar [base]="base()" [views]="entries()" [name]="dashboard().name" />
+      <mf-dashboard-tab-bar [base]="base()" [views]="entries()" [name]="dashboard().name" [counts]="counts()" [countsLoading]="countsLoading()" />
     </div>
     <hlm-toaster />
   `,
@@ -165,6 +201,15 @@ export class Frame implements OnInit {
     () => this.base().slice('/app/'.length) as Area,
   );
   protected readonly dashboard = computed(() => DASHBOARDS[this.area()]);
+  // Each dashboard has its own frame, so the area at creation is the frame's.
+  protected readonly adminOverview =
+    this.area() === 'admin' ? inject(AdminOverview) : null;
+  protected readonly countsLoading = computed(
+    () => this.adminOverview?.loading() ?? false,
+  );
+  protected readonly counts = computed<Counts>(() => ({
+    garagesWaiting: this.adminOverview?.waiting(),
+  }));
   protected readonly roles = computed(() => {
     const held = this.session.shown()?.roles ?? [];
     return ROLES.filter(({ role }) => held.includes(role));
