@@ -100,7 +100,7 @@ without a status, so the test runs again.
    pushes, and counts the lap:
 
    ```bash
-   node .claude/scripts/run-state.mjs repair   # exits 1 past SPECKIT_MAX_REPAIR_ITERATIONS (5)
+   node .claude/scripts/run-state.mjs repair   # exits 1 past SPECKIT_MAX_REPAIR_ITERATIONS (10)
    ```
 
    Then dispatch the new head's run with `dispatch.mjs <n> --no-wait` and
