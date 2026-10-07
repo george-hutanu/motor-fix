@@ -1,7 +1,6 @@
 import {
   afterNextRender,
   ChangeDetectionStrategy,
-  ChangeDetectorRef,
   Component,
   computed,
   DestroyRef,
@@ -34,8 +33,8 @@ const SETTLE_MS = 150;
     .intro { margin-top: var(--mf-space-2); color: var(--mf-text-secondary); }
     .page { display: grid; gap: var(--mf-space-4); margin-top: var(--mf-space-4); }
     .sections { display: grid; gap: var(--mf-space-4); min-width: 0; }
-    /* A jump rests the heading on the line the scroll spy reads: the bottom of the phone bar. */
-    section { scroll-margin-top: var(--mf-tap); }
+    /* A jump, to a heading or a fragment's section, rests it on the line the scroll spy reads: the bottom of the phone bar. */
+    section, h2 { scroll-margin-top: var(--mf-tap); }
     h2:focus-visible, nav button:focus-visible { outline: 2px solid var(--mf-focus); outline-offset: 2px; }
     .mark { font-weight: normal; color: var(--mf-text-secondary); }
     ol { margin: 0; padding: 0; list-style: none; }
@@ -50,7 +49,7 @@ const SETTLE_MS = 150;
       .page { grid-template-columns: minmax(12rem, 16rem) 1fr; align-items: start; }
       nav { position: sticky; top: var(--mf-space-4); }
       .bar { display: none; }
-      section { scroll-margin-top: var(--mf-space-4); }
+      section, h2 { scroll-margin-top: var(--mf-space-4); }
     }
     @media not all and (min-width: 768px) {
       nav { position: sticky; top: 0; z-index: 1; margin: 0 calc(-1 * var(--mf-space-4)); background: var(--mf-bg); border-bottom: 1px solid var(--mf-line); }
@@ -59,7 +58,12 @@ const SETTLE_MS = 150;
         border: 0; background: none; color: inherit; font: inherit; font-size: var(--mf-size-small);
         text-align: start; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;
       }
-      ol { display: none; max-height: calc(100dvh - 2 * var(--mf-tap)); overflow-y: auto; padding-bottom: var(--mf-space-2); }
+      /* Over the page, not in it: an open list that took room would push the page down under the reader. */
+      ol {
+        display: none; position: absolute; top: 100%; left: 0; right: 0;
+        max-height: calc(100dvh - 2 * var(--mf-tap)); overflow-y: auto; padding-bottom: var(--mf-space-2);
+        background: var(--mf-bg); border-bottom: 1px solid var(--mf-line);
+      }
       nav.open ol { display: block; }
     }
   `,
@@ -106,7 +110,6 @@ export class ListYourGarage {
   private readonly i18n = inject(I18n);
   private readonly reduced = inject(REDUCED_MOTION);
   private readonly host: HTMLElement = inject(ElementRef).nativeElement;
-  private readonly changes = inject(ChangeDetectorRef);
   private readonly nav = viewChild.required<ElementRef<HTMLElement>>('nav');
   private readonly bar = viewChild.required<ElementRef<HTMLElement>>('bar');
   private settling: ReturnType<typeof setTimeout> | undefined;
@@ -156,9 +159,6 @@ export class ListYourGarage {
   protected jump(n: number) {
     this.current.set(n);
     this.open.set(false);
-    // The open list pushes the sections down on a phone: close it first, or
-    // the scroll aims at where the heading was.
-    this.changes.detectChanges();
     this.settle();
     const heading = this.headings()[n - 1];
     heading.scrollIntoView({

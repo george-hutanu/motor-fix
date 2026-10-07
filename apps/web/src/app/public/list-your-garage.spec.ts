@@ -286,24 +286,6 @@ describe('the phone bar', () => {
     expect(current(page)).toEqual(['5 Fotografii și adresă']);
   });
 
-  // The open list pushes the sections down: a scroll aimed while it is open
-  // misses once it closes.
-  it('closes before the section scrolls into view', async () => {
-    const { harness, page } = await open('/ro/list-your-garage');
-    const openWhileScrolling: boolean[] = [];
-    Element.prototype.scrollIntoView = () => {
-      openWhileScrolling.push(
-        page.querySelector('nav')?.classList.contains('open') ?? false,
-      );
-    };
-
-    bar(page)?.click();
-    await settle(harness);
-    entries(page)[4].click();
-
-    expect(openWhileScrolling).toEqual([false]);
-  });
-
   it('closes on a tap outside it, without jumping', async () => {
     const { harness, page } = await open('/ro/list-your-garage');
 
