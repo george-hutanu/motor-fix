@@ -16,3 +16,6 @@
 - 2026-10-07 · debt · ST-39 · deferred.md line 6 → https://app.notion.com/p/Tech-debt-ST-39-tests-when-Redis-is-down-at-load-the-brands-active-delete-is-only-logged-so-the-3f2607bff0d28153be44d2fa40dd6a9f
 - 2026-10-07 · debt · ST-39 · deferred.md line 7 → https://app.notion.com/p/Tech-debt-ST-39-race-a-search-that-reads-PostgreSQL-before-the-loader-commits-and-sets-the-cache-3f2607bff0d281eda5e5eb9b9f3ba427
 - 2026-10-07 · debt · ST-39 · deferred.md line 8 → https://app.notion.com/p/Tech-debt-ST-39-config-the-60-s-load-transaction-timeout-is-a-literal-not-a-named-env-var-read-3f2607bff0d28109bd84c4c878d0140a
+- 2026-10-07 · qa · ST-39 · Implementing → QA
+- 2026-10-07 · qa · timeline · Implementing → QA
+- 2026-10-07 · labels · PR #193 · QA
