@@ -74,7 +74,16 @@ export async function contextCookies(run, { session, baseURL }) {
   return [sessionCookie({ refresh: await session(run.role), baseURL })];
 }
 
-export const sessionCookie = ({ refresh, baseURL }) => ({
+// The QA flows' `signIn(context, role)`: the cookie a `path@role` route gets,
+// for a browser context the flow opened itself.
+export const flowSignIn =
+  ({ session, baseURL }) =>
+  async (context, role) => {
+    if (!role) throw new Error("signIn(context, role) needs a role, one of the seeded accounts'");
+    await context.addCookies(await contextCookies({ role }, { session, baseURL }));
+  };
+
+export const sessionCookie =({ refresh, baseURL }) => ({
   name: "mf_refresh",
   value: refresh,
   domain: new URL(baseURL).hostname,

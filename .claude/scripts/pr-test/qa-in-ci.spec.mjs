@@ -121,7 +121,8 @@ describe('the tester names the API health routes the API serves', () => {
     assert.ok(!run.includes('/health/'), 'run.mjs spells a health route instead of reading HEALTH');
     assert.match(run, /HEALTH\.live/);
     assert.match(run, /HEALTH\.ready/);
-    assert.match(run, /flow\.default\(\{[^}]*\.\.\.apiHealth\(apiURL\)/);
+    assert.match(run, /flow\.default\(flowArgs\(\{/);
+    assert.match(run, /export const flowArgs = [^;]*\.\.\.apiHealth\(apiURL\)/);
   });
 });
 

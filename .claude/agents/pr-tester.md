@@ -64,13 +64,18 @@ does not drive is a `high` finding titled "flow not run", naming the flow, so
 the PR cannot merge on that run. With no file, every flow is not run.
 
 Otherwise write `.specify/.cache/qa-flows-<PR>.mjs`: a default export `async ({ baseURL,
-apiURL, outDir, repoRoot, health, ready }) => findings[]` that drives Playwright
+apiURL, outDir, repoRoot, signIn, health, ready }) => findings[]` that drives Playwright
 (`createRequire(join(repoRoot, 'package.json'))('@playwright/test').chromium`,
 one browser, closed in `finally`) through each flow from step 1: click, type,
 switch the language, reload, open a second tab where the spec asks for it, and
 check the empty, error and loading states the spec or design names. Each
 failure is a finding `{ severity, kind: 'flow', title, steps: [...], evidence }`
-with a screenshot under `outDir`. Call the changed API endpoints with
+with a screenshot under `outDir`. A guarded screen (`/app/...`) opens only
+signed in: `await signIn(context, 'driver')` on a fresh browser context, before
+its first page, gives it a new session of that role's seeded account, as the
+sweep does for `path@role`. The dashboard toast is one such flow: sign in as
+the driver, open `/app/driver`, click "Retrimite" on the e-mail banner and
+check the toast. Call the changed API endpoints with
 `fetch(apiURL + path)` — valid input, then invalid input — and check the status
 codes and shapes the spec and `apps/api/openapi.json` promise. The run itself
 already calls every changed API operation once (any method, path parameters
