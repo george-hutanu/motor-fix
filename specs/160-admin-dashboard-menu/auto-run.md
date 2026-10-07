@@ -48,3 +48,8 @@ Start commit: b76badd3 (worktree .worktrees/160-admin-dashboard-menu, branch 160
 - Model: sonnet. `tasks.md`: 27 tasks (Foundational 6, US1 4, US2 12, US3 4, Polish 1); tests precede implementation in each phase; every task names its FR ids. MVP: Foundational + US1. after_tasks analyze hook not run (caller runs it).
 - level.mjs check: see run.
 - STATUS: success - tasks.md written.
+
+## 8. Analyze (inline, opus)
+- Round 1: artifact-lint 3 ERROR → CRITICAL (capability `admin-dashboard` has no file; Modifies malformed; Modifies base not found); 3 WARN → MEDIUM (FR-004, FR-005, FR-015 in no delta). Manual pass: LOW research R6 rejected a `9+` cap while the checklist added `99+` (FR-010) — not a conflict, R6 now says so. Coverage: 15/15 FRs and SC-001..005 have tasks; the e2e live rise is deferred to ST-116 (T027, deferred.md). Context proposals: operations command left open for the owner; e2e deferral recorded; zero form and hidden counter at 0 kept (FR-008/FR-010).
+- Remediation applied: `.specify/capabilities/admin-dashboard.md` stub (precedent: garage-verification at ST-207); Modifies → `079-FR-018 → FR-007`, FR-007 now restates 079-FR-018 whole plus the release mark and left Adds; 082-FR-023 no longer modified (FR-013 adds beside it).
+- Round 2: artifact-lint 0 errors, 3 warnings kept (FR-004/005/015 restate existing rules or name tests; the spec says so); capabilities validate 0 errors. No CRITICAL/HIGH left.

@@ -98,7 +98,7 @@ Two admins have the dashboard open. A garage sends its file: both see "Service�
 - **FR-004**: The role `admin` MUST remain grantable only outside the product's screens and endpoints (079-FR-009 unchanged): this story adds no screen, endpoint or command that grants it; the seed's admin account (082-FR-023) is the only admin outside production.
 - **FR-005**: `/app/admin` MUST open only for an account whose landing is `/app/admin`: a signed-in account with another landing is sent to its own dashboard, and a signed-out visit ends on Home with the sign-in dialog open (082-FR-021 unchanged); after an admin's sign-in, sign-up return or role switch to `admin`, "Panou" of the admin dashboard opens in the account's language (082-FR-017 unchanged).
 - **FR-006**: The admin dashboard's one view list MUST hold, in this order, "Panou" (`''`), "Service‑uri" (`garages`, capability `admin.garages`), "Utilizatori" (`users`, `admin.users`), "Recenzii raportate" (`reviews`, `admin.reviews`), "Mărci și lucrări" (`catalogue`, `admin.catalogue`), "Asistent AI" (`assistant`, `admin.settings`) and "Setări" (`settings`, `admin.settings`); the side menu (from 768 px), the tab bar (below 768 px) and the routes MUST all read that list, and the tab bar MUST show the short labels "Panou", "Service‑uri", "Utilizatori", "Raportate", "Mărci", "Asistent", "Setări" (English: "Dashboard", "Garages", "Users", "Reported", "Brands", "Assistant", "Settings").
-- **FR-007**: Each view MUST carry a release mark; an unreleased view MUST be absent from the menu and the tab bar, and its address MUST open "Panou" (the existing fall-through) for every role the admin area admits (today `admin` only; any other role is sent to its own dashboard by FR-005). At this story's release "Panou", "Service‑uri" and "Setări" are released and "Utilizatori", "Recenzii raportate", "Mărci și lucrări" and "Asistent AI" are not; the story that builds a view flips its mark. The mark is one line per view in the view list, with a test for a hidden entry (modifies 079-FR-018: the menu shows only the entries the role may open and that are released).
+- **FR-007**: The frame's menu MUST show only the entries the role in use may open according to the capabilities table and whose view is released; there MUST be no "Vezi ca" demo buttons. Each view MUST carry a release mark; an unreleased view MUST be absent from the menu and the tab bar, and its address MUST open "Panou" (the existing fall-through) for every role the admin area admits (today `admin` only; any other role is sent to its own dashboard by FR-005). At this story's release "Panou", "Service‑uri" and "Setări" are released and "Utilizatori", "Recenzii raportate", "Mărci și lucrări" and "Asistent AI" are not; the story that builds a view flips its mark. The mark is one line per view in the view list, with a test for a hidden entry.
 - **FR-008**: The admin frame's header MUST show the line "MotorFix · București · {n} service‑uri așteaptă verificarea" (English "MotorFix · Bucharest · {n} garages are waiting for verification"), where `{n}` is `garagesWaiting` from the overview, written in the language's plural forms: Romanian `one` "1 service așteaptă verificarea", `few` "{n} service‑uri așteaptă verificarea", `other` "{n} de service‑uri așteaptă verificarea", zero "niciun service nu așteaptă verificarea"; English `one` "1 garage is waiting for verification", `other` "{n} garages are waiting for verification", zero "no garage is waiting for verification". The city is the fixed text "București" / "Bucharest" until the period-and-city story (https://app.notion.com/p/3ee607bff0d281bcba2fe16979f909fc) makes it a choice.
 - **FR-009**: The header MUST show the label "ADMINISTRATOR" (the same word in English) next to the line, and the language switch with RO and EN that every dashboard header carries; switching the language re-renders the line, the label, the menu and the counters in that language without a reload (MF-1).
 - **FR-010**: The menu entry "Service‑uri" and its tab MUST carry a counter equal to `garagesWaiting` when it is above zero, and none when it is zero; the entry's accessible name MUST include the count ("Service‑uri, 4 în așteptare" / "Garages, 4 waiting"). "Recenzii raportate" carries a counter only once it is released (MF-45); no other entry carries one. A count above 99 MUST read "99+" in the chip (the accessible name keeps the full number), so the chip never widens the tab past its 66 px minimum.
@@ -118,17 +118,17 @@ Two admins have the dashboard open. A garage sends its file: both see "Service�
 
 ### Capability: `admin-dashboard` (new)
 
-- **Adds**: FR-001, FR-002, FR-003, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-012, FR-013, FR-014
+- **Adds**: FR-001, FR-002, FR-003, FR-006, FR-008, FR-009, FR-010, FR-011, FR-012, FR-013, FR-014
 - **Modifies**: none
 - **Removes**: none
 
 ### Capability: `accounts`
 
 - **Adds**: none
-- **Modifies**: 079-FR-018 (by FR-007: the menu also hides a view whose feature is not released); 082-FR-023 (by FR-013: the seed also adds two waiting verification files)
+- **Modifies**: 079-FR-018 → FR-007
 - **Removes**: none
 
-FR-004, FR-005 and FR-015 restate rules the accounts capability already holds or name tests; they add no requirement to a capability.
+FR-007 replaces 079-FR-018 whole (it keeps the capability rule and the no-demo-buttons rule, and adds the release mark). FR-013 adds the waiting files beside 082-FR-023, which stays as it is. FR-004, FR-005 and FR-015 restate rules the accounts capability already holds or name tests; they add no requirement to a capability.
 
 ## Success Criteria *(mandatory)*
 
