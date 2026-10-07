@@ -458,6 +458,53 @@ describe('an SMS that may have gone', () => {
     expect(await sendingAt(sms.id)).toBeNull();
   });
 
+  it('is sent on its retry when its count could not be taken', async () => {
+    const { ana, sms } = await queuedSms();
+    const count = jest
+      .spyOn(prisma, '$queryRaw')
+      .mockRejectedValueOnce(new Error('connection lost'));
+    try {
+      await expect(sendJob(sms.id)).rejects.toThrow('connection lost');
+    } finally {
+      count.mockRestore();
+    }
+    expect(mock.sms()).toHaveLength(0);
+    expect(await counter(ana, '2026-11')).toBeNull();
+    expect(await sendingAt(sms.id)).toBeNull();
+    await sendJob(sms.id, 1);
+    expect(mock.sms()).toHaveLength(1);
+    expect((await counter(ana, '2026-11'))?.sentCount).toBe(1);
+    expect(await summary(ana)).toEqual([['sms', 'sent', null]]);
+  });
+
+  it('fails with the count’s error, and is not sent, when the mark cannot be cleared either', async () => {
+    const { ana, sms } = await queuedSms();
+    const count = jest
+      .spyOn(prisma, '$queryRaw')
+      .mockRejectedValueOnce(new Error('count lost'));
+    const real = prisma.notification.update.bind(prisma.notification);
+    let calls = 0;
+    const update = jest
+      .spyOn(prisma.notification, 'update')
+      .mockImplementation(((args: never) =>
+        ++calls === 2
+          ? Promise.reject(new Error('clear lost'))
+          : real(args)) as never);
+    try {
+      await expect(sendJob(sms.id)).rejects.toThrow('count lost');
+    } finally {
+      count.mockRestore();
+      update.mockRestore();
+    }
+    await drain(ana);
+    expect(mock.sms()).toHaveLength(0);
+    expect(await counter(ana, '2026-11')).toBeNull();
+    expect(await summary(ana)).toEqual([
+      ['sms', 'failed', 'sms_unconfirmed'],
+      ['whatsapp', 'sent', null],
+    ]);
+  });
+
   it('gives its count back and is not sent again when a refusal’s mark cannot be cleared', async () => {
     const { ana, sms } = await queuedSms();
     mock.answer({ status: 503 });
