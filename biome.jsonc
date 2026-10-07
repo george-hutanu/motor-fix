@@ -98,8 +98,8 @@
   },
   "overrides": [
     {
-      // Biome reads Angular templates as plain HTML: it cannot see [attr.aria-*] or [for] bindings, and it flags the ARIA combobox pattern (a ul listbox whose options are reached by aria-activedescendant, never focused).
-      "includes": ["apps/web/**/*.html"],
+      // Biome reads Angular templates as plain HTML: it cannot see this dialog's [attr.aria-*] or [for] bindings, and it flags its ARIA combobox (a ul listbox whose options are reached by aria-activedescendant, never focused).
+      "includes": ["apps/web/src/app/dashboard/add-car/add-car.html"],
       "linter": {
         "rules": {
           "a11y": {
