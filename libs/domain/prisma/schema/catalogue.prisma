@@ -42,3 +42,13 @@ model JobType {
 
   @@map("job_type")
 }
+
+// Romania's legal holidays, one row per day; two holidays on one day share
+// the row, their names joined with " / ". Each year is added by a migration.
+model PublicHoliday {
+  day    DateTime @id @db.Date
+  nameRo String   @map("name_ro")
+  nameEn String   @map("name_en")
+
+  @@map("public_holiday")
+}

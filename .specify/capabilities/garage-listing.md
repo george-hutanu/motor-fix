@@ -6,6 +6,7 @@ features:
   - 040-garage-brand-stance
   - 114-save-draft
   - 205-company-rar-check
+  - 112-opening-hours
   - 354-job-catalogue-prices
 ---
 
@@ -226,6 +227,54 @@ _From 205-company-rar-check._
 ### 205-FR-014 — Tests MUST cover, in Jest: the CUI rule (valid with and without "RO", with spaces and a lower-case prefix, a wrong control digit, too short, too long, a letter in the digits); the RAR number rule (trim, capitals, 2 and 3 characters, 40 and 41); the counter for 0 to 5 done items; on real PostgreSQL, a draft saved with both step-6 values and read back unchanged, a section with an unknown key, a non-string or a 41-character string refused with 400 while a save without the section is accepted. A Playwright end-to-end test MUST, at a phone width, open step 6, type an invalid CUI and see the error, type a valid one and a RAR number and see the counter reach "2 din 5 completate", and check that no look-up button exists.
 
 _From 205-company-rar-check._
+
+### 112-FR-001 — Step 5 of "List your garage" MUST show, in the page's language, a block "Program" / "Opening hours" with a row "Luni – vineri" / "Monday to Friday" and a row "Sâmbătă" / "Saturday", each with an opening and a closing time in 15-minute steps, the Saturday row also with a "Închis" / "Closed" tick that empties it (the Monday-to-Friday row has none: a weekday is closed in the per-day view), offering Monday to Friday 08:00–17:00 and Saturday closed as the starting point; the starting point is shown, not kept, until the owner changes a value, after which the whole weekly set is kept.
+
+_From 112-opening-hours._
+
+### 112-FR-002 — The block MUST offer a disclosure "Program pe zile" / "Hours by day" opening one row per day, Monday to Sunday, each with its own times, a closed tick and "Adaugă pauză" / "Add a break" that splits the day into two intervals (first interval, break, second interval); Sunday starts closed. The simple rows MUST reflect the per-day values: the Monday-to-Friday row shows the common interval when all five weekdays hold one equal interval, else it reads "Program diferit pe zile" / "Different hours by day" as text, with no time fields, and the disclosure open; while it shows its fields, editing the simple row sets all five weekdays to that one interval.
+
+_From 112-opening-hours._
+
+### 112-FR-003 — Weekly hours MUST be, for each of the seven days, a list of zero to two intervals of "HH:MM" times on the 15-minute grid (00:00 to 23:45), each closing after its opening, in order and not overlapping (touching is allowed); a day with no interval is closed. Every rule MUST be checked in the step (the invalid value is not kept, the row shows "Ora de închidere trebuie să fie după deschidere" / "Closing must be after opening" or the break's line, and the step is incomplete) and again by the draft's save and the write of FR-009, which refuse a section that breaks one (bad request; the draft save answers 400 as for step 6). An invalid value is never kept, so after a reload the row shows the last valid value and the step is complete again.
+
+_From 112-opening-hours._
+
+### 112-FR-004 — Under the hours the step MUST show "Zile închise" / "Closed days": a date field, an optional note of at most 80 characters (code points, trimmed, blank as none) with its limit shown, an add button, and the list of added days with their note and a remove button each. A day MUST be from today (Europe/Bucharest) to two years ahead, not already in the list and not a legal holiday; a refused day shows its reason ("E deja zi liberă legală" / "Already a legal holiday", "Data a trecut" / "The date has passed", "Cel mult 2 ani înainte" / "At most 2 years ahead") and adds nothing.
+
+_From 112-opening-hours._
+
+### 112-FR-005 — The step MUST say, under the closed days, that Romania's legal holidays count as closed by themselves and need no entry, and list the next six legal holidays with their names from the public-holiday calendar (`GET /api/v1/public-holidays`, public, by year, 15 items at most for the two seeded years), in the page's language. A year outside 2000 to 2100 or a missing year is refused with 400 and a year with no rows answers an empty list (contracts/public-holidays.md). When the calendar cannot be read the line says the list is not available right now and the holiday check of FR-004 is skipped; nothing else in the step waits for it.
+
+_From 112-opening-hours._
+
+### 112-FR-006 — The step MUST show "Facilități pentru clienți" / "Facilities for customers" with three toggle chips, "Mașină la schimb" / "Courtesy car", "Preluare și predare" / "Pick-up and drop-off", "Sală de așteptare" / "Waiting area" (`courtesy_car`, `pickup_dropoff`, `waiting_area`), each a button with `aria-pressed`, the state told by text or shape as well as colour, and the hint "Șoferii pot filtra după ele. Bifează doar ce oferi mereu, nu „uneori”." / "Drivers can filter by these. Tick only what you always offer, not \"sometimes\"." under them; a ticked courtesy car leaves a place under its chip for ST-397's choice and adds nothing else.
+
+_From 112-opening-hours._
+
+### 112-FR-007 — The step's values MUST be this story's keys of the draft's step 5 section (`steps['5']`, ST-114's shape): `hours` (seven days to intervals), `closedDays` (date and optional note), `facilities` (the ticked keys), typed in the shared contracts library and checked on save like step 6's section (an unknown facility, a malformed time or date, a third interval or an 81-character note is refused with 400; a section without these keys, or with other stories' keys beside them, is accepted). They are kept with the rest of the form, restored with it on reload and through the continue link, and MUST write nothing to the garage tables, the audit history or the outbox while there is no account (114-FR-018).
+
+_From 112-opening-hours._
+
+### 112-FR-009 — The system MUST own one function that writes a garage's hours, closed days and facilities from the section, for the submit story to run inside its transaction: it sets the garage's weekly hours (the starting point of FR-001 when the section has no `hours`), replaces the garage's closed-day rows with one per own closed day that FR-010 keeps (date, note), and replaces its facility rows with one per ticked facility with status `listed`; a section that breaks a rule of FR-003, FR-004 or FR-006 is refused whole (a day outside FR-004's window is dropped by FR-010 instead, since a kept draft ages) and nothing is written. No route calls it in this story; it is tested on a real database.
+
+_From 112-opening-hours._
+
+### 112-FR-010 — The write MUST NOT store a closed day that is before today (Europe/Bucharest), after the last day of FR-004's two-year window, or a legal holiday held in the calendar: a legal holiday is closed through the calendar alone, never through a closed-day row. Whether a garage is open at a given moment is ST-309's status function, which reads the hours, the closed-day rows and the calendar this story writes; this story adds no such function.
+
+_From 112-opening-hours._
+
+### 112-FR-011 — Every text of the step MUST exist in Romanian and English in the public interface texts and follow the interface language (108-FR-009); switching the language MUST change the texts and keep every time, closed day and tick. Day names and dates MUST be shown as the locale formats them.
+
+_From 112-opening-hours._
+
+### 112-FR-012 — The step MUST obey the page's phone layout rules (108-FR-011, `phone-layout.md`): no sideways scroll at 320 px with the two times side by side on a row or stacked when they do not fit, 44 px targets for the ticks, chips, add and remove buttons, no text under 12 px, time and date fields at 16 px, light and dark theme following the device; a row's error MUST be tied to its fields (`aria-describedby`) and announced, and the chips' states MUST be readable by assistive technology.
+
+_From 112-opening-hours._
+
+### 112-FR-013 — Tests MUST cover, in Jest: the interval rules (order, overlap, touching accepted, at most two, 15-minute grid, closing after opening, a break inside the day), the closed-day rules (today to two years, duplicate, legal holiday, 80-character note), the simple-rows view over per-day values; on real PostgreSQL: a draft saved with the three keys and read back unchanged, a bad time, a third interval, an unknown facility and an 81-character note refused with 400 while a section without the keys is accepted; the write creating the hours, the closed-day rows and facility rows with status `listed` and refusing a bad section whole; a legal holiday and a past date in the section written as no closed-day row, and a section without `hours` written as the starting point; the calendar holding 16 days for 2026 and 17 for 2027, each once. A Playwright end-to-end test MUST, at a phone width, set Monday with a lunch break, open Sunday, add a closed day with a note, tick two facilities, reload and check everything is back.
+
+_From 112-opening-hours._
 
 ### 354-FR-003 — Each garage MUST be able to carry an hourly labour range, `labour_from_bani` and `labour_to_bani`, both empty until the listing is sent and both set afterwards.
 
