@@ -1,0 +1,141 @@
+<header><mf-language-switch /></header>
+@switch (keeper.view()) {
+  @case ('loading') {
+    <p class="intro" role="status">{{ 'public.listing.loading' | t }}</p>
+  }
+  @case ('invalid') {
+    <div class="ended">
+      <h1>{{ 'public.listing.invalidTitle' | t }}</h1>
+      <p>{{ 'public.listing.invalidLine' | t }}</p>
+      <button hlmBtn type="button" (click)="startAgain()">{{ 'public.listing.startAgain' | t }}</button>
+    </div>
+  }
+  @case ('sent') {
+    <div class="ended">
+      <h1>{{ 'public.listing.sentTitle' | t }}</h1>
+      <p>{{ 'public.listing.sentLine' | t }}</p>
+      <button hlmBtn type="button" (click)="signIn.start()">{{ 'public.listing.signIn' | t }}</button>
+    </div>
+  }
+  @default {
+    <p class="label">{{ 'public.listing.label' | t }}</p>
+    <h1>{{ 'public.listing.heading' | t }}</h1>
+    <p class="intro">{{ 'public.listing.intro' | t }}</p>
+    <div class="page">
+      <nav
+        #nav
+        [attr.aria-label]="'public.listing.steps' | t"
+        [class.open]="open()"
+        (keydown.escape)="close()"
+      >
+        <button #bar type="button" class="bar" [attr.aria-expanded]="open()" (click)="open.set(!open())">
+          {{ barText() }}
+        </button>
+        <ol>
+          @for (step of steps; track step.n) {
+            <li>
+              <button
+                type="button"
+                [attr.aria-current]="current() === step.n ? 'step' : null"
+                (click)="jump(step.n)"
+              >
+                {{ step.n }} {{ step.label | t }}@if (step.mark) {<span class="mark"> · {{ step.mark | t }}</span>}
+              </button>
+              @if (done().has(step.n)) {
+                <span class="done" role="img" [attr.aria-label]="'public.listing.done' | t">✓</span>
+              }
+            </li>
+          }
+        </ol>
+      </nav>
+      <div class="sections">
+        @for (step of steps; track step.n) {
+          <section [id]="prefix() + step.n">
+            <h2 tabindex="-1">{{ step.n }} {{ step.label | t }}@if (step.mark) {<span class="mark"> · {{ step.mark | t }}</span>}</h2>
+            @if (step.n === 1) {
+              <div class="field">
+                <label for="listing-email">{{ 'public.listing.email' | t }}</label>
+                <input
+                  #email
+                  hlmInput
+                  id="listing-email"
+                  type="email"
+                  autocomplete="email"
+                  [value]="keeper.draft().email ?? ''"
+                  [aria-describedby]="keeper.emailError() ? 'listing-email-error' : 'listing-email-hint'"
+                  [attr.aria-invalid]="keeper.emailError() ? 'true' : null"
+                  (input)="keeper.type(email.value)"
+                  (blur)="keeper.leaveEmail()"
+                />
+                <p id="listing-email-hint" class="hint">{{ 'public.listing.emailHint' | t }}</p>
+                @if (keeper.emailError() === 'emailNeeded') {
+                  <p id="listing-email-error" class="error">{{ 'public.listing.emailNeeded' | t }}</p>
+                } @else if (keeper.emailError()) {
+                  <p id="listing-email-error" class="error">{{ 'public.listing.emailInvalid' | t }}</p>
+                }
+              </div>
+              <mf-details-step [value]="details()" (valueChange)="keeper.section('1', $event)" />
+            } @else if (step.n === 6) {
+              <p class="note">{{ 'public.listing.verifyIntro' | t }}</p>
+              <div class="field">
+                <!-- maxlength 40 mirrors the draft section's cap in listing-verification -->
+                <label for="listing-cui">{{ 'public.listing.cui' | t }}</label>
+                <input
+                  #cui
+                  hlmInput
+                  id="listing-cui"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  maxlength="40"
+                  [value]="shown().cui"
+                  [aria-describedby]="cuiError() ? 'listing-cui-error' : null"
+                  [attr.aria-invalid]="cuiError() ? 'true' : null"
+                  (input)="fillCui(cui.value)"
+                  (blur)="leave(cui, 'cui')"
+                />
+                <p id="listing-cui-error" class="error" role="status" aria-live="polite">{{ cuiError() ? ('public.listing.cuiInvalid' | t) : '' }}</p>
+              </div>
+              <div class="field">
+                <label for="listing-rar">{{ 'public.listing.rarNumber' | t }}</label>
+                <input
+                  #rar
+                  hlmInput
+                  id="listing-rar"
+                  type="text"
+                  autocomplete="off"
+                  maxlength="40"
+                  [value]="shown().rarNumber"
+                  [aria-describedby]="rarError() ? 'listing-rar-error' : 'listing-rar-hint'"
+                  [attr.aria-invalid]="rarError() ? 'true' : null"
+                  (input)="fillRar(rar.value)"
+                  (blur)="leave(rar, 'rarNumber')"
+                />
+                <p id="listing-rar-hint" class="hint">{{ 'public.listing.rarHint' | t }}</p>
+                <p id="listing-rar-error" class="error" role="status" aria-live="polite">{{ rarError() ? ('public.listing.rarShort' | t) : '' }}</p>
+              </div>
+              <p class="note count" role="status" aria-live="polite">{{ 'public.listing.verifyCount' | t: { n: verified() } }}</p>
+              <p class="note">{{ 'public.listing.verifyNote' | t }}</p>
+            }
+            @if (step.n === 2) {
+              <mf-brands-step [value]="brands()" (valueChange)="keeper.section('2', $event)" />
+            }
+            @if (step.n === 3) {
+              <mf-prices-step [value]="prices()" [takenBrands]="takenBrands()" (valueChange)="keeper.section('3', $event ?? {})" />
+            }
+            @if (step.n === 4) {
+              <mf-mechanics-step [value]="mechanics()" (valueChange)="keeper.section('4', $event)" />
+            }
+            @if (step.n === 5) {
+              <mf-hours-step [value]="hours()" (valueChange)="keepHours($event)" />
+            }
+          </section>
+        }
+        <div class="actions">
+          <button hlmBtn variant="secondary" type="button" (click)="save()">{{ 'public.listing.save' | t }}</button>
+        </div>
+        <p class="note" role="status" aria-live="polite">{{ noteText() }}</p>
+      </div>
+    </div>
+  }
+}

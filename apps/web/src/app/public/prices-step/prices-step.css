@@ -1,0 +1,131 @@
+:host {
+  display: grid;
+  gap: var(--mf-space-3);
+  margin-top: var(--mf-space-3);
+  min-width: 0;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.hint {
+  color: var(--mf-text-secondary);
+}
+.title {
+  font-weight: 600;
+}
+.labour,
+.field {
+  display: grid;
+  gap: var(--mf-space-1);
+}
+ul {
+  display: grid;
+  gap: var(--mf-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.job,
+.brand {
+  display: grid;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+.job {
+  padding-bottom: var(--mf-space-3);
+  border-bottom: 1px solid var(--mf-line);
+}
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.pending {
+  padding: 0 var(--mf-space-2);
+  border: 1px dashed var(--mf-line);
+  border-radius: var(--mf-radius-control);
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+  white-space: nowrap;
+}
+.range {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--mf-space-2);
+}
+input {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--mf-tap);
+  box-sizing: border-box;
+}
+.unit {
+  color: var(--mf-text-secondary);
+}
+.error,
+.warning {
+  font-size: var(--mf-size-small);
+}
+.error {
+  color: var(--mf-red-ink);
+}
+.warning {
+  color: var(--mf-text-secondary);
+}
+details {
+  display: grid;
+  gap: var(--mf-space-2);
+}
+summary {
+  min-height: var(--mf-tap);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--mf-text-secondary);
+}
+.brands {
+  margin-left: var(--mf-space-3);
+}
+.offer,
+.results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+.offer button,
+.results button,
+.remove {
+  min-height: var(--mf-tap);
+  min-width: var(--mf-tap);
+  max-width: 100%;
+  padding: 0 var(--mf-space-3);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-control);
+  background: var(--mf-bg);
+  color: var(--mf-text);
+  font: inherit;
+  text-align: start;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.remove {
+  padding: 0;
+  text-align: center;
+}
+.results button,
+.offer button {
+  border-style: dashed;
+}
+button:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--mf-focus);
+  outline-offset: 2px;
+}

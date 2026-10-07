@@ -1,0 +1,72 @@
+<label hlmLabel class="field" for="listing-name">{{ 'public.listing.details.name' | t }}</label>
+<input
+  hlmInput
+  id="listing-name"
+  name="name"
+  autocomplete="organization"
+  [attr.maxlength]="nameMax"
+  [value]="value().name ?? ''"
+  [attr.aria-invalid]="errors().name ? true : null"
+  [attr.aria-describedby]="errors().name ? 'listing-name-error' : null"
+  (input)="type('name', $event)"
+  (blur)="leave('name')"
+/>
+@if (errors().name; as key) {
+  <p class="error" id="listing-name-error">{{ key | t }}</p>
+}
+
+<label hlmLabel class="field" for="listing-phone">{{ 'public.listing.details.phone' | t }}</label>
+<input
+  hlmInput
+  id="listing-phone"
+  name="phone"
+  type="tel"
+  autocomplete="tel"
+  [value]="value().phone ?? ''"
+  [attr.aria-invalid]="errors().phone ? true : null"
+  [attr.aria-describedby]="errors().phone ? 'listing-phone-hint listing-phone-error' : 'listing-phone-hint'"
+  (input)="type('phone', $event)"
+  (blur)="leave('phone')"
+/>
+<p class="hint" id="listing-phone-hint">{{ 'public.listing.details.phoneHint' | t }}</p>
+@if (errors().phone; as key) {
+  <p class="error" id="listing-phone-error">{{ key | t }}</p>
+}
+
+<label hlmLabel class="field" for="listing-known-for">{{ 'public.listing.details.knownFor' | t }}</label>
+<textarea
+  hlmInput
+  id="listing-known-for"
+  name="knownFor"
+  rows="3"
+  [attr.maxlength]="knownForMax"
+  [value]="value().knownFor ?? ''"
+  [attr.aria-invalid]="errors().knownFor ? true : null"
+  [attr.aria-describedby]="errors().knownFor ? 'listing-known-for-hint listing-known-for-error' : 'listing-known-for-hint'"
+  (input)="type('knownFor', $event)"
+  (blur)="leave('knownFor')"
+></textarea>
+<p class="hint" id="listing-known-for-hint">{{ 'public.listing.details.knownForHint' | t }}</p>
+@if (errors().knownFor; as key) {
+  <p class="error" id="listing-known-for-error">{{ key | t }}</p>
+}
+
+<fieldset data-group="kind">
+  <legend>{{ 'public.listing.details.kind' | t }}</legend>
+  @for (kind of kinds; track kind.value) {
+    <button type="button" [attr.aria-pressed]="value().businessKind === kind.value" (click)="choose(kind.value)">
+      {{ kind.label | t }}
+    </button>
+  }
+</fieldset>
+
+@if (value().businessKind === 'mobile') {
+  <fieldset data-group="legal">
+    <legend>{{ 'public.listing.details.legalForm' | t }}</legend>
+    @for (form of legalForms; track form.value) {
+      <button type="button" [attr.aria-pressed]="value().mobileLegalForm === form.value" (click)="chooseForm(form.value)">
+        {{ form.label | t }}
+      </button>
+    }
+  </fieldset>
+}

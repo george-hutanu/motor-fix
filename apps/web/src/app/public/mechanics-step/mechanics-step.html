@@ -1,0 +1,64 @@
+<p class="hint">{{ 'public.listing.mechanics.hint' | t }}</p>
+<div class="switch">
+  <span aria-hidden="true">{{ 'public.listing.mechanics.onProfile' | t }}</span>
+  <hlm-switch
+    inputId="listing-on-profile"
+    [checked]="value().onProfile ?? false"
+    [aria-label]="'public.listing.mechanics.onProfile' | t"
+    (checkedChange)="show($event)"
+  />
+</div>
+@if (cards().length) {
+  <ul>
+    @for (card of cards(); track $index) {
+      @let i = $index;
+      @let n = i + 1;
+      @let wrong = nameError(card, i);
+      <li class="mechanic">
+        <span class="initials" aria-hidden="true">{{ initials(card.name) }}</span>
+        <div class="fields">
+          <input
+            hlmInput
+            name="name"
+            autocomplete="off"
+            [attr.maxlength]="nameMax"
+            [value]="card.name"
+            [attr.aria-label]="('public.listing.mechanics.row' | t: { n: n }) + ', ' + ('public.listing.mechanics.name' | t)"
+            [attr.placeholder]="'public.listing.mechanics.name' | t"
+            [attr.aria-invalid]="wrong ? true : null"
+            [attr.aria-describedby]="wrong ? 'listing-mechanic-error-' + i : null"
+            (input)="type(i, 'name', $event)"
+            (blur)="leave(i)"
+          />
+          @if (wrong) {
+            <p class="error" [id]="'listing-mechanic-error-' + i">{{ 'public.listing.mechanics.nameNeeded' | t }}</p>
+          }
+          <input
+            hlmInput
+            name="speciality"
+            autocomplete="off"
+            [attr.maxlength]="specialityMax"
+            [value]="card.speciality ?? ''"
+            [attr.aria-label]="('public.listing.mechanics.row' | t: { n: n }) + ', ' + ('public.listing.mechanics.speciality' | t)"
+            [attr.placeholder]="'public.listing.mechanics.speciality' | t"
+            (input)="type(i, 'speciality', $event)"
+          />
+        </div>
+        <button
+          type="button"
+          class="remove"
+          [attr.aria-label]="'public.listing.mechanics.remove' | t: { name: card.name.trim() || ('public.listing.mechanics.row' | t: { n: n }) }"
+          (click)="drop(i)"
+        >
+          ×
+        </button>
+      </li>
+    }
+  </ul>
+}
+<button hlmBtn variant="secondary" type="button" class="add" [disabled]="full()" (click)="add()">
+  {{ 'public.listing.mechanics.add' | t }}
+</button>
+@if (full()) {
+  <p class="hint">{{ 'public.listing.mechanics.max' | t }}</p>
+}
