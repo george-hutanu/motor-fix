@@ -66,7 +66,6 @@ export const dropExpected = (observations) =>
       !((o.kind === "http" && o.status === o.expect && pathOf(o.url) === o.path) || (o.kind === "console" && String(o.text).includes(`status of ${o.expect}`))),
   );
 
-/** The refresh cookie the API sets at sign-in, for the web origin, which forwards /api/ to the API. */
 /** The cookies a context opens a run with: a fresh session of its role (refresh tokens rotate, so never shared), else none. */
 export async function contextCookies(run, { session, baseURL }) {
   if (!run.role) return [];
@@ -74,6 +73,16 @@ export async function contextCookies(run, { session, baseURL }) {
   return [sessionCookie({ refresh: await session(run.role), baseURL })];
 }
 
+// The QA flows' `signIn(context, role)`: the cookie a `path@role` route gets,
+// for a browser context the flow opened itself.
+export const flowSignIn =
+  ({ session, baseURL }) =>
+  async (context, role) => {
+    if (!role) throw new Error("signIn(context, role) needs a role, one of the seeded accounts'");
+    await context.addCookies(await contextCookies({ role }, { session, baseURL }));
+  };
+
+/** The refresh cookie the API sets at sign-in, for the web origin, which forwards /api/ to the API. */
 export const sessionCookie = ({ refresh, baseURL }) => ({
   name: "mf_refresh",
   value: refresh,

@@ -52,6 +52,7 @@ features:
   - 768-cloud-compose-pull
   - 845-archived-delta-adds
   - 706-packet-web-relap
+  - 854-precompact-pr-signal
   - 850-dispatch-test-timeouts
   - 499-trace-matrix-delta-ids
 ---
@@ -370,9 +371,9 @@ _From 600-merge-gate-symlink._
 
 _From 600-merge-gate-symlink._
 
-### 623-FR-001 — The hook MUST NOT write to `auto-run.md` when the active feature's `spec.md` has a `**Status**:` line whose value begins with `Archived`, and MUST exit 0.
+### 854-FR-001 — The hook MUST NOT read the spec's `**Status**:` line; 854-FR-002 and 854-FR-003 are the only conditions under which it skips the Compaction block for an active feature with an `auto-run.md`.
 
-_From 623-precompact-flush._
+_From 854-precompact-pr-signal._
 
 ### 623-FR-002 — The hook MUST still append its Compaction block for a feature whose status is not Archived.
 
@@ -1206,6 +1207,21 @@ _From 845-archived-delta-adds._
 
 _From 845-archived-delta-adds._
 
+### 854-FR-002 — The hook MUST exit 0 and leave `auto-run.md` unchanged when the current branch is not the feature's branch, that is when `branchFeatureDir(repo, branch)` does not name the active feature's directory; a detached HEAD counts as not on it.
+
+_From 854-precompact-pr-signal._
+
+### 854-FR-003 — The hook MUST exit 0 and leave `auto-run.md` unchanged when the feature branch's PR state reads `MERGED`, read with `gh pr view <branch> --json state` through `ghSync` (`.claude/scripts/lib/gh-rest.mjs`) with a fixed 3 s timeout.
+
+_From 854-precompact-pr-signal._
+
+### 854-FR-004 — Any failure to read the PR state (no `gh`, no PR for the branch, a timeout, unparsable output) MUST result in the block being written.
+
+_From 854-precompact-pr-signal._
+
+### 854-FR-005 — The hook MUST NOT read the PR state when 854-FR-002 already decided to skip.
+
+_From 854-precompact-pr-signal._
 ### 850-FR-001 — `dispatch.mjs` MUST read how many times it looks for the run from `PR_QA_POLL_TRIES` (a positive integer), defaulting to 36 when unset or invalid, in both the dispatched (laptop) and the pull_request (cloud) wait, and its "appeared within N s" message MUST use that count.
 
 _From 850-dispatch-test-timeouts._
@@ -1236,3 +1252,5 @@ _From 499-trace-matrix-delta-ids._
 - `673-FR-005` — superseded by `691-FR-005` (2026-10-07)
 
 - `698-FR-007` — superseded by `706-FR-008` (2026-10-07)
+
+- `623-FR-001` — superseded by `854-FR-001` (2026-10-07)

@@ -3494,9 +3494,51 @@
           "total"
         ]
       },
+      "BrandRefDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "BMW"
+          },
+          "slug": {
+            "type": "string",
+            "example": "bmw"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ]
+      },
       "ListedGarageDto": {
         "type": "object",
         "properties": {
+          "worksOn": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandRefDto"
+            }
+          },
+          "doesNotTake": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandRefDto"
+            }
+          },
+          "brandNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "refusalPhrase": {
+            "type": "string",
+            "nullable": true
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -3520,6 +3562,10 @@
           }
         },
         "required": [
+          "worksOn",
+          "doesNotTake",
+          "brandNote",
+          "refusalPhrase",
           "id",
           "name",
           "slug",
@@ -3690,28 +3736,6 @@
         },
         "required": [
           "brands"
-        ]
-      },
-      "BrandRefDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string",
-            "example": "BMW"
-          },
-          "slug": {
-            "type": "string",
-            "example": "bmw"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "slug"
         ]
       },
       "GarageBrandAnswerDto": {

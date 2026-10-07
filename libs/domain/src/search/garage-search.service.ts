@@ -7,6 +7,7 @@ import { isUUID } from 'class-validator';
 
 import { PRISMA } from '../auth/prisma';
 import { refusal } from '../auth/sign-up.service';
+import { brandAnswer } from '../garages/brand-answer';
 import { publicGarages } from '../garages/public-garages';
 import type { Prisma, PrismaClient } from '../generated/prisma/client';
 
@@ -128,9 +129,18 @@ export class GarageSearchService {
     const garages = await this.prisma.garage.findMany({
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
       select: {
-        brands: { select: { stance: true }, where: { brandId } },
+        brandNote: true,
+        brands: {
+          select: {
+            brand: {
+              select: { id: true, name: true, popularity: true, slug: true },
+            },
+            stance: true,
+          },
+        },
         id: true,
         name: true,
+        refusalPhrase: true,
         slug: true,
       },
       take: PAGE + 1 - already,
@@ -145,9 +155,11 @@ export class GarageSearchService {
         }),
       },
     });
-    return garages.map(({ brands, ...garage }) => ({
+    return garages.map(({ brandNote, brands, refusalPhrase, ...garage }) => ({
       ...garage,
-      stance: brands[0]?.stance ?? 'unstated',
+      stance:
+        brands.find((row) => row.brand.id === brandId)?.stance ?? 'unstated',
+      ...brandAnswer(brands, { brandNote, refusalPhrase }),
     }));
   }
 }

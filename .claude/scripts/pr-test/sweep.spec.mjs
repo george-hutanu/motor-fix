@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import { VIEWPORTS, contextCookies, dropExpected, loadProblem, matrix, openPage, parseRoute, sessionCookie, toFindings } from './sweep.mjs';
+import { VIEWPORTS, contextCookies, dropExpected, flowSignIn, loadProblem, matrix, openPage, parseRoute, sessionCookie, toFindings } from './sweep.mjs';
 
 describe('the sweep matrix', () => {
   it('visits every route at four viewports, two schemes and two languages', () => {
@@ -131,6 +131,32 @@ describe('route syntax: path[@role][:status]', () => {
     assert.deepEqual(await contextCookies({ role: null }, { session, baseURL }), []);
     assert.equal(asked.length, 2);
     await assert.rejects(contextCookies({ role: 'admin' }, { baseURL }), /no session for @admin/);
+  });
+});
+
+describe('signing in from a QA flow', () => {
+  const baseURL = 'http://127.0.0.1:4100';
+  const fakeContext = () => {
+    const added = [];
+    return { added, addCookies: async (cookies) => added.push(...cookies) };
+  };
+
+  it('adds the same refresh cookie the sweep sets for path@role, signed in afresh on each call', async () => {
+    const asked = [];
+    const signIn = flowSignIn({ session: async (role) => (asked.push(role), `r-${asked.length}`), baseURL });
+    const one = fakeContext();
+    const two = fakeContext();
+    await signIn(one, 'driver');
+    await signIn(two, 'mechanic');
+    assert.deepEqual(asked, ['driver', 'mechanic']);
+    assert.deepEqual(one.added, [sessionCookie({ refresh: 'r-1', baseURL })]);
+    assert.deepEqual(two.added, [sessionCookie({ refresh: 'r-2', baseURL })]);
+  });
+
+  it('refuses a call with no role, and a run with no session', async () => {
+    const signIn = flowSignIn({ session: async () => 'r', baseURL });
+    await assert.rejects(signIn(fakeContext()), /signIn\(context, role\) needs a role/);
+    await assert.rejects(flowSignIn({ baseURL })(fakeContext(), 'driver'), /no session for @driver/);
   });
 });
 
