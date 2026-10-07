@@ -622,6 +622,7 @@ describe('retrying', () => {
 
     expect(current.save.state()).toBe('invalid');
     expect(current.save.problem()).toBeNull();
+    expect(text('mf-task-error')).toBe('');
     expect(current.sent).toHaveLength(1);
   });
 
