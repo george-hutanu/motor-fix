@@ -13,7 +13,7 @@ The rule for which event kinds reach a garage owner, a receptionist or a mechani
 
 **Why this priority**: it is the finding itself. Today the hub holds its own receptionist exclusion list and its own mechanic right-to-kind pairs (`live.hub.ts:17-26`); the capability table lives elsewhere (`capabilities.ts:43-85`) and the two have already drifted: a receptionist hears reviews, profile changes and invites that the capability table says they may not read.
 
-**Independent Test**: a unit test for every kind family in the table, for each garage role, against a hub whose only role input is `capabilitiesOf()`; and a reading of the hub source that finds no role-named kind list apart from the one table.
+**Independent Test**: a unit test for every kind family in the table, for each garage role, against a hub whose only role input is `capabilitiesOf()`; and a unit test that every kind in the contract's list (plus `garage.settings_changed`) falls in at most one family of the table; that the hub holds no other role-named kind list is a review checklist item.
 
 **Acceptance Scenarios**:
 
@@ -50,7 +50,7 @@ A mechanic's stream through the garage channel is driven by the same table: a ki
 **Acceptance Scenarios**:
 
 1. **Given** a mechanic stream on `garage:{garageId}` with `can_answer_quotes`, **When** `request.created` or `message.sent` passes through, **Then** it is delivered; without the permission it is not.
-2. **Given** the same stream with `can_move_bookings`, **When** `booking.move_proposed` passes through, **Then** it is delivered; without the permission it is not.
+2. **Given** the same stream with `can_move_bookings`, **When** `booking.move_proposed` or `booking.moved` passes through, **Then** it is delivered; without the permission it is not.
 3. **Given** the same stream with every permission, **When** `quote.sent`, `booking.confirmed`, `review.posted` or `price_list.updated` passes through on the garage key only, **Then** it is not delivered.
 4. **Given** a mechanic stream that meets a `job.*` or `booking.*` event on its own `mechanic:{mechanicId}` key, **When** it passes through, **Then** it is delivered whatever the permissions, as today.
 
@@ -58,19 +58,29 @@ A mechanic's stream through the garage channel is driven by the same table: a ki
 
 ### Edge Cases
 
-- A kind that matches two families (none does today: the families are disjoint prefixes) needs every listed capability; the table is written so that no kind matches twice, and a test asserts the families are disjoint over the contract's kind list.
+- A kind needs exactly one capability: the families are disjoint prefixes, and a test asserts that every kind in `EVENT_KINDS` plus `garage.settings_changed` matches at most one family.
 - `garage.settings_changed` is named by the hub today but not by the contract's kind list; it stays in the feature-switches family so its behaviour (withheld from a receptionist) does not change should a story emit it.
 - A `media.*` kind of a garage that switched `live_media` off is still dropped for every staff stream before any role rule runs.
 - A receptionist stream that meets `review.posted` on both `garage:{garageId}` and `public:garage` still receives it through the public key: the role rule applies only to a stream that met the event on staff keys alone.
 - A mechanic whose permissions change: the garage access cache is dropped on `mechanic.updated` and re-read, so the next event is judged on the new capabilities, as today.
+
+## Clarifications
+
+### Session 2026-10-07
+
+- Q: Does the staff-membership check still come before the table for an owner and a receptionist? → A: Yes (254-FR-004); a removed receptionist hears nothing through the garage. (spec-challenger 1)
+- Q: Is a role-keyed default for unmapped kinds a "per-role list"? → A: No: the default (open for owner and receptionist, closed for a mechanic) is one policy flag, not a kind list; SC-002 forbids kind lists and right pairs only. (spec-challenger 2)
+- Q: A kind matching two families? → A: Cannot happen: one capability per kind, tested over `EVENT_KINDS` plus `garage.settings_changed`. (spec-challenger 3)
+- Q: Is `booking.move*` the prefix or the move proposal only? → A: The prefix, as today (`booking.moved`, `booking.move_lapsed`, `booking.move_refused` included); the mechanic stream is unchanged. (spec-challenger 4)
+- Q: Do invite kinds and a mechanic's review/profile kinds follow the table? → A: Yes: Notion's Security "Capabilities by role" (decided 2026-10-03) and ST-400 give a receptionist no team or invite right and no review or profile management; a mechanic holds neither capability, so neither reaches them through the garage, as today. (context.md)
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
 - **FR-001**: Whether an event kind reaches a garage-staff stream that met it only on `garage:{garageId}` MUST be derived from the connection role's capabilities (`capabilitiesOf(role, permissions)`, the one capability table) through one table mapping kind families to the capability needed to read them: `price_list.*` → `garage.prices`; `member.*`, `mechanic.*`, `invite.*` → `garage.team`; `garage.settings_changed`, `garage.features_changed` → `garage.feature_switches`; `garage.updated` → `garage.profile`; `review.*` → `garage.reviews`; `request.*`, `message.*` → `garage.requests`; `booking.move*` → `garage.schedule`. The hub MUST hold no other per-role list of kinds. (Modifies 254-FR-003.)
-- **FR-002**: For an owner or a receptionist, a kind in a mapped family MUST reach the stream only when the role holds that family's capability, and a kind in no family MUST reach it. In consequence the owner still receives every kind, and a receptionist no longer receives `review.*`, `garage.updated` or `invite.*`, on top of the `price_list.*`, `member.*`, `mechanic.*`, `garage.settings_changed` and `garage.features_changed` kinds already withheld.
-- **FR-003**: For a mechanic, a kind MUST reach the stream through the garage channel only when it is in a mapped family whose capability the mechanic holds through their permissions (`can_answer_quotes` → `request.*`, `message.*`; `can_move_bookings` → `booking.move*`), and a kind in no family MUST NOT; a kind met on the mechanic's own `mechanic:{mechanicId}` channel, the staff-membership check and the feature switches (254-FR-004, 254-FR-005) are unchanged.
+- **FR-002**: For an owner or a receptionist who is still that garage's staff in that role (254-FR-004, checked before the table), a kind in a mapped family MUST reach the stream only when the role holds that family's capability, and a kind in no family MUST reach it. In consequence the owner still receives every kind, and a receptionist no longer receives `review.*`, `garage.updated` or `invite.*`, on top of the `price_list.*`, `member.*`, `mechanic.*`, `garage.settings_changed` and `garage.features_changed` kinds already withheld.
+- **FR-003**: For a mechanic, a kind MUST reach the stream through the garage channel only when it is in a mapped family whose capability the mechanic holds through their permissions (`can_answer_quotes` → `request.*`, `message.*`; `can_move_bookings` → every kind starting `booking.move`, `booking.moved` included), and a kind in no family MUST NOT; a kind met on the mechanic's own `mechanic:{mechanicId}` channel, the staff-membership check and the feature switches (254-FR-004, 254-FR-005) are unchanged.
 
 ### Key Entities
 
@@ -82,7 +92,7 @@ A mechanic's stream through the garage channel is driven by the same table: a ki
 ### Measurable Outcomes
 
 - **SC-001**: Each kind family in FR-001, and one unmapped kind, is proved for each garage role (owner, receptionist, mechanic with and without the relevant permission) by a unit test; the existing hub suites keep passing with no changed assertion apart from the three receptionist kinds FR-002 now withholds.
-- **SC-002**: The hub's source holds exactly one kind-to-capability table and no role-named kind list or right-to-kind pair; the receptionist exclusion list and the mechanic right pairs are gone.
+- **SC-002**: The hub's source holds exactly one kind-to-capability table and no role-named kind list or right-to-kind pair (checked in review); the receptionist exclusion list and the mechanic right pairs are gone. A role-keyed default for unmapped kinds (open for owner and receptionist, closed for a mechanic) is a policy, not a kind list, and is allowed.
 - **SC-003**: No contract, API route, screen or client changes: the diff touches `libs/domain/src/events` and its tests only, apart from this feature's records.
 
 ## Spec Delta
