@@ -9,5 +9,33 @@
     "soon": "în curând",
     "thisMonth": "{sign}{n} luna asta",
     "unavailable": "Cifrele nu au putut fi citite"
+  },
+  "platformRules": {
+    "alwaysOn": "Mereu active în producție",
+    "line": "Regulile care se aplică tuturor service‑urilor",
+    "loadFailed": "Nu am putut încărca regulile",
+    "retry": "Reîncearcă",
+    "rule": {
+      "maintenance_mode": {
+        "meaning": "Site‑ul arată un mesaj de întrerupere.",
+        "name": "Mod mentenanță"
+      },
+      "reviews_only_after_confirmed_job": {
+        "meaning": "Service‑ul confirmă că mașina a fost la el.",
+        "name": "Recenzii doar după o lucrare confirmată"
+      },
+      "skip_manual_approval": {
+        "meaning": "Fiecare profil nou trece pe la un administrator.",
+        "name": "Aprobare manuală pentru service‑uri noi"
+      },
+      "skip_rar_check": {
+        "meaning": "Service‑urile fără document nu apar pe hartă.",
+        "name": "Autorizație RAR obligatorie"
+      }
+    },
+    "saveFailed": "Regula nu a putut fi salvată. Încearcă din nou.",
+    "testOnly": "Doar în testare",
+    "title": "Setări platformă",
+    "twoAdmins": "Este nevoie de un al doilea administrator."
   }
 }

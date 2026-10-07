@@ -10,6 +10,7 @@ features:
   - 582-live-toast-axe
   - 574-live-hub-capabilities
   - 586-live-e2e-typed-text
+  - 258-platform-rules-switches
 ---
 
 # Capability: Live updates
@@ -78,7 +79,7 @@ _From 253-live-connection._
 
 _From 256-live-in-place._
 
-### 254-FR-001 — The audience of an event MUST be worked out from its subject: request → the driver's `account:` and each recipient `garage:`; quote → the driver and the quoting garage; booking → the driver, the garage and the booking's `mechanic:` when it has one; job (with its media and live kinds) → the driver, the garage and the job's mechanic when it has one; review → the garage, the author, `public:garage` and `public:mechanic`; message → the driver and the garage; car and repair → the owner's account, plus the named garage for a shared repair; verification and documents → `admin` and the garage; platform rules and copy voices → `admin` and `system`; account → that `account:`.
+### 254-FR-001 — The audience of an event MUST be worked out from its subject: request → the driver's `account:` and each recipient `garage:`; quote → the driver and the quoting garage; booking → the driver, the garage and the booking's `mechanic:` when it has one; job (with its media and live kinds) → the driver, the garage and the job's mechanic when it has one; review → the garage, the author, `public:garage` and `public:mechanic`; message → the driver and the garage; car and repair → the owner's account, plus the named garage for a shared repair; verification and documents → `admin` and the garage; platform rules → `admin`, and `system` too only for `maintenance_mode` (258-FR-006); copy voices → `admin` and `system`; account → that `account:`.
 
 _From 254-live-audience._
 
@@ -289,6 +290,10 @@ _From 586-live-e2e-typed-text._
 ### 586-FR-004 — The change MUST be test-only: no product code, no new dialog, and the existing live checks (two dashboards, confirm dialog, isolation between drivers) stay as they are.
 
 _From 586-live-e2e-typed-text._
+
+### 258-FR-006 — The `platform_rule.changed` event MUST reach every open admin Setări view on the `admin` channel, and the view MUST re-read the rules and show the new state without a reload; only a change of `maintenance_mode` MUST also go out on the `system` channel to every connection.
+
+_From 258-platform-rules-switches._
 
 ## Retired
 

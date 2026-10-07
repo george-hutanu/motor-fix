@@ -89,6 +89,10 @@ export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerO
 export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
 export type { VerificationChecksControllerRecord$Params as VerificationChecksControllerRecord$Params } from './fn/admin/verification-checks-controller-record';
 export { verificationChecksControllerRecord as verificationChecksControllerRecord } from './fn/admin/verification-checks-controller-record';
+export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$Params } from './fn/admin/platform-rules-controller-list';
+export { platformRulesControllerList as platformRulesControllerList } from './fn/admin/platform-rules-controller-list';
+export type { PlatformRulesControllerChange$Params as PlatformRulesControllerChange$Params } from './fn/admin/platform-rules-controller-change';
+export { platformRulesControllerChange as platformRulesControllerChange } from './fn/admin/platform-rules-controller-change';
 export type { GarageBrandsControllerReplace$Params as GarageBrandsControllerReplace$Params } from './fn/garages/garage-brands-controller-replace';
 export { garageBrandsControllerReplace as garageBrandsControllerReplace } from './fn/garages/garage-brands-controller-replace';
 export type { GarageInvitesControllerSend$Params as GarageInvitesControllerSend$Params } from './fn/garages/garage-invites-controller-send';

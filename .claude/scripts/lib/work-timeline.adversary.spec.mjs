@@ -302,10 +302,19 @@ describe('When range', () => {
     await sync(n, 'implement', story({ started: iso(30) }));
     assert.deepEqual(rowWrite(n).properties.When, { date: { start: iso(30), end: '2026-10-07T12:00:00.000Z' } });
   });
-  it('a blocked row that already has Merged at ends at Merged at', async () => {
-    const n = notion({ rows: [row('Blocked', { started: iso(300), merged: iso(100) })] });
-    await sync(n, 'blocked', story({ started: iso(300), merged: iso(100) }));
-    assert.deepEqual(rowWrite(n).properties.When, { date: { start: iso(300), end: iso(100) } });
+  it('a step after finish ends at now plus two hours, not at the old Merged at', async () => {
+    for (const event of WRITING.filter((e) => e !== 'finish')) {
+      const n = notion({ rows: [row('Merged', { started: iso(300), merged: iso(100) })] });
+      await sync(n, event, story({ started: iso(300), merged: iso(100) }));
+      const when = { date: { start: iso(300), end: '2026-10-07T12:00:00.000Z' } };
+      assert.deepEqual(rowWrite(n).properties.When, when, `${event} row`);
+      assert.deepEqual(storyWrite(n).properties.Work, when, `${event} story`);
+    }
+  });
+  it('an old Merged at only on the row still leaves a blocked step open', async () => {
+    const n = notion({ rows: [row('Merged', { started: iso(300), merged: iso(100) })] });
+    await sync(n, 'blocked', story({ started: iso(300) }));
+    assert.deepEqual(rowWrite(n).properties.When, { date: { start: iso(300), end: '2026-10-07T12:00:00.000Z' } });
   });
   it('the story gets the same Work range as the row', async () => {
     const n = notion({ rows: [row('QA')] });

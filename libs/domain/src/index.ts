@@ -1,3 +1,4 @@
+export { PlatformRulesModule } from './admin/platform-rules.module';
 export { signAccessToken } from './auth/access-token';
 export { AccountsService } from './auth/accounts.service';
 export { CurrentActor, Public, Requires } from './auth/actor.guard';
