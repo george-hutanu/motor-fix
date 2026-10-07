@@ -49,4 +49,12 @@ describe('the watch schedule', () => {
     assert.doesNotMatch(bullet, /CronList|\* \* \* \*/);
     assert.match(bullet, /session:start:watch-reminder/);
   });
+
+  it('names the conflict and its merge-main fix, and the wait ends on one with exit 3', () => {
+    const tail = read('.claude/skills/speckit-auto/tail.md');
+    assert.match(skill, /`conflict`/);
+    assert.match(skill, /`merge-main`[^|]*\|[^|]*origin\/main/);
+    assert.match(tail, /exit 3[^.]*conflict/i);
+    assert.match(tail, /merge-main/);
+  });
 });

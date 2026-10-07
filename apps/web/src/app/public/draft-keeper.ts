@@ -1,5 +1,6 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import type { ListingDraftData } from '@motor-fix/contracts';
 import { EMAIL_PATTERN } from '@motor-fix/contracts/email';
 import { ListingDraftsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
@@ -21,6 +22,7 @@ import {
 
 type DraftView = 'form' | 'loading' | 'invalid' | 'sent';
 type EmailError = 'emailInvalid' | 'emailNeeded';
+type StepKey = keyof NonNullable<ListingDraftData['steps']>;
 interface DraftNote {
   key: string;
   params?: Record<string, number>;
@@ -115,11 +117,15 @@ export class DraftKeeper {
   type(email: string) {
     this.emailError.set(null);
     this.change({ email });
-    if (this.draft().draftId && !this.serverTimer)
-      this.serverTimer = setTimeout(() => {
-        this.serverTimer = undefined;
-        void this.save();
-      }, SERVER_SAVE_MS);
+    this.later();
+  }
+
+  // One step's section, shaped by that step's story; every save carries the
+  // whole data, so the section rides with the rest of the form.
+  section(step: StepKey, value: object) {
+    const data = this.draft().data as ListingDraftData;
+    this.change({ data: { ...data, steps: { ...data.steps, [step]: value } } });
+    this.later();
   }
 
   leaveEmail() {
@@ -334,7 +340,18 @@ export class DraftKeeper {
     this.serverEmail = draft.draftId ? draft.email : undefined;
   }
 
-  private change(patch: Partial<Pick<BrowserDraft, 'email' | 'step'>>) {
+  // The server copy at most every five seconds of changes.
+  private later() {
+    if (this.draft().draftId && !this.serverTimer)
+      this.serverTimer = setTimeout(() => {
+        this.serverTimer = undefined;
+        void this.save();
+      }, SERVER_SAVE_MS);
+  }
+
+  private change(
+    patch: Partial<Pick<BrowserDraft, 'data' | 'email' | 'step'>>,
+  ) {
     this.draft.update((draft) => changed(draft, patch, new Date()));
     clearTimeout(this.browserTimer);
     this.browserTimer = setTimeout(() => this.write(), BROWSER_SAVE_MS);

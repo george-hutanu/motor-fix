@@ -6,10 +6,11 @@ import { GarageBrandsService } from './garage-brands.service';
 import { AuditService } from '../audit/audit.service';
 import type { Actor } from '../auth/policy';
 import { serialDatabase } from '../auth/serial-db.testing';
+import { noEvents } from '../events/event.port';
 import { databaseUrl, fixtures } from '../notifications/notifications.testing';
 
 const { account, prisma } = fixtures();
-const brands = new GarageBrandsService(prisma, new AuditService());
+const brands = new GarageBrandsService(prisma, new AuditService(), noEvents);
 serialDatabase(databaseUrl);
 
 let since: Date;

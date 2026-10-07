@@ -7,6 +7,21 @@ const garage = 'g1';
 const mechanic = 'm1';
 
 describe('audienceOf', () => {
+  it("sends a garage's brand change to its staff, its public page and each changed brand's search", () => {
+    expect(
+      audienceOf({
+        brandIds: ['b1', 'b2'],
+        garageId: garage,
+        type: 'garage_brands',
+      }),
+    ).toEqual([
+      'garage:g1',
+      'public:garage:g1',
+      'public:search:b1',
+      'public:search:b2',
+    ]);
+  });
+
   it('sends a garage change to each garage it touches', () => {
     expect(audienceOf({ garageIds: ['g1', 'g2'], type: 'garage' })).toEqual([
       'garage:g1',
