@@ -38,6 +38,7 @@ export class BrandLoader {
       // The full list is a few hundred brands, each audited on its first load.
       { timeout: 60_000 },
     );
+    this.logger.log(`brands loaded: ${changed} changed`);
     if (changed > 0) {
       await this.redis.del(ACTIVE_BRANDS_KEY).catch((error: unknown) => {
         this.logger.warn(`brand cache not dropped: ${String(error)}`);

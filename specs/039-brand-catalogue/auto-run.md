@@ -44,3 +44,12 @@ artifact-lint: 0 errors, 0 warnings (Jev lane unavailable). 17/17 FRs tasked, 20
 ## Phase 9 — Tests (red-first)
 - Foundational first (T001–T004): `catalogue.prisma`, garages.prisma additions, migration `20261007090000_brand_catalogue` (drafted with `prisma migrate diff` against the worktree DB, CHECKs added by hand), applied to the worktree's own services (`scripts/test-services.ts`) and the client regenerated, so the specs fail on behaviour rather than on schema.
 - 7 spec files, 63 new tests: brands.spec.ts (13), brand-loader.integration.spec.ts (12), brands.dto.spec.ts (5), brands.api.integration.spec.ts (14), garage-brands.service.integration.spec.ts (18), main.spec.ts (+1), public-routes.integration.spec.ts (+`GET /api/v1/brands`). Red proven: `npx jest` on the six runnable files → 6/6 suites failed (5 on the missing modules, main.spec 1 failed / 6 pre-existing passed). Not committed at red.
+
+## Phase 10 — Implement (inline, opus)
+- before_implement: design check skipped (design.md current, checked 2026-10-07); Notion sync `implement`: ST-39 and its timeline row Planning → Implementing, PR #193 label `in development`; optional git commit hook skipped (red tests are held for the implementation slices). Checklists 0 unchecked, gate passed.
+- T001–T020 done. `CatalogueModule` is a plain module (the global AuthModule supplies PRISMA and AUTH_REDIS; the specs import it unregistered), not `register(auth)` as T009 worded it.
+- Two test defects fixed without loosening them: the garage-brands history read now keeps to `garage_brand`/`garage_brand_job` entries (the account fixture writes its own); main.spec checked the loader class with `objectContaining`, which never matches a function, and now reads its `name`.
+- Fuel fields kept in the brief's order (petrol, diesel, hybrid, electric) through one list, since Biome's key sorting would otherwise reorder the history entries.
+- Quickstart run against a booted API (worktree services): `brands loaded: 12 changed`, then `0 changed` on the second boot; `q=sko` and `q=ŠKODA` → Škoda; no q → 12, BMW first; random cursor → 400 `invalid_cursor`. Added the one boot log line quickstart named. `scripts/contract-check.sh`: exit 0.
+- Feature specs: 7 suites, 75 tests green (`jest` on the feature's files, worktree services). Commits 81c82ed6 feat(garages), 307b38b6 feat(catalogue), pushed; pre-commit typecheck/test/lint green on each.
+- Ticket re-read: the skill's Jira step does not apply (Notion is the tracker); phase 13 refreshes the Notion story.

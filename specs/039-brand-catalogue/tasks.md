@@ -96,7 +96,7 @@ None. No new dependency, project or tool; `libs/domain`, `libs/contracts` and `a
 
 ## Phase 6: Polish
 
-- [ ] T020 Run the checks in `specs/039-brand-catalogue/quickstart.md` and `scripts/contract-check.sh` so `apps/api/openapi.json` and `libs/data-access` are current (SC-001..SC-005; depends on T010, T017, T019)
+- [X] T020 Run the checks in `specs/039-brand-catalogue/quickstart.md` and `scripts/contract-check.sh` so `apps/api/openapi.json` and `libs/data-access` are current (SC-001..SC-005; depends on T010, T017, T019)
 
 ---
 

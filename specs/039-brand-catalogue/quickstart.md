@@ -11,7 +11,7 @@ npx prisma generate --config libs/domain/prisma.config.ts
 sh scripts/heavy.sh npx nx serve api
 ```
 
-Expected: the API logs the loader's result once at boot (`brands loaded: 12 created` on an empty database, `brands loaded: 0 changes` on the next boot) and then listens.
+Expected: the API logs the loader's result once at boot (`brands loaded: 12 changed` on an empty database, `brands loaded: 0 changed` on the next boot) and then listens.
 
 ## 2. Search as a visitor (no token)
 
