@@ -496,6 +496,7 @@ describe('an SMS that may have gone', () => {
       count.mockRestore();
       update.mockRestore();
     }
+    expect(calls).toBe(2);
     await drain(ana);
     expect(mock.sms()).toHaveLength(0);
     expect(await counter(ana, '2026-11')).toBeNull();
