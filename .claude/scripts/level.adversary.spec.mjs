@@ -544,15 +544,15 @@ describe('suggest --set only records a confident answer', () => {
   });
 });
 
-describe('a level_at without a zone is no waiting level, in both readers', () => {
+describe('a level_at only one reader would accept is no waiting level, in both readers', () => {
   const NOW = Date.parse('2026-10-06T20:19:13Z');
   const pyProbe = spawnSync('python3', ['--version']);
   const pyIt = pyProbe.status === 0 ? it : it.skip;
 
-  const jsPoint = (levelAt) =>
-    pointTo({ level: 3, level_for: 'next', level_at: levelAt }, 'specs/050-new', { now: NOW, env: {} });
+  const jsPoint = (levelAt, now = NOW) =>
+    pointTo({ level: 3, level_for: 'next', level_at: levelAt }, 'specs/050-new', { now, env: {} });
 
-  const pyPoint = (levelAt) => {
+  const pyPoint = (levelAt, now = NOW) => {
     const dir = mkdtempSync(join(tmpdir(), 'adv-zone-'));
     dirs.push(dir);
     mkdirSync(join(dir, '.specify'), { recursive: true });
@@ -561,7 +561,7 @@ describe('a level_at without a zone is no waiting level, in both readers', () =>
       'import sys, time, pathlib',
       `sys.path.insert(0, ${JSON.stringify(join(process.cwd(), '.specify/scripts/python'))})`,
       'import common',
-      `time.time = lambda: ${NOW / 1000}`,
+      `time.time = lambda: ${now / 1000}`,
       `common.persist_feature_json(pathlib.Path(${JSON.stringify(dir)}), 'specs/050-new')`,
     ].join('\n');
     const run = spawnSync('python3', ['-c', code], { encoding: 'utf8' });
@@ -583,6 +583,80 @@ describe('a level_at without a zone is no waiting level, in both readers', () =>
   for (const stamp of zoned) {
     pyIt(`JS and Python agree on ${JSON.stringify(stamp)}`, () => {
       assert.deepEqual(pyPoint(stamp), jsPoint(stamp));
+    });
+  }
+
+  // Five minutes after midnight: an hour-24 stamp of the day before would be fresh if read as midnight.
+  const AFTER_MIDNIGHT = Date.parse('2026-10-07T00:05:00Z');
+  const dropped = { feature_directory: 'specs/050-new' };
+  const kept = { feature_directory: 'specs/050-new', level: 3, level_for: 'specs/050-new' };
+  const refused = [
+    '2026-10-06T24:00Z',
+    '2026-10-06T24:00:00Z',
+    '2026-10-06T24:00:00.000Z',
+    '2026-10-07T00:04',
+    '2026-10-06T23:60Z',
+    '2026-10-06T23:59:60Z',
+    '2026-10-08T00:04+24:00',
+    '2026-10-08T00:04+23:60',
+    '2026-10-07T00:04Z\n',
+    '2026-10-06T24:00:00+02:00',
+    '2026-10-06T24:30:00.5-05:00',
+    '2026-10-06T25:00Z',
+    '2026-10-06T29:59:59Z',
+    '2026-10-06T30:00Z',
+    '2026-10-06T99:00Z',
+    '2026-10-06T24:00:00.999999Z',
+    '2026-10-06T24:59Z',
+    '2026-10-06T00:04-24:00',
+    '2026-10-06T\u0662\u0664:00Z',
+    '2026-10-06T24\u0660:00Z',
+  ];
+  for (const stamp of refused) {
+    it(`drops the level for ${JSON.stringify(stamp)} in JS`, () => {
+      assert.deepEqual(jsPoint(stamp, AFTER_MIDNIGHT), dropped);
+    });
+    pyIt(`drops the level for ${JSON.stringify(stamp)} in Python`, () => {
+      assert.deepEqual(pyPoint(stamp, AFTER_MIDNIGHT), dropped);
+    });
+  }
+
+  const accepted = [
+    '2026-10-06T23:59Z',
+    '2026-10-07T00:04Z',
+    '2026-10-07T00:04:30Z',
+    '2026-10-07T00:04:30.123Z',
+    '2026-10-07T00:04:30.123456Z',
+    '2026-10-07T02:04+02:00',
+    '2026-10-06T19:04:30-05:00',
+  ];
+  for (const stamp of accepted) {
+    it(`keeps the level for ${JSON.stringify(stamp)} in JS`, () => {
+      assert.deepEqual(jsPoint(stamp, AFTER_MIDNIGHT), kept);
+    });
+    pyIt(`keeps the level for ${JSON.stringify(stamp)} in Python`, () => {
+      assert.deepEqual(pyPoint(stamp, AFTER_MIDNIGHT), kept);
+    });
+  }
+
+  // Shapes neither reader is asked to accept: only that they agree.
+  const odd = [
+    '2026-10-06T24:00:00z',
+    '2026-10-06T24:00:00,5Z',
+    '2026-10-06 24:00:00Z',
+    ' 2026-10-06T24:00Z',
+    '2026-10-06T4:00Z',
+    '2026-10-06T23:59:59z',
+    '2026-10-07T00:04:30,5Z',
+    '2026-10-07T00:04:30 Z',
+    '2026-10-07 00:04:30Z',
+    '\u0662026-10-07T00:04Z',
+    '2026-10-07T00:04:30.Z',
+    '2026-10-07T00:04:30.1234567890Z',
+  ];
+  for (const stamp of odd) {
+    pyIt(`JS and Python agree on ${JSON.stringify(stamp)}`, () => {
+      assert.deepEqual(pyPoint(stamp, AFTER_MIDNIGHT), jsPoint(stamp, AFTER_MIDNIGHT));
     });
   }
 

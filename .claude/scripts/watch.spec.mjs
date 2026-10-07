@@ -303,6 +303,19 @@ describe('stale and the fix', () => {
     assert.equal(fixOf(row({ ...done, main: true, holder: 'owner' }), opts).fix, null);
   });
 
+  it('gives a merged worktree a grace period of the done threshold before removing it', () => {
+    assert.equal(DEFAULT_THRESHOLDS.done, 30);
+    assert.equal(parseStale(['done=5'], DEFAULT_THRESHOLDS).done, 5);
+    const merged = summarizePr(pr({ state: 'MERGED', headRefOid: 'abc' }));
+    const recent = fixOf(row({ phase: 'done', pr: merged, activity: { at: NOW - 5 * MIN, source: 'commit' } }), opts);
+    assert.equal(recent.verdict, 'done');
+    assert.equal(recent.fix, null);
+    assert.match(recent.reason, /quiet 5 of 30 min/);
+    assert.equal(fixOf(row({ phase: 'done', pr: merged, activity: { at: NOW - 120 * MIN, source: 'commit' } }), opts).fix, 'remove-worktree');
+    const now = fixOf(row({ phase: 'done', pr: merged, activity: { at: NOW - 1, source: 'commit' } }), { now: NOW, thresholds: parseStale(['done=0'], DEFAULT_THRESHOLDS) });
+    assert.equal(now.fix, 'remove-worktree');
+  });
+
   it('shows a worktree git cannot read as blocked, with no fix', () => {
     const r = fixOf(row({ gitFailed: true, activity: { at: 0, source: 'commit' } }), opts);
     assert.equal(r.verdict, 'blocked');
@@ -516,6 +529,7 @@ describe('--fix and claim', () => {
       quietCommit(dead, 120);
       git(f.repo, 'worktree', 'lock', '--reason', 'claude agent agent-dead (pid 999999 start Sun Oct  4 08:07:18 2026)', dead);
       const merged = f.add('agent-merged', '902-b');
+      quietCommit(merged, 120);
       const dirty = f.add('agent-dirty', '903-c');
       writeFileSync(join(dirty, 'wip.txt'), 'x\n');
       const gone = f.add('agent-gone', '904-d');
@@ -557,6 +571,24 @@ describe('--fix and claim', () => {
       const list = git(f.repo, 'worktree', 'list', '--porcelain');
       assert.ok(!list.includes('agent-dead-gone'), 'the dead agent\'s deleted worktree is pruned');
       assert.ok(list.includes('agent-held-gone'), 'the live agent\'s record is kept');
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps a merged worktree whose subagent is still finishing: a live-session lock holds it within the done threshold', () => {
+    const f = fixture();
+    try {
+      const done = f.add('agent-done', '908-done');
+      quietCommit(done, 5);
+      git(f.repo, 'worktree', 'lock', '--reason', 'claude agent agent-done (pid 4242 start Sun Oct  4 08:07:18 2026)', done);
+      const sha = git(done, 'rev-parse', 'HEAD');
+      const report = collect(f.repo, env({ alive: (pid) => pid === 4242, gh: () => [pr({ number: 8, headRefName: '908-done', state: 'MERGED', headRefOid: sha })] }));
+      const r = report.rows.find((x) => x.path === done);
+      assert.equal(r.holder, 'live');
+      assert.equal(r.fix, null);
+      applyFixes(f.repo, report);
+      assert.ok(existsSync(done));
     } finally {
       rmSync(f.root, { recursive: true, force: true });
     }
@@ -994,10 +1026,26 @@ describe('--gate', () => {
     }
   });
 
+  it('stays silent for a just-merged clean worktree inside its grace period', () => {
+    const f = fixture();
+    try {
+      const done = f.add('agent-done', '903-b');
+      quietCommit(done, 5);
+      const sha = git(done, 'rev-parse', 'HEAD');
+      const io = captured();
+      const code = main(['--gate'], { cwd: f.repo, ...env({ gh: () => [pr({ number: 23, headRefName: '903-b', state: 'MERGED', headRefOid: sha })] }) });
+      assert.equal(code, 0, io.out.join('\n'));
+      assert.ok(!io.out.some((l) => l.includes(done)), io.out.join('\n'));
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
   it('fires on a finished clean worktree to remove, and keeps it', () => {
     const f = fixture();
     try {
       const done = f.add('agent-done', '902-b');
+      quietCommit(done, 120);
       const sha = git(done, 'rev-parse', 'HEAD');
       const io = captured();
       const code = main(['--gate'], { cwd: f.repo, ...env({ gh: () => [pr({ number: 22, headRefName: '902-b', state: 'MERGED', headRefOid: sha })] }) });

@@ -150,8 +150,9 @@ def _pending_ttl_minutes() -> float:
 
 
 # The stamp shape pendingLevel in .claude/scripts/lib/feature.mjs also reads:
-# a zone is required, since JS reads a zone-less stamp as local time.
-_LEVEL_AT = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(?::[0-9]{2}(?:\.[0-9]{3}|\.[0-9]{6})?)?(?:Z|[+-][0-9]{2}:[0-9]{2})")
+# a zone is required, since JS reads a zone-less stamp as local time, and the
+# hour stops at 23, since JS reads 24:00 as the next midnight.
+_LEVEL_AT = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T(?:[01][0-9]|2[0-3]):[0-9]{2}(?::[0-9]{2}(?:\.[0-9]{3}|\.[0-9]{6})?)?(?:Z|[+-][0-9]{2}:[0-9]{2})")
 
 
 def _pending_level(data: dict, now: float) -> int | None:
