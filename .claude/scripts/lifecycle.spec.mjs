@@ -462,7 +462,7 @@ describe('merge', () => {
     const result = step(['merge'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
     const calls = ofTool(h.calls).filter((c) => !c.startsWith('git rev-parse'));
-    assert.equal(calls[0], 'gh pr view --json number,state,url');
+    assert.equal(calls[0], 'gh pr view --json number,state,url,title');
     assert.equal(calls[1], 'gh pr merge 141 --merge');
     assert.equal(calls[2], 'gh pr view 141 --json mergeCommit --jq .mergeCommit.oid');
     assert.equal(calls[3], `node .claude/scripts/notion-sync.mjs finish --pr 141 --body-file ${join(featureDir, 'finish-comment.md')} --story ST-696`);
@@ -492,7 +492,7 @@ describe('merge', () => {
     assert.equal(result.stopped, 'gate: gh pr merge 141 --merge');
     assert.equal(result.fix, message);
     assert.ok(!h.calls.some((c) => c.startsWith('gh pr merge')));
-    assert.equal(h.calls.at(-1), 'gh pr view --json number,state,url');
+    assert.equal(h.calls.at(-1), 'gh pr view --json number,state,url,title');
     assert.equal(existsSync(join(featureDir, 'handoff.md')), true);
   });
 
@@ -876,5 +876,121 @@ describe('in a cloud session, where GitHub answers GraphQL with 403', () => {
     step(['open', '--title', TITLE], h.io);
     assert.ok(h.calls.some((c) => c.startsWith('gh pr create --draft')));
     assert.ok(!h.calls.some((c) => c.startsWith('gh api')));
+  });
+});
+
+// #244: ST-660 built on branch 854-precompact-pr-signal finished ST-854 in Notion.
+describe('the story: --story, the PR title, feature.json, then the folder number', () => {
+  const OTHER = '854-precompact-pr-signal';
+  const T660 = 'fix(harness): ST-660 precompact PR signal';
+  const state = () => JSON.parse(readFileSync(join(repo, '.specify', 'feature.json'), 'utf8'));
+  const view = (title, state = 'OPEN') => ['gh pr view --json number,state,url,title', { stdout: JSON.stringify({ number: 244, state, url: PR_URL, title }) }];
+  const readyView = (title) => [`gh pr view ${OTHER} --json number,title,isDraft,url`, { stdout: JSON.stringify({ number: 244, title, isDraft: true, url: PR_URL }) }];
+  const diff = ['git -C specs diff -U0 --', { stdout: '' }];
+  const sideEffects = (calls) => calls.filter((c) => /^(git push|git commit|gh pr merge|gh pr ready|gh pr edit|gh pr create|node \.claude\/scripts\/(notion-sync|specs-repo)\.mjs)/.test(c));
+
+  beforeEach(() => {
+    fixture();
+    mkdirSync(join(repo, 'specs', OTHER), { recursive: true });
+    writeFileSync(join(repo, 'specs', OTHER, 'spec.md'), '# Spec\n');
+    writeFileSync(join(repo, '.specify', 'feature.json'), JSON.stringify({ level: 1, level_for: `specs/${OTHER}`, feature_directory: `specs/${OTHER}` }));
+  });
+
+  // @traces 891-FR-001 891-FR-002 891-FR-005
+  it('merge finishes the story the PR title names, not the folder number, and never says ST-854', () => {
+    const h = harness({ branch: OTHER, answers: [diff, view(T660), ['gh pr view 244 --json mergeCommit', { stdout: 'feed1234beef\n' }]] });
+    const result = step(['merge'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(h.calls.find((c) => !c.startsWith('git rev-parse') && !c.startsWith('gh auth')), 'gh pr view --json number,state,url,title');
+    assert.ok(h.calls.includes('node .claude/scripts/notion-sync.mjs finish --pr 244 --no-comment --story ST-660'), h.calls.join('\n'));
+    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-660 finish -- ${OTHER}/notion-sync.md`), h.calls.join('\n'));
+    assert.ok(!h.calls.some((c) => c.includes('ST-854')), h.calls.join('\n'));
+  });
+
+  // @traces 891-FR-001 891-FR-005
+  it('falls back to the folder number, with no refusal, when no other source names a story', () => {
+    const h = harness({ branch: OTHER, answers: [diff, view('chore(harness): a title without a story')] });
+    const result = step(['merge', '--notion-done'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-854 finish -- ${OTHER}/notion-sync.md`), h.calls.join('\n'));
+  });
+
+  // @traces 891-FR-001 891-FR-002
+  it('reads the title over REST in a cloud session', () => {
+    const rest = ['gh api repos/{owner}/{repo}/pulls/244 --jq', { stdout: `${JSON.stringify({ number: 244, state: 'MERGED', merge_commit_sha: 'feed1234beef', title: T660 })}\n` }];
+    const h = harness({ branch: OTHER, env: { GH_TOKEN: 'proxy-injected', CLAUDE_CODE_REMOTE: 'true' }, answers: [diff, rest, ['gh api -X POST', {}]] });
+    const result = step(['merge', '--pr', '244'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.match(h.calls.find((c) => c.startsWith('gh api repos/{owner}/{repo}/pulls/244 --jq')), /title/);
+    assert.ok(h.calls.includes('node .claude/scripts/notion-sync.mjs finish --pr 244 --no-comment --story ST-660'), h.calls.join('\n'));
+  });
+
+  // @traces 891-FR-004 891-FR-005
+  it('open --story records the story for this feature, keeping the other keys, and a later merge reads it back', () => {
+    const o = harness({ branch: OTHER, answers: [['git rev-list', { stdout: '1\n' }], ['gh pr list', { stdout: '244\n' }]] });
+    const opened = step(['open', '--title', 'fix(harness): precompact PR signal', '--story', 'ST-660'], o.io);
+    assert.equal(opened.ok, true, JSON.stringify(opened));
+    assert.ok(o.calls.includes('node .claude/scripts/notion-sync.mjs start --pr 244 --story ST-660'), o.calls.join('\n'));
+    assert.deepEqual(state(), { level: 1, level_for: `specs/${OTHER}`, feature_directory: `specs/${OTHER}`, story: 'ST-660', story_for: `specs/${OTHER}` });
+    const m = harness({ branch: OTHER, answers: [diff, view('fix(harness): precompact PR signal')] });
+    const merged = step(['merge', '--notion-done'], m.io);
+    assert.equal(merged.ok, true, JSON.stringify(merged));
+    assert.ok(m.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-660 finish -- ${OTHER}/notion-sync.md`), m.calls.join('\n'));
+  });
+
+  // @traces 891-FR-001 891-FR-004 891-FR-005
+  it('ignores a recorded story whose story_for names another feature', () => {
+    writeFileSync(join(repo, '.specify', 'feature.json'), JSON.stringify({ feature_directory: `specs/${OTHER}`, story: 'ST-661', story_for: `specs/${FEATURE}` }));
+    const h = harness({ branch: OTHER, answers: [diff, view(T660)] });
+    const result = step(['merge', '--notion-done'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-660 finish -- ${OTHER}/notion-sync.md`), h.calls.join('\n'));
+  });
+
+  // @traces 891-FR-002 891-FR-003 891-FR-005
+  it('merge refuses --story against a title that names another story, before the merge and with feature.json untouched', () => {
+    const before = readFileSync(join(repo, '.specify', 'feature.json'), 'utf8');
+    const h = harness({ branch: OTHER, answers: [view('fix(harness): ST-661 something else')] });
+    const result = step(['merge', '--story', 'ST-660'], h.io);
+    assert.equal(result.ok, false);
+    assert.equal(result.stopped, 'story');
+    assert.match(result.fix, /--story ST-660/);
+    assert.match(result.fix, /title ST-661/);
+    assert.deepEqual(sideEffects(h.calls), []);
+    assert.equal(readFileSync(join(repo, '.specify', 'feature.json'), 'utf8'), before);
+  });
+
+  // @traces 891-FR-003 891-FR-005
+  it('ready refuses a recorded story against a title that names another, before anything is published', () => {
+    writeFileSync(join(repo, '.specify', 'feature.json'), JSON.stringify({ feature_directory: `specs/${OTHER}`, story: 'ST-661', story_for: `specs/${OTHER}` }));
+    const body = join(repo, 'body.md');
+    writeFileSync(body, '## Why\n\nfilled\n');
+    const h = harness({ branch: OTHER, answers: [readyView(T660)] });
+    const result = step(['ready', '--body-file', body], h.io);
+    assert.equal(result.ok, false);
+    assert.equal(result.stopped, 'story');
+    assert.match(result.fix, /feature\.json ST-661/);
+    assert.match(result.fix, /title ST-660/);
+    assert.deepEqual(sideEffects(h.calls), []);
+    assert.ok(!h.calls.some((c) => c.startsWith('node .claude/scripts/level.mjs')), h.calls.join('\n'));
+  });
+
+  // @traces 891-FR-003
+  it('compares stories by number, so ST-0660 and ST-660 agree', () => {
+    const h = harness({ branch: OTHER, answers: [diff, view(T660)] });
+    const result = step(['merge', '--story', 'ST-0660', '--notion-done'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-660 finish -- ${OTHER}/notion-sync.md`), h.calls.join('\n'));
+  });
+
+  // @traces 891-FR-004 891-FR-005
+  it('a malformed --story is a usage error before any git or gh call, and handoff takes none', () => {
+    for (const argv of [['merge', '--story', '660'], ['ready', '--body-file', 'b.md', '--story', 'st-660'], ['handoff', '--story', 'ST-660']]) {
+      const h = harness({ branch: OTHER });
+      const result = step(argv, h.io);
+      assert.equal(result.ok, false, argv.join(' '));
+      assert.equal(result.stopped, 'usage', argv.join(' '));
+      assert.deepEqual(h.calls, [], argv.join(' '));
+    }
   });
 });
