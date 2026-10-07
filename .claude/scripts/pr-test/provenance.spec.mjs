@@ -85,8 +85,18 @@ describe('agent-review provenance — the tester verdict in the PR reviews', () 
     assert.equal(testerVerdict([review(SHA, 'Verdict: failure (x)', 'User', undefined, 'CONTRIBUTOR')], SHA), null);
   });
 
-  it('ignores reviews of other commits, other comments, and any written by a bot', () => {
-    assert.equal(testerVerdict([review('c'.repeat(40), 'Verdict: failure (x)'), review(SHA, 'Looks fine'), review(SHA, 'Verdict: success (x)', 'Bot')], SHA), null);
+  it("ignores reviews of other commits, other comments, and a bot's passing verdict", () => {
+    assert.equal(testerVerdict([review('c'.repeat(40), 'Verdict: failure (x)'), review(SHA, 'Looks fine'), review(SHA, 'Verdict: success (x)', 'Bot', undefined, 'NONE')], SHA), null);
+  });
+
+  // A cloud session's proxy may post the tester's review as an app (type Bot),
+  // and that review is the only place a cloud lap's blocking verdict lives.
+  it("counts a bot's failing verdict, which only the owner's newer verdict clears", () => {
+    const cloud = review(SHA, 'Verdict: failure (agent-review on aaaaaaa, lap 1)', 'Bot', '2026-10-07T09:00:00Z', 'NONE');
+    assert.equal(testerVerdict([cloud], SHA), 'failure');
+    assert.equal(testerVerdict([cloud, review(SHA, 'Verdict: success (x)', 'Bot', '2026-10-07T10:00:00Z', 'NONE')], SHA), 'failure');
+    assert.equal(testerVerdict([cloud, review(SHA, 'Verdict: success (lap 2)', 'User', '2026-10-07T10:00:00Z')], SHA), 'success');
+    assert.equal(testerVerdict([review(SHA, 'Verdict: success (lap 2)', 'User', '2026-10-07T08:00:00Z'), cloud], SHA), 'failure');
   });
 });
 
