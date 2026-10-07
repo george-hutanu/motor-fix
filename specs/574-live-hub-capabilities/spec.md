@@ -59,6 +59,7 @@ A mechanic's stream through the garage channel is driven by the same table: a ki
 ### Edge Cases
 
 - A kind needs exactly one capability: the families are disjoint prefixes, and a test asserts that every kind in `EVENT_KINDS` plus `garage.settings_changed` matches at most one family.
+- No family may name `garage.own_jobs` or `garage.audit_history`, which every mechanic holds: the disjointness test also rejects such a family, so the garage channel never opens to every mechanic.
 - `garage.settings_changed` is named by the hub today but not by the contract's kind list; it stays in the feature-switches family so its behaviour (withheld from a receptionist) does not change should a story emit it.
 - A `media.*` kind of a garage that switched `live_media` off is still dropped for every staff stream before any role rule runs.
 - A receptionist stream that meets `review.posted` on both `garage:{garageId}` and `public:garage` still receives it through the public key: the role rule applies only to a stream that met the event on staff keys alone.
@@ -85,6 +86,7 @@ A mechanic's stream through the garage channel is driven by the same table: a ki
 ### Key Entities
 
 - **Kind family**: a prefix or exact name over event kinds (`review.*`, `garage.updated`), paired with the one capability needed to read it.
+- **Owner**: the `garage` role in `capabilitiesOf()` and the hub; this spec says owner for it.
 - **Garage capability**: a row of the Security page's "Capabilities by role" for a garage role; the owner holds all, the receptionist a fixed subset, the mechanic a subset grown by their permissions.
 
 ## Success Criteria *(mandatory)*
@@ -109,6 +111,6 @@ A mechanic's stream through the garage channel is driven by the same table: a ki
 - (autonomous default) The kind-to-capability map is the one in FR-001, read off the current hub rules (`live.hub.ts:17-26`) and the capability table (`capabilities.ts:43-85`): every kind the hub names today keeps the capability its area implies, and the three kinds the receptionist loses (`review.*`, `garage.updated`, `invite.*`) are the only behaviour change, as the task states.
 - (autonomous default) `garage.updated` is the profile kind: the contract (`libs/contracts/src/events.ts`) lists `garage.updated` and no `garage.profile_changed`.
 - (autonomous default) `garage.settings_changed` stays in the table although the contract's kind list does not carry it: the hub names it today and removing it would be a change the task does not ask for.
-- (autonomous default) An unmapped kind reaches an owner and a receptionist and not a mechanic through the garage: this is today's behaviour (254-FR-003: owner everything, receptionist all but the exclusion list, mechanic nothing else), kept so that only the derivation changes.
+- (autonomous default) Kinds in no family include `garage.messaged`, `garage.reported`, `garage.warned` and `garage.slots_changed`. An unmapped kind reaches an owner and a receptionist and not a mechanic through the garage: this is today's behaviour (254-FR-003: owner everything, receptionist all but the exclusion list, mechanic nothing else), kept so that only the derivation changes.
 - (autonomous default) The mechanic's `can_record_final_price` → `garage.final_price` row maps to no kind family: no kind of that area reaches a mechanic through the garage today, and the task names none.
 - (autonomous default) No web change: the receptionist dashboard reacts to a kind it no longer receives by not reacting; nothing on the client lists the kinds a role expects.

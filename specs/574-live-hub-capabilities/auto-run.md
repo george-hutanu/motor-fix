@@ -24,3 +24,6 @@ ST-574 (tech debt from ST-254): derive the live hub's garage-channel kind rules 
 
 ## Phase 5 — plan
 - fable: success. plan.md only (no research/data-model/contracts/quickstart: no unknowns, no entity, no API change). KIND_CAPABILITY table replaces HIDDEN_FROM_RECEPTIONIST + MECHANIC_RIGHTS; mechanic uses plain membership in capabilitiesOf (no family maps to own_jobs/audit_history; the disjointness test guards it). Hooks: git commit done; agent-context update skipped (nothing managed to refresh). Constitution check all pass.
+
+## Phase 6 — checklist
+- sonnet: success. checklists/authorization.md, 10 items, all checked; 3 spec edits (unmapped garage kinds listed, owner = `garage` role, no family on own_jobs/audit_history).
