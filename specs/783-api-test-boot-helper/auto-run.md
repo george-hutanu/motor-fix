@@ -29,3 +29,10 @@ Start: origin/main 0ea7890a (worktree `.worktrees/783-api-test-boot-helper`, bra
 - Q4 suites keep their own seed/restores? → yes; they never close app/store/turn themselves.
 - Q5 first close throws? → every close attempted, turn released in finally, first error rethrown; spec fails stages with jest.spyOn.
 - level check: 2 unchanged.
+
+## Phase 5 — Plan
+- before_plan hooks: design check `design.md current` (no screens, kept as written); git auto-commit: nothing outstanding.
+- Technical Context from package.json, apps/api/{jest.config.cts,project.json,tsconfig.app.json,tsconfig.spec.json}, jest.preset.cjs, scripts/mutation.ts (research.md R8).
+- Decisions (research.md R1–R7): `apps/api/src/api-boot.testing.ts`, factory `apiBoot()` → `{ start(), stop() }`; `*.testing.ts` excluded from tsconfig.app and included in tsconfig.spec as libs/domain does; Biome unchanged; no mutation exclusion (`ignoreStatic` drops the factory body, `scripts/mutation.spec.ts:68` pins the shared globs; one likely survivor `bufferLogs`); helper spec is `api-boot.testing.integration.spec.ts`, stages failed through `jest.spyOn` on `S3TestStore.prototype`, `Test.createTestingModule`, `NestApplication.prototype.{init,close}`; `stop()` keeps the first rejection, releases the turn in a `finally`, rethrows; bootstrap suite: `afterAll` try/finally only.
+- Constitution Check: all gates pass, Complexity Tracking empty. Artifacts: plan.md, research.md, data-model.md, quickstart.md; no contracts/ (FR-006).
+- after_plan hooks: agent-context refreshed (CLAUDE.local.md pointer, one-line form kept for the context ratchet); commit `docs(specs): ST-783 plan the shared apps/api boot handle`, pushed.
