@@ -55,6 +55,7 @@ features:
   - 854-precompact-pr-signal
   - 850-dispatch-test-timeouts
   - 499-trace-matrix-delta-ids
+  - 884-railway-egress
 ---
 
 # Capability: Platform
@@ -1229,6 +1230,42 @@ _From 850-dispatch-test-timeouts._
 ### 499-FR-001 — `trace-matrix.mjs` MUST collect a feature's requirements only from plain `FR-XXX` ids in its spec.md, never from an id prefixed by a number and a hyphen (`NNN-FR-XXX`, or a shorter ST id such as `81-`).
 
 _From 499-trace-matrix-delta-ids._
+
+### 884-FR-001 — The web server MUST compress its own responses — the static files it serves (scripts, stylesheets, fonts) and the server-rendered HTML — for a client whose `Accept-Encoding` includes an encoding the server produces (gzip at least), MUST name the encoding and carry `Vary: Accept-Encoding` on the response and MUST send the uncompressed bytes to a client that accepts none. The one-year public cache header on content-hashed static files MUST stay as it is today.
+
+_From 884-railway-egress._
+
+### 884-FR-002 — Compression MUST NOT apply to the `/api/` proxy: a server-sent event stream relayed through the web server MUST reach the browser as the API sends it, unbuffered and with the API's own headers, and a proxied answer MUST NOT be re-encoded by the web server.
+
+_From 884-railway-egress._
+
+### 884-FR-003 — No compressed response MUST be larger than its raw body (already compressed types are passed through), and a `304 Not Modified` answer MUST stay bodiless.
+
+_From 884-railway-egress._
+
+### 884-FR-004 — When the end-to-end suite targets a deployed address (`BASE_URL` set), each worker MUST fetch each content-hashed asset of the deployment (`<name>-<8 letters or digits>.js|css|woff2`) from the deployment and, once a successful answer is cached, MUST answer later requests for it within that worker and that run from memory with the deployment's status, `content-type` and decoded body (no `content-encoding`, `content-length` or `transfer-encoding` replayed).
+
+_From 884-railway-egress._
+
+### 884-FR-005 — Only successful answers to hashed-asset requests MUST be cached; pages, API calls, uploads and any resource without a content hash MUST reach the deployment as today, and a test's own route stubs MUST take precedence over the cache.
+
+_From 884-railway-egress._
+
+### 884-FR-006 — The suite run with no deployed address (local and PR CI) MUST be unchanged: same tests, same workers, same retry and flake rules, no cache.
+
+_From 884-railway-egress._
+
+### 884-FR-007 — Every test that ran against staging before this change MUST still run there; the change MUST NOT drop, skip or filter any test.
+
+_From 884-railway-egress._
+
+### 884-FR-008 — The pull request MUST state the before figures (GB per staging end-to-end run and GB/day, with the measurement window) and the projected after figures with their arithmetic; the finish on the merged PR and the Notion story MUST record the GB sent by staging `web` during the first completed staging E2E run whose deployed digest includes the merge (read from Railway's metrics API at the finish, values never printed) and the resulting GB/day, or say "not measured" when it cannot be read.
+
+_From 884-railway-egress._
+
+### 884-FR-009 — The compression behaviour (FR-001 to FR-003) and the asset cache (FR-004 to FR-006) MUST each have failing-first automated tests beside the code they exercise, in line with Constitution II.
+
+_From 884-railway-egress._
 
 ## Retired
 
