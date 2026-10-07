@@ -8,13 +8,15 @@ No agent is alive while CI and the QA run work. The session that receives
 `NEXT: tail #<n> after QA run <id>` (the orchestrating one, or the owner's own
 session for a story run there) starts one background command
 (`run_in_background`) that ends when both have finished and prints only what
-did not pass:
+did not pass, then `QA run: <conclusion>`:
 
 ```bash
-gh pr checks <n> --watch >/dev/null 2>&1; gh run watch <id> >/dev/null 2>&1
-gh pr checks <n> --json name,bucket --jq '.[] | select(.bucket != "pass" and .bucket != "skipping") | "\(.name): \(.bucket)"'
-gh run view <id> --json conclusion -q '"QA run: \(.conclusion)"'
+node .claude/scripts/pr-test/ci-wait.mjs <n> --run <id>
 ```
+
+It keeps waiting while the head has no checks yet, as it has for a few
+seconds after every push (`gh pr checks --watch` would end there at once);
+exit 1, no checks after 10 minutes, is the Hard Stop below.
 
 When it reports, `node .claude/scripts/watch.mjs claim <worktree> tail` and
 dispatch the tail (below). Should the session end first, the watcher holds
@@ -48,7 +50,9 @@ never waits on either: a lap that needs a new run dispatches it and ends.
    re-run `typecheck`, `lint` and the tests, and push: the new head needs a
    new run (step 3's "no run" case).
 2. Read CI: `gh pr checks <n> --json name,bucket --jq '.[] | select(.bucket != "pass" and .bucket != "skipping") | "\(.name): \(.bucket)"'`
-   lists what did not pass (`agent-review` aside). For a failing check read
+   lists what did not pass (`agent-review` aside). A pending check means CI
+   has not finished: the tail does not wait on it, and ends with
+   `NEXT: tail #<n> after QA run <id>` for the session's wait. For a failing check read
    `gh run view <run-id> --log-failed | tail -n 80`, not the whole log. A
    failing check is a repair, fixed as step 3's failing lap is.
 3. **QA — the PR tester** (`/speckit-pr-test <n>`, Constitution VII) on the
