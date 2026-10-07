@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-06
+updated: 2026-10-07
 features:
   - 194-email-sending
   - 195-message-templates
@@ -15,6 +15,7 @@ features:
   - 522-email-sent-once
   - 539-public-web-url-boot
   - 780-one-public-web-url-parser
+  - 778-mark-sent-retry-no-delay
 ---
 
 # Capability: Notifications
@@ -422,6 +423,14 @@ _From 780-one-public-web-url-parser._
 ### 780-FR-002 — A `PUBLIC_WEB_URL` that is unset, empty or not an absolute URL MUST leave the e-mail settings without an address and MUST NOT stop the api or the worker from loading their configuration.
 
 _From 780-one-public-web-url-parser._
+
+### 778-FR-001 — The processor MUST retry a failed mark-sent write (522-FR-001) immediately, with no wait between the 3 tries.
+
+_From 778-mark-sent-retry-no-delay._
+
+### 778-FR-002 — A push the push service accepted MUST follow 522-FR-001: a failed first mark-sent write does not fail the job, the message is not sent again, and the row ends `sent`.
+
+_From 778-mark-sent-retry-no-delay._
 
 ## Retired
 

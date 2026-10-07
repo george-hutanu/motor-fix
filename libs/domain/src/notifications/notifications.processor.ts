@@ -491,10 +491,7 @@ export class NotificationsProcessor {
         ]);
         return;
       } catch (error) {
-        if (attempt < SENT_WRITES) {
-          await new Promise((resolve) => setTimeout(resolve, 200 * attempt));
-          continue;
-        }
+        if (attempt < SENT_WRITES) continue;
         this.logger.error(
           `notification ${ids.join(', ')} sent as ${messageId ?? 'push'} but not recorded: ${String(error)}`,
         );
