@@ -75,7 +75,9 @@ signed in: `await signIn(context, 'driver')` on a fresh browser context, before
 its first page, gives it a new session of that role's seeded account, as the
 sweep does for `path@role`. The dashboard toast is one such flow: sign in as
 the driver, open `/app/driver`, click "Retrimite" on the e-mail banner and
-check the toast. Call the changed API endpoints with
+check the toast. Open every context with `serviceWorkers: 'block'`, as
+`apps/web-e2e` does: the production build registers ngsw, whose requests no
+`route` stub sees. Call the changed API endpoints with
 `fetch(apiURL + path)` — valid input, then invalid input — and check the status
 codes and shapes the spec and `apps/api/openapi.json` promise. The run itself
 already calls every changed API operation once (any method, path parameters
