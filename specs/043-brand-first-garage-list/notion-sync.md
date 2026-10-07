@@ -10,3 +10,6 @@
 - 2026-10-07 · implement · timeline · Planning → Implementing
 - 2026-10-07 · labels · PR #198 · in development
 - 2026-10-07 · debt · ST-43 · deferred.md line 2 → https://app.notion.com/p/Tech-debt-ST-43-No-index-on-garage-name-the-brand-first-list-orders-and-pages-by-name-then-id--3f2607bff0d281f2bdfdd21f1ff72852
+- 2026-10-07 · qa · ST-43 · Implementing → QA
+- 2026-10-07 · qa · timeline · Implementing → QA
+- 2026-10-07 · labels · PR #198 · QA
