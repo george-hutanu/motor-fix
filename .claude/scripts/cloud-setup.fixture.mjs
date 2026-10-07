@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 // scripts/cloud-setup.sh is the setup script of a Claude Code cloud
 // environment. It cannot be run on a real cloud VM from here, so every tool it
 // calls is a stub on PATH that logs its call and keeps its state in files.
-// Both cloud-setup spec files build their VM here; call `cleanup` afterEach.
+// Every cloud-setup spec file builds its VM here; call `cleanup` afterEach.
 
 const script = fileURLToPath(new URL('../../scripts/cloud-setup.sh', import.meta.url));
 const dirs = [];
