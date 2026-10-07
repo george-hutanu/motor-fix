@@ -51,6 +51,7 @@ features:
   - 849-work-timeline-row
   - 768-cloud-compose-pull
   - 845-archived-delta-adds
+  - 499-trace-matrix-delta-ids
 ---
 
 # Capability: Platform
@@ -1202,6 +1203,10 @@ _From 845-archived-delta-adds._
 ### 845-FR-002 — For any other feature, `delta-adds-existing` MUST stay an ERROR, and every other rule MUST fire for archived and unarchived features alike.
 
 _From 845-archived-delta-adds._
+
+### 499-FR-001 — `trace-matrix.mjs` MUST collect a feature's requirements only from plain `FR-XXX` ids in its spec.md, never from an id prefixed by a number and a hyphen (`NNN-FR-XXX`, or a shorter ST id such as `81-`).
+
+_From 499-trace-matrix-delta-ids._
 
 ## Retired
 
