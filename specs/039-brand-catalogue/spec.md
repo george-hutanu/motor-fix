@@ -27,7 +27,7 @@ MotorFix keeps one list of car brands for the whole product. The build team chan
 3. **Given** a stored brand "Mercedes" that a garage has marked, **When** the file corrects it to "Mercedes-Benz" and the loader runs, **Then** the brand keeps its id, the garage's mark for it is unchanged, and readers see the new name.
 4. **Given** a stored brand that a garage has marked, **When** the brand is no longer in the file and the loader runs, **Then** the brand is kept with its garage rows but is no longer active, so brand search and pickers do not return it.
 5. **Given** a file holding two brands with the same name, or two whose slugs are the same, **When** the loader runs, **Then** the load fails, names the duplicate, and the stored list is exactly what it was before.
-6. **Given** a loader run that created, renamed or retired a brand, **Then** each change is in the audit history with the actor `system`, and the cached brand list is dropped so the next search reflects the change.
+6. **Given** a loader run that created, changed, retired or brought back a brand, **Then** each change is in the audit history with the actor `system`, and the cached brand list is dropped so the next search reflects the change.
 7. **Given** the development data file shipped with this task, **When** the loader runs, **Then** at least the twelve brands of the mock are present and active: BMW, Mini, Mercedes-Benz, Audi, Volkswagen, Škoda, Dacia, Renault, Ford, Toyota, Hyundai, Tesla.
 
 ---
@@ -120,7 +120,7 @@ The spec-kit clarification gate was answered from the Build brief, the constitut
 - **Garage brand**: a garage's stance on one brand (`works_on` or `does_not_take`) with the four fuel ticks on a `works_on` row; at most one per garage and brand.
 - **Garage brand job**: one job type a garage does for a brand it works on (`job_type_id`, no foreign key yet); one row per garage, brand and job type; its presence is the tick.
 - **Garage limits**: two optional texts on the garage, a brand note (≤140 characters) and a refusal phrase (≤60 characters).
-- **Brand list change**: an audit entry per brand created, renamed or retired by the loader, actor `system`.
+- **Brand list change**: an audit entry per brand created, changed (name, slug or popularity), retired or brought back by the loader, actor `system`.
 
 ## Spec Delta
 

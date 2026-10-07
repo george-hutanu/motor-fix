@@ -40,7 +40,7 @@ One transaction, `pg_advisory_xact_lock(hashtext('brand_loader'))` first.
 4. Each stored brand whose `key` is not in the file and is `active` → `active=false`, audited (FR-006).
 5. Commit. When step 3 or 4 wrote anything: `DEL brands:active` (FR-009), errors logged.
 
-Audit entry: `subjectType: 'brand'`, `subjectId: brand.id`, `actorId: null`, `actorRole: 'system'` (named "MotorFix" by `AuditService`), `garageId` absent (FR-008). A second run with the same file performs steps 1–2 and writes nothing (FR-004, SC-002).
+Audit entry: `subjectType: 'brand'`, `subjectId: brand.id`, `actorId: null`, `actorRole: 'system'` (named "MotorFix" by `AuditService`), `garageId` absent (FR-008). A `BrandFileError` aborts the call, so the awaited load in `main.ts` fails and the API does not start on a refused file; the error names the duplicate. A second run with the same file performs steps 1–2 and writes nothing (FR-004, SC-002).
 
 ## `garage_brand` — `garages.prisma`
 

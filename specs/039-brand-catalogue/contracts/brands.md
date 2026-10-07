@@ -10,7 +10,7 @@ Public (`@Public()`; listed in `apps/api/src/public-routes.integration.spec.ts`)
 
 | Parameter | Type | Validation | Meaning |
 | --- | --- | --- | --- |
-| `q` | string | optional, `@IsString() @MaxLength(60)` | text typed by the user; matched against brand names ignoring accents and case; empty or absent returns every active brand |
+| `q` | string | optional, `@IsString() @MaxLength(60)` | text typed by the user; matched against brand names ignoring accents and case; empty, absent or whitespace-only (trimmed first) returns every active brand |
 | `cursor` | string (uuid) | optional, `@IsUUID()` | the `nextCursor` of the previous page |
 
 The global `ValidationPipe` (`whitelist`, `forbidNonWhitelisted`, `transform`) refuses any other parameter with 400 `validation_failed` (the existing `ProblemFilter` shape).
