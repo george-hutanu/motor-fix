@@ -6,6 +6,8 @@ const routes = [
   // Home lives at its language addresses; `/` moves to one of them.
   { path: '/ro' },
   { path: '/en' },
+  { path: '/ro/list-your-garage' },
+  { path: '/en/list-your-garage' },
   { path: '/cockpit' },
   { path: '/app/driver', role: 'driver' },
   { path: '/app/garage', role: 'garage' },

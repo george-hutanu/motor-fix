@@ -34,6 +34,21 @@
     "retry": "Try again",
     "title": "Team invitation"
   },
+  "listing": {
+    "bar": "{n} / 6 · {label}",
+    "heading": "Put your garage on the map",
+    "intro": "Say what you take and what you turn down. Whoever asks you for a quote already knows you work on their car.",
+    "label": "FOR GARAGES",
+    "optional": "optional",
+    "required": "required",
+    "step1": "The garage",
+    "step2": "Brands",
+    "step3": "Prices",
+    "step4": "Mechanics",
+    "step5": "Photos and place",
+    "step6": "Verification",
+    "steps": "Steps"
+  },
   "newPassword": {
     "askAgain": "Ask for a new link",
     "checking": "Checking the link…",
