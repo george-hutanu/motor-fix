@@ -160,5 +160,5 @@ ranked, read-only UI audit with `scan.mjs` and `contrast.mjs` helpers; fixes
 only the findings you name).
 
 <!-- SPECKIT START -->
-Active plan (stack, structure, commands): specs/491-back-closes-task/plan.md
+Active plan (stack, structure, commands): specs/775-level-at-parity/plan.md
 <!-- SPECKIT END -->
