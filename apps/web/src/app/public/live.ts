@@ -17,13 +17,13 @@ import { type LiveView, liveView } from '../live/view';
 
 // What an open public view shows: a garage's page, a mechanic's, or the
 // results for a brand.
-export interface PublicView {
+interface PublicView {
   garage?: string | undefined;
   mechanic?: string | undefined;
   brand?: string | undefined;
 }
 
-export type PublicLiveState = 'closed' | 'reconnecting' | 'open';
+type PublicLiveState = 'closed' | 'reconnecting' | 'open';
 
 const ASLEEP_FOR = 60_000;
 
