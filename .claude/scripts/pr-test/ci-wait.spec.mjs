@@ -5,7 +5,7 @@ import { waitForCi } from './ci-wait.mjs';
 
 // A fake gh that answers each call from the next entry of a script per route,
 // and a clock that the sleeps advance, so no test waits for real.
-function world({ checks = [], run = [] } = {}) {
+function world({ checks = [], run = [], mergeable = ['MERGEABLE'] } = {}) {
   const calls = [];
   let t = 0;
   const next = (list) => (list.length > 1 ? list.shift() : list[0]);
@@ -19,6 +19,11 @@ function world({ checks = [], run = [] } = {}) {
       // The cloud's gh.mjs keeps gh's plain exit codes under --json: 8 pending, 1 failing.
       if (answer.cloud) return { code: answer.cloud, stdout: JSON.stringify(answer.checks), stderr: '' };
       return { code: 0, stdout: JSON.stringify(answer), stderr: '' };
+    }
+    if (args[0] === 'pr' && args[1] === 'view') {
+      const answer = next(mergeable);
+      if (answer === 'error') return { code: 1, stdout: '', stderr: 'HTTP 502' };
+      return { code: 0, stdout: JSON.stringify({ mergeable: answer }), stderr: '' };
     }
     if (args[0] === 'run' && args[1] === 'view') return { code: 0, stdout: JSON.stringify(next(run)), stderr: '' };
     return { code: 1, stdout: '', stderr: `no route for ${args.join(' ')}` };
@@ -37,7 +42,7 @@ describe('waiting for CI and the QA run before the tail starts', () => {
     const w = world({ checks: ['none', [], [{ name: 'CI OK', bucket: 'pending' }], green] });
     const out = await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now });
     assert.deepEqual(out, { code: 0, lines: [] });
-    assert.equal(w.calls.length, 4);
+    assert.equal(w.calls.filter((c) => c.startsWith('pr checks')).length, 4);
   });
 
   it('waits out a pending check, then prints only what did not pass', async () => {
@@ -84,6 +89,49 @@ describe('waiting for CI and the QA run before the tail starts', () => {
 
   it('stops on a gh failure rather than reading it as green', async () => {
     const w = world({ checks: ['error'] });
+    const out = await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now });
+    assert.equal(out.code, 2);
+    assert.match(out.lines[0], /HTTP 502/);
+  });
+});
+
+describe('a PR that conflicts with main, which GitHub runs no CI on', () => {
+  const conflict = { code: 3, lines: ['conflict: merge origin/main'] };
+
+  it('ends at once on a conflict, before reading any check', async () => {
+    const w = world({ checks: ['none'], mergeable: ['CONFLICTING'] });
+    assert.deepEqual(await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now }), conflict);
+    assert.deepEqual(w.calls, ['pr view 21 --json mergeable']);
+  });
+
+  it('ends on the next poll when main moves under a PR whose checks are still pending', async () => {
+    const w = world({ checks: [[{ name: 'Checks', bucket: 'pending' }]], mergeable: ['MERGEABLE', 'CONFLICTING'] });
+    assert.deepEqual(await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now }), conflict);
+    assert.equal(w.calls.filter((c) => c.startsWith('pr checks')).length, 1);
+  });
+
+  it('ends on a conflict while the QA run is polled, printing only the conflict', async () => {
+    const w = world({ checks: [[{ name: 'Checks', bucket: 'fail' }]], run: [{ status: 'in_progress', conclusion: '' }], mergeable: ['MERGEABLE', 'CONFLICTING'] });
+    assert.deepEqual(await waitForCi({ pr: 21, run: '123', gh: w.gh, sleep: w.sleep, now: w.now }), conflict);
+    assert.equal(w.calls.filter((c) => c.startsWith('run view')).length, 0);
+  });
+
+  it('keeps polling while GitHub has not worked the state out, never calling it a conflict', async () => {
+    const w = world({ checks: [[{ name: 'Checks', bucket: 'pending' }], green], mergeable: ['UNKNOWN'] });
+    assert.deepEqual(await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now }), { code: 0, lines: [] });
+    const stuck = world({ checks: ['none'], mergeable: ['UNKNOWN'] });
+    const out = await waitForCi({ pr: 21, gh: stuck.gh, sleep: stuck.sleep, now: stuck.now, noChecksMs: 60_000, pollMs: 15_000 });
+    assert.equal(out.code, 1);
+  });
+
+  it('reads the state on every poll of both loops', async () => {
+    const w = world({ checks: [[{ name: 'Checks', bucket: 'pending' }], green], run: [{ status: 'queued', conclusion: '' }, done] });
+    assert.deepEqual(await waitForCi({ pr: 21, run: '123', gh: w.gh, sleep: w.sleep, now: w.now }), { code: 0, lines: ['QA run: success'] });
+    assert.equal(w.calls.filter((c) => c === 'pr view 21 --json mergeable').length, 4);
+  });
+
+  it('stops on a state it cannot read, as on any gh failure', async () => {
+    const w = world({ checks: [green], mergeable: ['error'] });
     const out = await waitForCi({ pr: 21, gh: w.gh, sleep: w.sleep, now: w.now });
     assert.equal(out.code, 2);
     assert.match(out.lines[0], /HTTP 502/);

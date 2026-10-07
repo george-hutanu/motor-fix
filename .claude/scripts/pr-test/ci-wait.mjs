@@ -11,16 +11,25 @@
 // minutes in all, by default 120: a run with no free runner, or a status a
 // cancelled run left pending, ends the wait with exit 1 too. It prints only what did not pass, one
 // "<check>: <bucket>" line each and "QA run: <conclusion>", so empty output
-// means green. Exit 0 finished, 1 a limit reached, 2 gh failed.
+// means green. Exit 0 finished, 1 a limit reached, 2 gh failed, 3 the PR
+// conflicts with main.
+//
+// GitHub runs no CI on a PR that conflicts with main, so the PR's mergeable
+// state is read before every poll: CONFLICTING ends the wait at once with
+// "conflict: merge origin/main" (merge it in, push, dispatch a new run, wait
+// again); UNKNOWN, which GitHub answers until it has worked the state out, is
+// read again on the next poll.
 //
 // In a cloud session gh's GraphQL is refused, so `pr checks` goes through
-// .claude/scripts/gh.mjs, which reads it over REST.
+// .claude/scripts/gh.mjs, which reads it over REST (`pr view --json
+// mergeable` too: REST's true/false/null become MERGEABLE/CONFLICTING/UNKNOWN).
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "../lib/entry.mjs";
 import { realGh } from "./post.mjs";
 
 const NO_CHECKS = /no checks reported/i;
+const CONFLICT = { code: 3, lines: ["conflict: merge origin/main"] };
 const minutes = (ms) => Math.round(ms / 60_000);
 
 /** gh's JSON answer, or undefined when there is none to read. */
@@ -32,11 +41,21 @@ function parsed(stdout) {
   }
 }
 
+/** The wait's ending when the PR conflicts with main or its state is unreadable, else null. */
+async function conflictOrFailure(gh, pr) {
+  const out = await gh(["pr", "view", String(pr), "--json", "mergeable"]);
+  const mergeable = out.code === 0 ? parsed(out.stdout)?.mergeable : undefined;
+  if (mergeable === undefined) return { code: 2, lines: [`CI: ${String(out.stderr).trim() || "unreadable gh output"}`] };
+  return mergeable === "CONFLICTING" ? CONFLICT : null;
+}
+
 /** Polls `gh` until CI (and the run, when given) has finished, or a limit is reached; never throws. */
 export async function waitForCi({ pr, run, gh, sleep, now, noChecksMs = 10 * 60_000, waitMs = 120 * 60_000, pollMs = 15_000 }) {
   const start = now();
   let checks;
   for (;;) {
+    const stop = await conflictOrFailure(gh, pr);
+    if (stop) return stop;
     // The cloud's gh.mjs keeps gh's plain exit codes under --json (8 pending,
     // 1 failing), so its answer is read whatever the code; real gh exits 0.
     const out = await gh(["pr", "checks", String(pr), "--json", "name,bucket"]);
@@ -51,6 +70,8 @@ export async function waitForCi({ pr, run, gh, sleep, now, noChecksMs = 10 * 60_
   const lines = checks.filter((c) => c.bucket !== "pass" && c.bucket !== "skipping").map((c) => `${c.name}: ${c.bucket}`);
   if (!run) return { code: 0, lines };
   for (;;) {
+    const stop = await conflictOrFailure(gh, pr);
+    if (stop) return stop;
     const out = await gh(["run", "view", String(run), "--json", "status,conclusion"]);
     const state = out.code === 0 ? parsed(out.stdout) : undefined;
     if (!state) return { code: 2, lines: [...lines, `QA run: ${String(out.stderr).trim() || "unreadable gh output"}`] };
