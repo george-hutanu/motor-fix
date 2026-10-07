@@ -22,6 +22,7 @@ function setup(signedIn: MeDto | null, ...answers: Answer[]) {
   const current = signal<MeDto | null>(signedIn);
   const session = {
     current,
+    keepShownWhile: jest.fn(<T>(open: Promise<T>) => open),
     load: jest.fn(async () => current()),
   };
   const open = jest.fn(async (..._: unknown[]) => {
@@ -339,6 +340,18 @@ describe('SignInDialog', () => {
 
       expect(open).toHaveBeenCalledWith(expect.any(Function), reason);
       expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('keeps the account on screen for as long as the dialog is open', async () => {
+      const { dialog, session } = setup(null, 'cancelled');
+
+      const gated = dialog.gate();
+
+      expect(session.keepShownWhile).toHaveBeenCalledTimes(1);
+      await expect(session.keepShownWhile.mock.results[0]?.value).resolves.toBe(
+        false,
+      );
+      await expect(gated).resolves.toBe(false);
     });
 
     it('resolves signed in after an account is created in the sign-up dialog', async () => {

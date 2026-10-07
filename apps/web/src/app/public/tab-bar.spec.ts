@@ -47,7 +47,7 @@ function setUp(platform = 'browser') {
       { provide: SITE_ORIGIN, useValue: 'https://motorfix.ro' },
       {
         provide: Session,
-        useValue: { current, ended: new Subject<void>(), load },
+        useValue: { current, ended: new Subject<void>(), load, shown: current },
       },
       { provide: PLATFORM_ID, useValue: platform },
       { provide: Overlays, useValue: overlays },

@@ -34,10 +34,12 @@ async function render(language: 'ro' | 'en' = 'ro') {
     open: jest.fn(),
     resync: new Subject<void>(),
   };
+  const current = signal<MeDto | null>(me);
   const session = {
-    current: signal<MeDto | null>(me),
+    current,
     ended: new Subject<void>(),
     reload: jest.fn(async () => undefined),
+    shown: current,
     signOut: jest.fn(),
   };
   TestBed.configureTestingModule({

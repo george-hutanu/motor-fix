@@ -57,7 +57,7 @@ function setUp(...replies: Array<MeDto | null>) {
       { provide: SITE_ORIGIN, useValue: ORIGIN },
       {
         provide: Session,
-        useValue: { current, ended: new Subject<void>(), load },
+        useValue: { current, ended: new Subject<void>(), load, shown: current },
       },
     ],
   });
