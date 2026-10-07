@@ -5,6 +5,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
   AdminService,
+  CarsService,
   type MeDto,
   MeService,
   NotificationsService,
@@ -101,6 +102,10 @@ async function render(
         useValue: { bellControllerUnreadCount: async () => ({ count: 0 }) },
       },
       { provide: MeService, useValue: {} },
+      {
+        provide: CarsService,
+        useValue: { carsControllerList: async () => ({ items: [] }) },
+      },
       {
         provide: AdminService,
         useValue: { adminOverviewControllerOverview: overview },

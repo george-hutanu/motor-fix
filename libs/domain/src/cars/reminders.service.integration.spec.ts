@@ -16,6 +16,27 @@ import {
 
 const redisUrl = redisUrlFor(3);
 const { account, prisma, reset } = fixtures();
+
+// A reminder's car must exist (the foreign key); any car of the account will do.
+const car = async (ownerId: string) => {
+  const brand = await prisma.brand.upsert({
+    create: { key: 'test-dacia', name: 'Dacia', slug: 'test-dacia' },
+    update: {},
+    where: { name: 'Dacia' },
+  });
+  const { id } = await prisma.car.create({
+    data: {
+      brandId: brand.id,
+      fuel: 'petrol',
+      idempotencyKey: randomUUID(),
+      model: 'Logan',
+      odometerKm: 90000,
+      ownerId,
+      year: 2018,
+    },
+  });
+  return id;
+};
 serialDatabase(databaseUrl);
 
 const queue = new Queue('notifications', { connection: { url: redisUrl } });
@@ -70,7 +91,7 @@ describe('an ITP reminder due on 10 December 2026', () => {
 
   beforeEach(async () => {
     driver = await account('ana');
-    carId = randomUUID();
+    carId = await car(driver);
     await reminders.setCarDue({
       accountId: driver,
       carId,
@@ -196,7 +217,7 @@ describe('a run that fails part-way', () => {
     for (const _ of [1, 2, 3]) {
       await reminders.setCarDue({
         accountId: driver,
-        carId: randomUUID(),
+        carId: await car(driver),
         dueOn: '2026-12-10',
         kind: 'itp',
       });
@@ -225,7 +246,7 @@ describe('a run that fails part-way', () => {
 describe('every 30 and 7 day kind', () => {
   it('sends its own type', async () => {
     const driver = await account('bogdan');
-    const carId = randomUUID();
+    const carId = await car(driver);
     for (const kind of ['rca', 'rovinieta', 'service'] as const) {
       await reminders.setCarDue({
         accountId: driver,
@@ -298,7 +319,7 @@ describe('a booking reminder', () => {
 describe('the tyre reminders', () => {
   it('send TYRES_SEASON once per car per season', async () => {
     const driver = await account('dan');
-    const carId = randomUUID();
+    const carId = await car(driver);
     await reminders.setTyres({ accountId: driver, carId });
 
     expect(await runOn('2026-10-31')).toBe(0);
@@ -315,7 +336,7 @@ describe('the tyre reminders', () => {
 
   it('keeps the season sent when the tyres are set again', async () => {
     const driver = await account('elena');
-    const carId = randomUUID();
+    const carId = await car(driver);
     await reminders.setTyres({ accountId: driver, carId });
     await runOn('2026-11-01');
     await reminders.setTyres({ accountId: driver, carId });
