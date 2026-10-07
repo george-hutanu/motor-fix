@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-07
 
-**Status**: Draft
+**Status**: Archived (2026-10-07)
 
 **Input**: User description: "ST-160 Open the admin dashboard and its menu, admins only — https://app.notion.com/p/3ee607bff0d281bcb229eaf763d5d51c"
 
