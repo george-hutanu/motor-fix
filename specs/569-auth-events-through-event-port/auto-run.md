@@ -33,3 +33,10 @@ org-researcher: partial (Foundations epic and Backend architecture pages too lar
 
 ## Phase 4 — Clarify
 spec-challenger: 7 findings; 5 answered in spec Clarifications (shared method on SignInService; FR-003 modifies 128-FR-004; e-mail/nudge order unspecified; event-port failure is a 500; SC-002 covers the two flows touched), 2 applied as edits (SC-003 allows added assertions; US2 test asserts the stub after the call resolves).
+
+## Phase 5 — Plan
+model fable. STATUS: success — plan.md, research.md, data-model.md, quickstart.md written; no contracts/ (FR-004: no interface change).
+- before_plan design check: design.md current (no screens); after_plan commit: this commit.
+- Technical Context from package.json (TypeScript 6.0.3, NestJS 12.1.2, Prisma 7.10.0, ioredis 6.0.0, Jest 30.5.2), tsconfig.base.json, libs/domain/jest.config.cts, jest.preset.cjs.
+- Decisions (research.md R1–R4): the event is `events.record(tx, …)` after `audit.record` inside the reset's transaction, `EVENT_PORT` injected (AuthModule is global and exports it, so PasswordResetModule needs no provider); one public `SignInService` method holds the `session.revoked` publish + catch + warn for both flows, the reset drops `SESSION_EVENTS`, `publishLive`, `audienceOf`, `randomUUID` (`SESSION_EVENTS` stays exported: the reset spec spies on it); `EVENT_KINDS` feeds nothing generated (not in openapi.json; only events.spec.ts and the `EventKind` type read it; the web matches only `session.revoked`; the live hub has no per-kind rule to join); tests reuse the sign-out-everywhere spec's `EVENT_PORT` override pattern, the adversary spec is untouched.
+- Constitution check: all gates pass before and after design; Complexity Tracking empty.
