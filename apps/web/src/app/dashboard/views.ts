@@ -1,6 +1,7 @@
-import { inject } from '@angular/core';
+import { inject, type Type } from '@angular/core';
 import type { Routes } from '@angular/router';
 
+import { AdminPanel } from './admin-panel';
 import { PushView } from './push-view';
 import { Session } from './session';
 import { SettingsView } from './settings-view';
@@ -14,6 +15,8 @@ export type Counts = Partial<Record<'garagesWaiting', number>>;
 // `label` (the menu's) and `tab` (the bar's, shorter) are shell translation keys.
 export interface DashboardView {
   path: string;
+  // The view's body, once its story has built one.
+  body?: Type<unknown>;
   label: string;
   tab: string;
   // The header's own title and the line under it; absent, the label is the title.
@@ -48,7 +51,7 @@ export const DASHBOARDS: Record<
     tag: 'shell.frame.area.admin',
     views: [
       // The admin bar says Dashboard in English, where the others say Home.
-      { ...HOME, tab: 'shell.frame.tab.overview' },
+      { ...HOME, body: AdminPanel, tab: 'shell.frame.tab.overview' },
       {
         capability: 'admin.garages',
         counter: 'garagesWaiting',
@@ -211,8 +214,8 @@ export const allowedViews = (
 // The area guard has loaded the session before these match. A view owns its
 // sub-paths, so its epic can add pages under it; a refused or unknown view
 // falls through to `**`, which sends it to the dashboard view.
-const body = ({ push, staff }: DashboardView) =>
-  staff ? SettingsView : push ? PushView : View;
+const body = ({ body, push, staff }: DashboardView) =>
+  body ?? (staff ? SettingsView : push ? PushView : View);
 
 export const dashboardRoutes = (area: Area): Routes => [
   {
