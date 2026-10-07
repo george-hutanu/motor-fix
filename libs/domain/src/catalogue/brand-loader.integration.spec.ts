@@ -273,6 +273,23 @@ describe('BrandLoader', () => {
     },
   );
 
+  it('refuses a file that swaps two brands names, telling the operator to rename through a temporary name', async () => {
+    await loader.load(FILE);
+    const before = await stored();
+
+    const run = loader.load([
+      { key: 'bmw', name: 'Škoda', popularity: 1 },
+      { key: 'skoda', name: 'BMW', popularity: 2 },
+      { key: 'dacia', name: 'Dacia' },
+    ]);
+
+    await expect(run).rejects.toThrow(BrandFileError);
+    await expect(run).rejects.toThrow(
+      '"Škoda" is held by the stored brand skoda: rename one brand to a temporary name first, load, then load again',
+    );
+    expect(await stored()).toEqual(before);
+  });
+
   it('drops the cached brand list when the list changed', async () => {
     await redis.set('brands:active', '[]');
 

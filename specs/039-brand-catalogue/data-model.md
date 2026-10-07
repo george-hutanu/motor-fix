@@ -35,7 +35,7 @@ Development content (twelve rows, popularity 1–12 in the mock's order): BMW, M
 One transaction, `pg_advisory_xact_lock(hashtext('brand_loader'))` first.
 
 1. Validate the file: two records with the same `key`, the same `name`, or names that fold to the same slug → `BrandFileError('duplicate <key|name|slug> "<value>": <key a>, <key b>')`, before any write (FR-007).
-2. Read every stored brand. A record whose `name` or `slug` is held by a stored brand with a different `key` (active or retired) → `BrandFileError`, nothing written (FR-007).
+2. Read every stored brand. A record whose `name` or `slug` is held by a stored brand with a different `key` (active or retired) → `BrandFileError('"<name>" is held by the stored brand <key>: rename one brand to a temporary name first, load, then load again')`, nothing written; two brands swapping names land here too (FR-007).
 3. For each record, by `key`: absent → create `{ active: true }` and audit `create`; present → compare `name`, `slug`, `popularity ?? null`, `active: true` with the row and `update` only the fields that differ, audited per field through `recordChanges` (FR-004, FR-005; a retired brand that returns is the same row, `active` false → true).
 4. Each stored brand whose `key` is not in the file and is `active` → `active=false`, audited (FR-006).
 5. Commit. When step 3 or 4 wrote anything: `DEL brands:active` (FR-009), errors logged.

@@ -116,7 +116,8 @@ export class BrandLoader {
 }
 
 // A name or slug of the file held by a stored brand under another key, active
-// or retired, would make two brands one.
+// or retired, would make two brands one. Two brands swapping names are refused
+// too: the operator renames one through a temporary name over two loads.
 function refuseHeldNames(
   stored: readonly Brand[],
   records: readonly BrandRecord[],
@@ -130,7 +131,7 @@ function refuseHeldNames(
     );
     if (holder) {
       throw new BrandFileError(
-        `"${record.name}" is held by the stored brand ${holder.key}`,
+        `"${record.name}" is held by the stored brand ${holder.key}: rename one brand to a temporary name first, load, then load again`,
       );
     }
   }

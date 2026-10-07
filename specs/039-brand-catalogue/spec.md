@@ -79,6 +79,8 @@ For each garage and brand the product stores one of two stances, works on it or 
 - Two brands with the same popularity sort by name; a brand without a popularity rank sorts after every ranked one.
 - The read function is asked for a retired brand: it answers from the row as usual (`works_on`, `does_not_take` or `unstated`); hiding retired brands is the pickers' job, not the garage's answer.
 - A brand note or refusal phrase of exactly 140 or 60 characters is accepted; whitespace-only text is stored as absent.
+- A file that swaps two brands' names between their keys is refused like any held name, and the error tells the operator to rename one brand to a temporary name first, load, then load again; a swap does not have to load in one run (decided by Chief, 2026-10-07).
+- A job row for a brand the garage does not take is refused by the garage-brands service, inside the write's transaction, not by the database; a cross-table trigger is not built (decided by Chief, 2026-10-07).
 
 ## Clarifications
 

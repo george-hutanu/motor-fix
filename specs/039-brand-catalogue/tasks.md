@@ -97,6 +97,7 @@ None. No new dependency, project or tool; `libs/domain`, `libs/contracts` and `a
 ## Phase 6: Polish
 
 - [X] T020 Run the checks in `specs/039-brand-catalogue/quickstart.md` and `scripts/contract-check.sh` so `apps/api/openapi.json` and `libs/data-access` are current (SC-001..SC-005; depends on T010, T017, T019)
+- [X] T021 `libs/domain/src/catalogue/brand-loader.integration.spec.ts` and `brand-loader.ts`: a file swapping two brands' names is refused and the error tells the operator to rename one brand to a temporary name first, then load again (FR-007; decided by Chief, deferred.md)
 
 ---
 
