@@ -14,6 +14,7 @@
       [attr.aria-expanded]="brands().length > 0"
       [attr.aria-activedescendant]="active() < 0 ? null : 'mf-car-brand-' + active()"
       [class.ng-invalid]="form.controls.brandId.invalid"
+      [attr.aria-invalid]="save.fieldError(form.controls.brandId) === null ? null : 'true'"
       [value]="brandText()"
       (input)="find($any($event.target).value)"
       (keydown)="move($event)"

@@ -1,3 +1,6 @@
+@if (cars()?.length === 0) {
+  <p>{{ 'shell.frame.empty' | t }}</p>
+}
 <button hlmBtn type="button" (click)="add()">{{ 'driver.cars.add.title' | t }}</button>
 @if (cars(); as list) {
   @if (list.length) {
@@ -17,8 +20,6 @@
         </article>
       }
     </div>
-  } @else {
-    <p>{{ 'shell.frame.empty' | t }}</p>
   }
 } @else if (failed()) {
   <p role="alert">{{ 'shell.form.problem.error' | t }}</p>

@@ -298,6 +298,7 @@ describe('the brand field', () => {
 
     expect(create).not.toHaveBeenCalled();
     expect(text()).toContain('Alege o marcă din listă.');
+    expect(field('Marcă').getAttribute('aria-invalid')).toBe('true');
   });
 });
 

@@ -133,9 +133,17 @@ describe('Mașinile mele', () => {
     const { element, settle } = await render([]);
     await settle();
 
-    expect(text(element)).toContain('Nimic aici încă.');
+    const placeholder = [...element.querySelectorAll('p')].find(
+      (p) => p.textContent?.trim() === 'Nimic aici încă.',
+    );
+    const add = button(element, 'Adaugă o mașină');
+    expect(placeholder).toBeDefined();
     expect(cards(element)).toHaveLength(0);
-    expect(button(element, 'Adaugă o mașină')).toBeDefined();
+    expect(add).toBeDefined();
+    expect(
+      placeholder!.compareDocumentPosition(add!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('opens the dialog with the plates already held and puts the saved car first without reading again', async () => {
