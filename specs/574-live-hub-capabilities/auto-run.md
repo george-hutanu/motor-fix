@@ -30,3 +30,14 @@ ST-574 (tech debt from ST-254): derive the live hub's garage-channel kind rules 
 
 ## Phase 7 — tasks
 - sonnet: tasks.md, 6 tasks (T001-T003 tests first, T004 red proof, T005 live.hub.ts, T006 green verification); FR-001..003 and SC-001..003 mapped.
+
+## Phase 8 — analyze
+- artifact-lint --check: 0 errors, 0 warnings; tasks cover FR-001..003, SC-001..003; no remediation.
+
+## Phase 9 — tests
+- live.hub.audience.spec.ts: receptionist case extended (review.posted, garage.updated, invite.sent withheld), 12-family × 5-role it.each, all-rights mechanic, membership-first, mechanic own channel, table disjointness over EVENT_KINDS + garage.settings_changed, no own_jobs/audit_history family. Red: suite failed to compile (TS2305 no exported KIND_CAPABILITY).
+
+## Phase 10 — implement
+- live.hub.ts: HIDDEN_FROM_RECEPTIONIST and MECHANIC_RIGHTS replaced by exported KIND_CAPABILITY; allows() = switches → staffRights (membership) → mechanic own key → unmapped open for owner/receptionist, closed for mechanic → capabilitiesOf(role, rights).includes(needs).
+- live.audience.adversary.spec.ts pinned "gives a receptionist garage.updated": moved garage.updated to the withheld list with review.posted and invite.sent (the FR-002 change, SC-001 allowed).
+- Unit suites libs/domain/src/events + auth: 20 suites, 729 passed.

@@ -4,7 +4,12 @@ import type { LiveByeReason, LiveMessage } from '@motor-fix/contracts';
 import { Logger } from '@nestjs/common';
 
 import type { GarageAccess, LoadGarageAccess } from './garage-access';
-import type { Permissions, Role } from '../auth/capabilities';
+import {
+  type Capability,
+  capabilitiesOf,
+  type Permissions,
+  type Role,
+} from '../auth/capabilities';
 
 export const LIVE_CHANNEL = 'live:events';
 
@@ -14,14 +19,18 @@ const ACCESS_MS = 60_000;
 
 // Kinds about a request, job or car: never sent through a public key.
 const PRIVATE = /^(request|quote|booking|job|media|live|message|car|repair)\./;
-// Prices, settings, feature switches and the team: not for a receptionist.
-const HIDDEN_FROM_RECEPTIONIST =
-  /^(price_list\.|member\.|mechanic\.|garage\.settings_changed$|garage\.features_changed$)/;
-// What reaches a mechanic through the garage, by the right it needs. Their own
-// jobs and bookings come through their mechanic channel.
-const MECHANIC_RIGHTS: [RegExp, keyof Permissions][] = [
-  [/^(request|message)\./, 'canAnswerQuotes'],
-  [/^booking\.move/, 'canMoveBookings'],
+// The capability a garage's staff need to hear a kind through the garage
+// channel; who holds which is capabilitiesOf's to say. A kind no family claims
+// reaches an owner and a receptionist, and never a mechanic, whose own jobs and
+// bookings come through their mechanic channel.
+export const KIND_CAPABILITY: [RegExp, Capability][] = [
+  [/^price_list\./, 'garage.prices'],
+  [/^(member|mechanic|invite)\./, 'garage.team'],
+  [/^garage\.(settings_changed|features_changed)$/, 'garage.feature_switches'],
+  [/^garage\.updated$/, 'garage.profile'],
+  [/^review\./, 'garage.reviews'],
+  [/^(request|message)\./, 'garage.requests'],
+  [/^booking\.move/, 'garage.schedule'],
 ];
 const FEATURES: [RegExp, string][] = [[/^media\./, 'live_media']];
 const REREAD_ACCESS = new Set([
@@ -51,19 +60,32 @@ function allows(
 ) {
   if (FEATURES.some(([kinds, key]) => kinds.test(kind) && access.off.has(key)))
     return false;
-  if (role === 'garage') return access.owners.has(accountId);
-  if (role === 'receptionist') {
-    return (
-      access.receptionists.has(accountId) &&
-      !HIDDEN_FROM_RECEPTIONIST.test(kind)
-    );
-  }
-  const rights = role === 'mechanic' ? access.mechanics.get(accountId) : null;
+  const rights = staffRights(access, role, accountId);
   if (!rights) return false;
-  if (keys.some((key) => key.startsWith('mechanic:'))) return true;
-  return MECHANIC_RIGHTS.some(
-    ([kinds, right]) => kinds.test(kind) && rights[right],
-  );
+  if (role === 'mechanic' && keys.some((key) => key.startsWith('mechanic:')))
+    return true;
+  const needs = KIND_CAPABILITY.find(([kinds]) => kinds.test(kind))?.[1];
+  if (!needs) return role !== 'mechanic';
+  return capabilitiesOf(role, rights).includes(needs);
+}
+
+const NO_RIGHTS: Permissions = {
+  canAnswerQuotes: false,
+  canMoveBookings: false,
+  canRecordFinalPrice: false,
+};
+
+// A connection's rights in the garage while it is still staff in its role.
+function staffRights(
+  access: GarageAccess,
+  role: Role,
+  accountId: string,
+): Permissions | null {
+  if (role === 'mechanic') return access.mechanics.get(accountId) ?? null;
+  if (role === 'garage') return access.owners.has(accountId) ? NO_RIGHTS : null;
+  if (role === 'receptionist')
+    return access.receptionists.has(accountId) ? NO_RIGHTS : null;
+  return null;
 }
 
 // An Express response, as far as the hub needs one.
