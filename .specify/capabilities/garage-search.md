@@ -3,6 +3,7 @@ capability: garage-search
 updated: 2026-10-07
 features:
   - 043-brand-first-garage-list
+  - 042-brand-verdict
 ---
 
 # Capability: Garage search
@@ -23,9 +24,9 @@ _From 043-brand-first-garage-list._
 
 _From 043-brand-first-garage-list._
 
-### 043-FR-004 — Each listed garage MUST carry its id, name, slug, and its answer for the brand, in a field named `stance`, one of `works_on`, `does_not_take` and `unstated`, so the screen can show the red lamp on every garage of the second group.
+### 042-FR-012 — Each garage listed by the brand-first search MUST carry its id, name, slug, its `stance` for the brand (`works_on`, `does_not_take` or `unstated`) and its brand answer: the works-on list and the refusal list as lists of (id, name, slug) in catalogue order (popularity rank, then name), the note and the phrase (null when not set); a brand retired from the catalogue stays in the lists; a garage with nothing marked carries two empty lists. The item MUST carry the brand answer flat, in the same shape as the public garage read (`ListedGarageDto` extends `GarageBrandAnswerDto`, as `PublicGarageDto` does), and the stance and the answer MUST be read from one include of all the garage's brand rows, in the same request, never from a second copy.
 
-_From 043-brand-first-garage-list._
+_From 042-brand-verdict._
 
 ### 043-FR-005 — The answer MUST carry two counts worked out once over every garage found, not over the page: how many work on the brand (`counts.worksOn`) and how many do not take it (`counts.doesNotTake`, refusers and unmarked together), both whole numbers; with no approved garage both are zero and the list is empty, with no error.
 
@@ -39,9 +40,9 @@ _From 043-brand-first-garage-list._
 
 _From 043-brand-first-garage-list._
 
-### 043-FR-008 — A listed garage MUST carry only the fields FR-004 names: no rating, review count, brand note or refusal phrase is added to the garage or the answer by this story.
+### 042-FR-013 — A listed garage MUST carry only the fields FR-012 names: no rating, review count or other garage field is added to the item by this story. The search stays open to visitors, reads only approved garages, keeps its order, counts and paging, and writes nothing.
 
-_From 043-brand-first-garage-list._
+_From 042-brand-verdict._
 
 ### 043-FR-009 — The brand MUST be named by its uuid; a uuid no brand row holds MUST answer "not found", while a retired (inactive) brand still answers; a missing brand, a value that is not a uuid, an unknown query field, or a cursor that is longer than 200 characters, does not decode, names another brand or names no group, MUST be refused as a bad request, in the API's one error shape with a stable code (`validation_failed`, `invalid_cursor`, `not_found`).
 
@@ -54,3 +55,8 @@ _From 043-brand-first-garage-list._
 ### 043-FR-011 — The search MUST write nothing: no audit entry, no event, no search log (MF-10 owns the search log).
 
 _From 043-brand-first-garage-list._
+
+## Retired
+
+- `043-FR-004` — superseded by `042-FR-012` (2026-10-07)
+- `043-FR-008` — superseded by `042-FR-013` (2026-10-07)
