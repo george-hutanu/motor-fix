@@ -154,13 +154,14 @@ test.describe('a driver can add a car @seeded', () => {
   });
 });
 
-test.describe('a garage account can add a car @seeded', () => {
+test.describe('a garage account can add a car @seeded @reset', () => {
   test('a garage-only owner adds a car from the account block, becomes a driver and finds it there', async ({
     page,
   }) => {
     await signInFromHome(page, ACCOUNTS.garageOnly);
     await expect(page).toHaveURL(/\/app\/(garage|driver)$/);
-    // A local run resets the account to garage only first (global-setup.ts).
+    // Only a local run resets the account to garage only first (global-setup.ts);
+    // a deployed address leaves @reset flows out.
     await expect(page.getByRole('group', { name: 'Rolul tău' })).toHaveCount(0);
 
     await page
