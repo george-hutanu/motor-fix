@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-06
+updated: 2026-10-07
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -34,6 +34,7 @@ features:
   - 675-size-not-trivial
   - 676-level-point-nonnumeric
   - 539-public-web-url-boot
+  - 472-validation-failed-code
 ---
 
 # Capability: Platform
@@ -953,6 +954,14 @@ _From 676-level-point-nonnumeric._
 ### 539-FR-003 — Reading `PUBLIC_WEB_URL` for the web server MUST throw an error naming the variable, without its value, when it is set but not an absolute URL, and return nothing when it is unset.
 
 _From 539-public-web-url-boot._
+
+### 472-FR-001 — A class-validator failure on `GET /api/v1/audit-history` from a signed-in caller MUST answer 400 with `code: validation_failed` through the production app setup.
+
+_From 472-validation-failed-code._
+
+### 472-FR-002 — A class-validator failure on `POST /api/v1/auth/roles/switch` from a signed-in caller MUST answer 400 with `code: validation_failed` through the production app setup.
+
+_From 472-validation-failed-code._
 
 ## Retired
 

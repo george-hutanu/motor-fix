@@ -13,3 +13,4 @@
 - 2026-10-06 · qa · ST-628 · Implementing → QA
 - 2026-10-06 · qa · timeline · no row for ST-628
 - 2026-10-06 · labels · PR #172 · QA
+- 2026-10-07 · ready · Foundations · no change

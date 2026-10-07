@@ -103,7 +103,7 @@ epic or a plan, whether run through spec-kit or by hand.
      every blocking finding
      (tests first), push, dispatch the new head's run with `--no-wait` and
      end, as at ready; each lap counts toward
-     `SPECKIT_MAX_REPAIR_ITERATIONS` (5), and at the cap the task goes to
+     `SPECKIT_MAX_REPAIR_ITERATIONS` (10), and at the cap the task goes to
      Blocked and the PR stays unmerged. A head that differs from the last
      tested commit by documentation only (`scripts/docs-only.ts`, e.g. the
      `deferred.md` task URLs) carries that verdict instead of a new lap

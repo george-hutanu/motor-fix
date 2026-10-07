@@ -92,9 +92,9 @@ test.describe('the live connection @seeded', () => {
     const page = await context.newPage();
     await openDashboard(page, ACCOUNTS.driver, '/app/driver');
     let reloads = 0;
-    page.on('framenavigated', (frame) => {
-      if (frame === page.mainFrame()) reloads++;
-    });
+    // A document load, not a same-address history entry (an open task adds
+    // one, so Back closes it).
+    page.on('load', () => reloads++);
     await page
       .getByRole('button', { name: 'Ieși de pe toate dispozitivele' })
       .click();

@@ -49,9 +49,9 @@ test.describe('the notification bell @seeded', () => {
     const bell = page.getByRole('button', { name: /^Notificări/ });
     await expect(bell).toHaveAccessibleName('Notificări');
     let reloads = 0;
-    page.on('framenavigated', (frame) => {
-      if (frame === page.mainFrame()) reloads++;
-    });
+    // A document load, not a same-address history entry (an open task adds
+    // one, so Back closes it).
+    page.on('load', () => reloads++);
 
     const admin = await accessToken(request, ACCOUNTS.admin);
     const sent = await request.post('/api/v1/admin/notifications/test', {

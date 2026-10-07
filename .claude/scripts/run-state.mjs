@@ -43,7 +43,7 @@ export const BLOCKING_CONDITIONS = [
   "product-call",
 ];
 
-export const DEFAULT_MAX_REPAIRS = 5;
+export const DEFAULT_MAX_REPAIRS = 10;
 
 export const statePath = (repo) => join(repo, ".specify", "run-state.json");
 

@@ -55,6 +55,20 @@ test.describe('signing in for real @seeded', () => {
     });
   }
 
+  test('Back from the landing returns to the screen the dialog opened over', async ({
+    page,
+  }) => {
+    await ready(page, '/ro/garages');
+    await openFromHeader(page);
+    await signIn(page, ACCOUNTS.driver);
+    await expect(page).toHaveURL('/app/driver');
+
+    await page.goBack();
+
+    await expect(page).toHaveURL('/ro/garages');
+    await expect(dialog(page)).toHaveCount(0);
+  });
+
   test('a receptionist sees no settings, prices or team', async ({ page }) => {
     await ready(page, '/ro');
     await openFromHeader(page);
