@@ -21,6 +21,7 @@ import {
   findRun,
   parseArgs,
   placeDownload,
+  pollTries,
   stagingDir,
 } from './dispatch.mjs';
 
@@ -244,11 +245,18 @@ describe('dispatch --no-wait: start the run, record it and end', () => {
     assert.deepEqual(called(r.calls, 'run download'), []);
   });
 
-  it('exits 2 with no hand-off line when the run never appears', () => {
-    const r = fakeGh({ FAKE_NO_RUN: '1' })('--no-wait');
+  it('exits 2 with no hand-off line when the run never appears, after the tries it was given', () => {
+    const r = fakeGh({ FAKE_NO_RUN: '1', PR_QA_POLL_TRIES: '2' })('--no-wait');
     assert.equal(r.code, 2);
     assert.equal(r.stdout.trim(), '');
     assert.match(r.stderr, /no pr-qa\.yml run/);
+    assert.equal(called(r.calls, 'run list').length, 2);
+  });
+
+  it('looks 36 times unless PR_QA_POLL_TRIES is a positive count', () => {
+    for (const tries of [undefined, '', '0', '-3', 'x', '2.5']) assert.equal(pollTries(tries), 36, `PR_QA_POLL_TRIES=${tries}`);
+    assert.equal(pollTries('2'), 2);
+    assert.equal(pollTries('40'), 40);
   });
 });
 
@@ -324,11 +332,12 @@ describe('dispatch in a cloud session: the pull_request run, found over REST', (
     assert.match(called(r.calls, 'api repos/{owner}/{repo}/actions/workflows/pr-qa.yml/runs?')[0], new RegExp(`head_sha=${SHA}&event=pull_request`));
   });
 
-  it('exits 2 with no hand-off line when no run for the head appears', () => {
-    const r = fakeGh({ ...cloud, FAKE_NO_RUN: '1' })('--no-wait');
+  it('exits 2 with no hand-off line when no run for the head appears, after the tries it was given', () => {
+    const r = fakeGh({ ...cloud, FAKE_NO_RUN: '1', PR_QA_POLL_TRIES: '2' })('--no-wait');
     assert.equal(r.code, 2);
     assert.equal(r.stdout.trim(), '');
     assert.match(r.stderr, /no pr-qa\.yml run/);
+    assert.equal(called(r.calls, 'api repos/{owner}/{repo}/actions/workflows/pr-qa.yml/runs?').length, 2);
   });
 
   it('says the flows cannot travel, rather than dropping them unseen', () => {
