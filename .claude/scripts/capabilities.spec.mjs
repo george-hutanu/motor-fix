@@ -265,6 +265,23 @@ describe('validating a delta before it can corrupt a capability', () => {
     assert.match(unassigned.message, /FR-006/);
   });
 
+  it('counts a requirement a capability already holds under the feature number as assigned', () => {
+    const findings = run('### Capability: `cli-tasks`\n\n- **Adds**: none', {
+      requirements: [[T('001', '004'), 'lists tasks'], [T('002', '001'), 'adds a flag']],
+      retired: [[T('002', '006'), 'superseded later']],
+    });
+    assert.ok(!rules(findings).includes('delta-unassigned'), JSON.stringify(findings));
+  });
+
+  it('still warns about a requirement held nowhere when its siblings are archived', () => {
+    const findings = run('### Capability: `cli-tasks`\n\n- **Adds**: none', {
+      requirements: [[T('001', '004'), 'lists tasks'], [T('002', '001'), 'adds a flag']],
+    });
+    const unassigned = findings.filter((f) => f.rule === 'delta-unassigned');
+    assert.equal(unassigned.length, 1);
+    assert.match(unassigned[0].message, /FR-006/);
+  });
+
   it('warns — never errors — when a spec with requirements carries no delta at all', () => {
     const dir = fixture({
       '.specify/capabilities/cli-tasks.md': capability('cli-tasks'),
