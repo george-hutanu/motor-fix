@@ -11,7 +11,7 @@ No new dependency, lib, module or migration (plan, Constitution I). Nothing to s
 
 ## Phase 2: Foundational (blocks every story)
 
-- [X] T001 [P] Red spec for `VerificationService.countWaiting(db)`: counts files in `submitted` and `in_review` only, over files in each of the five statuses, 0 for none, in `libs/domain/src/garages/verification.service.spec.ts` (FR-001, FR-015)
+- [X] T001 [P] Red spec for `VerificationService.countWaiting(db)`: counts files in `submitted` and `in_review` only, over files in each of the five statuses, 0 for none, in `libs/domain/src/garages/verification.service.integration.spec.ts` (FR-001, FR-015)
 - [X] T002 [P] Red spec for `AdminOverviewController`: `GET admin/overview` answers `{ garagesWaiting }` from the service and carries `@Requires('admin.garages')` in `libs/domain/src/garages/admin-overview.controller.spec.ts` (new) (FR-001, FR-002)
 - [X] T003 [P] Add `AdminOverviewDto { garagesWaiting }` (integer >= 0, `@ApiProperty({ description })`) in `libs/contracts/src/admin.dto.ts` (new) and export it from `libs/contracts/src/index.ts` (FR-001)
 - [X] T004 Implement `countWaiting(db)` in `libs/domain/src/garages/verification.service.ts` (FR-001)

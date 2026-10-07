@@ -75,3 +75,16 @@ Start commit: b76badd3 (worktree .worktrees/160-admin-dashboard-menu, branch 160
 ## 11. Converge
 
 - Cycle 1 appended T028 (FR-011 partial: the counters had no skeleton during the first read) and T029 (FR-015 partial: no visitor case on `/app/admin` end to end); both built, red seen for T028 (1 failed), web dashboard Jest 666/666 green. Cycle 2: converged. The ticket lane is Notion (phase 13), not Jira.
+
+## 12. Harden
+
+| Check | Before | After |
+|---|---|---|
+| artifact-lint errors | 1 (T001 named a spec file that is the integration spec) | 0 |
+| diff-audit errors | 30 | 30, all kept (below) |
+| mutation | not run here (CI nightly only) | — |
+| tests (web, i18n, admin routes) | 1181 | 1224 |
+
+- test-adversary: 43 tests in 4 files, all green, no defect.
+- code-reviewer: BLOCK, 1 HIGH, 1 MEDIUM. HIGH (the maintenance test asserted its own mock): the self-check line is removed; the test stays as the guard that keeps the admin routes open during maintenance, which the requirement asks a test for. MEDIUM (the `MAINTENANCE` barrel export serves only that test): kept with it. Repair lap 1.
+- Kept: 27 import-extension errors (domain and data-access use extensionless imports throughout; typecheck and build pass under their resolution) and 3 `eslint-disable` lines in generated data-access files (never edited by hand).

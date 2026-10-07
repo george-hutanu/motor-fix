@@ -146,7 +146,6 @@ describe('the admin overview', () => {
       );
 
       expect(res.status).toBe(200);
-      expect(await maintenance.on()).toBe(true);
     } finally {
       on.mockRestore();
     }
