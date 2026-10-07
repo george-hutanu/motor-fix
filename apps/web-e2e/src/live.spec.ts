@@ -125,6 +125,49 @@ test.describe('the live connection @seeded', () => {
     await context.close();
   });
 
+  test('a test update changes the dashboard in place while a half-filled form dialog keeps its text and focus', async ({
+    browser,
+    request,
+  }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await openDashboard(page, ACCOUNTS.garage, '/app/garage');
+    let reloads = 0;
+    page.on('load', () => reloads++);
+    // The dialog is a real invite form: nothing may send one.
+    const invites: string[] = [];
+    page.on('request', (r) => {
+      if (r.method() === 'POST' && /\/garages\/[^/]+\/invites$/.test(r.url()))
+        invites.push(r.url());
+    });
+    await page.getByRole('button', { name: 'Invită în echipă' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Invită în echipă' });
+    await expect(dialog).toBeVisible();
+    const name = dialog.getByLabel('Nume');
+    await name.click();
+    await name.pressSequentially('Elena Stan');
+    await expect(name).toBeFocused();
+    const admin = await accessToken(request, ACCOUNTS.admin);
+
+    const sent = await request.post('/api/v1/admin/live/test', {
+      data: { accountId: await accountId(request, ACCOUNTS.garage) },
+      headers: { Authorization: `Bearer ${admin}` },
+    });
+    expect(sent.status()).toBe(202);
+
+    await expect(
+      page.locator('[role="status"]', {
+        hasText: 'Actualizare de test în direct',
+      }),
+    ).toBeVisible({ timeout: 2_000 });
+    await expect(dialog).toBeVisible();
+    await expect(name).toHaveValue('Elena Stan');
+    await expect(name).toBeFocused();
+    expect(reloads).toBe(0);
+    expect(invites).toEqual([]);
+    await context.close();
+  });
+
   test("a test update sent to one driver never shows on another driver's dashboard", async ({
     browser,
     request,

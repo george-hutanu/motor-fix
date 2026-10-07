@@ -76,13 +76,42 @@ describe('model router — choosing', () => {
   });
 
   it('takes fable for a large diff without asking anything', async () => {
-    const picked = await chooseModel({ files: 40, lines: 2000 }, 'spec-reviewer', { repo, fetchImpl: never });
+    const picked = await chooseModel({ files: 40, lines: 2000 }, 'spec-reviewer', { repo, fetchImpl: never, fableTo: null });
     assert.equal(picked.model, 'fable');
+  });
+
+  // @traces 813-FR-004
+  it('takes opus instead of fable on a large diff while the fable switch is off', async () => {
+    const picked = await chooseModel({ files: 40, lines: 2000 }, 'spec-reviewer', { repo, fetchImpl: never, fableTo: 'claude-opus-5-5' });
+    assert.equal(picked.model, 'opus');
+    assert.match(picked.why, /fable switch off/);
+  });
+
+  it('takes opus when the lane answers fable while the switch is off', async () => {
+    const picked = await chooseModel({ files: 8, lines: 200 }, 'code-reviewer', { repo, fetchImpl: stubJev('fable'), apiKey: KEY, fableTo: 'claude-opus-5-5' });
+    assert.equal(picked.model, 'opus');
+  });
+
+  it('leaves sonnet alone while the switch is off', async () => {
+    const picked = await chooseModel({ files: 1, lines: 12 }, 'code-reviewer', { repo, fetchImpl: never, fableTo: 'claude-opus-5-5' });
+    assert.equal(picked.model, 'sonnet');
+  });
+
+  it('reads the switch from the environment when the caller does not pass it', async () => {
+    const before = process.env.ANTHROPIC_DEFAULT_FABLE_MODEL;
+    process.env.ANTHROPIC_DEFAULT_FABLE_MODEL = 'claude-opus-5-5';
+    try {
+      const picked = await chooseModel({ files: 40, lines: 2000 }, 'spec-reviewer', { repo, fetchImpl: never });
+      assert.equal(picked.model, 'opus');
+    } finally {
+      if (before === undefined) delete process.env.ANTHROPIC_DEFAULT_FABLE_MODEL;
+      else process.env.ANTHROPIC_DEFAULT_FABLE_MODEL = before;
+    }
   });
 
   it('asks the lane in the middle band and carries its answer', async () => {
     const fetchImpl = stubJev('fable');
-    const picked = await chooseModel({ files: 8, lines: 200 }, 'code-reviewer', { repo, fetchImpl, apiKey: KEY });
+    const picked = await chooseModel({ files: 8, lines: 200 }, 'code-reviewer', { repo, fetchImpl, apiKey: KEY, fableTo: null });
     assert.equal(picked.model, 'fable');
     assert.equal(fetchImpl.calls.length, 1);
     assert.equal(fetchImpl.calls[0].state.review, 'code-reviewer');

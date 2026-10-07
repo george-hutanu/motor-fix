@@ -17,6 +17,9 @@ name: PR QA
 # blocking findings, failure otherwise. The pr-tester agent still reads the
 # report and posts the review and the PR description's Agent review section;
 # on the laptop its own verdict, posted after the run, is the newer status.
+# A pull_request run executes the PR's own copy of this file, so the merge
+# gate counts its status only while the PR leaves this file alone, and never
+# one written by any other workflow (.claude/scripts/pr-test/provenance.mjs).
 on:
   pull_request:
     types: [ready_for_review, synchronize, reopened]

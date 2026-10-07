@@ -97,7 +97,8 @@
     },
     "env": {
       "CLAUDE_CODE_REMOTE": "true",
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}"
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
     "expect": {
       "exit": 0
@@ -114,7 +115,8 @@
     },
     "env": {
       "CLAUDE_CODE_REMOTE": "true",
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR QA\",\"workflowName\":\"PR QA\",\"status\":\"COMPLETED\",\"conclusion\":\"CANCELLED\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}"
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR QA\",\"workflowName\":\"PR QA\",\"status\":\"COMPLETED\",\"conclusion\":\"CANCELLED\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
     "expect": {
       "exit": 0
@@ -147,7 +149,8 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}"
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
     "expect": {
       "exit": 0
@@ -163,10 +166,65 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"body\",\"status\":\"COMPLETED\",\"conclusion\":\"CANCELLED\",\"startedAt\":\"2026-10-05T07:03:51Z\"},{\"__typename\":\"CheckRun\",\"name\":\"body\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\",\"startedAt\":\"2026-10-05T07:04:15Z\"},{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}"
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"body\",\"status\":\"COMPLETED\",\"conclusion\":\"CANCELLED\",\"startedAt\":\"2026-10-05T07:03:51Z\"},{\"__typename\":\"CheckRun\",\"name\":\"body\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\",\"startedAt\":\"2026-10-05T07:04:15Z\"},{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
     "expect": {
       "exit": 0
+    }
+  },
+  {
+    "id": "merge-gate-refuses-an-agent-review-a-pr-workflow-wrote",
+    "hook": "pre:bash:merge-gate",
+    "why": "on pull_request GitHub runs the PR's own workflows with their own token, so a workflow the PR adds can write agent-review success on itself; only pr-qa.yml's run counts",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"github-actions[bot]\",\"type\":\"Bot\"},\"target_url\":\"https://github.com/george-hutanu/motor-fix/actions/runs/123\"},\"run\":{\"path\":\".github/workflows/mine.yml\",\"event\":\"pull_request\",\"head_branch\":\"feature\",\"head_sha\":\"abc1234def5678\",\"status\":\"completed\",\"conclusion\":\"success\"}}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "not the PR QA workflow"
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-pr-that-ran-its-own-pr-qa",
+    "hook": "pre:bash:merge-gate",
+    "why": "a PR that changes pr-qa.yml ran its own copy of it on pull_request, so its verdict is the PR's own; it needs a lap that runs main's copy",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"github-actions[bot]\",\"type\":\"Bot\"},\"target_url\":\"https://github.com/george-hutanu/motor-fix/actions/runs/123\"},\"run\":{\"path\":\".github/workflows/pr-qa.yml\",\"event\":\"pull_request\",\"head_branch\":\"feature\",\"head_sha\":\"abc1234def5678\",\"status\":\"completed\",\"conclusion\":\"success\"},\"qaWorkflowChanged\":true}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "changes .github/workflows/pr-qa.yml"
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-success-over-a-failing-tester-review",
+    "hook": "pre:bash:merge-gate",
+    "why": "in a cloud session the tester can post its review but not a status, so a failing verdict lives only in the review and must still stop the merge",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"github-actions[bot]\",\"type\":\"Bot\"},\"target_url\":\"https://github.com/george-hutanu/motor-fix/actions/runs/123\"},\"run\":{\"path\":\".github/workflows/pr-qa.yml\",\"event\":\"pull_request\",\"head_branch\":\"feature\",\"head_sha\":\"abc1234def5678\",\"status\":\"completed\",\"conclusion\":\"success\"},\"testerReview\":\"failure\"}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "is a failure"
     }
   },
   {
@@ -345,7 +403,8 @@
     },
     "env": {
       "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
-      "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\"}],\"files\":[{\"filename\":\"specs/194-email-sending/deferred.md\"}]},\"between\":[],\"headReviews\":[]}"
+      "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\"}],\"files\":[{\"filename\":\"specs/194-email-sending/deferred.md\"}]},\"between\":[],\"headReviews\":[]}",
+      "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
     "expect": {
       "exit": 0

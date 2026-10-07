@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { DEADLINE_MS, deadlineMs, decideMerge, ghReader, mergeTarget, prefetchCarry, readPr } from './merge-gate.mjs';
+import { DEADLINE_MS, deadlineMs, decideMerge, ghReader, mergeTarget, prefetchCarry, prefetchProvenance, readPr } from './merge-gate.mjs';
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
 const run = (name, conclusion, status = 'COMPLETED', startedAt = '2026-10-05T07:00:00Z') => ({ __typename: 'CheckRun', name, status, conclusion, startedAt });
@@ -358,7 +358,7 @@ describe('merge gate — a check it cannot finish refuses the merge', () => {
       input: JSON.stringify({ tool_input: { command: 'gh pr merge 21 --merge' } }),
       encoding: 'utf8',
       timeout: 20000,
-      env: { ...process.env, SPECKIT_PR_STATE: '', SPECKIT_CARRY_STATE: '', SPECKIT_CARRY_DELAY_MS: '', SPECKIT_MERGE_GATE_DEADLINE_MS: '', ...env },
+      env: { ...process.env, SPECKIT_PR_STATE: '', SPECKIT_CARRY_STATE: '', SPECKIT_CARRY_DELAY_MS: '', SPECKIT_MERGE_GATE_DEADLINE_MS: '', SPECKIT_PROVENANCE_STATE: '', ...env },
     });
   /** A PATH whose gh runs `body`, for the real read path. */
   const withGh = (body, f) => {
@@ -410,6 +410,7 @@ describe('merge gate — a check it cannot finish refuses the merge', () => {
     const out = gate({
       SPECKIT_PR_STATE: JSON.stringify(carriedPr()),
       SPECKIT_CARRY_STATE: JSON.stringify(goodState),
+      SPECKIT_PROVENANCE_STATE: JSON.stringify({ status: { creator: { login: 'george-hutanu', type: 'User' } } }),
       SPECKIT_CARRY_DELAY_MS: '50',
       SPECKIT_MERGE_GATE_DEADLINE_MS: '5000',
     });
@@ -468,6 +469,72 @@ describe('merge gate — a check it cannot finish refuses the merge', () => {
     assert.match(decideMerge(carriedPr(null), await prefetchCarry(carriedPr(null), reader)), /could not read.*HTTP 502/);
     const slow = { description: async () => null, state: async () => { throw new Error('HTTP 504'); } };
     assert.match(decideMerge(carriedPr(), await prefetchCarry(carriedPr(), slow)), /could not verify.*HTTP 504/);
+  });
+});
+
+describe('merge gate — agent-review counts only when the PR under test could not have written it', () => {
+  const SHA = 'abc1234def5678';
+  const RUN = 'https://github.com/george-hutanu/motor-fix/actions/runs/9';
+  const botStatus = { state: 'success', context: 'agent-review', target_url: RUN, creator: { login: 'github-actions[bot]', type: 'Bot' } };
+  const qaRun = { path: '.github/workflows/pr-qa.yml', event: 'pull_request', head_branch: 'f', head_sha: SHA, display_title: `PR QA #21 at ${SHA} lap 1`, status: 'completed', conclusion: 'success' };
+  const reader = (over = {}, calls = []) => ({
+    read: async (shas) => (calls.push(shas), { qaWorkflowChanged: false, defaultBranch: 'main', bySha: Object.fromEntries(shas.map((s) => [s, { status: botStatus, run: qaRun, testerReview: null, ...over }])), ...over.pr }),
+  });
+
+  it('merges on a verdict the PR QA workflow wrote from its own run of this head', async () => {
+    const p = pr([...green, review('SUCCESS')]);
+    assert.equal(decideMerge(p, null, await prefetchProvenance(p, reader(), null)), null);
+  });
+
+  it('refuses a verdict written by a workflow the PR added, and says who wrote it', async () => {
+    const p = pr([...green, review('SUCCESS')]);
+    const why = decideMerge(p, null, await prefetchProvenance(p, reader({ run: { ...qaRun, path: '.github/workflows/mine.yml' } }), null));
+    assert.match(why, /cannot merge/);
+    assert.match(why, /mine\.yml, not the PR QA workflow/);
+  });
+
+  it("refuses a pull_request run's verdict when the PR changes pr-qa.yml", async () => {
+    const p = pr([...green, review('SUCCESS')]);
+    assert.match(decideMerge(p, null, await prefetchProvenance(p, reader({ pr: { qaWorkflowChanged: true } }), null)), /changes \.github\/workflows\/pr-qa\.yml/);
+  });
+
+  it("refuses when the tester's own review of the head is a failure the status does not show (the cloud)", async () => {
+    const p = pr([...green, review('SUCCESS')]);
+    assert.match(decideMerge(p, null, await prefetchProvenance(p, reader({ testerReview: 'failure' }), null)), /is a failure/);
+  });
+
+  it('refuses a verdict it could not trace, rather than trusting it', async () => {
+    const p = pr([...green, review('SUCCESS')]);
+    const failing = { read: async () => { throw new Error('HTTP 502'); } };
+    assert.match(decideMerge(p, null, await prefetchProvenance(p, failing, null)), /could not verify who wrote agent-review.*HTTP 502/);
+  });
+
+  it('also traces the verdict a carry names, so a forged success is not carried onto a docs-only head', async () => {
+    const FROM = 'f'.repeat(40);
+    const calls = [];
+    const p = pr([...green, review('SUCCESS')]);
+    await prefetchProvenance(p, reader({}, calls), FROM);
+    assert.deepEqual(calls, [[SHA, FROM]]);
+  });
+
+  it('reads nothing for a PR with no agent-review success', async () => {
+    const calls = [];
+    assert.equal(await prefetchProvenance(pr(green), reader({}, calls), null), null);
+    assert.deepEqual(calls, []);
+  });
+
+  it('refuses at the entry point when no provenance could be read, and passes with it', () => {
+    const hooks = fileURLToPath(new URL('.', import.meta.url));
+    const gate = (env) =>
+      spawnSync(process.execPath, [join(hooks, 'merge-gate.mjs')], {
+        input: JSON.stringify({ tool_input: { command: 'gh pr merge 21 --merge' } }),
+        encoding: 'utf8',
+        env: { ...process.env, SPECKIT_PR_STATE: JSON.stringify(pr([...green, review('SUCCESS')])), SPECKIT_PROVENANCE_STATE: '', ...env },
+      });
+    const blind = gate({});
+    assert.equal(blind.status, 2);
+    assert.match(blind.stderr, /could not verify who wrote agent-review/);
+    assert.equal(gate({ SPECKIT_PROVENANCE_STATE: JSON.stringify({ status: botStatus, run: qaRun }) }).status, 0);
   });
 });
 
