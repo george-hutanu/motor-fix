@@ -14,29 +14,29 @@ Three optional variables, read by `telemetry()` in `libs/contracts/src/env.ts`:
 | `OTEL_EXPORTER_OTLP_HEADERS` | `Authorization=Basic%20<token>`, percent-encoded as the OTLP spec asks | unset |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` (the default) | unset |
 
-The stack is `serviceyourcar.grafana.net` (org motor-fix, region
-prod-eu-west-2); the gateway takes OTLP over HTTP only. `telemetry()` passes
+The stack is in Grafana Cloud's prod-eu-west-2 region; its gateway takes
+OTLP over HTTP only. `telemetry()` passes
 the headers through untouched: the exporter decodes them, as the OTLP
 exporter spec says.
 
-Unset endpoint means telemetry off: the apps run unchanged. The owner set the
-values as per-service variables on api, worker and web in staging and
-production in Railway; telemetry starts with the first deploy that carries the
-instrumentation (ST-876). The values are never committed, read or printed
+Unset endpoint means telemetry off: the apps run unchanged. The owner sets
+the values on api, worker and web in staging and production in Railway;
+telemetry starts with the first deploy that carries the instrumentation. The
+values are never committed, read or printed
 by the repo or its agents. Every signal carries `env` (from `APP_ENV`), so staging and production share one
 stack and stay apart in every query. Export is fire-and-forget: an app never
 waits on, or fails because of, telemetry.
 
 Locally, `docker compose --profile observability up -d otel-lgtm` runs
-`grafana/otel-lgtm` (Grafana on `${GRAFANA_PORT:-3000}`, OTLP on 4317 and
-4318). Without the profile compose starts what it always has.
+`grafana/otel-lgtm`: Grafana on `${GRAFANA_PORT:-3300}` (clear of the api's
+3000), OTLP on 4317 and 4318. Without the profile compose starts what it always has.
 
 ## Dashboards and alerts as code
 
-- `infra/observability/dashboards/` — dashboard JSON (ST-879).
-- `infra/observability/alerts/` — alert rules (ST-880).
+- `infra/observability/dashboards/` — dashboard JSON.
+- `infra/observability/alerts/` — alert rules.
 
-They are imported or provisioned into Grafana Cloud by those stories; a
+They are imported or provisioned into Grafana Cloud by the stories that add them; a
 change made only in the Grafana UI is lost.
 
 ## Staying free

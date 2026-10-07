@@ -95,8 +95,8 @@ jobs:
           docker compose run --rm --entrypoint sh minio-setup -c \
             "mc alias set local http://minio:9000 motorfix motorfix-secret && mc ls local/motorfix"
           docker compose --profile observability up -d otel-lgtm
-          for i in $(seq 60); do curl -fsS localhost:3000/api/health && break; sleep 2; done
-          curl -fsS localhost:3000/api/health
+          for i in $(seq 60); do curl -fsS localhost:3300/api/health && break; sleep 2; done
+          curl -fsS localhost:3300/api/health
           for i in $(seq 30); do
             curl -fsS -X POST -H 'content-type: application/json' -d '{"resourceLogs":[]}' localhost:4318/v1/logs && break
             sleep 2

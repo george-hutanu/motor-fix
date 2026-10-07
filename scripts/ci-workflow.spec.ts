@@ -141,7 +141,7 @@ describe('ci workflow', () => {
     expect(block).toContain(
       'docker compose --profile observability up -d otel-lgtm',
     );
-    expect(block).toMatch(/curl -fsS[^\n]*localhost:3000\/api\/health/);
+    expect(block).toMatch(/curl -fsS[^\n]*localhost:3300\/api\/health/);
     expect(block).toMatch(/curl -fsS -X POST[^\n]*localhost:4318\/v1\/logs/);
     expect(step(job('checks'), 'Stop the compose stack')).toContain(
       'docker compose --profile observability down -v --remove-orphans',

@@ -37,6 +37,6 @@ services:
     image: grafana/otel-lgtm:0.35.0
     profiles: [observability]
     ports:
-      - '${GRAFANA_PORT:-3000}:3000'
+      - '${GRAFANA_PORT:-3300}:3000'
       - '4317:4317'
       - '4318:4318'
