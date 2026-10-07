@@ -48,6 +48,7 @@ features:
   - 760-e2e-sign-up-limit
   - 691-author-skills-card
   - 437-diff-audit-origin-main
+  - 849-work-timeline-row
   - 768-cloud-compose-pull
   - 845-archived-delta-adds
 ---
@@ -1165,6 +1166,26 @@ _From 691-author-skills-card._
 ### 437-FR-001 — diff-audit MUST take its base as `git merge-base HEAD origin/main`, and only when that ref is absent fall back to `git merge-base HEAD main`.
 
 _From 437-diff-audit-origin-main._
+
+### 849-FR-001 — Each status event `start`, `implement`, `qa`, `finish`, `blocked` and `unblock` that notion-sync runs for a story MUST upsert that story's Work timeline row: query the data source by `Key` = `ST-<n>`, update the first match, else create a row with Task (title) and Key both `ST-<n>`. `review` and every non-status event (`pr`, `debt`, `ready`, `log`, `check`) MUST NOT touch the Work timeline.
+
+_From 849-work-timeline-row._
+
+### 849-FR-002 — The step MUST write State and dates as mapped: `start` → In progress, Started = now only when empty; `implement` → In progress (Started as `start`); `qa` → QA, QA from = now only when empty; `finish` → Merged, Merged at = now; `blocked` → Blocked; `unblock` → QA when the row has QA from, else In progress. No other state (in particular `Queued`) is ever written.
+
+_From 849-work-timeline-row._
+
+### 849-FR-003 — With every write the step MUST set the row's page icon to the state's emoji (🔨 In progress, 🧪 QA, ✅ Merged, ⛔ Blocked; ⏳ Queued is never written), its `When` to the range Started (now when empty) → Merged at for a Merged row, else now + 2h, and `Took` to `"<total> total · build <b> · QA <q>"` once Merged, `"build <b> · in QA <q>"` in QA, `"<d> so far"` otherwise, with durations as `0m`, `<m>m` under an hour, else `<h>h<mm>`; `Took` is omitted when there is no Started. The same step MUST also write the timing onto the story page it already updates (stories data source): `Work` (the same range as `When`), `Started`, `QA from`, `Merged at` (each when set) and `Took`, so the story and the row agree. A date is read from the story first, else from the row.
+
+_From 849-work-timeline-row._
+
+### 849-FR-004 — The step MUST set `PR` to the story's PR URL when the event knows it (the story's `PR` property, else `--pr <n>` as the repository's PR URL) and omit it otherwise, and MUST set the `Ticket` relation (to the stories data source `326eee3c-abec-41d9-9f96-eb3bd545a802`) to the story's own page; it MUST never send the `Session` property (to the row or the story), nor any property the mapping does not name, so what the owner set by hand is kept.
+
+_From 849-work-timeline-row._
+
+### 849-FR-005 — The Work timeline write MUST fail open: any error (request, HTTP status, body) is caught inside `.claude/scripts/lib/work-timeline.mjs` (which holds the data source id `3706e923-2faa-42bc-aab2-8a2d5ab5d9d3` and the Notion version `2025-09-03` as constants and is called from notion-sync's status event after the story's own writes), logged as one line in `specs/<feature>/notion-sync.md` through the event's existing log, and never thrown, never changes the event's output or exit code, and never queues a PENDING replay line. A successful write logs one line with the row's change.
+
+_From 849-work-timeline-row._
 
 ### 768-FR-001 — `scripts/cloud-setup.sh` MUST skip `docker compose pull postgres redis` when every image `docker compose config --images postgres redis` names is present locally (`docker image inspect`), and say so.
 
