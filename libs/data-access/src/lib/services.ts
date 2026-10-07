@@ -6,6 +6,7 @@ export { AuthService } from './services/auth.service';
 export { MeService } from './services/me.service';
 export { AuditHistoryService } from './services/audit-history.service';
 export { NotificationsService } from './services/notifications.service';
+export { CarsService } from './services/cars.service';
 export { BrandsService } from './services/brands.service';
 export { PublicHolidaysService } from './services/public-holidays.service';
 export { SearchService } from './services/search.service';

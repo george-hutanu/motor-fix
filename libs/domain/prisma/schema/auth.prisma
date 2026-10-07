@@ -59,6 +59,7 @@ model Account {
   smsCounters             SmsCounter[]
   tokens                  AccountToken[]
   reminders               Reminder[]
+  cars                    Car[]
   consents                AccountConsent[]
 
   @@map("account")
