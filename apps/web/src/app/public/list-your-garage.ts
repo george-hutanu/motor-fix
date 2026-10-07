@@ -74,7 +74,12 @@ const SETTLE_MS = 150;
     .error { font-size: var(--mf-size-small); color: var(--mf-red-ink); }
     .error:empty { display: none; }
     section > .note { margin-top: var(--mf-space-3); }
-    .actions { display: flex; flex-wrap: wrap; gap: var(--mf-space-2); }
+    /* Pinned to the bottom of the screen while the sections pass: reaching Save never scrolls the owner off the step a draft is saved at. */
+    .actions {
+      display: flex; flex-wrap: wrap; gap: var(--mf-space-2);
+      position: sticky; bottom: 0; z-index: 1; padding-block: var(--mf-space-2);
+      background: var(--mf-bg); border-top: 1px solid var(--mf-line);
+    }
     .actions button, .ended button { min-height: var(--mf-tap); }
     .ended { display: grid; gap: var(--mf-space-3); justify-items: start; margin-top: var(--mf-space-4); }
     ol button {
