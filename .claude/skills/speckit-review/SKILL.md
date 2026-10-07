@@ -215,11 +215,11 @@ Every fix-and-re-verify lap is counted:
 node .claude/scripts/run-state.mjs repair
 ```
 
-It exits 1 at the fifth lap (`SPECKIT_MAX_REPAIR_ITERATIONS`) and leaves
+It exits 1 at the tenth lap (`SPECKIT_MAX_REPAIR_ITERATIONS`) and leaves
 `.specify/run-state.json` at `status: blocked`, `blocking_condition:
 repair-loop-exceeded`. Borrowed from BMAD's autonomous build, whose blocking
 conditions include "review repair loop exceeded 5 iterations".
 
-When it fires, stop and report. A cycle that has not converged in five laps is
+When it fires, stop and report. A cycle that has not converged in ten laps is
 not one lap from converging: either a finding is wrong, or the requirement is,
 and both are decisions rather than another edit.

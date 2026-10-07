@@ -112,7 +112,7 @@ npm run test:harness                             # the harness's own specs
   change lands in `specs/<feature>/deferred.md` instead of scope creep.
 - **Machine-readable run state.** `.specify/run-state.json` carries `status`,
   `blocking_condition` and `repair_iterations`; a fix/re-verify loop blocks at
-  five laps (`SPECKIT_MAX_REPAIR_ITERATIONS`).
+  ten laps (`SPECKIT_MAX_REPAIR_ITERATIONS`).
 - **A context ratchet.** This file may shrink freely and may not grow past
   `.specify/context-baseline.json`. Record deliberate growth with
   `node .claude/scripts/context-audit.mjs --bless --allow-growth "<reason>"`.
