@@ -63,3 +63,9 @@ Hook outcomes:
 - No research agent dispatched: every Technical Context value and decision came from repo files (cited in plan.md and research.md).
 - Artifacts: plan.md, research.md, data-model.md, contracts/garage-search.openapi.json, quickstart.md. `artifact-lint --check`: 0 errors (tasks.md not yet written). `level.mjs check`: level 2 unchanged.
 - after_plan hooks: `speckit.git.commit` done (this commit); `speckit.agent-context.update` skipped (optional; would grow untracked CLAUDE.local.md).
+
+## Phase 7 — Tasks
+
+- `speckit-tasks`: tasks.md written, 13 tasks in 5 phases (Foundational T001-T002, US1 T003-T008, US2 T009-T010, US3 T011-T012, Polish T013). Tests first in every story; no Playwright task (deferred); FR to test map in tasks.md.
+- `speckit.analyze` (after_tasks) left to phase 8, as instructed.
+- `level.mjs check`: level 2, unchanged for specs/043-brand-first-garage-list. `artifact-lint --check`: 0 errors, 0 warnings.
