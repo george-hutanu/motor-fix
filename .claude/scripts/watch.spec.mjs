@@ -312,7 +312,7 @@ describe('stale and the fix', () => {
     assert.equal(recent.fix, null);
     assert.match(recent.reason, /quiet 5 of 30 min/);
     assert.equal(fixOf(row({ phase: 'done', pr: merged, activity: { at: NOW - 120 * MIN, source: 'commit' } }), opts).fix, 'remove-worktree');
-    const now = fixOf(row({ phase: 'done', pr: merged, activity: { at: NOW, source: 'commit' } }), { now: NOW, thresholds: parseStale(['done=0'], DEFAULT_THRESHOLDS) });
+    const now = fixOf(row({ phase: 'done', pr: merged, activity: { at: NOW - 1, source: 'commit' } }), { now: NOW, thresholds: parseStale(['done=0'], DEFAULT_THRESHOLDS) });
     assert.equal(now.fix, 'remove-worktree');
   });
 
@@ -529,6 +529,7 @@ describe('--fix and claim', () => {
       quietCommit(dead, 120);
       git(f.repo, 'worktree', 'lock', '--reason', 'claude agent agent-dead (pid 999999 start Sun Oct  4 08:07:18 2026)', dead);
       const merged = f.add('agent-merged', '902-b');
+      quietCommit(merged, 120);
       const dirty = f.add('agent-dirty', '903-c');
       writeFileSync(join(dirty, 'wip.txt'), 'x\n');
       const gone = f.add('agent-gone', '904-d');

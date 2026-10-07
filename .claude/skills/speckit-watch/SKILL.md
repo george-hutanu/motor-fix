@@ -40,7 +40,7 @@ which uses the same scan, so a pass started by it always has something to do.
    Pass on any `--stale` from the arguments.
 
 2. `actions` lists what `--fix` did: dead locks released, merged clean
-   worktrees removed, deleted worktrees pruned, and `carry-review`: a ready
+   worktrees removed once quiet past the done threshold (30 min), deleted worktrees pruned, and `carry-review`: a ready
    PR whose head only adds documentation to a tested commit gets that
    verdict carried (`pr-test/carry.mjs`, re-checked by the merge gate)
    instead of a `rerun-qa` agent. A failed action is reported,

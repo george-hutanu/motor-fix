@@ -349,14 +349,21 @@ describe('stale and the fix, edges', () => {
   const quiet = { activity: { at: NOW - 600 * MIN, source: 'commit' } };
 
   it('applies each phase threshold exactly: quiet for the threshold is ok, one millisecond more is stale', () => {
-    for (const [phase, minutes] of Object.entries(DEFAULT_THRESHOLDS)) {
+    for (const [phase, minutes] of Object.entries(DEFAULT_THRESHOLDS).filter(([phase]) => phase !== 'done')) {
       assert.equal(fixOf(row({ phase, activity: { at: NOW - minutes * MIN, source: 'commit' } }), opts).verdict, 'ok', `${phase} at the threshold`);
       assert.equal(fixOf(row({ phase, activity: { at: NOW - minutes * MIN - 1, source: 'commit' } }), opts).verdict, 'stale', `${phase} past the threshold`);
     }
   });
 
   it('has the documented default thresholds', () => {
-    assert.deepEqual(DEFAULT_THRESHOLDS, { planning: 30, tests: 45, development: 45, review: 30, qa: 30, merging: 30 });
+    assert.deepEqual(DEFAULT_THRESHOLDS, { planning: 30, tests: 45, development: 45, review: 30, qa: 30, merging: 30, done: 30 });
+  });
+
+  it('removes a merged worktree only past the done threshold: quiet for it is kept, one millisecond more is removed (ST-481)', () => {
+    const merged = summarizePr(pr({ state: 'MERGED', headRefOid: 'abc' }));
+    const at = (ms) => fixOf(row({ phase: 'done', pr: merged, head: 'abc', clean: true, activity: { at: NOW - ms, source: 'commit' } }), opts).fix;
+    assert.equal(at(DEFAULT_THRESHOLDS.done * MIN), null);
+    assert.equal(at(DEFAULT_THRESHOLDS.done * MIN + 1), 'remove-worktree');
   });
 
   it('is stale at the epoch', () => {
@@ -471,7 +478,7 @@ describe('stale threshold parsing', () => {
     });
   }
 
-  for (const bad of ['=10', 'done=10', 'blocked=10', 'merge=10', 'constructor=10', 'toString=5', '__proto__=1', 'qa']) {
+  for (const bad of ['=10', 'blocked=10', 'merge=10', 'constructor=10', 'toString=5', '__proto__=1', 'qa']) {
     it(`rejects the name in ${JSON.stringify(bad)}`, () => {
       assert.throws(() => parseStale([bad], DEFAULT_THRESHOLDS));
     });
