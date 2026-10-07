@@ -47,7 +47,14 @@ function setUp(platform = 'browser') {
       { provide: SITE_ORIGIN, useValue: 'https://motorfix.ro' },
       {
         provide: Session,
-        useValue: { current, ended: new Subject<void>(), load, shown: current },
+        useValue: {
+          current,
+          ended: new Subject<void>(),
+          keepReturnTo: jest.fn(),
+          load,
+          shown: current,
+          takeReturnTo: jest.fn((): string | null => null),
+        },
       },
       { provide: PLATFORM_ID, useValue: platform },
       { provide: Overlays, useValue: overlays },
