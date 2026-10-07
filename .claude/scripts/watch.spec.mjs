@@ -1442,3 +1442,84 @@ describe('QA runs on GitHub Actions', () => {
     }
   });
 });
+
+// GitHub runs no CI on a PR that conflicts with main, so waiting for its checks
+// never ends: the board says so at once and offers the merge.
+describe('a ready PR that conflicts with main', () => {
+  afterEach(() => vi.restoreAllMocks());
+  const opts = { now: NOW, thresholds: DEFAULT_THRESHOLDS };
+  const ready = (over = {}) => ({ number: 21, state: 'ready', head: 'abc', checks: 'pending', agentReview: null, mergeable: 'CONFLICTING', ...over });
+  const recent = { at: NOW - 2 * MIN, source: 'commit' };
+
+  it('carries the mergeable state, reading an absent one as unknown', () => {
+    assert.equal(summarizePr(pr({ mergeable: 'CONFLICTING' })).mergeable, 'CONFLICTING');
+    assert.equal(summarizePr(pr()).mergeable, 'UNKNOWN');
+  });
+
+  it('is a conflict with fix merge-main at once, whatever else the row says', () => {
+    const rows = [
+      row({ phase: 'qa', activity: recent, pr: ready() }),
+      row({ phase: 'qa', pr: ready({ checks: 'fail' }) }),
+      row({ phase: 'qa', activity: recent, handoff: true, qaRun: { id: 7, head: 'abc' }, qaRunState: { status: 'queued' }, pr: ready() }),
+    ];
+    for (const r of rows) {
+      const out = fixOf(r, opts);
+      assert.equal(out.verdict, 'conflict');
+      assert.equal(out.fix, 'merge-main');
+      assert.match(out.reason, /conflicts with main/);
+    }
+  });
+
+  it('stays ok while held, and judges unknown, draft and merged PRs as before', () => {
+    assert.equal(fixOf(row({ phase: 'qa', holder: 'live', pr: ready() }), opts).verdict, 'ok');
+    assert.equal(fixOf(row({ phase: 'qa', holder: 'owner', main: true, pr: ready() }), opts).verdict, 'ok');
+    assert.equal(fixOf(row({ phase: 'qa', activity: recent, pr: ready({ mergeable: 'UNKNOWN' }) }), opts).verdict, 'ok');
+    assert.equal(fixOf(row({ phase: 'qa', activity: recent, pr: ready({ mergeable: 'MERGEABLE' }) }), opts).verdict, 'ok');
+    assert.equal(fixOf(row({ pr: ready({ state: 'draft' }) }), opts).fix, 'resume');
+    assert.equal(fixOf(row({ phase: 'done', pr: ready({ state: 'closed' }) }), opts).verdict, 'done');
+  });
+
+  it('dispatches merge-main like tail, on a QA place', () => {
+    const c = { path: 'c', verdict: 'conflict', fix: 'merge-main', activity: { at: NOW - MIN }, claim: null, pr: { number: 21 } };
+    assert.deepEqual(dispatchPlan([c], { qaLive: 0, now: NOW }).map((p) => [p.fix, p.pr]), [['merge-main', 21]]);
+    assert.deepEqual(dispatchPlan([c], { qaLive: 2, qaCap: 2, now: NOW }), []);
+    const others = [1, 2].map((i) => ({ path: `o${i}`, verdict: 'stale', fix: 'resume', activity: { at: NOW - MIN }, claim: null }));
+    assert.equal(dispatchPlan([...others, c], { qaLive: 0, now: NOW }).length, 3);
+  });
+
+  it('wakes the gate once, and not again once claimed', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-fixture-urls');
+      quietCommit(a, 2);
+      const head = git(a, 'rev-parse', 'HEAD');
+      const deps = env({ gh: () => [pr({ headRefOid: head, mergeable: 'CONFLICTING' })] });
+      const io = captured();
+      assert.equal(main(['--gate'], { cwd: f.repo, ...deps }), 2);
+      assert.deepEqual(io.out, [`merge-main ${a} #21`]);
+      writeClaim(a, 'merge-main', NOW);
+      io.out.length = 0;
+      assert.equal(main(['--gate'], { cwd: f.repo, ...deps }), 0);
+      assert.deepEqual(io.out, []);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('counts conflicts in the board header and shows it in the PR column', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-fixture-urls');
+      quietCommit(a, 2);
+      const head = git(a, 'rev-parse', 'HEAD');
+      const io = captured();
+      main([], { cwd: f.repo, ...env({ gh: () => [pr({ headRefOid: head, mergeable: 'CONFLICTING' })] }) });
+      const board = io.out.join('\n');
+      assert.match(board, /conflict 1/);
+      assert.match(board, /#21 ready ci:pass conflict/);
+      assert.match(board, /dispatch: merge-main agent-a/);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+});
