@@ -14,3 +14,6 @@
 - 2026-10-07 · implement · timeline · Planning → Implementing
 - 2026-10-07 · labels · PR #192 · in development
 - 2026-10-07 · debt · ST-108 · deferred.md line 2 → https://app.notion.com/p/Tech-debt-ST-108-new-code-not-urgent-follow-reads-getComputedStyle-on-the-bar-and-queries-the-3f2607bff0d28189b38ec3c946bf7e0e
+- 2026-10-07 · qa · ST-108 · Implementing → QA
+- 2026-10-07 · qa · timeline · Implementing → QA
+- 2026-10-07 · labels · PR #192 · QA
