@@ -1,3 +1,4 @@
+import { VERIFICATION_CHECK_KINDS } from '@motor-fix/contracts';
 import {
   HttpStatus,
   Inject,
@@ -106,6 +107,7 @@ export class VerificationService {
       subjectId: file.id,
       subjectType: 'verification_file',
     });
+    await withChecks(tx, file.id);
     await this.announce(tx, file, 'verification.submitted');
     if (!this.config.skipManualApproval) return file;
     return this.decide(tx, SYSTEM, file.id, { outcome: 'approved' });
@@ -215,6 +217,7 @@ export class VerificationService {
     const file = await this.move(tx, actor, before, 'resend', {
       status: 'submitted',
     });
+    await withChecks(tx, file.id);
     await this.announce(tx, file, 'verification.submitted');
     return file;
   }
@@ -352,6 +355,14 @@ export class VerificationService {
 function trust(actor: VerificationActor) {
   if (actor.role !== 'system') requireCapability(actor, 'admin.garages');
 }
+
+// One check per kind, not run; a check the file already has keeps its result.
+// The submission's history entry covers them.
+const withChecks = (tx: Prisma.TransactionClient, fileId: string) =>
+  tx.verificationCheck.createMany({
+    data: VERIFICATION_CHECK_KINDS.map((kind) => ({ fileId, kind })),
+    skipDuplicates: true,
+  });
 
 async function name(tx: Prisma.TransactionClient, accountId: string | null) {
   if (!accountId) return 'MotorFix';

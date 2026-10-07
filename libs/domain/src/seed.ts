@@ -198,6 +198,15 @@ async function seed(db: Client, secret: string) {
       [garage, status],
     );
   }
+  // A sent file has one check per kind (submit and resend add them); the seed
+  // inserts its files directly, so it adds them the same way.
+  await db.query(
+    `INSERT INTO verification_check (id, file_id, kind)
+     SELECT gen_random_uuid(), f.id, k
+     FROM verification_file f
+     CROSS JOIN unnest(enum_range(NULL::verification_check_kind)) AS k
+     ON CONFLICT (file_id, kind) DO NOTHING`,
+  );
 }
 
 async function main(secret: string) {

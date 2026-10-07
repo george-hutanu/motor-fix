@@ -19,6 +19,7 @@ features:
   - 561-sms-sent-once
   - 560-requeue-stranded-notifications
   - 802-sms-count-throw-clears-mark
+  - 806-requeue-sweep-batched
 ---
 
 # Capability: Notifications
@@ -451,9 +452,9 @@ _From 561-sms-sent-once._
 
 _From 561-sms-sent-once._
 
-### 560-FR-001 — The worker MUST run a periodic sweep that, for every stale `queued` notification row, adds its send job under the row's usual job id and options (`send-<id>`, no delay, the same attempts, backoff and cleanup as a first add), on every channel.
+### 806-FR-001 — The worker MUST run a periodic sweep that, for every stale `queued` notification row however many there are, adds its send job under the row's usual job id and options (`send-<id>`, no delay, the same attempts, backoff and cleanup as a first add), on every channel, in one sweep: the sweep reads the rows in fixed-size pages in a fixed, stable order, continuing until a page comes back short, so no single read is unbounded and no stranded row is left behind by the rows ahead of it. (Supersedes 560-FR-001.)
 
-_From 560-requeue-stranded-notifications._
+_From 806-requeue-sweep-batched._
 
 ### 560-FR-002 — A row is stale when it has been `queued` for longer than the stale window (5 minutes, see Assumptions), measured from its creation time.
 
@@ -495,6 +496,18 @@ _From 560-requeue-stranded-notifications._
 
 _From 802-sms-count-throw-clears-mark._
 
+### 806-FR-002 — The page size MUST be one fixed value in code, with no environment variable, setting or parameter to tune it (Principle I).
+
+_From 806-requeue-sweep-batched._
+
+### 806-FR-003 — Each page's send jobs MUST be handed to the queue in one bulk add, not one add per row; the jobs carry the same id and options as a single add would.
+
+_From 806-requeue-sweep-batched._
+
+### 806-FR-004 — Everything else about the sweep MUST stay as specified: what it selects and leaves alone (560-FR-002, FR-004, FR-005, FR-007), the idempotent job id (560-FR-003), the log naming the rows it re-queued (560-FR-009), a failing read or add logging and ending the sweep (560-FR-008, where the rows of pages already handed over stay handed over and are counted), the five-minute schedule, and no API route, contract, schema migration or UI (560-FR-010).
+
+_From 806-requeue-sweep-batched._
+
 ## Retired
 
 - `194-FR-007` — superseded by `195-FR-005` (2026-10-04)
@@ -503,3 +516,5 @@ _From 802-sms-count-throw-clears-mark._
 - `194-FR-003` — superseded by `196-FR-007` (2026-10-05)
 - `194-FR-008` — superseded by `196-FR-019` (2026-10-05)
 - `194-FR-013` — superseded by `196-FR-014` (2026-10-05)
+
+- `560-FR-001` — superseded by `806-FR-001` (2026-10-07)

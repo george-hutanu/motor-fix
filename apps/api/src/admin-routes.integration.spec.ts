@@ -21,6 +21,7 @@ const KNOWN = [
   'POST /api/v1/admin/live/test',
   'POST /api/v1/admin/news',
   'POST /api/v1/admin/notifications/test',
+  'PUT /api/v1/admin/verification-files/{id}/checks/{kind}',
 ];
 const NON_ADMIN = ['driver', 'garage', 'receptionist', 'mechanic'] as const;
 const METHODS = ['get', 'post', 'put', 'patch', 'delete'] as const;
