@@ -1,14 +1,13 @@
 import { afterEach, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { cleanup, setup } from './cloud-setup.fixture.mjs';
+import { cleanup, IMAGES, setup } from './cloud-setup.fixture.mjs';
 
 afterEach(cleanup);
 
 /** Docker is up and Node 24 is in place; the rest is the fixture's image controls. */
 const scene = (images) => setup({ node: '24', docker: true, ...images });
 
-const PG = 'imresamu/postgis:17-3.5';
-const RD = 'redis:7';
+const [PG, RD] = IMAGES;
 
 describe('cloud-setup.sh image check, hostile inputs', () => {
   // @traces 768-FR-001
