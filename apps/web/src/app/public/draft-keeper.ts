@@ -85,6 +85,8 @@ export class DraftKeeper {
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.browserTimer);
       clearTimeout(this.serverTimer);
+      // The server renders the form too, and has no window.
+      if (typeof window === 'undefined') return;
       window.removeEventListener('online', this.online);
       window.removeEventListener('offline', this.offline);
     });

@@ -57,7 +57,7 @@ test.describe('saving a listing draft @mailbox', () => {
       const phone = await other.newPage();
       await ready(phone, link);
       await expect(phone.getByLabel('E‑mail')).toHaveValue(email);
-      await expect(current(phone)).toHaveText(/^3 /);
+      await expect(current(phone)).toHaveText(/^\s*3 /);
       await expect(phone).not.toHaveURL(/draft=/);
     } finally {
       await other.close();
