@@ -462,16 +462,18 @@ describe('answers that refuse', () => {
     expect(alertText()).toBe('The e-mail or password is not correct.');
   });
 
-  it('clears the message at the next try', async () => {
+  it('keeps the message while the next try is sending (ST-497)', async () => {
     await open();
     signIn
       .mockRejectedValueOnce(problem(401, 'invalid_credentials'))
       .mockImplementationOnce(() => new Promise(() => undefined));
     await submit('andrei@example.ro', 'parola');
+    const message = alertText();
 
     await submit('andrei@example.ro', 'parola-buna');
 
-    expect(alertText()).toBe('');
+    expect(message).not.toBe('');
+    expect(alertText()).toBe(message);
   });
 });
 
