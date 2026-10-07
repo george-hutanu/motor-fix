@@ -20,7 +20,8 @@
 #      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD, which the install clears).
 #   3. The Docker daemon up (waiting CLOUD_SETUP_DOCKER_WAIT seconds, default
 #      30), then the postgres and redis images pulled for the integration tests
-#      and the pre-commit hook (scripts/test-services.ts).
+#      and the pre-commit hook (scripts/test-services.ts), unless both are
+#      already present.
 #
 # It does not check CLAUDE_CODE_REMOTE (whether a cloud setup script sees it is
 # unverified), and it installs system packages: never run it on the laptop.
@@ -122,5 +123,13 @@ if ! docker info >/dev/null 2>&1; then
     sleep 1
   done
 fi
-docker compose pull postgres redis
+# Docker Hub limits anonymous pulls (429 Too Many Requests), so images already
+# on the VM are not pulled again; a missing one is, and a failed pull fails.
+images="$(docker compose config --images postgres redis 2>/dev/null)" || images=""
+# shellcheck disable=SC2086
+if [ -n "$images" ] && docker image inspect $images >/dev/null 2>&1; then
+  log "postgres and redis images present"
+else
+  docker compose pull postgres redis
+fi
 log "ready"

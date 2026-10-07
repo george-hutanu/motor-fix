@@ -2,6 +2,7 @@ import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
 import {
   emailConfig,
   HealthModule,
+  InsightsModule,
   JsonLogger,
   listingDraftDaily,
   NEWS_CONSUMER,
@@ -20,8 +21,8 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 // The worker serves no routes of its own: its HTTP listener exists so that
 // Railway can health-check it. It relays the outbox's events to the live
 // streams, consumes the notifications queue, sending e-mail, SMS and
-// WhatsApp, runs the monthly news, the daily reminders and the listing
-// draft sweep.
+// WhatsApp, runs the monthly news, the daily reminders, the listing draft
+// sweep and the nightly platform figures.
 async function bootstrap() {
   const env = readEnv(['DATABASE_URL', 'REDIS_URL', ...STORAGE_ENV]);
   const email = emailConfig(env.APP_ENV, process.env);
@@ -53,6 +54,10 @@ async function bootstrap() {
         daily: listingDraftDaily(email.webUrl),
         dayMs: reminderDayMs(env.APP_ENV, process.env),
         notifications,
+        redisUrl: env.REDIS_URL,
+      }),
+      InsightsModule.registerWorker({
+        databaseUrl: env.DATABASE_URL,
         redisUrl: env.REDIS_URL,
       }),
     ],

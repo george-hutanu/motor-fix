@@ -1,1 +1,13 @@
-{}
+{
+  "panel": {
+    "activeDrivers": "Șoferi activi",
+    "answerRate": "Rată de răspuns",
+    "bookings": "Programări",
+    "garagesListed": "Service‑uri listate",
+    "reportedReviews": "Recenzii raportate",
+    "requestsToday": "Cereri de ofertă azi",
+    "soon": "în curând",
+    "thisMonth": "{sign}{n} luna asta",
+    "unavailable": "Cifrele nu au putut fi citite"
+  }
+}
