@@ -52,6 +52,7 @@ features:
   - 768-cloud-compose-pull
   - 845-archived-delta-adds
   - 706-packet-web-relap
+  - 850-dispatch-test-timeouts
 ---
 
 # Capability: Platform
@@ -1203,6 +1204,10 @@ _From 845-archived-delta-adds._
 ### 845-FR-002 — For any other feature, `delta-adds-existing` MUST stay an ERROR, and every other rule MUST fire for archived and unarchived features alike.
 
 _From 845-archived-delta-adds._
+
+### 850-FR-001 — `dispatch.mjs` MUST read how many times it looks for the run from `PR_QA_POLL_TRIES` (a positive integer), defaulting to 36 when unset or invalid, in both the dispatched (laptop) and the pull_request (cloud) wait, and its "appeared within N s" message MUST use that count.
+
+_From 850-dispatch-test-timeouts._
 
 ## Retired
 
