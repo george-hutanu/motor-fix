@@ -58,7 +58,7 @@ A long list is read 20 garages a page. Whatever page the driver is on, no taker 
 
 **Acceptance Scenarios**:
 
-1. **Given** 48 garages, 30 taking BMW, **When** the pages are read one after the other, **Then** pages one and two hold the 30 takers and the first page of refusers starts only after the last taker; no page holds a refuser before a taker.
+1. **Given** 48 garages, 30 taking BMW, **When** the pages are read one after the other, **Then** the 30 takers fill page one and the first ten places of page two, the refusers fill the rest of page two and the pages after it, and no page holds a refuser before a taker.
 2. **Given** takers named "Auto Delta", "Auto Alfa" and "Auto Beta", **Then** they come Alfa, Beta, Delta.
 3. **Given** two takers with the same name, **Then** they come by id, and the page boundary between them neither repeats nor skips either.
 4. **Given** a refuser whose name sorts before every taker's, **Then** it still comes after the last taker.
@@ -96,12 +96,12 @@ The spec-kit clarification gate was answered from the Build brief, the constitut
 - **FR-001**: The system MUST answer a request for the garages for one brand with every approved garage, in two groups: first the garages whose answer for the brand is `works_on`, then every other garage (`does_not_take` and `unstated` together); no garage of the first group ever comes after one of the second, on any page.
 - **FR-002**: A suspended or never-approved garage MUST be in neither group and in neither count: only garages visible to the public (the one public scope) are read.
 - **FR-003**: The request MUST be open to visitors without a session and listed with the public routes.
-- **FR-004**: Each listed garage MUST carry its id, name, slug, and its answer for the brand, one of `works_on`, `does_not_take` and `unstated`, so the screen can show the red lamp on every garage of the second group.
-- **FR-005**: The answer MUST carry two counts worked out once over every garage found, not over the page: how many work on the brand and how many do not take it (refusers and unmarked together); with no approved garage both are zero and the list is empty, with no error.
-- **FR-006**: The list MUST come 20 garages a page as `{ items, nextCursor, total, counts }`, with an opaque cursor for the next page that carries the brand, the group and the last garage's name and id (a keyset), so the next page continues the same group where the previous one stopped and no garage is repeated or skipped between two consecutive pages of an unchanged list; `total` is the sum of the two counts.
+- **FR-004**: Each listed garage MUST carry its id, name, slug, and its answer for the brand, in a field named `stance`, one of `works_on`, `does_not_take` and `unstated`, so the screen can show the red lamp on every garage of the second group.
+- **FR-005**: The answer MUST carry two counts worked out once over every garage found, not over the page: how many work on the brand (`counts.worksOn`) and how many do not take it (`counts.doesNotTake`, refusers and unmarked together), both whole numbers; with no approved garage both are zero and the list is empty, with no error.
+- **FR-006**: The list MUST come 20 garages a page as `{ items, nextCursor, total, counts }`, with an opaque cursor for the next page that carries the brand, the group and the last garage's name and id (a keyset), so the next page continues the same group where the previous one stopped and no garage is repeated or skipped between two consecutive pages of an unchanged list; `total` is the sum of the two counts; `nextCursor` is null on the last page, that is when no garage follows the page.
 - **FR-007**: Inside each group the garages MUST come by name under the database's default collation, then by id, so two garages of the same name have one order and a page boundary between them repeats or skips neither.
 - **FR-008**: A listed garage MUST carry only the fields FR-004 names: no rating, review count, brand note or refusal phrase is added to the garage or the answer by this story.
-- **FR-009**: The brand MUST be named by its uuid; a uuid no brand row holds MUST answer "not found", while a retired (inactive) brand still answers; a value that is not a uuid, or a cursor that does not decode, names another brand or names no group, MUST be refused as a bad request.
+- **FR-009**: The brand MUST be named by its uuid; a uuid no brand row holds MUST answer "not found", while a retired (inactive) brand still answers; a missing brand, a value that is not a uuid, an unknown query field, or a cursor that is longer than 200 characters, does not decode, names another brand or names no group, MUST be refused as a bad request, in the API's one error shape with a stable code (`validation_failed`, `invalid_cursor`, `not_found`).
 - **FR-010**: The search MUST read a garage's answer for a brand from the garage brand rows ST-39 created (one row per garage and brand, no row is `unstated`), never from a second copy.
 - **FR-011**: The search MUST write nothing: no audit entry, no event, no search log (MF-10 owns the search log).
 
@@ -128,6 +128,7 @@ The spec-kit clarification gate was answered from the Build brief, the constitut
 - **SC-003**: Inside a group, garages named Alfa, Beta and Delta come in that order whatever order they were created in, two garages of the same name come by id, and no refuser comes before a taker whatever its name.
 - **SC-004**: A visitor without a session gets the list; the route is in the public-routes list and every other new route is refused without a session, as the existing public-routes check enforces.
 - **SC-005**: With no garage taking Tesla and five approved, the Tesla list holds the five in the second group and the counts read 0 and 5; with no approved garage, the counts read 0 and 0.
+- **SC-006**: A request with no brand, a non-uuid brand, an unknown query field or a bad cursor (undecodable, another brand's, no group, over 200 characters) answers a bad request with the stable code of FR-009; an unknown brand uuid answers not found; a retired brand answers a list; and after any of these requests no audit, event or search-log row exists (FR-009, FR-010, FR-011).
 
 ## Assumptions
 
