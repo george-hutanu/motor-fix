@@ -60,7 +60,7 @@ interface Jobs {
   upsertJobScheduler(
     id: string,
     repeat: { every: number },
-    template: { name: string },
+    template: { name: string; opts: JobsOptions },
   ): Promise<unknown>;
 }
 
@@ -266,7 +266,9 @@ export class NotificationsService {
       this.logger.warn(`queued notifications not re-queued: ${String(error)}`);
     }
     if (added.length > 0) {
-      this.logger.warn(`queued notifications re-queued: ${added.join(', ')}`);
+      this.logger.warn(
+        `re-queued ${added.length} queued notifications: ${added.join(', ')}`,
+      );
     }
     return added.length;
   }
@@ -275,7 +277,7 @@ export class NotificationsService {
     return this.jobs.upsertJobScheduler(
       'requeue',
       { every: STRANDED_MS },
-      { name: 'requeue' },
+      { name: 'requeue', opts: { removeOnComplete: true, removeOnFail: 10 } },
     );
   }
 

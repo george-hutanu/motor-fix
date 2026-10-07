@@ -1,0 +1,5 @@
+# Deferred findings: 560-requeue-stranded-notifications
+
+- [ ] `libs/domain/src/notifications/notifications.service.ts:255` — **medium** — unbounded read: the sweep reads every stranded queued row in one pass with no `take`; a backlog of thousands after a Redis loss is one large read and one `add` per row. A cap needs an order that cannot starve rows behind ones already queued, and the spec chose no cap and no new setting (Principle I); revisit with a measured backlog (code-reviewer, 2026-10-07)
+- [ ] `libs/domain/src/scheduler/timers.ts:49` — **low** — job cleanup: `startSweep`'s repeating scheduler template sets no `removeOnComplete`/`removeOnFail`, so every completed sweep job stays in Redis; give it the same options as the notifications re-queue sweep (code-reviewer, 2026-10-07)
+- [ ] `libs/domain/src/notifications/notifications.service.ts:250` — **low** — out of scope: a held row whose delayed flush or release job is lost is never re-queued; the sweep covers queued rows only (spec FR-007); a held-row sweep needs the grouping rule's release time (spec-reviewer, 2026-10-07)

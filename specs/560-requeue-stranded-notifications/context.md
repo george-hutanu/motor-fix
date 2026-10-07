@@ -58,3 +58,7 @@
 - Notifications and reminders (MF-51) — https://app.notion.com/p/3ee607bff0d28162b9b2cc67189317d1
 - Architecture decisions — https://app.notion.com/p/3ee607bff0d28111907edddc4bdd066a
 - Decisions and ideas — https://app.notion.com/p/3ee607bff0d281df9485ce97dfa3332d
+
+## Refresh (2026-10-07T10:36:23Z)
+
+- ST-560 comments re-read (all blocks): none. No new evidence.

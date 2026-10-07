@@ -1,16 +1,19 @@
 import { randomUUID } from 'node:crypto';
 
 import { Logger } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 
 import { BrevoMock } from './brevo-mock.testing';
+import { NotificationsModule } from './notifications.module';
 import { NotificationsService } from './notifications.service';
 import {
   databaseUrl,
   fixtures,
   redisUrlFor,
   testConfig,
+  testPhoneConfig,
 } from './notifications.testing';
 import { AuditService } from '../audit/audit.service';
 import { serialDatabase } from '../auth/serial-db.testing';
@@ -168,6 +171,7 @@ describe('the sweep of queued rows with no job', () => {
     const stranded = await row();
     await service.requeueStranded();
     expect(warn).toHaveBeenCalledWith(expect.stringContaining(stranded.id));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('re-queued 1 '));
   });
 
   it('logs and ends without touching the rows when the queue refuses the add', async () => {
@@ -208,5 +212,68 @@ describe('the sweep of queued rows with no job', () => {
     const schedulers = await queue.getJobSchedulers();
     expect(schedulers).toHaveLength(1);
     expect(schedulers[0]).toMatchObject({ every: 300_000, name: 'requeue' });
+    expect(schedulers[0].template?.opts).toMatchObject({
+      removeOnComplete: true,
+      removeOnFail: 10,
+    });
+  });
+});
+
+describe('the worker', () => {
+  const boot = () =>
+    Test.createTestingModule({
+      imports: [
+        NotificationsModule.registerWorker({
+          databaseUrl,
+          email: testConfig(mock.url, { EMAIL_SENDING: 'off' }),
+          phone: testPhoneConfig({ PHONE_SENDING: 'off' }),
+          redisUrl,
+        }),
+      ],
+    }).compile();
+
+  const settled = async (id: string) => {
+    for (let i = 0; i < 100; i++) {
+      const { status } = await prisma.notification.findUniqueOrThrow({
+        where: { id },
+      });
+      if (status !== 'queued') return status;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return 'queued';
+  };
+
+  it('schedules the sweep when it starts', async () => {
+    const app = await boot();
+    try {
+      const schedulers = await queue.getJobSchedulers();
+      expect(schedulers.map((s) => s.name)).toEqual(['requeue']);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('still starts and logs when the sweep cannot be scheduled', async () => {
+    jest
+      .spyOn(NotificationsService.prototype, 'scheduleRequeue')
+      .mockRejectedValue(new Error('Redis refused'));
+    const error = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    const app = await boot();
+    try {
+      expect(error).toHaveBeenCalledWith(
+        expect.stringContaining('Redis refused'),
+      );
+      const queued = await row({ createdAt: NOW });
+      await queue.add(
+        'send',
+        { id: queued.id },
+        { jobId: `send-${queued.id}` },
+      );
+      expect(await settled(queued.id)).toBe('failed');
+    } finally {
+      await app.close();
+    }
   });
 });

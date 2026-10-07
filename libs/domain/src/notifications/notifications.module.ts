@@ -159,7 +159,6 @@ export class NotificationsModule implements OnApplicationShutdown {
             service: NotificationsService,
           ) => {
             if (!(await processor.ready())) return null;
-            // The sweep that re-queues a row whose job was lost.
             await service
               .scheduleRequeue()
               .catch((error) =>
