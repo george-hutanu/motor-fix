@@ -18,7 +18,7 @@
         "strict"
       ],
       "description": "Re-anchor a new session: branch and feature state, the mode context for where the feature stands, earned instincts, and the check commands — inside a character budget",
-      "fingerprint": "60a97ed2abb3"
+      "fingerprint": "2c3230fb133c"
     },
     {
       "id": "session:start:watch-reminder",

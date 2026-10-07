@@ -34,7 +34,7 @@ If `context_files` and `context_file` are empty, the command reports nothing to 
 The config names `.specify/agent-context.local.md`, a git-ignored file, and the
 `after_specify` and `after_plan` hooks that ran this command are off. The block
 named the active plan, and a tracked copy of it made every open feature branch
-conflict at each merge (ST-803); `.claude/hooks/session-context.mjs` now prints
+conflict at each merge; `.claude/hooks/session-context.mjs` now prints
 the pointer from `.specify/feature.json` at session start. Never point the
 config at a tracked file, and never leave it empty: the script then self-seeds
 `CLAUDE.md`. `.claude/scripts/active-plan-pointer.spec.mjs` checks both.

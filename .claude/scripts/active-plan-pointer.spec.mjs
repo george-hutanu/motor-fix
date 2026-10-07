@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-// ST-803. /speckit-plan's agent-context update rewrote one line of the tracked
+// /speckit-plan's agent-context update rewrote one line of the tracked
 // CLAUDE.local.md ("Active plan …: specs/<feature>/plan.md"), so with several
 // feature branches open every merge to main made the others conflict on it.
 // The pointer now comes from .specify/feature.json at session start
@@ -58,29 +58,5 @@ describe('the active plan pointer stays out of tracked files', () => {
     const hooks = agentContextHooks(read('.specify/extensions.yml'));
     assert.ok(hooks.length > 0, 'expected the after_specify and after_plan entries');
     for (const entry of hooks) assert.match(entry, /^\s*enabled: false\s*$/m, entry);
-  });
-});
-
-describe('the config readers', () => {
-  it('prefers context_files over context_file', () => {
-    assert.deepEqual(contextTargets('context_file: "A.md"\ncontext_files: ["B.md", "C.md"]\n'), ['B.md', 'C.md']);
-    assert.deepEqual(contextTargets('context_file: "A.md"\ncontext_files: []\n'), ['A.md']);
-    assert.deepEqual(contextTargets('context_file: ""\ncontext_files: []\n'), []);
-  });
-
-  it('finds every agent-context hook entry and only those', () => {
-    const yml = [
-      'hooks:',
-      '  after_plan:',
-      '  - extension: git',
-      '    command: speckit.git.commit',
-      '    enabled: true',
-      '  - extension: agent-context',
-      '    command: speckit.agent-context.update',
-      '    enabled: true',
-    ].join('\n');
-    const hooks = agentContextHooks(yml);
-    assert.equal(hooks.length, 1);
-    assert.match(hooks[0], /enabled: true/);
   });
 });

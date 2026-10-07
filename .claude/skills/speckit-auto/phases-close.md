@@ -49,8 +49,8 @@ tasks (`speckit-notion-sync debt`).
 ### 15. Agent context
 
 The active plan is not written into a tracked file: the session start prints
-it from `.specify/feature.json`, so parallel branches never conflict on it
-(ST-803). Run `node .claude/scripts/context-audit.mjs` and act on its findings
+it from `.specify/feature.json`, so parallel branches never conflict on it.
+Run `node .claude/scripts/context-audit.mjs` and act on its findings
 in `CLAUDE.local.md`; the file may shrink, never grow. Add no
 `<!-- SPECKIT START/END -->` block to `CLAUDE.local.md`, `CLAUDE.md` or `AGENTS.md`.
 

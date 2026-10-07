@@ -100,7 +100,7 @@ describe('session context — as a hook', () => {
     assert.equal(run({ SPECKIT_CONTEXT_OFF: '1' }).stdout, '');
   });
 
-  // ST-803: the plan pointer used to be a line /speckit-plan rewrote in the
+  // The plan pointer used to be a line /speckit-plan rewrote in the
   // tracked CLAUDE.local.md, so every merge made the other open branches
   // conflict on it. It is derived here, per checkout, from feature.json.
   const feature = (withPlan) => {

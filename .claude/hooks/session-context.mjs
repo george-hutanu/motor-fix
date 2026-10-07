@@ -55,7 +55,7 @@ export function readState(repoRoot = repo) {
 
   // The plan pointer is derived per checkout rather than committed: a line in
   // the tracked CLAUDE.local.md that /speckit-plan rewrote made every open
-  // feature branch conflict with each merge to main (ST-803).
+  // feature branch conflict with each merge to main.
   const planFile = join(feature.dir, "plan.md");
 
   return {
