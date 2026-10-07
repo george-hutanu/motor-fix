@@ -42,7 +42,7 @@
 - [x] CHK022 Is every stance transition specified, including the tick reset when a refused brand is worked on again? [Coverage, data-model.md State transitions, Spec §FR-014] — covered in data-model.md; the spec states the default and the clearing rule.
 - [x] CHK023 Is the job-row precondition (works_on only) and its refusal code specified? [Completeness, Spec §FR-015, contracts/brands.md]
 - [x] CHK024 Is the scope boundary with ST-397 and ST-412 (tables and rules only, no writing screens) explicit? [Clarity, Spec Assumptions]
-- [~] CHK025 ~~Are requirements defined for editing fuel ticks of a works_on row?~~ Does not apply: ST-397 builds it (Spec Assumptions).
+- [x] ~~CHK025 Are requirements defined for editing fuel ticks of a works_on row?~~ Does not apply: ST-397 builds it (Spec Assumptions).
 - [x] CHK026 Is the missing foreign key on `job_type_id` documented as a deliberate, temporary dependency? [Dependency, Spec Clarifications, data-model.md]
 
 ## Notes
