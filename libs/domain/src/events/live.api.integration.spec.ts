@@ -337,6 +337,50 @@ describe('the admin test update', () => {
     expect(live.messages.map((m) => m.event)).toEqual(['hello']);
   });
 
+  it('records who sent it, to whom, with the update it queued', async () => {
+    const admin = await account('Ana', ['admin']);
+    const driver = await account('Andrei', ['driver']);
+
+    const res = await sendTest(driver, `Bearer ${token(admin, 'admin')}`);
+
+    expect(res.status).toBe(202);
+    const entries = await prisma.activityLog.findMany({
+      where: { actorId: admin, kind: 'live.test' },
+    });
+    expect(entries).toEqual([
+      expect.objectContaining({
+        action: 'create',
+        actorName: 'Ana',
+        actorRole: 'admin',
+        kind: 'live.test',
+        newValue: { accountId: driver },
+        oldValue: null,
+        subjectId: driver,
+        subjectType: 'account',
+        viaAssistant: false,
+      }),
+    ]);
+    expect(
+      await prisma.outboxEvent.count({ where: { kind: 'live.test' } }),
+    ).toBe(1);
+  });
+
+  it.each([
+    ['an account that does not exist', () => randomUUID()],
+    ['an account id that is not a uuid', () => 'andrei'],
+  ])('records nothing for %s', async (_, target) => {
+    const admin = await account('Ana', ['admin']);
+
+    const res = await sendTest(target(), `Bearer ${token(admin, 'admin')}`);
+
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(
+      await prisma.activityLog.count({
+        where: { actorId: admin, kind: 'live.test' },
+      }),
+    ).toBe(0);
+  });
+
   it('answers 404, not 400, to a non-admin whose body is invalid', async () => {
     const driver = await account('Andrei', ['driver']);
 

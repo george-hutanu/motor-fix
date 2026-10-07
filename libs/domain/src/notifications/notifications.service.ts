@@ -18,6 +18,7 @@ import { isQuiet, nextMorning } from './quiet-hours';
 import { outsideChannels, type SentChannel } from './routing';
 import { STAFF_TYPES } from './staff-lists';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
+import type { Actor } from '../auth/policy';
 import { LIVE_CHANNEL } from '../events/live.hub';
 import type {
   Notification,
@@ -207,7 +208,10 @@ export class NotificationsService {
     });
   }
 
-  async sendTestMessage(accountIds: readonly string[]): Promise<number> {
+  async sendTestMessage(
+    actor: Actor,
+    accountIds: readonly string[],
+  ): Promise<number> {
     const found = await this.prisma.account.count({
       where: { id: { in: [...accountIds] }, status: { not: 'deleted' } },
     });
@@ -220,6 +224,19 @@ export class NotificationsService {
         HttpStatus.BAD_REQUEST,
       );
     }
+    // Committed on its own before any message: a send that fails part way
+    // still leaves the record that the admin asked for it.
+    await this.prisma.$transaction((tx) =>
+      this.audit.record(tx, {
+        action: 'create',
+        actorId: actor.accountId,
+        actorRole: actor.role,
+        kind: 'notification.test',
+        newValue: { accountIds: [...accountIds] },
+        subjectId: actor.accountId,
+        subjectType: 'account',
+      }),
+    );
     const eventId = randomUUID();
     let queued = 0;
     for (const accountId of accountIds) {

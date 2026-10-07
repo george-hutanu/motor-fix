@@ -19,6 +19,7 @@ features:
   - 114-save-draft
   - 561-sms-sent-once
   - 560-requeue-stranded-notifications
+  - 802-sms-count-throw-clears-mark
 ---
 
 # Capability: Notifications
@@ -494,6 +495,10 @@ _From 560-requeue-stranded-notifications._
 ### 560-FR-010 — The change MUST add no API route, contract, schema migration or UI.
 
 _From 560-requeue-stranded-notifications._
+
+### 802-FR-001 — When taking the month's SMS count fails, the processor MUST clear the row's being-sent record and fail the job with the count's error, so the retry sends the SMS rather than settling it as unconfirmed.
+
+_From 802-sms-count-throw-clears-mark._
 
 ## Retired
 

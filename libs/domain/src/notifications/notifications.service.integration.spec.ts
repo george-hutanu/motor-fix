@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 
@@ -10,6 +12,7 @@ import {
   testConfig,
 } from './notifications.testing';
 import { AuditService } from '../audit/audit.service';
+import type { Actor } from '../auth/policy';
 import { serialDatabase } from '../auth/serial-db.testing';
 
 const redisUrl = redisUrlFor(11);
@@ -39,6 +42,17 @@ const withDevice = (accountId: string) =>
     },
   });
 const published: string[] = [];
+const admin = (accountId: string): Actor => ({
+  accountId,
+  garageId: null,
+  permissions: {
+    canAnswerQuotes: false,
+    canMoveBookings: false,
+    canRecordFinalPrice: false,
+  },
+  role: 'admin',
+  roles: ['admin'],
+});
 
 let config: ReturnType<typeof testConfig>;
 let service: NotificationsService;
@@ -346,7 +360,91 @@ describe('the admin test message', () => {
     const outside = await account('outside', ['driver'], {
       email: 'someone@gmail.com',
     });
-    expect(await service.sendTestMessage([allowed, outside])).toBe(1);
+    expect(
+      await service.sendTestMessage(admin(allowed), [allowed, outside]),
+    ).toBe(1);
+  });
+
+  it('records who sent it and to whom', async () => {
+    const ana = await account('ana', ['admin']);
+    const andrei = await account('andrei');
+
+    await service.sendTestMessage(admin(ana), [andrei, ana]);
+
+    expect(
+      await prisma.activityLog.findMany({
+        where: { actorId: ana, kind: 'notification.test' },
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        action: 'create',
+        actorRole: 'admin',
+        kind: 'notification.test',
+        newValue: { accountIds: [andrei, ana] },
+        oldValue: null,
+        subjectId: ana,
+        subjectType: 'account',
+      }),
+    ]);
+  });
+
+  it('keeps the entry, written before any message, when the send fails', async () => {
+    const ana = await account('ana', ['admin']);
+    const seen: number[] = [];
+    service.notify = async () => {
+      seen.push(
+        await prisma.activityLog.count({
+          where: { actorId: ana, kind: 'notification.test' },
+        }),
+      );
+      throw new Error('queue down');
+    };
+
+    await expect(service.sendTestMessage(admin(ana), [ana])).rejects.toThrow(
+      'queue down',
+    );
+
+    expect(seen).toEqual([1]);
+    expect(
+      await prisma.activityLog.count({
+        where: { actorId: ana, kind: 'notification.test' },
+      }),
+    ).toBe(1);
+  });
+
+  it('sends nothing when the entry cannot be written', async () => {
+    const ana = await account('ana', ['admin']);
+    const audit = new AuditService();
+    audit.record = () => Promise.reject(new Error('audit down'));
+    service = new NotificationsService(
+      prisma,
+      queue,
+      publisher,
+      config,
+      pushConfig,
+      audit,
+    );
+
+    await expect(service.sendTestMessage(admin(ana), [ana])).rejects.toThrow(
+      'audit down',
+    );
+
+    expect(await prisma.notification.count()).toBe(0);
+    expect(await jobs()).toHaveLength(0);
+  });
+
+  it('records nothing for a recipient that is no account', async () => {
+    const ana = await account('ana', ['admin']);
+
+    await expect(
+      service.sendTestMessage(admin(ana), [ana, randomUUID()]),
+    ).rejects.toThrow();
+
+    expect(
+      await prisma.activityLog.count({
+        where: { actorId: ana, kind: 'notification.test' },
+      }),
+    ).toBe(0);
   });
 });
 

@@ -91,8 +91,8 @@ without a status, so the test runs again.
    ```
 
 5. **Success**: return to the caller, which merges on green CI
-   (`gh pr checks <n> --watch` with `run_in_background`, printing only the
-   checks that did not pass as AGENTS.md "Agent replies" shows, then
+   (`node .claude/scripts/pr-test/ci-wait.mjs <n>` with `run_in_background`,
+   which prints only the checks that did not pass, then
    `gh pr merge <n> --merge`, then `speckit-notion-sync finish`). The merge
    gate refuses while any check is failing, running or missing.
 6. **Failure**: the implementing agent fixes every blocking finding — a failing
@@ -134,5 +134,7 @@ days); the report names them and gives the run's URL. The specs repository's
 - Never post on, push to, or set a status on a PR you were asked to dry-run.
 - Never set `agent-review` by hand; only the PR QA workflow sets it, from
   its run (the only writer in a cloud session), `post.mjs`, from a report,
-  and `carry.mjs`, from a verified docs-only carry.
+  and `carry.mjs`, from a verified docs-only carry. The merge gate traces
+  who wrote it (`provenance.mjs`): a PR that changes `pr-qa.yml` needs a lap
+  dispatched on `main` from the laptop.
 - Never merge with `agent-review` missing or failing on the head commit.
