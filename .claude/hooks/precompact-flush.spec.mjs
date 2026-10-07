@@ -130,6 +130,13 @@ describe('pre-compact flush', () => {
     appended();
   });
 
+  it('leaves the run log unchanged when no feature is active', () => {
+    setup('In progress', { gh: 'OPEN', branch: 'scratch' });
+    rmSync(join(repo, '.specify/feature.json'));
+    untouched(run());
+    assert.equal(ghCalled(), false);
+  });
+
   it('keeps both status columns on every uncommitted entry', () => {
     setup('Draft');
     writeFileSync(join(repo, 'a.txt'), 'changed');
