@@ -77,3 +77,19 @@ CLAUDE.local.md "Active plan" line points at this plan; size unchanged (context-
 
 ## Phase 16 — Retrospective evidence (unjudged)
 retro-evidence --since bd60afa6: 9/9 tasks, 4 FRs, Spec Delta accounts +3 ~1, deferred 0, 10 carryover items from earlier features; Jev lane unavailable (no key), so no suggested verdict. instincts triggered: none (Jev unavailable).
+
+## Phase 17 — Archive
+spec.md `Archived (2026-10-07)`; Spec Delta merged into `.specify/capabilities/accounts.md` (+3 ~1; `128-FR-004` retired, superseded by `569-FR-003`; the merged FR-003 text lost its "today each calls" clause by hand). Retro not run (phase 16: the verdict stays the owner's).
+
+## Hand-off
+`lifecycle.mjs ready`: body published, PR ready, Notion qa, `qa` line pushed (head 8bee157), handoff.md and comment. QA run 37584808992 (lap 1, API flows in `.specify/.cache/qa-flows-187.mjs`). This session runs the tail itself.
+
+## Final Report
+- Branch `569-auth-events-through-event-port`, PR #187, range bd60afa6..HEAD, 12 commits (plus one merge of origin/main).
+- Phases 0–17 run: level 2; constitution read; specify/clarify/plan/checklist/tasks/analyze clean (analyze: 9 lint errors fixed in round 1); red proven (3 failed / 56 passed); implement 9/9 tasks; converge nothing new; harden: adversary 15 green, diff-audit only false positives; refresh no new evidence; review APPROVE x2 (2 LOW patched); agent context line updated; archive applied.
+- Decisions on the owner's behalf (spec.md Clarifications): kind `account.password_reset`, payload `{ accountId }`, in the reset's transaction; `session.revoked` stays a direct Redis publish through `SignInService.revokeSessionsLive`; password_changed e-mail stays a direct queue send; no API or web change.
+- Verification: `npm run test` 104 suites / 3362 tests (domain) and every project green; pre-commit typecheck + lint green; `git diff origin/main -- apps/web apps/api/openapi.json` empty.
+- FR → test: FR-001 password-reset.api.integration.spec "records account.password_reset with the change…"; FR-002 "records no event for a reset it refuses", "changes nothing and tells nobody when the event cannot be recorded"; FR-003 "tells the account open dashboards to sign out" + sign-out-everywhere live-channel test; FR-004 the unchanged-answer tests + the empty diff (T009).
+- Retrospective evidence (unjudged): see Phase 16; Jev lane unavailable, no suggested verdict.
+- Follow-ups (Notion, in the finish comment): add `account.password_reset` to Backend architecture's events list; ST-127 "Emits: none" superseded; docs spell `session_revoked`, code `session.revoked`.
+- Tail: CI E2E failed once on a flaky unrelated cockpit theme test, green on re-run. QA lap 1 (run 37584808992) failed on the flows file only (paths lacked `/api/v1`, no completed reset); lap 2 (run 37586456925) passed with a completed reset of the seeded driver: agent-review success, 1 medium (the flow's own short-password-with-unknown-link input) and 1 low (a redundant filter in the adversary spec), neither blocking.
