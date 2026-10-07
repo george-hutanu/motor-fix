@@ -316,6 +316,25 @@ describe('PlatformRules', () => {
     expect(checked(element, 'Mod mentenanță')).toBe('true');
   });
 
+  it('puts the switch back and shows an error line when the value seen was stale and the rules cannot be read again', async () => {
+    const { element, settle } = await render();
+    await settle();
+    change.mockRejectedValueOnce(
+      new HttpErrorResponse({ error: { code: 'stale_value' }, status: 409 }),
+    );
+    list.mockRejectedValueOnce(new HttpErrorResponse({ status: 500 }));
+
+    named(element, 'Mod mentenanță')?.click();
+    await settle();
+    await settle();
+
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(checked(element, 'Mod mentenanță')).toBe('false');
+    expect(element.querySelector('[role="alert"]')?.textContent).toContain(
+      'Regula nu a putut fi salvată',
+    );
+  });
+
   it('ignores a second change of a rule while its first is on its way', async () => {
     const { element, settle } = await render();
     await settle();

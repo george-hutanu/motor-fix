@@ -92,7 +92,7 @@ export class PlatformRulesService {
         );
       }
       if (same(value, row.value)) return dto(row);
-      // TODO: the two-admin flow replaces this refusal
+      // A rule that needs two admins is refused until a second admin can confirm it.
       if (row.requiresTwoAdmins) {
         throw refusal(
           HttpStatus.CONFLICT,

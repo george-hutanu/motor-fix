@@ -122,8 +122,10 @@ export class PlatformRules implements OnInit {
     this.failed.set(false);
     try {
       this.list.set(await this.api.platformRulesControllerList());
+      return true;
     } catch {
       if (this.list() === undefined) this.failed.set(true);
+      return false;
     }
   }
 
@@ -170,7 +172,8 @@ export class PlatformRules implements OnInit {
     }
   }
 
-  // A stale value re-reads the list; any other refusal puts the switch back.
+  // A stale value re-reads the list; any other refusal, or a stale value whose
+  // re-read fails, puts the switch back.
   private async refused(
     key: string,
     seen: PlatformRuleDto['value'],
@@ -178,7 +181,7 @@ export class PlatformRules implements OnInit {
   ) {
     const code =
       failure instanceof HttpErrorResponse ? failure.error?.code : undefined;
-    if (code === 'stale_value') return this.load();
+    if (code === 'stale_value' && (await this.load())) return;
     this.set(key, seen);
     this.error.set(
       code === 'two_admins_required'
