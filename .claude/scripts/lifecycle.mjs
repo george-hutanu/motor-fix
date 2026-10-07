@@ -3,9 +3,9 @@
 // lifecycle"), printing one JSON line: what it did, or the first thing that
 // stopped it and the fix.
 //
-//   node .claude/scripts/lifecycle.mjs open --title "<type>(<scope>): ST-<n> <subject>" [--body-file <f>] [--notion-done]
-//   node .claude/scripts/lifecycle.mjs ready --body-file <f> [--decisions "<text>"] [--notion-done]
-//   node .claude/scripts/lifecycle.mjs merge [--pr <n>] [--notion-done]
+//   node .claude/scripts/lifecycle.mjs open --title "<type>(<scope>): ST-<n> <subject>" [--body-file <f>] [--story ST-<n>] [--notion-done]
+//   node .claude/scripts/lifecycle.mjs ready --body-file <f> [--decisions "<text>"] [--story ST-<n>] [--notion-done]
+//   node .claude/scripts/lifecycle.mjs merge [--pr <n>] [--story ST-<n>] [--notion-done]
 //   node .claude/scripts/lifecycle.mjs handoff [--pr <n>]            post handoff.md as a marked PR comment (cloud only)
 //   node .claude/scripts/lifecycle.mjs handoff --restore [--pr <n>]  write a missing handoff.md from the newest one
 //
@@ -24,6 +24,11 @@
 // specs/ is its own repository (specs-repo.mjs): the feature records, the qa
 // line and the finish lines are committed and pushed there, never on the
 // motor-fix branch; only .specify/capabilities rides in the PR.
+// The story is `--story`, then the title's `: ST-<n> ` (open's --title, the
+// PR's for ready and merge), then the `story` feature.json records for this
+// feature, then the folder number, which a branch need not share with its
+// story. Two of the first three that differ stop the step before it
+// does anything; `--story` is recorded in feature.json for the later steps.
 // Exit 0 done or --help, 1 stopped, 64 usage (an unknown flag included).
 
 import { spawnSync } from "node:child_process";
@@ -34,11 +39,11 @@ import { typeLabel } from "../hooks/pr-lifecycle-gate.mjs";
 import { parseDeferred } from "./debt-tasks.mjs";
 import { isEntryPoint } from "./lib/entry.mjs";
 import { ghRun } from "./lib/gh-rest.mjs";
-import { activeFeature } from "./lib/feature.mjs";
+import { activeFeature, featureKey } from "./lib/feature.mjs";
 import { pointFeature } from "./level.mjs";
 import { readyLogged } from "./notion-ready.mjs";
 
-const USAGE = "usage: lifecycle.mjs open | ready | merge | handoff (open --title <t>; ready --body-file <f>; merge [--pr <n>]; each takes --notion-done; handoff [--restore] [--pr <n>])";
+const USAGE = "usage: lifecycle.mjs open | ready | merge | handoff (open --title <t>; ready --body-file <f>; merge [--pr <n>]; open, ready and merge take --story ST-<n>; each takes --notion-done; handoff [--restore] [--pr <n>])";
 const HANDOFF_MARK = "<!-- speckit-handoff -->";
 const NOTION = ".claude/scripts/notion-sync.mjs";
 const SELF = "node .claude/scripts/lifecycle.mjs";
@@ -97,9 +102,9 @@ function realIo() {
 // The flags each step reads: a switch is true when present, any other flag takes the next argument.
 const SWITCHES = new Set(["notion-done", "restore"]);
 const FLAGS = {
-  open: ["title", "body-file", "notion-done"],
-  ready: ["body-file", "decisions", "notion-done"],
-  merge: ["pr", "notion-done"],
+  open: ["title", "body-file", "story", "notion-done"],
+  ready: ["body-file", "decisions", "story", "notion-done"],
+  merge: ["pr", "story", "notion-done"],
   handoff: ["pr", "restore", "notion-done"],
 };
 
@@ -120,6 +125,7 @@ function parse(argv) {
     }
     const value = rest[++i];
     if (value === undefined || value.startsWith("--")) throw new Stop("usage", `--${key} needs a value: ${USAGE}`);
+    if (key === "story" && !/^ST-\d+$/.test(value)) throw new Stop("usage", `--story takes ST-<n>, not ${value}: ${USAGE}`);
     flags[key] = value;
   }
   return { name, flags };
@@ -186,8 +192,7 @@ function context(io, flags, did) {
   ctx.rel = relative(io.repo, ctx.feature.dir);
   // The feature folder as the specs repository names it.
   ctx.specsRel = relative(join(io.repo, "specs"), ctx.feature.dir);
-  const titled = /: (ST-\d+) /.exec(flags.title ?? "")?.[1];
-  ctx.story = titled ?? `ST-${Number(ctx.feature.num)}`;
+  ctx.story = `ST-${Number(ctx.feature.num)}`;
   ctx.push = () => {
     ctx.git("push", "-u", "origin", ctx.branch);
     did.push("pushed");
@@ -234,6 +239,38 @@ function lastJson(stdout) {
   }
 }
 
+/**
+ * Settle ctx.story from --story, the title and feature.json's record for this
+ * feature, the folder number standing only when none names one. A clash
+ * stops before anything is written; --story is then recorded for later steps.
+ */
+function settleStory(ctx, flags, title) {
+  const file = join(ctx.repo, ".specify", "feature.json");
+  let state = {};
+  try {
+    state = JSON.parse(readFileSync(file, "utf8"));
+  } catch {
+    // context() already resolved the feature; a missing file just records nothing.
+  }
+  const here = featureKey(ctx.repo, ctx.rel);
+  const recorded = typeof state.story === "string" && featureKey(ctx.repo, state.story_for) === here ? state.story : undefined;
+  const sources = [
+    ["--story", flags.story],
+    ["title", /: (ST-\d+) /.exec(title ?? "")?.[1]],
+    ["feature.json", recorded],
+  ].filter(([, value]) => /^ST-\d+$/.test(value ?? ""));
+  if (!sources.length) return;
+  const num = (story) => Number(story.slice(3));
+  const [first] = sources;
+  const clash = sources.find(([, value]) => num(value) !== num(first[1]));
+  if (clash) throw new Stop("story", `${first[0]} ${first[1]} and ${clash[0]} ${clash[1]} name different stories: correct the PR title, or pass the right --story`);
+  ctx.story = `ST-${num(first[1])}`;
+  if (flags.story && !(recorded && num(recorded) === num(ctx.story))) {
+    writeFileSync(file, `${JSON.stringify({ ...state, story: ctx.story, story_for: here }, null, 2)}\n`);
+    ctx.did.push(`feature.json story → ${ctx.story}`);
+  }
+}
+
 const storyPage = (ctx) => readFileSync(join(ctx.feature.dir, "spec.md"), "utf8").match(/notion\.(?:so|com)\/(?:[^\s)]*?)([0-9a-f]{32})/)?.[1] ?? null;
 
 function open(ctx, flags) {
@@ -241,6 +278,7 @@ function open(ctx, flags) {
   const m = /^(\w+)\(([^)]+)\)(!?): (?:ST-\d+ )?(.+)$/.exec(title ?? "");
   if (!m) throw new Stop("title", 'pass --title "<type>(<scope>): ST-<n> <subject>"');
   const [, , scope, bang, subject] = m;
+  settleStory(ctx, flags, title);
   if (ctx.git("rev-list", "--count", "origin/main..HEAD").stdout.trim() === "0") {
     ctx.git("commit", "--allow-empty", "-m", `chore(${scope}): ${ctx.story} start ${subject}`);
     ctx.did.push("start commit");
@@ -286,7 +324,7 @@ function ready(ctx, flags) {
   const view = ctx.ghTry("pr", "view", ctx.branch, "--json", "number,title,isDraft,url");
   if (view.code !== 0) throw new Stop(`gh pr view ${ctx.branch}`, `the branch has no PR: run ${SELF} open --title "<title>" first`);
   const pr = JSON.parse(view.stdout);
-  ctx.story = /: (ST-\d+) /.exec(pr.title)?.[1] ?? ctx.story;
+  settleStory(ctx, flags, pr.title);
   const rerun = [SELF, "ready", "--body-file", quote(bodyFile), ...(flags.decisions ? ["--decisions", quote(flags.decisions)] : []), "--notion-done"].join(" ");
   // The level against what was built: a promoted level 0/1 that still owes
   // phases stays a draft. A check that crashes (exit 1) is not a refusal.
@@ -370,7 +408,7 @@ function handoff(ctx, flags) {
 // merge and comment fail there: the same steps go over REST, the merge as
 // `gh api -X PUT repos/{owner}/{repo}/pulls/<n>/merge`, which the merge gate
 // judges as it judges gh pr merge.
-const PR_JQ = "{number, state: (if .merged then \"MERGED\" else (.state | ascii_upcase) end), merge_commit_sha}";
+const PR_JQ = "{number, state: (if .merged then \"MERGED\" else (.state | ascii_upcase) end), merge_commit_sha, title}";
 
 /** A PR comment over REST: the body from a file. */
 const restComment = (n, file) => ["api", "-X", "POST", `repos/{owner}/{repo}/issues/${n}/comments`, "-F", `body=@${file}`];
@@ -382,8 +420,9 @@ function merge(ctx, flags) {
   const viewPr = () =>
     cloud
       ? JSON.parse(ctx.gh("api", `repos/{owner}/{repo}/pulls/${flags.pr}`, "--jq", PR_JQ).stdout)
-      : JSON.parse(ctx.gh("pr", "view", ...(flags.pr ? [flags.pr] : []), "--json", "number,state,url").stdout);
+      : JSON.parse(ctx.gh("pr", "view", ...(flags.pr ? [flags.pr] : []), "--json", "number,state,url,title").stdout);
   const view = viewPr();
+  settleStory(ctx, flags, view.title);
   const n = String(view.number);
   if (view.state !== "MERGED") {
     if (cloud) ctx.gh("api", "-X", "PUT", `repos/{owner}/{repo}/pulls/${n}/merge`, "-f", "merge_method=merge");
