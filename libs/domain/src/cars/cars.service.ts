@@ -137,17 +137,13 @@ export class CarsService {
         rovinietaUntil: shown.rovinietaUntil,
         year: car.year,
       };
+      // No plate: admins read the audit history, and the plate is the owner's alone.
       await this.audit.record(tx, {
         action: 'create',
         actorId: ownerId,
         actorRole: actor.role,
         carId: car.id,
-        newValue: {
-          ...facts,
-          engine: car.engine,
-          model: car.model,
-          plate: car.plate,
-        },
+        newValue: { ...facts, engine: car.engine, model: car.model },
         subjectId: car.id,
         subjectType: 'car',
       });

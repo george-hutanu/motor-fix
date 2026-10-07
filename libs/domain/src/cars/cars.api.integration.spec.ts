@@ -483,6 +483,7 @@ describe('what a save writes beside the car', () => {
       odometerKm: 148200,
       year: 2019,
     });
+    expect(entries[0].newValue).not.toHaveProperty('plate');
   });
 
   it('hands car.added to the outbox with ids and small facts, no plate and no model', async () => {
