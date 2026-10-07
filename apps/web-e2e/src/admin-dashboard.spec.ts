@@ -81,6 +81,19 @@ test.describe('the admin dashboard @seeded', () => {
 
     await expect(page).toHaveURL('/app/driver');
   });
+
+  test('sends a visitor who types the admin address home, with the sign-in dialog', async ({
+    page,
+  }) => {
+    await page.goto('/app/admin');
+
+    await expect(page).toHaveURL(/\/ro\/?$/);
+    await expect(
+      page
+        .getByRole('dialog', { name: 'Autentificare' })
+        .locator('mf-overlay-panel'),
+    ).toBeVisible();
+  });
 });
 
 test.describe('the admin dashboard in English', () => {

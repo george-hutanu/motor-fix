@@ -101,6 +101,7 @@ const ROLES: readonly { role: Role; label: string }[] = [
       font-variant-numeric: tabular-nums;
     }
     main { flex: 1 0 auto; }
+    .chip-skeleton { width: 20px; height: 20px; border-radius: 10px; background: var(--mf-line); }
     .live-offline:empty { display: none; }
     .live-offline {
       margin: 0 0 var(--mf-space-3); padding: var(--mf-space-2) var(--mf-space-4);
@@ -126,7 +127,7 @@ const ROLES: readonly { role: Role; label: string }[] = [
             ariaCurrentWhenActive="page"
             [routerLinkActiveOptions]="{ exact: !view.path }"
             [attr.aria-label]="count ? ('shell.frame.counter' | t: { label: (view.label | t), waiting: count }) : null"
-          >{{ view.label | t }}@if (count) {<span class="chip" aria-hidden="true">{{ count > 99 ? '99+' : count }}</span>}</a>
+          >{{ view.label | t }}@if (count) {<span class="chip" aria-hidden="true">{{ count > 99 ? '99+' : count }}</span>} @else if (view.counter && countsLoading()) {<span class="chip-skeleton" aria-hidden="true"></span>}</a>
         }
       </nav>
       <div class="account">
@@ -178,7 +179,7 @@ const ROLES: readonly { role: Role; label: string }[] = [
         @if (lastTest(); as at) { {{ 'shell.live.test' | t }} · {{ at | clock }} }
       </p>
       <main><router-outlet /></main>
-      <mf-dashboard-tab-bar [base]="base()" [views]="entries()" [name]="dashboard().name" [counts]="counts()" />
+      <mf-dashboard-tab-bar [base]="base()" [views]="entries()" [name]="dashboard().name" [counts]="counts()" [countsLoading]="countsLoading()" />
     </div>
     <hlm-toaster />
   `,
@@ -203,6 +204,9 @@ export class Frame implements OnInit {
   // Each dashboard has its own frame, so the area at creation is the frame's.
   protected readonly adminOverview =
     this.area() === 'admin' ? inject(AdminOverview) : null;
+  protected readonly countsLoading = computed(
+    () => this.adminOverview?.loading() ?? false,
+  );
   protected readonly counts = computed<Counts>(() => ({
     garagesWaiting: this.adminOverview?.waiting(),
   }));

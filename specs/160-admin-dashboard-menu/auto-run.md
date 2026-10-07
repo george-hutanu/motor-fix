@@ -71,3 +71,7 @@ Start commit: b76badd3 (worktree .worktrees/160-admin-dashboard-menu, branch 160
 - T010: nothing grants `admin`. The only writes of the role are the seed (`libs/domain/src/seed.ts:88`); `POST auth/roles/switch` switches among roles held; no OpenAPI operation adds a role.
 - Env: Docker's address pools were exhausted by test stacks of removed worktrees; `docker compose -p <project> down -v` on the ten `mf-test-*` projects whose worktree is gone.
 - Verified: web + i18n Jest 98 suites / 1841 tests green; web typecheck green; domain garages, seed, admin-routes and public-routes integration 12 suites / 175 tests green.
+
+## 11. Converge
+
+- Cycle 1 appended T028 (FR-011 partial: the counters had no skeleton during the first read) and T029 (FR-015 partial: no visitor case on `/app/admin` end to end); both built, red seen for T028 (1 failed), web dashboard Jest 666/666 green. Cycle 2: converged. The ticket lane is Notion (phase 13), not Jira.

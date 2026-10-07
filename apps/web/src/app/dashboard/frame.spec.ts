@@ -713,6 +713,7 @@ describe('the admin header', () => {
 
     expect(garagesEntry(element)?.querySelector('.chip')).toBeNull();
     expect(garagesEntry(element)?.getAttribute('aria-label')).toBeNull();
+    expect(element.querySelectorAll('.chip-skeleton')).toHaveLength(0);
   });
 
   it('shows a skeleton in place of the count while the first read runs', async () => {
@@ -723,6 +724,15 @@ describe('the admin header', () => {
     expect(element.querySelector('.admin-line .skeleton')).not.toBeNull();
     expect(line(element)).toBe('MotorFix · București ·');
     expect(element.querySelectorAll('.chip')).toHaveLength(0);
+    expect(element.querySelectorAll('aside nav .chip-skeleton')).toHaveLength(
+      1,
+    );
+    expect(
+      garagesEntry(element)?.querySelector('.chip-skeleton'),
+    ).not.toBeNull();
+    expect(
+      element.querySelectorAll('mf-dashboard-tab-bar .chip-skeleton'),
+    ).toHaveLength(1);
   });
 
   it('hides the count everywhere when the read fails, never showing 0', async () => {
@@ -731,6 +741,7 @@ describe('the admin header', () => {
     expect(line(element)).toBe('MotorFix · București');
     expect(element.querySelector('.admin-line .skeleton')).toBeNull();
     expect(element.querySelectorAll('.chip')).toHaveLength(0);
+    expect(element.querySelectorAll('.chip-skeleton')).toHaveLength(0);
   });
 
   it('moves the line and the count when a garage sends its file, without a reload', async () => {

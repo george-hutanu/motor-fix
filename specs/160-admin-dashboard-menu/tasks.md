@@ -71,3 +71,8 @@ Phase 2 before Phases 3-5. US1 is independent of US2 and US3 after Phase 2. US3 
 ## Strategy
 
 MVP is Phase 2 plus US1 (the gate and the overview route); then US2 (visible shell), then US3 (live). Each phase ends green and is committed and pushed separately.
+
+## Phase 7: Convergence
+
+- [X] T028 Show a skeleton chip on the Service-uri menu entry and its tab while the first overview read runs (hidden after it, and on failure), with a spec, in `apps/web/src/app/dashboard/frame.ts`, `tab-bar.ts` and their specs per FR-011 (partial)
+- [X] T029 Add the signed-out visitor typing `/app/admin` and ending on Home to `apps/web-e2e/src/admin-dashboard.spec.ts` per FR-015 (partial)

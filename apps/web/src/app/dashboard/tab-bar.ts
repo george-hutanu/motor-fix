@@ -53,6 +53,7 @@ import type { Counts, DashboardView } from './views';
       font-size: var(--mf-size-label); line-height: 18px; text-align: center;
       font-variant-numeric: tabular-nums;
     }
+    .chip-skeleton { width: 18px; height: 18px; border-radius: 9px; background: var(--mf-line); }
     a[aria-current="page"] { color: var(--mf-amber-ink); }
     a[aria-current="page"] .marker { background: var(--mf-amber-ink); }
   `,
@@ -68,7 +69,7 @@ import type { Counts, DashboardView } from './views';
           [routerLinkActiveOptions]="{ exact: !view.path }"
           (isActiveChange)="$event && reveal(tab)"
           [attr.aria-label]="count ? ('shell.frame.counter' | t: { label: (view.tab | t), waiting: count }) : null"
-        ><span class="marker" aria-hidden="true"></span><span class="name"><span class="label">{{ view.tab | t }}</span>@if (count) {<span class="chip" aria-hidden="true">{{ count > 99 ? '99+' : count }}</span>}</span></a>
+        ><span class="marker" aria-hidden="true"></span><span class="name"><span class="label">{{ view.tab | t }}</span>@if (count) {<span class="chip" aria-hidden="true">{{ count > 99 ? '99+' : count }}</span>} @else if (view.counter && countsLoading()) {<span class="chip-skeleton" aria-hidden="true"></span>}</span></a>
       }
     </nav>
   `,
@@ -79,6 +80,8 @@ export class DashboardTabBar {
   // A translation key: the dashboard's name, for the landmark.
   readonly name = input.required<string>();
   readonly counts = input<Counts>({});
+  // The counts' first read is on its way.
+  readonly countsLoading = input(false);
 
   // Once the tab is marked current; `nearest` keeps the page itself still.
   // `scrollIntoView` is absent on the server and in jsdom.
