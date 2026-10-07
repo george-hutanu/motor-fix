@@ -97,6 +97,8 @@ const current = (page: HTMLElement) =>
   [...page.querySelectorAll('[aria-current="step"]')].map(text);
 const bar = (page: HTMLElement) =>
   page.querySelector<HTMLButtonElement>('nav > button[aria-expanded]');
+// What the browser fires once a scroll, the page's own jump included, has stopped.
+const ended = () => window.dispatchEvent(new Event('scrollend'));
 
 describe('the list your garage page', () => {
   it.each([
@@ -262,7 +264,85 @@ describe('the current step', () => {
     await settle(harness);
     expect(current(page)).toEqual(['4 Mecanici · opțional']);
 
+    ended();
+    window.dispatchEvent(new Event('scroll'));
+    await settle(harness);
+    expect(current(page)).toEqual(['3 Prețuri']);
+  });
+
+  it('stays the tapped step through a jump whose scroll starts late, then follows the scroll once the jump has ended', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+
+    entries(page)[3].click();
     await new Promise((resolve) => setTimeout(resolve, 250));
+    for (const flight of [
+      [990, 1990, 2990, 3990, 4990, 5990],
+      [-10, 990, 1990, 2990, 3990, 4990],
+      [-2010, -1010, -10, 990, 1990, 2990],
+      [-3000, -2000, -1000, 0, 1000, 2000],
+    ]) {
+      tops = flight;
+      window.dispatchEvent(new Event('scroll'));
+      await settle(harness);
+      expect(current(page)).toEqual(['4 Mecanici · opțional']);
+    }
+
+    ended();
+    await settle(harness);
+    expect(current(page)).toEqual(['4 Mecanici · opțional']);
+    tops = [-2000, -1000, -10, 990, 1990, 2990];
+    window.dispatchEvent(new Event('scroll'));
+    await settle(harness);
+    expect(current(page)).toEqual(['3 Prețuri']);
+  });
+
+  it('holds the tapped step until the page has been still for a moment, counted from its last movement, where the browser never says a scroll ended', async () => {
+    const onscrollend = Object.getOwnPropertyDescriptor(window, 'onscrollend');
+    delete (window as { onscrollend?: unknown }).onscrollend;
+    try {
+      const { harness, page } = await open('/ro/list-your-garage');
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+
+      entries(page)[3].click();
+      await jest.advanceTimersByTimeAsync(200);
+      tops = [990, 1990, 2990, 3990, 4990, 5990];
+      window.dispatchEvent(new Event('scroll'));
+      await settle(harness);
+      expect(current(page)).toEqual(['4 Mecanici · opțional']);
+
+      await jest.advanceTimersByTimeAsync(140);
+      tops = [-10, 990, 1990, 2990, 3990, 4990];
+      window.dispatchEvent(new Event('scroll'));
+      await settle(harness);
+      expect(current(page)).toEqual(['4 Mecanici · opțional']);
+
+      await jest.advanceTimersByTimeAsync(140);
+      tops = [-2010, -1010, -10, 990, 1990, 2990];
+      window.dispatchEvent(new Event('scroll'));
+      await settle(harness);
+      expect(current(page)).toEqual(['4 Mecanici · opțional']);
+
+      await jest.advanceTimersByTimeAsync(160);
+      tops = [-2000, -1000, -10, 990, 1990, 2990];
+      window.dispatchEvent(new Event('scroll'));
+      await settle(harness);
+      expect(current(page)).toEqual(['3 Prețuri']);
+    } finally {
+      jest.useRealTimers();
+      if (onscrollend)
+        Object.defineProperty(window, 'onscrollend', onscrollend);
+    }
+  });
+
+  it('holds nothing when the tapped heading is already at the line, so the next scroll is followed at once', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    tops = [-1000, 0, 1000, 2000, 3000, 4000];
+
+    entries(page)[1].click();
+    await settle(harness);
+    expect(current(page)).toEqual(['2 Mărci']);
+
+    tops = [-2000, -1000, -10, 990, 1990, 2990];
     window.dispatchEvent(new Event('scroll'));
     await settle(harness);
     expect(current(page)).toEqual(['3 Prețuri']);
@@ -272,7 +352,9 @@ describe('the current step', () => {
     const { harness, page } = await open('/ro/list-your-garage');
 
     entries(page)[2].click();
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    tops = [-200, -50, 420, 470, 520, 570];
+    window.dispatchEvent(new Event('scroll'));
+    ended();
     tops = [-450, -300, 170, 220, 270, 320];
     window.dispatchEvent(new Event('scroll'));
     await settle(harness);
@@ -568,11 +650,22 @@ describe('the e-mail field and the save button', () => {
   it('keeps a kept copy at its step when a scroll leaves that heading on screen below the line', async () => {
     seed({ email: 'ion@', step: 3 });
     const { harness, page } = await open('/ro/list-your-garage');
-    // The jump back to the kept step settles on a real timer.
+    // The jump back to the kept step starts late, as on a page still busy opening.
     await new Promise((resolve) => setTimeout(resolve, 250));
     jest.useFakeTimers({ doNotFake: ['setImmediate'] });
     try {
+      for (const flight of [
+        [990, 1990, 2990, 3990, 4990, 5990],
+        [-10, 990, 1990, 2990, 3990, 4990],
+      ]) {
+        tops = flight;
+        window.dispatchEvent(new Event('scroll'));
+        await settle(harness);
+        expect(current(page)).toEqual(['3 Prețuri']);
+      }
       tops = [-450, -300, 170, 220, 270, 320];
+      window.dispatchEvent(new Event('scroll'));
+      ended();
       window.dispatchEvent(new Event('scroll'));
       await settle(harness);
       await jest.advanceTimersByTimeAsync(1100);
@@ -908,6 +1001,11 @@ describe('opening the link from the e-mail', () => {
     await settle(harness);
 
     expect(field(page).value).toBe('ion@service.test');
+    expect(current(page)).toEqual(['4 Mecanici · opțional']);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    tops = [990, 1990, 2990, 3990, 4990, 5990];
+    window.dispatchEvent(new Event('scroll'));
+    await settle(harness);
     expect(current(page)).toEqual(['4 Mecanici · opțional']);
     expect(stored()).toMatchObject({
       dirty: false,

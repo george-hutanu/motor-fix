@@ -33,6 +33,19 @@ export function currentStep(
 // A tapped step whose heading the page cannot bring up to the line (the short
 // sections at its end) stays current while that heading is on screen; once
 // the scroll reaches it or a later step, or takes it off screen, it follows.
+// The scroll position a jump to a heading ends at: the heading at the top,
+// short of its scroll margin, within the range the page can scroll.
+export function jumpTarget(
+  top: number,
+  margin: number,
+  scrollY: number,
+  scrollHeight: number,
+  innerHeight: number,
+): number {
+  const end = Math.max(0, scrollHeight - innerHeight);
+  return Math.min(end, Math.max(0, scrollY + top - margin));
+}
+
 export function keepsTapped(
   spied: number,
   tapped: number,

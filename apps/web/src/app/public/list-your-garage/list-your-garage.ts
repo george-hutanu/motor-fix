@@ -35,11 +35,11 @@ import {
   readStep6,
   type Step6Values,
 } from '../step6';
-import { currentStep, keepsTapped, STEPS } from '../steps';
+import { currentStep, jumpTarget, keepsTapped, STEPS } from '../steps';
 
-// How long the page must be still after a tap before the scroll position
-// decides the current step again: a smooth jump fires scroll events on the way.
-const SETTLE_MS = 150;
+// Where the browser never says a scroll has ended: how long the page must be
+// still, after its last movement, before a jump's scroll counts as over.
+const QUIET_MS = 150;
 
 // The page the owner fills in to list a garage: six steps on one long page,
 // with the list of steps beside them, or in a bar on a phone.
@@ -68,7 +68,10 @@ export class ListYourGarage {
   private readonly nav = viewChild<ElementRef<HTMLElement>>('nav');
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   private readonly field = viewChild<ElementRef<HTMLElement>>('email');
-  private settling: ReturnType<typeof setTimeout> | undefined;
+  // A jump's own scroll is under way: however late it starts, none of its
+  // movement decides the current step.
+  private held = false;
+  private quiet: ReturnType<typeof setTimeout> | undefined;
   // The step last jumped to, held while the page cannot bring it to the line.
   private tapped: number | null = null;
 
@@ -97,15 +100,18 @@ export class ListYourGarage {
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
       const onScroll = () => {
-        if (this.settling) this.settle();
-        else this.follow();
+        if (!this.held) this.follow();
+        else if (!('onscrollend' in window)) this.restartQuiet();
       };
+      const onScrollEnd = () => this.release();
       window.addEventListener('scroll', onScroll, { passive: true });
       window.addEventListener('resize', onScroll, { passive: true });
+      window.addEventListener('scrollend', onScrollEnd, { passive: true });
       destroyRef.onDestroy(() => {
         window.removeEventListener('scroll', onScroll);
         window.removeEventListener('resize', onScroll);
-        clearTimeout(this.settling);
+        window.removeEventListener('scrollend', onScrollEnd);
+        clearTimeout(this.quiet);
       });
       this.follow();
       const link = this.route.snapshot.queryParamMap.get('draft') ?? undefined;
@@ -210,20 +216,35 @@ export class ListYourGarage {
     this.tapped = n;
     this.current.set(n);
     this.keeper.stepTo(n);
-    this.settle();
     const heading = this.headings()[n - 1];
-    heading?.scrollIntoView({
+    if (!heading) return heading;
+    clearTimeout(this.quiet);
+    // A jump that will not move the page fires no scroll, so it holds nothing.
+    const target = jumpTarget(
+      heading.getBoundingClientRect().top,
+      Number.parseFloat(getComputedStyle(heading).scrollMarginTop) || 0,
+      window.scrollY,
+      document.documentElement.scrollHeight,
+      window.innerHeight,
+    );
+    this.held = Math.abs(target - window.scrollY) >= 1;
+    heading.scrollIntoView({
       behavior: this.reduced() ? 'auto' : 'smooth',
       block: 'start',
     });
     return heading;
   }
 
-  private settle() {
-    clearTimeout(this.settling);
-    this.settling = setTimeout(() => {
-      this.settling = undefined;
-    }, SETTLE_MS);
+  // The end of a scroll only lets go: the step jumped to stays marked, so the
+  // next scroll is judged by whether its heading is still on screen.
+  private release() {
+    clearTimeout(this.quiet);
+    this.held = false;
+  }
+
+  private restartQuiet() {
+    clearTimeout(this.quiet);
+    this.quiet = setTimeout(() => this.release(), QUIET_MS);
   }
 
   private follow() {
