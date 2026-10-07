@@ -89,7 +89,7 @@ lane was unavailable, say that — an absent suggestion is not an endorsement.
 
 ### 17. Archive
 
-Invoke `speckit-archive` for its Phase 4 steps 1–3 only, on the branch before
-the hand-off: the status line and the Spec Delta merge into
-`.specify/capabilities/` ride in this PR (`commit-protocol.md`). Its archive
+Invoke `speckit-archive` for its Phase 4 steps 1–3 only, before the hand-off:
+the status line goes to the specs repository and the Spec Delta merge into
+`.specify/capabilities/` rides in this PR (`commit-protocol.md`). Its archive
 check runs in the tail after the merge (`tail.md`, step 6).

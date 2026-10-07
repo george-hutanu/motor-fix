@@ -1,7 +1,0 @@
-# Deferred findings: 470-chart-reduced-motion
-
-Findings a review verified but deliberately did not act on in this feature.
-
-- [ ] `apps/web-e2e/src/charts.spec.ts:138` — **low** — "follows reduced motion switched while the charts are on screen" assumes the retried chart is still growing when reduced motion turns back on, without enforcing it (the switch must land inside the 1000 ms growth); the sibling "grows the bars in" test makes the same assumption. Accepted for now; a deterministic version would hold the animation (e.g. a longer duration under test, or Chart.js's `onProgress`) before switching (code-reviewer, 2026-10-04) — Notion: https://app.notion.com/p/3ef607bff0d2817aa0dec871ab9e2964
-- [ ] `libs/ui-cockpit/src/lib/chart.spec.ts:281` — **low** — `chart.spec.ts:281` does not restore `matchMedia`: the reduced-motion `beforeEach` wraps `globalThis.matchMedia` with no `afterEach` restore, so each test adds another wrapper and the spy outlives the describe block; restore it in `afterEach` (pr-tester lap 1, 2026-10-04) — Notion: https://app.notion.com/p/3ef607bff0d281d4b1bafe5d38db3c74
-- [ ] `libs/ui-cockpit/src/lib/chart.spec.ts:302` — **low** — `chart.spec.ts:302` checks the animation stopped, not the final drawing: FR-002 says the chart shows its final drawing, and the test would also pass if it froze mid-growth; assert the bars' final position (pr-tester lap 1, 2026-10-04) — Notion: https://app.notion.com/p/3ef607bff0d281709490d45cfe4b3f24

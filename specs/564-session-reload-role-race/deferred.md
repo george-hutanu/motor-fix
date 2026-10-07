@@ -1,3 +1,0 @@
-# Deferred findings: 564-session-reload-role-race
-
-- [ ] `apps/web/src/app/dashboard/session.ts:290` — **medium** — failure path: a `reload()` sent after `switchRole` has put in the new token, whose switch then fails and restores the old token, still lands its answer (neither `starts` nor `switches` moved), so the never-committed role's account can show with the old token; drop that answer too (e.g. count a failed switch's restore), test first in `session.reload.adversary.spec.ts`. Also possible before this story, which only drops answers after a new sign-in or a completed switch (pr-tester lap 1, 2026-10-06)

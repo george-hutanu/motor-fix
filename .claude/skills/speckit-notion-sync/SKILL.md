@@ -174,14 +174,14 @@ node .claude/scripts/notion-sync.mjs log start ST-79 "To do → Planning"
 node .claude/scripts/notion-sync.mjs log --pending ready Foundations "usage limit"
 ```
 
-The log rides in the story's own PR. **Before the merge** its lines are
-committed with the next commit; the `qa` line on its own right after
-`gh pr ready`, pushed before CI is waited for. **After the merge** (`finish`,
-its `ready` and `comment` lines) nothing is committed: post the uncommitted
-lines as one comment on the merged PR headed `Finish log`
-(`gh pr comment <n> --body-file <file>`), then
-`git checkout -- specs/<feature>/notion-sync.md`. A PENDING line retried later
-goes into another comment on that PR.
+The log lives in the private specs repository (`specs/` is its clone), never
+on the motor-fix branch: `node .claude/scripts/specs-repo.mjs commit
+"chore(specs): ST-<n> <event>" -- <feature>/notion-sync.md` commits and pushes
+it (`lifecycle.mjs` does this at ready, for the `qa` line, and at the merge).
+**After the merge** (`finish`, its `ready` and `comment` lines) the new lines
+also go as one comment on the merged PR headed `Finish log`
+(`gh pr comment <n> --body-file <file>`). A PENDING line retried later goes
+into another comment on that PR.
 
 ## 4. Connector path (exit 3, and `plan`)
 
