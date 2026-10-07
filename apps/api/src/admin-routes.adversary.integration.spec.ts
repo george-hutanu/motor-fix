@@ -95,13 +95,21 @@ describe('the admin overview count', () => {
     expect(await waiting(admin)).toBe(first + 1);
   });
 
-  it('answers only the documented field, whatever the query string', async () => {
+  it('answers only the documented fields, whatever the query string', async () => {
     const res = await request(app.getHttpServer())
       .get(`${URL}?garagesWaiting=999&role=driver`)
       .set('Authorization', bearer(await account('admin'), 'admin'));
 
     expect(res.status).toBe(200);
-    expect(Object.keys(res.body)).toEqual(['garagesWaiting']);
+    expect(res.body.garagesWaiting).not.toBe(999);
+    expect(
+      Object.keys(res.body).filter((k) => k !== 'activeDriversMonthStart'),
+    ).toEqual([
+      'garagesWaiting',
+      'activeDrivers',
+      'garagesApprovedThisMonth',
+      'garagesListed',
+    ]);
   });
 });
 

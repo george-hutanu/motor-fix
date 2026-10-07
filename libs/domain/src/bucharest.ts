@@ -53,3 +53,5 @@ export function atLocal(day: string, hour: number): Date {
   const guess = wall - local(new Date(wall)).offsetMinutes * 60_000;
   return new Date(wall - local(new Date(guess)).offsetMinutes * 60_000);
 }
+
+export const monthStart = (day: string) => `${day.slice(0, 8)}01`;

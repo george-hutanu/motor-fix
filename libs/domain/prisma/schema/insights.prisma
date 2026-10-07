@@ -1,0 +1,13 @@
+// insights module models
+
+// The platform figures as they stood on one Europe/Bucharest day, written by
+// the night job; the month's first row is the start of its deltas.
+model PlatformDaily {
+  day                      DateTime @id @db.Date
+  garagesListed            Int      @map("garages_listed")
+  garagesApprovedThisMonth Int      @map("garages_approved_this_month")
+  activeDrivers            Int      @map("active_drivers")
+  writtenAt                DateTime @map("written_at") @db.Timestamptz(3)
+
+  @@map("platform_daily")
+}

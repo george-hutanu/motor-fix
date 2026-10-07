@@ -253,6 +253,41 @@ describe('validating a delta before it can corrupt a capability', () => {
     }
   });
 
+  // An archived feature's Adds were merged by its own archive: holding them is
+  // the expected state, not a double merge.
+  const archivedFindings = (status, delta = '### Capability: `cli-tasks`\n\n- **Adds**: FR-001') => {
+    const dir = fixture({
+      '.specify/capabilities/cli-tasks.md': capability('cli-tasks', { requirements: [[T('002', '001'), 'adds a flag']] }),
+      'specs/002-fixture/spec.md': spec([['FR-001', 'adds a flag']], delta).replace('\n\n## Requirements', `\n\n${status}\n\n## Requirements`),
+    });
+    try {
+      return validateFeature(dir, feature(dir));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  // @traces 845-FR-001
+  it('reports no delta-adds-existing for an archived feature, dated or not', () => {
+    for (const status of ['**Status**: Archived (2026-10-07)', '**Status**: Archived']) {
+      assert.deepEqual(rules(archivedFindings(status)), [], status);
+    }
+  });
+
+  // @traces 845-FR-002
+  it('keeps delta-adds-existing an ERROR for a feature that is not archived', () => {
+    for (const status of ['**Status**: Draft', '**Status**: Implemented — not Archived yet', '']) {
+      const found = archivedFindings(status).find((f) => f.rule === 'delta-adds-existing');
+      assert.equal(found?.level, 'ERROR', status);
+    }
+  });
+
+  // @traces 845-FR-002
+  it('still reports the other delta defects of an archived feature', () => {
+    const findings = archivedFindings('**Status**: Archived (2026-10-07)', '### Capability: `cli-tasks`\n\n- **Adds**: FR-001, FR-077');
+    assert.deepEqual(rules(findings), ['delta-adds-undeclared']);
+  });
+
   it('rejects a Modifies with no replacement', () => {
     const findings = run('### Capability: `cli-tasks`\n\n- **Adds**: FR-001, FR-006\n- **Modifies**: `' + T('001', '004') + '`');
     assert.ok(rules(findings).includes('delta-modifies-malformed'));

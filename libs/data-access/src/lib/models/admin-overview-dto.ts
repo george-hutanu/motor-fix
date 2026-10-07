@@ -4,6 +4,26 @@
 export interface AdminOverviewDto {
 
   /**
+   * Active driver accounts used in the last 30 days
+   */
+  activeDrivers: number;
+
+  /**
+   * Active drivers on the 1st of the current month, absent when that night was not recorded
+   */
+  activeDriversMonthStart?: number;
+
+  /**
+   * Listed garages first approved in the current Europe/Bucharest month
+   */
+  garagesApprovedThisMonth: number;
+
+  /**
+   * Garages approved and listed now
+   */
+  garagesListed: number;
+
+  /**
    * Verification files submitted or in review
    */
   garagesWaiting: number;

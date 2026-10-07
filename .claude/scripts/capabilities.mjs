@@ -202,6 +202,11 @@ export function validateFeature(repo, feature) {
   const declared = declaredRequirements(specText);
   const delta = parseDelta(specText);
   const caps = loadCapabilities(repo);
+  // The archive merges a feature's Adds and then marks it Archived; after that,
+  // the capability holding them is the merge done, not a second one coming.
+  // Only the spec's own status line counts: a fenced example of one does not,
+  // nor a status word that merely starts with Archived ("Archived-pending").
+  const isArchived = /^\*\*Status\*\*:[ \t]*archived(?=\s|\(|$)/im.test(specText.replace(/^```[\s\S]*?^```/gm, ""));
 
   if (delta.length === 0) {
     if (declared.size > 0)
@@ -226,7 +231,7 @@ export function validateFeature(repo, feature) {
       assigned.add(id);
       if (!declared.has(id)) add("ERROR", "delta-adds-undeclared", `Adds names ${id}, which spec.md does not declare`);
       const token = `${feature.num}-${id}`;
-      if (cap.requirements.has(token))
+      if (!isArchived && cap.requirements.has(token))
         add("ERROR", "delta-adds-existing", `Adds names ${id}, but ${token} is already in ${cap.name} — that is a Modifies, not an Adds`);
     }
 
