@@ -1,4 +1,9 @@
-import { ProxyTracerProvider, trace } from '@opentelemetry/api';
+import {
+  context,
+  ProxyTracerProvider,
+  ROOT_CONTEXT,
+  trace,
+} from '@opentelemetry/api';
 
 import { startTelemetry, telemetryStarted } from './start';
 import { queueTelemetry } from '../queues/telemetry-option';
@@ -33,6 +38,10 @@ describe('startTelemetry when the SDK fails while it starts', () => {
       (trace.getTracerProvider() as ProxyTracerProvider).getDelegate(),
     ).not.toHaveProperty('register');
     expect(process.listenerCount('SIGTERM')).toBe(handlers);
+    const key = Symbol('probe');
+    context.with(ROOT_CONTEXT.setValue(key, 1), () => {
+      expect(context.active()).toBe(ROOT_CONTEXT);
+    });
     expect(queueTelemetry()).toBeUndefined();
     errors.mockRestore();
   });

@@ -1,9 +1,11 @@
 import { telemetry } from '@motor-fix/contracts/env';
 import {
+  context,
   type DiagLogger,
   DiagLogLevel,
   diag,
   metrics,
+  propagation,
   trace,
 } from '@opentelemetry/api';
 import { logs } from '@opentelemetry/api-logs';
@@ -92,6 +94,8 @@ export function startTelemetry(
     // Whatever registered before the failure is taken back, so the
     // process runs as it does with telemetry off.
     trace.disable();
+    context.disable();
+    propagation.disable();
     metrics.disable();
     logs.disable();
     console.error(

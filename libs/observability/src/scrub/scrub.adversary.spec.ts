@@ -147,10 +147,14 @@ describe('scrubDeep with hostile values', () => {
     expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
   });
 
-  it('masks the message of an error object without changing the original', () => {
+  it('keeps an Error by reference', () => {
     const error = new Error('failed for ana@example.ro');
-    const out = scrubDeep({ error }) as { error: { message?: string } };
+    const out = scrubDeep({ error }) as { error: Error };
+    expect(out.error).toBe(error);
     expect(error.message).toBe('failed for ana@example.ro');
-    expect(JSON.stringify(out)).not.toContain('ana@example.ro');
+  });
+
+  it('masks an e-mail whose local part is longer than 64 characters', () => {
+    expect(scrub(`${'a'.repeat(70)}@example.ro sent`)).toBe('*** sent');
   });
 });

@@ -1,10 +1,11 @@
 // Personal values a log line, span or error message may carry: e-mails,
 // Romanian phone numbers (+40, 0040 or 0, with spaces, dots or dashes) and
 // Romanian plates. Each becomes `***` before anything leaves the process.
-// The e-mail pattern starts only where a local part starts and bounds every
-// part, so a long run with no domain is read once, not once per character.
+// The e-mail pattern starts only where a local part starts (the
+// lookbehind), so a long run with no domain is read once, not once per
+// character.
 const PATTERNS = [
-  /(?<![\p{L}\p{N}_.+-])[\p{L}\p{N}_.+-]{1,64}@[\p{L}\p{N}-]{1,63}(?:\.[\p{L}\p{N}-]{1,63}){1,8}/gu,
+  /(?<![\p{L}\p{N}_.+-])[\p{L}\p{N}_.+-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+/gu,
   /(?<![\w+])(?:\+40|0040|0)[\s.-]?[237](?:[\s.-]?\d){8}(?!\d)/g,
   /\b[A-Z]{1,2}[\s-]?\d{2,3}[\s-]?[A-Z]{3}\b/gi,
 ];
