@@ -132,3 +132,15 @@ Hook outcomes:
 ## Phase 17 — Archive
 
 - spec.md status `Archived (2026-10-07)`; `capabilities.mjs merge --apply`: garage-search +11 added. `/speckit-retro` not run (speckit-auto bars it). Commit a5a3ce22.
+
+## Final Report
+
+- Branch `043-brand-first-garage-list`, feature dir `specs/043-brand-first-garage-list`, range `2a8f9b75..HEAD`, PR #198 ready (QA), head at hand-off 7b8f3d7.
+- Phases: 1 preflight ok; 2 specify; 3 context (Notion ok); 4 clarify; 5 plan; 6 checklist; 7 tasks (13); 8 analyze, clean; 9 tests, red first (3 suites failing before code); 10 implement, 13/13 `[X]`; 11 converge, 0 findings; 12 harden (adversary +36 tests, code-reviewer HIGH fixed red-first, MEDIUM fixed, LOW deferred and filed); 13 Notion refresh, only Status moved; 14 review, both reviewers APPROVE after fixes; 15 skipped (would only touch the untracked CLAUDE.local.md); 16 retro evidence, unjudged; 17 archived, garage-search +11.
+- Autonomous decisions (full log above): order by name then id inside a group; no SEARCH_LOG write; no Playwright test until the results screen; no live channel; a garage suspended between pages still anchors the next page (name read by id, scope exemption); PAGE = 20 kept as a contract constant; `garage(name)` index deferred with ST-328.
+- Verification: `npx jest libs/contracts/src/garage-search.dto.spec.ts` 6 passed; `npx jest libs/domain/src/search libs/domain/src/garages/public-garages.scope.spec.ts apps/api/src/public-routes.integration.spec.ts` "Tests: 58 passed, 58 total" (before the last helper cleanup; adversary spec after it: "Tests: 26 passed, 26 total"); pre-commit typecheck + test of affected projects green on every commit; `scripts/contract-check.sh` exit 0; artifact-lint 0 errors; diff-audit 0 errors of this change (import-extension and generated-file items explained in phase 14).
+- FR → test (from tasks.md): FR-001/002/003/004/005 → T003/T005/T007 service and API specs; FR-006/007/009 → T011 paging and cursor cases; FR-008/010/011 → T001/T009 DTO and API specs, public-routes list.
+- spec-reviewer: all 5 findings fixed; none open. code-reviewer: all fixed; LOW #5 decided (constant).
+- Retrospective evidence (unjudged): 12 commits up to a58d74ed, 37 files +2455; 13 tasks done; 11 FRs, 0 retired; Spec Delta garage-search +11; deferred 1 of 1 (filed). `instincts.mjs triggered`: Jev unavailable. No verdict suggested (Jev lane unavailable).
+- Follow-ups: the `garage(name)` index (Notion tech-debt task); SEARCH_LOG and the live channel for MF-10 or the results-screen story; the Playwright flow with the results screen.
+- Left out: mutation testing (CI nightly only); `/speckit-retro` (barred in speckit-auto).
