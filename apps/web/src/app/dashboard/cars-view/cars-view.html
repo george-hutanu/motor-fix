@@ -1,0 +1,31 @@
+<button hlmBtn type="button" (click)="add()">{{ 'driver.cars.add.title' | t }}</button>
+@if (cars(); as list) {
+  @if (list.length) {
+    <div class="cards">
+      @for (car of list; track car.id) {
+        <article data-car>
+          <p class="name">{{ car.brandName }} {{ car.model }}</p>
+          <p>{{ car.year }} · {{ car.odometerKm | km }}</p>
+          @if (car.itpUntil) {
+            <p>{{ 'driver.cars.itpUntil' | t: { day: (car.itpUntil | day) } }}</p>
+          } @else {
+            <p class="muted">{{ 'driver.cars.itpMissing' | t }}</p>
+          }
+          @if (car.plate) {
+            <p>{{ grouped(car.plate) }}</p>
+          }
+        </article>
+      }
+    </div>
+  } @else {
+    <p>{{ 'shell.frame.empty' | t }}</p>
+  }
+} @else if (failed()) {
+  <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
+  <button hlmBtn variant="secondary" type="button" (click)="load()">{{ 'driver.cars.retry' | t }}</button>
+} @else {
+  <div class="cards" aria-busy="true">
+    <div class="skeleton" aria-hidden="true"></div>
+    <div class="skeleton" aria-hidden="true"></div>
+  </div>
+}

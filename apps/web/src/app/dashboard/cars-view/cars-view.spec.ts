@@ -3,8 +3,8 @@ import { type CarDto, CarsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 
-import { AddCar } from './add-car';
 import { CarsView } from './cars-view';
+import { AddCar } from '../add-car/add-car';
 
 const car = (over: Partial<CarDto> = {}): CarDto => ({
   brandId: 'bmw',

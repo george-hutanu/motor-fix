@@ -28,7 +28,7 @@ import { Overlays } from '@motor-fix/overlays';
 import { HlmToaster, toast } from '@motor-fix/ui-cockpit';
 import { filter, map } from 'rxjs';
 
-import { AddCar } from './add-car';
+import { AddCar } from './add-car/add-car';
 import { AdminOverview } from './admin-overview';
 import { Bell } from './bell';
 import { EmailBanner } from './email-banner';

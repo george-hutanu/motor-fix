@@ -8,7 +8,7 @@ import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { Subject } from 'rxjs';
 
-import { AddCar } from './add-car';
+import { AddCar } from './add-car/add-car';
 import { Frame } from './frame';
 import { Live } from './live';
 import { Session } from './session';

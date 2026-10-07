@@ -22,10 +22,10 @@ import {
 } from '@nestjs/swagger';
 
 import { CarsService } from './cars.service';
-import { CurrentActor, Requires } from '../auth/actor.guard';
-import { JsonOnly } from '../auth/auth.controller';
-import type { Actor } from '../auth/policy';
-import { refusal } from '../auth/sign-up.service';
+import { CurrentActor, Requires } from '../../auth/actor.guard';
+import { JsonOnly } from '../../auth/auth.controller';
+import type { Actor } from '../../auth/policy';
+import { refusal } from '../../auth/sign-up.service';
 
 const KEY = 'Idempotency-Key';
 

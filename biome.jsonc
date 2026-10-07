@@ -98,6 +98,20 @@
   },
   "overrides": [
     {
+      // Biome reads Angular templates as plain HTML: it cannot see [attr.aria-*] or [for] bindings, and it flags the ARIA combobox pattern (a ul listbox whose options are reached by aria-activedescendant, never focused).
+      "includes": ["apps/web/**/*.html"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noLabelWithoutControl": "off",
+            "noNoninteractiveElementToInteractiveRole": "off",
+            "useAriaPropsForRole": "off",
+            "useFocusableInteractive": "off"
+          }
+        }
+      }
+    },
+    {
       // The prefers-reduced-motion block must beat every component's own animation and transition, which only !important can do.
       "includes": ["libs/ui-cockpit/src/styles/cockpit.css"],
       "linter": {

@@ -7,7 +7,7 @@ import { Subject } from 'rxjs';
 
 import { AdminOverview } from './admin-overview';
 import { AdminPanel } from './admin-panel';
-import { CarsView } from './cars-view';
+import { CarsView } from './cars-view/cars-view';
 import { Live } from './live';
 import { Session } from './session';
 import { allowedViews, DASHBOARDS, dashboardRoutes } from './views';

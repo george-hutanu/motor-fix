@@ -39,7 +39,7 @@ import {
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
-import { characters } from '../sign-in/sign-up';
+import { characters } from '../../sign-in/sign-up';
 
 const SEARCH_PAUSE_MS = 250;
 const DATES = [
@@ -104,126 +104,8 @@ const chosen = (c: AbstractControl): ValidationErrors | null =>
     TranslatePipe,
   ],
   selector: 'mf-add-car',
-  styles: `
-    form { display: grid; gap: var(--mf-space-4); }
-    .field { display: grid; gap: var(--mf-space-2); min-width: 0; }
-    .field > label, legend, h3 { font-weight: 700; }
-    fieldset { display: grid; gap: var(--mf-space-1); margin: 0; padding: 0; border: 0; min-width: 0; }
-    legend { padding: 0; margin-bottom: var(--mf-space-2); }
-    h3 { margin: var(--mf-space-2) 0 0; font-size: inherit; }
-    p { margin: 0; overflow-wrap: anywhere; }
-    .lead, .note { color: var(--mf-ink-muted); }
-    .note { font-size: var(--mf-size-small); }
-    .error { color: var(--mf-red-ink); font-size: var(--mf-size-small); }
-    .fuels { display: flex; flex-wrap: wrap; gap: var(--mf-space-1) var(--mf-space-4); }
-    .choice { display: flex; align-items: center; gap: var(--mf-space-2); min-height: var(--mf-tap); font-weight: 400; cursor: pointer; }
-    .choice input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--mf-amber); }
-    .choice input:focus-visible { outline: 2px solid var(--mf-amber-ink); outline-offset: 2px; }
-    ul { list-style: none; margin: 0; padding: var(--mf-space-1) 0; border: 1px solid var(--mf-line-strong); border-radius: var(--mf-radius-sm, 8px); }
-    li { display: flex; align-items: center; min-height: var(--mf-tap); padding: 0 var(--mf-space-3); cursor: pointer; overflow-wrap: anywhere; }
-    li[aria-selected='true'], li:hover { background: var(--mf-line); }
-    .actions { display: flex; flex-wrap: wrap; gap: var(--mf-space-3); }
-    .actions button { white-space: normal; }
-  `,
-  template: `
-    <form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
-      <p class="lead">{{ 'driver.cars.add.lead' | t }}</p>
-      <div class="field">
-        <label for="mf-car-brand">{{ 'driver.cars.add.brand' | t }}</label>
-        <input
-          hlmInput
-          id="mf-car-brand"
-          type="text"
-          role="combobox"
-          autocomplete="off"
-          aria-autocomplete="list"
-          aria-controls="mf-car-brands"
-          aria-describedby="mf-car-brand-error"
-          [attr.aria-expanded]="brands().length > 0"
-          [attr.aria-activedescendant]="active() < 0 ? null : 'mf-car-brand-' + active()"
-          [class.ng-invalid]="form.controls.brandId.invalid"
-          [value]="brandText()"
-          (input)="find($any($event.target).value)"
-          (keydown)="move($event)"
-        />
-        @if (brands().length) {
-          <ul id="mf-car-brands" role="listbox" [attr.aria-label]="'driver.cars.add.brand' | t">
-            @for (brand of brands(); track brand.id; let i = $index) {
-              <li
-                role="option"
-                [id]="'mf-car-brand-' + i"
-                [attr.aria-selected]="i === active()"
-                (mousedown)="$event.preventDefault()"
-                (click)="choose(brand)"
-              >{{ brand.name }}</li>
-            }
-          </ul>
-        } @else if (brandsDown()) {
-          <p class="error" role="alert">{{ 'driver.cars.add.brandsDown' | t }}</p>
-          <div class="actions">
-            <button hlmBtn variant="secondary" type="button" (click)="search()">{{ 'driver.cars.add.retry' | t }}</button>
-          </div>
-        } @else if (noMatch()) {
-          <p class="note" role="status">{{ 'driver.cars.add.noMatch' | t }}</p>
-        }
-        <mf-field-error id="mf-car-brand-error" [save]="save" [control]="form.controls.brandId" />
-      </div>
-      <div class="field">
-        <label for="mf-car-model">{{ 'driver.cars.add.model' | t }}</label>
-        <input hlmInput id="mf-car-model" type="text" autocomplete="off" formControlName="model" aria-describedby="mf-car-model-error" />
-        <mf-field-error id="mf-car-model-error" [save]="save" [control]="form.controls.model" />
-      </div>
-      <div class="field">
-        <label for="mf-car-year">{{ 'driver.cars.add.year' | t }}</label>
-        <input hlmInput id="mf-car-year" type="text" inputmode="numeric" autocomplete="off" formControlName="year" aria-describedby="mf-car-year-error" />
-        <p class="error" id="mf-car-year-error">{{ yearError() }}</p>
-      </div>
-      <div class="field">
-        <label for="mf-car-km">{{ 'driver.cars.add.km' | t }}</label>
-        <input hlmInput id="mf-car-km" type="text" inputmode="numeric" autocomplete="off" formControlName="odometerKm" aria-describedby="mf-car-km-error" />
-        <mf-field-error id="mf-car-km-error" [save]="save" [control]="form.controls.odometerKm" />
-      </div>
-      <fieldset aria-describedby="mf-car-fuel-error">
-        <legend>{{ 'driver.cars.add.fuel.label' | t }}</legend>
-        <div class="fuels">
-          @for (fuel of fuels; track fuel) {
-            <label class="choice"><input type="radio" formControlName="fuel" [value]="fuel" />{{ fuelKey(fuel) | t }}</label>
-          }
-        </div>
-        <mf-field-error id="mf-car-fuel-error" [save]="save" [control]="form.controls.fuel" />
-      </fieldset>
-      <h3>{{ 'driver.cars.add.optional' | t }}</h3>
-      <div class="field">
-        <label for="mf-car-plate">{{ 'driver.cars.add.plate' | t }}</label>
-        <input hlmInput id="mf-car-plate" type="text" autocomplete="off" spellcheck="false" formControlName="plate" aria-describedby="mf-car-plate-error mf-car-plate-note" />
-        <mf-field-error id="mf-car-plate-error" [save]="save" [control]="form.controls.plate" />
-        <p class="note" id="mf-car-plate-note" aria-live="polite">@if (plateNote(); as note) { {{ note | t }} }</p>
-      </div>
-      <div class="field">
-        <label for="mf-car-engine">{{ 'driver.cars.add.engine' | t }}</label>
-        <input hlmInput id="mf-car-engine" type="text" autocomplete="off" formControlName="engine" aria-describedby="mf-car-engine-error" />
-        <mf-field-error id="mf-car-engine-error" [save]="save" [control]="form.controls.engine" />
-      </div>
-      @for (date of dates; track date.control) {
-        <div class="field">
-          <label [for]="'mf-car-' + date.control">{{ date.label | t }}</label>
-          <input
-            hlmInput
-            type="date"
-            [id]="'mf-car-' + date.control"
-            [max]="latest"
-            [formControlName]="date.control"
-            [attr.aria-describedby]="'mf-car-' + date.control + '-error'"
-          />
-          <mf-field-error [id]="'mf-car-' + date.control + '-error'" [save]="save" [control]="form.controls[date.control]" />
-        </div>
-      }
-      <mf-task-error [save]="save" />
-      <div class="actions">
-        <button hlmBtn type="submit" [mfTaskSubmit]="save">{{ 'driver.cars.add.submit' | t }}</button>
-      </div>
-    </form>
-  `,
+  styleUrl: './add-car.css',
+  templateUrl: './add-car.html',
 })
 export class AddCar {
   private readonly catalogue = inject(BrandsService);

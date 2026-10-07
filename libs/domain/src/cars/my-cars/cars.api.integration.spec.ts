@@ -6,17 +6,17 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
 import { CarsModule } from './cars.module';
-import { AuditService } from '../audit/audit.service';
-import { signAccessToken } from '../auth/access-token';
-import { AuthModule } from '../auth/auth.module';
-import type { Role } from '../auth/capabilities';
-import { serialDatabase } from '../auth/serial-db.testing';
-import { localDay } from '../bucharest';
+import { AuditService } from '../../audit/audit.service';
+import { signAccessToken } from '../../auth/access-token';
+import { AuthModule } from '../../auth/auth.module';
+import type { Role } from '../../auth/capabilities';
+import { serialDatabase } from '../../auth/serial-db.testing';
+import { localDay } from '../../bucharest';
 import {
   databaseUrl,
   fixtures,
   redisUrlFor,
-} from '../notifications/notifications.testing';
+} from '../../notifications/notifications.testing';
 
 const redisUrl = redisUrlFor(15);
 const tokenSecret = 'test-secret';
