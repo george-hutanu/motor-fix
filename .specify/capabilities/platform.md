@@ -39,6 +39,7 @@ features:
   - 775-level-at-parity
   - 783-api-test-boot-helper
   - 784-impossible-level-date
+  - 815-specs-private-repo
 ---
 
 # Capability: Platform
@@ -1002,6 +1003,34 @@ _From 784-impossible-level-date._
 ### 784-FR-002 — The two readers MUST give the same answer (the waiting level, or none, at the same `now`) for every stamp in acceptance scenarios 1–3, and the harness specs that hold the two readers together MUST assert each of them so a later divergence fails the suite; the JavaScript reader's answers MUST also be asserted on their own, without Python.
 
 _From 784-impossible-level-date._
+
+### 815-FR-001 — motor-fix MUST NOT track `specs/` (`.gitignore` names `/specs/`); `specs/` in every checkout is a clone of george-hutanu/motor-fix-specs on `trunk`, not a submodule.
+
+_From 815-specs-private-repo._
+
+### 815-FR-002 — `.claude/scripts/specs-repo.mjs ensure` MUST clone the private repository into `specs/` when it is missing or empty, adopt a non-repository `specs/` without losing a local file or change, and fast-forward an existing clone; `--soft` never fails (npm `prepare`, SessionStart).
+
+_From 815-specs-private-repo._
+
+### 815-FR-003 — `specs-repo.mjs commit "<msg>" [-- <paths>]` MUST commit the named paths (all by default) in `specs/` and push them to `trunk`, rebasing on a newer `trunk` and retrying when a push is refused.
+
+_From 815-specs-private-repo._
+
+### 815-FR-004 — `lifecycle.mjs ready` MUST commit the feature records and the qa line through the specs repository, and `merge` MUST read the finish lines from it and commit them there.
+
+_From 815-specs-private-repo._
+
+### 815-FR-005 — The lifecycle gate MUST refuse to stop while the specs clone has commits not pushed to `trunk`.
+
+_From 815-specs-private-repo._
+
+### 815-FR-006 — The PR tester's packet MUST read the feature's `tasks.md`, `spec.md` and lap reports from the private repository's `trunk`.
+
+_From 815-specs-private-repo._
+
+### 815-FR-007 — The bash guard MUST keep refusing a push to `main` and MUST allow a push to the specs repository's `trunk`.
+
+_From 815-specs-private-repo._
 
 ## Retired
 
