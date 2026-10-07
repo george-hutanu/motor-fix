@@ -49,3 +49,17 @@ Hook outcomes:
   - Q5 tie-break and collation? → id; database default collation; tests use ASCII-distinct names (challenger #5).
 - Settled without a question (already Assumptions): stance-only DTO (FR-008 now says so; challenger #4), no SEARCH_LOG (open: MF-10 may own it), no live channel here, no Playwright test until the results-screen story (open decision).
 - Spec touched: US3 text, scenarios 3.2–3.4, Edge Cases, Clarifications, FR-006–FR-009, Key Entities, SC-003, Assumptions. Checklist 16/16 → 16/16. `level.mjs check`: level 2 unchanged.
+
+## Phase 5 — Plan
+
+- `speckit.design.check` (before_plan): design.md current (Checked 2026-10-07; mock unreadable, logged), not re-run. `speckit.git.commit`: tree clean, nothing to commit.
+- Setup: `setup_plan.py` → plan.md from the template; branch 043-brand-first-garage-list.
+- Module: new `SearchModule` in `libs/domain/src/search/` (brief's name; ST-328/MF-10 extend it; boots with AuthModule alone, unlike GaragesModule.register), not a method on PublicGaragesService (research R1).
+- Route: `GET /api/v1/search/garages?brandId=<uuid>[&cursor]`, `@Public()`, added to the public-routes list; 400 validation_failed / invalid_cursor, 404 not_found (R2).
+- Query: two Prisma reads with `...publicGarages()` (group A `brands.some works_on`, group B `brands.none works_on`), order name asc then id asc, value keyset, `take: 21`, group A page filled from group B; no raw SQL so the scope spec still guards it (R3).
+- Counts: two `garage.count` calls per page request, `total` their sum; no schema change, no index, no cache (R4).
+- Stance per item from a filtered include, `?? 'unstated'` (R5). Cursor: base64url JSON `{b,g,n,i}`, unsigned, `invalid_cursor` on any mismatch (R6). Unknown brand 404, retired brand answers (R7).
+- Left out on purpose: SEARCH_LOG, events, live channel, Playwright, rating columns, sort (R8). Open decision for the owner unchanged: rating/review-count columns now vs with the reviews epic.
+- No research agent dispatched: every Technical Context value and decision came from repo files (cited in plan.md and research.md).
+- Artifacts: plan.md, research.md, data-model.md, contracts/garage-search.openapi.json, quickstart.md. `artifact-lint --check`: 0 errors (tasks.md not yet written). `level.mjs check`: level 2 unchanged.
+- after_plan hooks: `speckit.git.commit` done (this commit); `speckit.agent-context.update` skipped (optional; would grow untracked CLAUDE.local.md).
