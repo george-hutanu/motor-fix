@@ -97,3 +97,25 @@ Start commit: b76badd3 (worktree .worktrees/160-admin-dashboard-menu, branch 160
 
 - spec-reviewer: BLOCK, 1 HIGH (the admin bar's English Panou tab read "Home"; FR-006 says "Dashboard"), 1 LOW (a comment above the wrong declaration). code-reviewer: APPROVE, the same LOW.
 - Fixed: an admin-only tab key `frame.tab.overview` (RO "Panou", EN "Dashboard"); driver and garage keep "Home". This reverses the section 9 decision to keep the shared key. LOW fixed (comment moved). Repair lap 2.
+
+## 15–17. Agent context, retro evidence, archive
+
+- Agent context: CLAUDE.local.md already names this plan; context-audit held its size.
+- Retro evidence gathered (`retro-evidence.mjs`); Jev lane unavailable (no key), mechanical findings only. No verdict written.
+- Archive: Spec Delta merged (admin-dashboard +11, accounts ~1: 079-FR-018 superseded by 160-FR-007); FR-004, FR-005 and FR-015 deliberately unassigned (restatements and tests). spec.md status Archived (2026-10-07).
+
+## Final Report
+
+- Branch `160-admin-dashboard-menu`, feature `specs/160-admin-dashboard-menu`, range `1855f713..HEAD`, PR #196.
+- Phases 0–17 run in order (level 2). Reviews: spec-reviewer APPROVE after one HIGH fixed; code-reviewer APPROVE after one HIGH fixed. Repair laps 2 of 10.
+- Verification: web + i18n Jest 1875/1875; integration (garages verification, seed, admin-routes, adversary, public-routes) green; lint and typecheck green in the pre-commit hook; Playwright `admin-dashboard.spec.ts` runs in CI's E2E job (not locally, ports shared with other worktrees). Mutation is CI-nightly only.
+- FR → test: see tasks.md T001–T029.
+- Decisions on the owner's behalf: admin-only "Dashboard" tab key in English; zero and failed-read header states follow the spec (not drawn in the mock); e2e live rise deferred to ST-116 (deferred.md, filed in Notion).
+- Open: granting `admin` stays an operations command; the mock artifact was not shared with this run, the design check read the Build brief.
+- T027 left open in tasks.md: its end-to-end part is CI's E2E job, read at the merge.
+- Retrospective evidence (unjudged): Carryover 6 open items from earlier retrospectives; Deferred 0 open of 0 at gathering time; Jev lane unavailable.
+
+## QA lap 1 (run 37604307317, head adc6d55)
+
+- 7 high: the admin e2e spec and the QA flows signed in on phones through a header button phones lack; the desktop flow's text match missed a rendered line; the English switch and the driver redirect were not driven; the signed-out sweep 401. The PR also conflicted with main, so CI never ran on the ready heads.
+- Fixed: merged origin/main (OpenAPI and client regenerated); phones sign in from the Cont tab; a stubbed e2e test switches the admin header and counter to English without a reload; the flows read `p.admin-line`, switch to EN and drive the driver redirect; the sweep opens `/app/admin@admin`. T021's text no longer lists `frame.area.admin` (the ADMINISTRATOR label is `frame.admin.label`; the role tag stays "Admin"). Repair lap 3.

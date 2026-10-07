@@ -43,7 +43,7 @@ No new dependency, lib, module or migration (plan, Constitution I). Nothing to s
 - [X] T018 [US2] Add the `AdminOverview` store over `liveResource` (loading, value, failed) in `apps/web/src/app/dashboard/admin-overview.ts` (new) (FR-010, FR-011, FR-012)
 - [X] T019 [US2] Render the admin subtitle (label, line, skeleton, hidden-on-failure) and the Service-uri chip in `apps/web/src/app/dashboard/frame.ts`, provide `AdminOverview` for the admin area only (FR-008, FR-009, FR-010, FR-011)
 - [X] T020 [US2] Add the `counts` input, chip ("99+" above 99, full count in the accessible name), 12 px label size and the 48 px touch target in `apps/web/src/app/dashboard/tab-bar.ts` (FR-006, FR-010, FR-014)
-- [X] T021 [P] [US2] Add the shell texts in Romanian and English (`frame.admin.place`, `frame.admin.label`, `frame.admin.none`, `frame.admin.waiting.{one,few,other}`, `frame.counter`, `frame.area.admin` = Administrator, assistant nav and tab labels, the short tab labels, U+2011 in "Service‑uri") in `libs/i18n/src/shell/ro.json` and `libs/i18n/src/shell/en.json` (FR-008, FR-009, FR-014)
+- [X] T021 [P] [US2] Add the shell texts in Romanian and English (`frame.admin.place`, `frame.admin.label`, `frame.admin.none`, `frame.admin.waiting.{one,few,other}`, `frame.counter`, assistant nav and tab labels, the short tab labels, U+2011 in "Service‑uri") in `libs/i18n/src/shell/ro.json` and `libs/i18n/src/shell/en.json` (FR-008, FR-009, FR-014)
 - [X] T022 [US2] Add the two idempotent `INSERT ... SELECT ... WHERE NOT EXISTS` verification-file statements to `libs/domain/src/seed.ts` (FR-013)
 
 ## Phase 5: User Story 3 - The counters move live (P2)

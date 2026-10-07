@@ -14,11 +14,19 @@ const ADMIN_CAPABILITIES = [
 const sideways = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 
+// Below 768 px the header has no sign-in button; the bottom bar's Cont tab opens the dialog.
 async function signInAsAdmin(page: Page) {
   await ready(page, '/ro/garages');
-  await page
-    .getByRole('button', { exact: true, name: 'Autentificare' })
-    .click();
+  if ((page.viewportSize()?.width ?? 1280) < 768) {
+    await page
+      .getByRole('navigation', { name: 'Navigare principală' })
+      .getByRole('link', { name: 'Cont' })
+      .click();
+  } else {
+    await page
+      .getByRole('button', { exact: true, name: 'Autentificare' })
+      .click();
+  }
   await signIn(page, ACCOUNTS.admin);
   await expect(page).toHaveURL('/app/admin');
 }
@@ -146,4 +154,61 @@ test.describe('the admin dashboard in English', () => {
       ).toBeVisible();
     });
   }
+});
+
+test('switches the admin header and counter to English without a reload', async ({
+  page,
+}) => {
+  let language = 'ro';
+  await page.route('**/api/v1/auth/refresh', (route) =>
+    route.fulfill({ json: { accessToken: 'stubbed' } }),
+  );
+  await page.route('**/api/v1/me', async (route) => {
+    const request = route.request();
+    if (request.method() === 'PATCH')
+      language = (request.postDataJSON() as { language: string }).language;
+    await route.fulfill({
+      json: {
+        capabilities: ADMIN_CAPABILITIES,
+        email: ACCOUNTS.admin,
+        garageId: null,
+        id: 'admin-1',
+        landing: '/app/admin',
+        language,
+        name: 'Admin MotorFix',
+        role: 'admin',
+        roles: ['admin'],
+      },
+    });
+  });
+  await page.route('**/api/v1/admin/overview', (route) =>
+    route.fulfill({ json: { garagesWaiting: 2 } }),
+  );
+  await page.setViewportSize({ height: 800, width: 1280 });
+  await page.goto('/app/admin');
+  await expect(
+    page.getByText('MotorFix · București · 2 service‑uri așteaptă verificarea'),
+  ).toBeVisible();
+  await page.evaluate(() => {
+    (window as unknown as { kept: boolean }).kept = true;
+  });
+
+  await page
+    .getByRole('group', { name: 'Limba' })
+    .getByRole('button', { name: 'EN' })
+    .click();
+
+  await expect(
+    page.getByText(
+      'MotorFix · Bucharest · 2 garages are waiting for verification',
+    ),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole('navigation', { name: 'Menu' })
+      .getByRole('link', { name: 'Garages, 2 waiting' }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => (window as unknown as { kept?: boolean }).kept),
+  ).toBe(true);
 });
