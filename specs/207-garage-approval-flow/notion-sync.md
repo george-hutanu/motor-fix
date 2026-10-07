@@ -9,3 +9,6 @@
 - 2026-10-07 · implement · ST-207 · Planning → Implementing
 - 2026-10-07 · implement · timeline · Planning → Implementing
 - 2026-10-07 · labels · PR #188 · in development
+- 2026-10-07 · qa · ST-207 · Implementing → QA
+- 2026-10-07 · qa · timeline · Implementing → QA
+- 2026-10-07 · labels · PR #188 · QA
