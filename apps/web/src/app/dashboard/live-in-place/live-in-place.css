@@ -1,0 +1,18 @@
+:host {
+  position: sticky;
+  top: var(--mf-space-2);
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+}
+button {
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-4);
+  border: 1px solid var(--mf-amber);
+  border-radius: var(--mf-radius-chip);
+  background: var(--mf-panel);
+  color: var(--mf-amber-ink);
+  font: inherit;
+  font-size: var(--mf-size-small);
+  cursor: pointer;
+}

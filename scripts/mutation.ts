@@ -8,7 +8,7 @@
 // sets the exit code when the score is under the floor.
 
 import { appendFileSync, existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 const DETECTED = ['Killed', 'Timeout'];
 const UNDETECTED = ['Survived', 'NoCoverage'];
@@ -62,7 +62,7 @@ export function strykerOptions(
     ignoreStatic: true,
     incremental,
     incrementalFile: `${reports}/incremental.json`,
-    jest: { configFile: join(root, 'jest.config.cts') },
+    jest: jestOptions(root),
     mutate: [
       `${root}/src/**/*.ts`,
       `!${root}/src/**/*.spec.ts`,
@@ -75,6 +75,21 @@ export function strykerOptions(
     ...own,
     ...(only && { mutate: [only] }),
   };
+}
+
+// Stryker reads the Jest config without normalising it, so a project's own
+// `<rootDir>/…` environment would reach it as a module it cannot find: hand it
+// the resolved file instead.
+function jestOptions(root: string): Record<string, unknown> {
+  const configFile = join(root, 'jest.config.cts');
+  let text = '';
+  try {
+    text = readFileSync(configFile, 'utf8');
+  } catch {}
+  const own = text.match(/^\s*testEnvironment: '<rootDir>\/([^']+)',$/m)?.[1];
+  return own
+    ? { config: { testEnvironment: resolve(root, own) }, configFile }
+    : { configFile };
 }
 
 // Nx forwards `--incremental` as `--incremental=true` and `--mutate x` as

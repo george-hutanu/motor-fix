@@ -1,0 +1,88 @@
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+.brand {
+  margin: 0;
+  color: var(--mf-text-secondary);
+}
+.problem {
+  margin: 0;
+  color: var(--mf-red-ink);
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+}
+label {
+  font-weight: 700;
+}
+.remember-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 var(--mf-space-3);
+}
+.remember {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-3);
+  min-height: var(--mf-tap);
+  font-weight: 400;
+  cursor: pointer;
+}
+.remember input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--mf-amber);
+}
+button[type="submit"],
+.phone {
+  width: 100%;
+  min-height: 54px;
+  white-space: normal;
+}
+.or {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-3);
+  margin: 0;
+  color: var(--mf-text-secondary);
+}
+.or::before,
+.or::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--mf-line);
+}
+/* The phone button joins Apple and Google under their "or" when they show. */
+mf-provider-buttons:not(:empty) + .or {
+  display: none;
+}
+.switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0 var(--mf-space-2);
+  margin: 0;
+  color: var(--mf-text-secondary);
+}
+.switch button,
+.forgot {
+  min-height: var(--mf-tap);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--mf-amber-ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.switch button:focus-visible,
+.forgot:focus-visible {
+  outline: 2px solid var(--mf-amber-ink);
+  outline-offset: 2px;
+}

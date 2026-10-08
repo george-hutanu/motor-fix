@@ -3,7 +3,7 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { PRISMA } from '../../auth/prisma';
 import { refusal } from '../../auth/sign-up.service';
-import { publicGarages } from '../../garages/public-garages';
+import { publicGarages } from '../../garages/public-garages/public-garages';
 import type { PrismaClient } from '../../generated/prisma/client';
 
 @Injectable()

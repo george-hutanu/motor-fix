@@ -19,7 +19,7 @@ import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { ListYourGarage } from './list-your-garage';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
-import { type BrowserDraft, STORAGE_KEY } from '../draft';
+import { type BrowserDraft, STORAGE_KEY } from '../draft/draft';
 import { PLACE_MAP, type PlaceMapEvents } from '../place-step/place-map';
 
 // jsdom lays nothing out: each heading is placed by hand, the page is tall

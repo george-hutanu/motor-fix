@@ -1,7 +1,7 @@
 // @traces 392-FR-004 392-FR-005
 import type { OutsideChannel } from '@motor-fix/contracts';
 
-import { mutedChannels } from './preferences';
+import { mutedChannels } from './preferences/preferences';
 import { outsideChannels } from './routing';
 
 const everyone = { email: true, phone: true, push: false, whatsapp: true };

@@ -17,16 +17,19 @@ const pin = (page: Page) => step(page).locator('.maplibregl-marker');
 type Answer = { status: number; body: unknown };
 
 // The look-up and the map never leave the app: the look-up is answered here
-// and the map reads the app's own empty style.
+// and the map reads the app's own empty style. The app's own host is the
+// suite's base URL's, a deployed one included.
 async function stub(
   page: Page,
   answer: Answer = { body: { items: [STEFAN] }, status: 200 },
 ) {
+  const own = new URL(test.info().project.use.baseURL ?? 'http://localhost')
+    .hostname;
   const outside: string[] = [];
   page.on('request', (request) => {
     const { hostname } = new URL(request.url());
     if (
-      !['localhost', '127.0.0.1'].includes(hostname) &&
+      ![own, 'localhost', '127.0.0.1'].includes(hostname) &&
       !request.url().startsWith('data:')
     )
       outside.push(hostname);

@@ -92,6 +92,7 @@ describe('ci workflow', () => {
       'node scripts/observability-inventory.ts',
     ],
     ['checks', 'Harness', 'npm run test:harness'],
+    ['checks', 'Structure', 'node scripts/structure-check.ts'],
     ['checks', 'Dependency audit', 'npm audit --omit=dev --audit-level=high'],
     [
       'checks',
@@ -113,6 +114,16 @@ describe('ci workflow', () => {
       expect(block).toContain(command);
     },
   );
+
+  // On a pull request the baseline may not list a file the base branch's
+  // baseline lacks; a push to main has no base to compare against.
+  it('compares the structure baseline with the base branch on a pull request', () => {
+    const block = step(job('checks'), 'Structure');
+
+    expect(block).toContain('--base origin/');
+    expect(block).toContain('github.base_ref');
+    expect(block).toContain("github.event_name == 'pull_request'");
+  });
 
   // An unguarded step after a check is skipped once that check fails (the
   // install, say, after Biome), and every check after it then fails for it.
