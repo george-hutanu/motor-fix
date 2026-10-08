@@ -25,12 +25,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isSet = <T>(value: T | null | undefined): value is T =>
   value !== null && value !== undefined;
 
-// The job an entry names: a catalogue id, or a proposed name folded so that
-// accents and case do not make two jobs of one.
+// A job name folded so that accents, case and surrounding spaces do not make
+// two jobs of one.
+const nameOf = (name: string) => `name:${fold(name.trim())}`;
+
+// The job an entry names: a catalogue id, or a proposed name.
 const jobOf = (job: Job) =>
-  isSet(job.jobTypeId)
-    ? `id:${job.jobTypeId}`
-    : `name:${fold((job.name ?? '').trim())}`;
+  isSet(job.jobTypeId) ? `id:${job.jobTypeId}` : nameOf(job.name ?? '');
 
 // One range per job and brand; no brand is the job's default range.
 const pairOf = (job: string, brandId?: string | null) =>
@@ -290,7 +291,7 @@ export class GaragePricesService {
   }
 
   // Jobs and brands the catalogue does not hold, brands the garage does not
-  // take, and ranges already stored.
+  // take, ranges already stored, and proposals of a job already approved.
   private async catalogueErrors(
     tx: Prisma.TransactionClient,
     garageId: string,
@@ -319,11 +320,22 @@ export class GaragePricesService {
       select: { brandId: true, jobTypeId: true },
       where: { garageId },
     });
+    // The catalogue holds tens of jobs, so one read and a match in memory.
+    const approved = await tx.jobType.findMany({
+      select: { nameEn: true, nameRo: true },
+      where: { status: 'approved' },
+    });
     const status = new Map(jobTypes.map((job) => [job.id, job.status]));
     const known = new Set(brands.map((brand) => brand.id));
     const worksOn = new Set(takenBrands.map((row) => row.brandId));
     const storedPairs = new Set(
       stored.map((row) => pairOf(`id:${row.jobTypeId}`, row.brandId)),
+    );
+    const approvedNames = new Set(
+      approved.flatMap(({ nameEn, nameRo }) => [
+        nameOf(nameRo),
+        nameOf(nameEn),
+      ]),
     );
     const jobProblem = (job: Job) => {
       if (job.jobTypeId === undefined) return undefined;
@@ -342,8 +354,10 @@ export class GaragePricesService {
     return jobs.flatMap((job, i) => {
       const onJob = jobProblem(job);
       const onBrand = brandProblem(job);
+      const onName = isSet(job.name) && approvedNames.has(jobOf(job));
       return [
         ...(onJob ? [{ code: onJob, field: `jobs[${i}].jobTypeId` }] : []),
+        ...(onName ? [{ code: 'duplicate', field: `jobs[${i}].name` }] : []),
         ...(onBrand ? [{ code: onBrand, field: `jobs[${i}].brandId` }] : []),
       ];
     });
