@@ -240,4 +240,11 @@ describe('layout findings', () => {
     const consoleError = sweepFinding({ ...where, kind: 'console', text: 'NG0100' }, { web: true });
     assert.equal(markPreExisting([consoleError], [consoleError])[0].severity, 'high');
   });
+
+  it('treats every layout finding as pre-existing when the baseline run measured no layout', () => {
+    const now = [sweepFinding(layout('grid', { selector: 'div#row' }), { web: true })];
+    const marked = markPreExisting(now, [], { measured: false });
+    assert.equal(marked[0].severity, 'medium');
+    assert.equal(marked[0].preExisting, true);
+  });
 });

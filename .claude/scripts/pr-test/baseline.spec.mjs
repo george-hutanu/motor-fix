@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
-import { baselineFindings, chooseBaseline, diffShots, fetchBaseline, visualOutcome } from './baseline.mjs';
+import { chooseBaseline, diffShots, fetchBaseline, readReport, visualOutcome } from './baseline.mjs';
 
 const require = createRequire(import.meta.url);
 const sharp = require('sharp');
@@ -133,6 +133,13 @@ describe('diffShots', () => {
     return { cur: join(root, 'cur'), base: join(root, 'base'), out: join(root, 'cur') };
   };
 
+  it('loads the image library from the tested checkout and names it when that checkout has none', async () => {
+    const d = dirs();
+    await png(join(d.cur, 'shots/a.png'));
+    await png(join(d.base, 'shots/a.png'));
+    await assert.rejects(diffShots(d.cur, d.base, d.out, { root: mkdtempSync(join(tmpdir(), 'no-sharp-')) }), /sharp/);
+  });
+
   it('sorts shots into identical, changed, new and removed', async () => {
     const d = dirs();
     await png(join(d.cur, 'shots/same.png'));
@@ -172,11 +179,14 @@ describe('diffShots', () => {
 describe('what the run makes of the baseline', () => {
   const dir = () => mkdtempSync(join(tmpdir(), 'bl-'));
 
-  it('reads the baseline report\'s findings, or none', () => {
+  it('reads the baseline report, or none when it is missing or broken', () => {
     const d = dir();
-    assert.deepEqual(baselineFindings(d), []);
-    writeFileSync(join(d, 'report.json'), JSON.stringify(report({ findings: [{ kind: 'layout', rule: 'grid' }] })));
-    assert.deepEqual(baselineFindings(d), [{ kind: 'layout', rule: 'grid' }]);
+    assert.equal(readReport(d), null);
+    writeFileSync(join(d, 'report.json'), '{broken');
+    assert.equal(readReport(d), null);
+    writeFileSync(join(d, 'report.json'), JSON.stringify(report({ layout: true, findings: [{ kind: 'layout', rule: 'grid' }] })));
+    assert.deepEqual(readReport(d).findings, [{ kind: 'layout', rule: 'grid' }]);
+    assert.equal(readReport(d).layout, true);
   });
 
   const shots = {

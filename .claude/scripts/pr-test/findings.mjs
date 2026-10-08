@@ -174,10 +174,16 @@ export const layoutKey = (f) => `layout|${f.route ?? ""}|${f.rule}|${f.selector}
 /** What makes two findings the same one, across sources and laps. */
 export const findingKey = (f) => f.key ?? (f.kind === "layout" ? layoutKey(f) : `${f.kind}|${f.title}|${f.route ?? ""}`);
 
-/** Layout findings the baseline run of `main` already reported are pre-existing: kept, capped at medium. */
-export function markPreExisting(findings, baseline) {
+/**
+ * Layout findings the baseline run of `main` already reported are pre-existing: kept, capped at medium.
+ * A baseline from a tester that measured no layout (`measured: false`) cannot tell main's from the PR's,
+ * so every layout finding is treated as main's until a measured baseline exists.
+ */
+export function markPreExisting(findings, baseline, { measured = true } = {}) {
   const before = new Set(baseline.filter((f) => f.kind === "layout").map(layoutKey));
-  return findings.map((f) => (f.kind === "layout" && before.has(layoutKey(f)) ? { ...f, severity: capAt(f.severity, "medium"), preExisting: true } : f));
+  return findings.map((f) =>
+    f.kind === "layout" && (!measured || before.has(layoutKey(f))) ? { ...f, severity: capAt(f.severity, "medium"), preExisting: true } : f,
+  );
 }
 
 export function mergeFindings(list) {

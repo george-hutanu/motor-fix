@@ -8,8 +8,6 @@
 // from the page's own `--mf-size-*` and `--mf-font-*` custom properties, so the
 // check never keeps a copy of the Cockpit tokens.
 
-export const LAYOUT_RULES = ["min-text", "type-scale", "tap-target", "clipped", "overlap", "grid", "stretched-image", "font-fallback", "focus-ring"];
-
 /**
  * @param {{ phone: boolean, tapTargets: boolean, focus: boolean }} opts
  *   phone: hold body text to 16 px; tapTargets: hold controls to 44×44 px;
@@ -26,7 +24,8 @@ export async function measureLayout({ phone, tapTargets, focus }) {
   const RUNNING_ROLES = "p, li, td, th, dd, button, a[href], [role=button], [role=link]";
   const CAPTIONS = new Set(["SMALL", "SUB", "SUP"]);
   const FIELDS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
-  const CONTROLS = "a[href], button, input:not([type=hidden]), select, textarea, summary, [role=button], [role=link], [role=tab], [role=menuitem], [tabindex]:not([tabindex='-1'])";
+  const TAPPABLE = "a[href], button, input:not([type=hidden]), select, textarea, summary, [role=button], [role=link], [role=tab], [role=menuitem]";
+  const CONTROLS = `${TAPPABLE}, [tabindex]:not([tabindex='-1'])`;
 
   const found = new Map();
   const report = (rule, el, measured, expected, selector) => {
@@ -124,19 +123,20 @@ export async function measureLayout({ phone, tapTargets, focus }) {
     if (scale.length && !scale.some((v) => Math.abs(v - size) <= HALF)) report("type-scale", el, px(size), `one of ${scale.map(px).join(", ")}`);
     // Clipped, ellipsised or spilling out of its box.
     const s = style(el);
-    const hides = [s.overflowX, s.overflowY].some((o) => o === "hidden" || o === "clip");
-    if (hides || s.textOverflow === "ellipsis" || s.webkitLineClamp !== "none") {
-      if (el.scrollWidth > el.clientWidth + HALF || el.scrollHeight > el.clientHeight + HALF)
-        report("clipped", el, `content ${el.scrollWidth}×${el.scrollHeight}px in ${el.clientWidth}×${el.clientHeight}px`, "fits its box");
-    } else if (s.overflowX === "visible" && !FIELDS.has(el.tagName)) {
+    // Its own text against its box: layout places text that will be cut, ellipsised or
+    // clamped outside the box, while a strip drawn by a pseudo-element or a child is not its text.
+    const hides = [s.overflowX, s.overflowY].some((o) => o === "hidden" || o === "clip") || s.textOverflow === "ellipsis" || s.webkitLineClamp !== "none";
+    if (!FIELDS.has(el.tagName) && (hides || s.overflowX === "visible")) {
       const range = document.createRange();
       const box = el.getBoundingClientRect();
       for (const n of el.childNodes) {
         if (n.nodeType !== Node.TEXT_NODE || !n.textContent.trim()) continue;
         range.selectNodeContents(n);
         const t = range.getBoundingClientRect();
-        if (t.left < box.left - HALF || t.right > box.right + HALF) {
-          report("clipped", el, `text ${px(t.width)} wide in a ${px(box.width)} box`, "fits its box");
+        const wide = t.left < box.left - HALF || t.right > box.right + HALF;
+        const tall = hides && (t.top < box.top - HALF || t.bottom > box.bottom + HALF);
+        if (wide || tall) {
+          report("clipped", el, `text ${px(t.width)}×${px(t.height)} in a ${px(box.width)}×${px(box.height)} box`, "fits its box");
           break;
         }
       }
@@ -147,16 +147,21 @@ export async function measureLayout({ phone, tapTargets, focus }) {
   const controls = all.filter((el) => el.matches(CONTROLS)).slice(0, MAX_CONTROLS);
   if (tapTargets)
     for (const el of controls) {
-      if (el.matches("a[href]") && inRunningText(el)) continue;
+      if (!el.matches(TAPPABLE) || (el.matches("a[href]") && inRunningText(el))) continue;
       const r = el.getBoundingClientRect();
       if (r.width < TAP - HALF || r.height < TAP - HALF) report("tap-target", el, `${Math.round(r.width)}×${Math.round(r.height)}px`, `${TAP}×${TAP}px`);
     }
-  const rects = controls.map((el) => [el, el.getBoundingClientRect()]);
+  // A fixed or sticky bar over the page is not an overlap: the page scrolls clear of it.
+  const pinned = (el) => {
+    for (let e = el; e; e = e.parentElement) if (["fixed", "sticky"].includes(style(e).position)) return true;
+    return false;
+  };
+  const rects = controls.map((el) => [el, el.getBoundingClientRect(), pinned(el)]);
   for (let i = 0; i < rects.length; i++)
     for (let j = i + 1; j < rects.length; j++) {
-      const [a, ra] = rects[i];
-      const [b, rb] = rects[j];
-      if (a.contains(b) || b.contains(a)) continue;
+      const [a, ra, pa] = rects[i];
+      const [b, rb, pb] = rects[j];
+      if (a.contains(b) || b.contains(a) || pa !== pb) continue;
       const w = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
       const h = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
       if (w > HALF && h > HALF) report("overlap", a, `${px(w)}×${px(h)} shared`, "no overlap", `${selectorOf(a)} × ${selectorOf(b)}`);
@@ -193,6 +198,9 @@ export async function measureLayout({ phone, tapTargets, focus }) {
     if (!own.length) report("font-fallback", null, `"${first}" (not declared)`, `"${first}" loaded (in use: ${fallback})`, name);
     else if (own.every((f) => f.status === "error")) report("font-fallback", null, `"${first}" (error)`, `"${first}" loaded (in use: ${fallback})`, name);
   }
+  const themed = new Set(fonts.map((t) => t.families[0]));
+  for (const family of new Set(faces.filter((f) => f.status === "error").map((f) => f.family.replace(/^["']|["']$/g, ""))))
+    if (!themed.has(family)) report("font-fallback", null, `"${family}" (error)`, `"${family}" loaded`, `@font-face "${family}"`);
 
   // A visible change when a control takes keyboard focus.
   if (focus) {

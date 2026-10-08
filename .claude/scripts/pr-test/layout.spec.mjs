@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { LAYOUT_RULES, measureLayout } from './layout.mjs';
+import { measureLayout } from './layout.mjs';
 
 // Every rule runs in a real browser against a fixture page it must fault and
 // one it must pass. Off CI a machine without the browser skips; in CI the
@@ -45,10 +45,6 @@ const selectors = (result, rule) => of(result, rule).map((o) => o.selector).sort
 
 describe.skipIf(!browser)('layout checks in a browser', () => {
   afterAll(() => browser?.close());
-
-  it('knows the nine rules', () => {
-    expect(LAYOUT_RULES).toEqual(['min-text', 'type-scale', 'tap-target', 'clipped', 'overlap', 'grid', 'stretched-image', 'font-fallback', 'focus-ring']);
-  });
 
   describe('min-text', () => {
     it('faults 13 px body text on a phone, 11 px text anywhere and a 14 px field', async () => {
@@ -171,8 +167,13 @@ describe.skipIf(!browser)('layout checks in a browser', () => {
   describe('font-fallback', () => {
     it('faults a theme font that failed to load, naming the fallback in use', async () => {
       const r = await measure('font-fallback-fail');
-      expect(of(r, 'font-fallback')).toHaveLength(1);
+      expect(selectors(r, 'font-fallback')).toEqual(['--mf-font-body', '@font-face "Orphan Serif"']);
       expect(of(r, 'font-fallback')[0]).toMatchObject({ selector: '--mf-font-body', measured: '"Missing Grotesk" (error)', expected: '"Missing Grotesk" loaded (in use: system-ui)' });
+    });
+
+    it('faults a face the page declared and used that failed, though no theme token names it', async () => {
+      const r = await measure('font-fallback-fail');
+      expect(of(r, 'font-fallback').find((o) => o.selector === '@font-face "Orphan Serif"')).toMatchObject({ measured: '"Orphan Serif" (error)', expected: '"Orphan Serif" loaded' });
     });
 
     it('passes a theme font the system provides', async () => {

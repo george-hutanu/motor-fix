@@ -30,9 +30,15 @@ import { artifactName, WORKFLOW } from "./dispatch.mjs";
 const RUN_LIMIT = 100;
 const FINISHED = new Set(["success", "failure"]);
 const IMAGE = /\.png$/i;
+const NEIGHBOURS = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+];
 const short = (sha) => String(sha ?? "").slice(0, 7);
 const reason = (res) => (res.stderr || res.stdout || `exit ${res.code}`).trim().split("\n")[0];
-const parseJson = (text) => {
+export const parseJson = (text) => {
   try {
     return JSON.parse(text);
   } catch {
@@ -47,9 +53,6 @@ export function parseRunName(title) {
 }
 
 export const readReport = (dir) => (existsSync(join(dir, "report.json")) ? parseJson(readFileSync(join(dir, "report.json"), "utf8")) : null);
-
-/** The findings of the baseline run's report, or none. */
-export const baselineFindings = (dir) => readReport(dir)?.findings ?? [];
 
 /** Downloads a run's artifact; { dir, report } or { error }. */
 function download(gh, repo, id, pr) {
@@ -195,12 +198,7 @@ function regionsOf(a, b, { cell, tolerance, minCells }) {
       const cy = Math.floor(c / cols);
       cells++;
       [x0, y0, x1, y1] = [Math.min(x0, cx), Math.min(y0, cy), Math.max(x1, cx), Math.max(y1, cy)];
-      for (const [dx, dy] of [
-        [1, 0],
-        [-1, 0],
-        [0, 1],
-        [0, -1],
-      ]) {
+      for (const [dx, dy] of NEIGHBOURS) {
         const nx = cx + dx;
         const ny = cy + dy;
         const n = ny * cols + nx;
@@ -224,9 +222,15 @@ function regionsOf(a, b, { cell, tolerance, minCells }) {
 /**
  * Every screenshot of `currentDir` against `baselineDir`, by name:
  * { "shots/x.png": { status: identical|changed|new|removed, regions?, diff? } }.
+ * sharp comes from `root`, the tested checkout: the tester's own checkout has no node_modules.
  */
-export async function diffShots(currentDir, baselineDir, outDir, { cell = 16, tolerance = 24, minCells = 2 } = {}) {
-  const sharp = createRequire(import.meta.url)("sharp");
+export async function diffShots(currentDir, baselineDir, outDir, { cell = 16, tolerance = 24, minCells = 2, root } = {}) {
+  let sharp;
+  try {
+    sharp = createRequire(root ? join(root, "package.json") : import.meta.url)("sharp");
+  } catch (error) {
+    throw new Error(`sharp is not installed in ${root ?? "the tester's checkout"}: ${String(error.message).split("\n")[0]}`);
+  }
   const current = shotNames(currentDir);
   const before = new Set(shotNames(baselineDir));
   const out = {};

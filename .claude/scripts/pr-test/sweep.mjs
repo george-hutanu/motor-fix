@@ -183,12 +183,13 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
           seen({ kind: "axe", impact: v.impact ?? "minor", rule: v.id, help: v.help, nodes: v.nodes.length, target: v.nodes[0]?.target?.join(" ") });
         const box = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, width: window.innerWidth }));
         if (box.scrollWidth > box.width + 1) seen({ kind: "overflow", ...box });
+        // The screenshot first: measuring focuses controls for the focus-ring check, which would show in it.
+        await page.screenshot({ path: screenshot, fullPage: true });
+        screenshots.push(screenshot);
         if (!problem) {
           const layout = await page.evaluate(measureLayout, { phone: vp.isMobile, tapTargets: vp.hasTouch, focus: run.viewport === "desktop" });
           for (const o of layout.observations) seen(o);
         }
-        await page.screenshot({ path: screenshot, fullPage: true });
-        screenshots.push(screenshot);
       } catch (error) {
         seen({ kind: "load", text: String(error.message).split("\n")[0].slice(0, 300) });
       } finally {

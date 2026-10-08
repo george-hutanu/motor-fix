@@ -43,7 +43,7 @@ import { join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { callEndpoints, changedEndpoints, SEEDED, seedPassword, signIn } from "./endpoints.mjs";
-import { baselineFindings, diffShots, visualOutcome } from "./baseline.mjs";
+import { diffShots, parseJson, readReport, visualOutcome } from "./baseline.mjs";
 import { appsFor, cutOffFinding, markPreExisting, readinessOutcome, reportMarkdown, stepFinding, testFinding, touchesWeb, verdict } from "./findings.mjs";
 import {
   APP_SCRIPTS,
@@ -352,7 +352,11 @@ async function main(argv) {
     // Evidence relative to the report: shots/ stays in --out, beside it; only the report is copied into specs/.
     // A layout finding the baseline run already reported is main's, not this PR's: kept, at medium at most.
     const swept = toFindings(sweep.observations, { web, origins: [webURL, apiURL] });
-    for (const f of opt.baseline ? markPreExisting(swept, baselineFindings(opt.baseline)) : swept)
+    const before = opt.baseline ? readReport(opt.baseline) : null;
+    // `layout: true` marks a report from a tester that measured layout; an older one cannot tell main's findings from the PR's.
+    const measured = !before || before.layout === true;
+    if (!measured) notes.push("The baseline run measured no layout, so every layout finding is treated as pre-existing (medium at most) this lap.");
+    for (const f of before ? markPreExisting(swept, before.findings ?? [], { measured }) : swept)
       findings.push(f.evidence ? { ...f, evidence: relative(out, f.evidence) } : f);
     writeFileSync(join(out, "observations.json"), JSON.stringify(sweep.observations, null, 2));
     const screenshots = sweep.screenshots;
@@ -360,8 +364,13 @@ async function main(argv) {
     // The pixel diff against the baseline run's screenshots (baseline.mjs fetched them; baseline.json says which run).
     phase = "visual diff";
     const metaFile = opt.baseline && join(opt.baseline, "baseline.json");
-    const meta = metaFile && existsSync(metaFile) ? JSON.parse(readFileSync(metaFile, "utf8")) : null;
-    const shotsDiff = meta && !meta.none ? await diffShots(out, opt.baseline, out) : null;
+    const meta = metaFile && existsSync(metaFile) ? parseJson(readFileSync(metaFile, "utf8")) : null;
+    let shotsDiff = null;
+    try {
+      shotsDiff = meta && !meta.none ? await diffShots(out, opt.baseline, out, { root }) : null;
+    } catch (error) {
+      notes.push(`Visual diff skipped: ${String(error.message).split("\n")[0]}`);
+    }
     const visual = visualOutcome({ meta, shots: shotsDiff, web });
     notes.push(...visual.notes);
     findings.push(...visual.findings);
@@ -419,7 +428,7 @@ async function main(argv) {
     const v = verdict(findings);
     const blocking = findings.filter((f) => f.severity === "blocker" || f.severity === "high").length;
     const summary = `${v === "failure" ? `${blocking} blocking finding(s)` : "No blocking findings"}; ${findings.length} in all. Booted ${booted.join(", ") || "nothing"}.`;
-    const report = { pr: Number(opt.pr), repo: info.repo, sha, base: info.base, lap: opt.lap, verdict: v, summary, findings, booted, notes, screenshots: screenshots.map((s) => relative(out, s)) };
+    const report = { pr: Number(opt.pr), repo: info.repo, sha, base: info.base, lap: opt.lap, layout: true, verdict: v, summary, findings, booted, notes, screenshots: screenshots.map((s) => relative(out, s)) };
     report.markdown = reportMarkdown({ pr: opt.pr, sha, verdict: v, findings, booted, screenshots, lap: opt.lap, notes });
     writeFileSync(join(out, "report.json"), JSON.stringify(report, null, 2));
     writeFileSync(join(out, "report.md"), report.markdown);
