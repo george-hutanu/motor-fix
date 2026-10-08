@@ -1,0 +1,8 @@
+@if (missing()) {
+  <h1>{{ 'shell.notFound.title' | t }}</h1>
+  <p>{{ 'shell.notFound.text' | t }}</p>
+  <a [routerLink]="['/', i18n.language()]">{{ 'shell.notFound.home' | t }}</a>
+} @else {
+  <h1>{{ 'public.gone.title' | t }}</h1>
+  <a [routerLink]="['/', i18n.language()]">{{ 'public.gone.home' | t }}</a>
+}

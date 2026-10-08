@@ -1,0 +1,27 @@
+:host {
+  display: grid;
+  gap: var(--mf-space-4);
+  justify-items: start;
+  padding-block: var(--mf-space-6);
+}
+
+h1 {
+  margin: 0;
+  font-family: var(--mf-font-label);
+  font-size: clamp(22px, 3vw, 32px);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+p {
+  margin: 0;
+  color: var(--mf-text-secondary);
+}
+
+a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--mf-amber-ink);
+  font-weight: 600;
+}

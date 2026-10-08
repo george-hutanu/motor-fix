@@ -456,11 +456,9 @@ describe('the Cont destination', () => {
 describe('placeholder screens', () => {
   it.each([
     '/ro/garages',
-    '/ro/garages/atelier-pop',
     '/ro/mechanics/ion',
     '/ro/account',
     '/en/garages',
-    '/en/garages/atelier-pop',
     '/en/mechanics/ion',
     '/en/account',
   ])(

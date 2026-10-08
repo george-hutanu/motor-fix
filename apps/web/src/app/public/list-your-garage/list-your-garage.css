@@ -2,10 +2,6 @@
   display: block;
   padding: var(--mf-space-4);
 }
-header {
-  display: flex;
-  justify-content: flex-end;
-}
 h1,
 h2,
 p {

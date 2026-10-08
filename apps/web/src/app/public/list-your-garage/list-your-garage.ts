@@ -33,7 +33,7 @@ import {
   type PlaceSection,
   placeComplete,
 } from '@motor-fix/contracts/place-section';
-import { I18n, LanguageSwitch, TranslatePipe } from '@motor-fix/i18n';
+import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton, HlmInput, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
@@ -75,7 +75,6 @@ const STALL_MS = 3000;
     HlmButton,
     HlmInput,
     HoursStep,
-    LanguageSwitch,
     MechanicsStep,
     PhotosStep,
     PlaceStep,

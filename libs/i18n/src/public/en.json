@@ -21,6 +21,26 @@
     "required": "Tick to continue.",
     "terms": "Terms of use"
   },
+  "garageProfile": {
+    "backBrand": "Garages for {brand}",
+    "backHome": "Home",
+    "badge": "Verified · RAR authorisation",
+    "failed": "We could not load this garage",
+    "loading": "Loading the profile",
+    "mobileArea": "Mobile mechanic · {km} area",
+    "refuses": "Does not work on {brand}",
+    "retry": "Try again",
+    "reviews": {
+      "one": "{count} review",
+      "other": "{count} reviews"
+    },
+    "verified": "Active company and RAR technical authorisation, checked by MotorFix. Last check: {date}.",
+    "works": "Works on {brand}"
+  },
+  "gone": {
+    "home": "Go to the home page",
+    "title": "This garage is no longer available"
+  },
   "home": {
     "car": "Your car",
     "count": {
@@ -416,6 +436,14 @@
     "signIn": "Sign in",
     "submit": "Create account",
     "title": "New account"
+  },
+  "siteBar": {
+    "account": "Account",
+    "find": "Find a mechanic",
+    "home": "MotorFix, home page",
+    "list": "List your garage",
+    "nav": "Site menu",
+    "signIn": "Sign in"
   },
   "tabs": {
     "account": "Account",

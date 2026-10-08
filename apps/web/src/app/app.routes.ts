@@ -69,7 +69,13 @@ export const routes: Routes = [
         path: 'sign-in/return',
       },
       placeholder('garages', 'public.placeholder.garages'),
-      placeholder('garages/:garage', 'public.placeholder.garages'),
+      {
+        loadComponent: () =>
+          import('./public/garage-profile/garage-profile').then(
+            (m) => m.GarageProfile,
+          ),
+        path: 'garages/:garage',
+      },
       placeholder('mechanics/:mechanic', 'public.placeholder.mechanics'),
       {
         loadComponent: () =>
