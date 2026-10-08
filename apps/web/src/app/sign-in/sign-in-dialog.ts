@@ -1,9 +1,10 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 
 import type { AuthData, AuthSwitch, ProviderProblem } from './sign-in';
 import { type Provider, Session } from '../dashboard/session';
+import { PlatformStatus } from '../maintenance/platform-status';
 
 // What the server says on the way back from a provider, besides a session.
 export type ProviderResult = 'consent' | 'cancelled' | ProviderProblem;
@@ -24,6 +25,7 @@ export class SignInDialog {
   private readonly overlays = inject(Overlays);
   private readonly router = inject(Router);
   private readonly session = inject(Session);
+  private readonly injector = inject(Injector);
   // At most one sign-in dialog: whoever asks while it is open waits on it.
   private open: Promise<boolean> | null = null;
 
@@ -33,6 +35,9 @@ export class SignInDialog {
       await this.router.navigateByUrl(me.landing);
       return;
     }
+    // The account read met maintenance: the page it showed stays, no dialog.
+    // Looked up only here, so screens that never ask need no platform client.
+    if (this.injector.get(PlatformStatus).showPage()) return;
     const signedIn = await this.dialog(false);
     // Read either way, so a closed dialog drops the address the area guard kept.
     const kept = this.session.takeReturnTo();

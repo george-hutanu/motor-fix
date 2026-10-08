@@ -7,6 +7,7 @@ import { Overlays } from '@motor-fix/overlays';
 import { SignInDialog } from './sign-in-dialog';
 import { areaGuard } from '../dashboard/area.guard';
 import { Session } from '../dashboard/session';
+import { PlatformStatus } from '../maintenance/platform-status';
 
 const GARAGE = { landing: '/app/garage' } as MeDto;
 
@@ -20,6 +21,7 @@ type Answer =
     };
 
 function setup(signedIn: MeDto | null, ...answers: Answer[]) {
+  const down = signal(false);
   const current = signal<MeDto | null>(signedIn);
   const session = {
     current,
@@ -37,12 +39,19 @@ function setup(signedIn: MeDto | null, ...answers: Answer[]) {
       provideRouter([]),
       { provide: Session, useValue: session },
       { provide: Overlays, useValue: { open } },
+      { provide: PlatformStatus, useValue: { showPage: down } },
     ],
   });
   const navigate = jest
     .spyOn(TestBed.inject(Router), 'navigateByUrl')
     .mockResolvedValue(true);
-  return { dialog: TestBed.inject(SignInDialog), navigate, open, session };
+  return {
+    dialog: TestBed.inject(SignInDialog),
+    down,
+    navigate,
+    open,
+    session,
+  };
 }
 
 describe('SignInDialog', () => {
@@ -53,6 +62,20 @@ describe('SignInDialog', () => {
 
     expect(open).not.toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith('/app/garage');
+  });
+
+  // @traces 261-FR-010
+  it('leaves the maintenance page alone when the account read met maintenance', async () => {
+    const { dialog, down, navigate, open, session } = setup(null, 'signed-in');
+    session.load.mockImplementation(async () => {
+      down.set(true);
+      return null;
+    });
+
+    await dialog.start();
+
+    expect(open).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('opens the dialog over the current screen for a visitor', async () => {
