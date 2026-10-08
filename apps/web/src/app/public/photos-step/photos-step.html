@@ -1,0 +1,66 @@
+<h3>{{ 'public.listing.photos.heading' | t }}</h3>
+<p class="hint">{{ 'public.listing.photos.hint' | t }}</p>
+<div class="drop" (dragover)="$event.preventDefault()" (drop)="ready() && dropFiles($event)">
+  @if (ready()) {
+    @if (mobile()) {
+      <p>{{ 'public.listing.photos.dropMobile' | t }}</p>
+    } @else {
+      <p>{{ 'public.listing.photos.drop' | t }}</p>
+    }
+  } @else {
+    <p>{{ 'public.listing.photos.emailFirst' | t }}</p>
+  }
+  <input #picker type="file" hidden multiple [accept]="types" [disabled]="!ready()" (change)="choose($event)" />
+  <button hlmBtn variant="secondary" type="button" [disabled]="!ready()" (click)="picker.click()">
+    {{ 'public.listing.photos.choose' | t }}
+  </button>
+</div>
+@if (refused()) {
+  <p class="error" role="status">{{ 'public.listing.photos.refused' | t }}</p>
+}
+@if (full()) {
+  <p class="error" role="status">{{ 'public.listing.photos.full' | t }}</p>
+}
+@if (later()) {
+  <p class="error" role="status">{{ 'public.listing.photos.later' | t }}</p>
+}
+@let count = tiles().length;
+<ul cdkDropList cdkDropListOrientation="mixed" [cdkDropListData]="tiles()" (cdkDropListDropped)="drop($event)">
+  @for (tile of tiles(); track tile.id) {
+    @let i = $index;
+    @let n = i + 1;
+    <li class="photo" cdkDrag [attr.data-tile]="tile.id" [attr.data-key]="tile.key ?? null" [attr.data-name]="tile.name ?? null">
+      @if (tile.src) {
+        <img [src]="tile.src" alt="{{ 'public.listing.photos.photo' | t: { n: n } }}" />
+      } @else {
+        <span class="spinner" role="img" [attr.aria-label]="'public.listing.photos.processing' | t"></span>
+      }
+      @if (i === 0) {
+        <span class="cover">{{ 'public.listing.photos.cover' | t }}</span>
+      }
+      @if (tile.status === 'uploading') {
+        <progress max="100" [value]="tile.progress ?? 0" [attr.aria-label]="'public.listing.photos.photo' | t: { n: n }"></progress>
+      } @else if (tile.status === 'waiting') {
+        <span class="state">{{ 'public.listing.photos.waiting' | t }}</span>
+      } @else if (tile.status === 'failed') {
+        <button type="button" class="retry" (click)="retry(tile.id)">{{ 'public.listing.photos.retry' | t }}</button>
+      }
+      <div class="tools">
+        <button type="button" data-move="earlier" [disabled]="i === 0" [attr.aria-label]="'public.listing.photos.earlier' | t: { n: n }" (click)="move(i, -1, 'earlier')">
+          <span aria-hidden="true">←</span>
+        </button>
+        <button type="button" data-move="later" [disabled]="i === count - 1" [attr.aria-label]="'public.listing.photos.backward' | t: { n: n }" (click)="move(i, 1, 'later')">
+          <span aria-hidden="true">→</span>
+        </button>
+        <button type="button" [attr.aria-label]="'public.listing.photos.remove' | t: { n: n }" (click)="remove(tile.id)">
+          <span aria-hidden="true">✕</span>
+        </button>
+      </div>
+    </li>
+  }
+</ul>
+<p class="announce" aria-live="polite">
+  @if (announcement(); as place) {
+    {{ 'public.listing.photos.place' | t: place }}
+  }
+</p>

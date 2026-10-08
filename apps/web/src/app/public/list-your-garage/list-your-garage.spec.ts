@@ -187,7 +187,7 @@ describe('the list your garage page', () => {
       ['H2', 'MF-BRANDS-STEP'],
       ['H2', 'MF-PRICES-STEP'],
       ['H2', 'MF-MECHANICS-STEP'],
-      ['H2', 'MF-HOURS-STEP'],
+      ['H2', 'MF-PHOTOS-STEP', 'MF-HOURS-STEP'],
     ]);
   });
 
