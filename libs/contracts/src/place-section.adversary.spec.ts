@@ -1,4 +1,4 @@
-import { isListingDraftData } from './listing-drafts.dto';
+import { isListingDraftData } from './listing-sections';
 import {
   inRomania,
   isPlaceSection,

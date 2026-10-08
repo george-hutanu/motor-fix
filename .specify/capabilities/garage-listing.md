@@ -10,6 +10,7 @@ features:
   - 354-job-catalogue-prices
   - 109-garage-details-prices
   - 861-jump-holds-step
+  - 885-restored-draft-check
   - 111-garage-address-map
 ---
 
@@ -71,9 +72,9 @@ _From 114-save-draft._
 
 _From 114-save-draft._
 
-### 114-FR-002 — The form MUST keep a browser copy of the draft: every value the form holds (one section per step plus the survey answers, photos as file keys) and the current step, saved 1 second after the last change and at once on "Salvează ciorna", and MUST restore it, at that step, when the page is opened again in the same browser. The fields of the other stories join the same store as they arrive.
+### 885-FR-003 — Replacing 114-FR-002: the form MUST keep a browser copy of the draft: every value the form holds (one section per step plus the survey answers, photos as file keys) and the current step, saved 1 second after the last change and at once on "Salvează ciorna", and MUST restore it, at that step, when the page is opened again in the same browser, provided its data passes the shared draft-data rule (FR-001; a copy that fails it is handled by FR-002). A restored copy is pushed to the server when marked dirty and the server copy fetched when it holds a token and no unsaved changes, exactly as today (114-FR-011, 114-FR-013). The fields of the other stories join the same store as they arrive.
 
-_From 114-save-draft._
+_From 885-restored-draft-check._
 
 ### 114-FR-003 — When the browser cannot store (storage blocked or throwing) the form MUST keep working and show a note that the draft is kept only on the server once an e-mail is given; no error is thrown to the owner.
 
@@ -407,6 +408,21 @@ _From 861-jump-holds-step._
 
 _From 861-jump-holds-step._
 
+### 885-FR-001 — On restore, a stored browser draft MUST be checked by the same draft-data rule the server applies on save (`isListingDraftData` in the contracts library: the envelope `steps`, `survey`, `files` and nothing else, every step section under a known step 1–6 and passing that step's guard, `files` a list of well-formed file keys, `survey` an object), in addition to the envelope checks already made (step, language, dirty flag, optional token, draft id and e-mail). The copy fetched from the server is not checked again in the browser: the server validated it on save.
+
+_From 885-restored-draft-check._
+
+### 885-FR-002 — A stored entry whose data fails that rule MUST be treated as no browser copy at all: the page opens as it would with nothing stored (an empty form at step 1; a continue link still takes the server copy), its token is not used, and nothing is thrown to the owner.
+
+_From 885-restored-draft-check._
+
+### 885-FR-004 — The rule applied in the browser and the rule applied by the server MUST be one rule, not a browser-side copy: the same fixtures get the same verdict on both sides.
+
+_From 885-restored-draft-check._
+
+### 885-FR-005 — Tests MUST cover, in colocated Jest specs: each refused shape of FR-001 (an extra envelope key, an unknown step key, a step section failing its guard, bad `files`, a non-object `survey`) restoring nothing and throwing nothing; a passing draft, a dirty passing draft with a token and an empty `{}` data restoring as today; and the same fixtures judged alike by the browser restore and the server rule (FR-004).
+
+_From 885-restored-draft-check._
 ### 111-FR-001 — Step 5 of "List your garage" MUST show, in the page's language, after the photos' place and before ST-112's "Program" block, the field "Adresă" / "Address" with the placeholder "Stradă și număr, sector, oraș" / "Street and number, sector, town" (required for the step to be complete), a map under it, and the button "Pune pinul pe hartă" / "Place the pin on the map"; when step 1's `businessKind` is `mobile` the field is labelled "Sediul înregistrat" / "Registered seat" and a second control "Zona în care lucrezi" / "Area you work in" appears, a whole number of kilometres with the hint "Între 1 și 100 km" / "Between 1 and 100 km", showing 20 when the section holds no radius. Every label, hint, placeholder and error exists in Romanian and English.
 
 _From 111-garage-address-map._
@@ -487,3 +503,5 @@ _From 111-garage-address-map._
 - `354-FR-009` — superseded by `109-FR-016` (2026-10-08)
 - `354-FR-010` — superseded by `109-FR-017` (2026-10-08)
 - `108-FR-006` — superseded by `861-FR-008` (2026-10-08)
+
+- `114-FR-002` — superseded by `885-FR-003` (2026-10-08)

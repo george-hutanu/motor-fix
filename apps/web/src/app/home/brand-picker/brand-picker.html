@@ -1,0 +1,25 @@
+<div
+  role="radiogroup"
+  [attr.aria-label]="'public.home.picker' | t"
+  (pointerdown)="touched.emit()"
+  (keydown)="touched.emit()"
+  (focusin)="touched.emit()"
+  (click)="touched.emit()"
+>
+  @for (brand of brands(); track brand.id; let i = $index) {
+    <button
+      #tile
+      type="button"
+      role="radio"
+      class="spartan-button"
+      [class.spartan-button-variant-default]="brand.slug === selected()"
+      [class.spartan-button-variant-secondary]="brand.slug !== selected()"
+      [attr.aria-checked]="brand.slug === selected()"
+      [tabIndex]="brand.slug === stop() ? 0 : -1"
+      (click)="select.emit(brand.slug)"
+      (keydown)="move($event, i)"
+    >
+      {{ brand.name }}
+    </button>
+  }
+</div>

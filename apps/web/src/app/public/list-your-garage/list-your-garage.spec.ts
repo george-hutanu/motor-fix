@@ -678,6 +678,21 @@ describe('the e-mail field and the save button', () => {
     TestBed.inject(HttpTestingController).verify();
   });
 
+  it('opens an empty form at step 1 when the kept copy holds data the server would refuse', async () => {
+    seed({
+      data: { steps: { '1': { name: 'a'.repeat(200) } } },
+      email: 'ion@',
+      step: 3,
+      token: 't1',
+    });
+
+    const { page } = await open('/ro/list-your-garage');
+
+    expect(field(page).value).toBe('');
+    expect(current(page)).toEqual(['1 Service-ul']);
+    TestBed.inject(HttpTestingController).verify();
+  });
+
   it('keeps a kept copy at its step when a scroll leaves that heading on screen below the line', async () => {
     seed({ email: 'ion@', step: 3 });
     const { harness, page } = await open('/ro/list-your-garage');

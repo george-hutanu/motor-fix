@@ -11,75 +11,11 @@ import {
   Min,
 } from 'class-validator';
 
-import { type HoursSection, isHoursSection } from './garage-hours';
-import {
-  type DetailsSection,
-  isDetailsSection,
-  isMechanicsSection,
-  isPricesSection,
-  type MechanicsSection,
-  type PricesSection,
-} from './listing-sections';
-import { isStep6Section, type Step6Section } from './listing-verification';
-import { isPlaceSection, type PlaceSection } from './place-section';
+import type { ListingDraftData } from './listing-sections';
 
 const LANGUAGES = ['ro', 'en'] as const;
 const DRAFT_STATUSES = ['open', 'submitted'] as const;
 export type ListingDraftStatus = (typeof DRAFT_STATUSES)[number];
-
-// The form's own data: one section per step, the survey, and the storage keys
-// of the files the draft holds. Each step's story checks its own section.
-export interface ListingDraftData {
-  steps?: Partial<
-    Record<'2', Record<string, unknown>> & {
-      '1': DetailsSection;
-      '3': PricesSection;
-      '4': MechanicsSection;
-      '5': Record<string, unknown> & HoursSection & { place?: PlaceSection };
-      '6': Step6Section;
-    }
-  >;
-  survey?: Record<string, unknown>;
-  files?: string[];
-}
-
-const SECTION_GUARDS: Record<string, (section: unknown) => boolean> = {
-  '1': isDetailsSection,
-  '2': (section) => isRecord(section),
-  '3': isPricesSection,
-  '4': isMechanicsSection,
-  '5': (section) =>
-    isHoursSection(section) &&
-    (section['place'] === undefined || isPlaceSection(section['place'])),
-  '6': isStep6Section,
-};
-const FILE_KEY = /^[a-z-]+\/[0-9a-f-]{36}\/[\w-]{1,64}$/;
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-// The envelope only: an object holding nothing but those three keys.
-export function isListingDraftData(value: unknown): value is ListingDraftData {
-  if (!isRecord(value)) return false;
-  const { files, steps, survey, ...rest } = value;
-  if (Object.keys(rest).length > 0) return false;
-  if (survey !== undefined && !isRecord(survey)) return false;
-  if (
-    files !== undefined &&
-    !(
-      Array.isArray(files) &&
-      files.every((key) => typeof key === 'string' && FILE_KEY.test(key))
-    )
-  )
-    return false;
-  if (steps === undefined) return true;
-  return (
-    isRecord(steps) &&
-    Object.entries(steps).every(
-      ([key, section]) =>
-        Object.hasOwn(SECTION_GUARDS, key) && SECTION_GUARDS[key](section),
-    )
-  );
-}
 
 const lowerTrimmed = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim().toLowerCase() : value;

@@ -14,6 +14,7 @@ export * from './garage-search.dto';
 export * from './garage-status';
 export * from './garages.dto';
 export * from './health.dto';
+export * from './home.dto';
 export * from './job-types.dto';
 export * from './listing-drafts.dto';
 export * from './listing-sections';

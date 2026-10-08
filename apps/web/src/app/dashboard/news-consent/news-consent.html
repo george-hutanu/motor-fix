@@ -1,0 +1,9 @@
+<p>{{ 'driver.notifications.consent.text' | t }}</p>
+<div class="actions">
+  <button hlmBtn type="button" (click)="task.close(true)">
+    {{ 'driver.notifications.consent.confirm' | t }}
+  </button>
+  <button hlmBtn variant="ghost" type="button" (click)="task.close(false)">
+    {{ 'driver.notifications.consent.cancel' | t }}
+  </button>
+</div>

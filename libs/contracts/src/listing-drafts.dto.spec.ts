@@ -1,4 +1,4 @@
-import { isListingDraftData } from './listing-drafts.dto';
+import { isListingDraftData } from './listing-sections';
 
 const JOB = '0b9f3c1e-6a43-4c55-9d1c-6f3f1b7d2a10';
 

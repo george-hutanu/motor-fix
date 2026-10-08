@@ -1,0 +1,29 @@
+<section aria-labelledby="driver-notifications-title" [attr.aria-busy]="!loaded() && !failed()">
+  <h2 id="driver-notifications-title">{{ 'driver.notifications.title' | t }}</h2>
+  @if (failed()) {
+    <p role="alert">{{ 'shell.notifications.loadFailed' | t }}</p>
+    <button hlmBtn variant="secondary" type="button" (click)="load()">
+      {{ 'shell.notifications.retry' | t }}
+    </button>
+  } @else {
+    <ul>
+      @for (row of rows(); track row.key) {
+        <li>
+          <div class="name">
+            <span aria-hidden="true">{{ titleKey(row.key) | t }}</span>
+            <span class="hint" [id]="'driver-notifications-' + row.key">{{ hintKey(row.key) | t }}</span>
+          </div>
+          <hlm-switch
+            [inputId]="'driver-notifications-' + row.key + '-switch'"
+            [checked]="row.enabled"
+            [disabled]="!loaded()"
+            [aria-label]="titleKey(row.key) | t"
+            [aria-describedby]="'driver-notifications-' + row.key"
+            (checkedChange)="toggle(row.key, $event)"
+          />
+        </li>
+      }
+    </ul>
+    <p class="hint">{{ 'driver.notifications.alwaysSent' | t }}</p>
+  }
+</section>
