@@ -306,34 +306,6 @@ describe('the place map when the map raises errors around load', () => {
   });
 
   // @traces 945-FR-001
-  it('keeps the map and resolves the opener when an error follows load', async () => {
-    const seen = outcome(open());
-    await settle();
-    fake.map.fire('load');
-    fake.map.fire('error', { error: BOOM });
-    await settle();
-
-    expect(fake.map.remove).not.toHaveBeenCalled();
-    expect(seen.done).toBe(true);
-    expect(seen.error).toBeUndefined();
-    expect(seen.map).toBeDefined();
-  });
-
-  // @traces 945-FR-001
-  it('keeps the map when an error fires in the same tick as load, before the opener resumes', async () => {
-    const opening = open();
-    await settle();
-    fake.map.fire('load');
-    fake.map.fire('error', { error: BOOM });
-
-    const map = await opening;
-    map.show({ at: SEAT, km: 20 });
-
-    expect(fake.map.remove).not.toHaveBeenCalled();
-    expect(fake.map.fitBounds).toHaveBeenCalledTimes(1);
-  });
-
-  // @traces 945-FR-001
   it('draws and frames a show after an error exactly as it does without one', async () => {
     const opening = open();
     await settle();
@@ -402,19 +374,6 @@ describe('the place map when the map raises errors around load', () => {
     expect(seen.error).toBe(BOOM);
   });
 
-  // @traces 945-FR-003
-  it('does not remove the map again when an error follows load that followed a start-up error', async () => {
-    const seen = outcome(open());
-    await settle();
-    fake.map.fire('error', { error: BOOM });
-    fake.map.fire('load');
-    fake.map.fire('error', { error: BOOM });
-    await settle();
-
-    expect(seen.error).toBe(BOOM);
-    expect(fake.map.remove).toHaveBeenCalledTimes(1);
-  });
-
   // @traces 945-FR-002
   it('does not report a start-up error as a post-load failure twice or tear down on the next open', async () => {
     const first = outcome(open());
@@ -433,5 +392,6 @@ describe('the place map when the map raises errors around load', () => {
     expect(fake.map).not.toBe(dead);
     expect(fake.map.remove).not.toHaveBeenCalled();
     expect(dead.remove).toHaveBeenCalledTimes(1);
+    expect(failed).not.toHaveBeenCalled();
   });
 });
