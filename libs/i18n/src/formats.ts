@@ -138,7 +138,8 @@ export function formatDay(value: unknown, language: Language): string {
   return `${Number(day)} ${MONTHS_SHORT[language][Number(month) - 1]} ${year}`;
 }
 
-// Fixed like the short names, so server and browser write the same month.
+// Fixed like the short names, so server and browser write the same month;
+// date pickers read the same list through calendarNames.
 const MONTHS_LONG: Record<Language, readonly string[]> = {
   en: [
     'January',
@@ -225,9 +226,6 @@ export function calendarNames(language: Language) {
     });
     return dates.map((d) => format.format(d));
   };
-  const months = [...Array(12).keys()].map(
-    (m) => new Date(Date.UTC(2026, m, 15)),
-  );
   // 5 January 2026 is a Monday.
   const week = [...Array(7).keys()].map(
     (d) => new Date(Date.UTC(2026, 0, 5 + d)),
@@ -236,7 +234,7 @@ export function calendarNames(language: Language) {
     days: names({ weekday: 'long' }, week),
     daysShort: names({ weekday: 'short' }, week),
     firstDay: 1 as const,
-    months: names({ month: 'long' }, months),
+    months: [...MONTHS_LONG[language]],
     monthsShort: [...MONTHS_SHORT[language]],
   };
 }
