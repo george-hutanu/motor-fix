@@ -1,5 +1,3 @@
-import { PLACE_SUGGESTIONS_MAX } from '@motor-fix/contracts/place-section';
-
 export interface PlaceSuggestion {
   label: string;
   lat: number;
@@ -19,5 +17,3 @@ export interface PlacesProvider {
 }
 
 export const PLACES_PROVIDER = Symbol('PLACES_PROVIDER');
-
-export const PLACES_LIMIT = PLACE_SUGGESTIONS_MAX;

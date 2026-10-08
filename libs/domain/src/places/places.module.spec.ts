@@ -37,6 +37,12 @@ describe('which address search the api uses', () => {
     });
   });
 
+  it('holds the provider timeout to a minute at most', () => {
+    expect(
+      placesConfig('test', { GEOAPIFY_TIMEOUT_MS: '99999999999' }),
+    ).toEqual({ provider: 'fake', timeoutMs: 60_000 });
+  });
+
   it.each(['0', '-5', '2.5', 'many'])(
     'keeps the defaults for a limit of %s',
     (value) => {

@@ -1,7 +1,9 @@
-import { ADDRESS_MAX } from '@motor-fix/contracts/place-section';
+import {
+  ADDRESS_MAX,
+  PLACE_SUGGESTIONS_MAX,
+} from '@motor-fix/contracts/place-section';
 
 import {
-  PLACES_LIMIT,
   type PlaceSuggestion,
   type PlacesAnswer,
   type PlacesProvider,
@@ -51,7 +53,7 @@ export class FakePlaces implements PlacesProvider {
       const label = plain(place.label);
       return words.length > 0 && words.every((word) => label.includes(word));
     });
-    if (found.length) return { items: found.slice(0, PLACES_LIMIT) };
+    if (found.length) return { items: found.slice(0, PLACE_SUGGESTIONS_MAX) };
     const label = `${q.trim()}, București`;
     return {
       items: label.length > ADDRESS_MAX ? [] : [{ label, ...BUCHAREST }],

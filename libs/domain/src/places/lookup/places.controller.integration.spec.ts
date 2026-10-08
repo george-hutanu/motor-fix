@@ -33,11 +33,13 @@ const provider: PlacesProvider = {
 let app: INestApplication;
 let redis: Redis;
 
-async function boot() {
+async function boot(
+  config: Parameters<typeof PlacesModule.register>[0] = { provider: 'fake' },
+) {
   const moduleRef = await Test.createTestingModule({
     imports: [
       AuthModule.register({ databaseUrl, redisUrl, tokenSecret: 'test' }),
-      PlacesModule.register({ provider: 'fake' }),
+      PlacesModule.register(config),
     ],
   })
     .overrideProvider(PLACES_PROVIDER)
@@ -104,6 +106,33 @@ describe('GET /places', () => {
     expect(res.body).toEqual({ items: [] });
   });
 
+  it('sends at most five, all inside Romania, whatever the provider gave', async () => {
+    const inside = Array.from({ length: 6 }, (_, n) => ({
+      label: `Strada Exemplu ${n + 1}, București`,
+      lat: 44.43,
+      lng: 26.1,
+    }));
+    answer = async () => ({
+      items: [{ label: 'Wien', lat: 48.2, lng: 16.37 }, ...inside],
+    });
+
+    const res = await lookup({ q: 'Strada Exemplu' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.items).toEqual(inside.slice(0, 5));
+  });
+
+  it('answers 503 search_unavailable when the provider throws', async () => {
+    answer = async () => {
+      throw new TypeError('broken');
+    };
+
+    const res = await lookup({ q: 'Strada Exemplu' });
+
+    expect(res.status).toBe(503);
+    expect(res.body.code).toBe('search_unavailable');
+  });
+
   it.each([
     ['text under three characters', { q: 'ab' }],
     ['text that is blank once trimmed', { q: '      ' }],
@@ -144,4 +173,43 @@ describe('GET /places', () => {
     expect(res.body.retryAfterSeconds).toBeLessThanOrEqual(60);
     expect(calls).toEqual([]);
   });
+});
+
+describe('GET /places with the limit set at boot', () => {
+  let limited: INestApplication;
+
+  beforeAll(async () => {
+    limited = await boot({ lookupsPerMinute: 2, provider: 'fake' });
+  });
+
+  afterAll(async () => {
+    await limited.close();
+  });
+
+  it('refuses the look-up past the limit it was given', async () => {
+    const ask = () =>
+      request(limited.getHttpServer())
+        .get('/places')
+        .query({ q: 'Strada Exemplu' });
+
+    expect((await ask()).status).toBe(200);
+    expect((await ask()).status).toBe(200);
+    expect((await ask()).status).toBe(429);
+  });
+});
+
+it('gives the real provider the timeout it was booted with', async () => {
+  const moduleRef = await Test.createTestingModule({
+    imports: [
+      AuthModule.register({ databaseUrl, redisUrl, tokenSecret: 'test' }),
+      PlacesModule.register({
+        apiKey: 'k',
+        provider: 'geoapify',
+        timeoutMs: 1500,
+      }),
+    ],
+  }).compile();
+
+  expect(moduleRef.get(PLACES_PROVIDER)).toMatchObject({ timeoutMs: 1500 });
+  await moduleRef.close();
 });

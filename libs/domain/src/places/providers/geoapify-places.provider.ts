@@ -1,8 +1,11 @@
-import { ADDRESS_MAX, inRomania } from '@motor-fix/contracts/place-section';
+import {
+  ADDRESS_MAX,
+  inRomania,
+  PLACE_SUGGESTIONS_MAX,
+} from '@motor-fix/contracts/place-section';
 import { Logger } from '@nestjs/common';
 
 import {
-  PLACES_LIMIT,
   type PlaceSuggestion,
   type PlacesAnswer,
   type PlacesProvider,
@@ -44,7 +47,7 @@ export class GeoapifyPlaces implements PlacesProvider {
       filter: 'countrycode:ro',
       format: 'json',
       lang,
-      limit: String(PLACES_LIMIT),
+      limit: String(PLACE_SUGGESTIONS_MAX),
       text: q,
     }).toString();
     let response: Response;
@@ -64,7 +67,7 @@ export class GeoapifyPlaces implements PlacesProvider {
       items: results
         .map(suggestionOf)
         .filter((item): item is PlaceSuggestion => item !== null)
-        .slice(0, PLACES_LIMIT),
+        .slice(0, PLACE_SUGGESTIONS_MAX),
     };
   }
 

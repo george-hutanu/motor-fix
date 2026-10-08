@@ -20,16 +20,22 @@ type PlacesConfig = Limits &
     | { provider: 'none' }
   );
 
-const positive = (value: string | undefined) =>
+// A minute is the longest a typing owner would wait for a suggestion.
+const TIMEOUT_MAX_MS = 60_000;
+
+const whole = (value: string | undefined, max: number) =>
   value && /^\d+$/.test(value.trim()) && Number(value) > 0
-    ? Number(value)
+    ? Math.min(Number(value), max)
     : undefined;
 
 // PLACES_LOOKUPS_PER_MINUTE and GEOAPIFY_TIMEOUT_MS, each only when set to a
 // whole number above zero; otherwise the defaults hold.
 function limitsOf(source: Record<string, string | undefined>): Limits {
-  const lookupsPerMinute = positive(source['PLACES_LOOKUPS_PER_MINUTE']);
-  const timeoutMs = positive(source['GEOAPIFY_TIMEOUT_MS']);
+  const lookupsPerMinute = whole(
+    source['PLACES_LOOKUPS_PER_MINUTE'],
+    Number.MAX_SAFE_INTEGER,
+  );
+  const timeoutMs = whole(source['GEOAPIFY_TIMEOUT_MS'], TIMEOUT_MAX_MS);
   return {
     ...(lookupsPerMinute ? { lookupsPerMinute } : {}),
     ...(timeoutMs ? { timeoutMs } : {}),

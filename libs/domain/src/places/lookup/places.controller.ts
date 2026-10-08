@@ -1,11 +1,15 @@
 import { PlacesQueryDto, PlacesResultDto } from '@motor-fix/contracts';
-import { inRomania } from '@motor-fix/contracts/place-section';
+import {
+  inRomania,
+  PLACE_SUGGESTIONS_MAX,
+} from '@motor-fix/contracts/place-section';
 import {
   Controller,
   Get,
   HttpException,
   HttpStatus,
   Inject,
+  Logger,
   Query,
   Req,
   Res,
@@ -22,7 +26,6 @@ import { recordLookup } from './places.metrics';
 import { PlacesThrottle } from './places.throttle';
 import { Public } from '../../auth/actor.guard';
 import {
-  PLACES_LIMIT,
   PLACES_PROVIDER,
   type PlacesAnswer,
   type PlacesProvider,
@@ -31,6 +34,8 @@ import {
 @ApiTags('places')
 @Controller('places')
 export class PlacesController {
+  private readonly logger = new Logger('Places');
+
   constructor(
     @Inject(PLACES_PROVIDER) private readonly provider: PlacesProvider,
     @Inject(PlacesThrottle) private readonly throttle: PlacesThrottle,
@@ -64,7 +69,12 @@ export class PlacesController {
     const started = performance.now();
     const answer = await this.provider
       .search(q, lang)
-      .catch((): PlacesAnswer => ({ unavailable: 'thrown' }));
+      .catch((error: unknown): PlacesAnswer => {
+        this.logger.warn(
+          `address search threw: ${(error as Error | undefined)?.name ?? 'unknown'}`,
+        );
+        return { unavailable: 'thrown' };
+      });
     const seconds = (performance.now() - started) / 1_000;
     if ('unavailable' in answer) {
       recordLookup(name, 'unavailable', seconds);
@@ -78,7 +88,7 @@ export class PlacesController {
     }
     const items = answer.items
       .filter(({ lat, lng }) => inRomania(lat, lng))
-      .slice(0, PLACES_LIMIT);
+      .slice(0, PLACE_SUGGESTIONS_MAX);
     recordLookup(name, items.length ? 'found' : 'empty', seconds);
     return { items };
   }
