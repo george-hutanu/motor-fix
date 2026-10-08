@@ -21,6 +21,7 @@ const me = (role: string, landing: string) =>
   ({
     capabilities: [],
     email: null,
+    garageAccess: [],
     garageId: null,
     id: 'account-1',
     landing,

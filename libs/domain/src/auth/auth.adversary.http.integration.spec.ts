@@ -212,6 +212,7 @@ describe('who am I over HTTP and account writes under attack', () => {
         'capabilities',
         'email',
         'emailConfirmed',
+        'garageAccess',
         'garageId',
         'id',
         'landing',

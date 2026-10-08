@@ -19,6 +19,7 @@ export async function signInAs(
       json: {
         capabilities,
         email: `${role}@example.ro`,
+        garageAccess: [],
         garageId: landing === '/app/garage' ? 'garage-1' : null,
         id: `${role}-1`,
         landing,

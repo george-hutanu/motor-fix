@@ -97,6 +97,7 @@ describe('the driver dashboard views', () => {
 const me = {
   capabilities: ALL,
   email: null,
+  garageAccess: [],
   garageId: null,
   id: 'a',
   landing: '/app/driver',

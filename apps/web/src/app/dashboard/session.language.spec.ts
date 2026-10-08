@@ -9,6 +9,7 @@ function account(language: 'ro' | 'en'): MeDto {
     capabilities: [],
     email: 'andrei@example.ro',
     emailConfirmed: true,
+    garageAccess: [],
     garageId: null,
     id: 'account-1',
     landing: '/app/driver',

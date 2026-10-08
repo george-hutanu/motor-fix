@@ -7,6 +7,7 @@ const DRIVER = {
   capabilities: [],
   email: 'andrei@example.ro',
   emailConfirmed: false,
+  garageAccess: [],
   garageId: null,
   id: 'account-1',
   landing: '/app/driver',
@@ -18,6 +19,7 @@ const DRIVER = {
 
 const GARAGE = {
   ...DRIVER,
+  garageAccess: [],
   garageId: 'garage-1',
   landing: '/app/garage',
   role: 'garage',

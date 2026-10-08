@@ -7,6 +7,7 @@ const GARAGE = {
   capabilities: ['garage.requests', 'garage.team'],
   email: 'ioana@example.ro',
   emailConfirmed: true,
+  garageAccess: [],
   garageId: 'garage-1',
   id: 'account-1',
   landing: '/app/garage',
@@ -19,6 +20,7 @@ const GARAGE = {
 const DRIVER = {
   ...GARAGE,
   capabilities: [],
+  garageAccess: [],
   garageId: null,
   id: 'account-2',
   landing: '/app/driver',

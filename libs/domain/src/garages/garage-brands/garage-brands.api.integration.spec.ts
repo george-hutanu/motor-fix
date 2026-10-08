@@ -237,6 +237,23 @@ describe('PUT /garages/:garageId/brands', () => {
     expect(await rows(w)).toBe(0);
   });
 
+  // @traces 097-FR-009
+  it('answers 404 not_found to a driver, naming no garage', async () => {
+    const w = await world();
+    const driver = bearer(await account('andrei', ['driver']), 'driver');
+
+    const res = await put(
+      w,
+      { brands: [{ brandId: w.bmw.id, stance: 'works_on' }] },
+      driver,
+    );
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe('not_found');
+    expect(JSON.stringify(res.body)).not.toContain('Service Auto Nord');
+    expect(await rows(w)).toBe(0);
+  });
+
   it('answers 404 for a garage that does not exist', async () => {
     const w = await world();
 
