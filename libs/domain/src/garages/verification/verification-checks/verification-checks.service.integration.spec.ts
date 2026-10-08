@@ -325,6 +325,7 @@ describe('a record that is refused', () => {
     await isDecided;
 
     const recording = refusal(record('rar', { result: 'ok' }));
+    // Long enough for a write that did not wait to have settled.
     await new Promise((resolve) => setTimeout(resolve, 200));
     const waiting = await Promise.race([
       recording.then(() => 'settled'),
