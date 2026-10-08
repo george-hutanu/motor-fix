@@ -40,6 +40,9 @@ import { currentStep, jumpTarget, keepsTapped, STEPS } from '../steps';
 // Where the browser never says a scroll has ended: how long the page must be
 // still, after its last movement, before a jump's scroll counts as over.
 const QUIET_MS = 150;
+// A jump whose scroll has not started by then never will (the page could not
+// move after all): it lets go, so the step list follows the owner again.
+const STALL_MS = 3000;
 
 // The page the owner fills in to list a garage: six steps on one long page,
 // with the list of steps beside them, or in a bar on a phone.
@@ -68,8 +71,8 @@ export class ListYourGarage {
   private readonly nav = viewChild<ElementRef<HTMLElement>>('nav');
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   private readonly field = viewChild<ElementRef<HTMLElement>>('email');
-  // A jump's own scroll is under way: however late it starts, none of its
-  // movement decides the current step.
+  // A jump's own scroll is under way: however late it starts (up to the
+  // stall), none of its movement decides the current step.
   private held = false;
   private quiet: ReturnType<typeof setTimeout> | undefined;
   // The step last jumped to, held while the page cannot bring it to the line.
@@ -102,6 +105,8 @@ export class ListYourGarage {
       const onScroll = () => {
         if (!this.held) this.follow();
         else if (!('onscrollend' in window)) this.restartQuiet();
+        // The jump has started: its scroll end lets go, not the stall.
+        else clearTimeout(this.quiet);
       };
       // A resize is no movement of the jump's: it never restarts the quiet time.
       const onResize = () => {
@@ -232,6 +237,7 @@ export class ListYourGarage {
       window.innerHeight,
     );
     this.held = Math.abs(target - window.scrollY) >= 1;
+    if (this.held) this.quiet = setTimeout(() => this.release(), STALL_MS);
     heading.scrollIntoView({
       behavior: this.reduced() ? 'auto' : 'smooth',
       block: 'start',

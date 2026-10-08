@@ -304,6 +304,52 @@ describe('a jump to a step under hostile timing', () => {
     });
   });
 
+  it('lets go of a jump that never moves the page after three seconds, where the browser says when scrolls end', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    try {
+      entries(page)[3].click();
+      await jest.advanceTimersByTimeAsync(3001);
+      await scrolled(harness, AT_STEP_3);
+
+      expect(current(page)).toEqual(['3 Prețuri']);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('lets go of a jump that never moves the page after three seconds, where the browser never says a scroll ended', async () => {
+    await withoutScrollEnd(async () => {
+      const { harness, page } = await open('/ro/list-your-garage');
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+
+      entries(page)[3].click();
+      await jest.advanceTimersByTimeAsync(3001);
+      await scrolled(harness, AT_STEP_3);
+
+      expect(current(page)).toEqual(['3 Prețuri']);
+    });
+  });
+
+  it('holds a jump that has started moving past three seconds, until its scroll ends', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    try {
+      entries(page)[3].click();
+      await jest.advanceTimersByTimeAsync(100);
+      await scrolled(harness, FLIGHT);
+      await jest.advanceTimersByTimeAsync(4000);
+      await scrolled(harness, AT_STEP_3);
+      expect(current(page)).toEqual([FOURTH]);
+
+      ended();
+      await scrolled(harness, AT_STEP_3);
+      expect(current(page)).toEqual(['3 Prețuri']);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('counts the quiet time from the last scroll, not from a resize, when only the timer stands in', async () => {
     await withoutScrollEnd(async () => {
       const { harness, page } = await open('/ro/list-your-garage');
