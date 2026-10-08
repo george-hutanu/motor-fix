@@ -175,7 +175,7 @@
       "radius": "Area you work in",
       "radiusHint": "Between 1 and 100 km",
       "searchDown": "Address search is not working right now. You can place the pin on the map.",
-      "seat": "Registered office",
+      "seat": "Registered seat",
       "suggestions": "Addresses found"
     },
     "prices": {

@@ -16,21 +16,19 @@ import type { BusinessKind } from '@motor-fix/contracts/listing-sections';
 import {
   ADDRESS_MAX,
   inRomania,
+  PLACE_SEARCH_MIN,
+  PLACE_SUGGESTIONS_MAX,
   type PlaceSection,
   RADIUS_KM,
   radiusAllowed,
 } from '@motor-fix/contracts/place-section';
-import { PlacesService } from '@motor-fix/data-access';
+import { type PlaceSuggestionDto, PlacesService } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmInput, HlmLabel } from '@motor-fix/ui-cockpit';
 
 import { type LatLng, PLACE_MAP, type PlaceMap } from './place-map';
 
-type Suggestion = { label: string; lat: number; lng: number };
-
 const SEARCH_AFTER_MS = 300;
-const SEARCH_MIN = 3;
-const SHOWN = 5;
 // One arrow key moves the pin about 20 m.
 const NUDGE = 0.0002;
 const NUDGES: Record<string, [number, number]> = {
@@ -66,17 +64,21 @@ export class PlaceStep {
   private timer: ReturnType<typeof setTimeout> | undefined;
   // Only the answer to the latest text is shown.
   private asked = 0;
+  private lastAsked = '';
 
   protected readonly addressMax = ADDRESS_MAX;
   protected readonly radiusMin = RADIUS_KM.min;
   protected readonly radiusMax = RADIUS_KM.max;
   protected readonly mobile = computed(() => this.businessKind() === 'mobile');
-  protected readonly suggestions = signal<Suggestion[]>([]);
+  protected readonly suggestions = signal<PlaceSuggestionDto[]>([]);
   protected readonly active = signal(-1);
   protected readonly nothingFound = signal(false);
   protected readonly searchDown = signal(false);
   protected readonly armed = signal(false);
-  protected readonly outside = signal(false);
+  protected readonly outside = computed(() => {
+    const at = positionOf(this.value());
+    return !!at && !inRomania(at.lat, at.lng);
+  });
   protected readonly mapDown = signal(false);
   // What is typed in the radius field while it is not a radius to keep.
   private readonly radiusTyped = signal<string | null>(null);
@@ -127,37 +129,43 @@ export class PlaceStep {
     const typed = (event.target as HTMLInputElement).value;
     const { address: _, ...rest } = this.value();
     this.value.set(typed ? { ...rest, address: typed } : rest);
+    const q = typed.trim();
+    // Spaces around the text asked last change nothing to ask.
+    if (q && q === this.lastAsked) return;
     clearTimeout(this.timer);
     this.asked++;
     this.close();
     this.nothingFound.set(false);
     this.searchDown.set(false);
-    const q = typed.trim();
-    if (q.length < SEARCH_MIN) return;
+    if (q.length < PLACE_SEARCH_MIN) return;
     this.timer = setTimeout(() => this.search(q), SEARCH_AFTER_MS);
   }
 
   private async search(q: string) {
     const asked = ++this.asked;
+    this.lastAsked = q;
     try {
       const { items } = await this.places.placesControllerSearch({
         lang: this.i18n.language(),
         q,
       });
       if (asked !== this.asked) return;
-      this.suggestions.set(items.slice(0, SHOWN));
+      this.suggestions.set(items.slice(0, PLACE_SUGGESTIONS_MAX));
       this.nothingFound.set(items.length === 0);
     } catch {
-      if (asked === this.asked) this.searchDown.set(true);
+      if (asked !== this.asked) return;
+      this.lastAsked = '';
+      this.searchDown.set(true);
     }
   }
 
-  protected choose({ label, lat, lng }: Suggestion) {
+  protected choose({ label, lat, lng }: PlaceSuggestionDto) {
     clearTimeout(this.timer);
     this.asked++;
     this.close();
-    this.outside.set(false);
-    this.value.update((value) => ({ ...value, address: label, lat, lng }));
+    // The draft refuses a longer address, so a longer label is cut to fit.
+    const address = label.slice(0, ADDRESS_MAX);
+    this.value.update((value) => ({ ...value, address, lat, lng }));
   }
 
   protected keys(event: KeyboardEvent) {
@@ -199,18 +207,12 @@ export class PlaceStep {
     this.value.update((value) => ({ ...value, radiusKm: km }));
   }
 
-  // A pin outside Romania is not kept: the pin goes back where it was.
   private place(at: LatLng) {
-    if (!inRomania(at.lat, at.lng)) {
-      this.outside.set(true);
-      this.map()?.pin(positionOf(this.value()));
-      return;
-    }
-    this.outside.set(false);
     this.value.update((value) => ({ ...value, lat: at.lat, lng: at.lng }));
   }
 
   private close() {
+    this.lastAsked = '';
     this.suggestions.set([]);
     this.active.set(-1);
   }

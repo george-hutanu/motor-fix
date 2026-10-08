@@ -337,7 +337,7 @@ describe('step 5, the place', () => {
     expect(opened.emitted).toEqual([]);
   });
 
-  it('refuses a pin outside Romania, where the pin is', async () => {
+  it('keeps a pin dropped outside Romania where it fell and says why', async () => {
     const opened = await open({
       address: STEFAN.label,
       lat: STEFAN.lat,
@@ -346,7 +346,9 @@ describe('step 5, the place', () => {
 
     await mapEvent(opened, () => events.dragged({ lat: 48.2, lng: 16.37 }));
 
-    expect(opened.emitted).toEqual([]);
+    expect(opened.emitted).toEqual([
+      { address: STEFAN.label, lat: 48.2, lng: 16.37 },
+    ]);
     expect(text(opened.step.querySelector('.map-area'))).toContain(
       'Adresa trebuie să fie în România',
     );
