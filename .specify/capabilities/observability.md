@@ -10,6 +10,7 @@ features:
   - 877-web-health-grafana
   - 878-data-store-metrics
   - 916-otlp-log-masking-coverage
+  - 365-mcp-oauth
 ---
 
 # Capability: Observability
@@ -337,6 +338,10 @@ _From 916-otlp-log-masking-coverage._
 ### 916-FR-005 — The change MUST be test-only and small (Constitution I): no product source file under `apps/` or `libs/*/src` other than `*.spec.ts` changes, no new dependency, the existing cases of `libs/domain/src/logging.spec.ts` stay as they are, and the new spec runs in `npm run test:unit` (it needs no PostgreSQL, Redis or network).
 
 _From 916-otlp-log-masking-coverage._
+
+### 365-FR-015 — The server MUST record its metrics (requests by outcome, tool calls by tool and outcome, authentication failures by reason, tool-call duration), one log line per call with no token and no user text, and traces through the existing telemetry (the request id is a trace attribute); metric labels come from closed sets only (tool name, outcome, failure reason; never an account, client or token); the identity server's key fetch has its own success/failure counter so an outage is visible while cached keys still serve; the Grafana dashboard gets an MCP panel and an alert on authentication-failure spikes and tool-error rate; `infra/observability/inventory.json` lists the MCP endpoint, the identity server's key fetch (outside call) and the three assistant endpoints of the API. (D17; AGENTS.md observability rule)
+
+_From 365-mcp-oauth._
 
 ## Retired
 
