@@ -100,5 +100,5 @@ order. Then **Unticked** (with why) and **Held** (each `reason`). End with the
 one open blocker that holds the most items. When run from
 `speckit-notion-sync`, return the one-line summary it logs:
 `+<ticked IDs> −<unticked IDs>`, or `no change`. A story with no epic has no
-board to refresh: only its own box is checked, and the line is
-`no change (the story has no epic)` (or `−ST-<n> (the story has no epic)`).
+board to refresh: only its own box is checked, and the same summary is
+followed by `(the story has no epic)`, e.g. `no change (the story has no epic)`.

@@ -476,7 +476,7 @@ describe('debt with a bad answer', () => {
   });
 });
 
-describe('a story with no epic (ST-973)', () => {
+describe('a story with no epic', () => {
   const NO_EPIC_READS = [`POST /data_sources/${STORIES}/query`];
 
   it('files its deferred debt without an Epic relation, and marks the bullet', async () => {

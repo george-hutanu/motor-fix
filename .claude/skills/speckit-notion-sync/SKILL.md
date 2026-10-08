@@ -150,8 +150,7 @@ node .claude/scripts/notion-sync.mjs ready --tick ST-30,ST-31 --hold "ST-32=wait
 
 Logged as `- <date> · ready · <epic> · +<ticked> −<unticked>` (or `no change`).
 A story with no epic is refreshed alone, logged `- <date> · ready · ST-<n> ·
-no change (the story has no epic)` (or `−ST-<n> (the story has no epic)` when
-it unticks itself);
+<summary> (the story has no epic)`, e.g. `no change (the story has no epic)`;
 a failed refresh is `[NOTION-SYNC PENDING: ready <epic> — <error>]`, retried
 first next run. `/speckit-archive` refuses a feature with no ready line after
 its last `finish` line (`notion-ready.mjs check -`, §3).

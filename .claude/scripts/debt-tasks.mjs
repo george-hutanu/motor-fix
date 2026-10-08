@@ -52,6 +52,7 @@ const shorten = (s, n) => (s.length <= n ? s : `${s.slice(0, n - 1).trimEnd()}â€
 export function taskFor(entry, { story, epic, feature, pr, storyId }) {
   const summary = entry.title.replace(/`|\*\*/g, "").replace(/^\S+\s+â€”\s+/, "");
   const kind = entry.decision ? "Decision" : "Tech debt";
+  const epicUrl = typeof epic === "string" ? epic.trim() : "";
   const properties = {
     Story: shorten(`${kind} (${storyId}): ${summary}`, 120),
     "Issue type": kind,
@@ -65,7 +66,7 @@ export function taskFor(entry, { story, epic, feature, pr, storyId }) {
       400,
     ),
     // A story with no epic gets no Epic relation: `[null]` makes Notion answer 400.
-    ...(epic ? { Epic: JSON.stringify([epic]) } : {}),
+    ...(epicUrl ? { Epic: JSON.stringify([epicUrl]) } : {}),
     ...(feature ? { Feature: JSON.stringify([feature]) } : {}),
   };
   const content = [

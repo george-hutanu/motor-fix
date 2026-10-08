@@ -99,8 +99,8 @@ describe('the Notion task for a debt', () => {
     assert.deepEqual(JSON.parse(taskFor(entry, { ...ctx, feature: 'https://app.notion.com/p/f1' }).properties.Feature), ['https://app.notion.com/p/f1']);
   });
 
-  it('leaves the epic relation out for a story with no epic, never sending [null] (ST-973)', () => {
-    for (const epic of [undefined, null, '']) {
+  it('leaves the epic relation out for a story with no epic, never sending [null]', () => {
+    for (const epic of [undefined, null, '', ' \t\n']) {
       const t = taskFor(entry, { ...ctx, epic });
       assert.equal('Epic' in t.properties, false, `epic ${JSON.stringify(epic)}`);
       assert.equal(t.properties.Status, 'To do');
@@ -151,7 +151,7 @@ describe('the command line', () => {
     assert.equal(JSON.parse(out.at(-1)).length, 3);
   });
 
-  it('plans without --epic for a story with no epic, and still needs --story, --pr and --id (ST-973)', () => {
+  it('plans without --epic for a story with no epic, and still needs --story, --pr and --id', () => {
     const dir = mkdtempSync(join(tmpdir(), 'debt-'));
     dirs.push(dir);
     const file = join(dir, 'deferred.md');
