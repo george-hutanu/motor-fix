@@ -6,6 +6,7 @@ features:
   - 876-otel-instrumentation
   - 881-observability-current
   - 915-telemetry-flush-on-stop
+  - 924-inventory-real-calls
 ---
 
 # Capability: Observability
@@ -114,9 +115,9 @@ _From 881-observability-current._
 
 _From 881-observability-current._
 
-### 881-FR-003 — One check script, `scripts/observability-inventory.ts`, MUST discover from the code, without reading any environment variable: every directory under `apps/`; every service name in `scripts/railway-deploy.ts`; every queue name from `new Queue(…)`, `registerQueue(…)` and an outbox consumer's `queue:` in non-test, non-generated source under `libs/` and `apps/`, resolving a name given as an exported constant; every outside host literal (`https://<host>`, except hosts under the reserved TLDs `.example`, `.test`, `.invalid`, `.localhost`) and every known SDK client (`S3Client`, `web-push`) in the same files; `libs/data-access/`, `libs/domain/src/generated/`, `*.spec.ts`, `*.testing.ts` and test stubs are not scanned. A `new Queue(<identifier>)` whose identifier is not an exported string constant is skipped. Product counters, PostgreSQL and Redis are hand-listed, not discovered. It MUST fail (non-zero exit) naming each discovered item the inventory does not list (kind, name, file) and each stale inventory entry (a discovered kind the check no longer discovers, or a hand-listed entry whose `source` path no longer exists); `--root <dir>` runs it against another tree; with nothing wrong it MUST print one summary line and exit zero.
+### 924-FR-001 — The check (`scripts/observability-inventory.ts`) MUST discover from the code, without reading any environment variable: every directory under `apps/`; every service name in `scripts/railway-deploy.ts`; every queue name from `new Queue(…)`, `registerQueue(…)` and an outbox consumer's `queue:` in non-test, non-generated source under `libs/` and `apps/`, resolving a name given as an exported constant; every outside host whose `https://<host>` begins a string literal (single-quoted, double-quoted or template) in that code, except hosts under the reserved TLDs `.example`, `.test`, `.invalid`, `.localhost`; and every known SDK client (`S3Client`, `web-push`) in that code. Every matcher (hosts, queues, exported constants, SDK clients) MUST read the file with its comments (`//` line, `/* */` block, `/** */` doc comments) removed and its string literals kept as written, so nothing inside a comment is discovered; a link that does not begin its string literal (prose) MUST NOT be discovered as a host. A `'` or `"` string ends at its unescaped closing quote or at the end of the line (`\` escapes the next character); a template literal may span lines and is one literal, `${…}` included. `libs/data-access/`, `libs/domain/src/generated/`, `*.spec.ts`, `*.testing.ts` and test stubs are not scanned. A `new Queue(<identifier>)` whose identifier is not an exported string constant is skipped. Product counters, PostgreSQL and Redis are hand-listed, not discovered. It MUST fail (non-zero exit) naming each discovered item the inventory does not list (kind, name, file) and each stale inventory entry (a discovered kind the check no longer discovers, or a hand-listed entry whose `source` path no longer exists); `--root <dir>` runs it against another tree; with nothing wrong it MUST print one summary line and exit zero.
 
-_From 881-observability-current._
+_From 924-inventory-real-calls._
 
 ### 881-FR-004 — The check MUST fail naming the entry when an entry's `dashboard` is a uid that no `*.json` file under `infra/observability/` declares as its top-level `uid`, when an `alerts` uid is one no such file declares at `groups[].rules[].uid`, or when `"none"` has no reason. With no dashboard or alert file yet, nothing is declared, so an inventory of `"none"` entries passes before ST-879/ST-880 land.
 
@@ -177,3 +178,15 @@ _From 915-telemetry-flush-on-stop._
 ### 915-FR-005 — On a stop signal, the telemetry MUST be shut down by the signal only when no other listener handles that signal; the signal MUST then be raised again once the shutdown has finished or the bound of FR-002 has passed. When another listener handles it (the app's own stop), the signal MUST NOT start the shutdown. "Another listener" is any other listener registered on that signal in the process. The process exit code is unchanged: the re-raised signal ends the process as today.
 
 _From 915-telemetry-flush-on-stop._
+
+### 924-FR-002 — The colocated spec (`scripts/observability-inventory.spec.ts`) MUST cover, against a fixture tree: a host only in a line comment, a block comment and a doc comment is not reported; a host inside prose in a string is not reported; an SDK client named only in a comment is not reported; an unlisted host beginning a single-quoted, double-quoted or template string is reported; a real call followed by a commented link on the same line reports only the real host; a string holding `/*` does not hide the real call after it; a regular-expression literal with a lone quote does not hide a real host on the next line; a commented-out `new Queue('x')` is not a queue; a listed host whose only mention moves into a comment is reported stale.
+
+_From 924-inventory-real-calls._
+
+### 924-FR-003 — On this repository the check MUST still pass with the inventory unchanged, and the change MUST add no dependency (Constitution I): `package.json` and the lockfile stay unchanged, and comment and string handling lives in the check itself, not in a TypeScript parser.
+
+_From 924-inventory-real-calls._
+
+## Retired
+
+- `881-FR-003` — superseded by `924-FR-001` (2026-10-08)
