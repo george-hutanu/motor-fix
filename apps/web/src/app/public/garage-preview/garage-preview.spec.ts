@@ -9,6 +9,7 @@ import type {
   MechanicsSection,
   PricesSection,
 } from '@motor-fix/contracts/listing-sections';
+import type { PlaceSection } from '@motor-fix/contracts/place-section';
 import { I18n } from '@motor-fix/i18n';
 
 import { GaragePreview } from './garage-preview';
@@ -31,6 +32,7 @@ type Inputs = {
   details?: DetailsSection;
   mechanics?: MechanicsSection;
   order?: string[];
+  place?: PlaceSection;
   prices?: PricesSection;
 };
 
@@ -259,6 +261,12 @@ describe('the mechanics and the service area on the preview', () => {
     expect(text(host.querySelector('.mobile'))).toBe(
       'Mobil · 20 km în jurul sediului',
     );
+
+    await set({ place: { address: 'Strada Zăvoiului 17', radiusKm: 35 } });
+    expect(text(host.querySelector('.mobile'))).toBe(
+      'Mobil · 35 km în jurul sediului',
+    );
+    expect(host.textContent).not.toContain('Zăvoiului');
 
     await set({ details: { businessKind: 'company' } });
     expect(host.querySelector('.mobile')).toBeNull();

@@ -10,6 +10,7 @@ import type {
   MechanicsSection,
   PricesSection,
 } from '@motor-fix/contracts/listing-sections';
+import type { PlaceSection } from '@motor-fix/contracts/place-section';
 import { AsWritten, TranslatePipe } from '@motor-fix/i18n';
 import { Lamp } from '@motor-fix/ui-cockpit';
 
@@ -36,6 +37,7 @@ export class GaragePreview {
   readonly prices = input<PricesSection | undefined>(undefined);
   readonly mechanics = input.required<MechanicsSection>();
   readonly order = input.required<string[]>();
+  readonly place = input<PlaceSection | undefined>(undefined);
 
   protected readonly id = `garage-preview-${++panels}`;
   protected readonly open = signal(false);
@@ -46,6 +48,7 @@ export class GaragePreview {
       details: this.details(),
       mechanics: this.mechanics(),
       order: this.order(),
+      place: this.place(),
       prices: this.prices(),
     }),
   );

@@ -153,6 +153,16 @@ describe('the preview card', () => {
     expect(card({ details: { businessKind: kind } }).mobileKm).toBe(km);
   });
 
+  it('gives a mobile mechanic the radius typed on the place step', () => {
+    const place = { radiusKm: 35 };
+    expect(card({ details: { businessKind: 'mobile' }, place }).mobileKm).toBe(
+      35,
+    );
+    expect(
+      card({ details: { businessKind: 'company' }, place }).mobileKm,
+    ).toBeNull();
+  });
+
   it('never carries the phone, what the garage is known for, the brand note or a speciality', () => {
     const result = card({
       brands: {
@@ -169,6 +179,12 @@ describe('the preview card', () => {
         mechanics: [{ name: 'Mihai', speciality: 'SPECIALITATE' }],
         onProfile: true,
       },
+      place: {
+        address: 'ADRESA-SEDIU',
+        lat: 44.8565,
+        lng: 24.8692,
+        radiusKm: 35,
+      },
     });
 
     const text = JSON.stringify(result);
@@ -178,6 +194,9 @@ describe('the preview card', () => {
       'CUNOSCUT-PENTRU',
       'NOTA-SECRETA',
       'SPECIALITATE',
+      'ADRESA-SEDIU',
+      '44.8565',
+      '24.8692',
     ]) {
       expect(text).not.toContain(secret);
     }

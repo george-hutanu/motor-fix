@@ -3,20 +3,23 @@ import type {
   MechanicsSection,
   PricesSection,
 } from '@motor-fix/contracts/listing-sections';
+import {
+  MOBILE_SERVICE_RADIUS_DEFAULT_KM,
+  type PlaceSection,
+} from '@motor-fix/contracts/place-section';
 import { baniToLei } from '@motor-fix/contracts/price-range';
 
 import { initials } from '../../dashboard/initials';
 import { type BrandAnswer, written } from '../brand-verdict/brand-verdict';
 import type { BrandsSection, MarkedBrand } from '../brands-section';
 
-// The service area a mobile mechanic is shown with until the form asks for one.
-const MOBILE_KM = 20;
-
 interface PreviewCardInput {
   details: DetailsSection;
   brands: BrandsSection;
   prices: PricesSection | undefined;
   mechanics: MechanicsSection;
+  // Only its radius is read: the seat address never reaches the card.
+  place?: PlaceSection;
   // Brand ids in the order the brands step shows its chips.
   order: string[];
 }
@@ -78,7 +81,10 @@ export function previewCard(input: PreviewCardInput): PreviewCard {
           return name ? [{ initials: initials(name), name }] : [];
         })
       : [],
-    mobileKm: input.details.businessKind === 'mobile' ? MOBILE_KM : null,
+    mobileKm:
+      input.details.businessKind === 'mobile'
+        ? (input.place?.radiusKm ?? MOBILE_SERVICE_RADIUS_DEFAULT_KM)
+        : null,
     name: written(input.details.name),
     range: range(input.prices),
     sample: first ? { id: first.brandId, name: first.name } : null,
