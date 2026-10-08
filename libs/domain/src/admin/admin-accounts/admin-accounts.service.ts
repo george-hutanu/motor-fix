@@ -55,9 +55,10 @@ function decode(cursor: string) {
 const isSummary = (value: unknown): value is AdminAccountsSummaryDto =>
   typeof value === 'object' &&
   value !== null &&
-  ['activeDrivers', 'garagesListed', 'mechanics'].every((key) =>
-    Number.isInteger((value as Record<string, unknown>)[key]),
-  );
+  ['activeDrivers', 'garagesListed', 'mechanics'].every((key) => {
+    const count = (value as Record<string, unknown>)[key];
+    return Number.isInteger(count) && (count as number) >= 0;
+  });
 
 const ROW = {
   _count: { select: { cars: { where: { removedAt: null } } } },

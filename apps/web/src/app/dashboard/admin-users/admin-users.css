@@ -18,7 +18,7 @@
 .panels {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--mf-space-4);
+  gap: var(--mf-space-5);
   align-items: start;
 }
 @media (min-width: 900px) {
@@ -48,34 +48,52 @@
 }
 @media (min-width: 900px) {
   .row {
-    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.2fr) minmax(96px, auto);
     align-items: center;
     gap: var(--mf-space-3);
   }
 }
 .who {
   display: grid;
-  gap: 2px;
+  gap: var(--mf-space-1);
   min-width: 0;
 }
 .name {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--mf-text);
   overflow-wrap: anywhere;
 }
 .detail,
 .count {
-  font-size: var(--mf-size-small);
+  font-size: var(--mf-size-body);
   color: var(--mf-text-secondary);
   overflow-wrap: anywhere;
 }
 mf-lamp {
-  font-size: var(--mf-size-small);
+  font-size: var(--mf-size-body);
   min-width: 0;
   overflow-wrap: anywhere;
 }
 .count {
+  font-weight: 700;
+  color: var(--mf-text);
   font-variant-numeric: tabular-nums;
+}
+/* Phones read every row text at the body size; wider screens step the
+   secondary texts down to the small one. */
+@media (min-width: 768px) {
+  .detail,
+  .count,
+  mf-lamp {
+    font-size: var(--mf-size-small);
+  }
+}
+@media (min-width: 900px) {
+  .count {
+    justify-self: end;
+    text-align: right;
+    white-space: nowrap;
+  }
 }
 .skeleton-row {
   padding: var(--mf-space-3) 0;
@@ -138,7 +156,7 @@ mf-lamp {
   inset: 100% auto auto 0;
   z-index: 1;
   padding: var(--mf-space-2);
-  font-size: var(--mf-size-small);
+  font-size: var(--mf-size-body);
   color: var(--mf-text);
   background: var(--mf-panel-raised);
   border: 1px solid var(--mf-line-strong);
@@ -146,6 +164,6 @@ mf-lamp {
 }
 .retry:focus-visible,
 .info:focus-visible {
-  outline: 2px solid var(--mf-focus, currentColor);
-  outline-offset: 2px;
+  outline: var(--mf-focus-width) solid var(--mf-focus, currentColor);
+  outline-offset: var(--mf-focus-offset);
 }
