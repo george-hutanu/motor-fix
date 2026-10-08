@@ -11,6 +11,7 @@ import request from 'supertest';
 import { HealthModule } from './health.module';
 import { S3TestStore } from '../storage/s3-test-store';
 import { StorageModule } from '../storage/storage.module';
+import { timersArmedBy } from '../waits.testing';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
@@ -62,9 +63,10 @@ describe('readiness with a misbehaving store', () => {
   it('names only storage when the store never answers and the others are fine', async () => {
     const endpoint = await listen(createServer((s) => sockets.push(s)));
     app = await start(endpoint);
-    const started = Date.now();
-
-    const res = await request(app.getHttpServer()).get('/health/ready');
+    const { log, value: res } = await timersArmedBy(
+      ['health.service', 'storage.service'],
+      async () => request(app.getHttpServer()).get('/health/ready'),
+    );
 
     expect(res.status).toBe(503);
     expect(res.body.checks).toEqual({
@@ -72,7 +74,8 @@ describe('readiness with a misbehaving store', () => {
       redis: 'ok',
       storage: 'error',
     });
-    expect(Date.now() - started).toBeLessThan(3000);
+    // A 2-second limit, the check's or the store's own, ended the wait.
+    expect(log).toContain('fired 2000');
   });
 
   it('stays ready when the store answers after one second', async () => {

@@ -7,6 +7,7 @@ import request from 'supertest';
 import { HealthModule } from './health.module';
 import { S3TestStore } from '../storage/s3-test-store';
 import { StorageModule } from '../storage/storage.module';
+import { timersArmedBy } from '../waits.testing';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
@@ -208,9 +209,10 @@ describe('health under hostile conditions', () => {
         databaseUrl: `postgresql://localhost:${port}/x`,
         redisUrl,
       });
-      const started = Date.now();
-
-      const res = await request(app.getHttpServer()).get('/health/ready');
+      const { log, value: res } = await timersArmedBy(
+        'health.service',
+        async () => request(app.getHttpServer()).get('/health/ready'),
+      );
 
       expect(res.status).toBe(503);
       expect(res.body.checks).toEqual({
@@ -218,9 +220,11 @@ describe('health under hostile conditions', () => {
         redis: 'ok',
         storage: 'ok',
       });
-      expect(Date.now() - started).toBeLessThan(3000);
+      // The check's own 2-second limit is what ended the wait.
+      expect(log).toContain('fired 2000');
     });
 
+    // @traces 976-FR-004
     it('runs all checks in parallel, so three hung checks cost 2 seconds not 6', async () => {
       app = await start(
         {
@@ -230,9 +234,10 @@ describe('health under hostile conditions', () => {
         'abc123',
         `http://127.0.0.1:${port}`,
       );
-      const started = Date.now();
-
-      const res = await request(app.getHttpServer()).get('/health/ready');
+      const { log, value: res } = await timersArmedBy(
+        'health.service',
+        async () => request(app.getHttpServer()).get('/health/ready'),
+      );
 
       expect(res.status).toBe(503);
       expect(res.body.checks).toEqual({
@@ -240,7 +245,16 @@ describe('health under hostile conditions', () => {
         redis: 'error',
         storage: 'error',
       });
-      expect(Date.now() - started).toBeLessThan(3000);
+      // In parallel: every limit, the three checks' own and the store's, was
+      // running before the first ran out, and none started after.
+      const first = log.findIndex((entry) => entry.startsWith('fired'));
+      expect(first).toBeGreaterThanOrEqual(3);
+      expect(log.slice(0, first).every((entry) => entry === 'armed 2000')).toBe(
+        true,
+      );
+      expect(
+        log.slice(first).filter((entry) => entry.startsWith('armed')),
+      ).toEqual([]);
     });
 
     it('does not make the live path wait for a hung ready check', async () => {
@@ -249,11 +263,15 @@ describe('health under hostile conditions', () => {
         redisUrl: `redis://localhost:${port}`,
       });
       const http = request(app.getHttpServer());
-      const hung = http.get('/health/ready').then((r) => r);
+      let readyAnswered = false;
+      const hung = http.get('/health/ready').then((r) => {
+        readyAnswered = true;
+        return r;
+      });
 
-      const started = Date.now();
       await http.get('/health/live').expect(200, { status: 'ok' });
-      expect(Date.now() - started).toBeLessThan(500);
+      // Live answered while the ready check was still waiting on its limit.
+      expect(readyAnswered).toBe(false);
       await hung;
     });
   });

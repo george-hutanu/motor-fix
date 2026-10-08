@@ -19,6 +19,8 @@ interface Reply {
   body?: unknown;
   // Never answer, so the caller's timeout fires.
   hang?: boolean;
+  // Answer only once this settles, so a test can hold the caller in flight.
+  after?: Promise<unknown>;
 }
 
 // Brevo's transactional API as recorded: POST /smtp/email answers 201 with a
@@ -84,8 +86,12 @@ export class BrevoMock {
     });
     const reply = this.replies.shift() ?? this.default(path);
     if (reply.hang) return;
-    res.writeHead(reply.status, { 'content-type': 'application/json' });
-    res.end(reply.body === undefined ? '' : JSON.stringify(reply.body));
+    const send = () => {
+      res.writeHead(reply.status, { 'content-type': 'application/json' });
+      res.end(reply.body === undefined ? '' : JSON.stringify(reply.body));
+    };
+    if (reply.after) void reply.after.then(send, send);
+    else send();
   }
 
   private default(path: string): Reply {
