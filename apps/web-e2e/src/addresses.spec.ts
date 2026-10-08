@@ -130,6 +130,9 @@ test('an /en/ address opened with Romanian remembered stays English', async ({
 
 test('/ with English remembered goes to /en', async ({ page }) => {
   await page.goto('/ro/');
+  // Once the app has started: starting, it remembers the language it opened in.
+  await expect(switchGroup(page, 'Limba')).toBeVisible();
+  await page.waitForLoadState('networkidle');
   await page.evaluate(() => localStorage.setItem('mf.lang', 'en'));
   const errors: string[] = [];
   page.on('console', (message) => {

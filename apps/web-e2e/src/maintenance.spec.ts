@@ -70,13 +70,21 @@ test.describe('maintenance mode @seeded', () => {
 
     const driver = await (await browser.newContext()).newPage();
     await driver.goto('/admin');
-    await expect(maintenancePage(driver)).toBeVisible();
+    // The dialog opens over the page, and a modal hides what lies under it.
+    await expect(
+      driver.getByRole('heading', {
+        includeHidden: true,
+        level: 1,
+        name: 'Mentenanță',
+      }),
+    ).toBeAttached();
     await signIn(driver, ACCOUNTS.driver);
     await expect(
       signInDialog(driver).getByText(
         'MotorFix este în mentenanță. Încearcă din nou în câteva minute.',
       ),
     ).toBeVisible();
+    await signInDialog(driver).getByRole('button', { name: 'Închide' }).click();
     await expect(maintenancePage(driver)).toBeVisible();
     await driver.context().close();
 
