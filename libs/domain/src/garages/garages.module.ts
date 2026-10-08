@@ -8,6 +8,8 @@ import {
 import { GarageDetailsService } from './details/garage-details.service';
 import { GarageBrandsController } from './garage-brands/garage-brands.controller';
 import { GarageBrandsService } from './garage-brands/garage-brands.service';
+import { GarageSettingsController } from './garage-settings/garage-settings.controller';
+import { GarageSettingsService } from './garage-settings/garage-settings.service';
 import { ListingDraftsController } from './listing-drafts/listing-drafts.controller';
 import { ListingDraftsService } from './listing-drafts/listing-drafts.service';
 import { ListingDraftThrottle } from './listing-drafts/listing-drafts.throttle';
@@ -55,6 +57,7 @@ export class GaragesModule {
         AdminOverviewController,
         GarageBrandsController,
         GarageInvitesController,
+        GarageSettingsController,
         InvitesController,
         ListingDraftsController,
         PublicGaragesController,
@@ -76,6 +79,7 @@ export class GaragesModule {
         GarageMechanicsService,
         GaragePlaceService,
         GaragePricesService,
+        GarageSettingsService,
         ListingDraftsService,
         {
           inject: [AUTH_REDIS],

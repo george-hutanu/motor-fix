@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-import { GarageBrandAnswerDto } from './garage-brands.dto';
+import { GarageBrandAnswerDto, PublicBrandDto } from './garage-brands.dto';
+import { CourtesyCarDto, PaymentMethodsDto } from './garage-settings.dto';
 
 // A garage as anyone may read it: only an approved one is ever returned.
 export class PublicGarageDto extends GarageBrandAnswerDto {
@@ -28,4 +29,17 @@ export class PublicGarageDto extends GarageBrandAnswerDto {
     minimum: 1,
   })
   serviceRadiusKm?: number;
+
+  @ApiProperty({ type: [PublicBrandDto] })
+  declare worksOn: PublicBrandDto[];
+
+  @ApiProperty({ type: PaymentMethodsDto })
+  paymentMethods!: PaymentMethodsDto;
+
+  @ApiPropertyOptional({
+    description:
+      'Absent when the garage does not list one; a price only when paid',
+    type: CourtesyCarDto,
+  })
+  courtesyCar?: CourtesyCarDto;
 }

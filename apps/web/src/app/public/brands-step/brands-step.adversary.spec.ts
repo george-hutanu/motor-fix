@@ -53,7 +53,7 @@ async function settle(fixture: Fixture) {
 const text = (element: Element | null | undefined) =>
   (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
 const chips = (step: HTMLElement) => [
-  ...step.querySelectorAll<HTMLButtonElement>('.chips button'),
+  ...step.querySelectorAll<HTMLButtonElement>('.chips > li > button'),
 ];
 const chip = (step: HTMLElement, name: string) => {
   const found = chips(step).find((c) => text(c).startsWith(name));

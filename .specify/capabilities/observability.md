@@ -11,6 +11,7 @@ features:
   - 878-data-store-metrics
   - 916-otlp-log-masking-coverage
   - 879-dashboards
+  - 397-listing-ticks
 ---
 
 # Capability: Observability
@@ -418,6 +419,10 @@ _From 879-dashboards._
 ### 879-FR-020 — No Grafana credential, token or header MUST reach the browser or any response; Grafana's own sign-in protects the dashboards.
 
 _From 879-dashboards._
+
+### 397-FR-013 — The new endpoint MUST be listed with its telemetry in `infra/observability/inventory.json` (the API's request metrics and logs cover it; no new dashboard panel or alert, with the reason stated), as every new endpoint is.
+
+_From 397-listing-ticks._
 
 ## Retired
 

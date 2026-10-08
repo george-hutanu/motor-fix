@@ -254,13 +254,13 @@ describe('saving a draft', () => {
     const saved = await service.save(
       created.id,
       created.token,
-      body({ data: { steps: { '2': { c: 3 } } }, step: 2 }),
+      body({ data: { steps: { '2': { brandNote: 'Doar Dacia' } } }, step: 2 }),
     );
 
     const row = await prisma.listingDraft.findUniqueOrThrow({
       where: { id: created.id },
     });
-    expect(row.data).toEqual({ steps: { '2': { c: 3 } } });
+    expect(row.data).toEqual({ steps: { '2': { brandNote: 'Doar Dacia' } } });
     expect(row.step).toBe(2);
     expect(saved.updatedAt).toBe(row.updatedAt.toISOString());
     expect(row.updatedAt.getTime()).toBeGreaterThanOrEqual(
@@ -611,6 +611,28 @@ describe('the hours step of a draft', () => {
       'a note of 81 characters',
       { closedDays: [{ day: '2026-12-27', note: 'x'.repeat(81) }] },
     ],
+    ['an unknown payment method', { payments: ['cheque'] }],
+    ['a payment method twice', { payments: ['cash', 'cash'] }],
+    [
+      'a courtesy car with an extra key',
+      { courtesyCar: { paid: false, seats: 5 } },
+    ],
+    [
+      'a courtesy car price that is not a whole number',
+      { courtesyCar: { paid: true, pricePerDayBani: 12000.5 } },
+    ],
+    [
+      'a courtesy car price of 50 bani',
+      { courtesyCar: { paid: true, pricePerDayBani: 50 } },
+    ],
+    [
+      'a courtesy car price of 200,100 bani',
+      { courtesyCar: { paid: true, pricePerDayBani: 200_100 } },
+    ],
+    [
+      'a courtesy car price that is not whole lei',
+      { courtesyCar: { paid: true, pricePerDayBani: 150 } },
+    ],
   ])('refuses %s with validation_failed', async (_, section) => {
     const created = await service.create(body());
 
@@ -630,6 +652,18 @@ describe('the hours step of a draft', () => {
     ['a section without the hours keys', {}],
     ["a section holding only other steps' keys", { photos: ['front.jpg'] }],
     ['a closed day already past', { closedDays: [{ day: '2020-01-01' }] }],
+    [
+      'the payment methods and a paid courtesy car',
+      {
+        courtesyCar: { paid: true, pricePerDayBani: 12000 },
+        facilities: ['courtesy_car'],
+        payments: ['cash', 'card', 'transfer'],
+      },
+    ],
+    [
+      'a courtesy car the facilities do not list',
+      { courtesyCar: { paid: false }, facilities: [] },
+    ],
   ])('accepts %s', async (_, section) => {
     const created = await service.create(body());
 
@@ -639,6 +673,81 @@ describe('the hours step of a draft', () => {
       where: { id: created.id },
     });
     expect(row.data).toEqual({ steps: { '5': section } });
+  });
+});
+
+describe('the brands step of a draft', () => {
+  const step2 = (section: unknown) =>
+    body({ data: { steps: { '2': section } }, step: 2 });
+  const dacia = '6f1c2a4e-8b3d-4c5e-9f70-1a2b3c4d5e6f';
+  const tesla = '0d9e8f7a-6b5c-4d3e-8f21-0a1b2c3d4e5f';
+  const taken = (fuels?: unknown) => ({
+    brands: [
+      {
+        brandId: dacia,
+        name: 'Dacia',
+        stance: 'works_on',
+        ...(fuels === undefined ? {} : { fuels }),
+      },
+    ],
+  });
+
+  it('keeps the fuels of a taken brand and reads them back unchanged', async () => {
+    const created = await service.create(body());
+    const section = {
+      ...taken(['petrol', 'diesel', 'hybrid']),
+      brandNote: 'Fără mașini 100% electrice',
+    };
+
+    await service.save(created.id, created.token, step2(section));
+
+    const draft = await service.current(tokenOf(sent[0]?.link ?? ''));
+    expect(draft.data).toEqual({ steps: { '2': section } });
+  });
+
+  it.each([
+    ['an unknown fuel', taken(['petrol', 'lpg'])],
+    ['a fuel twice', taken(['diesel', 'diesel'])],
+    [
+      'fuels on a brand the garage does not take',
+      {
+        brands: [
+          {
+            brandId: tesla,
+            fuels: ['electric'],
+            name: 'Tesla',
+            stance: 'does_not_take',
+          },
+        ],
+      },
+    ],
+  ])('refuses %s with validation_failed', async (_, section) => {
+    const created = await service.create(body());
+
+    const refused = await refusalOf(
+      service.save(created.id, created.token, step2(section)),
+    );
+
+    expect(refused.status).toBe(400);
+    expect(refused.body).toMatchObject({ code: 'validation_failed' });
+    const row = await prisma.listingDraft.findUniqueOrThrow({
+      where: { id: created.id },
+    });
+    expect(row.data).toEqual(body().data);
+  });
+
+  it.each([
+    ['a taken brand without fuels', taken()],
+    ['a taken brand with every fuel unticked', taken([])],
+  ])('accepts %s', async (_, section) => {
+    const created = await service.create(body());
+
+    await service.save(created.id, created.token, step2(section));
+
+    const row = await prisma.listingDraft.findUniqueOrThrow({
+      where: { id: created.id },
+    });
+    expect(row.data).toEqual({ steps: { '2': section } });
   });
 });
 

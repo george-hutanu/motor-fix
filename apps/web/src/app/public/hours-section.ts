@@ -2,6 +2,7 @@ import {
   CLOSED_NOTE_MAX,
   type ClosedDay,
   type ClosedDayError,
+  type CourtesyCar,
   closedDayError,
   closedDaysError,
   DEFAULT_HOURS,
@@ -11,6 +12,8 @@ import {
   type Interval,
   isHoursSection,
   isWeeklyHours,
+  PAYMENTS,
+  type Payment,
   type Weekday,
   type WeeklyHours,
 } from '@motor-fix/contracts/garage-hours';
@@ -26,18 +29,22 @@ const stepFive = (data: unknown) => {
   return isRecord(steps) ? steps['5'] : undefined;
 };
 
-// Step 5's three keys as the listing draft holds them (`steps['5']`); a key
+// Step 5's keys as the listing draft holds them (`steps['5']`); a key
 // not in shape opens as never filled in, and the others are kept.
 export function hoursOf(data: unknown): HoursSection {
   const section = stepFive(data);
   if (!isRecord(section)) return {};
-  const { closedDays, facilities, hours } = section;
+  const { closedDays, courtesyCar, facilities, hours, payments } = section;
   const read: HoursSection = {};
   if (isWeeklyHours(hours)) read.hours = hours;
   if (closedDaysError(closedDays) === null)
     read.closedDays = closedDays as ClosedDay[];
   if (facilities !== undefined && isHoursSection({ facilities }))
     read.facilities = facilities as Facility[];
+  if (payments !== undefined && isHoursSection({ payments }))
+    read.payments = payments as Payment[];
+  if (courtesyCar !== undefined && isHoursSection({ courtesyCar }))
+    read.courtesyCar = courtesyCar as CourtesyCar;
   return read;
 }
 
@@ -47,11 +54,22 @@ export function mergeHours(
   section: Record<string, unknown> | undefined,
   value: HoursSection,
 ): Record<string, unknown> {
-  const { closedDays: _c, facilities: _f, hours: _h, ...rest } = section ?? {};
+  const {
+    closedDays: _c,
+    courtesyCar: _cc,
+    facilities: _f,
+    hours: _h,
+    payments: _p,
+    ...rest
+  } = section ?? {};
   const merged: Record<string, unknown> = { ...rest };
   if (value.hours) merged['hours'] = value.hours;
   if (value.closedDays?.length) merged['closedDays'] = value.closedDays;
   if (value.facilities?.length) merged['facilities'] = value.facilities;
+  if (value.payments?.length) merged['payments'] = value.payments;
+  // The car's terms only while the car itself is ticked.
+  if (value.courtesyCar && value.facilities?.includes('courtesy_car'))
+    merged['courtesyCar'] = value.courtesyCar;
   return merged;
 }
 
@@ -143,4 +161,20 @@ export function toggleFacility(list: Facility[], facility: Facility) {
   return FACILITIES.filter((f) =>
     f === facility ? !ticked : list.includes(f),
   );
+}
+
+export const togglePayment = (list: Payment[], payment: Payment) =>
+  PAYMENTS.filter((p) =>
+    p === payment ? !list.includes(p) : list.includes(p),
+  );
+
+// Free drops the price; paid keeps one already given.
+export function setCourtesy(
+  car: CourtesyCar | undefined,
+  paid: boolean,
+): CourtesyCar {
+  if (!paid) return { paid: false };
+  return car?.paid && car.pricePerDayBani !== undefined
+    ? { paid: true, pricePerDayBani: car.pricePerDayBani }
+    : { paid: true };
 }

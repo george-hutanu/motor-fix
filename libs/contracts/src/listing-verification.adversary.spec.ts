@@ -213,7 +213,7 @@ describe('a draft carrying a step-6 section', () => {
   });
 
   it('judges another step as before', () => {
-    expect(isListingDraftData({ steps: { '2': { anything: 1 } } })).toBe(true);
+    expect(isListingDraftData({ steps: { '2': { brands: [] } } })).toBe(true);
   });
 
   it('does not let a good step 6 excuse a bad one elsewhere', () => {
