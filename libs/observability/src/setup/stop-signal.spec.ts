@@ -46,9 +46,19 @@ function recordPending() {
   logs.getLogger('spec').emit({ body: 'last words' });
 }
 
-async function settle(until: () => boolean = () => false) {
-  for (let tick = 0; tick < 200 && !until(); tick++) {
-    await new Promise((resolve) => setImmediate(resolve));
+// Waits for `until`, by the clock rather than a count of turns: on a loaded CI
+// runner the exports outlast 200 turns, and the signal they then raise lands
+// in the next test. With no `until`, lets 200 turns pass.
+async function settle(until?: () => boolean, timeoutMs = 10_000) {
+  if (!until) {
+    for (let tick = 0; tick < 200; tick++) {
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+    return;
+  }
+  const deadline = Date.now() + timeoutMs;
+  while (!until() && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 5));
   }
 }
 
