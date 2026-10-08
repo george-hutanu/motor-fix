@@ -7,11 +7,13 @@ import {
   mergeHours,
   removeBreak,
   removeClosedDay,
+  setCourtesy,
   setDay,
   setWeekdays,
   simpleRows,
   toggleClosed,
   toggleFacility,
+  togglePayment,
 } from './hours-section';
 
 const TODAY = '2026-10-07';
@@ -46,6 +48,40 @@ describe('reading the step 5 section of a draft', () => {
       ),
     ).toEqual({ closedDays: [{ day: '2026-12-27' }] });
   });
+
+  it('reads the payment methods and the courtesy car back', () => {
+    const section = {
+      courtesyCar: { paid: true, pricePerDayBani: 12_000 },
+      facilities: ['courtesy_car'],
+      payments: ['cash', 'card'],
+    };
+
+    expect(hoursOf(data(section))).toEqual(section);
+  });
+
+  it('reads a courtesy car out of shape as absent, keeping the payments', () => {
+    expect(
+      hoursOf(
+        data({
+          courtesyCar: { paid: true, pricePerDayBani: 150 },
+          facilities: ['courtesy_car'],
+          payments: ['cash'],
+        }),
+      ),
+    ).toEqual({ facilities: ['courtesy_car'], payments: ['cash'] });
+  });
+
+  it('reads a repeated payment method as no payments, keeping the courtesy car', () => {
+    expect(
+      hoursOf(
+        data({
+          courtesyCar: { paid: false },
+          facilities: ['courtesy_car'],
+          payments: ['cash', 'cash'],
+        }),
+      ),
+    ).toEqual({ courtesyCar: { paid: false }, facilities: ['courtesy_car'] });
+  });
 });
 
 describe('putting the values back into the section', () => {
@@ -74,6 +110,41 @@ describe('putting the values back into the section', () => {
         { closedDays: [], facilities: [] },
       ),
     ).toEqual({ photos: ['a.jpg'] });
+  });
+
+  it('puts the payment methods and the courtesy car back', () => {
+    expect(
+      mergeHours(
+        { place: { address: 'Cluj' } },
+        {
+          courtesyCar: { paid: false },
+          facilities: ['courtesy_car'],
+          payments: ['transfer'],
+        },
+      ),
+    ).toEqual({
+      courtesyCar: { paid: false },
+      facilities: ['courtesy_car'],
+      payments: ['transfer'],
+      place: { address: 'Cluj' },
+    });
+  });
+
+  it('drops an empty payment list and a courtesy car that is no longer ticked', () => {
+    expect(
+      mergeHours(
+        {
+          courtesyCar: { paid: true, pricePerDayBani: 12_000 },
+          facilities: ['courtesy_car'],
+          payments: ['cash'],
+        },
+        {
+          courtesyCar: { paid: true, pricePerDayBani: 12_000 },
+          facilities: ['waiting_area'],
+          payments: [],
+        },
+      ),
+    ).toEqual({ facilities: ['waiting_area'] });
   });
 
   it('starts a section that was not there', () => {
@@ -258,5 +329,36 @@ describe('the facilities', () => {
       toggleFacility(['courtesy_car', 'waiting_area'], 'waiting_area'),
     ).toEqual(['courtesy_car']);
     expect(toggleFacility([], 'pickup_dropoff')).toEqual(['pickup_dropoff']);
+  });
+});
+
+describe('the payment methods', () => {
+  it('ticks a method, keeping the fixed order', () => {
+    expect(togglePayment(['transfer'], 'cash')).toEqual(['cash', 'transfer']);
+    expect(togglePayment([], 'card')).toEqual(['card']);
+  });
+
+  it('unticks a ticked one and never holds one twice', () => {
+    expect(togglePayment(['cash', 'card'], 'cash')).toEqual(['card']);
+  });
+});
+
+describe('the courtesy car', () => {
+  it('is free once chosen free, with no price', () => {
+    expect(setCourtesy(undefined, false)).toEqual({ paid: false });
+    expect(setCourtesy({ paid: true, pricePerDayBani: 12_000 }, false)).toEqual(
+      { paid: false },
+    );
+  });
+
+  it('is paid with no price yet when chosen paid', () => {
+    expect(setCourtesy({ paid: false }, true)).toEqual({ paid: true });
+  });
+
+  it('keeps the price while it stays paid', () => {
+    expect(setCourtesy({ paid: true, pricePerDayBani: 12_000 }, true)).toEqual({
+      paid: true,
+      pricePerDayBani: 12_000,
+    });
   });
 });

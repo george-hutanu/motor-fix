@@ -34,7 +34,7 @@ p {
   gap: var(--mf-space-2);
 }
 select,
-input:not([type="checkbox"]) {
+input:not([type="checkbox"], [type="radio"]) {
   min-height: var(--mf-tap);
   box-sizing: border-box;
   font: inherit;
@@ -59,10 +59,41 @@ input:focus-visible {
   min-height: var(--mf-tap);
   cursor: pointer;
 }
+/* The box is drawn at 20 px inside a 44 px tap target. */
 .tick input {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--mf-tap);
+  height: var(--mf-tap);
+  margin: 0 calc((1.25rem - var(--mf-tap)) / 2) 0 0;
+  appearance: none;
+  cursor: pointer;
+}
+.tick input::before,
+.tick input::after {
+  grid-area: 1 / 1;
+  content: "";
+  box-sizing: border-box;
+}
+.tick input::before {
   width: 1.25rem;
   height: 1.25rem;
-  margin: 0;
+  border: 2px solid var(--mf-text-secondary);
+  border-radius: 4px;
+  background: var(--mf-bg);
+}
+.tick input:checked::before {
+  border-color: var(--mf-text);
+  background: var(--mf-text);
+}
+.tick input:checked::after {
+  width: 6px;
+  height: 11px;
+  margin-top: -2px;
+  border: solid var(--mf-bg);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 button {
   display: inline-flex;
@@ -73,7 +104,7 @@ button {
   min-height: var(--mf-tap);
   min-width: var(--mf-tap);
   padding: 0 var(--mf-space-3);
-  border: 1px solid var(--mf-line);
+  border: 1px solid var(--mf-line-strong);
   border-radius: var(--mf-radius-control);
   background: var(--mf-bg);
   color: var(--mf-text);
@@ -84,7 +115,7 @@ button {
 }
 .error {
   flex-basis: 100%;
-  color: var(--mf-red);
+  color: var(--mf-red-ink);
 }
 details {
   display: grid;
@@ -113,7 +144,8 @@ ul {
   list-style: none;
 }
 .closed-days,
-.facilities {
+.facilities,
+.payments {
   display: flex;
   flex-wrap: wrap;
   gap: var(--mf-space-2);
@@ -129,12 +161,48 @@ ul {
   display: grid;
   gap: var(--mf-space-1);
   margin-top: var(--mf-space-1);
-  font-size: var(--mf-size-small);
 }
-.facilities button[aria-pressed="true"] {
+.facilities button[aria-pressed="true"],
+.payments button[aria-pressed="true"] {
   border-color: var(--mf-text-secondary);
   font-weight: 600;
 }
-mf-lamp {
-  font-size: var(--mf-size-small);
+/* The car's terms take their own line under its chip. */
+.facilities li:has(.courtesy) {
+  display: grid;
+  flex-basis: 100%;
+  gap: var(--mf-space-2);
+  justify-items: start;
+  min-width: 0;
+}
+.courtesy,
+.terms {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-1) var(--mf-space-3);
+  min-width: 0;
+}
+.price {
+  display: grid;
+  flex-basis: 100%;
+  gap: var(--mf-space-1);
+}
+.lei {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+}
+.lei input {
+  width: 8rem;
+  max-width: 100%;
+  min-height: var(--mf-tap);
+  box-sizing: border-box;
+}
+/* A phone reads these at the body size; the small and label sizes start at a tablet. */
+@media (min-width: 768px) {
+  .holidays ul,
+  mf-lamp {
+    font-size: var(--mf-size-small);
+  }
 }

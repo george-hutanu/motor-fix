@@ -4,7 +4,7 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { PRISMA } from '../../auth/prisma';
 import { refusal } from '../../auth/sign-up.service';
 import type { PrismaClient } from '../../generated/prisma/client';
-import { brandAnswer } from '../brand-answer';
+import { brandAnswerWithFuels } from '../brand-answer';
 
 // The one scope of every read a visitor can reach: spread into the `where`
 // of a garage read. A test fails when a public handler's read skips it.
@@ -34,14 +34,27 @@ export class PublicGaragesService {
             brand: {
               select: { id: true, name: true, popularity: true, slug: true },
             },
+            diesel: true,
+            electric: true,
+            hybrid: true,
+            petrol: true,
             stance: true,
           },
         },
         businessKind: true,
+        courtesyCarPaid: true,
+        courtesyCarPricePerDayBani: true,
+        facilities: {
+          select: { facility: true },
+          where: { facility: 'courtesy_car' },
+        },
         id: true,
         latitude: true,
         longitude: true,
         name: true,
+        paymentCard: true,
+        paymentCash: true,
+        paymentTransfer: true,
         refusalPhrase: true,
         serviceRadiusKm: true,
         slug: true,
@@ -53,10 +66,16 @@ export class PublicGaragesService {
         address,
         brands,
         businessKind,
+        courtesyCarPaid,
+        courtesyCarPricePerDayBani,
+        facilities,
         id,
         latitude,
         longitude,
         name,
+        paymentCard,
+        paymentCash,
+        paymentTransfer,
         serviceRadiusKm,
         slug: held,
         ...texts
@@ -65,7 +84,18 @@ export class PublicGaragesService {
         id,
         name,
         slug: held,
-        ...brandAnswer(brands, texts),
+        ...brandAnswerWithFuels(brands, texts),
+        paymentMethods: {
+          card: paymentCard,
+          cash: paymentCash,
+          transfer: paymentTransfer,
+        },
+        ...(facilities.length > 0 && {
+          courtesyCar: {
+            paid: courtesyCarPaid,
+            ...present({ pricePerDayBani: courtesyCarPricePerDayBani }),
+          },
+        }),
         // A mobile mechanic is shown by the area it serves: its position is
         // the owner's seat, so it never leaves with the garage.
         ...(businessKind === 'mobile'

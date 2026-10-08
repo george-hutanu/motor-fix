@@ -1,6 +1,9 @@
-import type {
-  GarageBrandAnswerDto,
-  ReplaceGarageBrandsDto,
+import {
+  FUELS,
+  type Fuel,
+  fuelColumns,
+  type GarageBrandAnswerDto,
+  type ReplaceGarageBrandsDto,
 } from '@motor-fix/contracts';
 import {
   ConflictException,
@@ -9,6 +12,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 
+import { assertCatalogued } from './write-garage-brands';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { type Actor, assertGarage } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
@@ -21,27 +25,18 @@ import type {
 } from '../../generated/prisma/client';
 import { brandAnswer } from '../brand-answer';
 
-// In the brief's order, which is the order the history lists them in.
-const FUELS = ['petrol', 'diesel', 'hybrid', 'electric'] as const;
-
-const fuels = (on: boolean) =>
-  Object.fromEntries(FUELS.map((fuel) => [fuel, on])) as Record<
-    (typeof FUELS)[number],
-    boolean
-  >;
-
-const notFound = () =>
+export const notFound = () =>
   refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such garage');
 
 // Only the owner answers; the garage's staff are told no, anyone else that
 // there is no such garage.
-function assertOwner(actor: Actor, garageId: string) {
+export function assertGarageOwner(actor: Actor, garageId: string) {
   if (actor.garageId !== garageId) throw notFound();
   if (actor.role !== 'garage') {
     throw refusal(
       HttpStatus.FORBIDDEN,
       'forbidden',
-      "Only the owner sets the garage's brands",
+      'Only the owner changes the garage',
     );
   }
 }
@@ -57,17 +52,21 @@ async function lockGarage(tx: Prisma.TransactionClient, garageId: string) {
   return garage;
 }
 
-// A retired brand still passes; only one missing from the catalogue is refused.
-async function assertCatalogued(tx: Prisma.TransactionClient, ids: string[]) {
-  const known = await tx.brand.count({ where: { id: { in: ids } } });
-  if (known === ids.length) return;
+// The DTO judges each brand alone; fuels on a refused one span two fields.
+function assertFuelsTaken(dto: ReplaceGarageBrandsDto) {
+  const at = dto.brands.findIndex(
+    (b) => b.stance === 'does_not_take' && b.fuels !== undefined,
+  );
+  if (at === -1) return;
   throw refusal(
     HttpStatus.BAD_REQUEST,
     'validation_failed',
-    'A brand is not in the catalogue',
-    [{ code: 'unknown_brand', field: 'brands' }],
+    'Only a taken brand has fuels',
+    [{ code: 'fuels_on_refused', field: `brands[${at}].fuels` }],
   );
 }
+
+type Wanted = { stance: GarageBrandStance; fuels?: Fuel[] };
 
 // The rules that span a garage's brand row and its jobs; the one-row rules
 // (no fuel on a refused brand, the text limits) are CHECKs in the database.
@@ -86,15 +85,24 @@ export class GarageBrandsService {
     garageId: string,
     dto: ReplaceGarageBrandsDto,
   ): Promise<GarageBrandAnswerDto> {
-    assertOwner(actor, garageId);
+    assertGarageOwner(actor, garageId);
+    assertFuelsTaken(dto);
     return this.prisma.$transaction(async (tx) => {
       const garage = await lockGarage(tx, garageId);
       // Stored ids are lowercase; a uuid is accepted in either case.
       const wanted = new Map(
-        dto.brands.map((b) => [b.brandId.toLowerCase(), b.stance]),
+        dto.brands.map(({ brandId, fuels, stance }) => [
+          brandId.toLowerCase(),
+          { fuels, stance },
+        ]),
       );
       await assertCatalogued(tx, [...wanted.keys()]);
-      const changed = await this.applyStances(tx, actor, garageId, wanted);
+      const { changed, fields } = await this.applyStances(
+        tx,
+        actor,
+        garageId,
+        wanted,
+      );
       const texts = {
         brandNote: dto.brandNote ?? null,
         refusalPhrase: dto.refusalPhrase ?? null,
@@ -106,11 +114,12 @@ export class GarageBrandsService {
         garage,
         texts,
       );
-      if (changed.length > 0 || textChanged) {
+      if (textChanged) fields.add('brands');
+      if (fields.size > 0) {
         await this.events.record(tx, {
           audience: { brandIds: changed, garageId, type: 'garage_brands' },
           kind: 'garage.updated',
-          payload: { brandIds: changed, fields: ['brands'], garageId },
+          payload: { brandIds: changed, fields: [...fields], garageId },
           subjectId: garageId,
         });
       }
@@ -128,26 +137,36 @@ export class GarageBrandsService {
   }
 
   // Switches off the brands left out, then sets the others; returns the
-  // brands whose stance changed.
+  // brands whose stance or fuels changed, and which of the two did.
   private async applyStances(
     tx: Prisma.TransactionClient,
     actor: Actor,
     garageId: string,
-    wanted: Map<string, GarageBrandStance>,
+    wanted: Map<string, Wanted>,
   ) {
     const rows = await tx.garageBrand.findMany({ where: { garageId } });
     const changed: string[] = [];
+    const fields = new Set<'brands' | 'brand_fuels'>();
     for (const row of rows.filter((r) => !wanted.has(r.brandId))) {
       await this.switchOff(tx, actor, row);
       changed.push(row.brandId);
+      fields.add('brands');
     }
-    const stored = new Map(rows.map((r) => [r.brandId, r.stance]));
-    for (const [brandId, stance] of wanted) {
-      if (stored.get(brandId) === stance) continue;
-      await this.setStance(tx, actor, garageId, brandId, stance);
+    for (const [brandId, { fuels, stance }] of wanted) {
+      const change = await this.setStance(
+        tx,
+        actor,
+        garageId,
+        brandId,
+        stance,
+        fuels,
+      );
+      if (!change.stance && !change.fuels) continue;
       changed.push(brandId);
+      if (change.stance) fields.add('brands');
+      if (change.fuels) fields.add('brand_fuels');
     }
-    return changed;
+    return { changed, fields };
   }
 
   private async applyTexts(
@@ -186,7 +205,7 @@ export class GarageBrandsService {
       garageId: string;
       brandId: string;
       stance: GarageBrandStance;
-    } & Record<(typeof FUELS)[number], boolean>,
+    } & Record<Fuel, boolean>,
   ) {
     const { brandId, garageId } = row;
     const change = {
@@ -233,22 +252,24 @@ export class GarageBrandsService {
   }
 
   // A refused brand loses its fuels and jobs; a brand taken (back) on gets
-  // all four fuels.
+  // the fuels given, all four when none are. A brand already taken keeps its
+  // fuels unless given. Says whether the stance and the fuels changed.
   async setStance(
     tx: Prisma.TransactionClient,
     actor: Actor,
     garageId: string,
     brandId: string,
     stance: GarageBrandStance,
-  ) {
+    fuels?: Fuel[],
+  ): Promise<{ stance: boolean; fuels: boolean }> {
     assertGarage(actor, garageId);
     // One stance write per garage at a time: two first writes would both miss
     // the row, and the second create would fail on the primary key.
     await tx.$executeRaw`SELECT 1 FROM garage WHERE id = ${garageId}::uuid FOR UPDATE`;
     const where = { garageId_brandId: { brandId, garageId } };
     const row = await tx.garageBrand.findUnique({ where });
-    if (row?.stance === stance) return;
-    const after = { stance, ...fuels(stance === 'works_on') };
+    const taken = stance === 'works_on';
+    const columns = fuelColumns(taken ? fuels : []);
     const change = {
       actorId: actor.accountId,
       actorRole: actor.role,
@@ -256,6 +277,18 @@ export class GarageBrandsService {
       subjectId: brandId,
       subjectType: 'garage_brand',
     };
+    if (row?.stance === stance) {
+      const moved = FUELS.filter((fuel) => row[fuel] !== columns[fuel]);
+      if (!taken || fuels === undefined || moved.length === 0)
+        return { fuels: false, stance: false };
+      const after = Object.fromEntries(
+        moved.map((fuel) => [fuel, columns[fuel]]),
+      );
+      await tx.garageBrand.update({ data: after, where });
+      await this.audit.recordChanges(tx, change, row, after);
+      return { fuels: true, stance: false };
+    }
+    const after = { stance, ...columns };
     if (!row) {
       await tx.garageBrand.create({ data: { ...after, brandId, garageId } });
       await this.audit.record(tx, {
@@ -263,11 +296,12 @@ export class GarageBrandsService {
         action: 'create',
         newValue: after,
       });
-      return;
+      return { fuels: false, stance: true };
     }
     await tx.garageBrand.update({ data: after, where });
     await this.audit.recordChanges(tx, change, row, after);
-    if (stance === 'works_on') return;
+    const result = { fuels: false, stance: true };
+    if (taken) return result;
     const jobs = await tx.garageBrandJob.findMany({
       where: { brandId, garageId },
     });
@@ -281,6 +315,7 @@ export class GarageBrandsService {
         subjectType: 'garage_brand_job',
       });
     }
+    return result;
   }
 
   async addJob(

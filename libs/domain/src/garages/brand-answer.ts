@@ -1,4 +1,10 @@
-import type { BrandRefDto, GarageBrandAnswerDto } from '@motor-fix/contracts';
+import {
+  type BrandRefDto,
+  FUELS,
+  type Fuel,
+  type GarageBrandAnswerDto,
+  type PublicBrandDto,
+} from '@motor-fix/contracts';
 
 import type { GarageBrandStance } from '../generated/prisma/client';
 
@@ -29,5 +35,23 @@ export function brandAnswer(
     doesNotTake: refs(rows, 'does_not_take'),
     refusalPhrase: texts.refusalPhrase,
     worksOn: refs(rows, 'works_on'),
+  };
+}
+
+// The same answer with the fuels each taken brand works on.
+export function brandAnswerWithFuels(
+  rows: (Row & Record<Fuel, boolean>)[],
+  texts: { brandNote: string | null; refusalPhrase: string | null },
+): GarageBrandAnswerDto & { worksOn: PublicBrandDto[] } {
+  const answer = brandAnswer(rows, texts);
+  const fuels = new Map(
+    rows.map((row) => [row.brand.id, FUELS.filter((fuel) => row[fuel])]),
+  );
+  return {
+    ...answer,
+    worksOn: answer.worksOn.map((brand) => ({
+      ...brand,
+      fuels: fuels.get(brand.id) ?? [],
+    })),
   };
 }

@@ -1,9 +1,10 @@
 ---
 capability: garage-brands
-updated: 2026-10-07
+updated: 2026-10-08
 features:
   - 039-brand-catalogue
   - 040-garage-brand-stance
+  - 397-listing-ticks
 ---
 
 # Capability: Garage brands
@@ -51,3 +52,7 @@ _From 040-garage-brand-stance._
 ### 040-FR-012 — The public garage read MUST carry the garage's brand answer: the brands taken and the brands refused as two lists of (id, name, slug) in catalogue order (popularity rank, then name), plus the note and the phrase (null when not set); a brand retired from the catalogue stays in the lists; a garage with nothing marked has two empty lists.
 
 _From 040-garage-brand-stance._
+
+### 397-FR-010 — `PUT /api/v1/garages/:garageId/brands` MUST accept, on each brand, an optional `fuels` list of the ticked kinds (each at most once): for a `works_on` brand it sets the four columns (a missing key means unchanged for a brand already taken, all four for one that becomes taken; `[]` unticks all four); on a `does_not_take` brand it is refused with 400 `validation_failed`. A brand that becomes taken stays one `create` history entry whose new value carries its fuels; for a brand already taken, each changed column is one history entry (subject `garage_brand`, field `petrol` / `diesel` / `hybrid` / `electric`, old and new value), and the one `garage.updated` event of the write names `brand_fuels` in `fields` when a fuel changed, beside `brands` when a stance or text changed; a write that changes nothing records nothing. The owner-only rule, the lock and the transaction stay as they are.
+
+_From 397-listing-ticks._
