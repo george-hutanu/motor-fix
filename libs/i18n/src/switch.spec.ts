@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
@@ -240,5 +243,27 @@ describe('LanguageChoice.taps', () => {
 
     expect(TestBed.inject(I18n).language()).toBe('en');
     expect(localStorage.getItem('mf.lang')).toBe('en');
+  });
+});
+
+describe('LanguageSwitch layout', () => {
+  const css = () =>
+    (
+      /styles: `([^`]*)`/.exec(
+        readFileSync(join(__dirname, 'switch.ts'), 'utf8'),
+      )?.[1] ?? ''
+    ).replace(/\s+/g, ' ');
+
+  it('reads its labels at the text size around it, not the browser button default', () => {
+    expect(css()).toMatch(/button\s*\{[^}]*font: inherit/);
+  });
+
+  it('pads its buttons on the 4 px grid', () => {
+    const padding = /button\s*\{[^}]*padding: ([^;]+);/.exec(css())?.[1];
+
+    expect(padding).toBeDefined();
+    for (const px of `${padding}`.matchAll(/(\d+(?:\.\d+)?)px/g)) {
+      expect(Number(px[1]) % 4).toBe(0);
+    }
   });
 });

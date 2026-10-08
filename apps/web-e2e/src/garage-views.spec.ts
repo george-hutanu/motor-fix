@@ -91,7 +91,7 @@ const marked = (page: Page) =>
 
 // @seeded: signs in as the seeded accounts against the real API.
 test.describe('garage views @seeded', () => {
-  // @traces 097-FR-001 097-FR-002 097-FR-003 097-FR-006 097-FR-011
+  // @traces 097-FR-001 097-FR-002 097-FR-003 097-FR-006
   test('the owner opens every released view from the menu, each with its own address, title and line', async ({
     page,
   }) => {
@@ -133,8 +133,9 @@ test.describe('garage views @seeded', () => {
   test('the owner reaches every released view from the bar on a 390 px phone, with the short labels', async ({
     page,
   }) => {
-    await page.setViewportSize({ height: 844, width: 390 });
+    // Signed in at desktop width, where the header carries the button.
     await signedIn(page, ACCOUNTS.garage);
+    await page.setViewportSize({ height: 844, width: 390 });
     await mark(page);
     const bar = page.getByRole('navigation', { name: 'Panou service' });
 
@@ -154,8 +155,8 @@ test.describe('garage views @seeded', () => {
   test('the dashboard turns English without a reload and back, with no sideways scroll at 320 px', async ({
     page,
   }) => {
-    await page.setViewportSize({ height: 700, width: 320 });
     await signedIn(page, ACCOUNTS.garage);
+    await page.setViewportSize({ height: 700, width: 320 });
     await mark(page);
     const bar = page.getByRole('navigation', {
       name: /^(Panou service|Garage dashboard)$/,
