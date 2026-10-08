@@ -63,6 +63,7 @@ features:
   - 974-stop-test-stack-on-merge
   - 976-integration-specs-under-load
   - 977-worktree-cleanup
+  - 887-precompact-fr-wording
 ---
 
 # Capability: Platform
@@ -381,9 +382,9 @@ _From 600-merge-gate-symlink._
 
 _From 854-precompact-pr-signal._
 
-### 623-FR-002 — The hook MUST still append its Compaction block for a feature whose status is not Archived.
+### 887-FR-001 — The pre-compact hook MUST append its Compaction block to the active feature's `auto-run.md` whenever neither 854-FR-002 (HEAD is not on the feature's branch, a detached HEAD included) nor 854-FR-003 (the feature branch's PR reads `MERGED`) skips it, whatever the spec's `**Status**:` line says.
 
-_From 623-precompact-flush._
+_From 887-precompact-fr-wording._
 
 ### 623-FR-003 — Each uncommitted entry in the block MUST keep the full porcelain line, both status columns included, for the first entry as for every other.
 
@@ -1543,3 +1544,4 @@ _From 977-worktree-cleanup._
 - `481-FR-002` — superseded by `977-FR-010` (2026-10-08)
 - `464-FR-007` — superseded by `977-FR-010` (2026-10-08)
 - `974-FR-003` — superseded by `977-FR-007` (2026-10-08)
+- `623-FR-002` — superseded by `887-FR-001` (2026-10-08)

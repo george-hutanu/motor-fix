@@ -282,5 +282,12 @@ export async function measureLayout({ phone, tapTargets, focus }) {
     observations.push(...list.slice(0, CAP));
     if (list.length > CAP) observations.push({ kind: "layout", rule, selector: "…", measured: "", expected: "", text: `…and ${list.length - CAP} more` });
   }
-  return { observations, tokens: { sizes, fonts } };
+  // The rules this page was measured against and listed in full: a baseline's silence about anything else (a rule
+  // it skipped, or one past the cap) says nothing about main, so the PR's findings there count as main's.
+  const ran = ["min-text", "clipped", "overlap", "grid", "stretched-image", "font-fallback"];
+  if (scale.length) ran.push("type-scale");
+  if (tapTargets) ran.push("tap-target");
+  if (focus) ran.push("focus-ring");
+  const rules = ran.filter((rule) => (found.get(rule)?.length ?? 0) <= CAP);
+  return { observations, rules, tokens: { sizes, fonts } };
 }
