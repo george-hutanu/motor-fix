@@ -3,11 +3,31 @@
 
 import { BrandRefDto } from '../models/brand-ref-dto';
 export interface PublicGarageDto {
+
+  /**
+   * A workshop only.
+   */
+  address?: string;
   brandNote: string | null;
   doesNotTake: Array<BrandRefDto>;
   id: string;
+
+  /**
+   * A workshop only.
+   */
+  latitude?: number;
+
+  /**
+   * A workshop only.
+   */
+  longitude?: number;
   name: string;
   refusalPhrase: string | null;
+
+  /**
+   * A mobile mechanic only: how far from its base it travels.
+   */
+  serviceRadiusKm?: number;
   slug: string;
   worksOn: Array<BrandRefDto>;
 }

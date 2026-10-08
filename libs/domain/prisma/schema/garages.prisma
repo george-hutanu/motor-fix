@@ -69,6 +69,12 @@ model Garage {
   businessKind            BusinessKind?            @map("business_kind")
   mobileLegalForm         MobileLegalForm?         @map("mobile_legal_form")
   proposedJobs            JobType[]
+  address                 String?                  @db.VarChar(200)
+  // A mobile mechanic's registered seat: checked by the admin, never public.
+  seatAddress             String?                  @map("seat_address") @db.VarChar(200)
+  latitude                Float?
+  longitude               Float?
+  serviceRadiusKm         Int?                     @map("service_radius_km") @db.SmallInt
   photos                  GaragePhoto[]
 
   @@map("garage")
