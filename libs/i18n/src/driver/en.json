@@ -38,6 +38,7 @@
       "yearRange": "The year must be between 1950 and {max}."
     },
     "findGarage": "Find a garage",
+    "findGarageFor": "Find a garage for {car}",
     "itp": {
       "days": {
         "one": "ITP expires tomorrow",

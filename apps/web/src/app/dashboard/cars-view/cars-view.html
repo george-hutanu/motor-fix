@@ -12,7 +12,7 @@
           <mf-due-date-line
             [expiry]="car.itpUntil"
             keyPrefix="driver.cars.itp"
-            [link]="{ label: 'driver.cars.findGarage', path: ['/', language(), 'garages'], query: { brand: car.brandId } }"
+            [link]="{ label: 'driver.cars.findGarage', name: 'driver.cars.findGarageFor', params: { car: car.brandName + ' ' + car.model }, path: ['/', language(), 'garages'], query: { brand: car.brandId } }"
           />
           @if (car.plate) {
             <p>{{ grouped(car.plate) }}</p>

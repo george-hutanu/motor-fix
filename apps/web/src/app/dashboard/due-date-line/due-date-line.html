@@ -1,5 +1,9 @@
 @let now = status();
 <mf-lamp [state]="now.state" [label]="sentence(now)" />
 @if (now.passed && link(); as to) {
-  <a [routerLink]="to.path" [queryParams]="to.query">{{ to.label | t }}</a>
+  <a
+    [routerLink]="to.path"
+    [queryParams]="to.query"
+    [attr.aria-label]="to.name ? (to.name | t: to.params) : null"
+  >{{ to.label | t }}</a>
 }

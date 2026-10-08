@@ -22,6 +22,10 @@ export interface DueDateStatus {
 
 export interface DueDateLink {
   label: string;
+  // The accessible name, when the visible label alone would read the same on
+  // every card; it starts with the label so voice control still finds it.
+  name?: string;
+  params?: Record<string, string>;
   path: unknown[];
   query: Record<string, string>;
 }

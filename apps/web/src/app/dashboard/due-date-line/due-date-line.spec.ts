@@ -7,6 +7,8 @@ import { DueDateLine, dueDateStatus } from './due-date-line';
 
 type Link = {
   label: string;
+  name?: string;
+  params?: Record<string, string>;
   path: unknown[];
   query: Record<string, string>;
 } | null;
@@ -26,6 +28,8 @@ class Host {
 
 const GARAGES: Link = {
   label: 'driver.cars.findGarage',
+  name: 'driver.cars.findGarageFor',
+  params: { car: 'BMW Seria 3' },
   path: ['/', 'ro', 'garages'],
   query: { brand: 'bmw' },
 };
@@ -194,6 +198,21 @@ describe('the garage link on a passed date', () => {
     expect(anchor?.getAttribute('href')).toBe('/ro/garages?brand=bmw');
   });
 
+  it('names the car in the link for a screen reader', async () => {
+    const line = await render('2026-10-07', 'ro', GARAGES);
+
+    expect(line.anchor()?.getAttribute('aria-label')).toBe(
+      'Caută un service pentru BMW Seria 3',
+    );
+  });
+
+  it('leaves the visible text as the name when no name is given', async () => {
+    const { name: _, params: __, ...plain } = GARAGES!;
+    const line = await render('2026-10-07', 'ro', plain);
+
+    expect(line.anchor()?.hasAttribute('aria-label')).toBe(false);
+  });
+
   it('names the link in English', async () => {
     const line = await render('2026-10-07', 'en', {
       ...GARAGES!,
@@ -202,6 +221,9 @@ describe('the garage link on a passed date', () => {
 
     expect(line.anchor()?.textContent?.trim()).toBe('Find a garage');
     expect(line.anchor()?.getAttribute('href')).toBe('/en/garages?brand=bmw');
+    expect(line.anchor()?.getAttribute('aria-label')).toBe(
+      'Find a garage for BMW Seria 3',
+    );
   });
 
   it.each([

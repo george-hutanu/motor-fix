@@ -165,11 +165,21 @@ describe('Mașinile mele', () => {
     expect(line.state).toBe('red');
     expect(line.link?.textContent?.trim()).toBe('Caută un service');
     expect(line.link?.getAttribute('href')).toBe('/ro/garages?brand=bmw');
+    expect(line.link?.getAttribute('aria-label')).toBe(
+      'Caută un service pentru BMW 320d',
+    );
   });
 
   it('sends a passed ITP to the English garages in English', async () => {
     const { element, settle } = await render(
-      [car({ brandId: 'dacia', itpUntil: '2026-10-01' })],
+      [
+        car({
+          brandId: 'dacia',
+          brandName: 'Dacia',
+          itpUntil: '2026-10-01',
+          model: 'Logan',
+        }),
+      ],
       'en',
     );
     await settle();
@@ -177,6 +187,9 @@ describe('Mașinile mele', () => {
     const line = itp(cards(element)[0]);
     expect(line.link?.textContent?.trim()).toBe('Find a garage');
     expect(line.link?.getAttribute('href')).toBe('/en/garages?brand=dacia');
+    expect(line.link?.getAttribute('aria-label')).toBe(
+      'Find a garage for Dacia Logan',
+    );
   });
 
   it('gives a car still in date no garage link', async () => {
