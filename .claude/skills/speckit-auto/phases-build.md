@@ -10,9 +10,11 @@ Invoke `speckit-tests`. Every spec FR must get at least one test in a
 colocated `*.spec.ts` next to the code it covers (API tests against real PostgreSQL and
 Redis, end-to-end flows in the app's `*-e2e` Playwright project — constitution II),
 No internal identifier goes into the source — not in a title, not in a comment:
-no FR id, feature number, task id or story id (project rule,
-`.claude/skills/speckit-tests/SKILL.md`). The FR → test mapping belongs to the
-completion report and `tasks.md`, where those ids resolve. Comments are held to
+no FR id, feature number, task id or story id (Constitution II,
+`.claude/skills/speckit-tests/SKILL.md`). The one exception is a whole-line
+`// @traces <feature>-FR-<n>` comment in a test file, which `trace-matrix.mjs`
+reads. The FR → test mapping also belongs to the completion report and
+`tasks.md`. Comments are held to
 the same bar as code: one only where it says something the code cannot. Then
 prove red: run the new spec files with
 `npx jest <files>` and quote the failing count in the run log. Tests that

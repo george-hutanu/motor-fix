@@ -5,7 +5,7 @@ import { SpanKind, trace } from '@opentelemetry/api';
 import express from 'express';
 
 import { routeLabel } from './route-label';
-import { startTelemetry } from './start';
+import { startedInstrumentations, startTelemetry } from './start';
 import { inMemory, patchForJest } from '../testing/in-memory';
 
 const memory = inMemory();
@@ -75,6 +75,20 @@ describe('the HTTP instrumentation', () => {
     const [span] = serverSpans(await spans());
     expect(span?.name).toBe('GET');
     expect(span?.attributes).not.toHaveProperty('http.route');
+  });
+
+  it('traces HTTP, Redis, Prisma and the runtime for the API', () => {
+    expect(
+      startedInstrumentations()
+        .map((instrumentation) => instrumentation.instrumentationName)
+        .sort(),
+    ).toEqual([
+      '@opentelemetry/instrumentation-http',
+      '@opentelemetry/instrumentation-ioredis',
+      '@opentelemetry/instrumentation-runtime-node',
+      '@opentelemetry/instrumentation-undici',
+      '@prisma/instrumentation',
+    ]);
   });
 
   it('records no span for the health probes', async () => {

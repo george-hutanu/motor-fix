@@ -68,7 +68,7 @@
       ],
       "description": "Gate `git commit` on message policy and spec-drift — not traceability (retired) and not the test suite (.husky/pre-commit runs it)",
       "fail_closed": true,
-      "fingerprint": "a7d87a437bc9"
+      "fingerprint": "467bd3867be2"
     },
     {
       "id": "pre:bash:merge-gate",
@@ -107,7 +107,7 @@
       ],
       "description": "Protect the ratchets: the mutation floor, the traceability baseline, the structure baseline, the NNN-FR- tokens in tests, and (under strict) the harness itself",
       "fail_closed": true,
-      "fingerprint": "891f673de6c8"
+      "fingerprint": "cad085812a2c"
     },
     {
       "id": "pre:edit:red-first",
@@ -118,9 +118,9 @@
         "standard",
         "strict"
       ],
-      "description": "Block src/ and bin/ edits on a feature branch until tests/ carry that feature's NNN-FR- tokens",
+      "description": "Block src/ edits on a feature branch with FRs and open tasks until the branch adds or modifies a *.spec.* / *.test.* file",
       "fail_closed": true,
-      "fingerprint": "581631481e79"
+      "fingerprint": "0e73553405a6"
     },
     {
       "id": "post:edit:affected-tests",

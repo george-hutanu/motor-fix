@@ -17,23 +17,31 @@ export function scrub(text: string): string {
   );
 }
 
-export function scrubDeep<T>(value: T): T {
-  return deep(value, new WeakSet()) as T;
+// `mask` replaces `scrub` for every string, for a caller that masks more.
+export function scrubDeep<T>(value: T, mask = scrub): T {
+  return deep(value, new WeakSet(), mask) as T;
 }
 
 // Plain objects and arrays are copied with their strings masked; any other
 // object (a Date, a Buffer) is kept as it is, and a cycle ends in a marker.
-function deep(value: unknown, seen: WeakSet<object>): unknown {
-  if (typeof value === 'string') return scrub(value);
+function deep(
+  value: unknown,
+  seen: WeakSet<object>,
+  mask: (text: string) => string,
+): unknown {
+  if (typeof value === 'string') return mask(value);
   if (value === null || typeof value !== 'object') return value;
   const plain = Array.isArray(value) || isPlainObject(value);
   if (!plain) return value;
   if (seen.has(value)) return '[Circular]';
   seen.add(value);
   const copy = Array.isArray(value)
-    ? value.map((inner) => deep(inner, seen))
+    ? value.map((inner) => deep(inner, seen, mask))
     : Object.fromEntries(
-        Object.entries(value).map(([key, inner]) => [key, deep(inner, seen)]),
+        Object.entries(value).map(([key, inner]) => [
+          key,
+          deep(inner, seen, mask),
+        ]),
       );
   seen.delete(value);
   return copy;
