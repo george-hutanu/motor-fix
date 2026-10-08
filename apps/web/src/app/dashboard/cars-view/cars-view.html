@@ -9,11 +9,11 @@
         <article data-car>
           <p class="name">{{ car.brandName }} {{ car.model }}</p>
           <p>{{ car.year }} · {{ car.odometerKm | km }}</p>
-          @if (car.itpUntil) {
-            <p>{{ 'driver.cars.itpUntil' | t: { day: (car.itpUntil | day) } }}</p>
-          } @else {
-            <p class="muted">{{ 'driver.cars.itpMissing' | t }}</p>
-          }
+          <mf-due-date-line
+            [expiry]="car.itpUntil"
+            keyPrefix="driver.cars.itp"
+            [link]="{ label: 'driver.cars.findGarage', path: ['/', language(), 'garages'], query: { brand: car.brandId } }"
+          />
           @if (car.plate) {
             <p>{{ grouped(car.plate) }}</p>
           }

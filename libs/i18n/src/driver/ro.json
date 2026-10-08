@@ -37,8 +37,18 @@
       "year": "An",
       "yearRange": "Anul trebuie să fie între 1950 și {max}."
     },
-    "itpMissing": "ITP: adaugă data din talon",
-    "itpUntil": "ITP valabil până la {day}",
+    "findGarage": "Caută un service",
+    "itp": {
+      "days": {
+        "few": "ITP‑ul expiră în {count} zile",
+        "one": "ITP‑ul expiră mâine",
+        "other": "ITP‑ul expiră în {count} de zile"
+      },
+      "expired": "ITP‑ul a expirat pe {day}",
+      "missing": "ITP: adaugă data din talon",
+      "today": "ITP‑ul expiră azi",
+      "valid": "ITP valabil până în {month}"
+    },
     "retry": "Reîncearcă"
   },
   "notifications": {

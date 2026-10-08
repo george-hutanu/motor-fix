@@ -1,0 +1,5 @@
+@let now = status();
+<mf-lamp [state]="now.state" [label]="sentence(now)" />
+@if (now.passed && link(); as to) {
+  <a [routerLink]="to.path" [queryParams]="to.query">{{ to.label | t }}</a>
+}
