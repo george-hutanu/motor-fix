@@ -1,6 +1,6 @@
 /* The site bar's height, fixed, so a page's own sticky parts (the listing's step bar and preview) rest under it rather than slide beneath it. */
 :host {
-  --mf-site-bar: calc(var(--mf-tap) + 2 * var(--mf-space-1) + 1px);
+  --public-site-bar: calc(var(--mf-tap) + 2 * var(--mf-space-1) + 1px);
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
@@ -17,7 +17,7 @@ main {
   align-items: center;
   gap: var(--mf-space-3);
   box-sizing: border-box;
-  height: var(--mf-site-bar);
+  height: var(--public-site-bar);
   padding: var(--mf-space-1) clamp(16px, 4.4vw, 32px);
   border-bottom: 1px solid var(--mf-line);
   background: color-mix(in srgb, var(--mf-bg) 74%, transparent);

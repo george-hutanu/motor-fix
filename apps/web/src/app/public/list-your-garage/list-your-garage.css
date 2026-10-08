@@ -31,7 +31,7 @@ p {
 /* A jump, to a heading or a fragment's section, rests it on the line the scroll spy reads: the bottom of the phone bar, under the site bar. */
 section,
 h2 {
-  scroll-margin-top: calc(var(--mf-site-bar, 0px) + var(--mf-tap));
+  scroll-margin-top: calc(var(--public-site-bar, 0px) + var(--mf-tap));
 }
 h2:focus-visible,
 nav button:focus-visible {
@@ -131,20 +131,20 @@ ol li {
   }
   nav {
     position: sticky;
-    top: calc(var(--mf-site-bar, 0px) + var(--mf-space-4));
+    top: calc(var(--public-site-bar, 0px) + var(--mf-space-4));
   }
   .bar {
     display: none;
   }
   section,
   h2 {
-    scroll-margin-top: calc(var(--mf-site-bar, 0px) + var(--mf-space-4));
+    scroll-margin-top: calc(var(--public-site-bar, 0px) + var(--mf-space-4));
   }
 }
 @media not all and (min-width: 768px) {
   nav {
     position: sticky;
-    top: var(--mf-site-bar, 0px);
+    top: var(--public-site-bar, 0px);
     z-index: 1;
     margin: 0 calc(-1 * var(--mf-space-4));
     background: var(--mf-bg);
@@ -173,7 +173,7 @@ ol li {
     top: 100%;
     left: 0;
     right: 0;
-    max-height: calc(100dvh - var(--mf-site-bar, 0px) - 2 * var(--mf-tap));
+    max-height: calc(100dvh - var(--public-site-bar, 0px) - 2 * var(--mf-tap));
     overflow-y: auto;
     padding-bottom: var(--mf-space-2);
     background: var(--mf-bg);
@@ -202,6 +202,6 @@ ol li {
   }
   aside mf-garage-preview {
     position: sticky;
-    top: calc(var(--mf-site-bar, 0px) + var(--mf-space-4));
+    top: calc(var(--public-site-bar, 0px) + var(--mf-space-4));
   }
 }

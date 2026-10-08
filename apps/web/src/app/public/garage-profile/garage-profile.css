@@ -129,7 +129,7 @@ h1 {
 .skeleton {
   display: block;
   border-radius: var(--mf-radius-control);
-  background: var(--mf-panel-step);
+  background: var(--mf-panel-raised);
 }
 
 .line {

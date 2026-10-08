@@ -245,17 +245,28 @@ describe('the brand answer through the cache', () => {
 // @traces 307-FR-001 307-FR-006
 describe('the slug and the cache', () => {
   // A change to a garage commits with its event, and the relay drops the
-  // cached profile when it hands the event on.
+  // cached profile when it hands the event on. Other spec files share the
+  // outbox: their rows can fill a batch ahead of this one, or another
+  // worker's relay can hold it, so relay until this event is handed on.
   const changed = async (id: string, write: () => Promise<unknown>) => {
     await write();
-    await prisma.outboxEvent.create({
+    const event = await prisma.outboxEvent.create({
       data: {
         audience: [`public:garage:${id}`],
         kind: 'garage.updated',
         subjectId: id,
       },
     });
-    await new OutboxRelay(prisma, other).relay();
+    const relay = new OutboxRelay(prisma, other);
+    for (let lap = 0; lap < 50; lap++) {
+      await relay.relay();
+      const row = await prisma.outboxEvent.findUnique({
+        where: { id: event.id },
+      });
+      if (row?.relayedAt) return;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    throw new Error(`outbox event ${event.id} was never relayed`);
   };
 
   it('answers 404 for a slug the garage gave up, even if it was read a moment ago', async () => {
