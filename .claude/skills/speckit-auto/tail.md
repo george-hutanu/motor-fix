@@ -80,8 +80,9 @@ never waits on either: a lap that needs a new run dispatches it and ends.
      `post.mjs --missing` and blocks the run (`verification-failed`).
    - **A failing lap** (blocking findings, a failing check, or a medium or
      low finding whose fix is small or medium by the size test in AGENTS.md,
-     "Technical debt a review defers"): fix every one, tests first, commit and push the fix, then the lap's report and any new
-     `notion-sync.md` lines through the specs repo
+     "Technical debt a review defers"): fix every one, tests first, commit
+     and push the fix, then the lap's report and any new `notion-sync.md`
+     lines through the specs repo
      (`node .claude/scripts/specs-repo.mjs commit "<message>" -- <feature>`), then
      `node .claude/scripts/run-state.mjs repair`, which counts the lap in
      `.specify/run-state.json` so the cap holds across tails. When it exits 1

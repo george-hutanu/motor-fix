@@ -15,10 +15,11 @@
 //   node .claude/scripts/jev.mjs triage <findings.json>
 //       Route each verified review finding to patch (a small or medium fix,
 //       made in this PR) / defer (a large fix only, AGENTS.md's size test) /
-//       decision-needed, and rank it by severity. The route already exists in code-reviewer and
-//       spec-reviewer as prose; this makes it a typed answer with a confidence,
-//       so a finding the model is unsure about goes to the human by rule rather
-//       than by disposition. Feeds specs/<feature>/deferred.md.
+//       decision-needed, and rank it by severity. The route already exists
+//       in code-reviewer and spec-reviewer as prose; this makes it a typed
+//       answer with a confidence, so a finding the model is unsure about
+//       goes to the human by rule rather than by disposition. Feeds
+//       specs/<feature>/deferred.md.
 //
 //   node .claude/scripts/jev.mjs rank <items.json> --about "<what matters>"
 //       Order candidate items by impact. Two callers: /speckit-clarify, which

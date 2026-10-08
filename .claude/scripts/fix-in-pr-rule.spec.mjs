@@ -71,6 +71,6 @@ describe('the fix-in-PR rule', () => {
     const defer = text.match(/defer: "([^"]+)"/)?.[1] ?? '';
     assert.match(patch, /small or medium/);
     assert.match(patch, /pre-existing/);
-    assert.match(defer, /large/);
+    assert.ok(normalise(defer).includes(SIZE_TEST), 'jev defer description lacks the size test');
   });
 });
