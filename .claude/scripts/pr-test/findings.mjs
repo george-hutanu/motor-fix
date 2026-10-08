@@ -99,7 +99,7 @@ export function sweepFinding(o, { web }) {
       `Observe: ${sweepTitle(o)}.`,
     ],
     evidence: o.screenshot,
-    ...(o.kind === "layout" ? { rule: o.rule, selector: o.selector, measured: o.measured, expected: o.expected } : {}),
+    ...(o.kind === "layout" ? { rule: o.rule, selector: o.selector, measured: o.measured, expected: o.expected, text: o.text ?? "" } : {}),
     ...(preExisting ? { preExisting: true } : {}),
   };
 }
@@ -172,7 +172,12 @@ export function readinessOutcome({ name, status, body, storage, url }) {
 /** A layout finding is its route, rule and element: the value measured may move between laps. */
 // Each part escapes its own "|", so no route or selector can pass for another rule's key.
 const keyPart = (v) => String(v ?? "").replaceAll("\\", "\\\\").replaceAll("|", "\\|");
-export const layoutKey = (f) => `layout|${keyPart(f.route)}|${keyPart(f.rule)}|${keyPart(f.selector)}`;
+// An element as it stays from run to run: no generated id (a per-page counter such as brn-label-2) and no
+// place among its siblings, both of which renumber when a change adds an element before it; its own text says which
+// (so one element is one finding per language, each matched against the baseline's run in that language).
+const GENERATED_ID = /#[\w\\-]*?[-_:]\d+(?![\w\\-])/g;
+const stableSelector = (selector) => String(selector ?? "").replace(/:nth-of-type\(\d+\)/g, "").replace(GENERATED_ID, "");
+export const layoutKey = (f) => `layout|${keyPart(f.route)}|${keyPart(f.rule)}|${keyPart(stableSelector(f.selector))}|${keyPart(f.text)}`;
 
 /** What makes two findings the same one, across sources and laps. */
 export const findingKey = (f) => f.key ?? (f.kind === "layout" ? layoutKey(f) : `${f.kind}|${f.title}|${f.route ?? ""}`);

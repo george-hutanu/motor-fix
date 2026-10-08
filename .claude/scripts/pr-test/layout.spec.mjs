@@ -57,6 +57,11 @@ describe.skipIf(!browser)('layout checks in a browser', () => {
       expect(of(r, 'min-text').find((o) => o.selector === 'input#field14').expected).toBe('16px (field)');
     });
 
+    it('names an element by its classes and place, not by a generated id that renumbers', async () => {
+      const html = `<label id="brn-label-2" class="field-label" style="font-size:13px">Caută marca</label>`;
+      expect(selectors(await measure(null, { html }), 'min-text')).toEqual(['label.field-label']);
+    });
+
     it('holds a label and a definition term to 16 px on a phone', async () => {
       const html = `<dl><dt id="term" style="font-size:13px">Programare</dt><dd style="font-size:16px">Luni</dd></dl><label id="name" style="font-size:13px">Nume</label>`;
       expect(selectors(await measure(null, { html }), 'min-text')).toEqual(['dt#term', 'label#name']);
@@ -134,6 +139,12 @@ describe.skipIf(!browser)('layout checks in a browser', () => {
       expect(selectors(await measure(null, { html }), 'clipped')).toEqual(['p#short']);
     });
 
+    it('skips a header hidden for sight but read aloud (clip-path inset 50 %, a 1 px box)', async () => {
+      const html = `<div style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap">
+        <span id="hidden" style="display:inline-block;width:16px;height:40px;font-size:16px">Service column</span></div>`;
+      expect(of(await measure(null, { html }), 'clipped')).toEqual([]);
+    });
+
     it('passes a scroller, a label that fits and a short title', async () => {
       expect(of(await measure('clipped-pass', { at: 'small-phone' }), 'clipped')).toEqual([]);
     });
@@ -151,6 +162,15 @@ describe.skipIf(!browser)('layout checks in a browser', () => {
       expect(selectors(await measure(null, { html: over }), 'overlap')).toEqual(['a#credit × button#save']);
       const under = over.replace('z-index:2;', 'z-index:0;').replace('z-index:1;', 'z-index:5;');
       expect(of(await measure(null, { html: under }), 'overlap')).toEqual([]);
+    });
+
+    it('passes the buttons of a map drawn over its focusable canvas, and faults a focusable sheet painted over a button', async () => {
+      const map = `<div style="position:relative;width:300px;height:200px"><canvas id="canvas" tabindex="0" width="300" height="200" style="display:block"></canvas>
+        <div style="position:absolute;top:8px;right:8px"><button id="zoom" style="width:44px;height:44px">+</button></div></div>`;
+      expect(of(await measure(null, { html: map, at: 'desktop' }), 'overlap')).toEqual([]);
+      const sheet = `<button id="under" style="width:200px;height:48px">Save</button>
+        <div id="sheet" tabindex="0" style="position:absolute;top:0;left:0;width:300px;height:100px;z-index:5;background:#fff">Sheet</div>`;
+      expect(selectors(await measure(null, { html: sheet, at: 'desktop' }), 'overlap')).toEqual(['button#under × div#sheet']);
     });
 
     it('passes a button inside a link card and two buttons side by side', async () => {

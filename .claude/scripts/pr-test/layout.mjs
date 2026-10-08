@@ -43,9 +43,11 @@ export async function measureLayout({ phone, tapTargets, focus }) {
   const style = (el) => getComputedStyle(el);
 
   function selectorOf(el) {
+    // A generated id (brn-label-2, a per-page counter) renumbers from run to run: name the element without it.
+    const ownId = (e) => (e.id && !/[-_:]\d+$/.test(e.id) ? e.id : "");
     const part = (e) => {
       const tag = e.tagName.toLowerCase();
-      if (e.id) return `${tag}#${CSS.escape(e.id)}`;
+      if (ownId(e)) return `${tag}#${CSS.escape(e.id)}`;
       const cls = [...e.classList].slice(0, 2).map((c) => `.${CSS.escape(c)}`).join("");
       const same = e.parentElement ? [...e.parentElement.children].filter((c) => c.tagName === e.tagName) : [];
       return `${tag}${cls}${same.length > 1 ? `:nth-of-type(${same.indexOf(e) + 1})` : ""}`;
@@ -53,7 +55,7 @@ export async function measureLayout({ phone, tapTargets, focus }) {
     const parts = [];
     for (let e = el; e && e !== document.body && e !== document.documentElement && parts.length < 3; e = e.parentElement) {
       parts.unshift(part(e));
-      if (e.id) break;
+      if (ownId(e)) break;
     }
     return parts.join(" > ") || el.tagName.toLowerCase();
   }
@@ -74,6 +76,10 @@ export async function measureLayout({ phone, tapTargets, focus }) {
     for (let e = el; e; e = e.parentElement) {
       const s = style(e);
       if (s.clip !== "auto" && s.position === "absolute") return false;
+      // The same trick with clip-path, or a 1 px box that hides what overflows it.
+      if (/^inset\(50%/.test(s.clipPath)) return false;
+      const box = e.getBoundingClientRect();
+      if (e !== el && (box.width <= 1 || box.height <= 1) && [s.overflowX, s.overflowY].some((o) => o === "hidden" || o === "clip")) return false;
     }
     return true;
   }
@@ -203,7 +209,15 @@ export async function measureLayout({ phone, tapTargets, focus }) {
       if (a.contains(b) || b.contains(a)) continue;
       const w = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
       const h = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
-      if (w > HALF && h > HALF && (pa === pb || pageOnTop(pa ? b : a, w, h, ra, rb))) report("overlap", a, `${px(w)}×${px(h)} shared`, "no overlap", `${selectorOf(a)} × ${selectorOf(b)}`);
+      if (w <= HALF || h <= HALF) continue;
+      // A surface that only takes focus (a map's canvas, a scroll region) under a button drawn on it is an overlay by
+      // design: the button gets the tap. It is a fault only when the surface paints over the button.
+      const surfaceA = !a.matches(TAPPABLE);
+      if (surfaceA !== !b.matches(TAPPABLE)) {
+        if (pageOnTop(surfaceA ? a : b, w, h, ra, rb)) report("overlap", a, `${px(w)}×${px(h)} shared`, "no overlap", `${selectorOf(a)} × ${selectorOf(b)}`);
+        continue;
+      }
+      if (pa === pb || pageOnTop(pa ? b : a, w, h, ra, rb)) report("overlap", a, `${px(w)}×${px(h)} shared`, "no overlap", `${selectorOf(a)} × ${selectorOf(b)}`);
     }
 
   // Spacing on the 4 px grid: gaps and padding as computed.

@@ -225,9 +225,17 @@ describe('layout findings', () => {
   it('keys a layout finding by route, rule and element, not by the value measured', () => {
     const a = sweepFinding(layout('grid', { measured: 'gap 13px' }), { web: true });
     const b = sweepFinding(layout('grid', { measured: 'gap 14px', viewport: 'desktop' }), { web: true });
-    assert.equal(layoutKey(a), 'layout|/|grid|p#body13');
+    assert.equal(layoutKey(a), 'layout|/|grid|p#body13|Programează');
     assert.equal(findingKey(a), findingKey(b));
     assert.equal(mergeFindings([a, b]).length, 1);
+  });
+
+  it('keys a layout finding by element and text, not by a generated id or its place among siblings (FR-011)', () => {
+    const at = (selector, text) => layoutKey({ kind: 'layout', route: '/', rule: 'min-text', selector, text });
+    assert.equal(at('label#brn-label-2', 'Caută marca'), at('label#brn-label-7', 'Caută marca'));
+    assert.equal(at('ul > li:nth-of-type(2) > a', 'Acasă'), at('ul > li:nth-of-type(3) > a', 'Acasă'));
+    assert.notEqual(at('label#brn-label-2', 'Caută marca'), at('label#brn-label-2', 'Doar deschise acum'));
+    assert.notEqual(at('p#body13', ''), at('p#body', ''));
   });
 
   it('marks a layout finding the baseline run already had as pre-existing, capped at medium', () => {
