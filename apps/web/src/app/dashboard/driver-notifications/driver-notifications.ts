@@ -22,6 +22,7 @@ import { Live } from '../live';
 import { NewsConsent } from '../news-consent/news-consent';
 
 type Choices = Record<NotificationGroupKey, boolean>;
+type Flip = { enabled: boolean };
 
 // What a driver with nothing saved gets: every group but news.
 const DEFAULTS = Object.fromEntries(
@@ -44,6 +45,9 @@ export class DriverNotifications implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly choices = signal<Choices | undefined>(undefined);
+  // Flips shown but not yet settled (a save in flight or the consent step
+  // open): a re-read keeps them, so a switch never jumps under the driver.
+  private readonly unsettled = new Map<NotificationGroupKey, Flip>();
   private consentVersion = '';
   protected readonly failed = signal(false);
   protected readonly loaded = computed(() => this.choices() !== undefined);
@@ -78,6 +82,7 @@ export class DriverNotifications implements OnInit {
       const answer = await this.api.notificationPreferencesControllerRead();
       const choices = { ...DEFAULTS };
       for (const group of answer.groups) choices[group.key] = group.enabled;
+      for (const [key, flip] of this.unsettled) choices[key] = flip.enabled;
       this.consentVersion = answer.newsConsent.currentTextVersion;
       this.choices.set(choices);
     } catch {
@@ -88,15 +93,30 @@ export class DriverNotifications implements OnInit {
   // The switch shows the flip at once; a later state comes from the live
   // re-read, since a save's answer may predate a later flip.
   protected async toggle(key: NotificationGroupKey, enabled: boolean) {
-    this.set(key, enabled);
+    const flip = { enabled };
+    this.unsettled.set(key, flip);
+    this.set(key, flip, enabled);
+    try {
+      await this.save(key, flip);
+    } finally {
+      if (this.unsettled.get(key) === flip) this.unsettled.delete(key);
+    }
+  }
+
+  private async save(key: NotificationGroupKey, flip: Flip) {
+    const { enabled } = flip;
     const askConsent = key === 'news' && enabled;
+    // The version of the text the driver is shown, whatever a re-read brings.
+    const version = this.consentVersion;
     if (askConsent) {
-      const answer = await this.overlays.open<boolean>(NewsConsent, {
-        shape: 'dialog',
-        title: 'driver.notifications.consent.title',
-      });
+      const answer = await this.overlays
+        .open<boolean>(NewsConsent, {
+          shape: 'dialog',
+          title: 'driver.notifications.consent.title',
+        })
+        .catch(() => false);
       if (answer !== true) {
-        this.set(key, false);
+        this.set(key, flip, false);
         return;
       }
     }
@@ -104,11 +124,11 @@ export class DriverNotifications implements OnInit {
       await this.api.notificationPreferencesControllerSave({
         body: {
           groups: [{ enabled, key }],
-          ...(askConsent && { newsConsentTextVersion: this.consentVersion }),
+          ...(askConsent && { newsConsentTextVersion: version }),
         },
       });
     } catch {
-      this.set(key, !enabled);
+      this.set(key, flip, !enabled);
       toast(this.i18n.t('shell.notifications.saveFailed'));
       // The consent text may have moved on: the next try needs its version.
       if (askConsent) void this.load();
@@ -123,7 +143,8 @@ export class DriverNotifications implements OnInit {
     return `driver.notifications.group.${key}.hint`;
   }
 
-  private set(key: NotificationGroupKey, enabled: boolean) {
+  private set(key: NotificationGroupKey, flip: Flip, enabled: boolean) {
+    flip.enabled = enabled;
     this.choices.update((choices) =>
       choices ? { ...choices, [key]: enabled } : choices,
     );

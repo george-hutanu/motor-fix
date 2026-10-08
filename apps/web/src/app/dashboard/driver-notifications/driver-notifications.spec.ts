@@ -158,14 +158,14 @@ describe('the driver notification switches', () => {
     expect(isOn(named(element, 'Scadențe'))).toBe(false);
   });
 
-  it('keeps the flip shown when the save answers with older choices', async () => {
+  it('does not apply the choices the save answers with', async () => {
     const { element, settle } = await render();
-    save.mockResolvedValueOnce(answer());
+    save.mockResolvedValueOnce(answer({ offers: false }));
 
     named(element, 'Scadențe').click();
     await settle();
 
-    expect(isOn(named(element, 'Scadențe'))).toBe(false);
+    expect(states(element)).toEqual([true, true, false, false, true]);
   });
 
   it('puts the switch back and says so when the save fails', async () => {
