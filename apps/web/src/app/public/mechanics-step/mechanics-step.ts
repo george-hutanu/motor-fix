@@ -12,7 +12,7 @@ import {
   type MechanicCard,
   type MechanicsSection,
   SPECIALITY_MAX,
-} from '@motor-fix/contracts';
+} from '@motor-fix/contracts/listing-sections';
 import { TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton, HlmInput, HlmSwitch } from '@motor-fix/ui-cockpit';
 

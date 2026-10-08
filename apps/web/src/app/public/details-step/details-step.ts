@@ -13,9 +13,9 @@ import {
   type MobileLegalForm,
   NAME_MAX,
   NAME_MIN,
-  normalisePhone,
   PHONE_MAX,
-} from '@motor-fix/contracts';
+} from '@motor-fix/contracts/listing-sections';
+import { normalisePhone } from '@motor-fix/contracts/phone';
 import { TranslatePipe } from '@motor-fix/i18n';
 import { HlmInput, HlmLabel } from '@motor-fix/ui-cockpit';
 

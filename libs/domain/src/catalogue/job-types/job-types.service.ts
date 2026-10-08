@@ -1,9 +1,12 @@
-import type { JobTypeListDto, JobTypesQueryDto } from '@motor-fix/contracts';
+import {
+  fold,
+  type JobTypeListDto,
+  type JobTypesQueryDto,
+} from '@motor-fix/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 
 import { PRISMA } from '../../auth/prisma';
 import type { PrismaClient } from '../../generated/prisma/client';
-import { fold } from '../brands';
 
 const PAGE = 20;
 const byRomanianName = new Intl.Collator('ro');

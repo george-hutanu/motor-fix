@@ -433,4 +433,21 @@ describe('GaragePricesService.saveStarting caps and shapes', () => {
 
     expect(result).toBe('http 422');
   });
+
+  it.each([
+    ['an entry that is null', () => null],
+    ['an entry that is a string', () => 'oil'],
+    [
+      'a brand id that is a number',
+      (oil: string) => ({ brandId: 5, fromBani: lei(100), jobTypeId: oil }),
+    ],
+    ['a job id that is a number', () => ({ fromBani: lei(100), jobTypeId: 7 })],
+  ])('refuses %s as an invalid job list, writing nothing', async (_, entry) => {
+    const w = await world();
+
+    expect(
+      await refused(save(w, { jobs: [entry(w.oil)] as never, labour })),
+    ).toEqual([{ code: 'invalid', field: 'jobs' }]);
+    await nothingStored(w);
+  });
 });

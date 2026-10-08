@@ -27,8 +27,6 @@ export const BRANDS: readonly BrandRecord[] = [
 
 export class BrandFileError extends Error {}
 
-export { fold };
-
 export const slugOf = (name: string) =>
   fold(name)
     .replace(/[^a-z0-9]+/g, '-')

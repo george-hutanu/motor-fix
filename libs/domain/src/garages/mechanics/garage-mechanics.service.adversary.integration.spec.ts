@@ -118,6 +118,18 @@ describe('GarageMechanicsService.saveCards under hostile input', () => {
     expect(errors.map((e) => e.field)).toEqual(['mechanics[0].name']);
   });
 
+  it.each([
+    ['a card list that is an object', {}],
+    ['a card list that is a string', 'Ion'],
+    ['a card that is null', [null]],
+    ['a card that is a string', ['Ion']],
+  ])('refuses %s as an invalid card list', async (_, list) => {
+    expect(await refused(save({ mechanics: list as never }))).toEqual([
+      { code: 'invalid', field: 'mechanics' },
+    ]);
+    expect(await prisma.mechanic.count()).toBe(0);
+  });
+
   it('keeps two mechanics of one name as two cards', async () => {
     await save({ mechanics: [{ name: 'Ion Marin' }, { name: 'Ion Marin' }] });
 
@@ -173,7 +185,7 @@ describe('GarageMechanicsService.saveCards under hostile input', () => {
     const missing = randomUUID();
     await expect(
       save({ mechanics: [{ name: 'Ion' }] }, missing),
-    ).rejects.toBeDefined();
+    ).rejects.toMatchObject({ code: 'P2003' });
 
     expect(await prisma.mechanic.count()).toBe(0);
     expect(

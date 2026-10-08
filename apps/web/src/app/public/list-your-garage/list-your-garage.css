@@ -90,10 +90,6 @@ section > .note {
     bottom: calc(59px + max(14px, var(--mf-safe-bottom)));
   }
 }
-.actions button,
-.ended button {
-  min-height: var(--mf-tap);
-}
 .ended {
   display: grid;
   gap: var(--mf-space-3);
@@ -190,4 +186,8 @@ ol li {
   nav.open ol {
     display: block;
   }
+}
+.actions button,
+.ended button {
+  min-height: var(--mf-tap);
 }

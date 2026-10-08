@@ -2,6 +2,7 @@ import {
   checkPriceRange,
   ENTRIES_MAX,
   type FieldProblem,
+  fold,
   JOB_NAME_MAX,
   JOB_NAME_MIN,
   JOBS_MAX,
@@ -12,11 +13,10 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { refusal, taken } from '../../auth/sign-up.service';
-import { fold } from '../../catalogue/brands';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import type { Prisma } from '../../generated/prisma/client';
 import { uniqueSlug } from '../garage-slug';
-import { plainText } from '../plain-text';
+import { isRecord, plainText } from '../plain-text';
 
 type Job = StartingPricesInput['jobs'][number];
 
@@ -51,6 +51,18 @@ const refuse = (errors: FieldProblem[]) =>
     'validation_failed',
     'The prices cannot be saved',
     errors,
+  );
+
+const idOrNone = (value: unknown) =>
+  value === undefined || value === null || typeof value === 'string';
+
+// A list of objects whose ids, when given, are strings: what the checks below
+// can read without failing.
+const wellShaped = (jobs: unknown) =>
+  Array.isArray(jobs) &&
+  jobs.every(
+    (job) =>
+      isRecord(job) && idOrNone(job['brandId']) && idOrNone(job['jobTypeId']),
   );
 
 // PostgreSQL reads a uuid in either case; lower case lets the payload's own
@@ -145,7 +157,7 @@ export class GaragePricesService {
     actorId: string,
     given: StartingPricesInput,
   ): Promise<StartingPricesResult> {
-    if (!Array.isArray(given.jobs)) {
+    if (!wellShaped(given.jobs)) {
       throw refuse([{ code: 'invalid', field: 'jobs' }]);
     }
     const input = sameCase(given);

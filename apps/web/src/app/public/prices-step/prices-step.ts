@@ -14,15 +14,15 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { fold } from '@motor-fix/contracts/fold';
 import {
-  checkPriceRange,
-  fold,
   JOB_NAME_MAX,
   JOB_NAME_MIN,
   type PriceEnds,
   type PriceEntry,
   type PricesSection,
-} from '@motor-fix/contracts';
+} from '@motor-fix/contracts/listing-sections';
+import { checkPriceRange } from '@motor-fix/contracts/price-range';
 import { CatalogueService, type JobTypeDto } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton, HlmInput, HlmLabel } from '@motor-fix/ui-cockpit';
@@ -204,11 +204,21 @@ export class PricesStep {
           this.remember(items);
           if (keys) this.listed.set(items);
           this.notice.set(null);
+          return true;
         },
-        () => this.notice.set(`${KEY}.searchDown`),
+        () => {
+          this.notice.set(`${KEY}.searchDown`);
+          return false;
+        },
       )
-      .finally(() => {
+      .then((answered) => {
         this.asking = false;
+        // What came to be wanted while this one was out; an id the
+        // catalogue does not hold is not asked for twice, and a failure
+        // waits for the step to become current again.
+        const wantsKeys = this.wantsListed() && !keys;
+        const wantsIds = this.unnamed() !== ids ? this.unnamed() : '';
+        if (answered) this.lookup(wantsKeys, wantsIds);
       });
   }
 

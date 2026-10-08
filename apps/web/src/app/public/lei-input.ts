@@ -1,5 +1,5 @@
 import { Directive, ElementRef, effect, inject, model } from '@angular/core';
-import { baniToLei, leiToBani } from '@motor-fix/contracts';
+import { baniToLei, leiToBani } from '@motor-fix/contracts/price-range';
 
 // Nine digits pass every price, so the range check names a too-high one,
 // and keep the bani a safe integer.

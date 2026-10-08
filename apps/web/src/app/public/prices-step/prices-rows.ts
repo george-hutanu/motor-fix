@@ -1,10 +1,10 @@
+import { fold } from '@motor-fix/contracts/fold';
 import {
-  fold,
   JOBS_MAX,
   type PriceEnds,
   type PriceEntry,
   type PricesSection,
-} from '@motor-fix/contracts';
+} from '@motor-fix/contracts/listing-sections';
 
 import type { MarkedBrand } from '../brands-section';
 

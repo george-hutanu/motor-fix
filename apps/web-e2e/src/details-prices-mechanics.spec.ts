@@ -84,7 +84,9 @@ test.describe('steps 1, 3 and 4 of list your garage', () => {
       .click();
     await mechanics(page).locator('input[name="name"]').fill('Ion Marin');
     await mechanics(page).locator('input[name="speciality"]').fill('Diagnoză');
+    await mechanics(page).getByRole('switch').click();
     await kept(page, 'Ion Marin');
+    await kept(page, '"onProfile":true');
     expect(await ticked(page)).toEqual([1, 3, 4]);
 
     await page.reload();
@@ -108,6 +110,13 @@ test.describe('steps 1, 3 and 4 of list your garage', () => {
     await expect(ends(prices(page), 'Reglaj faruri')[0]).toHaveValue('80');
     await expect(mechanics(page).locator('input[name="name"]')).toHaveValue(
       'Ion Marin',
+    );
+    await expect(
+      mechanics(page).locator('input[name="speciality"]'),
+    ).toHaveValue('Diagnoză');
+    await expect(mechanics(page).getByRole('switch')).toHaveAttribute(
+      'aria-checked',
+      'true',
     );
     await expect.poll(() => ticked(page)).toEqual([1, 3, 4]);
   });

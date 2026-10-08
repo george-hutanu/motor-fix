@@ -12,16 +12,16 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import type { ListingDraftData } from '@motor-fix/contracts';
+import type { HoursSection } from '@motor-fix/contracts/garage-hours';
 import {
   detailsComplete,
   isDetailsSection,
   isMechanicsSection,
   isPricesSection,
-  type ListingDraftData,
   mechanicsComplete,
   pricesComplete,
-} from '@motor-fix/contracts';
-import type { HoursSection } from '@motor-fix/contracts/garage-hours';
+} from '@motor-fix/contracts/listing-sections';
 import {
   isValidCui,
   normaliseRarNumber,

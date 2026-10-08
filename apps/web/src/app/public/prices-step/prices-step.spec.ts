@@ -168,6 +168,24 @@ describe('step 3, the prices', () => {
     expect(names(step)).toEqual(['Ambreiaj', 'Reglaj faruri']);
   });
 
+  it('names jobs kept while the listed jobs are still being asked for', async () => {
+    let answer: (value: { items: unknown[] }) => void = () => undefined;
+    search.mockImplementationOnce(
+      () => new Promise((resolve) => (answer = resolve)),
+    );
+    const { fixture, step } = await open();
+
+    fixture.componentRef.setInput('value', {
+      jobs: [{ jobTypeId: id(4) }],
+    });
+    await settle(fixture);
+    answer({ items: [DIAGNOSIS, OIL, BRAKES] });
+    await settle(fixture);
+
+    expect(search).toHaveBeenCalledWith({ ids: id(4) });
+    expect(names(step)).toEqual(['Ambreiaj']);
+  });
+
   it('asks again when the step becomes current after the catalogue failed', async () => {
     search.mockRejectedValueOnce(new Error('down'));
     const { fixture, step } = await open();
