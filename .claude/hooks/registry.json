@@ -107,7 +107,7 @@
       ],
       "description": "Protect the ratchets: the mutation floor, the traceability baseline, the structure baseline, the NNN-FR- tokens in tests, and (under strict) the harness itself",
       "fail_closed": true,
-      "fingerprint": "5b5c85533ec6"
+      "fingerprint": "cad085812a2c"
     },
     {
       "id": "pre:edit:red-first",
@@ -118,9 +118,9 @@
         "standard",
         "strict"
       ],
-      "description": "Block src/ and bin/ edits on a feature branch until tests/ carry that feature's NNN-FR- tokens",
+      "description": "Block src/ edits on a feature branch with FRs and open tasks until the branch adds or modifies a *.spec.* / *.test.* file",
       "fail_closed": true,
-      "fingerprint": "0af4738b72a6"
+      "fingerprint": "0e73553405a6"
     },
     {
       "id": "post:edit:affected-tests",

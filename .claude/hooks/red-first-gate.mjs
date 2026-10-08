@@ -22,7 +22,8 @@
 // It used to require a `// @traces NNN-FR-XXX` token in every file. It asks
 // only for test work now: a whole-line `// @traces` comment in a test file is
 // the one id form Principle II allows, and trace-matrix.mjs reads it on
-// demand. A per-file "sibling spec must exist" rule was rejected in turn because entry points and barrel files (apps/server/src/main.ts,
+// demand. A per-file "sibling spec must exist" rule was rejected in turn
+// because entry points and barrel files (apps/server/src/main.ts,
 // libs/contracts/src/index.ts) legitimately have none.
 import { readFileSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";

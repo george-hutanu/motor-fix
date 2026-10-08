@@ -52,8 +52,9 @@ describe('the one requirement id allowed in source', () => {
   it('lands as a minor amendment no older than 1.11.0, pinned the same in the workflow notes', () => {
     const [major, minor] = version.split('.').map(Number);
     assert.ok(major > 1 || minor >= 11, version);
-    assert.match(constitution, /Sync Impact Report \(v1\.11\.0\)/);
-    assert.match(constitution, /Previous report \(v1\.10\.0\)/);
+    const reports = constitution.slice(0, constitution.indexOf('-->'));
+    assert.match(reports, new RegExp(`^Sync Impact Report \\(v${version.replaceAll('.', '\\.')}\\)`, 'm'));
+    assert.match(reports, /^Previous report \(v1\.10\.0\)/m);
     assert.match(read('CLAUDE.local.md'), new RegExp(`Constitution v${version.replaceAll('.', '\\.')} `));
   });
 

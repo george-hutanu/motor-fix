@@ -75,8 +75,6 @@ export function baselineSize(text, keys = ["grandfathered", "artifact_legacy"]) 
   }
 }
 
-export const frTokens = traceTokens;
-
 /** A colocated test file, wherever it sits: `foo.spec.ts`, `page.test.tsx`, an e2e spec. */
 export const isTestFile = (rel) => /\.(spec|test)\.[cm]?[jt]sx?$/.test(rel);
 
@@ -127,9 +125,9 @@ export function verdict({ rel, current, next, profile, allowHookEdit, contextBas
   // Tests are colocated across apps/, libs/ and e2e/ rather than gathered in
   // one tests/ directory, so the test file is recognised by its name.
   if (isTestFile(rel) && current !== null) {
-    const lost = [...frTokens(current)].filter((t) => !frTokens(next).has(t));
+    const lost = [...traceTokens(current)].filter((t) => !traceTokens(next).has(t));
     if (lost.length)
-      return `this removes requirement token${lost.length > 1 ? "s" : ""} ${lost.join(", ")} from ${rel}. The traceability gate reads those tokens — deleting one silences the gate for that requirement. Keep the token on whichever test still covers it.`;
+      return `this removes requirement token${lost.length > 1 ? "s" : ""} ${lost.join(", ")} from ${rel}. trace-matrix.mjs reads those // @traces lines — deleting one drops the requirement from the matrix. Keep the id on a // @traces line above whichever test still covers it.`;
   }
 
   const harness = rel.startsWith(".claude/hooks/") || rel === ".claude/settings.json";

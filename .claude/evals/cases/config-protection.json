@@ -112,7 +112,7 @@
     },
     "expect": {
       "exit": 2,
-      "stderr": "traceability gate"
+      "stderr": "trace-matrix.mjs reads those"
     },
     "fixture": {
       "commits": [
