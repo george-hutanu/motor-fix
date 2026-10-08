@@ -3,10 +3,10 @@ import {
   type Browser,
   expect,
   type Page,
-  test,
 } from '@playwright/test';
 
 import { ACCOUNTS, PASSWORD, ready, signIn } from './accounts.js';
+import { test } from './fixtures.js';
 
 const MAINTENANCE = 'Mod mentenanță';
 

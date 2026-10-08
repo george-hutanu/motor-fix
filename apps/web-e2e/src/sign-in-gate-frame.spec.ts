@@ -1,4 +1,6 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+
+import { test } from './fixtures.js';
 
 // ST-536 FR-001: behind the gate dialog a failed renewal opened, the frame
 // keeps the account it showed; closing the dialog lets it go, and a sign-in

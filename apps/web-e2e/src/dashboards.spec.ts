@@ -1,5 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
 
+import { test } from './fixtures.js';
 import { signInAs } from './sign-in.js';
 
 for (const [role, landing] of [

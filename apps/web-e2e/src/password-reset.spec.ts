@@ -1,7 +1,8 @@
 import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import { ready, signIn } from './accounts.js';
+import { test } from './fixtures.js';
 
 // Fake passwords for an account these tests create; never real ones.
 const OLD = 'parola-veche-de-test';

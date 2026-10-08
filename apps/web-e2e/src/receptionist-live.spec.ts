@@ -1,6 +1,7 @@
-import { type APIRequestContext, expect, test } from '@playwright/test';
+import { type APIRequestContext, expect } from '@playwright/test';
 
 import { ACCOUNTS, PASSWORD } from './accounts.js';
+import { test } from './fixtures.js';
 
 async function accessToken(request: APIRequestContext, email: string) {
   const res = await request.post('/api/v1/auth/sign-in', {

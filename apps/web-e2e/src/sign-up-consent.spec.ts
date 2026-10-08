@@ -1,6 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import { ready } from './accounts.js';
+import { test } from './fixtures.js';
 
 const fresh = () =>
   `acord-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;

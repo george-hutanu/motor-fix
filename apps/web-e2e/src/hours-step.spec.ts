@@ -1,6 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import { ready } from './accounts.js';
+import { test } from './fixtures.js';
 
 const step = (page: Page) => page.locator('mf-hours-step');
 const select = (page: Page, name: string) =>

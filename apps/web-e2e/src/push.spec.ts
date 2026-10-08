@@ -1,5 +1,6 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
+import { test } from './fixtures.js';
 import { signInAs } from './sign-in.js';
 
 const noSideScroll = (page: Page) =>

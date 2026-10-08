@@ -1,11 +1,7 @@
-import {
-  type APIRequestContext,
-  expect,
-  type Page,
-  test,
-} from '@playwright/test';
+import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, PASSWORD, ready, signIn } from './accounts.js';
+import { test } from './fixtures.js';
 import { signInAs } from './sign-in.js';
 
 async function accessToken(request: APIRequestContext, email: string) {
