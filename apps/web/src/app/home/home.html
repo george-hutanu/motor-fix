@@ -6,11 +6,12 @@
     <p>{{ 'public.home.hero.paragraph' | t: { brand: brand.name } }}</p>
   </section>
   <mf-brand-picker
-    [brands]="tiles()"
+    [brands]="shown()"
     [selected]="brand.slug"
     (select)="choose($event)"
     (touched)="touched.set(true)"
   />
+  <mf-brand-search (reached)="touched.set(true)" (chosen)="pick($event)" />
   <a
     class="spartan-button spartan-button-variant-default search"
     [routerLink]="['/', i18n.language(), 'garages']"
