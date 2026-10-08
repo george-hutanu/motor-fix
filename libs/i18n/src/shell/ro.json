@@ -59,6 +59,7 @@
     "sending": "Se trimite…"
   },
   "frame": {
+    "addCar": "Adaugă o mașină",
     "admin": {
       "label": "ADMINISTRATOR",
       "none": "niciun service nu așteaptă verificarea",

@@ -1,0 +1,58 @@
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  type OnInit,
+  signal,
+} from '@angular/core';
+import { groupPlate } from '@motor-fix/contracts/plate';
+import { type CarDto, CarsService } from '@motor-fix/data-access';
+import { DayPipe, I18n, KmPipe, TranslatePipe } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
+import { HlmButton } from '@motor-fix/ui-cockpit';
+
+import { AddCar } from '../add-car/add-car';
+
+// "Mașinile mele": a card per car, newest first, and the button that adds one.
+@Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [DayPipe, HlmButton, KmPipe, TranslatePipe],
+  selector: 'mf-cars-view',
+  styleUrl: './cars-view.css',
+  templateUrl: './cars-view.html',
+})
+export class CarsView implements OnInit {
+  private readonly api = inject(CarsService);
+  private readonly overlays = inject(Overlays);
+  protected readonly cars = signal<CarDto[] | undefined>(undefined);
+  protected readonly failed = signal(false);
+  protected readonly grouped = groupPlate;
+
+  constructor() {
+    void inject(I18n).enter('driver');
+  }
+
+  ngOnInit() {
+    void this.load();
+  }
+
+  protected async load() {
+    this.failed.set(false);
+    try {
+      this.cars.set((await this.api.carsControllerList()).items);
+    } catch {
+      this.failed.set(true);
+    }
+  }
+
+  // The saved car goes first without reading the list again.
+  protected async add() {
+    const plates = (this.cars() ?? []).flatMap((c) => c.plate ?? []);
+    const car = await this.overlays.open<CarDto, { plates: string[] }>(AddCar, {
+      data: { plates },
+      shape: 'dialog',
+      title: 'driver.cars.add.title',
+    });
+    if (car !== 'cancelled') this.cars.update((list) => [car, ...(list ?? [])]);
+  }
+}

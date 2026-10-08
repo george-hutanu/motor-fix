@@ -105,6 +105,13 @@ const PEOPLE: Person[] = [
     name: 'Mihai Ionescu',
     roles: ['driver', 'garage'],
   },
+  // Garage only, with no garage: its first car makes it a driver.
+  {
+    email: 'masina-noua@example.test',
+    lastRole: 'garage',
+    name: 'Radu Pavel',
+    roles: ['garage'],
+  },
   {
     email: 'suspendat@example.test',
     lastRole: 'driver',

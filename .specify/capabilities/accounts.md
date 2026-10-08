@@ -19,6 +19,7 @@ features:
   - 160-admin-dashboard-menu
   - 765-reload-after-failed-switch
   - 028-driver-dashboard-views
+  - 089-add-a-car
 ---
 
 # Capability: Accounts
@@ -558,6 +559,14 @@ _From 765-reload-after-failed-switch._
 ### 765-FR-002 — A reload sent before a switch put its token in MUST still land when the switch fails.
 
 _From 765-reload-after-failed-switch._
+
+### 089-FR-006 — When the saving account does not hold the role `driver`, the same transaction MUST grant it through the existing grant use case (079-FR-007), whose audit entry records the role; an account that holds it gets nothing added, so a second car never adds the role again. The 201 carries no role flag: after a save from the garage-side entry the web app re-reads "who am I", which shows the new role chip.
+
+_From 089-add-a-car._
+
+### 089-FR-010 — The garage-side dashboard's account block MUST show "Adaugă o mașină" / "Add a car" for an account that does not hold the `driver` role, opening the same dialog; after a save that added the role, the app MUST re-read "who am I" so the "Șofer" / "Driver" chip appears and the switch opens `/app/driver`. An account that already holds `driver` sees no entry there (it adds cars on its driver dashboard).
+
+_From 089-add-a-car._
 
 ## Retired
 

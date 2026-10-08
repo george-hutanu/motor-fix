@@ -9,6 +9,7 @@ export { oauthSettings } from './auth/oauth/providers';
 export { PasswordResetModule } from './auth/password-reset.module';
 export { PhoneSignInModule } from './auth/phone-sign-in.module';
 export { type Actor, assertGarage, assertOwner } from './auth/policy';
+export { CarsModule } from './cars/my-cars/cars.module';
 export { RemindersModule } from './cars/reminders.module';
 export { reminderDayMs } from './cars/reminders-config';
 export { BrandLoader } from './catalogue/brand-loader';
