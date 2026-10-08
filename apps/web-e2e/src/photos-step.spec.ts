@@ -52,14 +52,21 @@ async function draftLink(page: Page, email: string): Promise<string> {
   return url.pathname + url.search;
 }
 
+// On a phone the steps sit behind the bar; open it first.
+async function toStep5(page: Page, nav: 'Pași' | 'Steps') {
+  const bar = page.locator('nav > button[aria-expanded]');
+  if (await bar.isVisible()) await bar.click();
+  await page
+    .getByRole('navigation', { name: nav })
+    .getByRole('button', { name: /^5 / })
+    .click();
+}
+
 async function toPhotos(page: Page, email: string) {
   await ready(page, '/ro/list-your-garage');
   await page.getByLabel('E‑mail').fill(email);
   await page.getByLabel('E‑mail').blur();
-  await page
-    .getByRole('navigation', { name: 'Pași' })
-    .getByRole('button', { name: /^5 / })
-    .click();
+  await toStep5(page, 'Pași');
   await expect(step(page).getByText('Alege fotografii')).toBeVisible();
 }
 
@@ -97,15 +104,19 @@ test.describe('step 5 of list your garage, the photos @mailbox', () => {
       await confirmedCount(page, 3);
       expect(await names(page)).toEqual(['unu.jpg', 'doi.jpg', 'trei.jpg']);
 
-      const last = tiles(page).nth(2);
-      await last.getByRole('button', { name: /Mută înainte/ }).click();
-      await tiles(page)
-        .nth(1)
-        .getByRole('button', { name: /Mută înainte/ })
+      await step(page)
+        .getByRole('button', { name: 'Mută înainte fotografia 3' })
         .click();
+      await expect
+        .poll(() => names(page))
+        .toEqual(['unu.jpg', 'trei.jpg', 'doi.jpg']);
+      await step(page)
+        .getByRole('button', { name: 'Mută înainte fotografia 2' })
+        .click();
+      await expect
+        .poll(() => names(page))
+        .toEqual(['trei.jpg', 'unu.jpg', 'doi.jpg']);
       await expect(tiles(page).first()).toContainText('Copertă');
-      const order = await names(page);
-      expect(order).toEqual(['trei.jpg', 'unu.jpg', 'doi.jpg']);
       await page.getByRole('button', { name: 'Salvează ciorna' }).click();
 
       await page.reload();
@@ -119,10 +130,7 @@ test.describe('step 5 of list your garage, the photos @mailbox', () => {
       try {
         const phone = await other.newPage();
         await ready(phone, await draftLink(page, email));
-        await phone
-          .getByRole('navigation', { name: 'Pași' })
-          .getByRole('button', { name: /^5 / })
-          .click();
+        await toStep5(phone, 'Pași');
         await expect(tiles(phone)).toHaveCount(3);
         expect(
           await tiles(phone).evaluateAll((items) =>
@@ -156,10 +164,7 @@ test.describe('step 5 of list your garage, the photos @mailbox', () => {
       await page.setViewportSize({ height: 640, width: 320 });
       await page.emulateMedia({ colorScheme: scheme });
       await ready(page, '/en/list-your-garage');
-      await page
-        .getByRole('navigation', { name: 'Steps' })
-        .getByRole('button', { name: /^5 / })
-        .click();
+      await toStep5(page, 'Steps');
 
       await expect(step(page)).toContainText(
         'Add an e-mail at step 1 to upload photos',
