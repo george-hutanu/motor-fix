@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
@@ -100,5 +103,14 @@ describe('RatingDial', () => {
     ).toBe('rotate(-120 34 34)');
     expect(small.getAttribute('data-size')).toBe('small');
     expect(small.querySelector('.mf-dial-needle')).toBeNull();
+  });
+});
+
+describe('the large dial figure', () => {
+  it('is set with the display token, on the type scale', () => {
+    const source = readFileSync(join(__dirname, 'rating-dial.ts'), 'utf8');
+    expect(source).toMatch(
+      /\[data-size='large'\]\) \.mf-dial-value \{[^}]*font-size: var\(--mf-size-display\)/,
+    );
   });
 });
