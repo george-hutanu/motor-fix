@@ -217,6 +217,35 @@ describe('PlatformStatus', () => {
     expect(publicLive.register).toHaveBeenCalledTimes(2);
   });
 
+  it('waits for the network to go quiet before holding the public stream', async () => {
+    jest.useFakeTimers();
+    const seen: (() => void)[] = [];
+    const real = globalThis.PerformanceObserver;
+    globalThis.PerformanceObserver = class {
+      constructor(callback: () => void) {
+        seen.push(callback);
+      }
+      disconnect() {}
+      observe() {}
+    } as unknown as typeof PerformanceObserver;
+    try {
+      const { publicLive } = setUp();
+      await TestBed.inject(ApplicationRef).whenStable();
+      await jest.advanceTimersByTimeAsync(1_500);
+      // A map still fetching its tiles: a download ends.
+      for (const ended of seen) ended();
+      await jest.advanceTimersByTimeAsync(1_500);
+      TestBed.tick();
+      expect(publicLive.register).not.toHaveBeenCalled();
+
+      await jest.advanceTimersByTimeAsync(500);
+      TestBed.tick();
+      expect(publicLive.register).toHaveBeenCalledTimes(1);
+    } finally {
+      globalThis.PerformanceObserver = real;
+    }
+  });
+
   it('keeps a call refused for maintenance over an older read that answers later', async () => {
     const { pending, live, platformStatus } = setUp();
     live.events.next(changed('maintenance_mode'));

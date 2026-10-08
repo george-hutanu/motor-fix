@@ -19,10 +19,29 @@ import { PublicLive } from '../public/live';
 const RULE = 'maintenance_mode';
 const CHANGED = ['platform_rule.changed'] as const;
 
-// Waited after the page settles before a tab with no signed-in stream opens
-// the public one: a page that never goes quiet on the network would otherwise
-// never count as loaded. The re-read on opening catches what was missed.
+// Waited after the page settles, and after the last download ended, before a
+// tab with no signed-in stream opens the public one: a stream that never ends,
+// opened while a map still fetches its tiles, keeps the page from ever counting
+// as loaded. The re-read on opening catches what was missed.
 const QUIET_FOR = 2_000;
+
+// Calls done once no download has ended for QUIET_FOR.
+function whenQuiet(done: () => void): void {
+  let timer: ReturnType<typeof setTimeout>;
+  let observer: PerformanceObserver | null = null;
+  const wait = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      observer?.disconnect();
+      done();
+    }, QUIET_FOR);
+  };
+  if (typeof PerformanceObserver !== 'undefined') {
+    observer = new PerformanceObserver(wait);
+    observer.observe({ type: 'resource' });
+  }
+  wait();
+}
 
 // Whether the site is in maintenance, read at boot, on every change of the
 // rule heard on either live stream and whenever a stream opens again, and set
@@ -52,7 +71,7 @@ export class PlatformStatus {
     const settled = signal(false);
     void inject(ApplicationRef)
       .whenStable()
-      .then(() => setTimeout(() => settled.set(true), QUIET_FOR));
+      .then(() => whenQuiet(() => settled.set(true)));
     let leave: (() => void) | null = null;
     effect(() => {
       const hold = settled() && live.state() === 'closed';
