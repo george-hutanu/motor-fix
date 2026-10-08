@@ -86,6 +86,11 @@ describe('ci workflow', () => {
     ['checks', 'Typecheck', 'npx nx $NX_SCOPE -t typecheck'],
     ['checks', 'Build', 'npx nx $NX_SCOPE -t build'],
     ['checks', 'Contract check', 'sh scripts/contract-check.sh'],
+    [
+      'checks',
+      'Observability inventory',
+      'node scripts/observability-inventory.ts',
+    ],
     ['checks', 'Harness', 'npm run test:harness'],
     ['checks', 'Dependency audit', 'npm audit --omit=dev --audit-level=high'],
     [

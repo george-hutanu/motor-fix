@@ -1,9 +1,10 @@
 ---
 capability: observability
-updated: 2026-10-07
+updated: 2026-10-08
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
+  - 881-observability-current
 ---
 
 # Capability: Observability
@@ -103,3 +104,55 @@ _From 876-otel-instrumentation._
 ### 876-FR-015 — The PR body's Notes MUST list the observability reports the signals make possible (per-route latency and error dashboards, queue health, job outcomes, runtime saturation, trace search by request or job id), for ST-879 and ST-880 to build on.
 
 _From 876-otel-instrumentation._
+
+### 881-FR-001 — The repository MUST hold one observability inventory file, `infra/observability/inventory.json`, listing every app under `apps/`, every Railway service named in `scripts/railway-deploy.ts`, every queue the code opens, every outside service the code calls and every product counter the code reports, each with: `kind`, `name`, `source` (the file or declaration it was discovered from), `dashboard` (a dashboard uid or `"none"`), `alerts` (one or more alert rule uids or `"none"`), `reason` (required whenever `dashboard` or `alerts` is `"none"`) and `story` (the `ST-n` that owns the entry); plus the API endpoint count and its source (`apps/api/openapi.json`).
+
+_From 881-observability-current._
+
+### 881-FR-002 — The inventory committed by this feature MUST list what the code holds today: apps `api`, `mcp`, `web`, `web-e2e`, `worker`; Railway services `api`, `worker`, `web`; queues `insights`, `reminders`, `notifications`, `news`; outside services Brevo (e-mail, `api.brevo.com`), the S3 object store, the Web Push service, Google sign-in (`accounts.google.com`), Apple sign-in (`appleid.apple.com`), PostgreSQL and Redis; product counters: none yet (the worker's job and queue metrics and the runtime metrics from 876-FR-009/010 are listed under their apps, not as product counters); endpoint count equal to the operation count of `apps/api/openapi.json` at merge (63 at specification time). Every entry says `"none"` for dashboard and alerts with the reason that ST-879 (dashboards) and ST-880 (alerts) add them.
+
+_From 881-observability-current._
+
+### 881-FR-003 — One check script, `scripts/observability-inventory.ts`, MUST discover from the code, without reading any environment variable: every directory under `apps/`; every service name in `scripts/railway-deploy.ts`; every queue name from `new Queue(…)`, `registerQueue(…)` and an outbox consumer's `queue:` in non-test, non-generated source under `libs/` and `apps/`, resolving a name given as an exported constant; every outside host literal (`https://<host>`, except hosts under the reserved TLDs `.example`, `.test`, `.invalid`, `.localhost`) and every known SDK client (`S3Client`, `web-push`) in the same files; `libs/data-access/`, `libs/domain/src/generated/`, `*.spec.ts`, `*.testing.ts` and test stubs are not scanned. A `new Queue(<identifier>)` whose identifier is not an exported string constant is skipped. Product counters, PostgreSQL and Redis are hand-listed, not discovered. It MUST fail (non-zero exit) naming each discovered item the inventory does not list (kind, name, file) and each stale inventory entry (a discovered kind the check no longer discovers, or a hand-listed entry whose `source` path no longer exists); `--root <dir>` runs it against another tree; with nothing wrong it MUST print one summary line and exit zero.
+
+_From 881-observability-current._
+
+### 881-FR-004 — The check MUST fail naming the entry when an entry's `dashboard` is a uid that no `*.json` file under `infra/observability/` declares as its top-level `uid`, when an `alerts` uid is one no such file declares at `groups[].rules[].uid`, or when `"none"` has no reason. With no dashboard or alert file yet, nothing is declared, so an inventory of `"none"` entries passes before ST-879/ST-880 land.
+
+_From 881-observability-current._
+
+### 881-FR-005 — The check MUST compare the inventory's endpoint count with the number of operations in `apps/api/openapi.json`: `--write` MUST update the inventory's count; without it a differing count MUST fail naming both numbers.
+
+_From 881-observability-current._
+
+### 881-FR-006 — The check MUST run as its own step of the CI Checks job in `.github/workflows/ci.yml`, beside Biome, Typecheck and Build, running even after an earlier step failed like the others, and it MUST be runnable locally with `node scripts/observability-inventory.ts` from the repository root.
+
+_From 881-observability-current._
+
+### 881-FR-007 — The check MUST have a colocated Jest spec (`scripts/observability-inventory.spec.ts`, run by the scripts project like `scripts/pr-body-check.spec.ts`) that builds a fixture repository in `os.tmpdir()` and runs the check against it with `--root`: an unlisted queue, app and outside client fail naming each; listed, they pass; a dashboard uid no file declares fails; `"none"` without a reason fails; a stale endpoint count fails and `--write` repairs it. The spec MUST also assert the check passes on this repository.
+
+_From 881-observability-current._
+
+### 881-FR-008 — `.github/pull_request_template.md` MUST gain an `## Observability` section between "How it was tested" and "UI evidence", asking what the change adds (service, queue, endpoint, outside call, product action) and the signals, dashboard panel and alert that come with it, or `N/A` and the reason. `scripts/pr-body-check.ts` MUST, by its existing rules, fail a ready PR whose section is empty, a placeholder or a bare `N/A`, and pass one with content or `N/A` and a reason; a draft needs only the heading. `scripts/pr-body-check.spec.ts` covers the new section.
+
+_From 881-observability-current._
+
+### 881-FR-009 — `.specify/templates/plan-template.md` MUST gain an `## Observability` section asking what the change adds (service, resource, queue, outside call, endpoint, product action) and which metrics, logs, traces, dashboard panel and alert rule it adds or why not, pointing at the inventory and the check.
+
+_From 881-observability-current._
+
+### 881-FR-010 — `AGENTS.md` MUST state the rule: every story that adds a service, resource, queue, outside call, endpoint or product action adds its metrics, logs, traces, dashboard panel and alert (or says why not) in the same PR, kept by `infra/observability/inventory.json` and its check; and `.specify/memory/constitution.md` MUST carry the same rule as an Additional Constraint in a PATCH amendment 1.8.2 → 1.8.3, with the Sync Impact Report, the version line and `.specify/memory/constitution-card.md` updated so `constitution-card.spec.mjs` passes.
+
+_From 881-observability-current._
+
+### 881-FR-011 — `infra/observability/README.md` MUST name the inventory and the check in one short paragraph; `.specify/capabilities/observability.md` is updated by `/speckit-archive` through this feature's Spec Delta, not by hand.
+
+_From 881-observability-current._
+
+### 881-FR-012 — Nothing in this feature MUST read, print or commit an OTLP endpoint, header or token value or any Railway value; only variable names appear.
+
+_From 881-observability-current._
+
+### 881-FR-013 — The whole change MUST stay small (Constitution I): one inventory file, one check script with one colocated spec, the CI step, and small edits to the PR template, its check's spec, the plan template, AGENTS.md, the constitution and card, and the README. No new dependency.
+
+_From 881-observability-current._
