@@ -522,7 +522,7 @@ export function applyFixes(repo, report, { postCarry: post = postCarry } = {}) {
  */
 export function sweepStacks(repo, run = execFileSync) {
   try {
-    const out = run("node", ["scripts/test-services.ts", "sweep"], { cwd: repo, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 300_000 });
+    const out = run("node", ["scripts/test-services.ts", "sweep"], { cwd: repo, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
     return { what: String(out).trim().split("\n").at(-1) || "sweep test stacks", ok: true };
   } catch (e) {
     return { what: "sweep test stacks", ok: false, error: String(e.stderr || e.message).trim() };

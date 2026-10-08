@@ -42,6 +42,7 @@ import { ghRun } from "./lib/gh-rest.mjs";
 import { activeFeature, featureKey } from "./lib/feature.mjs";
 import { pointFeature } from "./level.mjs";
 import { readyLogged } from "./notion-ready.mjs";
+import { parseWorktrees } from "./watch.mjs";
 
 const USAGE = "usage: lifecycle.mjs open | ready | merge | handoff (open --title <t>; ready --body-file <f>; merge [--pr <n>]; open, ready and merge take --story ST-<n>; each takes --notion-done; handoff [--restore] [--pr <n>])";
 const HANDOFF_MARK = "<!-- speckit-handoff -->";
@@ -466,9 +467,8 @@ function merge(ctx, flags) {
 function stopTestStack(ctx, branch) {
   let worktree = ctx.repo;
   try {
-    const entries = ctx.git("worktree", "list", "--porcelain").stdout.split("\n\n");
-    const own = entries.find((e) => branch && e.split("\n").includes(`branch refs/heads/${branch}`));
-    if (own) worktree = own.split("\n")[0].slice("worktree ".length);
+    const own = parseWorktrees(ctx.git("worktree", "list", "--porcelain").stdout).find((w) => branch && w.branch === branch);
+    if (own?.path) worktree = own.path;
   } catch (err) {
     if (!(err instanceof Stop)) throw err;
   }

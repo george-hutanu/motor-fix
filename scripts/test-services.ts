@@ -31,7 +31,7 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 
 type Project = { name: string; root: string };
 type Ports = { postgres: number; redis: number };
@@ -49,10 +49,10 @@ export function composeProject(worktree: string): string {
   return `mf-test-${slug}-${hash}`;
 }
 
-export type Stack = { name: string; dir: string };
-export type Worktree = { path: string; branch: string | undefined };
-export type Pr = { headRefName: string; number: number; state: string };
-export type Stop = { project: string; reason: string; volumes: boolean };
+type Stack = { name: string; dir: string };
+type Worktree = { path: string; branch: string | undefined };
+type Pr = { headRefName: string; number: number; state: string };
+type Stop = { project: string; reason: string; volumes: boolean };
 
 // `docker compose ls --all --format json`: a stack's folder is the one its
 // first compose file sits in.
@@ -285,7 +285,7 @@ function main() {
     return;
 
   const project = composeProject(git('rev-parse', '--show-toplevel')[0]);
-  if (spawnSync('docker', ['info'], { stdio: 'ignore' }).status !== 0) {
+  if (!dockerUp()) {
     console.error(noDockerMessage(project));
     process.exit(1);
   }
@@ -333,9 +333,11 @@ function main() {
   console.log(shellExports(env));
 }
 
-// Docker gets this long per call when stopping stacks, so a hung daemon
-// never holds a merge or a watch pass.
-const dockerTimeout = 60_000;
+// Docker (and git, gh) get this long per call when stopping stacks, so a hung
+// daemon never holds a merge or a watch pass.
+const dockerTimeout = Number(
+  process.env.TEST_SERVICES_DOCKER_TIMEOUT_MS ?? 60_000,
+);
 
 const tryRun = (command: string, args: string[]) => {
   const result = spawnSync(command, args, {
@@ -383,6 +385,16 @@ function down(worktree: string) {
   );
 }
 
+// Output a tool printed that is not the JSON asked for (an HTML error page,
+// a changed format) reads as no answer, never as a crash.
+function readJson<T>(read: () => T): T | null {
+  try {
+    return read();
+  } catch {
+    return null;
+  }
+}
+
 function sweepStops(): Stop[] | undefined {
   const listed = tryRun('docker', [
     'compose',
@@ -395,7 +407,12 @@ function sweepStops(): Stop[] | undefined {
     console.error(`test-services: cannot list stacks: ${listed.error}`);
     return undefined;
   }
-  const stacks = parseStacks(listed.stdout).map((stack) => ({
+  const parsed = readJson(() => parseStacks(listed.stdout));
+  if (!parsed) {
+    console.error('test-services: cannot read the stack list, no stack swept');
+    return undefined;
+  }
+  const stacks = parsed.map((stack) => ({
     ...stack,
     exists: existsSync(stack.dir),
   }));
@@ -410,36 +427,52 @@ function sweepStops(): Stop[] | undefined {
     '--json',
     'headRefName,state,number',
   ]);
-  if (prList.error)
+  const prs = prList.error
+    ? null
+    : readJson(() => JSON.parse(prList.stdout) as Pr[]);
+  if (!prs)
     console.error(
-      `test-services: no PR list, only gone worktrees swept: ${prList.error}`,
+      `test-services: no PR list, only gone worktrees swept: ${prList.error ?? 'unreadable output'}`,
     );
   return sweepPlan(
     stacks,
     worktrees.error ? [] : parseWorktrees(worktrees.stdout),
-    prList.error ? null : JSON.parse(prList.stdout),
+    Array.isArray(prs) ? prs : null,
   );
 }
 
 function sweep() {
   if (!dockerUp()) {
-    console.error('test-services: docker unavailable, no stack swept');
+    // On stdout too: it is the line a /speckit-watch pass prints.
+    console.error('test-services: docker unavailable, nothing swept');
+    console.log('test-services: docker unavailable, nothing swept');
     return;
   }
   const stops = sweepStops();
   if (!stops) return;
   const stopped: string[] = [];
+  const failed: string[] = [];
   for (const stop of stops) {
     const error = stopStack(stop.project, stop.volumes);
-    if (error)
+    if (error) {
       console.error(`test-services: ${stop.project} not stopped: ${error}`);
-    else stopped.push(`${stop.project} (${stop.reason})`);
+      failed.push(`${stop.project} (${error})`);
+    } else stopped.push(`${stop.project} (${stop.reason})`);
   }
-  console.log(
-    stopped.length
-      ? `test-services: stopped ${stopped.join(', ')}`
-      : 'test-services: nothing to stop',
-  );
+  const parts = [
+    stopped.length ? `stopped ${stopped.join(', ')}` : '',
+    failed.length ? `not stopped ${failed.join(', ')}` : '',
+  ].filter(Boolean);
+  console.log(`test-services: ${parts.join('; ') || 'nothing to stop'}`);
+}
+
+// Outside a checkout, the folder it runs in.
+function currentCheckout(): string {
+  try {
+    return git('rev-parse', '--show-toplevel')[0];
+  } catch {
+    return process.cwd();
+  }
 }
 
 const usage = [
@@ -456,7 +489,7 @@ if (process.argv[1]?.endsWith('test-services.ts')) {
       process.exit(2);
     }
     if (command === 'sweep') sweep();
-    else down(rest[0] ?? git('rev-parse', '--show-toplevel')[0]);
+    else down(resolve(rest[0] ?? currentCheckout()));
     process.exit(0);
   }
   try {

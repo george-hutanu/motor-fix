@@ -370,6 +370,12 @@ describe('down and sweep, against fake docker, git and gh', () => {
     expect(calls()).toContain(`docker compose -p ${project} down`);
   });
 
+  it('down names the stack of a relative worktree by its absolute path', () => {
+    fake('docker', 'exit 0');
+    const result = run('down', '.');
+    expect(JSON.parse(result.stdout).project).toBe(composeProject(cwd));
+  });
+
   it('down with no worktree stops the current checkout stack', () => {
     fake('docker', 'exit 0');
     fake('git', 'echo /r/here');
@@ -477,7 +483,7 @@ describe('down and sweep, against fake docker, git and gh', () => {
       const result = run('sweep');
       expect(result.status).toBe(0);
       expect(result.stdout.trim()).toBe(
-        `test-services: stopped ${composeProject(gone)} (worktree gone)`,
+        `test-services: stopped ${composeProject(gone)} (worktree gone); not stopped ${composeProject(merged)} (boom)`,
       );
       expect(result.stderr).toMatch(/boom/);
     });
@@ -502,7 +508,9 @@ describe('down and sweep, against fake docker, git and gh', () => {
       fake('docker', 'exit 1');
       const result = run('sweep');
       expect(result.status).toBe(0);
-      expect(result.stdout).toBe('');
+      expect(result.stdout.trim()).toBe(
+        'test-services: docker unavailable, nothing swept',
+      );
       expect(result.stderr).toMatch(/docker/i);
       expect(calls().some((c) => c.includes(' down'))).toBe(false);
     });
