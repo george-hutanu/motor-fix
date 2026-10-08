@@ -21,6 +21,17 @@ import { listingDraftsControllerSave } from '../fn/listing-drafts/listing-drafts
 import { ListingDraftsControllerSave$Params } from '../fn/listing-drafts/listing-drafts-controller-save';
 import { listingDraftsControllerSendLink } from '../fn/listing-drafts/listing-drafts-controller-send-link';
 import { ListingDraftsControllerSendLink$Params } from '../fn/listing-drafts/listing-drafts-controller-send-link';
+import { ListingPhotoDto } from '../models/listing-photo-dto';
+import { listingPhotosControllerConfirm } from '../fn/listing-drafts/listing-photos-controller-confirm';
+import { ListingPhotosControllerConfirm$Params } from '../fn/listing-drafts/listing-photos-controller-confirm';
+import { listingPhotosControllerList } from '../fn/listing-drafts/listing-photos-controller-list';
+import { ListingPhotosControllerList$Params } from '../fn/listing-drafts/listing-photos-controller-list';
+import { listingPhotosControllerRemove } from '../fn/listing-drafts/listing-photos-controller-remove';
+import { ListingPhotosControllerRemove$Params } from '../fn/listing-drafts/listing-photos-controller-remove';
+import { listingPhotosControllerUploadAddress } from '../fn/listing-drafts/listing-photos-controller-upload-address';
+import { ListingPhotosControllerUploadAddress$Params } from '../fn/listing-drafts/listing-photos-controller-upload-address';
+import { ListingPhotosDto } from '../models/listing-photos-dto';
+import { PhotoUploadAddressDto } from '../models/photo-upload-address-dto';
 
 @Injectable({ providedIn: 'root' })
 export class ListingDraftsService extends BaseService {
@@ -126,6 +137,106 @@ export class ListingDraftsService extends BaseService {
   listingDraftsControllerSendLink(params: ListingDraftsControllerSendLink$Params, context?: HttpContext): Promise<ContinueLinkSentDto> {
     const resp = this.listingDraftsControllerSendLink$Response(params, context);
     return resp.then((r: StrictHttpResponse<ContinueLinkSentDto>): ContinueLinkSentDto => r.body);
+  }
+
+  /** Path part for operation `listingPhotosControllerUploadAddress()` */
+  static readonly ListingPhotosControllerUploadAddressPath = '/api/v1/listing-drafts/{id}/photos/upload-url';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `listingPhotosControllerUploadAddress()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  listingPhotosControllerUploadAddress$Response(params: ListingPhotosControllerUploadAddress$Params, context?: HttpContext): Promise<StrictHttpResponse<PhotoUploadAddressDto>> {
+    const obs = listingPhotosControllerUploadAddress(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `listingPhotosControllerUploadAddress$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  listingPhotosControllerUploadAddress(params: ListingPhotosControllerUploadAddress$Params, context?: HttpContext): Promise<PhotoUploadAddressDto> {
+    const resp = this.listingPhotosControllerUploadAddress$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PhotoUploadAddressDto>): PhotoUploadAddressDto => r.body);
+  }
+
+  /** Path part for operation `listingPhotosControllerList()` */
+  static readonly ListingPhotosControllerListPath = '/api/v1/listing-drafts/{id}/photos';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `listingPhotosControllerList()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  listingPhotosControllerList$Response(params: ListingPhotosControllerList$Params, context?: HttpContext): Promise<StrictHttpResponse<ListingPhotosDto>> {
+    const obs = listingPhotosControllerList(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `listingPhotosControllerList$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  listingPhotosControllerList(params: ListingPhotosControllerList$Params, context?: HttpContext): Promise<ListingPhotosDto> {
+    const resp = this.listingPhotosControllerList$Response(params, context);
+    return resp.then((r: StrictHttpResponse<ListingPhotosDto>): ListingPhotosDto => r.body);
+  }
+
+  /** Path part for operation `listingPhotosControllerConfirm()` */
+  static readonly ListingPhotosControllerConfirmPath = '/api/v1/listing-drafts/{id}/photos';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `listingPhotosControllerConfirm()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  listingPhotosControllerConfirm$Response(params: ListingPhotosControllerConfirm$Params, context?: HttpContext): Promise<StrictHttpResponse<ListingPhotoDto>> {
+    const obs = listingPhotosControllerConfirm(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `listingPhotosControllerConfirm$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  listingPhotosControllerConfirm(params: ListingPhotosControllerConfirm$Params, context?: HttpContext): Promise<ListingPhotoDto> {
+    const resp = this.listingPhotosControllerConfirm$Response(params, context);
+    return resp.then((r: StrictHttpResponse<ListingPhotoDto>): ListingPhotoDto => r.body);
+  }
+
+  /** Path part for operation `listingPhotosControllerRemove()` */
+  static readonly ListingPhotosControllerRemovePath = '/api/v1/listing-drafts/{id}/photos/{key}';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `listingPhotosControllerRemove()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  listingPhotosControllerRemove$Response(params: ListingPhotosControllerRemove$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = listingPhotosControllerRemove(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `listingPhotosControllerRemove$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  listingPhotosControllerRemove(params: ListingPhotosControllerRemove$Params, context?: HttpContext): Promise<void> {
+    const resp = this.listingPhotosControllerRemove$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
 }

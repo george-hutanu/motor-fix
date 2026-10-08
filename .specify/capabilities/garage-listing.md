@@ -10,6 +10,7 @@ features:
   - 354-job-catalogue-prices
   - 109-garage-details-prices
   - 861-jump-holds-step
+  - 110-workshop-photos
   - 885-restored-draft-check
 ---
 
@@ -123,9 +124,9 @@ _From 114-save-draft._
 
 _From 114-save-draft._
 
-### 114-FR-016 — A daily timer MUST delete every draft with status `open` whose `updated_at` is 90 days old or more, with every file whose key its data holds (the storage delete); a draft changed since or `submitted` is kept. The 90 days are the brief's proposed retention, to be confirmed by the lawyer: the number MUST live in one place.
+### 110-FR-003 — Deleting a photo key MUST also delete the keys derived from it (its thumbnail and display copy), in one storage call, and succeed when any of them holds no object (422-FR-008); the storage rules for the `garage_photo` purpose stay JPEG, PNG and WebP with their signature check (422-FR-001, 422-FR-005), so a file whose bytes are not a photo is deleted and refused with `file_type_mismatch`. HEIC is not accepted: the worker's image library cannot decode it on the runtime image (`deferred.md`).
 
-_From 114-save-draft._
+_From 110-workshop-photos._
 
 ### 114-FR-017 — The draft's language MUST be the form's language at the last save, and every e-mail MUST be written in the draft's language with the Romanian and English templates of the message-templates story; the link MUST open the page in that language.
 
@@ -407,6 +408,77 @@ _From 861-jump-holds-step._
 
 _From 861-jump-holds-step._
 
+### 110-FR-001 — Step 5 of List your garage MUST show, in the page's language, a drop area reading "Trage aici fotografii cu atelierul, elevatoarele și echipa" / "Drop photos of the workshop, the lifts and the team here" with a button "Alege fotografii" / "Choose photos" that opens the device's picker limited to images (several at once). When the draft's step 1 kind of business is `mobile` the drop area MUST read "Trage aici fotografii cu duba sau trusa mobilă și sculele principale" / "Drop photos of your van or mobile kit and main tools here" instead; the wording follows the kind of business live, and the photos stay.
+
+_From 110-workshop-photos._
+
+### 110-FR-002 — Each photo MUST be JPEG, PNG or WebP and at most 10 MB; the draft MUST hold at most 20 photos. The form MUST refuse a file of another type or size before asking for an upload address with "Doar fotografii JPG, PNG sau WEBP, de cel mult 10 MB" / "Only JPG, PNG or WEBP photos, up to 10 MB", and a 21st photo with "Cel mult 20 de fotografii" / "At most 20 photos"; the other files of the same drop carry on. The server MUST refuse the same cases on its own (type and size through the storage rules, 422-FR-002 and 422-FR-005; the 21st against the draft's current photos, 422 with a stable code, checked when the upload address is asked for and again, binding, at confirm, which counts and appends in one update and deletes a refused object), so the limits live in one place shared by the form and the API.
+
+_From 110-workshop-photos._
+
+### 110-FR-004 — The browser MUST ask the API for a signed upload address for the draft (`POST /api/v1/listing-drafts/{id}/photos/upload-url`, the draft's token in `X-Listing-Token`, the declared type and size), send the file straight to the private store through the shared upload helper (progress, retries, one address renewal, 422-FR-012), and then confirm it (`POST /api/v1/listing-drafts/{id}/photos`, the key), which adds the photo at the end of the draft's photos and answers the photo. The API MUST never carry the file's bytes. The address is signed for the storage module's lifetime (15 minutes, 422-FR-003) and its owner id is the draft id (422-FR-004), so the keys belong to the draft and its clean-up deletes exactly them (114-FR-016).
+
+_From 110-workshop-photos._
+
+### 110-FR-005 — Every photo endpoint of this story (upload address, confirm, read, delete; reordering is the ordinary draft save) MUST be public (no session) and resolve the draft from the token header exactly as the draft endpoints do (114-FR-007): a missing, wrong or foreign token and a deleted draft answer 404 with the same body and touch nothing; a `submitted` draft answers 409 (114-FR-012) and a confirm against it deletes the uploaded object. Responses carry `Cache-Control: no-store` (114-FR-021).
+
+_From 110-workshop-photos._
+
+### 110-FR-006 — The draft MUST hold its photos as an ordered list of file keys, in the draft's data (`data.files`, the place 114 reserved for file keys, first key = cover). The order is saved by the form with the rest of the draft (114-FR-005; the whole data, the last save wins) and MUST be restored by the browser copy, by the server copy and by the continue link in the same order (114-FR-002, 114-FR-011, 114-FR-013). The server MUST accept in a save only keys the draft already holds (a key added by a confirm), in any order, never a new or foreign key, so a save cannot claim another draft's file; a held key the save leaves out (an older browser copy saved after a confirm) is kept and added back at the end, so only the photo delete (FR-009) removes a key. The draft's key pattern (`libs/contracts/src/listing-drafts.dto.ts`) MUST accept the storage key shape `<purpose>/<owner id>/<id>` with `_` in the purpose, which it refuses today.
+
+_From 110-workshop-photos._
+
+### 110-FR-007 — Each uploaded photo MUST show as a thumbnail in the step with its progress bar while uploading, a spinner while its processed copies are not ready, and the thumbnail once they are; the thumbnail of a photo chosen on this device MAY be the local file while the copies are not ready. On another device or after a reload the thumbnails MUST come from storage through signed, short-lived download addresses issued only to the draft's token (`GET /api/v1/listing-drafts/{id}/photos`: key, position, whether processed, width and height, thumbnail address). A photo is processed when its thumbnail exists in storage; the width and height are kept as metadata on the thumbnail object, with no new table and no new field in the draft's data, never a public address.
+
+_From 110-workshop-photos._
+
+### 110-FR-008 — The owner MUST be able to reorder the photos by dragging a thumbnail (pointer, touch) and by keyboard: every thumbnail carries "Mută înainte" / "Move earlier" and "Mută înapoi" / "Move later" buttons, disabled at the ends, that move it one place; focus stays on the moved photo and the new position is announced politely to assistive technology ("Fotografia <n> din <m>" / "Photo <n> of <m>"). The first photo MUST carry a visible "Copertă" / "Cover" mark, told by text, not colour alone. A reorder MUST be saved like any other draft change.
+
+_From 110-workshop-photos._
+
+### 110-FR-009 — Every thumbnail MUST carry "Șterge" / "Remove", reachable by keyboard and named with the photo's position; removing MUST take the photo out of the step at once, close the gap in the order, mark the new first photo as the cover, cancel an upload still in flight, and delete the file and its processed copies from storage through the storage call of FR-003, which the draft clean-up (114-FR-016) also uses (`DELETE /api/v1/listing-drafts/{id}/photos/{key}`; a key the draft does not hold answers 404). A storage delete that fails MUST not keep the photo in the draft: the key leaves the draft and the orphan is reported in the logs.
+
+_From 110-workshop-photos._
+
+### 110-FR-010 — After a confirm the worker MUST process the photo from a queue job: read the original, remove every location and other metadata (EXIF, XMP, IPTC) from the copies, make a thumbnail at most 400 px on its long side and a display copy at most 1,600 px, both JPEG (a PNG or WebP original keeps its format for the display copy, JPEG for the thumbnail), and record the original's width and height; the original stays untouched and private. A job that fails is retried by the queue (3 attempts with back-off) and then logged with the key and the draft id, never the e-mail (114-FR-018); the photo stays in the draft. A job whose original no longer exists (the photo was removed meanwhile) ends without error and writes no copy. The processed copies live beside the original under the same owner, the thumbnail carrying the original's width and height as object metadata, and are deleted with it by the storage call of FR-003.
+
+_From 110-workshop-photos._
+
+### 110-FR-011 — When the listing is sent, the sending story MUST be able to turn the draft's photos into gallery rows in one call this story provides: one `garage_photo` row per key, in the draft's order (position 0 = cover), with the file key, the width and height when processed, and `created_at`, written inside the sending story's transaction. The files are not moved: they stay under the draft's keys, which the draft clean-up never touches once the draft is `submitted` (114-FR-016). No row, no audit entry and no event is written before the listing is sent (114-FR-018): the audit entry for the starting photos belongs to the sending story, with the account.
+
+_From 110-workshop-photos._
+
+### 110-FR-012 — The photos of a draft and the gallery rows of an unapproved garage MUST be reachable only through signed addresses issued to the draft's token (FR-007), and, later, to MotorFix admins in the verification file (that story); this story MUST publish no public address for any photo. Public serving of the display copies after approval belongs to the public gallery story.
+
+_From 110-workshop-photos._
+
+### 110-FR-013 — While the device is offline the step MUST keep the chosen files in a browser queue for as long as the page is open, show them as waiting, and upload them in order when the connection returns; files waiting when the page is closed are lost and the owner is told nothing more than that they are not in the draft (they are simply absent). When the API refuses to issue addresses (storage down, 5xx), the rest of the draft MUST keep saving and a line "Fotografiile se încarcă mai târziu" / "The photos will upload later" MUST show under the drop area until an upload succeeds; each waiting file is retried on the next drop, on "Reîncearcă" and when the connection returns.
+
+_From 110-workshop-photos._
+
+### 110-FR-014 — The step MUST say what is needed when photos cannot be taken yet: without a server copy (no e-mail at step 1, 114-FR-005) the drop area reads "Adaugă un e-mail la pasul 1 ca să încarci fotografii" / "Add an e-mail at step 1 to upload photos" and takes no files; the line goes away as soon as the server copy exists.
+
+_From 110-workshop-photos._
+
+### 110-FR-015 — Switching the language MUST change every text of the step (drop area, buttons, marks, messages) and keep every photo, its order and its state (108-FR-009).
+
+_From 110-workshop-photos._
+
+### 110-FR-016 — The step MUST obey the page's phone layout rules (108-FR-011): no sideways scroll at 320 px, thumbnails in a wrapping grid, 44 px targets for the buttons on each thumbnail, text at least 12 px, light and dark theme following the device, a 3:1 focus ring and 4.5:1 text contrast with Cockpit tokens; the drop area's drag-over state and the drop placeholder are told by more than colour; progress, refusal messages and order changes are announced through a polite live region.
+
+_From 110-workshop-photos._
+
+### 110-FR-017 — The draft's step 5 completeness for photos MUST be exported for the sending story as a function: at least 1 photo whose upload is confirmed; this story adds no tick or check of its own to the step list (108-FR-010).
+
+_From 110-workshop-photos._
+
+### 110-FR-018 — Every new endpoint (upload address, confirm, read, delete) and the processing queue MUST carry the platform's telemetry (ST-875–881: a span per call and job, the job's duration and outcome counted, a failure logged with the key), and the PR's Notes MUST list the observability reports for them.
+
+_From 110-workshop-photos._
+
+### 110-FR-019 — Tests MUST cover, in Jest on real PostgreSQL and Redis with the test store: an upload address issued only to a valid draft token (a wrong, foreign, missing token and a `submitted` draft refused, nothing issued); a disallowed type, a file above 10 MB and the 21st photo refused with stable codes; a HEIC declaration refused and a non-photo refused at confirm; the order saved by a save and restored by the read, a foreign key in a save refused; the delete removing the key, the object and its copies; a save leaving out a held key keeping it; the 21st photo refused at the upload address and at confirm; the processing removing location data from the copies (a JPEG fixture with GPS tags), making the two sizes and recording the dimensions; the gallery rows created in order by the sending call. Unit tests in the web app cover the drop area wording by kind of business, the pointer and keyboard reorder, the cover mark, the refusal messages and the offline queue. A Playwright end-to-end test MUST upload 3 photos, move the last to the first place, reload and check the order, then remove one and check it is gone, at the sweep's sizes.
+
+_From 110-workshop-photos._
 ### 885-FR-001 — On restore, a stored browser draft MUST be checked by the same draft-data rule the server applies on save (`isListingDraftData` in the contracts library: the envelope `steps`, `survey`, `files` and nothing else, every step section under a known step 1–6 and passing that step's guard, `files` a list of well-formed file keys, `survey` an object), in addition to the envelope checks already made (step, language, dirty flag, optional token, draft id and e-mail). The copy fetched from the server is not checked again in the browser: the server validated it on save.
 
 _From 885-restored-draft-check._
@@ -432,4 +504,5 @@ _From 885-restored-draft-check._
 - `354-FR-010` — superseded by `109-FR-017` (2026-10-08)
 - `108-FR-006` — superseded by `861-FR-008` (2026-10-08)
 
+- `114-FR-016` — superseded by `110-FR-003` (2026-10-08)
 - `114-FR-002` — superseded by `885-FR-003` (2026-10-08)

@@ -6,6 +6,7 @@ import {
   HealthModule,
   InsightsModule,
   JsonLogger,
+  ListingPhotosWorkerModule,
   listingDraftDaily,
   NEWS_CONSUMER,
   NotificationsModule,
@@ -24,7 +25,7 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 // Railway can health-check it. It relays the outbox's events to the live
 // streams, consumes the notifications queue, sending e-mail, SMS and
 // WhatsApp, runs the monthly news, the daily reminders, the listing draft
-// sweep and the nightly platform figures.
+// sweep, the listing photos' copies and the nightly platform figures.
 async function bootstrap() {
   const env = readEnv(['DATABASE_URL', 'REDIS_URL', ...STORAGE_ENV]);
   const email = emailConfig(env.APP_ENV, process.env);
@@ -58,6 +59,7 @@ async function bootstrap() {
         notifications,
         redisUrl: env.REDIS_URL,
       }),
+      ListingPhotosWorkerModule.register({ redisUrl: env.REDIS_URL }),
       InsightsModule.registerWorker({
         databaseUrl: env.DATABASE_URL,
         redisUrl: env.REDIS_URL,

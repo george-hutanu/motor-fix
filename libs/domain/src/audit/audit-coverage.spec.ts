@@ -147,6 +147,10 @@ const NOT_CHANGES = new Set([
   'ListingDraftsService.create',
   'ListingDraftsService.issueLink',
   'ListingDraftsService.save',
+  'ListingPhotosService.confirm',
+  'ListingPhotosService.remove',
+  // Runs inside the sending transaction, which audits the new garage.
+  'GaragePhotosService.saveRows',
 ]);
 
 const uncovered = (source: string) =>

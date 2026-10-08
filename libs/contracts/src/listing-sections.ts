@@ -232,7 +232,7 @@ const SECTION_GUARDS: Record<string, (section: unknown) => boolean> = {
   '5': isHoursSection,
   '6': isStep6Section,
 };
-const FILE_KEY = /^[a-z-]+\/[0-9a-f-]{36}\/[\w-]{1,64}$/;
+const FILE_KEY = /^[a-z_-]+\/[0-9a-f-]{36}\/[\w-]{1,64}$/;
 
 // The envelope only: an object holding nothing but those three keys.
 export function isListingDraftData(value: unknown): value is ListingDraftData {

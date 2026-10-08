@@ -2196,6 +2196,207 @@
         ]
       }
     },
+    "/api/v1/listing-drafts/{id}/photos/upload-url": {
+      "post": {
+        "operationId": "ListingPhotosController_uploadAddress",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-listing-token",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhotoUploadRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoUploadAddressDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "draft_submitted"
+          },
+          "422": {
+            "description": "photos_full, file_type_not_allowed, file_too_large"
+          }
+        },
+        "tags": [
+          "listing-drafts"
+        ]
+      }
+    },
+    "/api/v1/listing-drafts/{id}/photos": {
+      "post": {
+        "operationId": "ListingPhotosController_confirm",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-listing-token",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmPhotoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingPhotoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "draft_submitted, file_missing"
+          },
+          "422": {
+            "description": "photos_full, file_type_mismatch, file_too_large"
+          }
+        },
+        "tags": [
+          "listing-drafts"
+        ]
+      },
+      "get": {
+        "operationId": "ListingPhotosController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-listing-token",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingPhotosDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "draft_submitted"
+          }
+        },
+        "tags": [
+          "listing-drafts"
+        ]
+      }
+    },
+    "/api/v1/listing-drafts/{id}/photos/{key}": {
+      "delete": {
+        "operationId": "ListingPhotosController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-listing-token",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "draft_submitted"
+          }
+        },
+        "tags": [
+          "listing-drafts"
+        ]
+      }
+    },
     "/api/v1/live": {
       "get": {
         "operationId": "LiveController_live",
@@ -4781,6 +4982,111 @@
           "check",
           "summary",
           "rarActivities"
+        ]
+      },
+      "PhotoUploadRequestDto": {
+        "type": "object",
+        "properties": {
+          "contentType": {
+            "type": "string",
+            "example": "image/jpeg"
+          },
+          "size": {
+            "type": "number",
+            "description": "Bytes",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "contentType",
+          "size"
+        ]
+      },
+      "PhotoUploadAddressDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Where the browser posts the form"
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Form fields to send before the file"
+          },
+          "key": {
+            "type": "string",
+            "description": "The key to confirm once uploaded"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "url",
+          "fields",
+          "key",
+          "expiresAt"
+        ]
+      },
+      "ConfirmPhotoDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The key the upload address gave"
+          }
+        },
+        "required": [
+          "key"
+        ]
+      },
+      "ListingPhotoDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "position": {
+            "type": "number",
+            "description": "0 is the cover"
+          },
+          "processed": {
+            "type": "boolean",
+            "description": "Whether the thumbnail is ready"
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "description": "Signed for 5 minutes"
+          }
+        },
+        "required": [
+          "key",
+          "position",
+          "processed"
+        ]
+      },
+      "ListingPhotosDto": {
+        "type": "object",
+        "properties": {
+          "photos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ListingPhotoDto"
+            }
+          }
+        },
+        "required": [
+          "photos"
         ]
       },
       "LiveTestDto": {
