@@ -291,6 +291,27 @@ describe('step 5, the place', () => {
     expect(map.pin).toHaveBeenLastCalledWith({ lat: 45.1, lng: 25.2 });
   });
 
+  it('leaves a placed pin where it is on a tap, even once the button is pressed', async () => {
+    const opened = await open({
+      address: STEFAN.label,
+      lat: STEFAN.lat,
+      lng: STEFAN.lng,
+    });
+
+    button(opened.step, 'Pune pinul pe hartă').click();
+    await settle(opened.fixture);
+    await mapEvent(opened, () => events.tapped({ lat: 46, lng: 24 }));
+
+    expect(opened.emitted).toEqual([]);
+    expect(map.pin).toHaveBeenLastCalledWith({
+      lat: STEFAN.lat,
+      lng: STEFAN.lng,
+    });
+    expect(
+      button(opened.step, 'Pune pinul pe hartă').getAttribute('aria-pressed'),
+    ).toBe('false');
+  });
+
   it('moves the position when the pin is dragged and leaves the address', async () => {
     const opened = await open({
       address: STEFAN.label,

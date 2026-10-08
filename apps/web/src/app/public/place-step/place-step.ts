@@ -108,7 +108,8 @@ export class PlaceStep {
         tapped: (at) => {
           if (!this.armed()) return;
           this.armed.set(false);
-          this.place(at);
+          // A placed pin is moved by dragging, never by a tap (FR-003).
+          if (!this.hasPin()) this.place(at);
         },
       }).then(
         (map) => (destroyed ? map.destroy() : this.map.set(map)),
