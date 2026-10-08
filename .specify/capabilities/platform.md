@@ -58,6 +58,7 @@ features:
   - 884-railway-egress
   - 891-lifecycle-story-override
   - 893-folder-rules
+  - 974-stop-test-stack-on-merge
 ---
 
 # Capability: Platform
@@ -1339,6 +1340,34 @@ _From 893-folder-rules._
 ### 893-FR-013 — This feature MUST move every file that violates a rule into place (the owner, 2026-10-08: backfill in the same PR), taking the work ST-894 and ST-895 planned, and change no behaviour while doing it: imports and paths follow the files, inline templates and styles move to the component's `.html` and `.css` unchanged, and the affected projects' typecheck, tests, lint and build stay green. A file an open pull request edits stays in the baseline until that pull request merges.
 
 _From 893-folder-rules._
+
+### 974-FR-001 — Once the PR is merged, the lifecycle merge step MUST stop the test stack of the worktree that carries the PR's head branch (the current checkout when none does), before the Notion finish, keeping its volumes, and MUST name the stack in its result (`test_stack`).
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-002 — An absent, failing or hanging Docker (each call bounded by a 60 s timeout) MUST never fail the merge step, the Notion finish that follows it, or the sweep: the failure is one logged line and the step goes on; a `down` that fails for one stack does not stop the sweep reaching the others, and an unavailable `gh` skips only the PR-based judgements.
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-003 — `scripts/test-services.ts` MUST offer `down [<worktree>]`, which stops the stack of the given worktree (the current checkout by default), keeping its volumes.
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-004 — `scripts/test-services.ts` MUST offer `sweep`, which stops every `mf-test-*` stack whose compose working directory no longer exists (volumes removed) or whose worktree's newest PR is merged or closed (volumes kept), leaves every other stack untouched, and prints one line naming what it stopped (or that nothing was).
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-005 — Every stack name used by the merge step, `down` and `sweep` MUST come from `composeProject` in `scripts/test-services.ts`; no other code derives the name.
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-006 — Each `/speckit-watch` pass MUST run the sweep as one of its safe fixes and include its result line in the pass output; a sweep failure never stops the pass.
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-007 — AGENTS.md's description of `scripts/test-services.ts` MUST say when the stack is stopped (merge, sweep, `down`).
+
+_From 974-stop-test-stack-on-merge._
 
 ## Retired
 
