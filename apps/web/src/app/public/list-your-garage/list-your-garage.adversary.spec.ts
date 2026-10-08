@@ -304,6 +304,21 @@ describe('a jump to a step under hostile timing', () => {
     });
   });
 
+  it('counts the quiet time from the last scroll, not from a resize, when only the timer stands in', async () => {
+    await withoutScrollEnd(async () => {
+      const { harness, page } = await open('/ro/list-your-garage');
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+
+      entries(page)[3].click();
+      await scrolled(harness, FLIGHT);
+      await jest.advanceTimersByTimeAsync(100);
+      window.dispatchEvent(new Event('resize'));
+      await jest.advanceTimersByTimeAsync(60);
+      await scrolled(harness, AT_STEP_3);
+      expect(current(page)).toEqual(['3 Prețuri']);
+    });
+  });
+
   it('runs no timer after the page is destroyed in the middle of a jump', async () => {
     await withoutScrollEnd(async () => {
       const { harness, page } = await open('/ro/list-your-garage');

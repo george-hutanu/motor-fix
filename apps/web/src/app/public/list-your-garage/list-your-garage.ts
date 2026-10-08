@@ -103,13 +103,17 @@ export class ListYourGarage {
         if (!this.held) this.follow();
         else if (!('onscrollend' in window)) this.restartQuiet();
       };
+      // A resize is no movement of the jump's: it never restarts the quiet time.
+      const onResize = () => {
+        if (!this.held) this.follow();
+      };
       const onScrollEnd = () => this.release();
       window.addEventListener('scroll', onScroll, { passive: true });
-      window.addEventListener('resize', onScroll, { passive: true });
+      window.addEventListener('resize', onResize, { passive: true });
       window.addEventListener('scrollend', onScrollEnd, { passive: true });
       destroyRef.onDestroy(() => {
         window.removeEventListener('scroll', onScroll);
-        window.removeEventListener('resize', onScroll);
+        window.removeEventListener('resize', onResize);
         window.removeEventListener('scrollend', onScrollEnd);
         clearTimeout(this.quiet);
       });
