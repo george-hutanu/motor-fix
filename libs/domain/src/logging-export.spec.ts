@@ -128,8 +128,12 @@ describe('JsonLogger export pipeline under unusual log shapes', () => {
       logger.log('first ana@example.com', 'second 0722 123 456', 'B 123 ABC'),
     );
 
-    expect(records.length).toBeGreaterThan(0);
-    expect(leaving(records)).not.toMatch(RAW);
+    // The last string is the context; the other two are a line each.
+    expect(records).toHaveLength(2);
+    const sent = leaving(records);
+    expect(sent).toContain('first ***');
+    expect(sent).toContain('second ***');
+    expect(sent).not.toMatch(RAW);
   });
 
   it('masks values nested in objects and arrays of a structured entry', async () => {
