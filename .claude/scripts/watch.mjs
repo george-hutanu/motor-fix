@@ -32,6 +32,7 @@ import { findCarry, postCarry } from "./pr-test/carry.mjs";
 import { parseQaRun } from "./pr-test/qa-run.mjs";
 import { readState } from "./run-state.mjs";
 import { WAIT_RECORD, commonDir, defaultCommandOf, waitHolder } from "./lib/watch-wait.mjs";
+import { lockPid, parseWorktrees, processAlive } from "./lib/worktrees.mjs";
 import { removeWorktree } from "./worktree-remove.mjs";
 
 // done is the grace period before a merged worktree is removed: its
@@ -64,26 +65,9 @@ const STAGES = {
   qa: ["pr-test", "qa"],
   merging: ["merge"],
 };
-const stageOf = (phase) => Object.keys(STAGES).find((stage) => STAGES[stage].includes(phase)) ?? null;
+export { lockPid, parseWorktrees, processAlive };
 
-export function parseWorktrees(porcelain) {
-  const records = porcelain
-    .split(/\n\s*\n/)
-    .map((block) => block.trim())
-    .filter(Boolean);
-  return records.map((block, i) => {
-    const line = (key) => block.split("\n").find((l) => l === key || l.startsWith(`${key} `));
-    const value = (key) => line(key)?.slice(key.length + 1) ?? null;
-    return {
-      path: value("worktree"),
-      head: value("HEAD"),
-      branch: value("branch")?.replace(/^refs\/heads\//, "") ?? null,
-      lock: line("locked") ? (value("locked") ?? "") : null,
-      prunable: Boolean(line("prunable")),
-      main: i === 0,
-    };
-  });
-}
+const stageOf = (phase) => Object.keys(STAGES).find((stage) => STAGES[stage].includes(phase)) ?? null;
 
 /**
  * A PR tester's scratch worktree (`mf-prtest-<pr>-<sha7>-<pid>`, pr-test/worktree.mjs).
@@ -93,11 +77,6 @@ export function parseWorktrees(porcelain) {
 export function scratchRun(path) {
   const m = basename(path).match(/^mf-prtest-(\d+)-[0-9a-f]+-([1-9]\d*)$/);
   return m ? { pr: Number(m[1]), pid: Number(m[2]) } : null;
-}
-
-export function lockPid(lock) {
-  const m = lock?.match(/\(pid ([1-9]\d*)\b/);
-  return m ? Number(m[1]) : null;
 }
 
 /**
@@ -114,15 +93,6 @@ function claudeAlive(pid) {
     return false;
   }
 }
-
-export const processAlive = (pid) => {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    return e.code === "EPERM";
-  }
-};
 
 export function summarizePr(pr) {
   let checks = "none";

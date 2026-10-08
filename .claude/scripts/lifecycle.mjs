@@ -42,7 +42,7 @@ import { ghRun } from "./lib/gh-rest.mjs";
 import { activeFeature, featureKey } from "./lib/feature.mjs";
 import { pointFeature } from "./level.mjs";
 import { readyLogged } from "./notion-ready.mjs";
-import { lockPid, parseWorktrees, processAlive } from "./watch.mjs";
+import { lockPid, parseWorktrees, processAlive } from "./lib/worktrees.mjs";
 
 const USAGE = "usage: lifecycle.mjs open | ready | merge | handoff (open --title <t>; ready --body-file <f>; merge [--pr <n>]; open, ready and merge take --story ST-<n>; each takes --notion-done; handoff [--restore] [--pr <n>])";
 const HANDOFF_MARK = "<!-- speckit-handoff -->";

@@ -20,7 +20,7 @@ import { cpSync, existsSync, mkdirSync, readdirSync, realpathSync, writeFileSync
 import { basename, join, resolve, sep } from "node:path";
 import { isEntryPoint } from "./lib/entry.mjs";
 import { commit as specsCommit } from "./specs-repo.mjs";
-import { lockPid, parseWorktrees, processAlive } from "./watch.mjs";
+import { lockPid, parseWorktrees, processAlive } from "./lib/worktrees.mjs";
 
 const TIMEOUT = 120_000;
 const MAX_NAMES = 1000;
