@@ -22,6 +22,7 @@ export * from './listing-photos/listing-photos.dto';
 export * from './listing-sections';
 export * from './listing-verification';
 export * from './live.dto';
+export * from './marked-brands';
 export * from './me.dto';
 export * from './notification-preferences.dto';
 export * from './notifications.dto';

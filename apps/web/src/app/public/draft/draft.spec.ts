@@ -230,7 +230,7 @@ const PASSING: [string, unknown][] = [
       files: [FILE],
       steps: {
         '1': { businessKind: 'pfa', name: 'Service Ion' },
-        '2': { anything: 1 },
+        '2': { brands: [] },
         '3': { jobs: [], labour: {} },
         '4': { mechanics: [{ name: 'Ion' }], onProfile: true },
         '5': {},

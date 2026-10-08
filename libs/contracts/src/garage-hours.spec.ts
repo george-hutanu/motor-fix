@@ -1,14 +1,19 @@
 import {
   CLOSED_DAY_YEARS,
   CLOSED_NOTE_MAX,
+  COURTESY_PRICE_MAX_BANI,
+  COURTESY_PRICE_MIN_BANI,
+  COURTESY_PRICE_STEP_BANI,
   closedDayError,
   closedDaysError,
   DEFAULT_HOURS,
   FACILITIES,
+  hoursComplete,
   intervalsError,
   isHoursSection,
   isTime,
   isWeeklyHours,
+  PAYMENTS,
   TIMES,
   todayInBucharest,
   WEEKDAYS,
@@ -283,6 +288,137 @@ describe('the step 5 section', () => {
     ['nothing', null],
   ])('refuses %s', (_, section) => {
     expect(isHoursSection(section)).toBe(false);
+  });
+});
+
+describe('the payment methods and the courtesy car in the section', () => {
+  it('offers cash, card and bank transfer', () => {
+    expect(PAYMENTS).toEqual(['cash', 'card', 'transfer']);
+  });
+
+  it('prices the courtesy car from 1 to 2,000 lei a day in whole lei', () => {
+    expect(COURTESY_PRICE_MIN_BANI).toBe(100);
+    expect(COURTESY_PRICE_MAX_BANI).toBe(200_000);
+    expect(COURTESY_PRICE_STEP_BANI).toBe(100);
+  });
+
+  it.each([
+    ['a section kept before payments existed', {}],
+    ['no payment ticked yet', { payments: [] }],
+    ['every payment ticked', { payments: ['cash', 'card', 'transfer'] }],
+    ['a free courtesy car', { courtesyCar: { paid: false } }],
+    [
+      'a paid courtesy car',
+      { courtesyCar: { paid: true, pricePerDayBani: 12_000 } },
+    ],
+    ['the lowest price', { courtesyCar: { paid: true, pricePerDayBani: 100 } }],
+    [
+      'the highest price',
+      { courtesyCar: { paid: true, pricePerDayBani: 200_000 } },
+    ],
+    ['paid with the price still to type', { courtesyCar: { paid: true } }],
+    [
+      'a courtesy car the facilities do not list',
+      { courtesyCar: { paid: false }, facilities: ['waiting_area'] },
+    ],
+  ])('accepts %s', (_, section) => {
+    expect(isHoursSection(section)).toBe(true);
+  });
+
+  it.each([
+    ['an unknown payment', { payments: ['crypto'] }],
+    ['a repeated payment', { payments: ['cash', 'cash'] }],
+    ['payments that are not a list', { payments: 'cash' }],
+    ['a courtesy car that is not an object', { courtesyCar: true }],
+    [
+      'a courtesy car without paid',
+      { courtesyCar: { pricePerDayBani: 1_000 } },
+    ],
+    ['paid that is not a boolean', { courtesyCar: { paid: 'yes' } }],
+    [
+      'a courtesy car with another key',
+      { courtesyCar: { km: 100, paid: false } },
+    ],
+    [
+      'a price below 1 leu',
+      { courtesyCar: { paid: true, pricePerDayBani: 50 } },
+    ],
+    [
+      'a price above 2,000 lei',
+      { courtesyCar: { paid: true, pricePerDayBani: 200_100 } },
+    ],
+    [
+      'a price that is not whole lei',
+      { courtesyCar: { paid: true, pricePerDayBani: 150 } },
+    ],
+    [
+      'a price that is not an integer',
+      { courtesyCar: { paid: true, pricePerDayBani: 1_000.5 } },
+    ],
+    [
+      'a price as text',
+      { courtesyCar: { paid: true, pricePerDayBani: '1000' } },
+    ],
+  ])('refuses %s', (_, section) => {
+    expect(isHoursSection(section)).toBe(false);
+  });
+});
+
+describe('a complete step 5', () => {
+  const car = ['courtesy_car'] as const;
+
+  it('needs at least one payment method', () => {
+    expect(hoursComplete({})).toBe(false);
+    expect(hoursComplete({ payments: [] })).toBe(false);
+    expect(hoursComplete({ payments: ['transfer'] })).toBe(true);
+  });
+
+  it('needs no price for a free courtesy car', () => {
+    expect(
+      hoursComplete({
+        courtesyCar: { paid: false },
+        facilities: [...car],
+        payments: ['cash'],
+      }),
+    ).toBe(true);
+  });
+
+  it('needs a price for a paid courtesy car', () => {
+    expect(
+      hoursComplete({
+        courtesyCar: { paid: true },
+        facilities: [...car],
+        payments: ['cash'],
+      }),
+    ).toBe(false);
+    expect(
+      hoursComplete({
+        courtesyCar: { paid: true, pricePerDayBani: 12_000 },
+        facilities: [...car],
+        payments: ['cash'],
+      }),
+    ).toBe(true);
+  });
+
+  it('refuses a paid price outside the range or not in whole lei', () => {
+    for (const pricePerDayBani of [50, 150, 200_100])
+      expect(
+        hoursComplete({
+          courtesyCar: { paid: true, pricePerDayBani },
+          facilities: [...car],
+          payments: ['card'],
+        }),
+      ).toBe(false);
+  });
+
+  it('ignores the courtesy car when the facilities do not list it', () => {
+    expect(
+      hoursComplete({
+        courtesyCar: { paid: true },
+        facilities: ['waiting_area'],
+        payments: ['card'],
+      }),
+    ).toBe(true);
   });
 });
 
