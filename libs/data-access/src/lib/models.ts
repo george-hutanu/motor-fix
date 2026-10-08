@@ -29,6 +29,8 @@ export type { HealthLiveDto } from './models/health-live-dto';
 export type { HealthReadyDto } from './models/health-ready-dto';
 export type { InviteTokenDto } from './models/invite-token-dto';
 export type { InviteViewDto } from './models/invite-view-dto';
+export type { JobTypeDto } from './models/job-type-dto';
+export type { JobTypeListDto } from './models/job-type-list-dto';
 export type { ListedGarageDto } from './models/listed-garage-dto';
 export type { ListingDraftCreatedDto } from './models/listing-draft-created-dto';
 export type { ListingDraftDto } from './models/listing-draft-dto';

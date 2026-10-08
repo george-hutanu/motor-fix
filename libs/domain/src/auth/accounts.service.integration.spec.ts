@@ -318,7 +318,7 @@ describe('garage links', () => {
     const dinamo = await garage('atelier-dinamo');
 
     const mechanic = await prisma.mechanic.create({
-      data: { accountId: id, garageId: dinamo.id },
+      data: { accountId: id, garageId: dinamo.id, name: 'Mecanic' },
     });
 
     expect(mechanic).toMatchObject({
@@ -337,11 +337,13 @@ describe('garage links', () => {
     const dinamo = await garage('atelier-dinamo');
     const second = await garage('atelier-doi');
     await prisma.mechanic.create({
-      data: { accountId: id, garageId: dinamo.id },
+      data: { accountId: id, garageId: dinamo.id, name: 'Mecanic' },
     });
 
     await expect(
-      prisma.mechanic.create({ data: { accountId: id, garageId: second.id } }),
+      prisma.mechanic.create({
+        data: { accountId: id, garageId: second.id, name: 'Mecanic' },
+      }),
     ).rejects.toThrow();
   });
 });

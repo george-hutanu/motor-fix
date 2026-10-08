@@ -1,4 +1,6 @@
-import { BRANDS, BrandFileError, fold, slugOf, validateFile } from './brands';
+import { fold } from '@motor-fix/contracts';
+
+import { BRANDS, BrandFileError, slugOf, validateFile } from './brands';
 
 describe('fold', () => {
   it.each([

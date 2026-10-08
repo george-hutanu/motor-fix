@@ -234,7 +234,7 @@ describe('who am I', () => {
     });
     const elena = await account('elena', ['mechanic']);
     await prisma.mechanic.create({
-      data: { accountId: elena, garageId: garage.id },
+      data: { accountId: elena, garageId: garage.id, name: 'Mecanic' },
     });
 
     expect(
@@ -297,7 +297,7 @@ describe('rights answer 404, never 403', () => {
     const id = await account('elena', ['mechanic']);
     const garage = await dinamo();
     await prisma.mechanic.create({
-      data: { accountId: id, garageId: garage.id },
+      data: { accountId: id, garageId: garage.id, name: 'Mecanic' },
     });
 
     for (const path of [

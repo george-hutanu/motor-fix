@@ -1,9 +1,8 @@
-import type { BrandDto, BrandPageDto } from '@motor-fix/contracts';
+import { type BrandDto, type BrandPageDto, fold } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import type { Redis } from 'ioredis';
 
 import { ACTIVE_BRANDS_KEY } from './brand-loader';
-import { fold } from './brands';
 import { AUTH_REDIS } from '../auth/attempts';
 import { PRISMA } from '../auth/prisma';
 import { refusal } from '../auth/sign-up.service';

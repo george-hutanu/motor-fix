@@ -108,7 +108,7 @@ async function world() {
   });
   const vlad = await account('vlad', ['mechanic']);
   await prisma.mechanic.create({
-    data: { accountId: vlad, garageId: dinamo.id },
+    data: { accountId: vlad, garageId: dinamo.id, name: 'Mecanic' },
   });
   const radu = await account('radu', ['garage'], { language: 'en' });
   await prisma.garageMember.create({
@@ -116,7 +116,12 @@ async function world() {
   });
   const sorin = await account('sorin', ['mechanic']);
   const sorinRow = await prisma.mechanic.create({
-    data: { accountId: sorin, canMoveBookings: true, garageId: nord.id },
+    data: {
+      accountId: sorin,
+      canMoveBookings: true,
+      garageId: nord.id,
+      name: 'Mecanic',
+    },
   });
   return { dinamo, ioana, mihai, nord, radu, sorin, sorinRow, vlad };
 }
