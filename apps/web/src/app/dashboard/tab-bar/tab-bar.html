@@ -1,0 +1,14 @@
+<nav [attr.aria-label]="name() | t">
+  @for (view of views(); track view.path) {
+    @let count = view.counter ? counts()[view.counter] : undefined;
+    <a
+      #tab
+      [routerLink]="view.path ? [base(), view.path] : base()"
+      routerLinkActive=""
+      ariaCurrentWhenActive="page"
+      [routerLinkActiveOptions]="{ exact: !view.path }"
+      (isActiveChange)="$event && reveal(tab)"
+      [attr.aria-label]="count ? ('shell.frame.counter' | t: { label: (view.tab | t), waiting: count }) : null"
+    ><span class="marker" aria-hidden="true"></span><span class="name"><span class="label">{{ view.tab | t }}</span>@if (count) {<span class="chip" aria-hidden="true">{{ count > 99 ? '99+' : count }}</span>} @else if (view.counter && countsLoading()) {<span class="chip-skeleton" aria-hidden="true"></span>}</span></a>
+  }
+</nav>

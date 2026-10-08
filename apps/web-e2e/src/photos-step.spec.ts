@@ -67,7 +67,11 @@ async function toPhotos(page: Page, email: string) {
   await page.getByLabel('E‑mail').fill(email);
   await page.getByLabel('E‑mail').blur();
   await toStep5(page, 'Pași');
-  await expect(step(page).getByText('Alege fotografii')).toBeVisible();
+  // The picker opens once the draft exists on the server; files set before
+  // then wait for a connection that is already there.
+  await expect(
+    step(page).getByRole('button', { name: 'Alege fotografii' }),
+  ).toBeEnabled();
 }
 
 const confirmedCount = (page: Page, count: number) =>
@@ -88,11 +92,17 @@ const confirmedCount = (page: Page, count: number) =>
     .toBe(count);
 
 test.describe('step 5 of list your garage, the photos @mailbox', () => {
+  // @traces 948-FR-001 948-FR-002 948-FR-003 948-FR-004
   for (const [size, width, height] of SIZES) {
     test(`on ${size}: three photos uploaded, the last moved first, kept after a reload and on the link, one removed`, async ({
       browser,
       page,
     }) => {
+      // Two reloads, a second browser and the mailbox: on a CI runner with
+      // four workers each step takes seconds (fill 2.8 s, networkidle 3.3 s
+      // in run 37734125105's trace), and the flow ran past 30 s while still
+      // correct. Its retries then used up the 10 drafts an hour per address.
+      test.slow();
       await page.setViewportSize({ height, width });
       const email = `photos-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
       await toPhotos(page, email);
@@ -141,10 +151,17 @@ test.describe('step 5 of list your garage, the photos @mailbox', () => {
         await other.close();
       }
 
+      // A reload that aborts the delete would leave the photo on the server.
+      const removed = page.waitForResponse(
+        (res) =>
+          res.request().method() === 'DELETE' &&
+          /\/listing-drafts\/[^/]+\/photos\//.test(res.url()),
+      );
       await tiles(page)
         .nth(1)
         .getByRole('button', { name: /Șterge/ })
         .click();
+      expect((await removed).ok()).toBe(true);
       await expect(tiles(page)).toHaveCount(2);
       await page.reload();
       await page.waitForLoadState('networkidle');

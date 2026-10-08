@@ -1,0 +1,57 @@
+form,
+.outcome {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+}
+.field > label,
+legend {
+  font-weight: 700;
+}
+fieldset {
+  display: grid;
+  gap: var(--mf-space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+legend {
+  padding: 0;
+  margin-bottom: var(--mf-space-2);
+}
+.choice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mf-space-3);
+  min-height: var(--mf-tap);
+  font-weight: 400;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.choice input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: var(--mf-amber);
+}
+.choice input:focus-visible {
+  outline: 2px solid var(--mf-amber-ink);
+  outline-offset: 2px;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-3);
+}
+.actions button {
+  white-space: normal;
+}
