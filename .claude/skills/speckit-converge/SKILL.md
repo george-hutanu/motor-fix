@@ -187,7 +187,7 @@ Before appending anything, output a compact, severity-graded summary (no file wr
 
 ## Re-read the ticket before reporting
 
-<!-- project-local addition (constitution v1.2.1) -->
+<!-- project-local addition (Constitution II) -->
 
 Convergence compares the codebase against local artifacts, which are only as
 current as the day they were written. Before reporting, fetch the feature's

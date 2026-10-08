@@ -43,9 +43,10 @@ Three gates shape this and are not negotiable:
   satisfies this honestly. If a slice changed behavior the spec does not
   describe, update `spec.md` before committing — do not relabel the commit
   `refactor` to dodge the gate.
-- **Traceability is reported, not tagged in code.** The pre-commit traceability
-  check is retired (`.claude/hooks/pre-commit-check.sh`) because source carries
-  no FR markers any more. `node .claude/scripts/trace-matrix.mjs` still runs on
-  demand and will show a feature uncovered; that is expected, not a gap to
-  close by putting ids back into comments. The FR → test mapping goes in the
-  final report and in `tasks.md`.
+- **Traceability is read from `// @traces` lines, never a commit gate.** The
+  one id form Constitution II allows in source is a whole-line `// @traces
+  <feature>-FR-<n>` comment in a test file; `node .claude/scripts/trace-matrix.mjs`
+  reads those lines on demand. The pre-commit traceability check stays retired
+  (`.claude/hooks/pre-commit-check.sh`): an uncovered feature in the matrix
+  does not block a commit. The FR → test mapping also goes in the final report
+  and in `tasks.md`.

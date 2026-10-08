@@ -58,7 +58,9 @@ features:
   - 884-railway-egress
   - 891-lifecycle-story-override
   - 893-folder-rules
+  - 960-traces-id-form
   - 962-gate-fail-closed
+  - 974-stop-test-stack-on-merge
 ---
 
 # Capability: Platform
@@ -1341,6 +1343,38 @@ _From 893-folder-rules._
 
 _From 893-folder-rules._
 
+### 960-FR-001 — Constitution II MUST state that the only requirement id allowed in source is a line comment in a test file (a file named `*.spec.*` or `*.test.*`) of the form `// @traces` followed by one or more feature-qualified requirement ids (`NNN-FR-NNN`), separated by single spaces — the whole line matching `^\s*// @traces( \d{3}-FR-\d{3})+\s*$`; a line that misses the grammar is not the form and none of its ids count — and that a requirement id, feature number, task id or ticket key anywhere else (test titles, other comments, non-test code) stays forbidden.
+
+_From 960-traces-id-form._
+
+### 960-FR-002 — The amendment MUST be versioned 1.11.0 (MINOR), with its Sync Impact Report first in the header, every earlier report (1.10.0 down to 1.0.0, 1.8.3 included) kept, and the Governance footer's version and Last Amended date updated.
+
+_From 960-traces-id-form._
+
+### 960-FR-003 — Every file that pins the constitution's version MUST say 1.11.0: the constitution card (whose Principle II line names the exception) and the private workflow notes' version line, which MUST NOT grow past its baseline; the card's drift test MUST pass.
+
+_From 960-traces-id-form._
+
+### 960-FR-004 — The traceability matrix MUST read a requirement id from a test file only when it sits on a conforming `// @traces` line, every id on such a line counted; it MUST report the same set of tagged ids on the current tree as before the change.
+
+_From 960-traces-id-form._
+
+### 960-FR-005 — The removal ratchet MUST read ids with the same line grammar as the matrix (one shared parser): an id removed from a conforming line is refused as today; an id in any other form is neither protected nor counted. Each tool keeps the set of files it reads today (the matrix walks `apps`, `libs`, `e2e`, `scripts`; the ratchet judges any test file it is handed).
+
+_From 960-traces-id-form._
+
+### 960-FR-006 — Every skill, agent definition, hook comment and gate message that today forbids `@traces` or any requirement id in source MUST state the exception (or stop stating the rule), and a gate message MUST NOT cite a constitution version (it cites the principle, so a later amendment cannot leave it stale).
+
+_From 960-traces-id-form._
+
+### 960-FR-007 — The existing tagged tests MUST all conform after the change; the one line carrying a non-requirement id is brought to the allowed form.
+
+_From 960-traces-id-form._
+
+### 960-FR-008 — Pre-commit traceability MUST stay non-blocking; only its explanatory comment changes.
+
+_From 960-traces-id-form._
+
 ### 962-FR-001 — The hook wrapper MUST exit 2 when any registry entry marked `fail_closed` (all seven today) runs a script whose exit code is neither 0 nor 2 and that was not stopped by a timeout or a signal.
 
 _From 962-gate-fail-closed._
@@ -1372,6 +1406,34 @@ _From 962-gate-fail-closed._
 ### 962-FR-008 — The change touches only `.claude/hooks/run-hook.mjs` (code and header comment), its spec, the eval cases and the `fail_closed` sentence of `.claude/hooks/registry.json`'s `_comment`, which today names only the stdin refusal; no product code, no new environment variable, no registry field.
 
 _From 962-gate-fail-closed._
+
+### 974-FR-001 — Once the PR is merged, the lifecycle merge step MUST stop the test stack of the worktree that carries the PR's head branch (the current checkout when none does), before the Notion finish, keeping its volumes, and MUST name the stack in its result (`test_stack`).
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-002 — An absent, failing or hanging Docker (each call bounded by a 60 s timeout) MUST never fail the merge step, the Notion finish that follows it, or the sweep: the failure is one logged line and the step goes on; a `down` that fails for one stack does not stop the sweep reaching the others, and an unavailable `gh` skips only the PR-based judgements.
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-003 — `scripts/test-services.ts` MUST offer `down [<worktree>]`, which stops the stack of the given worktree (the current checkout by default), keeping its volumes.
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-004 — `scripts/test-services.ts` MUST offer `sweep`, which stops every `mf-test-*` stack whose compose working directory no longer exists (volumes removed) or whose worktree's newest PR is merged or closed (volumes kept), leaves every other stack untouched, and prints one line naming what it stopped (or that nothing was).
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-005 — Every stack name used by the merge step, `down` and `sweep` MUST come from `composeProject` in `scripts/test-services.ts`; no other code derives the name.
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-006 — Each `/speckit-watch` pass MUST run the sweep as one of its safe fixes and include its result line in the pass output; a sweep failure never stops the pass.
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-007 — AGENTS.md's description of `scripts/test-services.ts` MUST say when the stack is stopped (merge, sweep, `down`).
+
+_From 974-stop-test-stack-on-merge._
 
 ## Retired
 

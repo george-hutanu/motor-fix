@@ -43,8 +43,10 @@ which uses the same scan, so a pass started by it always has something to do.
    worktrees removed once quiet past the done threshold (30 min), deleted worktrees pruned, and `carry-review`: a ready
    PR whose head only adds documentation to a tested commit gets that
    verdict carried (`pr-test/carry.mjs`, re-checked by the merge gate)
-   instead of a `rerun-qa` agent. A failed action is reported,
-   never retried with force.
+   instead of a `rerun-qa` agent. Last, the test stack sweep
+   (`node scripts/test-services.ts sweep`): the `mf-test-*` compose stacks
+   of worktrees that are gone, or whose PR merged or closed, are stopped.
+   A failed action is reported, never retried with force.
 
 3. Report the board in a few lines: counts (`stale`, `conflict`, `waiting`, `done`, `blocked`, QA
    runs in flight: `--local` ones and the `pr-qa.yml` runs on GitHub Actions
