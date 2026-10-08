@@ -9,9 +9,12 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { BrandDto } from '../models/brand-dto';
 import { BrandPageDto } from '../models/brand-page-dto';
 import { brandsControllerSearch } from '../fn/brands/brands-controller-search';
 import { BrandsControllerSearch$Params } from '../fn/brands/brands-controller-search';
+import { popularBrandsControllerTiles } from '../fn/brands/popular-brands-controller-tiles';
+import { PopularBrandsControllerTiles$Params } from '../fn/brands/popular-brands-controller-tiles';
 
 @Injectable({ providedIn: 'root' })
 export class BrandsService extends BaseService {
@@ -42,6 +45,31 @@ export class BrandsService extends BaseService {
   brandsControllerSearch(params?: BrandsControllerSearch$Params, context?: HttpContext): Promise<BrandPageDto> {
     const resp = this.brandsControllerSearch$Response(params, context);
     return resp.then((r: StrictHttpResponse<BrandPageDto>): BrandPageDto => r.body);
+  }
+
+  /** Path part for operation `popularBrandsControllerTiles()` */
+  static readonly PopularBrandsControllerTilesPath = '/api/v1/brands/popular';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `popularBrandsControllerTiles()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  popularBrandsControllerTiles$Response(params?: PopularBrandsControllerTiles$Params, context?: HttpContext): Promise<StrictHttpResponse<Array<BrandDto>>> {
+    const obs = popularBrandsControllerTiles(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `popularBrandsControllerTiles$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  popularBrandsControllerTiles(params?: PopularBrandsControllerTiles$Params, context?: HttpContext): Promise<Array<BrandDto>> {
+    const resp = this.popularBrandsControllerTiles$Response(params, context);
+    return resp.then((r: StrictHttpResponse<Array<BrandDto>>): Array<BrandDto> => r.body);
   }
 
 }
