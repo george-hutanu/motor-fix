@@ -1,6 +1,7 @@
+import { FUELS } from '@motor-fix/contracts/marked-brands';
+
 import {
   brandsOf,
-  FUELS,
   fuelsOf,
   type MarkedBrand,
   mark,

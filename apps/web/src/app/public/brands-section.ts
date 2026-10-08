@@ -4,13 +4,10 @@ import {
   type Fuel,
   isBrandsSection,
   type MarkedBrand,
-  NOTE_MAX,
-  PHRASE_MAX,
   type Stance,
 } from '@motor-fix/contracts/marked-brands';
 
 export type { Fuel, MarkedBrand, Stance };
-export { FUELS, NOTE_MAX, PHRASE_MAX };
 
 // The step's own value always holds the list, even when nothing is marked.
 export type BrandsSection = DraftBrands & { brands: MarkedBrand[] };

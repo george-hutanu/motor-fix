@@ -10,6 +10,11 @@ import {
   PLATFORM_ID,
   signal,
 } from '@angular/core';
+import {
+  FUELS,
+  NOTE_MAX,
+  PHRASE_MAX,
+} from '@motor-fix/contracts/marked-brands';
 import { type BrandDto, BrandsService } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmInput, HlmLabel, Lamp } from '@motor-fix/ui-cockpit';
@@ -19,14 +24,11 @@ import {
   clean,
   counts,
   cut,
-  FUELS,
   type Fuel,
   fuelsOf,
   letters,
   mark,
-  NOTE_MAX,
   next,
-  PHRASE_MAX,
   type Stance,
   toggleFuel,
 } from '../brands-section';
