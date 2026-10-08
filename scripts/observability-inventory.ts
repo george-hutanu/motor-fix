@@ -6,7 +6,9 @@
 // its dashboard and alerts or "none" and the reason.
 //
 // Queues, hosts and SDK clients are found by text, so only apps/ and libs/ are
-// read, without the generated client, tests and stubs. PostgreSQL, Redis and
+// read, without the generated client, tests and stubs, and with comments
+// removed. A host counts only where https:// begins a string literal: a link
+// in prose is not a call. PostgreSQL, Redis and
 // product counters are listed by hand: such an entry is stale once its source
 // path is gone.
 //
@@ -69,7 +71,7 @@ const QUEUE = new RegExp(
   'g',
 );
 const CONSTANT = /export const ([A-Za-z_$][\w$]*)\s*=\s*['"]([^'"]+)['"]/g;
-const HOST = /https:\/\/([a-z0-9-]+(?:\.[a-z0-9-]+)+)/g;
+const HOST = /(?<=['"`])https:\/\/([a-z0-9-]+(?:\.[a-z0-9-]+)+)/g;
 
 function files(root: string, dir: string): string[] {
   if (!existsSync(join(root, dir))) return [];
@@ -86,10 +88,51 @@ function files(root: string, dir: string): string[] {
   );
 }
 
+// A ' or " string ends at its quote or at the end of the line, so a quote in a
+// regular expression hides nothing past its own line. Regular expressions are
+// not read as such: one holding /* would hide code up to the next */.
+function stringEnd(text: string, start: number): number {
+  const quote = text[start];
+  for (let i = start + 1; i < text.length; i++) {
+    if (text[i] === '\\') i++;
+    else if (text[i] === quote) return i + 1;
+    else if (text[i] === '\n' && quote !== '`') return i;
+  }
+  return text.length;
+}
+
+function tokenEnd(text: string, i: number): number {
+  const end = (at: number, length: number) =>
+    at < 0 ? text.length : at + length;
+  if (text.startsWith('//', i)) return end(text.indexOf('\n', i), 0);
+  if (text.startsWith('/*', i)) return end(text.indexOf('*/', i + 2), 2);
+  if (`'"\``.includes(text[i])) return stringEnd(text, i);
+  return text[i] === '\\' ? i + 2 : i + 1;
+}
+
+// Comments become spaces, keeping the line breaks. A template is one literal,
+// so a quote inside it, ${…} included, begins no string of its own.
+function withoutComments(text: string): string {
+  let out = '';
+  for (let i = 0; i < text.length; ) {
+    const stop = Math.min(tokenEnd(text, i), text.length);
+    const part = text.slice(i, stop);
+    if (text.startsWith('//', i) || text.startsWith('/*', i))
+      out += part.replace(/[^\n]/g, ' ');
+    else if (text[i] === '`') out += part.replace(/['"]/g, ' ');
+    else out += part;
+    i = stop;
+  }
+  return out;
+}
+
 function readTexts(root: string): Map<string, string> {
   const sources = ['apps', 'libs'].flatMap((dir) => files(root, dir));
   return new Map(
-    sources.map((file) => [file, readFileSync(join(root, file), 'utf8')]),
+    sources.map((file) => [
+      file,
+      withoutComments(readFileSync(join(root, file), 'utf8')),
+    ]),
   );
 }
 
