@@ -93,10 +93,10 @@ export class ActorGuard implements CanActivate {
 
   private async adminOnly(request: WithActor) {
     const route: string = request.route?.path ?? request.path;
-    const actor = await this.actor(request.header('authorization')).catch(
-      () => null,
-    );
-    if (!actor) throw maintenanceRefusal(route, 'visitor');
+    const authorization = request.header('authorization');
+    if (!authorization) throw maintenanceRefusal(route, 'visitor');
+    // A token that does not resolve answers as usual, so the app renews it.
+    const actor = await this.actor(authorization);
     if (!actor.roles.includes('admin')) {
       throw maintenanceRefusal(route, 'signed_in');
     }

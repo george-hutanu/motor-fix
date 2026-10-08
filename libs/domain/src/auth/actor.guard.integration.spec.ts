@@ -193,27 +193,36 @@ describe('the actor check while the platform is in maintenance', () => {
     });
   });
 
+  it('answers maintenance ahead of sign-in for a call with no token', async () => {
+    expectMaintenance(await get('/unmarked'));
+  });
+
+  // The app renews an expired session on a 401, then learns of maintenance.
   it.each([
-    ['no token', undefined],
     ['a malformed token', 'Bearer not-a-token'],
     ['a token signed with another key', 'Bearer eyJhbGciOiJIUzI1NiJ9.e30.x'],
-  ])(
-    'answers maintenance ahead of sign-in for %s',
-    async (_, authorization) => {
-      expectMaintenance(await get('/unmarked', authorization));
-    },
-  );
+  ])('asks for sign-in as usual for %s', async (_, authorization) => {
+    const res = await get('/unmarked', authorization);
 
-  it('answers maintenance ahead of sign-in for an expired session', async () => {
+    expect(res.status).toBe(401);
+    expect(res.body).toMatchObject({ code: 'sign_in_required' });
+  });
+
+  it('asks an admin whose session expired to sign in, so it can renew', async () => {
     const expired = await signedIn(['admin'], 'admin', {
       now: Date.now() - DAY,
     });
+    const res = await get('/unmarked', expired);
 
-    expectMaintenance(await get('/unmarked', expired));
+    expect(res.status).toBe(401);
+    expect(res.body).toMatchObject({ code: 'sign_in_required' });
   });
 
-  it('answers maintenance ahead of the suspension of an account', async () => {
-    expectMaintenance(await get('/unmarked', await driver('suspended')));
+  it('still tells a suspended account so', async () => {
+    const res = await get('/unmarked', await driver('suspended'));
+
+    expect(res.status).toBe(403);
+    expect(res.body).toMatchObject({ code: 'account_suspended' });
   });
 
   it.each([
