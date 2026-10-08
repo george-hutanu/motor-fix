@@ -36,7 +36,8 @@ function sweepSeverity(o) {
     case "axe":
       return { critical: "high", serious: "high", moderate: "medium" }[o.impact] ?? "low";
     case "overflow":
-      return o.viewport === "mobile" ? "high" : "medium";
+      // Both phones, 390 px and 320 px (FR-011).
+      return o.viewport === "mobile" || o.viewport === "small-phone" ? "high" : "medium";
     case "layout":
       return BLOCKING_LAYOUT.has(o.rule) ? "high" : "medium";
     default:

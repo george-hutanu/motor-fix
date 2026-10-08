@@ -53,6 +53,10 @@ describe('severity of what the sweep saw', () => {
     assert.equal(sweepFinding({ ...where, viewport: 'desktop', kind: 'overflow', scrollWidth: 1500, width: 1440 }, { web: true }).severity, 'medium');
   });
 
+  it('ranks sideways scroll at 320 px high, like the 390 px phone (FR-011)', () => {
+    assert.equal(sweepFinding({ ...where, viewport: 'small-phone', kind: 'overflow', scrollWidth: 360, width: 320 }, { web: true }).severity, 'high');
+  });
+
   it('caps what a change without web code did not cause at medium, and says it is pre-existing', () => {
     const f = sweepFinding({ ...where, kind: 'pageerror', text: 'boom' }, { web: false });
     assert.equal(f.severity, 'medium');

@@ -23,7 +23,7 @@ export async function measureLayout({ phone, tapTargets, focus }) {
   const FLOOR = 12;
   const BODY = 16;
   const FIELD = 16;
-  const RUNNING_ROLES = "p, li, td, th, dd, button, a[href], [role=button], [role=link]";
+  const RUNNING_ROLES = "p, li, td, th, dd, dt, label, button, a[href], [role=button], [role=link]";
   const CAPTIONS = new Set(["SMALL", "SUB", "SUP"]);
   const FIELDS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
   // A field a phone zooms into: one that takes typing or a choice, not a box to tick or a button.
@@ -151,14 +151,28 @@ export async function measureLayout({ phone, tapTargets, focus }) {
         range.selectNodeContents(n);
         const t = range.getBoundingClientRect();
         const wide = t.left < box.left - HALF || t.right > box.right + HALF;
-        // Glyph boxes overhang a tight line box (line-height 1) by design: half a line of spill is a cut line.
-        const tall = hides && (t.top < box.top - size * HALF || t.bottom > box.bottom + size * HALF);
+        // Height from the line boxes, not the glyph boxes, which overhang a tight line (line-height 1) by design.
+        const tall = hides && linesSpill(range, s, box);
         if (wide || tall) {
           report("clipped", el, `text ${px(t.width)}×${px(t.height)} in a ${px(box.width)}×${px(box.height)} box`, "fits its box");
           break;
         }
       }
     }
+  }
+
+  // Its own lines against its box, by line box (each line's middle, half a line-height either way):
+  // glyphs overhang a tight line (line-height 1) by design, a line box past the box is a cut line.
+  function linesSpill(range, s, box) {
+    const lines = [...range.getClientRects()].filter((r) => r.height > 0);
+    if (!lines.length) return false;
+    const lh = Number.parseFloat(s.lineHeight);
+    const half = (r) => (Number.isFinite(lh) ? lh : r.height) / 2;
+    const first = lines[0];
+    const last = lines.at(-1);
+    const top = first.top + first.height / 2 - half(first);
+    const bottom = last.top + last.height / 2 + half(last);
+    return top < box.top - HALF || bottom > box.bottom + HALF;
   }
 
   // Controls: tap size, overlap, focus.
@@ -169,20 +183,27 @@ export async function measureLayout({ phone, tapTargets, focus }) {
       const r = el.getBoundingClientRect();
       if (r.width < TAP - HALF || r.height < TAP - HALF) report("tap-target", el, `${Math.round(r.width)}×${Math.round(r.height)}px`, `${TAP}×${TAP}px`);
     }
-  // A fixed or sticky bar over the page is not an overlap: the page scrolls clear of it.
+  // A fixed or sticky bar drawn over the page is not an overlap: the page scrolls clear of it.
+  // A page control drawn over the bar is: it hides the bar's control wherever the page stands.
   const pinned = (el) => {
     for (let e = el; e; e = e.parentElement) if (["fixed", "sticky"].includes(style(e).position)) return true;
     return false;
+  };
+  const pageOnTop = (page, w, h, ra, rb) => {
+    const x = Math.max(ra.left, rb.left) + w / 2;
+    const y = Math.max(ra.top, rb.top) + h / 2;
+    const hit = document.elementFromPoint(x, y);
+    return hit !== null && page.contains(hit);
   };
   const rects = controls.map((el) => [el, el.getBoundingClientRect(), pinned(el)]);
   for (let i = 0; i < rects.length; i++)
     for (let j = i + 1; j < rects.length; j++) {
       const [a, ra, pa] = rects[i];
       const [b, rb, pb] = rects[j];
-      if (a.contains(b) || b.contains(a) || pa !== pb) continue;
+      if (a.contains(b) || b.contains(a)) continue;
       const w = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
       const h = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
-      if (w > HALF && h > HALF) report("overlap", a, `${px(w)}×${px(h)} shared`, "no overlap", `${selectorOf(a)} × ${selectorOf(b)}`);
+      if (w > HALF && h > HALF && (pa === pb || pageOnTop(pa ? b : a, w, h, ra, rb))) report("overlap", a, `${px(w)}×${px(h)} shared`, "no overlap", `${selectorOf(a)} × ${selectorOf(b)}`);
     }
 
   // Spacing on the 4 px grid: gaps and padding as computed.

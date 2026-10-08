@@ -57,6 +57,11 @@ describe.skipIf(!browser)('layout checks in a browser', () => {
       expect(of(r, 'min-text').find((o) => o.selector === 'input#field14').expected).toBe('16px (field)');
     });
 
+    it('holds a label and a definition term to 16 px on a phone', async () => {
+      const html = `<dl><dt id="term" style="font-size:13px">Programare</dt><dd style="font-size:16px">Luni</dd></dl><label id="name" style="font-size:13px">Nume</label>`;
+      expect(selectors(await measure(null, { html }), 'min-text')).toEqual(['dt#term', 'label#name']);
+    });
+
     it('holds a desktop to the 12 px floor and the field size only', async () => {
       const r = await measure('min-text-fail', { at: 'desktop' });
       expect(selectors(r, 'min-text')).toEqual(['input#field14', 'span#tiny']);
@@ -123,6 +128,12 @@ describe.skipIf(!browser)('layout checks in a browser', () => {
       expect(of(r, 'clipped').find((o) => o.selector === 'button#cut').expected).toBe('fits its box');
     });
 
+    it('faults a line cut by a box shorter than its line by more than 0.5 px (FR-004)', async () => {
+      const html = `<p id="short" style="margin:0;overflow:hidden;height:20px;font:16px/24px sans-serif">Programează revizia</p>
+        <p id="tight" style="margin:0;overflow:hidden;font:16px/1 sans-serif">Programează revizia</p>`;
+      expect(selectors(await measure(null, { html }), 'clipped')).toEqual(['p#short']);
+    });
+
     it('passes a scroller, a label that fits and a short title', async () => {
       expect(of(await measure('clipped-pass', { at: 'small-phone' }), 'clipped')).toEqual([]);
     });
@@ -132,6 +143,14 @@ describe.skipIf(!browser)('layout checks in a browser', () => {
     it('faults two buttons drawn over each other, naming both', async () => {
       const r = await measure('overlap-fail', { at: 'desktop' });
       expect(selectors(r, 'overlap')).toEqual(['button#first × button#second']);
+    });
+
+    it('faults a page control painted over a control in a pinned bar, and passes one the bar covers', async () => {
+      const bar = (z) => `<div style="position:sticky;bottom:0;z-index:${z};background:#fff;padding:8px"><button id="save" style="width:200px;height:48px">Save</button></div>`;
+      const over = `<div style="height:760px"></div><div style="position:relative;height:0"><a id="credit" href="#" style="position:absolute;z-index:2;top:0;left:0;display:block;width:300px;height:44px;background:#eee">Credit</a></div>${bar(1)}`;
+      expect(selectors(await measure(null, { html: over }), 'overlap')).toEqual(['a#credit × button#save']);
+      const under = over.replace('z-index:2;', 'z-index:0;').replace('z-index:1;', 'z-index:5;');
+      expect(of(await measure(null, { html: under }), 'overlap')).toEqual([]);
     });
 
     it('passes a button inside a link card and two buttons side by side', async () => {
