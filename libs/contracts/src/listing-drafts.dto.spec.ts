@@ -1,4 +1,5 @@
 import { isListingDraftData } from './listing-drafts.dto';
+import { isListingDraftData as browserRule } from './listing-sections';
 
 const JOB = '0b9f3c1e-6a43-4c55-9d1c-6f3f1b7d2a10';
 
@@ -25,5 +26,9 @@ describe('the draft envelope', () => {
 
   it('still holds step 2 as any record', () => {
     expect(isListingDraftData({ steps: { '2': { anything: 1 } } })).toBe(true);
+  });
+
+  it('is the one rule the web app reads from the browser-safe sections module', () => {
+    expect(browserRule).toBe(isListingDraftData);
   });
 });
