@@ -118,22 +118,27 @@ function stream(target: INestApplication, auth?: string) {
           body: '',
           ended: new Promise<void>((done) => res.on('close', () => done())),
           messages: [] as Message[],
-          next: (kind: string, ms = 2_000) =>
+          // Waits for a message of `kind`; the limit only turns a message
+          // that never comes into a failure, and leaves room for a loaded
+          // machine.
+          next: (kind: string, ms = 15_000) =>
             new Promise<Message>((ok, fail) => {
               const seen = () => out.messages.find((m) => m.event === kind);
               const found = seen();
               if (found) return ok(found);
-              const timer = setTimeout(
-                () => fail(new Error(`no ${kind} within ${ms} ms`)),
-                ms,
-              );
-              res.on('data', () => {
+              const onData = () => {
                 const m = seen();
                 if (m) {
                   clearTimeout(timer);
+                  res.off('data', onData);
                   ok(m);
                 }
-              });
+              };
+              const timer = setTimeout(() => {
+                res.off('data', onData);
+                fail(new Error(`no ${kind} within ${ms} ms`));
+              }, ms);
+              res.on('data', onData);
             }),
           res,
         };
@@ -255,13 +260,13 @@ describe('the admin test update', () => {
     const {
       log,
       value: [res, a, b],
-    } = await timersArmedBy('outbox-relay', async (log) => {
+    } = await timersArmedBy('outbox-relay.ts', async (log) => {
       const sent = await sendTest(driver, `Bearer ${token(admin, 'admin')}`);
       // The wait is long enough for a loaded machine; the two seconds are
       // proved by the relay's timers below.
       const heard = await Promise.all([
-        phone.next('live.test', 15_000),
-        laptop.next('live.test', 15_000),
+        phone.next('live.test'),
+        laptop.next('live.test'),
       ]);
       await until('the relay to poll again', () => log.length > 0);
       return [sent, ...heard] as const;
@@ -546,7 +551,7 @@ describe('the end of a stream', () => {
     );
 
     const live = await stream(app, `Bearer ${shortLived}`);
-    const bye = await live.next('bye', 3_000);
+    const bye = await live.next('bye');
     await live.ended;
 
     expect(bye.data).toMatchObject({ kind: 'bye', reason: 'expired' });

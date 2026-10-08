@@ -6,6 +6,7 @@ import type { DataPoint } from '@opentelemetry/sdk-metrics';
 import { Client, Pool } from 'pg';
 
 import { DataStoreMetricsModule } from './data-store-metrics.module';
+import { serialDatabase } from '../auth/serial-db.testing';
 import { until } from '../waits.testing';
 
 const databaseUrl =
@@ -51,6 +52,10 @@ const up = async (store: string) =>
   (await points('motorfix_datastore_up')).find(
     (point) => point.attributes['store'] === store,
   )?.value;
+
+// The probe event below must stay pending: the suites that relay or clear the
+// outbox take the database turn, so this one waits for it too.
+serialDatabase(databaseUrl);
 
 beforeAll(async () => {
   await admin.connect();

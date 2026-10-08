@@ -156,7 +156,7 @@ describe('the relay', () => {
       where: { kind: 'quote.sent' },
     });
 
-    const { log, value: relayed } = await timersArmedBy('outbox-relay', () =>
+    const { log, value: relayed } = await timersArmedBy('outbox-relay.ts', () =>
       new OutboxRelay(prisma, publisher).relay(),
     );
     expect(relayed).toBe(1);

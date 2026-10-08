@@ -11,6 +11,7 @@ import {
 } from './news.fan-out';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { OutboxRelayModule } from '../../events/outbox-relay/outbox-relay.module';
+import { until } from '../../waits.testing';
 import { NotificationsModule } from '../notifications.module';
 import { NotificationsService } from '../notifications.service';
 import {
@@ -147,10 +148,10 @@ describe('the news worker', () => {
     await app.init();
     try {
       await queueRun(admin);
-      const deadline = Date.now() + 10_000;
-      while ((await newsEmails()).length < 2 && Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 100));
-      }
+      await until(
+        'both news e-mails',
+        async () => (await newsEmails()).length >= 2,
+      );
     } finally {
       await app.close();
     }
@@ -172,10 +173,10 @@ describe('the news worker', () => {
     const app = await worker('test-secret', undefined, true);
     await app.init();
     try {
-      const deadline = Date.now() + 10_000;
-      while ((await newsEmails()).length < 1 && Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 100));
-      }
+      await until(
+        'the news e-mail',
+        async () => (await newsEmails()).length >= 1,
+      );
     } finally {
       await app.close();
     }
@@ -198,11 +199,7 @@ describe('the news worker', () => {
     await app.init();
     let job = await newsJobs.getJob(`event-${id}`);
     try {
-      const deadline = Date.now() + 10_000;
-      while (!job && Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 100));
-        job = await newsJobs.getJob(`event-${id}`);
-      }
+      job ??= await until('the news job', () => newsJobs.getJob(`event-${id}`));
     } finally {
       await app.close();
       jest.restoreAllMocks();
@@ -228,6 +225,7 @@ describe('the news worker', () => {
       await app.init();
       try {
         await queueRun(admin);
+        // Long enough for a worker that should not run the job to run it.
         await new Promise((r) => setTimeout(r, 1_000));
       } finally {
         await app.close();
@@ -238,7 +236,6 @@ describe('the news worker', () => {
       expect(await newsJobs.getJobState('news-2026-11')).toBe('waiting');
       expect(logged).toContain(name);
     },
-    20_000,
   );
 
   it('gives the month back once the last attempt fails', async () => {
@@ -257,10 +254,10 @@ describe('the news worker', () => {
     await app.init();
     try {
       await queueRun(admin, 1);
-      const deadline = Date.now() + 10_000;
-      while ((await prisma.newsSend.count()) > 0 && Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 100));
-      }
+      await until(
+        'the month to be given back',
+        async () => (await prisma.newsSend.count()) === 0,
+      );
     } finally {
       await app.close();
       error.mockRestore();
@@ -276,13 +273,10 @@ describe('the news worker', () => {
     const app = await worker('test-secret', undefined, true);
     await app.init();
     try {
-      const deadline = Date.now() + 10_000;
-      while (
-        !(await prisma.newsSend.findFirst())?.ranAt &&
-        Date.now() < deadline
-      ) {
-        await new Promise((r) => setTimeout(r, 100));
-      }
+      await until(
+        'the run to be marked ran',
+        async () => (await prisma.newsSend.findFirst())?.ranAt,
+      );
     } finally {
       await app.close();
     }

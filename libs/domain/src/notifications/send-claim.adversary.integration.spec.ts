@@ -601,6 +601,7 @@ describe('a database error after Brevo accepted an e-mail', () => {
     expect(tries).toHaveLength(3);
     // Back to back: no timer ran out between them (Brevo's own request
     // limit is armed, and never reached).
+    expect(waits.some((entry) => entry.startsWith('armed'))).toBe(true);
     expect(waits.filter((entry) => entry.startsWith('fired'))).toEqual([]);
   });
 

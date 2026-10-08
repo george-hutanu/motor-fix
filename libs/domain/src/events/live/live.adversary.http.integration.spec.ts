@@ -125,7 +125,10 @@ function stream(target: INestApplication, auth?: string) {
           body: '',
           ended: new Promise<void>((done) => res.on('close', () => done())),
           messages: [] as Message[],
-          next: (kind: string, ms = 2_000) =>
+          // Waits for a message of `kind`; the limit only turns a message
+          // that never comes into a failure, and leaves room for a loaded
+          // machine.
+          next: (kind: string, ms = 15_000) =>
             new Promise<Message>((ok, fail) => {
               const seen = () => out.messages.find((m) => m.event === kind);
               const found = seen();
@@ -713,8 +716,8 @@ describe('Redis going away and coming back', () => {
 
       expect(down.status).toBe(202);
       expect(live.res.destroyed).toBe(false);
-      await live.next('after.ping', 5_000);
-      await during.next('after.ping', 5_000);
+      await live.next('after.ping');
+      await during.next('after.ping');
       expect(kinds(live, 'after.ping')).toHaveLength(1);
       expect(kinds(live, 'hello')).toHaveLength(1);
     } finally {
