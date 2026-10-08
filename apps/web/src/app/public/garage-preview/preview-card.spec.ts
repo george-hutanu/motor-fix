@@ -89,6 +89,23 @@ describe('the preview card', () => {
     });
   });
 
+  it('keeps the first mark of a brand the draft repeats, and the first place of one the order repeats', () => {
+    const brands: BrandsSection = {
+      brands: [
+        mark(TESLA, 'Tesla', 'works_on'),
+        mark(BMW, 'BMW', 'works_on'),
+        mark(TESLA, 'Tesla', 'does_not_take'),
+      ],
+    };
+
+    const listed = card({ brands, order: [TESLA, BMW, TESLA] }).brands;
+    expect(listed?.worksOn).toEqual([
+      { id: TESLA, name: 'Tesla' },
+      { id: BMW, name: 'BMW' },
+    ]);
+    expect(listed?.doesNotTake).toEqual([]);
+  });
+
   it('takes the first taken brand in display order as the sample, even one marked later', () => {
     const brands: BrandsSection = {
       brands: [mark(DACIA, 'Dacia', 'works_on'), mark(BMW, 'BMW', 'works_on')],

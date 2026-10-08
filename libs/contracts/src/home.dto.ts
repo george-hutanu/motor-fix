@@ -2,7 +2,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsInt,
-  IsLatLong,
   IsOptional,
   IsString,
   Matches,
@@ -12,8 +11,9 @@ import {
 } from 'class-validator';
 
 import { BrandDto } from './brands.dto';
+import { NearQueryDto } from './near.dto';
 
-export class HomeQueryDto {
+export class HomeQueryDto extends NearQueryDto {
   @ApiProperty({
     description: 'The brand, by its catalogue slug',
     example: 'dacia',
@@ -23,24 +23,16 @@ export class HomeQueryDto {
   @MaxLength(60)
   @Matches(/^[a-z0-9]+(-[a-z0-9]+)*$/)
   brand!: string;
-
-  @ApiPropertyOptional({
-    description:
-      'The place as "lat,lng"; accepted and ignored until a place narrows the count',
-    example: '44.43,26.10',
-  })
-  @IsOptional()
-  // IsLatLong alone takes a third number after the second comma.
-  @Matches(/^[^,]+,[^,]+$/)
-  @IsLatLong()
-  near?: string;
 }
 
 export class HomeDto {
   @ApiProperty({ type: BrandDto })
   brand!: BrandDto;
 
-  @ApiProperty({ description: 'Approved garages', type: 'integer' })
+  @ApiProperty({
+    description: 'Approved garages, in the area of the place when one is given',
+    type: 'integer',
+  })
   total!: number;
 
   @ApiProperty({

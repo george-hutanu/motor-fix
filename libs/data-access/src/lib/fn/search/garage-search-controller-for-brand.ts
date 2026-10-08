@@ -12,6 +12,11 @@ import { GarageSearchPageDto } from '../../models/garage-search-page-dto';
 export interface GarageSearchControllerForBrand$Params {
 
 /**
+ * The place the count is measured from, as "lat,lng" in Romania; rounded to three decimals. Without it, all of Romania
+ */
+  near?: string;
+
+/**
  * The brand, by its catalogue id
  */
   brandId: string;
@@ -25,6 +30,7 @@ export interface GarageSearchControllerForBrand$Params {
 export function garageSearchControllerForBrand(http: HttpClient, rootUrl: string, params: GarageSearchControllerForBrand$Params, context?: HttpContext): Observable<StrictHttpResponse<GarageSearchPageDto>> {
   const rb = new RequestBuilder(rootUrl, garageSearchControllerForBrand.PATH, 'get');
   if (params) {
+    rb.query('near', params.near, {});
     rb.query('brandId', params.brandId, {});
     rb.query('cursor', params.cursor, {});
   }

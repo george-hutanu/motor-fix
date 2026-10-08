@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -517,5 +520,13 @@ describe('step 5 for a mobile mechanic', () => {
     expect(radius(opened.step)).toBeNull();
     expect(shown()?.km).toBeUndefined();
     expect(opened.emitted).toEqual([]);
+  });
+});
+
+describe('the map on the listing page', () => {
+  it('keeps its own controls under the pinned Save bar: the map is its own stacking context', () => {
+    const css = readFileSync(join(__dirname, 'place-step.css'), 'utf8');
+    const map = /(?:^|\n)\.map \{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(map).toMatch(/isolation:\s*isolate;/);
   });
 });

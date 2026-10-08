@@ -7,6 +7,7 @@ import request from 'supertest';
 import { HealthModule } from './health.module';
 import { S3TestStore } from '../storage/s3-test-store';
 import { StorageModule } from '../storage/storage.module';
+import { timersArmedBy } from '../waits.testing';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
@@ -117,20 +118,23 @@ describe('health', () => {
 
     it('gives up after 2 seconds and answers 503', async () => {
       app = await start({ databaseUrl, redisUrl: `redis://localhost:${port}` });
-      const started = Date.now();
-
-      const res = await request(app.getHttpServer()).get('/health/ready');
+      const { log, value: res } = await timersArmedBy(
+        'health.service',
+        async () => request(app.getHttpServer()).get('/health/ready'),
+      );
 
       expect(res.status).toBe(503);
       expect(res.body.checks.redis).toBe('error');
-      expect(Date.now() - started).toBeLessThan(3000);
+      // The check's own 2-second limit is what ended the wait.
+      expect(log).toContain('fired 2000');
     });
 
     it('gives up on a silent store after 2 seconds and names storage', async () => {
       app = await start({ databaseUrl, redisUrl }, `http://127.0.0.1:${port}`);
-      const started = Date.now();
-
-      const res = await request(app.getHttpServer()).get('/health/ready');
+      const { log, value: res } = await timersArmedBy(
+        ['health.service', 'storage.service'],
+        async () => request(app.getHttpServer()).get('/health/ready'),
+      );
 
       expect(res.status).toBe(503);
       expect(res.body.checks).toEqual({
@@ -138,7 +142,8 @@ describe('health', () => {
         redis: 'ok',
         storage: 'error',
       });
-      expect(Date.now() - started).toBeLessThan(3000);
+      // A 2-second limit, the check's or the store's own, ended the wait.
+      expect(log).toContain('fired 2000');
     });
   });
 });

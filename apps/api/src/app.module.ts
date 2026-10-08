@@ -77,9 +77,10 @@ export class AppModule {
         garages,
         ListingPhotosModule.register({ redisUrl: env.REDIS_URL }, garages),
         EventsModule.register({ redisUrl: env.REDIS_URL }),
-        PlatformRulesModule.register({
-          production: env.APP_ENV === 'production',
-        }),
+        PlatformRulesModule.register(
+          { production: env.APP_ENV === 'production', webUrl: email.webUrl },
+          notifications,
+        ),
       ],
       module: AppModule,
     };

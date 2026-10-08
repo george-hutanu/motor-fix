@@ -148,12 +148,12 @@ describe('cockpit.css tokens', () => {
     for (const [, value] of spaces) expect(px(value) % 4).toBe(0);
   });
 
-  it('keeps every text size at 12 px or more, body at 13, fields at 16', () => {
+  it('keeps every text size at 12 px or more, body at 16, fields at 16', () => {
     const sizes = [...dark].filter(([n]) => n.startsWith('--mf-size-'));
     expect(sizes.length).toBeGreaterThanOrEqual(4);
     for (const [, value] of sizes) expect(px(value)).toBeGreaterThanOrEqual(12);
     expect(px(dark.get('--mf-size-label'))).toBe(12);
-    expect(px(dark.get('--mf-size-body'))).toBeGreaterThanOrEqual(13);
+    expect(px(dark.get('--mf-size-body'))).toBe(16);
     expect(px(dark.get('--mf-size-field'))).toBe(16);
   });
 });
@@ -294,6 +294,35 @@ describe('cockpit.css component rules', () => {
     const main = rule('.spartan-button-variant-default');
     expect(main).toMatch(/background(-color)?:\s*var\(--mf-amber\)/);
     expect(main).toMatch(/(^|;)\s*color:\s*var\(--mf-on-amber\)/);
+  });
+
+  it('sets the main button and the tab labels at the body size, so the theme meets the 16 px phone minimum (FR-021)', () => {
+    for (const selector of [
+      '.spartan-button-variant-default',
+      '.spartan-tabs-trigger',
+    ])
+      expect(rule(selector)).toMatch(/font-size:\s*var\(--mf-size-body\)/);
+  });
+
+  it('puts headings and the display figure on the type scale with their own tokens', () => {
+    const sizes = new Map(
+      [...css.matchAll(/(--mf-size-[\w-]+):\s*(\d+)px/g)].map((m) => [
+        m[1],
+        Number(m[2]),
+      ]),
+    );
+    expect(sizes.get('--mf-size-title')).toBe(32);
+    expect(sizes.get('--mf-size-heading')).toBe(24);
+    expect(sizes.get('--mf-size-subheading')).toBe(20);
+    expect(sizes.get('--mf-size-display')).toBe(40);
+    for (const [selector, token] of [
+      ['h1', 'title'],
+      ['h2', 'heading'],
+      ['h3', 'subheading'],
+    ])
+      expect(rule(selector)).toMatch(
+        new RegExp(`font-size:\\s*var\\(--mf-size-${token}\\)`),
+      );
   });
 
   it('keeps the secondary and ghost buttons out of amber', () => {
