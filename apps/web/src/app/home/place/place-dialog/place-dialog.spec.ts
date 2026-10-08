@@ -240,6 +240,18 @@ describe('the place dialog, by address', () => {
     expect(search).toHaveBeenCalledWith({ lang: 'en', q: 'Cluj' });
   });
 
+  it('asks nothing once it is closed before the pause ends', async () => {
+    await open();
+
+    await type('Cluj', 100);
+    await key('Escape');
+    expect(closed).toBeDefined();
+    await wait(300);
+    await settle();
+
+    expect(search).not.toHaveBeenCalled();
+  });
+
   it('shows at most five suggestions as options of a listbox', async () => {
     search.mockResolvedValue({ items: suggestions(7) });
     await open();

@@ -1,17 +1,6 @@
-import {
-  nearOf,
-  PLACE_DECIMALS,
-  parseNear,
-  roundCoordinate,
-  SEARCH_RADIUS_DEFAULT_KM,
-} from './search-place';
+import { nearOf, parseNear, roundCoordinate } from './search-place';
 
 describe('the search place', () => {
-  it('searches 25 km around a place, at three decimals', () => {
-    expect(SEARCH_RADIUS_DEFAULT_KM).toBe(25);
-    expect(PLACE_DECIMALS).toBe(3);
-  });
-
   it.each([
     [44.426812, 44.427],
     [26.102538, 26.103],

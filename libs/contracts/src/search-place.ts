@@ -3,7 +3,7 @@
 
 export const SEARCH_RADIUS_DEFAULT_KM = 25;
 // About 100 m: one spot gives one request, so a cached answer is shared.
-export const PLACE_DECIMALS = 3;
+const PLACE_DECIMALS = 3;
 
 export interface SearchPoint {
   lat: number;

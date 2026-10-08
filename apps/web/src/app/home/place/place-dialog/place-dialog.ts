@@ -1,5 +1,6 @@
 import {
   Component,
+  DestroyRef,
   type ElementRef,
   inject,
   signal,
@@ -42,6 +43,10 @@ export class PlaceDialog {
   // Each look-up and each key counts, so only the answer to the latest text
   // is shown.
   private asked = 0;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => clearTimeout(this.timer));
+  }
 
   protected readonly addressMax = ADDRESS_MAX;
   protected readonly geolocation =

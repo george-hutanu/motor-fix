@@ -13,8 +13,8 @@ export interface InArea {
 
 // Haversine on a sphere of the Earth's mean radius: within a metre of the
 // ellipsoid at these distances, and it needs no PostGIS extension. A fixed
-// garage is in within the search radius; a mobile mechanic when the place is
-// inside the area it serves around its seat.
+// garage is in when within the search radius; a mobile mechanic when the
+// place is inside the area it serves around its seat.
 export async function garagesInArea(
   prisma: PrismaClient,
   { lat, lng }: SearchPoint,
