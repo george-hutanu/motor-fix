@@ -7,6 +7,7 @@ import { Session } from './session';
 function account(language: 'ro' | 'en', id = 'account-1'): MeDto {
   return {
     capabilities: [],
+    city: null,
     email: 'andrei@example.ro',
     emailConfirmed: true,
     garageId: null,

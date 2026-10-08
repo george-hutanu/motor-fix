@@ -138,6 +138,79 @@ export function formatDay(value: unknown, language: Language): string {
   return `${Number(day)} ${MONTHS_SHORT[language][Number(month) - 1]} ${year}`;
 }
 
+// Fixed like the short names, so server and browser write the same month;
+// date pickers read the same list through calendarNames.
+const MONTHS_LONG: Record<Language, readonly string[]> = {
+  en: [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ],
+  ro: [
+    'ianuarie',
+    'februarie',
+    'martie',
+    'aprilie',
+    'mai',
+    'iunie',
+    'iulie',
+    'august',
+    'septembrie',
+    'octombrie',
+    'noiembrie',
+    'decembrie',
+  ],
+};
+
+function bucharestDay(date: Date) {
+  const { day, month, year } = Object.fromEntries(
+    dayParts.formatToParts(date).map((p) => [p.type, Number(p.value)]),
+  );
+  return { day, month, year };
+}
+
+const CALENDAR_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
+const DAY_MS = 86_400_000;
+
+// A calendar day as UTC midnight, or undefined: Date rolls 30 February into
+// March, and an expiry that does not exist must not become one that does.
+function calendarDay(value: unknown): Date | undefined {
+  const parts = typeof value === 'string' && CALENDAR_DAY.exec(value);
+  if (!parts) return undefined;
+  const [year, month, day] = parts.slice(1).map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+    ? date
+    : undefined;
+}
+
+export function formatMonthYear(value: unknown, language: Language): string {
+  const date = calendarDay(value);
+  if (!date) return MISSING;
+  return `${MONTHS_LONG[language][date.getUTCMonth()]} ${date.getUTCFullYear()}`;
+}
+
+// Whole calendar days from today in Bucharest to an expiry day: 0 on the
+// day itself, negative once it has passed, null for anything but a real day.
+export function daysUntil(expiry: unknown, now: Date): number | null {
+  const target = calendarDay(expiry);
+  if (!target || Number.isNaN(now.getTime())) return null;
+  const today = bucharestDay(now);
+  return Math.round(
+    (target.getTime() - Date.UTC(today.year, today.month - 1, today.day)) /
+      DAY_MS,
+  );
+}
+
 // One 24-hour clock in both languages.
 export function formatClock(value: unknown): string {
   const date = instant(value);
@@ -153,9 +226,6 @@ export function calendarNames(language: Language) {
     });
     return dates.map((d) => format.format(d));
   };
-  const months = [...Array(12).keys()].map(
-    (m) => new Date(Date.UTC(2026, m, 15)),
-  );
   // 5 January 2026 is a Monday.
   const week = [...Array(7).keys()].map(
     (d) => new Date(Date.UTC(2026, 0, 5 + d)),
@@ -164,7 +234,7 @@ export function calendarNames(language: Language) {
     days: names({ weekday: 'long' }, week),
     daysShort: names({ weekday: 'short' }, week),
     firstDay: 1 as const,
-    months: names({ month: 'long' }, months),
+    months: [...MONTHS_LONG[language]],
     monthsShort: [...MONTHS_SHORT[language]],
   };
 }

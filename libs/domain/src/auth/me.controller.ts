@@ -24,6 +24,7 @@ export class MeController {
     const { emailVerifiedAt, ...account } =
       await this.prisma.account.findUniqueOrThrow({
         select: {
+          city: true,
           email: true,
           emailVerifiedAt: true,
           language: true,
