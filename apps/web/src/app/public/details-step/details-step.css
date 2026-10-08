@@ -41,6 +41,7 @@ textarea {
   resize: vertical;
 }
 fieldset button {
+  min-width: var(--mf-tap);
   min-height: var(--mf-tap);
   max-width: 100%;
   padding: 0 var(--mf-space-3);
