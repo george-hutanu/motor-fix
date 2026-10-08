@@ -390,19 +390,24 @@ describe('the baseline', () => {
 
 describe('node scripts/structure-check.ts', () => {
   let dir: string;
+  // A git hook exports GIT_DIR and GIT_INDEX_FILE, which would point the
+  // temporary repository's git at the repository being committed.
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
+  );
 
   const put = (path: string, text: string) => {
     mkdirSync(dirname(join(dir, path)), { recursive: true });
     writeFileSync(join(dir, path), text);
   };
   const git = (...args: string[]) =>
-    execFileSync('git', args, { cwd: dir, encoding: 'utf8' });
+    execFileSync('git', args, { cwd: dir, encoding: 'utf8', env });
   const commit = () => {
     git('add', '-A');
     git('commit', '-qm', 'tree');
   };
   const run = (...args: string[]) =>
-    spawnSync('node', [SCRIPT, ...args], { cwd: dir, encoding: 'utf8' });
+    spawnSync('node', [SCRIPT, ...args], { cwd: dir, encoding: 'utf8', env });
   const baseline = (value: Baseline) =>
     put('scripts/structure-baseline.json', `${JSON.stringify(value)}\n`);
 
