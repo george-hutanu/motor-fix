@@ -129,6 +129,8 @@ labels: `gh pr edit <n> <labels>`.
 
 ## 2c. `debt`: deferred findings become tasks
 
+Only a large fix is deferred (the size test in AGENTS.md, "Technical debt a
+review defers"); a small or medium one is fixed in the PR and never filed.
 Each pending bullet of `specs/<feature>/deferred.md` becomes a To do row in
 MotorFix stories (Role System, the story's Epic and Feature; Issue type Tech
 debt, or Decision when it waits on the owner), built by `debt-tasks.mjs`, and
