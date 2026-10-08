@@ -148,12 +148,12 @@ describe('cockpit.css tokens', () => {
     for (const [, value] of spaces) expect(px(value) % 4).toBe(0);
   });
 
-  it('keeps every text size at 12 px or more, body at 13, fields at 16', () => {
+  it('keeps every text size at 12 px or more, body at 16, fields at 16', () => {
     const sizes = [...dark].filter(([n]) => n.startsWith('--mf-size-'));
     expect(sizes.length).toBeGreaterThanOrEqual(4);
     for (const [, value] of sizes) expect(px(value)).toBeGreaterThanOrEqual(12);
     expect(px(dark.get('--mf-size-label'))).toBe(12);
-    expect(px(dark.get('--mf-size-body'))).toBeGreaterThanOrEqual(13);
+    expect(px(dark.get('--mf-size-body'))).toBe(16);
     expect(px(dark.get('--mf-size-field'))).toBe(16);
   });
 });
