@@ -1,7 +1,16 @@
 <h3>{{ 'public.listing.photos.heading' | t }}</h3>
 <p class="hint">{{ 'public.listing.photos.hint' | t }}</p>
-<div class="drop" (dragover)="$event.preventDefault()" (drop)="ready() && dropFiles($event)">
-  @if (ready()) {
+<div
+  class="drop"
+  [class.over]="over()"
+  (dragenter)="over.set(ready())"
+  (dragover)="$event.preventDefault()"
+  (dragleave)="over.set(false)"
+  (drop)="ready() && dropFiles($event)"
+>
+  @if (over()) {
+    <p class="release">{{ 'public.listing.photos.release' | t }}</p>
+  } @else if (ready()) {
     @if (mobile()) {
       <p>{{ 'public.listing.photos.dropMobile' | t }}</p>
     } @else {
@@ -60,7 +69,11 @@
   }
 </ul>
 <p class="announce" aria-live="polite">
-  @if (announcement(); as place) {
-    {{ 'public.listing.photos.place' | t: place }}
+  @if (announcement(); as said) {
+    @if (said.key === 'place') {
+      {{ 'public.listing.photos.place' | t: said.params }}
+    } @else {
+      {{ 'public.listing.photos.uploaded' | t: said.params }}
+    }
   }
 </p>

@@ -297,6 +297,61 @@ describe('step 5, the photos', () => {
   });
 });
 
+describe('the step keeps trying and says what happens', () => {
+  it('retries a photo that failed when more photos are chosen', async () => {
+    const opened = await open();
+
+    await choose(opened, [photo('unu.jpg')]);
+    askedForAddress(opened.http)[0]?.flush(
+      { code: 'storage_unavailable' },
+      { status: 503, statusText: 'Service Unavailable' },
+    );
+    await opened.settle();
+    await choose(opened, [photo('doi.jpg')]);
+
+    expect(askedForAddress(opened.http)).toHaveLength(2);
+  });
+
+  it('retries a photo that failed when the connection returns', async () => {
+    const opened = await open();
+
+    await choose(opened, [photo('unu.jpg')]);
+    askedForAddress(opened.http)[0]?.flush(
+      { code: 'storage_unavailable' },
+      { status: 503, statusText: 'Service Unavailable' },
+    );
+    await opened.settle();
+    window.dispatchEvent(new Event('online'));
+    await opened.settle();
+
+    expect(askedForAddress(opened.http)).toHaveLength(1);
+  });
+
+  it('tells by words, not only colour, that photos are being dragged over it', async () => {
+    const { settle, step } = await open();
+    const area = step.querySelector('.drop') as HTMLElement;
+
+    area.dispatchEvent(new Event('dragenter'));
+    await settle();
+    expect(text(step)).toContain('Lasă fotografiile aici');
+    expect(area.classList).toContain('over');
+
+    area.dispatchEvent(new Event('dragleave'));
+    await settle();
+    expect(text(step)).not.toContain('Lasă fotografiile aici');
+  });
+
+  it('announces a photo once it has uploaded', async () => {
+    const opened = await open();
+
+    await choose(opened, [photo('atelier.jpg')]);
+    const [asked] = askedForAddress(opened.http);
+    await upload(opened, asked as TestRequest, 0);
+
+    expect(announced(opened.step)).toContain('Fotografia 1 este încărcată');
+  });
+});
+
 describe('ordering and removing the photos', () => {
   it('shows the saved photos in order, the first marked as the cover in words', async () => {
     const opened = await open({ files: [keyOf(0), keyOf(1), keyOf(2)] });

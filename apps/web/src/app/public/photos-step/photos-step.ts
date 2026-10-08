@@ -69,9 +69,11 @@ export class PhotosStep {
   protected readonly tiles = signal<Tile[]>([]);
   protected readonly refused = signal(false);
   protected readonly full = signal(false);
-  protected readonly announcement = signal<{ n: number; m: number } | null>(
-    null,
-  );
+  protected readonly over = signal(false);
+  protected readonly announcement = signal<{
+    key: 'place' | 'uploaded';
+    params: Record<string, number>;
+  } | null>(null);
   protected readonly types = TYPES.join(',');
   protected readonly mobile = computed(() => this.kind() === 'mobile');
   protected readonly ready = computed(() => !!this.draftId() && !!this.token());
@@ -103,12 +105,16 @@ export class PhotosStep {
 
   protected dropFiles(event: DragEvent) {
     event.preventDefault();
+    this.over.set(false);
     this.take([...(event.dataTransfer?.files ?? [])]);
   }
 
+  // Waiting and failed photos alike go again on a new pick and online.
   protected resume() {
     for (const tile of this.tiles()) {
-      if (tile.status === 'waiting') this.send(tile.id);
+      if (tile.status === 'waiting' || tile.status === 'failed') {
+        this.send(tile.id);
+      }
     }
   }
 
@@ -180,7 +186,7 @@ export class PhotosStep {
       }),
     );
     this.tiles.update((tiles) => [...tiles, ...added]);
-    if (navigator.onLine) for (const tile of added) this.send(tile.id);
+    if (navigator.onLine) this.resume();
   }
 
   private send(id: number) {
@@ -223,6 +229,8 @@ export class PhotosStep {
           this.sending.delete(id);
           this.patch(id, { key: event.done.key, status: 'ready' });
           this.setTiles(this.tiles());
+          const n = this.tiles().findIndex((t) => t.id === id) + 1;
+          this.announcement.set({ key: 'uploaded', params: { n } });
         },
       });
     this.sending.set(id, sub);
@@ -276,7 +284,10 @@ export class PhotosStep {
     if (to < 0 || to >= tiles.length) return;
     moveItemInArray(tiles, from, to);
     this.setTiles(tiles);
-    this.announcement.set({ m: tiles.length, n: to + 1 });
+    this.announcement.set({
+      key: 'place',
+      params: { m: tiles.length, n: to + 1 },
+    });
   }
 
   private setTiles(tiles: Tile[]) {

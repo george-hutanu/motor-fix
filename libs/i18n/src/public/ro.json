@@ -175,8 +175,10 @@
       "place": "Fotografia {n} din {m}",
       "processing": "Se pregătește",
       "refused": "Doar fotografii JPG, PNG sau WEBP, de cel mult 10 MB",
+      "release": "Lasă fotografiile aici",
       "remove": "Șterge fotografia {n}",
       "retry": "Reîncearcă",
+      "uploaded": "Fotografia {n} este încărcată",
       "waiting": "Așteaptă conexiunea"
     },
     "prices": {

@@ -24,6 +24,14 @@ p {
   border-radius: var(--mf-radius-control);
   color: var(--mf-text-secondary);
 }
+.drop.over {
+  border-style: solid;
+  border-color: var(--mf-focus);
+}
+.release {
+  font-weight: 600;
+  color: var(--mf-text);
+}
 .error {
   color: var(--mf-red);
 }
@@ -129,7 +137,9 @@ button:focus-visible {
   outline-offset: 2px;
 }
 .cdk-drag-placeholder {
-  opacity: 0.3;
+  opacity: 0.4;
+  outline: 2px dashed var(--mf-text-secondary);
+  outline-offset: 2px;
 }
 .announce {
   position: absolute;

@@ -172,8 +172,10 @@
       "place": "Photo {n} of {m}",
       "processing": "Getting ready",
       "refused": "Only JPG, PNG or WEBP photos, up to 10 MB each",
+      "release": "Let go to add the photos",
       "remove": "Remove photo {n}",
       "retry": "Retry",
+      "uploaded": "Photo {n} uploaded",
       "waiting": "Waiting for a connection"
     },
     "prices": {
