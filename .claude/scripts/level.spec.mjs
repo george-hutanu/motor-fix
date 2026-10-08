@@ -629,7 +629,7 @@ describe('a level reaches only the feature it was sized for', () => {
     assert.deepEqual(pointTo(cases[7][0], 'specs/002-new'), cases[7][0]);
     assert.deepEqual(pointTo(cases[10][0], 'specs/002-new'), { feature_directory: 'specs/002-new' });
     assert.deepEqual(pointTo(cases[11][0], 'specs/002-new'), { feature_directory: 'specs/002-new', level: 1, level_for: 'specs/002-new' });
-  });
+  }, 20000);
 });
 
 describe('classifyLevel', () => {

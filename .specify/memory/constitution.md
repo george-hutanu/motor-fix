@@ -1,5 +1,23 @@
 <!--
-Sync Impact Report (v1.9.0)
+Sync Impact Report (v1.10.0)
+- Version change: 1.9.0 → 1.10.0 (MINOR: the Agent Execution Rule "Scope is
+  the deliverable" gains the review clause — a verified review, harden, QA or
+  PR-tester finding with a small or medium fix is fixed in the same PR,
+  pre-existing or adjacent included; only a large fix, by the size test, is
+  deferred. Implementation scope is unchanged; nothing removed)
+- Source: ST-966, the owner's rule of 2026-10-08 (fewer tech-debt tickets).
+  1.9.0 belongs to ST-893; ST-960 takes the next free version.
+- Templates:
+  - ✅ .specify/templates/deferred-template.md — large fixes only, size test
+  - ✅ .claude/agents/code-reviewer.md, spec-reviewer.md — routing table
+  - ✅ .claude/skills/speckit-review, speckit-harden, speckit-auto,
+    speckit-pr-test, speckit-notion-sync — the route by fix size
+  - ✅ AGENTS.md — "Technical debt a review defers"; CLAUDE.local.md — the
+    defer bullet and the version line
+  - ✅ .specify/memory/constitution-card.md — v1.10.0
+  - ✅ .claude/scripts/fix-in-pr-rule.spec.mjs — keeps the files agreeing
+
+Previous report (v1.9.0)
 - Version change: 1.8.3 → 1.9.0 (MINOR: Principle IV gains the folder rules —
   a module's submodules get their own subfolder, and a web component is a
   `<name>/` folder holding `<name>.ts`, `<name>.html` and `<name>.css` — and
@@ -458,10 +476,16 @@ gate is the enforcement and the prose is the explanation; the rest are
 prompt-level, and `spec-reviewer` is where deviations surface.
 
 - **Scope is the deliverable.** Build exactly what spec, plan, and tasks
-  call for. A pre-existing bug, performance concern, cleanup, or behavior
-  the task doesn't mention is NOT fixed, optimized, or extended unless the
+  call for. While implementing, a pre-existing bug, performance concern,
+  cleanup, or behavior the task doesn't mention is left alone unless the
   requested behavior cannot work without it — it goes under "Follow-ups"
-  in the completion report.
+  in the completion report. A verified finding of the story's own review,
+  harden, QA or PR-tester laps is different: a small or medium fix is made
+  in the same PR, even when the problem existed before or sits next to the
+  change; only a large fix is deferred (`specs/<feature>/deferred.md` and a
+  Notion tech-debt task). A fix is large when it needs its own design or
+  decision, a data migration, a different area or epic, or work clearly
+  bigger than the story itself.
 - **Ambiguity.** Implement the reading the wording and surrounding code
   most directly support, state that assumption in the report, and don't
   build for the other readings too. Ask only when different readings mean
@@ -504,4 +528,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.9.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-08
+**Version**: 1.10.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-08
