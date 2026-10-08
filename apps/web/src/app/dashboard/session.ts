@@ -376,8 +376,10 @@ export class Session {
     this.drop();
   }
 
-  // Signed out here at once, whatever the server answers.
+  // Signed out here at once, whatever the server answers, once the language
+  // last tapped has reached the account.
   private async end(kind: SignOut) {
+    await this.saving;
     this.drop();
     this.tabs?.postMessage('signed-out');
     await this.send(kind);

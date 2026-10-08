@@ -188,14 +188,31 @@ describe('saving the language on the account', () => {
     expect(session.current()).toBeNull();
   });
 
-  it('drops an answer that arrives after signing out with the button', async () => {
+  it('saves the last language tapped before signing out with the button', async () => {
     const { choice, meControllerUpdate, pending, session } =
       await signedIn('ro');
 
     await choice.pick('en');
-    await session.signOut();
+    await choice.pick('ro');
+    const signingOut = session.signOut();
     pending[0].resolve(account('en'));
     await settle();
+
+    expect(meControllerUpdate).toHaveBeenCalledTimes(2);
+    expect(pending[1].language).toBe('ro');
+    pending[1].resolve(account('ro'));
+    await signingOut;
+    expect(session.current()).toBeNull();
+  });
+
+  it('signs out with the button even when the save in flight fails', async () => {
+    const { choice, meControllerUpdate, pending, session } =
+      await signedIn('ro');
+
+    await choice.pick('en');
+    const signingOut = session.signOut();
+    pending[0].reject(new Error('offline'));
+    await signingOut;
 
     expect(session.current()).toBeNull();
     expect(meControllerUpdate).toHaveBeenCalledTimes(1);
