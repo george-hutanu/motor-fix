@@ -14,6 +14,7 @@ features:
   - 885-restored-draft-check
   - 111-garage-address-map
   - 917-proposed-job-duplicate
+  - 959-map-fits-circle
 ---
 
 # Capability: Garage listing
@@ -504,9 +505,9 @@ _From 111-garage-address-map._
 
 _From 111-garage-address-map._
 
-### 111-FR-003 — The map MUST be drawn with MapLibre and show one draggable pin at the position once there is one, centred on it at street zoom 16 (a named constant beside the Romania bounds); dragging the pin, or the one map tap that follows "Pune pinul pe hartă" (the button arms one tap, which places the pin and disarms; with a pin already there a tap does nothing and the pin is moved by dragging), MUST set the position to where the pin lands and leave the address text untouched. For a mobile mechanic the map MUST draw a circle of the radius around the position and redraw it when the radius changes. The suggestions MUST be operable by keyboard alone (Tab/arrow keys move, Enter chooses, Escape closes the list), the field MUST announce the suggestion count to assistive technology, and the pin MUST have a keyboard path: with focus on the map the arrow keys nudge a placed pin, so a hand-placed or corrected position never needs a pointer. The pin and the map controls MUST be usable at 320 px with no sideways scroll, at least 44 px tall where they are controls, and readable in light and dark (`phone-layout.md`).
+### 959-FR-004 — For a garage that is not `mobile`, the map MUST centre on the pin at street zoom 16 (`PLACE_ZOOM`, the constant of 111-FR-003) on the first placement and whenever the pin lands outside the current viewport, and MUST NOT otherwise change the view.
 
-_From 111-garage-address-map._
+_From 959-map-fits-circle._
 
 ### 111-FR-004 — When the look-up answers the "search down" state or cannot be reached, the step MUST show "Căutarea adresei nu merge acum" / "Address search is not working right now" under the field and keep the field and the manual pin usable; when the map's style or tiles fail to load, or the map cannot start, the map area MUST say the map could not be loaded ("Harta nu s-a putut încărca" / "The map could not be loaded"), the address stays editable and kept, and the step stays incomplete until a position exists.
 
@@ -572,6 +573,34 @@ _From 111-garage-address-map._
 
 _From 917-proposed-job-duplicate._
 
+### 959-FR-001 — For a mobile mechanic (step 1's `businessKind` is `mobile`), once a position exists, the map MUST frame the whole service circle: every point of the circle's edge at the radius in force (the typed radius, else 20, 111-FR-005) inside the map's viewport, the pin at the centre, with 24 px of padding on every side of the circle's bounding box. It does this on the first placement (whenever the map goes from no pin to a pin, a restored draft included) and whenever a pin is set outside the current viewport. The fit MUST hold at 320 px and at every wider width, in light and dark, in Romanian and English.
+
+_From 959-map-fits-circle._
+
+### 959-FR-002 — The map MUST refit to the circle each time the radius in force changes to a value the field accepts (1–100, whole numbers), zooming out for a larger radius and in for a smaller one. The radius becoming known for the first time counts as a change. A value the field refuses (111-FR-005) MUST NOT move the map.
+
+_From 959-map-fits-circle._
+
+### 959-FR-003 — A pin move that leaves the pin inside the current viewport (a drag, an arrow-key nudge, a nearby suggestion) MUST NOT change the view, for either kind. This holds even when the circle no longer fits because the user zoomed in.
+
+_From 959-map-fits-circle._
+
+### 959-FR-005 — The map MUST NOT change its zoom because the user zoomed out: the rule that recentres at zoom 16 when the zoom is under 10 is removed, and a pin set inside the current view leaves the zoom as the user set it (FR-003). The first placement from the opening view of the whole country still frames the place (FR-001 or FR-004).
+
+_From 959-map-fits-circle._
+
+### 959-FR-006 — When the draft's kind changes with a pin in place, the map MUST follow the kind on the next step-5 render: to `mobile`, draw the circle and fit it; to fixed, remove the circle and keep the view.
+
+_From 959-map-fits-circle._
+
+### 959-FR-007 — Tests MUST be written first and cover, in Jest: the bounds of a circle at 1, 20 and 100 km around a seat (both axes, the longitude widening with latitude), the decision to move the view or not after a pin move (pin inside the view, pin outside it, first placement, map not open), a refused radius moving nothing, the fixed garage's first placement and out-of-view placement at zoom 16, and that a pin set inside the view at zoom 8 keeps zoom 8 for both kinds. The Playwright end-to-end test of 111-FR-018 (fake provider, empty map style) MUST gain: as a mobile mechanic at a phone width, after choosing the suggestion the map's zoom is below street zoom and the whole 20 km circle is inside the map area with a diameter of at least half its shorter side (this viewport check lives here, not in Jest: only a real map has a viewport); after setting 100 km the zoom is lower still; after zooming out and dragging the pin the zoom does not return to 16.
+
+_From 959-map-fits-circle._
+
+### 959-FR-008 — Before the PR is ready, `/design-audit` MUST run on the place step at 320 px, 390 px, tablet and desktop in light and dark; a finding this story caused is fixed, any other verified finding goes to `specs/959-map-fits-circle/deferred.md`. The step's phone rules (111-FR-003's last sentence: no sideways scroll at 320 px, 44 px controls) are unchanged.
+
+_From 959-map-fits-circle._
+
 ## Retired
 
 - `108-FR-012` — superseded by `114-FR-018` (2026-10-07)
@@ -585,3 +614,5 @@ _From 917-proposed-job-duplicate._
 - `114-FR-002` — superseded by `885-FR-003` (2026-10-08)
 
 - `109-FR-016` — superseded by `917-FR-001` (2026-10-08)
+
+- `111-FR-003` — superseded by `959-FR-004` (2026-10-08)

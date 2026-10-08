@@ -6,10 +6,10 @@ import { PlacesService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
 import {
-  type LatLng,
   type OpenPlaceMap,
   PLACE_MAP,
   type PlaceMapEvents,
+  type Shown,
 } from './place-map';
 import { PlaceStep } from './place-step';
 
@@ -31,10 +31,10 @@ let search: jest.Mock;
 let events: PlaceMapEvents;
 let failMap: boolean;
 const map = {
-  circle: jest.fn<void, [number | undefined]>(),
   destroy: jest.fn(),
-  pin: jest.fn<void, [LatLng | undefined]>(),
+  show: jest.fn<void, [Shown]>(),
 };
+const shown = () => map.show.mock.lastCall?.[0];
 const openMap: jest.Mock<
   ReturnType<OpenPlaceMap>,
   Parameters<OpenPlaceMap>
@@ -133,9 +133,8 @@ beforeEach(() => {
   failMap = false;
   mapGate = undefined;
   openMap.mockClear();
-  map.circle.mockClear();
   map.destroy.mockClear();
-  map.pin.mockClear();
+  map.show.mockClear();
   search = jest.fn(async ({ q }: { q: string }) =>
     q.toLowerCase().includes('nicăieri') ? { items: [] } : { items: [STEFAN] },
   );
@@ -309,7 +308,7 @@ describe('step 5 against hostile typing and answers', () => {
     await settle(opened.fixture);
 
     expect(address(opened.step).value).toBe(STEFAN.label);
-    expect(map.pin).toHaveBeenLastCalledWith({
+    expect(shown()?.at).toEqual({
       lat: STEFAN.lat,
       lng: STEFAN.lng,
     });
@@ -387,7 +386,9 @@ describe('step 5 radius against hostile typing', () => {
       await settle(opened.fixture);
 
       expect(opened.emitted).toEqual([]);
-      expect(map.circle).not.toHaveBeenCalledWith(Number(typed));
+      expect(map.show).not.toHaveBeenCalledWith(
+        expect.objectContaining({ km: Number(typed) }),
+      );
     },
   );
 
@@ -398,14 +399,16 @@ describe('step 5 radius against hostile typing', () => {
     );
 
     expect((radius(opened.step) as HTMLInputElement).value).toBe('20');
-    expect(map.circle).toHaveBeenLastCalledWith(20);
+    expect(shown()?.km).toBe(20);
     expect(opened.emitted).toEqual([]);
   });
 
   it('draws no circle for a workshop even when its section holds a radius', async () => {
     await open({ address: STEFAN.label, radiusKm: 35 }, 'company');
 
-    expect(map.circle).not.toHaveBeenCalledWith(35);
+    expect(map.show).not.toHaveBeenCalledWith(
+      expect.objectContaining({ km: 35 }),
+    );
   });
 
   it('recovers from a refused radius when a good one is typed after it', async () => {

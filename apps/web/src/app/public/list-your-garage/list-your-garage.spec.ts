@@ -58,7 +58,7 @@ const places = {
 let mapEvents: PlaceMapEvents | undefined;
 const placeMap = jest.fn(async (_host: HTMLElement, events: PlaceMapEvents) => {
   mapEvents = events;
-  return { circle: jest.fn(), destroy: jest.fn(), pin: jest.fn() };
+  return { destroy: jest.fn(), show: jest.fn() };
 });
 
 beforeEach(() => {
