@@ -40,6 +40,9 @@ describe('the telemetry shutdown', () => {
   });
 
   it('gives every caller the same shutdown to wait on', () => {
-    expect(started?.shutdown()).toBe(started?.shutdown());
+    const first = started?.shutdown();
+
+    expect(first).toBeInstanceOf(Promise);
+    expect(started?.shutdown()).toBe(first);
   });
 });

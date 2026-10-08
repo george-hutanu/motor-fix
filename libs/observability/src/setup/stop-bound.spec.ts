@@ -7,7 +7,7 @@ import {
   type StopSignal,
 } from '../testing/signals';
 
-type Exporter = 'hangs' | 'fails' | 'answers';
+type Exporter = 'hangs' | 'slow' | 'fails' | 'answers';
 
 const added: StopListener[] = [];
 // Each isolated start hooks the instrumentations into the worker's shared
@@ -18,15 +18,17 @@ const instrumented: { disable(): void }[] = [];
 // shutdown clock.
 function start(exporter: Exporter) {
   const memory = inMemory();
+  const spanShutdown = jest.spyOn(memory.spanExporter, 'shutdown');
   if (exporter === 'hangs') {
-    jest
-      .spyOn(memory.spanExporter, 'shutdown')
-      .mockReturnValue(new Promise(() => undefined));
+    spanShutdown.mockReturnValue(new Promise(() => undefined));
+  }
+  if (exporter === 'slow') {
+    spanShutdown.mockImplementation(
+      () => new Promise<void>((resolve) => setTimeout(resolve, 4_900)),
+    );
   }
   if (exporter === 'fails') {
-    jest
-      .spyOn(memory.spanExporter, 'shutdown')
-      .mockRejectedValue(new Error('collector unreachable'));
+    spanShutdown.mockRejectedValue(new Error('collector unreachable'));
   }
   let telemetry: ReturnType<typeof startTelemetry>;
   const listeners = addedListeners(() =>
@@ -44,7 +46,7 @@ function start(exporter: Exporter) {
     }),
   );
   added.push(listeners.SIGINT, listeners.SIGTERM);
-  return { listeners, telemetry: telemetry! };
+  return { listeners, spanShutdown, telemetry: telemetry! };
 }
 
 beforeEach(() => {
@@ -115,5 +117,72 @@ describe('the telemetry shutdown against a dead collector', () => {
     expect(early).toBe(0);
     expect(kill).toHaveBeenCalledTimes(1);
     expect(kill).toHaveBeenCalledWith(process.pid, 'SIGTERM');
+  });
+});
+
+describe('the stop signal at the edges of the bound', () => {
+  it('raises the signal again as soon as a slow shutdown settles just before the bound', async () => {
+    const { listeners } = start('slow');
+    const kill = jest.spyOn(process, 'kill').mockImplementation(() => true);
+    const restore = aloneOn('SIGTERM', listeners.SIGTERM);
+
+    listeners.SIGTERM('SIGTERM');
+    await jest.advanceTimersByTimeAsync(4_899);
+    const early = kill.mock.calls.length;
+    await jest.advanceTimersByTimeAsync(1);
+    const atSettle = kill.mock.calls.length;
+    await jest.advanceTimersByTimeAsync(200);
+    restore();
+
+    expect(early).toBe(0);
+    expect(atSettle).toBe(1);
+    expect(kill).toHaveBeenCalledTimes(1);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('raises the signal again when an exporter fails to shut down', async () => {
+    const { listeners } = start('fails');
+    const kill = jest.spyOn(process, 'kill').mockImplementation(() => true);
+    const restore = aloneOn('SIGTERM', listeners.SIGTERM);
+
+    listeners.SIGTERM('SIGTERM');
+    await jest.advanceTimersByTimeAsync(10);
+    restore();
+
+    expect(kill).toHaveBeenCalledTimes(1);
+    expect(kill).toHaveBeenCalledWith(process.pid, 'SIGTERM');
+  });
+
+  it('shuts the providers down once when both stop signals arrive', async () => {
+    const { listeners, spanShutdown } = start('answers');
+    const kill = jest.spyOn(process, 'kill').mockImplementation(() => true);
+    const restoreTerm = aloneOn('SIGTERM', listeners.SIGTERM);
+    const restoreInt = aloneOn('SIGINT', listeners.SIGINT);
+
+    listeners.SIGTERM('SIGTERM');
+    listeners.SIGINT('SIGINT');
+    await jest.advanceTimersByTimeAsync(10);
+    restoreTerm();
+    restoreInt();
+
+    expect(spanShutdown).toHaveBeenCalledTimes(1);
+    expect(kill.mock.calls[0]).toEqual([process.pid, 'SIGTERM']);
+  });
+
+  it('still shuts down on a direct request after a signal another listener handled', async () => {
+    const { listeners, telemetry, spanShutdown } = start('answers');
+    const kill = jest.spyOn(process, 'kill').mockImplementation(() => true);
+    const app = () => undefined;
+    process.on('SIGTERM', app);
+
+    listeners.SIGTERM('SIGTERM');
+    await jest.advanceTimersByTimeAsync(10);
+    const afterSignal = spanShutdown.mock.calls.length;
+    await telemetry.shutdown();
+    process.removeListener('SIGTERM', app);
+
+    expect(afterSignal).toBe(0);
+    expect(spanShutdown).toHaveBeenCalledTimes(1);
+    expect(kill).not.toHaveBeenCalled();
   });
 });

@@ -23,12 +23,8 @@ export function addedListeners(
 // gone); returns the undo.
 export function aloneOn(signal: StopSignal, listener: StopListener) {
   const others = process
-    .rawListeners(signal)
-    .filter(
-      (raw) =>
-        raw !== listener &&
-        (raw as { listener?: unknown }).listener !== listener,
-    ) as StopListener[];
+    .listeners(signal)
+    .filter((other) => other !== listener) as StopListener[];
   for (const other of others) process.removeListener(signal, other);
   return () => {
     for (const other of others) process.on(signal, other);
