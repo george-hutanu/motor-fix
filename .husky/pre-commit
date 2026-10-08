@@ -22,6 +22,9 @@ if ! git rev-parse --verify --quiet origin/main >/dev/null; then
   echo "pre-commit: origin/main is missing, so the affected projects cannot be worked out. Run: git fetch origin main" >&2
   exit 1
 fi
+# The folder rules (AGENTS.md "Folder structure") read only git's listing, so
+# they need no slot and fail fast.
+node scripts/structure-check.ts --base origin/main
 # When an affected project has integration specs, scripts/test-services.ts
 # starts this worktree's own PostgreSQL and Redis, migrates them and points
 # DATABASE_URL and REDIS_URL at them; when it cannot, the commit stops.

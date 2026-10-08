@@ -127,6 +127,9 @@ ios/ or android/
 **Structure Decision**: [Document the selected structure and reference the real
 directories captured above]
 
+Layout (AGENTS.md "Folder structure"): each submodule in its own subfolder;
+each web component a `<name>/` folder with `<name>.ts`, `<name>.html`, `<name>.css`.
+
 ## Observability
 
 [What this change adds: service, resource, queue, outside call, endpoint or

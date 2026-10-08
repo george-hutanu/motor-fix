@@ -6,7 +6,7 @@ import { type MeDto, NotificationsService } from '@motor-fix/data-access';
 import { Subject } from 'rxjs';
 
 import { AdminOverview } from './admin-overview';
-import { AdminPanel } from './admin-panel';
+import { AdminPanel } from './admin-panel/admin-panel';
 import { CarsView } from './cars-view/cars-view';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
 import { Live } from './live';

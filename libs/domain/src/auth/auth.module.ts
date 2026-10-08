@@ -20,8 +20,8 @@ import { SESSION_EVENTS, SignInService } from './sign-in.service';
 import { SignUpService } from './sign-up.service';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
-import { AuditHistoryController } from '../audit/audit-history.controller';
-import { AuditHistoryService } from '../audit/audit-history.service';
+import { AuditHistoryController } from '../audit/audit-history/audit-history.controller';
+import { AuditHistoryService } from '../audit/audit-history/audit-history.service';
 import { EVENT_PORT, outbox } from '../events/event.port';
 import type { PrismaClient } from '../generated/prisma/client';
 

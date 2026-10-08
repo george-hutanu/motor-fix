@@ -2,21 +2,23 @@ import { Redis } from 'ioredis';
 import { Client } from 'pg';
 
 import { resetGarageOnly } from './garage-only.js';
-import { clearSignUpCounts } from './sign-up-counts.js';
+import { clearCounts, DRAFT_KEYS, SIGN_UP_KEYS } from './rate-counts.js';
 
-async function clearCounts(): Promise<void> {
+async function clearRateCounts(): Promise<void> {
   const url = process.env['REDIS_URL'];
   if (!url) {
-    console.log('global-setup: REDIS_URL unset, sign-up counts not cleared');
+    console.log('global-setup: REDIS_URL unset, counts not cleared');
     return;
   }
   const redis = new Redis(url, { lazyConnect: true, maxRetriesPerRequest: 1 });
   try {
     await redis.connect();
-    const cleared = await clearSignUpCounts(redis);
-    if (cleared) console.log(`global-setup: cleared ${cleared} sign-up counts`);
+    const signUps = await clearCounts(redis, SIGN_UP_KEYS);
+    if (signUps) console.log(`global-setup: cleared ${signUps} sign-up counts`);
+    const drafts = await clearCounts(redis, DRAFT_KEYS);
+    if (drafts) console.log(`global-setup: cleared ${drafts} draft counts`);
   } catch (error) {
-    console.log(`global-setup: sign-up counts not cleared: ${error}`);
+    console.log(`global-setup: counts not cleared: ${error}`);
   } finally {
     redis.disconnect();
   }
@@ -49,6 +51,6 @@ async function resetAccounts(): Promise<void> {
 // REDIS_URL, DATABASE_URL or a reachable server the run goes on: the api skips
 // its limits then too, and the seeded accounts stay as they are.
 export default async function globalSetup(): Promise<void> {
-  await clearCounts();
+  await clearRateCounts();
   await resetAccounts();
 }

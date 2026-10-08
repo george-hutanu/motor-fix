@@ -455,3 +455,122 @@ describe('GaragePricesService.saveStarting caps and shapes', () => {
     await nothingStored(w);
   });
 });
+
+describe('GaragePricesService.saveStarting proposing a catalogue name', () => {
+  const named = (
+    nameRo: string,
+    nameEn: string,
+    status: 'approved' | 'pending' | 'rejected' = 'approved',
+  ) =>
+    prisma.jobType.create({
+      data: { key: `${status}-${nameEn.length}`, nameEn, nameRo, status },
+    });
+
+  it.each([
+    ['its Romanian name in other case, accents and spaces', '  SCHIMB ULÉI '],
+    ['its English name, case and accent aside', 'oil chânge'],
+  ])('refuses a proposal of an approved job by %s', async (_, name) => {
+    const w = await world();
+    await named('Schimb ulei', 'Oil change');
+
+    expect(
+      await refused(
+        save(w, {
+          jobs: [
+            { fromBani: lei(100), jobTypeId: w.oil },
+            { fromBani: lei(100), name },
+          ],
+          labour,
+        }),
+      ),
+    ).toEqual([{ code: 'duplicate', field: 'jobs[1].name' }]);
+    await nothingStored(w);
+  });
+
+  it('refuses each row that proposes an approved job', async () => {
+    const w = await world();
+    await named('Schimb ulei', 'Oil change');
+
+    expect(
+      await refused(
+        save(w, {
+          jobs: [
+            { fromBani: lei(100), name: 'schimb ulei' },
+            { brandId: w.dacia, fromBani: lei(90), name: 'schimb ulei' },
+            { fromBani: lei(100), name: 'Schimb ambreiaj' },
+            { fromBani: lei(100), name: 'OIL CHANGE' },
+          ],
+          labour,
+        }),
+      ),
+    ).toEqual([
+      { code: 'duplicate', field: 'jobs[0].name' },
+      { code: 'duplicate', field: 'jobs[1].name' },
+      { code: 'duplicate', field: 'jobs[3].name' },
+    ]);
+    await nothingStored(w);
+  });
+
+  it('names the approved-name error before the brand error of the same row', async () => {
+    const w = await world();
+    await named('Schimb ulei', 'Oil change');
+
+    expect(
+      await refused(
+        save(w, {
+          jobs: [
+            { fromBani: lei(100), name: 'Schimb ulei' },
+            { brandId: w.ford, fromBani: lei(90), name: 'Schimb ulei' },
+          ],
+          labour,
+        }),
+      ),
+    ).toEqual([
+      { code: 'duplicate', field: 'jobs[0].name' },
+      { code: 'duplicate', field: 'jobs[1].name' },
+      { code: 'not_taken', field: 'jobs[1].brandId' },
+    ]);
+    await nothingStored(w);
+  });
+
+  it.each(['pending', 'rejected'] as const)(
+    'saves a proposal named like a %s job as a new pending job',
+    async (status) => {
+      const w = await world();
+      await named('Schimb ulei', 'Oil change', status);
+
+      await save(w, {
+        jobs: [{ fromBani: lei(100), name: 'Schimb ulei' }],
+        labour,
+      });
+
+      expect(await proposed(w.garage)).toEqual([
+        expect.objectContaining({ nameRo: 'Schimb ulei', status: 'pending' }),
+      ]);
+    },
+  );
+
+  it('refuses a proposal of an approved job whose stored name has surrounding spaces', async () => {
+    const w = await world();
+    await named(' Schimb ulei ', 'Oil change ');
+
+    expect(
+      await refused(
+        save(w, { jobs: [{ fromBani: lei(100), name: 'Oil change' }], labour }),
+      ),
+    ).toEqual([{ code: 'duplicate', field: 'jobs[0].name' }]);
+    await nothingStored(w);
+  });
+
+  it.each(['Schimb ulei motor', 'Schimb-ulei', 'Schimb  ulei'])(
+    'saves the proposal %s, which is not an approved job name',
+    async (name) => {
+      const w = await world();
+      await named('Schimb ulei', 'Oil change');
+
+      await save(w, { jobs: [{ fromBani: lei(100), name }], labour });
+
+      expect(await proposed(w.garage)).toHaveLength(1);
+    },
+  );
+});
