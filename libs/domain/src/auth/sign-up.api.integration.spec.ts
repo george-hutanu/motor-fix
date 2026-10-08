@@ -532,7 +532,7 @@ describe('the hourly limit per address', () => {
     } finally {
       await offline.close();
     }
-  }, 20_000);
+  });
 });
 
 describe('maintenance mode', () => {

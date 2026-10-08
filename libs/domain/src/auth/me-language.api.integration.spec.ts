@@ -236,3 +236,44 @@ describe('the audit history of a language change', () => {
     ]);
   });
 });
+
+describe('the city from Setări on who am I', () => {
+  const me = (id: string) =>
+    request(app.getHttpServer())
+      .get('/me')
+      .set('Authorization', bearer(id, 'driver'));
+
+  it('carries the city the account saved', async () => {
+    const id = await account('andrei', ['driver']);
+    await prisma.account.update({
+      data: { city: 'Cluj-Napoca' },
+      where: { id },
+    });
+
+    const res = await me(id);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ city: 'Cluj-Napoca', id, role: 'driver' });
+  });
+
+  it('carries no city when none is saved, and the rest unchanged', async () => {
+    const id = await account('andrei', ['driver']);
+
+    const res = await me(id);
+
+    expect(res.body.city).toBeNull();
+    expect(Object.keys(res.body).sort()).toEqual([
+      'capabilities',
+      'city',
+      'email',
+      'emailConfirmed',
+      'garageId',
+      'id',
+      'landing',
+      'language',
+      'name',
+      'role',
+      'roles',
+    ]);
+  });
+});

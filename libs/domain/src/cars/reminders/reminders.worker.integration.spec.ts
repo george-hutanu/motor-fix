@@ -22,6 +22,7 @@ import {
   testPhoneConfig,
 } from '../../notifications/notifications.testing';
 import { bucharestDaily, type DailyClock } from '../../scheduler/daily';
+import { until } from '../../waits.testing';
 
 const redisUrl = redisUrlFor(4);
 const { account, prisma, reset } = fixtures();
@@ -204,15 +205,16 @@ describe('the reminders worker with shortened days', () => {
         orderBy: { createdAt: 'asc' },
         where: { accountId: driver, channel: 'in_app', kind: 'DUE_ITP' },
       });
-    const deadline = Date.now() + 20_000;
-    while ((await bell()).length < 2 && Date.now() < deadline) {
-      await new Promise((r) => setTimeout(r, 100));
-    }
+    await until(
+      'both reminders in the bell',
+      async () => (await bell()).length >= 2,
+      20_000,
+    );
     // Two more shortened days: nothing more goes.
     await new Promise((r) => setTimeout(r, 600));
     await app.close();
 
     const sent = await bell();
     expect(sent.map((n) => n.eventId.split(':')[2])).toEqual(['30', '7']);
-  }, 30_000);
+  });
 });

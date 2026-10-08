@@ -30,19 +30,26 @@ describe('HomeQueryDto', () => {
     expect(errors(HomeQueryDto, query)).not.toEqual([]);
   });
 
-  it.each(['44.43,26.10', '-90,-180', '90,180', '0,0'])(
-    'takes the place %s and ignores it',
+  it.each(['44.43,26.10', '46.771,23.624', '43.5,20.2', '48.4,29.8'])(
+    'takes the place %s',
     (near) => {
       expect(errors(HomeQueryDto, { brand: 'dacia', near })).toEqual([]);
     },
   );
 
-  it.each(['91,26', '44,181', '44', '44,26,1', 'abc,def', 'NaN,1', ''])(
-    'refuses the place %s',
-    (near) => {
-      expect(errors(HomeQueryDto, { brand: 'dacia', near })).not.toEqual([]);
-    },
-  );
+  it.each([
+    '91,26',
+    '44,181',
+    '44',
+    '44,26,1',
+    'abc,def',
+    'NaN,1',
+    '',
+    '0,0',
+    '-90,-180',
+  ])('refuses the place %s', (near) => {
+    expect(errors(HomeQueryDto, { brand: 'dacia', near })).not.toEqual([]);
+  });
 });
 
 describe('PopularBrandsQueryDto', () => {

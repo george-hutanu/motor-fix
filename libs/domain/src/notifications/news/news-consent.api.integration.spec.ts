@@ -226,6 +226,7 @@ describe('turning news off', () => {
     await save(driver, withConsent({ groups: [newsOn] }));
     const first = (await newsRow(driver))?.consentGivenAt;
     await save(driver, { groups: [newsOff] });
+    // Not a wait for work: the next save gets a later timestamp.
     await new Promise((resolve) => setTimeout(resolve, 5));
     const res = await save(driver, withConsent({ groups: [newsOn] }));
     expect(res.body.newsConsent.state).toBe('given');

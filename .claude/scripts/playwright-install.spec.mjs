@@ -49,13 +49,16 @@ function script(step) {
   return body.map((l) => l.slice(pad)).join('\n');
 }
 
+/** `--with-deps` and `install-deps` run apt under sudo; a browser-only install does not. */
+const usesApt = (run) => /--with-deps|install-deps/.test(run);
+
 const installs = WORKFLOWS.flatMap((name) => steps(read(name)).filter((s) => /playwright install/.test(s.text)).map((s) => ({ ...s, name })));
 
 describe('Playwright install steps: bounded, retried', () => {
-  it('finds the five install steps: two in ci.yml, two in pr-qa.yml, one in release.yml', () => {
+  it('finds the six install steps: three in ci.yml (the harness browser, two for E2E), two in pr-qa.yml, one in release.yml', () => {
     assert.deepEqual(
       installs.map((s) => s.name),
-      ['ci.yml', 'ci.yml', 'pr-qa.yml', 'pr-qa.yml', 'release.yml'],
+      ['ci.yml', 'ci.yml', 'ci.yml', 'pr-qa.yml', 'pr-qa.yml', 'release.yml'],
     );
   });
 
@@ -81,9 +84,15 @@ describe('Playwright install steps: bounded, retried', () => {
         assert.match(run, /^ {2}echo ".*attempt \$attempt of 3.*"$/m);
       });
 
-      it('kills a leftover apt and dpkg as root after a failed attempt, and repairs dpkg', () => {
-        assert.match(run, /^ {2}echo .*\n {2}sudo sh -c 'pkill -9 -x apt-get; pkill -9 -x dpkg; dpkg --configure -a' \|\| true\ndone$/m);
-      });
+      if (usesApt(run)) {
+        it('kills a leftover apt and dpkg as root after a failed attempt, and repairs dpkg', () => {
+          assert.match(run, /^ {2}echo .*\n {2}sudo sh -c 'pkill -9 -x apt-get; pkill -9 -x dpkg; dpkg --configure -a' \|\| true\ndone$/m);
+        });
+      } else {
+        it('runs no apt, so it kills nothing as root between attempts', () => {
+          assert.doesNotMatch(run, /sudo/);
+        });
+      }
     });
   }
 });
@@ -92,7 +101,8 @@ describe('the retry loop, run', () => {
   // A fake `npx` that fails until its `n`th call, a `timeout` that drops its options
   // and runs the command, and a `sudo` that only counts the cleanups: the loop's own
   // logic, on any machine.
-  const loop = installs[0] ? script(installs[0]) : '';
+  const apt = installs.find((s) => usesApt(script(s)));
+  const loop = apt ? script(apt) : '';
   const runLoop = (succeedOn) => {
     const dir = mkdtempSync(join(tmpdir(), 'pw-retry-'));
     try {

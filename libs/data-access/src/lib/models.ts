@@ -79,6 +79,8 @@ export type { PhotoUploadAddressDto } from './models/photo-upload-address-dto';
 export type { PhotoUploadRequestDto } from './models/photo-upload-request-dto';
 export type { PlacesResultDto } from './models/places-result-dto';
 export type { PlaceSuggestionDto } from './models/place-suggestion-dto';
+export type { PlatformRuleChangeDto } from './models/platform-rule-change-dto';
+export type { PlatformRuleChangesDto } from './models/platform-rule-changes-dto';
 export type { PlatformRuleDto } from './models/platform-rule-dto';
 export type { PlatformRulesDto } from './models/platform-rules-dto';
 export type { ProvidersDto } from './models/providers-dto';
@@ -97,6 +99,7 @@ export type { ReplaceGarageBrandsDto } from './models/replace-garage-brands-dto'
 export type { RequestDto } from './models/request-dto';
 export type { RequestJobDto } from './models/request-job-dto';
 export type { RequestListDto } from './models/request-list-dto';
+export type { RequestPlatformRuleChangeDto } from './models/request-platform-rule-change-dto';
 export type { RequestSummaryDto } from './models/request-summary-dto';
 export type { SaveListingDraftDto } from './models/save-listing-draft-dto';
 export type { SavePushSubscriptionDto } from './models/save-push-subscription-dto';

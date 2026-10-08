@@ -12,6 +12,7 @@ import {
   databaseUrl,
   fixtures,
 } from '../../notifications/notifications.testing';
+import { until } from '../../waits.testing';
 
 const { account, prisma } = fixtures();
 const brands = new GarageBrandsService(prisma, new AuditService(), noEvents);
@@ -263,15 +264,12 @@ describe('GarageBrandsService', () => {
     // Commit the first only once the second waits on its transaction (a row
     // lock or key wait; the spec files' turn is an advisory lock, never this).
     try {
-      for (let poll = 0; ; poll++) {
-        if (poll === 100)
-          throw new Error('the second write never waited on the first');
+      await until('the second write to wait on the first', async () => {
         const [{ waiting }] = await prisma.$queryRaw<{ waiting: number }[]>`
           SELECT count(*)::int AS waiting FROM pg_locks
           WHERE NOT granted AND locktype = 'transactionid'`;
-        if (waiting > 0) break;
-        await new Promise((resolve) => setTimeout(resolve, 20));
-      }
+        return waiting > 0;
+      });
     } finally {
       commit();
     }

@@ -73,7 +73,7 @@ describe('seed', () => {
     expect(await seeded()).toHaveLength(0);
   });
 
-  it('adds one account per role, two two-role accounts and a suspended driver', async () => {
+  it('adds one account per role, a second admin, two two-role accounts and a suspended driver', async () => {
     expect(seed('test').status).toBe(0);
 
     const accounts = await seeded();
@@ -89,6 +89,11 @@ describe('seed', () => {
     );
     expect(summary).toEqual({
       'admin@example.test': {
+        lastRole: 'admin',
+        roles: ['admin'],
+        status: 'active',
+      },
+      'admin2@example.test': {
         lastRole: 'admin',
         roles: ['admin'],
         status: 'active',
@@ -276,6 +281,8 @@ describe('seed of the listed garages', () => {
         brands: {
           select: { brand: { select: { key: true } }, stance: true },
         },
+        latitude: true,
+        longitude: true,
         slug: true,
       },
       where: { status: 'approved' },
@@ -285,11 +292,11 @@ describe('seed of the listed garages', () => {
       (g) => g.brands.find((b) => b.brand.key === 'dacia')?.stance ?? 'none',
     );
 
-  it('lists six garages, three taking Dacia, one refusing it, two silent', async () => {
+  it('lists eight garages, each with a place, five taking Dacia, one refusing it, two silent', async () => {
     expect(seed('test').status).toBe(0);
 
     const garages = await listed();
-    expect(garages).toHaveLength(6);
+    expect(garages).toHaveLength(8);
     expect(dacia(garages).sort()).toEqual([
       'does_not_take',
       'none',
@@ -297,7 +304,13 @@ describe('seed of the listed garages', () => {
       'works_on',
       'works_on',
       'works_on',
+      'works_on',
+      'works_on',
     ]);
+    for (const garage of garages) {
+      expect(garage.latitude).not.toBeNull();
+      expect(garage.longitude).not.toBeNull();
+    }
     // Approved in an earlier month, so the admin's growth this month stays 0.
     for (const garage of garages) {
       expect(garage.approvedAt?.getTime()).toBeLessThan(
@@ -317,7 +330,7 @@ describe('seed of the listed garages', () => {
       );
     });
 
-    it('starts with the leftover gone, so the seed links three garages to Dacia', async () => {
+    it('starts with the leftover gone, so the seed links five garages to Dacia', async () => {
       expect(await prisma.brand.count({ where: { key: 'dacia-left' } })).toBe(
         0,
       );
@@ -325,7 +338,7 @@ describe('seed of the listed garages', () => {
 
       expect(
         dacia(await listed()).filter((s) => s === 'works_on'),
-      ).toHaveLength(3);
+      ).toHaveLength(5);
     });
   });
 

@@ -5,6 +5,10 @@ import {
   appsFor,
   cutOffFinding,
   endpointFinding,
+  findingKey,
+  layoutKey,
+  markPreExisting,
+  mergeFindings,
   readinessOutcome,
   reportMarkdown,
   sweepFinding,
@@ -47,6 +51,10 @@ describe('severity of what the sweep saw', () => {
   it('ranks horizontal overflow high on mobile and medium elsewhere', () => {
     assert.equal(severityOf({ kind: 'overflow', scrollWidth: 520, width: 390 }), 'high');
     assert.equal(sweepFinding({ ...where, viewport: 'desktop', kind: 'overflow', scrollWidth: 1500, width: 1440 }, { web: true }).severity, 'medium');
+  });
+
+  it('ranks sideways scroll at 320 px high, like the 390 px phone (FR-011)', () => {
+    assert.equal(sweepFinding({ ...where, viewport: 'small-phone', kind: 'overflow', scrollWidth: 360, width: 320 }, { web: true }).severity, 'high');
   });
 
   it('caps what a change without web code did not cause at medium, and says it is pre-existing', () => {
@@ -184,9 +192,85 @@ describe('the report', () => {
     assert.match(md, /shots\/home-mobile-dark-en\.png/);
   });
 
+  it('writes the report when a finding carries no steps, such as a visual change', () => {
+    const findings = [{ kind: 'visual', severity: 'medium', title: 'Unintended visual change: shots/a.png, 2 regions', evidence: 'diff/a.png', key: 'visual|shots/a.png' }];
+    const md = reportMarkdown({ pr: 305, sha: 'abcdef1', verdict: 'success', findings, booted: ['api', 'web'], screenshots: [] });
+    assert.match(md, /Unintended visual change/);
+    assert.match(md, /### Reproduction\n1\. /);
+  });
+
   it('says so when there is nothing to report', () => {
     const md = reportMarkdown({ pr: 1, sha: 'abcdef1', verdict: 'success', findings: [], booted: ['api', 'web'], screenshots: [] });
     assert.match(md, /success/i);
     assert.match(md, /no findings/i);
+  });
+});
+
+describe('layout findings', () => {
+  const layout = (rule, extra = {}) => ({ ...where, kind: 'layout', rule, selector: 'p#body13', measured: '13px', expected: '16px (phone body)', text: 'Programează', ...extra });
+
+  it('blocks text under the minimum, off-scale type, clipped text and spacing off the grid', () => {
+    for (const rule of ['min-text', 'type-scale', 'clipped', 'grid']) assert.equal(severityOf(layout(rule)), 'high', rule);
+  });
+
+  it('keeps tap targets, overlap, stretched images, fallback fonts and focus rings at medium', () => {
+    for (const rule of ['tap-target', 'overlap', 'stretched-image', 'font-fallback', 'focus-ring']) assert.equal(severityOf(layout(rule)), 'medium', rule);
+  });
+
+  it('caps a layout defect at medium when the change has no web code', () => {
+    assert.equal(severityOf(layout('min-text'), false), 'medium');
+  });
+
+  it('names the rule, the element, what was measured and what was expected, with the screenshot', () => {
+    const f = sweepFinding(layout('min-text'), { web: true });
+    assert.equal(f.title, 'Layout (min-text): p#body13 "Programează" — measured 13px, expected 16px (phone body)');
+    assert.deepEqual([f.rule, f.selector, f.measured, f.expected], ['min-text', 'p#body13', '13px', '16px (phone body)']);
+    assert.ok(f.steps.some((s) => s === 'Measure p#body13: 13px, expected 16px (phone body).'));
+    assert.equal(f.evidence, 'shots/home-mobile-dark-en.png');
+  });
+
+  it('keys a layout finding by route, rule and element, not by the value measured', () => {
+    const a = sweepFinding(layout('grid', { measured: 'gap 13px' }), { web: true });
+    const b = sweepFinding(layout('grid', { measured: 'gap 14px', viewport: 'desktop' }), { web: true });
+    assert.equal(layoutKey(a), 'layout|/|grid|p#body13|Programează');
+    assert.equal(findingKey(a), findingKey(b));
+    assert.equal(mergeFindings([a, b]).length, 1);
+  });
+
+  it('keys a layout finding by element and text, not by a generated id or its place among siblings (FR-011)', () => {
+    const at = (selector, text) => layoutKey({ kind: 'layout', route: '/', rule: 'min-text', selector, text });
+    assert.equal(at('label#brn-label-2', 'Caută marca'), at('label#brn-label-7', 'Caută marca'));
+    assert.equal(at('ul > li:nth-of-type(2) > a', 'Acasă'), at('ul > li:nth-of-type(3) > a', 'Acasă'));
+    assert.notEqual(at('label#brn-label-2', 'Caută marca'), at('label#brn-label-2', 'Doar deschise acum'));
+    assert.notEqual(at('p#body13', ''), at('p#body', ''));
+  });
+
+  it('marks a layout finding the baseline run already had as pre-existing, capped at medium', () => {
+    const now = [sweepFinding(layout('min-text'), { web: true }), sweepFinding(layout('grid', { selector: 'div#row' }), { web: true })];
+    const base = [{ ...sweepFinding(layout('min-text', { viewport: 'desktop' }), { web: true }) }, { kind: 'console', title: 'Console error: x', route: '/' }];
+    const marked = markPreExisting(now, base);
+    assert.equal(marked[0].severity, 'medium');
+    assert.equal(marked[0].preExisting, true);
+    assert.equal(marked[1].severity, 'high');
+    assert.equal(marked[1].preExisting, undefined);
+  });
+
+  it('marks a layout finding on a route the baseline run never swept as pre-existing (FR-011)', () => {
+    const now = [sweepFinding(layout('min-text', { route: '/ro/list-your-garage' }), { web: true }), sweepFinding(layout('grid', { selector: 'div#row' }), { web: true })];
+    const marked = markPreExisting(now, [], { routes: ['/', '/cockpit'] });
+    assert.deepEqual(marked.map((f) => [f.severity, f.preExisting]), [['medium', true], ['high', undefined]]);
+    assert.equal(markPreExisting(now, [])[0].severity, 'high', 'a baseline that names no routes is not read as sweeping none');
+  });
+
+  it('leaves findings of other kinds alone, even when the baseline had them', () => {
+    const consoleError = sweepFinding({ ...where, kind: 'console', text: 'NG0100' }, { web: true });
+    assert.equal(markPreExisting([consoleError], [consoleError])[0].severity, 'high');
+  });
+
+  it('treats every layout finding as pre-existing when the baseline run measured no layout', () => {
+    const now = [sweepFinding(layout('grid', { selector: 'div#row' }), { web: true })];
+    const marked = markPreExisting(now, [], { measured: false });
+    assert.equal(marked[0].severity, 'medium');
+    assert.equal(marked[0].preExisting, true);
   });
 });
