@@ -1,4 +1,6 @@
 export { PlatformRulesModule } from './admin/platform-rules/platform-rules.module';
+export { AUDIT_PORT, type AuditPort } from './audit/audit.port';
+export { AuditService } from './audit/audit.service';
 export { signAccessToken } from './auth/access-token';
 export {
   AccountLoader,
@@ -15,11 +17,16 @@ export {
   type Role,
 } from './auth/capabilities';
 export { EmailConfirmationModule } from './auth/email-confirmation/email-confirmation.module';
-export { MAINTENANCE, type Maintenance } from './auth/maintenance';
+export {
+  MAINTENANCE,
+  type Maintenance,
+  maintenanceOff,
+} from './auth/maintenance';
 export { oauthSettings } from './auth/oauth/providers';
 export { PasswordResetModule } from './auth/password/password-reset/password-reset.module';
 export { PhoneSignInModule } from './auth/phone-sign-in/phone-sign-in.module';
 export { type Actor, assertGarage, assertOwner } from './auth/policy';
+export { createPrisma, PRISMA } from './auth/prisma';
 export { CarsModule } from './cars/my-cars/cars/cars.module';
 export { RemindersModule } from './cars/reminders/reminders.module';
 export { reminderDayMs } from './cars/reminders/reminders-config';
@@ -28,6 +35,7 @@ export { BRANDS } from './catalogue/brands';
 export { CatalogueModule } from './catalogue/catalogue.module';
 export { JobTypeLoader } from './catalogue/job-types/job-type-loader';
 export { JOB_TYPES } from './catalogue/job-types/job-types';
+export { EVENT_PORT, type EventPort, outbox } from './events/event.port';
 export { EventsModule } from './events/events.module';
 export { OutboxRelayModule } from './events/outbox-relay/outbox-relay.module';
 export { GarageDetailsService } from './garages/details/garage-details.service';

@@ -5,38 +5,6 @@
   "sourceRoot": "apps/mcp/src",
   "tags": [],
   "targets": {
-    "build": {
-      "configurations": {
-        "development": {},
-        "production": {
-          "esbuildOptions": {
-            "outExtension": {
-              ".js": ".js"
-            },
-            "sourcemap": false
-          }
-        }
-      },
-      "defaultConfiguration": "production",
-      "executor": "@nx/esbuild:esbuild",
-      "options": {
-        "bundle": true,
-        "esbuildOptions": {
-          "outExtension": {
-            ".js": ".js"
-          },
-          "sourcemap": true
-        },
-        "format": ["cjs"],
-        "generatePackageJson": true,
-        "main": "apps/mcp/src/main.ts",
-        "outputPath": "dist/apps/mcp",
-        "platform": "node",
-        "thirdParty": false,
-        "tsConfig": "apps/mcp/tsconfig.app.json"
-      },
-      "outputs": ["{options.outputPath}"]
-    },
     "serve": {
       "configurations": {
         "development": {
