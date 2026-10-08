@@ -98,6 +98,11 @@ test.describe('step 5 of list your garage, the photos @mailbox', () => {
       browser,
       page,
     }) => {
+      // Two reloads, a second browser and the mailbox: on a CI runner with
+      // four workers each step takes seconds (fill 2.8 s, networkidle 3.3 s
+      // in run 37734125105's trace), and the flow ran past 30 s while still
+      // correct. Its retries then used up the 10 drafts an hour per address.
+      test.slow();
       await page.setViewportSize({ height, width });
       const email = `photos-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
       await toPhotos(page, email);
