@@ -20,6 +20,7 @@ import {
 import { AuditService } from '../audit/audit.service';
 import type { Role } from '../auth/capabilities';
 import { serialDatabase } from '../auth/serial-db.testing';
+import { until } from '../waits.testing';
 
 const redisUrl = redisUrlFor(9);
 const { account, prisma, reset } = fixtures();
@@ -389,8 +390,7 @@ describe('an SMS that may have gone', () => {
       data: { id: sms.id },
       name: 'send',
     });
-    for (let i = 0; i < 100 && mock.sms().length === 0; i++)
-      await new Promise((r) => setTimeout(r, 20));
+    await until('the text message', () => mock.sms().length > 0);
     expect(mock.sms()).toHaveLength(1);
     expect(await sendingAt(sms.id)).toEqual(new Date(NOVEMBER));
     await job;

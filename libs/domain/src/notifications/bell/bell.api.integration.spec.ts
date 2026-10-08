@@ -9,6 +9,7 @@ import { BellService } from './bell.service';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { until } from '../../waits.testing';
 import { NotificationsModule } from '../notifications.module';
 import {
   databaseUrl,
@@ -267,9 +268,7 @@ describe('marking read', () => {
           m.event.kind === 'notification.read' &&
           m.audience.join() === `account:${andrei}`,
       );
-    for (let i = 0; i < 50 && reads().length < 2; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    }
+    await until('both announcements', () => reads().length >= 2);
     // Long enough for a third, wrong, announcement to arrive.
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(reads()).toHaveLength(2);
