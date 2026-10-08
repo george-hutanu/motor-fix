@@ -55,7 +55,8 @@ Production builds emit hidden source maps; they stay out of the image, and
 the release uploads them to Faro for the commit when the secret
 `FARO_SOURCEMAP_API_KEY` is set, with the repository variables
 `FARO_SOURCEMAP_ENDPOINT`, `FARO_SOURCEMAP_APP_ID` and
-`FARO_SOURCEMAP_STACK_ID`; without the secret it logs a skip and goes on.
+`FARO_SOURCEMAP_STACK_ID`; without the secret both steps are skipped and
+the release goes on.
 
 ## Dashboards and alerts as code
 
