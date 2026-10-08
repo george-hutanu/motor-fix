@@ -102,7 +102,7 @@ process.stdin.on("end", () => {
       note(`DRY RUN — ${refusal}`);
       process.exit(0);
     }
-    process.stderr.write(`[run-hook] ${refusal}\n`);
+    note(refusal);
     process.exit(2);
   }
 
@@ -127,7 +127,7 @@ process.stdin.on("end", () => {
       note(`DRY RUN — ${refusal}`);
       process.exit(0);
     }
-    process.stderr.write(`[run-hook] ${refusal}\n`);
+    note(refusal);
     process.exit(2);
   }
 
