@@ -483,14 +483,14 @@ describe('the hourly limit per address', () => {
     expect(Number(await redis.get(key ?? ''))).toBe(2);
   });
 
-  it('answers maintenance ahead of the hourly limit', async () => {
+  it('refuses before maintenance is read', async () => {
     const from = address();
     for (let i = 0; i < 10; i++) {
       await signUp(body({ password: 'scurta' }), from);
     }
     maintenance = true;
 
-    expect((await signUp(body(), from)).status).toBe(503);
+    expect((await signUp(body(), from)).status).toBe(429);
   });
 
   it('skips the limit for an address that cannot be read, and says so in the log', async () => {

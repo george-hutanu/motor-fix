@@ -23,6 +23,8 @@ import { openApiDocument } from './bootstrap';
 const api = apiBoot();
 
 // Every route that answers as usual while the platform is in maintenance.
+// Sign-up and the password reset refuse a valid request from anyone but an
+// admin themselves, after counting it, so a bad body still answers 400.
 const OPEN = [
   'GET /api/v1/auth/oauth/apple',
   'GET /api/v1/auth/oauth/google',
@@ -36,12 +38,15 @@ const OPEN = [
   'GET /health/ready',
   'POST /api/v1/auth/oauth/apple/callback',
   'POST /api/v1/auth/oauth/complete',
+  'POST /api/v1/auth/password-reset',
+  'POST /api/v1/auth/password-reset/check',
+  'POST /api/v1/auth/password-reset/complete',
   'POST /api/v1/auth/phone-code',
   'POST /api/v1/auth/phone-sign-in',
   'POST /api/v1/auth/refresh',
   'POST /api/v1/auth/sign-in',
   'POST /api/v1/auth/sign-out',
-  'POST /api/v1/auth/sign-out-everywhere',
+  'POST /api/v1/auth/sign-up',
 ];
 
 const SOME_ID = '00000000-0000-4000-8000-000000000000';
@@ -313,7 +318,13 @@ describe('the background work while the platform is in maintenance', () => {
     const listener = new Redis(redisUrl);
     const heard = new Promise<string>((resolve) =>
       listener.on('message', (_, message: string) => {
-        if (message.includes('platform_rule.changed')) resolve(message);
+        // Rows other specs left in the outbox are relayed too.
+        if (
+          message.includes('platform_rule.changed') &&
+          message.includes('maintenance_mode')
+        ) {
+          resolve(message);
+        }
       }),
     );
     await listener.subscribe('live:events');

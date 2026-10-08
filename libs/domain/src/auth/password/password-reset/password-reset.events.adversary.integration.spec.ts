@@ -321,15 +321,15 @@ describe('the event a completed reset records', () => {
     expect((await outbox()).map((r) => r.subjectId)).toEqual([id]);
   });
 
-  it('records no event for a reset refused during maintenance, admin or not', async () => {
+  it('records the event for an admin reset during maintenance and none for a driver', async () => {
     const admin = await person('admin@example.test', { roles: ['admin'] });
     const driver = await person();
     const adminToken = await linkFor(admin, 'admin@example.test');
     const driverToken = await linkFor(driver);
     maintenance = true;
     await complete(driverToken).expect(503);
-    await complete(adminToken).expect(503);
-    expect(await outbox()).toEqual([]);
+    await complete(adminToken).expect(200);
+    expect((await outbox()).map((r) => r.subjectId)).toEqual([admin]);
   });
 
   it('keeps the first reset recorded when the second one fails to record', async () => {

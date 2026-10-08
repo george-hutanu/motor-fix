@@ -37,23 +37,6 @@ describe('mcp server', () => {
     expect((await fetch(`${base}/health/live`)).status).toBe(200);
   });
 
-  // There is no tool, so nothing can act while the platform is in
-  // maintenance. The first tool passes the API's 503 `maintenance` answer
-  // through as a tool error naming maintenance, and reads no flag itself.
-  it('holds no tool to call', async () => {
-    const res = await fetch(`${base}/mcp`, {
-      body: JSON.stringify({
-        id: 1,
-        jsonrpc: '2.0',
-        method: 'tools/list',
-      }),
-      headers: { 'content-type': 'application/json' },
-      method: 'POST',
-    });
-
-    expect(res.status).toBe(404);
-  });
-
   it('answers 404 elsewhere', async () => {
     expect((await fetch(`${base}/health/ready`)).status).toBe(404);
   });

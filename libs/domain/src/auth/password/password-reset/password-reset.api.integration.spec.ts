@@ -818,13 +818,10 @@ describe('completing a reset', () => {
     await check(token).expect(204);
   });
 
-  it('refuses even an admin while maintenance is on, keeping the link', async () => {
+  it('lets an admin reset during maintenance', async () => {
     const id = await person('admin@example.test', { roles: ['admin'] });
     const token = await linkFor(id, 'admin@example.test');
     maintenance = true;
-    const res = await complete(token).expect(503);
-    expect(res.body.code).toBe('maintenance');
-    maintenance = false;
     await complete(token).expect(200);
   });
 

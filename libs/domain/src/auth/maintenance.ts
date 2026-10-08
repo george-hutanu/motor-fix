@@ -26,7 +26,9 @@ const KEEP_SECONDS = 60;
 const RETRY_AFTER_SECONDS = 300;
 
 // Read on every call from Redis, filled from the stored rule on a miss; when
-// Redis fails the stored rule answers, so Redis never decides a call.
+// Redis fails the stored rule answers, so Redis never decides a call. While
+// Redis is down each call first waits out the client's command timeout, as
+// the sign-in attempt limits on the same client already do.
 @Injectable()
 export class MaintenanceFlag implements Maintenance {
   private readonly logger = new Logger('Maintenance');

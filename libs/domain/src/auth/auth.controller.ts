@@ -125,6 +125,7 @@ export class AuthController {
   }
 
   @Post('sign-up')
+  @OpenInMaintenance()
   @UseGuards(JsonOnly)
   @HttpCode(HttpStatus.CREATED)
   @ApiCreatedResponse({ type: SessionDto })
@@ -188,7 +189,6 @@ export class AuthController {
   }
 
   @Post('sign-out-everywhere')
-  @OpenInMaintenance()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
   @ApiUnauthorizedResponse()

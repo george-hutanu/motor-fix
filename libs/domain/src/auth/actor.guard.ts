@@ -77,11 +77,12 @@ export class ActorGuard implements CanActivate {
       ]);
     const open = marked(PUBLIC);
     const request = context.switchToHttp().getRequest<WithActor>();
-    if (!marked(OPEN_IN_MAINTENANCE) && (await this.maintenance.on())) {
-      await this.adminOnly(request);
-    }
+    const admin =
+      !marked(OPEN_IN_MAINTENANCE) && (await this.maintenance.on())
+        ? await this.adminOnly(request)
+        : undefined;
     if (open) return true;
-    const actor = await this.actor(request.header('authorization'));
+    const actor = admin ?? (await this.actor(request.header('authorization')));
     const capability = this.reflector.get<Capability | undefined>(
       REQUIRES,
       context.getHandler(),
@@ -100,6 +101,7 @@ export class ActorGuard implements CanActivate {
     if (!actor.roles.includes('admin')) {
       throw maintenanceRefusal(route, 'signed_in');
     }
+    return actor;
   }
 
   private async actor(authorization: string | undefined): Promise<Actor> {
