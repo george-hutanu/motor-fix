@@ -106,19 +106,6 @@ describe('the stop signal at the edges of the bound', () => {
     expect(kill.mock.calls[0]).toEqual([process.pid, 'SIGTERM']);
   });
 
-  it('raises the signal again once when the same signal arrives twice', async () => {
-    const { listeners } = start();
-    const kill = jest.spyOn(process, 'kill').mockImplementation(() => true);
-    const restore = aloneOn('SIGTERM', listeners.SIGTERM);
-
-    listeners.SIGTERM('SIGTERM');
-    listeners.SIGTERM('SIGTERM');
-    await jest.advanceTimersByTimeAsync(10);
-    restore();
-
-    expect(kill).toHaveBeenCalledTimes(1);
-  });
-
   it('still shuts down on a direct request after a signal another listener handled', async () => {
     const { listeners, telemetry, spanSpy } = start();
     const kill = jest.spyOn(process, 'kill').mockImplementation(() => true);

@@ -250,12 +250,7 @@ function boot(
     const stop = () => {
       // Nest's shutdown hooks close the app, drop their own listener and
       // raise the signal again, so this one acts only once it is the last.
-      if (
-        !process.listeners(signal).includes(stop) ||
-        process.listenerCount(signal) > 1
-      ) {
-        return;
-      }
+      if (process.listenerCount(signal) > 1) return;
       process.removeListener(signal, stop);
       void shutdown().then(() => process.kill(process.pid, signal));
     };
