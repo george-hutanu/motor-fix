@@ -60,6 +60,8 @@ export type { PhoneSessionDto } from './models/phone-session-dto';
 export type { PhoneSignInDto } from './models/phone-sign-in-dto';
 export type { PhotoUploadAddressDto } from './models/photo-upload-address-dto';
 export type { PhotoUploadRequestDto } from './models/photo-upload-request-dto';
+export type { PlacesResultDto } from './models/places-result-dto';
+export type { PlaceSuggestionDto } from './models/place-suggestion-dto';
 export type { PlatformRuleDto } from './models/platform-rule-dto';
 export type { PlatformRulesDto } from './models/platform-rules-dto';
 export type { ProvidersDto } from './models/providers-dto';

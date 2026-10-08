@@ -34,6 +34,9 @@
         "./libs/contracts/src/notification-groups.ts"
       ],
       "@motor-fix/contracts/phone": ["./libs/contracts/src/phone.ts"],
+      "@motor-fix/contracts/place-section": [
+        "./libs/contracts/src/place-section.ts"
+      ],
       "@motor-fix/contracts/plate": ["./libs/contracts/src/plate.ts"],
       "@motor-fix/contracts/price-range": [
         "./libs/contracts/src/price-range.ts"

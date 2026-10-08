@@ -1,0 +1,104 @@
+<label hlmLabel class="field" for="place-address">
+  @if (mobile()) {
+    {{ 'public.listing.place.seat' | t }}
+  } @else {
+    {{ 'public.listing.place.address' | t }}
+  }
+</label>
+<div class="search">
+  <input
+    hlmInput
+    id="place-address"
+    name="address"
+    autocomplete="street-address"
+    role="combobox"
+    aria-autocomplete="list"
+    aria-controls="place-options"
+    aria-expanded="false"
+    [attr.aria-expanded]="suggestions().length > 0"
+    [attr.aria-activedescendant]="active() >= 0 ? 'place-option-' + active() : null"
+    [attr.aria-describedby]="searchDown() ? 'place-search-down' : null"
+    [attr.maxlength]="addressMax"
+    [placeholder]="'public.listing.place.placeholder' | t"
+    [value]="value().address ?? ''"
+    (input)="type($event)"
+    (keydown)="keys($event)"
+  />
+  <div class="suggestions" id="place-options" role="listbox" [attr.aria-label]="'public.listing.place.suggestions' | t">
+    @for (suggestion of suggestions(); track $index) {
+      <button
+        type="button"
+        role="option"
+        tabindex="-1"
+        [id]="'place-option-' + $index"
+        [attr.aria-selected]="active() === $index"
+        (click)="choose(suggestion)"
+      >{{ suggestion.label }}</button>
+    }
+  </div>
+</div>
+<p class="hint" aria-live="polite">
+  @if (suggestions().length > 0) {
+    {{ 'public.listing.place.found' | t: { count: suggestions().length } }}
+  } @else if (nothingFound()) {
+    {{ 'public.listing.place.nothingFound' | t }}
+  }
+</p>
+@if (searchDown()) {
+  <p class="error" id="place-search-down">{{ 'public.listing.place.searchDown' | t }}</p>
+}
+
+<div class="map-area">
+  <button type="button" class="manual" [attr.aria-pressed]="armed()" (click)="arm()">
+    {{ 'public.listing.place.manualPin' | t }}
+  </button>
+  @if (armed()) {
+    <p class="hint" aria-live="polite">{{ 'public.listing.place.armed' | t }}</p>
+  }
+  <div
+    #map
+    class="map"
+    [tabIndex]="0"
+    role="application"
+    [attr.aria-label]="'public.listing.place.map' | t"
+    [attr.aria-describedby]="outside() ? 'place-outside' : 'place-map-hint'"
+    (keydown)="nudge($event)"
+  ></div>
+  @if (mapDown()) {
+    <p class="error" role="alert">{{ 'public.listing.place.mapDown' | t }}</p>
+  }
+  @if (outside()) {
+    <p class="error" id="place-outside" role="alert">{{ 'public.listing.place.outside' | t }}</p>
+  }
+  <p class="hint" id="place-map-hint">
+    @if (hasPin()) {
+      {{ 'public.listing.place.dragHint' | t }}
+    } @else {
+      {{ 'public.listing.place.mapHint' | t }}
+    }
+  </p>
+</div>
+
+@if (mobile()) {
+  <label hlmLabel class="field" for="place-radius">{{ 'public.listing.place.radius' | t }}</label>
+  <div class="radius">
+    <input
+      hlmInput
+      id="place-radius"
+      name="radiusKm"
+      type="number"
+      inputmode="numeric"
+      step="1"
+      [attr.min]="radiusMin"
+      [attr.max]="radiusMax"
+      [value]="radiusShown()"
+      [attr.aria-invalid]="radiusInvalid() ? true : null"
+      aria-describedby="place-radius-hint"
+      (input)="typeRadius($event)"
+    />
+    <span aria-hidden="true">{{ 'public.listing.place.km' | t }}</span>
+  </div>
+  <p [class]="radiusInvalid() ? 'error' : 'hint'" id="place-radius-hint">
+    {{ 'public.listing.place.radiusHint' | t }}
+  </p>
+}
