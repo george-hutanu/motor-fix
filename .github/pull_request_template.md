@@ -27,6 +27,12 @@ _(fill in: the main changes, one bullet each)_
 - Integration: _(fill in: command and result, or N/A and why)_
 - End-to-end: _(fill in: command and result, or N/A and why)_
 
+## Observability
+
+<!-- A new service, queue, endpoint, outside call or product action ships with its telemetry and its line in infra/observability/inventory.json. List the reports here. -->
+
+_(fill in: what this change adds - service, queue, endpoint, outside call, product action - and the signals, dashboard panel and alert that come with it, or N/A and the reason)_
+
 ## UI evidence
 
 _(fill in: desktop and mobile screenshots of each changed screen, or N/A: no UI change)_
