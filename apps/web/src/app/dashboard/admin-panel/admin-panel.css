@@ -13,7 +13,8 @@
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 }
-[role="group"] {
+[role="group"],
+.observability {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -23,6 +24,22 @@
   background: var(--mf-panel);
   border: 1px solid var(--mf-line);
   border-radius: var(--mf-radius-control);
+}
+.observability {
+  grid-column: 1 / -1;
+  justify-content: center;
+  min-height: var(--mf-tap);
+  font-family: var(--mf-font-label);
+  color: var(--mf-text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.observability:hover {
+  border-color: var(--mf-line-strong);
+}
+.observability:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
 }
 .label {
   font-size: var(--mf-size-label);

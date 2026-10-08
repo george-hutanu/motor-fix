@@ -1,5 +1,5 @@
 import { AdminGrowthDto, AdminOverviewDto } from '@motor-fix/contracts';
-import { Controller, Get, Inject } from '@nestjs/common';
+import { Controller, Get, Inject, Optional } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiNotFoundResponse,
@@ -17,6 +17,20 @@ import {
   readGrowth,
 } from '../insights/platform-figures';
 
+// The overview's link to the Grafana overview dashboard, built by the API
+// from GRAFANA_URL and its own environment.
+export const OBSERVABILITY_URL = Symbol('OBSERVABILITY_URL');
+
+export function observabilityUrl(
+  grafana: string | undefined,
+  env: string,
+): string | undefined {
+  if (!grafana) return undefined;
+  const url = new URL('d/motorfix-overview', grafana);
+  url.searchParams.set('var-env', env);
+  return url.href;
+}
+
 @ApiTags('admin')
 @ApiBearerAuth()
 @Controller('admin')
@@ -24,6 +38,9 @@ export class AdminOverviewController {
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     private readonly verification: VerificationService,
+    @Optional()
+    @Inject(OBSERVABILITY_URL)
+    private readonly observabilityUrl?: string,
   ) {}
 
   @Get('overview')
@@ -44,6 +61,9 @@ export class AdminOverviewController {
       ...(activeDriversMonthStart === undefined
         ? {}
         : { activeDriversMonthStart }),
+      ...(this.observabilityUrl
+        ? { observabilityUrl: this.observabilityUrl }
+        : {}),
     };
   }
 

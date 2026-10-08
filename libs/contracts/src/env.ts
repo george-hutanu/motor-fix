@@ -79,13 +79,25 @@ export function publicWebUrl(
 export function faroUrl(
   source: Record<string, string | undefined> = process.env,
 ): string | undefined {
-  const value = source['FARO_URL'];
+  return optionalUrl('FARO_URL', source);
+}
+
+// The Grafana stack the admin panel links to; unset means no link. Grafana's
+// own sign-in guards the dashboards, so the URL carries no credential.
+export function grafanaUrl(
+  source: Record<string, string | undefined> = process.env,
+): string | undefined {
+  return optionalUrl('GRAFANA_URL', source);
+}
+
+function optionalUrl(
+  name: string,
+  source: Record<string, string | undefined>,
+): string | undefined {
+  const value = source[name];
   if (value === undefined || value === '') return undefined;
-  const url =
-    typeof value === 'string' && /^https?:\/\//i.test(value)
-      ? URL.parse(value)
-      : null;
-  if (!url) throw new Error('FARO_URL must be an absolute http(s) URL');
+  const url = /^https?:\/\//i.test(value) ? URL.parse(value) : null;
+  if (!url) throw new Error(`${name} must be an absolute http(s) URL`);
   return url.href;
 }
 

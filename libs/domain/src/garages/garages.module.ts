@@ -1,7 +1,10 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import type { Redis } from 'ioredis';
 
-import { AdminOverviewController } from './admin-overview.controller';
+import {
+  AdminOverviewController,
+  OBSERVABILITY_URL,
+} from './admin-overview.controller';
 import { GarageDetailsService } from './details/garage-details.service';
 import { GarageBrandsController } from './garage-brands/garage-brands.controller';
 import { GarageBrandsService } from './garage-brands/garage-brands.service';
@@ -45,6 +48,7 @@ export class GaragesModule {
     email: EmailConfig,
     notifications: DynamicModule,
     verification: VerificationConfig,
+    observabilityUrl?: string,
   ): DynamicModule {
     return {
       controllers: [
@@ -83,6 +87,9 @@ export class GaragesModule {
         VerificationService,
         VerificationChecksService,
         { provide: VERIFICATION_CONFIG, useValue: verification },
+        ...(observabilityUrl
+          ? [{ provide: OBSERVABILITY_URL, useValue: observabilityUrl }]
+          : []),
         { provide: INVITE_EMAIL, useValue: email },
         {
           provide: Brevo,
