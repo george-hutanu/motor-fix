@@ -478,6 +478,29 @@ describe('PlatformRules, switching the reviews rule off', () => {
     expect(checked(element, REVIEWS)).toBe('true');
   });
 
+  // The dialog hands the focus back to the switch as it closes; a disabled
+  // switch cannot take it, and the focus would fall to the page.
+  it('keeps the switch enabled while the dialog is open, and asks once', async () => {
+    const { element, settle } = await render();
+    await settle();
+    let close: (value: 'cancelled') => void = () => undefined;
+    open.mockImplementationOnce(
+      () => new Promise((resolve) => (close = resolve)),
+    );
+
+    named(element, REVIEWS)?.click();
+    await settle();
+    expect(named(element, REVIEWS)?.disabled).toBe(false);
+    named(element, REVIEWS)?.click();
+    await settle();
+    expect(open).toHaveBeenCalledTimes(1);
+
+    close('cancelled');
+    await settle();
+    expect(named(element, REVIEWS)?.disabled).toBe(false);
+    expect(checked(element, REVIEWS)).toBe('true');
+  });
+
   it('shows the waiting card once the request is sent', async () => {
     const { element, settle } = await render();
     await settle();

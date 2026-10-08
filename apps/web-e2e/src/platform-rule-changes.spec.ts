@@ -108,7 +108,10 @@ test.describe('a second admin confirms switching a rule off @seeded', () => {
     await expect(
       other.page.getByText('Așteaptă aprobarea altui admin'),
     ).toBeVisible({ timeout: 5000 });
-    await expect(other.page.getByText(REASON)).toBeVisible();
+    // The decided history below repeats the reasons of earlier runs.
+    await expect(
+      other.page.locator('[data-waiting]').getByText(REASON, { exact: true }),
+    ).toBeVisible();
 
     await other.page.getByRole('button', { name: 'Aprobă' }).click();
 

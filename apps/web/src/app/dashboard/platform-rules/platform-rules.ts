@@ -71,6 +71,9 @@ export class PlatformRules implements OnInit {
     waiting: null,
   });
   protected readonly deciding = signal(false);
+  // A rule whose request dialog is open: it takes no second toggle, but its
+  // switch stays enabled so the dialog can give the focus back to it.
+  private readonly asking = new Set<string>();
   protected readonly twoAdmins = TWO_ADMINS;
 
   constructor() {
@@ -146,7 +149,7 @@ export class PlatformRules implements OnInit {
 
   protected async toggle(line: Line, rule: PlatformRuleDto) {
     const { key } = line;
-    if (this.pending().has(key)) return;
+    if (this.pending().has(key) || this.asking.has(key)) return;
     const seen = rule.value;
     const value = !seen;
     if (rule.requiresTwoAdmins && value === false) {
@@ -172,7 +175,7 @@ export class PlatformRules implements OnInit {
   // switch goes back on, and a sent request shows as waiting.
   private async ask(key: string, seen: PlatformRuleDto['value']) {
     this.error.set(null);
-    this.mark(key, true);
+    this.asking.add(key);
     this.set(key, false);
     try {
       const sent = await this.overlays.open(RuleOffRequest, {
@@ -183,7 +186,7 @@ export class PlatformRules implements OnInit {
       if (sent !== 'cancelled') await this.load();
     } finally {
       this.set(key, seen);
-      this.mark(key, false);
+      this.asking.delete(key);
     }
   }
 
