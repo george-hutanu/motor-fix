@@ -1,11 +1,12 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-07
+updated: 2026-10-08
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
   - 258-platform-rules-switches
   - 162-growth-12-months
+  - 001-admin-recent-accounts
 ---
 
 # Capability: Admin dashboard
@@ -26,9 +27,9 @@ _From 161-headline-numbers._
 
 _From 160-admin-dashboard-menu._
 
-### 160-FR-006 — The admin dashboard's one view list MUST hold, in this order, "Panou" (`''`), "Service‑uri" (`garages`, capability `admin.garages`), "Utilizatori" (`users`, `admin.users`), "Recenzii raportate" (`reviews`, `admin.reviews`), "Mărci și lucrări" (`catalogue`, `admin.catalogue`), "Asistent AI" (`assistant`, `admin.settings`) and "Setări" (`settings`, `admin.settings`); the side menu (from 768 px), the tab bar (below 768 px) and the routes MUST all read that list, and the tab bar MUST show the short labels "Panou", "Service‑uri", "Utilizatori", "Raportate", "Mărci", "Asistent", "Setări" (English: "Dashboard", "Garages", "Users", "Reported", "Brands", "Assistant", "Settings").
+### 001-FR-006 — The admin "Utilizatori" view (`users`, capability `admin.users`) MUST be released (its "în curând" mark removed) and get its body: the three totals as the body's first line, directly under the view header (the admin frame renders no per-view subtitle; research.md D7), then a two-column grid (the list panel wider than the growth panel, as design.md records) that stacks into one column below 900 px.
 
-_From 160-admin-dashboard-menu._
+_From 001-admin-recent-accounts._
 
 ### 160-FR-008 — The admin frame's header MUST show the line "MotorFix · București · {n} service‑uri așteaptă verificarea" (English "MotorFix · Bucharest · {n} garages are waiting for verification"), where `{n}` is `garagesWaiting` from the overview, written in the language's plural forms: Romanian `one` "1 service așteaptă verificarea", `few` "{n} service‑uri așteaptă verificarea", `other` "{n} de service‑uri așteaptă verificarea", zero "niciun service nu așteaptă verificarea"; English `one` "1 garage is waiting for verification", `other` "{n} garages are waiting for verification", zero "no garage is waiting for verification". The city is the fixed text "București" / "Bucharest" until the period-and-city story (https://app.notion.com/p/3ee607bff0d281bcba2fe16979f909fc) makes it a choice.
 
@@ -194,9 +195,71 @@ _From 162-growth-12-months._
 
 _From 162-growth-12-months._
 
+### 001-FR-001 — `GET /api/v1/admin/accounts?cursor` MUST answer the accounts whose status is `active` or `suspended` (never `deleted`), newest first by creation time, then id, 20 per page as `{ items, nextCursor }`, with an opaque cursor for the next page (base64url of the last item's creation time and id; the next page holds the items older than it, or as old with a smaller id), so no account is repeated or skipped between two consecutive pages of a list to which accounts are only added; `nextCursor` is null when no account follows the page. A cursor that does not decode (not base64url, or not a valid creation time and id once decoded) MUST answer 400 `invalid_cursor`; a cursor that decodes always answers what follows it, even if its account is gone. The list carries no `total` (A30 is proposed; the view shows none).
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-002 — Each item MUST carry `id`, `name`, `roles` (the account's roles, in the order driver, garage, receptionist, mechanic, admin), `garageName` (the name of the garage of the account's owner or receptionist membership, or of its mechanic card, or null), `carsCount` (the account's cars, for a driver), `status` (`active` or `suspended`), `since` (the time the state began: for `active` the creation time; for `suspended` the time of the last recorded change of the account's status to `suspended` in the activity log, or null when none is recorded; the entry matched is `subjectType: 'account'`, `field: 'status'`, `newValue` `"suspended"`, the way platform-figures matches a garage's approval), `createdAt`, and `count`: `{ kind: 'requests' | 'reviews' | 'age', value }` — `requests` with the driver's number of requests for an account whose first role is driver, `reviews` with the garage's number of reviews for a garage owner, with the number of reviews naming the mechanic for a mechanic, and `age` with the account's age in whole days (rounded down, so an account created today reads 0) for a receptionist, an admin and any account whose creation time is later than now minus 7 × 24 hours, whatever its role. The first role in the order above decides `count` and the source of `garageName` (driver+garage counts `requests`; garage takes the owner membership, receptionist its membership, mechanic its card); `roles` come from the account's roles only. An item MUST NOT carry the e-mail, the phone, a plate or anything else about the person.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-003 — Requests and reviews do not exist on the platform yet (no story has built them): `requests` and `reviews` counts MUST be answered as 0 by the one read that will later count them, so the rows read "0 cereri" / "0 recenzii" until those stories land, and the DTO does not change when they do.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-004 — `GET /api/v1/admin/accounts/summary` MUST answer `{ activeDrivers, garagesListed, mechanics }`: `activeDrivers` and `garagesListed` by the overview's definitions (161-FR-001: driver-role accounts with status `active` whose last activity is within 30 days; garages whose status is `approved`), read through the same platform-figures code, and `mechanics` the number of mechanic cards that carry an account (`accountId` set) at `approved` garages (story ST-1 scenario 1, MF-46 rule 2). The answer MUST be served from a Redis cache (key `admin:accounts:summary`, TTL 60 seconds, the same for every language), the database being read again after it expires and when Redis cannot be reached; the cache never holds the only copy of anything (Constitution VI).
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-005 — Both reads MUST be admin-only through the actor check (ST-160's policy, 161-FR-003): any other role answers 404 `not_found`, a missing token 401 `sign_in_required`, a suspended account 403 `account_suspended`, every error as RFC 9457 problem details with a `code` (A28, contracts/admin-accounts.md); they are not refused by maintenance mode (160-FR-003). The DTOs live in the contracts library and the generated client is regenerated.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-006 — The admin "Utilizatori" view (`users`, capability `admin.users`) MUST be released (its "în curând" mark removed) and get its body: the three totals as the body's first line, directly under the view header (the admin frame renders no per-view subtitle; research.md D7), then a two-column grid (the list panel wider than the growth panel, as design.md records) that stacks into one column below 900 px.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-007 — The subtitle MUST read the three totals joined by " · " (drivers, garages, mechanics), each phrase in its number's plural form (the rules below win; every Romanian "service‑uri" uses U+2011 as FR-013 says) (Romanian `one` "1 șofer activ" / "1 service" / "1 mecanic", `few` "{n} șoferi activi" / "{n} service‑uri" / "{n} mecanici", `other` "{n} de șoferi activi" / "{n} de service‑uri" / "{n} de mecanici"; English `one` "1 active driver" / "1 garage" / "1 mechanic", `other` "{n} active drivers" / "{n} garages" / "{n} mechanics"), numbers grouped by the language (locale-formats: "12.480" / "12,480"). While the totals load the subtitle shows a skeleton line; when the read fails it reads "—" with the overview's info tip (161-FR-007), never 0 and never a number kept from an earlier failed read.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-008 — The panel "Conturi recente" / "Recent accounts" MUST show one row per item: the name over the detail; a lamp and the state; the count right-aligned. The detail MUST read the roles joined by " + " ("șofer", "service", "recepție", "mecanic", "admin" / "driver", "garage", "reception", "mechanic", "admin"), then " · " and, for a driver with no other role, the cars ("1 mașină", "{n} mașini", "fără mașină" / "1 car", "{n} cars", "no car"); for an account with a garage name, that name; for an admin or an account with neither, nothing after the roles.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-009 — The state MUST read, for `active`, a green lamp and "activ · din {month year}" / "active · since {Month year}" from `since` in the language's month names; for `suspended`, a red lamp and "suspendat · din {d mon. yyyy}" / "suspended · since {d Mon yyyy}" from `since`, or "suspendat" / "suspended" alone when `since` is null. The lamp colours are the Cockpit lamp tokens, and the state text is readable without the colour (the word carries the meaning).
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-010 — The count MUST read, by `count.kind`: `requests` "{n} cereri" (`one` "1 cerere", `few` "{n} cereri", `other` "{n} de cereri" / EN "1 request", "{n} requests"); `reviews` "{n} recenzii" (`one` "1 recenzie", `few` "{n} recenzii", `other` "{n} de recenzii" / EN "1 review", "{n} reviews"); `age` "cont de {n} zile" (`one` "cont de 1 zi", `few` "cont de {n} zile", `other` "cont de {n} de zile" / EN "{n}-day-old account", "1-day-old account"); numbers grouped by the language.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-011 — The list MUST load its next page when a sentinel after the last loaded row comes into view (so pages chain without a scroll while the sentinel stays in view), appending the rows below, until `nextCursor` is null; a page load in flight is never doubled. While the first page loads the panel shows skeleton rows; with no account at all it reads "Niciun cont încă." / "No accounts yet."; when the first page fails it shows "Lista nu s-a încărcat" / "The list did not load" with a "Reîncearcă" / "Try again" button (a native button, reachable and activated by keyboard) that reads it again; when a later page fails the loaded rows stay and the same button sits at the foot of the list. The charts load and show whatever the list does.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-012 — The panel "Creștere, ultimele 12 luni" / "Growth, last 12 months" MUST render the overview's growth component (ST-162) unchanged: same read, same labels, latest values, tooltips, loading and failure behaviour.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-013 — On a 320 px phone the view MUST NOT scroll sideways; below 900 px each row is one column (name and detail, then lamp and state, then the count, left-aligned); the lamp, state and count MUST be 12 px or larger; light and dark follow the theme's tokens. Every text MUST exist in Romanian and English in the shared i18n files, a Romanian hyphenated word using U+2011 ("Service‑uri"), and switching the language re-renders the view without a reload or a re-read of the list.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-014 — The two new routes MUST ship their observability in the same change: request count, duration and error metrics by route and status, a structured log line per failure (route and status, never an account's name or cursor), a dashboard panel for the two routes and an alert on their error rate, listed in `infra/observability/inventory.json`; where `infra/observability/dashboards/` and `alerts/` do not exist yet (ST-879, ST-880), the entry records `none` with that reason and the metric and labels to chart, as the plan's Observability section says.
+
+_From 001-admin-recent-accounts._
+
+### 001-FR-015 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the newest-first order and the 20-row page; a stable cursor across an insert between pages; 400 for a cursor that does not decode; a `deleted` account left out; each role's detail and count (driver with and without cars, owner, mechanic, receptionist, admin, driver-and-garage); the 7-day age rule; a suspended account with and without a recorded suspension time; the absence of e-mail, phone and plate in every item; the three totals, the 60-second cache (a changed count within the window not shown, shown after it); 404 for each non-admin role, 401 without a token, 403 suspended; and the inventory check. A Playwright end-to-end test opens "Utilizatori" as the seeded admin, reads the subtitle, the seeded rows (the suspended driver red, the driver-and-garage row, the mechanic's garage name), scrolls to load a second page (the list stubbed in the browser with 25 rows, since the end-to-end suite also runs against a deployed address), and reads the two charts, on a phone and a desktop, in both languages; a non-admin opening the address lands on their own dashboard.
+
+_From 001-admin-recent-accounts._
+
 ## Retired
 
 - `160-FR-001` — superseded by `161-FR-001` (2026-10-07)
 - `160-FR-002` — superseded by `161-FR-003` (2026-10-07)
 - `160-FR-011` — superseded by `161-FR-007` (2026-10-07)
 - `160-FR-014` — superseded by `161-FR-011` (2026-10-07)
+
+- `160-FR-006` — superseded by `001-FR-006` (2026-10-08)
