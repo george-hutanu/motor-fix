@@ -1,5 +1,27 @@
 <!--
-Sync Impact Report (v1.10.0)
+Sync Impact Report (v1.11.0)
+- Version change: 1.10.0 → 1.11.0 (MINOR: Principle II gains one allowed
+  form of requirement id in source — a whole-line `// @traces
+  <feature>-FR-<n>` comment in a test file, read by `trace-matrix.mjs`. The
+  prohibition stays for every other place and every other identifier;
+  nothing removed)
+- Source: ST-960 (supersedes the 1.9.0 figure in ST-952 and ST-925 comments).
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — v1.11.0, II line
+  - ✅ CLAUDE.local.md — the version line
+  - ✅ .claude/scripts/lib/traces.mjs — the one parser; trace-matrix.mjs and
+    config-protection.mjs read ids through it
+  - ✅ .claude/skills/speckit-tests, speckit-implement, speckit-review,
+    speckit-harden, speckit-bug-fix, speckit-auto (phases-build, report,
+    commit-protocol) — state the exception
+  - ✅ .claude/agents/code-reviewer.md, spec-reviewer.md, test-adversary.md
+  - ✅ .claude/hooks/red-first-gate.mjs, pre-commit-check.sh — comment and
+    message
+  - ✅ .claude/scripts/traces-rule.spec.mjs — keeps the files agreeing
+- Follow-ups: ST-817 (eval-case id prefixes) and ST-733 (matrix test roots)
+  stay their own tasks.
+
+Previous report (v1.10.0)
 - Version change: 1.9.0 → 1.10.0 (MINOR: the Agent Execution Rule "Scope is
   the deliverable" gains the review clause — a verified review, harden, QA or
   PR-tester finding with a small or medium fix is fixed in the same PR,
@@ -268,8 +290,13 @@ might be useful later" is not a defense.
 - Tests follow Principle I: cover real behavior and contracts, no padding
   suites for coverage numbers.
 - Source carries no internal identifiers — no FR id, feature number, task id,
-  or ticket key in code, comments, or test titles. The FR → test mapping lives
-  in `tasks.md` and each command's completion report.
+  or ticket key in code, comments, or test titles — with one exception: a
+  test file (`*.spec.*`, `*.test.*`) may carry a whole-line comment
+  `// @traces <feature>-FR-<n>` naming one or more requirement ids and nothing
+  else (`^\s*// @traces( \d{3}-FR-\d{3})+\s*$`), which `trace-matrix.mjs`
+  reads. An id anywhere else, in non-test code, or on a line that carries
+  anything more is still forbidden. The FR → test mapping also lives in
+  `tasks.md` and each command's completion report.
 
 Rationale: concrete failing tests cut agent regressions where advisory TDD
 prose does not; tests against the real database catch what mocks agree to.
@@ -528,4 +555,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.10.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-08
+**Version**: 1.11.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-08
