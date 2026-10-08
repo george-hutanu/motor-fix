@@ -1,9 +1,9 @@
-import { baniToLei } from '@motor-fix/contracts';
 import type {
   DetailsSection,
   MechanicsSection,
   PricesSection,
 } from '@motor-fix/contracts/listing-sections';
+import { baniToLei } from '@motor-fix/contracts/price-range';
 
 import { initials } from '../../dashboard/initials';
 import { type BrandAnswer, written } from '../brand-verdict/brand-verdict';
