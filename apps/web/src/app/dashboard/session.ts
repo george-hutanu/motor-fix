@@ -33,6 +33,9 @@ const RETURN_TO = 'mf-return-to';
 const PENDING = 'mf-sign-out-pending';
 const CHANNEL = 'mf-session';
 
+// How long a sign-out waits for a language save in flight.
+const SAVE_WAIT_MS = 3_000;
+
 // No answer, or an outage: the server may not have ended the session.
 const unanswered = (error: unknown) =>
   !(error instanceof HttpErrorResponse) ||
@@ -376,8 +379,20 @@ export class Session {
     this.drop();
   }
 
-  // Signed out here at once, whatever the server answers.
+  // Signed out here whatever the server answers. A language save in flight
+  // gets to send the language last tapped first, but a save that hangs never
+  // keeps the person signed in.
   private async end(kind: SignOut) {
+    if (this.saving) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      await Promise.race([
+        this.saving,
+        new Promise((resolve) => {
+          timer = setTimeout(resolve, SAVE_WAIT_MS);
+        }),
+      ]);
+      clearTimeout(timer);
+    }
     this.drop();
     this.tabs?.postMessage('signed-out');
     await this.send(kind);

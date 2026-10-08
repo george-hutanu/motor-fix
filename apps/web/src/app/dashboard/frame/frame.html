@@ -36,8 +36,8 @@
     @if (inviteGarage(); as garageId) {
       <button type="button" (click)="invite(garageId)">{{ 'shell.frame.invite' | t }}</button>
     }
-    <button type="button" (click)="signOut()">{{ 'shell.frame.signOut' | t }}</button>
-    <button type="button" (click)="signOutEverywhere()">{{ 'shell.frame.signOutEverywhere' | t }}</button>
+    <button type="button" [disabled]="signingOut()" [attr.aria-busy]="signingOut() || null" (click)="signOut()">{{ 'shell.frame.signOut' | t }}</button>
+    <button type="button" [disabled]="signingOut()" [attr.aria-busy]="signingOut() || null" (click)="signOutEverywhere()">{{ 'shell.frame.signOutEverywhere' | t }}</button>
   </div>
 </aside>
 <div class="view">
