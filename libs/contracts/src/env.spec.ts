@@ -1,5 +1,6 @@
 // @traces 539-FR-003 875-FR-001 875-FR-002 875-FR-003
 import {
+  PLACES_ENV,
   placesApiKey,
   publicWebUrl,
   readEnv,
@@ -205,5 +206,9 @@ describe('placesApiKey', () => {
   it('is undefined when unset or blank, so the api still boots', () => {
     expect(placesApiKey({})).toBeUndefined();
     expect(placesApiKey({ GEOAPIFY_API_KEY: '  ' })).toBeUndefined();
+  });
+
+  it('names the one variable it reads', () => {
+    expect(PLACES_ENV).toEqual(['GEOAPIFY_API_KEY']);
   });
 });

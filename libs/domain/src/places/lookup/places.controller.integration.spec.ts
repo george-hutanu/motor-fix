@@ -33,13 +33,11 @@ const provider: PlacesProvider = {
 let app: INestApplication;
 let redis: Redis;
 
-async function boot(
-  config: Parameters<typeof PlacesModule.register>[0] = { provider: 'fake' },
-) {
+async function boot() {
   const moduleRef = await Test.createTestingModule({
     imports: [
       AuthModule.register({ databaseUrl, redisUrl, tokenSecret: 'test' }),
-      PlacesModule.register(config),
+      PlacesModule.register({ provider: 'fake' }),
     ],
   })
     .overrideProvider(PLACES_PROVIDER)
@@ -173,43 +171,4 @@ describe('GET /places', () => {
     expect(res.body.retryAfterSeconds).toBeLessThanOrEqual(60);
     expect(calls).toEqual([]);
   });
-});
-
-describe('GET /places with the limit set at boot', () => {
-  let limited: INestApplication;
-
-  beforeAll(async () => {
-    limited = await boot({ lookupsPerMinute: 2, provider: 'fake' });
-  });
-
-  afterAll(async () => {
-    await limited.close();
-  });
-
-  it('refuses the look-up past the limit it was given', async () => {
-    const ask = () =>
-      request(limited.getHttpServer())
-        .get('/places')
-        .query({ q: 'Strada Exemplu' });
-
-    expect((await ask()).status).toBe(200);
-    expect((await ask()).status).toBe(200);
-    expect((await ask()).status).toBe(429);
-  });
-});
-
-it('gives the real provider the timeout it was booted with', async () => {
-  const moduleRef = await Test.createTestingModule({
-    imports: [
-      AuthModule.register({ databaseUrl, redisUrl, tokenSecret: 'test' }),
-      PlacesModule.register({
-        apiKey: 'k',
-        provider: 'geoapify',
-        timeoutMs: 1500,
-      }),
-    ],
-  }).compile();
-
-  expect(moduleRef.get(PLACES_PROVIDER)).toMatchObject({ timeoutMs: 1500 });
-  await moduleRef.close();
 });

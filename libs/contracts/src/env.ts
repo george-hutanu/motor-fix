@@ -53,10 +53,13 @@ export const APPLE_ENV = [
 
 // The address look-up's key: unset, the api still boots and the look-up says
 // it is down (a stand-in answers in tests).
+export const PLACES_ENV = ['GEOAPIFY_API_KEY'] as const;
+
 export function placesApiKey(
   source: Record<string, string | undefined> = process.env,
 ): string | undefined {
-  return source['GEOAPIFY_API_KEY']?.trim() || undefined;
+  const [key] = PLACES_ENV;
+  return source[key]?.trim() || undefined;
 }
 
 // The web app's public address: unset in development and at build time.

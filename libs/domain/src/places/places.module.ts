@@ -12,35 +12,10 @@ import {
 } from './providers/places.provider';
 import { AUTH_REDIS } from '../auth/attempts';
 
-type Limits = { lookupsPerMinute?: number; timeoutMs?: number };
-type PlacesConfig = Limits &
-  (
-    | { provider: 'geoapify'; apiKey: string }
-    | { provider: 'fake' }
-    | { provider: 'none' }
-  );
-
-// A minute is the longest a typing owner would wait for a suggestion.
-const TIMEOUT_MAX_MS = 60_000;
-
-const whole = (value: string | undefined, max: number) =>
-  value && /^\d+$/.test(value.trim()) && Number(value) > 0
-    ? Math.min(Number(value), max)
-    : undefined;
-
-// PLACES_LOOKUPS_PER_MINUTE and GEOAPIFY_TIMEOUT_MS, each only when set to a
-// whole number above zero; otherwise the defaults hold.
-function limitsOf(source: Record<string, string | undefined>): Limits {
-  const lookupsPerMinute = whole(
-    source['PLACES_LOOKUPS_PER_MINUTE'],
-    Number.MAX_SAFE_INTEGER,
-  );
-  const timeoutMs = whole(source['GEOAPIFY_TIMEOUT_MS'], TIMEOUT_MAX_MS);
-  return {
-    ...(lookupsPerMinute ? { lookupsPerMinute } : {}),
-    ...(timeoutMs ? { timeoutMs } : {}),
-  };
-}
+type PlacesConfig =
+  | { provider: 'geoapify'; apiKey: string }
+  | { provider: 'fake' }
+  | { provider: 'none' };
 
 // Chosen once at boot: the key wins; tests without one get the stand-in;
 // anywhere else without one the look-up says it is down.
@@ -49,9 +24,8 @@ export function placesConfig(
   source: Record<string, string | undefined>,
 ): PlacesConfig {
   const apiKey = placesApiKey(source);
-  const limits = limitsOf(source);
-  if (apiKey) return { apiKey, provider: 'geoapify', ...limits };
-  return { provider: appEnv === 'test' ? 'fake' : 'none', ...limits };
+  if (apiKey) return { apiKey, provider: 'geoapify' };
+  return appEnv === 'test' ? { provider: 'fake' } : { provider: 'none' };
 }
 
 const NONE: PlacesProvider = {
@@ -67,7 +41,7 @@ function providerFor(config: PlacesConfig): PlacesProvider {
   }
   const provider =
     config.provider === 'geoapify'
-      ? new GeoapifyPlaces(config.apiKey, fetch, config.timeoutMs)
+      ? new GeoapifyPlaces(config.apiKey)
       : new FakePlaces();
   logger.log(`address search: ${provider.name}`);
   return provider;
@@ -86,8 +60,7 @@ export class PlacesModule {
         {
           inject: [AUTH_REDIS],
           provide: PlacesThrottle,
-          useFactory: (redis: Redis) =>
-            new PlacesThrottle(redis, config.lookupsPerMinute),
+          useFactory: (redis: Redis) => new PlacesThrottle(redis),
         },
       ],
     };
