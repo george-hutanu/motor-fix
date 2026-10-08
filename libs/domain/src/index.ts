@@ -21,6 +21,7 @@ export { EventsModule } from './events/events.module';
 export { OutboxRelayModule } from './events/outbox-relay/outbox-relay.module';
 export { GarageDetailsService } from './garages/details/garage-details.service';
 export { writeGarageHours } from './garages/garage-hours';
+export { writeGaragePayments } from './garages/garage-settings/garage-settings';
 export { GaragesModule } from './garages/garages.module';
 export { listingDraftDaily } from './garages/listing-draft-sweep';
 export { GarageMechanicsService } from './garages/mechanics/garage-mechanics.service';

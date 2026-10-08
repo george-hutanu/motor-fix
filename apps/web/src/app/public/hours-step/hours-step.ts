@@ -10,12 +10,16 @@ import {
 } from '@angular/core';
 import {
   CLOSED_NOTE_MAX,
+  type CourtesyCar,
   DEFAULT_HOURS,
   FACILITIES,
   type Facility,
   type HoursSection,
   type Interval,
   intervalsError,
+  isCourtesyPrice,
+  PAYMENTS,
+  type Payment,
   TIMES,
   todayInBucharest,
   WEEKDAYS,
@@ -35,12 +39,15 @@ import {
   addClosedDay,
   removeBreak,
   removeClosedDay,
+  setCourtesy,
   setDay,
   setWeekdays,
   simpleRows,
   toggleClosed,
   toggleFacility,
+  togglePayment,
 } from '../hours-section';
+import { LeiInput } from '../lei-input';
 
 // The break a day gets first, moved to the middle of a day it does not fit.
 const LUNCH: Interval = ['12:00', '13:00'];
@@ -52,12 +59,14 @@ type Calendar =
   | { state: 'loading' | 'down' }
   | { state: 'ready'; days: PublicHolidayDto[] };
 
-// Step 5 of listing a garage: the weekly hours, the closed days and the
-// facilities. It holds the draft's section and saves nothing; nothing is kept
+// Step 5 of listing a garage: the weekly hours, the closed days, the
+// facilities with the courtesy car's terms, and the payment methods. It holds the draft's section and saves nothing; nothing is kept
 // until the owner changes something.
+type PriceError = 'priceMissing' | 'priceRange';
+
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [HlmInput, HlmLabel, Lamp, TranslatePipe],
+  imports: [HlmInput, HlmLabel, Lamp, LeiInput, TranslatePipe],
   selector: 'mf-hours-step',
   styleUrl: './hours-step.css',
   templateUrl: './hours-step.html',
@@ -71,6 +80,7 @@ export class HoursStep {
   protected readonly times = TIMES;
   protected readonly days = WEEKDAYS;
   protected readonly facilities = FACILITIES;
+  protected readonly payments = PAYMENTS;
 
   private readonly opened = signal(false);
   // The days show by themselves when the simple rows cannot tell the week.
@@ -99,6 +109,17 @@ export class HoursStep {
   );
   protected readonly simple = computed(() => simpleRows(this.hours()));
   protected readonly ticks = computed(() => this.value().facilities ?? []);
+  protected readonly paid = computed(
+    () => this.value().courtesyCar?.paid === true,
+  );
+  protected readonly taken = computed(() => this.value().payments ?? []);
+  // Why the paid car's price cannot stand, or null.
+  protected readonly priceError = computed((): PriceError | null => {
+    const car = this.value().courtesyCar;
+    if (!car?.paid) return null;
+    if (car.pricePerDayBani === undefined) return 'priceMissing';
+    return isCourtesyPrice(car.pricePerDayBani) ? null : 'priceRange';
+  });
 
   protected readonly nextHolidays = computed(() => {
     const calendar = this.calendar();
@@ -236,11 +257,48 @@ export class HoursStep {
     );
   }
 
+  protected paymentKey(payment: Payment) {
+    return this.key(`payment.${payment}`);
+  }
+
+  protected priceErrorKey(error: PriceError) {
+    return this.key(`courtesy.${error}`);
+  }
+
+  // The courtesy car starts free when ticked; its terms go when unticked.
   protected tick(facility: Facility) {
     const list = toggleFacility(this.ticks(), facility);
-    this.value.update(({ facilities: _, ...rest }) =>
-      list.length ? { ...rest, facilities: list } : rest,
+    const car = list.includes('courtesy_car')
+      ? (this.value().courtesyCar ?? { paid: false })
+      : undefined;
+    this.value.update(({ courtesyCar: _c, facilities: _f, ...rest }) => ({
+      ...rest,
+      ...(list.length && { facilities: list }),
+      ...(car && { courtesyCar: car }),
+    }));
+  }
+
+  protected pay(payment: Payment) {
+    const list = togglePayment(this.taken(), payment);
+    this.value.update(({ payments: _, ...rest }) =>
+      list.length ? { ...rest, payments: list } : rest,
     );
+  }
+
+  protected choosePaid(paid: boolean) {
+    this.setCar(setCourtesy(this.value().courtesyCar, paid));
+  }
+
+  protected price(bani: number | undefined) {
+    this.setCar(
+      bani === undefined
+        ? { paid: true }
+        : { paid: true, pricePerDayBani: bani },
+    );
+  }
+
+  private setCar(courtesyCar: CourtesyCar) {
+    this.value.update((v) => ({ ...v, courtesyCar }));
   }
 
   private changed(interval: Interval, side: 0 | 1, event: Event): Interval {

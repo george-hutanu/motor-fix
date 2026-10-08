@@ -13,7 +13,10 @@ import {
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import type { ListingDraftData } from '@motor-fix/contracts';
-import type { HoursSection } from '@motor-fix/contracts/garage-hours';
+import {
+  type HoursSection,
+  hoursComplete,
+} from '@motor-fix/contracts/garage-hours';
 import {
   detailsComplete,
   isDetailsSection,
@@ -151,7 +154,9 @@ export class ListYourGarage {
       ...(detailsComplete(this.details()) ? [1] : []),
       ...(prices && pricesComplete(prices) ? [3] : []),
       ...(mechanicsComplete(this.mechanics()) ? [4] : []),
-      ...(placeComplete(this.place()) ? [5] : []),
+      ...(placeComplete(this.place()) && hoursComplete(this.hours())
+        ? [5]
+        : []),
     ]);
   });
   protected readonly current = signal(1);

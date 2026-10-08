@@ -28,7 +28,12 @@ let tops = [1000, 2000, 3000, 4000, 5000, 6000];
 const scrolls: ScrollIntoViewOptions[] = [];
 const signIn = { start: jest.fn() };
 // The catalogue behind step 2's chips, read through its own client.
-const DACIA = { id: 'b-dacia', name: 'Dacia', popularity: 1, slug: 'dacia' };
+const DACIA = {
+  id: '7c1e4f2a-3b5d-4e6f-8a9b-0c1d2e3f4a5b',
+  name: 'Dacia',
+  popularity: 1,
+  slug: 'dacia',
+};
 const catalogue = {
   brandsControllerSearch: jest.fn(async () => ({
     items: [DACIA],
@@ -1372,7 +1377,13 @@ describe('the brands step in the draft', () => {
       expect(stored()?.data).toEqual({
         steps: {
           '2': {
-            brands: [{ brandId: 'b-dacia', name: 'Dacia', stance: 'works_on' }],
+            brands: [
+              {
+                brandId: '7c1e4f2a-3b5d-4e6f-8a9b-0c1d2e3f4a5b',
+                name: 'Dacia',
+                stance: 'works_on',
+              },
+            ],
           },
         },
       });
@@ -1388,7 +1399,11 @@ describe('the brands step in the draft', () => {
           '2': {
             brandNote: 'Doar diesel',
             brands: [
-              { brandId: 'b-dacia', name: 'Dacia', stance: 'does_not_take' },
+              {
+                brandId: '7c1e4f2a-3b5d-4e6f-8a9b-0c1d2e3f4a5b',
+                name: 'Dacia',
+                stance: 'does_not_take',
+              },
             ],
           },
         },
@@ -1426,7 +1441,13 @@ describe('the brands step in the draft', () => {
       data: {
         steps: {
           '2': {
-            brands: [{ brandId: 'b-dacia', name: 'Dacia', stance: 'works_on' }],
+            brands: [
+              {
+                brandId: '7c1e4f2a-3b5d-4e6f-8a9b-0c1d2e3f4a5b',
+                name: 'Dacia',
+                stance: 'works_on',
+              },
+            ],
           },
         },
       },
@@ -1481,7 +1502,7 @@ describe('the details, prices and mechanics in the draft', () => {
   };
 
   it('ticks step 5 once the kept place has an address and a position in Romania', async () => {
-    seed({ data: { steps: { '5': { place: STEFAN } } } });
+    seed({ data: { steps: { '5': { payments: ['cash'], place: STEFAN } } } });
 
     const { page } = await open('/ro/list-your-garage');
 
@@ -1504,6 +1525,92 @@ describe('the details, prices and mechanics in the draft', () => {
     expect(ticked(page)).toEqual([4]);
   });
 
+  it('leaves step 5 unticked while no payment method is ticked', async () => {
+    seed({ data: { steps: { '5': { place: STEFAN } } } });
+
+    const { page } = await open('/ro/list-your-garage');
+
+    expect(ticked(page)).toEqual([4]);
+  });
+
+  it('leaves step 5 unticked for a paid courtesy car with no price', async () => {
+    seed({
+      data: {
+        steps: {
+          '5': {
+            courtesyCar: { paid: true },
+            facilities: ['courtesy_car'],
+            payments: ['card'],
+            place: STEFAN,
+          },
+        },
+      },
+    });
+
+    const { page } = await open('/ro/list-your-garage');
+
+    expect(ticked(page)).toEqual([4]);
+  });
+
+  it('ticks step 5 once a payment method is ticked on the page', async () => {
+    seed({ data: { steps: { '5': { place: STEFAN } } } });
+    const { harness, page } = await open('/ro/list-your-garage');
+
+    const cash = [
+      ...page.querySelectorAll<HTMLButtonElement>(
+        'mf-hours-step .payments button',
+      ),
+    ].find((c) => text(c).startsWith('Numerar'));
+    if (!cash) throw new Error('no payment chip Numerar');
+    cash.click();
+    await settle(harness);
+
+    expect(ticked(page)).toEqual([4, 5]);
+  });
+
+  it('opens a draft kept before payments and fuels existed without losing a value', async () => {
+    seed({
+      data: {
+        steps: {
+          '2': {
+            brands: [{ brandId: DACIA.id, name: 'Dacia', stance: 'works_on' }],
+          },
+          '5': { facilities: ['courtesy_car'], place: STEFAN },
+        },
+      },
+    });
+
+    const { page } = await open('/ro/list-your-garage');
+
+    const fuels = [
+      ...page.querySelectorAll<HTMLButtonElement>(
+        'mf-brands-step .fuels button',
+      ),
+    ];
+    expect(fuels.map((f) => f.getAttribute('aria-pressed'))).toEqual([
+      'true',
+      'true',
+      'true',
+      'true',
+    ]);
+    const payments = [
+      ...page.querySelectorAll<HTMLButtonElement>(
+        'mf-hours-step .payments button',
+      ),
+    ];
+    expect(payments).toHaveLength(3);
+    for (const p of payments)
+      expect(p.getAttribute('aria-pressed')).toBe('false');
+    const free = [...page.querySelectorAll('mf-hours-step label')]
+      .find((l) => text(l) === 'Gratuită')
+      ?.querySelector<HTMLInputElement>('input[type="radio"]');
+    expect(free?.checked).toBe(true);
+    expect(
+      page.querySelector<HTMLInputElement>('mf-place-step [name="address"]')
+        ?.value,
+    ).toBe(STEFAN.address);
+  });
+
   it("ticks step 5 for a mobile mechanic's seat with no radius, as 20 stands in", async () => {
     seed({
       data: {
@@ -1513,7 +1620,7 @@ describe('the details, prices and mechanics in the draft', () => {
             businessKind: 'mobile',
             mobileLegalForm: 'pfa',
           },
-          '5': { place: STEFAN },
+          '5': { payments: ['cash'], place: STEFAN },
         },
       },
     });

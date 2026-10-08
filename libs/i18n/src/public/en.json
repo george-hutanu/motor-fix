@@ -68,12 +68,20 @@
     "brands": {
       "chips": "Your brands",
       "counter": "{taken} · {refused}",
+      "fuel": {
+        "diesel": "Diesel",
+        "electric": "Electric",
+        "hybrid": "Hybrid",
+        "petrol": "Petrol",
+        "ticked": "you work on it"
+      },
       "hint": "Tap once: green lamp, you work on it. Again: red lamp, you do not take it. A third tap switches it off.",
       "left": {
         "one": "{count} character left",
         "other": "{count} characters left"
       },
       "noMatch": "No brand found.",
+      "noRequests": "You will not receive requests for {brand}",
       "note": "Note on brands, up to 140 characters",
       "off": "you do not take it",
       "on": "you work on it",
@@ -131,6 +139,14 @@
       "closedDay": "Date",
       "closedDays": "Closed days",
       "closedNote": "Note, at most 80 characters",
+      "courtesy": {
+        "free": "Free",
+        "paid": "Paid",
+        "price": "Price per day",
+        "priceMissing": "Write the price per day",
+        "priceRange": "The price per day is from 1 to 2,000 lei",
+        "terms": "The courtesy car"
+      },
       "days": {
         "fri": "Friday",
         "mon": "Monday",
@@ -158,6 +174,14 @@
       "open": "Opens",
       "order": "Closing must be after opening",
       "past": "The date has passed",
+      "payment": {
+        "card": "Card",
+        "cash": "Cash",
+        "heading": "Payment",
+        "needed": "Choose at least one payment method",
+        "taken": "you take it",
+        "transfer": "Bank transfer"
+      },
       "remove": "Remove {day}",
       "removeBreak": "Remove the break",
       "saturday": "Saturday",

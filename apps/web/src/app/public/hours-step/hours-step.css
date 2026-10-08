@@ -138,3 +138,43 @@ ul {
 mf-lamp {
   font-size: var(--mf-size-small);
 }
+.payments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+.payments button[aria-pressed="true"] {
+  border-color: var(--mf-text-secondary);
+  font-weight: 600;
+}
+/* The car's terms take their own line under its chip. */
+.facilities li:has(.courtesy) {
+  display: grid;
+  flex-basis: 100%;
+  gap: var(--mf-space-2);
+  justify-items: start;
+  min-width: 0;
+}
+.courtesy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-1) var(--mf-space-3);
+  min-width: 0;
+}
+.price {
+  display: grid;
+  flex-basis: 100%;
+  gap: var(--mf-space-1);
+}
+.lei {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+}
+.lei input {
+  width: 8rem;
+  max-width: 100%;
+  min-height: var(--mf-tap);
+  box-sizing: border-box;
+}
