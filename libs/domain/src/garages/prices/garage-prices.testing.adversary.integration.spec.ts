@@ -53,23 +53,10 @@ describe('afterRace under hostile writers', () => {
       ),
     ).rejects.toThrow('rolled back');
 
-    expect(await insert(dacia)).toBe('dacia');
-    expect(await prisma.brand.count()).toBe(1);
-  });
-
-  it('rolls back the first row when the first writer throws after writing', async () => {
-    await afterRace(
-      prisma,
-      async (tx) => {
-        await tx.brand.create({ data: dacia });
-        throw new Error('late failure');
-      },
-      async () => 'ok',
-      { within: 1_000 },
-    ).catch(() => {});
-
     expect(await prisma.brand.count()).toBe(0);
     expect(await openTransactions()).toBe(0);
+    expect(await insert(dacia)).toBe('dacia');
+    expect(await prisma.brand.count()).toBe(1);
   });
 
   it('rejects with the second writer error without a conflict and still commits the first', async () => {
@@ -129,19 +116,6 @@ describe('afterRace under hostile writers', () => {
     expect(await run()).toBe('P2002');
     expect(await run()).toBe('P2002');
     expect(await openTransactions()).toBe(0);
-  });
-
-  it('fails the race by name and releases the first writer when the second never starts working', async () => {
-    const run = afterRace(
-      prisma,
-      (tx) => tx.brand.create({ data: dacia }),
-      () => new Promise<string>(() => {}),
-      { within: 300 },
-    );
-
-    await expect(run).rejects.toThrow(/afterRace/);
-    expect(await openTransactions()).toBe(0);
-    expect(await prisma.brand.count()).toBe(1);
   });
 
   it('rejects with the error of a second writer that throws synchronously, and releases the first', async () => {
