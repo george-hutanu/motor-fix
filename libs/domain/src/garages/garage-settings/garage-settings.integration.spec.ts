@@ -356,6 +356,28 @@ describe('PATCH /garages/:garageId', () => {
     });
   });
 
+  it('changes what the public garage page shows', async () => {
+    const w = await world();
+    await patch(w, {
+      courtesyCar: { paid: true, pricePerDayBani: 12000 },
+      paymentMethods: cashAndCard,
+    });
+
+    await patch(w, { paymentMethods: { ...cashAndCard, card: false } });
+
+    const page = await http().get(`/garages/${w.nord.slug}`);
+    expect(page.status).toBe(200);
+    expect(page.body.paymentMethods).toEqual({
+      card: false,
+      cash: true,
+      transfer: false,
+    });
+    expect(page.body.courtesyCar).toEqual({
+      paid: true,
+      pricePerDayBani: 12000,
+    });
+  });
+
   it('answers a free courtesy car without a price and clears the stored one', async () => {
     const w = await world();
     await patch(w, { courtesyCar: { paid: true, pricePerDayBani: 12000 } });
