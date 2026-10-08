@@ -192,6 +192,27 @@ describe('cockpit.css contrast', () => {
         }
       }
     });
+
+    it(`keeps control borders at 3:1 on every surface in the ${theme} theme`, () => {
+      const pairs = [
+        ...surfaces.map((surface) => ['--mf-line-strong', surface]),
+        ['--mf-text', '--mf-line-strong'],
+      ];
+      const failing = pairs
+        .map(([token, surface]) => ({
+          ratio: contrast(set.get(token)!, set.get(surface)!),
+          surface,
+          token,
+        }))
+        .filter(({ ratio }) => ratio < 3)
+        .map(({ token, surface, ratio }) => ({
+          ratio: Number(ratio.toFixed(2)),
+          surface,
+          theme,
+          token,
+        }));
+      expect(failing).toEqual([]);
+    });
   }
 });
 

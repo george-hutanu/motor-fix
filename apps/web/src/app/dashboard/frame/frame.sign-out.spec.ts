@@ -123,6 +123,38 @@ describe('the dashboard account block', () => {
   });
 });
 
+describe('signing out on this device', () => {
+  it('shows both sign-out buttons busy while it waits, and a second click signs out once', async () => {
+    const { element, harness, navigate, session } = await render(
+      'driver',
+      '/app/driver',
+    );
+    let finish: () => void = () => undefined;
+    session.signOut.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+
+    button(element, 'Ieși din cont')?.click();
+    await flush();
+    harness.detectChanges();
+    const here = button(element, 'Ieși din cont');
+    const everywhere = button(element, EVERYWHERE);
+    expect(here?.disabled).toBe(true);
+    expect(here?.getAttribute('aria-busy')).toBe('true');
+    expect(everywhere?.disabled).toBe(true);
+
+    here?.click();
+    finish();
+    await flush();
+
+    expect(session.signOut).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('signing out on all devices', () => {
   it('asks first, in a dialog', async () => {
     const { element, overlays } = await render('driver', '/app/driver');
