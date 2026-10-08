@@ -142,5 +142,22 @@ test.describe('maintenance mode @seeded', () => {
         page.getByRole('link', { name: 'Administrator? Intră în cont' }),
       ),
     ).toBeGreaterThanOrEqual(16);
+    // The one-word heading never breaks mid-word, in either language.
+    const lines = (locator: ReturnType<Page['locator']>) =>
+      locator.evaluate((el) => {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        return new Set([...range.getClientRects()].map((r) => r.top)).size;
+      });
+    expect(await lines(maintenancePage(page))).toBe(1);
+
+    expect((await page.goto('/en'))?.status()).toBe(503);
+    const english = page.getByRole('heading', {
+      level: 1,
+      name: 'Maintenance',
+    });
+    await expect(english).toBeVisible();
+    expect(await size(english)).toBe(20);
+    expect(await lines(english)).toBe(1);
   });
 });
