@@ -49,18 +49,25 @@ export default defineConfig({
       ? /@mailbox|@openid|@reset/
       : /@seeded|@mailbox|@openid|@reset/
     : undefined,
-  // The platform rules flows switch maintenance on, which refuses every
-  // non-admin sign-in platform-wide: they run alone, after everything else.
+  // The platform rules and maintenance flows switch maintenance on, which
+  // refuses every non-admin call platform-wide: they run alone, one file after
+  // the other, after everything else.
   projects: [
     {
       name: 'chromium',
-      testIgnore: /platform-rules\.spec\.ts$/,
+      testIgnore: /(platform-rules|maintenance)\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'] },
     },
     {
       dependencies: ['chromium'],
       name: 'platform-rules',
       testMatch: /platform-rules\.spec\.ts$/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      dependencies: ['platform-rules'],
+      name: 'maintenance',
+      testMatch: /maintenance\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'] },
     },
   ],
