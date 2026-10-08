@@ -20,6 +20,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { FILE_RULES } from '@motor-fix/contracts/files';
 import { PHOTOS_MAX } from '@motor-fix/contracts/listing-photos';
 import { ListingDraftsService } from '@motor-fix/data-access';
 import { TranslatePipe } from '@motor-fix/i18n';
@@ -27,8 +28,8 @@ import { FileUploader } from '@motor-fix/media';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 import { defer, type Subscription } from 'rxjs';
 
-const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const SIZE_MAX = 10 * 1024 * 1024;
+const RULE = FILE_RULES.garage_photo;
+const TYPES: readonly string[] = RULE.types;
 // A photo just confirmed shows the local file; one restored before its
 // copies exist is read again after this long.
 const PROCESSING_POLL_MS = 5000;
@@ -171,7 +172,10 @@ export class PhotosStep {
 
   private take(chosen: File[]) {
     const fit = chosen.filter(
-      (file) => TYPES.includes(file.type) && file.size <= SIZE_MAX,
+      (file) =>
+        TYPES.includes(file.type) &&
+        file.size > 0 &&
+        file.size <= RULE.maxBytes,
     );
     const room = Math.max(0, PHOTOS_MAX - this.tiles().length);
     this.refused.set(fit.length < chosen.length);
