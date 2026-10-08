@@ -31,7 +31,7 @@ export default defineConfig({
   // a retry fails the run instead of hiding a race. Against a deployed
   // address the preset's one worker and retries stay.
   // They also start with the api's sign-up and draft counts cleared, so a
-  // second local run within the hour is not refused (src/sign-up-counts.ts).
+  // second local run within the hour is not refused (src/rate-counts.ts).
   ...(deployed
     ? {}
     : {

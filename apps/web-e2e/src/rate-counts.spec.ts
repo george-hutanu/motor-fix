@@ -2,7 +2,7 @@ import { expect } from '@playwright/test';
 
 import { test } from './fixtures.js';
 import globalSetup from './global-setup.js';
-import { clearCounts, DRAFT_KEYS, SIGN_UP_KEYS } from './sign-up-counts.js';
+import { clearCounts, DRAFT_KEYS, SIGN_UP_KEYS } from './rate-counts.js';
 
 // A Redis that holds plain keys and answers SCAN one key per page, so the
 // cursor has to be followed to the end.

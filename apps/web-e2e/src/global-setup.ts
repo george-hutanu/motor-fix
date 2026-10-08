@@ -2,7 +2,7 @@ import { Redis } from 'ioredis';
 import { Client } from 'pg';
 
 import { resetGarageOnly } from './garage-only.js';
-import { clearCounts, DRAFT_KEYS, SIGN_UP_KEYS } from './sign-up-counts.js';
+import { clearCounts, DRAFT_KEYS, SIGN_UP_KEYS } from './rate-counts.js';
 
 async function clearRateCounts(): Promise<void> {
   const url = process.env['REDIS_URL'];

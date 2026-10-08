@@ -68,7 +68,7 @@ async function toPhotos(page: Page, email: string) {
   await page.getByLabel('E‑mail').blur();
   await toStep5(page, 'Pași');
   // The picker opens once the draft exists on the server; files set before
-  // then wait for a connection that is already there (ST-948).
+  // then wait for a connection that is already there.
   await expect(
     step(page).getByRole('button', { name: 'Alege fotografii' }),
   ).toBeEnabled();
