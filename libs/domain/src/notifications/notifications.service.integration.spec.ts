@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 
-import { BrevoMock } from './brevo-mock.testing';
+import { BrevoMock } from './brevo/brevo-mock.testing';
 import { NotificationsService } from './notifications.service';
 import {
   databaseUrl,
@@ -14,6 +14,7 @@ import {
 import { AuditService } from '../audit/audit.service';
 import type { Actor } from '../auth/policy';
 import { serialDatabase } from '../auth/serial-db.testing';
+import { until } from '../waits.testing';
 
 const redisUrl = redisUrlFor(11);
 const { account, prisma, reset } = fixtures();
@@ -202,6 +203,8 @@ describe('handing an event to the notifications service', () => {
     const andrei = await account('andrei');
     await quote(andrei, 'evt-6');
     const bell = (await rows(andrei)).find((r) => r.channel === 'in_app');
+    await until('the live announcement', () => published.length > 0);
+    // Long enough for a second, wrong, announcement to arrive.
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect(published.map((m) => JSON.parse(m))).toEqual([
       {

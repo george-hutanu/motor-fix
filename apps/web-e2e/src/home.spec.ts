@@ -17,6 +17,48 @@ const homeReads = (page: Page) => {
   });
   return brands;
 };
+const nearReads = (page: Page) => {
+  const nears: (string | null)[] = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === '/api/v1/home') {
+      nears.push(url.searchParams.get('near'));
+    }
+  });
+  return nears;
+};
+const placeReads = (page: Page) => {
+  const texts: string[] = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === '/api/v1/places') {
+      texts.push(url.searchParams.get('q') ?? '');
+    }
+  });
+  return texts;
+};
+const line = (page: Page) => page.locator('mf-home .place');
+const placeDialog = (page: Page) =>
+  page.getByRole('dialog', { name: 'Alege locul' });
+const field = (page: Page) => placeDialog(page).getByRole('combobox');
+
+const CLUJ = {
+  label: 'Strada Exemplu 2, Cluj-Napoca',
+  lat: 46.7712,
+  lng: 23.6236,
+};
+// The address look-up is answered here, not by the api: only the api's test
+// boot has a stand-in with fixed answers, and a deployed api answers real
+// addresses or none at all.
+const answerPlaces = (page: Page) =>
+  page.route('**/api/v1/places?*', (route) => {
+    const q = new URL(route.request().url()).searchParams.get('q') ?? '';
+    return route.fulfill({
+      body: JSON.stringify({ items: /cluj/i.test(q) ? [CLUJ] : [] }),
+      contentType: 'application/json',
+      status: 200,
+    });
+  });
 
 test('the server sends eight brand tiles, the first one selected', async ({
   request,
@@ -39,14 +81,14 @@ test.describe('the brand picker @seeded', () => {
     await tile(page, 'Dacia').click();
 
     await expect(
-      page.getByText('3 din 6 service‑uri primesc Dacia'),
+      page.getByText('5 din 8 service‑uri primesc Dacia'),
     ).toBeVisible();
     await expect(page.getByText('Service‑uri pentru Dacia')).toBeVisible();
     expect(reads).toEqual(['dacia']);
 
     await page.getByRole('button', { exact: true, name: 'EN' }).click();
 
-    await expect(page.getByText('3 of 6 garages take Dacia')).toBeVisible();
+    await expect(page.getByText('5 of 8 garages take Dacia')).toBeVisible();
     await expect(
       page
         .getByRole('radiogroup', { name: 'Car brand' })
@@ -99,8 +141,147 @@ test.describe('the brand picker @seeded', () => {
     await page.getByRole('button', { name: 'Reîncearcă' }).click();
 
     await expect(
-      page.getByText('3 din 6 service‑uri primesc Dacia'),
+      page.getByText('5 din 8 service‑uri primesc Dacia'),
     ).toBeVisible();
+  });
+});
+
+test.describe('the place on Home @seeded', () => {
+  test('starts with all of Romania and no distance', async ({ page }) => {
+    await ready(page, '/ro');
+    await tile(page, 'Dacia').click();
+
+    await expect(line(page)).toHaveText(/În toată România\s*·\s*Alege locul/);
+    await expect(
+      page.getByText('5 din 8 service‑uri primesc Dacia'),
+    ).toBeVisible();
+    await expect(page.locator('mf-home')).not.toContainText('km');
+  });
+
+  test.describe('with the location shared', () => {
+    test.use({
+      geolocation: { latitude: 46.7712, longitude: 23.6236 },
+      permissions: ['geolocation'],
+    });
+
+    test('counts the garages near the visitor after one more read', async ({
+      page,
+    }) => {
+      const nears = nearReads(page);
+      await ready(page, '/ro');
+      await tile(page, 'Dacia').click();
+      await expect(
+        page.getByText('5 din 8 service‑uri primesc Dacia'),
+      ).toBeVisible();
+      nears.length = 0;
+
+      await line(page).getByRole('button').click();
+      await placeDialog(page)
+        .getByRole('button', { name: 'Folosește locația mea' })
+        .click();
+
+      await expect(line(page)).toHaveText(/Lângă tine\s*·\s*Schimbă/);
+      await expect(
+        page.getByText('2 din 2 service‑uri primesc Dacia'),
+      ).toBeVisible();
+      expect(nears).toEqual(['46.771,23.624']);
+    });
+  });
+
+  test('hints at the address when the location is refused, and finds the address typed', async ({
+    page,
+  }) => {
+    const texts = placeReads(page);
+    await answerPlaces(page);
+    await ready(page, '/ro');
+    await tile(page, 'Dacia').click();
+
+    await line(page).getByRole('button').click();
+    await placeDialog(page)
+      .getByRole('button', { name: 'Folosește locația mea' })
+      .click();
+    await expect(
+      placeDialog(page).getByText('Nu am putut afla locația; scrie o adresă'),
+    ).toBeVisible();
+    await expect(field(page)).toBeFocused();
+
+    await field(page).fill('Cluj');
+    await placeDialog(page)
+      .getByRole('option', { name: 'Strada Exemplu 2, Cluj-Napoca' })
+      .click();
+
+    await expect(line(page)).toHaveText(
+      /Lângă Strada Exemplu 2, Cluj-Napoca\s*·\s*Schimbă/,
+    );
+    await expect(
+      page.getByText('2 din 2 service‑uri primesc Dacia'),
+    ).toBeVisible();
+    expect(texts).toEqual(['Cluj']);
+  });
+
+  test('says when no address was found', async ({ page }) => {
+    await answerPlaces(page);
+    await ready(page, '/ro');
+    await line(page).getByRole('button').click();
+
+    await field(page).fill('nicaieri');
+
+    await expect(
+      placeDialog(page).getByText('Nu am găsit adresa'),
+    ).toBeVisible();
+  });
+
+  test('says when addresses cannot be searched, and keeps the count', async ({
+    page,
+  }) => {
+    await page.route('**/api/v1/places?*', (route) =>
+      route.fulfill({ status: 503 }),
+    );
+    await ready(page, '/ro');
+    await tile(page, 'Dacia').click();
+    await expect(
+      page.getByText('5 din 8 service‑uri primesc Dacia'),
+    ).toBeVisible();
+
+    await line(page).getByRole('button').click();
+    await field(page).fill('Cluj');
+
+    await expect(
+      placeDialog(page).getByText('Nu putem căuta adrese acum'),
+    ).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(
+      page.getByText('5 din 8 service‑uri primesc Dacia'),
+    ).toBeVisible();
+  });
+
+  test('keeps the place after a reload and in the other language', async ({
+    page,
+  }) => {
+    await answerPlaces(page);
+    await ready(page, '/ro');
+    await line(page).getByRole('button').click();
+    await field(page).fill('Cluj');
+    await placeDialog(page)
+      .getByRole('option', { name: 'Strada Exemplu 2, Cluj-Napoca' })
+      .click();
+    await expect(line(page)).toContainText('Strada Exemplu 2');
+
+    const nears = nearReads(page);
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    await expect(line(page)).toHaveText(
+      /Lângă Strada Exemplu 2, Cluj-Napoca\s*·\s*Schimbă/,
+    );
+    expect(nears[0]).toBe('46.771,23.624');
+    await expect(placeDialog(page)).toHaveCount(0);
+
+    await page.getByRole('button', { exact: true, name: 'EN' }).click();
+
+    await expect(line(page)).toHaveText(
+      /Near Strada Exemplu 2, Cluj-Napoca\s*·\s*Change/,
+    );
   });
 });
 
@@ -142,6 +323,29 @@ for (const scheme of ['light', 'dark'] as const) {
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(320);
+    });
+  }
+}
+
+for (const scheme of ['light', 'dark'] as const) {
+  for (const path of ['/ro', '/en']) {
+    test(`fits the place line and its dialog on a 320 px phone on ${path}, ${scheme}`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.setViewportSize({ height: 640, width: 320 });
+      await ready(page, path);
+      const width = () =>
+        page.evaluate(() => document.documentElement.scrollWidth);
+
+      await expect(line(page)).toBeVisible();
+      const box = await line(page).getByRole('button').boundingBox();
+      expect(box?.height).toBeGreaterThanOrEqual(44);
+      expect(await width()).toBeLessThanOrEqual(320);
+
+      await line(page).getByRole('button').click();
+      await expect(page.getByRole('combobox')).toBeVisible();
+      expect(await width()).toBeLessThanOrEqual(320);
     });
   }
 }

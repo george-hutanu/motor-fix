@@ -1,0 +1,74 @@
+<section [attr.aria-busy]="list() === undefined && !failed()">
+  <h2>{{ 'admin.platformRules.title' | t }}</h2>
+  <p class="hint">{{ 'admin.platformRules.line' | t }}</p>
+  @if (list(); as rules) {
+    <ul>
+      @for (line of lines; track line.key) {
+        <li>
+          <div class="name">
+            <span>{{ name(line) | t }}</span>
+            <span class="hint">{{ meaning(line) | t }}</span>
+            @if (line.inverted) {
+              <span class="tag">{{ tag(rules) | t }}</span>
+            }
+          </div>
+          @if (rule(rules, line); as r) {
+            <hlm-switch
+              [checked]="isOn(line, r)"
+              [disabled]="locked(line)"
+              [aria-label]="name(line) | t"
+              (checkedChange)="toggle(line, r)"
+            />
+          }
+          @if (line.key === twoAdmins) {
+            <div class="requests" aria-live="polite">
+              @if (changes().waiting; as waiting) {
+                <div class="card" data-waiting>
+                  <p class="mark">{{ 'admin.platformRules.waiting' | t }}</p>
+                  <p class="hint">{{ waiting.requestedByName }} · {{ when(waiting.requestedAt) }}</p>
+                  <p class="reason">{{ waiting.reason }}</p>
+                  <div class="actions">
+                    @if (waiting.mine) {
+                      <button hlmBtn variant="secondary" type="button" [disabled]="deciding()" (click)="decide('cancel', waiting.id)">
+                        {{ 'admin.platformRules.withdraw' | t }}
+                      </button>
+                    } @else {
+                      <button hlmBtn type="button" [disabled]="deciding()" (click)="decide('approve', waiting.id)">
+                        {{ 'admin.platformRules.approve' | t }}
+                      </button>
+                      <button hlmBtn variant="secondary" type="button" [disabled]="deciding()" (click)="decide('refuse', waiting.id)">
+                        {{ 'admin.platformRules.refuse' | t }}
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+              @if (changes().decided.length > 0) {
+                <div class="decided" data-decided>
+                  @for (change of changes().decided; track change.id) {
+                    <p>
+                      <span>{{ decidedBy(change) | t: { name: change.decidedByName ?? '' } }} · {{ when(change.decidedAt) }}</span>
+                      <span class="hint">{{ change.reason }}</span>
+                    </p>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </li>
+      }
+    </ul>
+    @if (error(); as key) {
+      <p role="alert">{{ key | t }}</p>
+    }
+  } @else if (failed()) {
+    <p role="alert">{{ 'admin.platformRules.loadFailed' | t }}</p>
+    <button hlmBtn variant="secondary" type="button" (click)="load()">
+      {{ 'admin.platformRules.retry' | t }}
+    </button>
+  } @else {
+    @for (line of lines; track line.key) {
+      <div class="skeleton" aria-hidden="true"></div>
+    }
+  }
+</section>

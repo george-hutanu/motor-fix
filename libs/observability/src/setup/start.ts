@@ -19,7 +19,7 @@ import { instrumentations } from './instrumentations';
 import { sampler } from './sampler';
 import { scrub } from '../scrub/scrub';
 
-export type Service = 'api' | 'worker' | 'mcp';
+export type Service = 'api' | 'worker' | 'mcp' | 'web';
 
 export interface Exporters {
   spanExporter?: SpanExporter;
@@ -130,6 +130,8 @@ function boot(
     require('@opentelemetry/instrumentation') as typeof import('@opentelemetry/instrumentation');
   const { ScrubSpanProcessor } =
     require('../scrub/span-processor') as typeof import('../scrub/span-processor');
+  const { gaugeDelta } =
+    require('./temporality') as typeof import('./temporality');
 
   const base = endpoint.href.replace(/\/$/, '');
   const otlp = (signal: string) => ({
@@ -169,13 +171,18 @@ function boot(
     aggregation: { type: AggregationType.DROP },
     instrumentName,
   });
+  const metricExporter = () => {
+    const exporter = new (
+      require('@opentelemetry/exporter-metrics-otlp-proto') as typeof import('@opentelemetry/exporter-metrics-otlp-proto')
+    ).OTLPMetricExporter(otlp('metrics'));
+    exporter.selectAggregationTemporality = gaugeDelta;
+    return exporter;
+  };
   const meterProvider = new MeterProvider({
     readers: [
       exporters.metricReader ??
         new PeriodicExportingMetricReader({
-          exporter: new (
-            require('@opentelemetry/exporter-metrics-otlp-proto') as typeof import('@opentelemetry/exporter-metrics-otlp-proto')
-          ).OTLPMetricExporter(otlp('metrics')),
+          exporter: metricExporter(),
           exportIntervalMillis: METRIC_INTERVAL_MS,
           exportTimeoutMillis: EXPORT_TIMEOUT_MS,
         }),
@@ -192,6 +199,7 @@ function boot(
         'http.response.status_code',
         'server.address',
       ]),
+      histogram('motorfix_storage_request_duration_seconds', ['operation']),
       // The runtime figures kept: heap used and limit, the event loop's
       // p99 delay and utilisation, GC durations. The rest only add series.
       drop('v8js.memory.heap.space.*'),
@@ -220,8 +228,15 @@ function boot(
   });
   logs.setGlobalLoggerProvider(loggerProvider);
 
-  const instrumented = instrumentations();
+  const instrumented = instrumentations(service);
   registerInstrumentations({ instrumentations: instrumented });
+  // An ESM bundle (the web server) binds `node:http`'s exports when it is
+  // loaded; patching the CommonJS module is then copied over to them.
+  require('node:http');
+  require('node:https');
+  (
+    require('node:module') as typeof import('node:module')
+  ).syncBuiltinESMExports();
   observeCpu(metrics.getMeter('motorfix'));
 
   const flush = async () => {
@@ -231,22 +246,30 @@ function boot(
       loggerProvider.forceFlush(),
     ]);
   };
-  const shutdown = async () => {
-    await Promise.allSettled([
-      tracerProvider.shutdown(),
-      meterProvider.shutdown(),
-      loggerProvider.shutdown(),
-    ]);
-  };
-  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
-    process.once(signal, () => {
-      // Nest's shutdown hooks, when present, end the process themselves;
-      // alone, the signal is raised again once the last batch is out.
-      const others = process.listenerCount(signal);
-      void shutdown().finally(() => {
-        if (others === 0) process.kill(process.pid, signal);
+  // One shutdown for every caller, bounded so a dead collector cannot hold
+  // the stop past the export timeout.
+  let stopping: Promise<void> | undefined;
+  const shutdown = () =>
+    (stopping ??= new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, EXPORT_TIMEOUT_MS);
+      void Promise.allSettled([
+        tracerProvider.shutdown(),
+        meterProvider.shutdown(),
+        loggerProvider.shutdown(),
+      ]).then(() => {
+        clearTimeout(timer);
+        resolve();
       });
-    });
+    }));
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+    const stop = () => {
+      // Nest's shutdown hooks close the app, drop their own listener and
+      // raise the signal again, so this one acts only once it is the last.
+      if (process.listenerCount(signal) > 1) return;
+      process.removeListener(signal, stop);
+      void shutdown().then(() => process.kill(process.pid, signal));
+    };
+    process.on(signal, stop);
   }
 
   const value: Telemetry = { endpoint, env, flush, shutdown, traceSampleRatio };

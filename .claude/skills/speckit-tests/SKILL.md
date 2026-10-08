@@ -41,14 +41,16 @@ produces artifacts, not intentions.
   `*-e2e` project.
 - **Plain test titles** (project rule): describe the behavior, nothing else — no
   FR tokens, ticket codes, or other prefixes in titles.
-- **No internal identifiers anywhere in the source** (project rule): not in test
-  titles, and not in comments either. No `// @traces 010-FR-016`, no `FR-003`,
+- **No internal identifiers in the source but one** (Constitution II): not in
+  test titles, not in prose comments, not in non-test code — no bare `FR-003`,
   no Jira key, no task id, no spec or feature-directory number. They name things
-  that live outside the repo and mean nothing to a reader holding only the code;
-  the ticket moves, the numbering is renumbered, the spec is local-only, and the
-  comment is then a dead reference nobody can resolve. Traceability lives in the
-  completion report's FR → test table and in `tasks.md`, where the ids are
-  resolvable — never as a marker in a spec file.
+  that live outside the repo and rot when the ticket moves or the numbering
+  changes. The one exception is the trace line: a test file may carry a
+  whole-line comment `// @traces 010-FR-016` (one or more `<feature>-FR-<n>`
+  ids and nothing else, on or above the tests it covers), which
+  `trace-matrix.mjs` reads. Anything else on that line, an SC id included,
+  makes the matrix skip it. The completion report's FR → test table and
+  `tasks.md` carry the mapping too.
 - **A comment must earn its line.** Write one only where the code cannot say it
   itself: why a non-obvious choice was made, a constraint from outside the file,
   a trap the next reader would otherwise re-introduce. Never restate what the
@@ -136,5 +138,5 @@ Full text: `.specify/memory/constitution.md`.
 - [ ] Every FR has at least one test asserting concrete behavior from the spec
 - [ ] Tests were seen failing, with the failing count quoted — a test passing before implementation is not red-first
 - [ ] No production source created or modified
-- [ ] Titles plain, no internal identifiers anywhere in the file, and no comment that restates its own code
+- [ ] Titles plain, no internal identifier in the file outside a whole-line `// @traces <feature>-FR-<n>` comment, and no comment that restates its own code
 

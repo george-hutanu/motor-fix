@@ -8,12 +8,13 @@ import request from 'supertest';
 import { AccountsService } from './accounts.service';
 import { AuthModule } from './auth.module';
 import type { Role } from './capabilities';
-import * as password from './password';
+import * as password from './password/password';
 import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';
 import { SignInService } from './sign-in.service';
 import { AuditService } from '../audit/audit.service';
 import { EVENT_PORT, type EventPort, noEvents } from '../events/event.port';
+import { until } from '../waits.testing';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
@@ -263,6 +264,8 @@ describe('signing out on all devices', () => {
     const revoke = jest.spyOn(app.get(SignInService), 'revokeSessionsLive');
     try {
       await everywhere(phone);
+      await until('the live sign-out', () => heard.length > 0);
+      // Long enough for a second, wrong, announcement to arrive.
       await new Promise((resolve) => setTimeout(resolve, 200));
 
       expect(revoke).toHaveBeenCalledTimes(1);
@@ -378,5 +381,5 @@ describe('signing out on all devices', () => {
       warn.mockRestore();
       await down.close();
     }
-  }, 30_000);
+  });
 });

@@ -3,11 +3,13 @@ import { join } from 'node:path';
 
 import {
   calendarNames,
+  daysUntil,
   formatClock,
   formatDay,
   formatKm,
   formatLei,
   formatLeiRange,
+  formatMonthYear,
   formatNum,
   formatPct,
   formatRating,
@@ -299,4 +301,104 @@ describe('calendarNames', () => {
       'Sun',
     ]);
   });
+});
+
+describe('daysUntil', () => {
+  const now = new Date('2026-10-08T09:00:00Z');
+
+  it.each([
+    ['2026-12-08', 61],
+    ['2026-12-07', 60],
+    ['2026-10-16', 8],
+    ['2026-10-15', 7],
+    ['2026-10-09', 1],
+    ['2026-10-08', 0],
+    ['2026-10-07', -1],
+    ['2025-10-08', -365],
+  ])('counts %s as %p days from 8 October 2026', (expiry, days) => {
+    expect(daysUntil(expiry, now)).toBe(days);
+  });
+
+  it.each([
+    ['2026-10-08T20:59:00Z', 1],
+    ['2026-10-08T21:00:00Z', 0],
+  ])('starts a new day at Bucharest midnight in summer (%s)', (at, days) => {
+    expect(daysUntil('2026-10-09', new Date(at))).toBe(days);
+  });
+
+  it.each([
+    ['2026-12-31T21:59:00Z', 1],
+    ['2026-12-31T22:00:00Z', 0],
+  ])('starts a new day at Bucharest midnight in winter (%s)', (at, days) => {
+    expect(daysUntil('2027-01-01', new Date(at))).toBe(days);
+  });
+
+  it.each([
+    ['2026-03-28T12:00:00Z', '2026-03-30'],
+    ['2026-10-24T12:00:00Z', '2026-10-26'],
+    ['2026-03-28T22:30:00Z', '2026-03-31'],
+    ['2026-10-24T22:30:00Z', '2026-10-27'],
+  ])('counts whole days across a summer-time change (%s)', (at, expiry) => {
+    expect(daysUntil(expiry, new Date(at))).toBe(2);
+  });
+
+  it('counts across 29 February and a new year', () => {
+    expect(daysUntil('2028-03-01', new Date('2028-02-28T10:00:00Z'))).toBe(2);
+    expect(daysUntil('2027-01-02', new Date('2026-12-30T10:00:00Z'))).toBe(3);
+  });
+
+  it.each([
+    'not a date',
+    '2026-13-01',
+    '2026-02-30',
+    '2026-10-08T10:00:00Z',
+    '',
+    null,
+    undefined,
+    20261008,
+    new Date('2026-10-09'),
+  ])('has no count for %p', (value) => {
+    expect(daysUntil(value, now)).toBeNull();
+  });
+
+  it('counts in Bucharest on a device far east of it', () => {
+    const script = `
+      const f = await import(${JSON.stringify(join(__dirname, 'formats.ts'))});
+      console.log(JSON.stringify(
+        f.daysUntil('2026-10-09', new Date('2026-10-08T20:30:00Z')),
+      ));`;
+    const out = execFileSync(
+      process.execPath,
+      ['--input-type=module', '-e', script],
+      { encoding: 'utf8', env: { ...process.env, TZ: 'Pacific/Kiritimati' } },
+    );
+    expect(JSON.parse(out)).toBe(1);
+  });
+});
+
+describe('formatMonthYear', () => {
+  it('writes the month in full, lower case in Romanian', () => {
+    expect(formatMonthYear('2027-06-15', 'ro')).toBe('iunie 2027');
+    expect(formatMonthYear('2027-06-15', 'en')).toBe('June 2027');
+  });
+
+  it('names every month of the year', () => {
+    const days = [...Array(12).keys()].map(
+      (m) => `2027-${String(m + 1).padStart(2, '0')}-15`,
+    );
+    expect(days.map((d) => formatMonthYear(d, 'ro'))).toEqual(
+      calendarNames('ro').months.map((name) => `${name} 2027`),
+    );
+    expect(days.map((d) => formatMonthYear(d, 'en'))).toEqual(
+      calendarNames('en').months.map((name) => `${name} 2027`),
+    );
+  });
+
+  it.each(['not a date', null, undefined, new Date(Number.NaN)])(
+    'shows a dash for %p',
+    (value) => {
+      expect(formatMonthYear(value, 'ro')).toBe(MISSING);
+      expect(formatMonthYear(value, 'en')).toBe(MISSING);
+    },
+  );
 });

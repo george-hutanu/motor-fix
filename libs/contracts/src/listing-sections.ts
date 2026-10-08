@@ -6,6 +6,7 @@
 import { type HoursSection, isHoursSection } from './garage-hours';
 import { isStep6Section, type Step6Section } from './listing-verification';
 import { normalisePhone } from './phone';
+import { isPlaceSection, type PlaceSection } from './place-section';
 import { checkPriceRange } from './price-range';
 
 export const BUSINESS_KINDS = ['company', 'pfa', 'ii', 'mobile'] as const;
@@ -216,7 +217,7 @@ export interface ListingDraftData {
       '1': DetailsSection;
       '3': PricesSection;
       '4': MechanicsSection;
-      '5': Record<string, unknown> & HoursSection;
+      '5': Record<string, unknown> & HoursSection & { place?: PlaceSection };
       '6': Step6Section;
     }
   >;
@@ -229,7 +230,9 @@ const SECTION_GUARDS: Record<string, (section: unknown) => boolean> = {
   '2': isRecord,
   '3': isPricesSection,
   '4': isMechanicsSection,
-  '5': isHoursSection,
+  '5': (section) =>
+    isHoursSection(section) &&
+    (section['place'] === undefined || isPlaceSection(section['place'])),
   '6': isStep6Section,
 };
 const FILE_KEY = /^[a-z_-]+\/[0-9a-f-]{36}\/[\w-]{1,64}$/;

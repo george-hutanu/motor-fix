@@ -5,6 +5,11 @@ features:
   - 875-observability-stack
   - 876-otel-instrumentation
   - 881-observability-current
+  - 915-telemetry-flush-on-stop
+  - 924-inventory-real-calls
+  - 877-web-health-grafana
+  - 878-data-store-metrics
+  - 916-otlp-log-masking-coverage
 ---
 
 # Capability: Observability
@@ -113,9 +118,9 @@ _From 881-observability-current._
 
 _From 881-observability-current._
 
-### 881-FR-003 — One check script, `scripts/observability-inventory.ts`, MUST discover from the code, without reading any environment variable: every directory under `apps/`; every service name in `scripts/railway-deploy.ts`; every queue name from `new Queue(…)`, `registerQueue(…)` and an outbox consumer's `queue:` in non-test, non-generated source under `libs/` and `apps/`, resolving a name given as an exported constant; every outside host literal (`https://<host>`, except hosts under the reserved TLDs `.example`, `.test`, `.invalid`, `.localhost`) and every known SDK client (`S3Client`, `web-push`) in the same files; `libs/data-access/`, `libs/domain/src/generated/`, `*.spec.ts`, `*.testing.ts` and test stubs are not scanned. A `new Queue(<identifier>)` whose identifier is not an exported string constant is skipped. Product counters, PostgreSQL and Redis are hand-listed, not discovered. It MUST fail (non-zero exit) naming each discovered item the inventory does not list (kind, name, file) and each stale inventory entry (a discovered kind the check no longer discovers, or a hand-listed entry whose `source` path no longer exists); `--root <dir>` runs it against another tree; with nothing wrong it MUST print one summary line and exit zero.
+### 924-FR-001 — The check (`scripts/observability-inventory.ts`) MUST discover from the code, without reading any environment variable: every directory under `apps/`; every service name in `scripts/railway-deploy.ts`; every queue name from `new Queue(…)`, `registerQueue(…)` and an outbox consumer's `queue:` in non-test, non-generated source under `libs/` and `apps/`, resolving a name given as an exported constant; every outside host whose `https://<host>` begins a string literal (single-quoted, double-quoted or template) in that code, except hosts under the reserved TLDs `.example`, `.test`, `.invalid`, `.localhost`; and every known SDK client (`S3Client`, `web-push`) in that code. Every matcher (hosts, queues, exported constants, SDK clients) MUST read the file with its comments (`//` line, `/* */` block, `/** */` doc comments) removed and its string literals kept as written, so nothing inside a comment is discovered; a link that does not begin its string literal (prose) MUST NOT be discovered as a host. A `'` or `"` string ends at its unescaped closing quote or at the end of the line (`\` escapes the next character); a template literal may span lines and is one literal, `${…}` included. `libs/data-access/`, `libs/domain/src/generated/`, `*.spec.ts`, `*.testing.ts` and test stubs are not scanned. A `new Queue(<identifier>)` whose identifier is not an exported string constant is skipped. Product counters, PostgreSQL and Redis are hand-listed, not discovered. It MUST fail (non-zero exit) naming each discovered item the inventory does not list (kind, name, file) and each stale inventory entry (a discovered kind the check no longer discovers, or a hand-listed entry whose `source` path no longer exists); `--root <dir>` runs it against another tree; with nothing wrong it MUST print one summary line and exit zero.
 
-_From 881-observability-current._
+_From 924-inventory-real-calls._
 
 ### 881-FR-004 — The check MUST fail naming the entry when an entry's `dashboard` is a uid that no `*.json` file under `infra/observability/` declares as its top-level `uid`, when an `alerts` uid is one no such file declares at `groups[].rules[].uid`, or when `"none"` has no reason. With no dashboard or alert file yet, nothing is declared, so an inventory of `"none"` entries passes before ST-879/ST-880 land.
 
@@ -156,3 +161,183 @@ _From 881-observability-current._
 ### 881-FR-013 — The whole change MUST stay small (Constitution I): one inventory file, one check script with one colocated spec, the CI step, and small edits to the PR template, its check's spec, the plan template, AGENTS.md, the constitution and card, and the README. No new dependency.
 
 _From 881-observability-current._
+
+### 915-FR-001 — With telemetry on, the graceful stop of api and of worker MUST shut the telemetry providers down after the rest of the app has closed (on the signal the app raises again at the end of its close, FR-005), and MUST NOT complete until that shutdown has finished (pending spans, metrics and logs exported) or the bound of FR-002 has passed, whichever comes first.
+
+_From 915-telemetry-flush-on-stop._
+
+### 915-FR-002 — The wait of FR-001 and FR-005 MUST be bounded at 5 s from the first request for the telemetry shutdown, the export timeout every telemetry export already has; a telemetry shutdown that fails, hangs or outlasts the bound MUST NOT fail the stop or delay it beyond the bound.
+
+_From 915-telemetry-flush-on-stop._
+
+### 915-FR-003 — The telemetry providers MUST be shut down at most once per process; every later request waits on the same shutdown and the same bound.
+
+_From 915-telemetry-flush-on-stop._
+
+### 915-FR-004 — With telemetry off, the graceful stop MUST NOT wait, load or export anything.
+
+_From 915-telemetry-flush-on-stop._
+
+### 915-FR-005 — On a stop signal, the telemetry MUST be shut down by the signal only when no other listener handles that signal; the signal MUST then be raised again once the shutdown has finished or the bound of FR-002 has passed. When another listener handles it (the app's own stop), the signal MUST NOT start the shutdown. "Another listener" is any other listener registered on that signal in the process. The process exit code is unchanged: the re-raised signal ends the process as today.
+
+_From 915-telemetry-flush-on-stop._
+
+### 924-FR-002 — The colocated spec (`scripts/observability-inventory.spec.ts`) MUST cover, against a fixture tree: a host only in a line comment, a block comment and a doc comment is not reported; a host inside prose in a string is not reported; an SDK client named only in a comment is not reported; an unlisted host beginning a single-quoted, double-quoted or template string is reported; a real call followed by a commented link on the same line reports only the real host; a string holding `/*` does not hide the real call after it; a regular-expression literal with a lone quote does not hide a real host on the next line; a commented-out `new Queue('x')` is not a queue; a listed host whose only mention moves into a comment is reported stale.
+
+_From 924-inventory-real-calls._
+
+### 924-FR-003 — On this repository the check MUST still pass with the inventory unchanged, and the change MUST add no dependency (Constitution I): `package.json` and the lockfile stay unchanged, and comment and string handling lives in the check itself, not in a TypeScript parser.
+
+_From 924-inventory-real-calls._
+
+### 877-FR-001 — The web server MUST load the shared telemetry module before it starts, with service name `web`, reading its configuration only through `telemetry()`; with it off, the web server MUST start nothing and behave as today (876-FR-001, 876-FR-014 applied to `web`).
+
+_From 877-web-health-grafana._
+
+### 877-FR-002 — Every server-rendered page request MUST be one span named by its Angular route template and method, never the raw path; an unmatched route MUST use the fixed label `unmatched`. The template MUST come from the rendered app's router state (the deepest matched route's configured path), never from a second route table on the server. Static file requests and `/health/*` MUST produce no span.
+
+_From 877-web-health-grafana._
+
+### 877-FR-003 — The `/api/` pass-through MUST be a span with a child span for the outgoing call to the API that carries the trace context to the API, so the API's request span joins that trace; an incoming `traceparent` from the browser MUST be honoured as the parent.
+
+_From 877-web-health-grafana._
+
+### 877-FR-004 — The web server MUST report the request-duration histogram (`http.server.request.duration`) labelled by route template, method and status, and the Node runtime metrics, with labels from small fixed sets only (876-FR-008, -010, -011).
+
+_From 877-web-health-grafana._
+
+### 877-FR-005 — The web server's log lines MUST carry the trace id and span id when one is active; a request ending in a server error MUST write one error log line with the trace id and mark the span as error; e-mails, Romanian phone numbers and plates MUST be masked in spans, logs and exceptions (876-FR-006, -007, -012).
+
+_From 877-web-health-grafana._
+
+### 877-FR-006 — `/health/ready` on the web server MUST answer ok only when the API's `/health/ready` answers any 2xx within 2 s; otherwise it MUST answer 503. Each probe MUST call the API once; no result is cached. `/health/live` MUST stay unconditional.
+
+_From 877-web-health-grafana._
+
+### 877-FR-007 — The web server MUST read the browser collector URL from its runtime configuration (one optional variable, proposed `FARO_URL`, an absolute https URL in staging and production) and hand it, with the release version, to the browser inside the HTML it renders (no new endpoint); unset or empty → no browser telemetry and no telemetry code loaded in the browser. A malformed value MUST fail at start naming the variable and never print its value. `.env.example` MUST list the variable by name with no value.
+
+_From 877-web-health-grafana._
+
+### 877-FR-008 — When the collector URL is set, the browser MUST send LCP, INP, CLS, TTFB and FCP for each page, each labelled with the route template, the app version (`RELEASE_SHA`) and the viewport class (phone < 768 px, tablet 768–1199 px, desktop ≥ 1200 px).
+
+_From 877-web-health-grafana._
+
+### 877-FR-009 — When the collector URL is set, the browser MUST send each uncaught JavaScript error and unhandled promise rejection with the route template, app version and stack; at most 20 errors per page load, after the SDK's own deduplication.
+
+_From 877-web-health-grafana._
+
+### 877-FR-010 — Before anything leaves the browser, e-mail addresses, Romanian phone numbers and number plates MUST be replaced by `***` in error messages, stacks and any attribute, and every URL-valued attribute, the page URL included, MUST be sent without its query string or fragment.
+
+_From 877-web-health-grafana._
+
+### 877-FR-011 — Browser telemetry MUST create and send no session id, user id or device id, set no cookie, record no session replay or user journey, and leave nothing of its own in local storage, session storage or IndexedDB once the page has loaded and sent. The SDK's transient availability probe (one test key set and removed again at load, plan.md R3) and the tracing sampling flag (a session attribute with no id, removed before sending) are permitted because nothing persists and nothing leaves the device.
+
+_From 877-web-health-grafana._
+
+### 877-FR-012 — Browser requests to the web app's own origin MUST carry a `traceparent` header from a browser span that is exported to the collector; requests to any other origin MUST carry no trace header.
+
+_From 877-web-health-grafana._
+
+### 877-FR-013 — The browser telemetry MUST add less than 30 kB gzipped to Home's Angular `initial` bundle, measured against the build without it; the SDK itself MUST be loaded with a dynamic import once the page is idle. ST-249's 250 kB whole first-load budget is measured beside it.
+
+_From 877-web-health-grafana._
+
+### 877-FR-014 — A collector or SDK failure MUST never break, block or slow a page or a server request; export is batched and bounded, and failures are dropped silently in the browser (876-FR-013 applied to `web`).
+
+_From 877-web-health-grafana._
+
+### 877-FR-015 — The release MUST upload the web app's source maps to Grafana Cloud for that release's version when the upload credential is configured, skip it (and still succeed) when it is not, and the web app MUST NOT serve source maps publicly.
+
+_From 877-web-health-grafana._
+
+### 877-FR-016 — `infra/observability/inventory.json` MUST stay passing under `scripts/observability-inventory.ts`; the `web` entries and the new outside service (Grafana Cloud Frontend Observability) MUST be listed with dashboard and alerts `"none"` and the reason that ST-879 and ST-880 add them.
+
+_From 877-web-health-grafana._
+
+### 877-FR-017 — Unit tests MUST cover the browser masking and the route-template mapping; one Playwright test MUST load Home with the collector stubbed and assert that a Web Vitals payload is sent and holds no personal data, no id and no trace header to the collector.
+
+_From 877-web-health-grafana._
+
+### 877-FR-018 — The PR's Observability section MUST list the signals added (web traces, request metrics, runtime metrics, logs, browser Web Vitals and errors) and the reports they make possible (per-route render latency and errors, Web Vitals by route and viewport class, browser error rate per release) for ST-879 and ST-880.
+
+_From 877-web-health-grafana._
+
+### 878-FR-001 — A database migration MUST create the role `motorfix_monitor` (when it does not exist) able to log in, member of `pg_monitor` only, with no other grant and no password in the migration, and MUST create the `pg_stat_statements` extension when it does not exist. The role's password MUST come from a deployment variable, `MONITOR_DATABASE_PASSWORD`, applied at deploy time and never printed.
+
+_From 878-data-store-metrics._
+
+### 878-FR-002 — The worker MUST read PostgreSQL through a separate connection, `MONITOR_DATABASE_URL` (optional), whose sessions are read-only, with a 5 s statement timeout; no other part of the system uses it. Unset, the PostgreSQL readings are off (one log line).
+
+_From 878-data-store-metrics._
+
+### 878-FR-003 — Every 60 s while telemetry is on, the worker MUST read and report for the current database: `motorfix_pg_connections` by `state` (`active`, `idle`, `idle_in_transaction`, `other`), `motorfix_pg_connections_max`, `motorfix_pg_locks_waiting` (sessions waiting on a lock), `motorfix_pg_database_size_bytes`, and the cumulative `motorfix_pg_transactions_total` by `outcome` (`commit`, `rollback`) and `motorfix_pg_deadlocks_total`.
+
+_From 878-data-store-metrics._
+
+### 878-FR-004 — On the same reading, when `pg_stat_statements` is readable, the worker MUST report `motorfix_pg_slow_statements` (statements of the current database with mean run time over 500 ms whose call count grew since the previous reading; the first reading only records the baseline and reports 0) and write one log record per such statement whose call count grew since the previous reading (at most 10 per reading, slowest first), carrying the normalised text, the mean and max time in ms and the calls; the text MUST NOT be a metric label.
+
+_From 878-data-store-metrics._
+
+### 878-FR-005 — On the same timer, the worker MUST read Redis `INFO` and report `motorfix_redis_memory_used_bytes`, `motorfix_redis_memory_max_bytes`, `motorfix_redis_clients_connected`, and the cumulative `motorfix_redis_evicted_keys_total`, `motorfix_redis_keyspace_hits_total` and `motorfix_redis_keyspace_misses_total`, and `motorfix_redis_keys` by `db`.
+
+_From 878-data-store-metrics._
+
+### 878-FR-006 — On the same timer, the worker MUST report `motorfix_outbox_oldest_pending_seconds`: the age of the oldest outbox event not yet relayed, 0 when none.
+
+_From 878-data-store-metrics._
+
+### 878-FR-007 — The worker MUST report `motorfix_datastore_up` by `store` (`postgres`, `redis`): 1 when the last reading of that store succeeded, 0 when it failed (a reading that has not answered within 5 s for PostgreSQL, 2 s for Redis counts as failed). A failed reading MUST report none of that store's other figures for that cycle, MUST log one error line per failure streak, and MUST NOT affect jobs, the relay or health checks.
+
+_From 878-data-store-metrics._
+
+### 878-FR-008 — The readers MUST only read: PostgreSQL through the read-only monitoring session, Redis through `INFO` only, the outbox through one `SELECT`. No reader writes anything to any store.
+
+_From 878-data-store-metrics._
+
+### 878-FR-009 — Every queue in the observability inventory (`infra/observability/inventory.json`, kind `queue`) MUST report `motorfix_queue_waiting`, `motorfix_queue_oldest_waiting_seconds` and `motorfix_queue_failed_total` from the worker (the existing 15 s readings, unchanged); an integration test that boots the worker's modules with the configuration every queue needs MUST fail, naming the queue, when one does not.
+
+_From 878-data-store-metrics._
+
+### 878-FR-010 — Every object-store call the storage service makes MUST be a span `S3 <Operation>` with attributes `rpc.method` (the operation) and `aws.s3.bucket`, never the key, ended in error on failure (a 404 answer is not a failure: it counts as `ok`); and MUST count in `motorfix_storage_requests_total` by `operation` and `outcome` (`ok`, `error`) and record `motorfix_storage_request_duration_seconds` by `operation`. The health probe's HeadBucket is a call; signing a URL locally is not. The duration histogram uses the existing duration buckets.
+
+_From 878-data-store-metrics._
+
+### 878-FR-011 — With telemetry off, none of the above MUST run: no timer, connection, instrument or span; the services behave as today.
+
+_From 878-data-store-metrics._
+
+### 878-FR-012 — Every new metric label MUST take its values from the fixed sets named here; no statement text, key, id or host is a label (876-FR-011).
+
+_From 878-data-store-metrics._
+
+### 878-FR-013 — `.env.example` MUST name `MONITOR_DATABASE_URL` and `MONITOR_DATABASE_PASSWORD` with no value; the local compose PostgreSQL MUST preload `pg_stat_statements`, and CI's PostgreSQL MUST have it preloaded before the tests (`ALTER SYSTEM` and a restart), so the slow-statement reading is tested, never skipped.
+
+_From 878-data-store-metrics._
+
+### 878-FR-014 — The PR body's Observability section MUST list every new metric, the slow-statement log record and the storage spans, and the inventory MUST stay passing.
+
+_From 878-data-store-metrics._
+
+### 916-FR-001 — A colocated unit spec in `libs/domain` MUST write a log line through `JsonLogger` while telemetry is started by `startTelemetry` with the in-memory exporters from `@motor-fix/observability`'s testing helpers (the whole `inMemory()` set) in place of the OTLP ones, flush the telemetry, and read the record from that exporter: the same pipeline (logger provider, batching processor) the services use, with only the exporter swapped.
+
+_From 916-otlp-log-masking-coverage._
+
+### 916-FR-002 — The exported record's body MUST read the message with the e-mail address, the Romanian phone number and the number plate each replaced by `***`, and no raw value MUST appear anywhere in the exported record, body or attributes (checked on the serialised record).
+
+_From 916-otlp-log-masking-coverage._
+
+### 916-FR-003 — For a structured entry whose fields hold an e-mail, a phone and a plate, the exported record's body MUST be that object's JSON with each value replaced by `***`; for an `Error` carrying the same values, the record's `error` and `stack` attributes MUST carry them masked; in both, no raw value MUST appear anywhere in the record.
+
+_From 916-otlp-log-masking-coverage._
+
+### 916-FR-004 — The exported record MUST carry the request id, the job id (one that looks like a plate included) and the active span's trace id and span id unchanged, both as the `trace_id`/`span_id` attributes and as the record's span context.
+
+_From 916-otlp-log-masking-coverage._
+
+### 916-FR-005 — The change MUST be test-only and small (Constitution I): no product source file under `apps/` or `libs/*/src` other than `*.spec.ts` changes, no new dependency, the existing cases of `libs/domain/src/logging.spec.ts` stay as they are, and the new spec runs in `npm run test:unit` (it needs no PostgreSQL, Redis or network).
+
+_From 916-otlp-log-masking-coverage._
+
+## Retired
+
+- `881-FR-003` — superseded by `924-FR-001` (2026-10-08)

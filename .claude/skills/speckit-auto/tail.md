@@ -78,9 +78,11 @@ never waits on either: a lap that needs a new run dispatches it and ends.
      report): dispatch again once for that head, the same way, at the same
      lap. A second unusable run for the head is posted with
      `post.mjs --missing` and blocks the run (`verification-failed`).
-   - **A failing lap** (blocking findings, or a failing check): fix every
-     one, tests first, commit and push the fix, then the lap's report and any new
-     `notion-sync.md` lines through the specs repo
+   - **A failing lap** (blocking findings, a failing check, or a medium or
+     low finding whose fix is small or medium by the size test in AGENTS.md,
+     "Technical debt a review defers"): fix every one, tests first, commit
+     and push the fix, then the lap's report and any new `notion-sync.md`
+     lines through the specs repo
      (`node .claude/scripts/specs-repo.mjs commit "<message>" -- <feature>`), then
      `node .claude/scripts/run-state.mjs repair`, which counts the lap in
      `.specify/run-state.json` so the cap holds across tails. When it exits 1
@@ -91,7 +93,8 @@ never waits on either: a lap that needs a new run dispatches it and ends.
      (`lifecycle.mjs handoff --pr <n>`), and end with
      `NEXT: tail #<n> after QA run <id>`.
 4. After a passing lap, `speckit-notion-sync debt` files every deferred bullet
-   not yet filed (reviewers' and the tester's) as a To do task in Notion. Its
+   not yet filed (reviewers' and the tester's; each a large fix by the size
+   test) as a To do task in Notion. Its
    URLs change `deferred.md`, which lives in the specs repo: commit and push
    it there (`node .claude/scripts/specs-repo.mjs commit "<message>" --
    <feature>`). The PR head does not change, so no new lap or carry is needed.
@@ -110,7 +113,11 @@ never waits on either: a lap that needs a new run dispatches it and ends.
    and the archive check (`speckit-archive`, Phase 4 step 5); when it exits 1,
    do what its reason says and check again, once. A Notion write still PENDING
    is retried by the next `speckit-notion-sync` run and does not hold the
-   tail. Reply with the envelope: `PR: #<n> merged <sha7>`.
+   tail. Last, when the merge result's `worktree.removed` is false because
+   it was this tail's own checkout, `ExitWorktree` (keep) and run
+   `node <worktree>/.claude/scripts/worktree-remove.mjs <worktree>` from the
+   main checkout; a refusal is reported, never forced, and `/speckit-watch`
+   removes it later. Reply with the envelope: `PR: #<n> merged <sha7>`.
 
 A PR with no checks, or one still failing at the limit, is a Hard Stop: it
 stays ready and unmerged, the story goes to Blocked (`speckit-notion-sync

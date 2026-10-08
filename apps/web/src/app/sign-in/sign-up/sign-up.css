@@ -1,0 +1,78 @@
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+.intro {
+  display: grid;
+  gap: var(--mf-space-1);
+  margin: 0;
+  color: var(--mf-text-secondary);
+}
+.intro p {
+  margin: 0;
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+}
+label {
+  font-weight: 700;
+}
+.secret {
+  position: relative;
+}
+.secret input {
+  padding-right: 52px;
+}
+.reveal {
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--mf-tap);
+  height: var(--mf-tap);
+  padding: 0;
+  border: 0;
+  border-radius: var(--mf-radius-chip);
+  background: transparent;
+  color: var(--mf-text-secondary);
+  cursor: pointer;
+}
+.reveal[aria-pressed="true"] {
+  color: var(--mf-text);
+}
+.reveal:focus-visible {
+  outline: 2px solid var(--mf-amber-ink);
+  outline-offset: -2px;
+}
+button[type="submit"] {
+  width: 100%;
+  min-height: 54px;
+  white-space: normal;
+}
+.switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0 var(--mf-space-2);
+  margin: 0;
+  color: var(--mf-text-secondary);
+}
+.switch button {
+  min-height: var(--mf-tap);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--mf-amber-ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.switch button:focus-visible {
+  outline: 2px solid var(--mf-amber-ink);
+  outline-offset: 2px;
+}

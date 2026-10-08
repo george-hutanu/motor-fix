@@ -114,15 +114,6 @@ describe('GET /home', () => {
     expect(res.body).toMatchObject({ takers: 0, total: 0 });
   });
 
-  it('accepts a place and counts all of Romania all the same', async () => {
-    await garage('a', 'approved', 'works_on');
-
-    const res = await home({ brand: 'dacia', near: '44.43,26.10' });
-
-    expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ takers: 1, total: 1 });
-  });
-
   it('answers 404 for a brand retired from the catalogue', async () => {
     await prisma.brand.update({
       data: { active: false },
@@ -148,10 +139,90 @@ describe('GET /home', () => {
     ['a blank brand', { brand: '' }],
     ['a brand over 60 characters', { brand: 'a'.repeat(61) }],
     ['a place out of range', { brand: 'dacia', near: '95,26' }],
+    ['a place outside Romania', { brand: 'dacia', near: '47.498,19.040' }],
     ['an unknown parameter', { brand: 'dacia', sort: 'rating' }],
   ])('refuses with 400 %s', async (_, query) => {
     const res = await home(query);
 
     expect(res.status).toBe(400);
+  });
+});
+
+// Cluj-Napoca; a hundredth of a degree of latitude is about 1.1 km.
+const CLUJ = { lat: 46.771, lng: 23.624 };
+
+async function placed(
+  slug: string,
+  dLat: number,
+  stance?: 'works_on' | 'does_not_take',
+  mobile?: { radiusKm: number },
+) {
+  await garage(slug, 'approved', stance);
+  await prisma.garage.update({
+    data: {
+      latitude: CLUJ.lat + dLat,
+      longitude: CLUJ.lng,
+      ...(mobile && {
+        businessKind: 'mobile' as const,
+        seatAddress: 'Strada Sediului 1',
+        serviceRadiusKm: mobile.radiusKm,
+      }),
+    },
+    where: { slug },
+  });
+}
+
+describe('GET /home near a place', () => {
+  beforeEach(async () => {
+    await placed('in-taker', 0.01, 'works_on');
+    await placed('in-refuser', 0.1, 'does_not_take');
+    await placed('mobile-in', 0.27, 'works_on', { radiusKm: 35 });
+    await placed('mobile-out', 0.27, 'works_on', { radiusKm: 20 });
+    await placed('far-taker', 0.5, 'works_on');
+    await garage('nowhere', 'approved', 'works_on');
+  });
+
+  it('counts only the garages in the area of the place', async () => {
+    const res = await home({ brand: 'dacia', near: '46.771,23.624' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ takers: 2, total: 3 });
+  });
+
+  it('counts all of Romania without a place', async () => {
+    const res = await home({ brand: 'dacia' });
+
+    expect(res.body).toMatchObject({ takers: 5, total: 6 });
+  });
+
+  it('answers a point given to six decimals as the same point to three', async () => {
+    const six = await home({ brand: 'dacia', near: '46.771312,23.623538' });
+    const three = await home({ brand: 'dacia', near: '46.771,23.624' });
+
+    expect(six.body).toEqual(three.body);
+    expect(six.headers['cache-control']).toBe('public, max-age=60');
+  });
+
+  it('answers 0 of 0 for a place with no garage near it', async () => {
+    const res = await home({ brand: 'dacia', near: '44.43,26.10' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ takers: 0, total: 0 });
+  });
+
+  it('writes nothing when it reads near a place', async () => {
+    const before = await Promise.all([
+      prisma.activityLog.count(),
+      prisma.outboxEvent.count(),
+    ]);
+
+    await home({ brand: 'dacia', near: `${CLUJ.lat},${CLUJ.lng}` });
+
+    expect(
+      await Promise.all([
+        prisma.activityLog.count(),
+        prisma.outboxEvent.count(),
+      ]),
+    ).toEqual(before);
   });
 });

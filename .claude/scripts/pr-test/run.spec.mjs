@@ -27,6 +27,11 @@ describe('run: arguments', () => {
     assert.equal(o.tree, 'pr');
     assert.equal(o.sha, 'f'.repeat(40));
   });
+
+  it('takes the baseline run\'s folder (the workflow downloads it) and has none without it', () => {
+    assert.equal(parseArgs(['53', '--baseline', '/tmp/base']).baseline, '/tmp/base');
+    assert.equal(parseArgs(['53']).baseline, undefined);
+  });
 });
 
 describe('run: what the QA flows are given', () => {
@@ -102,5 +107,23 @@ describe('the pr-tester agent', () => {
     assert.match(doc, /:status/);
     assert.match(doc, /changed (API )?operations|changed endpoints/i);
     assert.doesNotMatch(doc, /changed GET\s+endpoints/);
+  });
+
+  it('judges screens by a design rubric with severities and the tools behind it', () => {
+    const rubric = doc.slice(doc.indexOf('### Design rubric'), doc.indexOf('### Mock fidelity'));
+    assert.ok(doc.indexOf('### Design rubric') > -1 && rubric.length > 0);
+    for (const high of [/under the minimum/, /sideways/, /clipped/, /alignment/, /contrast/, /type scale/]) assert.match(rubric, high);
+    for (const medium of [/spacing/, /hierarchy/, /density/, /icons?/, /padding/, /orphan/, /radi/]) assert.match(rubric, medium);
+    assert.match(rubric, /apple-design-skill/);
+    assert.match(rubric, /design-audit/);
+    assert.match(rubric, /contrast\.mjs/);
+  });
+
+  it('compares each changed screen with its board, and cites the pixel diff', () => {
+    const fidelity = doc.slice(doc.indexOf('### Mock fidelity'), doc.indexOf('## 5. Post'));
+    assert.match(fidelity, /design\.md/);
+    for (const axis of [/type hierarchy/, /spacing/, /alignment/, /colou?r/, /component/, /states/]) assert.match(fidelity, axis);
+    assert.match(fidelity, /no board/i);
+    assert.match(fidelity, /diff\/<shot>\.png/);
   });
 });

@@ -94,6 +94,18 @@ Fix every ERROR. Judge each WARN — several are legitimate by design (a test se
 a deliberate Stryker disable on an equivalent mutant); say which you kept and
 why.
 
+### 1b. Design audit
+
+```bash
+git diff --name-only <base>..HEAD -- apps/web libs/ui-cockpit
+```
+
+When that lists a file, run the `design-audit` skill on the changed component
+folders and on `libs/ui-cockpit/src/styles/cockpit.css`, with its `scan.mjs`
+and `contrast.mjs` helpers. Fix every high finding, run it again, and list
+what is left on a "Design audit" line in the report. When it lists nothing,
+the line reads "Design audit: skipped, no web file changed".
+
 ### 2. Attack, then measure
 
 **2a. Adversarial tests.** Invoke the `test-adversary` subagent (Agent tool,
@@ -136,7 +148,11 @@ code-reviewer`) with the diff range. It applies the rubric below with no memory
 of why the code was written that way — which is the bias this step exists to
 remove; the context that made a decision is the worst judge of whether it was
 necessary. Its report is not shown to the user; every CRITICAL and HIGH is
-fixed in step 4, MEDIUM/LOW are relayed.
+fixed in step 4, and so is every MEDIUM/LOW whose fix is small or medium,
+pre-existing or adjacent included. Only a large fix (the size test in
+AGENTS.md, "Technical debt a review defers") is relayed as a `defer` bullet
+for `specs/<feature>/deferred.md`; an adversary defect or a mutation survivor
+is routed the same way.
 
 The rubric it applies, so you can judge its findings:
 
@@ -180,6 +196,7 @@ finding needs the user, not another attempt.
 | mutation score (<pkg>) | n% | n% |
 | tests | n | n |
 
+Design audit: <high n → 0, medium n | skipped, no web file changed>
 Fixed: <one line each>
 Kept deliberately: <finding — why it is correct as it stands>
 Needs you: <finding this command must not decide>
@@ -201,7 +218,8 @@ The constitution's Agent Execution Rules apply in full. Specific to this command
 - A finding you cannot fix honestly is reported, never suppressed. "Needs you"
   is a legitimate and expected section of the report.
 - No internal identifiers in anything you write — no FR ids, task ids, or ticket
-  keys in comments or test titles (constitution v1.2.1).
+  keys in comments or test titles (Constitution II). The one allowed form is a
+  whole-line `// @traces <feature>-FR-<n>` comment in a test file.
 - Deletion is the preferred fix. Reach for it before refactoring, and refactor
   before adding.
 

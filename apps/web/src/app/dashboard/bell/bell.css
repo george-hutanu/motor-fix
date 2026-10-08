@@ -1,0 +1,39 @@
+/* Room for the badge that sits over the corner, at the screen's edge. */
+:host {
+  display: inline-flex;
+  margin-inline-end: 6px;
+}
+button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--mf-tap);
+  height: var(--mf-tap);
+  padding: 0;
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+  background: transparent;
+  color: var(--mf-text-secondary);
+  cursor: pointer;
+}
+button:hover {
+  border-color: var(--mf-amber);
+  color: var(--mf-amber-ink);
+}
+.badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--mf-amber);
+  color: var(--mf-on-amber);
+  font-size: var(--mf-size-label);
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}

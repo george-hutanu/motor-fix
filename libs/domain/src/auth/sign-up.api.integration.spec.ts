@@ -9,7 +9,7 @@ import { verifyAccessToken } from './access-token';
 import { AccountsService } from './accounts.service';
 import { AuthModule } from './auth.module';
 import { MAINTENANCE } from './maintenance';
-import { verifyPassword } from './password';
+import { verifyPassword } from './password/password';
 import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';
 import { SignInService } from './sign-in.service';
@@ -532,7 +532,7 @@ describe('the hourly limit per address', () => {
     } finally {
       await offline.close();
     }
-  }, 20_000);
+  });
 });
 
 describe('maintenance mode', () => {

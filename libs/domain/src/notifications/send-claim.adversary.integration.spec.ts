@@ -3,8 +3,8 @@ import { Logger } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 
-import { Brevo } from './brevo';
-import { BrevoMock } from './brevo-mock.testing';
+import { Brevo } from './brevo/brevo';
+import { BrevoMock } from './brevo/brevo-mock.testing';
 import { NotificationsProcessor } from './notifications.processor';
 import { NotificationsService } from './notifications.service';
 import {
@@ -18,6 +18,7 @@ import {
 } from './notifications.testing';
 import { AuditService } from '../audit/audit.service';
 import { serialDatabase } from '../auth/serial-db.testing';
+import { timersArmedBy, until } from '../waits.testing';
 
 const redisUrl = redisUrlFor(2);
 const { account, prisma, reset } = fixtures();
@@ -162,8 +163,24 @@ describe('many send jobs for one row', () => {
 
   it('calls Brevo once and leaves the row queued and unclaimed when the one call is refused for a retry', async () => {
     const { row: queued } = await queuedEmail();
-    mock.answer({ status: 503 });
-    const results = await many(queued.id, 8);
+    // Brevo answers only once the other seven have been refused the claim,
+    // so none of them starts after the 503 has released it.
+    let answer = () => {};
+    mock.answer({
+      after: new Promise<void>((resolve) => {
+        answer = resolve;
+      }),
+      status: 503,
+    });
+    const jobs = Array.from({ length: 8 }, () => sendJob(queued.id));
+    let refused = 0;
+    for (const job of jobs)
+      job.catch(() => {
+        refused += 1;
+      });
+    await until('seven jobs to be refused the claim', () => refused >= 7);
+    answer();
+    const results = await Promise.allSettled(jobs);
     expect(mock.emails()).toHaveLength(1);
     expect(results.every((r) => r.status === 'rejected')).toBe(true);
     expect(await row(queued.id)).toMatchObject({
@@ -474,7 +491,11 @@ describe('releasing a claim', () => {
       () => 'resolved',
       () => 'rejected',
     );
-    await wait(300);
+    await until(
+      'the slow send to claim the row',
+      async () =>
+        (await row(queued.id)).claimedAt?.getTime() === new Date(DAY).getTime(),
+    );
     expect((await row(queued.id)).claimedAt).toEqual(new Date(DAY));
     const takeoverAt = new Date('2026-10-05T11:02:00.000Z');
     const other = new NotificationsProcessor(
@@ -488,6 +509,7 @@ describe('releasing a claim', () => {
       testPhoneConfig({ PHONE_SENDING: 'off', WHATSAPP_SENDER: '' }),
     );
     other.now = () => takeoverAt;
+    // Not a wait for work: the slow send stays hung on Brevo meanwhile.
     await wait(1200);
     const takeover = other
       .handle({ attemptsMade: 1, data: { id: queued.id }, name: 'send' })
@@ -495,7 +517,11 @@ describe('releasing a claim', () => {
         () => 'resolved',
         () => 'rejected',
       );
-    await wait(300);
+    await until(
+      'the takeover to claim the row',
+      async () =>
+        (await row(queued.id)).claimedAt?.getTime() === takeoverAt.getTime(),
+    );
     expect((await row(queued.id)).claimedAt).toEqual(takeoverAt);
     expect(await slow).toBe('rejected');
     expect(await row(queued.id)).toMatchObject({
@@ -579,14 +605,23 @@ describe('a database error after Brevo accepted an e-mail', () => {
     const logged = jest
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
+    let waits: string[];
+    let result: unknown;
     try {
-      await expect(sendJob(queued.id)).resolves.toBeUndefined();
+      ({ log: waits, value: result } = await timersArmedBy(
+        'notifications.processor',
+        () => sendJob(queued.id),
+      ));
     } finally {
       failing();
       logged.mockRestore();
     }
+    expect(result).toBeUndefined();
     expect(tries).toHaveLength(3);
-    expect(tries[2] - tries[0]).toBeLessThan(150);
+    // Back to back: no timer ran out between them (Brevo's own request
+    // limit is armed, and never reached).
+    expect(waits.some((entry) => entry.startsWith('armed'))).toBe(true);
+    expect(waits.filter((entry) => entry.startsWith('fired'))).toEqual([]);
   });
 
   it('finishes the job when releasing the claim fails', async () => {

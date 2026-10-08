@@ -1,8 +1,8 @@
 // The viewport sweep: every route at desktop, tablet and two phone sizes, light
 // and dark, Romanian and English, with one browser and one page at a time.
 // Records console errors, uncaught errors, failed requests and error
-// responses, axe violations and horizontal overflow, and a screenshot of each
-// combination. Playwright and axe-core come from this checkout, not the PR's,
+// responses, axe violations, horizontal overflow and the measured layout
+// checks (layout.mjs), and a screenshot of each combination. Playwright and axe-core come from this checkout, not the PR's,
 // so a PR from before either existed can still be swept.
 //
 // A route is `path[@role][:status]`: `/de:404` must answer 404, and that 404
@@ -13,7 +13,8 @@ import { createRequire } from "node:module";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { mergeFindings, sweepFinding } from "./findings.mjs";
+import { layoutKey, mergeFindings, sweepFinding } from "./findings.mjs";
+import { measureLayout } from "./layout.mjs";
 
 export const VIEWPORTS = {
   desktop: { width: 1440, height: 900, isMobile: false, hasTouch: false, deviceScaleFactor: 1 },
@@ -93,7 +94,8 @@ export const sessionCookie = ({ refresh, baseURL }) => ({
   sameSite: "Strict",
 });
 
-const keyOf = (o) => `${o.kind}|${o.route}|${o.rule ?? o.text ?? ""}|${o.kind === "http" ? `${o.url}|${o.status}` : (o.url ?? "")}`;
+const keyOf = (o) =>
+  o.kind === "layout" ? layoutKey(o) : `${o.kind}|${o.route}|${o.rule ?? o.text ?? ""}|${o.kind === "http" ? `${o.url}|${o.status}` : (o.url ?? "")}`;
 
 /** Observations to findings, one per problem, listing every combination it was seen in. */
 export function toFindings(observations, { web, origins }) {
@@ -155,6 +157,10 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
         },
         [LANG_KEY, run.lang],
       );
+      // Maps read the app's own empty style: no tile is fetched from outside.
+      await context.addInitScript(() => {
+        globalThis.__MF_MAP_STYLE = "/map/empty-style.json";
+      });
       const page = await context.newPage();
       const screenshot = join(outDir, run.shot);
       const seen = (o) => observations.push({ ...run, screenshot, ...o });
@@ -177,8 +183,13 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
           seen({ kind: "axe", impact: v.impact ?? "minor", rule: v.id, help: v.help, nodes: v.nodes.length, target: v.nodes[0]?.target?.join(" ") });
         const box = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, width: window.innerWidth }));
         if (box.scrollWidth > box.width + 1) seen({ kind: "overflow", ...box });
+        // The screenshot first: measuring focuses controls for the focus-ring check, which would show in it.
         await page.screenshot({ path: screenshot, fullPage: true });
         screenshots.push(screenshot);
+        if (!problem) {
+          const layout = await page.evaluate(measureLayout, { phone: vp.isMobile, tapTargets: vp.hasTouch, focus: run.viewport === "desktop" });
+          for (const o of layout.observations) seen(o);
+        }
       } catch (error) {
         seen({ kind: "load", text: String(error.message).split("\n")[0].slice(0, 300) });
       } finally {

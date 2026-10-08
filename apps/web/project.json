@@ -27,7 +27,13 @@
             }
           ],
           "outputHashing": "all",
-          "serviceWorker": "apps/web/ngsw-config.json"
+          "serviceWorker": "apps/web/ngsw-config.json",
+          "sourceMap": {
+            "hidden": true,
+            "scripts": true,
+            "styles": false,
+            "vendor": false
+          }
         }
       },
       "defaultConfiguration": "production",
@@ -37,6 +43,11 @@
           {
             "glob": "**/*",
             "input": "apps/web/public"
+          },
+          {
+            "glob": "{maplibre-gl.css,maplibre-gl-worker.mjs}",
+            "input": "node_modules/maplibre-gl/dist",
+            "output": "map"
           }
         ],
         "browser": "apps/web/src/main.ts",

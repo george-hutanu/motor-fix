@@ -1,5 +1,13 @@
 // @traces 539-FR-003 875-FR-001 875-FR-002 875-FR-003
-import { publicWebUrl, readEnv, STORAGE_ENV, telemetry } from './env';
+import {
+  faroUrl,
+  PLACES_ENV,
+  placesApiKey,
+  publicWebUrl,
+  readEnv,
+  STORAGE_ENV,
+  telemetry,
+} from './env';
 
 describe('readEnv', () => {
   it('returns the required variables and defaults the release to dev', () => {
@@ -105,6 +113,36 @@ describe('publicWebUrl', () => {
   });
 });
 
+describe('faroUrl', () => {
+  it('parses an absolute https URL', () => {
+    expect(faroUrl({ FARO_URL: 'https://faro.example/collect/key' })).toBe(
+      'https://faro.example/collect/key',
+    );
+  });
+
+  it('accepts http for a local collector', () => {
+    expect(faroUrl({ FARO_URL: 'http://localhost:12345/collect' })).toBe(
+      'http://localhost:12345/collect',
+    );
+  });
+
+  it('returns nothing when unset or empty', () => {
+    expect(faroUrl({})).toBeUndefined();
+    expect(faroUrl({ FARO_URL: '' })).toBeUndefined();
+  });
+
+  it.each([
+    'not-a-url',
+    'ftp://faro.example/collect/secret-key',
+    '/collect/secret-key',
+  ])('names the variable, never the value, for %s', (value) => {
+    const run = () => faroUrl({ FARO_URL: value });
+
+    expect(run).toThrow(new Error('FARO_URL must be an absolute http(s) URL'));
+    expect(run).not.toThrow(/secret-key|not-a-url/);
+  });
+});
+
 describe('telemetry', () => {
   const endpoint = 'https://otlp.example/otlp';
   const header = 'Authorization=Basic c2VjcmV0LXRva2Vu';
@@ -188,5 +226,20 @@ describe('telemetry', () => {
 
     expect(run).toThrow('APP_ENV');
     expect(run).not.toThrow(/c2VjcmV0/);
+  });
+});
+
+describe('placesApiKey', () => {
+  it('reads the address search key when it is set', () => {
+    expect(placesApiKey({ GEOAPIFY_API_KEY: ' k-123 ' })).toBe('k-123');
+  });
+
+  it('is undefined when unset or blank, so the api still boots', () => {
+    expect(placesApiKey({})).toBeUndefined();
+    expect(placesApiKey({ GEOAPIFY_API_KEY: '  ' })).toBeUndefined();
+  });
+
+  it('names the one variable it reads', () => {
+    expect(PLACES_ENV).toEqual(['GEOAPIFY_API_KEY']);
   });
 });

@@ -1,0 +1,76 @@
+<form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+  <div class="intro">
+    <p>{{ 'public.signUp.brand' | t }}</p>
+    <p>{{ 'public.signUp.blurb' | t }}</p>
+  </div>
+  <div class="field">
+    <label for="mf-sign-up-name">{{ 'public.signUp.name' | t }}</label>
+    <input
+      hlmInput
+      id="mf-sign-up-name"
+      type="text"
+      autocomplete="name"
+      formControlName="name"
+      aria-describedby="mf-sign-up-name-error"
+    />
+    <mf-field-error id="mf-sign-up-name-error" [save]="save" [control]="form.controls.name" />
+  </div>
+  <div class="field">
+    <label for="mf-sign-up-email">{{ 'public.signUp.email' | t }}</label>
+    <input
+      hlmInput
+      id="mf-sign-up-email"
+      type="email"
+      inputmode="email"
+      autocomplete="email"
+      spellcheck="false"
+      formControlName="email"
+      [placeholder]="'public.signUp.emailPlaceholder' | t"
+      aria-describedby="mf-sign-up-email-error"
+    />
+    <mf-field-error id="mf-sign-up-email-error" [save]="save" [control]="form.controls.email" />
+  </div>
+  <div class="field">
+    <label for="mf-sign-up-password">{{ 'public.signUp.password' | t }}</label>
+    <div class="secret">
+      <input
+        hlmInput
+        id="mf-sign-up-password"
+        [type]="shown() ? 'text' : 'password'"
+        autocomplete="new-password"
+        formControlName="password"
+        [placeholder]="'public.signUp.passwordPlaceholder' | t"
+        aria-describedby="mf-sign-up-password-error"
+      />
+      <button
+        type="button"
+        class="reveal"
+        aria-controls="mf-sign-up-password"
+        [attr.aria-label]="'public.signUp.showPassword' | t"
+        [attr.aria-pressed]="shown()"
+        (click)="shown.set(!shown())"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+          <circle cx="12" cy="12" r="3" />
+          @if (shown()) {
+            <path d="M4 4l16 16" />
+          }
+        </svg>
+      </button>
+    </div>
+    <mf-field-error id="mf-sign-up-password-error" [save]="save" [control]="form.controls.password" />
+  </div>
+  <mf-consent [control]="form.controls.consent" [save]="save" />
+  <mf-task-error [save]="save" />
+  <button hlmBtn type="submit" [mfTaskSubmit]="save">
+    {{ 'public.signUp.submit' | t }}
+  </button>
+  <mf-provider-buttons [returnTo]="returnTo" />
+  <p class="switch">
+    <span>{{ 'public.signUp.haveAccount' | t }}</span>
+    <button type="button" [disabled]="save.state() === 'sending'" (click)="switchToSignIn()">
+      {{ 'public.signUp.signIn' | t }}
+    </button>
+  </p>
+</form>

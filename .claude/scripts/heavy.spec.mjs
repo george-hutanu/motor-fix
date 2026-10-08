@@ -229,6 +229,16 @@ describe('the pre-commit hook', () => {
     assert.match(line, /services=\\\$\(node scripts\/test-services\.ts \$base\) && eval \\"\\\$services\\" && TZ=UTC npx nx affected/);
   });
 
+  // The check reads only git's listing, so it needs no slot, and a flat
+  // submodule fails the commit before the slow checks start.
+  it('runs the structure check against origin/main before taking a slot', () => {
+    const hook = readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8');
+    const lines = hook.split('\n');
+    const check = lines.findIndex((l) => /^node scripts\/structure-check\.ts --base origin\/main$/.test(l));
+    assert.ok(check !== -1, 'pre-commit does not run node scripts/structure-check.ts --base origin/main');
+    assert.ok(check < lines.findIndex((l) => l.includes('scripts/heavy.sh')));
+  });
+
   it('turns the Nx daemon off before anything runs, slot or not', () => {
     const hook = readFileSync(fileURLToPath(new URL('../../.husky/pre-commit', import.meta.url)), 'utf8');
     const lines = hook.split('\n');

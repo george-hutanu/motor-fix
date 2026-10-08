@@ -1451,6 +1451,16 @@
         "operationId": "GarageSearchController_forBrand",
         "parameters": [
           {
+            "name": "near",
+            "required": false,
+            "in": "query",
+            "description": "The place the count is measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, all of Romania",
+            "schema": {
+              "example": "46.771,23.624",
+              "type": "string"
+            }
+          },
+          {
             "name": "brandId",
             "required": true,
             "in": "query",
@@ -1483,7 +1493,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: brandId missing or not a uuid; invalid_cursor: not a page of this search"
+            "description": "validation_failed: brandId missing or not a uuid, or near not a lat,lng in Romania; invalid_cursor: not a page of this search"
           },
           "404": {
             "description": "not_found: no brand with that id"
@@ -1499,6 +1509,16 @@
         "operationId": "HomeController_forBrand",
         "parameters": [
           {
+            "name": "near",
+            "required": false,
+            "in": "query",
+            "description": "The place the count is measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, all of Romania",
+            "schema": {
+              "example": "46.771,23.624",
+              "type": "string"
+            }
+          },
+          {
             "name": "brand",
             "required": true,
             "in": "query",
@@ -1506,16 +1526,6 @@
             "schema": {
               "maxLength": 60,
               "example": "dacia",
-              "type": "string"
-            }
-          },
-          {
-            "name": "near",
-            "required": false,
-            "in": "query",
-            "description": "The place as \"lat,lng\"; accepted and ignored until a place narrows the count",
-            "schema": {
-              "example": "44.43,26.10",
               "type": "string"
             }
           }
@@ -1532,7 +1542,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: brand is not a slug, or near is not lat,lng"
+            "description": "validation_failed: brand is not a slug, or near is not a lat,lng in Romania"
           },
           "404": {
             "description": "not_found: no active brand with that slug"
@@ -1579,6 +1589,58 @@
         },
         "tags": [
           "brands"
+        ]
+      }
+    },
+    "/api/v1/places": {
+      "get": {
+        "operationId": "PlacesController_search",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "description": "What the owner typed, trimmed",
+            "schema": {
+              "minLength": 3,
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "ro",
+              "type": "string",
+              "enum": [
+                "ro",
+                "en"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacesResultDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "places_rate_limited"
+          },
+          "503": {
+            "description": "search_unavailable"
+          }
+        },
+        "tags": [
+          "places"
         ]
       }
     },
@@ -2575,6 +2637,219 @@
           "admin"
         ]
       }
+    },
+    "/api/v1/admin/platform-rule-changes": {
+      "get": {
+        "operationId": "PlatformRuleChangesController_list",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformRuleChangesDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin, or no rule"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "operationId": "PlatformRuleChangesController_request",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestPlatformRuleChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformRuleChangeDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no rule that needs two admins"
+          },
+          "409": {
+            "description": "stale_value, change_pending"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/platform-rule-changes/{id}/approve": {
+      "post": {
+        "operationId": "PlatformRuleChangesController_approve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformRuleChangeDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "own_request"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "already_decided"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/platform-rule-changes/{id}/refuse": {
+      "post": {
+        "operationId": "PlatformRuleChangesController_refuse",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformRuleChangeDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "own_request"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "already_decided"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/platform-rule-changes/{id}/cancel": {
+      "post": {
+        "operationId": "PlatformRuleChangesController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformRuleChangeDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "not_requester"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "already_decided"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
     }
   },
   "info": {
@@ -2894,6 +3169,11 @@
               "en"
             ]
           },
+          "city": {
+            "type": "string",
+            "description": "The city saved in Setări",
+            "nullable": true
+          },
           "roles": {
             "type": "array",
             "items": {
@@ -2945,6 +3225,7 @@
           "email",
           "emailConfirmed",
           "language",
+          "city",
           "roles",
           "role",
           "garageId",
@@ -4250,6 +4531,15 @@
               "does_not_take",
               "unstated"
             ]
+          },
+          "distanceKm": {
+            "type": "number",
+            "description": "Km from the place, one decimal; null for a mobile mechanic. Only with near",
+            "nullable": true
+          },
+          "comesToYou": {
+            "type": "boolean",
+            "description": "True for a mobile mechanic whose area holds the place. Only with near"
           }
         },
         "required": [
@@ -4317,7 +4607,7 @@
           },
           "total": {
             "type": "integer",
-            "description": "Approved garages"
+            "description": "Approved garages, in the area of the place when one is given"
           },
           "takers": {
             "type": "integer",
@@ -4328,6 +4618,43 @@
           "brand",
           "total",
           "takers"
+        ]
+      },
+      "PlaceSuggestionDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "example": "Strada Ștefan cel Mare 12, Sector 2, București"
+          },
+          "lat": {
+            "type": "number",
+            "example": 44.4512
+          },
+          "lng": {
+            "type": "number",
+            "example": 26.1207
+          }
+        },
+        "required": [
+          "label",
+          "lat",
+          "lng"
+        ]
+      },
+      "PlacesResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "At most five places, all in Romania",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlaceSuggestionDto"
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       },
       "AdminOverviewDto": {
@@ -4843,6 +5170,27 @@
           },
           "slug": {
             "type": "string"
+          },
+          "address": {
+            "type": "string",
+            "description": "A workshop only.",
+            "maxLength": 200
+          },
+          "latitude": {
+            "type": "number",
+            "description": "A workshop only.",
+            "format": "double"
+          },
+          "longitude": {
+            "type": "number",
+            "description": "A workshop only.",
+            "format": "double"
+          },
+          "serviceRadiusKm": {
+            "type": "number",
+            "description": "A mobile mechanic only: how far from its base it travels.",
+            "maximum": 100,
+            "minimum": 1
           }
         },
         "required": [
@@ -5224,6 +5572,106 @@
         "required": [
           "value",
           "seen"
+        ]
+      },
+      "PlatformRuleChangeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string",
+            "example": "reviews_only_after_confirmed_job"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "requested",
+              "approved",
+              "refused",
+              "cancelled"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "requestedByName": {
+            "type": "string",
+            "description": "The asker's first name"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "mine": {
+            "type": "boolean",
+            "description": "The caller asked it"
+          },
+          "decidedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "status",
+          "reason",
+          "requestedByName",
+          "requestedAt",
+          "mine",
+          "decidedByName",
+          "decidedAt"
+        ]
+      },
+      "PlatformRuleChangesDto": {
+        "type": "object",
+        "properties": {
+          "waiting": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlatformRuleChangeDto"
+              }
+            ]
+          },
+          "decided": {
+            "description": "The last five decided, newest first",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlatformRuleChangeDto"
+            }
+          }
+        },
+        "required": [
+          "waiting",
+          "decided"
+        ]
+      },
+      "RequestPlatformRuleChangeDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "reviews_only_after_confirmed_job"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 5
+          }
+        },
+        "required": [
+          "key",
+          "reason"
         ]
       }
     }

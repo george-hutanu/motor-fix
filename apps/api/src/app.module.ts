@@ -13,8 +13,10 @@ import {
   oauthSettings,
   PasswordResetModule,
   PhoneSignInModule,
+  PlacesModule,
   PlatformRulesModule,
   phoneConfig,
+  placesConfig,
   pushConfig,
   SearchModule,
   StorageModule,
@@ -71,12 +73,14 @@ export class AppModule {
         CarsModule,
         CatalogueModule,
         SearchModule,
+        PlacesModule.register(placesConfig(env.APP_ENV, process.env)),
         garages,
         ListingPhotosModule.register({ redisUrl: env.REDIS_URL }, garages),
         EventsModule.register({ redisUrl: env.REDIS_URL }),
-        PlatformRulesModule.register({
-          production: env.APP_ENV === 'production',
-        }),
+        PlatformRulesModule.register(
+          { production: env.APP_ENV === 'production', webUrl: email.webUrl },
+          notifications,
+        ),
       ],
       module: AppModule,
     };

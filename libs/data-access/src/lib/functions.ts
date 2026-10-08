@@ -95,6 +95,8 @@ export type { GarageSearchControllerForBrand$Params as GarageSearchControllerFor
 export { garageSearchControllerForBrand as garageSearchControllerForBrand } from './fn/search/garage-search-controller-for-brand';
 export type { HomeControllerForBrand$Params as HomeControllerForBrand$Params } from './fn/home/home-controller-for-brand';
 export { homeControllerForBrand as homeControllerForBrand } from './fn/home/home-controller-for-brand';
+export type { PlacesControllerSearch$Params as PlacesControllerSearch$Params } from './fn/places/places-controller-search';
+export { placesControllerSearch as placesControllerSearch } from './fn/places/places-controller-search';
 export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';
 export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
 export type { AdminOverviewControllerGrowth$Params as AdminOverviewControllerGrowth$Params } from './fn/admin/admin-overview-controller-growth';
@@ -105,6 +107,16 @@ export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$
 export { platformRulesControllerList as platformRulesControllerList } from './fn/admin/platform-rules-controller-list';
 export type { PlatformRulesControllerChange$Params as PlatformRulesControllerChange$Params } from './fn/admin/platform-rules-controller-change';
 export { platformRulesControllerChange as platformRulesControllerChange } from './fn/admin/platform-rules-controller-change';
+export type { PlatformRuleChangesControllerList$Params as PlatformRuleChangesControllerList$Params } from './fn/admin/platform-rule-changes-controller-list';
+export { platformRuleChangesControllerList as platformRuleChangesControllerList } from './fn/admin/platform-rule-changes-controller-list';
+export type { PlatformRuleChangesControllerRequest$Params as PlatformRuleChangesControllerRequest$Params } from './fn/admin/platform-rule-changes-controller-request';
+export { platformRuleChangesControllerRequest as platformRuleChangesControllerRequest } from './fn/admin/platform-rule-changes-controller-request';
+export type { PlatformRuleChangesControllerApprove$Params as PlatformRuleChangesControllerApprove$Params } from './fn/admin/platform-rule-changes-controller-approve';
+export { platformRuleChangesControllerApprove as platformRuleChangesControllerApprove } from './fn/admin/platform-rule-changes-controller-approve';
+export type { PlatformRuleChangesControllerRefuse$Params as PlatformRuleChangesControllerRefuse$Params } from './fn/admin/platform-rule-changes-controller-refuse';
+export { platformRuleChangesControllerRefuse as platformRuleChangesControllerRefuse } from './fn/admin/platform-rule-changes-controller-refuse';
+export type { PlatformRuleChangesControllerCancel$Params as PlatformRuleChangesControllerCancel$Params } from './fn/admin/platform-rule-changes-controller-cancel';
+export { platformRuleChangesControllerCancel as platformRuleChangesControllerCancel } from './fn/admin/platform-rule-changes-controller-cancel';
 export type { GarageBrandsControllerReplace$Params as GarageBrandsControllerReplace$Params } from './fn/garages/garage-brands-controller-replace';
 export { garageBrandsControllerReplace as garageBrandsControllerReplace } from './fn/garages/garage-brands-controller-replace';
 export type { GarageInvitesControllerSend$Params as GarageInvitesControllerSend$Params } from './fn/garages/garage-invites-controller-send';

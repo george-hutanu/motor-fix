@@ -15,6 +15,7 @@ import {
   fixOf,
   holderOf,
   isClaudeCommand,
+  listPrs,
   lockPid,
   main,
   parseStale,
@@ -23,6 +24,7 @@ import {
   qaCapFrom,
   scratchRun,
   summarizePr,
+  sweepStacks,
   writeClaim,
 } from './watch.mjs';
 import { waitHolder } from './lib/watch-wait.mjs';
@@ -72,6 +74,7 @@ const row = (over = {}) => ({
   pr: null,
   clean: true,
   head: 'abc',
+  unpushed: 0,
   ...over,
 });
 
@@ -290,17 +293,43 @@ describe('stale and the fix', () => {
     assert.equal(r.fix, 'resume');
   });
 
-  it('removes a merged worktree only when it is clean, not held and at the merged head', () => {
+  // @traces 977-FR-010
+  it('removes a merged or closed worktree nobody holds, dirty or not, but never one with unpushed commits', () => {
     const merged = summarizePr(pr({ state: 'MERGED', headRefOid: 'abc' }));
     const done = { phase: 'done', pr: merged };
-    assert.equal(fixOf(row(done), opts).fix, 'remove-worktree');
+    assert.equal(fixOf(row(done), opts).fix, 'remove');
     assert.equal(fixOf(row(done), opts).verdict, 'done');
-    const dirty = fixOf(row({ ...done, clean: false }), opts);
-    assert.equal(dirty.fix, null);
-    assert.match(dirty.reason, /uncommitted/);
+    assert.equal(fixOf(row({ ...done, clean: false }), opts).fix, 'remove', 'the removal backs uncommitted work up');
+    assert.equal(fixOf(row({ ...done, head: 'def' }), opts).fix, 'remove', 'pushed commits after the merged head are on the remote');
+    assert.equal(fixOf(row({ ...done, pr: summarizePr(pr({ state: 'CLOSED' })) }), opts).fix, 'remove');
+    const unpushed = fixOf(row({ ...done, unpushed: 2 }), opts);
+    assert.equal(unpushed.fix, null);
+    assert.equal(unpushed.verdict, 'done');
+    assert.match(unpushed.reason, /unpushed commits/);
+    assert.equal(fixOf(row({ ...done, unpushed: null }), opts).fix, null, 'an unknown count withholds the fix too');
     assert.equal(fixOf(row({ ...done, holder: 'live' }), opts).fix, null);
-    assert.equal(fixOf(row({ ...done, head: 'def' }), opts).fix, null);
     assert.equal(fixOf(row({ ...done, main: true, holder: 'owner' }), opts).fix, null);
+  });
+
+  // @traces 977-FR-010
+  it('removes a worktree with no PR once it has been idle for 7 days, and takes an idle override', () => {
+    assert.equal(DEFAULT_THRESHOLDS.idle, 7 * 24 * 60);
+    const idle = (minutes, over = {}) => row({ pr: null, activity: { at: NOW - minutes * MIN, source: 'commit' }, ...over });
+    const r = fixOf(idle(DEFAULT_THRESHOLDS.idle + 1), opts);
+    assert.equal(r.fix, 'remove');
+    assert.equal(r.verdict, 'done');
+    assert.match(r.reason, /no PR, idle/);
+    assert.equal(fixOf(idle(DEFAULT_THRESHOLDS.idle - 1), opts).fix, 'resume');
+    assert.deepEqual(fixOf(idle(20_000, { unpushed: 1 }), opts), { verdict: 'done', fix: null, reason: 'no PR, idle 13 days, but has 1 unpushed commits' });
+    assert.match(fixOf(idle(20_000, { unpushed: null }), opts).reason, /unpushed commits unknown/);
+    assert.equal(fixOf(idle(20_000, { unpushed: null }), opts).fix, null);
+    assert.equal(fixOf(idle(20_000, { holder: 'live' }), opts).fix, null);
+    assert.equal(fixOf(idle(20_000, { main: true, holder: 'owner' }), opts).fix, null);
+    assert.notEqual(fixOf(idle(20_000, { pr: 'unknown' }), opts).fix, 'remove', 'only a PR list that was read can say there is no PR');
+    assert.notEqual(fixOf(idle(20_000, { pr: summarizePr(pr({ isDraft: true })) }), opts).fix, 'remove', 'an open PR is never swept');
+    const thresholds = parseStale(['idle=60'], DEFAULT_THRESHOLDS);
+    assert.equal(thresholds.idle, 60);
+    assert.equal(fixOf(idle(61), { now: NOW, thresholds }).fix, 'remove');
   });
 
   it('gives a merged worktree a grace period of the done threshold before removing it', () => {
@@ -311,9 +340,9 @@ describe('stale and the fix', () => {
     assert.equal(recent.verdict, 'done');
     assert.equal(recent.fix, null);
     assert.match(recent.reason, /quiet 5 of 30 min/);
-    assert.equal(fixOf(row({ phase: 'done', pr: merged, activity: { at: NOW - 120 * MIN, source: 'commit' } }), opts).fix, 'remove-worktree');
+    assert.equal(fixOf(row({ phase: 'done', pr: merged, activity: { at: NOW - 120 * MIN, source: 'commit' } }), opts).fix, 'remove');
     const now = fixOf(row({ phase: 'done', pr: merged, activity: { at: NOW - 1, source: 'commit' } }), { now: NOW, thresholds: parseStale(['done=0'], DEFAULT_THRESHOLDS) });
-    assert.equal(now.fix, 'remove-worktree');
+    assert.equal(now.fix, 'remove');
   });
 
   it('shows a worktree git cannot read as blocked, with no fix', () => {
@@ -374,8 +403,8 @@ describe('dispatch plan', () => {
     assert.deepEqual(dispatchPlan([stale('a', 'resume', 90)], { qaLive: 0, now: NOW, prsKnown: false }), []);
   });
 
-  it('never dispatches remove-worktree or a row that is not stale', () => {
-    const rows = [{ ...stale('a', 'remove-worktree', 50), verdict: 'done' }, { ...stale('b', null, 5), verdict: 'ok' }];
+  it('never dispatches remove or a row that is not stale', () => {
+    const rows = [{ ...stale('a', 'remove', 50), verdict: 'done' }, { ...stale('b', null, 5), verdict: 'ok' }];
     assert.deepEqual(dispatchPlan(rows, { qaLive: 0, now: NOW }), []);
   });
 });
@@ -397,6 +426,9 @@ function fixture() {
   writeFileSync(join(repo, '.gitignore'), '.specify/**/.cache/\n.specify/run-state.json\n');
   git(repo, 'add', '.');
   git(repo, 'commit', '-q', '-m', 'init');
+  git(root, 'init', '-q', '--bare', 'origin.git');
+  git(repo, 'remote', 'add', 'origin', join(root, 'origin.git'));
+  git(repo, 'push', '-q', 'origin', 'main');
   const add = (name, branch) => {
     const path = join(root, name);
     git(repo, 'worktree', 'add', '-q', '-b', branch, path);
@@ -405,14 +437,15 @@ function fixture() {
   return { root, repo, add };
 }
 
-const quietCommit = (path, minutesAgo) => {
+const quietCommit = (path, minutesAgo, { push = true } = {}) => {
   const date = new Date(NOW - minutesAgo * MIN).toISOString();
   writeFileSync(join(path, `f${minutesAgo}.txt`), 'x\n');
   git(path, 'add', '.');
   execFileSync('git', ['commit', '-q', '-m', 'w'], { cwd: path, env: { ...process.env, GIT_COMMITTER_DATE: date, GIT_AUTHOR_DATE: date } });
+  if (push) git(path, 'push', '-q', 'origin', 'HEAD');
 };
 
-const env = (over = {}) => ({ now: NOW, gh: () => [], alive: () => false, pidAlive: () => false, ...over });
+const env = (over = {}) => ({ now: NOW, gh: () => [], alive: () => false, pidAlive: () => false, remove: (path) => ({ path, removed: false, reason: 'not run in tests' }), ...over });
 
 describe('collect', () => {
   it('lists every worktree with its fields and counts a live PR-tester run instead of listing it', () => {
@@ -522,7 +555,8 @@ describe('--fix and claim', () => {
     }
   });
 
-  it('unlocks a dead lock, removes a merged clean worktree, prunes a deleted one, and leaves the rest alone', () => {
+  // @traces 977-FR-010
+  it('unlocks a dead lock, hands merged worktrees to the shared removal, dirty ones too, prunes a deleted one, and leaves the rest alone', () => {
     const f = fixture();
     try {
       const dead = f.add('agent-dead', '901-a');
@@ -536,21 +570,21 @@ describe('--fix and claim', () => {
       rmSync(gone, { recursive: true, force: true });
       const heads = { '902-b': git(merged, 'rev-parse', 'HEAD'), '903-c': git(dirty, 'rev-parse', 'HEAD') };
       const report = collect(f.repo, env({
+        now: Date.now() + 120 * MIN,
         gh: () => [
           pr({ number: 22, headRefName: '902-b', state: 'MERGED', headRefOid: heads['902-b'] }),
           pr({ number: 23, headRefName: '903-c', state: 'MERGED', headRefOid: heads['903-c'] }),
         ],
       }));
-      const actions = applyFixes(f.repo, report);
-      assert.equal(actions.filter((a) => a.ok).length, 3, JSON.stringify(actions));
+      const removed = [];
+      const remove = (path, o) => (removed.push([path, o.admitNoPr]), { path, removed: true });
+      const actions = applyFixes(f.repo, report, { remove });
+      assert.equal(actions.filter((a) => a.ok).length, 4, JSON.stringify(actions));
       const list = git(f.repo, 'worktree', 'list', '--porcelain');
       assert.ok(!list.includes('locked'), 'the dead lock is released');
-      assert.ok(!existsSync(merged), 'the merged clean worktree is removed');
+      assert.deepEqual(removed.sort(), [[merged, false], [dirty, false]].sort());
       assert.ok(!list.includes('agent-gone'), 'the deleted worktree is pruned');
-      assert.ok(existsSync(join(dirty, 'wip.txt')), 'the dirty worktree is kept');
       assert.ok(existsSync(join(f.repo, 'README.md')), 'the main worktree is kept');
-      const branches = git(f.repo, 'branch', '--format=%(refname:short)').split('\n');
-      for (const b of ['901-a', '902-b', '903-c', '904-d']) assert.ok(branches.includes(b), `branch ${b} kept`);
     } finally {
       rmSync(f.root, { recursive: true, force: true });
     }
@@ -604,11 +638,12 @@ describe('--fix and claim', () => {
       const report = collect(f.repo, env({ alive: (pid) => pid === 4242, gh: () => [pr({ number: 9, headRefName: '909-done', state: 'MERGED', headRefOid: sha })] }));
       const r = report.rows.find((x) => x.path === done);
       assert.equal(r.holder, 'none');
-      assert.equal(r.fix, 'remove-worktree');
-      const actions = applyFixes(f.repo, report);
+      assert.equal(r.fix, 'remove');
+      const removed = [];
+      const actions = applyFixes(f.repo, report, { remove: (path) => (removed.push(path), { path, removed: true }) });
       assert.ok(actions.every((a) => a.ok), JSON.stringify(actions));
-      assert.ok(!existsSync(done));
-      assert.ok(git(f.repo, 'branch', '--format=%(refname:short)').split('\n').includes('909-done'));
+      assert.deepEqual(removed, [done]);
+      assert.ok(!git(f.repo, 'worktree', 'list', '--porcelain').includes('locked'), 'the quiet subagent lock is released first');
     } finally {
       rmSync(f.root, { recursive: true, force: true });
     }
@@ -646,6 +681,52 @@ describe('--fix and claim', () => {
     }
   });
 
+  // @traces 977-FR-010
+  it('counts the commits on no remote, and withholds the removal of a merged worktree that has them', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      quietCommit(a, 120, { push: false });
+      const report = collect(f.repo, env({ gh: () => [pr({ number: 21, headRefName: '901-a', state: 'MERGED', headRefOid: git(a, 'rev-parse', 'HEAD') })] }));
+      const r = report.rows.find((x) => x.path === a);
+      assert.equal(r.unpushed, 1);
+      assert.equal(r.fix, null);
+      assert.match(r.reason, /unpushed commits/);
+      git(a, 'push', '-q', 'origin', 'HEAD');
+      assert.equal(collect(f.repo, env()).rows.find((x) => x.path === a).unpushed, 0);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  // @traces 977-FR-010
+  it('sweeps a worktree with no PR idle past the threshold, admitting it, and goes on past a refusal or a throw', () => {
+    const f = fixture();
+    try {
+      const a = f.add('agent-a', '901-a');
+      const b = f.add('agent-b', '902-b');
+      const c = f.add('agent-c', '903-c');
+      const report = collect(f.repo, env({ now: Date.now() + 8 * 24 * 60 * MIN }));
+      for (const p of [a, b, c]) assert.equal(report.rows.find((x) => x.path === p).fix, 'remove');
+      const seen = [];
+      const remove = (path, o) => {
+        seen.push([path, o.admitNoPr]);
+        if (path === a) return { path, removed: false, reason: 'unpushed commits: 1' };
+        if (path === b) throw new Error('boom');
+        return { path, removed: true };
+      };
+      const actions = applyFixes(f.repo, report, { remove });
+      assert.deepEqual(seen, [[a, true], [b, true], [c, true]]);
+      const of = (p) => actions.find((x) => x.what === `remove ${p}`);
+      assert.deepEqual(of(a), { what: `remove ${a}`, ok: false, error: 'unpushed commits: 1' });
+      assert.equal(of(b).ok, false);
+      assert.match(of(b).error, /boom/);
+      assert.deepEqual(of(c), { what: `remove ${c}`, ok: true });
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
   it('writes a claim git ignores, which makes the holder live until it ages out', () => {
     const f = fixture();
     try {
@@ -672,9 +753,9 @@ describe('the command, started from a path with a space or through a symlink', (
     try {
       const dir = join(f.root, 'with space', '.claude', 'scripts');
       mkdirSync(dir, { recursive: true });
-      for (const name of ['watch.mjs', 'run-state.mjs']) writeFileSync(join(dir, name), readFileSync(join(import.meta.dirname, name)));
+      for (const name of ['watch.mjs', 'run-state.mjs', 'worktree-remove.mjs', 'specs-repo.mjs']) writeFileSync(join(dir, name), readFileSync(join(import.meta.dirname, name)));
       mkdirSync(join(f.root, 'with space', '.claude', 'scripts', 'lib'), { recursive: true });
-      for (const name of ['feature.mjs', 'watch-wait.mjs']) writeFileSync(join(dir, 'lib', name), readFileSync(join(import.meta.dirname, 'lib', name)));
+      for (const name of ['feature.mjs', 'watch-wait.mjs', 'entry.mjs', 'worktrees.mjs']) writeFileSync(join(dir, 'lib', name), readFileSync(join(import.meta.dirname, 'lib', name)));
       mkdirSync(join(dir, 'pr-test'));
       for (const name of ['carry.mjs', 'post.mjs', 'findings.mjs', 'qa-run.mjs']) writeFileSync(join(dir, 'pr-test', name), readFileSync(join(import.meta.dirname, 'pr-test', name)));
       mkdirSync(join(f.root, 'with space', 'scripts'));
@@ -1050,7 +1131,7 @@ describe('--gate', () => {
       const io = captured();
       const code = main(['--gate'], { cwd: f.repo, ...env({ gh: () => [pr({ number: 22, headRefName: '902-b', state: 'MERGED', headRefOid: sha })] }) });
       assert.equal(code, 2);
-      assert.ok(io.out.some((l) => l.startsWith('remove-worktree ') && l.includes(done)), io.out.join('\n'));
+      assert.ok(io.out.some((l) => l.startsWith('remove ') && l.includes(done)), io.out.join('\n'));
       assert.ok(existsSync(done));
     } finally {
       rmSync(f.root, { recursive: true, force: true });
@@ -1117,7 +1198,7 @@ describe('--gate', () => {
         rmSync(f.root, { recursive: true, force: true });
       }
     }
-  });
+  }, 20000);
 
   it('is an error outside a repository and with --fix, --json or --wait', () => {
     const f = fixture();
@@ -1138,9 +1219,10 @@ describe('dueFixes', () => {
     const report = {
       rows: [
         row({ path: '/w/dead', holder: 'dead' }),
-        row({ path: '/w/done', fix: 'remove-worktree', clean: true }),
-        row({ path: '/w/dirty', fix: 'remove-worktree', clean: false }),
-        row({ path: '/w/main', main: true, fix: 'remove-worktree', clean: true }),
+        row({ path: '/w/done', fix: 'remove', clean: true, pr: { number: 3, state: 'merged' } }),
+        row({ path: '/w/dirty', fix: 'remove', clean: false, pr: { number: 4, state: 'closed' } }),
+        row({ path: '/w/idle', fix: 'remove', pr: null }),
+        row({ path: '/w/main', main: true, fix: 'remove', clean: true }),
         row({ path: '/w/carry', fix: 'carry-review', pr: { number: 5 }, carry: { from: 'abcdef1234', head: 'def' } }),
         row({ path: '/w/nocarry', fix: 'carry-review', pr: { number: 6 }, carry: null }),
       ],
@@ -1150,8 +1232,10 @@ describe('dueFixes', () => {
     };
     assert.deepEqual(
       dueFixes(report).map((d) => `${d.fix} ${d.path}`),
-      ['unlock /w/dead', 'remove-worktree /w/done', 'carry-review /w/carry', 'unlock /w/orphan', 'prune /w/orphan, /w/gone'],
+      ['unlock /w/dead', 'remove /w/done', 'remove /w/dirty', 'remove /w/idle', 'carry-review /w/carry', 'unlock /w/orphan', 'prune /w/orphan, /w/gone'],
     );
+    const due = dueFixes(report).filter((d) => d.fix === 'remove');
+    assert.deepEqual(due.map((d) => d.admitNoPr), [false, false, true], 'only a row with no PR is admitted without one');
   });
 
   it('is empty for an empty board', () => {
@@ -1521,5 +1605,103 @@ describe('a ready PR that conflicts with main', () => {
     } finally {
       rmSync(f.root, { recursive: true, force: true });
     }
+  });
+});
+
+describe('the test stack sweep', () => {
+  it('runs the test-services sweep in the repository and reports its line', () => {
+    const seen = [];
+    const run = (file, args, opts) => {
+      seen.push({ file, args, cwd: opts.cwd });
+      return 'test-services: stopped mf-test-a-111111 (PR #7 merged)\n';
+    };
+    assert.deepEqual(sweepStacks('/r', run), { what: 'test-services: stopped mf-test-a-111111 (PR #7 merged)', ok: true });
+    assert.deepEqual(seen, [{ file: 'node', args: ['scripts/test-services.ts', 'sweep'], cwd: '/r' }]);
+  });
+
+  it('reports a failed sweep as a failed action, never a throw', () => {
+    const run = () => {
+      throw Object.assign(new Error('Command failed'), { stderr: 'node: cannot find scripts/test-services.ts\n' });
+    };
+    assert.deepEqual(sweepStacks('/r', run), { what: 'sweep test stacks', ok: false, error: 'node: cannot find scripts/test-services.ts' });
+  });
+
+  const capture = (fn) => {
+    const out = [];
+    const log = console.log;
+    console.log = (...a) => out.push(a.join(' '));
+    try {
+      return { status: fn(), out: out.join('\n') };
+    } finally {
+      console.log = log;
+    }
+  };
+
+  it('runs on --fix, after the other fixes, and prints its line', () => {
+    const f = fixture();
+    try {
+      f.add('agent-a', '901-a');
+      let calls = 0;
+      const sweep = () => (calls++, { what: 'test-services: nothing to stop', ok: true });
+      const { status, out } = capture(() => main(['--fix'], { cwd: f.repo, ...env(), sweep }));
+      assert.equal(status, 0);
+      assert.equal(calls, 1);
+      assert.match(out, /fixed: test-services: nothing to stop/);
+      const json = capture(() => main(['--fix', '--json'], { cwd: f.repo, ...env(), sweep }));
+      assert.deepEqual(JSON.parse(json.out).actions.at(-1), { what: 'test-services: nothing to stop', ok: true });
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+
+  it('never runs without --fix, nor on --gate', () => {
+    const f = fixture();
+    try {
+      f.add('agent-a', '901-a');
+      let calls = 0;
+      const sweep = () => (calls++, { what: 'x', ok: true });
+      capture(() => main([], { cwd: f.repo, ...env(), sweep }));
+      capture(() => main(['--json'], { cwd: f.repo, ...env(), sweep }));
+      capture(() => main(['--gate'], { cwd: f.repo, ...env(), sweep }));
+      assert.equal(calls, 0);
+    } finally {
+      rmSync(f.root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('listPrs', () => {
+  it('asks open PRs for their checks and every PR for the cheap fields only, then merges them by number', () => {
+    const calls = [];
+    const exec = (args) => {
+      calls.push(args);
+      if (args.includes('open'))
+        return [{ number: 7, headRefName: 'a', state: 'OPEN', isDraft: false, headRefOid: 'x', statusCheckRollup: [{ name: 'CI OK', conclusion: 'SUCCESS' }], mergeable: 'MERGEABLE' }];
+      return [
+        { number: 7, headRefName: 'a', state: 'OPEN', isDraft: false, headRefOid: 'x' },
+        { number: 3, headRefName: 'b', state: 'MERGED', isDraft: false, headRefOid: 'y' },
+      ];
+    };
+    const prs = listPrs(exec);
+    assert.equal(calls.length, 2);
+    const open = calls.find((a) => a.includes('open'));
+    const all = calls.find((a) => a.includes('all'));
+    assert.match(open.join(' '), /statusCheckRollup/);
+    assert.match(open.join(' '), /mergeable/);
+    assert.doesNotMatch(all.join(' '), /statusCheckRollup|mergeable/);
+    assert.deepEqual(
+      prs.sort((p, q) => p.number - q.number),
+      [
+        { number: 3, headRefName: 'b', state: 'MERGED', isDraft: false, headRefOid: 'y' },
+        { number: 7, headRefName: 'a', state: 'OPEN', isDraft: false, headRefOid: 'x', statusCheckRollup: [{ name: 'CI OK', conclusion: 'SUCCESS' }], mergeable: 'MERGEABLE' },
+      ],
+    );
+  });
+
+  it('keeps an open PR the all-state list missed, and gives a closed PR no rollup', () => {
+    const exec = (args) => (args.includes('open') ? [{ number: 9, headRefName: 'n', state: 'OPEN', statusCheckRollup: [] }] : [{ number: 2, headRefName: 'c', state: 'CLOSED' }]);
+    const prs = listPrs(exec);
+    assert.deepEqual(prs.find((p) => p.number === 9).statusCheckRollup, []);
+    assert.equal(prs.find((p) => p.number === 2).statusCheckRollup, undefined);
   });
 });

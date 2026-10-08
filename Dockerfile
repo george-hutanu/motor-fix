@@ -19,13 +19,24 @@ RUN npx nx run ${APP}:build --configuration=production
 # The web server is fully bundled; the Node apps install the dependencies
 # their build listed in its own package.json and lockfile.
 RUN cd dist/apps/${APP} && if [ -f package-lock.json ]; then npm ci --omit=dev; fi
+# The web build's source maps never reach the image: the browser's go to the
+# web-maps stage, which the release uploads to the error collector; the
+# server's are not kept.
+RUN mkdir /maps && if [ "${APP}" = web ]; then \
+      find dist/apps/web/browser -name '*.map' -exec mv {} /maps/ \; \
+      && find dist/apps/web -name '*.map' -delete; fi
 # The api's pre-deploy step runs the migrations from inside its image, and
 # the staging reset (.github/workflows/reset-staging.yml) runs the seed there:
 # one file, run by Node as it is, with pg already among the api's dependencies.
+# The same step then sets the monitor role's password (monitor-password.ts).
 RUN if [ "${APP}" = api ]; then \
       cp -r libs/domain/prisma libs/domain/prisma.config.ts dist/apps/api/ \
-      && mkdir -p dist/apps/api/src \
-      && cp libs/domain/src/seed.ts dist/apps/api/src/; fi
+      && mkdir -p dist/apps/api/src dist/apps/api/scripts \
+      && cp libs/domain/src/seed.ts dist/apps/api/src/ \
+      && cp scripts/monitor-password.ts dist/apps/api/scripts/; fi
+
+FROM scratch AS web-maps
+COPY --from=build /maps /
 
 FROM node:${NODE_VERSION}-slim AS runtime
 ARG APP

@@ -1,0 +1,22 @@
+:host {
+  display: block;
+}
+[role="status"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mf-space-2) var(--mf-space-3);
+  margin: 0 var(--mf-space-4) var(--mf-space-3);
+  padding: var(--mf-space-3) var(--mf-space-4);
+  border: 1px solid var(--mf-amber-ink);
+  border-radius: var(--mf-radius-control);
+}
+p {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+button {
+  white-space: normal;
+}
