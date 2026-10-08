@@ -20,6 +20,7 @@ export async function loadTelemetry(
     await idle();
     const { startFaro } = await import('../faro');
     startFaro({
+      environment: tag.dataset['environment'] || 'development',
       router,
       url: tag.content,
       version: tag.dataset['version'] || 'dev',

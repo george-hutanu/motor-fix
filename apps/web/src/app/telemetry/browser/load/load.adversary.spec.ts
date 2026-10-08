@@ -62,6 +62,7 @@ describe('loadTelemetry with hostile pages', () => {
     );
     expect(startFaro).toHaveBeenCalledTimes(1);
     expect(startFaro).toHaveBeenCalledWith({
+      environment: 'development',
       router,
       url: 'https://f.example/a',
       version: 'x',

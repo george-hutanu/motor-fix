@@ -16,10 +16,12 @@ import { routeTemplate } from '../route-template/route-template';
 // device; the trace header goes to this origin's API only. Telemetry never
 // breaks the page, so any failure is dropped.
 export function startFaro({
+  environment,
   router,
   url,
   version,
 }: {
+  environment: string;
   router: Router;
   url: string;
   version: string;
@@ -28,7 +30,7 @@ export function startFaro({
     // Ties the uploaded source maps to this release.
     (globalThis as Record<string, unknown>)['__faroBundleId_web'] = version;
     initializeFaro({
-      app: { name: 'web', version },
+      app: { environment, name: 'web', version },
       beforeSend: createBeforeSend(viewportClass(window.innerWidth)),
       instrumentations: [
         new ErrorsInstrumentation(),

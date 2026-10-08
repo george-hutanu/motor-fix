@@ -30,12 +30,16 @@
   justify-content: center;
   min-height: var(--mf-tap);
   font-family: var(--mf-font-label);
+  font-size: var(--mf-size-body);
   color: var(--mf-text);
-  text-decoration: none;
+  /* A control, not a figure: a boundary at 3:1 and an underlined label. */
+  border-color: var(--mf-line-strong);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
   overflow-wrap: anywhere;
 }
 .observability:hover {
-  border-color: var(--mf-line-strong);
+  border-color: var(--mf-text);
 }
 .observability:focus-visible {
   outline: var(--mf-focus-width) solid var(--mf-focus);
