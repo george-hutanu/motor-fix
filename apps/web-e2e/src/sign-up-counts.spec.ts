@@ -43,6 +43,7 @@ test.describe('the per-address counts a local run clears', () => {
     ]);
   });
 
+  // @traces 948-FR-001
   test('deletes every listing-draft create count and nothing else', async () => {
     const { redis, store } = keyStore([
       'listing-drafts:create:aaa',

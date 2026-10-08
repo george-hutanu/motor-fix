@@ -92,6 +92,7 @@ const confirmedCount = (page: Page, count: number) =>
     .toBe(count);
 
 test.describe('step 5 of list your garage, the photos @mailbox', () => {
+  // @traces 948-FR-001 948-FR-002 948-FR-003 948-FR-004
   for (const [size, width, height] of SIZES) {
     test(`on ${size}: three photos uploaded, the last moved first, kept after a reload and on the link, one removed`, async ({
       browser,
