@@ -1,7 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import { inMemory } from '@motor-fix/observability/testing';
 import { Logger } from '@nestjs/common';
+import { metrics } from '@opentelemetry/api';
+import { MeterProvider } from '@opentelemetry/sdk-metrics';
 import { Redis } from 'ioredis';
 
 import { type EventConsumer, OutboxRelay } from './outbox-relay';
@@ -19,13 +22,33 @@ const prisma = createPrisma(databaseUrl);
 const other = createPrisma(databaseUrl);
 serialDatabase(databaseUrl);
 
+const { metricReader } = inMemory();
+metrics.setGlobalMeterProvider(new MeterProvider({ readers: [metricReader] }));
+
 // A Redis that records what it was asked to publish, and can be "down".
 // Suites running beside this one record account events, which the relay here
 // may also pick up; only this file's quote events are kept.
 class FakeRedis {
   down = false;
+  dropDown = false;
   failAfter = Number.POSITIVE_INFINITY;
   readonly sent: { audience: string[]; event: Record<string, string> }[] = [];
+  readonly dropped: string[] = [];
+  async del(key: string) {
+    if (this.dropDown) throw new Error('Connection is closed.');
+    this.dropped.push(`DEL ${key}`);
+    return 1;
+  }
+  async expire(key: string, seconds: number) {
+    if (this.dropDown) throw new Error('Connection is closed.');
+    this.dropped.push(`EXPIRE ${key} ${seconds}`);
+    return 1;
+  }
+  async incr(key: string) {
+    if (this.dropDown) throw new Error('Connection is closed.');
+    this.dropped.push(`INCR ${key}`);
+    return 1;
+  }
   async publish(channel: string, message: string) {
     if (this.down || this.sent.length >= this.failAfter) {
       throw new Error('Connection is closed.');
@@ -393,5 +416,73 @@ describe('the relay loop', () => {
     } finally {
       await relay.stop();
     }
+  });
+});
+
+describe('dropping the cached public profile', () => {
+  async function drops() {
+    const { resourceMetrics } = await metricReader.collect();
+    const point = resourceMetrics.scopeMetrics
+      .flatMap((scope) => scope.metrics)
+      .find(
+        (metric) =>
+          metric.descriptor.name === 'motorfix_garage_profile_cache_total',
+      )
+      ?.dataPoints.find((p) => p.attributes['outcome'] === 'drop');
+    return (point?.value as number | undefined) ?? 0;
+  }
+
+  const garageEvent = (garageId: string, kind: string) =>
+    prisma.outboxEvent.create({
+      data: {
+        audience: [`garage:${garageId}`, `public:garage:${garageId}`],
+        kind,
+        subjectId: garageId,
+      },
+    });
+
+  // @traces 307-FR-006 307-FR-007
+  it('drops the profile of every garage an event reaches publicly, whatever its kind', async () => {
+    const [a, b] = [randomUUID(), randomUUID()];
+    await garageEvent(a, 'garage.suspended');
+    await garageEvent(b, 'live.test');
+    const redis = new FakeRedis();
+    const before = await drops();
+
+    await new OutboxRelay(prisma, redis).relay();
+
+    expect(redis.dropped).toEqual([
+      `INCR garage-profile-gen:v1:${a}`,
+      `EXPIRE garage-profile-gen:v1:${a} 600`,
+      `DEL garage-profile:v1:${a}`,
+      `INCR garage-profile-gen:v1:${b}`,
+      `EXPIRE garage-profile-gen:v1:${b} 600`,
+      `DEL garage-profile:v1:${b}`,
+    ]);
+    expect((await drops()) - before).toBe(2);
+  });
+
+  it('drops nothing for an event no public channel reads', async () => {
+    await recorded(1);
+    const redis = new FakeRedis();
+
+    await new OutboxRelay(prisma, redis).relay();
+
+    expect(redis.dropped).toEqual([]);
+  });
+
+  it('keeps the event waiting when the profile cannot be dropped', async () => {
+    const garageId = randomUUID();
+    await garageEvent(garageId, 'garage.suspended');
+    const redis = new FakeRedis();
+    redis.dropDown = true;
+
+    await expect(new OutboxRelay(prisma, redis).relay()).rejects.toThrow();
+
+    expect(
+      await prisma.outboxEvent.count({
+        where: { relayedAt: null, subjectId: garageId },
+      }),
+    ).toBe(1);
   });
 });

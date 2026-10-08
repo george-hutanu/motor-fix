@@ -2158,6 +2158,16 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "description": "A catalogue brand's slug; anything else reads as none",
+            "schema": {
+              "example": "dacia",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -4900,6 +4910,37 @@
           "sentAt"
         ]
       },
+      "PublicGarageBrandDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "BMW"
+          },
+          "slug": {
+            "type": "string",
+            "example": "bmw"
+          },
+          "stance": {
+            "type": "string",
+            "description": "does_not_take also when the garage never named the brand",
+            "enum": [
+              "works_on",
+              "does_not_take"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "stance"
+        ]
+      },
       "PublicGarageDto": {
         "type": "object",
         "properties": {
@@ -4953,6 +4994,44 @@
             "description": "A mobile mechanic only: how far from its base it travels.",
             "maximum": 100,
             "minimum": 1
+          },
+          "businessKind": {
+            "type": "string",
+            "enum": [
+              "company",
+              "pfa",
+              "ii",
+              "mobile"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "The line the garage wrote about itself, as written",
+            "maxLength": 160
+          },
+          "verifiedAt": {
+            "type": "string",
+            "description": "When MotorFix last verified the garage",
+            "format": "date-time",
+            "nullable": true
+          },
+          "rating": {
+            "type": "number",
+            "description": "Out of 5, one decimal; null until reviews exist",
+            "format": "double",
+            "nullable": true
+          },
+          "reviewCount": {
+            "type": "number",
+            "minimum": 0
+          },
+          "brand": {
+            "description": "Only when the read named a catalogue brand",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicGarageBrandDto"
+              }
+            ]
           }
         },
         "required": [
@@ -4962,7 +5041,10 @@
           "refusalPhrase",
           "id",
           "name",
-          "slug"
+          "slug",
+          "verifiedAt",
+          "rating",
+          "reviewCount"
         ]
       },
       "RecordVerificationCheckDto": {

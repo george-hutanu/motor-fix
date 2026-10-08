@@ -71,6 +71,7 @@ export type { PlaceSuggestionDto } from './models/place-suggestion-dto';
 export type { PlatformRuleDto } from './models/platform-rule-dto';
 export type { PlatformRulesDto } from './models/platform-rules-dto';
 export type { ProvidersDto } from './models/providers-dto';
+export type { PublicGarageBrandDto } from './models/public-garage-brand-dto';
 export type { PublicGarageDto } from './models/public-garage-dto';
 export type { PublicHolidayDto } from './models/public-holiday-dto';
 export type { PushKeyDto } from './models/push-key-dto';

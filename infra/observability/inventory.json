@@ -208,6 +208,15 @@
       "alerts": "none",
       "reason": "map tiles fetched by the browser, no key; a failed load shows the map-down message and is not counted server-side",
       "story": "ST-111"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_garage_profile_cache_total",
+      "source": "libs/domain/src/garages/public-garages/public-garages.metrics.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "counts the public profile cache by outcome (hit, miss, drop); ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-307"
     }
   ]
 }

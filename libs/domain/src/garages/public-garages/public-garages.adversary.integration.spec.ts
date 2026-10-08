@@ -2,10 +2,12 @@ import { randomUUID } from 'node:crypto';
 
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
+import { Redis } from 'ioredis';
 import request from 'supertest';
 
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { OutboxRelay } from '../../events/outbox-relay/outbox-relay';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
   databaseUrl,
@@ -72,7 +74,7 @@ describe('reading a garage by slug, hostilely', () => {
     },
   );
 
-  it('exposes only id, name, slug and the brand answer of an approved garage', async () => {
+  it('exposes only the public fields of an approved garage', async () => {
     const created = await prisma.garage.create({
       data: {
         name: 'Atelier Ștefan',
@@ -89,22 +91,42 @@ describe('reading a garage by slug, hostilely', () => {
       'doesNotTake',
       'id',
       'name',
+      'rating',
       'refusalPhrase',
+      'reviewCount',
       'slug',
+      'verifiedAt',
       'worksOn',
     ]);
   });
 
+  // A suspension commits with its event, and the relay drops the cached
+  // profile when it hands the event on.
   it('serves a garage suspended after approval as 410, not from a cache', async () => {
     const created = await prisma.garage.create({
       data: { name: 'A', slug: `s-${randomUUID()}`, status: 'approved' },
     });
     expect((await read(created.slug)).status).toBe(200);
 
-    await prisma.garage.update({
-      data: { status: 'suspended' },
-      where: { id: created.id },
-    });
+    await prisma.$transaction([
+      prisma.garage.update({
+        data: { status: 'suspended' },
+        where: { id: created.id },
+      }),
+      prisma.outboxEvent.create({
+        data: {
+          audience: [`public:garage:${created.id}`],
+          kind: 'garage.suspended',
+          subjectId: created.id,
+        },
+      }),
+    ]);
+    const redis = new Redis(redisUrl);
+    try {
+      await new OutboxRelay(prisma, redis).relay();
+    } finally {
+      redis.disconnect();
+    }
 
     const res = await read(created.slug);
     expect(res.status).toBe(410);

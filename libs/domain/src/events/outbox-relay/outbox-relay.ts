@@ -1,6 +1,10 @@
 import type { EventKind } from '@motor-fix/contracts';
 import { Logger } from '@nestjs/common';
 
+import {
+  dropProfiles,
+  type ProfileDropper,
+} from '../../garages/public-garages/public-garages.cache';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { type LivePublisher, publishLive } from '../live/live.hub';
 
@@ -50,7 +54,7 @@ export class OutboxRelay {
 
   constructor(
     private readonly prisma: PrismaClient,
-    private readonly redis: LivePublisher,
+    private readonly redis: LivePublisher & ProfileDropper,
     private readonly consumers: readonly EventConsumer[] = [],
   ) {}
 
@@ -156,6 +160,7 @@ export class OutboxRelay {
       },
       row.audience,
     );
+    await dropProfiles(this.redis, row.audience);
     for (const consumer of this.consumers) {
       if (!consumer.kinds.includes(row.kind)) continue;
       await consumer.queue.add(
