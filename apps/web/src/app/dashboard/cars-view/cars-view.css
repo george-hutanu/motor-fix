@@ -33,9 +33,6 @@ p {
 .name {
   font-weight: 700;
 }
-.muted {
-  color: var(--mf-ink-muted);
-}
 button[hlmBtn] {
   width: 100%;
   white-space: normal;

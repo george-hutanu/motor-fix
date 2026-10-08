@@ -37,8 +37,18 @@
       "year": "Year",
       "yearRange": "The year must be between 1950 and {max}."
     },
-    "itpMissing": "ITP: add the date from the registration",
-    "itpUntil": "ITP valid until {day}",
+    "findGarage": "Find a garage",
+    "findGarageFor": "Find a garage for {car}",
+    "itp": {
+      "days": {
+        "one": "ITP expires tomorrow",
+        "other": "ITP expires in {count} days"
+      },
+      "expired": "ITP expired on {day}",
+      "missing": "ITP: add the date from the registration",
+      "today": "ITP expires today",
+      "valid": "ITP valid until {month}"
+    },
     "retry": "Try again"
   },
   "notifications": {
