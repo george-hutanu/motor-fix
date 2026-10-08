@@ -62,6 +62,7 @@ model Account {
   cars                    Car[]
   consents                AccountConsent[]
 
+  @@index([createdAt(sort: Desc), id(sort: Desc)])
   @@map("account")
 }
 
