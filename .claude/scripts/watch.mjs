@@ -302,18 +302,36 @@ function fetchPrs(gh) {
   }
 }
 
-// 1000 covers this repository many times over; past it the oldest merged PRs
-// drop out, and their worktrees read as having no PR (the removal asks gh for
-// the branch itself, so it never sweeps one whose PR is open).
-const defaultGh = () =>
+// One list of every PR asking for checks and mergeability took about 27 s, so
+// it timed out and every PR read unknown. The checks come from the open PRs
+// only; every PR, merged and closed too, gives just the cheap fields. 1000
+// covers this repository many times over; past it the oldest merged PRs drop
+// out, and their worktrees read as having no PR (the removal asks gh for the
+// branch itself, so it never sweeps one whose PR is open).
+const CHEAP = "number,headRefName,state,isDraft,headRefOid";
+
+/** Every PR, the open ones with statusCheckRollup and mergeable; `exec(args)` runs `gh <args>` and returns its parsed JSON. */
+export function listPrs(exec) {
+  const open = exec(["pr", "list", "--state", "open", "--limit", "1000", "--json", `${CHEAP},statusCheckRollup,mergeable`]);
+  const all = exec(["pr", "list", "--state", "all", "--limit", "1000", "--json", CHEAP]);
+  const byNumber = new Map();
+  for (const p of [...(Array.isArray(all) ? all : []), ...(Array.isArray(open) ? open : [])]) {
+    if (p && typeof p === "object") byNumber.set(p.number, { ...byNumber.get(p.number), ...p });
+  }
+  return [...byNumber.values()];
+}
+
+const ghJson = (args) =>
   JSON.parse(
-    execFileSync("gh", ["pr", "list", "--state", "all", "--limit", "1000", "--json", "number,headRefName,state,isDraft,headRefOid,statusCheckRollup,mergeable"], {
+    execFileSync("gh", args, {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
       // A gh that hangs reads as unknown PR state, which dispatches nothing.
       timeout: 30_000,
     }),
   );
+
+const defaultGh = () => listPrs(ghJson);
 
 function prFor(prs, branch) {
   const mine = prs.filter((p) => p.headRefName === branch);

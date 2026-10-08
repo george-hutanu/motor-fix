@@ -15,6 +15,7 @@ import {
   fixOf,
   holderOf,
   isClaudeCommand,
+  listPrs,
   lockPid,
   main,
   parseStale,
@@ -1666,5 +1667,41 @@ describe('the test stack sweep', () => {
     } finally {
       rmSync(f.root, { recursive: true, force: true });
     }
+  });
+});
+
+describe('listPrs', () => {
+  it('asks open PRs for their checks and every PR for the cheap fields only, then merges them by number', () => {
+    const calls = [];
+    const exec = (args) => {
+      calls.push(args);
+      if (args.includes('open'))
+        return [{ number: 7, headRefName: 'a', state: 'OPEN', isDraft: false, headRefOid: 'x', statusCheckRollup: [{ name: 'CI OK', conclusion: 'SUCCESS' }], mergeable: 'MERGEABLE' }];
+      return [
+        { number: 7, headRefName: 'a', state: 'OPEN', isDraft: false, headRefOid: 'x' },
+        { number: 3, headRefName: 'b', state: 'MERGED', isDraft: false, headRefOid: 'y' },
+      ];
+    };
+    const prs = listPrs(exec);
+    assert.equal(calls.length, 2);
+    const open = calls.find((a) => a.includes('open'));
+    const all = calls.find((a) => a.includes('all'));
+    assert.match(open.join(' '), /statusCheckRollup/);
+    assert.match(open.join(' '), /mergeable/);
+    assert.doesNotMatch(all.join(' '), /statusCheckRollup|mergeable/);
+    assert.deepEqual(
+      prs.sort((p, q) => p.number - q.number),
+      [
+        { number: 3, headRefName: 'b', state: 'MERGED', isDraft: false, headRefOid: 'y' },
+        { number: 7, headRefName: 'a', state: 'OPEN', isDraft: false, headRefOid: 'x', statusCheckRollup: [{ name: 'CI OK', conclusion: 'SUCCESS' }], mergeable: 'MERGEABLE' },
+      ],
+    );
+  });
+
+  it('keeps an open PR the all-state list missed, and gives a closed PR no rollup', () => {
+    const exec = (args) => (args.includes('open') ? [{ number: 9, headRefName: 'n', state: 'OPEN', statusCheckRollup: [] }] : [{ number: 2, headRefName: 'c', state: 'CLOSED' }]);
+    const prs = listPrs(exec);
+    assert.deepEqual(prs.find((p) => p.number === 9).statusCheckRollup, []);
+    assert.equal(prs.find((p) => p.number === 2).statusCheckRollup, undefined);
   });
 });
