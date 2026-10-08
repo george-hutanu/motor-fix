@@ -159,6 +159,7 @@ describe('the place map, how it frames the pin and the circle', () => {
     map = await open(document.createElement('div'), {
       dragged: () => {},
       failed: () => {},
+      recovered: () => {},
       tapped: () => {},
     });
   });
@@ -283,6 +284,7 @@ describe('the place map, how it frames the pin and the circle', () => {
     await TestBed.inject(PLACE_MAP)(document.createElement('div'), {
       dragged: () => {},
       failed: () => {},
+      recovered: () => {},
       tapped: () => {},
     });
 
@@ -295,6 +297,7 @@ describe('the place map, how it frames the pin and the circle', () => {
     const map = await TestBed.inject(PLACE_MAP)(document.createElement('div'), {
       dragged: () => {},
       failed: () => {},
+      recovered: () => {},
       tapped: () => {},
     });
 
@@ -307,10 +310,12 @@ describe('the place map, how it frames the pin and the circle', () => {
 
 describe('the place map when MapLibre raises an error', () => {
   const failed = jest.fn();
+  const recovered = jest.fn();
   const open = () =>
     TestBed.inject(PLACE_MAP)(document.createElement('div'), {
       dragged: () => {},
       failed,
+      recovered,
       tapped: () => {},
     });
   // The opener awaits MapLibre's import before it builds the map.
@@ -320,6 +325,7 @@ describe('the place map when MapLibre raises an error', () => {
     fake.inView = true;
     fake.manualLoad = true;
     failed.mockClear();
+    recovered.mockClear();
   });
 
   afterEach(() => {
@@ -384,5 +390,32 @@ describe('the place map when MapLibre raises an error', () => {
     await expect(opening).rejects.toBe(error);
     expect(fake.map.remove).toHaveBeenCalledTimes(1);
     expect(failed).not.toHaveBeenCalled();
+  });
+
+  // @traces 945-FR-004
+  it('reports a recovery at the first render after a failed one that ends with no error', async () => {
+    const opening = open();
+    await built();
+    fake.map.fire('load');
+    await opening;
+    fake.map.fire('error', { error: new Error('tile 404') });
+    fake.map.fire('idle');
+
+    expect(recovered).not.toHaveBeenCalled();
+
+    fake.map.fire('idle');
+
+    expect(recovered).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 945-FR-004
+  it('reports no recovery while the map has not failed', async () => {
+    const opening = open();
+    await built();
+    fake.map.fire('load');
+    await opening;
+    fake.map.fire('idle');
+
+    expect(recovered).not.toHaveBeenCalled();
   });
 });

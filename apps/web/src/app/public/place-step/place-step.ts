@@ -105,6 +105,7 @@ export class PlaceStep {
       this.openMap(this.host().nativeElement, {
         dragged: (at) => this.place(at),
         failed: () => this.mapDown.set(true),
+        recovered: () => this.mapDown.set(false),
         tapped: (at) => {
           if (!this.armed()) return;
           this.armed.set(false);

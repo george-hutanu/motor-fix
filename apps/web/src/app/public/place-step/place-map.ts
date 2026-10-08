@@ -16,6 +16,7 @@ export interface LatLng {
 export interface PlaceMapEvents {
   dragged(at: LatLng): void;
   failed(): void;
+  recovered(): void;
   tapped(at: LatLng): void;
 }
 
@@ -136,11 +137,24 @@ async function openMapLibre(
     'top-right',
   );
   // A failure before the map loads tears it down; once it has loaded, an
-  // error (one failed tile is enough) is only reported.
+  // error (one failed tile is enough) is only reported, and the first render
+  // after it that settles with no error of its own reports the recovery.
   await new Promise<void>((resolve, reject) => {
     const loaded = () => {
       map.off('error', broken);
-      map.on('error', () => events.failed());
+      let down = false;
+      let erred = false;
+      map.on('error', () => {
+        down = erred = true;
+        events.failed();
+      });
+      map.on('idle', () => {
+        if (down && !erred) {
+          down = false;
+          events.recovered();
+        }
+        erred = false;
+      });
       resolve();
     };
     const broken = ({ error }: MapEventType['error']) => {

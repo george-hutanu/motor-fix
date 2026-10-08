@@ -672,6 +672,10 @@ _From 945-map-error-listener._
 
 _From 945-map-error-listener._
 
+### 945-FR-004 — Once the map has loaded and a later error has shown the step's "the map could not be loaded" notice (111-FR-004), the first render after it that settles (MapLibre `idle`) with no error of its own MUST report a recovery, and the step MUST then hide the notice; while no error has been reported, no recovery is reported. (Folds in ST-942, map-down.)
+
+_From 945-map-error-listener._
+
 ## Retired
 
 - `108-FR-012` — superseded by `114-FR-018` (2026-10-07)
