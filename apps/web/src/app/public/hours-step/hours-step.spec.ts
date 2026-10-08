@@ -742,6 +742,42 @@ describe('step 5, the courtesy car', () => {
     expect(describedBy(step, price(step))).toBeNull();
   });
 
+  it.each([
+    ['0', '0'],
+    ['2001', '2001'],
+  ])(
+    'keeps a %s lei price out of the value, still shown with its error, so paid stays chosen',
+    async (typed, shown) => {
+      const { fixture, step } = await open();
+      await choosePaid(fixture, step);
+
+      await type(fixture, price(step), typed);
+
+      expect(fixture.componentInstance.value().courtesyCar).toEqual({
+        paid: true,
+      });
+      expect(price(step)?.value).toBe(shown);
+      expect(radio(step, 'Contra cost')?.checked).toBe(true);
+      expect(describedBy(step, price(step))?.getAttribute('role')).toBe(
+        'status',
+      );
+
+      // The parent hands the value back, as the draft does: the typed price stays.
+      fixture.componentInstance.value.set({
+        ...fixture.componentInstance.value(),
+      });
+      await settle(fixture);
+      expect(price(step)?.value).toBe(shown);
+
+      await type(fixture, price(step), '120');
+      expect(fixture.componentInstance.value().courtesyCar).toEqual({
+        paid: true,
+        pricePerDayBani: 12_000,
+      });
+      expect(describedBy(step, price(step))).toBeNull();
+    },
+  );
+
   it('keeps the choice and the typed price when the language changes', async () => {
     const { fixture, i18n, step } = await open();
     await choosePaid(fixture, step);

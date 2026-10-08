@@ -151,7 +151,7 @@
                   hlmInput
                   name="courtesyPrice"
                   autocomplete="off"
-                  [mfLei]="value().courtesyCar?.pricePerDayBani"
+                  [mfLei]="shownPrice()"
                   (mfLeiChange)="price($event)"
                   [aria-describedby]="priceError() ? 'courtesy-price-error' : null"
                 />

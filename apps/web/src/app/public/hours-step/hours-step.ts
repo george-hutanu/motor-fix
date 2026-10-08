@@ -114,10 +114,17 @@ export class HoursStep {
     () => this.value().courtesyCar?.paid === true,
   );
   protected readonly taken = computed(() => this.value().payments ?? []);
+  // A typed price outside 1-2,000 lei stays here, shown with its error: the
+  // draft refuses it, and reading the draft back would drop the paid choice.
+  private readonly outOfRange = signal<number | undefined>(undefined);
+  protected readonly shownPrice = computed(
+    () => this.outOfRange() ?? this.value().courtesyCar?.pricePerDayBani,
+  );
   // Why the paid car's price cannot stand, or null.
   protected readonly priceError = computed((): PriceError | null => {
     const car = this.value().courtesyCar;
     if (!car?.paid) return null;
+    if (this.outOfRange() !== undefined) return 'priceRange';
     if (car.pricePerDayBani === undefined) return 'priceMissing';
     return isCourtesyPrice(car.pricePerDayBani) ? null : 'priceRange';
   });
@@ -269,6 +276,7 @@ export class HoursStep {
   // The courtesy car starts free when ticked; its terms go when unticked.
   protected tick(facility: Facility) {
     const list = toggleFacility(this.ticks(), facility);
+    if (facility === 'courtesy_car') this.outOfRange.set(undefined);
     const car = list.includes('courtesy_car')
       ? (this.value().courtesyCar ?? { paid: false })
       : undefined;
@@ -287,15 +295,14 @@ export class HoursStep {
   }
 
   protected choosePaid(paid: boolean) {
+    this.outOfRange.set(undefined);
     this.setCar(setCourtesy(this.value().courtesyCar, paid));
   }
 
   protected price(bani: number | undefined) {
-    this.setCar(
-      bani === undefined
-        ? { paid: true }
-        : { paid: true, pricePerDayBani: bani },
-    );
+    const valid = isCourtesyPrice(bani);
+    this.outOfRange.set(bani === undefined || valid ? undefined : bani);
+    this.setCar(valid ? { paid: true, pricePerDayBani: bani } : { paid: true });
   }
 
   private setCar(courtesyCar: CourtesyCar) {
