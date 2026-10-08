@@ -8,6 +8,7 @@ features:
   - 915-telemetry-flush-on-stop
   - 924-inventory-real-calls
   - 878-data-store-metrics
+  - 916-otlp-log-masking-coverage
 ---
 
 # Capability: Observability
@@ -243,6 +244,26 @@ _From 878-data-store-metrics._
 ### 878-FR-014 — The PR body's Observability section MUST list every new metric, the slow-statement log record and the storage spans, and the inventory MUST stay passing.
 
 _From 878-data-store-metrics._
+
+### 916-FR-001 — A colocated unit spec in `libs/domain` MUST write a log line through `JsonLogger` while telemetry is started by `startTelemetry` with the in-memory exporters from `@motor-fix/observability`'s testing helpers (the whole `inMemory()` set) in place of the OTLP ones, flush the telemetry, and read the record from that exporter: the same pipeline (logger provider, batching processor) the services use, with only the exporter swapped.
+
+_From 916-otlp-log-masking-coverage._
+
+### 916-FR-002 — The exported record's body MUST read the message with the e-mail address, the Romanian phone number and the number plate each replaced by `***`, and no raw value MUST appear anywhere in the exported record, body or attributes (checked on the serialised record).
+
+_From 916-otlp-log-masking-coverage._
+
+### 916-FR-003 — For a structured entry whose fields hold an e-mail, a phone and a plate, the exported record's body MUST be that object's JSON with each value replaced by `***`; for an `Error` carrying the same values, the record's `error` and `stack` attributes MUST carry them masked; in both, no raw value MUST appear anywhere in the record.
+
+_From 916-otlp-log-masking-coverage._
+
+### 916-FR-004 — The exported record MUST carry the request id, the job id (one that looks like a plate included) and the active span's trace id and span id unchanged, both as the `trace_id`/`span_id` attributes and as the record's span context.
+
+_From 916-otlp-log-masking-coverage._
+
+### 916-FR-005 — The change MUST be test-only and small (Constitution I): no product source file under `apps/` or `libs/*/src` other than `*.spec.ts` changes, no new dependency, the existing cases of `libs/domain/src/logging.spec.ts` stay as they are, and the new spec runs in `npm run test:unit` (it needs no PostgreSQL, Redis or network).
+
+_From 916-otlp-log-masking-coverage._
 
 ## Retired
 
