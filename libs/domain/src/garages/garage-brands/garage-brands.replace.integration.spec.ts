@@ -121,6 +121,19 @@ const set = (
     ...texts,
   });
 
+type Fuel = 'petrol' | 'diesel' | 'hybrid' | 'electric';
+
+const setFuels = (
+  w: World,
+  marks: { brandId: string; stance: Stance; fuels?: Fuel[] }[],
+) => brands.replace(w.owner, w.garage, { brands: marks });
+
+const fuelsOf = (w: World, brandId: string) =>
+  prisma.garageBrand.findUniqueOrThrow({
+    select: { diesel: true, electric: true, hybrid: true, petrol: true },
+    where: { garageId_brandId: { brandId, garageId: w.garage } },
+  });
+
 const rows = async (w: World) =>
   Object.fromEntries(
     (
@@ -160,6 +173,8 @@ async function status(run: Promise<unknown>) {
   expect(error).toBeInstanceOf(HttpException);
   return (error as HttpException).getStatus();
 }
+
+const every = { diesel: true, electric: true, hybrid: true, petrol: true };
 
 describe("replacing a garage's brand answer", () => {
   it('stores exactly the marked brands with their stance and the two texts', async () => {
@@ -455,5 +470,165 @@ describe("replacing a garage's brand answer", () => {
       { [w.mini]: 'works_on', [w.tesla]: 'works_on' },
     ]).toContainEqual(await rows(w));
     expect(await events()).toHaveLength(2);
+  });
+});
+
+describe("a taken brand's fuels in the brand answer", () => {
+  it('sets the four fuel columns of a newly taken brand from its fuels', async () => {
+    const w = await world();
+
+    await setFuels(w, [
+      { brandId: w.bmw, fuels: ['petrol', 'diesel'], stance: 'works_on' },
+    ]);
+
+    expect(await fuelsOf(w, w.bmw)).toEqual({
+      diesel: true,
+      electric: false,
+      hybrid: false,
+      petrol: true,
+    });
+  });
+
+  it('keeps the fuels of a brand already taken when its fuels are left out', async () => {
+    const w = await world();
+    await setFuels(w, [
+      { brandId: w.bmw, fuels: ['petrol'], stance: 'works_on' },
+    ]);
+    await checkpoint();
+
+    await setFuels(w, [{ brandId: w.bmw, stance: 'works_on' }]);
+
+    expect(await fuelsOf(w, w.bmw)).toEqual({
+      diesel: false,
+      electric: false,
+      hybrid: false,
+      petrol: true,
+    });
+    expect(await history(w)).toEqual([]);
+    expect(await events()).toEqual([]);
+  });
+
+  it('unticks all four fuels with an empty list', async () => {
+    const w = await world();
+    await set(w, [[w.bmw, 'works_on']]);
+
+    await setFuels(w, [{ brandId: w.bmw, fuels: [], stance: 'works_on' }]);
+
+    expect(await fuelsOf(w, w.bmw)).toEqual({
+      diesel: false,
+      electric: false,
+      hybrid: false,
+      petrol: false,
+    });
+  });
+
+  it('refuses fuels on a refused brand with 400 validation_failed, changing nothing', async () => {
+    const w = await world();
+    await set(w, [[w.bmw, 'works_on']]);
+    await checkpoint();
+
+    const error = await setFuels(w, [
+      { brandId: w.bmw, stance: 'works_on' },
+      { brandId: w.tesla, fuels: ['electric'], stance: 'does_not_take' },
+    ]).then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+
+    expect(error).toBeInstanceOf(HttpException);
+    expect((error as HttpException).getStatus()).toBe(400);
+    expect((error as HttpException).getResponse()).toMatchObject({
+      code: 'validation_failed',
+    });
+    expect(await rows(w)).toEqual({ [w.bmw]: 'works_on' });
+    expect(await history(w)).toEqual([]);
+    expect(await events()).toEqual([]);
+  });
+
+  it('records a newly taken brand as one create entry carrying its fuels', async () => {
+    const w = await world();
+
+    await setFuels(w, [
+      { brandId: w.bmw, fuels: ['electric'], stance: 'works_on' },
+    ]);
+
+    const entries = (await history(w)).filter(
+      (e) => e.subjectType === 'garage_brand' && e.subjectId === w.bmw,
+    );
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      action: 'create',
+      actorId: w.owner.accountId,
+      newValue: {
+        diesel: false,
+        electric: true,
+        hybrid: false,
+        petrol: false,
+        stance: 'works_on',
+      },
+    });
+  });
+
+  it('records one entry per changed fuel of a brand already taken', async () => {
+    const w = await world();
+    await set(w, [[w.bmw, 'works_on']]);
+    expect(await fuelsOf(w, w.bmw)).toEqual(every);
+    await checkpoint();
+
+    await setFuels(w, [
+      { brandId: w.bmw, fuels: ['petrol', 'diesel'], stance: 'works_on' },
+    ]);
+
+    const entries = await history(w);
+    expect(
+      entries
+        .map((e) => [e.subjectType, e.field, e.oldValue, e.newValue])
+        .sort(),
+    ).toEqual([
+      ['garage_brand', 'electric', true, false],
+      ['garage_brand', 'hybrid', true, false],
+    ]);
+    for (const entry of entries) {
+      expect(entry).toMatchObject({
+        actorId: w.owner.accountId,
+        actorRole: 'owner',
+        garageId: w.garage,
+        subjectId: w.bmw,
+      });
+    }
+  });
+
+  it('names brand_fuels in the one event when only a fuel changed', async () => {
+    const w = await world();
+    await set(w, [[w.bmw, 'works_on']]);
+    await checkpoint();
+
+    await setFuels(w, [
+      { brandId: w.bmw, fuels: ['petrol'], stance: 'works_on' },
+    ]);
+
+    const saved = await events();
+    expect(saved).toHaveLength(1);
+    expect(saved[0].payload).toMatchObject({
+      fields: ['brand_fuels'],
+      garageId: w.garage,
+    });
+  });
+
+  it('names brands and brand_fuels in the one event when a stance and a fuel changed', async () => {
+    const w = await world();
+    await set(w, [[w.bmw, 'works_on']]);
+    await checkpoint();
+
+    await setFuels(w, [
+      { brandId: w.bmw, fuels: ['petrol'], stance: 'works_on' },
+      { brandId: w.mini, stance: 'works_on' },
+    ]);
+
+    const saved = await events();
+    expect(saved).toHaveLength(1);
+    expect(
+      [...(saved[0].payload as { fields: string[] }).fields].sort(),
+    ).toEqual(['brand_fuels', 'brands']);
   });
 });

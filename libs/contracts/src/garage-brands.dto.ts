@@ -11,6 +11,8 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+import { FUELS, type Fuel } from './marked-brands';
+
 const STANCES = ['works_on', 'does_not_take'] as const;
 type GarageBrandStance = (typeof STANCES)[number];
 
@@ -26,6 +28,18 @@ export class GarageBrandStanceDto {
   @ApiProperty({ enum: STANCES })
   @IsIn(STANCES)
   stance!: GarageBrandStance;
+
+  @ApiPropertyOptional({
+    description:
+      'A taken brand only. Left out: unchanged, or all four for a brand taken now; empty: none',
+    enum: FUELS,
+    isArray: true,
+  })
+  @IsOptional()
+  @IsArray()
+  @IsIn(FUELS, { each: true })
+  @ArrayUnique()
+  fuels?: Fuel[];
 }
 
 // A garage's whole brand answer: a brand left out is not stated.
@@ -73,6 +87,12 @@ export class BrandRefDto {
 
   @ApiProperty({ example: 'bmw' })
   slug!: string;
+}
+
+// A taken brand on the garage's public page, with the fuels it works on.
+export class PublicBrandDto extends BrandRefDto {
+  @ApiProperty({ enum: FUELS, isArray: true })
+  fuels!: Fuel[];
 }
 
 // The stored answer, in catalogue order: most popular first, unranked last,
