@@ -89,7 +89,8 @@ function files(root: string, dir: string): string[] {
 }
 
 // A ' or " string ends at its quote or at the end of the line, so a quote in a
-// regular expression hides nothing past its own line.
+// regular expression hides nothing past its own line. Regular expressions are
+// not read as such: one holding /* would hide code up to the next */.
 function stringEnd(text: string, start: number): number {
   const quote = text[start];
   for (let i = start + 1; i < text.length; i++) {
@@ -101,20 +102,25 @@ function stringEnd(text: string, start: number): number {
 }
 
 function tokenEnd(text: string, i: number): number {
-  const pair = text.slice(i, i + 2);
-  if (pair === '//') return text.indexOf('\n', i);
-  if (pair === '/*') return text.indexOf('*/', i + 2) + 2 || -1;
+  const end = (at: number, length: number) =>
+    at < 0 ? text.length : at + length;
+  if (text.startsWith('//', i)) return end(text.indexOf('\n', i), 0);
+  if (text.startsWith('/*', i)) return end(text.indexOf('*/', i + 2), 2);
   if (`'"\``.includes(text[i])) return stringEnd(text, i);
   return text[i] === '\\' ? i + 2 : i + 1;
 }
 
-export function withoutComments(text: string): string {
+// Comments become spaces, keeping the line breaks. A template is one literal,
+// so a quote inside it, ${…} included, begins no string of its own.
+function withoutComments(text: string): string {
   let out = '';
   for (let i = 0; i < text.length; ) {
-    const end = tokenEnd(text, i);
-    const stop = end < 0 ? text.length : end;
+    const stop = Math.min(tokenEnd(text, i), text.length);
     const part = text.slice(i, stop);
-    out += /^\/[/*]/.test(part) ? part.replace(/[^\n]/g, ' ') : part;
+    if (text.startsWith('//', i) || text.startsWith('/*', i))
+      out += part.replace(/[^\n]/g, ' ');
+    else if (text[i] === '`') out += part.replace(/['"]/g, ' ');
+    else out += part;
     i = stop;
   }
   return out;
