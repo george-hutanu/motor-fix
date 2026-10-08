@@ -194,6 +194,12 @@ describe("writing a garage's brands from step 2", () => {
       }),
     ],
     [
+      'a brand that is not in the catalogue',
+      (): Record<string, unknown> => ({
+        brands: [{ brandId: randomUUID(), name: 'Nimeni', stance: 'works_on' }],
+      }),
+    ],
+    [
       'a note of 141 characters',
       (): Record<string, unknown> => ({
         brandNote: 'a'.repeat(141),

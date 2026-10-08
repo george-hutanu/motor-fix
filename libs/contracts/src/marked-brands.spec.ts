@@ -80,6 +80,15 @@ describe('the step 2 section', () => {
       'a brand marked twice',
       { brands: [taken(), taken({ stance: 'does_not_take' })] },
     ],
+    [
+      'a brand marked twice, once in capitals',
+      {
+        brands: [
+          taken(),
+          taken({ brandId: DACIA.toUpperCase(), stance: 'does_not_take' }),
+        ],
+      },
+    ],
     ['a brand with another key', { brands: [taken({ logo: 'x.png' })] }],
     ['an unknown fuel', { brands: [taken({ fuels: ['lpg'] })] }],
     ['a repeated fuel', { brands: [taken({ fuels: ['diesel', 'diesel'] })] }],

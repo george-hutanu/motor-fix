@@ -12,6 +12,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 
+import { assertCatalogued } from './write-garage-brands';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { type Actor, assertGarage } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
@@ -24,12 +25,12 @@ import type {
 } from '../../generated/prisma/client';
 import { brandAnswer } from '../brand-answer';
 
-const notFound = () =>
+export const notFound = () =>
   refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such garage');
 
 // Only the owner answers; the garage's staff are told no, anyone else that
 // there is no such garage.
-export function assertOwner(actor: Actor, garageId: string) {
+export function assertGarageOwner(actor: Actor, garageId: string) {
   if (actor.garageId !== garageId) throw notFound();
   if (actor.role !== 'garage') {
     throw refusal(
@@ -67,18 +68,6 @@ function assertFuelsTaken(dto: ReplaceGarageBrandsDto) {
 
 type Wanted = { stance: GarageBrandStance; fuels?: Fuel[] };
 
-// A retired brand still passes; only one missing from the catalogue is refused.
-async function assertCatalogued(tx: Prisma.TransactionClient, ids: string[]) {
-  const known = await tx.brand.count({ where: { id: { in: ids } } });
-  if (known === ids.length) return;
-  throw refusal(
-    HttpStatus.BAD_REQUEST,
-    'validation_failed',
-    'A brand is not in the catalogue',
-    [{ code: 'unknown_brand', field: 'brands' }],
-  );
-}
-
 // The rules that span a garage's brand row and its jobs; the one-row rules
 // (no fuel on a refused brand, the text limits) are CHECKs in the database.
 @Injectable()
@@ -96,7 +85,7 @@ export class GarageBrandsService {
     garageId: string,
     dto: ReplaceGarageBrandsDto,
   ): Promise<GarageBrandAnswerDto> {
-    assertOwner(actor, garageId);
+    assertGarageOwner(actor, garageId);
     assertFuelsTaken(dto);
     return this.prisma.$transaction(async (tx) => {
       const garage = await lockGarage(tx, garageId);

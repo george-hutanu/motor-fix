@@ -71,7 +71,8 @@ export function isBrandsSection(value: unknown): value is BrandsSection {
   return (
     Array.isArray(brands) &&
     brands.every(isMarkedBrand) &&
-    new Set(brands.map((brand) => brand.brandId)).size === brands.length
+    new Set(brands.map((brand) => brand.brandId.toLowerCase())).size ===
+      brands.length
   );
 }
 

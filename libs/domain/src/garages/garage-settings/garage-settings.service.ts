@@ -7,7 +7,10 @@ import { PRISMA } from '../../auth/prisma';
 import { refusal } from '../../auth/sign-up.service';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
-import { assertOwner } from '../garage-brands/garage-brands.service';
+import {
+  assertGarageOwner,
+  notFound,
+} from '../garage-brands/garage-brands.service';
 
 // The columns as the history names them.
 type Stored = {
@@ -27,9 +30,6 @@ const COURTESY_FIELDS = [
   'courtesy_car_paid',
   'courtesy_car_price_per_day_bani',
 ] as const;
-
-const notFound = () =>
-  refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such garage');
 
 // The row locked, so two changes to one garage run one after the other.
 async function lockGarage(tx: Prisma.TransactionClient, garageId: string) {
@@ -90,7 +90,7 @@ export class GarageSettingsService {
     garageId: string,
     dto: UpdateGarageDto,
   ): Promise<GarageSettingsDto> {
-    assertOwner(actor, garageId);
+    assertGarageOwner(actor, garageId);
     return this.prisma.$transaction(async (tx) => {
       const { listed, ...before } = await lockGarage(tx, garageId);
       if (dto.courtesyCar && !listed) {

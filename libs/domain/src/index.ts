@@ -22,7 +22,7 @@ export { OutboxRelayModule } from './events/outbox-relay/outbox-relay.module';
 export { GarageDetailsService } from './garages/details/garage-details.service';
 export { writeGarageBrands } from './garages/garage-brands/write-garage-brands';
 export { writeGarageHours } from './garages/garage-hours';
-export { writeGaragePayments } from './garages/garage-settings/garage-settings';
+export { writeGaragePayments } from './garages/garage-settings/write-garage-payments';
 export { GaragesModule } from './garages/garages.module';
 export { listingDraftDaily } from './garages/listing-draft-sweep';
 export { GarageMechanicsService } from './garages/mechanics/garage-mechanics.service';

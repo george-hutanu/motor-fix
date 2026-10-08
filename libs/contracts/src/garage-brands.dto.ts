@@ -8,10 +8,11 @@ import {
   IsString,
   IsUUID,
   MaxLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 
-import { FUELS, type Fuel } from './marked-brands';
+import { FUELS, type Fuel, NOTE_MAX, PHRASE_MAX } from './marked-brands';
 
 const STANCES = ['works_on', 'does_not_take'] as const;
 type GarageBrandStance = (typeof STANCES)[number];
@@ -35,7 +36,8 @@ export class GarageBrandStanceDto {
     enum: FUELS,
     isArray: true,
   })
-  @IsOptional()
+  // Left out is unchanged; null is not a list and is refused.
+  @ValidateIf((_, value) => value !== undefined)
   @IsArray()
   @IsIn(FUELS, { each: true })
   @ArrayUnique()
@@ -59,22 +61,22 @@ export class ReplaceGarageBrandsDto {
 
   @ApiPropertyOptional({
     description: 'Trimmed; blank or left out is no note',
-    maxLength: 140,
+    maxLength: NOTE_MAX,
   })
   @Transform(text)
   @IsOptional()
   @IsString()
-  @MaxLength(140)
+  @MaxLength(NOTE_MAX)
   brandNote?: string;
 
   @ApiPropertyOptional({
     description: 'Trimmed; blank or left out is no phrase',
-    maxLength: 60,
+    maxLength: PHRASE_MAX,
   })
   @Transform(text)
   @IsOptional()
   @IsString()
-  @MaxLength(60)
+  @MaxLength(PHRASE_MAX)
   refusalPhrase?: string;
 }
 
