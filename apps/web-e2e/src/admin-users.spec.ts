@@ -86,6 +86,52 @@ test.describe('the accounts view @seeded', () => {
     });
   }
 
+  for (const [device, width, height] of [
+    ['a 390 px phone', 390, 844],
+    ['a desktop', 1280, 800],
+  ] as const) {
+    test(`reads the seeded accounts and the growth in English on ${device}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ height, width });
+      await signInAsAdmin(page);
+      // The seeded admin reads Romanian; only the language is changed, the
+      // accounts still come from the seeded API.
+      await page.route('**/api/v1/me', async (route) => {
+        const response = await route.fetch();
+        await route.fulfill({
+          json: { ...(await response.json()), language: 'en' },
+          response,
+        });
+      });
+      await page.goto('/app/admin/users');
+
+      await expect(page.locator('.totals')).toHaveText(
+        /^[\d,]+ active drivers? · [\d,]+ garages? · [\d,]+ mechanics?$/,
+      );
+      await expect(
+        page.getByRole('heading', { name: 'Recent accounts' }),
+      ).toBeVisible();
+      const suspended = await findRow(page, 'Radu Suspendat');
+      await expect(suspended.locator('mf-lamp')).toHaveText(
+        'suspended · since 2 Oct 2026',
+      );
+      await expect(
+        (await findRow(page, 'Elena Dobre')).locator('.detail'),
+      ).toHaveText('driver + garage · Service Dobre');
+      await expect(
+        (await findRow(page, 'Vlad Stan')).locator('.detail'),
+      ).toHaveText('mechanic · Atelier Test');
+      await expect(
+        page.getByRole('heading', { name: 'Growth, last 12 months' }),
+      ).toBeVisible();
+      await expect(page.locator('mf-admin-growth mf-line-chart')).toHaveCount(
+        2,
+      );
+      expect(await sideways(page)).toBeLessThanOrEqual(0);
+    });
+  }
+
   test('sends a driver who types the address to their own dashboard', async ({
     page,
   }) => {

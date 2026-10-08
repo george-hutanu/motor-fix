@@ -5,6 +5,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import {
@@ -34,6 +35,7 @@ export class AdminUsers {
   private readonly api = inject(AdminService);
   private readonly i18n = inject(I18n);
   private readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
+  private observer: IntersectionObserver | undefined;
 
   protected readonly skeletonRows = SKELETON_ROWS;
   protected readonly tip = signal(false);
@@ -89,10 +91,15 @@ export class AdminUsers {
       const element = this.sentinel()?.nativeElement;
       if (!element || typeof IntersectionObserver === 'undefined') return;
       const observer = new IntersectionObserver((entries) => {
-        if (entries.some((e) => e.isIntersecting)) void this.readMore();
+        if (entries.some((e) => e.isIntersecting))
+          untracked(() => void this.readMore());
       });
       observer.observe(element);
-      onCleanup(() => observer.disconnect());
+      this.observer = observer;
+      onCleanup(() => {
+        observer.disconnect();
+        this.observer = undefined;
+      });
     });
   }
 
@@ -127,8 +134,18 @@ export class AdminUsers {
       this.items.update((items) => [...items, ...page.items]);
       this.cursor.set(page.nextCursor);
       this.moreState.set('idle');
+      this.lookAgain();
     } catch {
       this.moreState.set('failed');
     }
+  }
+
+  // A sentinel still in view after a page fires no new intersection: observe
+  // it afresh so the browser reports where it stands and the pages chain.
+  private lookAgain() {
+    const element = this.sentinel()?.nativeElement;
+    if (!this.observer || !element) return;
+    this.observer.unobserve(element);
+    this.observer.observe(element);
   }
 }

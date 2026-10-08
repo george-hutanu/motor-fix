@@ -63,7 +63,7 @@
         "other": "{n} reviews"
       }
     },
-    "empty": "No account yet.",
+    "empty": "No accounts yet.",
     "failed": "The list did not load.",
     "loading": "Loading the accounts",
     "more": "The next accounts did not load.",

@@ -84,6 +84,8 @@ const GARAGE_OF: Partial<Record<Role, (row: Row) => string | null>> = {
 
 // What an account a week old or more is counted by, after its first role;
 // the others, and every newer account, by their age in days.
+// TODO: count requests and reviews once their stories build them; until
+// then the value is 0 (FR-003).
 const COUNTED_BY: Partial<Record<Role, 'requests' | 'reviews'>> = {
   driver: 'requests',
   garage: 'reviews',
@@ -95,7 +97,7 @@ function item(row: Row, now: Date, suspendedAt?: Date): AdminAccountDto {
   const garage = roles.map((role) => GARAGE_OF[role]).find(Boolean);
   const age = Math.max(0, now.getTime() - row.createdAt.getTime());
   const kind = age < NEW_FOR ? undefined : COUNTED_BY[roles[0]];
-  const status = row.status as 'active' | 'suspended';
+  const status = row.status === 'suspended' ? 'suspended' : 'active';
   return {
     carsCount: row._count.cars,
     count: kind

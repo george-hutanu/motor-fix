@@ -45,6 +45,7 @@ let summary: () => Promise<AdminAccountsSummaryDto>;
 let list: (cursor?: string) => Promise<AdminAccountsPageDto>;
 let cursors: (string | undefined)[];
 let seen: (() => void) | undefined;
+let inView: boolean;
 
 // The list asks for more when its sentinel comes into view; the test says when.
 class Observer {
@@ -55,13 +56,19 @@ class Observer {
         this as unknown as IntersectionObserver,
       );
   }
-  observe() {}
+  // A sentinel already in view reports so soon after it is observed,
+  // never inside the observe() call, as the browser does.
+  observe() {
+    if (inView) queueMicrotask(() => seen?.());
+  }
+  unobserve() {}
   disconnect() {}
 }
 
 beforeEach(() => {
   cursors = [];
   seen = undefined;
+  inView = false;
   summary = async () => TOTALS;
   list = async () => pageOf(0, 3, null);
   (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver =
@@ -273,6 +280,21 @@ describe('more rows as the admin scrolls', () => {
     expect(
       new Set(rows(el).map((r) => text(r.querySelector('.name')))).size,
     ).toBe(45);
+  });
+
+  it('chains the next pages while the sentinel stays in view, with no new intersection', async () => {
+    inView = true;
+    list = async (cursor) =>
+      cursor === undefined
+        ? pageOf(0, 20, 'c1')
+        : cursor === 'c1'
+          ? pageOf(20, 20, 'c2')
+          : pageOf(40, 5, null);
+    const el = await open();
+    await settle();
+
+    expect(cursors).toEqual([undefined, 'c1', 'c2']);
+    expect(rows(el)).toHaveLength(45);
   });
 
   it('never asks for the same page twice while one is loading', async () => {
