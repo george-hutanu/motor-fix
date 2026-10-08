@@ -8,6 +8,7 @@ import {
   emailConfig,
   GaragesModule,
   HealthModule,
+  ListingPhotosModule,
   NotificationsModule,
   oauthSettings,
   PasswordResetModule,
@@ -43,6 +44,11 @@ export class AppModule {
       },
       auth,
     );
+    const garages = GaragesModule.register(
+      email,
+      notifications,
+      verificationConfig(env.APP_ENV, process.env),
+    );
     return {
       imports: [
         HealthModule.register({
@@ -65,11 +71,8 @@ export class AppModule {
         CarsModule,
         CatalogueModule,
         SearchModule,
-        GaragesModule.register(
-          email,
-          notifications,
-          verificationConfig(env.APP_ENV, process.env),
-        ),
+        garages,
+        ListingPhotosModule.register({ redisUrl: env.REDIS_URL }, garages),
         EventsModule.register({ redisUrl: env.REDIS_URL }),
         PlatformRulesModule.register({
           production: env.APP_ENV === 'production',

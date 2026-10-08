@@ -44,12 +44,12 @@ import { ListingDraftThrottle } from './listing-drafts.throttle';
 import { Public } from '../auth/actor.guard';
 import { JsonOnly } from '../auth/auth.controller';
 
-const TOKEN = 'x-listing-token';
-const tokenHeader = ApiHeader({ name: TOKEN, required: true });
+export const TOKEN = 'x-listing-token';
+export const tokenHeader = ApiHeader({ name: TOKEN, required: true });
 
 // No browser or proxy keeps a draft or its key.
 @Injectable()
-class NoStore implements NestInterceptor {
+export class NoStore implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler) {
     context
       .switchToHttp()

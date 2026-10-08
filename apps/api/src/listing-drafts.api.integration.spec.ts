@@ -173,7 +173,7 @@ describe('the listing draft routes', () => {
     expect(sent).not.toHaveBeenCalled();
   });
 
-  it('documents exactly the four operations, and none that finds a draft by address', () => {
+  it('documents exactly the draft and photo operations, and none that finds a draft by address', () => {
     const operations = Object.entries(openApiDocument(app).paths).flatMap(
       ([path, item]) =>
         Object.entries(item)
@@ -182,10 +182,14 @@ describe('the listing draft routes', () => {
     );
 
     expect(operations.sort()).toEqual([
+      'DELETE /api/v1/listing-drafts/{id}/photos/{key}',
       'GET /api/v1/listing-drafts/current',
+      'GET /api/v1/listing-drafts/{id}/photos',
       'PATCH /api/v1/listing-drafts/{id}',
       'POST /api/v1/listing-drafts',
       'POST /api/v1/listing-drafts/{id}/continue-link',
+      'POST /api/v1/listing-drafts/{id}/photos',
+      'POST /api/v1/listing-drafts/{id}/photos/upload-url',
     ]);
   });
 });

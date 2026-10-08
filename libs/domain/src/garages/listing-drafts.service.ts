@@ -3,6 +3,7 @@ import {
   EMAIL_PATTERN,
   isListingDraftData,
   type ListingDraftCreatedDto,
+  type ListingDraftData,
   type ListingDraftDto,
   type ListingDraftSavedDto,
 } from '@motor-fix/contracts';
@@ -83,6 +84,33 @@ function checkedData(data: unknown): Prisma.InputJsonObject {
     );
   }
   return data as Prisma.InputJsonObject;
+}
+
+// A save orders the photos the draft holds and nothing more: a key only a
+// confirm added may come in, and one it left out (an older copy of the form)
+// stays, at the end. Only the photo delete takes a key out.
+async function withHeldFiles(
+  tx: Prisma.TransactionClient,
+  id: string,
+  data: Prisma.InputJsonObject,
+): Promise<Prisma.InputJsonObject> {
+  await tx.$queryRaw`SELECT id FROM listing_draft WHERE id = ${id}::uuid FOR UPDATE`;
+  const row = await tx.listingDraft.findUniqueOrThrow({ where: { id } });
+  const held = (row.data as ListingDraftData).files ?? [];
+  const sent = [...new Set((data as ListingDraftData).files ?? [])];
+  if (sent.some((key) => !held.includes(key))) {
+    throw refusal(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      'validation_failed',
+      'The draft holds no such photo',
+      [{ code: 'invalid', field: 'files' }],
+    );
+  }
+  if (held.length === 0 && sent.length === 0) return data;
+  return {
+    ...data,
+    files: [...sent, ...held.filter((key) => !sent.includes(key))],
+  };
 }
 
 const saved = (draft: ListingDraft): ListingDraftSavedDto => ({
@@ -192,7 +220,7 @@ export class ListingDraftsService {
       }
       return tx.listingDraft.update({
         data: {
-          data,
+          data: await withHeldFiles(tx, id, data),
           email,
           language: body.language,
           step: body.step,
@@ -278,7 +306,7 @@ export class ListingDraftsService {
   }
 
   // The draft a key opens, which must be the one named and still open.
-  private async open(id: string, token: string | undefined) {
+  async open(id: string, token: string | undefined) {
     const draft = await this.byToken(token);
     if (draft.id !== id) throw notFound();
     if (draft.status === 'submitted') {
