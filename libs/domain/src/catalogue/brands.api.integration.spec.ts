@@ -109,7 +109,23 @@ describe('GET /brands', () => {
 
     const res = await search({ q: '   ' });
 
-    expect(res.body.total).toBe(12);
+    expect(res.body.total).toBe(14);
+  });
+
+  it('ships Alfa Romeo and Citroën unranked, after every ranked brand', async () => {
+    await loader.load(BRANDS);
+
+    const res = await search();
+    const listed = names(res.body);
+
+    expect(listed.slice(-2)).toEqual(['Alfa Romeo', 'Citroën']);
+    expect(
+      res.body.items
+        .filter((b: { name: string }) =>
+          ['Alfa Romeo', 'Citroën'].includes(b.name),
+        )
+        .map((b: { popularity: number | null }) => b.popularity),
+    ).toEqual([null, null]);
   });
 
   it('pages 20 brands at a time with a cursor to the next page', async () => {
@@ -149,7 +165,7 @@ describe('GET /brands', () => {
     const res = await search({ q: 'tesla' });
 
     expect(res.body.items).toEqual([]);
-    expect((await search()).body.total).toBe(11);
+    expect((await search()).body.total).toBe(13);
   });
 
   it.each([
