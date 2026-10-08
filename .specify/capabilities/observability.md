@@ -5,6 +5,7 @@ features:
   - 875-observability-stack
   - 876-otel-instrumentation
   - 881-observability-current
+  - 915-telemetry-flush-on-stop
 ---
 
 # Capability: Observability
@@ -156,3 +157,23 @@ _From 881-observability-current._
 ### 881-FR-013 — The whole change MUST stay small (Constitution I): one inventory file, one check script with one colocated spec, the CI step, and small edits to the PR template, its check's spec, the plan template, AGENTS.md, the constitution and card, and the README. No new dependency.
 
 _From 881-observability-current._
+
+### 915-FR-001 — With telemetry on, the graceful stop of api and of worker MUST shut the telemetry providers down after the rest of the app has closed (on the signal the app raises again at the end of its close, FR-005), and MUST NOT complete until that shutdown has finished (pending spans, metrics and logs exported) or the bound of FR-002 has passed, whichever comes first.
+
+_From 915-telemetry-flush-on-stop._
+
+### 915-FR-002 — The wait of FR-001 and FR-005 MUST be bounded at 5 s from the first request for the telemetry shutdown, the export timeout every telemetry export already has; a telemetry shutdown that fails, hangs or outlasts the bound MUST NOT fail the stop or delay it beyond the bound.
+
+_From 915-telemetry-flush-on-stop._
+
+### 915-FR-003 — The telemetry providers MUST be shut down at most once per process; every later request waits on the same shutdown and the same bound.
+
+_From 915-telemetry-flush-on-stop._
+
+### 915-FR-004 — With telemetry off, the graceful stop MUST NOT wait, load or export anything.
+
+_From 915-telemetry-flush-on-stop._
+
+### 915-FR-005 — On a stop signal, the telemetry MUST be shut down by the signal only when no other listener handles that signal; the signal MUST then be raised again once the shutdown has finished or the bound of FR-002 has passed. When another listener handles it (the app's own stop), the signal MUST NOT start the shutdown. "Another listener" is any other listener registered on that signal in the process. The process exit code is unchanged: the re-raised signal ends the process as today.
+
+_From 915-telemetry-flush-on-stop._
