@@ -87,6 +87,28 @@ jobs:
       - name: Structure
         if: ${{ !cancelled() }}
         run: node scripts/structure-check.ts ${{ github.event_name == 'pull_request' && format('--base origin/{0}', github.base_ref) || '' }}
+      # The PR tester's layout and sweep specs measure fixture pages in a real
+      # browser and fail in CI without one. The headless shell is enough, and
+      # the runner image already carries Chrome's system libraries.
+      - id: harness-playwright
+        if: ${{ !cancelled() }}
+        run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - id: harness-browser
+        if: ${{ !cancelled() }}
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-shell-${{ runner.os }}-${{ steps.harness-playwright.outputs.version }}
+      - name: Browser for the harness
+        if: ${{ !cancelled() && steps.harness-browser.outputs.cache-hit != 'true' }}
+        timeout-minutes: 10
+        # Bounded and retried like every Playwright install; no apt runs here, so nothing to repair.
+        run: |
+          for attempt in 1 2 3; do
+            timeout -k 10 180 npx playwright install --only-shell chromium && exit 0
+            echo "::warning::playwright install --only-shell chromium: attempt $attempt of 3 failed or timed out"
+          done
+          exit 1
       - name: Harness
         if: ${{ !cancelled() }}
         run: |

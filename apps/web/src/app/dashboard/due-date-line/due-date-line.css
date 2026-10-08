@@ -1,0 +1,20 @@
+:host {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--mf-space-2);
+  row-gap: var(--mf-space-1);
+  min-width: 0;
+}
+mf-lamp {
+  align-items: flex-start;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--mf-amber-ink);
+  font-weight: 600;
+}

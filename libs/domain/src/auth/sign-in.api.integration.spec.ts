@@ -19,6 +19,7 @@ import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';
 import { AuditService } from '../audit/audit.service';
 import { noEvents } from '../events/event.port';
+import { timersArmedBy } from '../waits.testing';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
@@ -534,8 +535,9 @@ describe('attempt limits', () => {
     } finally {
       await offline.close();
     }
-  }, 20_000);
+  });
 
+  // @traces 976-FR-004
   it('still signs in when Redis takes the connection and never answers', async () => {
     jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     await person('andrei@example.test', ['driver']);
@@ -546,21 +548,23 @@ describe('attempt limits', () => {
     const stuck = await start(`redis://127.0.0.1:${port}`);
 
     try {
-      const started = Date.now();
-      const res = await signIn(
-        { email: 'andrei@example.test', password: PASSWORD },
-        address(),
-        stuck,
+      const { log, value: res } = await timersArmedBy('ioredis', () =>
+        signIn(
+          { email: 'andrei@example.test', password: PASSWORD },
+          address(),
+          stuck,
+        ),
       );
 
       expect(res.status).toBe(200);
-      expect(Date.now() - started).toBeLessThan(10_000);
+      // Redis's own 2-second command limit is what ended the wait.
+      expect(log).toContain('fired 2000');
     } finally {
       await stuck.close();
       for (const socket of sockets) socket.destroy();
       await new Promise((resolve) => silent.close(resolve));
     }
-  }, 30_000);
+  });
 });
 
 describe('maintenance mode', () => {
@@ -843,7 +847,7 @@ describe('renewing while the database is unreachable', () => {
     } finally {
       await down.close();
     }
-  }, 20_000);
+  });
 });
 
 describe('signing out', () => {

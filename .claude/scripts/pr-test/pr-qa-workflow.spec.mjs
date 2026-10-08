@@ -74,8 +74,8 @@ describe('PR QA workflow: trigger', () => {
     ]);
   });
 
-  it('reads the repository and writes commit statuses, nothing else', () => {
-    assert.deepEqual(block('permissions').map((l) => l.trim()).filter(Boolean), ['contents: read', 'statuses: write']);
+  it('reads the repository and earlier runs\' artifacts, and writes commit statuses, nothing else', () => {
+    assert.deepEqual(block('permissions').map((l) => l.trim()).filter(Boolean), ['contents: read', 'actions: read', 'statuses: write']);
   });
 });
 
@@ -110,9 +110,9 @@ describe('PR QA workflow: the agent-review status', () => {
 });
 
 describe('PR QA workflow: no secrets', () => {
-  it('references no secret, and its own token only in the two status steps', () => {
+  it('references no secret, and its own token only in the two status steps and the baseline download', () => {
     assert.doesNotMatch(code, /secrets\.|GITHUB_TOKEN|ANTHROPIC|TYPESAFE/i);
-    assert.equal(code.match(/github\.token/g)?.length, 2);
+    assert.equal(code.match(/github\.token/g)?.length, 3);
   });
 
   it('keeps no git credentials in either checkout', () => {
@@ -211,6 +211,20 @@ describe('PR QA workflow: the run and its evidence', () => {
 
   it('leaves the unit and end-to-end suites to CI: run.mjs gets no --tests', () => {
     assert.doesNotMatch(code, /--tests\b/);
+  });
+
+  it('fetches the baseline run before booting, and never boots main a second time', () => {
+    const stepList = steps.split(/\n(?= {6}- )/);
+    const at = stepList.findIndex((st) => /name: Baseline run of main/.test(st));
+    assert.ok(at > -1, 'a "Baseline run of main" step');
+    assert.ok(at < stepList.findIndex((st) => /name: Boot, readiness/.test(st)));
+    assert.match(stepList[at], /baseline\.mjs --pr "\$PR" --head "\$SHA" --out "\$RUNNER_TEMP\/baseline"/);
+    assert.match(stepList[at], /continue-on-error: true/);
+    assert.equal(code.match(/node \S+\/run\.mjs/g)?.length, 1, 'one boot: the PR head');
+  });
+
+  it('hands run.mjs the baseline when one was downloaded', () => {
+    assert.match(steps, /\[ -f "\$RUNNER_TEMP\/baseline\/baseline\.json" \] && args\+=\(--baseline "\$RUNNER_TEMP\/baseline"\)/);
   });
 
   it('prints the readiness lines, so storage up is visible in the log', () => {

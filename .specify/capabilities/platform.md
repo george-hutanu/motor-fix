@@ -60,6 +60,8 @@ features:
   - 893-folder-rules
   - 960-traces-id-form
   - 962-gate-fail-closed
+  - 974-stop-test-stack-on-merge
+  - 976-integration-specs-under-load
 ---
 
 # Capability: Platform
@@ -1405,6 +1407,70 @@ _From 962-gate-fail-closed._
 ### 962-FR-008 — The change touches only `.claude/hooks/run-hook.mjs` (code and header comment), its spec, the eval cases and the `fail_closed` sentence of `.claude/hooks/registry.json`'s `_comment`, which today names only the stdin refusal; no product code, no new environment variable, no registry field.
 
 _From 962-gate-fail-closed._
+
+### 974-FR-001 — Once the PR is merged, the lifecycle merge step MUST stop the test stack of the worktree that carries the PR's head branch (the current checkout when none does), before the Notion finish, keeping its volumes, and MUST name the stack in its result (`test_stack`).
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-002 — An absent, failing or hanging Docker (each call bounded by a 60 s timeout) MUST never fail the merge step, the Notion finish that follows it, or the sweep: the failure is one logged line and the step goes on; a `down` that fails for one stack does not stop the sweep reaching the others, and an unavailable `gh` skips only the PR-based judgements.
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-003 — `scripts/test-services.ts` MUST offer `down [<worktree>]`, which stops the stack of the given worktree (the current checkout by default), keeping its volumes.
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-004 — `scripts/test-services.ts` MUST offer `sweep`, which stops every `mf-test-*` stack whose compose working directory no longer exists (volumes removed) or whose worktree's newest PR is merged or closed (volumes kept), leaves every other stack untouched, and prints one line naming what it stopped (or that nothing was).
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-005 — Every stack name used by the merge step, `down` and `sweep` MUST come from `composeProject` in `scripts/test-services.ts`; no other code derives the name.
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-006 — Each `/speckit-watch` pass MUST run the sweep as one of its safe fixes and include its result line in the pass output; a sweep failure never stops the pass.
+
+_From 974-stop-test-stack-on-merge._
+
+### 974-FR-007 — AGENTS.md's description of `scripts/test-services.ts` MUST say when the stack is stopped (merge, sweep, `down`).
+
+_From 974-stop-test-stack-on-merge._
+
+### 976-FR-001 — Every `libs/domain` integration spec MUST run its tests and hooks under an explicit 30-second limit, set once for `*.integration.spec.ts` files, so database setup and bulk work no longer fail on Jest's default 5-second limit on a loaded machine; unit specs keep the default, and a test or hook that still exceeds the limit fails with Jest's message naming it.
+
+_From 976-integration-specs-under-load._
+
+### 976-FR-002 — No `libs/domain` integration spec MUST sleep a fixed wall-clock interval and then assert that asynchronous work (a queued job, a published live message, a queue worker, an outbox relay, an e-mail) has finished. Each such wait is replaced by waiting for the asserted condition up to a deadline, or by faked time advanced past the window where no real I/O is awaited inside it.
+
+_From 976-integration-specs-under-load._
+
+### 976-FR-003 — A spec that proves an absence (nothing sent, not yet drained, no second message) MUST keep a proof at least as strong as before: faked time advanced past the window, or the sibling event that shows the window closed. Shortening the window or dropping the check is not a fix.
+
+_From 976-integration-specs-under-load._
+
+### 976-FR-004 — Each assertion that bounds elapsed real time (`Date.now() - started` under a fixed number) MUST be replaced by a proof of the same property that does not depend on machine speed, or measured under faked time; the property proved MUST be stated in the spec's description text so a reviewer can compare it with the bound it replaces.
+
+_From 976-integration-specs-under-load._
+
+### 976-FR-005 — No assertion is weakened, no test is skipped or deleted, and every spec that ran before still runs; each spec file MUST keep the same number of tests, and each replaced wait or bound MUST prove the same property or a stronger one.
+
+_From 976-integration-specs-under-load._
+
+### 976-FR-006 — CI behaviour MUST be unchanged: the same specs run with the same worker settings in the same jobs; any worker-count change applies only to the pre-commit run under `scripts/heavy.sh`, MUST stay above 1 worker, and is made only when the reproduction shows it is needed.
+
+_From 976-integration-specs-under-load._
+
+### 976-FR-007 — One shared test helper in `libs/domain` MUST provide the wait-until-condition-or-deadline, with the condition's name and the deadline in its failure; every wait this change adds or replaces uses it, including the polling loops that gave up within two seconds. Loops that already wait 10 seconds or more are not load failures and stay.
+
+_From 976-integration-specs-under-load._
+
+### 976-FR-008 — The failure MUST be reproduced before the fix and shown gone after it: a repeatable procedure (a script or a documented command in the feature folder) puts the machine under artificial CPU load and runs the domain integration suite with the pre-commit's settings; its before and after results (which specs failed, how many runs) are recorded in the feature folder.
+
+_From 976-integration-specs-under-load._
+
+### 976-FR-009 — A spec that counts the outbox rows a request wrote (`cars/my-cars/cars/cars.api`, `garages/staff-invite/staff-invite.api`, `garages/garage-brands/garage-brands.api` and `.write.adversary`) MUST select them by a mark taken from the outbox itself before the request (the highest id), not by comparing the row's `created_at`, which the application stamps from the host clock, with a time read from the database clock; never by a sleep.
+
+_From 976-integration-specs-under-load._
 
 ## Retired
 

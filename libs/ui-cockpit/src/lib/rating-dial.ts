@@ -72,7 +72,7 @@ function toRating(value: unknown): number | undefined {
     }
     :host([data-size='large']) .mf-dial-value {
       inset: 58% 0 auto;
-      font-size: 40px;
+      font-size: var(--mf-size-display);
     }
   `,
   template: `

@@ -827,7 +827,6 @@ describe('a code WhatsApp does not take', () => {
       expect([res.status, res.body.code]).toEqual([502, 'whatsapp_failed']);
       expect(await prisma.signInCode.count()).toBe(0);
     },
-    10_000,
   );
 
   it('does not count a code that was not sent toward the hourly five', async () => {

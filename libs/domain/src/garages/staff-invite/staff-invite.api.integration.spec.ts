@@ -11,6 +11,7 @@ import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
 import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { outboxMark } from '../../events/outbox.testing';
 import { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
@@ -33,6 +34,7 @@ let invites: StaffInviteService;
 let email: ReturnType<typeof testConfig>;
 // The history and the outbox are never emptied: each test reads its own.
 let since: Date;
+let mark: bigint;
 
 beforeAll(async () => {
   await brevo.start();
@@ -76,6 +78,7 @@ beforeEach(async () => {
     { now: Date }[]
   >`SELECT clock_timestamp() AS now`;
   since = now;
+  mark = await outboxMark(prisma);
   invites.now = () => new Date();
   await foreignEntries(
     prisma,
@@ -166,7 +169,7 @@ function tokenOf() {
 }
 
 const outbox = (kind: string) =>
-  prisma.outboxEvent.findMany({ where: { createdAt: { gte: since }, kind } });
+  prisma.outboxEvent.findMany({ where: { id: { gt: mark }, kind } });
 const audit = (kind: string, garageId: string) =>
   prisma.activityLog.findMany({
     where: { at: { gte: since }, garageId, kind, subjectType: 'staff_invite' },
