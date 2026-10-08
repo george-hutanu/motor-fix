@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { databaseUrl, quotesWorld } from './quotes.testing';
+import { CANCEL_REASONS } from './quotes-config';
 import { serialDatabase } from '../auth/serial-db.testing';
 
 const world = quotesWorld();
@@ -94,4 +95,71 @@ describe('the quote table', () => {
       insertQuote({ ...valid(), from_bani: 50_000, to_bani: 50_000 }),
     ).rejects.toThrow('rolled back');
   });
+});
+
+function updateRequest(set: string) {
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRawUnsafe(
+      `UPDATE quote_request SET ${set} WHERE id = $1::uuid`,
+      requestId,
+    );
+    throw new Error('rolled back');
+  });
+}
+
+// @traces 220-FR-002
+describe('the request close columns', () => {
+  it('takes a closed request with its reason and time', async () => {
+    await expect(
+      updateRequest(
+        `status = 'closed', closed_reason = 'cancelled', closed_at = now()`,
+      ),
+    ).rejects.toThrow('rolled back');
+  });
+
+  it.each([
+    [
+      'a closed request without a reason',
+      `status = 'closed', closed_at = now()`,
+    ],
+    [
+      'a closed request without a time',
+      `status = 'closed', closed_reason = 'expired'`,
+    ],
+    [
+      'a reason on a request that is not closed',
+      `closed_reason = 'no_show', closed_at = now()`,
+    ],
+  ])('refuses %s', async (_case, set) => {
+    await expect(updateRequest(set)).rejects.toThrow(
+      'quote_request_closed_check',
+    );
+  });
+
+  it('refuses a reason outside the list', async () => {
+    await expect(
+      updateRequest(
+        `status = 'closed', closed_reason = 'lost', closed_at = now()`,
+      ),
+    ).rejects.toThrow(/invalid input value/i);
+  });
+});
+
+// @traces 220-FR-010
+describe('the per-side cancellation reasons in the database', () => {
+  it.each(Object.keys(CANCEL_REASONS) as (keyof typeof CANCEL_REASONS)[])(
+    'match the config for the %s side',
+    async (side) => {
+      const [{ def }] = await prisma.$queryRaw<{ def: string }[]>`
+        SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint
+        WHERE conname = 'booking_cancel_reason_side_check'`;
+      const branch = def.match(
+        new RegExp(`cancelled_by_side = '${side}'[^\\[]*\\[([^\\]]*)\\]`),
+      );
+
+      expect(
+        [...(branch?.[1] ?? '').matchAll(/'([a-z_]+)'/g)].map((m) => m[1]),
+      ).toEqual(CANCEL_REASONS[side]);
+    },
+  );
 });

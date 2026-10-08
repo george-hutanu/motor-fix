@@ -2,6 +2,11 @@ import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 
+import {
+  BOOKING_CONFIRM_LAPSE_HOURS,
+  QUOTE_VALIDITY_DAYS,
+  REQUEST_VALIDITY_DAYS,
+} from './quotes-config';
 import { AuditService } from '../audit/audit.service';
 import { AccountsService } from '../auth/accounts.service';
 import type { Role } from '../auth/capabilities';
@@ -99,7 +104,9 @@ export function quotesWorld(prisma: PrismaClient = createPrisma(databaseUrl)) {
             ? 'Scârțâie la frânare'
             : options.description,
         driverId,
-        expiresAt: new Date(createdAt.getTime() + 7 * 24 * HOUR),
+        expiresAt: new Date(
+          createdAt.getTime() + REQUEST_VALIDITY_DAYS * 24 * HOUR,
+        ),
         status,
         ...(closed && { closedAt: createdAt, closedReason: 'cancelled' }),
       },
@@ -146,7 +153,7 @@ export function quotesWorld(prisma: PrismaClient = createPrisma(databaseUrl)) {
     return prisma.quote.create({
       data: {
         durationMinutes: 90,
-        expiresAt: new Date(Date.now() + 7 * 24 * HOUR),
+        expiresAt: new Date(Date.now() + QUOTE_VALIDITY_DAYS * 24 * HOUR),
         fromBani: 45_000,
         garageId,
         recipientId: to.id,
@@ -173,7 +180,7 @@ export function quotesWorld(prisma: PrismaClient = createPrisma(databaseUrl)) {
     const confirmed = ['confirmed', 'no_show', 'completed'].includes(status);
     return prisma.booking.create({
       data: {
-        confirmBy: new Date(now.getTime() + 24 * HOUR),
+        confirmBy: new Date(now.getTime() + BOOKING_CONFIRM_LAPSE_HOURS * HOUR),
         driverId: q.request.driverId,
         durationMinutes: q.durationMinutes,
         garageId: q.garageId,

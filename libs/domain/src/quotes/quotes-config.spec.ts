@@ -15,7 +15,6 @@ describe('the request, quote and booking limits', () => {
       REQUEST_MAX_GARAGES: 5,
       REQUEST_REMINDER_DAYS: [2, 5],
       REQUEST_VALIDITY_DAYS: 7,
-      TIME_ZONE: 'Europe/Bucharest',
     });
   });
 

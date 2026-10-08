@@ -114,7 +114,8 @@ export class GarageJobsService {
 
   private scope(actor: Actor): Prisma.JobWhereInput {
     requireCapability(actor, 'garage.own_jobs');
-    const garageId = actor.garageId as string;
+    const garageId = actor.garageId;
+    if (!garageId) throw new NotFoundException();
     return actor.role === 'mechanic'
       ? { garageId, mechanic: { accountId: actor.accountId } }
       : { garageId };

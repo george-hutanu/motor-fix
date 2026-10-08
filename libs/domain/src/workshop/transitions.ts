@@ -1,3 +1,4 @@
+import { recordedRole } from '../audit/audit.port';
 import type { Prisma } from '../generated/prisma/client';
 import type { JobStatus } from '../generated/prisma/enums';
 import {
@@ -56,7 +57,7 @@ export async function moveJob(
   await tx.jobStageEntry.create({
     data: {
       actorId: move.actor.accountId,
-      actorRole: move.actor.role === 'garage' ? 'owner' : move.actor.role,
+      actorRole: recordedRole(move.actor.role),
       fromStatus: moved.from,
       jobId: move.id,
       text,

@@ -15,7 +15,6 @@ export const BOOKING_MAX_MOVES = 2;
 export const MOVE_CUTOFF_HOURS = 2;
 export const DECLINE_UNDO_MINUTES = 5;
 export const PAGE_SIZE = 20;
-export const TIME_ZONE = 'Europe/Bucharest';
 
 // The reasons each side may give; the system's own reasons are not offered.
 // The migration's booking_cancel_reason_side_check lists them again in SQL.

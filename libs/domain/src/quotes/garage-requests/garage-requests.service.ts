@@ -159,6 +159,7 @@ export class GarageRequestsService {
 
   private garageOf(actor: Actor) {
     requireCapability(actor, 'garage.requests');
-    return actor.garageId as string;
+    if (!actor.garageId) throw new NotFoundException();
+    return actor.garageId;
   }
 }
