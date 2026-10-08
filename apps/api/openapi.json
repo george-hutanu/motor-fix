@@ -1237,6 +1237,7 @@
             "in": "query",
             "description": "The nextCursor of the previous page",
             "schema": {
+              "maxLength": 200,
               "type": "string"
             }
           }
