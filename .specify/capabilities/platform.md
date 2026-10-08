@@ -58,6 +58,7 @@ features:
   - 884-railway-egress
   - 891-lifecycle-story-override
   - 893-folder-rules
+  - 960-traces-id-form
   - 962-gate-fail-closed
 ---
 
@@ -1340,6 +1341,38 @@ _From 893-folder-rules._
 ### 893-FR-013 — This feature MUST move every file that violates a rule into place (the owner, 2026-10-08: backfill in the same PR), taking the work ST-894 and ST-895 planned, and change no behaviour while doing it: imports and paths follow the files, inline templates and styles move to the component's `.html` and `.css` unchanged, and the affected projects' typecheck, tests, lint and build stay green. A file an open pull request edits stays in the baseline until that pull request merges.
 
 _From 893-folder-rules._
+
+### 960-FR-001 — Constitution II MUST state that the only requirement id allowed in source is a line comment in a test file (a file named `*.spec.*` or `*.test.*`) of the form `// @traces` followed by one or more feature-qualified requirement ids (`NNN-FR-NNN`), separated by single spaces — the whole line matching `^\s*// @traces( \d{3}-FR-\d{3})+\s*$`; a line that misses the grammar is not the form and none of its ids count — and that a requirement id, feature number, task id or ticket key anywhere else (test titles, other comments, non-test code) stays forbidden.
+
+_From 960-traces-id-form._
+
+### 960-FR-002 — The amendment MUST be versioned 1.11.0 (MINOR), with its Sync Impact Report first in the header, every earlier report (1.10.0 down to 1.0.0, 1.8.3 included) kept, and the Governance footer's version and Last Amended date updated.
+
+_From 960-traces-id-form._
+
+### 960-FR-003 — Every file that pins the constitution's version MUST say 1.11.0: the constitution card (whose Principle II line names the exception) and the private workflow notes' version line, which MUST NOT grow past its baseline; the card's drift test MUST pass.
+
+_From 960-traces-id-form._
+
+### 960-FR-004 — The traceability matrix MUST read a requirement id from a test file only when it sits on a conforming `// @traces` line, every id on such a line counted; it MUST report the same set of tagged ids on the current tree as before the change.
+
+_From 960-traces-id-form._
+
+### 960-FR-005 — The removal ratchet MUST read ids with the same line grammar as the matrix (one shared parser): an id removed from a conforming line is refused as today; an id in any other form is neither protected nor counted. Each tool keeps the set of files it reads today (the matrix walks `apps`, `libs`, `e2e`, `scripts`; the ratchet judges any test file it is handed).
+
+_From 960-traces-id-form._
+
+### 960-FR-006 — Every skill, agent definition, hook comment and gate message that today forbids `@traces` or any requirement id in source MUST state the exception (or stop stating the rule), and a gate message MUST NOT cite a constitution version (it cites the principle, so a later amendment cannot leave it stale).
+
+_From 960-traces-id-form._
+
+### 960-FR-007 — The existing tagged tests MUST all conform after the change; the one line carrying a non-requirement id is brought to the allowed form.
+
+_From 960-traces-id-form._
+
+### 960-FR-008 — Pre-commit traceability MUST stay non-blocking; only its explanatory comment changes.
+
+_From 960-traces-id-form._
 
 ### 962-FR-001 — The hook wrapper MUST exit 2 when any registry entry marked `fail_closed` (all seven today) runs a script whose exit code is neither 0 nor 2 and that was not stopped by a timeout or a signal.
 

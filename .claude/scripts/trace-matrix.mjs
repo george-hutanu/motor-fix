@@ -14,17 +14,16 @@
 //
 // Token convention: spec.md declares plain FR-XXX ids, but FR numbering
 // restarts per feature, so tests carry the feature-qualified form
-// `NNN-FR-XXX`. Unlike speckit-demo, the token does NOT go in the test title:
-// .claude/skills/speckit-tests/SKILL.md keeps titles plain by project rule. It
-// goes in a comment tag on or above the test instead —
+// `NNN-FR-XXX`. Constitution II allows it in one place only: a whole-line
+// comment in a test file, on or above the test it traces —
 //
 //   // @traces 006-FR-003
 //   it("rejects an unreadable rule file", () => { ... })
 //
-// which reads the same to a human and is still a literal token. This scan
-// matches file CONTENT, so either placement satisfies it; what it will not do
-// is guess from test names, because fuzzy name matching produces silent false
-// positives.
+// Titles stay plain (.claude/skills/speckit-tests/SKILL.md). The scan reads
+// only a conforming `// @traces` line (lib/traces.mjs): an id in a title, in
+// prose or after code is not counted, and it will not guess from test names,
+// because fuzzy name matching produces silent false positives.
 //
 // Usage:
 //   node .claude/scripts/trace-matrix.mjs           human-readable matrix
@@ -38,6 +37,7 @@ import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { grandfathered } from "./lib/feature.mjs";
+import { traceTokens } from "./lib/traces.mjs";
 import { retiredTokens } from "./capabilities.mjs";
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -85,7 +85,7 @@ const walk = (d) => {
     const p = join(d, name);
     if (statSync(p).isDirectory()) walk(p);
     else if (isTestFile(name)) {
-      for (const tok of readFileSync(p, "utf8").match(/\b\d{3}-FR-\d{3}\b/g) ?? []) {
+      for (const tok of traceTokens(readFileSync(p, "utf8"))) {
         if (!tokenFiles.has(tok)) tokenFiles.set(tok, new Set());
         tokenFiles.get(tok).add(relative(repo, p));
       }
