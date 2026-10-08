@@ -108,8 +108,8 @@ if (command === "triage") {
   const questions = {};
   items.forEach((item, i) => {
     questions[qid("route", i)] = choice(`How should finding ${i} be handled?`, {
-      patch: "a clear, contained defect the reviewer can fix now without widening scope",
-      defer: "real but out of this feature's scope — record it with its path:line and move on",
+      patch: "a small or medium fix, made in this PR whether or not this change caused it (pre-existing or adjacent included)",
+      defer: "a large fix. A fix is large when it needs its own design or decision, a data migration, a different area or epic, or work clearly bigger than the story itself. Record it with its path:line",
       "decision-needed": "fixing it requires a judgement about intent that only the author can make",
     });
     questions[qid("sev", i)] = score(`How severe is finding ${i}?`, ["cosmetic", "low", "medium", "high", "critical"]);

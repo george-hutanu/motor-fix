@@ -88,15 +88,20 @@ Run the tests yourself (`npx jest --onlyChanged`, or the affected
 ## Triage — every finding takes one of three routes
 
 Borrowed from BMAD's code review, which routes each verified finding to
-**patch**, **defer** or **decision needed**. Without a defer route a reviewer
-facing a real pre-existing bug has only bad options: fix it, which is the scope
-creep the constitution's Agent Execution Rules forbid, or drop it, which loses
-it. Add a **Route** column and fill it for every row.
+**patch**, **defer** or **decision needed**. The route follows the size of the
+fix, not whose problem it is (AGENTS.md, "Technical debt a review defers"): a
+small or medium fix is made in this PR, even for a bug that existed before the
+change or sits next to it, so a finding is neither dropped nor turned into a
+ticket it did not need. Add a **Route** column and fill it for every row.
+
+The size test: A fix is large when it needs its own design or decision, a data
+migration, a different area or epic, or work clearly bigger than the story
+itself. Anything else is small or medium.
 
 | Route | When | What happens |
 | --- | --- | --- |
-| `patch` | an unambiguous fix inside this change's scope | the caller fixes it and re-runs you once |
-| `defer` | a real issue that is **not this change** — pre-existing, or out of scope | append it to `specs/<feature>/deferred.md` |
+| `patch` | a small or medium fix, this change's problem or not (pre-existing or adjacent included) | the caller fixes it and re-runs you once |
+| `defer` | a real issue whose fix is **large** by the size test | append it to `specs/<feature>/deferred.md`, naming the arm it meets |
 | `decision` | an ambiguous choice only a human can settle | name the two options and what each costs; never pick one silently |
 
 `decision` is available only when the feature has a spec to be ambiguous about.
@@ -113,8 +118,8 @@ A `defer` row is written to `specs/<feature>/deferred.md` in the format
 `.specify/templates/deferred-template.md` gives, one line, with its `path:line`
 source. `.claude/scripts/retro-evidence.mjs` reads that file, so `/speckit-retro`
 reports what is still open instead of the finding evaporating. A `defer` never
-lowers a severity: a deferred CRITICAL still blocks, because "not this change"
-is a statement about ownership, not about danger.
+lowers a severity: a deferred CRITICAL still blocks, because "large" is a
+statement about the fix, not about danger.
 
 ## Output format
 
