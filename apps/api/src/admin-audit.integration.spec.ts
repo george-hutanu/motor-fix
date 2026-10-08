@@ -1,7 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
-import { AccountsService, signAccessToken } from '@motor-fix/domain';
+import {
+  AccountsService,
+  MAINTENANCE,
+  type Maintenance,
+  signAccessToken,
+} from '@motor-fix/domain';
 import type { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
@@ -151,6 +156,7 @@ afterAll(async () => {
     `UPDATE platform_rule SET value = 'false'::jsonb
      WHERE key = 'maintenance_mode'`,
   );
+  await app.get<Maintenance>(MAINTENANCE, { strict: false }).set(false);
   await db.end();
   await api.stop();
 });

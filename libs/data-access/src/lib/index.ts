@@ -70,6 +70,7 @@ export type { PlacesResultDto } from './models/places-result-dto';
 export type { PlaceSuggestionDto } from './models/place-suggestion-dto';
 export type { PlatformRuleDto } from './models/platform-rule-dto';
 export type { PlatformRulesDto } from './models/platform-rules-dto';
+export type { PlatformStatusDto } from './models/platform-status-dto';
 export type { ProvidersDto } from './models/providers-dto';
 export type { PublicGarageDto } from './models/public-garage-dto';
 export type { PublicHolidayDto } from './models/public-holiday-dto';
@@ -121,6 +122,7 @@ export { GaragesService } from './services/garages.service';
 export { InvitesService } from './services/invites.service';
 export { ListingDraftsService } from './services/listing-drafts.service';
 export { LiveService } from './services/live.service';
+export { PlatformService } from './services/platform.service';
 
 export type { HealthControllerLive$Params as HealthControllerLive$Params } from './fn/health/health-controller-live';
 export { healthControllerLive as healthControllerLive } from './fn/health/health-controller-live';
@@ -264,3 +266,5 @@ export type { LiveControllerTest$Params as LiveControllerTest$Params } from './f
 export { liveControllerTest as liveControllerTest } from './fn/live/live-controller-test';
 export type { PublicLiveControllerLive$Params as PublicLiveControllerLive$Params } from './fn/live/public-live-controller-live';
 export { publicLiveControllerLive as publicLiveControllerLive } from './fn/live/public-live-controller-live';
+export type { PlatformStatusControllerStatus$Params as PlatformStatusControllerStatus$Params } from './fn/platform/platform-status-controller-status';
+export { platformStatusControllerStatus as platformStatusControllerStatus } from './fn/platform/platform-status-controller-status';

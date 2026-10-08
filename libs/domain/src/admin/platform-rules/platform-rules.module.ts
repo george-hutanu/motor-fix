@@ -6,6 +6,7 @@ import {
   type PlatformRulesOptions,
   PlatformRulesService,
 } from './platform-rules.service';
+import { PlatformStatusController } from './platform-status/platform-status.controller';
 import { AUDIT_PORT } from '../../audit/audit.port';
 import { AuditService } from '../../audit/audit.service';
 
@@ -13,7 +14,7 @@ import { AuditService } from '../../audit/audit.service';
 export class PlatformRulesModule {
   static register(options: PlatformRulesOptions): DynamicModule {
     return {
-      controllers: [PlatformRulesController],
+      controllers: [PlatformRulesController, PlatformStatusController],
       module: PlatformRulesModule,
       providers: [
         PlatformRulesService,

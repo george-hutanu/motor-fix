@@ -1,8 +1,9 @@
-import { HttpException } from '@nestjs/common';
+import { HttpException, Logger } from '@nestjs/common';
 
 import { PlatformRulesService } from './platform-rules.service';
 import type { AuditPort } from '../../audit/audit.port';
 import { AuditService } from '../../audit/audit.service';
+import type { Maintenance } from '../../auth/maintenance';
 import type { Actor } from '../../auth/policy';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { outbox } from '../../events/event.port';
@@ -21,8 +22,10 @@ const NONE = {
 };
 const TEST_ONLY = ['skip_manual_approval', 'skip_rar_check'];
 
+const flag = { on: jest.fn(), set: jest.fn() } satisfies Maintenance;
+
 const rules = (production: boolean, audit: AuditPort = new AuditService()) =>
-  new PlatformRulesService(prisma, audit, outbox, { production });
+  new PlatformRulesService(prisma, audit, outbox, { production }, flag);
 
 let ioana: Actor;
 
@@ -51,6 +54,8 @@ const events = () =>
   prisma.outboxEvent.findMany({ where: { kind: 'platform_rule.changed' } });
 
 beforeEach(async () => {
+  jest.restoreAllMocks();
+  flag.set.mockReset().mockResolvedValue(undefined);
   await reset();
   await prisma.outboxEvent.deleteMany();
   await prisma.platformRule.deleteMany({ where: { key: { in: TEST_ONLY } } });
@@ -75,7 +80,13 @@ beforeEach(async () => {
   };
 });
 
-afterAll(() => prisma.$disconnect());
+afterAll(async () => {
+  await prisma.platformRule.updateMany({
+    data: { updatedAt: null, updatedBy: null, value: false },
+    where: { key: 'maintenance_mode' },
+  });
+  await prisma.$disconnect();
+});
 
 describe('listing the platform rules', () => {
   it('lists every rule with its value, default, two-admin flag and last change, outside production', async () => {
@@ -339,5 +350,71 @@ describe('the record of a platform rule change', () => {
 
     expect(await entries()).toHaveLength(0);
     expect(await events()).toHaveLength(0);
+  });
+});
+
+describe('switching maintenance', () => {
+  it('writes the switch to the fast store once the change is committed', async () => {
+    const committed: unknown[] = [];
+    flag.set.mockImplementation(async () => {
+      committed.push((await rule('maintenance_mode')).value);
+    });
+
+    await rules(false).change(ioana, 'maintenance_mode', {
+      seen: false,
+      value: true,
+    });
+
+    expect(flag.set).toHaveBeenCalledTimes(1);
+    expect(flag.set).toHaveBeenCalledWith(true);
+    expect(committed).toEqual([true]);
+  });
+
+  it('logs who switched it on and off', async () => {
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+
+    await rules(false).change(ioana, 'maintenance_mode', {
+      seen: false,
+      value: true,
+    });
+    await rules(false).change(ioana, 'maintenance_mode', {
+      seen: true,
+      value: false,
+    });
+
+    expect(flag.set.mock.calls).toEqual([[true], [false]]);
+    expect(log).toHaveBeenCalledWith(
+      `maintenance mode on by ${ioana.accountId}`,
+    );
+    expect(log).toHaveBeenCalledWith(
+      `maintenance mode off by ${ioana.accountId}`,
+    );
+  });
+
+  it('keeps the change when the fast store write fails, and logs the failure', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    flag.set.mockRejectedValue(new Error('Command timed out'));
+
+    const saved = await rules(false).change(ioana, 'maintenance_mode', {
+      seen: false,
+      value: true,
+    });
+
+    expect(saved.value).toBe(true);
+    expect((await rule('maintenance_mode')).value).toBe(true);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('writes nothing to the fast store for another rule, or for no change', async () => {
+    await rules(false).change(ioana, 'skip_rar_check', {
+      seen: false,
+      value: true,
+    });
+    await rules(false).change(ioana, 'maintenance_mode', {
+      seen: false,
+      value: false,
+    });
+
+    expect(flag.set).not.toHaveBeenCalled();
   });
 });

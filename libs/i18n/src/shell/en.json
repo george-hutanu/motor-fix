@@ -189,6 +189,12 @@
       "other": "{count} new updates"
     }
   },
+  "maintenance": {
+    "adminLink": "Admin? Sign in",
+    "banner": "Maintenance on",
+    "heading": "Maintenance",
+    "message": "MotorFix is down for maintenance. We'll be back soon."
+  },
   "notFound": {
     "home": "Back to the home page",
     "text": "This address does not lead to a MotorFix page.",

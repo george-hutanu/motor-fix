@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
 
-import { Public } from '../../auth/actor.guard';
+import { OpenInMaintenance, Public } from '../../auth/actor.guard';
 import type { EmailConfig } from '../email-config';
 import {
   NOTIFICATIONS_CONFIG,
@@ -26,6 +26,7 @@ const digest = (value: string) => createHash('sha256').update(value).digest();
 @ApiExcludeController()
 @Controller('webhooks/brevo')
 @Public()
+@OpenInMaintenance()
 export class BrevoWebhookController {
   constructor(
     private readonly notifications: NotificationsService,

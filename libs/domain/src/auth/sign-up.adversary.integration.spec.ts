@@ -691,7 +691,7 @@ describe('the hourly limit', () => {
     expect((await signUp(body(), from)).status).toBe(429);
   });
 
-  it('counts attempts refused for maintenance', async () => {
+  it('does not count attempts refused for maintenance', async () => {
     const from = address();
     maintenance = true;
     for (let i = 0; i < 10; i++) {
@@ -699,15 +699,15 @@ describe('the hourly limit', () => {
     }
     maintenance = false;
 
-    expect((await signUp(body(), from)).status).toBe(429);
+    expect((await signUp(body(), from)).status).toBe(201);
   });
 
-  it('answers a bad body with 400 even when maintenance is on', async () => {
+  it('answers maintenance ahead of a bad body', async () => {
     maintenance = true;
 
     const res = await signUp(body({ name: '' }));
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(503);
   });
 
   it('does not extend the window with the attempts it refuses', async () => {

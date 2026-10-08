@@ -11,7 +11,7 @@ import { AccountsService } from './accounts.service';
 import { ActorGuard, AUTH_OPTIONS, type AuthOptions } from './actor.guard';
 import { Attempts, AUTH_REDIS } from './attempts';
 import { AuthController } from './auth.controller';
-import { MAINTENANCE, maintenanceOff } from './maintenance';
+import { MAINTENANCE, MaintenanceFlag } from './maintenance';
 import { MeController } from './me.controller';
 import { OauthController } from './oauth/oauth.controller';
 import { OAuthService } from './oauth/oauth.service';
@@ -87,7 +87,7 @@ export class AuthModule implements OnApplicationShutdown {
           provide: Attempts,
           useFactory: (redis: Redis) => new Attempts(redis),
         },
-        { provide: MAINTENANCE, useValue: maintenanceOff },
+        { provide: MAINTENANCE, useClass: MaintenanceFlag },
         { provide: AUDIT_PORT, useClass: AuditService },
         { provide: EVENT_PORT, useValue: outbox },
       ],

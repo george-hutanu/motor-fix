@@ -29,6 +29,7 @@ import {
   AUTH_OPTIONS,
   type AuthOptions,
   CurrentActor,
+  OpenInMaintenance,
   Requires,
 } from '../../auth/actor.guard';
 import type { Actor } from '../../auth/policy';
@@ -49,6 +50,7 @@ export class LiveController {
   ) {}
 
   @Get('live')
+  @OpenInMaintenance()
   @ApiProduces('text/event-stream')
   @ApiOkResponse({ description: 'A server-sent events stream' })
   async live(

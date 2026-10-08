@@ -3,9 +3,10 @@ import type {
   PlatformRuleDto,
   PlatformRulesDto,
 } from '@motor-fix/contracts';
-import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
+import { MAINTENANCE, type Maintenance } from '../../auth/maintenance';
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { refusal } from '../../auth/sign-up.service';
@@ -26,7 +27,7 @@ export const PLATFORM_RULES_OPTIONS = Symbol('PLATFORM_RULES_OPTIONS');
 // even when a copied database holds them.
 const TEST_ONLY = new Set(['skip_manual_approval', 'skip_rar_check']);
 
-const MAINTENANCE = 'maintenance_mode';
+const MAINTENANCE_RULE = 'maintenance_mode';
 
 const same = (a: unknown, b: unknown) =>
   JSON.stringify(a) === JSON.stringify(b);
@@ -42,12 +43,15 @@ const dto = (row: PlatformRule): PlatformRuleDto => ({
 
 @Injectable()
 export class PlatformRulesService {
+  private readonly logger = new Logger('PlatformRules');
+
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
     @Inject(PLATFORM_RULES_OPTIONS)
     private readonly options: PlatformRulesOptions,
+    @Inject(MAINTENANCE) private readonly maintenance: Maintenance,
   ) {}
 
   async list(actor: Actor): Promise<PlatformRulesDto> {
@@ -61,14 +65,15 @@ export class PlatformRulesService {
     };
   }
 
-  change(
+  async change(
     actor: Actor,
     key: string,
     { seen, value }: ChangePlatformRuleDto,
   ): Promise<PlatformRuleDto> {
     requireCapability(actor, 'admin.settings');
-    if (!this.visible(key)) return Promise.reject(unknownRule());
-    return this.prisma.$transaction(async (tx) => {
+    if (!this.visible(key)) throw unknownRule();
+    let changed = false;
+    const rule = await this.prisma.$transaction(async (tx) => {
       // Two admins switching the same rule: the second waits here, then
       // finds the value it saw gone.
       const [locked] = await tx.$queryRaw<{ id: string }[]>`
@@ -100,13 +105,31 @@ export class PlatformRulesService {
         subjectType: 'platform_rule',
       });
       await this.events.record(tx, {
-        audience: { adminOnly: key !== MAINTENANCE, type: 'platform' },
+        audience: { adminOnly: key !== MAINTENANCE_RULE, type: 'platform' },
         kind: 'platform_rule.changed',
         payload: { key, new: value, old: row.value },
         subjectId: key,
       });
+      changed = true;
       return dto(saved);
     });
+    if (changed && key === MAINTENANCE_RULE) {
+      await this.switched(value === true, actor.accountId);
+    }
+    return rule;
+  }
+
+  // Every copy of the api reads the switch from Redis; the stored rule
+  // answers there within a minute if this write is lost.
+  private async switched(on: boolean, accountId: string) {
+    this.logger.log(`maintenance mode ${on ? 'on' : 'off'} by ${accountId}`);
+    try {
+      await this.maintenance.set(on);
+    } catch (error) {
+      this.logger.warn(
+        `maintenance mode not written to Redis: ${String(error)}`,
+      );
+    }
   }
 
   private visible(key: string) {

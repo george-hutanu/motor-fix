@@ -52,3 +52,8 @@ export class ChangePlatformRuleDto {
   @IsDefined()
   seen!: unknown;
 }
+
+export class PlatformStatusDto {
+  @ApiProperty({ description: 'The platform is in maintenance' })
+  maintenance!: boolean;
+}
