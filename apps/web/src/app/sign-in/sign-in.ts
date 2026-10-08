@@ -25,7 +25,7 @@ import {
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
-import { PROVIDER_NAME, ProviderButtons } from './providers';
+import { PROVIDER_NAME, ProviderButtons } from './providers/providers';
 import { type Provider, Session } from '../dashboard/session';
 
 // Text, "@", and a domain with a dot, spaces around it allowed; the server
@@ -83,88 +83,8 @@ export type AuthData =
     TranslatePipe,
   ],
   selector: 'mf-sign-in',
-  styles: `
-    form { display: grid; gap: var(--mf-space-4); }
-    .brand { margin: 0; color: var(--mf-text-secondary); }
-    .problem { margin: 0; color: var(--mf-red-ink); }
-    .field { display: grid; gap: var(--mf-space-2); }
-    label { font-weight: 700; }
-    .remember-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--mf-space-3); }
-    .remember { display: flex; align-items: center; gap: var(--mf-space-3); min-height: var(--mf-tap); font-weight: 400; cursor: pointer; }
-    .remember input { width: 20px; height: 20px; margin: 0; accent-color: var(--mf-amber); }
-    button[type='submit'], .phone { width: 100%; min-height: 54px; white-space: normal; }
-    .or { display: flex; align-items: center; gap: var(--mf-space-3); margin: 0; color: var(--mf-text-secondary); }
-    .or::before, .or::after { content: ''; flex: 1; border-top: 1px solid var(--mf-line); }
-    /* The phone button joins Apple and Google under their "or" when they show. */
-    mf-provider-buttons:not(:empty) + .or { display: none; }
-    .switch { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--mf-space-2); margin: 0; color: var(--mf-text-secondary); }
-    .switch button, .forgot { min-height: var(--mf-tap); padding: 0; border: 0; background: transparent; color: var(--mf-amber-ink); font: inherit; font-weight: 700; cursor: pointer; }
-    .switch button:focus-visible, .forgot:focus-visible { outline: 2px solid var(--mf-amber-ink); outline-offset: 2px; }
-  `,
-  template: `
-    <form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
-      <p class="brand">{{ 'public.signIn.brand' | t }}</p>
-      @if (reason) {
-        <p class="brand">{{ 'public.signIn.reason' | t }}</p>
-      }
-      @if (problem; as problem) {
-        <p class="problem" role="alert">{{ problem.key | t: { provider: problem.provider } }}</p>
-      }
-      <div class="field">
-        <label for="mf-sign-in-email">{{ 'public.signIn.email' | t }}</label>
-        <input
-          hlmInput
-          id="mf-sign-in-email"
-          type="email"
-          inputmode="email"
-          autocomplete="email"
-          spellcheck="false"
-          formControlName="email"
-          [placeholder]="'public.signIn.emailPlaceholder' | t"
-          aria-describedby="mf-sign-in-email-error"
-        />
-        <mf-field-error id="mf-sign-in-email-error" [save]="save" [control]="form.controls.email" />
-      </div>
-      <div class="field">
-        <label for="mf-sign-in-password">{{ 'public.signIn.password' | t }}</label>
-        <input
-          #passwordInput
-          hlmInput
-          id="mf-sign-in-password"
-          type="password"
-          autocomplete="current-password"
-          formControlName="password"
-          [placeholder]="'public.signIn.passwordPlaceholder' | t"
-          aria-describedby="mf-sign-in-password-error"
-        />
-        <mf-field-error id="mf-sign-in-password-error" [save]="save" [control]="form.controls.password" />
-      </div>
-      <div class="remember-row">
-        <label class="remember">
-          <input type="checkbox" formControlName="remember" />
-          <span>{{ 'public.signIn.remember' | t }}</span>
-        </label>
-        <button type="button" class="forgot" [disabled]="save.state() === 'sending'" (click)="switchTo('reset')">
-          {{ 'public.signIn.forgot' | t }}
-        </button>
-      </div>
-      <mf-task-error [save]="save" />
-      <button hlmBtn type="submit" [mfTaskSubmit]="save">
-        {{ 'public.signIn.submit' | t }}
-      </button>
-      <mf-provider-buttons [remember]="form.controls.remember.value" [returnTo]="returnTo" />
-      <p class="or" aria-hidden="true">{{ 'public.signIn.or' | t }}</p>
-      <button hlmBtn variant="secondary" type="button" class="phone" [disabled]="save.state() === 'sending'" (click)="switchTo('phone')">
-        {{ 'public.signIn.withPhone' | t }}
-      </button>
-      <p class="switch">
-        <span>{{ 'public.signIn.newHere' | t }}</span>
-        <button type="button" [disabled]="save.state() === 'sending'" (click)="switchTo('sign-up')">
-          {{ 'public.signIn.createAccount' | t }}
-        </button>
-      </p>
-    </form>
-  `,
+  styleUrl: './sign-in.css',
+  templateUrl: './sign-in.html',
 })
 export class SignIn {
   private readonly session = inject(Session);

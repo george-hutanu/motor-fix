@@ -50,7 +50,7 @@ describe('mutation setup', () => {
     '%s names its test environment in its own config',
     (root) => {
       expect(read(`${root}/jest.config.cts`)).toMatch(
-        /^\s*testEnvironment: '(node|jsdom)',$/m,
+        /^\s*testEnvironment: '(node|jsdom|<rootDir>\/[^']+)',$/m,
       );
     },
   );

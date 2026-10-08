@@ -1,0 +1,30 @@
+@if (lamp(); as lamp) {
+  <mf-lamp [state]="lamp.state" [label]="lamp.label" />
+}
+@if (answer(); as answer) {
+  @if (worksOn() || nothing()) {
+    <p class="line">
+      <span class="label">{{ 'public.verdict.worksOnList' | t }}</span>
+      @if (worksOn(); as list) {
+        <mf-as-written [text]="list" />
+      } @else {
+        {{ 'public.verdict.none' | t }}
+      }
+    </p>
+  }
+  @if (refused() || nothing()) {
+    <p class="line">
+      <span class="label">{{ 'public.verdict.refusedList' | t }}</span>
+      @if (refused(); as list) {
+        <mf-as-written [text]="list" />
+      } @else {
+        {{ 'public.verdict.none' | t }}
+      }
+    </p>
+  }
+  @if (note(); as note) {
+    <p class="note" [class.card]="mode() === 'card'">
+      <mf-as-written [text]="note" />
+    </p>
+  }
+}

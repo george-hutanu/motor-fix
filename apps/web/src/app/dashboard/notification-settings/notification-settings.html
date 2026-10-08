@@ -1,0 +1,66 @@
+@if (entries(); as lists) {
+  @if (lists.length > 0) {
+    <h2 class="title">{{ 'shell.notifications.title' | t }}</h2>
+  }
+  @for (entry of lists; track entry.garageId; let e = $index) {
+    <section [attr.aria-label]="heading(entry, lists.length) ?? ('shell.notifications.title' | t)">
+      @if (heading(entry, lists.length); as name) {
+        <h2>{{ name }}</h2>
+      }
+      @if (reason(entry); as key) {
+        <p class="hint" [id]="id + '-wa-' + e">{{ key | t }}</p>
+      }
+      @for (section of entry.sections; track section.key) {
+        <h3>{{ sectionKey(section.key) | t }}</h3>
+        <ul>
+          @for (item of section.types; track item.type; let r = $index) {
+            <li>
+              <div class="name">
+                <span>{{ typeKey(item.type) | t }}</span>
+                @if (item.channels.length === 0) {
+                  <span class="hint">{{ 'shell.notifications.inApp' | t }}</span>
+                }
+                @if (isLocked(item)) {
+                  <span class="hint" [id]="rowId(e, section.key, r)">{{ 'shell.notifications.alwaysSent' | t }}</span>
+                }
+                @if (item.type === 'REQUEST_RECEIVED') {
+                  <span class="hint">{{ 'shell.notifications.reminders' | t }}</span>
+                }
+              </div>
+              @if (item.channels.length > 0) {
+                <div class="channels">
+                  @for (c of item.channels; track c.channel) {
+                    <label>
+                      <hlm-switch
+                        [inputId]="rowId(e, section.key, r) + '-' + c.channel"
+                        [checked]="isOn(entry, c)"
+                        [disabled]="isFixed(entry, c)"
+                        [aria-label]="switchName(item.type, c.channel)"
+                        [aria-describedby]="describedBy(entry, c, e, section.key, r)"
+                        (checkedChange)="toggle(entry, item.type, c.channel, $event)"
+                      />
+                      <span aria-hidden="true">{{ channelKey(c.channel) | t }}</span>
+                    </label>
+                  }
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+} @else if (failed()) {
+  <section>
+    <p role="alert">{{ 'shell.notifications.loadFailed' | t }}</p>
+    <button hlmBtn variant="secondary" type="button" (click)="load()">
+      {{ 'shell.notifications.retry' | t }}
+    </button>
+  </section>
+} @else {
+  <section aria-busy="true">
+    @for (row of skeleton; track row) {
+      <div class="skeleton" aria-hidden="true"></div>
+    }
+  </section>
+}

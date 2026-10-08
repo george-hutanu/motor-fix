@@ -30,6 +30,19 @@ describe('the constitution card', () => {
     assert.equal(versionOf(card, /\bv(\d+\.\d+\.\d+)\b/), version);
   });
 
+  it('states the folder rules under principle IV, in the constitution and the card', () => {
+    const card = readFileSync(CARD, 'utf8');
+    const fourth = full.slice(full.indexOf('### IV.'), full.indexOf('### V.'));
+    const cardLine = card.split('\n').find((line) => line.startsWith('- **IV.'));
+    for (const text of [fourth, cardLine]) {
+      assert.match(text, /subfolder/);
+      assert.match(text, /<name>\.html/);
+      assert.match(text, /structure-check/);
+    }
+    const [, minor] = full.match(/^\*\*Version\*\*: 1\.(\d+)\.\d+/m);
+    assert.ok(Number(minor) >= 9);
+  });
+
   it('stays a card', () => {
     const bytes = Buffer.byteLength(readFileSync(CARD, 'utf8'));
     assert.ok(bytes <= MAX_BYTES, `${bytes} bytes, above ${MAX_BYTES}`);

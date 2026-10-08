@@ -52,7 +52,7 @@ export class SignInDialog {
     const first = await this.overlays.open<
       'signed-in' | AuthSwitch,
       { token: string }
-    >(() => import('./new-password').then((m) => m.NewPassword), {
+    >(() => import('./new-password/new-password').then((m) => m.NewPassword), {
       data: { token },
       shape: 'dialog',
       title: 'public.newPassword.title',
@@ -69,7 +69,10 @@ export class SignInDialog {
     let first: Answer;
     if (result === 'consent') {
       first = await this.overlays.open<'signed-in' | AuthSwitch>(
-        () => import('./provider-sign-up').then((m) => m.ProviderSignUp),
+        () =>
+          import('./provider-sign-up/provider-sign-up').then(
+            (m) => m.ProviderSignUp,
+          ),
         { shape: 'dialog', title: 'public.providerSignUp.title' },
       );
     } else {
@@ -140,7 +143,8 @@ export class SignInDialog {
         return this.reset(to.email);
       case 'phone':
         return this.overlays.open<'signed-in' | AuthSwitch, AuthData>(
-          () => import('./phone-sign-in').then((m) => m.PhoneSignIn),
+          () =>
+            import('./phone-sign-in/phone-sign-in').then((m) => m.PhoneSignIn),
           { data, shape: 'dialog', title: 'public.signIn.title' },
         );
       default:
@@ -150,14 +154,15 @@ export class SignInDialog {
 
   private signUp(data: AuthData): Promise<Answer> {
     return this.overlays.open<'signed-in' | AuthSwitch, AuthData>(
-      () => import('./sign-up').then((m) => m.SignUp),
+      () => import('./sign-up/sign-up').then((m) => m.SignUp),
       { data, shape: 'dialog', title: 'public.signUp.title' },
     );
   }
 
   private reset(email: string): Promise<Answer> {
     return this.overlays.open<AuthSwitch, { email: string }>(
-      () => import('./password-reset').then((m) => m.PasswordReset),
+      () =>
+        import('./password-reset/password-reset').then((m) => m.PasswordReset),
       { data: { email }, shape: 'dialog', title: 'public.passwordReset.title' },
     );
   }

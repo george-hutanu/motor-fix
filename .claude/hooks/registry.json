@@ -105,9 +105,9 @@
         "standard",
         "strict"
       ],
-      "description": "Protect the ratchets: the mutation floor, the traceability baseline, the NNN-FR- tokens in tests, and (under strict) the harness itself",
+      "description": "Protect the ratchets: the mutation floor, the traceability baseline, the structure baseline, the NNN-FR- tokens in tests, and (under strict) the harness itself",
       "fail_closed": true,
-      "fingerprint": "c828d0978eb7"
+      "fingerprint": "891f673de6c8"
     },
     {
       "id": "pre:edit:red-first",

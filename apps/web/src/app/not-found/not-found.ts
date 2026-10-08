@@ -15,14 +15,7 @@ import {
 @Component({
   imports: [LanguageSwitch, RouterLink, TranslatePipe],
   selector: 'mf-not-found',
-  template: `
-    <header><mf-language-switch /></header>
-    <main>
-      <h1>{{ 'shell.notFound.title' | t }}</h1>
-      <p>{{ 'shell.notFound.text' | t }}</p>
-      <a routerLink="/">{{ 'shell.notFound.home' | t }}</a>
-    </main>
-  `,
+  templateUrl: './not-found.html',
 })
 export class NotFound {
   constructor() {

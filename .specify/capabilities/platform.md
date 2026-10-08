@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-07
+updated: 2026-10-08
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -57,6 +57,7 @@ features:
   - 499-trace-matrix-delta-ids
   - 884-railway-egress
   - 891-lifecycle-story-override
+  - 893-folder-rules
 ---
 
 # Capability: Platform
@@ -1286,6 +1287,58 @@ _From 891-lifecycle-story-override._
 ### 891-FR-005 — A harness spec (`lifecycle.spec.mjs`) MUST cover a branch whose folder number is not the story's: the title wins over the folder, `--story` is recorded and read back, a `story_for` naming another feature is ignored, a disagreement refuses before the merge call (and `ready`), leading zeros agree, and a malformed `--story` exits 64.
 
 _From 891-lifecycle-story-override._
+
+### 893-FR-001 — The structure check MUST report every flat-submodule violation (rule 1) in the checked tree, as defined in Definitions, naming the file, the group key and the suggested subfolder.
+
+_From 893-folder-rules._
+
+### 893-FR-002 — The structure check MUST report every folder-component violation (rule 2) in `apps/web/src`, naming the file and the reason (inline template or styles, wrong folder or file name, wrong template or style path).
+
+_From 893-folder-rules._
+
+### 893-FR-003 — The structure check MUST NOT read `libs/ui-cockpit/`, `libs/data-access/`, `libs/domain/src/generated/` or `apps/web-e2e/`, and MUST only consider files tracked by git.
+
+_From 893-folder-rules._
+
+### 893-FR-004 — The structure check MUST exit non-zero when it finds a violation not listed in the baseline, or a baseline entry that no longer matches a violation, and exit zero otherwise.
+
+_From 893-folder-rules._
+
+### 893-FR-005 — The repository MUST carry a baseline, one entry per file and rule, listing only the violations that remain when this feature merges: those in a file an open pull request still edits, left for the change that follows it.
+
+_From 893-folder-rules._
+
+### 893-FR-006 — The baseline MUST only shrink. The config-protection ratchet MUST refuse an edit that raises its entry count, as it does for `.specify/trace-baseline.json`. The check, given a base ref (`--base <ref>`: `origin/<base_ref>` in PR CI, `origin/main` in pre-commit), MUST fail when the baseline holds an entry absent from that ref's baseline. A base ref with no baseline file, or no base ref (a push to `main`), skips that comparison.
+
+_From 893-folder-rules._
+
+### 893-FR-007 — The structure check MUST run in CI's Checks job as its own step, and in the pre-commit hook.
+
+_From 893-folder-rules._
+
+### 893-FR-008 — The Nx `@nx/angular:component` generator defaults MUST set `inlineTemplate: false` and `inlineStyle: false`, keeping `style: css`; AGENTS.md MUST give the `--path <area>/<name>/<name>` form that puts the component in its own folder (Clarification Q6).
+
+_From 893-folder-rules._
+
+### 893-FR-009 — AGENTS.md MUST carry a "Folder structure" section stating both rules, the definitions a reader needs to apply them, the out-of-scope paths, the baseline and how to run the check.
+
+_From 893-folder-rules._
+
+### 893-FR-010 — The constitution MUST state the folder rules under Principle IV with the structure check named in its Enforcement section, at the next minor version, and the constitution card MUST match.
+
+_From 893-folder-rules._
+
+### 893-FR-011 — The speckit plan template, tasks template and implement skill MUST name the layout so planned file paths follow it.
+
+_From 893-folder-rules._
+
+### 893-FR-012 — Tests MUST show: a flat module fails, an inline template fails, a misplaced component fails, a baselined entry passes, a stale baseline entry fails, and a grown baseline is refused. One test MUST run the rule 1 grouping over the `libs/domain/src/notifications/` listing as it stood before the move and find exactly the groups bell, brevo, news, preferences and push; another MUST show the checked tree holds no violation outside the baseline.
+
+_From 893-folder-rules._
+
+### 893-FR-013 — This feature MUST move every file that violates a rule into place (the owner, 2026-10-08: backfill in the same PR), taking the work ST-894 and ST-895 planned, and change no behaviour while doing it: imports and paths follow the files, inline templates and styles move to the component's `.html` and `.css` unchanged, and the affected projects' typecheck, tests, lint and build stay green. A file an open pull request edits stays in the baseline until that pull request merges.
+
+_From 893-folder-rules._
 
 ## Retired
 

@@ -1,0 +1,9 @@
+<header class="top">
+  <button type="button" class="spartan-button spartan-button-variant-ghost" (click)="signIn.start()">
+    {{ 'public.signInButton' | t }}
+  </button>
+</header>
+<main><router-outlet /></main>
+@if (tabBar) {
+  <mf-public-tab-bar />
+}
