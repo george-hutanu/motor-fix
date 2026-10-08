@@ -13,7 +13,8 @@ ALTER TABLE "garage"
     CHECK ("address" IS NULL OR "seat_address" IS NULL),
   ADD CONSTRAINT "garage_position_both_or_neither"
     CHECK (("latitude" IS NULL) = ("longitude" IS NULL)),
-  ADD CONSTRAINT "garage_position_in_romania"
-    CHECK ("latitude" IS NULL OR ("latitude" BETWEEN 43.5 AND 48.4 AND "longitude" BETWEEN 20.2 AND 29.8)),
+  -- The earth's ranges only: Romania's box lives in the contracts library alone.
+  ADD CONSTRAINT "garage_position_range"
+    CHECK ("latitude" IS NULL OR ("latitude" BETWEEN -90 AND 90 AND "longitude" BETWEEN -180 AND 180)),
   ADD CONSTRAINT "garage_service_radius_range"
     CHECK ("service_radius_km" IS NULL OR "service_radius_km" BETWEEN 1 AND 100);

@@ -235,18 +235,23 @@ describe('GaragePlaceService.write', () => {
     ).rejects.toThrow();
   });
 
-  it('is held by the database to a position inside Romania', async () => {
-    await expect(
-      prisma.garage.update({
-        data: { latitude: 52.52, longitude: 13.4 },
-        where: { id: garageId },
-      }),
-    ).rejects.toThrow();
-    await expect(
-      prisma.garage.update({
-        data: { latitude: 44.4 },
-        where: { id: garageId },
-      }),
-    ).rejects.toThrow();
+  // Romania's box lives only in the contracts library (FR-007): the
+  // database holds a position to the earth's ranges (FR-012), no tighter.
+  it('is held by the database to a position on the earth, not to Romania', async () => {
+    await prisma.garage.update({
+      data: { latitude: 52.52, longitude: 13.4 },
+      where: { id: garageId },
+    });
+    expect(await stored()).toMatchObject({ latitude: 52.52, longitude: 13.4 });
+    for (const data of [
+      { latitude: 90.0001, longitude: 0 },
+      { latitude: -90.0001, longitude: 0 },
+      { latitude: 0, longitude: 180.0001 },
+      { latitude: 0, longitude: -180.0001 },
+      { latitude: 44.4, longitude: null },
+    ])
+      await expect(
+        prisma.garage.update({ data, where: { id: garageId } }),
+      ).rejects.toThrow();
   });
 });
