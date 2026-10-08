@@ -1,3 +1,4 @@
+export * from './accounts.dto';
 export * from './admin.dto';
 export * from './audit-history.dto';
 export * from './auth.dto';
