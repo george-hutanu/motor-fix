@@ -9,6 +9,7 @@ import {
   publicTexts,
   toLanguageAddress,
 } from './addresses';
+import { AdminSignIn } from './admin-sign-in/admin-sign-in';
 import { areaGuard } from './dashboard/area.guard';
 import { dashboardRoutes } from './dashboard/views';
 import { Home } from './home/home';
@@ -36,6 +37,14 @@ export const routes: Routes = [
     data: { tabBar: false },
     path: '',
     pathMatch: 'full',
+  },
+  // The admins' way in, kept open during maintenance; no language prefix.
+  {
+    canMatch: [publicTexts],
+    children: [{ component: AdminSignIn, path: '' }],
+    component: PublicFrame,
+    data: { tabBar: false },
+    path: 'admin',
   },
   ...(['driver', 'garage', 'admin'] as const).map((area) => ({
     canMatch: [areaGuard(area)],

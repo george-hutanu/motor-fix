@@ -135,6 +135,7 @@
       "includes": [
         "apps/web/src/app/dashboard/frame/frame.html",
         "apps/web/src/app/dashboard/tab-bar/tab-bar.html",
+        "apps/web/src/app/maintenance/maintenance-page/maintenance-page.html",
         "apps/web/src/app/not-found/not-found.html",
         "apps/web/src/app/public/confirm-email/confirm-email.html",
         "apps/web/src/app/public/invite/invite.html",

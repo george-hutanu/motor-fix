@@ -8,9 +8,17 @@ import {
 } from '@angular/common/http';
 import { inject, PLATFORM_ID } from '@angular/core';
 import { toProblem } from '@motor-fix/overlays';
-import { catchError, from, type Observable, switchMap, throwError } from 'rxjs';
+import {
+  catchError,
+  from,
+  type Observable,
+  switchMap,
+  tap,
+  throwError,
+} from 'rxjs';
 
 import { Session } from './dashboard/session';
+import { PlatformStatus } from './maintenance/platform-status';
 import { SignInDialog } from './sign-in/sign-in-dialog';
 
 // Only the page's own API gets the token; the session calls work by cookie.
@@ -29,6 +37,11 @@ const signInRequired = (error: unknown) => {
   return problem.status === 401 && problem.code === 'sign_in_required';
 };
 
+const inMaintenance = (error: unknown) => {
+  const problem = toProblem(error);
+  return problem.status === 503 && problem.code === 'maintenance';
+};
+
 export const authInterceptor: HttpInterceptorFn = (
   req,
   next: HttpHandlerFn,
@@ -36,6 +49,7 @@ export const authInterceptor: HttpInterceptorFn = (
   if (!carriesToken(req.url)) return next(req);
   const session = inject(Session);
   const dialog = inject(SignInDialog);
+  const status = inject(PlatformStatus);
   const onServer = isPlatformServer(inject(PLATFORM_ID));
   const token = session.token();
   const mayAsk = !onServer && !isWhoAmI(req);
@@ -72,6 +86,12 @@ export const authInterceptor: HttpInterceptorFn = (
       return from(session.renew()).pipe(
         switchMap((renewed) => (renewed ? repeat(true, error) : ask(error))),
       );
+    }),
+    // The first answer or the one sent again: either shows the page.
+    tap({
+      error: (error: unknown) => {
+        if (inMaintenance(error)) status.on();
+      },
     }),
   );
 };
