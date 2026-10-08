@@ -275,6 +275,36 @@ describe('step 2, the brands', () => {
     expect(told.at(-1)).toEqual([...popular, LADA.id]);
   });
 
+  it('tells no order when it is gone before the catalogue answers', async () => {
+    let answer: (value: ReturnType<typeof page>) => void = () => undefined;
+    search.mockReturnValueOnce(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: BrandsService,
+          useValue: { brandsControllerSearch: search },
+        },
+      ],
+    });
+    await TestBed.inject(I18n).enter('public');
+    const fixture = TestBed.createComponent(BrandsStep);
+    const told: string[][] = [];
+    fixture.componentInstance.order.subscribe((ids) => told.push(ids));
+    fixture.destroy();
+
+    answer(page(CATALOGUE));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(told).toEqual([]);
+  });
+
   it('marks a brand already shown in place, never twice, ignoring accents and case', async () => {
     const { fixture, step } = await open();
 

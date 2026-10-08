@@ -25,7 +25,7 @@ export function verdict(
 const names = (brands: { name: string }[]) =>
   brands.map((brand) => brand.name).join(', ');
 
-const written = (value: string | null | undefined) =>
+export const written = (value: string | null | undefined) =>
   value?.trim() ? value.trim() : null;
 
 @Component({

@@ -146,13 +146,17 @@ export class BrandsStep {
   });
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => clearTimeout(this.timer));
+    let gone = false;
+    inject(DestroyRef).onDestroy(() => {
+      gone = true;
+      clearTimeout(this.timer);
+    });
     // The chips come with the client: a server render would drop the answer.
     if (isPlatformServer(inject(PLATFORM_ID))) return;
     this.catalogue.brandsControllerSearch({}).then(
       (page) => {
         this.popular.set(page.items.slice(0, POPULAR));
-        this.tellOrder();
+        if (!gone) this.tellOrder();
       },
       () => this.notice.set('public.listing.brands.searchDown'),
     );

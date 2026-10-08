@@ -7,6 +7,7 @@ import type {
 import type { GarageBrandAnswerDto } from '@motor-fix/data-access';
 
 import { initials } from '../../dashboard/initials';
+import { written } from '../brand-verdict';
 import type { BrandsSection, MarkedBrand } from '../brands-section';
 
 // The service area a mobile mechanic is shown with until the form asks for one.
@@ -32,10 +33,9 @@ interface PreviewCard {
   mobileKm: number | null;
 }
 
-const written = (value: string | undefined) => value?.trim() || null;
-
-const lei = (bani: number | undefined) =>
-  bani === undefined ? null : baniToLei(bani);
+// A kept draft may hold null for an end the owner cleared.
+const lei = (bani: number | null | undefined) =>
+  bani == null ? null : baniToLei(bani);
 
 function range(prices: PricesSection | undefined): PreviewCard['range'] {
   const from = lei(prices?.labour?.fromBani);
@@ -44,13 +44,16 @@ function range(prices: PricesSection | undefined): PreviewCard['range'] {
 }
 
 // Known brands in display order; brands the step does not show keep their
-// draft order, after them.
+// draft order, after them. A brand the draft repeats counts once.
 function inOrder(brands: MarkedBrand[], order: string[]): MarkedBrand[] {
+  const once = brands.filter(
+    (b, i) => brands.findIndex((c) => c.brandId === b.brandId) === i,
+  );
   const rank = (b: MarkedBrand) => {
     const at = order.indexOf(b.brandId);
     return at === -1 ? order.length : at;
   };
-  return [...brands].sort((a, b) => rank(a) - rank(b));
+  return once.sort((a, b) => rank(a) - rank(b));
 }
 
 export function previewCard(input: PreviewCardInput): PreviewCard {
