@@ -1,4 +1,9 @@
 import {
+  observeQueue,
+  observeWorker,
+  queueTelemetry,
+} from '@motor-fix/observability';
+import {
   type DynamicModule,
   Inject,
   Injectable,
@@ -11,6 +16,7 @@ import {
 import { type Job, type JobsOptions, Queue, Worker } from 'bullmq';
 
 import { RemindersService } from './reminders.service';
+import { inJob } from '../logging';
 import {
   bucharestDaily,
   DAILY_TASKS,
@@ -130,10 +136,14 @@ export class RemindersModule
         },
         {
           provide: REMINDERS_JOBS,
-          useFactory: () =>
-            new Queue(REMINDERS_QUEUE, {
+          useFactory: () => {
+            const queue = new Queue(REMINDERS_QUEUE, {
               connection: { url: options.redisUrl },
-            }),
+              telemetry: queueTelemetry(),
+            });
+            observeQueue(queue);
+            return queue;
+          },
         },
         {
           inject: [RemindersScheduler],
@@ -141,17 +151,19 @@ export class RemindersModule
           useFactory: (scheduler: RemindersScheduler) => {
             const worker = new Worker<Daily>(
               REMINDERS_QUEUE,
-              (job) => scheduler.handle(job),
+              (job) => inJob(job, () => scheduler.handle(job)),
               {
                 connection: {
                   maxRetriesPerRequest: null,
                   url: options.redisUrl,
                 },
+                telemetry: queueTelemetry(),
               },
             );
             worker.on('failed', (job, error) => {
-              if (job) scheduler.failed(job, error);
+              if (job) inJob(job, () => scheduler.failed(job, error));
             });
+            observeWorker(worker);
             return worker;
           },
         },
