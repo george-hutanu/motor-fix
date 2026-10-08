@@ -40,7 +40,7 @@ main {
   color: var(--mf-text);
   text-decoration: none;
   font-family: var(--mf-font-label);
-  font-size: var(--mf-size-small);
+  font-size: var(--mf-size-body);
   letter-spacing: 0.3em;
   text-transform: uppercase;
   white-space: nowrap;

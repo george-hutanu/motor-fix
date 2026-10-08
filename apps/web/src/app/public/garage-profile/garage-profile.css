@@ -69,7 +69,7 @@ mf-lamp[data-state="red"] {
 h1 {
   margin: 0;
   font-family: var(--mf-font-label);
-  font-size: clamp(30px, 4.4vw, 60px);
+  font-size: var(--mf-size-title);
   line-height: 1.12;
   text-transform: uppercase;
   overflow-wrap: anywhere;
@@ -84,12 +84,11 @@ h1 {
 
 .description {
   max-width: 32em;
-  font-size: 19px;
+  font-size: var(--mf-size-subheading);
 }
 
 .verified {
   max-width: 38em;
-  font-size: var(--mf-size-small);
 }
 
 .dial {
@@ -150,4 +149,10 @@ h1 {
   width: min(100%, 240px);
   aspect-ratio: 1;
   border-radius: 50%;
+}
+/* On the type scale: title on a phone, display from a tablet up. */
+@media (min-width: 48rem) {
+  h1 {
+    font-size: var(--mf-size-display);
+  }
 }

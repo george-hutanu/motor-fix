@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { HttpErrorResponse } from '@angular/common/http';
 import { PLATFORM_ID, RESPONSE_INIT } from '@angular/core';
@@ -477,6 +480,37 @@ describe('moving between profiles', () => {
     await settle();
     expect(page().querySelector('h1')?.textContent?.trim()).toBe(
       'Atelier Dinamo',
+    );
+  });
+});
+
+describe('the profile on the Cockpit type scale', () => {
+  const css = (path: string) => readFileSync(join(__dirname, path), 'utf8');
+  const sizes = (source: string) =>
+    [...source.matchAll(/font-size:\s*([^;]+);/g)].map((m) => m[1]?.trim());
+
+  it.each(['garage-profile.css', 'gone/gone.css', '../frame/frame.css'])(
+    'sizes every text in %s with a --mf-size-* token',
+    (path) => {
+      for (const size of sizes(css(path))) {
+        expect(size).toMatch(/^var\(--mf-size-[a-z]+\)$/);
+      }
+    },
+  );
+
+  it('keeps the site bar wordmark, a link, at body size on a phone', () => {
+    expect(css('../frame/frame.css')).toMatch(
+      /\.logo \{[^}]*font-size: var\(--mf-size-body\);/,
+    );
+  });
+
+  it('holds the review count, a label, outside running text', () => {
+    expect(css('garage-profile.html')).not.toMatch(/<p class="reviews">/);
+  });
+
+  it('gives the verified line body size, not a 13 px caption', () => {
+    expect(css('garage-profile.css')).not.toMatch(
+      /\.verified \{[^}]*--mf-size-small/,
     );
   });
 });
