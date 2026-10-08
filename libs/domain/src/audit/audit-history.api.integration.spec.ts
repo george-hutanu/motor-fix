@@ -23,7 +23,7 @@ async function world() {
   });
   const elena = await account('Elena', ['mechanic']);
   await prisma.mechanic.create({
-    data: { accountId: elena, garageId: nord.id },
+    data: { accountId: elena, garageId: nord.id, name: 'Mecanic' },
   });
   const mihai = await account('Mihai', ['garage']);
   await prisma.garageMember.create({

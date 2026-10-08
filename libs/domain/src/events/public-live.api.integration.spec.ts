@@ -184,7 +184,11 @@ async function mechanicOf(garageId: string) {
     name: 'Mihai',
     roles: ['mechanic'],
   });
-  return (await prisma.mechanic.create({ data: { accountId, garageId } })).id;
+  return (
+    await prisma.mechanic.create({
+      data: { accountId, garageId, name: 'Mecanic' },
+    })
+  ).id;
 }
 
 async function brand(active = true) {

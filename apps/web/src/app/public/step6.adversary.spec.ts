@@ -7,7 +7,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { I18n } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
-import { ListYourGarage } from './list-your-garage';
+import { ListYourGarage } from './list-your-garage/list-your-garage';
 import { completedCount, cuiError, rarError, readStep6 } from './step6';
 
 describe('reading the verification step from hostile draft data', () => {

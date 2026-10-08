@@ -1,8 +1,10 @@
 import {
+  baniToLei,
   checkPriceRange,
   leiToBani,
   PRICE_MAX_BANI,
   PRICE_MIN_BANI,
+  type StartingPricesInput,
 } from './price-range';
 
 const lei = leiToBani;
@@ -14,6 +16,12 @@ describe('lei and bani', () => {
 
   it('refuses lei with a fraction', () => {
     expect(() => lei(1.5)).toThrow(RangeError);
+  });
+
+  it('turns bani back into whole lei', () => {
+    expect(baniToLei(18_000)).toBe(180);
+    expect(baniToLei(0)).toBe(0);
+    expect(baniToLei(lei(1_200))).toBe(1_200);
   });
 
   it('bounds a price between 1 leu and 100.000 lei', () => {
@@ -138,6 +146,22 @@ describe('the price range check', () => {
       { code: 'min', field: 'from' },
       { code: 'integer', field: 'to' },
       { code: 'min', field: 'duration' },
+    ]);
+  });
+});
+
+describe('the starting prices input', () => {
+  it('takes a catalogue job or a proposed name, with no duration', () => {
+    const input: StartingPricesInput = {
+      jobs: [
+        { fromBani: lei(100), jobTypeId: 'job' },
+        { fromBani: lei(200), name: 'Schimb ambreiaj', toBani: lei(400) },
+      ],
+      labour: { fromBani: lei(150), toBani: lei(250) },
+    };
+    expect(input.jobs.map((job) => 'durationMinutes' in job)).toEqual([
+      false,
+      false,
     ]);
   });
 });

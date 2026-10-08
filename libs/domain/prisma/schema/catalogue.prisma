@@ -30,17 +30,21 @@ enum JobTypeStatus {
 // A job a garage can price. The shipped jobs load approved at start; a row
 // added later is a proposal an admin decides. Rows are never deleted.
 model JobType {
-  id          String        @id @default(uuid()) @db.Uuid
-  key         String        @unique
-  nameRo      String        @map("name_ro")
-  nameEn      String        @map("name_en")
-  status      JobTypeStatus @default(pending)
-  carSystem   String?       @map("car_system")
-  rarActivity String?       @map("rar_activity")
-  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
-  prices      GaragePrice[]
+  id                 String        @id @default(uuid()) @db.Uuid
+  key                String        @unique
+  nameRo             String        @map("name_ro")
+  nameEn             String        @map("name_en")
+  status             JobTypeStatus @default(pending)
+  carSystem          String?       @map("car_system")
+  rarActivity        String?       @map("rar_activity")
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  prices             GaragePrice[]
+  // The garage that proposed it while listing; null for the shipped jobs.
+  proposedByGarageId String?       @map("proposed_by_garage_id") @db.Uuid
+  proposedBy         Garage?       @relation(fields: [proposedByGarageId], references: [id], onDelete: SetNull)
 
+  @@index([proposedByGarageId])
   @@map("job_type")
 }
 

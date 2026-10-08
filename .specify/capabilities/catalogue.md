@@ -1,10 +1,11 @@
 ---
 capability: catalogue
-updated: 2026-10-07
+updated: 2026-10-08
 features:
   - 039-brand-catalogue
   - 112-opening-hours
   - 354-job-catalogue-prices
+  - 109-garage-details-prices
 ---
 
 # Capability: Catalogue
@@ -65,10 +66,18 @@ _From 039-brand-catalogue._
 
 _From 112-opening-hours._
 
-### 354-FR-001 — The system MUST keep one job catalogue for the whole product, maintained by MotorFix, with one row per job holding an id, a stable key, a Romanian name, an English name, a status among `approved`, `pending` and `rejected`, an optional car system and an optional RAR activity code (both empty for the first six, filled by the stories that own them), created and updated times.
+### 109-FR-021 — (Replaces 354-FR-001.) The system MUST keep one job catalogue for the whole product, maintained by MotorFix, with one row per job holding an id, a stable key, a Romanian name, an English name, a status among `approved`, `pending` and `rejected`, an optional car system and an optional RAR activity code (both empty for the first six, filled by the stories that own them), an optional proposing garage (`proposed_by_garage_id`, empty for the shipped jobs and set for a job a garage proposed through its listing), created and updated times.
 
-_From 354-job-catalogue-prices._
+_From 109-garage-details-prices._
 
 ### 354-FR-002 — The product MUST ship the six jobs of the mock as approved catalogue data, keyed stably, and load them in every environment, production included, when the product starts or its data load runs; the load MUST mirror the brand load: the file wins on names, each created or changed row is audited once by `system`, rows outside the file are left alone; it MUST be idempotent (a second run with an unchanged file creates, renames and re-ids nothing and writes no audit entry) and atomic (a failed load leaves the catalogue as it was), and two loads at once MUST still leave exactly one row per key.
 
 _From 354-job-catalogue-prices._
+
+### 109-FR-006 — "Adaugă o lucrare" / "Add a job" MUST search the catalogue as the owner types (from the second character): approved jobs whose Romanian or English name contains the text, accents and case ignored, at most 20, excluding jobs already in the list; choosing one adds a row with an empty range. The search MUST be a public read of the API (the owner has no account): `GET /api/v1/job-types?q=` answering `{ items: [{ id, nameRo, nameEn }] }`, approved jobs only, at most 20, in catalogue order (name), open to visitors without a session and listed with the public routes (`apps/api/src/public-routes.integration.spec.ts`). An empty `q` answers the approved jobs by name, at most 20. Only the answer to the text last typed is shown: a slower answer to an earlier text is dropped.
+
+_From 109-garage-details-prices._
+
+## Retired
+
+- `354-FR-001` — superseded by `109-FR-021` (2026-10-08)

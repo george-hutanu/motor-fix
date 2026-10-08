@@ -87,6 +87,8 @@ export type { BrandsControllerSearch$Params as BrandsControllerSearch$Params } f
 export { brandsControllerSearch as brandsControllerSearch } from './fn/brands/brands-controller-search';
 export type { PopularBrandsControllerTiles$Params as PopularBrandsControllerTiles$Params } from './fn/brands/popular-brands-controller-tiles';
 export { popularBrandsControllerTiles as popularBrandsControllerTiles } from './fn/brands/popular-brands-controller-tiles';
+export type { JobTypesControllerSearch$Params as JobTypesControllerSearch$Params } from './fn/catalogue/job-types-controller-search';
+export { jobTypesControllerSearch as jobTypesControllerSearch } from './fn/catalogue/job-types-controller-search';
 export type { PublicHolidaysControllerList$Params as PublicHolidaysControllerList$Params } from './fn/public-holidays/public-holidays-controller-list';
 export { publicHolidaysControllerList as publicHolidaysControllerList } from './fn/public-holidays/public-holidays-controller-list';
 export type { GarageSearchControllerForBrand$Params as GarageSearchControllerForBrand$Params } from './fn/search/garage-search-controller-for-brand';
