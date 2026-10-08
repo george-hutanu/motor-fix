@@ -15,8 +15,28 @@
   },
   "platformRules": {
     "alwaysOn": "Always on in production",
+    "approve": "Approve",
+    "decided": {
+      "approved": "Approved by {name}",
+      "cancelled": "Withdrawn by {name}",
+      "refused": "Refused by {name}"
+    },
     "line": "The rules that apply to every garage",
     "loadFailed": "We could not load the rules",
+    "refuse": "Refuse",
+    "request": {
+      "cancel": "Cancel",
+      "problem": {
+        "change_pending": "Another request for this rule is already waiting.",
+        "stale_value": "The rule is already off."
+      },
+      "reason": "Reason",
+      "reasonHint": "5–300 characters. The other admins see it.",
+      "second": "Another admin has to approve.",
+      "submit": "Send the request",
+      "title": "Switch off \"Reviews only after a confirmed job\"?",
+      "what": "Signed-in drivers will also be able to review a garage from its profile, without a MotorFix job. Those reviews will be marked \"not through MotorFix\"."
+    },
     "retry": "Try again",
     "rule": {
       "maintenance_mode": {
@@ -39,6 +59,8 @@
     "saveFailed": "The rule could not be saved. Try again.",
     "testOnly": "Test only",
     "title": "Platform settings",
-    "twoAdmins": "A second admin is needed."
+    "twoAdmins": "A second admin is needed.",
+    "waiting": "Waiting for another admin's approval",
+    "withdraw": "Withdraw the request"
   }
 }

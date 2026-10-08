@@ -10,7 +10,7 @@
   margin: 0 var(--mf-space-4) var(--mf-space-3);
   padding: var(--mf-space-3) var(--mf-space-4);
   border: 1px solid var(--mf-amber-ink);
-  border-radius: var(--mf-radius-md, 12px);
+  border-radius: var(--mf-radius-control);
 }
 p {
   margin: 0;

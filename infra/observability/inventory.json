@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 72,
+    "count": 77,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -217,6 +217,15 @@
       "alerts": "none",
       "reason": "counts calls refused while maintenance is on, by route and role (visitor or signed_in); ST-879 adds the dashboard, ST-880 the alerts",
       "story": "ST-261"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_platform_rule_changes_total",
+      "source": "libs/domain/src/admin/platform-rules/changes/changes.metrics.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "counts rule change requests by action (requested, approved, refused, cancelled), with one PlatformRuleChanges log line per step; ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-260"
     },
     {
       "kind": "outside-service",

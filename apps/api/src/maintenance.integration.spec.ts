@@ -272,7 +272,14 @@ describe('the switch across copies of the api', () => {
           redisUrl: redisAt,
           tokenSecret: TEST_TOKEN_SECRET,
         }),
-        PlatformRulesModule.register({ production: false }),
+        PlatformRulesModule.register(
+          { production: false },
+          {
+            exports: [NotificationsService],
+            module: class NoNotifications {},
+            providers: [{ provide: NotificationsService, useValue: {} }],
+          },
+        ),
       ],
     }).compile();
     const other = moduleRef.createNestApplication();

@@ -13,6 +13,7 @@ features:
   - 419-live-garage-updates
   - 258-platform-rules-switches
   - 261-maintenance-mode
+  - 260-rule-off-confirm
 ---
 
 # Capability: Live updates
@@ -348,6 +349,10 @@ _From 258-platform-rules-switches._
 ### 261-FR-009 — An open screen MUST switch to the maintenance page without a reload within 5 seconds of `platform_rule.changed` for `maintenance_mode` arriving on the `system` channel, and MUST return to the address the person was on, without a reload, within 5 seconds of the change to off. On each such event the app re-reads `GET /api/v1/platform-status` and acts on that answer, not on the event's payload, so a quick on-off ends in the last state. While the page shows, the screen under it is kept, so unsaved form text is there when it returns.
 
 _From 261-maintenance-mode._
+
+### 260-FR-007 — `platform_rule.change_requested` and `platform_rule.change_decided` MUST reach every admin's open Setări view on the `admin` channel and no other channel; the view MUST re-read the rules and the requests and show the new state without a reload. The `platform_rule.changed` of an approval follows 258-FR-006 (the `admin` channel).
+
+_From 260-rule-off-confirm._
 
 ## Retired
 

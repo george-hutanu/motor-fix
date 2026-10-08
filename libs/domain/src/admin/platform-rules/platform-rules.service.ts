@@ -19,13 +19,19 @@ import type {
 
 export interface PlatformRulesOptions {
   production: boolean;
+  // The web app's address, for the Setări link in a change request's alert.
+  webUrl?: string;
 }
+
+export type ReviewPolicy =
+  | { mode: 'job_only' }
+  | { mode: 'profile_allowed'; source: 'profile' };
 
 export const PLATFORM_RULES_OPTIONS = Symbol('PLATFORM_RULES_OPTIONS');
 
 // Seeded outside production only; production never reads or changes them,
 // even when a copied database holds them.
-const TEST_ONLY = new Set(['skip_manual_approval', 'skip_rar_check']);
+export const TEST_ONLY = new Set(['skip_manual_approval', 'skip_rar_check']);
 
 const MAINTENANCE_RULE = 'maintenance_mode';
 
@@ -85,31 +91,13 @@ export class PlatformRulesService {
       if (same(value, row.value) && same(seen, row.value)) return dto(row);
       const refused = refuseChange(row, seen, value);
       if (refused) throw refused;
-      const saved = await tx.platformRule.update({
-        data: {
-          updatedAt: new Date(),
-          updatedBy: actor.accountId,
-          value: value as Prisma.InputJsonValue,
-        },
-        where: { id: row.id },
-      });
-      await this.audit.record(tx, {
-        action: 'update',
-        actorId: actor.accountId,
-        actorRole: actor.role,
-        field: key,
-        kind: 'platform_rule_changed',
-        newValue: value,
-        oldValue: row.value,
-        subjectId: row.id,
-        subjectType: 'platform_rule',
-      });
-      await this.events.record(tx, {
-        audience: { adminOnly: key !== MAINTENANCE_RULE, type: 'platform' },
-        kind: 'platform_rule.changed',
-        payload: { key, new: value, old: row.value },
-        subjectId: key,
-      });
+      const saved = await setRule(
+        tx,
+        { audit: this.audit, events: this.events },
+        actor,
+        row,
+        value,
+      );
       changed = true;
       return dto(saved);
     });
@@ -132,9 +120,57 @@ export class PlatformRulesService {
     }
   }
 
+  // How a driver may review a garage: only after a confirmed job while the
+  // reviews rule is on, also from the garage's profile once it is off.
+  async reviewPolicy(): Promise<ReviewPolicy> {
+    const rule = await this.prisma.platformRule.findUnique({
+      where: { key: 'reviews_only_after_confirmed_job' },
+    });
+    return rule?.value === false
+      ? { mode: 'profile_allowed', source: 'profile' }
+      : { mode: 'job_only' };
+  }
+
   private visible(key: string) {
     return !(this.options.production && TEST_ONLY.has(key));
   }
+}
+
+// Saves a rule's new value with its audit entry and its event, inside the
+// caller's transaction: a direct change, or an approved request.
+export async function setRule(
+  tx: Prisma.TransactionClient,
+  ports: { audit: AuditPort; events: EventPort },
+  actor: Actor,
+  row: PlatformRule,
+  value: unknown,
+): Promise<PlatformRule> {
+  const saved = await tx.platformRule.update({
+    data: {
+      updatedAt: new Date(),
+      updatedBy: actor.accountId,
+      value: value as Prisma.InputJsonValue,
+    },
+    where: { id: row.id },
+  });
+  await ports.audit.record(tx, {
+    action: 'update',
+    actorId: actor.accountId,
+    actorRole: actor.role,
+    field: row.key,
+    kind: 'platform_rule_changed',
+    newValue: value,
+    oldValue: row.value,
+    subjectId: row.id,
+    subjectType: 'platform_rule',
+  });
+  await ports.events.record(tx, {
+    audience: { adminOnly: row.key !== MAINTENANCE_RULE, type: 'platform' },
+    kind: 'platform_rule.changed',
+    payload: { key: row.key, new: value, old: row.value },
+    subjectId: row.key,
+  });
+  return saved;
 }
 
 // A change is checked in this order: the value's shape, a stale read, then the
@@ -170,5 +206,5 @@ function refuseChange(
   return undefined;
 }
 
-const unknownRule = () =>
+export const unknownRule = () =>
   refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such rule');

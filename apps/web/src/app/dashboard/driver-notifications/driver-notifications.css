@@ -9,7 +9,7 @@ section {
   margin: var(--mf-space-4);
   padding: var(--mf-space-4);
   border: 1px solid var(--mf-line-strong);
-  border-radius: var(--mf-radius-md, 12px);
+  border-radius: var(--mf-radius-control);
   min-width: 0;
 }
 
@@ -46,8 +46,8 @@ li {
 }
 
 .hint {
-  color: var(--mf-ink-muted);
-  font-size: 0.875rem;
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
 }
 
 hlm-switch {

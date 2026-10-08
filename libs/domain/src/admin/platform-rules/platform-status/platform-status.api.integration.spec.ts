@@ -6,12 +6,21 @@ import { signAccessToken } from '../../../auth/access-token';
 import { AuthModule } from '../../../auth/auth.module';
 import { MAINTENANCE, type Maintenance } from '../../../auth/maintenance';
 import { serialDatabase } from '../../../auth/serial-db.testing';
+import { NotificationsService } from '../../../notifications/notifications.service';
 import {
   databaseUrl,
   fixtures,
   redisUrlFor,
 } from '../../../notifications/notifications.testing';
 import { PlatformRulesModule } from '../platform-rules.module';
+
+// The status call sends nothing; the change requests' notifier is a stub.
+class NoNotifications {}
+const notifications = {
+  exports: [NotificationsService],
+  module: NoNotifications,
+  providers: [{ provide: NotificationsService, useValue: {} }],
+};
 
 const redisUrl = redisUrlFor(14);
 const tokenSecret = 'test-secret';
@@ -32,7 +41,7 @@ beforeAll(async () => {
   const moduleRef = await Test.createTestingModule({
     imports: [
       AuthModule.register({ databaseUrl, redisUrl, tokenSecret }),
-      PlatformRulesModule.register({ production: false }),
+      PlatformRulesModule.register({ production: false }, notifications),
     ],
   }).compile();
   app = moduleRef.createNestApplication();
