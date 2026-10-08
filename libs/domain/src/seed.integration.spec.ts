@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 
-import { verifyPassword } from './auth/password';
+import { verifyPassword } from './auth/password/password';
 import { createPrisma } from './auth/prisma';
 import { serialDatabase } from './auth/serial-db.testing';
 

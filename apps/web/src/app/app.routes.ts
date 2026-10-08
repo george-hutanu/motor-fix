@@ -14,10 +14,10 @@ import { dashboardRoutes } from './dashboard/views';
 import { Home } from './home/home';
 import { NotFound } from './not-found/not-found';
 import { signedInToDashboard } from './public/account.guard';
-import { PublicFrame } from './public/frame';
-import { Placeholder } from './public/placeholder';
+import { PublicFrame } from './public/frame/frame';
+import { Placeholder } from './public/placeholder/placeholder';
 
-const frame = () => import('./dashboard/frame').then((m) => m.Frame);
+const frame = () => import('./dashboard/frame/frame').then((m) => m.Frame);
 
 const placeholder = (path: string, title: string) => ({
   component: Placeholder,
@@ -56,12 +56,16 @@ export const routes: Routes = [
       { component: Home, matcher: languageRoot },
       {
         loadComponent: () =>
-          import('./public/reset-password').then((m) => m.ResetPassword),
+          import('./public/reset-password/reset-password').then(
+            (m) => m.ResetPassword,
+          ),
         path: 'reset-password/:token',
       },
       {
         loadComponent: () =>
-          import('./public/sign-in-return').then((m) => m.SignInReturn),
+          import('./public/sign-in-return/sign-in-return').then(
+            (m) => m.SignInReturn,
+          ),
         path: 'sign-in/return',
       },
       placeholder('garages', 'public.placeholder.garages'),
@@ -69,17 +73,19 @@ export const routes: Routes = [
       placeholder('mechanics/:mechanic', 'public.placeholder.mechanics'),
       {
         loadComponent: () =>
-          import('./public/confirm-email').then((m) => m.ConfirmEmail),
+          import('./public/confirm-email/confirm-email').then(
+            (m) => m.ConfirmEmail,
+          ),
         path: 'confirm-email/:token',
       },
       {
         loadComponent: () =>
-          import('./public/unsubscribe').then((m) => m.Unsubscribe),
+          import('./public/unsubscribe/unsubscribe').then((m) => m.Unsubscribe),
         path: 'unsubscribe/:token',
       },
       {
         loadComponent: () =>
-          import('./public/invite').then((m) => m.InvitePage),
+          import('./public/invite/invite').then((m) => m.InvitePage),
         path: 'invite/:token',
       },
       {
@@ -92,7 +98,8 @@ export const routes: Routes = [
       },
       ...(['terms', 'privacy'] as const).map((text) => ({
         data: { text },
-        loadComponent: () => import('./public/legal').then((m) => m.Legal),
+        loadComponent: () =>
+          import('./public/legal/legal').then((m) => m.Legal),
         path: text,
       })),
       {

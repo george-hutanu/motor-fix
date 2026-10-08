@@ -16,12 +16,12 @@ import {
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 
-import { LiveHub } from './live.hub';
+import { LiveHub } from './live/live.hub';
 import { Public } from '../auth/actor.guard';
 import { clientOf } from '../auth/attempts';
 import { PRISMA } from '../auth/prisma';
 import { refusal } from '../auth/sign-up.service';
-import { publicGarages } from '../garages/public-garages';
+import { publicGarages } from '../garages/public-garages/public-garages';
 import type { PrismaClient } from '../generated/prisma/client';
 
 // A visitor's stream: no session, no token read, nothing written. An id that

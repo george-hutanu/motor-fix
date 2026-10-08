@@ -1,0 +1,33 @@
+<section [attr.aria-busy]="state() === 'checking' || state() === 'accepting'">
+  @switch (state()) {
+    @case ('checking') {
+      <h1>{{ 'public.invite.loading' | t }}</h1>
+    }
+    @case ('invalid') {
+      <h1>{{ 'public.invite.invalid' | t }}</h1>
+      <a hlmBtn variant="secondary" [routerLink]="['/', i18n.language()]">{{ 'public.invite.home' | t }}</a>
+    }
+    @case ('error') {
+      <h1>{{ 'public.invite.error' | t }}</h1>
+      <button hlmBtn type="button" (click)="check()">{{ 'public.invite.retry' | t }}</button>
+    }
+    @default {
+      @if (invite(); as invite) {
+        @if (invite.kind === 'mechanic') {
+          <h1>{{ 'public.invite.mechanic' | t: { garage: invite.garage } }}</h1>
+        } @else {
+          <h1>{{ 'public.invite.receptionist' | t: { garage: invite.garage } }}</h1>
+        }
+        @if (invite.kind === 'mechanic') {
+          <p>{{ 'public.invite.profile' | t }}</p>
+        }
+        @if (failed()) {
+          <p role="alert">{{ 'public.invite.acceptFailed' | t }}</p>
+        }
+        <button hlmBtn type="button" [disabled]="state() === 'accepting'" (click)="accept()">
+          {{ 'public.invite.accept' | t }}
+        </button>
+      }
+    }
+  }
+</section>

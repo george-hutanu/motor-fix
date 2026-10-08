@@ -137,6 +137,30 @@ describe('strykerOptions', () => {
     expect(options.testRunner).toBe('jest');
   });
 
+  // Stryker reads the Jest config without normalising it, so a
+  // `<rootDir>/…` environment reaches it as a module name it cannot find.
+  it("resolves a project's own <rootDir> test environment file for Stryker", () => {
+    write('libs/x/stryker.config.json', floor(0));
+    write(
+      'libs/x/jest.config.cts',
+      "module.exports = {\n  testEnvironment: '<rootDir>/src/env.cjs',\n};\n",
+    );
+
+    expect(strykerOptions('x', 'libs/x', false).jest).toEqual({
+      config: { testEnvironment: join(process.cwd(), 'libs/x/src/env.cjs') },
+      configFile: 'libs/x/jest.config.cts',
+    });
+  });
+
+  it('leaves a built-in test environment to the Jest config', () => {
+    write('libs/x/stryker.config.json', floor(0));
+    write('libs/x/jest.config.cts', "  testEnvironment: 'jsdom',\n");
+
+    expect(strykerOptions('x', 'libs/x', false).jest).toEqual({
+      configFile: 'libs/x/jest.config.cts',
+    });
+  });
+
   it('names the file when its JSON does not parse', () => {
     write('libs/x/stryker.config.json', '{');
 

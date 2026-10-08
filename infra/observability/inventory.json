@@ -88,7 +88,7 @@
     {
       "kind": "queue",
       "name": "reminders",
-      "source": "libs/domain/src/cars/reminders.module.ts",
+      "source": "libs/domain/src/cars/reminders/reminders.module.ts",
       "dashboard": "none",
       "alerts": "none",
       "reason": "ST-879 adds the dashboard, ST-880 the alerts",
@@ -106,7 +106,7 @@
     {
       "kind": "queue",
       "name": "listing-photos",
-      "source": "libs/domain/src/garages/photos/listing-photos.module.ts",
+      "source": "libs/domain/src/garages/photos/listing-photos/listing-photos.module.ts",
       "dashboard": "none",
       "alerts": "none",
       "reason": "ST-879 adds the dashboard, ST-880 the alerts",
@@ -115,7 +115,7 @@
     {
       "kind": "queue",
       "name": "news",
-      "source": "libs/domain/src/notifications/news.fan-out.ts",
+      "source": "libs/domain/src/notifications/news/news.fan-out.ts",
       "dashboard": "none",
       "alerts": "none",
       "reason": "ST-879 adds the dashboard, ST-880 the alerts",
@@ -165,7 +165,7 @@
       "kind": "outside-service",
       "name": "web-push",
       "client": "web-push",
-      "source": "libs/domain/src/notifications/push.ts",
+      "source": "libs/domain/src/notifications/push/push.ts",
       "dashboard": "none",
       "alerts": "none",
       "reason": "ST-879 adds the dashboard, ST-880 the alerts",
