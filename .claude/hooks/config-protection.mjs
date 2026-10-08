@@ -12,9 +12,9 @@
 //      gate"
 //   3. scripts/structure-baseline.json — the folder-rule violations that
 //      predate scripts/structure-check.ts; listing a new one bypasses the rules
-//   4. the NNN-FR- @traces tokens in the colocated *.spec.ts / *.test.ts files
-//      — deleting one silences the traceability
-//      gate for that requirement
+//   4. the ids on `// @traces NNN-FR-XXX` lines in the colocated *.spec.ts /
+//      *.test.ts files (the one form Constitution II allows) — deleting one,
+//      or moving it into a title, silences the traceability matrix for it
 //
 // Each of those is now a block (exit 2) with the honest alternative in the
 // message. The gate is evaluated on the PROPOSED file content: the edit is
@@ -29,6 +29,7 @@ import { isAbsolute, join, relative } from "node:path";
 import { profileOf } from "../scripts/lib/hooks.mjs";
 import { contextFileName, measure, readBaseline } from "../scripts/context-audit.mjs";
 import { isEntryPoint } from "../scripts/lib/entry.mjs";
+import { traceTokens } from "../scripts/lib/traces.mjs";
 
 const repo = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
 
@@ -73,8 +74,6 @@ export function baselineSize(text, keys = ["grandfathered", "artifact_legacy"]) 
     return null;
   }
 }
-
-export const frTokens = (text) => new Set(text.match(/\b\d{3}-FR-\d{3}\b/g) ?? []);
 
 /** A colocated test file, wherever it sits: `foo.spec.ts`, `page.test.tsx`, an e2e spec. */
 export const isTestFile = (rel) => /\.(spec|test)\.[cm]?[jt]sx?$/.test(rel);
@@ -126,9 +125,9 @@ export function verdict({ rel, current, next, profile, allowHookEdit, contextBas
   // Tests are colocated across apps/, libs/ and e2e/ rather than gathered in
   // one tests/ directory, so the test file is recognised by its name.
   if (isTestFile(rel) && current !== null) {
-    const lost = [...frTokens(current)].filter((t) => !frTokens(next).has(t));
+    const lost = [...traceTokens(current)].filter((t) => !traceTokens(next).has(t));
     if (lost.length)
-      return `this removes requirement token${lost.length > 1 ? "s" : ""} ${lost.join(", ")} from ${rel}. The traceability gate reads those tokens — deleting one silences the gate for that requirement. Keep the token on whichever test still covers it.`;
+      return `this removes requirement token${lost.length > 1 ? "s" : ""} ${lost.join(", ")} from ${rel}. trace-matrix.mjs reads those // @traces lines — deleting one drops the requirement from the matrix. Keep the id on a // @traces line above whichever test still covers it.`;
   }
 
   const harness = rel.startsWith(".claude/hooks/") || rel === ".claude/settings.json";

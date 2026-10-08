@@ -29,7 +29,7 @@ The report's sections:
 - [ ] Converge run; appended work implemented or reported
 - [ ] `spec-reviewer` run; CRITICAL/HIGH resolved
 - [ ] Tests and lint green; every FR covered by a test named in the report's FR → test table
-- [ ] No internal identifier (FR id, feature number, task id, story id) left in any source file, comments included
+- [ ] No internal identifier (FR id, feature number, task id, story id) left in any source file, comments included, outside a whole-line `// @traces <feature>-FR-<n>` comment in a test file
 - [ ] `artifact-lint.mjs` and `diff-audit.mjs` clean, or every remaining finding explained in the report
 - [ ] both were run in their REPORT form, not `--check`: `--check` turns the semantic lane off, so a
       run that only ever used it has not asked whether a requirement is testable or a dependency earns
