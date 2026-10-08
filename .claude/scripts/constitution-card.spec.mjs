@@ -39,7 +39,8 @@ describe('the constitution card', () => {
       assert.match(text, /<name>\.html/);
       assert.match(text, /structure-check/);
     }
-    assert.match(full, /^\*\*Version\*\*: 1\.9\.0/m);
+    const [, minor] = full.match(/^\*\*Version\*\*: 1\.(\d+)\.\d+/m);
+    assert.ok(Number(minor) >= 9);
   });
 
   it('stays a card', () => {

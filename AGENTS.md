@@ -309,6 +309,8 @@ Two rules for `apps/*/src` and `libs/*/src` (Constitution IV), checked by
   root: `index.ts` and files named after the folder (`notifications.module.ts`).
   Any other group of files sharing a name (`bell.service.ts`,
   `bell.controller.ts`) is a submodule and moves to `notifications/bell/`.
+  Files inside that subfolder are named after it (`bell/bell.service.ts`),
+  not after the parent module.
 - **A web component is a folder.** A `@Component` in `apps/web/src` lives at
   `<name>/<name>.ts`, with `templateUrl: './<name>.html'` and, when it has
   styles, `styleUrl: './<name>.css'`: no inline `template` or `styles`.

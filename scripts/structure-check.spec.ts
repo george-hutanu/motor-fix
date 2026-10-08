@@ -284,6 +284,16 @@ describe('folder components', () => {
     ]);
   });
 
+  it('reports an inline template in a second component after a clean first one', () => {
+    const second = `${good}\n${component('  template: `<p>b</p>`,')}`;
+
+    expect(
+      reasons(
+        componentViolations(`${DASHBOARD}/add-car/add-car.ts`, second, all),
+      ),
+    ).toEqual(['inline template or styles']);
+  });
+
   it('ignores a file that declares no component', () => {
     expect(
       componentViolations(

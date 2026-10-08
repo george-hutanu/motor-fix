@@ -15,7 +15,7 @@
 //   node scripts/structure-check.ts [--base <ref>]
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { posix } from 'node:path';
 import { parseArgs } from 'node:util';
 
@@ -38,6 +38,13 @@ const EXCLUDED = [
 const WEB = 'apps/web/src/';
 
 const stemOf = (name: string) => name.slice(0, name.indexOf('.'));
+
+// A git hook exports GIT_DIR and GIT_INDEX_FILE; git here must find the
+// repository from its working directory instead.
+const gitEnv = () =>
+  Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_')),
+  );
 
 const isCounted = (path: string) =>
   SOURCE.test(path) &&
@@ -80,6 +87,39 @@ export function submoduleViolations(paths: string[]): Violation[] {
   return found.sort((a, b) => a.file.localeCompare(b.file));
 }
 
+// Each string literal blanked to the same length, so offsets still match the source.
+const blankStrings = (text: string) =>
+  text.replace(
+    /(['"`])(?:\\.|(?!\1)[^\\])*\1/g,
+    (s) => `${s[0]}${' '.repeat(s.length - 2)}${s[0]}`,
+  );
+
+// Where the parenthesis opened just before `from` closes.
+function closing(blank: string, from: number): number {
+  let depth = 1;
+  let i = from;
+  for (; i < blank.length && depth > 0; i++) {
+    if (blank[i] === '(') depth++;
+    else if (blank[i] === ')') depth--;
+  }
+  return i - 1;
+}
+
+// The arguments of every @Component( in the file, joined.
+function decoratorArgs(text: string): { raw: string; code: string } | null {
+  const starts = [...text.matchAll(/^[ \t]*@Component\(/gm)];
+  if (starts.length === 0) return null;
+  const blank = blankStrings(text);
+  const spans = starts.map((start) => {
+    const from = (start.index ?? 0) + start[0].length;
+    return [from, closing(blank, from)] as const;
+  });
+  return {
+    code: spans.map(([from, to]) => blank.slice(from, to)).join('\n'),
+    raw: spans.map(([from, to]) => text.slice(from, to)).join('\n'),
+  };
+}
+
 const quoted = (text: string) =>
   [...text.matchAll(/['"`]([^'"`]+)['"`]/g)].map((m) => m[1]);
 
@@ -112,12 +152,9 @@ export function componentViolations(
   text: string,
   exists: (path: string) => boolean,
 ): Violation[] {
-  if (
-    !file.startsWith(WEB) ||
-    !isCounted(file) ||
-    !text.includes('@Component(')
-  )
-    return [];
+  const args =
+    file.startsWith(WEB) && isCounted(file) ? decoratorArgs(text) : null;
+  if (!args) return [];
   const dir = posix.dirname(file);
   const name = stemOf(posix.basename(file));
   const at = (detail: string): Violation => ({
@@ -127,7 +164,7 @@ export function componentViolations(
   });
   const found: Violation[] = [];
 
-  if (/\b(template|styles)\s*:/.test(text))
+  if (/\b(template|styles)\s*:/.test(args.code))
     found.push(at('inline template or styles'));
 
   if (posix.basename(dir) !== name || posix.basename(file) !== `${name}.ts`) {
@@ -135,11 +172,20 @@ export function componentViolations(
     found.push(at(`expected ${folder}/${name}.ts`));
   }
 
-  const paths = urlProblems(text, dir, name, exists);
+  const paths = urlProblems(args.raw, dir, name, exists);
   if (paths.length) found.push(at(paths.join('; ')));
 
   return found;
 }
+
+const duplicates = (baseline: Baseline) =>
+  RULES.flatMap((rule) =>
+    [
+      ...new Set(
+        baseline[rule].filter((file, i) => baseline[rule].indexOf(file) !== i),
+      ),
+    ].map((file) => `duplicate baseline entry: ${rule} ${file}`),
+  );
 
 export function baselineErrors(
   found: Violation[],
@@ -148,7 +194,8 @@ export function baselineErrors(
 ): string[] {
   const errors = found
     .filter((v) => !baseline[v.rule].includes(v.file))
-    .map((v) => `${v.file}: ${v.detail}`);
+    .map((v) => `${v.file}: ${v.detail}`)
+    .concat(duplicates(baseline));
   for (const rule of RULES) {
     const violating = new Set(
       found.filter((v) => v.rule === rule).map((v) => v.file),
@@ -172,17 +219,26 @@ export function scanRepo(root: string): {
   const tracked = execFileSync(
     'git',
     ['-c', 'core.quotePath=off', 'ls-files', '-z', '--', 'apps', 'libs'],
-    { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+    { cwd: root, encoding: 'utf8', env: gitEnv(), maxBuffer: 64 * 1024 * 1024 },
   )
     .split('\0')
     .filter(isCounted);
   const exists = (path: string) => existsSync(posix.join(root, path));
+  // A link is never followed: its target may sit outside the tree, or nowhere.
+  const readable = (path: string) => {
+    try {
+      return lstatSync(posix.join(root, path)).isFile();
+    } catch {
+      return false;
+    }
+  };
   return {
     checked: tracked.length,
     violations: [
       ...submoduleViolations(tracked),
       ...tracked.flatMap((file) =>
-        file.startsWith(WEB)
+        // Only UTF-8 source is read; a UTF-16 file is checked as nothing.
+        file.startsWith(WEB) && readable(file)
           ? componentViolations(
               file,
               readFileSync(posix.join(root, file), 'utf8'),
@@ -195,24 +251,32 @@ export function scanRepo(root: string): {
 }
 
 function parseBaseline(text: string, source: string): Baseline {
-  let parsed: Partial<Baseline>;
+  let parsed: Partial<Baseline> | null;
   try {
     parsed = JSON.parse(text);
   } catch {
     throw new Error(`${source} is not valid JSON`);
   }
-  if (!RULES.every((rule) => Array.isArray(parsed[rule])))
+  if (!RULES.every((rule) => Array.isArray(parsed?.[rule])))
     throw new Error(`${source} must hold "submodules" and "components" lists`);
   return parsed as Baseline;
 }
 
 function baseBaseline(ref: string): Baseline | null {
-  let text: string;
-  try {
-    text = execFileSync('git', ['show', `${ref}:${BASELINE}`], {
+  const git = (...args: string[]) =>
+    execFileSync('git', args, {
       encoding: 'utf8',
+      env: gitEnv(),
       stdio: ['ignore', 'pipe', 'ignore'],
     });
+  try {
+    git('rev-parse', '--verify', '--quiet', `${ref}^{commit}`);
+  } catch {
+    throw new Error(`--base ${ref} is not a commit; fetch it, or fix the ref`);
+  }
+  let text: string;
+  try {
+    text = git('show', `${ref}:${BASELINE}`);
   } catch {
     return null;
   }
@@ -220,10 +284,10 @@ function baseBaseline(ref: string): Baseline | null {
 }
 
 function main() {
-  const { values } = parseArgs({ options: { base: { type: 'string' } } });
   let errors: string[];
   let summary = '';
   try {
+    const { values } = parseArgs({ options: { base: { type: 'string' } } });
     if (!existsSync(BASELINE))
       throw new Error(
         `${BASELINE} is missing; it lists the violations allowed today`,
