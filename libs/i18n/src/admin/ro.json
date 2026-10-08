@@ -35,7 +35,7 @@
       "second": "Un alt administrator trebuie să aprobe.",
       "submit": "Trimite cererea",
       "title": "Oprești regula „Recenzii doar după o lucrare confirmată”?",
-      "what": "Șoferii conectați vor putea lăsa recenzii și din profilul unui service, fără o lucrare prin MotorFix."
+      "what": "Șoferii conectați vor putea lăsa recenzii și din profilul unui service, fără o lucrare prin MotorFix. Aceste recenzii vor fi marcate „nu prin MotorFix”."
     },
     "retry": "Reîncearcă",
     "rule": {

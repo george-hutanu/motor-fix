@@ -35,7 +35,7 @@
       "second": "Another admin has to approve.",
       "submit": "Send the request",
       "title": "Switch off \"Reviews only after a confirmed job\"?",
-      "what": "Signed-in drivers will be able to review a garage from its profile too, without a job through MotorFix."
+      "what": "Signed-in drivers will be able to review a garage from its profile too, without a job through MotorFix. These reviews will be marked \"not through MotorFix\"."
     },
     "retry": "Try again",
     "rule": {

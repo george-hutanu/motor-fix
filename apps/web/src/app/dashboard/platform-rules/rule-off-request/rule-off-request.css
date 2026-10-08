@@ -20,7 +20,7 @@ p {
   overflow-wrap: anywhere;
 }
 .hint {
-  color: var(--mf-ink-muted);
+  color: var(--mf-text-secondary);
 }
 .actions {
   display: flex;

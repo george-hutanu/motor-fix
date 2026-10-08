@@ -330,6 +330,31 @@ describe('PlatformRules', () => {
     );
   });
 
+  it('says a second admin is needed when the server refuses a change the screen thought was free', async () => {
+    // A screen read before the rule needed two admins sends the change.
+    const stale = testing();
+    stale.rules[1] = rule('reviews_only_after_confirmed_job', true);
+    const { element, settle } = await render(stale);
+    await settle();
+    change.mockRejectedValueOnce(
+      new HttpErrorResponse({
+        error: { code: 'two_admins_required' },
+        status: 409,
+      }),
+    );
+
+    named(element, 'Recenzii doar după o lucrare confirmată')?.click();
+    await settle();
+
+    expect(open).not.toHaveBeenCalled();
+    expect(checked(element, 'Recenzii doar după o lucrare confirmată')).toBe(
+      'true',
+    );
+    expect(element.querySelector('[role="alert"]')?.textContent).toContain(
+      'Este nevoie de un al doilea administrator',
+    );
+  });
+
   it('reads the rules again and shows the saved state when the value seen was stale', async () => {
     const { element, settle } = await render();
     await settle();

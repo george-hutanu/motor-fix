@@ -53,7 +53,7 @@ li {
   margin-top: var(--mf-space-3);
   padding: var(--mf-space-3);
   border: 1px solid var(--mf-line-strong);
-  border-radius: var(--mf-radius-sm, 8px);
+  border-radius: var(--mf-radius-control);
 }
 .mark {
   font-weight: 700;
@@ -74,7 +74,7 @@ li {
   flex-direction: column;
 }
 .hint {
-  color: var(--mf-ink-muted);
+  color: var(--mf-text-secondary);
   font-size: 0.875rem;
 }
 .tag {
