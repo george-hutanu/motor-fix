@@ -220,7 +220,7 @@ describe('the live stream audiences', () => {
       { accountId: stranger, role: 'owner' },
     ]);
     const mechanic = await prisma.mechanic.create({
-      data: { accountId: mechanicAccount, garageId },
+      data: { accountId: mechanicAccount, garageId, name: 'Mecanic' },
     });
     const people: [string, Role][] = [
       [driver, 'driver'],

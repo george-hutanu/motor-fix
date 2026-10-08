@@ -84,7 +84,9 @@ export const routes: Routes = [
       },
       {
         loadComponent: () =>
-          import('./public/list-your-garage').then((m) => m.ListYourGarage),
+          import('./public/list-your-garage/list-your-garage').then(
+            (m) => m.ListYourGarage,
+          ),
         path: 'list-your-garage',
         title: () => inject(I18n).t('public.listing.heading'),
       },

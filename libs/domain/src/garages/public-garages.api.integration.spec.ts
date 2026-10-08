@@ -101,6 +101,36 @@ describe('reading a garage by its public slug', () => {
     });
   });
 
+  it('never shows the phone, the step-1 details or the mechanic cards', async () => {
+    const approved = await prisma.garage.create({
+      data: {
+        businessKind: 'company',
+        knownFor: 'Frâne',
+        name: 'Atelier Dinamo',
+        phone: '+40722123456',
+        slug: `dinamo-${randomUUID()}`,
+        status: 'approved',
+      },
+    });
+    await prisma.mechanic.create({
+      data: { garageId: approved.id, name: 'Ion Marin', onProfile: true },
+    });
+
+    const res = await read(approved.slug);
+
+    expect(res.status).toBe(200);
+    expect(Object.keys(res.body).sort()).toEqual([
+      'brandNote',
+      'doesNotTake',
+      'id',
+      'name',
+      'refusalPhrase',
+      'slug',
+      'worksOn',
+    ]);
+    expect(JSON.stringify(res.body)).not.toContain('722123456');
+  });
+
   it("carries the garage's brand answer, in catalogue order, retired brands kept", async () => {
     const approved = await prisma.garage.update({
       data: {

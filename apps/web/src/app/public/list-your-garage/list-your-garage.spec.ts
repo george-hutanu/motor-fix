@@ -8,13 +8,17 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { BrandsService, PublicHolidaysService } from '@motor-fix/data-access';
+import {
+  BrandsService,
+  CatalogueService,
+  PublicHolidaysService,
+} from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
-import { type BrowserDraft, STORAGE_KEY } from './draft';
 import { ListYourGarage } from './list-your-garage';
-import { SignInDialog } from '../sign-in/sign-in-dialog';
+import { SignInDialog } from '../../sign-in/sign-in-dialog';
+import { type BrowserDraft, STORAGE_KEY } from '../draft';
 
 // jsdom lays nothing out: each heading is placed by hand, the page is tall
 // enough not to sit at its end, and scrolling is recorded, not done.
@@ -29,6 +33,17 @@ const catalogue = {
     nextCursor: null,
     total: 1,
   })),
+};
+// The job catalogue behind step 3, read through its own client.
+const jobId = (n: number) =>
+  `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+const JOBS = [
+  { id: jobId(1), key: 'diagnosis', nameEn: 'Diagnosis', nameRo: 'Diagnoză' },
+  { id: jobId(2), key: 'oil-service', nameEn: 'Oil', nameRo: 'Ulei' },
+  { id: jobId(3), key: 'front-brakes', nameEn: 'Brakes', nameRo: 'Frâne' },
+];
+const jobs = {
+  jobTypesControllerSearch: jest.fn(async () => ({ items: JOBS })),
 };
 // The legal holidays step 5 lists, read through their own client.
 const holidays = { publicHolidaysControllerList: jest.fn(async () => []) };
@@ -69,6 +84,7 @@ async function open(path: string, reduced = false) {
       { provide: SignInDialog, useValue: signIn },
       { provide: BrandsService, useValue: catalogue },
       { provide: PublicHolidaysService, useValue: holidays },
+      { provide: CatalogueService, useValue: jobs },
     ],
   });
   const i18n = TestBed.inject(I18n);
@@ -85,6 +101,8 @@ async function settle(harness: RouterTestingHarness) {
   for (let i = 0; i < 2; i++) {
     harness.detectChanges();
     await harness.fixture.whenStable();
+    // The catalogue's answer takes a few turns of the microtask queue.
+    for (let turn = 0; turn < 10; turn++) await Promise.resolve();
   }
 }
 
@@ -95,6 +113,11 @@ const entries = (page: HTMLElement) => [
 ];
 const current = (page: HTMLElement) =>
   [...page.querySelectorAll('[aria-current="step"]')].map(text);
+// The steps the list marks complete, by number.
+const ticked = (page: HTMLElement) =>
+  [...page.querySelectorAll('nav ol li')].flatMap((li, i) =>
+    li.querySelector('.done[aria-label="completat"]') ? [i + 1] : [],
+  );
 const bar = (page: HTMLElement) =>
   page.querySelector<HTMLButtonElement>('nav > button[aria-expanded]');
 
@@ -149,35 +172,28 @@ describe('the list your garage page', () => {
     },
   );
 
-  it('holds the e-mail field in step 1, the brands in step 2, the hours in step 5, the verification fields in step 6, and leaves the sections between empty but for their heading', async () => {
+  it('holds the e-mail field and the details in step 1, and each other step its own part', async () => {
     const { page } = await open('/ro/list-your-garage');
 
-    const [first, second, ...rest] = page.querySelectorAll('section');
-    const last = rest.pop() as HTMLElement;
-    const fifth = rest.pop() as HTMLElement;
-    expect(first.querySelector('#listing-email')).not.toBeNull();
-    expect(last.querySelector('#listing-cui')).not.toBeNull();
-    expect([...second.children].map((c) => c.tagName)).toEqual([
-      'H2',
-      'MF-BRANDS-STEP',
+    const sections = [...page.querySelectorAll('section')];
+    expect(sections[0].querySelector('#listing-email')).not.toBeNull();
+    expect(sections[0].querySelector('mf-details-step')).not.toBeNull();
+    expect(sections[5].querySelector('#listing-cui')).not.toBeNull();
+    expect(
+      sections.slice(1, 5).map((s) => [...s.children].map((c) => c.tagName)),
+    ).toEqual([
+      ['H2', 'MF-BRANDS-STEP'],
+      ['H2', 'MF-PRICES-STEP'],
+      ['H2', 'MF-MECHANICS-STEP'],
+      ['H2', 'MF-HOURS-STEP'],
     ]);
-    expect([...fifth.children].map((c) => c.tagName)).toEqual([
-      'H2',
-      'MF-HOURS-STEP',
-    ]);
-    for (const section of rest)
-      expect([...section.children].map((c) => c.tagName)).toEqual(['H2']);
   });
 
-  it('shows no completion tick and makes no request', async () => {
+  it('ticks only the optional step 4 on an empty form, and makes no request', async () => {
     const { page } = await open('/ro/list-your-garage');
 
-    expect(page.textContent).not.toMatch(/[✓✔]/);
-    // Step 5's closed-day ticks are fields, not completion marks.
-    const ticks = [
-      ...page.querySelectorAll('[aria-checked], input[type="checkbox"]'),
-    ].filter((t) => !t.closest('mf-hours-step'));
-    expect(ticks).toEqual([]);
+    expect(ticked(page)).toEqual([4]);
+    expect(stored()).toBeNull();
     TestBed.inject(HttpTestingController).verify();
   });
 
@@ -1287,5 +1303,139 @@ describe('the brands step in the draft', () => {
         },
       },
     });
+  });
+});
+
+// @traces 109-FR-003 109-FR-010 109-FR-012
+describe('the details, prices and mechanics in the draft', () => {
+  const COMPLETE_DETAILS = {
+    businessKind: 'company',
+    knownFor: 'Frâne',
+    name: 'Service Popescu',
+    phone: '0722 123 456',
+  };
+  const detailsField = (page: HTMLElement, name: string) =>
+    page.querySelector<HTMLInputElement>(
+      `mf-details-step [name="${name}"]`,
+    ) as HTMLInputElement;
+
+  it("keeps what step 1 holds as the draft's steps['1'] in the browser copy", async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    try {
+      fillIn(harness, detailsField(page, 'name'), 'Service Popescu');
+      await jest.advanceTimersByTimeAsync(1_100);
+
+      expect(stored()?.data).toEqual({
+        steps: { '1': { name: 'Service Popescu' } },
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('restores step 1 from a kept copy and ticks it while it is complete', async () => {
+    seed({ data: { steps: { '1': COMPLETE_DETAILS } } });
+
+    const { harness, page } = await open('/ro/list-your-garage');
+
+    expect(detailsField(page, 'name').value).toBe('Service Popescu');
+    expect(ticked(page)).toEqual([1, 4]);
+
+    fillIn(harness, detailsField(page, 'knownFor'), '');
+    expect(ticked(page)).toEqual([4]);
+  });
+
+  it('opens an empty step 1 when the kept one is not in its shape', async () => {
+    seed({ data: { steps: { '1': { name: 42 } } } });
+
+    const { page } = await open('/ro/list-your-garage');
+
+    expect(detailsField(page, 'name').value).toBe('');
+  });
+
+  it('ticks step 3 for a complete kept price list, and step 4 not for a one-letter mechanic', async () => {
+    seed({
+      data: {
+        steps: {
+          '3': {
+            jobs: [{ fromBani: 15_000, jobTypeId: jobId(3), toBani: 40_000 }],
+            labour: { fromBani: 10_000, toBani: 20_000 },
+          },
+          '4': { mechanics: [{ name: 'I' }] },
+        },
+      },
+    });
+
+    const { page } = await open('/ro/list-your-garage');
+
+    expect(ticked(page)).toEqual([3]);
+    expect(
+      [...page.querySelectorAll('mf-prices-step li.job .name')].map(text),
+    ).toEqual(['Frâne']);
+  });
+
+  const LADA = jobId(900);
+
+  it("drops a brand's price range once step 2 no longer takes the brand", async () => {
+    seed({
+      data: {
+        steps: {
+          '2': {
+            brands: [{ brandId: LADA, name: 'Lada', stance: 'works_on' }],
+          },
+          '3': {
+            jobs: [
+              { jobTypeId: jobId(3) },
+              { brandId: LADA, jobTypeId: jobId(3) },
+            ],
+          },
+        },
+      },
+    });
+    const { harness, page } = await open('/ro/list-your-garage');
+    expect(page.querySelectorAll('mf-prices-step li.brand')).toHaveLength(1);
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    try {
+      const lada = [
+        ...page.querySelectorAll<HTMLButtonElement>('.chips button'),
+      ].find((c) => text(c).startsWith('Lada')) as HTMLButtonElement;
+      lada.click();
+      harness.detectChanges();
+      await jest.advanceTimersByTimeAsync(1_100);
+
+      expect(stored()?.data).toMatchObject({
+        steps: { '3': { jobs: [{ jobTypeId: jobId(3) }] } },
+      });
+      expect(page.querySelectorAll('mf-prices-step li.brand')).toHaveLength(0);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("keeps the mechanics as the draft's steps['4']", async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    try {
+      page
+        .querySelector<HTMLButtonElement>('mf-mechanics-step button.add')
+        ?.click();
+      harness.detectChanges();
+      fillIn(
+        harness,
+        page.querySelector(
+          'mf-mechanics-step input[name="name"]',
+        ) as HTMLInputElement,
+        'Ion Marin',
+      );
+      await jest.advanceTimersByTimeAsync(1_100);
+
+      expect(stored()?.data).toEqual({
+        steps: { '4': { mechanics: [{ name: 'Ion Marin' }] } },
+      });
+      expect(ticked(page)).toEqual([4]);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

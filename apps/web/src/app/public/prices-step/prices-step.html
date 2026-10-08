@@ -1,0 +1,149 @@
+<p class="hint">{{ 'public.listing.prices.hint' | t }}</p>
+<p class="hint">{{ 'public.listing.prices.guide' | t }}</p>
+
+<ng-template #range let-ends="ends" let-judged="judged" let-name="name" let-set="set" let-key="key">
+  <div class="range">
+    <input
+      hlmInput
+      type="text"
+      autocomplete="off"
+      [mfLei]="ends?.fromBani"
+      (mfLeiChange)="set({ fromBani: $event })"
+      (blur)="leave(key)"
+      [attr.aria-label]="name + ', ' + ('public.listing.prices.from' | t)"
+      [attr.aria-invalid]="judged.field === 'from' ? true : null"
+    />
+    <span aria-hidden="true">–</span>
+    <input
+      hlmInput
+      type="text"
+      autocomplete="off"
+      [mfLei]="ends?.toBani"
+      (mfLeiChange)="set({ toBani: $event })"
+      (blur)="leave(key)"
+      [attr.aria-label]="name + ', ' + ('public.listing.prices.to' | t)"
+      [attr.aria-invalid]="judged.field === 'to' ? true : null"
+    />
+    <span class="unit">{{ 'public.listing.prices.lei' | t }}</span>
+  </div>
+  @if (judged.error) {
+    <p class="error" role="alert">{{ judged.error | t }}</p>
+  } @else if (judged.wide) {
+    <p class="warning">{{ 'public.listing.prices.wideRange' | t }}</p>
+  }
+</ng-template>
+
+<div class="labour">
+  <p class="title">{{ 'public.listing.prices.labour' | t }}</p>
+  <ng-container
+    *ngTemplateOutlet="range; context: {
+      ends: section().labour,
+      judged: labour(),
+      name: ('public.listing.prices.labour' | t),
+      set: setLabour.bind(this),
+      key: 'labour'
+    }"
+  />
+</div>
+
+<p class="title">{{ 'public.listing.prices.jobs' | t }}</p>
+<ul class="jobs">
+  @for (row of rows(); track row.index) {
+    @let name = nameOf(row.entry);
+    <li class="job">
+      <div class="head">
+        <span class="name">{{ name }}</span>
+        @if (row.entry.name !== undefined) {
+          <span class="pending">{{ 'public.listing.prices.pending' | t }}</span>
+        }
+        <button
+          type="button"
+          class="remove"
+          [attr.aria-label]="'public.listing.prices.remove' | t: { name: name }"
+          (click)="drop(row.index)"
+        >
+          ×
+        </button>
+      </div>
+      <ng-container
+        *ngTemplateOutlet="range; context: {
+          ends: row.entry,
+          judged: judged(row.entry, row.index),
+          name: name,
+          set: setEntry.bind(this, row.index),
+          key: '' + row.index
+        }"
+      />
+      @if (row.brands.length || offer(row.index).length) {
+        <details [open]="row.brands.length > 0">
+          <summary>{{ 'public.listing.prices.brandRange' | t }}</summary>
+          <ul class="brands">
+            @for (brand of row.brands; track brand.index) {
+              @let label = brandName(brand.entry);
+              <li class="brand">
+                <div class="head">
+                  <span class="name">{{ label }}</span>
+                  <button
+                    type="button"
+                    class="remove"
+                    [attr.aria-label]="'public.listing.prices.remove' | t: { name: label }"
+                    (click)="drop(brand.index)"
+                  >
+                    ×
+                  </button>
+                </div>
+                <ng-container
+                  *ngTemplateOutlet="range; context: {
+                    ends: brand.entry,
+                    judged: judged(brand.entry, brand.index),
+                    name: name + ' · ' + label,
+                    set: setEntry.bind(this, brand.index),
+                    key: '' + brand.index
+                  }"
+                />
+              </li>
+            }
+          </ul>
+          <div class="offer">
+            @for (brand of offer(row.index); track brand.brandId) {
+              <button type="button" (click)="giveBrand(row.index, brand)">{{ brand.name }}</button>
+            }
+          </div>
+        </details>
+      }
+    </li>
+  }
+</ul>
+
+<button hlmBtn variant="secondary" type="button" [disabled]="full()" (click)="toSearch()">
+  {{ 'public.listing.prices.addJob' | t }}
+</button>
+@if (full()) {
+  <p class="hint">{{ 'public.listing.prices.jobsMax' | t }}</p>
+}
+<label hlmLabel class="field">
+  {{ 'public.listing.prices.search' | t }}
+  <input
+    #search
+    hlmInput
+    type="search"
+    autocomplete="off"
+    [attr.maxlength]="nameMax"
+    [disabled]="full()"
+    [value]="query()"
+    (input)="find($event)"
+  />
+</label>
+@if (notice(); as key) {
+  <p class="notice" role="status">{{ key | t }}</p>
+}
+@if (!full() && (results().length || proposal())) {
+  <ul class="results" [attr.aria-label]="'public.listing.prices.results' | t">
+    @for (job of results(); track job.id) {
+      <li><button type="button" (click)="pick(job)">{{ nameOf({ jobTypeId: job.id }) }}</button></li>
+    }
+    @if (proposal(); as typed) {
+      <li><button type="button" class="propose" (click)="propose(typed)">{{ 'public.listing.prices.propose' | t: { name: typed } }}</button></li>
+    }
+  </ul>
+}

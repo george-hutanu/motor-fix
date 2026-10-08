@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 
 import { leiToBani, type StartingPricesInput } from '@motor-fix/contracts';
 
-import { type PricesWorld, pricesWorld } from './garage-prices.testing';
+import {
+  type PricesWorld,
+  pricesWorld,
+  refused,
+} from './garage-prices.testing';
 
 const {
   history,
@@ -10,7 +14,6 @@ const {
   nothingStored,
   prices,
   prisma,
-  refused,
   rows,
   save,
   since,
@@ -190,7 +193,7 @@ describe('GaragePricesService.saveStarting under hostile payloads', () => {
         jobs: [
           { fromBani: 0, jobTypeId: w.oil },
           { fromBani: lei(100), jobTypeId: w.brakes },
-          { durationMinutes: 10, fromBani: lei(100), jobTypeId: w.diagnosis },
+          { fromBani: lei(100), jobTypeId: w.diagnosis, toBani: lei(50) },
         ],
         labour,
       }),
@@ -198,7 +201,7 @@ describe('GaragePricesService.saveStarting under hostile payloads', () => {
 
     expect(errors).toEqual([
       { code: 'min', field: 'jobs[0].from' },
-      { code: 'min', field: 'jobs[2].duration' },
+      { code: 'below_from', field: 'jobs[2].to' },
     ]);
   });
 
@@ -215,31 +218,22 @@ describe('GaragePricesService.saveStarting under hostile payloads', () => {
     expect(errors).toEqual([{ code: 'below_from', field: 'jobs[0].to' }]);
   });
 
-  it('refuses a duration of zero', async () => {
+  it('refuses a proposed job name of only spaces as too short', async () => {
     const w = await world();
 
     const errors = await refused(
-      save(w, {
-        jobs: [{ durationMinutes: 0, fromBani: lei(100), jobTypeId: w.oil }],
-        labour,
-      }),
+      save(w, { jobs: [{ fromBani: lei(100), name: '      ' }], labour }),
     );
 
-    expect(errors).toEqual([{ code: 'min', field: 'jobs[0].duration' }]);
+    expect(errors).toEqual([{ code: 'length', field: 'jobs[0].name' }]);
+    await nothingStored(w);
   });
 
-  it('stores a null duration and a null top as empty', async () => {
+  it('stores no duration and a null top as empty', async () => {
     const w = await world();
 
     await save(w, {
-      jobs: [
-        {
-          durationMinutes: null,
-          fromBani: lei(100),
-          jobTypeId: w.oil,
-          toBani: null,
-        },
-      ],
+      jobs: [{ fromBani: lei(100), jobTypeId: w.oil, toBani: null }],
       labour,
     });
 
@@ -354,23 +348,27 @@ describe('GaragePricesService.saveStarting under hostile payloads', () => {
     ]);
   });
 
-  it('saves three hundred jobs in order with one audit entry each plus the labour', async () => {
+  it('saves fifty jobs with two brand ranges each in order, one audit entry per row plus the labour', async () => {
     const w = await world();
     const ids = await Promise.all(
-      Array.from({ length: 300 }, (_, i) => job(`bulk-${i}`)),
+      Array.from({ length: 50 }, (_, i) => job(`bulk-${i}`)),
     );
+    const jobs = ids.flatMap((jobTypeId) => [
+      { fromBani: lei(100), jobTypeId },
+      { brandId: w.dacia, fromBani: lei(120), jobTypeId },
+      { brandId: w.lada, fromBani: lei(140), jobTypeId },
+    ]);
 
-    const result = await save(w, {
-      jobs: ids.map((jobTypeId) => ({ fromBani: lei(100), jobTypeId })),
-      labour,
-    });
+    const result = await save(w, { jobs, labour });
 
     expect(result.jobs.map((j) => j.position)).toEqual(
-      Array.from({ length: 300 }, (_, i) => i),
+      Array.from({ length: 150 }, (_, i) => i),
     );
-    expect(result.jobs.map((j) => j.jobTypeId)).toEqual(ids);
-    expect(await rows(w)).toHaveLength(300);
-    expect(await history(w)).toHaveLength(302);
+    expect(result.jobs.map((j) => j.jobTypeId)).toEqual(
+      jobs.map((j) => j.jobTypeId),
+    );
+    expect(await rows(w)).toHaveLength(150);
+    expect(await history(w)).toHaveLength(152);
   });
 
   it('returns ids that match the stored rows and a warning only on the wide one', async () => {

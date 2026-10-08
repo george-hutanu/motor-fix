@@ -1,0 +1,193 @@
+:host {
+  display: block;
+  padding: var(--mf-space-4);
+}
+header {
+  display: flex;
+  justify-content: flex-end;
+}
+h1,
+h2,
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.label {
+  font: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  letter-spacing: var(--mf-label-tracking);
+  color: var(--mf-text-secondary);
+}
+.intro {
+  margin-top: var(--mf-space-2);
+  color: var(--mf-text-secondary);
+}
+.page {
+  display: grid;
+  gap: var(--mf-space-4);
+  margin-top: var(--mf-space-4);
+}
+.sections {
+  display: grid;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+/* A jump, to a heading or a fragment's section, rests it on the line the scroll spy reads: the bottom of the phone bar. */
+section,
+h2 {
+  scroll-margin-top: var(--mf-tap);
+}
+h2:focus-visible,
+nav button:focus-visible {
+  outline: 2px solid var(--mf-focus);
+  outline-offset: 2px;
+}
+.mark {
+  font-weight: normal;
+  color: var(--mf-text-secondary);
+}
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-1);
+  margin-top: var(--mf-space-3);
+  max-width: 28rem;
+}
+.hint,
+.note {
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+}
+.error {
+  font-size: var(--mf-size-small);
+  color: var(--mf-red-ink);
+}
+.error:empty {
+  display: none;
+}
+section > .note {
+  margin-top: var(--mf-space-3);
+}
+/* Pinned to the bottom of the screen while the sections pass: reaching Save never scrolls the owner off the step a draft is saved at. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding-block: var(--mf-space-2);
+  background: var(--mf-bg);
+  border-top: 1px solid var(--mf-line);
+}
+/* Below 768 px the public tab bar is pinned at the bottom too (1 px line, 6 px, 52 px links, max(14 px, safe area)): sit above it. */
+@media (max-width: 767.98px) {
+  .actions {
+    bottom: calc(59px + max(14px, var(--mf-safe-bottom)));
+  }
+}
+.ended {
+  display: grid;
+  gap: var(--mf-space-3);
+  justify-items: start;
+  margin-top: var(--mf-space-4);
+}
+ol button {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  width: 100%;
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-3);
+  border: 0;
+  border-radius: var(--mf-radius-control);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+ol button[aria-current="step"] {
+  background: var(--mf-amber-tint);
+  color: var(--mf-amber-ink);
+  font-weight: 600;
+}
+ol button[aria-current="step"]::before {
+  content: "▸" / "";
+}
+ol li {
+  display: flex;
+  align-items: center;
+}
+.done {
+  padding: 0 var(--mf-space-2);
+  color: var(--mf-text-secondary);
+  font-weight: 600;
+}
+@media (min-width: 768px) {
+  .page {
+    grid-template-columns: minmax(12rem, 16rem) 1fr;
+    align-items: start;
+  }
+  nav {
+    position: sticky;
+    top: var(--mf-space-4);
+  }
+  .bar {
+    display: none;
+  }
+  section,
+  h2 {
+    scroll-margin-top: var(--mf-space-4);
+  }
+}
+@media not all and (min-width: 768px) {
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin: 0 calc(-1 * var(--mf-space-4));
+    background: var(--mf-bg);
+    border-bottom: 1px solid var(--mf-line);
+  }
+  .bar {
+    display: block;
+    width: 100%;
+    min-height: var(--mf-tap);
+    padding: 0 var(--mf-space-4);
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: var(--mf-size-small);
+    text-align: start;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+  }
+  /* Over the page, not in it: an open list that took room would push the page down under the reader. */
+  ol {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: calc(100dvh - 2 * var(--mf-tap));
+    overflow-y: auto;
+    padding-bottom: var(--mf-space-2);
+    background: var(--mf-bg);
+    border-bottom: 1px solid var(--mf-line);
+  }
+  nav.open ol {
+    display: block;
+  }
+}
+.actions button,
+.ended button {
+  min-height: var(--mf-tap);
+}

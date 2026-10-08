@@ -19,9 +19,12 @@ export { JobTypeLoader } from './catalogue/job-types/job-type-loader';
 export { JOB_TYPES } from './catalogue/job-types/job-types';
 export { EventsModule } from './events/events.module';
 export { OutboxRelayModule } from './events/outbox-relay.module';
+export { GarageDetailsService } from './garages/details/garage-details.service';
 export { writeGarageHours } from './garages/garage-hours';
 export { GaragesModule } from './garages/garages.module';
 export { listingDraftDaily } from './garages/listing-draft-sweep';
+export { GarageMechanicsService } from './garages/mechanics/garage-mechanics.service';
+export { GaragePricesService } from './garages/prices/garage-prices.service';
 export { publicGarages } from './garages/public-garages';
 export {
   type Decision,
