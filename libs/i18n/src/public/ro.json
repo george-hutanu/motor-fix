@@ -236,6 +236,17 @@
       "seat": "Sediul înregistrat",
       "suggestions": "Adrese găsite"
     },
+    "preview": {
+      "draft": "Ciornă · se publică după verificare",
+      "mechanicNote": "apare după ce acceptă invitația",
+      "mobile": "Mobil · {km} km în jurul sediului",
+      "namePlaceholder": "Numele service‑ului",
+      "noBrand": "Nicio marcă aleasă",
+      "range": "{from}–{to} lei/oră",
+      "rangePlaceholder": "Manopera: — lei/oră",
+      "title": "Cum îl vor vedea șoferii",
+      "toggle": "Previzualizare"
+    },
     "prices": {
       "addJob": "Adaugă o lucrare",
       "brandRange": "Interval diferit pentru o marcă",
