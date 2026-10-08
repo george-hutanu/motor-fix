@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-07
+updated: 2026-10-08
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -57,6 +57,7 @@ features:
   - 499-trace-matrix-delta-ids
   - 884-railway-egress
   - 891-lifecycle-story-override
+  - 887-precompact-fr-wording
 ---
 
 # Capability: Platform
@@ -377,9 +378,9 @@ _From 600-merge-gate-symlink._
 
 _From 854-precompact-pr-signal._
 
-### 623-FR-002 — The hook MUST still append its Compaction block for a feature whose status is not Archived.
+### 887-FR-001 — The pre-compact hook MUST append its Compaction block to the active feature's `auto-run.md` whenever neither 854-FR-002 (HEAD is not on the feature's branch, a detached HEAD included) nor 854-FR-003 (the feature branch's PR reads `MERGED`) skips it, whatever the spec's `**Status**:` line says.
 
-_From 623-precompact-flush._
+_From 887-precompact-fr-wording._
 
 ### 623-FR-003 — Each uncommitted entry in the block MUST keep the full porcelain line, both status columns included, for the first entry as for every other.
 
@@ -1311,3 +1312,5 @@ _From 891-lifecycle-story-override._
 - `698-FR-007` — superseded by `706-FR-008` (2026-10-07)
 
 - `623-FR-001` — superseded by `854-FR-001` (2026-10-07)
+
+- `623-FR-002` — superseded by `887-FR-001` (2026-10-08)
