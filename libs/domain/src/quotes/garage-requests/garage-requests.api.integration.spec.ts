@@ -226,6 +226,48 @@ describe('GET /garage/requests/:id', () => {
     },
   );
 
+  it('keeps the plate once a confirmed booking is cancelled, as the job does', async () => {
+    const andrei = await driver();
+    const t = await team('Atelier Dinamo');
+    const { booking, request } = await world.chain(andrei, t.garage.id, {
+      booking: 'confirmed',
+    });
+    await prisma.booking.update({
+      data: {
+        cancelledAt: new Date(),
+        cancelledBy: t.owner,
+        cancelledBySide: 'garage',
+        cancelReason: 'parts_not_available',
+        status: 'cancelled',
+      },
+      where: { id: booking.id },
+    });
+
+    const res = await get(
+      `/garage/requests/${request.id}`,
+      bearer(t.owner, 'garage'),
+    );
+
+    expect(res.body.booking).toMatchObject({ status: 'cancelled' });
+    expect(res.body.car.plate).toBe('B123ABC');
+  });
+
+  it('shows no plate for a booking cancelled before confirmation', async () => {
+    const andrei = await driver();
+    const t = await team('Atelier Dinamo');
+    const { request } = await world.chain(andrei, t.garage.id, {
+      booking: 'cancelled',
+    });
+
+    const res = await get(
+      `/garage/requests/${request.id}`,
+      bearer(t.owner, 'garage'),
+    );
+
+    expect(res.body.booking).toMatchObject({ status: 'cancelled' });
+    expect(res.body.car.plate).toBeUndefined();
+  });
+
   it('shortens a one-word name to itself', async () => {
     const solo = await driver('Andrei');
     const t = await team('Atelier Dinamo');

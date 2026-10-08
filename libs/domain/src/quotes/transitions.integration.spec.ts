@@ -449,6 +449,42 @@ describe('moveBooking', () => {
   });
 });
 
+describe('a move that needs its reason', () => {
+  it('will not compile a close without its reason or a cancellation without one', () => {
+    const event = {
+      audience: { driverAccountId: driver, garageIds: [], type: 'request' },
+      kind: 'request.cancelled',
+    } as const;
+    const cancelled = {
+      audience: {
+        driverAccountId: driver,
+        garageId,
+        mechanicId: null,
+        type: 'booking',
+      },
+      kind: 'booking.cancelled',
+    } as const;
+    const unsent = (tx: Parameters<typeof moveRequest>[0]) => [
+      // @ts-expect-error a request closes only with its reason (closed_reason)
+      moveRequest(tx, ports, {
+        actor: byDriver(),
+        event,
+        id: '',
+        to: 'closed',
+      }),
+      // @ts-expect-error a booking is cancelled only with its cancellation
+      moveBooking(tx, ports, {
+        actor: byGarage(),
+        event: cancelled,
+        id: '',
+        to: 'cancelled',
+      }),
+    ];
+
+    expect(unsent).toBeInstanceOf(Function);
+  });
+});
+
 // @traces 220-FR-011
 describe('a move and its trace', () => {
   const event = () => ({

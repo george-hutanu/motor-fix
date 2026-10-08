@@ -33,10 +33,6 @@ import {
 } from '../reads';
 
 // Only this garage's own recipient row and quote ride along.
-// The booking statuses reached through confirmation: the plate shows from
-// confirmation on, as it does on the job.
-const CONFIRMED: readonly string[] = ['confirmed', 'completed', 'no_show'];
-
 const summaryInclude = (garageId: string) => ({
   driver: true,
   jobs: { include: { jobType: true }, orderBy: { position: 'asc' as const } },
@@ -140,10 +136,10 @@ export class GarageRequestsService {
     if (!row) throw new NotFoundException();
     const summary = summaryOf(row);
     const [booking] = row.bookings;
-    // A mechanic sees the plate only on a booking that is their own.
+    // The plate shows from confirmation on, as it does on the job, even once
+    // the booking is cancelled; a mechanic sees it only on their own booking.
     const plateShown =
-      booking !== undefined &&
-      CONFIRMED.includes(booking.status) &&
+      booking?.confirmedAt != null &&
       (actor.role !== 'mechanic' ||
         booking.mechanic?.accountId === actor.accountId);
     const phone =

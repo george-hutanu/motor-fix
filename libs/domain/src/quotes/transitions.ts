@@ -111,11 +111,15 @@ type Tx = Prisma.TransactionClient;
 
 const inGarage = (row: LockedRow) => ({ garageId: row.garage_id });
 
-export function moveRequest(
-  tx: Tx,
-  ports: TransitionPorts,
-  move: Base<QuoteRequestStatus> & { closedReason?: RequestClosedReason },
-) {
+// Closing needs its reason: closed_reason is checked by the database, so a
+// close without one would end as a 500.
+type RequestMove =
+  | (Base<Exclude<QuoteRequestStatus, 'closed'>> & {
+      closedReason?: RequestClosedReason;
+    })
+  | (Base<'closed'> & { closedReason: RequestClosedReason });
+
+export function moveRequest(tx: Tx, ports: TransitionPorts, move: RequestMove) {
   return applyTransition(tx, REQUEST, ports, {
     ...move,
     scope: (row) => ({ carId: row.car_id }),
@@ -217,12 +221,20 @@ function bookingColumns(
   }
 }
 
+// A cancellation needs its reason (checked by the database, as closing a
+// request is).
+type BookingMove =
+  | (Base<Exclude<BookingStatus, 'cancelled'>> & {
+      cancellation?: Cancellation;
+    })
+  | (Base<'cancelled'> & { cancellation: Cancellation });
+
 // A cancellation also files its reason, which the driver's short history
 // shows next to the status.
 export async function moveBooking(
   tx: Tx,
   ports: TransitionPorts,
-  move: Base<BookingStatus> & { cancellation?: Cancellation },
+  move: BookingMove,
 ) {
   const { cancellation, ...rest } = move;
   const moved = await applyTransition(tx, BOOKING, ports, {
