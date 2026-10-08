@@ -1,6 +1,7 @@
 import { isListingDraftData } from './listing-sections';
 
 const JOB = '0b9f3c1e-6a43-4c55-9d1c-6f3f1b7d2a10';
+const BRAND = '6d3b3a0e-2f8e-4b1f-8c2a-1d4e5f6a7b8c';
 
 describe('the draft envelope', () => {
   it('accepts good details, prices and mechanics sections', () => {
@@ -23,8 +24,47 @@ describe('the draft envelope', () => {
     expect(isListingDraftData({ steps })).toBe(false);
   });
 
-  it('still holds step 2 as any record', () => {
-    expect(isListingDraftData({ steps: { '2': { anything: 1 } } })).toBe(true);
+  it('holds step 2 to the brands rules', () => {
+    expect(isListingDraftData({ steps: { '2': { anything: 1 } } })).toBe(false);
+  });
+
+  it('refuses fuels on a refused brand in step 2', () => {
+    expect(
+      isListingDraftData({
+        steps: {
+          '2': {
+            brands: [
+              {
+                brandId: BRAND,
+                fuels: ['diesel'],
+                name: 'BMW',
+                stance: 'does_not_take',
+              },
+            ],
+          },
+        },
+      }),
+    ).toBe(false);
+  });
+
+  it('keeps steps 2 and 5 saved before fuels and payments existed', () => {
+    expect(
+      isListingDraftData({
+        steps: {
+          '2': {
+            brandNote: 'Doar autoturisme',
+            brands: [{ brandId: BRAND, name: 'Dacia', stance: 'works_on' }],
+          },
+          '5': { facilities: ['courtesy_car'] },
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it('refuses a step 5 payment it does not know', () => {
+    expect(
+      isListingDraftData({ steps: { '5': { payments: ['cheque'] } } }),
+    ).toBe(false);
   });
 
   it('keeps a place beside the opening hours in step 5', () => {

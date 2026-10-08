@@ -246,24 +246,13 @@ describe('LanguageChoice.taps', () => {
   });
 });
 
-describe('LanguageSwitch layout', () => {
-  const css = () =>
-    (
-      /styles: `([^`]*)`/.exec(
-        readFileSync(join(__dirname, 'switch.ts'), 'utf8'),
-      )?.[1] ?? ''
-    ).replace(/\s+/g, ' ');
+describe('the language switch buttons', () => {
+  const source = readFileSync(join(__dirname, 'switch.ts'), 'utf8');
 
-  it('reads its labels at the text size around it, not the browser button default', () => {
-    expect(css()).toMatch(/button\s*\{[^}]*font: inherit/);
-  });
-
-  it('pads its buttons on the 4 px grid', () => {
-    const padding = /button\s*\{[^}]*padding: ([^;]+);/.exec(css())?.[1];
-
-    expect(padding).toBeDefined();
-    for (const px of `${padding}`.matchAll(/(\d+(?:\.\d+)?)px/g)) {
-      expect(Number(px[1]) % 4).toBe(0);
-    }
+  it('read at the page size, not the browser button size, on the 4 px grid', () => {
+    expect(source).toMatch(
+      /button \{[^}]*font: inherit;[^}]*font-size: var\(--mf-size-body, 16px\);/,
+    );
+    expect(source).toMatch(/button \{[^}]*padding: 4px 8px;/);
   });
 });

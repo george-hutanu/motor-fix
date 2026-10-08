@@ -3,5 +3,10 @@
 
 export interface GarageBrandStanceDto {
   brandId: string;
+
+  /**
+   * A taken brand only. Left out: unchanged, or all four for a brand taken now; empty: none
+   */
+  fuels?: Array<'petrol' | 'diesel' | 'hybrid' | 'electric'>;
   stance: 'works_on' | 'does_not_take';
 }

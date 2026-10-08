@@ -29,10 +29,25 @@ export const FACILITIES = [
 ] as const;
 export type Facility = (typeof FACILITIES)[number];
 
+export const PAYMENTS = ['cash', 'card', 'transfer'] as const;
+export type Payment = (typeof PAYMENTS)[number];
+
+// The price a day in bani, whole lei only.
+export const COURTESY_PRICE_MIN_BANI = 100;
+export const COURTESY_PRICE_MAX_BANI = 200_000;
+export const COURTESY_PRICE_STEP_BANI = 100;
+
+export interface CourtesyCar {
+  paid: boolean;
+  pricePerDayBani?: number;
+}
+
 export interface HoursSection {
   hours?: WeeklyHours;
   closedDays?: ClosedDay[];
   facilities?: Facility[];
+  payments?: Payment[];
+  courtesyCar?: CourtesyCar;
 }
 
 export const CLOSED_NOTE_MAX = 80;
@@ -154,10 +169,33 @@ export function closedDayError(
   return null;
 }
 
-const isFacilities = (value: unknown): value is Facility[] =>
-  Array.isArray(value) &&
-  value.every((f) => (FACILITIES as readonly unknown[]).includes(f)) &&
-  new Set(value).size === value.length;
+// A list holding only the given values, each at most once.
+export const isSetOf =
+  <T>(values: readonly T[]) =>
+  (value: unknown): value is T[] =>
+    Array.isArray(value) &&
+    value.every((item) => values.includes(item)) &&
+    new Set(value).size === value.length;
+
+const isFacilities = isSetOf(FACILITIES);
+const isPayments = isSetOf(PAYMENTS);
+
+export const isCourtesyPrice = (value: unknown): value is number =>
+  Number.isInteger(value) &&
+  (value as number) >= COURTESY_PRICE_MIN_BANI &&
+  (value as number) <= COURTESY_PRICE_MAX_BANI &&
+  (value as number) % COURTESY_PRICE_STEP_BANI === 0;
+
+// Paid with the price still to type is kept; a typed price must be valid.
+function isCourtesyCar(value: unknown): value is CourtesyCar {
+  if (!isRecord(value)) return false;
+  const { paid, pricePerDayBani, ...rest } = value;
+  return (
+    Object.keys(rest).length === 0 &&
+    typeof paid === 'boolean' &&
+    (pricePerDayBani === undefined || isCourtesyPrice(pricePerDayBani))
+  );
+}
 
 // The step 5 section as the draft keeps it. Other stories' keys share the
 // section and pass untouched.
@@ -165,11 +203,25 @@ export function isHoursSection(
   value: unknown,
 ): value is Record<string, unknown> & HoursSection {
   if (!isRecord(value)) return false;
-  const { closedDays, facilities, hours } = value;
+  const { closedDays, courtesyCar, facilities, hours, payments } = value;
   return (
     (hours === undefined || isWeeklyHours(hours)) &&
     (closedDays === undefined || closedDaysError(closedDays) === null) &&
-    (facilities === undefined || isFacilities(facilities))
+    (facilities === undefined || isFacilities(facilities)) &&
+    (payments === undefined || isPayments(payments)) &&
+    (courtesyCar === undefined || isCourtesyCar(courtesyCar))
+  );
+}
+
+// Ready to tick: at least one payment, and a price when a listed courtesy car
+// is paid.
+export function hoursComplete(section: HoursSection): boolean {
+  const car = section.courtesyCar;
+  const needsPrice =
+    (section.facilities ?? []).includes('courtesy_car') && car?.paid === true;
+  return (
+    (section.payments ?? []).length > 0 &&
+    (!needsPrice || isCourtesyPrice(car?.pricePerDayBani))
   );
 }
 
