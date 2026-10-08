@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-07
+updated: 2026-10-08
 features:
   - 194-email-sending
   - 195-message-templates
@@ -21,6 +21,7 @@ features:
   - 560-requeue-stranded-notifications
   - 802-sms-count-throw-clears-mark
   - 806-requeue-sweep-batched
+  - 138-notification-switches
 ---
 
 # Capability: Notifications
@@ -512,6 +513,50 @@ _From 806-requeue-sweep-batched._
 ### 806-FR-004 — Everything else about the sweep MUST stay as specified: what it selects and leaves alone (560-FR-002, FR-004, FR-005, FR-007), the idempotent job id (560-FR-003), the log naming the rows it re-queued (560-FR-009), a failing read or add logging and ending the sweep (560-FR-008, where the rows of pages already handed over stay handed over and are counted), the five-minute schedule, and no API route, contract, schema migration or UI (560-FR-010).
 
 _From 806-requeue-sweep-batched._
+
+### 138-FR-001 — The driver's Setări (`/sofer/setari` in the story; the app's route is `/app/driver/settings`) MUST show a Notificări panel with exactly five switches, in this order: Ofertă nouă (`offers`), Programare (`bookings`), Scadențe (`due_dates`), Noutăți MotorFix (`news`), Recenzii și istoric (`reviews_history`), each with its title and helper line in the driver's language (texts in User Story 1, scenario 1).
+
+_From 138-notification-switches._
+
+### 138-FR-002 — Each switch MUST show the group's state as the preferences report it; with nothing saved, every group is on except Noutăți MotorFix.
+
+_From 138-notification-switches._
+
+### 138-FR-003 — Under the switches the panel MUST show the always-sent line (User Story 1, scenario 2) in the driver's language.
+
+_From 138-notification-switches._
+
+### 138-FR-004 — Flipping a switch MUST save that one group at once (the switch shows its new position before the save answers), with no other action, and the choice MUST survive signing out and in again.
+
+_From 138-notification-switches._
+
+### 138-FR-005 — Turning Noutăți MotorFix on MUST first show a consent step with the consent text in the driver's language; the switch is saved on, with the text version shown, only when the driver confirms. Cancelling or closing the step MUST return the switch to off with nothing saved.
+
+_From 138-notification-switches._
+
+### 138-FR-006 — Turning Noutăți MotorFix off MUST save at once, with no step.
+
+_From 138-notification-switches._
+
+### 138-FR-007 — While the preferences load, the five switches MUST be shown disabled; a failed first load MUST show an error and a retry action.
+
+_From 138-notification-switches._
+
+### 138-FR-008 — A failed save MUST return the switch to its previous position and show an error toast in the driver's language.
+
+_From 138-notification-switches._
+
+### 138-FR-011 — The panel MUST re-read the preferences on a live preference update (a change saved in another tab or on another device), as the staff panel does. A change made by the unsubscribe link shows on the panel's next load.
+
+_From 138-notification-switches._
+
+### 138-FR-012 — The panel MUST work on a 320 px phone, a 390 px phone, a tablet and a desktop, in light and dark, with no sideways scroll. A row that does not fit stacks its switch under the title at 320 px, and the switch keeps a 44 px tap target.
+
+_From 138-notification-switches._
+
+### 138-FR-013 — Every switch MUST be operable by keyboard and carry its title as accessible name with the helper line as description. The disabled loading state and the first-load error MUST be exposed to assistive technology. The consent step MUST take focus when it opens, close on Escape as a cancel, and return focus to the news switch when it closes.
+
+_From 138-notification-switches._
 
 ## Retired
 

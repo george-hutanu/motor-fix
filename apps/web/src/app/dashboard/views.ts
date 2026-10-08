@@ -3,6 +3,7 @@ import type { Routes } from '@angular/router';
 
 import { AdminPanel } from './admin-panel';
 import { CarsView } from './cars-view/cars-view';
+import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
 import { PushView } from './push-view';
 import { Session } from './session';
 import { SettingsView } from './settings-view';
@@ -140,6 +141,7 @@ export const DASHBOARDS: Record<
         unreleased: true,
       },
       {
+        body: DriverSettingsView,
         capability: 'driver.settings',
         label: 'shell.frame.nav.driver.settings',
         path: 'settings',
