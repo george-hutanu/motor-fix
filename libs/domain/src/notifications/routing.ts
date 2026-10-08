@@ -5,7 +5,7 @@ import {
   notificationType,
   sendsEmail,
 } from './catalogue';
-import { isDriverChoice } from './preferences';
+import { isDriverChoice } from './preferences/preferences';
 
 export type SentChannel = 'email' | 'push' | 'sms' | 'whatsapp';
 

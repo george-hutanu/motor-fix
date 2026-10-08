@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { DriverSettingsView } from './driver-settings-view';
 import { DriverNotifications } from '../driver-notifications/driver-notifications';
-import { PushPanel } from '../push-panel';
+import { PushPanel } from '../push-panel/push-panel';
 
 @Component({ selector: 'mf-push-panel', template: '' })
 class FakePushPanel {}

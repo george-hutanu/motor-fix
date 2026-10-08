@@ -1,0 +1,37 @@
+@switch (pending()) {
+  @case (undefined) {
+    <p aria-busy="true"></p>
+  }
+  @case (null) {
+    <div class="expired">
+      <p>{{ 'public.providerSignUp.expired' | t }}</p>
+      <button hlmBtn type="button" (click)="signIn()">{{ 'public.providerSignUp.signIn' | t }}</button>
+    </div>
+  }
+  @default {
+    <form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+      <p class="intro">{{ 'public.providerSignUp.intro' | t: { provider: providerName() } }}</p>
+      @if (pending()?.email; as email) {
+        <p>{{ 'public.providerSignUp.email' | t: { email } }}</p>
+      }
+      <div class="field">
+        <label for="mf-provider-sign-up-name">{{ 'public.providerSignUp.name' | t }}</label>
+        <input
+          hlmInput
+          id="mf-provider-sign-up-name"
+          type="text"
+          autocomplete="name"
+          formControlName="name"
+          aria-describedby="mf-provider-sign-up-name-error"
+        />
+        <mf-field-error id="mf-provider-sign-up-name-error" [save]="save" [control]="form.controls.name" />
+      </div>
+      <mf-consent [control]="form.controls.consent" [save]="save" />
+      <mf-task-error [save]="save" />
+      <button hlmBtn type="submit" [mfTaskSubmit]="save">{{ 'public.providerSignUp.submit' | t }}</button>
+      <button hlmBtn variant="ghost" type="button" [disabled]="save.state() === 'sending'" (click)="cancel()">
+        {{ 'public.providerSignUp.cancel' | t }}
+      </button>
+    </form>
+  }
+}

@@ -1,0 +1,46 @@
+<div [attr.aria-busy]="store.state() === 'loading'">
+  @switch (store.state()) {
+    @case ('loading') {
+      @for (n of [1, 2, 3]; track n) {
+        <div data-skeleton></div>
+      }
+    }
+    @case ('error') {
+      <div class="failed">
+        <p>{{ 'shell.bell.failed' | t }}</p>
+        <button hlmBtn variant="secondary" type="button" (click)="store.load()">{{ 'shell.bell.retry' | t }}</button>
+      </div>
+    }
+    @case ('ready') {
+      @if (store.items().length === 0) {
+        <p>{{ 'shell.bell.empty' | t }}</p>
+      } @else {
+        @if (unread()) {
+          <div class="actions">
+            <button hlmBtn variant="secondary" type="button" (click)="store.readAll()">{{ 'shell.bell.readAll' | t }}</button>
+          </div>
+        }
+        <ul>
+          @for (item of store.items(); track item.id) {
+            <li [class.unread]="!item.readAt">
+              <button type="button" (click)="store.read(item.id)">
+                <span>
+                  @if (!item.readAt) {
+                    <span class="dot" aria-hidden="true"></span><span class="hidden">{{ 'shell.bell.unread' | t }}, </span>
+                  }
+                  <span class="text">{{ item.text }}</span>
+                </span>
+                <time [attr.datetime]="item.at">{{ when(item.at) }}</time>
+              </button>
+            </li>
+          }
+        </ul>
+        @if (store.more()) {
+          <div class="more">
+            <button hlmBtn variant="secondary" type="button" (click)="store.loadMore()">{{ 'shell.bell.more' | t }}</button>
+          </div>
+        }
+      }
+    }
+  }
+</div>

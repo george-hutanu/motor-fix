@@ -2,8 +2,8 @@ import { type AppEnv, placesApiKey } from '@motor-fix/contracts';
 import { type DynamicModule, Logger, Module } from '@nestjs/common';
 import type { Redis } from 'ioredis';
 
-import { PlacesController } from './lookup/places.controller';
-import { PlacesThrottle } from './lookup/places.throttle';
+import { PlacesController } from './lookup/places/places.controller';
+import { PlacesThrottle } from './lookup/places/places.throttle';
 import { FakePlaces } from './providers/fake-places.provider';
 import { GeoapifyPlaces } from './providers/geoapify-places.provider';
 import {
