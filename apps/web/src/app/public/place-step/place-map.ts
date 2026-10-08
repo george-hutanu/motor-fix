@@ -201,19 +201,22 @@ async function openMapLibre(
   const frame = (next: Shown) => {
     const { at, km } = next;
     if (!at) return;
-    const view = viewFor(
+    const move = viewFor(
       shown,
       next,
       map.getBounds().contains([at.lng, at.lat]),
     );
-    if (view === 'circle' && km)
+    if (move === 'circle' && km)
       map.fitBounds(circleBounds(at, km), { animate: false, padding: 24 });
-    else if (view === 'street')
+    else if (move === 'street')
       map.jumpTo({ center: [at.lng, at.lat], zoom: PLACE_ZOOM });
   };
 
   return {
-    destroy: () => map.remove(),
+    destroy: () => {
+      map.remove();
+      if (view?.__MF_MAP === map) delete view.__MF_MAP;
+    },
     show(next) {
       draw(next);
       place(next.at);

@@ -337,4 +337,19 @@ describe('the place map, how it frames the pin and the circle', () => {
 
     expect((window as { __MF_MAP?: unknown }).__MF_MAP).toBe(fake.map);
   });
+
+  it('takes the map back from the page when it is destroyed', async () => {
+    (window as { __MF_MAP_STYLE?: string }).__MF_MAP_STYLE =
+      '/map/empty-style.json';
+    const map = await TestBed.inject(PLACE_MAP)(document.createElement('div'), {
+      dragged: () => {},
+      failed: () => {},
+      tapped: () => {},
+    });
+
+    map.destroy();
+
+    expect(fake.map.remove).toHaveBeenCalled();
+    expect((window as { __MF_MAP?: unknown }).__MF_MAP).toBeUndefined();
+  });
 });
