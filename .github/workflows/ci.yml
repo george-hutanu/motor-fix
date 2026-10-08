@@ -223,6 +223,9 @@ jobs:
       GOOGLE_CLIENT_ID: e2e-client
       GOOGLE_CLIENT_SECRET: e2e-only-not-a-secret
       GOOGLE_ISSUER: http://127.0.0.1:3026
+      # Pages carry the browser telemetry tag; the tests answer the
+      # collector themselves (apps/web-e2e/src/fixtures.ts), so nothing leaves.
+      FARO_URL: https://faro.invalid/collect/e2e
       # The photo flows upload to the compose MinIO, started in the steps below.
       STORAGE_ENDPOINT: http://localhost:9000
       STORAGE_REGION: eu-central-1
