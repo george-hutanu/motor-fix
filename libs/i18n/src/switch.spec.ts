@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
@@ -240,5 +243,16 @@ describe('LanguageChoice.taps', () => {
 
     expect(TestBed.inject(I18n).language()).toBe('en');
     expect(localStorage.getItem('mf.lang')).toBe('en');
+  });
+});
+
+describe('the language switch buttons', () => {
+  const source = readFileSync(join(__dirname, 'switch.ts'), 'utf8');
+
+  it('read at the page size, not the browser button size, on the 4 px grid', () => {
+    expect(source).toMatch(
+      /button \{[^}]*font: inherit;[^}]*font-size: var\(--mf-size-body, 16px\);/,
+    );
+    expect(source).toMatch(/button \{[^}]*padding: 4px 8px;/);
   });
 });
