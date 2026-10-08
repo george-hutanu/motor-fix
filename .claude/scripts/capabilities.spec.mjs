@@ -288,6 +288,44 @@ describe('validating a delta before it can corrupt a capability', () => {
     assert.deepEqual(rules(findings), ['delta-adds-undeclared']);
   });
 
+  // The archive retires a Modifies or Removes base; once the spec says
+  // Archived, finding it retired is the merge done, not a delta defect.
+  const mergedFindings = (status, delta) => {
+    const dir = fixture({
+      '.specify/capabilities/cli-tasks.md': capability('cli-tasks', {
+        requirements: [[T('002', '001'), 'adds a flag']],
+        retired: [[T('001', '004'), `superseded by ${T('002', '001')}`], [T('001', '009'), 'gone']],
+      }),
+      'specs/002-fixture/spec.md': spec([['FR-001', 'adds a flag']], delta).replace('\n\n## Requirements', `\n\n${status}\n\n## Requirements`),
+    });
+    try {
+      return validateFeature(dir, feature(dir));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+  const modifies = '### Capability: `cli-tasks`\n\n- **Modifies**: `' + T('001', '004') + '` → `FR-001`';
+  const removes = '### Capability: `cli-tasks`\n\n- **Adds**: FR-001\n- **Removes**: `' + T('001', '009') + '` — gone';
+
+  it('reports no delta-base-retired for an archived feature whose Modifies or Removes base its archive retired', () => {
+    for (const status of ['**Status**: Archived (2026-10-08)', '**Status**: Archived']) {
+      assert.deepEqual(rules(mergedFindings(status, modifies)), [], `${status}, Modifies`);
+      assert.deepEqual(rules(mergedFindings(status, removes)), [], `${status}, Removes`);
+    }
+  });
+
+  it('keeps delta-base-retired an ERROR for a feature that is not archived', () => {
+    for (const delta of [modifies, removes]) {
+      const found = mergedFindings('**Status**: Draft', delta).find((f) => f.rule === 'delta-base-retired');
+      assert.equal(found?.level, 'ERROR', delta);
+    }
+  });
+
+  it('still reports a missing Modifies base for an archived feature', () => {
+    const delta = '### Capability: `cli-tasks`\n\n- **Modifies**: `' + T('001', '099') + '` → `FR-001`';
+    assert.deepEqual(rules(mergedFindings('**Status**: Archived (2026-10-08)', delta)), ['delta-base-missing']);
+  });
+
   it('rejects a Modifies with no replacement', () => {
     const findings = run('### Capability: `cli-tasks`\n\n- **Adds**: FR-001, FR-006\n- **Modifies**: `' + T('001', '004') + '`');
     assert.ok(rules(findings).includes('delta-modifies-malformed'));
