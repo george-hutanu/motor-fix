@@ -1,7 +1,7 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
-import { deploy, type Service } from './railway-deploy.ts';
+import { API_PRE_DEPLOY, deploy, type Service } from './railway-deploy.ts';
 
 type Call = { query: string; variables: Record<string, unknown> };
 
@@ -10,7 +10,7 @@ const services: Service[] = [
     id: 'svc-api',
     image: 'ghcr.io/x/api@sha256:new',
     name: 'api',
-    preDeploy: ['npx prisma migrate deploy'],
+    preDeploy: API_PRE_DEPLOY,
     replicas: 2,
   },
   {
@@ -46,6 +46,15 @@ async function seenIn(calls: () => Call[], match: (call: Call) => boolean) {
     await new Promise((resolve) => setTimeout(resolve, 2));
   }
 }
+
+// @traces 878-FR-001
+describe('the api pre-deploy step', () => {
+  it('migrates, then applies the monitor role password', () => {
+    expect(API_PRE_DEPLOY).toEqual([
+      'npx prisma migrate deploy && node scripts/monitor-password.ts',
+    ]);
+  });
+});
 
 describe('railway deploy', () => {
   let server: Server;
@@ -105,7 +114,7 @@ describe('railway deploy', () => {
           healthcheckPath: '/health/ready',
           healthcheckTimeout: 300,
           numReplicas: 2,
-          preDeployCommand: ['npx prisma migrate deploy'],
+          preDeployCommand: API_PRE_DEPLOY,
           region: 'europe-west4-drams3a',
           source: { image: 'ghcr.io/x/api@sha256:new' },
         },

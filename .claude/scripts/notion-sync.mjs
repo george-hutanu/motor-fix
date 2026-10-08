@@ -313,7 +313,7 @@ async function statusEvent(ctx) {
     log("labels", `PR #${pr}`, decision.stage ?? "none");
   }
   const out = { status: decision.story, write: decision.write };
-  if (epic && (event === "start" || event === "finish")) {
+  if (event === "start" || event === "finish") {
     out.ready = await refreshReady(ctx, { epic, rows, self: { id: story.id, status: decision.story, row: row?.id, timeline: decision.timeline } });
   }
   return out;
@@ -359,9 +359,11 @@ async function finishComment(ctx) {
  * written only by `ready --tick` once the hold review confirmed them.
  */
 async function refreshReady(ctx, { epic, rows, self, confirm }) {
-  const name = titleOf(epic);
+  // A story with no epic is refreshed alone and still logs its ready line,
+  // so the archive check (notion-ready.mjs check) passes after its finish.
+  const name = epic ? titleOf(epic) : ctx.st;
   ctx.step = { name: "ready", item: name };
-  const stories = await epicStories(ctx, epic);
+  const stories = epic ? await epicStories(ctx, epic) : [ctx.story];
   const rowById = new Map(rows.map((r) => [r.id, r]));
   const holds = new Map(ctx.flags.hold.map((h) => h.split("=")).map(([id, ...why]) => [id, why.join("=") || "held by the hold review"]));
   const pages = new Map();
@@ -393,13 +395,12 @@ async function refreshReady(ctx, { epic, rows, self, confirm }) {
     decision.untick.length && `−${decision.untick.join(", −")}`,
     review.length && `review: ${review.join(", ")}`,
   ].filter(Boolean);
-  ctx.log("ready", name, parts.join(", ") || "no change");
+  ctx.log("ready", name, `${parts.join(", ") || "no change"}${epic ? "" : " (the story has no epic)"}`);
   return { tick, untick: decision.untick, review, held };
 }
 
 async function readyEvent(ctx) {
   const { epic, rows } = await surroundings(ctx);
-  if (!epic) return { ready: null };
   const row = rows.find((r) => readProp(r, "Story")?.includes(ctx.story.id));
   const self = { id: ctx.story.id, status: readProp(ctx.story, "Status"), row: row?.id, timeline: row && readProp(row, "Build status") };
   return { ready: await refreshReady(ctx, { epic, rows, self, confirm: ctx.flags.tick }) };

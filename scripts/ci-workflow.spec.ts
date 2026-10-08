@@ -190,6 +190,22 @@ describe('ci workflow', () => {
     );
   });
 
+  // @traces 878-FR-013
+  it('preloads pg_stat_statements and restarts PostgreSQL before migrating', () => {
+    const block = job('tests');
+    const preload = step(block, 'Preload pg_stat_statements');
+
+    expect(preload).toContain(gh('job.services.postgres.id'));
+    expect(preload).toContain(
+      "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements'",
+    );
+    expect(preload).toContain('docker restart');
+    expect(preload).toContain('pg_isready');
+    expect(block.indexOf('- name: Preload pg_stat_statements')).toBeLessThan(
+      block.indexOf('prisma migrate deploy'),
+    );
+  });
+
   it('CI OK needs every job and fails on anything but success or skipped', () => {
     const block = job('ci-ok');
 
