@@ -48,13 +48,18 @@ function range(prices: PricesSection | undefined): PreviewCard['range'] {
 // Known brands in display order; brands the step does not show keep their
 // draft order, after them. A brand the draft repeats counts once.
 function inOrder(brands: MarkedBrand[], order: string[]): MarkedBrand[] {
-  const once = brands.filter(
-    (b, i) => brands.findIndex((c) => c.brandId === b.brandId) === i,
-  );
-  const rank = (b: MarkedBrand) => {
-    const at = order.indexOf(b.brandId);
-    return at === -1 ? order.length : at;
-  };
+  // Linear lookups: a draft can carry thousands of brands.
+  const seen = new Set<string>();
+  const once = brands.filter((b) => {
+    if (seen.has(b.brandId)) return false;
+    seen.add(b.brandId);
+    return true;
+  });
+  const position = new Map<string, number>();
+  order.forEach((id, i) => {
+    if (!position.has(id)) position.set(id, i);
+  });
+  const rank = (b: MarkedBrand) => position.get(b.brandId) ?? order.length;
   return once.sort((a, b) => rank(a) - rank(b));
 }
 

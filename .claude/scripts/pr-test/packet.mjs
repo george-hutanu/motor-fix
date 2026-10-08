@@ -6,7 +6,9 @@
 // touches, the run's verdict and findings, the previous lap's findings marked
 // new, persisting or resolved, and the screenshots that differ from the
 // baseline run (the last tested commit of the PR, or a run already on the base
-// branch). The tester then opens only the screenshots it names.
+// branch), or, when the run diffed its shots against main's (visual.json), the
+// changed ones with their regions and diff/<shot>.png. The tester then opens
+// only the screenshots it names.
 //
 //   node .claude/scripts/pr-test/packet.mjs --pr <n> --out <dir> [--repo o/r] [--run <id>] [--baseline <run-id|dir>]
 // exits 0 with packet.md written (a section gh could not answer says so), 2
@@ -14,21 +16,19 @@
 // reports are read from the private specs repository's trunk (specs-repo.mjs),
 // where its folder sits at the root: motor-fix does not track specs/.
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, lstatSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { artifactName, WORKFLOW } from "./dispatch.mjs";
+import { chooseBaseline, parseRunName, readReport } from "./baseline.mjs";
 import { findingKey as keyOf, isBlocking, touchesWeb } from "./findings.mjs";
 import { realGh } from "./post.mjs";
 import { SPECS_SLUG, TRUNK } from "../specs-repo.mjs";
 
+export { parseRunName };
+
 /** Changed files listed one per line before the rest are only counted. */
 const FILE_CAP = 100;
-/** PR QA runs read when looking for a baseline, newest first. */
-const RUN_LIMIT = 100;
-const FINISHED = new Set(["success", "failure"]);
 const MAX_RANGE = 999;
 /** One line of Markdown: a newline in a title or evidence would start a heading of its own. */
 const flat = (s) => String(s ?? "").replace(/\s*[\r\n]+\s*/g, " ");
@@ -52,12 +52,6 @@ export function frIds(line) {
     for (let n = from; n <= to; n++) ids.push(`FR-${String(n).padStart(m[1].length, "0")}`);
   }
   return [...new Set(ids)];
-}
-
-/** The tested PR, head and lap a PR QA run's title (`run-name`) carries. */
-export function parseRunName(title) {
-  const m = String(title ?? "").match(/PR QA #(\d+) at ([0-9a-f]{7,40}) lap (\d+)/);
-  return m ? { pr: Number(m[1]), sha: m[2], lap: Number(m[3]) } : null;
 }
 
 
@@ -106,72 +100,11 @@ function shotHashes(dir) {
   return out;
 }
 
-const readReport = (dir) => (existsSync(join(dir, "report.json")) ? parseJson(readFileSync(join(dir, "report.json"), "utf8")) : null);
-
 /** A file at the PR head through the contents API: { text } or { error }. */
 function contents(gh, repo, path, ref, raw = true) {
   const args = ["api", ...(raw ? ["-H", "Accept: application/vnd.github.raw"] : []), `repos/${repo}/contents/${path}?ref=${ref}`];
   const res = gh(args);
   return res.code === 0 ? { text: res.stdout } : { error: reason(res) };
-}
-
-/** Downloads a run's artifact; { dir, report } or { error }. */
-function download(gh, repo, id, pr) {
-  const dir = mkdtempSync(join(tmpdir(), "packet-baseline-"));
-  const res = gh(["run", "download", String(id), "--repo", repo, "-n", artifactName(pr), "-D", dir]);
-  const report = res.code === 0 ? readReport(dir) : null;
-  if (report) return { dir, report };
-  rmSync(dir, { recursive: true, force: true });
-  return { error: res.code === 0 ? "the artifact has no report.json" : `download failed (expired?): ${reason(res)}` };
-}
-
-/** The baseline run, by the order the spec gives; { id, dir, report, temp } or { none: reason }, plus the skipped candidates. */
-function chooseBaseline({ gh, repo, pr, head, base, run, explicit }) {
-  const skipped = [];
-  if (explicit) {
-    if (existsSync(explicit) && statSync(explicit).isDirectory()) {
-      const report = readReport(explicit);
-      return report ? { dir: explicit, report, label: `folder ${explicit} · PR #${report.pr} · commit ${short(report.sha)} · lap ${report.lap}`, skipped } : { none: `${explicit} has no report.json`, skipped };
-    }
-    const got = download(gh, repo, explicit, pr);
-    return got.error ? { none: `run ${explicit}: ${got.error}`, skipped } : { ...got, temp: true, label: `run ${explicit} · PR #${got.report.pr} · commit ${short(got.report.sha)} · lap ${got.report.lap}`, skipped };
-  }
-  const list = gh(["run", "list", "--repo", repo, "--workflow", WORKFLOW, "--json", "databaseId,displayTitle,conclusion,createdAt", "--limit", String(RUN_LIMIT)]);
-  if (list.code !== 0) return { none: `unavailable: gh run list failed: ${reason(list)}`, skipped };
-  const runs = (parseJson(list.stdout) ?? [])
-    .map((r) => ({ ...r, ...parseRunName(r.displayTitle) }))
-    .filter((r) => r.pr)
-    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-  const before = runs.find((r) => String(r.databaseId) === String(run))?.createdAt;
-  const tried = new Set();
-  const attempt = (r) => {
-    tried.add(r.databaseId);
-    const got = download(gh, repo, r.databaseId, r.pr);
-    if (got.error) {
-      skipped.push(`run ${r.databaseId}: ${got.error}`);
-      return null;
-    }
-    return { ...got, temp: true, label: `run ${r.databaseId} · PR #${r.pr} · commit ${short(got.report.sha ?? r.sha)} · lap ${got.report.lap ?? r.lap}`, skipped };
-  };
-  const candidates = runs.filter((r) => {
-    if (String(r.databaseId) === String(run)) return false;
-    if (before && r.createdAt >= before) return false;
-    if (!FINISHED.has(r.conclusion)) return false;
-    return !head.startsWith(r.sha);
-  });
-  for (const r of candidates.filter((c) => c.pr === pr)) {
-    const got = attempt(r);
-    if (got) return got;
-  }
-  if (!base) return { none: "no earlier run of this PR, and the base branch is unknown", skipped };
-  for (const r of candidates.filter((c) => !tried.has(c.databaseId))) {
-    const cmp = gh(["api", `repos/${repo}/compare/${base}...${r.sha}`]);
-    const status = cmp.code === 0 ? parseJson(cmp.stdout)?.status : null;
-    if (status !== "behind" && status !== "identical") continue;
-    const got = attempt(r);
-    if (got) return got;
-  }
-  return { none: `no finished run of this PR at another head, nor of a commit on ${base}`, skipped };
 }
 
 /** The FR ids on tasks.md lines naming a changed file, with their text from spec.md; { lines } or { note }. */
@@ -233,7 +166,7 @@ function readiness(dir) {
 }
 
 /** packet.md's text from its parts. */
-function packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, delta, web = true, ready }) {
+function packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, delta, visual, cited = [], web = true, ready }) {
   const out = [`# Packet: PR #${pr} at ${short(view?.headRefOid ?? report.sha)}, lap ${report.lap ?? "?"}`, ""];
   if (view) out.push(`${flat(view.title)} · branch ${view.headRefName} · head ${view.headRefOid} · base ${view.baseRefName}`, "");
   out.push("## Changed files", "");
@@ -272,6 +205,25 @@ function packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, del
   out.push(baseline.none ? `No baseline: ${baseline.none}.` : `Baseline: ${baseline.label}.`);
   for (const s of baseline.skipped ?? []) out.push(`- skipped ${s}`);
   out.push("", "## Screenshots", "");
+  if (visual) {
+    const shots = Object.entries(visual.shots ?? {});
+    const of = (st) => shots.filter(([, v]) => v.status === st).map(([n]) => n);
+    const changed = of("changed");
+    out.push(
+      `Pixel diff against run ${visual.baseline?.run} of ${short(visual.baseline?.sha)}: changed ${changed.length} · new ${of("new").length} · removed ${of("removed").length} · identical ${of("identical").length}`,
+      "",
+      "Look at only these:",
+    );
+    const others = cited.filter((n) => !changed.includes(n));
+    const added = web ? of("new") : [];
+    for (const n of changed) {
+      const v = visual.shots[n];
+      out.push(`- ${n}: ${v.regions.length} region(s) ${v.regions.map((r) => `${r.width}×${r.height}@${r.x},${r.y}`).join(" ")}; outlined in ${v.diff}`);
+    }
+    for (const n of [...new Set([...added, ...others])].sort()) out.push(`- ${n}`);
+    if (!changed.length && !added.length && !others.length) out.push("- none");
+    return `${out.join("\n")}\n`;
+  }
   if (!baseline.none) {
     out.push(`changed ${delta.changed.length} · new ${delta.added.length} · removed ${delta.removed.length} · unchanged ${delta.unchanged}`);
     for (const n of delta.removed) out.push(`- removed: ${n}`);
@@ -306,8 +258,10 @@ export function buildPacket({ out, pr, repo, run, baseline: explicit, gh = realG
     const cited = (report.findings ?? []).flatMap((f) => String(f.evidence ?? "").match(/shots\/\S+?\.png/g) ?? []);
     const web = view?.files?.length ? touchesWeb(view.files.map((f) => f.path)) : true;
     const delta = shotDelta({ current: shotHashes(out), baseline: baseline.dir ? shotHashes(baseline.dir) : null, cited, web });
+    // The run's own pixel diff (baseline.mjs), when the workflow had a baseline; the byte hashes otherwise.
+    const visual = existsSync(join(out, "visual.json")) ? parseJson(readFileSync(join(out, "visual.json"), "utf8")) : null;
     const path = join(out, "packet.md");
-    writeFileSync(path, packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, delta, web, ready: readiness(out) }));
+    writeFileSync(path, packetMarkdown({ pr, report, view, viewError, reqs, prev, baseline, delta, visual, cited, web, ready: readiness(out) }));
     return { code: 0, path };
   } finally {
     if (baseline.temp) rmSync(baseline.dir, { recursive: true, force: true });
