@@ -33,7 +33,10 @@ What the realm holds:
 - The identity provider `motorfix` (OpenID Connect, `client_secret_post`),
   the browser flow that goes straight to it and a first sign-in flow that
   creates the user without a profile review. The id token comes back on the
-  authenticated back channel, so its signature is not checked.
+  authenticated back channel, so its signature is not checked: Keycloak 26.8
+  checks a brokered token only against a public key (a JWKS address, an
+  inline JWKS or a PEM), never the client secret, and the api signs it HS256
+  with that secret. Signing it with a published key pair is a debt task.
 - Access tokens for 15 minutes; refresh tokens rotate and are never reused.
 - Client ID Metadata Documents: a client whose id is an address on a trusted
   domain is accepted, may only ask for `MCP_URL`, and may send people back to

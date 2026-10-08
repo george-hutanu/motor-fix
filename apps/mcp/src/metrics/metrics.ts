@@ -23,7 +23,7 @@ type RequestOutcome =
   | 'error';
 type ToolOutcome = 'ok' | 'refused' | 'error';
 
-export interface ToolCall {
+interface ToolCall {
   accountId: string;
   clientId: string;
   requestId: string;

@@ -12,4 +12,4 @@ export {
   USER_TEXT_NOTICE,
   visibleTools,
 } from './registry';
-export { type UserText, type UserTextAuthor, userText } from './user-text';
+export { type UserTextAuthor, userText } from './user-text';

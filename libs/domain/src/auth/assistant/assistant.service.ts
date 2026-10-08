@@ -25,7 +25,7 @@ export interface AssistantBroker {
   webUrl: string;
 }
 
-export interface AssistantTokens {
+interface AssistantTokens {
   id_token: string;
   access_token: string;
   token_type: 'Bearer';
@@ -220,6 +220,10 @@ export class AssistantService {
             where: { codeHash },
           })
         : null;
+    // Codes are never read again a minute after they lapse.
+    await this.prisma.assistantSignInCode.deleteMany({
+      where: { expiresAt: { lt: new Date(now - CODE_TTL_MS) } },
+    });
     if (
       !row ||
       row.clientId !== broker.clientId ||

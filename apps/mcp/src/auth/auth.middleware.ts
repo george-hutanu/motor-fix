@@ -2,7 +2,12 @@ import { InvalidTokenError } from '@modelcontextprotocol/sdk/server/auth/errors.
 import type { OAuthTokenVerifier } from '@modelcontextprotocol/sdk/server/auth/provider.js';
 import { getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/sdk/server/auth/router.js';
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
-import { Inject, Injectable, type NestMiddleware } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  type NestMiddleware,
+} from '@nestjs/common';
 import type { NextFunction, Request, Response } from 'express';
 
 import {
@@ -34,6 +39,8 @@ export function refuse(
     );
   res.status(status).json(body);
 }
+
+const logger = new Logger('McpAuth');
 
 export const metadataUrlOf = (mcpUrl: string) =>
   getOAuthProtectedResourceMetadataUrl(new URL(mcpUrl));
@@ -72,6 +79,11 @@ export class BearerAuth implements NestMiddleware {
           { invalidToken: true, metadataUrl: this.metadataUrl },
         );
       }
+      // The key server is down or answered badly; the token itself is never logged.
+      const failure = error instanceof Error ? error : new Error(String(error));
+      logger.warn(
+        `cannot verify an assistant token: ${failure.name}: ${failure.message}`,
+      );
       return refuse(res, 503, {
         code: 'service_unavailable',
         message: 'MotorFix cannot check sign-ins right now. Try again soon.',

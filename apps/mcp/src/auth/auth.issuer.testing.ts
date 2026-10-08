@@ -30,7 +30,7 @@ async function newKey(kid: string = randomUUID()): Promise<Key> {
   };
 }
 
-export interface SignOptions {
+interface SignOptions {
   claims?: JWTPayload;
   // Claims left out of the token.
   omit?: string[];

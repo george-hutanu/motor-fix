@@ -3,6 +3,7 @@ import type { AddressInfo } from 'node:net';
 
 import { InvalidTokenError } from '@modelcontextprotocol/sdk/server/auth/errors.js';
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
+import { Logger } from '@nestjs/common';
 import express from 'express';
 
 import { TEST_MCP_URL } from './auth.issuer.testing';
@@ -91,9 +92,19 @@ describe('the bearer check in front of the MCP endpoint', () => {
 
   it('answers 503 when the keys cannot be read, without blaming the token', async () => {
     verifyAccessToken.mockRejectedValue(new TypeError('fetch failed'));
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
 
     const res = await call(`Bearer ${SECRET_TOKEN}`);
     const body = await res.text();
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0]?.[0])).toContain(
+      'TypeError: fetch failed',
+    );
+    expect(JSON.stringify(warn.mock.calls)).not.toContain(SECRET_TOKEN);
+    warn.mockRestore();
 
     expect(res.status).toBe(503);
     expect(res.headers.get('www-authenticate')).toBeNull();

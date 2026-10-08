@@ -46,7 +46,7 @@ import { TransportMetadataController } from './transport/transport.metadata';
 
 export const MCP_ENV = ['DATABASE_URL', 'MCP_URL', 'ASSISTANT_ISSUER'] as const;
 
-export interface McpSettings {
+interface McpSettings {
   databaseUrl: string;
   issuer: string;
   mcpUrl: string;
@@ -101,8 +101,10 @@ export class McpModule implements NestModule, OnModuleDestroy {
   }
 
   configure(consumer: MiddlewareConsumer) {
+    // The body is read only once the token is checked, so a caller with no
+    // token learns nothing from how its body parses.
     consumer
-      .apply(BearerAuth)
+      .apply(BearerAuth, express.json())
       .forRoutes({ method: RequestMethod.POST, path: 'mcp' });
   }
 
@@ -130,6 +132,6 @@ export async function createMcpApp(
   return NestFactory.create(
     McpModule.register(settings, tools),
     new ExpressAdapter(instance),
-    { logger: new JsonLogger() },
+    { bodyParser: false, logger: new JsonLogger() },
   );
 }

@@ -36,6 +36,11 @@ function fakePrisma() {
         rows.push({ ...data, usedAt: null });
         return data;
       },
+      async deleteMany({ where }: { where: { expiresAt: { lt: Date } } }) {
+        const stale = rows.filter((row) => row.expiresAt < where.expiresAt.lt);
+        for (const row of stale) rows.splice(rows.indexOf(row), 1);
+        return { count: stale.length };
+      },
       async findUnique({ where }: { where: { codeHash: string } }) {
         return rows.find((row) => row.codeHash === where.codeHash) ?? null;
       },
@@ -296,6 +301,21 @@ describe('the assistant token exchange', () => {
     );
     expect(payload).toMatchObject({ nonce: 'nonce-1', sub: ACCOUNT });
     expect((payload.exp ?? 0) - (payload.iat ?? 0)).toBe(300);
+  });
+
+  it('clears codes that lapsed more than a minute ago when one is exchanged', async () => {
+    const prisma = fakePrisma();
+    const assistant = service(prisma);
+    await codeFor(assistant, NOW - 180_000);
+    await codeFor(assistant, NOW - 90_000);
+    const code = await codeFor(assistant);
+
+    await assistant.exchange(body(code), NOW + 1000);
+
+    expect(prisma.rows.map((row) => row.expiresAt.getTime())).toEqual([
+      NOW - 90_000 + 60_000,
+      NOW + 60_000,
+    ]);
   });
 
   it('exchanges a code once', async () => {

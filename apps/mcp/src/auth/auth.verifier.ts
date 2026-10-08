@@ -65,7 +65,9 @@ export class TokenVerifier implements OAuthTokenVerifier {
     const { azp, exp, motorfix_account_id: accountId, scope } = payload;
     if (
       typeof azp !== 'string' ||
+      !azp ||
       typeof scope !== 'string' ||
+      !scope ||
       typeof accountId !== 'string' ||
       !UUID.test(accountId)
     )
