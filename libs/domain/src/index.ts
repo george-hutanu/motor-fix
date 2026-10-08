@@ -8,6 +8,12 @@ export {
 export { AccountsService } from './auth/accounts.service';
 export { CurrentActor, Public, Requires } from './auth/actor.guard';
 export { AuthModule } from './auth/auth.module';
+export {
+  type Capability,
+  capabilitiesOf,
+  ROLES,
+  type Role,
+} from './auth/capabilities';
 export { EmailConfirmationModule } from './auth/email-confirmation/email-confirmation.module';
 export { MAINTENANCE, type Maintenance } from './auth/maintenance';
 export { oauthSettings } from './auth/oauth/providers';

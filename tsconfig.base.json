@@ -49,6 +49,7 @@
       ],
       "@motor-fix/i18n": ["./libs/i18n/src/index.ts"],
       "@motor-fix/i18n/formats": ["./libs/i18n/src/formats.ts"],
+      "@motor-fix/mcp-tools": ["./libs/mcp-tools/src/index.ts"],
       "@motor-fix/media": ["./libs/media/src/index.ts"],
       "@motor-fix/observability": ["./libs/observability/src/index.ts"],
       "@motor-fix/observability/scrub": [
