@@ -462,6 +462,22 @@ describe('step 5 for a mobile mechanic', () => {
     }
   });
 
+  it('keeps the radius when the map could not be loaded', async () => {
+    failMap = true;
+    const opened = await open(
+      { address: STEFAN.label, lat: STEFAN.lat, lng: STEFAN.lng },
+      'mobile',
+    );
+    const area = radius(opened.step) as HTMLInputElement;
+
+    area.value = '35';
+    area.dispatchEvent(new Event('input'));
+    await settle(opened.fixture);
+
+    expect(opened.emitted.at(-1)?.radiusKm).toBe(35);
+    expect(shown()).toBeUndefined();
+  });
+
   it.each(['0', '101', '12.5', 'a'])(
     'refuses %s km and keeps the last good value drawn',
     async (typed) => {

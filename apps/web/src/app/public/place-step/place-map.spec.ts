@@ -33,9 +33,6 @@ class FakeMap {
   getSource() {
     return { setData: this.data };
   }
-  getZoom() {
-    return 8;
-  }
   on() {}
   once(event: string, then: () => void) {
     if (event === 'load') then();

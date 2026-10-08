@@ -32,9 +32,6 @@ class FakeMap {
   getSource() {
     return { setData: this.data };
   }
-  getZoom() {
-    return 8;
-  }
   on() {}
   once(event: string, then: () => void) {
     if (event === 'load') then();
@@ -154,10 +151,6 @@ describe('the place map under repeated and awkward sequences', () => {
       failed: () => {},
       tapped: () => {},
     });
-  });
-
-  afterEach(() => {
-    delete (window as { __MF_MAP?: unknown }).__MF_MAP;
   });
 
   it('makes one view change when the same mobile show arrives twice', () => {
