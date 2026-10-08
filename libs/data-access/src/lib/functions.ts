@@ -95,6 +95,18 @@ export type { GarageSearchControllerForBrand$Params as GarageSearchControllerFor
 export { garageSearchControllerForBrand as garageSearchControllerForBrand } from './fn/search/garage-search-controller-for-brand';
 export type { HomeControllerForBrand$Params as HomeControllerForBrand$Params } from './fn/home/home-controller-for-brand';
 export { homeControllerForBrand as homeControllerForBrand } from './fn/home/home-controller-for-brand';
+export type { RequestsControllerList$Params as RequestsControllerList$Params } from './fn/requests/requests-controller-list';
+export { requestsControllerList as requestsControllerList } from './fn/requests/requests-controller-list';
+export type { RequestsControllerGet$Params as RequestsControllerGet$Params } from './fn/requests/requests-controller-get';
+export { requestsControllerGet as requestsControllerGet } from './fn/requests/requests-controller-get';
+export type { GarageRequestsControllerList$Params as GarageRequestsControllerList$Params } from './fn/garage-requests/garage-requests-controller-list';
+export { garageRequestsControllerList as garageRequestsControllerList } from './fn/garage-requests/garage-requests-controller-list';
+export type { GarageRequestsControllerGet$Params as GarageRequestsControllerGet$Params } from './fn/garage-requests/garage-requests-controller-get';
+export { garageRequestsControllerGet as garageRequestsControllerGet } from './fn/garage-requests/garage-requests-controller-get';
+export type { GarageJobsControllerList$Params as GarageJobsControllerList$Params } from './fn/garage-jobs/garage-jobs-controller-list';
+export { garageJobsControllerList as garageJobsControllerList } from './fn/garage-jobs/garage-jobs-controller-list';
+export type { GarageJobsControllerGet$Params as GarageJobsControllerGet$Params } from './fn/garage-jobs/garage-jobs-controller-get';
+export { garageJobsControllerGet as garageJobsControllerGet } from './fn/garage-jobs/garage-jobs-controller-get';
 export type { PlacesControllerSearch$Params as PlacesControllerSearch$Params } from './fn/places/places-controller-search';
 export { placesControllerSearch as placesControllerSearch } from './fn/places/places-controller-search';
 export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';
