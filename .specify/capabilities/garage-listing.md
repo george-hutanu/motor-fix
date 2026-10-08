@@ -15,6 +15,7 @@ features:
   - 111-garage-address-map
   - 917-proposed-job-duplicate
   - 229-location-or-address
+  - 113-garage-live-preview
   - 959-map-fits-circle
 ---
 
@@ -577,6 +578,58 @@ _From 917-proposed-job-duplicate._
 ### 229-FR-014 — The address look-up `GET /api/v1/places?q=` MUST serve the drivers' search unchanged: Romania only, at most 5 suggestions, from 3 characters, a provider failure as 503 `search_unavailable`, rate limited per address; this story adds no second look-up and no new outside call.
 
 _From 229-location-or-address._
+
+### 113-FR-001 — The "List your garage" form MUST show a card titled "Cum îl vor vedea șoferii" beside the form, built only from the owner's current draft.
+
+_From 113-garage-live-preview._
+
+### 113-FR-002 — Before a garage name or a labour range is entered, the card MUST show placeholders for each.
+
+_From 113-garage-live-preview._
+
+### 113-FR-003 — While the listing is a draft, the card MUST show the state "Ciornă · se publică după verificare".
+
+_From 113-garage-live-preview._
+
+### 113-FR-004 — The card MUST show the garage name and the hourly labour range as entered, read from the live form state (not the saved draft), and MUST reflect every change within 150 ms of it, with no timer.
+
+_From 113-garage-live-preview._
+
+### 113-FR-005 — The card MUST show a lamp for a sample brand — the first taken brand in the order the brands step lists them — using the same lamp and wording drivers see; with no brand taken (including when brands are only refused), the lamp MUST be grey.
+
+_From 113-garage-live-preview._
+
+### 113-FR-006 — The card MUST show the "Lucrează pe" and "Nu primește" lists from the brands marked on the brands step, using the same lists drivers see; an empty list MUST read "nimic ales încă", drawn by the preview and not by the shared component.
+
+_From 113-garage-live-preview._
+
+### 113-FR-007 — When a specialist phrase is set, the refusal list MUST show the phrase instead of the refused brands.
+
+_From 113-garage-live-preview._
+
+### 113-FR-008 — When the single switch "Afișează-i pe pagina ta" is on, the card MUST show every mechanic from the mechanics step with their initials and the note "apare după ce acceptă invitația"; when it is off, no mechanics MUST show.
+
+_From 113-garage-live-preview._
+
+### 113-FR-009 — For a mobile mechanic, the card MUST show the service area as "Mobil · <radius> km în jurul sediului" and MUST NOT show any part of the registered seat address.
+
+_From 113-garage-live-preview._
+
+### 113-FR-010 — The card MUST show only the fields of the Preview card model; it MUST NOT show the phone number entered on step 1 or the seat address. A fixed (non-mobile) garage shows no location line.
+
+_From 113-garage-live-preview._
+
+### 113-FR-011 — The card MUST work without a network connection and MUST NOT fetch anything about this or any other garage.
+
+_From 113-garage-live-preview._
+
+### 113-FR-012 — Below 1024 px (phones and tablets), the card MUST appear as a collapsible panel "Previzualizare", collapsed by default, above the submit button, with the same content; its toggle MUST be operable by keyboard and expose its expanded state to assistive technology. From 1024 px the card MUST sit beside the form, always open. The card MUST NOT make the page scroll sideways at 320 px.
+
+_From 113-garage-live-preview._
+
+### 113-FR-013 — The card's text MUST be available in Romanian and English and readable in light and dark schemes.
+
+_From 113-garage-live-preview._
 
 ### 959-FR-001 — For a mobile mechanic (step 1's `businessKind` is `mobile`), once a position exists, the map MUST frame the whole service circle: every point of the circle's edge at the radius in force (the typed radius, else 20, 111-FR-005) inside the map's viewport, the pin at the centre, with 24 px of padding on every side of the circle's bounding box. It does this on the first placement (whenever the map goes from no pin to a pin, a restored draft included) and whenever a pin is set outside the current viewport. The fit MUST hold at 320 px and at every wider width, in light and dark, in Romanian and English.
 
