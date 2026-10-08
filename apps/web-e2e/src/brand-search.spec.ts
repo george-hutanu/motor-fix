@@ -146,8 +146,19 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme: scheme });
       await page.setViewportSize({ height: 640, width: 320 });
       await ready(page, path);
-      const button = page.locator('a.search');
-      const before = await button.boundingBox();
+      // Where the button sits on the page, not in the viewport: filling the
+      // field scrolls it into view, which moves every viewport box.
+      const place = () =>
+        page.locator('a.search').evaluate((e) => {
+          const box = e.getBoundingClientRect();
+          return {
+            height: box.height,
+            width: box.width,
+            x: box.x + window.scrollX,
+            y: box.y + window.scrollY,
+          };
+        });
+      const before = await place();
 
       await page.getByRole('combobox').fill('a');
       await expect(suggestions(page).first()).toBeVisible();
@@ -161,7 +172,7 @@ for (const scheme of ['light', 'dark'] as const) {
         )),
       ];
       for (const height of heights) expect(height).toBeGreaterThanOrEqual(44);
-      expect(await button.boundingBox()).toEqual(before);
+      expect(await place()).toEqual(before);
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(320);
