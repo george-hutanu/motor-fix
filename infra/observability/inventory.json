@@ -1,0 +1,184 @@
+{
+  "endpoints": {
+    "count": 63,
+    "source": "apps/api/openapi.json"
+  },
+  "entries": [
+    {
+      "kind": "app",
+      "name": "api",
+      "source": "apps/api",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "app",
+      "name": "mcp",
+      "source": "apps/mcp",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "app",
+      "name": "web",
+      "source": "apps/web",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "app",
+      "name": "web-e2e",
+      "source": "apps/web-e2e",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "app",
+      "name": "worker",
+      "source": "apps/worker",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "railway-service",
+      "name": "api",
+      "source": "scripts/railway-deploy.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "railway-service",
+      "name": "worker",
+      "source": "scripts/railway-deploy.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "railway-service",
+      "name": "web",
+      "source": "scripts/railway-deploy.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "queue",
+      "name": "insights",
+      "source": "libs/domain/src/insights/insights.module.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "queue",
+      "name": "reminders",
+      "source": "libs/domain/src/cars/reminders.module.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "queue",
+      "name": "notifications",
+      "source": "libs/domain/src/notifications/notifications.module.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "queue",
+      "name": "news",
+      "source": "libs/domain/src/notifications/news.fan-out.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "outside-service",
+      "name": "brevo",
+      "host": "api.brevo.com",
+      "source": "libs/domain/src/notifications/email-config.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "outside-service",
+      "name": "google-sign-in",
+      "host": "accounts.google.com",
+      "source": "libs/domain/src/auth/oauth/providers.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "outside-service",
+      "name": "apple-sign-in",
+      "host": "appleid.apple.com",
+      "source": "libs/domain/src/auth/oauth/providers.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "outside-service",
+      "name": "s3",
+      "client": "s3",
+      "source": "libs/domain/src/storage/storage.service.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "outside-service",
+      "name": "web-push",
+      "client": "web-push",
+      "source": "libs/domain/src/notifications/push.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "outside-service",
+      "name": "postgresql",
+      "source": "libs/contracts/src/env.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    },
+    {
+      "kind": "outside-service",
+      "name": "redis",
+      "source": "libs/contracts/src/env.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-881"
+    }
+  ]
+}
