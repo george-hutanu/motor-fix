@@ -48,8 +48,14 @@ async function stub(
 // The browser copy is written a moment after the last change.
 const keptPlace = (page: Page) =>
   page.evaluate(() => {
+    // Not every key holds JSON: the language, for one, is a plain string.
     for (const key of Object.keys(localStorage)) {
-      const draft = JSON.parse(localStorage.getItem(key) ?? 'null');
+      let draft: { data?: { steps?: Record<string, { place?: unknown }> } };
+      try {
+        draft = JSON.parse(localStorage.getItem(key) ?? 'null');
+      } catch {
+        continue;
+      }
       const found = draft?.data?.steps?.['5']?.place;
       if (found) return found as Record<string, unknown>;
     }

@@ -54,12 +54,34 @@ function ring({ lat, lng }: LatLng, km: number): [number, number][] {
   });
 }
 
+// MapLibre's worker and stylesheet are copied to /map by the build
+// (project.json assets) rather than bundled: the worker is looked up beside
+// the module that loads it, which a bundle moves, and the stylesheet would
+// weigh on every page's first load.
+export function mapAssets(document: Document) {
+  const sheet = new URL('/map/maplibre-gl.css', document.baseURI).href;
+  const links = document.head.querySelectorAll<HTMLLinkElement>(
+    'link[rel="stylesheet"]',
+  );
+  if (!Array.from(links).some((link) => link.href === sheet)) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = sheet;
+    document.head.append(link);
+  }
+  return {
+    workerUrl: new URL('/map/maplibre-gl-worker.mjs', document.baseURI).href,
+  };
+}
+
 async function openMapLibre(
   host: HTMLElement,
   events: PlaceMapEvents,
   style: string,
 ): Promise<PlaceMap> {
+  const { workerUrl } = mapAssets(host.ownerDocument);
   const maplibre = await import('maplibre-gl');
+  maplibre.setWorkerUrl(workerUrl);
   const map: MapLibre = new maplibre.Map({
     attributionControl: { compact: true },
     container: host,
