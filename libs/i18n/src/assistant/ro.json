@@ -1,0 +1,7 @@
+{
+  "connecting": "Se conectează asistentul…",
+  "error": {
+    "text": "Cererea de conectare a expirat sau nu mai este valabilă. Întoarce‑te în asistent și pornește din nou conectarea.",
+    "title": "Asistentul nu s‑a putut conecta"
+  }
+}
