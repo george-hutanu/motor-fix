@@ -35,7 +35,7 @@ ul button {
   max-width: 100%;
   min-height: var(--mf-tap);
   padding: 0 var(--mf-space-3);
-  border: 1px solid var(--mf-line);
+  border: 1px solid var(--mf-line-strong);
   border-radius: var(--mf-radius-control);
   background: var(--mf-bg);
   color: var(--mf-text);

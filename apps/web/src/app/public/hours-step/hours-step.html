@@ -132,15 +132,17 @@
         }
       </button>
       @if (facility === 'courtesy_car' && ticked) {
-        <div class="courtesy" role="radiogroup" [attr.aria-label]="'public.listing.hours.courtesy.terms' | t">
-          <label class="tick">
-            <input type="radio" name="courtesyPaid" [checked]="!paid()" (change)="choosePaid(false)" />
-            {{ 'public.listing.hours.courtesy.free' | t }}
-          </label>
-          <label class="tick">
-            <input type="radio" name="courtesyPaid" [checked]="paid()" (change)="choosePaid(true)" />
-            {{ 'public.listing.hours.courtesy.paid' | t }}
-          </label>
+        <div class="courtesy">
+          <div class="terms" role="radiogroup" [attr.aria-label]="'public.listing.hours.courtesy.terms' | t">
+            <label class="tick">
+              <input type="radio" name="courtesyPaid" [checked]="!paid()" (change)="choosePaid(false)" />
+              {{ 'public.listing.hours.courtesy.free' | t }}
+            </label>
+            <label class="tick">
+              <input type="radio" name="courtesyPaid" [checked]="paid()" (change)="choosePaid(true)" />
+              {{ 'public.listing.hours.courtesy.paid' | t }}
+            </label>
+          </div>
           @if (paid()) {
             <label hlmLabel class="price">
               {{ 'public.listing.hours.courtesy.price' | t }}

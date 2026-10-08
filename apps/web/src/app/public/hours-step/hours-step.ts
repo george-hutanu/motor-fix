@@ -60,8 +60,9 @@ type Calendar =
   | { state: 'ready'; days: PublicHolidayDto[] };
 
 // Step 5 of listing a garage: the weekly hours, the closed days, the
-// facilities with the courtesy car's terms, and the payment methods. It holds the draft's section and saves nothing; nothing is kept
-// until the owner changes something.
+// facilities with the courtesy car's terms, and the payment methods. It holds
+// the draft's section and saves nothing; nothing is kept until the owner
+// changes something.
 type PriceError = 'priceMissing' | 'priceRange';
 
 @Component({

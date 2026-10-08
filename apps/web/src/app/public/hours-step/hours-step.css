@@ -34,7 +34,7 @@ p {
   gap: var(--mf-space-2);
 }
 select,
-input:not([type="checkbox"]) {
+input:not([type="checkbox"], [type="radio"]) {
   min-height: var(--mf-tap);
   box-sizing: border-box;
   font: inherit;
@@ -73,7 +73,7 @@ button {
   min-height: var(--mf-tap);
   min-width: var(--mf-tap);
   padding: 0 var(--mf-space-3);
-  border: 1px solid var(--mf-line);
+  border: 1px solid var(--mf-line-strong);
   border-radius: var(--mf-radius-control);
   background: var(--mf-bg);
   color: var(--mf-text);
@@ -84,7 +84,7 @@ button {
 }
 .error {
   flex-basis: 100%;
-  color: var(--mf-red);
+  color: var(--mf-red-ink);
 }
 details {
   display: grid;
@@ -113,7 +113,8 @@ ul {
   list-style: none;
 }
 .closed-days,
-.facilities {
+.facilities,
+.payments {
   display: flex;
   flex-wrap: wrap;
   gap: var(--mf-space-2);
@@ -131,21 +132,13 @@ ul {
   margin-top: var(--mf-space-1);
   font-size: var(--mf-size-small);
 }
-.facilities button[aria-pressed="true"] {
+.facilities button[aria-pressed="true"],
+.payments button[aria-pressed="true"] {
   border-color: var(--mf-text-secondary);
   font-weight: 600;
 }
 mf-lamp {
   font-size: var(--mf-size-small);
-}
-.payments {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--mf-space-2);
-}
-.payments button[aria-pressed="true"] {
-  border-color: var(--mf-text-secondary);
-  font-weight: 600;
 }
 /* The car's terms take their own line under its chip. */
 .facilities li:has(.courtesy) {
@@ -155,7 +148,8 @@ mf-lamp {
   justify-items: start;
   min-width: 0;
 }
-.courtesy {
+.courtesy,
+.terms {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
