@@ -197,8 +197,10 @@ export function fixOf(row, { now, thresholds }) {
   if (row.holder === "live" || row.holder === "owner") return { verdict: row.phase === "done" ? "done" : "ok", fix: null, reason: `held (${row.holder})` };
   // A worktree with no PR (a list that was read, not "unknown") and nothing
   // pushed-but-missing is swept once idle for thresholds.idle.
-  if (row.pr === null && !row.main && row.unpushed === 0 && (now - row.activity.at) / MIN > (thresholds.idle ?? DEFAULT_THRESHOLDS.idle)) {
-    return { verdict: "done", fix: "remove", reason: `no PR, idle ${Math.floor((now - row.activity.at) / (24 * 60 * MIN))} days` };
+  if (row.pr === null && !row.main && (now - row.activity.at) / MIN > (thresholds.idle ?? DEFAULT_THRESHOLDS.idle)) {
+    const days = `no PR, idle ${Math.floor((now - row.activity.at) / (24 * 60 * MIN))} days`;
+    if (row.unpushed !== 0) return { verdict: "done", fix: null, reason: `${days}, but ${row.unpushed > 0 ? `has ${row.unpushed} unpushed commits` : "unpushed commits unknown"}` };
+    return { verdict: "done", fix: "remove", reason: days };
   }
   if (row.phase === "done") return { verdict: "done", fix: null, reason: pr ? `PR ${pr.state}` : "run done" };
   // GitHub runs no CI on a PR that conflicts with main: nothing else moves it

@@ -39,6 +39,7 @@ function fake(answers = []) {
   const table = [
     ...answers,
     ['git -C', (cmd) => (cmd.includes('worktree list --porcelain') ? { stdout: porcelain() } : null)],
+    ['git -C', (cmd) => (cmd.endsWith('specs rev-parse --abbrev-ref HEAD') ? { stdout: 'trunk\n' } : null)],
     [`git -C ${wt} rev-list --count HEAD --not --remotes`, { stdout: '0\n' }],
     ['gh pr list', { stdout: JSON.stringify([{ number: 77, state: 'MERGED' }]) }],
     ['node', { stdout: '{"project":"mf-test-x-abc123","stopped":true}\n' }],

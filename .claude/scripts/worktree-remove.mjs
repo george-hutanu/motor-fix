@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Backs a worktree up, then removes it: the one implementation the lifecycle
-// merge step, the watch and the tail share (ST-977).
+// merge step, the watch and the tail share.
 //
 //   node .claude/scripts/worktree-remove.mjs <path>
 //
@@ -16,13 +16,15 @@
 // removed, 1 when not, 2 on bad arguments.
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
 import { basename, join, resolve, sep } from "node:path";
 import { isEntryPoint } from "./lib/entry.mjs";
 import { commit as specsCommit } from "./specs-repo.mjs";
 import { lockPid, parseWorktrees, processAlive } from "./watch.mjs";
 
 const TIMEOUT = 120_000;
+const MAX_NAMES = 1000;
+const SETTLED = new Set(["MERGED", "CLOSED"]);
 const TEST_SERVICES = join(import.meta.dirname, "..", "..", "scripts", "test-services.ts");
 
 function spawnRun(file, args, opts = {}) {
@@ -53,16 +55,20 @@ function prOf(run, cwd, branch) {
   }
   if (!Array.isArray(list)) return "unreadable";
   const prs = list.filter((p) => Number.isInteger(p?.number) && typeof p?.state === "string");
+  if (prs.length !== list.length) return "unreadable";
   if (prs.length === 0) return null;
-  return prs.find((p) => p.state === "OPEN") ?? prs.sort((a, b) => b.number - a.number)[0];
+  const pr = prs.find((p) => p.state === "OPEN") ?? prs.sort((a, b) => b.number - a.number)[0];
+  // Only a state gh is known to print is trusted; anything else is unreadable.
+  return pr.state === "OPEN" || SETTLED.has(pr.state) ? pr : "unreadable";
 }
 
-/** A file under the backfill folder that does not exist yet. */
-function freshFile(dir, stem, kind) {
-  for (let i = 0; ; i++) {
-    const file = join(dir, `${stem}${i ? `-${i}` : ""}.${kind}.patch`);
+/** A name under the backfill folder that does not exist yet. */
+function freshFile(dir, stem, kind, ext = ".patch") {
+  for (let i = 0; i < MAX_NAMES; i++) {
+    const file = join(dir, `${stem}${i ? `-${i}` : ""}.${kind}${ext}`);
     if (!existsSync(file)) return file;
   }
+  throw new Error(`no free name for ${stem}.${kind}${ext}`);
 }
 
 function stackDown(run, path) {
@@ -99,8 +105,9 @@ export function removeWorktree(target, { admitNoPr = false, admitLiveLock = fals
     if (!admitLiveLock && alive(pid)) return no(`locked by a live session (pid ${pid})`);
   }
   const ahead = run("git", ["-C", path, "rev-list", "--count", "HEAD", "--not", "--remotes"]);
-  const count = Number(ahead.stdout.trim());
-  if (ahead.code !== 0 || !Number.isInteger(count)) return no(`unpushed commits: unknown (${why(ahead)})`);
+  const printed = ahead.stdout.trim();
+  if (ahead.code !== 0 || !/^\d+$/.test(printed)) return no(`unpushed commits: unknown (${why(ahead)})`);
+  const count = Number(printed);
   if (count > 0) return no(`unpushed commits: ${count}`);
   const branch = entry.branch;
   if (branch) {
@@ -123,9 +130,17 @@ export function removeWorktree(target, { admitNoPr = false, admitLiveLock = fals
   const backup = {};
   try {
     const specs = join(path, "specs");
-    if (!existsSync(join(specs, ".git"))) backup.specs = "none";
-    else {
-      const pushed = commitSpecs({ root: path, message: `chore(specs): backfill ${name} before removal` });
+    if (!existsSync(specs) || readdirSync(specs).length === 0) backup.specs = "none";
+    else if (!existsSync(join(specs, ".git"))) {
+      // A plain folder, not a clone: git ignores it, so it is copied whole.
+      mkdirSync(dir, { recursive: true });
+      const copy = freshFile(dir, stem, "specs", "");
+      cpSync(specs, copy, { recursive: true });
+      backup.specs = `copy ${copy}`;
+    } else {
+      const onTrunk = run("git", ["-C", specs, "rev-parse", "--abbrev-ref", "HEAD"]).stdout.trim() === "trunk";
+      // Only a clone on trunk is pushed; any other branch falls to the patch.
+      const pushed = onTrunk ? commitSpecs({ root: path, message: `chore(specs): backfill ${name} before removal` }) : { ok: false, error: "not on trunk" };
       if (pushed?.ok) backup.specs = pushed.committed || pushed.pushed ? "pushed" : "nothing to back up";
       else {
         const add = run("git", ["-C", specs, "add", "-A"]);

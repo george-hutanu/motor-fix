@@ -319,7 +319,9 @@ describe('stale and the fix', () => {
     assert.equal(r.verdict, 'done');
     assert.match(r.reason, /no PR, idle/);
     assert.equal(fixOf(idle(DEFAULT_THRESHOLDS.idle - 1), opts).fix, 'resume');
-    assert.notEqual(fixOf(idle(20_000, { unpushed: 1 }), opts).fix, 'remove');
+    assert.deepEqual(fixOf(idle(20_000, { unpushed: 1 }), opts), { verdict: 'done', fix: null, reason: 'no PR, idle 13 days, but has 1 unpushed commits' });
+    assert.match(fixOf(idle(20_000, { unpushed: null }), opts).reason, /unpushed commits unknown/);
+    assert.equal(fixOf(idle(20_000, { unpushed: null }), opts).fix, null);
     assert.equal(fixOf(idle(20_000, { holder: 'live' }), opts).fix, null);
     assert.equal(fixOf(idle(20_000, { main: true, holder: 'owner' }), opts).fix, null);
     assert.notEqual(fixOf(idle(20_000, { pr: 'unknown' }), opts).fix, 'remove', 'only a PR list that was read can say there is no PR');
