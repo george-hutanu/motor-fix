@@ -366,3 +366,14 @@ describe('alternates', () => {
     });
   });
 });
+
+describe('public frame', () => {
+  // The site bar grew the frame; loaded on demand, it stays out of the first
+  // download, whose budget the production build enforces.
+  it.each(['', ':lang'])('loads the frame of "%s" on demand', (path) => {
+    const route = routes.find((r) => r.path === path);
+
+    expect(route?.loadComponent).toBeDefined();
+    expect(route?.component).toBeUndefined();
+  });
+});
