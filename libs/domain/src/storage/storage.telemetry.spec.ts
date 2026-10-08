@@ -112,6 +112,24 @@ describe('StorageService with telemetry on', () => {
     expect(errors?.value).toBe(1);
   });
 
+  it('signs a download address locally without counting it as a call', async () => {
+    const before = (await points('motorfix_storage_requests_total'))
+      .filter((point) => point.attributes['operation'] === 'GetObject')
+      .reduce((sum, point) => sum + Number(point.value), 0);
+
+    const url = await inJob(() =>
+      storage.createDownloadUrl(KEY, 'photo.jpg', 'inline', 5),
+    );
+
+    expect(url).toContain('X-Amz-Signature=');
+    const names = (await spans()).map((span) => span.name);
+    expect(names.filter((name) => name.startsWith('S3 '))).toEqual([]);
+    const after = (await points('motorfix_storage_requests_total'))
+      .filter((point) => point.attributes['operation'] === 'GetObject')
+      .reduce((sum, point) => sum + Number(point.value), 0);
+    expect(after).toBe(before);
+  });
+
   it('records each call duration on the duration buckets', async () => {
     const [duration] = (
       await points('motorfix_storage_request_duration_seconds')

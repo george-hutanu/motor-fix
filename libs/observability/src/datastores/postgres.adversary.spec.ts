@@ -121,6 +121,25 @@ describe('slowStatements with queryid churn', () => {
     expect(slowStatements(rows, first.baseline).count).toBe(0);
   });
 
+  it("counts nothing when two roles' rows of one queryid come back in another order", () => {
+    const first = slowStatements([slow('a', 9), slow('a', 5)], undefined);
+    expect(
+      slowStatements([slow('a', 5), slow('a', 9)], first.baseline).count,
+    ).toBe(0);
+    expect(
+      slowStatements([slow('a', 9), slow('a', 5)], first.baseline).count,
+    ).toBe(0);
+  });
+
+  it('counts a queryid shared by two roles once, when either role ran it again', () => {
+    const first = slowStatements([slow('a', 5), slow('a', 9)], undefined);
+    const second = slowStatements([slow('a', 6), slow('a', 9)], first.baseline);
+    expect(second.count).toBe(1);
+    expect(second.grown).toEqual([
+      expect.objectContaining({ calls: 15, queryid: 'a' }),
+    ]);
+  });
+
   it('reports 0 and an empty baseline for an empty view', () => {
     expect(slowStatements([], undefined)).toEqual({
       baseline: {},

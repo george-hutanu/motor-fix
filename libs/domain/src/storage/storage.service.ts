@@ -8,6 +8,7 @@ import {
   HeadObjectCommand,
   PutObjectCommand,
   S3Client,
+  type S3ClientConfig,
   S3ServiceException,
 } from '@aws-sdk/client-s3';
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
@@ -93,12 +94,15 @@ function contentDisposition(
 @Injectable()
 export class StorageService implements OnApplicationShutdown {
   private readonly s3: S3Client;
+  // Signs download addresses: getSignedUrl runs the client's middleware, and
+  // local signing is not an object-store call, so this one carries none.
+  private readonly signer: S3Client;
   private readonly bucket: string;
   private readonly logger = new Logger(StorageService.name);
 
   constructor(@Inject(STORAGE_OPTIONS) env: StorageEnv) {
     this.bucket = env.STORAGE_BUCKET;
-    this.s3 = new S3Client({
+    const config = {
       credentials: {
         accessKeyId: env.STORAGE_ACCESS_KEY_ID,
         secretAccessKey: env.STORAGE_SECRET_ACCESS_KEY,
@@ -109,7 +113,9 @@ export class StorageService implements OnApplicationShutdown {
       requestChecksumCalculation: 'WHEN_REQUIRED',
       requestHandler: { connectionTimeout: 2000, requestTimeout: 30_000 },
       responseChecksumValidation: 'WHEN_REQUIRED',
-    });
+    } satisfies S3ClientConfig;
+    this.s3 = new S3Client(config);
+    this.signer = new S3Client(config);
     const telemetry = storageTelemetry(this.bucket);
     if (telemetry) {
       this.s3.middlewareStack.add(telemetry, {
@@ -228,7 +234,7 @@ export class StorageService implements OnApplicationShutdown {
       );
     }
     return getSignedUrl(
-      this.s3,
+      this.signer,
       new GetObjectCommand({
         Bucket: this.bucket,
         Key: key,
@@ -303,6 +309,7 @@ export class StorageService implements OnApplicationShutdown {
 
   onApplicationShutdown() {
     this.s3.destroy();
+    this.signer.destroy();
   }
 
   private rule(purpose: FilePurpose, ownerRef: string): FileRule {

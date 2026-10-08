@@ -77,18 +77,42 @@ export function foldConnections(
   return folded;
 }
 
+// pg_stat_statements keeps one row per role (and top-level flag) for the
+// same normalised statement; they are one statement here, its calls summed,
+// its mean weighted by calls and its max the largest, so neither the row
+// order nor a second role makes it look grown.
+function byStatement(rows: SlowRow[]): SlowRow[] {
+  const merged = new Map<string, SlowRow>();
+  for (const row of rows) {
+    const calls = Number(row.calls);
+    const seen = merged.get(row.queryid);
+    if (!seen) {
+      merged.set(row.queryid, { ...row, calls });
+      continue;
+    }
+    const total = seen.calls + calls;
+    seen.mean_exec_time =
+      total > 0
+        ? (seen.mean_exec_time * seen.calls + row.mean_exec_time * calls) /
+          total
+        : Math.max(seen.mean_exec_time, row.mean_exec_time);
+    seen.max_exec_time = Math.max(seen.max_exec_time, row.max_exec_time);
+    seen.calls = total;
+  }
+  return [...merged.values()];
+}
+
 // Statements over the threshold whose calls grew, or that are new, since
 // the previous reading. The first reading only takes the baseline.
 export function slowStatements(
-  rows: SlowRow[],
+  read: SlowRow[],
   baseline: SlowBaseline | undefined,
 ) {
+  const rows = byStatement(read);
   const next: SlowBaseline = {};
-  for (const row of rows) next[row.queryid] = Number(row.calls);
+  for (const row of rows) next[row.queryid] = row.calls;
   if (!baseline) return { baseline: next, count: 0, grown: [] as SlowRow[] };
-  const grown = rows.filter(
-    (row) => Number(row.calls) > (baseline[row.queryid] ?? 0),
-  );
+  const grown = rows.filter((row) => row.calls > (baseline[row.queryid] ?? 0));
   return {
     baseline: next,
     count: grown.length,
