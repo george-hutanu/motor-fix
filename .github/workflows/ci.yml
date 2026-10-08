@@ -80,6 +80,22 @@ jobs:
       - name: Observability inventory
         if: ${{ !cancelled() }}
         run: node scripts/observability-inventory.ts
+      # The PR tester's layout and sweep specs measure fixture pages in a real
+      # browser and fail in CI without one. The headless shell is enough, and
+      # the runner image already carries Chrome's system libraries.
+      - id: harness-playwright
+        if: ${{ !cancelled() }}
+        run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - id: harness-browser
+        if: ${{ !cancelled() }}
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-shell-${{ runner.os }}-${{ steps.harness-playwright.outputs.version }}
+      - name: Browser for the harness
+        if: ${{ !cancelled() && steps.harness-browser.outputs.cache-hit != 'true' }}
+        timeout-minutes: 5
+        run: npx playwright install --only-shell chromium
       - name: Harness
         if: ${{ !cancelled() }}
         run: |

@@ -27,7 +27,12 @@
 //
 //   node .claude/scripts/pr-test/run.mjs <pr> [--routes /,/cockpit] [--flows <file.mjs>]
 //        [--out <dir>] [--lap <n>] [--langs ro,en] [--schemes light,dark] [--tests] [--allow-closed]
-//        [--tree <dir> --sha <sha>]
+//        [--tree <dir> --sha <sha>] [--baseline <dir>]
+//
+// --baseline names the folder baseline.mjs downloaded an earlier run into
+// (the PR QA workflow's "Baseline run of main" step): layout findings it already
+// reported are marked pre-existing, and every screenshot is diffed against
+// its namesake there into visual.json and diff/<shot>.png.
 //
 // It posts nothing: the pr-tester agent adds its own findings and posts with
 // post.mjs. The report lands in --out (default <tmp>/mf-prtest/<pr>-<sha7>).
@@ -38,7 +43,8 @@ import { join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { callEndpoints, changedEndpoints, SEEDED, seedPassword, signIn } from "./endpoints.mjs";
-import { appsFor, cutOffFinding, readinessOutcome, reportMarkdown, stepFinding, testFinding, touchesWeb, verdict } from "./findings.mjs";
+import { baselineFindings, diffShots, visualOutcome } from "./baseline.mjs";
+import { appsFor, cutOffFinding, markPreExisting, readinessOutcome, reportMarkdown, stepFinding, testFinding, touchesWeb, verdict } from "./findings.mjs";
 import {
   APP_SCRIPTS,
   EXTERNAL_PORTS,
@@ -77,6 +83,7 @@ export function parseArgs(argv) {
     allowClosed: argv.includes("--allow-closed"),
     tree: flag("tree"),
     sha: flag("sha"),
+    baseline: flag("baseline"),
   };
 }
 
@@ -343,10 +350,23 @@ async function main(argv) {
     };
     const sweep = await runSweep({ baseURL: webURL, routes: opt.routes, outDir: shots, schemes: opt.schemes, langs: opt.langs, repoRoot: root, session });
     // Evidence relative to the report: shots/ stays in --out, beside it; only the report is copied into specs/.
-    for (const f of toFindings(sweep.observations, { web, origins: [webURL, apiURL] }))
+    // A layout finding the baseline run already reported is main's, not this PR's: kept, at medium at most.
+    const swept = toFindings(sweep.observations, { web, origins: [webURL, apiURL] });
+    for (const f of opt.baseline ? markPreExisting(swept, baselineFindings(opt.baseline)) : swept)
       findings.push(f.evidence ? { ...f, evidence: relative(out, f.evidence) } : f);
     writeFileSync(join(out, "observations.json"), JSON.stringify(sweep.observations, null, 2));
     const screenshots = sweep.screenshots;
+
+    // The pixel diff against the baseline run's screenshots (baseline.mjs fetched them; baseline.json says which run).
+    phase = "visual diff";
+    const metaFile = opt.baseline && join(opt.baseline, "baseline.json");
+    const meta = metaFile && existsSync(metaFile) ? JSON.parse(readFileSync(metaFile, "utf8")) : null;
+    const shotsDiff = meta && !meta.none ? await diffShots(out, opt.baseline, out) : null;
+    const visual = visualOutcome({ meta, shots: shotsDiff, web });
+    notes.push(...visual.notes);
+    findings.push(...visual.findings);
+    if (visual.visual) writeFileSync(join(out, "visual.json"), JSON.stringify(visual.visual, null, 2));
+    log(visual.notes.join(" "));
 
     if (opt.flows) {
       phase = "flows";

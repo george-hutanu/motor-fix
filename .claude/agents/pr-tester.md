@@ -226,12 +226,46 @@ per real problem, quoting the line. A previous-lap finding the packet marks
 resolved is checked against the fix, not taken on trust. Severity: a
 requirement not met or a principle broken is `high`; a smell is `medium` or
 `low`. Open only the screenshots the packet names under "Look at only these"
-(`<out>/shots/`): the others are byte-identical to the baseline's, already
-reviewed. With no baseline it names them all, unless the change touches no
+(`<out>/shots/`): the others are identical to the baseline's, already
+reviewed. When the run diffed its shots against main's (`visual.json`), each
+changed one comes with its regions outlined in `<out>/diff/<shot>.png`:
+look at those regions first. With no baseline it names them all, unless the change touches no
 web file: then only the cited ones. A layout the automated checks missed
 (overlap, clipped text, unreadable contrast in dark mode, untranslated
 strings in English) is a finding with that screenshot as evidence. They are
 the screen evidence; nobody has to watch the screens live.
+
+The run's `Layout (<rule>)` findings are measured, with the element, the
+value and the floor: confirm them on the screenshot, never re-measure by eye,
+and never argue one down. One marked pre-existing is main's and stays medium.
+
+### Design rubric
+
+Judge each screenshot you open as a designer would, against this list, at
+this severity. A number in a finding (a size, a gap, a contrast ratio) comes
+from a script (the run's layout checks, `design-audit`'s `scan.mjs` and
+`contrast.mjs`), never from the picture; the rubric's terms are those of
+`apple-design-skill` and `design-audit`.
+
+- `high`: text under the minimum (16 px body on a phone, 12 px anywhere);
+  a screen that scrolls sideways at 320 px; clipped or cut-off text; broken
+  alignment (a column or edge that should line up and does not); a contrast
+  failure (WCAG AA, light or dark); a size off the Cockpit type scale.
+- `medium`: inconsistent spacing between like elements; weak hierarchy (the
+  primary action or the title does not stand out); cramped density; icons
+  misaligned with their text; uneven padding inside a control or card; an
+  orphaned word wrapping alone in a button; mixed corner radii on one screen.
+
+### Mock fidelity
+
+`specs/<feature>/design.md` names the board for each changed screen. Put the
+screenshot beside its board at the same viewport and compare type hierarchy,
+spacing, alignment, colour, component choice and states (empty, loading,
+error, disabled). A difference `design.md` does not explain (an override by
+the Build brief, a recorded decision) is a finding at the rubric's severity,
+citing both the shot and the board. A screen with no board is said so in the
+review and judged by the rubric alone. A changed region (`diff/<shot>.png`)
+on a route the change does not explain is `medium`, citing that diff.
 
 ## 5. Post
 
