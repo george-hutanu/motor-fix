@@ -27,7 +27,13 @@
             }
           ],
           "outputHashing": "all",
-          "serviceWorker": "apps/web/ngsw-config.json"
+          "serviceWorker": "apps/web/ngsw-config.json",
+          "sourceMap": {
+            "hidden": true,
+            "scripts": true,
+            "styles": false,
+            "vendor": false
+          }
         }
       },
       "defaultConfiguration": "production",
