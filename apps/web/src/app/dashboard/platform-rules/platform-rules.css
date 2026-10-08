@@ -26,18 +26,52 @@ ul {
 }
 li {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--mf-space-3);
+  gap: 0 var(--mf-space-3);
   padding: var(--mf-space-3) 0;
   border-top: 1px solid var(--mf-line);
   min-width: 0;
 }
 .name {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: var(--mf-space-1);
   min-width: 0;
+}
+.requests,
+.decided {
+  flex-basis: 100%;
+  min-width: 0;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-2);
+  margin-top: var(--mf-space-3);
+  padding: var(--mf-space-3);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-sm, 8px);
+}
+.mark {
+  font-weight: 700;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+.decided {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-2);
+  margin-top: var(--mf-space-3);
+}
+.decided p {
+  display: flex;
+  flex-direction: column;
 }
 .hint {
   color: var(--mf-ink-muted);
