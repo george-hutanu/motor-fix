@@ -11,7 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   NOTIFICATION_GROUPS,
   type NotificationGroupKey,
-} from '@motor-fix/contracts';
+} from '@motor-fix/contracts/notification-groups';
 import { NotificationsService } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';

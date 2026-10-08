@@ -15,17 +15,16 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-// The driver's switches, and the channels a message goes by outside the app.
-export const NOTIFICATION_GROUPS = [
-  'offers',
-  'bookings',
-  'due_dates',
-  'news',
-  'reviews_history',
-] as const;
+import {
+  NOTIFICATION_GROUPS,
+  type NotificationGroupKey,
+} from './notification-groups';
+
+export { NOTIFICATION_GROUPS, type NotificationGroupKey };
+
+// The channels a message goes by outside the app.
 export const OUTSIDE_CHANNELS = ['email', 'push', 'sms', 'whatsapp'] as const;
 
-export type NotificationGroupKey = (typeof NOTIFICATION_GROUPS)[number];
 export type OutsideChannel = (typeof OUTSIDE_CHANNELS)[number];
 
 export class UpdateNotificationGroupDto {
