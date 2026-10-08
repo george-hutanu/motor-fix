@@ -139,4 +139,20 @@ describe('processing a photo', () => {
 
     expect(store.objects.size).toBe(0);
   });
+
+  it('leaves no copy behind when the photo is removed while it is processed', async () => {
+    store.put(KEY, await located(800, 600), 'image/jpeg');
+    const put = storage.putObject.bind(storage);
+    const putting = jest
+      .spyOn(storage, 'putObject')
+      .mockImplementationOnce(async (...args) => {
+        store.objects.delete(KEY);
+        return put(...args);
+      });
+
+    await processPhoto(storage, KEY);
+
+    putting.mockRestore();
+    expect([...store.objects.keys()]).toEqual([]);
+  });
 });

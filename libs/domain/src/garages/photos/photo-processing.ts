@@ -47,4 +47,8 @@ export async function processPhoto(
     'image/jpeg',
     { height: String(height), width: String(width) },
   );
+  // Removed while it was processed: the copies go too, as nothing holds them.
+  if ((await storage.metadataOf(key)) === null) {
+    await storage.deleteWithCopies(key);
+  }
 }

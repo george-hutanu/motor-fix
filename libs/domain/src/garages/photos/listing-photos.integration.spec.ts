@@ -263,6 +263,27 @@ describe('confirming a photo', () => {
     expect(await filesOf(draft.id)).toHaveLength(1);
   });
 
+  it('keeps the photo once when a second confirm of it passed storage at the same time', async () => {
+    const draft = await newDraft();
+    await hold(draft.id, 18);
+    const incoming = await uploaded(draft.id, draft.token);
+    const confirmed = await photos.confirm(draft.id, draft.token, incoming);
+    const racing = jest
+      .spyOn(storage, 'confirmUpload')
+      .mockResolvedValueOnce(confirmed.key);
+
+    const refused = await refusalOf(
+      photos.confirm(draft.id, draft.token, incoming),
+    );
+
+    racing.mockRestore();
+    expect(refused.body).toMatchObject({ code: 'file_missing' });
+    const files = await filesOf(draft.id);
+    expect(files.filter((key) => key === confirmed.key)).toHaveLength(1);
+    expect(files).toHaveLength(19);
+    expect(store.objects.has(confirmed.key)).toBe(true);
+  });
+
   it('refuses a key uploaded for another draft', async () => {
     const draft = await newDraft();
     const other = await newDraft();

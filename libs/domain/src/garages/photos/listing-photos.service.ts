@@ -1,6 +1,6 @@
 import {
   DOWNLOAD_URL_MINUTES,
-  type ListingDraftData,
+  isListingDraftData,
   type ListingPhotoDto,
   type ListingPhotosDto,
   PHOTOS_MAX,
@@ -44,7 +44,10 @@ const submitted = () =>
     'draft_submitted',
     'This listing was already sent',
   );
-const filesOf = (data: unknown) => (data as ListingDraftData).files ?? [];
+const held = () =>
+  refusal(HttpStatus.CONFLICT, 'file_missing', 'The draft holds this photo');
+const filesOf = (data: unknown) =>
+  isListingDraftData(data) ? (data.files ?? []) : [];
 
 // The photos of a listing draft: the browser uploads straight to storage
 // with an address issued here, and the draft keeps the confirmed keys in
@@ -88,11 +91,17 @@ export class ListingPhotosService implements OnApplicationShutdown {
       throw full();
     }
     const key = await this.storage.confirmUpload(incoming, PURPOSE, id);
+    let kept = false;
     const position = await this.prisma
       .$transaction(async (tx) => {
         const row = await locked(tx, id);
         if (row.status === 'submitted') throw submitted();
         const files = filesOf(row.data);
+        // A second confirm that passed storage alongside the first.
+        if (files.includes(key)) {
+          kept = true;
+          throw held();
+        }
         if (files.length >= PHOTOS_MAX) throw full();
         await tx.listingDraft.update({
           data: { data: { ...(row.data as object), files: [...files, key] } },
@@ -101,7 +110,9 @@ export class ListingPhotosService implements OnApplicationShutdown {
         return files.length;
       })
       .catch(async (error) => {
-        await this.storage.deleteWithCopies(key).catch(() => undefined);
+        if (!kept) {
+          await this.storage.deleteWithCopies(key).catch(() => undefined);
+        }
         throw error;
       });
     await this.queue(key);
@@ -135,6 +146,7 @@ export class ListingPhotosService implements OnApplicationShutdown {
     await this.drafts.open(id, token);
     await this.prisma.$transaction(async (tx) => {
       const row = await locked(tx, id);
+      if (row.status === 'submitted') throw submitted();
       const files = filesOf(row.data);
       if (!files.includes(key)) {
         throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such photo');

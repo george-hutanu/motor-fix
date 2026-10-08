@@ -141,6 +141,29 @@ describe('removing a photo', () => {
     logged.mockRestore();
   });
 
+  it('keeps the photo of a draft sent after the delete opened it', async () => {
+    const draft = await draftWith(2);
+    const key = draft.keys[0] as string;
+    const open = drafts.open.bind(drafts);
+    const opening = jest
+      .spyOn(drafts, 'open')
+      .mockImplementationOnce(async (...args) => {
+        const opened = await open(...args);
+        await prisma.listingDraft.update({
+          data: { status: 'submitted' },
+          where: { id: draft.id },
+        });
+        return opened;
+      });
+
+    const refused = await refusalOf(photos.remove(draft.id, draft.token, key));
+
+    opening.mockRestore();
+    expect(refused.status).toBe(409);
+    expect(await filesOf(draft.id)).toEqual(draft.keys);
+    expect(store.objects.has(key)).toBe(true);
+  });
+
   it('is refused for a wrong token and for a sent draft', async () => {
     const draft = await draftWith(1);
     const key = draft.keys[0] as string;
@@ -180,6 +203,29 @@ describe('saving the draft with its photos', () => {
     await save(draft, [c, a, b]);
 
     expect(await filesOf(draft.id)).toEqual([c, a, b]);
+  });
+
+  it("refuses a new draft that claims another draft's photo", async () => {
+    const other = await draftWith(1);
+
+    const refused = await refusalOf(
+      drafts.create({
+        data: {
+          files: [other.keys[0] as string],
+          steps: { '1': { name: 'Service Popescu' } },
+        },
+        email: 'stranger@example.test',
+        language: 'ro',
+        step: 5,
+      }),
+    );
+
+    expect(refused.status).toBe(422);
+    expect(refused.body).toMatchObject({
+      code: 'validation_failed',
+      errors: [{ code: 'invalid', field: 'files' }],
+    });
+    expect(await prisma.listingDraft.count()).toBe(1);
   });
 
   it('refuses a key the draft does not hold', async () => {
