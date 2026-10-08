@@ -35,31 +35,13 @@ const bodyOnPhone = (file: string, selector: string) => {
 };
 
 // ST-953 FR-001: on a phone, running text (p, li, button, a) is at least the 16 px body size.
+// The listing page and steps 1-4 are checked by list-your-garage/phone-sizes.spec.ts.
 describe('running text on a phone is at body size', () => {
   it.each([
-    ['list-your-garage/list-your-garage.css', '.label'],
-    ['list-your-garage/list-your-garage.css', '.hint'],
-    ['list-your-garage/list-your-garage.css', '.note'],
-    ['list-your-garage/list-your-garage.css', '.error'],
-    ['list-your-garage/list-your-garage.css', '.bar'],
-    ['details-step/details-step.css', '.hint'],
-    ['details-step/details-step.css', '.error'],
-    ['place-step/place-step.css', '.hint'],
-    ['place-step/place-step.css', '.error'],
-    ['brands-step/brands-step.css', '.left'],
     ['brand-verdict/brand-verdict.css', '.note'],
     ['mechanics-step/mechanics-step.css', '.error'],
-    ['hours-step/hours-step.css', '.holidays ul'],
     ['prices-step/prices-step.css', '.warning'],
   ])('%s %s', (file, selector) => {
     expect(bodyOnPhone(file, selector)).toBe(true);
-  });
-});
-
-describe('the hours step', () => {
-  it('gives the closed-day checkbox a full tap target', () => {
-    expect(css('hours-step/hours-step.css')).toMatch(
-      /\.tick input \{[^}]*width: var\(--mf-tap\);[^}]*height: var\(--mf-tap\);/,
-    );
   });
 });

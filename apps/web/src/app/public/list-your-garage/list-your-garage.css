@@ -14,7 +14,6 @@ p {
 }
 .label {
   font: var(--mf-font-label);
-  font-size: var(--mf-size-label);
   letter-spacing: var(--mf-label-tracking);
   color: var(--mf-text-secondary);
 }
@@ -59,11 +58,9 @@ ol {
 }
 .hint,
 .note {
-  font-size: var(--mf-size-small);
   color: var(--mf-text-secondary);
 }
 .error {
-  font-size: var(--mf-size-small);
   color: var(--mf-red-ink);
 }
 .error:empty {
@@ -84,10 +81,10 @@ section > .note {
   background: var(--mf-bg);
   border-top: 1px solid var(--mf-line);
 }
-/* Below 768 px the public tab bar is pinned at the bottom too (1 px line, 6 px, 52 px links, max(14 px, safe area)): sit above it. */
+/* Below 768 px the public tab bar is pinned at the bottom too (1 px line, 8 px, 52 px links, max(16 px, safe area)): sit above it. */
 @media (max-width: 767.98px) {
   .actions {
-    bottom: calc(59px + max(14px, var(--mf-safe-bottom)));
+    bottom: calc(61px + max(16px, var(--mf-safe-bottom)));
   }
 }
 .ended {
@@ -163,7 +160,6 @@ ol li {
     background: none;
     color: inherit;
     font: inherit;
-    font-size: var(--mf-size-body);
     text-align: start;
     white-space: nowrap;
     overflow: hidden;
@@ -209,13 +205,14 @@ ol li {
     top: var(--mf-space-4);
   }
 }
-
-/* ST-953 FR-001: running text on a phone is at the 16 px body size. */
-@media (max-width: 767.98px) {
-  .label,
+/* A phone reads these at the body size; the small and label sizes start at a tablet. */
+@media (min-width: 768px) {
+  .label {
+    font-size: var(--mf-size-label);
+  }
   .hint,
   .note,
   .error {
-    font-size: var(--mf-size-body);
+    font-size: var(--mf-size-small);
   }
 }

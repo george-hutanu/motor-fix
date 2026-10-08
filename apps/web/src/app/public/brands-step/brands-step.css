@@ -12,9 +12,6 @@ p {
 .left {
   color: var(--mf-text-secondary);
 }
-.left {
-  font-size: var(--mf-size-small);
-}
 input {
   width: 100%;
   min-height: var(--mf-tap);
@@ -35,7 +32,7 @@ ul button {
   max-width: 100%;
   min-height: var(--mf-tap);
   padding: 0 var(--mf-space-3);
-  border: 1px solid var(--mf-line);
+  border: 1px solid var(--mf-line-strong);
   border-radius: var(--mf-radius-control);
   background: var(--mf-bg);
   color: var(--mf-text);
@@ -55,17 +52,27 @@ ul button:focus-visible {
 .results button {
   border-style: dashed;
 }
-mf-lamp {
-  font-size: var(--mf-size-small);
-}
 .field {
   display: grid;
   gap: var(--mf-space-1);
 }
-
-/* ST-953 FR-001: running text on a phone is at the 16 px body size. */
-@media (max-width: 767.98px) {
-  .left {
-    font-size: var(--mf-size-body);
+/* A taken brand takes its own line, with its fuels under it. */
+.chips > li:has(.fuels) {
+  display: grid;
+  flex-basis: 100%;
+  gap: var(--mf-space-2);
+  justify-items: start;
+  min-width: 0;
+}
+.quiet {
+  color: var(--mf-text-secondary);
+}
+/* A phone reads the fuels, the no-requests line, the counters and the lamps at the body size; the small size starts at a tablet. */
+@media (min-width: 768px) {
+  .fuels button,
+  .quiet,
+  .left,
+  mf-lamp {
+    font-size: var(--mf-size-small);
   }
 }

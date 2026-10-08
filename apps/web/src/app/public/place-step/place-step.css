@@ -13,11 +13,9 @@ p:empty {
 }
 .hint {
   color: var(--mf-text-secondary);
-  font-size: var(--mf-size-small);
 }
 .error {
   color: var(--mf-red-ink);
-  font-size: var(--mf-size-small);
 }
 input {
   width: 100%;
@@ -91,11 +89,10 @@ button:focus-visible,
   outline: 2px solid var(--mf-focus);
   outline-offset: 2px;
 }
-
-/* ST-953 FR-001: running text on a phone is at the 16 px body size. */
-@media (max-width: 767.98px) {
+/* A phone reads these at the body size; the small and label sizes start at a tablet. */
+@media (min-width: 768px) {
   .hint,
   .error {
-    font-size: var(--mf-size-body);
+    font-size: var(--mf-size-small);
   }
 }

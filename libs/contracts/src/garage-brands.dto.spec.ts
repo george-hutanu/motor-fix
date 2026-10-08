@@ -34,6 +34,18 @@ describe('ReplaceGarageBrandsDto', () => {
     ]);
   });
 
+  it('takes the ticked fuels of a taken brand, none ticked included', () => {
+    const dto = replace({
+      brands: [
+        { brandId: bmw, fuels: ['petrol', 'diesel'], stance: 'works_on' },
+        { brandId: tesla, fuels: [], stance: 'works_on' },
+      ],
+    });
+
+    expect(problems(dto)).toEqual([]);
+    expect(dto.brands.map((b) => b.fuels)).toEqual([['petrol', 'diesel'], []]);
+  });
+
   it('takes an empty set, which switches every brand off', () => {
     expect(problems(replace({ brands: [] }))).toEqual([]);
   });
@@ -85,6 +97,25 @@ describe('ReplaceGarageBrandsDto', () => {
           { brandId: bmw, stance: 'does_not_take' },
         ],
       },
+      'brands',
+    ],
+    [
+      'a fuel twice',
+      {
+        brands: [
+          { brandId: bmw, fuels: ['diesel', 'diesel'], stance: 'works_on' },
+        ],
+      },
+      'brands',
+    ],
+    [
+      'an unknown fuel',
+      { brands: [{ brandId: bmw, fuels: ['lpg'], stance: 'works_on' }] },
+      'brands',
+    ],
+    [
+      'fuels that are not a list',
+      { brands: [{ brandId: bmw, fuels: 'petrol', stance: 'works_on' }] },
       'brands',
     ],
     ['no set at all', { brands: undefined }, 'brands'],

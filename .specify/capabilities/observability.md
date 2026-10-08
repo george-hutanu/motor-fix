@@ -10,6 +10,7 @@ features:
   - 877-web-health-grafana
   - 878-data-store-metrics
   - 916-otlp-log-masking-coverage
+  - 397-listing-ticks
 ---
 
 # Capability: Observability
@@ -337,6 +338,10 @@ _From 916-otlp-log-masking-coverage._
 ### 916-FR-005 — The change MUST be test-only and small (Constitution I): no product source file under `apps/` or `libs/*/src` other than `*.spec.ts` changes, no new dependency, the existing cases of `libs/domain/src/logging.spec.ts` stay as they are, and the new spec runs in `npm run test:unit` (it needs no PostgreSQL, Redis or network).
 
 _From 916-otlp-log-masking-coverage._
+
+### 397-FR-013 — The new endpoint MUST be listed with its telemetry in `infra/observability/inventory.json` (the API's request metrics and logs cover it; no new dashboard panel or alert, with the reason stated), as every new endpoint is.
+
+_From 397-listing-ticks._
 
 ## Retired
 

@@ -10,11 +10,9 @@ p {
 }
 .hint {
   color: var(--mf-text-secondary);
-  font-size: var(--mf-size-small);
 }
 .error {
   color: var(--mf-red-ink);
-  font-size: var(--mf-size-small);
 }
 fieldset {
   display: flex;
@@ -41,8 +39,8 @@ textarea {
   resize: vertical;
 }
 fieldset button {
-  min-width: var(--mf-tap);
   min-height: var(--mf-tap);
+  min-width: var(--mf-tap);
   max-width: 100%;
   padding: 0 var(--mf-space-3);
   border: 1px solid var(--mf-line);
@@ -61,11 +59,10 @@ fieldset button:focus-visible {
   outline: 2px solid var(--mf-focus);
   outline-offset: 2px;
 }
-
-/* ST-953 FR-001: running text on a phone is at the 16 px body size. */
-@media (max-width: 767.98px) {
+/* A phone reads these at the body size; the small and label sizes start at a tablet. */
+@media (min-width: 768px) {
   .hint,
   .error {
-    font-size: var(--mf-size-body);
+    font-size: var(--mf-size-small);
   }
 }
