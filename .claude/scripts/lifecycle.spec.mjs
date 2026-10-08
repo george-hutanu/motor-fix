@@ -608,6 +608,96 @@ describe('merge stops the merged worktree test stack', () => {
   });
 });
 
+// @traces 977-FR-009
+describe('merge removes the merged worktree as its last step', () => {
+  beforeEach(() => {
+    fixture();
+    writeFileSync(join(featureDir, 'handoff.md'), '# Hand-off\n');
+  });
+
+  const diff = ['git -C specs diff -U0 --', { stdout: '+++ b/x\n+- 2026-10-05 · finish · ST-696 · QA → Done\n' }];
+  const WT = '/machine/motor-fix/.worktrees/696-lifecycle-script';
+  const list = (path, lock = '') => ['git worktree list --porcelain', { stdout: `worktree /machine/motor-fix\nHEAD 1\nbranch refs/heads/main\n\nworktree ${path}\nHEAD 2\nbranch refs/heads/${BRANCH}\n${lock}` }];
+  const REMOVE = `node .claude/scripts/worktree-remove.mjs ${WT}`;
+  const viewHead = ['gh pr view --json number,state,url,title,headRefName', { stdout: JSON.stringify({ number: 141, state: 'OPEN', url: PR_URL, title: TITLE, headRefName: BRANCH }) }];
+  const removed = { stdout: `${JSON.stringify({ path: WT, removed: true, backup: { specs: 'pushed', product: 'clean' }, test_stack: { project: 'p', stopped: true } })}\n` };
+  const removal = (out) => ['node .claude/scripts/worktree-remove.mjs', out];
+
+  it('removes the branch worktree through the shared removal after the finish comment and the hand-off note', () => {
+    const h = harness({ answers: [diff, viewHead, list(WT), removal(removed)] });
+    const result = step(['merge'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(h.calls.at(-1), REMOVE);
+    assert.ok(h.calls.indexOf(REMOVE) > h.calls.findIndex((c) => c.startsWith('gh pr comment 141')));
+    assert.equal(existsSync(join(featureDir, 'handoff.md')), false);
+    assert.equal(result.worktree.removed, true);
+    assert.equal(result.worktree.path, WT);
+    assert.ok(result.did.includes(`worktree ${WT} removed`), JSON.stringify(result.did));
+  });
+
+  it('never removes the checkout it runs in, and says so', () => {
+    const h = harness({ answers: [diff, viewHead, list(repo)] });
+    const result = step(['merge'], h.io);
+    assert.equal(result.ok, true);
+    assert.ok(!h.calls.some((c) => c.includes('worktree-remove')));
+    assert.deepEqual(result.worktree, { path: repo, removed: false, reason: 'own checkout' });
+  });
+
+  it('removes nothing when no worktree carries the branch', () => {
+    const h = harness({ answers: [diff, viewHead, ['git worktree list --porcelain', { stdout: 'worktree /machine/motor-fix\nHEAD 1\nbranch refs/heads/main\n' }]] });
+    const result = step(['merge'], h.io);
+    assert.ok(!h.calls.some((c) => c.includes('worktree-remove')));
+    assert.equal(result.worktree.removed, false);
+  });
+
+  it('leaves a worktree a live session holds, however long it has been quiet', () => {
+    const h = harness({ answers: [diff, viewHead, list(WT, `locked claude agent agent-a1 (pid ${process.pid})\n`)] });
+    const result = step(['merge'], h.io);
+    assert.equal(result.ok, true);
+    assert.ok(!h.calls.some((c) => c.includes('worktree-remove')));
+    assert.equal(result.worktree.removed, false);
+    assert.match(result.worktree.reason, new RegExp(`held by a live session \\(pid ${process.pid}\\)`));
+  });
+
+  it('removes a worktree whose lock names a process that has ended', () => {
+    const h = harness({ answers: [diff, viewHead, list(WT, 'locked claude agent agent-a1 (pid 999999)\n'), removal(removed)] });
+    const result = step(['merge'], h.io);
+    assert.equal(h.calls.at(-1), REMOVE);
+    assert.equal(result.worktree.removed, true);
+  });
+
+  const mergedAnyway = (result) => {
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(result.worktree.removed, false);
+    assert.ok(result.did.some((d) => d.startsWith('worktree not removed: ')), JSON.stringify(result.did));
+  };
+
+  it('finishes the merge when the removal refuses, with its reason', () => {
+    const h = harness({ answers: [diff, viewHead, list(WT), removal({ code: 1, stdout: `${JSON.stringify({ path: WT, removed: false, reason: 'unpushed commits: 2' })}\n` })] });
+    const result = step(['merge'], h.io);
+    mergedAnyway(result);
+    assert.equal(result.worktree.reason, 'unpushed commits: 2');
+  });
+
+  it('finishes the merge when the removal prints nothing it can read, or throws', () => {
+    for (const answer of [{ code: 1, stderr: 'boom' }, () => { throw new Error('spawn node ENOENT'); }]) {
+      fixture();
+      writeFileSync(join(featureDir, 'handoff.md'), '# Hand-off\n');
+      const h = harness({ answers: [diff, viewHead, list(WT), removal(answer)] });
+      const result = step(['merge'], h.io);
+      mergedAnyway(result);
+      assert.match(result.worktree.reason, /boom|ENOENT/);
+    }
+  });
+
+  it('removes nothing when the step stops before its end', () => {
+    const h = harness({ answers: [viewHead, list(WT), ['node .claude/scripts/notion-sync.mjs finish', { code: 3, stdout: 'no token\n' }]] });
+    const result = step(['merge', '--pr', '141'], h.io);
+    assert.equal(result.ok, false);
+    assert.ok(!h.calls.some((c) => c.includes('worktree-remove')));
+  });
+});
+
 describe('merge in a cloud session: REST only', () => {
   beforeEach(() => {
     fixture();
