@@ -40,7 +40,7 @@
       "choose": "Choose a place",
       "field": "Address",
       "locating": "Finding your location…",
-      "locationFailed": "We could not find your location; type an address",
+      "locationFailed": "We could not get your location; type an address",
       "near": "Near {label}",
       "nearYou": "Near you",
       "nothingFound": "Address not found",
