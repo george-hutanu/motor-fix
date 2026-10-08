@@ -25,6 +25,7 @@ description: "Task list template for feature implementation"
 - **Web app**: `backend/src/`, `frontend/src/`
 - **Mobile**: `api/src/`, `ios/src/` or `android/src/`
 - Paths shown below assume single project - adjust based on plan.md structure
+- Layout (AGENTS.md "Folder structure"): submodules in their own subfolder; a web component is `<name>/<name>.ts|html|css`
 
 <!--
   ============================================================================

@@ -1,0 +1,26 @@
+:host {
+  display: block;
+  padding: var(--mf-space-4);
+}
+article {
+  display: grid;
+  gap: var(--mf-space-3);
+  max-width: 42rem;
+}
+h1,
+h2,
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+h2 {
+  margin-top: var(--mf-space-3);
+}
+.meta {
+  color: var(--mf-text-secondary);
+}
+.draft {
+  padding: var(--mf-space-3);
+  border-radius: var(--mf-radius-control);
+  background: var(--mf-amber-tint);
+}

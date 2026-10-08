@@ -22,7 +22,7 @@ import {
   pkce,
   randomToken,
   verifyIdToken,
-} from './openid';
+} from './openid/openid';
 import type { ProviderSettings } from './providers';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { Prisma, type PrismaClient } from '../../generated/prisma/client';

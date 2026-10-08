@@ -9,7 +9,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, type Observable } from 'rxjs';
 
-import { reuse } from '../dashboard/live-in-place';
+import { reuse } from '../dashboard/live-in-place/live-in-place';
 
 export interface LiveView<T> {
   // The last data read; a re-read changes only its parts that changed.

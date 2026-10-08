@@ -1,0 +1,42 @@
+<p class="hint">{{ 'public.listing.brands.hint' | t }}</p>
+<label hlmLabel class="field">
+  {{ 'public.listing.brands.search' | t }}
+  <input hlmInput type="search" autocomplete="off" [value]="query()" (input)="find(input($event))" />
+</label>
+@if (notice(); as key) {
+  <p class="notice" role="status">{{ key | t }}</p>
+}
+@if (results().length) {
+  <ul class="results" [attr.aria-label]="'public.listing.brands.results' | t">
+    @for (brand of results(); track brand.id) {
+      <li><button type="button" (click)="pick(brand)">{{ brand.name }}</button></li>
+    }
+  </ul>
+}
+<ul class="chips" [attr.aria-label]="'public.listing.brands.chips' | t">
+  @for (brand of chips(); track brand.id) {
+    @let stance = stanceOf(brand.id);
+    <li>
+      <button type="button" [attr.aria-pressed]="!!stance" (click)="tap(brand)">
+        {{ brand.name }}
+        @if (stance) {
+          <mf-lamp
+            [state]="stance === 'works_on' ? 'green' : 'red'"
+            [label]="(stance === 'works_on' ? 'public.listing.brands.on' : 'public.listing.brands.off') | t"
+          />
+        }
+      </button>
+    </li>
+  }
+</ul>
+<p aria-live="polite">{{ counter() }}</p>
+<label hlmLabel class="field">
+  {{ 'public.listing.brands.note' | t }}
+  <input hlmInput name="brandNote" autocomplete="off" [value]="value().brandNote ?? ''" (input)="write(note, input($event))" />
+</label>
+<p class="left">{{ 'public.listing.brands.left' | t: { count: left(note) } }}</p>
+<label hlmLabel class="field">
+  {{ 'public.listing.brands.phrase' | t }}
+  <input hlmInput name="refusalPhrase" autocomplete="off" [value]="value().refusalPhrase ?? ''" (input)="write(phrase, input($event))" />
+</label>
+<p class="left">{{ 'public.listing.brands.left' | t: { count: left(phrase) } }}</p>

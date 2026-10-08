@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 
 import { DriverNotifications } from '../driver-notifications/driver-notifications';
-import { PushPanel } from '../push-panel';
+import { PushPanel } from '../push-panel/push-panel';
 
 // Setări of the driver's dashboard: this device's push panel, then the
 // driver's notification switches.

@@ -1,0 +1,32 @@
+<section [attr.aria-busy]="state() === 'confirming'">
+  @switch (state()) {
+    @case ('confirming') {
+      <h1>{{ 'public.confirmEmail.confirming' | t }}</h1>
+    }
+    @case ('confirmed') {
+      <h1>{{ 'public.confirmEmail.confirmed' | t }}</h1>
+      <a hlmBtn variant="secondary" [routerLink]="['/', i18n.language()]">{{ 'public.confirmEmail.home' | t }}</a>
+    }
+    @case ('expired') {
+      <h1>{{ 'public.confirmEmail.expired' | t }}</h1>
+      <p>{{ 'public.confirmEmail.expiredLine' | t }}</p>
+      <p role="status">
+        @switch (asked()) {
+          @case ('sent') { {{ 'public.confirmEmail.sent' | t }} }
+          @case ('tooMany') { {{ 'public.confirmEmail.tooMany' | t }} }
+          @case ('failed') { {{ 'public.confirmEmail.failed' | t }} }
+          @case ('refused') { {{ 'public.confirmEmail.refused' | t }} }
+        }
+      </p>
+      @if (asked() !== 'sent' && asked() !== 'refused') {
+        <button hlmBtn type="button" [disabled]="asked() === 'sending'" (click)="askAgain()">
+          {{ 'public.confirmEmail.sendNew' | t }}
+        </button>
+      }
+    }
+    @case ('error') {
+      <h1>{{ 'public.confirmEmail.error' | t }}</h1>
+      <button hlmBtn type="button" (click)="confirm()">{{ 'public.confirmEmail.retry' | t }}</button>
+    }
+  }
+</section>

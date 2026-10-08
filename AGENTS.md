@@ -300,6 +300,35 @@ that variable, so the laptop behaves as before.
   `.claude/settings.json` name connector-id prefixes; a cloud session's
   connector prefix may differ and must be added to them.
 
+## Folder structure
+
+Two rules for `apps/*/src` and `libs/*/src` (Constitution IV), checked by
+`node scripts/structure-check.ts` in CI's Checks job and in `.husky/pre-commit`:
+
+- **Submodules get their own subfolder.** A module's own files sit at its
+  root: `index.ts` and files named after the folder (`notifications.module.ts`).
+  Any other group of files sharing a name (`bell.service.ts`,
+  `bell.controller.ts`) is a submodule and moves to `notifications/bell/`.
+  Files inside that subfolder are named after it (`bell/bell.service.ts`),
+  not after the parent module.
+- **A web component is a folder.** A `@Component` in `apps/web/src` lives at
+  `<name>/<name>.ts`, with `templateUrl: './<name>.html'` and, when it has
+  styles, `styleUrl: './<name>.css'`: no inline `template` or `styles`.
+  Generate one with `npx nx g @nx/angular:component --path <area>/<name>/<name>`
+  (`nx.json` already turns inline templates and styles off); delete an empty
+  stylesheet together with its `styleUrl`.
+
+Out of scope: `libs/ui-cockpit` (Spartan's copied helm components),
+`libs/data-access` and `libs/domain/src/generated` (generated), `web-e2e`.
+`scripts/structure-baseline.json` lists the violations older than the check;
+it only shrinks (`config-protection.mjs`), an entry goes in the change that
+fixes it, and on a PR the check refuses an entry the base branch lacks.
+
+A Biome a11y override for an external template lists the files it covers and
+why, never `apps/web/**/*.html`; template accessibility is still covered by
+the axe checks in the QA sweep (`.claude/scripts/pr-test/sweep.mjs`) and
+`web-e2e`.
+
 ## Product and stack
 
 MotorFix: drivers in Romania find a garage or mechanic for their car. The

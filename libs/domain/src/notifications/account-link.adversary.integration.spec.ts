@@ -1,8 +1,8 @@
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 
-import { Brevo } from './brevo';
-import { BrevoMock } from './brevo-mock.testing';
+import { Brevo } from './brevo/brevo';
+import { BrevoMock } from './brevo/brevo-mock.testing';
 import { NotificationsProcessor } from './notifications.processor';
 import { NotificationsService, RETRY_MINUTES } from './notifications.service';
 import {
