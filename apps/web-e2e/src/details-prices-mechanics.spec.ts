@@ -5,6 +5,16 @@ import { ready } from './accounts.js';
 // @traces 109-FR-010 109-FR-012 109-FR-020 109-SC-001
 
 const details = (page: Page) => page.locator('mf-details-step');
+// "PFA" is both a business kind and a mobile mechanic's legal form: each is
+// reached through its own group, which also waits for the legal form to show.
+const kind = (page: Page, name: string) =>
+  details(page)
+    .getByRole('group', { name: 'Tipul afacerii' })
+    .getByRole('button', { exact: true, name });
+const legalForm = (page: Page, name: string) =>
+  details(page)
+    .getByRole('group', { name: 'Forma juridică' })
+    .getByRole('button', { exact: true, name });
 const prices = (page: Page) => page.locator('mf-prices-step');
 const mechanics = (page: Page) => page.locator('mf-mechanics-step');
 const DIAGNOSIS = 'Diagnoză și citire coduri de eroare';
@@ -56,8 +66,16 @@ test.describe('steps 1, 3 and 4 of list your garage', () => {
     await details(page).locator('[name="name"]').fill('Service Popescu');
     await details(page).locator('[name="phone"]').fill('0722 123 456');
     await details(page).locator('[name="knownFor"]').fill('Frâne și diesel');
-    await details(page).getByRole('button', { name: 'Mecanic mobil' }).click();
-    await details(page).getByRole('button', { name: 'PFA' }).click();
+    await kind(page, 'Mecanic mobil').click();
+    await expect(kind(page, 'Mecanic mobil')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await legalForm(page, 'PFA').click();
+    await expect(legalForm(page, 'PFA')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
 
     await page
       .locator('mf-brands-step .chips button', { hasText: 'BMW' })
@@ -98,9 +116,14 @@ test.describe('steps 1, 3 and 4 of list your garage', () => {
     await expect(details(page).locator('[name="phone"]')).toHaveValue(
       '0722 123 456',
     );
-    await expect(
-      details(page).getByRole('button', { name: 'Mecanic mobil' }),
-    ).toHaveAttribute('aria-pressed', 'true');
+    await expect(kind(page, 'Mecanic mobil')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(legalForm(page, 'PFA')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     await expect(ends(prices(page), 'Manoperă, pe oră')[1]).toHaveValue('200');
     await expect(ends(prices(page), `${BRAKES} · BMW`)[1]).toHaveValue('1400');
     const proposed = prices(page).locator('li.job', {
