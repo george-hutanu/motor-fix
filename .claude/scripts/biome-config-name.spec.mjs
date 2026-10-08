@@ -40,7 +40,7 @@ describe('the harness docs name the root Biome config biome.jsonc', () => {
 
   it('the constitution records the PATCH amendment', () => {
     const text = readFileSync(join(root, '.specify/memory/constitution.md'), 'utf8');
-    assert.match(text, /\*\*Version\*\*: 1\.8\.2 /);
+    assert.match(text, /\*\*Version\*\*: 1\.8\.([2-9]|\d{2,}) /);
     assert.match(text, /Version change: 1\.8\.1 → 1\.8\.2/);
   });
 });

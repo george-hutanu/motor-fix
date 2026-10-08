@@ -77,6 +77,9 @@ jobs:
       - name: Contract check
         if: ${{ !cancelled() }}
         run: sh scripts/contract-check.sh
+      - name: Observability inventory
+        if: ${{ !cancelled() }}
+        run: node scripts/observability-inventory.ts
       - name: Harness
         if: ${{ !cancelled() }}
         run: |
