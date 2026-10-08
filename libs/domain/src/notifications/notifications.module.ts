@@ -15,19 +15,19 @@ import {
 import { Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 
-import { BellController } from './bell.controller';
-import { BellService } from './bell.service';
-import { Brevo } from './brevo';
-import { BrevoWebhookController } from './brevo-webhook.controller';
+import { BellController } from './bell/bell.controller';
+import { BellService } from './bell/bell.service';
+import { Brevo } from './brevo/brevo';
+import { BrevoWebhookController } from './brevo/brevo-webhook.controller';
 import type { EmailConfig } from './email-config';
-import { NewsController } from './news.controller';
+import { NewsController } from './news/news.controller';
 import {
   NEWS_QUEUE,
   NEWS_TOKEN_SECRET,
   type NewsEvent,
   NewsFanOut,
-} from './news.fan-out';
-import { NewsService } from './news.service';
+} from './news/news.fan-out';
+import { NewsService } from './news/news.service';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsProcessor, retryDelay } from './notifications.processor';
 import {
@@ -39,12 +39,12 @@ import {
   NotificationsService,
 } from './notifications.service';
 import { PHONE_CONFIG, type PhoneConfig } from './phone-config';
-import { NotificationPreferencesController } from './preferences.controller';
-import { NotificationPreferencesService } from './preferences.service';
-import { PUSH_SENDER, PushSender } from './push';
-import { PUSH_CONFIG, type PushConfig } from './push-config';
-import { PushSubscriptionsController } from './push-subscriptions.controller';
-import { PushSubscriptionsService } from './push-subscriptions.service';
+import { NotificationPreferencesController } from './preferences/preferences.controller';
+import { NotificationPreferencesService } from './preferences/preferences.service';
+import { PUSH_SENDER, PushSender } from './push/push';
+import { PUSH_CONFIG, type PushConfig } from './push/push-config';
+import { PushSubscriptionsController } from './push/push-subscriptions/push-subscriptions.controller';
+import { PushSubscriptionsService } from './push/push-subscriptions/push-subscriptions.service';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { createPrisma, PRISMA } from '../auth/prisma';

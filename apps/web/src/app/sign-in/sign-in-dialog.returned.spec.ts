@@ -4,7 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import type { MeDto } from '@motor-fix/data-access';
 import { Overlays } from '@motor-fix/overlays';
 
-import { ProviderSignUp } from './provider-sign-up';
+import { ProviderSignUp } from './provider-sign-up/provider-sign-up';
 import { SignIn } from './sign-in';
 import { SignInDialog } from './sign-in-dialog';
 import { Session } from '../dashboard/session';

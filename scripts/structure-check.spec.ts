@@ -157,13 +157,46 @@ describe('flat submodules', () => {
     ).toEqual([]);
   });
 
-  it('finds the five flat groups of the notifications module today', () => {
-    const listing = execFileSync('git', ['ls-files', '--', NOTIFICATIONS], {
-      cwd: repo,
-      encoding: 'utf8',
-    })
-      .split('\n')
-      .filter(Boolean);
+  it('finds the five flat groups of the notifications module as it stood', () => {
+    const listing = at(NOTIFICATIONS, [
+      'bell.controller.ts',
+      'bell.service.ts',
+      'brevo-mock.testing.ts',
+      'brevo-webhook.controller.ts',
+      'brevo.spec.ts',
+      'brevo.ts',
+      'catalogue.spec.ts',
+      'catalogue.ts',
+      'email-config.ts',
+      'email-layout.ts',
+      'news.controller.ts',
+      'news.fan-out.ts',
+      'news.service.ts',
+      'news.spec.ts',
+      'news.ts',
+      'notifications.controller.ts',
+      'notifications.module.ts',
+      'notifications.processor.ts',
+      'notifications.service.ts',
+      'notifications.testing.ts',
+      'phone-config.ts',
+      'preferences.controller.ts',
+      'preferences.service.ts',
+      'preferences.ts',
+      'push-config.ts',
+      'push-subscriptions.controller.ts',
+      'push-subscriptions.service.ts',
+      'push.testing.ts',
+      'push.ts',
+      'quiet-hours.ts',
+      'routing.ts',
+      'sms-counter.ts',
+      'staff-lists.ts',
+      'template-check.ts',
+      'templates.ts',
+      'templates/account-email.ts',
+      'templates/registry.ts',
+    ]);
 
     expect(keysOf(submoduleViolations(listing))).toEqual([
       'bell',
@@ -569,6 +602,23 @@ describe('the repository', () => {
 
     expect(recorded.submodules).toEqual(listOf('submodules').sort());
     expect(recorded.components).toEqual(listOf('components').sort());
+  });
+
+  it('baselines only the files an open change still edits', () => {
+    const recorded = JSON.parse(
+      readFileSync(join(repo, 'scripts/structure-baseline.json'), 'utf8'),
+    );
+
+    expect(recorded).toEqual({
+      components: [],
+      submodules: [
+        'libs/domain/src/catalogue/brands.controller.ts',
+        'libs/domain/src/catalogue/brands.service.ts',
+        'libs/domain/src/catalogue/brands.ts',
+        'libs/domain/src/garages/prices/garage-prices.service.ts',
+        'libs/domain/src/garages/prices/garage-prices.testing.ts',
+      ],
+    });
   });
 
   it('generates Angular components with a separate template and stylesheet', () => {

@@ -7,7 +7,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
 import { EventsModule } from './events.module';
-import { OutboxRelayModule } from './outbox-relay.module';
+import { OutboxRelayModule } from './outbox-relay/outbox-relay.module';
 import { AuditService } from '../audit/audit.service';
 import { signAccessToken } from '../auth/access-token';
 import { AccountsService } from '../auth/accounts.service';

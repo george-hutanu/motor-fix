@@ -1,0 +1,19 @@
+:host {
+  display: block;
+  padding: var(--mf-space-4);
+}
+section {
+  display: grid;
+  gap: var(--mf-space-3);
+  max-width: 36rem;
+}
+h1,
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+button,
+a {
+  justify-self: start;
+  white-space: normal;
+}

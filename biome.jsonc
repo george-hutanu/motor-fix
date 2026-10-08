@@ -128,6 +128,51 @@
       }
     },
     {
+      // Biome reads Angular templates as plain HTML: it cannot see the href that routerLink or a bound [href] writes on these links; the dashboard frame's role chips are a labelled group outside any form, where a fieldset would be wrong.
+      "includes": [
+        "apps/web/src/app/dashboard/frame/frame.html",
+        "apps/web/src/app/dashboard/tab-bar/tab-bar.html",
+        "apps/web/src/app/not-found/not-found.html",
+        "apps/web/src/app/public/confirm-email/confirm-email.html",
+        "apps/web/src/app/public/invite/invite.html",
+        "apps/web/src/app/public/tab-bar/tab-bar.html",
+        "apps/web/src/app/public/unsubscribe/unsubscribe.html",
+        "apps/web/src/app/sign-in/consent/consent.html"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off",
+            "useValidAnchor": "off"
+          }
+        }
+      }
+    },
+    {
+      // A labelled role="group" of tiles or buttons outside any form, where a fieldset would be wrong.
+      "includes": ["apps/web/src/app/dashboard/admin-panel/admin-panel.html"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off"
+          }
+        }
+      }
+    },
+    {
+      // Biome cannot see that the label wraps hlm-switch, whose [inputId] names the input it renders.
+      "includes": [
+        "apps/web/src/app/dashboard/notification-settings/notification-settings.html"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noLabelWithoutControl": "off"
+          }
+        }
+      }
+    },
+    {
       // The prefers-reduced-motion block must beat every component's own animation and transition, which only !important can do.
       "includes": ["libs/ui-cockpit/src/styles/cockpit.css"],
       "linter": {

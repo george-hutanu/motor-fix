@@ -1,0 +1,43 @@
+@for (tile of tiles(); track tile.label; let i = $index) {
+  <div
+    role="group"
+    [attr.aria-label]="tile.name"
+    [attr.aria-busy]="tile.state === 'loading' ? 'true' : null"
+  >
+    <span class="label">{{ tile.label }}</span>
+    @switch (tile.state) {
+      @case ('loading') {
+        <span class="number"><span class="skeleton"></span></span>
+        <span class="line"><span class="skeleton"></span></span>
+      }
+      @case ('failed') {
+        <span class="number">
+          {{ tile.number }}
+          <button
+            type="button"
+            [attr.aria-label]="tile.line"
+            [attr.aria-expanded]="tip() === tile.label"
+            [attr.aria-describedby]="'mf-admin-tip-' + i"
+            (click)="tip.set(tile.label)"
+            (focus)="tip.set(tile.label)"
+            (blur)="tip.set(null)"
+            (keydown.escape)="tip.set(null)"
+          >
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18">
+              <circle cx="9" cy="9" r="8" fill="none" stroke="currentColor" />
+              <path d="M9 8v5M9 5v1" stroke="currentColor" stroke-width="1.6" />
+            </svg>
+          </button>
+        </span>
+        <span class="tip" role="tooltip" [id]="'mf-admin-tip-' + i" [hidden]="tip() !== tile.label">{{ tile.line }}</span>
+      }
+      @default {
+        <span class="number">{{ tile.number }}</span>
+        @if (tile.line) {
+          <span class="line">{{ tile.line }}</span>
+        }
+      }
+    }
+  </div>
+}
+<mf-admin-growth />
