@@ -34,6 +34,12 @@
 // block on a hook it stopped for its timeout, so an entry with `timeout_ms`
 // is stopped here first, inside the hook timeout settings.json gives it, and a
 // fail-closed gate stopped that way (or by any signal) is refused, not passed.
+//
+// And a gate that dies before deciding: a syntax error or an import it cannot
+// load exits 1, which Claude Code also reads as a non-blocking error. For a
+// fail-closed gate only 0 (approve) and 2 (refuse) are decisions; any other
+// exit is refused, naming the script to fix and the id to disable. A missing
+// script or one that cannot be started stays a wrapper failure (exit 0).
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { hookById, isDryRun, isEnabled, scriptPath } from "../scripts/lib/hooks.mjs";
@@ -96,7 +102,7 @@ process.stdin.on("end", () => {
       note(`DRY RUN — ${refusal}`);
       process.exit(0);
     }
-    process.stderr.write(`[run-hook] ${refusal}\n`);
+    note(refusal);
     process.exit(2);
   }
 
@@ -121,7 +127,7 @@ process.stdin.on("end", () => {
       note(`DRY RUN — ${refusal}`);
       process.exit(0);
     }
-    process.stderr.write(`[run-hook] ${refusal}\n`);
+    note(refusal);
     process.exit(2);
   }
 
@@ -131,6 +137,18 @@ process.stdin.on("end", () => {
   }
 
   const code = run.status ?? 0;
+  if (entry.fail_closed && code !== 0 && code !== 2) {
+    const refusal = `${entry.id} refused: the gate crashed (exit ${code}), so it has not approved the request. Fix .claude/hooks/${entry.script}, or set SPECKIT_DISABLED_HOOKS=${entry.id} to proceed unchecked.`;
+    process.stdout.write(run.stdout ?? "");
+    process.stderr.write(run.stderr ?? "");
+    if (isDryRun()) {
+      note(`DRY RUN — ${refusal}`);
+      process.exit(0);
+    }
+    note(refusal);
+    process.exit(2);
+  }
+
   if (isDryRun() && code !== 0) {
     process.stdout.write(run.stdout ?? "");
     note(`DRY RUN — ${entry.id} would have blocked (exit ${code}):`);
