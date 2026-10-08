@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
@@ -51,6 +54,17 @@ describe('LanguageSwitch', () => {
     expect(button('RO').getAttribute('aria-pressed')).toBe('true');
     expect(button('EN').getAttribute('aria-pressed')).toBe('false');
     expect(TestBed.inject(I18n).language()).toBe('ro');
+  });
+
+  it('sets its buttons in Cockpit body type on the 4 px grid, not the browser default', () => {
+    // The test build drops component styles, so read them from the source.
+    const css = readFileSync(join(__dirname, 'switch.ts'), 'utf8').replace(
+      /\s+/g,
+      ' ',
+    );
+
+    expect(css).toMatch(/button[^{]*\{[^}]*font-size: var\(--mf-size-body\)/);
+    expect(css).toMatch(/button[^{]*\{[^}]*padding: 0 8px/);
   });
 
   it('switches to English in place, and back to Romanian', async () => {

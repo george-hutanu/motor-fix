@@ -78,7 +78,7 @@ export function provideRememberedLanguage(): EnvironmentProviders {
   selector: 'mf-language-switch',
   styles: `
     :host { display: inline-flex; }
-    button { min-width: 44px; min-height: 44px; }
+    button { min-width: 44px; min-height: 44px; padding: 0 8px; font: inherit; font-size: var(--mf-size-body); }
     button[aria-pressed='true'] { font-weight: 700; text-decoration: underline; }
   `,
   template: `

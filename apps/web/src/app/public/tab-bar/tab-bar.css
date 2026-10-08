@@ -27,13 +27,13 @@
 nav {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding: 6px 8px max(14px, var(--mf-safe-bottom));
+  padding: 8px 8px max(16px, var(--mf-safe-bottom));
 }
 a {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
+  gap: 4px;
   min-height: 52px;
   color: var(--mf-text-secondary);
   font-size: var(--mf-size-label);
