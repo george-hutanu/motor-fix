@@ -28,18 +28,24 @@ import {
   RAR_NUMBER_MIN,
   stripCui,
 } from '@motor-fix/contracts/listing-verification';
+import {
+  isPlaceSection,
+  type PlaceSection,
+  placeComplete,
+} from '@motor-fix/contracts/place-section';
 import { I18n, LanguageSwitch, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton, HlmInput, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { brandsOf } from '../brands-section';
-import { BrandsStep } from '../brands-step';
+import { BrandsStep } from '../brands-step/brands-step';
 import { DetailsStep } from '../details-step/details-step';
-import { DraftKeeper } from '../draft-keeper';
+import { DraftKeeper } from '../draft/draft-keeper';
 import { hoursOf, mergeHours } from '../hours-section';
-import { HoursStep } from '../hours-step';
+import { HoursStep } from '../hours-step/hours-step';
 import { MechanicsStep } from '../mechanics-step/mechanics-step';
 import { PhotosStep } from '../photos-step/photos-step';
+import { PlaceStep } from '../place-step/place-step';
 import { dropUntaken } from '../prices-step/prices-rows';
 import { PricesStep } from '../prices-step/prices-step';
 import {
@@ -72,6 +78,7 @@ const STALL_MS = 3000;
     LanguageSwitch,
     MechanicsStep,
     PhotosStep,
+    PlaceStep,
     PricesStep,
     TranslatePipe,
   ],
@@ -125,6 +132,15 @@ export class ListYourGarage {
   protected readonly photos = computed(
     () => (this.keeper.draft().data as ListingDraftData).files ?? [],
   );
+  // steps['5'].place, beside the hours; a place not in its shape opens empty.
+  protected readonly place = computed(() => {
+    const section: unknown = this.kept()['5'];
+    const place =
+      typeof section === 'object' && section !== null
+        ? (section as Record<string, unknown>)['place']
+        : undefined;
+    return isPlaceSection(place) ? place : {};
+  });
   protected readonly takenBrands = computed(() =>
     this.brands().brands.filter((b) => b.stance === 'works_on'),
   );
@@ -135,6 +151,7 @@ export class ListYourGarage {
       ...(detailsComplete(this.details()) ? [1] : []),
       ...(prices && pricesComplete(prices) ? [3] : []),
       ...(mechanicsComplete(this.mechanics()) ? [4] : []),
+      ...(placeComplete(this.place()) ? [5] : []),
     ]);
   });
   protected readonly current = signal(1);
@@ -242,6 +259,11 @@ export class ListYourGarage {
   protected keepHours(value: HoursSection) {
     const data = this.keeper.draft().data as ListingDraftData;
     this.keeper.section('5', mergeHours(data.steps?.['5'], value));
+  }
+
+  protected keepPlace(place: PlaceSection) {
+    const data = this.keeper.draft().data as ListingDraftData;
+    this.keeper.section('5', { ...data.steps?.['5'], place });
   }
 
   protected save() {

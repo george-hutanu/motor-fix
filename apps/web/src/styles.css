@@ -1,1 +1,7 @@
 /* You can add global styles to this file, and also import other style files */
+
+/* The map's own controls, at the size of every other tap target. */
+.maplibregl-ctrl-group button {
+  width: var(--mf-tap);
+  height: var(--mf-tap);
+}

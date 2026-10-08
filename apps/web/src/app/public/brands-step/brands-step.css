@@ -1,0 +1,64 @@
+:host {
+  display: grid;
+  gap: var(--mf-space-3);
+  margin-top: var(--mf-space-3);
+  min-width: 0;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.hint,
+.left {
+  color: var(--mf-text-secondary);
+}
+.left {
+  font-size: var(--mf-size-small);
+}
+input {
+  width: 100%;
+  min-height: var(--mf-tap);
+  box-sizing: border-box;
+}
+ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+ul button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  max-width: 100%;
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-3);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-control);
+  background: var(--mf-bg);
+  color: var(--mf-text);
+  font: inherit;
+  text-align: start;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+ul button[aria-pressed="true"] {
+  border-color: var(--mf-text-secondary);
+  font-weight: 600;
+}
+ul button:focus-visible {
+  outline: 2px solid var(--mf-focus);
+  outline-offset: 2px;
+}
+.results button {
+  border-style: dashed;
+}
+mf-lamp {
+  font-size: var(--mf-size-small);
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-1);
+}

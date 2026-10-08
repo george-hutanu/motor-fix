@@ -134,6 +134,11 @@
                 [files]="photos()"
                 (filesChange)="keeper.files($event)"
               />
+              <mf-place-step
+                [value]="place()"
+                [businessKind]="details().businessKind"
+                (valueChange)="keepPlace($event)"
+              />
               <mf-hours-step [value]="hours()" (valueChange)="keepHours($event)" />
             }
           </section>

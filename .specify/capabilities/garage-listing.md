@@ -12,6 +12,7 @@ features:
   - 861-jump-holds-step
   - 110-workshop-photos
   - 885-restored-draft-check
+  - 111-garage-address-map
   - 917-proposed-job-duplicate
 ---
 
@@ -495,6 +496,77 @@ _From 885-restored-draft-check._
 ### 885-FR-005 — Tests MUST cover, in colocated Jest specs: each refused shape of FR-001 (an extra envelope key, an unknown step key, a step section failing its guard, bad `files`, a non-object `survey`) restoring nothing and throwing nothing; a passing draft, a dirty passing draft with a token and an empty `{}` data restoring as today; and the same fixtures judged alike by the browser restore and the server rule (FR-004).
 
 _From 885-restored-draft-check._
+### 111-FR-001 — Step 5 of "List your garage" MUST show, in the page's language, after the photos' place and before ST-112's "Program" block, the field "Adresă" / "Address" with the placeholder "Stradă și număr, sector, oraș" / "Street and number, sector, town" (required for the step to be complete), a map under it, and the button "Pune pinul pe hartă" / "Place the pin on the map"; when step 1's `businessKind` is `mobile` the field is labelled "Sediul înregistrat" / "Registered seat" and a second control "Zona în care lucrezi" / "Area you work in" appears, a whole number of kilometres with the hint "Între 1 și 100 km" / "Between 1 and 100 km", showing 20 when the section holds no radius. Every label, hint, placeholder and error exists in Romanian and English.
+
+_From 111-garage-address-map._
+
+### 111-FR-002 — From the third character typed, 300 ms after the last keystroke, the field MUST ask the API's address look-up for suggestions and show at most 5 as buttons reachable by keyboard, each the suggestion's text; fewer than three characters show none and ask nothing; a newer text's answer always replaces an older one, never the other way round. Choosing a suggestion MUST fill the field with its text and set the position to the suggestion's point; a text with no suggestion shows a line saying nothing was found and offers the manual pin.
+
+_From 111-garage-address-map._
+
+### 111-FR-003 — The map MUST be drawn with MapLibre and show one draggable pin at the position once there is one, centred on it at street zoom 16 (a named constant beside the Romania bounds); dragging the pin, or the one map tap that follows "Pune pinul pe hartă" (the button arms one tap, which places the pin and disarms; with a pin already there a tap does nothing and the pin is moved by dragging), MUST set the position to where the pin lands and leave the address text untouched. For a mobile mechanic the map MUST draw a circle of the radius around the position and redraw it when the radius changes. The suggestions MUST be operable by keyboard alone (Tab/arrow keys move, Enter chooses, Escape closes the list), the field MUST announce the suggestion count to assistive technology, and the pin MUST have a keyboard path: with focus on the map the arrow keys nudge a placed pin, so a hand-placed or corrected position never needs a pointer. The pin and the map controls MUST be usable at 320 px with no sideways scroll, at least 44 px tall where they are controls, and readable in light and dark (`phone-layout.md`).
+
+_From 111-garage-address-map._
+
+### 111-FR-004 — When the look-up answers the "search down" state or cannot be reached, the step MUST show "Căutarea adresei nu merge acum" / "Address search is not working right now" under the field and keep the field and the manual pin usable; when the map's style or tiles fail to load, or the map cannot start, the map area MUST say the map could not be loaded ("Harta nu s-a putut încărca" / "The map could not be loaded"), the address stays editable and kept, and the step stays incomplete until a position exists.
+
+_From 111-garage-address-map._
+
+### 111-FR-005 — The radius MUST accept whole numbers from 1 to 100 only, 20 being the default when none was given (one named constant, `MOBILE_SERVICE_RADIUS_DEFAULT_KM`, in the shared contracts library, read by the web app and the write); a value outside, a fraction or a non-number MUST be refused in the field with the hint of FR-001 and MUST NOT replace the last good value.
+
+_From 111-garage-address-map._
+
+### 111-FR-006 — The step's values MUST be the `place` key of the draft's step-5 section (`steps['5'].place`, beside ST-112's `hours`, `closedDays` and `facilities`, 112-FR-007): `address` (string, at most 200 characters, absent or empty allowed while typing, the typed or chosen text; for a mobile mechanic the registered seat), `lat` and `lng` (numbers, both present or both absent), and `radiusKm` (integer 1–100 or absent). It MUST be typed in the shared contracts library and checked by one guard where the API and the web app both read it, joined into the step-5 guard the draft envelope already runs (`libs/contracts/src/listing-drafts.dto.ts:50`): a `place` with another key, a wrong type, a 201-character address, one coordinate without the other or a radius outside the limits is refused with 400 and the draft's stable validation code; a section without `place` is accepted. The values are kept with the rest of the form (browser copy and server copy, 114-FR-002, 114-FR-005), restored on reload and through the continue link (114-FR-011), and MUST write nothing to the garage tables, the audit history or the outbox while there is no account (114-FR-018).
+
+_From 111-garage-address-map._
+
+### 111-FR-007 — Step 5's place is complete when `address` is non-empty and a position exists inside Romania; a mobile mechanic's radius never blocks completeness (20 stands in). A position outside Romania MUST show "Adresa trebuie să fie în România" / "The address must be in Romania" at the map and make the place incomplete. Romania is one bounding box held in one named place in the shared contracts library (latitude 43.5 to 48.4, longitude 20.2 to 29.8), read by the web app, the look-up and the write; no second copy may exist.
+
+_From 111-garage-address-map._
+
+### 111-FR-008 — The API MUST offer `GET /api/v1/places?q=<text>[&lang=ro|en]` (`lang`, default `ro`, only picks the label language), open to visitors without a session (`@Public()`, listed with the public routes), answering `{ items: [{ label, lat, lng }] }` with at most 5 items, every item inside Romania's bounding box (FR-007), for a trimmed `q` of 3 to 200 characters; a shorter, longer or missing `q` is refused as a bad request in the API's one error shape (`validation_failed`). The answer MUST send `Cache-Control: no-store` for nothing of the owner's typing to be cached on the way.
+
+_From 111-garage-address-map._
+
+### 111-FR-009 — The look-up MUST go through one provider port in a `places` module of its own in the domain library (`libs/domain/src/places/`, which ST-229 and the drivers' search reuse unchanged) (`PlacesProvider`: a text in, candidate places out), with exactly two implementations: the real provider and a fake. Which one serves is decided once at boot: a key set → the real provider; no key and `APP_ENV=test` → the fake; no key otherwise → no provider, the "search down" state (FR-010). The fake MUST serve `APP_ENV=test` and the end-to-end boot with a fixed list of Romanian addresses (one for "Str. Ștefan cel Mare 12, Sector 2" at a point in Bucharest, one text that finds nothing) and is what the unit, API and Playwright tests use; no test reaches the outside provider. The real provider MUST be asked with the query, a limit of 5 and Romania as the only country, and MUST wait at most 3 seconds.
+
+_From 111-garage-address-map._
+
+### 111-FR-010 — The provider's key MUST be read from the server's environment through the shared env reader (`libs/contracts/src/env.ts`, a named optional set as `GOOGLE_ENV` is) and listed in `.env.example` with its one comment line; it MUST never reach the browser, a log or an error message. A missing key MUST NOT stop the API from booting: outside `APP_ENV=test` the look-up then answers the "search down" state, as it does when the provider fails, times out or refuses the key: 503 in the API's one error shape with the stable code `search_unavailable`, nothing cached, and one warning log per boot that the key is missing, without its value.
+
+_From 111-garage-address-map._
+
+### 111-FR-011 — The look-up MUST be limited per source address by a Redis counter in the pattern of the drafts' throttle (114-FR-021, one shared helper, never a second copy): 60 calls per minute; past it the answer is 429 with the stable code `places_rate_limited` and the provider is not called. The counter never holds the only copy of anything (Constitution VI): it is a limit, not data.
+
+_From 111-garage-address-map._
+
+### 111-FR-012 — The garage row MUST gain `address` (text, 1–200 characters or null, CHECK in the migration), `seat_address` (the same rule), `location` as two columns `latitude` and `longitude` (`double precision`, WGS84, both set or both null by CHECK, each inside its range by CHECK) and `service_radius_km` (integer 1–100 or null, CHECK in the migration), all null for the garages that exist today; a row MUST never hold both `address` and `seat_address` (CHECK). No PostGIS extension is created: staging and production run Railway's `postgres-ssl:18` template, which has none, and the migration runs as the api's pre-deploy step (`scripts/railway-deploy.ts:294`); moving the position to `geography` with a GiST index is MF-10's, deferred.
+
+_From 111-garage-address-map._
+
+### 111-FR-013 — The `garages` module MUST provide one write that saves a garage's place from the step-5 `place` section inside a transaction the caller owns (the sending story runs it with 109-FR-013's and 112-FR-009's writes), taking the transaction, the actor (the owner account created in it), the garage and the section. It MUST trim the address and check its length (code `length` on `address`), require a position (code `required` on `location`) inside Romania (FR-007; code `romania` on `location`), and refuse a radius outside 1–100 (code `range` on `radiusKm`); a refusal is the 422 field-error refusal the other writes raise and writes nothing. For a garage whose `business_kind` is not `mobile` it writes `address` and `location` and leaves `seat_address` and `service_radius_km` null; for `mobile` it writes `seat_address`, `location` (the seat) and `service_radius_km` (the section's radius, else 20) and leaves `address` null. No route calls it in this story; it is tested on a real database.
+
+_From 111-garage-address-map._
+
+### 111-FR-014 — In the same transaction the write MUST record the starting values once in the audit history through the existing audit writer (`recordChanges`, as 109-FR-017 does): one `update` entry per field written on the garage from null to the value, subject type `garage`, actor the owner, the position recorded as `{ lat, lng }`; it MUST emit no event and notify nobody (the garage is not public yet).
+
+_From 111-garage-address-map._
+
+### 111-FR-015 — The public garage read (`GET /api/v1/garages/:slug`, `PublicGarageDto`) MUST carry `address` (string or null), `latitude` and `longitude` (numbers or null, both set or both null; the plan's contract names them flat) for a garage whose `business_kind` is not `mobile`, and `serviceRadiusKm` (integer or null) with `address`, `latitude` and `longitude` all null (absent) for a mobile mechanic, whatever the row holds; a garage with no place yet carries null in all of them. The brand-first search's item (042-FR-012, 042-FR-013) is unchanged: the pins of the results map are MF-10's.
+
+_From 111-garage-address-map._
+
+### 111-FR-016 — No public shape of the API MUST carry the registered seat [X20c]: no DTO reachable from a `@Public()` route, read or list, has a property for `seat_address` (in any spelling), and the public garage read of a mobile mechanic has no position (the seat is the position). `seat_address` is read only by the garage's own staff and MotorFix admins through the later dashboard and admin stories, which are not this one. A test MUST read the generated OpenAPI document and fail on any property whose name contains `seat` in a schema reachable from the responses of the routes in the public routes list, and the public routes list MUST gain `GET /api/v1/places`.
+
+_From 111-garage-address-map._
+
+### 111-FR-017 — The real map style and tiles MUST never be reached by the Playwright suite or the PR QA run: the web app reads its map style address from one place and the end-to-end and QA boots give it a local, empty style (no outside request), so screenshots and tests are the same every run; MapLibre GL JS is the only new front-end dependency (BSD licence, Constitution III), and the map's attribution is shown as the tile provider's terms require.
+
+_From 111-garage-address-map._
+
+### 111-FR-018 — Tests MUST cover, in Jest: the `place` guard (good sections, each wrong key, type and length, one coordinate alone, radius 0, 1, 100, 101 and 12.5), completeness (no address, no position, outside Romania, mobile with no radius), the Romania bounding box, the look-up's trimming and 3-character floor, the debounce and the latest-answer rule, the radius default; in Jest on real PostgreSQL and Redis: the look-up passing the query to the fake provider and answering at most 5 results inside Romania, the "search down" answer with no key and with a failing provider, the throttle's 429, a draft saved with `place` and read back unchanged, a malformed `place` refused with 400 while a section without it is accepted, the write for a workshop (address and location set, seat and radius null), for a mobile mechanic (seat, location and 35 set, address null; 20 when the section has no radius), the refusals (no position, outside Romania, 201 characters, radius 101) writing nothing, the audit entries, the public read of each kind and the OpenAPI `seat` check, and the public routes list with `GET /api/v1/places`. A Playwright end-to-end test MUST, at a phone width with the fake provider and the empty map style: type "Str. Ștefan cel Mare 12, Sector 2", choose the suggestion, see the pin, drag it, reload and check the position moved and the text stayed; as a mobile mechanic, set 35 km, reload and find 35 and "Sediul înregistrat".
+
+_From 111-garage-address-map._
 
 ### 917-FR-002 — A proposed name equal only to a `pending` or `rejected` job's name, one that merely contains an approved job's name, or one that differs from it by more than case, accents and surrounding spaces (`Schimb  ulei`, `Schimb-ulei` against `Schimb ulei`), MUST be saved as before (a new pending job).
 

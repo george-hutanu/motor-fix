@@ -1,0 +1,3 @@
+@if (rows().waiting(); as count) {
+  <button type="button" (click)="show()">{{ 'shell.live.waiting' | t: { count } }}</button>
+}

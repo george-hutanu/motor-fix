@@ -22,7 +22,7 @@
         "./libs/contracts/src/garage-hours.ts"
       ],
       "@motor-fix/contracts/listing-photos": [
-        "./libs/contracts/src/listing-photos.ts"
+        "./libs/contracts/src/listing-photos/listing-photos.ts"
       ],
       "@motor-fix/contracts/listing-sections": [
         "./libs/contracts/src/listing-sections.ts"
@@ -34,6 +34,9 @@
         "./libs/contracts/src/notification-groups.ts"
       ],
       "@motor-fix/contracts/phone": ["./libs/contracts/src/phone.ts"],
+      "@motor-fix/contracts/place-section": [
+        "./libs/contracts/src/place-section.ts"
+      ],
       "@motor-fix/contracts/plate": ["./libs/contracts/src/plate.ts"],
       "@motor-fix/contracts/price-range": [
         "./libs/contracts/src/price-range.ts"

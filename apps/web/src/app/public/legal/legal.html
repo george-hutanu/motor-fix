@@ -1,0 +1,11 @@
+<article>
+  <h1>{{ document().title }}</h1>
+  <p class="meta">{{ labels().version }} {{ document().version }}</p>
+  <p class="draft" role="note">{{ labels().draft }}</p>
+  @for (section of document().sections; track section.heading) {
+    <h2>{{ section.heading }}</h2>
+    @for (paragraph of section.paragraphs; track $index) {
+      <p>{{ paragraph }}</p>
+    }
+  }
+</article>

@@ -1,0 +1,75 @@
+@if (outcome(); as sent) {
+  <div class="outcome" role="status">
+    @if (sent.emailSent) {
+      <p>{{ 'garage.invite.sent' | t }}</p>
+      <p>{{ 'garage.invite.sentLine' | t }}</p>
+    } @else {
+      <p>{{ 'garage.invite.notSent' | t }}</p>
+      <p>{{ 'garage.invite.notSentLine' | t }}</p>
+    }
+    <div class="actions">
+      @if (sent.link) {
+        <button hlmBtn variant="secondary" type="button" (click)="copy(sent.link)">
+          {{ 'garage.invite.copy' | t }}
+        </button>
+      }
+      <button hlmBtn type="button" (click)="task.close('sent')">{{ 'garage.invite.done' | t }}</button>
+    </div>
+  </div>
+} @else {
+  <form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+    <div class="field">
+      <label for="mf-invite-name">{{ 'garage.invite.name' | t }}</label>
+      <input
+        hlmInput
+        id="mf-invite-name"
+        type="text"
+        autocomplete="off"
+        formControlName="name"
+        aria-describedby="mf-invite-name-error"
+      />
+      <mf-field-error id="mf-invite-name-error" [save]="save" [control]="form.controls.name" />
+    </div>
+    <div class="field">
+      <label for="mf-invite-email">{{ 'garage.invite.email' | t }}</label>
+      <input
+        hlmInput
+        id="mf-invite-email"
+        type="email"
+        inputmode="email"
+        autocomplete="off"
+        spellcheck="false"
+        formControlName="email"
+        aria-describedby="mf-invite-email-error"
+      />
+      <mf-field-error id="mf-invite-email-error" [save]="save" [control]="form.controls.email" />
+    </div>
+    <fieldset>
+      <legend>{{ 'garage.invite.kind' | t }}</legend>
+      @if (mechanics()) {
+        <label class="choice"><input type="radio" formControlName="kind" value="mechanic" />{{ 'garage.invite.mechanic' | t }}</label>
+      }
+      <label class="choice"><input type="radio" formControlName="kind" value="receptionist" />{{ 'garage.invite.receptionist' | t }}</label>
+    </fieldset>
+    @if (form.controls.kind.value === 'mechanic') {
+      <fieldset>
+        <legend>{{ 'garage.invite.permissions' | t }}</legend>
+        <label class="choice"><input type="checkbox" formControlName="canMoveBookings" />{{ 'garage.invite.canMoveBookings' | t }}</label>
+        <label class="choice"><input type="checkbox" formControlName="canAnswerQuotes" />{{ 'garage.invite.canAnswerQuotes' | t }}</label>
+        <label class="choice"><input type="checkbox" formControlName="canRecordFinalPrice" />{{ 'garage.invite.canRecordFinalPrice' | t }}</label>
+      </fieldset>
+    }
+    <mf-task-error [save]="save" />
+    <div class="actions">
+      @if (inviteId(); as id) {
+        <button hlmBtn variant="secondary" type="button" [disabled]="resending()" (click)="resend(id)">
+          {{ 'garage.invite.resend' | t }}
+        </button>
+      }
+      <button hlmBtn type="submit" [mfTaskSubmit]="save">{{ 'garage.invite.submit' | t }}</button>
+      <button hlmBtn variant="ghost" type="button" (click)="task.close('cancelled')">
+        {{ 'garage.invite.cancel' | t }}
+      </button>
+    </div>
+  </form>
+}

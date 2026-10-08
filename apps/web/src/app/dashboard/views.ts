@@ -1,13 +1,13 @@
 import { inject, type Type } from '@angular/core';
 import type { Routes } from '@angular/router';
 
-import { AdminPanel } from './admin-panel';
+import { AdminPanel } from './admin-panel/admin-panel';
 import { CarsView } from './cars-view/cars-view';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
-import { PushView } from './push-view';
+import { PushView } from './push-view/push-view';
 import { Session } from './session';
-import { SettingsView } from './settings-view';
-import { View } from './view';
+import { SettingsView } from './settings-view/settings-view';
+import { View } from './view/view';
 
 export type Area = 'driver' | 'garage' | 'admin';
 

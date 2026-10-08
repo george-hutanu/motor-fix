@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 
-import { Brevo, BrevoError } from './brevo';
+import { Brevo, BrevoError } from './brevo/brevo';
 import { notificationType } from './catalogue';
 import { blockedReason, type EmailConfig } from './email-config';
 import {
@@ -19,8 +19,8 @@ import {
   type PushResult,
   type PushSender,
   pushPayload,
-} from './push';
-import { MAX_DEVICES } from './push-subscriptions.service';
+} from './push/push';
+import { MAX_DEVICES } from './push/push-subscriptions/push-subscriptions.service';
 import { giveSmsBack, smsMonth, takeSms } from './sms-counter';
 import { render, TemplateError, templateName } from './templates';
 import type {

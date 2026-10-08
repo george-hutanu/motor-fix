@@ -3,31 +3,35 @@ import type { Redis } from 'ioredis';
 
 import { AdminOverviewController } from './admin-overview.controller';
 import { GarageDetailsService } from './details/garage-details.service';
-import { GarageBrandsController } from './garage-brands.controller';
-import { GarageBrandsService } from './garage-brands.service';
-import { ListingDraftsController } from './listing-drafts.controller';
-import { ListingDraftsService } from './listing-drafts.service';
-import { ListingDraftThrottle } from './listing-drafts.throttle';
+import { GarageBrandsController } from './garage-brands/garage-brands.controller';
+import { GarageBrandsService } from './garage-brands/garage-brands.service';
+import { ListingDraftsController } from './listing-drafts/listing-drafts.controller';
+import { ListingDraftsService } from './listing-drafts/listing-drafts.service';
+import { ListingDraftThrottle } from './listing-drafts/listing-drafts.throttle';
 import { GarageMechanicsService } from './mechanics/garage-mechanics.service';
+import { GaragePlaceService } from './place/garage-place.service';
 import { GaragePricesService } from './prices/garage-prices.service';
-import { PublicGaragesService } from './public-garages';
-import { PublicGaragesController } from './public-garages.controller';
+import { PublicGaragesService } from './public-garages/public-garages';
+import { PublicGaragesController } from './public-garages/public-garages.controller';
 import {
   GarageInvitesController,
   InvitesController,
-} from './staff-invite.controller';
-import { INVITE_EMAIL, StaffInviteService } from './staff-invite.service';
-import { VerificationService } from './verification.service';
-import { VerificationChecksController } from './verification-checks.controller';
-import { VerificationChecksService } from './verification-checks.service';
+} from './staff-invite/staff-invite.controller';
+import {
+  INVITE_EMAIL,
+  StaffInviteService,
+} from './staff-invite/staff-invite.service';
+import { VerificationService } from './verification/verification.service';
+import { VerificationChecksController } from './verification/verification-checks/verification-checks.controller';
+import { VerificationChecksService } from './verification/verification-checks/verification-checks.service';
 import {
   VERIFICATION_CONFIG,
   type VerificationConfig,
-} from './verification-config';
+} from './verification/verification-config';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { AUTH_REDIS } from '../auth/attempts';
-import { Brevo } from '../notifications/brevo';
+import { Brevo } from '../notifications/brevo/brevo';
 import type { EmailConfig } from '../notifications/email-config';
 
 // Apart from the AuthModule, which the notifications module imports: the
@@ -56,6 +60,7 @@ export class GaragesModule {
         ListingDraftsService,
         GarageDetailsService,
         GarageMechanicsService,
+        GaragePlaceService,
         GaragePricesService,
         VerificationService,
       ],
@@ -65,6 +70,7 @@ export class GaragesModule {
         GarageBrandsService,
         GarageDetailsService,
         GarageMechanicsService,
+        GaragePlaceService,
         GaragePricesService,
         ListingDraftsService,
         {
