@@ -6,7 +6,9 @@
 // its dashboard and alerts or "none" and the reason.
 //
 // Queues, hosts and SDK clients are found by text, so only apps/ and libs/ are
-// read, without the generated client, tests and stubs. PostgreSQL, Redis and
+// read, without the generated client, tests and stubs, and with comments
+// removed. A host counts only where https:// begins a string literal: a link
+// in prose is not a call. PostgreSQL, Redis and
 // product counters are listed by hand: such an entry is stale once its source
 // path is gone.
 //
@@ -69,7 +71,7 @@ const QUEUE = new RegExp(
   'g',
 );
 const CONSTANT = /export const ([A-Za-z_$][\w$]*)\s*=\s*['"]([^'"]+)['"]/g;
-const HOST = /https:\/\/([a-z0-9-]+(?:\.[a-z0-9-]+)+)/g;
+const HOST = /(?<=['"`])https:\/\/([a-z0-9-]+(?:\.[a-z0-9-]+)+)/g;
 
 function files(root: string, dir: string): string[] {
   if (!existsSync(join(root, dir))) return [];
@@ -86,10 +88,45 @@ function files(root: string, dir: string): string[] {
   );
 }
 
+// A ' or " string ends at its quote or at the end of the line, so a quote in a
+// regular expression hides nothing past its own line.
+function stringEnd(text: string, start: number): number {
+  const quote = text[start];
+  for (let i = start + 1; i < text.length; i++) {
+    if (text[i] === '\\') i++;
+    else if (text[i] === quote) return i + 1;
+    else if (text[i] === '\n' && quote !== '`') return i;
+  }
+  return text.length;
+}
+
+function tokenEnd(text: string, i: number): number {
+  const pair = text.slice(i, i + 2);
+  if (pair === '//') return text.indexOf('\n', i);
+  if (pair === '/*') return text.indexOf('*/', i + 2) + 2 || -1;
+  if (`'"\``.includes(text[i])) return stringEnd(text, i);
+  return text[i] === '\\' ? i + 2 : i + 1;
+}
+
+export function withoutComments(text: string): string {
+  let out = '';
+  for (let i = 0; i < text.length; ) {
+    const end = tokenEnd(text, i);
+    const stop = end < 0 ? text.length : end;
+    const part = text.slice(i, stop);
+    out += /^\/[/*]/.test(part) ? part.replace(/[^\n]/g, ' ') : part;
+    i = stop;
+  }
+  return out;
+}
+
 function readTexts(root: string): Map<string, string> {
   const sources = ['apps', 'libs'].flatMap((dir) => files(root, dir));
   return new Map(
-    sources.map((file) => [file, readFileSync(join(root, file), 'utf8')]),
+    sources.map((file) => [
+      file,
+      withoutComments(readFileSync(join(root, file), 'utf8')),
+    ]),
   );
 }
 

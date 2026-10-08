@@ -237,6 +237,63 @@ describe('checkInventory', () => {
   });
 });
 
+describe('checkInventory counts real calls only', () => {
+  it('ignores links, clients and queues in comments and links inside prose', () => {
+    put(
+      'libs/domain/src/docs/notes.ts',
+      [
+        '// see https://docs.bullmq.io/guide/queues',
+        '/* mirrors https://block.docs.io/x */',
+        '/**',
+        ' * Based on https://jsdoc.docs.io/y',
+        " * import { sendNotification } from 'web-push';",
+        ' */',
+        "// new Queue('commented');",
+        "const help = 'Read https://prose.docs.io for details';",
+      ].join('\n'),
+    );
+    expect(checkInventory(root)).toEqual([]);
+  });
+
+  it('names an unlisted host that begins a string literal in code', () => {
+    put(
+      'libs/domain/src/sms/sms.ts',
+      [
+        'fetch("https://api.sms.ro/send"); // see https://docs.sms.ro',
+        `const push = \`https://push.sms.ro/\${id}\`;`,
+        "const text = '/* not a comment'; fetch('https://after.sms.ro');",
+        "const unsafe = /['()*]/g;",
+        "const next = 'https://next.sms.ro';",
+      ].join('\n'),
+    );
+    expect(checkInventory(root)).toEqual([
+      'missing outside-service api.sms.ro (libs/domain/src/sms/sms.ts)',
+      'missing outside-service push.sms.ro (libs/domain/src/sms/sms.ts)',
+      'missing outside-service after.sms.ro (libs/domain/src/sms/sms.ts)',
+      'missing outside-service next.sms.ro (libs/domain/src/sms/sms.ts)',
+    ]);
+  });
+
+  it('reports a listed host or client whose only mention moved into a comment as stale', () => {
+    put(
+      'libs/domain/src/mail/mail.module.ts',
+      [
+        "export const MAIL_QUEUE = 'mail';",
+        'const queue = new Queue(MAIL_QUEUE, { connection });',
+        "// const base = 'https://api.mailer.eu/v3';",
+      ].join('\n'),
+    );
+    put(
+      'libs/domain/src/storage/storage.ts',
+      '// this.s3 = new S3Client({ region });\n',
+    );
+    expect(checkInventory(root)).toEqual([
+      'stale outside-service mailer',
+      'stale outside-service s3',
+    ]);
+  });
+});
+
 describe('writeEndpointCount', () => {
   it('rewrites the endpoint count from the OpenAPI operations', () => {
     inventory(listed, 5);
