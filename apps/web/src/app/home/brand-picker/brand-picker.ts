@@ -1,5 +1,6 @@
 import {
   Component,
+  computed,
   type ElementRef,
   input,
   output,
@@ -30,6 +31,12 @@ export class BrandPicker {
   // The first time a person reaches for the picker, by any means.
   readonly touched = output<void>();
   private readonly tiles = viewChildren<ElementRef<HTMLButtonElement>>('tile');
+  // The group keeps one Tab stop even when the selection is not among the
+  // tiles: the first tile then takes it.
+  protected readonly stop = computed(() => {
+    const slugs = this.brands().map((brand) => brand.slug);
+    return slugs.includes(this.selected()) ? this.selected() : slugs[0];
+  });
 
   protected move(event: KeyboardEvent, index: number) {
     const step = STEP[event.key];

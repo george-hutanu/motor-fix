@@ -174,6 +174,7 @@ describe('Home', () => {
     await settle();
 
     expect(text()).toContain('version unknown');
+    expect(text()).toContain('PostgreSQL: unknown · Redis: unknown');
     expect(en.getAttribute('aria-pressed')).toBe('true');
   });
 });
