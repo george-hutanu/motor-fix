@@ -16,7 +16,7 @@
 // removed, 1 when not, 2 on bad arguments.
 
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, resolve, sep } from "node:path";
 import { isEntryPoint } from "./lib/entry.mjs";
 import { commit as specsCommit } from "./specs-repo.mjs";
@@ -128,6 +128,16 @@ export function removeWorktree(target, { admitNoPr = false, admitLiveLock = fals
     return `patch ${file}`;
   };
   const backup = {};
+  // The patches stage everything to diff it; each tree's index is put back as
+  // it was afterwards, so a refused removal leaves the tree as it found it.
+  const restores = [];
+  const keepIndex = (tree) => {
+    const at = run("git", ["-C", tree, "rev-parse", "--path-format=absolute", "--git-path", "index"]);
+    const file = at.code === 0 ? at.stdout.trim() : "";
+    if (!file) return;
+    const bytes = existsSync(file) ? readFileSync(file) : null;
+    restores.push(() => (bytes ? writeFileSync(file, bytes) : rmSync(file, { force: true })));
+  };
   try {
     const specs = join(path, "specs");
     if (!existsSync(specs) || readdirSync(specs).length === 0) backup.specs = "none";
@@ -143,18 +153,28 @@ export function removeWorktree(target, { admitNoPr = false, admitLiveLock = fals
       const pushed = onTrunk ? commitSpecs({ root: path, message: `chore(specs): backfill ${name} before removal` }) : { ok: false, error: "not on trunk" };
       if (pushed?.ok) backup.specs = pushed.committed || pushed.pushed ? "pushed" : "nothing to back up";
       else {
+        keepIndex(specs);
         const add = run("git", ["-C", specs, "add", "-A"]);
         const diff = add.code === 0 ? run("git", ["-C", specs, "diff", "--binary", "--cached", "origin/trunk"]) : add;
         if (diff.code !== 0) return no(`backup failed: specs: ${pushed?.error ?? "push failed"}; patch: ${why(diff)}`, { backup });
         backup.specs = diff.stdout ? save("specs", diff.stdout) : "nothing to back up";
       }
     }
+    keepIndex(path);
     const intent = run("git", ["-C", path, "add", "-A", "--intent-to-add"]);
     const product = intent.code === 0 ? run("git", ["-C", path, "diff", "--binary", "HEAD"]) : intent;
     if (product.code !== 0) return no(`backup failed: product: ${why(product)}`, { backup });
     backup.product = product.stdout ? save("product", product.stdout) : "clean";
   } catch (e) {
     return no(`backup failed: ${e.message}`, { backup });
+  } finally {
+    for (const restore of restores) {
+      try {
+        restore();
+      } catch {
+        // A stale index costs a `git reset`; it never turns a refusal into a throw.
+      }
+    }
   }
 
   // ---- the stack, then git ---------------------------------------------------

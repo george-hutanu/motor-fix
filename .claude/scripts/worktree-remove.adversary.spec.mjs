@@ -594,6 +594,7 @@ describe('uncommitted work is kept', () => {
 
   it('refuses without touching the worktree, branch or stack when the patch cannot be written', () => {
     dirty();
+    const staged = git(wt, 'status', '--porcelain');
     writeFileSync(join(main, '.work'), 'a file where a folder is needed\n');
     const f = fake();
     const o = options(f);
@@ -605,6 +606,7 @@ describe('uncommitted work is kept', () => {
     assert.equal(branchExists(), true);
     assert.equal(readFileSync(join(wt, 'untracked.txt'), 'utf8'), 'brand new\n');
     assert.equal(readFileSync(join(wt, 'a.txt'), 'utf8'), 'one\nedited\n');
+    assert.equal(git(wt, 'status', '--porcelain'), staged, 'the index changed');
   });
 
   it('leaves the tree dirty exactly as it was when the removal is refused after the backup step', () => {
@@ -697,6 +699,7 @@ describe('the specs clone', () => {
   it('refuses and keeps everything when both the push and the specs patch fail', () => {
     setupSpecs();
     writeFileSync(join(wt, 'specs', 'note.md'), 'precious untracked note\n');
+    const staged = git(join(wt, 'specs'), 'status', '--porcelain');
     writeFileSync(join(main, '.work'), 'blocker\n');
     const f = fake();
     const o = options(f);
@@ -706,6 +709,7 @@ describe('the specs clone', () => {
     assert.match(result.reason, /^backup failed/);
     assert.deepEqual(mutating(f.cmds()).filter((c) => !/ add /.test(c)), [], f.cmds().join('\n'));
     assert.equal(existsSync(join(wt, 'specs', 'note.md')), true);
+    assert.equal(git(join(wt, 'specs'), 'status', '--porcelain'), staged, 'the specs index changed');
     assert.equal(existsSync(wt), true);
     assert.equal(branchExists(), true);
   });
