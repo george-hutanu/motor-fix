@@ -40,7 +40,7 @@ const seeded = () =>
 afterAll(() => prisma.$disconnect());
 
 beforeEach(async () => {
-  await prisma.$executeRawUnsafe('TRUNCATE account, garage CASCADE');
+  await prisma.$executeRawUnsafe('TRUNCATE account, garage, brand CASCADE');
 });
 
 describe('seed', () => {
@@ -304,6 +304,26 @@ describe('seed of the listed garages', () => {
         new Date('2026-02-01T00:00:00Z').getTime(),
       );
     }
+  });
+
+  // ST-946: an earlier spec file can leave a brand behind under the same
+  // name; the seed must still link the listed garages to Dacia.
+  describe('after another spec left a brand named Dacia', () => {
+    beforeAll(async () => {
+      await prisma.$executeRawUnsafe('TRUNCATE brand CASCADE');
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO brand (id, key, name, slug, popularity, updated_at)
+         VALUES (gen_random_uuid(), 'dacia-left', 'Dacia', 'dacia-left', 1, now())`,
+      );
+    });
+
+    it('still lists three garages taking Dacia', async () => {
+      expect(seed('test').status).toBe(0);
+
+      expect(
+        dacia(await listed()).filter((s) => s === 'works_on'),
+      ).toHaveLength(3);
+    });
   });
 
   it('gives Dacia its catalogue slug and popularity before the API has loaded it', async () => {
