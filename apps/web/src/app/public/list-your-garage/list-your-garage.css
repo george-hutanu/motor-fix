@@ -191,3 +191,21 @@ ol li {
 .ended button {
   min-height: var(--mf-tap);
 }
+/* From 1024 px the preview card leaves the form for a third column of its own, and stays in view while the form scrolls. Placed after the six steps in the page, so on narrower screens its panel sits right above Save. The aside stays inside the form's markup for that order, so here it is laid over the third track the grid keeps empty for it, spanning the page's height for the sticky card to travel in. */
+@media (min-width: 1024px) {
+  .page {
+    position: relative;
+    grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr) 18rem;
+  }
+  aside {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 18rem;
+  }
+  aside mf-garage-preview {
+    position: sticky;
+    top: var(--mf-space-4);
+  }
+}

@@ -44,6 +44,7 @@ import { brandsOf } from '../brands-section';
 import { BrandsStep } from '../brands-step/brands-step';
 import { DetailsStep } from '../details-step/details-step';
 import { DraftKeeper } from '../draft/draft-keeper';
+import { GaragePreview } from '../garage-preview/garage-preview';
 import { hoursOf, mergeHours } from '../hours-section';
 import { HoursStep } from '../hours-step/hours-step';
 import { MechanicsStep } from '../mechanics-step/mechanics-step';
@@ -75,6 +76,7 @@ const STALL_MS = 3000;
   imports: [
     BrandsStep,
     DetailsStep,
+    GaragePreview,
     HlmButton,
     HlmInput,
     HoursStep,
@@ -144,6 +146,8 @@ export class ListYourGarage {
         : undefined;
     return isPlaceSection(place) ? place : {};
   });
+  // The brands in the order step 2 shows them, for the preview card.
+  protected readonly brandOrder = signal<string[]>([]);
   protected readonly takenBrands = computed(() =>
     this.brands().brands.filter((b) => b.stance === 'works_on'),
   );

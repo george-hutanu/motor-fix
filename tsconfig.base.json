@@ -54,6 +54,9 @@
       "@motor-fix/i18n/formats": ["./libs/i18n/src/formats.ts"],
       "@motor-fix/media": ["./libs/media/src/index.ts"],
       "@motor-fix/observability": ["./libs/observability/src/index.ts"],
+      "@motor-fix/observability/scrub": [
+        "./libs/observability/src/scrub/scrub.ts"
+      ],
       "@motor-fix/observability/testing": [
         "./libs/observability/src/testing/in-memory.ts"
       ],

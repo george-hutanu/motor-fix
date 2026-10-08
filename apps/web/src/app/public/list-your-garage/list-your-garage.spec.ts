@@ -1725,6 +1725,40 @@ describe('the details, prices and mechanics in the draft', () => {
     }
   });
 
+  const labourInputs = (page: HTMLElement) => [
+    ...page.querySelectorAll<HTMLInputElement>('mf-prices-step .labour input'),
+  ];
+  const preview = (page: HTMLElement) =>
+    page.querySelector('aside mf-garage-preview') as HTMLElement;
+
+  it('fills the preview card as the name and the labour range are typed', async () => {
+    const { harness, page } = await open('/ro/list-your-garage');
+
+    fillIn(harness, detailsField(page, 'name'), 'Service Popescu');
+    const [from, to] = labourInputs(page);
+    fillIn(harness, from, '150');
+    fillIn(harness, to, '250');
+
+    expect(text(preview(page).querySelector('.name'))).toBe('Service Popescu');
+    expect(text(preview(page).querySelector('.range'))).toBe('150–250 lei/oră');
+  });
+
+  it('shows the values of a kept copy on the preview card when the page opens', async () => {
+    seed({
+      data: {
+        steps: {
+          '1': COMPLETE_DETAILS,
+          '3': { labour: { fromBani: 10_000, toBani: 20_000 } },
+        },
+      },
+    });
+
+    const { page } = await open('/ro/list-your-garage');
+
+    expect(text(preview(page).querySelector('.name'))).toBe('Service Popescu');
+    expect(text(preview(page).querySelector('.range'))).toBe('100–200 lei/oră');
+  });
+
   it("keeps the mechanics as the draft's steps['4']", async () => {
     const { harness, page } = await open('/ro/list-your-garage');
     jest.useFakeTimers({ doNotFake: ['setImmediate'] });
