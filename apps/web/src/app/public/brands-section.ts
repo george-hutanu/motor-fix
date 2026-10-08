@@ -1,21 +1,16 @@
-export type Stance = 'works_on' | 'does_not_take';
+import {
+  type BrandsSection as DraftBrands,
+  FUELS,
+  type Fuel,
+  isBrandsSection,
+  type MarkedBrand,
+  type Stance,
+} from '@motor-fix/contracts/marked-brands';
 
-export interface MarkedBrand {
-  brandId: string;
-  name: string;
-  stance: Stance;
-}
+export type { Fuel, MarkedBrand, Stance };
 
-// Step 2 of the listing draft: only the brands the owner marked, and the two
-// optional texts, each absent when blank.
-export interface BrandsSection {
-  brands: MarkedBrand[];
-  brandNote?: string;
-  refusalPhrase?: string;
-}
-
-export const NOTE_MAX = 140;
-export const PHRASE_MAX = 60;
+// The step's own value always holds the list, even when nothing is marked.
+export type BrandsSection = DraftBrands & { brands: MarkedBrand[] };
 
 // Off, then taken, then refused, then off again.
 export function next(stance: Stance | undefined): Stance | undefined {
@@ -31,9 +26,33 @@ export function mark(
 ): MarkedBrand[] {
   if (!stance) return brands.filter((b) => b.brandId !== brand.id);
   const marked = { brandId: brand.id, name: brand.name, stance };
-  return brands.some((b) => b.brandId === brand.id)
-    ? brands.map((b) => (b.brandId === brand.id ? marked : b))
-    : [...brands, marked];
+  const held = brands.find((b) => b.brandId === brand.id);
+  if (!held) return [...brands, marked];
+  // Taken again keeps its fuels; refused drops them.
+  const kept =
+    stance === 'works_on' && held.stance === 'works_on' && held.fuels
+      ? { ...marked, fuels: held.fuels }
+      : marked;
+  return brands.map((b) => (b.brandId === brand.id ? kept : b));
+}
+
+// No fuels held means all four, as a draft kept before fuels existed reads.
+export const fuelsOf = (brand: MarkedBrand): Fuel[] =>
+  brand.fuels ? [...brand.fuels] : [...FUELS];
+
+export function toggleFuel(
+  brands: MarkedBrand[],
+  brandId: string,
+  fuel: Fuel,
+): MarkedBrand[] {
+  return brands.map((b) => {
+    if (b.brandId !== brandId) return b;
+    const held = fuelsOf(b);
+    const fuels = FUELS.filter((f) =>
+      f === fuel ? !held.includes(f) : held.includes(f),
+    );
+    return { ...b, fuels };
+  });
 }
 
 export function counts(brands: MarkedBrand[]) {
@@ -55,37 +74,17 @@ export function clean(text: string, max: number): string | undefined {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const isMarked = (value: unknown): value is MarkedBrand => {
-  if (!isRecord(value)) return false;
-  const { brandId, name, stance } = value;
-  return (
-    typeof brandId === 'string' &&
-    typeof name === 'string' &&
-    (stance === 'works_on' || stance === 'does_not_take')
-  );
-};
-
-const text = (value: unknown, max: number) =>
-  typeof value === 'string' ? clean(value, max) : undefined;
-
 const stepTwo = (data: unknown) => {
   if (!isRecord(data)) return undefined;
   const { steps } = data;
   return isRecord(steps) ? steps['2'] : undefined;
 };
 
-// Step 2 as the listing draft holds it (`steps['2']`); a kept copy not in
-// this shape opens with nothing marked rather than breaking the form.
+// Step 2 as the listing draft holds it (`steps['2']`), read through the
+// draft's own guard; a kept copy not in that shape opens with nothing marked
+// rather than breaking the form.
 export function brandsOf(data: unknown): BrandsSection {
   const section = stepTwo(data);
-  if (!isRecord(section)) return { brands: [] };
-  const { brands } = section;
-  if (!Array.isArray(brands) || !brands.every(isMarked)) return { brands: [] };
-  const brandNote = text(section['brandNote'], NOTE_MAX);
-  const refusalPhrase = text(section['refusalPhrase'], PHRASE_MAX);
-  return {
-    brands,
-    ...(brandNote && { brandNote }),
-    ...(refusalPhrase && { refusalPhrase }),
-  };
+  if (!isBrandsSection(section)) return { brands: [] };
+  return { ...section, brands: section.brands ?? [] };
 }

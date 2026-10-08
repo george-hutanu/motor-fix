@@ -129,6 +129,8 @@ export type { GarageInvitesControllerResend$Params as GarageInvitesControllerRes
 export { garageInvitesControllerResend as garageInvitesControllerResend } from './fn/garages/garage-invites-controller-resend';
 export type { GarageInvitesControllerRevoke$Params as GarageInvitesControllerRevoke$Params } from './fn/garages/garage-invites-controller-revoke';
 export { garageInvitesControllerRevoke as garageInvitesControllerRevoke } from './fn/garages/garage-invites-controller-revoke';
+export type { GarageSettingsControllerUpdate$Params as GarageSettingsControllerUpdate$Params } from './fn/garages/garage-settings-controller-update';
+export { garageSettingsControllerUpdate as garageSettingsControllerUpdate } from './fn/garages/garage-settings-controller-update';
 export type { PublicGaragesControllerBySlug$Params as PublicGaragesControllerBySlug$Params } from './fn/garages/public-garages-controller-by-slug';
 export { publicGaragesControllerBySlug as publicGaragesControllerBySlug } from './fn/garages/public-garages-controller-by-slug';
 export type { InvitesControllerCheck$Params as InvitesControllerCheck$Params } from './fn/invites/invites-controller-check';

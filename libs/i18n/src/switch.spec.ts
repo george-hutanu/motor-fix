@@ -56,17 +56,6 @@ describe('LanguageSwitch', () => {
     expect(TestBed.inject(I18n).language()).toBe('ro');
   });
 
-  it('sets its buttons in Cockpit body type on the 4 px grid, not the browser default', () => {
-    // The test build drops component styles, so read them from the source.
-    const css = readFileSync(join(__dirname, 'switch.ts'), 'utf8').replace(
-      /\s+/g,
-      ' ',
-    );
-
-    expect(css).toMatch(/button[^{]*\{[^}]*font-size: var\(--mf-size-body\)/);
-    expect(css).toMatch(/button[^{]*\{[^}]*padding: 0 8px/);
-  });
-
   it('switches to English in place, and back to Romanian', async () => {
     const { button, element, fixture } = render();
 
@@ -254,5 +243,16 @@ describe('LanguageChoice.taps', () => {
 
     expect(TestBed.inject(I18n).language()).toBe('en');
     expect(localStorage.getItem('mf.lang')).toBe('en');
+  });
+});
+
+describe('the language switch buttons', () => {
+  const source = readFileSync(join(__dirname, 'switch.ts'), 'utf8');
+
+  it('read at the page size, not the browser button size, on the 4 px grid', () => {
+    expect(source).toMatch(
+      /button \{[^}]*font: inherit;[^}]*font-size: var\(--mf-size-body, 16px\);/,
+    );
+    expect(source).toMatch(/button \{[^}]*padding: 4px 8px;/);
   });
 });

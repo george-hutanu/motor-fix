@@ -36,7 +36,7 @@ a {
   gap: 4px;
   min-height: 52px;
   color: var(--mf-text-secondary);
-  font-size: var(--mf-size-label);
+  font-size: var(--mf-size-body);
   font-weight: 700;
   text-align: center;
   text-decoration: none;
