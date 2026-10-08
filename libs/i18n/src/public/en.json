@@ -31,7 +31,7 @@
     "hero": {
       "headline": "Who works on {brand}, near you",
       "label": "Garages for {brand}",
-      "paragraph": "Pick the brand and see how many garages take it."
+      "paragraph": "Pick the brand and see how many garages take it. The search is by brand; the model, year and fuel go into the quote request."
     },
     "picker": "Car brand",
     "retry": "Try again",

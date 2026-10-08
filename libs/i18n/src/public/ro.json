@@ -32,7 +32,7 @@
     "hero": {
       "headline": "Cine lucrează pe {brand}, aproape de tine",
       "label": "Service‑uri pentru {brand}",
-      "paragraph": "Alege marca și vezi câte service‑uri o primesc."
+      "paragraph": "Alege marca și vezi câte service‑uri o primesc. Căutarea este pe marcă; modelul, anul și combustibilul intră în cererea de ofertă."
     },
     "picker": "Marca mașinii",
     "retry": "Reîncearcă",

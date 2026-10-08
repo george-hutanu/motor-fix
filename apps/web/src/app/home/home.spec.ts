@@ -194,6 +194,9 @@ describe('Home brand picker', () => {
     expect(text()).toContain('Service‑uri pentru Dacia');
     expect(text()).toContain('Cine lucrează pe Dacia, aproape de tine');
     expect(text()).toContain('Alege marca și vezi câte service‑uri o primesc.');
+    expect(text()).toContain(
+      'Căutarea este pe marcă; modelul, anul și combustibilul intră în cererea de ofertă.',
+    );
   });
 
   it('keeps an empty, named place for the car after the picker', async () => {
