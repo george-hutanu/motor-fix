@@ -31,7 +31,6 @@ import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { BrandPicker } from './brand-picker/brand-picker';
 import { BrandSearch } from './brand-picker/brand-search/brand-search';
-import { PlaceDialog } from './place/place-dialog/place-dialog';
 import { type Place, PlaceStore } from './place/place-store';
 import { Session } from '../dashboard/session';
 
@@ -166,6 +165,8 @@ export class Home {
   }
 
   protected async pickPlace() {
+    // Loaded on the first tap: the dialog stays out of the initial bundle.
+    const { PlaceDialog } = await import('./place/place-dialog/place-dialog');
     const place = await this.overlays.open<Place>(PlaceDialog, {
       confirmDiscard: false,
       shape: 'dialog',
