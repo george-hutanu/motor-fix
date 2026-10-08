@@ -27,6 +27,7 @@ export { GarageMechanicsService } from './garages/mechanics/garage-mechanics.ser
 export { GaragePhotosService } from './garages/photos/garage-photos.service';
 export { ListingPhotosModule } from './garages/photos/listing-photos.module';
 export { ListingPhotosWorkerModule } from './garages/photos/listing-photos.worker';
+export { GaragePlaceService } from './garages/place/garage-place.service';
 export { GaragePricesService } from './garages/prices/garage-prices.service';
 export { publicGarages } from './garages/public-garages';
 export {
@@ -44,6 +45,7 @@ export { NotificationsModule } from './notifications/notifications.module';
 export { NotificationsService } from './notifications/notifications.service';
 export { phoneConfig } from './notifications/phone-config';
 export { pushConfig } from './notifications/push-config';
+export { PlacesModule, placesConfig } from './places/places.module';
 export { SearchModule } from './search/search.module';
 export * from './storage/storage.module';
 export { type SignedUpload, StorageService } from './storage/storage.service';
