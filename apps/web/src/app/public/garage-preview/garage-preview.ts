@@ -14,7 +14,7 @@ import { AsWritten, TranslatePipe } from '@motor-fix/i18n';
 import { Lamp } from '@motor-fix/ui-cockpit';
 
 import { previewCard } from './preview-card';
-import { BrandVerdict } from '../brand-verdict';
+import { BrandVerdict } from '../brand-verdict/brand-verdict';
 import type { BrandsSection } from '../brands-section';
 
 let panels = 0;

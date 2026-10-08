@@ -12,9 +12,9 @@ import { AccountsService } from './accounts.service';
 import { Attempts } from './attempts';
 import { isCommonPassword } from './common-passwords';
 import { consentRequired, isCurrentConsent } from './consent';
-import { EmailConfirmationService } from './email-confirmation.service';
+import { EmailConfirmationService } from './email-confirmation/email-confirmation.service';
 import { MAINTENANCE, type Maintenance } from './maintenance';
-import { hashPassword } from './password';
+import { hashPassword } from './password/password';
 import { type Issued, SignInService } from './sign-in.service';
 import { Prisma } from '../generated/prisma/client';
 

@@ -1,5 +1,5 @@
 // The api counts sign-ups (libs/domain/src/auth/attempts.ts) and listing
-// drafts created (libs/domain/src/garages/listing-drafts.throttle.ts) per
+// drafts created (libs/domain/src/garages/listing-drafts/listing-drafts.throttle.ts) per
 // address for an hour, 10 a client each, and the suite does both several times
 // a run, so a second local run within the hour would be refused. A local run
 // clears those counts first (global-setup.ts); CI starts a fresh Redis each run.

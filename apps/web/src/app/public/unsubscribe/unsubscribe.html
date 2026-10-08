@@ -1,0 +1,21 @@
+<section [attr.aria-busy]="state() === 'stopping'">
+  @switch (state()) {
+    @case ('stopping') {
+      <h1>{{ 'public.unsubscribe.stopping' | t }}</h1>
+    }
+    @case ('stopped') {
+      <h1>{{ 'public.unsubscribe.stopped' | t }}</h1>
+      <p>{{ 'public.unsubscribe.stoppedLine' | t }}</p>
+      <a hlmBtn variant="secondary" [routerLink]="['/', i18n.language()]">{{ 'public.unsubscribe.home' | t }}</a>
+    }
+    @case ('invalid') {
+      <h1>{{ 'public.unsubscribe.invalid' | t }}</h1>
+      <p>{{ 'public.unsubscribe.invalidLine' | t }}</p>
+      <a hlmBtn variant="secondary" [routerLink]="['/', i18n.language()]">{{ 'public.unsubscribe.home' | t }}</a>
+    }
+    @case ('error') {
+      <h1>{{ 'public.unsubscribe.error' | t }}</h1>
+      <button hlmBtn type="button" (click)="stop()">{{ 'public.unsubscribe.retry' | t }}</button>
+    }
+  }
+</section>

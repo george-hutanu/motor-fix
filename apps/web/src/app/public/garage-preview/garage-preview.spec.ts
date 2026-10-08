@@ -12,7 +12,7 @@ import type {
 import { I18n } from '@motor-fix/i18n';
 
 import { GaragePreview } from './garage-preview';
-import { BrandVerdict } from '../brand-verdict';
+import { BrandVerdict } from '../brand-verdict/brand-verdict';
 import type { BrandsSection, MarkedBrand } from '../brands-section';
 
 const BMW = 'b-bmw';

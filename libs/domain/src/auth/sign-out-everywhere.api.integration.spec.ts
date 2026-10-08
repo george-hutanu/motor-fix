@@ -8,7 +8,7 @@ import request from 'supertest';
 import { AccountsService } from './accounts.service';
 import { AuthModule } from './auth.module';
 import type { Role } from './capabilities';
-import * as password from './password';
+import * as password from './password/password';
 import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';
 import { SignInService } from './sign-in.service';

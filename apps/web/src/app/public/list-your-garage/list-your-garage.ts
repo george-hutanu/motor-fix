@@ -38,12 +38,12 @@ import { HlmButton, HlmInput, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { brandsOf } from '../brands-section';
-import { BrandsStep } from '../brands-step';
+import { BrandsStep } from '../brands-step/brands-step';
 import { DetailsStep } from '../details-step/details-step';
-import { DraftKeeper } from '../draft-keeper';
+import { DraftKeeper } from '../draft/draft-keeper';
 import { GaragePreview } from '../garage-preview/garage-preview';
 import { hoursOf, mergeHours } from '../hours-section';
-import { HoursStep } from '../hours-step';
+import { HoursStep } from '../hours-step/hours-step';
 import { MechanicsStep } from '../mechanics-step/mechanics-step';
 import { PhotosStep } from '../photos-step/photos-step';
 import { PlaceStep } from '../place-step/place-step';

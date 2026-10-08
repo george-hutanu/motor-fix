@@ -6,7 +6,7 @@ import type {
 } from '@motor-fix/contracts/listing-sections';
 
 import { initials } from '../../dashboard/initials';
-import { type BrandAnswer, written } from '../brand-verdict';
+import { type BrandAnswer, written } from '../brand-verdict/brand-verdict';
 import type { BrandsSection, MarkedBrand } from '../brands-section';
 
 // The service area a mobile mechanic is shown with until the form asks for one.

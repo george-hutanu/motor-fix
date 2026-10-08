@@ -121,6 +121,26 @@ describe('config-protection — the traceability baseline', () => {
   });
 });
 
+describe('config-protection — the structure baseline', () => {
+  const rel = 'scripts/structure-baseline.json';
+  const base = (submodules, components) => JSON.stringify({ _comment: 'shrink only', submodules, components });
+
+  it('counts the entries of both lists', () => {
+    assert.equal(baselineSize(base(['a.ts'], ['b.ts', 'c.ts']), ['submodules', 'components']), 3);
+  });
+
+  it('blocks growing it', () => {
+    const why = judge({ rel, current: base(['a.ts'], []), next: base(['a.ts'], ['b.ts']) });
+    assert.match(why, /structure baseline/);
+    assert.match(why, /1 → 2/);
+  });
+
+  it('allows shrinking or keeping it', () => {
+    assert.equal(judge({ rel, current: base(['a.ts', 'b.ts'], []), next: base(['a.ts'], []) }), null);
+    assert.equal(judge({ rel, current: base(['a.ts'], ['b.ts']), next: base(['a.ts'], ['c.ts']) }), null);
+  });
+});
+
 describe('config-protection — requirement tokens', () => {
   it('finds every feature-qualified token', () => {
     const text = `[${fake('001', '002')}] and [${fake('012', '134')}]`;
