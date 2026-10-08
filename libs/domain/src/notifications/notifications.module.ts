@@ -229,7 +229,6 @@ export class NotificationsModule implements OnApplicationShutdown {
               },
             );
             observeWorker(worker);
-            logFinalFailure(worker, new Logger('News'));
             return worker;
           },
         },

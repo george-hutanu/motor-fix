@@ -37,14 +37,20 @@ export function observeWorker(worker: Worker): void {
   worker.on('completed', (job: Job) => record(job, 'completed'));
   worker.on('failed', (job: Job | undefined, error: Error) => {
     if (!job) return;
-    const final =
-      error.name === 'UnrecoverableError' ||
-      job.attemptsMade >= (job.opts.attempts ?? 1);
+    const final = isFinalFailure(job, error);
     record(job, final ? 'failed' : 'retried');
     const span = trace.getActiveSpan();
     span?.recordException(error);
     if (final) span?.setStatus({ code: SpanStatusCode.ERROR });
   });
+}
+
+// A job has failed for good on its last attempt or an UnrecoverableError.
+export function isFinalFailure(job: Job, error: Error): boolean {
+  return (
+    error.name === 'UnrecoverableError' ||
+    job.attemptsMade >= (job.opts.attempts ?? 1)
+  );
 }
 
 // Reads the queue's waiting and failed counts and the age of its oldest

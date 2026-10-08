@@ -6,8 +6,8 @@ import type { Sampler } from '@opentelemetry/sdk-trace-node';
 // request or job started (queue polling, background queries) are dropped.
 // A caller's trace context is continued but sampled by our own ratio; a job
 // is sampled by the same ratio over the same trace id, so it keeps its
-// request's decision; child spans follow
-// their parent.
+// request's decision while api and worker share TRACE_SAMPLE_RATIO;
+// child spans follow their parent.
 export function sampler(ratio: number): Sampler {
   const { SamplingDecision, TraceIdRatioBasedSampler } =
     require('@opentelemetry/sdk-trace-node') as typeof import('@opentelemetry/sdk-trace-node');
