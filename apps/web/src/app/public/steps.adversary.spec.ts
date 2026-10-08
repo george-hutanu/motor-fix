@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { currentStep } from './steps';
+import { currentStep, jumpTarget } from './steps';
 
 const catalogue = (language: string) =>
   JSON.parse(
@@ -35,5 +35,36 @@ describe('the listing texts', () => {
 
     expect(bar).toContain('{n}');
     expect(bar).toContain('{label}');
+  });
+});
+
+describe('the target of a jump', () => {
+  it('is the heading top short of its margin, from the current position', () => {
+    expect(jumpTarget(500, 80, 1000, 8000, 800)).toBe(1420);
+  });
+
+  it('never goes above the top of the page', () => {
+    expect(jumpTarget(-5000, 0, 100, 8000, 800)).toBe(0);
+    expect(jumpTarget(10, 500, 0, 8000, 800)).toBe(0);
+  });
+
+  it('stops at the end of the scroll range, exactly and one past it', () => {
+    expect(jumpTarget(7200, 0, 0, 8000, 800)).toBe(7200);
+    expect(jumpTarget(7201, 0, 0, 8000, 800)).toBe(7200);
+    expect(jumpTarget(7199, 0, 0, 8000, 800)).toBe(7199);
+  });
+
+  it('is zero on a page no taller than the window', () => {
+    expect(jumpTarget(300, 0, 0, 600, 800)).toBe(0);
+    expect(jumpTarget(300, 0, 0, 800, 800)).toBe(0);
+    expect(jumpTarget(0, 0, 0, 0, 0)).toBe(0);
+  });
+
+  it('is the current position for a heading exactly at the line', () => {
+    expect(jumpTarget(80, 80, 1234, 8000, 800)).toBe(1234);
+  });
+
+  it('keeps a fractional position without rounding it', () => {
+    expect(jumpTarget(0.5, 0, 10.25, 8000, 800)).toBe(10.75);
   });
 });
