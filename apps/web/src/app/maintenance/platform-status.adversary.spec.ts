@@ -21,7 +21,7 @@ function stream() {
   };
 }
 
-function setUp() {
+async function setUp() {
   const pending: {
     resolve: (a: Answer) => void;
     reject: (e: Error) => void;
@@ -48,6 +48,8 @@ function setUp() {
     ],
   });
   const platformStatus = TestBed.inject(PlatformStatus);
+  // The streams are wired once their code has loaded.
+  await platformStatus.listening;
   TestBed.tick();
   return { current, live, pending, platformStatus, publicLive, status };
 }
@@ -62,8 +64,8 @@ const account = (roles: unknown) => ({ roles }) as unknown as MeDto;
 afterEach(() => TestBed.resetTestingModule());
 
 describe('PlatformStatus under hostile input', () => {
-  it('starts with maintenance off and the page hidden before any answer', () => {
-    const { platformStatus } = setUp();
+  it('starts with maintenance off and the page hidden before any answer', async () => {
+    const { platformStatus } = await setUp();
 
     expect(platformStatus.maintenance()).toBe(false);
     expect(platformStatus.showPage()).toBe(false);
@@ -79,7 +81,7 @@ describe('PlatformStatus under hostile input', () => {
     ['the number 1', { maintenance: 1 }],
     ['a null flag', { maintenance: null }],
   ])('does not switch the page on for %s', async (_title, body) => {
-    const { pending, platformStatus } = setUp();
+    const { pending, platformStatus } = await setUp();
 
     const done = platformStatus.read();
     pending[0]?.resolve(body);
@@ -89,7 +91,7 @@ describe('PlatformStatus under hostile input', () => {
   });
 
   it('never rejects when the read fails', async () => {
-    const { pending, platformStatus } = setUp();
+    const { pending, platformStatus } = await setUp();
 
     const done = platformStatus.read();
     pending[0]?.reject(new Error('offline'));
@@ -99,7 +101,7 @@ describe('PlatformStatus under hostile input', () => {
   });
 
   it('ends on the last answer after two hundred events answered in reverse order', async () => {
-    const { live, pending, platformStatus } = setUp();
+    const { live, pending, platformStatus } = await setUp();
     for (let i = 0; i < 200; i++) {
       live.events.next(message('platform_rule.changed', 'maintenance_mode'));
     }
@@ -116,7 +118,7 @@ describe('PlatformStatus under hostile input', () => {
   });
 
   it('answers the last read when a call refused for maintenance arrives after a read of off', async () => {
-    const { pending, platformStatus } = setUp();
+    const { pending, platformStatus } = await setUp();
     const done = platformStatus.read();
     pending[0]?.resolve({ maintenance: false });
     await done;
@@ -127,7 +129,7 @@ describe('PlatformStatus under hostile input', () => {
   });
 
   it('lets a read begun after a refusal turn maintenance off again', async () => {
-    const { pending, platformStatus } = setUp();
+    const { pending, platformStatus } = await setUp();
     platformStatus.on();
 
     const done = platformStatus.read();
@@ -137,8 +139,8 @@ describe('PlatformStatus under hostile input', () => {
     expect(platformStatus.maintenance()).toBe(false);
   });
 
-  it('is unchanged by being told twice that a call was refused', () => {
-    const { platformStatus } = setUp();
+  it('is unchanged by being told twice that a call was refused', async () => {
+    const { platformStatus } = await setUp();
 
     platformStatus.on();
     platformStatus.on();
@@ -156,7 +158,7 @@ describe('PlatformStatus under hostile input', () => {
     ['a rule id with a suffix', 'platform_rule.changed', 'maintenance_mode_2'],
     ['an empty id', 'platform_rule.changed', ''],
   ])('ignores %s', async (_title, kind, id) => {
-    const { live, publicLive, status } = setUp();
+    const { live, publicLive, status } = await setUp();
 
     live.events.next(message(kind, id));
     publicLive.events.next(message(kind, id));
@@ -166,7 +168,7 @@ describe('PlatformStatus under hostile input', () => {
   });
 
   it('keeps listening after a read failed on an event', async () => {
-    const { live, pending, platformStatus } = setUp();
+    const { live, pending, platformStatus } = await setUp();
     live.events.next(message('platform_rule.changed', 'maintenance_mode'));
     pending[0]?.reject(new Error('boom'));
     await settle();
@@ -185,8 +187,8 @@ describe('PlatformStatus under hostile input', () => {
     ['a role named in capitals', ['ADMIN']],
     ['a role with a trailing space', ['admin ']],
     ['a look-alike role', ['administrator']],
-  ])('shows the page to an account with %s', (_title, roles) => {
-    const { current, platformStatus } = setUp();
+  ])('shows the page to an account with %s', async (_title, roles) => {
+    const { current, platformStatus } = await setUp();
     current.set(account(roles));
 
     platformStatus.on();
@@ -195,8 +197,8 @@ describe('PlatformStatus under hostile input', () => {
     expect(platformStatus.showPage()).toBe(true);
   });
 
-  it('follows the session from admin to signed out while maintenance is on', () => {
-    const { current, platformStatus } = setUp();
+  it('follows the session from admin to signed out while maintenance is on', async () => {
+    const { current, platformStatus } = await setUp();
     platformStatus.on();
     current.set(account(['admin']));
     expect(platformStatus.showPage()).toBe(false);
@@ -206,8 +208,8 @@ describe('PlatformStatus under hostile input', () => {
     expect(platformStatus.showPage()).toBe(true);
   });
 
-  it('follows the session from signed out to admin while maintenance is on', () => {
-    const { current, platformStatus } = setUp();
+  it('follows the session from signed out to admin while maintenance is on', async () => {
+    const { current, platformStatus } = await setUp();
     platformStatus.on();
     expect(platformStatus.showPage()).toBe(true);
 
@@ -216,8 +218,8 @@ describe('PlatformStatus under hostile input', () => {
     expect(platformStatus.showPage()).toBe(false);
   });
 
-  it('hides the page from an account that holds admin among many roles', () => {
-    const { current, platformStatus } = setUp();
+  it('hides the page from an account that holds admin among many roles', async () => {
+    const { current, platformStatus } = await setUp();
     platformStatus.on();
 
     current.set(account(['driver', 'garage', 'receptionist', 'admin']));

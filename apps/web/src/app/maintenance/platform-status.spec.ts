@@ -21,7 +21,7 @@ function fakeStream() {
   };
 }
 
-function setUp({ platform = 'browser', answers = [] as Answer[] } = {}) {
+async function setUp({ platform = 'browser', answers = [] as Answer[] } = {}) {
   const pending: ((answer: Answer) => void)[] = [];
   const status = jest.fn(
     () =>
@@ -53,6 +53,8 @@ function setUp({ platform = 'browser', answers = [] as Answer[] } = {}) {
     ],
   });
   const platformStatus = TestBed.inject(PlatformStatus);
+  // The streams are wired once their code has loaded.
+  await platformStatus.listening;
   TestBed.tick();
   return {
     answer: (answer: Answer) => pending.shift()?.(answer),
@@ -84,7 +86,9 @@ afterEach(() => {
 
 describe('PlatformStatus', () => {
   it('reads whether maintenance is on', async () => {
-    const { platformStatus } = setUp({ answers: [{ maintenance: true }] });
+    const { platformStatus } = await setUp({
+      answers: [{ maintenance: true }],
+    });
 
     await platformStatus.read();
 
@@ -92,7 +96,7 @@ describe('PlatformStatus', () => {
   });
 
   it('keeps what it knew when the read fails', async () => {
-    const { platformStatus } = setUp({
+    const { platformStatus } = await setUp({
       answers: [{ maintenance: true }, new Error('offline')],
     });
     await platformStatus.read();
@@ -102,8 +106,8 @@ describe('PlatformStatus', () => {
     expect(platformStatus.maintenance()).toBe(true);
   });
 
-  it('turns maintenance on when told a call was refused for it', () => {
-    const { platformStatus } = setUp();
+  it('turns maintenance on when told a call was refused for it', async () => {
+    const { platformStatus } = await setUp();
 
     platformStatus.on();
 
@@ -117,8 +121,8 @@ describe('PlatformStatus', () => {
     ['an admin', ['driver', 'admin'], false],
   ] as const)(
     'shows the page to %s while maintenance is on',
-    (_who, roles, shown) => {
-      const { current, platformStatus } = setUp();
+    async (_who, roles, shown) => {
+      const { current, platformStatus } = await setUp();
       current.set(roles ? account([...roles]) : null);
 
       platformStatus.on();
@@ -128,8 +132,8 @@ describe('PlatformStatus', () => {
     },
   );
 
-  it('shows the page to nobody while maintenance is off', () => {
-    const { platformStatus } = setUp();
+  it('shows the page to nobody while maintenance is off', async () => {
+    const { platformStatus } = await setUp();
 
     expect(platformStatus.showPage()).toBe(false);
   });
@@ -137,7 +141,7 @@ describe('PlatformStatus', () => {
   it.each(['live', 'publicLive'] as const)(
     're-reads the status when the rule changes on the %s stream',
     async (stream) => {
-      const fakes = setUp({ answers: [{ maintenance: true }] });
+      const fakes = await setUp({ answers: [{ maintenance: true }] });
 
       fakes[stream].events.next(changed('maintenance_mode'));
       await settle();
@@ -148,7 +152,7 @@ describe('PlatformStatus', () => {
   );
 
   it('ignores a change of another rule', async () => {
-    const { live, status } = setUp();
+    const { live, status } = await setUp();
 
     live.events.next(changed('lead_fee'));
     await settle();
@@ -159,7 +163,7 @@ describe('PlatformStatus', () => {
   it.each(['live', 'publicLive'] as const)(
     're-reads the status when the %s stream opens again',
     async (stream) => {
-      const fakes = setUp({ answers: [{ maintenance: true }] });
+      const fakes = await setUp({ answers: [{ maintenance: true }] });
 
       fakes[stream].resync.next();
       await settle();
@@ -170,7 +174,7 @@ describe('PlatformStatus', () => {
   );
 
   it('ends in the last answer when a quick on and off cross on the way', async () => {
-    const { answer, live, platformStatus } = setUp();
+    const { answer, live, platformStatus } = await setUp();
 
     live.events.next(changed('maintenance_mode'));
     live.events.next(changed('maintenance_mode'));
@@ -183,7 +187,7 @@ describe('PlatformStatus', () => {
   });
 
   it('acts on the newest read even when an older one answers last', async () => {
-    const { live, pending, platformStatus } = setUp();
+    const { live, pending, platformStatus } = await setUp();
     live.events.next(changed('maintenance_mode'));
     live.events.next(changed('maintenance_mode'));
 
@@ -197,7 +201,7 @@ describe('PlatformStatus', () => {
 
   it('holds the public stream, once the page has settled, while the signed-in stream is closed', async () => {
     jest.useFakeTimers();
-    const { leave, live, publicLive } = setUp();
+    const { leave, live, publicLive } = await setUp();
     await TestBed.inject(ApplicationRef).whenStable();
     await jest.advanceTimersByTimeAsync(1_000);
     TestBed.tick();
@@ -229,7 +233,7 @@ describe('PlatformStatus', () => {
       observe() {}
     } as unknown as typeof PerformanceObserver;
     try {
-      const { publicLive } = setUp();
+      const { publicLive } = await setUp();
       await TestBed.inject(ApplicationRef).whenStable();
       await jest.advanceTimersByTimeAsync(1_500);
       // A map still fetching its tiles: a download ends.
@@ -247,7 +251,7 @@ describe('PlatformStatus', () => {
   });
 
   it('keeps a call refused for maintenance over an older read that answers later', async () => {
-    const { pending, live, platformStatus } = setUp();
+    const { pending, live, platformStatus } = await setUp();
     live.events.next(changed('maintenance_mode'));
 
     platformStatus.on();
@@ -258,7 +262,7 @@ describe('PlatformStatus', () => {
   });
 
   it('opens no stream and listens to nothing on the server', async () => {
-    const { live, publicLive, status } = setUp({ platform: 'server' });
+    const { live, publicLive, status } = await setUp({ platform: 'server' });
 
     live.events.next(changed('maintenance_mode'));
     await settle();
