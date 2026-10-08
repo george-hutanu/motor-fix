@@ -30,6 +30,7 @@ export class HomeQueryDto {
     example: '44.43,26.10',
   })
   @IsOptional()
+  // IsLatLong alone takes a third number after the second comma.
   @Matches(/^[^,]+,[^,]+$/)
   @IsLatLong()
   near?: string;

@@ -101,6 +101,13 @@ describe('GET /brands/popular', () => {
     expect(res.headers['cache-control']).toBe('public, max-age=60');
   });
 
+  it('never lets a refusal be cached publicly', async () => {
+    const res = await popular({ limit: '0' });
+
+    expect(res.status).toBe(400);
+    expect(res.headers['cache-control']).not.toBe('public, max-age=60');
+  });
+
   it('leaves out retired brands and puts unranked ones last, by name', async () => {
     await brands([
       ['Zastava', null],

@@ -1,11 +1,12 @@
 import { HomeDto, HomeQueryDto } from '@motor-fix/contracts';
-import { Controller, Get, Header, Query } from '@nestjs/common';
+import { Controller, Get, Query, Res } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Response } from 'express';
 
 import { HomeService } from './home.service';
 import { Public } from '../../auth/actor.guard';
@@ -17,7 +18,6 @@ export class HomeController {
 
   @Get()
   @Public()
-  @Header('Cache-Control', 'public, max-age=60')
   @ApiOkResponse({ type: HomeDto })
   @ApiBadRequestResponse({
     description:
@@ -26,7 +26,12 @@ export class HomeController {
   @ApiNotFoundResponse({
     description: 'not_found: no active brand with that slug',
   })
-  forBrand(@Query() query: HomeQueryDto): Promise<HomeDto> {
-    return this.home.forBrand(query.brand);
+  async forBrand(
+    @Query() query: HomeQueryDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<HomeDto> {
+    const home = await this.home.forBrand(query.brand);
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    return home;
   }
 }

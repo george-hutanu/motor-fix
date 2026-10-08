@@ -1,6 +1,7 @@
 import { BrandDto, PopularBrandsQueryDto } from '@motor-fix/contracts';
-import { Controller, Get, Header, Query } from '@nestjs/common';
+import { Controller, Get, Query, Res } from '@nestjs/common';
 import { ApiBadRequestResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 
 import { PopularBrandsService } from './popular-brands.service';
 import { Public } from '../../auth/actor.guard';
@@ -12,7 +13,6 @@ export class PopularBrandsController {
 
   @Get('popular')
   @Public()
-  @Header('Cache-Control', 'public, max-age=60')
   @ApiOkResponse({
     description: 'Active brands by popularity, unranked last, then by name',
     type: [BrandDto],
@@ -20,7 +20,12 @@ export class PopularBrandsController {
   @ApiBadRequestResponse({
     description: 'validation_failed: limit is not a whole number from 1 to 12',
   })
-  tiles(@Query() query: PopularBrandsQueryDto): Promise<BrandDto[]> {
-    return this.popular.tiles(query.limit);
+  async tiles(
+    @Query() query: PopularBrandsQueryDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<BrandDto[]> {
+    const tiles = await this.popular.tiles(query.limit);
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    return tiles;
   }
 }
