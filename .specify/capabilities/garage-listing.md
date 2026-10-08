@@ -8,6 +8,7 @@ features:
   - 205-company-rar-check
   - 112-opening-hours
   - 354-job-catalogue-prices
+  - 109-garage-details-prices
   - 861-jump-holds-step
 ---
 
@@ -297,17 +298,17 @@ _From 354-job-catalogue-prices._
 
 _From 354-job-catalogue-prices._
 
-### 354-FR-008 — The `garages` module MUST provide one write that saves a garage's starting prices inside a transaction the caller owns, taking the garage, the actor (the owner account created in that transaction) and the step-3 payload: the labour range (both ends required: a missing end is refused with code `required` before the range check runs; the range check, `wide_range` included, applies to it) and a list of jobs, each with a catalogue job id, an optional brand id, from, optional to and optional duration. It MUST write the labour range on the garage and one price row per job in payload order with `visible = true`, `position` 0, 1, 2…, `updated_at` now and `updated_by` the actor; a job with no top is stored with `to_bani` empty and `visible = true` (the public rule, ST-357, hides it on read; this story stores no "hidden" mark for it).
+### 109-FR-015 — (Replaces 354-FR-008.) The `garages` module MUST provide one write that saves a garage's starting prices inside a transaction the caller owns (the existing one, `libs/domain/src/garages/prices/garage-prices.service.ts:67`, extended, never a second), taking the garage, the actor (the owner account created in that transaction) and the step-3 payload: the labour range (both ends required: a missing end, start or top, is refused with code `required` before the range check runs; the range check, `wide_range` included, applies to it) and the flat list of FR-010, each entry with either a catalogue job id or a proposed job name (2–80 characters), an optional brand id, from and optional to. The job's duration is not taken here (it is set in the price list editor, MF-57); the stored row's `duration_minutes` stays empty. For each proposed job, in the same transaction and before its price rows, it MUST create a catalogue job with `status = pending`, `name_ro` and `name_en` both the typed name, a unique key derived from the name (as the slug of FR-013) and `proposed_by_garage_id` the garage. It MUST write the labour range on the garage and one price row per job in payload order with `visible = true`, `position` 0, 1, 2…, `updated_at` now and `updated_by` the actor; a job with no top is stored with `to_bani` empty and `visible = true` (the public rule, ST-357, hides it on read; no "hidden" mark is stored).
 
-_From 354-job-catalogue-prices._
+_From 109-garage-details-prices._
 
-### 354-FR-009 — The write MUST check every range with FR-006 and refuse the whole payload on any error, the duplicate `(job, brand)` pair within the payload, a brand range whose job has no default range in the payload, an unknown job, a job that is not `approved`, or an unknown brand, each as a field error naming the row; it MUST write nothing when it refuses, and because it runs in the caller's transaction, a caller that fails afterwards MUST leave no price row, labour range or audit entry behind, the listing draft untouched.
+### 109-FR-016 — (Replaces 354-FR-009.) The write MUST check every range with 354-FR-006 and refuse the whole payload, each refusal a field error naming the row, on: any range error; more than 50 entries without a brand or more than 500 entries in all (`too_many` on `jobs`); the duplicate `(job, brand)` pair within the payload; a brand range whose job has no default range in the payload; an unknown job; a job that is not `approved` unless it is proposed in this payload; an unknown brand; a brand the garage does not take (no `works_on` garage-brand row at save time, `not_taken` on `brandId`, so the sending story saves the brands before the prices); a proposed job name shorter than 2 or longer than 80 characters after trimming (`length` on `name`) or repeated within the payload, accents and case ignored (`duplicate` on `name`). A database refusal on the price unique index (two saves racing for one garage) MUST be answered as the same 422 refusal with `duplicate` on the row, never as a server error. It MUST write nothing when it refuses, and because it runs in the caller's transaction, a caller that fails afterwards MUST leave no price row, labour range, proposed job, event or audit entry behind, the listing draft untouched.
 
-_From 354-job-catalogue-prices._
+_From 109-garage-details-prices._
 
-### 354-FR-010 — In the same transaction the write MUST record the starting values once in the audit history through the existing audit writer: one `create` entry per price row (subject type `garage_price`, the row's values as the new value, the garage id as scope) and one `update` entry per labour field on the garage from null to the value (subject type `garage`, fields `labour_from_bani`, `labour_to_bani`, through `recordChanges`), actor the owner. The write MUST emit no event and notify nobody: the garage is not public yet.
+### 109-FR-017 — (Replaces 354-FR-010.) In the same transaction the write MUST record the starting values once in the audit history through the existing audit writer: one `create` entry per price row (subject type `garage_price`, the row's values as the new value, the garage id as scope), one `update` entry per labour field on the garage from null to the value (subject type `garage`, fields `labour_from_bani`, `labour_to_bani`, through `recordChanges`) and one `create` entry per proposed job (subject type `job_type`), actor the owner. It MUST write one `catalogue_job.proposed` outbox event per proposed job (subject the job id, payload the garage id and the job id, audience the admins as the notification catalogue reads it) and no other event, and notify nobody else: the garage is not public yet. The event's notification (ADMIN_CATALOGUE_JOB_PENDING) is already wired (`libs/domain/src/notifications/catalogue.ts:46`); nothing else of the approval is built here.
 
-_From 354-job-catalogue-prices._
+_From 109-garage-details-prices._
 
 ### 354-FR-011 — The write MUST return the saved rows and the warnings per row and for the labour range, so the sending story's response can carry `wide_range` where it applies.
 
@@ -316,6 +317,70 @@ _From 354-job-catalogue-prices._
 ### 354-FR-012 — Tests MUST cover, in Jest on real PostgreSQL: the load is idempotent and atomic; lei ↔ bani; the range check's table (top below bottom refused, empty top allowed, the 1 leu and 100.000 lei bounds, the duration steps, the 3 × warning and the exactly-3 × non-warning); the unique rule with an empty brand at the database; the write creating the garage's labour range, the rows and the audit entries in one transaction; a refused payload storing nothing; a failed caller transaction leaving nothing. The end-to-end check of step 3 through submit to the price API belongs to the stories that build those (ST-109, the sending story, ST-357) and is recorded here as deferred.
 
 _From 354-job-catalogue-prices._
+
+### 109-FR-001 — Step 1 of the form MUST hold, after the e-mail field (114-FR-001), the garage name (required, 2–80 characters), the phone (required), "La ce sunteți cei mai buni" / "What you are best at" (required, 1–160 characters) with the brief's hint, and the kind of business (required) as four choices: company (`company`), PFA (`pfa`), II (`ii`), mobile mechanic (`mobile`). When `mobile` is chosen a second required choice appears, PFA or company (`pfa`, `company`); choosing another kind hides and clears it. Every label, hint and error exists in Romanian and English.
+
+_From 109-garage-details-prices._
+
+### 109-FR-002 — The phone MUST be checked as the owner leaves the field with the shared normaliser (`libs/contracts/src/phone.ts:6`): a result that is not `+40` followed by nine digits shows "Momentan acceptăm doar numere din România" / "We only take Romanian numbers for now" and marks the field invalid (the error line waits for the owner to leave the field; completeness, FR-012, judges the normalised value on every change); the draft keeps the phone as typed; the normalised form is what the write stores.
+
+_From 109-garage-details-prices._
+
+### 109-FR-003 — The step-1 values MUST be kept in the draft as `steps['1']` (the browser copy and the server copy, 114-FR-002, 114-FR-005), restored from it on load, and checked by one guard where the API and the web app both read it (as `isStep6Section`, `libs/contracts/src/listing-verification.ts:39`): only the keys `name`, `phone`, `knownFor`, `businessKind`, `mobileLegalForm`, each a string of at most 160 UTF-16 code units, `businessKind` and `mobileLegalForm` among their allowed values when present; the draft envelope (`libs/contracts/src/listing-drafts.dto.ts:40`) MUST refuse a section that fails it, so the server never holds a malformed one.
+
+_From 109-garage-details-prices._
+
+### 109-FR-004 — Step 3 MUST show the labour range per hour (from and to, both required), the brief's hint, and three catalogue jobs already listed in the mock's order (diagnosis and fault-code read, oil and filter service, front brake pads and discs) with their names in the current language, each with a from–to range in whole lei. A row MAY be removed; step 3 is complete only when the labour range and every row's range are valid and at least one job row remains.
+
+_From 109-garage-details-prices._
+
+### 109-FR-005 — Every range the form takes MUST be judged by the one shared range check (354-FR-006, `libs/contracts/src/price-range.ts:59`) with the form holding bani: the field's lei are turned to bani with `leiToBani` and shown again with a `baniToLei` added beside it (the first reader the ST-354 deferral waited for). The error "Prețul minim trebuie să fie mai mic decât maximul" / "The low price must be below the high one" shows for `below_from`; the bounds errors show in words; the `wide_range` warning shows as a warning under the range and never makes the row incomplete. Price fields accept digits only and a pasted "1.200 lei" becomes 1200.
+
+_From 109-garage-details-prices._
+
+### 109-FR-007 — When no offered job fits, the owner MUST be able to add the typed text (2–80 characters) as a proposed job: a row with that name, its own range and the tag "Așteaptă aprobare" / "Awaiting approval". When the search fails or does not answer, the line "Căutarea nu merge acum" / "Search is not working right now" shows and the proposal stays possible.
+
+_From 109-garage-details-prices._
+
+### 109-FR-008 — For a job, the owner MUST be able to open "Interval diferit pentru o marcă" / "A different range for a brand" and add a brand range: the brands offered are those taken (`works_on`) in step 2 (`apps/web/src/app/public/brands-section.ts:11`) and not already given for that job; the brand row sits under the job's default row with its own range. A brand untaken in step 2 removes its brand rows from step 3 at once; the draft follows at the next save, and the write's `not_taken` check (FR-016) is the backstop.
+
+_From 109-garage-details-prices._
+
+### 109-FR-009 — Step 3 MUST hold at most 50 job rows (brand rows not counted): past 50, "Adaugă o lucrare" is disabled with "Cel mult 50 de lucrări" / "At most 50 jobs".
+
+_From 109-garage-details-prices._
+
+### 109-FR-010 — The step-3 values MUST be kept in the draft as `steps['3']`, restored on load and checked by one shared guard as FR-003: `labour` (`fromBani`, `toBani`, each an integer or absent) and `jobs`, one flat list as the write takes it (`libs/domain/src/garages/prices/garage-prices.service.ts:67`): each entry holds either a catalogue job id `jobTypeId` (uuid) or a proposed job `name` (string, at most 80), an optional `brandId` (uuid; an entry with a brand is that job's brand range), and `fromBani` and `toBani` (integer or absent). At most 50 entries without a brand and at most 500 entries in all. The shape is the write's input (FR-015) with a job name allowed in place of an id, so the sending story passes the section through without reshaping it; an empty end is kept absent, never as 0. When `steps['3']` is absent the form pre-lists the three jobs of FR-004, resolved by their catalogue keys from `GET /api/v1/job-types` (never hard-coded ids); once the section exists, `jobs: []` stays empty. When that lookup fails, no row is pre-listed, the line of FR-007 shows, and the lookup runs again the next time the step opens while `steps['3']` is still absent.
+
+_From 109-garage-details-prices._
+
+### 109-FR-011 — Step 4 MUST show the "OPȚIONAL" / "OPTIONAL" mark the page already carries, the switch "Afișează-i pe pagina ta" / "Show them on your page" (off by default), rows with "Nume" / "Name" (2–60 characters) and "Pe ce lucrează de obicei" / "What they mostly work on" (optional, at most 80 characters), the name's initials on the row, "Adaugă un mecanic" / "Add a mechanic" adding a row up to 30 (then disabled with "Cel mult 30 de mecanici" / "At most 30 mechanics"), and a way to remove a row. A row with a name shorter than 2 characters shows "Scrie numele mecanicului" / "Give the mechanic's name" and makes step 4 incomplete; an empty step 4 is complete. The values MUST be kept in the draft as `steps['4']` (`onProfile` boolean, `mechanics` of at most 30 `{ name, speciality? }` with the lengths above), restored on load and checked by one shared guard as FR-003.
+
+_From 109-garage-details-prices._
+
+### 109-FR-012 — Each of the three sections MUST expose whether it is complete by the rules above, through one pure function per section where the form and the sending story's checks both read it (texts judged after trimming, as the writes trim them), and the step list MUST show a tick on steps 1, 3 and 4 when their section is complete, updated as the owner types.
+
+_From 109-garage-details-prices._
+
+### 109-FR-013 — The `garages` module MUST provide one write that creates the garage from a step-1 section inside a transaction the caller owns, taking the transaction, the actor (the owner account created in it) and the section: it MUST trim the texts, check the lengths of FR-001 (code `length` on the field), normalise the phone and refuse one that is not `+40` and nine digits (code `romanian` on `phone`), require the kind of business and, for `mobile`, the legal form (code `required`), and create the garage with `status = draft`, `name`, a unique `slug` derived from the name (lower case, accents dropped, non-letters as hyphens, a numeric suffix when taken), `phone`, `known_for`, `business_kind`, `mobile_legal_form` (null unless mobile); a refusal is the 422 field-error refusal the other writes raise and writes nothing. It MUST record one `create` audit entry (subject type `garage`, the stored values as the new value, actor the owner) and emit no event. The garage row gains `phone`, `known_for`, `business_kind` (`company`, `pfa`, `ii`, `mobile`) and `mobile_legal_form` (`pfa`, `company`), all empty for garages that exist today.
+
+_From 109-garage-details-prices._
+
+### 109-FR-014 — The phone MUST never leave the server for a driver: the public garage profile and every public card keep selecting explicit fields and never the phone (`libs/domain/src/garages/public-garages.ts:24`), and a test MUST assert the public response carries no phone.
+
+_From 109-garage-details-prices._
+
+### 109-FR-018 — The `garages` module MUST provide one write that saves the step-4 section inside the caller's transaction, taking the transaction, the garage, the actor and the section: it checks the lengths of FR-011 (code `length` on the field) and the cap of 30 (`too_many` on `mechanics`), creates one mechanic card per row with `garage_id`, `name`, `speciality` (null when blank), `account_id` empty and `on_profile` the switch's value, and records one `create` audit entry per card (subject type `mechanic`, actor the owner). The mechanic row gains a nullable `account_id` (still unique when set), `name`, `speciality` and `on_profile` (default false); mechanics with an account keep working as today (their name comes from the account until the invite story decides otherwise).
+
+_From 109-garage-details-prices._
+
+### 109-FR-019 — An accountless mechanic card MUST reach no driver: the public profile shows no mechanics today and this story adds none; a test MUST assert the public response of a garage with cards carries no mechanic. Showing them, once invited and accepted, is the invite story's.
+
+_From 109-garage-details-prices._
+
+### 109-FR-020 — Tests MUST cover: in Jest, the three section guards (good sections, each wrong key, type and length), the three completeness functions, phone normalisation and refusal of a non-Romanian number, `baniToLei` and the lei-and-digits input rule, the job list's cap and removal, the brand-range offer following step 2; in Jest on real PostgreSQL, the garage write (row, slug uniqueness, refusals, audit, no phone on the public read), the prices write with a proposed job (pending job, price row, event, audit, all gone on rollback), the 50-job cap, the not-taken brand, the `required` labour start, the duplicate race answered 422, the mechanics write (cards, audit, none on the public read), and the public route list with `GET /api/v1/job-types`; in Playwright, fill steps 1, 3 (one brand range, one proposed job) and 4, reload the page and find everything back. The end-to-end check through the submit to the price API stays deferred to the sending story (ST-354 deferral).
+
+_From 109-garage-details-prices._
 
 ### 861-FR-001 — A jump to a step, from a tap in the step list or from a draft's restore, MUST keep that step current from the moment of the jump until the jump's own scrolling has ended, however late that scrolling starts and however long it lasts; no scroll event of the jump's own flight changes the current step.
 
@@ -345,4 +410,7 @@ _From 861-jump-holds-step._
 
 - `108-FR-012` — superseded by `114-FR-018` (2026-10-07)
 
+- `354-FR-008` — superseded by `109-FR-015` (2026-10-08)
+- `354-FR-009` — superseded by `109-FR-016` (2026-10-08)
+- `354-FR-010` — superseded by `109-FR-017` (2026-10-08)
 - `108-FR-006` — superseded by `861-FR-008` (2026-10-08)

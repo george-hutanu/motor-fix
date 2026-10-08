@@ -2,11 +2,13 @@ import { type DynamicModule, Module } from '@nestjs/common';
 import type { Redis } from 'ioredis';
 
 import { AdminOverviewController } from './admin-overview.controller';
+import { GarageDetailsService } from './details/garage-details.service';
 import { GarageBrandsController } from './garage-brands.controller';
 import { GarageBrandsService } from './garage-brands.service';
 import { ListingDraftsController } from './listing-drafts.controller';
 import { ListingDraftsService } from './listing-drafts.service';
 import { ListingDraftThrottle } from './listing-drafts.throttle';
+import { GarageMechanicsService } from './mechanics/garage-mechanics.service';
 import { GaragePricesService } from './prices/garage-prices.service';
 import { PublicGaragesService } from './public-garages';
 import { PublicGaragesController } from './public-garages.controller';
@@ -50,11 +52,18 @@ export class GaragesModule {
         PublicGaragesController,
         VerificationChecksController,
       ],
-      exports: [VerificationService],
+      exports: [
+        GarageDetailsService,
+        GarageMechanicsService,
+        GaragePricesService,
+        VerificationService,
+      ],
       imports: [notifications],
       module: GaragesModule,
       providers: [
         GarageBrandsService,
+        GarageDetailsService,
+        GarageMechanicsService,
         GaragePricesService,
         ListingDraftsService,
         {

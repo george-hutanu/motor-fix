@@ -5,6 +5,7 @@ import {
   computed,
   DestroyRef,
   ElementRef,
+  effect,
   Injector,
   inject,
   signal,
@@ -13,6 +14,14 @@ import {
 import { ActivatedRoute } from '@angular/router';
 import type { ListingDraftData } from '@motor-fix/contracts';
 import type { HoursSection } from '@motor-fix/contracts/garage-hours';
+import {
+  detailsComplete,
+  isDetailsSection,
+  isMechanicsSection,
+  isPricesSection,
+  mechanicsComplete,
+  pricesComplete,
+} from '@motor-fix/contracts/listing-sections';
 import {
   isValidCui,
   normaliseRarNumber,
@@ -25,9 +34,13 @@ import { HlmButton, HlmInput, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { brandsOf } from '../brands-section';
 import { BrandsStep } from '../brands-step';
+import { DetailsStep } from '../details-step/details-step';
 import { DraftKeeper } from '../draft-keeper';
 import { hoursOf, mergeHours } from '../hours-section';
 import { HoursStep } from '../hours-step';
+import { MechanicsStep } from '../mechanics-step/mechanics-step';
+import { dropUntaken } from '../prices-step/prices-rows';
+import { PricesStep } from '../prices-step/prices-step';
 import {
   completedCount,
   cuiError,
@@ -51,10 +64,13 @@ const STALL_MS = 3000;
   host: { '(document:click)': 'outside($event)' },
   imports: [
     BrandsStep,
+    DetailsStep,
     HlmButton,
     HlmInput,
     HoursStep,
     LanguageSwitch,
+    MechanicsStep,
+    PricesStep,
     TranslatePipe,
   ],
   providers: [DraftKeeper],
@@ -87,6 +103,35 @@ export class ListYourGarage {
   protected readonly brands = computed(() =>
     brandsOf(this.keeper.draft().data),
   );
+  // Steps 1, 3 and 4 as the draft holds them; a kept section not in its
+  // shape reads as empty (step 3 as absent, so its jobs are listed again).
+  private readonly kept = computed(
+    () => (this.keeper.draft().data as ListingDraftData).steps ?? {},
+  );
+  protected readonly details = computed(() => {
+    const section: unknown = this.kept()['1'];
+    return isDetailsSection(section) ? section : {};
+  });
+  protected readonly prices = computed(() => {
+    const section: unknown = this.kept()['3'];
+    return isPricesSection(section) ? section : undefined;
+  });
+  protected readonly mechanics = computed(() => {
+    const section: unknown = this.kept()['4'];
+    return isMechanicsSection(section) ? section : {};
+  });
+  protected readonly takenBrands = computed(() =>
+    this.brands().brands.filter((b) => b.stance === 'works_on'),
+  );
+  // The steps the list ticks, judged as the owner types.
+  protected readonly done = computed(() => {
+    const prices = this.prices();
+    return new Set([
+      ...(detailsComplete(this.details()) ? [1] : []),
+      ...(prices && pricesComplete(prices) ? [3] : []),
+      ...(mechanicsComplete(this.mechanics()) ? [4] : []),
+    ]);
+  });
   protected readonly current = signal(1);
   protected readonly open = signal(false);
   protected readonly prefix = computed(() =>
@@ -100,6 +145,16 @@ export class ListYourGarage {
   );
 
   constructor() {
+    // A brand step 2 no longer takes keeps no price range in step 3.
+    effect(() => {
+      const prices = this.prices();
+      if (!prices) return;
+      const kept = dropUntaken(
+        prices,
+        this.takenBrands().map((b) => b.brandId),
+      );
+      if (kept !== prices) this.keeper.section('3', kept);
+    });
     const destroyRef = inject(DestroyRef);
     afterNextRender(() => {
       const onScroll = () => {

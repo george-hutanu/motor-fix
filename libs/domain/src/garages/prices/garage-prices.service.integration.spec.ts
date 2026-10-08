@@ -6,10 +6,16 @@ import {
   type StartingPricesInput,
 } from '@motor-fix/contracts';
 
-import { type PricesWorld, pricesWorld } from './garage-prices.testing';
+import {
+  afterRace,
+  type PricesWorld,
+  pricesWorld,
+  refused,
+} from './garage-prices.testing';
+import { audienceOf } from '../../events/audience';
 import { Prisma } from '../../generated/prisma/client';
 
-const { history, nothingStored, prices, prisma, refused, rows, save, world } =
+const { history, job, nothingStored, prices, prisma, rows, save, world } =
   pricesWorld();
 
 const lei = leiToBani;
@@ -22,12 +28,7 @@ describe('GaragePricesService.saveStarting', () => {
     const result = await save(w, {
       jobs: [
         { fromBani: lei(150), jobTypeId: w.diagnosis, toBani: lei(250) },
-        {
-          durationMinutes: 60,
-          fromBani: lei(350),
-          jobTypeId: w.oil,
-          toBani: lei(500),
-        },
+        { fromBani: lei(350), jobTypeId: w.oil, toBani: lei(500) },
         { fromBani: lei(600), jobTypeId: w.brakes, toBani: lei(1_800) },
       ],
       labour,
@@ -49,7 +50,7 @@ describe('GaragePricesService.saveStarting', () => {
         visible: true,
       }),
       expect.objectContaining({
-        durationMinutes: 60,
+        durationMinutes: null,
         jobTypeId: w.oil,
         position: 1,
       }),
@@ -317,15 +318,99 @@ describe('GaragePricesService.saveStarting', () => {
       [{ code: 'below_from', field: 'jobs[0].to' }],
     ],
     [
-      'a bad labour range and a bad job duration together',
+      'a bad labour range and a bad job start together',
       (w) => ({
-        jobs: [{ durationMinutes: 10, fromBani: lei(150), jobTypeId: w.oil }],
+        jobs: [{ fromBani: 50, jobTypeId: w.oil }],
         labour: { fromBani: 0, toBani: lei(240) },
       }),
       [
         { code: 'min', field: 'labour.from' },
-        { code: 'min', field: 'jobs[0].duration' },
+        { code: 'min', field: 'jobs[0].from' },
       ],
+    ],
+    [
+      'a labour range with no start',
+      () => ({
+        jobs: [],
+        labour: { toBani: lei(240) },
+      }),
+      [{ code: 'required', field: 'labour.from' }],
+    ],
+    [
+      'a job range with no start',
+      (w) => ({ jobs: [{ jobTypeId: w.oil, toBani: lei(400) }], labour }),
+      [{ code: 'required', field: 'jobs[0].from' }],
+    ],
+    [
+      'an entry with neither a job nor a name',
+      () => ({ jobs: [{ fromBani: lei(150) }], labour }),
+      [{ code: 'required', field: 'jobs[0].jobTypeId' }],
+    ],
+    [
+      'an entry with both a job and a name',
+      (w) => ({
+        jobs: [{ fromBani: lei(150), jobTypeId: w.oil, name: 'Ulei' }],
+        labour,
+      }),
+      [{ code: 'required', field: 'jobs[0].jobTypeId' }],
+    ],
+    [
+      'a proposed name of one letter',
+      () => ({ jobs: [{ fromBani: lei(150), name: ' A ' }], labour }),
+      [{ code: 'length', field: 'jobs[0].name' }],
+    ],
+    [
+      'a proposed name over 80 characters',
+      () => ({ jobs: [{ fromBani: lei(150), name: 'x'.repeat(81) }], labour }),
+      [{ code: 'length', field: 'jobs[0].name' }],
+    ],
+    [
+      'the same proposed name twice, accents and case aside',
+      () => ({
+        jobs: [
+          { fromBani: lei(150), name: 'Schimb ambreiaj' },
+          { fromBani: lei(150), name: 'SCHÎMB ambreiaj ' },
+        ],
+        labour,
+      }),
+      [{ code: 'duplicate', field: 'jobs[1].name' }],
+    ],
+    [
+      'a brand range for a brand the garage has not taken',
+      (w) => ({
+        jobs: [
+          { fromBani: lei(600), jobTypeId: w.brakes },
+          { brandId: w.ford, fromBani: lei(500), jobTypeId: w.brakes },
+        ],
+        labour,
+      }),
+      [{ code: 'not_taken', field: 'jobs[1].brandId' }],
+    ],
+    [
+      '51 jobs without a brand',
+      (w) => ({
+        jobs: Array.from({ length: 51 }, () => ({
+          fromBani: lei(150),
+          jobTypeId: w.oil,
+        })),
+        labour,
+      }),
+      [{ code: 'too_many', field: 'jobs' }],
+    ],
+    [
+      '501 entries in all',
+      (w) => ({
+        jobs: [
+          { fromBani: lei(600), jobTypeId: w.brakes },
+          ...Array.from({ length: 500 }, () => ({
+            brandId: w.dacia,
+            fromBani: lei(500),
+            jobTypeId: w.brakes,
+          })),
+        ],
+        labour,
+      }),
+      [{ code: 'too_many', field: 'jobs' }],
     ],
   ])('refuses %s and stores nothing', async (_, input, expected) => {
     const w = await world();
@@ -334,5 +419,172 @@ describe('GaragePricesService.saveStarting', () => {
 
     expect(errors).toEqual(expected);
     await nothingStored(w);
+  });
+});
+
+describe('a job the garage proposes', () => {
+  const proposal = (w: PricesWorld): StartingPricesInput => ({
+    jobs: [
+      { fromBani: lei(150), jobTypeId: w.diagnosis },
+      { fromBani: lei(400), name: '  Schimb ambreiaj ', toBani: lei(900) },
+    ],
+    labour,
+  });
+
+  it('becomes a pending catalogue job of that garage, priced like any other', async () => {
+    const w = await world();
+
+    const result = await save(w, proposal(w));
+
+    const proposed = await prisma.jobType.findFirstOrThrow({
+      where: { proposedByGarageId: w.garage },
+    });
+    expect(proposed).toMatchObject({
+      key: 'schimb-ambreiaj',
+      nameEn: 'Schimb ambreiaj',
+      nameRo: 'Schimb ambreiaj',
+      status: 'pending',
+    });
+    expect(await rows(w)).toEqual([
+      expect.objectContaining({ jobTypeId: w.diagnosis, position: 0 }),
+      expect.objectContaining({
+        fromBani: 40_000,
+        jobTypeId: proposed.id,
+        position: 1,
+        toBani: 90_000,
+      }),
+    ]);
+    expect(result.jobs[1].jobTypeId).toBe(proposed.id);
+  });
+
+  it('tells the platform admins, with ids only', async () => {
+    const w = await world();
+
+    await save(w, proposal(w));
+
+    const proposed = await prisma.jobType.findFirstOrThrow({
+      where: { proposedByGarageId: w.garage },
+    });
+    const events = await prisma.outboxEvent.findMany({
+      where: { kind: 'catalogue_job.proposed', subjectId: proposed.id },
+    });
+    expect(events).toEqual([
+      expect.objectContaining({
+        audience: audienceOf({ adminOnly: true, type: 'platform' }),
+        payload: { garageId: w.garage, jobTypeId: proposed.id },
+      }),
+    ]);
+  });
+
+  it('records the new job in the history as the owner', async () => {
+    const w = await world();
+
+    await save(w, proposal(w));
+
+    const proposed = await prisma.jobType.findFirstOrThrow({
+      where: { proposedByGarageId: w.garage },
+    });
+    expect(
+      (await history(w)).filter((e) => e.subjectType === 'job_type'),
+    ).toEqual([
+      expect.objectContaining({
+        action: 'create',
+        actorId: w.mihai,
+        subjectId: proposed.id,
+      }),
+    ]);
+  });
+
+  it('takes the next free key when the name is already a key', async () => {
+    const w = await world();
+    await job('schimb-ambreiaj', 'pending');
+    await job('schimb-ambreiaj-2', 'pending');
+
+    await save(w, proposal(w));
+
+    expect(
+      await prisma.jobType.findFirstOrThrow({
+        where: { proposedByGarageId: w.garage },
+      }),
+    ).toMatchObject({ key: 'schimb-ambreiaj-3' });
+  });
+
+  it('leaves no job and no event behind when the caller fails after the write', async () => {
+    const w = await world();
+
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await prices.saveStarting(tx, w.garage, w.mihai, proposal(w));
+        throw new Error('the listing could not be sent');
+      }),
+    ).rejects.toThrow('the listing could not be sent');
+
+    await nothingStored(w);
+  });
+
+  it('refuses a pending job another garage proposed', async () => {
+    const w = await world();
+    const other = await prisma.garage.create({
+      data: { name: 'Alt service', slug: `alt-${randomUUID()}` },
+    });
+    const theirs = await prisma.jobType.create({
+      data: {
+        key: 'polish',
+        nameEn: 'Polish',
+        nameRo: 'Polish',
+        proposedByGarageId: other.id,
+        status: 'pending',
+      },
+    });
+
+    const errors = await refused(
+      save(w, { jobs: [{ fromBani: lei(150), jobTypeId: theirs.id }], labour }),
+    );
+
+    expect(errors).toEqual([
+      { code: 'not_approved', field: 'jobs[0].jobTypeId' },
+    ]);
+    await nothingStored(w);
+  });
+});
+
+describe('a range stored by a concurrent save', () => {
+  it('is refused as a duplicate, not a server error', async () => {
+    const w = await world();
+    const input: StartingPricesInput = {
+      jobs: [{ fromBani: lei(150), jobTypeId: w.diagnosis }],
+      labour,
+    };
+    const second = afterRace(
+      prisma,
+      (tx) => prices.saveStarting(tx, w.garage, w.mihai, input),
+      () => refused(save(w, input)),
+    );
+
+    expect(await second).toEqual([
+      { code: 'duplicate', field: 'jobs[0].jobTypeId' },
+    ]);
+  });
+});
+
+describe('a job proposed by a concurrent save of another garage', () => {
+  it('is refused as a duplicate, not a server error', async () => {
+    const w = await world();
+    const other = await prisma.garage.create({
+      data: { name: 'Service Auto Sud', slug: `sud-${randomUUID()}` },
+    });
+    const input: StartingPricesInput = {
+      jobs: [{ fromBani: lei(150), name: 'Reglaj faruri' }],
+      labour,
+    };
+    const second = afterRace(
+      prisma,
+      (tx) => prices.saveStarting(tx, other.id, w.mihai, input),
+      () => refused(save(w, input)),
+    );
+
+    expect(await second).toEqual([
+      { code: 'duplicate', field: 'jobs[0].name' },
+    ]);
   });
 });

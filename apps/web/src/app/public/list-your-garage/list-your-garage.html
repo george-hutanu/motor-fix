@@ -41,6 +41,9 @@
               >
                 {{ step.n }} {{ step.label | t }}@if (step.mark) {<span class="mark"> · {{ step.mark | t }}</span>}
               </button>
+              @if (done().has(step.n)) {
+                <span class="done" role="img" [attr.aria-label]="'public.listing.done' | t">✓</span>
+              }
             </li>
           }
         </ol>
@@ -71,6 +74,7 @@
                   <p id="listing-email-error" class="error">{{ 'public.listing.emailInvalid' | t }}</p>
                 }
               </div>
+              <mf-details-step [value]="details()" (valueChange)="keeper.section('1', $event)" />
             } @else if (step.n === 6) {
               <p class="note">{{ 'public.listing.verifyIntro' | t }}</p>
               <div class="field">
@@ -115,6 +119,12 @@
             }
             @if (step.n === 2) {
               <mf-brands-step [value]="brands()" (valueChange)="keeper.section('2', $event)" />
+            }
+            @if (step.n === 3) {
+              <mf-prices-step [value]="prices()" [takenBrands]="takenBrands()" [current]="current() === 3" (valueChange)="keeper.section('3', $event ?? {})" />
+            }
+            @if (step.n === 4) {
+              <mf-mechanics-step [value]="mechanics()" (valueChange)="keeper.section('4', $event)" />
             }
             @if (step.n === 5) {
               <mf-hours-step [value]="hours()" (valueChange)="keepHours($event)" />

@@ -230,7 +230,9 @@ describe('reading a draft', () => {
 describe('saving a draft', () => {
   it('replaces the whole data and sets the save time, merging nothing', async () => {
     const created = await service.create(
-      body({ data: { steps: { '1': { a: 1, b: 2 } } } }),
+      body({
+        data: { steps: { '1': { knownFor: 'Frâne', name: 'Service' } } },
+      }),
     );
 
     const saved = await service.save(

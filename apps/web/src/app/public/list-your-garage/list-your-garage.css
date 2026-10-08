@@ -90,10 +90,6 @@ section > .note {
     bottom: calc(59px + max(14px, var(--mf-safe-bottom)));
   }
 }
-.actions button,
-.ended button {
-  min-height: var(--mf-tap);
-}
 .ended {
   display: grid;
   gap: var(--mf-space-3);
@@ -122,6 +118,15 @@ ol button[aria-current="step"] {
 }
 ol button[aria-current="step"]::before {
   content: "▸" / "";
+}
+ol li {
+  display: flex;
+  align-items: center;
+}
+.done {
+  padding: 0 var(--mf-space-2);
+  color: var(--mf-text-secondary);
+  font-weight: 600;
 }
 @media (min-width: 768px) {
   .page {
@@ -181,4 +186,8 @@ ol button[aria-current="step"]::before {
   nav.open ol {
     display: block;
   }
+}
+.actions button,
+.ended button {
+  min-height: var(--mf-tap);
 }

@@ -18,6 +18,8 @@ export function leiToBani(lei: number): number {
   return bani;
 }
 
+export const baniToLei = (bani: number): number => bani / BANI_PER_LEU;
+
 interface PriceRangeInput {
   fromBani: number;
   toBani?: number | null;
@@ -75,10 +77,18 @@ export function checkPriceRange(range: PriceRangeInput): PriceRangeCheck {
   };
 }
 
+// Shaped as the draft's step 3, so a half-typed range reaches the write and
+// is refused there; every start is required, and the labour top too.
 export interface StartingPricesInput {
-  // The hourly labour range; its top is required.
-  labour: { fromBani: number; toBani?: number | null };
-  jobs: Array<{ jobTypeId: string; brandId?: string | null } & PriceRangeInput>;
+  labour: { fromBani?: number | null; toBani?: number | null };
+  // A catalogue job by id, or a name the garage proposes; exactly one.
+  jobs: Array<{
+    jobTypeId?: string;
+    name?: string;
+    brandId?: string | null;
+    fromBani?: number | null;
+    toBani?: number | null;
+  }>;
 }
 
 export interface StartingPricesResult {

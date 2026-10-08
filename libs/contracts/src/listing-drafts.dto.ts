@@ -12,6 +12,14 @@ import {
 } from 'class-validator';
 
 import { type HoursSection, isHoursSection } from './garage-hours';
+import {
+  type DetailsSection,
+  isDetailsSection,
+  isMechanicsSection,
+  isPricesSection,
+  type MechanicsSection,
+  type PricesSection,
+} from './listing-sections';
 import { isStep6Section, type Step6Section } from './listing-verification';
 
 const LANGUAGES = ['ro', 'en'] as const;
@@ -22,7 +30,10 @@ export type ListingDraftStatus = (typeof DRAFT_STATUSES)[number];
 // of the files the draft holds. Each step's story checks its own section.
 export interface ListingDraftData {
   steps?: Partial<
-    Record<'1' | '2' | '3' | '4', Record<string, unknown>> & {
+    Record<'2', Record<string, unknown>> & {
+      '1': DetailsSection;
+      '3': PricesSection;
+      '4': MechanicsSection;
       '5': Record<string, unknown> & HoursSection;
       '6': Step6Section;
     }
@@ -31,7 +42,14 @@ export interface ListingDraftData {
   files?: string[];
 }
 
-const STEP_KEYS = new Set(['1', '2', '3', '4', '5', '6']);
+const SECTION_GUARDS: Record<string, (section: unknown) => boolean> = {
+  '1': isDetailsSection,
+  '2': (section) => isRecord(section),
+  '3': isPricesSection,
+  '4': isMechanicsSection,
+  '5': isHoursSection,
+  '6': isStep6Section,
+};
 const FILE_KEY = /^[a-z-]+\/[0-9a-f-]{36}\/[\w-]{1,64}$/;
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -55,12 +73,7 @@ export function isListingDraftData(value: unknown): value is ListingDraftData {
     isRecord(steps) &&
     Object.entries(steps).every(
       ([key, section]) =>
-        STEP_KEYS.has(key) &&
-        (key === '6'
-          ? isStep6Section(section)
-          : key === '5'
-            ? isHoursSection(section)
-            : isRecord(section)),
+        Object.hasOwn(SECTION_GUARDS, key) && SECTION_GUARDS[key](section),
     )
   );
 }
