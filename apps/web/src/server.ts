@@ -19,6 +19,7 @@ import { mountCompression } from './server/compress/compress';
 import { mountEdge } from './server/edge';
 import { renderError } from './server/render-error/render-error';
 import { mountSearch } from './server/search';
+import { mountStaticFiles } from './server/static-files/static-files';
 import { withTelemetryMeta } from './server/telemetry-meta/telemetry-meta';
 
 const browserDistFolder = resolve(
@@ -42,13 +43,7 @@ mountEdge(app, apiInternalUrl());
 mountCompression(app);
 mountSearch(app, publicUrl?.origin);
 
-app.use(
-  express.static(browserDistFolder, {
-    index: false,
-    maxAge: '1y',
-    redirect: false,
-  }),
-);
+mountStaticFiles(app, browserDistFolder);
 
 app.use((req, res, next) => {
   // A page rendered on the server names itself on navigation; one left to

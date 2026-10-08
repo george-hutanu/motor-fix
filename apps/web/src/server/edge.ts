@@ -22,7 +22,11 @@ export function mountEdge(app: Express, apiUrl: string) {
     const ready = await fetch(new URL('/health/ready', api), {
       signal: AbortSignal.timeout(READY_TIMEOUT_MS),
     }).then(
-      (answer) => answer.ok,
+      (answer) => {
+        // Only the status counts; the body is let go so the socket is freed.
+        void answer.body?.cancel().catch(() => undefined);
+        return answer.ok;
+      },
       () => false,
     );
     if (ready) res.json({ status: 'ok' });

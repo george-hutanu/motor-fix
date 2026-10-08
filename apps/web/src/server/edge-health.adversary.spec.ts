@@ -122,4 +122,33 @@ describe('web readiness under odd API answers', () => {
 
     expect(await res.text()).toBe('{"status":"unavailable"}');
   });
+
+  it('lets go of the API answer it does not read, so the socket is freed', async () => {
+    await close(upstream);
+    let released: () => void = () => undefined;
+    const freed = new Promise<void>((resolve) => {
+      released = resolve;
+    });
+    // Headers at once, then a body that never ends on its own.
+    upstream = createServer((_req, res) => {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.write('{"status":');
+      res.on('close', () => released());
+    });
+    const apiUrl = await listen(upstream);
+    const app = express();
+    mountEdge(app, apiUrl);
+    await close(web);
+    web = createServer(app);
+    base = await listen(web);
+
+    expect((await fetch(`${base}/health/ready`)).status).toBe(200);
+    // Sooner than the probe's own 2 s timeout would abort it.
+    const late = new Promise<string>((resolve) =>
+      setTimeout(() => resolve('still held'), 1_000).unref(),
+    );
+    await expect(Promise.race([freed.then(() => 'freed'), late])).resolves.toBe(
+      'freed',
+    );
+  });
 });

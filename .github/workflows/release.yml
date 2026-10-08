@@ -55,6 +55,9 @@ jobs:
       # The web build's source maps, from the layers just built, go to the
       # error collector so browser stacks read as source; skipped until the
       # owner sets the secret.
+      - name: Skip the web source maps
+        if: env.FARO_SOURCEMAPS != 'true'
+        run: echo "::notice::FARO_SOURCEMAP_API_KEY is not set; the web source maps are not uploaded for this release."
       - name: Export the web source maps
         if: env.FARO_SOURCEMAPS == 'true'
         uses: docker/build-push-action@v7
