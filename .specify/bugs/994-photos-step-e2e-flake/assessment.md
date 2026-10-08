@@ -34,7 +34,7 @@ High confidence. The spec waits for the network to go quiet, and a page that hol
 
 **Preferred**: the test waits for what it uses. A new `hydrated(page, path?)` helper in `accounts.ts` waits until no `[ngh]` node is left, since Angular removes that marker as it hydrates each server-rendered node. The spec then waits on the data it checks:
 - the server save (`PATCH /listing-drafts/:id`) that carries the reordered keys, before the other browser opens the link;
-- polled tile keys after each reload and in the other browser.
+- the tile keys after each reload, read once their count matches, and in the other browser.
 
 None of these waits is a sleep or a timeout, and the stream cannot hold any of them.
 

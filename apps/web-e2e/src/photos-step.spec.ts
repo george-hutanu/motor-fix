@@ -44,8 +44,8 @@ const savedWith = (page: Page, files: (string | null)[]) =>
       return false;
     const sent = res.request().postDataJSON() as {
       data?: { files?: string[] };
-    };
-    return res.ok() && sent.data?.files?.join() === files.join();
+    } | null;
+    return res.ok() && sent?.data?.files?.join() === files.join();
   });
 
 async function draftLink(page: Page, email: string): Promise<string> {
