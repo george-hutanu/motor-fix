@@ -13,6 +13,7 @@ features:
   - 110-workshop-photos
   - 885-restored-draft-check
   - 111-garage-address-map
+  - 917-proposed-job-duplicate
 ---
 
 # Capability: Garage listing
@@ -305,9 +306,9 @@ _From 354-job-catalogue-prices._
 
 _From 109-garage-details-prices._
 
-### 109-FR-016 — (Replaces 354-FR-009.) The write MUST check every range with 354-FR-006 and refuse the whole payload, each refusal a field error naming the row, on: any range error; more than 50 entries without a brand or more than 500 entries in all (`too_many` on `jobs`); the duplicate `(job, brand)` pair within the payload; a brand range whose job has no default range in the payload; an unknown job; a job that is not `approved` unless it is proposed in this payload; an unknown brand; a brand the garage does not take (no `works_on` garage-brand row at save time, `not_taken` on `brandId`, so the sending story saves the brands before the prices); a proposed job name shorter than 2 or longer than 80 characters after trimming (`length` on `name`) or repeated within the payload, accents and case ignored (`duplicate` on `name`). A database refusal on the price unique index (two saves racing for one garage) MUST be answered as the same 422 refusal with `duplicate` on the row, never as a server error. It MUST write nothing when it refuses, and because it runs in the caller's transaction, a caller that fails afterwards MUST leave no price row, labour range, proposed job, event or audit entry behind, the listing draft untouched.
+### 917-FR-001 — (Replaces 109-FR-016.) The write MUST check every range with 354-FR-006 and refuse the whole payload, each refusal a field error naming the row, on: any range error; more than 50 entries without a brand or more than 500 entries in all (`too_many` on `jobs`); the duplicate `(job, brand)` pair within the payload; a brand range whose job has no default range in the payload; an unknown job; a job that is not `approved` unless it is proposed in this payload; an unknown brand; a brand the garage does not take (no `works_on` garage-brand row at save time, `not_taken` on `brandId`, so the sending story saves the brands before the prices); a proposed job name shorter than 2 or longer than 80 characters after trimming (`length` on `name`) or repeated within the payload, accents and case ignored (`duplicate` on `name`); a proposed job name that, trimmed and folded (accents and case aside, `fold` of `@motor-fix/contracts`), equals the trimmed and folded Romanian or English name of an `approved` catalogue job (`duplicate` on `name`, on every row that carries it, brand rows included). A database refusal on the price unique index (two saves racing for one garage) MUST be answered as the same 422 refusal with `duplicate` on the row, never as a server error. It MUST write nothing when it refuses, and because it runs in the caller's transaction, a caller that fails afterwards MUST leave no price row, labour range, proposed job, event or audit entry behind, the listing draft untouched.
 
-_From 109-garage-details-prices._
+_From 917-proposed-job-duplicate._
 
 ### 109-FR-017 — (Replaces 354-FR-010.) In the same transaction the write MUST record the starting values once in the audit history through the existing audit writer: one `create` entry per price row (subject type `garage_price`, the row's values as the new value, the garage id as scope), one `update` entry per labour field on the garage from null to the value (subject type `garage`, fields `labour_from_bani`, `labour_to_bani`, through `recordChanges`) and one `create` entry per proposed job (subject type `job_type`), actor the owner. It MUST write one `catalogue_job.proposed` outbox event per proposed job (subject the job id, payload the garage id and the job id, audience the admins as the notification catalogue reads it) and no other event, and notify nobody else: the garage is not public yet. The event's notification (ADMIN_CATALOGUE_JOB_PENDING) is already wired (`libs/domain/src/notifications/catalogue.ts:46`); nothing else of the approval is built here.
 
@@ -567,6 +568,10 @@ _From 111-garage-address-map._
 
 _From 111-garage-address-map._
 
+### 917-FR-002 — A proposed name equal only to a `pending` or `rejected` job's name, one that merely contains an approved job's name, or one that differs from it by more than case, accents and surrounding spaces (`Schimb  ulei`, `Schimb-ulei` against `Schimb ulei`), MUST be saved as before (a new pending job).
+
+_From 917-proposed-job-duplicate._
+
 ## Retired
 
 - `108-FR-012` — superseded by `114-FR-018` (2026-10-07)
@@ -578,3 +583,5 @@ _From 111-garage-address-map._
 
 - `114-FR-016` — superseded by `110-FR-003` (2026-10-08)
 - `114-FR-002` — superseded by `885-FR-003` (2026-10-08)
+
+- `109-FR-016` — superseded by `917-FR-001` (2026-10-08)
