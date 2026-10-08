@@ -31,13 +31,14 @@ async function waitBehind(
   prisma: PrismaClient,
   holder: number,
   ended: Promise<unknown>,
+  within: number,
 ) {
   let done = false;
   const end = () => {
     done = true;
   };
   ended.then(end, end);
-  const deadline = Date.now() + 15_000;
+  const deadline = Date.now() + within;
   while (!done) {
     const [{ waiting }] = await prisma.$queryRaw<{ waiting: boolean }[]>`
       SELECT EXISTS (
@@ -59,11 +60,13 @@ async function waitBehind(
 // its uncommitted row holds (or ends without meeting it), then commits it;
 // answers how `second` ended. The second write finds the value free when it
 // reads, so it meets the unique index instead: the race two concurrent
-// sendings run.
+// sendings run. A second writer that does neither `within` ms fails the race
+// by name, and the first is still released before the failure.
 export async function afterRace<T>(
   prisma: PrismaClient,
   first: (tx: Prisma.TransactionClient) => Promise<unknown>,
   second: () => Promise<T>,
+  { within = 15_000 } = {},
 ): Promise<T> {
   let release = () => {};
   const held = new Promise<void>((resolve) => {
@@ -88,12 +91,13 @@ export async function afterRace<T>(
     // `winner` only settles first when `first` threw.
     const holder = await Promise.race([written, winner.then(() => 0)]);
     const loser = second();
-    await waitBehind(prisma, holder, loser);
+    await waitBehind(prisma, holder, loser, within);
     release();
     await winner;
     return loser;
   } finally {
     release();
+    await winner.catch(() => {});
   }
 }
 

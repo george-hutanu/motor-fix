@@ -41,4 +41,23 @@ describe('afterRace', () => {
     expect(loser).toBe('ford');
     expect(await prisma.brand.count()).toBe(2);
   });
+
+  it('fails naming the race when the second writer neither waits nor ends in time, and releases the first', async () => {
+    let second: Promise<string> = Promise.resolve('');
+    const run = afterRace(
+      prisma,
+      (tx) => tx.brand.create({ data: dacia }),
+      () => {
+        second = later(1_000).then(() => 'late');
+        return second;
+      },
+      { within: 200 },
+    );
+
+    await expect(run).rejects.toThrow(
+      'afterRace: the second writer neither waited on the first one nor ended',
+    );
+    expect(await prisma.brand.count()).toBe(1);
+    await second;
+  });
 });
