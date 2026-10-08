@@ -198,6 +198,28 @@
       "uploaded": "Photo {n} uploaded",
       "waiting": "Waiting for a connection"
     },
+    "place": {
+      "address": "Address",
+      "armed": "Tap the map where the garage is.",
+      "dragHint": "Drag the pin if it is not exactly on the garage. On the map, the arrow keys move it.",
+      "found": {
+        "one": "One address found",
+        "other": "{count} addresses found"
+      },
+      "km": "km",
+      "manualPin": "Place the pin on the map",
+      "map": "Map of where the garage is",
+      "mapDown": "The map could not be loaded. The address you typed is kept.",
+      "mapHint": "Choose an address from the list or place the pin on the map.",
+      "nothingFound": "No address found. You can place the pin on the map.",
+      "outside": "The address must be in Romania",
+      "placeholder": "Street and number, sector, town",
+      "radius": "Area you work in",
+      "radiusHint": "Between 1 and 100 km",
+      "searchDown": "Address search is not working right now. You can place the pin on the map.",
+      "seat": "Registered seat",
+      "suggestions": "Addresses found"
+    },
     "prices": {
       "addJob": "Add a job",
       "brandRange": "A different range for a brand",

@@ -95,6 +95,8 @@ export type { GarageSearchControllerForBrand$Params as GarageSearchControllerFor
 export { garageSearchControllerForBrand as garageSearchControllerForBrand } from './fn/search/garage-search-controller-for-brand';
 export type { HomeControllerForBrand$Params as HomeControllerForBrand$Params } from './fn/home/home-controller-for-brand';
 export { homeControllerForBrand as homeControllerForBrand } from './fn/home/home-controller-for-brand';
+export type { PlacesControllerSearch$Params as PlacesControllerSearch$Params } from './fn/places/places-controller-search';
+export { placesControllerSearch as placesControllerSearch } from './fn/places/places-controller-search';
 export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';
 export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
 export type { AdminOverviewControllerGrowth$Params as AdminOverviewControllerGrowth$Params } from './fn/admin/admin-overview-controller-growth';

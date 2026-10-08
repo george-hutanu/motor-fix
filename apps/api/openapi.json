@@ -1582,6 +1582,58 @@
         ]
       }
     },
+    "/api/v1/places": {
+      "get": {
+        "operationId": "PlacesController_search",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "description": "What the owner typed, trimmed",
+            "schema": {
+              "minLength": 3,
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "ro",
+              "type": "string",
+              "enum": [
+                "ro",
+                "en"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacesResultDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "places_rate_limited"
+          },
+          "503": {
+            "description": "search_unavailable"
+          }
+        },
+        "tags": [
+          "places"
+        ]
+      }
+    },
     "/api/v1/admin/overview": {
       "get": {
         "operationId": "AdminOverviewController_overview",
@@ -4330,6 +4382,43 @@
           "takers"
         ]
       },
+      "PlaceSuggestionDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "example": "Strada Ștefan cel Mare 12, Sector 2, București"
+          },
+          "lat": {
+            "type": "number",
+            "example": 44.4512
+          },
+          "lng": {
+            "type": "number",
+            "example": 26.1207
+          }
+        },
+        "required": [
+          "label",
+          "lat",
+          "lng"
+        ]
+      },
+      "PlacesResultDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "At most five places, all in Romania",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlaceSuggestionDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
       "AdminOverviewDto": {
         "type": "object",
         "properties": {
@@ -4843,6 +4932,27 @@
           },
           "slug": {
             "type": "string"
+          },
+          "address": {
+            "type": "string",
+            "description": "A workshop only.",
+            "maxLength": 200
+          },
+          "latitude": {
+            "type": "number",
+            "description": "A workshop only.",
+            "format": "double"
+          },
+          "longitude": {
+            "type": "number",
+            "description": "A workshop only.",
+            "format": "double"
+          },
+          "serviceRadiusKm": {
+            "type": "number",
+            "description": "A mobile mechanic only: how far from its base it travels.",
+            "maximum": 100,
+            "minimum": 1
           }
         },
         "required": [

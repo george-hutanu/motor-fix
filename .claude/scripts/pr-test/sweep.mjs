@@ -155,6 +155,10 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
         },
         [LANG_KEY, run.lang],
       );
+      // Maps read the app's own empty style: no tile is fetched from outside.
+      await context.addInitScript(() => {
+        globalThis.__MF_MAP_STYLE = "/map/empty-style.json";
+      });
       const page = await context.newPage();
       const screenshot = join(outDir, run.shot);
       const seen = (o) => observations.push({ ...run, screenshot, ...o });

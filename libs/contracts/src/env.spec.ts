@@ -1,5 +1,12 @@
 // @traces 539-FR-003 875-FR-001 875-FR-002 875-FR-003
-import { publicWebUrl, readEnv, STORAGE_ENV, telemetry } from './env';
+import {
+  PLACES_ENV,
+  placesApiKey,
+  publicWebUrl,
+  readEnv,
+  STORAGE_ENV,
+  telemetry,
+} from './env';
 
 describe('readEnv', () => {
   it('returns the required variables and defaults the release to dev', () => {
@@ -188,5 +195,20 @@ describe('telemetry', () => {
 
     expect(run).toThrow('APP_ENV');
     expect(run).not.toThrow(/c2VjcmV0/);
+  });
+});
+
+describe('placesApiKey', () => {
+  it('reads the address search key when it is set', () => {
+    expect(placesApiKey({ GEOAPIFY_API_KEY: ' k-123 ' })).toBe('k-123');
+  });
+
+  it('is undefined when unset or blank, so the api still boots', () => {
+    expect(placesApiKey({})).toBeUndefined();
+    expect(placesApiKey({ GEOAPIFY_API_KEY: '  ' })).toBeUndefined();
+  });
+
+  it('names the one variable it reads', () => {
+    expect(PLACES_ENV).toEqual(['GEOAPIFY_API_KEY']);
   });
 });
