@@ -61,8 +61,6 @@ export class Home {
   protected readonly i18n = inject(I18n);
   protected readonly health = signal(this.state.get(HEALTH, null));
   protected readonly tiles = signal(this.state.get(TILES, null) ?? []);
-  // A brand found by search takes the first tile while the visitor stays on
-  // Home; the popular tiles after it keep their order.
   private readonly searched = signal<BrandDto | undefined>(undefined);
   protected readonly shown = computed(() => {
     const searched = this.searched();

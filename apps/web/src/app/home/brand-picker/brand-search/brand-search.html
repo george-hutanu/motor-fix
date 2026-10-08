@@ -37,7 +37,9 @@
     </ul>
   }
 </div>
-@if (none() && open()) {
+@if (state() === 'loading' && typed()) {
+  <p class="none" aria-hidden="true">{{ 'public.home.searchLoading' | t }}</p>
+} @else if (none() && open()) {
   <p class="none" aria-hidden="true">{{ 'public.home.searchNone' | t }}</p>
 }
 @if (state() === 'failed') {

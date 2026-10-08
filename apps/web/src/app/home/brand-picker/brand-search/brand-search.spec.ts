@@ -331,10 +331,14 @@ describe('BrandSearch', () => {
     expect(input().value).toBe('alf');
     expect(input().disabled).toBe(false);
     expect(status()).toBe('Se încarcă mărcile…');
+    expect(host().querySelector('.none')?.textContent?.trim()).toBe(
+      'Se încarcă mărcile…',
+    );
 
     await pages[0].resolve(onePage([AUDI, ALFA]));
 
     expect(optionNames()).toEqual(['Alfa Romeo']);
+    expect(host().querySelector('.none')).toBeNull();
   });
 
   it('keeps the typed text and turns English when the language changes', async () => {
