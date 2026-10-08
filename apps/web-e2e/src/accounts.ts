@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { type BrowserContext, expect, type Page } from '@playwright/test';
 
 // The accounts libs/domain/src/seed.ts adds outside production. Their password
 // is a fake default locally and in CI; a deployed address has its own secret.
@@ -25,6 +25,14 @@ export async function ready(page: Page, path: string) {
   await page.goto(path);
   await page.waitForLoadState('networkidle');
 }
+
+// The place step's map reads the app's own empty style: no outside tiles, and
+// no software WebGL render holding the page's thread.
+export const ownMap = (target: Page | BrowserContext) =>
+  target.addInitScript(() => {
+    (window as { __MF_MAP_STYLE?: string }).__MF_MAP_STYLE =
+      '/map/empty-style.json';
+  });
 
 // Angular drops each server-rendered node's ngh marker as it hydrates it, so
 // none left means the page answers. Unlike networkidle, it still comes on a

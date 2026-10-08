@@ -1,6 +1,6 @@
-import { type BrowserContext, expect, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
-import { hydrated } from './accounts.js';
+import { hydrated, ownMap } from './accounts.js';
 import { test } from './fixtures.js';
 
 const MAILBOX = 'http://127.0.0.1:3025';
@@ -22,14 +22,6 @@ const SIZES = [
   ['a tablet', 820, 1180],
   ['a desktop', 1280, 800],
 ] as const;
-
-// The place step's map reads the app's own empty style: no outside tiles, and
-// no software WebGL render holding the page's thread while the photos move.
-const ownMap = (context: BrowserContext) =>
-  context.addInitScript(() => {
-    (window as unknown as { __MF_MAP_STYLE: string }).__MF_MAP_STYLE =
-      '/map/empty-style.json';
-  });
 
 const step = (page: Page) => page.locator('mf-photos-step');
 const tiles = (page: Page) => step(page).locator('li.photo');
