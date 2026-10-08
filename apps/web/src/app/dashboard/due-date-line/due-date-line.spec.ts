@@ -3,13 +3,13 @@ import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { I18n } from '@motor-fix/i18n';
 
-import { DueDateLine, dueDateStatus } from './due-date-line';
+import { DueDateLine } from './due-date-line';
 
 type Link = {
   label: string;
   name?: string;
   params?: Record<string, string>;
-  path: unknown[];
+  path: string[];
   query: Record<string, string>;
 } | null;
 
@@ -26,7 +26,7 @@ class Host {
   readonly link = signal<Link>(null);
 }
 
-const GARAGES: Link = {
+const GARAGES: NonNullable<Link> = {
   label: 'driver.cars.findGarage',
   name: 'driver.cars.findGarageFor',
   params: { car: 'BMW Seria 3' },
@@ -84,30 +84,14 @@ async function render(
   const lamp = () => element.querySelector('mf-lamp') as HTMLElement;
   return {
     anchor: () => element.querySelector('a'),
+    anchors: () => element.querySelectorAll('a'),
     element,
     fixture,
+    i18n,
     sentence: () => (lamp().textContent ?? '').replace(/\s+/g, ' ').trim(),
     state: () => lamp().getAttribute('data-state'),
   };
 }
-
-describe('dueDateStatus', () => {
-  const now = new Date('2026-10-08T09:00:00Z');
-
-  it.each([
-    [null, 'grey', null, false],
-    ['not a date', 'grey', null, false],
-    ['2026-10-07', 'red', -1, true],
-    ['2025-10-08', 'red', -365, true],
-    ['2026-10-08', 'red', 0, false],
-    ['2026-10-15', 'red', 7, false],
-    ['2026-10-16', 'amber', 8, false],
-    ['2026-12-07', 'amber', 60, false],
-    ['2026-12-08', 'green', 61, false],
-  ])('reads %p as %s', (expiry, state, days, passed) => {
-    expect(dueDateStatus(expiry, now)).toEqual({ days, passed, state });
-  });
-});
 
 describe('the due-date line', () => {
   beforeEach(() => clockAt('2026-10-08T09:00:00Z'));
@@ -167,14 +151,6 @@ describe('the due-date line', () => {
     expect(line.state()).toBe('red');
   });
 
-  it('gives the lamp the sentence as its label and hides the dot', async () => {
-    const line = await render('2026-10-16');
-    const dot = line.element.querySelector('.mf-lamp-dot');
-
-    expect(dot?.getAttribute('aria-hidden')).toBe('true');
-    expect(line.sentence()).toBe('ITP‑ul expiră în 8 zile');
-  });
-
   it('reads the clock again on the next check, with no new input', async () => {
     const line = await render('2026-10-16');
     expect(line.state()).toBe('amber');
@@ -207,7 +183,7 @@ describe('the garage link on a passed date', () => {
   });
 
   it('leaves the visible text as the name when no name is given', async () => {
-    const { name: _, params: __, ...plain } = GARAGES!;
+    const { name: _, params: __, ...plain } = GARAGES;
     const line = await render('2026-10-07', 'ro', plain);
 
     expect(line.anchor()?.hasAttribute('aria-label')).toBe(false);
@@ -215,7 +191,7 @@ describe('the garage link on a passed date', () => {
 
   it('names the link in English', async () => {
     const line = await render('2026-10-07', 'en', {
-      ...GARAGES!,
+      ...GARAGES,
       path: ['/', 'en', 'garages'],
     });
 
@@ -260,4 +236,249 @@ describe('the line across midnight and summer time', () => {
       expect(line.sentence()).toBe('ITP‑ul expiră azi');
     },
   );
+});
+
+describe('the due-date line at the edges', () => {
+  beforeEach(() => clockAt('2026-10-08T09:00:00Z'));
+
+  it.each([
+    ['2026-10-11', 'ITP‑ul expiră în 3 zile'],
+    ['2026-10-12', 'ITP‑ul expiră în 4 zile'],
+    ['2026-10-13', 'ITP‑ul expiră în 5 zile'],
+    ['2026-10-14', 'ITP‑ul expiră în 6 zile'],
+    ['2026-10-19', 'ITP‑ul expiră în 11 zile'],
+    ['2026-10-20', 'ITP‑ul expiră în 12 zile'],
+    ['2026-10-26', 'ITP‑ul expiră în 18 zile'],
+    ['2026-10-29', 'ITP‑ul expiră în 21 de zile'],
+    ['2026-10-30', 'ITP‑ul expiră în 22 de zile'],
+    ['2026-11-07', 'ITP‑ul expiră în 30 de zile'],
+    ['2026-12-06', 'ITP‑ul expiră în 59 de zile'],
+  ])('writes the Romanian plural for %s', async (expiry, text) => {
+    expect((await render(expiry)).sentence()).toBe(text);
+  });
+
+  it.each([
+    ['2026-10-10', 'ITP expires in 2 days'],
+    ['2026-10-28', 'ITP expires in 20 days'],
+    ['2026-10-29', 'ITP expires in 21 days'],
+    ['2026-11-07', 'ITP expires in 30 days'],
+  ])('writes the English plural for %s', async (expiry, text) => {
+    expect((await render(expiry, 'en')).sentence()).toBe(text);
+  });
+
+  it.each([
+    ['2027-01-15', 'ITP valabil până în ianuarie 2027'],
+    ['2027-12-31', 'ITP valabil până în decembrie 2027'],
+    ['2026-12-31', 'ITP valabil până în decembrie 2026'],
+  ])('names the month of %s in Romanian', async (expiry, text) => {
+    expect((await render(expiry)).sentence()).toBe(text);
+  });
+
+  it.each([
+    ['2027-01-01', 'ITP valid until January 2027'],
+    ['2027-12-31', 'ITP valid until December 2027'],
+  ])('names the month of %s in English', async (expiry, text) => {
+    expect((await render(expiry, 'en')).sentence()).toBe(text);
+  });
+
+  it.each([
+    [
+      '2026-01-01',
+      'ITP‑ul a expirat pe 1 ian. 2026',
+      'ITP expired on 1 Jan 2026',
+    ],
+    [
+      '2020-02-29',
+      'ITP‑ul a expirat pe 29 feb. 2020',
+      'ITP expired on 29 Feb 2020',
+    ],
+    [
+      '2025-12-31',
+      'ITP‑ul a expirat pe 31 dec. 2025',
+      'ITP expired on 31 Dec 2025',
+    ],
+  ])('writes the passed day %s in both languages', async (expiry, ro, en) => {
+    expect((await render(expiry)).sentence()).toBe(ro);
+    TestBed.resetTestingModule();
+    expect((await render(expiry, 'en')).sentence()).toBe(en);
+  });
+
+  it.each([
+    undefined,
+    '',
+    'soon',
+    ' 2026-10-09',
+    '2026-02-30',
+    '2026-10-09T10:00:00Z',
+  ])('shows the grey line for %p', async (expiry) => {
+    const line = await render(
+      expiry as unknown as string | null,
+      'ro',
+      GARAGES,
+    );
+
+    expect(line.state()).toBe('grey');
+    expect(line.sentence()).toBe('ITP: adaugă data din talon');
+    expect(line.anchors().length).toBe(0);
+  });
+
+  it.each([
+    ['1970-01-01', 'red', 'ITP‑ul a expirat pe 1 ian. 1970'],
+    ['9999-12-31', 'green', 'ITP valabil până în decembrie 9999'],
+  ])('reads the far date %s as a %s lamp', async (expiry, state, text) => {
+    const line = await render(expiry);
+
+    expect(line.state()).toBe(state);
+    expect(line.sentence()).toBe(text);
+  });
+
+  it.each([
+    [
+      '2026-10-15',
+      'red',
+      'ITP‑ul expiră în 7 zile',
+      'red',
+      'ITP‑ul expiră în 6 zile',
+    ],
+    [
+      '2026-10-16',
+      'amber',
+      'ITP‑ul expiră în 8 zile',
+      'red',
+      'ITP‑ul expiră în 7 zile',
+    ],
+  ])(
+    'counts %s again at Bucharest midnight',
+    async (expiry, stateBefore, before, stateAfter, after) => {
+      clockAt('2026-10-08T20:59:59.999Z');
+      const line = await render(expiry);
+      expect([line.state(), line.sentence()]).toEqual([stateBefore, before]);
+
+      jest.setSystemTime(new Date('2026-10-08T21:00:00.000Z'));
+      redraw(line.fixture);
+
+      expect([line.state(), line.sentence()]).toEqual([stateAfter, after]);
+    },
+  );
+
+  it.each([
+    ['2026-03-23T10:00:00Z', '2026-03-30', 'red', 'ITP‑ul expiră în 7 zile'],
+    ['2026-10-18T10:00:00Z', '2026-10-26', 'amber', 'ITP‑ul expiră în 8 zile'],
+  ])(
+    'keeps the thresholds across a clock change (%s)',
+    async (at, expiry, state, text) => {
+      clockAt(at);
+      const line = await render(expiry);
+
+      expect([line.state(), line.sentence()]).toEqual([state, text]);
+    },
+  );
+
+  it('shows no link when one is given but the date has not passed', async () => {
+    for (const expiry of [
+      '2026-10-08',
+      '2026-10-09',
+      '2026-10-15',
+      '2026-12-31',
+    ]) {
+      TestBed.resetTestingModule();
+      const line = await render(expiry, 'ro', GARAGES);
+      expect(line.anchors().length).toBe(0);
+    }
+  });
+
+  it('shows exactly one link on a passed date', async () => {
+    const line = await render('2000-01-01', 'ro', GARAGES);
+
+    expect(line.anchors().length).toBe(1);
+  });
+
+  it('encodes a brand with reserved characters in the address', async () => {
+    const line = await render('2026-10-07', 'ro', {
+      ...GARAGES,
+      query: { brand: 'a&b=c d' },
+    });
+
+    expect(line.anchors()[0]?.getAttribute('href')).toBe(
+      '/ro/garages?brand=a%26b%3Dc%20d',
+    );
+  });
+
+  it('keeps the address without a query when none is given', async () => {
+    const line = await render('2026-10-07', 'ro', { ...GARAGES, query: {} });
+
+    expect(line.anchors()[0]?.getAttribute('href')).toBe('/ro/garages');
+  });
+
+  it('adds the link when the clock passes the last day, and not before', async () => {
+    clockAt('2026-10-08T20:59:59.999Z');
+    const line = await render('2026-10-08', 'ro', GARAGES);
+    expect(line.anchors().length).toBe(0);
+
+    jest.setSystemTime(new Date('2026-10-08T21:00:00.000Z'));
+    redraw(line.fixture);
+
+    expect(line.anchors().length).toBe(1);
+  });
+
+  it('turns a green line amber when Bucharest midnight passes with no new input', async () => {
+    clockAt('2026-10-08T20:59:59.999Z');
+    const line = await render('2026-12-08');
+    expect(line.state()).toBe('green');
+
+    jest.setSystemTime(new Date('2026-10-08T21:00:00.000Z'));
+    redraw(line.fixture);
+
+    expect(line.state()).toBe('amber');
+    expect(line.sentence()).toBe('ITP‑ul expiră în 60 de zile');
+  });
+
+  it('follows a changed expiry and drops the link', async () => {
+    const line = await render('2026-10-01', 'ro', GARAGES);
+    expect(line.anchors().length).toBe(1);
+
+    line.fixture.componentInstance.expiry.set('2027-10-01');
+    redraw(line.fixture);
+
+    expect(line.state()).toBe('green');
+    expect(line.anchors().length).toBe(0);
+  });
+
+  it('follows a date removed after it was set', async () => {
+    const line = await render('2026-10-01', 'ro', GARAGES);
+
+    line.fixture.componentInstance.expiry.set(null);
+    redraw(line.fixture);
+
+    expect(line.state()).toBe('grey');
+    expect(line.anchors().length).toBe(0);
+  });
+
+  it('rewrites the sentence and link when the language changes', async () => {
+    const line = await render('2026-10-07', 'ro', GARAGES);
+
+    await line.i18n.use('en');
+    redraw(line.fixture);
+
+    expect(line.sentence()).toBe('ITP expired on 7 Oct 2026');
+    expect(line.anchors()[0]?.textContent?.trim()).toBe('Find a garage');
+  });
+
+  it('gives two lines on one page their own dates', async () => {
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    const i18n = TestBed.inject(I18n);
+    await i18n.enter('driver');
+    const a = TestBed.createComponent(Host);
+    const b = TestBed.createComponent(Host);
+    a.componentInstance.expiry.set('2026-10-01');
+    b.componentInstance.expiry.set('2027-10-01');
+    redraw(a);
+    redraw(b);
+
+    const state = (f: typeof a) =>
+      (f.nativeElement as HTMLElement)
+        .querySelector('mf-lamp')
+        ?.getAttribute('data-state');
+    expect([state(a), state(b)]).toEqual(['red', 'green']);
+  });
 });

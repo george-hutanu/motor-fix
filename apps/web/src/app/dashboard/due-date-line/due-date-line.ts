@@ -14,23 +14,23 @@ import {
 } from '@motor-fix/i18n';
 import { Lamp, type LampState } from '@motor-fix/ui-cockpit';
 
-export interface DueDateStatus {
+interface DueDateStatus {
   state: LampState;
   days: number | null;
   passed: boolean;
 }
 
-export interface DueDateLink {
+interface DueDateLink {
   label: string;
   // The accessible name, when the visible label alone would read the same on
   // every card; it starts with the label so voice control still finds it.
   name?: string;
   params?: Record<string, string>;
-  path: unknown[];
+  path: string[];
   query: Record<string, string>;
 }
 
-export function dueDateStatus(expiry: string | null, now: Date): DueDateStatus {
+function dueDateStatus(expiry: string | null, now: Date): DueDateStatus {
   const days = daysUntil(expiry, now);
   if (days === null) return { days, passed: false, state: 'grey' };
   if (days < 0) return { days, passed: true, state: 'red' };
@@ -60,7 +60,7 @@ export class DueDateLine {
     return dueDateStatus(this.expiry(), new Date());
   }
 
-  protected sentence({ days }: DueDateStatus): string {
+  protected sentence({ days, state }: DueDateStatus): string {
     const key = this.keyPrefix();
     const language = this.i18n.language();
     if (days === null) return this.i18n.t(`${key}.missing`);
@@ -69,7 +69,7 @@ export class DueDateLine {
         day: formatDay(this.expiry(), language),
       });
     if (days === 0) return this.i18n.t(`${key}.today`);
-    if (days > 60)
+    if (state === 'green')
       return this.i18n.t(`${key}.valid`, {
         month: formatMonthYear(this.expiry(), language),
       });

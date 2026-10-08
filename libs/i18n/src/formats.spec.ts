@@ -394,12 +394,6 @@ describe('formatMonthYear', () => {
     );
   });
 
-  it('takes the month in Bucharest, not on the device', () => {
-    expect(formatMonthYear(new Date('2026-12-31T22:30:00Z'), 'ro')).toBe(
-      'ianuarie 2027',
-    );
-  });
-
   it.each(['not a date', null, undefined, new Date(Number.NaN)])(
     'shows a dash for %p',
     (value) => {

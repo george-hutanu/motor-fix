@@ -138,15 +138,37 @@ export function formatDay(value: unknown, language: Language): string {
   return `${Number(day)} ${MONTHS_SHORT[language][Number(month) - 1]} ${year}`;
 }
 
-const monthNames = Object.fromEntries(
-  (Object.keys(LOCALES) as Language[]).map((language) => [
-    language,
-    new Intl.DateTimeFormat(LOCALES[language], {
-      month: 'long',
-      timeZone: ZONE,
-    }),
-  ]),
-) as Record<Language, Intl.DateTimeFormat>;
+// Fixed like the short names, so server and browser write the same month.
+const MONTHS_LONG: Record<Language, readonly string[]> = {
+  en: [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ],
+  ro: [
+    'ianuarie',
+    'februarie',
+    'martie',
+    'aprilie',
+    'mai',
+    'iunie',
+    'iulie',
+    'august',
+    'septembrie',
+    'octombrie',
+    'noiembrie',
+    'decembrie',
+  ],
+};
 
 function bucharestDay(date: Date) {
   const { day, month, year } = Object.fromEntries(
@@ -171,12 +193,9 @@ function calendarDay(value: unknown): Date | undefined {
 }
 
 export function formatMonthYear(value: unknown, language: Language): string {
-  const date =
-    typeof value === 'string' && CALENDAR_DAY.test(value)
-      ? calendarDay(value)
-      : instant(value);
+  const date = calendarDay(value);
   if (!date) return MISSING;
-  return `${monthNames[language].format(date)} ${bucharestDay(date).year}`;
+  return `${MONTHS_LONG[language][date.getUTCMonth()]} ${date.getUTCFullYear()}`;
 }
 
 // Whole calendar days from today in Bucharest to an expiry day: 0 on the

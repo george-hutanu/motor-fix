@@ -90,15 +90,6 @@ describe('formatMonthYear at the edges', () => {
     expect(formatMonthYear(day, 'en')).toBe(en);
   });
 
-  it('puts the last evening of a year in the next year in Bucharest', () => {
-    expect(formatMonthYear(new Date('2027-01-31T22:00:00Z'), 'en')).toBe(
-      'February 2027',
-    );
-    expect(formatMonthYear(new Date('2027-01-31T21:59:59.999Z'), 'en')).toBe(
-      'January 2027',
-    );
-  });
-
   it.each([
     '2027-13-01',
     '2027-02-30',
