@@ -26,12 +26,40 @@ export async function refused(run: Promise<unknown>) {
   return (http.getResponse() as { errors: FieldProblem[] }).errors;
 }
 
-const pause = () => new Promise((resolve) => setTimeout(resolve, 300));
+// Until a backend waits on a lock `holder` holds, or `ended` has settled.
+async function waitBehind(
+  prisma: PrismaClient,
+  holder: number,
+  ended: Promise<unknown>,
+) {
+  let done = false;
+  const end = () => {
+    done = true;
+  };
+  ended.then(end, end);
+  const deadline = Date.now() + 15_000;
+  while (!done) {
+    const [{ waiting }] = await prisma.$queryRaw<{ waiting: boolean }[]>`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_stat_activity
+        WHERE wait_event_type = 'Lock'
+          AND ${holder}::int = ANY (pg_blocking_pids(pid))
+      ) AS waiting`;
+    if (waiting) return;
+    if (Date.now() > deadline) {
+      throw new Error(
+        'afterRace: the second writer neither waited on the first one nor ended',
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
 
-// Runs `first` in a transaction held open until `second` has started and
-// met its uncommitted row, then commits it; answers how `second` ended. The
-// second write finds the value free when it reads, so it meets the unique
-// index instead: the race two concurrent sendings run.
+// Runs `first` in a transaction held open until `second` waits on the lock
+// its uncommitted row holds (or ends without meeting it), then commits it;
+// answers how `second` ended. The second write finds the value free when it
+// reads, so it meets the unique index instead: the race two concurrent
+// sendings run.
 export async function afterRace<T>(
   prisma: PrismaClient,
   first: (tx: Prisma.TransactionClient) => Promise<unknown>,
@@ -41,19 +69,32 @@ export async function afterRace<T>(
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
+  let wrote = (_pid: number) => {};
+  const written = new Promise<number>((resolve) => {
+    wrote = resolve;
+  });
   const winner = prisma.$transaction(
     async (tx) => {
       await first(tx);
+      const [{ pid }] = await tx.$queryRaw<
+        { pid: number }[]
+      >`SELECT pg_backend_pid() AS pid`;
+      wrote(pid);
       await held;
     },
     { timeout: 20_000 },
   );
-  await pause();
-  const loser = second();
-  await pause();
-  release();
-  await winner;
-  return loser;
+  try {
+    // `winner` only settles first when `first` threw.
+    const holder = await Promise.race([written, winner.then(() => 0)]);
+    const loser = second();
+    await waitBehind(prisma, holder, loser);
+    release();
+    await winner;
+    return loser;
+  } finally {
+    release();
+  }
 }
 
 // One spec file's garage, owner and catalogue, emptied before every test.
