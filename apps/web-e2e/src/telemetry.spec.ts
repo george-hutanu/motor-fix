@@ -1,8 +1,7 @@
 import { expect, type Page, type Request } from '@playwright/test';
 
-import { test } from './fixtures.js';
+import { COLLECTOR, test } from './fixtures.js';
 
-const COLLECTOR = /\/collect\/[\w-]+$/;
 const PERSONAL =
   /@[\w-]+\.\w|(\+40|0040|\b0)7\d{8}\b|\b[A-Z]{1,2}[\s-]?\d{2,3}[\s-]?[A-Z]{3}\b/;
 
