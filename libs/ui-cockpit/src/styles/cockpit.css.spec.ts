@@ -296,6 +296,35 @@ describe('cockpit.css component rules', () => {
     expect(main).toMatch(/(^|;)\s*color:\s*var\(--mf-on-amber\)/);
   });
 
+  it('sets the main button and the tab labels at the body size, so the theme meets the 16 px phone minimum (FR-021)', () => {
+    for (const selector of [
+      '.spartan-button-variant-default',
+      '.spartan-tabs-trigger',
+    ])
+      expect(rule(selector)).toMatch(/font-size:\s*var\(--mf-size-body\)/);
+  });
+
+  it('puts headings and the display figure on the type scale with their own tokens', () => {
+    const sizes = new Map(
+      [...css.matchAll(/(--mf-size-[\w-]+):\s*(\d+)px/g)].map((m) => [
+        m[1],
+        Number(m[2]),
+      ]),
+    );
+    expect(sizes.get('--mf-size-title')).toBe(32);
+    expect(sizes.get('--mf-size-heading')).toBe(24);
+    expect(sizes.get('--mf-size-subheading')).toBe(20);
+    expect(sizes.get('--mf-size-display')).toBe(40);
+    for (const [selector, token] of [
+      ['h1', 'title'],
+      ['h2', 'heading'],
+      ['h3', 'subheading'],
+    ])
+      expect(rule(selector)).toMatch(
+        new RegExp(`font-size:\\s*var\\(--mf-size-${token}\\)`),
+      );
+  });
+
   it('keeps the secondary and ghost buttons out of amber', () => {
     for (const variant of ['secondary', 'ghost']) {
       const body = componentRules

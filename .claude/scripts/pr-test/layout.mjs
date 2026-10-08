@@ -23,7 +23,9 @@ export async function measureLayout({ phone, tapTargets, focus }) {
   const FLOOR = 12;
   const BODY = 16;
   const FIELD = 16;
-  const RUNNING_ROLES = "p, li, td, th, dd, dt, label, button, a[href], [role=button], [role=link]";
+  // Exactly FR-001's reading and interaction roles (fields are held apart, below); labels and description
+  // lists are not among them, so they keep the 12 px floor only.
+  const RUNNING_ROLES = "p, li, td, th, button, a[href], [role=button], [role=link]";
   const CAPTIONS = new Set(["SMALL", "SUB", "SUP"]);
   const FIELDS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
   // A field a phone zooms into: one that takes typing or a choice, not a box to tick or a button.

@@ -58,13 +58,13 @@ describe.skipIf(!browser)('layout checks in a browser', () => {
     });
 
     it('names an element by its classes and place, not by a generated id that renumbers', async () => {
-      const html = `<label id="brn-label-2" class="field-label" style="font-size:13px">Caută marca</label>`;
-      expect(selectors(await measure(null, { html }), 'min-text')).toEqual(['label.field-label']);
+      const html = `<p id="brn-label-2" class="field-label" style="font-size:13px">Caută marca</p>`;
+      expect(selectors(await measure(null, { html }), 'min-text')).toEqual(["p.field-label"]);
     });
 
-    it('holds a label and a definition term to 16 px on a phone', async () => {
-      const html = `<dl><dt id="term" style="font-size:13px">Programare</dt><dd style="font-size:16px">Luni</dd></dl><label id="name" style="font-size:13px">Nume</label>`;
-      expect(selectors(await measure(null, { html }), 'min-text')).toEqual(['dt#term', 'label#name']);
+    it('holds labels and description lists, outside the roles of FR-001, to the 12 px floor only on a phone', async () => {
+      const html = `<dl><dt id="term" style="font-size:13px">Programare</dt><dd id="when" style="font-size:13px">Luni</dd></dl><label id="name" style="font-size:13px">Nume</label><label id="tiny" style="font-size:11px">Mic</label>`;
+      expect(selectors(await measure(null, { html }), 'min-text')).toEqual(['label#tiny']);
     });
 
     it('holds a desktop to the 12 px floor and the field size only', async () => {

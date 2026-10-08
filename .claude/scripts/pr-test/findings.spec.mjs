@@ -248,6 +248,13 @@ describe('layout findings', () => {
     assert.equal(marked[1].preExisting, undefined);
   });
 
+  it('marks a layout finding on a route the baseline run never swept as pre-existing (FR-011)', () => {
+    const now = [sweepFinding(layout('min-text', { route: '/ro/list-your-garage' }), { web: true }), sweepFinding(layout('grid', { selector: 'div#row' }), { web: true })];
+    const marked = markPreExisting(now, [], { routes: ['/', '/cockpit'] });
+    assert.deepEqual(marked.map((f) => [f.severity, f.preExisting]), [['medium', true], ['high', undefined]]);
+    assert.equal(markPreExisting(now, [])[0].severity, 'high', 'a baseline that names no routes is not read as sweeping none');
+  });
+
   it('leaves findings of other kinds alone, even when the baseline had them', () => {
     const consoleError = sweepFinding({ ...where, kind: 'console', text: 'NG0100' }, { web: true });
     assert.equal(markPreExisting([consoleError], [consoleError])[0].severity, 'high');

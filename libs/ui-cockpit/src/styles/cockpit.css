@@ -29,6 +29,10 @@
   --mf-size-small: 13px;
   --mf-size-body: 16px;
   --mf-size-field: 16px;
+  --mf-size-subheading: 20px;
+  --mf-size-heading: 24px;
+  --mf-size-title: 32px;
+  --mf-size-display: 40px;
   --mf-label-tracking: 0.14em;
 
   --mf-space-1: 4px;
@@ -88,6 +92,19 @@ body {
   line-height: 1.45;
   overflow-wrap: break-word;
   padding-inline: var(--mf-safe-left) var(--mf-safe-right);
+}
+
+/* Headings on the type scale: the browser's own sizes (1.17em for h3) fall between its steps. */
+h1 {
+  font-size: var(--mf-size-title);
+}
+
+h2 {
+  font-size: var(--mf-size-heading);
+}
+
+h3 {
+  font-size: var(--mf-size-subheading);
 }
 
 /* Phone rules every screen inherits, at no specificity so components win.
@@ -157,7 +174,7 @@ body {
   background: var(--mf-amber);
   color: var(--mf-on-amber);
   font-family: var(--mf-font-label);
-  font-size: var(--mf-size-small);
+  font-size: var(--mf-size-body);
   font-weight: 400;
   letter-spacing: var(--mf-label-tracking);
   text-transform: uppercase;
@@ -288,7 +305,7 @@ button.spartan-switch[data-disabled="true"] {
   border-radius: var(--mf-radius-chip);
   color: var(--mf-text-secondary);
   font-family: var(--mf-font-label);
-  font-size: var(--mf-size-label);
+  font-size: var(--mf-size-body);
   letter-spacing: var(--mf-label-tracking);
   text-transform: uppercase;
   cursor: pointer;

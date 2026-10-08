@@ -185,12 +185,15 @@ export const findingKey = (f) => f.key ?? (f.kind === "layout" ? layoutKey(f) : 
 /**
  * Layout findings the baseline run of `main` already reported are pre-existing: kept, capped at medium.
  * A baseline from a tester that measured no layout (`measured: false`) cannot tell main's from the PR's,
- * so every layout finding is treated as main's until a measured baseline exists.
+ * so every layout finding is treated as main's until a measured baseline exists. Nor can a baseline that
+ * never swept a route (`routes`, the routes it swept, when its report names them): on such a route, too,
+ * every layout finding is main's until a baseline sweeps it.
  */
-export function markPreExisting(findings, baseline, { measured = true } = {}) {
+export function markPreExisting(findings, baseline, { measured = true, routes } = {}) {
   const before = new Set(baseline.filter((f) => f.kind === "layout").map(layoutKey));
+  const unswept = (route) => Array.isArray(routes) && !routes.includes(route);
   return findings.map((f) =>
-    f.kind === "layout" && (!measured || before.has(layoutKey(f))) ? { ...f, severity: capAt(f.severity, "medium"), preExisting: true } : f,
+    f.kind === "layout" && (!measured || unswept(f.route) || before.has(layoutKey(f))) ? { ...f, severity: capAt(f.severity, "medium"), preExisting: true } : f,
   );
 }
 
