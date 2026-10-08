@@ -1,7 +1,7 @@
 import express, { type Express } from 'express';
 
 // A source map, whatever its case or query: the build writes hidden ones for
-// the release to upload, and they never leave the server (FR-015).
+// the release to upload, and they never leave the server.
 const SOURCE_MAP = /\.map$/i;
 
 // The browser build's files, cached for a year (their names carry a hash).
