@@ -6,7 +6,7 @@ const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
 serialDatabase(databaseUrl);
 
-// ST-946 FR-001: a spec's own teardown (closing its app, queues and workers)
+// A spec's own teardown (closing its app, queues and workers)
 // can still write, so the turn must outlast every afterAll the spec declares
 // after taking it. Jest runs afterAll hooks in the order they were declared.
 afterAll(async () => {

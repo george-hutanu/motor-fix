@@ -306,8 +306,8 @@ describe('seed of the listed garages', () => {
     }
   });
 
-  // ST-946: an earlier spec file can leave a brand behind under the same
-  // name; the seed must still link the listed garages to Dacia.
+  // An earlier spec file can leave a brand behind under the seed's name; this
+  // spec's own beforeEach must clear it, or the seed skips Dacia.
   describe('after another spec left a brand named Dacia', () => {
     beforeAll(async () => {
       await prisma.$executeRawUnsafe('TRUNCATE brand CASCADE');
@@ -317,7 +317,10 @@ describe('seed of the listed garages', () => {
       );
     });
 
-    it('still lists three garages taking Dacia', async () => {
+    it('starts with the leftover gone, so the seed links three garages to Dacia', async () => {
+      expect(await prisma.brand.count({ where: { key: 'dacia-left' } })).toBe(
+        0,
+      );
       expect(seed('test').status).toBe(0);
 
       expect(
