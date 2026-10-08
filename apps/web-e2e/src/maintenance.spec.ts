@@ -85,6 +85,12 @@ test.describe('maintenance mode @seeded', () => {
       ),
     ).toBeVisible();
     await signInDialog(driver).getByRole('button', { name: 'Închide' }).click();
+    // The typed credentials make the dialog ask before it drops them.
+    await driver
+      .getByRole('alertdialog', { name: 'Renunți la modificări?' })
+      .getByRole('button', { exact: true, name: 'Renunță' })
+      .click();
+    await expect(signInDialog(driver)).toBeHidden();
     await expect(maintenancePage(driver)).toBeVisible();
     await driver.context().close();
 
@@ -120,5 +126,21 @@ test.describe('maintenance mode @seeded', () => {
         () => document.documentElement.scrollWidth - window.innerWidth,
       ),
     ).toBeLessThanOrEqual(0);
+    // Cockpit type on a phone: a 20 px heading, 16 px running text and links.
+    const size = async (locator: ReturnType<Page['locator']>) =>
+      Number.parseFloat(
+        await locator.evaluate((el) => getComputedStyle(el).fontSize),
+      );
+    expect(await size(maintenancePage(page))).toBe(20);
+    expect(
+      await size(
+        page.getByText('MotorFix este în mentenanță. Revenim în curând.'),
+      ),
+    ).toBeGreaterThanOrEqual(16);
+    expect(
+      await size(
+        page.getByRole('link', { name: 'Administrator? Intră în cont' }),
+      ),
+    ).toBeGreaterThanOrEqual(16);
   });
 });

@@ -45,7 +45,7 @@ main {
 
 h1 {
   font-family: var(--mf-font-label);
-  font-size: var(--mf-size-body);
+  font-size: var(--mf-size-subheading);
   letter-spacing: var(--mf-label-tracking);
   margin: 0;
   text-transform: uppercase;
@@ -61,6 +61,6 @@ a {
   align-self: flex-start;
   color: var(--mf-text-secondary);
   display: inline-flex;
-  font-size: var(--mf-size-small);
+  font-size: var(--mf-size-body);
   min-height: var(--mf-tap);
 }

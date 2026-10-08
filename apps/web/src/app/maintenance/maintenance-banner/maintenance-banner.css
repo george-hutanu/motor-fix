@@ -2,7 +2,7 @@
   display: block;
 }
 
-p {
+div {
   border-block-end: 1px solid var(--mf-amber-ink);
   background: var(--mf-amber-tint);
   color: var(--mf-amber-ink);

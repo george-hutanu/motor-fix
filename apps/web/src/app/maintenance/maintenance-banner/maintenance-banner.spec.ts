@@ -14,7 +14,7 @@ describe('MaintenanceBanner', () => {
   it('announces in Romanian that maintenance is on', async () => {
     const element = (await render()).nativeElement as HTMLElement;
 
-    const status = element.querySelector('p[role="status"]');
+    const status = element.querySelector('div[role="status"]');
     expect(status?.textContent?.trim()).toBe('Mentenanță activă');
   });
 
@@ -25,7 +25,7 @@ describe('MaintenanceBanner', () => {
     fixture.detectChanges();
 
     const status = (fixture.nativeElement as HTMLElement).querySelector(
-      'p[role="status"]',
+      'div[role="status"]',
     );
     expect(status?.textContent?.trim()).toBe('Maintenance on');
   });
