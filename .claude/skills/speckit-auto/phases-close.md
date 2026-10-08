@@ -42,9 +42,11 @@ feature directory and the diff range `<start-commit>..HEAD`. They answer
 different questions — conformance to the spec, and durability of the code —
 and run in parallel. Merge both tables. Fix every CRITICAL and HIGH finding,
 then re-run whichever reviewer raised them, once. CRITICAL/HIGH findings that survive the re-review block completion —
-report them as a Hard Stop. MEDIUM/LOW findings go in the report unfixed; the
-ones routed to defer go to `specs/<feature>/deferred.md` and are filed as Notion
-tasks (`speckit-notion-sync debt`).
+report them as a Hard Stop. MEDIUM/LOW findings with a small or medium fix are
+fixed on the branch too, pre-existing or adjacent ones included, before ready;
+only a large fix by the size test in AGENTS.md ("Technical debt a review
+defers") is routed to defer, goes to `specs/<feature>/deferred.md` and is filed
+as a Notion task (`speckit-notion-sync debt`).
 
 ### 15. Agent context
 

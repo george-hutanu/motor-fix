@@ -1,17 +1,20 @@
 # Deferred findings: <feature>
 
-Findings a review verified but deliberately did not act on in this feature.
-Borrowed from BMAD's review triage, which routes each verified finding to
-**patch** (an unambiguous fix), **defer** (a real pre-existing issue that is not
-this change), or **decision needed** (an ambiguous choice that requires a human,
-available only when a spec exists to be ambiguous about).
+Findings a review verified whose fix is large, so they are not made in this
+PR. Borrowed from BMAD's review triage, which routes each verified finding to
+**patch** (a small or medium fix, made in this PR even when the problem existed
+before the change or sits next to it), **defer** (a large fix), or **decision
+needed** (an ambiguous choice that requires a human, available only when a
+spec exists to be ambiguous about). AGENTS.md, "Technical debt a review
+defers", holds the rule.
 
-Without this file the defer route does not exist, and a reviewer facing a real
-pre-existing bug has two bad options: fix it, which is the scope creep the
-constitution's Agent Execution Rules forbid, or drop it, which loses it.
+The size test: A fix is large when it needs its own design or decision, a data
+migration, a different area or epic, or work clearly bigger than the story
+itself. A bullet that names none of these arms is not large: fix it in the PR.
 
-One line per finding. `.claude/scripts/retro-evidence.mjs` reads the checkboxes, so an
-item stays open until someone closes it, and `/speckit-retro` reports what is
-still open.
+One line per finding, each filed as a Notion To do task before the merge
+(`speckit-notion-sync debt` appends its URL). `.claude/scripts/retro-evidence.mjs`
+reads the checkboxes, so an item stays open until someone closes it, and
+`/speckit-retro` reports what is still open.
 
-- [ ] `path/to/file.js:120` — **medium** — pre-existing: <what is wrong and what would happen> (<reviewer>, <date>)
+- [ ] `path/to/file.js:120` — **medium** — large (data migration): <what is wrong and what would happen> (<reviewer>, <date>)
