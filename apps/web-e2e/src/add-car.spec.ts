@@ -1,6 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, ready, signIn } from './accounts.js';
+import { test } from './fixtures.js';
 
 // A fake password for the account this test creates; never a real one.
 const NEW_PASSWORD = 'parola-noua-de-test';

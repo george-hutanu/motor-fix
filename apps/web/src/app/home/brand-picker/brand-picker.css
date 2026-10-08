@@ -11,9 +11,12 @@
 }
 
 button {
+  font: inherit;
   height: auto;
+  letter-spacing: normal;
   min-height: 44px;
   min-width: 0;
   overflow-wrap: anywhere;
+  text-transform: none;
   white-space: normal;
 }

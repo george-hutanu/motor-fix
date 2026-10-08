@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { TestBed } from '@angular/core/testing';
 import type { BrandDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
@@ -141,5 +144,13 @@ describe('BrandPicker', () => {
     expect(
       element.querySelector('[role="radiogroup"]')?.getAttribute('aria-label'),
     ).toBe('Car brand');
+  });
+
+  it('writes each brand as its name is spelt, the selected tile too', () => {
+    const css = readFileSync(join(__dirname, 'brand-picker.css'), 'utf8');
+    const tile = /(?:^|\n)button\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+
+    expect(tile).toMatch(/text-transform:\s*none;/);
+    expect(tile).toMatch(/font:\s*inherit;/);
   });
 });
