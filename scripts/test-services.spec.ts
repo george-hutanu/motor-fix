@@ -376,8 +376,8 @@ describe('down and sweep, against fake docker, git and gh', () => {
     expect(JSON.parse(result.stdout).project).toBe(composeProject(cwd));
   });
 
-  it('down still stops the stack when the timeout setting is not a number', () => {
-    fake('docker', 'exit 0');
+  it('down keeps its fixed 60 s limit whatever the environment says', () => {
+    fake('docker', 'sleep 0.3\nexit 0');
     const result = spawnSync(
       'node',
       ['scripts/test-services.ts', 'down', '/r/x'],
@@ -387,7 +387,7 @@ describe('down and sweep, against fake docker, git and gh', () => {
         env: {
           ...process.env,
           PATH: `${bin}:${process.env.PATH}`,
-          TEST_SERVICES_DOCKER_TIMEOUT_MS: 'soon',
+          TEST_SERVICES_DOCKER_TIMEOUT_MS: '1',
         },
       },
     );
@@ -436,6 +436,11 @@ describe('down and sweep, against fake docker, git and gh', () => {
     fake('docker', 'exit 0');
     expect(run('down', '/a', '/b').status).toBe(2);
     expect(run('sweep', 'now').status).toBe(2);
+    const unknown = run('stop');
+    expect(unknown.status).toBe(2);
+    expect(unknown.stderr).toMatch(/Usage: node scripts\/test-services\.ts/);
+    expect(calls()).toEqual([]);
+    expect(run('origin/main', 'extra').status).toBe(2);
   });
 
   describe('sweep', () => {

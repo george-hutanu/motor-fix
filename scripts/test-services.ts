@@ -335,8 +335,7 @@ function main() {
 
 // Docker (and git, gh) get this long per call when stopping stacks, so a hung
 // daemon never holds a merge or a watch pass.
-const dockerTimeout =
-  Number(process.env.TEST_SERVICES_DOCKER_TIMEOUT_MS) || 60_000;
+const dockerTimeout = 60_000;
 
 const tryRun = (command: string, args: string[]) => {
   const result = spawnSync(command, args, {
@@ -491,6 +490,21 @@ if (process.argv[1]?.endsWith('test-services.ts')) {
     if (command === 'sweep') sweep();
     else down(resolve(rest[0] ?? currentCheckout()));
     process.exit(0);
+  }
+  // Anything else is the base ref, alone: a word that names no commit is an
+  // unknown subcommand, not a ref to diff against.
+  const isCommit =
+    command !== undefined &&
+    spawnSync(
+      'git',
+      ['rev-parse', '--verify', '--quiet', `${command}^{commit}`],
+      {
+        stdio: 'ignore',
+      },
+    ).status === 0;
+  if (!isCommit || rest.length > 0) {
+    console.error(usage);
+    process.exit(2);
   }
   try {
     main();

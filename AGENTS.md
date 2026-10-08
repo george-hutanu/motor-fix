@@ -400,6 +400,8 @@ decisions are the source for anything the constitution does not fix.
   merge` stops the merged worktree's stack (`test-services.ts down`, volumes
   kept), and each `/speckit-watch` pass runs `test-services.ts sweep`, which
   stops those of merged, closed or deleted worktrees; neither fails on Docker.
+  By hand, `node scripts/test-services.ts down [<worktree>]` stops one stack
+  (the current checkout's by default).
 - PR CI: `.github/workflows/ci.yml`, six jobs, so a PR holds at most seven
   of the free plan's 20 concurrent runners: Checks (one runner and one
   install: Biome, Dependency audit, Typecheck, Build, Contract check, Harness,
