@@ -1,4 +1,6 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
+
+import { test } from './fixtures.js';
 
 const bar = 'mf-bar-chart canvas';
 const line = 'mf-line-chart canvas';

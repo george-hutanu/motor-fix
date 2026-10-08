@@ -1,6 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import { ready } from './accounts.js';
+import { test } from './fixtures.js';
 
 // The link e-mail as the API sent it, read from the test mailbox the local
 // run starts (mailbox.mjs); a deployed address has none, so the config leaves
