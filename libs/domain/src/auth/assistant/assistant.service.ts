@@ -185,10 +185,12 @@ export class AssistantService {
   }
 
   async exchange(
-    body: Record<string, unknown>,
+    given: Record<string, unknown> | null | undefined,
     now = Date.now(),
   ): Promise<AssistantTokens> {
     const broker = this.options.assistant;
+    const body: Record<string, unknown> =
+      typeof given === 'object' && given !== null ? given : {};
     const secret = text(body['client_secret']);
     if (
       !broker ||
@@ -265,13 +267,15 @@ export class AssistantService {
       this.logger.warn('approve refused: invalid_request');
       throw invalidRequest();
     }
-    let handOff: Partial<HandOff>;
+    let handOff: Partial<HandOff> | null;
     try {
       handOff = JSON.parse(Buffer.from(payload, 'base64url').toString());
     } catch {
       throw invalidRequest();
     }
     if (
+      typeof handOff !== 'object' ||
+      handOff === null ||
       handOff.client_id !== broker.clientId ||
       handOff.redirect_uri !== broker.redirectUri ||
       !text(handOff.state) ||
