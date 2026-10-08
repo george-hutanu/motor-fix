@@ -7,6 +7,7 @@ import { AuditService } from '../../../audit/audit.service';
 import type { Actor } from '../../../auth/policy';
 import { serialDatabase } from '../../../auth/serial-db.testing';
 import { outbox } from '../../../events/event.port';
+import { Prisma } from '../../../generated/prisma/client';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import {
   databaseUrl,
@@ -226,6 +227,34 @@ describe('asking to switch a rule off', () => {
 
     expect(res).toMatchObject({ code: 'change_pending', status: 409 });
     expect(await stored()).toHaveLength(1);
+  });
+
+  // The one-waiting index is the last word should two requests pass the row
+  // lock: its clash is the same 409, not a 500.
+  it('answers change_pending when the one-waiting index refuses the insert', async () => {
+    const clash = new Prisma.PrismaClientKnownRequestError(
+      'Unique constraint failed on platform_rule_change_one_waiting',
+      { clientVersion: 'test', code: 'P2002' },
+    );
+    const racing = new Proxy(prisma, {
+      get: (target, key, receiver) =>
+        key === '$transaction'
+          ? () => Promise.reject(clash)
+          : Reflect.get(target, key, receiver),
+    });
+    const service = new PlatformRuleChangesService(
+      racing,
+      new AuditService(),
+      outbox,
+      notifications,
+      { production: false, webUrl: WEB },
+    );
+
+    const res = await refusal(
+      service.request(ioana, { key: REVIEWS, reason: 'Testăm recenziile.' }),
+    );
+
+    expect(res).toMatchObject({ code: 'change_pending', status: 409 });
   });
 
   it('keeps one of two simultaneous requests and refuses the other as pending', async () => {
@@ -540,6 +569,16 @@ describe('withdrawing a request', () => {
 
     expect(res).toMatchObject({ code: 'already_decided', status: 409 });
     expect(res.detail).toContain('Mihai');
+  });
+
+  it('says a withdrawn request was withdrawn, by whom', async () => {
+    const asked = await ask(ioana);
+    await changes().cancel(ioana, asked.id);
+
+    const res = await refusal(changes().approve(mihai, asked.id));
+
+    expect(res).toMatchObject({ code: 'already_decided', status: 409 });
+    expect(res.detail).toBe('Already withdrawn by Ioana');
   });
 });
 

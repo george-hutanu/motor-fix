@@ -10,7 +10,7 @@ import { AUDIT_PORT, type AuditPort } from '../../../audit/audit.port';
 import { firstName } from '../../../audit/audit.service';
 import { type Actor, requireCapability } from '../../../auth/policy';
 import { PRISMA } from '../../../auth/prisma';
-import { refusal } from '../../../auth/sign-up.service';
+import { refusal, taken } from '../../../auth/sign-up.service';
 import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import type {
   PlatformRuleChange,
@@ -34,6 +34,13 @@ const DECIDED_SHOWN = 5;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Decision = 'approved' | 'refused' | 'cancelled';
+
+// A request its asker cancelled reads as withdrawn, as the screens say.
+const SAID: Record<Decision, string> = {
+  approved: 'approved',
+  cancelled: 'withdrawn',
+  refused: 'refused',
+};
 
 const dto = (row: PlatformRuleChange, actor: Actor): PlatformRuleChangeDto => ({
   decidedAt: row.decidedAt?.toISOString() ?? null,
@@ -77,7 +84,7 @@ function refuseStep(change: PlatformRuleChange, actor: Actor, step: Decision) {
     return refusal(
       HttpStatus.CONFLICT,
       'already_decided',
-      `Already ${change.status} by ${change.decidedByName}`,
+      `Already ${SAID[change.status as Decision] ?? change.status} by ${change.decidedByName}`,
     );
   }
   return undefined;
@@ -144,53 +151,63 @@ export class PlatformRuleChangesService {
       where: { id: actor.accountId },
     });
     const name = firstName(asker.name);
-    const row = await this.prisma.$transaction(async (tx) => {
-      // Two admins asking at once: the second waits here, then finds the
-      // first request.
-      const [locked] = await tx.$queryRaw<{ value: unknown }[]>`
+    const row = await this.prisma
+      .$transaction(async (tx) => {
+        // Two admins asking at once: the second waits here, then finds the
+        // first request.
+        const [locked] = await tx.$queryRaw<{ value: unknown }[]>`
         SELECT value FROM platform_rule WHERE key = ${key} FOR UPDATE`;
-      if (locked?.value !== true) {
-        throw refusal(
-          HttpStatus.CONFLICT,
-          'stale_value',
-          'The rule is already off',
-        );
-      }
-      const waiting = await tx.platformRuleChange.findFirst({
-        where: { ruleKey: key, status: 'requested' },
-      });
-      if (waiting) {
+        if (locked?.value !== true) {
+          throw refusal(
+            HttpStatus.CONFLICT,
+            'stale_value',
+            'The rule is already off',
+          );
+        }
+        const waiting = await tx.platformRuleChange.findFirst({
+          where: { ruleKey: key, status: 'requested' },
+        });
+        if (waiting) {
+          throw refusal(
+            HttpStatus.CONFLICT,
+            'change_pending',
+            'A request for this rule already waits',
+          );
+        }
+        const created = await tx.platformRuleChange.create({
+          data: {
+            newValue: false,
+            oldValue: true,
+            reason: text,
+            requestedBy: actor.accountId,
+            requestedByName: name,
+            ruleKey: key,
+          },
+        });
+        await this.audit.record(tx, {
+          action: 'create',
+          actorId: actor.accountId,
+          actorRole: actor.role,
+          field: 'value',
+          kind: 'platform_rule.change_requested',
+          newValue: false,
+          oldValue: true,
+          subjectId: created.id,
+          subjectType: 'platform_rule_change',
+          text,
+        });
+        await this.event(tx, created);
+        return created;
+      })
+      .catch((error: unknown) => {
+        // The one-waiting index catches what the row lock let through.
+        if (!taken(error)) throw error;
         throw refusal(
           HttpStatus.CONFLICT,
           'change_pending',
           'A request for this rule already waits',
         );
-      }
-      const created = await tx.platformRuleChange.create({
-        data: {
-          newValue: false,
-          oldValue: true,
-          reason: text,
-          requestedBy: actor.accountId,
-          requestedByName: name,
-          ruleKey: key,
-        },
       });
-      await this.audit.record(tx, {
-        action: 'create',
-        actorId: actor.accountId,
-        actorRole: actor.role,
-        field: 'value',
-        kind: 'platform_rule.change_requested',
-        newValue: false,
-        oldValue: true,
-        subjectId: created.id,
-        subjectType: 'platform_rule_change',
-        text,
-      });
-      await this.event(tx, created);
-      return created;
-    });
     this.done('requested', row);
     await this.tellAdmins(row);
     return dto(row, actor);

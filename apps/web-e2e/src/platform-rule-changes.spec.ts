@@ -144,10 +144,41 @@ test.describe('a second admin confirms switching a rule off @seeded', () => {
     });
 
     await reviews(page).click();
+    await expect(page.getByLabel('Motiv')).toBeVisible();
+    await expect(reviews(page)).toHaveAttribute('aria-checked', 'true');
     await page.getByRole('button', { name: 'Renunță' }).click();
 
     await expect(reviews(page)).toHaveAttribute('aria-checked', 'true');
     await expect(reviews(page)).toBeFocused();
+    expect(sent).toBe(0);
+  });
+
+  test('ask with the keyboard: the focus stays in the dialog and Escape gives it back', async ({
+    page,
+  }) => {
+    await openSettings(page, ACCOUNTS.admin);
+    let sent = 0;
+    page.on('request', (r) => {
+      if (r.method() !== 'GET' && r.url().includes('/admin/platform-rule')) {
+        sent++;
+      }
+    });
+    const dialog = page.getByRole('dialog', {
+      name: `Oprești regula „${REVIEWS}”?`,
+    });
+
+    await reviews(page).focus();
+    await page.keyboard.press('Space');
+    await expect(dialog).toBeVisible();
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('Tab');
+      await expect(dialog.locator(':focus')).toHaveCount(1);
+    }
+    await page.keyboard.press('Escape');
+
+    await expect(dialog).toBeHidden();
+    await expect(reviews(page)).toBeFocused();
+    await expect(reviews(page)).toHaveAttribute('aria-checked', 'true');
     expect(sent).toBe(0);
   });
 

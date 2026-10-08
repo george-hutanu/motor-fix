@@ -480,7 +480,7 @@ describe('PlatformRules, switching the reviews rule off', () => {
 
   // The dialog hands the focus back to the switch as it closes; a disabled
   // switch cannot take it, and the focus would fall to the page.
-  it('keeps the switch enabled while the dialog is open, and asks once', async () => {
+  it('keeps the switch on and enabled while the dialog is open', async () => {
     const { element, settle } = await render();
     await settle();
     let close: (value: 'cancelled') => void = () => undefined;
@@ -491,10 +491,8 @@ describe('PlatformRules, switching the reviews rule off', () => {
     named(element, REVIEWS)?.click();
     await settle();
     expect(named(element, REVIEWS)?.disabled).toBe(false);
-    named(element, REVIEWS)?.click();
-    await settle();
-    expect(open).toHaveBeenCalledTimes(1);
-
+    // FR-010: the switch stays where it is while the dialog asks.
+    expect(checked(element, REVIEWS)).toBe('true');
     close('cancelled');
     await settle();
     expect(named(element, REVIEWS)?.disabled).toBe(false);

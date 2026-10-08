@@ -1,8 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  Injector,
   inject,
   type OnInit,
   signal,
@@ -60,6 +62,7 @@ export class PlatformRules implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly overlays = inject(Overlays);
   private readonly i18n = inject(I18n);
+  private readonly injector = inject(Injector);
 
   protected readonly lines = LINES;
   protected readonly list = signal<PlatformRulesDto | undefined>(undefined);
@@ -172,11 +175,14 @@ export class PlatformRules implements OnInit {
   }
 
   // Switching off a rule that needs a second admin asks for it instead; the
-  // switch goes back on, and a sent request shows as waiting.
+  // switch stays on behind the dialog, and a sent request shows as waiting.
+  // The switch moved itself on the click: it is shown off for one render
+  // and then on again, so it takes the value back.
   private async ask(key: string, seen: PlatformRuleDto['value']) {
     this.error.set(null);
     this.asking.add(key);
     this.set(key, false);
+    afterNextRender(() => this.set(key, seen), { injector: this.injector });
     try {
       const sent = await this.overlays.open(RuleOffRequest, {
         data: { key },
