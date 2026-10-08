@@ -118,7 +118,7 @@
               <p class="note">{{ 'public.listing.verifyNote' | t }}</p>
             }
             @if (step.n === 2) {
-              <mf-brands-step [value]="brands()" (valueChange)="keeper.section('2', $event)" />
+              <mf-brands-step [value]="brands()" (valueChange)="keeper.section('2', $event)" (order)="brandOrder.set($event)" />
             }
             @if (step.n === 3) {
               <mf-prices-step [value]="prices()" [takenBrands]="takenBrands()" [current]="current() === 3" (valueChange)="keeper.section('3', $event ?? {})" />
@@ -143,6 +143,15 @@
             }
           </section>
         }
+        <aside>
+          <mf-garage-preview
+            [details]="details()"
+            [brands]="brands()"
+            [prices]="prices()"
+            [mechanics]="mechanics()"
+            [order]="brandOrder()"
+          />
+        </aside>
         <div class="actions">
           <button hlmBtn variant="secondary" type="button" (click)="save()">{{ 'public.listing.save' | t }}</button>
         </div>

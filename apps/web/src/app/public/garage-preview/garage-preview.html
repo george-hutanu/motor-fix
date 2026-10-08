@@ -1,0 +1,64 @@
+<button
+  type="button"
+  class="toggle"
+  [attr.aria-expanded]="open()"
+  [attr.aria-controls]="id"
+  (click)="open.set(!open())"
+>
+  {{ 'public.listing.preview.toggle' | t }}
+</button>
+<div class="body" [id]="id" [class.open]="open()">
+  <p class="title">{{ 'public.listing.preview.title' | t }}</p>
+  @let shown = card();
+  <p class="name">
+    @if (shown.name; as name) {
+      <mf-as-written [text]="name" />
+    } @else {
+      <span class="placeholder">{{ 'public.listing.preview.namePlaceholder' | t }}</span>
+    }
+  </p>
+  <p class="range">
+    @if (range(); as range) {
+      {{ 'public.listing.preview.range' | t: range }}
+    } @else {
+      <span class="placeholder">{{ 'public.listing.preview.rangePlaceholder' | t }}</span>
+    }
+  </p>
+  <div class="brands">
+    @if (!shown.sample) {
+      <mf-lamp state="grey" [label]="'public.listing.preview.noBrand' | t" />
+    }
+    @if (!shown.brands?.worksOn?.length) {
+      <p class="line">
+        <span class="label">{{ 'public.verdict.worksOnList' | t }}</span>
+        {{ 'public.verdict.none' | t }}
+      </p>
+    }
+    @if (shown.brands; as answer) {
+      <mf-brand-verdict [answer]="answer" [brand]="shown.sample" />
+    }
+    @if (!shown.brands?.doesNotTake?.length && !shown.brands?.refusalPhrase) {
+      <p class="line">
+        <span class="label">{{ 'public.verdict.refusedList' | t }}</span>
+        {{ 'public.verdict.none' | t }}
+      </p>
+    }
+  </div>
+  @if (shown.mechanics.length) {
+    <ul class="mechanics">
+      @for (mechanic of shown.mechanics; track $index) {
+        <li class="mechanic">
+          <span class="avatar" aria-hidden="true">{{ mechanic.initials }}</span>
+          <span class="who">
+            <mf-as-written [text]="mechanic.name" />
+            <span class="note">{{ 'public.listing.preview.mechanicNote' | t }}</span>
+          </span>
+        </li>
+      }
+    </ul>
+  }
+  @if (shown.mobileKm; as km) {
+    <p class="mobile">{{ 'public.listing.preview.mobile' | t: { km: km } }}</p>
+  }
+  <p class="state">{{ 'public.listing.preview.draft' | t }}</p>
+</div>

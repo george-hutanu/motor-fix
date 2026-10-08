@@ -243,6 +243,38 @@ describe('step 2, the brands', () => {
     ]);
   });
 
+  it('tells the order its chips are shown in, once loaded and after a brand found by search', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: BrandsService,
+          useValue: { brandsControllerSearch: search },
+        },
+      ],
+    });
+    await TestBed.inject(I18n).enter('public');
+    const fixture = TestBed.createComponent(BrandsStep);
+    const told: string[][] = [];
+    fixture.componentInstance.order.subscribe((ids) => told.push(ids));
+    await settle(fixture);
+    const step = fixture.nativeElement as HTMLElement;
+
+    const popular = CATALOGUE.slice(0, 12).map((b) => b.id);
+    expect(told.at(-1)).toEqual(popular);
+
+    await type(
+      fixture,
+      step.querySelector('input[type="search"]') as HTMLInputElement,
+      'lada',
+    );
+    results(step)[0].click();
+    await settle(fixture);
+
+    expect(told.at(-1)).toEqual([...popular, LADA.id]);
+  });
+
   it('marks a brand already shown in place, never twice, ignoring accents and case', async () => {
     const { fixture, step } = await open();
 
