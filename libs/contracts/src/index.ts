@@ -16,6 +16,8 @@ export * from './garages.dto';
 export * from './health.dto';
 export * from './job-types.dto';
 export * from './listing-drafts.dto';
+export * from './listing-photos';
+export * from './listing-photos.dto';
 export * from './listing-sections';
 export * from './listing-verification';
 export * from './live.dto';
