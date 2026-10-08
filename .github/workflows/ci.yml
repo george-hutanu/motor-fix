@@ -148,6 +148,18 @@ jobs:
         env:
           JEST_SUITE: unit
         run: npx nx $NX_SCOPE -t test --passWithNoTests
+      # Service containers take no command, so the slow-statement view is
+      # preloaded here: the data-store specs read it, never skip it.
+      - name: Preload pg_stat_statements
+        if: ${{ !cancelled() }}
+        run: |
+          docker exec ${{ job.services.postgres.id }} psql -U postgres -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements'"
+          docker restart ${{ job.services.postgres.id }}
+          for i in $(seq 1 30); do
+            docker exec ${{ job.services.postgres.id }} pg_isready -U postgres && break
+            sleep 1
+          done
+          docker exec ${{ job.services.postgres.id }} pg_isready -U postgres
       - name: Migrate the test database
         if: ${{ !cancelled() }}
         run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
@@ -189,6 +201,9 @@ jobs:
       GOOGLE_CLIENT_ID: e2e-client
       GOOGLE_CLIENT_SECRET: e2e-only-not-a-secret
       GOOGLE_ISSUER: http://127.0.0.1:3026
+      # Pages carry the browser telemetry tag; the tests answer the
+      # collector themselves (apps/web-e2e/src/fixtures.ts), so nothing leaves.
+      FARO_URL: https://faro.invalid/collect/e2e
       # The photo flows upload to the compose MinIO, started in the steps below.
       STORAGE_ENDPOINT: http://localhost:9000
       STORAGE_REGION: eu-central-1

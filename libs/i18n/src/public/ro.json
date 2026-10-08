@@ -37,6 +37,16 @@
     "picker": "Marca mașinii",
     "retry": "Reîncearcă",
     "search": "Caută service‑uri",
+    "searchFailed": "Lista de mărci nu s‑a încărcat",
+    "searchFound": {
+      "few": "{count} mărci găsite",
+      "one": "{count} marcă găsită",
+      "other": "{count} de mărci găsite"
+    },
+    "searchLabel": "Caută marca",
+    "searchList": "Mărci găsite",
+    "searchLoading": "Se încarcă mărcile…",
+    "searchNone": "Nicio marcă găsită",
     "takes": {
       "few": "primesc",
       "one": "primește",
@@ -225,6 +235,17 @@
       "searchDown": "Căutarea adresei nu merge acum. Poți pune pinul pe hartă.",
       "seat": "Sediul înregistrat",
       "suggestions": "Adrese găsite"
+    },
+    "preview": {
+      "draft": "Ciornă · se publică după verificare",
+      "mechanicNote": "apare după ce acceptă invitația",
+      "mobile": "Mobil · {km} km în jurul sediului",
+      "namePlaceholder": "Numele service‑ului",
+      "noBrand": "Nicio marcă aleasă",
+      "range": "{from}–{to} lei/oră",
+      "rangePlaceholder": "Manopera: — lei/oră",
+      "title": "Cum îl vor vedea șoferii",
+      "toggle": "Previzualizare"
     },
     "prices": {
       "addJob": "Adaugă o lucrare",

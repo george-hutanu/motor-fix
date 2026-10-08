@@ -6,6 +6,7 @@ features:
   - 112-opening-hours
   - 354-job-catalogue-prices
   - 109-garage-details-prices
+  - 230-brand-search
 ---
 
 # Capability: Catalogue
@@ -77,6 +78,10 @@ _From 354-job-catalogue-prices._
 ### 109-FR-006 — "Adaugă o lucrare" / "Add a job" MUST search the catalogue as the owner types (from the second character): approved jobs whose Romanian or English name contains the text, accents and case ignored, at most 20, excluding jobs already in the list; choosing one adds a row with an empty range. The search MUST be a public read of the API (the owner has no account): `GET /api/v1/job-types?q=` answering `{ items: [{ id, nameRo, nameEn }] }`, approved jobs only, at most 20, in catalogue order (name), open to visitors without a session and listed with the public routes (`apps/api/src/public-routes.integration.spec.ts`). An empty `q` answers the approved jobs by name, at most 20. Only the answer to the text last typed is shown: a slower answer to an earlier text is dropped.
 
 _From 109-garage-details-prices._
+
+### 230-FR-015 — The development brand data file MUST hold Alfa Romeo and Citroën (unranked) besides its twelve brands, so the scenarios above run against the development catalogue; the eight tiles stay the eight most popular.
+
+_From 230-brand-search._
 
 ## Retired
 

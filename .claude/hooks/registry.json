@@ -1,5 +1,5 @@
 {
-  "_comment": "Every hook this repo arms, by id. settings.json calls run-hook.mjs <id>; this file says what the id is, which script backs it, what it does, which strictness profiles it belongs to, and the fingerprint of the script as reviewed. Adapted from ECC's hooks.metadata.json. Profiles: `off` arms nothing, `standard` is the day-to-day gate set, `strict` adds the harness-freeze rules. Set SPECKIT_HOOK_PROFILE, or SPECKIT_DISABLED_HOOKS=id,id to silence one gate; SPECKIT_HOOKS_DRY_RUN=1 downgrades every block to a report. `fail_closed: true` marks a gate whose refusal is a safety guarantee: run-hook.mjs refuses on its behalf (exit 2) when the payload arrives truncated or unparseable, instead of the silent exit 0 that a gate's own `catch` used to produce. Fingerprints are checked by `node scripts/doctor.mjs` and refreshed with `--bless-hooks` — a mismatch means a gate's own script changed, which is the edit a weakened gate always needs.",
+  "_comment": "Every hook this repo arms, by id. settings.json calls run-hook.mjs <id>; this file says what the id is, which script backs it, what it does, which strictness profiles it belongs to, and the fingerprint of the script as reviewed. Adapted from ECC's hooks.metadata.json. Profiles: `off` arms nothing, `standard` is the day-to-day gate set, `strict` adds the harness-freeze rules. Set SPECKIT_HOOK_PROFILE, or SPECKIT_DISABLED_HOOKS=id,id to silence one gate; SPECKIT_HOOKS_DRY_RUN=1 downgrades every block to a report. `fail_closed: true` marks a gate whose refusal is a safety guarantee: run-hook.mjs refuses on its behalf (exit 2) when the payload arrives truncated or unparseable, instead of the silent exit 0 that a gate's own `catch` used to produce. It also refuses when the gate outlives its `timeout_ms` or is killed by a signal, and when the gate's script crashes (any exit other than 0 or 2). Fingerprints are checked by `node scripts/doctor.mjs` and refreshed with `--bless-hooks` — a mismatch means a gate's own script changed, which is the edit a weakened gate always needs.",
   "helpers": [
     {
       "script": "commit-msg-policy.js",
@@ -68,7 +68,7 @@
       ],
       "description": "Gate `git commit` on message policy and spec-drift — not traceability (retired) and not the test suite (.husky/pre-commit runs it)",
       "fail_closed": true,
-      "fingerprint": "a7d87a437bc9"
+      "fingerprint": "467bd3867be2"
     },
     {
       "id": "pre:bash:merge-gate",
@@ -107,7 +107,7 @@
       ],
       "description": "Protect the ratchets: the mutation floor, the traceability baseline, the structure baseline, the NNN-FR- tokens in tests, and (under strict) the harness itself",
       "fail_closed": true,
-      "fingerprint": "891f673de6c8"
+      "fingerprint": "cad085812a2c"
     },
     {
       "id": "pre:edit:red-first",
@@ -118,9 +118,9 @@
         "standard",
         "strict"
       ],
-      "description": "Block src/ and bin/ edits on a feature branch until tests/ carry that feature's NNN-FR- tokens",
+      "description": "Block src/ edits on a feature branch with FRs and open tasks until the branch adds or modifies a *.spec.* / *.test.* file",
       "fail_closed": true,
-      "fingerprint": "581631481e79"
+      "fingerprint": "0e73553405a6"
     },
     {
       "id": "post:edit:affected-tests",

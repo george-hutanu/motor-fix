@@ -30,7 +30,10 @@ const app = express()
   });
 const server = createServer(app);
 
+// Kept-alive sockets (fetch's, the exporter's) would hold close() open.
 afterAll(async () => {
+  server.closeAllConnections();
+  collector.closeAllConnections();
   await new Promise((resolve) => server.close(resolve));
   await new Promise((resolve) => collector.close(resolve));
 });

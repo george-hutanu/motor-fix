@@ -37,10 +37,10 @@ fi
 
 echo "▶ spec-kit gates: spec-drift (tests+lint+typecheck run in .husky/pre-commit)" >&2
 
-# The traceability gate is retired: the `// @traces NNN-FR-XXX` markers it
-# matched were removed from the test suite deliberately, so the check could
-# only ever fail. `node .claude/scripts/trace-matrix.mjs` still reports the
-# FR -> test matrix on demand; it just no longer blocks a commit.
+# The traceability gate stays retired: a whole-line `// @traces NNN-FR-XXX`
+# comment in a test file is the one id form Constitution II allows, and
+# `node .claude/scripts/trace-matrix.mjs` reads those lines on demand to report
+# the FR -> test matrix. An uncovered requirement never blocks a commit.
 
 if ! node "$repo/.claude/scripts/spec-drift.mjs" --staged "$commit_msg" >&2; then
   echo "❌ Commit blocked: spec drift — behavior change without a spec update alongside it." >&2

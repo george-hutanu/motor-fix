@@ -205,7 +205,8 @@ The constitution's Agent Execution Rules apply in full. Specific to this command
 - A finding you cannot fix honestly is reported, never suppressed. "Needs you"
   is a legitimate and expected section of the report.
 - No internal identifiers in anything you write — no FR ids, task ids, or ticket
-  keys in comments or test titles (constitution v1.2.1).
+  keys in comments or test titles (Constitution II). The one allowed form is a
+  whole-line `// @traces <feature>-FR-<n>` comment in a test file.
 - Deletion is the preferred fix. Reach for it before refactoring, and refactor
   before adding.
 

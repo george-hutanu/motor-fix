@@ -6,10 +6,10 @@ import { PlacesService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
 import {
-  type LatLng,
   type OpenPlaceMap,
   PLACE_MAP,
   type PlaceMapEvents,
+  type Shown,
 } from './place-map';
 import { PlaceStep } from './place-step';
 
@@ -31,10 +31,10 @@ let search: jest.Mock;
 let events: PlaceMapEvents;
 let failMap: boolean;
 const map = {
-  circle: jest.fn<void, [number | undefined]>(),
   destroy: jest.fn(),
-  pin: jest.fn<void, [LatLng | undefined]>(),
+  show: jest.fn<void, [Shown]>(),
 };
+const shown = () => map.show.mock.lastCall?.[0];
 const openMap: jest.Mock<
   ReturnType<OpenPlaceMap>,
   Parameters<OpenPlaceMap>
@@ -132,9 +132,8 @@ async function mapEvent({ fixture }: Opened, act: () => void) {
 beforeEach(() => {
   failMap = false;
   openMap.mockClear();
-  map.circle.mockClear();
   map.destroy.mockClear();
-  map.pin.mockClear();
+  map.show.mockClear();
   search = jest.fn(async ({ q }: { q: string }) =>
     q.toLowerCase().includes('nicăieri') ? { items: [] } : { items: [STEFAN] },
   );
@@ -237,7 +236,7 @@ describe('step 5, the place', () => {
       lng: STEFAN.lng,
     });
     expect(address(opened.step).value).toBe(STEFAN.label);
-    expect(map.pin).toHaveBeenLastCalledWith({
+    expect(shown()?.at).toEqual({
       lat: STEFAN.lat,
       lng: STEFAN.lng,
     });
@@ -288,7 +287,7 @@ describe('step 5, the place', () => {
     expect(opened.emitted).toEqual([
       { address: 'Bulevardul Nicăieri 7', lat: 45.1, lng: 25.2 },
     ]);
-    expect(map.pin).toHaveBeenLastCalledWith({ lat: 45.1, lng: 25.2 });
+    expect(shown()?.at).toEqual({ lat: 45.1, lng: 25.2 });
   });
 
   it('leaves a placed pin where it is on a tap, even once the button is pressed', async () => {
@@ -303,7 +302,7 @@ describe('step 5, the place', () => {
     await mapEvent(opened, () => events.tapped({ lat: 46, lng: 24 }));
 
     expect(opened.emitted).toEqual([]);
-    expect(map.pin).toHaveBeenLastCalledWith({
+    expect(shown()?.at).toEqual({
       lat: STEFAN.lat,
       lng: STEFAN.lng,
     });
@@ -319,7 +318,7 @@ describe('step 5, the place', () => {
       lng: STEFAN.lng,
     });
 
-    expect(map.pin).toHaveBeenCalledWith({ lat: STEFAN.lat, lng: STEFAN.lng });
+    expect(shown()?.at).toEqual({ lat: STEFAN.lat, lng: STEFAN.lng });
     await mapEvent(opened, () => events.dragged({ lat: 44.452, lng: 26.121 }));
 
     expect(opened.emitted.at(-1)).toEqual({
@@ -421,12 +420,37 @@ describe('step 5 for a mobile mechanic', () => {
     expect(described(step, area)).toContain('Între 1 și 100 km');
   });
 
+  it('sends the pin and the radius in force to the map together, once', async () => {
+    await open(
+      { address: STEFAN.label, lat: STEFAN.lat, lng: STEFAN.lng },
+      'mobile',
+    );
+
+    expect(map.show).toHaveBeenCalledTimes(1);
+    expect(map.show).toHaveBeenCalledWith({
+      at: { lat: STEFAN.lat, lng: STEFAN.lng },
+      km: 20,
+    });
+  });
+
+  it('sends a workshop pin to the map with no radius', async () => {
+    await open(
+      { address: STEFAN.label, lat: STEFAN.lat, lng: STEFAN.lng, radiusKm: 35 },
+      'company',
+    );
+
+    expect(map.show).toHaveBeenLastCalledWith({
+      at: { lat: STEFAN.lat, lng: STEFAN.lng },
+      km: undefined,
+    });
+  });
+
   it('keeps a whole radius from 1 to 100 and redraws the circle', async () => {
     const opened = await open(
       { address: STEFAN.label, lat: STEFAN.lat, lng: STEFAN.lng },
       'mobile',
     );
-    expect(map.circle).toHaveBeenLastCalledWith(20);
+    expect(shown()?.km).toBe(20);
     const area = radius(opened.step) as HTMLInputElement;
 
     for (const km of [1, 100, 35]) {
@@ -434,8 +458,24 @@ describe('step 5 for a mobile mechanic', () => {
       area.dispatchEvent(new Event('input'));
       await settle(opened.fixture);
       expect(opened.emitted.at(-1)?.radiusKm).toBe(km);
-      expect(map.circle).toHaveBeenLastCalledWith(km);
+      expect(shown()?.km).toBe(km);
     }
+  });
+
+  it('keeps the radius when the map could not be loaded', async () => {
+    failMap = true;
+    const opened = await open(
+      { address: STEFAN.label, lat: STEFAN.lat, lng: STEFAN.lng },
+      'mobile',
+    );
+    const area = radius(opened.step) as HTMLInputElement;
+
+    area.value = '35';
+    area.dispatchEvent(new Event('input'));
+    await settle(opened.fixture);
+
+    expect(opened.emitted.at(-1)?.radiusKm).toBe(35);
+    expect(shown()).toBeUndefined();
   });
 
   it.each(['0', '101', '12.5', 'a'])(
@@ -446,15 +486,17 @@ describe('step 5 for a mobile mechanic', () => {
         'mobile',
       );
       const area = radius(opened.step) as HTMLInputElement;
+      const sent = map.show.mock.calls.length;
 
       area.value = typed;
       area.dispatchEvent(new Event('input'));
       await settle(opened.fixture);
 
       expect(opened.emitted).toEqual([]);
+      expect(map.show).toHaveBeenCalledTimes(sent);
       expect(area.getAttribute('aria-invalid')).toBe('true');
       expect(described(opened.step, area)).toContain('Între 1 și 100 km');
-      expect(map.circle).not.toHaveBeenLastCalledWith(Number(typed));
+      expect(shown()?.km).toBe(35);
     },
   );
 
@@ -473,7 +515,7 @@ describe('step 5 for a mobile mechanic', () => {
     expect(labelOf(opened.step, address(opened.step))).toBe('Adresă');
     expect(address(opened.step).value).toBe(STEFAN.label);
     expect(radius(opened.step)).toBeNull();
-    expect(map.circle).toHaveBeenLastCalledWith(undefined);
+    expect(shown()?.km).toBeUndefined();
     expect(opened.emitted).toEqual([]);
   });
 });
