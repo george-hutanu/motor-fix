@@ -541,6 +541,44 @@ describe('Home brand picker on the server', () => {
   });
 });
 
+describe('Home opened from another screen in the app', () => {
+  // No server render handed tiles over: the browser reads them itself, so
+  // the brands and the place line still show.
+  async function visit() {
+    TestBed.inject(TransferState).remove(TILES);
+    fixture = TestBed.createComponent(Home);
+    fixture.detectChanges();
+    await settle();
+    await settle();
+  }
+
+  it('reads the eight tiles in the browser and shows the place line', async () => {
+    tilesApi.popularBrandsControllerTiles.mockResolvedValue(BRANDS);
+    await visit();
+
+    expect(tilesApi.popularBrandsControllerTiles).toHaveBeenCalledWith({
+      limit: 8,
+    });
+    expect(tiles()).toHaveLength(8);
+    expect(page().querySelector('.place')).not.toBeNull();
+  });
+
+  it('shows no brands, quietly, when that read fails', async () => {
+    tilesApi.popularBrandsControllerTiles.mockRejectedValue(
+      new HttpErrorResponse({ status: 500 }),
+    );
+    await visit();
+
+    expect(tiles()).toHaveLength(0);
+  });
+
+  it('does not read the tiles again when the server handed them over', async () => {
+    await render();
+
+    expect(tilesApi.popularBrandsControllerTiles).not.toHaveBeenCalled();
+  });
+});
+
 describe('Home brand cycling', () => {
   beforeEach(() => {
     jest.useFakeTimers();

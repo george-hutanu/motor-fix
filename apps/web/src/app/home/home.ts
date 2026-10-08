@@ -146,9 +146,19 @@ export class Home {
       onCleanup(() => clearInterval(timer));
     });
 
-    if (!this.server) return;
-    const health = inject(HealthService);
     const brands = inject(BrandsService);
+    if (!this.server) {
+      // Opened from another screen in the app: no server render handed the
+      // tiles over, so the browser reads them itself.
+      if (!this.state.hasKey(TILES)) {
+        void brands
+          .popularBrandsControllerTiles({ limit: 8 })
+          .catch(() => [])
+          .then((tiles) => this.tiles.set(tiles));
+      }
+      return;
+    }
+    const health = inject(HealthService);
     const pending = inject(PendingTasks);
     void pending.run(async () => {
       const ready = await health.healthControllerReady().catch(report);
