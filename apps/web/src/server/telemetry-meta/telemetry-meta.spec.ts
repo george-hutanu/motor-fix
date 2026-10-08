@@ -76,4 +76,68 @@ describe('withTelemetryMeta', () => {
 
     expect(res).toBe(json);
   });
+
+  it('streams the page: the head with its tag goes out before the body ends', async () => {
+    const encoder = new TextEncoder();
+    let finish: () => void = () => undefined;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode('<html><HEAD><title>M</title></he'));
+        controller.enqueue(encoder.encode('ad><body>first'));
+        finish = () => {
+          controller.enqueue(encoder.encode(' last</body></html>'));
+          controller.close();
+        };
+      },
+    });
+
+    const res = await withTelemetryMeta(html(body as never), collector);
+    const reader = (res.body as ReadableStream<Uint8Array>).getReader();
+    const decoder = new TextDecoder();
+    let early = '';
+    while (!early.includes('first')) {
+      const { value } = await reader.read();
+      early += decoder.decode(value, { stream: true });
+    }
+
+    expect(early).toBe(
+      '<html><HEAD><title>M</title>' +
+        '<meta name="mf-telemetry" content="https://faro.example/collect/key" data-version="abc1234">' +
+        '</head><body>first',
+    );
+    finish();
+    let rest = '';
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      rest += decoder.decode(value, { stream: true });
+    }
+    expect(rest).toBe(' last</body></html>');
+  });
+
+  it('passes a page with no head end through whole', async () => {
+    const res = await withTelemetryMeta(html('<p>no head</p>'), collector);
+
+    expect(await res.text()).toBe('<p>no head</p>');
+  });
+
+  it('keeps a character split across chunks whole', async () => {
+    const bytes = new TextEncoder().encode(
+      '<html><head><title>Mașină 🚗 ok</title></head><body></body></html>',
+    );
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const byte of bytes) controller.enqueue(Uint8Array.of(byte));
+        controller.close();
+      },
+    });
+
+    const res = await withTelemetryMeta(html(body as never), collector);
+
+    expect(await res.text()).toBe(
+      '<html><head><title>Mașină 🚗 ok</title>' +
+        '<meta name="mf-telemetry" content="https://faro.example/collect/key" data-version="abc1234">' +
+        '</head><body></body></html>',
+    );
+  });
 });
