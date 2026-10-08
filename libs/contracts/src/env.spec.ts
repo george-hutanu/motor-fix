@@ -1,5 +1,5 @@
 // @traces 539-FR-003 875-FR-001 875-FR-002 875-FR-003
-import { publicWebUrl, readEnv, STORAGE_ENV, telemetry } from './env';
+import { faroUrl, publicWebUrl, readEnv, STORAGE_ENV, telemetry } from './env';
 
 describe('readEnv', () => {
   it('returns the required variables and defaults the release to dev', () => {
@@ -102,6 +102,36 @@ describe('publicWebUrl', () => {
     expect(() => publicWebUrl({ PUBLIC_WEB_URL: 'secret-host' })).toThrow(
       new Error('PUBLIC_WEB_URL must be an absolute URL'),
     );
+  });
+});
+
+describe('faroUrl', () => {
+  it('parses an absolute https URL', () => {
+    expect(faroUrl({ FARO_URL: 'https://faro.example/collect/key' })).toBe(
+      'https://faro.example/collect/key',
+    );
+  });
+
+  it('accepts http for a local collector', () => {
+    expect(faroUrl({ FARO_URL: 'http://localhost:12345/collect' })).toBe(
+      'http://localhost:12345/collect',
+    );
+  });
+
+  it('returns nothing when unset or empty', () => {
+    expect(faroUrl({})).toBeUndefined();
+    expect(faroUrl({ FARO_URL: '' })).toBeUndefined();
+  });
+
+  it.each([
+    'not-a-url',
+    'ftp://faro.example/collect/secret-key',
+    '/collect/secret-key',
+  ])('names the variable, never the value, for %s', (value) => {
+    const run = () => faroUrl({ FARO_URL: value });
+
+    expect(run).toThrow(new Error('FARO_URL must be an absolute http(s) URL'));
+    expect(run).not.toThrow(/secret-key|not-a-url/);
   });
 });
 

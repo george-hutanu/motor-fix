@@ -63,6 +63,21 @@ export function publicWebUrl(
   return new URL(value);
 }
 
+// The browser collector's address (Grafana Faro): unset means the browser
+// sends nothing. Its path carries the app key, so a bad value is never echoed.
+export function faroUrl(
+  source: Record<string, string | undefined> = process.env,
+): string | undefined {
+  const value = source['FARO_URL'];
+  if (value === undefined || value === '') return undefined;
+  const url =
+    typeof value === 'string' && /^https?:\/\//i.test(value)
+      ? URL.parse(value)
+      : null;
+  if (!url) throw new Error('FARO_URL must be an absolute http(s) URL');
+  return url.href;
+}
+
 // Telemetry: optional; unset endpoint means off. Grafana Cloud's OTLP gateway
 // in staging and production, the local otel-lgtm profile in development. The
 // headers carry the Grafana Cloud token and never reach an error.
