@@ -37,7 +37,9 @@ const encode = (createdAt: Date, id: string) =>
   Buffer.from(`${createdAt.toISOString()}|${id}`).toString('base64url');
 
 function decode(cursor: string) {
-  if (!/^[A-Za-z0-9_-]+$/.test(cursor)) throw invalidCursor();
+  if (cursor.length > 200 || !/^[A-Za-z0-9_-]+$/.test(cursor)) {
+    throw invalidCursor();
+  }
   const parts = Buffer.from(cursor, 'base64url').toString('utf8').split('|');
   if (parts.length !== 2) throw invalidCursor();
   const [at, id] = parts;

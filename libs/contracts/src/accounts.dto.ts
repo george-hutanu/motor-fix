@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 import { ROLE } from './me.dto';
 
@@ -7,10 +7,14 @@ const COUNT_KIND = ['requests', 'reviews', 'age'] as const;
 const STATUS = ['active', 'suspended'] as const;
 
 export class AdminAccountsQueryDto {
-  @ApiPropertyOptional({ description: 'The nextCursor of the previous page' })
+  // The length is checked with the rest of the cursor, so a long one answers
+  // invalid_cursor like any other cursor this list never gave out.
+  @ApiPropertyOptional({
+    description: 'The nextCursor of the previous page',
+    maxLength: 200,
+  })
   @IsOptional()
   @IsString()
-  @MaxLength(200)
   cursor?: string;
 }
 

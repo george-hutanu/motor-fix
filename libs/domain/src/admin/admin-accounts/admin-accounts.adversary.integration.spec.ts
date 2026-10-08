@@ -108,13 +108,14 @@ describe('hostile cursors over HTTP', () => {
     expect(res.body.code).toBe('invalid_cursor');
   });
 
-  it('refuses a cursor past 200 characters with a 400', async () => {
+  it('refuses a cursor past 200 characters with a 400 invalid_cursor', async () => {
     const res = await get(
       `/admin/accounts?cursor=${'A'.repeat(201)}`,
       await adminAuth(),
     );
 
     expect(res.status).toBe(400);
+    expect(res.body.code).toBe('invalid_cursor');
   });
 
   it('refuses a cursor given twice with a 400', async () => {
