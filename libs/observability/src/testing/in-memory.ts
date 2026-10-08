@@ -4,8 +4,12 @@ import { MetricReader } from '@opentelemetry/sdk-metrics';
 import { InMemorySpanExporter } from '@opentelemetry/sdk-trace-node';
 
 import { startedInstrumentations } from '../setup/start';
+import { gaugeDelta } from '../setup/temporality';
 
 class ManualMetricReader extends MetricReader {
+  constructor() {
+    super({ aggregationTemporalitySelector: gaugeDelta });
+  }
   protected override async onForceFlush() {}
   protected override async onShutdown() {}
 }

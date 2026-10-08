@@ -95,5 +95,9 @@ Rules that keep it there:
   values: service, `env`, route template, method, status class, queue name.
   Never a user, garage, request, record or session id, a raw URL or an
   e-mail; those belong in logs and trace attributes.
+- **Data-store figures.** The worker's PostgreSQL, Redis, outbox and object
+  storage figures add at most 150 series per environment, every label value in
+  use (`libs/observability/src/datastores/series.spec.ts` holds the ceiling);
+  slow statements are WARN log records, never labels.
 - Check usage in Grafana Cloud's billing dashboard when a story adds a signal;
   past half of any limit, cut before adding.

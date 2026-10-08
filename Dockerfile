@@ -28,10 +28,12 @@ RUN mkdir /maps && if [ "${APP}" = web ]; then \
 # The api's pre-deploy step runs the migrations from inside its image, and
 # the staging reset (.github/workflows/reset-staging.yml) runs the seed there:
 # one file, run by Node as it is, with pg already among the api's dependencies.
+# The same step then sets the monitor role's password (monitor-password.ts).
 RUN if [ "${APP}" = api ]; then \
       cp -r libs/domain/prisma libs/domain/prisma.config.ts dist/apps/api/ \
-      && mkdir -p dist/apps/api/src \
-      && cp libs/domain/src/seed.ts dist/apps/api/src/; fi
+      && mkdir -p dist/apps/api/src dist/apps/api/scripts \
+      && cp libs/domain/src/seed.ts dist/apps/api/src/ \
+      && cp scripts/monitor-password.ts dist/apps/api/scripts/; fi
 
 FROM scratch AS web-maps
 COPY --from=build /maps /
