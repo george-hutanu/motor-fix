@@ -32,11 +32,11 @@ import {
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
+import { characters } from '../../characters';
 import { Session } from '../../dashboard/session';
 import { Consent, consentControl } from '../consent/consent';
 import { ProviderButtons } from '../providers/providers';
 import type { AuthData, AuthSwitch } from '../sign-in';
-import { characters } from '../sign-up/sign-up';
 
 const CODE_SECONDS = 5 * 60;
 const RESEND_SECONDS = 60;

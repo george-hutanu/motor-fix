@@ -34,7 +34,7 @@ p {
 }
 .lead,
 .note {
-  color: var(--mf-ink-muted);
+  color: var(--mf-text-secondary);
 }
 .note {
   font-size: var(--mf-size-small);
@@ -72,7 +72,7 @@ ul {
   margin: 0;
   padding: var(--mf-space-1) 0;
   border: 1px solid var(--mf-line-strong);
-  border-radius: var(--mf-radius-sm, 8px);
+  border-radius: var(--mf-radius-chip);
 }
 li {
   display: flex;

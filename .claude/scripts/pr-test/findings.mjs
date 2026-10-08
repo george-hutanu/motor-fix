@@ -229,7 +229,7 @@ export function reportMarkdown({ pr, sha, verdict: v, findings, booted, screensh
       lines.push(`| ${i + 1} | ${f.severity}${f.preExisting ? " (pre-existing)" : ""} | ${cell(f.title)} | ${cell(where)}${also} | ${cell(f.evidence ?? "")} |`);
     });
     lines.push("", "### Reproduction");
-    sorted.forEach((f, i) => lines.push(`${i + 1}. ${f.steps.map(cell).join(" → ")}`));
+    sorted.forEach((f, i) => lines.push(`${i + 1}. ${(f.steps ?? [f.title]).map(cell).join(" → ")}`));
   }
   if (screenshots.length) lines.push("", `Screenshots: ${screenshots.length}, one per route × viewport × scheme × language.`);
   return `${lines.join("\n")}\n`;

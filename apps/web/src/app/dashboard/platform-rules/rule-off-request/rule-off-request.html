@@ -1,0 +1,23 @@
+<form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+  <p>{{ 'admin.platformRules.request.what' | t }}</p>
+  <p>{{ 'admin.platformRules.request.second' | t }}</p>
+  <div class="field">
+    <label for="mf-rule-off-reason">{{ 'admin.platformRules.request.reason' | t }}</label>
+    <textarea
+      hlmInput
+      id="mf-rule-off-reason"
+      rows="3"
+      formControlName="reason"
+      aria-describedby="mf-rule-off-reason-hint mf-rule-off-reason-error"
+    ></textarea>
+    <p class="hint" id="mf-rule-off-reason-hint">{{ 'admin.platformRules.request.reasonHint' | t }}</p>
+    <mf-field-error id="mf-rule-off-reason-error" [save]="save" [control]="form.controls.reason" />
+  </div>
+  <mf-task-error [save]="save" />
+  <div class="actions">
+    <button hlmBtn type="submit" [mfTaskSubmit]="save">{{ 'admin.platformRules.request.submit' | t }}</button>
+    <button hlmBtn variant="ghost" type="button" (click)="task.close('cancelled')">
+      {{ 'admin.platformRules.request.cancel' | t }}
+    </button>
+  </div>
+</form>
