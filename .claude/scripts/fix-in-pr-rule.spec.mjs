@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-// The owner's rule of 2026-10-08 (ST-966): a verified finding whose fix is
+// The owner's rule of 2026-10-08: a verified finding whose fix is
 // small or medium is fixed in the same PR; only a large fix is deferred. Every
 // file that routes findings carries the size test, verbatim or as a pointer to
 // AGENTS.md, and none keeps the old wording, so the rule cannot drift back.
 
 const repo = join(import.meta.dirname, '..', '..');
 
-export const normalise = (text) => text.replace(/[*>`]/g, '').replace(/\s+/g, ' ');
+const normalise = (text) => text.replace(/[*>`]/g, '').replace(/\s+/g, ' ');
 
 const SIZE_TEST = normalise(
   'A fix is large when it needs its own design or decision, a data migration, a different area or epic, or work clearly bigger than the story itself.',
@@ -43,14 +43,17 @@ const OLD = [
 
 const read = (file) => normalise(readFileSync(join(repo, file), 'utf8'));
 
-describe('the fix-in-PR rule (ST-966)', () => {
+describe('the fix-in-PR rule', () => {
   it.each(VERBATIM)('%s carries the size test verbatim', (file) => {
     assert.ok(read(file).includes(SIZE_TEST), `${file} lacks the size test`);
   });
 
   it.each(POINTER)('%s points at the size test in AGENTS.md', (file) => {
-    const text = read(file);
-    assert.ok(/size test/i.test(text) && text.includes('AGENTS.md'), `${file} does not point at AGENTS.md's size test`);
+    const sentences = read(file).split(/\.\s/);
+    assert.ok(
+      sentences.some((s) => /size test/i.test(s) && s.includes('AGENTS.md')),
+      `${file} has no sentence pointing at AGENTS.md's size test`,
+    );
   });
 
   it.each([...VERBATIM, ...POINTER])('%s keeps none of the old routing wording', (file) => {
