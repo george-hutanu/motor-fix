@@ -52,8 +52,7 @@ function injectTag(tag: string): TransformStream<Uint8Array, Uint8Array> {
 }
 
 // Tells the browser where to send its telemetry, for which release and
-// environment, in
-// one tag before `</head>` of a rendered page. With no collector set the page
+// environment, in one tag before `</head>` of a rendered page. With no collector set the page
 // carries no tag and the browser loads no telemetry at all.
 export async function withTelemetryMeta(
   response: Response,

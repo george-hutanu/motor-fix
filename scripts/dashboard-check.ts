@@ -11,7 +11,7 @@
 //
 // Prints `<file>: <rule> …` per problem and exits 1, or one ok line.
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 
@@ -19,7 +19,6 @@ export const DASHBOARDS = 'infra/observability/grafana/dashboards';
 const INVENTORY = 'infra/observability/inventory.json';
 const SERVICES = ['api', 'worker', 'web', 'mcp', 'postgres', 'redis'];
 const LINKED = new Set([
-  'motorfix-overview',
   'motorfix-api',
   'motorfix-worker',
   'motorfix-web',
@@ -36,14 +35,18 @@ export const PRODUCT_COUNTERS = [
 ];
 const SIGNAL_SOURCES = new Set(['prometheus', 'loki', 'tempo', 'grafana']);
 const GRAFANA = '-- Grafana --';
-const USAGE = '${usage}';
+const USAGE = `\${usage}`;
 const ENV_NAMES = /staging|production/i;
 const QUERY_KEYS = new Set(['expr', 'query', 'title', 'url']);
 
 type Json = Record<string, unknown>;
 type Panel = Json & { panels?: Panel[]; targets?: Json[] };
 
-const list = <T>(value: unknown): T[] => (Array.isArray(value) ? value : []);
+const isObject = (value: unknown): value is Json =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+// An array's objects only: a null or a number in a list is skipped, not read.
+const list = <T>(value: unknown): T[] =>
+  Array.isArray(value) ? (value.filter(isObject) as T[]) : [];
 const text = (value: unknown) => (typeof value === 'string' ? value : '');
 
 // Every panel, rows' collapsed children included.
@@ -128,7 +131,12 @@ function overviewProblems(dashboard: Json): string[] {
     .filter((panel) => panel['type'] === 'row')
     .map((panel) => text(panel['title']).toLowerCase());
   return SERVICES.filter(
-    (service) => !rows.some((title) => title.split(/\W+/).includes(service)),
+    (service) =>
+      !rows.some((title) => {
+        // A row stands for one service: a title naming two counts for neither.
+        const named = SERVICES.filter((s) => title.split(/\W+/).includes(s));
+        return named.length === 1 && named[0] === service;
+      }),
   ).map((service) => `overview-rows: no row titled for ${service}`);
 }
 
@@ -166,7 +174,10 @@ function identityProblems(dashboard: Json, file: string): string[] {
   if (!uid) problems.push('uid: missing');
   else if (`${uid}.json` !== file)
     problems.push(`uid: "${uid}" is not the file's name`);
-  if (!text(dashboard['title'])) problems.push('title: missing');
+  const title = text(dashboard['title']).trim();
+  if (!title) problems.push('title: missing');
+  else if (!title.startsWith('MotorFix'))
+    problems.push(`title: "${title}" does not start with MotorFix`);
   if (dashboard['id'] !== null) problems.push('id: must be null');
   return problems;
 }
@@ -195,7 +206,9 @@ function deployProblems(dashboard: Json): string[] {
   const deploys = list<Json>(
     (dashboard['annotations'] as Json | undefined)?.['list'],
   ).some((annotation) => {
-    const tags = list<string>((annotation['target'] as Json)?.['tags']);
+    const target = annotation['target'];
+    const tags =
+      isObject(target) && Array.isArray(target['tags']) ? target['tags'] : [];
     return tags.includes('deploy') && tags.includes('env:$env');
   });
   return deploys ? [] : ['deploy-annotation: no deploy, env:$env query'];
@@ -240,18 +253,32 @@ export function checkDashboards(root: string): string[] {
   const folder = join(root, DASHBOARDS);
   if (!existsSync(folder)) return [`${DASHBOARDS}: missing`];
   const listed = listedUids(root);
-  const files = readdirSync(folder).filter((f) => f.endsWith('.json'));
+  const files = dashboardFiles(root);
   if (files.length === 0) return [`${DASHBOARDS}: no dashboard`];
-  return files.sort().flatMap((file) => {
-    let dashboard: Json;
-    try {
-      dashboard = JSON.parse(readFileSync(join(folder, file), 'utf8'));
-    } catch (error) {
-      return [`${file}: json: ${(error as Error).message}`];
-    }
-    return fileProblems(dashboard, file, listed).map((p) => `${file}: ${p}`);
-  });
+  return files
+    .sort()
+    .flatMap((file) =>
+      readProblems(join(folder, file), file, listed).map(
+        (p) => `${file}: ${p}`,
+      ),
+    );
 }
+
+function readProblems(path: string, file: string, listed: Set<string>) {
+  // The release pushes what the repository holds, never a link out of it.
+  if (lstatSync(path).isSymbolicLink()) return ['file: a symbolic link'];
+  let dashboard: unknown;
+  try {
+    dashboard = JSON.parse(readFileSync(path, 'utf8'));
+  } catch (error) {
+    return [`json: ${(error as Error).message}`];
+  }
+  if (!isObject(dashboard)) return ['json: not an object'];
+  return fileProblems(dashboard, file, listed);
+}
+
+export const dashboardFiles = (root: string) =>
+  readdirSync(join(root, DASHBOARDS)).filter((f) => f.endsWith('.json'));
 
 function main() {
   const { values } = parseArgs({ options: { root: { type: 'string' } } });
@@ -262,7 +289,7 @@ function main() {
     process.exitCode = 1;
     return;
   }
-  const count = readdirSync(join(root, DASHBOARDS)).length;
+  const count = dashboardFiles(root).length;
   console.log(`dashboard check: ${count} dashboards, ok`);
 }
 

@@ -1,23 +1,19 @@
 import { type Counter, metrics } from '@opentelemetry/api';
 
-// The product's key numbers, one counter each, created on first use so a
-// process that never starts telemetry pays nothing. Every label comes from a
+// The product's key numbers, one counter each; a process that never starts
+// telemetry counts into the API's no-op meter and pays nothing. Every label comes from a
 // fixed set: no identifier, address or free text ever becomes a series.
 
-export type SearchOutcome = 'results' | 'none';
+type SearchOutcome = 'results' | 'none';
 export type SignInMethod = 'password' | 'phone' | 'google' | 'apple';
-export type ApprovalOutcome = 'approved' | 'rejected';
+type ApprovalOutcome = 'approved' | 'rejected';
 export type NotificationChannel = 'push' | 'in-app';
 
-const counters = new Map<string, Counter>();
-
+// Looked up on every count, never cached: a counter kept from before the
+// meter provider is registered would stay a no-op for the life of the
+// process. The SDK hands back the same instrument for the same name.
 function counter(name: string, description: string): Counter {
-  let found = counters.get(name);
-  if (!found) {
-    found = metrics.getMeter('motorfix').createCounter(name, { description });
-    counters.set(name, found);
-  }
-  return found;
+  return metrics.getMeter('motorfix').createCounter(name, { description });
 }
 
 export function countSearch(outcome: SearchOutcome) {

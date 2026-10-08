@@ -124,7 +124,7 @@
     {
       "id": 1,
       "type": "row",
-      "title": "Web Vitals, p75 (from the browser)",
+      "title": "Web Vitals, p75 by route and viewport (from the browser)",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -155,8 +155,8 @@
             "type": "loki",
             "uid": "${loki}"
           },
-          "expr": "quantile_over_time(0.75, {app_name=\"$web_app\", kind=\"measurement\"} | logfmt | app_environment=\"$env\" | type=\"web-vitals\" | unwrap lcp [$__auto]) by (view_name)",
-          "legendFormat": "{{view_name}}"
+          "expr": "quantile_over_time(0.75, {app_name=\"$web_app\", kind=\"measurement\"} | logfmt | app_environment=\"$env\" | type=\"web-vitals\" | unwrap lcp [$__auto]) by (view_name, context_viewport)",
+          "legendFormat": "{{view_name}} {{context_viewport}}"
         }
       ],
       "fieldConfig": {
@@ -187,8 +187,8 @@
             "type": "loki",
             "uid": "${loki}"
           },
-          "expr": "quantile_over_time(0.75, {app_name=\"$web_app\", kind=\"measurement\"} | logfmt | app_environment=\"$env\" | type=\"web-vitals\" | unwrap inp [$__auto]) by (view_name)",
-          "legendFormat": "{{view_name}}"
+          "expr": "quantile_over_time(0.75, {app_name=\"$web_app\", kind=\"measurement\"} | logfmt | app_environment=\"$env\" | type=\"web-vitals\" | unwrap inp [$__auto]) by (view_name, context_viewport)",
+          "legendFormat": "{{view_name}} {{context_viewport}}"
         }
       ],
       "fieldConfig": {
@@ -219,8 +219,8 @@
             "type": "loki",
             "uid": "${loki}"
           },
-          "expr": "quantile_over_time(0.75, {app_name=\"$web_app\", kind=\"measurement\"} | logfmt | app_environment=\"$env\" | type=\"web-vitals\" | unwrap cls [$__auto]) by (view_name)",
-          "legendFormat": "{{view_name}}"
+          "expr": "quantile_over_time(0.75, {app_name=\"$web_app\", kind=\"measurement\"} | logfmt | app_environment=\"$env\" | type=\"web-vitals\" | unwrap cls [$__auto]) by (view_name, context_viewport)",
+          "legendFormat": "{{view_name}} {{context_viewport}}"
         }
       ],
       "fieldConfig": {
@@ -251,8 +251,8 @@
             "type": "loki",
             "uid": "${loki}"
           },
-          "expr": "quantile_over_time(0.75, {app_name=\"$web_app\", kind=\"measurement\"} | logfmt | app_environment=\"$env\" | type=\"web-vitals\" | unwrap ttfb [$__auto]) by (view_name)",
-          "legendFormat": "{{view_name}}"
+          "expr": "quantile_over_time(0.75, {app_name=\"$web_app\", kind=\"measurement\"} | logfmt | app_environment=\"$env\" | type=\"web-vitals\" | unwrap ttfb [$__auto]) by (view_name, context_viewport)",
+          "legendFormat": "{{view_name}} {{context_viewport}}"
         }
       ],
       "fieldConfig": {
@@ -283,8 +283,8 @@
             "type": "loki",
             "uid": "${loki}"
           },
-          "expr": "quantile_over_time(0.75, {app_name=\"$web_app\", kind=\"measurement\"} | logfmt | app_environment=\"$env\" | type=\"web-vitals\" | unwrap fcp [$__auto]) by (view_name)",
-          "legendFormat": "{{view_name}}"
+          "expr": "quantile_over_time(0.75, {app_name=\"$web_app\", kind=\"measurement\"} | logfmt | app_environment=\"$env\" | type=\"web-vitals\" | unwrap fcp [$__auto]) by (view_name, context_viewport)",
+          "legendFormat": "{{view_name}} {{context_viewport}}"
         }
       ],
       "fieldConfig": {

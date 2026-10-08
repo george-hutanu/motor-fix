@@ -1,4 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -10,7 +16,7 @@ import {
 
 type Json = Record<string, unknown>;
 
-const prom = { type: 'prometheus', uid: '${prom}' };
+const prom = { type: 'prometheus', uid: `\${prom}` };
 const ENV = 'deployment_environment="$env"';
 
 const LINKS = [
@@ -150,7 +156,7 @@ describe('the dashboard check', () => {
       'a uid that is no variable',
       { type: 'prometheus', uid: 'grafanacloud-prom' },
     ],
-    ['a database', { type: 'grafana-postgresql-datasource', uid: '${prom}' }],
+    ['a database', { type: 'grafana-postgresql-datasource', uid: `\${prom}` }],
   ])('fails a datasource given as %s', (_case, datasource) => {
     put(
       'motorfix-api.json',
@@ -203,7 +209,7 @@ describe('the dashboard check', () => {
   });
 
   it('leaves the stack-wide usage panels unfiltered', () => {
-    const usage = { type: 'prometheus', uid: '${usage}' };
+    const usage = { type: 'prometheus', uid: `\${usage}` };
     const file = dashboard('motorfix-api', [
       panel('Active series', 'max(grafanacloud_instance_active_series)', {
         datasource: usage,
@@ -299,5 +305,18 @@ describe('the dashboard check', () => {
 
   it('passes on this repository', () => {
     expect(checkDashboards(join(__dirname, '..'))).toEqual([]);
+  });
+
+  // A counter renamed in the code must not leave the check reading old names.
+  it('knows the counters the product code defines', () => {
+    const source = readFileSync(
+      join(__dirname, '../libs/domain/src/metrics/product-counters.ts'),
+      'utf8',
+    );
+    const defined = [...source.matchAll(/'(motorfix_\w+_total)'/g)].map(
+      (m) => m[1],
+    );
+
+    expect([...PRODUCT_COUNTERS].sort()).toEqual([...new Set(defined)].sort());
   });
 });

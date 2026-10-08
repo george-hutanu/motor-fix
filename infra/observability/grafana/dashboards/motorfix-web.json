@@ -745,7 +745,7 @@
     {
       "id": 21,
       "type": "row",
-      "title": "Logs and traces",
+      "title": "Ready state",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -757,6 +757,97 @@
     },
     {
       "id": 22,
+      "type": "stat",
+      "title": "Ready",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 41
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "max(sum(rate(http_server_request_duration_seconds_count{service_name=\"web\", deployment_environment=\"$env\", http_route=\"/health/ready\", http_response_status_code=~\"2..\"}[5m])) > bool 0)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "No data",
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "text": "Down",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "Up",
+                  "color": "green"
+                }
+              },
+              "type": "value"
+            }
+          ]
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Ready checks by status",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 18,
+        "x": 6,
+        "y": 41
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_seconds_count{service_name=\"web\", deployment_environment=\"$env\", http_route=\"/health/ready\"}[5m]))",
+          "legendFormat": "{{http_response_status_code}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 24,
+      "type": "row",
+      "title": "Logs and traces",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "panels": []
+    },
+    {
+      "id": 25,
       "type": "logs",
       "title": "Error logs",
       "datasource": {
@@ -767,7 +858,7 @@
         "h": 10,
         "w": 12,
         "x": 0,
-        "y": 41
+        "y": 46
       },
       "targets": [
         {
@@ -798,7 +889,7 @@
       }
     },
     {
-      "id": 23,
+      "id": 26,
       "type": "table",
       "title": "Slowest traces",
       "datasource": {
@@ -809,7 +900,7 @@
         "h": 10,
         "w": 12,
         "x": 12,
-        "y": 41
+        "y": 46
       },
       "targets": [
         {

@@ -106,7 +106,7 @@ const settled = (params: Prisma.InputJsonObject): Prisma.InputJsonObject =>
 
 // The only messages that go to a listing draft rather than an account.
 const DRAFT_KINDS = ['LISTING_CONTINUE_LINK', 'LISTING_REMINDER'] as const;
-export type DraftKind = (typeof DRAFT_KINDS)[number];
+type DraftKind = (typeof DRAFT_KINDS)[number];
 
 const send = (id: string): NextJob => ({
   data: { id },

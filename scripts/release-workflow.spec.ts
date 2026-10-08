@@ -158,12 +158,13 @@ describe('release workflow', () => {
     expect(push).toContain('overwrite: true');
     expect(push).toContain('/api/dashboards/db');
     expect(push).toContain('--fail-with-body');
+    expect(push).toContain('--max-time 60');
     expect(push).toContain(
       `GRAFANA_SA_TOKEN: ${gh('secrets.GRAFANA_SA_TOKEN')}`,
     );
     expect(push).toContain(`GRAFANA_URL: ${gh('vars.GRAFANA_URL')}`);
     expect(push.match(/\$\{GRAFANA_SA_TOKEN\}/g)).toHaveLength(1);
-    expect(push).toContain('-H "Authorization: Bearer ${GRAFANA_SA_TOKEN}"');
+    expect(push).toContain(`-H "Authorization: Bearer \${GRAFANA_SA_TOKEN}"`);
     expect(block.indexOf('- name: Push the dashboards')).toBeGreaterThan(
       block.indexOf('- id: mcp'),
     );
@@ -193,8 +194,9 @@ describe('release workflow', () => {
       expect(note).toContain(`"env:${name}"`);
       expect(note).toContain('"deploy"');
       expect(note).toContain('/api/annotations');
-      expect(note).toContain('--arg sha "${GITHUB_SHA}"');
-      expect(note).toContain('-H "Authorization: Bearer ${GRAFANA_SA_TOKEN}"');
+      expect(note).toContain('--max-time 60');
+      expect(note).toContain(`--arg sha "\${GITHUB_SHA}"`);
+      expect(note).toContain(`-H "Authorization: Bearer \${GRAFANA_SA_TOKEN}"`);
       expect(block.indexOf('- name: Annotate the deploy')).toBeGreaterThan(
         block.indexOf(`railway-deploy.ts ${name}`),
       );

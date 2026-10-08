@@ -26,7 +26,8 @@ export function observabilityUrl(
   env: string,
 ): string | undefined {
   if (!grafana) return undefined;
-  const url = new URL('d/motorfix-overview', grafana);
+  // A Grafana served under a path keeps it, as the release's push does.
+  const url = new URL(`${grafana.replace(/\/$/, '')}/d/motorfix-overview`);
   url.searchParams.set('var-env', env);
   return url.href;
 }

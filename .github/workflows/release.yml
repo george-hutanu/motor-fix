@@ -138,12 +138,13 @@ jobs:
         env:
           GRAFANA_SA_TOKEN: ${{ secrets.GRAFANA_SA_TOKEN }}
           GRAFANA_URL: ${{ vars.GRAFANA_URL }}
-        # curl -sS prints Grafana's answer on a refusal, never the request.
+        # curl -sS prints Grafana's answer on a refusal, never the request; a
+        # Grafana that hangs fails the step after a minute, not the 6 h default.
         run: |
           for f in infra/observability/grafana/dashboards/*.json; do
             jq -n --slurpfile d "$f" --arg m "release ${GITHUB_SHA}" \
               '{dashboard: $d[0], overwrite: true, message: $m}' |
-            curl --fail-with-body -sS -X POST "${GRAFANA_URL%/}/api/dashboards/db" \
+            curl --fail-with-body --max-time 60 -sS -X POST "${GRAFANA_URL%/}/api/dashboards/db" \
               -H "Authorization: Bearer ${GRAFANA_SA_TOKEN}" -H 'Content-Type: application/json' \
               --data-binary @- > /dev/null
             echo "pushed $f"
@@ -189,7 +190,7 @@ jobs:
           [ "$GRAFANA" = "true" ] || exit 0
           jq -n --arg sha "${GITHUB_SHA}" --argjson t "$(date +%s000)" \
             '{text: $sha, tags: ["deploy", "env:staging"], time: $t}' |
-          curl --fail-with-body -sS -X POST "${GRAFANA_URL%/}/api/annotations" \
+          curl --fail-with-body --max-time 60 -sS -X POST "${GRAFANA_URL%/}/api/annotations" \
             -H "Authorization: Bearer ${GRAFANA_SA_TOKEN}" -H 'Content-Type: application/json' \
             --data-binary @- > /dev/null
       # The end-to-end run signs in as the seed accounts, and only a reset used
@@ -288,6 +289,6 @@ jobs:
           [ "$GRAFANA" = "true" ] || exit 0
           jq -n --arg sha "${GITHUB_SHA}" --argjson t "$(date +%s000)" \
             '{text: $sha, tags: ["deploy", "env:production"], time: $t}' |
-          curl --fail-with-body -sS -X POST "${GRAFANA_URL%/}/api/annotations" \
+          curl --fail-with-body --max-time 60 -sS -X POST "${GRAFANA_URL%/}/api/annotations" \
             -H "Authorization: Bearer ${GRAFANA_SA_TOKEN}" -H 'Content-Type: application/json' \
             --data-binary @- > /dev/null

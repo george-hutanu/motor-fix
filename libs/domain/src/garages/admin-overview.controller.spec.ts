@@ -167,6 +167,23 @@ describe('the observability link', () => {
     );
   });
 
+  it.each([
+    [
+      'https://example.org/grafana',
+      'https://example.org/grafana/d/motorfix-overview?var-env=staging',
+    ],
+    [
+      'https://example.org/grafana/',
+      'https://example.org/grafana/d/motorfix-overview?var-env=staging',
+    ],
+    [
+      'https://stack.grafana.net',
+      'https://stack.grafana.net/d/motorfix-overview?var-env=staging',
+    ],
+  ])('keeps the path of a Grafana served at %s', (grafana, url) => {
+    expect(observabilityUrl(grafana, 'staging')).toBe(url);
+  });
+
   it('is absent when Grafana is not configured', () => {
     expect(observabilityUrl(undefined, 'production')).toBeUndefined();
   });

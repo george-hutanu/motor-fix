@@ -230,7 +230,7 @@
     {
       "kind": "product-counter",
       "name": "motorfix_sign_ins_total",
-      "source": "libs/domain/src/metrics/product-counters.ts",
+      "source": "libs/domain/src/auth/sign-in.service.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
       "reason": "ST-880 adds the alert rules",
@@ -275,7 +275,7 @@
     {
       "kind": "product-counter",
       "name": "motorfix_notifications_sent_total",
-      "source": "libs/domain/src/metrics/product-counters.ts",
+      "source": "libs/domain/src/notifications/notifications.processor.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
       "reason": "ST-880 adds the alert rules",
