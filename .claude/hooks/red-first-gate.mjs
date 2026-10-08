@@ -13,16 +13,16 @@
 //   - its tasks.md still has unchecked tasks — a finished feature can be
 //     refactored freely
 //
-// Gate condition (constitution v1.2.1): this branch must carry test work. At
+// Gate condition (Constitution II): this branch must carry test work. At
 // least one *.spec.ts / *.test.ts is added or modified relative to the default
 // branch, counting the working tree and untracked files so that writing the
 // spec unblocks the edit immediately, without a commit. None → block, with the
 // instruction to run /speckit-tests first.
 //
-// It used to require a `// @traces NNN-FR-XXX` token instead. That put an
-// unresolvable internal identifier into shipped source, so the tokens were
-// removed repo-wide; a per-file "sibling spec must exist" rule was rejected in
-// turn because entry points and barrel files (apps/server/src/main.ts,
+// It used to require a `// @traces NNN-FR-XXX` token in every file. It asks
+// only for test work now: a whole-line `// @traces` comment in a test file is
+// the one id form Principle II allows, and trace-matrix.mjs reads it on
+// demand. A per-file "sibling spec must exist" rule was rejected in turn because entry points and barrel files (apps/server/src/main.ts,
 // libs/contracts/src/index.ts) legitimately have none.
 import { readFileSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -87,7 +87,8 @@ process.stdin.on("end", () => {
     `Red-first gate: feature ${feature.name} has FR requirements and open tasks, but this branch ` +
       "adds or modifies no *.spec.ts / *.test.ts file. Write the failing acceptance tests first — " +
       "run /speckit-tests — then implement. Test titles stay plain and carry no FR ids, ticket " +
-      "keys, or other internal identifiers (constitution v1.2.1)."
+      "keys, or other internal identifiers (Constitution Principle II); the one exception is a " +
+      "whole-line `// @traces <feature>-FR-<n>` comment in a test file."
   );
   process.exit(2);
 });

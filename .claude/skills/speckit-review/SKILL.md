@@ -208,7 +208,8 @@ The constitution's Agent Execution Rules apply in full. Specific to this command
   wrong fix is higher than the cost of a missed nit. Say in the report when
   that default plainly threw away something real, and let the user decide.
 - No internal identifiers in anything written to source as a result of this
-  review (constitution v1.2.1).
+  review (Constitution II), apart from a whole-line `// @traces
+  <feature>-FR-<n>` comment in a test file.
 
 ## The repair loop has a cap
 

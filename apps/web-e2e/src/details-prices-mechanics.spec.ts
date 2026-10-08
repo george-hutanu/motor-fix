@@ -3,7 +3,7 @@ import { expect, type Locator, type Page } from '@playwright/test';
 import { ready } from './accounts.js';
 import { test } from './fixtures.js';
 
-// @traces 109-FR-010 109-FR-012 109-FR-020 109-SC-001
+// @traces 109-FR-010 109-FR-012 109-FR-020
 
 const details = (page: Page) => page.locator('mf-details-step');
 // "PFA" is both a business kind and a mobile mechanic's legal form: each is

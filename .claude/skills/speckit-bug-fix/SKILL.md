@@ -141,6 +141,8 @@ The constitution's Agent Execution Rules apply in full. Specific to this command
 - No bug id, ticket key or other internal identifier in the source — not in a
   test title, not in a comment. A reader with only the code cannot resolve it,
   and it rots the moment the tracker moves. The bug → test link belongs in the
-  assessment and the verification report.
+  assessment and the verification report. The one id Constitution II allows in
+  source is a whole-line `// @traces <feature>-FR-<n>` comment in a test file,
+  for a requirement the fix's test covers; a bug id never goes there.
 - Comment only what the code cannot say — why the fix takes this shape, or the
   trap that produced the bug. A comment restating the line below it is noise.

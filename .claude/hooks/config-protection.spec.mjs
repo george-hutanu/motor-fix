@@ -142,10 +142,23 @@ describe('config-protection — the structure baseline', () => {
 });
 
 describe('config-protection — requirement tokens', () => {
-  it('finds every feature-qualified token', () => {
-    const text = `[${fake('001', '002')}] and [${fake('012', '134')}]`;
-    assert.deepEqual([...frTokens(text)], [fake('001', '002'), fake('012', '134')]);
+  it('finds every id on a // @traces line, and only there', () => {
+    const text = `// @traces ${fake('001', '002')} ${fake('012', '134')}\n  // @traces ${fake('003', '004')}\n`;
+    assert.deepEqual([...frTokens(text)], [fake('001', '002'), fake('012', '134'), fake('003', '004')]);
     assert.equal(frTokens('FR-002 alone').size, 0);
+    assert.equal(frTokens(`it('covers ${fake('001', '002')}', () => {});`).size, 0);
+    assert.equal(frTokens(`// see ${fake('001', '002')}`).size, 0);
+  });
+
+  it('lets an id leave a test title, which is not the traced form', () => {
+    assert.equal(
+      judge({
+        rel: 'libs/utils/src/slug.spec.ts',
+        current: `it('covers ${fake('001', '003')}', () => {})`,
+        next: "it('covers it', () => {})",
+      }),
+      null,
+    );
   });
 
   it('blocks deleting one from a test file', () => {
