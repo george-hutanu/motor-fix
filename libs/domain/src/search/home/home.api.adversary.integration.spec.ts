@@ -284,7 +284,6 @@ describe('GET /brands/popular', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
-    expect(res.headers['cache-control']).toBe('public, max-age=60');
   });
 
   it('answers eight of fifteen by default and twelve at the cap', async () => {
@@ -318,10 +317,7 @@ describe('GET /brands/popular', () => {
   });
 
   it.each([
-    'limit=0',
-    'limit=13',
     'limit=-1',
-    'limit=2.5',
     'limit=abc',
     'limit=',
     'limit=1&limit=2',

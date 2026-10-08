@@ -140,6 +140,7 @@ describe('GET /home', () => {
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe('not_found');
+    expect(res.headers['cache-control']).not.toBe('public, max-age=60');
   });
 
   it.each([

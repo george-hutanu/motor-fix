@@ -91,7 +91,7 @@ describe('BrandPicker under odd input', () => {
     expect(tiles()[0].textContent?.trim()).toBe(name);
   });
 
-  it('renders eight tiles and one hundred tiles with one checked tile each', async () => {
+  it('renders one hundred tiles with one checked tile and one Tab stop', async () => {
     const { tiles } = await render(brands(100), 'brand-57');
 
     expect(tiles()).toHaveLength(100);
@@ -110,7 +110,7 @@ describe('BrandPicker under odd input', () => {
     expect(chosen).toEqual(['brand-0', 'brand-7']);
   });
 
-  it('does not choose anything for Home, End, Enter or Escape on a tile', async () => {
+  it('does not choose anything for Escape, PageDown or Shift on a tile', async () => {
     const { chosen, tiles } = await render(brands(3), 'brand-0');
 
     for (const k of ['Escape', 'PageDown', 'Shift']) {
