@@ -214,56 +214,65 @@ test.describe('step 5 of list your garage, the place step', () => {
     await expect(radius(page)).toHaveValue('35');
   });
 
-  test('at 320 px a mobile mechanic sees the whole service circle, refitted when the radius changes, and keeps their own zoom', async ({
-    page,
-  }) => {
-    await page.setViewportSize({ height: 640, width: 320 });
-    await stub(page);
-    await ready(page, '/ro/list-your-garage');
-    await page
-      .locator('mf-details-step')
-      .getByRole('group', { name: 'Tipul afacerii' })
-      .getByRole('button', { exact: true, name: 'Mecanic mobil' })
-      .click();
+  for (const colorScheme of ['light', 'dark'] as const) {
+    test(`at 320 px in ${colorScheme} a mobile mechanic sees the whole service circle, refitted when the radius changes, and keeps their own zoom`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await page.setViewportSize({ height: 640, width: 320 });
+      await stub(page);
+      await ready(page, '/ro/list-your-garage');
+      await page
+        .locator('mf-details-step')
+        .getByRole('group', { name: 'Tipul afacerii' })
+        .getByRole('button', { exact: true, name: 'Mecanic mobil' })
+        .click();
 
-    await address(page).fill('Str. Ștefan cel Mare 12, Sector 2');
-    await step(page)
-      .locator('.suggestions button', { hasText: STEFAN.label })
-      .click();
-    await expect(pin(page)).toBeVisible();
-    await expect
-      .poll(() => framing(page, 20))
-      .toMatchObject({ filled: true, inside: true });
-    const atDefault = await framing(page, 20);
-    expect(atDefault.zoom).toBeLessThan(16);
+      await address(page).fill('Str. Ștefan cel Mare 12, Sector 2');
+      await step(page)
+        .locator('.suggestions button', { hasText: STEFAN.label })
+        .click();
+      await expect(pin(page)).toBeVisible();
+      await expect
+        .poll(() => framing(page, 20))
+        .toMatchObject({ filled: true, inside: true });
+      const atDefault = await framing(page, 20);
+      expect(atDefault.zoom).toBeLessThan(16);
 
-    await radius(page).fill('100');
-    await expect
-      .poll(() => framing(page, 100))
-      .toMatchObject({ filled: true, inside: true });
-    expect((await framing(page, 100)).zoom).toBeLessThan(atDefault.zoom);
+      await radius(page).fill('100');
+      await expect
+        .poll(() => framing(page, 100))
+        .toMatchObject({ filled: true, inside: true });
+      expect((await framing(page, 100)).zoom).toBeLessThan(atDefault.zoom);
 
-    await radius(page).fill('1');
-    await expect
-      .poll(() => framing(page, 1))
-      .toMatchObject({ filled: true, inside: true });
-    expect((await framing(page, 1)).zoom).toBeGreaterThan(atDefault.zoom);
+      await radius(page).fill('1');
+      await expect
+        .poll(() => framing(page, 1))
+        .toMatchObject({ filled: true, inside: true });
+      expect((await framing(page, 1)).zoom).toBeGreaterThan(atDefault.zoom);
 
-    await page.evaluate(() =>
-      (
-        window as unknown as { __MF_MAP: { jumpTo(o: { zoom: number }): void } }
-      ).__MF_MAP.jumpTo({ zoom: 8 }),
-    );
-    const box = await pin(page).boundingBox();
-    if (!box) throw new Error('the pin has no box');
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2 + 30, box.y + box.height / 2, {
-      steps: 5,
+      await page.evaluate(() =>
+        (
+          window as unknown as {
+            __MF_MAP: { jumpTo(o: { zoom: number }): void };
+          }
+        ).__MF_MAP.jumpTo({ zoom: 8 }),
+      );
+      const box = await pin(page).boundingBox();
+      if (!box) throw new Error('the pin has no box');
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(
+        box.x + box.width / 2 + 30,
+        box.y + box.height / 2,
+        {
+          steps: 5,
+        },
+      );
+      await page.mouse.up();
+      await kept(page, (p) => p['lng'] !== STEFAN.lng);
+      expect((await framing(page, 1)).zoom).toBe(8);
+      await noSidewaysScroll(page);
     });
-    await page.mouse.up();
-    await kept(page, (p) => p['lng'] !== STEFAN.lng);
-    expect((await framing(page, 1)).zoom).toBe(8);
-    await noSidewaysScroll(page);
-  });
+  }
 });

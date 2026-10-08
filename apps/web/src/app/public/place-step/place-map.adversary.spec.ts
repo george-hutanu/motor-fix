@@ -8,56 +8,10 @@ import {
   type PlaceMap,
   viewFor,
 } from './place-map';
+import type { MapFake } from './place-step.testing';
 
-const fake = {
-  inView: true,
-  map: undefined as unknown as FakeMap,
-  marker: undefined as unknown as FakeMarker,
-};
-
-class FakeMap {
-  readonly data = jest.fn();
-  readonly fitBounds = jest.fn();
-  readonly jumpTo = jest.fn();
-  readonly remove = jest.fn();
-  constructor() {
-    fake.map = this;
-  }
-  addControl() {}
-  addLayer() {}
-  addSource() {}
-  getBounds() {
-    return { contains: () => fake.inView };
-  }
-  getSource() {
-    return { setData: this.data };
-  }
-  on() {}
-  once(event: string, then: () => void) {
-    if (event === 'load') then();
-  }
-}
-
-class FakeMarker {
-  readonly remove = jest.fn();
-  constructor() {
-    fake.marker = this;
-  }
-  addTo() {
-    return this;
-  }
-  on() {}
-  setLngLat() {
-    return this;
-  }
-}
-
-jest.mock('maplibre-gl', () => ({
-  Map: FakeMap,
-  Marker: FakeMarker,
-  NavigationControl: class {},
-  setWorkerUrl: () => {},
-}));
+jest.mock('maplibre-gl', () => jest.requireActual('./place-step.testing'));
+const { fake } = jest.requireMock<MapFake>('maplibre-gl');
 
 const SEAT: LatLng = { lat: 44.4512, lng: 26.1207 };
 const FAR: LatLng = { lat: 47.1585, lng: 27.6014 };
