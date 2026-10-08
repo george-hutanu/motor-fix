@@ -131,6 +131,57 @@ describe('reading a garage by its public slug', () => {
     expect(JSON.stringify(res.body)).not.toContain('722123456');
   });
 
+  it('shows a workshop where it is', async () => {
+    const approved = await prisma.garage.create({
+      data: {
+        address: 'Strada Ștefan cel Mare 12, Sector 2, București',
+        businessKind: 'company',
+        latitude: 44.4512,
+        longitude: 26.1207,
+        name: 'Atelier Dinamo',
+        slug: `dinamo-${randomUUID()}`,
+        status: 'approved',
+      },
+    });
+
+    const res = await read(approved.slug);
+
+    expect(res.body).toMatchObject({
+      address: 'Strada Ștefan cel Mare 12, Sector 2, București',
+      latitude: 44.4512,
+      longitude: 26.1207,
+    });
+    expect(res.body).not.toHaveProperty('serviceRadiusKm');
+  });
+
+  it('shows a mobile mechanic only by the area served, never the seat', async () => {
+    const seat = 'Strada Sediului 3, Ploiești';
+    const approved = await prisma.garage.create({
+      data: {
+        businessKind: 'mobile',
+        latitude: 44.9365,
+        longitude: 26.0129,
+        mobileLegalForm: 'pfa',
+        name: 'Mecanic la domiciliu',
+        seatAddress: seat,
+        serviceRadiusKm: 35,
+        slug: `mobil-${randomUUID()}`,
+        status: 'approved',
+      },
+    });
+
+    const res = await read(approved.slug);
+
+    expect(res.status).toBe(200);
+    expect(res.body.serviceRadiusKm).toBe(35);
+    for (const key of ['address', 'latitude', 'longitude', 'seatAddress']) {
+      expect(res.body).not.toHaveProperty(key);
+    }
+    const body = JSON.stringify(res.body);
+    expect(body).not.toContain('Sediului');
+    expect(body).not.toContain('44.9365');
+  });
+
   it("carries the garage's brand answer, in catalogue order, retired brands kept", async () => {
     const approved = await prisma.garage.update({
       data: {
