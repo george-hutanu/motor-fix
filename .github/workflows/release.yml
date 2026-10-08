@@ -21,6 +21,10 @@ jobs:
   images:
     needs: checks
     runs-on: ubuntu-latest
+    env:
+      # Only whether the key is set; the key itself reaches the upload step
+      # alone.
+      FARO_SOURCEMAPS: ${{ secrets.FARO_SOURCEMAP_API_KEY != '' }}
     outputs:
       web: ${{ steps.web.outputs.digest }}
       api: ${{ steps.api.outputs.digest }}
@@ -48,6 +52,40 @@ jobs:
           tags: ghcr.io/${{ github.repository }}-web:${{ github.sha }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
+      # The web build's source maps, from the layers just built, go to the
+      # error collector so browser stacks read as source; skipped until the
+      # owner sets the secret.
+      - name: Skip the web source maps
+        if: env.FARO_SOURCEMAPS != 'true'
+        run: echo "::notice::FARO_SOURCEMAP_API_KEY is not set; the web source maps are not uploaded for this release."
+      - name: Export the web source maps
+        if: env.FARO_SOURCEMAPS == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          build-args: |
+            APP=web
+            RELEASE_SHA=${{ github.sha }}
+          target: web-maps
+          outputs: type=local,dest=./web-maps
+          cache-from: type=gha,scope=web
+      - name: Upload the web source maps
+        if: env.FARO_SOURCEMAPS == 'true'
+        env:
+          FARO_SOURCEMAP_API_KEY: ${{ secrets.FARO_SOURCEMAP_API_KEY }}
+          FARO_SOURCEMAP_ENDPOINT: ${{ vars.FARO_SOURCEMAP_ENDPOINT }}
+          FARO_SOURCEMAP_APP_ID: ${{ vars.FARO_SOURCEMAP_APP_ID }}
+          FARO_SOURCEMAP_STACK_ID: ${{ vars.FARO_SOURCEMAP_STACK_ID }}
+        # faro-cli runs at a pinned version outside the lockfile (this job
+        # installs nothing else); its own dependencies are not pinned.
+        run: |
+          npx -y @grafana/faro-cli@0.13.1 upload \
+            --endpoint "$FARO_SOURCEMAP_ENDPOINT" \
+            --app-id "$FARO_SOURCEMAP_APP_ID" \
+            --stack-id "$FARO_SOURCEMAP_STACK_ID" \
+            --api-key "$FARO_SOURCEMAP_API_KEY" \
+            --bundle-id "${{ github.sha }}" \
+            --output-path ./web-maps \
+            --gzip-payload
       - id: api
         uses: docker/build-push-action@v7
         with:

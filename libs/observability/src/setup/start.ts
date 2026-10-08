@@ -19,7 +19,7 @@ import { instrumentations } from './instrumentations';
 import { sampler } from './sampler';
 import { scrub } from '../scrub/scrub';
 
-export type Service = 'api' | 'worker' | 'mcp';
+export type Service = 'api' | 'worker' | 'mcp' | 'web';
 
 export interface Exporters {
   spanExporter?: SpanExporter;
@@ -228,8 +228,15 @@ function boot(
   });
   logs.setGlobalLoggerProvider(loggerProvider);
 
-  const instrumented = instrumentations();
+  const instrumented = instrumentations(service);
   registerInstrumentations({ instrumentations: instrumented });
+  // An ESM bundle (the web server) binds `node:http`'s exports when it is
+  // loaded; patching the CommonJS module is then copied over to them.
+  require('node:http');
+  require('node:https');
+  (
+    require('node:module') as typeof import('node:module')
+  ).syncBuiltinESMExports();
   observeCpu(metrics.getMeter('motorfix'));
 
   const flush = async () => {
