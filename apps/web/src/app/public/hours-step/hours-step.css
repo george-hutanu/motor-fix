@@ -41,7 +41,7 @@ input:not([type="checkbox"]) {
   font-size: max(16px, 1rem);
   color: var(--mf-text);
   background: var(--mf-bg);
-  border: 1px solid var(--mf-line);
+  border: 1px solid var(--mf-line-strong);
   border-radius: var(--mf-radius-control);
   padding: 0 var(--mf-space-2);
   max-width: 100%;
