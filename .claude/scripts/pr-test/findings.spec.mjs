@@ -192,6 +192,13 @@ describe('the report', () => {
     assert.match(md, /shots\/home-mobile-dark-en\.png/);
   });
 
+  it('writes the report when a finding carries no steps, such as a visual change', () => {
+    const findings = [{ kind: 'visual', severity: 'medium', title: 'Unintended visual change: shots/a.png, 2 regions', evidence: 'diff/a.png', key: 'visual|shots/a.png' }];
+    const md = reportMarkdown({ pr: 305, sha: 'abcdef1', verdict: 'success', findings, booted: ['api', 'web'], screenshots: [] });
+    assert.match(md, /Unintended visual change/);
+    assert.match(md, /### Reproduction\n1\. /);
+  });
+
   it('says so when there is nothing to report', () => {
     const md = reportMarkdown({ pr: 1, sha: 'abcdef1', verdict: 'success', findings: [], booted: ['api', 'web'], screenshots: [] });
     assert.match(md, /success/i);
