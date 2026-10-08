@@ -245,12 +245,12 @@ describe('line endings and encodings', () => {
     expect(scan(`﻿fetch('https://real.eu');\n`)).toEqual(missing('real.eu'));
   });
 
-  it('does not throw on a UTF-16 file with a byte order mark', () => {
+  it('reports nothing for a UTF-16 file, which is read as UTF-8', () => {
     const source = Buffer.concat([
       Buffer.from([0xff, 0xfe]),
       Buffer.from("fetch('https://utf16.eu');\n", 'utf16le'),
     ]);
-    expect(Array.isArray(scan(source))).toBe(true);
+    expect(scan(source)).toEqual([]);
   });
 
   it('reports nothing for a binary blob under a source name', () => {
@@ -319,8 +319,8 @@ describe('size and command line', () => {
   it('scans a file of many short lines in bounded time', () => {
     const lines = "const a = 'it''s';\n".repeat(300_000);
     const started = Date.now();
-    expect(Array.isArray(scan(`${lines}fetch('https://real.eu');\n`))).toBe(
-      true,
+    expect(scan(`${lines}fetch('https://real.eu');\n`)).toEqual(
+      missing('real.eu'),
     );
     expect(Date.now() - started).toBeLessThan(10_000);
   });
