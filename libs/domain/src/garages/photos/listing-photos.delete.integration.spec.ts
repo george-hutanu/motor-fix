@@ -137,7 +137,7 @@ describe('removing a photo', () => {
     await photos.remove(draft.id, draft.token, first);
 
     expect(await filesOf(draft.id)).toEqual([second]);
-    expect(logged).toHaveBeenCalled();
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining(first));
     logged.mockRestore();
   });
 
