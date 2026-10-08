@@ -14,7 +14,7 @@ import {
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
-import { characters } from '../../../sign-in/sign-up/sign-up';
+import { characters } from '../../../characters';
 
 // The request to switch off a rule that needs a second admin: what changes,
 // a reason, then "Trimite cererea". Closes with the request, or "cancelled".

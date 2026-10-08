@@ -7,7 +7,7 @@ import { PlatformRulesService } from './platform-rules.service';
 class FakeNotifications {}
 
 describe('PlatformRulesModule', () => {
-  // FR-013: the reviews story reads reviewPolicy() from another module.
+  // @traces 260-FR-013
   it('exports PlatformRulesService so other modules can read the review policy', () => {
     const module = PlatformRulesModule.register({ configured: [] } as never, {
       module: FakeNotifications,

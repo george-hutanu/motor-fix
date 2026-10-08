@@ -40,7 +40,7 @@ async function rendered(me: MeDto | null) {
 }
 
 describe('SettingsView', () => {
-  // ST-260: the rules and their two-admin confirmation are admin-only, so
+  // The rules and their two-admin confirmation are admin-only, so
   // they load in a chunk of their own and stay out of the web app's
   // first bundle, which the 1 MB budget caps.
   it('loads the platform rules in a deferred block, apart from the first bundle', async () => {

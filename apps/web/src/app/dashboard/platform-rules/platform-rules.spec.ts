@@ -491,7 +491,7 @@ describe('PlatformRules, switching the reviews rule off', () => {
     named(element, REVIEWS)?.click();
     await settle();
     expect(named(element, REVIEWS)?.disabled).toBe(false);
-    // FR-010: the switch stays where it is while the dialog asks.
+    // The switch stays where it is while the dialog asks.
     expect(checked(element, REVIEWS)).toBe('true');
     close('cancelled');
     await settle();
