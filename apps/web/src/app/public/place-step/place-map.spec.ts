@@ -332,8 +332,8 @@ describe('the place map when MapLibre raises an error', () => {
     const opening = open();
     await built();
     fake.map.fire('load');
-    const map = await opening;
     fake.map.fire('error', { error: new Error('tile 404') });
+    const map = await opening;
 
     expect(fake.map.remove).not.toHaveBeenCalled();
     expect(failed).toHaveBeenCalledTimes(1);
@@ -379,6 +379,7 @@ describe('the place map when MapLibre raises an error', () => {
     await built();
     fake.map.fire('error', { error });
     fake.map.fire('load');
+    fake.map.fire('error', { error: new Error('tile 404') });
 
     await expect(opening).rejects.toBe(error);
     expect(fake.map.remove).toHaveBeenCalledTimes(1);

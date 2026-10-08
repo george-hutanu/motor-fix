@@ -5,7 +5,7 @@
 
 type Listener = (payload?: unknown) => void;
 
-export class FakeMap {
+class FakeMap {
   readonly data = jest.fn();
   readonly fitBounds = jest.fn();
   readonly jumpTo = jest.fn();
@@ -47,7 +47,7 @@ export class FakeMap {
   }
 }
 
-export class FakeMarker {
+class FakeMarker {
   readonly remove = jest.fn();
   constructor() {
     fake.marker = this;

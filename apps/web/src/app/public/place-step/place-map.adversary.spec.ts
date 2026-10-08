@@ -272,3 +272,166 @@ describe('the place map under repeated and awkward sequences', () => {
     expect(fake.map.jumpTo).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('the place map when the map raises errors around load', () => {
+  const BOOM = new Error('tile failed');
+  let failed: jest.Mock;
+
+  const open = () =>
+    TestBed.inject(PLACE_MAP)(document.createElement('div'), {
+      dragged: () => {},
+      failed,
+      tapped: () => {},
+    });
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+  const outcome = (opening: Promise<PlaceMap>) => {
+    const seen: { map?: PlaceMap; error?: unknown; done: boolean } = {
+      done: false,
+    };
+    opening.then(
+      (map) => Object.assign(seen, { done: true, map }),
+      (error) => Object.assign(seen, { done: true, error }),
+    );
+    return seen;
+  };
+
+  beforeEach(() => {
+    failed = jest.fn();
+    fake.inView = true;
+    fake.manualLoad = true;
+  });
+
+  afterEach(() => {
+    fake.manualLoad = false;
+  });
+
+  // @traces 945-FR-001
+  it('keeps the map and resolves the opener when an error follows load', async () => {
+    const seen = outcome(open());
+    await settle();
+    fake.map.fire('load');
+    fake.map.fire('error', { error: BOOM });
+    await settle();
+
+    expect(fake.map.remove).not.toHaveBeenCalled();
+    expect(seen.done).toBe(true);
+    expect(seen.error).toBeUndefined();
+    expect(seen.map).toBeDefined();
+  });
+
+  // @traces 945-FR-001
+  it('keeps the map when an error fires in the same tick as load, before the opener resumes', async () => {
+    const opening = open();
+    await settle();
+    fake.map.fire('load');
+    fake.map.fire('error', { error: BOOM });
+
+    const map = await opening;
+    map.show({ at: SEAT, km: 20 });
+
+    expect(fake.map.remove).not.toHaveBeenCalled();
+    expect(fake.map.fitBounds).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 945-FR-001
+  it('draws and frames a show after an error exactly as it does without one', async () => {
+    const opening = open();
+    await settle();
+    fake.map.fire('load');
+    const plain = await opening;
+    plain.show({ at: SEAT, km: 20 });
+    const expected = {
+      data: fake.map.data.mock.calls,
+      fit: fake.map.fitBounds.mock.calls,
+      jump: fake.map.jumpTo.mock.calls,
+    };
+
+    const opening2 = open();
+    await settle();
+    fake.map.fire('load');
+    fake.map.fire('error', { error: BOOM });
+    const hit = await opening2;
+    hit.show({ at: SEAT, km: 20 });
+
+    expect(fake.map.data.mock.calls).toEqual(expected.data);
+    expect(fake.map.fitBounds.mock.calls).toEqual(expected.fit);
+    expect(fake.map.jumpTo.mock.calls).toEqual(expected.jump);
+    expect(fake.map.remove).not.toHaveBeenCalled();
+  });
+
+  // @traces 945-FR-001
+  it('still places the pin and the circle after many errors', async () => {
+    const opening = open();
+    await settle();
+    fake.map.fire('load');
+    for (let i = 0; i < 50; i++) fake.map.fire('error', { error: BOOM });
+    const map = await opening;
+    map.show({ at: SEAT, km: 5 });
+    map.show({ at: FAR, km: 100 });
+
+    expect(fake.map.remove).not.toHaveBeenCalled();
+    expect(fake.map.data.mock.calls.at(-1)?.[0].features).toHaveLength(1);
+    expect(fake.map.fitBounds).toHaveBeenLastCalledWith(
+      circleBounds(FAR, 100),
+      FIT,
+    );
+  });
+
+  // @traces 945-FR-002
+  it('calls failed once per error after load', async () => {
+    const opening = open();
+    await settle();
+    fake.map.fire('load');
+    fake.map.fire('error', { error: BOOM });
+    fake.map.fire('error', { error: BOOM });
+    fake.map.fire('error', { error: BOOM });
+    await opening;
+
+    expect(failed).toHaveBeenCalledTimes(3);
+  });
+
+  // @traces 945-FR-003
+  it('removes the map only once when two errors arrive before load', async () => {
+    const seen = outcome(open());
+    await settle();
+    fake.map.fire('error', { error: BOOM });
+    fake.map.fire('error', { error: new Error('second') });
+    await settle();
+
+    expect(fake.map.remove).toHaveBeenCalledTimes(1);
+    expect(seen.error).toBe(BOOM);
+  });
+
+  // @traces 945-FR-003
+  it('does not remove the map again when an error follows load that followed a start-up error', async () => {
+    const seen = outcome(open());
+    await settle();
+    fake.map.fire('error', { error: BOOM });
+    fake.map.fire('load');
+    fake.map.fire('error', { error: BOOM });
+    await settle();
+
+    expect(seen.error).toBe(BOOM);
+    expect(fake.map.remove).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 945-FR-002
+  it('does not report a start-up error as a post-load failure twice or tear down on the next open', async () => {
+    const first = outcome(open());
+    await settle();
+    fake.map.fire('error', { error: BOOM });
+    await settle();
+    const dead = fake.map;
+    expect(first.error).toBe(BOOM);
+
+    const second = open();
+    await settle();
+    fake.map.fire('load');
+    const map = await second;
+    map.show({ at: SEAT });
+
+    expect(fake.map).not.toBe(dead);
+    expect(fake.map.remove).not.toHaveBeenCalled();
+    expect(dead.remove).toHaveBeenCalledTimes(1);
+  });
+});
