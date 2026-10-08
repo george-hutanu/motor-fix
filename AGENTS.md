@@ -121,8 +121,17 @@ epic or a plan, whether run through spec-kit or by hand.
      other check green, `CI OK` included, with no `agent-review` status; a
      failing, pending or missing check still refuses it.
 
-  Technical debt a review defers (`specs/<feature>/deferred.md`) is filed as
-  a To do task in Notion (`speckit-notion-sync debt`) before the merge; each
+  Technical debt a review defers is only a large fix. A verified finding from
+  review, harden, QA or the PR tester (code-reviewer, spec-reviewer,
+  test-adversary, a mutation survivor, pr-tester) whose fix is small or medium
+  is fixed in the same PR (route `patch`), even when the problem existed
+  before the change or sits next to it. The size test: A fix is large when it
+  needs its own design or decision, a data migration, a different area or
+  epic, or work clearly bigger than the story itself. A different area is an
+  Nx project or harness area the branch does not touch; the file or module
+  the change touches is never one. Only a large fix is routed `defer`: a
+  bullet in `specs/<feature>/deferred.md` naming the arm it meets, filed as a
+  To do task in Notion (`speckit-notion-sync debt`) before the merge; each
   bullet carries its task's URL so it is never filed twice.
 
   Whenever the work cannot go on without something outside it (a Hard Stop,

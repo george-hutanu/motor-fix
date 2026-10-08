@@ -189,17 +189,54 @@ describe('saving the language on the account', () => {
     expect(session.current()).toBeNull();
   });
 
-  it('drops an answer that arrives after signing out with the button', async () => {
+  it('saves the last language tapped before signing out with the button', async () => {
     const { choice, meControllerUpdate, pending, session } =
       await signedIn('ro');
 
     await choice.pick('en');
-    await session.signOut();
+    await choice.pick('ro');
+    const signingOut = session.signOut();
     pending[0].resolve(account('en'));
     await settle();
 
+    expect(meControllerUpdate).toHaveBeenCalledTimes(2);
+    expect(pending[1].language).toBe('ro');
+    pending[1].resolve(account('ro'));
+    await signingOut;
+    expect(session.current()).toBeNull();
+  });
+
+  it('signs out with the button even when the save in flight fails', async () => {
+    const { choice, meControllerUpdate, pending, session } =
+      await signedIn('ro');
+
+    await choice.pick('en');
+    const signingOut = session.signOut();
+    pending[0].reject(new Error('offline'));
+    await signingOut;
+
     expect(session.current()).toBeNull();
     expect(meControllerUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it('signs out with the button within three seconds when the save in flight never answers', async () => {
+    const { choice, session } = await signedIn('ro');
+
+    await choice.pick('en');
+    jest.useFakeTimers();
+    try {
+      let done = false;
+      const signingOut = session.signOut().then(() => {
+        done = true;
+      });
+      await jest.advanceTimersByTimeAsync(2_999);
+      expect(done).toBe(false);
+      await jest.advanceTimersByTimeAsync(1);
+      await signingOut;
+      expect(session.current()).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('drops an answer that arrives after another account signed in', async () => {

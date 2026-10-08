@@ -52,6 +52,16 @@
     },
     "retry": "Reîncearcă",
     "search": "Caută service‑uri",
+    "searchFailed": "Lista de mărci nu s‑a încărcat",
+    "searchFound": {
+      "few": "{count} mărci găsite",
+      "one": "{count} marcă găsită",
+      "other": "{count} de mărci găsite"
+    },
+    "searchLabel": "Caută marca",
+    "searchList": "Mărci găsite",
+    "searchLoading": "Se încarcă mărcile…",
+    "searchNone": "Nicio marcă găsită",
     "takes": {
       "few": "primesc",
       "one": "primește",

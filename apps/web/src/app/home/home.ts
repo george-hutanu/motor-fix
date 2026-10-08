@@ -30,6 +30,7 @@ import { Overlays } from '@motor-fix/overlays';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { BrandPicker } from './brand-picker/brand-picker';
+import { BrandSearch } from './brand-picker/brand-search/brand-search';
 import { PlaceDialog } from './place/place-dialog/place-dialog';
 import { type Place, PlaceStore } from './place/place-store';
 import { Session } from '../dashboard/session';
@@ -47,7 +48,13 @@ const report = (error: unknown) =>
     : null;
 
 @Component({
-  imports: [BrandPicker, LanguageSwitch, RouterLink, TranslatePipe],
+  imports: [
+    BrandPicker,
+    BrandSearch,
+    LanguageSwitch,
+    RouterLink,
+    TranslatePipe,
+  ],
   selector: 'mf-home',
   styleUrl: './home.css',
   templateUrl: './home.html',
@@ -70,6 +77,11 @@ export class Home {
   protected readonly i18n = inject(I18n);
   protected readonly health = signal(this.state.get(HEALTH, null));
   protected readonly tiles = signal(this.state.get(TILES, null) ?? []);
+  private readonly searched = signal<BrandDto | undefined>(undefined);
+  protected readonly shown = computed(() => {
+    const searched = this.searched();
+    return searched ? [searched, ...this.tiles().slice(0, 7)] : this.tiles();
+  });
   protected readonly selected = linkedSignal<BrandDto | undefined>(
     () => this.tiles()[0],
   );
@@ -183,11 +195,20 @@ export class Home {
   }
 
   protected choose(slug: string) {
-    this.selected.set(this.tiles().find((brand) => brand.slug === slug));
+    this.selected.set(this.shown().find((brand) => brand.slug === slug));
+  }
+
+  protected pick(brand: BrandDto) {
+    if (brand.slug === this.selected()?.slug) return;
+    // A tile counts only while it is shown: a popular brand an earlier search
+    // pushed off the eight takes the first place like any other.
+    const tile = this.shown().find((b) => b.slug === brand.slug);
+    if (!tile) this.searched.set(brand);
+    this.selected.set(tile ?? brand);
   }
 
   private advance() {
-    const tiles = this.tiles();
+    const tiles = this.shown();
     const at = tiles.findIndex((b) => b.slug === this.selected()?.slug);
     this.selected.set(tiles[(at + 1) % tiles.length]);
   }

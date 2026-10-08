@@ -1,0 +1,82 @@
+:host {
+  display: grid;
+  font-size: var(--mf-size-field);
+  gap: var(--mf-space-2);
+}
+
+.field {
+  position: relative;
+}
+
+input {
+  min-height: var(--mf-tap);
+  width: 100%;
+}
+
+input:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
+
+/* A layer over what follows, so the main button never moves: the
+   suggestions, and in their place the loading or no-match line. */
+[role="listbox"],
+.none {
+  background: var(--mf-panel-raised);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+  left: 0;
+  list-style: none;
+  margin: var(--mf-space-1) 0 0;
+  padding: var(--mf-space-1);
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 10;
+}
+
+[role="option"] {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  min-height: var(--mf-tap);
+  overflow-wrap: anywhere;
+  /* With the list's padding, each name lines up with the typed text. */
+  padding: 0 var(--mf-space-2);
+}
+
+[role="option"]:hover {
+  background: var(--mf-amber-tint);
+}
+
+/* Shown by an outline and weight, not by colour alone. */
+[role="option"][aria-selected="true"] {
+  font-weight: 700;
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: calc(-1 * var(--mf-focus-width));
+}
+
+.none {
+  overflow-wrap: anywhere;
+  padding: var(--mf-space-2) var(--mf-space-3);
+}
+
+.failed {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+button {
+  justify-self: start;
+  min-height: var(--mf-tap);
+}
+
+.hidden {
+  clip-path: inset(50%);
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
