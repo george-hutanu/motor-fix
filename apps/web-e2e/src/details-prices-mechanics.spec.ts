@@ -1,6 +1,7 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 import { ready } from './accounts.js';
+import { test } from './fixtures.js';
 
 // @traces 109-FR-010 109-FR-012 109-FR-020 109-SC-001
 
