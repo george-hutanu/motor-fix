@@ -199,6 +199,16 @@ describe('step 5, the photos', () => {
     http.expectNone(() => true);
   });
 
+  it('keeps a photo dropped with no e-mail yet from opening in the browser', async () => {
+    const { http, step } = await open({ draftId: '' });
+    const drop = new Event('drop', { bubbles: true, cancelable: true });
+
+    step.querySelector('.drop')?.dispatchEvent(drop);
+
+    expect(drop.defaultPrevented).toBe(true);
+    http.expectNone(() => true);
+  });
+
   it('refuses a file of another type or over 10 MB before asking, and uploads the rest', async () => {
     const opened = await open();
 
