@@ -94,6 +94,18 @@ Fix every ERROR. Judge each WARN — several are legitimate by design (a test se
 a deliberate Stryker disable on an equivalent mutant); say which you kept and
 why.
 
+### 1b. Design audit
+
+```bash
+git diff --name-only <base>..HEAD -- apps/web libs/ui-cockpit
+```
+
+When that lists a file, run the `design-audit` skill on the changed component
+folders and on `libs/ui-cockpit/src/styles/cockpit.css`, with its `scan.mjs`
+and `contrast.mjs` helpers. Fix every high finding, run it again, and list
+what is left on a "Design audit" line in the report. When it lists nothing,
+the line reads "Design audit: skipped, no web file changed".
+
 ### 2. Attack, then measure
 
 **2a. Adversarial tests.** Invoke the `test-adversary` subagent (Agent tool,
@@ -184,6 +196,7 @@ finding needs the user, not another attempt.
 | mutation score (<pkg>) | n% | n% |
 | tests | n | n |
 
+Design audit: <high n → 0, medium n | skipped, no web file changed>
 Fixed: <one line each>
 Kept deliberately: <finding — why it is correct as it stands>
 Needs you: <finding this command must not decide>
