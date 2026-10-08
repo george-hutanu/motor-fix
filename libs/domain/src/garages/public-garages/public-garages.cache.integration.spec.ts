@@ -143,7 +143,7 @@ describe('the profile cache', () => {
   it('keeps each brand in context in its own field', async () => {
     const slug = `dacia-${randomUUID()}`;
     await prisma.brand.create({
-      data: { key: slug, name: 'Dacia', slug },
+      data: { key: slug, name: `Dacia ${slug}`, slug },
     });
     const garage = await approvedGarage();
 

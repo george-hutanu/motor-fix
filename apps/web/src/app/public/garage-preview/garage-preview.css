@@ -1,0 +1,129 @@
+:host {
+  display: block;
+  min-width: 0;
+  color: var(--mf-text);
+  font-family: var(--mf-font-body);
+}
+p,
+ul {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+ul {
+  padding: 0;
+  list-style: none;
+}
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-4);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-control);
+  background: var(--mf-panel);
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+}
+.arrow {
+  color: var(--mf-text-secondary);
+}
+.toggle:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
+.body {
+  display: none;
+  gap: var(--mf-space-3);
+  margin-top: var(--mf-space-2);
+  padding: var(--mf-space-4);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-panel);
+  background: var(--mf-panel);
+}
+.body.open {
+  display: grid;
+}
+.title {
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  letter-spacing: var(--mf-label-tracking);
+  text-transform: uppercase;
+  color: var(--mf-text-secondary);
+}
+.name {
+  font-size: var(--mf-size-field);
+  font-weight: 700;
+}
+.range {
+  font-variant-numeric: tabular-nums;
+}
+.placeholder {
+  color: var(--mf-text-secondary);
+  font-weight: normal;
+}
+.brands {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+/* The lines the preview adds look like the ones mf-brand-verdict draws. */
+.line {
+  font-size: var(--mf-size-small);
+}
+.label {
+  font-weight: 600;
+}
+.mechanics {
+  display: grid;
+  gap: var(--mf-space-2);
+}
+.mechanic {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+.avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--mf-line);
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-label);
+  font-weight: 700;
+}
+.who {
+  display: grid;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.note,
+.mobile,
+.state {
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+}
+.state {
+  padding-top: var(--mf-space-2);
+  border-top: 1px solid var(--mf-line);
+}
+/* Beside the form from 1024 px: always open, no button. */
+@media (min-width: 1024px) {
+  .toggle {
+    display: none;
+  }
+  .body {
+    display: grid;
+    margin-top: 0;
+  }
+}
