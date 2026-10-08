@@ -7,10 +7,12 @@ import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
 import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { NotificationsModule } from '../../notifications/notifications.module';
 import {
   databaseUrl,
   fixtures,
   redisUrlFor,
+  testConfig,
 } from '../../notifications/notifications.testing';
 
 const redisUrl = redisUrlFor(14);
@@ -21,10 +23,16 @@ serialDatabase(databaseUrl);
 const TEST_ONLY = ['skip_manual_approval', 'skip_rar_check'];
 
 const boot = async (production: boolean) => {
+  const auth = AuthModule.register({ databaseUrl, redisUrl, tokenSecret });
+  const notifications = NotificationsModule.register(
+    { databaseUrl, email: testConfig('http://127.0.0.1:9'), redisUrl },
+    auth,
+  );
   const moduleRef = await Test.createTestingModule({
     imports: [
-      AuthModule.register({ databaseUrl, redisUrl, tokenSecret }),
-      PlatformRulesModule.register({ production }),
+      auth,
+      notifications,
+      PlatformRulesModule.register({ production }, notifications),
     ],
   }).compile();
   const nest = moduleRef.createNestApplication();

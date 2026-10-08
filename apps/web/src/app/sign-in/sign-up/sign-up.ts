@@ -5,11 +5,9 @@ import {
   signal,
 } from '@angular/core';
 import {
-  type AbstractControl,
   FormControl,
   FormGroup,
   ReactiveFormsModule,
-  type ValidationErrors,
   Validators,
 } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -23,26 +21,11 @@ import {
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
+import { characters } from '../../characters';
 import { Session } from '../../dashboard/session';
 import { Consent, consentControl } from '../consent/consent';
 import { ProviderButtons } from '../providers/providers';
 import { ADDRESS, type AuthData, type AuthSwitch } from '../sign-in';
-
-// Between min and max characters, counted in code points as the server counts
-// them, so an emoji is one; `trim` checks the value as it will be stored. The
-// messages are the shared ones for these validators.
-export const characters =
-  (min: number, max: number, trim = false) =>
-  (control: AbstractControl): ValidationErrors | null => {
-    const value = String(control.value ?? '');
-    const length = [...(trim ? value.trim() : value)].length;
-    if (length === 0) return { required: true };
-    if (length < min)
-      return { minlength: { actualLength: length, requiredLength: min } };
-    if (length > max)
-      return { maxlength: { actualLength: length, requiredLength: max } };
-    return null;
-  };
 
 // The sign-up task shown in the shared dialog: a driver account, signed in at
 // once. It closes with "signed-in", or with a switch back to sign-in. The

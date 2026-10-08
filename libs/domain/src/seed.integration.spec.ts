@@ -73,7 +73,7 @@ describe('seed', () => {
     expect(await seeded()).toHaveLength(0);
   });
 
-  it('adds one account per role, two two-role accounts and a suspended driver', async () => {
+  it('adds one account per role, a second admin, two two-role accounts and a suspended driver', async () => {
     expect(seed('test').status).toBe(0);
 
     const accounts = await seeded();
@@ -89,6 +89,11 @@ describe('seed', () => {
     );
     expect(summary).toEqual({
       'admin@example.test': {
+        lastRole: 'admin',
+        roles: ['admin'],
+        status: 'active',
+      },
+      'admin2@example.test': {
         lastRole: 'admin',
         roles: ['admin'],
         status: 'active',
