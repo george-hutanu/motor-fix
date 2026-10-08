@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
@@ -240,5 +243,26 @@ describe('LanguageChoice.taps', () => {
 
     expect(TestBed.inject(I18n).language()).toBe('en');
     expect(localStorage.getItem('mf.lang')).toBe('en');
+  });
+});
+
+describe('LanguageSwitch look', () => {
+  const source = readFileSync(join(__dirname, 'switch.ts'), 'utf8');
+
+  it('draws one segmented control, not two browser-default buttons', () => {
+    expect(source).toMatch(/div \{[^}]*border: 1px solid var\(--mf-line/);
+    expect(source).toMatch(
+      /div \{[^}]*border-radius: var\(--mf-radius-control\)/,
+    );
+    expect(source).toMatch(/button \{[^}]*background: transparent/);
+    expect(source).toMatch(/button \{[^}]*border: 0/);
+    expect(source).toMatch(/button \{[^}]*color: inherit/);
+  });
+
+  it('fills the pressed segment rather than underlining it', () => {
+    expect(source).toMatch(
+      /button\[aria-pressed='true'\] \{[^}]*background: var\(--mf-panel-raised\)/,
+    );
+    expect(source).not.toMatch(/text-decoration: underline/);
   });
 });

@@ -91,6 +91,12 @@ h1 {
   max-width: 38em;
 }
 
+.shield {
+  margin-inline-end: var(--mf-space-1);
+  color: var(--mf-green);
+  vertical-align: -3px;
+}
+
 .dial {
   display: grid;
   flex: 0 1 320px;

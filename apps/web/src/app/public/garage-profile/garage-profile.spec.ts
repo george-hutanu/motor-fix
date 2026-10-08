@@ -126,6 +126,7 @@ const link = (name: RegExp) =>
   [...page().querySelectorAll<HTMLAnchorElement>('a')].find((a) =>
     name.test(a.textContent ?? ''),
   );
+const css = (path: string) => readFileSync(join(__dirname, path), 'utf8');
 const lamp = () => page().querySelector<HTMLElement>('mf-lamp');
 
 // @traces 307-FR-008 307-FR-010 307-FR-013 307-FR-014 307-FR-015
@@ -143,6 +144,25 @@ describe('the garage profile', () => {
 
     expect(page().querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(page().querySelector('h1')).toBeNull();
+  });
+
+  it('announces the skeletons as a status a screen reader names', async () => {
+    await open('/ro/garages/mecanic-mobil-ilfov');
+
+    const loading = page().querySelector('[aria-busy="true"]');
+    expect(loading?.getAttribute('role')).toBe('status');
+    expect(loading?.getAttribute('aria-label')).toBeTruthy();
+  });
+
+  it('leads the verification line with a shield-check icon kept from screen readers', async () => {
+    await open('/ro/garages/mecanic-mobil-ilfov');
+    await reads[0]?.answer(MOBILE);
+
+    const icon = page().querySelector('.verified svg.shield');
+    expect(icon?.getAttribute('aria-hidden')).toBe('true');
+    expect(css('garage-profile.css')).toMatch(
+      /\.shield \{[^}]*color: var\(--mf-green\)/,
+    );
   });
 
   it('shows the header of a mobile mechanic in order, with its area and no address', async () => {
@@ -498,7 +518,6 @@ describe('moving between profiles', () => {
 });
 
 describe('the profile on the Cockpit type scale', () => {
-  const css = (path: string) => readFileSync(join(__dirname, path), 'utf8');
   const sizes = (source: string) =>
     [...source.matchAll(/font-size:\s*([^;]+);/g)].map((m) => m[1]?.trim());
 
