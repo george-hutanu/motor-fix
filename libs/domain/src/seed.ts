@@ -20,6 +20,7 @@ if (!password) {
   process.exit(1);
 }
 
+type Stance = 'works_on' | 'does_not_take';
 type Role = 'driver' | 'garage' | 'receptionist' | 'mechanic' | 'admin';
 
 interface Person {
@@ -38,6 +39,46 @@ const GARAGES = [
   { name: 'Atelier Test', slug: 'atelier-test' },
   { name: 'Service Dobre', slug: 'service-dobre' },
   { name: 'Atelier Dinamo', slug: 'atelier-dinamo' },
+];
+
+// Listed garages, so Home and search have a known count: 3 of 6 take Dacia.
+// Approved in an earlier month, so the admin's growth this month stays 0.
+const BRANDS = [
+  { key: 'dacia', name: 'Dacia', popularity: 7, slug: 'dacia' },
+  { key: 'volkswagen', name: 'Volkswagen', popularity: 5, slug: 'volkswagen' },
+];
+
+const LISTED: {
+  name: string;
+  slug: string;
+  stances: Record<string, Stance>;
+}[] = [
+  {
+    name: 'Service Auto Militari',
+    slug: 'service-auto-militari',
+    stances: { dacia: 'works_on', volkswagen: 'works_on' },
+  },
+  {
+    name: 'Atelier Berceni',
+    slug: 'atelier-berceni',
+    stances: { dacia: 'works_on' },
+  },
+  {
+    name: 'Auto Pipera',
+    slug: 'auto-pipera',
+    stances: { dacia: 'works_on', volkswagen: 'does_not_take' },
+  },
+  {
+    name: 'Service Colentina',
+    slug: 'service-colentina',
+    stances: { dacia: 'does_not_take', volkswagen: 'works_on' },
+  },
+  {
+    name: 'Atelier Drumul Taberei',
+    slug: 'atelier-drumul-taberei',
+    stances: { volkswagen: 'works_on' },
+  },
+  { name: 'Service Titan', slug: 'service-titan', stances: {} },
 ];
 
 // Two garages waiting for an admin, so the admin dashboard has a known count.
@@ -194,6 +235,34 @@ async function seed(db: Client, secret: string) {
        ON CONFLICT (slug) DO NOTHING`,
       [garage.name, garage.slug],
     );
+  }
+  // The API's catalogue loader reconciles these rows by key when it boots.
+  for (const brand of BRANDS) {
+    await db.query(
+      `INSERT INTO brand (id, key, name, slug, popularity, updated_at)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, now())
+       ON CONFLICT DO NOTHING`,
+      [brand.key, brand.name, brand.slug, brand.popularity],
+    );
+  }
+  for (const garage of LISTED) {
+    await db.query(
+      `INSERT INTO garage (id, name, slug, status, approved_at)
+       VALUES (gen_random_uuid(), $1, $2, 'approved', '2026-01-15T09:00:00Z')
+       ON CONFLICT (slug) DO NOTHING`,
+      [garage.name, garage.slug],
+    );
+    for (const [brand, stance] of Object.entries(garage.stances)) {
+      // A brand a garage does not take is taken for no fuel.
+      const fuels = stance === 'works_on';
+      await db.query(
+        `INSERT INTO garage_brand (garage_id, brand_id, stance, petrol, diesel, hybrid, electric, updated_at)
+         SELECT g.id, b.id, $3::garage_brand_stance, $4, $4, $4, $4, now()
+         FROM garage g, brand b WHERE g.slug = $1 AND b.key = $2
+         ON CONFLICT DO NOTHING`,
+        [garage.slug, brand, stance, fuels],
+      );
+    }
   }
   for (const person of PEOPLE) await add(db, person, secret);
   for (const { garage, status } of WAITING) {

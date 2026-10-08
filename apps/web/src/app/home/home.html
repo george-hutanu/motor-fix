@@ -1,0 +1,44 @@
+<header><h1>{{ 'shell.brand' | t }}</h1><mf-language-switch /></header>
+@if (selected(); as brand) {
+  <section class="hero">
+    <p class="label">{{ 'public.home.hero.label' | t: { brand: brand.name } }}</p>
+    <h2>{{ 'public.home.hero.headline' | t: { brand: brand.name } }}</h2>
+    <p>{{ 'public.home.hero.paragraph' | t: { brand: brand.name } }}</p>
+  </section>
+  <mf-brand-picker
+    [brands]="tiles()"
+    [selected]="brand.slug"
+    (select)="choose($event)"
+    (touched)="touched.set(true)"
+  />
+  <a
+    class="spartan-button spartan-button-variant-default search"
+    [routerLink]="['/', i18n.language(), 'garages']"
+    [queryParams]="{ brand: brand.slug }"
+  >
+    {{ 'public.home.search' | t }}
+  </a>
+  <div
+    class="count"
+    [attr.aria-live]="touched() ? 'polite' : 'off'"
+    [attr.aria-busy]="busy()"
+  >
+    @if (home.error()) {
+      <span>{{ 'public.home.failed' | t }}</span>
+      <button
+        type="button"
+        class="spartan-button spartan-button-variant-ghost"
+        (click)="home.reload()"
+      >
+        {{ 'public.home.retry' | t }}
+      </button>
+    } @else if (count(); as count) {
+      {{ count }}
+    } @else {
+      <span class="skeleton"></span>
+    }
+  </div>
+  <section class="car" [attr.aria-label]="'public.home.car' | t"></section>
+}
+<p>{{ health()?.version ?? ('shell.version.unknown' | t) }}</p>
+<p>{{ 'shell.health.status' | t: checks() }}</p>

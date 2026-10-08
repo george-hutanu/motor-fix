@@ -1494,6 +1494,94 @@
         ]
       }
     },
+    "/api/v1/home": {
+      "get": {
+        "operationId": "HomeController_forBrand",
+        "parameters": [
+          {
+            "name": "brand",
+            "required": true,
+            "in": "query",
+            "description": "The brand, by its catalogue slug",
+            "schema": {
+              "maxLength": 60,
+              "example": "dacia",
+              "type": "string"
+            }
+          },
+          {
+            "name": "near",
+            "required": false,
+            "in": "query",
+            "description": "The place as \"lat,lng\"; accepted and ignored until a place narrows the count",
+            "schema": {
+              "example": "44.43,26.10",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: brand is not a slug, or near is not lat,lng"
+          },
+          "404": {
+            "description": "not_found: no active brand with that slug"
+          }
+        },
+        "tags": [
+          "home"
+        ]
+      }
+    },
+    "/api/v1/brands/popular": {
+      "get": {
+        "operationId": "PopularBrandsController_tiles",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 12,
+              "default": 8,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Active brands by popularity, unranked last, then by name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BrandDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: limit is not a whole number from 1 to 12"
+          }
+        },
+        "tags": [
+          "brands"
+        ]
+      }
+    },
     "/api/v1/admin/overview": {
       "get": {
         "operationId": "AdminOverviewController_overview",
@@ -4018,6 +4106,27 @@
           "nextCursor",
           "total",
           "counts"
+        ]
+      },
+      "HomeDto": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "$ref": "#/components/schemas/BrandDto"
+          },
+          "total": {
+            "type": "integer",
+            "description": "Approved garages"
+          },
+          "takers": {
+            "type": "integer",
+            "description": "Approved garages that work on the brand"
+          }
+        },
+        "required": [
+          "brand",
+          "total",
+          "takers"
         ]
       },
       "AdminOverviewDto": {

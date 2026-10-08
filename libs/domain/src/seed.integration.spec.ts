@@ -218,6 +218,7 @@ describe('seed', () => {
     const garages = await prisma.garage.findMany({
       include: { verificationFiles: { select: { status: true } } },
       orderBy: { slug: 'asc' },
+      where: { status: 'draft' },
     });
     expect(
       garages.map((g) => [
@@ -263,6 +264,71 @@ describe('seed', () => {
         ].map((kind) => [kind, 'not_run', false, null]),
       );
     }
+  });
+});
+
+describe('seed of the listed garages', () => {
+  const listed = () =>
+    prisma.garage.findMany({
+      orderBy: { slug: 'asc' },
+      select: {
+        approvedAt: true,
+        brands: {
+          select: { brand: { select: { key: true } }, stance: true },
+        },
+        slug: true,
+      },
+      where: { status: 'approved' },
+    });
+  const dacia = (garages: Awaited<ReturnType<typeof listed>>) =>
+    garages.map(
+      (g) => g.brands.find((b) => b.brand.key === 'dacia')?.stance ?? 'none',
+    );
+
+  it('lists six garages, three taking Dacia, one refusing it, two silent', async () => {
+    expect(seed('test').status).toBe(0);
+
+    const garages = await listed();
+    expect(garages).toHaveLength(6);
+    expect(dacia(garages).sort()).toEqual([
+      'does_not_take',
+      'none',
+      'none',
+      'works_on',
+      'works_on',
+      'works_on',
+    ]);
+    // Approved in an earlier month, so the admin's growth this month stays 0.
+    for (const garage of garages) {
+      expect(garage.approvedAt?.getTime()).toBeLessThan(
+        new Date('2026-02-01T00:00:00Z').getTime(),
+      );
+    }
+  });
+
+  it('gives Dacia its catalogue slug and popularity before the API has loaded it', async () => {
+    await prisma.$executeRawUnsafe('TRUNCATE brand CASCADE');
+
+    expect(seed('test').status).toBe(0);
+
+    expect(
+      await prisma.brand.findUnique({
+        select: { active: true, name: true, popularity: true, slug: true },
+        where: { key: 'dacia' },
+      }),
+    ).toEqual({ active: true, name: 'Dacia', popularity: 7, slug: 'dacia' });
+  });
+
+  it('changes nothing in the listed garages when run twice', async () => {
+    expect(seed('test').status).toBe(0);
+    const once = await listed();
+
+    expect(seed('test').status).toBe(0);
+
+    expect(await listed()).toEqual(once);
+    expect(await prisma.garageBrand.count()).toBe(
+      once.reduce((n, g) => n + g.brands.length, 0),
+    );
   });
 });
 
