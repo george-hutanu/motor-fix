@@ -408,7 +408,7 @@ function handoff(ctx, flags) {
 // merge and comment fail there: the same steps go over REST, the merge as
 // `gh api -X PUT repos/{owner}/{repo}/pulls/<n>/merge`, which the merge gate
 // judges as it judges gh pr merge.
-const PR_JQ = "{number, state: (if .merged then \"MERGED\" else (.state | ascii_upcase) end), merge_commit_sha, title}";
+const PR_JQ = "{number, state: (if .merged then \"MERGED\" else (.state | ascii_upcase) end), merge_commit_sha, title, head: .head.ref}";
 
 /** A PR comment over REST: the body from a file. */
 const restComment = (n, file) => ["api", "-X", "POST", `repos/{owner}/{repo}/issues/${n}/comments`, "-F", `body=@${file}`];
@@ -420,7 +420,7 @@ function merge(ctx, flags) {
   const viewPr = () =>
     cloud
       ? JSON.parse(ctx.gh("api", `repos/{owner}/{repo}/pulls/${flags.pr}`, "--jq", PR_JQ).stdout)
-      : JSON.parse(ctx.gh("pr", "view", ...(flags.pr ? [flags.pr] : []), "--json", "number,state,url,title").stdout);
+      : JSON.parse(ctx.gh("pr", "view", ...(flags.pr ? [flags.pr] : []), "--json", "number,state,url,title,headRefName").stdout);
   const view = viewPr();
   settleStory(ctx, flags, view.title);
   const n = String(view.number);
@@ -430,6 +430,7 @@ function merge(ctx, flags) {
     ctx.did.push("merged");
   }
   const sha = cloud ? String(viewPr().merge_commit_sha ?? "") : ctx.gh("pr", "view", n, "--json", "mergeCommit", "--jq", ".mergeCommit.oid").stdout.trim();
+  const testStack = stopTestStack(ctx, cloud ? view.head : view.headRefName);
   const commentFile = join(ctx.feature.dir, "finish-comment.md");
   const hasComment = existsSync(commentFile);
   const [finish] = ctx.notion([["finish", "--pr", n, ...(hasComment ? ["--body-file", commentFile] : ["--no-comment"])]], `${SELF} merge --pr ${n} --notion-done`);
@@ -454,7 +455,33 @@ function merge(ctx, flags) {
   ctx.did.push("finish comment");
   rmSync(join(ctx.feature.dir, "handoff.md"), { force: true });
   ctx.did.push("handoff.md removed");
-  return { pr: view.number, merged: sha.slice(0, 7), review: finish?.ready?.review ?? [], ready_logged: readyLogged(lines.join("\n")).ok };
+  return { pr: view.number, merged: sha.slice(0, 7), review: finish?.ready?.review ?? [], ready_logged: readyLogged(lines.join("\n")).ok, test_stack: testStack };
+}
+
+/**
+ * Stops the merged branch's test stack (scripts/test-services.ts down): the
+ * worktree carrying the branch, else the checkout this runs in, volumes kept.
+ * Nothing here can fail the merge: every failure is a reason in the result.
+ */
+function stopTestStack(ctx, branch) {
+  let worktree = ctx.repo;
+  try {
+    const entries = ctx.git("worktree", "list", "--porcelain").stdout.split("\n\n");
+    const own = entries.find((e) => branch && e.split("\n").includes(`branch refs/heads/${branch}`));
+    if (own) worktree = own.split("\n")[0].slice("worktree ".length);
+  } catch (err) {
+    if (!(err instanceof Stop)) throw err;
+  }
+  let stack;
+  try {
+    const r = ctx.io.run("node", ["scripts/test-services.ts", "down", worktree], { env: ctx.env });
+    const out = lastJson(r.stdout);
+    stack = r.code !== 0 ? { stopped: false, reason: (r.stderr || r.stdout || `exit ${r.code}`).trim().slice(-200) } : typeof out.stopped === "boolean" ? out : { stopped: false, reason: `unreadable output: ${String(r.stdout).trim().slice(-200)}` };
+  } catch (err) {
+    stack = { stopped: false, reason: String(err?.message ?? err) };
+  }
+  ctx.did.push(stack.stopped ? `test stack ${stack.project} stopped` : `test stack not stopped: ${stack.reason}`);
+  return stack;
 }
 
 if (isEntryPoint(import.meta.url)) {

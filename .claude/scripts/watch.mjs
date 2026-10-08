@@ -516,6 +516,22 @@ export function applyFixes(repo, report, { postCarry: post = postCarry } = {}) {
   return actions;
 }
 
+/**
+ * Stops the test stacks (scripts/test-services.ts) of merged, closed or gone worktrees.
+ * The action's `what` is the script's own line; a failure is a failed action, never a throw.
+ */
+export function sweepStacks(repo, run = execFileSync) {
+  try {
+    const out = run("node", ["scripts/test-services.ts", "sweep"], { cwd: repo, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 300_000 });
+    return { what: String(out).trim().split("\n").at(-1) || "sweep test stacks", ok: true };
+  } catch (e) {
+    return { what: "sweep test stacks", ok: false, error: String(e.stderr || e.message).trim() };
+  }
+}
+
+/** The sweep, in a repository that has the script (the harness runs in others too); null elsewhere. */
+const sweepIfPresent = (repo) => (existsSync(join(repo, "scripts", "test-services.ts")) ? sweepStacks(repo) : null);
+
 /** One line per thing a full pass would do: each dispatch and each no-agent fix. Empty means the pass would do nothing. */
 const gateLines = (report) =>
   [...report.plan, ...dueFixes(report)].map((d) => `${d.fix} ${d.path}${d.pr ? ` #${d.pr}` : ""}`);
@@ -559,7 +575,7 @@ function render(report, now) {
 
 const USAGE = "usage: watch.mjs [--json] [--fix] [--stale <phase>=<minutes>,…] | --gate [--stale …] | --wait [--every <minutes>] [--for <minutes>] [--stale …] | claim <worktree> <fix>";
 
-export function main(argv, { cwd = process.cwd(), now, sleep = blockingSleep, commandOf = defaultCommandOf, ...deps } = {}) {
+export function main(argv, { cwd = process.cwd(), now, sleep = blockingSleep, commandOf = defaultCommandOf, sweep = sweepIfPresent, ...deps } = {}) {
   const at = () => now ?? Date.now();
   if (argv[0] === "claim") {
     const [, path, fix] = argv;
@@ -626,7 +642,7 @@ export function main(argv, { cwd = process.cwd(), now, sleep = blockingSleep, co
     console.error(e.message);
     return 1;
   }
-  const actions = flags.has("--fix") ? applyFixes(cwd, report) : [];
+  const actions = flags.has("--fix") ? [...applyFixes(cwd, report), sweep(cwd)].filter(Boolean) : [];
   if (flags.has("--json")) console.log(JSON.stringify({ ...report, actions }, null, 2));
   else {
     console.log(render(report, at()));

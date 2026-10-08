@@ -396,7 +396,10 @@ decisions are the source for anything the constitution does not fix.
   an affected project has integration specs it starts and migrates the
   worktree's own PostgreSQL and Redis (`scripts/test-services.ts`, compose
   project `mf-test-<worktree>-<hash>`, left running between commits; Docker
-  required), and it refuses a commit with `JEST_SUITE` set.
+  required), and it refuses a commit with `JEST_SUITE` set. `lifecycle.mjs
+  merge` stops the merged worktree's stack (`test-services.ts down`, volumes
+  kept), and each `/speckit-watch` pass runs `test-services.ts sweep`, which
+  stops those of merged, closed or deleted worktrees; neither fails on Docker.
 - PR CI: `.github/workflows/ci.yml`, six jobs, so a PR holds at most seven
   of the free plan's 20 concurrent runners: Checks (one runner and one
   install: Biome, Dependency audit, Typecheck, Build, Contract check, Harness,
