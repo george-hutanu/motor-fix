@@ -130,7 +130,15 @@ test.describe('a mobile mechanic, then suspended @seeded', () => {
   test('turns into the no-longer-available view in place when the garage is suspended', async ({
     page,
   }) => {
-    const stream = page.waitForRequest('**/api/v1/live/public*');
+    // The stream is open once its answer has come back: a request alone may
+    // still be refused (the visitors' streams share one address here) and
+    // retried after the event has gone out.
+    const stream = page.waitForResponse(
+      (r) =>
+        r.url().includes('/api/v1/live/public?') &&
+        r.url().includes('garages=') &&
+        r.ok(),
+    );
     await page.goto(`/ro/garages/${slug}`);
     await expect(heading(page)).toHaveText('Mecanic Mobil E2E');
     await stream;
