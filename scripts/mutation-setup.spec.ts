@@ -1,5 +1,7 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
+
+import { strykerOptions } from './mutation.ts';
 
 // What every project's mutation run depends on, read from the repository as
 // text: Stryker reads these files differently from a plain Jest run.
@@ -46,12 +48,35 @@ describe('mutation setup', () => {
 
   // Stryker reads a Jest config without its preset, so an environment that
   // only the preset sets falls back to node and every browser spec fails.
+  // A project may name its own environment file under <rootDir>.
   it.each(mutated)(
     '%s names its test environment in its own config',
     (root) => {
-      expect(read(`${root}/jest.config.cts`)).toMatch(
-        /^\s*testEnvironment: '(node|jsdom)',$/m,
+      const named = read(`${root}/jest.config.cts`).match(
+        /^\s*testEnvironment: '(node|jsdom|<rootDir>\/[^']+)',$/m,
+      )?.[1];
+      expect(named).toBeDefined();
+      const file = named?.replace('<rootDir>', root) ?? '';
+      if (file !== named) expect(existsSync(join(repo, file))).toBe(true);
+    },
+  );
+
+  // Stryker reads the config without normalising it, so it would look for a
+  // module called "<rootDir>/…"; strykerOptions hands it the resolved file.
+  it.each(mutated)(
+    '%s gives Stryker an environment file it can load',
+    (root) => {
+      process.chdir(repo);
+      const env = (
+        strykerOptions(root, root, false).jest as {
+          config?: { testEnvironment?: string };
+        }
+      ).config?.testEnvironment;
+      const own = /testEnvironment: '<rootDir>\//.test(
+        read(`${root}/jest.config.cts`),
       );
+      expect(env === undefined).toBe(!own);
+      if (env) expect(existsSync(env)).toBe(true);
     },
   );
 
