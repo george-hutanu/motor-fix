@@ -45,7 +45,7 @@ and QA lap is where most of a story's cost went.
    - Notion: story <page id> · timeline row and epic in specs/<feature>/notion-sync.md
    - QA run: <id> · head <sha> · lap 1 · <url>
    - Open decisions: <each, with its source file> | none
-   - Deferred: <each deferred.md bullet not yet filed, or "all filed"> | none
+   - Deferred: <each deferred.md bullet not yet filed (large fixes only, AGENTS.md's size test), or "all filed"> | none
    ```
 
 5. `node .claude/scripts/run-state.mjs set --status in-progress --phase hand-off`,
