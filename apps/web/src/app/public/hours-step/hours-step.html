@@ -171,7 +171,12 @@
   @for (payment of payments; track payment) {
     @let ticked = taken().includes(payment);
     <li>
-      <button type="button" [attr.aria-pressed]="ticked" (click)="pay(payment)">
+      <button
+        type="button"
+        [attr.aria-pressed]="ticked"
+        [attr.aria-describedby]="taken().length ? null : 'payments-error'"
+        (click)="pay(payment)"
+      >
         {{ paymentKey(payment) | t }}
         @if (ticked) {
           <mf-lamp state="green" [label]="'public.listing.hours.payment.taken' | t" />
@@ -181,5 +186,5 @@
   }
 </ul>
 @if (!taken().length) {
-  <p class="hint" role="status">{{ 'public.listing.hours.payment.needed' | t }}</p>
+  <p id="payments-error" class="error" role="status">{{ 'public.listing.hours.payment.needed' | t }}</p>
 }

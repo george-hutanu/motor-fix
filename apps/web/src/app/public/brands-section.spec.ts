@@ -1,4 +1,10 @@
-import { fuelsOf, type MarkedBrand, mark, toggleFuel } from './brands-section';
+import {
+  brandsOf,
+  fuelsOf,
+  type MarkedBrand,
+  mark,
+  toggleFuel,
+} from './brands-section';
 
 const DACIA = { id: 'b-dacia', name: 'Dacia' };
 const BMW = { id: 'b-bmw', name: 'BMW' };
@@ -75,5 +81,39 @@ describe('marking a brand with fuels', () => {
     expect(mark([taken(DACIA, ['diesel'])], DACIA, 'works_on')).toEqual([
       taken(DACIA, ['diesel']),
     ]);
+  });
+});
+
+describe('step 2 as the draft holds it', () => {
+  const ID = '2f1c6a0e-8b1d-4c3a-9e57-0d6f1b2c3a4d';
+  const draft = (section: unknown) => ({ steps: { 2: section } });
+
+  it('opens with the brands of a section in shape', () => {
+    const brands = [
+      { brandId: ID, fuels: ['diesel'], name: 'Dacia', stance: 'works_on' },
+    ];
+
+    expect(brandsOf(draft({ brandNote: 'Doar Dacia', brands }))).toEqual({
+      brandNote: 'Doar Dacia',
+      brands,
+    });
+  });
+
+  it('opens with nothing marked when a brand id is not a uuid', () => {
+    const brands = [{ brandId: 'b-dacia', name: 'Dacia', stance: 'works_on' }];
+
+    expect(brandsOf(draft({ brands }))).toEqual({ brands: [] });
+  });
+
+  it('opens with nothing marked when a brand is marked twice', () => {
+    const dacia = { brandId: ID, name: 'Dacia', stance: 'works_on' };
+
+    expect(brandsOf(draft({ brands: [dacia, dacia] }))).toEqual({
+      brands: [],
+    });
+  });
+
+  it('opens with nothing marked when the section carries an unknown key', () => {
+    expect(brandsOf(draft({ brands: [], extra: 1 }))).toEqual({ brands: [] });
   });
 });

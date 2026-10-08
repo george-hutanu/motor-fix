@@ -632,6 +632,13 @@ describe('step 5, the payment methods', () => {
     const { fixture, step } = await open();
 
     expect(statuses(step)).toContain('Alege cel puțin o modalitate de plată');
+    const error = step.querySelector(
+      `#${payChip(step, 'Card').getAttribute('aria-describedby')}`,
+    );
+    expect(error?.classList).toContain('error');
+    expect(text(error as HTMLElement)).toBe(
+      'Alege cel puțin o modalitate de plată',
+    );
 
     await click(fixture, payChip(step, 'Card'));
     expect(statuses(step)).not.toContain(

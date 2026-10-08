@@ -2,6 +2,7 @@ import {
   type BrandsSection as DraftBrands,
   FUELS,
   type Fuel,
+  isBrandsSection,
   type MarkedBrand,
   NOTE_MAX,
   PHRASE_MAX,
@@ -76,43 +77,17 @@ export function clean(text: string, max: number): string | undefined {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const isFuels = (value: unknown) =>
-  Array.isArray(value) &&
-  value.every((f) => (FUELS as readonly unknown[]).includes(f)) &&
-  new Set(value).size === value.length;
-
-const isMarked = (value: unknown): value is MarkedBrand => {
-  if (!isRecord(value)) return false;
-  const { brandId, fuels, name, stance } = value;
-  return (
-    typeof brandId === 'string' &&
-    typeof name === 'string' &&
-    (stance === 'works_on' || stance === 'does_not_take') &&
-    (fuels === undefined || (stance === 'works_on' && isFuels(fuels)))
-  );
-};
-
-const text = (value: unknown, max: number) =>
-  typeof value === 'string' ? clean(value, max) : undefined;
-
 const stepTwo = (data: unknown) => {
   if (!isRecord(data)) return undefined;
   const { steps } = data;
   return isRecord(steps) ? steps['2'] : undefined;
 };
 
-// Step 2 as the listing draft holds it (`steps['2']`); a kept copy not in
-// this shape opens with nothing marked rather than breaking the form.
+// Step 2 as the listing draft holds it (`steps['2']`), read through the
+// draft's own guard; a kept copy not in that shape opens with nothing marked
+// rather than breaking the form.
 export function brandsOf(data: unknown): BrandsSection {
   const section = stepTwo(data);
-  if (!isRecord(section)) return { brands: [] };
-  const { brands } = section;
-  if (!Array.isArray(brands) || !brands.every(isMarked)) return { brands: [] };
-  const brandNote = text(section['brandNote'], NOTE_MAX);
-  const refusalPhrase = text(section['refusalPhrase'], PHRASE_MAX);
-  return {
-    brands,
-    ...(brandNote && { brandNote }),
-    ...(refusalPhrase && { refusalPhrase }),
-  };
+  if (!isBrandsSection(section)) return { brands: [] };
+  return { ...section, brands: section.brands ?? [] };
 }
