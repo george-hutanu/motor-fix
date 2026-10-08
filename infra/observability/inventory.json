@@ -8,27 +8,27 @@
       "kind": "app",
       "name": "api",
       "source": "apps/api",
-      "dashboard": "none",
+      "dashboard": "motorfix-api",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
       "kind": "app",
       "name": "mcp",
       "source": "apps/mcp",
-      "dashboard": "none",
+      "dashboard": "motorfix-mcp",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
       "kind": "app",
       "name": "web",
       "source": "apps/web",
-      "dashboard": "none",
+      "dashboard": "motorfix-web",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-877"
     },
     {
@@ -44,81 +44,81 @@
       "kind": "app",
       "name": "worker",
       "source": "apps/worker",
-      "dashboard": "none",
+      "dashboard": "motorfix-worker",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
       "kind": "railway-service",
       "name": "api",
       "source": "scripts/railway-deploy.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-overview",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
       "kind": "railway-service",
       "name": "worker",
       "source": "scripts/railway-deploy.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-overview",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
       "kind": "railway-service",
       "name": "web",
       "source": "scripts/railway-deploy.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-overview",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-877"
     },
     {
       "kind": "queue",
       "name": "insights",
       "source": "libs/domain/src/insights/insights.module.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-queues",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
       "kind": "queue",
       "name": "reminders",
       "source": "libs/domain/src/cars/reminders/reminders.module.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-queues",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
       "kind": "queue",
       "name": "notifications",
       "source": "libs/domain/src/notifications/notifications.module.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-queues",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
       "kind": "queue",
       "name": "listing-photos",
       "source": "libs/domain/src/garages/photos/listing-photos/listing-photos.module.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-queues",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
       "kind": "queue",
       "name": "news",
       "source": "libs/domain/src/notifications/news/news.fan-out.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-queues",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
@@ -126,9 +126,9 @@
       "name": "brevo",
       "host": "api.brevo.com",
       "source": "libs/domain/src/notifications/email-config.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-worker",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
@@ -136,9 +136,9 @@
       "name": "google-sign-in",
       "host": "accounts.google.com",
       "source": "libs/domain/src/auth/oauth/providers.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-api",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
@@ -146,9 +146,9 @@
       "name": "apple-sign-in",
       "host": "appleid.apple.com",
       "source": "libs/domain/src/auth/oauth/providers.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-api",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
@@ -156,9 +156,9 @@
       "name": "s3",
       "client": "s3",
       "source": "libs/domain/src/storage/storage.service.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-api",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
@@ -166,27 +166,27 @@
       "name": "web-push",
       "client": "web-push",
       "source": "libs/domain/src/notifications/push/push.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-worker",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
       "kind": "outside-service",
       "name": "postgresql",
       "source": "libs/contracts/src/env.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-postgres",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
       "kind": "outside-service",
       "name": "redis",
       "source": "libs/contracts/src/env.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-redis",
       "alerts": "none",
-      "reason": "ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "ST-880 adds the alerts",
       "story": "ST-881"
     },
     {
@@ -194,9 +194,9 @@
       "name": "geoapify",
       "host": "api.geoapify.com",
       "source": "libs/domain/src/places/providers/geoapify-places.provider.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-api",
       "alerts": "none",
-      "reason": "reports motorfix_places_lookups_total{provider,outcome} and motorfix_places_provider_duration_seconds{provider}; ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "reports motorfix_places_lookups_total{provider,outcome} and motorfix_places_provider_duration_seconds{provider}; ST-880 the alerts",
       "story": "ST-111"
     },
     {
@@ -213,72 +213,72 @@
       "kind": "outside-service",
       "name": "grafana-faro",
       "source": "apps/web/src/app/telemetry/browser/faro.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-web-vitals",
       "alerts": "none",
-      "reason": "the browser's collector; ST-879 adds the dashboard, ST-880 the alerts",
+      "reason": "the browser's collector; ST-880 the alerts",
       "story": "ST-877"
     },
     {
       "kind": "product-counter",
       "name": "motorfix_searches_total",
       "source": "libs/domain/src/search/garage-search/garage-search.service.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "the product dashboard lands with the dashboards in this PR; ST-880 adds the alert rules",
+      "reason": "ST-880 adds the alert rules",
       "story": "ST-879"
     },
     {
       "kind": "product-counter",
       "name": "motorfix_sign_ins_total",
       "source": "libs/domain/src/metrics/product-counters.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "the product dashboard lands with the dashboards in this PR; ST-880 adds the alert rules",
+      "reason": "ST-880 adds the alert rules",
       "story": "ST-879"
     },
     {
       "kind": "product-counter",
       "name": "motorfix_garage_sign_ups_total",
       "source": "libs/domain/src/garages/listing-drafts/listing-drafts.service.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "the product dashboard lands with the dashboards in this PR; ST-880 adds the alert rules",
+      "reason": "ST-880 adds the alert rules",
       "story": "ST-879"
     },
     {
       "kind": "product-counter",
       "name": "motorfix_garage_approvals_total",
       "source": "libs/domain/src/garages/verification/verification.service.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "the product dashboard lands with the dashboards in this PR; ST-880 adds the alert rules",
+      "reason": "ST-880 adds the alert rules",
       "story": "ST-879"
     },
     {
       "kind": "product-counter",
       "name": "motorfix_quotes_total",
       "source": "libs/domain/src/notifications/notifications.service.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "the product dashboard lands with the dashboards in this PR; ST-880 adds the alert rules",
+      "reason": "ST-880 adds the alert rules",
       "story": "ST-879"
     },
     {
       "kind": "product-counter",
       "name": "motorfix_emails_sent_total",
       "source": "libs/domain/src/notifications/notifications.processor.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "the product dashboard lands with the dashboards in this PR; ST-880 adds the alert rules",
+      "reason": "ST-880 adds the alert rules",
       "story": "ST-879"
     },
     {
       "kind": "product-counter",
       "name": "motorfix_notifications_sent_total",
       "source": "libs/domain/src/metrics/product-counters.ts",
-      "dashboard": "none",
+      "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "the product dashboard lands with the dashboards in this PR; ST-880 adds the alert rules",
+      "reason": "ST-880 adds the alert rules",
       "story": "ST-879"
     }
   ]

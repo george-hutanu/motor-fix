@@ -135,4 +135,69 @@ describe('release workflow', () => {
     expect(at).toBeGreaterThan(0);
     expect(step).toMatch(/^ +if: always\(\)$/m);
   });
+
+  function step(block: string, name: string): string {
+    const at = block.indexOf(`- name: ${name}\n`);
+    if (at < 0) throw new Error(`no step ${name}`);
+    const next = block.indexOf('\n      - ', at + 1);
+    return block.slice(at, next < 0 ? undefined : next);
+  }
+
+  const GRAFANA = gh(
+    "secrets.GRAFANA_SA_TOKEN != '' && vars.GRAFANA_URL != ''",
+  );
+
+  // @traces 879-FR-013
+  it('pushes every dashboard to Grafana after the builds, the token in the header only', () => {
+    const block = job('images');
+    const push = step(block, 'Push the dashboards');
+
+    expect(setting(block, 'GRAFANA')).toBe(GRAFANA);
+    expect(push).toMatch(/^ +if: env\.GRAFANA == 'true'$/m);
+    expect(push).toContain('infra/observability/grafana/dashboards/*.json');
+    expect(push).toContain('overwrite: true');
+    expect(push).toContain('/api/dashboards/db');
+    expect(push).toContain('--fail-with-body');
+    expect(push).toContain(
+      `GRAFANA_SA_TOKEN: ${gh('secrets.GRAFANA_SA_TOKEN')}`,
+    );
+    expect(push).toContain(`GRAFANA_URL: ${gh('vars.GRAFANA_URL')}`);
+    expect(push.match(/\$\{GRAFANA_SA_TOKEN\}/g)).toHaveLength(1);
+    expect(push).toContain('-H "Authorization: Bearer ${GRAFANA_SA_TOKEN}"');
+    expect(block.indexOf('- name: Push the dashboards')).toBeGreaterThan(
+      block.indexOf('- id: mcp'),
+    );
+    expect(setting(job('staging'), 'needs')).toBe('images');
+  });
+
+  // @traces 879-FR-013
+  it('skips the push with a notice naming what is not set, and goes on', () => {
+    const skip = step(job('images'), 'Skip the dashboards');
+
+    expect(skip).toMatch(/^ +if: env\.GRAFANA != 'true'$/m);
+    expect(skip).toContain('GRAFANA_SA_TOKEN');
+    expect(skip).toContain('GRAFANA_URL');
+    expect(skip).toContain('::notice::');
+    expect(skip).not.toContain('exit 1');
+  });
+
+  // @traces 879-FR-014
+  it.each(['staging', 'production'])(
+    'annotates the %s deploy in Grafana right after it',
+    (name) => {
+      const block = job(name);
+      const note = step(block, 'Annotate the deploy');
+
+      expect(setting(block, 'GRAFANA')).toBe(GRAFANA);
+      expect(note).toMatch(/^ +\[ "\$GRAFANA" = "true" \] \|\| exit 0$/m);
+      expect(note).toContain(`"env:${name}"`);
+      expect(note).toContain('"deploy"');
+      expect(note).toContain('/api/annotations');
+      expect(note).toContain('--arg sha "${GITHUB_SHA}"');
+      expect(note).toContain('-H "Authorization: Bearer ${GRAFANA_SA_TOKEN}"');
+      expect(block.indexOf('- name: Annotate the deploy')).toBeGreaterThan(
+        block.indexOf(`railway-deploy.ts ${name}`),
+      );
+    },
+  );
 });
