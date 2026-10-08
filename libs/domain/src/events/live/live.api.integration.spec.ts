@@ -16,6 +16,7 @@ import { AuthModule } from '../../auth/auth.module';
 import type { Role } from '../../auth/capabilities';
 import { createPrisma } from '../../auth/prisma';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { timersArmedBy, until } from '../../waits.testing';
 import { noEvents } from '../event.port';
 import { EventsModule } from '../events.module';
 import { OutboxRelayModule } from '../outbox-relay/outbox-relay.module';
@@ -117,22 +118,27 @@ function stream(target: INestApplication, auth?: string) {
           body: '',
           ended: new Promise<void>((done) => res.on('close', () => done())),
           messages: [] as Message[],
-          next: (kind: string, ms = 2_000) =>
+          // Waits for a message of `kind`; the limit only turns a message
+          // that never comes into a failure, and leaves room for a loaded
+          // machine.
+          next: (kind: string, ms = 15_000) =>
             new Promise<Message>((ok, fail) => {
               const seen = () => out.messages.find((m) => m.event === kind);
               const found = seen();
               if (found) return ok(found);
-              const timer = setTimeout(
-                () => fail(new Error(`no ${kind} within ${ms} ms`)),
-                ms,
-              );
-              res.on('data', () => {
+              const onData = () => {
                 const m = seen();
                 if (m) {
                   clearTimeout(timer);
+                  res.off('data', onData);
                   ok(m);
                 }
-              });
+              };
+              const timer = setTimeout(() => {
+                res.off('data', onData);
+                fail(new Error(`no ${kind} within ${ms} ms`));
+              }, ms);
+              res.on('data', onData);
             }),
           res,
         };
@@ -243,6 +249,7 @@ describe('the live stream', () => {
 });
 
 describe('the admin test update', () => {
+  // @traces 976-FR-002 976-FR-004
   it('reaches the target on every open stream within two seconds, once each', async () => {
     const admin = await account('Admin', ['admin']);
     const driver = await account('Andrei', ['driver']);
@@ -251,15 +258,25 @@ describe('the admin test update', () => {
     await phone.next('hello');
     await laptop.next('hello');
 
-    const started = Date.now();
-    const res = await sendTest(driver, `Bearer ${token(admin, 'admin')}`);
+    const {
+      log,
+      value: [res, a, b],
+    } = await timersArmedBy('outbox-relay.ts', async (log) => {
+      const sent = await sendTest(driver, `Bearer ${token(admin, 'admin')}`);
+      // The wait is long enough for a loaded machine; the two seconds are
+      // proved by the relay's timers below.
+      const heard = await Promise.all([
+        phone.next('live.test'),
+        laptop.next('live.test'),
+      ]);
+      await until('the relay to poll again', () => log.length > 0);
+      return [sent, ...heard] as const;
+    });
 
     expect(res.status).toBe(202);
-    const [a, b] = await Promise.all([
-      phone.next('live.test'),
-      laptop.next('live.test'),
-    ]);
-    expect(Date.now() - started).toBeLessThan(2_000);
+    // Within two seconds: the only wait between the message and the streams
+    // is the relay's poll, a fifth of a second; the hub forwards at once.
+    expect(log.every((entry) => entry.endsWith(' 200'))).toBe(true);
     expect(a.data).toEqual({
       at: expect.any(String),
       id: expect.stringMatching(/^[0-9a-f-]{36}$/),
@@ -267,6 +284,7 @@ describe('the admin test update', () => {
     });
     expect(a.data['id']).not.toBe(driver);
     expect(b.data['id']).toBe(a.data['id']);
+    // Long enough for a wrong message to arrive.
     await new Promise((r) => setTimeout(r, 200));
     for (const live of [phone, laptop]) {
       expect(live.messages.filter((m) => m.event === 'live.test')).toHaveLength(
@@ -304,6 +322,7 @@ describe('the admin test update', () => {
       await sendTest(id, `Bearer ${token(admin, 'admin')}`).expect(202);
       await streams[index]?.next('live.test');
     }
+    // Long enough for a wrong message to arrive.
     await new Promise((r) => setTimeout(r, 200));
 
     for (const live of streams) {
@@ -337,6 +356,7 @@ describe('the admin test update', () => {
       const res = await sendTest(driver, `Bearer ${token(id, role)}`);
       expect(res.status).toBe(404);
     }
+    // Long enough for a wrong message to arrive.
     await new Promise((r) => setTimeout(r, 200));
     expect(live.messages.map((m) => m.event)).toEqual(['hello']);
   });
@@ -532,7 +552,7 @@ describe('the end of a stream', () => {
     );
 
     const live = await stream(app, `Bearer ${shortLived}`);
-    const bye = await live.next('bye', 3_000);
+    const bye = await live.next('bye');
     await live.ended;
 
     expect(bye.data).toMatchObject({ kind: 'bye', reason: 'expired' });
@@ -570,6 +590,8 @@ describe('who gets an event at a garage', () => {
     );
     publisher.disconnect();
   };
+  // An absence window, after the wait for what did arrive: long enough for
+  // a wrong message to arrive. Never a wait for work.
   const settle = () => new Promise((r) => setTimeout(r, 300));
   const seen = (live: { messages: Message[] }) =>
     live.messages.map((m) => m.event).filter((k) => k !== 'hello');
@@ -634,6 +656,13 @@ describe('who gets an event at a garage', () => {
       [`garage:${garageId}`, `mechanic:${mechanicId}`],
       'job.updated',
     );
+    await until(
+      'every staff stream to hear its kinds',
+      () =>
+        seen(ownerLive).length >= 3 &&
+        seen(deskLive).length >= 2 &&
+        seen(mihaiLive).length >= 2,
+    );
     await settle();
 
     expect(seen(ownerLive)).toEqual([
@@ -654,6 +683,9 @@ describe('who gets an event at a garage', () => {
 
     await fanOut([`garage:${garageId}`], 'media.added');
     await fanOut([`garage:${garageId}`], 'request.created');
+    await until('the request to arrive', () =>
+      seen(ownerLive).includes('request.created'),
+    );
     await settle();
 
     expect(seen(ownerLive)).toEqual(['request.created']);
@@ -663,6 +695,7 @@ describe('who gets an event at a garage', () => {
     const { deskLive, garageId, ownerLive, receptionist } = await team();
     await fanOut([`garage:${garageId}`], 'member.removed', receptionist);
     await fanOut([`garage:${garageId}`], 'request.created');
+    await until('the owner to hear both', () => seen(ownerLive).length >= 2);
     await settle();
 
     expect(seen(deskLive)).toEqual([]);

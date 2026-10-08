@@ -5,6 +5,7 @@ import { Session } from './session';
 
 const DRIVER = {
   capabilities: [],
+  city: null,
   email: 'andrei@example.ro',
   emailConfirmed: false,
   garageAccess: [],

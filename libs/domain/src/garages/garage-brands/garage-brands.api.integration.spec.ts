@@ -9,6 +9,7 @@ import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
 import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { outboxMark } from '../../events/outbox.testing';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
   databaseUrl,
@@ -26,7 +27,7 @@ const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
 
 let app: NestExpressApplication;
-let since: Date;
+let mark: bigint;
 
 beforeAll(async () => {
   const email = testConfig('http://127.0.0.1:9');
@@ -63,10 +64,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await reset();
   await prisma.$executeRawUnsafe('TRUNCATE brand CASCADE');
-  const [{ at }] = await prisma.$queryRaw<
-    { at: Date }[]
-  >`SELECT clock_timestamp() AS at`;
-  since = at;
+  mark = await outboxMark(prisma);
 });
 
 const http = () => request(app.getHttpServer());
@@ -165,7 +163,7 @@ describe('PUT /garages/:garageId/brands', () => {
     await put(w, { brands: [{ brandId: w.bmw.id, stance: 'works_on' }] });
 
     const events = await prisma.outboxEvent.findMany({
-      where: { createdAt: { gte: since }, kind: 'garage.updated' },
+      where: { id: { gt: mark }, kind: 'garage.updated' },
     });
     expect(events).toHaveLength(1);
     expect(events[0].payload).toMatchObject({

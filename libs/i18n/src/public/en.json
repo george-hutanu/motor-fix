@@ -34,6 +34,21 @@
       "paragraph": "Pick the brand and see how many garages take it. The search is by brand; the model, year and fuel go into the quote request."
     },
     "picker": "Car brand",
+    "place": {
+      "all": "All of Romania",
+      "change": "Change",
+      "choose": "Choose a place",
+      "field": "Address",
+      "locating": "Finding your location…",
+      "locationFailed": "We could not get your location; type an address",
+      "near": "Near {label}",
+      "nearYou": "Near you",
+      "nothingFound": "Address not found",
+      "placeholder": "Street, city",
+      "searchUnavailable": "We cannot search addresses now",
+      "title": "Choose a place",
+      "useLocation": "Use my location"
+    },
     "retry": "Try again",
     "search": "Find garages",
     "searchFailed": "The brand list did not load",

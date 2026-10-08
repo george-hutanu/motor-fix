@@ -8,6 +8,11 @@ export interface MeDto {
    * What the role in use may do
    */
   capabilities: Array<string>;
+
+  /**
+   * The city saved in Setări
+   */
+  city: string | null;
   email: string | null;
 
   /**

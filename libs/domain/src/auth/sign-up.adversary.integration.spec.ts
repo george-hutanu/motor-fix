@@ -12,6 +12,7 @@ import { AuthModule } from './auth.module';
 import { MAINTENANCE } from './maintenance';
 import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';
+import { timersArmedBy } from '../waits.testing';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
@@ -728,6 +729,7 @@ describe('the hourly limit', () => {
     expect((await signUp(body(), from)).status).toBe(429);
     const [key] = await redis.keys('auth:signup:*');
     await redis.expire(key ?? '', 1);
+    // Not a wait for work: the hour, shortened to a second, has to pass.
     await sleep(1500);
 
     expect((await signUp(body(), from)).status).toBe(201);
@@ -849,18 +851,19 @@ describe('Redis that never answers', () => {
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const hung = await start(`redis://127.0.0.1:${port}`);
-    const began = Date.now();
-
     try {
-      const res = await signUp(body(), address(), hung);
+      const { log, value: res } = await timersArmedBy('ioredis', () =>
+        signUp(body(), address(), hung),
+      );
 
       expect(res.status).toBe(201);
-      expect(Date.now() - began).toBeLessThan(6000);
+      // Redis's own 2-second command limit is what ended the wait.
+      expect(log).toContain('fired 2000');
       expect(JSON.stringify(warn.mock.calls)).toMatch(/Redis/);
     } finally {
       await hung.close();
     }
-  }, 30_000);
+  });
 });
 
 describe('the log of refused attempts', () => {

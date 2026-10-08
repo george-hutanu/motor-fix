@@ -1,0 +1,55 @@
+:host {
+  display: grid;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+.locate {
+  min-height: var(--mf-tap);
+  margin-bottom: var(--mf-space-2);
+}
+input {
+  width: 100%;
+  min-height: var(--mf-tap);
+  box-sizing: border-box;
+  font-size: 1rem;
+}
+.message {
+  margin: 0;
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+  overflow-wrap: anywhere;
+}
+.message:empty {
+  display: none;
+}
+.suggestions {
+  display: grid;
+  min-width: 0;
+  max-height: 16rem;
+  overflow-y: auto;
+}
+.suggestions:empty {
+  display: none;
+}
+.suggestions button {
+  min-height: var(--mf-tap);
+  max-width: 100%;
+  padding: var(--mf-space-2) var(--mf-space-3);
+  border: 1px solid var(--mf-line);
+  background: var(--mf-bg);
+  color: var(--mf-text);
+  font: inherit;
+  text-align: start;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.suggestions button + button {
+  border-top: 0;
+}
+.suggestions button[aria-selected="true"] {
+  font-weight: 600;
+}
+button:focus-visible {
+  outline: 2px solid var(--mf-focus);
+  outline-offset: 2px;
+}

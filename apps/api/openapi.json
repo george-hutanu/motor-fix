@@ -1451,6 +1451,16 @@
         "operationId": "GarageSearchController_forBrand",
         "parameters": [
           {
+            "name": "near",
+            "required": false,
+            "in": "query",
+            "description": "The place the count is measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, all of Romania",
+            "schema": {
+              "example": "46.771,23.624",
+              "type": "string"
+            }
+          },
+          {
             "name": "brandId",
             "required": true,
             "in": "query",
@@ -1483,7 +1493,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: brandId missing or not a uuid; invalid_cursor: not a page of this search"
+            "description": "validation_failed: brandId missing or not a uuid, or near not a lat,lng in Romania; invalid_cursor: not a page of this search"
           },
           "404": {
             "description": "not_found: no brand with that id"
@@ -1499,6 +1509,16 @@
         "operationId": "HomeController_forBrand",
         "parameters": [
           {
+            "name": "near",
+            "required": false,
+            "in": "query",
+            "description": "The place the count is measured from, as \"lat,lng\" in Romania; rounded to three decimals. Without it, all of Romania",
+            "schema": {
+              "example": "46.771,23.624",
+              "type": "string"
+            }
+          },
+          {
             "name": "brand",
             "required": true,
             "in": "query",
@@ -1506,16 +1526,6 @@
             "schema": {
               "maxLength": 60,
               "example": "dacia",
-              "type": "string"
-            }
-          },
-          {
-            "name": "near",
-            "required": false,
-            "in": "query",
-            "description": "The place as \"lat,lng\"; accepted and ignored until a place narrows the count",
-            "schema": {
-              "example": "44.43,26.10",
               "type": "string"
             }
           }
@@ -1532,7 +1542,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: brand is not a slug, or near is not lat,lng"
+            "description": "validation_failed: brand is not a slug, or near is not a lat,lng in Romania"
           },
           "404": {
             "description": "not_found: no active brand with that slug"
@@ -3012,6 +3022,11 @@
               "en"
             ]
           },
+          "city": {
+            "type": "string",
+            "description": "The city saved in Setări",
+            "nullable": true
+          },
           "roles": {
             "type": "array",
             "items": {
@@ -3070,6 +3085,7 @@
           "email",
           "emailConfirmed",
           "language",
+          "city",
           "roles",
           "role",
           "garageId",
@@ -4376,6 +4392,15 @@
               "does_not_take",
               "unstated"
             ]
+          },
+          "distanceKm": {
+            "type": "number",
+            "description": "Km from the place, one decimal; null for a mobile mechanic. Only with near",
+            "nullable": true
+          },
+          "comesToYou": {
+            "type": "boolean",
+            "description": "True for a mobile mechanic whose area holds the place. Only with near"
           }
         },
         "required": [
@@ -4443,7 +4468,7 @@
           },
           "total": {
             "type": "integer",
-            "description": "Approved garages"
+            "description": "Approved garages, in the area of the place when one is given"
           },
           "takers": {
             "type": "integer",

@@ -75,6 +75,13 @@ export class MeDto {
   @ApiProperty({ enum: LANGUAGE })
   language!: (typeof LANGUAGE)[number];
 
+  @ApiProperty({
+    description: 'The city saved in Setări',
+    nullable: true,
+    type: String,
+  })
+  city!: string | null;
+
   @ApiProperty({ enum: ROLE, isArray: true })
   roles!: Role[];
 
