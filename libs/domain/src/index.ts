@@ -38,6 +38,7 @@ export { verificationConfig } from './garages/verification-config';
 export * from './health/health.module';
 export { InsightsModule } from './insights/insights.module';
 export * from './logging';
+export { DataStoreMetricsModule } from './metrics/data-store-metrics.module';
 export { emailConfig } from './notifications/email-config';
 export { NEWS_CONSUMER } from './notifications/news.fan-out';
 export { NotificationsModule } from './notifications/notifications.module';

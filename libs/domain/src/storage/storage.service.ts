@@ -19,6 +19,7 @@ import {
   type StorageEnv,
   UPLOAD_URL_MINUTES,
 } from '@motor-fix/contracts';
+import { storageTelemetry } from '@motor-fix/observability';
 import {
   BadRequestException,
   ConflictException,
@@ -109,6 +110,13 @@ export class StorageService implements OnApplicationShutdown {
       requestHandler: { connectionTimeout: 2000, requestTimeout: 30_000 },
       responseChecksumValidation: 'WHEN_REQUIRED',
     });
+    const telemetry = storageTelemetry(this.bucket);
+    if (telemetry) {
+      this.s3.middlewareStack.add(telemetry, {
+        name: 'motorfixStorageTelemetry',
+        step: 'initialize',
+      });
+    }
   }
 
   async createUpload(
