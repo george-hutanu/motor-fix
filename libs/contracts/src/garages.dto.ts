@@ -1,7 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Allow, IsOptional } from 'class-validator';
 
-import { BrandRefDto, GarageBrandAnswerDto } from './garage-brands.dto';
+import {
+  BrandRefDto,
+  GarageBrandAnswerDto,
+  PublicBrandDto,
+} from './garage-brands.dto';
+import { CourtesyCarDto, PaymentMethodsDto } from './garage-settings.dto';
 import { BUSINESS_KINDS, type BusinessKind } from './listing-sections';
 
 const STANCES = ['works_on', 'does_not_take'] as const;
@@ -87,4 +92,17 @@ export class PublicGarageDto extends GarageBrandAnswerDto {
     type: PublicGarageBrandDto,
   })
   brand?: PublicGarageBrandDto;
+
+  @ApiProperty({ type: [PublicBrandDto] })
+  declare worksOn: PublicBrandDto[];
+
+  @ApiProperty({ type: PaymentMethodsDto })
+  paymentMethods!: PaymentMethodsDto;
+
+  @ApiPropertyOptional({
+    description:
+      'Absent when the garage does not list one; a price only when paid',
+    type: CourtesyCarDto,
+  })
+  courtesyCar?: CourtesyCarDto;
 }

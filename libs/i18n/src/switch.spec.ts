@@ -266,3 +266,14 @@ describe('LanguageSwitch look', () => {
     expect(source).not.toMatch(/text-decoration: underline/);
   });
 });
+
+describe('the language switch buttons', () => {
+  const source = readFileSync(join(__dirname, 'switch.ts'), 'utf8');
+
+  it('read at the page size, not the browser button size, on the 4 px grid', () => {
+    expect(source).toMatch(
+      /button \{[^}]*font: inherit;[^}]*font-size: var\(--mf-size-body, 16px\);/,
+    );
+    expect(source).toMatch(/button \{[^}]*padding: 4px 8px;/);
+  });
+});

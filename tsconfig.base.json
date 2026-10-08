@@ -31,6 +31,9 @@
       "@motor-fix/contracts/listing-verification": [
         "./libs/contracts/src/listing-verification.ts"
       ],
+      "@motor-fix/contracts/marked-brands": [
+        "./libs/contracts/src/marked-brands.ts"
+      ],
       "@motor-fix/contracts/notification-groups": [
         "./libs/contracts/src/notification-groups.ts"
       ],

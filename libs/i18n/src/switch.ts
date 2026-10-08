@@ -79,7 +79,7 @@ export function provideRememberedLanguage(): EnvironmentProviders {
   styles: `
     :host { display: inline-flex; }
     div { display: flex; border: 1px solid var(--mf-line); border-radius: var(--mf-radius-control); overflow: hidden; }
-    button { min-width: 44px; min-height: 44px; padding: 0 var(--mf-space-2); font: inherit; color: inherit; background: transparent; border: 0; cursor: pointer; }
+    button { min-width: 44px; min-height: 44px; padding: 4px 8px; font: inherit; font-size: var(--mf-size-body, 16px); color: inherit; background: transparent; border: 0; cursor: pointer; }
     button[aria-pressed='true'] { font-weight: 700; background: var(--mf-panel-raised); }
   `,
   template: `

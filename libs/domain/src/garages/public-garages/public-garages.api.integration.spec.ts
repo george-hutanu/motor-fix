@@ -95,6 +95,7 @@ describe('reading a garage by its public slug', () => {
       doesNotTake: [],
       id: approved.id,
       name: 'Atelier Dinamo',
+      paymentMethods: { card: false, cash: false, transfer: false },
       rating: null,
       refusalPhrase: null,
       reviewCount: 0,
@@ -129,6 +130,7 @@ describe('reading a garage by its public slug', () => {
       'doesNotTake',
       'id',
       'name',
+      'paymentMethods',
       'rating',
       'refusalPhrase',
       'reviewCount',
@@ -244,6 +246,112 @@ describe('reading a garage by its public slug', () => {
       refusalPhrase: 'orice nu e BMW',
       worksOn: [ref(mini), ref(bmw), ref(audi), ref(lada)],
     });
+  });
+
+  it('carries the payment methods the garage takes', async () => {
+    const approved = await garage('approved');
+    await prisma.$executeRaw`UPDATE garage SET payment_cash = true, payment_transfer = true WHERE id = ${approved.id}::uuid`;
+
+    const res = await read(approved.slug);
+
+    expect(res.body.paymentMethods).toEqual({
+      card: false,
+      cash: true,
+      transfer: true,
+    });
+  });
+
+  it('carries no courtesy car when the garage does not list one', async () => {
+    const approved = await garage('approved');
+
+    const res = await read(approved.slug);
+
+    expect(res.body).not.toHaveProperty('courtesyCar');
+  });
+
+  it('carries a free courtesy car without a price', async () => {
+    const approved = await garage('approved');
+    await prisma.garageFacility.create({
+      data: { facility: 'courtesy_car', garageId: approved.id },
+    });
+
+    const res = await read(approved.slug);
+
+    expect(res.body.courtesyCar).toEqual({ paid: false });
+  });
+
+  it('carries a paid courtesy car with its price per day', async () => {
+    const approved = await garage('approved');
+    await prisma.garageFacility.create({
+      data: { facility: 'courtesy_car', garageId: approved.id },
+    });
+    await prisma.$executeRaw`UPDATE garage SET courtesy_car_paid = true, courtesy_car_price_per_day_bani = 12000 WHERE id = ${approved.id}::uuid`;
+
+    const res = await read(approved.slug);
+
+    expect(res.body.courtesyCar).toEqual({
+      paid: true,
+      pricePerDayBani: 12000,
+    });
+  });
+
+  it('carries the ticked fuels of each taken brand, none ticked included', async () => {
+    const approved = await garage('approved');
+    const brand = (name: string, popularity: number) => {
+      const key = `${name.toLowerCase()}-${randomUUID()}`;
+      return prisma.brand.create({
+        data: { key, name, popularity, slug: key },
+      });
+    };
+    const dacia = await brand('Dacia', 1);
+    const bmw = await brand('BMW', 2);
+    const tesla = await brand('Tesla', 3);
+    await prisma.garageBrand.createMany({
+      data: [
+        {
+          brandId: dacia.id,
+          diesel: true,
+          electric: false,
+          garageId: approved.id,
+          hybrid: true,
+          petrol: true,
+          stance: 'works_on',
+        },
+        {
+          brandId: bmw.id,
+          diesel: false,
+          electric: false,
+          garageId: approved.id,
+          hybrid: false,
+          petrol: false,
+          stance: 'works_on',
+        },
+        {
+          brandId: tesla.id,
+          diesel: false,
+          electric: false,
+          garageId: approved.id,
+          hybrid: false,
+          petrol: false,
+          stance: 'does_not_take',
+        },
+      ],
+    });
+
+    const res = await read(approved.slug);
+
+    expect(res.body.worksOn).toEqual([
+      {
+        fuels: ['petrol', 'diesel', 'hybrid'],
+        id: dacia.id,
+        name: 'Dacia',
+        slug: dacia.slug,
+      },
+      { fuels: [], id: bmw.id, name: 'BMW', slug: bmw.slug },
+    ]);
+    expect(res.body.doesNotTake).toEqual([
+      { id: tesla.id, name: 'Tesla', slug: tesla.slug },
+    ]);
   });
 
   it('answers a garage never approved exactly as a slug nobody holds', async () => {
@@ -619,12 +727,14 @@ const PUBLIC_FIELDS = new Set([
   'brand',
   'brandNote',
   'businessKind',
+  'courtesyCar',
   'description',
   'doesNotTake',
   'id',
   'latitude',
   'longitude',
   'name',
+  'paymentMethods',
   'rating',
   'refusalPhrase',
   'reviewCount',

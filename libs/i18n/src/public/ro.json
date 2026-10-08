@@ -107,6 +107,13 @@
     "brands": {
       "chips": "Mărcile tale",
       "counter": "{taken} · {refused}",
+      "fuel": {
+        "diesel": "Diesel",
+        "electric": "Electric",
+        "hybrid": "Hibrid",
+        "petrol": "Benzină",
+        "ticked": "o lucrezi"
+      },
       "hint": "O apăsare: led verde, lucrezi pe ea. Încă una: led roșu, nu o primești. A treia o stinge.",
       "left": {
         "few": "{count} caractere rămase",
@@ -114,6 +121,7 @@
         "other": "{count} de caractere rămase"
       },
       "noMatch": "Nicio marcă găsită.",
+      "noRequests": "Nu vei primi cereri pentru {brand}",
       "note": "Notă despre mărci, cel mult 140 de caractere",
       "off": "nu o primești",
       "on": "lucrezi pe ea",
@@ -173,6 +181,14 @@
       "closedDay": "Data",
       "closedDays": "Zile închise",
       "closedNote": "Notă, cel mult 80 de caractere",
+      "courtesy": {
+        "free": "Gratuită",
+        "paid": "Contra cost",
+        "price": "Preț pe zi",
+        "priceMissing": "Scrie prețul pe zi",
+        "priceRange": "Prețul pe zi e între 1 și 2.000 lei",
+        "terms": "Mașina la schimb"
+      },
       "days": {
         "fri": "Vineri",
         "mon": "Luni",
@@ -200,6 +216,14 @@
       "open": "Deschide",
       "order": "Ora de închidere trebuie să fie după deschidere",
       "past": "Data a trecut",
+      "payment": {
+        "card": "Card",
+        "cash": "Numerar",
+        "heading": "Plată",
+        "needed": "Alege cel puțin o modalitate de plată",
+        "taken": "o accepți",
+        "transfer": "Transfer bancar"
+      },
       "remove": "Elimină {day}",
       "removeBreak": "Elimină pauza",
       "saturday": "Sâmbătă",

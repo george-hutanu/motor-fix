@@ -74,7 +74,7 @@ describe('reading a garage by slug, hostilely', () => {
     },
   );
 
-  it('exposes only the public fields of an approved garage', async () => {
+  it('exposes only the public fields, the brand answer and the payment methods of an approved garage', async () => {
     const created = await prisma.garage.create({
       data: {
         name: 'Atelier Ștefan',
@@ -91,6 +91,7 @@ describe('reading a garage by slug, hostilely', () => {
       'doesNotTake',
       'id',
       'name',
+      'paymentMethods',
       'rating',
       'refusalPhrase',
       'reviewCount',
