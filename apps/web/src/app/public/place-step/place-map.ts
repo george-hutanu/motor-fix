@@ -14,10 +14,16 @@ export interface PlaceMapEvents {
   tapped(at: LatLng): void;
 }
 
+// What the map shows: the pin, and for a mobile mechanic the radius of the
+// service circle around it.
+export interface Shown {
+  at?: LatLng;
+  km?: number;
+}
+
 export interface PlaceMap {
-  circle(km: number | undefined): void;
   destroy(): void;
-  pin(at: LatLng | undefined): void;
+  show(next: Shown): void;
 }
 
 export type OpenPlaceMap = (
@@ -45,9 +51,40 @@ function styleFor(document: Document) {
     : STYLES.light;
 }
 
+function span(lat: number, km: number) {
+  return {
+    dLat: km / KM_PER_DEGREE,
+    dLng: km / (KM_PER_DEGREE * Math.cos((lat * Math.PI) / 180)),
+  };
+}
+
+export function circleBounds(
+  { lat, lng }: LatLng,
+  km: number,
+): [[number, number], [number, number]] {
+  const { dLat, dLng } = span(lat, km);
+  return [
+    [lng - dLng, lat - dLat],
+    [lng + dLng, lat + dLat],
+  ];
+}
+
+// The view moves only when a placement starts (the first pin, or one set
+// outside the view) or the radius changes; any other move keeps the zoom the
+// user chose.
+export function viewFor(
+  prev: Shown,
+  next: Shown,
+  inView: boolean,
+): 'circle' | 'keep' | 'street' {
+  if (!next.at) return 'keep';
+  if (!prev.at || !inView) return next.km ? 'circle' : 'street';
+  if (next.km !== undefined && next.km !== prev.km) return 'circle';
+  return 'keep';
+}
+
 function ring({ lat, lng }: LatLng, km: number): [number, number][] {
-  const dLat = km / KM_PER_DEGREE;
-  const dLng = km / (KM_PER_DEGREE * Math.cos((lat * Math.PI) / 180));
+  const { dLat, dLng } = span(lat, km);
   return Array.from({ length: 65 }, (_, i) => {
     const angle = (i / 64) * 2 * Math.PI;
     return [lng + dLng * Math.cos(angle), lat + dLat * Math.sin(angle)];
@@ -100,6 +137,11 @@ async function openMapLibre(
       reject(error);
     });
   });
+  // Under the test style the e2e suite reads the view off the live map.
+  const view = host.ownerDocument.defaultView as
+    | (Window & { __MF_MAP?: MapLibre; __MF_MAP_STYLE?: string })
+    | null;
+  if (view?.__MF_MAP_STYLE) view.__MF_MAP = map;
   map.on('error', () => events.failed());
   map.on('click', ({ lngLat }) =>
     events.tapped({ lat: lngLat.lat, lng: lngLat.lng }),
@@ -126,9 +168,8 @@ async function openMapLibre(
   });
 
   let marker: Marker | undefined;
-  let at: LatLng | undefined;
-  let km: number | undefined;
-  const draw = () =>
+  let shown: Shown = {};
+  const draw = ({ at, km }: Shown) =>
     (map.getSource('radius') as GeoJSONSource).setData({
       features:
         at && km
@@ -142,31 +183,42 @@ async function openMapLibre(
           : [],
       type: 'FeatureCollection',
     });
+  const place = (at: LatLng | undefined) => {
+    if (!at) {
+      marker?.remove();
+      marker = undefined;
+      return;
+    }
+    if (!marker) {
+      marker = new maplibre.Marker({ draggable: true });
+      marker.on('dragend', () => {
+        const { lat, lng } = (marker as Marker).getLngLat();
+        events.dragged({ lat, lng });
+      });
+    }
+    marker.setLngLat([at.lng, at.lat]).addTo(map);
+  };
+  const frame = (next: Shown) => {
+    const { at, km } = next;
+    if (!at) return;
+    const view = viewFor(
+      shown,
+      next,
+      map.getBounds().contains([at.lng, at.lat]),
+    );
+    if (view === 'circle' && km)
+      map.fitBounds(circleBounds(at, km), { animate: false, padding: 24 });
+    else if (view === 'street')
+      map.jumpTo({ center: [at.lng, at.lat], zoom: PLACE_ZOOM });
+  };
 
   return {
-    circle(next) {
-      km = next;
-      draw();
-    },
     destroy: () => map.remove(),
-    pin(next) {
-      at = next;
-      draw();
-      if (!next) {
-        marker?.remove();
-        marker = undefined;
-        return;
-      }
-      if (!marker) {
-        marker = new maplibre.Marker({ draggable: true });
-        marker.on('dragend', () => {
-          const { lat, lng } = (marker as Marker).getLngLat();
-          events.dragged({ lat, lng });
-        });
-      }
-      marker.setLngLat([next.lng, next.lat]).addTo(map);
-      if (!map.getBounds().contains([next.lng, next.lat]) || map.getZoom() < 10)
-        map.jumpTo({ center: [next.lng, next.lat], zoom: PLACE_ZOOM });
+    show(next) {
+      draw(next);
+      place(next.at);
+      frame(next);
+      shown = next;
     },
   };
 }

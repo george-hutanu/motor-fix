@@ -108,7 +108,7 @@ export class PlaceStep {
         tapped: (at) => {
           if (!this.armed()) return;
           this.armed.set(false);
-          // A placed pin is moved by dragging, never by a tap (FR-003).
+          // A placed pin is moved by dragging, never by a tap.
           if (!this.hasPin()) this.place(at);
         },
       }).then(
@@ -116,13 +116,14 @@ export class PlaceStep {
         () => this.mapDown.set(true),
       );
     });
-    effect(() => this.map()?.pin(positionOf(this.value())));
+    // One call, so a pin and a radius set together move the view once.
     effect(() =>
-      this.map()?.circle(
-        this.mobile()
+      this.map()?.show({
+        at: positionOf(this.value()),
+        km: this.mobile()
           ? (this.value().radiusKm ?? RADIUS_KM.default)
           : undefined,
-      ),
+      }),
     );
   }
 

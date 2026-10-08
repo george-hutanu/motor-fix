@@ -75,6 +75,39 @@ async function kept(
   return (await keptPlace(page)) as Record<string, unknown>;
 }
 
+// Read from the live map, which the page exposes under the test style only.
+const framing = (page: Page, km: number) =>
+  page.evaluate(
+    ({ km, at }) => {
+      type Point = { x: number; y: number };
+      const map = (
+        window as unknown as {
+          __MF_MAP: {
+            getBounds(): { contains(at: [number, number]): boolean };
+            getContainer(): HTMLElement;
+            getZoom(): number;
+            project(at: [number, number]): Point;
+          };
+        }
+      ).__MF_MAP;
+      const dLat = km / 111.32;
+      const dLng = km / (111.32 * Math.cos((at.lat * Math.PI) / 180));
+      const corners: [number, number][] = [
+        [at.lng - dLng, at.lat - dLat],
+        [at.lng + dLng, at.lat + dLat],
+      ];
+      const [west, east] = corners.map((c) => map.project(c));
+      const { clientHeight, clientWidth } = map.getContainer();
+      return {
+        filled:
+          Math.abs(east.x - west.x) >= Math.min(clientWidth, clientHeight) / 2,
+        inside: corners.every((c) => map.getBounds().contains(c)),
+        zoom: map.getZoom(),
+      };
+    },
+    { at: { lat: STEFAN.lat, lng: STEFAN.lng }, km },
+  );
+
 async function noSidewaysScroll(page: Page) {
   expect(
     await page.evaluate(
@@ -176,5 +209,58 @@ test.describe('step 5 of list your garage, the place step', () => {
     await page.waitForLoadState('networkidle');
     await expect(step(page).getByLabel('Sediul înregistrat')).toBeVisible();
     await expect(radius(page)).toHaveValue('35');
+  });
+
+  test('at 320 px a mobile mechanic sees the whole service circle, refitted when the radius changes, and keeps their own zoom', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 640, width: 320 });
+    await stub(page);
+    await ready(page, '/ro/list-your-garage');
+    await page
+      .locator('mf-details-step')
+      .getByRole('group', { name: 'Tipul afacerii' })
+      .getByRole('button', { exact: true, name: 'Mecanic mobil' })
+      .click();
+
+    await address(page).fill('Str. Ștefan cel Mare 12, Sector 2');
+    await step(page)
+      .locator('.suggestions button', { hasText: STEFAN.label })
+      .click();
+    await expect(pin(page)).toBeVisible();
+    await expect
+      .poll(() => framing(page, 20))
+      .toMatchObject({ filled: true, inside: true });
+    const atDefault = await framing(page, 20);
+    expect(atDefault.zoom).toBeLessThan(16);
+
+    await radius(page).fill('100');
+    await expect
+      .poll(() => framing(page, 100))
+      .toMatchObject({ filled: true, inside: true });
+    expect((await framing(page, 100)).zoom).toBeLessThan(atDefault.zoom);
+
+    await radius(page).fill('1');
+    await expect
+      .poll(() => framing(page, 1))
+      .toMatchObject({ filled: true, inside: true });
+    expect((await framing(page, 1)).zoom).toBeGreaterThan(atDefault.zoom);
+
+    await page.evaluate(() =>
+      (
+        window as unknown as { __MF_MAP: { jumpTo(o: { zoom: number }): void } }
+      ).__MF_MAP.jumpTo({ zoom: 8 }),
+    );
+    const box = await pin(page).boundingBox();
+    if (!box) throw new Error('the pin has no box');
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 30, box.y + box.height / 2, {
+      steps: 5,
+    });
+    await page.mouse.up();
+    await kept(page, (p) => p['lng'] !== STEFAN.lng);
+    expect((await framing(page, 1)).zoom).toBe(8);
+    await noSidewaysScroll(page);
   });
 });
