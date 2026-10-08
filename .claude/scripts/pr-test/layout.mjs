@@ -17,6 +17,8 @@ export async function measureLayout({ phone, tapTargets, focus }) {
   const CAP = 20;
   const MAX_CONTROLS = 200;
   const HALF = 0.5;
+  // Under a minimum means under it: only float noise is forgiven, never half a pixel.
+  const EPS = 0.01;
   const TAP = 44;
   const FLOOR = 12;
   const BODY = 16;
@@ -24,6 +26,9 @@ export async function measureLayout({ phone, tapTargets, focus }) {
   const RUNNING_ROLES = "p, li, td, th, dd, button, a[href], [role=button], [role=link]";
   const CAPTIONS = new Set(["SMALL", "SUB", "SUP"]);
   const FIELDS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
+  // A field a phone zooms into: one that takes typing or a choice, not a box to tick or a button.
+  const NOT_TYPED = new Set(["checkbox", "radio", "range", "color", "file", "submit", "button", "image", "reset", "hidden"]);
+  const typed = (el) => FIELDS.has(el.tagName) && !(el.tagName === "INPUT" && NOT_TYPED.has(el.type));
   const TAPPABLE = "a[href], button, input:not([type=hidden]), select, textarea, summary, [role=button], [role=link], [role=tab], [role=menuitem]";
   const CONTROLS = `${TAPPABLE}, [tabindex]:not([tabindex='-1'])`;
 
@@ -54,7 +59,8 @@ export async function measureLayout({ phone, tapTargets, focus }) {
   }
 
   function ownText(el) {
-    if (FIELDS.has(el.tagName)) return String(el.value ?? el.placeholder ?? "").trim();
+    if (typed(el)) return String(el.value || el.placeholder || "").trim();
+    if (el.tagName === "INPUT") return ["submit", "button", "reset"].includes(el.type) ? String(el.value ?? "").trim() : "";
     let text = "";
     for (const n of el.childNodes) if (n.nodeType === Node.TEXT_NODE) text += n.textContent;
     return text.replace(/\s+/g, " ").trim();
@@ -79,10 +85,21 @@ export async function measureLayout({ phone, tapTargets, focus }) {
   };
 
   const all = [...document.body.querySelectorAll("*")].filter((el) => !["SCRIPT", "STYLE", "TEMPLATE", "NOSCRIPT", "svg"].includes(el.tagName) && visible(el));
-  const withText = all.filter((el) => ownText(el));
+  // A field is measured empty too: a phone zooms into it whatever it holds.
+  const withText = all.filter((el) => typed(el) || ownText(el));
 
   // The theme's tokens, as the page resolves them.
   const rootStyle = style(document.documentElement);
+  // A size token in rem, em or px, resolved to px by laying it out at the root.
+  const resolved = (name) => {
+    if (!Number.isFinite(Number.parseFloat(rootStyle.getPropertyValue(name)))) return Number.NaN;
+    const probe = document.createElement("span");
+    probe.style.cssText = `position:absolute;visibility:hidden;font-size:var(${name})`;
+    document.documentElement.append(probe);
+    const value = Number.parseFloat(style(probe).fontSize);
+    probe.remove();
+    return value;
+  };
   const names = new Set();
   for (const sheet of document.styleSheets) {
     let rules;
@@ -102,7 +119,7 @@ export async function measureLayout({ phone, tapTargets, focus }) {
   const sizes = [...names]
     .filter((n) => n.startsWith("--mf-size-"))
     .sort()
-    .map((name) => ({ name, value: Number.parseFloat(rootStyle.getPropertyValue(name)) }))
+    .map((name) => ({ name, value: resolved(name) }))
     .filter((t) => Number.isFinite(t.value));
   const fonts = [...names]
     .filter((n) => n.startsWith("--mf-font-"))
@@ -114,10 +131,10 @@ export async function measureLayout({ phone, tapTargets, focus }) {
   for (const el of withText) {
     const size = Number.parseFloat(style(el).fontSize);
     // Text under the minimum.
-    if (FIELDS.has(el.tagName)) {
-      if (size < FIELD - HALF) report("min-text", el, px(size), `${FIELD}px (field)`);
-    } else if (size < FLOOR - HALF) report("min-text", el, px(size), `${FLOOR}px`);
-    else if (phone && !CAPTIONS.has(el.tagName) && el.closest(RUNNING_ROLES) && size < BODY - HALF && !(el.matches("a[href]") && inRunningText(el)))
+    if (typed(el)) {
+      if (size < FIELD - EPS) report("min-text", el, px(size), `${FIELD}px (field)`);
+    } else if (size < FLOOR - EPS) report("min-text", el, px(size), `${FLOOR}px`);
+    else if (phone && !CAPTIONS.has(el.tagName) && el.closest(RUNNING_ROLES) && size < BODY - EPS && !(el.matches("a[href]") && inRunningText(el)))
       report("min-text", el, px(size), `${BODY}px (phone body)`);
     // Off the type scale.
     if (scale.length && !scale.some((v) => Math.abs(v - size) <= HALF)) report("type-scale", el, px(size), `one of ${scale.map(px).join(", ")}`);
@@ -134,7 +151,8 @@ export async function measureLayout({ phone, tapTargets, focus }) {
         range.selectNodeContents(n);
         const t = range.getBoundingClientRect();
         const wide = t.left < box.left - HALF || t.right > box.right + HALF;
-        const tall = hides && (t.top < box.top - HALF || t.bottom > box.bottom + HALF);
+        // Glyph boxes overhang a tight line box (line-height 1) by design: half a line of spill is a cut line.
+        const tall = hides && (t.top < box.top - size * HALF || t.bottom > box.bottom + size * HALF);
         if (wide || tall) {
           report("clipped", el, `text ${px(t.width)}×${px(t.height)} in a ${px(box.width)}×${px(box.height)} box`, "fits its box");
           break;

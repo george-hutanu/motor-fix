@@ -80,7 +80,10 @@ export function chooseBaseline({ gh, repo, pr, head, base, run, explicit, prefer
   }
   const list = gh(["run", "list", "--repo", repo, "--workflow", WORKFLOW, "--json", "databaseId,displayTitle,conclusion,createdAt", "--limit", String(RUN_LIMIT)]);
   if (list.code !== 0) return { none: `unavailable: gh run list failed: ${reason(list)}`, skipped };
-  const runs = (parseJson(list.stdout) ?? [])
+  const listed = parseJson(list.stdout);
+  if (!Array.isArray(listed)) return { none: `unavailable: gh run list printed no list: ${String(list.stdout).trim().slice(0, 120)}`, skipped };
+  const runs = listed
+    .filter((r) => r && typeof r.displayTitle === "string" && r.databaseId != null)
     .map((r) => ({ ...r, ...parseRunName(r.displayTitle) }))
     .filter((r) => r.pr)
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
@@ -240,7 +243,15 @@ export async function diffShots(currentDir, baselineDir, outDir, { cell = 16, to
       continue;
     }
     const raw = (dir) => sharp(join(dir, name)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-    const [a, b] = await Promise.all([raw(currentDir), raw(baselineDir)]);
+    let a;
+    let b;
+    try {
+      [a, b] = await Promise.all([raw(currentDir), raw(baselineDir)]);
+    } catch {
+      // A shot either side cannot decode (truncated, empty, not a PNG) has nothing to compare: new.
+      out[name] = { status: "new" };
+      continue;
+    }
     const regions = regionsOf(a, b, { cell, tolerance, minCells });
     if (!regions.length) {
       out[name] = { status: "identical" };

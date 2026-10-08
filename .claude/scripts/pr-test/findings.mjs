@@ -169,7 +169,9 @@ export function readinessOutcome({ name, status, body, storage, url }) {
 }
 
 /** A layout finding is its route, rule and element: the value measured may move between laps. */
-export const layoutKey = (f) => `layout|${f.route ?? ""}|${f.rule}|${f.selector}`;
+// Each part escapes its own "|", so no route or selector can pass for another rule's key.
+const keyPart = (v) => String(v ?? "").replaceAll("\\", "\\\\").replaceAll("|", "\\|");
+export const layoutKey = (f) => `layout|${keyPart(f.route)}|${keyPart(f.rule)}|${keyPart(f.selector)}`;
 
 /** What makes two findings the same one, across sources and laps. */
 export const findingKey = (f) => f.key ?? (f.kind === "layout" ? layoutKey(f) : `${f.kind}|${f.title}|${f.route ?? ""}`);
