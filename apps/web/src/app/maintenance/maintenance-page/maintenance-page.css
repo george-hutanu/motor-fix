@@ -39,13 +39,13 @@ main {
   gap: var(--mf-space-3);
   margin-block: auto;
   max-width: 32rem;
-  padding: var(--mf-space-6);
+  padding: clamp(var(--mf-space-4), 6vw, var(--mf-space-6));
   width: 100%;
 }
 
 h1 {
   font-family: var(--mf-font-label);
-  font-size: var(--mf-size-subheading);
+  font-size: clamp(var(--mf-size-body), 5.5vw, var(--mf-size-subheading));
   letter-spacing: var(--mf-label-tracking);
   margin: 0;
   text-transform: uppercase;
