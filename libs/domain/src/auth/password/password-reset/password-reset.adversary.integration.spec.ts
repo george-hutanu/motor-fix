@@ -139,6 +139,18 @@ function holdResetEmails(): () => void {
 }
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+// The reset e-mail is held until release(), so any answer at all proves the
+// request did not wait for it; this limit only turns a hang into a quick
+// failure, and leaves room for a loaded machine.
+const ANSWER_MS = 10_000;
+
+// `{ resolved: value }` when the promise settles before the event loop turns
+// once: without waiting on any timer or I/O.
+const beforeAnyTimer = (promise: Promise<unknown>) =>
+  Promise.race([
+    promise.then((value) => ({ resolved: value })),
+    new Promise((resolve) => setImmediate(() => resolve('waited'))),
+  ]);
 
 const emailCount = () =>
   prisma.notification.count({
@@ -153,7 +165,7 @@ describe('answering a reset request before the link is issued', () => {
     for (let i = 0; i < count; i++) await person(`driver${i}@example.test`);
     const answers = await Promise.all(
       Array.from({ length: count }, (_, i) =>
-        ask(`driver${i}@example.test`).timeout(2000),
+        ask(`driver${i}@example.test`).timeout(ANSWER_MS),
       ),
     );
     expect(answers.map((r) => r.status)).toEqual(Array(count).fill(202));
@@ -162,6 +174,7 @@ describe('answering a reset request before the link is issued', () => {
     const draining = resets.drain().then(() => {
       drained = true;
     });
+    // Long enough for a drain that did not wait to have settled.
     await pause(150);
     expect(drained).toBe(false);
     release();
@@ -170,29 +183,33 @@ describe('answering a reset request before the link is issued', () => {
     expect(await prisma.accountToken.count()).toBe(count);
   });
 
+  // @traces 976-FR-003
   it('resolves drain at once when nothing is in flight', async () => {
-    const started = Date.now();
-    await expect(resets.drain()).resolves.toBeUndefined();
-    expect(Date.now() - started).toBeLessThan(200);
+    expect(await beforeAnyTimer(resets.drain())).toEqual({
+      resolved: undefined,
+    });
   });
 
   it('resolves drain at once after the issuings have settled', async () => {
     await person();
     await ask('andrei@example.test').expect(202);
     await resets.drain();
-    const started = Date.now();
-    await expect(resets.drain()).resolves.toBeUndefined();
-    await expect(resets.drain()).resolves.toBeUndefined();
-    expect(Date.now() - started).toBeLessThan(200);
+    expect(await beforeAnyTimer(resets.drain())).toEqual({
+      resolved: undefined,
+    });
+    expect(await beforeAnyTimer(resets.drain())).toEqual({
+      resolved: undefined,
+    });
   });
 
   it('lets two drains wait on the same issuing and both resolve', async () => {
     await person();
     const release = holdResetEmails();
-    await ask('andrei@example.test').timeout(2000).expect(202);
+    await ask('andrei@example.test').timeout(ANSWER_MS).expect(202);
     let settled = 0;
     const a = resets.drain().then(() => settled++);
     const b = resets.beforeApplicationShutdown().then(() => settled++);
+    // Long enough for a wrong outcome to show.
     await pause(100);
     expect(settled).toBe(0);
     release();
@@ -213,6 +230,7 @@ describe('answering a reset request before the link is issued', () => {
       jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
       await ask('andrei@example.test').expect(202);
       await resets.drain();
+      // Long enough for a wrong outcome to show.
       await pause(100);
     } finally {
       process.off('unhandledRejection', listener);
@@ -235,6 +253,7 @@ describe('answering a reset request before the link is issued', () => {
       jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
       status = (await ask('andrei@example.test')).status;
       await resets.drain();
+      // Long enough for a wrong outcome to show.
       await pause(100);
     } finally {
       process.off('unhandledRejection', listener);
@@ -259,6 +278,7 @@ describe('answering a reset request before the link is issued', () => {
     try {
       status = (await ask('andrei@example.test')).status;
       await resets.drain();
+      // Long enough for a wrong outcome to show.
       await pause(100);
     } finally {
       process.off('unhandledRejection', listener);
@@ -368,8 +388,12 @@ describe('answering a reset request before the link is issued', () => {
   it('answers 202 in the same shape for a held issuing, an unknown address and a known one', async () => {
     await person();
     const release = holdResetEmails();
-    const known = await ask('andrei@example.test').timeout(2000).expect(202);
-    const unknown = await ask('nimeni@example.test').timeout(2000).expect(202);
+    const known = await ask('andrei@example.test')
+      .timeout(ANSWER_MS)
+      .expect(202);
+    const unknown = await ask('nimeni@example.test')
+      .timeout(ANSWER_MS)
+      .expect(202);
     expect(known.text).toBe('');
     expect(unknown.text).toBe('');
     expect(known.headers['content-length'] ?? '0').toBe(
@@ -383,9 +407,9 @@ describe('answering a reset request before the link is issued', () => {
     for (let i = 0; i < 5; i++) await person(`held${i}@example.test`);
     const release = holdResetEmails();
     for (let i = 0; i < 5; i++) {
-      await ask(`held${i}@example.test`).timeout(2000).expect(202);
+      await ask(`held${i}@example.test`).timeout(ANSWER_MS).expect(202);
     }
-    await ask('late@example.test').timeout(2000).expect(202);
+    await ask('late@example.test').timeout(ANSWER_MS).expect(202);
     release();
     await resets.drain();
     expect(await emailCount()).toBe(5);

@@ -9,6 +9,7 @@ import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
 import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { until } from '../../waits.testing';
 import { NotificationsModule } from '../notifications.module';
 import {
   databaseUrl,
@@ -548,6 +549,10 @@ describe('the person’s other tabs', () => {
       },
       bearer(driver),
     );
+    const updates = () =>
+      published.filter((m) => m.includes('notification_preferences.updated'));
+    await until('both announcements', () => updates().length >= 2);
+    // Long enough for a third, wrong, announcement to arrive.
     await new Promise((resolve) => setTimeout(resolve, 200));
     const told = published
       .map((m) => JSON.parse(m))
@@ -786,6 +791,10 @@ describe('a staff save', () => {
         .enabled,
     ).toBe(false);
     expect(await entries(owner)).toHaveLength(2);
+    await until('the announcement', () =>
+      published.some((m) => m.includes('notification_preferences.updated')),
+    );
+    // Long enough for a second, wrong, announcement to arrive.
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(
       published
