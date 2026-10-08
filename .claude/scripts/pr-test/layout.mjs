@@ -283,7 +283,7 @@ export async function measureLayout({ phone, tapTargets, focus }) {
     if (list.length > CAP) observations.push({ kind: "layout", rule, selector: "…", measured: "", expected: "", text: `…and ${list.length - CAP} more` });
   }
   // The rules this page was measured against and listed in full: a baseline's silence about anything else (a rule
-  // it skipped, or one past the cap) says nothing about main, so the PR's findings there count as main's (FR-011).
+  // it skipped, or one past the cap) says nothing about main, so the PR's findings there count as main's.
   const ran = ["min-text", "clipped", "overlap", "grid", "stretched-image", "font-fallback"];
   if (scale.length) ran.push("type-scale");
   if (tapTargets) ran.push("tap-target");

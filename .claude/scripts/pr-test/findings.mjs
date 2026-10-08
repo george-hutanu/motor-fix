@@ -193,7 +193,7 @@ export const coverageKey = ({ route, viewport, scheme, lang }) => `${route ?? ""
  * every layout finding is main's until a baseline sweeps it.
  * With `coverage` (the baseline's layoutCoverage), a finding stays the PR's only where the baseline measured
  * its rule in full on its route in at least one size, scheme and language it was seen in, and did not report
- * it there; a baseline of other web code (`stale`) vouches for nothing (FR-011, ST-985).
+ * it there; a baseline of other web code (`stale`) vouches for nothing.
  */
 export function markPreExisting(findings, baseline, { measured = true, routes, coverage, stale = false } = {}) {
   const before = new Set(baseline.filter((f) => f.kind === "layout").map(layoutKey));
@@ -229,7 +229,7 @@ export function trustBaseline(before, { base, changed }) {
     const run = `the baseline run (${before.sha ? String(before.sha).slice(0, 7) : "no commit"})`;
     note = `${files === null ? `This PR's base cannot be compared with ${run}` : `Between ${run} and this PR's base the web code changed`}, so every layout finding is treated as pre-existing (medium at most) this lap.`;
   }
-  else if (!before.layoutCoverage) note = "The baseline run recorded no layout coverage, so every layout finding is treated as pre-existing (medium at most) this lap.";
+  else if (!Object.keys(coverage).length) note = "The baseline run recorded no layout coverage, so every layout finding is treated as pre-existing (medium at most) this lap.";
   return { options: { measured, routes: before.routes, coverage, stale }, note };
 }
 

@@ -62,7 +62,7 @@ describe('chooseBaseline, base first (the visual diff)', () => {
     assert.match(got.label, /run 20 · PR #5 · commit aaaaaaa · lap 2/);
   });
 
-  it('prefers a run of a commit in the PR head\'s history over a newer one the PR does not have (ST-985)', () => {
+  it('prefers a run of a commit in the PR head\'s history over a newer one the PR does not have', () => {
     const fake = fakeGh({
       runs: [run(30, 6, otherSha, 1, 'success', '2026-10-05T12:00:00Z'), run(20, 5, mainSha, 1, 'success', '2026-10-05T11:00:00Z')],
       artifacts: { 20: { 'report.json': JSON.stringify(report({ sha: mainSha })) }, 30: { 'report.json': JSON.stringify(report({ sha: otherSha })) } },

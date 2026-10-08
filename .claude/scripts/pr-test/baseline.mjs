@@ -116,14 +116,14 @@ export function chooseBaseline({ gh, repo, pr, head, base, run, explicit, prefer
     return cmp.code === 0 ? parseJson(cmp.stdout)?.status : null;
   };
   // A run of a commit on the base, and first one the PR head also has: main as the PR sees it, so its layout
-  // findings are the ones the PR inherited (FR-011). A newer commit of main the PR lacks is the fallback.
+  // findings are the ones the PR inherited. A newer commit of main the PR lacks is the fallback.
   const baseRuns = () => {
     if (!base) return null;
     const later = [];
     for (const r of candidates.filter((c) => c.pr !== pr && !tried.has(c.databaseId))) {
       const status = compareStatus(base, r.sha);
       if (status !== "behind" && status !== "identical") continue;
-      const inHead = head ? compareStatus(r.sha, head) : null;
+      const inHead = compareStatus(r.sha, head);
       if (inHead !== "ahead" && inHead !== "identical") {
         later.push(r);
         continue;

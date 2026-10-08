@@ -101,6 +101,15 @@ export const flowArgs = ({ webURL, apiURL, outDir, repoRoot, worktree, session }
 /** The affected unit tests between the base and the head, never answered from the Nx cache. */
 export const testsCommand = ({ base, sha }) => ["nx", "affected", "-t", "test", `--base=${base}`, `--head=${sha}`, "--parallel=1", "--skip-nx-cache"];
 
+/**
+ * The files between two commits of the tree under test (`cwd`: the workflow's checkout, with its full history,
+ * never the tester's own sparse one), or null when either commit is not there.
+ */
+export function filesBetween(cwd, from, to) {
+  const r = spawnSync("git", ["diff", "--name-only", from, to], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+  return r.status === 0 ? r.stdout.split("\n").filter(Boolean) : null;
+}
+
 const sh = (cmd, list, opts = {}) => execFileSync(cmd, list, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], ...opts }).trim();
 const has = (cmd, list) => spawnSync(cmd, list, { stdio: "ignore" }).status === 0;
 
@@ -143,14 +152,6 @@ async function main(argv) {
   const booted = [];
   const teardown = [];
   let layoutCoverage = {};
-  // The files between two commits, or null when either is not in this clone (the workflow fetches the full history).
-  const changedBetween = (from, to) => {
-    try {
-      return sh("git", ["diff", "--name-only", from, to], { cwd: repoRoot }).split("\n").filter(Boolean);
-    } catch {
-      return null;
-    }
-  };
   const log = (line) => {
     console.error(`run: ${line}`);
     writeFileSync(join(out, "run.log"), `${new Date().toISOString()} ${line}\n`, { flag: "a" });
@@ -364,7 +365,7 @@ async function main(argv) {
     const before = opt.baseline ? readReport(opt.baseline) : null;
     layoutCoverage = sweep.coverage;
     // The baseline vouches for main only where it measured, on the web code this PR is based on (trustBaseline).
-    const trust = before ? trustBaseline(before, { base: info.base, changed: changedBetween }) : null;
+    const trust = before ? trustBaseline(before, { base: info.base, changed: (from, to) => filesBetween(root, from, to) }) : null;
     if (trust?.note) notes.push(trust.note);
     for (const f of before ? markPreExisting(swept, before.findings ?? [], trust.options) : swept)
       findings.push(f.evidence ? { ...f, evidence: relative(out, f.evidence) } : f);

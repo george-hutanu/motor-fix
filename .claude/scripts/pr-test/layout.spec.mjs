@@ -91,7 +91,7 @@ describe.skipIf(!browser)('layout checks in a browser', () => {
     });
   });
 
-  describe('rules measured (ST-985)', () => {
+  describe('rules measured', () => {
     const ALWAYS = ['clipped', 'font-fallback', 'grid', 'min-text', 'overlap', 'stretched-image'];
 
     it('names every rule it measured completely: no type scale without size tokens, tap targets with touch', async () => {

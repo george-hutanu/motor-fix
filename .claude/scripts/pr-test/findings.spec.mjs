@@ -268,7 +268,7 @@ describe('layout findings', () => {
     assert.equal(markPreExisting([consoleError], [consoleError])[0].severity, 'high');
   });
 
-  describe('against what the baseline measured (ST-985)', () => {
+  describe('against what the baseline measured', () => {
     const seen = (rule, seenIn, extra = {}) => ({ ...sweepFinding(layout(rule, extra), { web: true }), seenIn });
     const all = ['min-text', 'type-scale', 'clipped', 'grid'];
 
@@ -309,7 +309,7 @@ describe('layout findings', () => {
     });
   });
 
-  describe('trustBaseline (ST-985)', () => {
+  describe('trustBaseline', () => {
     const before = { layout: true, sha: 'a'.repeat(40), routes: ['/'], layoutCoverage: { '/|desktop|light|en': ['grid'] }, findings: [] };
 
     it('passes the baseline\'s coverage on when its web code is the PR base\'s', () => {
@@ -333,6 +333,10 @@ describe('layout findings', () => {
       const got = trustBaseline({ ...before, layoutCoverage: undefined }, { base: 'b'.repeat(40), changed: () => [] });
       assert.deepEqual(got.options.coverage, {});
       assert.match(got.note, /no layout coverage/);
+    });
+
+    it('notes an empty coverage too: a baseline lap that ended before its sweep', () => {
+      assert.match(trustBaseline({ ...before, layoutCoverage: {} }, { base: 'b'.repeat(40), changed: () => [] }).note, /no layout coverage/);
     });
 
     it('keeps the note for a baseline that measured no layout', () => {
