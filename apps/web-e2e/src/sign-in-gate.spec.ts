@@ -35,6 +35,11 @@ async function sessionEndsWhileWorking(page: Page) {
   // The stubbed token means nothing to the real stream, which would refuse it
   // and renew on its own; this test is about the save.
   await page.route('**/api/v1/live', (route) => route.abort());
+  // A production build reads the push key on load (the service worker is
+  // off in dev): answer it here, or the real API refuses the stubbed token.
+  await page.route('**/api/v1/push-subscriptions/key', (route) =>
+    route.fulfill({ json: { publicKey: null } }),
+  );
   // The bell counts on load with the stubbed token; only the save may be refused.
   await page.route('**/api/v1/notifications/unread-count', (route) =>
     route.fulfill({ json: { count: 0 } }),
