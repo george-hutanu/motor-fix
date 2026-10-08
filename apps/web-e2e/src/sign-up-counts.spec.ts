@@ -58,10 +58,20 @@ test.describe('the sign-up counts a local run clears', () => {
 });
 
 test.describe('the global setup', () => {
-  const before = process.env['REDIS_URL'];
+  const before = {
+    DATABASE_URL: process.env['DATABASE_URL'],
+    REDIS_URL: process.env['REDIS_URL'],
+  };
+  // Never the run's own database: resetting its accounts mid-run would race
+  // the flows that use them.
+  test.beforeEach(() => {
+    process.env['DATABASE_URL'] = 'postgresql://127.0.0.1:1/none';
+  });
   test.afterEach(() => {
-    if (before === undefined) delete process.env['REDIS_URL'];
-    else process.env['REDIS_URL'] = before;
+    for (const [name, value] of Object.entries(before)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
   });
 
   test('lets the run go on when Redis does not answer', async () => {
@@ -73,6 +83,14 @@ test.describe('the global setup', () => {
   test('lets the run go on without REDIS_URL', async () => {
     delete process.env['REDIS_URL'];
 
+    await expect(globalSetup()).resolves.toBeUndefined();
+  });
+
+  test('lets the run go on when PostgreSQL does not answer, or without DATABASE_URL', async () => {
+    delete process.env['REDIS_URL'];
+    await expect(globalSetup()).resolves.toBeUndefined();
+
+    delete process.env['DATABASE_URL'];
     await expect(globalSetup()).resolves.toBeUndefined();
   });
 });

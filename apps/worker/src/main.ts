@@ -1,3 +1,5 @@
+import './telemetry';
+
 import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
 import {
   emailConfig,
