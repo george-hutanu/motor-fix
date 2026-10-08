@@ -1,5 +1,10 @@
 export { PlatformRulesModule } from './admin/platform-rules/platform-rules.module';
 export { signAccessToken } from './auth/access-token';
+export {
+  AccountLoader,
+  actorOf,
+  type LoadedAccount,
+} from './auth/account-loader';
 export { AccountsService } from './auth/accounts.service';
 export { CurrentActor, Public, Requires } from './auth/actor.guard';
 export { AuthModule } from './auth/auth.module';

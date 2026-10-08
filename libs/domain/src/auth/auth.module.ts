@@ -7,6 +7,7 @@ import {
 import { APP_GUARD } from '@nestjs/core';
 import { Redis } from 'ioredis';
 
+import { AccountLoader } from './account-loader';
 import { AccountsService } from './accounts.service';
 import { ActorGuard, AUTH_OPTIONS, type AuthOptions } from './actor.guard';
 import { Attempts, AUTH_REDIS } from './attempts';
@@ -54,6 +55,7 @@ export class AuthModule implements OnApplicationShutdown {
         AuditHistoryController,
       ],
       exports: [
+        AccountLoader,
         AccountsService,
         Attempts,
         AUTH_OPTIONS,
@@ -68,6 +70,7 @@ export class AuthModule implements OnApplicationShutdown {
       global: true,
       module: AuthModule,
       providers: [
+        AccountLoader,
         AccountsService,
         ActorGuard,
         { provide: APP_GUARD, useExisting: ActorGuard },
