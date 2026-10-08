@@ -1,7 +1,10 @@
 import { request as httpRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 
+import { setRoute } from '@motor-fix/observability';
 import type { Express } from 'express';
+
+const READY_TIMEOUT_MS = 2_000;
 
 // The browser reaches the API on the web app's own address. Answers are piped
 // as they arrive, never buffered, so server-sent events stream through.
@@ -9,12 +12,23 @@ export function mountEdge(app: Express, apiUrl: string) {
   const api = new URL(apiUrl);
   const send = api.protocol === 'https:' ? httpsRequest : httpRequest;
 
-  const ok = (_req: unknown, res: { json: (body: unknown) => void }) =>
+  app.get('/health/live', (_req, res) => {
     res.json({ status: 'ok' });
-  app.get('/health/live', ok);
-  app.get('/health/ready', ok);
+  });
+  // Ready only while the API is: asked on every probe, never cached.
+  app.get('/health/ready', async (_req, res) => {
+    const ready = await fetch(new URL('/health/ready', api), {
+      signal: AbortSignal.timeout(READY_TIMEOUT_MS),
+    }).then(
+      (answer) => answer.ok,
+      () => false,
+    );
+    if (ready) res.json({ status: 'ok' });
+    else res.status(503).json({ status: 'unavailable' });
+  });
 
   app.use('/api/', (req, res) => {
+    setRoute('/api');
     const caller = req.socket.remoteAddress ?? '';
     const given = req.headers['x-forwarded-for'];
     const upstream = send(
