@@ -103,7 +103,7 @@
   {
     "id": "blocks-deleting-a-requirement-token",
     "hook": "pre:edit:config-protection",
-    "why": "removing a @traces NNN-FR- token silences the traceability gate for that requirement",
+    "why": "removing an id from a // @traces line drops that requirement from the traceability matrix",
     "payload": {
       "tool_input": {
         "file_path": "libs/domain/src/auth/actor.spec.ts",
