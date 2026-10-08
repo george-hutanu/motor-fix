@@ -32,6 +32,9 @@ beforeAll(async () => {
   app.get('/ro/garages', (_req, res) => {
     res.send('<html></html>');
   });
+  app.get('/ro/garages/auto.service', (_req, res) => {
+    res.send('<html></html>');
+  });
   app.get('/main-AB12CD34.js', (_req, res) => {
     res.type('js').send('');
   });
@@ -110,6 +113,12 @@ describe('startTelemetry for the web server', () => {
     await fetch(`${base}/health/ready`);
 
     expect(await spans(SpanKind.SERVER)).toEqual([]);
+  });
+
+  it('traces a page whose slug holds a dot', async () => {
+    await fetch(`${base}/ro/garages/auto.service`);
+
+    expect(await spans(SpanKind.SERVER)).toHaveLength(1);
   });
 
   it('records no client span for a call to a health probe', async () => {

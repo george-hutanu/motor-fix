@@ -5,10 +5,13 @@ import type { Service } from './start';
 const health = (path: string | undefined) =>
   path?.startsWith('/health/') ?? false;
 
-// A static file (`/main-AB12CD34.js`, `/icons/192.png`): its last segment has
-// an extension, which no page route does.
+// A static file (`/main-AB12CD34.js`, `/icons/192.png`): its last segment
+// ends in a file type the web build serves. A page slug may hold a dot
+// (`auto.service`) and is still traced.
+const STATIC_FILE =
+  /\.(?:js|mjs|css|map|json|webmanifest|txt|xml|ico|png|jpe?g|webp|avif|gif|svg|woff2?|ttf)$/i;
 const staticFile = (url: string | undefined) =>
-  /\.[a-z0-9]+$/i.test((url ?? '').split(/[?#]/)[0] ?? '');
+  STATIC_FILE.test((url ?? '').split(/[?#]/)[0] ?? '');
 
 // What is traced: incoming and outgoing HTTP (http and fetch), Redis
 // commands inside a request or job, and Prisma queries. Nothing for the file
