@@ -80,6 +80,10 @@ jobs:
       - name: Observability inventory
         if: ${{ !cancelled() }}
         run: node scripts/observability-inventory.ts
+      # On a PR the baseline may not list a file the base branch's lacks.
+      - name: Structure
+        if: ${{ !cancelled() }}
+        run: node scripts/structure-check.ts ${{ github.event_name == 'pull_request' && format('--base origin/{0}', github.base_ref) || '' }}
       - name: Harness
         if: ${{ !cancelled() }}
         run: |

@@ -3,14 +3,16 @@
 // to linter/formatter config files; steer the agent to fix code instead of
 // weakening configs").
 //
-// This repo has three ratchets that existed only as prose in CLAUDE.md, which
+// This repo has four ratchets that existed only as prose in CLAUDE.md, which
 // means the cheapest way out of a red gate was always to edit the gate:
 //
 //   1. stryker.config.json `thresholds.break` — "raise it after a harden pass,
 //      never lower it to make a run pass"
 //   2. .specify/trace-baseline.json — "adding an entry to buy time defeats the
 //      gate"
-//   3. the NNN-FR- @traces tokens in the colocated *.spec.ts / *.test.ts files
+//   3. scripts/structure-baseline.json — the folder-rule violations that
+//      predate scripts/structure-check.ts; listing a new one bypasses the rules
+//   4. the NNN-FR- @traces tokens in the colocated *.spec.ts / *.test.ts files
 //      — deleting one silences the traceability
 //      gate for that requirement
 //
@@ -62,11 +64,11 @@ export function breakFloor(text) {
   }
 }
 
-/** Total exemptions listed in a trace-baseline.json text. */
-export function baselineSize(text) {
+/** Total entries across the given lists of a baseline JSON text. */
+export function baselineSize(text, keys = ["grandfathered", "artifact_legacy"]) {
   try {
     const parsed = JSON.parse(text);
-    return (parsed.grandfathered?.length ?? 0) + (parsed.artifact_legacy?.length ?? 0);
+    return keys.reduce((sum, key) => sum + (parsed[key]?.length ?? 0), 0);
   } catch {
     return null;
   }
@@ -111,6 +113,14 @@ export function verdict({ rel, current, next, profile, allowHookEdit, contextBas
     const after = baselineSize(next);
     if (before !== null && after !== null && after > before)
       return `this adds a grandfathering entry (${before} → ${after}). The baseline exempts features that predate a gate — adding one to buy time is what the gate is for. Cover the FRs with tagged tests instead.`;
+  }
+
+  if (rel === "scripts/structure-baseline.json") {
+    const keys = ["submodules", "components"];
+    const before = current === null ? null : baselineSize(current, keys);
+    const after = baselineSize(next, keys);
+    if (before !== null && after !== null && after > before)
+      return `this grows the structure baseline (${before} → ${after}). It lists the folder-rule violations that predate the check, and only shrinks. Put the file in its own subfolder, or make the component a <name>/ folder, instead.`;
   }
 
   // Tests are colocated across apps/, libs/ and e2e/ rather than gathered in

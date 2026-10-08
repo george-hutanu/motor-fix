@@ -77,6 +77,30 @@
     }
   },
   {
+    "id": "blocks-growing-the-structure-baseline",
+    "hook": "pre:edit:config-protection",
+    "why": "listing a new flat submodule or inline component is how the folder rules would be bypassed",
+    "payload": {
+      "tool_input": {
+        "file_path": "scripts/structure-baseline.json",
+        "content": "{\n  \"_comment\": \"shrink only\",\n  \"submodules\": [\"libs/domain/src/notifications/bell.controller.ts\", \"libs/domain/src/notifications/bell.service.ts\"],\n  \"components\": []\n}\n"
+      }
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "structure baseline"
+    },
+    "fixture": {
+      "commits": [
+        {
+          "files": {
+            "scripts/structure-baseline.json": "{\n  \"_comment\": \"shrink only\",\n  \"submodules\": [\"libs/domain/src/notifications/bell.controller.ts\"],\n  \"components\": []\n}\n"
+          }
+        }
+      ]
+    }
+  },
+  {
     "id": "blocks-deleting-a-requirement-token",
     "hook": "pre:edit:config-protection",
     "why": "removing a @traces NNN-FR- token silences the traceability gate for that requirement",
