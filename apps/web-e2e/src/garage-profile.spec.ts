@@ -56,9 +56,12 @@ test.describe('the public garage profile @seeded', () => {
   test('opens the same profile in English with the brand kept', async ({
     page,
   }) => {
+    // The page holds its live stream open, so the network never goes idle;
+    // the browser opening that stream says the client has taken over.
+    const live = page.waitForRequest(/\/api\/v1\/live\/public\?/);
     await page.goto('/ro/garages/service-auto-militari?brand=dacia');
     await expect(page.getByText('Lucrează pe Dacia')).toBeVisible();
-    await page.waitForLoadState('networkidle');
+    await live;
 
     await page
       .getByRole('group', { name: 'Limba' })
