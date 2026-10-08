@@ -56,7 +56,7 @@
   gap: var(--mf-space-2);
   min-height: 32px;
   font-family: var(--mf-font-label);
-  font-size: clamp(18px, 5vw, 24px);
+  font-size: var(--mf-size-subheading);
   color: var(--mf-text);
   overflow-wrap: anywhere;
 }
@@ -94,4 +94,10 @@ button {
   background: var(--mf-panel-raised);
   border: 1px solid var(--mf-line-strong);
   border-radius: var(--mf-radius-chip);
+}
+/* The type scale's 20 px on a small phone, its 24 px from 480 px up. */
+@media (min-width: 480px) {
+  .number {
+    font-size: var(--mf-size-heading);
+  }
 }

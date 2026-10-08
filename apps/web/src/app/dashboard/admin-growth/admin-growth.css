@@ -31,11 +31,23 @@ h2 {
 .latest {
   margin: 0;
   font-family: var(--mf-font-label);
-  font-size: clamp(18px, 5vw, 24px);
+  font-size: var(--mf-size-subheading);
   color: var(--mf-text);
 }
 .range {
   margin: 0;
   font-size: var(--mf-size-small);
   color: var(--mf-text-secondary);
+}
+/* The type scale's 20 px on a small phone, its 24 px from 480 px up. */
+@media (min-width: 480px) {
+  .latest {
+    font-size: var(--mf-size-heading);
+  }
+}
+/* Read on a phone: 16 px there, the small size from a tablet up. */
+@media (max-width: 767.98px) {
+  .range {
+    font-size: var(--mf-size-body);
+  }
 }

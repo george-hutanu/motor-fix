@@ -23,6 +23,12 @@ aside nav a[aria-current="page"] {
   flex-direction: column;
   gap: 0.25rem;
 }
+.account > button {
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-3);
+  font: inherit;
+  font-size: var(--mf-size-body);
+}
 .account button[aria-busy="true"] {
   cursor: progress;
 }
@@ -88,6 +94,12 @@ header h1 {
   font-size: var(--mf-size-small);
   overflow-wrap: anywhere;
 }
+/* Read on a phone: 16 px there, the small size from a tablet up. */
+@media (max-width: 767.98px) {
+  .admin-line {
+    font-size: var(--mf-size-body);
+  }
+}
 .who {
   display: flex;
   align-items: center;
@@ -125,7 +137,7 @@ aside nav a {
 .chip {
   min-width: 20px;
   height: 20px;
-  padding: 0 6px;
+  padding: 0 var(--mf-space-2);
   border-radius: 10px;
   background: var(--mf-amber);
   color: var(--mf-on-amber);

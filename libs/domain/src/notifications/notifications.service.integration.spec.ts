@@ -249,10 +249,16 @@ describe('handing an event to the notifications service', () => {
     const andrei = await account('andrei');
     await quote(andrei, 'evt-6');
     const bell = (await rows(andrei)).find((r) => r.channel === 'in_app');
-    await until('the live announcement', () => published.length > 0);
+    // Other suites publish on the same Redis channel at once (account.created
+    // for their own accounts): only what reaches this account is ours.
+    const toAndrei = () =>
+      published
+        .map((m) => JSON.parse(m))
+        .filter((m) => m.audience?.includes(`account:${andrei}`));
+    await until('the live announcement', () => toAndrei().length > 0);
     // Long enough for a second, wrong, announcement to arrive.
     await new Promise((resolve) => setTimeout(resolve, 100));
-    expect(published.map((m) => JSON.parse(m))).toEqual([
+    expect(toAndrei()).toEqual([
       {
         audience: [`account:${andrei}`],
         event: {
