@@ -62,6 +62,22 @@ describe('chooseBaseline, base first (the visual diff)', () => {
     assert.match(got.label, /run 20 · PR #5 · commit aaaaaaa · lap 2/);
   });
 
+  it('prefers a run of a commit in the PR head\'s history over a newer one the PR does not have (ST-985)', () => {
+    const fake = fakeGh({
+      runs: [run(30, 6, otherSha, 1, 'success', '2026-10-05T12:00:00Z'), run(20, 5, mainSha, 1, 'success', '2026-10-05T11:00:00Z')],
+      artifacts: { 20: { 'report.json': JSON.stringify(report({ sha: mainSha })) }, 30: { 'report.json': JSON.stringify(report({ sha: otherSha })) } },
+      compare: { [mainSha]: 'behind', [otherSha]: 'behind' },
+    });
+    const inHead = { [mainSha]: 'ahead', [otherSha]: 'diverged' };
+    const gh = (args) => {
+      const m = args.join(' ').match(/compare\/([0-9a-f]{40})\.\.\.([0-9a-f]{40})/);
+      return m && m[2] === HEAD ? ok({ status: inHead[m[1]] }) : fake.gh(args);
+    };
+    assert.equal(chooseBaseline({ gh, repo: REPO, pr: 7, head: HEAD, base: 'main', prefer: 'base' }).id, 20);
+    inHead[mainSha] = 'diverged';
+    assert.equal(chooseBaseline({ gh, repo: REPO, pr: 7, head: HEAD, base: 'main', prefer: 'base' }).id, 30, 'the newest run of main stays the fallback');
+  });
+
   it('skips a run whose commit is not on the base and one still in progress', () => {
     const { gh } = fakeGh({
       runs: [run(40, 5, otherSha, 1, null, '2026-10-05T13:00:00Z'), run(30, 6, otherSha, 1, 'success', '2026-10-05T12:00:00Z'), run(20, 5, mainSha, 1, 'failure', '2026-10-05T11:00:00Z')],

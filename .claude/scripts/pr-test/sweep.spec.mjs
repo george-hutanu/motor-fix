@@ -251,6 +251,13 @@ describe('the sweep measures the layout', async () => {
     for (const f of [find('min-text', 'p#intro'), clipped, find('grid', 'div#actions')]) assert.match(f.title, /#(intro|book|actions)/);
   }, 60000);
 
+  it.skipIf(!ready)('records which rules it measured on each route, size, scheme and language (ST-985)', async () => {
+    const { coverage } = await runSweep({ baseURL, routes: ['/owner-pass.html'], outDir, schemes: ['light'], langs: ['en'], repoRoot: root });
+    assert.deepEqual(Object.keys(coverage).sort(), Object.keys(VIEWPORTS).map((v) => `/owner-pass.html|${v}|light|en`).sort());
+    assert.ok(coverage['/owner-pass.html|desktop|light|en'].includes('focus-ring'));
+    assert.ok(coverage['/owner-pass.html|mobile|light|en'].includes('min-text'));
+  }, 60000);
+
   it.skipIf(!ready)('finds no layout defect on the same page without them', async () => {
     const findings = await sweep('/owner-pass.html');
     assert.deepEqual(findings.filter((f) => f.kind === 'layout').map((f) => f.title), []);

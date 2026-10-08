@@ -14,6 +14,7 @@ import {
   sweepFinding,
   testFinding,
   touchesWeb,
+  trustBaseline,
   verdict,
 } from './findings.mjs';
 
@@ -265,6 +266,80 @@ describe('layout findings', () => {
   it('leaves findings of other kinds alone, even when the baseline had them', () => {
     const consoleError = sweepFinding({ ...where, kind: 'console', text: 'NG0100' }, { web: true });
     assert.equal(markPreExisting([consoleError], [consoleError])[0].severity, 'high');
+  });
+
+  describe('against what the baseline measured (ST-985)', () => {
+    const seen = (rule, seenIn, extra = {}) => ({ ...sweepFinding(layout(rule, extra), { web: true }), seenIn });
+    const all = ['min-text', 'type-scale', 'clipped', 'grid'];
+
+    it('keeps a finding high only where the baseline measured its rule on its route, size, scheme and language and did not report it', () => {
+      const coverage = { '/|mobile|dark|en': all };
+      const marked = markPreExisting([seen('min-text', ['mobile dark en'])], [], { coverage });
+      assert.deepEqual(marked.map((f) => [f.severity, f.preExisting]), [['high', undefined]]);
+    });
+
+    it('caps a rule the baseline never measured there: no type scale on its pages (#287 against b9f535e)', () => {
+      const coverage = { '/|mobile|dark|en': ['min-text', 'clipped', 'grid'] };
+      const marked = markPreExisting([seen('type-scale', ['mobile dark en']), seen('grid', ['mobile dark en'], { selector: 'div#row' })], [], { coverage });
+      assert.deepEqual(marked.map((f) => [f.severity, f.preExisting]), [['medium', true], ['high', undefined]]);
+    });
+
+    it('caps a finding seen only in combinations the baseline did not measure', () => {
+      const coverage = { '/|desktop|light|ro': all, '/cockpit|mobile|dark|en': all };
+      const marked = markPreExisting([seen('min-text', ['mobile dark en', 'mobile light en'])], [], { coverage });
+      assert.equal(marked[0].severity, 'medium');
+      assert.equal(marked[0].preExisting, true);
+      assert.equal(markPreExisting([seen('min-text', ['mobile light en', 'mobile dark en'])], [], { coverage: { '/|mobile|dark|en': all } })[0].severity, 'high');
+    });
+
+    it('caps every layout finding against a baseline that recorded no coverage, as every report before this fix', () => {
+      const marked = markPreExisting([seen('grid', ['mobile dark en'])], [], { coverage: {} });
+      assert.equal(marked[0].severity, 'medium');
+    });
+
+    it('caps every layout finding against a stale baseline, one whose web code differs from the PR base', () => {
+      const marked = markPreExisting([seen('grid', ['mobile dark en'])], [], { coverage: { '/|mobile|dark|en': all }, stale: true });
+      assert.equal(marked[0].severity, 'medium');
+      assert.equal(marked[0].preExisting, true);
+    });
+
+    it('still caps what the baseline measured and reported', () => {
+      const f = seen('min-text', ['mobile dark en']);
+      assert.equal(markPreExisting([f], [f], { coverage: { '/|mobile|dark|en': all } })[0].severity, 'medium');
+    });
+  });
+
+  describe('trustBaseline (ST-985)', () => {
+    const before = { layout: true, sha: 'a'.repeat(40), routes: ['/'], layoutCoverage: { '/|desktop|light|en': ['grid'] }, findings: [] };
+
+    it('passes the baseline\'s coverage on when its web code is the PR base\'s', () => {
+      const got = trustBaseline(before, { base: 'b'.repeat(40), changed: () => ['apps/api/src/main.ts'] });
+      assert.deepEqual(got.options, { measured: true, routes: ['/'], coverage: before.layoutCoverage, stale: false });
+      assert.equal(got.note, null);
+    });
+
+    it('marks it stale, with a note, when web code changed between its commit and the base', () => {
+      const got = trustBaseline(before, { base: 'b'.repeat(40), changed: () => ['apps/web/src/app/home.ts'] });
+      assert.equal(got.options.stale, true);
+      assert.match(got.note, /web code changed/);
+    });
+
+    it('marks it stale when the two commits cannot be compared, or it names no commit', () => {
+      assert.equal(trustBaseline(before, { base: 'b'.repeat(40), changed: () => null }).options.stale, true);
+      assert.equal(trustBaseline({ ...before, sha: undefined }, { base: 'b'.repeat(40), changed: () => [] }).options.stale, true);
+    });
+
+    it('reads a report with no coverage as covering nothing', () => {
+      const got = trustBaseline({ ...before, layoutCoverage: undefined }, { base: 'b'.repeat(40), changed: () => [] });
+      assert.deepEqual(got.options.coverage, {});
+      assert.match(got.note, /no layout coverage/);
+    });
+
+    it('keeps the note for a baseline that measured no layout', () => {
+      const got = trustBaseline({ ...before, layout: undefined }, { base: 'b'.repeat(40), changed: () => [] });
+      assert.equal(got.options.measured, false);
+      assert.match(got.note, /measured no layout/);
+    });
   });
 
   it('treats every layout finding as pre-existing when the baseline run measured no layout', () => {
