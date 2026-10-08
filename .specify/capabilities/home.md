@@ -3,6 +3,7 @@ capability: home
 updated: 2026-10-08
 features:
   - 225-brand-picker
+  - 229-location-or-address
 ---
 
 # Capability: Home
@@ -64,3 +65,47 @@ _From 225-brand-picker._
 ### 225-FR-016 — This story writes nothing to the database (no audit entry, no event, no live update); the data is re-read on each brand change only.
 
 _From 225-brand-picker._
+
+### 229-FR-001 — Home MUST show one place line under the hero: before a place exists, "În toată România · Alege locul" / "All of Romania · Choose a place"; with a place from the browser's location, "Lângă tine · Schimbă" / "Near you · Change"; with a typed address, "Lângă {label} · Schimbă" / "Near {label} · Change" where {label} is the chosen suggestion's label on one line (an over-long label is cut with an ellipsis, never wrapped into a second line); "Alege locul" and "Schimbă" are one button that opens the place dialog. Nothing on Home assumes Bucharest.
+
+_From 229-location-or-address._
+
+### 229-FR-002 — The place dialog MUST hold a "Folosește locația mea" / "Use my location" button and an address field with the suggestion list under it; it is a dialog in the app's overlay pattern (focus trapped, closed by Escape and by choosing a place, focus returning to the button that opened it), works at 320 px with no sideways scroll, in light and dark, Romanian and English. When the browser offers no geolocation the button is not shown.
+
+_From 229-location-or-address._
+
+### 229-FR-003 — The browser's location MUST be asked for only when the visitor taps "Folosește locația mea", never on load; while the request is open the button is disabled and reads "Se caută locația…" / "Finding your location…" and the page keeps working; the request waits at most 10 s (the geolocation `timeout` option, which does not count the time the permission prompt is open). On a position inside Romania the place becomes that point, the dialog closes and the line reads "Lângă tine"; on refusal, timeout, error or a point outside Romania, the address field gets focus with a short hint ("Nu am putut afla locația; scrie o adresă" / "We could not get your location; type an address") and the previous place stays.
+
+_From 229-location-or-address._
+
+### 229-FR-004 — The address field MUST ask the address look-up from the third character, 300 ms after the last key, with the page's language, and show at most 5 suggestions as a listbox the keyboard can walk; choosing one makes it the place (its label and point) and closes the dialog. An empty answer shows "Nu am găsit adresa" / "Address not found"; a failed or rate-limited look-up shows "Nu putem căuta adrese acum" / "We cannot search addresses now" and keeps the previous place; a text under three characters asks nothing and shows nothing. These messages and the hint of FR-003 sit in a polite live region so a screen reader announces them.
+
+_From 229-location-or-address._
+
+### 229-FR-005 — The place MUST be kept in the browser's local storage only (label, point, origin: location or address) and read back on the next visit, so the same browser starts from the last place; a stored value that does not parse or lies outside Romania is dropped. The server never stores the point: it leaves the browser only as a search parameter of the Home and garage search reads.
+
+_From 229-location-or-address._
+
+### 229-FR-006 — For a signed-in driver with a city in Setări and no stored place, Home MUST take that city as the place: the city, read from `GET /api/v1/me` (`MeDto.city`, nullable, added by this story), goes through the address look-up once per load and its first suggestion supplies the point, while the line reads "Lângă {city}" with the Setări text; this place is not written to local storage; when the look-up finds nothing or fails, Home stays on all of Romania with no message. The Setări city is edited in Driver account basics, never here. Home never asks for the session itself: the city is taken once the session is known on the page (a screen opened earlier in the tab loaded it, or a sign-in on Home), because asking on every Home load would renew the refresh cookie for each visitor and apply the account's language to a public page (decided 2026-10-08 in review; the owner may reverse it in a story of its own).
+
+_From 229-location-or-address._
+
+### 229-FR-007 — Whenever the place changes (location, suggestion, stored place, Setări city), the Home read for the selected brand MUST be sent again with the place, exactly once per change, and the count MUST follow the answer; an answer for a place or brand no longer selected is dropped; a failed read follows 225-FR-012 (message and "Reîncearcă"), and the retry repeats the read with the same place. Without a place the Home read carries no point and the count covers all of Romania (225-FR-005 unchanged).
+
+_From 229-location-or-address._
+
+### 229-FR-008 — The point MUST be rounded to three decimals (about 100 m) before it leaves the browser, and the API rounds it again before querying, so one visitor's requests from one spot share one answer and the cached Home answer (`Cache-Control: public, max-age=60`, 225-FR-009) is not spent on metre-level variants.
+
+_From 229-location-or-address._
+
+### 229-FR-016 — Every text of this story MUST live in the shared i18n files in Romanian and English; switching the language keeps the place and re-fills the place line and the dialog.
+
+_From 229-location-or-address._
+
+### 229-FR-017 — The place line and the dialog MUST hold at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll; the button that opens the dialog is at least 44 px tall and the suggestions are at least 44 px tall each.
+
+_From 229-location-or-address._
+
+### 229-FR-018 — This story writes nothing on the server: no audit entry, no event, no live update, no search log (ST-267 owns the search log) and no account field; it reads the garage's position, business kind, service radius and status, and the signed-in driver's city (exposed read-only on `MeDto.city`).
+
+_From 229-location-or-address._

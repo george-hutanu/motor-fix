@@ -14,6 +14,7 @@ features:
   - 885-restored-draft-check
   - 111-garage-address-map
   - 917-proposed-job-duplicate
+  - 229-location-or-address
 ---
 
 # Capability: Garage listing
@@ -571,6 +572,10 @@ _From 111-garage-address-map._
 ### 917-FR-002 — A proposed name equal only to a `pending` or `rejected` job's name, one that merely contains an approved job's name, or one that differs from it by more than case, accents and surrounding spaces (`Schimb  ulei`, `Schimb-ulei` against `Schimb ulei`), MUST be saved as before (a new pending job).
 
 _From 917-proposed-job-duplicate._
+
+### 229-FR-014 — The address look-up `GET /api/v1/places?q=` MUST serve the drivers' search unchanged: Romania only, at most 5 suggestions, from 3 characters, a provider failure as 503 `search_unavailable`, rate limited per address; this story adds no second look-up and no new outside call.
+
+_From 229-location-or-address._
 
 ## Retired
 
