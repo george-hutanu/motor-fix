@@ -4,7 +4,8 @@ name: PR QA
 # 16 GB laptop: boot the PR head with PostgreSQL+PostGIS, Redis and MinIO,
 # check /health/live and /health/ready, call the changed endpoints, run the viewport sweep
 # (desktop, tablet, 390 and 320 px phones x light/dark x ro/en), the agent's
-# flows, and upload the report and the screenshots. The unit and end-to-end
+# flows, the measured layout checks and a pixel diff of every screenshot
+# against the baseline run's, and upload the report and the screenshots. The unit and end-to-end
 # suites are CI's (ci.yml runs them on the merge result), not run again here.
 # It is .claude/scripts/pr-test/run.mjs in --tree mode, not a copy of it.
 #
@@ -58,8 +59,10 @@ on:
 # On pull_request the inputs are empty, so each falls back to the event's value.
 run-name: "PR QA #${{ inputs.pr || github.event.pull_request.number }} at ${{ inputs.sha || github.event.pull_request.head.sha }} lap ${{ inputs.lap || '1' }} ${{ inputs.nonce }}"
 
+# actions: read lets the baseline step download an earlier run's artifact.
 permissions:
   contents: read
+  actions: read
   statuses: write
 
 # One run per PR: a newer head, or a lap dispatched after the run the push
@@ -185,11 +188,27 @@ jobs:
         if: inputs.flows != ''
         run: printf '%s' "$FLOWS" | base64 -d | gunzip > "$RUNNER_TEMP/flows.mjs"
 
+      # The newest finished PR QA run of a commit already on main (a merged PR's
+      # head), else this PR's earlier run: its screenshots are the picture the
+      # sweep's are diffed against, its layout findings the ones already there.
+      # main is not booted a second time. No baseline is a note, never a failure;
+      # a tester from before baseline.mjs existed skips the step.
+      - name: Baseline run of main
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BASE: ${{ github.event.pull_request.base.ref || 'main' }}
+        run: |
+          [ -f tester/.claude/scripts/pr-test/baseline.mjs ] || { echo "no baseline: the tester has no baseline.mjs"; exit 0; }
+          node tester/.claude/scripts/pr-test/baseline.mjs --pr "$PR" --head "$SHA" --out "$RUNNER_TEMP/baseline" --repo "$REPO" --base "$BASE"
+
       - name: Boot, readiness, API, sweep, flows
         id: run
         run: |
           args=()
           [ -n "$FLOWS" ] && args+=(--flows "$RUNNER_TEMP/flows.mjs")
+          [ -f "$RUNNER_TEMP/baseline/baseline.json" ] && args+=(--baseline "$RUNNER_TEMP/baseline")
           set +e
           node tester/.claude/scripts/pr-test/run.mjs "$PR" --tree pr --sha "$SHA" \
             --routes "$ROUTES" --lap "$LAP" --out "$RUNNER_TEMP/pr-qa" "${args[@]}"

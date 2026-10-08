@@ -66,7 +66,7 @@ input {
   gap: var(--mf-space-2);
   margin-top: var(--mf-space-2);
 }
-/* Its own stacking context: the map's controls (z-index 2) stay inside it, under the page's sticky bars, as it scrolls past them. */
+/* Its own stacking context: MapLibre's controls (z-index 2) stay inside the map and never paint over the pinned Save bar. */
 .map {
   isolation: isolate;
   width: 100%;

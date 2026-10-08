@@ -21,6 +21,7 @@ import {
   redisUrlFor,
   testConfig,
 } from '../../../notifications/notifications.testing';
+import { until } from '../../../waits.testing';
 import { AccountsService } from '../../accounts.service';
 import { AuthModule } from '../../auth.module';
 import { hashToken } from '../../email-confirmation/email-confirmation';
@@ -34,6 +35,10 @@ const tokenSecret = 'test-secret';
 const webUrl = 'https://motorfix.test';
 const OLD = 'parola-veche-de-test';
 const NEW = 'parola-noua-de-test';
+// The reset e-mail is held until release(), so any answer at all proves the
+// request did not wait for it; this limit only turns a hang into a quick
+// failure, and leaves room for a loaded machine.
+const ANSWER_MS = 10_000;
 const { account, prisma, reset } = fixtures();
 const accounts = new AccountsService(prisma, new AuditService(), noEvents);
 serialDatabase(databaseUrl);
@@ -204,13 +209,6 @@ function holdResetEmails(): () => void {
       return send(input);
     });
   return release;
-}
-
-// Waits up to two seconds for something the request set going in the background.
-async function settled(done: () => boolean | Promise<boolean>) {
-  for (let i = 0; i < 40 && !(await done()); i++) {
-    await new Promise((resolve) => setTimeout(resolve, 50));
-  }
 }
 
 // @traces 127-FR-001 127-FR-002 127-FR-003
@@ -406,7 +404,7 @@ describe('asking for a reset link', () => {
   it('answers 202 before the link is issued, then issues it', async () => {
     const id = await person();
     const release = holdResetEmails();
-    await ask('andrei@example.test').timeout(2000).expect(202);
+    await ask('andrei@example.test').timeout(ANSWER_MS).expect(202);
     expect(await prisma.notification.count()).toBe(0);
     release();
     expect(await resetEmails(id)).toHaveLength(1);
@@ -419,11 +417,12 @@ describe('asking for a reset link', () => {
   it('waits, on shutdown, for a link still being issued', async () => {
     const id = await person();
     const release = holdResetEmails();
-    await ask('andrei@example.test').timeout(2000).expect(202);
+    await ask('andrei@example.test').timeout(ANSWER_MS).expect(202);
     let closed = false;
     const closing = resets.beforeApplicationShutdown().then(() => {
       closed = true;
     });
+    // Long enough for a shutdown that did not wait to have settled.
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect(closed).toBe(false);
     release();
@@ -443,18 +442,20 @@ describe('asking for a reset link', () => {
     const first = await person('ana@example.test');
     const second = await person('ion@example.test');
     const releaseFirst = holdResetEmails();
-    await ask('ana@example.test').timeout(2000).expect(202);
+    await ask('ana@example.test').timeout(ANSWER_MS).expect(202);
     const sending = jest.mocked(app.get(NotificationsService).sendAccountEmail);
-    while (sending.mock.calls.length === 0) {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
+    await until(
+      'the first reset e-mail to start sending',
+      () => sending.mock.calls.length > 0,
+    );
     let closed = false;
     const closing = resets.beforeApplicationShutdown().then(() => {
       closed = true;
     });
     const releaseSecond = holdResetEmails();
-    await ask('ion@example.test').timeout(2000).expect(202);
+    await ask('ion@example.test').timeout(ANSWER_MS).expect(202);
     releaseFirst();
+    // Long enough for a shutdown that did not wait to have settled.
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect(closed).toBe(false);
     releaseSecond();
@@ -639,7 +640,8 @@ describe('completing a reset', () => {
   it('e-mails the account that its password was changed', async () => {
     const id = await person();
     await complete(await linkFor(id)).expect(200);
-    await settled(
+    await until(
+      'the background work',
       async () => (await resetEmails(id, 'password_changed')).length > 0,
     );
     expect(await resetEmails(id, 'password_changed')).toHaveLength(1);
@@ -709,7 +711,7 @@ describe('completing a reset', () => {
     expect(revoke).toHaveBeenCalledWith(id, expect.any(Date));
     const events = () =>
       published.map((m) => JSON.parse(m) as Record<string, unknown>);
-    await settled(() => events().length > 0);
+    await until('the background work', () => events().length > 0);
     expect(events()).toContainEqual(
       expect.objectContaining({
         audience: [`account:${id}`],
@@ -739,7 +741,7 @@ describe('completing a reset', () => {
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     await complete(token).expect(200);
-    await settled(() => warn.mock.calls.length > 0);
+    await until('the background work', () => warn.mock.calls.length > 0);
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining('session.revoked not sent'),
     );
@@ -755,7 +757,7 @@ describe('completing a reset', () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     await complete(token).expect(500);
     expect(await resetEmails(id, 'password_changed')).toHaveLength(1);
-    await settled(() => published.length > 0);
+    await until('the background work', () => published.length > 0);
     expect(published.join()).toContain('session.revoked');
   });
 

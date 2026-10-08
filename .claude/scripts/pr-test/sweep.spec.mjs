@@ -1,7 +1,13 @@
-import { describe, it } from 'vitest';
+import { afterAll, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { VIEWPORTS, contextCookies, dropExpected, flowSignIn, loadProblem, matrix, openPage, parseRoute, sessionCookie, toFindings } from './sweep.mjs';
+import { VIEWPORTS, contextCookies, dropExpected, flowSignIn, loadProblem, matrix, openPage, parseRoute, runSweep, sessionCookie, toFindings } from './sweep.mjs';
 
 describe('the sweep matrix', () => {
   it('visits every route at four viewports, two schemes and two languages', () => {
@@ -62,6 +68,15 @@ describe('observations to findings', () => {
     const findings = toFindings(obs, { web: true, origins });
     assert.equal(findings.length, 1);
     assert.equal(findings[0].severity, 'high');
+  });
+
+  it('keeps one layout finding per element, listing every combination it was seen in', () => {
+    const layout = (viewport, selector) => at(viewport, { kind: 'layout', rule: 'grid', selector, measured: 'gap 13px', expected: 'a multiple of 4px', text: '' });
+    const findings = toFindings([layout('mobile', 'div#row'), layout('desktop', 'div#row'), layout('mobile', 'div#pad')], { web: true, origins });
+    assert.equal(findings.length, 2);
+    const row = findings.find((f) => f.selector === 'div#row');
+    assert.deepEqual(row.seenIn, ['mobile light ro', 'desktop light ro']);
+    assert.equal(row.evidence, 'home-mobile-light-ro.png');
   });
 });
 
@@ -189,4 +204,55 @@ describe('opening a page', () => {
     };
     await assert.rejects(openPage(page, 'http://127.0.0.1:4100/'), /Timeout 30000ms/);
   });
+});
+
+// The owner's three defects, through the whole sweep in a real browser: each
+// blocks with a finding that names the element; the same page without them
+// has no layout finding. Off CI a machine without the browser skips.
+describe('the sweep measures the layout', async () => {
+  const root = fileURLToPath(new URL('../../..', import.meta.url));
+  const fixtures = fileURLToPath(new URL('./fixtures/layout/', import.meta.url));
+  let ready = true;
+  try {
+    const { chromium } = await import('@playwright/test');
+    await (await chromium.launch()).close();
+  } catch (error) {
+    if (process.env.CI) throw error;
+    ready = false;
+  }
+  const server = createServer(async (req, res) => {
+    try {
+      const body = await readFile(join(fixtures, new URL(req.url, 'http://x').pathname.replace(/^\/+/, '')));
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(body);
+    } catch {
+      res.writeHead(404).end();
+    }
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const baseURL = `http://127.0.0.1:${server.address().port}`;
+  const outDir = mkdtempSync(join(tmpdir(), 'sweep-layout-'));
+  afterAll(() => {
+    server.close();
+    rmSync(outDir, { recursive: true, force: true });
+  });
+  const sweep = async (route) => {
+    const { observations } = await runSweep({ baseURL, routes: [route], outDir, schemes: ['light'], langs: ['en'], repoRoot: root });
+    return toFindings(observations, { web: true, origins: [baseURL] });
+  };
+
+  it.skipIf(!ready)('blocks 13 px body text, a label clipped at 320 px and a 13 px gap, naming each element', async () => {
+    const findings = (await sweep('/owner-fail.html')).filter((f) => f.kind === 'layout');
+    const find = (rule, selector) => findings.find((f) => f.rule === rule && f.selector === selector);
+    assert.equal(find('min-text', 'p#intro')?.severity, 'high');
+    const clipped = find('clipped', 'button#book');
+    assert.equal(clipped?.severity, 'high');
+    assert.ok(clipped.seenIn.includes('small-phone light en'));
+    assert.equal(find('grid', 'div#actions')?.severity, 'high');
+    for (const f of [find('min-text', 'p#intro'), clipped, find('grid', 'div#actions')]) assert.match(f.title, /#(intro|book|actions)/);
+  }, 60000);
+
+  it.skipIf(!ready)('finds no layout defect on the same page without them', async () => {
+    const findings = await sweep('/owner-pass.html');
+    assert.deepEqual(findings.filter((f) => f.kind === 'layout').map((f) => f.title), []);
+  }, 60000);
 });
