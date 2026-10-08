@@ -11,7 +11,7 @@ export interface HomeDto {
   takers: number;
 
   /**
-   * Approved garages
+   * Approved garages, in the area of the place when one is given
    */
   total: number;
 }

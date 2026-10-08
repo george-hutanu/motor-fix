@@ -12,21 +12,21 @@ import { HomeDto } from '../../models/home-dto';
 export interface HomeControllerForBrand$Params {
 
 /**
+ * The place the count is measured from, as "lat,lng" in Romania; rounded to three decimals. Without it, all of Romania
+ */
+  near?: string;
+
+/**
  * The brand, by its catalogue slug
  */
   brand: string;
-
-/**
- * The place as "lat,lng"; accepted and ignored until a place narrows the count
- */
-  near?: string;
 }
 
 export function homeControllerForBrand(http: HttpClient, rootUrl: string, params: HomeControllerForBrand$Params, context?: HttpContext): Observable<StrictHttpResponse<HomeDto>> {
   const rb = new RequestBuilder(rootUrl, homeControllerForBrand.PATH, 'get');
   if (params) {
-    rb.query('brand', params.brand, {});
     rb.query('near', params.near, {});
+    rb.query('brand', params.brand, {});
   }
 
   return http.request(

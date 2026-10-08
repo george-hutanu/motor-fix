@@ -5,6 +5,27 @@
     <h2>{{ 'public.home.hero.headline' | t: { brand: brand.name } }}</h2>
     <p>{{ 'public.home.hero.paragraph' | t: { brand: brand.name } }}</p>
   </section>
+  <p class="place">
+    <span class="where">
+      @if (place(); as place) {
+        @if (place.label; as label) {
+          {{ 'public.home.place.near' | t: { label } }}
+        } @else {
+          {{ 'public.home.place.nearYou' | t }}
+        }
+      } @else {
+        {{ 'public.home.place.all' | t }}
+      }
+    </span>
+    <span aria-hidden="true">·</span>
+    <button type="button" class="spartan-button spartan-button-variant-ghost" (click)="pickPlace()">
+      @if (place()) {
+        {{ 'public.home.place.change' | t }}
+      } @else {
+        {{ 'public.home.place.choose' | t }}
+      }
+    </button>
+  </p>
   <mf-brand-picker
     [brands]="shown()"
     [selected]="brand.slug"
