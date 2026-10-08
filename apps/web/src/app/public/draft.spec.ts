@@ -1,3 +1,4 @@
+import { isListingDraftData } from '@motor-fix/contracts/listing-sections';
 import type { ListingDraftDto } from '@motor-fix/data-access';
 
 import {
@@ -203,32 +204,59 @@ describe('what the page does with the copy on load', () => {
   });
 });
 
+const FILE = 'listing-photos/0b9f3c1e-6a43-4c55-9d1c-6f3f1b7d2a10/front';
+const REFUSED: [string, unknown][] = [
+  ['a key beside steps, survey and files', { other: 1, steps: {} }],
+  ['a section under a step the form does not have', { steps: { '7': {} } }],
+  [
+    'a step 1 name longer than any field',
+    { steps: { '1': { name: 'a'.repeat(200) } } },
+  ],
+  ['a step 6 tax ID that is not text', { steps: { '6': { cui: 18547290 } } }],
+  ['a file key of the wrong shape', { files: ['../etc/passwd'] }],
+  ['files that are not a list', { files: FILE }],
+  ['a survey that is not an object', { survey: 'yes' }],
+  ['data that is a list', [{ steps: {} }]],
+];
+const PASSING: [string, unknown][] = [
+  ['nothing yet', {}],
+  [
+    'no steps but a survey and a photo',
+    { files: [FILE], survey: { heard: 'friend' } },
+  ],
+  [
+    'a section for every step',
+    {
+      files: [FILE],
+      steps: {
+        '1': { businessKind: 'pfa', name: 'Service Ion' },
+        '2': { anything: 1 },
+        '3': { jobs: [], labour: {} },
+        '4': { mechanics: [{ name: 'Ion' }], onProfile: true },
+        '5': {},
+        '6': { cui: '18547290', rarNumber: 'RAR-123' },
+      },
+      survey: {},
+    },
+  ],
+];
+
 describe('a stored copy whose form data the server would refuse', () => {
-  const FILE = 'listing-photos/0b9f3c1e-6a43-4c55-9d1c-6f3f1b7d2a10/front';
   const holding = (data: unknown, overrides: Partial<BrowserDraft> = {}) => {
     const storage = memory();
     storage.setItem(STORAGE_KEY, JSON.stringify({ ...entry(overrides), data }));
     return storage;
   };
 
-  it.each([
-    ['a key beside steps, survey and files', { other: 1, steps: {} }],
-    ['a section under a step the form does not have', { steps: { '7': {} } }],
-    [
-      'a step 1 name longer than any field',
-      { steps: { '1': { name: 'a'.repeat(200) } } },
-    ],
-    ['a step 6 tax ID that is not text', { steps: { '6': { cui: 18547290 } } }],
-    ['a file key of the wrong shape', { files: ['../etc/passwd'] }],
-    ['files that are not a list', { files: FILE }],
-    ['a survey that is not an object', { survey: 'yes' }],
-    ['data that is a list', [{ steps: {} }]],
-  ])('is not restored when it holds %s, and nothing throws', (_, data) => {
-    const storage = holding(data);
+  it.each(REFUSED)(
+    'is not restored when it holds %s, and nothing throws',
+    (_, data) => {
+      const storage = holding(data);
 
-    expect(() => readDraft(storage)).not.toThrow();
-    expect(readDraft(storage)).toEqual({ blocked: false, draft: null });
-  });
+      expect(() => readDraft(storage)).not.toThrow();
+      expect(readDraft(storage)).toEqual({ blocked: false, draft: null });
+    },
+  );
 
   it('is dropped whole when it also holds a server key, so nothing is fetched or pushed', () => {
     const storage = holding(
@@ -242,28 +270,7 @@ describe('a stored copy whose form data the server would refuse', () => {
     expect(loadPlan(draft)).toEqual({ kind: 'empty' });
   });
 
-  it.each([
-    ['nothing yet', {}],
-    [
-      'no steps but a survey and a photo',
-      { files: [FILE], survey: { heard: 'friend' } },
-    ],
-    [
-      'a section for every step',
-      {
-        files: [FILE],
-        steps: {
-          '1': { businessKind: 'pfa', name: 'Service Ion' },
-          '2': { anything: 1 },
-          '3': { jobs: [], labour: {} },
-          '4': { mechanics: [{ name: 'Ion' }], onProfile: true },
-          '5': {},
-          '6': { cui: '18547290', rarNumber: 'RAR-123' },
-        },
-        survey: {},
-      },
-    ],
-  ])('is restored as before when it holds %s', (_, data) => {
+  it.each(PASSING)('is restored as before when it holds %s', (_, data) => {
     const kept = entry({ data: data as BrowserDraft['data'] });
     const storage = memory();
     writeDraft(storage, kept);
@@ -281,4 +288,13 @@ describe('a stored copy whose form data the server would refuse', () => {
       kind: 'push',
     });
   });
+
+  it.each([...REFUSED, ...PASSING])(
+    'gets the same verdict as the server rule when it holds %s',
+    (_, data) => {
+      const restored = readDraft(holding(data)).draft !== null;
+
+      expect(restored).toBe(isListingDraftData(data));
+    },
+  );
 });
