@@ -228,7 +228,12 @@ async function restore(options: Options, touched: Touched[]) {
   }
 }
 
-// The api goes first: its pre-deploy step migrates the database the others use.
+// The api goes first: its pre-deploy step migrates the database the others
+// use, then sets the monitor role's password.
+export const API_PRE_DEPLOY = [
+  'npx prisma migrate deploy && node scripts/monitor-password.ts',
+];
+
 export async function deploy(options: Options) {
   const touched: Touched[] = [];
   try {
@@ -291,7 +296,7 @@ async function main() {
       image: required(`IMAGE_${name.toUpperCase()}`),
       name,
       replicas: replicas[name] ?? 1,
-      ...(name === 'api' && { preDeploy: ['npx prisma migrate deploy'] }),
+      ...(name === 'api' && { preDeploy: API_PRE_DEPLOY }),
     })),
     signal: cancel.signal,
     token: required('RAILWAY_API_TOKEN'),

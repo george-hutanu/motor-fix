@@ -36,6 +36,15 @@
     "picker": "Car brand",
     "retry": "Try again",
     "search": "Find garages",
+    "searchFailed": "The brand list did not load",
+    "searchFound": {
+      "one": "{count} brand found",
+      "other": "{count} brands found"
+    },
+    "searchLabel": "Search for a brand",
+    "searchList": "Brands found",
+    "searchLoading": "Loading brands…",
+    "searchNone": "No brand found",
     "takes": {
       "one": "takes",
       "other": "take"
