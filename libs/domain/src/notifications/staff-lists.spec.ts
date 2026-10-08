@@ -1,4 +1,4 @@
-import type { PreferenceRow } from './preferences';
+import type { PreferenceRow } from './preferences/preferences';
 import {
   locked,
   type StaffInput,

@@ -7,7 +7,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { VerificationService } from './verification.service';
+import { VerificationService } from './verification/verification.service';
 import { Requires } from '../auth/actor.guard';
 import { PRISMA } from '../auth/prisma';
 import type { PrismaClient } from '../generated/prisma/client';

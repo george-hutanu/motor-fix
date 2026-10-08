@@ -37,8 +37,8 @@ export {
   type TaskSaveState,
   taskSave,
   toProblem,
-} from './form';
-export { FieldError, TaskDone, TaskError, TaskSubmit } from './form-parts';
+} from './form/form';
+export { FieldError, TaskDone, TaskError, TaskSubmit } from './form/form-parts';
 export { Overlays } from './overlays';
 export {
   injectOverlayTask,

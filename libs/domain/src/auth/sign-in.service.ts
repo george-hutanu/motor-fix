@@ -14,13 +14,13 @@ import { AUTH_OPTIONS, type AuthOptions } from './actor.guard';
 import { Attempts } from './attempts';
 import type { Role } from './capabilities';
 import { MAINTENANCE, type Maintenance } from './maintenance';
-import { DECOY_HASH, verifyPassword } from './password';
+import { DECOY_HASH, verifyPassword } from './password/password';
 import { roleInUse } from './policy';
 import { PRISMA } from './prisma';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { audienceOf } from '../events/audience';
 import { EVENT_PORT, type EventPort } from '../events/event.port';
-import { type LivePublisher, publishLive } from '../events/live.hub';
+import { type LivePublisher, publishLive } from '../events/live/live.hub';
 import type { PrismaClient } from '../generated/prisma/client';
 
 const DAY_MS = 86_400_000;

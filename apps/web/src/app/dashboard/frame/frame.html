@@ -1,0 +1,76 @@
+<aside>
+  <a routerLink="/" [attr.aria-label]="'shell.frame.home' | t">{{ 'shell.frame.logo' | t }}</a>
+  <span class="eyebrow">{{ dashboard().tag | t }}</span>
+  <nav [attr.aria-label]="'shell.frame.menu' | t">
+    @for (view of entries(); track view.path) {
+      @let count = view.counter ? counts()[view.counter] : undefined;
+      <a
+        [routerLink]="view.path ? [base(), view.path] : base()"
+        routerLinkActive=""
+        ariaCurrentWhenActive="page"
+        [routerLinkActiveOptions]="{ exact: !view.path }"
+        [attr.aria-label]="count ? ('shell.frame.counter' | t: { label: (view.label | t), waiting: count }) : null"
+      >{{ view.label | t }}@if (count) {<span class="chip" aria-hidden="true">{{ count > 99 ? '99+' : count }}</span>} @else if (view.counter && countsLoading()) {<span class="chip-skeleton" aria-hidden="true"></span>}</a>
+    }
+  </nav>
+  <div class="account">
+    @if (roles().length > 1) {
+      <div class="roles" role="group" [attr.aria-label]="'shell.frame.roles.label' | t">
+        @for (chip of roles(); track chip.role) {
+          <button
+            type="button"
+            [attr.aria-pressed]="chip.role === session.shown()?.role"
+            [disabled]="switching()"
+            (click)="switchTo(chip.role)"
+          >{{ chip.label | t }}</button>
+        }
+      </div>
+    }
+    <div class="who">
+      @if (letters(); as l) {<span class="avatar" aria-hidden="true">{{ l }}</span>}
+      <mf-as-written [text]="session.shown()?.name ?? ''" />
+    </div>
+    @if (addsCar()) {
+      <button type="button" (click)="addCar()">{{ 'shell.frame.addCar' | t }}</button>
+    }
+    @if (inviteGarage(); as garageId) {
+      <button type="button" (click)="invite(garageId)">{{ 'shell.frame.invite' | t }}</button>
+    }
+    <button type="button" (click)="signOut()">{{ 'shell.frame.signOut' | t }}</button>
+    <button type="button" (click)="signOutEverywhere()">{{ 'shell.frame.signOutEverywhere' | t }}</button>
+  </div>
+</aside>
+<div class="view">
+  <header>
+    @if (adminOverview; as overview) {
+      <div class="title">
+        <span class="admin-label">{{ 'shell.frame.admin.label' | t }}</span>
+        <h1>{{ open().label | t }}</h1>
+        <p class="admin-line" [attr.aria-busy]="overview.loading()">
+          {{ 'shell.frame.admin.place' | t }}
+          @if (overview.loading()) {
+            · <span class="skeleton" aria-hidden="true"></span>
+          } @else if (overview.waiting(); as count) {
+            · {{ 'shell.frame.admin.waiting' | t: { count } }}
+          } @else if (overview.waiting() === 0) {
+            · {{ 'shell.frame.admin.none' | t }}
+          }
+        </p>
+      </div>
+    } @else {
+      <div class="title">
+        <h1>{{ (open().title ?? open().label) | t }}</h1>
+        @if (open().subtitle; as line) {<p class="line">{{ line | t }}</p>}
+      </div>
+    }
+    <mf-language-switch /><mf-bell />
+  </header>
+  <p class="live-offline" role="status">@if (offline()) { {{ 'shell.live.offline' | t }} }</p>
+  <mf-email-banner />
+  <p class="live-status" role="status" [mfLiveChange]="lastTest()">
+    @if (lastTest(); as at) { {{ 'shell.live.test' | t }} · {{ at | clock }} }
+  </p>
+  <main><router-outlet /></main>
+  <mf-dashboard-tab-bar [base]="base()" [views]="entries()" [name]="dashboard().name" [counts]="counts()" [countsLoading]="countsLoading()" />
+</div>
+<hlm-toaster />

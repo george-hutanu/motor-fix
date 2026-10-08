@@ -1,5 +1,19 @@
 <!--
-Sync Impact Report (v1.8.3)
+Sync Impact Report (v1.9.0)
+- Version change: 1.8.3 → 1.9.0 (MINOR: Principle IV gains the folder rules —
+  a module's submodules get their own subfolder, and a web component is a
+  `<name>/` folder holding `<name>.ts`, `<name>.html` and `<name>.css` — and
+  Enforcement gains `scripts/structure-check.ts` with its shrink-only
+  baseline. Nothing removed or redefined)
+- Source: ST-893, the owner's folder rules.
+- Templates:
+  - ✅ .specify/templates/plan-template.md — Project Structure note
+  - ✅ .specify/templates/tasks-template.md — Path Conventions line
+  - ✅ .claude/skills/speckit-implement/SKILL.md — step 3 names the layout
+  - ✅ AGENTS.md — "Folder structure" section
+  - ✅ .specify/memory/constitution-card.md — IV line, v1.9.0
+
+Previous report (v1.8.3)
 - Version change: 1.8.2 → 1.8.3 (PATCH: Additional Constraints gains the
   observability rule — a change that adds a service, resource, queue, outside
   call, endpoint or product action ships its metrics, logs, traces, dashboard
@@ -275,6 +289,13 @@ it; a quiet substitute invalidates the documentation the build follows.
   eslint, no prettier, no per-project Biome config; a genuinely
   project-specific need is a scoped `overrides` entry in the root file.
 - Jest runs from the root config across every project.
+- Folder rules: a module's submodules each get their own subfolder, never
+  files left flat at the module's root (`notifications/bell/`, not
+  `notifications/bell.service.ts` beside `bell.controller.ts`); a web
+  component is a `<name>/` folder holding `<name>.ts`, `<name>.html` and,
+  when it has styles, `<name>.css`, with no inline template or styles.
+  `scripts/structure-check.ts` checks both, against a baseline of older
+  violations that only shrinks.
 
 Rationale: one of each, until it hurts — a small team ships faster with one
 deployable and one toolchain, and duplicate configs drift silently
@@ -410,6 +431,7 @@ the hooks live in `.claude/hooks/`, the checks in `.claude/scripts/`.
 | VII task lifecycle | `pr-lifecycle-gate.mjs` (Stop hook) | the agent may not finish on a task branch ahead of `main` with unpushed commits, with no PR, with a green ready PR that has no `agent-review` status on its head (unless run-state is blocked), or with a ready PR whose checks and `agent-review` passed but that is not merged; a green Dependabot PR is asked to merge, not to be tested |
 | VII QA before merge | `merge-gate.mjs` (PreToolUse) | refuses `gh pr merge` and the REST merge call while the PR's head commit has no `agent-review` success from the PR tester, or while the latest run of any other check is failing or pending, or `CI OK` is missing; a PR authored by Dependabot with only Dependabot's commits needs no `agent-review`, but the same CI rule still refuses it |
 | Observability inventory | `scripts/observability-inventory.ts` (CI Checks job) | fails while an app, Railway service, queue or outside service in the code has no entry in `infra/observability/inventory.json`, an entry outlives what it names, a dashboard or alert it names is not declared, or the endpoint count differs from `apps/api/openapi.json` |
+| IV folder rules | `scripts/structure-check.ts` (CI Checks job, `.husky/pre-commit`); `config-protection.mjs` | fails on a flat submodule or a component that is not a `<name>/` folder with external `<name>.html`/`<name>.css` unless `scripts/structure-baseline.json` lists it, on a stale baseline entry, and on an entry the base branch's baseline lacks; the hook refuses an edit that grows the baseline |
 | Full verification | `.husky/pre-commit` | identity, then `npm run typecheck && npm run lint && npm run test` on every real commit, in a `scripts/heavy.sh` slot |
 
 The edit-time gates watch `apps/*`, `libs/*` and `e2e/`, and skip Biome or Jest
@@ -482,4 +504,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.8.3 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-08
+**Version**: 1.9.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-08

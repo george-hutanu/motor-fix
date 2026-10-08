@@ -4,8 +4,8 @@ import {
   continueLink,
   DELETE_AFTER_DAYS,
   REMIND_AFTER_DAYS,
-} from './listing-drafts';
-import { newToken } from '../auth/email-confirmation';
+} from './listing-drafts/listing-drafts';
+import { newToken } from '../auth/email-confirmation/email-confirmation';
 import type { PrismaClient } from '../generated/prisma/client';
 import {
   NOTIFICATIONS_PRISMA,

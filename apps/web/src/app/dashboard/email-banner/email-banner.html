@@ -1,0 +1,8 @@
+@if (shown()) {
+  <div role="status">
+    <p>{{ 'shell.emailBanner.text' | t }}</p>
+    <button hlmBtn variant="secondary" type="button" [disabled]="busy()" (click)="askAgain()">
+      {{ 'shell.emailBanner.resend' | t }}
+    </button>
+  </div>
+}
