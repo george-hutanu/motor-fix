@@ -9,7 +9,7 @@ import {
   oauthHarness,
   type StubPerson,
   WEB,
-} from './openid-stub.testing';
+} from './openid/openid-stub.testing';
 import { oauthSettings } from './providers';
 import type { Role } from '../capabilities';
 

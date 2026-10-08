@@ -7,7 +7,7 @@ import {
 import { AuditService } from '../audit/audit.service';
 import { serialDatabase } from '../auth/serial-db.testing';
 import { outbox } from '../events/event.port';
-import { VerificationService } from '../garages/verification.service';
+import { VerificationService } from '../garages/verification/verification.service';
 import { databaseUrl, fixtures } from '../notifications/notifications.testing';
 
 const { account, prisma, reset } = fixtures();

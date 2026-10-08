@@ -1,5 +1,5 @@
 import { AdminOverviewController } from './admin-overview.controller';
-import type { VerificationService } from './verification.service';
+import type { VerificationService } from './verification/verification.service';
 import type { PrismaClient } from '../generated/prisma/client';
 import {
   countPlatformFigures,

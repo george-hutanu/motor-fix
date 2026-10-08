@@ -12,7 +12,7 @@ import {
   isDriverChoice,
   mutedChannels,
   type PreferenceRow,
-} from './preferences';
+} from './preferences/preferences';
 
 // The garage list and the admin list, section by section, in the order the
 // panel shows them.
