@@ -1,0 +1,57 @@
+@if (geolocation) {
+  <button
+    type="button"
+    class="spartan-button spartan-button-variant-default locate"
+    [disabled]="locating()"
+    (click)="locate()"
+  >
+    @if (locating()) {
+      {{ 'public.home.place.locating' | t }}
+    } @else {
+      {{ 'public.home.place.useLocation' | t }}
+    }
+  </button>
+}
+<label hlmLabel for="home-place-address">{{ 'public.home.place.field' | t }}</label>
+<input
+  #field
+  hlmInput
+  id="home-place-address"
+  autocomplete="street-address"
+  role="combobox"
+  aria-autocomplete="list"
+  aria-controls="home-place-options"
+  aria-describedby="home-place-message"
+  aria-expanded="false"
+  [attr.aria-expanded]="suggestions().length > 0"
+  [attr.aria-activedescendant]="active() >= 0 ? 'home-place-option-' + active() : null"
+  [attr.maxlength]="addressMax"
+  [placeholder]="'public.home.place.placeholder' | t"
+  (input)="type($event)"
+  (keydown)="keys($event)"
+/>
+<p class="message" id="home-place-message" aria-live="polite">
+  @switch (message()) {
+    @case ('locationFailed') {
+      {{ 'public.home.place.locationFailed' | t }}
+    }
+    @case ('nothingFound') {
+      {{ 'public.home.place.nothingFound' | t }}
+    }
+    @case ('searchUnavailable') {
+      {{ 'public.home.place.searchUnavailable' | t }}
+    }
+  }
+</p>
+<div class="suggestions" id="home-place-options" role="listbox" [attr.aria-label]="'public.home.place.field' | t">
+  @for (suggestion of suggestions(); track $index) {
+    <button
+      type="button"
+      role="option"
+      tabindex="-1"
+      [id]="'home-place-option-' + $index"
+      [attr.aria-selected]="active() === $index"
+      (click)="choose(suggestion)"
+    >{{ suggestion.label }}</button>
+  }
+</div>

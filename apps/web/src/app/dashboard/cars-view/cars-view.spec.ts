@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { type CarDto, CarsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
@@ -38,6 +39,7 @@ async function render(
     providers: [
       { provide: CarsService, useValue: { carsControllerList: list } },
       { provide: Overlays, useValue: { open } },
+      provideRouter([]),
     ],
   });
   await TestBed.inject(I18n).enter('driver');
@@ -62,12 +64,44 @@ const button = (element: HTMLElement, name: string) =>
 const cards = (element: HTMLElement) => [
   ...element.querySelectorAll<HTMLElement>('[data-car]'),
 ];
+const itp = (card: HTMLElement) => {
+  const lamp = card.querySelector<HTMLElement>('mf-due-date-line mf-lamp');
+  return {
+    link: card.querySelector('mf-due-date-line a'),
+    state: lamp?.getAttribute('data-state'),
+    text: (lamp?.textContent ?? '').replace(/\s+/g, ' ').trim(),
+  };
+};
 const lines = (card: HTMLElement) =>
   [...card.querySelectorAll<HTMLElement>('p')].map((p) =>
     (p.textContent ?? '').replace(/\s+/g, ' ').trim(),
   );
 
 describe('Mașinile mele', () => {
+  // Only Date is faked: Angular's stability checks still need real timers.
+  beforeEach(() =>
+    jest.useFakeTimers({
+      doNotFake: [
+        'nextTick',
+        'setImmediate',
+        'clearImmediate',
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'queueMicrotask',
+        'requestAnimationFrame',
+        'cancelAnimationFrame',
+        'requestIdleCallback',
+        'cancelIdleCallback',
+        'hrtime',
+        'performance',
+      ],
+      now: new Date('2026-10-08T09:00:00Z'),
+    }),
+  );
+  afterEach(() => jest.useRealTimers());
+
   it('reads the cars once and shows a card per car with its name and its year and kilometres', async () => {
     const { element, settle } = await render();
     await settle();
@@ -89,33 +123,83 @@ describe('Mașinile mele', () => {
     expect(lines(cards(element)[0])[1]).toBe('2019 · 148,200 km');
   });
 
-  it('asks for the ITP date in a muted line when the car has none', async () => {
+  it('asks for the ITP date on a grey lamp when the car has none', async () => {
     const { element, settle } = await render();
     await settle();
 
-    const itp = lines(cards(element)[0])[2];
-    expect(itp).toBe('ITP: adaugă data din talon');
-    const line = cards(element)[0].querySelectorAll('p')[2];
-    expect(line.classList).toContain('muted');
+    expect(itp(cards(element)[0])).toEqual({
+      link: null,
+      state: 'grey',
+      text: 'ITP: adaugă data din talon',
+    });
   });
 
-  it('shows the ITP date in the plain text colour when the car has one', async () => {
+  it('shows how long the ITP has left on a lamp', async () => {
     const { element, settle } = await render([car({ itpUntil: '2026-11-13' })]);
     await settle();
 
-    const line = cards(element)[0].querySelectorAll('p')[2];
-    expect(line.textContent?.trim()).toBe('ITP valabil până la 13 nov. 2026');
-    expect(line.classList).not.toContain('muted');
+    expect(itp(cards(element)[0])).toMatchObject({
+      state: 'amber',
+      text: 'ITP‑ul expiră în 36 de zile',
+    });
   });
 
-  it('shows the ITP date in English', async () => {
+  it('shows the ITP line in English', async () => {
     const { element, settle } = await render(
-      [car({ itpUntil: '2026-11-13' })],
+      [car({ itpUntil: '2027-11-13' })],
       'en',
     );
     await settle();
 
-    expect(lines(cards(element)[0])[2]).toBe('ITP valid until 13 Nov 2026');
+    expect(itp(cards(element)[0])).toMatchObject({
+      state: 'green',
+      text: 'ITP valid until November 2027',
+    });
+  });
+
+  it('sends a car whose ITP has passed to the garages for its brand', async () => {
+    const { element, settle } = await render([car({ itpUntil: '2026-10-01' })]);
+    await settle();
+
+    const line = itp(cards(element)[0]);
+    expect(line.state).toBe('red');
+    expect(line.link?.textContent?.trim()).toBe('Caută un service');
+    expect(line.link?.getAttribute('href')).toBe('/ro/garages?brand=bmw');
+    expect(line.link?.getAttribute('aria-label')).toBe(
+      'Caută un service pentru BMW 320d',
+    );
+  });
+
+  it('sends a passed ITP to the English garages in English', async () => {
+    const { element, settle } = await render(
+      [
+        car({
+          brandId: 'dacia',
+          brandName: 'Dacia',
+          itpUntil: '2026-10-01',
+          model: 'Logan',
+        }),
+      ],
+      'en',
+    );
+    await settle();
+
+    const line = itp(cards(element)[0]);
+    expect(line.link?.textContent?.trim()).toBe('Find a garage');
+    expect(line.link?.getAttribute('href')).toBe('/en/garages?brand=dacia');
+    expect(line.link?.getAttribute('aria-label')).toBe(
+      'Find a garage for Dacia Logan',
+    );
+  });
+
+  it('gives a car still in date no garage link', async () => {
+    const { element, settle } = await render([car({ itpUntil: '2026-11-13' })]);
+    await settle();
+
+    expect(itp(cards(element)[0])).toMatchObject({
+      link: null,
+      state: 'amber',
+    });
   });
 
   it('shows the plate grouped, and no plate line without one', async () => {
@@ -125,8 +209,8 @@ describe('Mașinile mele', () => {
     ]);
     await settle();
 
-    expect(lines(cards(element)[0])[3]).toBe('B 123 ABC');
-    expect(lines(cards(element)[1])).toHaveLength(3);
+    expect(lines(cards(element)[0])[2]).toBe('B 123 ABC');
+    expect(lines(cards(element)[1])).toHaveLength(2);
   });
 
   it('shows the shared placeholder above the button with no car', async () => {
@@ -152,7 +236,12 @@ describe('Mașinile mele', () => {
     ]);
     await settle();
     open.mockResolvedValueOnce(
-      car({ brandName: 'Dacia', id: 'car-2', model: 'Logan' }),
+      car({
+        brandName: 'Dacia',
+        id: 'car-2',
+        itpUntil: '2026-10-10',
+        model: 'Logan',
+      }),
     );
 
     button(element, 'Adaugă o mașină')?.click();
@@ -164,6 +253,7 @@ describe('Mașinile mele', () => {
       title: 'driver.cars.add.title',
     });
     expect(lines(cards(element)[0])[0]).toBe('Dacia Logan');
+    expect(itp(cards(element)[0]).text).toBe('ITP‑ul expiră în 2 zile');
     expect(cards(element)).toHaveLength(2);
     expect(list).toHaveBeenCalledTimes(1);
   });
