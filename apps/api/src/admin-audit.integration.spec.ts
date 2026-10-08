@@ -26,6 +26,10 @@ const FIXTURES: Record<
     path?: () => Promise<string>;
   }
 > = {
+  'GET /api/v1/admin/platform-rule-changes': {
+    path: async () =>
+      '/api/v1/admin/platform-rule-changes?key=reviews_only_after_confirmed_job',
+  },
   'PATCH /api/v1/admin/platform-rules/{key}': {
     body: () => ({ seen: false, value: true }),
     path: async () => {
@@ -45,6 +49,31 @@ const FIXTURES: Record<
   },
   'POST /api/v1/admin/notifications/test': {
     body: (admin) => ({ accountIds: [admin] }),
+  },
+  'POST /api/v1/admin/platform-rule-changes': {
+    body: () => ({
+      key: 'reviews_only_after_confirmed_job',
+      reason: 'Testăm recenziile din profil.',
+    }),
+    path: async () => {
+      await clearRequests();
+      return '/api/v1/admin/platform-rule-changes';
+    },
+  },
+  'POST /api/v1/admin/platform-rule-changes/{id}/approve': {
+    body: () => ({}),
+    path: async () =>
+      `/api/v1/admin/platform-rule-changes/${await waiting(randomUUID())}/approve`,
+  },
+  'POST /api/v1/admin/platform-rule-changes/{id}/cancel': {
+    body: () => ({}),
+    path: async () =>
+      `/api/v1/admin/platform-rule-changes/${await waiting(admin)}/cancel`,
+  },
+  'POST /api/v1/admin/platform-rule-changes/{id}/refuse': {
+    body: () => ({}),
+    path: async () =>
+      `/api/v1/admin/platform-rule-changes/${await waiting(randomUUID())}/refuse`,
   },
   'PUT /api/v1/admin/verification-files/{id}/checks/{kind}': {
     body: () => ({ detail: 'CUI activ', result: 'ok' }),
@@ -68,6 +97,32 @@ const FIXTURES: Record<
     },
   },
 };
+
+// The reviews rule back on, with no request waiting on it.
+async function clearRequests() {
+  await db.query(`DELETE FROM platform_rule_change WHERE status = 'requested'`);
+  await db.query(
+    `UPDATE platform_rule SET value = 'true'::jsonb
+     WHERE key = 'reviews_only_after_confirmed_job'`,
+  );
+}
+
+// A request waiting on the reviews rule, asked by `asker`.
+async function waiting(asker: string) {
+  await clearRequests();
+  return (
+    await db.query(
+      `INSERT INTO platform_rule_change
+         (id, rule_key, old_value, new_value, reason, status,
+          requested_by, requested_by_name)
+       VALUES (gen_random_uuid(), 'reviews_only_after_confirmed_job',
+         'true'::jsonb, 'false'::jsonb, 'Testăm recenziile.', 'requested',
+         $1, 'Ioana')
+       RETURNING id`,
+      [asker],
+    )
+  ).rows[0].id as string;
+}
 
 const db = new Client({
   connectionString:
@@ -151,6 +206,7 @@ afterAll(async () => {
     `UPDATE platform_rule SET value = 'false'::jsonb
      WHERE key = 'maintenance_mode'`,
   );
+  await clearRequests();
   await db.end();
   await api.stop();
 });

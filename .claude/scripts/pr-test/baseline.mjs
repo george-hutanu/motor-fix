@@ -285,7 +285,14 @@ export function visualOutcome({ meta, shots, web }) {
     ? []
     : Object.entries(shots)
         .filter(([, v]) => v.status === "changed")
-        .map(([name, v]) => ({ kind: "visual", severity: "medium", title: `Unintended visual change: ${name}, ${v.regions.length} region${v.regions.length === 1 ? "" : "s"}`, evidence: v.diff, key: `visual|${name}` }));
+        .map(([name, v]) => ({
+          kind: "visual",
+          severity: "medium",
+          title: `Unintended visual change: ${name}, ${v.regions.length} region${v.regions.length === 1 ? "" : "s"}`,
+          evidence: v.diff,
+          key: `visual|${name}`,
+          steps: [`Compare ${name} with the baseline run ${meta.run} of ${short(meta.sha)}`, `See the changed regions in ${v.diff}`],
+        }));
   return { notes, findings, visual: { baseline: meta, shots } };
 }
 

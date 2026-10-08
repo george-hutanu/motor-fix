@@ -42,6 +42,24 @@ const placeDialog = (page: Page) =>
   page.getByRole('dialog', { name: 'Alege locul' });
 const field = (page: Page) => placeDialog(page).getByRole('combobox');
 
+const CLUJ = {
+  label: 'Strada Exemplu 2, Cluj-Napoca',
+  lat: 46.7712,
+  lng: 23.6236,
+};
+// The address look-up is answered here, not by the api: only the api's test
+// boot has a stand-in with fixed answers, and a deployed api answers real
+// addresses or none at all.
+const answerPlaces = (page: Page) =>
+  page.route('**/api/v1/places?*', (route) => {
+    const q = new URL(route.request().url()).searchParams.get('q') ?? '';
+    return route.fulfill({
+      body: JSON.stringify({ items: /cluj/i.test(q) ? [CLUJ] : [] }),
+      contentType: 'application/json',
+      status: 200,
+    });
+  });
+
 test('the server sends eight brand tiles, the first one selected', async ({
   request,
 }) => {
@@ -174,6 +192,7 @@ test.describe('the place on Home @seeded', () => {
     page,
   }) => {
     const texts = placeReads(page);
+    await answerPlaces(page);
     await ready(page, '/ro');
     await tile(page, 'Dacia').click();
 
@@ -201,6 +220,7 @@ test.describe('the place on Home @seeded', () => {
   });
 
   test('says when no address was found', async ({ page }) => {
+    await answerPlaces(page);
     await ready(page, '/ro');
     await line(page).getByRole('button').click();
 
@@ -238,6 +258,7 @@ test.describe('the place on Home @seeded', () => {
   test('keeps the place after a reload and in the other language', async ({
     page,
   }) => {
+    await answerPlaces(page);
     await ready(page, '/ro');
     await line(page).getByRole('button').click();
     await field(page).fill('Cluj');

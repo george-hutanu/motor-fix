@@ -1,4 +1,6 @@
 @if (admin()) {
-  <mf-platform-rules />
+  @defer {
+    <mf-platform-rules />
+  }
 }
 <mf-push-panel /><mf-notification-settings />
