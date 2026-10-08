@@ -17,6 +17,7 @@ features:
   - 229-location-or-address
   - 113-garage-live-preview
   - 959-map-fits-circle
+  - 945-map-error-listener
 ---
 
 # Capability: Garage listing
@@ -658,6 +659,18 @@ _From 959-map-fits-circle._
 ### 959-FR-008 — Before the PR is ready, `/design-audit` MUST run on the place step at 320 px, 390 px, tablet and desktop in light and dark; a finding this story caused is fixed, any other verified finding goes to `specs/959-map-fits-circle/deferred.md`. The step's phone rules (111-FR-003's last sentence: no sideways scroll at 320 px, 44 px controls) are unchanged.
 
 _From 959-map-fits-circle._
+
+### 945-FR-001 — Once the map has loaded, a MapLibre error MUST NOT remove the map or reject the opener: the map stays usable, and `show()` keeps placing the pin, drawing the circle and framing the view on it exactly as before the error.
+
+_From 945-map-error-listener._
+
+### 945-FR-002 — Once the map has loaded, the listener that tears the map down on a pre-load error MUST no longer be listening, and a later error MUST reach only the post-load error path, which still calls the step's `failed()` once per error, unchanged.
+
+_From 945-map-error-listener._
+
+### 945-FR-003 — An error raised before the map has loaded MUST still remove the map exactly once and reject the opener with that error, and a `load` that arrives afterwards MUST be ignored.
+
+_From 945-map-error-listener._
 
 ## Retired
 
