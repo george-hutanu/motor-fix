@@ -4,6 +4,8 @@ services:
     # image, and emulating it on Apple silicon was slow and failed with
     # "exec format error". CI keeps postgis/postgis on its amd64 runners.
     image: imresamu/postgis:17-3.5
+    # The worker's slow-statement reading needs the view preloaded.
+    command: ['postgres', '-c', 'shared_preload_libraries=pg_stat_statements']
     environment:
       POSTGRES_USER: motorfix
       POSTGRES_PASSWORD: motorfix
