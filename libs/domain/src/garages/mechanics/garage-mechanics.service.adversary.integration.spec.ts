@@ -91,6 +91,13 @@ describe('GarageMechanicsService.saveCards under hostile input', () => {
     },
   );
 
+  it('refuses a one-emoji name as too short, counting characters as PostgreSQL does', async () => {
+    expect(await refused(save({ mechanics: [{ name: '😀' }] }))).toEqual([
+      { code: 'length', field: 'mechanics[0].name' },
+    ]);
+    expect(await cards()).toEqual([]);
+  });
+
   it('refuses thirty-one cards even when they are all good, and none is written', async () => {
     expect(await refused(save({ mechanics: names(31) }))).toEqual([
       { code: 'too_many', field: 'mechanics' },

@@ -442,6 +442,10 @@ describe('GaragePricesService.saveStarting caps and shapes', () => {
       (oil: string) => ({ brandId: 5, fromBani: lei(100), jobTypeId: oil }),
     ],
     ['a job id that is a number', () => ({ fromBani: lei(100), jobTypeId: 7 })],
+    [
+      'a proposed name that is a number',
+      () => ({ fromBani: lei(100), name: 5 }),
+    ],
   ])('refuses %s as an invalid job list, writing nothing', async (_, entry) => {
     const w = await world();
 

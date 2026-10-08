@@ -56,13 +56,16 @@ const refuse = (errors: FieldProblem[]) =>
 const idOrNone = (value: unknown) =>
   value === undefined || value === null || typeof value === 'string';
 
-// A list of objects whose ids, when given, are strings: what the checks below
-// can read without failing.
+// A list of objects whose ids and proposed name, when given, are strings:
+// what the checks below can read without failing.
 const wellShaped = (jobs: unknown) =>
   Array.isArray(jobs) &&
   jobs.every(
     (job) =>
-      isRecord(job) && idOrNone(job['brandId']) && idOrNone(job['jobTypeId']),
+      isRecord(job) &&
+      idOrNone(job['brandId']) &&
+      idOrNone(job['jobTypeId']) &&
+      idOrNone(job['name']),
   );
 
 // PostgreSQL reads a uuid in either case; lower case lets the payload's own

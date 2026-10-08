@@ -21,7 +21,8 @@ function sectionErrors(mechanics: MechanicsSection['mechanics'] = []) {
     return [{ code: 'too_many', field: 'mechanics' }];
   }
   return mechanics.flatMap((card, i): FieldProblem[] => {
-    const name = plainText(card.name).trim().length;
+    // Counted in code points, as the table's char_length check counts them.
+    const name = [...plainText(card.name).trim()].length;
     const errors: FieldProblem[] = [];
     if (name < MECHANIC_NAME_MIN || name > MECHANIC_NAME_MAX) {
       errors.push({ code: 'length', field: `mechanics[${i}].name` });
