@@ -4,6 +4,10 @@
 export type { AdminGrowthDto } from './models/admin-growth-dto';
 export type { AdminGrowthMonthDto } from './models/admin-growth-month-dto';
 export type { AdminOverviewDto } from './models/admin-overview-dto';
+export type { ApproveAssistantSignInDto } from './models/approve-assistant-sign-in-dto';
+export type { AssistantApprovalDto } from './models/assistant-approval-dto';
+export type { AssistantTokenDto } from './models/assistant-token-dto';
+export type { AssistantTokensDto } from './models/assistant-tokens-dto';
 export type { AuditActorDto } from './models/audit-actor-dto';
 export type { AuditEntryDto } from './models/audit-entry-dto';
 export type { AuditHistoryPageDto } from './models/audit-history-page-dto';

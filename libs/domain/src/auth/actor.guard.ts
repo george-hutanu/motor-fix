@@ -11,6 +11,7 @@ import type { Request } from 'express';
 
 import { verifyAccessToken } from './access-token';
 import { AccountLoader, actorOf, signInRequired } from './account-loader';
+import type { AssistantBroker } from './assistant/assistant.service';
 import type { Capability } from './capabilities';
 import type { OAuthSettings } from './oauth/providers';
 import { type Actor, requireCapability, roleInUse } from './policy';
@@ -24,6 +25,8 @@ export interface AuthOptions {
   tokenSecret: string;
   // Sign-in with Google and Apple; a provider left out is not offered.
   oauth?: OAuthSettings;
+  // Sign-in for AI assistants through the identity server; off when unset.
+  assistant?: AssistantBroker;
 }
 
 const REQUIRES = 'auth:requires';

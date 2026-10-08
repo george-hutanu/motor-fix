@@ -376,7 +376,7 @@ describe('the account module', () => {
         );
     });
 
-  it('exposes no route that writes anything but a session, a new driver account, my language or my role in use', () => {
+  it("exposes no route that writes anything but a session, a new driver account, my language, my role in use or an assistant's sign-in code", () => {
     const controllers =
       AuthModule.register({ databaseUrl, redisUrl, tokenSecret }).controllers ??
       [];
@@ -384,6 +384,8 @@ describe('the account module', () => {
 
     expect(controllers.length).toBeGreaterThan(0);
     expect(writes.sort()).toEqual([
+      'auth/assistant/approve',
+      'auth/assistant/token',
       'auth/oauth/apple/callback',
       'auth/oauth/complete',
       'auth/refresh',

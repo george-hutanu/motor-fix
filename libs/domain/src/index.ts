@@ -9,6 +9,10 @@ export {
 } from './auth/account-loader';
 export { AccountsService } from './auth/accounts.service';
 export { CurrentActor, Public, Requires } from './auth/actor.guard';
+export {
+  type AssistantBroker,
+  assistantBroker,
+} from './auth/assistant/assistant.service';
 export { AuthModule } from './auth/auth.module';
 export {
   type Capability,

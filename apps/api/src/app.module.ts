@@ -1,6 +1,7 @@
 import type { Env, StorageEnv } from '@motor-fix/contracts';
 import {
   AuthModule,
+  assistantBroker,
   CarsModule,
   CatalogueModule,
   EmailConfirmationModule,
@@ -31,6 +32,7 @@ type ApiEnv = Env<'DATABASE_URL' | 'REDIS_URL' | 'AUTH_TOKEN_SECRET'> &
 export class AppModule {
   static register(env: ApiEnv): DynamicModule {
     const auth = AuthModule.register({
+      assistant: assistantBroker(process.env),
       databaseUrl: env.DATABASE_URL,
       oauth: oauthSettings(env.APP_ENV, process.env),
       redisUrl: env.REDIS_URL,
