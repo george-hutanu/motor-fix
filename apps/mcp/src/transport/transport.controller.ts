@@ -10,6 +10,7 @@ import {
 } from '@motor-fix/domain';
 import {
   type Caller,
+  databaseDown,
   register,
   type ToolContext,
   type ToolDefinition,
@@ -129,6 +130,13 @@ export class TransportController {
       // The bearer check runs first, so the token is verified here.
       return await this.actors.caller(req.auth as AuthInfo, requestId);
     } catch (error) {
+      if (databaseDown(error)) {
+        refuse(res, 503, {
+          code: 'service_unavailable',
+          message: 'MotorFix is not available right now. Try again later.',
+        });
+        return null;
+      }
       if (!(error instanceof HttpException)) throw error;
       const status = error.getStatus();
       const body = error.getResponse() as Refusal;

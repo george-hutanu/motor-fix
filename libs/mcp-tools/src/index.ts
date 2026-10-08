@@ -1,4 +1,5 @@
 export { catalogue } from './catalogue';
+export { databaseDown } from './errors';
 export {
   type Caller,
   type CallObserver,

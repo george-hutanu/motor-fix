@@ -81,7 +81,7 @@ async function access(
   tool: ToolDefinition,
   caller: Caller,
   ctx: ToolContext,
-): Promise<Actor | 'not_found' | 'assistant_act_off'> {
+): Promise<Actor | 'not_found' | 'assistant_act_off' | 'assistant_read_off'> {
   const held = new Set(caller.account.roles.map((r) => r.role));
   const actor = tool.roles
     .filter((role) => held.has(role))
@@ -99,6 +99,8 @@ async function access(
   }
   if (tool.acts && !caller.scopes.includes('motorfix.act'))
     return 'assistant_act_off';
+  if (!tool.acts && !caller.scopes.includes('motorfix.read'))
+    return 'assistant_read_off';
   return actor;
 }
 

@@ -64,6 +64,18 @@ describe('tool visibility', () => {
     expect(listed).toEqual(['list_my_cars']);
   });
 
+  it('hides read tools when the token carries no read scope', async () => {
+    const listed = await names(
+      fixtureTools,
+      caller({ roles: ['driver'] }, ['motorfix.act']),
+      context(),
+    );
+    expect(listed).toEqual(['book_service']);
+    expect(
+      await names(fixtureTools, caller({ roles: ['driver'] }, []), context()),
+    ).toEqual([]);
+  });
+
   it('hides a tool whose garage feature is off', async () => {
     const listed = await names(
       fixtureTools,
@@ -102,6 +114,19 @@ describe('tool calls', () => {
     );
     expect(result.isError).toBe(true);
     expect(codeOf(result)).toBe('assistant_act_off');
+  });
+
+  // @traces 365-FR-006
+  it('answers assistant_read_off to a read call without the read scope', async () => {
+    const result = await callTool(
+      fixtureTools,
+      caller({ roles: ['driver'] }, ['motorfix.act']),
+      context(),
+      'list_my_cars',
+      {},
+    );
+    expect(result.isError).toBe(true);
+    expect(codeOf(result)).toBe('assistant_read_off');
   });
 
   it.each([

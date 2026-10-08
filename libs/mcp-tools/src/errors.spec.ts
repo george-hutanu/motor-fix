@@ -80,6 +80,7 @@ describe('toolError', () => {
   it('words its own refusals in both languages', () => {
     for (const code of [
       'assistant_act_off',
+      'assistant_read_off',
       'not_found',
       'validation',
       'maintenance',

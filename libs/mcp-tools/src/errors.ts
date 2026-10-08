@@ -17,6 +17,10 @@ const MESSAGES: Record<string, Record<Language, string>> = {
     en: 'The person allowed this assistant to read only; it cannot act for them.',
     ro: 'Persoana a permis acestui asistent doar să citească; nu poate acționa în numele ei.',
   },
+  assistant_read_off: {
+    en: 'The person did not allow this assistant to read their MotorFix data.',
+    ro: 'Persoana nu a permis acestui asistent să citească datele sale din MotorFix.',
+  },
   internal_error: {
     en: 'Something went wrong. Try again later.',
     ro: 'Ceva nu a mers. Încearcă din nou mai târziu.',
@@ -75,7 +79,7 @@ export function toolError(error: unknown, language: Language): ToolError {
   return refusal('internal_error', language);
 }
 
-function databaseDown(error: unknown): boolean {
+export function databaseDown(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   if (error.name === 'PrismaClientInitializationError') return true;
   const code = (error as { code?: unknown }).code;
