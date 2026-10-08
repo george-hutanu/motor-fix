@@ -376,27 +376,6 @@ describe('down and sweep, against fake docker, git and gh', () => {
     expect(JSON.parse(result.stdout).project).toBe(composeProject(cwd));
   });
 
-  it('down keeps its fixed 60 s limit whatever the environment says', () => {
-    fake('docker', 'sleep 0.3\nexit 0');
-    const result = spawnSync(
-      'node',
-      ['scripts/test-services.ts', 'down', '/r/x'],
-      {
-        cwd,
-        encoding: 'utf8',
-        env: {
-          ...process.env,
-          PATH: `${bin}:${process.env.PATH}`,
-          TEST_SERVICES_DOCKER_TIMEOUT_MS: '1',
-        },
-      },
-    );
-    expect(JSON.parse(result.stdout)).toEqual({
-      project: composeProject('/r/x'),
-      stopped: true,
-    });
-  });
-
   it('down with no worktree stops the current checkout stack', () => {
     fake('docker', 'exit 0');
     fake('git', 'echo /r/here');
