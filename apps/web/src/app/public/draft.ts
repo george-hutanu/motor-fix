@@ -20,7 +20,7 @@ export interface BrowserDraft {
   savedAt: string;
 }
 
-export type LoadPlan =
+type LoadPlan =
   | { kind: 'empty' }
   | { kind: 'local'; draft: BrowserDraft }
   | { kind: 'push'; draft: BrowserDraft }

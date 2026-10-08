@@ -13,11 +13,6 @@ import {
 
 import type { ListingDraftData } from './listing-sections';
 
-export {
-  isListingDraftData,
-  type ListingDraftData,
-} from './listing-sections';
-
 const LANGUAGES = ['ro', 'en'] as const;
 const DRAFT_STATUSES = ['open', 'submitted'] as const;
 export type ListingDraftStatus = (typeof DRAFT_STATUSES)[number];
