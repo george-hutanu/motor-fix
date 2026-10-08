@@ -18,6 +18,9 @@ import { garageInvitesControllerRevoke } from '../fn/garages/garage-invites-cont
 import { GarageInvitesControllerRevoke$Params } from '../fn/garages/garage-invites-controller-revoke';
 import { garageInvitesControllerSend } from '../fn/garages/garage-invites-controller-send';
 import { GarageInvitesControllerSend$Params } from '../fn/garages/garage-invites-controller-send';
+import { garageSettingsControllerUpdate } from '../fn/garages/garage-settings-controller-update';
+import { GarageSettingsControllerUpdate$Params } from '../fn/garages/garage-settings-controller-update';
+import { GarageSettingsDto } from '../models/garage-settings-dto';
 import { PublicGarageDto } from '../models/public-garage-dto';
 import { publicGaragesControllerBySlug } from '../fn/garages/public-garages-controller-by-slug';
 import { PublicGaragesControllerBySlug$Params } from '../fn/garages/public-garages-controller-by-slug';
@@ -135,6 +138,39 @@ export class GaragesService extends BaseService {
   garageInvitesControllerRevoke(params: GarageInvitesControllerRevoke$Params, context?: HttpContext): Promise<void> {
     const resp = this.garageInvitesControllerRevoke$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `garageSettingsControllerUpdate()` */
+  static readonly GarageSettingsControllerUpdatePath = '/api/v1/garages/{garageId}';
+
+  /**
+   * Change the garage's payment methods or courtesy car price.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageSettingsControllerUpdate()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  garageSettingsControllerUpdate$Response(params: GarageSettingsControllerUpdate$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageSettingsDto>> {
+    const obs = garageSettingsControllerUpdate(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Change the garage's payment methods or courtesy car price.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageSettingsControllerUpdate$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  garageSettingsControllerUpdate(params: GarageSettingsControllerUpdate$Params, context?: HttpContext): Promise<GarageSettingsDto> {
+    const resp = this.garageSettingsControllerUpdate$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GarageSettingsDto>): GarageSettingsDto => r.body);
   }
 
   /** Path part for operation `publicGaragesControllerBySlug()` */

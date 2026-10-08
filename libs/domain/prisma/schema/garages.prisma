@@ -35,51 +35,60 @@ enum MobileLegalForm {
 }
 
 model Garage {
-  id                      String                   @id @default(uuid()) @db.Uuid
-  name                    String
-  slug                    String                   @unique
-  status                  GarageStatus             @default(draft)
-  approvedAt              DateTime?                @map("approved_at") @db.Timestamptz(3)
-  createdAt               DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
-  verificationFiles       VerificationFile[]
-  members                 GarageMember[]
-  mechanics               Mechanic[]
-  notificationPreferences NotificationPreference[]
-  features                GarageFeature[]
-  invites                 StaffInvite[]
+  id                         String                   @id @default(uuid()) @db.Uuid
+  name                       String
+  slug                       String                   @unique
+  status                     GarageStatus             @default(draft)
+  approvedAt                 DateTime?                @map("approved_at") @db.Timestamptz(3)
+  createdAt                  DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  verificationFiles          VerificationFile[]
+  members                    GarageMember[]
+  mechanics                  Mechanic[]
+  notificationPreferences    NotificationPreference[]
+  features                   GarageFeature[]
+  invites                    StaffInvite[]
   // CHECKs in the migration: at most 140 and 60 characters, never blank.
-  brandNote               String?                  @map("brand_note")
-  refusalPhrase           String?                  @map("refusal_phrase")
-  brands                  GarageBrand[]
+  brandNote                  String?                  @map("brand_note")
+  refusalPhrase              String?                  @map("refusal_phrase")
+  brands                     GarageBrand[]
   // rar_activity codes the RAR authorisation covers; the activities check
   // writes them.
-  rarActivities           String[]                 @default([]) @map("rar_activities")
+  rarActivities              String[]                 @default([]) @map("rar_activities")
   // The hourly labour range, in bani; both set when the listing is sent.
-  labourFromBani          Int?                     @map("labour_from_bani")
-  labourToBani            Int?                     @map("labour_to_bani")
-  prices                  GaragePrice[]
+  labourFromBani             Int?                     @map("labour_from_bani")
+  labourToBani               Int?                     @map("labour_to_bani")
+  prices                     GaragePrice[]
   // WeeklyHours from contracts' garage-hours; {} until the listing is sent.
-  hours                   Json                     @default("{}")
-  closedDays              GarageClosedDay[]
-  facilities              GarageFacility[]
+  hours                      Json                     @default("{}")
+  closedDays                 GarageClosedDay[]
+  facilities                 GarageFacility[]
   // CHECKs in the migration: +40 and nine digits; 1 to 160 characters; a
   // legal form only for a mobile service. Never in a public read.
-  phone                   String?
-  knownFor                String?                  @map("known_for")
-  businessKind            BusinessKind?            @map("business_kind")
-  mobileLegalForm         MobileLegalForm?         @map("mobile_legal_form")
-  proposedJobs            JobType[]
-  address                 String?                  @db.VarChar(200)
+  phone                      String?
+  knownFor                   String?                  @map("known_for")
+  businessKind               BusinessKind?            @map("business_kind")
+  mobileLegalForm            MobileLegalForm?         @map("mobile_legal_form")
+  proposedJobs               JobType[]
+  address                    String?                  @db.VarChar(200)
   // A mobile mechanic's registered seat: checked by the admin, never public.
-  seatAddress             String?                  @map("seat_address") @db.VarChar(200)
-  latitude                Float?
-  longitude               Float?
-  serviceRadiusKm         Int?                     @map("service_radius_km") @db.SmallInt
-  photos                  GaragePhoto[]
-  requestRecipients       RequestRecipient[]
-  quotes                  Quote[]
-  bookings                Booking[]
-  jobs                    Job[]
+  seatAddress                String?                  @map("seat_address") @db.VarChar(200)
+  latitude                   Float?
+  longitude                  Float?
+  serviceRadiusKm            Int?                     @map("service_radius_km") @db.SmallInt
+  photos                     GaragePhoto[]
+  // The payment methods step 5 ticks; at least one is the step's rule, not
+  // the row's: an unsent garage has none.
+  paymentCash                Boolean                  @default(false) @map("payment_cash")
+  paymentCard                Boolean                  @default(false) @map("payment_card")
+  paymentTransfer            Boolean                  @default(false) @map("payment_transfer")
+  // CHECKs in the migration: a price exactly when paid, whole lei from 1 to
+  // 2,000. Meaningful only while the garage lists the courtesy car.
+  courtesyCarPaid            Boolean                  @default(false) @map("courtesy_car_paid")
+  courtesyCarPricePerDayBani Int?                     @map("courtesy_car_price_per_day_bani")
+  requestRecipients          RequestRecipient[]
+  quotes                     Quote[]
+  bookings                   Booking[]
+  jobs                       Job[]
 
   @@map("garage")
 }

@@ -26,6 +26,29 @@
           />
         }
       </button>
+      @if (fuelsTicked(brand.id); as ticked) {
+        <ul class="fuels">
+          @for (fuel of fuelList; track fuel) {
+            @let on = ticked.includes(fuel);
+            <li>
+              <button
+                type="button"
+                [attr.aria-pressed]="on"
+                [attr.aria-label]="brand.name + ', ' + (fuelKey(fuel) | t)"
+                (click)="tickFuel(brand.id, fuel)"
+              >
+                {{ fuelKey(fuel) | t }}
+                @if (on) {
+                  <mf-lamp state="green" [label]="'public.listing.brands.fuel.ticked' | t" />
+                }
+              </button>
+            </li>
+          }
+        </ul>
+        @if (!ticked.length) {
+          <p class="quiet" role="status">{{ 'public.listing.brands.noRequests' | t: { brand: brand.name } }}</p>
+        }
+      }
     </li>
   }
 </ul>
