@@ -138,6 +138,59 @@ export function formatDay(value: unknown, language: Language): string {
   return `${Number(day)} ${MONTHS_SHORT[language][Number(month) - 1]} ${year}`;
 }
 
+const monthNames = Object.fromEntries(
+  (Object.keys(LOCALES) as Language[]).map((language) => [
+    language,
+    new Intl.DateTimeFormat(LOCALES[language], {
+      month: 'long',
+      timeZone: ZONE,
+    }),
+  ]),
+) as Record<Language, Intl.DateTimeFormat>;
+
+function bucharestDay(date: Date) {
+  const { day, month, year } = Object.fromEntries(
+    dayParts.formatToParts(date).map((p) => [p.type, Number(p.value)]),
+  );
+  return { day, month, year };
+}
+
+const CALENDAR_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
+const DAY_MS = 86_400_000;
+
+// A calendar day as UTC midnight, or undefined: Date rolls 30 February into
+// March, and an expiry that does not exist must not become one that does.
+function calendarDay(value: unknown): Date | undefined {
+  const parts = typeof value === 'string' && CALENDAR_DAY.exec(value);
+  if (!parts) return undefined;
+  const [year, month, day] = parts.slice(1).map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+    ? date
+    : undefined;
+}
+
+export function formatMonthYear(value: unknown, language: Language): string {
+  const date =
+    typeof value === 'string' && CALENDAR_DAY.test(value)
+      ? calendarDay(value)
+      : instant(value);
+  if (!date) return MISSING;
+  return `${monthNames[language].format(date)} ${bucharestDay(date).year}`;
+}
+
+// Whole calendar days from today in Bucharest to an expiry day: 0 on the
+// day itself, negative once it has passed, null for anything but a real day.
+export function daysUntil(expiry: unknown, now: Date): number | null {
+  const target = calendarDay(expiry);
+  if (!target || Number.isNaN(now.getTime())) return null;
+  const today = bucharestDay(now);
+  return Math.round(
+    (target.getTime() - Date.UTC(today.year, today.month - 1, today.day)) /
+      DAY_MS,
+  );
+}
+
 // One 24-hour clock in both languages.
 export function formatClock(value: unknown): string {
   const date = instant(value);
