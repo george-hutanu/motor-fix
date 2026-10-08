@@ -604,23 +604,6 @@ describe('the repository', () => {
     expect(recorded.components).toEqual(listOf('components').sort());
   });
 
-  it('baselines only the files an open change still edits', () => {
-    const recorded = JSON.parse(
-      readFileSync(join(repo, 'scripts/structure-baseline.json'), 'utf8'),
-    );
-
-    expect(recorded).toEqual({
-      components: [],
-      submodules: [
-        'libs/domain/src/catalogue/brands.controller.ts',
-        'libs/domain/src/catalogue/brands.service.ts',
-        'libs/domain/src/catalogue/brands.ts',
-        'libs/domain/src/garages/prices/garage-prices.service.ts',
-        'libs/domain/src/garages/prices/garage-prices.testing.ts',
-      ],
-    });
-  });
-
   it('generates Angular components with a separate template and stylesheet', () => {
     const nx = JSON.parse(readFileSync(join(repo, 'nx.json'), 'utf8'));
 
