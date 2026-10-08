@@ -163,7 +163,7 @@ ol li {
     background: none;
     color: inherit;
     font: inherit;
-    font-size: var(--mf-size-small);
+    font-size: var(--mf-size-body);
     text-align: start;
     white-space: nowrap;
     overflow: hidden;
@@ -207,5 +207,15 @@ ol li {
   aside mf-garage-preview {
     position: sticky;
     top: var(--mf-space-4);
+  }
+}
+
+/* ST-953 FR-001: running text on a phone is at the 16 px body size. */
+@media (max-width: 767.98px) {
+  .label,
+  .hint,
+  .note,
+  .error {
+    font-size: var(--mf-size-body);
   }
 }

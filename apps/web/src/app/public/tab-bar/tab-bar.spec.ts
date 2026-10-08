@@ -308,9 +308,13 @@ describe('the public tab bar', () => {
 
     expect(css).toMatch(/position: sticky/);
     expect(css).toMatch(/bottom: 0/);
-    expect(css).toMatch(/padding:[^;]*max\([^;]*var\(--mf-safe-bottom\)\)/);
+    expect(css).toMatch(
+      /padding: 8px 8px max\(16px, var\(--mf-safe-bottom\)\)/,
+    );
     expect(css).toMatch(/min-height: (4[4-9]|5\d)px/);
-    expect(css).toMatch(/font-size: var\(--mf-size-label\)/);
+    // ST-953 FR-001: a link's text on a phone is at the 16 px body size, on the 4 px grid.
+    expect(css).toMatch(/font-size: var\(--mf-size-body\)/);
+    expect(css).toMatch(/\ba \{[^}]*gap: 4px/);
     expect(css).toMatch(
       /\[aria-current=["']?page["']?\][^{]*\{[^}]*color: var\(--mf-amber-ink\)/,
     );

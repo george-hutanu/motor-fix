@@ -26,3 +26,10 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ST-953 FR-001: running text on a phone is at the 16 px body size. */
+@media (max-width: 767.98px) {
+  .note {
+    font-size: var(--mf-size-body);
+  }
+}
