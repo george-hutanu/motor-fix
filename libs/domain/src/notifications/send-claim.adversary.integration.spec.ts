@@ -163,8 +163,24 @@ describe('many send jobs for one row', () => {
 
   it('calls Brevo once and leaves the row queued and unclaimed when the one call is refused for a retry', async () => {
     const { row: queued } = await queuedEmail();
-    mock.answer({ status: 503 });
-    const results = await many(queued.id, 8);
+    // Brevo answers only once the other seven have been refused the claim,
+    // so none of them starts after the 503 has released it.
+    let answer = () => {};
+    mock.answer({
+      after: new Promise<void>((resolve) => {
+        answer = resolve;
+      }),
+      status: 503,
+    });
+    const jobs = Array.from({ length: 8 }, () => sendJob(queued.id));
+    let refused = 0;
+    for (const job of jobs)
+      job.catch(() => {
+        refused += 1;
+      });
+    await until('seven jobs to be refused the claim', () => refused >= 7);
+    answer();
+    const results = await Promise.allSettled(jobs);
     expect(mock.emails()).toHaveLength(1);
     expect(results.every((r) => r.status === 'rejected')).toBe(true);
     expect(await row(queued.id)).toMatchObject({
@@ -590,14 +606,17 @@ describe('a database error after Brevo accepted an e-mail', () => {
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     let waits: string[];
+    let result: unknown;
     try {
-      ({ log: waits } = await timersArmedBy('notifications.processor', () =>
-        sendJob(queued.id),
+      ({ log: waits, value: result } = await timersArmedBy(
+        'notifications.processor',
+        () => sendJob(queued.id),
       ));
     } finally {
       failing();
       logged.mockRestore();
     }
+    expect(result).toBeUndefined();
     expect(tries).toHaveLength(3);
     // Back to back: no timer ran out between them (Brevo's own request
     // limit is armed, and never reached).
