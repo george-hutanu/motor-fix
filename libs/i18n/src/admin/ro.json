@@ -40,5 +40,67 @@
     "testOnly": "Doar în testare",
     "title": "Setări platformă",
     "twoAdmins": "Este nevoie de un al doilea administrator."
+  },
+  "users": {
+    "cars": {
+      "count": {
+        "few": "{n} mașini",
+        "one": "{n} mașină",
+        "other": "{n} de mașini"
+      },
+      "none": "fără mașină"
+    },
+    "count": {
+      "age": {
+        "few": "cont de {n} zile",
+        "one": "cont de {n} zi",
+        "other": "cont de {n} de zile"
+      },
+      "requests": {
+        "few": "{n} cereri",
+        "one": "{n} cerere",
+        "other": "{n} de cereri"
+      },
+      "reviews": {
+        "few": "{n} recenzii",
+        "one": "{n} recenzie",
+        "other": "{n} de recenzii"
+      }
+    },
+    "empty": "Niciun cont încă.",
+    "failed": "Lista nu s‑a încărcat.",
+    "loading": "Se încarcă conturile",
+    "more": "Următoarele conturi nu s‑au încărcat.",
+    "recent": "Conturi recente",
+    "retry": "Reîncearcă",
+    "roles": {
+      "admin": "admin",
+      "driver": "șofer",
+      "garage": "service",
+      "mechanic": "mecanic",
+      "receptionist": "recepție"
+    },
+    "state": {
+      "active": "activ",
+      "since": "{state} · din {when}",
+      "suspended": "suspendat"
+    },
+    "totals": {
+      "drivers": {
+        "few": "{n} șoferi activi",
+        "one": "{n} șofer activ",
+        "other": "{n} de șoferi activi"
+      },
+      "garages": {
+        "few": "{n} service‑uri",
+        "one": "{n} service",
+        "other": "{n} de service‑uri"
+      },
+      "mechanics": {
+        "few": "{n} mecanici",
+        "one": "{n} mecanic",
+        "other": "{n} de mecanici"
+      }
+    }
   }
 }

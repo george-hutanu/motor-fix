@@ -123,9 +123,9 @@ test.describe('the admin dashboard @seeded', () => {
       await expect(
         menu.getByRole('link', { name: 'Service‑uri, 2 în așteptare' }),
       ).toBeVisible();
-      await expect(menu.getByRole('link', { name: /Utilizatori/ })).toHaveCount(
-        0,
-      );
+      await expect(
+        menu.getByRole('link', { name: /Utilizatori/ }),
+      ).toBeVisible();
     });
   }
 
