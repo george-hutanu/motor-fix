@@ -13,20 +13,26 @@ import {
   resource,
   signal,
   TransferState,
+  untracked,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { nearOf } from '@motor-fix/contracts/search-place';
 import {
   type BrandDto,
   BrandsService,
   type HealthReadyDto,
   HealthService,
   HomeService,
+  PlacesService,
 } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { BrandPicker } from './brand-picker/brand-picker';
 import { BrandSearch } from './brand-picker/brand-search/brand-search';
+import { type Place, PlaceStore } from './place/place-store';
+import { Session } from '../dashboard/session';
 
 export const HEALTH = makeStateKey<HealthReadyDto | null>('health');
 export const TILES = makeStateKey<BrandDto[] | null>('tiles');
@@ -52,6 +58,15 @@ export class Home {
   private readonly document = inject(DOCUMENT);
   private readonly reduced = inject(REDUCED_MOTION);
   private readonly homes = inject(HomeService);
+  private readonly overlays = inject(Overlays);
+  private readonly session = inject(Session);
+  private readonly places = inject(PlacesService);
+  private readonly store = inject(PlaceStore);
+  protected readonly place = this.store.place;
+  // Bumped by a place chosen here, so a Setări city answering later never
+  // replaces it.
+  private chosen = 0;
+  private cityAsked: string | null = null;
   protected readonly i18n = inject(I18n);
   protected readonly health = signal(this.state.get(HEALTH, null));
   protected readonly tiles = signal(this.state.get(TILES, null) ?? []);
@@ -71,9 +86,13 @@ export class Home {
   // The count is never read on the server: the page there carries the tiles,
   // and the browser asks once per brand it shows.
   protected readonly home = resource({
-    loader: ({ params }) =>
-      this.homes.homeControllerForBrand({ brand: params }),
-    params: () => (this.server ? undefined : this.selected()?.slug),
+    loader: ({ params }) => this.homes.homeControllerForBrand(params),
+    params: () => {
+      const brand = this.selected()?.slug;
+      if (this.server || !brand) return undefined;
+      const place = this.place();
+      return place ? { brand, near: nearOf(place) } : { brand };
+    },
   });
   protected readonly busy = computed(
     () => this.server || this.home.isLoading(),
@@ -99,7 +118,19 @@ export class Home {
   });
 
   constructor() {
-    afterNextRender(() => this.hydrated.set(true));
+    afterNextRender(() => {
+      this.hydrated.set(true);
+    });
+    // Public pages never ask for the session (each ask renews the cookie), so
+    // the Setări city is taken only once some other screen has loaded it.
+    effect(() => {
+      const city = this.session.current()?.city;
+      if (!this.hydrated() || !city || city === this.cityAsked) return;
+      this.cityAsked = city;
+      untracked(() => {
+        if (!this.place()) void this.fromCity(city);
+      });
+    });
     effect((onCleanup) => {
       if (!this.hydrated() || this.touched() || this.reduced()) return;
       if (this.tiles().length < 2) return;
@@ -109,9 +140,19 @@ export class Home {
       onCleanup(() => clearInterval(timer));
     });
 
-    if (!this.server) return;
-    const health = inject(HealthService);
     const brands = inject(BrandsService);
+    if (!this.server) {
+      // Opened from another screen in the app: no server render handed the
+      // tiles over, so the browser reads them itself.
+      if (!this.state.hasKey(TILES)) {
+        void brands
+          .popularBrandsControllerTiles({ limit: 8 })
+          .catch(() => [])
+          .then((tiles) => this.tiles.set(tiles));
+      }
+      return;
+    }
+    const health = inject(HealthService);
     const pending = inject(PendingTasks);
     void pending.run(async () => {
       const ready = await health.healthControllerReady().catch(report);
@@ -124,6 +165,37 @@ export class Home {
         .catch(() => []);
       this.tiles.set(tiles);
       this.state.set(TILES, tiles);
+    });
+  }
+
+  protected async pickPlace() {
+    // Loaded on the first tap: the dialog stays out of the initial bundle.
+    const { PlaceDialog } = await import('./place/place-dialog/place-dialog');
+    const place = await this.overlays.open<Place>(PlaceDialog, {
+      confirmDiscard: false,
+      shape: 'dialog',
+      title: 'public.home.place.title',
+    });
+    if (place === 'cancelled') return;
+    this.chosen++;
+    this.store.set(place);
+  }
+
+  // A driver who saved a city in Setări starts near it; a failed or empty
+  // look-up leaves all of Romania, saying nothing.
+  private async fromCity(city: string) {
+    const chosen = this.chosen;
+    const items = await this.places
+      .placesControllerSearch({ lang: this.i18n.language(), q: city })
+      .then((answer) => answer.items)
+      .catch(() => []);
+    const [first] = items;
+    if (!first || chosen !== this.chosen || this.place()) return;
+    this.store.use({
+      label: city,
+      lat: first.lat,
+      lng: first.lng,
+      origin: 'address',
     });
   }
 

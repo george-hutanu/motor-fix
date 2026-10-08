@@ -56,6 +56,21 @@
       "paragraph": "Alege marca și vezi câte service‑uri o primesc. Căutarea este pe marcă; modelul, anul și combustibilul intră în cererea de ofertă."
     },
     "picker": "Marca mașinii",
+    "place": {
+      "all": "În toată România",
+      "change": "Schimbă",
+      "choose": "Alege locul",
+      "field": "Adresă",
+      "locating": "Se caută locația…",
+      "locationFailed": "Nu am putut afla locația; scrie o adresă",
+      "near": "Lângă {label}",
+      "nearYou": "Lângă tine",
+      "nothingFound": "Nu am găsit adresa",
+      "placeholder": "Stradă, oraș",
+      "searchUnavailable": "Nu putem căuta adrese acum",
+      "title": "Alege locul",
+      "useLocation": "Folosește locația mea"
+    },
     "retry": "Reîncearcă",
     "search": "Caută service‑uri",
     "searchFailed": "Lista de mărci nu s‑a încărcat",
