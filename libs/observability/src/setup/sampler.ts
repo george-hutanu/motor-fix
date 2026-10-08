@@ -5,7 +5,8 @@ import type { Sampler } from '@opentelemetry/sdk-trace-node';
 // (consumer) or a queued message (producer), sampled by the ratio. Spans no
 // request or job started (queue polling, background queries) are dropped.
 // A caller's trace context is continued but sampled by our own ratio; a job
-// carries its request's decision through our queue; child spans follow
+// is sampled by the same ratio over the same trace id, so it keeps its
+// request's decision; child spans follow
 // their parent.
 export function sampler(ratio: number): Sampler {
   const { SamplingDecision, TraceIdRatioBasedSampler } =
@@ -27,7 +28,7 @@ export function sampler(ratio: number): Sampler {
       const sampledParent =
         parent !== undefined &&
         (parent.traceFlags & TraceFlags.SAMPLED) === TraceFlags.SAMPLED;
-      if (parent && (!parent.isRemote || kind === SpanKind.CONSUMER)) {
+      if (parent && !parent.isRemote) {
         return decided(sampledParent);
       }
       if (!parent && (kind === SpanKind.INTERNAL || kind === SpanKind.CLIENT)) {

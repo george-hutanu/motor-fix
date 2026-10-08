@@ -49,6 +49,7 @@ import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { createPrisma, PRISMA } from '../auth/prisma';
 import type { PrismaClient } from '../generated/prisma/client';
+import { logFinalFailure } from '../job-failures';
 import { inJob } from '../logging';
 
 interface NotificationsOptions {
@@ -196,6 +197,7 @@ export class NotificationsModule implements OnApplicationShutdown {
               },
             );
             observeWorker(worker);
+            logFinalFailure(worker, new Logger('Notifications'));
             return worker;
           },
         },
@@ -227,6 +229,7 @@ export class NotificationsModule implements OnApplicationShutdown {
               },
             );
             observeWorker(worker);
+            logFinalFailure(worker, new Logger('News'));
             return worker;
           },
         },

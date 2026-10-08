@@ -53,12 +53,12 @@ describe('sampler', () => {
     );
   });
 
-  it("follows the decision of a job's parent, carried through our own queue", () => {
+  it("samples a job's span by the ratio, never by the flag its carrier brings", () => {
     expect(decide(0, withParent(true, true), SpanKind.CONSUMER)).toBe(
-      SamplingDecision.RECORD_AND_SAMPLED,
+      SamplingDecision.NOT_RECORD,
     );
     expect(decide(1, withParent(true, false), SpanKind.CONSUMER)).toBe(
-      SamplingDecision.NOT_RECORD,
+      SamplingDecision.RECORD_AND_SAMPLED,
     );
   });
 

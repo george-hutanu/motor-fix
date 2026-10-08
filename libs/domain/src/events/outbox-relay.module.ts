@@ -1,4 +1,4 @@
-import { queueTelemetry } from '@motor-fix/observability';
+import { observeQueue, queueTelemetry } from '@motor-fix/observability';
 import {
   type DynamicModule,
   Inject,
@@ -67,20 +67,24 @@ export class OutboxRelayModule implements OnModuleInit, OnApplicationShutdown {
         {
           provide: RELAY_QUEUES,
           // Fails fast like the publisher: the add runs inside the batch.
+          // The relay runs in the worker only, so its queues are the ones
+          // whose health it reports.
           useFactory: (): Consumers =>
             (options.consumers ?? []).map(
               ({ jobs, kinds, queue, requeue }) => ({
                 kinds,
-                queue: new Queue(queue, {
-                  connection: {
-                    commandTimeout: 2000,
-                    enableOfflineQueue: false,
-                    maxRetriesPerRequest: 1,
-                    url: options.redisUrl,
-                  },
-                  defaultJobOptions: jobs,
-                  telemetry: queueTelemetry(),
-                }),
+                queue: observed(
+                  new Queue(queue, {
+                    connection: {
+                      commandTimeout: 2000,
+                      enableOfflineQueue: false,
+                      maxRetriesPerRequest: 1,
+                      url: options.redisUrl,
+                    },
+                    defaultJobOptions: jobs,
+                    telemetry: queueTelemetry(),
+                  }),
+                ),
                 requeue,
               }),
             ),
@@ -105,4 +109,9 @@ export class OutboxRelayModule implements OnModuleInit, OnApplicationShutdown {
     this.redis.disconnect();
     await this.prisma.$disconnect();
   }
+}
+
+function observed(queue: Queue): Queue {
+  observeQueue(queue);
+  return queue;
 }
