@@ -9,6 +9,7 @@ import { AuditService } from '../../audit/audit.service';
 import { AccountsService } from '../../auth/accounts.service';
 import { createPrisma } from '../../auth/prisma';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { timersArmedBy, until } from '../../waits.testing';
 import { outbox } from '../event.port';
 import { LIVE_CHANNEL } from '../live/live.hub';
 
@@ -155,11 +156,16 @@ describe('the relay', () => {
       where: { kind: 'quote.sent' },
     });
 
-    const started = Date.now();
-    expect(await new OutboxRelay(prisma, publisher).relay()).toBe(1);
-    await new Promise((r) => setTimeout(r, 100));
+    const { log, value: relayed } = await timersArmedBy('outbox-relay.ts', () =>
+      new OutboxRelay(prisma, publisher).relay(),
+    );
+    expect(relayed).toBe(1);
+    await until('the event on live:events', () =>
+      heard.some((m) => m.includes('quote.sent')),
+    );
 
-    expect(Date.now() - started).toBeLessThan(2_000);
+    // Published in the call itself, not on a later poll.
+    expect(log).toEqual([]);
     expect(
       heard
         .map((m) => JSON.parse(m))
@@ -365,10 +371,7 @@ describe('the relay loop', () => {
     relay.start();
     try {
       const [id] = await recorded(1);
-      const until = Date.now() + 1_000;
-      while (redis.sent.length === 0 && Date.now() < until) {
-        await new Promise((r) => setTimeout(r, 20));
-      }
+      await until('the relay to publish', () => redis.sent.length > 0);
       expect(redis.sent.map((m) => m.event['id'])).toEqual([id]);
     } finally {
       await relay.stop();
@@ -383,12 +386,10 @@ describe('the relay loop', () => {
     await recorded(1);
     relay.start();
     try {
+      // Not a wait for work: Redis stays down across a few polls.
       await new Promise((r) => setTimeout(r, 500));
       redis.down = false;
-      const until = Date.now() + 1_000;
-      while (redis.sent.length === 0 && Date.now() < until) {
-        await new Promise((r) => setTimeout(r, 20));
-      }
+      await until('the relay to publish', () => redis.sent.length > 0);
       expect(redis.sent).toHaveLength(1);
     } finally {
       await relay.stop();

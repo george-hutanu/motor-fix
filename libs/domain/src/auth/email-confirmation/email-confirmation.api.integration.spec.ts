@@ -16,6 +16,7 @@ import {
   redisUrlFor,
   testConfig,
 } from '../../notifications/notifications.testing';
+import { until } from '../../waits.testing';
 import { signAccessToken } from '../access-token';
 import { AUTH_REDIS } from '../attempts';
 import { AuthModule } from '../auth.module';
@@ -213,7 +214,9 @@ describe('confirming', () => {
       actorId: id,
       subjectType: 'account',
     });
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await until('the live announcement', () =>
+      published.some((m) => m.includes('account.email_confirmed')),
+    );
     expect(
       published.map((m) => JSON.parse(m) as Record<string, unknown>),
     ).toContainEqual({
@@ -487,6 +490,7 @@ describe('with Redis down', () => {
     down();
     await confirm(tokenOf(await lastLink(id))).expect(200);
     expect(await verifiedAt(id)).not.toBeNull();
+    // Long enough for a wrong announcement to arrive.
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(
       published.filter((m) => m.includes('account.email_confirmed')),
