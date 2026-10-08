@@ -14,7 +14,10 @@ import { SignInDialog } from '../sign-in/sign-in-dialog';
 export class AdminSignIn {
   constructor() {
     if (isPlatformBrowser(inject(PLATFORM_ID))) {
-      void inject(SignInDialog).start();
+      // A dialog that fails to open leaves the home page as it is.
+      inject(SignInDialog)
+        .start()
+        .catch(() => undefined);
     }
   }
 }

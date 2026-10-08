@@ -34,7 +34,7 @@ export class PlatformStatus {
   private readonly state = signal(false);
   readonly maintenance = this.state.asReadonly();
   readonly isAdmin = computed(
-    () => this.session.current()?.roles.includes('admin') ?? false,
+    () => this.session.current()?.roles?.includes('admin') ?? false,
   );
   readonly showPage = computed(() => this.maintenance() && !this.isAdmin());
   // Only the newest read decides, so a quick on and off ends in the last state.
@@ -71,7 +71,8 @@ export class PlatformStatus {
     try {
       const { maintenance } =
         await this.platform.platformStatusControllerStatus();
-      if (read === this.reads) this.state.set(maintenance);
+      // Only a true flag takes the site down; anything else reads as up.
+      if (read === this.reads) this.state.set(maintenance === true);
     } catch {
       // Unknown is not a reason to hide the site: keep what was known.
     }
