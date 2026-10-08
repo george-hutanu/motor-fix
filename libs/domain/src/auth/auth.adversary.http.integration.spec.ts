@@ -339,7 +339,7 @@ describe('who am I over HTTP and account writes under attack', () => {
         data: { name: 'A', slug: 'a' },
       });
       await prisma.mechanic.create({
-        data: { accountId, garageId: garage.id },
+        data: { accountId, garageId: garage.id, name: 'Mecanic' },
       });
       const token = bearer(accountId, 'mechanic');
 

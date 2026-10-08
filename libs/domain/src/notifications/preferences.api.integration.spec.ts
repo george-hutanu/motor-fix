@@ -579,7 +579,7 @@ async function mechanic(
 ) {
   const id = await account(name, ['mechanic']);
   await prisma.mechanic.create({
-    data: { accountId: id, canAnswerQuotes, garageId },
+    data: { accountId: id, canAnswerQuotes, garageId, name: 'Mecanic' },
   });
   return id;
 }
@@ -683,7 +683,12 @@ describe('the staff lists a person reads', () => {
       'admin',
     ]);
     await prisma.mechanic.create({
-      data: { accountId: person, canAnswerQuotes: false, garageId: second },
+      data: {
+        accountId: person,
+        canAnswerQuotes: false,
+        garageId: second,
+        name: 'Mecanic',
+      },
     });
     const entries = await staffOf(person, 'garage');
     expect(entries.map((e) => [e.garageName, e.role])).toEqual([

@@ -251,6 +251,7 @@ export class StaffInviteService {
           create: {
             accountId: actor.accountId,
             garageId,
+            name: invite.name,
             ...permissionsOf(invite),
           },
           update: { garageId, ...permissionsOf(invite) },

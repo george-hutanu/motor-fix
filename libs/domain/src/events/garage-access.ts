@@ -39,10 +39,10 @@ export const loadGarageAccess =
       new Set(members.filter((m) => m.role === role).map((m) => m.accountId));
     return {
       mechanics: new Map(
-        mechanics.map(({ accountId, ...permissions }) => [
-          accountId,
-          permissions,
-        ]),
+        // A card with no account yet hears nothing.
+        mechanics.flatMap(({ accountId, ...permissions }) =>
+          accountId ? [[accountId, permissions] as const] : [],
+        ),
       ),
       off: new Set(off.map((f) => f.key)),
       owners: holding('owner'),
