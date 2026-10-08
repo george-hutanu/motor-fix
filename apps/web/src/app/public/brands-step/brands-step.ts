@@ -6,6 +6,7 @@ import {
   DestroyRef,
   inject,
   model,
+  output,
   PLATFORM_ID,
   signal,
 } from '@angular/core';
@@ -54,6 +55,8 @@ export class BrandsStep {
   private searches = 0;
 
   readonly value = model<BrandsSection>({ brands: [] });
+  // The ids of the popular and searched brands, in the order the chips show them.
+  readonly order = output<string[]>();
 
   protected readonly note: Text = 'brandNote';
   protected readonly phrase: Text = 'refusalPhrase';
@@ -82,13 +85,24 @@ export class BrandsStep {
   });
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => clearTimeout(this.timer));
+    let gone = false;
+    inject(DestroyRef).onDestroy(() => {
+      gone = true;
+      clearTimeout(this.timer);
+    });
     // The chips come with the client: a server render would drop the answer.
     if (isPlatformServer(inject(PLATFORM_ID))) return;
     this.catalogue.brandsControllerSearch({}).then(
-      (page) => this.popular.set(page.items.slice(0, POPULAR)),
+      (page) => {
+        this.popular.set(page.items.slice(0, POPULAR));
+        if (!gone) this.tellOrder();
+      },
       () => this.notice.set('public.listing.brands.searchDown'),
     );
+  }
+
+  private tellOrder() {
+    this.order.emit([...this.popular(), ...this.added()].map((b) => b.id));
   }
 
   protected input(event: Event) {
@@ -105,8 +119,10 @@ export class BrandsStep {
 
   // A brand found by search is taken, as a new chip or in place.
   protected pick(brand: Brand) {
-    if (!this.chips().some((c) => c.id === brand.id))
+    if (!this.chips().some((c) => c.id === brand.id)) {
       this.added.update((added) => [...added, brand]);
+      this.tellOrder();
+    }
     this.set(brand, 'works_on');
     this.clear();
   }

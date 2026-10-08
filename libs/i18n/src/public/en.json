@@ -229,6 +229,17 @@
       "seat": "Registered seat",
       "suggestions": "Addresses found"
     },
+    "preview": {
+      "draft": "Draft · published after verification",
+      "mechanicNote": "shows once they accept the invitation",
+      "mobile": "Mobile · {km} km around the base",
+      "namePlaceholder": "Your garage's name",
+      "noBrand": "No brand chosen",
+      "range": "{from}–{to} lei/hour",
+      "rangePlaceholder": "Labour: — lei/hour",
+      "title": "How drivers will see it",
+      "toggle": "Preview"
+    },
     "prices": {
       "addJob": "Add a job",
       "brandRange": "A different range for a brand",

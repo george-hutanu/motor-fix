@@ -7,6 +7,7 @@ features:
   - 881-observability-current
   - 915-telemetry-flush-on-stop
   - 924-inventory-real-calls
+  - 877-web-health-grafana
   - 878-data-store-metrics
   - 916-otlp-log-masking-coverage
 ---
@@ -188,6 +189,78 @@ _From 924-inventory-real-calls._
 ### 924-FR-003 — On this repository the check MUST still pass with the inventory unchanged, and the change MUST add no dependency (Constitution I): `package.json` and the lockfile stay unchanged, and comment and string handling lives in the check itself, not in a TypeScript parser.
 
 _From 924-inventory-real-calls._
+
+### 877-FR-001 — The web server MUST load the shared telemetry module before it starts, with service name `web`, reading its configuration only through `telemetry()`; with it off, the web server MUST start nothing and behave as today (876-FR-001, 876-FR-014 applied to `web`).
+
+_From 877-web-health-grafana._
+
+### 877-FR-002 — Every server-rendered page request MUST be one span named by its Angular route template and method, never the raw path; an unmatched route MUST use the fixed label `unmatched`. The template MUST come from the rendered app's router state (the deepest matched route's configured path), never from a second route table on the server. Static file requests and `/health/*` MUST produce no span.
+
+_From 877-web-health-grafana._
+
+### 877-FR-003 — The `/api/` pass-through MUST be a span with a child span for the outgoing call to the API that carries the trace context to the API, so the API's request span joins that trace; an incoming `traceparent` from the browser MUST be honoured as the parent.
+
+_From 877-web-health-grafana._
+
+### 877-FR-004 — The web server MUST report the request-duration histogram (`http.server.request.duration`) labelled by route template, method and status, and the Node runtime metrics, with labels from small fixed sets only (876-FR-008, -010, -011).
+
+_From 877-web-health-grafana._
+
+### 877-FR-005 — The web server's log lines MUST carry the trace id and span id when one is active; a request ending in a server error MUST write one error log line with the trace id and mark the span as error; e-mails, Romanian phone numbers and plates MUST be masked in spans, logs and exceptions (876-FR-006, -007, -012).
+
+_From 877-web-health-grafana._
+
+### 877-FR-006 — `/health/ready` on the web server MUST answer ok only when the API's `/health/ready` answers any 2xx within 2 s; otherwise it MUST answer 503. Each probe MUST call the API once; no result is cached. `/health/live` MUST stay unconditional.
+
+_From 877-web-health-grafana._
+
+### 877-FR-007 — The web server MUST read the browser collector URL from its runtime configuration (one optional variable, proposed `FARO_URL`, an absolute https URL in staging and production) and hand it, with the release version, to the browser inside the HTML it renders (no new endpoint); unset or empty → no browser telemetry and no telemetry code loaded in the browser. A malformed value MUST fail at start naming the variable and never print its value. `.env.example` MUST list the variable by name with no value.
+
+_From 877-web-health-grafana._
+
+### 877-FR-008 — When the collector URL is set, the browser MUST send LCP, INP, CLS, TTFB and FCP for each page, each labelled with the route template, the app version (`RELEASE_SHA`) and the viewport class (phone < 768 px, tablet 768–1199 px, desktop ≥ 1200 px).
+
+_From 877-web-health-grafana._
+
+### 877-FR-009 — When the collector URL is set, the browser MUST send each uncaught JavaScript error and unhandled promise rejection with the route template, app version and stack; at most 20 errors per page load, after the SDK's own deduplication.
+
+_From 877-web-health-grafana._
+
+### 877-FR-010 — Before anything leaves the browser, e-mail addresses, Romanian phone numbers and number plates MUST be replaced by `***` in error messages, stacks and any attribute, and every URL-valued attribute, the page URL included, MUST be sent without its query string or fragment.
+
+_From 877-web-health-grafana._
+
+### 877-FR-011 — Browser telemetry MUST create and send no session id, user id or device id, set no cookie, record no session replay or user journey, and leave nothing of its own in local storage, session storage or IndexedDB once the page has loaded and sent. The SDK's transient availability probe (one test key set and removed again at load, plan.md R3) and the tracing sampling flag (a session attribute with no id, removed before sending) are permitted because nothing persists and nothing leaves the device.
+
+_From 877-web-health-grafana._
+
+### 877-FR-012 — Browser requests to the web app's own origin MUST carry a `traceparent` header from a browser span that is exported to the collector; requests to any other origin MUST carry no trace header.
+
+_From 877-web-health-grafana._
+
+### 877-FR-013 — The browser telemetry MUST add less than 30 kB gzipped to Home's Angular `initial` bundle, measured against the build without it; the SDK itself MUST be loaded with a dynamic import once the page is idle. ST-249's 250 kB whole first-load budget is measured beside it.
+
+_From 877-web-health-grafana._
+
+### 877-FR-014 — A collector or SDK failure MUST never break, block or slow a page or a server request; export is batched and bounded, and failures are dropped silently in the browser (876-FR-013 applied to `web`).
+
+_From 877-web-health-grafana._
+
+### 877-FR-015 — The release MUST upload the web app's source maps to Grafana Cloud for that release's version when the upload credential is configured, skip it (and still succeed) when it is not, and the web app MUST NOT serve source maps publicly.
+
+_From 877-web-health-grafana._
+
+### 877-FR-016 — `infra/observability/inventory.json` MUST stay passing under `scripts/observability-inventory.ts`; the `web` entries and the new outside service (Grafana Cloud Frontend Observability) MUST be listed with dashboard and alerts `"none"` and the reason that ST-879 and ST-880 add them.
+
+_From 877-web-health-grafana._
+
+### 877-FR-017 — Unit tests MUST cover the browser masking and the route-template mapping; one Playwright test MUST load Home with the collector stubbed and assert that a Web Vitals payload is sent and holds no personal data, no id and no trace header to the collector.
+
+_From 877-web-health-grafana._
+
+### 877-FR-018 — The PR's Observability section MUST list the signals added (web traces, request metrics, runtime metrics, logs, browser Web Vitals and errors) and the reports they make possible (per-route render latency and errors, Web Vitals by route and viewport class, browser error rate per release) for ST-879 and ST-880.
+
+_From 877-web-health-grafana._
 
 ### 878-FR-001 — A database migration MUST create the role `motorfix_monitor` (when it does not exist) able to log in, member of `pg_monitor` only, with no other grant and no password in the migration, and MUST create the `pg_stat_statements` extension when it does not exist. The role's password MUST come from a deployment variable, `MONITOR_DATABASE_PASSWORD`, applied at deploy time and never printed.
 

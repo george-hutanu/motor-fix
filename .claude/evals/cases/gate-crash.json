@@ -1,0 +1,24 @@
+[
+  {
+    "id": "a-fail-closed-gate-that-cannot-load-refuses",
+    "hook": "pre:bash:guard",
+    "why": "a gate whose script dies before deciding exits 1, which Claude Code reads as a non-blocking error — a broken bash guard would approve every command until somebody noticed",
+    "fixture": {
+      "commits": [{ "message": "break the bash guard", "files": { ".claude/hooks/bash-guard.mjs": "import \"./does-not-exist.mjs\";\n" } }]
+    },
+    "payload": { "tool_input": { "command": "ls" } },
+    "env": { "SPECKIT_HOOKS_DRY_RUN": "", "SPECKIT_DISABLED_HOOKS": "" },
+    "expect": { "exit": 2, "stderr": "pre:bash:guard refused: .*SPECKIT_DISABLED_HOOKS=pre:bash:guard" }
+  },
+  {
+    "id": "an-advisory-hook-that-crashes-keeps-its-exit-code",
+    "hook": "stop:telemetry",
+    "why": "only gates marked fail_closed refuse on a crash; ending a session because the telemetry ledger broke would make the ledger cost more than it records",
+    "fixture": {
+      "commits": [{ "message": "break the telemetry hook", "files": { ".claude/hooks/session-telemetry.mjs": "process.exit(1);\n" } }]
+    },
+    "payload": { "session_id": "eval-crashing-advisory-hook" },
+    "env": { "SPECKIT_HOOKS_DRY_RUN": "", "SPECKIT_DISABLED_HOOKS": "" },
+    "expect": { "exit": 1 }
+  }
+]
