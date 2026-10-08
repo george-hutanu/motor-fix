@@ -1,6 +1,6 @@
 ---
 capability: garage-listing
-updated: 2026-10-07
+updated: 2026-10-08
 features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
@@ -8,6 +8,7 @@ features:
   - 205-company-rar-check
   - 112-opening-hours
   - 354-job-catalogue-prices
+  - 861-jump-holds-step
 ---
 
 # Capability: Garage listing
@@ -36,9 +37,9 @@ _From 108-step-list-in-view._
 
 _From 108-step-list-in-view._
 
-### 108-FR-006 — Tapping or activating an entry with the keyboard MUST bring that step's section into view below the header (or the phone bar), move keyboard focus to the section's heading, and make that entry the current one, which it stays until the owner next scrolls (the jump's own scrolling never moves the highlight off it). With the device set to reduced motion the jump MUST be immediate.
+### 861-FR-008 — Replacing 108-FR-006: tapping or activating an entry with the keyboard MUST bring that step's section into view below the header (or the phone bar), move keyboard focus to the section's heading, and make that entry the current one; the jump's own scrolling, from its first movement to its end, never moves the highlight off it (FR-001), and the owner's next scroll after the jump has ended is followed (FR-002). With the device set to reduced motion the jump MUST be immediate.
 
-_From 108-step-list-in-view._
+_From 861-jump-holds-step._
 
 ### 108-FR-007 — At 768 px and wider the list MUST stay in view beside the sections while the page scrolls.
 
@@ -316,6 +317,32 @@ _From 354-job-catalogue-prices._
 
 _From 354-job-catalogue-prices._
 
+### 861-FR-001 — A jump to a step, from a tap in the step list or from a draft's restore, MUST keep that step current from the moment of the jump until the jump's own scrolling has ended, however late that scrolling starts and however long it lasts; no scroll event of the jump's own flight changes the current step.
+
+_From 861-jump-holds-step._
+
+### 861-FR-002 — When the jump's scrolling has ended, the hold is released (the end itself does not re-read the spy) and the step list MUST follow the owner's scrolling again from the next scroll event, with the on-screen rule unchanged: a jumped-to step the page could not bring to the line stays current while its heading is on screen, and follows once the scroll reaches it or a later step or takes the heading off screen (108-FR-006).
+
+_From 861-jump-holds-step._
+
+### 861-FR-003 — A jump that moves the page by nothing (its target, the heading's page top minus its `scroll-margin-top` clamped to the page's scroll range, is within 1 px of the current scroll position) MUST make the step current at once and MUST NOT hold the step list against the owner's next scroll.
+
+_From 861-jump-holds-step._
+
+### 861-FR-004 — Where the browser signals the end of a scroll, the hold MUST end on that signal; where it does not, the hold MUST end after a short quiet time measured from the jump's last movement (never from the tap alone), so a late start is held as a prompt one is. A jump whose scroll has not started 3 s after the tap lets go (the page could not move after all), so the step list never stops following the owner; a scroll that has started is never cut short by it (amended at review, 2026-10-08).
+
+_From 861-jump-holds-step._
+
+### 861-FR-005 — The restore from a continue link (114-FR-011) MUST use the same jump and the same hold as a tap, so the page opens at the saved step whether it starts quickly or slowly.
+
+_From 861-jump-holds-step._
+
+### 861-FR-007 — No API, contract or stored-data change: the draft's saved step is written by the same path as today.
+
+_From 861-jump-holds-step._
+
 ## Retired
 
 - `108-FR-012` — superseded by `114-FR-018` (2026-10-07)
+
+- `108-FR-006` — superseded by `861-FR-008` (2026-10-08)
