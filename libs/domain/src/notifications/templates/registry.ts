@@ -1,4 +1,5 @@
 import { EMAIL_CHECK, PASSWORD_CHANGED, PASSWORD_RESET } from './account-email';
+import { ADMIN_RULE_APPROVAL_NEEDED } from './admin-rule';
 import { DUE_ITP } from './due-itp';
 import { GENERIC, GENERIC_GROUPED } from './generic';
 import { LISTING_CONTINUE_LINK, LISTING_REMINDER } from './listing';
@@ -20,6 +21,7 @@ export const TEMPLATES: Registry = {
   'ACCOUNT_EMAIL.email_check': EMAIL_CHECK,
   'ACCOUNT_EMAIL.password_changed': PASSWORD_CHANGED,
   'ACCOUNT_EMAIL.password_reset': PASSWORD_RESET,
+  ADMIN_RULE_APPROVAL_NEEDED,
   DUE_ITP,
   GENERIC,
   'GENERIC.grouped': GENERIC_GROUPED,
