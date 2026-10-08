@@ -13,6 +13,7 @@ import {
   HttpException,
   Logger,
 } from '@nestjs/common';
+import { SpanStatusCode, trace } from '@opentelemetry/api';
 import type { Response } from 'express';
 
 export function sendProblem(
@@ -59,6 +60,12 @@ export class ProblemFilter implements ExceptionFilter {
     }
     if (!(exception instanceof HttpException)) {
       this.logger.error(exception);
+      // The request span ends in error with the cause, when one is recorded.
+      const span = trace.getActiveSpan();
+      span?.recordException(
+        exception instanceof Error ? exception : String(exception),
+      );
+      span?.setStatus({ code: SpanStatusCode.ERROR });
       sendProblem(res, 500, 'internal_error');
       return;
     }

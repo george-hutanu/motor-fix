@@ -1,0 +1,98 @@
+<form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+  <p class="lead">{{ 'driver.cars.add.lead' | t }}</p>
+  <div class="field">
+    <label for="mf-car-brand">{{ 'driver.cars.add.brand' | t }}</label>
+    <input
+      hlmInput
+      id="mf-car-brand"
+      type="text"
+      role="combobox"
+      autocomplete="off"
+      aria-autocomplete="list"
+      aria-controls="mf-car-brands"
+      aria-describedby="mf-car-brand-error"
+      [attr.aria-expanded]="brands().length > 0"
+      [attr.aria-activedescendant]="active() < 0 ? null : 'mf-car-brand-' + active()"
+      [class.ng-invalid]="form.controls.brandId.invalid"
+      [attr.aria-invalid]="save.fieldError(form.controls.brandId) === null ? null : 'true'"
+      [value]="brandText()"
+      (input)="find($any($event.target).value)"
+      (keydown)="move($event)"
+    />
+    @if (brands().length) {
+      <ul id="mf-car-brands" role="listbox" [attr.aria-label]="'driver.cars.add.brand' | t">
+        @for (brand of brands(); track brand.id; let i = $index) {
+          <li
+            role="option"
+            [id]="'mf-car-brand-' + i"
+            [attr.aria-selected]="i === active()"
+            (mousedown)="$event.preventDefault()"
+            (click)="choose(brand)"
+          >{{ brand.name }}</li>
+        }
+      </ul>
+    } @else if (brandsDown()) {
+      <p class="error" role="alert">{{ 'driver.cars.add.brandsDown' | t }}</p>
+      <div class="actions">
+        <button hlmBtn variant="secondary" type="button" (click)="search()">{{ 'driver.cars.add.retry' | t }}</button>
+      </div>
+    } @else if (noMatch()) {
+      <p class="note" role="status">{{ 'driver.cars.add.noMatch' | t }}</p>
+    }
+    <mf-field-error id="mf-car-brand-error" [save]="save" [control]="form.controls.brandId" />
+  </div>
+  <div class="field">
+    <label for="mf-car-model">{{ 'driver.cars.add.model' | t }}</label>
+    <input hlmInput id="mf-car-model" type="text" autocomplete="off" formControlName="model" aria-describedby="mf-car-model-error" />
+    <mf-field-error id="mf-car-model-error" [save]="save" [control]="form.controls.model" />
+  </div>
+  <div class="field">
+    <label for="mf-car-year">{{ 'driver.cars.add.year' | t }}</label>
+    <input hlmInput id="mf-car-year" type="text" inputmode="numeric" autocomplete="off" formControlName="year" aria-describedby="mf-car-year-error" />
+    <p class="error" id="mf-car-year-error">{{ yearError() }}</p>
+  </div>
+  <div class="field">
+    <label for="mf-car-km">{{ 'driver.cars.add.km' | t }}</label>
+    <input hlmInput id="mf-car-km" type="text" inputmode="numeric" autocomplete="off" formControlName="odometerKm" aria-describedby="mf-car-km-error" />
+    <mf-field-error id="mf-car-km-error" [save]="save" [control]="form.controls.odometerKm" />
+  </div>
+  <fieldset aria-describedby="mf-car-fuel-error">
+    <legend>{{ 'driver.cars.add.fuel.label' | t }}</legend>
+    <div class="fuels">
+      @for (fuel of fuels; track fuel) {
+        <label class="choice"><input type="radio" formControlName="fuel" [value]="fuel" />{{ fuelKey(fuel) | t }}</label>
+      }
+    </div>
+    <mf-field-error id="mf-car-fuel-error" [save]="save" [control]="form.controls.fuel" />
+  </fieldset>
+  <h3>{{ 'driver.cars.add.optional' | t }}</h3>
+  <div class="field">
+    <label for="mf-car-plate">{{ 'driver.cars.add.plate' | t }}</label>
+    <input hlmInput id="mf-car-plate" type="text" autocomplete="off" spellcheck="false" formControlName="plate" aria-describedby="mf-car-plate-error mf-car-plate-note" />
+    <mf-field-error id="mf-car-plate-error" [save]="save" [control]="form.controls.plate" />
+    <p class="note" id="mf-car-plate-note" aria-live="polite">@if (plateNote(); as note) { {{ note | t }} }</p>
+  </div>
+  <div class="field">
+    <label for="mf-car-engine">{{ 'driver.cars.add.engine' | t }}</label>
+    <input hlmInput id="mf-car-engine" type="text" autocomplete="off" formControlName="engine" aria-describedby="mf-car-engine-error" />
+    <mf-field-error id="mf-car-engine-error" [save]="save" [control]="form.controls.engine" />
+  </div>
+  @for (date of dates; track date.control) {
+    <div class="field">
+      <label [for]="'mf-car-' + date.control">{{ date.label | t }}</label>
+      <input
+        hlmInput
+        type="date"
+        [id]="'mf-car-' + date.control"
+        [max]="latest"
+        [formControlName]="date.control"
+        [attr.aria-describedby]="'mf-car-' + date.control + '-error'"
+      />
+      <mf-field-error [id]="'mf-car-' + date.control + '-error'" [save]="save" [control]="form.controls[date.control]" />
+    </div>
+  }
+  <mf-task-error [save]="save" />
+  <div class="actions">
+    <button hlmBtn type="submit" [mfTaskSubmit]="save">{{ 'driver.cars.add.submit' | t }}</button>
+  </div>
+</form>

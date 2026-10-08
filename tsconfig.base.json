@@ -23,6 +23,7 @@
         "./libs/contracts/src/listing-verification.ts"
       ],
       "@motor-fix/contracts/phone": ["./libs/contracts/src/phone.ts"],
+      "@motor-fix/contracts/plate": ["./libs/contracts/src/plate.ts"],
       "@motor-fix/contracts/problem": ["./libs/contracts/src/problem.ts"],
       "@motor-fix/data-access": ["./libs/data-access/src/index.ts"],
       "@motor-fix/domain": ["./libs/domain/src/index.ts"],
@@ -32,6 +33,10 @@
       "@motor-fix/i18n": ["./libs/i18n/src/index.ts"],
       "@motor-fix/i18n/formats": ["./libs/i18n/src/formats.ts"],
       "@motor-fix/media": ["./libs/media/src/index.ts"],
+      "@motor-fix/observability": ["./libs/observability/src/index.ts"],
+      "@motor-fix/observability/testing": [
+        "./libs/observability/src/testing/in-memory.ts"
+      ],
       "@motor-fix/overlays": ["./libs/overlays/src/index.ts"],
       "@motor-fix/ui-cockpit": ["./libs/ui-cockpit/src/index.ts"],
       "@motor-fix/ui-cockpit/email": ["./libs/ui-cockpit/src/email.ts"],

@@ -41,12 +41,13 @@ export default defineConfig({
       }),
   // Flows tagged @seeded sign in with the seeded accounts; a deployed address
   // runs them only when it is given their password. Flows tagged @mailbox read
-  // the local test mailbox, and flows tagged @openid the local stand-in
-  // issuer, which a deployed address does not have.
+  // the local test mailbox, flows tagged @openid the local stand-in issuer,
+  // and flows tagged @reset need a seeded account the global setup resets,
+  // none of which a deployed address has.
   grepInvert: deployed
     ? process.env['E2E_PASSWORD']
-      ? /@mailbox|@openid/
-      : /@seeded|@mailbox|@openid/
+      ? /@mailbox|@openid|@reset/
+      : /@seeded|@mailbox|@openid|@reset/
     : undefined,
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   use: {

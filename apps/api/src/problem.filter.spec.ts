@@ -4,8 +4,21 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { SpanStatusCode } from '@opentelemetry/api';
+import {
+  InMemorySpanExporter,
+  NodeTracerProvider,
+  SimpleSpanProcessor,
+} from '@opentelemetry/sdk-trace-node';
 
 import { ProblemFilter } from './problem.filter';
+
+const exporter = new InMemorySpanExporter();
+const provider = new NodeTracerProvider({
+  spanProcessors: [new SimpleSpanProcessor(exporter)],
+});
+provider.register();
+const tracer = provider.getTracer('spec');
 
 function send(exception: unknown) {
   const res = {
@@ -35,6 +48,7 @@ function send(exception: unknown) {
   return res;
 }
 
+// @traces 876-FR-007
 describe('ProblemFilter', () => {
   afterEach(() => jest.restoreAllMocks());
 
@@ -188,5 +202,38 @@ describe('ProblemFilter', () => {
     expect(send(new HttpException(body, 400)).body).not.toHaveProperty(
       'errors',
     );
+  });
+
+  it('records an unknown error on the request span, which ends in error status', () => {
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    exporter.reset();
+    const error = new Error('database unreachable');
+
+    tracer.startActiveSpan('GET /api/v1/probe', (span) => {
+      send(error);
+      span.end();
+    });
+
+    const [span] = exporter.getFinishedSpans();
+    expect(span?.status.code).toBe(SpanStatusCode.ERROR);
+    expect(span?.events[0]).toMatchObject({
+      attributes: expect.objectContaining({
+        'exception.message': 'database unreachable',
+      }),
+      name: 'exception',
+    });
+  });
+
+  it('leaves the request span alone for a refusal the client caused', () => {
+    exporter.reset();
+
+    tracer.startActiveSpan('GET /api/v1/probe', (span) => {
+      send(new NotFoundException());
+      span.end();
+    });
+
+    const [span] = exporter.getFinishedSpans();
+    expect(span?.status.code).toBe(SpanStatusCode.UNSET);
+    expect(span?.events).toEqual([]);
   });
 });

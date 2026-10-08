@@ -2,6 +2,7 @@ import { inject, type Type } from '@angular/core';
 import type { Routes } from '@angular/router';
 
 import { AdminPanel } from './admin-panel';
+import { CarsView } from './cars-view/cars-view';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
 import { PushView } from './push-view';
 import { Session } from './session';
@@ -111,6 +112,7 @@ export const DASHBOARDS: Record<
         title: 'shell.frame.title.driver.requests',
       },
       {
+        body: CarsView,
         capability: 'driver.cars',
         label: 'shell.frame.nav.driver.cars',
         path: 'cars',

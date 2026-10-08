@@ -7,6 +7,7 @@ import { Subject } from 'rxjs';
 
 import { AdminOverview } from './admin-overview';
 import { AdminPanel } from './admin-panel';
+import { CarsView } from './cars-view/cars-view';
 import { DriverSettingsView } from './driver-settings-view/driver-settings-view';
 import { Live } from './live';
 import { Session } from './session';
@@ -53,6 +54,7 @@ describe('the dashboard view lists', () => {
         title: 'shell.frame.title.driver.requests',
       },
       {
+        body: CarsView,
         capability: 'driver.cars',
         label: 'shell.frame.nav.driver.cars',
         path: 'cars',

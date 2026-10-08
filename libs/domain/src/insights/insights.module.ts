@@ -1,4 +1,9 @@
 import {
+  observeQueue,
+  observeWorker,
+  queueTelemetry,
+} from '@motor-fix/observability';
+import {
   type DynamicModule,
   Inject,
   Logger,
@@ -11,6 +16,7 @@ import { Queue, Worker } from 'bullmq';
 import { writeSnapshot } from './platform-figures';
 import { createPrisma } from '../auth/prisma';
 import type { PrismaClient } from '../generated/prisma/client';
+import { inJob } from '../logging';
 
 export const INSIGHTS_QUEUE = 'insights';
 const INSIGHTS_PRISMA = Symbol('INSIGHTS_PRISMA');
@@ -48,10 +54,14 @@ export class InsightsModule
         },
         {
           provide: INSIGHTS_JOBS,
-          useFactory: () =>
-            new Queue(INSIGHTS_QUEUE, {
+          useFactory: () => {
+            const queue = new Queue(INSIGHTS_QUEUE, {
               connection: { url: options.redisUrl },
-            }),
+              telemetry: queueTelemetry(),
+            });
+            observeQueue(queue);
+            return queue;
+          },
         },
         {
           inject: [INSIGHTS_PRISMA],
@@ -59,17 +69,21 @@ export class InsightsModule
           useFactory: (prisma: PrismaClient) => {
             const worker = new Worker(
               INSIGHTS_QUEUE,
-              () => writeSnapshot(prisma, new Date()),
+              (job) => inJob(job, () => writeSnapshot(prisma, new Date())),
               {
                 connection: {
                   maxRetriesPerRequest: null,
                   url: options.redisUrl,
                 },
+                telemetry: queueTelemetry(),
               },
             );
-            worker.on('failed', (_, error) =>
-              logger.error(`${SNAPSHOT} run failed: ${error.message}`),
+            worker.on('failed', (job, error) =>
+              inJob(job, () =>
+                logger.error(`${SNAPSHOT} run failed: ${error.message}`),
+              ),
             );
+            observeWorker(worker);
             return worker;
           },
         },
