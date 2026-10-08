@@ -386,6 +386,23 @@ describe('the news consent step under hostile timing', () => {
     expect(toast).toHaveBeenCalledWith('Setarea nu a putut fi salvată');
   });
 
+  it('shows the newest read when an older one answers last', async () => {
+    const { element, settle } = await render();
+    let older: (value: NotificationPreferencesDto) => void = () => undefined;
+    read.mockImplementationOnce(
+      () => new Promise((resolve) => (older = resolve)),
+    );
+    read.mockResolvedValueOnce(answer({ offers: false }));
+
+    resync.next();
+    resync.next();
+    await settle();
+    older(answer());
+    await settle();
+
+    expect(isOn(named(element, 'Ofertă nouă'))).toBe(false);
+  });
+
   it('keeps the latest of three quick flips shown when the first save fails', async () => {
     const { element, settle } = await render();
     let fail: (reason: Error) => void = () => undefined;

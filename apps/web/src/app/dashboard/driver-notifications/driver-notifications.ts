@@ -49,6 +49,8 @@ export class DriverNotifications implements OnInit {
   // open): a re-read keeps them, so a switch never jumps under the driver.
   private readonly unsettled = new Map<NotificationGroupKey, Flip>();
   private consentVersion = '';
+  // Only the latest of overlapping reads is shown.
+  private reads = 0;
   protected readonly failed = signal(false);
   protected readonly loaded = computed(() => this.choices() !== undefined);
   protected readonly rows = computed(() => {
@@ -66,8 +68,9 @@ export class DriverNotifications implements OnInit {
         filter(
           (message) => message.kind === 'notification_preferences.updated',
         ),
+        debounceTime(300),
+        takeUntilDestroyed(this.destroyRef),
       )
-      .pipe(debounceTime(300), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => void this.load());
     this.live.resync
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -78,15 +81,17 @@ export class DriverNotifications implements OnInit {
   // A failed re-read keeps the switches; only a first read shows the error.
   protected async load() {
     this.failed.set(false);
+    const read = ++this.reads;
     try {
       const answer = await this.api.notificationPreferencesControllerRead();
+      if (read !== this.reads) return;
       const choices = { ...DEFAULTS };
       for (const group of answer.groups) choices[group.key] = group.enabled;
       for (const [key, flip] of this.unsettled) choices[key] = flip.enabled;
       this.consentVersion = answer.newsConsent.currentTextVersion;
       this.choices.set(choices);
     } catch {
-      if (!this.loaded()) this.failed.set(true);
+      if (read === this.reads && !this.loaded()) this.failed.set(true);
     }
   }
 
@@ -120,8 +125,7 @@ export class DriverNotifications implements OnInit {
         },
       });
     } catch {
-      // A later flip of the same switch owns what it shows.
-      if (this.unsettled.get(key) === flip) this.set(key, flip, !enabled);
+      this.set(key, flip, !enabled);
       toast(this.i18n.t('shell.notifications.saveFailed'));
       // The consent text may have moved on: the next try needs its version.
       if (askConsent) void this.load();
@@ -150,7 +154,9 @@ export class DriverNotifications implements OnInit {
     return `driver.notifications.group.${key}.hint`;
   }
 
+  // A later flip of the same switch owns what it shows.
   private set(key: NotificationGroupKey, flip: Flip, enabled: boolean) {
+    if (this.unsettled.get(key) !== flip) return;
     flip.enabled = enabled;
     this.choices.update((choices) =>
       choices ? { ...choices, [key]: enabled } : choices,

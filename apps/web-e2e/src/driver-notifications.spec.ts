@@ -142,6 +142,7 @@ test.describe("the driver's notification switches @seeded", () => {
     await dialog.getByRole('button', { exact: true, name: 'Renunță' }).click();
     await expect(dialog).toBeHidden();
     await expect(news).not.toBeChecked();
+    await expect(news).toBeFocused();
     expect(enabled(await read(request), 'news')).toBe(false);
 
     await news.click();
