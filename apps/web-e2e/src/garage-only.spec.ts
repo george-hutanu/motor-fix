@@ -1,6 +1,7 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
 
 import { ACCOUNTS } from './accounts.js';
+import { test } from './fixtures.js';
 import { resetGarageOnly } from './garage-only.js';
 
 test.describe('the garage-only account a local run resets', () => {

@@ -1,11 +1,7 @@
-import {
-  type APIRequestContext,
-  expect,
-  type Page,
-  test,
-} from '@playwright/test';
+import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, PASSWORD, ready, signIn } from './accounts.js';
+import { test } from './fixtures.js';
 
 const SETTINGS = '/app/driver/settings';
 const PREFERENCES = '/api/v1/notification-preferences';
@@ -66,6 +62,16 @@ async function restore(request: APIRequestContext) {
 const switchOf = (page: Page, name: string) =>
   page.getByRole('switch', { exact: true, name });
 
+// The seeded driver's account language is shared with specs running beside
+// this one, so a loaded dashboard may open in English: Romanian is chosen here.
+async function inRomanian(page: Page) {
+  await page
+    .getByRole('group', { name: /^(Limba|Language)$/ })
+    .getByRole('button', { exact: true, name: 'RO' })
+    .click();
+  await expect(switchOf(page, 'Scadențe')).toBeEnabled();
+}
+
 async function signedInSettings(page: Page) {
   await ready(page, '/ro');
   await page
@@ -75,7 +81,7 @@ async function signedInSettings(page: Page) {
   await expect(page).toHaveURL('/app/driver');
   // The live stream stays open, so the page never goes network-idle.
   await page.goto(SETTINGS);
-  await expect(switchOf(page, 'Scadențe')).toBeEnabled();
+  await inRomanian(page);
 }
 
 const saving = (page: Page) =>
@@ -117,11 +123,13 @@ test.describe("the driver's notification switches @seeded", () => {
     await expect(switchOf(page, 'Scadențe')).not.toBeChecked();
 
     await page.reload();
-    await expect(switchOf(page, 'Scadențe')).toBeEnabled();
+    await inRomanian(page);
     await expect(switchOf(page, 'Scadențe')).not.toBeChecked();
 
-    await page.getByRole('button', { name: 'Ieși din cont' }).click();
-    await expect(page).toHaveURL('/');
+    await page
+      .getByRole('button', { exact: true, name: 'Ieși din cont' })
+      .click();
+    await expect(page).toHaveURL(/\/ro\/?$/);
     await signedInSettings(page);
     await expect(switchOf(page, 'Scadențe')).not.toBeChecked();
     expect(enabled(await read(request), 'due_dates')).toBe(false);
