@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router, RouterOutlet } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { type MeDto, NotificationsService } from '@motor-fix/data-access';
+import { I18n } from '@motor-fix/i18n';
 import { Subject } from 'rxjs';
 
 import { AdminOverview } from './admin-overview';
@@ -32,6 +33,15 @@ const RECEPTIONIST = [
   'garage.own_jobs',
   'garage.audit_history',
 ];
+
+// Each key's text in Romanian, then in English (a missing key reads as itself).
+async function texts(keys: readonly (string | undefined)[]) {
+  const i18n = TestBed.inject(I18n);
+  const read = () => keys.map((key) => (key ? i18n.t(key) : undefined));
+  const ro = read();
+  await i18n.use('en');
+  return { en: read(), ro };
+}
 
 const paths = (area: 'driver' | 'garage' | 'admin', capabilities: string[]) =>
   allowedViews(area, capabilities).map((view) => view.path);
@@ -95,6 +105,7 @@ describe('the dashboard view lists', () => {
     ]);
   });
 
+  // @traces 097-FR-001
   it('gives the garage and admin dashboards their addresses in menu order', () => {
     expect(DASHBOARDS.garage.views.map((view) => view.path)).toEqual([
       '',
@@ -104,7 +115,9 @@ describe('the dashboard view lists', () => {
       'prices',
       'reviews',
       'profile',
+      'assistant',
       'settings',
+      'history',
     ]);
     expect(DASHBOARDS.admin.views.map((view) => view.path)).toEqual([
       '',
@@ -178,7 +191,7 @@ describe('the dashboard view lists', () => {
     expect(DASHBOARDS.garage.tag).toBe('shell.frame.area.garage');
   });
 
-  it('gives a garage owner every garage view', () => {
+  it('gives a garage owner every released garage view', () => {
     expect(paths('garage', OWNER)).toEqual([
       '',
       'requests',
@@ -188,6 +201,7 @@ describe('the dashboard view lists', () => {
       'reviews',
       'profile',
       'settings',
+      'history',
     ]);
   });
 
@@ -197,13 +211,14 @@ describe('the dashboard view lists', () => {
       'requests',
       'schedule',
       'settings',
+      'history',
     ]);
   });
 
   it('gives a mechanic the dashboard view, the settings and what their permissions allow', () => {
     expect(
       paths('garage', ['garage.own_jobs', 'garage.audit_history']),
-    ).toEqual(['', 'settings']);
+    ).toEqual(['', 'settings', 'history']);
     expect(
       paths('garage', [
         'garage.own_jobs',
@@ -211,17 +226,21 @@ describe('the dashboard view lists', () => {
         'garage.requests',
         'garage.schedule',
       ]),
-    ).toEqual(['', 'requests', 'schedule', 'settings']);
+    ).toEqual(['', 'requests', 'schedule', 'settings', 'history']);
   });
 
   // @traces 198-FR-011
   it('gives the garage a settings view with no capability, carrying the push and staff panels', () => {
-    expect(DASHBOARDS.garage.views.at(-1)).toEqual({
+    expect(
+      DASHBOARDS.garage.views.find((view) => view.path === 'settings'),
+    ).toEqual({
       label: 'shell.frame.nav.garage.settings',
       path: 'settings',
       push: true,
       staff: true,
+      subtitle: 'shell.frame.subtitle.garage.settings',
       tab: 'shell.frame.tab.settings',
+      title: 'shell.frame.title.garage.settings',
     });
     expect(DASHBOARDS.garage.views[0].push).toBeUndefined();
   });
@@ -253,14 +272,15 @@ describe('the dashboard view lists', () => {
     expect(paths('admin', ['admin.users'])).toEqual(['']);
   });
 
-  it('marks only the driver assistant unreleased, and no garage view', () => {
+  // @traces 097-FR-002
+  it('marks the driver and garage assistants unreleased, and no other garage view', () => {
     const marked = (area: 'driver' | 'garage') =>
       DASHBOARDS[area].views
         .filter((view) => view.unreleased)
         .map((view) => view.path);
 
     expect(marked('driver')).toEqual(['assistant']);
-    expect(marked('garage')).toEqual([]);
+    expect(marked('garage')).toEqual(['assistant']);
   });
 
   it('gives a driver the six released views, never the assistant', () => {
@@ -283,12 +303,94 @@ describe('the dashboard view lists', () => {
     expect(routed).toContain('settings');
   });
 
-  it('gives the garage and admin views no title of their own', () => {
-    const titled = [...DASHBOARDS.garage.views, ...DASHBOARDS.admin.views]
+  it('gives the admin views no title of their own', () => {
+    const titled = DASHBOARDS.admin.views
       .filter((view) => view.title || view.subtitle)
       .map((view) => view.path);
 
     expect(titled).toEqual([]);
+  });
+
+  // @traces 097-FR-002 097-FR-003 097-FR-004
+  it('gives every garage view a title, every one but Panou a subtitle, and every one but Setări an empty state, in both languages', async () => {
+    const views = DASHBOARDS.garage.views;
+    const keys = views
+      .flatMap((v) => [v.label, v.tab, v.title, v.subtitle, v.empty])
+      .filter((key): key is string => !!key);
+    const { en, ro } = await texts(keys);
+
+    expect(views.every((view) => view.title)).toBe(true);
+    expect(views.filter((v) => !v.subtitle).map((v) => v.path)).toEqual([
+      '',
+      'assistant',
+    ]);
+    expect(views.filter((v) => !v.empty).map((v) => v.path)).toEqual([
+      'assistant',
+      'settings',
+    ]);
+    expect(keys.filter((key, i) => ro[i] === key)).toEqual([]);
+    expect(keys.filter((key, i) => en[i] === key)).toEqual([]);
+  });
+
+  // @traces 097-FR-002 097-FR-003
+  it('names Istoric modificări and Asistent AI, and calls Programări Schedule in English', async () => {
+    const view = (path: string) =>
+      DASHBOARDS.garage.views.find((v) => v.path === path);
+    const history = view('history');
+    const ai = view('assistant');
+    const schedule = view('schedule');
+
+    expect(history?.capability).toBe('garage.audit_history');
+    expect(
+      await texts([
+        history?.label,
+        history?.tab,
+        ai?.label,
+        ai?.title,
+        schedule?.label,
+        schedule?.title,
+        DASHBOARDS.garage.tag,
+      ]),
+    ).toEqual({
+      en: [
+        'Change history',
+        'History',
+        'AI assistant',
+        'Your AI assistant',
+        'Schedule',
+        'Schedule',
+        'GARAGE ACCOUNT',
+      ],
+      ro: [
+        'Istoric modificări',
+        'Istoric',
+        'Asistent AI',
+        'Asistentul tău AI',
+        'Programări',
+        'Programări',
+        'CONT SERVICE',
+      ],
+    });
+  });
+
+  // @traces 097-FR-007
+  it('drops a view whose feature the garage switched off, and keeps it while the feature is on or unknown', () => {
+    expect(
+      allowedViews('garage', OWNER, { team_mechanics: false }).map(
+        (v) => v.path,
+      ),
+    ).not.toContain('team');
+    expect(
+      allowedViews('garage', OWNER, { team_mechanics: true }).map(
+        (v) => v.path,
+      ),
+    ).toContain('team');
+    expect(allowedViews('garage', OWNER, {}).map((v) => v.path)).toContain(
+      'team',
+    );
+    expect(
+      allowedViews('garage', OWNER, { whatsapp: false }).map((v) => v.path),
+    ).toEqual(paths('garage', OWNER));
   });
 });
 
@@ -304,12 +406,36 @@ const ADMIN = [
   'admin.audit_history',
 ];
 
+const ATELIER = 'garage-1';
+const access = (
+  status: 'draft' | 'approved' | 'suspended' = 'approved',
+  features: Record<string, boolean> = {},
+) => [
+  {
+    features,
+    garageId: ATELIER,
+    name: 'Atelier Test',
+    permissions: {
+      canAnswerQuotes: true,
+      canMoveBookings: true,
+      canRecordFinalPrice: true,
+    },
+    role: 'owner',
+    status,
+  },
+];
+
 async function open(
   url: string,
   capabilities: string[],
   area: 'driver' | 'garage' | 'admin' = 'garage',
+  garageAccess = access(),
 ) {
-  const current = signal({ capabilities } as unknown as MeDto);
+  const current = signal({
+    capabilities,
+    garageAccess,
+    garageId: ATELIER,
+  } as unknown as MeDto);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -319,7 +445,7 @@ async function open(
           path: `app/${area}`,
         },
       ]),
-      { provide: Session, useValue: { current } },
+      { provide: Session, useValue: { current, shown: current } },
       {
         provide: NotificationsService,
         useValue: {
@@ -346,11 +472,70 @@ async function open(
 }
 
 describe('the dashboard view routes', () => {
-  it('opens an allowed view at its own address, with a placeholder body', async () => {
+  // @traces 097-FR-004
+  it('opens an allowed view at its own address, with the empty state of that view', async () => {
     const { element } = await open('/app/garage/team', OWNER);
 
     expect(TestBed.inject(Router).url).toBe('/app/garage/team');
+    expect(element.textContent).toContain(
+      'Aici vei vedea mecanicii service‑ului și ce poate face fiecare.',
+    );
+    expect(element.textContent).not.toContain('Nimic aici încă.');
+  });
+
+  // @traces 097-FR-004
+  it('keeps the shared placeholder for a driver view with no empty state of its own', async () => {
+    const { element } = await open(
+      '/app/driver/requests',
+      ['driver.requests'],
+      'driver',
+    );
+
     expect(element.textContent).toContain('Nimic aici încă.');
+  });
+
+  // @traces 097-FR-001
+  it('opens the change history for an owner, and sends one without the right to the dashboard', async () => {
+    const { element } = await open('/app/garage/history', OWNER);
+
+    expect(TestBed.inject(Router).url).toBe('/app/garage/history');
+    expect(element.textContent).toContain(
+      'Aici vei vedea cine a schimbat ce în service.',
+    );
+    TestBed.resetTestingModule();
+    await open('/app/garage/history', ['garage.own_jobs']);
+    expect(TestBed.inject(Router).url).toBe('/app/garage');
+  });
+
+  // @traces 097-FR-002
+  it('sends an owner who types the unreleased assistant address to the dashboard', async () => {
+    await open('/app/garage/assistant', OWNER);
+
+    expect(TestBed.inject(Router).url).toBe('/app/garage');
+  });
+
+  // @traces 097-FR-007
+  it('sends the team address to the dashboard while the garage has mechanics switched off', async () => {
+    await open(
+      '/app/garage/team',
+      OWNER,
+      'garage',
+      access('approved', { team_mechanics: false }),
+    );
+
+    expect(TestBed.inject(Router).url).toBe('/app/garage');
+  });
+
+  // @traces 097-FR-007
+  it('opens the team address while mechanics is switched on', async () => {
+    await open(
+      '/app/garage/team',
+      OWNER,
+      'garage',
+      access('approved', { team_mechanics: true }),
+    );
+
+    expect(TestBed.inject(Router).url).toBe('/app/garage/team');
   });
 
   it('opens the dashboard view at the dashboard address', async () => {
@@ -414,11 +599,59 @@ describe('the dashboard view routes', () => {
     expect(element.querySelector('mf-admin-panel')).not.toBeNull();
   });
 
-  it('keeps the placeholder on the garage dashboard address', async () => {
-    const { element } = await open('/app/garage', OWNER);
+  // @traces 097-FR-004 097-FR-008
+  it('shows the dashboard’s empty state on the garage dashboard address of an approved or suspended garage', async () => {
+    for (const status of ['approved', 'suspended'] as const) {
+      TestBed.resetTestingModule();
+      const { element } = await open(
+        '/app/garage',
+        OWNER,
+        'garage',
+        access(status),
+      );
 
-    expect(element.querySelector('mf-admin-panel')).toBeNull();
-    expect(element.textContent).toContain('Nimic aici încă.');
+      expect(element.querySelector('mf-admin-panel')).toBeNull();
+      expect(element.textContent).toContain(
+        'Aici vei vedea ce se întâmplă azi în service.',
+      );
+      expect(element.textContent).not.toContain(
+        'Profilul tău e în verificare.',
+      );
+    }
+  });
+
+  // @traces 097-FR-008
+  it('says a draft garage’s profile is being checked on its dashboard, and only there', async () => {
+    const { element, harness } = await open(
+      '/app/garage',
+      OWNER,
+      'garage',
+      access('draft'),
+    );
+
+    expect(element.textContent).toContain('Profilul tău e în verificare.');
+    expect(element.textContent).not.toContain(
+      'Aici vei vedea ce se întâmplă azi în service.',
+    );
+    await harness.navigateByUrl('/app/garage/prices');
+    expect(harness.routeNativeElement?.textContent).toContain(
+      'Aici vei vedea intervalele de preț pe lucrări.',
+    );
+    expect(harness.routeNativeElement?.textContent).not.toContain(
+      'Profilul tău e în verificare.',
+    );
+  });
+
+  // @traces 097-FR-006 097-FR-008
+  it('shows the empty state, not the check line, when the session’s garage matches no membership', async () => {
+    const { element } = await open('/app/garage', OWNER, 'garage', [
+      { ...access('draft')[0], garageId: 'another-garage' },
+    ]);
+
+    expect(element.textContent).toContain(
+      'Aici vei vedea ce se întâmplă azi în service.',
+    );
+    expect(element.textContent).not.toContain('Profilul tău e în verificare.');
   });
 
   it('opens the released garages view for an admin', async () => {
