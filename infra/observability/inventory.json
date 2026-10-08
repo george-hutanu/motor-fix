@@ -29,7 +29,7 @@
       "dashboard": "none",
       "alerts": "none",
       "reason": "ST-879 adds the dashboard, ST-880 the alerts",
-      "story": "ST-881"
+      "story": "ST-877"
     },
     {
       "kind": "app",
@@ -74,7 +74,7 @@
       "dashboard": "none",
       "alerts": "none",
       "reason": "ST-879 adds the dashboard, ST-880 the alerts",
-      "story": "ST-881"
+      "story": "ST-877"
     },
     {
       "kind": "queue",
@@ -208,6 +208,15 @@
       "alerts": "none",
       "reason": "map tiles fetched by the browser, no key; a failed load shows the map-down message and is not counted server-side",
       "story": "ST-111"
+    },
+    {
+      "kind": "outside-service",
+      "name": "grafana-faro",
+      "source": "apps/web/src/app/telemetry/browser/faro.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "the browser's collector; ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-877"
     }
   ]
 }

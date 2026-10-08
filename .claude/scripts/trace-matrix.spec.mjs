@@ -12,16 +12,20 @@ const T = (feature, n) => `${feature}${'-FR-'}${n}`;
 
 // trace-matrix reads the repo its own file sits in, so each case copies the
 // script and its imports into a throwaway repo beside a fixture spec.
-function matrix(specBody) {
+function matrix(specBody, files = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'taskr-trace-'));
   try {
-    for (const rel of ['trace-matrix.mjs', 'capabilities.mjs', 'lib/feature.mjs']) {
+    for (const rel of ['trace-matrix.mjs', 'capabilities.mjs', 'lib/feature.mjs', 'lib/traces.mjs']) {
       const to = join(dir, '.claude', 'scripts', rel);
       mkdirSync(dirname(to), { recursive: true });
       cpSync(join(root, '.claude', 'scripts', rel), to);
     }
     mkdirSync(join(dir, 'specs', '002-fixture'), { recursive: true });
     writeFileSync(join(dir, 'specs', '002-fixture', 'spec.md'), specBody);
+    for (const [rel, body] of Object.entries(files)) {
+      mkdirSync(dirname(join(dir, rel)), { recursive: true });
+      writeFileSync(join(dir, rel), body);
+    }
     const out = spawnSync(process.execPath, [join(dir, '.claude', 'scripts', 'trace-matrix.mjs'), '--json'], {
       cwd: dir,
       encoding: 'utf8',
@@ -51,5 +55,42 @@ describe('trace-matrix requirements', () => {
       f.requirements.map((r) => r.fr),
       ['FR-001', 'FR-002'],
     );
+  });
+});
+
+describe('trace-matrix tokens', () => {
+  const spec = ['- **FR-001**: one.', '- **FR-002**: two.', '- **FR-003**: three.', ''].join('\n');
+  const tagged = (f) => f.requirements.filter((r) => r.tests.length).map((r) => r.fr);
+
+  it('counts every id on a // @traces line in a test file, indented or not', () => {
+    const f = matrix(spec, {
+      'libs/a/src/a.spec.ts': `// @traces ${T('002', '001')} ${T('002', '002')}\nit('a', () => {});\n`,
+      'apps/b/src/b.spec.ts': `describe('b', () => {\n  // @traces ${T('002', '003')}\n  it('b', () => {});\n});\n`,
+    });
+    assert.deepEqual(tagged(f), ['FR-001', 'FR-002', 'FR-003']);
+  });
+
+  it('does not count an id in a test title, a prose comment or after code', () => {
+    const f = matrix(spec, {
+      'libs/a/src/a.spec.ts': [
+        `it('covers ${T('002', '001')}', () => {});`,
+        `// see ${T('002', '002')} for why`,
+        `it('c', () => {}); // @traces ${T('002', '003')}`,
+        '',
+      ].join('\n'),
+    });
+    assert.deepEqual(tagged(f), []);
+  });
+
+  it('does not count a line that carries anything but requirement ids', () => {
+    const f = matrix(spec, {
+      'libs/a/src/a.spec.ts': `// @traces ${T('002', '001')} 002-SC-001\nit('a', () => {});\n`,
+    });
+    assert.deepEqual(tagged(f), []);
+  });
+
+  it('ignores a // @traces line outside a test file', () => {
+    const f = matrix(spec, { 'libs/a/src/a.ts': `// @traces ${T('002', '001')}\nexport const a = 1;\n` });
+    assert.deepEqual(tagged(f), []);
   });
 });

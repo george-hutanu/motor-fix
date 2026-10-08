@@ -68,8 +68,10 @@ range (or "working tree"). Gather your own evidence:
    or deleted to make the suite pass? Weakened tests are CRITICAL.
 4. **Comments** — flag any internal identifier left in the source: an FR id, a
    feature number, a task id, a Jira key, whether in a title or a comment
-   (project rule — they name what the repo does not contain, and rot as soon as
-   the ticket or the numbering moves). Flag comments that restate the next line,
+   (Constitution II — they name what the repo does not contain, and rot as soon
+   as the ticket or the numbering moves). The one exception is a whole-line
+   `// @traces <feature>-FR-<n>` comment in a test file; flag one that carries
+   anything else, since the matrix skips it. Flag comments that restate the next line,
    label a test with its own title, or address this run rather than a future
    reader. A comment survives review only if it says what the code cannot.
 5. **Ticket conformance** — does the delivered behavior still match the ticket

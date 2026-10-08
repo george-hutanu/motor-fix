@@ -6,6 +6,7 @@ import {
   get,
   type IncomingMessage,
   type Server,
+  type ServerResponse,
 } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
@@ -30,11 +31,22 @@ describe('web edge', () => {
   let seen: { method?: string; url?: string; body: string }[];
   let release: () => void;
   let forwarded: { cookie?: string; for?: string }[];
+  let apiReady: 'ok' | 'failing' | 'silent';
 
   beforeEach(async () => {
     seen = [];
     forwarded = [];
+    apiReady = 'ok';
+    const answerReady = (res: ServerResponse) => {
+      if (apiReady !== 'silent')
+        res.writeHead(apiReady === 'ok' ? 204 : 503).end();
+    };
     upstream = createServer((req, res) => {
+      if (req.url === '/health/ready') {
+        seen.push({ body: '', method: req.method, url: req.url });
+        answerReady(res);
+        return;
+      }
       forwarded.push({
         cookie: req.headers.cookie,
         for: req.headers['x-forwarded-for'] as string | undefined,
@@ -74,15 +86,54 @@ describe('web edge', () => {
     await Promise.all([close(web), close(upstream)]);
   });
 
-  it('answers its own health checks without asking the API', async () => {
+  it('answers its liveness check without asking the API', async () => {
     const live = await fetch(`${base}/health/live`);
-    const ready = await fetch(`${base}/health/ready`);
 
     expect(live.status).toBe(200);
     expect(await live.json()).toEqual({ status: 'ok' });
-    expect(ready.status).toBe(200);
-    expect(await ready.json()).toEqual({ status: 'ok' });
     expect(seen).toEqual([]);
+  });
+
+  it('is ready when the API says it is ready, asking it once per probe', async () => {
+    const first = await fetch(`${base}/health/ready`);
+    const second = await fetch(`${base}/health/ready`);
+
+    expect(first.status).toBe(200);
+    expect(await first.json()).toEqual({ status: 'ok' });
+    expect(second.status).toBe(200);
+    expect(seen.map((call) => call.url)).toEqual([
+      '/health/ready',
+      '/health/ready',
+    ]);
+  });
+
+  it('is not ready when the API answers its ready check with an error', async () => {
+    apiReady = 'failing';
+
+    const ready = await fetch(`${base}/health/ready`);
+
+    expect(ready.status).toBe(503);
+    expect(await ready.json()).toEqual({ status: 'unavailable' });
+  });
+
+  it('is not ready when the API cannot be reached', async () => {
+    await close(upstream);
+
+    const ready = await fetch(`${base}/health/ready`);
+
+    expect(ready.status).toBe(503);
+    expect(await ready.json()).toEqual({ status: 'unavailable' });
+  });
+
+  it('is not ready within two seconds when the API does not answer', async () => {
+    apiReady = 'silent';
+    const asked = Date.now();
+
+    const ready = await fetch(`${base}/health/ready`);
+
+    expect(ready.status).toBe(503);
+    expect(Date.now() - asked).toBeGreaterThanOrEqual(1_900);
+    expect(Date.now() - asked).toBeLessThan(3_000);
   });
 
   it('forwards /api/ with the method, path, query and body', async () => {
