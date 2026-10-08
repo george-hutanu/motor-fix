@@ -239,22 +239,30 @@ function boot(
       loggerProvider.forceFlush(),
     ]);
   };
-  const shutdown = async () => {
-    await Promise.allSettled([
-      tracerProvider.shutdown(),
-      meterProvider.shutdown(),
-      loggerProvider.shutdown(),
-    ]);
-  };
-  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
-    process.once(signal, () => {
-      // Nest's shutdown hooks, when present, end the process themselves;
-      // alone, the signal is raised again once the last batch is out.
-      const others = process.listenerCount(signal);
-      void shutdown().finally(() => {
-        if (others === 0) process.kill(process.pid, signal);
+  // One shutdown for every caller, bounded so a dead collector cannot hold
+  // the stop past the export timeout.
+  let stopping: Promise<void> | undefined;
+  const shutdown = () =>
+    (stopping ??= new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, EXPORT_TIMEOUT_MS);
+      void Promise.allSettled([
+        tracerProvider.shutdown(),
+        meterProvider.shutdown(),
+        loggerProvider.shutdown(),
+      ]).then(() => {
+        clearTimeout(timer);
+        resolve();
       });
-    });
+    }));
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+    const stop = () => {
+      // Nest's shutdown hooks close the app, drop their own listener and
+      // raise the signal again, so this one acts only once it is the last.
+      if (process.listenerCount(signal) > 1) return;
+      process.removeListener(signal, stop);
+      void shutdown().then(() => process.kill(process.pid, signal));
+    };
+    process.on(signal, stop);
   }
 
   const value: Telemetry = { endpoint, env, flush, shutdown, traceSampleRatio };

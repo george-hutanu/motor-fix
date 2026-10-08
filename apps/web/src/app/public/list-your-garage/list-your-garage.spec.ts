@@ -11,6 +11,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import {
   BrandsService,
   CatalogueService,
+  PlacesService,
   PublicHolidaysService,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
@@ -18,7 +19,8 @@ import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { ListYourGarage } from './list-your-garage';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
-import { type BrowserDraft, STORAGE_KEY } from '../draft';
+import { type BrowserDraft, STORAGE_KEY } from '../draft/draft';
+import { PLACE_MAP, type PlaceMapEvents } from '../place-step/place-map';
 
 // jsdom lays nothing out: each heading is placed by hand, the page is tall
 // enough not to sit at its end, and scrolling is recorded, not done.
@@ -47,6 +49,17 @@ const jobs = {
 };
 // The legal holidays step 5 lists, read through their own client.
 const holidays = { publicHolidaysControllerList: jest.fn(async () => []) };
+// The address look-up and the map of step 5, both stood in for.
+const places = {
+  placesControllerSearch: jest.fn(async () => ({
+    items: [{ label: 'Strada Exemplu 1, București', lat: 44.43, lng: 26.1 }],
+  })),
+};
+let mapEvents: PlaceMapEvents | undefined;
+const placeMap = jest.fn(async (_host: HTMLElement, events: PlaceMapEvents) => {
+  mapEvents = events;
+  return { circle: jest.fn(), destroy: jest.fn(), pin: jest.fn() };
+});
 
 beforeEach(() => {
   localStorage.clear();
@@ -85,6 +98,8 @@ async function open(path: string, reduced = false) {
       { provide: BrandsService, useValue: catalogue },
       { provide: PublicHolidaysService, useValue: holidays },
       { provide: CatalogueService, useValue: jobs },
+      { provide: PlacesService, useValue: places },
+      { provide: PLACE_MAP, useValue: placeMap },
     ],
   });
   const i18n = TestBed.inject(I18n);
@@ -187,7 +202,7 @@ describe('the list your garage page', () => {
       ['H2', 'MF-BRANDS-STEP'],
       ['H2', 'MF-PRICES-STEP'],
       ['H2', 'MF-MECHANICS-STEP'],
-      ['H2', 'MF-PHOTOS-STEP', 'MF-HOURS-STEP'],
+      ['H2', 'MF-PHOTOS-STEP', 'MF-PLACE-STEP', 'MF-HOURS-STEP'],
     ]);
   });
 
@@ -1457,6 +1472,83 @@ describe('the details, prices and mechanics in the draft', () => {
 
     fillIn(harness, detailsField(page, 'knownFor'), '');
     expect(ticked(page)).toEqual([4]);
+  });
+
+  const STEFAN = {
+    address: 'Strada Ștefan cel Mare 12, Sector 2, București',
+    lat: 44.4512,
+    lng: 26.1207,
+  };
+
+  it('ticks step 5 once the kept place has an address and a position in Romania', async () => {
+    seed({ data: { steps: { '5': { place: STEFAN } } } });
+
+    const { page } = await open('/ro/list-your-garage');
+
+    expect(ticked(page)).toEqual([4, 5]);
+    expect(
+      page.querySelector<HTMLInputElement>('mf-place-step [name="address"]')
+        ?.value,
+    ).toBe(STEFAN.address);
+  });
+
+  it.each([
+    ['no position', { address: STEFAN.address }],
+    ['no address', { lat: STEFAN.lat, lng: STEFAN.lng }],
+    ['a position outside Romania', { ...STEFAN, lat: 48.2, lng: 16.37 }],
+  ])('leaves step 5 unticked for a place with %s', async (_, place) => {
+    seed({ data: { steps: { '5': { place } } } });
+
+    const { page } = await open('/ro/list-your-garage');
+
+    expect(ticked(page)).toEqual([4]);
+  });
+
+  it("ticks step 5 for a mobile mechanic's seat with no radius, as 20 stands in", async () => {
+    seed({
+      data: {
+        steps: {
+          '1': {
+            ...COMPLETE_DETAILS,
+            businessKind: 'mobile',
+            mobileLegalForm: 'pfa',
+          },
+          '5': { place: STEFAN },
+        },
+      },
+    });
+
+    const { page } = await open('/ro/list-your-garage');
+
+    expect(ticked(page)).toEqual([1, 4, 5]);
+    expect(
+      page.querySelector<HTMLInputElement>('mf-place-step [name="radiusKm"]')
+        ?.value,
+    ).toBe('20');
+  });
+
+  it("keeps the place as steps['5'].place beside the hours", async () => {
+    seed({
+      data: { steps: { '5': { facilities: ['waiting_area'], place: STEFAN } } },
+    });
+    const { harness } = await open('/ro/list-your-garage');
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    try {
+      mapEvents?.dragged({ lat: 44.452, lng: 26.121 });
+      harness.detectChanges();
+      await jest.advanceTimersByTimeAsync(1_100);
+
+      expect(stored()?.data).toMatchObject({
+        steps: {
+          '5': {
+            facilities: ['waiting_area'],
+            place: { address: STEFAN.address, lat: 44.452, lng: 26.121 },
+          },
+        },
+      });
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('opens an empty step 1 when the kept one is not in its shape', async () => {

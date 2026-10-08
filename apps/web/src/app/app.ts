@@ -4,6 +4,6 @@ import { RouterOutlet } from '@angular/router';
 @Component({
   imports: [RouterOutlet],
   selector: 'mf-root',
-  template: '<router-outlet />',
+  templateUrl: './app.html',
 })
 export class App {}

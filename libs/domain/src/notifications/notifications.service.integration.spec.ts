@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 
-import { BrevoMock } from './brevo-mock.testing';
+import { BrevoMock } from './brevo/brevo-mock.testing';
 import { NotificationsService } from './notifications.service';
 import {
   databaseUrl,

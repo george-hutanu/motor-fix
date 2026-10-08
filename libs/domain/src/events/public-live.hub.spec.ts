@@ -3,7 +3,7 @@ import { EventEmitter } from 'node:events';
 import { EVENT_KINDS } from '@motor-fix/contracts';
 import { Logger } from '@nestjs/common';
 
-import { LiveHub } from './live.hub';
+import { LiveHub } from './live/live.hub';
 
 class Sink extends EventEmitter {
   chunks: string[] = [];

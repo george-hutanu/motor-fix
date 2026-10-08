@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 70,
+    "count": 71,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -88,7 +88,7 @@
     {
       "kind": "queue",
       "name": "reminders",
-      "source": "libs/domain/src/cars/reminders.module.ts",
+      "source": "libs/domain/src/cars/reminders/reminders.module.ts",
       "dashboard": "none",
       "alerts": "none",
       "reason": "ST-879 adds the dashboard, ST-880 the alerts",
@@ -106,7 +106,7 @@
     {
       "kind": "queue",
       "name": "listing-photos",
-      "source": "libs/domain/src/garages/photos/listing-photos.module.ts",
+      "source": "libs/domain/src/garages/photos/listing-photos/listing-photos.module.ts",
       "dashboard": "none",
       "alerts": "none",
       "reason": "ST-879 adds the dashboard, ST-880 the alerts",
@@ -115,7 +115,7 @@
     {
       "kind": "queue",
       "name": "news",
-      "source": "libs/domain/src/notifications/news.fan-out.ts",
+      "source": "libs/domain/src/notifications/news/news.fan-out.ts",
       "dashboard": "none",
       "alerts": "none",
       "reason": "ST-879 adds the dashboard, ST-880 the alerts",
@@ -165,7 +165,7 @@
       "kind": "outside-service",
       "name": "web-push",
       "client": "web-push",
-      "source": "libs/domain/src/notifications/push.ts",
+      "source": "libs/domain/src/notifications/push/push.ts",
       "dashboard": "none",
       "alerts": "none",
       "reason": "ST-879 adds the dashboard, ST-880 the alerts",
@@ -188,6 +188,26 @@
       "alerts": "none",
       "reason": "ST-879 adds the dashboard, ST-880 the alerts",
       "story": "ST-881"
+    },
+    {
+      "kind": "outside-service",
+      "name": "geoapify",
+      "host": "api.geoapify.com",
+      "source": "libs/domain/src/places/providers/geoapify-places.provider.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "reports motorfix_places_lookups_total{provider,outcome} and motorfix_places_provider_duration_seconds{provider}; ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-111"
+    },
+    {
+      "kind": "outside-service",
+      "name": "openfreemap",
+      "host": "tiles.openfreemap.org",
+      "source": "apps/web/src/app/public/place-step/place-map.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "map tiles fetched by the browser, no key; a failed load shows the map-down message and is not counted server-side",
+      "story": "ST-111"
     }
   ]
 }

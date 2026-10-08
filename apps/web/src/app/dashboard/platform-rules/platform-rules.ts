@@ -1,0 +1,158 @@
+import { HttpErrorResponse } from '@angular/common/http';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  inject,
+  type OnInit,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  AdminService,
+  type PlatformRuleDto,
+  type PlatformRulesDto,
+} from '@motor-fix/data-access';
+import { I18n, TranslatePipe } from '@motor-fix/i18n';
+import { HlmButton, HlmSwitch } from '@motor-fix/ui-cockpit';
+import { debounceTime, filter } from 'rxjs';
+
+import { Live } from '../live';
+
+// The lines the block shows, in order. The skip_* rules read inverted: the
+// switch is on while the check is required, and production never skips it.
+const LINES = [
+  { inverted: true, key: 'skip_rar_check' },
+  { inverted: false, key: 'reviews_only_after_confirmed_job' },
+  { inverted: true, key: 'skip_manual_approval' },
+  { inverted: false, key: 'maintenance_mode' },
+] as const;
+
+type Line = (typeof LINES)[number];
+
+// The admin's Setări: the platform rules, each saved as it is switched.
+@Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [HlmButton, HlmSwitch, TranslatePipe],
+  selector: 'mf-platform-rules',
+  styleUrl: './platform-rules.css',
+  templateUrl: './platform-rules.html',
+})
+export class PlatformRules implements OnInit {
+  private readonly api = inject(AdminService);
+  private readonly live = inject(Live);
+  private readonly destroyRef = inject(DestroyRef);
+
+  protected readonly lines = LINES;
+  protected readonly list = signal<PlatformRulesDto | undefined>(undefined);
+  protected readonly failed = signal(false);
+  protected readonly error = signal<string | null>(null);
+  protected readonly pending = signal<ReadonlySet<string>>(new Set());
+
+  constructor() {
+    void inject(I18n).enter('admin');
+  }
+
+  ngOnInit() {
+    this.live.events
+      .pipe(filter((message) => message.kind === 'platform_rule.changed'))
+      .pipe(debounceTime(300), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => void this.load());
+    this.live.resync
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => void this.load());
+    void this.load();
+  }
+
+  // A failed re-read keeps the rules on screen; only a first read shows the error.
+  protected async load() {
+    this.failed.set(false);
+    try {
+      this.list.set(await this.api.platformRulesControllerList());
+      return true;
+    } catch {
+      if (this.list() === undefined) this.failed.set(true);
+      return false;
+    }
+  }
+
+  protected rule(rules: PlatformRulesDto, line: Line) {
+    if (line.inverted && rules.production) return undefined;
+    return rules.rules.find((r) => r.key === line.key);
+  }
+
+  protected isOn(line: Line, rule: PlatformRuleDto) {
+    return line.inverted ? rule.value === false : rule.value === true;
+  }
+
+  protected name(line: Line) {
+    return `admin.platformRules.rule.${line.key}.name`;
+  }
+
+  protected tag(rules: PlatformRulesDto) {
+    return rules.production
+      ? 'admin.platformRules.alwaysOn'
+      : 'admin.platformRules.testOnly';
+  }
+
+  protected meaning(line: Line) {
+    return `admin.platformRules.rule.${line.key}.meaning`;
+  }
+
+  protected async toggle(line: Line, rule: PlatformRuleDto) {
+    const { key } = line;
+    if (this.pending().has(key)) return;
+    const seen = rule.value;
+    const value = !seen;
+    this.error.set(null);
+    this.mark(key, true);
+    this.set(key, value);
+    try {
+      await this.api.platformRulesControllerChange({
+        body: { seen, value },
+        key,
+      });
+    } catch (failure) {
+      await this.refused(key, seen, failure);
+    } finally {
+      this.mark(key, false);
+    }
+  }
+
+  // A stale value re-reads the list; any other refusal, or a stale value whose
+  // re-read fails, puts the switch back.
+  private async refused(
+    key: string,
+    seen: PlatformRuleDto['value'],
+    failure: unknown,
+  ) {
+    const code =
+      failure instanceof HttpErrorResponse ? failure.error?.code : undefined;
+    if (code === 'stale_value' && (await this.load())) return;
+    this.set(key, seen);
+    this.error.set(
+      code === 'two_admins_required'
+        ? 'admin.platformRules.twoAdmins'
+        : 'admin.platformRules.saveFailed',
+    );
+  }
+
+  private mark(key: string, busy: boolean) {
+    this.pending.update((keys) => {
+      const next = new Set(keys);
+      if (busy) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }
+
+  private set(key: string, value: PlatformRuleDto['value']) {
+    this.list.update(
+      (list) =>
+        list && {
+          ...list,
+          rules: list.rules.map((r) => (r.key === key ? { ...r, value } : r)),
+        },
+    );
+  }
+}

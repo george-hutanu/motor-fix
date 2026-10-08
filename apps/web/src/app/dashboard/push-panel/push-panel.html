@@ -1,0 +1,26 @@
+@if (device.state() !== 'loading') {
+  <section aria-labelledby="push-title">
+    <h2 id="push-title">{{ 'shell.push.title' | t }}</h2>
+    @if (line(); as key) {
+      <p role="status">{{ key | t }}</p>
+    }
+    @if (device.failed()) {
+      <p role="alert">{{ 'shell.push.failed' | t }}</p>
+    }
+    <div class="actions">
+      @if (device.state() === 'off') {
+        <button hlmBtn type="button" [disabled]="device.busy()" (click)="device.enable()">
+          {{ 'shell.push.enable' | t }}
+        </button>
+      }
+      @if (device.state() === 'on') {
+        <button hlmBtn variant="secondary" type="button" [disabled]="device.busy()" (click)="device.disable()">
+          {{ 'shell.push.disable' | t }}
+        </button>
+        <button hlmBtn variant="secondary" type="button" [disabled]="device.busy()" (click)="test()">
+          {{ 'shell.push.test' | t }}
+        </button>
+      }
+    </div>
+  </section>
+}
