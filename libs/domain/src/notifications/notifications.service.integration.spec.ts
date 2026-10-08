@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 
@@ -110,6 +111,51 @@ const quote = (recipient: string, eventId: string) =>
     recipients: [recipient],
     subjectId: '6d1f6a9c-1b7e-4a52-9a5b-1c1a2e3f4a5b',
   });
+
+const reader = countedMetrics();
+const counted = async () => ({
+  inApp: await counterTotal(reader, 'motorfix_notifications_sent_total', {
+    channel: 'in-app',
+  }),
+  quotes: await counterTotal(reader, 'motorfix_quotes_total'),
+});
+
+// @traces 879-FR-009
+describe('counting what the notifications service writes', () => {
+  it('counts one bell row and one quote per recipient, and nothing for a repeat', async () => {
+    const andrei = await account('andrei');
+    const maria = await account('maria');
+    const before = await counted();
+
+    await service.notify({
+      eventId: 'evt-count',
+      kind: 'QUOTE_RECEIVED',
+      recipients: [andrei, maria],
+    });
+    await quote(andrei, 'evt-count');
+
+    expect(await counted()).toEqual({
+      inApp: before.inApp + 2,
+      quotes: before.quotes + 2,
+    });
+  });
+
+  it('counts a bell row of another type without counting a quote', async () => {
+    const andrei = await account('andrei');
+    const before = await counted();
+
+    await service.notify({
+      eventId: 'evt-other',
+      kind: 'SIGN_IN_CODE',
+      recipients: [andrei],
+    });
+
+    expect(await counted()).toEqual({
+      inApp: before.inApp + 1,
+      quotes: before.quotes,
+    });
+  });
+});
 
 describe('handing an event to the notifications service', () => {
   it('writes a bell row and an e-mail row, and queues one send', async () => {

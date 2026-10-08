@@ -25,6 +25,7 @@ import type {
   Prisma,
   PrismaClient,
 } from '../generated/prisma/client';
+import { countNotification, countQuote } from '../metrics/product-counters';
 
 export const NOTIFICATIONS_QUEUE = 'notifications';
 export const NOTIFICATIONS_CONFIG = Symbol('NOTIFICATIONS_CONFIG');
@@ -153,6 +154,10 @@ export class NotificationsService {
       );
       if (!written) continue;
       await this.announce(written.bell);
+      countNotification('in-app');
+      // The one path a quote takes today; it moves to the quoting use case
+      // once there is one.
+      if (input.kind === 'QUOTE_RECEIVED') countQuote();
       for (const next of written.next) await this.queue(next);
       queued += written.next.length;
     }

@@ -10,6 +10,7 @@ import { refusal } from '../../auth/sign-up.service';
 import { brandAnswer } from '../../garages/brand-answer';
 import { publicGarages } from '../../garages/public-garages/public-garages';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
+import { countSearch } from '../../metrics/product-counters';
 
 const PAGE = 20;
 const GROUPS = ['works_on', 'other'] as const;
@@ -94,6 +95,7 @@ export class GarageSearchService {
     }
     const items = rows.slice(0, PAGE);
     const last = items.at(-1);
+    countFirstPage(cursor, items.length);
     return {
       counts: { doesNotTake, worksOn },
       items,
@@ -162,4 +164,9 @@ export class GarageSearchService {
       ...brandAnswer(brands, { brandNote, refusalPhrase }),
     }));
   }
+}
+
+// One search per first page; the pages after it are the same search.
+function countFirstPage(cursor: string | undefined, found: number) {
+  if (cursor === undefined) countSearch(found > 0 ? 'results' : 'none');
 }

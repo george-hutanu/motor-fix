@@ -1,4 +1,5 @@
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
@@ -224,6 +225,27 @@ describe('asking for a sign-in code', () => {
 
     expect(res.status).toBe(400);
     expect(brevo.whatsapp()).toHaveLength(0);
+  });
+});
+
+const reader = countedMetrics();
+const phoneSignIns = () =>
+  counterTotal(reader, 'motorfix_sign_ins_total', { method: 'phone' });
+
+// @traces 879-FR-009
+describe('counting phone sign-ins', () => {
+  it('counts a sign-in with the right code, and not a wrong code', async () => {
+    await holder(['garage']);
+    const code = await codeFor(PHONE);
+    const before = await phoneSignIns();
+
+    await signIn({
+      code: code === '000000' ? '111111' : '000000',
+      phone: PHONE,
+    });
+    await signIn({ code, phone: PHONE });
+
+    expect(await phoneSignIns()).toBe(before + 1);
   });
 });
 

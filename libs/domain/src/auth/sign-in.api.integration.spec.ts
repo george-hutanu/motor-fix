@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { createServer, type Server } from 'node:net';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
@@ -140,6 +141,23 @@ const sha256 = (value: string) =>
 
 const claims = (res: request.Response) =>
   verifyAccessToken(res.body.accessToken, tokenSecret);
+
+const reader = countedMetrics();
+const passwordSignIns = () =>
+  counterTotal(reader, 'motorfix_sign_ins_total', { method: 'password' });
+
+// @traces 879-FR-009
+describe('counting password sign-ins', () => {
+  it('counts a sign-in that opened a session, and not one refused', async () => {
+    await person('andrei@example.test', ['driver']);
+    const before = await passwordSignIns();
+
+    await signIn({ email: 'andrei@example.test', password: PASSWORD });
+    await signIn({ email: 'andrei@example.test', password: 'wrong-password' });
+
+    expect(await passwordSignIns()).toBe(before + 1);
+  });
+});
 
 describe('signing in with the right e-mail and password', () => {
   it('answers an access token for the account and sets the refresh cookie', async () => {
