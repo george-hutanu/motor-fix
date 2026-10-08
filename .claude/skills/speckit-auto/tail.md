@@ -113,7 +113,11 @@ never waits on either: a lap that needs a new run dispatches it and ends.
    and the archive check (`speckit-archive`, Phase 4 step 5); when it exits 1,
    do what its reason says and check again, once. A Notion write still PENDING
    is retried by the next `speckit-notion-sync` run and does not hold the
-   tail. Reply with the envelope: `PR: #<n> merged <sha7>`.
+   tail. Last, when the merge result's `worktree.removed` is false because
+   it was this tail's own checkout, `ExitWorktree` (keep) and run
+   `node <worktree>/.claude/scripts/worktree-remove.mjs <worktree>` from the
+   main checkout; a refusal is reported, never forced, and `/speckit-watch`
+   removes it later. Reply with the envelope: `PR: #<n> merged <sha7>`.
 
 A PR with no checks, or one still failing at the limit, is a Hard Stop: it
 stays ready and unmerged, the story goes to Blocked (`speckit-notion-sync
