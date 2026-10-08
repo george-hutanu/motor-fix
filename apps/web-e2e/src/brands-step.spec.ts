@@ -43,8 +43,9 @@ test.describe('step 2 of list your garage, the brands', () => {
   test('finds Lada by search and adds it taken, then keeps everything in English', async ({
     page,
   }) => {
-    // The catalogue ships the twelve popular brands only, so the search for
-    // a brand outside them is answered here, shaped like the API's page.
+    // The catalogue ships the twelve popular brands and two unranked ones,
+    // so the search for a brand outside them is answered here, shaped like
+    // the API's page.
     await page.route(
       (url) =>
         url.pathname.endsWith('/api/v1/brands') &&

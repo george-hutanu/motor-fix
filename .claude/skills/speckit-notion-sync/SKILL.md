@@ -129,6 +129,8 @@ labels: `gh pr edit <n> <labels>`.
 
 ## 2c. `debt`: deferred findings become tasks
 
+Only a large fix is deferred (the size test in AGENTS.md, "Technical debt a
+review defers"); a small or medium one is fixed in the PR and never filed.
 Each pending bullet of `specs/<feature>/deferred.md` becomes a To do row in
 MotorFix stories (Role System, the story's Epic and Feature; Issue type Tech
 debt, or Decision when it waits on the owner), built by `debt-tasks.mjs`, and
@@ -146,7 +148,9 @@ page and comments as `notion-ready` says, then tick only those it clears:
 node .claude/scripts/notion-sync.mjs ready --tick ST-30,ST-31 --hold "ST-32=waits on the lawyer"
 ```
 
-Logged as `- <date> · ready · <epic> · +<ticked> −<unticked>` (or `no change`);
+Logged as `- <date> · ready · <epic> · +<ticked> −<unticked>` (or `no change`).
+A story with no epic is refreshed alone, logged `- <date> · ready · ST-<n> ·
+<summary> (the story has no epic)`, e.g. `no change (the story has no epic)`;
 a failed refresh is `[NOTION-SYNC PENDING: ready <epic> — <error>]`, retried
 first next run. `/speckit-archive` refuses a feature with no ready line after
 its last `finish` line (`notion-ready.mjs check -`, §3).
@@ -205,7 +209,8 @@ into another comment on that PR.
 4. **`pr`**: as §2a, with `notion-update-page` (`{"PR": "<url>"}`) or a
    follow-up `notion-create-comment`.
 5. **`debt`**: `debt-tasks.mjs plan specs/<feature>/deferred.md --story <url>
-   --epic <url> --pr <url> --id ST-<n>`, then per entry `notion-create-pages`
+   [--epic <url>] --pr <url> --id ST-<n>` (no `--epic` for a story with no
+   epic: its tasks carry no Epic relation), then per entry `notion-create-pages`
    with its `properties` and `content`, and `debt-tasks.mjs mark … --line <n>
    --url <task url>`.
 6. **Ready and the finish comment**: invoke `notion-ready <epic>` (§2d) and

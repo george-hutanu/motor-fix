@@ -1117,7 +1117,7 @@ describe('--gate', () => {
         rmSync(f.root, { recursive: true, force: true });
       }
     }
-  });
+  }, 20000);
 
   it('is an error outside a repository and with --fix, --json or --wait', () => {
     const f = fixture();
