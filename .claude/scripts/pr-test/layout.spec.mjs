@@ -91,6 +91,29 @@ describe.skipIf(!browser)('layout checks in a browser', () => {
     });
   });
 
+  describe('rules measured', () => {
+    const ALWAYS = ['clipped', 'font-fallback', 'grid', 'min-text', 'overlap', 'stretched-image'];
+
+    it('names every rule it measured completely: no type scale without size tokens, tap targets with touch', async () => {
+      expect((await measure('min-text-fail')).rules.sort()).toEqual([...ALWAYS, 'tap-target'].sort());
+    });
+
+    it('names the type scale when the page declares one, and the focus ring on desktop', async () => {
+      expect((await measure('type-scale-fail')).rules).toContain('type-scale');
+      const desk = await measure('type-scale-fail', { at: 'desktop' });
+      expect(desk.rules).toContain('focus-ring');
+      expect(desk.rules).not.toContain('tap-target');
+    });
+
+    it('leaves out a rule that hit the cap: what it did not list, it cannot vouch for', async () => {
+      const html = `<main>${Array.from({ length: 25 }, (_, i) => `<span style="font-size:10px">t${i}</span>`).join('')}</main>`;
+      const r = await measure(null, { html });
+      expect(of(r, 'min-text').length).toBe(21);
+      expect(r.rules).not.toContain('min-text');
+      expect(r.rules).toContain('grid');
+    });
+  });
+
   describe('type-scale', () => {
     it('faults a size the theme tokens do not name, listing the scale it read', async () => {
       const r = await measure('type-scale-fail');
