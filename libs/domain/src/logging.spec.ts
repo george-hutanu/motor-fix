@@ -88,6 +88,19 @@ describe('JsonLogger', () => {
     expect(line['message']).toBe('***, ***, car ***');
   });
 
+  it('keeps a request or job id that looks like a plate unmasked', () => {
+    const requestId = 'ab123cde-1f2e-4a3b-9c8d-0123456789ab';
+    const line = written(() =>
+      requestContext.run({ jobId: 'B 123 ABC', requestId }, () =>
+        logger.log('served', 'Probe'),
+      ),
+    );
+
+    expect(line).toMatchObject({ jobId: 'B 123 ABC', requestId });
+    const [record] = records.getFinishedLogRecords();
+    expect(record?.attributes).toMatchObject({ jobId: 'B 123 ABC', requestId });
+  });
+
   it('emits the same masked line as a log record', () => {
     written(() =>
       requestContext.run({ jobId: '7' }, () =>

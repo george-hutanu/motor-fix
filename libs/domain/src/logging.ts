@@ -42,12 +42,14 @@ export class JsonLogger extends ConsoleLogger {
   ) {
     const { jobId, requestId } = requestContext.getStore() ?? {};
     const span = trace.getActiveSpan()?.spanContext();
-    const line = scrubDeep({
-      ...super.getJsonLogObject(message, options),
+    // Only the entry is masked: the ids are generated, never personal, and
+    // a UUID can look like a plate.
+    const line = {
+      ...scrubDeep(super.getJsonLogObject(message, options)),
       ...(requestId && { requestId }),
       ...(jobId && { jobId }),
       ...(span && { span_id: span.spanId, trace_id: span.traceId }),
-    });
+    };
     const {
       message: body,
       level,
