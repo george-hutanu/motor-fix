@@ -26,9 +26,8 @@ export async function assertCatalogued(
 export async function writeGarageBrands(
   tx: Prisma.TransactionClient,
   garageId: string,
-  data: Record<string, unknown>,
+  section: unknown,
 ): Promise<void> {
-  const section: unknown = data;
   if (!isBrandsSection(section) || section.brands === undefined) {
     throw refusal(
       HttpStatus.BAD_REQUEST,

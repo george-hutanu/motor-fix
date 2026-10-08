@@ -59,12 +59,12 @@ type Calendar =
   | { state: 'loading' | 'down' }
   | { state: 'ready'; days: PublicHolidayDto[] };
 
+type PriceError = 'priceMissing' | 'priceRange';
+
 // Step 5 of listing a garage: the weekly hours, the closed days, the
 // facilities with the courtesy car's terms, and the payment methods. It holds
 // the draft's section and saves nothing; nothing is kept until the owner
 // changes something.
-type PriceError = 'priceMissing' | 'priceRange';
-
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmInput, HlmLabel, Lamp, LeiInput, TranslatePipe],
