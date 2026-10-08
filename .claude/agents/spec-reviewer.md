@@ -63,6 +63,9 @@ range (or "working tree"). Gather your own evidence:
 2. **Spec conformance** — for each FR the diff claims to implement: does the
    code do what the FR says, including error paths, JSON report shape, and
    ordering rules? Quote the FR and the code that satisfies or misses it.
+   A changed screen must match its board in `specs/<feature>/design.md`
+   (layout, states, texts): a difference is a finding unless `design.md` says
+   the Build brief overrides the board there.
 3. **Test honesty** — do the new tests assert real behavior, not vacuous
    always-pass assertions? Did any pre-existing test get weakened, `.skip`ped,
    or deleted to make the suite pass? Weakened tests are CRITICAL.
