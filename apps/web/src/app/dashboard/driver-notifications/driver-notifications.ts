@@ -108,17 +108,9 @@ export class DriverNotifications implements OnInit {
     const askConsent = key === 'news' && enabled;
     // The version of the text the driver is shown, whatever a re-read brings.
     const version = this.consentVersion;
-    if (askConsent) {
-      const answer = await this.overlays
-        .open<boolean>(NewsConsent, {
-          shape: 'dialog',
-          title: 'driver.notifications.consent.title',
-        })
-        .catch(() => false);
-      if (answer !== true) {
-        this.set(key, flip, false);
-        return;
-      }
+    if (askConsent && !(await this.consent())) {
+      this.set(key, flip, false);
+      return;
     }
     try {
       await this.api.notificationPreferencesControllerSave({
@@ -128,10 +120,25 @@ export class DriverNotifications implements OnInit {
         },
       });
     } catch {
-      this.set(key, flip, !enabled);
+      // A later flip of the same switch owns what it shows.
+      if (this.unsettled.get(key) === flip) this.set(key, flip, !enabled);
       toast(this.i18n.t('shell.notifications.saveFailed'));
       // The consent text may have moved on: the next try needs its version.
       if (askConsent) void this.load();
+    }
+  }
+
+  // True only when the driver agrees; a step that cannot open says so.
+  private async consent() {
+    try {
+      const answer = await this.overlays.open<boolean>(NewsConsent, {
+        shape: 'dialog',
+        title: 'driver.notifications.consent.title',
+      });
+      return answer === true;
+    } catch {
+      toast(this.i18n.t('shell.notifications.saveFailed'));
+      return false;
     }
   }
 

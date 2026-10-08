@@ -383,6 +383,27 @@ describe('the news consent step under hostile timing', () => {
 
     expect(save).not.toHaveBeenCalled();
     expect(isOn(named(element, 'Noutăți MotorFix'))).toBe(false);
+    expect(toast).toHaveBeenCalledWith('Setarea nu a putut fi salvată');
+  });
+
+  it('keeps the latest of three quick flips shown when the first save fails', async () => {
+    const { element, settle } = await render();
+    let fail: (reason: Error) => void = () => undefined;
+    save.mockImplementationOnce(
+      () => new Promise((_, reject) => (fail = reject)),
+    );
+    const scadente = () => named(element, 'Scadențe');
+
+    scadente().click();
+    await settle();
+    scadente().click();
+    await settle();
+    scadente().click();
+    await settle();
+    fail(new Error('down'));
+    await settle();
+
+    expect(isOn(scadente())).toBe(false);
   });
 
   it('opens the step on every turn-on, also after a cancel', async () => {
