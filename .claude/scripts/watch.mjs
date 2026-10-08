@@ -32,10 +32,13 @@ import { findCarry, postCarry } from "./pr-test/carry.mjs";
 import { parseQaRun } from "./pr-test/qa-run.mjs";
 import { readState } from "./run-state.mjs";
 import { WAIT_RECORD, commonDir, defaultCommandOf, waitHolder } from "./lib/watch-wait.mjs";
+import { removeWorktree } from "./worktree-remove.mjs";
 
 // done is the grace period before a merged worktree is removed: its
 // tail agent may still be finishing there, and holds it while within it.
-export const DEFAULT_THRESHOLDS = { planning: 30, tests: 45, development: 45, review: 30, qa: 30, merging: 30, done: 30 };
+// `idle` is not a stage: a worktree with no PR and no activity for this long
+// (7 days) is swept by the `remove` fix.
+export const DEFAULT_THRESHOLDS = { planning: 30, tests: 45, development: 45, review: 30, qa: 30, merging: 30, done: 30, idle: 7 * 24 * 60 };
 // QA boots on GitHub Actions (.github/workflows/pr-qa.yml), not on the laptop,
 // so the default is Actions' 20 concurrent jobs on a free plan, the ceiling a
 // dispatch can reach. SPECKIT_QA_CAP lowers it, e.g. to leave jobs for PR CI.
@@ -112,7 +115,7 @@ function claudeAlive(pid) {
   }
 }
 
-const processAlive = (pid) => {
+export const processAlive = (pid) => {
   try {
     process.kill(pid, 0);
     return true;
@@ -182,16 +185,22 @@ export function fixOf(row, { now, thresholds }) {
   const pr = row.pr && row.pr !== "unknown" ? row.pr : null;
   if (row.gitFailed) return { verdict: "blocked", fix: null, reason: "git cannot read this worktree" };
   if (row.phase === "blocked") return { verdict: "blocked", fix: null, reason: "run-state blocked" };
-  if (row.phase === "done") {
-    if (!pr || pr.state !== "merged") return { verdict: "done", fix: null, reason: pr ? `PR ${pr.state}` : "run done" };
-    if (row.main || row.holder === "live") return { verdict: "done", fix: null, reason: "merged, still held" };
-    if (!row.clean) return { verdict: "done", fix: null, reason: "merged, but has uncommitted changes" };
-    if (!row.head || row.head !== pr.head) return { verdict: "done", fix: null, reason: "merged, but has commits after the merged head" };
+  // A worktree whose PR merged or closed is removed once quiet: the removal
+  // backs uncommitted work up, so only commits no remote has withhold it.
+  if (row.phase === "done" && (pr?.state === "merged" || pr?.state === "closed")) {
+    if (row.main || row.holder === "live") return { verdict: "done", fix: null, reason: `${pr.state}, still held` };
+    if (row.unpushed !== 0) return { verdict: "done", fix: null, reason: `${pr.state}, but ${row.unpushed > 0 ? `has ${row.unpushed} unpushed commits` : "unpushed commits unknown"}` };
     const quiet = (now - row.activity.at) / MIN;
-    if (quiet <= thresholds.done) return { verdict: "done", fix: null, reason: `merged, quiet ${Math.round(quiet)} of ${thresholds.done} min` };
-    return { verdict: "done", fix: "remove-worktree", reason: "merged and clean" };
+    if (quiet <= thresholds.done) return { verdict: "done", fix: null, reason: `${pr.state}, quiet ${Math.round(quiet)} of ${thresholds.done} min` };
+    return { verdict: "done", fix: "remove", reason: `${pr.state}, nothing unpushed` };
   }
-  if (row.holder === "live" || row.holder === "owner") return { verdict: "ok", fix: null, reason: `held (${row.holder})` };
+  if (row.holder === "live" || row.holder === "owner") return { verdict: row.phase === "done" ? "done" : "ok", fix: null, reason: `held (${row.holder})` };
+  // A worktree with no PR (a list that was read, not "unknown") and nothing
+  // pushed-but-missing is swept once idle for thresholds.idle.
+  if (row.pr === null && !row.main && row.unpushed === 0 && (now - row.activity.at) / MIN > (thresholds.idle ?? DEFAULT_THRESHOLDS.idle)) {
+    return { verdict: "done", fix: "remove", reason: `no PR, idle ${Math.floor((now - row.activity.at) / (24 * 60 * MIN))} days` };
+  }
+  if (row.phase === "done") return { verdict: "done", fix: null, reason: pr ? `PR ${pr.state}` : "run done" };
   // GitHub runs no CI on a PR that conflicts with main: nothing else moves it
   // until main is merged in, so no quiet threshold applies.
   if (pr?.state === "ready" && pr.mergeable === "CONFLICTING") return { verdict: "conflict", fix: "merge-main", reason: "conflicts with main: no CI runs until origin/main is merged in" };
@@ -322,7 +331,8 @@ function fetchPrs(gh) {
 }
 
 // 1000 covers this repository many times over; past it the oldest merged PRs
-// drop out, and their worktrees read as having no PR (shown, never removed).
+// drop out, and their worktrees read as having no PR (the removal asks gh for
+// the branch itself, so it never sweeps one whose PR is open).
 const defaultGh = () =>
   JSON.parse(
     execFileSync("gh", ["pr", "list", "--state", "all", "--limit", "1000", "--json", "number,headRefName,state,isDraft,headRefOid,statusCheckRollup,mergeable"], {
@@ -415,6 +425,8 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
     const threshold = thresholds[phase] ?? 0;
     const claim = readJson(claimPath(w.path));
     const { activity, clean, gitFailed } = activityOf(w.path, runState);
+    const ahead = git(w.path, ["rev-list", "--count", "HEAD", "--not", "--remotes"]);
+    const unpushed = ahead !== null && /^\d+$/.test(ahead.trim()) ? Number(ahead.trim()) : null;
     const holder = holderOf({ main: w.main, self: real(w.path) === here, lock: w.lock, alive, qaLive, claim, threshold, now, activityAt: activity.at });
     const row = {
       path: w.path,
@@ -425,6 +437,7 @@ export function collect(repo, { now = Date.now(), gh = defaultGh, alive = claude
       activity,
       pr,
       clean,
+      unpushed,
       gitFailed,
       qaLive,
       locked: w.lock !== null,
@@ -475,9 +488,10 @@ export function dueFixes(report) {
   const due = [];
   for (const r of report.rows.filter((x) => x.holder === "dead")) due.push({ fix: "unlock", path: r.path });
   // A merged worktree whose subagent went quiet still carries its session's
-  // lock, which git will not remove past: release it on this path only.
-  for (const r of report.rows.filter((x) => x.fix === "remove-worktree" && !x.main && x.clean)) {
-    due.push({ fix: "remove-worktree", path: r.path, unlock: Boolean(r.locked) && r.holder === "none" });
+  // lock, which the removal refuses while that session lives: release it on
+  // this path only. A row with no PR is the idle sweep, so it is admitted.
+  for (const r of report.rows.filter((x) => x.fix === "remove" && !x.main)) {
+    due.push({ fix: "remove", path: r.path, admitNoPr: r.pr === null, unlock: Boolean(r.locked) && r.holder === "none" });
   }
   for (const r of report.rows.filter((x) => x.fix === "carry-review" && x.carry?.from)) due.push({ fix: "carry-review", path: r.path, pr: r.pr.number, carry: r.carry });
   for (const path of report.orphanLocks ?? []) due.push({ fix: "unlock", path });
@@ -485,8 +499,12 @@ export function dueFixes(report) {
   return due;
 }
 
-/** The fixes that need no agent. Never forced, never a branch, never the main worktree; a carry writes only a commit status and the PR's Agent review section. */
-export function applyFixes(repo, report, { postCarry: post = postCarry } = {}) {
+/**
+ * The fixes that need no agent. Never the main worktree; a removal goes
+ * through worktree-remove.mjs, which backs up first and refuses what it must;
+ * a carry writes only a commit status and the PR's Agent review section.
+ */
+export function applyFixes(repo, report, { postCarry: post = postCarry, remove = removeWorktree } = {}) {
   const actions = [];
   const run = (what, args) => {
     try {
@@ -499,9 +517,15 @@ export function applyFixes(repo, report, { postCarry: post = postCarry } = {}) {
   for (const d of dueFixes(report)) {
     if (d.fix === "unlock") run(`unlock ${d.path}`, ["worktree", "unlock", d.path]);
     else if (d.fix === "prune") run(`prune ${d.path}`, ["worktree", "prune"]);
-    else if (d.fix === "remove-worktree") {
+    else if (d.fix === "remove") {
       if (d.unlock) run(`unlock ${d.path}`, ["worktree", "unlock", d.path]);
-      run(`remove ${d.path}`, ["worktree", "remove", d.path]);
+      const what = `remove ${d.path}`;
+      try {
+        const r = remove(d.path, { admitNoPr: d.admitNoPr, cwd: repo });
+        actions.push(r.removed ? { what, ok: true } : { what, ok: false, error: r.reason });
+      } catch (e) {
+        actions.push({ what, ok: false, error: e.message });
+      }
     } else {
       // A carry sets the agent-review status on the PR head; the merge gate re-checks it.
       const what = `carry #${d.pr} from ${d.carry.from.slice(0, 7)}`;
@@ -642,7 +666,7 @@ export function main(argv, { cwd = process.cwd(), now, sleep = blockingSleep, co
     console.error(e.message);
     return 1;
   }
-  const actions = flags.has("--fix") ? [...applyFixes(cwd, report), sweep(cwd)].filter(Boolean) : [];
+  const actions = flags.has("--fix") ? [...applyFixes(cwd, report, { remove: deps.remove }), sweep(cwd)].filter(Boolean) : [];
   if (flags.has("--json")) console.log(JSON.stringify({ ...report, actions }, null, 2));
   else {
     console.log(render(report, at()));
