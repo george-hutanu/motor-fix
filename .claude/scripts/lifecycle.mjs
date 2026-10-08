@@ -32,7 +32,7 @@
 // Exit 0 done or --help, 1 stopped, 64 usage (an unknown flag included).
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { typeLabel } from "../hooks/pr-lifecycle-gate.mjs";
@@ -42,7 +42,7 @@ import { ghRun } from "./lib/gh-rest.mjs";
 import { activeFeature, featureKey } from "./lib/feature.mjs";
 import { pointFeature } from "./level.mjs";
 import { readyLogged } from "./notion-ready.mjs";
-import { parseWorktrees } from "./watch.mjs";
+import { lockPid, parseWorktrees, processAlive } from "./watch.mjs";
 
 const USAGE = "usage: lifecycle.mjs open | ready | merge | handoff (open --title <t>; ready --body-file <f>; merge [--pr <n>]; open, ready and merge take --story ST-<n>; each takes --notion-done; handoff [--restore] [--pr <n>])";
 const HANDOFF_MARK = "<!-- speckit-handoff -->";
@@ -431,7 +431,7 @@ function merge(ctx, flags) {
     ctx.did.push("merged");
   }
   const sha = cloud ? String(viewPr().merge_commit_sha ?? "") : ctx.gh("pr", "view", n, "--json", "mergeCommit", "--jq", ".mergeCommit.oid").stdout.trim();
-  const testStack = stopTestStack(ctx, cloud ? view.head : view.headRefName);
+  const { stack: testStack, worktree } = stopTestStack(ctx, cloud ? view.head : view.headRefName);
   const commentFile = join(ctx.feature.dir, "finish-comment.md");
   const hasComment = existsSync(commentFile);
   const [finish] = ctx.notion([["finish", "--pr", n, ...(hasComment ? ["--body-file", commentFile] : ["--no-comment"])]], `${SELF} merge --pr ${n} --notion-done`);
@@ -456,7 +456,46 @@ function merge(ctx, flags) {
   ctx.did.push("finish comment");
   rmSync(join(ctx.feature.dir, "handoff.md"), { force: true });
   ctx.did.push("handoff.md removed");
-  return { pr: view.number, merged: sha.slice(0, 7), review: finish?.ready?.review ?? [], ready_logged: readyLogged(lines.join("\n")).ok, test_stack: testStack };
+  const removal = removeMergedWorktree(ctx, worktree);
+  return { pr: view.number, merged: sha.slice(0, 7), review: finish?.ready?.review ?? [], ready_logged: readyLogged(lines.join("\n")).ok, test_stack: testStack, worktree: removal };
+}
+
+const samePath = (a, b) => {
+  const real = (p) => {
+    try {
+      return realpathSync(p);
+    } catch {
+      return resolve(p);
+    }
+  };
+  return real(a) === real(b);
+};
+
+/**
+ * The merge step's last act: back up and remove the merged branch's worktree
+ * through worktree-remove.mjs, unless it is the checkout this runs in (the
+ * tail removes that one itself, from the main checkout) or a live process
+ * holds its lock. Nothing here can fail the merge.
+ */
+function removeMergedWorktree(ctx, worktree) {
+  let result;
+  if (!worktree) result = { path: null, removed: false, reason: "no worktree carries the branch" };
+  else if (samePath(worktree.path, ctx.repo)) result = { path: worktree.path, removed: false, reason: "own checkout" };
+  else {
+    const pid = lockPid(worktree.lock);
+    if (pid !== null && processAlive(pid)) result = { path: worktree.path, removed: false, reason: `held by a live session (pid ${pid})` };
+    else {
+      try {
+        const r = ctx.io.run("node", [".claude/scripts/worktree-remove.mjs", worktree.path], { env: ctx.env });
+        const out = lastJson(r.stdout);
+        result = typeof out?.removed === "boolean" ? out : { path: worktree.path, removed: false, reason: (r.stderr || r.stdout || `exit ${r.code}`).trim().slice(-200) };
+      } catch (err) {
+        result = { path: worktree.path, removed: false, reason: String(err?.message ?? err) };
+      }
+    }
+  }
+  ctx.did.push(result.removed ? `worktree ${result.path} removed` : `worktree not removed: ${result.reason}`);
+  return result;
 }
 
 /**
@@ -466,8 +505,9 @@ function merge(ctx, flags) {
  */
 function stopTestStack(ctx, branch) {
   let worktree = ctx.repo;
+  let own = null;
   try {
-    const own = parseWorktrees(ctx.git("worktree", "list", "--porcelain").stdout).find((w) => branch && w.branch === branch);
+    own = parseWorktrees(ctx.git("worktree", "list", "--porcelain").stdout).find((w) => branch && w.branch === branch) ?? null;
     if (own?.path) worktree = own.path;
   } catch (err) {
     if (!(err instanceof Stop)) throw err;
@@ -481,7 +521,7 @@ function stopTestStack(ctx, branch) {
     stack = { stopped: false, reason: String(err?.message ?? err) };
   }
   ctx.did.push(stack.stopped ? `test stack ${stack.project} stopped` : `test stack not stopped: ${stack.reason}`);
-  return stack;
+  return { stack, worktree: own?.path ? own : null };
 }
 
 if (isEntryPoint(import.meta.url)) {
