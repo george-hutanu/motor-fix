@@ -519,6 +519,7 @@ describe('attempt limits', () => {
     }
   });
 
+  // @traces 976-FR-004
   it('still signs in when Redis takes the connection and never answers', async () => {
     jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     await person('andrei@example.test', ['driver']);

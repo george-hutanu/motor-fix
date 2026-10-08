@@ -224,6 +224,7 @@ describe('health under hostile conditions', () => {
       expect(log).toContain('fired 2000');
     });
 
+    // @traces 976-FR-004
     it('runs all checks in parallel, so three hung checks cost 2 seconds not 6', async () => {
       app = await start(
         {

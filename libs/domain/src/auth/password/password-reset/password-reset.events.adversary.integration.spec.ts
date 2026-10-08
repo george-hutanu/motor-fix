@@ -228,6 +228,7 @@ describe('the event a completed reset records', () => {
     ).toBe(2);
   });
 
+  // @traces 976-FR-002
   it('records one event when twelve saves of one link race', async () => {
     const id = await person();
     const token = await linkFor(id);

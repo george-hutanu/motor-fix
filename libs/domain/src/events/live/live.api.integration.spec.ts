@@ -249,6 +249,7 @@ describe('the live stream', () => {
 });
 
 describe('the admin test update', () => {
+  // @traces 976-FR-002 976-FR-004
   it('reaches the target on every open stream within two seconds, once each', async () => {
     const admin = await account('Admin', ['admin']);
     const driver = await account('Andrei', ['driver']);

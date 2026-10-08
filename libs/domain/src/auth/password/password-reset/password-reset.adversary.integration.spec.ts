@@ -183,6 +183,7 @@ describe('answering a reset request before the link is issued', () => {
     expect(await prisma.accountToken.count()).toBe(count);
   });
 
+  // @traces 976-FR-003
   it('resolves drain at once when nothing is in flight', async () => {
     expect(await beforeAnyTimer(resets.drain())).toEqual({
       resolved: undefined,
