@@ -232,6 +232,15 @@ jobs:
       STORAGE_BUCKET: motorfix
       STORAGE_ACCESS_KEY_ID: motorfix
       STORAGE_SECRET_ACCESS_KEY: motorfix-secret
+      # The assistant flows connect through the compose Keycloak (profile
+      # assistants), started in the steps below; it signs people in at the
+      # api on the runner. These are not real keys.
+      MCP_URL: http://127.0.0.1:3002/mcp
+      ASSISTANT_ISSUER: http://127.0.0.1:8081/realms/motorfix-assistants
+      ASSISTANT_TRUSTED_DOMAINS: host.docker.internal
+      ASSISTANT_BROKER_CLIENT_ID: e2e-broker
+      ASSISTANT_BROKER_CLIENT_SECRET: e2e-only-not-a-secret-broker
+      ASSISTANT_BROKER_REDIRECT_URI: http://127.0.0.1:8081/realms/motorfix-assistants/broker/motorfix/endpoint
     steps:
       - uses: actions/checkout@v7
         with:
@@ -241,6 +250,8 @@ jobs:
         run: |
           docker compose up -d --wait minio
           docker compose run --rm minio-setup
+      - name: Identity server
+        run: docker compose --profile assistants up -d --wait keycloak
       - name: Migrate the test database
         run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
       # The sign-in flows use the seeded accounts.

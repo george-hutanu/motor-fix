@@ -1,7 +1,7 @@
 {
   "// targets": "to see all targets run: nx show project web-e2e --web",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "implicitDependencies": ["api", "web"],
+  "implicitDependencies": ["api", "mcp", "web"],
   "name": "web-e2e",
   "projectType": "application",
   "sourceRoot": "apps/web-e2e/src",

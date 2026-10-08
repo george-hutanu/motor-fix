@@ -1,0 +1,349 @@
+{
+  "realm": "motorfix-assistants",
+  "displayName": "MotorFix",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "loginWithEmailAllowed": false,
+  "accessTokenLifespan": 900,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+  "browserFlow": "motorfix browser",
+  "firstBrokerLoginFlow": "motorfix first sign-in",
+  "clientScopes": [
+    {
+      "name": "motorfix.read",
+      "description": "Read your MotorFix account, cars and requests",
+      "protocol": "openid-connect",
+      "attributes": {
+        "consent.screen.text": "Read your MotorFix account, cars, requests and bookings",
+        "display.on.consent.screen": "true",
+        "include.in.token.scope": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "mcp audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "${MCP_URL}",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "motorfix.act",
+      "description": "Act in MotorFix on your behalf",
+      "protocol": "openid-connect",
+      "attributes": {
+        "consent.screen.text": "Act in MotorFix on your behalf: send requests, answer quotes, book visits",
+        "display.on.consent.screen": "true",
+        "include.in.token.scope": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "mcp audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "${MCP_URL}",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "motorfix-account",
+      "description": "The MotorFix account the token speaks for",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "false",
+        "include.in.token.scope": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "motorfix account id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "motorfix_account_id",
+            "claim.name": "motorfix_account_id",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "defaultDefaultClientScopes": ["motorfix-account"],
+  "defaultOptionalClientScopes": ["motorfix.read", "motorfix.act"],
+  "clients": [
+    {
+      "clientId": "motorfix-mcp",
+      "name": "MotorFix MCP server",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "attributes": {
+        "resource_url": "${MCP_URL}"
+      }
+    }
+  ],
+  "identityProviders": [
+    {
+      "alias": "motorfix",
+      "displayName": "MotorFix",
+      "providerId": "oidc",
+      "enabled": true,
+      "trustEmail": false,
+      "storeToken": false,
+      "linkOnly": false,
+      "hideOnLogin": false,
+      "firstBrokerLoginFlowAlias": "motorfix first sign-in",
+      "config": {
+        "authorizationUrl": "${PUBLIC_WEB_URL}/api/v1/auth/assistant/authorize",
+        "tokenUrl": "${API_INTERNAL_URL}/api/v1/auth/assistant/token",
+        "issuer": "${PUBLIC_WEB_URL}",
+        "clientId": "${ASSISTANT_BROKER_CLIENT_ID}",
+        "clientSecret": "${ASSISTANT_BROKER_CLIENT_SECRET}",
+        "clientAuthMethod": "client_secret_post",
+        "defaultScope": "openid",
+        "syncMode": "IMPORT",
+        "validateSignature": "false",
+        "useJwksUrl": "false",
+        "pkceEnabled": "false",
+        "disableUserInfo": "true",
+        "backchannelSupported": "false"
+      }
+    }
+  ],
+  "identityProviderMappers": [
+    {
+      "name": "motorfix account id",
+      "identityProviderAlias": "motorfix",
+      "identityProviderMapper": "oidc-user-attribute-idp-mapper",
+      "config": {
+        "claim": "sub",
+        "user.attribute": "motorfix_account_id",
+        "syncMode": "FORCE"
+      }
+    }
+  ],
+  "authenticationFlows": [
+    {
+      "alias": "motorfix browser",
+      "description": "Every sign-in goes to MotorFix",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-cookie",
+          "requirement": "ALTERNATIVE",
+          "priority": 10,
+          "autheticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "identity-provider-redirector",
+          "authenticatorConfig": "motorfix redirector",
+          "requirement": "ALTERNATIVE",
+          "priority": 20,
+          "autheticatorFlow": false,
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "alias": "motorfix first sign-in",
+      "description": "Creates the user from the MotorFix account, no profile review",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "idp-create-user-if-unique",
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "autheticatorFlow": false,
+          "userSetupAllowed": false
+        }
+      ]
+    }
+  ],
+  "authenticatorConfig": [
+    {
+      "alias": "motorfix redirector",
+      "config": {
+        "defaultProvider": "motorfix"
+      }
+    }
+  ],
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"Username\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"Email\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"First name\",\"validations\":{\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"Last name\",\"validations\":{\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]},\"multivalued\":false},{\"name\":\"motorfix_account_id\",\"displayName\":\"MotorFix account\",\"permissions\":{\"view\":[\"admin\"],\"edit\":[\"admin\"]},\"multivalued\":false}],\"groups\":[]}"
+          ]
+        }
+      }
+    ],
+    "org.keycloak.services.clientregistration.policy.ClientRegistrationPolicy": [
+      {
+        "name": "Trusted Hosts",
+        "providerId": "trusted-hosts",
+        "subType": "anonymous",
+        "subComponents": {},
+        "config": {
+          "trusted-hosts": [
+            "claude.ai",
+            "chatgpt.com",
+            "openai.com",
+            "${ASSISTANT_TRUSTED_DOMAINS:claude.ai}"
+          ],
+          "host-sending-registration-request-must-match": ["false"],
+          "client-uris-must-match": ["true"]
+        }
+      },
+      {
+        "name": "Consent Required",
+        "providerId": "consent-required",
+        "subType": "anonymous",
+        "subComponents": {},
+        "config": {}
+      },
+      {
+        "name": "Full Scope Disabled",
+        "providerId": "scope",
+        "subType": "anonymous",
+        "subComponents": {},
+        "config": {}
+      },
+      {
+        "name": "Max Clients Limit",
+        "providerId": "max-clients",
+        "subType": "anonymous",
+        "subComponents": {},
+        "config": {
+          "max-clients": ["1000"]
+        }
+      },
+      {
+        "name": "Allowed Client Scopes",
+        "providerId": "allowed-client-templates",
+        "subType": "anonymous",
+        "subComponents": {},
+        "config": {
+          "allowed-client-scopes": ["motorfix.read", "motorfix.act"],
+          "allow-default-scopes": ["true"]
+        }
+      },
+      {
+        "name": "Allowed Protocol Mapper Types",
+        "providerId": "allowed-protocol-mappers",
+        "subType": "anonymous",
+        "subComponents": {},
+        "config": {
+          "allowed-protocol-mapper-types": [
+            "oidc-audience-mapper",
+            "oidc-usermodel-attribute-mapper"
+          ]
+        }
+      },
+      {
+        "name": "Allowed Client Scopes",
+        "providerId": "allowed-client-templates",
+        "subType": "authenticated",
+        "subComponents": {},
+        "config": {
+          "allowed-client-scopes": ["motorfix.read", "motorfix.act"],
+          "allow-default-scopes": ["true"]
+        }
+      },
+      {
+        "name": "Allowed Protocol Mapper Types",
+        "providerId": "allowed-protocol-mappers",
+        "subType": "authenticated",
+        "subComponents": {},
+        "config": {
+          "allowed-protocol-mapper-types": [
+            "oidc-audience-mapper",
+            "oidc-usermodel-attribute-mapper"
+          ]
+        }
+      }
+    ]
+  },
+  "clientProfiles": {
+    "profiles": [
+      {
+        "name": "assistant-metadata-document",
+        "description": "Assistants that publish a Client ID Metadata Document",
+        "executors": [
+          {
+            "executor": "client-id-metadata-document",
+            "configuration": {
+              "cimd-allow-http-scheme": "${ASSISTANT_ALLOW_HTTP:false}",
+              "cimd-allow-permitted-domains": [
+                "claude.ai",
+                "chatgpt.com",
+                "openai.com",
+                "localhost",
+                "127.0.0.1",
+                "${ASSISTANT_TRUSTED_DOMAINS:claude.ai}"
+              ],
+              "cimd-restrict-same-domain": "false",
+              "cimd-resource-indicator-allow-list": ["${MCP_URL}"],
+              "only-allow-confidential-client": "false",
+              "accept-public-client-with-confidential-client-only-grant": "true"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "clientPolicies": {
+    "policies": [
+      {
+        "name": "assistant-metadata-document",
+        "description": "A client_id that is an address on a trusted assistant domain",
+        "enabled": true,
+        "conditions": [
+          {
+            "condition": "client-id-uri",
+            "configuration": {
+              "client-id-uri-scheme": ["https", "http"],
+              "client-id-uri-allow-permitted-domains": [
+                "claude.ai",
+                "chatgpt.com",
+                "openai.com",
+                "${ASSISTANT_TRUSTED_DOMAINS:claude.ai}"
+              ]
+            }
+          }
+        ],
+        "profiles": ["assistant-metadata-document"]
+      }
+    ]
+  }
+}
