@@ -10,8 +10,8 @@ export class NearQueryDto {
     example: '46.771,23.624',
   })
   @IsOptional()
-  // IsLatLong alone takes a third number after the second comma.
-  @Matches(/^[^,]+,[^,]+$/)
+  // IsLatLong alone takes a third number and whitespace around the comma.
+  @Matches(/^[-+]?[\d.]+,[-+]?[\d.]+$/)
   @IsLatLong()
   @ValidateBy({
     name: 'nearInRomania',
