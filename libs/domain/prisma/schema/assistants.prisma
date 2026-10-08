@@ -1,0 +1,39 @@
+// assistants module models
+
+// One per account and assistant client (the token's azp), created at the
+// first call after consent. Never deleted: revocation sets revoked_at.
+model AssistantGrant {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId    String    @map("account_id") @db.Uuid
+  account      Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  clientId     String    @map("client_id")
+  clientName   String    @map("client_name")
+  canRead      Boolean   @map("can_read")
+  canAct       Boolean   @map("can_act")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastUsedAt   DateTime  @default(now()) @map("last_used_at") @db.Timestamptz(3)
+  revokedAt    DateTime? @map("revoked_at") @db.Timestamptz(3)
+  revokedBy    String?   @map("revoked_by")
+  revokeReason String?   @map("revoke_reason")
+
+  // Also serves look-ups by account: account_id leads the index.
+  @@unique([accountId, clientId])
+  @@map("assistant_grant")
+}
+
+// The single-use code the identity server exchanges for an id token: only
+// its sha256 is kept, good for 60 seconds.
+model AssistantSignInCode {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codeHash    String    @unique @map("code_hash")
+  accountId   String    @map("account_id") @db.Uuid
+  account     Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  clientId    String    @map("client_id")
+  nonce       String
+  redirectUri String    @map("redirect_uri")
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt      DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@map("assistant_sign_in_code")
+}

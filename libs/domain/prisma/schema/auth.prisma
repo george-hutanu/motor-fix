@@ -61,6 +61,8 @@ model Account {
   reminders               Reminder[]
   cars                    Car[]
   consents                AccountConsent[]
+  assistantGrants         AssistantGrant[]
+  assistantSignInCodes    AssistantSignInCode[]
 
   @@map("account")
 }

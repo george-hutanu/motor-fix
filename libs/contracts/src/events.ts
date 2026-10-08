@@ -137,3 +137,12 @@ export const EVENT_KINDS = [
 ] as const;
 
 export type EventKind = (typeof EVENT_KINDS)[number];
+
+// assistant_grant.created, on the account's own stream: an open Asistent AI
+// view adds the assistant without reloading.
+export interface AssistantGrantCreatedPayload {
+  grantId: string;
+  clientName: string;
+  canRead: boolean;
+  canAct: boolean;
+}
