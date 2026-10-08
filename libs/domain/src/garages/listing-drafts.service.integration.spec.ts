@@ -625,3 +625,42 @@ describe('the hours step of a draft', () => {
     expect(row.data).toEqual({ steps: { '5': section } });
   });
 });
+
+describe('the place in step 5 of a draft', () => {
+  const step5 = (section: unknown) =>
+    body({ data: { steps: { '5': section } }, step: 5 });
+
+  it('keeps the place beside the facilities and reads it back unchanged', async () => {
+    const created = await service.create(body());
+    const section = {
+      facilities: ['waiting_area'],
+      place: {
+        address: 'Strada Ștefan cel Mare 12, Sector 2, București',
+        lat: 44.4512,
+        lng: 26.1207,
+        radiusKm: 35,
+      },
+    };
+
+    await service.save(created.id, created.token, step5(section));
+
+    const draft = await service.current(tokenOf(sent[0]?.link ?? ''));
+    expect(draft.data).toEqual({ steps: { '5': section } });
+  });
+
+  it.each([
+    ['a latitude with no longitude', { lat: 44.45 }],
+    ['a radius of 101 km', { radiusKm: 101 }],
+    ['an address of 201 characters', { address: 'x'.repeat(201) }],
+    ['a seat key', { seatAddress: 'Strada Sediului 3' }],
+  ])('refuses a place with %s', async (_, place) => {
+    const created = await service.create(body());
+
+    const refused = await refusalOf(
+      service.save(created.id, created.token, step5({ place })),
+    );
+
+    expect(refused.status).toBe(400);
+    expect(refused.body).toMatchObject({ code: 'validation_failed' });
+  });
+});
