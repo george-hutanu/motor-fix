@@ -18,6 +18,9 @@ export const touchesWeb = (files) => files.some((f) => WEB.some((p) => f.startsW
 /** The api and the web app serve every sweep; the worker only when its code or shared server code moved. */
 export const appsFor = (files) => ({ api: true, web: true, worker: files.some((f) => WORKER.some((p) => f.startsWith(p))) });
 
+/** The measured layout rules a reviewer may not wave through; the others are reported at medium. */
+const BLOCKING_LAYOUT = new Set(["min-text", "type-scale", "clipped", "grid"]);
+
 function sweepSeverity(o) {
   switch (o.kind) {
     case "load":
@@ -34,6 +37,8 @@ function sweepSeverity(o) {
       return { critical: "high", serious: "high", moderate: "medium" }[o.impact] ?? "low";
     case "overflow":
       return o.viewport === "mobile" ? "high" : "medium";
+    case "layout":
+      return BLOCKING_LAYOUT.has(o.rule) ? "high" : "medium";
     default:
       return "medium";
   }
@@ -55,6 +60,8 @@ function sweepTitle(o) {
       return `Accessibility (${o.impact}): ${o.rule}${o.help ? ` — ${o.help}` : ""}${o.nodes ? ` (${o.nodes} element${o.nodes === 1 ? "" : "s"})` : ""}`;
     case "overflow":
       return `Horizontal overflow: page is ${o.scrollWidth}px wide in a ${o.width}px viewport`;
+    case "layout":
+      return `Layout (${o.rule}): ${o.selector}${o.text ? ` "${o.text}"` : ""}${o.measured ? ` — measured ${o.measured}, expected ${o.expected}` : ""}`;
     default:
       return o.text ?? o.kind;
   }
@@ -83,10 +90,15 @@ export function sweepFinding(o, { web }) {
     lang: o.lang,
     steps: [
       `Open ${o.route} at the ${o.viewport} viewport (${o.size ?? "see VIEWPORTS"}), ${o.scheme} colour scheme, language ${o.lang}.`,
-      o.kind === "axe" ? `Run axe-core on the page: rule ${o.rule}${o.target ? ` on ${o.target}` : ""}.` : "Wait for the network to go idle.",
+      o.kind === "axe"
+        ? `Run axe-core on the page: rule ${o.rule}${o.target ? ` on ${o.target}` : ""}.`
+        : o.kind === "layout"
+          ? `Measure ${o.selector}: ${o.measured}, expected ${o.expected}.`
+          : "Wait for the network to go idle.",
       `Observe: ${sweepTitle(o)}.`,
     ],
     evidence: o.screenshot,
+    ...(o.kind === "layout" ? { rule: o.rule, selector: o.selector, measured: o.measured, expected: o.expected } : {}),
     ...(preExisting ? { preExisting: true } : {}),
   };
 }
@@ -156,8 +168,17 @@ export function readinessOutcome({ name, status, body, storage, url }) {
   return { finding: stepFinding(`${name} readiness failed: ${failed.join(", ") || status}`, `GET ${url} answered ${status}: ${String(body).slice(0, 300)}`) };
 }
 
+/** A layout finding is its route, rule and element: the value measured may move between laps. */
+export const layoutKey = (f) => `layout|${f.route ?? ""}|${f.rule}|${f.selector}`;
+
 /** What makes two findings the same one, across sources and laps. */
-export const findingKey = (f) => f.key ?? `${f.kind}|${f.title}|${f.route ?? ""}`;
+export const findingKey = (f) => f.key ?? (f.kind === "layout" ? layoutKey(f) : `${f.kind}|${f.title}|${f.route ?? ""}`);
+
+/** Layout findings the baseline run of `main` already reported are pre-existing: kept, capped at medium. */
+export function markPreExisting(findings, baseline) {
+  const before = new Set(baseline.filter((f) => f.kind === "layout").map(layoutKey));
+  return findings.map((f) => (f.kind === "layout" && before.has(layoutKey(f)) ? { ...f, severity: capAt(f.severity, "medium"), preExisting: true } : f));
+}
 
 export function mergeFindings(list) {
   const out = new Map();

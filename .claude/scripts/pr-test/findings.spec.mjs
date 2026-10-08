@@ -5,6 +5,10 @@ import {
   appsFor,
   cutOffFinding,
   endpointFinding,
+  findingKey,
+  layoutKey,
+  markPreExisting,
+  mergeFindings,
   readinessOutcome,
   reportMarkdown,
   sweepFinding,
@@ -188,5 +192,52 @@ describe('the report', () => {
     const md = reportMarkdown({ pr: 1, sha: 'abcdef1', verdict: 'success', findings: [], booted: ['api', 'web'], screenshots: [] });
     assert.match(md, /success/i);
     assert.match(md, /no findings/i);
+  });
+});
+
+describe('layout findings', () => {
+  const layout = (rule, extra = {}) => ({ ...where, kind: 'layout', rule, selector: 'p#body13', measured: '13px', expected: '16px (phone body)', text: 'Programează', ...extra });
+
+  it('blocks text under the minimum, off-scale type, clipped text and spacing off the grid', () => {
+    for (const rule of ['min-text', 'type-scale', 'clipped', 'grid']) assert.equal(severityOf(layout(rule)), 'high', rule);
+  });
+
+  it('keeps tap targets, overlap, stretched images, fallback fonts and focus rings at medium', () => {
+    for (const rule of ['tap-target', 'overlap', 'stretched-image', 'font-fallback', 'focus-ring']) assert.equal(severityOf(layout(rule)), 'medium', rule);
+  });
+
+  it('caps a layout defect at medium when the change has no web code', () => {
+    assert.equal(severityOf(layout('min-text'), false), 'medium');
+  });
+
+  it('names the rule, the element, what was measured and what was expected, with the screenshot', () => {
+    const f = sweepFinding(layout('min-text'), { web: true });
+    assert.equal(f.title, 'Layout (min-text): p#body13 "Programează" — measured 13px, expected 16px (phone body)');
+    assert.deepEqual([f.rule, f.selector, f.measured, f.expected], ['min-text', 'p#body13', '13px', '16px (phone body)']);
+    assert.ok(f.steps.some((s) => s === 'Measure p#body13: 13px, expected 16px (phone body).'));
+    assert.equal(f.evidence, 'shots/home-mobile-dark-en.png');
+  });
+
+  it('keys a layout finding by route, rule and element, not by the value measured', () => {
+    const a = sweepFinding(layout('grid', { measured: 'gap 13px' }), { web: true });
+    const b = sweepFinding(layout('grid', { measured: 'gap 14px', viewport: 'desktop' }), { web: true });
+    assert.equal(layoutKey(a), 'layout|/|grid|p#body13');
+    assert.equal(findingKey(a), findingKey(b));
+    assert.equal(mergeFindings([a, b]).length, 1);
+  });
+
+  it('marks a layout finding the baseline run already had as pre-existing, capped at medium', () => {
+    const now = [sweepFinding(layout('min-text'), { web: true }), sweepFinding(layout('grid', { selector: 'div#row' }), { web: true })];
+    const base = [{ ...sweepFinding(layout('min-text', { viewport: 'desktop' }), { web: true }) }, { kind: 'console', title: 'Console error: x', route: '/' }];
+    const marked = markPreExisting(now, base);
+    assert.equal(marked[0].severity, 'medium');
+    assert.equal(marked[0].preExisting, true);
+    assert.equal(marked[1].severity, 'high');
+    assert.equal(marked[1].preExisting, undefined);
+  });
+
+  it('leaves findings of other kinds alone, even when the baseline had them', () => {
+    const consoleError = sweepFinding({ ...where, kind: 'console', text: 'NG0100' }, { web: true });
+    assert.equal(markPreExisting([consoleError], [consoleError])[0].severity, 'high');
   });
 });
