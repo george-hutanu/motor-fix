@@ -15,8 +15,28 @@
   },
   "platformRules": {
     "alwaysOn": "Mereu active în producție",
+    "approve": "Aprobă",
+    "decided": {
+      "approved": "Aprobată de {name}",
+      "cancelled": "Retrasă de {name}",
+      "refused": "Refuzată de {name}"
+    },
     "line": "Regulile care se aplică tuturor service‑urilor",
     "loadFailed": "Nu am putut încărca regulile",
+    "refuse": "Refuză",
+    "request": {
+      "cancel": "Renunță",
+      "problem": {
+        "change_pending": "O altă cerere pentru această regulă așteaptă deja.",
+        "stale_value": "Regula este deja oprită."
+      },
+      "reason": "Motiv",
+      "reasonHint": "5–300 caractere. Ceilalți administratori îl văd.",
+      "second": "Un alt administrator trebuie să aprobe.",
+      "submit": "Trimite cererea",
+      "title": "Oprești regula „Recenzii doar după o lucrare confirmată”?",
+      "what": "Șoferii conectați vor putea lăsa recenzii și din profilul unui service, fără o lucrare prin MotorFix. Aceste recenzii vor fi marcate „nu prin MotorFix”."
+    },
     "retry": "Reîncearcă",
     "rule": {
       "maintenance_mode": {
@@ -39,7 +59,9 @@
     "saveFailed": "Regula nu a putut fi salvată. Încearcă din nou.",
     "testOnly": "Doar în testare",
     "title": "Setări platformă",
-    "twoAdmins": "Este nevoie de un al doilea administrator."
+    "twoAdmins": "Este nevoie de un al doilea administrator.",
+    "waiting": "Așteaptă aprobarea altui admin",
+    "withdraw": "Retrage cererea"
   },
   "users": {
     "cars": {

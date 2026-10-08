@@ -21,8 +21,8 @@ import {
 } from '@motor-fix/overlays';
 import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
 
+import { characters } from '../../characters';
 import { ADDRESS } from '../../sign-in/sign-in';
-import { characters } from '../../sign-in/sign-up/sign-up';
 
 type Kind = 'mechanic' | 'receptionist';
 

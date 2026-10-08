@@ -93,6 +93,16 @@ export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$
 export { platformRulesControllerList as platformRulesControllerList } from './fn/admin/platform-rules-controller-list';
 export type { PlatformRulesControllerChange$Params as PlatformRulesControllerChange$Params } from './fn/admin/platform-rules-controller-change';
 export { platformRulesControllerChange as platformRulesControllerChange } from './fn/admin/platform-rules-controller-change';
+export type { PlatformRuleChangesControllerList$Params as PlatformRuleChangesControllerList$Params } from './fn/admin/platform-rule-changes-controller-list';
+export { platformRuleChangesControllerList as platformRuleChangesControllerList } from './fn/admin/platform-rule-changes-controller-list';
+export type { PlatformRuleChangesControllerRequest$Params as PlatformRuleChangesControllerRequest$Params } from './fn/admin/platform-rule-changes-controller-request';
+export { platformRuleChangesControllerRequest as platformRuleChangesControllerRequest } from './fn/admin/platform-rule-changes-controller-request';
+export type { PlatformRuleChangesControllerApprove$Params as PlatformRuleChangesControllerApprove$Params } from './fn/admin/platform-rule-changes-controller-approve';
+export { platformRuleChangesControllerApprove as platformRuleChangesControllerApprove } from './fn/admin/platform-rule-changes-controller-approve';
+export type { PlatformRuleChangesControllerRefuse$Params as PlatformRuleChangesControllerRefuse$Params } from './fn/admin/platform-rule-changes-controller-refuse';
+export { platformRuleChangesControllerRefuse as platformRuleChangesControllerRefuse } from './fn/admin/platform-rule-changes-controller-refuse';
+export type { PlatformRuleChangesControllerCancel$Params as PlatformRuleChangesControllerCancel$Params } from './fn/admin/platform-rule-changes-controller-cancel';
+export { platformRuleChangesControllerCancel as platformRuleChangesControllerCancel } from './fn/admin/platform-rule-changes-controller-cancel';
 export type { CarsControllerList$Params as CarsControllerList$Params } from './fn/cars/cars-controller-list';
 export { carsControllerList as carsControllerList } from './fn/cars/cars-controller-list';
 export type { CarsControllerCreate$Params as CarsControllerCreate$Params } from './fn/cars/cars-controller-create';

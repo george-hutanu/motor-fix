@@ -22,6 +22,7 @@ features:
   - 802-sms-count-throw-clears-mark
   - 806-requeue-sweep-batched
   - 138-notification-switches
+  - 260-rule-off-confirm
 ---
 
 # Capability: Notifications
@@ -557,6 +558,10 @@ _From 138-notification-switches._
 ### 138-FR-013 — Every switch MUST be operable by keyboard and carry its title as accessible name with the helper line as description. The disabled loading state and the first-load error MUST be exposed to assistive technology. The consent step MUST take focus when it opens, close on Escape as a cancel, and return focus to the news switch when it closes.
 
 _From 138-notification-switches._
+
+### 260-FR-008 — On a request, the system MUST queue one ADMIN_RULE_APPROVAL_NEEDED notification for every admin account other than the asker (none when the asker is the only admin), carrying the asker's first name, the rule's name and the reason, with a link to the admin's Setări; the reason is user text and MUST be rendered as escaped plain text in the e-mail and the push; the type's catalogue entry MUST narrow to e-mail and push (muteable in the admin section, its urgency unchanged). The system MUST carry the type's e-mail and push texts in Romanian and English. No notification is sent on a decision or a withdrawal.
+
+_From 260-rule-off-confirm._
 
 ## Retired
 

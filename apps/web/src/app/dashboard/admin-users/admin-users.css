@@ -27,7 +27,7 @@
   }
   /* Beside the list there is room for one chart under the other. */
   .panels mf-admin-growth {
-    --mf-growth-columns: 1;
+    --growth-columns: 1;
   }
 }
 .list {

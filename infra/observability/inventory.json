@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 73,
+    "count": 78,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -208,6 +208,15 @@
       "alerts": "none",
       "reason": "map tiles fetched by the browser, no key; a failed load shows the map-down message and is not counted server-side",
       "story": "ST-111"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_platform_rule_changes_total",
+      "source": "libs/domain/src/admin/platform-rules/changes/changes.metrics.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "counts rule change requests by action (requested, approved, refused, cancelled), with one PlatformRuleChanges log line per step; ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-260"
     },
     {
       "kind": "outside-service",
