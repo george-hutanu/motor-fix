@@ -173,6 +173,11 @@ for (const scheme of ['light', 'dark'] as const) {
       ];
       for (const height of heights) expect(height).toBeGreaterThanOrEqual(44);
       expect(await place()).toEqual(before);
+
+      // "No brand found" is a layer too.
+      await page.getByRole('combobox').fill('zzz');
+      await expect(page.locator('mf-brand-search .none')).toBeVisible();
+      expect(await place()).toEqual(before);
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(320);

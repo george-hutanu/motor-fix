@@ -139,7 +139,9 @@ export class Home {
 
   protected pick(brand: BrandDto) {
     if (brand.slug === this.selected()?.slug) return;
-    const tile = this.tiles().find((b) => b.slug === brand.slug);
+    // A tile counts only while it is shown: a popular brand an earlier search
+    // pushed off the eight takes the first place like any other.
+    const tile = this.shown().find((b) => b.slug === brand.slug);
     if (!tile) this.searched.set(brand);
     this.selected.set(tile ?? brand);
   }

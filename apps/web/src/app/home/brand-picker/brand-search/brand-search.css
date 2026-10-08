@@ -18,8 +18,10 @@ input:focus-visible {
   outline-offset: var(--mf-focus-offset);
 }
 
-/* A layer over what follows, so the main button never moves. */
-[role="listbox"] {
+/* A layer over what follows, so the main button never moves: the
+   suggestions, and in their place the loading or no-match line. */
+[role="listbox"],
+.none {
   background: var(--mf-panel-raised);
   border: 1px solid var(--mf-line-strong);
   border-radius: var(--mf-radius-control);
@@ -54,7 +56,11 @@ input:focus-visible {
   outline-offset: calc(-1 * var(--mf-focus-width));
 }
 
-.none,
+.none {
+  overflow-wrap: anywhere;
+  padding: var(--mf-space-2) var(--mf-space-3);
+}
+
 .failed {
   margin: 0;
   overflow-wrap: anywhere;

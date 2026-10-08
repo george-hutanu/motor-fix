@@ -36,12 +36,12 @@
       }
     </ul>
   }
+  @if (state() === 'loading' && typed()) {
+    <p class="none" aria-hidden="true">{{ 'public.home.searchLoading' | t }}</p>
+  } @else if (none() && open()) {
+    <p class="none" aria-hidden="true">{{ 'public.home.searchNone' | t }}</p>
+  }
 </div>
-@if (state() === 'loading' && typed()) {
-  <p class="none" aria-hidden="true">{{ 'public.home.searchLoading' | t }}</p>
-} @else if (none() && open()) {
-  <p class="none" aria-hidden="true">{{ 'public.home.searchNone' | t }}</p>
-}
 @if (state() === 'failed') {
   <p class="failed" id="mf-brand-search-failed">{{ 'public.home.searchFailed' | t }}</p>
   <button

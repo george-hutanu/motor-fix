@@ -398,6 +398,15 @@ describe('Home brand search', () => {
     expect(checked()).toBe('Dacia');
   });
 
+  it('shows a popular brand a search pushed off the tiles when it is searched next', async () => {
+    await render();
+    await find(ALFA);
+    await find(brand('renault'));
+
+    expect(names()).toEqual(['Renault', ...NAMES.slice(0, 7)]);
+    expect(checked()).toBe('Renault');
+  });
+
   it('reads nothing again when the selected brand is searched', async () => {
     await render();
     await find(ALFA);
