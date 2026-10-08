@@ -30,8 +30,8 @@ export default defineConfig({
   // Locally started servers: run in parallel, and a test that passed only on
   // a retry fails the run instead of hiding a race. Against a deployed
   // address the preset's one worker and retries stay.
-  // They also start with the api's sign-up counts cleared, so a second local
-  // run within the hour is not refused (src/sign-up-counts.ts).
+  // They also start with the api's sign-up and draft counts cleared, so a
+  // second local run within the hour is not refused (src/rate-counts.ts).
   ...(deployed
     ? {}
     : {
