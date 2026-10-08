@@ -1,9 +1,10 @@
 ---
 capability: garage-verification
-updated: 2026-10-07
+updated: 2026-10-08
 features:
   - 207-garage-approval-flow
   - 300-verification-checks
+  - 307-public-garage-profile
 ---
 
 # Capability: Garage verification
@@ -28,9 +29,9 @@ _From 207-garage-approval-flow._
 
 _From 207-garage-approval-flow._
 
-### 207-FR-005 — One query scope, `publicGarages()`, MUST define public as garage status = `approved` and nothing else, reading the database and never a cache; every public read of garages (search, map, profile, request routing, mechanic public pages, the sitemap and the assistant's tools, as each is built) MUST go through it, and a test MUST fail, naming the method, when a public garage read in the domain library bypasses it. The one public read this story ships, `GET /api/v1/garages/{slug}` (marked public, joining the public-routes list), MUST answer the garage's id, name and slug through the scope; 410 `gone` for a `suspended` garage (A34); and 404 `not_found` otherwise, the same body for a never-approved and an unknown slug.
+### 307-FR-001 — `GET /api/v1/garages/{slug}` MUST keep answering only through the one public scope: 200 for an `approved` garage, 404 `not_found` with no garage data for a `draft`, waiting or unknown slug, to everyone including the garage's own staff, and 410 `gone` with no garage data for a `suspended` garage (207-FR-005 unchanged).
 
-_From 207-garage-approval-flow._
+_From 307-public-garage-profile._
 
 ### 207-FR-006 — The status shown to the garage MUST be derived, never stored, as one of: Ciornă (draft) when the garage is `draft` and has no file; Trimis (sent) when the newest file is `submitted`; În verificare (under review) when it is `in_review`; Cerute completări (more details requested) when it is `more_requested`; Respins (rejected), with the reason code and note, when it is `rejected`; Aprobat, pe hartă (approved, on the map) when the garage is `approved`, whatever its newest file; Suspendat (suspended) when the garage is `suspended`. The seven labels MUST exist in Romanian and English in the shared status labels, in the forms the mock uses: "Trimis", "În verificare", "Cerute completări", "Respins", "Aprobat, pe hartă" and, for the unpublished states, the suffix "· nepublicat" (English "· not published").
 
@@ -99,3 +100,7 @@ _From 300-verification-checks._
 ### 300-FR-011 — Only a MotorFix admin may record a check; anyone else gets 404, as on the other admin routes.
 
 _From 300-verification-checks._
+
+## Retired
+
+- `207-FR-005` — superseded by `307-FR-001` (2026-10-08)
