@@ -98,6 +98,15 @@ describe('the Notion task for a debt', () => {
     assert.equal(taskFor(entry, ctx).properties.Feature, undefined);
     assert.deepEqual(JSON.parse(taskFor(entry, { ...ctx, feature: 'https://app.notion.com/p/f1' }).properties.Feature), ['https://app.notion.com/p/f1']);
   });
+
+  it('leaves the epic relation out for a story with no epic, never sending [null] (ST-973)', () => {
+    for (const epic of [undefined, null, '']) {
+      const t = taskFor(entry, { ...ctx, epic });
+      assert.equal('Epic' in t.properties, false, `epic ${JSON.stringify(epic)}`);
+      assert.equal(t.properties.Status, 'To do');
+    }
+    assert.deepEqual(JSON.parse(taskFor(entry, ctx).properties.Epic), [ctx.epic]);
+  });
 });
 
 describe('writing the task back', () => {
@@ -140,5 +149,20 @@ describe('the command line', () => {
     out.length = 0;
     main(['plan', file, '--story', ctx.story, '--epic', ctx.epic, '--pr', ctx.pr, '--id', 'ST-434']);
     assert.equal(JSON.parse(out.at(-1)).length, 3);
+  });
+
+  it('plans without --epic for a story with no epic, and still needs --story, --pr and --id (ST-973)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'debt-'));
+    dirs.push(dir);
+    const file = join(dir, 'deferred.md');
+    writeFileSync(file, DEFERRED);
+    const out = [];
+    vi.spyOn(console, 'log').mockImplementation((line) => out.push(line));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    assert.equal(main(['plan', file, '--story', ctx.story, '--pr', ctx.pr, '--id', 'ST-434']), 0);
+    const plan = JSON.parse(out.at(-1));
+    assert.equal(plan.length, 4);
+    assert.ok(plan.every((t) => !('Epic' in t.properties)));
+    assert.equal(main(['plan', file, '--story', ctx.story, '--epic', ctx.epic, '--id', 'ST-434']), 64);
   });
 });

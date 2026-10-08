@@ -7,8 +7,9 @@
 //
 // This script decides; `speckit-notion-sync debt` makes the Notion writes:
 //
-//   node .claude/scripts/debt-tasks.mjs plan <deferred.md> --story <url> --epic <url> --pr <url> --id ST-<n> [--feature <url>]
-//     prints the pending entries as [{ line, properties, content }]
+//   node .claude/scripts/debt-tasks.mjs plan <deferred.md> --story <url> [--epic <url>] --pr <url> --id ST-<n> [--feature <url>]
+//     prints the pending entries as [{ line, properties, content }]; a story
+//     with no epic omits --epic and its tasks carry no Epic relation
 //   node .claude/scripts/debt-tasks.mjs mark <deferred.md> --line <n> --url <notion url>
 //     writes the task's URL onto that bullet, so no later run files it again
 //
@@ -63,7 +64,8 @@ export function taskFor(entry, { story, epic, feature, pr, storyId }) {
         : `So that the code stays sound, fix what ${entry.reviewer} deferred in ${storyId}: ${summary}`,
       400,
     ),
-    Epic: JSON.stringify([epic]),
+    // A story with no epic gets no Epic relation: `[null]` makes Notion answer 400.
+    ...(epic ? { Epic: JSON.stringify([epic]) } : {}),
     ...(feature ? { Feature: JSON.stringify([feature]) } : {}),
   };
   const content = [
@@ -97,8 +99,8 @@ export function main(argv) {
   const [command, file] = argv;
   if (command === "plan" && file) {
     const ctx = { story: flag(argv, "story"), epic: flag(argv, "epic"), feature: flag(argv, "feature"), pr: flag(argv, "pr"), storyId: flag(argv, "id") };
-    if (!ctx.story || !ctx.epic || !ctx.pr || !ctx.storyId) {
-      console.error("debt-tasks: plan needs --story, --epic, --pr and --id");
+    if (!ctx.story || !ctx.pr || !ctx.storyId) {
+      console.error("debt-tasks: plan needs --story, --pr and --id (--epic when the story has one)");
       return 64;
     }
     const plan = parseDeferred(readFileSync(file, "utf8")).filter((e) => e.pending).map((e) => taskFor(e, ctx));
@@ -109,7 +111,7 @@ export function main(argv) {
     writeFileSync(file, markFiled(readFileSync(file, "utf8"), Number(flag(argv, "line")), flag(argv, "url")));
     return 0;
   }
-  console.error("usage: debt-tasks.mjs plan <deferred.md> --story <url> --epic <url> --pr <url> --id ST-<n> [--feature <url>] | mark <deferred.md> --line <n> --url <url>");
+  console.error("usage: debt-tasks.mjs plan <deferred.md> --story <url> [--epic <url>] --pr <url> --id ST-<n> [--feature <url>] | mark <deferred.md> --line <n> --url <url>");
   return 64;
 }
 
