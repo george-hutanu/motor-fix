@@ -87,6 +87,95 @@ test.describe('the public garage profile @seeded', () => {
     ).toBeHidden();
     expect(await sideways(page)).toBeLessThanOrEqual(0);
   });
+
+  for (const path of ['/ro', '/ro/garages/service-auto-militari']) {
+    test(`fits the site bar's controls on one row inside the bar at 320 px on ${path}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ height: 640, width: 320 });
+      await page.goto(path);
+      const bar = page.locator('mf-public-frame header.bar');
+      await expect(bar).toBeVisible();
+
+      const boxes = await bar.evaluate((header) => {
+        const box = (el: Element) => {
+          const r = el.getBoundingClientRect();
+          return { bottom: r.bottom, left: r.left, right: r.right, top: r.top };
+        };
+        return {
+          bar: box(header),
+          controls: [
+            ...header.querySelectorAll(
+              '.logo, mf-language-switch button, .account',
+            ),
+          ].map(box),
+          languages: [
+            ...header.querySelectorAll('mf-language-switch button'),
+          ].map(box),
+        };
+      });
+      expect(boxes.controls).toHaveLength(4);
+      for (const c of boxes.controls) {
+        expect(c.left).toBeGreaterThanOrEqual(0);
+        expect(c.right).toBeLessThanOrEqual(320);
+        expect(c.top).toBeGreaterThanOrEqual(boxes.bar.top);
+        expect(c.bottom).toBeLessThanOrEqual(boxes.bar.bottom);
+      }
+      expect(boxes.languages[0]?.top).toBe(boxes.languages[1]?.top);
+    });
+  }
+
+  test('keeps the public frame on the phone type floor and the 4 px grid', async ({
+    page,
+  }) => {
+    await page.goto('/ro/garages/service-auto-militari');
+    await expect(heading(page)).toBeVisible();
+
+    const measure = () =>
+      page.evaluate(() => {
+        const css = (selector: string) =>
+          [...document.querySelectorAll(selector)].map((el) =>
+            getComputedStyle(el),
+          );
+        const px = (v: string) => Number.parseFloat(v);
+        const offGrid = (s: CSSStyleDeclaration) =>
+          [
+            s.paddingTop,
+            s.paddingRight,
+            s.paddingBottom,
+            s.paddingLeft,
+            s.rowGap,
+            s.columnGap,
+          ]
+            .map(px)
+            .filter(
+              (v) =>
+                Number.isFinite(v) &&
+                Math.abs(v / 4 - Math.round(v / 4)) > 0.01,
+            );
+        return {
+          offGrid: [
+            'mf-public-frame header.bar',
+            'mf-garage-profile',
+            'mf-garage-profile header.head',
+            'mf-public-tab-bar nav',
+            'mf-public-tab-bar nav a',
+            'mf-language-switch button',
+          ].flatMap((selector) => css(selector).flatMap(offGrid)),
+          sizes: css(
+            'mf-public-tab-bar nav a span, mf-language-switch button',
+          ).map((s) => px(s.fontSize)),
+        };
+      });
+    // A tablet lays the profile's header side by side; a phone shows the tab bar.
+    await page.setViewportSize({ height: 1180, width: 820 });
+    expect((await measure()).offGrid).toEqual([]);
+    await page.setViewportSize({ height: 844, width: 390 });
+    const measured = await measure();
+    expect(measured.offGrid).toEqual([]);
+    expect(measured.sizes.length).toBe(5);
+    for (const size of measured.sizes) expect(size).toBeGreaterThanOrEqual(16);
+  });
 });
 
 // A mobile mechanic of this file's own, written straight to PostgreSQL: it

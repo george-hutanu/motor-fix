@@ -18,7 +18,7 @@ main {
   gap: var(--mf-space-3);
   box-sizing: border-box;
   height: var(--public-site-bar);
-  padding: var(--mf-space-1) clamp(16px, 4.4vw, 32px);
+  padding: var(--mf-space-1) var(--mf-space-4);
   border-bottom: 1px solid var(--mf-line);
   background: color-mix(in srgb, var(--mf-bg) 74%, transparent);
   -webkit-backdrop-filter: saturate(160%) blur(18px);
@@ -44,6 +44,27 @@ main {
   letter-spacing: 0.3em;
   text-transform: uppercase;
   white-space: nowrap;
+}
+/* Two 44 px languages side by side, never wrapped under one another. */
+mf-language-switch {
+  flex: none;
+}
+/* A 320 px phone holds the wordmark, both languages and the account button on one row. */
+@media (max-width: 359.98px) {
+  .bar {
+    gap: var(--mf-space-2);
+  }
+  .logo {
+    letter-spacing: 0.08em;
+  }
+  .logo svg {
+    display: none;
+  }
+}
+@media (min-width: 768px) {
+  .bar {
+    padding-inline: var(--mf-space-8);
+  }
 }
 .logo svg {
   color: var(--mf-amber);

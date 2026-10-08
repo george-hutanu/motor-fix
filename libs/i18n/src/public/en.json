@@ -25,7 +25,7 @@
     "backBrand": "Garages for {brand}",
     "backHome": "Home",
     "badge": "Verified · RAR authorisation",
-    "failed": "We could not load this garage",
+    "failed": "We could not load the garage",
     "loading": "Loading the profile",
     "mobileArea": "Mobile mechanic · {km} area",
     "refuses": "Does not work on {brand}",

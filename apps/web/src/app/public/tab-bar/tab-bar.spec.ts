@@ -309,7 +309,7 @@ describe('the public tab bar', () => {
     expect(css).toMatch(/bottom: 0/);
     expect(css).toMatch(/padding:[^;]*max\([^;]*var\(--mf-safe-bottom\)\)/);
     expect(css).toMatch(/min-height: (4[4-9]|5\d)px/);
-    expect(css).toMatch(/font-size: var\(--mf-size-label\)/);
+    expect(css).toMatch(/font-size: var\(--mf-size-body\)/);
     expect(css).toMatch(
       /\[aria-current=["']?page["']?\][^{]*\{[^}]*color: var\(--mf-amber-ink\)/,
     );

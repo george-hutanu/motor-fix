@@ -27,16 +27,17 @@
 nav {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding: 6px 8px max(14px, var(--mf-safe-bottom));
+  padding: var(--mf-space-2) var(--mf-space-2)
+    max(var(--mf-space-4), var(--mf-safe-bottom));
 }
 a {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
+  gap: var(--mf-space-1);
   min-height: 52px;
   color: var(--mf-text-secondary);
-  font-size: var(--mf-size-label);
+  font-size: var(--mf-size-body);
   font-weight: 700;
   text-align: center;
   text-decoration: none;

@@ -228,6 +228,19 @@ describe('the garage profile', () => {
     );
   });
 
+  it('words the error block in English as the spec does', async () => {
+    await TestBed.inject(I18n).use('en');
+    await open('/en/garages/service-auto-militari');
+    await reads[0]?.fail(500);
+
+    expect(text()).toContain('We could not load the garage');
+    expect(
+      [...page().querySelectorAll('button')].some(
+        (b) => b.textContent?.trim() === 'Try again',
+      ),
+    ).toBe(true);
+  });
+
   it('shows the not-found page and status for a garage nobody can see', async () => {
     await open('/ro/garages/atelier-dinamo');
     await reads[0]?.fail(404);
