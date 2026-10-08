@@ -600,7 +600,7 @@ describe('the fuels under a taken brand on a phone', () => {
     expect(outside).not.toMatch(/\.fuels button \{[^}]*font-size/);
     expect(outside).not.toMatch(/\.quiet \{[^}]*font-size/);
     expect(tablet).toMatch(
-      /\.fuels button,\s*\.quiet \{[^}]*font-size:\s*var\(--mf-size-small\);/,
+      /\.fuels button,\s*\.quiet,[^{]*\{[^}]*font-size:\s*var\(--mf-size-small\);/,
     );
   });
 });

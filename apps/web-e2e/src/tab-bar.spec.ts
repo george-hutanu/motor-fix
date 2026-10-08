@@ -166,7 +166,7 @@ test('the server render of / carries no tab bar', async ({ request }) => {
 
 test.describe('the public tab bar at 320 px', () => {
   for (const path of ['/ro', '/ro/garages', '/ro/account', '/en']) {
-    test(`fits ${path} with 44 px tabs and 12 px labels`, async ({ page }) => {
+    test(`fits ${path} with 44 px tabs and 16 px labels`, async ({ page }) => {
       await page.setViewportSize({ height: 640, width: 320 });
       await open(page, path);
 
@@ -182,7 +182,7 @@ test.describe('the public tab bar at 320 px', () => {
         const size = await tab.evaluate((el) =>
           Number.parseFloat(getComputedStyle(el).fontSize),
         );
-        expect(size).toBeGreaterThanOrEqual(12);
+        expect(size).toBeGreaterThanOrEqual(16);
       }
     });
   }

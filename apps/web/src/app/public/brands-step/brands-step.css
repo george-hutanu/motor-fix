@@ -12,9 +12,6 @@ p {
 .left {
   color: var(--mf-text-secondary);
 }
-.left {
-  font-size: var(--mf-size-small);
-}
 input {
   width: 100%;
   min-height: var(--mf-tap);
@@ -55,9 +52,6 @@ ul button:focus-visible {
 .results button {
   border-style: dashed;
 }
-mf-lamp {
-  font-size: var(--mf-size-small);
-}
 .field {
   display: grid;
   gap: var(--mf-space-1);
@@ -73,10 +67,12 @@ mf-lamp {
 .quiet {
   color: var(--mf-text-secondary);
 }
-/* A phone reads the fuels and the no-requests line at the body size; the small size starts at a tablet. */
+/* A phone reads the fuels, the no-requests line, the counters and the lamps at the body size; the small size starts at a tablet. */
 @media (min-width: 768px) {
   .fuels button,
-  .quiet {
+  .quiet,
+  .left,
+  mf-lamp {
     font-size: var(--mf-size-small);
   }
 }

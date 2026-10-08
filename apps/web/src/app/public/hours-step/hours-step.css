@@ -59,10 +59,41 @@ input:focus-visible {
   min-height: var(--mf-tap);
   cursor: pointer;
 }
+/* The box is drawn at 20 px inside a 44 px tap target. */
 .tick input {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--mf-tap);
+  height: var(--mf-tap);
+  margin: 0 calc((1.25rem - var(--mf-tap)) / 2) 0 0;
+  appearance: none;
+  cursor: pointer;
+}
+.tick input::before,
+.tick input::after {
+  grid-area: 1 / 1;
+  content: "";
+  box-sizing: border-box;
+}
+.tick input::before {
   width: 1.25rem;
   height: 1.25rem;
-  margin: 0;
+  border: 2px solid var(--mf-text-secondary);
+  border-radius: 4px;
+  background: var(--mf-bg);
+}
+.tick input:checked::before {
+  border-color: var(--mf-text);
+  background: var(--mf-text);
+}
+.tick input:checked::after {
+  width: 6px;
+  height: 11px;
+  margin-top: -2px;
+  border: solid var(--mf-bg);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 button {
   display: inline-flex;
@@ -130,15 +161,11 @@ ul {
   display: grid;
   gap: var(--mf-space-1);
   margin-top: var(--mf-space-1);
-  font-size: var(--mf-size-small);
 }
 .facilities button[aria-pressed="true"],
 .payments button[aria-pressed="true"] {
   border-color: var(--mf-text-secondary);
   font-weight: 600;
-}
-mf-lamp {
-  font-size: var(--mf-size-small);
 }
 /* The car's terms take their own line under its chip. */
 .facilities li:has(.courtesy) {
@@ -171,4 +198,11 @@ mf-lamp {
   max-width: 100%;
   min-height: var(--mf-tap);
   box-sizing: border-box;
+}
+/* A phone reads these at the body size; the small and label sizes start at a tablet. */
+@media (min-width: 768px) {
+  .holidays ul,
+  mf-lamp {
+    font-size: var(--mf-size-small);
+  }
 }
