@@ -21,6 +21,8 @@ export class PlatformRulesModule {
   ): DynamicModule {
     return {
       controllers: [PlatformRulesController, PlatformRuleChangesController],
+      // FR-013: the reviews story reads reviewPolicy() from its own module.
+      exports: [PlatformRulesService],
       imports: [notifications],
       module: PlatformRulesModule,
       providers: [
