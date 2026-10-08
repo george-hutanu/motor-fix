@@ -17,6 +17,8 @@ import { openApiDocument } from './bootstrap';
 const api = apiBoot();
 
 const KNOWN = [
+  'GET /api/v1/admin/accounts',
+  'GET /api/v1/admin/accounts/summary',
   'GET /api/v1/admin/growth',
   'GET /api/v1/admin/overview',
   'GET /api/v1/admin/platform-rules',
