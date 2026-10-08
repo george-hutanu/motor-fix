@@ -1,6 +1,7 @@
 import {
   GarageSearchPageDto,
   GarageSearchQueryDto,
+  parseNear,
 } from '@motor-fix/contracts';
 import { Controller, Get, Query } from '@nestjs/common';
 import {
@@ -23,10 +24,14 @@ export class GarageSearchController {
   @ApiOkResponse({ type: GarageSearchPageDto })
   @ApiBadRequestResponse({
     description:
-      'validation_failed: brandId missing or not a uuid; invalid_cursor: not a page of this search',
+      'validation_failed: brandId missing or not a uuid, or near not a lat,lng in Romania; invalid_cursor: not a page of this search',
   })
   @ApiNotFoundResponse({ description: 'not_found: no brand with that id' })
   forBrand(@Query() query: GarageSearchQueryDto): Promise<GarageSearchPageDto> {
-    return this.search.forBrand(query.brandId, query.cursor);
+    return this.search.forBrand(
+      query.brandId,
+      query.cursor,
+      parseNear(query.near),
+    );
   }
 }

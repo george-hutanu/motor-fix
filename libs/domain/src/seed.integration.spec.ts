@@ -276,6 +276,8 @@ describe('seed of the listed garages', () => {
         brands: {
           select: { brand: { select: { key: true } }, stance: true },
         },
+        latitude: true,
+        longitude: true,
         slug: true,
       },
       where: { status: 'approved' },
@@ -285,11 +287,11 @@ describe('seed of the listed garages', () => {
       (g) => g.brands.find((b) => b.brand.key === 'dacia')?.stance ?? 'none',
     );
 
-  it('lists six garages, three taking Dacia, one refusing it, two silent', async () => {
+  it('lists eight garages, each with a place, five taking Dacia, one refusing it, two silent', async () => {
     expect(seed('test').status).toBe(0);
 
     const garages = await listed();
-    expect(garages).toHaveLength(6);
+    expect(garages).toHaveLength(8);
     expect(dacia(garages).sort()).toEqual([
       'does_not_take',
       'none',
@@ -297,7 +299,13 @@ describe('seed of the listed garages', () => {
       'works_on',
       'works_on',
       'works_on',
+      'works_on',
+      'works_on',
     ]);
+    for (const garage of garages) {
+      expect(garage.latitude).not.toBeNull();
+      expect(garage.longitude).not.toBeNull();
+    }
     // Approved in an earlier month, so the admin's growth this month stays 0.
     for (const garage of garages) {
       expect(garage.approvedAt?.getTime()).toBeLessThan(

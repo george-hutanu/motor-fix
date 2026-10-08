@@ -134,3 +134,148 @@ describe('GET /search/garages', () => {
     expect(res.body.code).toBe('not_found');
   });
 });
+
+// Cluj-Napoca; a hundredth of a degree of latitude is about 1.1 km.
+const CLUJ = { lat: 46.771, lng: 23.624 };
+const NEAR = '46.771,23.624';
+
+async function placed(
+  name: string,
+  dLat: number | null,
+  stance?: 'works_on' | 'does_not_take',
+  radiusKm?: number,
+) {
+  const garage = await prisma.garage.create({
+    data: {
+      name,
+      slug: name.toLowerCase().replace(/ /g, '-'),
+      status: 'approved',
+      ...(dLat !== null && {
+        latitude: CLUJ.lat + dLat,
+        longitude: CLUJ.lng,
+      }),
+      ...(radiusKm !== undefined && {
+        businessKind: 'mobile' as const,
+        seatAddress: 'Strada Sediului 1, Cluj-Napoca',
+        serviceRadiusKm: radiusKm,
+      }),
+    },
+  });
+  if (stance) {
+    await prisma.garageBrand.create({
+      data: {
+        brandId: dacia,
+        garageId: garage.id,
+        stance,
+        ...(stance === 'does_not_take' && {
+          diesel: false,
+          electric: false,
+          hybrid: false,
+          petrol: false,
+        }),
+      },
+    });
+  }
+  return garage.id;
+}
+
+describe('GET /search/garages near a place', () => {
+  it('lists and counts only the garages in the area, with their distance', async () => {
+    await placed('Alfa', 0.01, 'works_on');
+    await placed('Beta', 0.1, 'does_not_take');
+    await placed('Gama', 0.27, 'works_on', 35);
+    await placed('Delta', 0.27, 'works_on', 20);
+    await placed('Epsilon', 0.5, 'works_on');
+    await placed('Zeta', null, 'works_on');
+
+    const res = await search({ brandId: dacia, near: NEAR });
+
+    expect(res.status).toBe(200);
+    expect(res.body.counts).toEqual({ doesNotTake: 1, worksOn: 2 });
+    expect(res.body.total).toBe(3);
+    expect(
+      res.body.items.map(
+        ({ comesToYou, distanceKm, name }: Record<string, unknown>) => ({
+          comesToYou,
+          distanceKm,
+          name,
+        }),
+      ),
+    ).toEqual([
+      { comesToYou: false, distanceKm: 1.1, name: 'Alfa' },
+      { comesToYou: true, distanceKm: null, name: 'Gama' },
+      { comesToYou: false, distanceKm: 11.1, name: 'Beta' },
+    ]);
+  });
+
+  it('never tells where a mobile mechanic is', async () => {
+    await placed('Gama', 0.1, 'works_on', 20);
+
+    const res = await search({ brandId: dacia, near: NEAR });
+
+    const [item] = res.body.items;
+    expect(item).toMatchObject({ comesToYou: true, distanceKm: null });
+    for (const key of [
+      'address',
+      'latitude',
+      'longitude',
+      'seatAddress',
+      'serviceRadiusKm',
+    ]) {
+      expect(item).not.toHaveProperty(key);
+    }
+    expect(JSON.stringify(res.body)).not.toContain('Sediului');
+  });
+
+  it('carries neither distance nor "comes to you" without a place', async () => {
+    await placed('Alfa', 0.01, 'works_on');
+    await placed('Gama', 0.1, 'works_on', 20);
+
+    const res = await search({ brandId: dacia });
+
+    expect(res.body.total).toBe(2);
+    for (const item of res.body.items) {
+      expect(item).not.toHaveProperty('distanceKm');
+      expect(item).not.toHaveProperty('comesToYou');
+    }
+  });
+
+  it('pages the area 20 at a time, and takes a cursor from a search without a place', async () => {
+    for (let n = 0; n < 22; n += 1) {
+      await placed(`Service ${String(n).padStart(2, '0')}`, 0.01, 'works_on');
+    }
+    await placed('Service far', 0.5, 'works_on');
+
+    const first = await search({ brandId: dacia, near: NEAR });
+    const second = await search({
+      brandId: dacia,
+      cursor: first.body.nextCursor,
+      near: NEAR,
+    });
+    const plain = await search({ brandId: dacia });
+    const mixed = await search({
+      brandId: dacia,
+      cursor: plain.body.nextCursor,
+      near: NEAR,
+    });
+
+    expect(first.body.items).toHaveLength(20);
+    expect(first.body.total).toBe(22);
+    expect(second.body.items.map((i: { name: string }) => i.name)).toEqual([
+      'Service 20',
+      'Service 21',
+    ]);
+    expect(second.body.nextCursor).toBeNull();
+    expect(mixed.status).toBe(200);
+    expect(mixed.body.items.map((i: { name: string }) => i.name)).toEqual([
+      'Service 20',
+      'Service 21',
+    ]);
+  });
+
+  it('answers 400 to a place outside Romania', async () => {
+    const res = await search({ brandId: dacia, near: '47.498,19.040' });
+
+    expect(res.status).toBe(400);
+  });
+});

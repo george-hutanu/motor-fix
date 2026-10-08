@@ -1,10 +1,12 @@
 import type {
   GarageSearchPageDto,
   ListedGarageDto,
+  SearchPoint,
 } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 
+import { garagesInArea, type InArea } from './area/search-area';
 import { PRISMA } from '../auth/prisma';
 import { refusal } from '../auth/sign-up.service';
 import { brandAnswer } from '../garages/brand-answer';
@@ -49,6 +51,33 @@ function decode(cursor: string, brandId: string): Cursor {
   return parsed as Cursor;
 }
 
+function groupsOf(
+  brandId: string,
+  area: Map<string, InArea> | undefined,
+): Record<Cursor['g'], Prisma.GarageWhereInput> {
+  const inArea = area && { id: { in: [...area.keys()] } };
+  const takers = { brandId, stance: 'works_on' as const };
+  return {
+    other: { brands: { none: takers }, ...inArea },
+    works_on: { brands: { some: takers }, ...inArea },
+  };
+}
+
+// A mobile mechanic's distance would tell where its seat is; it only says it
+// comes to the place.
+function placed(
+  item: ListedGarageDto,
+  area: Map<string, InArea> | undefined,
+): ListedGarageDto {
+  const found = area?.get(item.id);
+  if (!found) return item;
+  return {
+    ...item,
+    comesToYou: found.mobile,
+    distanceKm: found.mobile ? null : Math.round(found.distanceM / 100) / 10,
+  };
+}
+
 const encode = (cursor: Cursor) =>
   Buffer.from(JSON.stringify(cursor)).toString('base64url');
 
@@ -59,6 +88,7 @@ export class GarageSearchService {
   async forBrand(
     brandId: string,
     cursor?: string,
+    point?: SearchPoint,
   ): Promise<GarageSearchPageDto> {
     const brand = await this.prisma.brand.findUnique({
       select: { id: true },
@@ -69,11 +99,8 @@ export class GarageSearchService {
       cursor === undefined
         ? undefined
         : await this.after(decode(cursor, brandId));
-    const takers = { brandId, stance: 'works_on' as const };
-    const groups: Record<Cursor['g'], Prisma.GarageWhereInput> = {
-      other: { brands: { none: takers } },
-      works_on: { brands: { some: takers } },
-    };
+    const area = await this.area(point);
+    const groups = groupsOf(brandId, area);
     const [worksOn, doesNotTake] = await Promise.all([
       this.prisma.garage.count({
         where: { ...publicGarages(), ...groups.works_on },
@@ -92,7 +119,7 @@ export class GarageSearchService {
         ...(await this.read(brandId, groups.other, resume, rows.length)),
       );
     }
-    const items = rows.slice(0, PAGE);
+    const items = rows.slice(0, PAGE).map((item) => placed(item, area));
     const last = items.at(-1);
     return {
       counts: { doesNotTake, worksOn },
@@ -107,6 +134,10 @@ export class GarageSearchService {
           : null,
       total: worksOn + doesNotTake,
     };
+  }
+
+  private async area(point: SearchPoint | undefined) {
+    return point && garagesInArea(this.prisma, point);
   }
 
   // The boundary's name only, by id: a garage suspended since the last page
