@@ -1,4 +1,21 @@
 <!--
+Sync Impact Report (v1.8.3)
+- Version change: 1.8.2 → 1.8.3 (PATCH: Additional Constraints gains the
+  observability rule — a change that adds a service, resource, queue, outside
+  call, endpoint or product action ships its metrics, logs, traces, dashboard
+  panel and alert, or says why not, in the same PR — and Enforcement gains the
+  check that keeps `infra/observability/inventory.json` in step with the code.
+  No principle changed)
+- Source: ST-881 (Observability epic ST-875..881), owner decision for the
+  Grafana Cloud free tier.
+- Templates:
+  - ✅ .github/pull_request_template.md — `## Observability` section
+  - ✅ .specify/templates/plan-template.md — `## Observability` section
+  - ✅ AGENTS.md — rule line under "Notion is the tracker"
+  - ✅ .specify/memory/constitution-card.md names v1.8.3
+  - ⚠ CLAUDE.local.md (untracked, owner's copy) still names v1.8.2
+-->
+<!--
 Sync Impact Report (v1.8.2)
 - Version change: 1.8.1 → 1.8.2 (PATCH: IV names the root Biome config by
   its real name, `biome.jsonc`, since PR #99 (ST-609) renamed it so a disabled
@@ -358,6 +375,10 @@ tester, or with a passed PR left unmerged is not finished.
   idiom. Comments state constraints the code cannot show — never narration.
 - Every commit and push is authored as `george-hutanu <hutanugeorge40@gmail.com>`
   on GitHub account `george-hutanu`, never the work identity.
+- A change that adds a service, resource, queue, outside call, endpoint or
+  product action ships its metrics, logs, traces, dashboard panel and alert
+  in the same PR, or says why not, and lists them in the PR's Observability
+  section; `infra/observability/inventory.json` records each one.
 - AGENTS.md remains the runtime guidance file; this constitution governs, it
   does not duplicate AGENTS.md operational detail.
 
@@ -388,6 +409,7 @@ the hooks live in `.claude/hooks/`, the checks in `.claude/scripts/`.
 | Destructive commands | `bash-guard.mjs` (PreToolUse) | force-push, `reset --hard`, `clean -f`, deleting `.work/` |
 | VII task lifecycle | `pr-lifecycle-gate.mjs` (Stop hook) | the agent may not finish on a task branch ahead of `main` with unpushed commits, with no PR, with a green ready PR that has no `agent-review` status on its head (unless run-state is blocked), or with a ready PR whose checks and `agent-review` passed but that is not merged; a green Dependabot PR is asked to merge, not to be tested |
 | VII QA before merge | `merge-gate.mjs` (PreToolUse) | refuses `gh pr merge` and the REST merge call while the PR's head commit has no `agent-review` success from the PR tester, or while the latest run of any other check is failing or pending, or `CI OK` is missing; a PR authored by Dependabot with only Dependabot's commits needs no `agent-review`, but the same CI rule still refuses it |
+| Observability inventory | `scripts/observability-inventory.ts` (CI Checks job) | fails while an app, Railway service, queue or outside service in the code has no entry in `infra/observability/inventory.json`, an entry outlives what it names, a dashboard or alert it names is not declared, or the endpoint count differs from `apps/api/openapi.json` |
 | Full verification | `.husky/pre-commit` | identity, then `npm run typecheck && npm run lint && npm run test` on every real commit, in a `scripts/heavy.sh` slot |
 
 The edit-time gates watch `apps/*`, `libs/*` and `e2e/`, and skip Biome or Jest
@@ -460,4 +482,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 1.8.2 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-06
+**Version**: 1.8.3 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-08

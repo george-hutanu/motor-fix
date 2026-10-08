@@ -19,6 +19,9 @@ const duration = (from, to) => {
 const dateOf = (page, name) => readProp(page, name)?.start ?? null;
 const dateProp = (start) => ({ date: { start } });
 
+/** Where When ends: at Merged at for a Merged row that has one, else two hours from now. */
+export const whenEnd = (state, merged, now) => (state === "Merged" && merged ? merged : new Date(now.getTime() + SPAN_MS).toISOString());
+
 /** The step's state and timing, from the story's dates (else the row's). */
 function timing(event, story, row, now) {
   const at = now.toISOString();
@@ -30,7 +33,7 @@ function timing(event, story, row, now) {
   if (event === "qa") qa ??= at;
   if (event === "finish") merged = at;
   const state = event === "unblock" ? (qa ? "QA" : "In progress") : STATE[event];
-  const range = { start: started ?? at, end: state === "Merged" && merged ? merged : new Date(now.getTime() + SPAN_MS).toISOString() };
+  const range = { start: started ?? at, end: whenEnd(state, merged, now) };
   let took = null;
   if (started && state === "Merged") took = `${duration(started, merged)} total · build ${duration(started, qa ?? merged)} · QA ${duration(qa ?? merged, merged)}`;
   else if (started && state === "QA") took = `build ${duration(started, qa)} · in QA ${duration(qa, at)}`;

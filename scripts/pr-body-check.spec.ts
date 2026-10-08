@@ -18,6 +18,8 @@ const answers: Record<string, string> = {
     'https://app.notion.com/p/0000000000000000000000000000000a (ST-1)',
   'what could break, and how to undo it':
     'A PR body the check misreads; revert the workflow.',
+  'what this change adds - service, queue, endpoint, outside call, product action - and the signals, dashboard panel and alert that come with it, or N/A and the reason':
+    'N/A: adds no service, queue, endpoint, outside call or product action',
   'what this PR does and why, in two or three sentences':
     'Every PR tells the reviewer the same things.',
 };
@@ -54,6 +56,7 @@ describe('the pull request template', () => {
       'Spec folder',
       'What changed',
       'How it was tested',
+      'Observability',
       'UI evidence',
       'Risk and rollback',
       'Checklist',
@@ -63,6 +66,7 @@ describe('the pull request template', () => {
     expect(template).toMatch(/- Integration:/);
     expect(template).toMatch(/- End-to-end:/);
     expect(template).toMatch(/desktop and mobile/);
+    expect(template).toMatch(/signals, dashboard panel and alert/);
     for (const item of [
       'Conventional Commit',
       'Tests were written first',
@@ -108,7 +112,7 @@ describe('checkPrBody on a ready PR', () => {
 
   it('reports every section of an empty body', () => {
     const problems = ready(null);
-    expect(problems).toHaveLength(9);
+    expect(problems).toHaveLength(10);
     expect(problems[0]).toBe('Missing section: "## Why".');
   });
 
@@ -126,6 +130,29 @@ describe('checkPrBody on a ready PR', () => {
   it('names an empty section, counting a comment as empty', () => {
     const body = withSection(filled(), 'Why', '<!-- later -->');
     expect(ready(body)).toEqual(['"## Why" is empty.']);
+  });
+
+  it.each([
+    ['empty', '', '"## Observability" is empty.'],
+    [
+      'a placeholder',
+      '_(fill in: what this change adds - service, queue, endpoint, outside call, product action - and the signals, dashboard panel and alert that come with it, or N/A and the reason)_',
+      '"## Observability" still has template placeholder text: "(fill in: what this change adds - service, queue, endpoint, outside call, product action - and the signals, dashboard panel and alert that come with it, or N/A and the reason)".',
+    ],
+    ['a bare N/A', 'N/A', '"## Observability" says N/A without a reason.'],
+  ])('refuses an Observability section left %s', (_, content, problem) => {
+    expect(ready(withSection(filled(), 'Observability', content))).toEqual([
+      problem,
+    ]);
+  });
+
+  it('passes an Observability section answered N/A with a reason', () => {
+    const body = withSection(
+      filled(),
+      'Observability',
+      'N/A: adds no service, queue, endpoint or outside call',
+    );
+    expect(ready(body)).toEqual([]);
   });
 
   it('refuses a bare N/A', () => {
