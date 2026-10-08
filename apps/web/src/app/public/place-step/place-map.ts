@@ -1,7 +1,12 @@
 import { DOCUMENT } from '@angular/common';
 import { InjectionToken, inject } from '@angular/core';
 import { PLACE_ZOOM } from '@motor-fix/contracts/place-section';
-import type { GeoJSONSource, Map as MapLibre, Marker } from 'maplibre-gl';
+import type {
+  GeoJSONSource,
+  MapEventType,
+  Map as MapLibre,
+  Marker,
+} from 'maplibre-gl';
 
 export interface LatLng {
   lat: number;
@@ -130,12 +135,20 @@ async function openMapLibre(
     new maplibre.NavigationControl({ showCompass: false }),
     'top-right',
   );
+  // A failure before the map loads tears it down; once it has loaded, an
+  // error (one failed tile is enough) only reaches events.failed below.
   await new Promise<void>((resolve, reject) => {
-    map.once('load', () => resolve());
-    map.once('error', ({ error }) => {
+    const loaded = () => {
+      map.off('error', broken);
+      resolve();
+    };
+    const broken = ({ error }: MapEventType['error']) => {
+      map.off('load', loaded);
       map.remove();
       reject(error);
-    });
+    };
+    map.once('load', loaded);
+    map.once('error', broken);
   });
   // Under the test style the e2e suite reads the view off the live map.
   const view = host.ownerDocument.defaultView as

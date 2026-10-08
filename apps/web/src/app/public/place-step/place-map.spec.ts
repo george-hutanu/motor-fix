@@ -304,3 +304,84 @@ describe('the place map, how it frames the pin and the circle', () => {
     expect((window as { __MF_MAP?: unknown }).__MF_MAP).toBeUndefined();
   });
 });
+
+describe('the place map when MapLibre raises an error', () => {
+  const failed = jest.fn();
+  const open = () =>
+    TestBed.inject(PLACE_MAP)(document.createElement('div'), {
+      dragged: () => {},
+      failed,
+      tapped: () => {},
+    });
+  // The opener awaits MapLibre's import before it builds the map.
+  const built = () => new Promise((resolve) => setTimeout(resolve));
+
+  beforeEach(() => {
+    fake.inView = true;
+    fake.manualLoad = true;
+    failed.mockClear();
+  });
+
+  afterEach(() => {
+    fake.manualLoad = false;
+    for (const link of sheets()) link.remove();
+  });
+
+  // @traces 945-FR-001 945-FR-002
+  it('keeps a loaded map standing through a later error and still draws on it', async () => {
+    const opening = open();
+    await built();
+    fake.map.fire('load');
+    const map = await opening;
+    fake.map.fire('error', { error: new Error('tile 404') });
+
+    expect(fake.map.remove).not.toHaveBeenCalled();
+    expect(failed).toHaveBeenCalledTimes(1);
+
+    map.show({ at: SEAT, km: 20 });
+
+    expect(fake.map.data).toHaveBeenCalledTimes(1);
+    expect(fake.marker.remove).not.toHaveBeenCalled();
+    expect(fake.map.fitBounds).toHaveBeenCalledWith(circleBounds(SEAT, 20), {
+      animate: false,
+      padding: 24,
+    });
+  });
+
+  // @traces 945-FR-001
+  it('is removed once, by the step, when destroyed after a later error', async () => {
+    const opening = open();
+    await built();
+    fake.map.fire('load');
+    const map = await opening;
+    fake.map.fire('error', { error: new Error('tile 404') });
+
+    map.destroy();
+
+    expect(fake.map.remove).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 945-FR-003
+  it('removes a map that fails before it loads, once, and rejects with the error', async () => {
+    const error = new Error('style 500');
+    const opening = open();
+    await built();
+    fake.map.fire('error', { error });
+
+    await expect(opening).rejects.toBe(error);
+    expect(fake.map.remove).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 945-FR-003
+  it('ignores a load that arrives after the map failed to start', async () => {
+    const error = new Error('style 500');
+    const opening = open();
+    await built();
+    fake.map.fire('error', { error });
+    fake.map.fire('load');
+
+    await expect(opening).rejects.toBe(error);
+    expect(fake.map.remove).toHaveBeenCalledTimes(1);
+    expect(failed).not.toHaveBeenCalled();
+  });
+});
