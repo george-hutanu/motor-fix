@@ -56,7 +56,7 @@ For each public entry point:
   you if you try, and it is right to.
 - **House conventions**: Jest; plain titles describing the behavior; no FR
   ids, ticket keys, task ids or other internal identifiers anywhere in the
-  file; no comment that restates its own test; temp dirs via `mkdtemp`, cleaned
+  file except a whole-line `// @traces <feature>-FR-<n>` comment; no comment that restates its own test; temp dirs via `mkdtemp`, cleaned
   in `afterEach`.
 - **Real assertions.** Every test asserts a concrete expected outcome from the
   spec or contract — a thrown error, a status code, an exact shape. Never

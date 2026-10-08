@@ -26,3 +26,11 @@ export function routeLabel() {
     next();
   };
 }
+
+// Names the active request span by a route template set by the code that
+// handled it (an Angular route, the API pass-through), for a server whose
+// routes Express does not know.
+export function setRoute(template: string): void {
+  const rpc = getRPCMetadata(context.active());
+  if (rpc?.type === RPCType.HTTP) rpc.route = template;
+}

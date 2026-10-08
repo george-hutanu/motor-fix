@@ -29,7 +29,7 @@
       "dashboard": "none",
       "alerts": "none",
       "reason": "ST-879 adds the dashboard, ST-880 the alerts",
-      "story": "ST-881"
+      "story": "ST-877"
     },
     {
       "kind": "app",
@@ -74,7 +74,7 @@
       "dashboard": "none",
       "alerts": "none",
       "reason": "ST-879 adds the dashboard, ST-880 the alerts",
-      "story": "ST-881"
+      "story": "ST-877"
     },
     {
       "kind": "queue",
@@ -217,6 +217,15 @@
       "alerts": "none",
       "reason": "counts calls refused while maintenance is on, by route and role (visitor or signed_in); ST-879 adds the dashboard, ST-880 the alerts",
       "story": "ST-261"
+    },
+    {
+      "kind": "outside-service",
+      "name": "grafana-faro",
+      "source": "apps/web/src/app/telemetry/browser/faro.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "the browser's collector; ST-879 adds the dashboard, ST-880 the alerts",
+      "story": "ST-877"
     }
   ]
 }

@@ -1,7 +1,7 @@
 import { expect, type Page, type Route } from '@playwright/test';
 
 import { ready } from './accounts.js';
-import { test } from './fixtures.js';
+import { COLLECTOR, test } from './fixtures.js';
 
 const STEFAN = {
   label: 'Strada Ștefan cel Mare 12, Sector 2, București',
@@ -28,9 +28,11 @@ async function stub(
   const outside: string[] = [];
   page.on('request', (request) => {
     const { hostname } = new URL(request.url());
+    // The telemetry collector is answered by the fixture, so it never leaves.
     if (
       ![own, 'localhost', '127.0.0.1'].includes(hostname) &&
-      !request.url().startsWith('data:')
+      !request.url().startsWith('data:') &&
+      !COLLECTOR.test(request.url())
     )
       outside.push(hostname);
   });

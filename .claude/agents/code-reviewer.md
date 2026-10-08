@@ -53,7 +53,8 @@ running: keep the grep result, mark it "unconfirmed", move on.
 5. **Bloat.** An abstraction with one implementation. A parameter every caller
    passes the same value for. A wrapper that only forwards. A config knob
    nothing sets. An export nothing imports. A comment restating its own code, or
-   carrying an internal identifier (FR id, task id, ticket key). Each is a
+   carrying an internal identifier (FR id, task id, ticket key) — a whole-line
+   `// @traces <feature>-FR-<n>` comment in a test file excepted. Each is a
    deletion, and each is a finding: MEDIUM alone, HIGH when it adds a dependency
    or a layer.
 6. **Test honesty.** Would each new test still pass with the implementation
@@ -103,7 +104,7 @@ it costs a review round.
 - **A known gap is a `TODO`, never silence.** A limit that will be revisited,
   a stub logger, a temporary build step — each carries a `TODO:` saying what
   changes and when. A gap with no TODO is a finding; a TODO with a ticket key
-  in it is one too (constitution v1.2.1). LOW.
+  in it is one too (Constitution II). LOW.
 
 Also asked, once each, and worth pre-empting: why `interface` over `type`;
 why an `unknown` (document it); whether a regex really wants a global
