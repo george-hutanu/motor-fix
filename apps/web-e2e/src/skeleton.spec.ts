@@ -1,4 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+
+import { test } from './fixtures.js';
 
 test('the skeleton page shows the release and both checks', async ({
   page,

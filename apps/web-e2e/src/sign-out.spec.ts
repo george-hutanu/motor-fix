@@ -1,7 +1,8 @@
 import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
-import { type Browser, expect, type Page, test } from '@playwright/test';
+import { type Browser, expect, type Page } from '@playwright/test';
 
 import { ready, signIn } from './accounts.js';
+import { test } from './fixtures.js';
 
 // Signing out everywhere ends every session of the account, so these flows
 // use an account of their own, never a seeded one other specs sign in with:

@@ -1,6 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import { ACCOUNTS, ready, signIn } from './accounts.js';
+import { test } from './fixtures.js';
 
 const menuLink = (page: Page, name: string) =>
   page

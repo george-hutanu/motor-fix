@@ -1,4 +1,6 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+
+import { test } from './fixtures.js';
 
 // The href of the first <link> carrying the attribute, in any attribute order.
 const href = (html: string, attribute: string) =>
