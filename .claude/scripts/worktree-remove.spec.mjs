@@ -127,6 +127,15 @@ describe('refusals change nothing', () => {
     assert.equal(removeWorktree(wt, opts(f, { alive: () => false }).options).removed, true);
   });
 
+  it('admits a live session lock only when the caller says the removal is deliberate, never a hand lock', () => {
+    const locked = (lock) => fake([['git -C', (cmd) => (cmd.includes('worktree list') ? { stdout: porcelain(`branch refs/heads/${BRANCH}\nlocked ${lock}`) } : null)]]);
+    let f = locked(`claude agent agent-a1 (pid ${process.pid} start Sun Oct  4 08:07:18 2026)`);
+    assert.equal(removeWorktree(wt, opts(f, { admitLiveLock: true }).options).removed, true);
+    f = locked('kept while I look at it');
+    const o = opts(f, { admitLiveLock: true });
+    refused(f, o, removeWorktree(wt, o.options), /^locked: kept while I look at it$/);
+  });
+
   it('refuses a worktree whose head has commits on no remote', () => {
     const f = fake([[`git -C ${wt} rev-list --count HEAD --not --remotes`, { stdout: '3\n' }]]);
     const o = opts(f);
@@ -374,5 +383,21 @@ describe('the command', () => {
     assert.equal(r.status, 1);
     assert.equal(JSON.parse(r.stdout).removed, false);
     assert.equal(existsSync(join(repo, '.worktrees', 'loose')), true);
+  });
+
+  it('from the command, goes past a live session lock (the tail removing its own worktree) but not a hand lock', () => {
+    const repo = join(base, 'locks');
+    const git = (...args) => spawnSync('git', args, { cwd: repo, encoding: 'utf8' });
+    mkdirSync(repo);
+    git('init', '-q', '-b', 'main');
+    git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '--allow-empty', '-m', 'init');
+    const cli1 = (name, reason) => {
+      git('worktree', 'add', '-q', '-b', name, join(repo, '.worktrees', name));
+      git('worktree', 'lock', '--reason', reason, join(repo, '.worktrees', name));
+      const r = spawnSync(process.execPath, [cli, join(repo, '.worktrees', name)], { encoding: 'utf8', cwd: repo });
+      return JSON.parse(r.stdout).reason;
+    };
+    assert.doesNotMatch(cli1('live', `claude agent agent-a1 (pid ${process.pid} start Sun Oct  4 08:07:18 2026)`), /^locked/);
+    assert.equal(cli1('hand', 'kept while I look at it'), 'locked: kept while I look at it');
   });
 });

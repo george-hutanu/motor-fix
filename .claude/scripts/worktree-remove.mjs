@@ -5,7 +5,8 @@
 //   node .claude/scripts/worktree-remove.mjs <path>
 //
 // Refuses, changing nothing, the main checkout, a worktree it runs inside, one
-// locked by a live process or by hand, one whose head has commits on no
+// locked by hand or by a live process (the CLI, a deliberate removal, admits
+// the latter), one whose head has commits on no
 // remote, one whose newest PR is open or unreadable, and one with no PR (the
 // watch's function call admits that last one for idle worktrees). Then:
 // specs clone committed and pushed through specs-repo (else a patch), product
@@ -78,7 +79,7 @@ function stackDown(run, path) {
   }
 }
 
-export function removeWorktree(target, { admitNoPr = false, run = spawnRun, cwd = process.cwd(), now = new Date(), commitSpecs = specsCommit, alive = processAlive } = {}) {
+export function removeWorktree(target, { admitNoPr = false, admitLiveLock = false, run = spawnRun, cwd = process.cwd(), now = new Date(), commitSpecs = specsCommit, alive = processAlive } = {}) {
   const path = real(target);
   const no = (reason, extra = {}) => ({ path, removed: false, reason, ...extra });
 
@@ -95,7 +96,7 @@ export function removeWorktree(target, { admitNoPr = false, run = spawnRun, cwd 
   if (entry.lock !== null) {
     const pid = lockPid(entry.lock);
     if (pid === null) return no(`locked: ${entry.lock}`.trim());
-    if (alive(pid)) return no(`locked by a live session (pid ${pid})`);
+    if (!admitLiveLock && alive(pid)) return no(`locked by a live session (pid ${pid})`);
   }
   const ahead = run("git", ["-C", path, "rev-list", "--count", "HEAD", "--not", "--remotes"]);
   const count = Number(ahead.stdout.trim());
@@ -161,7 +162,9 @@ if (isEntryPoint(import.meta.url)) {
     console.error("usage: node .claude/scripts/worktree-remove.mjs <path>");
     process.exit(2);
   }
-  const result = removeWorktree(args[0]);
+  // A deliberate removal (the tail, after ExitWorktree): the session's own lock
+  // does not stop it; the merge step checks the holder before it calls this.
+  const result = removeWorktree(args[0], { admitLiveLock: true });
   console.log(JSON.stringify(result));
   process.exit(result.removed ? 0 : 1);
 }
