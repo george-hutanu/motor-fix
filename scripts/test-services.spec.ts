@@ -411,9 +411,49 @@ describe('down and sweep, against fake docker, git and gh', () => {
     expect(out.reason).toMatch(/no pools left/);
   });
 
+  // @traces 977-worktree-cleanup-FR-007
+  // @traces 977-worktree-cleanup-FR-006
+  it('down --volumes removes the stack with its volumes, leftover ones too', () => {
+    fake(
+      'docker',
+      'case "$1 $2" in "volume ls") echo vol-a; echo vol-b;; esac\nexit 0',
+    );
+    const project = composeProject('/r/.worktrees/x');
+    const result = run('down', '/r/.worktrees/x', '--volumes');
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual({ project, stopped: true });
+    expect(calls()).toContain(`docker compose -p ${project} down -v`);
+    expect(calls()).toContain(
+      `docker volume ls -q --filter label=com.docker.compose.project=${project}`,
+    );
+    expect(calls()).toContain('docker volume rm vol-a vol-b');
+  });
+
+  it('down --volumes takes the flag before the worktree as well', () => {
+    fake('docker', 'exit 0');
+    const project = composeProject('/r/x');
+    const result = run('down', '--volumes', '/r/x');
+    expect(JSON.parse(result.stdout)).toEqual({ project, stopped: true });
+    expect(calls()).toContain(`docker compose -p ${project} down -v`);
+    expect(calls().some((c) => c.startsWith('docker volume rm'))).toBe(false);
+  });
+
+  it('down --volumes reports a volume Docker will not remove', () => {
+    fake(
+      'docker',
+      'case "$1 $2" in "volume ls") echo vol-a; exit 0;; "volume rm") echo "in use" >&2; exit 1;; esac\nexit 0',
+    );
+    const result = run('down', '/r/x', '--volumes');
+    expect(result.status).toBe(0);
+    const out = JSON.parse(result.stdout);
+    expect(out.stopped).toBe(false);
+    expect(out.reason).toMatch(/in use/);
+  });
+
   it('refuses an unknown subcommand or an extra argument with the usage', () => {
     fake('docker', 'exit 0');
     expect(run('down', '/a', '/b').status).toBe(2);
+    expect(run('down', '/a', '--force').status).toBe(2);
     expect(run('sweep', 'now').status).toBe(2);
     const unknown = run('stop');
     expect(unknown.status).toBe(2);
