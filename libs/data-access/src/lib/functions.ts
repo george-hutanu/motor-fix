@@ -79,6 +79,10 @@ export type { PushSubscriptionsControllerTest$Params as PushSubscriptionsControl
 export { pushSubscriptionsControllerTest as pushSubscriptionsControllerTest } from './fn/notifications/push-subscriptions-controller-test';
 export type { PushSubscriptionsControllerRemove$Params as PushSubscriptionsControllerRemove$Params } from './fn/notifications/push-subscriptions-controller-remove';
 export { pushSubscriptionsControllerRemove as pushSubscriptionsControllerRemove } from './fn/notifications/push-subscriptions-controller-remove';
+export type { CarsControllerList$Params as CarsControllerList$Params } from './fn/cars/cars-controller-list';
+export { carsControllerList as carsControllerList } from './fn/cars/cars-controller-list';
+export type { CarsControllerCreate$Params as CarsControllerCreate$Params } from './fn/cars/cars-controller-create';
+export { carsControllerCreate as carsControllerCreate } from './fn/cars/cars-controller-create';
 export type { BrandsControllerSearch$Params as BrandsControllerSearch$Params } from './fn/brands/brands-controller-search';
 export { brandsControllerSearch as brandsControllerSearch } from './fn/brands/brands-controller-search';
 export type { PublicHolidaysControllerList$Params as PublicHolidaysControllerList$Params } from './fn/public-holidays/public-holidays-controller-list';

@@ -58,6 +58,7 @@
     "sending": "Sending…"
   },
   "frame": {
+    "addCar": "Add a car",
     "admin": {
       "label": "ADMINISTRATOR",
       "none": "no garage is waiting for verification",

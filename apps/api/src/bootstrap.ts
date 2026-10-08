@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import type { AppEnv } from '@motor-fix/contracts';
 import { JsonLogger, requestContext } from '@motor-fix/domain';
+import { routeLabel } from '@motor-fix/observability';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -24,6 +25,7 @@ export function configureApp(app: INestApplication, env: { APP_ENV: AppEnv }) {
   // A listing draft holds up to 256 KB of form data, past Express's 100 KB;
   // the draft's own limit answers above that with draft_too_large.
   (app as NestExpressApplication).useBodyParser('json', { limit: '320kb' });
+  app.use(routeLabel());
   app.use((req: Request, res: Response, next: NextFunction) => {
     const given = req.header('x-request-id');
     const requestId = given && REQUEST_ID.test(given) ? given : randomUUID();

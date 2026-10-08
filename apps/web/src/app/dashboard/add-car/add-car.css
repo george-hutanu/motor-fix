@@ -1,0 +1,96 @@
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+.field > label,
+legend,
+h3 {
+  font-weight: 700;
+}
+fieldset {
+  display: grid;
+  gap: var(--mf-space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+legend {
+  padding: 0;
+  margin-bottom: var(--mf-space-2);
+}
+h3 {
+  margin: var(--mf-space-2) 0 0;
+  font-size: inherit;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.lead,
+.note {
+  color: var(--mf-ink-muted);
+}
+.note {
+  font-size: var(--mf-size-small);
+}
+.error {
+  color: var(--mf-red-ink);
+  font-size: var(--mf-size-small);
+}
+.fuels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-1) var(--mf-space-4);
+}
+.choice {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-height: var(--mf-tap);
+  font-weight: 400;
+  cursor: pointer;
+}
+.choice input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--mf-amber);
+}
+.choice input:focus-visible {
+  outline: 2px solid var(--mf-amber-ink);
+  outline-offset: 2px;
+}
+ul {
+  list-style: none;
+  margin: 0;
+  padding: var(--mf-space-1) 0;
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-sm, 8px);
+}
+li {
+  display: flex;
+  align-items: center;
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-3);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+li[aria-selected="true"],
+li:hover {
+  background: var(--mf-line);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-3);
+}
+.actions button {
+  white-space: normal;
+}
