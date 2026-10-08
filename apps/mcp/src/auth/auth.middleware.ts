@@ -10,6 +10,7 @@ import {
   type IssuerSettings,
   TokenVerifier,
 } from './auth.verifier';
+import { recordAuthFailure } from '../metrics/metrics';
 
 export interface Refusal {
   code: string;
@@ -50,23 +51,27 @@ export class BearerAuth implements NestMiddleware {
 
   async use(req: AuthedRequest, res: Response, next: NextFunction) {
     const [scheme, token] = (req.headers.authorization ?? '').split(' ');
-    if (scheme?.toLowerCase() !== 'bearer' || !token)
+    if (scheme?.toLowerCase() !== 'bearer' || !token) {
+      recordAuthFailure('missing');
       return refuse(
         res,
         401,
         { code: 'sign_in_required', message: 'Sign in to MotorFix first.' },
         { invalidToken: false, metadataUrl: this.metadataUrl },
       );
+    }
     try {
       req.auth = await this.verifier.verifyAccessToken(token);
     } catch (error) {
-      if (error instanceof InvalidTokenError)
+      if (error instanceof InvalidTokenError) {
+        recordAuthFailure('invalid_token');
         return refuse(
           res,
           401,
           { code: 'invalid_token', message: 'Sign in to MotorFix again.' },
           { invalidToken: true, metadataUrl: this.metadataUrl },
         );
+      }
       return refuse(res, 503, {
         code: 'service_unavailable',
         message: 'MotorFix cannot check sign-ins right now. Try again soon.',

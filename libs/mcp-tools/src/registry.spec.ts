@@ -218,4 +218,27 @@ describe('register', () => {
       { text: JSON.stringify({ ok: true }), type: 'text' },
     ]);
   });
+
+  // @traces 365-FR-015
+  it('runs every call through the observer it is given, with the name asked for', async () => {
+    const seen: string[] = [];
+    const client = await connect(
+      fixtureTools,
+      caller({ roles: ['driver'] }, ['motorfix.read']),
+      context(),
+      async (name, call) => {
+        seen.push(name);
+        return call();
+      },
+    );
+
+    const answered = await client.callTool({
+      arguments: {},
+      name: 'list_my_cars',
+    });
+    await client.callTool({ arguments: {}, name: 'no_such_tool' });
+
+    expect(answered.structuredContent).toEqual({ ok: true });
+    expect(seen).toEqual(['list_my_cars', 'no_such_tool']);
+  });
 });

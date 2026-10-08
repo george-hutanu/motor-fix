@@ -37,6 +37,7 @@ import { McpActorService } from './auth/auth.actor';
 import { AssistantGrants } from './auth/auth.grants';
 import { BearerAuth } from './auth/auth.middleware';
 import { ISSUER_SETTINGS, TokenVerifier } from './auth/auth.verifier';
+import { recordRequest } from './metrics/metrics';
 import {
   MCP_TOOLS,
   TransportController,
@@ -122,6 +123,8 @@ export async function createMcpApp(
     const given = req.header('x-request-id');
     const requestId = given && REQUEST_ID.test(given) ? given : randomUUID();
     res.setHeader('X-Request-Id', requestId);
+    if (req.path === '/mcp')
+      res.on('finish', () => recordRequest(res.statusCode));
     requestContext.run({ requestId }, next);
   });
   return NestFactory.create(

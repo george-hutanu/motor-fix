@@ -7,6 +7,7 @@ import {
   testIssuer,
 } from './auth.issuer.testing';
 import { TokenVerifier } from './auth.verifier';
+import * as metrics from '../metrics/metrics';
 
 // @traces 365-FR-003
 describe('the assistant token verifier', () => {
@@ -182,5 +183,20 @@ describe('the assistant token verifier', () => {
 
     await expect(result).rejects.toBeDefined();
     await expect(result).rejects.not.toBeInstanceOf(InvalidTokenError);
+  });
+
+  // @traces 365-FR-015
+  it('counts each key fetch by outcome, and none while the keys are cached', async () => {
+    const counted = jest.spyOn(metrics, 'recordKeyFetch');
+    const down = new TokenVerifier({
+      issuer: 'http://127.0.0.1:1/realms/motorfix-assistants',
+      mcpUrl: TEST_MCP_URL,
+    });
+
+    await verifier.verifyAccessToken(await realm.sign());
+    await verifier.verifyAccessToken(await realm.sign());
+    await down.verifyAccessToken(await realm.sign()).catch(() => undefined);
+
+    expect(counted.mock.calls).toEqual([['ok'], ['error']]);
   });
 });

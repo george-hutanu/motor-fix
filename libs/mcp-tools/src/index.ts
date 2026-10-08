@@ -1,6 +1,7 @@
 export { catalogue } from './catalogue';
 export {
   type Caller,
+  type CallObserver,
   callTool,
   defineTool,
   register,

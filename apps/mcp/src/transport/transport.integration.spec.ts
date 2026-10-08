@@ -14,6 +14,7 @@ import {
   testIssuer,
 } from '../auth/auth.issuer.testing';
 import { createMcpApp } from '../mcp.module';
+import * as metrics from '../metrics/metrics';
 
 const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
@@ -239,5 +240,63 @@ describe('the MCP endpoint', () => {
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ status: 'ok' });
+  });
+});
+
+// @traces 365-FR-015
+describe('what the MCP endpoint reports', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('observes a tool call with the tool, the caller and the request id', async () => {
+    const observed = jest.spyOn(metrics, 'observeToolCall');
+    const { id } = await newAccount();
+    const client = await connect(await tokenFor(id), {
+      'x-request-id': 'observed-call-1',
+    });
+
+    await client.callTool({ arguments: {}, name: 'get_my_account' });
+    await client.callTool({ arguments: {}, name: 'drop_everything' });
+
+    expect(observed.mock.calls.map(([call]) => call)).toEqual([
+      {
+        accountId: id,
+        clientId: expect.any(String),
+        requestId: 'observed-call-1',
+        tool: 'get_my_account',
+      },
+      {
+        accountId: id,
+        clientId: expect.any(String),
+        requestId: 'observed-call-1',
+        tool: 'unknown',
+      },
+    ]);
+    await client.close();
+  });
+
+  it('counts a revoked grant, a suspended account and a missing account by reason', async () => {
+    const counted = jest.spyOn(metrics, 'recordAuthFailure');
+    const revoked = await newAccount();
+    const revokedToken = await tokenFor(revoked.id);
+    await initialize(revokedToken);
+    await prisma.assistantGrant.updateMany({
+      data: { revokedAt: new Date(), revokedBy: 'person' },
+      where: { accountId: revoked.id },
+    });
+    const suspended = await newAccount();
+    await prisma.account.update({
+      data: { status: 'suspended' },
+      where: { id: suspended.id },
+    });
+
+    await initialize(revokedToken);
+    await initialize(await tokenFor(suspended.id));
+    await initialize(await tokenFor('00000000-0000-4000-8000-000000000000'));
+
+    expect(counted.mock.calls).toEqual([
+      ['revoked'],
+      ['suspended'],
+      ['no_account'],
+    ]);
   });
 });

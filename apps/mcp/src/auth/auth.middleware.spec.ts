@@ -7,6 +7,7 @@ import express from 'express';
 
 import { TEST_MCP_URL } from './auth.issuer.testing';
 import { BearerAuth } from './auth.middleware';
+import * as metrics from '../metrics/metrics';
 
 const METADATA = `resource_metadata="http://127.0.0.1:3002/.well-known/oauth-protected-resource/mcp"`;
 const SECRET_TOKEN = 'eyJhbGciOiJSUzI1NiJ9.c2VjcmV0.c2lnbmF0dXJl';
@@ -39,6 +40,7 @@ describe('the bearer check in front of the MCP endpoint', () => {
   afterAll(() => new Promise((resolve) => server.close(resolve)));
 
   beforeEach(() => verifyAccessToken.mockReset());
+  afterEach(() => jest.restoreAllMocks());
 
   const call = (authorization?: string) =>
     fetch(`${base}/mcp`, {
@@ -119,5 +121,17 @@ describe('the bearer check in front of the MCP endpoint', () => {
       clientId: auth.clientId,
       extra: auth.extra,
     });
+  });
+
+  // @traces 365-FR-015
+  it('counts a missing and a rejected token as authentication failures, and a key server outage as neither', async () => {
+    const counted = jest.spyOn(metrics, 'recordAuthFailure');
+    await call();
+    verifyAccessToken.mockRejectedValueOnce(new InvalidTokenError('expired'));
+    await call(`Bearer ${SECRET_TOKEN}`);
+    verifyAccessToken.mockRejectedValueOnce(new TypeError('fetch failed'));
+    await call(`Bearer ${SECRET_TOKEN}`);
+
+    expect(counted.mock.calls).toEqual([['missing'], ['invalid_token']]);
   });
 });

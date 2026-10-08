@@ -34,15 +34,28 @@ import {
   refuse,
 } from '../auth/auth.middleware';
 import { ISSUER_SETTINGS, type IssuerSettings } from '../auth/auth.verifier';
+import {
+  type AuthFailure,
+  observeToolCall,
+  recordAuthFailure,
+  toolLabel,
+} from '../metrics/metrics';
 
 export const MCP_TOOLS = Symbol('MCP_TOOLS');
 
 type Prisma = ReturnType<typeof createPrisma>;
 
+const FAILURES: Record<string, AuthFailure> = {
+  account_suspended: 'suspended',
+  assistant_grant_revoked: 'revoked',
+  sign_in_required: 'no_account',
+};
+
 @Controller('mcp')
 export class TransportController {
   private readonly ctx: ToolContext;
   private readonly metadataUrl: string;
+  private readonly toolNames: string[];
 
   constructor(
     private readonly actors: McpActorService,
@@ -53,6 +66,7 @@ export class TransportController {
     @Inject(MAINTENANCE) maintenance: Maintenance,
   ) {
     this.metadataUrl = metadataUrlOf(settings.mcpUrl);
+    this.toolNames = tools.map((t) => t.name);
     this.ctx = {
       accounts,
       featureOn: async (garageId, key) =>
@@ -73,7 +87,17 @@ export class TransportController {
       { name: 'motorfix', version: '1.0.0' },
       { capabilities: { tools: {} } },
     );
-    register(server, this.tools, caller, this.ctx);
+    register(server, this.tools, caller, this.ctx, (name, call) =>
+      observeToolCall(
+        {
+          accountId: caller.account.id,
+          clientId: (req.auth as AuthInfo).clientId,
+          requestId: caller.requestId,
+          tool: toolLabel(name, this.toolNames),
+        },
+        call,
+      ),
+    );
     const transport = new StreamableHTTPServerTransport({
       enableJsonResponse: true,
       sessionIdGenerator: undefined,
@@ -107,10 +131,13 @@ export class TransportController {
     } catch (error) {
       if (!(error instanceof HttpException)) throw error;
       const status = error.getStatus();
+      const body = error.getResponse() as Refusal;
+      const reason = FAILURES[body.code];
+      if (reason) recordAuthFailure(reason);
       refuse(
         res,
         status,
-        error.getResponse() as Refusal,
+        body,
         status === 401
           ? { invalidToken: true, metadataUrl: this.metadataUrl }
           : undefined,

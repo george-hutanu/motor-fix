@@ -3,6 +3,7 @@ import { connect } from 'node:net';
 import type { INestApplication } from '@nestjs/common';
 
 import { bootMcp } from './boot.testing';
+import * as metrics from './metrics/metrics';
 
 // @traces 365-FR-001
 describe('mcp server', () => {
@@ -51,5 +52,22 @@ describe('mcp server', () => {
 
     expect(res.status).toBe(401);
     expect(await res.json()).toMatchObject({ code: 'sign_in_required' });
+  });
+
+  // @traces 365-FR-015
+  it('counts every answered MCP request by its status, and nothing else', async () => {
+    const counted = jest.spyOn(metrics, 'recordRequest');
+
+    await fetch(`${base}/mcp`, {
+      body: '{}',
+      headers: { 'content-type': 'application/json' },
+      method: 'POST',
+    });
+    await fetch(`${base}/mcp`);
+    await fetch(`${base}/health/live`);
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(counted.mock.calls).toEqual([[401], [405]]);
+    counted.mockRestore();
   });
 });

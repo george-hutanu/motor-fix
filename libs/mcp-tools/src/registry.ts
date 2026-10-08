@@ -159,6 +159,12 @@ export async function callTool(
   }
 }
 
+// Wraps each call, given the tool name the client asked for.
+export type CallObserver = (
+  name: string,
+  call: () => Promise<CallToolResult>,
+) => Promise<CallToolResult>;
+
 // One server per request: the listing and every call are checked against
 // this caller as the account stands now.
 export function register(
@@ -166,11 +172,14 @@ export function register(
   tools: ToolDefinition[],
   caller: Caller,
   ctx: ToolContext,
+  observe: CallObserver = (_name, call) => call(),
 ) {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: await visibleTools(tools, caller, ctx),
   }));
-  server.setRequestHandler(CallToolRequestSchema, (request) =>
-    callTool(tools, caller, ctx, request.params.name, request.params.arguments),
+  server.setRequestHandler(CallToolRequestSchema, ({ params }) =>
+    observe(params.name, () =>
+      callTool(tools, caller, ctx, params.name, params.arguments),
+    ),
   );
 }

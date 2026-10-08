@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import {
   type Caller,
+  type CallObserver,
   defineTool,
   register,
   type Scope,
@@ -172,12 +173,13 @@ export async function connect(
   tools: ToolDefinition[],
   who: Caller,
   ctx: ToolContext,
+  observe?: CallObserver,
 ): Promise<Client> {
   const server = new Server(
     { name: 'motor-fix-test', version: '0.0.0' },
     { capabilities: { tools: {} } },
   );
-  register(server, tools, who, ctx);
+  register(server, tools, who, ctx, observe);
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test', version: '0.0.0' });
   await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
