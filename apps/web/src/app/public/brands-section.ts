@@ -1,21 +1,18 @@
-export type Stance = 'works_on' | 'does_not_take';
+import {
+  type BrandsSection as DraftBrands,
+  FUELS,
+  type Fuel,
+  type MarkedBrand,
+  NOTE_MAX,
+  PHRASE_MAX,
+  type Stance,
+} from '@motor-fix/contracts/marked-brands';
 
-export interface MarkedBrand {
-  brandId: string;
-  name: string;
-  stance: Stance;
-}
+export type { Fuel, MarkedBrand, Stance };
+export { FUELS, NOTE_MAX, PHRASE_MAX };
 
-// Step 2 of the listing draft: only the brands the owner marked, and the two
-// optional texts, each absent when blank.
-export interface BrandsSection {
-  brands: MarkedBrand[];
-  brandNote?: string;
-  refusalPhrase?: string;
-}
-
-export const NOTE_MAX = 140;
-export const PHRASE_MAX = 60;
+// The step's own value always holds the list, even when nothing is marked.
+export type BrandsSection = DraftBrands & { brands: MarkedBrand[] };
 
 // Off, then taken, then refused, then off again.
 export function next(stance: Stance | undefined): Stance | undefined {
@@ -31,9 +28,33 @@ export function mark(
 ): MarkedBrand[] {
   if (!stance) return brands.filter((b) => b.brandId !== brand.id);
   const marked = { brandId: brand.id, name: brand.name, stance };
-  return brands.some((b) => b.brandId === brand.id)
-    ? brands.map((b) => (b.brandId === brand.id ? marked : b))
-    : [...brands, marked];
+  const held = brands.find((b) => b.brandId === brand.id);
+  if (!held) return [...brands, marked];
+  // Taken again keeps its fuels; refused drops them.
+  const kept =
+    stance === 'works_on' && held.stance === 'works_on' && held.fuels
+      ? { ...marked, fuels: held.fuels }
+      : marked;
+  return brands.map((b) => (b.brandId === brand.id ? kept : b));
+}
+
+// No fuels held means all four, as a draft kept before fuels existed reads.
+export const fuelsOf = (brand: MarkedBrand): Fuel[] =>
+  brand.fuels ? [...brand.fuels] : [...FUELS];
+
+export function toggleFuel(
+  brands: MarkedBrand[],
+  brandId: string,
+  fuel: Fuel,
+): MarkedBrand[] {
+  return brands.map((b) => {
+    if (b.brandId !== brandId) return b;
+    const held = fuelsOf(b);
+    const fuels = FUELS.filter((f) =>
+      f === fuel ? !held.includes(f) : held.includes(f),
+    );
+    return { ...b, fuels };
+  });
 }
 
 export function counts(brands: MarkedBrand[]) {
@@ -55,13 +76,19 @@ export function clean(text: string, max: number): string | undefined {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
+const isFuels = (value: unknown) =>
+  Array.isArray(value) &&
+  value.every((f) => (FUELS as readonly unknown[]).includes(f)) &&
+  new Set(value).size === value.length;
+
 const isMarked = (value: unknown): value is MarkedBrand => {
   if (!isRecord(value)) return false;
-  const { brandId, name, stance } = value;
+  const { brandId, fuels, name, stance } = value;
   return (
     typeof brandId === 'string' &&
     typeof name === 'string' &&
-    (stance === 'works_on' || stance === 'does_not_take')
+    (stance === 'works_on' || stance === 'does_not_take') &&
+    (fuels === undefined || (stance === 'works_on' && isFuels(fuels)))
   );
 };
 

@@ -20,6 +20,7 @@ export { JOB_TYPES } from './catalogue/job-types/job-types';
 export { EventsModule } from './events/events.module';
 export { OutboxRelayModule } from './events/outbox-relay/outbox-relay.module';
 export { GarageDetailsService } from './garages/details/garage-details.service';
+export { writeGarageBrands } from './garages/garage-brands/write-garage-brands';
 export { writeGarageHours } from './garages/garage-hours';
 export { writeGaragePayments } from './garages/garage-settings/garage-settings';
 export { GaragesModule } from './garages/garages.module';

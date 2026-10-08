@@ -78,7 +78,7 @@ async function settle(fixture: Fixture) {
 const text = (element: Element | null | undefined) =>
   (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
 const chips = (step: HTMLElement) => [
-  ...step.querySelectorAll<HTMLButtonElement>('.chips button'),
+  ...step.querySelectorAll<HTMLButtonElement>('.chips > li > button'),
 ];
 const chip = (step: HTMLElement, name: string) => {
   const found = chips(step).find((c) => text(c).startsWith(name));
@@ -371,5 +371,156 @@ describe('step 2, the brands', () => {
     expect(text(chip(step, 'BMW'))).toBe('BMW lucrezi pe ea');
     expect(field(step, 'brandNote').value).toBe('Doar benzină');
     expect(counter(step)).toBe('1 primită · 1 refuzată');
+  });
+});
+
+const fuelRow = (step: HTMLElement, name: string) =>
+  chip(step, name).closest('li')?.querySelector<HTMLElement>('.fuels') ?? null;
+const fuels = (step: HTMLElement, name: string) => [
+  ...(fuelRow(step, name)?.querySelectorAll<HTMLButtonElement>('button') ?? []),
+];
+const fuel = (step: HTMLElement, name: string, label: string) => {
+  const found = fuels(step, name).find(
+    (f) => f.getAttribute('aria-label') === `${name}, ${label}`,
+  );
+  if (!found) throw new Error(`no fuel ${label} under ${name}`);
+  return found;
+};
+const quiet = (step: HTMLElement, name: string) =>
+  chip(step, name).closest('li')?.querySelector('[role="status"]') ?? null;
+
+async function press(fixture: Fixture, button: HTMLButtonElement) {
+  button.click();
+  await settle(fixture);
+}
+
+describe('step 2, the fuels of a taken brand', () => {
+  it('shows four fuels, all ticked, under a brand once it is taken', async () => {
+    const { fixture, step } = await open();
+
+    await tap(fixture, step, 'Dacia');
+
+    expect(fuels(step, 'Dacia').map((f) => text(f).split(' ')[0])).toEqual([
+      'Benzină',
+      'Diesel',
+      'Hibrid',
+      'Electric',
+    ]);
+    for (const f of fuels(step, 'Dacia')) {
+      expect(f.type).toBe('button');
+      expect(f.getAttribute('aria-pressed')).toBe('true');
+    }
+  });
+
+  it('names each fuel with its brand', async () => {
+    const { fixture, step } = await open();
+    await tap(fixture, step, 'Dacia');
+
+    expect(
+      fuels(step, 'Dacia').map((f) => f.getAttribute('aria-label')),
+    ).toEqual([
+      'Dacia, Benzină',
+      'Dacia, Diesel',
+      'Dacia, Hibrid',
+      'Dacia, Electric',
+    ]);
+  });
+
+  it('shows no fuels under a refused or an unmarked brand', async () => {
+    const { fixture, step } = await open();
+
+    await tap(fixture, step, 'Tesla', 2);
+
+    expect(fuels(step, 'Tesla')).toHaveLength(0);
+    expect(fuels(step, 'BMW')).toHaveLength(0);
+  });
+
+  it('unticks a fuel and ticks it again, holding the ticked ones in the value', async () => {
+    const { fixture, step } = await open();
+    await tap(fixture, step, 'Dacia');
+
+    await press(fixture, fuel(step, 'Dacia', 'Electric'));
+
+    expect(fuel(step, 'Dacia', 'Electric').getAttribute('aria-pressed')).toBe(
+      'false',
+    );
+    expect(fixture.componentInstance.value().brands).toEqual([
+      {
+        brandId: CATALOGUE[6].id,
+        fuels: ['petrol', 'diesel', 'hybrid'],
+        name: 'Dacia',
+        stance: 'works_on',
+      },
+    ]);
+
+    await press(fixture, fuel(step, 'Dacia', 'Electric'));
+    expect(fixture.componentInstance.value().brands[0].fuels).toEqual([
+      'petrol',
+      'diesel',
+      'hybrid',
+      'electric',
+    ]);
+  });
+
+  it('says politely that no requests come for a brand with every fuel unticked', async () => {
+    const { fixture, step } = await open();
+    await tap(fixture, step, 'Dacia');
+    expect(quiet(step, 'Dacia')).toBeNull();
+
+    for (const label of ['Benzină', 'Diesel', 'Hibrid', 'Electric'])
+      await press(fixture, fuel(step, 'Dacia', label));
+
+    expect(text(quiet(step, 'Dacia'))).toBe('Nu vei primi cereri pentru Dacia');
+    expect(fixture.componentInstance.value().brands[0].fuels).toEqual([]);
+  });
+
+  it('starts at all four again after the brand is refused and taken back', async () => {
+    const { fixture, step } = await open();
+    await tap(fixture, step, 'Dacia');
+    await press(fixture, fuel(step, 'Dacia', 'Diesel'));
+
+    await tap(fixture, step, 'Dacia', 3);
+
+    for (const f of fuels(step, 'Dacia'))
+      expect(f.getAttribute('aria-pressed')).toBe('true');
+    expect(fixture.componentInstance.value().brands[0]).not.toHaveProperty(
+      'fuels',
+    );
+  });
+
+  it('shows the fuels and the line in English, keeping the ticks', async () => {
+    const { fixture, i18n, step } = await open();
+    await tap(fixture, step, 'Dacia');
+    for (const label of ['Benzină', 'Diesel', 'Hibrid', 'Electric'])
+      await press(fixture, fuel(step, 'Dacia', label));
+
+    await i18n.use('en');
+    await settle(fixture);
+
+    expect(
+      fuels(step, 'Dacia').map((f) => f.getAttribute('aria-label')),
+    ).toEqual([
+      'Dacia, Petrol',
+      'Dacia, Diesel',
+      'Dacia, Hybrid',
+      'Dacia, Electric',
+    ]);
+    expect(text(quiet(step, 'Dacia'))).toBe(
+      'You will not receive requests for Dacia',
+    );
+    expect(fixture.componentInstance.value().brands[0].fuels).toEqual([]);
+  });
+
+  it('shows a restored brand with no fuels kept as all four ticked', async () => {
+    const { fixture, step } = await open();
+
+    fixture.componentInstance.value.set({
+      brands: [{ brandId: CATALOGUE[0].id, name: 'BMW', stance: 'works_on' }],
+    });
+    await settle(fixture);
+
+    expect(fuels(step, 'BMW')).toHaveLength(4);
+    for (const f of fuels(step, 'BMW'))
+      expect(f.getAttribute('aria-pressed')).toBe('true');
   });
 });

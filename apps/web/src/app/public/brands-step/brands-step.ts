@@ -18,12 +18,16 @@ import {
   clean,
   counts,
   cut,
+  FUELS,
+  type Fuel,
+  fuelsOf,
   letters,
   mark,
   NOTE_MAX,
   next,
   PHRASE_MAX,
   type Stance,
+  toggleFuel,
 } from '../brands-section';
 
 const POPULAR = 12;
@@ -55,6 +59,7 @@ export class BrandsStep {
 
   readonly value = model<BrandsSection>({ brands: [] });
 
+  protected readonly fuelList = FUELS;
   protected readonly note: Text = 'brandNote';
   protected readonly phrase: Text = 'refusalPhrase';
 
@@ -97,6 +102,23 @@ export class BrandsStep {
 
   protected stanceOf(id: string): Stance | undefined {
     return this.value().brands.find((b) => b.brandId === id)?.stance;
+  }
+
+  // The fuels of a taken brand; none for one refused or not marked.
+  protected fuelsTicked(id: string): Fuel[] | null {
+    const held = this.value().brands.find((b) => b.brandId === id);
+    return held?.stance === 'works_on' ? fuelsOf(held) : null;
+  }
+
+  protected fuelKey(fuel: Fuel) {
+    return `public.listing.brands.fuel.${fuel}`;
+  }
+
+  protected tickFuel(id: string, fuel: Fuel) {
+    this.value.update((v) => ({
+      ...v,
+      brands: toggleFuel(v.brands, id, fuel),
+    }));
   }
 
   protected tap(brand: Brand) {

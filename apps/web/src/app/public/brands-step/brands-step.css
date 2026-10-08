@@ -62,3 +62,18 @@ mf-lamp {
   display: grid;
   gap: var(--mf-space-1);
 }
+/* A taken brand takes its own line, with its fuels under it. */
+.chips > li:has(.fuels) {
+  display: grid;
+  flex-basis: 100%;
+  gap: var(--mf-space-2);
+  justify-items: start;
+  min-width: 0;
+}
+.fuels button {
+  font-size: var(--mf-size-small);
+}
+.quiet {
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+}
