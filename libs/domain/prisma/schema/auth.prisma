@@ -64,6 +64,7 @@ model Account {
   assistantGrants         AssistantGrant[]
   assistantSignInCodes    AssistantSignInCode[]
 
+  @@index([createdAt(sort: Desc), id(sort: Desc)])
   @@map("account")
 }
 

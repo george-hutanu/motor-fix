@@ -1376,6 +1376,78 @@
         ]
       }
     },
+    "/api/v1/admin/accounts": {
+      "get": {
+        "operationId": "AdminAccountsController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "The nextCursor of the previous page",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAccountsPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_cursor, or a query parameter it does not take"
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/accounts/summary": {
+      "get": {
+        "operationId": "AdminAccountsController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAccountsSummaryDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/cars": {
       "post": {
         "operationId": "CarsController_create",
@@ -2055,6 +2127,64 @@
             "bearer": []
           }
         ],
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}": {
+      "patch": {
+        "operationId": "GarageSettingsController_update",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGarageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageSettingsDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: an empty body, no payment method, a bad price, a courtesy car the garage does not list"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change the garage's payment methods or courtesy car price",
         "tags": [
           "garages"
         ]
@@ -4421,6 +4551,140 @@
           }
         }
       },
+      "AdminAccountCountDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "requests for a driver, reviews for a garage or mechanic, age in days for a receptionist, an admin or an account under 7 days old",
+            "enum": [
+              "requests",
+              "reviews",
+              "age"
+            ]
+          },
+          "value": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "kind",
+          "value"
+        ]
+      },
+      "AdminAccountDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "description": "In the order driver, garage, receptionist, mechanic, admin",
+            "items": {
+              "type": "string",
+              "enum": [
+                "driver",
+                "garage",
+                "receptionist",
+                "mechanic",
+                "admin"
+              ]
+            }
+          },
+          "garageName": {
+            "type": "string",
+            "description": "The garage of the first role: owned, worked at as receptionist, or of the mechanic card",
+            "nullable": true
+          },
+          "carsCount": {
+            "type": "integer",
+            "description": "Cars not removed",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended"
+            ]
+          },
+          "since": {
+            "type": "string",
+            "description": "When the state began: creation for active, the last recorded suspension for suspended (null when none is recorded)",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "count": {
+            "$ref": "#/components/schemas/AdminAccountCountDto"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "roles",
+          "garageName",
+          "carsCount",
+          "status",
+          "since",
+          "createdAt",
+          "count"
+        ]
+      },
+      "AdminAccountsPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Newest first, 20 at most",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminAccountDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "AdminAccountsSummaryDto": {
+        "type": "object",
+        "properties": {
+          "activeDrivers": {
+            "type": "integer",
+            "description": "Active driver accounts used in the last 30 days",
+            "minimum": 0
+          },
+          "garagesListed": {
+            "type": "integer",
+            "description": "Garages approved and listed now",
+            "minimum": 0
+          },
+          "mechanics": {
+            "type": "integer",
+            "description": "Mechanic cards with an account at listed garages",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "activeDrivers",
+          "garagesListed",
+          "mechanics"
+        ]
+      },
       "CreateCarDto": {
         "type": "object",
         "properties": {
@@ -4979,6 +5243,19 @@
               "works_on",
               "does_not_take"
             ]
+          },
+          "fuels": {
+            "type": "array",
+            "description": "A taken brand only. Left out: unchanged, or all four for a brand taken now; empty: none",
+            "items": {
+              "type": "string",
+              "enum": [
+                "petrol",
+                "diesel",
+                "hybrid",
+                "electric"
+              ]
+            }
           }
         },
         "required": [
@@ -5101,6 +5378,83 @@
         "required": [
           "id",
           "emailSent"
+        ]
+      },
+      "PaymentMethodsDto": {
+        "type": "object",
+        "properties": {
+          "cash": {
+            "type": "boolean"
+          },
+          "card": {
+            "type": "boolean"
+          },
+          "transfer": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "cash",
+          "card",
+          "transfer"
+        ]
+      },
+      "CourtesyCarDto": {
+        "type": "object",
+        "properties": {
+          "paid": {
+            "type": "boolean"
+          },
+          "pricePerDayBani": {
+            "type": "integer",
+            "description": "Per day, in bani: whole lei; only when paid",
+            "maximum": 200000,
+            "minimum": 100,
+            "multipleOf": 100
+          }
+        },
+        "required": [
+          "paid"
+        ]
+      },
+      "UpdateGarageDto": {
+        "type": "object",
+        "properties": {
+          "paymentMethods": {
+            "description": "All three; at least one true",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentMethodsDto"
+              }
+            ]
+          },
+          "courtesyCar": {
+            "description": "Only for a garage that lists the courtesy car",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CourtesyCarDto"
+              }
+            ]
+          }
+        }
+      },
+      "GarageSettingsDto": {
+        "type": "object",
+        "properties": {
+          "paymentMethods": {
+            "$ref": "#/components/schemas/PaymentMethodsDto"
+          },
+          "courtesyCar": {
+            "description": "Absent when the garage does not list the courtesy car",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CourtesyCarDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "paymentMethods"
         ]
       },
       "InviteTokenDto": {
@@ -5372,13 +5726,48 @@
           "sentAt"
         ]
       },
+      "PublicBrandDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "BMW"
+          },
+          "slug": {
+            "type": "string",
+            "example": "bmw"
+          },
+          "fuels": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "petrol",
+                "diesel",
+                "hybrid",
+                "electric"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "fuels"
+        ]
+      },
       "PublicGarageDto": {
         "type": "object",
         "properties": {
           "worksOn": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/BrandRefDto"
+              "$ref": "#/components/schemas/PublicBrandDto"
             }
           },
           "doesNotTake": {
@@ -5425,6 +5814,17 @@
             "description": "A mobile mechanic only: how far from its base it travels.",
             "maximum": 100,
             "minimum": 1
+          },
+          "paymentMethods": {
+            "$ref": "#/components/schemas/PaymentMethodsDto"
+          },
+          "courtesyCar": {
+            "description": "Absent when the garage does not list one; a price only when paid",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CourtesyCarDto"
+              }
+            ]
           }
         },
         "required": [
@@ -5434,7 +5834,8 @@
           "refusalPhrase",
           "id",
           "name",
-          "slug"
+          "slug",
+          "paymentMethods"
         ]
       },
       "RecordVerificationCheckDto": {

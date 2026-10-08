@@ -9,6 +9,12 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { adminAccountsControllerList } from '../fn/admin/admin-accounts-controller-list';
+import { AdminAccountsControllerList$Params } from '../fn/admin/admin-accounts-controller-list';
+import { adminAccountsControllerSummary } from '../fn/admin/admin-accounts-controller-summary';
+import { AdminAccountsControllerSummary$Params } from '../fn/admin/admin-accounts-controller-summary';
+import { AdminAccountsPageDto } from '../models/admin-accounts-page-dto';
+import { AdminAccountsSummaryDto } from '../models/admin-accounts-summary-dto';
 import { AdminGrowthDto } from '../models/admin-growth-dto';
 import { adminOverviewControllerGrowth } from '../fn/admin/admin-overview-controller-growth';
 import { AdminOverviewControllerGrowth$Params } from '../fn/admin/admin-overview-controller-growth';
@@ -41,6 +47,56 @@ import { VerificationChecksControllerRecord$Params } from '../fn/admin/verificat
 export class AdminService extends BaseService {
   constructor(config: ApiConfiguration, http: HttpClient) {
     super(config, http);
+  }
+
+  /** Path part for operation `adminAccountsControllerList()` */
+  static readonly AdminAccountsControllerListPath = '/api/v1/admin/accounts';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `adminAccountsControllerList()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminAccountsControllerList$Response(params?: AdminAccountsControllerList$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminAccountsPageDto>> {
+    const obs = adminAccountsControllerList(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `adminAccountsControllerList$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminAccountsControllerList(params?: AdminAccountsControllerList$Params, context?: HttpContext): Promise<AdminAccountsPageDto> {
+    const resp = this.adminAccountsControllerList$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminAccountsPageDto>): AdminAccountsPageDto => r.body);
+  }
+
+  /** Path part for operation `adminAccountsControllerSummary()` */
+  static readonly AdminAccountsControllerSummaryPath = '/api/v1/admin/accounts/summary';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `adminAccountsControllerSummary()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminAccountsControllerSummary$Response(params?: AdminAccountsControllerSummary$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminAccountsSummaryDto>> {
+    const obs = adminAccountsControllerSummary(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `adminAccountsControllerSummary$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminAccountsControllerSummary(params?: AdminAccountsControllerSummary$Params, context?: HttpContext): Promise<AdminAccountsSummaryDto> {
+    const resp = this.adminAccountsControllerSummary$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminAccountsSummaryDto>): AdminAccountsSummaryDto => r.body);
   }
 
   /** Path part for operation `adminOverviewControllerOverview()` */

@@ -11,6 +11,7 @@ features:
   - 878-data-store-metrics
   - 916-otlp-log-masking-coverage
   - 365-mcp-oauth
+  - 397-listing-ticks
 ---
 
 # Capability: Observability
@@ -342,6 +343,10 @@ _From 916-otlp-log-masking-coverage._
 ### 365-FR-015 — The server MUST record its metrics (requests by outcome, tool calls by tool and outcome, authentication failures by reason, tool-call duration), one log line per call with no token and no user text, and traces through the existing telemetry (the request id is a trace attribute); metric labels come from closed sets only (tool name, outcome, failure reason; never an account, client or token); the identity server's key fetch has its own success/failure counter so an outage is visible while cached keys still serve; the Grafana dashboard gets an MCP panel and an alert on authentication-failure spikes and tool-error rate; `infra/observability/inventory.json` lists the MCP endpoint, the identity server's key fetch (outside call) and the three assistant endpoints of the API. (D17; AGENTS.md observability rule)
 
 _From 365-mcp-oauth._
+
+### 397-FR-013 — The new endpoint MUST be listed with its telemetry in `infra/observability/inventory.json` (the API's request metrics and logs cover it; no new dashboard panel or alert, with the reason stated), as every new endpoint is.
+
+_From 397-listing-ticks._
 
 ## Retired
 

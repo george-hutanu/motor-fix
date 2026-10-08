@@ -10,6 +10,11 @@ import {
   PLATFORM_ID,
   signal,
 } from '@angular/core';
+import {
+  FUELS,
+  NOTE_MAX,
+  PHRASE_MAX,
+} from '@motor-fix/contracts/marked-brands';
 import { type BrandDto, BrandsService } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmInput, HlmLabel, Lamp } from '@motor-fix/ui-cockpit';
@@ -19,12 +24,13 @@ import {
   clean,
   counts,
   cut,
+  type Fuel,
+  fuelsOf,
   letters,
   mark,
-  NOTE_MAX,
   next,
-  PHRASE_MAX,
   type Stance,
+  toggleFuel,
 } from '../brands-section';
 
 const POPULAR = 12;
@@ -58,6 +64,7 @@ export class BrandsStep {
   // The ids of the popular and searched brands, in the order the chips show them.
   readonly order = output<string[]>();
 
+  protected readonly fuelList = FUELS;
   protected readonly note: Text = 'brandNote';
   protected readonly phrase: Text = 'refusalPhrase';
 
@@ -111,6 +118,23 @@ export class BrandsStep {
 
   protected stanceOf(id: string): Stance | undefined {
     return this.value().brands.find((b) => b.brandId === id)?.stance;
+  }
+
+  // The fuels of a taken brand; none for one refused or not marked.
+  protected fuelsTicked(id: string): Fuel[] | null {
+    const held = this.value().brands.find((b) => b.brandId === id);
+    return held?.stance === 'works_on' ? fuelsOf(held) : null;
+  }
+
+  protected fuelKey(fuel: Fuel) {
+    return `public.listing.brands.fuel.${fuel}`;
+  }
+
+  protected tickFuel(id: string, fuel: Fuel) {
+    this.value.update((v) => ({
+      ...v,
+      brands: toggleFuel(v.brands, id, fuel),
+    }));
   }
 
   protected tap(brand: Brand) {
