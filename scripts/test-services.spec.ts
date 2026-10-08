@@ -411,8 +411,8 @@ describe('down and sweep, against fake docker, git and gh', () => {
     expect(out.reason).toMatch(/no pools left/);
   });
 
-  // @traces 977-worktree-cleanup-FR-007
-  // @traces 977-worktree-cleanup-FR-006
+  // @traces 977-FR-007
+  // @traces 977-FR-006
   it('down --volumes removes the stack with its volumes, leftover ones too', () => {
     fake(
       'docker',

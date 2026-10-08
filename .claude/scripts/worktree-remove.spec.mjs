@@ -1,11 +1,11 @@
-// @traces 977-worktree-cleanup-FR-001
-// @traces 977-worktree-cleanup-FR-002
-// @traces 977-worktree-cleanup-FR-003
-// @traces 977-worktree-cleanup-FR-004
-// @traces 977-worktree-cleanup-FR-005
-// @traces 977-worktree-cleanup-FR-006
-// @traces 977-worktree-cleanup-FR-008
-// @traces 977-worktree-cleanup-FR-013
+// @traces 977-FR-001
+// @traces 977-FR-002
+// @traces 977-FR-003
+// @traces 977-FR-004
+// @traces 977-FR-005
+// @traces 977-FR-006
+// @traces 977-FR-008
+// @traces 977-FR-013
 import { afterEach, beforeEach, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -399,5 +399,20 @@ describe('the command', () => {
     };
     assert.doesNotMatch(cli1('live', `claude agent agent-a1 (pid ${process.pid} start Sun Oct  4 08:07:18 2026)`), /^locked/);
     assert.equal(cli1('hand', 'kept while I look at it'), 'locked: kept while I look at it');
+  });
+});
+
+// @traces 977-FR-011
+// @traces 977-FR-012
+describe('the docs name the one removal', () => {
+  const root = join(import.meta.dirname, '..', '..');
+  const read = (p) => readFileSync(join(root, p), 'utf8');
+
+  it('AGENTS.md states the rule, and the tail and the watch skill run the shared command', () => {
+    const agents = read('AGENTS.md');
+    assert.match(agents, /A worktree goes once its PR merges or closes, or after 7 idle days with no\s+PR/);
+    assert.match(agents, /\.claude\/scripts\/worktree-remove\.mjs/);
+    assert.match(read('.claude/skills/speckit-auto/tail.md'), /`ExitWorktree` \(keep\) and run\s+`node <worktree>\/\.claude\/scripts\/worktree-remove\.mjs <worktree>` from the\s+main checkout/);
+    assert.match(read('.claude/skills/speckit-watch/SKILL.md'), /`remove`: worktrees whose PR merged or closed[\s\S]*worktree-remove\.mjs/);
   });
 });

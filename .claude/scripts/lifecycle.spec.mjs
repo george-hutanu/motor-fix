@@ -608,7 +608,7 @@ describe('merge stops the merged worktree test stack', () => {
   });
 });
 
-// @traces 977-worktree-cleanup-FR-009
+// @traces 977-FR-009
 describe('merge removes the merged worktree as its last step', () => {
   beforeEach(() => {
     fixture();

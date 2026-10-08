@@ -292,7 +292,7 @@ describe('stale and the fix', () => {
     assert.equal(r.fix, 'resume');
   });
 
-  // @traces 977-worktree-cleanup-FR-010
+  // @traces 977-FR-010
   it('removes a merged or closed worktree nobody holds, dirty or not, but never one with unpushed commits', () => {
     const merged = summarizePr(pr({ state: 'MERGED', headRefOid: 'abc' }));
     const done = { phase: 'done', pr: merged };
@@ -310,7 +310,7 @@ describe('stale and the fix', () => {
     assert.equal(fixOf(row({ ...done, main: true, holder: 'owner' }), opts).fix, null);
   });
 
-  // @traces 977-worktree-cleanup-FR-010
+  // @traces 977-FR-010
   it('removes a worktree with no PR once it has been idle for 7 days, and takes an idle override', () => {
     assert.equal(DEFAULT_THRESHOLDS.idle, 7 * 24 * 60);
     const idle = (minutes, over = {}) => row({ pr: null, activity: { at: NOW - minutes * MIN, source: 'commit' }, ...over });
@@ -552,7 +552,7 @@ describe('--fix and claim', () => {
     }
   });
 
-  // @traces 977-worktree-cleanup-FR-010
+  // @traces 977-FR-010
   it('unlocks a dead lock, hands merged worktrees to the shared removal, dirty ones too, prunes a deleted one, and leaves the rest alone', () => {
     const f = fixture();
     try {
@@ -678,7 +678,7 @@ describe('--fix and claim', () => {
     }
   });
 
-  // @traces 977-worktree-cleanup-FR-010
+  // @traces 977-FR-010
   it('counts the commits on no remote, and withholds the removal of a merged worktree that has them', () => {
     const f = fixture();
     try {
@@ -696,7 +696,7 @@ describe('--fix and claim', () => {
     }
   });
 
-  // @traces 977-worktree-cleanup-FR-010
+  // @traces 977-FR-010
   it('sweeps a worktree with no PR idle past the threshold, admitting it, and goes on past a refusal or a throw', () => {
     const f = fixture();
     try {
