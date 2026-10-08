@@ -1,3 +1,4 @@
+export { AdminAccountsModule } from './admin/admin-accounts/admin-accounts.module';
 export { PlatformRulesModule } from './admin/platform-rules/platform-rules.module';
 export { signAccessToken } from './auth/access-token';
 export { AccountsService } from './auth/accounts.service';

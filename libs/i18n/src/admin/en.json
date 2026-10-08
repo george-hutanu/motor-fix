@@ -62,5 +62,60 @@
     "twoAdmins": "A second admin is needed.",
     "waiting": "Waiting for another admin's approval",
     "withdraw": "Withdraw the request"
+  },
+  "users": {
+    "cars": {
+      "count": {
+        "one": "{n} car",
+        "other": "{n} cars"
+      },
+      "none": "no car"
+    },
+    "count": {
+      "age": {
+        "one": "{n}-day-old account",
+        "other": "{n}-day-old account"
+      },
+      "requests": {
+        "one": "{n} request",
+        "other": "{n} requests"
+      },
+      "reviews": {
+        "one": "{n} review",
+        "other": "{n} reviews"
+      }
+    },
+    "empty": "No accounts yet.",
+    "failed": "The list did not load.",
+    "loading": "Loading the accounts",
+    "more": "The next accounts did not load.",
+    "recent": "Recent accounts",
+    "retry": "Try again",
+    "roles": {
+      "admin": "admin",
+      "driver": "driver",
+      "garage": "garage",
+      "mechanic": "mechanic",
+      "receptionist": "reception"
+    },
+    "state": {
+      "active": "active",
+      "since": "{state} · since {when}",
+      "suspended": "suspended"
+    },
+    "totals": {
+      "drivers": {
+        "one": "{n} active driver",
+        "other": "{n} active drivers"
+      },
+      "garages": {
+        "one": "{n} garage",
+        "other": "{n} garages"
+      },
+      "mechanics": {
+        "one": "{n} mechanic",
+        "other": "{n} mechanics"
+      }
+    }
   }
 }
