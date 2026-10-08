@@ -36,5 +36,6 @@ export * from './problem';
 export * from './public-holidays.dto';
 export * from './public-live.dto';
 export * from './push-subscriptions.dto';
+export * from './request-status';
 export * from './staff-invite.dto';
 export * from './verification-checks';

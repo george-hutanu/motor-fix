@@ -12,6 +12,7 @@ const KEY_CHANGES = new Set([
   'job.eta_at',
   'booking.starts_at',
   'booking.mechanic_id',
+  'booking.cancel_reason',
 ]);
 
 // JSON with object keys sorted, so equal content compares equal whatever the key order.

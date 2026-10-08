@@ -1,0 +1,253 @@
+// quotes module models: a driver's request, the garages it went to, their
+// quotes and the booking of the one accepted. Only the quotes module writes
+// them; the moves between statuses are in src/quotes/transitions.ts. The
+// CHECKs and the partial unique index are in the migration.
+
+enum QuoteRequestStatus {
+  sent
+  quoted
+  booked
+  in_work
+  done
+  closed
+
+  @@map("quote_request_status")
+}
+
+enum RequestClosedReason {
+  expired
+  cancelled
+  booking_lapsed
+  booking_cancelled
+  no_show
+  account_closed
+
+  @@map("request_closed_reason")
+}
+
+enum RecipientStatus {
+  waiting
+  quoted
+  declined
+  expired
+  // Not answered when the request closed or the garage was suspended; left
+  // out of the response rate, unlike `expired`.
+  closed
+
+  @@map("request_recipient_status")
+}
+
+enum RequestSource {
+  search
+  map
+  home
+  shared_link
+  profile_direct
+  saved
+  unknown
+
+  @@map("request_source")
+}
+
+enum DeclineReason {
+  fully_booked
+  job_not_done
+  make_model_engine_not_done
+  need_to_see_car
+
+  @@map("decline_reason")
+}
+
+enum QuoteStatus {
+  waiting
+  accepted
+  withdrawn
+  expired
+  lost
+  declined_by_driver
+
+  @@map("quote_status")
+}
+
+enum BookingStatus {
+  awaiting_confirmation
+  confirmed
+  lapsed
+  cancelled
+  no_show
+  completed
+
+  @@map("booking_status")
+}
+
+enum CancelledBySide {
+  driver
+  garage
+  system
+
+  @@map("cancelled_by_side")
+}
+
+enum BookingCancelReason {
+  plans_changed
+  found_another_garage
+  problem_solved
+  no_mechanic_free
+  parts_not_available
+  closed_that_day
+  driver_asked
+  other
+  garage_suspended
+  driver_account_closed
+
+  @@map("booking_cancel_reason")
+}
+
+// The car is copied when the request is sent, so editing the car later
+// changes nothing here. The plate is never copied.
+model QuoteRequest {
+  id           String               @id @default(uuid()) @db.Uuid
+  driverId     String               @map("driver_id") @db.Uuid
+  carId        String               @map("car_id") @db.Uuid
+  carBrand     String               @map("car_brand")
+  carModel     String               @map("car_model")
+  carYear      Int                  @map("car_year")
+  carFuel      Fuel                 @map("car_fuel")
+  carEngine    String?              @map("car_engine")
+  description  String?
+  status       QuoteRequestStatus   @default(sent)
+  closedReason RequestClosedReason? @map("closed_reason")
+  closedAt     DateTime?            @map("closed_at") @db.Timestamptz(3)
+  createdAt    DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt    DateTime             @map("expires_at") @db.Timestamptz(3)
+  driver       Account              @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  car          Car                  @relation(fields: [carId], references: [id], onDelete: NoAction)
+  jobs         RequestJob[]
+  recipients   RequestRecipient[]
+  quotes       Quote[]
+  bookings     Booking[]
+
+  @@index([driverId, createdAt(sort: Desc), id(sort: Desc)])
+  @@map("quote_request")
+}
+
+model RequestJob {
+  id        String       @id @default(uuid()) @db.Uuid
+  requestId String       @map("request_id") @db.Uuid
+  jobTypeId String       @map("job_type_id") @db.Uuid
+  position  Int
+  request   QuoteRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  jobType   JobType      @relation(fields: [jobTypeId], references: [id], onDelete: Restrict)
+  quoteJobs QuoteJob[]
+
+  @@unique([requestId, jobTypeId])
+  @@unique([requestId, position])
+  @@map("request_job")
+}
+
+model RequestRecipient {
+  id              String          @id @default(uuid()) @db.Uuid
+  requestId       String          @map("request_id") @db.Uuid
+  garageId        String          @map("garage_id") @db.Uuid
+  status          RecipientStatus @default(waiting)
+  source          RequestSource
+  answeredAt      DateTime?       @map("answered_at") @db.Timestamptz(3)
+  declineReason   DeclineReason?  @map("decline_reason")
+  // The undo window counts from here.
+  declinedAt      DateTime?       @map("declined_at") @db.Timestamptz(3)
+  declinedBy      String?         @map("declined_by") @db.Uuid
+  remindedDay2At  DateTime?       @map("reminded_day2_at") @db.Timestamptz(3)
+  remindedDay5At  DateTime?       @map("reminded_day5_at") @db.Timestamptz(3)
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  request         QuoteRequest    @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  garage          Garage          @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  declinedByActor Account?        @relation("RecipientDeclinedBy", fields: [declinedBy], references: [id], onDelete: SetNull)
+  quote           Quote?
+
+  @@unique([requestId, garageId])
+  @@index([garageId, createdAt(sort: Desc)])
+  @@map("request_recipient")
+}
+
+// Edited in place: one quote per garage and request.
+model Quote {
+  id              String           @id @default(uuid()) @db.Uuid
+  requestId       String           @map("request_id") @db.Uuid
+  recipientId     String           @unique @map("recipient_id") @db.Uuid
+  garageId        String           @map("garage_id") @db.Uuid
+  fromBani        Int              @map("from_bani")
+  toBani          Int              @map("to_bani")
+  durationMinutes Int              @map("duration_minutes")
+  // The proposed start.
+  slot            DateTime         @db.Timestamptz(3)
+  note            String?
+  status          QuoteStatus      @default(waiting)
+  sentAt          DateTime         @default(now()) @map("sent_at") @db.Timestamptz(3)
+  changedAt       DateTime?        @map("changed_at") @db.Timestamptz(3)
+  withdrawnAt     DateTime?        @map("withdrawn_at") @db.Timestamptz(3)
+  acceptedAt      DateTime?        @map("accepted_at") @db.Timestamptz(3)
+  expiresAt       DateTime         @map("expires_at") @db.Timestamptz(3)
+  request         QuoteRequest     @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  recipient       RequestRecipient @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  garage          Garage           @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  jobs            QuoteJob[]
+  booking         Booking?
+
+  @@unique([requestId, garageId])
+  @@index([garageId, sentAt(sort: Desc)])
+  @@map("quote")
+}
+
+model QuoteJob {
+  id           String     @id @default(uuid()) @db.Uuid
+  quoteId      String     @map("quote_id") @db.Uuid
+  requestJobId String     @map("request_job_id") @db.Uuid
+  included     Boolean
+  quote        Quote      @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  requestJob   RequestJob @relation(fields: [requestJobId], references: [id], onDelete: Cascade)
+
+  @@unique([quoteId, requestJobId])
+  @@map("quote_job")
+}
+
+model Booking {
+  id                    String               @id @default(uuid()) @db.Uuid
+  quoteId               String               @unique @map("quote_id") @db.Uuid
+  requestId             String               @map("request_id") @db.Uuid
+  garageId              String               @map("garage_id") @db.Uuid
+  driverId              String               @map("driver_id") @db.Uuid
+  startsAt              DateTime             @map("starts_at") @db.Timestamptz(3)
+  durationMinutes       Int                  @map("duration_minutes")
+  status                BookingStatus        @default(awaiting_confirmation)
+  confirmBy             DateTime             @map("confirm_by") @db.Timestamptz(3)
+  confirmedAt           DateTime?            @map("confirmed_at") @db.Timestamptz(3)
+  confirmedBy           String?              @map("confirmed_by") @db.Uuid
+  mechanicId            String?              @map("mechanic_id") @db.Uuid
+  lift                  Int?
+  moveCount             Int                  @default(0) @map("move_count")
+  historyShared         Boolean              @default(false) @map("history_shared")
+  cancelledAt           DateTime?            @map("cancelled_at") @db.Timestamptz(3)
+  cancelledBySide       CancelledBySide?     @map("cancelled_by_side")
+  cancelledBy           String?              @map("cancelled_by") @db.Uuid
+  cancelReason          BookingCancelReason? @map("cancel_reason")
+  cancelNote            String?              @map("cancel_note")
+  lateCancellation      Boolean              @default(false) @map("late_cancellation")
+  noShowAt              DateTime?            @map("no_show_at") @db.Timestamptz(3)
+  noShowRecordedBy      String?              @map("no_show_recorded_by") @db.Uuid
+  // Set at handover, never when the job is merely done.
+  completedAt           DateTime?            @map("completed_at") @db.Timestamptz(3)
+  createdAt             DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  quote                 Quote                @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  request               QuoteRequest         @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  garage                Garage               @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  driver                Account              @relation("BookingDriver", fields: [driverId], references: [id], onDelete: Cascade)
+  confirmedByActor      Account?             @relation("BookingConfirmedBy", fields: [confirmedBy], references: [id], onDelete: SetNull)
+  cancelledByActor      Account?             @relation("BookingCancelledBy", fields: [cancelledBy], references: [id], onDelete: SetNull)
+  noShowRecordedByActor Account?             @relation("BookingNoShowRecordedBy", fields: [noShowRecordedBy], references: [id], onDelete: SetNull)
+  mechanic              Mechanic?            @relation(fields: [mechanicId], references: [id], onDelete: SetNull)
+  job                   Job?
+
+  @@index([garageId, createdAt(sort: Desc)])
+  @@index([requestId])
+  @@map("booking")
+}
