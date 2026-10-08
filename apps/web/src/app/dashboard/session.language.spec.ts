@@ -218,6 +218,26 @@ describe('saving the language on the account', () => {
     expect(meControllerUpdate).toHaveBeenCalledTimes(1);
   });
 
+  it('signs out with the button within three seconds when the save in flight never answers', async () => {
+    const { choice, session } = await signedIn('ro');
+
+    await choice.pick('en');
+    jest.useFakeTimers();
+    try {
+      let done = false;
+      const signingOut = session.signOut().then(() => {
+        done = true;
+      });
+      await jest.advanceTimersByTimeAsync(2_999);
+      expect(done).toBe(false);
+      await jest.advanceTimersByTimeAsync(1);
+      await signingOut;
+      expect(session.current()).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('drops an answer that arrives after another account signed in', async () => {
     const { choice, meControllerUpdate, pending, session } =
       await signedIn('ro');
