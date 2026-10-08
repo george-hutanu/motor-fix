@@ -9,6 +9,8 @@ const suggestions = (page: Page) => page.getByRole('option');
 const tiles = (page: Page) =>
   page.getByRole('radiogroup', { name: 'Marca mașinii' }).getByRole('radio');
 
+// Seeded: the count line under the hero reads the seeded garages, as the
+// brand picker's own flows do.
 test.describe('the brand search @seeded', () => {
   test('finds Alfa Romeo, makes it the selected first tile and opens its results', async ({
     page,

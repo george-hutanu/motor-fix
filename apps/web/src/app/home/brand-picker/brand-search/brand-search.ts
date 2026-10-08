@@ -2,6 +2,7 @@ import {
   afterNextRender,
   Component,
   computed,
+  DestroyRef,
   type ElementRef,
   Injector,
   inject,
@@ -38,6 +39,13 @@ export class BrandSearch {
   protected readonly open = signal(false);
   protected readonly active = signal(-1);
   private told = false;
+  private gone = false;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => {
+      this.gone = true;
+    });
+  }
 
   protected readonly typed = computed(() => this.text().trim() !== '');
   protected readonly found = computed(() =>
@@ -63,7 +71,7 @@ export class BrandSearch {
   protected retry() {
     if (this.state() !== 'failed') return;
     void this.load().then(() => {
-      if (this.state() !== 'loaded') return;
+      if (this.gone || this.state() !== 'loaded') return;
       afterNextRender(() => this.field().nativeElement.focus(), {
         injector: this.injector,
       });
@@ -116,6 +124,8 @@ export class BrandSearch {
     return `mf-brand-search-option-${index}`;
   }
 
+  // Bounded by the count the list gives and by an empty page, so a cursor
+  // that repeats can never keep it reading.
   private async load() {
     this.state.set('loading');
     const all: BrandDto[] = [];
@@ -124,7 +134,10 @@ export class BrandSearch {
       do {
         const page = await this.api.brandsControllerSearch({ cursor });
         all.push(...page.items);
-        cursor = page.nextCursor ?? undefined;
+        cursor =
+          page.items.length && all.length < page.total
+            ? (page.nextCursor ?? undefined)
+            : undefined;
       } while (cursor);
     } catch {
       this.state.set('failed');

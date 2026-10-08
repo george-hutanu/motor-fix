@@ -157,6 +157,36 @@ describe('BrandSearch', () => {
     expect(optionNames()).toEqual(['Audi', 'Alfa Romeo']);
   });
 
+  it('stops reading once it holds every brand counted, even if the cursor repeats', async () => {
+    await reach();
+    await pages[0].resolve({ items: [AUDI], nextCursor: 'again', total: 2 });
+    await pages[1].resolve({ items: [ALFA], nextCursor: 'again', total: 2 });
+    await type('a');
+
+    expect(api.brandsControllerSearch).toHaveBeenCalledTimes(2);
+    expect(optionNames()).toEqual(['Audi', 'Alfa Romeo']);
+  });
+
+  it('stops reading at a page with no brands, even if a cursor follows', async () => {
+    await reach();
+    await pages[0].resolve({ items: [AUDI], nextCursor: 'again', total: 5 });
+    await pages[1].resolve({ items: [], nextCursor: 'again', total: 5 });
+    await type('a');
+
+    expect(api.brandsControllerSearch).toHaveBeenCalledTimes(2);
+    expect(optionNames()).toEqual(['Audi']);
+  });
+
+  it('does nothing when the list arrives after the field is gone', async () => {
+    await reach();
+    await pages[0].reject(new Error('down'));
+    retry()?.click();
+    await settle();
+    fixture.destroy();
+
+    await expect(pages[1].resolve(onePage([AUDI]))).resolves.toBeUndefined();
+  });
+
   it('tells its host it was reached only once', async () => {
     await reach();
     await key('a');
