@@ -23,6 +23,9 @@ aside nav a[aria-current="page"] {
   flex-direction: column;
   gap: 0.25rem;
 }
+.account button[aria-busy="true"] {
+  cursor: progress;
+}
 .roles {
   display: flex;
   flex-wrap: wrap;

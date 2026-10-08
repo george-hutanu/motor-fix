@@ -107,6 +107,8 @@ export class Frame implements OnInit {
     return ROLES.filter(({ role }) => held.includes(role));
   });
   protected readonly switching = signal(false);
+  // Signing out can wait up to 3 s for a language save in flight.
+  protected readonly signingOut = signal(false);
   protected readonly letters = computed(() =>
     initials(this.session.shown()?.name ?? ''),
   );
@@ -227,10 +229,16 @@ export class Frame implements OnInit {
   }
 
   protected async signOut() {
-    await this.push.forget();
-    this.live.close();
-    await this.session.signOut();
-    await this.router.navigateByUrl('/');
+    if (this.signingOut()) return;
+    this.signingOut.set(true);
+    try {
+      await this.push.forget();
+      this.live.close();
+      await this.session.signOut();
+      await this.router.navigateByUrl('/');
+    } finally {
+      this.signingOut.set(false);
+    }
   }
 
   private async revoked() {
@@ -240,14 +248,20 @@ export class Frame implements OnInit {
   }
 
   protected async signOutEverywhere() {
+    if (this.signingOut()) return;
     const answer = await this.overlays.open<boolean>(SignOutEverywhere, {
       shape: 'dialog',
       title: 'shell.signOutEverywhere.title',
     });
-    if (answer !== true) return;
-    await this.push.forget();
-    this.live.close();
-    await this.session.signOutEverywhere();
-    await this.router.navigateByUrl('/');
+    if (answer !== true || this.signingOut()) return;
+    this.signingOut.set(true);
+    try {
+      await this.push.forget();
+      this.live.close();
+      await this.session.signOutEverywhere();
+      await this.router.navigateByUrl('/');
+    } finally {
+      this.signingOut.set(false);
+    }
   }
 }
