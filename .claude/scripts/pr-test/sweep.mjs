@@ -13,7 +13,7 @@ import { createRequire } from "node:module";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { layoutKey, mergeFindings, sweepFinding } from "./findings.mjs";
+import { coverageKey, layoutKey, mergeFindings, sweepFinding } from "./findings.mjs";
 import { measureLayout } from "./layout.mjs";
 
 export const VIEWPORTS = {
@@ -137,6 +137,8 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
   const axeSource = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
   const observations = [];
   const screenshots = [];
+  // route|viewport|scheme|lang -> the layout rules measured there in full (layout.mjs), saved as the report's layoutCoverage.
+  const coverage = {};
   const browser = await chromium.launch();
   try {
     for (const run of matrix({ routes, schemes, langs })) {
@@ -189,6 +191,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
         if (!problem) {
           const layout = await page.evaluate(measureLayout, { phone: vp.isMobile, tapTargets: vp.hasTouch, focus: run.viewport === "desktop" });
           for (const o of layout.observations) seen(o);
+          coverage[coverageKey(run)] = layout.rules;
         }
       } catch (error) {
         seen({ kind: "load", text: String(error.message).split("\n")[0].slice(0, 300) });
@@ -199,7 +202,7 @@ export async function runSweep({ baseURL, routes, outDir, schemes, langs, repoRo
   } finally {
     await browser.close();
   }
-  return { observations: dropExpected(observations), screenshots };
+  return { observations: dropExpected(observations), screenshots, coverage };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

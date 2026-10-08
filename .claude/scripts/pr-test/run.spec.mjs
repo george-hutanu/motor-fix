@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { flowArgs, parseArgs, testsCommand } from './run.mjs';
+import { filesBetween, flowArgs, parseArgs, testsCommand } from './run.mjs';
 import { EXTERNAL_PORTS, appEnv, externalPlan } from './services.mjs';
 
 describe('run: arguments', () => {
@@ -125,5 +125,17 @@ describe('the pr-tester agent', () => {
     for (const axis of [/type hierarchy/, /spacing/, /alignment/, /colou?r/, /component/, /states/]) assert.match(fidelity, axis);
     assert.match(fidelity, /no board/i);
     assert.match(fidelity, /diff\/<shot>\.png/);
+  });
+});
+
+describe('filesBetween', () => {
+  const tree = fileURLToPath(new URL('../../..', import.meta.url));
+
+  it('lists the files two commits of the tree under test differ by: none for a commit and itself', () => {
+    assert.deepEqual(filesBetween(tree, 'HEAD', 'HEAD'), []);
+  });
+
+  it('is null when a commit is not in that tree, so the baseline counts as stale', () => {
+    assert.equal(filesBetween(tree, 'f'.repeat(40), 'HEAD'), null);
   });
 });
