@@ -182,19 +182,55 @@ export const layoutKey = (f) => `layout|${keyPart(f.route)}|${keyPart(f.rule)}|$
 /** What makes two findings the same one, across sources and laps. */
 export const findingKey = (f) => f.key ?? (f.kind === "layout" ? layoutKey(f) : `${f.kind}|${f.title}|${f.route ?? ""}`);
 
+/** Where one sweep ran: the key of a report's layoutCoverage. */
+export const coverageKey = ({ route, viewport, scheme, lang }) => `${route ?? ""}|${viewport ?? ""}|${scheme ?? ""}|${lang ?? ""}`;
+
 /**
  * Layout findings the baseline run of `main` already reported are pre-existing: kept, capped at medium.
  * A baseline from a tester that measured no layout (`measured: false`) cannot tell main's from the PR's,
  * so every layout finding is treated as main's until a measured baseline exists. Nor can a baseline that
  * never swept a route (`routes`, the routes it swept, when its report names them): on such a route, too,
  * every layout finding is main's until a baseline sweeps it.
+ * With `coverage` (the baseline's layoutCoverage), a finding stays the PR's only where the baseline measured
+ * its rule in full on its route in at least one size, scheme and language it was seen in, and did not report
+ * it there; a baseline of other web code (`stale`) vouches for nothing.
  */
-export function markPreExisting(findings, baseline, { measured = true, routes } = {}) {
+export function markPreExisting(findings, baseline, { measured = true, routes, coverage, stale = false } = {}) {
   const before = new Set(baseline.filter((f) => f.kind === "layout").map(layoutKey));
   const unswept = (route) => Array.isArray(routes) && !routes.includes(route);
+  const uncovered = (f) => {
+    if (coverage === undefined) return false;
+    const where = f.seenIn?.length ? f.seenIn : [`${f.viewport} ${f.scheme} ${f.lang}`];
+    return !where.some((w) => {
+      const [viewport, scheme, lang] = w.split(" ");
+      const rules = coverage[coverageKey({ route: f.route, viewport, scheme, lang })];
+      return Array.isArray(rules) && rules.includes(f.rule);
+    });
+  };
   return findings.map((f) =>
-    f.kind === "layout" && (!measured || unswept(f.route) || before.has(layoutKey(f))) ? { ...f, severity: capAt(f.severity, "medium"), preExisting: true } : f,
+    f.kind === "layout" && (!measured || stale || unswept(f.route) || uncovered(f) || before.has(layoutKey(f)))
+      ? { ...f, severity: capAt(f.severity, "medium"), preExisting: true }
+      : f,
   );
+}
+
+/**
+ * How far the baseline report `before` vouches for main: markPreExisting's options and the note the report
+ * carries. `changed(from, to)` lists the files between two commits, or null when they cannot be compared.
+ */
+export function trustBaseline(before, { base, changed }) {
+  const measured = before.layout === true;
+  const coverage = before.layoutCoverage ?? {};
+  const files = before.sha && base ? changed(before.sha, base) : null;
+  const stale = files === null || touchesWeb(files);
+  let note = null;
+  if (!measured) note = "The baseline run measured no layout, so every layout finding is treated as pre-existing (medium at most) this lap.";
+  else if (stale) {
+    const run = `the baseline run (${before.sha ? String(before.sha).slice(0, 7) : "no commit"})`;
+    note = `${files === null ? `This PR's base cannot be compared with ${run}` : `Between ${run} and this PR's base the web code changed`}, so every layout finding is treated as pre-existing (medium at most) this lap.`;
+  }
+  else if (!Object.keys(coverage).length) note = "The baseline run recorded no layout coverage, so every layout finding is treated as pre-existing (medium at most) this lap.";
+  return { options: { measured, routes: before.routes, coverage, stale }, note };
 }
 
 export function mergeFindings(list) {
