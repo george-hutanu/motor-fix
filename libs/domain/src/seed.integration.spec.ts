@@ -415,3 +415,29 @@ describe('seed of the platform rules', () => {
     ).toMatchObject({ defaultValue: false, value: true });
   });
 });
+
+describe('seed of the suspension record', () => {
+  const suspensions = async () => {
+    const { id } = await prisma.account.findUniqueOrThrow({
+      where: { email: 'suspendat@example.test' },
+    });
+    return prisma.activityLog.findMany({
+      select: { at: true, field: true, newValue: true, subjectType: true },
+      where: { subjectId: id },
+    });
+  };
+
+  it('records the suspended driver as suspended on 2 October 2026, once', async () => {
+    expect(seed('test').status).toBe(0);
+    expect(seed('test').status).toBe(0);
+
+    expect(await suspensions()).toEqual([
+      {
+        at: new Date('2026-10-02T10:00:00.000Z'),
+        field: 'status',
+        newValue: 'suspended',
+        subjectType: 'account',
+      },
+    ]);
+  });
+});

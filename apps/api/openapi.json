@@ -1227,6 +1227,78 @@
         ]
       }
     },
+    "/api/v1/admin/accounts": {
+      "get": {
+        "operationId": "AdminAccountsController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "The nextCursor of the previous page",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAccountsPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_cursor, or a query parameter it does not take"
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/accounts/summary": {
+      "get": {
+        "operationId": "AdminAccountsController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAccountsSummaryDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/cars": {
       "post": {
         "operationId": "CarsController_create",
@@ -4207,6 +4279,140 @@
             ]
           }
         }
+      },
+      "AdminAccountCountDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "requests for a driver, reviews for a garage or mechanic, age in days for a receptionist, an admin or an account under 7 days old",
+            "enum": [
+              "requests",
+              "reviews",
+              "age"
+            ]
+          },
+          "value": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "kind",
+          "value"
+        ]
+      },
+      "AdminAccountDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "description": "In the order driver, garage, receptionist, mechanic, admin",
+            "items": {
+              "type": "string",
+              "enum": [
+                "driver",
+                "garage",
+                "receptionist",
+                "mechanic",
+                "admin"
+              ]
+            }
+          },
+          "garageName": {
+            "type": "string",
+            "description": "The garage of the first role: owned, worked at as receptionist, or of the mechanic card",
+            "nullable": true
+          },
+          "carsCount": {
+            "type": "integer",
+            "description": "Cars not removed",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended"
+            ]
+          },
+          "since": {
+            "type": "string",
+            "description": "When the state began: creation for active, the last recorded suspension for suspended (null when none is recorded)",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "count": {
+            "$ref": "#/components/schemas/AdminAccountCountDto"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "roles",
+          "garageName",
+          "carsCount",
+          "status",
+          "since",
+          "createdAt",
+          "count"
+        ]
+      },
+      "AdminAccountsPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Newest first, 20 at most",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminAccountDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "AdminAccountsSummaryDto": {
+        "type": "object",
+        "properties": {
+          "activeDrivers": {
+            "type": "integer",
+            "description": "Active driver accounts used in the last 30 days",
+            "minimum": 0
+          },
+          "garagesListed": {
+            "type": "integer",
+            "description": "Garages approved and listed now",
+            "minimum": 0
+          },
+          "mechanics": {
+            "type": "integer",
+            "description": "Mechanic cards with an account at listed garages",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "activeDrivers",
+          "garagesListed",
+          "mechanics"
+        ]
       },
       "CreateCarDto": {
         "type": "object",
