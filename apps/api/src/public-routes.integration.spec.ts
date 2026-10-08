@@ -21,6 +21,7 @@ const PUBLIC = [
   'GET /api/v1/job-types',
   'GET /api/v1/listing-drafts/current',
   'GET /api/v1/live/public',
+  'GET /api/v1/places',
   'GET /api/v1/public-holidays',
   'GET /api/v1/search/garages',
   'GET /health/live',
@@ -140,4 +141,57 @@ describe('routes without a session', () => {
 
     expect(honoured).toEqual([]);
   });
+
+  it('names no seat anywhere a visitor can be answered, and carries the public place', () => {
+    const document = openApiDocument(app);
+    const schemas = (document.components?.schemas ?? {}) as Record<
+      string,
+      unknown
+    >;
+    const reached = new Set<string>();
+    const properties: string[] = [];
+    const visit = (node: unknown) => walk(node, schemas, reached, properties);
+    const operations = Object.entries(document.paths).flatMap(([path, item]) =>
+      METHODS.map((method) => ({
+        operation: (item as Record<string, { responses?: unknown }>)[method],
+        route: `${method.toUpperCase()} ${path.replace(/\{[^}]+\}/g, SOME_ID)}`,
+      })),
+    );
+    for (const { operation, route } of operations)
+      if (operation && PUBLIC.includes(route)) visit(operation.responses);
+
+    expect(properties.filter((name) => /seat/i.test(name))).toEqual([]);
+    expect(reached).toContain('PublicGarageDto');
+    expect(reached).toContain('PlacesResultDto');
+    expect(properties).toEqual(
+      expect.arrayContaining([
+        'address',
+        'latitude',
+        'longitude',
+        'serviceRadiusKm',
+      ]),
+    );
+  });
 });
+
+// Every schema a response reaches through its $refs, and the names of the
+// properties met on the way.
+function walk(
+  node: unknown,
+  schemas: Record<string, unknown>,
+  reached: Set<string>,
+  properties: string[],
+): void {
+  if (typeof node !== 'object' || node === null) return;
+  const record = node as Record<string, unknown>;
+  const ref = record['$ref'];
+  const name = typeof ref === 'string' ? (ref.split('/').pop() ?? '') : '';
+  if (name && !reached.has(name)) {
+    reached.add(name);
+    walk(schemas[name], schemas, reached, properties);
+  }
+  const own = record['properties'];
+  if (typeof own === 'object' && own) properties.push(...Object.keys(own));
+  for (const child of Object.values(record))
+    walk(child, schemas, reached, properties);
+}

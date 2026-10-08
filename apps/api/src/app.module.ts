@@ -12,8 +12,10 @@ import {
   oauthSettings,
   PasswordResetModule,
   PhoneSignInModule,
+  PlacesModule,
   PlatformRulesModule,
   phoneConfig,
+  placesConfig,
   pushConfig,
   SearchModule,
   StorageModule,
@@ -65,6 +67,7 @@ export class AppModule {
         CarsModule,
         CatalogueModule,
         SearchModule,
+        PlacesModule.register(placesConfig(env.APP_ENV, process.env)),
         GaragesModule.register(
           email,
           notifications,

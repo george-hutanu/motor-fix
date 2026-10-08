@@ -10,6 +10,13 @@ import type { PrismaClient } from '../generated/prisma/client';
 // of a garage read. A test fails when a public handler's read skips it.
 export const publicGarages = () => ({ status: 'approved' as const });
 
+// A mobile mechanic is shown by the area it serves: its position is the
+// owner's seat, so it never leaves with the garage.
+const present = <T extends Record<string, unknown>>(fields: T) =>
+  Object.fromEntries(
+    Object.entries(fields).filter(([, value]) => value !== null),
+  ) as { [K in keyof T]?: NonNullable<T[K]> };
+
 const notFound = () => refusal(HttpStatus.NOT_FOUND, 'not_found', 'Not found');
 
 @Injectable()
@@ -22,6 +29,7 @@ export class PublicGaragesService {
     if (/\p{Cc}/u.test(slug)) throw notFound();
     const garage = await this.prisma.garage.findFirst({
       select: {
+        address: true,
         brandNote: true,
         brands: {
           select: {
@@ -31,16 +39,39 @@ export class PublicGaragesService {
             stance: true,
           },
         },
+        businessKind: true,
         id: true,
+        latitude: true,
+        longitude: true,
         name: true,
         refusalPhrase: true,
+        serviceRadiusKm: true,
         slug: true,
       },
       where: { slug, ...publicGarages() },
     });
     if (garage) {
-      const { brands, id, name, slug: held, ...texts } = garage;
-      return { id, name, slug: held, ...brandAnswer(brands, texts) };
+      const {
+        address,
+        brands,
+        businessKind,
+        id,
+        latitude,
+        longitude,
+        name,
+        serviceRadiusKm,
+        slug: held,
+        ...texts
+      } = garage;
+      return {
+        id,
+        name,
+        slug: held,
+        ...brandAnswer(brands, texts),
+        ...(businessKind === 'mobile'
+          ? present({ serviceRadiusKm })
+          : present({ address, latitude, longitude })),
+      };
     }
     const hidden = await this.prisma.garage.findUnique({
       select: { status: true },

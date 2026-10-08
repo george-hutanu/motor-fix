@@ -54,6 +54,8 @@ export type { PasswordResetDto } from './models/password-reset-dto';
 export type { PhoneCodeDto } from './models/phone-code-dto';
 export type { PhoneSessionDto } from './models/phone-session-dto';
 export type { PhoneSignInDto } from './models/phone-sign-in-dto';
+export type { PlacesResultDto } from './models/places-result-dto';
+export type { PlaceSuggestionDto } from './models/place-suggestion-dto';
 export type { PlatformRuleDto } from './models/platform-rule-dto';
 export type { PlatformRulesDto } from './models/platform-rules-dto';
 export type { ProvidersDto } from './models/providers-dto';

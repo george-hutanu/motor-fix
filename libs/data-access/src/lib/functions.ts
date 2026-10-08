@@ -91,6 +91,8 @@ export type { PublicHolidaysControllerList$Params as PublicHolidaysControllerLis
 export { publicHolidaysControllerList as publicHolidaysControllerList } from './fn/public-holidays/public-holidays-controller-list';
 export type { GarageSearchControllerForBrand$Params as GarageSearchControllerForBrand$Params } from './fn/search/garage-search-controller-for-brand';
 export { garageSearchControllerForBrand as garageSearchControllerForBrand } from './fn/search/garage-search-controller-for-brand';
+export type { PlacesControllerSearch$Params as PlacesControllerSearch$Params } from './fn/places/places-controller-search';
+export { placesControllerSearch as placesControllerSearch } from './fn/places/places-controller-search';
 export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';
 export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
 export type { AdminOverviewControllerGrowth$Params as AdminOverviewControllerGrowth$Params } from './fn/admin/admin-overview-controller-growth';

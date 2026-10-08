@@ -24,6 +24,7 @@ export { writeGarageHours } from './garages/garage-hours';
 export { GaragesModule } from './garages/garages.module';
 export { listingDraftDaily } from './garages/listing-draft-sweep';
 export { GarageMechanicsService } from './garages/mechanics/garage-mechanics.service';
+export { GaragePlaceService } from './garages/place/garage-place.service';
 export { GaragePricesService } from './garages/prices/garage-prices.service';
 export { publicGarages } from './garages/public-garages';
 export {
@@ -41,6 +42,7 @@ export { NotificationsModule } from './notifications/notifications.module';
 export { NotificationsService } from './notifications/notifications.service';
 export { phoneConfig } from './notifications/phone-config';
 export { pushConfig } from './notifications/push-config';
+export { PlacesModule, placesConfig } from './places/places.module';
 export { SearchModule } from './search/search.module';
 export * from './storage/storage.module';
 export { type SignedUpload, StorageService } from './storage/storage.service';
