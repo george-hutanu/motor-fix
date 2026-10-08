@@ -23,6 +23,8 @@ export const BRANDS: readonly BrandRecord[] = [
   { key: 'toyota', name: 'Toyota', popularity: 10 },
   { key: 'hyundai', name: 'Hyundai', popularity: 11 },
   { key: 'tesla', name: 'Tesla', popularity: 12 },
+  { key: 'alfa-romeo', name: 'Alfa Romeo' },
+  { key: 'citroen', name: 'Citroën' },
 ];
 
 export class BrandFileError extends Error {}

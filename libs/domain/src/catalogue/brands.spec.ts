@@ -68,7 +68,7 @@ describe('validateFile', () => {
 });
 
 describe('the shipped brand file', () => {
-  it('holds the twelve brands of the mock, each once, in the mock order', () => {
+  it('holds the twelve brands of the mock in the mock order, then two unranked ones', () => {
     expect(BRANDS.map((brand) => brand.name)).toEqual([
       'BMW',
       'Mini',
@@ -82,9 +82,24 @@ describe('the shipped brand file', () => {
       'Toyota',
       'Hyundai',
       'Tesla',
+      'Alfa Romeo',
+      'Citroën',
     ]);
     expect(BRANDS.map((brand) => brand.popularity)).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      undefined,
+      undefined,
     ]);
     expect(() => validateFile(BRANDS)).not.toThrow();
   });
