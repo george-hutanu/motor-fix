@@ -245,7 +245,7 @@ describe('the brand answer through the cache', () => {
 // @traces 307-FR-001 307-FR-006
 describe('the slug and the cache', () => {
   // A change to a garage commits with its event, and the relay drops the
-  // cached profile when it hands the event on (FR-006).
+  // cached profile when it hands the event on.
   const changed = async (id: string, write: () => Promise<unknown>) => {
     await write();
     await prisma.outboxEvent.create({
@@ -406,7 +406,7 @@ describe('dropping the profile when an event reaches a public garage channel', (
   });
 
   // A drop Redis refuses fails the relay's batch, which leaves the event
-  // unrelayed and retries it, so no profile outlives its change (FR-006).
+  // unrelayed and retries it, so no profile outlives its change.
   it('fails the drop when Redis refuses it, so the relay retries the event', async () => {
     const broken = {
       del: () => Promise.reject(new Error('Connection is closed.')),

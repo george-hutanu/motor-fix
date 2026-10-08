@@ -49,7 +49,9 @@ class FakeRedis {
     this.dropped.push(`INCR ${key}`);
     return 1;
   }
+  readonly published: string[] = [];
   async publish(channel: string, message: string) {
+    this.published.push(message);
     if (this.down || this.sent.length >= this.failAfter) {
       throw new Error('Connection is closed.');
     }
@@ -484,5 +486,8 @@ describe('dropping the cached public profile', () => {
         where: { relayedAt: null, subjectId: garageId },
       }),
     ).toBe(1);
+    // The drop comes before the publish: no page hears of a change while
+    // its old profile is still cached.
+    expect(redis.published.filter((m) => m.includes(garageId))).toEqual([]);
   });
 });

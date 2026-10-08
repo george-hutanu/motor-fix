@@ -151,6 +151,9 @@ export class OutboxRelay {
 
   private async hand(row: Row) {
     const id = String(row.id);
+    // The cached profile goes first, so a page re-reading on the event never
+    // gets the answer from before it.
+    await dropProfiles(this.redis, row.audience);
     await publishLive(
       this.redis,
       {
@@ -160,7 +163,6 @@ export class OutboxRelay {
       },
       row.audience,
     );
-    await dropProfiles(this.redis, row.audience);
     for (const consumer of this.consumers) {
       if (!consumer.kinds.includes(row.kind)) continue;
       await consumer.queue.add(
