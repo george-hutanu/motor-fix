@@ -44,7 +44,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { callEndpoints, changedEndpoints, SEEDED, seedPassword, signIn } from "./endpoints.mjs";
 import { diffShots, parseJson, readReport, visualOutcome } from "./baseline.mjs";
-import { appsFor, cutOffFinding, markPreExisting, readinessOutcome, reportMarkdown, stepFinding, testFinding, touchesWeb, verdict } from "./findings.mjs";
+import { appsFor, cutOffFinding, markPreExisting, readinessOutcome, reportMarkdown, stepFinding, testFinding, touchesWeb, trustBaseline, verdict } from "./findings.mjs";
 import {
   APP_SCRIPTS,
   EXTERNAL_PORTS,
@@ -101,6 +101,15 @@ export const flowArgs = ({ webURL, apiURL, outDir, repoRoot, worktree, session }
 /** The affected unit tests between the base and the head, never answered from the Nx cache. */
 export const testsCommand = ({ base, sha }) => ["nx", "affected", "-t", "test", `--base=${base}`, `--head=${sha}`, "--parallel=1", "--skip-nx-cache"];
 
+/**
+ * The files between two commits of the tree under test (`cwd`: the workflow's checkout, with its full history,
+ * never the tester's own sparse one), or null when either commit is not there.
+ */
+export function filesBetween(cwd, from, to) {
+  const r = spawnSync("git", ["diff", "--name-only", from, to], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+  return r.status === 0 ? r.stdout.split("\n").filter(Boolean) : null;
+}
+
 const sh = (cmd, list, opts = {}) => execFileSync(cmd, list, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], ...opts }).trim();
 const has = (cmd, list) => spawnSync(cmd, list, { stdio: "ignore" }).status === 0;
 
@@ -142,6 +151,7 @@ async function main(argv) {
   const notes = [];
   const booted = [];
   const teardown = [];
+  let layoutCoverage = {};
   const log = (line) => {
     console.error(`run: ${line}`);
     writeFileSync(join(out, "run.log"), `${new Date().toISOString()} ${line}\n`, { flag: "a" });
@@ -353,10 +363,11 @@ async function main(argv) {
     // A layout finding the baseline run already reported is main's, not this PR's: kept, at medium at most.
     const swept = toFindings(sweep.observations, { web, origins: [webURL, apiURL] });
     const before = opt.baseline ? readReport(opt.baseline) : null;
-    // `layout: true` marks a report from a tester that measured layout; an older one cannot tell main's findings from the PR's.
-    const measured = !before || before.layout === true;
-    if (!measured) notes.push("The baseline run measured no layout, so every layout finding is treated as pre-existing (medium at most) this lap.");
-    for (const f of before ? markPreExisting(swept, before.findings ?? [], { measured, routes: before.routes }) : swept)
+    layoutCoverage = sweep.coverage;
+    // The baseline vouches for main only where it measured, on the web code this PR is based on (trustBaseline).
+    const trust = before ? trustBaseline(before, { base: info.base, changed: (from, to) => filesBetween(root, from, to) }) : null;
+    if (trust?.note) notes.push(trust.note);
+    for (const f of before ? markPreExisting(swept, before.findings ?? [], trust.options) : swept)
       findings.push(f.evidence ? { ...f, evidence: relative(out, f.evidence) } : f);
     writeFileSync(join(out, "observations.json"), JSON.stringify(sweep.observations, null, 2));
     const screenshots = sweep.screenshots;
@@ -428,7 +439,7 @@ async function main(argv) {
     const v = verdict(findings);
     const blocking = findings.filter((f) => f.severity === "blocker" || f.severity === "high").length;
     const summary = `${v === "failure" ? `${blocking} blocking finding(s)` : "No blocking findings"}; ${findings.length} in all. Booted ${booted.join(", ") || "nothing"}.`;
-    const report = { pr: Number(opt.pr), repo: info.repo, sha, base: info.base, lap: opt.lap, layout: true, routes: opt.routes, verdict: v, summary, findings, booted, notes, screenshots: screenshots.map((s) => relative(out, s)) };
+    const report = { pr: Number(opt.pr), repo: info.repo, sha, base: info.base, lap: opt.lap, layout: true, routes: opt.routes, layoutCoverage, verdict: v, summary, findings, booted, notes, screenshots: screenshots.map((s) => relative(out, s)) };
     report.markdown = reportMarkdown({ pr: opt.pr, sha, verdict: v, findings, booted, screenshots, lap: opt.lap, notes });
     writeFileSync(join(out, "report.json"), JSON.stringify(report, null, 2));
     writeFileSync(join(out, "report.md"), report.markdown);

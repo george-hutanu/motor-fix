@@ -70,6 +70,7 @@ model Account {
   jobs                    Job[]                    @relation("JobDriver")
   jobStageEntries         JobStageEntry[]          @relation("JobStageActor")
 
+  @@index([createdAt(sort: Desc), id(sort: Desc)])
   @@map("account")
 }
 

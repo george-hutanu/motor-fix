@@ -1,5 +1,6 @@
 import type { Env, StorageEnv } from '@motor-fix/contracts';
 import {
+  AdminAccountsModule,
   AuthModule,
   CarsModule,
   CatalogueModule,
@@ -72,6 +73,7 @@ export class AppModule {
           brevo: { apiKey: email.apiKey ?? '', apiUrl: email.apiUrl },
           phone: phoneConfig(env.APP_ENV, process.env),
         }),
+        AdminAccountsModule,
         CarsModule,
         CatalogueModule,
         SearchModule,

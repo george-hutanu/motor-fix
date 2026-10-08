@@ -202,8 +202,9 @@ export function validateFeature(repo, feature) {
   const declared = declaredRequirements(specText);
   const delta = parseDelta(specText);
   const caps = loadCapabilities(repo);
-  // The archive merges a feature's Adds and then marks it Archived; after that,
-  // the capability holding them is the merge done, not a second one coming.
+  // The archive merges a feature's delta and then marks it Archived; after
+  // that, the capability holding its Adds, and tombstones naming this feature
+  // for its Modifies and Removes bases, are the merge done, not a second one.
   // Only the spec's own status line counts: a fenced example of one does not,
   // nor a status word that merely starts with Archived ("Archived-pending").
   const isArchived = /^\*\*Status\*\*:[ \t]*archived(?=\s|\(|$)/im.test(specText.replace(/^```[\s\S]*?^```/gm, ""));

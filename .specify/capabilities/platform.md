@@ -62,6 +62,8 @@ features:
   - 962-gate-fail-closed
   - 974-stop-test-stack-on-merge
   - 976-integration-specs-under-load
+  - 977-worktree-cleanup
+  - 887-precompact-fr-wording
 ---
 
 # Capability: Platform
@@ -274,13 +276,11 @@ _From 464-agent-watch._
 
 _From 481-watch-done-threshold._
 
-### 481-FR-002 — Each stale worktree MUST get exactly one fix, the first that applies of `merge` (PR ready, checks passed, `agent-review` success on the head, the tree clean and at the PR head), `fix-ci` (a check on its open PR failed), `rerun-qa` (PR ready, checks passed, no `agent-review` result on the head), `resume` (anything else, an `agent-review` failure included); a done worktree whose PR is merged, whose tree is clean, whose `HEAD` is the PR's merged head, whose holder is not live and whose last activity is older than the done threshold MUST get `remove-worktree`; inside the threshold its verdict MUST be done with no fix and a reason naming its quiet minutes and the threshold; every other worktree gets none.
+### 977-FR-010 — The watch MUST report the fix `remove` (replacing `remove-worktree`) for every worktree that is not the main checkout, that nobody holds, and whose newest PR is merged or closed and quiet past the done threshold, or that has no PR and no activity for 7 days; an uncommitted change MUST no longer withhold the fix, while a head with commits on no remote MUST (no fix, reason "unpushed commits"). `--fix` and `/speckit-watch` MUST apply `remove` as a safe fix through the shared removal, admitting the no-PR rows; a refusal or failure is printed as a failed action with its reason and never stops the pass.
 
-_From 481-watch-done-threshold._
+_From 977-worktree-cleanup._
 
-### 464-FR-007 — `--fix` MUST release the lock of every worktree whose holder is `dead` (and, just before removing it, the quiet subagent lock of a `remove-worktree` row), remove every worktree whose fix is `remove-worktree` without forcing, and prune records whose directory is gone; it MUST NOT delete a branch, force anything, or touch the main worktree or a tree with uncommitted changes, and MUST print each action taken.
-
-_From 464-agent-watch._
+_From 977-worktree-cleanup._
 
 ### 464-FR-008 — The dispatch plan MUST contain the stale worktrees whose fix needs an agent, oldest activity first, with at most 4 QA runs (`rerun-qa`) live at once counting the live PR-tester runs and the live `rerun-qa` claims whose PR has no live run yet, and at most 2 other agent fixes live at once counting the watcher's own live claims.
 
@@ -382,9 +382,9 @@ _From 600-merge-gate-symlink._
 
 _From 854-precompact-pr-signal._
 
-### 623-FR-002 — The hook MUST still append its Compaction block for a feature whose status is not Archived.
+### 887-FR-001 — The pre-compact hook MUST append its Compaction block to the active feature's `auto-run.md` whenever neither 854-FR-002 (HEAD is not on the feature's branch, a detached HEAD included) nor 854-FR-003 (the feature branch's PR reads `MERGED`) skips it, whatever the spec's `**Status**:` line says.
 
-_From 623-precompact-flush._
+_From 887-precompact-fr-wording._
 
 ### 623-FR-003 — Each uncommitted entry in the block MUST keep the full porcelain line, both status columns included, for the first entry as for every other.
 
@@ -1416,9 +1416,9 @@ _From 974-stop-test-stack-on-merge._
 
 _From 974-stop-test-stack-on-merge._
 
-### 974-FR-003 — `scripts/test-services.ts` MUST offer `down [<worktree>]`, which stops the stack of the given worktree (the current checkout by default), keeping its volumes.
+### 977-FR-007 — `scripts/test-services.ts down` MUST accept `--volumes`, which removes the stack's volumes as well as its containers and network; without it, volumes are kept as today.
 
-_From 974-stop-test-stack-on-merge._
+_From 977-worktree-cleanup._
 
 ### 974-FR-004 — `scripts/test-services.ts` MUST offer `sweep`, which stops every `mf-test-*` stack whose compose working directory no longer exists (volumes removed) or whose worktree's newest PR is merged or closed (volumes kept), leaves every other stack untouched, and prints one line naming what it stopped (or that nothing was).
 
@@ -1472,6 +1472,50 @@ _From 976-integration-specs-under-load._
 
 _From 976-integration-specs-under-load._
 
+### 977-FR-001 — Worktree removal MUST be one shared implementation, `.claude/scripts/worktree-remove.mjs`, exposing an exported function and a CLI (`node .claude/scripts/worktree-remove.mjs <path>`), used by the lifecycle merge step, the watch and the tail; no other code removes a worktree.
+
+_From 977-worktree-cleanup._
+
+### 977-FR-002 — Before any side effect, the removal MUST refuse, with a reason and nothing changed: the main checkout; a worktree whose newest PR is open or whose PR state cannot be read; a worktree whose head has a commit on no remote (`git rev-list HEAD --not --remotes` non-empty); a worktree whose path contains the process's working directory; a worktree locked by hand (a lock naming no process), or by a live session unless the caller admits it (only the CLI does). A worktree with no PR MUST be refused unless the caller passes the option that admits it; the CLI never passes it.
+
+_From 977-worktree-cleanup._
+
+### 977-FR-003 — After the refusals, the removal MUST back up the worktree's specs clone: anything uncommitted or ahead of `origin/trunk` is committed and pushed through `specs-repo.mjs commit` with the message `chore(specs): backfill <worktree name> before removal`; when that fails, the difference from `origin/trunk` (uncommitted changes included) is written to `<main checkout>/.work/worktree-backfill/<YYYY-MM-DD>/<worktree name>-<HHMMSS>.specs.patch`; a clone on a branch other than `trunk` goes straight to that patch. A plain `specs/` folder that is not a clone is copied whole beside the patches (`<worktree name>-<HHMMSS>.specs/`). A worktree with no specs folder, or an empty one, skips this with the result saying so.
+
+_From 977-worktree-cleanup._
+
+### 977-FR-004 — The removal MUST save the worktree's uncommitted product changes, tracked and untracked but not ignored, as `<worktree name>-<HHMMSS>.product.patch` in the same folder, a patch that applies on the branch's head; a clean tree writes no file and the result says so.
+
+_From 977-worktree-cleanup._
+
+### 977-FR-005 — A backup that fails (the specs push and the specs patch both fail, or the product patch cannot be written) MUST refuse the removal with the reason, leaving the worktree, its branch and its stack as they were.
+
+_From 977-worktree-cleanup._
+
+### 977-FR-006 — After the backup, the removal MUST take the worktree's test stack down with its volumes through `scripts/test-services.ts` (its `composeProject`, `down --volumes`, run with the worktree as working directory) and MUST also remove any leftover volume labelled with that compose project; Docker unavailable or a failing down MUST never block the removal and MUST be reported in the result's `test_stack`.
+
+_From 977-worktree-cleanup._
+
+### 977-FR-008 — The removal MUST then run `git worktree remove --force --force <path>`, `git branch -D <branch>` and `git worktree prune`, in that order, and MUST return (the function) and print (the CLI, one line on stdout) one JSON result `{path, removed, reason?, backup: {specs, product}, test_stack}`; the CLI exits 0 when removed, 1 when refused or failed, 2 with its usage on stderr when not given exactly one path. A failing step MUST stop the sequence, return `removed: false` with the reason, the backup and `test_stack` already made, and never retry or undo the backup.
+
+_From 977-worktree-cleanup._
+
+### 977-FR-009 — The lifecycle merge step MUST, as its very last step after the finish comment and the `handoff.md` deletion, remove the merged branch's worktree when that worktree is not the checkout the step runs in and no live session holds it (its lock names a process that is still running, however long idle); otherwise it removes nothing and reports `worktree: {removed: false, reason}`. A removal failure MUST never fail the merge step.
+
+_From 977-worktree-cleanup._
+
+### 977-FR-011 — The tail MUST remove its own worktree as its last action: it leaves the worktree (`ExitWorktree`, folder kept) and runs the removal CLI from the main checkout against the worktree's path, after the merge step has reported it did not remove it; `tail.md` describes this step.
+
+_From 977-worktree-cleanup._
+
+### 977-FR-012 — AGENTS.md (Parallel work) MUST state in one or two lines that a worktree is backed up and removed once its PR merges or closes and that inactive ones are swept, and the `speckit-watch` skill MUST describe the `remove` fix and what it refuses.
+
+_From 977-worktree-cleanup._
+
+### 977-FR-013 — Tests MUST exist before the implementation and MUST cover every refusal in FR-002 and FR-005 (each shown to make no changing call), the backup fallbacks of FR-003 and FR-004, the `test_stack` reporting of FR-006, the merge step's own-checkout and held cases (FR-009), and the watch's `remove` rows and refused actions (FR-010).
+
+_From 977-worktree-cleanup._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -1496,3 +1540,8 @@ _From 976-integration-specs-under-load._
 - `698-FR-007` — superseded by `706-FR-008` (2026-10-07)
 
 - `623-FR-001` — superseded by `854-FR-001` (2026-10-07)
+
+- `481-FR-002` — superseded by `977-FR-010` (2026-10-08)
+- `464-FR-007` — superseded by `977-FR-010` (2026-10-08)
+- `974-FR-003` — superseded by `977-FR-007` (2026-10-08)
+- `623-FR-002` — superseded by `887-FR-001` (2026-10-08)
