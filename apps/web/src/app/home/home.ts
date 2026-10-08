@@ -1,19 +1,36 @@
-import { isPlatformServer } from '@angular/common';
+import { DOCUMENT, isPlatformServer } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
+  afterNextRender,
   Component,
   computed,
+  effect,
   inject,
+  linkedSignal,
   makeStateKey,
   PendingTasks,
   PLATFORM_ID,
+  resource,
   signal,
   TransferState,
 } from '@angular/core';
-import { HealthReadyDto, HealthService } from '@motor-fix/data-access';
+import { RouterLink } from '@angular/router';
+import {
+  type BrandDto,
+  BrandsService,
+  type HealthReadyDto,
+  HealthService,
+  HomeService,
+} from '@motor-fix/data-access';
 import { I18n, LanguageSwitch, TranslatePipe } from '@motor-fix/i18n';
+import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
+
+import { BrandPicker } from './brand-picker/brand-picker';
 
 export const HEALTH = makeStateKey<HealthReadyDto | null>('health');
+export const TILES = makeStateKey<BrandDto[] | null>('tiles');
+
+const CYCLE_MS = 5000;
 
 // A 503 from the ready check still carries the report, so it is shown, not
 // treated as "unknown".
@@ -23,18 +40,49 @@ const report = (error: unknown) =>
     : null;
 
 @Component({
-  imports: [LanguageSwitch, TranslatePipe],
+  imports: [BrandPicker, LanguageSwitch, RouterLink, TranslatePipe],
   selector: 'mf-home',
-  template: `
-    <header><h1>{{ 'shell.brand' | t }}</h1><mf-language-switch /></header>
-    <p>{{ health()?.version ?? ('shell.version.unknown' | t) }}</p>
-    <p>{{ 'shell.health.status' | t: checks() }}</p>
-  `,
+  styleUrl: './home.css',
+  templateUrl: './home.html',
 })
 export class Home {
   private readonly state = inject(TransferState);
+  private readonly server = isPlatformServer(inject(PLATFORM_ID));
+  private readonly document = inject(DOCUMENT);
+  private readonly reduced = inject(REDUCED_MOTION);
+  private readonly homes = inject(HomeService);
+  protected readonly i18n = inject(I18n);
   protected readonly health = signal(this.state.get(HEALTH, null));
-  private readonly i18n = inject(I18n);
+  protected readonly tiles = signal(this.state.get(TILES, null) ?? []);
+  protected readonly selected = linkedSignal<BrandDto | undefined>(
+    () => this.tiles()[0],
+  );
+  // Until a person reaches for the picker the brand changes on its own, and
+  // a screen reader is not told each time.
+  protected readonly touched = signal(false);
+  private readonly hydrated = signal(false);
+
+  // The count is never read on the server: the page there carries the tiles,
+  // and the browser asks once per brand it shows.
+  protected readonly home = resource({
+    loader: ({ params }) =>
+      this.homes.homeControllerForBrand({ brand: params }),
+    params: () => (this.server ? undefined : this.selected()?.slug),
+  });
+  protected readonly busy = computed(
+    () => this.server || this.home.isLoading(),
+  );
+  protected readonly count = computed(() => {
+    if (this.home.isLoading() || !this.home.hasValue()) return null;
+    const { brand, takers, total } = this.home.value();
+    return this.i18n.t('public.home.count', {
+      brand: brand.name,
+      count: total,
+      takers,
+      verb: this.i18n.t('public.home.takes', { count: takers }),
+    });
+  });
+
   protected readonly checks = computed(() => {
     const checks = this.health()?.checks;
     const unknown = this.i18n.t('shell.health.unknown');
@@ -45,12 +93,41 @@ export class Home {
   });
 
   constructor() {
-    if (!isPlatformServer(inject(PLATFORM_ID))) return;
-    const api = inject(HealthService);
-    void inject(PendingTasks).run(async () => {
-      const health = await api.healthControllerReady().catch(report);
-      this.health.set(health);
-      this.state.set(HEALTH, health);
+    afterNextRender(() => this.hydrated.set(true));
+    effect((onCleanup) => {
+      if (!this.hydrated() || this.touched() || this.reduced()) return;
+      if (this.tiles().length < 2) return;
+      const timer = setInterval(() => {
+        if (!this.document.hidden) this.advance();
+      }, CYCLE_MS);
+      onCleanup(() => clearInterval(timer));
     });
+
+    if (!this.server) return;
+    const health = inject(HealthService);
+    const brands = inject(BrandsService);
+    const pending = inject(PendingTasks);
+    void pending.run(async () => {
+      const ready = await health.healthControllerReady().catch(report);
+      this.health.set(ready);
+      this.state.set(HEALTH, ready);
+    });
+    void pending.run(async () => {
+      const tiles = await brands
+        .popularBrandsControllerTiles({ limit: 8 })
+        .catch(() => []);
+      this.tiles.set(tiles);
+      this.state.set(TILES, tiles);
+    });
+  }
+
+  protected choose(slug: string) {
+    this.selected.set(this.tiles().find((brand) => brand.slug === slug));
+  }
+
+  private advance() {
+    const tiles = this.tiles();
+    const at = tiles.findIndex((b) => b.slug === this.selected()?.slug);
+    this.selected.set(tiles[(at + 1) % tiles.length]);
   }
 }

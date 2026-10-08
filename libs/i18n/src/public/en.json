@@ -21,6 +21,26 @@
     "required": "Tick to continue.",
     "terms": "Terms of use"
   },
+  "home": {
+    "car": "Your car",
+    "count": {
+      "one": "{takers} of {count} garage {verb} {brand}",
+      "other": "{takers} of {count} garages {verb} {brand}"
+    },
+    "failed": "We could not load the garages",
+    "hero": {
+      "headline": "Who works on {brand}, near you",
+      "label": "Garages for {brand}",
+      "paragraph": "Pick the brand and see how many garages take it."
+    },
+    "picker": "Car brand",
+    "retry": "Try again",
+    "search": "Find garages",
+    "takes": {
+      "one": "takes",
+      "other": "take"
+    }
+  },
   "invite": {
     "accept": "Accept",
     "acceptFailed": "We couldn't accept the invitation. Try again.",

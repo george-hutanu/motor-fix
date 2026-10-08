@@ -21,6 +21,28 @@
     "required": "Bifează pentru a continua.",
     "terms": "Termenii de utilizare"
   },
+  "home": {
+    "car": "Mașina ta",
+    "count": {
+      "few": "{takers} din {count} service‑uri {verb} {brand}",
+      "one": "{takers} din {count} service {verb} {brand}",
+      "other": "{takers} din {count} de service‑uri {verb} {brand}"
+    },
+    "failed": "Nu am putut încărca service‑urile",
+    "hero": {
+      "headline": "Cine lucrează pe {brand}, aproape de tine",
+      "label": "Service‑uri pentru {brand}",
+      "paragraph": "Alege marca și vezi câte service‑uri o primesc."
+    },
+    "picker": "Marca mașinii",
+    "retry": "Reîncearcă",
+    "search": "Caută service‑uri",
+    "takes": {
+      "few": "primesc",
+      "one": "primește",
+      "other": "primesc"
+    }
+  },
   "invite": {
     "accept": "Acceptă",
     "acceptFailed": "Nu am putut accepta invitația. Încearcă din nou.",
