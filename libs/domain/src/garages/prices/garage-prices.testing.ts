@@ -60,22 +60,17 @@ async function waitBehind(
 // its uncommitted row holds (or ends without meeting it), then commits it;
 // answers how `second` ended. The second write finds the value free when it
 // reads, so it meets the unique index instead: the race two concurrent
-// sendings run. A second writer that does neither `within` ms fails the race
-// by name, and the first is still released before the failure.
+// sendings run. A second writer that does neither within `within` ms fails the race
+// by name, and the first is still released before the failure; that second
+// writer is still in flight then, so a caller that keeps it awaits it.
 export async function afterRace<T>(
   prisma: PrismaClient,
   first: (tx: Prisma.TransactionClient) => Promise<unknown>,
   second: () => Promise<T>,
   { within = 15_000 } = {},
 ): Promise<T> {
-  let release = () => {};
-  const held = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  let wrote = (_pid: number) => {};
-  const written = new Promise<number>((resolve) => {
-    wrote = resolve;
-  });
+  const { promise: held, resolve: release } = Promise.withResolvers<void>();
+  const { promise: written, resolve: wrote } = Promise.withResolvers<number>();
   const winner = prisma.$transaction(
     async (tx) => {
       await first(tx);
