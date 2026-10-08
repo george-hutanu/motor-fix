@@ -4,6 +4,7 @@ updated: 2026-10-08
 features:
   - 050-cockpit-theme
   - 158-small-action-sheet
+  - 953-ui-review-checks
   - 954-input-border-contrast
 ---
 
@@ -49,9 +50,9 @@ _From 050-cockpit-theme._
 
 _From 050-cockpit-theme._
 
-### 050-FR-010 — The type scale MUST be one set of tokens with no per-width variation and a 12 px floor: no rendered text smaller than 12 px at any width (checked at 375 px); body text (the default Hanken Grotesk size) 13 px or more; form-field text 16 px.
+### 953-FR-021 — The Cockpit type scale MUST stay one set of tokens with no per-width variation and a 12 px floor (no rendered text under 12 px at any width); its body size (the default body typeface size) MUST be 16 px and its form-field size 16 px, so the theme itself meets FR-001 on every viewport.
 
-_From 050-cockpit-theme._
+_From 953-ui-review-checks._
 
 ### 050-FR-011 — Michroma MUST be used for labels, headings and numerals, in capitals with 0.14em spacing; Hanken Grotesk for all other text. Both MUST be self-hosted with `font-display: swap`, cover Latin Extended (ă, â, î, ș, ț), and fall back to Hanken Grotesk then the system sans-serif.
 
@@ -99,5 +100,6 @@ _From 954-input-border-contrast._
 
 ## Retired
 
+- `050-FR-010` — superseded by `953-FR-021` (2026-10-08)
 - `050-FR-001` — superseded by `954-FR-001` (2026-10-08)
 - `050-FR-002` — superseded by `954-FR-002` (2026-10-08)
